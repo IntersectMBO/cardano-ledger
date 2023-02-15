@@ -122,7 +122,7 @@ deriving via Enc (AlonzoTxOut CurrentEra) instance PersistField (AlonzoTxOut Cur
 deriving via Enc (AlonzoTxOut CurrentEra) instance PersistFieldSql (AlonzoTxOut CurrentEra)
 
 instance DecCBOR (DState C) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
 deriving via Enc (DState C) instance PersistField (DState C)
 
@@ -141,7 +141,7 @@ deriving via Enc (PoolParams C) instance PersistField (PoolParams C)
 deriving via Enc (PoolParams C) instance PersistFieldSql (PoolParams C)
 
 instance DecCBOR (NonMyopic C) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
 deriving via Enc (NonMyopic C) instance PersistField (NonMyopic C)
 

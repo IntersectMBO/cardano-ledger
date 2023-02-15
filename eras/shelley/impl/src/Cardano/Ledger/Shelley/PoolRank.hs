@@ -36,14 +36,14 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
+  DecShareCBOR (Share, decSharePlusCBOR),
   EncCBOR (encCBOR),
-  FromSharedCBOR (Share, fromSharedPlusCBOR),
   Interns,
+  decSharePlusLensCBOR,
   decodeDouble,
   decodeRecordNamedT,
   encodeDouble,
   encodeListLen,
-  fromSharedPlusLensCBOR,
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
@@ -239,11 +239,11 @@ instance CC.Crypto c => EncCBOR (NonMyopic c) where
         <> encCBOR aps
         <> encCBOR rp
 
-instance CC.Crypto c => FromSharedCBOR (NonMyopic c) where
+instance CC.Crypto c => DecShareCBOR (NonMyopic c) where
   type Share (NonMyopic c) = Interns (KeyHash 'StakePool c)
-  fromSharedPlusCBOR = do
+  decSharePlusCBOR = do
     decodeRecordNamedT "NonMyopic" (const 2) $ do
-      likelihoodsNM <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
+      likelihoodsNM <- decSharePlusLensCBOR (toMemptyLens _1 id)
       rewardPotNM <- lift decCBOR
       pure $ NonMyopic {likelihoodsNM, rewardPotNM}
 

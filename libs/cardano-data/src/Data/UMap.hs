@@ -728,15 +728,15 @@ instance
 
 instance
   (DecCBOR coin, Ord ptr, DecCBOR ptr, DecCBOR pool) =>
-  FromSharedCBOR (Trip coin ptr pool)
+  DecShareCBOR (Trip coin ptr pool)
   where
   type Share (Trip coin ptr pool) = Interns pool
-  fromSharedCBOR is =
+  decShareCBOR is =
     decodeRecordNamed "Triple" (const 3) $
       do
         a <- decCBOR
         b <- decCBOR
-        c <- fromShareCBORfunctor is
+        c <- decShareMonadCBOR is
         pure (Triple a b c)
 
 instance
@@ -748,16 +748,16 @@ instance
 
 instance
   (Ord cred, DecCBOR cred, Ord ptr, DecCBOR ptr, DecCBOR coin, DecCBOR pool) =>
-  FromSharedCBOR (UMap coin cred pool ptr)
+  DecShareCBOR (UMap coin cred pool ptr)
   where
   type
     Share (UMap coin cred pool ptr) =
       (Interns cred, Interns pool)
-  fromSharedPlusCBOR =
+  decSharePlusCBOR =
     StateT
       ( \(a, b) ->
           decodeRecordNamed "UnifiedMap" (const 2) $ do
-            tripmap <- decodeMap (interns a <$> decCBOR) (fromSharedCBOR b)
+            tripmap <- decodeMap (interns a <$> decCBOR) (decShareCBOR b)
             let a' = internsFromMap tripmap <> a
             ptrmap <- decodeMap decCBOR (interns a' <$> decCBOR)
             pure (UnifiedMap tripmap ptrmap, (a', b))

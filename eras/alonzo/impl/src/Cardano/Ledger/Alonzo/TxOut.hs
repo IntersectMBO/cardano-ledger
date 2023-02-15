@@ -55,15 +55,15 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
+  DecShareCBOR (Share, decShareCBOR),
   DecoderError (DecoderErrorCustom),
   EncCBOR (encCBOR),
-  FromSharedCBOR (Share, fromSharedCBOR),
   Interns,
   cborError,
+  decNoShareCBOR,
   decodeBreakOr,
   decodeListLenOrIndef,
   encodeListLen,
-  fromNotSharedCBOR,
   interns,
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -347,15 +347,15 @@ instance
   (Era era, Show (Value era), DecCBOR (CompactForm (Value era)), Val (Value era)) =>
   DecCBOR (AlonzoTxOut era)
   where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
   {-# INLINE decCBOR #-}
 
 instance
   (Era era, Val (Value era), DecCBOR (CompactForm (Value era)), Show (Value era)) =>
-  FromSharedCBOR (AlonzoTxOut era)
+  DecShareCBOR (AlonzoTxOut era)
   where
   type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credsInterns = do
+  decShareCBOR credsInterns = do
     lenOrIndef <- decodeListLenOrIndef
     let internTxOut = \case
           TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
@@ -383,7 +383,7 @@ instance
         cv <- decCBOR
         mkTxOutCompact a ca cv . SJust <$> decCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
-  {-# INLINEABLE fromSharedCBOR #-}
+  {-# INLINEABLE decShareCBOR #-}
 
 instance (EraTxOut era, ToJSON (Value era)) => ToJSON (AlonzoTxOut era) where
   toJSON (AlonzoTxOut addr v dataHash) =

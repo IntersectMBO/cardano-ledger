@@ -27,15 +27,15 @@ where
 
 import Cardano.Ledger.Binary (
   DecCBOR (..),
+  DecShareCBOR (..),
   EncCBOR (..),
-  FromSharedCBOR (..),
   Interns,
+  decNoShareCBOR,
+  decSharePlusCBOR,
+  decSharePlusLensCBOR,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
-  fromNotSharedCBOR,
-  fromSharedPlusCBOR,
-  fromSharedPlusLensCBOR,
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (
@@ -138,16 +138,16 @@ instance (CC.Crypto c, EncCBOR (InstantaneousRewards c)) => EncCBOR (DState c) w
       <> encCBOR gs
       <> encCBOR ir
 
-instance (CC.Crypto c, FromSharedCBOR (InstantaneousRewards c)) => FromSharedCBOR (DState c) where
+instance (CC.Crypto c, DecShareCBOR (InstantaneousRewards c)) => DecShareCBOR (DState c) where
   type
     Share (DState c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
-  fromSharedPlusCBOR =
+  decSharePlusCBOR =
     decodeRecordNamedT "DState" (const 4) $ do
-      unified <- fromSharedPlusCBOR
+      unified <- decSharePlusCBOR
       fgs <- lift decCBOR
       gs <- lift decCBOR
-      ir <- fromSharedPlusLensCBOR _1
+      ir <- decSharePlusLensCBOR _1
       pure $ DState unified fgs gs ir
 
 -- | The state used by the POOL rule, which tracks stake pool information.
@@ -175,19 +175,19 @@ instance CC.Crypto c => EncCBOR (PState c) where
   encCBOR (PState a b c d) =
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
-instance CC.Crypto c => FromSharedCBOR (PState c) where
+instance CC.Crypto c => DecShareCBOR (PState c) where
   type
     Share (PState c) =
       Interns (KeyHash 'StakePool c)
-  fromSharedPlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
-    psStakePoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-    psFutureStakePoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-    psRetiring <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-    psDeposits <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
+  decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
+    psStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psRetiring <- decSharePlusLensCBOR (toMemptyLens _1 id)
+    psDeposits <- decSharePlusLensCBOR (toMemptyLens _1 id)
     pure PState {psStakePoolParams, psFutureStakePoolParams, psRetiring, psDeposits}
 
-instance (CC.Crypto c, FromSharedCBOR (PState c)) => DecCBOR (PState c) where
-  decCBOR = fromNotSharedCBOR
+instance (CC.Crypto c, DecShareCBOR (PState c)) => DecCBOR (PState c) where
+  decCBOR = decNoShareCBOR
 
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
@@ -205,12 +205,12 @@ instance CC.Crypto c => EncCBOR (InstantaneousRewards c) where
   encCBOR (InstantaneousRewards irR irT dR dT) =
     encodeListLen 4 <> encCBOR irR <> encCBOR irT <> encCBOR dR <> encCBOR dT
 
-instance CC.Crypto c => FromSharedCBOR (InstantaneousRewards c) where
+instance CC.Crypto c => DecShareCBOR (InstantaneousRewards c) where
   type Share (InstantaneousRewards c) = Interns (Credential 'Staking c)
-  fromSharedPlusCBOR =
+  decSharePlusCBOR =
     decodeRecordNamedT "InstantaneousRewards" (const 4) $ do
-      irR <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-      irT <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
+      irR <- decSharePlusLensCBOR (toMemptyLens _1 id)
+      irT <- decSharePlusLensCBOR (toMemptyLens _1 id)
       dR <- lift decCBOR
       dT <- lift decCBOR
       pure $ InstantaneousRewards irR irT dR dT
@@ -224,15 +224,15 @@ instance
       <> encCBOR dpsPState -- We get better sharing when encoding pstate before dstate
       <> encCBOR dpsDState
 
-instance CC.Crypto c => FromSharedCBOR (DPState c) where
+instance CC.Crypto c => DecShareCBOR (DPState c) where
   type
     Share (DPState c) =
       ( Interns (Credential 'Staking c)
       , Interns (KeyHash 'StakePool c)
       )
-  fromSharedPlusCBOR = decodeRecordNamedT "DPState" (const 2) $ do
-    dpsPState <- fromSharedPlusLensCBOR _2
-    dpsDState <- fromSharedPlusCBOR
+  decSharePlusCBOR = decodeRecordNamedT "DPState" (const 2) $ do
+    dpsPState <- decSharePlusLensCBOR _2
+    dpsDState <- decSharePlusCBOR
     pure DPState {dpsPState, dpsDState}
 
 instance Default (DPState c) where

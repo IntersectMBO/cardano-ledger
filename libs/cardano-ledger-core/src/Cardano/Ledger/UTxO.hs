@@ -36,8 +36,8 @@ where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
+  DecShareCBOR (Share, decShareCBOR),
   EncCBOR (..),
-  FromSharedCBOR (Share, fromSharedCBOR),
   Interns,
   decodeMapNoDuplicates,
  )
@@ -91,16 +91,16 @@ deriving newtype instance (Era era, EncCBOR (TxOut era)) => EncCBOR (UTxO era)
 
 instance
   ( Crypto (EraCrypto era)
-  , FromSharedCBOR (TxOut era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   ) =>
-  FromSharedCBOR (UTxO era)
+  DecShareCBOR (UTxO era)
   where
   type
     Share (UTxO era) =
       Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credsInterns =
-    UTxO <$!> decodeMapNoDuplicates decCBOR (fromSharedCBOR credsInterns)
+  decShareCBOR credsInterns =
+    UTxO <$!> decodeMapNoDuplicates decCBOR (decShareCBOR credsInterns)
 
 instance
   ( DecCBOR (TxOut era)

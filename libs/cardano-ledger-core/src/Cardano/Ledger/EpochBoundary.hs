@@ -39,12 +39,12 @@ where
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
+  DecShareCBOR (..),
   EncCBOR (encCBOR),
-  FromSharedCBOR (..),
   Interns,
+  decSharePlusLensCBOR,
   decodeRecordNamedT,
   encodeListLen,
-  fromSharedPlusLensCBOR,
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (
@@ -87,10 +87,10 @@ deriving newtype instance Typeable c => NoThunks (Stake c)
 deriving newtype instance
   CC.Crypto c => EncCBOR (Stake c)
 
-instance CC.Crypto c => FromSharedCBOR (Stake c) where
+instance CC.Crypto c => DecShareCBOR (Stake c) where
   type Share (Stake c) = Share (VMap VB VP (Credential 'Staking c) (CompactForm Coin))
   getShare = getShare . unStake
-  fromSharedCBOR = fmap Stake . fromSharedCBOR
+  decShareCBOR = fmap Stake . decShareCBOR
 
 sumAllStake :: Stake c -> Coin
 sumAllStake = fromCompact . CompactCoin . VMap.foldl (\acc (CompactCoin c) -> acc + c) 0 . unStake
@@ -175,14 +175,14 @@ instance
         <> encCBOR d
         <> encCBOR p
 
-instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
+instance CC.Crypto c => DecShareCBOR (SnapShot c) where
   type
     Share (SnapShot c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
-  fromSharedPlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
-    ssStake <- fromSharedPlusLensCBOR _1
-    ssDelegations <- fromSharedPlusCBOR
-    ssPoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
+  decSharePlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
+    ssStake <- decSharePlusLensCBOR _1
+    ssDelegations <- decSharePlusCBOR
+    ssPoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     pure SnapShot {ssStake, ssDelegations, ssPoolParams}
 
 -- | Snapshots of the stake distribution.
@@ -215,12 +215,12 @@ instance
       <> encCBOR ssStakeGo
       <> encCBOR ssFee
 
-instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
+instance CC.Crypto c => DecShareCBOR (SnapShots c) where
   type Share (SnapShots c) = Share (SnapShot c)
-  fromSharedPlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
-    !ssStakeMark <- fromSharedPlusCBOR
-    ssStakeSet <- fromSharedPlusCBOR
-    ssStakeGo <- fromSharedPlusCBOR
+  decSharePlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
+    !ssStakeMark <- decSharePlusCBOR
+    ssStakeSet <- decSharePlusCBOR
+    ssStakeGo <- decSharePlusCBOR
     ssFee <- lift decCBOR
     let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
     pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet, ssStakeGo, ssFee}

@@ -27,12 +27,12 @@ import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
+  DecShareCBOR (..),
   EncCBOR (..),
-  FromSharedCBOR (..),
   Interns (..),
+  decNoShareCBOR,
   decodeRecordNamed,
   encodeListLen,
-  fromNotSharedCBOR,
  )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Core (Era (EraCrypto), EraTxOut (..), Value, ppMinUTxOValueL)
@@ -145,16 +145,16 @@ instance
   (Era era, DecCBOR (CompactForm (Value era))) =>
   DecCBOR (ShelleyTxOut era)
   where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
 -- This instance does not do any sharing and is isomorphic to DecCBOR
 -- use the weakest constraint necessary
 instance
   (Era era, DecCBOR (CompactForm (Value era))) =>
-  FromSharedCBOR (ShelleyTxOut era)
+  DecShareCBOR (ShelleyTxOut era)
   where
   type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR _ =
+  decShareCBOR _ =
     decodeRecordNamed "ShelleyTxOut" (const 2) $ do
       cAddr <- decCBOR
       TxOutCompact cAddr <$> decCBOR

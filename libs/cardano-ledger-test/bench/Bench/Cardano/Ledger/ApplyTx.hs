@@ -20,8 +20,8 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
+  decNoShareCBOR,
   decodeFullAnnotator,
-  fromNotSharedCBOR,
   serialize,
  )
 import Cardano.Ledger.Mary (MaryEra)
@@ -157,16 +157,16 @@ applyTxBenchmarks =
     ]
 
 instance DecCBOR (UTxOState ShelleyBench) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
 instance DecCBOR (UTxOState AllegraBench) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
 instance DecCBOR (UTxOState MaryBench) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
 instance DecCBOR (UTxOState AlonzoBench) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
 instance DecCBOR (DPState C_Crypto) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR

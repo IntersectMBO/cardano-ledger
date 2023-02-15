@@ -81,9 +81,9 @@ import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR,
+  DecShareCBOR (Share),
   EncCBOR,
   EncCBORGroup,
-  FromSharedCBOR (Share),
   Interns,
   Sized (sizedValue),
   mkSized,
@@ -191,7 +191,7 @@ class
   , DecCBOR (CompactForm (Value era))
   , EncCBOR (Value era)
   , DecCBOR (TxOut era)
-  , FromSharedCBOR (TxOut era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   , EncCBOR (TxOut era)
   , NoThunks (TxOut era)

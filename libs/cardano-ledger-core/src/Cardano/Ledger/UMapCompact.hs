@@ -713,29 +713,29 @@ instance
   encCBOR (Triple coin ptr pool) =
     encodeListLen 3 <> encCBOR coin <> encCBOR ptr <> encCBOR pool
 
-instance Crypto c => FromSharedCBOR (Trip c) where
+instance Crypto c => DecShareCBOR (Trip c) where
   type Share (Trip c) = Interns (KeyHash 'StakePool c)
-  fromSharedCBOR is =
+  decShareCBOR is =
     decodeRecordNamed "Triple" (const 3) $
       do
         a <- decCBOR
         b <- decCBOR
-        c <- fromShareCBORfunctor is
+        c <- decShareMonadCBOR is
         pure (Triple a b c)
 
 instance Crypto c => EncCBOR (UMap c) where
   encCBOR (UMap tripmap ptrmap) =
     encodeListLen 2 <> encodeMap encCBOR encCBOR tripmap <> encodeMap encCBOR encCBOR ptrmap
 
-instance Crypto c => FromSharedCBOR (UMap c) where
+instance Crypto c => DecShareCBOR (UMap c) where
   type
     Share (UMap c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
-  fromSharedPlusCBOR =
+  decSharePlusCBOR =
     StateT
       ( \(a, b) ->
           decodeRecordNamed "UMap" (const 2) $ do
-            tripmap <- decodeMap (interns a <$> decCBOR) (fromSharedCBOR b)
+            tripmap <- decodeMap (interns a <$> decCBOR) (decShareCBOR b)
             let a' = internsFromMap tripmap <> a
             ptrmap <- decodeMap decCBOR (interns a' <$> decCBOR)
             pure (UMap tripmap ptrmap, (a', b))

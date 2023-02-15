@@ -74,11 +74,11 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
+  DecShareCBOR (..),
   Decoder,
   DecoderError (..),
   EncCBOR (..),
   Encoding,
-  FromSharedCBOR (..),
   Interns,
   Sized (..),
   TokenType (..),
@@ -430,10 +430,10 @@ instance
   , DecCBOR (Annotator (Script era))
   , DecCBOR (Value era)
   ) =>
-  FromSharedCBOR (BabbageTxOut era)
+  DecShareCBOR (BabbageTxOut era)
   where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credsInterns =
+  decShareCBOR credsInterns =
     internTxOut <$!> decodeBabbageTxOut
     where
       internTxOut = \case

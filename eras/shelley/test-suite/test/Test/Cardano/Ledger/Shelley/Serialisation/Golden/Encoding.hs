@@ -40,11 +40,11 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   Tokens (..),
   byronProtVer,
+  decNoShareCBOR,
   decodeFullAnnotator,
   decodeFullDecoder,
   decodeMapTraverse,
   encCBOR,
-  fromNotSharedCBOR,
   hashWithEncoder,
   ipv4ToBytes,
   serialize',
@@ -1336,7 +1336,7 @@ tests =
 -- From CBOR instances for things that only have DecCBORSharing instances
 
 instance DecCBOR (Stake C_Crypto) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
 instance DecCBOR (SnapShots C_Crypto) where
-  decCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR

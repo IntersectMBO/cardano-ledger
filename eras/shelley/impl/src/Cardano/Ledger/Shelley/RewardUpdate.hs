@@ -21,9 +21,9 @@ import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  decNoShareCBOR,
   decodeRecordNamed,
   encodeListLen,
-  fromNotSharedCBOR,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -123,7 +123,7 @@ instance
       dr <- decCBOR -- TODO change Coin serialization to use integers?
       rw <- decCBOR
       df <- decCBOR -- TODO change Coin serialization to use integers?
-      nm <- fromNotSharedCBOR
+      nm <- decNoShareCBOR
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
 emptyRewardUpdate :: RewardUpdate c
@@ -169,7 +169,7 @@ instance Crypto c => DecCBOR (RewardSnapShot c) where
       ( RecD RewardSnapShot
           <! From
           <! From
-          <! D fromNotSharedCBOR
+          <! D decNoShareCBOR
           <! From
           <! From
           <! From
