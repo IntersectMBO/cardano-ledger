@@ -54,8 +54,7 @@ library
         cardano-strict-containers,
         microlens,
         tasty,
-        tasty-quickcheck,
-        QuickCheck
+        tasty-quickcheck
 
 test-suite cardano-ledger-conway-test
     type:             exitcode-stdio-1.0

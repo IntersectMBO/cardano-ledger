@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -18,6 +19,7 @@ module Cardano.Ledger.Conway.Rules.Tally (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Conway.Era (ConwayTALLY)
 import Cardano.Ledger.Conway.Governance (
   ConwayTallyState (..),
@@ -30,6 +32,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Core (Era (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
+import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
@@ -39,6 +42,7 @@ import Control.State.Transition.Extended (
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
+import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
 newtype TallyEnv era = TallyEnv (TxId (EraCrypto era))
@@ -49,7 +53,9 @@ data GovernanceProcedure era
 
 newtype ConwayTallyPredFailure era
   = NoSuchGovernanceAction (Vote era)
-  deriving (Eq, Show)
+  deriving (Eq, Show, ToCBOR, FromCBOR, NoThunks)
+
+deriving instance Era era => NFData (ConwayTallyPredFailure era)
 
 instance Era era => STS (ConwayTALLY era) where
   type State (ConwayTALLY era) = ConwayTallyState era

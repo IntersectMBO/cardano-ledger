@@ -55,6 +55,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto, VRF)
 import Cardano.Ledger.Keys (
@@ -78,7 +79,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   dsGenDelegs,
   lsDPState,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyTickfPredFailure)
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Protocol.TPraos.BHeader (
@@ -140,7 +140,6 @@ class
   , Environment (EraRule "TICKF" era) ~ ()
   , State (EraRule "TICKF" era) ~ NewEpochState era
   , Signal (EraRule "TICKF" era) ~ SlotNo
-  , PredicateFailure (EraRule "TICKF" era) ~ ShelleyTickfPredFailure era
   , EraPParams era
   ) =>
   GetLedgerView era
@@ -205,6 +204,34 @@ instance Crypto c => GetLedgerView (BabbageEra c) where
       res =
         flip runReader globals
           . applySTS @(EraRule "TICKF" (BabbageEra c))
+          $ TRC ((), ss, slot)
+
+-- Note that although we do not use TPraos in the Conway era, we include this
+-- because it makes it simpler to get the ledger view for Praos.
+instance Crypto c => GetLedgerView (ConwayEra c) where
+  currentLedgerView
+    NewEpochState {nesPd = pd, nesEs = es} =
+      LedgerView
+        { lvD = esPp es ^. ppDG
+        , lvExtraEntropy = error "Extra entropy is not set in the Conway era"
+        , lvPoolDistr = pd
+        , lvGenDelegs =
+            dsGenDelegs
+              . dpsDState
+              . lsDPState
+              $ esLState es
+        , lvChainChecks = pparamsToChainChecksPParams . esPp $ es
+        }
+
+  futureLedgerView globals ss slot =
+    liftEither
+      . right currentLedgerView
+      . left FutureLedgerViewError
+      $ res
+    where
+      res =
+        flip runReader globals
+          . applySTS @(EraRule "TICKF" (ConwayEra c))
           $ TRC ((), ss, slot)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
@@ -317,7 +344,6 @@ futureView ::
   , Environment (EraRule "TICKF" era) ~ ()
   , State (EraRule "TICKF" era) ~ NewEpochState era
   , Signal (EraRule "TICKF" era) ~ SlotNo
-  , PredicateFailure (EraRule "TICKF" era) ~ ShelleyTickfPredFailure era
   , EraPParams era
   , ProtVerAtMost era 6
   ) =>

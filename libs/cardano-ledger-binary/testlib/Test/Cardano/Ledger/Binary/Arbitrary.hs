@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -125,6 +126,9 @@ deriving instance Arbitrary SlotNo
 
 instance Arbitrary t => Arbitrary (WithOrigin t) where
   arbitrary = frequency [(20, pure Origin), (80, At <$> arbitrary)]
+  shrink = \case
+    Origin -> []
+    At x -> Origin : map At (shrink x)
 
 deriving instance Arbitrary EpochNo
 
