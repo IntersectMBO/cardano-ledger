@@ -59,8 +59,12 @@ import Cardano.Ledger.Binary (
   Annotated (..),
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Time (UTCTime)
@@ -163,6 +167,12 @@ data ConfigurationError
   | -- | An error occured while decoding the genesis hash.
     GenesisHashDecodeError Text
   deriving (Show)
+
+instance ToCBOR Config where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Config where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Config where
   encCBOR

@@ -22,7 +22,11 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoded (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   annotatedDecoder,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
@@ -56,11 +60,20 @@ instance Buildable (APayload a) where
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (APayload a)
 
+instance ToCBOR Payload where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Payload where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR Payload where
   encCBOR = encCBOR . getPayload
 
 instance DecCBOR Payload where
   decCBOR = void <$> decCBOR @(APayload ByteSpan)
+
+instance FromCBOR (APayload ByteSpan) where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR (APayload ByteSpan) where
   decCBOR = do

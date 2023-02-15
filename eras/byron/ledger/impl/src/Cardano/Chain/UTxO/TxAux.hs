@@ -27,13 +27,17 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoded (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   annotatedDecoder,
   byronProtVer,
   decCBORAnnotated,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   serialize,
   slice,
+  toByronCBOR,
   unsafeDeserialize,
  )
 import Cardano.Prelude
@@ -86,6 +90,12 @@ txaF = later $ \ta ->
 instance B.Buildable TxAux where
   build = bprint txaF
 
+instance ToCBOR TxAux where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxAux where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR TxAux where
   encCBOR ta = encodeListLen 2 <> encCBOR (taTx ta) <> encCBOR (taWitness ta)
 
@@ -93,6 +103,9 @@ instance EncCBOR TxAux where
 
 instance DecCBOR TxAux where
   decCBOR = void <$> decCBOR @(ATxAux ByteSpan)
+
+instance FromCBOR (ATxAux ByteSpan) where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR (ATxAux ByteSpan) where
   decCBOR = do

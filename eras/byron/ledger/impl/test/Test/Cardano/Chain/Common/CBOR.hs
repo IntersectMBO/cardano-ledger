@@ -41,7 +41,7 @@ import Cardano.Ledger.Binary (
   SizeOverride (..),
   byronProtVer,
   decodeFullDecoder,
-  serializeEncoding,
+  serialize,
   szCases,
  )
 import Cardano.Prelude hiding (check)
@@ -93,7 +93,7 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 prop_roundTripCrcProtected :: Property
 prop_roundTripCrcProtected = property $ do
   x <- forAll genAddress
-  let crcEncodedBS = serializeEncoding byronProtVer . encodeCrcProtected $ x
+  let crcEncodedBS = serialize byronProtVer . encodeCrcProtected $ x
   decodeFullDecoder byronProtVer "" decodeCrcProtected crcEncodedBS === Right x
 
 --------------------------------------------------------------------------------

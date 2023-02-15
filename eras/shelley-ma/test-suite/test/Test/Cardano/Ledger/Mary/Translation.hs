@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools (translateEraEncCBOR)
+import Test.Cardano.Ledger.TranslationTools (translateEraEncCBOR, translateEraEncoding)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)
@@ -44,15 +44,22 @@ maryTranslationTests :: TestTree
 maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (test @S.ShelleyTx)
+    [ testProperty "Tx compatibility" $
+        translateEraEncoding @Mary @S.ShelleyTx () toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
-    , testProperty "ShelleyPPUPState compatibility" (test @S.ShelleyPPUPState)
+    , testProperty "ShelleyPPUPState compatibility" $
+        translateEraEncoding @Mary @S.ShelleyPPUPState () toCBOR toCBOR
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
-    , testProperty "UTxO compatibility" (test @S.UTxO)
-    , testProperty "UTxOState compatibility" (test @S.UTxOState)
-    , testProperty "LedgerState compatibility" (test @S.LedgerState)
-    , testProperty "EpochState compatibility" (test @S.EpochState)
-    , testProperty "ShelleyTxWits compatibility" (test @S.ShelleyTxWits)
+    , testProperty "UTxO compatibility" $
+        translateEraEncoding @Mary @S.UTxO () toCBOR toCBOR
+    , testProperty "UTxOState compatibility" $
+        translateEraEncoding @Mary @S.UTxOState () toCBOR toCBOR
+    , testProperty "LedgerState compatibility" $
+        translateEraEncoding @Mary @S.LedgerState () toCBOR toCBOR
+    , testProperty "EpochState compatibility" $
+        translateEraEncoding @Mary @S.EpochState () toCBOR toCBOR
+    , testProperty "ShelleyTxWits compatibility" $
+        translateEraEncoding @Mary @S.ShelleyTxWits () toCBOR toCBOR
     , testProperty "Update compatibility" (test @S.Update)
     ]
 

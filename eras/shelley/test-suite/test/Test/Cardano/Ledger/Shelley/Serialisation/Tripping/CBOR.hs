@@ -15,8 +15,8 @@ where
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  decNoShareCBOR,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -32,6 +32,7 @@ import qualified Cardano.Ledger.Shelley.Rules as STS
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Data.Maybe (fromJust)
+import qualified Test.Cardano.Ledger.Binary.Plain.RoundTrip as Plain
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -58,7 +59,7 @@ testCoreTypes =
     , testProperty "Protocol State" $
         roundTripExpectation @(STS.PrtclState StandardCrypto) cborTrip
     , testProperty "SnapShots" $
-        roundTripExpectation @(SnapShots StandardCrypto) (mkTrip encCBOR decNoShareCBOR)
+        roundTripExpectation @(SnapShots StandardCrypto) (mkTrip encCBOR decCBOR)
     , testProperty "coin CompactCoin cbor" $
         roundTripExpectation @Coin (mkTrip (encCBOR . fromJust . toCompact) decCBOR)
     , testProperty "coin cbor CompactCoin" $
@@ -96,11 +97,12 @@ tests =
       , testProperty "LEDGER Predicate Failures" $
           roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Shelley)]) cborTrip
       , testProperty "Ledger State" $
-          roundTripExpectation @(LedgerState Shelley) (mkTrip encCBOR decNoShareCBOR)
+          Plain.roundTripExpectation @(LedgerState Shelley) $
+            Plain.mkTrip Plain.toCBOR Plain.fromCBOR
       , testProperty "Epoch State" $
-          roundTripExpectation @(EpochState Shelley) cborTrip
+          Plain.roundTripExpectation @(EpochState Shelley) Plain.cborTrip
       , testProperty "NewEpoch State" $
-          roundTripExpectation @(NewEpochState Shelley) cborTrip
+          Plain.roundTripExpectation @(NewEpochState Shelley) Plain.cborTrip
       , testProperty "MultiSig" $
           roundTripAnnRangeExpectation @(MultiSig Shelley)
             (eraProtVerLow @Shelley)
@@ -110,7 +112,7 @@ tests =
             (eraProtVerLow @Shelley)
             (eraProtVerHigh @Shelley)
       , testProperty "Shelley Genesis" $
-          roundTripExpectation @(ShelleyGenesis StandardCrypto) cborTrip
+          Plain.roundTripExpectation @(ShelleyGenesis StandardCrypto) Plain.cborTrip
       , testProperty "NominalDiffTimeMicro" $
           roundTripExpectation @NominalDiffTimeMicro cborTrip
       , testCoreTypes

@@ -78,12 +78,18 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (encCBOR),
   EncCBORGroup (..),
+  FromCBOR,
+  ToCBOR,
   cborError,
   decodeRationalWithTag,
-  decodeRecordSum,
-  encodeListLen,
   encodeRatioWithTag,
   encodedSizeExpr,
+ )
+import Cardano.Ledger.Binary.Plain (
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeRecordSum,
+  encodeListLen,
   invalidKey,
  )
 import Cardano.Ledger.Binary.Version
@@ -127,6 +133,12 @@ data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Natural}
   deriving (Show, Eq, Generic, Ord, NFData)
   deriving (EncCBOR) via (CBORGroup ProtVer)
   deriving (DecCBOR) via (CBORGroup ProtVer)
+
+instance ToCBOR ProtVer where
+  toCBOR ProtVer {..} = toCBOR (pvMajor, pvMinor)
+
+instance FromCBOR ProtVer where
+  fromCBOR = uncurry ProtVer <$> fromCBOR
 
 instance NoThunks ProtVer
 
@@ -413,16 +425,20 @@ data Nonce
 
 instance NoThunks Nonce
 
-instance EncCBOR Nonce where
-  encCBOR NeutralNonce = encodeListLen 1 <> encCBOR (0 :: Word8)
-  encCBOR (Nonce n) = encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR n
+instance EncCBOR Nonce
 
-instance DecCBOR Nonce where
-  decCBOR = decodeRecordSum "Nonce" $
+instance DecCBOR Nonce
+
+instance ToCBOR Nonce where
+  toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
+  toCBOR (Nonce n) = encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR n
+
+instance FromCBOR Nonce where
+  fromCBOR = decodeRecordSum "Nonce" $
     \case
       0 -> pure (1, NeutralNonce)
       1 -> do
-        x <- decCBOR
+        x <- fromCBOR
         pure (2, Nonce x)
       k -> invalidKey k
 
@@ -652,7 +668,7 @@ newtype BlocksMade c = BlocksMade
 -- | Transaction index.
 newtype TxIx = TxIx Word64
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR)
 
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
@@ -672,7 +688,7 @@ mkTxIxPartial i =
 -- `mkCertIxPartial` that can be used for testing.
 newtype CertIx = CertIx Word64
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR)
 
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16

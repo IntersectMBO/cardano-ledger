@@ -38,7 +38,7 @@ prop_shouldFailMapWithDupKeys =
 
 decode :: DecCBOR a => Version -> Encoding -> Either DecoderError a
 decode version enc =
-  let encoded = serializeEncoding version enc
+  let encoded = serialize version enc
    in decodeFull version encoded
 
 spec :: Spec

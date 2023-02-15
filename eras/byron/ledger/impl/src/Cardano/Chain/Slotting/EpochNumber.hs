@@ -13,7 +13,14 @@ module Cardano.Chain.Slotting.EpochNumber (
 )
 where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Data.Data (Data)
@@ -48,6 +55,12 @@ instance Buildable EpochNumber where
 
 -- Used for debugging purposes only
 instance Aeson.ToJSON EpochNumber
+
+instance ToCBOR EpochNumber where
+  toCBOR = toByronCBOR
+
+instance FromCBOR EpochNumber where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR EpochNumber where
   encCBOR (EpochNumber epoch) = encCBOR epoch

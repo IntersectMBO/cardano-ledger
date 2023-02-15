@@ -58,6 +58,12 @@ instance MonadError SchemaError m => FromJSON m GenesisDelegation where
           (Just $ "Error: " <> formatToString build err)
       Right delegation -> pure delegation
 
+instance ToCBOR GenesisDelegation where
+  toCBOR = toByronCBOR
+
+instance FromCBOR GenesisDelegation where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR GenesisDelegation where
   encCBOR (UnsafeGenesisDelegation gd) =
     encodeListLen 1

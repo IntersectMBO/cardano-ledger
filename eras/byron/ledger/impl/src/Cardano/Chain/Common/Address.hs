@@ -74,11 +74,15 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (..),
   Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
   decodeFull',
   decodeListLenCanonical,
+  fromByronCBOR,
   matchSize,
   serialize',
+  toByronCBOR,
  )
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
@@ -117,6 +121,12 @@ newtype Address' = Address'
   deriving (Eq, Show, Generic)
   deriving newtype (EncCBOR)
 
+instance ToCBOR Address' where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Address' where
+  fromCBOR = fromByronCBOR
+
 -- We need to use canonical encodings for @Address'@ so that all implementations
 -- agree on the `AddressHash`. The components of the @Address'@ also have
 -- canonical encodings enforced.
@@ -142,6 +152,12 @@ data Address = Address
 
 -- Used for debugging purposes only
 instance Aeson.ToJSON Address
+
+instance ToCBOR Address where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Address where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Address where
   encCBOR addr =

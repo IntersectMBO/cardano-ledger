@@ -40,8 +40,12 @@ import Cardano.Ledger.Binary (
   Annotated (..),
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
+  fromByronCBOR,
   serializeBuilder,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
@@ -71,6 +75,12 @@ instance Buildable (MerkleRoot a) where
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (MerkleRoot a)
+
+instance EncCBOR a => ToCBOR (MerkleRoot a) where
+  toCBOR = toByronCBOR
+
+instance DecCBOR a => FromCBOR (MerkleRoot a) where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR a => EncCBOR (MerkleRoot a) where
   encCBOR = encCBOR . getMerkleRoot
@@ -113,6 +123,12 @@ instance Foldable MerkleTree where
 
 instance Show a => Show (MerkleTree a) where
   show tree = "Merkle tree: " <> show (Foldable.toList tree)
+
+instance EncCBOR a => ToCBOR (MerkleTree a) where
+  toCBOR = toByronCBOR
+
+instance (DecCBOR a, EncCBOR a) => FromCBOR (MerkleTree a) where
+  fromCBOR = fromByronCBOR
 
 -- This instance is both faster and more space-efficient (as confirmed by a
 -- benchmark). Hashing turns out to be faster than decoding extra data.

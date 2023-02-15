@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ExistentialQuantification #-}
@@ -20,6 +21,7 @@ module Cardano.Ledger.Binary.Encoding.EncCBOR (
   EncCBOR (..),
   withWordSize,
   PreEncoded (..),
+  toByronCBOR,
 
   -- * Size of expressions
   Range (..),
@@ -101,7 +103,7 @@ import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
-import Cardano.Ledger.Binary.Version (Version, getVersion64)
+import Cardano.Ledger.Binary.Version (Version, byronProtVer, getVersion64)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -119,6 +121,7 @@ import Data.ByteString.Short (ShortByteString(SBS))
 #else
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 #endif
+import qualified Cardano.Binary as Plain (Encoding, ToCBOR (..))
 import Data.Fixed (Fixed (..))
 import Data.Foldable (toList)
 import Data.Functor.Foldable (cata, project)
@@ -161,6 +164,8 @@ import Data.Functor.Foldable (Fix(..))
 
 class Typeable a => EncCBOR a where
   encCBOR :: a -> Encoding
+  default encCBOR :: Plain.ToCBOR a => a -> Encoding
+  encCBOR = fromPlainEncoding . Plain.toCBOR
 
   encodedSizeExpr :: (forall t. EncCBOR t => Proxy t -> Size) -> Proxy a -> Size
   encodedSizeExpr = todo
@@ -192,6 +197,11 @@ instance EncCBOR PreEncoded where
 instance EncCBOR Version where
   encCBOR = encodeVersion
   encodedSizeExpr f px = f (getVersion64 <$> px)
+
+-- | Convert a versioned `EncCBOR` instance to a plain `Plain.Encoding` using Byron
+-- protocol version.
+toByronCBOR :: EncCBOR a => a -> Plain.Encoding
+toByronCBOR = toPlainEncoding byronProtVer . encCBOR
 
 --------------------------------------------------------------------------------
 -- Size expressions
@@ -776,7 +786,7 @@ instance EncCBOR a => EncCBOR (Seq.Seq a) where
   encCBOR = encodeSeq encCBOR
 
 instance EncCBOR a => EncCBOR (SSeq.StrictSeq a) where
-  encCBOR = encCBOR . SSeq.fromStrict
+  encCBOR = encodeStrictSeq encCBOR
 
 instance
   (Ord k, EncCBOR k, EncCBOR v, VMap.Vector kv k, VMap.Vector vv v, Typeable kv, Typeable vv) =>

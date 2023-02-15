@@ -72,12 +72,16 @@ import Cardano.Ledger.Binary (
   Decoder,
   DecoderError (DecoderErrorUnknownTag),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import qualified Data.ByteString as BS
@@ -98,6 +102,12 @@ data TxValidationError
   | TxValidationUnknownAddressAttributes
   | TxValidationUnknownAttributes
   deriving (Eq, Show)
+
+instance ToCBOR TxValidationError where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxValidationError where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR TxValidationError where
   encCBOR = \case
@@ -324,6 +334,12 @@ data UTxOValidationError
   = UTxOValidationTxValidationError TxValidationError
   | UTxOValidationUTxOError UTxOError
   deriving (Eq, Show)
+
+instance ToCBOR UTxOValidationError where
+  toCBOR = toByronCBOR
+
+instance FromCBOR UTxOValidationError where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR UTxOValidationError where
   encCBOR = \case

@@ -46,6 +46,7 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
+  ToCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -173,7 +174,9 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
 
 newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
   deriving (Eq, Generic)
-  deriving newtype (EncCBOR, NoThunks, NFData, SafeToHash)
+  deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
+
+instance Era era => EncCBOR (Timelock era)
 
 instance Memoized Timelock where
   type RawType Timelock = TimelockRaw

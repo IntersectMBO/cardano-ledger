@@ -52,11 +52,15 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError, concat, empty, toList)
 import Data.Coerce
@@ -72,10 +76,22 @@ newtype UTxO = UTxO
   deriving newtype (HeapWords, DecCBOR, EncCBOR)
   deriving anyclass (NFData, NoThunks)
 
+instance ToCBOR UTxO where
+  toCBOR = toByronCBOR
+
+instance FromCBOR UTxO where
+  fromCBOR = fromByronCBOR
+
 data UTxOError
   = UTxOMissingInput TxIn
   | UTxOOverlappingUnion
   deriving (Eq, Show)
+
+instance ToCBOR UTxOError where
+  toCBOR = toByronCBOR
+
+instance FromCBOR UTxOError where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR UTxOError where
   encCBOR = \case

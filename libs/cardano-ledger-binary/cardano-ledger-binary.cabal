@@ -24,6 +24,7 @@ library
         Cardano.Ledger.Binary.Encoding
         Cardano.Ledger.Binary.FlatTerm
         Cardano.Ledger.Binary.Group
+        Cardano.Ledger.Binary.Plain
         Cardano.Ledger.Binary.Version
 
     hs-source-dirs:   src
@@ -46,15 +47,14 @@ library
 
     build-depends:
         base >=4.12 && <4.17,
-        base >=4.11 && <5,
         aeson,
         binary,
         bytestring,
-        cardano-binary,
-        cardano-crypto-class,
-        cardano-crypto-praos >=2.1.0.0,
+        cardano-binary >=1.6,
+        cardano-crypto-class >=2.1,
+        cardano-crypto-praos >=2.1,
         cardano-slotting,
-        cardano-strict-containers,
+        cardano-strict-containers >=0.1.2,
         cborg,
         containers,
         data-fix,
@@ -80,6 +80,8 @@ library
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Binary.Arbitrary
+        Test.Cardano.Ledger.Binary.Plain.Golden
+        Test.Cardano.Ledger.Binary.Plain.RoundTrip
         Test.Cardano.Ledger.Binary.Random
         Test.Cardano.Ledger.Binary.RoundTrip
         Test.Cardano.Ledger.Binary.TreeDiff

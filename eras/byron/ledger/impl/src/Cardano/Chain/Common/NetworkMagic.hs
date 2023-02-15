@@ -20,11 +20,15 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError, (%))
 import Data.Aeson (ToJSON)
@@ -51,6 +55,12 @@ instance ToJSON NetworkMagic
 instance HeapWords NetworkMagic where
   heapWords NetworkMainOrStage = 0
   heapWords (NetworkTestnet _) = 2
+
+instance ToCBOR NetworkMagic where
+  toCBOR = toByronCBOR
+
+instance FromCBOR NetworkMagic where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR NetworkMagic where
   encCBOR = \case

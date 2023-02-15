@@ -24,8 +24,12 @@ import Cardano.Ledger.Binary (
   Annotated (..),
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   decodeTag,
   encodeTag,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Control.Monad.Fail (fail)
@@ -56,7 +60,7 @@ newtype ProtocolMagicId = ProtocolMagicId
   { unProtocolMagicId :: Word32
   }
   deriving (Show, Eq, Generic)
-  deriving newtype (DecCBOR, EncCBOR)
+  deriving newtype (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
   deriving anyclass (NFData, NoThunks)
 
 instance A.ToJSON ProtocolMagicId where
@@ -101,6 +105,12 @@ data RequiresNetworkMagic
   = RequiresNoMagic
   | RequiresMagic
   deriving (Show, Eq, Generic, NFData, NoThunks)
+
+instance ToCBOR RequiresNetworkMagic where
+  toCBOR = toByronCBOR
+
+instance FromCBOR RequiresNetworkMagic where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR RequiresNetworkMagic where
   encCBOR = \case

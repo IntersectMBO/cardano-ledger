@@ -23,17 +23,22 @@ module Cardano.Ledger.Shelley.LedgerState.Types where
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
+  EpochNo,
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecShareCBOR (Share, decShareCBOR, decSharePlusCBOR),
   EncCBOR (encCBOR),
+  FromCBOR (..),
   Interns,
+  ToCBOR (..),
+  decNoShareCBOR,
   decShareLensCBOR,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
+  toPlainDecoder,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
@@ -51,13 +56,8 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PoolRank (
-  NonMyopic (..),
- )
-import Cardano.Ledger.Shelley.RewardUpdate (
-  PulsingRewUpdate (..),
- )
-import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
+import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)
@@ -167,6 +167,12 @@ instance
         esPp <- lift decCBOR
         esNonMyopic <- decShareLensCBOR _2
         pure EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
+
+instance (EraTxOut era, EraGovernance era) => ToCBOR (EpochState era) where
+  toCBOR = toEraCBOR @era
+
+instance (EraTxOut era, EraGovernance era) => FromCBOR (EpochState era) where
+  fromCBOR = fromEraCBOR @era
 
 -- =============================
 
@@ -278,6 +284,12 @@ instance
       utxosStakeDistr <- decShareCBOR credInterns
       pure UTxOState {..}
 
+instance (EraTxOut era, EraGovernance era) => ToCBOR (UTxOState era) where
+  toCBOR = toEraCBOR @era
+
+instance (EraTxOut era, EraGovernance era) => FromCBOR (UTxOState era) where
+  fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
+
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState
   { nesEL :: !EpochNo
@@ -368,6 +380,18 @@ instance
         <! From
 
 instance
+  (EraTxOut era, EraGovernance era, EncCBOR (StashedAVVMAddresses era)) =>
+  ToCBOR (NewEpochState era)
+  where
+  toCBOR = toEraCBOR @era
+
+instance
+  (EraTxOut era, EraGovernance era, DecCBOR (StashedAVVMAddresses era)) =>
+  FromCBOR (NewEpochState era)
+  where
+  fromCBOR = fromEraCBOR @era
+
+instance
   ( Era era
   , NoThunks (BlocksMade (EraCrypto era))
   , NoThunks (EpochState era)
@@ -434,6 +458,12 @@ instance
       lsUTxOState <- decShareLensCBOR _1
       pure LedgerState {lsUTxOState, lsDPState}
 
+instance (EraTxOut era, EraGovernance era) => ToCBOR (LedgerState era) where
+  toCBOR = toEraCBOR @era
+
+instance (EraTxOut era, EraGovernance era) => FromCBOR (LedgerState era) where
+  fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
+
 -- ====================================================
 
 --------------------------------------------------------------------------------
@@ -441,7 +471,7 @@ instance
 --------------------------------------------------------------------------------
 
 instance EraGovernance era => Default (UTxOState era) where
-  def = UTxOState mempty mempty mempty emptyGovernanceState mempty
+  def = UTxOState mempty mempty mempty def mempty
 
 instance
   (Default (LedgerState era), Default (PParams era)) =>

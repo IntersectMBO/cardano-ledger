@@ -14,23 +14,11 @@ module Cardano.Ledger.Shelley.RewardProvenance (
 where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Binary (
-  DecCBOR (decCBOR),
-  EncCBOR (encCBOR),
-  decodeDouble,
-  encodeDouble,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
- )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
@@ -80,11 +68,11 @@ instance NoThunks (RewardProvenancePool c)
 
 instance NFData (RewardProvenancePool c)
 
-deriving instance (CC.Crypto c) => FromJSON (RewardProvenancePool c)
+deriving instance Crypto c => FromJSON (RewardProvenancePool c)
 
-deriving instance (CC.Crypto c) => ToJSON (RewardProvenancePool c)
+deriving instance Crypto c => ToJSON (RewardProvenancePool c)
 
-instance CC.Crypto c => Default (RewardProvenancePool c) where
+instance Crypto c => Default (RewardProvenancePool c) where
   def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
 
 -- | The desirability score of a stake pool, as described
@@ -165,9 +153,9 @@ deriving instance FromJSON Desirability
 
 deriving instance ToJSON Desirability
 
-deriving instance (CC.Crypto c) => FromJSON (RewardProvenance c)
+deriving instance Crypto c => FromJSON (RewardProvenance c)
 
-deriving instance (CC.Crypto c) => ToJSON (RewardProvenance c)
+deriving instance Crypto c => ToJSON (RewardProvenance c)
 
 instance NoThunks (RewardProvenance c)
 
@@ -193,16 +181,16 @@ instance Default (RewardProvenance c) where
       def
       def
 
-instance CC.Crypto c => Default (PoolParams c) where
+instance Crypto c => Default (PoolParams c) where
   def = PoolParams def def (Coin 0) (Coin 0) def def def def def
 
-instance CC.Crypto e => Default (Credential r e) where
+instance Crypto e => Default (Credential r e) where
   def = KeyHashObj def
 
-instance CC.Crypto c => Default (RewardAcnt c) where
+instance Crypto c => Default (RewardAcnt c) where
   def = RewardAcnt def def
 
-instance CC.Crypto c => Default (SafeHash c i) where
+instance Crypto c => Default (SafeHash c i) where
   def = unsafeMakeSafeHash def
 
 -- =======================================================
@@ -272,15 +260,12 @@ instance Show (RewardProvenance c) where
 
 instance EncCBOR Desirability where
   encCBOR (Desirability p1 p2) =
-    encode $ Rec Desirability !> E encodeDouble p1 !> E encodeDouble p2
+    encode $ Rec Desirability !> To p1 !> To p2
 
 instance DecCBOR Desirability where
-  decCBOR = decode $ RecD Desirability <! D decodeDouble <! D decodeDouble
+  decCBOR = decode $ RecD Desirability <! From <! From
 
-instance
-  (CC.Crypto c) =>
-  EncCBOR (RewardProvenancePool c)
-  where
+instance Crypto c => EncCBOR (RewardProvenancePool c) where
   encCBOR (RewardProvenancePool p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
     encode $
       Rec RewardProvenancePool
@@ -295,10 +280,7 @@ instance
         !> To p9
         !> To p10
 
-instance
-  (CC.Crypto c) =>
-  DecCBOR (RewardProvenancePool c)
-  where
+instance Crypto c => DecCBOR (RewardProvenancePool c) where
   decCBOR =
     decode $
       RecD RewardProvenancePool
@@ -313,10 +295,7 @@ instance
         <! From
         <! From
 
-instance
-  (CC.Crypto c) =>
-  EncCBOR (RewardProvenance c)
-  where
+instance Crypto c => EncCBOR (RewardProvenance c) where
   encCBOR (RewardProvenance p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16) =
     encode $
       Rec RewardProvenance
@@ -337,10 +316,7 @@ instance
         !> To p15
         !> To p16
 
-instance
-  (CC.Crypto c) =>
-  DecCBOR (RewardProvenance c)
-  where
+instance Crypto c => DecCBOR (RewardProvenance c) where
   decCBOR =
     decode $
       RecD RewardProvenance

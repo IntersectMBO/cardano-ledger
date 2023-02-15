@@ -53,13 +53,12 @@ import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
-  EncCBOR (encCBOR),
-  encodePreEncoded,
+  EncCBOR,
   serialize,
-  serializeEncoding,
   withSlice,
  )
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core (Era (EraCrypto), eraProtVerLow)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
@@ -104,8 +103,8 @@ deriving instance NFData (t era) => NFData (MemoBytes t era)
 
 deriving instance Generic (MemoBytes t era)
 
-instance (Typeable t, Typeable era) => EncCBOR (MemoBytes t era) where
-  encCBOR (Memo' _ bytes _hash) = encodePreEncoded (fromShort bytes)
+instance (Typeable t, Typeable era) => Plain.ToCBOR (MemoBytes t era) where
+  toCBOR (Memo' _ bytes _hash) = Plain.encodePreEncoded (fromShort bytes)
 
 instance
   ( Typeable t
@@ -159,7 +158,7 @@ printMemo x = putStrLn (showMemo x)
 
 -- | Create MemoBytes from its CBOR encoding
 memoBytes :: forall era w t. Era era => Encode w (t era) -> MemoBytes t era
-memoBytes t = mkMemoBytes (runE t) (serializeEncoding (eraProtVerLow @era) (encode t))
+memoBytes t = mkMemoBytes (runE t) (serialize (eraProtVerLow @era) (encode t))
 
 -- | Helper function. Converts a short bytestring to a lazy bytestring.
 shortToLazy :: ShortByteString -> BSL.ByteString

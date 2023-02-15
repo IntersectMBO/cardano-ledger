@@ -41,11 +41,16 @@ module Cardano.Ledger.Alonzo.Genesis (
 )
 where
 
-import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
-
+import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (UpgradeAlonzoPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices (..))
-import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (encCBOR))
+import Cardano.Ledger.Binary (
+  DecCBOR,
+  EncCBOR,
+  FromCBOR (..),
+  ToCBOR (..),
+ )
 import Cardano.Ledger.Binary.Coders (
   Decode (From, RecD),
   Encode (Rec, To),
@@ -54,6 +59,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
@@ -128,21 +134,27 @@ pattern AlonzoGenesis
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance DecCBOR AlonzoGenesis where
-  decCBOR =
-    decode $
-      RecD AlonzoGenesis
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+-- | Genesis types are always encoded with the version of era they are defined in.
+instance DecCBOR AlonzoGenesis
 
-instance EncCBOR AlonzoGenesis where
-  encCBOR
+instance EncCBOR AlonzoGenesis
+
+instance FromCBOR AlonzoGenesis where
+  fromCBOR =
+    eraDecoder @(AlonzoEra StandardCrypto) $
+      decode $
+        RecD AlonzoGenesis
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+
+instance ToCBOR AlonzoGenesis where
+  toCBOR
     AlonzoGenesis
       { agCoinsPerUTxOWord
       , agCostModels
@@ -153,8 +165,9 @@ instance EncCBOR AlonzoGenesis where
       , agCollateralPercentage
       , agMaxCollateralInputs
       } =
-      encode $
-        Rec AlonzoGenesis
+      toEraCBOR @(AlonzoEra StandardCrypto)
+        . encode
+        $ Rec AlonzoGenesis
           !> To agCoinsPerUTxOWord
           !> To agCostModels
           !> To agPrices

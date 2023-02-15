@@ -71,12 +71,16 @@ import Cardano.Ledger.Binary (
   Decoder,
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (State, cborError)
 import qualified Data.ByteString as BS
@@ -99,6 +103,12 @@ data ApplicationVersion = ApplicationVersion
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
+
+instance ToCBOR ApplicationVersion where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ApplicationVersion where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR ApplicationVersion where
   decCBOR = do
@@ -130,6 +140,12 @@ data ProtocolUpdateProposal = ProtocolUpdateProposal
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
 
+instance ToCBOR ProtocolUpdateProposal where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ProtocolUpdateProposal where
+  fromCBOR = fromByronCBOR
+
 instance DecCBOR ProtocolUpdateProposal where
   decCBOR = do
     enforceSize "ProtocolUpdateProposal" 2
@@ -149,6 +165,12 @@ data SoftwareUpdateProposal = SoftwareUpdateProposal
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
+
+instance ToCBOR SoftwareUpdateProposal where
+  toCBOR = toByronCBOR
+
+instance FromCBOR SoftwareUpdateProposal where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR SoftwareUpdateProposal where
   decCBOR = do
@@ -182,6 +204,12 @@ data Error
     -- application versions.
     NullUpdateProposal
   deriving (Eq, Show)
+
+instance ToCBOR Error where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Error where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Error where
   encCBOR err = case err of
@@ -271,13 +299,19 @@ data TooLarge n = TooLarge
   }
   deriving (Eq, Show)
 
-instance (EncCBOR n) => EncCBOR (TooLarge n) where
+instance EncCBOR n => ToCBOR (TooLarge n) where
+  toCBOR = toByronCBOR
+
+instance DecCBOR n => FromCBOR (TooLarge n) where
+  fromCBOR = fromByronCBOR
+
+instance EncCBOR n => EncCBOR (TooLarge n) where
   encCBOR TooLarge {tlActual, tlMaxBound} =
     encodeListLen 2
       <> encCBOR tlActual
       <> encCBOR tlMaxBound
 
-instance (DecCBOR n) => DecCBOR (TooLarge n) where
+instance DecCBOR n => DecCBOR (TooLarge n) where
   decCBOR = do
     enforceSize "TooLarge" 2
     TooLarge <$> decCBOR <*> decCBOR
@@ -285,6 +319,12 @@ instance (DecCBOR n) => DecCBOR (TooLarge n) where
 newtype Adopted = Adopted ProtocolVersion
   deriving (Eq, Show)
   deriving newtype (EncCBOR, DecCBOR)
+
+instance ToCBOR Adopted where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Adopted where
+  fromCBOR = fromByronCBOR
 
 -- | Register an update proposal after verifying its signature and validating
 --   its contents. This corresponds to the @UPREG@ rules in the spec.

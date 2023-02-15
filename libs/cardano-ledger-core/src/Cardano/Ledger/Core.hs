@@ -84,8 +84,10 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (Share),
   EncCBOR,
   EncCBORGroup,
+  FromCBOR,
   Interns,
   Sized (sizedValue),
+  ToCBOR,
   mkSized,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -128,6 +130,7 @@ class
     NoThunks (Tx era)
   , DecCBOR (Annotator (Tx era))
   , EncCBOR (Tx era)
+  , ToCBOR (Tx era)
   , Show (Tx era)
   , Eq (Tx era)
   ) =>
@@ -155,6 +158,7 @@ class
   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , DecCBOR (Annotator (TxBody era))
   , EncCBOR (TxBody era)
+  , ToCBOR (TxBody era)
   , NoThunks (TxBody era)
   , NFData (TxBody era)
   , Show (TxBody era)
@@ -190,10 +194,12 @@ class
   , DecCBOR (Value era)
   , DecCBOR (CompactForm (Value era))
   , EncCBOR (Value era)
+  , ToCBOR (TxOut era)
+  , FromCBOR (TxOut era)
+  , EncCBOR (TxOut era)
   , DecCBOR (TxOut era)
   , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
-  , EncCBOR (TxOut era)
   , NoThunks (TxOut era)
   , NFData (TxOut era)
   , Show (TxOut era)
@@ -348,6 +354,7 @@ class
   , Eq (TxAuxData era)
   , Show (TxAuxData era)
   , NoThunks (TxAuxData era)
+  , ToCBOR (TxAuxData era)
   , EncCBOR (TxAuxData era)
   , DecCBOR (Annotator (TxAuxData era))
   , HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
@@ -377,6 +384,7 @@ class
   , Show (TxWits era)
   , Monoid (TxWits era)
   , NoThunks (TxWits era)
+  , ToCBOR (TxWits era)
   , EncCBOR (TxWits era)
   , DecCBOR (Annotator (TxWits era))
   ) =>
@@ -410,6 +418,7 @@ class
   ( Era era
   , Show (Script era)
   , Eq (Script era)
+  , ToCBOR (Script era)
   , EncCBOR (Script era)
   , DecCBOR (Annotator (Script era))
   , NoThunks (Script era)

@@ -8,8 +8,6 @@ module Cardano.Ledger.Binary.Encoding (
   serialize,
   serialize',
   serializeBuilder,
-  serializeEncoding,
-  serializeEncoding',
 
   -- ** Hash
   hashWithEncoder,
@@ -44,10 +42,16 @@ import qualified Data.ByteString.Lazy as BSL
 -- | Serialize a Haskell value with a 'EncCBOR' instance to an external binary
 --   representation.
 --
---   The output is represented as a lazy 'LByteString' and is constructed
+--   The output is represented as a lazy 'BSL.ByteString' and is constructed
 --   incrementally.
 serialize :: EncCBOR a => Version -> a -> BSL.ByteString
-serialize version = serializeEncoding version . encCBOR
+serialize version =
+  toLazyByteStringWith strategy mempty . toBuilder version . encCBOR
+  where
+    -- 1024 is the size of the first buffer, 4096 is the size of subsequent
+    -- buffers. Chosen because they seem to give good performance. They are not
+    -- sacred.
+    strategy = safeStrategy 1024 4096
 
 -- | Serialize a Haskell value to an external binary representation.
 --
@@ -60,30 +64,12 @@ serialize' version = BSL.toStrict . serialize version
 serializeBuilder :: EncCBOR a => Version -> a -> Builder
 serializeBuilder version = toBuilder version . encCBOR
 
--- | Serialize a Haskell value to an external binary representation using the
---   provided CBOR 'Encoding'
---
---   The output is represented as an 'LByteString' and is constructed
---   incrementally.
-serializeEncoding :: Version -> Encoding -> BSL.ByteString
-serializeEncoding version =
-  toLazyByteStringWith strategy mempty . toBuilder version
-  where
-    -- 1024 is the size of the first buffer, 4096 is the size of subsequent
-    -- buffers. Chosen because they seem to give good performance. They are not
-    -- sacred.
-    strategy = safeStrategy 1024 4096
-
--- | A strict version of 'serializeEncoding'
-serializeEncoding' :: Version -> Encoding -> BS.ByteString
-serializeEncoding' version = BSL.toStrict . serializeEncoding version
-
 --------------------------------------------------------------------------------
 -- Hashing
 --------------------------------------------------------------------------------
 
 hashWithEncoder :: forall h a. C.HashAlgorithm h => Version -> (a -> Encoding) -> a -> C.Hash h a
-hashWithEncoder version toEnc = C.hashWith (serializeEncoding' version . toEnc)
+hashWithEncoder version toEnc = C.hashWith (serialize' version . toEnc)
 
 hashEncCBOR :: forall h a. (C.HashAlgorithm h, EncCBOR a) => Version -> a -> C.Hash h a
 hashEncCBOR version = hashWithEncoder version encCBOR

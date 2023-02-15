@@ -26,8 +26,12 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Aeson (
@@ -61,6 +65,12 @@ data CompactRedeemVerificationKey
   deriving (Eq, Generic, Show)
   deriving (NoThunks) via InspectHeap CompactRedeemVerificationKey
   deriving anyclass (NFData)
+
+instance ToCBOR CompactRedeemVerificationKey where
+  toCBOR = toByronCBOR
+
+instance FromCBOR CompactRedeemVerificationKey where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR CompactRedeemVerificationKey where
   encCBOR (CompactRedeemVerificationKey a b c d) =

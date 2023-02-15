@@ -37,13 +37,17 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (DecoderErrorUnknownTag),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
   cborError,
   decodeListLen,
   encodeListLen,
+  fromByronCBOR,
   matchSize,
   serialize',
   szCases,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
@@ -80,6 +84,12 @@ instance B.Buildable TxInWitness where
       sig
   build (RedeemWitness key sig) =
     bprint ("VKWitness: key = " . build . ", sig = " . build) key sig
+
+instance ToCBOR TxInWitness where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxInWitness where
+  fromCBOR = fromByronCBOR
 
 -- Used for debugging purposes only
 instance ToJSON TxInWitness
@@ -133,6 +143,12 @@ recoverSigData atx =
 
 -- Used for debugging purposes only
 instance ToJSON TxSigData
+
+instance ToCBOR TxSigData where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxSigData where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR TxSigData where
   encCBOR txSigData = encCBOR (txSigTxHash txSigData)

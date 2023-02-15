@@ -73,12 +73,16 @@ import Cardano.Ledger.Binary (
   Decoder,
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
@@ -128,6 +132,12 @@ data State = State
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
 
+instance ToCBOR State where
+  toCBOR = toByronCBOR
+
+instance FromCBOR State where
+  fromCBOR = fromByronCBOR
+
 instance DecCBOR State where
   decCBOR = do
     enforceSize "State" 11
@@ -165,6 +175,12 @@ data Error
   | Endorsement Endorsement.Error
   | NumberOfGenesisKeysTooLarge (Registration.TooLarge Int)
   deriving (Eq, Show)
+
+instance ToCBOR Error where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Error where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Error where
   encCBOR err = case err of

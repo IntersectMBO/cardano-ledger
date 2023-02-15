@@ -32,7 +32,8 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
-import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator, serialize)
+import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
+import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
@@ -188,10 +189,10 @@ goldenSerialization =
     "golden tests - serialization"
     [ testCase "Alonzo Block" $ do
         expected <- readDataFile "golden/block.cbor"
-        serialize (eraProtVerHigh @Alonzo) (SLE.sleBlock ledgerExamplesAlonzo) @?= expected
+        Plain.serialize (SLE.sleBlock ledgerExamplesAlonzo) @?= expected
     , testCase "Alonzo Tx" $ do
         expected <- readDataFile "golden/tx.cbor"
-        serialize (eraProtVerHigh @Alonzo) (SLE.sleTx ledgerExamplesAlonzo) @?= expected
+        Plain.serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
 
 goldenGenesisSerialization :: TestTree

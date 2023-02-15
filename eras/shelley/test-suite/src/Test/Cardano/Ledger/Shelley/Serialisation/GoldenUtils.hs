@@ -21,6 +21,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   EncCBORGroup (..),
   Encoding,
+  ToCBOR (..),
   Tokens (..),
   Version,
   decodeFullAnnotator,
@@ -30,7 +31,6 @@ import Cardano.Ledger.Binary (
   fromPlainEncoding,
   serialize,
   serialize',
-  serializeEncoding,
  )
 
 -- ToExpr (CBOR.Term) instance
@@ -58,7 +58,7 @@ expectDecodingFailure action x =
     Right _ -> assertFailure $ "Did not expect successful decoding of " ++ show x
 
 roundtrip :: Version -> (a -> Encoding) -> (BSL.ByteString -> Either DecoderError a) -> a -> Either DecoderError a
-roundtrip v encode decode = decode . serializeEncoding v . encode
+roundtrip v encode decode = decode . serialize v . encode
 
 roundTripSuccess ::
   (Show a, Eq a) => Version -> (a -> Encoding) -> (BSL.ByteString -> Either DecoderError a) -> a -> Assertion
@@ -103,7 +103,7 @@ checkEncodingWithRoundtrip v encode decode roundTrip name x t =
   where
     getTerms lbl = either throwIO pure . decodeFullDecoder v lbl decodeTerm
     expectedBinary = serialize v t
-    actualBinary = serializeEncoding v $ encode x
+    actualBinary = serialize v $ encode x
     testName = "golden_serialize_" <> name
 
 checkEncodingCBORDecodeFailure ::
@@ -129,7 +129,7 @@ checkEncodingCBOR v name x t =
    in checkEncodingWithRoundtrip v encCBOR d roundTripSuccess name x t
 
 checkEncodingCBORAnnotated ::
-  (HasCallStack, DecCBOR (Annotator a), EncCBOR a, Show a, Eq a) =>
+  (HasCallStack, DecCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
   Version ->
   String ->
   a ->
@@ -137,7 +137,7 @@ checkEncodingCBORAnnotated ::
   TestTree
 checkEncodingCBORAnnotated v name x t =
   let d = decodeFullAnnotator v (fromString name) decCBOR
-   in checkEncodingWithRoundtrip v encCBOR d roundTripSuccess name x annTokens
+   in checkEncodingWithRoundtrip v (fromPlainEncoding . toCBOR) d roundTripSuccess name x annTokens
   where
     annTokens = T $ TkEncoded $ serialize' v t
 

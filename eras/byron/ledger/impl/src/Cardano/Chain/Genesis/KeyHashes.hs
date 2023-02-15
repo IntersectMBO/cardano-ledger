@@ -42,6 +42,12 @@ instance MonadError SchemaError m => FromJSON m GenesisKeyHashes where
   fromJSON =
     fmap (GenesisKeyHashes . M.keysSet) . fromJSON @m @(Map KeyHash Word16)
 
+instance ToCBOR GenesisKeyHashes where
+  toCBOR = toByronCBOR
+
+instance FromCBOR GenesisKeyHashes where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR GenesisKeyHashes where
   encCBOR (GenesisKeyHashes gkh) = encodeListLen 1 <> encCBOR @(Set KeyHash) gkh
 

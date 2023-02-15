@@ -22,7 +22,16 @@ where
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxAux (ATxAux (..), TxAux, taTx, taWitness)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
-import Cardano.Ledger.Binary (Annotated (..), ByteSpan, DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  ByteSpan,
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 
@@ -43,6 +52,15 @@ unTxPayload = fmap void . aUnTxPayload
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ATxPayload a)
+
+instance ToCBOR TxPayload where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxPayload where
+  fromCBOR = fromByronCBOR
+
+instance FromCBOR (ATxPayload ByteSpan) where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR TxPayload where
   encCBOR = encCBOR . unTxPayload

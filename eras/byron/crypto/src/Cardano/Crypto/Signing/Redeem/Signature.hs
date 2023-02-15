@@ -25,8 +25,12 @@ import Cardano.Ledger.Binary (
   DecCBOR,
   Decoded (..),
   EncCBOR,
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
+  fromByronCBOR,
   serialize',
+  toByronCBOR,
  )
 import Cardano.Prelude
 import qualified Crypto.PubKey.Ed25519 as Ed25519
@@ -39,6 +43,12 @@ type RedeemSignature :: Type -> Type
 newtype RedeemSignature a
   = RedeemSignature Ed25519.Signature
   deriving (Eq, Show, Generic, NFData, DecCBOR, EncCBOR)
+
+instance EncCBOR a => ToCBOR (RedeemSignature a) where
+  toCBOR = toByronCBOR
+
+instance DecCBOR a => FromCBOR (RedeemSignature a) where
+  fromCBOR = fromByronCBOR
 
 -- Note that there is deliberately no Ord instance. The crypto libraries
 -- encourage using key /hashes/ not keys for things like sets, map etc.

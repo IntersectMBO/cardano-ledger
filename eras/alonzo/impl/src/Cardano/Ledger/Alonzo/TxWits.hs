@@ -64,6 +64,7 @@ import Cardano.Ledger.Binary (
   Decoder,
   EncCBOR (..),
   EncCBORGroup (..),
+  ToCBOR (..),
   decodeList,
   encodeFoldableEncoder,
   encodeListLen,
@@ -149,7 +150,7 @@ instance Memoized Redeemers where
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
-  deriving newtype (Eq, EncCBOR, NoThunks, SafeToHash, Typeable, NFData)
+  deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Redeemers era)
 
@@ -220,7 +221,7 @@ instance
   NFData (AlonzoTxWitsRaw era)
 
 newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes AlonzoTxWitsRaw era)
-  deriving newtype (SafeToHash, EncCBOR)
+  deriving newtype (SafeToHash, ToCBOR)
 
 instance Memoized AlonzoTxWits where
   type RawType AlonzoTxWits = AlonzoTxWitsRaw
@@ -287,7 +288,7 @@ instance (Era era) => DecCBOR (Annotator (TxDatsRaw era)) where
 -- Since the 'TxDats' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
-  deriving newtype (SafeToHash, EncCBOR, Eq, NoThunks, NFData)
+  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
 
 instance Memoized TxDats where
   type RawType TxDats = TxDatsRaw
@@ -299,6 +300,9 @@ instance Era era => Semigroup (TxDats era) where
 
 instance Era era => Monoid (TxDats era) where
   mempty = TxDats mempty
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (TxDats era)
 
 deriving via
   (Mem TxDatsRaw era)
@@ -440,6 +444,9 @@ instance (EraScript (AlonzoEra c), Crypto c) => AlonzoEraTxWits (AlonzoEra c) wh
 -- Serialisation
 --------------------------------------------------------------------------------
 
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (AlonzoTxWits era)
+
 instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw era) where
   encCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
     encode $
@@ -468,7 +475,7 @@ instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw er
                 (encCBOR . mapMaybe unwrapPS2 . Map.elems)
                 (Map.filter (isPlutus PlutusV2) scripts)
           )
-        !> Omit nullDats (Key 4 $ E encCBOR dats)
+        !> Omit nullDats (Key 4 $ To dats)
         !> Omit nullRedeemers (Key 5 $ To rdmrs)
     where
       unwrapTS (TimelockScript x) = Just x
@@ -500,6 +507,9 @@ instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
           "Redeemer"
           (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2)
           $ (,,) <$> decCBORGroup <*> decCBOR <*> decCBOR
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (Redeemers era)
 
 deriving via
   (Mem RedeemersRaw era)

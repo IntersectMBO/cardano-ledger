@@ -23,7 +23,16 @@ import Cardano.Chain.Ssc (SscProof (..))
 import Cardano.Chain.UTxO.TxProof (TxProof, mkTxProof, recoverTxProof)
 import qualified Cardano.Chain.Update.Proof as Update
 import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build, shown)
@@ -47,6 +56,12 @@ instance B.Buildable Proof where
       (proofSsc proof)
       (proofDelegation proof)
       (proofUpdate proof)
+
+instance ToCBOR Proof where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Proof where
+  fromCBOR = fromByronCBOR
 
 -- Used for debugging purposes only
 instance ToJSON Proof

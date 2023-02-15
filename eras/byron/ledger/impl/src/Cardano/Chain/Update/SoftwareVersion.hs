@@ -19,10 +19,14 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeWord8,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
@@ -53,6 +57,12 @@ instance Show SoftwareVersion where
 -- Used for debugging purposes only
 instance ToJSON SoftwareVersion
 
+instance ToCBOR SoftwareVersion where
+  toCBOR = toByronCBOR
+
+instance FromCBOR SoftwareVersion where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR SoftwareVersion where
   encCBOR sv = encodeListLen 2 <> encCBOR (svAppName sv) <> encCBOR (svNumber sv)
 
@@ -69,6 +79,12 @@ instance DecCBOR SoftwareVersion where
 data SoftwareVersionError
   = SoftwareVersionApplicationNameError ApplicationNameError
   deriving (Data, Eq, Show)
+
+instance ToCBOR SoftwareVersionError where
+  toCBOR = toByronCBOR
+
+instance FromCBOR SoftwareVersionError where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR SoftwareVersionError where
   encCBOR (SoftwareVersionApplicationNameError applicationNameError) =

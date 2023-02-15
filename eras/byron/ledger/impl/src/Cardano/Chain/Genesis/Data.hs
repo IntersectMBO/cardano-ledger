@@ -119,6 +119,12 @@ instance B.Buildable GenesisDataError where
         ("Failed with " . stext . " when tried to read GenesisData file")
         (show err)
 
+instance ToCBOR GenesisData where
+  toCBOR = toByronCBOR
+
+instance FromCBOR GenesisData where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR GenesisData where
   encCBOR
     ( GenesisData

@@ -19,12 +19,16 @@ import Cardano.Ledger.Binary (
   Decoder,
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
+  fromByronCBOR,
   matchSize,
   szCases,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
@@ -38,6 +42,12 @@ newtype ApplicationName = ApplicationName
   { unApplicationName :: Text
   }
   deriving (Eq, Ord, Show, Generic, B.Buildable, NFData, NoThunks)
+
+instance ToCBOR ApplicationName where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ApplicationName where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR ApplicationName where
   encCBOR appName = encCBOR (unApplicationName appName)
@@ -58,6 +68,12 @@ data ApplicationNameError
 
 -- Used for debugging purposes only
 instance ToJSON ApplicationName
+
+instance ToCBOR ApplicationNameError where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ApplicationNameError where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR ApplicationNameError where
   encCBOR err = case err of

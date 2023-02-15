@@ -56,6 +56,8 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (..),
   Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeRational,
   decodeRecordNamed,
@@ -63,6 +65,8 @@ import Cardano.Ledger.Binary (
   enforceDecoderVersion,
   enforceEncodingVersion,
   shelleyProtVer,
+  toPlainDecoder,
+  toPlainEncoding,
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
@@ -304,8 +308,13 @@ instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
         <$> (forceElemsToWHNF <$> obj .: "pools")
         <*> (forceElemsToWHNF <$> obj .: "stake")
 
-instance Crypto c => EncCBOR (ShelleyGenesis c) where
-  encCBOR
+-- | Genesis are always encoded with the version of era they are defined in.
+instance Crypto c => DecCBOR (ShelleyGenesis c)
+
+instance Crypto c => EncCBOR (ShelleyGenesis c)
+
+instance Crypto c => ToCBOR (ShelleyGenesis c) where
+  toCBOR
     ShelleyGenesis
       { sgSystemStart
       , sgNetworkMagic
@@ -323,25 +332,26 @@ instance Crypto c => EncCBOR (ShelleyGenesis c) where
       , sgInitialFunds
       , sgStaking
       } =
-      encodeListLen 15
-        <> encCBOR sgSystemStart
-        <> encCBOR sgNetworkMagic
-        <> encCBOR sgNetworkId
-        <> activeSlotsCoeffEncCBOR sgActiveSlotsCoeff
-        <> encCBOR sgSecurityParam
-        <> encCBOR (unEpochSize sgEpochLength)
-        <> encCBOR sgSlotsPerKESPeriod
-        <> encCBOR sgMaxKESEvolutions
-        <> encCBOR sgSlotLength
-        <> encCBOR sgUpdateQuorum
-        <> encCBOR sgMaxLovelaceSupply
-        <> encCBOR sgProtocolParams
-        <> encCBOR sgGenDelegs
-        <> encCBOR sgInitialFunds
-        <> encCBOR sgStaking
+      toPlainEncoding shelleyProtVer $
+        encodeListLen 15
+          <> encCBOR sgSystemStart
+          <> encCBOR sgNetworkMagic
+          <> encCBOR sgNetworkId
+          <> activeSlotsCoeffEncCBOR sgActiveSlotsCoeff
+          <> encCBOR sgSecurityParam
+          <> encCBOR (unEpochSize sgEpochLength)
+          <> encCBOR sgSlotsPerKESPeriod
+          <> encCBOR sgMaxKESEvolutions
+          <> encCBOR sgSlotLength
+          <> encCBOR sgUpdateQuorum
+          <> encCBOR sgMaxLovelaceSupply
+          <> encCBOR sgProtocolParams
+          <> encCBOR sgGenDelegs
+          <> encCBOR sgInitialFunds
+          <> encCBOR sgStaking
 
-instance Crypto c => DecCBOR (ShelleyGenesis c) where
-  decCBOR = do
+instance Crypto c => FromCBOR (ShelleyGenesis c) where
+  fromCBOR = toPlainDecoder shelleyProtVer $ do
     decodeRecordNamed "ShelleyGenesis" (const 15) $ do
       sgSystemStart <- decCBOR
       sgNetworkMagic <- decCBOR

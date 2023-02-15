@@ -14,7 +14,16 @@ import Cardano.Chain.Common (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Validation.Scheduling (ScheduledDelegation (..))
 import Cardano.Chain.Slotting (SlotNumber (..))
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import NoThunks.Class (NoThunks (..))
@@ -30,6 +39,12 @@ data State = State
   , delegationSlots :: !(Map KeyHash SlotNumber)
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
+
+instance ToCBOR State where
+  toCBOR = toByronCBOR
+
+instance FromCBOR State where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR State where
   decCBOR = do

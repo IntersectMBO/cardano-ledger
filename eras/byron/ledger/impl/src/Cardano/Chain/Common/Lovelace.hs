@@ -53,11 +53,15 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
   toCborError,
  )
 import Cardano.Prelude hiding (cborError, toCborError)
@@ -90,6 +94,12 @@ instance Bounded Lovelace where
 
 -- Used for debugging purposes only
 instance ToJSON Lovelace
+
+instance ToCBOR Lovelace where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Lovelace where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Lovelace where
   encCBOR = encCBOR . unsafeGetLovelace
@@ -136,6 +146,12 @@ instance B.Buildable LovelaceError where
         ("Lovelace underflow when subtracting " . build . " from " . build)
         c'
         c
+
+instance ToCBOR LovelaceError where
+  toCBOR = toByronCBOR
+
+instance FromCBOR LovelaceError where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR LovelaceError where
   encCBOR = \case
