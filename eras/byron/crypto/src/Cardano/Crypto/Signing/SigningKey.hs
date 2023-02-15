@@ -7,14 +7,14 @@
 module Cardano.Crypto.Signing.SigningKey (
   SigningKey (..),
   toVerification,
-  toCBORXPrv,
-  fromCBORXPrv,
+  encCBORXPrv,
+  decCBORXPrv,
 )
 where
 
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..), shortVerificationKeyHexF)
 import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Ledger.Binary (Decoder, Encoding, FromCBOR (..), ToCBOR (..), toCborError)
+import Cardano.Ledger.Binary (DecCBOR (..), Decoder, EncCBOR (..), Encoding, toCborError)
 import Cardano.Prelude hiding (toCborError)
 import Formatting (bprint)
 import Formatting.Buildable
@@ -46,14 +46,14 @@ instance Show SigningKey where
 instance Buildable SigningKey where
   build = bprint ("sec:" . shortVerificationKeyHexF) . toVerification
 
-toCBORXPrv :: CC.XPrv -> Encoding
-toCBORXPrv a = toCBOR $ CC.unXPrv a
+encCBORXPrv :: CC.XPrv -> Encoding
+encCBORXPrv a = encCBOR $ CC.unXPrv a
 
-fromCBORXPrv :: Decoder s CC.XPrv
-fromCBORXPrv = toCborError . CC.xprv =<< fromCBOR @ByteString
+decCBORXPrv :: Decoder s CC.XPrv
+decCBORXPrv = toCborError . CC.xprv =<< decCBOR @ByteString
 
-instance ToCBOR SigningKey where
-  toCBOR (SigningKey a) = toCBORXPrv a
+instance EncCBOR SigningKey where
+  encCBOR (SigningKey a) = encCBORXPrv a
 
-instance FromCBOR SigningKey where
-  fromCBOR = fmap SigningKey fromCBORXPrv
+instance DecCBOR SigningKey where
+  decCBOR = fmap SigningKey decCBORXPrv

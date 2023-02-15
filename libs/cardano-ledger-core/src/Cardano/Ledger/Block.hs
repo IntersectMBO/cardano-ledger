@@ -25,9 +25,9 @@ where
 
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (fromCBOR),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  DecCBOR (decCBOR),
+  EncCBOR (..),
+  EncCBORGroup (..),
   annotatorSlice,
   decodeRecordNamed,
   encodeListLen,
@@ -68,8 +68,8 @@ deriving anyclass instance
 pattern Block ::
   forall era h.
   ( Era era
-  , ToCBORGroup (TxSeq era)
-  , ToCBOR h
+  , EncCBORGroup (TxSeq era)
+  , EncCBOR h
   ) =>
   h ->
   TxSeq era ->
@@ -80,7 +80,7 @@ pattern Block h txns <-
     Block h txns =
       let bytes =
             serializeEncoding (eraProtVerLow @era) $
-              encodeListLen (1 + listLen txns) <> toCBOR h <> toCBORGroup txns
+              encodeListLen (1 + listLen txns) <> encCBOR h <> encCBORGroup txns
        in Block' h txns bytes
 
 {-# COMPLETE Block #-}
@@ -113,21 +113,21 @@ pattern UnsafeUnserialisedBlock h txns <-
 
 {-# COMPLETE UnsafeUnserialisedBlock #-}
 
-instance (EraTx era, Typeable h) => ToCBOR (Block h era) where
-  toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
+instance (EraTx era, Typeable h) => EncCBOR (Block h era) where
+  encCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
 
 instance
   forall h era.
   ( EraSegWits era
-  , FromCBOR (Annotator h)
+  , DecCBOR (Annotator h)
   , Typeable h
   ) =>
-  FromCBOR (Annotator (Block h era))
+  DecCBOR (Annotator (Block h era))
   where
-  fromCBOR = annotatorSlice $
+  decCBOR = annotatorSlice $
     decodeRecordNamed "Block" (const blockSize) $ do
-      header <- fromCBOR
-      txns <- fromCBOR
+      header <- decCBOR
+      txns <- decCBOR
       pure $ Block' <$> header <*> txns
     where
       blockSize =

@@ -29,14 +29,14 @@ import Cardano.Chain.Block (
   HeaderHash,
   Proof (..),
   ToSign (..),
-  fromCBORABoundaryHeader,
-  fromCBORAHeader,
+  decCBORABoundaryHeader,
+  decCBORAHeader,
+  encCBORABoundaryHeader,
+  encCBORHeader,
   hashHeader,
   mkABoundaryHeader,
   mkBlockExplicit,
   mkHeaderExplicit,
-  toCBORABoundaryHeader,
-  toCBORHeader,
   pattern Body,
  )
 import Cardano.Chain.Byron.API (reAnnotateUsing)
@@ -241,11 +241,11 @@ genABlockOrBoundaryHdr pm es =
     reAnnotateHdr :: AHeader () -> AHeader ByteString
     reAnnotateHdr =
       reAnnotateUsing
-        (toCBORHeader es)
-        (fromCBORAHeader es)
+        (encCBORHeader es)
+        (decCBORAHeader es)
 
     reAnnotateBoundaryHdr :: ABoundaryHeader () -> ABoundaryHeader ByteString
     reAnnotateBoundaryHdr =
       reAnnotateUsing
-        (toCBORABoundaryHeader pm)
-        fromCBORABoundaryHeader
+        (encCBORABoundaryHeader pm)
+        decCBORABoundaryHeader

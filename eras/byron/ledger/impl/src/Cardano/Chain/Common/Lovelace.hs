@@ -50,9 +50,9 @@ module Cardano.Chain.Common.Lovelace (
 where
 
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
@@ -91,13 +91,13 @@ instance Bounded Lovelace where
 -- Used for debugging purposes only
 instance ToJSON Lovelace
 
-instance ToCBOR Lovelace where
-  toCBOR = toCBOR . unsafeGetLovelace
+instance EncCBOR Lovelace where
+  encCBOR = encCBOR . unsafeGetLovelace
   encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
 
-instance FromCBOR Lovelace where
-  fromCBOR = do
-    l <- fromCBOR
+instance DecCBOR Lovelace where
+  decCBOR = do
+    l <- decCBOR
     toCborError
       . first (DecoderErrorCustom "Lovelace" . sformat build)
       $ mkLovelace l
@@ -137,27 +137,27 @@ instance B.Buildable LovelaceError where
         c'
         c
 
-instance ToCBOR LovelaceError where
-  toCBOR = \case
+instance EncCBOR LovelaceError where
+  encCBOR = \case
     LovelaceOverflow c ->
-      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR c
+      encodeListLen 2 <> encCBOR @Word8 0 <> encCBOR c
     LovelaceTooLarge c ->
-      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR c
+      encodeListLen 2 <> encCBOR @Word8 1 <> encCBOR c
     LovelaceTooSmall c ->
-      encodeListLen 2 <> toCBOR @Word8 2 <> toCBOR c
+      encodeListLen 2 <> encCBOR @Word8 2 <> encCBOR c
     LovelaceUnderflow c c' ->
-      encodeListLen 3 <> toCBOR @Word8 3 <> toCBOR c <> toCBOR c'
+      encodeListLen 3 <> encCBOR @Word8 3 <> encCBOR c <> encCBOR c'
 
-instance FromCBOR LovelaceError where
-  fromCBOR = do
+instance DecCBOR LovelaceError where
+  decCBOR = do
     len <- decodeListLen
     let checkSize size = matchSize "LovelaceError" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 2 >> LovelaceOverflow <$> fromCBOR
-      1 -> checkSize 2 >> LovelaceTooLarge <$> fromCBOR
-      2 -> checkSize 2 >> LovelaceTooSmall <$> fromCBOR
-      3 -> checkSize 3 >> LovelaceUnderflow <$> fromCBOR <*> fromCBOR
+      0 -> checkSize 2 >> LovelaceOverflow <$> decCBOR
+      1 -> checkSize 2 >> LovelaceTooLarge <$> decCBOR
+      2 -> checkSize 2 >> LovelaceTooSmall <$> decCBOR
+      3 -> checkSize 3 >> LovelaceUnderflow <$> decCBOR <*> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
 
 -- | Maximal possible value of 'Lovelace'

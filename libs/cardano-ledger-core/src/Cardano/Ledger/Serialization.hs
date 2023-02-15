@@ -10,8 +10,8 @@
 
 module Cardano.Ledger.Serialization
   {-# DEPRECATED "Use `Cardano.Ledger.Binary` from 'cardano-ledger-binary' package instead" #-} (
-  ToCBORGroup (..),
-  FromCBORGroup (..),
+  EncCBORGroup (..),
+  DecCBORGroup (..),
   CBORGroup (..),
   decodeList,
   decodeSeq,
@@ -31,27 +31,27 @@ module Cardano.Ledger.Serialization
   encodeNullMaybe,
   encodeMap,
   groupRecord,
-  ratioToCBOR,
-  ratioFromCBOR,
-  mapToCBOR,
-  mapFromCBOR,
+  ratioEncCBOR,
+  ratioDecCBOR,
+  mapEncCBOR,
+  mapDecCBOR,
   translateViaCBORAnnotator,
   -- IPv4
   ipv4ToBytes,
   ipv4FromBytes,
-  ipv4ToCBOR,
-  ipv4FromCBOR,
+  ipv4EncCBOR,
+  ipv4DecCBOR,
   -- IPv6
   ipv6ToBytes,
   ipv6FromBytes,
-  ipv6ToCBOR,
-  ipv6FromCBOR,
+  ipv6EncCBOR,
+  ipv6DecCBOR,
   -- Raw
   listLenInt,
   runByteBuilder,
   -- UTC Time
-  utcTimeToCBOR,
-  utcTimeFromCBOR,
+  utcTimeEncCBOR,
+  utcTimeDecCBOR,
   -- This abstraction can/should be moved into cardano-binary
   Sized (..),
   mkSized,
@@ -62,14 +62,14 @@ where
 
 import Cardano.Ledger.Binary (
   CBORGroup (..),
+  DecCBOR (..),
+  DecCBORGroup (..),
   Decoder,
   DecoderError (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   Encoding,
-  FromCBOR (..),
-  FromCBORGroup (..),
   Sized (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
   assertTag,
   cborError,
   decodeIPv4,
@@ -124,17 +124,17 @@ import Data.Ratio (Ratio, (%))
 import Data.Time (UTCTime (..))
 import Network.Socket (HostAddress6)
 
-mapToCBOR :: (ToCBOR a, ToCBOR b) => Map a b -> Encoding
-mapToCBOR = encodeMap toCBOR toCBOR
+mapEncCBOR :: (EncCBOR a, EncCBOR b) => Map a b -> Encoding
+mapEncCBOR = encodeMap encCBOR encCBOR
 
-mapFromCBOR :: (Ord a, FromCBOR a, FromCBOR b) => Decoder s (Map a b)
-mapFromCBOR = decodeMap fromCBOR fromCBOR
+mapDecCBOR :: (Ord a, DecCBOR a, DecCBOR b) => Decoder s (Map a b)
+mapDecCBOR = decodeMap decCBOR decCBOR
 
-ratioToCBOR :: ToCBOR a => Ratio a -> Encoding
-ratioToCBOR = encodeRatio toCBOR
+ratioEncCBOR :: EncCBOR a => Ratio a -> Encoding
+ratioEncCBOR = encodeRatio encCBOR
 
-ratioFromCBOR :: (Integral a, FromCBOR a) => Decoder s (Ratio a)
-ratioFromCBOR = decodeFraction fromCBOR
+ratioDecCBOR :: (Integral a, DecCBOR a) => Decoder s (Ratio a)
+ratioDecCBOR = decodeFraction decCBOR
 
 decodeFraction :: Integral a => Decoder s a -> Decoder s (Ratio a)
 decodeFraction decoder = do
@@ -152,11 +152,11 @@ ipv4FromBytes b =
     Left (_, _, err) -> Left err
     Right (_, _, ha) -> Right $ fromHostAddress ha
 
-ipv4ToCBOR :: IPv4 -> Encoding
-ipv4ToCBOR = encodeIPv4
+ipv4EncCBOR :: IPv4 -> Encoding
+ipv4EncCBOR = encodeIPv4
 
-ipv4FromCBOR :: Decoder s IPv4
-ipv4FromCBOR = enforceDecoderVersion (natVersion @2) decodeIPv4
+ipv4DecCBOR :: Decoder s IPv4
+ipv4DecCBOR = enforceDecoderVersion (natVersion @2) decodeIPv4
 
 getHostAddress6 :: Get HostAddress6
 getHostAddress6 = do
@@ -172,17 +172,17 @@ ipv6FromBytes b =
     Left (_, _, err) -> Left err
     Right (_, _, ha) -> Right $ fromHostAddress6 ha
 
-ipv6ToCBOR :: IPv6 -> Encoding
-ipv6ToCBOR = encodeIPv6
+ipv6EncCBOR :: IPv6 -> Encoding
+ipv6EncCBOR = encodeIPv6
 
-ipv6FromCBOR :: Decoder s IPv6
-ipv6FromCBOR = enforceDecoderVersion (natVersion @2) decodeIPv6
+ipv6DecCBOR :: Decoder s IPv6
+ipv6DecCBOR = enforceDecoderVersion (natVersion @2) decodeIPv6
 
-utcTimeToCBOR :: UTCTime -> Encoding
-utcTimeToCBOR = encodeUTCTime
+utcTimeEncCBOR :: UTCTime -> Encoding
+utcTimeEncCBOR = encodeUTCTime
 
-utcTimeFromCBOR :: Decoder s UTCTime
-utcTimeFromCBOR = decodeUTCTime
+utcTimeDecCBOR :: Decoder s UTCTime
+utcTimeDecCBOR = decodeUTCTime
 
-encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
-encodeFoldable = encodeFoldableEncoder toCBOR
+encodeFoldable :: (EncCBOR a, Foldable f) => f a -> Encoding
+encodeFoldable = encodeFoldableEncoder encCBOR

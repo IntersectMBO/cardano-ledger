@@ -31,8 +31,8 @@ import Cardano.Ledger.BaseTypes (
   invalidKey,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordSum,
   decodeWord,
   encodeListLen,
@@ -72,12 +72,12 @@ data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
 
 instance NoThunks VotingPeriod
 
-instance ToCBOR VotingPeriod where
-  toCBOR VoteForThisEpoch = toCBOR (0 :: Word8)
-  toCBOR VoteForNextEpoch = toCBOR (1 :: Word8)
+instance EncCBOR VotingPeriod where
+  encCBOR VoteForThisEpoch = encCBOR (0 :: Word8)
+  encCBOR VoteForNextEpoch = encCBOR (1 :: Word8)
 
-instance FromCBOR VotingPeriod where
-  fromCBOR =
+instance DecCBOR VotingPeriod where
+  decCBOR =
     decodeWord >>= \case
       0 -> pure VoteForThisEpoch
       1 -> pure VoteForNextEpoch
@@ -124,31 +124,31 @@ instance EraPParams era => STS (ShelleyPPUP era) where
 
   transitionRules = [ppupTransitionNonEmpty]
 
-instance Era era => ToCBOR (ShelleyPpupPredFailure era) where
-  toCBOR = \case
+instance Era era => EncCBOR (ShelleyPpupPredFailure era) where
+  encCBOR = \case
     NonGenesisUpdatePPUP a b ->
       encodeListLen 3
-        <> toCBOR (0 :: Word8)
-        <> toCBOR a
-        <> toCBOR b
+        <> encCBOR (0 :: Word8)
+        <> encCBOR a
+        <> encCBOR b
     PPUpdateWrongEpoch ce e vp ->
-      encodeListLen 4 <> toCBOR (1 :: Word8) <> toCBOR ce <> toCBOR e <> toCBOR vp
-    PVCannotFollowPPUP p -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR p
+      encodeListLen 4 <> encCBOR (1 :: Word8) <> encCBOR ce <> encCBOR e <> encCBOR vp
+    PVCannotFollowPPUP p -> encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR p
 
-instance Era era => FromCBOR (ShelleyPpupPredFailure era) where
-  fromCBOR = decodeRecordSum "PredicateFailure (PPUP era)" $
+instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
+  decCBOR = decodeRecordSum "PredicateFailure (PPUP era)" $
     \case
       0 -> do
-        a <- fromCBOR
-        b <- fromCBOR
+        a <- decCBOR
+        b <- decCBOR
         pure (3, NonGenesisUpdatePPUP a b)
       1 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        c <- fromCBOR
+        a <- decCBOR
+        b <- decCBOR
+        c <- decCBOR
         pure (4, PPUpdateWrongEpoch a b c)
       2 -> do
-        p <- fromCBOR
+        p <- decCBOR
         pure (2, PVCannotFollowPPUP p)
       k -> invalidKey k
 

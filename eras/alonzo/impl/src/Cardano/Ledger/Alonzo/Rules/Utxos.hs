@@ -62,7 +62,7 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
   systemStart,
  )
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), serialize')
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize')
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
@@ -120,7 +120,7 @@ instance
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
-  , ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
+  , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
@@ -164,7 +164,7 @@ utxosTransition ::
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
-  , ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
+  , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
@@ -310,17 +310,17 @@ data FailureDescription
   = PlutusFailure Text BS.ByteString
   deriving (Show, Eq, Generic, NoThunks)
 
-instance ToCBOR FailureDescription where
+instance EncCBOR FailureDescription where
   -- This strange encoding results from the fact that 'FailureDescription'
   -- used to have another constructor, which used key 0.
   -- We must maintain the original serialization in order to not disrupt
   -- the node-to-client protocol of the cardano node.
-  toCBOR (PlutusFailure s b) = encode $ Sum PlutusFailure 1 !> To s !> To b
+  encCBOR (PlutusFailure s b) = encode $ Sum PlutusFailure 1 !> To s !> To b
 
-instance FromCBOR FailureDescription where
-  fromCBOR = decode (Summands "FailureDescription" dec)
+instance DecCBOR FailureDescription where
+  decCBOR = decode (Summands "FailureDescription" dec)
     where
-      -- Note the lack of key 0. See the ToCBOR instance above for an explanation.
+      -- Note the lack of key 0. See the EncCBOR instance above for an explanation.
       dec 1 = SumD PlutusFailure <! From <! From
       dec n = Invalid n
 
@@ -339,12 +339,12 @@ data TagMismatchDescription
   | FailedUnexpectedly (NonEmpty FailureDescription)
   deriving (Show, Eq, Generic, NoThunks)
 
-instance ToCBOR TagMismatchDescription where
-  toCBOR PassedUnexpectedly = encode (Sum PassedUnexpectedly 0)
-  toCBOR (FailedUnexpectedly fs) = encode (Sum FailedUnexpectedly 1 !> To fs)
+instance EncCBOR TagMismatchDescription where
+  encCBOR PassedUnexpectedly = encode (Sum PassedUnexpectedly 0)
+  encCBOR (FailedUnexpectedly fs) = encode (Sum FailedUnexpectedly 1 !> To fs)
 
-instance FromCBOR TagMismatchDescription where
-  fromCBOR = decode (Summands "TagMismatchDescription" dec)
+instance DecCBOR TagMismatchDescription where
+  decCBOR = decode (Summands "TagMismatchDescription" dec)
     where
       dec 0 = SumD PassedUnexpectedly
       dec 1 = SumD FailedUnexpectedly <! From
@@ -371,22 +371,22 @@ instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) wher
 instance
   ( Era era
   , Show (TxOut era)
-  , ToCBOR (PPUPPredFailure era)
+  , EncCBOR (PPUPPredFailure era)
   ) =>
-  ToCBOR (AlonzoUtxosPredFailure era)
+  EncCBOR (AlonzoUtxosPredFailure era)
   where
-  toCBOR (ValidationTagMismatch v descr) = encode (Sum ValidationTagMismatch 0 !> To v !> To descr)
-  toCBOR (CollectErrors cs) =
+  encCBOR (ValidationTagMismatch v descr) = encode (Sum ValidationTagMismatch 0 !> To v !> To descr)
+  encCBOR (CollectErrors cs) =
     encode (Sum (CollectErrors @era) 1 !> To cs)
-  toCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 2 !> To pf)
+  encCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 2 !> To pf)
 
 instance
   ( Era era
-  , FromCBOR (PPUPPredFailure era)
+  , DecCBOR (PPUPPredFailure era)
   ) =>
-  FromCBOR (AlonzoUtxosPredFailure era)
+  DecCBOR (AlonzoUtxosPredFailure era)
   where
-  fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
+  decCBOR = decode (Summands "UtxosPredicateFailure" dec)
     where
       dec 0 = SumD ValidationTagMismatch <! From <! From
       dec 1 = SumD (CollectErrors @era) <! From

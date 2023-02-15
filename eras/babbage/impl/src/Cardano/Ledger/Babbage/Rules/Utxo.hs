@@ -55,7 +55,7 @@ import Cardano.Ledger.BaseTypes (
   networkId,
   systemStart,
  )
-import Cardano.Ledger.Binary (FromCBOR (..), Sized (..), ToCBOR (..), serialize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..), serialize)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Rules.ValidationMode (
@@ -433,16 +433,16 @@ instance
 
 instance
   ( Era era
-  , ToCBOR (TxOut era)
-  , ToCBOR (Value era)
-  , ToCBOR (PredicateFailure (EraRule "UTXOS" era))
-  , ToCBOR (PredicateFailure (EraRule "UTXO" era))
-  , ToCBOR (Script era)
+  , EncCBOR (TxOut era)
+  , EncCBOR (Value era)
+  , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
+  , EncCBOR (PredicateFailure (EraRule "UTXO" era))
+  , EncCBOR (Script era)
   , Typeable (TxAuxData era)
   ) =>
-  ToCBOR (BabbageUtxoPredFailure era)
+  EncCBOR (BabbageUtxoPredFailure era)
   where
-  toCBOR pf = encode (work pf)
+  encCBOR pf = encode (work pf)
     where
       work (AlonzoInBabbageUtxoPredFailure x) = Sum AlonzoInBabbageUtxoPredFailure 1 !> To x
       work (IncorrectTotalCollateralField c1 c2) = Sum IncorrectTotalCollateralField 2 !> To c1 !> To c2
@@ -450,16 +450,16 @@ instance
 
 instance
   ( Era era
-  , FromCBOR (TxOut era)
-  , FromCBOR (Value era)
-  , FromCBOR (PredicateFailure (EraRule "UTXOS" era))
-  , FromCBOR (PredicateFailure (EraRule "UTXO" era))
+  , DecCBOR (TxOut era)
+  , DecCBOR (Value era)
+  , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
+  , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
-  FromCBOR (BabbageUtxoPredFailure era)
+  DecCBOR (BabbageUtxoPredFailure era)
   where
-  fromCBOR = decode (Summands "BabbageUtxoPred" work)
+  decCBOR = decode (Summands "BabbageUtxoPred" work)
     where
       work 1 = SumD AlonzoInBabbageUtxoPredFailure <! From
       work 2 = SumD IncorrectTotalCollateralField <! From <! From

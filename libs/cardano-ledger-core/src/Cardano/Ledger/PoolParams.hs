@@ -30,11 +30,11 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   CBORGroup (..),
   Case (..),
-  FromCBOR (fromCBOR),
-  FromCBORGroup (..),
+  DecCBOR (decCBOR),
+  DecCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   Size,
-  ToCBOR (..),
-  ToCBORGroup (..),
   decodeNullMaybe,
   decodeRecordNamed,
   decodeRecordSum,
@@ -163,37 +163,37 @@ instance NoThunks StakePoolRelay
 
 instance NFData StakePoolRelay
 
-instance ToCBOR StakePoolRelay where
-  toCBOR (SingleHostAddr p ipv4 ipv6) =
+instance EncCBOR StakePoolRelay where
+  encCBOR (SingleHostAddr p ipv4 ipv6) =
     encodeListLen 4
-      <> toCBOR (0 :: Word8)
-      <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
-      <> encodeNullMaybe toCBOR (strictMaybeToMaybe ipv4)
-      <> encodeNullMaybe toCBOR (strictMaybeToMaybe ipv6)
-  toCBOR (SingleHostName p n) =
+      <> encCBOR (0 :: Word8)
+      <> encodeNullMaybe encCBOR (strictMaybeToMaybe p)
+      <> encodeNullMaybe encCBOR (strictMaybeToMaybe ipv4)
+      <> encodeNullMaybe encCBOR (strictMaybeToMaybe ipv6)
+  encCBOR (SingleHostName p n) =
     encodeListLen 3
-      <> toCBOR (1 :: Word8)
-      <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
-      <> toCBOR n
-  toCBOR (MultiHostName n) =
+      <> encCBOR (1 :: Word8)
+      <> encodeNullMaybe encCBOR (strictMaybeToMaybe p)
+      <> encCBOR n
+  encCBOR (MultiHostName n) =
     encodeListLen 2
-      <> toCBOR (2 :: Word8)
-      <> toCBOR n
+      <> encCBOR (2 :: Word8)
+      <> encCBOR n
 
-instance FromCBOR StakePoolRelay where
-  fromCBOR = decodeRecordSum "StakePoolRelay" $
+instance DecCBOR StakePoolRelay where
+  decCBOR = decodeRecordSum "StakePoolRelay" $
     \case
       0 ->
         (\x y z -> (4, SingleHostAddr x y z))
-          <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
-          <*> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
-          <*> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+          <$> (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
+          <*> (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
+          <*> (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
       1 ->
         (\x y -> (3, SingleHostName x y))
-          <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
-          <*> fromCBOR
+          <$> (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
+          <*> decCBOR
       2 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, MultiHostName x)
       k -> invalidKey k
 
@@ -210,8 +210,8 @@ data PoolParams c = PoolParams
   , ppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (ToCBOR) via CBORGroup (PoolParams c)
-  deriving (FromCBOR) via CBORGroup (PoolParams c)
+  deriving (EncCBOR) via CBORGroup (PoolParams c)
+  deriving (DecCBOR) via CBORGroup (PoolParams c)
 
 instance NoThunks (PoolParams c)
 
@@ -245,44 +245,44 @@ instance CC.Crypto c => FromJSON (PoolParams c) where
         <*> obj .: "relays"
         <*> obj .: "metadata"
 
-instance ToCBOR PoolMetadata where
-  toCBOR (PoolMetadata u h) =
+instance EncCBOR PoolMetadata where
+  encCBOR (PoolMetadata u h) =
     encodeListLen 2
-      <> toCBOR u
-      <> toCBOR h
+      <> encCBOR u
+      <> encCBOR h
 
-instance FromCBOR PoolMetadata where
-  fromCBOR = do
-    decodeRecordNamed "PoolMetadata" (const 2) (PoolMetadata <$> fromCBOR <*> fromCBOR)
+instance DecCBOR PoolMetadata where
+  decCBOR = do
+    decodeRecordNamed "PoolMetadata" (const 2) (PoolMetadata <$> decCBOR <*> decCBOR)
 
 -- | The size of the 'ppOwners' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
 data SizeOfPoolOwners = SizeOfPoolOwners
 
-instance ToCBOR SizeOfPoolOwners where
-  toCBOR = error "The `SizeOfPoolOwners` type cannot be encoded!"
+instance EncCBOR SizeOfPoolOwners where
+  encCBOR = error "The `SizeOfPoolOwners` type cannot be encoded!"
 
 -- | The size of the 'ppRelays' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
 data SizeOfPoolRelays = SizeOfPoolRelays
 
-instance ToCBOR SizeOfPoolRelays where
-  toCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
+instance EncCBOR SizeOfPoolRelays where
+  encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
 instance
   CC.Crypto c =>
-  ToCBORGroup (PoolParams c)
+  EncCBORGroup (PoolParams c)
   where
-  toCBORGroup poolParams =
-    toCBOR (ppId poolParams)
-      <> toCBOR (ppVrf poolParams)
-      <> toCBOR (ppPledge poolParams)
-      <> toCBOR (ppCost poolParams)
-      <> toCBOR (ppMargin poolParams)
-      <> toCBOR (ppRewardAcnt poolParams)
-      <> toCBOR (ppOwners poolParams)
-      <> toCBOR (ppRelays poolParams)
-      <> encodeNullMaybe toCBOR (strictMaybeToMaybe (ppMetadata poolParams))
+  encCBORGroup poolParams =
+    encCBOR (ppId poolParams)
+      <> encCBOR (ppVrf poolParams)
+      <> encCBOR (ppPledge poolParams)
+      <> encCBOR (ppCost poolParams)
+      <> encCBOR (ppMargin poolParams)
+      <> encCBOR (ppRewardAcnt poolParams)
+      <> encCBOR (ppOwners poolParams)
+      <> encCBOR (ppRelays poolParams)
+      <> encodeNullMaybe encCBOR (strictMaybeToMaybe (ppMetadata poolParams))
 
   encodedGroupSizeExpr size' proxy =
     encodedSizeExpr size' (ppId <$> proxy)
@@ -311,18 +311,18 @@ instance
 
 instance
   CC.Crypto c =>
-  FromCBORGroup (PoolParams c)
+  DecCBORGroup (PoolParams c)
   where
-  fromCBORGroup = do
-    hk <- fromCBOR
-    vrf <- fromCBOR
-    pledge <- fromCBOR
-    cost <- fromCBOR
-    margin <- fromCBOR
-    ra <- fromCBOR
-    owners <- fromCBOR
-    relays <- fromCBOR
-    md <- decodeNullMaybe fromCBOR
+  decCBORGroup = do
+    hk <- decCBOR
+    vrf <- decCBOR
+    pledge <- decCBOR
+    cost <- decCBOR
+    margin <- decCBOR
+    ra <- decCBOR
+    owners <- decCBOR
+    relays <- decCBOR
+    md <- decodeNullMaybe decCBOR
     pure $
       PoolParams
         { ppId = hk

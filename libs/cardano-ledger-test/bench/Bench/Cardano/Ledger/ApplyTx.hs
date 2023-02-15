@@ -19,7 +19,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
+  DecCBOR (decCBOR),
   decodeFullAnnotator,
   fromNotSharedCBOR,
   serialize,
@@ -128,7 +128,7 @@ deserialiseTxEra ::
   Benchmark
 deserialiseTxEra px =
   benchWithGenState px (pure . serialize v . ateTx) $
-    nf (either (error . show) (id @(Tx era)) . decodeFullAnnotator v "tx" fromCBOR)
+    nf (either (error . show) (id @(Tx era)) . decodeFullAnnotator v "tx" decCBOR)
   where
     v = eraProtVerHigh @era
 
@@ -156,17 +156,17 @@ applyTxBenchmarks =
         ]
     ]
 
-instance FromCBOR (UTxOState ShelleyBench) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (UTxOState ShelleyBench) where
+  decCBOR = fromNotSharedCBOR
 
-instance FromCBOR (UTxOState AllegraBench) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (UTxOState AllegraBench) where
+  decCBOR = fromNotSharedCBOR
 
-instance FromCBOR (UTxOState MaryBench) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (UTxOState MaryBench) where
+  decCBOR = fromNotSharedCBOR
 
-instance FromCBOR (UTxOState AlonzoBench) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (UTxOState AlonzoBench) where
+  decCBOR = fromNotSharedCBOR
 
-instance FromCBOR (DPState C_Crypto) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (DPState C_Crypto) where
+  decCBOR = fromNotSharedCBOR

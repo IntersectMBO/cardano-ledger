@@ -37,11 +37,11 @@ module Cardano.Chain.Common.CBOR (
 where
 
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
   Size,
-  ToCBOR (..),
   byronProtVer,
   cborError,
   decodeFull',
@@ -64,7 +64,7 @@ import Formatting (Format, sformat, shown)
 --
 -- This function is used to handle the case of a known type, but compatible
 -- with the encoding used by 'encodeUnknownCborDataItem'.
-encodeKnownCborDataItem :: ToCBOR a => a -> Encoding
+encodeKnownCborDataItem :: EncCBOR a => a -> Encoding
 encodeKnownCborDataItem = encodeNestedCbor
 
 -- | This is an alias for 'encodeNestedCborBytes', so all its details apply.
@@ -84,7 +84,7 @@ unknownCborDataItemSizeExpr = nestedCborBytesSizeExpr
 --
 -- This function is used to handle the case of a known type, but compatible
 -- with the encoding used by 'decodeUnknownCborDataItem'.
-decodeKnownCborDataItem :: FromCBOR a => Decoder s a
+decodeKnownCborDataItem :: DecCBOR a => Decoder s a
 decodeKnownCborDataItem = decodeNestedCbor
 
 -- | This is an alias for 'decodeNestedCborBytes', so all its details apply.
@@ -100,16 +100,16 @@ decodeUnknownCborDataItem = decodeNestedCborBytes
 
 -- | Encodes a value of type @a@, protecting it from accidental corruption by
 -- protecting it with a CRC.
-encodeCrcProtected :: ToCBOR a => a -> Encoding
+encodeCrcProtected :: EncCBOR a => a -> Encoding
 encodeCrcProtected x =
-  encodeListLen 2 <> encodeUnknownCborDataItem body <> toCBOR (crc32 body)
+  encodeListLen 2 <> encodeUnknownCborDataItem body <> encCBOR (crc32 body)
   where
     body = serialize byronProtVer x
 
 encodedCrcProtectedSizeExpr ::
   forall a.
-  ToCBOR a =>
-  (forall t. ToCBOR t => Proxy t -> Size) ->
+  EncCBOR a =>
+  (forall t. EncCBOR t => Proxy t -> Size) ->
   Proxy a ->
   Size
 encodedCrcProtectedSizeExpr size pxy =
@@ -119,11 +119,11 @@ encodedCrcProtectedSizeExpr size pxy =
 
 -- | Decodes a CBOR blob into a value of type @a@, checking the serialised CRC
 --   corresponds to the computed one
-decodeCrcProtected :: forall s a. FromCBOR a => Decoder s a
+decodeCrcProtected :: forall s a. DecCBOR a => Decoder s a
 decodeCrcProtected = do
   enforceSize ("decodeCrcProtected: " <> show (typeOf (Proxy :: Proxy a))) 2
   body <- decodeUnknownCborDataItem
-  expectedCrc <- fromCBOR
+  expectedCrc <- decCBOR
   let actualCrc :: Word32
       actualCrc = crc32 body
   let crcErrorFmt :: Format r (Word32 -> Word32 -> r)

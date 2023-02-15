@@ -24,8 +24,8 @@ genDuplicateAssocListEncoding = do
   xs <- genDuplicateAssocList
   let flatXs = concat [[a, b] | (a, b) <- xs]
   oneof
-    [ pure $ encodeMapLen (fromIntegral $ Prelude.length xs) <> foldMap toCBOR flatXs
-    , pure $ encodeMapLenIndef <> foldMap toCBOR flatXs <> encodeBreak
+    [ pure $ encodeMapLen (fromIntegral $ Prelude.length xs) <> foldMap encCBOR flatXs
+    , pure $ encodeMapLenIndef <> foldMap encCBOR flatXs <> encodeBreak
     ]
 
 -- | Starting in version 9, do not accept duplicates in CBOR maps
@@ -36,7 +36,7 @@ prop_shouldFailMapWithDupKeys =
         (property . isLeft) (decode (natVersion @9) encodedMap :: Either DecoderError (Map Int Int))
     )
 
-decode :: FromCBOR a => Version -> Encoding -> Either DecoderError a
+decode :: DecCBOR a => Version -> Encoding -> Either DecoderError a
 decode version enc =
   let encoded = serializeEncoding version enc
    in decodeFull version encoded

@@ -13,8 +13,8 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR (
 where
 
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   fromNotSharedCBOR,
  )
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -58,11 +58,11 @@ testCoreTypes =
     , testProperty "Protocol State" $
         roundTripExpectation @(STS.PrtclState StandardCrypto) cborTrip
     , testProperty "SnapShots" $
-        roundTripExpectation @(SnapShots StandardCrypto) (mkTrip toCBOR fromNotSharedCBOR)
+        roundTripExpectation @(SnapShots StandardCrypto) (mkTrip encCBOR fromNotSharedCBOR)
     , testProperty "coin CompactCoin cbor" $
-        roundTripExpectation @Coin (mkTrip (toCBOR . fromJust . toCompact) fromCBOR)
+        roundTripExpectation @Coin (mkTrip (encCBOR . fromJust . toCompact) decCBOR)
     , testProperty "coin cbor CompactCoin" $
-        roundTripExpectation @Coin (mkTrip toCBOR (fromCompact <$> fromCBOR))
+        roundTripExpectation @Coin (mkTrip encCBOR (fromCompact <$> decCBOR))
     , testProperty "RewardUpdate" $
         roundTripExpectation @(RewardUpdate StandardCrypto) cborTrip
     , testProperty "RewardSnapShot" $
@@ -96,7 +96,7 @@ tests =
       , testProperty "LEDGER Predicate Failures" $
           roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Shelley)]) cborTrip
       , testProperty "Ledger State" $
-          roundTripExpectation @(LedgerState Shelley) (mkTrip toCBOR fromNotSharedCBOR)
+          roundTripExpectation @(LedgerState Shelley) (mkTrip encCBOR fromNotSharedCBOR)
       , testProperty "Epoch State" $
           roundTripExpectation @(EpochState Shelley) cborTrip
       , testProperty "NewEpoch State" $

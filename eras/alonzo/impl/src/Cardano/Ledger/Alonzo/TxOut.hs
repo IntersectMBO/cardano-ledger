@@ -54,11 +54,11 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (decCBOR),
   DecoderError (DecoderErrorCustom),
-  FromCBOR (fromCBOR),
+  EncCBOR (encCBOR),
   FromSharedCBOR (Share, fromSharedCBOR),
   Interns,
-  ToCBOR (toCBOR),
   cborError,
   decodeBreakOr,
   decodeListLenOrIndef,
@@ -331,27 +331,27 @@ instance Crypto c => EraTxOut (AlonzoEra c) where
 
 instance
   (Era era, Val (Value era)) =>
-  ToCBOR (AlonzoTxOut era)
+  EncCBOR (AlonzoTxOut era)
   where
-  toCBOR (TxOutCompact addr cv) =
+  encCBOR (TxOutCompact addr cv) =
     encodeListLen 2
-      <> toCBOR addr
-      <> toCBOR cv
-  toCBOR (TxOutCompactDH addr cv dh) =
+      <> encCBOR addr
+      <> encCBOR cv
+  encCBOR (TxOutCompactDH addr cv dh) =
     encodeListLen 3
-      <> toCBOR addr
-      <> toCBOR cv
-      <> toCBOR dh
+      <> encCBOR addr
+      <> encCBOR cv
+      <> encCBOR dh
 
 instance
-  (Era era, Show (Value era), FromCBOR (CompactForm (Value era)), Val (Value era)) =>
-  FromCBOR (AlonzoTxOut era)
+  (Era era, Show (Value era), DecCBOR (CompactForm (Value era)), Val (Value era)) =>
+  DecCBOR (AlonzoTxOut era)
   where
-  fromCBOR = fromNotSharedCBOR
-  {-# INLINE fromCBOR #-}
+  decCBOR = fromNotSharedCBOR
+  {-# INLINE decCBOR #-}
 
 instance
-  (Era era, Val (Value era), FromCBOR (CompactForm (Value era)), Show (Value era)) =>
+  (Era era, Val (Value era), DecCBOR (CompactForm (Value era)), Show (Value era)) =>
   FromSharedCBOR (AlonzoTxOut era)
   where
   type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
@@ -366,22 +366,22 @@ instance
     internTxOut <$!> case lenOrIndef of
       Nothing -> do
         (a, ca) <- fromCborBothAddr
-        cv <- fromCBOR
+        cv <- decCBOR
         decodeBreakOr >>= \case
           True -> pure $ mkTxOutCompact a ca cv SNothing
           False -> do
-            dh <- fromCBOR
+            dh <- decCBOR
             decodeBreakOr >>= \case
               True -> pure $ mkTxOutCompact a ca cv (SJust dh)
               False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
       Just 2 -> do
         (a, ca) <- fromCborBothAddr
-        cv <- fromCBOR
+        cv <- decCBOR
         pure $ mkTxOutCompact a ca cv SNothing
       Just 3 -> do
         (a, ca) <- fromCborBothAddr
-        cv <- fromCBOR
-        mkTxOutCompact a ca cv . SJust <$> fromCBOR
+        cv <- decCBOR
+        mkTxOutCompact a ca cv . SJust <$> decCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
   {-# INLINEABLE fromSharedCBOR #-}
 

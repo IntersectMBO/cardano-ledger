@@ -58,15 +58,15 @@ instance MonadError SchemaError m => FromJSON m GenesisDelegation where
           (Just $ "Error: " <> formatToString build err)
       Right delegation -> pure delegation
 
-instance ToCBOR GenesisDelegation where
-  toCBOR (UnsafeGenesisDelegation gd) =
+instance EncCBOR GenesisDelegation where
+  encCBOR (UnsafeGenesisDelegation gd) =
     encodeListLen 1
-      <> toCBOR @(Map KeyHash Certificate) gd
+      <> encCBOR @(Map KeyHash Certificate) gd
 
-instance FromCBOR GenesisDelegation where
-  fromCBOR = do
+instance DecCBOR GenesisDelegation where
+  decCBOR = do
     enforceSize "GenesisDelegation" 1
-    UnsafeGenesisDelegation <$> fromCBOR @(Map KeyHash Certificate)
+    UnsafeGenesisDelegation <$> decCBOR @(Map KeyHash Certificate)
 
 data GenesisDelegationError
   = GenesisDelegationDuplicateIssuer

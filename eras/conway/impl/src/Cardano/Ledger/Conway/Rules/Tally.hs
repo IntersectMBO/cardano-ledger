@@ -19,7 +19,7 @@ module Cardano.Ledger.Conway.Rules.Tally (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Conway.Era (ConwayTALLY)
 import Cardano.Ledger.Conway.Governance (
   ConwayTallyState (..),
@@ -53,7 +53,7 @@ data GovernanceProcedure era
 
 newtype ConwayTallyPredFailure era
   = NoSuchGovernanceAction (Vote era)
-  deriving (Eq, Show, ToCBOR, FromCBOR, NoThunks)
+  deriving (Eq, Show, EncCBOR, DecCBOR, NoThunks)
 
 deriving instance Era era => NFData (ConwayTallyPredFailure era)
 

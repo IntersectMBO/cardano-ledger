@@ -18,10 +18,10 @@ module Cardano.Chain.Update.SystemTag (
 where
 
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
@@ -52,11 +52,11 @@ instance ToJSON SystemTag
 -- Used for debugging purposes only
 instance ToJSONKey SystemTag
 
-instance ToCBOR SystemTag where
-  toCBOR = toCBOR . getSystemTag
+instance EncCBOR SystemTag where
+  encCBOR = encCBOR . getSystemTag
 
-instance FromCBOR SystemTag where
-  fromCBOR = SystemTag <$> fromCBOR
+instance DecCBOR SystemTag where
+  decCBOR = SystemTag <$> decCBOR
 
 systemTagMaxLength :: Integral i => i
 systemTagMaxLength = 10
@@ -66,26 +66,26 @@ data SystemTagError
   | SystemTagTooLong Text
   deriving (Eq, Show, Data)
 
-instance ToCBOR SystemTagError where
-  toCBOR err = case err of
+instance EncCBOR SystemTagError where
+  encCBOR err = case err of
     SystemTagNotAscii tag ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR tag
+        <> encCBOR (0 :: Word8)
+        <> encCBOR tag
     SystemTagTooLong tag ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR tag
+        <> encCBOR (1 :: Word8)
+        <> encCBOR tag
 
-instance FromCBOR SystemTagError where
-  fromCBOR = do
+instance DecCBOR SystemTagError where
+  decCBOR = do
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "SystemTagError" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 2 >> SystemTagNotAscii <$> fromCBOR
-      1 -> checkSize 2 >> SystemTagTooLong <$> fromCBOR
+      0 -> checkSize 2 >> SystemTagNotAscii <$> decCBOR
+      1 -> checkSize 2 >> SystemTagTooLong <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "SystemTagError" tag
 
 instance B.Buildable SystemTagError where

@@ -22,7 +22,7 @@ module Cardano.Ledger.Shelley.Rules.Ledgers (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGERS)
@@ -82,19 +82,19 @@ instance
 
 instance
   ( Era era
-  , ToCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  ToCBOR (ShelleyLedgersPredFailure era)
+  EncCBOR (ShelleyLedgersPredFailure era)
   where
-  toCBOR (LedgerFailure e) = toCBOR e
+  encCBOR (LedgerFailure e) = encCBOR e
 
 instance
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  FromCBOR (ShelleyLedgersPredFailure era)
+  DecCBOR (ShelleyLedgersPredFailure era)
   where
-  fromCBOR = LedgerFailure <$> fromCBOR
+  decCBOR = LedgerFailure <$> decCBOR
 
 instance
   ( Era era

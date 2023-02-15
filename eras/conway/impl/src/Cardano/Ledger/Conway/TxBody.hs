@@ -55,9 +55,9 @@ import Cardano.Ledger.Babbage.TxBody as BabbageTxBodyReExports (
 import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (
   Annotator,
-  FromCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   Sized (..),
-  ToCBOR (..),
   mkSized,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -156,10 +156,10 @@ deriving instance
   Show (ConwayTxBodyRaw era)
 
 instance
-  (EraPParams era, FromCBOR (TxOut era)) =>
-  FromCBOR (ConwayTxBodyRaw era)
+  (EraPParams era, DecCBOR (TxOut era)) =>
+  DecCBOR (ConwayTxBodyRaw era)
   where
-  fromCBOR =
+  decCBOR =
     decode $
       SparseKeyed
         "TxBodyRaw"
@@ -201,7 +201,7 @@ instance
         ]
 
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
-  deriving (Generic, SafeToHash, ToCBOR)
+  deriving (Generic, SafeToHash, EncCBOR)
 
 deriving instance
   (EraPParams era, NoThunks (TxOut era)) =>
@@ -225,16 +225,16 @@ instance (c ~ EraCrypto era) => HashAnnotated (ConwayTxBody era) EraIndependentT
   hashAnnotated = getMemoSafeHash
 
 instance
-  (FromCBOR (TxOut era), EraPParams era) =>
-  FromCBOR (Annotator (ConwayTxBodyRaw era))
+  (DecCBOR (TxOut era), EraPParams era) =>
+  DecCBOR (Annotator (ConwayTxBodyRaw era))
   where
-  fromCBOR = pure <$> fromCBOR
+  decCBOR = pure <$> decCBOR
 
 deriving via
   (Mem ConwayTxBodyRaw era)
   instance
-    (FromCBOR (TxOut era), EraPParams era) =>
-    FromCBOR (Annotator (ConwayTxBody era))
+    (DecCBOR (TxOut era), EraPParams era) =>
+    DecCBOR (Annotator (ConwayTxBody era))
 
 mkConwayTxBody :: ConwayEraTxBody era => ConwayTxBody era
 mkConwayTxBody = mkMemoized basicConwayTxBodyRaw
@@ -509,5 +509,5 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> Omit null (Key 19 (To ctbrGovActions))
         !> Omit null (Key 20 (To ctbrVotes))
 
-instance ConwayEraTxBody era => ToCBOR (ConwayTxBodyRaw era) where
-  toCBOR = encode . encodeTxBodyRaw
+instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
+  encCBOR = encode . encodeTxBodyRaw

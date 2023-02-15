@@ -12,8 +12,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 
-module Cardano.Ledger.Binary.Decoding.FromCBOR (
-  FromCBOR (..),
+module Cardano.Ledger.Binary.Decoding.DecCBOR (
+  DecCBOR (..),
 )
 where
 
@@ -80,101 +80,101 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Prelude hiding (decodeFloat)
 
-class Typeable a => FromCBOR a where
-  fromCBOR :: Decoder s a
+class Typeable a => DecCBOR a where
+  decCBOR :: Decoder s a
 
   -- | Validate decoding of a Haskell value, without the need to actually construct
-  -- it. Coule be slightly faster than `fromCBOR`, however it should respect this law:
+  -- it. Coule be slightly faster than `decCBOR`, however it should respect this law:
   --
-  -- > dropCBOR (proxy :: Proxy a) = () <$ (fromCBOR :: Decoder s a)
+  -- > dropCBOR (proxy :: Proxy a) = () <$ (decCBOR :: Decoder s a)
   dropCBOR :: Proxy a -> Decoder s ()
-  dropCBOR _ = () <$ fromCBOR @a
+  dropCBOR _ = () <$ decCBOR @a
 
   label :: Proxy a -> T.Text
   label = T.pack . show . typeRep
 
-instance FromCBOR Version where
-  fromCBOR = decodeVersion
+instance DecCBOR Version where
+  decCBOR = decodeVersion
 
 --------------------------------------------------------------------------------
 -- Primitive types
 --------------------------------------------------------------------------------
 
-instance FromCBOR () where
-  fromCBOR = decodeNull
+instance DecCBOR () where
+  decCBOR = decodeNull
 
-instance FromCBOR Bool where
-  fromCBOR = decodeBool
+instance DecCBOR Bool where
+  decCBOR = decodeBool
 
 --------------------------------------------------------------------------------
 -- Numeric data
 --------------------------------------------------------------------------------
 
-instance FromCBOR Integer where
-  fromCBOR = decodeInteger
+instance DecCBOR Integer where
+  decCBOR = decodeInteger
 
-instance FromCBOR Natural where
-  fromCBOR = decodeNatural
+instance DecCBOR Natural where
+  decCBOR = decodeNatural
 
-instance FromCBOR Word where
-  fromCBOR = decodeWord
+instance DecCBOR Word where
+  decCBOR = decodeWord
 
-instance FromCBOR Word8 where
-  fromCBOR = decodeWord8
+instance DecCBOR Word8 where
+  decCBOR = decodeWord8
 
-instance FromCBOR Word16 where
-  fromCBOR = decodeWord16
+instance DecCBOR Word16 where
+  decCBOR = decodeWord16
 
-instance FromCBOR Word32 where
-  fromCBOR = decodeWord32
+instance DecCBOR Word32 where
+  decCBOR = decodeWord32
 
-instance FromCBOR Word64 where
-  fromCBOR = decodeWord64
+instance DecCBOR Word64 where
+  decCBOR = decodeWord64
 
-instance FromCBOR Int where
-  fromCBOR = decodeInt
+instance DecCBOR Int where
+  decCBOR = decodeInt
 
-instance FromCBOR Int8 where
-  fromCBOR = decodeInt8
+instance DecCBOR Int8 where
+  decCBOR = decodeInt8
 
-instance FromCBOR Int16 where
-  fromCBOR = decodeInt16
+instance DecCBOR Int16 where
+  decCBOR = decodeInt16
 
-instance FromCBOR Int32 where
-  fromCBOR = decodeInt32
+instance DecCBOR Int32 where
+  decCBOR = decodeInt32
 
-instance FromCBOR Int64 where
-  fromCBOR = decodeInt64
+instance DecCBOR Int64 where
+  decCBOR = decodeInt64
 
-instance FromCBOR Float where
-  fromCBOR = decodeFloat
+instance DecCBOR Float where
+  decCBOR = decodeFloat
 
-instance FromCBOR Double where
-  fromCBOR = decodeDouble
+instance DecCBOR Double where
+  decCBOR = decodeDouble
 
-instance FromCBOR Rational where
-  fromCBOR = decodeRational
+instance DecCBOR Rational where
+  decCBOR = decodeRational
 
-deriving newtype instance Typeable p => FromCBOR (Fixed p)
+deriving newtype instance Typeable p => DecCBOR (Fixed p)
 
-instance FromCBOR Void where
-  fromCBOR = cborError DecoderErrorVoid
+instance DecCBOR Void where
+  decCBOR = cborError DecoderErrorVoid
 
-instance FromCBOR Term where
-  fromCBOR = decodeTerm
+instance DecCBOR Term where
+  decCBOR = decodeTerm
 
-instance FromCBOR IPv4 where
-  fromCBOR = decodeIPv4
+instance DecCBOR IPv4 where
+  decCBOR = decodeIPv4
 
-instance FromCBOR IPv6 where
-  fromCBOR = decodeIPv6
+instance DecCBOR IPv6 where
+  decCBOR = decodeIPv6
 
 --------------------------------------------------------------------------------
 -- Tagged
 --------------------------------------------------------------------------------
 
-instance (Typeable s, FromCBOR a) => FromCBOR (Tagged s a) where
-  fromCBOR = Tagged <$> fromCBOR
+instance (Typeable s, DecCBOR a) => DecCBOR (Tagged s a) where
+  decCBOR = Tagged <$> decCBOR
 
   dropCBOR _ = dropCBOR (Proxy @a)
 
@@ -182,20 +182,20 @@ instance (Typeable s, FromCBOR a) => FromCBOR (Tagged s a) where
 -- Containers
 --------------------------------------------------------------------------------
 
-instance (FromCBOR a, FromCBOR b) => FromCBOR (a, b) where
-  fromCBOR = do
+instance (DecCBOR a, DecCBOR b) => DecCBOR (a, b) where
+  decCBOR = do
     decodeListLenOf 2
-    !x <- fromCBOR
-    !y <- fromCBOR
+    !x <- decCBOR
+    !y <- decCBOR
     return (x, y)
   dropCBOR _ = decodeListLenOf 2 <* dropCBOR (Proxy @a) <* dropCBOR (Proxy @b)
 
-instance (FromCBOR a, FromCBOR b, FromCBOR c) => FromCBOR (a, b, c) where
-  fromCBOR = do
+instance (DecCBOR a, DecCBOR b, DecCBOR c) => DecCBOR (a, b, c) where
+  decCBOR = do
     decodeListLenOf 3
-    !x <- fromCBOR
-    !y <- fromCBOR
-    !z <- fromCBOR
+    !x <- decCBOR
+    !y <- decCBOR
+    !z <- decCBOR
     return (x, y, z)
   dropCBOR _ =
     decodeListLenOf 3
@@ -203,13 +203,13 @@ instance (FromCBOR a, FromCBOR b, FromCBOR c) => FromCBOR (a, b, c) where
       <* dropCBOR (Proxy @b)
       <* dropCBOR (Proxy @c)
 
-instance (FromCBOR a, FromCBOR b, FromCBOR c, FromCBOR d) => FromCBOR (a, b, c, d) where
-  fromCBOR = do
+instance (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d) => DecCBOR (a, b, c, d) where
+  decCBOR = do
     decodeListLenOf 4
-    !a <- fromCBOR
-    !b <- fromCBOR
-    !c <- fromCBOR
-    !d <- fromCBOR
+    !a <- decCBOR
+    !b <- decCBOR
+    !c <- decCBOR
+    !d <- decCBOR
     return (a, b, c, d)
   dropCBOR _ =
     decodeListLenOf 4
@@ -219,16 +219,16 @@ instance (FromCBOR a, FromCBOR b, FromCBOR c, FromCBOR d) => FromCBOR (a, b, c, 
       <* dropCBOR (Proxy @d)
 
 instance
-  (FromCBOR a, FromCBOR b, FromCBOR c, FromCBOR d, FromCBOR e) =>
-  FromCBOR (a, b, c, d, e)
+  (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d, DecCBOR e) =>
+  DecCBOR (a, b, c, d, e)
   where
-  fromCBOR = do
+  decCBOR = do
     decodeListLenOf 5
-    !a <- fromCBOR
-    !b <- fromCBOR
-    !c <- fromCBOR
-    !d <- fromCBOR
-    !e <- fromCBOR
+    !a <- decCBOR
+    !b <- decCBOR
+    !c <- decCBOR
+    !d <- decCBOR
+    !e <- decCBOR
     return (a, b, c, d, e)
   dropCBOR _ =
     decodeListLenOf 5
@@ -239,17 +239,17 @@ instance
       <* dropCBOR (Proxy @e)
 
 instance
-  (FromCBOR a, FromCBOR b, FromCBOR c, FromCBOR d, FromCBOR e, FromCBOR f) =>
-  FromCBOR (a, b, c, d, e, f)
+  (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d, DecCBOR e, DecCBOR f) =>
+  DecCBOR (a, b, c, d, e, f)
   where
-  fromCBOR = do
+  decCBOR = do
     decodeListLenOf 6
-    !a <- fromCBOR
-    !b <- fromCBOR
-    !c <- fromCBOR
-    !d <- fromCBOR
-    !e <- fromCBOR
-    !f <- fromCBOR
+    !a <- decCBOR
+    !b <- decCBOR
+    !c <- decCBOR
+    !d <- decCBOR
+    !e <- decCBOR
+    !f <- decCBOR
     return (a, b, c, d, e, f)
   dropCBOR _ =
     decodeListLenOf 6
@@ -261,25 +261,25 @@ instance
       <* dropCBOR (Proxy @f)
 
 instance
-  ( FromCBOR a
-  , FromCBOR b
-  , FromCBOR c
-  , FromCBOR d
-  , FromCBOR e
-  , FromCBOR f
-  , FromCBOR g
+  ( DecCBOR a
+  , DecCBOR b
+  , DecCBOR c
+  , DecCBOR d
+  , DecCBOR e
+  , DecCBOR f
+  , DecCBOR g
   ) =>
-  FromCBOR (a, b, c, d, e, f, g)
+  DecCBOR (a, b, c, d, e, f, g)
   where
-  fromCBOR = do
+  decCBOR = do
     decodeListLenOf 7
-    !a <- fromCBOR
-    !b <- fromCBOR
-    !c <- fromCBOR
-    !d <- fromCBOR
-    !e <- fromCBOR
-    !f <- fromCBOR
-    !g <- fromCBOR
+    !a <- decCBOR
+    !b <- decCBOR
+    !c <- decCBOR
+    !d <- decCBOR
+    !e <- decCBOR
+    !f <- decCBOR
+    !g <- decCBOR
     return (a, b, c, d, e, f, g)
   dropCBOR _ =
     decodeListLenOf 7
@@ -291,98 +291,98 @@ instance
       <* dropCBOR (Proxy @f)
       <* dropCBOR (Proxy @g)
 
-instance FromCBOR BS.ByteString where
-  fromCBOR = decodeBytes
+instance DecCBOR BS.ByteString where
+  decCBOR = decodeBytes
 
-instance FromCBOR T.Text where
-  fromCBOR = decodeString
+instance DecCBOR T.Text where
+  decCBOR = decodeString
 
-instance FromCBOR BSL.ByteString where
-  fromCBOR = BSL.fromStrict <$> fromCBOR
+instance DecCBOR BSL.ByteString where
+  decCBOR = BSL.fromStrict <$> decCBOR
 
-instance FromCBOR ShortByteString where
-  fromCBOR = do
+instance DecCBOR ShortByteString where
+  decCBOR = do
     BA (Prim.ByteArray ba) <- decodeByteArray
     return $ SBS ba
 
-instance FromCBOR ByteArray where
-  fromCBOR = decodeByteArray
+instance DecCBOR ByteArray where
+  decCBOR = decodeByteArray
 
-instance FromCBOR Prim.ByteArray where
-  fromCBOR = unBA <$> decodeByteArray
+instance DecCBOR Prim.ByteArray where
+  decCBOR = unBA <$> decodeByteArray
 
-instance FromCBOR SlicedByteArray where
-  fromCBOR = fromByteArray . unBA <$> decodeByteArray
+instance DecCBOR SlicedByteArray where
+  decCBOR = fromByteArray . unBA <$> decodeByteArray
 
-instance FromCBOR a => FromCBOR [a] where
-  fromCBOR = decodeList fromCBOR
+instance DecCBOR a => DecCBOR [a] where
+  decCBOR = decodeList decCBOR
 
-instance (FromCBOR a, FromCBOR b) => FromCBOR (Either a b) where
-  fromCBOR = decodeEither (fromCBOR >>= \a -> a `seq` pure a) (fromCBOR >>= \a -> a `seq` pure a)
+instance (DecCBOR a, DecCBOR b) => DecCBOR (Either a b) where
+  decCBOR = decodeEither (decCBOR >>= \a -> a `seq` pure a) (decCBOR >>= \a -> a `seq` pure a)
   dropCBOR _ = () <$ decodeEither (dropCBOR (Proxy :: Proxy a)) (dropCBOR (Proxy :: Proxy b))
 
-instance FromCBOR a => FromCBOR (NonEmpty a) where
-  fromCBOR = do
-    ls <- fromCBOR
+instance DecCBOR a => DecCBOR (NonEmpty a) where
+  decCBOR = do
+    ls <- decCBOR
     case nonEmpty ls of
       Nothing -> cborError $ DecoderErrorEmptyList "NonEmpty"
       Just ne -> pure ne
 
-instance FromCBOR a => FromCBOR (Maybe a) where
-  fromCBOR = decodeMaybe fromCBOR
+instance DecCBOR a => DecCBOR (Maybe a) where
+  decCBOR = decodeMaybe decCBOR
   dropCBOR _ = () <$ decodeMaybe (dropCBOR (Proxy @a))
 
-instance FromCBOR a => FromCBOR (SMaybe.StrictMaybe a) where
-  fromCBOR = SMaybe.maybeToStrictMaybe <$> decodeMaybe fromCBOR
+instance DecCBOR a => DecCBOR (SMaybe.StrictMaybe a) where
+  decCBOR = SMaybe.maybeToStrictMaybe <$> decodeMaybe decCBOR
   dropCBOR _ = () <$ decodeMaybe (dropCBOR (Proxy @a))
 
-instance FromCBOR a => FromCBOR (SSeq.StrictSeq a) where
-  fromCBOR = decodeStrictSeq fromCBOR
+instance DecCBOR a => DecCBOR (SSeq.StrictSeq a) where
+  decCBOR = decodeStrictSeq decCBOR
 
-instance FromCBOR a => FromCBOR (Seq.Seq a) where
-  fromCBOR = decodeSeq fromCBOR
+instance DecCBOR a => DecCBOR (Seq.Seq a) where
+  decCBOR = decodeSeq decCBOR
 
-instance (Ord a, FromCBOR a) => FromCBOR (Set.Set a) where
-  fromCBOR = decodeSet fromCBOR
+instance (Ord a, DecCBOR a) => DecCBOR (Set.Set a) where
+  decCBOR = decodeSet decCBOR
 
-instance (Ord k, FromCBOR k, FromCBOR v) => FromCBOR (Map.Map k v) where
-  fromCBOR = decodeMap fromCBOR fromCBOR
+instance (Ord k, DecCBOR k, DecCBOR v) => DecCBOR (Map.Map k v) where
+  decCBOR = decodeMap decCBOR decCBOR
 
 instance
   ( Ord k
-  , FromCBOR k
-  , FromCBOR a
+  , DecCBOR k
+  , DecCBOR a
   , Typeable kv
   , Typeable av
   , VMap.Vector kv k
   , VMap.Vector av a
   ) =>
-  FromCBOR (VMap.VMap kv av k a)
+  DecCBOR (VMap.VMap kv av k a)
   where
-  fromCBOR = decodeVMap fromCBOR fromCBOR
+  decCBOR = decodeVMap decCBOR decCBOR
 
-instance FromCBOR a => FromCBOR (V.Vector a) where
-  fromCBOR = decodeVector fromCBOR
-  {-# INLINE fromCBOR #-}
+instance DecCBOR a => DecCBOR (V.Vector a) where
+  decCBOR = decodeVector decCBOR
+  {-# INLINE decCBOR #-}
 
-instance (FromCBOR a, VP.Prim a) => FromCBOR (VP.Vector a) where
-  fromCBOR = decodeVector fromCBOR
-  {-# INLINE fromCBOR #-}
+instance (DecCBOR a, VP.Prim a) => DecCBOR (VP.Vector a) where
+  decCBOR = decodeVector decCBOR
+  {-# INLINE decCBOR #-}
 
-instance (FromCBOR a, VS.Storable a) => FromCBOR (VS.Vector a) where
-  fromCBOR = decodeVector fromCBOR
-  {-# INLINE fromCBOR #-}
+instance (DecCBOR a, VS.Storable a) => DecCBOR (VS.Vector a) where
+  decCBOR = decodeVector decCBOR
+  {-# INLINE decCBOR #-}
 
-instance (FromCBOR a, VU.Unbox a) => FromCBOR (VU.Vector a) where
-  fromCBOR = decodeVector fromCBOR
-  {-# INLINE fromCBOR #-}
+instance (DecCBOR a, VU.Unbox a) => DecCBOR (VU.Vector a) where
+  decCBOR = decodeVector decCBOR
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Time
 --------------------------------------------------------------------------------
 
-instance FromCBOR UTCTime where
-  fromCBOR = decodeUTCTime
+instance DecCBOR UTCTime where
+  decCBOR = decodeUTCTime
 
 --------------------------------------------------------------------------------
 -- Crypto
@@ -392,21 +392,21 @@ instance FromCBOR UTCTime where
 -- DSIGN
 --------------------------------------------------------------------------------
 
-instance DSIGNAlgorithm v => FromCBOR (VerKeyDSIGN v) where
-  fromCBOR = decodeVerKeyDSIGN
+instance DSIGNAlgorithm v => DecCBOR (VerKeyDSIGN v) where
+  decCBOR = decodeVerKeyDSIGN
 
-instance DSIGNAlgorithm v => FromCBOR (SignKeyDSIGN v) where
-  fromCBOR = decodeSignKeyDSIGN
+instance DSIGNAlgorithm v => DecCBOR (SignKeyDSIGN v) where
+  decCBOR = decodeSignKeyDSIGN
 
-instance DSIGNAlgorithm v => FromCBOR (SigDSIGN v) where
-  fromCBOR = decodeSigDSIGN
+instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
+  decCBOR = decodeSigDSIGN
 
 --------------------------------------------------------------------------------
 -- Hash
 --------------------------------------------------------------------------------
 
-instance (HashAlgorithm h, Typeable a) => FromCBOR (Hash h a) where
-  fromCBOR = do
+instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
+  decCBOR = do
     bs <- decodeBytes
     case hashFromBytes bs of
       Just x -> return x
@@ -426,144 +426,144 @@ instance (HashAlgorithm h, Typeable a) => FromCBOR (Hash h a) where
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  FromCBOR (VerKeyKES (SimpleKES d t))
+  DecCBOR (VerKeyKES (SimpleKES d t))
   where
-  fromCBOR = decodeVerKeyKES
+  decCBOR = decodeVerKeyKES
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  FromCBOR (SignKeyKES (SimpleKES d t))
+  DecCBOR (SignKeyKES (SimpleKES d t))
   where
-  fromCBOR = decodeSignKeyKES
+  decCBOR = decodeSignKeyKES
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  FromCBOR (SigKES (SimpleKES d t))
+  DecCBOR (SigKES (SimpleKES d t))
   where
-  fromCBOR = decodeSigKES
+  decCBOR = decodeSigKES
 
-instance (KESAlgorithm d, HashAlgorithm h) => FromCBOR (VerKeyKES (SumKES h d)) where
-  fromCBOR = decodeVerKeyKES
+instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (VerKeyKES (SumKES h d)) where
+  decCBOR = decodeVerKeyKES
 
-instance (KESAlgorithm d, HashAlgorithm h) => FromCBOR (SignKeyKES (SumKES h d)) where
-  fromCBOR = decodeSignKeyKES
+instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (SignKeyKES (SumKES h d)) where
+  decCBOR = decodeSignKeyKES
 
-instance (KESAlgorithm d, HashAlgorithm h) => FromCBOR (SigKES (SumKES h d)) where
-  fromCBOR = decodeSigKES
+instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (SigKES (SumKES h d)) where
+  decCBOR = decodeSigKES
 
-instance DSIGNAlgorithm d => FromCBOR (VerKeyKES (CompactSingleKES d)) where
-  fromCBOR = decodeVerKeyKES
+instance DSIGNAlgorithm d => DecCBOR (VerKeyKES (CompactSingleKES d)) where
+  decCBOR = decodeVerKeyKES
 
-instance DSIGNAlgorithm d => FromCBOR (SignKeyKES (CompactSingleKES d)) where
-  fromCBOR = decodeSignKeyKES
+instance DSIGNAlgorithm d => DecCBOR (SignKeyKES (CompactSingleKES d)) where
+  decCBOR = decodeSignKeyKES
 
-instance DSIGNAlgorithm d => FromCBOR (SigKES (CompactSingleKES d)) where
-  fromCBOR = decodeSigKES
+instance DSIGNAlgorithm d => DecCBOR (SigKES (CompactSingleKES d)) where
+  decCBOR = decodeSigKES
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  FromCBOR (VerKeyKES (CompactSumKES h d))
+  DecCBOR (VerKeyKES (CompactSumKES h d))
   where
-  fromCBOR = decodeVerKeyKES
+  decCBOR = decodeVerKeyKES
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  FromCBOR (SignKeyKES (CompactSumKES h d))
+  DecCBOR (SignKeyKES (CompactSumKES h d))
   where
-  fromCBOR = decodeSignKeyKES
+  decCBOR = decodeSignKeyKES
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  FromCBOR (SigKES (CompactSumKES h d))
+  DecCBOR (SigKES (CompactSumKES h d))
   where
-  fromCBOR = decodeSigKES
+  decCBOR = decodeSigKES
 
-instance DSIGNAlgorithm d => FromCBOR (VerKeyKES (SingleKES d)) where
-  fromCBOR = decodeVerKeyKES
+instance DSIGNAlgorithm d => DecCBOR (VerKeyKES (SingleKES d)) where
+  decCBOR = decodeVerKeyKES
 
-instance DSIGNAlgorithm d => FromCBOR (SignKeyKES (SingleKES d)) where
-  fromCBOR = decodeSignKeyKES
+instance DSIGNAlgorithm d => DecCBOR (SignKeyKES (SingleKES d)) where
+  decCBOR = decodeSignKeyKES
 
-instance DSIGNAlgorithm d => FromCBOR (SigKES (SingleKES d)) where
-  fromCBOR = decodeSigKES
+instance DSIGNAlgorithm d => DecCBOR (SigKES (SingleKES d)) where
+  decCBOR = decodeSigKES
 
-instance KnownNat t => FromCBOR (VerKeyKES (MockKES t)) where
-  fromCBOR = decodeVerKeyKES
+instance KnownNat t => DecCBOR (VerKeyKES (MockKES t)) where
+  decCBOR = decodeVerKeyKES
 
-instance KnownNat t => FromCBOR (SignKeyKES (MockKES t)) where
-  fromCBOR = decodeSignKeyKES
+instance KnownNat t => DecCBOR (SignKeyKES (MockKES t)) where
+  decCBOR = decodeSignKeyKES
 
-instance KnownNat t => FromCBOR (SigKES (MockKES t)) where
-  fromCBOR = decodeSigKES
+instance KnownNat t => DecCBOR (SigKES (MockKES t)) where
+  decCBOR = decodeSigKES
 
 --------------------------------------------------------------------------------
 -- VRF
 --------------------------------------------------------------------------------
 
-instance FromCBOR (VerKeyVRF SimpleVRF) where
-  fromCBOR = decodeVerKeyVRF
+instance DecCBOR (VerKeyVRF SimpleVRF) where
+  decCBOR = decodeVerKeyVRF
 
-instance FromCBOR (SignKeyVRF SimpleVRF) where
-  fromCBOR = decodeSignKeyVRF
+instance DecCBOR (SignKeyVRF SimpleVRF) where
+  decCBOR = decodeSignKeyVRF
 
-instance FromCBOR (CertVRF SimpleVRF) where
-  fromCBOR = decodeCertVRF
+instance DecCBOR (CertVRF SimpleVRF) where
+  decCBOR = decodeCertVRF
 
-instance FromCBOR (VerKeyVRF MockVRF) where
-  fromCBOR = decodeVerKeyVRF
+instance DecCBOR (VerKeyVRF MockVRF) where
+  decCBOR = decodeVerKeyVRF
 
-instance FromCBOR (SignKeyVRF MockVRF) where
-  fromCBOR = decodeSignKeyVRF
+instance DecCBOR (SignKeyVRF MockVRF) where
+  decCBOR = decodeSignKeyVRF
 
-instance FromCBOR (CertVRF MockVRF) where
-  fromCBOR = decodeCertVRF
+instance DecCBOR (CertVRF MockVRF) where
+  decCBOR = decodeCertVRF
 
-instance FromCBOR Praos.Proof where
-  fromCBOR = fromCBOR >>= Praos.proofFromBytes
+instance DecCBOR Praos.Proof where
+  decCBOR = decCBOR >>= Praos.proofFromBytes
 
-instance FromCBOR Praos.SignKey where
-  fromCBOR = fromCBOR >>= Praos.skFromBytes
+instance DecCBOR Praos.SignKey where
+  decCBOR = decCBOR >>= Praos.skFromBytes
 
-instance FromCBOR Praos.VerKey where
-  fromCBOR = fromCBOR >>= Praos.vkFromBytes
+instance DecCBOR Praos.VerKey where
+  decCBOR = decCBOR >>= Praos.vkFromBytes
 
-deriving instance FromCBOR (VerKeyVRF Praos.PraosVRF)
+deriving instance DecCBOR (VerKeyVRF Praos.PraosVRF)
 
-deriving instance FromCBOR (SignKeyVRF Praos.PraosVRF)
+deriving instance DecCBOR (SignKeyVRF Praos.PraosVRF)
 
-deriving instance FromCBOR (CertVRF Praos.PraosVRF)
+deriving instance DecCBOR (CertVRF Praos.PraosVRF)
 
-deriving instance Typeable v => FromCBOR (OutputVRF v)
+deriving instance Typeable v => DecCBOR (OutputVRF v)
 
-instance (VRFAlgorithm v, Typeable a) => FromCBOR (CertifiedVRF v a) where
-  fromCBOR =
+instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
+  decCBOR =
     CertifiedVRF
       <$ enforceSize "CertifiedVRF" 2
-      <*> fromCBOR
+      <*> decCBOR
       <*> decodeCertVRF
 
 --------------------------------------------------------------------------------
 -- Slotting
 --------------------------------------------------------------------------------
 
-instance FromCBOR SlotNo where
-  fromCBOR = fromPlainDecoder Serialise.decode
+instance DecCBOR SlotNo where
+  decCBOR = fromPlainDecoder Serialise.decode
 
-instance (Serialise.Serialise t, Typeable t) => FromCBOR (WithOrigin t) where
-  fromCBOR = fromPlainDecoder Serialise.decode
+instance (Serialise.Serialise t, Typeable t) => DecCBOR (WithOrigin t) where
+  decCBOR = fromPlainDecoder Serialise.decode
 
-deriving instance FromCBOR EpochNo
+deriving instance DecCBOR EpochNo
 
-deriving instance FromCBOR EpochSize
+deriving instance DecCBOR EpochSize
 
-deriving instance FromCBOR SystemStart
+deriving instance DecCBOR SystemStart
 
-instance FromCBOR BlockNo where
-  fromCBOR = fromPlainDecoder decode
+instance DecCBOR BlockNo where
+  decCBOR = fromPlainDecoder decode
 
 --------------------------------------------------------------------------------
 -- Plutus
 --------------------------------------------------------------------------------
 
-instance FromCBOR PV1.Data where
-  fromCBOR = fromPlainDecoder decode
+instance DecCBOR PV1.Data where
+  decCBOR = fromPlainDecoder decode

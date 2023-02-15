@@ -15,8 +15,8 @@ where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeWord,
   encodeWord,
  )
@@ -46,12 +46,12 @@ instance NoThunks RewardType
 
 instance NFData RewardType
 
-instance ToCBOR RewardType where
-  toCBOR MemberReward = encodeWord 0
-  toCBOR LeaderReward = encodeWord 1
+instance EncCBOR RewardType where
+  encCBOR MemberReward = encodeWord 0
+  encCBOR LeaderReward = encodeWord 1
 
-instance FromCBOR RewardType where
-  fromCBOR =
+instance DecCBOR RewardType where
+  decCBOR =
     decodeWord >>= \case
       0 -> pure MemberReward
       1 -> pure LeaderReward
@@ -84,10 +84,10 @@ instance NoThunks (Reward c)
 
 instance NFData (Reward c)
 
-instance Crypto c => ToCBOR (Reward c) where
-  toCBOR (Reward rt pool c) =
+instance Crypto c => EncCBOR (Reward c) where
+  encCBOR (Reward rt pool c) =
     encode $ Rec Reward !> To rt !> To pool !> To c
 
-instance Crypto c => FromCBOR (Reward c) where
-  fromCBOR =
+instance Crypto c => DecCBOR (Reward c) where
+  decCBOR =
     decode $ RecD Reward <! From <! From <! From

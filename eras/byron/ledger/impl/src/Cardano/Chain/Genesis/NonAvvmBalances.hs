@@ -25,9 +25,9 @@ import Cardano.Chain.Common (
   integerToLovelace,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError,
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   encodeListLen,
   enforceSize,
  )
@@ -58,15 +58,15 @@ instance Monad m => ToJSON m GenesisNonAvvmBalances where
 instance MonadError SchemaError m => FromJSON m GenesisNonAvvmBalances where
   fromJSON = fmap GenesisNonAvvmBalances . fromJSON
 
-instance ToCBOR GenesisNonAvvmBalances where
-  toCBOR (GenesisNonAvvmBalances gnab) =
+instance EncCBOR GenesisNonAvvmBalances where
+  encCBOR (GenesisNonAvvmBalances gnab) =
     encodeListLen 1
-      <> toCBOR @(Map Address Lovelace) gnab
+      <> encCBOR @(Map Address Lovelace) gnab
 
-instance FromCBOR GenesisNonAvvmBalances where
-  fromCBOR = do
+instance DecCBOR GenesisNonAvvmBalances where
+  decCBOR = do
     enforceSize "GenesisNonAvvmBalances" 1
-    GenesisNonAvvmBalances <$> fromCBOR @(Map Address Lovelace)
+    GenesisNonAvvmBalances <$> decCBOR @(Map Address Lovelace)
 
 data NonAvvmBalancesError
   = NonAvvmBalancesLovelaceError LovelaceError

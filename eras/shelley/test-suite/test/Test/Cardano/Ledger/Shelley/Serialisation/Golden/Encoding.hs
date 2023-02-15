@@ -32,23 +32,23 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator,
+  DecCBOR (..),
+  DecCBORGroup (..),
   Decoder,
   DecoderError,
-  FromCBOR (..),
-  FromCBORGroup (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   Tokens (..),
   byronProtVer,
   decodeFullAnnotator,
   decodeFullDecoder,
   decodeMapTraverse,
+  encCBOR,
   fromNotSharedCBOR,
   hashWithEncoder,
   ipv4ToBytes,
   serialize',
   shelleyProtVer,
-  toCBOR,
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Crypto (
@@ -210,21 +210,21 @@ import Test.Tasty.HUnit (assertFailure, testCase)
 type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig (ShelleyEra C_Crypto))
 
 decodeMultiSigMap :: Decoder s (Annotator MultiSigMap)
-decodeMultiSigMap = decodeMapTraverse (pure <$> fromCBOR) fromCBOR
+decodeMultiSigMap = decodeMapTraverse (pure <$> decCBOR) decCBOR
 
 deserializeMultiSigMap :: BSL.ByteString -> Either DecoderError MultiSigMap
 deserializeMultiSigMap =
   decodeFullAnnotator shelleyProtVer "Map ScriptHash MultiSig" decodeMultiSigMap
 
 checkEncodingCBORCBORGroup ::
-  (FromCBORGroup a, ToCBORGroup a, Show a, Eq a) =>
+  (DecCBORGroup a, EncCBORGroup a, Show a, Eq a) =>
   String ->
   a ->
   ToTokens ->
   TestTree
 checkEncodingCBORCBORGroup name x t =
-  let d = decodeFullDecoder shelleyProtVer (fromString name) fromCBORGroup
-   in checkEncoding shelleyProtVer toCBORGroup d name x t
+  let d = decodeFullDecoder shelleyProtVer (fromString name) decCBORGroup
+   in checkEncoding shelleyProtVer encCBORGroup d name x t
 
 getRawKeyHash :: KeyHash 'Payment h -> ByteString
 getRawKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
@@ -363,7 +363,7 @@ testHeaderHash ::
 testHeaderHash =
   HashHeader $
     coerce
-      (hashWithEncoder shelleyProtVer toCBOR 0 :: Hash c Int)
+      (hashWithEncoder shelleyProtVer encCBOR 0 :: Hash c Int)
 
 testBHB ::
   forall era c.
@@ -518,7 +518,7 @@ tests =
             )
     , checkEncoding
         shelleyProtVer
-        toCBOR
+        encCBOR
         deserializeMultiSigMap
         "script_hash_to_scripts"
         (Map.singleton (hashScript @C testScript) testScript) -- Transaction _witnessMSigMap
@@ -1333,10 +1333,10 @@ tests =
     genesisTxIn1 = TxIn @C_Crypto genesisId (mkTxIxPartial 1)
 
 -- ===============
--- From CBOR instances for things that only have FromCBORSharing instances
+-- From CBOR instances for things that only have DecCBORSharing instances
 
-instance FromCBOR (Stake C_Crypto) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (Stake C_Crypto) where
+  decCBOR = fromNotSharedCBOR
 
-instance FromCBOR (SnapShots C_Crypto) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (SnapShots C_Crypto) where
+  decCBOR = fromNotSharedCBOR

@@ -1,5 +1,5 @@
 -- | /DEPRECATED/ - This module is deprecated and used in Byron era exclusively. For newer
--- implementation of this functionality use `Cardano.Ledger.Binary.Decoding.FromCBOR.dropCBOR`
+-- implementation of this functionality use `Cardano.Ledger.Binary.Decoding.DecCBOR.dropCBOR`
 --
 -- A 'Dropper s' is a 'Decoder s ()', that is a decoder that returns nothing
 --

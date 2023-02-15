@@ -17,7 +17,7 @@ where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Binary (
-  ToCBOR (..),
+  EncCBOR (..),
   Tokens (..),
   serializeEncoding',
   shelleyProtVer,
@@ -77,8 +77,8 @@ golden_cbor_ShelleyGenesis =
     example :: ShelleyGenesis StandardCrypto
     example = exampleShelleyGenesis
 
-    received = serializeEncoding' shelleyProtVer (toCBOR expectedTokens)
-    expected = serializeEncoding' shelleyProtVer (toCBOR example)
+    received = serializeEncoding' shelleyProtVer (encCBOR expectedTokens)
+    expected = serializeEncoding' shelleyProtVer (encCBOR example)
 
     expectedTokens =
       TkListLen 15

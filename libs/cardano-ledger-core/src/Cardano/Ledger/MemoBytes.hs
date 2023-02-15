@@ -20,7 +20,7 @@
 -- | MemoBytes is an abstraction for a data type that encodes its own serialization.
 --   The idea is to use a newtype around a MemoBytes applied to a non-memoizing type.
 --   For example:   newtype Foo = Foo (`MemoBytes` NonMemoizingFoo)
---   This way all the instances for @Foo (`Eq`, `Show`, `ToCBOR`, `FromCBOR`, `NoThunks`, Generic`)@
+--   This way all the instances for @Foo (`Eq`, `Show`, `EncCBOR`, `DecCBOR`, `NoThunks`, Generic`)@
 --   can be derived for free. MemoBytes plays an important role in the 'SafeToHash' class
 --   introduced in the module 'Cardano.Ledger.SafeHash'
 module Cardano.Ledger.MemoBytes (
@@ -52,8 +52,8 @@ where
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
+  DecCBOR (decCBOR),
+  EncCBOR (encCBOR),
   encodePreEncoded,
   serialize,
   serializeEncoding,
@@ -81,7 +81,7 @@ import Prelude hiding (span)
 -- | Pair together a type @t@ and its serialization. Used to encode a type
 --   that is serialized over the network, and to remember the original bytes
 --   that were used to transmit it. Important since hashes are computed
---   from the serialization of a type, and ToCBOR instances do not have unique
+--   from the serialization of a type, and EncCBOR instances do not have unique
 --   serializations.
 data MemoBytes t era = Memo'
   { mbRawType :: !(t era)
@@ -104,18 +104,18 @@ deriving instance NFData (t era) => NFData (MemoBytes t era)
 
 deriving instance Generic (MemoBytes t era)
 
-instance (Typeable t, Typeable era) => ToCBOR (MemoBytes t era) where
-  toCBOR (Memo' _ bytes _hash) = encodePreEncoded (fromShort bytes)
+instance (Typeable t, Typeable era) => EncCBOR (MemoBytes t era) where
+  encCBOR (Memo' _ bytes _hash) = encodePreEncoded (fromShort bytes)
 
 instance
   ( Typeable t
-  , FromCBOR (Annotator (t era))
+  , DecCBOR (Annotator (t era))
   , Era era
   ) =>
-  FromCBOR (Annotator (MemoBytes t era))
+  DecCBOR (Annotator (MemoBytes t era))
   where
-  fromCBOR = do
-    (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
+  decCBOR = do
+    (Annotator getT, Annotator getBytes) <- withSlice decCBOR
     pure (Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes)))
 
 -- | Both binary representation and Haskell types are compared.
@@ -138,8 +138,8 @@ instance SafeToHash (MemoBytes t era) where
 shorten :: Lazy.ByteString -> ShortByteString
 shorten x = toShort (toStrict x)
 
--- | Useful when deriving FromCBOR(Annotator T)
--- deriving via (Mem T) instance (Era era) => FromCBOR (Annotator T)
+-- | Useful when deriving DecCBOR(Annotator T)
+-- deriving via (Mem T) instance (Era era) => DecCBOR (Annotator T)
 type Mem t era = Annotator (MemoBytes t era)
 
 -- | Smart constructor
@@ -201,8 +201,8 @@ class Memoized t where
     t era
   wrapMemoBytes = coerce
 
--- | Construct memoized type from the raw type using its ToCBOR instance
-mkMemoized :: forall era t. (Era era, ToCBOR (RawType t era), Memoized t) => RawType t era -> t era
+-- | Construct memoized type from the raw type using its EncCBOR instance
+mkMemoized :: forall era t. (Era era, EncCBOR (RawType t era), Memoized t) => RawType t era -> t era
 mkMemoized rawType = wrapMemoBytes (mkMemoBytes rawType (serialize (eraProtVerLow @era) rawType))
 
 -- | Extract memoized SafeHash
@@ -228,7 +228,7 @@ zipMemoRawType f x y = f (getMemoRawType x) (getMemoRawType y)
 
 -- | This is a helper Lens creator for any Memoized type.
 lensMemoRawType ::
-  (Era era, ToCBOR (RawType t era), Memoized t) =>
+  (Era era, EncCBOR (RawType t era), Memoized t) =>
   (RawType t era -> a) ->
   (RawType t era -> b -> RawType t era) ->
   Lens (t era) (t era) a b

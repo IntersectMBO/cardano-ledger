@@ -14,7 +14,7 @@ module Control.State.Transition.Examples.CommitReveal where
 
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Hash.Short (ShortHash)
-import Cardano.Ledger.Binary (ToCBOR (..), hashToCBOR)
+import Cardano.Ledger.Binary (EncCBOR (..), hashEncCBOR)
 import Control.State.Transition (
   Environment,
   PredicateFailure,
@@ -103,10 +103,10 @@ isCommit Commit {} = True
 isCommit _ = False
 
 newtype Data = Data {getData :: (Id, Int)}
-  deriving (Eq, Show, ToCBOR, Ord, QC.Arbitrary)
+  deriving (Eq, Show, EncCBOR, Ord, QC.Arbitrary)
 
 newtype Id = Id {getId :: Int}
-  deriving (Eq, Show, ToCBOR, Ord, QC.Arbitrary)
+  deriving (Eq, Show, EncCBOR, Ord, QC.Arbitrary)
 
 data CRPredicateFailure hashAlgo (hashToDataMap :: Type -> Type -> Type) commitData
   = InvalidReveal Data
@@ -156,18 +156,18 @@ instance
                 , committedHashes = Set.insert dataHash committedHashes
                 }
           Reveal someData -> do
-            hashToCBOR minBound someData
+            hashEncCBOR minBound someData
               `Set.member` committedHashes
               ?! InvalidReveal someData
             pure $!
               CRSt
                 { hashToData =
                     delete
-                      (hashToCBOR minBound someData)
+                      (hashEncCBOR minBound someData)
                       hashToData
                 , committedHashes =
                     Set.delete
-                      (hashToCBOR minBound someData)
+                      (hashEncCBOR minBound someData)
                       committedHashes
                 }
     ]
@@ -187,7 +187,7 @@ instance
         id <- Id <$> QC.arbitrary
         n <- QC.choose (-2, 2)
         let newData = Data (id, n)
-        pure $! Commit (hashToCBOR minBound newData) newData
+        pure $! Commit (hashEncCBOR minBound newData) newData
       genReveal = do
         hashToReveal <- QC.elements $ Set.toList committedHashes
         let dataToReveal = hashToData Map.! hashToReveal
@@ -198,7 +198,7 @@ instance
     where
       recalculateCommit shrunkData =
         Commit
-          (hashToCBOR minBound shrunkData)
+          (hashEncCBOR minBound shrunkData)
           shrunkData
   shrinkSignal (Reveal someData) = Reveal <$> QC.shrink someData
 

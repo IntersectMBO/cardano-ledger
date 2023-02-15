@@ -27,7 +27,7 @@ import Cardano.Chain.UTxO.TxPayload (
  )
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
@@ -53,22 +53,22 @@ instance B.Buildable TxProof where
       (txpRoot proof)
       (txpWitnessesHash proof)
 
-instance ToCBOR TxProof where
-  toCBOR proof =
+instance EncCBOR TxProof where
+  encCBOR proof =
     encodeListLen 3
-      <> toCBOR (txpNumber proof)
-      <> toCBOR (txpRoot proof)
-      <> toCBOR (txpWitnessesHash proof)
+      <> encCBOR (txpNumber proof)
+      <> encCBOR (txpRoot proof)
+      <> encCBOR (txpWitnessesHash proof)
   encodedSizeExpr size proof =
     1
       + encodedSizeExpr size (txpNumber <$> proof)
       + encodedSizeExpr size (txpRoot <$> proof)
       + encodedSizeExpr size (txpWitnessesHash <$> proof)
 
-instance FromCBOR TxProof where
-  fromCBOR = do
+instance DecCBOR TxProof where
+  decCBOR = do
     enforceSize "TxProof" 3
-    TxProof <$> fromCBOR <*> fromCBOR <*> fromCBOR
+    TxProof <$> decCBOR <*> decCBOR <*> decCBOR
 
 -- | Construct 'TxProof' which proves given 'TxPayload'
 --

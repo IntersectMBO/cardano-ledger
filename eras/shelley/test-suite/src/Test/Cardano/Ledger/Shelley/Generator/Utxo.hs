@@ -26,7 +26,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   maybeToStrictMaybe,
  )
-import Cardano.Ledger.Binary (ToCBOR, serialize)
+import Cardano.Ledger.Binary (EncCBOR, serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -342,7 +342,7 @@ setMinCoinTxOut pp = go
             then txOut
             else go (txOut & coinTxOutL .~ curMinCoin)
 
-encodedLen :: forall era t. (Era era, ToCBOR t) => t -> Integer
+encodedLen :: forall era t. (Era era, EncCBOR t) => t -> Integer
 encodedLen x = fromIntegral $ BSL.length (serialize (eraProtVerHigh @era) x)
 
 -- | Do the work of computing what additioanl inputs we need to 'fix-up' the transaction

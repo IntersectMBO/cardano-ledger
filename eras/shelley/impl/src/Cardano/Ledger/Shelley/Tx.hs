@@ -52,8 +52,8 @@ where
 
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
+  DecCBOR (decCBOR),
+  EncCBOR (encCBOR),
   decodeNullMaybe,
   encodeListLen,
   encodeNull,
@@ -136,7 +136,7 @@ instance
   NoThunks (ShelleyTxRaw era)
 
 newtype ShelleyTx era = TxConstr (MemoBytes ShelleyTxRaw era)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, EncCBOR)
 
 -- | `TxBody` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
@@ -264,30 +264,30 @@ encodeShelleyTxRaw ShelleyTxRaw {strBody, strWits, strAuxiliaryData} =
   Rec ShelleyTxRaw
     !> To strBody
     !> To strWits
-    !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) strAuxiliaryData
+    !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) strAuxiliaryData
 
 instance
   ( Era era
-  , FromCBOR (Annotator (TxBody era))
-  , FromCBOR (Annotator (TxWits era))
-  , FromCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (Annotator (TxAuxData era))
   ) =>
-  FromCBOR (Annotator (ShelleyTxRaw era))
+  DecCBOR (Annotator (ShelleyTxRaw era))
   where
-  fromCBOR =
+  decCBOR =
     decode $
       Ann (RecD ShelleyTxRaw)
         <*! From
         <*! From
         <*! D
           ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe fromCBOR
+              <$> decodeNullMaybe decCBOR
           )
 
 deriving via
   Mem ShelleyTxRaw era
   instance
-    EraTx era => FromCBOR (Annotator (ShelleyTx era))
+    EraTx era => DecCBOR (Annotator (ShelleyTx era))
 
 -- | Construct a Tx containing the explicit serialised bytes.
 --

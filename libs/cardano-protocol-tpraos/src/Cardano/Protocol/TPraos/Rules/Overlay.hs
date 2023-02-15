@@ -36,8 +36,8 @@ import Cardano.Ledger.BaseTypes (
   epochInfoPure,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   TokenType (TypeNull),
   decodeNull,
   encodeNull,
@@ -311,21 +311,21 @@ data OBftSlot c
 
 instance
   Crypto c =>
-  ToCBOR (OBftSlot c)
+  EncCBOR (OBftSlot c)
   where
-  toCBOR NonActiveSlot = encodeNull
-  toCBOR (ActiveSlot k) = toCBOR k
+  encCBOR NonActiveSlot = encodeNull
+  encCBOR (ActiveSlot k) = encCBOR k
 
 instance
   Crypto c =>
-  FromCBOR (OBftSlot c)
+  DecCBOR (OBftSlot c)
   where
-  fromCBOR = do
+  decCBOR = do
     peekTokenType >>= \case
       TypeNull -> do
         decodeNull
         pure NonActiveSlot
-      _ -> ActiveSlot <$> fromCBOR
+      _ -> ActiveSlot <$> decCBOR
 
 instance NoThunks (OBftSlot c)
 

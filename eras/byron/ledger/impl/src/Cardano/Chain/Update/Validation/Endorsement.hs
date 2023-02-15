@@ -24,9 +24,9 @@ import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeWord8,
   encodeListLen,
@@ -66,20 +66,20 @@ data CandidateProtocolUpdate = CandidateProtocolUpdate
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance FromCBOR CandidateProtocolUpdate where
-  fromCBOR = do
+instance DecCBOR CandidateProtocolUpdate where
+  decCBOR = do
     enforceSize "CandidateProtocolUpdate" 3
     CandidateProtocolUpdate
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
-instance ToCBOR CandidateProtocolUpdate where
-  toCBOR cpu =
+instance EncCBOR CandidateProtocolUpdate where
+  encCBOR cpu =
     encodeListLen 3
-      <> toCBOR (cpuSlot cpu)
-      <> toCBOR (cpuProtocolVersion cpu)
-      <> toCBOR (cpuProtocolParameters cpu)
+      <> encCBOR (cpuSlot cpu)
+      <> encCBOR (cpuProtocolVersion cpu)
+      <> encCBOR (cpuProtocolParameters cpu)
 
 data Endorsement = Endorsement
   { endorsementProtocolVersion :: !ProtocolVersion
@@ -88,18 +88,18 @@ data Endorsement = Endorsement
   deriving (Eq, Show, Ord, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance FromCBOR Endorsement where
-  fromCBOR = do
+instance DecCBOR Endorsement where
+  decCBOR = do
     enforceSize "Endorsement" 2
     Endorsement
-      <$> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
 
-instance ToCBOR Endorsement where
-  toCBOR sh =
+instance EncCBOR Endorsement where
+  encCBOR sh =
     encodeListLen 2
-      <> toCBOR (endorsementProtocolVersion sh)
-      <> toCBOR (endorsementKeyHash sh)
+      <> encCBOR (endorsementProtocolVersion sh)
+      <> encCBOR (endorsementKeyHash sh)
 
 data Error
   = -- | Multiple proposals were found, which propose an update to the same
@@ -107,18 +107,18 @@ data Error
     MultipleProposalsForProtocolVersion ProtocolVersion
   deriving (Eq, Show)
 
-instance ToCBOR Error where
-  toCBOR (MultipleProposalsForProtocolVersion protocolVersion) =
+instance EncCBOR Error where
+  encCBOR (MultipleProposalsForProtocolVersion protocolVersion) =
     encodeListLen 2
-      <> toCBOR (0 :: Word8)
-      <> toCBOR protocolVersion
+      <> encCBOR (0 :: Word8)
+      <> encCBOR protocolVersion
 
-instance FromCBOR Error where
-  fromCBOR = do
+instance DecCBOR Error where
+  decCBOR = do
     enforceSize "Endorsement.Error" 2
     tag <- decodeWord8
     case tag of
-      0 -> MultipleProposalsForProtocolVersion <$> fromCBOR
+      0 -> MultipleProposalsForProtocolVersion <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "Endorsement.Error" tag
 
 -- | Register an endorsement.

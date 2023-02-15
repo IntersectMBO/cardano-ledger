@@ -26,10 +26,10 @@ module Cardano.Ledger.DPState (
 where
 
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   FromSharedCBOR (..),
   Interns,
-  ToCBOR (..),
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
@@ -81,14 +81,14 @@ instance NoThunks (FutureGenDeleg c)
 
 instance NFData (FutureGenDeleg c)
 
-instance CC.Crypto c => ToCBOR (FutureGenDeleg c) where
-  toCBOR (FutureGenDeleg a b) =
-    encodeListLen 2 <> toCBOR a <> toCBOR b
+instance CC.Crypto c => EncCBOR (FutureGenDeleg c) where
+  encCBOR (FutureGenDeleg a b) =
+    encodeListLen 2 <> encCBOR a <> encCBOR b
 
-instance CC.Crypto c => FromCBOR (FutureGenDeleg c) where
-  fromCBOR =
+instance CC.Crypto c => DecCBOR (FutureGenDeleg c) where
+  decCBOR =
     decodeRecordNamed "FutureGenDeleg" (const 2) $
-      FutureGenDeleg <$> fromCBOR <*> fromCBOR
+      FutureGenDeleg <$> decCBOR <*> decCBOR
 
 -- | InstantaneousRewards captures the pending changes to the ledger
 -- state caused by MIR certificates. It consists of two mappings,
@@ -130,13 +130,13 @@ instance NoThunks (InstantaneousRewards c) => NoThunks (DState c)
 
 instance NFData (InstantaneousRewards c) => NFData (DState c)
 
-instance (CC.Crypto c, ToCBOR (InstantaneousRewards c)) => ToCBOR (DState c) where
-  toCBOR (DState unified fgs gs ir) =
+instance (CC.Crypto c, EncCBOR (InstantaneousRewards c)) => EncCBOR (DState c) where
+  encCBOR (DState unified fgs gs ir) =
     encodeListLen 4
-      <> toCBOR unified
-      <> toCBOR fgs
-      <> toCBOR gs
-      <> toCBOR ir
+      <> encCBOR unified
+      <> encCBOR fgs
+      <> encCBOR gs
+      <> encCBOR ir
 
 instance (CC.Crypto c, FromSharedCBOR (InstantaneousRewards c)) => FromSharedCBOR (DState c) where
   type
@@ -145,8 +145,8 @@ instance (CC.Crypto c, FromSharedCBOR (InstantaneousRewards c)) => FromSharedCBO
   fromSharedPlusCBOR =
     decodeRecordNamedT "DState" (const 4) $ do
       unified <- fromSharedPlusCBOR
-      fgs <- lift fromCBOR
-      gs <- lift fromCBOR
+      fgs <- lift decCBOR
+      gs <- lift decCBOR
       ir <- fromSharedPlusLensCBOR _1
       pure $ DState unified fgs gs ir
 
@@ -171,9 +171,9 @@ instance NoThunks (PState c)
 
 instance NFData (PState c)
 
-instance CC.Crypto c => ToCBOR (PState c) where
-  toCBOR (PState a b c d) =
-    encodeListLen 4 <> toCBOR a <> toCBOR b <> toCBOR c <> toCBOR d
+instance CC.Crypto c => EncCBOR (PState c) where
+  encCBOR (PState a b c d) =
+    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
 instance CC.Crypto c => FromSharedCBOR (PState c) where
   type
@@ -186,8 +186,8 @@ instance CC.Crypto c => FromSharedCBOR (PState c) where
     psDeposits <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
     pure PState {psStakePoolParams, psFutureStakePoolParams, psRetiring, psDeposits}
 
-instance (CC.Crypto c, FromSharedCBOR (PState c)) => FromCBOR (PState c) where
-  fromCBOR = fromNotSharedCBOR
+instance (CC.Crypto c, FromSharedCBOR (PState c)) => DecCBOR (PState c) where
+  decCBOR = fromNotSharedCBOR
 
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
@@ -201,9 +201,9 @@ instance NoThunks (InstantaneousRewards c) => NoThunks (DPState c)
 
 instance NFData (InstantaneousRewards c) => NFData (DPState c)
 
-instance CC.Crypto c => ToCBOR (InstantaneousRewards c) where
-  toCBOR (InstantaneousRewards irR irT dR dT) =
-    encodeListLen 4 <> toCBOR irR <> toCBOR irT <> toCBOR dR <> toCBOR dT
+instance CC.Crypto c => EncCBOR (InstantaneousRewards c) where
+  encCBOR (InstantaneousRewards irR irT dR dT) =
+    encodeListLen 4 <> encCBOR irR <> encCBOR irT <> encCBOR dR <> encCBOR dT
 
 instance CC.Crypto c => FromSharedCBOR (InstantaneousRewards c) where
   type Share (InstantaneousRewards c) = Interns (Credential 'Staking c)
@@ -211,18 +211,18 @@ instance CC.Crypto c => FromSharedCBOR (InstantaneousRewards c) where
     decodeRecordNamedT "InstantaneousRewards" (const 4) $ do
       irR <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
       irT <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-      dR <- lift fromCBOR
-      dT <- lift fromCBOR
+      dR <- lift decCBOR
+      dT <- lift decCBOR
       pure $ InstantaneousRewards irR irT dR dT
 
 instance
   CC.Crypto c =>
-  ToCBOR (DPState c)
+  EncCBOR (DPState c)
   where
-  toCBOR DPState {dpsPState, dpsDState} =
+  encCBOR DPState {dpsPState, dpsDState} =
     encodeListLen 2
-      <> toCBOR dpsPState -- We get better sharing when encoding pstate before dstate
-      <> toCBOR dpsDState
+      <> encCBOR dpsPState -- We get better sharing when encoding pstate before dstate
+      <> encCBOR dpsDState
 
 instance CC.Crypto c => FromSharedCBOR (DPState c) where
   type

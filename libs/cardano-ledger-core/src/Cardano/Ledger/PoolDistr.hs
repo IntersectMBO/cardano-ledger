@@ -23,7 +23,7 @@ module Cardano.Ledger.PoolDistr (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Cardano.Ledger.TreeDiff (ToExpr)
@@ -53,20 +53,20 @@ data IndividualPoolStake c = IndividualPoolStake
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance CC.Crypto c => ToCBOR (IndividualPoolStake c) where
-  toCBOR (IndividualPoolStake stake vrf) =
+instance CC.Crypto c => EncCBOR (IndividualPoolStake c) where
+  encCBOR (IndividualPoolStake stake vrf) =
     mconcat
       [ encodeListLen 2
-      , toCBOR stake
-      , toCBOR vrf
+      , encCBOR stake
+      , encCBOR vrf
       ]
 
-instance CC.Crypto c => FromCBOR (IndividualPoolStake c) where
-  fromCBOR =
+instance CC.Crypto c => DecCBOR (IndividualPoolStake c) where
+  decCBOR =
     decodeRecordNamed "IndividualPoolStake" (const 2) $
       IndividualPoolStake
-        <$> fromCBOR
-        <*> fromCBOR
+        <$> decCBOR
+        <*> decCBOR
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'.
@@ -75,7 +75,7 @@ newtype PoolDistr c = PoolDistr
       Map (KeyHash 'StakePool c) (IndividualPoolStake c)
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks)
+  deriving newtype (EncCBOR, DecCBOR, NFData, NoThunks)
 
 -- ===============================
 

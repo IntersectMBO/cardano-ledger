@@ -31,8 +31,8 @@ import Cardano.Ledger.BaseTypes (
   networkId,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordSum,
   encodeListLen,
  )
@@ -148,42 +148,42 @@ instance
 instance
   ( Era era
   , Typeable (Script era)
-  , ToCBOR (PredicateFailure (EraRule "DELPL" era))
+  , EncCBOR (PredicateFailure (EraRule "DELPL" era))
   ) =>
-  ToCBOR (ShelleyDelegsPredFailure era)
+  EncCBOR (ShelleyDelegsPredFailure era)
   where
-  toCBOR = \case
+  encCBOR = \case
     DelegateeNotRegisteredDELEG kh ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR kh
+        <> encCBOR (0 :: Word8)
+        <> encCBOR kh
     WithdrawalsNotInRewardsDELEGS ws ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR ws
+        <> encCBOR (1 :: Word8)
+        <> encCBOR ws
     (DelplFailure a) ->
       encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR a
+        <> encCBOR (2 :: Word8)
+        <> encCBOR a
 
 instance
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "DELPL" era))
+  , DecCBOR (PredicateFailure (EraRule "DELPL" era))
   , Typeable (Script era)
   ) =>
-  FromCBOR (ShelleyDelegsPredFailure era)
+  DecCBOR (ShelleyDelegsPredFailure era)
   where
-  fromCBOR =
+  decCBOR =
     decodeRecordSum "PredicateFailure" $
       \case
         0 -> do
-          kh <- fromCBOR
+          kh <- decCBOR
           pure (2, DelegateeNotRegisteredDELEG kh)
         1 -> do
-          ws <- fromCBOR
+          ws <- decCBOR
           pure (2, WithdrawalsNotInRewardsDELEGS ws)
         2 -> do
-          a <- fromCBOR
+          a <- decCBOR
           pure (2, DelplFailure a)
         k -> invalidKey k
 

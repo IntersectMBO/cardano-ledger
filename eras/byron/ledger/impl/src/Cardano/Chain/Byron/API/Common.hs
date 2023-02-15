@@ -85,8 +85,8 @@ reAnnotateMagic (AProtocolMagic a b) = AProtocolMagic (reAnnotate byronProtVer a
 reAnnotateBlock :: CC.EpochSlots -> CC.ABlock () -> CC.ABlock ByteString
 reAnnotateBlock epochSlots =
   reAnnotateUsing
-    (CC.toCBORBlock epochSlots)
-    (CC.fromCBORABlock epochSlots)
+    (CC.encCBORBlock epochSlots)
+    (CC.decCBORABlock epochSlots)
 
 reAnnotateBoundary ::
   ProtocolMagicId ->
@@ -94,8 +94,8 @@ reAnnotateBoundary ::
   CC.ABoundaryBlock ByteString
 reAnnotateBoundary pm =
   reAnnotateUsing
-    (CC.toCBORABoundaryBlock pm)
-    CC.fromCBORABoundaryBlock
+    (CC.encCBORABoundaryBlock pm)
+    CC.decCBORABoundaryBlock
 
 -- | Generalization of 'reAnnotate'
 reAnnotateUsing ::

@@ -16,7 +16,7 @@ module Cardano.Chain.Common.LovelacePortion (
 where
 
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Prelude
 import Control.Monad (fail)
 import qualified Data.Aeson as Aeson
@@ -60,12 +60,12 @@ instance B.Buildable LovelacePortion where
 -- Used for debugging purposes only
 instance Aeson.ToJSON LovelacePortion
 
-instance ToCBOR LovelacePortion where
-  toCBOR = toCBOR . unLovelacePortion
+instance EncCBOR LovelacePortion where
+  encCBOR = encCBOR . unLovelacePortion
 
-instance FromCBOR LovelacePortion where
-  fromCBOR = do
-    nominator <- fromCBOR
+instance DecCBOR LovelacePortion where
+  decCBOR = do
+    nominator <- decCBOR
     when (nominator > lovelacePortionDenominator) $
       fail "LovelacePortion: value out of bounds [0..1e15]"
     return (LovelacePortion nominator)

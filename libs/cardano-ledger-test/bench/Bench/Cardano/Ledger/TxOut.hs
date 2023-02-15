@@ -130,9 +130,9 @@ serializeTxOutAlonzoBench :: Int -> String -> (Int -> TxOut Alonzo) -> Benchmark
 serializeTxOutAlonzoBench count name mkTxOuts =
   bgroup
     name
-    [ env (pure (mkTxOuts <$> [1 .. count])) $ bench "ToCBOR" . nf (map (serialize v))
+    [ env (pure (mkTxOuts <$> [1 .. count])) $ bench "EncCBOR" . nf (map (serialize v))
     , env (pure (serialize v . mkTxOuts <$> [1 .. count])) $
-        bench "FromCBOR" . nf (map (either (error . show) (id @(TxOut Alonzo)) . decodeFull v))
+        bench "DecCBOR" . nf (map (either (error . show) (id @(TxOut Alonzo)) . decodeFull v))
     ]
   where
     v = eraProtVerHigh @Alonzo

@@ -93,9 +93,9 @@ import Cardano.Ledger.Alonzo.TxBody (
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   Version,
   decodeFull',
  )
@@ -170,13 +170,13 @@ data TxOutSource c
   | TxOutFromOutput !TxIx
   deriving (Eq, Show, Generic, NoThunks)
 
-instance Crypto c => ToCBOR (TxOutSource c) where
-  toCBOR = \case
+instance Crypto c => EncCBOR (TxOutSource c) where
+  encCBOR = \case
     TxOutFromInput txIn -> encode $ Sum TxOutFromInput 0 !> To txIn
     TxOutFromOutput txIx -> encode $ Sum TxOutFromOutput 1 !> To txIx
 
-instance Crypto c => FromCBOR (TxOutSource c) where
-  fromCBOR = decode (Summands "TxOutSource" dec)
+instance Crypto c => DecCBOR (TxOutSource c) where
+  decCBOR = decode (Summands "TxOutSource" dec)
     where
       dec 0 = SumD TxOutFromInput <! From
       dec 1 = SumD TxOutFromOutput <! From
@@ -194,8 +194,8 @@ data TranslationError c
   | TimeTranslationPastHorizon !Text
   deriving (Eq, Show, Generic, NoThunks)
 
-instance Crypto c => ToCBOR (TranslationError c) where
-  toCBOR = \case
+instance Crypto c => EncCBOR (TranslationError c) where
+  encCBOR = \case
     ByronTxOutInContext txOutSource ->
       encode $ Sum ByronTxOutInContext 0 !> To txOutSource
     TranslationLogicMissingInput txIn ->
@@ -213,8 +213,8 @@ instance Crypto c => ToCBOR (TranslationError c) where
     TimeTranslationPastHorizon err ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
 
-instance Crypto c => FromCBOR (TranslationError c) where
-  fromCBOR = decode (Summands "TranslationError" dec)
+instance Crypto c => DecCBOR (TranslationError c) where
+  decCBOR = decode (Summands "TranslationError" dec)
     where
       dec 0 = SumD ByronTxOutInContext <! From
       dec 1 = SumD TranslationLogicMissingInput <! From
@@ -559,11 +559,11 @@ instance Monoid ScriptResult where
 newtype PlutusData = PlutusData {unPlutusData :: [PV1.Data]}
   deriving (Eq)
 
-instance ToCBOR PlutusData where
-  toCBOR (PlutusData d) = toCBOR d
+instance EncCBOR PlutusData where
+  encCBOR (PlutusData d) = encCBOR d
 
-instance FromCBOR PlutusData where
-  fromCBOR = PlutusData <$> fromCBOR
+instance DecCBOR PlutusData where
+  decCBOR = PlutusData <$> decCBOR
 
 data PlutusDebugLang (l :: Language) where
   PlutusDebugLang ::
@@ -589,10 +589,10 @@ deriving instance Generic (PlutusDebugLang l)
 
 instance
   forall (l :: Language).
-  (Typeable l, IsLanguage l, ToCBOR (SLanguage l)) =>
-  ToCBOR (PlutusDebugLang l)
+  (Typeable l, IsLanguage l, EncCBOR (SLanguage l)) =>
+  EncCBOR (PlutusDebugLang l)
   where
-  toCBOR (PlutusDebugLang slang costModel exUnits sbs pData protVer) =
+  encCBOR (PlutusDebugLang slang costModel exUnits sbs pData protVer) =
     let tag =
           case slang of
             SPlutusV1 -> 0
@@ -609,17 +609,17 @@ instance
 instance
   forall (l :: Language).
   (Typeable l, IsLanguage l) =>
-  FromCBOR (PlutusDebugLang l)
+  DecCBOR (PlutusDebugLang l)
   where
-  fromCBOR = decodeRecordSum "PlutusDebugLang" $ \tag -> do
+  decCBOR = decodeRecordSum "PlutusDebugLang" $ \tag -> do
     let lang = fromSLanguage $ isLanguage @l
     when (fromEnum lang /= fromIntegral tag) $ fail $ "Unexpected language: " <> show tag
-    slang <- fromCBOR
+    slang <- decCBOR
     costModel <- decodeCostModelFailHard lang
-    exUnits <- fromCBOR
-    sbs <- fromCBOR
-    pData <- fromCBOR
-    protVer <- fromCBOR
+    exUnits <- decCBOR
+    sbs <- decCBOR
+    pData <- decCBOR
+    protVer <- decCBOR
     -- We need to return a tuple here, with the size of the tag in bytes.
     pure $ (1, PlutusDebugLang slang costModel exUnits sbs pData protVer)
 
@@ -628,8 +628,8 @@ data PlutusDebug where
 
 deriving instance Show PlutusDebug
 
-instance ToCBOR PlutusDebug where
-  toCBOR (PlutusDebug pdbg) = toCBOR pdbg
+instance EncCBOR PlutusDebug where
+  encCBOR (PlutusDebug pdbg) = encCBOR pdbg
 
 data PlutusError
   = PlutusErrorV1 PV1.EvaluationError

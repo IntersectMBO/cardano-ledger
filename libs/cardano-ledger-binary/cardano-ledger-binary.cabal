@@ -30,12 +30,12 @@ library
     other-modules:
         Cardano.Ledger.Binary.Encoding.Coders
         Cardano.Ledger.Binary.Encoding.Encoder
-        Cardano.Ledger.Binary.Encoding.ToCBOR
+        Cardano.Ledger.Binary.Encoding.EncCBOR
         Cardano.Ledger.Binary.Decoding.Annotated
         Cardano.Ledger.Binary.Decoding.Coders
         Cardano.Ledger.Binary.Decoding.Decoder
         Cardano.Ledger.Binary.Decoding.Drop
-        Cardano.Ledger.Binary.Decoding.FromCBOR
+        Cardano.Ledger.Binary.Decoding.DecCBOR
         Cardano.Ledger.Binary.Decoding.Sharing
         Cardano.Ledger.Binary.Decoding.Sized
 

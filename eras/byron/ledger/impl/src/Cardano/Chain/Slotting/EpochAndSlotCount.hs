@@ -21,8 +21,8 @@ import Cardano.Chain.Slotting.EpochSlots (EpochSlots (..))
 import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
 import Cardano.Chain.Slotting.SlotNumber (SlotNumber (..))
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   encodeListLen,
   enforceSize,
  )
@@ -46,17 +46,17 @@ instance B.Buildable EpochAndSlotCount where
       (unSlotCount $ slotCount eas)
       (getEpochNumber $ epochNo eas)
 
-instance ToCBOR EpochAndSlotCount where
-  toCBOR eas = encodeListLen 2 <> toCBOR (epochNo eas) <> toCBOR (slotCount eas)
+instance EncCBOR EpochAndSlotCount where
+  encCBOR eas = encodeListLen 2 <> encCBOR (epochNo eas) <> encCBOR (slotCount eas)
   encodedSizeExpr f eas =
     1
       + encodedSizeExpr f (epochNo <$> eas)
       + encodedSizeExpr f (slotCount <$> eas)
 
-instance FromCBOR EpochAndSlotCount where
-  fromCBOR = do
+instance DecCBOR EpochAndSlotCount where
+  decCBOR = do
     enforceSize "EpochAndSlotCount" 2
-    EpochAndSlotCount <$> fromCBOR <*> fromCBOR
+    EpochAndSlotCount <$> decCBOR <*> decCBOR
 
 -- | Flatten 'EpochAndSlotCount' into a single absolute 'SlotNumber'
 toSlotNumber :: EpochSlots -> EpochAndSlotCount -> SlotNumber

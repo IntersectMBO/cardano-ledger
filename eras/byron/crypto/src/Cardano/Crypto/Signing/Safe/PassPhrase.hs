@@ -10,7 +10,7 @@ module Cardano.Crypto.Signing.Safe.PassPhrase (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), toCborError)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), toCborError)
 import Cardano.Prelude hiding (toCborError)
 import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as ByteArray
@@ -41,12 +41,12 @@ instance Buildable PassPhrase where
 instance Default PassPhrase where
   def = emptyPassphrase
 
-instance ToCBOR PassPhrase where
-  toCBOR pp = toCBOR (ByteArray.convert pp :: ByteString)
+instance EncCBOR PassPhrase where
+  encCBOR pp = encCBOR (ByteArray.convert pp :: ByteString)
 
-instance FromCBOR PassPhrase where
-  fromCBOR = do
-    bs <- fromCBOR @ByteString
+instance DecCBOR PassPhrase where
+  decCBOR = do
+    bs <- decCBOR @ByteString
     let bl = BS.length bs
     -- Currently passphrase may be either 32-byte long or empty (for
     -- unencrypted keys).

@@ -54,13 +54,13 @@ import Cardano.Crypto (
 import Cardano.Ledger.Binary (
   Annotated (Annotated, unAnnotated),
   ByteSpan,
+  DecCBOR (..),
   Decoded (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   annotatedDecoder,
+  decCBORAnnotated,
   encodeListLen,
   enforceSize,
-  fromCBORAnnotated,
  )
 import qualified Cardano.Ledger.Binary as Binary (annotation)
 import Cardano.Prelude
@@ -169,30 +169,30 @@ recoverVoteId = hashDecoded
 -- Vote Binary Serialization
 --------------------------------------------------------------------------------
 
-instance ToCBOR Vote where
-  toCBOR uv =
+instance EncCBOR Vote where
+  encCBOR uv =
     encodeListLen 4
-      <> toCBOR (voterVK uv)
-      <> toCBOR (proposalId uv)
+      <> encCBOR (voterVK uv)
+      <> encCBOR (proposalId uv)
       -- We encode @True@ here because we removed the decision bit. This is safe
       -- because we know that all @Vote@s on mainnet use this encoding and any
       -- changes to the encoding in our implementation will be picked up by
       -- golden tests.
-      <> toCBOR True
-      <> toCBOR (signature uv)
+      <> encCBOR True
+      <> encCBOR (signature uv)
 
-instance FromCBOR Vote where
-  fromCBOR = void <$> fromCBOR @(AVote ByteSpan)
+instance DecCBOR Vote where
+  decCBOR = void <$> decCBOR @(AVote ByteSpan)
 
-instance FromCBOR (AVote ByteSpan) where
-  fromCBOR = do
+instance DecCBOR (AVote ByteSpan) where
+  decCBOR = do
     Annotated (voterVK, aProposalId, signature) byteSpan <- annotatedDecoder $ do
       enforceSize "Vote" 4
-      voterVK <- fromCBOR
-      aProposalId <- fromCBORAnnotated
+      voterVK <- decCBOR
+      aProposalId <- decCBORAnnotated
       -- Drop the decision bit that previously allowed negative voting
-      void $ fromCBOR @Bool
-      signature <- fromCBOR
+      void $ decCBOR @Bool
+      signature <- decCBOR
       pure (voterVK, aProposalId, signature)
     pure $ UnsafeVote voterVK aProposalId signature byteSpan
 

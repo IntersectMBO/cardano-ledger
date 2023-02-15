@@ -49,9 +49,9 @@ import Cardano.Chain.UTxO.Tx (Tx (..), TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto (serializeCborHash)
 import Cardano.HeapWords (HeapWords)
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
@@ -69,7 +69,7 @@ newtype UTxO = UTxO
   { unUTxO :: Map CompactTxIn CompactTxOut
   }
   deriving (Eq, Show, Generic)
-  deriving newtype (HeapWords, FromCBOR, ToCBOR)
+  deriving newtype (HeapWords, DecCBOR, EncCBOR)
   deriving anyclass (NFData, NoThunks)
 
 data UTxOError
@@ -77,19 +77,19 @@ data UTxOError
   | UTxOOverlappingUnion
   deriving (Eq, Show)
 
-instance ToCBOR UTxOError where
-  toCBOR = \case
+instance EncCBOR UTxOError where
+  encCBOR = \case
     UTxOMissingInput txIn ->
-      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR txIn
+      encodeListLen 2 <> encCBOR @Word8 0 <> encCBOR txIn
     UTxOOverlappingUnion ->
-      encodeListLen 1 <> toCBOR @Word8 1
+      encodeListLen 1 <> encCBOR @Word8 1
 
-instance FromCBOR UTxOError where
-  fromCBOR = do
+instance DecCBOR UTxOError where
+  decCBOR = do
     len <- decodeListLen
     tag <- decodeWord8
     case tag of
-      0 -> matchSize "UTxOError" 2 len >> UTxOMissingInput <$> fromCBOR
+      0 -> matchSize "UTxOError" 2 len >> UTxOMissingInput <$> decCBOR
       1 -> matchSize "UTxOError" 1 len $> UTxOOverlappingUnion
       _ -> cborError $ DecoderErrorUnknownTag "UTxOError" tag
 

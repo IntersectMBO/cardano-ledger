@@ -14,7 +14,7 @@ import Cardano.Chain.Common (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Validation.Scheduling (ScheduledDelegation (..))
 import Cardano.Chain.Slotting (SlotNumber (..))
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import NoThunks.Class (NoThunks (..))
@@ -31,18 +31,18 @@ data State = State
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
-instance FromCBOR State where
-  fromCBOR = do
+instance DecCBOR State where
+  decCBOR = do
     enforceSize "State" 2
     State
-      <$> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
 
-instance ToCBOR State where
-  toCBOR s =
+instance EncCBOR State where
+  encCBOR s =
     encodeListLen 2
-      <> toCBOR (delegationMap s)
-      <> toCBOR (delegationSlots s)
+      <> encCBOR (delegationMap s)
+      <> encCBOR (delegationSlots s)
 
 -- | Activate a 'ScheduledDelegation' if its activation slot is less than the
 --   previous delegation slot for this delegate, otherwise discard it. This is

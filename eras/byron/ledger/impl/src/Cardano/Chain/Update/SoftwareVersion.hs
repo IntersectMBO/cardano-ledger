@@ -16,9 +16,9 @@ where
 
 import Cardano.Chain.Update.ApplicationName
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeWord8,
   encodeListLen,
@@ -53,35 +53,35 @@ instance Show SoftwareVersion where
 -- Used for debugging purposes only
 instance ToJSON SoftwareVersion
 
-instance ToCBOR SoftwareVersion where
-  toCBOR sv = encodeListLen 2 <> toCBOR (svAppName sv) <> toCBOR (svNumber sv)
+instance EncCBOR SoftwareVersion where
+  encCBOR sv = encodeListLen 2 <> encCBOR (svAppName sv) <> encCBOR (svNumber sv)
 
   encodedSizeExpr f sv =
     1
       + encodedSizeExpr f (svAppName <$> sv)
       + encodedSizeExpr f (svNumber <$> sv)
 
-instance FromCBOR SoftwareVersion where
-  fromCBOR = do
+instance DecCBOR SoftwareVersion where
+  decCBOR = do
     enforceSize "SoftwareVersion" 2
-    SoftwareVersion <$> fromCBOR <*> fromCBOR
+    SoftwareVersion <$> decCBOR <*> decCBOR
 
 data SoftwareVersionError
   = SoftwareVersionApplicationNameError ApplicationNameError
   deriving (Data, Eq, Show)
 
-instance ToCBOR SoftwareVersionError where
-  toCBOR (SoftwareVersionApplicationNameError applicationNameError) =
+instance EncCBOR SoftwareVersionError where
+  encCBOR (SoftwareVersionApplicationNameError applicationNameError) =
     encodeListLen 2
-      <> toCBOR (0 :: Word8)
-      <> toCBOR applicationNameError
+      <> encCBOR (0 :: Word8)
+      <> encCBOR applicationNameError
 
-instance FromCBOR SoftwareVersionError where
-  fromCBOR = do
+instance DecCBOR SoftwareVersionError where
+  decCBOR = do
     enforceSize "SoftwareVersionError" 2
     tag <- decodeWord8
     case tag of
-      0 -> SoftwareVersionApplicationNameError <$> fromCBOR
+      0 -> SoftwareVersionApplicationNameError <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" tag
 
 instance B.Buildable SoftwareVersionError where

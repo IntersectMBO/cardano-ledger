@@ -11,12 +11,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Data.Coders provides tools for writing 'ToCBOR' and 'FromCBOR' instances (see module
+-- | Data.Coders provides tools for writing 'EncCBOR' and 'DecCBOR' instances (see module
 --   'Cardano.Binary') in an intuitive way that mirrors the way one constructs values of a
 --   particular type. Advantages include:
 --
 -- 1. Book-keeping details neccesary to write correct instances are hidden from the user.
--- 2. Inverse 'ToCBOR' and 'FromCBOR' instances have visually similar definitions.
+-- 2. Inverse 'EncCBOR' and 'DecCBOR' instances have visually similar definitions.
 -- 3. Advanced instances involving sparse-encoding, compact-representation, and 'Annotator' instances are also supported.
 --
 -- A Guide to Visual inspection of Duality in Encode and Decode
@@ -59,8 +59,9 @@ module Cardano.Ledger.Binary.Encoding.Coders (
 where
 
 import Cardano.Ledger.Binary.Decoding.Coders (Density (Dense, Sparse), Wrapped (..))
+import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (..))
 import Cardano.Ledger.Binary.Decoding.Decoder (Decoder)
-import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
+import Cardano.Ledger.Binary.Encoding.EncCBOR (EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Encoding.Encoder (
   Encoding,
   encodeListLen,
@@ -68,7 +69,6 @@ import Cardano.Ledger.Binary.Encoding.Encoder (
   encodeTag,
   encodeWord,
  )
-import Cardano.Ledger.Binary.Encoding.ToCBOR (ToCBOR (toCBOR))
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 
 -- ====================================================================
@@ -88,7 +88,7 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 --    written to the ByteString. Care must still be taken that the Keys are correct.
 -- 3. get a (MemoBytes t)
 --
--- The advantage of using Encode with a MemoBytes, is we don't have to make a ToCBOR
+-- The advantage of using Encode with a MemoBytes, is we don't have to make a EncCBOR
 -- instance. Instead the "instance" is spread amongst the pattern constuctors by using
 -- (memoBytes encoding) in the where clause of the pattern contructor.
 -- See some examples of this see the file Timelocks.hs
@@ -100,7 +100,7 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 
 -- Encoders
 
--- | A first-order domain specific langage for describing ToCBOR instances. Applying
+-- | A first-order domain specific langage for describing EncCBOR instances. Applying
 --   the interpreter 'encode' to a well-typed @(Encode w T)@ always produces a valid encoding for @T@.
 --   Constructing an Encode of type T is just like building a value of type T, applying a constructor
 --   of @T@ to the correctly typed arguments. For example
@@ -108,8 +108,8 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 -- @
 -- data T = T Bool Word
 --
--- instance ToCBOR T where
---   toCBOR (T b w) = encode (Rec T !> To b !> To w)
+-- instance EncCBOR T where
+--   encCBOR (T b w) = encode (Rec T !> To b !> To w)
 -- @
 --
 -- Note the similarity of
@@ -127,8 +127,8 @@ data Encode (w :: Wrapped) t where
   Sum :: t -> Word -> Encode 'Open t
   -- | Label the constructor of a Record-like datatype as being encoded sparsely (storing only non-default values).
   Keyed :: t -> Encode ('Closed 'Sparse) t
-  -- | Label an (component, field, argument) to be encoded using an existing ToCBOR instance.
-  To :: ToCBOR a => a -> Encode ('Closed 'Dense) a
+  -- | Label an (component, field, argument) to be encoded using an existing EncCBOR instance.
+  To :: EncCBOR a => a -> Encode ('Closed 'Dense) a
   -- | Label a  (component, field, argument) to be encoded using the given encoding function.
   E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
   -- | Lift one Encode to another with a different type. Used to make a Functor instance of (Encode w).
@@ -192,7 +192,7 @@ encode = encodeCountPrefix 0
     encodeCountPrefix n (Sum _ tag) = encodeListLen (n + 1) <> encodeWord tag
     encodeCountPrefix n (Keyed _) = encodeMapLen n
     encodeCountPrefix n (Rec _) = encodeListLen n
-    encodeCountPrefix _ (To x) = toCBOR x
+    encodeCountPrefix _ (To x) = encCBOR x
     encodeCountPrefix _ (E enc x) = enc x
     encodeCountPrefix n (MapE _ x) = encodeCountPrefix n x
     encodeCountPrefix _ (OmitC _) = mempty
@@ -204,7 +204,7 @@ encode = encodeCountPrefix 0
       where
         encodeClosed :: Encode ('Closed d) t -> Encoding
         encodeClosed (Rec _) = mempty
-        encodeClosed (To x) = toCBOR x
+        encodeClosed (To x) = encCBOR x
         encodeClosed (E enc x) = enc x
         encodeClosed (MapE _ x) = encodeClosed x
         encodeClosed (ApplyE f x) = encodeClosed f <> encodeClosed x
@@ -224,16 +224,16 @@ encodeKeyedStrictMaybeWith _ _ SNothing = OmitC SNothing
 encodeKeyedStrictMaybeWith key enc (SJust x) = Key key (MapE SJust $ E enc x)
 
 encodeKeyedStrictMaybe ::
-  ToCBOR a =>
+  EncCBOR a =>
   Word ->
   StrictMaybe a ->
   Encode ('Closed 'Sparse) (StrictMaybe a)
-encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
+encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key encCBOR
 
 -- | Use `encodeDual` and `Cardano.Ledger.Binary.Coders.decodeDual`, when you want to
--- guarantee that a type has both `ToCBOR` and `FromCBR` instances.
-encodeDual :: forall t. (ToCBOR t, FromCBOR t) => t -> Encode ('Closed 'Dense) t
-encodeDual = E toCBOR
+-- guarantee that a type has both `EncCBOR` and `FromCBR` instances.
+encodeDual :: forall t. (EncCBOR t, DecCBOR t) => t -> Encode ('Closed 'Dense) t
+encodeDual = E encCBOR
   where
-    -- Enforce FromCBOR constraint on t
-    _fromCBOR = fromCBOR :: Decoder s t
+    -- Enforce DecCBOR constraint on t
+    _decCBOR = decCBOR :: Decoder s t

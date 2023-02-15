@@ -22,9 +22,9 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey (RedeemVerificationKey (..)
 import Cardano.Crypto.Signing.Tag (SignTag, signTag, signTagDecoded)
 import Cardano.Ledger.Binary (
   Annotated,
+  DecCBOR,
   Decoded (..),
-  FromCBOR,
-  ToCBOR,
+  EncCBOR,
   byronProtVer,
   serialize',
  )
@@ -38,7 +38,7 @@ import qualified Formatting.Buildable as B (Buildable (..))
 type RedeemSignature :: Type -> Type
 newtype RedeemSignature a
   = RedeemSignature Ed25519.Signature
-  deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
+  deriving (Eq, Show, Generic, NFData, DecCBOR, EncCBOR)
 
 -- Note that there is deliberately no Ord instance. The crypto libraries
 -- encourage using key /hashes/ not keys for things like sets, map etc.
@@ -48,9 +48,9 @@ instance B.Buildable (RedeemSignature a) where
 
 deriveJSON defaultOptions ''RedeemSignature
 
--- | Encode something with 'ToCBOR' and sign it
+-- | Encode something with 'EncCBOR' and sign it
 redeemSign ::
-  ToCBOR a =>
+  EncCBOR a =>
   ProtocolMagicId ->
   SignTag ->
   RedeemSigningKey ->
@@ -72,7 +72,7 @@ redeemSignRaw pm mbTag (RedeemSigningKey k) x =
 
 -- | Verify a redeem signature
 verifyRedeemSig ::
-  ToCBOR a =>
+  EncCBOR a =>
   ProtocolMagicId ->
   SignTag ->
   RedeemVerificationKey ->

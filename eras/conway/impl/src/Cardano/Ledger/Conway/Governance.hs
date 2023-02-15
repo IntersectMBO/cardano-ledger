@@ -27,7 +27,7 @@ module Cardano.Ledger.Conway.Governance (
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..))
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeEnumBounded, encodeEnum)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeEnumBounded, encodeEnum)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -72,8 +72,8 @@ instance EraPParams era => NoThunks (GovernanceActionInfo era)
 
 instance EraPParams era => NFData (GovernanceActionInfo era)
 
-instance EraPParams era => FromCBOR (GovernanceActionInfo era) where
-  fromCBOR =
+instance EraPParams era => DecCBOR (GovernanceActionInfo era) where
+  decCBOR =
     decode $
       RecD GovernanceActionInfo
         <! From
@@ -82,8 +82,8 @@ instance EraPParams era => FromCBOR (GovernanceActionInfo era) where
         <! From
         <! From
 
-instance EraPParams era => ToCBOR (GovernanceActionInfo era) where
-  toCBOR GovernanceActionInfo {..} =
+instance EraPParams era => EncCBOR (GovernanceActionInfo era) where
+  encCBOR GovernanceActionInfo {..} =
     encode $
       Rec GovernanceActionInfo
         !> To gaiDepositAmount
@@ -106,8 +106,8 @@ instance EraPParams era => NoThunks (GovernanceAction era)
 
 instance EraPParams era => NFData (GovernanceAction era)
 
-instance EraPParams era => FromCBOR (GovernanceAction era) where
-  fromCBOR =
+instance EraPParams era => DecCBOR (GovernanceAction era) where
+  decCBOR =
     decode $
       Summands "GovernanceAction" dec
     where
@@ -116,12 +116,12 @@ instance EraPParams era => FromCBOR (GovernanceAction era) where
       dec 2 = TreasuryWithdrawals <$> From
       dec k = Invalid k
 
-instance EraPParams era => ToCBOR (GovernanceAction era) where
-  toCBOR x = encode (enc x)
+instance EraPParams era => EncCBOR (GovernanceAction era) where
+  encCBOR x = encode (enc x)
     where
-      enc (ParameterChange ppup) = Sum (toCBOR ppup) 0
-      enc (HardForkInitiation pv) = Sum (toCBOR pv) 1
-      enc (TreasuryWithdrawals ws) = Sum (toCBOR ws) 2
+      enc (ParameterChange ppup) = Sum (encCBOR ppup) 0
+      enc (HardForkInitiation pv) = Sum (encCBOR pv) 1
+      enc (TreasuryWithdrawals ws) = Sum (encCBOR ws) 2
 
 newtype GovernanceActionIx = GovernanceActionIx Word64
   deriving (Generic, Eq, Ord, Show, Num, Enum)
@@ -130,9 +130,9 @@ instance NoThunks GovernanceActionIx
 
 instance NFData GovernanceActionIx
 
-deriving newtype instance FromCBOR GovernanceActionIx
+deriving newtype instance DecCBOR GovernanceActionIx
 
-deriving newtype instance ToCBOR GovernanceActionIx
+deriving newtype instance EncCBOR GovernanceActionIx
 
 data GovernanceActionId c = GovernanceActionId
   { gaidTxId :: !(TxId c)
@@ -140,8 +140,8 @@ data GovernanceActionId c = GovernanceActionId
   }
   deriving (Generic, Eq, Ord, Show)
 
-instance Crypto c => FromCBOR (GovernanceActionId c) where
-  fromCBOR =
+instance Crypto c => DecCBOR (GovernanceActionId c) where
+  decCBOR =
     decode $
       RecD GovernanceActionId
         <! From
@@ -169,9 +169,9 @@ instance
   ( Era era
   , Crypto (EraCrypto era)
   ) =>
-  FromCBOR (Vote era)
+  DecCBOR (Vote era)
   where
-  fromCBOR =
+  decCBOR =
     decode $
       RecD Vote
         <! From
@@ -181,15 +181,15 @@ instance
         <! From
         <! From
 
-instance Crypto c => ToCBOR (GovernanceActionId c) where
-  toCBOR GovernanceActionId {..} =
+instance Crypto c => EncCBOR (GovernanceActionId c) where
+  encCBOR GovernanceActionId {..} =
     encode $
       Rec GovernanceActionId
         !> To gaidTxId
         !> To gaidGovActionIx
 
-instance Era era => ToCBOR (Vote era) where
-  toCBOR Vote {..} =
+instance Era era => EncCBOR (Vote era) where
+  encCBOR Vote {..} =
     encode $
       Rec (Vote @era)
         !> To voteGovActionId
@@ -205,11 +205,11 @@ data VoterRole
   | SPO
   deriving (Generic, Eq, Ord, Show, Enum, Bounded)
 
-instance FromCBOR VoterRole where
-  fromCBOR = decodeEnumBounded
+instance DecCBOR VoterRole where
+  decCBOR = decodeEnumBounded
 
-instance ToCBOR VoterRole where
-  toCBOR = encodeEnum
+instance EncCBOR VoterRole where
+  encCBOR = encodeEnum
 
 instance NoThunks VoterRole
 
@@ -225,11 +225,11 @@ instance NoThunks VoteDecision
 
 instance NFData VoteDecision
 
-instance FromCBOR VoteDecision where
-  fromCBOR = decodeEnumBounded
+instance DecCBOR VoteDecision where
+  decCBOR = decodeEnumBounded
 
-instance ToCBOR VoteDecision where
-  toCBOR = encodeEnum
+instance EncCBOR VoteDecision where
+  encCBOR = encodeEnum
 
 data GovernanceActionState era = GovernanceActionState
   { gasVotes :: !(Map (VoterRole, KeyHash 'Voting (EraCrypto era)) (Vote era))
@@ -272,11 +272,11 @@ makeGovAction GovernanceActionInfo {..} =
     , gasAction = gaiAction
     }
 
-instance EraPParams era => ToCBOR (ConwayTallyState era) where
-  toCBOR = undefined
+instance EraPParams era => EncCBOR (ConwayTallyState era) where
+  encCBOR = undefined
 
-instance EraPParams era => FromCBOR (ConwayTallyState era) where
-  fromCBOR = undefined
+instance EraPParams era => DecCBOR (ConwayTallyState era) where
+  decCBOR = undefined
 
 instance Crypto c => EraGovernance (ConwayEra c) where
   type GovernanceState (ConwayEra c) = ConwayTallyState (ConwayEra c)

@@ -19,9 +19,9 @@ import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Ledger.Binary (
   Annotated (..),
   ByteSpan,
+  DecCBOR (..),
   Decoded (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   annotatedDecoder,
  )
 import Cardano.Prelude
@@ -56,13 +56,13 @@ instance Buildable (APayload a) where
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (APayload a)
 
-instance ToCBOR Payload where
-  toCBOR = toCBOR . getPayload
+instance EncCBOR Payload where
+  encCBOR = encCBOR . getPayload
 
-instance FromCBOR Payload where
-  fromCBOR = void <$> fromCBOR @(APayload ByteSpan)
+instance DecCBOR Payload where
+  decCBOR = void <$> decCBOR @(APayload ByteSpan)
 
-instance FromCBOR (APayload ByteSpan) where
-  fromCBOR = do
-    (Annotated p a) <- annotatedDecoder fromCBOR
+instance DecCBOR (APayload ByteSpan) where
+  decCBOR = do
+    (Annotated p a) <- annotatedDecoder decCBOR
     pure (UnsafeAPayload p a)

@@ -16,7 +16,7 @@ import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber (..))
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters (..))
 import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude hiding (empty)
 import Data.Aeson (ToJSON)
 import Data.Text.Lazy.Builder (Builder)
@@ -100,42 +100,42 @@ instance B.Buildable ProtocolParametersUpdate where
 -- Used for debugging purposes only
 instance ToJSON ProtocolParametersUpdate
 
-instance ToCBOR ProtocolParametersUpdate where
-  toCBOR ppu =
+instance EncCBOR ProtocolParametersUpdate where
+  encCBOR ppu =
     encodeListLen 14
-      <> toCBOR (ppuScriptVersion ppu)
-      <> toCBOR (ppuSlotDuration ppu)
-      <> toCBOR (ppuMaxBlockSize ppu)
-      <> toCBOR (ppuMaxHeaderSize ppu)
-      <> toCBOR (ppuMaxTxSize ppu)
-      <> toCBOR (ppuMaxProposalSize ppu)
-      <> toCBOR (ppuMpcThd ppu)
-      <> toCBOR (ppuHeavyDelThd ppu)
-      <> toCBOR (ppuUpdateVoteThd ppu)
-      <> toCBOR (ppuUpdateProposalThd ppu)
-      <> toCBOR (ppuUpdateProposalTTL ppu)
-      <> toCBOR (ppuSoftforkRule ppu)
-      <> toCBOR (ppuTxFeePolicy ppu)
-      <> toCBOR (ppuUnlockStakeEpoch ppu)
+      <> encCBOR (ppuScriptVersion ppu)
+      <> encCBOR (ppuSlotDuration ppu)
+      <> encCBOR (ppuMaxBlockSize ppu)
+      <> encCBOR (ppuMaxHeaderSize ppu)
+      <> encCBOR (ppuMaxTxSize ppu)
+      <> encCBOR (ppuMaxProposalSize ppu)
+      <> encCBOR (ppuMpcThd ppu)
+      <> encCBOR (ppuHeavyDelThd ppu)
+      <> encCBOR (ppuUpdateVoteThd ppu)
+      <> encCBOR (ppuUpdateProposalThd ppu)
+      <> encCBOR (ppuUpdateProposalTTL ppu)
+      <> encCBOR (ppuSoftforkRule ppu)
+      <> encCBOR (ppuTxFeePolicy ppu)
+      <> encCBOR (ppuUnlockStakeEpoch ppu)
 
-instance FromCBOR ProtocolParametersUpdate where
-  fromCBOR = do
+instance DecCBOR ProtocolParametersUpdate where
+  decCBOR = do
     enforceSize "ProtocolParametersUpdate" 14
     ProtocolParametersUpdate
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
 empty :: ProtocolParametersUpdate
 empty =

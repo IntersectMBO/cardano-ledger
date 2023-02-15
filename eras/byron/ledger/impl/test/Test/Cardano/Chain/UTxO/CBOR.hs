@@ -18,7 +18,7 @@ import Cardano.Chain.UTxO (
   taWitness,
  )
 import Cardano.Crypto (ProtocolMagicId (..), SignTag (..), Signature, sign)
-import Cardano.Ledger.Binary (Case (..), LengthOf, SizeOverride (..), ToCBOR, szCases)
+import Cardano.Ledger.Binary (Case (..), EncCBOR, LengthOf, SizeOverride (..), szCases)
 import Cardano.Prelude
 import qualified Data.Map.Strict as M
 import Data.Vector (Vector)
@@ -294,7 +294,7 @@ ts_roundTripUTxOConfiguration =
 
 sizeEstimates :: H.Group
 sizeEstimates =
-  let sizeTestGen :: (Show a, ToCBOR a) => Gen a -> Property
+  let sizeTestGen :: (Show a, EncCBOR a) => Gen a -> Property
       sizeTestGen g = sizeTest $ scfg {gen = g}
       pm = ProtocolMagicId 0
 

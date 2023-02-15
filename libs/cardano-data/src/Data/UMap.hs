@@ -717,37 +717,37 @@ domRestrict (Ptrs (UnifiedMap _ pmap)) m = Map.intersection m pmap
 
 -- ==========================
 
-type Tbor x = (Typeable x, ToCBOR x)
+type Tbor x = (Typeable x, EncCBOR x)
 
 instance
-  (Tbor coin, Tbor ptr, Ord ptr, ToCBOR pool) =>
-  ToCBOR (Trip coin ptr pool)
+  (Tbor coin, Tbor ptr, Ord ptr, EncCBOR pool) =>
+  EncCBOR (Trip coin ptr pool)
   where
-  toCBOR (Triple coin ptr pool) =
-    encodeListLen 3 <> toCBOR coin <> toCBOR ptr <> toCBOR pool
+  encCBOR (Triple coin ptr pool) =
+    encodeListLen 3 <> encCBOR coin <> encCBOR ptr <> encCBOR pool
 
 instance
-  (FromCBOR coin, Ord ptr, FromCBOR ptr, FromCBOR pool) =>
+  (DecCBOR coin, Ord ptr, DecCBOR ptr, DecCBOR pool) =>
   FromSharedCBOR (Trip coin ptr pool)
   where
   type Share (Trip coin ptr pool) = Interns pool
   fromSharedCBOR is =
     decodeRecordNamed "Triple" (const 3) $
       do
-        a <- fromCBOR
-        b <- fromCBOR
+        a <- decCBOR
+        b <- decCBOR
         c <- fromShareCBORfunctor is
         pure (Triple a b c)
 
 instance
-  (Tbor coin, Tbor ptr, Tbor cred, ToCBOR pool, Ord ptr) =>
-  ToCBOR (UMap coin cred pool ptr)
+  (Tbor coin, Tbor ptr, Tbor cred, EncCBOR pool, Ord ptr) =>
+  EncCBOR (UMap coin cred pool ptr)
   where
-  toCBOR (UnifiedMap tripmap ptrmap) =
-    encodeListLen 2 <> encodeMap toCBOR toCBOR tripmap <> encodeMap toCBOR toCBOR ptrmap
+  encCBOR (UnifiedMap tripmap ptrmap) =
+    encodeListLen 2 <> encodeMap encCBOR encCBOR tripmap <> encodeMap encCBOR encCBOR ptrmap
 
 instance
-  (Ord cred, FromCBOR cred, Ord ptr, FromCBOR ptr, FromCBOR coin, FromCBOR pool) =>
+  (Ord cred, DecCBOR cred, Ord ptr, DecCBOR ptr, DecCBOR coin, DecCBOR pool) =>
   FromSharedCBOR (UMap coin cred pool ptr)
   where
   type
@@ -757,9 +757,9 @@ instance
     StateT
       ( \(a, b) ->
           decodeRecordNamed "UnifiedMap" (const 2) $ do
-            tripmap <- decodeMap (interns a <$> fromCBOR) (fromSharedCBOR b)
+            tripmap <- decodeMap (interns a <$> decCBOR) (fromSharedCBOR b)
             let a' = internsFromMap tripmap <> a
-            ptrmap <- decodeMap fromCBOR (interns a' <$> fromCBOR)
+            ptrmap <- decodeMap decCBOR (interns a' <$> decCBOR)
             pure (UnifiedMap tripmap ptrmap, (a', b))
       )
 

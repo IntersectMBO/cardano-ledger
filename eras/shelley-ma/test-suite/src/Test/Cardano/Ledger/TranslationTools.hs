@@ -7,13 +7,13 @@
 module Test.Cardano.Ledger.TranslationTools (
   translateEraPartial,
   translateEraEncoding,
-  translateEraToCBOR,
+  translateEraEncCBOR,
 )
 where
 
 import Cardano.Ledger.Binary (
+  EncCBOR (..),
   Encoding,
-  ToCBOR (..),
   serializeEncoding',
  )
 import Cardano.Ledger.Core
@@ -59,16 +59,16 @@ translateEraEncoding tc encodeThisEra encodePreviousEra x =
 
 -- Tests that the serializing before translation or after translating
 -- does not change the result
-translateEraToCBOR ::
+translateEraEncCBOR ::
   forall proxy era f.
   ( HasCallStack
   , TranslateEra era f
-  , ToCBOR (f era)
-  , ToCBOR (f (PreviousEra era))
+  , EncCBOR (f era)
+  , EncCBOR (f (PreviousEra era))
   , Show (TranslationError era f)
   ) =>
   proxy era ->
   TranslationContext era ->
   f (PreviousEra era) ->
   Assertion
-translateEraToCBOR _ tc = translateEraEncoding @era tc toCBOR toCBOR
+translateEraEncCBOR _ tc = translateEraEncoding @era tc encCBOR encCBOR

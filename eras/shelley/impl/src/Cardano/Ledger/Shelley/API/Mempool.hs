@@ -35,7 +35,7 @@ module Cardano.Ledger.Shelley.API.Mempool (
 where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Core (
   Era,
   EraIndependentTxBody,
@@ -224,19 +224,19 @@ deriving stock instance
 
 instance
   ( Era era
-  , ToCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  ToCBOR (ApplyTxError era)
+  EncCBOR (ApplyTxError era)
   where
-  toCBOR (ApplyTxError es) = toCBOR es
+  encCBOR (ApplyTxError es) = encCBOR es
 
 instance
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  FromCBOR (ApplyTxError era)
+  DecCBOR (ApplyTxError era)
   where
-  fromCBOR = ApplyTxError <$> fromCBOR
+  decCBOR = ApplyTxError <$> decCBOR
 
 -- | Old 'applyTxs'
 applyTxs ::

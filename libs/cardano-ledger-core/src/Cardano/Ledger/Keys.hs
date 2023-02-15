@@ -80,8 +80,8 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordNamed,
   encodeListLen,
   encodedVerKeyDSIGNSizeExpr,
@@ -177,15 +177,15 @@ instance HasKeyRole VKey
 
 instance
   (Crypto c, Typeable kd) =>
-  FromCBOR (VKey kd c)
+  DecCBOR (VKey kd c)
   where
-  fromCBOR = VKey <$> decodeVerKeyDSIGN
+  decCBOR = VKey <$> decodeVerKeyDSIGN
 
 instance
   (Crypto c, Typeable kd) =>
-  ToCBOR (VKey kd c)
+  EncCBOR (VKey kd c)
   where
-  toCBOR (VKey vk) = encodeVerKeyDSIGN vk
+  encCBOR (VKey vk) = encodeVerKeyDSIGN vk
   encodedSizeExpr _size proxy = encodedVerKeyDSIGNSizeExpr ((\(VKey k) -> k) <$> proxy)
 
 data KeyPair (kd :: KeyRole) c = KeyPair
@@ -231,11 +231,11 @@ newtype KeyHash (discriminator :: KeyRole) c
 
 deriving instance
   (Crypto c, Typeable disc) =>
-  ToCBOR (KeyHash disc c)
+  EncCBOR (KeyHash disc c)
 
 deriving instance
   (Crypto c, Typeable disc) =>
-  FromCBOR (KeyHash disc c)
+  DecCBOR (KeyHash disc c)
 
 deriving newtype instance
   Crypto c =>
@@ -291,16 +291,16 @@ instance NoThunks (GenDelegPair c)
 
 instance NFData (GenDelegPair c)
 
-instance Crypto c => ToCBOR (GenDelegPair c) where
-  toCBOR (GenDelegPair hk vrf) =
-    encodeListLen 2 <> toCBOR hk <> toCBOR vrf
+instance Crypto c => EncCBOR (GenDelegPair c) where
+  encCBOR (GenDelegPair hk vrf) =
+    encodeListLen 2 <> encCBOR hk <> encCBOR vrf
 
-instance Crypto c => FromCBOR (GenDelegPair c) where
-  fromCBOR = do
+instance Crypto c => DecCBOR (GenDelegPair c) where
+  decCBOR = do
     decodeRecordNamed
       "GenDelegPair"
       (const 2)
-      (GenDelegPair <$> fromCBOR <*> fromCBOR)
+      (GenDelegPair <$> decCBOR <*> decCBOR)
 
 instance Crypto c => ToJSON (GenDelegPair c) where
   toJSON (GenDelegPair d v) =
@@ -319,12 +319,12 @@ instance Crypto c => FromJSON (GenDelegPair c) where
 newtype GenDelegs c = GenDelegs
   { unGenDelegs :: Map (KeyHash 'Genesis c) (GenDelegPair c)
   }
-  deriving (Eq, FromCBOR, NoThunks, NFData, Generic, FromJSON)
+  deriving (Eq, DecCBOR, NoThunks, NFData, Generic, FromJSON)
   deriving (Show) via Quiet (GenDelegs c)
 
 deriving instance
   (Crypto c) =>
-  ToCBOR (GenDelegs c)
+  EncCBOR (GenDelegs c)
 
 deriving instance
   Crypto c =>

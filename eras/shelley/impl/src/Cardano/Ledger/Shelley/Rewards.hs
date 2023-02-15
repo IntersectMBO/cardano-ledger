@@ -33,8 +33,8 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (
@@ -198,11 +198,11 @@ instance NoThunks (LeaderOnlyReward c)
 
 instance NFData (LeaderOnlyReward c)
 
-instance CC.Crypto c => ToCBOR (LeaderOnlyReward c) where
-  toCBOR (LeaderOnlyReward pool c) = encode $ Rec LeaderOnlyReward !> To pool !> To c
+instance CC.Crypto c => EncCBOR (LeaderOnlyReward c) where
+  encCBOR (LeaderOnlyReward pool c) = encode $ Rec LeaderOnlyReward !> To pool !> To c
 
-instance CC.Crypto c => FromCBOR (LeaderOnlyReward c) where
-  fromCBOR = decode $ RecD LeaderOnlyReward <! From <! From
+instance CC.Crypto c => DecCBOR (LeaderOnlyReward c) where
+  decCBOR = decode $ RecD LeaderOnlyReward <! From <! From
 
 leaderRewardToGeneral :: LeaderOnlyReward c -> Reward c
 leaderRewardToGeneral (LeaderOnlyReward poolId r) = Reward LeaderReward poolId r
@@ -227,22 +227,22 @@ instance NoThunks (PoolRewardInfo c)
 
 instance NFData (PoolRewardInfo c)
 
-instance CC.Crypto c => ToCBOR (PoolRewardInfo c) where
-  toCBOR
+instance CC.Crypto c => EncCBOR (PoolRewardInfo c) where
+  encCBOR
     (PoolRewardInfo a b c d e) =
       encode $
         Rec PoolRewardInfo
-          !> E (toCBOR . unStakeShare) a
+          !> E (encCBOR . unStakeShare) a
           !> To b
           !> To c
           !> To d
           !> To e
 
-instance CC.Crypto c => FromCBOR (PoolRewardInfo c) where
-  fromCBOR =
+instance CC.Crypto c => DecCBOR (PoolRewardInfo c) where
+  decCBOR =
     decode
       ( RecD PoolRewardInfo
-          <! D (StakeShare <$> fromCBOR)
+          <! D (StakeShare <$> decCBOR)
           <! From
           <! From
           <! From

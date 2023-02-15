@@ -29,9 +29,9 @@ import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (
   Case (..),
+  DecCBOR (..),
   DecoderError (DecoderErrorUnknownTag),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   encodeListLen,
   enforceSize,
@@ -84,12 +84,12 @@ instance B.Buildable Tx where
 -- Used for debugging purposes only
 instance ToJSON Tx
 
-instance ToCBOR Tx where
-  toCBOR tx =
+instance EncCBOR Tx where
+  encCBOR tx =
     encodeListLen 3
-      <> toCBOR (txInputs tx)
-      <> toCBOR (txOutputs tx)
-      <> toCBOR
+      <> encCBOR (txInputs tx)
+      <> encCBOR (txOutputs tx)
+      <> encCBOR
         (txAttributes tx)
 
   encodedSizeExpr size pxy =
@@ -99,10 +99,10 @@ instance ToCBOR Tx where
       + size
         (txAttributes <$> pxy)
 
-instance FromCBOR Tx where
-  fromCBOR = do
+instance DecCBOR Tx where
+  decCBOR = do
     enforceSize "Tx" 3
-    UnsafeTx <$> fromCBOR <*> fromCBOR <*> fromCBOR
+    UnsafeTx <$> decCBOR <*> decCBOR <*> decCBOR
 
 -- | Specialized formatter for 'Tx'
 txF :: Format r (Tx -> r)
@@ -143,10 +143,10 @@ instance B.Buildable TxIn where
 -- Used for debugging purposes only
 instance ToJSON TxIn
 
-instance ToCBOR TxIn where
-  toCBOR (TxInUtxo txInHash txInIndex) =
+instance EncCBOR TxIn where
+  encCBOR (TxInUtxo txInHash txInIndex) =
     encodeListLen 2
-      <> toCBOR (0 :: Word8)
+      <> encCBOR (0 :: Word8)
       <> encodeKnownCborDataItem
         (txInHash, txInIndex)
 
@@ -155,10 +155,10 @@ instance ToCBOR TxIn where
       + knownCborDataItemSizeExpr
         (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word16)])
 
-instance FromCBOR TxIn where
-  fromCBOR = do
+instance DecCBOR TxIn where
+  decCBOR = do
     enforceSize "TxIn" 2
-    tag <- fromCBOR @Word8
+    tag <- decCBOR @Word8
     case tag of
       0 -> uncurry TxInUtxo <$> decodeKnownCborDataItem
       _ -> cborError $ DecoderErrorUnknownTag "TxIn" tag
@@ -188,17 +188,17 @@ instance B.Buildable TxOut where
 -- Used for debugging purposes only
 instance ToJSON TxOut
 
-instance ToCBOR TxOut where
-  toCBOR txOut =
-    encodeListLen 2 <> toCBOR (txOutAddress txOut) <> toCBOR (txOutValue txOut)
+instance EncCBOR TxOut where
+  encCBOR txOut =
+    encodeListLen 2 <> encCBOR (txOutAddress txOut) <> encCBOR (txOutValue txOut)
 
   encodedSizeExpr size pxy =
     1 + size (txOutAddress <$> pxy) + size (txOutValue <$> pxy)
 
-instance FromCBOR TxOut where
-  fromCBOR = do
+instance DecCBOR TxOut where
+  decCBOR = do
     enforceSize "TxOut" 2
-    TxOut <$> fromCBOR <*> fromCBOR
+    TxOut <$> decCBOR <*> decCBOR
 
 instance HeapWords TxOut where
   heapWords (TxOut address _) = 3 + heapWords address

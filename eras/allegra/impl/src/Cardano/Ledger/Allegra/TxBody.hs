@@ -43,7 +43,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxOut ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
-import Cardano.Ledger.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -118,8 +118,8 @@ deriving instance
   (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era), NoThunks ma) =>
   NoThunks (AllegraTxBodyRaw ma era)
 
-instance (FromCBOR ma, Monoid ma, AllegraEraTxBody era) => FromCBOR (AllegraTxBodyRaw ma era) where
-  fromCBOR =
+instance (DecCBOR ma, Monoid ma, AllegraEraTxBody era) => DecCBOR (AllegraTxBodyRaw ma era) where
+  decCBOR =
     decode
       ( SparseKeyed
           "AllegraTxBodyRaw"
@@ -128,14 +128,14 @@ instance (FromCBOR ma, Monoid ma, AllegraEraTxBody era) => FromCBOR (AllegraTxBo
           [(0, "atbrInputs"), (1, "atbrOutputs"), (2, "atbrTxFee")]
       )
 
-instance AllegraEraTxBody era => FromCBOR (Annotator (AllegraTxBodyRaw () era)) where
-  fromCBOR = pure <$> fromCBOR
+instance AllegraEraTxBody era => DecCBOR (Annotator (AllegraTxBodyRaw () era)) where
+  decCBOR = pure <$> decCBOR
 
 -- Sparse encodings of AllegraTxBodyRaw, the key values are fixed by backward compatibility
 -- concerns as we want the ShelleyTxBody to deserialise as AllegraTxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
-instance (EraTxOut era, Eq ma, ToCBOR ma, Monoid ma) => ToCBOR (AllegraTxBodyRaw ma era) where
-  toCBOR (AllegraTxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
+instance (EraTxOut era, Eq ma, EncCBOR ma, Monoid ma) => EncCBOR (AllegraTxBodyRaw ma era) where
+  encCBOR (AllegraTxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
     encode $
       Keyed
         ( \i o f topx c w u h botx forg ->
@@ -152,7 +152,7 @@ instance (EraTxOut era, Eq ma, ToCBOR ma, Monoid ma) => ToCBOR (AllegraTxBodyRaw
         !> encodeKeyedStrictMaybe 8 bot
         !> Omit (== mempty) (Key 9 (To frge))
 
-bodyFields :: (FromCBOR ma, EraTxOut era) => Word -> Field (AllegraTxBodyRaw ma era)
+bodyFields :: (DecCBOR ma, EraTxOut era) => Word -> Field (AllegraTxBodyRaw ma era)
 bodyFields 0 = field (\x tx -> tx {atbrInputs = x}) From
 bodyFields 1 = field (\x tx -> tx {atbrOutputs = x}) From
 bodyFields 2 = field (\x tx -> tx {atbrTxFee = x}) From
@@ -224,12 +224,12 @@ deriving newtype instance
   ) =>
   NFData (AllegraTxBody era)
 
-deriving newtype instance Typeable era => ToCBOR (AllegraTxBody era)
+deriving newtype instance Typeable era => EncCBOR (AllegraTxBody era)
 
 deriving via
   Mem (AllegraTxBodyRaw ()) era
   instance
-    AllegraEraTxBody era => FromCBOR (Annotator (AllegraTxBody era))
+    AllegraEraTxBody era => DecCBOR (Annotator (AllegraTxBody era))
 
 type instance MemoHashIndex (AllegraTxBodyRaw c) = EraIndependentTxBody
 

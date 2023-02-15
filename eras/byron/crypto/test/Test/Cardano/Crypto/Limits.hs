@@ -11,7 +11,7 @@ where
 
 import Cardano.Crypto (AbstractHash, Signature (..), VerificationKey)
 import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Ledger.Binary (ToCBOR, byronProtVer, serialize')
+import Cardano.Ledger.Binary (EncCBOR, byronProtVer, serialize')
 import Cardano.Prelude
 import Crypto.Hash (Blake2b_224, Blake2b_256)
 import Crypto.Hash.IO (HashAlgorithm, hashDigestSize)
@@ -96,5 +96,5 @@ prop_abstractHash256LenLimited =
     (genAbstractHash @Int32 @Blake2b_256 (Gen.int32 Range.constantBounded))
     (msgLenLimited mlAbstractHash)
 
-msgLenLimited :: ToCBOR a => Limit a -> a -> PropertyT IO ()
+msgLenLimited :: EncCBOR a => Limit a -> a -> PropertyT IO ()
 msgLenLimited limit a = assert $ BS.length (serialize' byronProtVer a) <= fromIntegral limit

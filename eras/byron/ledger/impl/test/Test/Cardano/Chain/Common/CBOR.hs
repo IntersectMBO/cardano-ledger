@@ -37,8 +37,8 @@ import Cardano.Crypto (
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Ledger.Binary (
   Case (..),
+  EncCBOR,
   SizeOverride (..),
-  ToCBOR,
   byronProtVer,
   decodeFullDecoder,
   serializeEncoding,
@@ -307,7 +307,7 @@ ts_roundTripMerkleRoot =
 --------------------------------------------------------------------------------
 sizeEstimates :: H.Group
 sizeEstimates =
-  let check :: forall a. (Show a, ToCBOR a) => Gen a -> Property
+  let check :: forall a. (Show a, EncCBOR a) => Gen a -> Property
       check g = sizeTest $ scfg {gen = g}
 
       -- Explicit bounds for types, based on the generators from Gen.

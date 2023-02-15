@@ -11,9 +11,9 @@ module Test.Cardano.Ledger.Shelley.LaxBlock where
 
 import Cardano.Ledger.Binary (
   Annotator (..),
+  DecCBOR (decCBOR),
   Decoder,
-  FromCBOR (fromCBOR),
-  ToCBOR (..),
+  EncCBOR (..),
   annotatorSlice,
   decodeRecordNamed,
  )
@@ -30,19 +30,19 @@ newtype LaxBlock h era = LaxBlock (Block h era)
 blockDecoder ::
   ( EraTx era
   , TxSeq era ~ ShelleyTxSeq era
-  , FromCBOR (Annotator h)
+  , DecCBOR (Annotator h)
   ) =>
   Bool ->
   forall s.
   Decoder s (Annotator (Block h era))
 blockDecoder lax = annotatorSlice $
   decodeRecordNamed "Block" (const 4) $ do
-    header <- fromCBOR
+    header <- decCBOR
     txns <- txSeqDecoder lax
     pure $ Block' <$> header <*> txns
 
-instance (EraTx era, Typeable h) => ToCBOR (LaxBlock h era) where
-  toCBOR (LaxBlock x) = toCBOR x
+instance (EraTx era, Typeable h) => EncCBOR (LaxBlock h era) where
+  encCBOR (LaxBlock x) = encCBOR x
 
 deriving stock instance (Era era, Show (TxSeq era), Show h) => Show (LaxBlock h era)
 
@@ -50,8 +50,8 @@ instance
   ( EraTx era
   , Typeable h
   , TxSeq era ~ ShelleyTxSeq era
-  , FromCBOR (Annotator h)
+  , DecCBOR (Annotator h)
   ) =>
-  FromCBOR (Annotator (LaxBlock h era))
+  DecCBOR (Annotator (LaxBlock h era))
   where
-  fromCBOR = fmap LaxBlock <$> blockDecoder True
+  decCBOR = fmap LaxBlock <$> blockDecoder True

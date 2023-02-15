@@ -14,7 +14,7 @@ module Cardano.Ledger.AuxiliaryData (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -26,9 +26,9 @@ newtype AuxiliaryDataHash c = AuxiliaryDataHash
   }
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
-deriving instance CC.Crypto c => ToCBOR (AuxiliaryDataHash c)
+deriving instance CC.Crypto c => EncCBOR (AuxiliaryDataHash c)
 
-deriving instance CC.Crypto c => FromCBOR (AuxiliaryDataHash c)
+deriving instance CC.Crypto c => DecCBOR (AuxiliaryDataHash c)
 
 type ValidateAuxiliaryData era c = ()
 

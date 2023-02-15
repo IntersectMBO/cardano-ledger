@@ -18,8 +18,8 @@ where
 
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (fromCBOR),
-  ToCBOR (..),
+  DecCBOR (decCBOR),
+  EncCBOR (..),
   annotatorSlice,
   decodeRecordNamed,
   encodeListLen,
@@ -85,15 +85,15 @@ instance (Typeable kr, Crypto c) => Ord (WitVKey kr c) where
     -- compliance with Ord laws.
     comparing wvkKeyHash x y <> comparing (hashSignature @c . wvkSig) x y
 
-instance (Typeable kr, Crypto c) => ToCBOR (WitVKey kr c) where
-  toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
+instance (Typeable kr, Crypto c) => EncCBOR (WitVKey kr c) where
+  encCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
 
-instance (Typeable kr, Crypto c) => FromCBOR (Annotator (WitVKey kr c)) where
-  fromCBOR =
+instance (Typeable kr, Crypto c) => DecCBOR (Annotator (WitVKey kr c)) where
+  decCBOR =
     annotatorSlice $
       decodeRecordNamed "WitVKey" (const 2) $
         fmap pure $
-          mkWitVKey <$> fromCBOR <*> decodeSignedDSIGN
+          mkWitVKey <$> decCBOR <*> decodeSignedDSIGN
     where
       mkWitVKey k sig = WitVKeyInternal k sig (asWitness $ hashKey k)
 
@@ -109,7 +109,7 @@ pattern WitVKey k s <-
       let bytes =
             serializeEncoding shelleyProtVer $
               encodeListLen 2
-                <> toCBOR k
+                <> encCBOR k
                 <> encodeSignedDSIGN s
           hash = asWitness $ hashKey k
        in WitVKeyInternal k s hash bytes

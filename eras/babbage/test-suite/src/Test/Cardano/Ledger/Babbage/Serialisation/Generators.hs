@@ -21,7 +21,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPr
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Binary (Sized, Term (..), ToCBOR, mkSized)
+import Cardano.Ledger.Binary (EncCBOR, Sized, Term (..), mkSized)
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Val (Val)
 import Control.State.Transition (STS (PredicateFailure))
@@ -34,7 +34,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 
-instance (Era era, ToCBOR (f era), Arbitrary (f era)) => Arbitrary (Sized (f era)) where
+instance (Era era, EncCBOR (f era), Arbitrary (f era)) => Arbitrary (Sized (f era)) where
   arbitrary = mkSized (eraProtVerHigh @era) <$> arbitrary
 
 instance
@@ -171,7 +171,7 @@ instance
 
 instance
   ( Era era
-  , ToCBOR (PParamsUpdate era)
+  , EncCBOR (PParamsUpdate era)
   ) =>
   Twiddle (Update era)
   where
@@ -182,8 +182,8 @@ instance Twiddle a => Twiddle (Sized a)
 instance
   ( Era era
   , Val (Value era)
-  , ToCBOR (Value era)
-  , ToCBOR (Script era)
+  , EncCBOR (Value era)
+  , EncCBOR (Script era)
   ) =>
   Twiddle (BabbageTxOut era)
   where

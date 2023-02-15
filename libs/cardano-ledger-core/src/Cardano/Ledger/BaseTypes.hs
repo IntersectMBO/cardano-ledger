@@ -72,12 +72,12 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
   CBORGroup (..),
+  DecCBOR (decCBOR),
+  DecCBORGroup (..),
   Decoder,
   DecoderError (..),
-  FromCBOR (fromCBOR),
-  FromCBORGroup (..),
-  ToCBOR (toCBOR),
-  ToCBORGroup (..),
+  EncCBOR (encCBOR),
+  EncCBORGroup (..),
   cborError,
   decodeRationalWithTag,
   decodeRecordSum,
@@ -125,8 +125,8 @@ import Quiet (Quiet (Quiet))
 
 data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Natural}
   deriving (Show, Eq, Generic, Ord, NFData)
-  deriving (ToCBOR) via (CBORGroup ProtVer)
-  deriving (FromCBOR) via (CBORGroup ProtVer)
+  deriving (EncCBOR) via (CBORGroup ProtVer)
+  deriving (DecCBOR) via (CBORGroup ProtVer)
 
 instance NoThunks ProtVer
 
@@ -144,8 +144,8 @@ instance FromJSON ProtVer where
       pvMinor <- obj .: "minor"
       pure ProtVer {..}
 
-instance ToCBORGroup ProtVer where
-  toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
+instance EncCBORGroup ProtVer where
+  encCBORGroup (ProtVer x y) = encCBOR x <> encCBOR y
   encodedGroupSizeExpr l proxy =
     encodedSizeExpr l (pvMajor <$> proxy)
       + encodedSizeExpr l (toWord . pvMinor <$> proxy)
@@ -156,8 +156,8 @@ instance ToCBORGroup ProtVer where
   listLen _ = 2
   listLenBound _ = 2
 
-instance FromCBORGroup ProtVer where
-  fromCBORGroup = ProtVer <$> fromCBOR <*> fromCBOR
+instance DecCBORGroup ProtVer where
+  decCBORGroup = ProtVer <$> decCBOR <*> decCBOR
 
 data E34
 
@@ -260,14 +260,14 @@ fromRatioBoundedRatio ratio
     lowerBound = minBound :: BoundedRatio b a
     upperBound = maxBound :: BoundedRatio b a
 
-instance (ToCBOR a, Integral a, Bounded a, Typeable b) => ToCBOR (BoundedRatio b a) where
-  toCBOR (BoundedRatio u) = encodeRatioWithTag toCBOR u
+instance (EncCBOR a, Integral a, Bounded a, Typeable b) => EncCBOR (BoundedRatio b a) where
+  encCBOR (BoundedRatio u) = encodeRatioWithTag encCBOR u
 
 instance
-  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
-  FromCBOR (BoundedRatio b a)
+  (DecCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
+  DecCBOR (BoundedRatio b a)
   where
-  fromCBOR = do
+  decCBOR = do
     r <- decodeRationalWithTag
     case fromRationalBoundedRatio r of
       Nothing ->
@@ -325,8 +325,8 @@ newtype NonNegativeInterval
     ( Show
     , Bounded
     , BoundedRational
-    , ToCBOR
-    , FromCBOR
+    , EncCBOR
+    , DecCBOR
     , ToJSON
     , FromJSON
     , NoThunks
@@ -345,8 +345,8 @@ newtype PositiveInterval
     ( Show
     , Bounded
     , BoundedRational
-    , ToCBOR
-    , FromCBOR
+    , EncCBOR
+    , DecCBOR
     , ToJSON
     , FromJSON
     , NoThunks
@@ -369,8 +369,8 @@ newtype PositiveUnitInterval
     ( Show
     , Bounded
     , BoundedRational
-    , ToCBOR
-    , FromCBOR
+    , EncCBOR
+    , DecCBOR
     , ToJSON
     , FromJSON
     , NoThunks
@@ -389,8 +389,8 @@ newtype UnitInterval
     ( Show
     , Bounded
     , BoundedRational
-    , ToCBOR
-    , FromCBOR
+    , EncCBOR
+    , DecCBOR
     , ToJSON
     , FromJSON
     , NoThunks
@@ -413,16 +413,16 @@ data Nonce
 
 instance NoThunks Nonce
 
-instance ToCBOR Nonce where
-  toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
-  toCBOR (Nonce n) = encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR n
+instance EncCBOR Nonce where
+  encCBOR NeutralNonce = encodeListLen 1 <> encCBOR (0 :: Word8)
+  encCBOR (Nonce n) = encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR n
 
-instance FromCBOR Nonce where
-  fromCBOR = decodeRecordSum "Nonce" $
+instance DecCBOR Nonce where
+  decCBOR = decodeRecordSum "Nonce" $
     \case
       0 -> pure (1, NeutralNonce)
       1 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, Nonce x)
       k -> invalidKey k
 
@@ -455,7 +455,7 @@ mkNonceFromNumber =
 -- | Seed to the verifiable random function.
 newtype Seed = Seed (Hash Blake2b_256 Seed)
   deriving (Eq, Ord, Show, Generic)
-  deriving newtype (NoThunks, ToCBOR)
+  deriving newtype (NoThunks, EncCBOR)
 
 instance SignableRepresentation Seed where
   getSignableRepresentation (Seed x) = hashToBytes x
@@ -475,8 +475,8 @@ text64 t =
     then pure t
     else fail $ "Text exceeds 64 bytes:" ++ show t
 
-text64FromCBOR :: Decoder s Text
-text64FromCBOR = fromCBOR >>= text64
+text64DecCBOR :: Decoder s Text
+text64DecCBOR = decCBOR >>= text64
 
 --
 -- Types used in the Stake Pool Relays
@@ -484,27 +484,27 @@ text64FromCBOR = fromCBOR >>= text64
 
 newtype Url = Url {urlToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NFData, NoThunks, FromJSON, ToJSON)
+  deriving newtype (EncCBOR, NFData, NoThunks, FromJSON, ToJSON)
 
 textToUrl :: Text -> Maybe Url
 textToUrl t = Url <$> text64 t
 
-instance FromCBOR Url where
-  fromCBOR = Url <$> text64FromCBOR
+instance DecCBOR Url where
+  decCBOR = Url <$> text64DecCBOR
 
 newtype DnsName = DnsName {dnsToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NoThunks, NFData, FromJSON, ToJSON)
+  deriving newtype (EncCBOR, NoThunks, NFData, FromJSON, ToJSON)
 
 textToDns :: Text -> Maybe DnsName
 textToDns t = DnsName <$> text64 t
 
-instance FromCBOR DnsName where
-  fromCBOR = DnsName <$> text64FromCBOR
+instance DecCBOR DnsName where
+  decCBOR = DnsName <$> text64DecCBOR
 
 newtype Port = Port {portToWord16 :: Word16}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (Num, FromCBOR, ToCBOR, NFData, NoThunks, ToJSON, FromJSON)
+  deriving newtype (Num, DecCBOR, EncCBOR, NFData, NoThunks, ToJSON, FromJSON)
 
 --------------------------------------------------------------------------------
 -- Active Slot Coefficent, named f in
@@ -523,16 +523,16 @@ instance NoThunks ActiveSlotCoeff
 
 instance NFData ActiveSlotCoeff
 
-instance FromCBOR ActiveSlotCoeff where
-  fromCBOR = mkActiveSlotCoeff <$> fromCBOR
+instance DecCBOR ActiveSlotCoeff where
+  decCBOR = mkActiveSlotCoeff <$> decCBOR
 
-instance ToCBOR ActiveSlotCoeff where
-  toCBOR
+instance EncCBOR ActiveSlotCoeff where
+  encCBOR
     ActiveSlotCoeff
       { unActiveSlotVal = slotVal
       , unActiveSlotLog = _logVal
       } =
-      toCBOR slotVal
+      encCBOR slotVal
 
 mkActiveSlotCoeff :: PositiveUnitInterval -> ActiveSlotCoeff
 mkActiveSlotCoeff v =
@@ -625,12 +625,12 @@ word8ToNetwork e
   | fromEnum e < fromEnum (minBound :: Network) = Nothing
   | otherwise = Just $ toEnum (fromEnum e)
 
-instance ToCBOR Network where
-  toCBOR = toCBOR . networkToWord8
+instance EncCBOR Network where
+  encCBOR = encCBOR . networkToWord8
 
-instance FromCBOR Network where
-  fromCBOR =
-    word8ToNetwork <$> fromCBOR >>= \case
+instance DecCBOR Network where
+  decCBOR =
+    word8ToNetwork <$> decCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
 
@@ -640,7 +640,7 @@ newtype BlocksMade c = BlocksMade
   }
   deriving (Eq, Generic)
   deriving (Show) via Quiet (BlocksMade c)
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, ToCBOR, FromCBOR)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR)
 
 -- TODO: It is unfeasable to have 65535 outputs in a transaction,
 -- but 255 is right on the border of a maximum TxIx on Mainnet at the moment,
@@ -652,7 +652,7 @@ newtype BlocksMade c = BlocksMade
 -- | Transaction index.
 newtype TxIx = TxIx Word64
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR)
 
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
@@ -672,7 +672,7 @@ mkTxIxPartial i =
 -- `mkCertIxPartial` that can be used for testing.
 newtype CertIx = CertIx Word64
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR)
 
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16

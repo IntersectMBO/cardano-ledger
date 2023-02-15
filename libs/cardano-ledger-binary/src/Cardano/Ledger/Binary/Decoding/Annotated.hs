@@ -15,7 +15,7 @@ module Cardano.Ledger.Binary.Decoding.Annotated (
   annotationBytes,
   annotatedDecoder,
   slice,
-  fromCBORAnnotated,
+  decCBORAnnotated,
   reAnnotate,
   Annotator (..),
   annotatorSlice,
@@ -25,14 +25,14 @@ module Cardano.Ledger.Binary.Decoding.Annotated (
 )
 where
 
+import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (..))
 import Cardano.Ledger.Binary.Decoding.Decoder (
   Decoder,
   decodeList,
   decodeWithByteSpan,
   fromPlainDecoder,
  )
-import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (..))
-import Cardano.Ledger.Binary.Encoding (ToCBOR, Version, serialize')
+import Cardano.Ledger.Binary.Encoding (EncCBOR, Version, serialize')
 import Codec.CBOR.Read (ByteOffset)
 import qualified Codec.Serialise as Serialise (decode)
 import Control.DeepSeq (NFData)
@@ -94,14 +94,14 @@ annotatedDecoder vd =
 
 -- | A decoder for a value paired with an annotation specifying the start and end
 -- of the consumed bytes.
-fromCBORAnnotated :: FromCBOR a => Decoder s (Annotated a ByteSpan)
-fromCBORAnnotated = annotatedDecoder fromCBOR
+decCBORAnnotated :: DecCBOR a => Decoder s (Annotated a ByteSpan)
+decCBORAnnotated = annotatedDecoder decCBOR
 
 annotationBytes :: Functor f => BSL.ByteString -> f ByteSpan -> f BS.ByteString
 annotationBytes bytes = fmap (BSL.toStrict . slice bytes)
 
 -- | Reconstruct an annotation by re-serialising the payload to a ByteString.
-reAnnotate :: ToCBOR a => Version -> Annotated a b -> Annotated a BS.ByteString
+reAnnotate :: EncCBOR a => Version -> Annotated a b -> Annotated a BS.ByteString
 reAnnotate version (Annotated x _) = Annotated x (serialize' version x)
 
 class Decoded t where
@@ -126,27 +126,27 @@ newtype FullByteString = Full BSL.ByteString
 --   type @Inner@ below is constructed using the helper function @makeInner@ which
 --   serializes and stores its bytes (using 'serializeEncoding').  Note how we build the
 --   'Annotator' by abstracting over the full bytes, and using those original bytes to
---   fill the bytes field of the constructor @Inner@.  The 'ToCBOR' instance just reuses
+--   fill the bytes field of the constructor @Inner@.  The 'EncCBOR' instance just reuses
 --   the stored bytes to produce an encoding (using 'encodePreEncoded').
 --
 -- @
 -- data Inner = Inner Int Bool LByteString
 --
 -- makeInner :: Int -> Bool -> Inner
--- makeInner i b = Inner i b (serializeEncoding (toCBOR i <> toCBOR b))
+-- makeInner i b = Inner i b (serializeEncoding (encCBOR i <> encCBOR b))
 --
--- instance ToCBOR Inner where
---   toCBOR (Inner _ _ bytes) = encodePreEncoded bytes
+-- instance EncCBOR Inner where
+--   encCBOR (Inner _ _ bytes) = encodePreEncoded bytes
 --
--- instance FromCBOR (Annotator Inner) where
---   fromCBOR = do
---      int <- fromCBOR
---      trueOrFalse <- fromCBOR
+-- instance DecCBOR (Annotator Inner) where
+--   decCBOR = do
+--      int <- decCBOR
+--      trueOrFalse <- decCBOR
 --      pure (Annotator (\(Full bytes) -> Inner int trueOrFalse bytes))
 -- @
 --
--- if an @Outer@ type has a field of type @Inner@, with a @(ToCBOR (Annotator Inner))@
--- instance, the @Outer@ type must also have a @(ToCBOR (Annotator Outer))@ instance.  The
+-- if an @Outer@ type has a field of type @Inner@, with a @(EncCBOR (Annotator Inner))@
+-- instance, the @Outer@ type must also have a @(EncCBOR (Annotator Outer))@ instance.  The
 -- key to writing that instance is to use the operation @withSlice@ which returns a pair.
 -- The first component is an @Annotator@ that can build @Inner@, the second is an
 -- @Annotator@ that given the full bytes, extracts just the bytes needed to decode
@@ -155,13 +155,13 @@ newtype FullByteString = Full BSL.ByteString
 -- @
 -- data Outer = Outer Text Inner
 --
--- instance ToCBOR Outer where
---   toCBOR (Outer t i) = toCBOR t <> toCBOR i
+-- instance EncCBOR Outer where
+--   encCBOR (Outer t i) = encCBOR t <> encCBOR i
 --
--- instance FromCBOR (Annotator Outer) where
---   fromCBOR = do
---     t <- fromCBOR
---     (Annotator mkInner, Annotator extractInnerBytes) <- withSlice fromCBOR
+-- instance DecCBOR (Annotator Outer) where
+--   decCBOR = do
+--     t <- decCBOR
+--     (Annotator mkInner, Annotator extractInnerBytes) <- withSlice decCBOR
 --     pure (Annotator (\ full -> Outer t (mkInner (Full (extractInnerBytes full)))))
 -- @
 newtype Annotator a = Annotator {runAnnotator :: FullByteString -> a}
@@ -194,5 +194,5 @@ decodeAnnSet dec = do
 -- Plutus
 --------------------------------------------------------------------------------
 
-instance FromCBOR (Annotator PV1.Data) where
-  fromCBOR = pure <$> fromPlainDecoder Serialise.decode
+instance DecCBOR (Annotator PV1.Data) where
+  decCBOR = pure <$> fromPlainDecoder Serialise.decode

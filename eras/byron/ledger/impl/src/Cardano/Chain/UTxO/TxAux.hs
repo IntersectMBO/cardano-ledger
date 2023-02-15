@@ -24,14 +24,14 @@ import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import Cardano.Ledger.Binary (
   Annotated (..),
   ByteSpan,
+  DecCBOR (..),
   Decoded (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   annotatedDecoder,
   byronProtVer,
+  decCBORAnnotated,
   encodeListLen,
   enforceSize,
-  fromCBORAnnotated,
   serialize,
   slice,
   unsafeDeserialize,
@@ -86,19 +86,19 @@ txaF = later $ \ta ->
 instance B.Buildable TxAux where
   build = bprint txaF
 
-instance ToCBOR TxAux where
-  toCBOR ta = encodeListLen 2 <> toCBOR (taTx ta) <> toCBOR (taWitness ta)
+instance EncCBOR TxAux where
+  encCBOR ta = encodeListLen 2 <> encCBOR (taTx ta) <> encCBOR (taWitness ta)
 
   encodedSizeExpr size pxy = 1 + size (taTx <$> pxy) + size (taWitness <$> pxy)
 
-instance FromCBOR TxAux where
-  fromCBOR = void <$> fromCBOR @(ATxAux ByteSpan)
+instance DecCBOR TxAux where
+  decCBOR = void <$> decCBOR @(ATxAux ByteSpan)
 
-instance FromCBOR (ATxAux ByteSpan) where
-  fromCBOR = do
+instance DecCBOR (ATxAux ByteSpan) where
+  decCBOR = do
     Annotated (tx, witness) byteSpan <- annotatedDecoder $ do
       enforceSize "TxAux" 2
-      tx <- fromCBORAnnotated
-      witness <- fromCBORAnnotated
+      tx <- decCBORAnnotated
+      witness <- decCBORAnnotated
       pure (tx, witness)
     pure $ ATxAux tx witness byteSpan

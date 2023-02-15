@@ -29,8 +29,8 @@ where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, TxIx, epochInfoPure, invalidKey)
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordSum,
   encodeListLen,
  )
@@ -124,31 +124,31 @@ instance
   NoThunks (ShelleyLedgerPredFailure era)
 
 instance
-  ( ToCBOR (PredicateFailure (EraRule "DELEGS" era))
-  , ToCBOR (PredicateFailure (EraRule "UTXOW" era))
+  ( EncCBOR (PredicateFailure (EraRule "DELEGS" era))
+  , EncCBOR (PredicateFailure (EraRule "UTXOW" era))
   , Era era
   ) =>
-  ToCBOR (ShelleyLedgerPredFailure era)
+  EncCBOR (ShelleyLedgerPredFailure era)
   where
-  toCBOR = \case
-    (UtxowFailure a) -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR a
-    (DelegsFailure a) -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR a
+  encCBOR = \case
+    (UtxowFailure a) -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR a
+    (DelegsFailure a) -> encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR a
 
 instance
-  ( FromCBOR (PredicateFailure (EraRule "DELEGS" era))
-  , FromCBOR (PredicateFailure (EraRule "UTXOW" era))
+  ( DecCBOR (PredicateFailure (EraRule "DELEGS" era))
+  , DecCBOR (PredicateFailure (EraRule "UTXOW" era))
   , Era era
   ) =>
-  FromCBOR (ShelleyLedgerPredFailure era)
+  DecCBOR (ShelleyLedgerPredFailure era)
   where
-  fromCBOR =
+  decCBOR =
     decodeRecordSum "PredicateFailure (LEDGER era)" $
       \case
         0 -> do
-          a <- fromCBOR
+          a <- decCBOR
           pure (2, UtxowFailure a)
         1 -> do
-          a <- fromCBOR
+          a <- decCBOR
           pure (2, DelegsFailure a)
         k -> invalidKey k
 

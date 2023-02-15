@@ -74,7 +74,7 @@ import Cardano.Crypto.Signing.Redeem (
   redeemSign,
   toCompactRedeemVerificationKey,
  )
-import Cardano.Ledger.Binary (Annotated (..), ToCBOR)
+import Cardano.Ledger.Binary (Annotated (..), EncCBOR)
 import Cardano.Prelude
 import qualified Data.ByteArray as ByteArray
 import Data.Coerce (coerce)
@@ -158,7 +158,7 @@ genRedeemSigningKey = snd <$> genRedeemKeypair
 -- Signature Generators
 --------------------------------------------------------------------------------
 
-genSignature :: ToCBOR a => ProtocolMagicId -> Gen a -> Gen (Signature a)
+genSignature :: EncCBOR a => ProtocolMagicId -> Gen a -> Gen (Signature a)
 genSignature pm genA = sign pm <$> genSignTag <*> genSigningKey <*> genA
 
 genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
@@ -166,7 +166,7 @@ genSignatureEncoded genB =
   coerce . signRaw <$> genProtocolMagicId <*> (Just <$> genSignTag) <*> genSigningKey <*> genB
 
 genRedeemSignature ::
-  ToCBOR a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
+  EncCBOR a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
   where
     gst = genSignTag
@@ -177,7 +177,7 @@ genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
 --------------------------------------------------------------------------------
 
 genAbstractHash ::
-  (ToCBOR a, HashAlgorithm algo) => Gen a -> Gen (AbstractHash algo a)
+  (EncCBOR a, HashAlgorithm algo) => Gen a -> Gen (AbstractHash algo a)
 genAbstractHash genA = abstractHash <$> genA
 
 --------------------------------------------------------------------------------

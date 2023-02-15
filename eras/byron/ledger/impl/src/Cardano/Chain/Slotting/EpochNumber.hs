@@ -13,7 +13,7 @@ module Cardano.Chain.Slotting.EpochNumber (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Data.Data (Data)
@@ -49,12 +49,12 @@ instance Buildable EpochNumber where
 -- Used for debugging purposes only
 instance Aeson.ToJSON EpochNumber
 
-instance ToCBOR EpochNumber where
-  toCBOR (EpochNumber epoch) = toCBOR epoch
+instance EncCBOR EpochNumber where
+  encCBOR (EpochNumber epoch) = encCBOR epoch
   encodedSizeExpr size = encodedSizeExpr size . fmap getEpochNumber
 
-instance FromCBOR EpochNumber where
-  fromCBOR = EpochNumber <$> fromCBOR
+instance DecCBOR EpochNumber where
+  decCBOR = EpochNumber <$> decCBOR
 
 -- Note that it will be encoded as string, because 'EpochNumber' doesn't
 -- necessary fit into JS number.

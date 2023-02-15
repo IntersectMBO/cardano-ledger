@@ -31,8 +31,8 @@ import Cardano.Chain.Slotting (
 import Cardano.Crypto (ProtocolMagicId, VerificationKey)
 import Cardano.Ledger.Binary (
   Annotated (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   byronProtVer,
   encodeListLen,
   enforceSize,
@@ -64,18 +64,18 @@ data State = State
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
-instance FromCBOR State where
-  fromCBOR = do
+instance DecCBOR State where
+  decCBOR = do
     enforceSize "State" 2
     State
-      <$> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
 
-instance ToCBOR State where
-  toCBOR s =
+instance EncCBOR State where
+  encCBOR s =
     encodeListLen 2
-      <> toCBOR (schedulingState s)
-      <> toCBOR (activationState s)
+      <> encCBOR (schedulingState s)
+      <> encCBOR (activationState s)
 
 delegationMap :: State -> Delegation.Map
 delegationMap = Activation.delegationMap . activationState

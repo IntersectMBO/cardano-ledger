@@ -41,7 +41,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), AlonzoTxWits, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Crypto (Crypto)
@@ -97,14 +97,14 @@ data CollectError c
   | BadTranslation !(TranslationError c)
   deriving (Eq, Show, Generic, NoThunks)
 
-instance (Crypto c) => ToCBOR (CollectError c) where
-  toCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
-  toCBOR (NoWitness x) = encode $ Sum NoWitness 1 !> To x
-  toCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
-  toCBOR (BadTranslation x) = encode $ Sum BadTranslation 3 !> To x
+instance (Crypto c) => EncCBOR (CollectError c) where
+  encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
+  encCBOR (NoWitness x) = encode $ Sum NoWitness 1 !> To x
+  encCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
+  encCBOR (BadTranslation x) = encode $ Sum BadTranslation 3 !> To x
 
-instance (Crypto c) => FromCBOR (CollectError c) where
-  fromCBOR = decode (Summands "CollectError" dec)
+instance (Crypto c) => DecCBOR (CollectError c) where
+  decCBOR = decode (Summands "CollectError" dec)
     where
       dec 0 = SumD NoRedeemer <! From
       dec 1 = SumD NoWitness <! From

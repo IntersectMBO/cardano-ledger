@@ -25,9 +25,9 @@ where
 
 import Cardano.HeapWords (HeapWords)
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   decodeInteger,
   decodeWord64,
   ifDecoderVersionAtLeast,
@@ -61,17 +61,17 @@ newtype Coin = Coin {unCoin :: Integer}
     )
   deriving (Show) via Quiet Coin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (PartialOrd, ToCBOR, HeapWords)
+  deriving newtype (PartialOrd, EncCBOR, HeapWords)
 
-instance FromCBOR Coin where
-  fromCBOR =
+instance DecCBOR Coin where
+  decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @9)
       (Coin . fromIntegral <$> decodeWord64)
       (Coin <$> decodeInteger)
 
 newtype DeltaCoin = DeltaCoin Integer
-  deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, FromCBOR, ToCBOR, HeapWords)
+  deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, DecCBOR, EncCBOR, HeapWords)
   deriving (Show) via Quiet DeltaCoin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd)
@@ -117,17 +117,17 @@ integerToWord64 c
   | otherwise = Just $ fromIntegral c
 {-# INLINE integerToWord64 #-}
 
-instance ToCBOR (CompactForm Coin) where
-  toCBOR (CompactCoin c) = toCBOR c
+instance EncCBOR (CompactForm Coin) where
+  encCBOR (CompactCoin c) = encCBOR c
 
-instance FromCBOR (CompactForm Coin) where
-  fromCBOR = CompactCoin <$> fromCBOR
+instance DecCBOR (CompactForm Coin) where
+  decCBOR = CompactCoin <$> decCBOR
 
-instance ToCBOR (CompactForm DeltaCoin) where
-  toCBOR (CompactDeltaCoin c) = toCBOR c
+instance EncCBOR (CompactForm DeltaCoin) where
+  encCBOR (CompactDeltaCoin c) = encCBOR c
 
-instance FromCBOR (CompactForm DeltaCoin) where
-  fromCBOR = CompactDeltaCoin <$> fromCBOR
+instance DecCBOR (CompactForm DeltaCoin) where
+  decCBOR = CompactDeltaCoin <$> decCBOR
 
 -- ================================
 

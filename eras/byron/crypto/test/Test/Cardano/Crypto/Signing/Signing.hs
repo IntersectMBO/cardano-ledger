@@ -3,7 +3,7 @@
 module Test.Cardano.Crypto.Signing.Signing (tests) where
 
 import Cardano.Crypto.Signing (SignTag (..), sign, toVerification, verifySignature)
-import Cardano.Ledger.Binary (toCBOR)
+import Cardano.Ledger.Binary (encCBOR)
 import Cardano.Prelude
 import Hedgehog (
   Gen,
@@ -41,7 +41,7 @@ prop_sign = property $ do
   a <- forAll genData
 
   assert $
-    verifySignature toCBOR Dummy.protocolMagicId SignForTestingOnly vk a $
+    verifySignature encCBOR Dummy.protocolMagicId SignForTestingOnly vk a $
       sign Dummy.protocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when the wrong 'VerificationKey' is used
@@ -53,7 +53,7 @@ prop_signDifferentKey = property $ do
 
   assert
     . not
-    $ verifySignature toCBOR Dummy.protocolMagicId SignForTestingOnly vk a
+    $ verifySignature encCBOR Dummy.protocolMagicId SignForTestingOnly vk a
     $ sign Dummy.protocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when then wrong signature data is used
@@ -65,7 +65,7 @@ prop_signDifferentData = property $ do
 
   assert
     . not
-    $ verifySignature toCBOR Dummy.protocolMagicId SignForTestingOnly vk b
+    $ verifySignature encCBOR Dummy.protocolMagicId SignForTestingOnly vk b
     $ sign Dummy.protocolMagicId SignForTestingOnly sk a
 
 genData :: Gen [Int32]

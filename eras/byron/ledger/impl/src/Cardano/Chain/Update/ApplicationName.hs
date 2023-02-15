@@ -15,10 +15,10 @@ where
 
 import Cardano.Ledger.Binary (
   Case (..),
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
@@ -39,8 +39,8 @@ newtype ApplicationName = ApplicationName
   }
   deriving (Eq, Ord, Show, Generic, B.Buildable, NFData, NoThunks)
 
-instance ToCBOR ApplicationName where
-  toCBOR appName = toCBOR (unApplicationName appName)
+instance EncCBOR ApplicationName where
+  encCBOR appName = encCBOR (unApplicationName appName)
   encodedSizeExpr _ _ =
     1
       + szCases
@@ -48,8 +48,8 @@ instance ToCBOR ApplicationName where
         , Case "maxBound" (fromInteger applicationNameMaxLength)
         ]
 
-instance FromCBOR ApplicationName where
-  fromCBOR = ApplicationName <$> fromCBOR
+instance DecCBOR ApplicationName where
+  decCBOR = ApplicationName <$> decCBOR
 
 data ApplicationNameError
   = ApplicationNameTooLong Text
@@ -59,26 +59,26 @@ data ApplicationNameError
 -- Used for debugging purposes only
 instance ToJSON ApplicationName
 
-instance ToCBOR ApplicationNameError where
-  toCBOR err = case err of
+instance EncCBOR ApplicationNameError where
+  encCBOR err = case err of
     ApplicationNameTooLong appName ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR appName
+        <> encCBOR (0 :: Word8)
+        <> encCBOR appName
     ApplicationNameNotAscii appName ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR appName
+        <> encCBOR (1 :: Word8)
+        <> encCBOR appName
 
-instance FromCBOR ApplicationNameError where
-  fromCBOR = do
+instance DecCBOR ApplicationNameError where
+  decCBOR = do
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "ApplicationNameError" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 2 >> ApplicationNameTooLong <$> fromCBOR
-      1 -> checkSize 2 >> ApplicationNameNotAscii <$> fromCBOR
+      0 -> checkSize 2 >> ApplicationNameTooLong <$> decCBOR
+      1 -> checkSize 2 >> ApplicationNameNotAscii <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "ApplicationNameError" tag
 
 instance B.Buildable ApplicationNameError where

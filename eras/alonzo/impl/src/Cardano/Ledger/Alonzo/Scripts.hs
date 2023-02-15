@@ -61,11 +61,11 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator,
+  DecCBOR (decCBOR),
   Decoder,
   DecoderError (..),
+  EncCBOR (encCBOR),
   Encoding,
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
   cborError,
   decodeMapByKey,
   encodeFoldableAsDefLenList,
@@ -158,10 +158,10 @@ instance NFData Tag where
 -- | Binary representation of a Plutus script.
 newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}
   deriving stock (Eq, Show)
-  deriving newtype (ToCBOR, FromCBOR, NFData)
+  deriving newtype (EncCBOR, DecCBOR, NFData)
 
-instance FromCBOR (Annotator BinaryPlutus) where
-  fromCBOR = pure <$> fromCBOR
+instance DecCBOR (Annotator BinaryPlutus) where
+  decCBOR = pure <$> decCBOR
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
@@ -563,11 +563,11 @@ getCostModelParams :: CostModel -> [Integer]
 getCostModelParams (CostModel _ cm _) = cm
 
 decodeCostModelsCollectingErrors :: Decoder s CostModels
-decodeCostModelsCollectingErrors = mkCostModelsLenient <$> fromCBOR
+decodeCostModelsCollectingErrors = mkCostModelsLenient <$> decCBOR
 
 decodeCostModelsFailingOnError :: Decoder s CostModels
 decodeCostModelsFailingOnError =
-  CostModels <$> decodeMapByKey fromCBOR legacyDecodeCostModel <*> pure mempty <*> pure mempty
+  CostModels <$> decodeMapByKey decCBOR legacyDecodeCostModel <*> pure mempty <*> pure mempty
 
 decodeCostModels :: Decoder s CostModels
 decodeCostModels =
@@ -595,7 +595,7 @@ legacyCostModelLength PlutusV2 = 175
 -- | See the note for 'legacyCostModelLength'.
 legacyDecodeCostModel :: Language -> Decoder s CostModel
 legacyDecodeCostModel lang = do
-  values <- fromCBOR
+  values <- decCBOR
   let numValues = length values
       expectedNumValues = legacyCostModelLength lang
   when (numValues /= expectedNumValues) $
@@ -611,7 +611,7 @@ legacyDecodeCostModel lang = do
 
 decodeCostModelFailHard :: Language -> Decoder s CostModel
 decodeCostModelFailHard lang = do
-  checked <- mkCostModel lang <$> fromCBOR
+  checked <- mkCostModel lang <$> decCBOR
   case checked of
     Left e -> fail $ show e
     Right cm -> pure cm
@@ -696,11 +696,11 @@ instance NoThunks CostModels
 
 instance NFData CostModels
 
-instance FromCBOR CostModels where
-  fromCBOR = decodeCostModels
+instance DecCBOR CostModels where
+  decCBOR = decodeCostModels
 
-instance ToCBOR CostModels where
-  toCBOR = toCBOR . flattenCostModel
+instance EncCBOR CostModels where
+  encCBOR = encCBOR . flattenCostModel
 
 instance ToJSON CostModel where
   toJSON = toJSON . getCostModelParams
@@ -711,7 +711,7 @@ instance ToJSON CostModels where
 -- | Encoding for the `CostModel`. Important to note that it differs from `Encoding` used
 -- by `Cardano.Ledger.Alonzo.PParams.getLanguageView`
 encodeCostModel :: CostModel -> Encoding
-encodeCostModel = encodeFoldableAsDefLenList toCBOR . getCostModelParams
+encodeCostModel = encodeFoldableAsDefLenList encCBOR . getCostModelParams
 
 -- ==================================
 
@@ -777,24 +777,24 @@ word8ToTag e
   | fromEnum e < fromEnum (minBound :: Tag) = Nothing
   | otherwise = Just $ toEnum (fromEnum e)
 
-instance ToCBOR Tag where
-  toCBOR = toCBOR . tagToWord8
+instance EncCBOR Tag where
+  encCBOR = encCBOR . tagToWord8
 
-instance FromCBOR Tag where
-  fromCBOR =
-    word8ToTag <$> fromCBOR >>= \case
+instance DecCBOR Tag where
+  decCBOR =
+    word8ToTag <$> decCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Tag" "Unknown redeemer tag"
       Just n -> pure n
 
-instance ToCBOR ExUnits where
-  toCBOR (ExUnits m s) = encode $ Rec ExUnits !> To m !> To s
+instance EncCBOR ExUnits where
+  encCBOR (ExUnits m s) = encode $ Rec ExUnits !> To m !> To s
 
-instance FromCBOR ExUnits where
-  fromCBOR = decode $ RecD ExUnits <! D decNat <! D decNat
+instance DecCBOR ExUnits where
+  decCBOR = decode $ RecD ExUnits <! D decNat <! D decNat
     where
       decNat :: Decoder s Natural
       decNat = do
-        x <- fromCBOR
+        x <- decCBOR
         when
           (x > fromIntegral (Prelude.maxBound :: Int64))
           ( cborError $
@@ -804,23 +804,23 @@ instance FromCBOR ExUnits where
       wordToNatural :: Word64 -> Natural
       wordToNatural = fromIntegral
 
-instance ToCBOR Prices where
-  toCBOR (Prices m s) = encode $ Rec Prices !> To m !> To s
+instance EncCBOR Prices where
+  encCBOR (Prices m s) = encode $ Rec Prices !> To m !> To s
 
-instance FromCBOR Prices where
-  fromCBOR = decode $ RecD Prices <! From <! From
+instance DecCBOR Prices where
+  decCBOR = decode $ RecD Prices <! From <! From
 
-instance (Typeable (EraCrypto era), Typeable era) => ToCBOR (AlonzoScript era) where
-  toCBOR x = encode (encodeScript x)
+instance (Typeable (EraCrypto era), Typeable era) => EncCBOR (AlonzoScript era) where
+  encCBOR x = encode (encodeScript x)
 
 encodeScript :: (Typeable era) => AlonzoScript era -> Encode 'Open (AlonzoScript era)
 encodeScript (TimelockScript i) = Sum TimelockScript 0 !> To i
--- Use the ToCBOR instance of ShortByteString:
+-- Use the EncCBOR instance of ShortByteString:
 encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s
 encodeScript (PlutusScript PlutusV2 s) = Sum (PlutusScript PlutusV2) 2 !> To s
 
-instance Era era => FromCBOR (Annotator (AlonzoScript era)) where
-  fromCBOR = decode (Summands "Alonzo Script" decodeScript)
+instance Era era => DecCBOR (Annotator (AlonzoScript era)) where
+  decCBOR = decode (Summands "Alonzo Script" decodeScript)
     where
       decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
       decodeScript 0 = Ann (SumD TimelockScript) <*! From

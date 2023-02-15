@@ -25,11 +25,11 @@ module Test.Cardano.Ledger.Binary.Vintage.Helpers (
 where
 
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   Range (..),
   Size,
   SizeOverride (..),
-  ToCBOR (..),
   byronProtVer,
   decodeListLenOf,
   decodeNestedCborBytes,
@@ -71,8 +71,8 @@ import Test.QuickCheck (
 --------------------------------------------------------------------------------
 
 -- | Machinery to test we perform "flat" encoding.
-cborFlatTermValid :: ToCBOR a => a -> Property
-cborFlatTermValid = property . validFlatTerm . toFlatTerm byronProtVer . toCBOR
+cborFlatTermValid :: EncCBOR a => a -> Property
+cborFlatTermValid = property . validFlatTerm . toFlatTerm byronProtVer . encCBOR
 
 --------------------------------------------------------------------------------
 
@@ -82,17 +82,17 @@ cborFlatTermValid = property . validFlatTerm . toFlatTerm byronProtVer . toCBOR
 -- Check the `extensionProperty` for more details.
 data U = U Word8 BS.ByteString deriving (Show, Eq)
 
-instance ToCBOR U where
-  toCBOR (U word8 bs) =
+instance EncCBOR U where
+  encCBOR (U word8 bs) =
     encodeListLen 2
-      <> toCBOR (word8 :: Word8)
+      <> encCBOR (word8 :: Word8)
       <> encodeNestedCborBytes
         (LBS.fromStrict bs)
 
-instance FromCBOR U where
-  fromCBOR = do
+instance DecCBOR U where
+  decCBOR = do
     decodeListLenOf 2
-    U <$> fromCBOR <*> decodeNestedCborBytes
+    U <$> decCBOR <*> decodeNestedCborBytes
 
 instance Arbitrary U where
   arbitrary = U <$> choose (0, 255) <*> arbitrary
@@ -100,15 +100,15 @@ instance Arbitrary U where
 -- | Like `U`, but we expect to read back the Cbor Data Item when decoding.
 data U24 = U24 Word8 BS.ByteString deriving (Show, Eq)
 
-instance FromCBOR U24 where
-  fromCBOR = do
+instance DecCBOR U24 where
+  decCBOR = do
     decodeListLenOf 2
-    U24 <$> fromCBOR <*> decodeNestedCborBytes
+    U24 <$> decCBOR <*> decodeNestedCborBytes
 
-instance ToCBOR U24 where
-  toCBOR (U24 word8 bs) =
+instance EncCBOR U24 where
+  encCBOR (U24 word8 bs) =
     encodeListLen 2
-      <> toCBOR (word8 :: Word8)
+      <> encCBOR (word8 :: Word8)
       <> encodeNestedCborBytes
         (LBS.fromStrict bs)
 
@@ -117,7 +117,7 @@ instance ToCBOR U24 where
 -- the schema of having at least one constructor of the form:
 -- .... | Unknown Word8 ByteString
 extensionProperty ::
-  forall a. (Arbitrary a, Eq a, Show a, FromCBOR a, ToCBOR a) => Property
+  forall a. (Arbitrary a, Eq a, Show a, DecCBOR a, EncCBOR a) => Property
 extensionProperty = forAll @a (arbitrary :: Gen a) $ \input ->
   {- This function works as follows:
 
@@ -210,7 +210,7 @@ scfg =
     }
 
 -- | Create a test case from the given test configuration.
-sizeTest :: forall a. ToCBOR a => SizeTestConfig a -> HH.Property
+sizeTest :: forall a. EncCBOR a => SizeTestConfig a -> HH.Property
 sizeTest SizeTestConfig {..} = HH.property $ do
   x <- forAllWith debug gen
 
@@ -249,9 +249,9 @@ data ComparisonResult
   | -- | The size fell outside of the bounds.
     OutOfBounds Natural (Range Natural)
 
--- | For a given value @x :: a@ with @ToCBOR a@, check that the encoded size
+-- | For a given value @x :: a@ with @EncCBOR a@, check that the encoded size
 --   of @x@ falls within the statically-computed size range for @a@.
-szVerify :: ToCBOR a => M.Map TypeRep SizeOverride -> a -> ComparisonResult
+szVerify :: EncCBOR a => M.Map TypeRep SizeOverride -> a -> ComparisonResult
 szVerify ctx x = case szSimplify (szWithCtx ctx (pure x)) of
   Left bounds -> BoundsAreSymbolic bounds
   Right range

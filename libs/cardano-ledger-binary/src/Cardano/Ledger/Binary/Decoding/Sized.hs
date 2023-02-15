@@ -11,10 +11,10 @@ module Cardano.Ledger.Binary.Decoding.Sized (
 where
 
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotated (..), ByteSpan (..), annotatedDecoder)
+import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Decoding.Decoder (Decoder)
-import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (fromCBOR))
 import Cardano.Ledger.Binary.Encoding (serialize)
-import Cardano.Ledger.Binary.Encoding.ToCBOR (ToCBOR (toCBOR))
+import Cardano.Ledger.Binary.Encoding.EncCBOR (EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Version (Version)
 import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.ByteString.Lazy as BSL
@@ -24,7 +24,7 @@ import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import NoThunks.Class (NoThunks)
 
 -- | A CBOR deserialized value together with its size. When deserializing use
--- either `decodeSized` or its `FromCBOR` instance.
+-- either `decodeSized` or its `DecCBOR` instance.
 --
 -- Use `mkSized` to construct such value.
 data Sized a = Sized
@@ -45,7 +45,7 @@ instance NFData a => NFData (Sized a) where
 -- therefore it is *NOT* a requirement that this property holds:
 --
 -- > sizedSize (mkSized a) === sizedSize (unsafeDeserialize (serialize a) :: a)
-mkSized :: ToCBOR a => Version -> a -> Sized a
+mkSized :: EncCBOR a => Version -> a -> Sized a
 mkSized version a =
   Sized
     { sizedValue = a
@@ -61,18 +61,18 @@ sizedDecoder :: Decoder s a -> Decoder s (Sized a)
 sizedDecoder = decodeSized
 {-# DEPRECATED sizedDecoder "In favor of more consistently named `decodeSized`" #-}
 
-instance FromCBOR a => FromCBOR (Sized a) where
-  fromCBOR = decodeSized fromCBOR
+instance DecCBOR a => DecCBOR (Sized a) where
+  decCBOR = decodeSized decCBOR
 
 -- | Discards the size.
-instance ToCBOR a => ToCBOR (Sized a) where
+instance EncCBOR a => EncCBOR (Sized a) where
   -- Size is an auxiliary value and should not be transmitted over the wire,
   -- therefore it is ignored.
-  toCBOR (Sized v _) = toCBOR v
+  encCBOR (Sized v _) = encCBOR v
 
 -- | Take a lens that operates on a particular type and convert it into a lens
 -- that operates on the `Sized` version of the type.
-toSizedL :: ToCBOR s => Version -> Lens' s a -> Lens' (Sized s) a
+toSizedL :: EncCBOR s => Version -> Lens' s a -> Lens' (Sized s) a
 toSizedL version l =
   lens (\sv -> sizedValue sv ^. l) (\sv a -> mkSized version (sizedValue sv & l .~ a))
 {-# INLINEABLE toSizedL #-}

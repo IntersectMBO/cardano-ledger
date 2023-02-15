@@ -38,10 +38,10 @@ where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
 import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
+  DecCBOR (decCBOR),
+  EncCBOR (encCBOR),
   FromSharedCBOR (..),
   Interns,
-  ToCBOR (toCBOR),
   decodeRecordNamedT,
   encodeListLen,
   fromSharedPlusLensCBOR,
@@ -85,7 +85,7 @@ newtype Stake c = Stake
 deriving newtype instance Typeable c => NoThunks (Stake c)
 
 deriving newtype instance
-  CC.Crypto c => ToCBOR (Stake c)
+  CC.Crypto c => EncCBOR (Stake c)
 
 instance CC.Crypto c => FromSharedCBOR (Stake c) where
   type Share (Stake c) = Share (VMap VB VP (Credential 'Staking c) (CompactForm Coin))
@@ -162,18 +162,18 @@ instance NFData (SnapShot c)
 
 instance
   CC.Crypto c =>
-  ToCBOR (SnapShot c)
+  EncCBOR (SnapShot c)
   where
-  toCBOR
+  encCBOR
     SnapShot
       { ssStake = s
       , ssDelegations = d
       , ssPoolParams = p
       } =
       encodeListLen 3
-        <> toCBOR s
-        <> toCBOR d
-        <> toCBOR p
+        <> encCBOR s
+        <> encCBOR d
+        <> encCBOR p
 
 instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
   type
@@ -205,15 +205,15 @@ instance NFData (SnapShots c)
 
 instance
   CC.Crypto c =>
-  ToCBOR (SnapShots c)
+  EncCBOR (SnapShots c)
   where
-  toCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
+  encCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
     encodeListLen 4
-      <> toCBOR ssStakeMark
+      <> encCBOR ssStakeMark
       -- We intentionaly do not serialize the redundant ssStakeMarkPoolDistr
-      <> toCBOR ssStakeSet
-      <> toCBOR ssStakeGo
-      <> toCBOR ssFee
+      <> encCBOR ssStakeSet
+      <> encCBOR ssStakeGo
+      <> encCBOR ssFee
 
 instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
   type Share (SnapShots c) = Share (SnapShot c)
@@ -221,7 +221,7 @@ instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
     !ssStakeMark <- fromSharedPlusCBOR
     ssStakeSet <- fromSharedPlusCBOR
     ssStakeGo <- fromSharedPlusCBOR
-    ssFee <- lift fromCBOR
+    ssFee <- lift decCBOR
     let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
     pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet, ssStakeGo, ssFee}
 

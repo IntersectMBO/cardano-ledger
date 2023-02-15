@@ -24,8 +24,8 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
 )
 where
 
+import Cardano.Ledger.Binary.Decoding.DecCBOR
 import Cardano.Ledger.Binary.Decoding.Decoder
-import Cardano.Ledger.Binary.Decoding.FromCBOR
 import Control.Monad ((<$!>))
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
@@ -179,26 +179,26 @@ fromSharedPlusLensCBOR l = do
 fromNotSharedCBOR :: FromSharedCBOR a => Decoder s a
 fromNotSharedCBOR = fromSharedCBOR mempty
 
-instance (Ord k, FromCBOR k, FromCBOR v) => FromSharedCBOR (Map k v) where
+instance (Ord k, DecCBOR k, DecCBOR v) => FromSharedCBOR (Map k v) where
   type Share (Map k v) = (Interns k, Interns v)
   fromSharedCBOR (kis, vis) = do
-    decodeMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
+    decodeMap (interns kis <$> decCBOR) (interns vis <$> decCBOR)
   getShare !m = (internsFromMap m, mempty)
 
-instance (Ord k, FromCBOR k, FromCBOR v) => FromSharedCBOR (VMap VB VB k v) where
+instance (Ord k, DecCBOR k, DecCBOR v) => FromSharedCBOR (VMap VB VB k v) where
   type Share (VMap VB VB k v) = (Interns k, Interns v)
   fromSharedCBOR (kis, vis) = do
-    decodeVMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
+    decodeVMap (interns kis <$> decCBOR) (interns vis <$> decCBOR)
   getShare !m = (internsFromVMap m, mempty)
 
-instance (Ord k, FromCBOR k, FromCBOR v, Prim v) => FromSharedCBOR (VMap VB VP k v) where
+instance (Ord k, DecCBOR k, DecCBOR v, Prim v) => FromSharedCBOR (VMap VB VP k v) where
   type Share (VMap VB VP k v) = Interns k
   fromSharedCBOR kis = do
-    decodeVMap (interns kis <$> fromCBOR) fromCBOR
+    decodeVMap (interns kis <$> decCBOR) decCBOR
   getShare !m = internsFromVMap m
 
 -- | Share every item in a functor, have deserializing it
-fromShareCBORfunctor :: (FromCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
+fromShareCBORfunctor :: (DecCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
 fromShareCBORfunctor kis = do
-  sm <- fromCBOR
+  sm <- decCBOR
   pure (interns kis <$!> sm)

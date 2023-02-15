@@ -44,7 +44,7 @@ import Cardano.Chain.UTxO (TxValidationMode (..))
 import Cardano.Chain.ValidationMode (ValidationMode (..))
 import Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hashing as H
-import Cardano.Ledger.Binary (fromCBOR, toCBOR)
+import Cardano.Ledger.Binary (decCBOR, encCBOR)
 import Cardano.Prelude
 import qualified Control.State.Transition as STS
 import qualified Control.State.Transition.Generator as STS
@@ -243,4 +243,4 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
   isRight validateBlockResult === isRight applyMempoolPayloadResult
   where
     addAnnotation :: MempoolPayload -> AMempoolPayload ByteString
-    addAnnotation = reAnnotateUsing toCBOR fromCBOR
+    addAnnotation = reAnnotateUsing encCBOR decCBOR

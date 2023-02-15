@@ -23,7 +23,7 @@ module Data.ListMap (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeMapLen, encodeMapLen)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeMapLen, encodeMapLen)
 import Control.DeepSeq (NFData, NFData1)
 import Control.Monad
 import Data.Aeson (
@@ -74,19 +74,19 @@ instance Monoid (ListMap k v) where
 
 instance (NoThunks k, NoThunks v) => NoThunks (ListMap k v)
 
-instance (FromCBOR k, FromCBOR v) => FromCBOR (ListMap k v) where
-  fromCBOR =
+instance (DecCBOR k, DecCBOR v) => DecCBOR (ListMap k v) where
+  decCBOR =
     ListMap <$> do
       len <- decodeMapLen
       replicateM len $ do
-        k <- fromCBOR
-        v <- fromCBOR
+        k <- decCBOR
+        v <- decCBOR
         return (k, v)
 
-instance (ToCBOR k, ToCBOR v) => ToCBOR (ListMap k v) where
-  toCBOR (ListMap xs) = encodeMapLen (fromIntegral $ length xs) <> foldr f mempty xs
+instance (EncCBOR k, EncCBOR v) => EncCBOR (ListMap k v) where
+  encCBOR (ListMap xs) = encodeMapLen (fromIntegral $ length xs) <> foldr f mempty xs
     where
-      f (k, v) e = toCBOR k <> toCBOR v <> e
+      f (k, v) e = encCBOR k <> encCBOR v <> e
 
 instance ToJSONKey k => ToJSON1 (ListMap k) where
   liftToJSON g _ = case toJSONKey of

@@ -25,18 +25,18 @@ import Cardano.Chain.Block (
   HeaderHash,
   Proof (..),
   ToSign (..),
+  decCBORABOBBlock,
+  decCBORABoundaryBlock,
+  decCBORABoundaryHeader,
+  decCBORBoundaryConsensusData,
+  decCBORHeader,
+  decCBORHeaderToHash,
   dropBoundaryBody,
-  fromCBORABOBBlock,
-  fromCBORABoundaryBlock,
-  fromCBORABoundaryHeader,
-  fromCBORBoundaryConsensusData,
-  fromCBORHeader,
-  fromCBORHeaderToHash,
+  encCBORABOBBlock,
+  encCBORABoundaryBlock,
+  encCBORHeader,
+  encCBORHeaderToHash,
   mkHeaderExplicit,
-  toCBORABOBBlock,
-  toCBORABoundaryBlock,
-  toCBORHeader,
-  toCBORHeaderToHash,
   pattern Body,
  )
 import qualified Cardano.Chain.Delegation as Delegation
@@ -95,8 +95,8 @@ goldenHeader :: Property
 goldenHeader =
   goldenTestCBORExplicit
     "Header"
-    (toCBORHeader exampleEs)
-    (fromCBORHeader exampleEs)
+    (encCBORHeader exampleEs)
+    (decCBORHeader exampleEs)
     exampleHeader
     <:< "golden/cbor/block/Header"
 
@@ -112,9 +112,9 @@ ts_roundTripHeaderCompat =
     roundTripsHeaderCompat esh@(WithEpochSlots es _) =
       trippingBuildable
         esh
-        (serializeEncoding byronProtVer . toCBORHeaderToHash es . unWithEpochSlots)
+        (serializeEncoding byronProtVer . encCBORHeaderToHash es . unWithEpochSlots)
         ( fmap (WithEpochSlots es . fromJust)
-            . decodeFullDecoder byronProtVer "Header" (fromCBORHeaderToHash es)
+            . decodeFullDecoder byronProtVer "Header" (decCBORHeaderToHash es)
         )
 
 --------------------------------------------------------------------------------
@@ -133,9 +133,9 @@ ts_roundTripBlockCompat =
     roundTripsBlockCompat esb@(WithEpochSlots es _) =
       trippingBuildable
         esb
-        (serializeEncoding byronProtVer . toCBORABOBBlock es . unWithEpochSlots)
+        (serializeEncoding byronProtVer . encCBORABOBBlock es . unWithEpochSlots)
         ( fmap (WithEpochSlots es . fromJust)
-            . decodeFullDecoder byronProtVer "Block" (fromCBORABOBBlock es)
+            . decodeFullDecoder byronProtVer "Block" (decCBORABOBBlock es)
         )
 
 --------------------------------------------------------------------------------
@@ -158,7 +158,7 @@ goldenDeprecatedBoundaryBlockHeader :: Property
 goldenDeprecatedBoundaryBlockHeader =
   deprecatedGoldenDecode
     "BoundaryBlockHeader"
-    (void fromCBORABoundaryHeader)
+    (void decCBORABoundaryHeader)
     <:< "golden/cbor/block/BoundaryBlockHeader"
 
 ts_roundTripBoundaryBlock :: TSProperty
@@ -173,9 +173,9 @@ ts_roundTripBoundaryBlock =
     roundTripsBVD (pm, bvd) =
       trippingBuildable
         bvd
-        (serializeEncoding byronProtVer . toCBORABoundaryBlock pm)
+        (serializeEncoding byronProtVer . encCBORABoundaryBlock pm)
         ( fmap (dropSize . fmap (const ()))
-            <$> decodeFullDecoder byronProtVer "BoundaryBlock" fromCBORABoundaryBlock
+            <$> decodeFullDecoder byronProtVer "BoundaryBlock" decCBORABoundaryBlock
         )
 
     genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, ABoundaryBlock ())
@@ -203,7 +203,7 @@ goldenDeprecatedBoundaryConsensusData :: Property
 goldenDeprecatedBoundaryConsensusData =
   deprecatedGoldenDecode
     "BoundaryConsensusData"
-    (void fromCBORBoundaryConsensusData)
+    (void decCBORBoundaryConsensusData)
     <:< "golden/cbor/block/BoundaryConsensusData"
 
 --------------------------------------------------------------------------------

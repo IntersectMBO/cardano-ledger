@@ -56,10 +56,10 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   Annotator (..),
   Case (..),
-  FromCBOR (fromCBOR),
-  FromCBORGroup (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  DecCBOR (decCBOR),
+  DecCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   TokenType (TypeNull),
   annotatorSlice,
   decodeNull,
@@ -69,7 +69,7 @@ import Cardano.Ledger.Binary (
   encodePreEncoded,
   encodedSigKESSizeExpr,
   encodedVerKeyVRFSizeExpr,
-  hashToCBOR,
+  hashEncCBOR,
   listLenInt,
   peekTokenType,
   runByteBuilder,
@@ -117,7 +117,7 @@ newtype HashHeader c = HashHeader {unHashHeader :: Hash c EraIndependentBlockHea
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance Crypto c => ToCBOR (HashHeader c)
+deriving newtype instance Crypto c => EncCBOR (HashHeader c)
 
 -- | The previous hash of a block
 data PrevHash c = GenesisHash | BlockHash !(HashHeader c)
@@ -127,10 +127,10 @@ instance Crypto c => NoThunks (PrevHash c)
 
 instance
   Crypto c =>
-  ToCBOR (PrevHash c)
+  EncCBOR (PrevHash c)
   where
-  toCBOR GenesisHash = encodeNull
-  toCBOR (BlockHash h) = toCBOR h
+  encCBOR GenesisHash = encodeNull
+  encCBOR (BlockHash h) = encCBOR h
   encodedSizeExpr size _ =
     szCases
       [ Case "GenesisHash" 1
@@ -141,16 +141,16 @@ instance
 
 instance
   Crypto c =>
-  FromCBOR (PrevHash c)
+  DecCBOR (PrevHash c)
   where
-  fromCBOR = do
+  decCBOR = do
     peekTokenType >>= \case
       TypeNull -> do
         decodeNull
         pure GenesisHash
-      _ -> BlockHash <$> fromCBOR
+      _ -> BlockHash <$> decCBOR
 
-deriving newtype instance Crypto c => FromCBOR (HashHeader c)
+deriving newtype instance Crypto c => DecCBOR (HashHeader c)
 
 data BHBody c = BHBody
   { bheaderBlockNo :: !BlockNo
@@ -194,21 +194,21 @@ instance
 
 instance
   Crypto c =>
-  ToCBOR (BHBody c)
+  EncCBOR (BHBody c)
   where
-  toCBOR bhBody =
+  encCBOR bhBody =
     encodeListLen (9 + listLen oc + listLen pv)
-      <> toCBOR (bheaderBlockNo bhBody)
-      <> toCBOR (bheaderSlotNo bhBody)
-      <> toCBOR (bheaderPrev bhBody)
-      <> toCBOR (bheaderVk bhBody)
+      <> encCBOR (bheaderBlockNo bhBody)
+      <> encCBOR (bheaderSlotNo bhBody)
+      <> encCBOR (bheaderPrev bhBody)
+      <> encCBOR (bheaderVk bhBody)
       <> encodeVerKeyVRF (bheaderVrfVk bhBody)
-      <> toCBOR (bheaderEta bhBody)
-      <> toCBOR (bheaderL bhBody)
-      <> toCBOR (bsize bhBody)
-      <> toCBOR (bhash bhBody)
-      <> toCBORGroup oc
-      <> toCBORGroup pv
+      <> encCBOR (bheaderEta bhBody)
+      <> encCBOR (bheaderL bhBody)
+      <> encCBOR (bsize bhBody)
+      <> encCBOR (bhash bhBody)
+      <> encCBORGroup oc
+      <> encCBORGroup pv
     where
       oc = bheaderOCert bhBody
       pv = bprotver bhBody
@@ -234,20 +234,20 @@ instance
 
 instance
   Crypto c =>
-  FromCBOR (BHBody c)
+  DecCBOR (BHBody c)
   where
-  fromCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
-    bheaderBlockNo <- fromCBOR
-    bheaderSlotNo <- fromCBOR
-    bheaderPrev <- fromCBOR
-    bheaderVk <- fromCBOR
+  decCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
+    bheaderBlockNo <- decCBOR
+    bheaderSlotNo <- decCBOR
+    bheaderPrev <- decCBOR
+    bheaderVk <- decCBOR
     bheaderVrfVk <- decodeVerKeyVRF
-    bheaderEta <- fromCBOR
-    bheaderL <- fromCBOR
-    bsize <- fromCBOR
-    bhash <- fromCBOR
-    bheaderOCert <- fromCBORGroup
-    bprotver <- fromCBORGroup
+    bheaderEta <- decCBOR
+    bheaderL <- decCBOR
+    bsize <- decCBOR
+    bhash <- decCBOR
+    bheaderOCert <- decCBORGroup
+    bprotver <- decCBORGroup
     pure $
       BHBody
         { bheaderBlockNo
@@ -293,24 +293,24 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
       let mkBytes bhBody kESig =
             serialize' (pvMajor (bprotver bhBody)) $
               encodeListLen 2
-                <> toCBOR bhBody
+                <> encCBOR bhBody
                 <> encodeSignedKES kESig
        in BHeader' body sig (mkBytes body sig)
 
 {-# COMPLETE BHeader #-}
 
-instance Crypto c => ToCBOR (BHeader c) where
-  toCBOR (BHeader' _ _ bytes) = encodePreEncoded bytes
+instance Crypto c => EncCBOR (BHeader c) where
+  encCBOR (BHeader' _ _ bytes) = encodePreEncoded bytes
 
   encodedSizeExpr size proxy =
     1
       + encodedSizeExpr size (bHeaderBody' <$> proxy)
       + encodedSigKESSizeExpr (KES.getSig . bHeaderSig' <$> proxy)
 
-instance Crypto c => FromCBOR (Annotator (BHeader c)) where
-  fromCBOR = annotatorSlice $
+instance Crypto c => DecCBOR (Annotator (BHeader c)) where
+  decCBOR = annotatorSlice $
     decodeRecordNamed "Header" (const 2) $ do
-      bhb <- fromCBOR
+      bhb <- decCBOR
       sig <- decodeSignedKES
       pure $ pure $ BHeader' bhb sig . BSL.toStrict
 
@@ -319,7 +319,7 @@ bhHash ::
   Crypto c =>
   BHeader c ->
   HashHeader c
-bhHash bh = HashHeader . Hash.castHash . hashToCBOR version $ bh
+bhHash bh = HashHeader . Hash.castHash . hashEncCBOR version $ bh
   where
     version = pvMajor (bprotver (bHeaderBody' bh))
 
@@ -491,19 +491,19 @@ instance Crypto c => NoThunks (LastAppliedBlock c)
 
 instance NFData (LastAppliedBlock c)
 
-instance Crypto c => ToCBOR (LastAppliedBlock c) where
-  toCBOR (LastAppliedBlock b s h) =
-    encodeListLen 3 <> toCBOR b <> toCBOR s <> toCBOR h
+instance Crypto c => EncCBOR (LastAppliedBlock c) where
+  encCBOR (LastAppliedBlock b s h) =
+    encodeListLen 3 <> encCBOR b <> encCBOR s <> encCBOR h
 
-instance Crypto c => FromCBOR (LastAppliedBlock c) where
-  fromCBOR =
+instance Crypto c => DecCBOR (LastAppliedBlock c) where
+  decCBOR =
     decodeRecordNamed
       "lastAppliedBlock"
       (const 3)
       ( LastAppliedBlock
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
+          <$> decCBOR
+          <*> decCBOR
+          <*> decCBOR
       )
 
 lastAppliedHash :: WithOrigin (LastAppliedBlock c) -> PrevHash c

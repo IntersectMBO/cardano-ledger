@@ -47,24 +47,24 @@ data ApplyMempoolPayloadErr
   | MempoolUpdateVoteErr U.Iface.Error
   deriving (Eq, Show)
 
-instance ToCBOR ApplyMempoolPayloadErr where
-  toCBOR (MempoolTxErr err) =
-    encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR err
-  toCBOR (MempoolDlgErr err) =
-    encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR err
-  toCBOR (MempoolUpdateProposalErr err) =
-    encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR err
-  toCBOR (MempoolUpdateVoteErr err) =
-    encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR err
+instance EncCBOR ApplyMempoolPayloadErr where
+  encCBOR (MempoolTxErr err) =
+    encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR err
+  encCBOR (MempoolDlgErr err) =
+    encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR err
+  encCBOR (MempoolUpdateProposalErr err) =
+    encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR err
+  encCBOR (MempoolUpdateVoteErr err) =
+    encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR err
 
-instance FromCBOR ApplyMempoolPayloadErr where
-  fromCBOR = do
+instance DecCBOR ApplyMempoolPayloadErr where
+  decCBOR = do
     enforceSize "ApplyMempoolPayloadErr" 2
     decodeWord8 >>= \case
-      0 -> MempoolTxErr <$> fromCBOR
-      1 -> MempoolDlgErr <$> fromCBOR
-      2 -> MempoolUpdateProposalErr <$> fromCBOR
-      3 -> MempoolUpdateVoteErr <$> fromCBOR
+      0 -> MempoolTxErr <$> decCBOR
+      1 -> MempoolDlgErr <$> decCBOR
+      2 -> MempoolUpdateProposalErr <$> decCBOR
+      3 -> MempoolUpdateVoteErr <$> decCBOR
       tag -> cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" tag
 
 applyMempoolPayload ::
@@ -110,8 +110,8 @@ mempoolPayloadReencode = go
     go (CC.MempoolUpdateProposal payload) = reencode payload
     go (CC.MempoolUpdateVote payload) = reencode payload
 
-    reencode :: (Functor f, ToCBOR (f ())) => f a -> ByteString
-    reencode = CBOR.toStrictByteString . toPlainEncoding byronProtVer . toCBOR . void
+    reencode :: (Functor f, EncCBOR (f ())) => f a -> ByteString
+    reencode = CBOR.toStrictByteString . toPlainEncoding byronProtVer . encCBOR . void
 
 {-------------------------------------------------------------------------------
   Applying transactions

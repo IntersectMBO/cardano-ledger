@@ -27,9 +27,9 @@ import Cardano.Chain.Common.Lovelace (
  )
 import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear (..))
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (DecoderErrorUnknownTag),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   encodeListLen,
   enforceSize,
@@ -74,17 +74,17 @@ instance B.Buildable TxFeePolicy where
 -- Used for debugging purposes only
 instance Aeson.ToJSON TxFeePolicy
 
-instance ToCBOR TxFeePolicy where
-  toCBOR policy = case policy of
+instance EncCBOR TxFeePolicy where
+  encCBOR policy = case policy of
     TxFeePolicyTxSizeLinear txSizeLinear ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
+        <> encCBOR (0 :: Word8)
         <> encodeKnownCborDataItem txSizeLinear
 
-instance FromCBOR TxFeePolicy where
-  fromCBOR = do
+instance DecCBOR TxFeePolicy where
+  decCBOR = do
     enforceSize "TxFeePolicy" 2
-    tag <- fromCBOR @Word8
+    tag <- decCBOR @Word8
     case tag of
       0 -> TxFeePolicyTxSizeLinear <$> decodeKnownCborDataItem
       _ -> cborError $ DecoderErrorUnknownTag "TxFeePolicy" tag

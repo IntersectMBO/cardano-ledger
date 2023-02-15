@@ -52,15 +52,15 @@ type CurrentEra = Alonzo
 readNewEpochState ::
   FilePath ->
   IO (NewEpochState CurrentEra)
-readNewEpochState = readFromCBOR
+readNewEpochState = readDecCBOR
 
 readEpochState ::
   FilePath ->
   IO (EpochState CurrentEra)
-readEpochState = readFromCBOR
+readEpochState = readDecCBOR
 
-readFromCBOR :: FromCBOR a => FilePath -> IO a
-readFromCBOR fp =
+readDecCBOR :: DecCBOR a => FilePath -> IO a
+readDecCBOR fp =
   LBS.readFile fp <&> decodeFull (eraProtVerHigh @CurrentEra) >>= \case
     Left exc -> throwIO exc
     Right res -> pure res

@@ -29,7 +29,7 @@ import Cardano.Ledger.Allegra.TxBody (
  )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Binary (serializeEncoding', toCBOR)
+import Cardano.Ledger.Binary (encCBOR, serializeEncoding')
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Keys (KeyHash)
@@ -189,7 +189,7 @@ someLeaf ::
   KeyHash 'Witness (EraCrypto era) ->
   Timelock era
 someLeaf x =
-  let n = mod (hash (serializeEncoding' (eraProtVerLow @era) (toCBOR x))) 200
+  let n = mod (hash (serializeEncoding' (eraProtVerLow @era) (encCBOR x))) 200
    in partition @era [n] [RequireSignature x]
 
 partition ::

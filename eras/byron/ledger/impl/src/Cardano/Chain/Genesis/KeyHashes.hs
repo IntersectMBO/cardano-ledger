@@ -42,10 +42,10 @@ instance MonadError SchemaError m => FromJSON m GenesisKeyHashes where
   fromJSON =
     fmap (GenesisKeyHashes . M.keysSet) . fromJSON @m @(Map KeyHash Word16)
 
-instance ToCBOR GenesisKeyHashes where
-  toCBOR (GenesisKeyHashes gkh) = encodeListLen 1 <> toCBOR @(Set KeyHash) gkh
+instance EncCBOR GenesisKeyHashes where
+  encCBOR (GenesisKeyHashes gkh) = encodeListLen 1 <> encCBOR @(Set KeyHash) gkh
 
-instance FromCBOR GenesisKeyHashes where
-  fromCBOR = do
+instance DecCBOR GenesisKeyHashes where
+  decCBOR = do
     enforceSize "GenesisKeyHashes" 1
-    GenesisKeyHashes <$> fromCBOR @(Set KeyHash)
+    GenesisKeyHashes <$> decCBOR @(Set KeyHash)

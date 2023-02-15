@@ -1,9 +1,9 @@
--- | "Cardano.Ledger.Binary.Coders" provides tools for writing 'ToCBOR' and 'FromCBOR'
+-- | "Cardano.Ledger.Binary.Coders" provides tools for writing 'EncCBOR' and 'DecCBOR'
 --   instances (see module 'Cardano.Ledger.Binary') in an intuitive way that mirrors the way one
 --   constructs values of a particular type. Advantages include:
 --
 -- 1. Book-keeping details neccesary to write correct instances are hidden from the user.
--- 2. Inverse 'ToCBOR' and 'FromCBOR' instances have visually similar definitions.
+-- 2. Inverse 'EncCBOR' and 'DecCBOR' instances have visually similar definitions.
 -- 3. Advanced instances involving sparse-encoding, compact-representation, and
 -- 'Annotator' instances are also supported.
 --

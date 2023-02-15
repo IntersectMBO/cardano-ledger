@@ -51,11 +51,11 @@ import Cardano.Ledger.BaseTypes (
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
   cborError,
   decodeRational,
   decodeRecordNamed,
@@ -125,15 +125,15 @@ data ShelleyGenesisStaking c = ShelleyGenesisStaking
 
 instance NoThunks (ShelleyGenesisStaking c)
 
-instance Crypto c => ToCBOR (ShelleyGenesisStaking c) where
-  toCBOR (ShelleyGenesisStaking pools stake) =
-    encodeListLen 2 <> toCBOR pools <> toCBOR stake
+instance Crypto c => EncCBOR (ShelleyGenesisStaking c) where
+  encCBOR (ShelleyGenesisStaking pools stake) =
+    encodeListLen 2 <> encCBOR pools <> encCBOR stake
 
-instance Crypto c => FromCBOR (ShelleyGenesisStaking c) where
-  fromCBOR = do
+instance Crypto c => DecCBOR (ShelleyGenesisStaking c) where
+  decCBOR = do
     decodeRecordNamed "ShelleyGenesisStaking" (const 2) $ do
-      pools <- fromCBOR
-      stake <- fromCBOR
+      pools <- decCBOR
+      stake <- decCBOR
       pure $ ShelleyGenesisStaking pools stake
 
 -- | Empty genesis staking
@@ -149,7 +149,7 @@ emptyGenesisStaking =
 newtype NominalDiffTimeMicro = NominalDiffTimeMicro Micro
   deriving (Show, Eq, Generic)
   deriving anyclass (NoThunks)
-  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON, ToCBOR, FromCBOR)
+  deriving newtype (Ord, Num, Fractional, Real, ToJSON, FromJSON, EncCBOR, DecCBOR)
 
 -- | There is no loss of resolution in this conversion
 microToPico :: Micro -> Pico
@@ -304,8 +304,8 @@ instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
         <$> (forceElemsToWHNF <$> obj .: "pools")
         <*> (forceElemsToWHNF <$> obj .: "stake")
 
-instance Crypto c => ToCBOR (ShelleyGenesis c) where
-  toCBOR
+instance Crypto c => EncCBOR (ShelleyGenesis c) where
+  encCBOR
     ShelleyGenesis
       { sgSystemStart
       , sgNetworkMagic
@@ -324,40 +324,40 @@ instance Crypto c => ToCBOR (ShelleyGenesis c) where
       , sgStaking
       } =
       encodeListLen 15
-        <> toCBOR sgSystemStart
-        <> toCBOR sgNetworkMagic
-        <> toCBOR sgNetworkId
-        <> activeSlotsCoeffToCBOR sgActiveSlotsCoeff
-        <> toCBOR sgSecurityParam
-        <> toCBOR (unEpochSize sgEpochLength)
-        <> toCBOR sgSlotsPerKESPeriod
-        <> toCBOR sgMaxKESEvolutions
-        <> toCBOR sgSlotLength
-        <> toCBOR sgUpdateQuorum
-        <> toCBOR sgMaxLovelaceSupply
-        <> toCBOR sgProtocolParams
-        <> toCBOR sgGenDelegs
-        <> toCBOR sgInitialFunds
-        <> toCBOR sgStaking
+        <> encCBOR sgSystemStart
+        <> encCBOR sgNetworkMagic
+        <> encCBOR sgNetworkId
+        <> activeSlotsCoeffEncCBOR sgActiveSlotsCoeff
+        <> encCBOR sgSecurityParam
+        <> encCBOR (unEpochSize sgEpochLength)
+        <> encCBOR sgSlotsPerKESPeriod
+        <> encCBOR sgMaxKESEvolutions
+        <> encCBOR sgSlotLength
+        <> encCBOR sgUpdateQuorum
+        <> encCBOR sgMaxLovelaceSupply
+        <> encCBOR sgProtocolParams
+        <> encCBOR sgGenDelegs
+        <> encCBOR sgInitialFunds
+        <> encCBOR sgStaking
 
-instance Crypto c => FromCBOR (ShelleyGenesis c) where
-  fromCBOR = do
+instance Crypto c => DecCBOR (ShelleyGenesis c) where
+  decCBOR = do
     decodeRecordNamed "ShelleyGenesis" (const 15) $ do
-      sgSystemStart <- fromCBOR
-      sgNetworkMagic <- fromCBOR
-      sgNetworkId <- fromCBOR
-      sgActiveSlotsCoeff <- activeSlotsCoeffFromCBOR
-      sgSecurityParam <- fromCBOR
-      sgEpochLength <- fromCBOR
-      sgSlotsPerKESPeriod <- fromCBOR
-      sgMaxKESEvolutions <- fromCBOR
-      sgSlotLength <- fromCBOR
-      sgUpdateQuorum <- fromCBOR
-      sgMaxLovelaceSupply <- fromCBOR
-      sgProtocolParams <- fromCBOR
-      sgGenDelegs <- fromCBOR
-      sgInitialFunds <- fromCBOR
-      sgStaking <- fromCBOR
+      sgSystemStart <- decCBOR
+      sgNetworkMagic <- decCBOR
+      sgNetworkId <- decCBOR
+      sgActiveSlotsCoeff <- activeSlotsCoeffDecCBOR
+      sgSecurityParam <- decCBOR
+      sgEpochLength <- decCBOR
+      sgSlotsPerKESPeriod <- decCBOR
+      sgMaxKESEvolutions <- decCBOR
+      sgSlotLength <- decCBOR
+      sgUpdateQuorum <- decCBOR
+      sgMaxLovelaceSupply <- decCBOR
+      sgProtocolParams <- decCBOR
+      sgGenDelegs <- decCBOR
+      sgInitialFunds <- decCBOR
+      sgStaking <- decCBOR
       pure $
         ShelleyGenesis
           sgSystemStart
@@ -378,14 +378,14 @@ instance Crypto c => FromCBOR (ShelleyGenesis c) where
 
 -- | Serialize `PositiveUnitInterval` type in the same way `Rational` is serialized,
 -- however ensure there is no usage of tag 30 by enforcing Shelley protocol version.
-activeSlotsCoeffToCBOR :: PositiveUnitInterval -> Encoding
-activeSlotsCoeffToCBOR = enforceEncodingVersion shelleyProtVer . toCBOR . unboundRational
+activeSlotsCoeffEncCBOR :: PositiveUnitInterval -> Encoding
+activeSlotsCoeffEncCBOR = enforceEncodingVersion shelleyProtVer . encCBOR . unboundRational
 
 -- | Deserialize `PositiveUnitInterval` type using `Rational` deserialization and fail
 -- when bounds are violated. Also, ensure there is no usage of tag 30 by enforcing Shelley
 -- protocol version.
-activeSlotsCoeffFromCBOR :: Decoder s PositiveUnitInterval
-activeSlotsCoeffFromCBOR = do
+activeSlotsCoeffDecCBOR :: Decoder s PositiveUnitInterval
+activeSlotsCoeffDecCBOR = do
   r <- enforceDecoderVersion shelleyProtVer $ decodeRational
   case boundRational r of
     Nothing ->

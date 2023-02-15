@@ -29,10 +29,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   CBORGroup (..),
-  FromCBOR (..),
-  FromCBORGroup (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  DecCBOR (..),
+  DecCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   decodeRecordSum,
   encodeListLen,
  )
@@ -136,7 +136,7 @@ instance NoThunks (StakeReference c)
 -- list.
 data Ptr = Ptr !SlotNo !TxIx !CertIx
   deriving (Eq, Ord, Generic, NFData, NoThunks)
-  deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
+  deriving (EncCBOR, DecCBOR) via CBORGroup Ptr
 
 instance Show Ptr where
   showsPrec n (Ptr slotNo txIx certIx)
@@ -190,31 +190,31 @@ ptrCertIx (Ptr _ _ cIx) = cIx
 
 instance
   (Typeable kr, CC.Crypto c) =>
-  ToCBOR (Credential kr c)
+  EncCBOR (Credential kr c)
   where
-  toCBOR = \case
-    KeyHashObj kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
-    ScriptHashObj hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
+  encCBOR = \case
+    KeyHashObj kh -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
+    ScriptHashObj hs -> encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR hs
 
 instance
   (Typeable kr, CC.Crypto c) =>
-  FromCBOR (Credential kr c)
+  DecCBOR (Credential kr c)
   where
-  fromCBOR = decodeRecordSum "Credential" $
+  decCBOR = decodeRecordSum "Credential" $
     \case
       0 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, KeyHashObj x)
       1 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, ScriptHashObj x)
       k -> invalidKey k
 
-instance ToCBORGroup Ptr where
-  toCBORGroup (Ptr sl txIx certIx) =
-    toCBOR sl
-      <> toCBOR txIx
-      <> toCBOR certIx
+instance EncCBORGroup Ptr where
+  encCBORGroup (Ptr sl txIx certIx) =
+    encCBOR sl
+      <> encCBOR txIx
+      <> encCBOR certIx
   encodedGroupSizeExpr size_ proxy =
     encodedSizeExpr size_ (ptrSlotNo <$> proxy)
       + encodedSizeExpr size_ (ptrTxIx <$> proxy)
@@ -223,11 +223,11 @@ instance ToCBORGroup Ptr where
   listLen _ = 3
   listLenBound _ = 3
 
-instance FromCBORGroup Ptr where
-  fromCBORGroup = do
-    slotNo <- fromCBOR
-    txIx <- fromCBOR
-    certIx <- fromCBOR
+instance DecCBORGroup Ptr where
+  decCBORGroup = do
+    slotNo <- decCBOR
+    txIx <- decCBOR
+    certIx <- decCBOR
     pure $ Ptr slotNo txIx certIx
 
 -- case mkPtr slotNo txIx certIx of
@@ -246,8 +246,8 @@ instance Ord (GenesisCredential c) where
 instance Eq (GenesisCredential c) where
   (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
 
-instance CC.Crypto c => ToCBOR (GenesisCredential c) where
-  toCBOR (GenesisCredential kh) = toCBOR kh
+instance CC.Crypto c => EncCBOR (GenesisCredential c) where
+  encCBOR (GenesisCredential kh) = encCBOR kh
 
 -- ==================================
 

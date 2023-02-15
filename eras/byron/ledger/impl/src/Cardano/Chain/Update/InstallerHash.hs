@@ -11,8 +11,8 @@ where
 import Cardano.Crypto (Hash, hashRaw)
 import Cardano.Crypto.Raw (Raw)
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   dropBytes,
   encodeListLen,
   enforceSize,
@@ -36,21 +36,21 @@ instance B.Buildable InstallerHash where
 -- Used for debugging purposes only
 instance ToJSON InstallerHash
 
-instance ToCBOR InstallerHash where
-  toCBOR (InstallerHash h) =
+instance EncCBOR InstallerHash where
+  encCBOR (InstallerHash h) =
     encodeListLen 4
-      <> toCBOR emptyHash
-      <> toCBOR h
-      <> toCBOR emptyHash
-      <> toCBOR emptyHash
+      <> encCBOR emptyHash
+      <> encCBOR h
+      <> encCBOR emptyHash
+      <> encCBOR emptyHash
     where
       emptyHash = hashRaw "\NUL"
 
-instance FromCBOR InstallerHash where
-  fromCBOR = do
+instance DecCBOR InstallerHash where
+  decCBOR = do
     enforceSize "InstallerHash" 4
     dropBytes
-    h <- fromCBOR
+    h <- decCBOR
     dropBytes
     dropBytes
     pure $ InstallerHash h

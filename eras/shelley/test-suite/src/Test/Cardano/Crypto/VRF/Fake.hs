@@ -31,7 +31,7 @@ import Cardano.Crypto.VRF.Class hiding (
   encodeVerKeyVRF,
  )
 import Cardano.Ledger.BaseTypes (Seed, shelleyProtVer)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), hashWithEncoder)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), hashWithEncoder)
 import Cardano.Ledger.Binary.Crypto (
   decodeCertVRF,
   decodeSignKeyVRF,
@@ -53,7 +53,7 @@ data FakeVRF
 
 -- | A class for seeds which sneakily contain the certified output we wish to
 -- "randomly" derive from them.
-class ToCBOR (Payload a) => SneakilyContainResult a where
+class EncCBOR (Payload a) => SneakilyContainResult a where
   type Payload a
   sneakilyExtractResult :: a -> SignKeyVRF FakeVRF -> OutputVRF FakeVRF
   unsneakilyExtractPayload :: a -> Payload a
@@ -61,7 +61,7 @@ class ToCBOR (Payload a) => SneakilyContainResult a where
 data WithResult a = WithResult !a !Word64
   deriving (Eq, Show)
 
-instance ToCBOR a => SneakilyContainResult (WithResult a) where
+instance EncCBOR a => SneakilyContainResult (WithResult a) where
   type Payload (WithResult a) = a
 
   -- Note that this instance completely ignores the key.
@@ -81,7 +81,7 @@ instance SneakilyContainResult Seed where
     OutputVRF
       . hashToBytes
       . hashWithEncoder @Blake2b_224 shelleyProtVer id
-      $ toCBOR s <> toCBOR sk
+      $ encCBOR s <> encCBOR sk
   unsneakilyExtractPayload = id
 
 instance VRFAlgorithm FakeVRF where
@@ -155,26 +155,26 @@ evalVRF' a sk@(SignKeyFakeVRF n) =
           . bytesToNatural
           . hashToBytes
           . hashWithEncoder @Blake2b_224 shelleyProtVer id
-          $ toCBOR p <> toCBOR sk
+          $ encCBOR p <> encCBOR sk
    in (y, CertFakeVRF n realValue)
 
-instance FromCBOR (VerKeyVRF FakeVRF) where
-  fromCBOR = decodeVerKeyVRF
+instance DecCBOR (VerKeyVRF FakeVRF) where
+  decCBOR = decodeVerKeyVRF
 
-instance ToCBOR (VerKeyVRF FakeVRF) where
-  toCBOR = encodeVerKeyVRF
+instance EncCBOR (VerKeyVRF FakeVRF) where
+  encCBOR = encodeVerKeyVRF
 
-instance FromCBOR (SignKeyVRF FakeVRF) where
-  fromCBOR = decodeSignKeyVRF
+instance DecCBOR (SignKeyVRF FakeVRF) where
+  decCBOR = decodeSignKeyVRF
 
-instance ToCBOR (SignKeyVRF FakeVRF) where
-  toCBOR = encodeSignKeyVRF
+instance EncCBOR (SignKeyVRF FakeVRF) where
+  encCBOR = encodeSignKeyVRF
 
-instance FromCBOR (CertVRF FakeVRF) where
-  fromCBOR = decodeCertVRF
+instance DecCBOR (CertVRF FakeVRF) where
+  decCBOR = decodeCertVRF
 
-instance ToCBOR (CertVRF FakeVRF) where
-  toCBOR = encodeCertVRF
+instance EncCBOR (CertVRF FakeVRF) where
+  encCBOR = encodeCertVRF
 
 readBinaryWord16 :: ByteString -> Word16
 readBinaryWord16 =

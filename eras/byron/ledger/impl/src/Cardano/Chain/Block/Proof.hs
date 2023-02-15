@@ -23,7 +23,7 @@ import Cardano.Chain.Ssc (SscProof (..))
 import Cardano.Chain.UTxO.TxProof (TxProof, mkTxProof, recoverTxProof)
 import qualified Cardano.Chain.Update.Proof as Update
 import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build, shown)
@@ -51,13 +51,13 @@ instance B.Buildable Proof where
 -- Used for debugging purposes only
 instance ToJSON Proof
 
-instance ToCBOR Proof where
-  toCBOR bc =
+instance EncCBOR Proof where
+  encCBOR bc =
     encodeListLen 4
-      <> toCBOR (proofUTxO bc)
-      <> toCBOR (proofSsc bc)
-      <> toCBOR (proofDelegation bc)
-      <> toCBOR (proofUpdate bc)
+      <> encCBOR (proofUTxO bc)
+      <> encCBOR (proofSsc bc)
+      <> encCBOR (proofDelegation bc)
+      <> encCBOR (proofUpdate bc)
 
   encodedSizeExpr size bc =
     1
@@ -66,10 +66,10 @@ instance ToCBOR Proof where
       + encodedSizeExpr size (proofDelegation <$> bc)
       + encodedSizeExpr size (proofUpdate <$> bc)
 
-instance FromCBOR Proof where
-  fromCBOR = do
+instance DecCBOR Proof where
+  decCBOR = do
     enforceSize "Proof" 4
-    Proof <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
+    Proof <$> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR
 
 mkProof :: Body -> Proof
 mkProof body =

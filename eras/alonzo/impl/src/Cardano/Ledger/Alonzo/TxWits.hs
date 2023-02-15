@@ -59,11 +59,11 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData)
 import Cardano.Ledger.Binary (
   Annotator,
+  DecCBOR (..),
+  DecCBORGroup (..),
   Decoder,
-  FromCBOR (..),
-  FromCBORGroup (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   decodeList,
   encodeFoldableEncoder,
   encodeListLen,
@@ -108,23 +108,23 @@ instance NoThunks RdmrPtr
 
 instance NFData RdmrPtr
 
--- ToCBOR and FromCBOR for RdmrPtr is used in UTXOW for error reporting
-instance FromCBOR RdmrPtr where
-  fromCBOR = RdmrPtr <$> fromCBOR <*> fromCBOR
+-- EncCBOR and DecCBOR for RdmrPtr is used in UTXOW for error reporting
+instance DecCBOR RdmrPtr where
+  decCBOR = RdmrPtr <$> decCBOR <*> decCBOR
 
-instance ToCBOR RdmrPtr where
-  toCBOR (RdmrPtr t w) = toCBOR t <> toCBOR w
+instance EncCBOR RdmrPtr where
+  encCBOR (RdmrPtr t w) = encCBOR t <> encCBOR w
 
-instance ToCBORGroup RdmrPtr where
+instance EncCBORGroup RdmrPtr where
   listLen _ = 2
   listLenBound _ = 2
-  toCBORGroup (RdmrPtr t w) = toCBOR t <> toCBOR w
+  encCBORGroup (RdmrPtr t w) = encCBOR t <> encCBOR w
   encodedGroupSizeExpr size_ _proxy =
     encodedSizeExpr size_ (Proxy :: Proxy Tag)
       + encodedSizeExpr size_ (Proxy :: Proxy Word64)
 
-instance FromCBORGroup RdmrPtr where
-  fromCBORGroup = RdmrPtr <$> fromCBOR <*> fromCBOR
+instance DecCBORGroup RdmrPtr where
+  decCBORGroup = RdmrPtr <$> decCBOR <*> decCBOR
 
 newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
   deriving (Eq, Generic, Typeable, NFData)
@@ -132,14 +132,14 @@ newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (RedeemersRaw era)
 
-instance Typeable era => ToCBOR (RedeemersRaw era) where
-  toCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
+instance Typeable era => EncCBOR (RedeemersRaw era) where
+  encCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
     where
       keyValueEncoder (ptr, (dats, exs)) =
         encodeListLen (listLen ptr + 2)
-          <> toCBORGroup ptr
-          <> toCBOR dats
-          <> toCBOR exs
+          <> encCBORGroup ptr
+          <> encCBOR dats
+          <> encCBOR exs
 
 instance Memoized Redeemers where
   type RawType Redeemers = RedeemersRaw
@@ -149,7 +149,7 @@ instance Memoized Redeemers where
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
-  deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
+  deriving newtype (Eq, EncCBOR, NoThunks, SafeToHash, Typeable, NFData)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Redeemers era)
 
@@ -220,7 +220,7 @@ instance
   NFData (AlonzoTxWitsRaw era)
 
 newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes AlonzoTxWitsRaw era)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, EncCBOR)
 
 instance Memoized AlonzoTxWits where
   type RawType AlonzoTxWits = AlonzoTxWitsRaw
@@ -258,8 +258,8 @@ newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (EraCrypto era)) (Data era))
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDatsRaw era)
 
-instance (Typeable era, ToCBOR (Data era)) => ToCBOR (TxDatsRaw era) where
-  toCBOR (TxDatsRaw m) = toCBOR $ Map.elems m
+instance (Typeable era, EncCBOR (Data era)) => EncCBOR (TxDatsRaw era) where
+  encCBOR (TxDatsRaw m) = encCBOR $ Map.elems m
 
 pattern TxDats' :: Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
 pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
@@ -279,15 +279,15 @@ unTxDats (TxDats' m) = m
 nullDats :: TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
 
-instance (Era era) => FromCBOR (Annotator (TxDatsRaw era)) where
-  fromCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
+instance (Era era) => DecCBOR (Annotator (TxDatsRaw era)) where
+  decCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
 
 -- | Note that 'TxDats' are based on 'MemoBytes' since we must preserve
 -- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
 -- Since the 'TxDats' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
-  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
+  deriving newtype (SafeToHash, EncCBOR, Eq, NoThunks, NFData)
 
 instance Memoized TxDats where
   type RawType TxDats = TxDatsRaw
@@ -303,7 +303,7 @@ instance Era era => Monoid (TxDats era) where
 deriving via
   (Mem TxDatsRaw era)
   instance
-    (Era era) => FromCBOR (Annotator (TxDats era))
+    (Era era) => DecCBOR (Annotator (TxDats era))
 
 -- =====================================================
 -- AlonzoTxWits instances
@@ -440,8 +440,8 @@ instance (EraScript (AlonzoEra c), Crypto c) => AlonzoEraTxWits (AlonzoEra c) wh
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era) where
-  toCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
+instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw era) where
+  encCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
     encode $
       Keyed
         (\a b c d e f g -> AlonzoTxWitsRaw a b (c <> d <> e) f g)
@@ -451,24 +451,24 @@ instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era
           null
           ( Key 1 $
               E
-                (toCBOR . mapMaybe unwrapTS . Map.elems)
+                (encCBOR . mapMaybe unwrapTS . Map.elems)
                 (Map.filter isTimelock scripts)
           )
         !> Omit
           null
           ( Key 3 $
               E
-                (toCBOR . mapMaybe unwrapPS1 . Map.elems)
+                (encCBOR . mapMaybe unwrapPS1 . Map.elems)
                 (Map.filter (isPlutus PlutusV1) scripts)
           )
         !> Omit
           null
           ( Key 6 $
               E
-                (toCBOR . mapMaybe unwrapPS2 . Map.elems)
+                (encCBOR . mapMaybe unwrapPS2 . Map.elems)
                 (Map.filter (isPlutus PlutusV2) scripts)
           )
-        !> Omit nullDats (Key 4 $ E toCBOR dats)
+        !> Omit nullDats (Key 4 $ E encCBOR dats)
         !> Omit nullRedeemers (Key 5 $ To rdmrs)
     where
       unwrapTS (TimelockScript x) = Just x
@@ -484,8 +484,8 @@ instance (Era era, Script era ~ AlonzoScript era) => ToCBOR (AlonzoTxWitsRaw era
       isPlutus _ (TimelockScript _) = False
       isPlutus lang (PlutusScript l _) = lang == l
 
-instance Era era => FromCBOR (Annotator (RedeemersRaw era)) where
-  fromCBOR = do
+instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
+  decCBOR = do
     entries <- fmap sequence . decodeList $ decodeAnnElement
     pure $ RedeemersRaw . Map.fromList <$> entries
     where
@@ -499,22 +499,22 @@ instance Era era => FromCBOR (Annotator (RedeemersRaw era)) where
         decodeRecordNamed
           "Redeemer"
           (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2)
-          $ (,,) <$> fromCBORGroup <*> fromCBOR <*> fromCBOR
+          $ (,,) <$> decCBORGroup <*> decCBOR <*> decCBOR
 
 deriving via
   (Mem RedeemersRaw era)
   instance
-    (Era era) => FromCBOR (Annotator (Redeemers era))
+    (Era era) => DecCBOR (Annotator (Redeemers era))
 
 instance
   ( EraScript era
-  , ToCBOR (Data era)
+  , EncCBOR (Data era)
   , EraScript era
   , Script era ~ AlonzoScript era
   ) =>
-  FromCBOR (Annotator (AlonzoTxWitsRaw era))
+  DecCBOR (Annotator (AlonzoTxWitsRaw era))
   where
-  fromCBOR =
+  decCBOR =
     decode $
       SparseKeyed
         "AlonzoTxWits"
@@ -570,4 +570,4 @@ deriving via
   (Mem AlonzoTxWitsRaw era)
   instance
     (EraScript era, Script era ~ AlonzoScript era) =>
-    FromCBOR (Annotator (AlonzoTxWits era))
+    DecCBOR (Annotator (AlonzoTxWits era))

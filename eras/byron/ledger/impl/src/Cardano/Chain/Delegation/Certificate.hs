@@ -47,14 +47,14 @@ import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Ledger.Binary (
   Annotated (Annotated, unAnnotated),
   ByteSpan,
+  DecCBOR (..),
   Decoded (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   annotatedDecoder,
   byronProtVer,
+  decCBORAnnotated,
   encodeListLen,
   enforceSize,
-  fromCBORAnnotated,
   serialize',
  )
 import Cardano.Prelude
@@ -177,13 +177,13 @@ isValid pm UnsafeACertificate {aEpoch, issuerVK, delegateVK, signature} =
 -- Certificate Binary Serialization
 --------------------------------------------------------------------------------
 
-instance ToCBOR Certificate where
-  toCBOR cert =
+instance EncCBOR Certificate where
+  encCBOR cert =
     encodeListLen 4
-      <> toCBOR (epoch cert)
-      <> toCBOR (issuerVK cert)
-      <> toCBOR (delegateVK cert)
-      <> toCBOR (signature cert)
+      <> encCBOR (epoch cert)
+      <> encCBOR (issuerVK cert)
+      <> encCBOR (delegateVK cert)
+      <> encCBOR (signature cert)
 
   encodedSizeExpr size cert =
     1
@@ -192,18 +192,18 @@ instance ToCBOR Certificate where
       + encodedSizeExpr size (delegateVK <$> cert)
       + encodedSizeExpr size (signature <$> cert)
 
-instance FromCBOR Certificate where
-  fromCBOR = void <$> fromCBOR @(ACertificate ByteSpan)
+instance DecCBOR Certificate where
+  decCBOR = void <$> decCBOR @(ACertificate ByteSpan)
 
-instance FromCBOR (ACertificate ByteSpan) where
-  fromCBOR = do
+instance DecCBOR (ACertificate ByteSpan) where
+  decCBOR = do
     Annotated (e, ivk, dvk, sig) byteSpan <- annotatedDecoder $ do
       enforceSize "Delegation.Certificate" 4
       (,,,)
-        <$> fromCBORAnnotated
-        <*> fromCBOR
-        <*> fromCBOR
-        <*> fromCBOR
+        <$> decCBORAnnotated
+        <*> decCBOR
+        <*> decCBOR
+        <*> decCBOR
     pure $ UnsafeACertificate e ivk dvk sig byteSpan
 
 instance Decoded (ACertificate ByteString) where

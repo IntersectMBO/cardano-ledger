@@ -26,7 +26,7 @@ where
 import Cardano.HeapWords (HeapWords (..))
 import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
-import Cardano.Ledger.Binary (FromCBOR (fromCBOR), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -53,9 +53,9 @@ newtype TxId c = TxId {_unTxId :: SafeHash c EraIndependentTxBody}
 
 deriving newtype instance CC.Crypto c => HeapWords (TxId c)
 
-deriving newtype instance CC.Crypto c => ToCBOR (TxId c)
+deriving newtype instance CC.Crypto c => EncCBOR (TxId c)
 
-deriving newtype instance CC.Crypto c => FromCBOR (TxId c)
+deriving newtype instance CC.Crypto c => DecCBOR (TxId c)
 
 deriving newtype instance CC.Crypto c => NFData (TxId c)
 
@@ -82,18 +82,18 @@ deriving instance CC.Crypto c => NFData (TxIn c)
 
 instance NoThunks (TxIn c)
 
-instance CC.Crypto c => ToCBOR (TxIn c) where
-  toCBOR (TxIn txId index) =
+instance CC.Crypto c => EncCBOR (TxIn c) where
+  encCBOR (TxIn txId index) =
     encodeListLen 2
-      <> toCBOR txId
-      <> toCBOR index
+      <> encCBOR txId
+      <> encCBOR index
 
-instance CC.Crypto c => FromCBOR (TxIn c) where
-  fromCBOR =
+instance CC.Crypto c => DecCBOR (TxIn c) where
+  decCBOR =
     decodeRecordNamed
       "TxIn"
       (const 2)
-      (TxIn <$> fromCBOR <*> fromCBOR)
+      (TxIn <$> decCBOR <*> decCBOR)
 
 -- ============================================================
 

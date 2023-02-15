@@ -13,7 +13,7 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFullAnnotator,
   decodeFullAnnotatedBytes,
   module Cardano.Ledger.Binary.Version,
-  module Cardano.Ledger.Binary.Decoding.FromCBOR,
+  module Cardano.Ledger.Binary.Decoding.DecCBOR,
   module Cardano.Ledger.Binary.Decoding.Sharing,
   module Cardano.Ledger.Binary.Decoding.Decoder,
   module Cardano.Ledger.Binary.Decoding.Sized,
@@ -38,14 +38,14 @@ module Cardano.Ledger.Binary.Decoding (
 
   -- * Deprecated
   decodeAnnotator,
-  fromCBORMaybe,
+  decCBORMaybe,
 )
 where
 
 import Cardano.Ledger.Binary.Decoding.Annotated
+import Cardano.Ledger.Binary.Decoding.DecCBOR
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.Drop
-import Cardano.Ledger.Binary.Decoding.FromCBOR
 import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
 import Cardano.Ledger.Binary.Version
@@ -74,31 +74,31 @@ import Data.Text (Text)
 --
 -- * Decoding will not fail when the binary input is not consumed in full.
 unsafeDeserialize ::
-  FromCBOR a =>
+  DecCBOR a =>
   Version ->
   BSL.ByteString ->
   a
 unsafeDeserialize version =
-  either (error . displayException) id . bimap fst fst . deserialiseDecoder version fromCBOR
+  either (error . displayException) id . bimap fst fst . deserialiseDecoder version decCBOR
 
 -- | Variant of 'unsafeDeserialize' that accepts a strict `BS.ByteString` as
 -- input.
-unsafeDeserialize' :: FromCBOR a => Version -> BS.ByteString -> a
+unsafeDeserialize' :: DecCBOR a => Version -> BS.ByteString -> a
 unsafeDeserialize' version = unsafeDeserialize version . BSL.fromStrict
 
 -- | Deserialize a Haskell value from a binary CBOR representation, failing if
 --   there are leftovers. In other words, the __Full__ here implies the contract
 --   on this function that the input must be consumed in its entirety by the
---   decoder specified in `FromCBOR`.
-decodeFull :: forall a. FromCBOR a => Version -> BSL.ByteString -> Either DecoderError a
-decodeFull version = decodeFullDecoder version (label $ Proxy @a) fromCBOR
+--   decoder specified in `DecCBOR`.
+decodeFull :: forall a. DecCBOR a => Version -> BSL.ByteString -> Either DecoderError a
+decodeFull version = decodeFullDecoder version (label $ Proxy @a) decCBOR
 
 -- | Same as `decodeFull`, except accepts a strict `BS.ByteString` as input
 -- instead of the lazy one.
-decodeFull' :: forall a. FromCBOR a => Version -> BS.ByteString -> Either DecoderError a
+decodeFull' :: forall a. DecCBOR a => Version -> BS.ByteString -> Either DecoderError a
 decodeFull' version = decodeFull version . BSL.fromStrict
 
--- | Same as `decodeFull`, except instead of relying on the `FromCBOR` instance
+-- | Same as `decodeFull`, except instead of relying on the `DecCBOR` instance
 -- the `Decoder` must be suplied manually.
 decodeFullDecoder ::
   -- | Protocol version to be used during decoding.
@@ -199,7 +199,7 @@ decodeNestedCborTag = do
 -- | Remove the the semantic tag 24 from the enclosed CBOR data item,
 -- decoding back the inner `ByteString` as a proper Haskell type.
 -- Consume its input in full.
-decodeNestedCbor :: FromCBOR a => Decoder s a
+decodeNestedCbor :: DecCBOR a => Decoder s a
 decodeNestedCbor = do
   bs <- decodeNestedCborBytes
   version <- getDecoderVersion
@@ -228,9 +228,9 @@ decodeAnnotator ::
 decodeAnnotator = decodeFullAnnotator
 {-# DEPRECATED decodeAnnotator "In favor of `decodeFullAnnotator`" #-}
 
-fromCBORMaybe :: Decoder s a -> Decoder s (Maybe a)
-fromCBORMaybe = decodeMaybe
-{-# DEPRECATED fromCBORMaybe "In favor of `decodeMaybe`" #-}
+decCBORMaybe :: Decoder s a -> Decoder s (Maybe a)
+decCBORMaybe = decodeMaybe
+{-# DEPRECATED decCBORMaybe "In favor of `decodeMaybe`" #-}
 
 -- $annotated
 --
@@ -247,8 +247,8 @@ fromCBORMaybe = decodeMaybe
 -- 1. To complete the deserialization, or
 -- 2. To combine the deserialized answer with the original 'BSL.ByteString'.
 --
--- We should proceed as follows: Define instances @('FromCBOR' ('Annotator' t))@ instead
--- of @('FromCBOR' t)@. When making this instance we may freely use that both 'Decoder'
+-- We should proceed as follows: Define instances @('DecCBOR' ('Annotator' t))@ instead
+-- of @('DecCBOR' t)@. When making this instance we may freely use that both 'Decoder'
 -- and 'Annotator' are both monads, and that functions 'withSlice' and 'annotatorSlice'
 -- provide access to the original bytes, or portions thereof, inside of decoders.  Then,
 -- to actually decode a value of type @t@, we use something similar to the following code
@@ -256,7 +256,7 @@ fromCBORMaybe = decodeMaybe
 --
 -- @
 -- howToUseFullBytes bytes = do
---   Annotator f <- decodeFullDecoder \"DecodingAnnotator\" (fromCBOR :: forall s. Decoder s (Annotator t)) bytes
+--   Annotator f <- decodeFullDecoder \"DecodingAnnotator\" (decCBOR :: forall s. Decoder s (Annotator t)) bytes
 --   pure (f (Full bytes))
 -- @
 --

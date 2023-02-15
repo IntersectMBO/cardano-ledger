@@ -44,8 +44,8 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
+  DecCBOR (decCBOR),
+  EncCBOR (encCBOR),
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -91,14 +91,14 @@ data ValidityInterval = ValidityInterval
 encodeVI :: ValidityInterval -> Encode ('Closed 'Dense) ValidityInterval
 encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t
 
-instance ToCBOR ValidityInterval where
-  toCBOR vi = encode (encodeVI vi)
+instance EncCBOR ValidityInterval where
+  encCBOR vi = encode (encodeVI vi)
 
 decodeVI :: Decode ('Closed 'Dense) ValidityInterval
 decodeVI = RecD ValidityInterval <! From <! From
 
-instance FromCBOR ValidityInterval where
-  fromCBOR = decode decodeVI
+instance DecCBOR ValidityInterval where
+  decCBOR = decode decodeVI
 
 -- ==================================================================
 
@@ -140,8 +140,8 @@ translateTimelock (TimelockConstr (Memo tl bs)) =
 -- These coding choices are chosen so that a MultiSig script
 -- can be deserialised as a Timelock script
 
-instance Era era => ToCBOR (TimelockRaw era) where
-  toCBOR =
+instance Era era => EncCBOR (TimelockRaw era) where
+  encCBOR =
     encode . \case
       Signature hash -> Sum Signature 0 !> To hash
       AllOf xs -> Sum AllOf 1 !> To xs
@@ -150,17 +150,17 @@ instance Era era => ToCBOR (TimelockRaw era) where
       TimeStart m -> Sum TimeStart 4 !> To m
       TimeExpire m -> Sum TimeExpire 5 !> To m
 
--- This instance allows us to derive instance FromCBOR (Annotator (Timelock crypto)).
+-- This instance allows us to derive instance DecCBOR (Annotator (Timelock crypto)).
 -- Since Timelock is a newtype around (Memo (Timelock crypto)).
 
-instance Era era => FromCBOR (Annotator (TimelockRaw era)) where
-  fromCBOR = decode (Summands "TimelockRaw" decRaw)
+instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
+  decCBOR = decode (Summands "TimelockRaw" decRaw)
     where
       decRaw :: Word -> Decode 'Open (Annotator (TimelockRaw era))
       decRaw 0 = Ann (SumD Signature <! From)
-      decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> fromCBOR)
-      decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> fromCBOR)
-      decRaw 3 = Ann (SumD MOfN) <*! Ann From <*! D (sequence <$> fromCBOR)
+      decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> decCBOR)
+      decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> decCBOR)
+      decRaw 3 = Ann (SumD MOfN) <*! Ann From <*! D (sequence <$> decCBOR)
       decRaw 4 = Ann (SumD TimeStart <! From)
       decRaw 5 = Ann (SumD TimeExpire <! From)
       decRaw n = Invalid n
@@ -173,7 +173,7 @@ instance Era era => FromCBOR (Annotator (TimelockRaw era)) where
 
 newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
   deriving (Eq, Generic)
-  deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
+  deriving newtype (EncCBOR, NoThunks, NFData, SafeToHash)
 
 instance Memoized Timelock where
   type RawType Timelock = TimelockRaw
@@ -194,7 +194,7 @@ instance Crypto c => EraScript (AllegraEra c) where
 deriving via
   Mem TimelockRaw era
   instance
-    Era era => FromCBOR (Annotator (Timelock era))
+    Era era => DecCBOR (Annotator (Timelock era))
 
 pattern RequireSignature :: Era era => KeyHash 'Witness (EraCrypto era) -> Timelock era
 pattern RequireSignature akh <- (getMemoRawType -> Signature akh)

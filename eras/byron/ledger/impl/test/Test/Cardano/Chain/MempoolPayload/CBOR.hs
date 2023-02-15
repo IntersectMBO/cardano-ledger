@@ -10,16 +10,16 @@ where
 
 import Cardano.Ledger.Binary (
   ByteSpan,
+  DecCBOR (..),
   Decoder,
-  FromCBOR (..),
-  ToCBOR,
+  EncCBOR,
   byronProtVer,
+  decCBOR,
   decodeFull,
   decodeFullDecoder,
-  fromCBOR,
+  encCBOR,
   serialize,
   slice,
-  toCBOR,
  )
 import Cardano.Prelude
 import qualified Data.ByteString.Lazy as LBS
@@ -49,7 +49,7 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 -- in.
 fillInByteString ::
   forall f.
-  (FromCBOR (f ByteSpan), ToCBOR (f ()), Functor f) =>
+  (DecCBOR (f ByteSpan), EncCBOR (f ()), Functor f) =>
   f () ->
   f ByteString
 fillInByteString a =
@@ -59,18 +59,18 @@ fillInByteString a =
     bytes = serialize byronProtVer a
 
     dec :: Decoder s (f ByteString)
-    dec = fmap (LBS.toStrict . slice bytes) <$> fromCBOR
+    dec = fmap (LBS.toStrict . slice bytes) <$> decCBOR
 
--- | Variant of 'goldenTestCBOR' that does not use the @'ToCBOR' (f ())@
--- instance, but the @'ToCBOR' (f ByteString)@ instance. The latter instance
+-- | Variant of 'goldenTestCBOR' that does not use the @'EncCBOR' (f ())@
+-- instance, but the @'EncCBOR' (f ByteString)@ instance. The latter instance
 -- allows reusing the annotation when serialising instead of reserialising
 -- from scratch.
 filledInGoldenTestCBOR ::
   forall f.
-  ( FromCBOR (f ())
-  , ToCBOR (f ())
-  , FromCBOR (f ByteSpan)
-  , ToCBOR (f ByteString)
+  ( DecCBOR (f ())
+  , EncCBOR (f ())
+  , DecCBOR (f ByteSpan)
+  , EncCBOR (f ByteString)
   , Functor f
   , Eq (f ())
   , Show (f ())
@@ -82,8 +82,8 @@ filledInGoldenTestCBOR ::
 filledInGoldenTestCBOR =
   goldenTestCBORExplicit
     (label $ Proxy @(f ()))
-    (toCBOR . fillInByteString)
-    fromCBOR
+    (encCBOR . fillInByteString)
+    decCBOR
 
 --------------------------------------------------------------------------------
 -- MempoolPayload

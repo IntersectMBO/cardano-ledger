@@ -48,8 +48,8 @@ import Cardano.Ledger.BaseTypes (
   networkId,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordSum,
   encodeListLen,
  )
@@ -181,104 +181,104 @@ instance
 instance
   ( Typeable era
   , CC.Crypto (EraCrypto era)
-  , ToCBOR (Value era)
-  , ToCBOR (TxOut era)
-  , ToCBOR (PPUPPredFailure era)
+  , EncCBOR (Value era)
+  , EncCBOR (TxOut era)
+  , EncCBOR (PPUPPredFailure era)
   ) =>
-  ToCBOR (ShelleyUtxoPredFailure era)
+  EncCBOR (ShelleyUtxoPredFailure era)
   where
-  toCBOR = \case
+  encCBOR = \case
     BadInputsUTxO ins ->
-      encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR ins
+      encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR ins
     (ExpiredUTxO a b) ->
       encodeListLen 3
-        <> toCBOR (1 :: Word8)
-        <> toCBOR a
-        <> toCBOR b
+        <> encCBOR (1 :: Word8)
+        <> encCBOR a
+        <> encCBOR b
     (MaxTxSizeUTxO a b) ->
       encodeListLen 3
-        <> toCBOR (2 :: Word8)
-        <> toCBOR a
-        <> toCBOR b
-    InputSetEmptyUTxO -> encodeListLen 1 <> toCBOR (3 :: Word8)
+        <> encCBOR (2 :: Word8)
+        <> encCBOR a
+        <> encCBOR b
+    InputSetEmptyUTxO -> encodeListLen 1 <> encCBOR (3 :: Word8)
     (FeeTooSmallUTxO a b) ->
       encodeListLen 3
-        <> toCBOR (4 :: Word8)
-        <> toCBOR a
-        <> toCBOR b
+        <> encCBOR (4 :: Word8)
+        <> encCBOR a
+        <> encCBOR b
     (ValueNotConservedUTxO a b) ->
       encodeListLen 3
-        <> toCBOR (5 :: Word8)
-        <> toCBOR a
-        <> toCBOR b
+        <> encCBOR (5 :: Word8)
+        <> encCBOR a
+        <> encCBOR b
     OutputTooSmallUTxO outs ->
       encodeListLen 2
-        <> toCBOR (6 :: Word8)
-        <> toCBOR outs
+        <> encCBOR (6 :: Word8)
+        <> encCBOR outs
     (UpdateFailure a) ->
       encodeListLen 2
-        <> toCBOR (7 :: Word8)
-        <> toCBOR a
+        <> encCBOR (7 :: Word8)
+        <> encCBOR a
     (WrongNetwork right wrongs) ->
       encodeListLen 3
-        <> toCBOR (8 :: Word8)
-        <> toCBOR right
-        <> toCBOR wrongs
+        <> encCBOR (8 :: Word8)
+        <> encCBOR right
+        <> encCBOR wrongs
     (WrongNetworkWithdrawal right wrongs) ->
       encodeListLen 3
-        <> toCBOR (9 :: Word8)
-        <> toCBOR right
-        <> toCBOR wrongs
+        <> encCBOR (9 :: Word8)
+        <> encCBOR right
+        <> encCBOR wrongs
     OutputBootAddrAttrsTooBig outs ->
       encodeListLen 2
-        <> toCBOR (10 :: Word8)
-        <> toCBOR outs
+        <> encCBOR (10 :: Word8)
+        <> encCBOR outs
 
 instance
   ( EraTxOut era
-  , FromCBOR (PPUPPredFailure era)
+  , DecCBOR (PPUPPredFailure era)
   ) =>
-  FromCBOR (ShelleyUtxoPredFailure era)
+  DecCBOR (ShelleyUtxoPredFailure era)
   where
-  fromCBOR =
+  decCBOR =
     decodeRecordSum "PredicateFailureUTXO" $
       \case
         0 -> do
-          ins <- fromCBOR
+          ins <- decCBOR
           pure (2, BadInputsUTxO ins) -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
         1 -> do
-          a <- fromCBOR
-          b <- fromCBOR
+          a <- decCBOR
+          b <- decCBOR
           pure (3, ExpiredUTxO a b)
         2 -> do
-          a <- fromCBOR
-          b <- fromCBOR
+          a <- decCBOR
+          b <- decCBOR
           pure (3, MaxTxSizeUTxO a b)
         3 -> pure (1, InputSetEmptyUTxO)
         4 -> do
-          a <- fromCBOR
-          b <- fromCBOR
+          a <- decCBOR
+          b <- decCBOR
           pure (3, FeeTooSmallUTxO a b)
         5 -> do
-          a <- fromCBOR
-          b <- fromCBOR
+          a <- decCBOR
+          b <- decCBOR
           pure (3, ValueNotConservedUTxO a b)
         6 -> do
-          outs <- fromCBOR
+          outs <- decCBOR
           pure (2, OutputTooSmallUTxO outs)
         7 -> do
-          a <- fromCBOR
+          a <- decCBOR
           pure (2, UpdateFailure a)
         8 -> do
-          right <- fromCBOR
-          wrongs <- fromCBOR
+          right <- decCBOR
+          wrongs <- decCBOR
           pure (3, WrongNetwork right wrongs)
         9 -> do
-          right <- fromCBOR
-          wrongs <- fromCBOR
+          right <- decCBOR
+          wrongs <- decCBOR
           pure (3, WrongNetworkWithdrawal right wrongs)
         10 -> do
-          outs <- fromCBOR
+          outs <- decCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
         k -> invalidKey k
 

@@ -9,7 +9,7 @@ module Cardano.Ledger.Compactible (
 )
 where
 
-import Cardano.Ledger.Binary.Encoding (ToCBOR)
+import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Data.Kind (Type)
 
 --------------------------------------------------------------------------------
@@ -24,7 +24,7 @@ import Data.Kind (Type)
 class
   ( Show (CompactForm a)
   , Eq (CompactForm a)
-  , ToCBOR (CompactForm a)
+  , EncCBOR (CompactForm a)
   ) =>
   Compactible a
   where

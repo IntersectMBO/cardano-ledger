@@ -10,7 +10,7 @@ module Cardano.Ledger.Conway.Genesis (
 where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis, alonzoGenesisAesonPairs)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (GenDelegs (..))
@@ -29,15 +29,15 @@ data ConwayGenesis c = ConwayGenesis
 
 instance NoThunks (ConwayGenesis c)
 
-instance Crypto c => FromCBOR (ConwayGenesis c) where
-  fromCBOR =
+instance Crypto c => DecCBOR (ConwayGenesis c) where
+  decCBOR =
     decode $
       RecD ConwayGenesis
         <! From
         <! From
 
-instance Crypto c => ToCBOR (ConwayGenesis c) where
-  toCBOR (ConwayGenesis alonzoGenesis genDelegs) =
+instance Crypto c => EncCBOR (ConwayGenesis c) where
+  encCBOR (ConwayGenesis alonzoGenesis genDelegs) =
     encode $
       Rec ConwayGenesis
         !> To alonzoGenesis

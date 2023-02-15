@@ -6,7 +6,7 @@ module Cardano.Chain.Common.BlockCount (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Prelude
 import Formatting.Buildable (Buildable)
 import NoThunks.Class (NoThunks (..))
@@ -16,9 +16,9 @@ newtype BlockCount = BlockCount
   }
   deriving (Eq, Ord, Enum, Read, Show, Buildable, Generic, NFData, NoThunks)
 
-instance ToCBOR BlockCount where
-  toCBOR = toCBOR . unBlockCount
+instance EncCBOR BlockCount where
+  encCBOR = encCBOR . unBlockCount
   encodedSizeExpr size pxy = size (unBlockCount <$> pxy)
 
-instance FromCBOR BlockCount where
-  fromCBOR = BlockCount <$> fromCBOR
+instance DecCBOR BlockCount where
+  decCBOR = BlockCount <$> decCBOR

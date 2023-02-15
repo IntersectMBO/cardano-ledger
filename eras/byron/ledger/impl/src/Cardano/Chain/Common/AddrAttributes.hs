@@ -13,15 +13,15 @@ where
 
 import Cardano.Chain.Common.Attributes (
   Attributes (..),
-  fromCBORAttributes,
-  toCBORAttributes,
+  decCBORAttributes,
+  encCBORAttributes,
  )
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic (..))
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   byronProtVer,
   decodeBytesCanonical,
   decodeFull,
@@ -77,15 +77,15 @@ For address there are two attributes:
 
 -}
 
-instance ToCBOR (Attributes AddrAttributes) where
+instance EncCBOR (Attributes AddrAttributes) where
   -- FIXME @avieth it was observed that for a 150kb block, this call to
-  -- toCBORAttributes allocated 3.685mb
+  -- encCBORAttributes allocated 3.685mb
   -- Try using serialize rather than serialize', to avoid the
   -- toStrict call.
   -- Also consider using a custom builder strategy; serialized attributes are
   -- probably small, right?
-  toCBOR attrs@Attributes {attrData = AddrAttributes derivationPath networkMagic} =
-    toCBORAttributes listWithIndices attrs
+  encCBOR attrs@Attributes {attrData = AddrAttributes derivationPath networkMagic} =
+    encCBORAttributes listWithIndices attrs
     where
       listWithIndices :: [(Word8, AddrAttributes -> LByteString)]
       listWithIndices =
@@ -100,7 +100,7 @@ instance ToCBOR (Attributes AddrAttributes) where
         Just _ -> [(1, serialize byronProtVer . unsafeFromJust . aaVKDerivationPath)]
       unsafeFromJust :: Maybe a -> a
       unsafeFromJust =
-        fromMaybe (panic "Maybe was Nothing in ToCBOR (Attributes AddrAttributes)")
+        fromMaybe (panic "Maybe was Nothing in EncCBOR (Attributes AddrAttributes)")
 
       networkMagicListWithIndices :: [(Word8, AddrAttributes -> LByteString)]
       networkMagicListWithIndices =
@@ -109,8 +109,8 @@ instance ToCBOR (Attributes AddrAttributes) where
           NetworkTestnet x ->
             [(2, \_ -> serialize byronProtVer x)]
 
-instance FromCBOR (Attributes AddrAttributes) where
-  fromCBOR = fromCBORAttributes initValue go
+instance DecCBOR (Attributes AddrAttributes) where
+  decCBOR = decCBORAttributes initValue go
     where
       initValue =
         AddrAttributes
@@ -153,12 +153,12 @@ newtype HDAddressPayload = HDAddressPayload
   { getHDAddressPayload :: ByteString
   }
   deriving (Eq, Ord, Show, Generic)
-  deriving newtype (ToCBOR, HeapWords)
+  deriving newtype (EncCBOR, HeapWords)
   deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON HDAddressPayload where
   toJSON (HDAddressPayload bs) = object ["HDAddressPayload" .= Char8.unpack bs]
 
-instance FromCBOR HDAddressPayload where
-  fromCBOR = HDAddressPayload <$> decodeBytesCanonical
+instance DecCBOR HDAddressPayload where
+  decCBOR = HDAddressPayload <$> decodeBytesCanonical

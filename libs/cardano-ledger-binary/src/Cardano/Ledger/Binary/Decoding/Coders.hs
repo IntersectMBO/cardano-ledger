@@ -59,9 +59,9 @@ module Cardano.Ledger.Binary.Decoding.Coders (
 where
 
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
+import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Decoding.Decoder
-import Cardano.Ledger.Binary.Decoding.FromCBOR (FromCBOR (fromCBOR))
-import Cardano.Ledger.Binary.Encoding.ToCBOR (ToCBOR (toCBOR))
+import Cardano.Ledger.Binary.Encoding.EncCBOR (EncCBOR (encCBOR))
 import Control.Applicative (liftA2)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -88,7 +88,7 @@ import Data.Void (Void)
 --    written to the ByteString. Care must still be taken that the Keys are correct.
 -- 3. get a (MemoBytes t)
 --
--- The advantage of using Encode with a MemoBytes, is we don't have to make a ToCBOR
+-- The advantage of using Encode with a MemoBytes, is we don't have to make a EncCBOR
 -- instance. Instead the "instance" is spread amongst the pattern constuctors by using
 -- (memoBytes encoding) in the where clause of the pattern contructor.
 -- See some examples of this see the file Timelocks.hs
@@ -133,12 +133,12 @@ ofield update dec = Field update (SJust <$> decode dec)
 invalidField :: forall t. Word -> Field t
 invalidField n = field (flip $ const @t @Void) (Invalid n)
 
--- | Sparse decode something with a (FromCBOR (Annotator t)) instance
+-- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 -- A special case of 'field'
 fieldA :: (Applicative ann) => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
 fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
 
--- | Sparse decode something with a (FromCBOR (Annotator t)) instance
+-- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 fieldAA ::
   (Applicative ann) =>
   (x -> t -> t) ->
@@ -157,29 +157,29 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 --
 -- An example with 1 constructor (a record) uses 'Rec' and 'RecD'
 --
--- In this example, let @Int@ and @C@ have 'ToCBOR' instances.
+-- In this example, let @Int@ and @C@ have 'EncCBOR' instances.
 --
 -- @
 -- data C = C { unC :: Text.Text }
--- instance ToCBOR C where
---   toCBOR (C t) = toCBOR t
--- instance FromCBOR C where
---   fromCBOR = C <$> fromCBOR
+-- instance EncCBOR C where
+--   encCBOR (C t) = encCBOR t
+-- instance DecCBOR C where
+--   decCBOR = C <$> decCBOR
 --
 -- data B = B { unB :: Text.Text }
 --
 -- data A = ACon Int B C
 --
 -- encodeA :: A -> Encode ('Closed 'Dense) A
--- encodeA (ACon i b c) = Rec ACon !> To i !> E (toCBOR . unB) b !> To c
+-- encodeA (ACon i b c) = Rec ACon !> To i !> E (encCBOR . unB) b !> To c
 --
 -- decodeA :: Decode ('Closed 'Dense) A
--- decodeA = RecD ACon <! From <! D (B <$> fromCBOR) <! From
+-- decodeA = RecD ACon <! From <! D (B <$> decCBOR) <! From
 --
--- instance ToCBOR A where
---   toCBOR = encode . encodeA
--- instance FromCBOR A where
---   fromCBOR = decode decodeA
+-- instance EncCBOR A where
+--   encCBOR = encode . encodeA
+-- instance DecCBOR A where
+--   decCBOR = decode decodeA
 -- @
 --
 -- An example with multiple constructors uses 'Sum', 'SumD', and 'Summands'.
@@ -189,18 +189,18 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 --
 -- encodeN :: N -> Encode 'Open N
 -- encodeN (N1 i)    = Sum N1 0 !> To i
--- encodeN (N2 b tf) = Sum N2 1 !> E (toCBOR . unB) b !> To tf
+-- encodeN (N2 b tf) = Sum N2 1 !> E (encCBOR . unB) b !> To tf
 -- encodeN (N3 a)    = Sum N3 2 !> To a
 --
 -- decodeN :: Decode ('Closed 'Dense) N    -- Note each clause has an 'Open decoder,
 -- decodeN = Summands "N" decodeNx           -- But Summands returns a ('Closed 'Dense) decoder
 --   where decodeNx 0 = SumD N1 <! From
---         decodeNx 1 = SumD N2 <! D (B <$> fromCBOR) <! From
+--         decodeNx 1 = SumD N2 <! D (B <$> decCBOR) <! From
 --         decodeNx 3 = SumD N3 <! From
 --         decodeNx k = Invalid k
 --
--- instance ToCBOR N   where toCBOR x = encode(encodeN x)
--- instance FromCBOR N where fromCBOR = decode decodeN
+-- instance EncCBOR N   where encCBOR x = encode(encodeN x)
+-- instance DecCBOR N where decCBOR = decode decodeN
 -- @
 --
 -- Two examples using variants of sparse encoding for records, i.e. those datatypes with only one constructor.
@@ -239,11 +239,11 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- decM 3 = SumD M <! From <! From <! From
 -- decM n = Invalid n
 --
--- instance ToCBOR M where
---   toCBOR m = encode (encM m)
+-- instance EncCBOR M where
+--   encCBOR m = encode (encM m)
 --
--- instance FromCBOR M where
---   fromCBOR = decode (Summands "M" decM)
+-- instance DecCBOR M where
+--   decCBOR = decode (Summands "M" decM)
 -- @
 --
 -- The Sparse field approach uses N keys, one for each field that is not defaulted. For example
@@ -297,16 +297,16 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- of required fields is checked.
 --
 -- @
--- instance FromCBOR M where
---   fromCBOR = decode (SparseKeyed
+-- instance DecCBOR M where
+--   decCBOR = decode (SparseKeyed
 --                       "TT"                        -- ^ Name of the type being decoded
 --                       (M 0 [] (Text.pack "a"))  -- ^ The default value
 --                       boxM                      -- ^ The Field function
 --                       [(2, "Stringpart")]         -- ^ The required Fields
 --                     )
 --
--- instance ToCBOR M where
---   toCBOR m = encode(encM2 m)
+-- instance EncCBOR M where
+--   encCBOR m = encode(encM2 m)
 -- @
 data Decode (w :: Wrapped) t where
   -- | Label the constructor of a Record-like datatype (one with exactly 1 constructor) as a Decode.
@@ -331,8 +331,8 @@ data Decode (w :: Wrapped) t where
   -- with the default value.
   KeyedD :: t -> Decode ('Closed 'Sparse) t
   -- | Label a (component, field, argument). It will be decoded using the existing
-  -- FromCBOR instance at @t@
-  From :: FromCBOR t => Decode w t
+  -- DecCBOR instance at @t@
+  From :: DecCBOR t => Decode w t
   -- | Label a (component, field, argument). It will be decoded using the given decoder.
   D :: (forall s. Decoder s t) -> Decode ('Closed 'Dense) t
   -- | Apply a functional decoding (arising from 'RecD' or 'SumD') to get (type wise)
@@ -411,7 +411,7 @@ decodeCount (Summands nm f) n = (n + 1,) <$> decodeRecordSum nm (decodE . f)
 decodeCount (SumD cn) n = pure (n + 1, cn)
 decodeCount (KeyedD cn) n = pure (n + 1, cn)
 decodeCount (RecD cn) n = decodeRecordNamed "RecD" (const n) (pure (n, cn))
-decodeCount From n = (n,) <$> fromCBOR
+decodeCount From n = (n,) <$> decCBOR
 decodeCount (D dec) n = (n,) <$> dec
 decodeCount (Invalid k) _ = invalidKey k
 decodeCount (Map f x) n = do (m, y) <- decodeCount x n; pure (m, f y)
@@ -443,7 +443,7 @@ decodeClosed :: Decode ('Closed d) t -> Decoder s t
 decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
-decodeClosed From = fromCBOR
+decodeClosed From = decCBOR
 decodeClosed (D dec) = dec
 decodeClosed (ApplyD cn g) = do
   f <- decodeClosed cn
@@ -528,12 +528,12 @@ instance Applicative (Decode ('Closed d)) where
   f <*> x = ApplyD f x
 
 -- | Use `Cardano.Ledger.Binary.Coders.encodeDual` and `decodeDual`, when you want to
--- guarantee that a type has both `ToCBOR` and `FromCBR` instances.
-decodeDual :: forall t. (ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
-decodeDual = D fromCBOR
+-- guarantee that a type has both `EncCBOR` and `FromCBR` instances.
+decodeDual :: forall t. (EncCBOR t, DecCBOR t) => Decode ('Closed 'Dense) t
+decodeDual = D decCBOR
   where
-    -- Enforce ToCBOR constraint on t
-    _toCBOR = toCBOR (undefined :: t)
+    -- Enforce EncCBOR constraint on t
+    _encCBOR = encCBOR (undefined :: t)
 
 -- =============================================================================
 

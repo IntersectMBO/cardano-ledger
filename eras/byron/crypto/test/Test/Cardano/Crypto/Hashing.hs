@@ -7,7 +7,7 @@ module Test.Cardano.Crypto.Hashing (
 where
 
 import Cardano.Crypto (decodeAbstractHash, hashHexF, serializeCborHash)
-import Cardano.Ledger.Binary (ToCBOR)
+import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Prelude
 import Formatting (sformat)
 import Hedgehog (
@@ -68,7 +68,7 @@ prop_decodeAbstractHash = property $ do
 --------------------------------------------------------------------------------
 
 -- | Check that hashing two different @a@ values gives different hashes
-hashInequality :: (Eq a, Show a, ToCBOR a) => Gen a -> Property
+hashInequality :: (Eq a, Show a, EncCBOR a) => Gen a -> Property
 hashInequality genA = property $ do
   a <- forAll genA
   b <- forAll $ Gen.filter (/= a) genA

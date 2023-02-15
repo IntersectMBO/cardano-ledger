@@ -13,8 +13,8 @@ where
 import Cardano.Chain.Common.Address (Address)
 import Cardano.Chain.Common.Compact (CompactAddress, toCompactAddress)
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   encodeListLen,
   enforceSize,
  )
@@ -30,15 +30,15 @@ data UTxOConfiguration = UTxOConfiguration
   }
   deriving (Eq, Show, Generic, NoThunks)
 
-instance ToCBOR UTxOConfiguration where
-  toCBOR (UTxOConfiguration tcAssetLockedSrcAddrs_) =
+instance EncCBOR UTxOConfiguration where
+  encCBOR (UTxOConfiguration tcAssetLockedSrcAddrs_) =
     encodeListLen 1
-      <> toCBOR @(Set CompactAddress) tcAssetLockedSrcAddrs_
+      <> encCBOR @(Set CompactAddress) tcAssetLockedSrcAddrs_
 
-instance FromCBOR UTxOConfiguration where
-  fromCBOR = do
+instance DecCBOR UTxOConfiguration where
+  decCBOR = do
     enforceSize "UTxOConfiguration" 1
-    UTxOConfiguration <$> fromCBOR @(Set CompactAddress)
+    UTxOConfiguration <$> decCBOR @(Set CompactAddress)
 
 defaultUTxOConfiguration :: UTxOConfiguration
 defaultUTxOConfiguration =
