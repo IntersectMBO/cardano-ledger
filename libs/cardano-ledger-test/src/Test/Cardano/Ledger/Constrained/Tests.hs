@@ -19,6 +19,7 @@
 module Test.Cardano.Ledger.Constrained.Tests where
 
 import Control.Arrow (first)
+import Control.Monad
 import Data.Foldable (fold)
 import Data.List (intercalate, partition, isPrefixOf)
 import Data.Map (Map)
@@ -191,7 +192,7 @@ genTerm' env rep valid genLit vspec =
       ++ [(5, genExistingVar) | not $ null allowedVars]
       ++ [(1, genFreshVar) | VarTerm {} <- [vspec]]
       ++ [(2, genDom krep) | SetR krep <- [rep]]
-      -- ++ [(2, genRng vrep) | SetR vrep <- [rep]]
+      ++ [(2, genRng vrep) | SetR vrep <- [rep]]
   where
     isValid (_, Lit _ val) = valid val
     existingVars = map fst $ filter isValid $ envVarsOfType (gEnv env) rep
@@ -216,12 +217,29 @@ genTerm' env rep valid genLit vspec =
                             vspec
       pure (Dom m, env')
 
+    genRng :: forall v. (t ~ Set v, Ord v) => Rep era v -> Gen (Term era (Set v), GenEnv era)
+    genRng vrep = do
+      TypeInEra krep <- genBaseType
+      (m, env') <- genTerm' env (MapR krep vrep) (valid . Set.fromList . Map.elems)
+                            (genLit >>= genMapLiteralWithRng env krep vrep)
+                            vspec
+      pure (Rng m, env')
+
 genMapLiteralWithDom :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set k) -> Gen (Literal era (Map k v))
 genMapLiteralWithDom env krep vrep (Lit _ keys) = do
   let genVal = do
         Lit _ v <- genLiteral env vrep
         pure v
   Lit (MapR krep vrep) <$> traverse (\ _ -> genVal) (Map.fromSet (const ()) keys)
+
+genMapLiteralWithRng :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set v) -> Gen (Literal era (Map k v))
+genMapLiteralWithRng env krep vrep (Lit _ vals) = do
+  let genKey = do
+        Lit _ k <- genLiteral env krep
+        pure k
+  keys <- setSized [] (Set.size vals) genKey
+  valsList <- shuffle $ Set.toList vals
+  pure $ Lit (MapR krep vrep) $ Map.fromList $ zip (Set.toList keys) valsList
 
 data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
