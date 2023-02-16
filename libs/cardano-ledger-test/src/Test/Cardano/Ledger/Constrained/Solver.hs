@@ -299,6 +299,14 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   (Disjoint (Dom (Var v2)) expr) | Name v1 == Name v2 -> do
     With set <- simplifySet dom expr
     mapSpec SzAny (relDisjoint dom set) RngAny
+  (Disjoint expr (Rng (Var v2))) | Name v1 == Name v2 -> do
+    With _ <- hasOrd rng rng
+    With set <- simplifySet rng expr
+    mapSpec SzAny RelAny (RngSpec $ relDisjoint rng set)
+  (Disjoint (Rng (Var v2)) expr) | Name v1 == Name v2 -> do
+    With _ <- hasOrd rng rng
+    With set <- simplifySet rng expr
+    mapSpec SzAny RelAny (RngSpec $ relDisjoint rng set)
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
