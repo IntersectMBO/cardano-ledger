@@ -436,6 +436,12 @@ genPreds = \env -> do
           (pr, env') <- genPred env
           first (pr :) <$> loop (n - 1) env'
 
+withEq :: Rep era t -> (Eq t => a) -> Maybe a
+withEq (SetR r)     cont = withEq r cont
+withEq (MapR kr vr) cont = join $ withEq kr (withEq vr cont)
+withEq IntR         cont = Just cont
+withEq _            _    = Nothing
+
 -- We can't drop constraints due to dependency limitations. There needs to be at least one
 -- constraint to solve each variable. We can replace constraints by Random though!
 shrinkPreds :: ([Pred era], GenEnv era) -> [([Pred era], GenEnv era)]
@@ -447,7 +453,18 @@ shrinkPreds (preds, env) =
     -- Shrink to a Random constraint defining the same variables. The makes sure we respect the
     -- OrderInfo.
     shrinkPred Random {} = []
-    shrinkPred c = [r | r@(Random Var{}) <- randoms c, def r == def c, not . null $ def r ]
+    shrinkPred c = filter (checkDefs c) $ shrinkToValue c ++ shrinkToRandom c
+
+    checkDefs orig shrunk = def orig == def shrunk && not (null $ def shrunk)
+
+    shrinkToValue (Lit{} :=: Var{}) = []
+    shrinkToValue c = [ c'
+                      | Name x@(V _ r _) <- Set.toList $ def c,
+                        Right v <- [runTyped $ runTerm (gEnv env) (Var x)],
+                        Just c' <- [withEq r $ Lit r v :=: Var x]
+                      ]
+
+    shrinkToRandom c = [r | r@(Random Var{}) <- randoms c]
 
     randoms (Sized n t) = [Random n, Random t]
     randoms (s `Subset` t) = [Random s, Random t]
@@ -514,10 +531,12 @@ showVal rep t = synopsis rep t
 showTerm :: Term era t -> String
 showTerm (Lit rep t) = showVal rep t
 showTerm (Dom t) = "(Dom " ++ showTerm t ++ ")"
+showTerm (Rng t) = "(Rng " ++ showTerm t ++ ")"
 showTerm t = show t
 
 showPred :: Pred era -> String
 showPred (sub `Subset` sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
+showPred (sub :=: sup) = showTerm sub ++ " == " ++ showTerm sup
 showPred (Disjoint s t) = "Disjoint " ++ showTerm s ++ " " ++ showTerm t
 showPred pr = show pr
 
@@ -555,14 +574,13 @@ prop_soundness' strict whitelist info =
           checkTyped (compile info preds) $ \graph ->
             forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
               let env = errorTyped $ substToEnv subst emptyEnv
-                  checkPred pr = counterexample ("Failed: " ++ show pr) $ ensureTyped (runPred env pr) id
+                  checkPred pr = counterexample ("Failed: " ++ showPred pr) $ ensureTyped (runPred env pr) id
                   n = let Env e = gEnv genenv in Map.size e
                in tabulate "Var count" [show n] $
-                    tabulate "Constraint count" [show $ length preds] $
-                      tabulate "Constraint types" (map predConstr preds) $
-                        counterexample ("-- Solution --\n" ++ showEnv env) $
-                          conjoin $
-                            map checkPred preds
+                    tabulate "Constraint types" (map predConstr preds) $
+                      counterexample ("-- Solution --\n" ++ showEnv env) $
+                        conjoin $
+                          map checkPred preds
   where
     checkTyped
       | strict = checkWhitelist . runTyped
