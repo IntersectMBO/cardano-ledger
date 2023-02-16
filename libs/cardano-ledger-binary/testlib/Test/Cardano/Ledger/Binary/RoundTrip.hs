@@ -105,14 +105,14 @@ roundTripExpectation trip = roundTripRangeExpectation trip minBound maxBound
 
 roundTripFailureCborExpectation ::
   forall t.
-  (ToCBOR t, FromCBOR t, HasCallStack) =>
+  (EncCBOR t, DecCBOR t, HasCallStack) =>
   t ->
   Expectation
 roundTripFailureCborExpectation = roundTripFailureExpectation (cborTrip @t @t)
 
 roundTripFailureCborRangeExpectation ::
   forall t.
-  (ToCBOR t, FromCBOR t, HasCallStack) =>
+  (EncCBOR t, DecCBOR t, HasCallStack) =>
   -- | From Version
   Version ->
   -- | To Version
@@ -122,7 +122,7 @@ roundTripFailureCborRangeExpectation ::
 roundTripFailureCborRangeExpectation = roundTripFailureRangeExpectation (cborTrip @t)
 
 roundTripFailureExpectation ::
-  (ToCBOR t, HasCallStack) =>
+  (EncCBOR t, HasCallStack) =>
   Trip t t ->
   t ->
   Expectation
@@ -130,7 +130,7 @@ roundTripFailureExpectation trip = roundTripFailureRangeExpectation trip minBoun
 
 roundTripFailureRangeExpectation ::
   forall t.
-  (ToCBOR t, HasCallStack) =>
+  (EncCBOR t, HasCallStack) =>
   Trip t t ->
   -- | From Version
   Version ->
@@ -168,14 +168,14 @@ roundTripRangeExpectation trip fromVersion toVersion t =
 
 roundTripCborExpectation ::
   forall t.
-  (Show t, Eq t, ToCBOR t, FromCBOR t, HasCallStack) =>
+  (Show t, Eq t, EncCBOR t, DecCBOR t, HasCallStack) =>
   t ->
   Expectation
 roundTripCborExpectation = roundTripExpectation (cborTrip @t @t)
 
 roundTripCborRangeExpectation ::
   forall t.
-  (Show t, Eq t, ToCBOR t, FromCBOR t, HasCallStack) =>
+  (Show t, Eq t, EncCBOR t, DecCBOR t, HasCallStack) =>
   -- | From Version
   Version ->
   -- | To Version
@@ -185,13 +185,13 @@ roundTripCborRangeExpectation ::
 roundTripCborRangeExpectation = roundTripRangeExpectation (cborTrip @t)
 
 roundTripAnnExpectation ::
-  (Show t, Eq t, ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
+  (Show t, Eq t, EncCBOR t, DecCBOR (Annotator t), HasCallStack) =>
   t ->
   Expectation
 roundTripAnnExpectation = roundTripAnnRangeExpectation (natVersion @2) maxBound
 
 roundTripAnnRangeExpectation ::
-  (Show t, Eq t, ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
+  (Show t, Eq t, EncCBOR t, DecCBOR (Annotator t), HasCallStack) =>
   Version ->
   Version ->
   t ->
@@ -203,13 +203,13 @@ roundTripAnnRangeExpectation fromVersion toVersion t =
       Right tDecoded -> tDecoded `shouldBe` t
 
 roundTripAnnFailureExpectation ::
-  (ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
+  (EncCBOR t, DecCBOR (Annotator t), HasCallStack) =>
   t ->
   Expectation
 roundTripAnnFailureExpectation = roundTripAnnFailureRangeExpectation (natVersion @2) maxBound
 
 roundTripAnnFailureRangeExpectation ::
-  (ToCBOR t, FromCBOR (Annotator t), HasCallStack) =>
+  (EncCBOR t, DecCBOR (Annotator t), HasCallStack) =>
   Version ->
   Version ->
   t ->
@@ -228,7 +228,7 @@ roundTripAnnFailureRangeExpectation fromVersion toVersion t =
             ]
 
 roundTripTwiddledProperty ::
-  (Show t, Eq t, Twiddle t, FromCBOR t) => Version -> t -> Property
+  (Show t, Eq t, Twiddle t, DecCBOR t) => Version -> t -> Property
 roundTripTwiddledProperty version t = property $ do
   roundTripTwiddled version t >>= \case
     Left err ->
@@ -238,7 +238,7 @@ roundTripTwiddledProperty version t = property $ do
 
 roundTripAnnTwiddledProperty ::
   forall t q.
-  (Twiddle t, FromCBOR (Annotator t), Testable q) =>
+  (Twiddle t, DecCBOR (Annotator t), Testable q) =>
   (t -> t -> q) ->
   Version ->
   t ->
@@ -268,7 +268,7 @@ embedTripExpectation encVersion decVersion trip f t =
 
 embedTripAnnExpectation ::
   forall a b.
-  (ToCBOR a, FromCBOR (Annotator b), HasCallStack) =>
+  (EncCBOR a, DecCBOR (Annotator b), HasCallStack) =>
   -- | Version for the encoder
   Version ->
   -- | Version for the decoder
@@ -338,8 +338,8 @@ data Trip a b = Trip
   , tripDropper :: forall s. Decoder s ()
   }
 
-cborTrip :: forall a b. (ToCBOR a, FromCBOR b) => Trip a b
-cborTrip = Trip toCBOR fromCBOR (dropCBOR (Proxy @b))
+cborTrip :: forall a b. (EncCBOR a, DecCBOR b) => Trip a b
+cborTrip = Trip encCBOR decCBOR (dropCBOR (Proxy @b))
 
 -- | Construct a `Trip` using encoder and decoder, with dropper set to the decoder which
 -- drops the value
@@ -358,26 +358,26 @@ roundTrip version trip val = do
 
 roundTripTwiddled ::
   forall t.
-  (Twiddle t, FromCBOR t) =>
+  (Twiddle t, DecCBOR t) =>
   Version ->
   t ->
   Gen (Either RoundTripFailure t)
 roundTripTwiddled version x = do
   tw <- twiddle version x
-  pure (roundTrip version (Trip (const (encodeTerm tw)) fromCBOR (dropCBOR (Proxy @t))) x)
+  pure (roundTrip version (Trip (const (encodeTerm tw)) decCBOR (dropCBOR (Proxy @t))) x)
 
-roundTripAnn :: (ToCBOR t, FromCBOR (Annotator t)) => Version -> t -> Either RoundTripFailure t
+roundTripAnn :: (EncCBOR t, DecCBOR (Annotator t)) => Version -> t -> Either RoundTripFailure t
 roundTripAnn v = embedTripAnn v v
 
 roundTripAnnTwiddled ::
-  (Twiddle t, FromCBOR (Annotator t)) => Version -> t -> Gen (Either RoundTripFailure t)
+  (Twiddle t, DecCBOR (Annotator t)) => Version -> t -> Gen (Either RoundTripFailure t)
 roundTripAnnTwiddled version x = do
   tw <- twiddle version x
   pure (decodeAnn version version (encodeTerm tw))
 
 decodeAnn ::
   forall t.
-  FromCBOR (Annotator t) =>
+  DecCBOR (Annotator t) =>
   -- | Version for the encoder
   Version ->
   -- | Version for the decoder
@@ -386,7 +386,7 @@ decodeAnn ::
   Either RoundTripFailure t
 decodeAnn encVersion decVersion encoding =
   first (RoundTripFailure encVersion decVersion encoding encodedBytes Nothing Nothing . Just) $
-    decodeFullAnnotator decVersion (label (Proxy @(Annotator t))) fromCBOR encodedBytes
+    decodeFullAnnotator decVersion (label (Proxy @(Annotator t))) decCBOR encodedBytes
   where
     encodedBytes = serializeEncoding encVersion encoding
 
@@ -450,12 +450,12 @@ embedTrip = embedTripLabel (Text.pack (show (typeRep $ Proxy @b)))
 
 embedTripAnn ::
   forall a b.
-  (ToCBOR a, FromCBOR (Annotator b)) =>
+  (EncCBOR a, DecCBOR (Annotator b)) =>
   Version ->
   Version ->
   a ->
   Either RoundTripFailure b
-embedTripAnn encVersion decVersion = decodeAnn encVersion decVersion . toCBOR
+embedTripAnn encVersion decVersion = decodeAnn encVersion decVersion . encCBOR
 
 typeLabel :: forall t. Typeable t => Text.Text
 typeLabel = Text.pack (show (typeRep $ Proxy @t))

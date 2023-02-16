@@ -22,7 +22,7 @@ where
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxAux (ATxAux (..), TxAux, taTx, taWitness)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
-import Cardano.Ledger.Binary (Annotated (..), ByteSpan, FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (Annotated (..), ByteSpan, DecCBOR (..), EncCBOR (..))
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 
@@ -44,14 +44,14 @@ unTxPayload = fmap void . aUnTxPayload
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ATxPayload a)
 
-instance ToCBOR TxPayload where
-  toCBOR = toCBOR . unTxPayload
+instance EncCBOR TxPayload where
+  encCBOR = encCBOR . unTxPayload
 
-instance FromCBOR TxPayload where
-  fromCBOR = void <$> fromCBOR @(ATxPayload ByteSpan)
+instance DecCBOR TxPayload where
+  decCBOR = void <$> decCBOR @(ATxPayload ByteSpan)
 
-instance FromCBOR (ATxPayload ByteSpan) where
-  fromCBOR = ATxPayload <$> fromCBOR
+instance DecCBOR (ATxPayload ByteSpan) where
+  decCBOR = ATxPayload <$> decCBOR
 
 txpAnnotatedTxs :: ATxPayload a -> [Annotated Tx a]
 txpAnnotatedTxs = fmap aTaTx . aUnTxPayload

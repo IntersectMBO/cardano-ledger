@@ -39,7 +39,7 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
-import Cardano.Ledger.Binary (ToCBOR (..))
+import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
@@ -83,7 +83,7 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
-  , ToCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
+  , EncCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   ) =>
@@ -123,7 +123,7 @@ utxosTransition ::
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
-  , ToCBOR (PPUPPredFailure era)
+  , EncCBOR (PPUPPredFailure era)
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   ) =>

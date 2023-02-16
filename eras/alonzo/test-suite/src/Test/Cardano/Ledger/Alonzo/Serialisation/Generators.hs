@@ -58,7 +58,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
@@ -289,7 +289,7 @@ genKnownCostModels = do
 -- scheme of 'CostModels' starting at version 9.
 newtype FlexibleCostModels = FlexibleCostModels CostModels
   deriving (Show, Eq, Ord)
-  deriving newtype (ToCBOR, FromCBOR)
+  deriving newtype (EncCBOR, DecCBOR)
 
 instance Arbitrary FlexibleCostModels where
   arbitrary = do
@@ -485,7 +485,7 @@ instance Crypto c => Twiddle (Update (AlonzoEra c)) where
   twiddle v = twiddle v . toTerm v
 
 instance Crypto c => Twiddle (MultiAsset c) where
-  twiddle v = twiddle v . encodingToTerm v . toCBOR
+  twiddle v = twiddle v . encodingToTerm v . encCBOR
 
 instance Crypto c => Twiddle (ScriptIntegrityHash c) where
   twiddle v = twiddle v . toTerm v

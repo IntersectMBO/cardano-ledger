@@ -13,10 +13,10 @@ module Cardano.Ledger.Binary.Encoding (
 
   -- ** Hash
   hashWithEncoder,
-  hashToCBOR,
+  hashEncCBOR,
   module Cardano.Ledger.Binary.Version,
   module Cardano.Ledger.Binary.Encoding.Encoder,
-  module Cardano.Ledger.Binary.Encoding.ToCBOR,
+  module Cardano.Ledger.Binary.Encoding.EncCBOR,
 
   -- * Nested CBOR-in-CBOR
   encodeNestedCbor,
@@ -28,37 +28,37 @@ module Cardano.Ledger.Binary.Encoding (
   runByteBuilder,
 
   -- * Deprecated
-  toCBORMaybe,
+  encCBORMaybe,
 )
 where
 
 import qualified Cardano.Crypto.Hash.Class as C
+import Cardano.Ledger.Binary.Encoding.EncCBOR
 import Cardano.Ledger.Binary.Encoding.Encoder
-import Cardano.Ledger.Binary.Encoding.ToCBOR
 import Cardano.Ledger.Binary.Version
 import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder.Extra (safeStrategy, toLazyByteStringWith)
 import qualified Data.ByteString.Lazy as BSL
 
--- | Serialize a Haskell value with a 'ToCBOR' instance to an external binary
+-- | Serialize a Haskell value with a 'EncCBOR' instance to an external binary
 --   representation.
 --
 --   The output is represented as a lazy 'LByteString' and is constructed
 --   incrementally.
-serialize :: ToCBOR a => Version -> a -> BSL.ByteString
-serialize version = serializeEncoding version . toCBOR
+serialize :: EncCBOR a => Version -> a -> BSL.ByteString
+serialize version = serializeEncoding version . encCBOR
 
 -- | Serialize a Haskell value to an external binary representation.
 --
 --   The output is represented as a strict 'ByteString'.
-serialize' :: ToCBOR a => Version -> a -> BS.ByteString
+serialize' :: EncCBOR a => Version -> a -> BS.ByteString
 serialize' version = BSL.toStrict . serialize version
 
 -- | Serialize into a Builder. Useful if you want to throw other ByteStrings
 --   around it.
-serializeBuilder :: ToCBOR a => Version -> a -> Builder
-serializeBuilder version = toBuilder version . toCBOR
+serializeBuilder :: EncCBOR a => Version -> a -> Builder
+serializeBuilder version = toBuilder version . encCBOR
 
 -- | Serialize a Haskell value to an external binary representation using the
 --   provided CBOR 'Encoding'
@@ -85,8 +85,8 @@ serializeEncoding' version = BSL.toStrict . serializeEncoding version
 hashWithEncoder :: forall h a. C.HashAlgorithm h => Version -> (a -> Encoding) -> a -> C.Hash h a
 hashWithEncoder version toEnc = C.hashWith (serializeEncoding' version . toEnc)
 
-hashToCBOR :: forall h a. (C.HashAlgorithm h, ToCBOR a) => Version -> a -> C.Hash h a
-hashToCBOR version = hashWithEncoder version toCBOR
+hashEncCBOR :: forall h a. (C.HashAlgorithm h, EncCBOR a) => Version -> a -> C.Hash h a
+hashEncCBOR version = hashWithEncoder version encCBOR
 
 --------------------------------------------------------------------------------
 -- Nested CBOR-in-CBOR
@@ -96,17 +96,17 @@ hashToCBOR version = hashWithEncoder version toCBOR
 -- | Encode and serialise the given `a` and sorround it with the semantic tag 24
 --   In CBOR diagnostic notation:
 --   >>> 24(h'DEADBEEF')
-encodeNestedCbor :: ToCBOR a => a -> Encoding
+encodeNestedCbor :: EncCBOR a => a -> Encoding
 encodeNestedCbor value =
   encodeTag 24
-    <> withCurrentEncodingVersion (\version -> toCBOR (serialize version value))
+    <> withCurrentEncodingVersion (\version -> encCBOR (serialize version value))
 
 -- | Like `encodeNestedCbor`, but assumes nothing about the shape of
 --   input object, so that it must be passed as a binary `ByteString` blob. It's
 --   the caller responsibility to ensure the input `ByteString` correspond
 --   indeed to valid, previously-serialised CBOR data.
 encodeNestedCborBytes :: BSL.ByteString -> Encoding
-encodeNestedCborBytes x = encodeTag 24 <> toCBOR x
+encodeNestedCborBytes x = encodeTag 24 <> encCBOR x
 
 nestedCborSizeExpr :: Size -> Size
 nestedCborSizeExpr x = 2 + apMono "withWordSize" withWordSize x + x
@@ -132,6 +132,6 @@ runByteBuilder !sizeHint =
 -- Deprecations
 --------------------------------------------------------------------------------
 
-toCBORMaybe :: (a -> Encoding) -> (Maybe a -> Encoding)
-toCBORMaybe = encodeMaybe
-{-# DEPRECATED toCBORMaybe "In favor of `encodeMaybe`" #-}
+encCBORMaybe :: (a -> Encoding) -> (Maybe a -> Encoding)
+encCBORMaybe = encodeMaybe
+{-# DEPRECATED encCBORMaybe "In favor of `encodeMaybe`" #-}

@@ -12,7 +12,7 @@ where
 
 import Cardano.Chain.Block.Block (
   ABlockOrBoundary (..),
-  fromCBORABlockOrBoundary,
+  decCBORABlockOrBoundary,
  )
 import Cardano.Chain.Slotting (EpochSlots (..))
 import Cardano.Ledger.Binary (DecoderError, byronProtVer, decodeFullDecoder, slice)
@@ -132,7 +132,7 @@ getSlotData epochSlots = runExceptT $ do
         decodeFullDecoder
           byronProtVer
           "ABlockOrBoundary"
-          (fromCBORABlockOrBoundary epochSlots)
+          (decCBORABlockOrBoundary epochSlots)
           blockBytes
     pure $ map (LBS.toStrict . slice blockBytes) bb
   -- Drop the Undo bytes as we no longer use these

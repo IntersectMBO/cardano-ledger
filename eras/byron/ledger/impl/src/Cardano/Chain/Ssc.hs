@@ -20,10 +20,10 @@ module Cardano.Chain.Ssc (
 where
 
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (..),
   Dropper,
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   dropBytes,
@@ -52,21 +52,21 @@ data SscPayload
 -- Used for debugging purposes only
 instance ToJSON SscPayload
 
-instance ToCBOR SscPayload where
-  toCBOR _ =
+instance EncCBOR SscPayload where
+  encCBOR _ =
     encodeListLen 2
-      <> toCBOR (3 :: Word8)
-      <> toCBOR (mempty :: Set ())
+      <> encCBOR (3 :: Word8)
+      <> encCBOR (mempty :: Set ())
 
-instance FromCBOR SscPayload where
-  fromCBOR = do
+instance DecCBOR SscPayload where
+  decCBOR = do
     dropSscPayload
     pure SscPayload
 
 dropSscPayload :: Dropper s
 dropSscPayload = do
   actualLen <- decodeListLen
-  fromCBOR >>= \case
+  decCBOR >>= \case
     0 -> do
       matchSize "CommitmentsPayload" 3 actualLen
       dropCommitmentsMap
@@ -95,9 +95,9 @@ data SscProof
 -- Used for debugging purposes only
 instance ToJSON SscProof
 
-instance ToCBOR SscProof where
-  toCBOR _ =
-    encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR hashBytes
+instance EncCBOR SscProof where
+  encCBOR _ =
+    encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR hashBytes
     where
       -- The VssCertificatesMap is encoded as a HashSet, so you'd think we want
       -- the hash of the encoding of an empty HashSet. BUT NO! For the calculation
@@ -146,15 +146,15 @@ instance ToCBOR SscProof where
       + encodedSizeExpr size (Proxy :: Proxy Word8)
       + 34
 
-instance FromCBOR SscProof where
-  fromCBOR = do
+instance DecCBOR SscProof where
+  decCBOR = do
     dropSscProof
     pure SscProof
 
 dropSscProof :: Dropper s
 dropSscProof = do
   actualLen <- decodeListLen
-  fromCBOR >>= \case
+  decCBOR >>= \case
     0 -> do
       matchSize "CommitmentsProof" 3 actualLen
       dropBytes

@@ -17,7 +17,7 @@ module Cardano.Chain.Common.Address (
   -- * Formatting
   addressF,
   addressDetailedF,
-  fromCBORTextAddress,
+  decCBORTextAddress,
 
   -- * Spending data checks
   checkAddrSpendingData,
@@ -26,8 +26,8 @@ module Cardano.Chain.Common.Address (
 
   -- * Encoding/Decoding
   addrToBase58,
-  toCBORAddr,
-  toCBORAddrCRC32,
+  encCBORAddr,
+  encCBORAddrCRC32,
   decodeAddressBase58,
   encodeAddressBase58,
 
@@ -70,10 +70,10 @@ import Cardano.Crypto.Signing (
  )
 import Cardano.HeapWords (HeapWords (..), heapWords3)
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (..),
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
   byronProtVer,
   decodeFull',
   decodeListLenCanonical,
@@ -115,16 +115,16 @@ newtype Address' = Address'
   { unAddress' :: (AddrType, AddrSpendingData, Attributes AddrAttributes)
   }
   deriving (Eq, Show, Generic)
-  deriving newtype (ToCBOR)
+  deriving newtype (EncCBOR)
 
 -- We need to use canonical encodings for @Address'@ so that all implementations
 -- agree on the `AddressHash`. The components of the @Address'@ also have
 -- canonical encodings enforced.
-instance FromCBOR Address' where
-  fromCBOR = do
+instance DecCBOR Address' where
+  decCBOR = do
     len <- decodeListLenCanonical
     matchSize "Address'" 3 len
-    fmap Address' $ (,,) <$> fromCBOR <*> fromCBOR <*> fromCBOR
+    fmap Address' $ (,,) <$> decCBOR <*> decCBOR <*> decCBOR
 
 -- | 'Address' is where you can send Lovelace
 data Address = Address
@@ -143,8 +143,8 @@ data Address = Address
 -- Used for debugging purposes only
 instance Aeson.ToJSON Address
 
-instance ToCBOR Address where
-  toCBOR addr =
+instance EncCBOR Address where
+  encCBOR addr =
     encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)
 
   encodedSizeExpr size pxy =
@@ -154,8 +154,8 @@ instance ToCBOR Address where
         <*> (addrAttributes <$> pxy)
         <*> (addrType <$> pxy)
 
-instance FromCBOR Address where
-  fromCBOR = do
+instance DecCBOR Address where
+  decCBOR = do
     (root, attributes, addrType') <- decodeCrcProtected
     pure $
       Address
@@ -171,13 +171,13 @@ instance Monad m => ToObjectKey m Address where
   toObjectKey = pure . toJSString . formatToString addressF
 
 instance MonadError SchemaError m => FromObjectKey m Address where
-  fromObjectKey = fmap Just . parseJSString fromCBORTextAddress . JSString
+  fromObjectKey = fmap Just . parseJSString decCBORTextAddress . JSString
 
 instance Monad m => ToJSON m Address where
   toJSON = fmap JSString . toObjectKey
 
 instance MonadError SchemaError m => FromJSON m Address where
-  fromJSON = parseJSString fromCBORTextAddress
+  fromJSON = parseJSString decCBORTextAddress
 
 instance HeapWords Address where
   heapWords (Address root attrs typ) = heapWords3 root attrs typ
@@ -215,12 +215,12 @@ addressF :: Format r (Address -> r)
 addressF = build
 
 -- | A function which decodes base58-encoded 'Address'
-{-# DEPRECATED fromCBORTextAddress "Use decodeAddressBase58 instead" #-}
-fromCBORTextAddress :: Text -> Either DecoderError Address
-fromCBORTextAddress = fromCBORAddress . encodeUtf8
+{-# DEPRECATED decCBORTextAddress "Use decodeAddressBase58 instead" #-}
+decCBORTextAddress :: Text -> Either DecoderError Address
+decCBORTextAddress = decCBORAddress . encodeUtf8
   where
-    fromCBORAddress :: ByteString -> Either DecoderError Address
-    fromCBORAddress bs = do
+    decCBORAddress :: ByteString -> Either DecoderError Address
+    decCBORAddress bs = do
       let base58Err =
             DecoderErrorCustom
               "Address"
@@ -230,7 +230,7 @@ fromCBORTextAddress = fromCBORAddress . encodeUtf8
 
 -- | Decode an address from Base58 encoded Text.
 decodeAddressBase58 :: Text -> Either DecoderError Address
-decodeAddressBase58 = fromCBORTextAddress
+decodeAddressBase58 = decCBORTextAddress
 
 -- | Encode an address to Text.
 -- `decodeAddressBase58 (encodeAddressBase58 x) === Right x`
@@ -333,17 +333,17 @@ isRedeemAddress addr = case addrType addr of
   _ -> False
 
 -- Encodes the `Address` __without__ the CRC32.
--- It's important to keep this function separated from the `toCBOR`
--- definition to avoid that `toCBOR` would call `crc32` and
--- the latter invoke `crc32Update`, which would then try to call `toCBOR`
+-- It's important to keep this function separated from the `encCBOR`
+-- definition to avoid that `encCBOR` would call `crc32` and
+-- the latter invoke `crc32Update`, which would then try to call `encCBOR`
 -- indirectly once again, in an infinite loop.
-toCBORAddr :: Address -> Encoding
-toCBORAddr addr =
-  toCBOR (addrRoot addr)
-    <> toCBOR (addrAttributes addr)
-    <> toCBOR
+encCBORAddr :: Address -> Encoding
+encCBORAddr addr =
+  encCBOR (addrRoot addr)
+    <> encCBOR (addrAttributes addr)
+    <> encCBOR
       (addrType addr)
 
-toCBORAddrCRC32 :: Address -> Encoding
-toCBORAddrCRC32 addr =
+encCBORAddrCRC32 :: Address -> Encoding
+encCBORAddrCRC32 addr =
   encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)

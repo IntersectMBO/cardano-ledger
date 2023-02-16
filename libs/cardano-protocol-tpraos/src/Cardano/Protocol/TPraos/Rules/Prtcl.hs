@@ -30,8 +30,8 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
+  DecCBOR (decCBOR),
+  EncCBOR (encCBOR),
   decodeRecordNamed,
   encodeListLen,
  )
@@ -80,24 +80,24 @@ data PrtclState c
       -- ^ Candidate nonce
   deriving (Generic, Show, Eq)
 
-instance Crypto c => ToCBOR (PrtclState c) where
-  toCBOR (PrtclState m n1 n2) =
+instance Crypto c => EncCBOR (PrtclState c) where
+  encCBOR (PrtclState m n1 n2) =
     mconcat
       [ encodeListLen 3
-      , toCBOR m
-      , toCBOR n1
-      , toCBOR n2
+      , encCBOR m
+      , encCBOR n1
+      , encCBOR n2
       ]
 
-instance Crypto c => FromCBOR (PrtclState c) where
-  fromCBOR =
+instance Crypto c => DecCBOR (PrtclState c) where
+  decCBOR =
     decodeRecordNamed
       "PrtclState"
       (const 3)
       ( PrtclState
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
+          <$> decCBOR
+          <*> decCBOR
+          <*> decCBOR
       )
 
 instance Crypto c => NoThunks (PrtclState c)

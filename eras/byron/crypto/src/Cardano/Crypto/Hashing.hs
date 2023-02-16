@@ -58,10 +58,10 @@ where
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.HeapWords
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoded (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   byronProtVer,
   cborError,
   serialize,
@@ -135,8 +135,8 @@ instance
 instance ToJSONKey (AbstractHash algo a) where
   toJSONKey = toJSONKeyText (sformat hashHexF)
 
-instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash algo a) where
-  toCBOR (AbstractHash h) = toCBOR h
+instance (Typeable algo, Typeable a, HashAlgorithm algo) => EncCBOR (AbstractHash algo a) where
+  encCBOR (AbstractHash h) = encCBOR h
 
   encodedSizeExpr _ _ =
     let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
@@ -144,13 +144,13 @@ instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash
 
 instance
   (Typeable algo, Typeable a, HashAlgorithm algo) =>
-  FromCBOR (AbstractHash algo a)
+  DecCBOR (AbstractHash algo a)
   where
-  fromCBOR = do
+  decCBOR = do
     -- FIXME bad decode: it reads an arbitrary-length byte string.
     -- Better instance: know the hash algorithm up front, read exactly that
     -- many bytes, fail otherwise. Then convert to a digest.
-    bs <- fromCBOR @SBS.ShortByteString
+    bs <- decCBOR @SBS.ShortByteString
     when (SBS.length bs /= expectedSize) $
       cborError $
         DecoderErrorCustom "AbstractHash" "Bytes not expected length"
@@ -199,9 +199,9 @@ decodeAbstractHash prettyHash = do
         )
     Just h -> return h
 
--- | Hash the 'ToCBOR'-serialised version of a value
+-- | Hash the 'EncCBOR'-serialised version of a value
 -- Once this is no longer used outside this module it should be made private.
-abstractHash :: (HashAlgorithm algo, ToCBOR a) => a -> AbstractHash algo a
+abstractHash :: (HashAlgorithm algo, EncCBOR a) => a -> AbstractHash algo a
 abstractHash = unsafeAbstractHash . serialize byronProtVer
 
 -- | Hash a lazy 'LByteString'
@@ -254,12 +254,12 @@ type Hash = AbstractHash Blake2b_256
 
 {-# DEPRECATED hash "Use serializeCborHash or hash the annotation instead." #-}
 
--- | The hash of a value, serialised via 'ToCBOR'.
-hash :: ToCBOR a => a -> Hash a
+-- | The hash of a value, serialised via 'EncCBOR'.
+hash :: EncCBOR a => a -> Hash a
 hash = abstractHash
 
--- | The hash of a value, serialised via 'ToCBOR'.
-serializeCborHash :: ToCBOR a => a -> Hash a
+-- | The hash of a value, serialised via 'EncCBOR'.
+serializeCborHash :: EncCBOR a => a -> Hash a
 serializeCborHash = abstractHash
 
 -- | The hash of a value's annotation

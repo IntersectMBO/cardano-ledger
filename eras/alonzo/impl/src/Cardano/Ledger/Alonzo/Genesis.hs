@@ -45,7 +45,7 @@ import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
 
 import Cardano.Ledger.Alonzo.PParams (UpgradeAlonzoPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices (..))
-import Cardano.Ledger.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, RecD),
   Encode (Rec, To),
@@ -128,8 +128,8 @@ pattern AlonzoGenesis
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance FromCBOR AlonzoGenesis where
-  fromCBOR =
+instance DecCBOR AlonzoGenesis where
+  decCBOR =
     decode $
       RecD AlonzoGenesis
         <! From
@@ -141,8 +141,8 @@ instance FromCBOR AlonzoGenesis where
         <! From
         <! From
 
-instance ToCBOR AlonzoGenesis where
-  toCBOR
+instance EncCBOR AlonzoGenesis where
+  encCBOR
     AlonzoGenesis
       { agCoinsPerUTxOWord
       , agCostModels

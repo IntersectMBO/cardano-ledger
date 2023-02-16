@@ -37,10 +37,10 @@ where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  FromCBORGroup (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  DecCBOR (decCBOR),
+  DecCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
   decodeRecordNamed,
   decodeRecordSum,
@@ -104,12 +104,12 @@ data MIRPot = ReservesMIR | TreasuryMIR
 
 deriving instance NoThunks MIRPot
 
-instance ToCBOR MIRPot where
-  toCBOR ReservesMIR = toCBOR (0 :: Word8)
-  toCBOR TreasuryMIR = toCBOR (1 :: Word8)
+instance EncCBOR MIRPot where
+  encCBOR ReservesMIR = encCBOR (0 :: Word8)
+  encCBOR TreasuryMIR = encCBOR (1 :: Word8)
 
-instance FromCBOR MIRPot where
-  fromCBOR =
+instance DecCBOR MIRPot where
+  decCBOR =
     decodeWord >>= \case
       0 -> pure ReservesMIR
       1 -> pure TreasuryMIR
@@ -127,21 +127,21 @@ deriving instance NoThunks (MIRTarget c)
 
 instance
   CC.Crypto c =>
-  FromCBOR (MIRTarget c)
+  DecCBOR (MIRTarget c)
   where
-  fromCBOR = do
+  decCBOR = do
     peekTokenType >>= \case
-      TypeMapLen -> StakeAddressesMIR <$> fromCBOR
-      TypeMapLen64 -> StakeAddressesMIR <$> fromCBOR
-      TypeMapLenIndef -> StakeAddressesMIR <$> fromCBOR
-      _ -> SendToOppositePotMIR <$> fromCBOR
+      TypeMapLen -> StakeAddressesMIR <$> decCBOR
+      TypeMapLen64 -> StakeAddressesMIR <$> decCBOR
+      TypeMapLenIndef -> StakeAddressesMIR <$> decCBOR
+      _ -> SendToOppositePotMIR <$> decCBOR
 
 instance
   CC.Crypto c =>
-  ToCBOR (MIRTarget c)
+  EncCBOR (MIRTarget c)
   where
-  toCBOR (StakeAddressesMIR m) = toCBOR m
-  toCBOR (SendToOppositePotMIR c) = toCBOR c
+  encCBOR (StakeAddressesMIR m) = encCBOR m
+  encCBOR (SendToOppositePotMIR c) = encCBOR c
 
 -- | Move instantaneous rewards certificate
 data MIRCert c = MIRCert
@@ -152,19 +152,19 @@ data MIRCert c = MIRCert
 
 instance
   CC.Crypto c =>
-  FromCBOR (MIRCert c)
+  DecCBOR (MIRCert c)
   where
-  fromCBOR =
-    decodeRecordNamed "MIRCert" (const 2) (MIRCert <$> fromCBOR <*> fromCBOR)
+  decCBOR =
+    decodeRecordNamed "MIRCert" (const 2) (MIRCert <$> decCBOR <*> decCBOR)
 
 instance
   CC.Crypto c =>
-  ToCBOR (MIRCert c)
+  EncCBOR (MIRCert c)
   where
-  toCBOR (MIRCert pot targets) =
+  encCBOR (MIRCert pot targets) =
     encodeListLen 2
-      <> toCBOR pot
-      <> toCBOR targets
+      <> encCBOR pot
+      <> encCBOR targets
 
 -- | A heavyweight certificate.
 data DCert c
@@ -188,76 +188,76 @@ instance NoThunks (DCert c)
 
 instance
   CC.Crypto c =>
-  ToCBOR (DCert c)
+  EncCBOR (DCert c)
   where
-  toCBOR = \case
+  encCBOR = \case
     -- DCertDeleg
     DCertDeleg (RegKey cred) ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR cred
+        <> encCBOR (0 :: Word8)
+        <> encCBOR cred
     DCertDeleg (DeRegKey cred) ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR cred
+        <> encCBOR (1 :: Word8)
+        <> encCBOR cred
     DCertDeleg (Delegate (Delegation cred poolkh)) ->
       encodeListLen 3
-        <> toCBOR (2 :: Word8)
-        <> toCBOR cred
-        <> toCBOR poolkh
+        <> encCBOR (2 :: Word8)
+        <> encCBOR cred
+        <> encCBOR poolkh
     -- DCertPool
     DCertPool (RegPool poolParams) ->
       encodeListLen (1 + listLen poolParams)
-        <> toCBOR (3 :: Word8)
-        <> toCBORGroup poolParams
+        <> encCBOR (3 :: Word8)
+        <> encCBORGroup poolParams
     DCertPool (RetirePool vk epoch) ->
       encodeListLen 3
-        <> toCBOR (4 :: Word8)
-        <> toCBOR vk
-        <> toCBOR epoch
+        <> encCBOR (4 :: Word8)
+        <> encCBOR vk
+        <> encCBOR epoch
     -- DCertGenesis
     DCertGenesis (ConstitutionalDelegCert gk kh vrf) ->
       encodeListLen 4
-        <> toCBOR (5 :: Word8)
-        <> toCBOR gk
-        <> toCBOR kh
-        <> toCBOR vrf
+        <> encCBOR (5 :: Word8)
+        <> encCBOR gk
+        <> encCBOR kh
+        <> encCBOR vrf
     -- DCertMIR
     DCertMir mir ->
       encodeListLen 2
-        <> toCBOR (6 :: Word8)
-        <> toCBOR mir
+        <> encCBOR (6 :: Word8)
+        <> encCBOR mir
 
 instance
   CC.Crypto c =>
-  FromCBOR (DCert c)
+  DecCBOR (DCert c)
   where
-  fromCBOR = decodeRecordSum "DCert crypto" $
+  decCBOR = decodeRecordSum "DCert crypto" $
     \case
       0 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, DCertDeleg . RegKey $ x)
       1 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, DCertDeleg . DeRegKey $ x)
       2 -> do
-        a <- fromCBOR
-        b <- fromCBOR
+        a <- decCBOR
+        b <- decCBOR
         pure (3, DCertDeleg $ Delegate (Delegation a b))
       3 -> do
-        group <- fromCBORGroup
+        group <- decCBORGroup
         pure (fromIntegral (1 + listLenInt group), DCertPool (RegPool group))
       4 -> do
-        a <- fromCBOR
-        b <- fromCBOR
+        a <- decCBOR
+        b <- decCBOR
         pure (3, DCertPool $ RetirePool a (EpochNo b))
       5 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        c <- fromCBOR
+        a <- decCBOR
+        b <- decCBOR
+        c <- decCBOR
         pure (4, DCertGenesis $ ConstitutionalDelegCert a b c)
       6 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, DCertMir x)
       k -> invalidKey k
 

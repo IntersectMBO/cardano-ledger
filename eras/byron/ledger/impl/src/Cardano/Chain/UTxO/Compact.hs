@@ -35,7 +35,7 @@ import Cardano.Chain.Common.Lovelace (Lovelace)
 import Cardano.Chain.UTxO.Tx (TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto.Hashing (hashToBytes, unsafeHashFromBytes)
 import Cardano.HeapWords (HeapWords (..), heapWordsUnpacked)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)
@@ -75,18 +75,18 @@ instance HeapWords CompactTxIn where
     --
     6
 
-instance FromCBOR CompactTxIn where
-  fromCBOR = do
+instance DecCBOR CompactTxIn where
+  decCBOR = do
     enforceSize "CompactTxIn" 2
     CompactTxInUtxo
-      <$> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
 
-instance ToCBOR CompactTxIn where
-  toCBOR (CompactTxInUtxo txId txIndex) =
+instance EncCBOR CompactTxIn where
+  encCBOR (CompactTxInUtxo txId txIndex) =
     encodeListLen 2
-      <> toCBOR txId
-      <> toCBOR txIndex
+      <> encCBOR txId
+      <> encCBOR txIndex
 
 toCompactTxIn :: TxIn -> CompactTxIn
 toCompactTxIn (TxInUtxo txId txIndex) =
@@ -137,22 +137,22 @@ instance HeapWords CompactTxId where
     --
     5
 
-instance FromCBOR CompactTxId where
-  fromCBOR = do
+instance DecCBOR CompactTxId where
+  decCBOR = do
     enforceSize "CompactTxId" 4
     CompactTxId
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
-instance ToCBOR CompactTxId where
-  toCBOR (CompactTxId a b c d) =
+instance EncCBOR CompactTxId where
+  encCBOR (CompactTxId a b c d) =
     encodeListLen 4
-      <> toCBOR a
-      <> toCBOR b
-      <> toCBOR c
-      <> toCBOR d
+      <> encCBOR a
+      <> encCBOR b
+      <> encCBOR c
+      <> encCBOR d
 
 getCompactTxId :: Get CompactTxId
 getCompactTxId =
@@ -222,18 +222,18 @@ instance HeapWords CompactTxOut where
     --
     3 + heapWordsUnpacked compactAddr
 
-instance FromCBOR CompactTxOut where
-  fromCBOR = do
+instance DecCBOR CompactTxOut where
+  decCBOR = do
     enforceSize "CompactTxOut" 2
     CompactTxOut
-      <$> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
 
-instance ToCBOR CompactTxOut where
-  toCBOR (CompactTxOut compactAddr lovelace) =
+instance EncCBOR CompactTxOut where
+  encCBOR (CompactTxOut compactAddr lovelace) =
     encodeListLen 2
-      <> toCBOR compactAddr
-      <> toCBOR lovelace
+      <> encCBOR compactAddr
+      <> encCBOR lovelace
 
 toCompactTxOut :: TxOut -> CompactTxOut
 toCompactTxOut (TxOut addr lovelace) =

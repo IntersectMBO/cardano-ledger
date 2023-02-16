@@ -73,14 +73,14 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
+  DecCBOR (..),
+  DecShareCBOR (..),
   Decoder,
   DecoderError (..),
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  FromSharedCBOR (..),
   Interns,
   Sized (..),
-  ToCBOR (..),
   TokenType (..),
   cborError,
   decodeBreakOr,
@@ -397,10 +397,10 @@ pattern TxOutCompactDH addr vl dh <-
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
 instance
-  (Era era, Val (Value era), ToCBOR (Value era), ToCBOR (Script era)) =>
-  ToCBOR (BabbageTxOut era)
+  (Era era, Val (Value era), EncCBOR (Value era), EncCBOR (Script era)) =>
+  EncCBOR (BabbageTxOut era)
   where
-  toCBOR (BabbageTxOut addr v d s) = encodeTxOut (compactAddr addr) v d s
+  encCBOR (BabbageTxOut addr v d s) = encodeTxOut (compactAddr addr) v d s
 
 -- FIXME: ^ Starting with Babbage we need to reserialize all Addresses.  It is
 -- safe to reserialize an address, because we do not rely on this instance for
@@ -409,31 +409,31 @@ instance
 --
 -- After Vasil Hardfork we can switch it back to a more efficient version below:
 --
--- toCBOR (TxOutCompact addr cv) = encodeTxOut @era addr cv NoDatum SNothing
--- toCBOR (TxOutCompactDH addr cv dh) = encodeTxOut @era addr cv (DatumHash dh) SNothing
--- toCBOR (TxOutCompactDatum addr cv d) = encodeTxOut addr cv (Datum d) SNothing
--- toCBOR (TxOutCompactRefScript addr cv d rs) = encodeTxOut addr cv d (SJust rs)
+-- encCBOR (TxOutCompact addr cv) = encodeTxOut @era addr cv NoDatum SNothing
+-- encCBOR (TxOutCompactDH addr cv dh) = encodeTxOut @era addr cv (DatumHash dh) SNothing
+-- encCBOR (TxOutCompactDatum addr cv d) = encodeTxOut addr cv (Datum d) SNothing
+-- encCBOR (TxOutCompactRefScript addr cv d rs) = encodeTxOut addr cv d (SJust rs)
 
 instance
   ( Era era
   , Val (Value era)
-  , FromCBOR (Annotator (Script era))
-  , FromCBOR (Value era)
+  , DecCBOR (Annotator (Script era))
+  , DecCBOR (Value era)
   ) =>
-  FromCBOR (BabbageTxOut era)
+  DecCBOR (BabbageTxOut era)
   where
-  fromCBOR = decodeBabbageTxOut
+  decCBOR = decodeBabbageTxOut
 
 instance
   ( Era era
   , Val (Value era)
-  , FromCBOR (Annotator (Script era))
-  , FromCBOR (Value era)
+  , DecCBOR (Annotator (Script era))
+  , DecCBOR (Value era)
   ) =>
-  FromSharedCBOR (BabbageTxOut era)
+  DecShareCBOR (BabbageTxOut era)
   where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credsInterns =
+  decShareCBOR credsInterns =
     internTxOut <$!> decodeBabbageTxOut
     where
       internTxOut = \case
@@ -444,7 +444,7 @@ instance
         txOut -> txOut
 
 decodeBabbageTxOut ::
-  (Era era, Val (Value era), FromCBOR (Annotator (Script era)), FromCBOR (Value era)) =>
+  (Era era, Val (Value era), DecCBOR (Annotator (Script era)), DecCBOR (Value era)) =>
   Decoder s (BabbageTxOut era)
 decodeBabbageTxOut = do
   peekTokenType >>= \case
@@ -457,29 +457,29 @@ decodeBabbageTxOut = do
       case lenOrIndef of
         Nothing -> do
           (a, ca) <- fromCborBothAddr
-          v <- fromCBOR
+          v <- decCBOR
           decodeBreakOr >>= \case
             True -> pure $ mkTxOut a ca v NoDatum SNothing
             False -> do
-              dh <- fromCBOR
+              dh <- decCBOR
               decodeBreakOr >>= \case
                 True -> pure $ mkTxOut a ca v (DatumHash dh) SNothing
                 False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
         Just 2 -> do
           (a, ca) <- fromCborBothAddr
-          v <- fromCBOR
+          v <- decCBOR
           pure $ mkTxOut a ca v NoDatum SNothing
         Just 3 -> do
           (a, ca) <- fromCborBothAddr
-          v <- fromCBOR
-          dh <- fromCBOR
+          v <- decCBOR
+          dh <- decCBOR
           pure $ mkTxOut a ca v (DatumHash dh) SNothing
         Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
 {-# INLINE encodeTxOut #-}
 encodeTxOut ::
   forall era.
-  (Era era, ToCBOR (Value era), ToCBOR (Script era)) =>
+  (Era era, EncCBOR (Value era), EncCBOR (Script era)) =>
   CompactAddr (EraCrypto era) ->
   Value era ->
   Datum era ->
@@ -503,7 +503,7 @@ data DecodingTxOut era = DecodingTxOut
 {-# INLINE decodeTxOut #-}
 decodeTxOut ::
   forall s era.
-  (Era era, Val (Value era), FromCBOR (Value era), FromCBOR (Annotator (Script era))) =>
+  (Era era, Val (Value era), DecCBOR (Value era), DecCBOR (Annotator (Script era))) =>
   (forall s'. Decoder s' (Addr (EraCrypto era), CompactAddr (EraCrypto era))) ->
   Decoder s (BabbageTxOut era)
 decodeTxOut decAddr = do
@@ -527,7 +527,7 @@ decodeTxOut decAddr = do
     bodyFields 2 =
       field
         (\x txo -> txo {decodingTxOutDatum = x})
-        (D fromCBOR)
+        (D decCBOR)
     bodyFields 3 =
       ofield
         (\x txo -> txo {decodingTxOutScript = x})
@@ -652,10 +652,10 @@ txOutScript :: BabbageTxOut era -> Maybe (Script era)
 txOutScript = strictMaybeToMaybe . getScriptBabbageTxOut
 {-# DEPRECATED txOutScript "In favor of `dataTxOutL` or `getScriptBabbageTxOut`" #-}
 
-decodeCIC :: (FromCBOR (Annotator b)) => T.Text -> Decoder s b
+decodeCIC :: (DecCBOR (Annotator b)) => T.Text -> Decoder s b
 decodeCIC s = do
   version <- getDecoderVersion
   lbs <- decodeNestedCborBytes
-  case decodeFullAnnotator version s fromCBOR (LBS.fromStrict lbs) of
+  case decodeFullAnnotator version s decCBOR (LBS.fromStrict lbs) of
     Left e -> fail $ T.unpack s <> ": " <> show e
     Right x -> pure x

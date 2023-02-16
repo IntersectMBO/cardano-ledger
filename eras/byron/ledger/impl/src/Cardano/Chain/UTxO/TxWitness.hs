@@ -34,9 +34,9 @@ import Cardano.Crypto (
 import Cardano.Ledger.Binary (
   Annotated (..),
   Case (..),
+  DecCBOR (..),
   DecoderError (DecoderErrorUnknownTag),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   byronProtVer,
   cborError,
   decodeListLen,
@@ -84,15 +84,15 @@ instance B.Buildable TxInWitness where
 -- Used for debugging purposes only
 instance ToJSON TxInWitness
 
-instance ToCBOR TxInWitness where
-  toCBOR input = case input of
+instance EncCBOR TxInWitness where
+  encCBOR input = case input of
     VKWitness key sig ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
+        <> encCBOR (0 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
     RedeemWitness key sig ->
       encodeListLen 2
-        <> toCBOR (2 :: Word8)
+        <> encCBOR (2 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
 
   encodedSizeExpr size _ =
@@ -107,10 +107,10 @@ instance ToCBOR TxInWitness where
             ]
         )
 
-instance FromCBOR TxInWitness where
-  fromCBOR = do
+instance DecCBOR TxInWitness where
+  decCBOR = do
     len <- decodeListLen
-    fromCBOR @Word8 >>= \case
+    decCBOR @Word8 >>= \case
       0 -> do
         matchSize "TxInWitness.VKWitness" len 2
         uncurry VKWitness <$> decodeKnownCborDataItem
@@ -134,12 +134,12 @@ recoverSigData atx =
 -- Used for debugging purposes only
 instance ToJSON TxSigData
 
-instance ToCBOR TxSigData where
-  toCBOR txSigData = toCBOR (txSigTxHash txSigData)
+instance EncCBOR TxSigData where
+  encCBOR txSigData = encCBOR (txSigTxHash txSigData)
   encodedSizeExpr size pxy = size (txSigTxHash <$> pxy)
 
-instance FromCBOR TxSigData where
-  fromCBOR = TxSigData <$> fromCBOR
+instance DecCBOR TxSigData where
+  decCBOR = TxSigData <$> decCBOR
 
 -- | 'Signature' of addrId
 type TxSig = Signature TxSigData

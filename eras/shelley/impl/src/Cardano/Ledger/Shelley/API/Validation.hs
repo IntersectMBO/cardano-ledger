@@ -25,7 +25,7 @@ where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)
-import Cardano.Ledger.Binary (ToCBORGroup)
+import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core
@@ -60,7 +60,7 @@ class
   , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
   , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
-  , ToCBORGroup (TxSeq era)
+  , EncCBORGroup (TxSeq era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   ApplyBlock era

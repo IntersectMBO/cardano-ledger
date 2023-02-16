@@ -38,13 +38,13 @@ where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
 import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  FromSharedCBOR (..),
+  DecCBOR (decCBOR),
+  DecShareCBOR (..),
+  EncCBOR (encCBOR),
   Interns,
-  ToCBOR (toCBOR),
+  decSharePlusLensCBOR,
   decodeRecordNamedT,
   encodeListLen,
-  fromSharedPlusLensCBOR,
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (
@@ -85,12 +85,12 @@ newtype Stake c = Stake
 deriving newtype instance Typeable c => NoThunks (Stake c)
 
 deriving newtype instance
-  CC.Crypto c => ToCBOR (Stake c)
+  CC.Crypto c => EncCBOR (Stake c)
 
-instance CC.Crypto c => FromSharedCBOR (Stake c) where
+instance CC.Crypto c => DecShareCBOR (Stake c) where
   type Share (Stake c) = Share (VMap VB VP (Credential 'Staking c) (CompactForm Coin))
   getShare = getShare . unStake
-  fromSharedCBOR = fmap Stake . fromSharedCBOR
+  decShareCBOR = fmap Stake . decShareCBOR
 
 sumAllStake :: Stake c -> Coin
 sumAllStake = fromCompact . CompactCoin . VMap.foldl (\acc (CompactCoin c) -> acc + c) 0 . unStake
@@ -162,27 +162,27 @@ instance NFData (SnapShot c)
 
 instance
   CC.Crypto c =>
-  ToCBOR (SnapShot c)
+  EncCBOR (SnapShot c)
   where
-  toCBOR
+  encCBOR
     SnapShot
       { ssStake = s
       , ssDelegations = d
       , ssPoolParams = p
       } =
       encodeListLen 3
-        <> toCBOR s
-        <> toCBOR d
-        <> toCBOR p
+        <> encCBOR s
+        <> encCBOR d
+        <> encCBOR p
 
-instance CC.Crypto c => FromSharedCBOR (SnapShot c) where
+instance CC.Crypto c => DecShareCBOR (SnapShot c) where
   type
     Share (SnapShot c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
-  fromSharedPlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
-    ssStake <- fromSharedPlusLensCBOR _1
-    ssDelegations <- fromSharedPlusCBOR
-    ssPoolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
+  decSharePlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
+    ssStake <- decSharePlusLensCBOR _1
+    ssDelegations <- decSharePlusCBOR
+    ssPoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     pure SnapShot {ssStake, ssDelegations, ssPoolParams}
 
 -- | Snapshots of the stake distribution.
@@ -205,23 +205,23 @@ instance NFData (SnapShots c)
 
 instance
   CC.Crypto c =>
-  ToCBOR (SnapShots c)
+  EncCBOR (SnapShots c)
   where
-  toCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
+  encCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
     encodeListLen 4
-      <> toCBOR ssStakeMark
+      <> encCBOR ssStakeMark
       -- We intentionaly do not serialize the redundant ssStakeMarkPoolDistr
-      <> toCBOR ssStakeSet
-      <> toCBOR ssStakeGo
-      <> toCBOR ssFee
+      <> encCBOR ssStakeSet
+      <> encCBOR ssStakeGo
+      <> encCBOR ssFee
 
-instance CC.Crypto c => FromSharedCBOR (SnapShots c) where
+instance CC.Crypto c => DecShareCBOR (SnapShots c) where
   type Share (SnapShots c) = Share (SnapShot c)
-  fromSharedPlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
-    !ssStakeMark <- fromSharedPlusCBOR
-    ssStakeSet <- fromSharedPlusCBOR
-    ssStakeGo <- fromSharedPlusCBOR
-    ssFee <- lift fromCBOR
+  decSharePlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
+    !ssStakeMark <- decSharePlusCBOR
+    ssStakeSet <- decSharePlusCBOR
+    ssStakeGo <- decSharePlusCBOR
+    ssFee <- lift decCBOR
     let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
     pure SnapShots {ssStakeMark, ssStakeMarkPoolDistr, ssStakeSet, ssStakeGo, ssFee}
 

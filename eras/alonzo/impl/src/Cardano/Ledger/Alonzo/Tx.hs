@@ -69,8 +69,8 @@ module Cardano.Ledger.Alonzo.Tx (
   -- Segwit
   alonzoSegwitTx,
   -- Other
-  toCBORForSizeComputation,
-  toCBORForMempoolSubmission,
+  encCBORForSizeComputation,
+  encCBORForMempoolSubmission,
 )
 where
 
@@ -111,9 +111,9 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
+  DecCBOR (..),
+  EncCBOR (encCBOR),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (toCBOR),
   decodeNullMaybe,
   encodeListLen,
   encodeNullMaybe,
@@ -224,7 +224,7 @@ sizeAlonzoTxF =
     fromIntegral
       . LBS.length
       . serializeEncoding (eraProtVerLow @era)
-      . toCBORForSizeComputation
+      . encCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
@@ -315,18 +315,18 @@ isTwoPhaseScriptAddress tx =
 -- | This ensures that the size of transactions from Mary is unchanged.
 -- The individual components all store their bytes; the only work we do in this
 -- function is concatenating
-toCBORForSizeComputation ::
-  ( ToCBOR (TxBody era)
-  , ToCBOR (TxWits era)
-  , ToCBOR (TxAuxData era)
+encCBORForSizeComputation ::
+  ( EncCBOR (TxBody era)
+  , EncCBOR (TxWits era)
+  , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
-toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
+encCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
   encodeListLen 3
-    <> toCBOR body
-    <> toCBOR wits
-    <> encodeNullMaybe toCBOR (strictMaybeToMaybe auxiliaryData)
+    <> encCBOR body
+    <> encCBOR wits
+    <> encodeNullMaybe encCBOR (strictMaybeToMaybe auxiliaryData)
 
 alonzoMinFeeTx ::
   ( EraTx era
@@ -373,14 +373,14 @@ data ScriptPurpose c
   | Certifying !(DCert c)
   deriving (Eq, Show, Generic, NoThunks, NFData)
 
-instance (Crypto c) => ToCBOR (ScriptPurpose c) where
-  toCBOR (Minting x) = encode (Sum Minting 0 !> To x)
-  toCBOR (Spending x) = encode (Sum Spending 1 !> To x)
-  toCBOR (Rewarding x) = encode (Sum Rewarding 2 !> To x)
-  toCBOR (Certifying x) = encode (Sum Certifying 3 !> To x)
+instance (Crypto c) => EncCBOR (ScriptPurpose c) where
+  encCBOR (Minting x) = encode (Sum Minting 0 !> To x)
+  encCBOR (Spending x) = encode (Sum Spending 1 !> To x)
+  encCBOR (Rewarding x) = encode (Sum Rewarding 2 !> To x)
+  encCBOR (Certifying x) = encode (Sum Certifying 3 !> To x)
 
-instance (Crypto c) => FromCBOR (ScriptPurpose c) where
-  fromCBOR = decode (Summands "ScriptPurpose" dec)
+instance (Crypto c) => DecCBOR (ScriptPurpose c) where
+  decCBOR = decode (Summands "ScriptPurpose" dec)
     where
       dec 0 = SumD Minting <! From
       dec 1 = SumD Spending <! From
@@ -466,9 +466,9 @@ indexedRdmrs tx sp = case rdptr @era (tx ^. bodyTxL) sp of
 -- Serialisation
 --------------------------------------------------------------------------------
 
-deriving newtype instance FromCBOR IsValid
+deriving newtype instance DecCBOR IsValid
 
-deriving newtype instance ToCBOR IsValid
+deriving newtype instance EncCBOR IsValid
 
 -- | Construct an annotated Alonzo style transaction.
 alonzoSegwitTx ::
@@ -505,42 +505,42 @@ alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
 -- Note that this serialisation is neither the serialisation used on-chain
 -- (where Txs are deconstructed using segwit), nor the serialisation used for
 -- computing the transaction size (which omits the `IsValid` field for
--- compatibility with Mary - see 'toCBORForSizeComputation').
-toCBORForMempoolSubmission ::
-  ( ToCBOR (TxBody era)
-  , ToCBOR (TxWits era)
-  , ToCBOR (TxAuxData era)
+-- compatibility with Mary - see 'encCBORForSizeComputation').
+encCBORForMempoolSubmission ::
+  ( EncCBOR (TxBody era)
+  , EncCBOR (TxWits era)
+  , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
-toCBORForMempoolSubmission
+encCBORForMempoolSubmission
   AlonzoTx {body, wits, auxiliaryData, isValid} =
     encode $
       Rec AlonzoTx
         !> To body
         !> To wits
         !> To isValid
-        !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) auxiliaryData
+        !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) auxiliaryData
 
 instance
   ( Era era
-  , ToCBOR (TxBody era)
-  , ToCBOR (TxAuxData era)
-  , ToCBOR (TxWits era)
+  , EncCBOR (TxBody era)
+  , EncCBOR (TxAuxData era)
+  , EncCBOR (TxWits era)
   ) =>
-  ToCBOR (AlonzoTx era)
+  EncCBOR (AlonzoTx era)
   where
-  toCBOR = toCBORForMempoolSubmission
+  encCBOR = encCBORForMempoolSubmission
 
 instance
   ( Typeable era
-  , FromCBOR (Annotator (TxBody era))
-  , FromCBOR (Annotator (TxWits era))
-  , FromCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (Annotator (TxAuxData era))
   ) =>
-  FromCBOR (Annotator (AlonzoTx era))
+  DecCBOR (Annotator (AlonzoTx era))
   where
-  fromCBOR =
+  decCBOR =
     decode $
       Ann (RecD AlonzoTx)
         <*! From
@@ -548,7 +548,7 @@ instance
         <*! Ann From
         <*! D
           ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe fromCBOR
+              <$> decodeNullMaybe decCBOR
           )
 
 -- =======================================================================

@@ -243,7 +243,7 @@ annotateBlock epochSlots block =
         case Binary.decodeFullDecoder
           Binary.byronProtVer
           "Block"
-          (Concrete.fromCBORABlockOrBoundary epochSlots)
+          (Concrete.decCBORABlockOrBoundary epochSlots)
           bytes of
           Left err ->
             panic $
@@ -256,7 +256,7 @@ annotateBlock epochSlots block =
         Concrete.ABOBBoundary _ ->
           panic "This function should have decoded a block."
   where
-    bytes = Binary.serializeEncoding Binary.byronProtVer (Concrete.toCBORABOBBlock epochSlots block)
+    bytes = Binary.serializeEncoding Binary.byronProtVer (Concrete.encCBORABOBBlock epochSlots block)
 
 -- | Re-construct an abstract delegation certificate from the abstract state.
 --

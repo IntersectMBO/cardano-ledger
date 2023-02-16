@@ -153,7 +153,7 @@ extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
 decodeTx :: ByteString -> Tx CurrentEra
 decodeTx hex = either error id $ do
   bsl <- BSL16.decode hex
-  first show $ decodeFullAnnotator (eraProtVerHigh @CurrentEra) "Tx" fromCBOR bsl
+  first show $ decodeFullAnnotator (eraProtVerHigh @CurrentEra) "Tx" decCBOR bsl
 
 -- | Most basic ada-only transaction:
 --

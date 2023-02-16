@@ -16,7 +16,7 @@
 --     versions of old languages) will be added here.
 module Cardano.Ledger.Language where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeEnumBounded, encodeEnum)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeEnumBounded, encodeEnum)
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (
@@ -84,11 +84,11 @@ languageFromText "PlutusV1" = pure PlutusV1
 languageFromText "PlutusV2" = pure PlutusV2
 languageFromText lang = fail $ "Error decoding Language: " ++ show lang
 
-instance ToCBOR Language where
-  toCBOR = encodeEnum
+instance EncCBOR Language where
+  encCBOR = encodeEnum
 
-instance FromCBOR Language where
-  fromCBOR = decodeEnumBounded
+instance DecCBOR Language where
+  decCBOR = decodeEnumBounded
 
 nonNativeLanguages :: [Language]
 nonNativeLanguages = [minBound .. maxBound]
@@ -107,16 +107,16 @@ deriving instance Show (SLanguage l)
 instance
   forall (l :: Language).
   (Typeable l, IsLanguage l) =>
-  ToCBOR (SLanguage l)
+  EncCBOR (SLanguage l)
   where
-  toCBOR = toCBOR . fromSLanguage
+  encCBOR = encCBOR . fromSLanguage
 
 instance
   forall (l :: Language).
   (Typeable l, IsLanguage l) =>
-  FromCBOR (SLanguage l)
+  DecCBOR (SLanguage l)
   where
-  fromCBOR = toSLanguage =<< fromCBOR @Language
+  decCBOR = toSLanguage =<< decCBOR @Language
 
 -- | Reflection for '@SLanguage@'
 fromSLanguage :: SLanguage l -> Language

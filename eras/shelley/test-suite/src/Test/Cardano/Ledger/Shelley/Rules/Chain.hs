@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
  )
-import Cardano.Ledger.Binary (ToCBORGroup)
+import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
@@ -256,7 +256,7 @@ instance
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL (EraCrypto era)) (CHAIN era)
-  , ToCBORGroup (TxSeq era)
+  , EncCBORGroup (TxSeq era)
   , ProtVerAtMost era 6
   , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
@@ -295,7 +295,7 @@ chainTransition ::
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL (EraCrypto era)) (CHAIN era)
-  , ToCBORGroup (TxSeq era)
+  , EncCBORGroup (TxSeq era)
   , EraPParams era
   , ProtVerAtMost era 6
   , State (Core.EraRule "LEDGERS" era) ~ LedgerState era

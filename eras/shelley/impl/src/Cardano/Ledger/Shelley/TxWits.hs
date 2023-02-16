@@ -42,9 +42,9 @@ where
 
 import Cardano.Ledger.Binary (
   Annotator,
+  DecCBOR (decCBOR),
   Decoder,
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
+  EncCBOR (encCBOR),
   decodeList,
   decodeMapContents,
   decodeWord,
@@ -186,8 +186,8 @@ instance Crypto c => EraTxWits (ShelleyEra c) where
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
-instance Era era => ToCBOR (ShelleyTxWits era) where
-  toCBOR (ShelleyTxWitsConstr w) = encodePreEncoded $ BSL.toStrict $ txWitsBytes w
+instance Era era => EncCBOR (ShelleyTxWits era) where
+  encCBOR (ShelleyTxWitsConstr w) = encodePreEncoded $ BSL.toStrict $ txWitsBytes w
 
 instance EraScript era => Semigroup (ShelleyTxWits era) where
   (ShelleyTxWits a b c) <> y | Set.null a && Map.null b && Set.null c = y
@@ -212,9 +212,9 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
             if null x then Nothing else Just (encodeWord ix <> enc x)
           l =
             catMaybes
-              [ encodeMapElement 0 toCBOR awits
-              , encodeMapElement 1 toCBOR (Map.elems scriptWitMap)
-              , encodeMapElement 2 toCBOR bootstrapWits
+              [ encodeMapElement 0 encCBOR awits
+              , encodeMapElement 1 encCBOR (Map.elems scriptWitMap)
+              , encodeMapElement 2 encCBOR bootstrapWits
               ]
           n = fromIntegral $ length l
           witsBytes = serializeEncoding (eraProtVerLow @era) $ encodeMapLen n <> fold l
@@ -243,8 +243,8 @@ prettyWitnessSetParts ::
   )
 prettyWitnessSetParts (ShelleyTxWitsConstr (WitnessSet' a b c _)) = (a, b, c)
 
-instance EraScript era => FromCBOR (Annotator (ShelleyTxWits era)) where
-  fromCBOR = decodeWits
+instance EraScript era => DecCBOR (Annotator (ShelleyTxWits era)) where
+  decCBOR = decodeWits
 
 -- | This type is only used to preserve the old buggy behavior where signature
 -- was ignored in the `Ord` instance for `WitVKey`s.
@@ -261,7 +261,7 @@ decodeWits = do
       decodeMapContents $
         decodeWord >>= \case
           0 ->
-            decodeList fromCBOR >>= \x ->
+            decodeList decCBOR >>= \x ->
               pure
                 ( \ws ->
                     ws
@@ -270,10 +270,10 @@ decodeWits = do
                       }
                 )
           1 ->
-            decodeList fromCBOR >>= \x ->
+            decodeList decCBOR >>= \x ->
               pure (\ws -> ws {scriptWits' = keyBy (hashScript @era) <$> sequence x})
           2 ->
-            decodeList fromCBOR >>= \x ->
+            decodeList decCBOR >>= \x ->
               pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
           k -> invalidKey k
   let witSet = foldr ($) emptyWitnessSetHKD mapParts

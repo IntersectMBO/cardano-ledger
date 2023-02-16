@@ -27,7 +27,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
@@ -119,13 +119,13 @@ instance
 
 instance
   ( Era era
-  , ToCBOR (PredicateFailure (EraRule "UTXOW" era))
-  , ToCBOR (PredicateFailure (EraRule "DELEGS" era))
-  , ToCBOR (PredicateFailure (EraRule "TALLY" era))
+  , EncCBOR (PredicateFailure (EraRule "UTXOW" era))
+  , EncCBOR (PredicateFailure (EraRule "DELEGS" era))
+  , EncCBOR (PredicateFailure (EraRule "TALLY" era))
   ) =>
-  ToCBOR (ConwayLedgerPredFailure era)
+  EncCBOR (ConwayLedgerPredFailure era)
   where
-  toCBOR =
+  encCBOR =
     encode . \case
       ConwayUtxowFailure x -> Sum (ConwayUtxowFailure @era) 1 !> To x
       ConwayDelegsFailure x -> Sum (ConwayDelegsFailure @era) 2 !> To x
@@ -133,13 +133,13 @@ instance
 
 instance
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "UTXOW" era))
-  , FromCBOR (PredicateFailure (EraRule "DELEGS" era))
-  , FromCBOR (PredicateFailure (EraRule "TALLY" era))
+  , DecCBOR (PredicateFailure (EraRule "UTXOW" era))
+  , DecCBOR (PredicateFailure (EraRule "DELEGS" era))
+  , DecCBOR (PredicateFailure (EraRule "TALLY" era))
   ) =>
-  FromCBOR (ConwayLedgerPredFailure era)
+  DecCBOR (ConwayLedgerPredFailure era)
   where
-  fromCBOR =
+  decCBOR =
     decode $ Summands "ConwayLedgerPredFailure" $ \case
       1 -> SumD ConwayUtxowFailure <! From
       2 -> SumD ConwayDelegsFailure <! From

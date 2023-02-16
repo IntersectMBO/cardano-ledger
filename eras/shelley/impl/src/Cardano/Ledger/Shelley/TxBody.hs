@@ -68,8 +68,8 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (fromCBOR),
-  ToCBOR (..),
+  DecCBOR (decCBOR),
+  EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -166,12 +166,12 @@ deriving instance
 
 instance
   ( Era era
-  , FromCBOR (PParamsUpdate era)
-  , FromCBOR (TxOut era)
+  , DecCBOR (PParamsUpdate era)
+  , DecCBOR (TxOut era)
   ) =>
-  FromCBOR (ShelleyTxBodyRaw era)
+  DecCBOR (ShelleyTxBodyRaw era)
   where
-  fromCBOR =
+  decCBOR =
     decode
       ( SparseKeyed
           "TxBody"
@@ -182,12 +182,12 @@ instance
 
 instance
   ( Era era
-  , FromCBOR (PParamsUpdate era)
-  , FromCBOR (TxOut era)
+  , DecCBOR (PParamsUpdate era)
+  , DecCBOR (TxOut era)
   ) =>
-  FromCBOR (Annotator (ShelleyTxBodyRaw era))
+  DecCBOR (Annotator (ShelleyTxBodyRaw era))
   where
-  fromCBOR = pure <$> fromCBOR
+  decCBOR = pure <$> decCBOR
 
 -- =================================================================
 -- Composable components for building TxBody optional sparse serialisers.
@@ -199,8 +199,8 @@ instance
 --   changes only the field being deserialised.
 boxBody ::
   ( Era era
-  , FromCBOR (PParamsUpdate era)
-  , FromCBOR (TxOut era)
+  , DecCBOR (PParamsUpdate era)
+  , DecCBOR (TxOut era)
   ) =>
   Word ->
   Field (ShelleyTxBodyRaw era)
@@ -218,7 +218,7 @@ boxBody n = invalidField n
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (Era era, ToCBOR (TxOut era), ToCBOR (PParamsUpdate era)) =>
+  (Era era, EncCBOR (TxOut era), EncCBOR (PParamsUpdate era)) =>
   ShelleyTxBodyRaw era ->
   Encode ('Closed 'Sparse) (ShelleyTxBodyRaw era)
 txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
@@ -248,17 +248,17 @@ basicShelleyTxBodyRaw =
     }
 
 instance
-  (Era era, ToCBOR (TxOut era), ToCBOR (PParamsUpdate era)) =>
-  ToCBOR (ShelleyTxBodyRaw era)
+  (Era era, EncCBOR (TxOut era), EncCBOR (PParamsUpdate era)) =>
+  EncCBOR (ShelleyTxBodyRaw era)
   where
-  toCBOR = encode . txSparse
+  encCBOR = encode . txSparse
 
 -- ====================================================
 -- Introduce ShelleyTxBody as a newtype around a MemoBytes
 
 newtype ShelleyTxBody era = TxBodyConstr (MemoBytes ShelleyTxBodyRaw era)
   deriving (Generic, Typeable)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, EncCBOR)
 
 instance Memoized ShelleyTxBody where
   type RawType ShelleyTxBody = ShelleyTxBodyRaw
@@ -323,7 +323,7 @@ deriving instance
 deriving via
   Mem ShelleyTxBodyRaw era
   instance
-    EraTxBody era => FromCBOR (Annotator (ShelleyTxBody era))
+    EraTxBody era => DecCBOR (Annotator (ShelleyTxBody era))
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::

@@ -33,7 +33,7 @@ where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
-import Cardano.Ledger.Binary (ToCBOR (..), serializeEncoding', shelleyProtVer)
+import Cardano.Ledger.Binary (EncCBOR (..), serializeEncoding', shelleyProtVer)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -350,10 +350,10 @@ allScripts c =
           3 -> (getScript3 (args3 !! n), getScript2 (args2 !! m))
           i -> error ("mod function returns value out of bounds: " ++ show i)
 
-randomByHash :: forall x. ToCBOR x => Int -> Int -> x -> Int
+randomByHash :: forall x. EncCBOR x => Int -> Int -> x -> Int
 randomByHash low high x = low + remainder
   where
-    n = hash (serializeEncoding' shelleyProtVer (toCBOR x))
+    n = hash (serializeEncoding' shelleyProtVer (encCBOR x))
     -- We don't really care about the hash, we only
     -- use it to pseudo-randomly pick a number bewteen low and high
     m = high - low + 1

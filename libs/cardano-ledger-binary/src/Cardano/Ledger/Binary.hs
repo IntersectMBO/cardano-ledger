@@ -28,7 +28,7 @@ import Data.Text (Text)
 -- deserialization will happen with `Annotator`, since that is usually the way we
 -- deserialize upgradeable types that live on chain.
 translateViaCBORAnnotator ::
-  (ToCBOR a, FromCBOR (Annotator b)) =>
+  (EncCBOR a, DecCBOR (Annotator b)) =>
   -- | Version that will be used for serialization
   Version ->
   -- | Version that will be used for deserialization
@@ -37,6 +37,6 @@ translateViaCBORAnnotator ::
   a ->
   Except DecoderError b
 translateViaCBORAnnotator versionSerialize versionDeserialize name x =
-  case decodeFullAnnotator versionDeserialize name fromCBOR (serialize versionSerialize x) of
+  case decodeFullAnnotator versionDeserialize name decCBOR (serialize versionSerialize x) of
     Right newx -> pure newx
     Left decoderError -> throwError decoderError

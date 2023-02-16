@@ -45,7 +45,7 @@ import Cardano.Ledger.BaseTypes (
   epochInfoPure,
   mkActiveSlotCoeff,
  )
-import Cardano.Ledger.Binary (hashWithEncoder, natVersion, shelleyProtVer, toCBOR)
+import Cardano.Ledger.Binary (encCBOR, hashWithEncoder, natVersion, shelleyProtVer)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
@@ -205,7 +205,7 @@ keyPair seed = KeyPair vk sk
     sk =
       Crypto.genKeyDSIGN $
         mkSeedFromBytes . hashToBytes $
-          hashWithEncoder @Blake2b_256 shelleyProtVer toCBOR seed
+          hashWithEncoder @Blake2b_256 shelleyProtVer encCBOR seed
 
 vrfKeyPair :: forall v. Crypto.VRFAlgorithm v => Int -> (Crypto.SignKeyVRF v, Crypto.VerKeyVRF v)
 vrfKeyPair seed = (sk, vk)
@@ -214,7 +214,7 @@ vrfKeyPair seed = (sk, vk)
     sk =
       Crypto.genKeyVRF $
         mkSeedFromBytes . hashToBytes $
-          hashWithEncoder @Blake2b_256 shelleyProtVer toCBOR seed
+          hashWithEncoder @Blake2b_256 shelleyProtVer encCBOR seed
 
 data PoolSetUpArgs c f = PoolSetUpArgs
   { poolPledge :: f Coin

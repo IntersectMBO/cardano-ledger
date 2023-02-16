@@ -16,21 +16,21 @@ where
 
 import Cardano.Ledger.Binary (
   Annotator,
+  DecCBOR (..),
   DecoderError,
+  EncCBOR (..),
+  EncCBORGroup (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
   Tokens (..),
   Version,
   decodeFullAnnotator,
   decodeFullDecoder,
   decodeTerm,
+  encCBOR,
   fromPlainEncoding,
   serialize,
   serialize',
   serializeEncoding,
-  toCBOR,
  )
 
 -- ToExpr (CBOR.Term) instance
@@ -107,51 +107,51 @@ checkEncodingWithRoundtrip v encode decode roundTrip name x t =
     testName = "golden_serialize_" <> name
 
 checkEncodingCBORDecodeFailure ::
-  (HasCallStack, FromCBOR a, ToCBOR a, Show a) =>
+  (HasCallStack, DecCBOR a, EncCBOR a, Show a) =>
   Version ->
   String ->
   a ->
   ToTokens ->
   TestTree
 checkEncodingCBORDecodeFailure v name x t =
-  let d = decodeFullDecoder v (fromString name) fromCBOR
-   in checkEncodingWithRoundtrip v toCBOR d roundTripFailure name x t
+  let d = decodeFullDecoder v (fromString name) decCBOR
+   in checkEncodingWithRoundtrip v encCBOR d roundTripFailure name x t
 
 checkEncodingCBOR ::
-  (HasCallStack, FromCBOR a, ToCBOR a, Show a, Eq a) =>
+  (HasCallStack, DecCBOR a, EncCBOR a, Show a, Eq a) =>
   Version ->
   String ->
   a ->
   ToTokens ->
   TestTree
 checkEncodingCBOR v name x t =
-  let d = decodeFullDecoder v (fromString name) fromCBOR
-   in checkEncodingWithRoundtrip v toCBOR d roundTripSuccess name x t
+  let d = decodeFullDecoder v (fromString name) decCBOR
+   in checkEncodingWithRoundtrip v encCBOR d roundTripSuccess name x t
 
 checkEncodingCBORAnnotated ::
-  (HasCallStack, FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
+  (HasCallStack, DecCBOR (Annotator a), EncCBOR a, Show a, Eq a) =>
   Version ->
   String ->
   a ->
   ToTokens ->
   TestTree
 checkEncodingCBORAnnotated v name x t =
-  let d = decodeFullAnnotator v (fromString name) fromCBOR
-   in checkEncodingWithRoundtrip v toCBOR d roundTripSuccess name x annTokens
+  let d = decodeFullAnnotator v (fromString name) decCBOR
+   in checkEncodingWithRoundtrip v encCBOR d roundTripSuccess name x annTokens
   where
     annTokens = T $ TkEncoded $ serialize' v t
 
 data ToTokens where
   T :: (Tokens -> Tokens) -> ToTokens
-  S :: ToCBOR a => a -> ToTokens
-  G :: ToCBORGroup a => a -> ToTokens
+  S :: EncCBOR a => a -> ToTokens
+  G :: EncCBORGroup a => a -> ToTokens
   Plus :: ToTokens -> ToTokens -> ToTokens
 
-instance ToCBOR ToTokens where
-  toCBOR (T xs) = fromPlainEncoding (CBOR.Encoding xs)
-  toCBOR (S s) = toCBOR s
-  toCBOR (G g) = toCBORGroup g
-  toCBOR (Plus a b) = toCBOR a <> toCBOR b
+instance EncCBOR ToTokens where
+  encCBOR (T xs) = fromPlainEncoding (CBOR.Encoding xs)
+  encCBOR (S s) = encCBOR s
+  encCBOR (G g) = encCBORGroup g
+  encCBOR (Plus a b) = encCBOR a <> encCBOR b
 
 instance Semigroup ToTokens where
   (<>) = Plus

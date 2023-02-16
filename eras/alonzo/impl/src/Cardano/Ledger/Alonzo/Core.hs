@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Prices)
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum)
 import Cardano.Ledger.BaseTypes (Network)
-import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
 import Cardano.Ledger.Hashes
@@ -73,7 +73,7 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
 
 newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
   deriving stock (Eq, Ord)
-  deriving newtype (ToCBOR, FromCBOR, ToJSON, FromJSON, NFData, NoThunks, ToExpr, Show)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, ToExpr, Show)
 
 class EraPParams era => AlonzoEraPParams era where
   hkdCoinsPerUTxOWordL ::

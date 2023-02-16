@@ -24,8 +24,8 @@ import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Ledger.Binary (
   ByteSpan,
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   encodeListLen,
   enforceSize,
  )
@@ -55,25 +55,25 @@ data ABody a = ABody
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ABody a)
 
-instance ToCBOR Body where
-  toCBOR bc =
+instance EncCBOR Body where
+  encCBOR bc =
     encodeListLen 4
-      <> toCBOR (bodyTxPayload bc)
-      <> toCBOR (bodySscPayload bc)
-      <> toCBOR (bodyDlgPayload bc)
-      <> toCBOR (bodyUpdatePayload bc)
+      <> encCBOR (bodyTxPayload bc)
+      <> encCBOR (bodySscPayload bc)
+      <> encCBOR (bodyDlgPayload bc)
+      <> encCBOR (bodyUpdatePayload bc)
 
-instance FromCBOR Body where
-  fromCBOR = void <$> fromCBOR @(ABody ByteSpan)
+instance DecCBOR Body where
+  decCBOR = void <$> decCBOR @(ABody ByteSpan)
 
-instance FromCBOR (ABody ByteSpan) where
-  fromCBOR = do
+instance DecCBOR (ABody ByteSpan) where
+  decCBOR = do
     enforceSize "Body" 4
     ABody
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload

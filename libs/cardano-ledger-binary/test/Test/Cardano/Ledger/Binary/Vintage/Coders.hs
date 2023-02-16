@@ -29,46 +29,46 @@ data TT
   | H (StrictSeq Bool)
   deriving (Show, Eq)
 
-instance FromCBOR TT where
-  fromCBOR = decodeRecordSum "TT" $
+instance DecCBOR TT where
+  decCBOR = decodeRecordSum "TT" $
     \case
-      0 -> (\i -> (2, A i)) <$> fromCBOR -- Tag for A is 0
+      0 -> (\i -> (2, A i)) <$> decCBOR -- Tag for A is 0
       1 -> do
-        -- (,) 3 . B <$> fromCBOR <*> fromCBOR
-        i <- fromCBOR
-        b <- fromCBOR
+        -- (,) 3 . B <$> decCBOR <*> decCBOR
+        i <- decCBOR
+        b <- decCBOR
         pure (3, B i b) -- Tag for B is 1
       2 -> do
-        l <- decodeList fromCBOR
+        l <- decodeList decCBOR
         pure (2, G l) -- Tag for G is 2
       3 -> do
-        i <- decodeStrictSeq fromCBOR
+        i <- decodeStrictSeq decCBOR
         pure (2, H i) -- Tag for H is 3
       k -> invalidKey k
 
 -- =============================================================================================
--- JUST A NOTE about the (instance ToCBOR a => ToCBOR [a]). This uses the Begin .. End encoding,
+-- JUST A NOTE about the (instance EncCBOR a => EncCBOR [a]). This uses the Begin .. End encoding,
 -- while encodeList uses the list-length encoding.
---     toCBOR [5::Int,2]     --> [TkListBegin,TkInt 5,TkInt 2,TkBreak].
+--     encCBOR [5::Int,2]     --> [TkListBegin,TkInt 5,TkInt 2,TkBreak].
 --     encodeList [5::Int,2] --> [TkListLen 2,TkInt 5,TkInt 2]
--- the (instance FromCBOR a => FromCBOR [a]) will ONLY RECOGNIZE THE BEGIN END ENCODING.
--- but the decoder (decodeList fromCBOR) will recognize both styles of encoding. So in a decoder
--- or FromCBOR instance it is always preferable to use (decodeList fromCBOR) over (fromCBOR)
+-- the (instance DecCBOR a => DecCBOR [a]) will ONLY RECOGNIZE THE BEGIN END ENCODING.
+-- but the decoder (decodeList decCBOR) will recognize both styles of encoding. So in a decoder
+-- or DecCBOR instance it is always preferable to use (decodeList decCBOR) over (decCBOR)
 -- For example in the instance above, we could write either of these 2 lines
---       2 -> do { l <- decodeList fromCBOR; pure(2,G l) }
---       2 -> do { l <- fromCBOR; pure(2,G l) }
+--       2 -> do { l <- decodeList decCBOR; pure(2,G l) }
+--       2 -> do { l <- decCBOR; pure(2,G l) }
 -- BUT THE FIRST IS MORE GENERAL. The following instance should be replaced
--- instance FromCBOR a => FromCBOR [a]  -- Defined in ‘cardano-binary-1.5.0:Cardano.Binary.FromCBOR’
+-- instance DecCBOR a => DecCBOR [a]  -- Defined in ‘cardano-binary-1.5.0:Cardano.Binary.DecCBOR’
 
-instance ToCBOR TT where
-  toCBOR (A i) = encodeListLen 2 <> encodeWord 0 <> toCBOR i
-  toCBOR (B i b) = encodeListLen 3 <> encodeWord 1 <> toCBOR i <> toCBOR b
-  toCBOR (G is) = encodeListLen 2 <> encodeWord 2 <> toCBOR is
-  toCBOR (H bs) = encodeListLen 2 <> encodeWord 3 <> toCBOR bs
+instance EncCBOR TT where
+  encCBOR (A i) = encodeListLen 2 <> encodeWord 0 <> encCBOR i
+  encCBOR (B i b) = encodeListLen 3 <> encodeWord 1 <> encCBOR i <> encCBOR b
+  encCBOR (G is) = encodeListLen 2 <> encodeWord 2 <> encCBOR is
+  encCBOR (H bs) = encodeListLen 2 <> encodeWord 3 <> encCBOR bs
 
 -- The Key is that in (G constr tag <@> ...)
 -- The 'tag' for 'constr' aligns with the Tag in the case match
--- in the FromCBOR instance for TT above.
+-- in the DecCBOR instance for TT above.
 
 -- ===============================================================
 
@@ -84,11 +84,11 @@ decTwo = RecD Two <! From <! From
 
 encTwo (Two a b) = Rec Two !> To a !> To b
 
-instance ToCBOR Two where
-  toCBOR two = encode $ encTwo two
+instance EncCBOR Two where
+  encCBOR two = encode $ encTwo two
 
-instance FromCBOR Two where
-  fromCBOR = decode decTwo
+instance DecCBOR Two where
+  decCBOR = decode decTwo
 
 -- ============
 
@@ -104,11 +104,11 @@ decTestWithGroupForTwo = RecD Test <! From <! decTwo <! From
 
 encTestWithGroupForTwo (Test a b c) = Rec Test !> To a !> encTwo b !> To c
 
-instance ToCBOR Test where
-  toCBOR = encode . encTestWithGroupForTwo
+instance EncCBOR Test where
+  encCBOR = encode . encTestWithGroupForTwo
 
-instance FromCBOR Test where
-  fromCBOR = decode decTestWithGroupForTwo
+instance DecCBOR Test where
+  decCBOR = decode decTestWithGroupForTwo
 
 -- ===========
 
@@ -122,26 +122,26 @@ three3 = F (Two 1 False)
 
 -- The following values 'decThree' and 'encThree' are meant to simulate the following instances
 {-
-instance ToCBOR Three where
-  toCBOR (In x) = encodeListLen 2 <> encodeWord 0 <> toCBOR x
-  toCBOR (N b i) = encodeListLen 3 <> encodeWord 1 <> toCBOR b <> toCBOR i
-  toCBOR (F (Two i b)) = encodeListLen 3 <> encodeWord 2 <> toCBOR i <>  toCBOR b
+instance EncCBOR Three where
+  encCBOR (In x) = encodeListLen 2 <> encodeWord 0 <> encCBOR x
+  encCBOR (N b i) = encodeListLen 3 <> encodeWord 1 <> encCBOR b <> encCBOR i
+  encCBOR (F (Two i b)) = encodeListLen 3 <> encodeWord 2 <> encCBOR i <>  encCBOR b
      -- even though F has only 1 argument, we inline the two parts of Two,
      -- so it appears to have 2 arguments. This mimics CBORGROUP instances
 
-instance FromCBOR Three where
-  fromCBOR = decodeRecordSum "Three" $
+instance DecCBOR Three where
+  decCBOR = decodeRecordSum "Three" $
     \case
       0 -> do
-        x <- fromCBOR
+        x <- decCBOR
         pure (2, In x)
       1 -> do
-        b <- fromCBOR
-        i <- fromCBOR
+        b <- decCBOR
+        i <- decCBOR
         pure (3, N b i)
       2 -> do
-        i <- fromCBOR
-        b <- fromCBOR
+        i <- decCBOR
+        b <- decCBOR
         pure (3,F (Two i b))
       k -> invalidKey k
 -}
@@ -157,11 +157,11 @@ encThree (In x) = Sum In 0 !> To x
 encThree (N b i) = Sum N 1 !> To b !> To i
 encThree (F t) = Sum F 2 !> encTwo t
 
-instance FromCBOR Three where
-  fromCBOR = decode (Summands "Three" decThree)
+instance DecCBOR Three where
+  decCBOR = decode (Summands "Three" decThree)
 
-instance ToCBOR Three where
-  toCBOR x = encode (encThree x)
+instance EncCBOR Three where
+  encCBOR x = encode (encThree x)
 
 -- ================================================================
 -- In this test we nest many Records, and flatten out everything
@@ -195,11 +195,11 @@ encBigger (Bigger (Test a (Two b c) d) (Two e f) (Big g h i)) =
     !> (Rec Two !> To e !> To f)
     !> (Rec Big !> To g !> To h !> To i)
 
-instance ToCBOR Bigger where
-  toCBOR = encode . encBigger
+instance EncCBOR Bigger where
+  encCBOR = encode . encBigger
 
-instance FromCBOR Bigger where
-  fromCBOR = decode decBigger
+instance DecCBOR Bigger where
+  decCBOR = decode decBigger
 
 -- ======================================================================
 -- There are two ways to write smart encoders and decoders that don't put
@@ -285,24 +285,24 @@ dualM = mkTrip (encode . baz) (decode decodeM)
 roundTripSpec :: (HasCallStack, Show t, Eq t, Typeable t) => String -> Trip t t -> t -> Spec
 roundTripSpec name trip val = it name $ roundTripExpectation trip val
 
--- | Check that a value can be encoded using Coders and decoded using FromCBOR
-encodeSpec :: (HasCallStack, Show t, Eq t, FromCBOR t) => String -> Encode w t -> t -> Spec
-encodeSpec name enc = roundTripSpec name (mkTrip (const (encode enc)) fromCBOR)
+-- | Check that a value can be encoded using Coders and decoded using DecCBOR
+encodeSpec :: (HasCallStack, Show t, Eq t, DecCBOR t) => String -> Encode w t -> t -> Spec
+encodeSpec name enc = roundTripSpec name (mkTrip (const (encode enc)) decCBOR)
 
 newtype C = C Text
   deriving (Show, Eq)
 
-instance ToCBOR C where
-  toCBOR (C t) = toCBOR t
+instance EncCBOR C where
+  encCBOR (C t) = encCBOR t
 
-instance FromCBOR C where
-  fromCBOR = C <$> fromCBOR
+instance DecCBOR C where
+  decCBOR = C <$> decCBOR
 
 newtype BB = BB Text
   deriving (Show, Eq)
 
 dualBB :: Trip BB BB
-dualBB = mkTrip (\(BB t) -> toCBOR t) (BB <$> fromCBOR)
+dualBB = mkTrip (\(BB t) -> encCBOR t) (BB <$> decCBOR)
 
 -- Record Type
 
@@ -315,11 +315,11 @@ encodeA (ACon i b c) = Rec ACon !> To i !> E (tripEncoder dualBB) b !> To c
 decodeA :: Decode ('Closed 'Dense) A
 decodeA = RecD ACon <! From <! D (tripDecoder dualBB) <! From
 
-instance ToCBOR A where
-  toCBOR x = encode (encodeA x)
+instance EncCBOR A where
+  encCBOR x = encode (encodeA x)
 
-instance FromCBOR A where
-  fromCBOR = decode decodeA
+instance DecCBOR A where
+  decCBOR = decode decodeA
 
 dualA :: Trip A A
 dualA = cborTrip
@@ -365,10 +365,10 @@ ttSpec =
     encodeSpec "sB" (Sum B 1 !> To 13 !> To True) (B 13 True)
     -- Tag for G is 2
     encodeSpec "sG" (Sum G 2 !> To [3, 4, 5]) (G [3, 4, 5])
-    encodeSpec "sGa" (Sum G 2 !> E toCBOR [2, 5]) (G [2, 5])
+    encodeSpec "sGa" (Sum G 2 !> E encCBOR [2, 5]) (G [2, 5])
     -- Tag for H is 3
     let sseq = fromList [False, True]
-    encodeSpec "sH" (Sum H 3 !> E toCBOR sseq) (H sseq)
+    encodeSpec "sH" (Sum H 3 !> E encCBOR sseq) (H sseq)
 
 spec :: Spec
 spec =

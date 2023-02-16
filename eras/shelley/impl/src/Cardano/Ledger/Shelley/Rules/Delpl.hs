@@ -24,8 +24,8 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordSum,
   encodeListLen,
  )
@@ -113,39 +113,39 @@ instance
 
 instance
   ( Era era
-  , ToCBOR (PredicateFailure (EraRule "POOL" era))
-  , ToCBOR (PredicateFailure (EraRule "DELEG" era))
+  , EncCBOR (PredicateFailure (EraRule "POOL" era))
+  , EncCBOR (PredicateFailure (EraRule "DELEG" era))
   , Typeable (Script era)
   ) =>
-  ToCBOR (ShelleyDelplPredFailure era)
+  EncCBOR (ShelleyDelplPredFailure era)
   where
-  toCBOR = \case
+  encCBOR = \case
     (PoolFailure a) ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR a
+        <> encCBOR (0 :: Word8)
+        <> encCBOR a
     (DelegFailure a) ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR a
+        <> encCBOR (1 :: Word8)
+        <> encCBOR a
 
 instance
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "POOL" era))
-  , FromCBOR (PredicateFailure (EraRule "DELEG" era))
+  , DecCBOR (PredicateFailure (EraRule "POOL" era))
+  , DecCBOR (PredicateFailure (EraRule "DELEG" era))
   , Typeable (Script era)
   ) =>
-  FromCBOR (ShelleyDelplPredFailure era)
+  DecCBOR (ShelleyDelplPredFailure era)
   where
-  fromCBOR =
+  decCBOR =
     decodeRecordSum
       "PredicateFailure (DELPL era)"
       ( \case
           0 -> do
-            a <- fromCBOR
+            a <- decCBOR
             pure (2, PoolFailure a)
           1 -> do
-            a <- fromCBOR
+            a <- decCBOR
             pure (2, DelegFailure a)
           k -> invalidKey k
       )

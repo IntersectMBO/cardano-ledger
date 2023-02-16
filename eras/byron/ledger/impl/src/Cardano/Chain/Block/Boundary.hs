@@ -2,7 +2,7 @@
 
 -- | Boundary blocks have been deprecated, but we keep functions to decode them
 module Cardano.Chain.Block.Boundary (
-  fromCBORBoundaryConsensusData,
+  decCBORBoundaryConsensusData,
   dropBoundaryExtraHeaderData,
   dropBoundaryExtraHeaderDataRetainGenesisTag,
   dropBoundaryBody,
@@ -13,17 +13,17 @@ where
 import Cardano.Chain.Common (
   ChainDifficulty,
   attrData,
+  decCBORAttributes,
   dropAttributes,
-  fromCBORAttributes,
  )
 import Cardano.Ledger.Binary (
   Decoder,
   Dropper,
+  decCBOR,
   decodeWord64,
   dropBytes,
   dropList,
   enforceSize,
-  fromCBOR,
  )
 import Cardano.Prelude
 
@@ -31,11 +31,11 @@ import Cardano.Prelude
 -- BoundaryConsensusData
 --------------------------------------------------------------------------------
 
-fromCBORBoundaryConsensusData :: Decoder s (Word64, ChainDifficulty)
-fromCBORBoundaryConsensusData = do
+decCBORBoundaryConsensusData :: Decoder s (Word64, ChainDifficulty)
+decCBORBoundaryConsensusData = do
   enforceSize "BoundaryConsensusData" 2
   w <- decodeWord64
-  cd <- fromCBOR
+  cd <- decCBOR
   return (w, cd)
 
 --------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ dropBoundaryExtraHeaderDataRetainGenesisTag :: Decoder s Bool
 dropBoundaryExtraHeaderDataRetainGenesisTag = do
   enforceSize "BoundaryExtraHeaderData" 1
   attrData
-    <$> fromCBORAttributes
+    <$> decCBORAttributes
       False
       (\w8 bs t -> pure . Just $ t || w8 == 255 && bs == "Genesis")
 

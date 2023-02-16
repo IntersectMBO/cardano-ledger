@@ -42,9 +42,9 @@ import Cardano.HeapWords (HeapWords (..), heapWords0, heapWords1)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   decodeFullAnnotator,
   decodeNestedCborBytes,
   encodeTag,
@@ -94,22 +94,22 @@ deriving instance NoThunks PV1.Data
 newtype PlutusData era = PlutusData PV1.Data
   deriving newtype (Eq, Generic, Show, NFData, NoThunks, Cborg.Serialise)
 
-instance Typeable era => ToCBOR (PlutusData era) where
-  toCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
+instance Typeable era => EncCBOR (PlutusData era) where
+  encCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
 
-instance Typeable era => FromCBOR (Annotator (PlutusData era)) where
-  fromCBOR = pure <$> fromPlainDecoder Cborg.decode
+instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
+  decCBOR = pure <$> fromPlainDecoder Cborg.decode
 
 newtype Data era = DataConstr (MemoBytes PlutusData era)
   deriving (Eq, Generic)
-  deriving newtype (SafeToHash, ToCBOR, NFData)
+  deriving newtype (SafeToHash, EncCBOR, NFData)
 
 instance Memoized Data where
   type RawType Data = PlutusData
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Data era)
 
-deriving via Mem PlutusData era instance Era era => FromCBOR (Annotator (Data era))
+deriving via Mem PlutusData era instance Era era => DecCBOR (Annotator (Data era))
 
 type instance MemoHashIndex PlutusData = EraIndependentData
 
@@ -137,11 +137,11 @@ newtype BinaryData era = BinaryData ShortByteString
 
 instance (EraCrypto era ~ c) => HashAnnotated (BinaryData era) EraIndependentData c
 
-instance Typeable era => ToCBOR (BinaryData era) where
-  toCBOR (BinaryData sbs) = encodeTag 24 <> toCBOR sbs
+instance Typeable era => EncCBOR (BinaryData era) where
+  encCBOR (BinaryData sbs) = encodeTag 24 <> encCBOR sbs
 
-instance Era era => FromCBOR (BinaryData era) where
-  fromCBOR = do
+instance Era era => DecCBOR (BinaryData era) where
+  decCBOR = do
     bs <- decodeNestedCborBytes
     either fail pure $! makeBinaryData (toShort bs)
 
@@ -155,7 +155,7 @@ makeBinaryData sbs = do
 
 decodeBinaryData :: forall era. Era era => BinaryData era -> Either DecoderError (Data era)
 decodeBinaryData (BinaryData sbs) = do
-  plutusData <- decodeFullAnnotator (eraProtVerLow @era) "Data" fromCBOR (fromStrict (fromShort sbs))
+  plutusData <- decodeFullAnnotator (eraProtVerLow @era) "Data" decCBOR (fromStrict (fromShort sbs))
   pure (DataConstr (mkMemoBytes plutusData $ shortToLazy sbs))
 
 -- | It is safe to convert `BinaryData` to `Data` because the only way to
@@ -199,14 +199,14 @@ data Datum era
   | Datum !(BinaryData era)
   deriving (Eq, Ord, Show)
 
-instance Era era => ToCBOR (Datum era) where
-  toCBOR d = encode $ case d of
+instance Era era => EncCBOR (Datum era) where
+  encCBOR d = encode $ case d of
     DatumHash dh -> Sum DatumHash 0 !> To dh
     Datum d' -> Sum Datum 1 !> To d'
     NoDatum -> OmitC NoDatum
 
-instance Era era => FromCBOR (Datum era) where
-  fromCBOR = decode (Summands "Datum" decodeDatum)
+instance Era era => DecCBOR (Datum era) where
+  decCBOR = decode (Summands "Datum" decodeDatum)
     where
       decodeDatum 0 = SumD DatumHash <! From
       decodeDatum 1 = SumD Datum <! From

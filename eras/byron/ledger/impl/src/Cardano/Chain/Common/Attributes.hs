@@ -18,8 +18,8 @@ module Cardano.Chain.Common.Attributes (
   Attributes (..),
   attributesAreKnown,
   unknownAttributesLength,
-  toCBORAttributes,
-  fromCBORAttributes,
+  encCBORAttributes,
+  decCBORAttributes,
   mkAttributes,
   dropAttributes,
   dropEmptyAttributes,
@@ -28,12 +28,12 @@ where
 
 import Cardano.HeapWords (HeapWords (..), heapWords2)
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
   Dropper,
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
   cborError,
   decodeMapLen,
   dropBytes,
@@ -114,11 +114,11 @@ instance Buildable (Attributes ()) where
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (Attributes a)
 
-instance ToCBOR (Attributes ()) where
-  toCBOR = toCBORAttributes []
+instance EncCBOR (Attributes ()) where
+  encCBOR = encCBORAttributes []
 
-instance FromCBOR (Attributes ()) where
-  fromCBOR = fromCBORAttributes () $ \_ _ _ -> pure Nothing
+instance DecCBOR (Attributes ()) where
+  decCBOR = decCBORAttributes () $ \_ _ _ -> pure Nothing
 
 instance HeapWords h => HeapWords (Attributes h) where
   heapWords (Attributes dat unparsed) = heapWords2 dat unparsed
@@ -180,10 +180,10 @@ version would be able to parse it).
 
 -}
 
-toCBORAttributes ::
+encCBORAttributes ::
   forall t. [(Word8, t -> LBS.ByteString)] -> Attributes t -> Encoding
-toCBORAttributes encs attr =
-  toCBOR $
+encCBORAttributes encs attr =
+  encCBOR $
     foldr go (fromUnparsedFields $ attrRemain attr) encs
   where
     go ::
@@ -196,18 +196,18 @@ toCBORAttributes encs attr =
         insertCheck v Nothing = Just v
         insertCheck _ (Just v') =
           panic $
-            "toCBORAttributes: impossible: field no. "
+            "encCBORAttributes: impossible: field no. "
               <> show k
               <> " is already encoded as unparsed field: "
               <> show v'
 
-fromCBORAttributes ::
+decCBORAttributes ::
   forall t s.
   t ->
   (Word8 -> LBS.ByteString -> t -> Decoder s (Maybe t)) ->
   Decoder s (Attributes t)
-fromCBORAttributes initval updater = do
-  raw <- fromCBOR @(Map Word8 LBS.ByteString)
+decCBORAttributes initval updater = do
+  raw <- decCBOR @(Map Word8 LBS.ByteString)
   foldrM go (Attributes initval $ UnparsedFields raw) $ M.toList raw
   where
     go :: (Word8, LBS.ByteString) -> Attributes t -> Decoder s (Attributes t)

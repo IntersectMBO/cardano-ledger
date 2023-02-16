@@ -24,8 +24,8 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey (
   redeemVKBuild,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   encodeListLen,
   enforceSize,
  )
@@ -62,24 +62,24 @@ data CompactRedeemVerificationKey
   deriving (NoThunks) via InspectHeap CompactRedeemVerificationKey
   deriving anyclass (NFData)
 
-instance ToCBOR CompactRedeemVerificationKey where
-  toCBOR (CompactRedeemVerificationKey a b c d) =
+instance EncCBOR CompactRedeemVerificationKey where
+  encCBOR (CompactRedeemVerificationKey a b c d) =
     mconcat
       [ encodeListLen 4
-      , toCBOR @Word64 a
-      , toCBOR @Word64 b
-      , toCBOR @Word64 c
-      , toCBOR @Word64 d
+      , encCBOR @Word64 a
+      , encCBOR @Word64 b
+      , encCBOR @Word64 c
+      , encCBOR @Word64 d
       ]
 
-instance FromCBOR CompactRedeemVerificationKey where
-  fromCBOR = do
+instance DecCBOR CompactRedeemVerificationKey where
+  decCBOR = do
     enforceSize "CompactRedeemVerificationKey" 4
     CompactRedeemVerificationKey
-      <$> fromCBOR @Word64
-      <*> fromCBOR @Word64
-      <*> fromCBOR @Word64
-      <*> fromCBOR @Word64
+      <$> decCBOR @Word64
+      <*> decCBOR @Word64
+      <*> decCBOR @Word64
+      <*> decCBOR @Word64
 
 getCompactRedeemVerificationKey :: Get CompactRedeemVerificationKey
 getCompactRedeemVerificationKey =

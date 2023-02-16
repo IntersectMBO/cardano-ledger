@@ -27,7 +27,7 @@ import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Binary (Annotator (..), FromCBOR (..), ToCBOR (..), peekTokenType)
+import Cardano.Ledger.Binary (Annotator (..), DecCBOR (..), EncCBOR (..), peekTokenType)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core (
   Era (..),
@@ -93,7 +93,7 @@ instance NFData (AllegraTxAuxDataRaw era)
 
 newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes AllegraTxAuxDataRaw era)
   deriving (Generic)
-  deriving newtype (Eq, ToCBOR, SafeToHash)
+  deriving newtype (Eq, EncCBOR, SafeToHash)
 
 instance Memoized AllegraTxAuxData where
   type RawType AllegraTxAuxData = AllegraTxAuxDataRaw
@@ -112,7 +112,7 @@ deriving newtype instance Era era => NoThunks (AllegraTxAuxData era)
 deriving newtype instance NFData (AllegraTxAuxData era)
 
 pattern AllegraTxAuxData ::
-  (ToCBOR (Script era), Era era) =>
+  (EncCBOR (Script era), Era era) =>
   Map Word64 Metadatum ->
   StrictSeq (Timelock era) ->
   AllegraTxAuxData era
@@ -140,15 +140,15 @@ pattern AllegraTxAuxData' blob sp <-
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance (Era era, ToCBOR (Script era)) => ToCBOR (AllegraTxAuxDataRaw era) where
-  toCBOR (AllegraTxAuxDataRaw blob sp) =
+instance (Era era, EncCBOR (Script era)) => EncCBOR (AllegraTxAuxDataRaw era) where
+  encCBOR (AllegraTxAuxDataRaw blob sp) =
     encode (Rec AllegraTxAuxDataRaw !> To blob !> To sp)
 
 instance
-  (Era era, FromCBOR (Annotator (Script era))) =>
-  FromCBOR (Annotator (AllegraTxAuxDataRaw era))
+  (Era era, DecCBOR (Annotator (Script era))) =>
+  DecCBOR (Annotator (AllegraTxAuxDataRaw era))
   where
-  fromCBOR =
+  decCBOR =
     peekTokenType >>= \case
       TypeMapLen -> decodeFromMap
       TypeMapLen64 -> decodeFromMap
@@ -168,11 +168,11 @@ instance
         decode
           ( Ann (RecD AllegraTxAuxDataRaw)
               <*! Ann From
-              <*! D (sequence <$> fromCBOR)
+              <*! D (sequence <$> decCBOR)
           )
 
 deriving via
   (Mem AllegraTxAuxDataRaw era)
   instance
-    (Era era, FromCBOR (Annotator (Script era))) =>
-    FromCBOR (Annotator (AllegraTxAuxData era))
+    (Era era, DecCBOR (Annotator (Script era))) =>
+    DecCBOR (Annotator (AllegraTxAuxData era))

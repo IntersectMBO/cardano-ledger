@@ -13,7 +13,7 @@ module Cardano.Chain.Update.SoftforkRule (
 where
 
 import Cardano.Chain.Common (LovelacePortion)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, build)
@@ -52,18 +52,18 @@ instance B.Buildable SoftforkRule where
 -- Used for debugging purposes only
 instance Aeson.ToJSON SoftforkRule
 
-instance ToCBOR SoftforkRule where
-  toCBOR sr =
+instance EncCBOR SoftforkRule where
+  encCBOR sr =
     encodeListLen 3
-      <> toCBOR (srInitThd sr)
-      <> toCBOR (srMinThd sr)
-      <> toCBOR
+      <> encCBOR (srInitThd sr)
+      <> encCBOR (srMinThd sr)
+      <> encCBOR
         (srThdDecrement sr)
 
-instance FromCBOR SoftforkRule where
-  fromCBOR = do
+instance DecCBOR SoftforkRule where
+  decCBOR = do
     enforceSize "SoftforkRule" 3
-    SoftforkRule <$> fromCBOR <*> fromCBOR <*> fromCBOR
+    SoftforkRule <$> decCBOR <*> decCBOR <*> decCBOR
 
 instance Monad m => ToJSON m SoftforkRule where
   toJSON sr =

@@ -24,8 +24,8 @@ boundedRationalTests ::
   ( BoundedRational a
   , ToJSON a
   , FromJSON a
-  , ToCBOR a
-  , FromCBOR a
+  , EncCBOR a
+  , DecCBOR a
   , Arbitrary a
   , GenValid a
   , Show a

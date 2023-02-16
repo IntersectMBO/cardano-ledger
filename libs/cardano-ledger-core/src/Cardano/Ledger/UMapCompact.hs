@@ -117,16 +117,16 @@ data RDPair = RDPair
   }
   deriving (Show, Eq, Ord, Generic, NoThunks, NFData)
 
-instance ToCBOR RDPair where
-  toCBOR (RDPair (CompactCoin rew) (CompactCoin deposit)) =
-    encodeListLen 2 <> toCBOR rew <> toCBOR deposit
+instance EncCBOR RDPair where
+  encCBOR (RDPair (CompactCoin rew) (CompactCoin deposit)) =
+    encodeListLen 2 <> encCBOR rew <> encCBOR deposit
 
-instance FromCBOR RDPair where
-  fromCBOR =
+instance DecCBOR RDPair where
+  decCBOR =
     decodeRecordNamed "RDPair" (const 2) $
       do
-        a <- fromCBOR
-        b <- fromCBOR
+        a <- decCBOR
+        b <- decCBOR
         pure (RDPair (CompactCoin a) (CompactCoin b))
 
 -- ===================================================================
@@ -708,36 +708,36 @@ domRestrict (Ptrs (UMap _ pmap)) m = Map.intersection m pmap
 
 instance
   (Crypto c) =>
-  ToCBOR (Trip c)
+  EncCBOR (Trip c)
   where
-  toCBOR (Triple coin ptr pool) =
-    encodeListLen 3 <> toCBOR coin <> toCBOR ptr <> toCBOR pool
+  encCBOR (Triple coin ptr pool) =
+    encodeListLen 3 <> encCBOR coin <> encCBOR ptr <> encCBOR pool
 
-instance Crypto c => FromSharedCBOR (Trip c) where
+instance Crypto c => DecShareCBOR (Trip c) where
   type Share (Trip c) = Interns (KeyHash 'StakePool c)
-  fromSharedCBOR is =
+  decShareCBOR is =
     decodeRecordNamed "Triple" (const 3) $
       do
-        a <- fromCBOR
-        b <- fromCBOR
-        c <- fromShareCBORfunctor is
+        a <- decCBOR
+        b <- decCBOR
+        c <- decShareMonadCBOR is
         pure (Triple a b c)
 
-instance Crypto c => ToCBOR (UMap c) where
-  toCBOR (UMap tripmap ptrmap) =
-    encodeListLen 2 <> encodeMap toCBOR toCBOR tripmap <> encodeMap toCBOR toCBOR ptrmap
+instance Crypto c => EncCBOR (UMap c) where
+  encCBOR (UMap tripmap ptrmap) =
+    encodeListLen 2 <> encodeMap encCBOR encCBOR tripmap <> encodeMap encCBOR encCBOR ptrmap
 
-instance Crypto c => FromSharedCBOR (UMap c) where
+instance Crypto c => DecShareCBOR (UMap c) where
   type
     Share (UMap c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
-  fromSharedPlusCBOR =
+  decSharePlusCBOR =
     StateT
       ( \(a, b) ->
           decodeRecordNamed "UMap" (const 2) $ do
-            tripmap <- decodeMap (interns a <$> fromCBOR) (fromSharedCBOR b)
+            tripmap <- decodeMap (interns a <$> decCBOR) (decShareCBOR b)
             let a' = internsFromMap tripmap <> a
-            ptrmap <- decodeMap fromCBOR (interns a' <$> fromCBOR)
+            ptrmap <- decodeMap decCBOR (interns a' <$> decCBOR)
             pure (UMap tripmap ptrmap, (a', b))
       )
 

@@ -9,9 +9,9 @@ module Cardano.Chain.Common.ChainDifficulty (
 where
 
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Dropper,
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   dropWord64,
   encodeListLen,
   enforceSize,
@@ -31,15 +31,15 @@ newtype ChainDifficulty = ChainDifficulty
 -- Used for debugging purposes only
 instance ToJSON ChainDifficulty
 
-instance ToCBOR ChainDifficulty where
-  toCBOR cd = encodeListLen 1 <> toCBOR (unChainDifficulty cd)
+instance EncCBOR ChainDifficulty where
+  encCBOR cd = encodeListLen 1 <> encCBOR (unChainDifficulty cd)
 
   encodedSizeExpr f cd = 1 + encodedSizeExpr f (unChainDifficulty <$> cd)
 
-instance FromCBOR ChainDifficulty where
-  fromCBOR = do
+instance DecCBOR ChainDifficulty where
+  decCBOR = do
     enforceSize "ChainDifficulty" 1
-    ChainDifficulty <$> fromCBOR
+    ChainDifficulty <$> decCBOR
 
 dropChainDifficulty :: Dropper s
 dropChainDifficulty = do

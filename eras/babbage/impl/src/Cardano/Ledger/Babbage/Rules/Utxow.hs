@@ -43,7 +43,7 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxOut (..),
  )
 import Cardano.Ledger.BaseTypes (ShelleyBase, quorum, strictMaybeToMaybe)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
   Encode (Sum, To),
@@ -127,16 +127,16 @@ instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) wher
 
 instance
   ( Era era
-  , ToCBOR (TxOut era)
-  , ToCBOR (Value era)
-  , ToCBOR (PredicateFailure (EraRule "UTXOS" era))
-  , ToCBOR (PredicateFailure (EraRule "UTXO" era))
-  , ToCBOR (Script era)
+  , EncCBOR (TxOut era)
+  , EncCBOR (Value era)
+  , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
+  , EncCBOR (PredicateFailure (EraRule "UTXO" era))
+  , EncCBOR (Script era)
   , Typeable (TxAuxData era)
   ) =>
-  ToCBOR (BabbageUtxowPredFailure era)
+  EncCBOR (BabbageUtxowPredFailure era)
   where
-  toCBOR = encode . work
+  encCBOR = encode . work
     where
       work (AlonzoInBabbageUtxowPredFailure x) = Sum AlonzoInBabbageUtxowPredFailure 1 !> To x
       work (UtxoFailure x) = Sum UtxoFailure 2 !> To x
@@ -145,16 +145,16 @@ instance
 
 instance
   ( Era era
-  , FromCBOR (TxOut era)
-  , FromCBOR (Value era)
-  , FromCBOR (PredicateFailure (EraRule "UTXOS" era))
-  , FromCBOR (PredicateFailure (EraRule "UTXO" era))
+  , DecCBOR (TxOut era)
+  , DecCBOR (Value era)
+  , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
+  , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
-  FromCBOR (BabbageUtxowPredFailure era)
+  DecCBOR (BabbageUtxowPredFailure era)
   where
-  fromCBOR = decode (Summands "BabbageUtxowPred" work)
+  decCBOR = decode (Summands "BabbageUtxowPred" work)
     where
       work 1 = SumD AlonzoInBabbageUtxowPredFailure <! From
       work 2 = SumD UtxoFailure <! From

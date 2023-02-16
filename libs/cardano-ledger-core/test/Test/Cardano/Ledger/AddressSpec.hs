@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.AddressSpec (spec) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
-import Cardano.Ledger.Binary (Version, decodeFull', natVersion, serialize', toCBOR)
+import Cardano.Ledger.Binary (Version, decodeFull', encCBOR, natVersion, serialize')
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import qualified Data.Binary.Put as B
@@ -48,14 +48,14 @@ spec = do
     prop "RoundTrip" $
       roundTripExpectation @(Addr StandardCrypto) cborTrip
     prop "RoundTrip (fromCborAddr)" $
-      roundTripExpectation @(Addr StandardCrypto) (mkTrip toCBOR fromCborAddr)
+      roundTripExpectation @(Addr StandardCrypto) (mkTrip encCBOR fromCborAddr)
     prop "Deserializing an address matches old implementation" $
       propValidateNewDeserialize @StandardCrypto
   describe "RewardAcnt" $ do
     prop "RewardAcnt" $
       roundTripExpectation @(RewardAcnt StandardCrypto) cborTrip
     prop "RewardAcnt (fromCborRewardAcnt)" $
-      roundTripExpectation @(RewardAcnt StandardCrypto) (mkTrip toCBOR fromCborRewardAcnt)
+      roundTripExpectation @(RewardAcnt StandardCrypto) (mkTrip encCBOR fromCborRewardAcnt)
 
 propSameAsOldDecompactAddr :: forall c. Crypto c => CompactAddr c -> Expectation
 propSameAsOldDecompactAddr cAddr = do

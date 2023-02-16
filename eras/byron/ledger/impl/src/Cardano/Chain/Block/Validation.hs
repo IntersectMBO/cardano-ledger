@@ -110,8 +110,8 @@ import Cardano.Crypto (
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (
   Annotated (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   byronProtVer,
   encodeListLen,
   enforceSize,
@@ -143,24 +143,24 @@ data ChainValidationState = ChainValidationState
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
-instance FromCBOR ChainValidationState where
-  fromCBOR = do
+instance DecCBOR ChainValidationState where
+  decCBOR = do
     enforceSize "ChainValidationState" 5
     ChainValidationState
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
-instance ToCBOR ChainValidationState where
-  toCBOR c =
+instance EncCBOR ChainValidationState where
+  encCBOR c =
     encodeListLen 5
-      <> toCBOR (cvsLastSlot c)
-      <> toCBOR (cvsPreviousHash c)
-      <> toCBOR (cvsUtxo c)
-      <> toCBOR (cvsUpdateState c)
-      <> toCBOR (cvsDelegationState c)
+      <> encCBOR (cvsLastSlot c)
+      <> encCBOR (cvsPreviousHash c)
+      <> encCBOR (cvsUtxo c)
+      <> encCBOR (cvsUpdateState c)
+      <> encCBOR (cvsDelegationState c)
 
 -- | Create the state needed to validate the zeroth epoch of the chain. The
 --   zeroth epoch starts with a boundary block where the previous hash is the

@@ -81,7 +81,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
@@ -125,10 +125,10 @@ deriving newtype instance
   FromJSON (PParamsHKD Identity era) => FromJSON (PParams era)
 
 deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD Identity era)) => ToCBOR (PParams era)
+  (Typeable era, EncCBOR (PParamsHKD Identity era)) => EncCBOR (PParams era)
 
 deriving newtype instance
-  (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
+  (Typeable era, DecCBOR (PParamsHKD Identity era)) => DecCBOR (PParams era)
 
 deriving newtype instance
   ToExpr (PParamsHKD Identity era) => ToExpr (PParams era)
@@ -157,10 +157,10 @@ deriving stock instance
   Show (PParamsHKD StrictMaybe era) => Show (PParamsUpdate era)
 
 deriving newtype instance
-  (Typeable era, ToCBOR (PParamsHKD StrictMaybe era)) => ToCBOR (PParamsUpdate era)
+  (Typeable era, EncCBOR (PParamsHKD StrictMaybe era)) => EncCBOR (PParamsUpdate era)
 
 deriving newtype instance
-  (Typeable era, FromCBOR (PParamsHKD StrictMaybe era)) => FromCBOR (PParamsUpdate era)
+  (Typeable era, DecCBOR (PParamsHKD StrictMaybe era)) => DecCBOR (PParamsUpdate era)
 
 deriving newtype instance
   ToJSON (PParamsHKD StrictMaybe era) => ToJSON (PParamsUpdate era)
@@ -201,15 +201,15 @@ class
   , Ord (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
   , NFData (PParamsHKD Identity era)
-  , ToCBOR (PParamsHKD Identity era)
-  , FromCBOR (PParamsHKD Identity era)
+  , EncCBOR (PParamsHKD Identity era)
+  , DecCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , NFData (PParamsHKD StrictMaybe era)
-  , ToCBOR (PParamsHKD StrictMaybe era)
-  , FromCBOR (PParamsHKD StrictMaybe era)
+  , EncCBOR (PParamsHKD StrictMaybe era)
+  , DecCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era

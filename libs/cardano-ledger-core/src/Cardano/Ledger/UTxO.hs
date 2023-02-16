@@ -35,10 +35,10 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  FromSharedCBOR (Share, fromSharedCBOR),
+  DecCBOR (..),
+  DecShareCBOR (Share, decShareCBOR),
+  EncCBOR (..),
   Interns,
-  ToCBOR (..),
   decodeMapNoDuplicates,
  )
 import Cardano.Ledger.Block (txid)
@@ -87,28 +87,28 @@ deriving newtype instance
 
 deriving newtype instance Crypto (EraCrypto era) => Monoid (UTxO era)
 
-deriving newtype instance (Era era, ToCBOR (TxOut era)) => ToCBOR (UTxO era)
+deriving newtype instance (Era era, EncCBOR (TxOut era)) => EncCBOR (UTxO era)
 
 instance
   ( Crypto (EraCrypto era)
-  , FromSharedCBOR (TxOut era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
   ) =>
-  FromSharedCBOR (UTxO era)
+  DecShareCBOR (UTxO era)
   where
   type
     Share (UTxO era) =
       Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credsInterns =
-    UTxO <$!> decodeMapNoDuplicates fromCBOR (fromSharedCBOR credsInterns)
+  decShareCBOR credsInterns =
+    UTxO <$!> decodeMapNoDuplicates decCBOR (decShareCBOR credsInterns)
 
 instance
-  ( FromCBOR (TxOut era)
+  ( DecCBOR (TxOut era)
   , Era era
   ) =>
-  FromCBOR (UTxO era)
+  DecCBOR (UTxO era)
   where
-  fromCBOR = UTxO <$!> decodeMapNoDuplicates fromCBOR fromCBOR
+  decCBOR = UTxO <$!> decodeMapNoDuplicates decCBOR decCBOR
 
 deriving via
   Quiet (UTxO era)

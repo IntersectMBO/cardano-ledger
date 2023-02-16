@@ -35,11 +35,11 @@ where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
   TokenType (..),
   cborError,
   decodeInteger,
@@ -102,7 +102,7 @@ import Prelude hiding (lookup)
 newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
   deriving newtype
     ( Eq
-    , ToCBOR
+    , EncCBOR
     , Ord
     , NoThunks
     , NFData
@@ -111,9 +111,9 @@ newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
 instance Show AssetName where
   show = show . BS16.encode . SBS.fromShort . assetName
 
-instance FromCBOR AssetName where
-  fromCBOR = do
-    an <- fromCBOR
+instance DecCBOR AssetName where
+  decCBOR = do
+    an <- decCBOR
     if SBS.length an > 32
       then
         cborError $
@@ -125,7 +125,7 @@ instance FromCBOR AssetName where
 
 -- | Policy ID
 newtype PolicyID c = PolicyID {policyID :: ScriptHash c}
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData, Generic)
+  deriving (Show, Eq, EncCBOR, DecCBOR, Ord, NoThunks, NFData, Generic)
 
 -- | The MultiAssets map
 newtype MultiAsset c = MultiAsset (Map (PolicyID c) (Map AssetName Integer))
@@ -150,11 +150,11 @@ instance Group (MultiAsset c) where
   invert (MultiAsset m) =
     MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
 
-instance Crypto c => FromCBOR (MultiAsset c) where
-  fromCBOR = decodeMultiAssetMint
+instance Crypto c => DecCBOR (MultiAsset c) where
+  decCBOR = decodeMultiAssetMint
 
-instance Crypto c => ToCBOR (MultiAsset c) where
-  toCBOR = encodeMultiAssetMaps
+instance Crypto c => EncCBOR (MultiAsset c) where
+  encCBOR = encodeMultiAssetMaps
 
 -- | The Value representing MultiAssets
 data MaryValue c = MaryValue !Integer !(MultiAsset c)
@@ -302,7 +302,7 @@ encodeMultiAssetMaps ::
   Crypto c =>
   MultiAsset c ->
   Encoding
-encodeMultiAssetMaps (MultiAsset m) = toCBOR m
+encodeMultiAssetMaps (MultiAsset m) = encCBOR m
 
 -- | `MultiAsset` can be used in two different circumstances:
 -- during minting and in `MaryValue` while sending.
@@ -310,7 +310,7 @@ encodeMultiAssetMaps (MultiAsset m) = toCBOR m
 -- while in minting negative indicates burning, and should not be zero.
 decodeMultiAssetMaps :: Crypto c => (forall t. Decoder t Integer) -> Decoder s (MultiAsset c)
 decodeMultiAssetMaps decodeAmount = do
-  ma <- decodeMap fromCBOR (decodeMap fromCBOR decodeAmount)
+  ma <- decodeMap decCBOR (decodeMap decCBOR decodeAmount)
   ifDecoderVersionAtLeast
     (natVersion @9)
     (MultiAsset ma <$ forM_ ma (\m -> when (Map.null m) $ fail "Empty Assets are not allowed"))
@@ -321,11 +321,11 @@ decodeMultiAssetMint = decodeMultiAssetMaps decodeIntegerBounded64
 
 instance
   Crypto c =>
-  ToCBOR (MaryValue c)
+  EncCBOR (MaryValue c)
   where
-  toCBOR (MaryValue c ma@(MultiAsset m)) =
+  encCBOR (MaryValue c ma@(MultiAsset m)) =
     if Map.null m
-      then toCBOR c
+      then encCBOR c
       else
         encode $
           Rec MaryValue
@@ -334,9 +334,9 @@ instance
 
 instance
   Crypto c =>
-  FromCBOR (MaryValue c)
+  DecCBOR (MaryValue c)
   where
-  fromCBOR = decodeValue
+  decCBOR = decodeValue
 
 -- Note: we do not use `decodeInt64` from the cborg library here because the
 -- implementation contains "-- TODO FIXME: overflow"
@@ -375,15 +375,15 @@ decodeIntegerBounded64 = do
 
 instance Crypto c => Compactible (MaryValue c) where
   newtype CompactForm (MaryValue c) = CompactValue (CompactValue c)
-    deriving (Eq, Typeable, Show, NoThunks, ToCBOR, FromCBOR, NFData)
+    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
-instance Crypto c => ToCBOR (CompactValue c) where
-  toCBOR = toCBOR . from
+instance Crypto c => EncCBOR (CompactValue c) where
+  encCBOR = encCBOR . from
 
-instance Crypto c => FromCBOR (CompactValue c) where
-  fromCBOR = do
+instance Crypto c => DecCBOR (CompactValue c) where
+  decCBOR = do
     v <- decodeValue
     case to v of
       Nothing ->

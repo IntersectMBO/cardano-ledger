@@ -20,8 +20,8 @@ where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, epochInfoPure, invalidKey)
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordSum,
   encodeListLen,
  )
@@ -152,108 +152,108 @@ instance NoThunks (ShelleyDelegPredFailure era)
 
 instance
   (Era era, Typeable (Script era)) =>
-  ToCBOR (ShelleyDelegPredFailure era)
+  EncCBOR (ShelleyDelegPredFailure era)
   where
-  toCBOR = \case
+  encCBOR = \case
     StakeKeyAlreadyRegisteredDELEG cred ->
-      encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR cred
+      encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR cred
     StakeKeyNotRegisteredDELEG cred ->
-      encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR cred
+      encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR cred
     StakeKeyNonZeroAccountBalanceDELEG rewardBalance ->
-      encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR rewardBalance
+      encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR rewardBalance
     StakeDelegationImpossibleDELEG cred ->
-      encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR cred
+      encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR cred
     WrongCertificateTypeDELEG ->
-      encodeListLen 1 <> toCBOR (4 :: Word8)
+      encodeListLen 1 <> encCBOR (4 :: Word8)
     GenesisKeyNotInMappingDELEG gkh ->
-      encodeListLen 2 <> toCBOR (5 :: Word8) <> toCBOR gkh
+      encodeListLen 2 <> encCBOR (5 :: Word8) <> encCBOR gkh
     DuplicateGenesisDelegateDELEG kh ->
-      encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR kh
+      encodeListLen 2 <> encCBOR (6 :: Word8) <> encCBOR kh
     InsufficientForInstantaneousRewardsDELEG pot needed potAmount ->
       encodeListLen 4
-        <> toCBOR (7 :: Word8)
-        <> toCBOR pot
-        <> toCBOR needed
-        <> toCBOR potAmount
+        <> encCBOR (7 :: Word8)
+        <> encCBOR pot
+        <> encCBOR needed
+        <> encCBOR potAmount
     MIRCertificateTooLateinEpochDELEG sNow sTooLate ->
-      encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR sNow <> toCBOR sTooLate
+      encodeListLen 3 <> encCBOR (8 :: Word8) <> encCBOR sNow <> encCBOR sTooLate
     DuplicateGenesisVRFDELEG vrf ->
-      encodeListLen 2 <> toCBOR (9 :: Word8) <> toCBOR vrf
+      encodeListLen 2 <> encCBOR (9 :: Word8) <> encCBOR vrf
     StakeKeyInRewardsDELEG cred ->
-      encodeListLen 2 <> toCBOR (10 :: Word8) <> toCBOR cred
+      encodeListLen 2 <> encCBOR (10 :: Word8) <> encCBOR cred
     MIRTransferNotCurrentlyAllowed ->
-      encodeListLen 1 <> toCBOR (11 :: Word8)
+      encodeListLen 1 <> encCBOR (11 :: Word8)
     MIRNegativesNotCurrentlyAllowed ->
-      encodeListLen 1 <> toCBOR (12 :: Word8)
+      encodeListLen 1 <> encCBOR (12 :: Word8)
     InsufficientForTransferDELEG pot needed available ->
       encodeListLen 4
-        <> toCBOR (13 :: Word8)
-        <> toCBOR pot
-        <> toCBOR needed
-        <> toCBOR available
+        <> encCBOR (13 :: Word8)
+        <> encCBOR pot
+        <> encCBOR needed
+        <> encCBOR available
     MIRProducesNegativeUpdate ->
-      encodeListLen 1 <> toCBOR (14 :: Word8)
+      encodeListLen 1 <> encCBOR (14 :: Word8)
     MIRNegativeTransfer pot amt ->
       encodeListLen 3
-        <> toCBOR (15 :: Word8)
-        <> toCBOR pot
-        <> toCBOR amt
+        <> encCBOR (15 :: Word8)
+        <> encCBOR pot
+        <> encCBOR amt
 
 instance
   (Era era, Typeable (Script era)) =>
-  FromCBOR (ShelleyDelegPredFailure era)
+  DecCBOR (ShelleyDelegPredFailure era)
   where
-  fromCBOR = decodeRecordSum "PredicateFailure (DELEG era)" $
+  decCBOR = decodeRecordSum "PredicateFailure (DELEG era)" $
     \case
       0 -> do
-        kh <- fromCBOR
+        kh <- decCBOR
         pure (2, StakeKeyAlreadyRegisteredDELEG kh)
       1 -> do
-        kh <- fromCBOR
+        kh <- decCBOR
         pure (2, StakeKeyNotRegisteredDELEG kh)
       2 -> do
-        b <- fromCBOR
+        b <- decCBOR
         pure (2, StakeKeyNonZeroAccountBalanceDELEG b)
       3 -> do
-        kh <- fromCBOR
+        kh <- decCBOR
         pure (2, StakeDelegationImpossibleDELEG kh)
       4 -> do
         pure (1, WrongCertificateTypeDELEG)
       5 -> do
-        gkh <- fromCBOR
+        gkh <- decCBOR
         pure (2, GenesisKeyNotInMappingDELEG gkh)
       6 -> do
-        kh <- fromCBOR
+        kh <- decCBOR
         pure (2, DuplicateGenesisDelegateDELEG kh)
       7 -> do
-        pot <- fromCBOR
-        needed <- fromCBOR
-        potAmount <- fromCBOR
+        pot <- decCBOR
+        needed <- decCBOR
+        potAmount <- decCBOR
         pure (4, InsufficientForInstantaneousRewardsDELEG pot needed potAmount)
       8 -> do
-        sNow <- fromCBOR
-        sTooLate <- fromCBOR
+        sNow <- decCBOR
+        sTooLate <- decCBOR
         pure (3, MIRCertificateTooLateinEpochDELEG sNow sTooLate)
       9 -> do
-        vrf <- fromCBOR
+        vrf <- decCBOR
         pure (2, DuplicateGenesisVRFDELEG vrf)
       10 -> do
-        kh <- fromCBOR
+        kh <- decCBOR
         pure (2, StakeKeyInRewardsDELEG kh)
       11 -> do
         pure (1, MIRTransferNotCurrentlyAllowed)
       12 -> do
         pure (1, MIRNegativesNotCurrentlyAllowed)
       13 -> do
-        pot <- fromCBOR
-        needed <- fromCBOR
-        available <- fromCBOR
+        pot <- decCBOR
+        needed <- decCBOR
+        available <- decCBOR
         pure (4, InsufficientForTransferDELEG pot needed available)
       14 -> do
         pure (1, MIRProducesNegativeUpdate)
       15 -> do
-        pot <- fromCBOR
-        amt <- fromCBOR
+        pot <- decCBOR
+        amt <- decCBOR
         pure (3, MIRNegativeTransfer pot amt)
       k -> invalidKey k
 

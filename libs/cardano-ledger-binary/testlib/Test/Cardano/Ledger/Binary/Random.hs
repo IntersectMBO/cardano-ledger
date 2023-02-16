@@ -12,7 +12,7 @@ where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashToBytesShort)
 import Cardano.Crypto.Hash.Short (Blake2bPrefix)
-import Cardano.Ledger.Binary (ToCBOR (toCBOR), hashWithEncoder, shelleyProtVer)
+import Cardano.Ledger.Binary (EncCBOR (encCBOR), hashWithEncoder, shelleyProtVer)
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.Coerce (coerce)
 import Data.Primitive.ByteArray (ByteArray (ByteArray), indexByteArray)
@@ -40,12 +40,12 @@ instance StatefulGen QC Gen where
 
 -- | It is possible to use a hash of a binary representation of any type as a source of
 -- randomness, since hash value by its definiteion is uniformly distributed.
-mkDummyHash :: forall h a b. (HashAlgorithm h, ToCBOR a) => a -> Hash h b
-mkDummyHash = coerce . hashWithEncoder @h shelleyProtVer toCBOR
+mkDummyHash :: forall h a b. (HashAlgorithm h, EncCBOR a) => a -> Hash h b
+mkDummyHash = coerce . hashWithEncoder @h shelleyProtVer encCBOR
 
 -- | Use a hash of the binary representation of a type as a seed to construct `StdGen`,
 -- that can be further used to generate random values.
-mkHashStdGen :: ToCBOR x => x -> StdGen
+mkHashStdGen :: EncCBOR x => x -> StdGen
 mkHashStdGen x =
   case hashToBytesShort $ mkDummyHash @(Blake2bPrefix 8) x of
     SBS ba -> mkStdGen (indexByteArray (ByteArray ba) 0)

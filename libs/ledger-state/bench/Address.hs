@@ -133,7 +133,7 @@ main = do
                 ]
             ]
         , bgroup
-            "fromCBOR-Addr"
+            "decCBOR-Addr"
             [ benchDecode
                 "StakeRefNull"
                 forcePaymentCred

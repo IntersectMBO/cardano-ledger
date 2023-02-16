@@ -55,7 +55,7 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (ToCBOR)
+import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto
@@ -484,7 +484,7 @@ sumCollateral tx (UTxO utxo) =
   where
     collateral_ = tx ^. bodyTxL . collateralInputsTxBodyL
 
-storageCost :: forall era t. (EraPParams era, ToCBOR t) => Integer -> PParams era -> t -> Coin
+storageCost :: forall era t. (EraPParams era, EncCBOR t) => Integer -> PParams era -> t -> Coin
 storageCost extra pp x = (extra + encodedLen @era x) <×> pp ^. ppMinFeeAL
 
 addRedeemMap ::

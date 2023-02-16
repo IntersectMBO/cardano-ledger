@@ -61,7 +61,7 @@ import Cardano.Ledger.BaseTypes (
   networkId,
   systemStart,
  )
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), serialize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -579,20 +579,20 @@ instance
 
 instance
   ( Era era
-  , ToCBOR (TxOut era)
-  , ToCBOR (Value era)
-  , ToCBOR (PredicateFailure (EraRule "UTXOS" era))
+  , EncCBOR (TxOut era)
+  , EncCBOR (Value era)
+  , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  ToCBOR (AlonzoUtxoPredFailure era)
+  EncCBOR (AlonzoUtxoPredFailure era)
   where
-  toCBOR x = encode (encFail x)
+  encCBOR x = encode (encFail x)
 
 encFail ::
   forall era.
   ( Era era
-  , ToCBOR (TxOut era)
-  , ToCBOR (Value era)
-  , ToCBOR (PredicateFailure (EraRule "UTXOS" era))
+  , EncCBOR (TxOut era)
+  , EncCBOR (Value era)
+  , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   AlonzoUtxoPredFailure era ->
   Encode 'Open (AlonzoUtxoPredFailure era)
@@ -641,9 +641,9 @@ encFail NoCollateralInputs =
 
 decFail ::
   ( Era era
-  , FromCBOR (TxOut era)
-  , FromCBOR (Value era)
-  , FromCBOR (PredicateFailure (EraRule "UTXOS" era))
+  , DecCBOR (TxOut era)
+  , DecCBOR (Value era)
+  , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   Word ->
   Decode 'Open (AlonzoUtxoPredFailure era)
@@ -662,11 +662,11 @@ decFail 11 = SumD TriesToForgeADA
 decFail 12 =
   let fromRestricted :: (Int, Int, TxOut era) -> (Integer, Integer, TxOut era)
       fromRestricted (sz, mv, txOut) = (toInteger sz, toInteger mv, txOut)
-   in SumD OutputTooBigUTxO <! D (map fromRestricted <$> fromCBOR)
+   in SumD OutputTooBigUTxO <! D (map fromRestricted <$> decCBOR)
 decFail 13 = SumD InsufficientCollateral <! From <! From
 decFail 14 =
   SumD ScriptsNotPaidUTxO
-    <! D (UTxO <$> fromCBOR)
+    <! D (UTxO <$> decCBOR)
 decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
 decFail 16 = SumD CollateralContainsNonADA <! From
 decFail 17 = SumD WrongNetworkInTxBody <! From <! From
@@ -677,13 +677,13 @@ decFail n = Invalid n
 
 instance
   ( Era era
-  , FromCBOR (TxOut era)
-  , FromCBOR (Value era)
-  , FromCBOR (PredicateFailure (EraRule "UTXOS" era))
+  , DecCBOR (TxOut era)
+  , DecCBOR (Value era)
+  , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  FromCBOR (AlonzoUtxoPredFailure era)
+  DecCBOR (AlonzoUtxoPredFailure era)
   where
-  fromCBOR = decode (Summands "UtxoPredicateFailure" decFail)
+  decCBOR = decode (Summands "UtxoPredicateFailure" decFail)
 
 -- =====================================================
 -- Injecting from one PredicateFailure to another

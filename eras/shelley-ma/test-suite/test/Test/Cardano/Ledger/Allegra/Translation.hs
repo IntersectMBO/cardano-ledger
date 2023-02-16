@@ -17,7 +17,7 @@ import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools (translateEraToCBOR)
+import Test.Cardano.Ledger.TranslationTools (translateEraEncCBOR)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)
@@ -53,11 +53,11 @@ allegraTranslationTests =
 
 testTranslation ::
   forall f.
-  ( ToCBOR (f Allegra)
-  , ToCBOR (f Shelley)
+  ( EncCBOR (f Allegra)
+  , EncCBOR (f Shelley)
   , TranslateEra Allegra f
   , Show (TranslationError Allegra f)
   ) =>
   f Shelley ->
   Assertion
-testTranslation = translateEraToCBOR ([] :: [Allegra]) ()
+testTranslation = translateEraEncCBOR ([] :: [Allegra]) ()

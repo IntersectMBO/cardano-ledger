@@ -126,9 +126,9 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   Sized (..),
-  ToCBOR (..),
   mkSized,
  )
 import Cardano.Ledger.Binary.Coders
@@ -206,7 +206,7 @@ deriving instance
   Show (BabbageTxBodyRaw era)
 
 newtype BabbageTxBody era = TxBodyConstr (MemoBytes BabbageTxBodyRaw era)
-  deriving (ToCBOR)
+  deriving (EncCBOR)
   deriving newtype (SafeToHash)
 
 instance Memoized BabbageTxBody where
@@ -470,14 +470,14 @@ deriving instance
 deriving via
   (Mem BabbageTxBodyRaw era)
   instance
-    (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
-    FromCBOR (Annotator (BabbageTxBody era))
+    (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+    DecCBOR (Annotator (BabbageTxBody era))
 
 instance
-  (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (Annotator (BabbageTxBodyRaw era))
+  (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+  DecCBOR (Annotator (BabbageTxBodyRaw era))
   where
-  fromCBOR = pure <$> fromCBOR
+  decCBOR = pure <$> decCBOR
 
 pattern BabbageTxBody ::
   BabbageEraTxBody era =>
@@ -642,10 +642,10 @@ txnetworkid' = btbrTxNetworkId . getMemoRawType
 --------------------------------------------------------------------------------
 
 instance
-  (Era era, ToCBOR (TxOut era), ToCBOR (PParamsUpdate era)) =>
-  ToCBOR (BabbageTxBodyRaw era)
+  (Era era, EncCBOR (TxOut era), EncCBOR (PParamsUpdate era)) =>
+  EncCBOR (BabbageTxBodyRaw era)
   where
-  toCBOR
+  encCBOR
     BabbageTxBodyRaw
       { btbrSpendInputs
       , btbrCollateralInputs
@@ -688,10 +688,10 @@ instance
           !> encodeKeyedStrictMaybe 15 btbrTxNetworkId
 
 instance
-  (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (BabbageTxBodyRaw era)
+  (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+  DecCBOR (BabbageTxBodyRaw era)
   where
-  fromCBOR =
+  decCBOR =
     decode $
       SparseKeyed
         "BabbageTxBodyRaw"

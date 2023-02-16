@@ -67,10 +67,10 @@ import Cardano.Crypto (
  )
 import Cardano.Ledger.Binary (
   Annotated (unAnnotated),
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
@@ -100,17 +100,17 @@ data ApplicationVersion = ApplicationVersion
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance FromCBOR ApplicationVersion where
-  fromCBOR = do
+instance DecCBOR ApplicationVersion where
+  decCBOR = do
     enforceSize "ApplicationVersion" 3
-    ApplicationVersion <$> fromCBOR <*> fromCBOR <*> fromCBOR
+    ApplicationVersion <$> decCBOR <*> decCBOR <*> decCBOR
 
-instance ToCBOR ApplicationVersion where
-  toCBOR av =
+instance EncCBOR ApplicationVersion where
+  encCBOR av =
     encodeListLen 3
-      <> toCBOR (avNumSoftwareVersion av)
-      <> toCBOR (avSlotNumber av)
-      <> toCBOR (avMetadata av)
+      <> encCBOR (avNumSoftwareVersion av)
+      <> encCBOR (avSlotNumber av)
+      <> encCBOR (avMetadata av)
 
 type ApplicationVersions = Map ApplicationName ApplicationVersion
 
@@ -130,16 +130,16 @@ data ProtocolUpdateProposal = ProtocolUpdateProposal
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance FromCBOR ProtocolUpdateProposal where
-  fromCBOR = do
+instance DecCBOR ProtocolUpdateProposal where
+  decCBOR = do
     enforceSize "ProtocolUpdateProposal" 2
-    ProtocolUpdateProposal <$> fromCBOR <*> fromCBOR
+    ProtocolUpdateProposal <$> decCBOR <*> decCBOR
 
-instance ToCBOR ProtocolUpdateProposal where
-  toCBOR pup =
+instance EncCBOR ProtocolUpdateProposal where
+  encCBOR pup =
     encodeListLen 2
-      <> toCBOR (pupProtocolVersion pup)
-      <> toCBOR (pupProtocolParameters pup)
+      <> encCBOR (pupProtocolVersion pup)
+      <> encCBOR (pupProtocolParameters pup)
 
 type ProtocolUpdateProposals = Map UpId ProtocolUpdateProposal
 
@@ -150,16 +150,16 @@ data SoftwareUpdateProposal = SoftwareUpdateProposal
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance FromCBOR SoftwareUpdateProposal where
-  fromCBOR = do
+instance DecCBOR SoftwareUpdateProposal where
+  decCBOR = do
     enforceSize "SoftwareUpdateProposal" 2
-    SoftwareUpdateProposal <$> fromCBOR <*> fromCBOR
+    SoftwareUpdateProposal <$> decCBOR <*> decCBOR
 
-instance ToCBOR SoftwareUpdateProposal where
-  toCBOR sup =
+instance EncCBOR SoftwareUpdateProposal where
+  encCBOR sup =
     encodeListLen 2
-      <> toCBOR (supSoftwareVersion sup)
-      <> toCBOR (supSoftwareMetadata sup)
+      <> encCBOR (supSoftwareVersion sup)
+      <> encCBOR (supSoftwareMetadata sup)
 
 type SoftwareUpdateProposals = Map UpId SoftwareUpdateProposal
 
@@ -183,85 +183,85 @@ data Error
     NullUpdateProposal
   deriving (Eq, Show)
 
-instance ToCBOR Error where
-  toCBOR err = case err of
+instance EncCBOR Error where
+  encCBOR err = case err of
     DuplicateProtocolVersion protocolVersion ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR protocolVersion
+        <> encCBOR (0 :: Word8)
+        <> encCBOR protocolVersion
     DuplicateSoftwareVersion softwareVersion ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR softwareVersion
+        <> encCBOR (1 :: Word8)
+        <> encCBOR softwareVersion
     InvalidProposer keyHash ->
       encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR keyHash
+        <> encCBOR (2 :: Word8)
+        <> encCBOR keyHash
     InvalidProtocolVersion protocolVersion adopted ->
       encodeListLen 3
-        <> toCBOR (3 :: Word8)
-        <> toCBOR protocolVersion
-        <> toCBOR adopted
+        <> encCBOR (3 :: Word8)
+        <> encCBOR protocolVersion
+        <> encCBOR adopted
     InvalidScriptVersion adoptedScriptVersion newScriptVersion ->
       encodeListLen 3
-        <> toCBOR (4 :: Word8)
-        <> toCBOR adoptedScriptVersion
-        <> toCBOR newScriptVersion
+        <> encCBOR (4 :: Word8)
+        <> encCBOR adoptedScriptVersion
+        <> encCBOR newScriptVersion
     InvalidSignature ->
       encodeListLen 1
-        <> toCBOR (5 :: Word8)
+        <> encCBOR (5 :: Word8)
     InvalidSoftwareVersion applicationVersions softwareVersion ->
       encodeListLen 3
-        <> toCBOR (6 :: Word8)
-        <> toCBOR applicationVersions
-        <> toCBOR softwareVersion
+        <> encCBOR (6 :: Word8)
+        <> encCBOR applicationVersions
+        <> encCBOR softwareVersion
     MaxBlockSizeTooLarge tooLarge ->
       encodeListLen 2
-        <> toCBOR (7 :: Word8)
-        <> toCBOR tooLarge
+        <> encCBOR (7 :: Word8)
+        <> encCBOR tooLarge
     MaxTxSizeTooLarge tooLarge ->
       encodeListLen 2
-        <> toCBOR (8 :: Word8)
-        <> toCBOR tooLarge
+        <> encCBOR (8 :: Word8)
+        <> encCBOR tooLarge
     ProposalAttributesUnknown ->
       encodeListLen 1
-        <> toCBOR (9 :: Word8)
+        <> encCBOR (9 :: Word8)
     ProposalTooLarge tooLarge ->
       encodeListLen 2
-        <> toCBOR (10 :: Word8)
-        <> toCBOR tooLarge
+        <> encCBOR (10 :: Word8)
+        <> encCBOR tooLarge
     SoftwareVersionError softwareVersionError ->
       encodeListLen 2
-        <> toCBOR (11 :: Word8)
-        <> toCBOR softwareVersionError
+        <> encCBOR (11 :: Word8)
+        <> encCBOR softwareVersionError
     SystemTagError systemTagError ->
       encodeListLen 2
-        <> toCBOR (12 :: Word8)
-        <> toCBOR systemTagError
+        <> encCBOR (12 :: Word8)
+        <> encCBOR systemTagError
     NullUpdateProposal ->
       encodeListLen 1
-        <> toCBOR (13 :: Word8)
+        <> encCBOR (13 :: Word8)
 
-instance FromCBOR Error where
-  fromCBOR = do
+instance DecCBOR Error where
+  decCBOR = do
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "Registration.Error" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 2 >> DuplicateProtocolVersion <$> fromCBOR
-      1 -> checkSize 2 >> DuplicateSoftwareVersion <$> fromCBOR
-      2 -> checkSize 2 >> InvalidProposer <$> fromCBOR
-      3 -> checkSize 3 >> InvalidProtocolVersion <$> fromCBOR <*> fromCBOR
-      4 -> checkSize 3 >> InvalidScriptVersion <$> fromCBOR <*> fromCBOR
+      0 -> checkSize 2 >> DuplicateProtocolVersion <$> decCBOR
+      1 -> checkSize 2 >> DuplicateSoftwareVersion <$> decCBOR
+      2 -> checkSize 2 >> InvalidProposer <$> decCBOR
+      3 -> checkSize 3 >> InvalidProtocolVersion <$> decCBOR <*> decCBOR
+      4 -> checkSize 3 >> InvalidScriptVersion <$> decCBOR <*> decCBOR
       5 -> checkSize 1 >> pure InvalidSignature
-      6 -> checkSize 3 >> InvalidSoftwareVersion <$> fromCBOR <*> fromCBOR
-      7 -> checkSize 2 >> MaxBlockSizeTooLarge <$> fromCBOR
-      8 -> checkSize 2 >> MaxTxSizeTooLarge <$> fromCBOR
+      6 -> checkSize 3 >> InvalidSoftwareVersion <$> decCBOR <*> decCBOR
+      7 -> checkSize 2 >> MaxBlockSizeTooLarge <$> decCBOR
+      8 -> checkSize 2 >> MaxTxSizeTooLarge <$> decCBOR
       9 -> checkSize 1 >> pure ProposalAttributesUnknown
-      10 -> checkSize 2 >> ProposalTooLarge <$> fromCBOR
-      11 -> checkSize 2 >> SoftwareVersionError <$> fromCBOR
-      12 -> checkSize 2 >> SystemTagError <$> fromCBOR
+      10 -> checkSize 2 >> ProposalTooLarge <$> decCBOR
+      11 -> checkSize 2 >> SoftwareVersionError <$> decCBOR
+      12 -> checkSize 2 >> SystemTagError <$> decCBOR
       13 -> checkSize 1 >> pure NullUpdateProposal
       _ -> cborError $ DecoderErrorUnknownTag "Registration.Error" tag
 
@@ -271,20 +271,20 @@ data TooLarge n = TooLarge
   }
   deriving (Eq, Show)
 
-instance (ToCBOR n) => ToCBOR (TooLarge n) where
-  toCBOR TooLarge {tlActual, tlMaxBound} =
+instance (EncCBOR n) => EncCBOR (TooLarge n) where
+  encCBOR TooLarge {tlActual, tlMaxBound} =
     encodeListLen 2
-      <> toCBOR tlActual
-      <> toCBOR tlMaxBound
+      <> encCBOR tlActual
+      <> encCBOR tlMaxBound
 
-instance (FromCBOR n) => FromCBOR (TooLarge n) where
-  fromCBOR = do
+instance (DecCBOR n) => DecCBOR (TooLarge n) where
+  decCBOR = do
     enforceSize "TooLarge" 2
-    TooLarge <$> fromCBOR <*> fromCBOR
+    TooLarge <$> decCBOR <*> decCBOR
 
 newtype Adopted = Adopted ProtocolVersion
   deriving (Eq, Show)
-  deriving newtype (ToCBOR, FromCBOR)
+  deriving newtype (EncCBOR, DecCBOR)
 
 -- | Register an update proposal after verifying its signature and validating
 --   its contents. This corresponds to the @UPREG@ rules in the spec.

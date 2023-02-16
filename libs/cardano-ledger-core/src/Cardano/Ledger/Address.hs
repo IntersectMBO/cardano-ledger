@@ -73,9 +73,9 @@ import Cardano.Ledger.BaseTypes (
   networkToWord8,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   decodeFull',
   ifDecoderVersionAtLeast,
   serialize,
@@ -320,17 +320,17 @@ word64ToWord7s = reverse . go
 putVariableLengthWord64 :: Word64 -> Put
 putVariableLengthWord64 = putWord7s . word64ToWord7s
 
-instance Crypto c => ToCBOR (Addr c) where
-  toCBOR = toCBOR . B.runPut . putAddr
+instance Crypto c => EncCBOR (Addr c) where
+  encCBOR = encCBOR . B.runPut . putAddr
 
-instance Crypto c => FromCBOR (Addr c) where
-  fromCBOR = fromCborAddr
+instance Crypto c => DecCBOR (Addr c) where
+  decCBOR = fromCborAddr
 
-instance Crypto c => ToCBOR (RewardAcnt c) where
-  toCBOR = toCBOR . B.runPut . putRewardAcnt
+instance Crypto c => EncCBOR (RewardAcnt c) where
+  encCBOR = encCBOR . B.runPut . putRewardAcnt
 
-instance Crypto c => FromCBOR (RewardAcnt c) where
-  fromCBOR = fromCborRewardAcnt
+instance Crypto c => DecCBOR (RewardAcnt c) where
+  decCBOR = fromCborRewardAcnt
 
 newtype BootstrapAddress c = BootstrapAddress
   { unBootstrapAddress :: Byron.Address
@@ -414,7 +414,7 @@ fromCborCompactAddr = snd <$> fromCborBothAddr
 -- that it was encoded as.
 fromCborBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
 fromCborBothAddr = do
-  sbs <- fromCBOR
+  sbs <- decCBOR
   case decodeAddrShortEither sbs of
     Right addr -> pure (addr, UnsafeCompactAddr sbs)
     Left err ->
@@ -812,7 +812,7 @@ decodeRewardAcnt buf = evalStateT (decodeRewardAccountT buf) 0
 
 fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
 fromCborRewardAcnt = do
-  sbs :: ShortByteString <- fromCBOR
+  sbs :: ShortByteString <- decCBOR
   decodeRewardAcnt @c sbs
 {-# INLINE fromCborRewardAcnt #-}
 
@@ -859,13 +859,13 @@ decodeRewardAccountT buf = do
   pure $! RewardAcnt (headerNetworkId header) account
 {-# INLINE decodeRewardAccountT #-}
 
-instance Crypto c => ToCBOR (CompactAddr c) where
-  toCBOR (UnsafeCompactAddr bytes) = toCBOR bytes
-  {-# INLINE toCBOR #-}
+instance Crypto c => EncCBOR (CompactAddr c) where
+  encCBOR (UnsafeCompactAddr bytes) = encCBOR bytes
+  {-# INLINE encCBOR #-}
 
-instance Crypto c => FromCBOR (CompactAddr c) where
-  fromCBOR = fromCborCompactAddr
-  {-# INLINE fromCBOR #-}
+instance Crypto c => DecCBOR (CompactAddr c) where
+  decCBOR = fromCborCompactAddr
+  {-# INLINE decCBOR #-}
 
 -- | Efficiently check whether compated adddress is an address with a credential
 -- that is a payment script.
@@ -884,4 +884,4 @@ fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 -- | This is called @wdrl@ in the spec.
 newtype Withdrawals c = Withdrawals {unWithdrawals :: Map (RewardAcnt c) Coin}
   deriving (Show, Eq, Generic)
-  deriving newtype (NoThunks, NFData, ToCBOR, FromCBOR)
+  deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)

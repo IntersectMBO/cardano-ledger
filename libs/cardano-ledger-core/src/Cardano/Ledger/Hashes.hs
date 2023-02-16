@@ -29,7 +29,7 @@ module Cardano.Ledger.Hashes (
 where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -77,9 +77,9 @@ newtype ScriptHash c
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance CC.Crypto c => ToCBOR (ScriptHash c)
+deriving newtype instance CC.Crypto c => EncCBOR (ScriptHash c)
 
-deriving newtype instance CC.Crypto c => FromCBOR (ScriptHash c)
+deriving newtype instance CC.Crypto c => DecCBOR (ScriptHash c)
 
 deriving newtype instance CC.Crypto c => ToJSON (ScriptHash c)
 

@@ -55,8 +55,8 @@ import Cardano.Ledger.BaseTypes (
   epochInfoPure,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeDouble,
   decodeFull,
   decodeFullDecoder,
@@ -528,8 +528,8 @@ addShelleyKeyWitnesses = addKeyWitnesses
 -- CBOR instances
 --------------------------------------------------------------------------------
 
-instance ToCBOR RewardParams where
-  toCBOR (RewardParams p1 p2 p3 p4) =
+instance EncCBOR RewardParams where
+  encCBOR (RewardParams p1 p2 p3 p4) =
     encode $
       Rec RewardParams
         !> To p1
@@ -537,8 +537,8 @@ instance ToCBOR RewardParams where
         !> To p3
         !> To p4
 
-instance FromCBOR RewardParams where
-  fromCBOR =
+instance DecCBOR RewardParams where
+  decCBOR =
     decode $
       RecD RewardParams
         <! From
@@ -546,8 +546,8 @@ instance FromCBOR RewardParams where
         <! From
         <! From
 
-instance ToCBOR RewardInfoPool where
-  toCBOR (RewardInfoPool p1 p2 p3 p4 p5 d6) =
+instance EncCBOR RewardInfoPool where
+  encCBOR (RewardInfoPool p1 p2 p3 p4 p5 d6) =
     encode $
       Rec RewardInfoPool
         !> To p1
@@ -557,8 +557,8 @@ instance ToCBOR RewardInfoPool where
         !> To p5
         !> E encodeDouble d6
 
-instance FromCBOR RewardInfoPool where
-  fromCBOR =
+instance DecCBOR RewardInfoPool where
+  decCBOR =
     decode $
       RecD RewardInfoPool
         <! From

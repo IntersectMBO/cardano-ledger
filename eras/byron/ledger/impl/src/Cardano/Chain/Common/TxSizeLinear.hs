@@ -22,10 +22,10 @@ import Cardano.Chain.Common.Lovelace (
   unsafeGetLovelace,
  )
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   encodeListLen,
   enforceSize,
   toCborError,
@@ -51,18 +51,18 @@ instance B.Buildable TxSizeLinear where
 -- Used for debugging purposes only
 instance ToJSON TxSizeLinear
 
-instance ToCBOR TxSizeLinear where
+instance EncCBOR TxSizeLinear where
   -- We encode as 'Nano' for backwards compatibility
-  toCBOR (TxSizeLinear a b) =
+  encCBOR (TxSizeLinear a b) =
     encodeListLen 2
-      <> toCBOR (fromIntegral (unsafeGetLovelace a) :: Nano)
-      <> toCBOR (fromRational b :: Nano)
+      <> encCBOR (fromIntegral (unsafeGetLovelace a) :: Nano)
+      <> encCBOR (fromRational b :: Nano)
 
-instance FromCBOR TxSizeLinear where
-  fromCBOR = do
+instance DecCBOR TxSizeLinear where
+  decCBOR = do
     enforceSize "TxSizeLinear" 2
-    !a <- wrapLovelaceError . mkLovelace . round =<< fromCBOR @Nano
-    !b <- toRational <$> fromCBOR @Nano
+    !a <- wrapLovelaceError . mkLovelace . round =<< decCBOR @Nano
+    !b <- toRational <$> decCBOR @Nano
     return $ TxSizeLinear a b
     where
       wrapLovelaceError :: Either LovelaceError Lovelace -> Decoder s Lovelace

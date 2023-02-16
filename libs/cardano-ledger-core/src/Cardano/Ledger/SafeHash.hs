@@ -11,7 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | In cardano-ledger, hashing a type @X@ is based upon the serialization of @X@. Serialization is
---   based upon the 'ToCBOR' and FromCBOR type classes, and the values produced by 'ToCBOR' instances for a
+--   based upon the 'EncCBOR' and DecCBOR type classes, and the values produced by 'EncCBOR' instances for a
 --   particular type, are not necessarily unique. For this reason, when an @X@ object comes
 --   over the network in serialized form, we must preserve the original bytes that arrived over
 --   the network, otherwise when the system hashes that object, the hash in the ledger, and the hash of
@@ -60,7 +60,7 @@ where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
@@ -92,9 +92,9 @@ deriving newtype instance
 
 deriving newtype instance HeapWords (SafeHash c i)
 
-deriving instance (Typeable index, CC.Crypto c) => ToCBOR (SafeHash c index)
+deriving instance (Typeable index, CC.Crypto c) => EncCBOR (SafeHash c index)
 
-deriving instance (Typeable index, CC.Crypto c) => FromCBOR (SafeHash c index)
+deriving instance (Typeable index, CC.Crypto c) => DecCBOR (SafeHash c index)
 
 {-# DEPRECATED HasAlgorithm "Use `Hash.HashAlgorithm (CC.HASH c)` instead" #-}
 

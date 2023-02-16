@@ -90,68 +90,68 @@ genTestStruct =
     <*> (BS.Short.toShort <$> Gen.bytes (Range.linear 0 20))
     <*> arbitrary
 
-instance ToCBOR TestStruct where
-  toCBOR ts =
+instance EncCBOR TestStruct where
+  encCBOR ts =
     encodeListLen 1
-      <> toCBOR (tsUnit ts)
-      <> toCBOR (tsBool ts)
-      <> toCBOR (tsInteger ts)
-      <> toCBOR (tsWord ts)
-      <> toCBOR (tsWord8 ts)
-      <> toCBOR (tsWord16 ts)
-      <> toCBOR (tsWord32 ts)
-      <> toCBOR (tsWord64 ts)
-      <> toCBOR (tsInt ts)
-      <> toCBOR (tsFloat ts)
-      <> toCBOR (tsInt32 ts)
-      <> toCBOR (tsInt64 ts)
-      <> toCBOR (tsTupleBoolBool ts)
-      <> toCBOR (tsTupleBoolBoolBool ts)
-      <> toCBOR (tsTupleBoolBoolBoolBool ts)
-      <> toCBOR (tsByteString ts)
-      <> toCBOR (tsText ts)
-      <> toCBOR (tsListBool ts)
-      <> toCBOR (tsEitherBoolBool ts)
-      <> toCBOR (tsNonEmptyBool ts)
-      <> toCBOR (tsMaybeBool ts)
-      <> toCBOR (tsMapBoolBool ts)
-      <> toCBOR (tsSetBool ts)
-      <> toCBOR (tsVectorBool ts)
-      <> toCBOR (tsLByteString ts)
-      <> toCBOR (tsSByteString ts)
-      <> toCBOR (tsUTCTime ts)
+      <> encCBOR (tsUnit ts)
+      <> encCBOR (tsBool ts)
+      <> encCBOR (tsInteger ts)
+      <> encCBOR (tsWord ts)
+      <> encCBOR (tsWord8 ts)
+      <> encCBOR (tsWord16 ts)
+      <> encCBOR (tsWord32 ts)
+      <> encCBOR (tsWord64 ts)
+      <> encCBOR (tsInt ts)
+      <> encCBOR (tsFloat ts)
+      <> encCBOR (tsInt32 ts)
+      <> encCBOR (tsInt64 ts)
+      <> encCBOR (tsTupleBoolBool ts)
+      <> encCBOR (tsTupleBoolBoolBool ts)
+      <> encCBOR (tsTupleBoolBoolBoolBool ts)
+      <> encCBOR (tsByteString ts)
+      <> encCBOR (tsText ts)
+      <> encCBOR (tsListBool ts)
+      <> encCBOR (tsEitherBoolBool ts)
+      <> encCBOR (tsNonEmptyBool ts)
+      <> encCBOR (tsMaybeBool ts)
+      <> encCBOR (tsMapBoolBool ts)
+      <> encCBOR (tsSetBool ts)
+      <> encCBOR (tsVectorBool ts)
+      <> encCBOR (tsLByteString ts)
+      <> encCBOR (tsSByteString ts)
+      <> encCBOR (tsUTCTime ts)
 
-instance FromCBOR TestStruct where
-  fromCBOR = do
+instance DecCBOR TestStruct where
+  decCBOR = do
     decodeListLenOf 1
     TestStruct
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
 prop_roundTripSerialize' :: Property
 prop_roundTripSerialize' = property $ do

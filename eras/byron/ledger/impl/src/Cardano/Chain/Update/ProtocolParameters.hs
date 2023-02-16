@@ -22,7 +22,7 @@ import Cardano.Chain.Common (
  )
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber (..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
@@ -151,42 +151,42 @@ instance MonadError SchemaError m => FromJSON m ProtocolParameters where
       <*> fromJSField obj "txFeePolicy"
       <*> fromJSField obj "unlockStakeEpoch"
 
-instance ToCBOR ProtocolParameters where
-  toCBOR pp =
+instance EncCBOR ProtocolParameters where
+  encCBOR pp =
     encodeListLen 14
-      <> toCBOR (ppScriptVersion pp)
-      <> toCBOR (ppSlotDuration pp)
-      <> toCBOR (ppMaxBlockSize pp)
-      <> toCBOR (ppMaxHeaderSize pp)
-      <> toCBOR (ppMaxTxSize pp)
-      <> toCBOR (ppMaxProposalSize pp)
-      <> toCBOR (ppMpcThd pp)
-      <> toCBOR (ppHeavyDelThd pp)
-      <> toCBOR (ppUpdateVoteThd pp)
-      <> toCBOR (ppUpdateProposalThd pp)
-      <> toCBOR (ppUpdateProposalTTL pp)
-      <> toCBOR (ppSoftforkRule pp)
-      <> toCBOR (ppTxFeePolicy pp)
-      <> toCBOR (ppUnlockStakeEpoch pp)
+      <> encCBOR (ppScriptVersion pp)
+      <> encCBOR (ppSlotDuration pp)
+      <> encCBOR (ppMaxBlockSize pp)
+      <> encCBOR (ppMaxHeaderSize pp)
+      <> encCBOR (ppMaxTxSize pp)
+      <> encCBOR (ppMaxProposalSize pp)
+      <> encCBOR (ppMpcThd pp)
+      <> encCBOR (ppHeavyDelThd pp)
+      <> encCBOR (ppUpdateVoteThd pp)
+      <> encCBOR (ppUpdateProposalThd pp)
+      <> encCBOR (ppUpdateProposalTTL pp)
+      <> encCBOR (ppSoftforkRule pp)
+      <> encCBOR (ppTxFeePolicy pp)
+      <> encCBOR (ppUnlockStakeEpoch pp)
 
-instance FromCBOR ProtocolParameters where
-  fromCBOR = do
+instance DecCBOR ProtocolParameters where
+  decCBOR = do
     enforceSize "ProtocolParameters" 14
     ProtocolParameters
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
 -- | Version of 'isBootstrapEra' which takes 'ProtocolParameters' instead of
 --   unlock stake epoch

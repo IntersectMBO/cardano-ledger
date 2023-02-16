@@ -34,10 +34,10 @@ import Cardano.Crypto (
  )
 import Cardano.Ledger.Binary (
   Annotated,
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
@@ -81,35 +81,35 @@ data Error
   | VotingVoteAlreadyCast KeyHash
   deriving (Eq, Show)
 
-instance ToCBOR Error where
-  toCBOR err = case err of
+instance EncCBOR Error where
+  encCBOR err = case err of
     VotingInvalidSignature ->
       encodeListLen 1
-        <> toCBOR (0 :: Word8)
+        <> encCBOR (0 :: Word8)
     VotingProposalNotRegistered upId ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR upId
+        <> encCBOR (1 :: Word8)
+        <> encCBOR upId
     VotingVoterNotDelegate keyHash ->
       encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR keyHash
+        <> encCBOR (2 :: Word8)
+        <> encCBOR keyHash
     VotingVoteAlreadyCast keyHash ->
       encodeListLen 2
-        <> toCBOR (3 :: Word8)
-        <> toCBOR keyHash
+        <> encCBOR (3 :: Word8)
+        <> encCBOR keyHash
 
-instance FromCBOR Error where
-  fromCBOR = do
+instance DecCBOR Error where
+  decCBOR = do
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "Voting.Error" size len
     tag <- decodeWord8
     case tag of
       0 -> checkSize 1 >> pure VotingInvalidSignature
-      1 -> checkSize 2 >> VotingProposalNotRegistered <$> fromCBOR
-      2 -> checkSize 2 >> VotingVoterNotDelegate <$> fromCBOR
-      3 -> checkSize 2 >> VotingVoteAlreadyCast <$> fromCBOR
+      1 -> checkSize 2 >> VotingProposalNotRegistered <$> decCBOR
+      2 -> checkSize 2 >> VotingVoterNotDelegate <$> decCBOR
+      3 -> checkSize 2 >> VotingVoteAlreadyCast <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "Voting.Error" tag
 
 -- | Register a vote and confirm the corresponding proposal if it passes the

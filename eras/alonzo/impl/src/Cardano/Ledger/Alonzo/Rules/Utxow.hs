@@ -60,7 +60,7 @@ import Cardano.Ledger.BaseTypes (
   quorum,
   strictMaybeToMaybe,
  )
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
@@ -165,26 +165,26 @@ instance
 
 instance
   ( Era era
-  , ToCBOR (PredicateFailure (EraRule "UTXO" era))
+  , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (TxAuxData era)
-  , ToCBOR (Script era)
+  , EncCBOR (Script era)
   ) =>
-  ToCBOR (AlonzoUtxowPredFailure era)
+  EncCBOR (AlonzoUtxowPredFailure era)
   where
-  toCBOR x = encode (encodePredFail x)
+  encCBOR x = encode (encodePredFail x)
 
 newtype AlonzoUtxowEvent era
   = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
 
 encodePredFail ::
   ( Era era
-  , ToCBOR (PredicateFailure (EraRule "UTXO" era))
+  , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   AlonzoUtxowPredFailure era ->
   Encode 'Open (AlonzoUtxowPredFailure era)
-encodePredFail (ShelleyInAlonzoUtxowPredFailure x) = Sum ShelleyInAlonzoUtxowPredFailure 0 !> E toCBOR x
+encodePredFail (ShelleyInAlonzoUtxowPredFailure x) = Sum ShelleyInAlonzoUtxowPredFailure 0 !> E encCBOR x
 encodePredFail (MissingRedeemers x) = Sum MissingRedeemers 1 !> To x
 encodePredFail (MissingRequiredDatums x y) = Sum MissingRequiredDatums 2 !> To x !> To y
 encodePredFail (NonOutputSupplimentaryDatums x y) = Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
@@ -195,23 +195,23 @@ encodePredFail (ExtraRedeemers x) = Sum ExtraRedeemers 7 !> To x
 
 instance
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "UTXO" era))
+  , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
-  FromCBOR (AlonzoUtxowPredFailure era)
+  DecCBOR (AlonzoUtxowPredFailure era)
   where
-  fromCBOR = decode (Summands "(UtxowPredicateFail" decodePredFail)
+  decCBOR = decode (Summands "(UtxowPredicateFail" decodePredFail)
 
 decodePredFail ::
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "UTXO" era))
+  , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   Word ->
   Decode 'Open (AlonzoUtxowPredFailure era)
-decodePredFail 0 = SumD ShelleyInAlonzoUtxowPredFailure <! D fromCBOR
+decodePredFail 0 = SumD ShelleyInAlonzoUtxowPredFailure <! D decCBOR
 decodePredFail 1 = SumD MissingRedeemers <! From
 decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
 decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From

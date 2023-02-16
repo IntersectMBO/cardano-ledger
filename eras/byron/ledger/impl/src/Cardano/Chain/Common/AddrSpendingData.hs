@@ -16,9 +16,9 @@ import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
 import Cardano.HeapWords
 import Cardano.Ledger.Binary (
   Case (..),
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLenCanonical,
   decodeWord8Canonical,
@@ -50,11 +50,11 @@ instance B.Buildable AddrSpendingData where
     RedeemASD rvk -> bprint ("RedeemASD " . build) rvk
 
 -- Tag 1 was previously used for scripts, but never appeared on the chain
-instance ToCBOR AddrSpendingData where
-  toCBOR = \case
-    VerKeyASD vk -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR vk
+instance EncCBOR AddrSpendingData where
+  encCBOR = \case
+    VerKeyASD vk -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR vk
     RedeemASD redeemVK ->
-      encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR redeemVK
+      encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR redeemVK
 
   encodedSizeExpr size _ =
     szCases
@@ -62,13 +62,13 @@ instance ToCBOR AddrSpendingData where
       , Case "RedeemASD" $ size $ Proxy @(Word8, RedeemVerificationKey)
       ]
 
-instance FromCBOR AddrSpendingData where
-  fromCBOR = do
+instance DecCBOR AddrSpendingData where
+  decCBOR = do
     len <- decodeListLenCanonical
     matchSize "AddrSpendingData" 2 len
     decodeWord8Canonical >>= \case
-      0 -> VerKeyASD <$> fromCBOR
-      2 -> RedeemASD <$> fromCBOR
+      0 -> VerKeyASD <$> decCBOR
+      2 -> RedeemASD <$> decCBOR
       tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" tag
 
 -- | Type of an address. It corresponds to constructors of 'AddrSpendingData'.
@@ -84,16 +84,16 @@ data AddrType
 instance ToJSON AddrType
 
 -- Tag 1 was previously used for scripts, but never appeared on the chain
-instance ToCBOR AddrType where
-  toCBOR =
-    toCBOR @Word8 . \case
+instance EncCBOR AddrType where
+  encCBOR =
+    encCBOR @Word8 . \case
       ATVerKey -> 0
       ATRedeem -> 2
 
   encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
 
-instance FromCBOR AddrType where
-  fromCBOR =
+instance DecCBOR AddrType where
+  decCBOR =
     decodeWord8Canonical >>= \case
       0 -> pure ATVerKey
       2 -> pure ATRedeem

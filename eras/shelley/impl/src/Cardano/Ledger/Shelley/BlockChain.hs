@@ -40,10 +40,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
+  DecCBOR (decCBOR),
   Decoder,
-  FromCBOR (fromCBOR),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodePreEncoded,
@@ -144,7 +144,7 @@ pattern ShelleyTxSeq xs <-
               encodeFoldableEncoder encodePreEncoded x
           metaChunk index m = encodePair <$> strictMaybeToMaybe m
             where
-              encodePair metadata = toCBOR index <> encodePreEncoded metadata
+              encodePair metadata = encCBOR index <> encodePreEncoded metadata
        in TxSeq'
             { txSeqTxns' = txns
             , -- bytes encoding Seq(TxBody era)
@@ -165,9 +165,9 @@ txSeqTxns (TxSeq' ts _ _ _) = ts
 instance
   forall era.
   (Era era) =>
-  ToCBORGroup (ShelleyTxSeq era)
+  EncCBORGroup (ShelleyTxSeq era)
   where
-  toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
+  encCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes
@@ -206,7 +206,7 @@ constructMetadata ::
   Seq (Maybe (Annotator (TxAuxData era)))
 constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n - 1])
 
--- | The parts of the Tx in Blocks that have to have FromCBOR(Annotator x) instances.
+-- | The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
 --   These are exactly the parts that are SafeToHash.
 -- | Decode a TxSeq, used in decoding a Block.
 txSeqDecoder ::
@@ -216,14 +216,14 @@ txSeqDecoder ::
   forall s.
   Decoder s (Annotator (ShelleyTxSeq era))
 txSeqDecoder lax = do
-  (bodies, bodiesAnn) <- withSlice fromCBOR
-  (wits, witsAnn) <- withSlice fromCBOR
+  (bodies, bodiesAnn) <- withSlice decCBOR
+  (wits, witsAnn) <- withSlice decCBOR
   let b = length bodies
       inRange x = (0 <= x) && (x <= (b - 1))
       w = length wits
   (metadata, metadataAnn) <- withSlice $
     do
-      m <- fromCBOR
+      m <- decCBOR
       unless -- TODO this PR introduces this new test, That didn't used to run in the Shelley
         (lax || all inRange (Map.keysSet m)) -- Era,  Is it possible there might be some blocks, that should have been caught on the chain?
         (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b - 1)))
@@ -245,11 +245,11 @@ txSeqDecoder lax = do
             Seq.zipWith3 segwitTx bodies wits metadata
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
-instance EraTx era => FromCBOR (Annotator (ShelleyTxSeq era)) where
-  fromCBOR = txSeqDecoder False
+instance EraTx era => DecCBOR (Annotator (ShelleyTxSeq era)) where
+  decCBOR = txSeqDecoder False
 
 bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
-bBodySize (ProtVer v _) = BS.length . serializeEncoding' v . toCBORGroup
+bBodySize (ProtVer v _) = BS.length . serializeEncoding' v . encCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s

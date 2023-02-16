@@ -28,8 +28,8 @@ class
   , Show (GovernanceState era)
   , NoThunks (GovernanceState era)
   , NFData (GovernanceState era)
-  , ToCBOR (GovernanceState era)
-  , FromCBOR (GovernanceState era)
+  , EncCBOR (GovernanceState era)
+  , DecCBOR (GovernanceState era)
   , Default (GovernanceState era)
   ) =>
   EraGovernance era
@@ -63,15 +63,15 @@ instance NFData (PParamsUpdate era) => NFData (ShelleyPPUPState era)
 
 instance NoThunks (PParamsUpdate era) => NoThunks (ShelleyPPUPState era)
 
-instance (Era era, ToCBOR (PParamsUpdate era)) => ToCBOR (ShelleyPPUPState era) where
-  toCBOR (ShelleyPPUPState ppup fppup) =
-    encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
+instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (ShelleyPPUPState era) where
+  encCBOR (ShelleyPPUPState ppup fppup) =
+    encodeListLen 2 <> encCBOR ppup <> encCBOR fppup
 
 instance
-  (Era era, FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (ShelleyPPUPState era)
+  (Era era, DecCBOR (PParamsUpdate era)) =>
+  DecCBOR (ShelleyPPUPState era)
   where
-  fromCBOR =
+  decCBOR =
     decode $
       RecD ShelleyPPUPState
         <! From

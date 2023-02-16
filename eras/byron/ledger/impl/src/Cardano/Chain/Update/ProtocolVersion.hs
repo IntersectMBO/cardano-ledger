@@ -8,7 +8,7 @@ module Cardano.Chain.Update.ProtocolVersion (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, shown)
@@ -35,12 +35,12 @@ instance Buildable ProtocolVersion where
 -- Used for debugging purposes only
 instance ToJSON ProtocolVersion
 
-instance ToCBOR ProtocolVersion where
-  toCBOR pv =
+instance EncCBOR ProtocolVersion where
+  encCBOR pv =
     encodeListLen 3
-      <> toCBOR (pvMajor pv)
-      <> toCBOR (pvMinor pv)
-      <> toCBOR
+      <> encCBOR (pvMajor pv)
+      <> encCBOR (pvMinor pv)
+      <> encCBOR
         (pvAlt pv)
 
   encodedSizeExpr f pv =
@@ -49,7 +49,7 @@ instance ToCBOR ProtocolVersion where
       + encodedSizeExpr f (pvMinor <$> pv)
       + encodedSizeExpr f (pvAlt <$> pv)
 
-instance FromCBOR ProtocolVersion where
-  fromCBOR = do
+instance DecCBOR ProtocolVersion where
+  decCBOR = do
     enforceSize "ProtocolVersion" 3
-    ProtocolVersion <$> fromCBOR <*> fromCBOR <*> fromCBOR
+    ProtocolVersion <$> decCBOR <*> decCBOR <*> decCBOR

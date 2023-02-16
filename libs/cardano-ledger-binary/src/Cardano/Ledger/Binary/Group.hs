@@ -4,9 +4,9 @@
 module Cardano.Ledger.Binary.Group (
   CBORGroup (..),
   groupRecord,
-  ToCBORGroup (..),
+  EncCBORGroup (..),
   listLenInt,
-  FromCBORGroup (..),
+  DecCBORGroup (..),
 )
 where
 
@@ -21,28 +21,28 @@ import Data.Typeable
 
 newtype CBORGroup a = CBORGroup {unCBORGroup :: a}
 
-instance (FromCBORGroup a, ToCBORGroup a) => FromCBOR (CBORGroup a) where
-  fromCBOR = CBORGroup <$> groupRecord
+instance (DecCBORGroup a, EncCBORGroup a) => DecCBOR (CBORGroup a) where
+  decCBOR = CBORGroup <$> groupRecord
 
-instance ToCBORGroup a => ToCBOR (CBORGroup a) where
-  toCBOR (CBORGroup x) = encodeListLen (listLen x) <> toCBORGroup x
+instance EncCBORGroup a => EncCBOR (CBORGroup a) where
+  encCBOR (CBORGroup x) = encodeListLen (listLen x) <> encCBORGroup x
   encodedSizeExpr size proxy =
     fromInteger (withWordSize (listLenBound proxy'))
       + encodedGroupSizeExpr size proxy'
     where
       proxy' = unCBORGroup <$> proxy
 
-groupRecord :: forall a s. (ToCBORGroup a, FromCBORGroup a) => Decoder s a
-groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen) fromCBORGroup
+groupRecord :: forall a s. (EncCBORGroup a, DecCBORGroup a) => Decoder s a
+groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen) decCBORGroup
 
 --------------------------------------------------------------------------------
--- ToCBORGroup
+-- EncCBORGroup
 --------------------------------------------------------------------------------
 
-class Typeable a => ToCBORGroup a where
-  toCBORGroup :: a -> Encoding
+class Typeable a => EncCBORGroup a where
+  encCBORGroup :: a -> Encoding
   encodedGroupSizeExpr ::
-    (forall x. ToCBOR x => Proxy x -> Size) ->
+    (forall x. EncCBOR x => Proxy x -> Size) ->
     Proxy a ->
     Size
 
@@ -51,12 +51,12 @@ class Typeable a => ToCBORGroup a where
   -- | an upper bound for 'listLen', used in 'Size' expressions.
   listLenBound :: Proxy a -> Word
 
-listLenInt :: ToCBORGroup a => a -> Int
+listLenInt :: EncCBORGroup a => a -> Int
 listLenInt x = fromIntegral (listLen x)
 
 --------------------------------------------------------------------------------
--- FromCBORGroup
+-- DecCBORGroup
 --------------------------------------------------------------------------------
 
-class Typeable a => FromCBORGroup a where
-  fromCBORGroup :: Decoder s a
+class Typeable a => DecCBORGroup a where
+  decCBORGroup :: Decoder s a

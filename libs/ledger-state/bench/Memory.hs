@@ -64,7 +64,7 @@ main = do
     forM_ (optsNewEpochStateBinaryFile opts) $ \binFp -> do
       io "NewEpochState" readNewEpochState binFp
     forM_ (optsEpochStateBinaryFile opts) $ \binFp -> do
-      io "EpochState (FromCBOR)" readEpochState binFp
+      io "EpochState (DecCBOR)" readEpochState binFp
     forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
       let dbFp = T.pack dbFpStr
       io "EpochState (with-sharing)" loadEpochStateWithSharing dbFp

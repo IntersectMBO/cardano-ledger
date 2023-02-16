@@ -51,8 +51,8 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   TokenType (..),
   decodeStrictSeq,
   peekTokenType,
@@ -107,8 +107,8 @@ deriving via
   instance
     NoThunks (AlonzoTxAuxDataRaw era)
 
-instance Era era => ToCBOR (AlonzoTxAuxDataRaw era) where
-  toCBOR AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus} =
+instance Era era => EncCBOR (AlonzoTxAuxDataRaw era) where
+  encCBOR AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus} =
     encode $
       Tag 259 $
         Keyed
@@ -118,8 +118,8 @@ instance Era era => ToCBOR (AlonzoTxAuxDataRaw era) where
           )
           !> Omit null (Key 0 $ To atadrMetadata)
           !> Omit null (Key 1 $ To atadrTimelock)
-          !> Omit isNothing (Key 2 $ E (maybe mempty toCBOR) (Map.lookup PlutusV1 atadrPlutus))
-          !> Omit isNothing (Key 3 $ E (maybe mempty toCBOR) (Map.lookup PlutusV2 atadrPlutus))
+          !> Omit isNothing (Key 2 $ E (maybe mempty encCBOR) (Map.lookup PlutusV1 atadrPlutus))
+          !> Omit isNothing (Key 3 $ E (maybe mempty encCBOR) (Map.lookup PlutusV2 atadrPlutus))
 
 -- | Helper function that will construct Auxiliary data from Metadatum map and a list of scripts.
 --
@@ -158,8 +158,8 @@ getAlonzoTxAuxDataScripts AlonzoTxAuxData' {atadTimelock' = timelocks, atadPlutu
         , Just plutusScripts <- [Map.lookup lang plutus]
         ]
 
-instance Era era => FromCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
-  fromCBOR =
+instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
+  decCBOR =
     peekTokenType >>= \case
       TypeMapLen -> decodeShelley
       TypeMapLen64 -> decodeShelley
@@ -183,7 +183,7 @@ instance Era era => FromCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
           ( Ann (RecD AlonzoTxAuxDataRaw)
               <*! Ann From
               <*! D
-                (sequence <$> decodeStrictSeq fromCBOR)
+                (sequence <$> decodeStrictSeq decCBOR)
               <*! Ann (Emit Map.empty)
           )
       decodeAlonzo =
@@ -203,7 +203,7 @@ instance Era era => FromCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
       auxDataField 1 =
         fieldAA
           (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x})
-          (D (sequence <$> decodeStrictSeq fromCBOR))
+          (D (sequence <$> decodeStrictSeq decCBOR))
       auxDataField 2 = fieldA (addPlutusScripts PlutusV1) From
       auxDataField 3 = fieldA (addPlutusScripts PlutusV2) From
       auxDataField n = field (\_ t -> t) (Invalid n)
@@ -215,7 +215,7 @@ emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
 -- Version with serialized bytes.
 
 newtype AlonzoTxAuxData era = AuxiliaryDataConstr (MemoBytes AlonzoTxAuxDataRaw era)
-  deriving newtype (ToCBOR, SafeToHash)
+  deriving newtype (EncCBOR, SafeToHash)
 
 instance Memoized AlonzoTxAuxData where
   type RawType AlonzoTxAuxData = AlonzoTxAuxDataRaw
@@ -263,7 +263,7 @@ deriving via
 deriving via
   (Mem AlonzoTxAuxDataRaw era)
   instance
-    Era era => FromCBOR (Annotator (AuxiliaryData era))
+    Era era => DecCBOR (Annotator (AuxiliaryData era))
 
 pattern AlonzoTxAuxData ::
   Era era =>

@@ -10,22 +10,22 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Binary.Decoding.Sharing (
-  FromSharedCBOR (..),
+  DecShareCBOR (..),
   Interns (..),
   Intern (..),
-  fromSharedLensCBOR,
-  fromSharedPlusLensCBOR,
-  fromNotSharedCBOR,
+  decShareLensCBOR,
+  decSharePlusLensCBOR,
+  decNoShareCBOR,
   interns,
   internsFromMap,
   internsFromVMap,
   toMemptyLens,
-  fromShareCBORfunctor,
+  decShareMonadCBOR,
 )
 where
 
+import Cardano.Ledger.Binary.Decoding.DecCBOR
 import Cardano.Ledger.Binary.Decoding.Decoder
-import Cardano.Ledger.Binary.Decoding.FromCBOR
 import Control.Monad ((<$!>))
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
@@ -108,38 +108,38 @@ instance Semigroup (Interns a) where
         | internWeight a > internWeight i = a : insertIntoSortedInterns i as
         | otherwise = i : a : as
 
-class Monoid (Share a) => FromSharedCBOR a where
-  {-# MINIMAL (fromSharedCBOR | fromSharedPlusCBOR) #-}
+class Monoid (Share a) => DecShareCBOR a where
+  {-# MINIMAL (decShareCBOR | decSharePlusCBOR) #-}
   type Share a :: Type
   type Share a = ()
 
   -- | Whenever `fromShareCBOR` is being used for defining the instance this
   -- function should return the state that can be added whenever user invokes
-  -- `fromSharedPlusCBOR`. `mempty` is returned by default.
+  -- `decSharePlusCBOR`. `mempty` is returned by default.
   getShare :: a -> Share a
   getShare _ = mempty
 
   -- | Utilize sharing when decoding, but do not add anything to the state for
   -- future sharing.
-  fromSharedCBOR :: Share a -> Decoder s a
-  fromSharedCBOR s = fst <$> runStateT fromSharedPlusCBOR s
+  decShareCBOR :: Share a -> Decoder s a
+  decShareCBOR s = fst <$> runStateT decSharePlusCBOR s
 
   -- | Deserialize with sharing and add to the state that is used for sharing. Default
   -- implementation will add value returned by `getShare` for adding to the
   -- state.
-  fromSharedPlusCBOR :: StateT (Share a) (Decoder s) a
-  fromSharedPlusCBOR = do
+  decSharePlusCBOR :: StateT (Share a) (Decoder s) a
+  decSharePlusCBOR = do
     s <- get
-    x <- lift $ fromSharedCBOR s
+    x <- lift $ decShareCBOR s
     x <$ put (getShare x <> s)
 
-fromSharedLensCBOR ::
-  FromSharedCBOR b =>
+decShareLensCBOR ::
+  DecShareCBOR b =>
   SimpleGetter bs (Share b) ->
   StateT bs (Decoder s) b
-fromSharedLensCBOR l = do
+decShareLensCBOR l = do
   s <- get
-  lift $ fromSharedCBOR (s ^. l)
+  lift $ decShareCBOR (s ^. l)
 
 -- | Using this function it is possible to compose two lenses. One will extract
 -- a value and another will used it for placing it into a empty monoid. Here is
@@ -164,41 +164,41 @@ toMemptyLens :: Monoid a => Lens' a b -> Lens' c b -> Lens' c a
 toMemptyLens lto lfrom =
   lens (\s -> mempty & lto .~ (s ^. lfrom)) (\s a -> s & lfrom .~ (a ^. lto))
 
--- | Just like `fromSharedPlusCBOR`, except allows to transform the shared state
+-- | Just like `decSharePlusCBOR`, except allows to transform the shared state
 -- with a lens.
-fromSharedPlusLensCBOR ::
-  FromSharedCBOR b =>
+decSharePlusLensCBOR ::
+  DecShareCBOR b =>
   Lens' bs (Share b) ->
   StateT bs (Decoder s) b
-fromSharedPlusLensCBOR l = do
+decSharePlusLensCBOR l = do
   s <- get
-  (x, k) <- lift $ runStateT fromSharedPlusCBOR (s ^. l)
+  (x, k) <- lift $ runStateT decSharePlusCBOR (s ^. l)
   x <$ put (s & l .~ k)
 
--- | Use `FromSharedCBOR` class while ignoring sharing
-fromNotSharedCBOR :: FromSharedCBOR a => Decoder s a
-fromNotSharedCBOR = fromSharedCBOR mempty
+-- | Use `DecShareCBOR` class while ignoring sharing
+decNoShareCBOR :: DecShareCBOR a => Decoder s a
+decNoShareCBOR = decShareCBOR mempty
 
-instance (Ord k, FromCBOR k, FromCBOR v) => FromSharedCBOR (Map k v) where
+instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (Map k v) where
   type Share (Map k v) = (Interns k, Interns v)
-  fromSharedCBOR (kis, vis) = do
-    decodeMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
+  decShareCBOR (kis, vis) = do
+    decodeMap (interns kis <$> decCBOR) (interns vis <$> decCBOR)
   getShare !m = (internsFromMap m, mempty)
 
-instance (Ord k, FromCBOR k, FromCBOR v) => FromSharedCBOR (VMap VB VB k v) where
+instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (VMap VB VB k v) where
   type Share (VMap VB VB k v) = (Interns k, Interns v)
-  fromSharedCBOR (kis, vis) = do
-    decodeVMap (interns kis <$> fromCBOR) (interns vis <$> fromCBOR)
+  decShareCBOR (kis, vis) = do
+    decodeVMap (interns kis <$> decCBOR) (interns vis <$> decCBOR)
   getShare !m = (internsFromVMap m, mempty)
 
-instance (Ord k, FromCBOR k, FromCBOR v, Prim v) => FromSharedCBOR (VMap VB VP k v) where
+instance (Ord k, DecCBOR k, DecCBOR v, Prim v) => DecShareCBOR (VMap VB VP k v) where
   type Share (VMap VB VP k v) = Interns k
-  fromSharedCBOR kis = do
-    decodeVMap (interns kis <$> fromCBOR) fromCBOR
+  decShareCBOR kis = do
+    decodeVMap (interns kis <$> decCBOR) decCBOR
   getShare !m = internsFromVMap m
 
 -- | Share every item in a functor, have deserializing it
-fromShareCBORfunctor :: (FromCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
-fromShareCBORfunctor kis = do
-  sm <- fromCBOR
+decShareMonadCBOR :: (DecCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
+decShareMonadCBOR kis = do
+  sm <- decCBOR
   pure (interns kis <$!> sm)

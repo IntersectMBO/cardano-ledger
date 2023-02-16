@@ -31,8 +31,8 @@ import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
   Annotator (..),
-  FromCBOR (fromCBOR),
-  ToCBOR,
+  DecCBOR (decCBOR),
+  EncCBOR,
   decodeRecordSum,
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
@@ -86,7 +86,7 @@ instance NFData (MultiSigRaw era)
 
 newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
   deriving (Eq, Generic)
-  deriving newtype (ToCBOR, NoThunks, SafeToHash)
+  deriving newtype (EncCBOR, NoThunks, SafeToHash)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSig era)
 
@@ -110,7 +110,7 @@ deriving newtype instance NFData (MultiSig era)
 deriving via
   Mem MultiSigRaw era
   instance
-    Era era => FromCBOR (Annotator (MultiSig era))
+    Era era => DecCBOR (Annotator (MultiSig era))
 
 pattern RequireSignature :: Era era => KeyHash 'Witness (EraCrypto era) -> MultiSig era
 pattern RequireSignature akh <-
@@ -144,19 +144,19 @@ pattern RequireMOf n ms <-
 
 instance
   (Era era) =>
-  FromCBOR (Annotator (MultiSigRaw era))
+  DecCBOR (Annotator (MultiSigRaw era))
   where
-  fromCBOR = decodeRecordSum "MultiSig" $
+  decCBOR = decodeRecordSum "MultiSig" $
     \case
-      0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR
+      0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> decCBOR
       1 -> do
-        multiSigs <- sequence <$> fromCBOR
+        multiSigs <- sequence <$> decCBOR
         pure (2, RequireAllOf' <$> multiSigs)
       2 -> do
-        multiSigs <- sequence <$> fromCBOR
+        multiSigs <- sequence <$> decCBOR
         pure (2, RequireAnyOf' <$> multiSigs)
       3 -> do
-        m <- fromCBOR
-        multiSigs <- sequence <$> fromCBOR
+        m <- decCBOR
+        multiSigs <- sequence <$> decCBOR
         pure (3, RequireMOf' m <$> multiSigs)
       k -> invalidKey k

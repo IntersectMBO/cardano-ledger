@@ -80,12 +80,12 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator,
-  FromCBOR,
-  FromSharedCBOR (Share),
+  DecCBOR,
+  DecShareCBOR (Share),
+  EncCBOR,
+  EncCBORGroup,
   Interns,
   Sized (sizedValue),
-  ToCBOR,
-  ToCBORGroup,
   mkSized,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -126,8 +126,8 @@ class
   , EraPParams era
   , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era)
-  , FromCBOR (Annotator (Tx era))
-  , ToCBOR (Tx era)
+  , DecCBOR (Annotator (Tx era))
+  , EncCBOR (Tx era)
   , Show (Tx era)
   , Eq (Tx era)
   ) =>
@@ -153,8 +153,8 @@ class
   ( EraTxOut era
   , EraPParams era
   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
-  , FromCBOR (Annotator (TxBody era))
-  , ToCBOR (TxBody era)
+  , DecCBOR (Annotator (TxBody era))
+  , EncCBOR (TxBody era)
   , NoThunks (TxBody era)
   , NFData (TxBody era)
   , Show (TxBody era)
@@ -187,13 +187,13 @@ class
   , Show (Value era)
   , Val (Value era)
   , Eq (Value era)
-  , FromCBOR (Value era)
-  , FromCBOR (CompactForm (Value era))
-  , ToCBOR (Value era)
-  , FromCBOR (TxOut era)
-  , FromSharedCBOR (TxOut era)
+  , DecCBOR (Value era)
+  , DecCBOR (CompactForm (Value era))
+  , EncCBOR (Value era)
+  , DecCBOR (TxOut era)
+  , DecShareCBOR (TxOut era)
   , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
-  , ToCBOR (TxOut era)
+  , EncCBOR (TxOut era)
   , NoThunks (TxOut era)
   , NFData (TxOut era)
   , Show (TxOut era)
@@ -348,8 +348,8 @@ class
   , Eq (TxAuxData era)
   , Show (TxAuxData era)
   , NoThunks (TxAuxData era)
-  , ToCBOR (TxAuxData era)
-  , FromCBOR (Annotator (TxAuxData era))
+  , EncCBOR (TxAuxData era)
+  , DecCBOR (Annotator (TxAuxData era))
   , HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
   ) =>
   EraTxAuxData era
@@ -377,8 +377,8 @@ class
   , Show (TxWits era)
   , Monoid (TxWits era)
   , NoThunks (TxWits era)
-  , ToCBOR (TxWits era)
-  , FromCBOR (Annotator (TxWits era))
+  , EncCBOR (TxWits era)
+  , DecCBOR (Annotator (TxWits era))
   ) =>
   EraTxWits era
   where
@@ -410,8 +410,8 @@ class
   ( Era era
   , Show (Script era)
   , Eq (Script era)
-  , ToCBOR (Script era)
-  , FromCBOR (Annotator (Script era))
+  , EncCBOR (Script era)
+  , DecCBOR (Annotator (Script era))
   , NoThunks (Script era)
   , SafeToHash (Script era)
   ) =>
@@ -463,8 +463,8 @@ class
   ( EraTx era
   , Eq (TxSeq era)
   , Show (TxSeq era)
-  , ToCBORGroup (TxSeq era)
-  , FromCBOR (Annotator (TxSeq era))
+  , EncCBORGroup (TxSeq era)
+  , DecCBOR (Annotator (TxSeq era))
   ) =>
   EraSegWits era
   where

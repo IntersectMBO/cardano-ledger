@@ -31,12 +31,12 @@ instance Show VEncoding where
   show (VEncoding v enc) = show (toPlainEncoding v enc)
 
 genInvalidNonEmptyCBOR :: Gen VEncoding -- NonEmpty Bool
-genInvalidNonEmptyCBOR = pure (mkByronEncoding (toCBOR ([] :: [Bool])))
+genInvalidNonEmptyCBOR = pure (mkByronEncoding (encCBOR ([] :: [Bool])))
 
 genInvalidEitherCBOR :: Gen VEncoding -- Either Bool Bool
 genInvalidEitherCBOR = do
   b <- Gen.bool
-  pure (mkByronEncoding (encodeListLen 2 <> encodeWord 3 <> toCBOR b))
+  pure (mkByronEncoding (encodeListLen 2 <> encodeWord 3 <> encCBOR b))
 
 genNegativeInteger :: Gen Integer
 genNegativeInteger =
@@ -72,13 +72,13 @@ prop_shouldFailSet = property $ do
   let set =
         encodeTag 258
           <> encodeListLen (fromIntegral (length ls + 2))
-          <> mconcat (toCBOR <$> (4 : 3 : ls))
+          <> mconcat (encCBOR <$> (4 : 3 : ls))
   assertIsLeft (decode byronProtVer set :: Either DecoderError (Set Int))
 
 prop_shouldFailNegativeNatural :: Property
 prop_shouldFailNegativeNatural = property $ do
   n <- forAll genNegativeInteger
-  assertIsLeft (decode byronProtVer (toCBOR n) :: Either DecoderError Natural)
+  assertIsLeft (decode byronProtVer (encCBOR n) :: Either DecoderError Natural)
 
 ---------------------------------------------------------------------
 ------------------------------- helpers -----------------------------
@@ -95,7 +95,7 @@ assertIsLeft (Left !x) = case x of
   DecoderErrorUnknownTag _ i | i > 0 -> success
   _ -> success
 
-decode :: FromCBOR a => Version -> Encoding -> Either DecoderError a
+decode :: DecCBOR a => Version -> Encoding -> Either DecoderError a
 decode version enc =
   let encoded = serializeEncoding version enc
    in decodeFull version encoded

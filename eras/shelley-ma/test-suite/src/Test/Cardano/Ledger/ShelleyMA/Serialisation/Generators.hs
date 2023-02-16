@@ -26,7 +26,7 @@ import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.Allegra.Scripts as MA (Timelock (..))
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
-import Cardano.Ledger.Binary (Annotator, FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
@@ -102,8 +102,8 @@ instance
   ( Era era
   , c ~ EraCrypto era
   , Mock c
-  , FromCBOR (Annotator (Timelock era))
-  , ToCBOR (Script era)
+  , DecCBOR (Annotator (Timelock era))
+  , EncCBOR (Script era)
   , Arbitrary (Script era)
   ) =>
   Arbitrary (AllegraTxAuxData era)

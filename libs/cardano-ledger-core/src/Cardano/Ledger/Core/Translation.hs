@@ -111,7 +111,7 @@ translateEraMaybe ctxt =
 -- | Translate a type through its binary representation from previous era to the current one.
 translateEraThroughCBOR ::
   forall era ti to.
-  (Era era, Era (PreviousEra era), ToCBOR (ti (PreviousEra era)), FromCBOR (Annotator (to era))) =>
+  (Era era, Era (PreviousEra era), EncCBOR (ti (PreviousEra era)), DecCBOR (Annotator (to era))) =>
   -- | Label for error reporting
   Text ->
   ti (PreviousEra era) ->

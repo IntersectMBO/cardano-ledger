@@ -28,11 +28,11 @@ where
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
+  DecCBOR (decCBOR),
   Decoder,
   DecoderError (..),
+  EncCBOR (encCBOR),
   Encoding,
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
   TokenType (..),
   cborError,
   decodeBreakOr,
@@ -135,24 +135,24 @@ pattern ShelleyTxAuxData m <-
   ShelleyTxAuxData' m _
   where
     ShelleyTxAuxData m =
-      let bytes = serializeEncoding (eraProtVerLow @era) $ toCBOR m
+      let bytes = serializeEncoding (eraProtVerLow @era) $ encCBOR m
        in ShelleyTxAuxData' m bytes
 
 {-# COMPLETE ShelleyTxAuxData #-}
 
-instance Typeable era => ToCBOR (ShelleyTxAuxData era) where
-  toCBOR = encodePreEncoded . LBS.toStrict . mdBytes
+instance Typeable era => EncCBOR (ShelleyTxAuxData era) where
+  encCBOR = encodePreEncoded . LBS.toStrict . mdBytes
 
-instance Typeable era => FromCBOR (Annotator (ShelleyTxAuxData era)) where
-  fromCBOR = do
-    (m, bytesAnn) <- withSlice fromCBOR
+instance Typeable era => DecCBOR (Annotator (ShelleyTxAuxData era)) where
+  decCBOR = do
+    (m, bytesAnn) <- withSlice decCBOR
     pure $ ShelleyTxAuxData' m <$> bytesAnn
 
-instance ToCBOR Metadatum where
-  toCBOR = encodeMetadatum
+instance EncCBOR Metadatum where
+  encCBOR = encodeMetadatum
 
-instance FromCBOR Metadatum where
-  fromCBOR = decodeMetadatum
+instance DecCBOR Metadatum where
+  decCBOR = decodeMetadatum
 
 -- Validation of sizes
 

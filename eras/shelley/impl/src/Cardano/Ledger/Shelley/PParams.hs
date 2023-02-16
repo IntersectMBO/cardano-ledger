@@ -43,10 +43,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  FromCBORGroup (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  DecCBOR (..),
+  DecCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   decodeMapContents,
   decodeRecordNamed,
   decodeWord,
@@ -176,49 +176,49 @@ instance Crypto c => EraPParams (ShelleyEra c) where
   hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
-instance Era era => ToCBOR (ShelleyPParams Identity era) where
-  toCBOR
+instance Era era => EncCBOR (ShelleyPParams Identity era) where
+  encCBOR
     ShelleyPParams {..} =
       encodeListLen 18
-        <> toCBOR sppMinFeeA
-        <> toCBOR sppMinFeeB
-        <> toCBOR sppMaxBBSize
-        <> toCBOR sppMaxTxSize
-        <> toCBOR sppMaxBHSize
-        <> toCBOR sppKeyDeposit
-        <> toCBOR sppPoolDeposit
-        <> toCBOR sppEMax
-        <> toCBOR sppNOpt
-        <> toCBOR sppA0
-        <> toCBOR sppRho
-        <> toCBOR sppTau
-        <> toCBOR sppD
-        <> toCBOR sppExtraEntropy
-        <> toCBORGroup sppProtocolVersion
-        <> toCBOR sppMinUTxOValue
-        <> toCBOR sppMinPoolCost
+        <> encCBOR sppMinFeeA
+        <> encCBOR sppMinFeeB
+        <> encCBOR sppMaxBBSize
+        <> encCBOR sppMaxTxSize
+        <> encCBOR sppMaxBHSize
+        <> encCBOR sppKeyDeposit
+        <> encCBOR sppPoolDeposit
+        <> encCBOR sppEMax
+        <> encCBOR sppNOpt
+        <> encCBOR sppA0
+        <> encCBOR sppRho
+        <> encCBOR sppTau
+        <> encCBOR sppD
+        <> encCBOR sppExtraEntropy
+        <> encCBORGroup sppProtocolVersion
+        <> encCBOR sppMinUTxOValue
+        <> encCBOR sppMinPoolCost
 
-instance Era era => FromCBOR (ShelleyPParams Identity era) where
-  fromCBOR = do
+instance Era era => DecCBOR (ShelleyPParams Identity era) where
+  decCBOR = do
     decodeRecordNamed "ShelleyPParams" (const 18) $
       ShelleyPParams @Identity
-        <$> fromCBOR -- sppMinFeeA         :: Integer
-        <*> fromCBOR -- sppMinFeeB         :: Natural
-        <*> fromCBOR -- sppMaxBBSize       :: Natural
-        <*> fromCBOR -- sppMaxTxSize       :: Natural
-        <*> fromCBOR -- sppMaxBHSize       :: Natural
-        <*> fromCBOR -- sppKeyDeposit      :: Coin
-        <*> fromCBOR -- sppPoolDeposit     :: Coin
-        <*> fromCBOR -- sppEMax            :: EpochNo
-        <*> fromCBOR -- sppNOpt            :: Natural
-        <*> fromCBOR -- sppA0              :: NonNegativeInterval
-        <*> fromCBOR -- sppRho             :: UnitInterval
-        <*> fromCBOR -- sppTau             :: UnitInterval
-        <*> fromCBOR -- sppD               :: UnitInterval
-        <*> fromCBOR -- sppExtraEntropy    :: Nonce
-        <*> fromCBORGroup -- sppProtocolVersion :: ProtVer
-        <*> fromCBOR -- sppMinUTxOValue    :: Natural
-        <*> fromCBOR -- sppMinPoolCost     :: Natural
+        <$> decCBOR -- sppMinFeeA         :: Integer
+        <*> decCBOR -- sppMinFeeB         :: Natural
+        <*> decCBOR -- sppMaxBBSize       :: Natural
+        <*> decCBOR -- sppMaxTxSize       :: Natural
+        <*> decCBOR -- sppMaxBHSize       :: Natural
+        <*> decCBOR -- sppKeyDeposit      :: Coin
+        <*> decCBOR -- sppPoolDeposit     :: Coin
+        <*> decCBOR -- sppEMax            :: EpochNo
+        <*> decCBOR -- sppNOpt            :: Natural
+        <*> decCBOR -- sppA0              :: NonNegativeInterval
+        <*> decCBOR -- sppRho             :: UnitInterval
+        <*> decCBOR -- sppTau             :: UnitInterval
+        <*> decCBOR -- sppD               :: UnitInterval
+        <*> decCBOR -- sppExtraEntropy    :: Nonce
+        <*> decCBORGroup -- sppProtocolVersion :: ProtVer
+        <*> decCBOR -- sppMinUTxOValue    :: Natural
+        <*> decCBOR -- sppMinPoolCost     :: Natural
 
 instance ToJSON (ShelleyPParams Identity era) where
   toJSON pp =
@@ -321,71 +321,71 @@ deriving instance Show (PParamsUpdate era) => Show (Update era)
 
 instance NoThunks (PParamsUpdate era) => NoThunks (Update era)
 
-instance (Era era, ToCBOR (PParamsUpdate era)) => ToCBOR (Update era) where
-  toCBOR (Update ppUpdate e) =
-    encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
+instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (Update era) where
+  encCBOR (Update ppUpdate e) =
+    encodeListLen 2 <> encCBOR ppUpdate <> encCBOR e
 
 instance
-  (Era era, FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (Update era)
+  (Era era, DecCBOR (PParamsUpdate era)) =>
+  DecCBOR (Update era)
   where
-  fromCBOR = decode $ RecD Update <! From <! From
+  decCBOR = decode $ RecD Update <! From <! From
 
 data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
   deriving (Show, Eq, Generic)
 
 instance NoThunks (PPUpdateEnv era)
 
-instance Era era => ToCBOR (ShelleyPParams StrictMaybe era) where
-  toCBOR ppup =
+instance Era era => EncCBOR (ShelleyPParams StrictMaybe era) where
+  encCBOR ppup =
     let l =
           mapMaybe
             strictMaybeToMaybe
-            [ encodeMapElement 0 toCBOR =<< sppMinFeeA ppup
-            , encodeMapElement 1 toCBOR =<< sppMinFeeB ppup
-            , encodeMapElement 2 toCBOR =<< sppMaxBBSize ppup
-            , encodeMapElement 3 toCBOR =<< sppMaxTxSize ppup
-            , encodeMapElement 4 toCBOR =<< sppMaxBHSize ppup
-            , encodeMapElement 5 toCBOR =<< sppKeyDeposit ppup
-            , encodeMapElement 6 toCBOR =<< sppPoolDeposit ppup
-            , encodeMapElement 7 toCBOR =<< sppEMax ppup
-            , encodeMapElement 8 toCBOR =<< sppNOpt ppup
-            , encodeMapElement 9 toCBOR =<< sppA0 ppup
-            , encodeMapElement 10 toCBOR =<< sppRho ppup
-            , encodeMapElement 11 toCBOR =<< sppTau ppup
-            , encodeMapElement 12 toCBOR =<< sppD ppup
-            , encodeMapElement 13 toCBOR =<< sppExtraEntropy ppup
-            , encodeMapElement 14 toCBOR =<< sppProtocolVersion ppup
-            , encodeMapElement 15 toCBOR =<< sppMinUTxOValue ppup
-            , encodeMapElement 16 toCBOR =<< sppMinPoolCost ppup
+            [ encodeMapElement 0 encCBOR =<< sppMinFeeA ppup
+            , encodeMapElement 1 encCBOR =<< sppMinFeeB ppup
+            , encodeMapElement 2 encCBOR =<< sppMaxBBSize ppup
+            , encodeMapElement 3 encCBOR =<< sppMaxTxSize ppup
+            , encodeMapElement 4 encCBOR =<< sppMaxBHSize ppup
+            , encodeMapElement 5 encCBOR =<< sppKeyDeposit ppup
+            , encodeMapElement 6 encCBOR =<< sppPoolDeposit ppup
+            , encodeMapElement 7 encCBOR =<< sppEMax ppup
+            , encodeMapElement 8 encCBOR =<< sppNOpt ppup
+            , encodeMapElement 9 encCBOR =<< sppA0 ppup
+            , encodeMapElement 10 encCBOR =<< sppRho ppup
+            , encodeMapElement 11 encCBOR =<< sppTau ppup
+            , encodeMapElement 12 encCBOR =<< sppD ppup
+            , encodeMapElement 13 encCBOR =<< sppExtraEntropy ppup
+            , encodeMapElement 14 encCBOR =<< sppProtocolVersion ppup
+            , encodeMapElement 15 encCBOR =<< sppMinUTxOValue ppup
+            , encodeMapElement 16 encCBOR =<< sppMinPoolCost ppup
             ]
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
     where
       encodeMapElement ix encoder x = SJust (encodeWord ix <> encoder x)
 
-instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
-  fromCBOR = do
+instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
+  decCBOR = do
     mapParts <-
       decodeMapContents $
         decodeWord >>= \case
-          0 -> fromCBOR >>= \x -> pure (0, \up -> up {sppMinFeeA = SJust x})
-          1 -> fromCBOR >>= \x -> pure (1, \up -> up {sppMinFeeB = SJust x})
-          2 -> fromCBOR >>= \x -> pure (2, \up -> up {sppMaxBBSize = SJust x})
-          3 -> fromCBOR >>= \x -> pure (3, \up -> up {sppMaxTxSize = SJust x})
-          4 -> fromCBOR >>= \x -> pure (4, \up -> up {sppMaxBHSize = SJust x})
-          5 -> fromCBOR >>= \x -> pure (5, \up -> up {sppKeyDeposit = SJust x})
-          6 -> fromCBOR >>= \x -> pure (6, \up -> up {sppPoolDeposit = SJust x})
-          7 -> fromCBOR >>= \x -> pure (7, \up -> up {sppEMax = SJust x})
-          8 -> fromCBOR >>= \x -> pure (8, \up -> up {sppNOpt = SJust x})
-          9 -> fromCBOR >>= \x -> pure (9, \up -> up {sppA0 = SJust x})
-          10 -> fromCBOR >>= \x -> pure (10, \up -> up {sppRho = SJust x})
-          11 -> fromCBOR >>= \x -> pure (11, \up -> up {sppTau = SJust x})
-          12 -> fromCBOR >>= \x -> pure (12, \up -> up {sppD = SJust x})
-          13 -> fromCBOR >>= \x -> pure (13, \up -> up {sppExtraEntropy = SJust x})
-          14 -> fromCBOR >>= \x -> pure (14, \up -> up {sppProtocolVersion = SJust x})
-          15 -> fromCBOR >>= \x -> pure (15, \up -> up {sppMinUTxOValue = SJust x})
-          16 -> fromCBOR >>= \x -> pure (16, \up -> up {sppMinPoolCost = SJust x})
+          0 -> decCBOR >>= \x -> pure (0, \up -> up {sppMinFeeA = SJust x})
+          1 -> decCBOR >>= \x -> pure (1, \up -> up {sppMinFeeB = SJust x})
+          2 -> decCBOR >>= \x -> pure (2, \up -> up {sppMaxBBSize = SJust x})
+          3 -> decCBOR >>= \x -> pure (3, \up -> up {sppMaxTxSize = SJust x})
+          4 -> decCBOR >>= \x -> pure (4, \up -> up {sppMaxBHSize = SJust x})
+          5 -> decCBOR >>= \x -> pure (5, \up -> up {sppKeyDeposit = SJust x})
+          6 -> decCBOR >>= \x -> pure (6, \up -> up {sppPoolDeposit = SJust x})
+          7 -> decCBOR >>= \x -> pure (7, \up -> up {sppEMax = SJust x})
+          8 -> decCBOR >>= \x -> pure (8, \up -> up {sppNOpt = SJust x})
+          9 -> decCBOR >>= \x -> pure (9, \up -> up {sppA0 = SJust x})
+          10 -> decCBOR >>= \x -> pure (10, \up -> up {sppRho = SJust x})
+          11 -> decCBOR >>= \x -> pure (11, \up -> up {sppTau = SJust x})
+          12 -> decCBOR >>= \x -> pure (12, \up -> up {sppD = SJust x})
+          13 -> decCBOR >>= \x -> pure (13, \up -> up {sppExtraEntropy = SJust x})
+          14 -> decCBOR >>= \x -> pure (14, \up -> up {sppProtocolVersion = SJust x})
+          15 -> decCBOR >>= \x -> pure (15, \up -> up {sppMinUTxOValue = SJust x})
+          16 -> decCBOR >>= \x -> pure (16, \up -> up {sppMinPoolCost = SJust x})
           k -> invalidKey k
     let fields = fst <$> mapParts :: [Int]
     unless
@@ -407,16 +407,16 @@ deriving instance Show (PParamsUpdate era) => Show (ProposedPPUpdates era)
 instance NoThunks (PParamsUpdate era) => NoThunks (ProposedPPUpdates era)
 
 instance
-  (Era era, ToCBOR (PParamsUpdate era)) =>
-  ToCBOR (ProposedPPUpdates era)
+  (Era era, EncCBOR (PParamsUpdate era)) =>
+  EncCBOR (ProposedPPUpdates era)
   where
-  toCBOR (ProposedPPUpdates m) = toCBOR m
+  encCBOR (ProposedPPUpdates m) = encCBOR m
 
 instance
-  (Era era, FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (ProposedPPUpdates era)
+  (Era era, DecCBOR (PParamsUpdate era)) =>
+  DecCBOR (ProposedPPUpdates era)
   where
-  fromCBOR = ProposedPPUpdates <$> fromCBOR
+  decCBOR = ProposedPPUpdates <$> decCBOR
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty

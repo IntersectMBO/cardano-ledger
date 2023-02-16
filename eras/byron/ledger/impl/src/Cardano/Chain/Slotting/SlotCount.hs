@@ -8,7 +8,7 @@ module Cardano.Chain.Slotting.SlotCount (
 )
 where
 
-import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude
 import Formatting.Buildable (Buildable)
 
@@ -17,5 +17,5 @@ newtype SlotCount = SlotCount
   { unSlotCount :: Word64
   }
   deriving stock (Read, Show, Generic)
-  deriving newtype (Eq, Ord, Buildable, ToCBOR, FromCBOR)
+  deriving newtype (Eq, Ord, Buildable, EncCBOR, DecCBOR)
   deriving anyclass (NFData)

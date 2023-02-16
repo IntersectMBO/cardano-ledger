@@ -26,13 +26,13 @@ import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  FromSharedCBOR (..),
+  DecCBOR (..),
+  DecShareCBOR (..),
+  EncCBOR (..),
   Interns (..),
-  ToCBOR (..),
+  decNoShareCBOR,
   decodeRecordNamed,
   encodeListLen,
-  fromNotSharedCBOR,
  )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Core (Era (EraCrypto), EraTxOut (..), Value, ppMinUTxOValueL)
@@ -135,29 +135,29 @@ viewCompactTxOut :: (Era era, Compactible (Value era)) => ShelleyTxOut era -> (A
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 
-instance (Era era, ToCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut era) where
-  toCBOR (TxOutCompact addr coin) =
+instance (Era era, EncCBOR (CompactForm (Value era))) => EncCBOR (ShelleyTxOut era) where
+  encCBOR (TxOutCompact addr coin) =
     encodeListLen 2
-      <> toCBOR addr
-      <> toCBOR coin
+      <> encCBOR addr
+      <> encCBOR coin
 
 instance
-  (Era era, FromCBOR (CompactForm (Value era))) =>
-  FromCBOR (ShelleyTxOut era)
+  (Era era, DecCBOR (CompactForm (Value era))) =>
+  DecCBOR (ShelleyTxOut era)
   where
-  fromCBOR = fromNotSharedCBOR
+  decCBOR = decNoShareCBOR
 
--- This instance does not do any sharing and is isomorphic to FromCBOR
+-- This instance does not do any sharing and is isomorphic to DecCBOR
 -- use the weakest constraint necessary
 instance
-  (Era era, FromCBOR (CompactForm (Value era))) =>
-  FromSharedCBOR (ShelleyTxOut era)
+  (Era era, DecCBOR (CompactForm (Value era))) =>
+  DecShareCBOR (ShelleyTxOut era)
   where
   type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR _ =
+  decShareCBOR _ =
     decodeRecordNamed "ShelleyTxOut" (const 2) $ do
-      cAddr <- fromCBOR
-      TxOutCompact cAddr <$> fromCBOR
+      cAddr <- decCBOR
+      TxOutCompact cAddr <$> decCBOR
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords

@@ -27,7 +27,7 @@ import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
@@ -91,20 +91,20 @@ deriving anyclass instance
 
 instance
   ( Typeable era
-  , ToCBOR (ShelleyBbodyPredFailure era)
+  , EncCBOR (ShelleyBbodyPredFailure era)
   ) =>
-  ToCBOR (AlonzoBbodyPredFailure era)
+  EncCBOR (AlonzoBbodyPredFailure era)
   where
-  toCBOR (ShelleyInAlonzoBbodyPredFailure x) = encode (Sum ShelleyInAlonzoBbodyPredFailure 0 !> To x)
-  toCBOR (TooManyExUnits x y) = encode (Sum TooManyExUnits 1 !> To x !> To y)
+  encCBOR (ShelleyInAlonzoBbodyPredFailure x) = encode (Sum ShelleyInAlonzoBbodyPredFailure 0 !> To x)
+  encCBOR (TooManyExUnits x y) = encode (Sum TooManyExUnits 1 !> To x !> To y)
 
 instance
   ( Typeable era
-  , FromCBOR (ShelleyBbodyPredFailure era) -- TODO why is there no FromCBOR for (ShelleyBbodyPredFailure era)
+  , DecCBOR (ShelleyBbodyPredFailure era) -- TODO why is there no DecCBOR for (ShelleyBbodyPredFailure era)
   ) =>
-  FromCBOR (AlonzoBbodyPredFailure era)
+  DecCBOR (AlonzoBbodyPredFailure era)
   where
-  fromCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
+  decCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
     where
       dec 0 = SumD ShelleyInAlonzoBbodyPredFailure <! From
       dec 1 = SumD TooManyExUnits <! From <! From

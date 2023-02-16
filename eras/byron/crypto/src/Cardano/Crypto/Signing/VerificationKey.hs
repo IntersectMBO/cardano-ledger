@@ -21,10 +21,10 @@ where
 
 import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   Decoder,
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
   decodeBytesCanonical,
   toCborError,
  )
@@ -72,20 +72,20 @@ instance Monad m => TJC.ToJSON m VerificationKey where
 instance MonadError SchemaError m => TJC.FromJSON m VerificationKey where
   fromJSON = parseJSString parseFullVerificationKey
 
-instance ToCBOR VerificationKey where
-  toCBOR (VerificationKey a) = toCBORXPub a
+instance EncCBOR VerificationKey where
+  encCBOR (VerificationKey a) = encCBORXPub a
   encodedSizeExpr _ _ = 66
 
-instance FromCBOR VerificationKey where
-  fromCBOR = fmap VerificationKey fromCBORXPub
+instance DecCBOR VerificationKey where
+  decCBOR = fmap VerificationKey decCBORXPub
 
-toCBORXPub :: CC.XPub -> Encoding
-toCBORXPub a = toCBOR $ CC.unXPub a
+encCBORXPub :: CC.XPub -> Encoding
+encCBORXPub a = encCBOR $ CC.unXPub a
 
 -- | We enforce canonical CBOR encodings for `VerificationKey`s, because we serialize
 --   them before hashing to get `KeyHash`es.
-fromCBORXPub :: Decoder s CC.XPub
-fromCBORXPub = toCborError . CC.xpub =<< decodeBytesCanonical
+decCBORXPub :: Decoder s CC.XPub
+decCBORXPub = toCborError . CC.xpub =<< decodeBytesCanonical
 
 instance Buildable VerificationKey where
   build = bprint ("pub:" . shortVerificationKeyHexF)

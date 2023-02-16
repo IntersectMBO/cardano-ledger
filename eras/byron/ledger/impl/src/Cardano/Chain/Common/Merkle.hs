@@ -38,8 +38,8 @@ import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
 import Cardano.Crypto.Raw (Raw)
 import Cardano.Ledger.Binary (
   Annotated (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   byronProtVer,
   serializeBuilder,
  )
@@ -72,12 +72,12 @@ instance Buildable (MerkleRoot a) where
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (MerkleRoot a)
 
-instance ToCBOR a => ToCBOR (MerkleRoot a) where
-  toCBOR = toCBOR . getMerkleRoot
+instance EncCBOR a => EncCBOR (MerkleRoot a) where
+  encCBOR = encCBOR . getMerkleRoot
   encodedSizeExpr size = encodedSizeExpr size . fmap getMerkleRoot
 
-instance FromCBOR a => FromCBOR (MerkleRoot a) where
-  fromCBOR = MerkleRoot <$> fromCBOR
+instance DecCBOR a => DecCBOR (MerkleRoot a) where
+  decCBOR = MerkleRoot <$> decCBOR
 
 merkleRootToBuilder :: MerkleRoot a -> Builder
 merkleRootToBuilder (MerkleRoot h) = byteString (hashToBytes h)
@@ -116,14 +116,14 @@ instance Show a => Show (MerkleTree a) where
 
 -- This instance is both faster and more space-efficient (as confirmed by a
 -- benchmark). Hashing turns out to be faster than decoding extra data.
-instance ToCBOR a => ToCBOR (MerkleTree a) where
-  toCBOR = toCBOR . Foldable.toList
+instance EncCBOR a => EncCBOR (MerkleTree a) where
+  encCBOR = encCBOR . Foldable.toList
 
-instance (FromCBOR a, ToCBOR a) => FromCBOR (MerkleTree a) where
-  fromCBOR = mkMerkleTree <$> fromCBOR
+instance (DecCBOR a, EncCBOR a) => DecCBOR (MerkleTree a) where
+  decCBOR = mkMerkleTree <$> decCBOR
 
 -- | Smart constructor for 'MerkleTree'
-mkMerkleTree :: ToCBOR a => [a] -> MerkleTree a
+mkMerkleTree :: EncCBOR a => [a] -> MerkleTree a
 mkMerkleTree = mkMerkleTree' (mkLeaf . getConst) . fmap Const
 
 -- | Reconstruct a 'MerkleTree' from a decoded list of items
@@ -198,7 +198,7 @@ nodeRoot :: MerkleNode a -> MerkleRoot a
 nodeRoot (MerkleLeaf root _) = root
 nodeRoot (MerkleBranch root _ _) = root
 
-mkLeaf :: forall a. ToCBOR a => a -> MerkleNode a
+mkLeaf :: forall a. EncCBOR a => a -> MerkleNode a
 mkLeaf a = MerkleLeaf mRoot a
   where
     mRoot :: MerkleRoot a

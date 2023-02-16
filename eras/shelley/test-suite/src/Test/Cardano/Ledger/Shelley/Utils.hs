@@ -75,7 +75,7 @@ import Cardano.Ledger.BaseTypes (
   mkActiveSlotCoeff,
   mkNonceFromOutputVRF,
  )
-import Cardano.Ledger.Binary (ToCBOR (..), hashWithEncoder, shelleyProtVer)
+import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (DSIGN)
@@ -162,8 +162,8 @@ instance Arbitrary RawSeed where
       <*> chooseAny
       <*> chooseAny
 
-instance ToCBOR RawSeed where
-  toCBOR (RawSeed w1 w2 w3 w4 w5) = toCBOR (w1, w2, w3, w4, w5)
+instance EncCBOR RawSeed where
+  encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
   encodedSizeExpr size _ = 1 + size (Proxy :: Proxy Word64) * 5
 
 -- | Construct a seed from a bunch of Word64s
@@ -174,7 +174,7 @@ mkSeedFromWords ::
   RawSeed ->
   Seed
 mkSeedFromWords stuff =
-  mkSeedFromBytes . hashToBytes $ hashWithEncoder @Blake2b_256 shelleyProtVer toCBOR stuff
+  mkSeedFromBytes . hashToBytes $ hashWithEncoder @Blake2b_256 shelleyProtVer encCBOR stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey ::
@@ -306,7 +306,7 @@ testSTS env initSt sig predicateFailure@(Left _) = do
   st @?= predicateFailure
 
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
-mkHash i = coerce (hashWithEncoder @h shelleyProtVer toCBOR i)
+mkHash i = coerce (hashWithEncoder @h shelleyProtVer encCBOR i)
 
 getBlockNonce :: forall era. Era era => Block (BHeader (EraCrypto era)) era -> Nonce
 getBlockNonce =

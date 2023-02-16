@@ -35,15 +35,15 @@ import Cardano.Ledger.BaseTypes (
   activeSlotVal,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  FromSharedCBOR (Share, fromSharedPlusCBOR),
+  DecCBOR (decCBOR),
+  DecShareCBOR (Share, decSharePlusCBOR),
+  EncCBOR (encCBOR),
   Interns,
-  ToCBOR (toCBOR),
+  decSharePlusLensCBOR,
   decodeDouble,
   decodeRecordNamedT,
   encodeDouble,
   encodeListLen,
-  fromSharedPlusLensCBOR,
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
@@ -78,7 +78,7 @@ import Numeric.Natural (Natural)
 import Quiet
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
-  deriving (Eq, Generic, Ord, Num, NFData, NoThunks, ToCBOR, FromCBOR)
+  deriving (Eq, Generic, Ord, Num, NFData, NoThunks, EncCBOR, DecCBOR)
   deriving (Show) via Quiet LogWeight
 
 toLogWeight :: Double -> LogWeight
@@ -92,7 +92,7 @@ newtype Histogram = Histogram {unHistogram :: StrictSeq LogWeight}
 
 newtype Likelihood = Likelihood {unLikelihood :: StrictSeq LogWeight}
   -- TODO: replace with small data structure
-  deriving (Show, Ord, Generic, NFData, ToCBOR, FromCBOR)
+  deriving (Show, Ord, Generic, NFData, EncCBOR, DecCBOR)
 
 instance NoThunks Likelihood
 
@@ -210,11 +210,11 @@ reimannSum width heights = sum $ fmap (width *) heights
 newtype PerformanceEstimate = PerformanceEstimate {unPerformanceEstimate :: Double}
   deriving (Show, Eq, Generic, NoThunks)
 
-instance ToCBOR PerformanceEstimate where
-  toCBOR = encodeDouble . unPerformanceEstimate
+instance EncCBOR PerformanceEstimate where
+  encCBOR = encodeDouble . unPerformanceEstimate
 
-instance FromCBOR PerformanceEstimate where
-  fromCBOR = PerformanceEstimate <$> decodeDouble
+instance DecCBOR PerformanceEstimate where
+  decCBOR = PerformanceEstimate <$> decodeDouble
 
 data NonMyopic c = NonMyopic
   { likelihoodsNM :: !(Map (KeyHash 'StakePool c) Likelihood)
@@ -229,22 +229,22 @@ instance NoThunks (NonMyopic c)
 
 instance NFData (NonMyopic c)
 
-instance CC.Crypto c => ToCBOR (NonMyopic c) where
-  toCBOR
+instance CC.Crypto c => EncCBOR (NonMyopic c) where
+  encCBOR
     NonMyopic
       { likelihoodsNM = aps
       , rewardPotNM = rp
       } =
       encodeListLen 2
-        <> toCBOR aps
-        <> toCBOR rp
+        <> encCBOR aps
+        <> encCBOR rp
 
-instance CC.Crypto c => FromSharedCBOR (NonMyopic c) where
+instance CC.Crypto c => DecShareCBOR (NonMyopic c) where
   type Share (NonMyopic c) = Interns (KeyHash 'StakePool c)
-  fromSharedPlusCBOR = do
+  decSharePlusCBOR = do
     decodeRecordNamedT "NonMyopic" (const 2) $ do
-      likelihoodsNM <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
-      rewardPotNM <- lift fromCBOR
+      likelihoodsNM <- decSharePlusLensCBOR (toMemptyLens _1 id)
+      rewardPotNM <- lift decCBOR
       pure $ NonMyopic {likelihoodsNM, rewardPotNM}
 
 -- | Desirability calculation for non-myopic utility,

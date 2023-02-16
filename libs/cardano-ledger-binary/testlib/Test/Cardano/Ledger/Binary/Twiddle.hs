@@ -23,10 +23,10 @@ module Test.Cardano.Ledger.Binary.Twiddle (
 where
 
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
   Term (..),
-  ToCBOR (..),
   Version,
   decodeFull,
   encodeTerm,
@@ -66,7 +66,7 @@ gTwiddleTList v a = TList <$> twiddleL v (from @a @p a)
 --
 --   For any value `x :: a`, where `a` derives `Twiddle`, and for any version
 --   of the decoder, the following property must hold:
---   >>> fmap ((== x) . encodingToTerm version . toCBOR) (twiddle x)
+--   >>> fmap ((== x) . encodingToTerm version . encCBOR) (twiddle x)
 class Twiddle a where
   -- | Given a value of type `a`, generates a CBOR `Term` that can contain
   -- slight variations without changing the semantics. After encoding and
@@ -112,7 +112,7 @@ instance Twiddle Int where
   -- This is not possible with the CBOR AST provided by cborg
   twiddle _ = pure . TInt
 
-instance (Twiddle a, Arbitrary a, ToCBOR a) => Arbitrary (Twiddler a) where
+instance (Twiddle a, Arbitrary a, EncCBOR a) => Arbitrary (Twiddler a) where
   arbitrary = do
     x <- arbitrary
     v <- arbitrary
@@ -128,13 +128,13 @@ instance Twiddle a => Twiddle (Seq a) where
 instance Twiddle a => Twiddle (StrictSeq a) where
   twiddle v = twiddle v . toList
 
-instance Typeable a => ToCBOR (Twiddler a) where
-  toCBOR (Twiddler _ _ x) = encodeTerm x
+instance Typeable a => EncCBOR (Twiddler a) where
+  encCBOR (Twiddler _ _ x) = encodeTerm x
 
-instance (ToCBOR a, FromCBOR a) => FromCBOR (Twiddler a) where
-  fromCBOR = do
+instance (EncCBOR a, DecCBOR a) => DecCBOR (Twiddler a) where
+  decCBOR = do
     v <- getDecoderVersion
-    (\x -> Twiddler v x $ toTerm v x) <$> fromCBOR
+    (\x -> Twiddler v x $ toTerm v x) <$> decCBOR
 
 instance Show a => Show (Twiddler a) where
   show (Twiddler v x _) = "Twiddler " <> show v <> ": " <> show x
@@ -210,8 +210,8 @@ encodingToTerm version enc =
     Right t -> t
     Left err -> error $ show err
 
-toTerm :: ToCBOR a => Version -> a -> Term
-toTerm version = encodingToTerm version . toCBOR
+toTerm :: EncCBOR a => Version -> a -> Term
+toTerm version = encodingToTerm version . encCBOR
 
 -- | Wraps an arbitrary value into a `Twiddler`
 toTwiddler :: Twiddle a => Version -> a -> Gen (Twiddler a)
@@ -222,7 +222,7 @@ toTwiddler v x = Twiddler v x <$> twiddle v x
 twiddleInvariantProp :: forall a. Twiddle a => Version -> a -> Gen Property
 twiddleInvariantProp version x = do
   t <- twiddle version x
-  let t' = encodingToTerm version $ toCBOR t
+  let t' = encodingToTerm version $ encCBOR t
   pure $ t === t'
 
 -- | Optional containers have two "empty" representations. One of

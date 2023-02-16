@@ -31,8 +31,8 @@ import Cardano.Ledger.BaseTypes (
   networkId,
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   decodeRecordSum,
   encodeListLen,
  )
@@ -118,47 +118,47 @@ data PoolEvent era
   = RegisterPool (KeyHash 'StakePool (EraCrypto era))
   | ReregisterPool (KeyHash 'StakePool (EraCrypto era))
 
-instance Era era => ToCBOR (ShelleyPoolPredFailure era) where
-  toCBOR = \case
+instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
+  encCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
-      encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
+      encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
     StakePoolRetirementWrongEpochPOOL ce e em ->
-      encodeListLen 4 <> toCBOR (1 :: Word8) <> toCBOR ce <> toCBOR e <> toCBOR em
+      encodeListLen 4 <> encCBOR (1 :: Word8) <> encCBOR ce <> encCBOR e <> encCBOR em
     WrongCertificateTypePOOL ct ->
-      encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR ct
+      encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR ct
     StakePoolCostTooLowPOOL pc mc ->
-      encodeListLen 3 <> toCBOR (3 :: Word8) <> toCBOR pc <> toCBOR mc
+      encodeListLen 3 <> encCBOR (3 :: Word8) <> encCBOR pc <> encCBOR mc
     WrongNetworkPOOL a b c ->
-      encodeListLen 4 <> toCBOR (4 :: Word8) <> toCBOR a <> toCBOR b <> toCBOR c
+      encodeListLen 4 <> encCBOR (4 :: Word8) <> encCBOR a <> encCBOR b <> encCBOR c
     PoolMedataHashTooBig a b ->
-      encodeListLen 3 <> toCBOR (5 :: Word8) <> toCBOR a <> toCBOR b
+      encodeListLen 3 <> encCBOR (5 :: Word8) <> encCBOR a <> encCBOR b
 
-instance Era era => FromCBOR (ShelleyPoolPredFailure era) where
-  fromCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
+instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
+  decCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case
       0 -> do
-        kh <- fromCBOR
+        kh <- decCBOR
         pure (2, StakePoolNotRegisteredOnKeyPOOL kh)
       1 -> do
-        ce <- fromCBOR
-        e <- fromCBOR
-        em <- fromCBOR
+        ce <- decCBOR
+        e <- decCBOR
+        em <- decCBOR
         pure (4, StakePoolRetirementWrongEpochPOOL ce e em)
       2 -> do
-        ct <- fromCBOR
+        ct <- decCBOR
         pure (2, WrongCertificateTypePOOL ct)
       3 -> do
-        pc <- fromCBOR
-        mc <- fromCBOR
+        pc <- decCBOR
+        mc <- decCBOR
         pure (3, StakePoolCostTooLowPOOL pc mc)
       4 -> do
-        actualNetID <- fromCBOR
-        suppliedNetID <- fromCBOR
-        poolID <- fromCBOR
+        actualNetID <- decCBOR
+        suppliedNetID <- decCBOR
+        poolID <- decCBOR
         pure (4, WrongNetworkPOOL actualNetID suppliedNetID poolID)
       5 -> do
-        poolID <- fromCBOR
-        s <- fromCBOR
+        poolID <- decCBOR
+        s <- decCBOR
         pure (3, PoolMedataHashTooBig poolID s)
       k -> invalidKey k
 

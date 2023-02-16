@@ -26,10 +26,10 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   CBORGroup (..),
-  FromCBOR (..),
-  FromCBORGroup (..),
-  ToCBOR (..),
-  ToCBORGroup (..),
+  DecCBOR (..),
+  DecCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
   encodedSigDSIGNSizeExpr,
   encodedVerKeyKESSizeExpr,
   runByteBuilder,
@@ -76,7 +76,7 @@ currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | otherwise = Nothing
 
 newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
-  deriving (Eq, Generic, Ord, NoThunks, FromCBOR, ToCBOR)
+  deriving (Eq, Generic, Ord, NoThunks, DecCBOR, EncCBOR)
   deriving (Show) via Quiet KESPeriod
 
 data OCert c = OCert
@@ -90,7 +90,7 @@ data OCert c = OCert
   -- ^ Signature of block operational certificate content
   }
   deriving (Generic)
-  deriving (ToCBOR) via (CBORGroup (OCert c))
+  deriving (EncCBOR) via (CBORGroup (OCert c))
 
 deriving instance Crypto c => Eq (OCert c)
 
@@ -100,12 +100,12 @@ instance Crypto c => NoThunks (OCert c)
 
 instance
   (Crypto c) =>
-  ToCBORGroup (OCert c)
+  EncCBORGroup (OCert c)
   where
-  toCBORGroup ocert =
+  encCBORGroup ocert =
     encodeVerKeyKES (ocertVkHot ocert)
-      <> toCBOR (ocertN ocert)
-      <> toCBOR (ocertKESPeriod ocert)
+      <> encCBOR (ocertN ocert)
+      <> encCBOR (ocertKESPeriod ocert)
       <> encodeSignedDSIGN (ocertSigma ocert)
   encodedGroupSizeExpr size proxy =
     encodedVerKeyKESSizeExpr (ocertVkHot <$> proxy)
@@ -121,13 +121,13 @@ instance
 
 instance
   (Crypto c) =>
-  FromCBORGroup (OCert c)
+  DecCBORGroup (OCert c)
   where
-  fromCBORGroup =
+  decCBORGroup =
     OCert
       <$> decodeVerKeyKES
-      <*> fromCBOR
-      <*> fromCBOR
+      <*> decCBOR
+      <*> decCBOR
       <*> decodeSignedDSIGN
 
 kesPeriod :: SlotNo -> ShelleyBase KESPeriod

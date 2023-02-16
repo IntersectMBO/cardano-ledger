@@ -15,8 +15,8 @@ where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  ToCBOR (toCBOR),
+  DecCBOR (decCBOR),
+  EncCBOR (encCBOR),
   decodeDouble,
   encodeDouble,
  )
@@ -270,18 +270,18 @@ instance Show (RewardProvenance c) where
 -- =======================================================
 -- CBOR instances
 
-instance ToCBOR Desirability where
-  toCBOR (Desirability p1 p2) =
+instance EncCBOR Desirability where
+  encCBOR (Desirability p1 p2) =
     encode $ Rec Desirability !> E encodeDouble p1 !> E encodeDouble p2
 
-instance FromCBOR Desirability where
-  fromCBOR = decode $ RecD Desirability <! D decodeDouble <! D decodeDouble
+instance DecCBOR Desirability where
+  decCBOR = decode $ RecD Desirability <! D decodeDouble <! D decodeDouble
 
 instance
   (CC.Crypto c) =>
-  ToCBOR (RewardProvenancePool c)
+  EncCBOR (RewardProvenancePool c)
   where
-  toCBOR (RewardProvenancePool p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+  encCBOR (RewardProvenancePool p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
     encode $
       Rec RewardProvenancePool
         !> To p1
@@ -297,9 +297,9 @@ instance
 
 instance
   (CC.Crypto c) =>
-  FromCBOR (RewardProvenancePool c)
+  DecCBOR (RewardProvenancePool c)
   where
-  fromCBOR =
+  decCBOR =
     decode $
       RecD RewardProvenancePool
         <! From
@@ -315,9 +315,9 @@ instance
 
 instance
   (CC.Crypto c) =>
-  ToCBOR (RewardProvenance c)
+  EncCBOR (RewardProvenance c)
   where
-  toCBOR (RewardProvenance p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16) =
+  encCBOR (RewardProvenance p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16) =
     encode $
       Rec RewardProvenance
         !> To p1
@@ -339,9 +339,9 @@ instance
 
 instance
   (CC.Crypto c) =>
-  FromCBOR (RewardProvenance c)
+  DecCBOR (RewardProvenance c)
   where
-  fromCBOR =
+  decCBOR =
     decode $
       RecD RewardProvenance
         <! From

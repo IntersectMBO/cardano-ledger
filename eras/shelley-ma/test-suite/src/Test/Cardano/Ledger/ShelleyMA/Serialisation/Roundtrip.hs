@@ -8,7 +8,7 @@
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
 import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Shelley (Shelley)
@@ -36,8 +36,8 @@ eraRoundTripProps ::
   , Arbitrary (Value e)
   , Arbitrary (Script e)
   , Arbitrary (ApplyTxError e)
-  , ToCBOR (PredicateFailure (EraRule "LEDGER" e))
-  , FromCBOR (PredicateFailure (EraRule "LEDGER" e))
+  , EncCBOR (PredicateFailure (EraRule "LEDGER" e))
+  , DecCBOR (PredicateFailure (EraRule "LEDGER" e))
   ) =>
   TestTree
 eraRoundTripProps =

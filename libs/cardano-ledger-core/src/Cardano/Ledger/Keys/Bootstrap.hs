@@ -36,8 +36,8 @@ import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.Binary (
   Annotator,
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   annotatorSlice,
   byronProtVer,
   decodeRecordNamed,
@@ -75,7 +75,7 @@ import Quiet
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)
   deriving (Show) via Quiet ChainCode
-  deriving newtype (NoThunks, ToCBOR, FromCBOR, NFData)
+  deriving newtype (NoThunks, EncCBOR, DecCBOR, NFData)
 
 data BootstrapWitness c = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness c)
@@ -120,10 +120,10 @@ pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} <-
       let bytes =
             serializeEncoding byronProtVer $
               encodeListLen 4
-                <> toCBOR key
+                <> encCBOR key
                 <> encodeSignedDSIGN sig
-                <> toCBOR cc
-                <> toCBOR attributes
+                <> encCBOR cc
+                <> encCBOR attributes
        in BootstrapWitness' key sig cc attributes bytes
 
 {-# COMPLETE BootstrapWitness #-}
@@ -131,17 +131,17 @@ pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} <-
 instance CC.Crypto c => Ord (BootstrapWitness c) where
   compare = comparing bootstrapWitKeyHash
 
-instance CC.Crypto c => ToCBOR (BootstrapWitness c) where
-  toCBOR = encodePreEncoded . LBS.toStrict . bwBytes
+instance CC.Crypto c => EncCBOR (BootstrapWitness c) where
+  encCBOR = encodePreEncoded . LBS.toStrict . bwBytes
 
-instance CC.Crypto c => FromCBOR (Annotator (BootstrapWitness c)) where
-  fromCBOR = annotatorSlice $
+instance CC.Crypto c => DecCBOR (Annotator (BootstrapWitness c)) where
+  decCBOR = annotatorSlice $
     decodeRecordNamed "BootstrapWitness" (const 4) $
       do
-        key <- fromCBOR
+        key <- decCBOR
         sig <- decodeSignedDSIGN
-        cc <- fromCBOR
-        attributes <- fromCBOR
+        cc <- decCBOR
+        attributes <- decCBOR
         pure . pure $ BootstrapWitness' key sig cc attributes
 
 -- | Rebuild the addrRoot of the corresponding address.

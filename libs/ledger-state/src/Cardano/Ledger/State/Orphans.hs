@@ -87,14 +87,14 @@ instance PersistFieldSql DeltaCoin where
 
 newtype Enc a = Enc {unEnc :: a}
 
-instance (ToCBOR a, FromCBOR a) => PersistField (Enc a) where
+instance (EncCBOR a, DecCBOR a) => PersistField (Enc a) where
   toPersistValue = PersistByteString . serialize' (eraProtVerHigh @CurrentEra) . unEnc
   fromPersistValue = fmap Enc . decodePersistValue
 
-instance (ToCBOR a, FromCBOR a) => PersistFieldSql (Enc a) where
+instance (EncCBOR a, DecCBOR a) => PersistFieldSql (Enc a) where
   sqlType _ = SqlBlob
 
-decodePersistValue :: FromCBOR b => PersistValue -> Either T.Text b
+decodePersistValue :: DecCBOR b => PersistValue -> Either T.Text b
 decodePersistValue (PersistByteString bs) =
   case decodeFull' (eraProtVerHigh @CurrentEra) bs of
     Left err -> Left $ "Could not decode: " <> T.pack (show err)
@@ -121,8 +121,8 @@ deriving via Enc (AlonzoTxOut CurrentEra) instance PersistField (AlonzoTxOut Cur
 
 deriving via Enc (AlonzoTxOut CurrentEra) instance PersistFieldSql (AlonzoTxOut CurrentEra)
 
-instance FromCBOR (DState C) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (DState C) where
+  decCBOR = decNoShareCBOR
 
 deriving via Enc (DState C) instance PersistField (DState C)
 
@@ -140,8 +140,8 @@ deriving via Enc (PoolParams C) instance PersistField (PoolParams C)
 
 deriving via Enc (PoolParams C) instance PersistFieldSql (PoolParams C)
 
-instance FromCBOR (NonMyopic C) where
-  fromCBOR = fromNotSharedCBOR
+instance DecCBOR (NonMyopic C) where
+  decCBOR = decNoShareCBOR
 
 deriving via Enc (NonMyopic C) instance PersistField (NonMyopic C)
 

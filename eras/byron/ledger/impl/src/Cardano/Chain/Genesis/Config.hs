@@ -57,8 +57,8 @@ import Cardano.Crypto (
 import Cardano.Crypto.Raw (Raw)
 import Cardano.Ledger.Binary (
   Annotated (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
   encodeListLen,
   enforceSize,
  )
@@ -164,8 +164,8 @@ data ConfigurationError
     GenesisHashDecodeError Text
   deriving (Show)
 
-instance ToCBOR Config where
-  toCBOR
+instance EncCBOR Config where
+  encCBOR
     ( Config
         configGenesisData_
         configGenesisHash_
@@ -174,17 +174,17 @@ instance ToCBOR Config where
       ) =
       mconcat
         [ encodeListLen 4
-        , toCBOR @GenesisData configGenesisData_
-        , toCBOR @GenesisHash configGenesisHash_
-        , toCBOR @RequiresNetworkMagic configReqNetMagic_
-        , toCBOR @UTxOConfiguration configUTxOConfiguration_
+        , encCBOR @GenesisData configGenesisData_
+        , encCBOR @GenesisHash configGenesisHash_
+        , encCBOR @RequiresNetworkMagic configReqNetMagic_
+        , encCBOR @UTxOConfiguration configUTxOConfiguration_
         ]
 
-instance FromCBOR Config where
-  fromCBOR = do
+instance DecCBOR Config where
+  decCBOR = do
     enforceSize "Config" 4
     Config
-      <$> fromCBOR @GenesisData
-      <*> fromCBOR @GenesisHash
-      <*> fromCBOR @RequiresNetworkMagic
-      <*> fromCBOR @UTxOConfiguration
+      <$> decCBOR @GenesisData
+      <*> decCBOR @GenesisHash
+      <*> decCBOR @RequiresNetworkMagic
+      <*> decCBOR @UTxOConfiguration

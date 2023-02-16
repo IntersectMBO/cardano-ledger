@@ -17,9 +17,9 @@ import Cardano.Crypto.ProtocolMagic (
  )
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
@@ -52,20 +52,20 @@ instance HeapWords NetworkMagic where
   heapWords NetworkMainOrStage = 0
   heapWords (NetworkTestnet _) = 2
 
-instance ToCBOR NetworkMagic where
-  toCBOR = \case
+instance EncCBOR NetworkMagic where
+  encCBOR = \case
     NetworkMainOrStage ->
-      encodeListLen 1 <> toCBOR @Word8 0
+      encodeListLen 1 <> encCBOR @Word8 0
     NetworkTestnet n ->
-      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR n
+      encodeListLen 2 <> encCBOR @Word8 1 <> encCBOR n
 
-instance FromCBOR NetworkMagic where
-  fromCBOR = do
+instance DecCBOR NetworkMagic where
+  decCBOR = do
     len <- decodeListLen
     tag <- decodeWord8
     case tag of
       0 -> matchSize "NetworkMagic" 1 len $> NetworkMainOrStage
-      1 -> matchSize "NetworkMagic" 2 len >> NetworkTestnet <$> fromCBOR
+      1 -> matchSize "NetworkMagic" 2 len >> NetworkTestnet <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "NetworkMagic" tag
 
 makeNetworkMagic :: AProtocolMagic a -> NetworkMagic

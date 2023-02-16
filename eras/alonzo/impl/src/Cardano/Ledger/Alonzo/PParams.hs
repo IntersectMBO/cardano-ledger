@@ -69,9 +69,9 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.BaseTypes (EpochNo (..), NonNegativeInterval, Nonce (NeutralNonce), StrictMaybe (..), UnitInterval, isSNothing)
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
   encodeMapLen,
@@ -258,8 +258,8 @@ instance Crypto c => EraGovernance (AlonzoEra c) where
 
   getProposedPPUpdates = Just . proposals
 
-instance Era era => ToCBOR (AlonzoPParams Identity era) where
-  toCBOR
+instance Era era => EncCBOR (AlonzoPParams Identity era) where
+  encCBOR
     AlonzoPParams
       { appMinFeeA
       , appMinFeeB
@@ -314,8 +314,8 @@ instance Era era => ToCBOR (AlonzoPParams Identity era) where
           !> To appCollateralPercentage
           !> To appMaxCollateralInputs
 
-instance Era era => FromCBOR (AlonzoPParams Identity era) where
-  fromCBOR =
+instance Era era => DecCBOR (AlonzoPParams Identity era) where
+  decCBOR =
     decode $
       RecD AlonzoPParams
         <! From -- appMinFeeA
@@ -408,7 +408,7 @@ instance FromJSON (AlonzoPParams Identity era) where
 -- that operate on TxExUnits and BlockExUnits use the `ExUnits` type, not this one.
 newtype OrdExUnits = OrdExUnits {unOrdExUnits :: ExUnits}
   deriving (Eq)
-  deriving newtype (Show, NoThunks, NFData, FromCBOR, ToCBOR, FromJSON, ToJSON, ToExpr)
+  deriving newtype (Show, NoThunks, NFData, DecCBOR, EncCBOR, FromJSON, ToJSON, ToExpr)
 
 instance Ord OrdExUnits where
   compare = coerce (zipSemiExUnits compare)
@@ -532,30 +532,30 @@ encodePParamsUpdate ::
   Encode ('Closed 'Sparse) (AlonzoPParams StrictMaybe era)
 encodePParamsUpdate ppup =
   Keyed AlonzoPParams
-    !> omitStrictMaybe 0 (appMinFeeA ppup) toCBOR
-    !> omitStrictMaybe 1 (appMinFeeB ppup) toCBOR
-    !> omitStrictMaybe 2 (appMaxBBSize ppup) toCBOR
-    !> omitStrictMaybe 3 (appMaxTxSize ppup) toCBOR
-    !> omitStrictMaybe 4 (appMaxBHSize ppup) toCBOR
-    !> omitStrictMaybe 5 (appKeyDeposit ppup) toCBOR
-    !> omitStrictMaybe 6 (appPoolDeposit ppup) toCBOR
-    !> omitStrictMaybe 7 (appEMax ppup) toCBOR
-    !> omitStrictMaybe 8 (appNOpt ppup) toCBOR
-    !> omitStrictMaybe 9 (appA0 ppup) toCBOR
-    !> omitStrictMaybe 10 (appRho ppup) toCBOR
-    !> omitStrictMaybe 11 (appTau ppup) toCBOR
-    !> omitStrictMaybe 12 (appD ppup) toCBOR
-    !> omitStrictMaybe 13 (appExtraEntropy ppup) toCBOR
-    !> omitStrictMaybe 14 (appProtocolVersion ppup) toCBOR
-    !> omitStrictMaybe 16 (appMinPoolCost ppup) toCBOR
-    !> omitStrictMaybe 17 (appCoinsPerUTxOWord ppup) toCBOR
-    !> omitStrictMaybe 18 (appCostModels ppup) toCBOR
-    !> omitStrictMaybe 19 (appPrices ppup) toCBOR
-    !> omitStrictMaybe 20 (appMaxTxExUnits ppup) toCBOR
-    !> omitStrictMaybe 21 (appMaxBlockExUnits ppup) toCBOR
-    !> omitStrictMaybe 22 (appMaxValSize ppup) toCBOR
-    !> omitStrictMaybe 23 (appCollateralPercentage ppup) toCBOR
-    !> omitStrictMaybe 24 (appMaxCollateralInputs ppup) toCBOR
+    !> omitStrictMaybe 0 (appMinFeeA ppup) encCBOR
+    !> omitStrictMaybe 1 (appMinFeeB ppup) encCBOR
+    !> omitStrictMaybe 2 (appMaxBBSize ppup) encCBOR
+    !> omitStrictMaybe 3 (appMaxTxSize ppup) encCBOR
+    !> omitStrictMaybe 4 (appMaxBHSize ppup) encCBOR
+    !> omitStrictMaybe 5 (appKeyDeposit ppup) encCBOR
+    !> omitStrictMaybe 6 (appPoolDeposit ppup) encCBOR
+    !> omitStrictMaybe 7 (appEMax ppup) encCBOR
+    !> omitStrictMaybe 8 (appNOpt ppup) encCBOR
+    !> omitStrictMaybe 9 (appA0 ppup) encCBOR
+    !> omitStrictMaybe 10 (appRho ppup) encCBOR
+    !> omitStrictMaybe 11 (appTau ppup) encCBOR
+    !> omitStrictMaybe 12 (appD ppup) encCBOR
+    !> omitStrictMaybe 13 (appExtraEntropy ppup) encCBOR
+    !> omitStrictMaybe 14 (appProtocolVersion ppup) encCBOR
+    !> omitStrictMaybe 16 (appMinPoolCost ppup) encCBOR
+    !> omitStrictMaybe 17 (appCoinsPerUTxOWord ppup) encCBOR
+    !> omitStrictMaybe 18 (appCostModels ppup) encCBOR
+    !> omitStrictMaybe 19 (appPrices ppup) encCBOR
+    !> omitStrictMaybe 20 (appMaxTxExUnits ppup) encCBOR
+    !> omitStrictMaybe 21 (appMaxBlockExUnits ppup) encCBOR
+    !> omitStrictMaybe 22 (appMaxValSize ppup) encCBOR
+    !> omitStrictMaybe 23 (appCollateralPercentage ppup) encCBOR
+    !> omitStrictMaybe 24 (appMaxCollateralInputs ppup) encCBOR
   where
     omitStrictMaybe ::
       Word -> StrictMaybe a -> (a -> Encoding) -> Encode ('Closed 'Sparse) (StrictMaybe a)
@@ -565,8 +565,8 @@ encodePParamsUpdate ppup =
     fromSJust (SJust x) = x
     fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
 
-instance Era era => ToCBOR (AlonzoPParams StrictMaybe era) where
-  toCBOR ppup = encode (encodePParamsUpdate ppup)
+instance Era era => EncCBOR (AlonzoPParams StrictMaybe era) where
+  encCBOR ppup = encode (encodePParamsUpdate ppup)
 
 updateField :: Word -> Field (AlonzoPParams StrictMaybe era)
 updateField 0 = field (\x up -> up {appMinFeeA = SJust x}) From
@@ -595,8 +595,8 @@ updateField 23 = field (\x up -> up {appCollateralPercentage = SJust x}) From
 updateField 24 = field (\x up -> up {appMaxCollateralInputs = SJust x}) From
 updateField k = field (\_x up -> up) (Invalid k)
 
-instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
-  fromCBOR =
+instance Era era => DecCBOR (AlonzoPParams StrictMaybe era) where
+  decCBOR =
     decode (SparseKeyed "PParamsUpdate" emptyAlonzoPParamsUpdate updateField [])
 
 -- ===================================================
@@ -617,10 +617,10 @@ encodeCostModel cm =
     -- For this reason, PlutusV1 remains with this encoding.
     -- Future versions of Plutus, starting with PlutusV2 in the Babbage era, will
     -- use the intended definite length encoding.
-    PlutusV1 -> encodeFoldableAsIndefLenList toCBOR $ getCostModelParams cm
+    PlutusV1 -> encodeFoldableAsIndefLenList encCBOR $ getCostModelParams cm
     -- Since cost model serializations need to be independently reproduced,
     -- we use the 'canonical' serialization with definite list length.
-    PlutusV2 -> encodeFoldableAsDefLenList toCBOR $ getCostModelParams cm
+    PlutusV2 -> encodeFoldableAsDefLenList encCBOR $ getCostModelParams cm
 
 getLanguageView ::
   AlonzoEraPParams era =>

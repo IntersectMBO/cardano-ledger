@@ -85,8 +85,8 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator,
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
@@ -149,7 +149,7 @@ deriving instance
   Show (AlonzoTxBodyRaw era)
 
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
-  deriving (ToCBOR)
+  deriving (EncCBOR)
   deriving newtype (SafeToHash)
 
 instance Memoized AlonzoTxBody where
@@ -261,8 +261,8 @@ deriving instance
 deriving via
   (Mem AlonzoTxBodyRaw era)
   instance
-    (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
-    FromCBOR (Annotator (AlonzoTxBody era))
+    (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+    DecCBOR (Annotator (AlonzoTxBody era))
 
 pattern AlonzoTxBody ::
   EraTxOut era =>
@@ -401,10 +401,10 @@ txnetworkid' = atbrTxNetworkId . getMemoRawType
 --------------------------------------------------------------------------------
 
 instance
-  (Era era, ToCBOR (TxOut era), ToCBOR (PParamsUpdate era)) =>
-  ToCBOR (AlonzoTxBodyRaw era)
+  (Era era, EncCBOR (TxOut era), EncCBOR (PParamsUpdate era)) =>
+  EncCBOR (AlonzoTxBodyRaw era)
   where
-  toCBOR
+  encCBOR
     AlonzoTxBodyRaw
       { atbrInputs
       , atbrCollateral
@@ -441,10 +441,10 @@ instance
           !> encodeKeyedStrictMaybe 15 atbrTxNetworkId
 
 instance
-  (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (AlonzoTxBodyRaw era)
+  (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+  DecCBOR (AlonzoTxBodyRaw era)
   where
-  fromCBOR =
+  decCBOR =
     decode $
       SparseKeyed
         "AlonzoTxBodyRaw"
@@ -498,7 +498,7 @@ emptyAlonzoTxBodyRaw =
     SNothing
 
 instance
-  (Era era, FromCBOR (TxOut era), FromCBOR (PParamsUpdate era)) =>
-  FromCBOR (Annotator (AlonzoTxBodyRaw era))
+  (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+  DecCBOR (Annotator (AlonzoTxBodyRaw era))
   where
-  fromCBOR = pure <$> fromCBOR
+  decCBOR = pure <$> decCBOR

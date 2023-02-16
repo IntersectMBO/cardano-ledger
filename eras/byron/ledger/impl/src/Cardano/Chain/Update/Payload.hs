@@ -28,9 +28,9 @@ import Cardano.Chain.Update.Vote (
 import Cardano.Ledger.Binary (
   Annotated (..),
   ByteSpan,
+  DecCBOR (..),
   Decoded (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   annotatedDecoder,
   encodeListLen,
   enforceSize,
@@ -71,16 +71,16 @@ instance B.Buildable Payload where
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (APayload a)
 
-instance ToCBOR Payload where
-  toCBOR p =
-    encodeListLen 2 <> toCBOR (payloadProposal p) <> toCBOR (payloadVotes p)
+instance EncCBOR Payload where
+  encCBOR p =
+    encodeListLen 2 <> encCBOR (payloadProposal p) <> encCBOR (payloadVotes p)
 
-instance FromCBOR Payload where
-  fromCBOR = void <$> fromCBOR @(APayload ByteSpan)
+instance DecCBOR Payload where
+  decCBOR = void <$> decCBOR @(APayload ByteSpan)
 
-instance FromCBOR (APayload ByteSpan) where
-  fromCBOR = do
+instance DecCBOR (APayload ByteSpan) where
+  decCBOR = do
     Annotated (proposal, votes) byteSpan <- annotatedDecoder $ do
       enforceSize "Update.Payload" 2
-      (,) <$> fromCBOR <*> fromCBOR
+      (,) <$> decCBOR <*> decCBOR
     pure $ APayload proposal votes byteSpan

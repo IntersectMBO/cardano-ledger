@@ -10,8 +10,8 @@
 module Cardano.Crypto.Signing.Signature (
   -- * Signature
   Signature (..),
-  toCBORXSignature,
-  fromCBORXSignature,
+  encCBORXSignature,
+  decCBORXSignature,
   fullSignatureHexF,
   parseFullSignature,
 
@@ -41,11 +41,11 @@ import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..))
 import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Ledger.Binary (
   Annotated (..),
+  DecCBOR (..),
   Decoded (..),
   Decoder,
+  EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
   byronProtVer,
   serialize',
   serializeEncoding,
@@ -120,35 +120,35 @@ parseFullSignature s = do
   b <- first (const (SignatureParseBase16Error bs)) $ B16.decode bs
   Signature <$> first (SignatureParseXSignatureError . toS) (CC.xsignature b)
 
-toCBORXSignature :: CC.XSignature -> Encoding
-toCBORXSignature a = toCBOR $ CC.unXSignature a
+encCBORXSignature :: CC.XSignature -> Encoding
+encCBORXSignature a = encCBOR $ CC.unXSignature a
 
-fromCBORXSignature :: Decoder s CC.XSignature
-fromCBORXSignature = toCborError . CC.xsignature =<< fromCBOR
+decCBORXSignature :: Decoder s CC.XSignature
+decCBORXSignature = toCborError . CC.xsignature =<< decCBOR
 
-instance Typeable a => ToCBOR (Signature a) where
-  toCBOR (Signature a) = toCBORXSignature a
+instance Typeable a => EncCBOR (Signature a) where
+  encCBOR (Signature a) = encCBORXSignature a
   encodedSizeExpr _ _ = 66
 
-instance Typeable a => FromCBOR (Signature a) where
-  fromCBOR = fmap Signature fromCBORXSignature
+instance Typeable a => DecCBOR (Signature a) where
+  decCBOR = fmap Signature decCBORXSignature
 
 --------------------------------------------------------------------------------
 -- Signing
 --------------------------------------------------------------------------------
 
--- | Encode something with 'ToCBOR' and sign it
+-- | Encode something with 'EncCBOR' and sign it
 sign ::
-  ToCBOR a =>
+  EncCBOR a =>
   ProtocolMagicId ->
   -- | See docs for 'SignTag'
   SignTag ->
   SigningKey ->
   a ->
   Signature a
-sign pm tag sk = signEncoded pm tag sk . toCBOR
+sign pm tag sk = signEncoded pm tag sk . encCBOR
 
--- | Like 'sign' but without the 'ToCBOR' constraint
+-- | Like 'sign' but without the 'EncCBOR' constraint
 signEncoded ::
   ProtocolMagicId -> SignTag -> SigningKey -> Encoding -> Signature a
 signEncoded pm tag sk =
@@ -170,7 +170,7 @@ signRaw pm mTag (SigningKey sk) x =
     tag = maybe mempty (signTag pm) mTag
 
 safeSign ::
-  ToCBOR a => ProtocolMagicId -> SignTag -> SafeSigner -> a -> Signature a
+  EncCBOR a => ProtocolMagicId -> SignTag -> SafeSigner -> a -> Signature a
 safeSign pm t ss = coerce . safeSignRaw pm (Just t) ss . serialize' byronProtVer
 
 safeSignRaw ::

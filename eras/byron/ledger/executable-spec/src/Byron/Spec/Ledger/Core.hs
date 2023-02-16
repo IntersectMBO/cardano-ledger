@@ -12,7 +12,7 @@
 
 module Byron.Spec.Ledger.Core where
 
-import Cardano.Ledger.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Data.AbstractSize
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
@@ -44,7 +44,7 @@ newtype Hash = Hash
   { unHash :: Maybe Int
   }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 isValid :: Hash -> Bool
@@ -63,7 +63,7 @@ newtype Owner = Owner
   { unOwner :: Natural
   }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, FromCBOR, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, DecCBOR, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 class HasOwner a where
@@ -72,7 +72,7 @@ class HasOwner a where
 -- | Signing Key.
 newtype SKey = SKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner SKey where
@@ -81,7 +81,7 @@ instance HasOwner SKey where
 -- | Verification Key.
 newtype VKey = VKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, FromCBOR, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, DecCBOR, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasHash VKey where
@@ -93,7 +93,7 @@ instance HasOwner VKey where
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis {unVKeyGenesis :: VKey}
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, HasHash, FromCBOR, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, HasHash, DecCBOR, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner VKeyGenesis where
@@ -149,12 +149,12 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 newtype Epoch = Epoch {unEpoch :: Word64}
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, Num, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, Num, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype Slot = Slot {unSlot :: Word64}
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 -- | A number of slots.
@@ -164,7 +164,7 @@ newtype Slot = Slot {unSlot :: Word64}
 --  of blocks.
 newtype SlotCount = SlotCount {unSlotCount :: Word64}
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Num, Hashable, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Num, Hashable, EncCBOR, NoThunks)
 
 instance HasTypeReps SlotCount
 
@@ -210,7 +210,7 @@ minusSlotMaybe (Slot m) (SlotCount n)
 
 newtype BlockCount = BlockCount {unBlockCount :: Word64}
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Num, Hashable, NoThunks, FromCBOR, ToCBOR)
+  deriving newtype (Eq, Ord, Num, Hashable, NoThunks, DecCBOR, EncCBOR)
 
 instance HasTypeReps BlockCount
 
@@ -221,7 +221,7 @@ instance HasTypeReps BlockCount
 -- | The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, HasOwner, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, HasOwner, EncCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 -- | Create an address from a number.
@@ -236,7 +236,7 @@ newtype Lovelace = Lovelace
   { unLovelace :: Integer
   }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral, EncCBOR, NoThunks)
   deriving (Semigroup, Monoid) via (Sum Integer)
   deriving anyclass (HasTypeReps)
 

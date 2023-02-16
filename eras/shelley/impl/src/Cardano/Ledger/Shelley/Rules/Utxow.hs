@@ -43,7 +43,7 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
   (==>),
  )
-import Cardano.Ledger.Binary (FromCBOR (..), ToCBOR (..), decodeRecordSum, encodeListLen)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (
@@ -184,85 +184,85 @@ instance
   ( Era era
   , Typeable (Script era)
   , Typeable (TxAuxData era)
-  , ToCBOR (PredicateFailure (EraRule "UTXO" era))
+  , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   ) =>
-  ToCBOR (ShelleyUtxowPredFailure era)
+  EncCBOR (ShelleyUtxowPredFailure era)
   where
-  toCBOR = \case
+  encCBOR = \case
     InvalidWitnessesUTXOW wits ->
-      encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR wits
+      encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR wits
     MissingVKeyWitnessesUTXOW missing ->
-      encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR missing
+      encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR missing
     MissingScriptWitnessesUTXOW ss ->
       encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR ss
+        <> encCBOR (2 :: Word8)
+        <> encCBOR ss
     ScriptWitnessNotValidatingUTXOW ss ->
       encodeListLen 2
-        <> toCBOR (3 :: Word8)
-        <> toCBOR ss
+        <> encCBOR (3 :: Word8)
+        <> encCBOR ss
     UtxoFailure a ->
       encodeListLen 2
-        <> toCBOR (4 :: Word8)
-        <> toCBOR a
+        <> encCBOR (4 :: Word8)
+        <> encCBOR a
     MIRInsufficientGenesisSigsUTXOW sigs ->
       encodeListLen 2
-        <> toCBOR (5 :: Word8)
-        <> toCBOR sigs
+        <> encCBOR (5 :: Word8)
+        <> encCBOR sigs
     MissingTxBodyMetadataHash h ->
-      encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR h
+      encodeListLen 2 <> encCBOR (6 :: Word8) <> encCBOR h
     MissingTxMetadata h ->
-      encodeListLen 2 <> toCBOR (7 :: Word8) <> toCBOR h
+      encodeListLen 2 <> encCBOR (7 :: Word8) <> encCBOR h
     ConflictingMetadataHash bodyHash fullMDHash ->
-      encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR bodyHash <> toCBOR fullMDHash
+      encodeListLen 3 <> encCBOR (8 :: Word8) <> encCBOR bodyHash <> encCBOR fullMDHash
     InvalidMetadata ->
-      encodeListLen 1 <> toCBOR (9 :: Word8)
+      encodeListLen 1 <> encCBOR (9 :: Word8)
     ExtraneousScriptWitnessesUTXOW ss ->
       encodeListLen 2
-        <> toCBOR (10 :: Word8)
-        <> toCBOR ss
+        <> encCBOR (10 :: Word8)
+        <> encCBOR ss
 
 instance
   ( Era era
-  , FromCBOR (PredicateFailure (EraRule "UTXO" era))
+  , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
-  FromCBOR (ShelleyUtxowPredFailure era)
+  DecCBOR (ShelleyUtxowPredFailure era)
   where
-  fromCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
+  decCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
     \case
       0 -> do
-        wits <- fromCBOR
+        wits <- decCBOR
         pure (2, InvalidWitnessesUTXOW wits)
       1 -> do
-        missing <- fromCBOR
+        missing <- decCBOR
         pure (2, MissingVKeyWitnessesUTXOW missing)
       2 -> do
-        ss <- fromCBOR
+        ss <- decCBOR
         pure (2, MissingScriptWitnessesUTXOW ss)
       3 -> do
-        ss <- fromCBOR
+        ss <- decCBOR
         pure (2, ScriptWitnessNotValidatingUTXOW ss)
       4 -> do
-        a <- fromCBOR
+        a <- decCBOR
         pure (2, UtxoFailure a)
       5 -> do
-        s <- fromCBOR
+        s <- decCBOR
         pure (2, MIRInsufficientGenesisSigsUTXOW s)
       6 -> do
-        h <- fromCBOR
+        h <- decCBOR
         pure (2, MissingTxBodyMetadataHash h)
       7 -> do
-        h <- fromCBOR
+        h <- decCBOR
         pure (2, MissingTxMetadata h)
       8 -> do
-        bodyHash <- fromCBOR
-        fullMDHash <- fromCBOR
+        bodyHash <- decCBOR
+        fullMDHash <- decCBOR
         pure (3, ConflictingMetadataHash bodyHash fullMDHash)
       9 -> pure (1, InvalidMetadata)
       10 -> do
-        ss <- fromCBOR
+        ss <- decCBOR
         pure (2, ExtraneousScriptWitnessesUTXOW ss)
       k -> invalidKey k
 

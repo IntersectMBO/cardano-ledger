@@ -69,10 +69,10 @@ import Cardano.Chain.Update.Vote (AVote)
 import Cardano.Crypto (ProtocolMagicId)
 import Cardano.Ledger.Binary (
   Annotated,
+  DecCBOR (..),
   Decoder,
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
@@ -128,36 +128,36 @@ data State = State
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance FromCBOR State where
-  fromCBOR = do
+instance DecCBOR State where
+  decCBOR = do
     enforceSize "State" 11
     State
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
 
-instance ToCBOR State where
-  toCBOR s =
+instance EncCBOR State where
+  encCBOR s =
     encodeListLen 11
-      <> toCBOR (currentEpoch s)
-      <> toCBOR (adoptedProtocolVersion s)
-      <> toCBOR (adoptedProtocolParameters s)
-      <> toCBOR (candidateProtocolUpdates s)
-      <> toCBOR (appVersions s)
-      <> toCBOR (registeredProtocolUpdateProposals s)
-      <> toCBOR (registeredSoftwareUpdateProposals s)
-      <> toCBOR (confirmedProposals s)
-      <> toCBOR (proposalVotes s)
-      <> toCBOR (registeredEndorsements s)
-      <> toCBOR (proposalRegistrationSlot s)
+      <> encCBOR (currentEpoch s)
+      <> encCBOR (adoptedProtocolVersion s)
+      <> encCBOR (adoptedProtocolParameters s)
+      <> encCBOR (candidateProtocolUpdates s)
+      <> encCBOR (appVersions s)
+      <> encCBOR (registeredProtocolUpdateProposals s)
+      <> encCBOR (registeredSoftwareUpdateProposals s)
+      <> encCBOR (confirmedProposals s)
+      <> encCBOR (proposalVotes s)
+      <> encCBOR (registeredEndorsements s)
+      <> encCBOR (proposalRegistrationSlot s)
 
 data Error
   = Registration Registration.Error
@@ -166,36 +166,36 @@ data Error
   | NumberOfGenesisKeysTooLarge (Registration.TooLarge Int)
   deriving (Eq, Show)
 
-instance ToCBOR Error where
-  toCBOR err = case err of
+instance EncCBOR Error where
+  encCBOR err = case err of
     Registration registrationErr ->
       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR registrationErr
+        <> encCBOR (0 :: Word8)
+        <> encCBOR registrationErr
     Voting votingErr ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR votingErr
+        <> encCBOR (1 :: Word8)
+        <> encCBOR votingErr
     Endorsement endorsementErr ->
       encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR endorsementErr
+        <> encCBOR (2 :: Word8)
+        <> encCBOR endorsementErr
     NumberOfGenesisKeysTooLarge tooLarge ->
       encodeListLen 2
-        <> toCBOR (3 :: Word8)
-        <> toCBOR tooLarge
+        <> encCBOR (3 :: Word8)
+        <> encCBOR tooLarge
 
-instance FromCBOR Error where
-  fromCBOR = do
+instance DecCBOR Error where
+  decCBOR = do
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "Interface.Error" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 2 >> Registration <$> fromCBOR
-      1 -> checkSize 2 >> Voting <$> fromCBOR
-      2 -> checkSize 2 >> Endorsement <$> fromCBOR
-      3 -> checkSize 2 >> NumberOfGenesisKeysTooLarge <$> fromCBOR
+      0 -> checkSize 2 >> Registration <$> decCBOR
+      1 -> checkSize 2 >> Voting <$> decCBOR
+      2 -> checkSize 2 >> Endorsement <$> decCBOR
+      3 -> checkSize 2 >> NumberOfGenesisKeysTooLarge <$> decCBOR
       _ -> cborError $ DecoderErrorUnknownTag "Interface.Error" tag
 
 -- | Signal combining signals from various rules

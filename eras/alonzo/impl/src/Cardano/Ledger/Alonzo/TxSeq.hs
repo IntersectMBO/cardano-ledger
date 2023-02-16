@@ -28,14 +28,14 @@ import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), alonzoSegwitTx)
 import Cardano.Ledger.Binary (
   Annotator,
-  FromCBOR (..),
-  ToCBORGroup (..),
+  DecCBOR (..),
+  EncCBORGroup (..),
+  encCBOR,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodePreEncoded,
   encodedSizeExpr,
   serializeEncoding,
-  toCBOR,
   withSlice,
  )
 import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
@@ -109,7 +109,7 @@ pattern AlonzoTxSeq xs <-
               encodeFoldableEncoder encodePreEncoded x
           metaChunk index m = encodeIndexed <$> strictMaybeToMaybe m
             where
-              encodeIndexed metadata = toCBOR index <> encodePreEncoded metadata
+              encodeIndexed metadata = encCBOR index <> encodePreEncoded metadata
        in TxSeq'
             { txSeqTxns = txns
             , txSeqBodyBytes =
@@ -120,7 +120,7 @@ pattern AlonzoTxSeq xs <-
                 serializeEncoding version . encodeFoldableMapEncoder metaChunk $
                   fmap originalBytes . view auxDataTxL <$> txns
             , txSeqIsValidBytes =
-                serializeEncoding version $ toCBOR $ nonValidatingIndices txns
+                serializeEncoding version $ encCBOR $ nonValidatingIndices txns
             }
 
 {-# COMPLETE AlonzoTxSeq #-}
@@ -151,9 +151,9 @@ deriving stock instance Eq (Tx era) => Eq (TxSeq era)
 instance
   forall era.
   (Era era) =>
-  ToCBORGroup (TxSeq era)
+  EncCBORGroup (TxSeq era)
   where
-  toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes invalidBytes) =
+  encCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes invalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
@@ -195,16 +195,16 @@ hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 
-instance AlonzoEraTx era => FromCBOR (Annotator (TxSeq era)) where
-  fromCBOR = do
-    (bodies, bodiesAnn) <- withSlice fromCBOR
-    (ws, witsAnn) <- withSlice fromCBOR
+instance AlonzoEraTx era => DecCBOR (Annotator (TxSeq era)) where
+  decCBOR = do
+    (bodies, bodiesAnn) <- withSlice decCBOR
+    (ws, witsAnn) <- withSlice decCBOR
     let b = length bodies
         inRange x = (0 <= x) && (x <= (b - 1))
         w = length ws
     (auxData, auxDataAnn) <- withSlice $
       do
-        m <- fromCBOR
+        m <- decCBOR
         unless
           (all inRange (Map.keysSet m))
           ( fail
@@ -213,7 +213,7 @@ instance AlonzoEraTx era => FromCBOR (Annotator (TxSeq era)) where
               )
           )
         pure (constructMetadata b m)
-    (isValIdxs, isValAnn) <- withSlice fromCBOR
+    (isValIdxs, isValAnn) <- withSlice decCBOR
     let vs = alignedValidFlags b isValIdxs
     unless
       (b == w)

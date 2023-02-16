@@ -119,8 +119,8 @@ instance B.Buildable GenesisDataError where
         ("Failed with " . stext . " when tried to read GenesisData file")
         (show err)
 
-instance ToCBOR GenesisData where
-  toCBOR
+instance EncCBOR GenesisData where
+  encCBOR
     ( GenesisData
         gdGenesisKeyHashes_
         gdHeavyDelegation_
@@ -133,28 +133,28 @@ instance ToCBOR GenesisData where
       ) =
       mconcat
         [ encodeListLen 8
-        , toCBOR @GenesisKeyHashes gdGenesisKeyHashes_
-        , toCBOR @GenesisDelegation gdHeavyDelegation_
-        , toCBOR {- @UTCTime -} gdStartTime_
-        , toCBOR @GenesisNonAvvmBalances gdNonAvvmBalances_
-        , toCBOR @ProtocolParameters gdProtocolParameters_
-        , toCBOR @BlockCount gdK_
-        , toCBOR @ProtocolMagicId gdProtocolMagicId_
-        , toCBOR @GenesisAvvmBalances gdAvvmDistr_
+        , encCBOR @GenesisKeyHashes gdGenesisKeyHashes_
+        , encCBOR @GenesisDelegation gdHeavyDelegation_
+        , encCBOR {- @UTCTime -} gdStartTime_
+        , encCBOR @GenesisNonAvvmBalances gdNonAvvmBalances_
+        , encCBOR @ProtocolParameters gdProtocolParameters_
+        , encCBOR @BlockCount gdK_
+        , encCBOR @ProtocolMagicId gdProtocolMagicId_
+        , encCBOR @GenesisAvvmBalances gdAvvmDistr_
         ]
 
-instance FromCBOR GenesisData where
-  fromCBOR = do
+instance DecCBOR GenesisData where
+  decCBOR = do
     enforceSize "GenesisData" 8
     GenesisData
-      <$> fromCBOR @GenesisKeyHashes
-      <*> fromCBOR @GenesisDelegation
-      <*> fromCBOR -- @UTCTime
-      <*> fromCBOR @GenesisNonAvvmBalances
-      <*> fromCBOR @ProtocolParameters
-      <*> fromCBOR @BlockCount
-      <*> fromCBOR @ProtocolMagicId
-      <*> fromCBOR @GenesisAvvmBalances
+      <$> decCBOR @GenesisKeyHashes
+      <*> decCBOR @GenesisDelegation
+      <*> decCBOR -- @UTCTime
+      <*> decCBOR @GenesisNonAvvmBalances
+      <*> decCBOR @ProtocolParameters
+      <*> decCBOR @BlockCount
+      <*> decCBOR @ProtocolMagicId
+      <*> decCBOR @GenesisAvvmBalances
 
 -- | Parse @GenesisData@ from a JSON file and annotate with Canonical JSON hash
 readGenesisData ::

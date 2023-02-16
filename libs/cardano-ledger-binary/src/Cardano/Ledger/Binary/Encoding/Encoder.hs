@@ -500,7 +500,7 @@ encodeContainerSkel encodeLen size foldFunction f c =
 {-# INLINE encodeContainerSkel #-}
 
 -- | Generic encoder for vectors. Its intended use is to allow easy
--- definition of 'ToCBOR' instances for custom vector
+-- definition of 'EncCBOR' instances for custom vector
 encodeVector :: VG.Vector v a => (a -> Encoding) -> v a -> Encoding
 encodeVector encodeValue =
   encodeContainerSkel

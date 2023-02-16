@@ -26,14 +26,14 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
-  FromCBOR (fromCBOR),
-  FromSharedCBOR (Share, fromSharedCBOR, fromSharedPlusCBOR),
+  DecCBOR (decCBOR),
+  DecShareCBOR (Share, decShareCBOR, decSharePlusCBOR),
+  EncCBOR (encCBOR),
   Interns,
-  ToCBOR (toCBOR),
+  decShareLensCBOR,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
-  fromSharedLensCBOR,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
@@ -86,13 +86,13 @@ data AccountState = AccountState
   }
   deriving (Show, Eq, Generic)
 
-instance ToCBOR AccountState where
-  toCBOR (AccountState t r) =
-    encodeListLen 2 <> toCBOR t <> toCBOR r
+instance EncCBOR AccountState where
+  encCBOR (AccountState t r) =
+    encodeListLen 2 <> encCBOR t <> encCBOR r
 
-instance FromCBOR AccountState where
-  fromCBOR =
-    decodeRecordNamed "AccountState" (const 2) $ AccountState <$> fromCBOR <*> fromCBOR
+instance DecCBOR AccountState where
+  decCBOR =
+    decodeRecordNamed "AccountState" (const 2) $ AccountState <$> decCBOR <*> decCBOR
 
 instance NoThunks AccountState
 
@@ -138,34 +138,34 @@ instance
 
 instance
   ( EraTxOut era
-  , ToCBOR (GovernanceState era)
+  , EncCBOR (GovernanceState era)
   ) =>
-  ToCBOR (EpochState era)
+  EncCBOR (EpochState era)
   where
-  toCBOR EpochState {esAccountState, esLState, esSnapshots, esPrevPp, esPp, esNonMyopic} =
+  encCBOR EpochState {esAccountState, esLState, esSnapshots, esPrevPp, esPp, esNonMyopic} =
     encodeListLen 6
-      <> toCBOR esAccountState
-      <> toCBOR esLState -- We get better sharing when encoding ledger state before snaphots
-      <> toCBOR esSnapshots
-      <> toCBOR esPrevPp
-      <> toCBOR esPp
-      <> toCBOR esNonMyopic
+      <> encCBOR esAccountState
+      <> encCBOR esLState -- We get better sharing when encoding ledger state before snaphots
+      <> encCBOR esSnapshots
+      <> encCBOR esPrevPp
+      <> encCBOR esPp
+      <> encCBOR esNonMyopic
 
 instance
   ( EraTxOut era
   , EraGovernance era
   ) =>
-  FromCBOR (EpochState era)
+  DecCBOR (EpochState era)
   where
-  fromCBOR =
+  decCBOR =
     decodeRecordNamed "EpochState" (const 6) $
       flip evalStateT mempty $ do
-        esAccountState <- lift fromCBOR
-        esLState <- fromSharedPlusCBOR
-        esSnapshots <- fromSharedPlusCBOR
-        esPrevPp <- lift fromCBOR
-        esPp <- lift fromCBOR
-        esNonMyopic <- fromSharedLensCBOR _2
+        esAccountState <- lift decCBOR
+        esLState <- decSharePlusCBOR
+        esSnapshots <- decSharePlusCBOR
+        esPrevPp <- lift decCBOR
+        esPp <- lift decCBOR
+        esNonMyopic <- decShareLensCBOR _2
         pure EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
 
 -- =============================
@@ -185,16 +185,16 @@ data IncrementalStake c = IStake
   }
   deriving (Generic, Show, Eq, Ord, NoThunks, NFData)
 
-instance Crypto c => ToCBOR (IncrementalStake c) where
-  toCBOR (IStake st dangle) =
-    encodeListLen 2 <> toCBOR st <> toCBOR dangle
+instance Crypto c => EncCBOR (IncrementalStake c) where
+  encCBOR (IStake st dangle) =
+    encodeListLen 2 <> encCBOR st <> encCBOR dangle
 
-instance Crypto c => FromSharedCBOR (IncrementalStake c) where
+instance Crypto c => DecShareCBOR (IncrementalStake c) where
   type Share (IncrementalStake c) = Interns (Credential 'Staking c)
-  fromSharedCBOR credInterns =
+  decShareCBOR credInterns =
     decodeRecordNamed "Stake" (const 2) $ do
-      stake <- fromSharedCBOR (credInterns, mempty)
-      IStake stake <$> fromCBOR
+      stake <- decShareCBOR (credInterns, mempty)
+      IStake stake <$> decCBOR
 
 instance Semigroup (IncrementalStake c) where
   (IStake a b) <> (IStake c d) = IStake (Map.unionWith (<>) a c) (Map.unionWith (<>) b d)
@@ -253,29 +253,29 @@ instance
 
 instance
   ( EraTxOut era
-  , ToCBOR (GovernanceState era)
+  , EncCBOR (GovernanceState era)
   ) =>
-  ToCBOR (UTxOState era)
+  EncCBOR (UTxOState era)
   where
-  toCBOR (UTxOState ut dp fs us sd) =
-    encodeListLen 5 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us <> toCBOR sd
+  encCBOR (UTxOState ut dp fs us sd) =
+    encodeListLen 5 <> encCBOR ut <> encCBOR dp <> encCBOR fs <> encCBOR us <> encCBOR sd
 
 instance
   ( EraTxOut era
   , EraGovernance era
   ) =>
-  FromSharedCBOR (UTxOState era)
+  DecShareCBOR (UTxOState era)
   where
   type
     Share (UTxOState era) =
       Interns (Credential 'Staking (EraCrypto era))
-  fromSharedCBOR credInterns =
+  decShareCBOR credInterns =
     decodeRecordNamed "UTxOState" (const 5) $ do
-      utxosUtxo <- fromSharedCBOR credInterns
-      utxosDeposited <- fromCBOR
-      utxosFees <- fromCBOR
-      utxosGovernance <- fromCBOR
-      utxosStakeDistr <- fromSharedCBOR credInterns
+      utxosUtxo <- decShareCBOR credInterns
+      utxosDeposited <- decCBOR
+      utxosFees <- decCBOR
+      utxosGovernance <- decCBOR
+      utxosStakeDistr <- decShareCBOR credInterns
       pure UTxOState {..}
 
 -- | New Epoch state and environment
@@ -334,29 +334,29 @@ instance
 
 instance
   ( EraTxOut era
-  , ToCBOR (StashedAVVMAddresses era)
-  , ToCBOR (GovernanceState era)
+  , EncCBOR (StashedAVVMAddresses era)
+  , EncCBOR (GovernanceState era)
   ) =>
-  ToCBOR (NewEpochState era)
+  EncCBOR (NewEpochState era)
   where
-  toCBOR (NewEpochState e bp bc es ru pd av) =
+  encCBOR (NewEpochState e bp bc es ru pd av) =
     encodeListLen 7
-      <> toCBOR e
-      <> toCBOR bp
-      <> toCBOR bc
-      <> toCBOR es
-      <> toCBOR ru
-      <> toCBOR pd
-      <> toCBOR av
+      <> encCBOR e
+      <> encCBOR bp
+      <> encCBOR bc
+      <> encCBOR es
+      <> encCBOR ru
+      <> encCBOR pd
+      <> encCBOR av
 
 instance
   ( EraTxOut era
   , EraGovernance era
-  , FromCBOR (StashedAVVMAddresses era)
+  , DecCBOR (StashedAVVMAddresses era)
   ) =>
-  FromCBOR (NewEpochState era)
+  DecCBOR (NewEpochState era)
   where
-  fromCBOR = do
+  decCBOR = do
     decode $
       RecD NewEpochState
         <! From
@@ -410,28 +410,28 @@ instance
 
 instance
   ( EraTxOut era
-  , ToCBOR (GovernanceState era)
+  , EncCBOR (GovernanceState era)
   ) =>
-  ToCBOR (LedgerState era)
+  EncCBOR (LedgerState era)
   where
-  toCBOR LedgerState {lsUTxOState, lsDPState} =
+  encCBOR LedgerState {lsUTxOState, lsDPState} =
     encodeListLen 2
-      <> toCBOR lsDPState -- encode delegation state first to improve sharing
-      <> toCBOR lsUTxOState
+      <> encCBOR lsDPState -- encode delegation state first to improve sharing
+      <> encCBOR lsUTxOState
 
 instance
   ( EraTxOut era
   , EraGovernance era
   ) =>
-  FromSharedCBOR (LedgerState era)
+  DecShareCBOR (LedgerState era)
   where
   type
     Share (LedgerState era) =
       (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
-  fromSharedPlusCBOR =
+  decSharePlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
-      lsDPState <- fromSharedPlusCBOR
-      lsUTxOState <- fromSharedLensCBOR _1
+      lsDPState <- decSharePlusCBOR
+      lsUTxOState <- decShareLensCBOR _1
       pure LedgerState {lsUTxOState, lsDPState}
 
 -- ====================================================

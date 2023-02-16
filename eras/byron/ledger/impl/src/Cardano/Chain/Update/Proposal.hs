@@ -61,9 +61,9 @@ import Cardano.Crypto (
 import Cardano.Ledger.Binary (
   Annotated (..),
   ByteSpan,
+  DecCBOR (..),
   Decoded (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   annotatedDecoder,
   encodeListLen,
   enforceSize,
@@ -136,37 +136,37 @@ recoverUpId = hashDecoded
 -- Proposal Binary Serialization
 --------------------------------------------------------------------------------
 
-instance ToCBOR Proposal where
-  toCBOR proposal =
+instance EncCBOR Proposal where
+  encCBOR proposal =
     encodeListLen 7
-      <> toCBOR (protocolVersion body')
-      <> toCBOR (protocolParametersUpdate body')
-      <> toCBOR (softwareVersion body')
-      <> toCBOR (metadata body')
-      <> toCBOR (mempty :: Map Word8 LByteString)
-      <> toCBOR (issuer proposal)
-      <> toCBOR (signature proposal)
+      <> encCBOR (protocolVersion body')
+      <> encCBOR (protocolParametersUpdate body')
+      <> encCBOR (softwareVersion body')
+      <> encCBOR (metadata body')
+      <> encCBOR (mempty :: Map Word8 LByteString)
+      <> encCBOR (issuer proposal)
+      <> encCBOR (signature proposal)
     where
       body' = body proposal
 
-instance FromCBOR Proposal where
-  fromCBOR = void <$> fromCBOR @(AProposal ByteSpan)
+instance DecCBOR Proposal where
+  decCBOR = void <$> decCBOR @(AProposal ByteSpan)
 
-instance FromCBOR (AProposal ByteSpan) where
-  fromCBOR = do
+instance DecCBOR (AProposal ByteSpan) where
+  decCBOR = do
     Annotated (pb, vk, sig) byteSpan <- annotatedDecoder $ do
       enforceSize "Proposal" 7
       pb <-
         annotatedDecoder
           ( ProposalBody
-              <$> fromCBOR
-              <*> fromCBOR
-              <*> fromCBOR
-              <*> fromCBOR
+              <$> decCBOR
+              <*> decCBOR
+              <*> decCBOR
+              <*> decCBOR
               <* dropEmptyAttributes
           )
-      vk <- fromCBOR
-      sig <- fromCBOR
+      vk <- decCBOR
+      sig <- decCBOR
       pure (pb, vk, sig)
     pure $ AProposal pb vk sig byteSpan
 
@@ -224,24 +224,24 @@ instance ToJSON ProposalBody
 -- ProposalBody Binary Serialization
 --------------------------------------------------------------------------------
 
-instance ToCBOR ProposalBody where
-  toCBOR pb =
+instance EncCBOR ProposalBody where
+  encCBOR pb =
     encodeListLen 5
-      <> toCBOR (protocolVersion pb)
-      <> toCBOR (protocolParametersUpdate pb)
-      <> toCBOR (softwareVersion pb)
-      <> toCBOR (metadata pb)
+      <> encCBOR (protocolVersion pb)
+      <> encCBOR (protocolParametersUpdate pb)
+      <> encCBOR (softwareVersion pb)
+      <> encCBOR (metadata pb)
       -- Encode empty Attributes
-      <> toCBOR (mempty :: Map Word8 LByteString)
+      <> encCBOR (mempty :: Map Word8 LByteString)
 
-instance FromCBOR ProposalBody where
-  fromCBOR = do
+instance DecCBOR ProposalBody where
+  decCBOR = do
     enforceSize "ProposalBody" 5
     ProposalBody
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <$> decCBOR
+      <*> decCBOR
+      <*> decCBOR
+      <*> decCBOR
       <* dropEmptyAttributes
 
 -- | Prepend byte corresponding to `encodeListLen 5`, which was used during

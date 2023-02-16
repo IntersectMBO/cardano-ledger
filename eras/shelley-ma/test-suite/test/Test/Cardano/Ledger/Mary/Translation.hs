@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools (translateEraToCBOR)
+import Test.Cardano.Ledger.TranslationTools (translateEraEncCBOR)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)
@@ -58,11 +58,11 @@ maryTranslationTests =
 
 test ::
   forall f.
-  ( ToCBOR (f Allegra)
-  , ToCBOR (f Mary)
+  ( EncCBOR (f Allegra)
+  , EncCBOR (f Mary)
   , TranslateEra Mary f
   , Show (TranslationError Mary f)
   ) =>
   f Allegra ->
   Assertion
-test = translateEraToCBOR ([] :: [Mary]) ()
+test = translateEraEncCBOR ([] :: [Mary]) ()

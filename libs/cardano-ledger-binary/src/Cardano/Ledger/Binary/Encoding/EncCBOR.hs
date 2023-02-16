@@ -16,8 +16,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 
-module Cardano.Ledger.Binary.Encoding.ToCBOR (
-  ToCBOR (..),
+module Cardano.Ledger.Binary.Encoding.EncCBOR (
+  EncCBOR (..),
   withWordSize,
   PreEncoded (..),
 
@@ -159,26 +159,26 @@ import Data.Fix (Fix(..))
 import Data.Functor.Foldable (Fix(..))
 #endif
 
-class Typeable a => ToCBOR a where
-  toCBOR :: a -> Encoding
+class Typeable a => EncCBOR a where
+  encCBOR :: a -> Encoding
 
-  encodedSizeExpr :: (forall t. ToCBOR t => Proxy t -> Size) -> Proxy a -> Size
+  encodedSizeExpr :: (forall t. EncCBOR t => Proxy t -> Size) -> Proxy a -> Size
   encodedSizeExpr = todo
 
-  encodedListSizeExpr :: (forall t. ToCBOR t => Proxy t -> Size) -> Proxy [a] -> Size
+  encodedListSizeExpr :: (forall t. EncCBOR t => Proxy t -> Size) -> Proxy [a] -> Size
   encodedListSizeExpr = defaultEncodedListSizeExpr
 
 -- | A type used to represent the length of a value in 'Size' computations.
 newtype LengthOf xs = LengthOf xs
 
-instance Typeable xs => ToCBOR (LengthOf xs) where
-  toCBOR = error "The `LengthOf` type cannot be encoded!"
+instance Typeable xs => EncCBOR (LengthOf xs) where
+  encCBOR = error "The `LengthOf` type cannot be encoded!"
 
 -- | Default size expression for a list type.
 defaultEncodedListSizeExpr ::
   forall a.
-  ToCBOR a =>
-  (forall t. ToCBOR t => Proxy t -> Size) ->
+  EncCBOR a =>
+  (forall t. EncCBOR t => Proxy t -> Size) ->
   Proxy [a] ->
   Size
 defaultEncodedListSizeExpr size _ =
@@ -186,11 +186,11 @@ defaultEncodedListSizeExpr size _ =
 
 newtype PreEncoded = PreEncoded {unPreEncoded :: BS.ByteString}
 
-instance ToCBOR PreEncoded where
-  toCBOR = encodePreEncoded . unPreEncoded
+instance EncCBOR PreEncoded where
+  encCBOR = encodePreEncoded . unPreEncoded
 
-instance ToCBOR Version where
-  toCBOR = encodeVersion
+instance EncCBOR Version where
+  encCBOR = encodeVersion
   encodedSizeExpr f px = f (getVersion64 <$> px)
 
 --------------------------------------------------------------------------------
@@ -230,7 +230,7 @@ data SizeF t
     --   from the outside in. For example, `szLazy` can be followed by
     --   applications of `szForce` to reveal more detailed expressions
     --   describing the size bounds on a type.
-    forall a. ToCBOR a => TodoF (forall x. ToCBOR x => Proxy x -> Size) (Proxy a)
+    forall a. EncCBOR a => TodoF (forall x. EncCBOR x => Proxy x -> Size) (Proxy a)
 
 instance Functor SizeF where
   fmap f = \case
@@ -321,7 +321,7 @@ instance B.Buildable (Range Natural) where
 --   suspended computations. @szEval g@ effectively turns each "thunk"
 --   of the form @TodoF f x@ into @g x@, then evaluates the result.
 szEval ::
-  (forall t. ToCBOR t => (Proxy t -> Size) -> Proxy t -> Range Natural) ->
+  (forall t. EncCBOR t => (Proxy t -> Size) -> Proxy t -> Range Natural) ->
   Size ->
   Range Natural
 szEval doit = cata $ \case
@@ -345,16 +345,16 @@ szEval doit = cata $ \case
 --
 -- > ghci> putStrLn $ pretty $ szLazy (Proxy @TxAux)
 -- > (_ :: TxAux)
-szLazy :: ToCBOR a => (Proxy a -> Size)
+szLazy :: EncCBOR a => (Proxy a -> Size)
 szLazy = todo (encodedSizeExpr szLazy)
 
 -- | Evaluate an expression greedily. There may still be thunks in the
 --    result, for types that did not provide a custom 'encodedSizeExpr' method
---    in their 'ToCBOR' instance.
+--    in their 'EncCBOR' instance.
 --
 -- > ghci> putStrLn $ pretty $ szGreedy (Proxy @TxAux)
 -- > (0 + { TxAux=(2 + ((0 + (((1 + (2 + ((_ :: LengthOf [TxIn]) * (2 + { TxInUtxo=(2 + ((1 + 34) + { minBound=1 maxBound=5 })) })))) + (2 + ((_ :: LengthOf [TxOut]) * (0 + { TxOut=(2 + ((0 + ((2 + ((2 + withWordSize((((1 + 30) + (_ :: Attributes AddrAttributes)) + 1))) + (((1 + 30) + (_ :: Attributes AddrAttributes)) + 1))) + { minBound=1 maxBound=5 })) + { minBound=1 maxBound=9 })) })))) + (_ :: Attributes ()))) + (_ :: Vector TxInWitness))) })
-szGreedy :: ToCBOR a => (Proxy a -> Size)
+szGreedy :: EncCBOR a => (Proxy a -> Size)
 szGreedy = encodedSizeExpr szGreedy
 
 -- | Is this expression a thunk?
@@ -365,8 +365,8 @@ isTodo _ = False
 -- | Create a "thunk" that will apply @f@ to @pxy@ when forced.
 todo ::
   forall a.
-  ToCBOR a =>
-  (forall t. ToCBOR t => Proxy t -> Size) ->
+  EncCBOR a =>
+  (forall t. EncCBOR t => Proxy t -> Size) ->
   Proxy a ->
   Size
 todo f pxy = Fix (TodoF f pxy)
@@ -384,7 +384,7 @@ apMono n f = \case
 
 -- | Greedily compute the size bounds for a type, using the given context to
 --   override sizes for specific types.
-szWithCtx :: (ToCBOR a) => Map.Map TypeRep SizeOverride -> Proxy a -> Size
+szWithCtx :: (EncCBOR a) => Map.Map TypeRep SizeOverride -> Proxy a -> Size
 szWithCtx ctx pxy = case Map.lookup (typeRep pxy) ctx of
   Nothing -> normal
   Just override -> case override of
@@ -412,7 +412,7 @@ data SizeOverride
   = -- | Replace with a fixed @Size@.
     SizeConstant Size
   | -- | Recursively compute the size.
-    SizeExpression ((forall a. ToCBOR a => Proxy a -> Size) -> Size)
+    SizeExpression ((forall a. EncCBOR a => Proxy a -> Size) -> Size)
   | -- | Select only a specific case from a @CasesF@.
     SelectCases [Text]
 
@@ -478,7 +478,7 @@ szForce = cata $ \case
   ApF n f x -> apMono n f x
   TodoF f x -> f x
 
-szBounds :: ToCBOR a => a -> Either Size (Range Natural)
+szBounds :: EncCBOR a => a -> Either Size (Range Natural)
 szBounds = szSimplify . szGreedy . pure
 
 -- | Compute encoded size of an integer
@@ -496,20 +496,20 @@ withWordSize x =
 -- Primitive types
 --------------------------------------------------------------------------------
 
-instance ToCBOR () where
-  toCBOR = const encodeNull
+instance EncCBOR () where
+  encCBOR = const encodeNull
   encodedSizeExpr _ _ = 1
 
-instance ToCBOR Bool where
-  toCBOR = encodeBool
+instance EncCBOR Bool where
+  encCBOR = encodeBool
   encodedSizeExpr _ _ = 1
 
 --------------------------------------------------------------------------------
 -- Numeric data
 --------------------------------------------------------------------------------
 
-instance ToCBOR Integer where
-  toCBOR = encodeInteger
+instance EncCBOR Integer where
+  encCBOR = encodeInteger
 
 encodedSizeRange :: forall a. (Integral a, Bounded a) => Proxy a -> Size
 encodedSizeRange _ =
@@ -521,94 +521,94 @@ encodedSizeRange _ =
     mkCase :: Text -> a -> Case Size
     mkCase n = Case n . fromInteger . withWordSize
 
-instance ToCBOR Word where
-  toCBOR = encodeWord
+instance EncCBOR Word where
+  encCBOR = encodeWord
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Word8 where
-  toCBOR = encodeWord8
+instance EncCBOR Word8 where
+  encCBOR = encodeWord8
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Word16 where
-  toCBOR = encodeWord16
+instance EncCBOR Word16 where
+  encCBOR = encodeWord16
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Word32 where
-  toCBOR = encodeWord32
+instance EncCBOR Word32 where
+  encCBOR = encodeWord32
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Word64 where
-  toCBOR = encodeWord64
+instance EncCBOR Word64 where
+  encCBOR = encodeWord64
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Int where
-  toCBOR = encodeInt
+instance EncCBOR Int where
+  encCBOR = encodeInt
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Int8 where
-  toCBOR = encodeInt8
+instance EncCBOR Int8 where
+  encCBOR = encodeInt8
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Int16 where
-  toCBOR = encodeInt16
+instance EncCBOR Int16 where
+  encCBOR = encodeInt16
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Int32 where
-  toCBOR = encodeInt32
+instance EncCBOR Int32 where
+  encCBOR = encodeInt32
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Int64 where
-  toCBOR = encodeInt64
+instance EncCBOR Int64 where
+  encCBOR = encodeInt64
   encodedSizeExpr _ = encodedSizeRange
 
-instance ToCBOR Float where
-  toCBOR = encodeFloat
+instance EncCBOR Float where
+  encCBOR = encodeFloat
   encodedSizeExpr _ _ = 1 + fromIntegral (sizeOf (0 :: Float))
 
-instance ToCBOR Double where
-  toCBOR = encodeDouble
+instance EncCBOR Double where
+  encCBOR = encodeDouble
   encodedSizeExpr _ _ = 1 + fromIntegral (sizeOf (0 :: Float))
 
-instance ToCBOR a => ToCBOR (Ratio a) where
-  toCBOR = encodeRatio toCBOR
+instance EncCBOR a => EncCBOR (Ratio a) where
+  encCBOR = encodeRatio encCBOR
   encodedSizeExpr size _ = 1 + size (Proxy @a) + size (Proxy @a)
 
-deriving newtype instance Typeable p => ToCBOR (Fixed p)
+deriving newtype instance Typeable p => EncCBOR (Fixed p)
 
-instance ToCBOR Natural where
-  toCBOR = toCBOR . toInteger
+instance EncCBOR Natural where
+  encCBOR = encCBOR . toInteger
 
-instance ToCBOR Void where
-  toCBOR = absurd
+instance EncCBOR Void where
+  encCBOR = absurd
 
-instance ToCBOR IPv4 where
-  toCBOR = encodeIPv4
+instance EncCBOR IPv4 where
+  encCBOR = encodeIPv4
 
-instance ToCBOR IPv6 where
-  toCBOR = encodeIPv6
+instance EncCBOR IPv6 where
+  encCBOR = encodeIPv6
 
 --------------------------------------------------------------------------------
 -- CBOR
 --------------------------------------------------------------------------------
 
-instance ToCBOR Term where
-  toCBOR = encodeTerm
+instance EncCBOR Term where
+  encCBOR = encodeTerm
 
-instance ToCBOR Encoding where
-  toCBOR = id
+instance EncCBOR Encoding where
+  encCBOR = id
 
-instance ToCBOR C.Encoding where
-  toCBOR = fromPlainEncoding
+instance EncCBOR C.Encoding where
+  encCBOR = fromPlainEncoding
 
-instance ToCBOR (Tokens -> Tokens) where
-  toCBOR t = fromPlainEncoding (C.Encoding t)
+instance EncCBOR (Tokens -> Tokens) where
+  encCBOR t = fromPlainEncoding (C.Encoding t)
 
 --------------------------------------------------------------------------------
 -- Tagged
 --------------------------------------------------------------------------------
 
-instance (Typeable s, ToCBOR a) => ToCBOR (Tagged s a) where
-  toCBOR (Tagged a) = toCBOR a
+instance (Typeable s, EncCBOR a) => EncCBOR (Tagged s a) where
+  encCBOR (Tagged a) = encCBOR a
 
   encodedSizeExpr size _ = encodedSizeExpr size (Proxy @a)
 
@@ -616,35 +616,35 @@ instance (Typeable s, ToCBOR a) => ToCBOR (Tagged s a) where
 -- Containers
 --------------------------------------------------------------------------------
 
-instance (ToCBOR a, ToCBOR b) => ToCBOR (a, b) where
-  toCBOR (a, b) = encodeListLen 2 <> toCBOR a <> toCBOR b
+instance (EncCBOR a, EncCBOR b) => EncCBOR (a, b) where
+  encCBOR (a, b) = encodeListLen 2 <> encCBOR a <> encCBOR b
 
   encodedSizeExpr size _ = 1 + size (Proxy @a) + size (Proxy @b)
 
-instance (ToCBOR a, ToCBOR b, ToCBOR c) => ToCBOR (a, b, c) where
-  toCBOR (a, b, c) = encodeListLen 3 <> toCBOR a <> toCBOR b <> toCBOR c
+instance (EncCBOR a, EncCBOR b, EncCBOR c) => EncCBOR (a, b, c) where
+  encCBOR (a, b, c) = encodeListLen 3 <> encCBOR a <> encCBOR b <> encCBOR c
 
   encodedSizeExpr size _ =
     1 + size (Proxy @a) + size (Proxy @b) + size (Proxy @c)
 
-instance (ToCBOR a, ToCBOR b, ToCBOR c, ToCBOR d) => ToCBOR (a, b, c, d) where
-  toCBOR (a, b, c, d) =
-    encodeListLen 4 <> toCBOR a <> toCBOR b <> toCBOR c <> toCBOR d
+instance (EncCBOR a, EncCBOR b, EncCBOR c, EncCBOR d) => EncCBOR (a, b, c, d) where
+  encCBOR (a, b, c, d) =
+    encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
   encodedSizeExpr size _ =
     1 + size (Proxy @a) + size (Proxy @b) + size (Proxy @c) + size (Proxy @d)
 
 instance
-  (ToCBOR a, ToCBOR b, ToCBOR c, ToCBOR d, ToCBOR e) =>
-  ToCBOR (a, b, c, d, e)
+  (EncCBOR a, EncCBOR b, EncCBOR c, EncCBOR d, EncCBOR e) =>
+  EncCBOR (a, b, c, d, e)
   where
-  toCBOR (a, b, c, d, e) =
+  encCBOR (a, b, c, d, e) =
     encodeListLen 5
-      <> toCBOR a
-      <> toCBOR b
-      <> toCBOR c
-      <> toCBOR d
-      <> toCBOR e
+      <> encCBOR a
+      <> encCBOR b
+      <> encCBOR c
+      <> encCBOR d
+      <> encCBOR e
 
   encodedSizeExpr size _ =
     1
@@ -655,17 +655,17 @@ instance
       + size (Proxy @e)
 
 instance
-  (ToCBOR a, ToCBOR b, ToCBOR c, ToCBOR d, ToCBOR e, ToCBOR f) =>
-  ToCBOR (a, b, c, d, e, f)
+  (EncCBOR a, EncCBOR b, EncCBOR c, EncCBOR d, EncCBOR e, EncCBOR f) =>
+  EncCBOR (a, b, c, d, e, f)
   where
-  toCBOR (a, b, c, d, e, f) =
+  encCBOR (a, b, c, d, e, f) =
     encodeListLen 6
-      <> toCBOR a
-      <> toCBOR b
-      <> toCBOR c
-      <> toCBOR d
-      <> toCBOR e
-      <> toCBOR f
+      <> encCBOR a
+      <> encCBOR b
+      <> encCBOR c
+      <> encCBOR d
+      <> encCBOR e
+      <> encCBOR f
 
   encodedSizeExpr size _ =
     1
@@ -677,18 +677,18 @@ instance
       + size (Proxy @f)
 
 instance
-  (ToCBOR a, ToCBOR b, ToCBOR c, ToCBOR d, ToCBOR e, ToCBOR f, ToCBOR g) =>
-  ToCBOR (a, b, c, d, e, f, g)
+  (EncCBOR a, EncCBOR b, EncCBOR c, EncCBOR d, EncCBOR e, EncCBOR f, EncCBOR g) =>
+  EncCBOR (a, b, c, d, e, f, g)
   where
-  toCBOR (a, b, c, d, e, f, g) =
+  encCBOR (a, b, c, d, e, f, g) =
     encodeListLen 7
-      <> toCBOR a
-      <> toCBOR b
-      <> toCBOR c
-      <> toCBOR d
-      <> toCBOR e
-      <> toCBOR f
-      <> toCBOR g
+      <> encCBOR a
+      <> encCBOR b
+      <> encCBOR c
+      <> encCBOR d
+      <> encCBOR e
+      <> encCBOR f
+      <> encCBOR g
 
   encodedSizeExpr size _ =
     1
@@ -700,111 +700,111 @@ instance
       + size (Proxy @f)
       + size (Proxy @g)
 
-instance ToCBOR BS.ByteString where
-  toCBOR = encodeBytes
+instance EncCBOR BS.ByteString where
+  encCBOR = encodeBytes
   encodedSizeExpr size _ =
     let len = size (Proxy @(LengthOf BS.ByteString))
      in apMono "withWordSize@Int" (withWordSize @Int . fromIntegral) len + len
 
-instance ToCBOR Text.Text where
-  toCBOR = encodeString
+instance EncCBOR Text.Text where
+  encCBOR = encodeString
   encodedSizeExpr size _ =
     let bsLength =
           size (Proxy @(LengthOf Text))
             * szCases [Case "minChar" 1, Case "maxChar" 4]
      in bsLength + apMono "withWordSize" withWordSize bsLength
 
-instance ToCBOR ByteArray where
-  toCBOR = toCBOR . unBA
-  {-# INLINE toCBOR #-}
+instance EncCBOR ByteArray where
+  encCBOR = encCBOR . unBA
+  {-# INLINE encCBOR #-}
 
-instance ToCBOR Prim.ByteArray where
-  toCBOR = encodeByteArray . fromByteArray
-  {-# INLINE toCBOR #-}
+instance EncCBOR Prim.ByteArray where
+  encCBOR = encodeByteArray . fromByteArray
+  {-# INLINE encCBOR #-}
 
-instance ToCBOR SlicedByteArray where
-  toCBOR = encodeByteArray
-  {-# INLINE toCBOR #-}
+instance EncCBOR SlicedByteArray where
+  encCBOR = encodeByteArray
+  {-# INLINE encCBOR #-}
 
-instance ToCBOR ShortByteString where
-  toCBOR sbs@(SBS ba) =
+instance EncCBOR ShortByteString where
+  encCBOR sbs@(SBS ba) =
     encodeByteArray $ SBA (Prim.ByteArray ba) 0 (SBS.length sbs)
 
   encodedSizeExpr size _ =
     let len = size (Proxy @(LengthOf ShortByteString))
      in apMono "withWordSize@Int" (withWordSize @Int . fromIntegral) len + len
 
-instance ToCBOR BS.Lazy.ByteString where
-  toCBOR = toCBOR . BS.Lazy.toStrict
+instance EncCBOR BS.Lazy.ByteString where
+  encCBOR = encCBOR . BS.Lazy.toStrict
   encodedSizeExpr size _ =
     let len = size (Proxy @(LengthOf BS.Lazy.ByteString))
      in apMono "withWordSize@Int" (withWordSize @Int . fromIntegral) len + len
 
-instance ToCBOR a => ToCBOR [a] where
-  toCBOR = encodeList toCBOR
+instance EncCBOR a => EncCBOR [a] where
+  encCBOR = encodeList encCBOR
   encodedSizeExpr size _ = encodedListSizeExpr size (Proxy @[a])
 
-instance (ToCBOR a, ToCBOR b) => ToCBOR (Either a b) where
-  toCBOR (Left x) = encodeListLen 2 <> encodeWord 0 <> toCBOR x
-  toCBOR (Right x) = encodeListLen 2 <> encodeWord 1 <> toCBOR x
+instance (EncCBOR a, EncCBOR b) => EncCBOR (Either a b) where
+  encCBOR (Left x) = encodeListLen 2 <> encodeWord 0 <> encCBOR x
+  encCBOR (Right x) = encodeListLen 2 <> encodeWord 1 <> encCBOR x
 
   encodedSizeExpr size _ =
     szCases
       [Case "Left" (2 + size (Proxy @a)), Case "Right" (2 + size (Proxy @b))]
 
-instance ToCBOR a => ToCBOR (NonEmpty a) where
-  toCBOR = toCBOR . toList
+instance EncCBOR a => EncCBOR (NonEmpty a) where
+  encCBOR = encCBOR . toList
   encodedSizeExpr size _ = size (Proxy @[a]) -- MN TODO make 0 count impossible
 
-instance ToCBOR a => ToCBOR (Maybe a) where
-  toCBOR = encodeMaybe toCBOR
+instance EncCBOR a => EncCBOR (Maybe a) where
+  encCBOR = encodeMaybe encCBOR
 
   encodedSizeExpr size _ =
     szCases [Case "Nothing" 1, Case "Just" (1 + size (Proxy @a))]
 
-instance ToCBOR a => ToCBOR (SMaybe.StrictMaybe a) where
-  toCBOR SMaybe.SNothing = encodeListLen 0
-  toCBOR (SMaybe.SJust x) = encodeListLen 1 <> toCBOR x
+instance EncCBOR a => EncCBOR (SMaybe.StrictMaybe a) where
+  encCBOR SMaybe.SNothing = encodeListLen 0
+  encCBOR (SMaybe.SJust x) = encodeListLen 1 <> encCBOR x
 
-instance (Ord k, ToCBOR k, ToCBOR v) => ToCBOR (Map.Map k v) where
-  toCBOR = encodeMap toCBOR toCBOR
+instance (Ord k, EncCBOR k, EncCBOR v) => EncCBOR (Map.Map k v) where
+  encCBOR = encodeMap encCBOR encCBOR
 
-instance (Ord a, ToCBOR a) => ToCBOR (Set.Set a) where
-  toCBOR = encodeSet toCBOR
+instance (Ord a, EncCBOR a) => EncCBOR (Set.Set a) where
+  encCBOR = encodeSet encCBOR
 
-instance ToCBOR a => ToCBOR (Seq.Seq a) where
-  toCBOR = encodeSeq toCBOR
+instance EncCBOR a => EncCBOR (Seq.Seq a) where
+  encCBOR = encodeSeq encCBOR
 
-instance ToCBOR a => ToCBOR (SSeq.StrictSeq a) where
-  toCBOR = toCBOR . SSeq.fromStrict
+instance EncCBOR a => EncCBOR (SSeq.StrictSeq a) where
+  encCBOR = encCBOR . SSeq.fromStrict
 
 instance
-  (Ord k, ToCBOR k, ToCBOR v, VMap.Vector kv k, VMap.Vector vv v, Typeable kv, Typeable vv) =>
-  ToCBOR (VMap.VMap kv vv k v)
+  (Ord k, EncCBOR k, EncCBOR v, VMap.Vector kv k, VMap.Vector vv v, Typeable kv, Typeable vv) =>
+  EncCBOR (VMap.VMap kv vv k v)
   where
-  toCBOR = encodeVMap toCBOR toCBOR
+  encCBOR = encodeVMap encCBOR encCBOR
 
-instance ToCBOR a => ToCBOR (V.Vector a) where
-  toCBOR = encodeVector toCBOR
-  {-# INLINE toCBOR #-}
+instance EncCBOR a => EncCBOR (V.Vector a) where
+  encCBOR = encodeVector encCBOR
+  {-# INLINE encCBOR #-}
   encodedSizeExpr size _ =
     2 + size (Proxy @(LengthOf (V.Vector a))) * size (Proxy @a)
 
-instance (ToCBOR a, VP.Prim a) => ToCBOR (VP.Vector a) where
-  toCBOR = encodeVector toCBOR
-  {-# INLINE toCBOR #-}
+instance (EncCBOR a, VP.Prim a) => EncCBOR (VP.Vector a) where
+  encCBOR = encodeVector encCBOR
+  {-# INLINE encCBOR #-}
   encodedSizeExpr size _ =
     2 + size (Proxy @(LengthOf (VP.Vector a))) * size (Proxy @a)
 
-instance (ToCBOR a, VS.Storable a) => ToCBOR (VS.Vector a) where
-  toCBOR = encodeVector toCBOR
-  {-# INLINE toCBOR #-}
+instance (EncCBOR a, VS.Storable a) => EncCBOR (VS.Vector a) where
+  encCBOR = encodeVector encCBOR
+  {-# INLINE encCBOR #-}
   encodedSizeExpr size _ =
     2 + size (Proxy @(LengthOf (VS.Vector a))) * size (Proxy @a)
 
-instance (ToCBOR a, VU.Unbox a) => ToCBOR (VU.Vector a) where
-  toCBOR = encodeVector toCBOR
-  {-# INLINE toCBOR #-}
+instance (EncCBOR a, VU.Unbox a) => EncCBOR (VU.Vector a) where
+  encCBOR = encodeVector encCBOR
+  {-# INLINE encCBOR #-}
   encodedSizeExpr size _ =
     2 + size (Proxy @(LengthOf (VU.Vector a))) * size (Proxy @a)
 
@@ -812,8 +812,8 @@ instance (ToCBOR a, VU.Unbox a) => ToCBOR (VU.Vector a) where
 -- Time
 --------------------------------------------------------------------------------
 
-instance ToCBOR UTCTime where
-  toCBOR = encodeUTCTime
+instance EncCBOR UTCTime where
+  encCBOR = encodeUTCTime
 
 --------------------------------------------------------------------------------
 -- Crypto
@@ -850,27 +850,27 @@ encodedSigDSIGNSizeExpr _proxy =
 -- DSIGN
 --------------------------------------------------------------------------------
 
-instance DSIGNAlgorithm v => ToCBOR (VerKeyDSIGN v) where
-  toCBOR = encodeVerKeyDSIGN
+instance DSIGNAlgorithm v => EncCBOR (VerKeyDSIGN v) where
+  encCBOR = encodeVerKeyDSIGN
   encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
 
-instance DSIGNAlgorithm v => ToCBOR (SignKeyDSIGN v) where
-  toCBOR = encodeSignKeyDSIGN
+instance DSIGNAlgorithm v => EncCBOR (SignKeyDSIGN v) where
+  encCBOR = encodeSignKeyDSIGN
   encodedSizeExpr _ = encodedSignKeyDSIGNSizeExpr
 
-instance DSIGNAlgorithm v => ToCBOR (SigDSIGN v) where
-  toCBOR = encodeSigDSIGN
+instance DSIGNAlgorithm v => EncCBOR (SigDSIGN v) where
+  encCBOR = encodeSigDSIGN
   encodedSizeExpr _ = encodedSigDSIGNSizeExpr
 
 --------------------------------------------------------------------------------
 -- Hash
 --------------------------------------------------------------------------------
 
-instance (HashAlgorithm h, Typeable a) => ToCBOR (Hash h a) where
-  toCBOR (UnsafeHash h) = toCBOR h
+instance (HashAlgorithm h, Typeable a) => EncCBOR (Hash h a) where
+  encCBOR (UnsafeHash h) = encCBOR h
 
-  -- \| 'Size' expression for @Hash h a@, which is expressed using the 'ToCBOR'
-  -- instance for 'ByteString' (as is the above 'toCBOR' method).  'Size'
+  -- \| 'Size' expression for @Hash h a@, which is expressed using the 'EncCBOR'
+  -- instance for 'ByteString' (as is the above 'encCBOR' method).  'Size'
   -- computation of length of the bytestring is passed as the first argument to
   -- 'encodedSizeExpr'.  The 'ByteString' instance will use it to calculate
   -- @'size' ('Proxy' @('LengthOf' 'ByteString'))@.
@@ -913,101 +913,101 @@ encodedSigKESSizeExpr _proxy =
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  ToCBOR (VerKeyKES (SimpleKES d t))
+  EncCBOR (VerKeyKES (SimpleKES d t))
   where
-  toCBOR = encodeVerKeyKES
+  encCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  ToCBOR (SignKeyKES (SimpleKES d t))
+  EncCBOR (SignKeyKES (SimpleKES d t))
   where
-  toCBOR = encodeSignKeyKES
+  encCBOR = encodeSignKeyKES
   encodedSizeExpr _size = encodedSignKeyKESSizeExpr
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  ToCBOR (SigKES (SimpleKES d t))
+  EncCBOR (SigKES (SimpleKES d t))
   where
-  toCBOR = encodeSigKES
+  encCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
 
 instance
   (KESAlgorithm d, HashAlgorithm h) =>
-  ToCBOR (VerKeyKES (SumKES h d))
+  EncCBOR (VerKeyKES (SumKES h d))
   where
-  toCBOR = encodeVerKeyKES
+  encCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
 
 instance
   (KESAlgorithm d, HashAlgorithm h) =>
-  ToCBOR (SignKeyKES (SumKES h d))
+  EncCBOR (SignKeyKES (SumKES h d))
   where
-  toCBOR = encodeSignKeyKES
+  encCBOR = encodeSignKeyKES
   encodedSizeExpr _size = encodedSignKeyKESSizeExpr
 
 instance
   (KESAlgorithm d, HashAlgorithm h) =>
-  ToCBOR (SigKES (SumKES h d))
+  EncCBOR (SigKES (SumKES h d))
   where
-  toCBOR = encodeSigKES
+  encCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
 
-instance DSIGNAlgorithm d => ToCBOR (VerKeyKES (CompactSingleKES d)) where
-  toCBOR = encodeVerKeyKES
+instance DSIGNAlgorithm d => EncCBOR (VerKeyKES (CompactSingleKES d)) where
+  encCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
 
-instance DSIGNAlgorithm d => ToCBOR (SignKeyKES (CompactSingleKES d)) where
-  toCBOR = encodeSignKeyKES
+instance DSIGNAlgorithm d => EncCBOR (SignKeyKES (CompactSingleKES d)) where
+  encCBOR = encodeSignKeyKES
   encodedSizeExpr _size = encodedSignKeyKESSizeExpr
 
-instance DSIGNAlgorithm d => ToCBOR (SigKES (CompactSingleKES d)) where
-  toCBOR = encodeSigKES
+instance DSIGNAlgorithm d => EncCBOR (SigKES (CompactSingleKES d)) where
+  encCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  ToCBOR (VerKeyKES (CompactSumKES h d))
+  EncCBOR (VerKeyKES (CompactSumKES h d))
   where
-  toCBOR = encodeVerKeyKES
+  encCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  ToCBOR (SignKeyKES (CompactSumKES h d))
+  EncCBOR (SignKeyKES (CompactSumKES h d))
   where
-  toCBOR = encodeSignKeyKES
+  encCBOR = encodeSignKeyKES
   encodedSizeExpr _size = encodedSignKeyKESSizeExpr
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  ToCBOR (SigKES (CompactSumKES h d))
+  EncCBOR (SigKES (CompactSumKES h d))
   where
-  toCBOR = encodeSigKES
+  encCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
 
-instance DSIGNAlgorithm d => ToCBOR (VerKeyKES (SingleKES d)) where
-  toCBOR = encodeVerKeyKES
+instance DSIGNAlgorithm d => EncCBOR (VerKeyKES (SingleKES d)) where
+  encCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
 
-instance DSIGNAlgorithm d => ToCBOR (SignKeyKES (SingleKES d)) where
-  toCBOR = encodeSignKeyKES
+instance DSIGNAlgorithm d => EncCBOR (SignKeyKES (SingleKES d)) where
+  encCBOR = encodeSignKeyKES
   encodedSizeExpr _size = encodedSignKeyKESSizeExpr
 
-instance DSIGNAlgorithm d => ToCBOR (SigKES (SingleKES d)) where
-  toCBOR = encodeSigKES
+instance DSIGNAlgorithm d => EncCBOR (SigKES (SingleKES d)) where
+  encCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
 
-instance KnownNat t => ToCBOR (VerKeyKES (MockKES t)) where
-  toCBOR = encodeVerKeyKES
+instance KnownNat t => EncCBOR (VerKeyKES (MockKES t)) where
+  encCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
 
-instance KnownNat t => ToCBOR (SignKeyKES (MockKES t)) where
-  toCBOR = encodeSignKeyKES
+instance KnownNat t => EncCBOR (SignKeyKES (MockKES t)) where
+  encCBOR = encodeSignKeyKES
   encodedSizeExpr _size = encodedSignKeyKESSizeExpr
 
-instance KnownNat t => ToCBOR (SigKES (MockKES t)) where
-  toCBOR = encodeSigKES
+instance KnownNat t => EncCBOR (SigKES (MockKES t)) where
+  encCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
 
 --------------------------------------------------------------------------------
@@ -1041,36 +1041,36 @@ encodedCertVRFSizeExpr _proxy =
     -- payload
     + fromIntegral (sizeCertVRF (Proxy :: Proxy v))
 
-instance ToCBOR (VerKeyVRF SimpleVRF) where
-  toCBOR = encodeVerKeyVRF
+instance EncCBOR (VerKeyVRF SimpleVRF) where
+  encCBOR = encodeVerKeyVRF
   encodedSizeExpr _size = encodedVerKeyVRFSizeExpr
 
-instance ToCBOR (SignKeyVRF SimpleVRF) where
-  toCBOR = encodeSignKeyVRF
+instance EncCBOR (SignKeyVRF SimpleVRF) where
+  encCBOR = encodeSignKeyVRF
   encodedSizeExpr _size = encodedSignKeyVRFSizeExpr
 
-instance ToCBOR (CertVRF SimpleVRF) where
-  toCBOR = encodeCertVRF
+instance EncCBOR (CertVRF SimpleVRF) where
+  encCBOR = encodeCertVRF
   encodedSizeExpr _size = encodedCertVRFSizeExpr
 
-instance ToCBOR (VerKeyVRF MockVRF) where
-  toCBOR = encodeVerKeyVRF
+instance EncCBOR (VerKeyVRF MockVRF) where
+  encCBOR = encodeVerKeyVRF
   encodedSizeExpr _size = encodedVerKeyVRFSizeExpr
 
-instance ToCBOR (SignKeyVRF MockVRF) where
-  toCBOR = encodeSignKeyVRF
+instance EncCBOR (SignKeyVRF MockVRF) where
+  encCBOR = encodeSignKeyVRF
   encodedSizeExpr _size = encodedSignKeyVRFSizeExpr
 
-instance ToCBOR (CertVRF MockVRF) where
-  toCBOR = encodeCertVRF
+instance EncCBOR (CertVRF MockVRF) where
+  encCBOR = encodeCertVRF
   encodedSizeExpr _size = encodedCertVRFSizeExpr
 
-deriving instance Typeable v => ToCBOR (OutputVRF v)
+deriving instance Typeable v => EncCBOR (OutputVRF v)
 
-instance (VRFAlgorithm v, Typeable a) => ToCBOR (CertifiedVRF v a) where
-  toCBOR cvrf =
+instance (VRFAlgorithm v, Typeable a) => EncCBOR (CertifiedVRF v a) where
+  encCBOR cvrf =
     encodeListLen 2
-      <> toCBOR (certifiedOutput cvrf)
+      <> encCBOR (certifiedOutput cvrf)
       <> encodeCertVRF (certifiedProof cvrf)
 
   encodedSizeExpr _size proxy =
@@ -1082,52 +1082,52 @@ instance (VRFAlgorithm v, Typeable a) => ToCBOR (CertifiedVRF v a) where
       certifiedOutputSize _proxy =
         fromIntegral $ sizeOutputVRF (Proxy :: Proxy v)
 
-instance ToCBOR Praos.Proof where
-  toCBOR = toCBOR . Praos.proofBytes
+instance EncCBOR Praos.Proof where
+  encCBOR = encCBOR . Praos.proofBytes
   encodedSizeExpr _ _ =
     encodedSizeExpr (\_ -> fromIntegral Praos.certSizeVRF) (Proxy :: Proxy BS.ByteString)
 
-instance ToCBOR Praos.SignKey where
-  toCBOR = toCBOR . Praos.skBytes
+instance EncCBOR Praos.SignKey where
+  encCBOR = encCBOR . Praos.skBytes
   encodedSizeExpr _ _ =
     encodedSizeExpr (\_ -> fromIntegral Praos.signKeySizeVRF) (Proxy :: Proxy BS.ByteString)
 
-instance ToCBOR Praos.VerKey where
-  toCBOR = toCBOR . Praos.vkBytes
+instance EncCBOR Praos.VerKey where
+  encCBOR = encCBOR . Praos.vkBytes
   encodedSizeExpr _ _ =
     encodedSizeExpr (\_ -> fromIntegral Praos.verKeySizeVRF) (Proxy :: Proxy BS.ByteString)
 
-deriving instance ToCBOR (VerKeyVRF Praos.PraosVRF)
+deriving instance EncCBOR (VerKeyVRF Praos.PraosVRF)
 
-deriving instance ToCBOR (SignKeyVRF Praos.PraosVRF)
+deriving instance EncCBOR (SignKeyVRF Praos.PraosVRF)
 
-deriving instance ToCBOR (CertVRF Praos.PraosVRF)
+deriving instance EncCBOR (CertVRF Praos.PraosVRF)
 
 --------------------------------------------------------------------------------
 -- Slotting
 --------------------------------------------------------------------------------
 
 -- TODO: Remove usage of 'serialise' package
-instance ToCBOR SlotNo where
-  toCBOR = fromPlainEncoding . Serialise.encode
+instance EncCBOR SlotNo where
+  encCBOR = fromPlainEncoding . Serialise.encode
   encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNo
 
-instance (Serialise.Serialise t, Typeable t) => ToCBOR (WithOrigin t) where
-  toCBOR = fromPlainEncoding . Serialise.encode
+instance (Serialise.Serialise t, Typeable t) => EncCBOR (WithOrigin t) where
+  encCBOR = fromPlainEncoding . Serialise.encode
 
-deriving instance ToCBOR EpochNo
+deriving instance EncCBOR EpochNo
 
-deriving instance ToCBOR EpochSize
+deriving instance EncCBOR EpochSize
 
-deriving instance ToCBOR SystemStart
+deriving instance EncCBOR SystemStart
 
-instance ToCBOR BlockNo where
-  toCBOR = fromPlainEncoding . Serialise.encode
+instance EncCBOR BlockNo where
+  encCBOR = fromPlainEncoding . Serialise.encode
   encodedSizeExpr size = encodedSizeExpr size . fmap unBlockNo
 
 --------------------------------------------------------------------------------
 -- Plutus
 --------------------------------------------------------------------------------
 
-instance ToCBOR PV1.Data where
-  toCBOR = fromPlainEncoding . Serialise.encode
+instance EncCBOR PV1.Data where
+  encCBOR = fromPlainEncoding . Serialise.encode

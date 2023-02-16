@@ -19,11 +19,11 @@ module Cardano.Ledger.Shelley.RewardUpdate where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Binary (
-  FromCBOR (..),
-  ToCBOR (..),
+  DecCBOR (..),
+  EncCBOR (..),
+  decNoShareCBOR,
   decodeRecordNamed,
   encodeListLen,
-  fromNotSharedCBOR,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -75,11 +75,11 @@ data RewardAns c = RewardAns
 
 instance NoThunks (RewardAns c)
 
-instance Crypto c => ToCBOR (RewardAns c) where
-  toCBOR (RewardAns accum recent) = encodeListLen 2 <> toCBOR accum <> toCBOR recent
+instance Crypto c => EncCBOR (RewardAns c) where
+  encCBOR (RewardAns accum recent) = encodeListLen 2 <> encCBOR accum <> encCBOR recent
 
-instance Crypto c => FromCBOR (RewardAns c) where
-  fromCBOR = decodeRecordNamed "RewardAns" (const 2) (RewardAns <$> fromCBOR <*> fromCBOR)
+instance Crypto c => DecCBOR (RewardAns c) where
+  decCBOR = decodeRecordNamed "RewardAns" (const 2) (RewardAns <$> decCBOR <*> decCBOR)
 
 -- | The type of RewardPulser we pulse on.
 type Pulser c = RewardPulser c ShelleyBase (RewardAns c)
@@ -103,27 +103,27 @@ instance NFData (RewardUpdate c)
 
 instance
   Crypto c =>
-  ToCBOR (RewardUpdate c)
+  EncCBOR (RewardUpdate c)
   where
-  toCBOR (RewardUpdate dt dr rw df nm) =
+  encCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
-      <> toCBOR dt
-      <> toCBOR (invert dr) -- TODO change Coin serialization to use integers?
-      <> toCBOR rw
-      <> toCBOR (invert df) -- TODO change Coin serialization to use integers?
-      <> toCBOR nm
+      <> encCBOR dt
+      <> encCBOR (invert dr) -- TODO change Coin serialization to use integers?
+      <> encCBOR rw
+      <> encCBOR (invert df) -- TODO change Coin serialization to use integers?
+      <> encCBOR nm
 
 instance
   Crypto c =>
-  FromCBOR (RewardUpdate c)
+  DecCBOR (RewardUpdate c)
   where
-  fromCBOR = do
+  decCBOR = do
     decodeRecordNamed "RewardUpdate" (const 5) $ do
-      dt <- fromCBOR
-      dr <- fromCBOR -- TODO change Coin serialization to use integers?
-      rw <- fromCBOR
-      df <- fromCBOR -- TODO change Coin serialization to use integers?
-      nm <- fromNotSharedCBOR
+      dt <- decCBOR
+      dr <- decCBOR -- TODO change Coin serialization to use integers?
+      rw <- decCBOR
+      df <- decCBOR -- TODO change Coin serialization to use integers?
+      nm <- decNoShareCBOR
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
 emptyRewardUpdate :: RewardUpdate c
@@ -149,8 +149,8 @@ instance Typeable c => NoThunks (RewardSnapShot c)
 
 instance NFData (RewardSnapShot c)
 
-instance Crypto c => ToCBOR (RewardSnapShot c) where
-  toCBOR (RewardSnapShot fees ver nm dr1 r dt1 lhs lrs) =
+instance Crypto c => EncCBOR (RewardSnapShot c) where
+  encCBOR (RewardSnapShot fees ver nm dr1 r dt1 lhs lrs) =
     encode
       ( Rec RewardSnapShot
           !> To fees
@@ -163,13 +163,13 @@ instance Crypto c => ToCBOR (RewardSnapShot c) where
           !> To lrs
       )
 
-instance Crypto c => FromCBOR (RewardSnapShot c) where
-  fromCBOR =
+instance Crypto c => DecCBOR (RewardSnapShot c) where
+  decCBOR =
     decode
       ( RecD RewardSnapShot
           <! From
           <! From
-          <! D fromNotSharedCBOR
+          <! D decNoShareCBOR
           <! From
           <! From
           <! From
@@ -194,8 +194,8 @@ data FreeVars c = FreeVars
 
 instance NFData (FreeVars c)
 
-instance Crypto c => ToCBOR (FreeVars c) where
-  toCBOR
+instance Crypto c => EncCBOR (FreeVars c) where
+  encCBOR
     FreeVars
       { fvDelegs
       , fvAddrsRew
@@ -212,8 +212,8 @@ instance Crypto c => ToCBOR (FreeVars c) where
             !> To fvPoolRewardInfo
         )
 
-instance (Crypto c) => FromCBOR (FreeVars c) where
-  fromCBOR =
+instance (Crypto c) => DecCBOR (FreeVars c) where
+  decCBOR =
     decode
       ( RecD FreeVars
           <! From {- fvDelegs -}
@@ -305,12 +305,12 @@ instance Typeable c => NoThunks (Pulser c) where
 instance NFData (Pulser c) where
   rnf (RSLP n1 c1 b1 a1) = seq (rnf n1) (seq (rnf c1) (seq (rnf b1) (rnf a1)))
 
-instance Crypto c => ToCBOR (Pulser c) where
-  toCBOR (RSLP n free balance ans) =
+instance Crypto c => EncCBOR (Pulser c) where
+  encCBOR (RSLP n free balance ans) =
     encode (Rec RSLP !> To n !> To free !> To balance !> To ans)
 
-instance Crypto c => FromCBOR (Pulser c) where
-  fromCBOR =
+instance Crypto c => DecCBOR (Pulser c) where
+  decCBOR =
     decode (RecD RSLP <! From <! From <! From <! From)
 
 -- =========================================================================
@@ -321,12 +321,12 @@ data PulsingRewUpdate c
   | Complete !(RewardUpdate c) -- Pulsing work completed, ultimate goal reached
   deriving (Eq, Show, Generic, NoThunks)
 
-instance Crypto c => ToCBOR (PulsingRewUpdate c) where
-  toCBOR (Pulsing s p) = encode (Sum Pulsing 0 !> To s !> To p)
-  toCBOR (Complete r) = encode (Sum Complete 1 !> To r)
+instance Crypto c => EncCBOR (PulsingRewUpdate c) where
+  encCBOR (Pulsing s p) = encode (Sum Pulsing 0 !> To s !> To p)
+  encCBOR (Complete r) = encode (Sum Complete 1 !> To r)
 
-instance Crypto c => FromCBOR (PulsingRewUpdate c) where
-  fromCBOR = decode (Summands "PulsingRewUpdate" decPS)
+instance Crypto c => DecCBOR (PulsingRewUpdate c) where
+  decCBOR = decode (Summands "PulsingRewUpdate" decPS)
     where
       decPS 0 = SumD Pulsing <! From <! From
       decPS 1 = SumD Complete <! From

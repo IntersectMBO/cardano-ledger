@@ -15,9 +15,9 @@ import Cardano.Chain.UTxO (ATxAux)
 import qualified Cardano.Chain.Update as Update
 import Cardano.Ledger.Binary (
   ByteSpan,
+  DecCBOR (..),
   DecoderError (..),
-  FromCBOR (..),
-  ToCBOR (..),
+  EncCBOR (..),
   cborError,
   decodeWord8,
   encodeListLen,
@@ -44,35 +44,35 @@ data AMempoolPayload a
     MempoolUpdateVote !(Update.AVote a)
   deriving (Eq, Show, Functor)
 
-instance ToCBOR MempoolPayload where
-  toCBOR (MempoolTx tp) =
-    encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR tp
-  toCBOR (MempoolDlg dp) =
-    encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR dp
-  toCBOR (MempoolUpdateProposal upp) =
-    encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR upp
-  toCBOR (MempoolUpdateVote upv) =
-    encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR upv
+instance EncCBOR MempoolPayload where
+  encCBOR (MempoolTx tp) =
+    encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR tp
+  encCBOR (MempoolDlg dp) =
+    encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR dp
+  encCBOR (MempoolUpdateProposal upp) =
+    encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR upp
+  encCBOR (MempoolUpdateVote upv) =
+    encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR upv
 
-instance ToCBOR (AMempoolPayload ByteString) where
-  toCBOR (MempoolTx tp) =
-    encodeListLen 2 <> toCBOR (0 :: Word8) <> encodePreEncoded (recoverBytes tp)
-  toCBOR (MempoolDlg dp) =
-    encodeListLen 2 <> toCBOR (1 :: Word8) <> encodePreEncoded (recoverBytes dp)
-  toCBOR (MempoolUpdateProposal upp) =
-    encodeListLen 2 <> toCBOR (2 :: Word8) <> encodePreEncoded (recoverBytes upp)
-  toCBOR (MempoolUpdateVote upv) =
-    encodeListLen 2 <> toCBOR (3 :: Word8) <> encodePreEncoded (recoverBytes upv)
+instance EncCBOR (AMempoolPayload ByteString) where
+  encCBOR (MempoolTx tp) =
+    encodeListLen 2 <> encCBOR (0 :: Word8) <> encodePreEncoded (recoverBytes tp)
+  encCBOR (MempoolDlg dp) =
+    encodeListLen 2 <> encCBOR (1 :: Word8) <> encodePreEncoded (recoverBytes dp)
+  encCBOR (MempoolUpdateProposal upp) =
+    encodeListLen 2 <> encCBOR (2 :: Word8) <> encodePreEncoded (recoverBytes upp)
+  encCBOR (MempoolUpdateVote upv) =
+    encodeListLen 2 <> encCBOR (3 :: Word8) <> encodePreEncoded (recoverBytes upv)
 
-instance FromCBOR MempoolPayload where
-  fromCBOR = void <$> fromCBOR @(AMempoolPayload ByteSpan)
+instance DecCBOR MempoolPayload where
+  decCBOR = void <$> decCBOR @(AMempoolPayload ByteSpan)
 
-instance FromCBOR (AMempoolPayload ByteSpan) where
-  fromCBOR = do
+instance DecCBOR (AMempoolPayload ByteSpan) where
+  decCBOR = do
     enforceSize "MempoolPayload" 2
     decodeWord8 >>= \case
-      0 -> MempoolTx <$> fromCBOR
-      1 -> MempoolDlg <$> fromCBOR
-      2 -> MempoolUpdateProposal <$> fromCBOR
-      3 -> MempoolUpdateVote <$> fromCBOR
+      0 -> MempoolTx <$> decCBOR
+      1 -> MempoolDlg <$> decCBOR
+      2 -> MempoolUpdateProposal <$> decCBOR
+      3 -> MempoolUpdateVote <$> decCBOR
       tag -> cborError $ DecoderErrorUnknownTag "MempoolPayload" tag

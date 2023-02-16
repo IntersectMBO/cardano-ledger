@@ -17,7 +17,7 @@ where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum)
-import Cardano.Ledger.Binary (FromCBOR, Sized (..), ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Sized (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
 import Cardano.Ledger.TreeDiff (ToExpr (..))
@@ -53,7 +53,7 @@ class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
 
 newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
   deriving stock (Eq, Ord)
-  deriving newtype (ToCBOR, FromCBOR, ToJSON, FromJSON, NFData, NoThunks, ToExpr, Show)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, ToExpr, Show)
 
 class AlonzoEraPParams era => BabbageEraPParams era where
   hkdCoinsPerUTxOByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
