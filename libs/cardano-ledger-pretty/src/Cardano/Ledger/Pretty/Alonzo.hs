@@ -7,10 +7,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Cardano.Ledger.Pretty.Alonzo where
+module Cardano.Ledger.Pretty.Alonzo () where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (
@@ -34,18 +37,18 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (AlonzoTxAuxData, atadMetadata),
   getAlonzoTxAuxDataScripts,
  )
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (AlonzoTxOut))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (AlonzoTxSeq))
 import Cardano.Ledger.Alonzo.TxWits
-import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
-import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppTimelock, ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Prettyprinter (viaShow)
 import qualified Prettyprinter as PP
+import Cardano.Ledger.Pretty
+import Cardano.Ledger.Pretty.Mary ()
+import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut(..))
 
 ppTxSeq ::
   ( AlonzoEraTx era
@@ -55,7 +58,7 @@ ppTxSeq ::
   AlonzoTxSeq era ->
   PDoc
 ppTxSeq (AlonzoTxSeq xs) =
-  ppSexp "Alonzo TxSeq" [ppStrictSeq prettyA xs]
+  ppSexp "Alonzo TxSeq" [prettyA xs]
 
 instance
   ( AlonzoEraTx era
@@ -67,52 +70,33 @@ instance
   prettyA = ppTxSeq
 
 ppLanguage :: Language -> PDoc
-ppLanguage PlutusV1 = ppString "PlutusV1"
-ppLanguage PlutusV2 = ppString "PlutusV2"
+ppLanguage PlutusV1 = "PlutusV1"
+ppLanguage PlutusV2 = "PlutusV2"
 
 instance PrettyA Language where
   prettyA = ppLanguage
 
-ppTag :: Tag -> PDoc
-ppTag x = ppString (show x)
-
 instance PrettyA Tag where
-  prettyA = ppTag
-
-ppScript ::
-  forall era.
-  (EraScript era, Script era ~ AlonzoScript era) =>
-  AlonzoScript era ->
-  PDoc
-ppScript s@(PlutusScript v _) = ppString ("PlutusScript " <> show v <> " ") PP.<+> ppScriptHash (hashScript @era s)
-ppScript (TimelockScript x) = ppTimelock x
+  prettyA = viaShow
 
 instance (EraScript era, Script era ~ AlonzoScript era) => PrettyA (AlonzoScript era) where
-  prettyA = ppScript
-
-ppExUnits :: ExUnits -> PDoc
-ppExUnits (ExUnits mem step) =
-  ppRecord "ExUnits" [("memory", ppNatural mem), ("steps", ppNatural step)]
+  prettyA s@(PlutusScript v _) = "PlutusScript " <> prettyA v <> " " PP.<+> prettyA (hashScript @era s)
+  prettyA (TimelockScript x) = prettyA x
 
 instance PrettyA ExUnits where
-  prettyA = ppExUnits
-
-ppCostModel :: CostModel -> PDoc
-ppCostModel cm =
-  ppSexp "CostModel" [ppLanguage (getCostModelLanguage cm), ppList ppInteger (getCostModelParams cm)]
+  prettyA (ExUnits mem step) =
+    ppRecord "ExUnits" [("memory", prettyA mem), ("steps", prettyA step)]
 
 instance PrettyA CostModel where
-  prettyA = ppCostModel
-
-ppCostModels :: CostModels -> PDoc
-ppCostModels (CostModels cms) = ppMap ppLanguage ppCostModel cms
+  prettyA cm =
+    ppSexp "CostModel" [ppLanguage (getCostModelLanguage cm), prettyA $ getCostModelParams cm]
 
 ppPrices :: Prices -> PDoc
 ppPrices Prices {prMem, prSteps} =
   ppRecord
     "Prices"
-    [ ("prMem", ppRational $ unboundRational prMem)
-    , ("prSteps", ppRational $ unboundRational prSteps)
+    [ ("prMem", prettyA $ unboundRational prMem)
+    , ("prSteps", prettyA $ unboundRational prSteps)
     ]
 
 instance PrettyA Prices where
@@ -125,138 +109,119 @@ ppAlonzoPParamsUpdate :: Crypto c => PParamsUpdate (AlonzoEra c) -> PDoc
 ppAlonzoPParamsUpdate pp =
   ppRecord
     "PParamsUdate"
-    [ ("minfeeA", ppStrictMaybe ppCoin $ pp ^. ppuMinFeeAL)
-    , ("minfeeB", ppStrictMaybe ppCoin $ pp ^. ppuMinFeeBL)
-    , ("maxBBSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBBSizeL)
-    , ("maxTxSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxTxSizeL)
-    , ("maxBHSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBHSizeL)
-    , ("keyDeposit", ppStrictMaybe ppCoin $ pp ^. ppuKeyDepositL)
-    , ("poolDeposit", ppStrictMaybe ppCoin $ pp ^. ppuPoolDepositL)
-    , ("eMax", ppStrictMaybe ppEpochNo $ pp ^. ppuEMaxL)
-    , ("nOpt", ppStrictMaybe ppNatural $ pp ^. ppuNOptL)
-    , ("a0", ppStrictMaybe (ppRational . unboundRational) $ pp ^. ppuA0L)
-    , ("rho", ppStrictMaybe ppUnitInterval $ pp ^. ppuRhoL)
-    , ("tau", ppStrictMaybe ppUnitInterval $ pp ^. ppuTauL)
-    , ("d", ppStrictMaybe ppUnitInterval $ pp ^. ppuDL)
-    , ("extraEntropy", ppStrictMaybe ppNonce $ pp ^. ppuExtraEntropyL)
-    , ("protocolVersion", ppStrictMaybe ppProtVer $ pp ^. ppuProtocolVersionL)
-    , ("minPoolCost", ppStrictMaybe ppCoin $ pp ^. ppuMinPoolCostL)
-    , ("coinPerWord", ppStrictMaybe (ppCoin . unCoinPerWord) $ pp ^. ppuCoinsPerUTxOWordL)
-    , ("costmdls", ppStrictMaybe ppCostModels $ pp ^. ppuCostModelsL)
-    , ("prices", ppStrictMaybe ppPrices $ pp ^. ppuPricesL)
-    , ("maxTxExUnits", ppStrictMaybe ppExUnits $ pp ^. ppuMaxTxExUnitsL)
-    , ("maxBlockExUnits", ppStrictMaybe ppExUnits $ pp ^. ppuMaxBlockExUnitsL)
-    , ("maxValSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxValSizeL)
-    , ("collateral%", ppStrictMaybe ppNatural $ pp ^. ppuCollateralPercentageL)
-    , ("maxCollateralInputs", ppStrictMaybe ppNatural $ pp ^. ppuMaxCollateralInputsL)
+    [ ("minfeeA", prettyA $ pp ^. ppuMinFeeAL)
+    , ("minfeeB", prettyA $ pp ^. ppuMinFeeBL)
+    , ("maxBBSize", prettyA $ pp ^. ppuMaxBBSizeL)
+    , ("maxTxSize", prettyA $ pp ^. ppuMaxTxSizeL)
+    , ("maxBHSize", prettyA $ pp ^. ppuMaxBHSizeL)
+    , ("keyDeposit", prettyA $ pp ^. ppuKeyDepositL)
+    , ("poolDeposit", prettyA $ pp ^. ppuPoolDepositL)
+    , ("eMax", prettyA $ pp ^. ppuEMaxL)
+    , ("nOpt", prettyA $ pp ^. ppuNOptL)
+    , ("a0", prettyA $ pp ^. ppuA0L)
+    , ("rho", prettyA $ pp ^. ppuRhoL)
+    , ("tau", prettyA $ pp ^. ppuTauL)
+    , ("d", prettyA $ pp ^. ppuDL)
+    , ("extraEntropy", prettyA $ pp ^. ppuExtraEntropyL)
+    , ("protocolVersion", prettyA $ pp ^. ppuProtocolVersionL)
+    , ("minPoolCost", prettyA $ pp ^. ppuMinPoolCostL)
+    , ("coinPerWord", prettyA $ pp ^. ppuCoinsPerUTxOWordL)
+    , ("costmdls", prettyA $ pp ^. ppuCostModelsL)
+    , ("prices", prettyA $ pp ^. ppuPricesL)
+    , ("maxTxExUnits", prettyA $ pp ^. ppuMaxTxExUnitsL)
+    , ("maxBlockExUnits", prettyA $ pp ^. ppuMaxBlockExUnitsL)
+    , ("maxValSize", prettyA $ pp ^. ppuMaxValSizeL)
+    , ("collateral%", prettyA $ pp ^. ppuCollateralPercentageL)
+    , ("maxCollateralInputs", prettyA $ pp ^. ppuMaxCollateralInputsL)
     ]
+
+deriving newtype instance PrettyA CostModels
 
 instance Crypto c => PrettyA (PParamsUpdate (AlonzoEra c)) where
   prettyA = ppAlonzoPParamsUpdate
 
-ppPlutusData :: PV1.Data -> PDoc
-ppPlutusData (PV1.Constr tag args) = ppSexp "Constr" [ppInteger tag, ppList ppPlutusData args]
-ppPlutusData (PV1.Map pairs) = ppSexp "Map" [ppList (ppPair ppPlutusData ppPlutusData) pairs]
-ppPlutusData (PV1.List xs) = ppSexp "List" [ppList ppPlutusData xs]
-ppPlutusData (PV1.I i) = ppSexp "I" [ppInteger i]
-ppPlutusData (PV1.B bytes) = ppSexp "B" [ppLong bytes]
-
 instance PrettyA PV1.Data where
-  prettyA = ppPlutusData
-
-ppData :: Era era => Data era -> PDoc
-ppData (Data d) = ppSexp "Data" [ppPlutusData d]
+  prettyA (PV1.Constr tag args) = ppSexp "Constr" [prettyA tag, prettyA args]
+  prettyA (PV1.Map pairs) = ppSexp "Map" [prettyA pairs]
+  prettyA (PV1.List xs) = ppSexp "List" [prettyA xs]
+  prettyA (PV1.I i) = ppSexp "I" [prettyA i]
+  prettyA (PV1.B bytes) = ppSexp "B" [prettyA bytes]
 
 instance Era era => PrettyA (Data era) where
-  prettyA = ppData
-
-ppAuxiliaryData ::
-  (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
-  AlonzoTxAuxData era ->
-  PDoc
-ppAuxiliaryData auxData@AlonzoTxAuxData {atadMetadata = metadata} =
-  ppSexp
-    "AuxiliaryData"
-    [ ppMap ppWord64 ppMetadatum metadata
-    , ppStrictSeq prettyA (getAlonzoTxAuxDataScripts auxData)
-    ]
+  prettyA (Data d) = ppSexp "Data" [prettyA d]
 
 instance
   (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
   PrettyA (AlonzoTxAuxData era)
   where
-  prettyA = ppAuxiliaryData
+  prettyA auxData@AlonzoTxAuxData {atadMetadata = metadata} =
+    ppSexp
+      "AuxiliaryData"
+      [ prettyA metadata
+      , prettyA (getAlonzoTxAuxDataScripts auxData)
+      ]
 
 ppAlonzoPParams :: Crypto c => PParams (AlonzoEra c) -> PDoc
 ppAlonzoPParams pp =
   ppRecord
     "PParams"
-    [ ("minfeeA", ppCoin $ pp ^. ppMinFeeAL)
-    , ("minfeeB", ppCoin $ pp ^. ppMinFeeBL)
-    , ("maxBBSize", ppNatural $ pp ^. ppMaxBBSizeL)
-    , ("maxTxSize", ppNatural $ pp ^. ppMaxTxSizeL)
-    , ("maxBHSize", ppNatural $ pp ^. ppMaxBHSizeL)
-    , ("keyDeposit", ppCoin $ pp ^. ppKeyDepositL)
-    , ("poolDeposit", ppCoin $ pp ^. ppPoolDepositL)
-    , ("eMax", ppEpochNo $ pp ^. ppEMaxL)
-    , ("nOpt", ppNatural $ pp ^. ppNOptL)
-    , ("a0", (ppRational . unboundRational) $ pp ^. ppA0L)
-    , ("rho", ppUnitInterval $ pp ^. ppRhoL)
-    , ("tau", ppUnitInterval $ pp ^. ppTauL)
-    , ("d", ppUnitInterval $ pp ^. ppDL)
-    , ("extraEntropy", ppNonce $ pp ^. ppExtraEntropyL)
-    , ("protocolVersion", ppProtVer $ pp ^. ppProtocolVersionL)
-    , ("minPoolCost", ppCoin $ pp ^. ppMinPoolCostL)
-    , ("coinPerWord", (ppCoin . unCoinPerWord) $ pp ^. ppCoinsPerUTxOWordL)
-    , ("costmdls", ppCostModels $ pp ^. ppCostModelsL)
-    , ("prices", ppPrices $ pp ^. ppPricesL)
-    , ("maxTxExUnits", ppExUnits $ pp ^. ppMaxTxExUnitsL)
-    , ("maxBlockExUnits", ppExUnits $ pp ^. ppMaxBlockExUnitsL)
-    , ("maxValSize", ppNatural $ pp ^. ppMaxValSizeL)
-    , ("collateral%", ppNatural $ pp ^. ppCollateralPercentageL)
-    , ("maxCollateralInputs", ppNatural $ pp ^. ppMaxCollateralInputsL)
+    [ ("minfeeA", prettyA $ pp ^. ppMinFeeAL)
+    , ("minfeeB", prettyA $ pp ^. ppMinFeeBL)
+    , ("maxBBSize", prettyA $ pp ^. ppMaxBBSizeL)
+    , ("maxTxSize", prettyA $ pp ^. ppMaxTxSizeL)
+    , ("maxBHSize", prettyA $ pp ^. ppMaxBHSizeL)
+    , ("keyDeposit", prettyA $ pp ^. ppKeyDepositL)
+    , ("poolDeposit", prettyA $ pp ^. ppPoolDepositL)
+    , ("eMax", prettyA $ pp ^. ppEMaxL)
+    , ("nOpt", prettyA $ pp ^. ppNOptL)
+    , ("a0", prettyA $ pp ^. ppA0L)
+    , ("rho", prettyA $ pp ^. ppRhoL)
+    , ("tau", prettyA $ pp ^. ppTauL)
+    , ("d", prettyA $ pp ^. ppDL)
+    , ("extraEntropy", prettyA $ pp ^. ppExtraEntropyL)
+    , ("protocolVersion", prettyA $ pp ^. ppProtocolVersionL)
+    , ("minPoolCost", prettyA $ pp ^. ppMinPoolCostL)
+    , ("coinPerWord", prettyA $ pp ^. ppCoinsPerUTxOWordL)
+    , ("costmdls", prettyA $ pp ^. ppCostModelsL)
+    , ("prices", prettyA $ pp ^. ppPricesL)
+    , ("maxTxExUnits", prettyA $ pp ^. ppMaxTxExUnitsL)
+    , ("maxBlockExUnits", prettyA $ pp ^. ppMaxBlockExUnitsL)
+    , ("maxValSize", prettyA $ pp ^. ppMaxValSizeL)
+    , ("collateral%", prettyA $ pp ^. ppCollateralPercentageL)
+    , ("maxCollateralInputs", prettyA $ pp ^. ppMaxCollateralInputsL)
     ]
 
-ppTxOut :: (EraTxOut era, PrettyA (Value era)) => AlonzoTxOut era -> PDoc
-ppTxOut (AlonzoTxOut addr val dhash) =
-  ppSexp "TxOut" [ppAddr addr, prettyA val, ppStrictMaybe ppSafeHash dhash]
-
-ppTxBody ::
-  (AlonzoEraTxBody era, PrettyA (TxOut era), PrettyA (PParamsUpdate era)) =>
-  AlonzoTxBody era ->
-  PDoc
-ppTxBody (AlonzoTxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
-  ppRecord
-    "TxBody(Alonzo)"
-    [ ("inputs", ppSet ppTxIn i)
-    , ("collateral", ppSet ppTxIn ifee)
-    , ("outputs", ppStrictSeq prettyA o)
-    , ("certificates", ppStrictSeq ppDCert c)
-    , ("withdrawals", ppWithdrawals w)
-    , ("txfee", ppCoin fee)
-    , ("vldt", ppValidityInterval vi)
-    , ("update", ppStrictMaybe ppUpdate u)
-    , ("reqSignerHashes", ppSet ppKeyHash rsh)
-    , ("mint", ppMultiAsset mnt)
-    , ("scriptIntegrityHash", ppStrictMaybe ppSafeHash sdh)
-    , ("adHash", ppStrictMaybe ppAuxDataHash axh)
-    , ("txnetworkid", ppStrictMaybe ppNetwork ni)
-    ]
-
-ppAuxDataHash :: AuxiliaryDataHash c -> PDoc
-ppAuxDataHash (AuxiliaryDataHash axh) = ppSafeHash axh
+instance PrettyA CoinPerWord where
+  prettyA = prettyA . unCoinPerWord
 
 instance
   (AlonzoEraTxBody era, PrettyA (TxOut era), PrettyA (PParamsUpdate era)) =>
   PrettyA (AlonzoTxBody era)
   where
-  prettyA = ppTxBody
+  prettyA (AlonzoTxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
+    ppRecord
+      "TxBody(Alonzo)"
+      [ ("inputs", prettyA i)
+      , ("collateral", prettyA ifee)
+      , ("outputs", prettyA o)
+      , ("certificates", prettyA c)
+      , ("withdrawals", prettyA w)
+      , ("txfee", prettyA fee)
+      , ("vldt", prettyA vi)
+      , ("update", prettyA u)
+      , ("reqSignerHashes", prettyA rsh)
+      , ("mint", prettyA mnt)
+      , ("scriptIntegrityHash", prettyA sdh)
+      , ("adHash", prettyA axh)
+      , ("txnetworkid", prettyA ni)
+      ]
 
 instance (EraTxOut era, PrettyA (Value era)) => PrettyA (AlonzoTxOut era) where
-  prettyA x = ppTxOut x
+  prettyA (AlonzoTxOut addr val dhash) =
+    ppSexp "TxOut" [prettyA addr, prettyA val, prettyA dhash]
 
 ppRdmrPtr :: RdmrPtr -> PDoc
-ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [ppTag tag, ppWord64 w]
+ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [prettyA tag, prettyA w]
 
 instance PrettyA RdmrPtr where
   prettyA = ppRdmrPtr
@@ -265,11 +230,11 @@ ppTxWitness :: (Era era, PrettyA (Script era)) => AlonzoTxWits era -> PDoc
 ppTxWitness (AlonzoTxWits' vk wb sc da (Redeemers rd)) =
   ppRecord
     "AlonzoTxWits"
-    [ ("keys", ppSet ppWitVKey vk)
-    , ("bootstrap witnesses", ppSet ppBootstrapWitness wb)
-    , ("scripts map", ppMap ppScriptHash prettyA sc)
-    , ("Data map", ppMap ppSafeHash ppData (unTxDats da))
-    , ("Redeemer map", ppMap ppRdmrPtr (ppPair ppData ppExUnits) rd)
+    [ ("keys", prettyA vk)
+    , ("bootstrap witnesses", prettyA wb)
+    , ("scripts map", prettyA sc)
+    , ("Data map", prettyA (unTxDats da))
+    , ("Redeemer map", prettyA rd)
     ]
 
 instance
@@ -278,12 +243,9 @@ instance
   where
   prettyA = ppTxWitness
 
-ppIsValid :: IsValid -> PDoc
-ppIsValid (IsValid True) = ppString "True"
-ppIsValid (IsValid False) = ppString "False"
-
 instance PrettyA IsValid where
-  prettyA = ppIsValid
+  prettyA (IsValid True) = "True"
+  prettyA (IsValid False) = "False"
 
 ppTx ::
   ( PrettyA (TxBody era)
@@ -297,8 +259,8 @@ ppTx (AlonzoTx b w iv aux) =
     "Tx"
     [ ("body", prettyA b)
     , ("wits", prettyA w)
-    , ("isValid", ppIsValid iv)
-    , ("auxiliaryData", ppStrictMaybe prettyA aux)
+    , ("isValid", prettyA iv)
+    , ("auxiliaryData", prettyA aux)
     ]
 
 instance

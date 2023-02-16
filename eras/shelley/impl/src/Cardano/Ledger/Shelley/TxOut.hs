@@ -13,6 +13,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Cardano.Ledger.Shelley.TxOut (
   ShelleyTxOut (ShelleyTxOut, TxOutCompact),
@@ -51,11 +52,13 @@ import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import GHC.Generics (Generic)
 
 data ShelleyTxOut era = TxOutCompact
   { txOutCompactAddr :: {-# UNPACK #-} !(CompactAddr (EraCrypto era))
   , txOutCompactValue :: !(CompactForm (Value era))
   }
+  deriving (Generic)
 
 instance Crypto crypto => EraTxOut (ShelleyEra crypto) where
   {-# SPECIALIZE instance EraTxOut (ShelleyEra StandardCrypto) #-}

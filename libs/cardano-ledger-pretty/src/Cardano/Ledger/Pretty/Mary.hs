@@ -4,8 +4,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE FlexibleInstances #-}
 
-module Cardano.Ledger.Pretty.Mary where
+module Cardano.Ledger.Pretty.Mary () where
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
@@ -19,49 +20,45 @@ import Cardano.Ledger.Pretty
 import qualified Data.Map as Map
 import Data.Text (Text)
 import Lens.Micro
-import Prettyprinter (hsep, viaShow)
+import Prettyprinter (hsep)
+import Cardano.Ledger.Allegra (AllegraEra)
 
-ppPolicyID :: PolicyID c -> PDoc
-ppPolicyID (PolicyID sh) = ppScriptHash sh
+instance PrettyA (PolicyID c) where
+  prettyA (PolicyID sh) = prettyA sh
 
-instance PrettyA (PolicyID c) where prettyA x = ppSexp "PolicyID" [ppPolicyID x]
-
-ppAssetName :: AssetName -> PDoc
-ppAssetName = viaShow
-
-instance PrettyA AssetName where prettyA x = ppSexp "AssetName" [ppAssetName x]
+instance PrettyA AssetName
 
 ppMultiAsset :: MultiAsset c -> PDoc
-ppMultiAsset m = ppList pptriple (flattenMultiAsset m)
+ppMultiAsset m = mconcat $ pptriple <$> flattenMultiAsset m
   where
-    pptriple (i, asset, num) = hsep [ppPolicyID i, ppAssetName asset, ppInteger num]
+    pptriple (i, asset, num) = hsep [prettyA i, prettyA asset, prettyA num]
 
 instance CC.Crypto c => PrettyA (MultiAsset c) where
   prettyA x = ppSexp "MultiAsset" [ppMultiAsset x]
 
 ppValue :: MaryValue c -> PDoc
-ppValue (MaryValue n m) = ppSexp "Value" $ [ppCoin (Coin n), ppMultiAsset m] ++ ppBad
+ppValue (MaryValue n m) = ppSexp "Value" $ [prettyA (Coin n), ppMultiAsset m] ++ ppBad
   where
     ppBad = case getBadMultiAsset m of
       [] -> []
-      bad -> [ppString "Bad " <> ppList ppPolicyID bad]
+      bad -> ["Bad " <> prettyA bad]
     getBadMultiAsset (MultiAsset ma) = Map.keys (Map.filter Map.null ma)
 
 instance PrettyA (MaryValue c) where prettyA = ppValue
 
 ppTimelock :: Era era => Timelock era -> PDoc
 ppTimelock (RequireSignature akh) =
-  ppSexp "Signature" [ppKeyHash akh]
+  ppSexp "Signature" [prettyA akh]
 ppTimelock (RequireAllOf ms) =
   ppSexp "AllOf" (foldr (:) [] (fmap ppTimelock ms))
 ppTimelock (RequireAnyOf ms) =
   ppSexp "AnyOf" (foldr (:) [] (fmap ppTimelock ms))
 ppTimelock (RequireMOf m ms) =
-  ppSexp "MOfN" (ppInteger (fromIntegral m) : foldr (:) [] (fmap ppTimelock ms))
+  ppSexp "MOfN" (prettyA m : foldr (:) [] (fmap ppTimelock ms))
 ppTimelock (RequireTimeExpire mslot) =
-  ppSexp "Expires" [ppSlotNo mslot]
+  ppSexp "Expires" [prettyA mslot]
 ppTimelock (RequireTimeStart mslot) =
-  ppSexp "Starts" [ppSlotNo mslot]
+  ppSexp "Starts" [prettyA mslot]
 
 instance Era era => PrettyA (Timelock era) where prettyA = ppTimelock
 
@@ -69,22 +66,19 @@ ppValidityInterval :: ValidityInterval -> PDoc
 ppValidityInterval (ValidityInterval b a) =
   ppRecord
     "ValidityInterval"
-    [ ("invalidBefore", ppStrictMaybe ppSlotNo b)
-    , ("invalidHereafter", ppStrictMaybe ppSlotNo a)
+    [ ("invalidBefore", prettyA b)
+    , ("invalidHereafter", prettyA a)
     ]
 
 instance PrettyA ValidityInterval where prettyA = ppValidityInterval
 
-ppAuxiliaryData :: Era era => AllegraTxAuxData era -> PDoc
-ppAuxiliaryData (AllegraTxAuxData' m sp) =
-  ppRecord
-    "AllegraTxAuxData"
-    [ ("metadata", ppMap' (text "Metadata") ppWord64 ppMetadatum m)
-    , ("auxiliaryscripts", ppStrictSeq prettyA sp)
-    ]
-
 instance Era era => PrettyA (AllegraTxAuxData era) where
-  prettyA = ppAuxiliaryData
+  prettyA (AllegraTxAuxData' m sp) =
+    ppRecord
+      "AllegraTxAuxData"
+      [ ("metadata", prettyA m)
+      , ("auxiliaryscripts", prettyA sp)
+      ]
 
 allegraFields ::
   ( AllegraEraTxBody era
@@ -95,14 +89,14 @@ allegraFields ::
   TxBody era ->
   [(Text, PDoc)]
 allegraFields txBody =
-  [ ("inputs", ppSet ppTxIn (txBody ^. inputsTxBodyL))
-  , ("outputs", ppStrictSeq prettyA (txBody ^. outputsTxBodyL))
-  , ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyG))
-  , ("withdrawals", ppWithdrawals (txBody ^. withdrawalsTxBodyL))
-  , ("txfee", ppCoin (txBody ^. feeTxBodyL))
-  , ("vldt", ppValidityInterval (txBody ^. vldtTxBodyL))
-  , ("update", ppStrictMaybe ppUpdate (txBody ^. updateTxBodyL))
-  , ("auxDataHash", ppStrictMaybe ppAuxiliaryDataHash (txBody ^. auxDataHashTxBodyL))
+  [ ("inputs", prettyA (txBody ^. inputsTxBodyL))
+  , ("outputs", prettyA (txBody ^. outputsTxBodyL))
+  , ("certificates", prettyA (txBody ^. certsTxBodyG))
+  , ("withdrawals", prettyA (txBody ^. withdrawalsTxBodyL))
+  , ("txfee", prettyA (txBody ^. feeTxBodyL))
+  , ("vldt", prettyA (txBody ^. vldtTxBodyL))
+  , ("update", prettyA (txBody ^. updateTxBodyL))
+  , ("auxDataHash", prettyA (txBody ^. auxDataHashTxBodyL))
   ]
 
 instance
@@ -131,3 +125,9 @@ instance
       ( allegraFields txBody
           ++ [("mint", prettyA (txBody ^. mintTxBodyL))]
       )
+
+instance PrettyA (PParams (AllegraEra c)) where
+  prettyA = undefined
+
+instance PrettyA (PParamsUpdate (AllegraEra c)) where
+  prettyA = undefined

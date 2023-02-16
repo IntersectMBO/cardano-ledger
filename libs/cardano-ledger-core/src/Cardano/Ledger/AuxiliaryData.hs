@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Cardano.Ledger.AuxiliaryData (
   AuxiliaryDataHash (..),
@@ -20,11 +21,12 @@ import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import NoThunks.Class (NoThunks (..))
+import GHC.Generics (Generic)
 
 newtype AuxiliaryDataHash c = AuxiliaryDataHash
   { unsafeAuxiliaryDataHash :: SafeHash c EraIndependentTxAuxData
   }
-  deriving (Show, Eq, Ord, NoThunks, NFData)
+  deriving (Show, Eq, Ord, NoThunks, NFData, Generic)
 
 deriving instance CC.Crypto c => ToCBOR (AuxiliaryDataHash c)
 

@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Cardano.Ledger.Conway.Rules.Tally (
   ConwayTALLY,
@@ -40,6 +41,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
 import Validation (failureUnless)
+import GHC.Generics (Generic)
 
 newtype TallyEnv era = TallyEnv (TxId (EraCrypto era))
 
@@ -49,7 +51,7 @@ data GovernanceProcedure era
 
 newtype ConwayTallyPredFailure era
   = NoSuchGovernanceAction (Vote era)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 instance Era era => STS (ConwayTALLY era) where
   type State (ConwayTALLY era) = ConwayTallyState era

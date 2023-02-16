@@ -35,102 +35,73 @@ import Cardano.Ledger.Babbage.TxBody (
   vldt',
   withdrawals',
  )
-import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Pretty hiding (
-  ppTxBody,
-  ppTxOut,
- )
-import Cardano.Ledger.Pretty.Alonzo (
-  ppAuxDataHash,
-  ppCostModels,
-  ppData,
-  ppExUnits,
-  ppPrices,
- )
-import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppValidityInterval)
+import Cardano.Ledger.Pretty.Alonzo ()
 import Control.State.Transition.Extended
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Lens.Micro
 import Prettyprinter ((<+>))
+import Cardano.Ledger.Pretty
+import Cardano.Ledger.Pretty.Alonzo ()
 
 -- =====================================
 
 instance Crypto c => PrettyA (PParams (BabbageEra c)) where
-  prettyA = ppBabbagePParams
-
-ppBabbagePParams :: BabbageEraPParams era => PParams era -> PDoc
-ppBabbagePParams pp =
-  ppRecord
-    "PParams"
-    [ ("minfeeA", ppCoin $ pp ^. ppMinFeeAL)
-    , ("minfeeB", ppCoin $ pp ^. ppMinFeeBL)
-    , ("maxBBSize", ppNatural $ pp ^. ppMaxBBSizeL)
-    , ("maxTxSize", ppNatural $ pp ^. ppMaxTxSizeL)
-    , ("maxBHSize", ppNatural $ pp ^. ppMaxBHSizeL)
-    , ("keyDeposit", ppCoin $ pp ^. ppKeyDepositL)
-    , ("poolDeposit", ppCoin $ pp ^. ppPoolDepositL)
-    , ("eMax", ppEpochNo $ pp ^. ppEMaxL)
-    , ("nOpt", ppNatural $ pp ^. ppNOptL)
-    , ("a0", (ppRational . unboundRational) $ pp ^. ppA0L)
-    , ("rho", ppUnitInterval $ pp ^. ppRhoL)
-    , ("tau", ppUnitInterval $ pp ^. ppTauL)
-    , ("protocolVersion", ppProtVer $ pp ^. ppProtocolVersionL)
-    , ("minPoolCost", ppCoin $ pp ^. ppMinPoolCostL)
-    , ("coinPerByte", (ppCoin . unCoinPerByte) $ pp ^. ppCoinsPerUTxOByteL)
-    , ("costmdls", ppCostModels $ pp ^. ppCostModelsL)
-    , ("prices", ppPrices $ pp ^. ppPricesL)
-    , ("maxTxExUnits", ppExUnits $ pp ^. ppMaxTxExUnitsL)
-    , ("maxBlockExUnits", ppExUnits $ pp ^. ppMaxBlockExUnitsL)
-    , ("maxValSize", ppNatural $ pp ^. ppMaxValSizeL)
-    , ("collateral%", ppNatural $ pp ^. ppCollateralPercentageL)
-    , ("maxCollateralInputs", ppNatural $ pp ^. ppMaxCollateralInputsL)
-    ]
-
-ppBabbagePParamsUpdate :: BabbageEraPParams era => PParamsUpdate era -> PDoc
-ppBabbagePParamsUpdate pp =
-  ppRecord
-    "PParamsUdate"
-    [ ("minfeeA", ppStrictMaybe ppCoin $ pp ^. ppuMinFeeAL)
-    , ("minfeeB", ppStrictMaybe ppCoin $ pp ^. ppuMinFeeBL)
-    , ("maxBBSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBBSizeL)
-    , ("maxTxSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxTxSizeL)
-    , ("maxBHSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBHSizeL)
-    , ("keyDeposit", ppStrictMaybe ppCoin $ pp ^. ppuKeyDepositL)
-    , ("poolDeposit", ppStrictMaybe ppCoin $ pp ^. ppuPoolDepositL)
-    , ("eMax", ppStrictMaybe ppEpochNo $ pp ^. ppuEMaxL)
-    , ("nOpt", ppStrictMaybe ppNatural $ pp ^. ppuNOptL)
-    , ("a0", ppStrictMaybe (ppRational . unboundRational) $ pp ^. ppuA0L)
-    , ("rho", ppStrictMaybe ppUnitInterval $ pp ^. ppuRhoL)
-    , ("tau", ppStrictMaybe ppUnitInterval $ pp ^. ppuTauL)
-    , ("protocolVersion", ppStrictMaybe ppProtVer $ pp ^. ppuProtocolVersionL)
-    , ("minPoolCost", ppStrictMaybe ppCoin $ pp ^. ppuMinPoolCostL)
-    , ("coinPerByte", ppStrictMaybe (ppCoin . unCoinPerByte) $ pp ^. ppuCoinsPerUTxOByteL)
-    , ("costmdls", ppStrictMaybe ppCostModels $ pp ^. ppuCostModelsL)
-    , ("prices", ppStrictMaybe ppPrices $ pp ^. ppuPricesL)
-    , ("maxTxExUnits", ppStrictMaybe ppExUnits $ pp ^. ppuMaxTxExUnitsL)
-    , ("maxBlockExUnits", ppStrictMaybe ppExUnits $ pp ^. ppuMaxBlockExUnitsL)
-    , ("maxValSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxValSizeL)
-    , ("collateral%", ppStrictMaybe ppNatural $ pp ^. ppuCollateralPercentageL)
-    , ("maxCollateralInputs", ppStrictMaybe ppNatural $ pp ^. ppuMaxCollateralInputsL)
-    ]
+  prettyA pp =
+    ppRecord
+      "PParams"
+      [ ("minfeeA", prettyA $ pp ^. ppMinFeeAL)
+      , ("minfeeB", prettyA $ pp ^. ppMinFeeBL)
+      , ("maxBBSize", prettyA $ pp ^. ppMaxBBSizeL)
+      , ("maxTxSize", prettyA $ pp ^. ppMaxTxSizeL)
+      , ("maxBHSize", prettyA $ pp ^. ppMaxBHSizeL)
+      , ("keyDeposit", prettyA $ pp ^. ppKeyDepositL)
+      , ("poolDeposit", prettyA $ pp ^. ppPoolDepositL)
+      , ("eMax", prettyA $ pp ^. ppEMaxL)
+      , ("nOpt", prettyA $ pp ^. ppNOptL)
+      , ("a0", prettyA $ pp ^. ppA0L)
+      , ("rho", prettyA $ pp ^. ppRhoL)
+      , ("tau", prettyA $ pp ^. ppTauL)
+      , ("protocolVersion", prettyA $ pp ^. ppProtocolVersionL)
+      , ("minPoolCost", prettyA $ pp ^. ppMinPoolCostL)
+      , ("coinPerByte", prettyA $ pp ^. ppCoinsPerUTxOByteL)
+      , ("costmdls", prettyA $ pp ^. ppCostModelsL)
+      , ("prices", prettyA $ pp ^. ppPricesL)
+      , ("maxTxExUnits", prettyA $ pp ^. ppMaxTxExUnitsL)
+      , ("maxBlockExUnits", prettyA $ pp ^. ppMaxBlockExUnitsL)
+      , ("maxValSize", prettyA $ pp ^. ppMaxValSizeL)
+      , ("collateral%", prettyA $ pp ^. ppCollateralPercentageL)
+      , ("maxCollateralInputs", prettyA $ pp ^. ppMaxCollateralInputsL)
+      ]
 
 instance Crypto c => PrettyA (PParamsUpdate (BabbageEra c)) where
-  prettyA = ppBabbagePParamsUpdate
+  prettyA pp =
+    ppRecord
+      "PParamsUdate"
+      [ ("minfeeA", prettyA $ pp ^. ppuMinFeeAL)
+      , ("minfeeB", prettyA $ pp ^. ppuMinFeeBL)
+      , ("maxBBSize", prettyA $ pp ^. ppuMaxBBSizeL)
+      , ("maxTxSize", prettyA $ pp ^. ppuMaxTxSizeL)
+      , ("maxBHSize", prettyA $ pp ^. ppuMaxBHSizeL)
+      , ("keyDeposit", prettyA $ pp ^. ppuKeyDepositL)
+      , ("poolDeposit", prettyA $ pp ^. ppuPoolDepositL)
+      , ("eMax", prettyA $ pp ^. ppuEMaxL)
+      , ("nOpt", prettyA $ pp ^. ppuNOptL)
+      , ("a0", prettyA $ pp ^. ppuA0L)
+      , ("rho", prettyA $ pp ^. ppuRhoL)
+      , ("tau", prettyA $ pp ^. ppuTauL)
+      , ("protocolVersion", prettyA $ pp ^. ppuProtocolVersionL)
+      , ("minPoolCost", prettyA $ pp ^. ppuMinPoolCostL)
+      , ("coinPerByte", prettyA $ pp ^. ppuCoinsPerUTxOByteL)
+      , ("costmdls", prettyA $ pp ^. ppuCostModelsL)
+      , ("prices", prettyA $ pp ^. ppuPricesL)
+      , ("maxTxExUnits", prettyA $ pp ^. ppuMaxTxExUnitsL)
+      , ("maxBlockExUnits", prettyA $ pp ^. ppuMaxBlockExUnitsL)
+      , ("maxValSize", prettyA $ pp ^. ppuMaxValSizeL)
+      , ("collateral%", prettyA $ pp ^. ppuCollateralPercentageL)
+      , ("maxCollateralInputs", prettyA $ pp ^. ppuMaxCollateralInputsL)
+      ]
 
-ppBabbageUtxoPred ::
-  ( PrettyA (AlonzoUtxoPredFailure era)
-  , PrettyA (TxOut era)
-  ) =>
-  BabbageUtxoPredFailure era ->
-  PDoc
-ppBabbageUtxoPred (AlonzoInBabbageUtxoPredFailure x) = prettyA x
-ppBabbageUtxoPred (IncorrectTotalCollateralField c1 c2) =
-  ppRecord
-    "IncorrectTotalCollateralField"
-    [("collateral provided", ppCoin c1), ("collateral declared", ppCoin c2)]
-ppBabbageUtxoPred (BabbageOutputTooSmallUTxO xs) =
-  ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair prettyA ppCoin) xs]
 
 instance
   ( PrettyA (AlonzoUtxoPredFailure era)
@@ -138,20 +109,13 @@ instance
   ) =>
   PrettyA (BabbageUtxoPredFailure era)
   where
-  prettyA = ppBabbageUtxoPred
-
-ppBabbageUtxowPred ::
-  ( PrettyA (AlonzoUtxowPredFailure era)
-  , PrettyA (PredicateFailure (EraRule "UTXO" era))
-  ) =>
-  BabbageUtxowPredFailure era ->
-  PDoc
-ppBabbageUtxowPred (AlonzoInBabbageUtxowPredFailure pf) = prettyA pf
-ppBabbageUtxowPred (UtxoFailure pf) = prettyA pf
-ppBabbageUtxowPred (MalformedScriptWitnesses scripts) =
-  ppSexp "MalformedScriptWitnesses" [ppSet ppScriptHash scripts]
-ppBabbageUtxowPred (MalformedReferenceScripts scripts) =
-  ppSexp "MalformedReferenceScripts" [ppSet ppScriptHash scripts]
+    prettyA (AlonzoInBabbageUtxoPredFailure x) = prettyA x
+    prettyA (IncorrectTotalCollateralField c1 c2) =
+      ppRecord
+        "IncorrectTotalCollateralField"
+        [("collateral provided", prettyA c1), ("collateral declared", prettyA c2)]
+    prettyA (BabbageOutputTooSmallUTxO xs) =
+      ppSexp "BabbageOutputTooSmallUTxO" [prettyA xs]
 
 instance
   ( PrettyA (AlonzoUtxowPredFailure era)
@@ -159,30 +123,12 @@ instance
   ) =>
   PrettyA (BabbageUtxowPredFailure era)
   where
-  prettyA = ppBabbageUtxowPred
-
-ppTxOut ::
-  forall era.
-  ( EraTxOut era
-  , EraScript era
-  , PrettyA (Script era)
-  , PrettyA (Value era)
-  ) =>
-  BabbageTxOut era ->
-  PDoc
-ppTxOut (BabbageTxOut addr val datum mscript) =
-  ppRecord
-    "TxOut"
-    [ ("address", ppAddr addr)
-    , ("value", prettyA val)
-    , ("datum", ppDatum datum)
-    ,
-      ( "reference script"
-      , case mscript of
-          (SJust s) -> prettyA s <+> ppScriptHash (hashScript @era s)
-          SNothing -> ppString "?-"
-      )
-    ]
+    prettyA (AlonzoInBabbageUtxowPredFailure pf) = prettyA pf
+    prettyA (UtxoFailure pf) = prettyA pf
+    prettyA (MalformedScriptWitnesses scripts) =
+      ppSexp "MalformedScriptWitnesses" [prettyA scripts]
+    prettyA (MalformedReferenceScripts scripts) =
+      ppSexp "MalformedReferenceScripts" [prettyA scripts]
 
 instance
   ( EraTxOut era
@@ -192,51 +138,24 @@ instance
   ) =>
   PrettyA (BabbageTxOut era)
   where
-  prettyA = ppTxOut
+  prettyA (BabbageTxOut addr val datum mscript) =
+    ppRecord
+      "TxOut"
+      [ ("address", prettyA addr)
+      , ("value", prettyA val)
+      , ("datum", prettyA datum)
+      ,
+        ( "reference script"
+        , case mscript of
+            (SJust s) -> prettyA s <+> prettyA (hashScript @era s)
+            SNothing -> "?-"
+        )
+      ]
 
-ppDatum :: Era era => Datum era -> PDoc
-ppDatum NoDatum = ppString "NoDatum"
-ppDatum (DatumHash x) = ppSexp "DatumHash" [ppDataHash x]
-ppDatum (Datum x) = ppSexp "Datum" [ppBinaryData x]
+instance Era era => PrettyA (Datum era)
 
-instance Era era => PrettyA (Datum era) where prettyA = ppDatum
-
-ppBinaryData :: Era era => BinaryData era -> PDoc
-ppBinaryData x = ppData (binaryDataToData x)
-
-instance Era era => PrettyA (BinaryData era) where prettyA = ppBinaryData
-
-ppDataHash :: DataHash era -> PDoc
-ppDataHash x = ppSafeHash x
-
-instance PrettyA (DataHash era) where prettyA = ppDataHash
-
-ppTxBody ::
-  ( PrettyA (TxOut era)
-  , PrettyA (PParamsUpdate era)
-  ) =>
-  BabbageTxBody era ->
-  PDoc
-ppTxBody x =
-  ppRecord
-    "TxBody(Babbage)"
-    [ ("spending inputs", ppSet ppTxIn (spendInputs' x))
-    , ("collateral inputs", ppSet ppTxIn (collateralInputs' x))
-    , ("reference inputs", ppSet ppTxIn (referenceInputs' x))
-    , ("outputs", ppStrictSeq prettyA (outputs' x))
-    , ("collateral return", ppStrictMaybe prettyA (collateralReturn' x))
-    , ("total collateral", ppStrictMaybe ppCoin (totalCollateral' x))
-    , ("certificates", ppStrictSeq ppDCert (certs' x))
-    , ("withdrawals", ppWithdrawals (withdrawals' x))
-    , ("txfee", ppCoin (txfee' x))
-    , ("vldt", ppValidityInterval (vldt' x))
-    , ("update", ppStrictMaybe ppUpdate (update' x))
-    , ("reqSignerHashes", ppSet ppKeyHash (reqSignerHashes' x))
-    , ("mint", ppMultiAsset (mint' x))
-    , ("scriptIntegrityHash", ppStrictMaybe ppSafeHash (scriptIntegrityHash' x))
-    , ("adHash", ppStrictMaybe ppAuxDataHash (adHash' x))
-    , ("txnetworkid", ppStrictMaybe ppNetwork (txnetworkid' x))
-    ]
+instance Era era => PrettyA (BinaryData era) where 
+  prettyA = prettyA . binaryDataToData
 
 instance
   ( EraTxOut era
@@ -245,4 +164,26 @@ instance
   ) =>
   PrettyA (BabbageTxBody era)
   where
-  prettyA = ppTxBody
+  prettyA x =
+    ppRecord
+      "TxBody(Babbage)"
+      [ ("spending inputs", prettyA (spendInputs' x))
+      , ("collateral inputs", prettyA (collateralInputs' x))
+      , ("reference inputs", prettyA (referenceInputs' x))
+      , ("outputs", prettyA (outputs' x))
+      , ("collateral return", prettyA (collateralReturn' x))
+      , ("total collateral", prettyA (totalCollateral' x))
+      , ("certificates", prettyA (certs' x))
+      , ("withdrawals", prettyA (withdrawals' x))
+      , ("txfee", prettyA (txfee' x))
+      , ("vldt", prettyA (vldt' x))
+      , ("update", prettyA (update' x))
+      , ("reqSignerHashes", prettyA (reqSignerHashes' x))
+      , ("mint", prettyA (mint' x))
+      , ("scriptIntegrityHash", prettyA (scriptIntegrityHash' x))
+      , ("adHash", prettyA (adHash' x))
+      , ("txnetworkid", prettyA (txnetworkid' x))
+      ]
+
+instance PrettyA CoinPerByte where
+  prettyA = prettyA . unCoinPerByte

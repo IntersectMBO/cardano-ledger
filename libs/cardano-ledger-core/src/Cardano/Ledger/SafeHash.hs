@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 -- | In cardano-ledger, hashing a type @X@ is based upon the serialization of @X@. Serialization is
 --   based upon the 'ToCBOR' and FromCBOR type classes, and the values produced by 'ToCBOR' instances for a
@@ -69,6 +70,7 @@ import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Foldable (fold)
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))
+import GHC.Generics (Generic)
 
 -- ==========================================================
 
@@ -84,7 +86,7 @@ import NoThunks.Class (NoThunks (..))
 --     that limit their application to types which preserve their original serialization
 --     bytes.
 newtype SafeHash c index = SafeHash (Hash.Hash (CC.HASH c) index)
-  deriving (Show, Eq, Ord, NoThunks, NFData)
+  deriving (Show, Eq, Ord, NoThunks, NFData, Generic)
 
 deriving newtype instance
   Hash.HashAlgorithm (CC.HASH c) =>

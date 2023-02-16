@@ -197,7 +197,7 @@ data Datum era
   = NoDatum
   | DatumHash !(DataHash (EraCrypto era))
   | Datum !(BinaryData era)
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
 
 instance Era era => ToCBOR (Datum era) where
   toCBOR d = encode $ case d of

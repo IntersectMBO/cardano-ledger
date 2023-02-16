@@ -20,7 +20,6 @@ module Test.Cardano.Ledger.Shelley.Rewards (
   defaultMain,
   newEpochProp,
   newEpochEventsProp,
-  ppAgg,
   RewardUpdateOld (..),
   createRUpdOld,
   createRUpdOld_,
@@ -64,7 +63,7 @@ import Cardano.Ledger.Keys (
   VKey (..),
   hashKey,
  )
-import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
+import Cardano.Ledger.Pretty (PrettyA (..))
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
@@ -613,11 +612,8 @@ overrideProtocolVersionUsedInRewardCalc pv es =
     pp' = pp & ppProtocolVersionL .~ pv
 
 oldEqualsNew ::
-  forall era.
-  ( era ~ C
-  ) =>
   ProtVer ->
-  NewEpochState era ->
+  NewEpochState C ->
   Property
 oldEqualsNew pv newepochstate =
   counterexample
@@ -628,7 +624,7 @@ oldEqualsNew pv newepochstate =
     epochstate = overrideProtocolVersionUsedInRewardCalc pv $ nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: BlocksMade (EraCrypto era)
+    blocksmade :: BlocksMade (EraCrypto C)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
@@ -636,7 +632,7 @@ oldEqualsNew pv newepochstate =
     unAggregated =
       runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
-    newWithZeros = aggregateRewards @(EraCrypto era) pv (rs unAggregated)
+    newWithZeros = aggregateRewards pv (rs unAggregated)
     new = Map.filter (/= Coin 0) newWithZeros
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
@@ -736,17 +732,11 @@ eventsMirrorRewards events nes = same eventRew compRew
               x
               y
 
-ppAgg :: Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C))) -> PDoc
-ppAgg = ppMap prettyA (ppSet ppReward)
-
 instance Terse (Reward c) where
-  terse x = show (ppReward x)
+  terse = show . prettyA
 
 instance PrettyA x => Terse (Set x) where
-  terse x = show (ppSet prettyA x)
-
-instance PrettyA (Reward c) where
-  prettyA = ppReward
+  terse = show . prettyA
 
 -- ================================================================
 
@@ -815,9 +805,9 @@ rewardTests =
     [ testProperty "Sum of rewards is bounded by reward pot" $
         withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))
     , testProperty "compare with reference impl, no provenance, v3" $
-        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @3) 0))
+        newEpochProp chainlen (oldEqualsNew (ProtVer (natVersion @3) 0))
     , testProperty "compare with reference impl, no provenance, v7" $
-        newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @7) 0))
+        newEpochProp chainlen (oldEqualsNew (ProtVer (natVersion @7) 0))
     , testProperty "compare with reference impl, with provenance" $
         newEpochProp chainlen (oldEqualsNewOn @C (ProtVer (natVersion @3) 0))
     , testProperty "delta events mirror reward updates" $

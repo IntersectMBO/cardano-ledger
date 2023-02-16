@@ -100,6 +100,7 @@ import Prelude hiding (lookup)
 
 -- | Asset Name
 newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
+  deriving Generic
   deriving newtype
     ( Eq
     , ToCBOR
