@@ -75,7 +75,8 @@ fixSet mess numtrys size genA s = help numtrys s
       EQ -> pure set
       GT -> help (trys - 1) (iterate Set.deleteMin set !! (Set.size set - size))
       LT -> do
-        new <- Set.fromList <$> vectorOf (size - Set.size set) genA
+        let need = size - Set.size set
+        new <- Set.fromList . take need . filter (`Set.notMember` set) <$> vectorOf size genA
         help (trys - 1) (Set.union new set)
 
 {-
