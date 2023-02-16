@@ -113,7 +113,7 @@ import Test.Cardano.Ledger.Generic.Proof (
   Proof (..),
   Reflect (..),
  )
-import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
+import Test.Cardano.Protocol.TPraos.Utils (runShelleyBase)
 
 -- =============================================
 

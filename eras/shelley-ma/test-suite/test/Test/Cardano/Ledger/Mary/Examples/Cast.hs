@@ -26,7 +26,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
-import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
+import Test.Cardano.Protocol.TPraos.Utils (RawSeed (..), mkKeyPair)
 
 -- | Alice's payment key pair
 alicePay :: KeyPair 'Payment StandardCrypto

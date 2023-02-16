@@ -57,14 +57,14 @@ import Test.Cardano.Ledger.AllegraEraGen (
  )
 import Test.Cardano.Ledger.EraBuffet (MaryEra)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genInteger)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+import Test.Cardano.Protocol.TPraos.Core (GenEnv (..), genInteger)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..), MinGenTxout (..))
+import Test.Cardano.Protocol.TPraos.ScriptClass (
   ScriptClass (..),
   exponential,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
-import Test.Cardano.Ledger.Shelley.Utils (Split (..))
+import Test.Cardano.Protocol.TPraos.Update (genPParams, genShelleyPParamsUpdate)
+import Test.Cardano.Protocol.TPraos.Utils (Split (..))
 import Test.QuickCheck (Gen, arbitrary, frequency)
 import qualified Test.QuickCheck as QC
 

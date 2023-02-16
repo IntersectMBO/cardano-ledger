@@ -116,8 +116,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro ((^.))
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)
+import Test.Cardano.Protocol.TPraos.Rules (ChainState (..))
+import Test.Cardano.Protocol.TPraos.Utils (epochFromSlotNo, getBlockNonce)
 
 -- ======================================================
 

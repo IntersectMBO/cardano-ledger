@@ -71,10 +71,10 @@ import qualified Hedgehog.Range
 import Lens.Micro
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
-import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (C_Crypto)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Utils (testSTS)
+import qualified Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes as Original (C_Crypto)
+import Test.Cardano.Protocol.TPraos.EraGen (genesisId)
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils (testSTS)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Tasty (TestTree)

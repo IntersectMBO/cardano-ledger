@@ -75,7 +75,7 @@ library
         cardano-ledger-shelley >=1.1,
         cardano-ledger-shelley-test >=1.1,
         cardano-ledger-shelley-ma-test >=1.1,
-        cardano-protocol-tpraos >=1.0,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.0,
         cardano-slotting,
         containers,
         vector-map,
@@ -147,6 +147,7 @@ benchmark bench
         cardano-ledger-core,
         cardano-ledger-shelley-ma-test,
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
+        cardano-protocol-tpraos:testlib,
         vector-map,
         containers,
         criterion,
@@ -182,4 +183,5 @@ benchmark benchProperty
         small-steps,
         cardano-ledger-shelley,
         cardano-ledger-shelley-test,
+        cardano-protocol-tpraos:testlib,
         tasty

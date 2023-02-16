@@ -91,7 +91,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
+import Test.Cardano.Protocol.TPraos.Utils (RawSeed (..), mkKeyPair)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, testCase)
 

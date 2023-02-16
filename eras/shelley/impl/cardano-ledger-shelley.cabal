@@ -132,6 +132,7 @@ library testlib
         Test.Cardano.Ledger.Shelley.Arbitrary
         Test.Cardano.Ledger.Shelley.Binary.Golden
         Test.Cardano.Ledger.Shelley.Constants
+        Test.Cardano.Crypto.VRF.Fake
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -156,6 +157,7 @@ library testlib
         containers,
         vector-map,
         mtl,
+        nothunks,
         text,
         hedgehog-quickcheck
 

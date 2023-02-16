@@ -82,7 +82,7 @@ import Test.Cardano.Ledger.Generic.ModelState (MUtxo, Model, ModelNewEpochState 
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld, createRUpdOld_)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Cardano.Protocol.TPraos.Utils (testGlobals)
 
 -- ====================================================================
 -- Era agnostic actions on (PParams era) (TxOut era) and

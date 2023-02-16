@@ -53,7 +53,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
@@ -69,16 +68,17 @@ import Test.Cardano.Ledger.Shelley.Examples.Init (
   ppEx,
  )
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makePulser')
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (ExMock)
+import Test.Cardano.Protocol.TPraos.Core (
   NatNonce (..),
   genesisCoins,
   mkBlockFakeVRF,
   mkOCert,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.EraGen (genesisId)
+import Test.Cardano.Protocol.TPraos.Rules (ChainState (..))
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils (
   RawSeed (..),
   getBlockNonce,
   mkKeyPair,

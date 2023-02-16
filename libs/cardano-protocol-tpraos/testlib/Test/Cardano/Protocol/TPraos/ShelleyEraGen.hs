@@ -7,7 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen (genCoin) where
+module Test.Cardano.Protocol.TPraos.ShelleyEraGen (genCoin) where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
@@ -39,21 +39,21 @@ import Control.Monad (replicateM)
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import Data.Set (Set)
 import Lens.Micro.Extras (view)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.Core (
   GenEnv (..),
   genCoin,
   genNatural,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..), MinGenTxout (..))
+import Test.Cardano.Protocol.TPraos.ScriptClass (
   Quantifier (..),
   ScriptClass (..),
  )
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain ()
-import Test.Cardano.Ledger.Shelley.Generator.TxAuxData (genMetadata)
-import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
+import Test.Cardano.Protocol.TPraos.Trace.Chain ()
+import Test.Cardano.Protocol.TPraos.TxAuxData (genMetadata)
+import Test.Cardano.Protocol.TPraos.Update (genPParams, genShelleyPParamsUpdate)
 import Test.QuickCheck (Gen)
 
 {------------------------------------------------------------------------------

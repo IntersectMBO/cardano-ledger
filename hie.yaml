@@ -195,6 +195,12 @@ cradle:
     - path: "libs/cardano-protocol-tpraos/src"
       component: "lib:cardano-protocol-tpraos"
 
+    - path: "libs/cardano-protocol-tpraos/testlib"
+      component: "cardano-protocol-tpraos:lib:testlib"
+
+    - path: "libs/cardano-protocol-tpraos/prettylib"
+      component: "cardano-protocol-tpraos:lib:prettylib"
+
     - path: "libs/ledger-state/src"
       component: "lib:ledger-state"
 

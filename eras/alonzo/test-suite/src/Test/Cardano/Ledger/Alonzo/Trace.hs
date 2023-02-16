@@ -33,13 +33,13 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genAccountState)
-import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv (..))
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..), MinLEDGER_STS)
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Trace.DCert (CERTS)
+import Test.Cardano.Protocol.TPraos.Trace.Ledger (genAccountState)
+import Test.Cardano.Protocol.TPraos.Utxo (genTx)
 
 -- The AlonzoLEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.

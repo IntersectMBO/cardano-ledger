@@ -41,7 +41,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
+import Test.Cardano.Protocol.TPraos.EraGen (genesisId)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
 

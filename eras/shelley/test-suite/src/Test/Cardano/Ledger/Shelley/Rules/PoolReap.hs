@@ -3,11 +3,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
   tests,
@@ -35,21 +32,23 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.BHeader (
+  BHeader,
   bhbody,
   bheaderSlotNo,
  )
 import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
+import Control.State.Transition.Extended (STS (Environment, Signal, State))
 import Control.State.Transition.Trace (
   SourceSignalTarget (..),
  )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils (
   ChainProperty,
   epochFromSlotNo,
  )
@@ -71,6 +70,9 @@ tests ::
   , EraGen era
   , EraGovernance era
   , QC.HasTrace (CHAIN era) (GenEnv era)
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   TestTree
 tests =
@@ -110,6 +112,7 @@ removedAfterPoolreap p p' e =
 
 sameEpoch ::
   forall era.
+  State (CHAIN era) ~ ChainState era =>
   SourceSignalTarget (CHAIN era) ->
   Bool
 sameEpoch SourceSignalTarget {source, target} =

@@ -35,8 +35,8 @@ import Data.Default.Class (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
-import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), applySTSTest, mkKeyPair, runShelleyBase)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Protocol.TPraos.Utils (RawSeed (..), applySTSTest, mkKeyPair, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 

@@ -40,7 +40,7 @@ import Paths_cardano_ledger_shelley_test (getDataFileName)
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Utils (
   RawSeed (..),
   mkKeyPair,
   mkVRFKeyPair,

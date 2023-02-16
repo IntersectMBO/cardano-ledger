@@ -99,7 +99,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (HasTokens (..), PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Utils (
   RawSeed (..),
   mkKeyPair,
  )

@@ -101,8 +101,8 @@ import Test.Cardano.Ledger.Shelley.Examples.Consensus (
  )
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as Old (ledgerExamplesShelley)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
-import Test.Cardano.Ledger.Shelley.Generator.Core hiding (hashData)
-import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
+import Test.Cardano.Protocol.TPraos.Core hiding (hashData)
+import Test.Cardano.Protocol.TPraos.Utils hiding (mkVRFKeyPair)
 
 -- ==================================================================
 
@@ -267,7 +267,7 @@ mkVRFKeyPair _ byte = (sk, VRF.deriveVerKeyVRF sk)
 
     sk = VRF.genKeyVRF seed
 
--- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
+-- | @mkKeyPair'@ from @Test.Cardano.Protocol.TPraos.Utils@ doesn't work for real
 -- crypto:
 -- <https://github.com/input-output-hk/cardano-ledger/issues/1770>
 mkDSIGNKeyPair ::

@@ -106,12 +106,12 @@ import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
   testBootstrapSpending,
  )
 import Test.Cardano.Ledger.Shelley.Arbitrary (ASC (ASC), StakeProportion (StakeProportion), VRFNatVal (VRFNatVal))
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
-import Test.Cardano.Ledger.Shelley.Generator.Core (genesisCoins)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C, C_Crypto)
+import Test.Cardano.Protocol.TPraos.Core (genesisCoins)
+import Test.Cardano.Protocol.TPraos.EraGen (genesisId)
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Tasty
 import Test.Tasty.HUnit

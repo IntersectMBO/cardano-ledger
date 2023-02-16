@@ -3,11 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Deleg (
   tests,
@@ -39,22 +37,27 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
-import Test.QuickCheck (Property, conjoin, counterexample)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState)
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.QuickCheck (
+  Property,
+  Testable (..),
+  conjoin,
+  counterexample,
+ )
 
+import Cardano.Ledger.Block (Block)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Control.State.Transition.Extended (STS (Environment, Signal, State))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   delegTraceFromBlock,
   forAllChainTrace,
   traceLen,
  )
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Utils (
   ChainProperty,
- )
-import Test.QuickCheck (
-  Testable (..),
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
@@ -68,6 +71,9 @@ tests ::
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ChainProperty era
   , ProtVerAtMost era 8
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   TestTree
 tests =
@@ -78,7 +84,7 @@ tests =
   where
     delegProp :: DelegEnv era -> SourceSignalTarget (ShelleyDELEG era) -> Property
     delegProp denv delegSst =
-      conjoin $
+      conjoin
         [ keyRegistration delegSst
         , keyDeRegistration delegSst
         , keyDelegation delegSst

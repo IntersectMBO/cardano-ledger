@@ -19,11 +19,11 @@ import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Mary.Arbitrary ()
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Cardano.Ledger.TranslationTools (translateEraEncCBOR, translateEraEncoding)
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)

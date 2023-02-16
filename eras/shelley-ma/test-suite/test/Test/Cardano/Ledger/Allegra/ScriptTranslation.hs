@@ -21,7 +21,7 @@ import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
+import Test.Cardano.Protocol.TPraos.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 

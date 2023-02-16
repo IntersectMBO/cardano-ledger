@@ -73,16 +73,16 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
+import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (
   Mock,
  )
-import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.Core (
   genesisCoins,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.EraGen (genesisId)
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils
 
 -- Multi-Signature tests
 

@@ -109,7 +109,6 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
@@ -123,17 +122,18 @@ import Test.Cardano.Ledger.Shelley.Examples.Init (
   ppEx,
  )
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser, mkStake)
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C, C_Crypto, ExMock)
+import Test.Cardano.Protocol.TPraos.Core (
   AllIssuerKeys (..),
   NatNonce (..),
   genesisCoins,
   mkBlockFakeVRF,
   mkOCert,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.EraGen (genesisId)
+import Test.Cardano.Protocol.TPraos.Rules (ChainState (..))
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils (
   epochSize,
   getBlockNonce,
   maxLLSupply,

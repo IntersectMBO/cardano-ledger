@@ -34,9 +34,10 @@ import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Data.Maybe (fromJust)
 import qualified Test.Cardano.Ledger.Binary.Plain.RoundTrip as Plain
 import Test.Cardano.Ledger.Binary.RoundTrip
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.Cardano.Protocol.TPraos.Arbitrary ()
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 

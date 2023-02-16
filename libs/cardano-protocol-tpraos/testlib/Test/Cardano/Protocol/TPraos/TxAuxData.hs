@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.TxAuxData (
+module Test.Cardano.Protocol.TPraos.TxAuxData (
   genMetadata,
   genMetadata',
 )

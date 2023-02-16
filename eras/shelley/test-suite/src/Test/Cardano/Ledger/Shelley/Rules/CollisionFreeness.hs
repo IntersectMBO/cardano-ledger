@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (
   tests,
 ) where
 
-import Cardano.Ledger.Block (bbody)
+import Cardano.Ledger.Block (Block, bbody)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Shelley.Core
@@ -22,7 +22,9 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.SetAlgebra (eval, (∩))
+import Control.State.Transition.Extended (STS (Environment, Signal, State))
 import Control.State.Transition.Trace (
   SourceSignalTarget (..),
   sourceSignalTargets,
@@ -35,18 +37,18 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro hiding (ix)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombinations)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   TestingLedger,
   forAllChainTrace,
   ledgerTraceFromBlock,
   traceLen,
  )
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState)
+import Test.Cardano.Protocol.TPraos.ScriptClass (scriptKeyCombinations)
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils (
   ChainProperty,
  )
 import Test.QuickCheck (
@@ -67,6 +69,9 @@ tests ::
   , ChainProperty era
   , TestingLedger era ledger
   , QC.HasTrace (CHAIN era) (GenEnv era)
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   TestTree
 tests =
@@ -89,6 +94,8 @@ eliminateTxInputs ::
   ( ChainProperty era
   , EraGen era
   , TestingLedger era ledger
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -115,6 +122,8 @@ newEntriesAndUniqueTxIns ::
   ( ChainProperty era
   , EraGen era
   , TestingLedger era ledger
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -146,6 +155,8 @@ requiredMSigSignaturesSubset ::
   ( ChainProperty era
   , EraGen era
   , TestingLedger era ledger
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -171,7 +182,10 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 --- | Check for absence of double spend in a block
 noDoubleSpend ::
   forall era.
-  (ChainProperty era, EraGen era) =>
+  ( Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
+  , ChainProperty era
+  , EraGen era
+  ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 noDoubleSpend SourceSignalTarget {signal} =

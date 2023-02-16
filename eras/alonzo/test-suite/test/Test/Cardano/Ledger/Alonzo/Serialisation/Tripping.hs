@@ -28,8 +28,9 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
+import Test.Cardano.Protocol.TPraos.Arbitrary ()
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (StandardCrypto)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

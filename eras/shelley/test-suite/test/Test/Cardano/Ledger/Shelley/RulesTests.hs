@@ -38,7 +38,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Examples (testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Examples.EmptyBlock (exEmptyBlock)
@@ -62,7 +61,8 @@ import Test.Cardano.Ledger.Shelley.MultiSigExamples (
  )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C, C_Crypto)
+import Test.Cardano.Protocol.TPraos.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 import Test.Tasty.QuickCheck (Property, discard, testProperty, (===))

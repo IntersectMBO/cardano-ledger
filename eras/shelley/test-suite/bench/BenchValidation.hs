@@ -1,14 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -53,17 +49,18 @@ import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Except ()
+import Control.State.Transition.Extended (Environment)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map.Strict as Map
 import Data.Proxy
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
-import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen, MinLEDGER_STS)
+import Test.Cardano.Protocol.TPraos.Presets (genEnv)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.Utils (testGlobals)
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHeader (EraCrypto era)) era)
 
@@ -82,10 +79,11 @@ validateInput ::
   , GetLedgerView era
   , MinLEDGER_STS era
   , EraGovernance era
+  , Environment (CHAIN era) ~ ()
   ) =>
   Int ->
   IO (ValidateInput era)
-validateInput utxoSize = genValidateInput utxoSize
+validateInput = genValidateInput
 
 genValidateInput ::
   ( EraGen era
@@ -96,6 +94,7 @@ genValidateInput ::
   , GetLedgerView era
   , MinLEDGER_STS era
   , EraGovernance era
+  , Environment (CHAIN era) ~ ()
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -180,6 +179,7 @@ genUpdateInputs ::
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
   , API.ApplyBlock era
   , EraGovernance era
+  , Environment (CHAIN era) ~ ()
   ) =>
   Int ->
   IO (UpdateInputs (EraCrypto era))

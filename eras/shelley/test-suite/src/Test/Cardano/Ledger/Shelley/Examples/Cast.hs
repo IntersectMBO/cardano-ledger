@@ -71,10 +71,10 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.Core (
   AllIssuerKeys (..),
  )
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Utils (
   RawSeed (..),
   mkKESKeyPair,
   mkKeyPair,

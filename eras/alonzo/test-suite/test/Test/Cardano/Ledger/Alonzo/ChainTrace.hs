@@ -38,14 +38,16 @@ import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
-  CHAIN,
   ChainEvent (..),
-  ChainState (..),
   TestChainPredicateFailure (..),
  )
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
   ledgerTraceFromBlock,
+ )
+import Test.Cardano.Protocol.TPraos.Rules (
+  CHAIN,
+  ChainState (..),
  )
 import Test.QuickCheck (
   Property,

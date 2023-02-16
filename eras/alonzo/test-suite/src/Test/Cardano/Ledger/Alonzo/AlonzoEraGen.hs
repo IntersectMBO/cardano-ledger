@@ -109,9 +109,9 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts (
  )
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.Core (
   GenEnv (..),
   ScriptInfo,
   TwoPhase2ArgInfo (..),
@@ -120,12 +120,12 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   genNatural,
   hashData,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (Quantifier (..), ScriptClass (..))
-import Test.Cardano.Ledger.Shelley.Generator.Update (genM, genShelleyPParamsUpdate)
-import qualified Test.Cardano.Ledger.Shelley.Generator.Update as Shelley (genPParams)
-import Test.Cardano.Ledger.Shelley.Generator.Utxo (encodedLen, myDiscard)
-import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..), MinGenTxout (..))
+import Test.Cardano.Protocol.TPraos.ScriptClass (Quantifier (..), ScriptClass (..))
+import Test.Cardano.Protocol.TPraos.Update (genM, genShelleyPParamsUpdate)
+import qualified Test.Cardano.Protocol.TPraos.Update as Shelley (genPParams)
+import Test.Cardano.Protocol.TPraos.Utils (unsafeBoundRational)
+import Test.Cardano.Protocol.TPraos.Utxo (encodedLen, myDiscard)
 import Test.QuickCheck hiding ((><))
 
 -- ============================================================

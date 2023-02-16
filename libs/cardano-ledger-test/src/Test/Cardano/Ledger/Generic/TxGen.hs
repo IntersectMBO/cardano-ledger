@@ -133,9 +133,9 @@ import Test.Cardano.Ledger.Generic.ModelState (
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
-import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
+import Test.Cardano.Protocol.TPraos.Core (genNatural)
+import Test.Cardano.Protocol.TPraos.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
 
 -- ===================================================

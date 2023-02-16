@@ -21,9 +21,9 @@ import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (Identity)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN)
 
 import qualified Test.Cardano.Ledger.Shelley.ByronTranslation as ByronTranslation (testGroupByronTranslation)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
@@ -39,7 +39,7 @@ import qualified Test.Cardano.Ledger.Shelley.Rules.Pool as Pool (tests)
 import qualified Test.Cardano.Ledger.Shelley.Rules.PoolReap as PoolReap (tests)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import qualified Test.Cardano.Ledger.Shelley.ShelleyTranslation as ShelleyTranslation (testGroupShelleyTranslation)
-import Test.Cardano.Ledger.Shelley.Utils (ChainProperty)
+import Test.Cardano.Protocol.TPraos.Utils (ChainProperty)
 import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty (TestTree, localOption, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC

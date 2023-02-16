@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Utxo (
+module Test.Cardano.Protocol.TPraos.Utxo (
   genTx,
   Delta (..),
   encodedLen,
@@ -78,11 +78,11 @@ import Test.Cardano.Ledger.Core.KeyPair (
   mkCred,
   mkWitnessesVKey,
  )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..), defaultConstants)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (
   Mock,
  )
-import Test.Cardano.Ledger.Shelley.Constants (Constants (..), defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.Core (
   GenEnv (..),
   KeySpace (..),
   ScriptInfo,
@@ -92,11 +92,11 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   findPayScriptFromAddr,
   findStakeScriptFromCred,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS, genDCerts)
-import Test.Cardano.Ledger.Shelley.Generator.Update (genUpdate)
-import Test.Cardano.Ledger.Shelley.Utils (Split (..))
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.ScriptClass (scriptKeyCombination)
+import Test.Cardano.Protocol.TPraos.Trace.DCert (CERTS, genDCerts)
+import Test.Cardano.Protocol.TPraos.Update (genUpdate)
+import Test.Cardano.Protocol.TPraos.Utils (Split (..))
 import Test.QuickCheck (Gen, discard)
 import qualified Test.QuickCheck as QC
 

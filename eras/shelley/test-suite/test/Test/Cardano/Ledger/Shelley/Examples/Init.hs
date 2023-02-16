@@ -40,11 +40,11 @@ import Cardano.Slotting.Slot (WithOrigin (..))
 import Data.Default.Class
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Examples.Federation (genDelegs)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (
+import Test.Cardano.Protocol.TPraos.Rules (
   ChainState (..),
   initialShelleyState,
  )
-import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash, unsafeBoundRational)
+import Test.Cardano.Protocol.TPraos.Utils (maxLLSupply, mkHash, unsafeBoundRational)
 
 -- | Initial Protocol Parameters
 ppEx :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era

@@ -13,24 +13,18 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Chain (
-  CHAIN,
-  ChainState (..),
   TestChainPredicateFailure (..),
   ChainEvent (..),
   PredicateFailure,
   AdaPots (..),
-  initialShelleyState,
   totalAda,
   totalAdaPots,
 ) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (
-  BlocksMade (..),
   Globals (..),
-  Nonce (..),
   ShelleyBase,
-  StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block (..))
@@ -41,15 +35,6 @@ import Cardano.Ledger.Chain (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.EpochBoundary (emptySnapShots)
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  KeyHash,
-  KeyRole (..),
-  coerceKeyRole,
- )
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Pretty (PrettyA)
 import qualified Cardano.Ledger.Pretty as PP
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -60,7 +45,6 @@ import Cardano.Ledger.Shelley.AdaPots (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   DPState (..),
   DState (..),
   EpochState (..),
@@ -69,7 +53,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   dsGenDelegs,
-  smartUTxOState,
   updateNES,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -81,9 +64,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickEvent,
   ShelleyTickPredFailure,
  )
-import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
   HashHeader,
@@ -117,29 +98,14 @@ import Control.State.Transition (
   liftSTS,
   trans,
  )
-import Data.Default.Class (Default, def)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Void (Void)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
+import Pretty.Cardano.Protocol.TPraos (ppLastAppliedBlock)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (ChainState, chainNes))
 
 type instance EraRule "TICKN" (ShelleyEra c) = TICKN
-
-data CHAIN era
-
-data ChainState era = ChainState
-  { chainNes :: NewEpochState era
-  , chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer (EraCrypto era)) Word64
-  , chainEpochNonce :: Nonce
-  , chainEvolvingNonce :: Nonce
-  , chainCandidateNonce :: Nonce
-  , chainPrevEpochNonce :: Nonce
-  , chainLastAppliedBlock :: WithOrigin (LastAppliedBlock (EraCrypto era))
-  }
-  deriving (Generic)
 
 deriving stock instance Show (NewEpochState era) => Show (ChainState era)
 
@@ -185,61 +151,6 @@ instance
   , NoThunks (PredicateFailure (EraRule "TICKN" era))
   ) =>
   NoThunks (TestChainPredicateFailure era)
-
--- | Creates a valid initial chain state
-initialShelleyState ::
-  ( EraTxOut era
-  , EraGovernance era
-  , Default (StashedAVVMAddresses era)
-  ) =>
-  WithOrigin (LastAppliedBlock (EraCrypto era)) ->
-  EpochNo ->
-  UTxO era ->
-  Coin ->
-  Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
-  PParams era ->
-  Nonce ->
-  ChainState era
-initialShelleyState lab e utxo reserves genDelegs pp initNonce =
-  ChainState
-    ( NewEpochState
-        e
-        (BlocksMade Map.empty)
-        (BlocksMade Map.empty)
-        ( EpochState
-            (AccountState (Coin 0) reserves)
-            emptySnapShots
-            ( LedgerState
-                ( smartUTxOState
-                    pp
-                    utxo
-                    (Coin 0)
-                    (Coin 0)
-                    emptyGovernanceState
-                )
-                (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
-            )
-            pp
-            pp
-            def
-        )
-        SNothing
-        (PoolDistr Map.empty)
-        def
-    )
-    cs
-    initNonce
-    initNonce
-    initNonce
-    NeutralNonce
-    lab
-  where
-    cs =
-      Map.fromList
-        ( fmap
-            (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0))
-            (Map.elems genDelegs)
-        )
 
 instance
   ( EraPParams era
@@ -444,7 +355,7 @@ ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce la
     , ("evolvingNonce", PP.ppNonce evolvenonce)
     , ("candidateNonce", PP.ppNonce prevnonce)
     , ("prevepochNonce", PP.ppNonce candnonce)
-    , ("lastApplidBlock", PP.ppWithOrigin PP.ppLastAppliedBlock lastab)
+    , ("lastApplidBlock", PP.ppWithOrigin ppLastAppliedBlock lastab)
     ]
 
 instance

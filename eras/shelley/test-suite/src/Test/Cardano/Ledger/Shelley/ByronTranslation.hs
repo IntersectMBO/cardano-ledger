@@ -14,7 +14,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation
 import Cardano.Ledger.Shelley.TxBody
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

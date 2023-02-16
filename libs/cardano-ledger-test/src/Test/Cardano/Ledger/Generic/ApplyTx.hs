@@ -82,7 +82,7 @@ import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
 import Test.Cardano.Ledger.Generic.Updaters (newPParams, newScriptIntegrityHash, newTx, newTxBody, newTxOut)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
+import Test.Cardano.Protocol.TPraos.Utils (epochFromSlotNo)
 
 -- ========================================================================
 

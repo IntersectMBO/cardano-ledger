@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Core (
+module Test.Cardano.Protocol.TPraos.Core (
   AllIssuerKeys (..),
   GenEnv (..),
   ScriptSpace (..),
@@ -145,16 +145,16 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, mkAddr, mkCred, vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (ExMock, Mock)
+import Test.Cardano.Protocol.TPraos.ScriptClass (
   ScriptClass,
   exponential,
   mkKeyPairs,
   mkPayScriptHashMap,
   mkStakeScriptHashMap,
  )
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Utils (
   GenesisKeyPair,
   RawSeed (..),
   epochFromSlotNo,

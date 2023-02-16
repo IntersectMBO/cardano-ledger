@@ -51,8 +51,8 @@ import Data.Word (Word64, Word8)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.Generator.Core
-import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
+import Test.Cardano.Protocol.TPraos.Core
+import Test.Cardano.Protocol.TPraos.Utils hiding (mkVRFKeyPair)
 
 type KeyPairWits era = [KeyPair 'Witness (EraCrypto era)]
 
@@ -512,7 +512,7 @@ exampleKeys =
 keyToCredential :: Crypto c => KeyPair r c -> Credential r c
 keyToCredential = KeyHashObj . hashKey . vKey
 
--- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
+-- | @mkKeyPair'@ from @Test.Cardano.Protocol.TPraos.Utils@ doesn't work for real
 -- crypto:
 -- <https://github.com/input-output-hk/cardano-ledger/issues/1770>
 mkDSIGNKeyPair ::

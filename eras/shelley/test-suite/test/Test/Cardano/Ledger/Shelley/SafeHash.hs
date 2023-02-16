@@ -19,7 +19,7 @@ import Data.ByteString.Short (ShortByteString, toShort)
 
 import Data.Proxy
 import Data.String (fromString)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes
 import Test.Tasty
 import Test.Tasty.HUnit
 

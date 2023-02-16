@@ -21,29 +21,13 @@ source-repository head
 
 library
     exposed-modules:
-        Test.Cardano.Crypto.VRF.Fake
         Test.Cardano.Ledger.TerseTools
         Test.Cardano.Ledger.Shelley.Address.Bootstrap
         Test.Cardano.Ledger.Shelley.BenchmarkFunctions
         Test.Cardano.Ledger.Shelley.ByronTranslation
-        Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
         Test.Cardano.Ledger.Shelley.Examples.Cast
         Test.Cardano.Ledger.Shelley.Examples.Consensus
         Test.Cardano.Ledger.Shelley.Examples.Federation
-        Test.Cardano.Ledger.Shelley.Generator.Block
-        Test.Cardano.Ledger.Shelley.Generator.Constants
-        Test.Cardano.Ledger.Shelley.Generator.Core
-        Test.Cardano.Ledger.Shelley.Generator.Delegation
-        Test.Cardano.Ledger.Shelley.Generator.Presets
-        Test.Cardano.Ledger.Shelley.Generator.Trace.Chain
-        Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
-        Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger
-        Test.Cardano.Ledger.Shelley.Generator.TxAuxData
-        Test.Cardano.Ledger.Shelley.Generator.Update
-        Test.Cardano.Ledger.Shelley.Generator.Utxo
-        Test.Cardano.Ledger.Shelley.Generator.EraGen
-        Test.Cardano.Ledger.Shelley.Generator.ScriptClass
-        Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen
         Test.Cardano.Ledger.Shelley.LaxBlock
         Test.Cardano.Ledger.Shelley.PropertyTests
         Test.Cardano.Ledger.Shelley.Rewards
@@ -62,7 +46,6 @@ library
         Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
         Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
         Test.Cardano.Ledger.Shelley.ShelleyTranslation
-        Test.Cardano.Ledger.Shelley.Utils
         Test.Cardano.Ledger.Shelley.WitVKeys
 
     hs-source-dirs:   src
@@ -87,22 +70,17 @@ library
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.0,
         cardano-ledger-pretty,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib} ^>=1.1,
-        cardano-protocol-tpraos >=1.0,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, prettylib, testlib} >=1.0,
         cardano-slotting,
         cborg,
         containers,
         data-default-class,
         deepseq,
-        generic-random,
-        hashable,
         hedgehog >=1.0.4,
         hedgehog-quickcheck,
         microlens,
-        mtl,
         nothunks,
-        plutus-ledger-api,
         process-extras,
-        serialise,
         set-algebra,
         small-steps,
         small-steps-test,
@@ -110,11 +88,9 @@ library
         tasty,
         tasty-hunit,
         tasty-quickcheck,
-        text,
         time,
         transformers,
         unliftio,
-        vector,
         vector-map
 
 test-suite cardano-ledger-shelley-test
@@ -170,7 +146,7 @@ test-suite cardano-ledger-shelley-test
         cardano-ledger-pretty,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test >=1.1,
-        cardano-protocol-tpraos,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
         cardano-slotting,
         cborg,
         containers,
@@ -215,7 +191,7 @@ benchmark mainbench
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test,
-        cardano-protocol-tpraos,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
         cardano-slotting,
         cardano-strict-containers,
         containers,

@@ -79,7 +79,7 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
 
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Cardano.Protocol.TPraos.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen as QC
 

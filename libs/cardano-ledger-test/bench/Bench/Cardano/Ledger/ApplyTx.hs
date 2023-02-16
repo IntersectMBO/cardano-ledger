@@ -39,9 +39,9 @@ import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.MaryEraGen ()
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen)
 
 type ShelleyBench = ShelleyEra C_Crypto
 

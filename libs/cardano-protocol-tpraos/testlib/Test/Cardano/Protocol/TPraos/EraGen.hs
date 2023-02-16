@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Infrastructure for generating STS Traces over any Era
-module Test.Cardano.Ledger.Shelley.Generator.EraGen (
+module Test.Cardano.Protocol.TPraos.EraGen (
   genUtxo0,
   genesisId,
   EraGen (..),
@@ -68,21 +68,21 @@ import Lens.Micro
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPairs, mkAddr)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.Core (
   GenEnv (..),
   ScriptInfo,
   TwoPhase2ArgInfo (..),
   TwoPhase3ArgInfo (..),
   genesisCoins,
  )
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState)
+import Test.Cardano.Protocol.TPraos.ScriptClass (
   ScriptClass,
   baseScripts,
   combinedScripts,
   keyPairs,
  )
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState)
-import Test.Cardano.Ledger.Shelley.Utils (Split)
+import Test.Cardano.Protocol.TPraos.Utils (Split)
 import Test.QuickCheck (Gen, choose, shuffle)
 
 {------------------------------------------------------------------------------
@@ -228,7 +228,7 @@ class
 
   -- Its is VERY IMPORTANT that the decentralisation parameter "_d" be non-zero and less than 1.
   -- The system will deadlock if d==0 and there are no registered stake pools.
-  -- use Test.Cardano.Ledger.Shelley.Generator.Update(genDecentralisationParam) in your instance.
+  -- use Test.Cardano.Protocol.TPraos.Update(genDecentralisationParam) in your instance.
 
   genEraTxWits ::
     (UTxO era, TxBody era, ScriptInfo era) ->

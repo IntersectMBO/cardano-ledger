@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,6 +12,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Pool (
 where
 
 import Cardano.Ledger.Block (
+  Block,
   bheader,
  )
 import Cardano.Ledger.Core
@@ -28,6 +28,7 @@ import Cardano.Ledger.Shelley.Rules (ShelleyPOOL)
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.BHeader (
+  BHeader,
   bhbody,
   bheaderSlotNo,
  )
@@ -43,23 +44,27 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
-import Test.QuickCheck (Property, conjoin, counterexample, (===))
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.QuickCheck (
+  Property,
+  Testable (..),
+  conjoin,
+  counterexample,
+  (===),
+ )
 
+import Control.State.Transition.Extended (STS (Environment, Signal, State))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
   poolTraceFromBlock,
   traceLen,
  )
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Utils (
   ChainProperty,
   epochFromSlotNo,
- )
-import Test.QuickCheck (
-  Testable (..),
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
@@ -73,6 +78,9 @@ tests ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ProtVerAtMost era 8
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   TestTree
 tests =
@@ -92,6 +100,8 @@ poolRetirement ::
   , EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -111,6 +121,8 @@ poolRegistration ::
   , EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -127,6 +139,8 @@ poolStateIsInternallyConsistent ::
   , EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property

@@ -8,7 +8,6 @@ import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Shelley.Address.Bootstrap as Bootstrap (
   bootstrapHashTest,
  )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import qualified Test.Cardano.Ledger.Shelley.Pretty as Pretty (prettyTest)
 import Test.Cardano.Ledger.Shelley.PropertyTests (commonTests)
 import qualified Test.Cardano.Ledger.Shelley.Rewards as Rewards (tests)
@@ -27,6 +26,7 @@ import qualified Test.Cardano.Ledger.Shelley.SafeHash as SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
 import qualified Test.Cardano.Ledger.Shelley.UnitTests as UnitTests (unitTests)
 import qualified Test.Cardano.Ledger.Shelley.WitVKeys as WitVKeys (tests)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C)
 import Test.Tasty
 import Test.Tasty.QuickCheck (QuickCheckMaxRatio (..))
 

@@ -20,7 +20,6 @@ import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default.Class
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..))
 import Test.Cardano.Ledger.Shelley.Examples.Combinators (
   evolveNonceUnfrozen,
@@ -33,13 +32,14 @@ import Test.Cardano.Ledger.Shelley.Examples.Init (
   nonce0,
   ppEx,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (ExMock)
+import Test.Cardano.Protocol.TPraos.Core (
   NatNonce (..),
   mkBlockFakeVRF,
   mkOCert,
  )
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce)
+import Test.Cardano.Protocol.TPraos.Rules (ChainState (..))
+import Test.Cardano.Protocol.TPraos.Utils (getBlockNonce)
 
 -- =============================================================
 

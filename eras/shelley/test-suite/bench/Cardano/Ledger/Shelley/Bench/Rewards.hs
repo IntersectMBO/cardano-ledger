@@ -48,8 +48,9 @@ import Test.Cardano.Ledger.Shelley.Constants (
   maxGenesisUTxOouts,
   minGenesisUTxOouts,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Block (genBlockWithTxGen)
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Ledger.Shelley.Rules.Chain (totalAda)
+import Test.Cardano.Protocol.TPraos.Block (genBlockWithTxGen)
+import Test.Cardano.Protocol.TPraos.Core (
   AllIssuerKeys (..),
   GenEnv (..),
   ScriptSpace (..),
@@ -57,13 +58,13 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   geKeySpace,
   ksStakePools,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (
+import Test.Cardano.Protocol.TPraos.Presets (genEnv)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (chainNes))
+import Test.Cardano.Protocol.TPraos.Trace.Chain (
   mkGenesisChainState,
   registerGenesisStaking,
  )
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, chainNes, totalAda)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Cardano.Protocol.TPraos.Utils (testGlobals)
 import Test.QuickCheck (Gen)
 
 -- | Generate a chain state at a given epoch. Since we are only concerned about

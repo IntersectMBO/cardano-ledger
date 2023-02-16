@@ -74,14 +74,13 @@ import Data.Sequence.Strict (StrictSeq)
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
-import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (mkGenesisLedgerState)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
-import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen)
+import Test.Cardano.Protocol.TPraos.Presets (genEnv)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState)
+import Test.Cardano.Protocol.TPraos.Trace.Chain (mkGenesisChainState)
+import Test.Cardano.Protocol.TPraos.Trace.Ledger (mkGenesisLedgerState)
+import Test.Cardano.Protocol.TPraos.Utils
 import Test.QuickCheck (
   Property,
   checkCoverage,
@@ -103,6 +102,9 @@ relevantCasesAreCovered ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ProtVerAtMost era 8
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   Int ->
   TestTree
@@ -127,6 +129,7 @@ relevantCasesAreCoveredForTrace ::
   , EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   Trace (CHAIN era) ->
   Property
@@ -134,7 +137,7 @@ relevantCasesAreCoveredForTrace tr = do
   let blockTxs :: Block (BHeader (EraCrypto era)) era -> [Tx era]
       blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
-      txs = concat (blockTxs <$> bs)
+      txs = concatMap blockTxs bs
       certsByTx_ = certsByTx @era txs
       certs_ = concat certsByTx_
 
@@ -387,6 +390,9 @@ onlyValidChainSignalsAreGenerated ::
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGovernance era
+  , Show (Environment (CHAIN era))
+  , Show (Signal (CHAIN era))
+  , ChainState era ~ State (CHAIN era)
   ) =>
   TestTree
 onlyValidChainSignalsAreGenerated =

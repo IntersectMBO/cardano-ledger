@@ -61,7 +61,7 @@ import Test.Cardano.Ledger.Generic.Fields (
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
+import Test.Cardano.Protocol.TPraos.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)

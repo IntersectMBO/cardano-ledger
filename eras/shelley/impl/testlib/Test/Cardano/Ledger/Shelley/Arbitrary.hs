@@ -21,6 +21,7 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   ASC (..),
   StakeProportion (..),
   VRFNatVal (..),
+  maxTxWits,
 ) where
 
 import qualified Cardano.Chain.UTxO as Byron

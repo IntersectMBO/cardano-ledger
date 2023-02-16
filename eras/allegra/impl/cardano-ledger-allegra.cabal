@@ -52,7 +52,7 @@ library
         cardano-crypto-class,
         cardano-ledger-binary >=1.0,
         cardano-ledger-core >=1.0,
-        cardano-ledger-shelley >=1.1,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.1,
         cardano-strict-containers,
         cardano-slotting,
         cborg,

@@ -33,7 +33,6 @@ import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (ledgerEnv)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (
   Constants (
     maxGenesisUTxOouts,
@@ -42,15 +41,16 @@ import Test.Cardano.Ledger.Shelley.Constants (
   ),
   defaultConstants,
  )
-import qualified Test.Cardano.Ledger.Shelley.Generator.Block as GenBlock
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), ScriptSpace (..))
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
-import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS)
-import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import qualified Test.Cardano.Protocol.TPraos.Block as GenBlock
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv (..), ScriptSpace (..))
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen, MinLEDGER_STS)
+import Test.Cardano.Protocol.TPraos.Presets (genEnv)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.Trace.Chain (mkGenesisChainState)
+import Test.Cardano.Protocol.TPraos.Trace.DCert (CERTS)
+import Test.Cardano.Protocol.TPraos.Utxo (genTx)
 import Test.QuickCheck (generate)
 
 -- ===============================================================
@@ -59,6 +59,7 @@ import Test.QuickCheck (generate)
 genChainState ::
   ( EraGen era
   , EraGovernance era
+  , Environment (CHAIN era) ~ ()
   ) =>
   Int ->
   GenEnv era ->
@@ -75,9 +76,7 @@ genChainState n ge =
           }
       ge' = GenEnv (geKeySpace ge) (ScriptSpace [] [] Map.empty Map.empty) cs
    in fromRight (error "genChainState failed")
-        <$> ( generate $
-                mkGenesisChainState ge' (IRC ())
-            )
+        <$> generate (mkGenesisChainState ge' (IRC ()))
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
@@ -113,6 +112,7 @@ genTriple ::
   , EraGovernance era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
+  , Environment (CHAIN era) ~ ()
   ) =>
   Proxy era ->
   Int ->

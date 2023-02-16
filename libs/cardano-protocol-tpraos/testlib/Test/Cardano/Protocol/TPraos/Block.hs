@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Block (
+module Test.Cardano.Protocol.TPraos.Block (
   genBlock,
   genBlockWithTxGen,
   tickChainState,
@@ -45,10 +45,10 @@ import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (
   Mock,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.Core (
   AllIssuerKeys (..),
   GenEnv (..),
   KeySpace (..),
@@ -56,10 +56,10 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   mkBlock,
   mkOCert,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..), MinLEDGER_STS)
+import Test.Cardano.Protocol.TPraos.Rules (ChainState (..))
+import Test.Cardano.Protocol.TPraos.Trace.Ledger ()
+import Test.Cardano.Protocol.TPraos.Utils (
   epochFromSlotNo,
   maxKESIterations,
   runShelleyBase,

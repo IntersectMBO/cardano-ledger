@@ -46,8 +46,9 @@ import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainEvent (..), TestChainPredicateFailure (..))
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainEvent (..), TestChainPredicateFailure (..))
 import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (relevantCasesAreCovered)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN)
 import qualified Test.Tasty as T
 
 -- ===============================================================

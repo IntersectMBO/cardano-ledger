@@ -74,8 +74,8 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.Kind (Type)
 import GHC.Natural
 import GHC.TypeLits (Symbol)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Protocol.TPraos.Utils (applySTSTest, runShelleyBase)
 
 -- =================================================
 -- GADTs for witnessing Crypto and Era

@@ -175,17 +175,17 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (ledgerExamplesShelley, sleNewEpochState)
-import Test.Cardano.Ledger.Shelley.Generator.Core (PreAlonzo)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
   checkEncoding,
   checkEncodingCBOR,
   checkEncodingCBORAnnotated,
  )
-import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
+import Test.Cardano.Protocol.TPraos.Core (PreAlonzo)
+import Test.Cardano.Protocol.TPraos.EraGen (genesisId)
+import Test.Cardano.Protocol.TPraos.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 

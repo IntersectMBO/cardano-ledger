@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Update (
+module Test.Cardano.Protocol.TPraos.Update (
   genPParams,
   genUpdate,
   genShelleyPParamsUpdate,
@@ -69,7 +69,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.Core (
   AllIssuerKeys (cold),
   genInteger,
   genNatural,
@@ -77,8 +77,8 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   increasingProbabilityAt,
   tooLateInEpoch,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.Utils (
   GenesisKeyPair,
   epochFromSlotNo,
   unsafeBoundRational,

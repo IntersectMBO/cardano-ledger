@@ -71,15 +71,15 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Constants (Constants)
-import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import qualified Test.Cardano.Ledger.Shelley.Generator.Presets as Preset (genEnv)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.Block (tickChainState)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import qualified Test.Cardano.Protocol.TPraos.Presets as Preset (genEnv)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Trace.Chain (mkGenesisChainState)
 
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Utils (
   ChainProperty,
   runShelleyBase,
   testGlobals,
@@ -122,6 +122,8 @@ shortChainTrace ::
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGovernance era
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
   ) =>
   Constants ->
   (SourceSignalTarget (CHAIN era) -> Property) ->
@@ -278,7 +280,10 @@ ledgerTraceBase chainSt block =
 -- in the block following the transition.
 chainSstWithTick ::
   forall era.
-  ChainProperty era =>
+  ( ChainProperty era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
+  , State (CHAIN era) ~ ChainState era
+  ) =>
   Trace (CHAIN era) ->
   [SourceSignalTarget (CHAIN era)]
 chainSstWithTick ledgerTr =
@@ -299,6 +304,8 @@ forAllChainTrace ::
   , EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGovernance era
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
   ) =>
   Word64 -> -- trace length
   Constants ->
@@ -323,6 +330,8 @@ forEachEpochTrace ::
   , Testable prop
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGovernance era
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
   ) =>
   Int ->
   Word64 ->

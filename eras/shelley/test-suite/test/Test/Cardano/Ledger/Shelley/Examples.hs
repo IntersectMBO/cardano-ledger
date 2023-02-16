@@ -13,9 +13,10 @@ import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqual)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, totalAda)
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, maxLLSupply, runShelleyBase)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (totalAda)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C, C_Crypto)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState)
+import Test.Cardano.Protocol.TPraos.Utils (applySTSTest, maxLLSupply, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
 
 data CHAINExample h era = CHAINExample

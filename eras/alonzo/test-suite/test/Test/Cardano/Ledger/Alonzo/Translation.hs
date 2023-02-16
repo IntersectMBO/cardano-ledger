@@ -22,10 +22,10 @@ import Lens.Micro
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Mary.Arbitrary ()
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
 import Test.QuickCheck ((==>))
 import Test.QuickCheck.Monadic
 import Test.Tasty (TestTree, testGroup)

@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+module Test.Cardano.Protocol.TPraos.ScriptClass (
   ScriptClass (..),
   Quantifier (..),
   exponential,
@@ -50,7 +50,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, vKey)
 import Test.Cardano.Ledger.Shelley.Constants (
   Constants (..),
  )
-import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
+import Test.Cardano.Protocol.TPraos.Utils (RawSeed (..), mkKeyPair)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 

@@ -64,7 +64,7 @@ import Test.Cardano.Ledger.Generic.Proof (
   Proof (..),
   Reflect (..),
  )
-import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
+import Test.Cardano.Protocol.TPraos.Utils (RawSeed (..), mkKeyPair)
 
 -- ===========================================================================
 -- Classes for "picking" the unique element of a type associated with an Int

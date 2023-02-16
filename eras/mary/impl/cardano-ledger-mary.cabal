@@ -80,7 +80,7 @@ library testlib
         cardano-crypto-class,
         cardano-ledger-binary:testlib,
         cardano-ledger-core,
-        cardano-ledger-mary >=1.0.0.1,
+        cardano-ledger-mary >=1.1,
         cardano-ledger-allegra:testlib,
         cardano-strict-containers,
         QuickCheck

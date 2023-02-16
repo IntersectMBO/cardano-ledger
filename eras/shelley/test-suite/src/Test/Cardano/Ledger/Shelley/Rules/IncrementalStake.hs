@@ -24,6 +24,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (natVersion)
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -47,7 +48,9 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.TxBody
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.SetAlgebra (dom, eval, (▷), (◁))
+import Control.State.Transition.Extended (STS (Environment, Signal, State))
 import Control.State.Transition.Trace (
   SourceSignalTarget (..),
   sourceSignalTargets,
@@ -60,14 +63,14 @@ import Data.Proxy
 import qualified Data.VMap as VMap
 import Lens.Micro hiding (ix)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants, maxMajorPV)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Ledger.TerseTools (tersemapdiffs)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils (
   ChainProperty,
  )
-import Test.Cardano.Ledger.TerseTools (tersemapdiffs)
 import Test.QuickCheck (
   Property,
   conjoin,
@@ -84,21 +87,26 @@ incrStakeComputationTest ::
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
   ) =>
   TestTree
 incrStakeComputationTest =
   testProperty "incremental stake calc" $
     forAllChainTrace @era longTraceLen defaultConstants {maxMajorPV = natVersion @8} $ \tr -> do
       let ssts = sourceSignalTargets tr
-
-      conjoin . concat $
-        [ -- preservation properties
-          map (incrStakeComp @era @ledger) ssts
-        ]
+      -- preservation properties
+      conjoin (map (incrStakeComp @era @ledger) ssts)
 
 incrStakeComp ::
   forall era ledger.
-  (EraSegWits era, ChainProperty era, TestingLedger era ledger) =>
+  ( EraSegWits era
+  , ChainProperty era
+  , State (CHAIN era) ~ ChainState era
+  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
+  , TestingLedger era ledger
+  ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
@@ -116,25 +124,24 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
         } =
         counterexample
           ( mconcat
-              ( [ "\nDetails:\n"
-                , "\ntx\n"
-                , show tx
-                , "\nsize original utxo\n"
-                , show (Map.size $ unUTxO u)
-                , "\noriginal utxo\n"
-                , show u
-                , "\noriginal sd\n"
-                , show sd
-                , "\nfinal utxo\n"
-                , show u'
-                , "\nfinal sd\n"
-                , show sd'
-                , "\noriginal ptrs\n"
-                , show ptrs
-                , "\nfinal ptrs\n"
-                , show ptrs'
-                ]
-              )
+              [ "\nDetails:\n"
+              , "\ntx\n"
+              , show tx
+              , "\nsize original utxo\n"
+              , show (Map.size $ unUTxO u)
+              , "\noriginal utxo\n"
+              , show u
+              , "\noriginal sd\n"
+              , show sd
+              , "\nfinal utxo\n"
+              , show u'
+              , "\nfinal sd\n"
+              , show sd'
+              , "\noriginal ptrs\n"
+              , show ptrs
+              , "\nfinal ptrs\n"
+              , show ptrs'
+              ]
           )
           $ utxoBal === incrStakeBal
         where
@@ -148,6 +155,8 @@ incrStakeComparisonTest ::
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGovernance era
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
   ) =>
   Proxy era ->
   TestTree

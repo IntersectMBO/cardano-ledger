@@ -22,9 +22,9 @@ import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (def)
 import Lens.Micro
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Protocol.TPraos.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 

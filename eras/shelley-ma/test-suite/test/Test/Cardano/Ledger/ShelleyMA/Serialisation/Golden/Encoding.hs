@@ -50,14 +50,14 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripFailureCborRangeExpectation)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   ToTokens (..),
   checkEncodingCBOR,
   checkEncodingCBORAnnotated,
   checkEncodingCBORDecodeFailure,
  )
-import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkGenKey, mkKeyPair)
+import Test.Cardano.Protocol.TPraos.EraGen (genesisId)
+import Test.Cardano.Protocol.TPraos.Utils (RawSeed (..), mkGenKey, mkKeyPair)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 

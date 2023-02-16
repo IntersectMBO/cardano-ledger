@@ -2,7 +2,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -40,11 +39,12 @@ import Control.State.Transition.Trace (
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.Core (GenEnv)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (..))
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
 
+import Control.State.Transition.Extended (STS (Environment, State))
 import Test.QuickCheck (
   Property,
   counterexample,
@@ -59,6 +59,8 @@ tests ::
   ( EraGen era
   , EraGovernance era
   , QC.HasTrace (CHAIN era) (GenEnv era)
+  , Show (Environment (CHAIN era))
+  , State (CHAIN era) ~ ChainState era
   ) =>
   TestTree
 tests =
@@ -71,6 +73,7 @@ tests =
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
+  State (CHAIN era) ~ ChainState era =>
   SourceSignalTarget (CHAIN era) ->
   Property
 nonNegativeDeposits SourceSignalTarget {source = chainSt} =
@@ -80,6 +83,7 @@ nonNegativeDeposits SourceSignalTarget {source = chainSt} =
 
 -- | Check that the sum of key Deposits (in the UMap) and the pool Depoits (in psDeposits) are equal to the utsosDeposits
 depositInvariant ::
+  State (CHAIN era) ~ ChainState era =>
   SourceSignalTarget (CHAIN era) ->
   Property
 depositInvariant SourceSignalTarget {source = chainSt} =
@@ -99,6 +103,7 @@ depositInvariant SourceSignalTarget {source = chainSt} =
         (allDeposits === keyDeposits <+> poolDeposits)
 
 rewardDepositDomainInvariant ::
+  State (CHAIN era) ~ ChainState era =>
   SourceSignalTarget (CHAIN era) ->
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =

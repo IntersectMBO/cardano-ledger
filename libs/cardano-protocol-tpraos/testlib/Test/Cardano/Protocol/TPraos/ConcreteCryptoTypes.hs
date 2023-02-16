@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
+module Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (
   Mock,
   ExMock,
   C_Crypto,

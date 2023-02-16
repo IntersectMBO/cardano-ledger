@@ -35,6 +35,7 @@ import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
+import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra

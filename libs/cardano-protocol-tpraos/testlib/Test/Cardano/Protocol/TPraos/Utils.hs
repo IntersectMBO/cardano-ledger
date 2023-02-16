@@ -11,7 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Utils (
+module Test.Cardano.Protocol.TPraos.Utils (
   mkSeedFromWords,
   mkCertifiedVRF,
   epochFromSlotNo,
@@ -110,7 +110,7 @@ import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (Mock)
 import Test.Tasty.HUnit (
   Assertion,
   (@?=),

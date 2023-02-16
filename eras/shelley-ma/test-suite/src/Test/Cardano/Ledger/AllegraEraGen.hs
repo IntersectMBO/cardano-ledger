@@ -48,14 +48,13 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
+import Test.Cardano.Protocol.TPraos.Core (GenEnv (..), genCoin)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..), MinGenTxout (..))
+import Test.Cardano.Protocol.TPraos.ScriptClass (
   Quantifier (..),
   ScriptClass (..),
  )
-import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
+import Test.Cardano.Protocol.TPraos.Update (genPParams, genShelleyPParamsUpdate)
 import Test.QuickCheck (Arbitrary, Gen, arbitrary, frequency)
 
 -- ==========================================================

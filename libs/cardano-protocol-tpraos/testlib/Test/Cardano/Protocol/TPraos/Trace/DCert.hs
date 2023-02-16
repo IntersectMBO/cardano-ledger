@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (
+module Test.Cardano.Protocol.TPraos.Trace.DCert (
   CERTS,
   genDCerts,
 )
@@ -65,11 +65,11 @@ import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
-import Test.Cardano.Ledger.Shelley.Generator.Delegation (CertCred (..), genDCert)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv (..), KeySpace (..))
+import Test.Cardano.Protocol.TPraos.Delegation (CertCred (..), genDCert)
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..))
+import Test.Cardano.Protocol.TPraos.ScriptClass (scriptKeyCombination)
+import Test.Cardano.Protocol.TPraos.Utils (testGlobals)
 import Test.QuickCheck (Gen)
 
 -- | This is a non-spec STS used to generate a sequence of certificates with

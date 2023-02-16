@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -13,7 +12,7 @@
 -- Allow for an orphan HasTrace instance for CHAIN, since HasTrace only pertains to tests
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
+module Test.Cardano.Protocol.TPraos.Trace.Chain where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Shelley.API
@@ -59,23 +58,18 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (
+import Test.Cardano.Protocol.TPraos.Block (genBlock)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv (..))
+import Test.Cardano.Protocol.TPraos.EraGen (
   EraGen (..),
   MinCHAIN_STS,
   MinLEDGER_STS,
   genUtxo0,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Presets (genesisDelegs0)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (
-  CHAIN,
-  ChainState (..),
-  initialShelleyState,
- )
-import qualified Test.Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
-import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash)
+import Test.Cardano.Protocol.TPraos.Presets (genesisDelegs0)
+import Test.Cardano.Protocol.TPraos.Rules (CHAIN, ChainState (ChainState, chainNes), initialShelleyState)
+import Test.Cardano.Protocol.TPraos.Utils (maxLLSupply, mkHash)
 import Test.QuickCheck (Gen)
 
 -- ======================================================
@@ -108,12 +102,12 @@ instance
   where
   envGen _ = pure ()
 
-  sigGen ge _env st = genBlock ge st
-
-  shrinkSignal = (\_x -> []) -- shrinkBlock -- TO DO FIX ME
-
   type BaseEnv (CHAIN era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
+
+  sigGen ge _env = genBlock ge
+
+  shrinkSignal _x = [] -- shrinkBlock -- TO DO FIX ME
 
 -- | The first block of the Shelley era will point back to the last block of the Byron era.
 -- For our purposes we can bootstrap the chain by just coercing the value.
@@ -154,7 +148,7 @@ mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do
     -- We preload the initial state with some Treasury to enable generation
     -- of things dependent on Treasury (e.g. MIR Treasury certificates)
     withRewards :: ChainState h -> ChainState h
-    withRewards st@STS.ChainState {..} =
+    withRewards st@ChainState {..} =
       st
         { chainNes =
             chainNes
@@ -189,7 +183,7 @@ registerGenesisStaking ::
   ChainState era
 registerGenesisStaking
   ShelleyGenesisStaking {sgsPools, sgsStake}
-  cs@STS.ChainState {chainNes = oldChainNes} =
+  cs@ChainState {chainNes = oldChainNes} =
     cs
       { chainNes = newChainNes
       }

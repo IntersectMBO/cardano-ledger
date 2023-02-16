@@ -10,7 +10,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Delegation (
+module Test.Cardano.Protocol.TPraos.Delegation (
   genDCert,
   CertCred (..),
 )
@@ -69,7 +69,7 @@ import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, KeyPairs, vKey)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.Core (
   AllIssuerKeys (..),
   KeySpace (..),
   genInteger,
@@ -77,8 +77,8 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   mkCred,
   tooLateInEpoch,
  )
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
-import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen)
+import Test.Cardano.Protocol.TPraos.Utils
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 

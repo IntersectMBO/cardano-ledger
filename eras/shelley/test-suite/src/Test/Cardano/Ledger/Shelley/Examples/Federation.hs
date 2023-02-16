@@ -47,10 +47,10 @@ import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
-import Test.Cardano.Ledger.Shelley.Generator.Core (
+import Test.Cardano.Protocol.TPraos.Core (
   AllIssuerKeys (..),
  )
-import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.Utils
 
 -- | Number of Core Node
 numCoreNodes :: Word64

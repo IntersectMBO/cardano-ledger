@@ -21,9 +21,9 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripCborExpectation,
  )
 import Test.Cardano.Ledger.Mary.Arbitrary ()
-import Test.Cardano.Ledger.Shelley.Generator.TxAuxData ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
+import Test.Cardano.Protocol.TPraos.TxAuxData ()
 import Test.QuickCheck (Arbitrary)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

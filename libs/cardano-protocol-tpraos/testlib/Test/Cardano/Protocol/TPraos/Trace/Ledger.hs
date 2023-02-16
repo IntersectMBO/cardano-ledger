@@ -13,7 +13,7 @@
 -- be included with the LEDGER STS
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
+module Test.Cardano.Protocol.TPraos.Trace.Ledger where
 
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
 import Cardano.Ledger.Shelley.Core
@@ -45,21 +45,21 @@ import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import GHC.Stack
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.Core (GenEnv (..), genCoin)
+import Test.Cardano.Protocol.TPraos.EraGen (
   EraGen (..),
   MinLEDGER_STS,
   genUtxo0,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Presets (genesisDelegs0)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS)
-import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Presets (genesisDelegs0)
+import Test.Cardano.Protocol.TPraos.Trace.DCert (CERTS)
+import Test.Cardano.Protocol.TPraos.Utils (
   applySTSTest,
   runShelleyBase,
  )
+import Test.Cardano.Protocol.TPraos.Utxo (genTx)
 import Test.QuickCheck (Gen)
 
 -- ======================================================

@@ -3,10 +3,10 @@ module Test.Cardano.Ledger.Shelley.ShelleyTranslation (testGroupShelleyTranslati
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (totalAdaES)
 import Cardano.Ledger.Shelley.LedgerState (EpochState, returnRedeemAddrsToReserves)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

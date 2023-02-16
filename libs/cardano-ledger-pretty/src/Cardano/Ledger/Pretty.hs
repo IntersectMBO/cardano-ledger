@@ -5,7 +5,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Pretty where
@@ -160,19 +159,6 @@ import Cardano.Ledger.Slot (
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMapCompact (RDPair (..), Trip (Triple), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Protocol.TPraos.BHeader (
-  BHBody (..),
-  BHeader (BHeader),
-  HashHeader (..),
-  LastAppliedBlock (..),
-  PrevHash (..),
- )
-import Cardano.Protocol.TPraos.OCert (
-  KESPeriod (..),
-  OCert (..),
-  OCertEnv (..),
-  OCertSignable (..),
- )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
@@ -437,76 +423,20 @@ ppUnifiedMap (UMap tripmap ptrmap) =
 
 -- ======================================================
 
-ppLastAppliedBlock :: LastAppliedBlock c -> PDoc
-ppLastAppliedBlock (LastAppliedBlock blkNo slotNo hh) =
-  ppRecord
-    "LastAppliedBlock"
-    [ ("blockNo", ppBlockNo blkNo)
-    , ("slotNo", ppSlotNo slotNo)
-    , ("hash", ppHashHeader hh)
-    ]
-
-ppHashHeader :: HashHeader c -> PDoc
-ppHashHeader (HashHeader x) = ppHash x
-
 ppWithOrigin :: (t -> PDoc) -> WithOrigin t -> PDoc
 ppWithOrigin _ Origin = ppString "Origin"
 ppWithOrigin pp (At t) = ppSexp "At" [pp t]
 
-instance PrettyA (LastAppliedBlock c) where
-  prettyA = ppLastAppliedBlock
-
-instance PrettyA (HashHeader c) where
-  prettyA = ppHashHeader
-
 instance PrettyA t => PrettyA (WithOrigin t) where
   prettyA = ppWithOrigin prettyA
 
-ppBHBody :: Crypto c => BHBody c -> PDoc
-ppBHBody (BHBody bn sn prev vk vrfvk eta l size hash ocert protver) =
-  ppRecord
-    "BHBody"
-    [ ("BlockNo", ppBlockNo bn)
-    , ("SlotNo", ppSlotNo sn)
-    , ("Prev", ppPrevHash prev)
-    , ("VKey", ppVKey vk)
-    , ("VerKeyVRF", viaShow vrfvk) -- The next 3 are type families
-    , ("Eta", viaShow eta)
-    , ("L", viaShow l)
-    , ("size", ppNatural size)
-    , ("Hash", ppHash hash)
-    , ("OCert", ppOCert ocert)
-    , ("ProtVersion", ppProtVer protver)
-    ]
-
-ppPrevHash :: PrevHash c -> PDoc
-ppPrevHash GenesisHash = ppString "GenesisHash"
-ppPrevHash (BlockHash x) = ppSexp "BlockHashppHashHeader" [ppHashHeader x]
-
-ppBHeader :: Crypto c => BHeader c -> PDoc
-ppBHeader (BHeader bh sig) =
-  ppRecord
-    "BHeader"
-    [ ("Body", ppBHBody bh)
-    , ("Sig", viaShow sig)
-    ]
-
-ppBlock :: (PrettyA (Era.TxSeq era), PrettyA (h)) => Block h era -> PDoc
+ppBlock :: (PrettyA (Era.TxSeq era), PrettyA h) => Block h era -> PDoc
 ppBlock (UnserialisedBlock bh seqx) =
   ppRecord
     "Block"
     [ ("Header", prettyA bh)
     , ("TxSeq", prettyA seqx)
     ]
-
-instance Crypto c => PrettyA (BHBody c) where
-  prettyA = ppBHBody
-
-instance Crypto c => PrettyA (BHeader c) where
-  prettyA = ppBHeader
-
-instance PrettyA (PrevHash c) where
-  prettyA = ppPrevHash
 
 instance (Era era, PrettyA (Era.TxSeq era), PrettyA h) => PrettyA (Block h era) where
   prettyA = ppBlock
@@ -802,7 +732,7 @@ instance
   ) =>
   PrettyA (NewEpochState era)
   where
-  prettyA x = ppNewEpochState x
+  prettyA = ppNewEpochState
 
 instance PrettyA (FutureGenDeleg c) where
   prettyA = ppFutureGenDeleg
@@ -1479,46 +1409,6 @@ instance PrettyA EpochSize where
 instance PrettyA BlockNo where
   prettyA = ppBlockNo
 
--- ===================================================
--- Cardano.Ledger.Shelley.OCert
-
-ppKESPeriod :: KESPeriod -> PDoc
-ppKESPeriod (KESPeriod x) = text "KESPeriod" <+> pretty x
-
-ppOCertEnv :: OCertEnv c -> PDoc
-ppOCertEnv (OCertEnv ps ds) =
-  ppRecord
-    "OCertEnv"
-    [ ("ocertEnvStPools", ppSet ppKeyHash ps)
-    , ("ocertEnvGenDelegs", ppSet ppKeyHash ds)
-    ]
-
-ppOCert :: forall c. Crypto c => OCert c -> PDoc
-ppOCert (OCert vk n per sig) =
-  ppRecord
-    "OCert"
-    [ ("ocertVkKot", ppVerKeyKES (Proxy @c) vk)
-    , ("ocertN", pretty n)
-    , ("ocertKESPeriod", ppKESPeriod per)
-    , ("ocertSigma", ppSignedDSIGN sig)
-    ]
-
-ppOCertSignable :: forall c. Crypto c => OCertSignable c -> PDoc
-ppOCertSignable (OCertSignable verkes w per) =
-  ppSexp "OCertSignable" [ppVerKeyKES (Proxy @c) verkes, pretty w, ppKESPeriod per]
-
-instance PrettyA KESPeriod where
-  prettyA = ppKESPeriod
-
-instance PrettyA (OCertEnv c) where
-  prettyA = ppOCertEnv
-
-instance Crypto c => PrettyA (OCert c) where
-  prettyA = ppOCert
-
-instance Crypto c => PrettyA (OCertSignable c) where
-  prettyA = ppOCertSignable
-
 -- ==========================================
 --  Cardano.Crypto.Hash
 
@@ -1733,10 +1623,10 @@ instance PrettyA a => PrettyA (StrictMaybe a) where
   prettyA = ppStrictMaybe prettyA
 
 ptrace :: PrettyA t => String -> t -> a -> a
-ptrace x y z = trace ("\n" ++ show (prettyA y) ++ "\n" ++ show x) z
+ptrace x y = trace ("\n" ++ show (prettyA y) ++ "\n" ++ show x)
 
 instance (PrettyA x, PrettyA y) => PrettyA (Map.Map x y) where
-  prettyA m = ppMap prettyA prettyA m
+  prettyA = ppMap prettyA prettyA
 
 -- | turn on trace appromimately 1 in 'n' times it is called.
 occaisionally :: Hashable.Hashable a => a -> Int -> String -> String

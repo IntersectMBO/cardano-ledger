@@ -9,7 +9,7 @@
 --
 --   Functions in this module make specific assumptions about the sets of keys
 --   involved, and thus cannot be used as generic generators.
-module Test.Cardano.Ledger.Shelley.Generator.Presets (
+module Test.Cardano.Protocol.TPraos.Presets (
   coreNodeKeys,
   keySpace,
   genEnv,
@@ -37,10 +37,10 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
-import Test.Cardano.Ledger.Shelley.Generator.Core
-import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), allScripts, someKeyPairs)
-import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (keyPairs)
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Protocol.TPraos.Core
+import Test.Cardano.Protocol.TPraos.EraGen (EraGen (..), allScripts, someKeyPairs)
+import Test.Cardano.Protocol.TPraos.ScriptClass (keyPairs)
+import Test.Cardano.Protocol.TPraos.Utils (
   maxKESIterations,
   mkKESKeyPair,
   mkVRFKeyPair,

@@ -132,20 +132,21 @@ import GHC.Stack
 import Lens.Micro ((&), (.~), (^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
-import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
-import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainEvent (..), ChainState (..))
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainEvent (..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace, forEachEpochTrace)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.Shelley.Utils (
+import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
+import Test.Cardano.Protocol.TPraos.ConcreteCryptoTypes (C)
+import Test.Cardano.Protocol.TPraos.Core (genCoin, genNatural)
+import Test.Cardano.Protocol.TPraos.Rules (ChainState (chainNes))
+import Test.Cardano.Protocol.TPraos.ShelleyEraGen ()
+import Test.Cardano.Protocol.TPraos.Utils (
   runShelleyBase,
   testGlobals,
   unsafeBoundRational,
  )
-import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (
   Gen,
