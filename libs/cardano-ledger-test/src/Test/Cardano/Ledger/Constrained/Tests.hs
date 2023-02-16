@@ -57,6 +57,9 @@ it was solved. When generating constraints between solved variables we require t
 the dependency order. For instance, a constraints S ⊆ T (assuming we solve supersets before subsets)
 must have `depthOf T < depthOf S`.
 
+This doesn't always work, because the solver substitutes equalities in a way that does not respect
+our dependencies (`Rewrite.removeEqual`)
+
 The soundness property discards cases where we fail to find a solution to the constraints, but it's
 still interesting to know when this happens, since we try our best to generate solvable constraints.
 There is a strict version of the property (`prop_soundness' True`) that fails instead. Currently it
@@ -227,12 +230,12 @@ genMapLiteralWithDom env krep vrep (Lit _ keys) = do
 data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
 
-genType :: Gen (TypeInEra era)
-genType = elements [ TypeInEra IntR
-                   , TypeInEra (SetR IntR)
-                   , TypeInEra (ListR IntR)
-                   , TypeInEra (MapR IntR IntR)
-                   ]
+-- genType :: Gen (TypeInEra era)
+-- genType = elements [ TypeInEra IntR
+--                    , TypeInEra (SetR IntR)
+--                    , TypeInEra (ListR IntR)
+--                    , TypeInEra (MapR IntR IntR)
+--                    ]
 
 genBaseType :: Gen (TypeInEra era)
 genBaseType = elements [TypeInEra IntR]
@@ -424,7 +427,7 @@ genPred env =
 
 genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
 genPreds = \env -> do
-  n <- choose (1, 10)
+  n <- choose (1, 40)
   loop (n :: Int) env
   where
     loop n env
@@ -464,7 +467,8 @@ shrinkPreds (preds, env) =
         (rdy, rest) = partition canSolve preds'
         canSolve c = Set.isSubsetOf (use c) solved
 
-    -- deps (lhs :=: rhs) = Map.fromSet (const $ vars rhs) (vars lhs)
+    -- Note: accumdep treats equality constraints strangely (as `() -> lhs, rhs`).
+    -- Here we use `lhs -> rhs` instead.
     deps (lhs :=: rhs) = Map.fromSet (const $ vars lhs) (vars rhs)
     deps c = accumdep (gOrder env) mempty c
     def = Map.keysSet . deps
@@ -545,7 +549,7 @@ prop_soundness' strict whitelist info =
     counterexample ("\n-- Order --\n" ++ show info) $
       counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
-          ensureTyped (compile info preds) $ \graph ->
+          checkTyped (compile info preds) $ \graph ->
             forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
               let env = errorTyped $ substToEnv subst emptyEnv
                   checkPred pr = counterexample ("Failed: " ++ show pr) $ ensureTyped (runPred env pr) id
@@ -557,13 +561,16 @@ prop_soundness' strict whitelist info =
                           conjoin $
                             map checkPred preds
   where
+    checkTyped
+      | strict = ensureTyped
+      | otherwise = ifTyped
     checkRight
       | strict = checkWhitelist
       | otherwise = ifRight
 
     checkWhitelist (Left errs) _ = and [ not $ isPrefixOf white err
                                        | white <- whitelist
-                                       , err <- errs ] ==> False
+                                       , err <- errs ] ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = k x
 
 -- Why is this not triggered by tests?
