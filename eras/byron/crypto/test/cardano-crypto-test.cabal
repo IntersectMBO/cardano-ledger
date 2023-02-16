@@ -53,8 +53,7 @@ library
     build-depends:
         base >=4.14 && <4.17,
         bytestring,
-        cardano-ledger-binary,
-        cardano-ledger-binary:testlib,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
         cardano-crypto,
         cardano-crypto-wrapper ^>=1.5,
         cardano-prelude,

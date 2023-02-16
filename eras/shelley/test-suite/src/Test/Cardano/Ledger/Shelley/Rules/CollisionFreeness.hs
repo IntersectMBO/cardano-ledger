@@ -34,7 +34,7 @@ import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro hiding (ix)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
+import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombinations)

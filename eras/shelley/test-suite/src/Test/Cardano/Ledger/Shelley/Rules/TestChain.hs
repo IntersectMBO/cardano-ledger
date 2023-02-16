@@ -70,8 +70,8 @@ import Data.Proxy
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.Constants (Constants)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import qualified Test.Cardano.Ledger.Shelley.Generator.Presets as Preset (genEnv)

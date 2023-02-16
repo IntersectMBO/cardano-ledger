@@ -21,7 +21,7 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.Proof
 

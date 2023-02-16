@@ -37,7 +37,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)

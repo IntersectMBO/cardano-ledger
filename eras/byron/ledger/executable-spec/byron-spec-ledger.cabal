@@ -40,7 +40,7 @@ library
         bimap >=0.4 && <0.5,
         bytestring,
         cardano-crypto-class,
-        cardano-ledger-binary,
+        cardano-ledger-binary >=1.0,
         containers,
         cryptonite,
         hashable,

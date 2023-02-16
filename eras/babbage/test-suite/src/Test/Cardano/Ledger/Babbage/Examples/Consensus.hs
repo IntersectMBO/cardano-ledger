@@ -52,7 +52,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusTx as Plutus
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE

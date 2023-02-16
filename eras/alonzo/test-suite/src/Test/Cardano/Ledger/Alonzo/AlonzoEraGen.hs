@@ -96,6 +96,7 @@ import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (
   evenRedeemer2,
@@ -106,11 +107,10 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts (
   redeemerIs102,
   sumsTo103,
  )
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
   ScriptInfo,

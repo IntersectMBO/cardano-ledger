@@ -1,14 +1,14 @@
 module Test.Cardano.Ledger.Shelley.Pretty (testwidth, prettyTest) where
 
+import Cardano.Ledger.Core (Tx, TxBody)
 import Cardano.Ledger.Pretty
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx)
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody)
 import Cardano.Ledger.UTxO (UTxO)
 import Prettyprinter (defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text (renderStrict)
 import Prettyprinter.Util (putDocW)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
+import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (Arbitrary (..), Gen, generate, testProperty, withMaxSuccess, (===))
@@ -16,17 +16,17 @@ import Test.Tasty.QuickCheck (Arbitrary (..), Gen, generate, testProperty, withM
 -- ====================================================
 -- a few generators to generate random UTxO, TxBody, Tx and LedgerState
 
-txbody :: Gen (ShelleyTxBody C)
-txbody = arbitrary :: Gen (ShelleyTxBody C)
+txbody :: Gen (TxBody Shelley)
+txbody = arbitrary
 
-tx :: Gen (ShelleyTx C)
-tx = arbitrary :: Gen (ShelleyTx C)
+tx :: Gen (Tx Shelley)
+tx = arbitrary
 
-utxo :: Gen (UTxO C)
-utxo = arbitrary :: Gen (UTxO C)
+utxo :: Gen (UTxO Shelley)
+utxo = arbitrary
 
-ls :: Gen (LedgerState C)
-ls = arbitrary :: Gen (LedgerState C)
+ls :: Gen (LedgerState Shelley)
+ls = arbitrary
 
 -- | Used to test pretty printing things with different widths
 --   for example: testwidth 120 ls ppLedgerState

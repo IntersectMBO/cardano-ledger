@@ -11,10 +11,10 @@ import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Core (Era (..))
 import Data.Data (Proxy (..), typeRep)
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators (FlexibleCostModels)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (FlexibleCostModels)
 import Test.Cardano.Ledger.Binary.Plain.RoundTrip as Plain (roundTripCborExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeExpectation)
-import Test.Cardano.Ledger.Conway.Serialisation.Generators ()
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -23,9 +23,13 @@ allprops =
   testGroup
     (show $ typeRep (Proxy @e))
     [ testProperty "ConwayGenesis" $
-        roundTripCborRangeExpectation @(ConwayGenesis (EraCrypto e)) (natVersion @2) maxBound
+        roundTripCborRangeExpectation @(ConwayGenesis (EraCrypto e))
+          (natVersion @2)
+          maxBound
     , testProperty "ConwayGenesis (Plain)" $
         Plain.roundTripCborExpectation @(ConwayGenesis (EraCrypto e))
     , testProperty "v9 CostModels" $
-        roundTripCborRangeExpectation @FlexibleCostModels (natVersion @9) (natVersion @9)
+        roundTripCborRangeExpectation @FlexibleCostModels
+          (natVersion @9)
+          (natVersion @9)
     ]

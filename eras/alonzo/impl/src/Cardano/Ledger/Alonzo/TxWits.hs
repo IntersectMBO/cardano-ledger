@@ -84,6 +84,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
+import Cardano.Ledger.Shelley.TxWits (keyBy)
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -572,9 +573,6 @@ instance
         [Script e] ->
         Map (ScriptHash (EraCrypto e)) (Script e)
       getKeys _ = keyBy (hashScript @e)
-
-keyBy :: forall a b. Ord b => (a -> b) -> [a] -> Map b a
-keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
 deriving via
   (Mem AlonzoTxWitsRaw era)

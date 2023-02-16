@@ -13,7 +13,6 @@ import Cardano.Crypto.Signing.Redeem (
  )
 import Cardano.Prelude
 import Hedgehog (
-  Gen,
   Property,
   assert,
   checkParallel,
@@ -22,13 +21,13 @@ import Hedgehog (
   property,
  )
 import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 import Test.Cardano.Crypto.Gen (
   genRedeemKeypair,
   genRedeemSigningKey,
   genRedeemVerificationKey,
  )
+import Test.Cardano.Crypto.Signing.Signing (genData)
 
 --------------------------------------------------------------------------------
 -- Main Test Action
@@ -74,6 +73,3 @@ prop_redeemSignDifferentData = property $ do
     . not
     $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly vk b
     $ redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
-
-genData :: Gen [Int32]
-genData = Gen.list (Range.constant 0 50) (Gen.int32 Range.constantBounded)

@@ -13,9 +13,8 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation
 import Cardano.Ledger.Shelley.TxBody
-import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
+import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
-import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
@@ -58,10 +57,3 @@ translateTxOutByronToShelley (Byron.TxOut addr amount) =
 
     translateAddr :: Byron.Address -> Addr c
     translateAddr = AddrBootstrap . BootstrapAddress
-
-{------------------------------------------------------------------------------
-  Generators
-------------------------------------------------------------------------------}
-
-instance Arbitrary Byron.CompactTxOut where
-  arbitrary = hedgehog genCompactTxOut

@@ -81,7 +81,7 @@ import Test.Cardano.Ledger.Core.KeyPair (
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
   Mock,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..), defaultConstants)
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..), defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
   KeySpace (..),

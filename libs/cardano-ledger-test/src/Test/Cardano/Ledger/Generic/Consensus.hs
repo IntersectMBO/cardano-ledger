@@ -74,10 +74,10 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified Test.Cardano.Ledger.Allegra.Examples.Consensus as Old (ledgerExamplesAllegra)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as Old (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Babbage.Examples.Consensus as Old (ledgerExamplesBabbage)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Conway.Examples.Consensus (exampleConwayGenesis)

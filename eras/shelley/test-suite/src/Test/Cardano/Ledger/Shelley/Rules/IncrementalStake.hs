@@ -59,7 +59,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.VMap as VMap
 import Lens.Micro hiding (ix)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants, maxMajorPV)
+import Test.Cardano.Ledger.Shelley.Constants (defaultConstants, maxMajorPV)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()

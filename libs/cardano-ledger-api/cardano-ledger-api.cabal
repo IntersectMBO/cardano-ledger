@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-api
-version:            1.0.0.0
+version:            1.0.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -11,19 +11,13 @@ description:
     provides functionality that works for all eras and is useful for downstream
     packages.
 
-build-type:         Custom
+build-type:         Simple
 extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
     location: https://github.com/input-output-hk/cardano-ledger
     subdir:   libs/cardano-ledger-api
-
-custom-setup
-    setup-depends:
-        base >=4.14 && <4.17,
-        Cabal,
-        cabal-doctest ^>=1
 
 library
     exposed-modules:
@@ -48,14 +42,14 @@ library
 
     build-depends:
         base >=4.14 && <4.17,
-        cardano-ledger-allegra >=1.0,
-        cardano-ledger-alonzo >=1.0,
-        cardano-ledger-babbage >=1.0,
+        cardano-ledger-allegra >=1.1,
+        cardano-ledger-alonzo >=1.1,
+        cardano-ledger-babbage >=1.1,
         cardano-ledger-binary >=1.0,
-        cardano-ledger-conway >=1.0,
+        cardano-ledger-conway >=1.1,
         cardano-ledger-core >=1.0,
-        cardano-ledger-mary >=1.0,
-        cardano-ledger-shelley >=1.0,
+        cardano-ledger-mary >=1.1,
+        cardano-ledger-shelley >=1.1,
         microlens
 
 test-suite cardano-ledger-api-test
@@ -74,22 +68,7 @@ test-suite cardano-ledger-api-test
         bytestring,
         cardano-ledger-api,
         cardano-ledger-binary,
-        cardano-ledger-babbage-test,
+        cardano-ledger-babbage:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-conway,
         microlens
-
-test-suite doctests
-    type:              exitcode-stdio-1.0
-    main-is:           Doctests.hs
-    hs-source-dirs:    doctests
-    default-language:  Haskell2010
-    ghc-options:       -threaded -rtsopts -with-rtsopts=-N
-    x-doctest-options: --no-magic
-    build-depends:
-        base >=4.14 && <4.17,
-        cardano-ledger-babbage-test,
-        cardano-strict-containers,
-        doctest,
-        template-haskell,
-        QuickCheck

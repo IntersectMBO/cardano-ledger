@@ -67,7 +67,7 @@ import Data.Set (Set)
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPairs, mkAddr)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
   ScriptInfo,

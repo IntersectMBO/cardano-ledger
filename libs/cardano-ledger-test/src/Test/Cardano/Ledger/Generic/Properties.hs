@@ -36,8 +36,10 @@ import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Fields (abstractTx, abstractTxBody, abstractTxOut, abstractWitnesses)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
 import Test.Cardano.Ledger.Generic.GenState (

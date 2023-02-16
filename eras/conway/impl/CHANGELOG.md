@@ -16,6 +16,7 @@ Removed:
  * Removed `Vote`
 
 Changed:
+ * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
  * Replaced `ctbrVotes` and `ctbrGovActions` with `ctbrGovProcedure`
  * Renamed `ENACTMENT` to `ENACT`
 

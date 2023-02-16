@@ -10,7 +10,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Export the EraGen instance for MaryEra, as well as some reusable functions for future Eras
-module Test.Cardano.Ledger.MaryEraGen (genMint, maryGenesisValue, policyIndex, addTokens) where
+module Test.Cardano.Ledger.MaryEraGen (
+  genMint,
+  maryGenesisValue,
+  policyIndex,
+  addTokens,
+) where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
@@ -43,6 +48,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Exts (fromString)
 import Lens.Micro
+import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.AllegraEraGen (
   genValidityInterval,
   quantifyTL,
@@ -50,8 +56,7 @@ import Test.Cardano.Ledger.AllegraEraGen (
   unQuantifyTL,
  )
 import Test.Cardano.Ledger.EraBuffet (MaryEra)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genInteger)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
@@ -74,14 +79,14 @@ import qualified Test.QuickCheck as QC
    `instance ValidateScript (ShelleyMAEra ma c) where ... `
 ------------------------------------------------------------------------------}
 
-instance (CC.Crypto c) => ScriptClass (MaryEra c) where
+instance CC.Crypto c => ScriptClass (MaryEra c) where
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
   basescript _proxy = someLeaf @(MaryEra c)
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
+instance CC.Crypto c => EraGen (MaryEra c) where
   genGenesisValue = maryGenesisValue
   genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
@@ -94,10 +99,7 @@ instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
   genEraPParams = genPParams
   genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
 
-genAuxiliaryData ::
-  Mock c =>
-  Constants ->
-  Gen (StrictMaybe (TxAuxData (MaryEra c)))
+genAuxiliaryData :: CC.Crypto c => Constants -> Gen (StrictMaybe (TxAuxData (MaryEra c)))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary)
@@ -322,7 +324,7 @@ instance Split (MaryValue era) where
         , Coin (n `rem` m)
         )
 
-instance Mock c => MinGenTxout (MaryEra c) where
+instance CC.Crypto c => MinGenTxout (MaryEra c) where
   calcEraMinUTxO _txout pp = pp ^. ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do

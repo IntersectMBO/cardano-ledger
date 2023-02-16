@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-shelley
-version:            1.0.1.0
+version:            1.1.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -102,7 +102,7 @@ library
         cardano-crypto-class,
         cardano-crypto-wrapper,
         cardano-data >=1.0,
-        cardano-ledger-binary,
+        cardano-ledger-binary >=1.0,
         cardano-ledger-byron,
         cardano-ledger-core >=1.0,
         cardano-slotting,
@@ -131,6 +131,7 @@ library testlib
     exposed-modules:
         Test.Cardano.Ledger.Shelley.Arbitrary
         Test.Cardano.Ledger.Shelley.Binary.Golden
+        Test.Cardano.Ledger.Shelley.Constants
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -142,13 +143,21 @@ library testlib
 
     build-depends:
         base,
+        bytestring,
+        cardano-crypto-class,
+        cardano-data,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-byron,
+        cardano-ledger-byron-test,
         cardano-ledger-shelley,
+        containers,
         generic-random,
         containers,
         vector-map,
-        mtl
+        mtl,
+        text,
+        hedgehog-quickcheck
 
 test-suite tests
     type:             exitcode-stdio-1.0

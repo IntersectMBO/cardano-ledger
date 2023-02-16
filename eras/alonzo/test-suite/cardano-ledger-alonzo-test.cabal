@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-alonzo-test
-version:       1.0.0.0
+version:       1.1.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -45,15 +45,15 @@ library
     build-depends:
         base >=4.14 && <4.17,
         bytestring,
-        cardano-ledger-alonzo,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.1,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
+        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.0,
         cardano-ledger-pretty,
-        cardano-ledger-allegra ^>=1.0,
-        cardano-ledger-shelley ^>=1.0,
-        cardano-ledger-shelley-test ^>=1.0,
-        cardano-ledger-mary ^>=1.0,
-        cardano-ledger-shelley-ma-test ^>=1.0,
+        cardano-ledger-allegra ^>=1.1,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} ^>=1.1,
+        cardano-ledger-shelley-test ^>=1.1,
+        cardano-ledger-mary ^>=1.1,
+        cardano-ledger-shelley-ma-test ^>=1.1,
         cardano-protocol-tpraos ^>=1.0,
         cardano-slotting,
         cardano-strict-containers,
@@ -61,14 +61,12 @@ library
         containers,
         data-default-class,
         microlens,
-        plutus-core,
         plutus-tx,
         plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1,
         QuickCheck,
         random,
-        small-steps,
+        small-steps >=1.0,
         small-steps-test,
-        text,
         transformers
 
 test-suite cardano-ledger-alonzo-test
@@ -97,12 +95,12 @@ test-suite cardano-ledger-alonzo-test
         aeson >=2,
         base16-bytestring,
         bytestring,
-        cardano-ledger-allegra,
-        cardano-ledger-alonzo,
+        cardano-ledger-allegra >=1.1,
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-alonzo-test,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core,
-        cardano-ledger-mary,
+        cardano-ledger-mary:{cardano-ledger-mary, testlib},
         cardano-ledger-shelley-ma-test,
         cardano-protocol-tpraos,
         cardano-slotting,
@@ -112,8 +110,8 @@ test-suite cardano-ledger-alonzo-test
         QuickCheck,
         small-steps,
         small-steps-test,
-        cardano-ledger-shelley,
-        cardano-ledger-shelley-test,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+        cardano-ledger-shelley-test >=1.1,
         microlens,
         cardano-strict-containers,
         tasty,

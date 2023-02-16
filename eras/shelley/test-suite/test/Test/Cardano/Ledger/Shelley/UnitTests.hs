@@ -20,7 +20,7 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (Crypto, HASH, VRF)
+import Cardano.Ledger.Crypto (Crypto, HASH, StandardCrypto, VRF)
 import Cardano.Ledger.Keys (
   KeyRole (..),
   asWitness,
@@ -105,6 +105,7 @@ import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
   testBootstrapNotSpending,
   testBootstrapSpending,
  )
+import Test.Cardano.Ledger.Shelley.Arbitrary (ASC (ASC), StakeProportion (StakeProportion), VRFNatVal (VRFNatVal))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genesisCoins)
@@ -174,45 +175,10 @@ testsPParams =
     [ testCase "VRF checks when the activeSlotCoeff is one" testVRFCheckWithActiveSlotCoeffOne
     ]
 
-newtype VRFNatVal = VRFNatVal Natural
-  deriving (Show)
-
-instance Arbitrary VRFNatVal where
-  arbitrary =
-    VRFNatVal . fromIntegral
-      <$> choose @Integer
-        ( 0
-        , 2
-            ^ ( 8
-                  * VRF.sizeOutputVRF
-                    (Proxy @(VRF C_Crypto))
-              )
-        )
-  shrink (VRFNatVal v) = VRFNatVal <$> shrinkIntegral v
-
-newtype ASC = ASC ActiveSlotCoeff
-  deriving (Show)
-
-instance Arbitrary ASC where
-  arbitrary =
-    ASC
-      . mkActiveSlotCoeff
-      . unsafeBoundRational
-      . fromRational
-      . toRational
-      <$> choose @Double (0.01, 0.5)
-
-newtype StakeProportion = StakeProportion Rational
-  deriving (Show)
-
-instance Arbitrary StakeProportion where
-  arbitrary = StakeProportion . toRational <$> choose @Double (0, 1)
-  shrink (StakeProportion r) = StakeProportion <$> shrinkRealFrac r
-
 -- | Test @checkLeaderVal@ in 'Cardano.Ledger.Shelley.BlockChain'
 testCheckLeaderVal ::
   forall v.
-  (v ~ VRF C_Crypto) =>
+  (v ~ VRF StandardCrypto) =>
   TestTree
 testCheckLeaderVal =
   testGroup

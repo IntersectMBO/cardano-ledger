@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-babbage-test
-version:       1.0.0.0
+version:       1.1.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -33,24 +33,23 @@ library
 
     build-depends:
         base >=4.14 && <4.17,
-        cardano-ledger-allegra,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        cardano-ledger-alonzo ^>=1.0,
-        cardano-ledger-alonzo-test,
-        cardano-ledger-babbage ^>=1.0,
+        cardano-ledger-allegra >=1.1,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} ^>=1.1,
+        cardano-ledger-alonzo-test >=1.1,
+        cardano-ledger-babbage ^>=1.1,
         cardano-ledger-core:{cardano-ledger-core, testlib} ^>=1.0,
-        cardano-ledger-shelley-ma-test,
-        cardano-ledger-mary ^>=1.0,
-        cardano-ledger-shelley-test,
-        cardano-ledger-shelley ^>=1.0,
+        cardano-ledger-shelley-ma-test >=1.1,
+        cardano-ledger-mary ^>=1.1,
+        cardano-ledger-shelley-test >=1.1,
+        cardano-ledger-shelley ^>=1.1,
         cardano-strict-containers,
         cardano-slotting,
         containers,
         data-default-class,
         microlens,
         plutus-tx,
-        QuickCheck,
-        small-steps
+        QuickCheck
 
 test-suite cardano-ledger-babbage-test
     type:             exitcode-stdio-1.0
@@ -73,15 +72,14 @@ test-suite cardano-ledger-babbage-test
         bytestring,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-allegra,
-        cardano-ledger-alonzo,
-        cardano-ledger-alonzo-test,
-        cardano-ledger-babbage,
-        cardano-ledger-babbage-test,
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+        cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
+        cardano-ledger-babbage-test >=1.1,
         cardano-ledger-core,
         cardano-ledger-shelley,
         cardano-ledger-shelley-ma-test,
         cardano-ledger-shelley-test,
-        cardano-protocol-tpraos,
+        cardano-protocol-tpraos >=1.0,
         cardano-slotting,
         containers,
         data-default-class,

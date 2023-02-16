@@ -68,7 +68,7 @@ import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (cold),
   genInteger,

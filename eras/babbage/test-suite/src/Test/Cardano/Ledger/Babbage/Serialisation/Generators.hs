@@ -16,158 +16,15 @@ module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.PParams
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Binary (EncCBOR, Sized, Term (..), mkSized)
+import Cardano.Ledger.Binary (EncCBOR, Sized, Term (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Val (Val)
-import Control.State.Transition (STS (PredicateFailure))
-import Data.Functor.Identity (Identity)
 import Data.Maybe (catMaybes)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..), emptyOrNothing, toTerm, twiddleStrictMaybe)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
-
-instance (Era era, EncCBOR (f era), Arbitrary (f era)) => Arbitrary (Sized (f era)) where
-  arbitrary = mkSized (eraProtVerHigh @era) <$> arbitrary
-
-instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (Value era)
-  , Arbitrary (Script era)
-  ) =>
-  Arbitrary (BabbageTxOut era)
-  where
-  arbitrary =
-    BabbageTxOut
-      <$> arbitrary
-      <*> scale (`div` 15) arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance
-  ( Mock (EraCrypto era)
-  , BabbageEraTxBody era
-  , Arbitrary (Sized (TxOut era))
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (Script era)
-  , Arbitrary (PParamsUpdate era)
-  ) =>
-  Arbitrary (BabbageTxBody era)
-  where
-  arbitrary =
-    BabbageTxBody
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> scale (`div` 15) arbitrary
-      <*> arbitrary
-      <*> scale (`div` 15) genMintValues
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
--- ==========================
---
-
-deriving instance Arbitrary CoinPerByte
-
-instance Arbitrary (BabbagePParams Identity era) where
-  arbitrary =
-    BabbagePParams
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance Arbitrary (BabbagePParams StrictMaybe era) where
-  arbitrary =
-    BabbagePParams
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (Value era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (PredicateFailure (EraRule "UTXOS" era))
-  ) =>
-  Arbitrary (BabbageUtxoPredFailure era)
-  where
-  arbitrary =
-    oneof
-      [ AlonzoInBabbageUtxoPredFailure <$> arbitrary
-      , IncorrectTotalCollateralField <$> arbitrary <*> arbitrary
-      ]
-
-instance
-  ( Era era
-  , Mock (EraCrypto era)
-  , Arbitrary (PredicateFailure (EraRule "UTXO" era))
-  ) =>
-  Arbitrary (BabbageUtxowPredFailure era)
-  where
-  arbitrary =
-    oneof
-      [ AlonzoInBabbageUtxowPredFailure <$> arbitrary
-      , UtxoFailure <$> arbitrary
-      , MalformedScriptWitnesses <$> arbitrary
-      , MalformedReferenceScripts <$> arbitrary
-      ]
 
 instance
   ( Era era

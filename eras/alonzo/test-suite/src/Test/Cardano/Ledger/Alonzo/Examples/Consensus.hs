@@ -45,8 +45,8 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusTx as Plutus
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
-import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE

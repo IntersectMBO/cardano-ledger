@@ -236,7 +236,7 @@ library
         canonical-json,
         cardano-crypto,
         cardano-crypto-wrapper,
-        cardano-ledger-binary,
+        cardano-ledger-binary >=1.0,
         cardano-prelude,
         cborg,
         containers,

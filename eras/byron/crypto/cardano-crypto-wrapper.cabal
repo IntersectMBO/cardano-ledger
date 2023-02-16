@@ -81,7 +81,7 @@ library
         binary,
         bytestring,
         canonical-json,
-        cardano-ledger-binary,
+        cardano-ledger-binary >=1.0,
         cardano-crypto,
         cardano-prelude,
         heapwords,
@@ -126,8 +126,7 @@ test-suite test
     build-depends:
         base,
         bytestring,
-        cardano-ledger-binary,
-        cardano-ledger-binary:testlib,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-crypto,
         cardano-crypto-wrapper,
         cardano-prelude,
