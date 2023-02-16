@@ -541,6 +541,9 @@ predConstr CanFollow {} = "CanFollow"
 prop_soundness :: OrderInfo -> Property
 prop_soundness = prop_soundness' False []
 
+defaultWhitelist :: [String]
+defaultWhitelist = ["Cannot make subset of size", "Cycle in dependencies"]
+
 -- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
 --   constraints.
 prop_soundness' :: Bool -> [String] -> OrderInfo -> Property
@@ -562,16 +565,17 @@ prop_soundness' strict whitelist info =
                             map checkPred preds
   where
     checkTyped
-      | strict = ensureTyped
+      | strict = checkWhitelist . runTyped
       | otherwise = ifTyped
     checkRight
       | strict = checkWhitelist
       | otherwise = ifRight
 
+    checkWhitelist :: Testable prop => Either [String] a -> (a -> prop) -> Property
     checkWhitelist (Left errs) _ = and [ not $ isPrefixOf white err
                                        | white <- whitelist
                                        , err <- errs ] ==> counterexample (unlines errs) False
-    checkWhitelist (Right x) k = k x
+    checkWhitelist (Right x) k = property $ k x
 
 -- Why is this not triggered by tests?
 bug :: Gen (Either [String] (Subst TestEra))
