@@ -154,14 +154,12 @@ genLiteral env rep =
       pure $ Lit (SetR erep) $ op set1 set2
 
 genFreshVarName :: GenEnv era -> Gen String
-genFreshVarName env = elements varNames
+genFreshVarName = elements . varNames
   where
-    Env vmap = gEnv env
-    varNames =
-      take
-        10
-        [ name | s <- "" : varNames, c <- ['A' .. 'Z'], let name = s ++ [c], Map.notMember name vmap
-        ]
+    allTheNames = [ s ++ [c] | s <- "" : allTheNames, c <- ['A' .. 'Z'] ]
+    varNames env = take 10 $ filter (`Map.notMember` vmap) allTheNames
+      where
+        Env vmap = gEnv env
 
 envVarsOfType :: Env era -> Rep era t -> [(V era t, Literal era t)]
 envVarsOfType (Env env) rep = concatMap wellTyped $ Map.toList env
