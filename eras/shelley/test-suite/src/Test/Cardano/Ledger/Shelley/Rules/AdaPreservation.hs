@@ -9,7 +9,6 @@
 
 module Test.Cardano.Ledger.Shelley.Rules.AdaPreservation (
   adaPreservationProps,
-  adaPreservationPropsMinimal,
 ) where
 
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
@@ -142,40 +141,6 @@ adaPreservationProps =
       , map potsSumIncreaseWithdrawalsPerBlock noEpochBoundarySsts
       , map feesNonDecreasing noEpochBoundarySsts
       ]
-
-adaPreservationPropsMinimal ::
-  forall era.
-  ( EraGen era
-  , EraGovernance era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
-  , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyPPUPState era
-  ) =>
-  TestTree
-adaPreservationPropsMinimal =
-  testGroup
-    "Minimal Property Tests"
-    [ TQC.testProperty "total amount of Ada is preserved (Chain)" (adaIsPreserved @era)
-    ]
-
-adaIsPreserved ::
-  forall era.
-  ( EraGen era
-  , EraGovernance era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
-  , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyPPUPState era
-  ) =>
-  Property
-adaIsPreserved =
-  forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
-    let ssts :: [SourceSignalTarget (CHAIN era)]
-        -- Signal(CHAIN era) = Block (BHeader (EraCrypto era)) era
-        ssts = sourceSignalTargets tr
-        -- noEpochBoundarySsts = filter sameEpoch ssts
-        justBoundarySsts = filter (not . sameEpoch) ssts
-
-    conjoin (map (checkPreservation @era) (zip justBoundarySsts [0 ..]))
 
 infoRetire :: Map (KeyHash 'StakePool c) Coin -> KeyHash 'StakePool c -> String
 infoRetire deposits keyhash = showKeyHash keyhash ++ extra
