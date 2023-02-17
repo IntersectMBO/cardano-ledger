@@ -35,10 +35,6 @@ import qualified Cardano.Ledger.Mary.Value as Mary (MultiAsset (..))
 import Cardano.Ledger.Pretty (
   PrettyA (..),
   PrettyAnn (Width),
-  ppPair,
-  ppRecord,
-  ppString,
-  ppVKey,
  )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Pretty.Mary ()

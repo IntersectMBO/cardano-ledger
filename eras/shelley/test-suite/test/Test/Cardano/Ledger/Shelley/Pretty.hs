@@ -49,8 +49,8 @@ prettyTest :: TestTree
 prettyTest =
   testGroup
     "Pretty printer tests"
-    [ testPP "UTxO" ppUTxO utxo
-    , testPP "TxBody" ppTxBody txbody
-    , testPP "Tx" ppTx tx
-    , testPP "LedgerState" ppLedgerState ls
+    [ testPP "UTxO" prettyA utxo
+    , testPP "TxBody" prettyA txbody
+    , testPP "Tx" prettyA tx
+    , testPP "LedgerState" prettyA ls
     ]

@@ -22,6 +22,7 @@ import Data.Text (Text)
 import Lens.Micro
 import Prettyprinter (hsep)
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Mary (MaryEra)
 
 instance PrettyA (PolicyID c) where
   prettyA (PolicyID sh) = prettyA sh
@@ -130,4 +131,10 @@ instance PrettyA (PParams (AllegraEra c)) where
   prettyA = undefined
 
 instance PrettyA (PParamsUpdate (AllegraEra c)) where
+  prettyA = undefined
+
+instance PrettyA (PParams (MaryEra c)) where
+  prettyA = undefined
+
+instance PrettyA (PParamsUpdate (MaryEra c)) where
   prettyA = undefined
