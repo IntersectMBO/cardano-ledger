@@ -26,15 +26,13 @@ module Cardano.Ledger.Address (
   RewardAcnt (..),
   serialiseRewardAcnt,
   deserialiseRewardAcnt,
-  -- internals exported for testing
   bootstrapKeyHash,
+  -- internals exported for testing
   putAddr,
   putCredential,
   putPtr,
   putRewardAcnt,
   putVariableLengthWord64,
-  -- TODO: these should live somewhere else
-  word64ToWord7s,
   Word7 (..),
   toWord7,
 
@@ -111,6 +109,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (ShortByteString, fromShort, index, length, toShort)
 import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex, unsafeTake)
+import Data.Function (fix)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
@@ -144,7 +143,7 @@ deserialiseAddr = decodeAddr
 serialiseRewardAcnt :: RewardAcnt c -> ByteString
 serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
 
--- | Deserialise an reward account from the external format. This will fail if the
+-- | Deserialise a reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
 deserialiseRewardAcnt :: Crypto c => ByteString -> Maybe (RewardAcnt c)
 deserialiseRewardAcnt = decodeRewardAcnt
@@ -291,12 +290,10 @@ isBootstrapRedeemer (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem)) = True
 isBootstrapRedeemer _ = False
 
 putPtr :: Ptr -> Put
-putPtr (Ptr slot (TxIx txIx) (CertIx certIx)) = do
-  putSlot slot
-  putVariableLengthWord64 ((fromIntegral @_ @Word64) txIx)
-  putVariableLengthWord64 ((fromIntegral @_ @Word64) certIx)
-  where
-    putSlot (SlotNo n) = putVariableLengthWord64 n
+putPtr (Ptr (SlotNo slot) (TxIx txIx) (CertIx certIx)) = do
+  putVariableLengthWord64 slot
+  putVariableLengthWord64 txIx
+  putVariableLengthWord64 certIx
 
 newtype Word7 = Word7 Word8
   deriving (Eq, Show)
@@ -386,7 +383,7 @@ compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 
 decompactAddr :: forall c. (HasCallStack, Crypto c) => CompactAddr c -> Addr c
 decompactAddr (UnsafeCompactAddr sbs) =
-  case decodeAddrShortEither sbs of
+  case runFail $ evalStateT (decodeAddrStateAllowLeftoverT True sbs) 0 of
     Right addr -> addr
     Left err ->
       error $
@@ -415,18 +412,19 @@ fromCborCompactAddr = snd <$> fromCborBothAddr
 fromCborBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
 fromCborBothAddr = do
   sbs <- decCBOR
-  case decodeAddrShortEither sbs of
-    Right addr -> pure (addr, UnsafeCompactAddr sbs)
-    Left err ->
-      ifDecoderVersionAtLeast (natVersion @7) (fail err) (decodeAddrDropSlack sbs)
+  ifDecoderVersionAtLeast (natVersion @7) (decodeAddrStrict sbs) (decodeAddrDropSlack sbs)
   where
+    -- Starting with Babbage we no longer allow addresses with garbage in them.
+    decodeAddrStrict sbs = flip evalStateT 0 $ do
+      addr <- decodeAddrStateAllowLeftoverT False sbs
+      pure (addr, UnsafeCompactAddr sbs)
     -- Prior to Babbage era we did not check if a binary blob representing an address was
-    -- fully consumed, so unfortunately we must preserve this behavior. However,
-    -- decompacting of an address enforces that there are no bytes are left unconsumed,
-    -- therefore we need to drop the garbage after we successfully decod the malformed
-    -- address.
+    -- fully consumed, so unfortunately we must preserve this behavior. However, we do not
+    -- need to preserve the unconsumed bytes in memory, therefore we can to drop the
+    -- garbage after we successfully decoded the malformed address. We also need to allow
+    -- bogus pointer address to be deserializeable prior to Babbage era.
     decodeAddrDropSlack sbs = flip evalStateT 0 $ do
-      addr <- decodeAddrStateAllowLeftoverT sbs
+      addr <- decodeAddrStateAllowLeftoverT True sbs
       bytesConsumed <- get
       let sbsCropped = SBS.toShort $ BS.take bytesConsumed $ SBS.fromShort sbs
       pure (addr, UnsafeCompactAddr sbsCropped)
@@ -587,30 +585,37 @@ decodeAddrStateT ::
   (Crypto c, MonadFail m, AddressBuffer b) =>
   b ->
   StateT Int m (Addr c)
-decodeAddrStateT buf = decodeAddrStateAllowLeftoverT buf <* ensureBufIsConsumed "Addr" buf
+decodeAddrStateT = decodeAddrStateAllowLeftoverT False
 {-# INLINE decodeAddrStateT #-}
 
 -- | Just like `decodeAddrStateT`, but does not check whether the input was consumed in full.
 decodeAddrStateAllowLeftoverT ::
   (Crypto c, MonadFail m, AddressBuffer b) =>
+  -- | Enable lenient decoding, i.e. indicate whether junk can follow an address or a
+  -- Ptr. This is necessary for backwards compatibility only.
+  Bool ->
   b ->
   StateT Int m (Addr c)
-decodeAddrStateAllowLeftoverT buf = do
+decodeAddrStateAllowLeftoverT isLenient buf = do
   guardLength "Header" 1 buf
   let header = Header $ bufUnsafeIndex buf 0
-  if isByronAddress header
-    then AddrBootstrap <$> decodeBootstrapAddress buf
-    else do
-      -- Ensure there are no unexpected bytes in the header
-      unless (header .&. headerNonShelleyBits == 0)
-        $ failDecoding
-          "Shelley Address"
-        $ "Invalid header. Unused bits are not suppose to be set: " <> show header
-      -- Advance one byte for the consumed header
-      modify' (+ 1)
-      payment <- decodePaymentCredential header buf
-      staking <- decodeStakeReference header buf
-      pure $ Addr (headerNetworkId header) payment staking
+  addr <-
+    if isByronAddress header
+      then AddrBootstrap <$> decodeBootstrapAddress buf
+      else do
+        -- Ensure there are no unexpected bytes in the header
+        unless (header .&. headerNonShelleyBits == 0)
+          $ failDecoding
+            "Shelley Address"
+          $ "Invalid header. Unused bits are not suppose to be set: " <> show header
+        -- Advance one byte for the consumed header
+        modify' (+ 1)
+        payment <- decodePaymentCredential header buf
+        staking <- decodeStakeReference isLenient header buf
+        pure $ Addr (headerNetworkId header) payment staking
+  unless isLenient $
+    ensureBufIsConsumed "Addr" buf
+  pure addr
 {-# INLINE decodeAddrStateAllowLeftoverT #-}
 
 -- | Checks that the current offset is exactly at the end of the buffer.
@@ -654,10 +659,11 @@ decodePaymentCredential header buf
 
 decodeStakeReference ::
   (Crypto c, MonadFail m, AddressBuffer b) =>
+  Bool ->
   Header ->
   b ->
   StateT Int m (StakeReference c)
-decodeStakeReference header buf
+decodeStakeReference isLenientPtrDecoder header buf
   | headerIsBaseAddress header =
       if headerIsStakingScript header
         then StakeRefBase . ScriptHashObj <$> decodeScriptHash buf
@@ -665,7 +671,7 @@ decodeStakeReference header buf
   | otherwise =
       if headerIsEnterpriseAddr header
         then pure StakeRefNull
-        else StakeRefPtr <$> decodePtr buf
+        else StakeRefPtr <$> if isLenientPtrDecoder then decodePtrLenient buf else decodePtr buf
 {-# INLINE decodeStakeReference #-}
 
 decodeKeyHash ::
@@ -714,6 +720,17 @@ decodePtr buf =
     <*> (TxIx . (fromIntegral :: Word16 -> Word64) <$> decodeVariableLengthWord16 "TxIx" buf)
     <*> (CertIx . (fromIntegral :: Word16 -> Word64) <$> decodeVariableLengthWord16 "CertIx" buf)
 {-# INLINE decodePtr #-}
+
+decodePtrLenient ::
+  (MonadFail m, AddressBuffer b) =>
+  b ->
+  StateT Int m Ptr
+decodePtrLenient buf =
+  Ptr
+    <$> (SlotNo <$> decodeVariableLengthWord64 "SlotNo" buf)
+    <*> (TxIx <$> decodeVariableLengthWord64 "TxIx" buf)
+    <*> (CertIx <$> decodeVariableLengthWord64 "CertIx" buf)
+{-# INLINE decodePtrLenient #-}
 
 guardLength ::
   (MonadFail m, AddressBuffer b) =>
@@ -770,7 +787,7 @@ decodeVariableLengthWord16 name buf = do
         res <- decode7BitVarLength name buf (\_ -> failDecoding name "too many bytes.") acc
         -- Only while decoding the last 7bits we check if there was too many
         -- bits supplied at the beginning.
-        unless (bufUnsafeIndex buf off0 .&. 0b01111100 == 0) $
+        unless (bufUnsafeIndex buf off0 .&. 0b11111100 == 0b10000000) $
           failDecoding name "More than 16bits was supplied"
         pure res
   d7 (d7 d7last) 0
@@ -791,12 +808,23 @@ decodeVariableLengthWord32 name buf = do
         res <- decode7BitVarLength name buf (\_ -> failDecoding name "too many bytes.") acc
         -- Only while decoding the last 7bits we check if there was too many
         -- bits supplied at the beginning.
-        unless (bufUnsafeIndex buf off0 .&. 0b01110000 == 0) $
+        unless (bufUnsafeIndex buf off0 .&. 0b11110000 == 0b10000000) $
           failDecoding name "More than 32bits was supplied"
         pure res
       {-# INLINE d7last #-}
   d7 (d7 (d7 (d7 d7last))) 0
 {-# INLINE decodeVariableLengthWord32 #-}
+
+-- | This decoder is here only with the purpose of preserving old buggy behavior. Should
+-- not be used for anything else.
+decodeVariableLengthWord64 ::
+  forall m b.
+  (MonadFail m, AddressBuffer b) =>
+  String ->
+  b ->
+  StateT Int m Word64
+decodeVariableLengthWord64 name buf = fix (decode7BitVarLength name buf) 0
+{-# INLINE decodeVariableLengthWord64 #-}
 
 ------------------------------------------------------------------------------------------
 -- Reward Account Deserializer -----------------------------------------------------------
