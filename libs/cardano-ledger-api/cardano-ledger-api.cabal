@@ -21,7 +21,7 @@ source-repository head
 
 custom-setup
     setup-depends:
-        base >=4 && <5,
+        base >=4.14 && <4.17,
         Cabal,
         cabal-doctest ^>=1
 
@@ -47,7 +47,7 @@ library
         -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base >=4.14 && <4.17,
         cardano-ledger-allegra >=1.0,
         cardano-ledger-alonzo >=1.0,
         cardano-ledger-babbage >=1.0,
@@ -70,7 +70,7 @@ test-suite cardano-ledger-api-test
         -Wunused-packages -rtsopts -threaded
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         bytestring,
         cardano-ledger-api,
         cardano-ledger-binary,
@@ -87,7 +87,7 @@ test-suite doctests
     ghc-options:       -threaded -rtsopts -with-rtsopts=-N
     x-doctest-options: --no-magic
     build-depends:
-        base >=4.7 && <5,
+        base >=4.14 && <4.17,
         cardano-ledger-babbage-test,
         cardano-strict-containers,
         doctest,

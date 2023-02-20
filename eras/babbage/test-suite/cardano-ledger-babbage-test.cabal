@@ -32,7 +32,7 @@ library
         -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base >=4.14 && <4.17,
         cardano-ledger-allegra,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-alonzo ^>=1.0,
@@ -69,7 +69,7 @@ test-suite cardano-ledger-babbage-test
         -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         bytestring,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-allegra,

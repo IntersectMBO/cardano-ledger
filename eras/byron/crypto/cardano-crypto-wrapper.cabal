@@ -73,7 +73,7 @@ library
         -Wno-safe -Wno-unsafe -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base >=4.14 && <4.17,
         aeson,
         base16-bytestring >=1,
         base64-bytestring,
@@ -124,7 +124,7 @@ test-suite test
         -Wno-safe -Wno-unsafe -Wunused-packages -threaded -rtsopts
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         bytestring,
         cardano-ledger-binary,
         cardano-ledger-binary:testlib,

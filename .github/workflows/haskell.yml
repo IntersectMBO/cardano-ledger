@@ -152,3 +152,34 @@ jobs:
     - uses: actions/checkout@v3
     - name: Format all cabal files
       run: ./scripts/cabal-format.sh
+
+  gen-hie:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: Cache implicit-hie executable (gen-hie)
+      id: cache-gen-hie
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cabal/bin/gen-hie
+        key: ${{ runner.os }}-cache-gen-hie
+
+    - name: Install gen-hie if not cached
+      if: steps.cache-gen-hie.outputs.cache-hit != 'true'
+      run: cabal update && cabal install implicit-hie --install-method=copy --overwrite-policy=always
+
+    - name: Add cabal-bin to PATH
+      run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+
+    - uses: actions/checkout@v3
+
+    - name: Regenerate hie.yaml and confirm that it is in sync
+      run: ./scripts/gen-hie.sh

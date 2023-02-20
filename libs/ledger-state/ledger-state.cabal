@@ -33,7 +33,7 @@ library
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base >=4.14 && <4.17,
         bytestring,
         cardano-crypto-class,
         cardano-ledger-alonzo,
@@ -65,7 +65,7 @@ executable ledger-state
         -O2 -threaded -rtsopts
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         cardano-ledger-shelley,
         ledger-state,
         optparse-applicative,
@@ -96,7 +96,6 @@ benchmark performance
         -threaded -rtsopts -O2
 
     build-depends:
-        base >=4.12 && <4.17,
         base,
         aeson >=2,
         bytestring,
@@ -125,7 +124,6 @@ benchmark address
         -threaded -rtsopts -O2
 
     build-depends:
-        base >=4.12 && <4.17,
         base,
         cardano-ledger-binary,
         cardano-crypto-class,

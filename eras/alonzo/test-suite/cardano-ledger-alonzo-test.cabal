@@ -43,7 +43,7 @@ library
         -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base >=4.14 && <4.17,
         bytestring,
         cardano-ledger-alonzo,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
@@ -93,7 +93,7 @@ test-suite cardano-ledger-alonzo-test
         -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         aeson >=2,
         base16-bytestring,
         bytestring,
@@ -108,7 +108,7 @@ test-suite cardano-ledger-alonzo-test
         cardano-slotting,
         containers,
         data-default-class,
-        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1,
+        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
         QuickCheck,
         small-steps,
         small-steps-test,
