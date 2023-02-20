@@ -14,6 +14,9 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
   initialOrder,
   strategyRhsMap,
   showGraph,
+  listEq,
+  cpeq,
+  cteq,
 ) where
 
 import qualified Data.Array as A
@@ -24,11 +27,10 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyW (..), Name (..), V (..), W (..))
+import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Field (..), Name (..), V (..))
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
 
--- import Debug.Trace(trace)
 -- ======================================================================
 
 {-
@@ -130,8 +132,8 @@ cseq (Project r1 x) (Project r2 y) = case testEql r1 r2 of
   Nothing -> False
 cseq _ _ = False
 
-anyWeq :: AnyW era t -> AnyW era s -> Bool
-anyWeq (AnyW (W x y z)) (AnyW (W a b c)) = Name (V x y z) == Name (V a b c)
+anyWeq :: AnyF era t -> AnyF era s -> Bool
+anyWeq (AnyF (Field x y z)) (AnyF (Field a b c)) = Name (V x y z) == Name (V a b c)
 anyWeq _ _ = False
 
 -- ==================================================================================
@@ -339,10 +341,10 @@ accumdep info answer c = case c of
     where
       accum ans v = Map.insertWith (Set.union) v Set.empty ans
 
-componentVars :: [AnyW era s] -> Set (Name era)
+componentVars :: [AnyF era s] -> Set (Name era)
 componentVars [] = Set.empty
-componentVars (AnyW (W n r a) : cs) = Set.insert (Name $ V n r a) $ componentVars cs
-componentVars (AnyW (WConst _ _) : cs) = componentVars cs
+componentVars (AnyF (Field n r a) : cs) = Set.insert (Name $ V n r a) $ componentVars cs
+componentVars (AnyF (FConst _ _ _) : cs) = componentVars cs
 
 -- =========================================================================
 -- Create an initial Ordering. Build a Graph, then extract the Ordering

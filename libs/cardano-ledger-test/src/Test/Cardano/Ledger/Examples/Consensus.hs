@@ -20,7 +20,6 @@ import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 oneTest ::
   ( Reflect era
   , Eq (TranslationContext era)
-  , Show (TranslationContext era)
   , EraCrypto era ~ StandardCrypto
   ) =>
   Proof era ->

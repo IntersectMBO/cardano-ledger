@@ -25,8 +25,6 @@ import Cardano.Ledger.BaseTypes (
   BlockNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.Coin (CompactForm (..))
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.Core
@@ -91,10 +89,7 @@ instance Mock c => Arbitrary (BHeader c) where -- TODO: Move to TPraos
 instance Crypto c => Arbitrary (TP.HashHeader c) where -- TODO: Move to TPraos
   arbitrary = TP.HashHeader <$> arbitrary
 
-instance Era era => Arbitrary (ProposedPPUpdates era) where
-  arbitrary = ProposedPPUpdates <$> pure Map.empty
-
-instance Era era => Arbitrary (Update era) where
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -131,12 +126,6 @@ instance Era era => Arbitrary (ShelleyTxAuxData era) where
 
 maxTxWits :: Int
 maxTxWits = 5
-
-instance
-  (Core.EraTxOut era, Arbitrary (Core.Value era)) =>
-  Arbitrary (ShelleyTxOut era)
-  where
-  arbitrary = ShelleyTxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary MIRPot where
   arbitrary = genericArbitraryU
@@ -188,90 +177,6 @@ instance Crypto c => Arbitrary (DCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-
-instance Era era => Arbitrary (PPUPState era) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (DPState c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance
-  ( Core.EraTxOut era
-  , Arbitrary (Core.TxOut era)
-  , Arbitrary (State (Core.EraRule "PPUP" era))
-  ) =>
-  Arbitrary (UTxOState era)
-  where
-  arbitrary = genericArbitraryU
-  shrink = recursivelyShrink
-
-instance Crypto c => Arbitrary (IncrementalStake c) where
-  arbitrary = IStake <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
--- The 'genericShrink' function returns first the immediate subterms of a
--- value (in case it is a recursive data-type), and then shrinks the value
--- itself. Since 'UTxOState' is not a recursive data-type, there are no
--- subterms, and we can use `recursivelyShrink` directly. This is particularly
--- important when abstracting away the different fields of the ledger state,
--- since the generic subterms instances will overlap due to GHC not having
--- enough context to infer if 'a' and 'b' are the same types (since in this
--- case this will depend on the definition of 'era').
---
--- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
--- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
-
-instance
-  ( Core.EraTxOut era
-  , Arbitrary (Core.TxOut era)
-  , Arbitrary (State (Core.EraRule "PPUP" era))
-  ) =>
-  Arbitrary (LedgerState era)
-  where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance
-  ( EraTxOut era
-  , Mock (EraCrypto era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (PParams era)
-  , Arbitrary (State (EraRule "PPUP" era))
-  , Arbitrary (StashedAVVMAddresses era)
-  ) =>
-  Arbitrary (NewEpochState era)
-  where
-  arbitrary = genericArbitraryU
-
-instance
-  ( Core.EraTxOut era
-  , Arbitrary (Core.TxOut era)
-  , Arbitrary (Core.Value era)
-  , Arbitrary (Core.PParams era)
-  , Arbitrary (State (Core.EraRule "PPUP" era))
-  ) =>
-  Arbitrary (EpochState era)
-  where
-  arbitrary =
-    EpochState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance Crypto c => Arbitrary (LeaderOnlyReward c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (RewardUpdate c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
 instance Crypto c => Arbitrary (STS.OBftSlot c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
@@ -296,7 +201,7 @@ instance Era era => Arbitrary (MultiSig era) where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
 instance
-  (Crypto c, Arbitrary (Core.PParams (ShelleyEra c))) =>
+  (Crypto c, Arbitrary (PParams (ShelleyEra c))) =>
   Arbitrary (ShelleyGenesis c)
   where
   arbitrary = do
@@ -322,7 +227,7 @@ instance Crypto c => Arbitrary (ShelleyGenesisStaking c) where
 
 instance
   ( EraScript era
-  , Arbitrary (Core.Script era)
+  , Arbitrary (Script era)
   ) =>
   Arbitrary (ShelleyTxWits era)
   where
@@ -344,8 +249,8 @@ instance Era era => Arbitrary (STS.ShelleyPoolPredFailure era) where
 
 instance
   ( Era era
-  , Arbitrary (STS.PredicateFailure (Core.EraRule "POOL" era))
-  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELEG" era))
+  , Arbitrary (STS.PredicateFailure (EraRule "POOL" era))
+  , Arbitrary (STS.PredicateFailure (EraRule "DELEG" era))
   ) =>
   Arbitrary (STS.ShelleyDelplPredFailure era)
   where
@@ -361,7 +266,7 @@ instance
 
 instance
   ( Era era
-  , Arbitrary (STS.PredicateFailure (Core.EraRule "DELPL" era))
+  , Arbitrary (STS.PredicateFailure (EraRule "DELPL" era))
   ) =>
   Arbitrary (STS.ShelleyDelegsPredFailure era)
   where
@@ -429,8 +334,8 @@ genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era h.
-  ( Mock (EraCrypto era)
-  , EraSegWits era
+  ( EraSegWits era
+  , Mock (EraCrypto era)
   , Arbitrary (Tx era)
   , h ~ BHeader (EraCrypto era)
   ) =>
@@ -477,56 +382,3 @@ instance
   where
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
-
-instance (Mock c) => Arbitrary (PulsingRewUpdate c) where
-  arbitrary =
-    oneof
-      [ Complete <$> arbitrary
-      , Pulsing <$> arbitrary <*> arbitrary
-      ]
-
-instance
-  Crypto c =>
-  Arbitrary (RewardSnapShot c)
-  where
-  arbitrary =
-    RewardSnapShot
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance
-  Crypto c =>
-  Arbitrary (PoolRewardInfo c)
-  where
-  arbitrary =
-    PoolRewardInfo
-      <$> (StakeShare <$> arbitrary)
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance
-  Crypto c =>
-  Arbitrary (FreeVars c)
-  where
-  arbitrary =
-    FreeVars
-      <$> arbitrary {- addrsRew -}
-      <*> arbitrary {- totalStake -}
-      <*> arbitrary {- pp_mv -}
-      <*> arbitrary {- poolRewardInfo -}
-      <*> arbitrary {- delegations -}
-
-instance
-  Crypto c =>
-  Arbitrary (Pulser c)
-  where
-  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> (RewardAns <$> arbitrary <*> arbitrary)
-

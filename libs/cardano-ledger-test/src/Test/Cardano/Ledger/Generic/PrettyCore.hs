@@ -61,8 +61,8 @@ import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Conway (ppConwayTxBody)
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaES, totalAdaPotsES)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DPState (..),
@@ -112,7 +112,7 @@ import Cardano.Ledger.UMapCompact (
   ptrView,
   rewView,
  )
-import qualified Cardano.Ledger.UMapCompact as UM (UMap, View (..), delView, rewView, size)
+import qualified Cardano.Ledger.UMapCompact as UM (UMap, View (..), size)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
@@ -124,8 +124,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
-import Data.Void (absurd)
 import qualified Data.VMap as VMap
+import Data.Void (absurd)
 import Lens.Micro ((^.))
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
@@ -1487,17 +1487,6 @@ pcTxBody proof txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody
     pairs = concat (map (pcTxBodyField proof) fields)
-
-pcDPState :: p -> DPState era -> PDoc
-pcDPState _proof (DPState (DState {dsUnified = un}) (PState {psStakePoolParams = pool})) =
-  ppRecord
-    "DPState summary"
-    [ ("rewards", ppMap pcCredential pcCoin (UM.rewView un))
-    , ("delegations", ppMap pcCredential keyHashSummary (UM.delView un))
-    , ("pool params", ppMap pcKeyHash pcPoolParams pool)
-    ]
-
-instance PrettyC (DPState era) era where prettyC = pcDPState
 
 instance PrettyC (ConwayTallyState era) era where
   prettyC proof (ConwayTallyState x) = case proof of
