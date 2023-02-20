@@ -10,7 +10,7 @@
   };
 
   inputs = {
-    nixpkgs.url = github:NixOS/nixpkgs/nixos-22.05;
+    nixpkgs.url = github:NixOS/nixpkgs/nixos-22.11;
     tullia = {
       url = github:input-output-hk/tullia;
       inputs.nixpkgs.follows = "nixpkgs";
