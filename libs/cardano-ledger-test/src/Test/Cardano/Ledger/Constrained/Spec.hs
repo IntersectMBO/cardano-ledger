@@ -14,7 +14,7 @@
 --   For example
 --   (MapSpec era dom rng) denotes Gen(Map dom rng)
 --   (RngSpec era t)       denotes Gen[t]  where the [t] has some Summing properties
---   (RelSep era t)        denotes Gen(Set t) where the set meets som relational properties
+--   (RelSep era t)        denotes Gen(Set t) where the set meets some relational properties
 --   (Size)                denotes Gen Int, the size of some Map, Set, List etc.
 --   (SumSpec n t)         denotes Gen([t]), a list of length 'n' that adds up to 't'
 module Test.Cardano.Ledger.Constrained.Spec where
@@ -29,17 +29,24 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Debug.Trace (trace)
-import Test.Cardano.Ledger.Constrained.Ast (testSize)
+import Test.Cardano.Ledger.Constrained.Ast (runSize)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   SumCond (..),
   Sums (..),
   projAdds,
   runCond,
-  suchThatErr,
   sumAdds,
  )
-import Test.Cardano.Ledger.Constrained.Combinators
+import Test.Cardano.Ledger.Constrained.Combinators (
+  errorMess,
+  setSized,
+  subsetFromSet,
+  subsetFromSetWithSize,
+  suchThatErr,
+  superSetFromSet,
+  superSetFromSetWithSize,
+ )
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
@@ -57,24 +64,17 @@ import Test.Tasty.QuickCheck hiding (Fixed, total)
 import Prelude hiding (subtract)
 
 -- ===========================================================
-{- TODO
-
+{- TODO, possible extensions and improvements, so we don't forget
 1) Redo Size with: data Size = SzNever [String] | SzRange Int (Maybe Int) Move to own file
 2) Add newtype Never = Never [String], then instead of (XXXNever xs) we use (XX (Never xs))
-4) Done. genMapSpec does not need Int
-5) Done. Fix output on moreMerge of RelSpec
-6) class Specify
-7) Done mapSpec :: size -> dom -> rng -> Typed (MapSpec era d r) that checks Size consistency
-   use in mergeMapSpec (with runTyped, dropT) (MapSpec x y z) become droptT (mapSpec x y z)
-   so inconsistencies get rolled into MapNever
-8) Done same for SetSpec and ListSpec,  use in solver to detect size inconsistency as we solve
-9) Done. genSizeForXX :: XX -> Gen Size  should be sizeForXX :: XX -> Size
-10) Done. MapNever -> MapNever  NeverSet -> SetNever  for consistency
-11) Done Redo dispatch with case stmt, and one explain call
-12) In RelSpec add (RelOp musthave canhave neverhave) to replace subset, superset, disjoint, can also express membership 
-
+3) class Specify
+4) In RelSpec add (RelOp musthave canhave neverhave) to replace subset, superset, disjoint, can also express membership
+5) A better story about fields in constraints. Maybe add FieldSpec type.
 -}
+
 -- =========================================================
+
+-- | used when we run tests, and we have to pick some concrete Era
 type TT = MaryEra C_Crypto
 
 seps :: [String] -> String
@@ -89,9 +89,13 @@ sepn xs = List.intercalate "\n   " xs
 -- ============================================================
 -- Operators for Size (Defined in TypeRep.hs)
 
+-- | Used in tests so things don't get too large
 atleastdelta :: Int
 atleastdelta = 5
 
+-- | Used in tests so things don't get too large
+--   If we can't find an era using things of size 10
+--   using things of size 100, isn't going to help.
 atmostany :: Int
 atmostany = 10
 
@@ -108,13 +112,6 @@ minSize (SzLeast n) = n
 minSize (SzMost _) = 0
 minSize (SzRng i _) = i
 minSize (SzNever xs) = errorMess "SzNever in minSize" xs
-
-runSize :: Int -> Size -> Bool
-runSize _ (SzNever xs) = errorMess "SzNever in runSizeSpec" xs
-runSize _ SzAny = True
-runSize n (SzLeast m) = n >= m
-runSize n (SzMost m) = n <= m
-runSize n (SzRng i j) = n >= i && n <= j
 
 genSize :: Gen Size
 genSize =
@@ -137,7 +134,7 @@ testSoundSize :: Gen Bool
 testSoundSize = do
   spec <- genSize
   ans <- genFromSize spec
-  pure $ testSize ans spec
+  pure $ runSize ans spec
 
 testMergeSize :: Gen Bool
 testMergeSize = do
@@ -148,7 +145,7 @@ testMergeSize = do
     SzAny -> trace "Aways True RelSpec" pure True
     spec -> do
       ans <- genFromSize spec
-      pure $ testSize ans spec && testSize ans spec1 && testSize ans spec2
+      pure $ runSize ans spec && runSize ans spec1 && runSize ans spec2
 
 -- =====================================================
 -- RelSpec
@@ -277,15 +274,6 @@ sizeForRel (RelEqual _ s) = SzExact (Set.size s)
 sizeForRel (RelDisjoint _ _) = SzAny
 sizeForRel RelAny = SzAny
 sizeForRel (RelNever _) = SzAny
-
--- | Is a RelSpec consistent with a given size
-relCanHaveSize :: RelSpec era dom -> Size -> Bool
-relCanHaveSize rel size = case rel of
-  RelAny -> True
-  RelSubset _ xs -> Set.size xs >= maxSize size
-  RelSuperset _ xs -> Set.size xs <= minSize size
-  RelEqual _ xs -> case size of SzExact n -> n == Set.size xs; _ -> False
-  _ -> True
 
 -- -------------------------------------
 -- RelSpec tests
@@ -562,26 +550,6 @@ sizeForRng (RngElem _ xs) = SzExact (length xs)
 sizeForRng RngAny = SzAny
 sizeForRng (RngNever _) = SzAny
 
--- | Is a RngSpec consistent with a given size
-rngCanHaveSize :: RngSpec era dom -> Size -> Bool
-rngCanHaveSize rngspec size = case rngspec of
-  RngRel x -> relCanHaveSize x size
-  RngSum c tot -> minSize size >= 1 && condConsistency c size tot
-  RngProj c _ tot -> minSize size >= 1 && condConsistency c size tot
-  RngElem _ xs -> case size of SzExact n -> n == length xs; _ -> False
-  RngAny -> True
-  RngNever _ -> False
-
-condConsistency :: SumCond -> Size -> c -> Bool
-condConsistency _ _ _ = undefined -- FIXME complete this function
-{-
-condConsistency EQL count total = total >= count
-condConsistency GTE count total = total > count
-condConsistency GTH count total = total + 1 > count
-condConsistency LTE count total = total >= count - 1
-condConsistency LTH count total = total > count - 1
--}
-
 -- ------------------------------------------
 -- generators for test functions.
 
@@ -725,6 +693,8 @@ data MapSpec era dom rng where
     RelSpec era dom ->
     RngSpec era rng ->
     MapSpec era dom rng
+  -- | Currently used to generate from (Component x fields) Pred. The plan
+  --   is to replace it with some sort of FieldSpec soon.
   MapUnique :: Rep era (Map dom rng) -> Unique dom rng -> MapSpec era dom rng
   -- | Something is inconsistent
   MapNever :: [String] -> MapSpec era dom rng
@@ -1286,7 +1256,9 @@ main =
 
 -- :main --quickcheck-replay=740521
 
--- =============================================
+-- ================================================
+-- Synthetic classes used to control the size of
+-- things in the tests.
 
 class (Arbitrary t, Adds t) => TestAdd t where
   anyAdds :: Gen t
@@ -1330,7 +1302,8 @@ someMap r = do
   ds <- vectorOf n (genRep r)
   pure $ Map.fromList (zip ds rs)
 
--- ==============================
+-- ===================================
+-- Some proto-tests, to be fixed soon
 
 aMap :: Era era => Gen (MapSpec era Int Word64)
 aMap = genMapSpec (chooseInt (1, 1000)) IntR Word64R CoinR
@@ -1339,7 +1312,7 @@ testm :: Gen (MapSpec TT Int Word64)
 testm = do
   a <- aMap @TT
   b <- aMap
-  pure (ioTyped (liftT (a <> b)))
+  monadTyped (liftT (a <> b))
 
 aList :: Era era => Gen (ListSpec era Word64)
 aList = genListSpec Word64R CoinR
@@ -1348,4 +1321,4 @@ testl :: Gen (ListSpec TT Word64)
 testl = do
   a <- aList @TT
   b <- aList
-  pure (ioTyped (liftT (a <> b)))
+  monadTyped (liftT (a <> b))

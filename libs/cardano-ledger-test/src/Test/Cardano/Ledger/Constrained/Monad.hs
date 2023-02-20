@@ -17,7 +17,8 @@ module Test.Cardano.Ledger.Constrained.Monad (
   hasOrd,
   Id (..),
   testHasCond,
-  ioTyped,
+  errorTyped,
+  monadTyped,
 ) where
 
 import Data.Set (Set)
@@ -69,10 +70,21 @@ explain _ (Typed (Right x)) = Typed (Right x)
 mergeExplain :: (Monoid x, LiftT x) => String -> x -> x -> x
 mergeExplain message x y = dropT (explain message (liftT (x <> y)))
 
-ioTyped :: Typed t -> t
-ioTyped t = case runTyped t of
+-- ======================================================
+-- converting from a (Typed t) to something else
+
+-- The projection from (newtype Typed t = Typed {runTyped :: Either [String] x})
+-- runTyped :: Typed t => Either [String] x
+
+-- | Pushes the (Left msgs) into a call to 'error'
+errorTyped :: Typed t -> t
+errorTyped t = case runTyped t of
   Right x -> x
   Left xs -> error (unlines ("\nSolver-time error" : xs))
+
+-- | Pushes the (Left msgs) into a call to 'error', then injects into a Monad
+monadTyped :: Monad m => Typed t -> m t
+monadTyped t = pure (errorTyped t)
 
 -- ========================================================
 
@@ -95,7 +107,7 @@ runDyn rep1 (Dyn rep2 t) = do
 isDynSet :: Dyn era -> Rep era rng -> Typed (HasCond Ord (Set rng))
 isDynSet (Dyn (SetR r2) set) rng = do
   Refl <- sameRep rng r2
-  pure (With set) -- Note pattern matchin against (SetR r2) provides the Ord instance
+  pure (With set) -- Note pattern matching against (SetR r2) provides the Ord instance
 isDynSet dyn rng = failT [show dyn ++ "is not a dynamic (Set " ++ show rng ++ ")"]
 
 -- ================================================================
@@ -146,7 +158,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help DeltaCoinR v = pure $ With v
     help GenDelegPairR v = pure $ With v
     help FutureGenDelegR v = pure $ With v
-    help PPUPStateR _ = failT ["PPUPState does not have Ord instance"]
+    help (PPUPStateR _) _ = failT ["PPUPState does not have Ord instance"]
     help PtrR v = pure $ With v
     help SnapShotsR _ = failT ["SnapShot does not have Ord instance"]
     help IPoolStakeR _ = failT ["IndividualPoolStake does not have Ord instance"]

@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.Constrained.Combinators where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Data.Char (chr)
+import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -15,30 +15,23 @@ import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck hiding (Fixed, total)
 
--- import Test.Cardano.Ledger.Constrained.Monad
-
--- import Debug.Trace(trace)
-import qualified Data.List as List
-
 -- ==========================================================================
+-- Tracking Gen-time errors
 
-test1 :: Int -> (Int -> Gen Int -> Gen b) -> IO b
-test1 n x = generate (x n (arbitrary :: Gen Int))
-
-test2 :: Int -> (Int -> Gen Int -> Gen Char -> Gen b) -> IO b
-test2 n x = generate (x n (arbitrary :: Gen Int) (elements [chr i | i <- [1 .. 128]]))
-
-small :: Gen Int
-small = elements [1 .. 6]
-
-data SubsetCond = Any | NotEmpty deriving (Eq, Show)
-
--- =======================================================================
-
--- | Report an error from the current message 'extra' and the
+-- | Report a Gen-time error from the current message 'extra' and the
 --   [messages] 'mess' describing the path to this call site.
 errorMess :: String -> [String] -> a
 errorMess extra mess = error (unlines ("\nGen-time error" : (reverse (extra : mess))))
+
+-- | suchThat version that tracks Gen-time errors
+suchThatErr :: [String] -> Gen a -> (a -> Bool) -> Gen a
+suchThatErr msgs gen p = do
+  x <- suchThatMaybe gen p
+  case x of
+    Just y -> pure y
+    Nothing -> errorMess "SuchThat times out" msgs
+
+-- =======================================================================
 
 setSized :: Ord a => [String] -> Int -> Gen a -> Gen (Set a)
 setSized mess size gen = do set <- (Set.fromList <$> vectorOf size gen); fixSet mess (size * 10) size gen set
@@ -114,14 +107,6 @@ mapFromSubset mess subset n genA genB = do
   additions <- mapSized ("From MapFromSubset " : mess) n genA genB
   pure (Map.union subset additions)
 
-{-  BROKEN 'n' could be too big for 'set'
-subsetFromMap :: Map a b -> Int -> Gen (Map a b)
-subsetFromMap set n |
-subsetFromMap set n = do
-  indexes <- vectorOf n (elements [0 .. Map.size set - 1])
-  pure (List.foldl' (flip Map.deleteAt) set indexes)
--}
-
 mapFromSet :: Ord a => Set a -> Gen b -> Gen (Map a b)
 mapFromSet set genB = addRange set
   where
@@ -156,9 +141,6 @@ superSetFromSet :: Ord a => Gen a -> Set a -> Gen (Set a)
 superSetFromSet genA setA = do
   Positive n <- arbitrary
   superSetFromSetWithSize ["supersetFromSet"] (n + Set.size setA) genA setA
-
--- additions <- vectorOf n genA
--- pure (List.foldl' (flip Set.insert) setA additions)
 
 superSetFromSetWithSize :: Ord a => [String] -> Int -> Gen a -> Set a -> Gen (Set a)
 superSetFromSetWithSize mess n _ setA

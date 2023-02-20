@@ -1,7 +1,9 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -9,33 +11,26 @@
 
 -- {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module Test.Cardano.Ledger.Constrained.Classes
-where
-
--- import Debug.Trace(trace)
+module Test.Cardano.Ledger.Constrained.Classes where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
+import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (coin, modifyCoin, (<+>)))
 import Data.Default.Class (Default (def))
-import Data.Maybe.Strict (StrictMaybe (SJust))
-import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
-import Prelude hiding (subtract)
-
--- import qualified Data.List as List
-
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (SJust))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
@@ -43,6 +38,7 @@ import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.Cardano.Ledger.Constrained.Combinators (errorMess, suchThatErr)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
@@ -67,23 +63,55 @@ import Test.QuickCheck (
   elements,
   frequency,
   shuffle,
-  suchThatMaybe,
   vectorOf,
  )
+import Prelude hiding (subtract)
+
+import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
+import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..))
+import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
+
+-- import  Cardano.Ledger.Conway.Governance(ConwayTallyState(..))
+-- import Lens.Micro
 
 -- =====================================================================
--- Partioning a value into a bunch of pieces, that sum to that value
+-- Partitioning a value into a bunch of pieces, that sum to that value
 
 -- | Generate a list of length 'size' that sums to 'total', where the minimum element is (>= 'smallest')
 intPartition :: [String] -> String -> Int -> Int -> Int -> Gen [Int]
 intPartition msgs typname smallest size total
   | size == 0 = errorMess (zeroCount "intPartition" total) msgs
-  | size > total = errorMess ("Can't partition " ++ show total ++ " into " ++ show size ++ " positive pieces at type " ++ typname) msgs
-  | size < 1 = errorMess ("Can only make a partion of positive number of pieces: " ++ show size ++ " total: " ++ show total ++ " smallest: " ++ show smallest) msgs
+  | size > total =
+      errorMess
+        ( "Can't partition "
+            ++ show total
+            ++ " into "
+            ++ show size
+            ++ " positive pieces at type "
+            ++ typname
+        )
+        msgs
+  | size < 1 =
+      errorMess
+        ( "Can only make a partion of positive number of pieces: "
+            ++ show size
+            ++ " total: "
+            ++ show total
+            ++ " smallest: "
+            ++ show smallest
+        )
+        msgs
   | smallest < 0 = errorMess ("The minimum choice must be positive : " ++ show smallest) msgs
   | smallest * size > total =
       errorMess
-        ("Can't partition " ++ show total ++ " into " ++ show size ++ " pieces, each (>= " ++ show smallest ++ ")")
+        ( "Can't partition "
+            ++ show total
+            ++ " into "
+            ++ show size
+            ++ " pieces, each (>= "
+            ++ show smallest
+            ++ ")"
+        )
         msgs
   | total < 1 = errorMess ("Total must be positive: " ++ show total) msgs
   | otherwise =
@@ -143,13 +171,6 @@ naturalPartition msgs smallest size total =
 
 -- ==========================================
 -- The Adds class
-
-suchThatErr :: [String] -> Gen a -> (a -> Bool) -> Gen a
-suchThatErr msgs gen p = do
-  x <- suchThatMaybe gen p
-  case x of
-    Just y -> pure y
-    Nothing -> errorMess "SuchThat times out" msgs
 
 class (Ord x, Show x) => Adds x where
   add :: x -> x -> x
@@ -435,8 +456,12 @@ data TxOut era where
 unTxOut :: TxOut era -> Core.TxOut era
 unTxOut (TxOut _ x) = x
 
+-- ======
 data Value era where
   Value :: Proof era -> Core.Value era -> Value era
+
+unValue :: Value era -> Core.Value era
+unValue (Value _ v) = v
 
 instance Ord (Value (ShelleyEra c)) where
   compare (Value _ coin1) (Value _ coin2) = compare coin1 coin2
@@ -448,9 +473,7 @@ instance Ord (Value (AllegraEra c)) where
 instance Eq (Value (AllegraEra c)) where
   x == y = compare x y == EQ
 
-unValue :: Value era -> Core.Value era
-unValue (Value _ v) = v
-
+-- ======
 data PParams era where
   PParams :: Proof era -> Core.PParams era -> PParams era
 
@@ -460,12 +483,76 @@ unPParams (PParams _ p) = p
 pparamsWrapperL :: Lens' (PParams era) (Core.PParams era)
 pparamsWrapperL = lens unPParams (\(PParams p _) pp -> PParams p pp)
 
+-- =======
+
 data PParamsUpdate era where
   PParamsUpdate :: Proof era -> Core.PParamsUpdate era -> PParamsUpdate era
 
 unPParamsUpdate :: PParamsUpdate era -> Core.PParamsUpdate era
 unPParamsUpdate (PParamsUpdate _ p) = p
 
+pparamsUpdateWrapperL :: Lens' (PParamsUpdate era) (Core.PParamsUpdate era)
+pparamsUpdateWrapperL = lens unPParamsUpdate (\(PParamsUpdate p _) pp -> PParamsUpdate p pp)
+
+-- =====================
+
+data ProposedPPUpdates era where
+  ProposedPPUpdates :: Proof era -> Core.ProposedPPUpdates era -> ProposedPPUpdates era
+
+-- newtype Core.ProposedPPUpdates era = Core.ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (Core.PParamsUpdate era))
+
+unProposedPPUpdates :: ProposedPPUpdates era -> Core.ProposedPPUpdates era
+unProposedPPUpdates (ProposedPPUpdates _ x) = x
+
+proposedCoreL :: Lens' (Core.ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (Core.PParamsUpdate era))
+proposedCoreL = lens (\(Core.ProposedPPUpdates m) -> m) (\(Core.ProposedPPUpdates _) m -> Core.ProposedPPUpdates m)
+
+proposedWrapperL :: Lens' (ProposedPPUpdates era) (Core.ProposedPPUpdates era)
+proposedWrapperL = lens unProposedPPUpdates (\(ProposedPPUpdates p _) pp -> ProposedPPUpdates p pp)
+
+coreMapL ::
+  Proof era ->
+  Lens'
+    (Map (KeyHash 'Genesis (EraCrypto era)) (Core.PParamsUpdate era))
+    (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+coreMapL p = lens (fmap (PParamsUpdate p)) (\_ b -> fmap unPParamsUpdate b)
+
+proposedMapL :: Lens' (ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+proposedMapL =
+  lens
+    (\(ProposedPPUpdates p x) -> x ^. (proposedCoreL . (coreMapL p)))
+    (\(ProposedPPUpdates p x) y -> ProposedPPUpdates p (x & (proposedCoreL . (coreMapL p)) .~ y))
+
+-- ====================
+
+data GovernanceState era = GovernanceState (Proof era) (Core.GovernanceState era)
+
+unGovernanceState :: GovernanceState era -> Core.GovernanceState era
+unGovernanceState (GovernanceState _ x) = x
+
+governanceProposedL :: Lens' (GovernanceState era) (ShelleyPPUPState era)
+governanceProposedL =
+  lens
+    (\(GovernanceState p x) -> getPPUP p x)
+    (\(GovernanceState p _) y -> GovernanceState p (putPPUP p y))
+
+getPPUP :: forall era. Proof era -> Core.GovernanceState era -> ShelleyPPUPState era
+getPPUP (Shelley _) x = x
+getPPUP (Allegra _) x = x
+getPPUP (Mary _) x = x
+getPPUP (Alonzo _) x = x
+getPPUP (Babbage _) x = x
+getPPUP (Conway _) _ = def @(ShelleyPPUPState era)
+
+putPPUP :: forall era. Proof era -> ShelleyPPUPState era -> Core.GovernanceState era
+putPPUP (Shelley _) x = x
+putPPUP (Allegra _) x = x
+putPPUP (Mary _) x = x
+putPPUP (Alonzo _) x = x
+putPPUP (Babbage _) x = x
+putPPUP (Conway _) _ = Core.emptyGovernanceState @era
+
+-- ================
 liftUTxO :: Map (TxIn (EraCrypto era)) (TxOut era) -> UTxO era
 liftUTxO m = UTxO (Map.map unTxOut m)
 
@@ -480,6 +567,9 @@ instance Show (PParams era) where
 
 instance Show (PParamsUpdate era) where
   show (PParamsUpdate _ _) = "PParamsUpdate ..."
+
+instance Show (ProposedPPUpdates era) where
+  show (ProposedPPUpdates _ _) = "ProposedPPUdates ..."
 
 genValue :: Proof era -> Gen (Value era)
 genValue p = case p of
@@ -516,6 +606,24 @@ genPParamsUpdate p = case p of
   (Alonzo _) -> PParamsUpdate p <$> arbitrary
   (Babbage _) -> PParamsUpdate p <$> arbitrary
   (Conway _) -> PParamsUpdate p <$> arbitrary
+
+genProposedPPUpdates :: Proof era -> Gen (ProposedPPUpdates era)
+genProposedPPUpdates p = case p of
+  (Shelley _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
+  (Allegra _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
+  (Mary _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
+  (Alonzo _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
+  (Babbage _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
+  (Conway _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
+
+genGovernanceState :: Proof era -> Gen (GovernanceState era)
+genGovernanceState p = case p of
+  (Shelley _) -> GovernanceState p <$> arbitrary
+  (Allegra _) -> GovernanceState p <$> arbitrary
+  (Mary _) -> GovernanceState p <$> arbitrary
+  (Alonzo _) -> GovernanceState p <$> arbitrary
+  (Babbage _) -> GovernanceState p <$> arbitrary
+  (Conway _) -> pure $ GovernanceState p Core.emptyGovernanceState
 
 genUTxO :: Proof era -> Gen (UTxO era)
 genUTxO p = case p of

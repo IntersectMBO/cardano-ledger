@@ -229,10 +229,7 @@ sameWithDependency (SomeM labx actx x1 x2 : more) =
     ansx -> extendLabel (labx ++ " ") ansx ++ sameWithDependency more
 
 instance
-  ( Eq (TranslationContext era)
-  , Show (TranslationContext era)
-  , Reflect era
-  ) =>
+  Reflect era =>
   Same era (ShelleyLedgerExamples era)
   where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of
@@ -327,9 +324,6 @@ sameLedgerFail (Conway _) x y = eqByShow x y
 {-# NOINLINE sameLedgerFail #-}
 
 sameTransCtx ::
-  ( Eq (TranslationContext era)
-  , Show (TranslationContext era)
-  ) =>
   Proof era ->
   TranslationContext era ->
   TranslationContext era ->

@@ -481,7 +481,7 @@ prop_soundness' strict info =
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
           ensureTyped (compile info preds) $ \graph ->
             forAll (genDependGraph False testProof graph) . flip checkRight $ \subst ->
-              let env = substToEnv subst emptyEnv
+              let env = errorTyped $ substToEnv subst emptyEnv
                   checkPred pr = counterexample ("Failed: " ++ show pr) $ ensureTyped (runPred env pr) id
                   n = let Env e = gEnv genenv in Map.size e
                in tabulate "Var count" [show n] $
