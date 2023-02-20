@@ -10,6 +10,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary, MaryEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
+import System.Environment (lookupEnv)
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.AllegraEraGen ()
@@ -29,20 +30,20 @@ import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty
 import qualified Test.Tasty.QuickCheck as TQC
-import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
 type instance EraRule "TICKN" (MaryEra _c) = TPraos.TICKN
 
 type instance EraRule "TICKN" (AllegraEra _c) = TPraos.TICKN
 
-tests :: TestTree
-tests = askOption $ \case
-  Nightly -> nightlyTests
-  Fast -> mainTests
-  _ -> mainTests
+main :: IO ()
+main = do
+  nightly <- lookupEnv "NIGHTLY"
+  defaultMain $ case nightly of
+    Nothing -> defaultTests
+    Just _ -> nightlyTests
 
-mainTests :: TestTree
-mainTests =
+defaultTests :: TestTree
+defaultTests =
   testGroup
     "ShelleyMA Ledger Tests"
     [ allegraTests
@@ -90,6 +91,3 @@ nightlyTests =
         "Mary Ledger - nightly"
         (Shelley.commonTests @Mary @(ShelleyLEDGER Mary))
     ]
-
-main :: IO ()
-main = mainWithTestScenario tests
