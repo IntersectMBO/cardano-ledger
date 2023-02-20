@@ -34,7 +34,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (MultiAsset (..))
 import Cardano.Ledger.Pretty (
   PrettyA (..),
-  PrettyAnn (Width),
+  PrettyAnn (Width), ppRecord,
  )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Pretty.Mary ()
@@ -327,13 +327,13 @@ instance CC.Crypto c => Fixed (PublicSecret kr kr' c) where
 
 instance Crypto c => PrettyA (KeyPair r c) where
   prettyA (KeyPair x y) =
-    ppRecord "KeyPair" [("vKey", ppVKey x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
+    ppRecord "KeyPair" [("vKey", prettyA x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
 
 instance (CC.Crypto c) => PrettyA (PublicSecret kr kr' c) where
-  prettyA (PublicSecret x y) = ppPair prettyA prettyA (x, y)
+  prettyA (PublicSecret x y) = prettyA (x, y)
 
 instance PrettyA (SKey kr c) where
-  prettyA (SKey _x) = ppString "SKey"
+  prettyA (SKey _x) = "SKey"
 
 instance PrettyA (MultiAsset era) where
   prettyA (MultiAsset v) = prettyA v

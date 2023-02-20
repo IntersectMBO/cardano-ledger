@@ -17,10 +17,7 @@ module Cardano.Ledger.Pretty.Core (
   PDoc,
   PrettyA (..),
   GPrettyA (..),
-
   -- Utils
-  ppSexp,
-  ppRecord,
   text,
   putDoc,
   puncLeft,
@@ -28,15 +25,23 @@ module Cardano.Ledger.Pretty.Core (
   atWidth,
   ptrace,
   occaisionally,
+  arrow,
+  -- Common prettyprinters
+  ppSexp,
+  ppRecord,
+  ppMap,
+  ppMap',
+  ppAssocList,
 ) where
 
+import qualified Data.Hashable as Hashable
+import qualified Data.Map.Strict as Map
+import Data.Text (Text)
+import Debug.Trace (trace)
 import GHC.Generics (Generic (..))
 import Prettyprinter
-import Data.Text (Text)
-import Prettyprinter.Internal.Type (Doc(..))
+import Prettyprinter.Internal.Type (Doc (..))
 import Prettyprinter.Util (putDocW)
-import Debug.Trace (trace)
-import qualified Data.Hashable as Hashable
 
 newtype PrettyAnn = Width Int
 
@@ -119,3 +124,25 @@ ptrace x y z = trace ("\n" ++ show (prettyA y) ++ "\n" ++ show x) z
 -- | turn on trace appromimately 1 in 'n' times it is called.
 occaisionally :: Hashable.Hashable a => a -> Int -> String -> String
 occaisionally x n s = if mod (Hashable.hash x) n == 0 then trace s s else s
+
+-- | x -> y
+arrow :: (Doc a, Doc a) -> Doc a
+arrow (x, y) = group (flatAlt (hang 2 (sep [x <+> text "->", y])) (hsep [x, text "->", y]))
+
+ppAssocList :: PDoc -> (k -> PDoc) -> (v -> PDoc) -> [(k, v)] -> PDoc
+ppAssocList name kf vf xs =
+  let docs = fmap (\(k, v) -> arrow (kf k, vf v)) xs
+      vertical =
+        if isEmpty name
+          then hang 1 (puncLeft lbrace docs comma rbrace)
+          else hang 1 (vcat [name, puncLeft lbrace docs comma rbrace])
+   in group $
+        flatAlt
+          vertical
+          (name <> encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) docs)
+
+ppMap' :: PDoc -> (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
+ppMap' name kf vf = ppAssocList name kf vf . Map.toList
+
+ppMap :: (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
+ppMap = ppMap' (text "Map")

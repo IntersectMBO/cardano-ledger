@@ -34,6 +34,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
+  BoundedRational (..),
   DnsName,
   FixedPoint,
   Globals (..),
@@ -51,7 +52,7 @@ import Cardano.Ledger.BaseTypes (
   certIxToInt,
   dnsToText,
   getVersion64,
-  txIxToInt, BoundedRational (..),
+  txIxToInt,
  )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -85,6 +86,7 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty.Core
 import Cardano.Ledger.Pretty.Generic ()
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -195,7 +197,6 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Natural (Natural)
 import Lens.Micro ((^.))
 import Prettyprinter
-import Cardano.Ledger.Shelley (ShelleyEra)
 
 instance PrettyA Long.ByteString where
   prettyA = ppLong
@@ -298,10 +299,6 @@ ppLong x = text (long_bech32 x)
 ppLazy :: Lazy.ByteString -> PDoc
 ppLazy x = text (lazy_bech32 x)
 
--- | x -> y
-arrow :: (Doc a, Doc a) -> Doc a
-arrow (x, y) = group (flatAlt (hang 2 (sep [x <+> text "->", y])) (hsep [x, text "->", y]))
-
 ppSet :: (x -> Doc ann) -> Set x -> Doc ann
 ppSet p xs = encloseSep lbrace rbrace comma (map p (toList xs))
 
@@ -316,23 +313,15 @@ ppMaybe :: (x -> Doc ann) -> Maybe x -> Doc ann
 ppMaybe _ Nothing = text "?-"
 ppMaybe p (Just x) = text "?" <> p x
 
-ppAssocList :: PDoc -> (k -> PDoc) -> (v -> PDoc) -> [(k, v)] -> PDoc
-ppAssocList name kf vf xs =
-  let docs = fmap (\(k, v) -> arrow (kf k, vf v)) xs
-      vertical =
-        if isEmpty name
-          then hang 1 (puncLeft lbrace docs comma rbrace)
-          else hang 1 (vcat [name, puncLeft lbrace docs comma rbrace])
-   in group $
-        flatAlt
-          vertical
-          (name <> encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) docs)
-
-ppMap' :: PDoc -> (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
-ppMap' name kf vf = ppAssocList name kf vf . Map.toList
-
-ppMap :: (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
-ppMap = ppMap' (text "Map")
+ppVMap ::
+  ( PrettyA k
+  , PrettyA v
+  , VMap.Vector kv k
+  , VMap.Vector vv v
+  ) =>
+  VMap kv vv k v ->
+  PDoc
+ppVMap = ppAssocList (text "VMap") prettyA prettyA . VMap.toList
 
 instance
   ( PrettyA k
@@ -342,7 +331,7 @@ instance
   ) =>
   PrettyA (VMap kv vv k v)
   where
-  prettyA = ppAssocList (text "VMap") prettyA prettyA . VMap.toList
+  prettyA = ppVMap
 
 -- =============================================================================
 -- END HELPER FUNCTIONS
