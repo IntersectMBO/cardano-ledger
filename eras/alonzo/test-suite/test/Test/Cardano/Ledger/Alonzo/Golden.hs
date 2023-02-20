@@ -6,11 +6,7 @@
 -- Module      : Test.Cardano.Ledger.Alonzo.Golden
 -- Description : Golden Tests for the Alonzo era
 module Test.Cardano.Ledger.Alonzo.Golden (
-  goldenUTxOEntryMinAda,
-  goldenSerialization,
-  goldenMinFee,
-  goldenScriptIntegrity,
-  goldenGenesisSerialization,
+  tests,
 )
 where
 
@@ -75,6 +71,17 @@ coinsPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
 
 calcMinUTxO :: AlonzoTxOut Alonzo -> Coin
 calcMinUTxO tout = Coin (utxoEntrySize tout * coinsPerUTxOWordLocal)
+
+tests :: TestTree
+tests =
+  testGroup
+    "Alonzo Golden Tests"
+    [ goldenSerialization
+    , goldenMinFee
+    , goldenScriptIntegrity
+    , goldenGenesisSerialization
+    , goldenUTxOEntryMinAda
+    ]
 
 -- | (heapWords of a DataHash) * coinsPerUTxOWordLocal is 344820
 goldenUTxOEntryMinAda :: TestTree
