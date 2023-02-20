@@ -56,7 +56,7 @@ BEFORE
 main :: IO ()
 main = do
   hSetEncoding stdout utf8
-  mainWithTestScenario tests
+  defaultMain tests
 ------------------------
 
 AFTER
@@ -67,10 +67,10 @@ import Test.Cardano.Ledger.Generic.Properties (adaIsPreservedBabbage)
 mainSave :: IO ()
 mainSave = do
   hSetEncoding stdout utf8
-  mainWithTestScenario tests
+  defaultMain tests
 
 main :: IO ()
-main = defaultMain adaIsPreservedBabbage 
+main = defaultMain adaIsPreservedBabbage
 -----------------------
 
 The variable 'adaIsPreservedBabbage' is a property test of type 'TestTree' that takes
@@ -91,14 +91,14 @@ There are also a few slack threads about this. For example
 https://input-output-rnd.slack.com/archives/C21UF2WVC/p1624555583258300
 The workaround for this is quite convoluted, but I will try and give explicit directions here.
 
-First we must add (or change if you already have it) cabal.project.local  In the root of the 
+First we must add (or change if you already have it) cabal.project.local  In the root of the
 ledger repository. Put this in cabal.project.local
 ---------------------
 ignore-project: False
 profiling: True
 profiling-detail: all-functions
 
-package plutus-core 
+package plutus-core
    ghc-options: -fexternal-interpreter
 ---------------------
 
@@ -115,7 +115,7 @@ The final step is to pass the right flags to nix-shell, cabal, and ghc. Here is 
    nix-shell --arg config "{ haskellNix.profiling = true; }"
 2) to build with cabal, we must use
    cabal build --enable-profiling
-3) to run the test, we must pass extra flags to ghc, so we must use   
+3) to run the test, we must pass extra flags to ghc, so we must use
    cabal test --test-options="+RTS  -i60 -p"
 
 How to build the system for profiling
@@ -132,7 +132,7 @@ every file in the Ledger is compiled with profiling enabled). This might take a
 while. Be patient. Take the dogs for a walk.
 
 Now change directories to the root directory of the modlue that contains your
-modified Test file, and type 
+modified Test file, and type
 
 cabal build --enable-profiling
 
