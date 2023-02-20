@@ -97,23 +97,18 @@ These include:
   $\fun{indexof}$ is a helper function that finds the index of a given certificate, value, input, or
   withdrawal in a list, finite map, or set of such objects. The implementation is not given
   directly, but we give a high-level description of how it relies on the underlying ordering.
-  For each of these, it computes the index as follows :
+  For each of these, it computes the index as follows:
   \begin{itemize}
     \item certificates in the $\DCert$ list are indexed in the order in which they arranged
     in the (full, unfiltered) list of certificates inside the transaction
     \item the index of a reward account $\var{ract}$ in the reward withdrawals map is
     the index of $\var{ract}$ as a key in the (unfiltered) map. The keys of the $\Wdrl$
     map are arranged in the order defined on the $\RewardAcnt$ type, which is a lexicographical
-    (abbrv. lex) order
-    on the pair of the $\Network$ and the $\Credential$.
-    \item the set of inputs is an ordered set (according to the order defined on
-    the type $\TxIn$) - this also is the order in which the elements of the set are
-    indexed (lex order on the pair of $\TxId$ and $\Ix$). All inputs of a transaction
-    are included in the set being indexed (not just the ones that point to a Plutus script UTxO)
-    \item the set of policy IDs is ordered according to the order defined on $\PolicyID$ (lex).
-    The index of a $\PolicyID$ in this set of policy IDs is computed according to this order.
-    Note that at the use site, the set of policy IDs passed to $\fun{indexof}$ is
-    the (unfiltered) domain of the $\Value$ map in the $\fun{mint}$ field of the transaction.
+    order on the pair of the $\Network$ and the $\Credential$.
+    \item the set of inputs is ordered according to the lexicographical order on
+    the type $\TxIn$, and the index is the index of the list obtained from this ordering.
+    \item as with the inputs, the set of policy IDs is ordered lexicographically and the
+    index is derived from the list obtained from this ordering.
   \end{itemize}
   Note that in all the orderings above, long and short lex are one in the same, since
   for each of the ordered types, all the terms of that type have the same length.
