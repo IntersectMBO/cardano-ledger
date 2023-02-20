@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
--- | The type that make up the Absract Syntax Tree of the Language
+-- | The types that make up the Abstract Syntax Trees of the Language
 module Test.Cardano.Ledger.Constrained.Ast where
 
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -23,10 +23,11 @@ import Data.Text (Text, pack)
 import qualified Data.Universe as Univ (Any (..))
 import Data.Word (Word64)
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Count (..), Sizeable (..), SumCond (..), Sums (..), runCond)
-import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyW (..), Env, Name (..), V (..), W (..), findVar, storeVar)
+import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Count (..), Sizeable (..), Sums (..))
+import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env, Field (..), Name (..), V (..), findVar, storeVar)
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
-import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), Size (..), synopsis, testEql, (:~:) (Refl))
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), runOrdCond, runSize)
+import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), synopsis, testEql, (:~:) (Refl))
 
 -- ================================================
 
@@ -52,10 +53,10 @@ data Pred era where
   (:=:) :: Eq a => Term era a -> Term era a -> Pred era
   (:<=:) :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
   Disjoint :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
-  SumsTo :: Adds c => SumCond -> Term era c -> [Sum era c] -> Pred era
+  SumsTo :: Adds c => OrdCond -> Term era c -> [Sum era c] -> Pred era
   Random :: Term era t -> Pred era
   HasDom :: Ord d => Term era (Map d r) -> Term era (Set d) -> Pred era
-  Component :: Term era t -> [AnyW era t] -> Pred era
+  Component :: Term era t -> [AnyF era t] -> Pred era
   CanFollow :: Count n => Term era n -> Term era n -> Pred era
 
 data Sum era c where
@@ -116,9 +117,12 @@ data Target era t where
 
 infixl 0 $>
 
--- | Version of (:$) That takes a Term on the left, rather than a Target
+-- | Version of (:$) That takes a Term on the right, rather than a Target
 ($>) :: Target era (a -> t) -> Term era a -> Target era t
 ($>) f x = f :$ (Simple x)
+
+constTarget :: t -> Target era t
+constTarget t = Constr "constTarget" (const t) $> (Fixed (Lit UnitR ()))
 
 -- ===================================
 
@@ -131,7 +135,6 @@ instance Show (Literal era t) where
   show (Lit r k) = synopsis r k
 
 instance Show (Term era t) where
-  -- show (Fixed k) = "(Fixed " ++ show k ++ ")"
   show (Fixed k) = show k
   show (Var (V nm _rep _)) = nm -- ++ "::" ++ show _rep
   show (Dom x) = "(Dom " ++ show x ++ ")"
@@ -230,8 +233,8 @@ varsOfPred ans s = case s of
   HasDom a b -> varsOfTerm (varsOfTerm ans a) b
   Component t cs -> varsOfTerm (List.foldl' varsOfComponent ans cs) t
     where
-      varsOfComponent l (AnyW (W n r a)) = Set.insert (Name $ V n r a) l
-      varsOfComponent l (AnyW (WConst _ _)) = l
+      varsOfComponent l (AnyF (Field n r a)) = Set.insert (Name $ V n r a) l
+      varsOfComponent l (AnyF (FConst _ _ _)) = l
   (CanFollow a b) -> varsOfTerm (varsOfTerm ans a) b
 
 varsOfSum :: Set (Name era) -> Sum era r -> Set (Name era)
@@ -243,11 +246,11 @@ varsOfSum ans (Project _ x) = varsOfTerm ans x
 -- =====================================================
 -- Subtitution of (V era t) inside of (Spec era t)
 
-substToEnv :: [SubItem era] -> Env era -> Env era
-substToEnv [] ans = ans
+substToEnv :: [SubItem era] -> Env era -> Typed (Env era)
+substToEnv [] ans = pure ans
 substToEnv ((SubItem v (Fixed (Lit _ t))) : more) ans =
   substToEnv more (storeVar v t ans)
-substToEnv ((SubItem _ e) : _) _ = error ("Not Literal expr in substToEnv: " ++ show e)
+substToEnv ((SubItem _ e) : _) _ = failT ["Not Literal expr in substToEnv: " ++ show e]
 
 data SubItem era where SubItem :: V era t -> Term era t -> SubItem era
 
@@ -299,18 +302,11 @@ substPred sub (Random x) = Random (substTerm sub x)
 substPred sub (HasDom a b) = HasDom (substTerm sub a) (substTerm sub b)
 substPred sub (Component t cs) = Component (substTerm sub t) (substComp <$> cs)
   where
-    substComp (AnyW w@(W n r a)) = AnyW $ case findV sub (V n r a) of
-      (Fixed (Lit _ x)) -> WConst x a
+    substComp (AnyF w@(Field n r a)) = AnyF $ case findV sub (V n r a) of
+      (Fixed (Lit rep x)) -> FConst rep x a
       _ -> w
-    substComp x@(AnyW (WConst _ _)) = x
+    substComp x@(AnyF (FConst _ _ _)) = x
 substPred sub (CanFollow a b) = CanFollow (substTerm sub a) (substTerm sub b)
-
--- substPred _ c@(Component _ (WConst _ _)) = c
--- substPred sub (Component t w@(W name rep access)) = Component (substTerm sub t) val
---  where
---    val = case findV sub (V name rep access) of
---      (Fixed (Lit _ x)) -> WConst x access
---      _ -> w
 
 substSum :: Subst era -> Sum era t -> Sum era t
 substSum sub (SumMap x) = SumMap (substTerm sub x)
@@ -326,7 +322,7 @@ substTarget _ (Constr n f) = Constr n f
 -- ======================================================
 -- Symbolic evaluators
 
--- | Simplify only Fixed (or constant) Terms
+-- | Simplify Terms that only contain Fixed (or constant) sub-Terms
 simplify :: Term era t -> Typed t
 simplify (Fixed (Lit _ x)) = pure x
 simplify (Dom (Fixed (Lit _ x))) = pure (Map.keysSet x)
@@ -379,7 +375,7 @@ runPred :: Env era -> Pred era -> Typed Bool
 runPred env (Sized w x) = do
   sz <- runTerm env w
   item <- runTerm env x
-  pure (testSize (getsize item) sz)
+  pure (runSize (getsize item) sz)
 runPred env (x :=: y) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
@@ -396,7 +392,7 @@ runPred env (SumsTo cond x ys) = do
   x2 <- runTerm env x
   is <- mapM (runSum env) ys
   let y2 = List.foldl' add zero is
-  pure (runCond cond x2 y2)
+  pure (runOrdCond cond x2 y2)
 runPred _ (Random _) = pure True
 runPred env (HasDom m s) = do
   m2 <- runTerm env m
@@ -410,20 +406,13 @@ runPred env (CanFollow x y) = do
   y2 <- runTerm env y
   pure (canFollow x2 y2)
 
-testSize :: Int -> Size -> Bool
-testSize _ SzAny = True
-testSize _ (SzNever _) = False
-testSize n (SzMost m) = n <= m
-testSize n (SzLeast m) = n >= m
-testSize n (SzRng i j) = n >= i && n <= j
-
-runComp :: Env era -> s -> AnyW era s -> Typed Bool
-runComp _ _ (AnyW (W _ _ No)) = pure False
-runComp _ _ (AnyW (WConst _ No)) = pure False
-runComp env t (AnyW (W n r a@(Yes _ l))) = do
+runComp :: Env era -> s -> AnyF era s -> Typed Bool
+runComp _ _ (AnyF (Field _ _ No)) = pure False
+runComp _ _ (AnyF (FConst _ _ No)) = pure False
+runComp env t (AnyF (Field n r a@(Yes _ l))) = do
   t' <- runTerm env $ Var (V n r a)
   pure $ t ^. l == t'
-runComp _ t (AnyW (WConst v (Yes _ l))) = pure $ t ^. l == v
+runComp _ t (AnyF (FConst _ v (Yes _ l))) = pure $ t ^. l == v
 
 termRep :: Term era t -> Rep era t
 termRep (Fixed (Lit r _)) = r
@@ -455,5 +444,3 @@ makeTest :: Env era -> Pred era -> Typed (String, Bool, Pred era)
 makeTest env c = do
   b <- runPred env c
   pure (show c ++ " => " ++ show b, b, c)
-
--- ============================

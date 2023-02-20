@@ -16,19 +16,19 @@ source-repository head
     subdir:   libs/cardano-data
 
 library
+    exposed-modules:
+        Data.CanonicalMaps
+        Data.Pulse
+        Data.MapExtras
+        Data.UMap
+        Data.ListMap
+        Data.Universe
+
     hs-source-dirs:   src
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
-        
-    exposed-modules:
-        Data.CanonicalMaps,
-        Data.Pulse,
-        Data.MapExtras,
-        Data.UMap,
-        Data.ListMap,
-        Data.Universe
 
     build-depends:
         base >=4.14 && <4.17,

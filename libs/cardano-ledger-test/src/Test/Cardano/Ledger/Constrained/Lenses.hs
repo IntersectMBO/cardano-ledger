@@ -2,15 +2,9 @@
 
 module Test.Cardano.Ledger.Constrained.Lenses where
 
--- import Cardano.Ledger.Core (EraTxOut, TxOut, Value)
--- import Cardano.Ledger.DPState (DPState (..), DState (..), FutureGenDeleg, InstantaneousRewards, PState (..))
--- import Cardano.Ledger.TxIn (TxIn)
--- import Test.Cardano.Ledger.Constrained.TypeRep
--- import Cardano.Ledger.PoolDistr(IndividualPoolStake(..))
-
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, SlotNo)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
-import Cardano.Ledger.Core (EraRule, PParams)
+import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
@@ -33,7 +27,10 @@ import Cardano.Ledger.UMapCompact (
   unify,
  )
 import Cardano.Ledger.UTxO (UTxO (..))
-import Control.State.Transition.Extended (State)
+
+-- import Control.State.Transition.Extended (State)
+
+import Cardano.Ledger.Shelley.Governance (GovernanceState (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -44,6 +41,9 @@ import qualified Data.Set as Set
 import Data.VMap (VB, VMap)
 import Lens.Micro
 import Numeric.Natural (Natural)
+
+-- import Cardano.Ledger.Shelley.PParams(ProposedPPUpdates(..))
+-- import Cardano.Ledger.Core(PParamsUpdate)
 
 -- ====================================================
 -- Lenses
@@ -132,8 +132,8 @@ utxosDepositedL = lens utxosDeposited (\ds u -> ds {utxosDeposited = u})
 utxosFeesL :: Lens' (UTxOState era) Coin
 utxosFeesL = lens utxosFees (\ds u -> ds {utxosFees = u})
 
-utxosPpupsL :: Lens' (UTxOState era) (State (EraRule "PPUP" era))
-utxosPpupsL = lens utxosPpups (\ds u -> ds {utxosPpups = u})
+utxosGovernanceL :: Lens' (UTxOState era) (GovernanceState era)
+utxosGovernanceL = lens utxosGovernance (\ds u -> ds {utxosGovernance = u})
 
 utxosStakeDistrL :: Lens' (UTxOState era) (IncrementalStake (EraCrypto era))
 utxosStakeDistrL = lens utxosStakeDistr (\ds u -> ds {utxosStakeDistr = u})

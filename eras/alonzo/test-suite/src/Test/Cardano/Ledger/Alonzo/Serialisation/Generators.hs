@@ -42,6 +42,8 @@ import Data.Maybe (catMaybes)
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle
+
+-- import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.QuickCheck
@@ -135,7 +137,7 @@ instance
       <*> arbitrary
 
 instance
-  (EraTxOut era, Arbitrary (TxOut era)) =>
+  (EraTxOut era, Arbitrary (TxOut era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (AlonzoTxBody era)
   where
   arbitrary =
@@ -316,7 +318,7 @@ instance Arbitrary TagMismatchDescription where
     oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
 instance
-  (Era era, Arbitrary (PredicateFailure (EraRule "PPUP" era))) =>
+  (Era era, Arbitrary (PPUPPredFailure era)) =>
   Arbitrary (AlonzoUtxosPredFailure era)
   where
   arbitrary =

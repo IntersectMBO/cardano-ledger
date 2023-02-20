@@ -31,7 +31,6 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   liftUTxO,
   Proof (..),
   Evidence (..),
-  Size (SzExact, ..),
 )
 where
 
@@ -81,6 +80,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
   unValue,
  )
 import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
+import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
@@ -135,7 +135,7 @@ data Rep era t where
   DeltaCoinR :: Rep era DeltaCoin
   GenDelegPairR :: Rep era (GenDelegPair (EraCrypto era))
   FutureGenDelegR :: Rep era (FutureGenDeleg (EraCrypto era))
-  PPUPStateR :: Rep era (PPUPState era)
+  PPUPStateR :: Proof era -> Rep era (ShelleyPPUPState era)
   PtrR :: Rep era Ptr
   IPoolStakeR :: Rep era (IndividualPoolStake (EraCrypto era))
   SnapShotsR :: Rep era (SnapShots (EraCrypto era))
@@ -195,7 +195,7 @@ instance Singleton (Rep e) where
   testEql DeltaCoinR DeltaCoinR = Just Refl
   testEql GenDelegPairR GenDelegPairR = Just Refl
   testEql FutureGenDelegR FutureGenDelegR = Just Refl
-  testEql PPUPStateR PPUPStateR = Just Refl
+  testEql (PPUPStateR c) (PPUPStateR d) = do Refl <- testEql c d; pure Refl
   testEql PtrR PtrR = Just Refl
   testEql IPoolStakeR IPoolStakeR = Just Refl
   testEql SnapShotsR SnapShotsR = Just Refl
@@ -238,7 +238,7 @@ instance Show (Rep era t) where
   show DeltaCoinR = "DeltaCoin"
   show GenDelegPairR = "(GenDelegPair c)"
   show FutureGenDelegR = "(FutureGenDeleg c)"
-  show PPUPStateR = "(PPUPStateR era)"
+  show (PPUPStateR p) = "(ShelleyPPUPState " ++ show p ++ ")"
   show PtrR = "Ptr"
   show IPoolStakeR = "(IndividualPoolStake c)"
   show SnapShotsR = "(SnapShots c)"
@@ -260,10 +260,12 @@ synopsis rep@(MapR a b) mp = case Map.toList mp of
   [] -> "(empty::Map " ++ show a ++ " " ++ show b ++ ")"
   ((d, r) : _) -> "Map{" ++ synopsis a d ++ " -> " ++ synopsis b r ++ " | size = " ++ show (Map.size mp) ++ synSum rep mp ++ "}"
 synopsis (SetR IntR) x = "Set" ++ show (Set.toList x)
+synopsis (SetR Word64R) x = "Set" ++ show (Set.toList x)
 synopsis rep@(SetR a) t
   | Set.null t = "(empty::Set " ++ show a ++ ")"
   | otherwise = "Set{" ++ synopsis a (head (Set.elems t)) ++ " | size = " ++ show (Set.size t) ++ synSum rep t ++ "}"
 synopsis (ListR IntR) x = show x
+synopsis (ListR Word64R) x = show x
 synopsis rep@(ListR a) ll = case ll of
   [] -> "(empty::" ++ show (ListR a) ++ "]"
   (d : _) -> "[" ++ synopsis a d ++ " | size = " ++ show (length ll) ++ synSum rep ll ++ "]"
@@ -286,7 +288,7 @@ synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
 synopsis FutureGenDelegR x = show (pcFutureGenDeleg x)
-synopsis PPUPStateR _ = "PPUPStateR ..."
+synopsis (PPUPStateR _) _ = "PPUPStateR ..."
 synopsis PtrR p = show p
 synopsis IPoolStakeR p = show (pcIndividualPoolStake p)
 synopsis SnapShotsR _ = "SnapShots ..."
@@ -352,7 +354,7 @@ instance Shaped (Rep era) any where
   shape DeltaCoinR = Nullary 22
   shape GenDelegPairR = Nullary 23
   shape FutureGenDelegR = Nullary 24
-  shape PPUPStateR = Nullary 25
+  shape (PPUPStateR p) = Nary 25 [shape p]
   shape PtrR = Nullary 26
   shape IPoolStakeR = Nullary 27
   shape SnapShotsR = Nullary 28
@@ -376,7 +378,7 @@ genSizedRep ::
   Int ->
   Rep era t ->
   Gen t
-genSizedRep _ CoinR = do Positive n <- arbitrary; pure (Coin n)
+genSizedRep _ CoinR = do Positive n <- arbitrary; pure (Coin n) -- We never store (Coin 0) so we don't generate it
 genSizedRep n (_a :-> b) = const <$> genSizedRep n b
 genSizedRep n r@(MapR a b) = do
   mapSized ["From genSizedRep " ++ show r] n (genSizedRep n a) (genSizedRep n b)
@@ -391,8 +393,8 @@ genSizedRep _ GenDelegHashR = arbitrary
 genSizedRep _ PoolParamsR = arbitrary
 genSizedRep _ EpochR = arbitrary
 genSizedRep _ RationalR = arbitrary
-genSizedRep _ Word64R = choose (1, 1000)
-genSizedRep _ IntR = resize 10 arbitrary
+genSizedRep _ Word64R = choose (0, 1000)
+genSizedRep _ IntR = resize 500 arbitrary
 genSizedRep _ NaturalR = arbitrary
 genSizedRep _ FloatR = arbitrary
 genSizedRep _ TxInR = arbitrary
@@ -405,7 +407,7 @@ genSizedRep _ (PParamsUpdateR p) = genPParamsUpdate p
 genSizedRep _ DeltaCoinR = arbitrary
 genSizedRep _ GenDelegPairR = arbitrary
 genSizedRep _ FutureGenDelegR = arbitrary
-genSizedRep _ PPUPStateR = arbitrary
+genSizedRep _ r@(PPUPStateR _) = genpup r
 genSizedRep _ PtrR = arbitrary
 genSizedRep _ IPoolStakeR = arbitrary
 genSizedRep _ SnapShotsR = arbitrary
@@ -433,6 +435,14 @@ genProtVer proof = frequency (zipWith pair [count, count - 1 .. 1] versions)
 protVerRange :: forall era. Era era => Proof era -> [Version]
 protVerRange _ = [Core.eraProtVerLow @era .. Core.eraProtVerHigh @era]
 
+genpup :: Rep era (ShelleyPPUPState era) -> Gen (ShelleyPPUPState era)
+genpup (PPUPStateR (Shelley _)) = arbitrary
+genpup (PPUPStateR (Allegra _)) = arbitrary
+genpup (PPUPStateR (Mary _)) = arbitrary
+genpup (PPUPStateR (Alonzo _)) = arbitrary
+genpup (PPUPStateR (Babbage _)) = arbitrary
+genpup (PPUPStateR (Conway _)) = arbitrary
+
 -- ===========================
 
 synopsisPParam :: forall era. Proof era -> Core.PParams era -> String
@@ -450,6 +460,7 @@ synopsisPParam p x = withEraPParams p help
         ++ (synopsis (ProtVerR p) (x ^. Core.ppProtocolVersionL))
         ++ "}"
 
+{-
 -- ==========================================================================
 -- The type Size is defined in TypeRep.hs, because its type must be known in
 -- Ast.hs (which it needs an (Rep era Size) SizeR defined here). It also acts
@@ -507,3 +518,4 @@ instance Monoid Size where mempty = SzAny
 
 instance Semigroup Size where
   (<>) = mergeSize
+-}

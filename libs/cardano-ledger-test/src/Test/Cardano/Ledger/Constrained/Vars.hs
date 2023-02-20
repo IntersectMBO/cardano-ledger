@@ -4,11 +4,21 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Cardano.Ledger.Constrained.Vars where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.Core (
+  EraPParams,
+  ppMaxBBSizeL,
+  ppMaxBHSizeL,
+  ppMaxTxSizeL,
+  ppMinFeeAL,
+  ppMinFeeBL,
+  ppProtocolVersionL,
+ )
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.DPState (DPState (..), DState (..), FutureGenDeleg (..), PState (..))
 import qualified Cardano.Ledger.DPState as DPS (InstantaneousRewards (..))
@@ -22,12 +32,15 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPState (..),
+  ShelleyPPUPState (..),
   UTxOState (..),
   smartUTxOState,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
+import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (Complete))
+import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
+import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMapCompact (compactCoinOrError, fromCompact)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -38,42 +51,38 @@ import qualified Data.VMap as VMap
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Constrained.Ast (Target (..), Term (Var), ppTarget, ($>))
-import Test.Cardano.Ledger.Constrained.Classes (PParams (..), PParamsUpdate (..), TxOut (..), liftUTxO, pparamsWrapperL, unPParams, unPParamsUpdate)
-import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyW (..), Field, Name (..), V (..), W (..))
+import Test.Cardano.Ledger.Constrained.Ast (Target (..), Term (Var), constTarget, ppTarget, ($>))
+import Test.Cardano.Ledger.Constrained.Classes (
+  GovernanceState (..),
+  PParams (..),
+  PParamsUpdate (..),
+  TxOut (..),
+  governanceProposedL,
+  liftUTxO,
+  pparamsWrapperL,
+  unPParams,
+  unPParamsUpdate,
+ )
+import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Field (..), Name (..), V (..))
 import Test.Cardano.Ledger.Constrained.Lenses
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), testEql, (:~:) (Refl))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..))
 
--- , RewardUpdate (RewardUpdate))
-
--- ,RewardType(..))
-import Cardano.Ledger.Core (
-  EraPParams,
-  ppMaxBBSizeL,
-  ppMaxBHSizeL,
-  ppMaxTxSizeL,
-  ppMinFeeAL,
-  ppMinFeeBL,
-  ppProtocolVersionL,
- )
-import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (Complete))
-import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
-import Cardano.Ledger.Shelley.Rewards (Reward (..))
-
--- import qualified Cardano.Ledger.Core as Core
--- import Cardano.Ledger.Shelley.LedgerState(PulsingRewUpdate, StashedAVVMAddresses)
+import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
+import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
+import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..))
+import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
 
 -- ================================================================
 
--- | Used in Component constraints to turn a Var Term into a component (AnyW era s)
+-- | Used in Component constraints to turn a Var Term into a component (AnyF era s)
 -- E.g.  (Component foo [ field fooRep fooPart1, field fooRep fooPart2])
 -- Where fooPart1 :: Term era a, and fooPart2 :: Term era b
 -- And fooPart1 has an (Access foo a)
 -- And fooPart2 has an (Access foo b)
-field :: (Eq t, Show t) => Rep era s -> Term era t -> AnyW era s
+field :: (Eq t, Show t) => Rep era s -> Term era t -> AnyF era s
 field repS1 (Var (V name rept access@(Yes repS2 _))) = case testEql repS1 repS2 of
-  Just Refl -> AnyW (W name rept access)
+  Just Refl -> AnyF (Field name rept access)
   Nothing ->
     error
       ( unlines
@@ -91,6 +100,8 @@ getName x = error ("nameOf can't find the name in: " ++ show x)
 -- ==============================================================
 -- NewEpochState fields
 
+type NELens era t = Lens' (NewEpochState era) t
+
 epochNo :: Term era EpochNo
 epochNo = Var $ V "epochNo" EpochR (Yes NewEpochStateR nesELL)
 
@@ -107,7 +118,7 @@ poolDistr = Var $ V "poolDistr" (MapR PoolHashR IPoolStakeR) (Yes NewEpochStateR
 mockPoolDistr :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) Rational)
 mockPoolDistr = Var $ V "mockPoolDistr" (MapR PoolHashR RationalR) No
 
-poolDistrL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+poolDistrL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
 poolDistrL = nesPdL . unPoolDistrL
 
 unPoolDistrL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
@@ -118,25 +129,25 @@ unPoolDistrL = lens unPoolDistr (\(PoolDistr _) x -> PoolDistr x)
 rewards :: Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 rewards = Var $ V "rewards" (MapR CredR CoinR) (Yes NewEpochStateR rewardsL)
 
-rewardsL :: Field era (Map (Credential 'Staking (EraCrypto era)) Coin)
+rewardsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 rewardsL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsUnifiedL . rewardsUMapL
 
 delegations :: Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 delegations = Var $ V "delegations" (MapR CredR PoolHashR) (Yes NewEpochStateR delegationsL)
 
-delegationsL :: Field era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+delegationsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 delegationsL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsUnifiedL . delegationsUMapL
 
 stakeDeposits :: Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 stakeDeposits = Var $ V "stakeDeposits" (MapR CredR CoinR) (Yes NewEpochStateR stakeDepositsL)
 
-stakeDepositsL :: Field era (Map (Credential 'Staking (EraCrypto era)) Coin)
+stakeDepositsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 stakeDepositsL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsUnifiedL . stakeDepositsUMapL
 
 ptrs :: Term era (Map Ptr (Credential 'Staking (EraCrypto era)))
 ptrs = Var $ V "ptrs" (MapR PtrR CredR) (Yes NewEpochStateR ptrsL)
 
-ptrsL :: Field era (Map Ptr (Credential 'Staking (EraCrypto era)))
+ptrsL :: NELens era (Map Ptr (Credential 'Staking (EraCrypto era)))
 ptrsL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsUnifiedL . ptrsUMapL
 
 futureGenDelegs :: Term era (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
@@ -147,13 +158,13 @@ futureGenDelegs =
       (MapR FutureGenDelegR GenDelegPairR)
       (Yes NewEpochStateR futureGenDelegsL)
 
-futureGenDelegsL :: Field era (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+futureGenDelegsL :: NELens era (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 futureGenDelegsL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsFutureGenDelegsL
 
 genDelegs :: Term era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 genDelegs = Var $ V "genDelegs" (MapR GenHashR GenDelegPairR) (Yes NewEpochStateR genDelegsL)
 
-genDelegsL :: Field era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+genDelegsL :: NELens era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 genDelegsL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsGenDelegsL . unGenDelegsL
 
 -- DState - InstantaneousRewards
@@ -161,25 +172,25 @@ genDelegsL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsGenDelegsL . unGen
 instanReserves :: Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 instanReserves = Var $ V "instanReserves" (MapR CredR CoinR) (Yes NewEpochStateR instanReservesL)
 
-instanReservesL :: Field era (Map (Credential 'Staking (EraCrypto era)) Coin)
+instanReservesL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 instanReservesL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsIRewardsL . iRReservesL
 
 instanTreasury :: Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 instanTreasury = Var $ V "instanTreasury" (MapR CredR CoinR) (Yes NewEpochStateR instanTreasuryL)
 
-instanTreasuryL :: Field era (Map (Credential 'Staking (EraCrypto era)) Coin)
+instanTreasuryL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 instanTreasuryL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsIRewardsL . iRTreasuryL
 
 deltaReserves :: Term era DeltaCoin
 deltaReserves = Var $ V "deltaReserves" DeltaCoinR (Yes NewEpochStateR deltaReservesL)
 
-deltaReservesL :: Field era DeltaCoin
+deltaReservesL :: NELens era DeltaCoin
 deltaReservesL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsIRewardsL . deltaResL
 
 deltaTreasury :: Term era DeltaCoin
 deltaTreasury = Var $ V "deltaTreasury" DeltaCoinR (Yes NewEpochStateR deltaTreasuryL)
 
-deltaTreasuryL :: Field era DeltaCoin
+deltaTreasuryL :: NELens era DeltaCoin
 deltaTreasuryL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsIRewardsL . deltaTreasL
 
 -- DPState - PState
@@ -187,25 +198,25 @@ deltaTreasuryL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsIRewardsL . de
 regPools :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 regPools = Var $ V "regPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR regPoolsL)
 
-regPoolsL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+regPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 regPoolsL = nesEsL . esLStateL . lsDPStateL . dpsPStateL . psStakePoolParamsL
 
 futureRegPools :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 futureRegPools = Var $ V "futureRegPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR futureRegPoolsL)
 
-futureRegPoolsL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+futureRegPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 futureRegPoolsL = nesEsL . esLStateL . lsDPStateL . dpsPStateL . psFutureStakePoolParamsL
 
 retiring :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
 retiring = Var $ V "retiring" (MapR PoolHashR EpochR) (Yes NewEpochStateR retiringL)
 
-retiringL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
+retiringL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
 retiringL = nesEsL . esLStateL . lsDPStateL . dpsPStateL . psRetiringL
 
 poolDeposits :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 poolDeposits = Var $ V "poolDeposits" (MapR PoolHashR CoinR) (Yes NewEpochStateR poolDepositsL)
 
-poolDepositsL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+poolDepositsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 poolDepositsL = nesEsL . esLStateL . lsDPStateL . dpsPStateL . psDepositsL
 
 -- UTxOState
@@ -213,7 +224,7 @@ poolDepositsL = nesEsL . esLStateL . lsDPStateL . dpsPStateL . psDepositsL
 utxo :: Proof era -> Term era (Map (TxIn (EraCrypto era)) (TxOut era))
 utxo p = Var $ V "utxo" (MapR TxInR (TxOutR p)) (Yes NewEpochStateR (utxoL p))
 
-utxoL :: Proof era -> Field era (Map (TxIn (EraCrypto era)) (TxOut era))
+utxoL :: Proof era -> NELens era (Map (TxIn (EraCrypto era)) (TxOut era))
 utxoL proof = nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL . unUtxoL proof
 
 unUtxoL :: Proof era -> Lens' (UTxO era) (Map (TxIn (EraCrypto era)) (TxOut era))
@@ -222,17 +233,27 @@ unUtxoL p = lens (Map.map (TxOut p) . unUTxO) (\(UTxO _) new -> (liftUTxO new))
 deposits :: Term era Coin
 deposits = Var $ V "deposits" CoinR (Yes NewEpochStateR depositsL)
 
-depositsL :: Field era Coin
+depositsL :: NELens era Coin
 depositsL = nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
 
 fees :: Term era Coin
 fees = Var $ V "fees" CoinR (Yes NewEpochStateR feesL)
 
-feesL :: Field era Coin
+feesL :: NELens era Coin
 feesL = nesEsL . esLStateL . lsUTxOStateL . utxosFeesL
 
-ppup :: Proof era -> Term era (PPUPState era)
-ppup p = Var $ (V "ppup" PPUPStateR (Yes NewEpochStateR (ppupsL p)))
+ppup :: Proof era -> Term era (ShelleyPPUPState era)
+ppup p = Var $ (V "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p)))
+
+ppupsL :: Proof era -> NELens era (ShelleyPPUPState era)
+ppupsL (Shelley _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
+ppupsL (Allegra _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
+ppupsL (Mary _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
+ppupsL (Alonzo _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
+ppupsL (Babbage _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
+ppupsL (Conway _) = error "Conway era does not have a PPUPState, in ppupsL"
+
+-- nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL . ???
 
 proposalsT :: Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
 proposalsT p = Var (V "proposals" (MapR GenHashR (PParamsUpdateR p)) No)
@@ -241,22 +262,23 @@ futureProposalsT ::
   Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
 futureProposalsT p = Var (V "futureProposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
-ppupStateT :: Proof era -> Target era (PPUPState era)
+ppupStateT :: Proof era -> Target era (ShelleyPPUPState era)
 ppupStateT p = Constr "PPUPState" ppupfun $> proposalsT p $> futureProposalsT p
   where
     ppupfun x y =
-      PPUPState
+      ShelleyPPUPState
         (ProposedPPUpdates (Map.map unPParamsUpdate x))
         (ProposedPPUpdates (Map.map unPParamsUpdate y))
 
-ppupsL :: Proof era -> Field era (PPUPState era)
-ppupsL (Shelley _) = nesEsL . esLStateL . lsUTxOStateL . utxosPpupsL
-ppupsL (Allegra _) = nesEsL . esLStateL . lsUTxOStateL . utxosPpupsL
-ppupsL (Mary _) = nesEsL . esLStateL . lsUTxOStateL . utxosPpupsL
-ppupsL (Alonzo _) = nesEsL . esLStateL . lsUTxOStateL . utxosPpupsL
-ppupsL (Babbage _) = nesEsL . esLStateL . lsUTxOStateL . utxosPpupsL
-ppupsL (Conway _) = nesEsL . esLStateL . lsUTxOStateL . utxosPpupsL
-
+governanceStateT :: forall era. Proof era -> Target era (GovernanceState era)
+governanceStateT p@(Shelley _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
+governanceStateT p@(Allegra _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
+governanceStateT p@(Mary _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
+governanceStateT p@(Alonzo _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
+governanceStateT p@(Babbage _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
+governanceStateT p@(Conway _) =
+  Constr "GovernanceState" (GovernanceState p)
+    :$ constTarget (Core.emptyGovernanceState @era)
 individualPoolStakeL :: Lens' (IndividualPoolStake c) Rational
 individualPoolStakeL = lens individualPoolStake (\ds u -> ds {individualPoolStake = u})
 
@@ -279,13 +301,13 @@ credMapL = nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL . isCredMapL
 treasury :: Term era Coin
 treasury = Var $ V "treasury" CoinR (Yes NewEpochStateR treasuryL)
 
-treasuryL :: Field era Coin
+treasuryL :: NELens era Coin
 treasuryL = nesEsL . esAccountStateL . asTreasuryL
 
 reserves :: Term era Coin
 reserves = Var $ V "reserves" CoinR (Yes NewEpochStateR reservesL)
 
-reservesL :: Field era Coin
+reservesL :: NELens era Coin
 reservesL = nesEsL . esAccountStateL . asReservesL
 
 -- EpochState
@@ -293,7 +315,7 @@ reservesL = nesEsL . esAccountStateL . asReservesL
 snapshots :: Term era (SnapShots (EraCrypto era))
 snapshots = Var (V "snapshots" SnapShotsR (Yes NewEpochStateR snapshotsL))
 
-snapshotsL :: Field era (SnapShots (EraCrypto era))
+snapshotsL :: NELens era (SnapShots (EraCrypto era))
 snapshotsL = nesEsL . esSnapshotsL
 
 prevpparams :: Proof era -> Term era (PParams era)
@@ -321,7 +343,7 @@ stakeL =
 vmapL :: Lens' (VMap.VMap VMap.VB VMap.VB k v) (Map k v)
 vmapL = lens VMap.toMap (\_ u -> VMap.fromMap u)
 
-markStakeL :: Field era (Map (Credential 'Staking (EraCrypto era)) Coin)
+markStakeL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 markStakeL = nesEsL . esSnapshotsL . ssStakeMarkL . ssStakeL . stakeL
 
 markStake :: Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
@@ -330,13 +352,13 @@ markStake = Var (V "markStake" (MapR CredR CoinR) (Yes NewEpochStateR markStakeL
 markDelegs :: Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 markDelegs = Var (V "markDelegs" (MapR CredR PoolHashR) (Yes NewEpochStateR markDelegsL))
 
-markDelegsL :: Field era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+markDelegsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 markDelegsL = nesEsL . esSnapshotsL . ssStakeMarkL . ssDelegationsL . vmapL
 
 markPools :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 markPools = Var (V "markPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR markPoolsL))
 
-markPoolsL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+markPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 markPoolsL = nesEsL . esSnapshotsL . ssStakeMarkL . ssPoolParamsL . vmapL
 
 markSnapShotT :: Target era (SnapShot (EraCrypto era))
@@ -351,19 +373,19 @@ markSnapShotT = Constr "SnapShot" snapfun $> markStake $> markDelegs $> markPool
 setStake :: Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 setStake = Var (V "setStake" (MapR CredR CoinR) (Yes NewEpochStateR setStakeL))
 
-setStakeL :: Field era (Map (Credential 'Staking (EraCrypto era)) Coin)
+setStakeL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 setStakeL = nesEsL . esSnapshotsL . ssStakeSetL . ssStakeL . stakeL
 
 setDelegs :: Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 setDelegs = Var (V "setDelegs" (MapR CredR PoolHashR) (Yes NewEpochStateR setDelegsL))
 
-setDelegsL :: Field era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+setDelegsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 setDelegsL = nesEsL . esSnapshotsL . ssStakeSetL . ssDelegationsL . vmapL
 
 setPools :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 setPools = Var (V "setPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR setPoolsL))
 
-setPoolsL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+setPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 setPoolsL = nesEsL . esSnapshotsL . ssStakeSetL . ssPoolParamsL . vmapL
 
 setSnapShotT :: Target era (SnapShot (EraCrypto era))
@@ -378,19 +400,19 @@ setSnapShotT = Constr "SnapShot" snapfun $> setStake $> setDelegs $> setPools
 goStake :: Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 goStake = Var (V "goStake" (MapR CredR CoinR) (Yes NewEpochStateR goStakeL))
 
-goStakeL :: Field era (Map (Credential 'Staking (EraCrypto era)) Coin)
+goStakeL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 goStakeL = nesEsL . esSnapshotsL . ssStakeGoL . ssStakeL . stakeL
 
 goDelegs :: Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 goDelegs = Var (V "goDelegs" (MapR CredR PoolHashR) (Yes NewEpochStateR goDelegsL))
 
-goDelegsL :: Field era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+goDelegsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 goDelegsL = nesEsL . esSnapshotsL . ssStakeGoL . ssDelegationsL . vmapL
 
 goPools :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 goPools = Var (V "goPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR goPoolsL))
 
-goPoolsL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+goPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 goPoolsL = nesEsL . esSnapshotsL . ssStakeGoL . ssPoolParamsL . vmapL
 
 goSnapShotT :: Target era (SnapShot (EraCrypto era))
@@ -405,7 +427,7 @@ goSnapShotT = Constr "SnapShot" snapfun $> goStake $> goDelegs $> goPools
 markPoolDistr :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
 markPoolDistr = Var (V "markPoolDistr" (MapR PoolHashR IPoolStakeR) No)
 
-markPoolDistrL :: Field era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+markPoolDistrL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
 markPoolDistrL = nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL . pooldistrHelpL
 
 pooldistrHelpL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
@@ -431,7 +453,7 @@ snapShotsT =
 deltaT :: Term era (Maybe DeltaCoin)
 deltaT = Var (V "deltaT" (MaybeR DeltaCoinR) (Yes NewEpochStateR deltaTL))
 
-deltaTL :: Field era (Maybe DeltaCoin)
+deltaTL :: NELens era (Maybe DeltaCoin)
 deltaTL = nesRuL . help
   where
     help :: Lens' (StrictMaybe (PulsingRewUpdate c)) (Maybe DeltaCoin)
@@ -446,7 +468,7 @@ deltaTL = nesRuL . help
 deltaR :: Term era (Maybe DeltaCoin)
 deltaR = Var (V "deltaR" (MaybeR DeltaCoinR) (Yes NewEpochStateR deltaRL))
 
-deltaRL :: Field era (Maybe DeltaCoin)
+deltaRL :: NELens era (Maybe DeltaCoin)
 deltaRL = nesRuL . help
   where
     help :: Lens' (StrictMaybe (PulsingRewUpdate c)) (Maybe DeltaCoin)
@@ -461,7 +483,7 @@ deltaRL = nesRuL . help
 deltaF :: Term era (Maybe DeltaCoin)
 deltaF = Var (V "deltaF" (MaybeR DeltaCoinR) (Yes NewEpochStateR deltaFL))
 
-deltaFL :: Field era (Maybe DeltaCoin)
+deltaFL :: NELens era (Maybe DeltaCoin)
 deltaFL = nesRuL . help
   where
     help :: Lens' (StrictMaybe (PulsingRewUpdate c)) (Maybe DeltaCoin)
@@ -476,7 +498,7 @@ deltaFL = nesRuL . help
 rewardSet :: Term era (Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
 rewardSet = Var (V "rewardSet" (MapR CredR (SetR RewardR)) No)
 
-rewardSetL :: Field era (Maybe (Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))))
+rewardSetL :: NELens era (Maybe (Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))))
 rewardSetL = nesRuL . help
   where
     help :: Lens' (StrictMaybe (PulsingRewUpdate c)) (Maybe (Map (Credential 'Staking c) (Set (Reward c))))
@@ -589,21 +611,22 @@ ledgerStateT proof = Constr "LedgerState" LedgerState :$ utxoStateT proof :$ dps
 
 -- | Target for UTxOState
 utxoStateT :: Proof era -> Target era (UTxOState era)
-utxoStateT p = Constr "UTxOState" (utxofun p) $> utxo p $> deposits $> fees :$ ppupStateT p
+utxoStateT p = Constr "UTxOState" (utxofun p) $> (pparams p) $> utxo p $> deposits $> fees :$ governanceStateT p
   where
     utxofun ::
       Proof era ->
+      PParams era ->
       Map (TxIn (EraCrypto era)) (TxOut era) ->
       Coin ->
       Coin ->
-      (PPUPState era) ->
+      GovernanceState era ->
       UTxOState era
-    utxofun (Shelley _) u = smartUTxOState (liftUTxO u)
-    utxofun (Mary _) u = smartUTxOState (liftUTxO u)
-    utxofun (Allegra _) u = smartUTxOState (liftUTxO u)
-    utxofun (Alonzo _) u = smartUTxOState (liftUTxO u)
-    utxofun (Babbage _) u = smartUTxOState (liftUTxO u)
-    utxofun (Conway _) u = smartUTxOState (liftUTxO u)
+    utxofun (Shelley _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Mary _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Allegra _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Alonzo _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Babbage _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Conway _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
 
 -- | Target for DPState
 dpstateT :: Target era (DPState (EraCrypto era))

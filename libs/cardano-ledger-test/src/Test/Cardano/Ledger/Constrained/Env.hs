@@ -7,10 +7,10 @@
 -- | Provides variables (V era t), and mappings of them to objects of type 't'
 module Test.Cardano.Ledger.Constrained.Env (
   V (..),
-  W (..),
-  AnyW (..),
-  vToW,
-  wToV,
+  Field (..),
+  AnyF (..),
+  vToField,
+  fieldToV,
   Env (..),
   Payload (..),
   emptyEnv,
@@ -18,69 +18,93 @@ module Test.Cardano.Ledger.Constrained.Env (
   storeVar,
   P (..),
   bulkStore,
-  Dyn (..),
   Name (..),
   Access (..),
-  Field,
 ) where
 
+import Data.List (intercalate)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import Data.Universe (Shaped (..))
-import Test.Cardano.Ledger.Constrained.Monad (Dyn (..), Typed (..), failT)
+import Lens.Micro
+import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
 
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
-import Data.List (intercalate)
-import Lens.Micro
-
 -- ================================================================
+-- V
+
+-- | A proto variable. May or may not contain a Lens (encoded as Access)
+data V era t where V :: String -> Rep era t -> Access era s t -> V era t
 
 data Access era s t where
   Yes :: forall s t era. Rep era s -> Lens' s t -> Access era s t
   No :: Access era s t
 
-type Field era x = Lens' (NewEpochState era) x
-
-data AnyW era s where
-  AnyW :: (Show t, Eq t) => W era s t -> AnyW era s
-
-instance Show (AnyW era s) where
-  show (AnyW (W n r _)) = "Field " ++ n ++ " " ++ show r
-  show (AnyW (WConst t No)) = "Const " ++ show t
-  show (AnyW (WConst t (Yes r _))) = "Const " ++ show t ++ " " ++ show r
-
-data V era t where V :: String -> Rep era t -> Access era s t -> V era t
-
-
 instance Show (V era t) where
   show (V nm rep _) = nm ++ " :: " ++ show rep
 
-data W era s t where
-  W :: Eq t => String -> Rep era t -> Access era s t -> W era s t
-  WConst :: Eq t => t -> Access era s t -> W era s t
+-- ===========================================================
+-- Name
 
-instance Show (W era s t) where
-  show (W n r _) = intercalate " " ["W", show n, show r]
-  show (WConst _ _) = "WConst"
+-- | An existentially quantified (V era t), hiding the 't'
+--   Usefull because unlike (V era t), it has both Eq and Ord instances
+data Name era where Name :: V era t -> Name era
 
-vToW :: Eq t => Rep era s -> V era t -> Typed (W era s t)
-vToW reps (V name rept access@(Yes reps' _)) = case testEql reps reps' of
-  Just Refl -> pure $ W name rept access
+instance Show (Name era) where
+  show (Name (V n _ _)) = n
+
+-- | Does not satisfy extensionality
+instance Eq (Name era) where
+  Name (V n1 rep1 _) == Name (V n2 rep2 _) = n1 == n2 && isJust (testEql rep1 rep2)
+
+instance Ord (Name era) where
+  compare v1@(Name (V n1 rep1 _)) v2@(Name (V n2 rep2 _)) =
+    if v1 == v2
+      then EQ
+      else case compare n1 n2 of
+        LT -> LT
+        GT -> GT
+        EQ -> compareRep rep1 rep2
+
+-- ================================================================
+-- Field
+
+-- | Fields are like V, except they expose the type of the Lens
+data Field era s t where
+  Field :: Eq t => String -> Rep era t -> Access era s t -> Field era s t
+  FConst :: Eq t => Rep era t -> t -> Access era s t -> Field era s t
+
+instance Show (Field era s t) where
+  show (Field n r _) = intercalate " " ["Field", show n, show r]
+  show (FConst r t _) = "FConst " ++ synopsis r t
+
+-- | Hide the type of 't' in a Field.
+data AnyF era s where
+  AnyF :: (Show t, Eq t) => Field era s t -> AnyF era s
+
+instance Show (AnyF era s) where
+  show (AnyF (Field n r _)) = "Field " ++ n ++ " " ++ show r
+  show (AnyF (FConst r t _)) = "FConst " ++ synopsis r t
+
+vToField :: Eq t => Rep era s -> V era t -> Typed (Field era s t)
+vToField reps (V name rept access@(Yes reps' _)) = case testEql reps reps' of
+  Just Refl -> pure $ Field name rept access
   Nothing ->
     failT
       [ "Given rep and lens target do not match: "
       , "rep: " ++ show reps
       , "lens target: " ++ show reps'
       ]
-vToW _ (V name rep No) = pure $ W name rep No
+vToField _ (V name rep No) = pure $ Field name rep No
 
-wToV :: W era s t -> Typed (V era t)
-wToV (W name rep access) = pure $ V name rep access
-wToV (WConst _ _) = failT ["Cannot convert a WConst to a V"]
+fieldToV :: Field era s t -> Typed (V era t)
+fieldToV (Field name rep access) = pure $ V name rep access
+fieldToV (FConst _ _ _) = failT ["Cannot convert a FieldConst to a V"]
 
+-- ===================================================
+-- Env
 
 data Payload era where
   Payload :: Rep era t -> t -> Access era s t -> Payload era
@@ -127,23 +151,3 @@ bulkStore ps env = List.foldl' accum env ps
     accum e (P v t) = storeVar v t e
 
 -- ===================================
-
--- | An existentially quantified (V era t), hiding the 't'
---   Usefull because unlike (V era t), it has both Eq and Ord instances
-data Name era where Name :: V era t -> Name era
-
-instance Show (Name era) where
-  show (Name (V n _ _)) = n
-
--- | Does not satisfy extensionality
-instance Eq (Name era) where
-  Name (V n1 rep1 _) == Name (V n2 rep2 _) = n1 == n2 && isJust (testEql rep1 rep2)
-
-instance Ord (Name era) where
-  compare v1@(Name (V n1 rep1 _)) v2@(Name (V n2 rep2 _)) =
-    if v1 == v2
-      then EQ
-      else case compare n1 n2 of
-        LT -> LT
-        GT -> GT
-        EQ -> compareRep rep1 rep2

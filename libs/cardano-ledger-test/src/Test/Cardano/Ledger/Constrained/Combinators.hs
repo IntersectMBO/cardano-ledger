@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.Constrained.Combinators where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Data.Char (chr)
+import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -15,33 +15,28 @@ import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck hiding (Fixed, total)
 
--- import Test.Cardano.Ledger.Constrained.Monad
-
--- import Debug.Trace(trace)
-import qualified Data.List as List
-
 -- ==========================================================================
+-- Tracking Gen-time errors
 
-test1 :: Int -> (Int -> Gen Int -> Gen b) -> IO b
-test1 n x = generate (x n (arbitrary :: Gen Int))
-
-test2 :: Int -> (Int -> Gen Int -> Gen Char -> Gen b) -> IO b
-test2 n x = generate (x n (arbitrary :: Gen Int) (elements [chr i | i <- [1 .. 128]]))
-
-small :: Gen Int
-small = elements [1 .. 6]
-
-data SubsetCond = Any | NotEmpty deriving (Eq, Show)
-
--- =======================================================================
-
--- | Report an error from the current message 'extra' and the
+-- | Report a Gen-time error from the current message 'extra' and the
 --   [messages] 'mess' describing the path to this call site.
 errorMess :: String -> [String] -> a
 errorMess extra mess = error (unlines ("\nGen-time error" : (reverse (extra : mess))))
 
+-- | suchThat version that tracks Gen-time errors
+suchThatErr :: [String] -> Gen a -> (a -> Bool) -> Gen a
+suchThatErr msgs gen p = do
+  x <- suchThatMaybe (resize 1000 gen) p
+  case x of
+    Just y -> pure y
+    Nothing -> errorMess "SuchThat times out" msgs
+
+-- =======================================================================
+
 setSized :: Ord a => [String] -> Int -> Gen a -> Gen (Set a)
-setSized mess size gen = do set <- (Set.fromList <$> vectorOf size gen); fixSet mess (size * 10) size gen set
+setSized mess size gen = do
+  set <- (Set.fromList <$> vectorOf size gen)
+  fixSet (("setSized " ++ show size) : mess) 1000 {-(size * 4)-} size gen set
 
 fixSet :: Ord a => [String] -> Int -> Int -> Gen a -> Set a -> Gen (Set a)
 fixSet mess numtrys size genA s = help numtrys s
@@ -58,8 +53,14 @@ fixSet mess numtrys size genA s = help numtrys s
         new <- Set.fromList <$> vectorOf (size - Set.size set) genA
         help (trys - 1) (Set.union new set)
 
+{-
+x <- genA
+if Set.member x set
+  then help (trys - 1) set
+  else help trys (Set.insert x set) -}
+
 mapSized :: Ord a => [String] -> Int -> Gen a -> Gen b -> Gen (Map a b)
-mapSized mess size genA genB = setSized (("From mapSized " ++ show size) : mess) size genA >>= addRange
+mapSized mess size genA genB = setSized (("mapSized " ++ show size) : mess) size genA >>= addRange
   where
     addRange set = Set.foldl' accum (pure Map.empty) set
     accum ansGen dom = do ans <- ansGen; rng <- genB; pure (Map.insert dom rng ans)
@@ -69,7 +70,7 @@ coinSized n = pure (Coin (fromIntegral n))
 
 setFromSubsetWithSize :: Ord a => [String] -> Set a -> Int -> Gen a -> Gen (Set a)
 setFromSubsetWithSize mess subset n gen = do
-  additions <- setSized (("From setFromSubsetWithSize " ++ show n) : mess) n gen
+  additions <- setSized (("setFromSubsetWithSize " ++ show n) : mess) n gen
   pure (Set.union subset additions)
 
 subsetFromSetWithSize :: Ord a => [String] -> Set a -> Int -> Gen (Set a)
@@ -86,7 +87,7 @@ subsetFromSetWithSize mess set n = help set Set.empty n
             mess
       | count <= 0 = pure target
       | otherwise = do
-          item <- itemFromSet ("From subsetFromSetWithSize" : mess) source
+          item <- itemFromSet (("subsetFromSetWithSize " ++ show n) : mess) source
           help (Set.delete item source) (Set.insert item target) (count - 1)
 
 subsetFromSetWithSize2 :: [String] -> Set a -> Int -> Gen (Set a)
@@ -111,16 +112,8 @@ subsetFromSetWithSize2 mess set n
 
 mapFromSubset :: Ord a => [String] -> Map a b -> Int -> Gen a -> Gen b -> Gen (Map a b)
 mapFromSubset mess subset n genA genB = do
-  additions <- mapSized ("From MapFromSubset " : mess) n genA genB
+  additions <- mapSized (("mapFromSubset " ++ show n) : mess) n genA genB
   pure (Map.union subset additions)
-
-{-  BROKEN 'n' could be too big for 'set'
-subsetFromMap :: Map a b -> Int -> Gen (Map a b)
-subsetFromMap set n |
-subsetFromMap set n = do
-  indexes <- vectorOf n (elements [0 .. Map.size set - 1])
-  pure (List.foldl' (flip Map.deleteAt) set indexes)
--}
 
 mapFromSet :: Ord a => Set a -> Gen b -> Gen (Map a b)
 mapFromSet set genB = addRange set
@@ -154,11 +147,10 @@ subsetFromSet mess set = do
 
 superSetFromSet :: Ord a => Gen a -> Set a -> Gen (Set a)
 superSetFromSet genA setA = do
-  Positive n <- arbitrary
-  superSetFromSetWithSize ["supersetFromSet"] (n + Set.size setA) genA setA
-
--- additions <- vectorOf n genA
--- pure (List.foldl' (flip Set.insert) setA additions)
+  n <- choose (0, 4)
+  if n == 0
+    then pure setA
+    else superSetFromSetWithSize ["supersetFromSet " ++ show n] (n + Set.size setA) genA setA
 
 superSetFromSetWithSize :: Ord a => [String] -> Int -> Gen a -> Set a -> Gen (Set a)
 superSetFromSetWithSize mess n _ setA
