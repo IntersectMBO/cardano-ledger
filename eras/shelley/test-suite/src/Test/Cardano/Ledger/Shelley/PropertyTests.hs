@@ -63,28 +63,13 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (TestingLedger)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Cardano.Ledger.Shelley.Utils (ChainProperty, RawSeed, mkKeyPair')
+import qualified Test.Cardano.Ledger.Shelley.WitVKeys as WitVKeys (tests)
 import Test.QuickCheck (conjoin, (===), (==>))
 import Test.Tasty (TestTree, localOption, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
 
 -- =====================================================================
 
-propWitVKeys ::
-  forall c.
-  (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  RawSeed ->
-  SafeHash c EraIndependentTxBody ->
-  SafeHash c EraIndependentTxBody ->
-  TQC.Property
-propWitVKeys seed h1 h2 =
-  let kp = mkKeyPair' seed
-      w1 = mkWitnessVKey h1 kp
-      w2 = mkWitnessVKey h2 kp
-   in conjoin
-        [ sort [w1, w2] === sort [w2, w1]
-        , length (nub [w1, w2]) === length (Set.fromList [w1, w2])
-        , w1 /= w2 ==> length (Set.singleton w1 <> Set.singleton w2) === 2
-        ]
 
 minimalPropertyTests ::
   forall era ledger.
@@ -105,8 +90,7 @@ minimalPropertyTests =
     , TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationProps @era @ledger)
     , TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated @era)
     , bootstrapHashTest
-    , TQC.testProperty "WitVKey does not brake containers due to invalid Ord" $
-        propWitVKeys @(EraCrypto era)
+    , WitVKeys.tests @era
     ]
 
 -- | 'TestTree' of property-based testing properties.

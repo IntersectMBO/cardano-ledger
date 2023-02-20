@@ -63,6 +63,7 @@ library
         Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
         Test.Cardano.Ledger.Shelley.ShelleyTranslation
         Test.Cardano.Ledger.Shelley.Utils
+        Test.Cardano.Ledger.Shelley.WitVKeys
         Test.TestScenario
 
     hs-source-dirs:   src
