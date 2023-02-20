@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Shelley.Rules.AdaPreservation (
   adaPreservationProps,
+  tests,
 ) where
 
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
@@ -99,8 +100,26 @@ import Test.QuickCheck (
   (.||.),
   (===),
  )
-import Test.Tasty (TestTree, testGroup)
+import Test.QuickCheck.Property (withMaxSuccess)
+import Test.Tasty (TestTree)
 import qualified Test.Tasty.QuickCheck as TQC
+
+tests ::
+  forall era ledger.
+  ( EraGen era
+  , EraGovernance era
+  , TestingLedger era ledger
+  , ChainProperty era
+  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , ProtVerAtMost era 8
+  , GovernanceState era ~ ShelleyPPUPState era
+  ) =>
+  Int ->
+  TestTree
+tests n =
+  TQC.testProperty
+    "total amount of Ada is preserved (Chain)"
+    (withMaxSuccess n (adaPreservationProps @era @ledger))
 
 -- | Various preservation properties
 adaPreservationProps ::

@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Alonzo.TxInfo where
+module Test.Cardano.Ledger.Alonzo.TxInfo (
+  tests,
+) where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -120,8 +122,8 @@ transVITimeUpperBoundIsOpen = do
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
     Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False))
 
-txInfoTests :: TestTree
-txInfoTests =
+tests :: TestTree
+tests =
   testGroup
     "txInfo translation"
     [ testGroup
