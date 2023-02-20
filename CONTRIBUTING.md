@@ -180,6 +180,13 @@ which can be run with the `--scenario` flag. For example:
 cabal test cardano-ledger-shelley-test --test-options --scenario=Fast
 ```
 
+### Default and Nightly builds
+Most test suites have two different sets of tests: default and "nightly" (which take longer to run).
+The latter are being run when the environment variable NIGHTLY is set:
+
+```shell
+NIGHTLY=true cabal test cardano-ledger-shelley-test
+```
 ### ghcid
 
 We have support for running
@@ -373,7 +380,7 @@ cabal run db-analyser -- --db ~/io/cardano-node/state-node-mainnet/db-mainnet/ -
 The value of the nonce used above can be discovered in the
 [config](https://github.com/input-output-hk/cardano-node/blob/61da26bddd4d34a5ec750492aa625c62941d808a/configuration/cardano/mainnet-config.json#L15a).
 
-Finally, 
+Finally,
 
 Run the block validation, say for 1000 slots, with:
 ```
