@@ -12,7 +12,7 @@ We give the Plutus types corresponding to the ledger counterparts in Figures \re
 and \ref{fig:txinfo-types-two}. Details for types that have non-identity translation
 functions between ledger and Plutus types are in Figure \ref{fig:txinfo-translations}.
 
-\textbf{Notation. }
+\textbf{Notation.}
 In this Section we use the notation $\type{P.PlutusType}$ for the Plutus type
 $\type{PlutusType}$ (specified in the Plutus library) to distinguish it from ledger types.
 
@@ -27,7 +27,13 @@ As a shorthand, we always write $t_P$ for $\fun{toPlutusType}_{LT}~t$, if $t$ is
 In many cases this function is simply the identity function, and all
 the cases in which it is not the identity will be described below.
 
-\textbf{Untranslatable Types. }
+\textbf{Sets and maps.}
+Since the $\Data$ type is effectively a serialization, we need to make some arbitrary choices
+for how to encode certain types that aren't inherently ordered. We encode sets as
+lexicographically ordered lists, and maps in the same way by treating them first as
+sets of key-value pairs.
+
+\textbf{Untranslatable Types.}
 Certain types, such as the bootstrap address type, cannot be passed to scripts, and
 are therefore translated as $\Nothing$. Any type that cannot be fully translated
 as a Plutus-library type is also translated to $\Nothing$.
