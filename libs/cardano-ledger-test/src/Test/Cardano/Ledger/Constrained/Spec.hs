@@ -14,7 +14,7 @@
 --   For example
 --   (MapSpec era dom rng) denotes Gen(Map dom rng)
 --   (RngSpec era t)       denotes Gen[t]  where the [t] has some Summing properties
---   (RelSep era t)        denotes Gen(Set t) where the set meets som relational properties
+--   (RelSep era t)        denotes Gen(Set t) where the set meets some relational properties
 --   (Size)                denotes Gen Int, the size of some Map, Set, List etc.
 --   (SumSpec n t)         denotes Gen([t]), a list of length 'n' that adds up to 't'
 module Test.Cardano.Ledger.Constrained.Spec where
@@ -29,21 +29,42 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Debug.Trace (trace)
-import Test.Cardano.Ledger.Constrained.Ast (testSize)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
-  SumCond (..),
   Sums (..),
+  genFromNonNegSumV,
+  genFromSumV,
   projAdds,
-  runCond,
-  suchThatErr,
+  smallInc,
   sumAdds,
  )
-import Test.Cardano.Ledger.Constrained.Combinators
+import Test.Cardano.Ledger.Constrained.Combinators (
+  errorMess,
+  fixSet,
+  itemFromSet,
+  setSized,
+  subsetFromSet,
+  suchThatErr,
+  superSetFromSet,
+  superSetFromSetWithSize,
+ )
+import Test.Cardano.Ledger.Constrained.Env (Access (No), V (..))
 import Test.Cardano.Ledger.Constrained.Monad
+import Test.Cardano.Ledger.Constrained.Size (
+  OrdCond (..),
+  Size (..),
+  SumV (..),
+  atleastdelta,
+  atmostany,
+  genFromSize,
+  runSize,
+  seps,
+  sepsP,
+  vLeft,
+  vRight,
+ )
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
-  Size (..),
   genRep,
   synopsis,
   testEql,
@@ -57,43 +78,21 @@ import Test.Tasty.QuickCheck hiding (Fixed, total)
 import Prelude hiding (subtract)
 
 -- ===========================================================
-{- TODO
-
+{- TODO, possible extensions and improvements, so we don't forget
 1) Redo Size with: data Size = SzNever [String] | SzRange Int (Maybe Int) Move to own file
 2) Add newtype Never = Never [String], then instead of (XXXNever xs) we use (XX (Never xs))
-4) Done. genMapSpec does not need Int
-5) Done. Fix output on moreMerge of RelSpec
-6) class Specify
-7) Done mapSpec :: size -> dom -> rng -> Typed (MapSpec era d r) that checks Size consistency
-   use in mergeMapSpec (with runTyped, dropT) (MapSpec x y z) become droptT (mapSpec x y z)
-   so inconsistencies get rolled into MapNever
-8) Done same for SetSpec and ListSpec,  use in solver to detect size inconsistency as we solve
-9) Done. genSizeForXX :: XX -> Gen Size  should be sizeForXX :: XX -> Size
-10) Done. MapNever -> MapNever  NeverSet -> SetNever  for consistency
-11) Done Redo dispatch with case stmt, and one explain call
-12) In RelSpec add (RelOp musthave canhave neverhave) to replace subset, superset, disjoint, can also express membership 
-
+3) class Specify
+4) In RelSpec add (RelOp musthave canhave neverhave) to replace subset, superset, disjoint, can also express membership
+5) A better story about fields in constraints. Maybe add FieldSpec type.
 -}
+
 -- =========================================================
+
+-- | used when we run tests, and we have to pick some concrete Era
 type TT = MaryEra C_Crypto
-
-seps :: [String] -> String
-seps xs = List.intercalate " " xs
-
-sepsP :: [String] -> String
-sepsP xs = "(" ++ List.intercalate " " xs ++ ")"
-
-sepn :: [String] -> String
-sepn xs = List.intercalate "\n   " xs
 
 -- ============================================================
 -- Operators for Size (Defined in TypeRep.hs)
-
-atleastdelta :: Int
-atleastdelta = 5
-
-atmostany :: Int
-atmostany = 10
 
 maxSize :: Size -> Int
 maxSize SzAny = atmostany
@@ -109,67 +108,81 @@ minSize (SzMost _) = 0
 minSize (SzRng i _) = i
 minSize (SzNever xs) = errorMess "SzNever in minSize" xs
 
-runSize :: Int -> Size -> Bool
-runSize _ (SzNever xs) = errorMess "SzNever in runSizeSpec" xs
-runSize _ SzAny = True
-runSize n (SzLeast m) = n >= m
-runSize n (SzMost m) = n <= m
-runSize n (SzRng i j) = n >= i && n <= j
-
 genSize :: Gen Size
 genSize =
   frequency
     [ (1, SzLeast <$> pos)
     , (1, SzMost <$> anyAdds)
     , (4, (\x -> SzRng x x) <$> pos)
-    , (1, do lo <- anyAdds; hi <- greater lo; pure (SzRng lo hi))
+    , (1, do lo <- anyAdds; hi <- choose (lo + 1, lo + 6); pure (SzRng lo hi))
     ]
 
--- | Only use this only where you know it is NOT SzNever
-genFromSize :: Size -> Gen Int
-genFromSize (SzNever _) = error "Bad call to (genFromSize(SzNever ..))."
-genFromSize SzAny = chooseInt (0, atmostany)
-genFromSize (SzRng i j) = chooseInt (i, j)
-genFromSize (SzLeast i) = chooseInt (i, i + atleastdelta)
-genFromSize (SzMost i) = chooseInt (0, i)
+genBigSize :: Int -> Gen Size
+genBigSize n =
+  frequency
+    [ (1, SzLeast <$> choose (n + 1, n + 30))
+    , --  , (1, SzMost <$> choose (1, 30))
+      (1, (\x -> SzRng x x) <$> choose (n + 1, n + 30))
+    , (1, do lo <- choose (n + 1, n + 30); hi <- choose (lo + 1, lo + 30); pure (SzRng lo hi))
+    ]
 
 testSoundSize :: Gen Bool
 testSoundSize = do
   spec <- genSize
   ans <- genFromSize spec
-  pure $ testSize ans spec
+  pure $ runSize ans spec
+
+testNonNegSize :: Gen Bool
+testNonNegSize = do
+  spec <- genSize
+  ans <- genFromSize spec
+  pure $ ans >= 0
 
 testMergeSize :: Gen Bool
 testMergeSize = do
   spec1 <- genSize
   spec2 <- genSize
   case (spec1 <> spec2) of
-    SzNever _xs -> pure True -- trace (unlines _xs) $ pure True
-    SzAny -> trace "Aways True RelSpec" pure True
+    SzNever _xs -> pure True
+    SzAny -> pure True
     spec -> do
       ans <- genFromSize spec
-      pure $ testSize ans spec && testSize ans spec1 && testSize ans spec2
+      pure $ runSize ans spec && runSize ans spec1 && runSize ans spec2
 
 -- =====================================================
 -- RelSpec
 
--- | Stores information to describe sets with relational constraints such as
---   equality (x == y) subset (x ⊆ y) disjointness ( x ∩ y = ∅) superset (x ⊇ y).
---   The information stored is used to compute the sets. Some times it is about
---   what is in the set, and sometimes it is about what is NOT in the set.
 data RelSpec era dom where
-  -- \^ There is no restriction on the domain. Denotes the universe.
-  RelAny :: RelSpec era dom
-  -- | Must be a subset
-  RelSubset :: Ord dom => Rep era dom -> Set dom -> RelSpec era dom
-  -- | To get a superset, pick things not in this set, and union with the original
-  RelSuperset :: Ord dom => Rep era dom -> Set dom -> RelSpec era dom
-  -- | pick things, not in this set, and then union them together
-  RelDisjoint :: Ord dom => Rep era dom -> Set dom -> RelSpec era dom
-  -- | Exactly things in this set
-  RelEqual :: Ord dom => Rep era dom -> Set dom -> RelSpec era dom
-  -- | Something is inconsistent
-  RelNever :: [String] -> RelSpec era dom
+  RelAny ::
+    -- | There is no restriction on the set. Denotes the universe.
+    RelSpec era dom
+  RelEqual ::
+    Ord dom =>
+    Rep era dom ->
+    Set dom ->
+    -- | Must be a subset
+    RelSpec era dom
+  RelNever ::
+    -- | Something is inconsistent
+    [String] ->
+    RelSpec era dom
+  RelOper ::
+    Ord d =>
+    Rep era d ->
+    Set d ->
+    Maybe (Set d) ->
+    -- | Denotes things like: (x == y) equality, (x ⊆ y) subset, ( x ∩ y = ∅) disjointness, (x ⊇ y) superset.
+    -- Invariants of r@(RepOper must (Just may) cant)
+    -- 1) must is a subset of may
+    -- 2) must is disjoint from cant
+    -- 3) (sizeFromRel r) is realizable E.g.  (SzRng 10 3) is NOT realizable
+    Set d ->
+    RelSpec era d
+
+relSubset, relSuperset, relDisjoint :: Ord t => Rep era t -> Set t -> RelSpec era t
+relSubset r set = RelOper r Set.empty (Just set) Set.empty
+relSuperset r set = RelOper r set Nothing Set.empty
+relDisjoint r set = RelOper r Set.empty Nothing set
 
 instance Monoid (RelSpec era dom) where mempty = RelAny
 
@@ -186,229 +199,266 @@ instance LiftT (RelSpec era a) where
 
 showRelSpec :: RelSpec era dom -> String
 showRelSpec RelAny = "RelAny"
-showRelSpec (RelSubset r x) = sepsP ["RelSubset ", synopsis (SetR r) x]
-showRelSpec (RelSuperset r x) = sepsP ["RelSuperset", synopsis (SetR r) x]
-showRelSpec (RelDisjoint r x) = sepsP ["RelDisjoint", synopsis (SetR r) x]
+showRelSpec (RelOper r x (Just s) y) | Set.null y && x == s = sepsP ["RelEqual", synopsis (SetR r) x]
+showRelSpec (RelOper r x (Just s) y) | Set.null x && Set.null y = sepsP ["RelSubset", synopsis (SetR r) s]
+-- showRelSpec (RelOper _ x Nothing y) | Set.null x && Set.null y = "RelAny"
+showRelSpec (RelOper r x Nothing y) | Set.null y = sepsP ["RelSuperset", synopsis (SetR r) x]
+showRelSpec (RelOper r x Nothing y) | Set.null x = sepsP ["RelDisjoint", synopsis (SetR r) y]
+showRelSpec (RelOper r x Nothing y) = sepsP ["RelOper", synopsis (SetR r) x, "Univ", synopsis (SetR r) y]
+showRelSpec (RelOper r x (Just y) z) = sepsP ["RelOper", synopsis (SetR r) x, synopsis (SetR r) y, synopsis (SetR r) z]
 showRelSpec (RelEqual r x) = sepsP ["RelEqual", synopsis (SetR r) x]
 showRelSpec (RelNever _) = "RelNever"
 
-showR :: Show dom => RelSpec era dom -> String
-showR (RelDisjoint _ xs) = "Disjoint " ++ show xs
-showR (RelSuperset _ xs) = "Superset " ++ show xs
-showR (RelSubset _ xs) = "Subset " ++ show xs
-showR (RelEqual _ xs) = "Subset " ++ show xs
-showR x = show x
+synSet :: Ord t => Rep era t -> Set t -> String
+synSet r s = synopsis (SetR r) s
 
--- | Merge two RelSpec's, return (RelNever _) if they are inconsistent. if we think of
---   each RelSpec as defining a set, then the merge is the intersection of the two sets.
-mergeRelSpec :: forall r era. RelSpec era r -> RelSpec era r -> (RelSpec era r)
+mergeRelSpec :: RelSpec era d -> RelSpec era d -> RelSpec era d
 mergeRelSpec (RelNever xs) (RelNever ys) = RelNever (xs ++ ys)
 mergeRelSpec d@(RelNever _) _ = d
 mergeRelSpec _ d@(RelNever _) = d
-mergeRelSpec d RelAny = d
-mergeRelSpec RelAny d = d
--- Subset on left
-mergeRelSpec (RelSubset _ x) (RelSubset r y) = RelSubset r (Set.intersection x y)
-mergeRelSpec a@(RelSubset r x) b@(RelSuperset _ y) =
-  if Set.isSubsetOf y x
-    then RelEqual r x
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec (RelSubset r x) (RelDisjoint _ y) = RelSubset r (Set.difference x y)
-mergeRelSpec b@(RelSubset _ x) a@(RelEqual r y) =
-  if Set.isSubsetOf y x
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
--- Superset on left
-mergeRelSpec a@(RelSuperset _ y) b@(RelSubset r x) =
-  if Set.isSubsetOf y x
-    then RelEqual r x
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec a@(RelSuperset _ _) b@(RelDisjoint _ _) = mergeRelSpec b a
-mergeRelSpec a@(RelSuperset _ x) b@(RelEqual r y) =
-  if Set.isSubsetOf x y
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec (RelSuperset r y) (RelSuperset _ x) = RelSuperset r (Set.union y x)
--- Disjoint on left
-mergeRelSpec (RelDisjoint r y) (RelSubset _ x) = RelSubset r (Set.difference x y)
-mergeRelSpec b@(RelDisjoint _ _) a@(RelSuperset _ _) =
-  RelNever
-    [ "The RelSpec's may be inconsistent."
-    , "  " ++ show a
-    , "  " ++ show b
-    , "While there may exist a solution, it cannot be expressed using "
-        ++ "RelEqual, RelSubset, RelSuperset or RelDisjoint."
-    , "Try reformulating using (X :<=: _) rather than (_ :<=: X)."
-    ]
-mergeRelSpec (RelDisjoint r y) (RelDisjoint _ x) = RelDisjoint r (Set.union y x)
-mergeRelSpec b@(RelDisjoint _ x) a@(RelEqual r y) =
-  if Set.disjoint y x
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
--- Equal on the left
-mergeRelSpec a@(RelEqual r y) b@(RelSubset _ x) =
-  if Set.isSubsetOf y x
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec a@(RelEqual r y) b@(RelSuperset _ x) =
-  if Set.isSubsetOf x y
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec a@(RelEqual r y) b@(RelDisjoint _ x) =
-  if Set.disjoint y x
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec a@(RelEqual r xs) b@(RelEqual _ ys) =
-  if xs == ys
-    then RelEqual r ys
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
+mergeRelSpec RelAny x = x
+mergeRelSpec x RelAny = x
+mergeRelSpec (RelEqual r x) y = mergeRelSpec (RelOper r x (Just x) Set.empty) y
+mergeRelSpec y (RelEqual r x) = mergeRelSpec y (RelOper r x (Just x) Set.empty)
+mergeRelSpec a@(RelOper r must1 may1 cant1) b@(RelOper _ must2 may2 cant2) =
+  dropT $
+    explain ("merging a=" ++ show a ++ "\n        b=" ++ show b) $
+      requireAll
+        [
+          ( Set.disjoint must1 cant2
+          ,
+            [ "The 'must' set of a("
+                ++ synSet r must1
+                ++ ") is not disjoint from the 'cant' set of b("
+                ++ synSet r cant2
+            ]
+          )
+        ,
+          ( Set.disjoint must2 cant1
+          ,
+            [ "The 'must' set of b("
+                ++ synSet r must2
+                ++ ") is not disjoint from the 'cant' set of a("
+                ++ synSet r cant1
+            ]
+          )
+        ]
+        (relOper r (Set.union must1 must2) (interSectM may1 may2) (Set.union cant1 cant2))
 
--- ==================================================
--- Some RelSpecs are inconsistent with some Sizes
--- For example, you can't make a subset of 'xs', of size 'n',
--- if 'xs' has less then 'n' elements. It will be crucial to
--- track this information, when building specs.
+-- | Check that RelOper invariants hold
+relOper :: Ord d => Rep era d -> Set d -> Maybe (Set d) -> Set d -> Typed (RelSpec era d)
+relOper r sup sub disj =
+  explain
+    ("Checking RelSpec self consistency\n   " ++ show (RelOper r sup sub disj))
+    (help sup sub disj)
+  where
+    help must (Just may) cant | must == may && Set.disjoint must cant = pure $ RelEqual r must
+    help must Nothing cant =
+      if Set.disjoint must cant
+        then pure $ RelOper r must Nothing cant
+        else pure $ RelNever ["'must' " ++ synopsis (SetR r) must ++ " Is not disjoint from: 'disj' " ++ synopsis (SetR r) cant]
+    help must (Just may) cant = case (Set.isSubsetOf must may, Set.disjoint must cant) of
+      (True, True) ->
+        let potentialAns = RelOper r must (Just may) cant
+         in case sizeForRel potentialAns of
+              sz@(SzRng lo hi) | lo > hi -> failT ["potentialAns " ++ show potentialAns ++ " has unrealizable size " ++ show sz]
+              SzNever xs -> failT xs
+              _ -> pure potentialAns
+      (False, True) -> failT ["'must' " ++ synopsis (SetR r) must ++ " Is not a subset of: 'may' " ++ synopsis (SetR r) may]
+      (True, False) -> failT ["'must' " ++ synopsis (SetR r) must ++ " Is not disjoint from: 'cant' " ++ synopsis (SetR r) cant]
+      (False, False) ->
+        failT
+          [ "'must' " ++ synopsis (SetR r) must ++ " Is not disjoint from: 'cant' " ++ synopsis (SetR r) cant
+          , "'must' " ++ synopsis (SetR r) must ++ " Is not a subset of: 'may' " ++ synopsis (SetR r) may
+          ]
 
--- | Compute the size that is appropriate for a RelSpec
-sizeForRel :: RelSpec era dom -> Size
-sizeForRel (RelSubset _ s) = SzMost (Set.size s)
-sizeForRel (RelSuperset _ s) = SzLeast (Set.size s)
-sizeForRel (RelEqual _ s) = SzExact (Set.size s)
-sizeForRel (RelDisjoint _ _) = SzAny
-sizeForRel RelAny = SzAny
-sizeForRel (RelNever _) = SzAny
+-- | The interpretation of (Just set) is set, and of Nothing is the universe (all possible sets)
+interSectM :: Ord a => Maybe (Set a) -> Maybe (Set a) -> Maybe (Set a)
+interSectM Nothing Nothing = Nothing
+interSectM Nothing x = x
+interSectM x Nothing = x
+interSectM (Just x) (Just y) = Just (Set.intersection x y)
 
--- | Is a RelSpec consistent with a given size
-relCanHaveSize :: RelSpec era dom -> Size -> Bool
-relCanHaveSize rel size = case rel of
-  RelAny -> True
-  RelSubset _ xs -> Set.size xs >= maxSize size
-  RelSuperset _ xs -> Set.size xs <= minSize size
-  RelEqual _ xs -> case size of SzExact n -> n == Set.size xs; _ -> False
-  _ -> True
-
--- -------------------------------------
--- RelSpec tests
-
-genFromRelSpec :: forall era t. Ord t => [String] -> Int -> Gen t -> RelSpec era t -> Gen (Set t)
-genFromRelSpec msgs n g spec =
-  let msg = "genFromRelSpec " ++ show spec
-   in case spec of
-        RelNever xs -> errorMess "RelNever in genFromSpec" (msgs ++ xs)
-        RelAny -> setSized (msg : msgs) n g
-        RelSubset _ x -> subsetFromSetWithSize (msg : msgs) x n
-        RelSuperset _ x -> superSetFromSetWithSize (msg : msgs) n g x
-        RelEqual _ s -> pure s
-        RelDisjoint _ set -> genSet n (suchThatErr (msg : msgs) g (\x -> not (Set.member x set)))
-
+-- | test that a set 's' meets the RelSpec
 runRelSpec :: Ord t => Set t -> RelSpec era t -> Bool
-runRelSpec s (RelSubset _ x) = Set.isSubsetOf s x
-runRelSpec new (RelSuperset _ old) = Set.isSubsetOf old new
-runRelSpec s (RelDisjoint _ set) = all (\x -> not (Set.member x set)) s
 runRelSpec s (RelEqual _ set) = s == set
 runRelSpec _ RelAny = True
 runRelSpec _ (RelNever xs) = errorMess "RelNever in call to runRelSpec" xs
+runRelSpec s (RelOper _ sup Nothing disj) = Set.isSubsetOf sup s && Set.disjoint s disj
+runRelSpec s (RelOper _ sup (Just sub) disj) = Set.isSubsetOf sup s && Set.isSubsetOf s sub && Set.disjoint s disj
 
--- ----------------------------------------
--- RelSpec generators
+-- | Compute the Size that bounds the size of a set generated from a RelSpec
+sizeForRel :: RelSpec era dom -> Size
+sizeForRel (RelEqual _ s) = SzExact (Set.size s)
+sizeForRel RelAny = SzAny
+sizeForRel (RelNever _) = SzAny
+sizeForRel (RelOper _ sup Nothing _) = SzLeast (Set.size sup)
+sizeForRel (RelOper _ sup (Just sub) _) | Set.null sup = SzMost (Set.size sub)
+sizeForRel (RelOper _ sup (Just sub) disj) = SzRng (Set.size sup) (Set.size (Set.difference sub disj))
 
-genRelSpec :: Ord dom => [String] -> Maybe Int -> Gen dom -> Rep era dom -> Gen (RelSpec era dom)
-genRelSpec _ Nothing genD r = do
+-- | return a generator that always generates things that meet the RelSpec
+genFromRelSpec :: forall era t. Ord t => [String] -> Int -> Gen t -> RelSpec era t -> Gen (Set t)
+genFromRelSpec msgs n g spec =
+  let msg = ("genFromRelSpec " ++ show n ++ " " ++ show spec)
+   in case spec of
+        RelNever xs -> errorMess "RelNever in genFromSpec" (msgs ++ xs)
+        RelAny -> setSized (msg : msgs) n g
+        RelEqual _ s -> pure s
+        RelOper _ sup Nothing dis ->
+          -- add things (not in disj) to 'sup' until you get to size 'n'
+          fixSet (msg : msgs) 1000 n (suchThatErr (msg : msgs) g (`Set.notMember` dis)) sup
+        RelOper _ sup (Just sub) dis ->
+          let choices = Set.difference sub dis
+              m = Set.size choices
+           in -- add things (from choices) to 'sup' until you get to size 'n'
+              case compare m n of
+                EQ -> pure choices
+                LT ->
+                  errorMess
+                    ( "Size inconsistency. We need "
+                        ++ show n
+                        ++ ". The most we can get from (sub-disj) is "
+                        ++ show m
+                    )
+                    (msg : msgs)
+                GT -> fixSet (("choices " ++ show (Set.size choices)) : msg : msgs) 1000 n (itemFromSet (msg : msgs) choices) sup
+
+-- | Generate a random RelSpec
+genRelSpec :: Ord dom => [String] -> Int -> Gen dom -> Rep era dom -> Gen (RelSpec era dom)
+genRelSpec _ 0 _ r = pure $ RelEqual r Set.empty
+genRelSpec msg n genD r = do
+  smaller <- choose (1, min 2 (n - 1))
+  larger <- choose (n + 5, n + 7)
+  let msgs = (sepsP ["genRelSpec ", show n, show r, " smaller=", show smaller, ", larger=", show larger]) : msg
   frequency
-    [ (1, RelSubset r <$> someSet genD)
-    , (1, RelSuperset r <$> someSet genD)
-    , (1, RelDisjoint r <$> someSet genD)
-    , (1, RelEqual r <$> someSet genD)
+    [
+      ( 1
+      , do
+          sup <- setSized ("sup of RelOper Nothing" : msgs) smaller genD
+          dis <- someSet (suchThatErr (("dis of RelOper Nothing " ++ synSet r sup) : msgs) genD (`Set.notMember` sup))
+          monadTyped (relOper r sup Nothing dis)
+      )
+    ,
+      ( 2
+      , do
+          sup <- setSized ("sup of RelOper Just" : msgs) smaller genD
+          sub <- superSetFromSetWithSize ("sub of RelOper Just" : msgs) larger genD sup
+          dis <-
+            setSized
+              ("dis of RelOper Some" : msgs)
+              3
+              (suchThatErr (("dis of RelOper Some sup=" ++ synSet r sup ++ " sub=" ++ synSet r sub) : msgs) genD (`Set.notMember` sub))
+          monadTyped (relOper r sup (Just sub) dis)
+      )
+    , (1, RelEqual r <$> setSized ("RelEqual" : msgs) n genD)
     , (1, pure RelAny)
     ]
-genRelSpec _ (Just 0) _ r = pure $ RelEqual r Set.empty
-genRelSpec msg (Just n) genD r = do
-  smaller <- choose (1, n)
-  larger <- choose (n, n + atleastdelta)
-  let msgs = ("genRelSpec " ++ show n) : msg
-  frequency
-    [ (1, RelSubset r <$> setSized msgs larger genD)
-    , (1, RelSuperset r <$> setSized msgs smaller genD)
-    , (1, RelDisjoint r <$> someSet genD)
-    , (1, RelEqual r <$> setSized msgs n genD)
-    , (1, pure RelAny)
-    ]
 
-genDisjoint :: Ord a => [String] -> Set a -> Gen a -> Gen (Set a)
-genDisjoint msgs s gen = someSet (suchThatErr ("from genDisjoint" : msgs) gen (`Set.notMember` s))
+-- | Generate another set which is disjoint from the input 'set'
+--   Note that the empty set is always a solution.
+--   These sets tend to be rather small (size <= atleastdelta)
+genDisjoint :: Ord a => Set a -> Gen a -> Gen (Set a)
+genDisjoint set gen = help atleastdelta Set.empty
+  where
+    help n answer | n < 0 = pure answer
+    help n answer = do
+      x <- gen
+      help (n - 1) (if Set.member x set then answer else Set.insert x answer)
 
+-- | Generate another RelSpec, guaranteed to be consistent with the input
+--   Where (consistent a b) means:  (a <> b) =/= (RelNever _)
+--   See the property test 'genConsistent'
 genConsistentRelSpec :: [String] -> Gen dom -> RelSpec era dom -> Gen (RelSpec era dom)
 genConsistentRelSpec msg g x = case x of
-  RelSubset r s ->
+  RelOper r sup Nothing disj ->
     frequency
-      [ (1, pure (RelSubset r s))
-      , (1, pure RelAny)
-      , (1, RelSuperset r <$> subsetFromSet msgs s)
-      , (1, RelDisjoint r <$> genDisjoint msgs s g)
-      , (3, pure (RelEqual r s))
+      [ (1, pure RelAny)
+      ,
+        ( 1
+        , do
+            disj2 <- genDisjoint sup g
+            sup2 <- genDisjoint (disj <> disj2) g
+            pure $ RelOper r sup2 Nothing disj2
+        )
+      ,
+        ( 1
+        , do
+            sub2 <- (`Set.difference` disj) <$> superSetFromSet g sup
+            sup2 <- subsetFromSet ((show x ++ " gen sub") : msgs) sup
+            disj2 <- genDisjoint sub2 g
+            pure $ RelOper r sup2 (Just sub2) disj2
+        )
       ]
-  RelSuperset r s ->
+  RelOper r sup (Just sub) disj ->
     frequency
-      [ (1, pure (RelSuperset r s))
-      , (1, pure RelAny)
-      , (1, RelSubset r <$> superSetFromSet g s)
+      [ (1, pure RelAny)
+      ,
+        ( 1
+        , do
+            disj2 <- genDisjoint sub g
+            sup2 <- subsetFromSet ((show x ++ " gen sup") : msgs) sub
+            pure $ RelOper r sup2 Nothing disj2
+        )
+      ,
+        ( 1
+        , do
+            sub2 <- (`Set.difference` disj) <$> superSetFromSet g sup
+            sup2 <- subsetFromSet ((show x ++ " gen sup") : msgs) sup
+            disj2 <- genDisjoint (sub <> sub2) g
+            pure $ RelOper r sup2 (Just (sub <> sub2)) disj2
+        )
       ]
-  RelDisjoint r s ->
-    frequency [(1, pure RelAny), (1, pure (RelDisjoint r s))]
   RelEqual r s ->
     frequency
       [ (1, pure $ RelEqual r s)
       , (1, pure RelAny)
-      , (1, RelSubset r <$> superSetFromSet g s)
-      , (1, RelDisjoint r <$> genDisjoint msgs s g)
+      , (1, RelOper r s (Just s) <$> genDisjoint s g)
       ]
   RelAny -> pure RelAny
   RelNever _ -> error "RelNever in genConsistentRelSpec"
   where
     msgs = ("genConsistentRelSpec " ++ show x) : msg
 
--- -----------------------------
--- Actual tests for RelSpec
+-- ==================
+-- Actual property tests for Relpec
 
-testConsistent :: Gen Property
-testConsistent = do
-  spec1 <- genRelSpec ["testConsistent"] Nothing (choose (1, 1000)) Word64R
-  spec2 <- genConsistentRelSpec ["testConsistent"] (choose (1, 1000)) spec1
-  pure $
-    counterexample
-      ("spec1=" ++ show spec1 ++ "\n  " ++ show spec2)
-      ( case (spec1 <> spec2) of
-          RelNever _ -> False
-          _ -> True
-      )
+testConsistentRel :: Gen Property
+testConsistentRel = do
+  n <- chooseInt (3, 10)
+  s1 <- genRelSpec ["testConsistentRel " ++ show n] n (choose (1, 10000)) IntR
+  s2 <- genConsistentRelSpec ["testConsistentRel " ++ show n ++ " " ++ show s1] (choose (1, 1000)) s1
+  case s1 <> s2 of
+    RelNever ms -> pure $ counterexample (unlines (["genConsistent fails", show s1, show s2] ++ ms)) False
+    _ -> pure $ counterexample "" True
 
 testSoundRelSpec :: Gen Property
 testSoundRelSpec = do
   n <- chooseInt (3, 10)
-  s1 <- genRelSpec ["genRelSpec " ++ show n] (Just n) (choose (1, 1000)) Word64R
-  ans <- genFromRelSpec @TT ["genFromRelSpec " ++ show n ++ " " ++ show s1] n (choose (1, 1000)) s1
+  s1 <- genRelSpec ["from testSoundRelSpec " ++ show n] n (choose (1, 10000)) Word64R
+  ans <- genFromRelSpec @TT ["from testSoundRelSpec " ++ show n] n (choose (1, 100000)) s1
   pure $ counterexample ("spec=" ++ show s1 ++ "\nans=" ++ show ans) (runRelSpec ans s1)
 
 testMergeRelSpec :: Gen Property
 testMergeRelSpec = do
   let msg = ["testMergeRelSpec"]
-  s1 <- genRelSpec (("genRelSpec") : msg) Nothing (choose (1, 1000)) Word64R
+  n <- chooseInt (0, 10)
+  s1 <- genRelSpec (("genRelSpec") : msg) n (choose (1, 10000)) Word64R
   s2 <- genConsistentRelSpec (("genConsistentRepSpec " ++ show s1) : msg) (choose (1, 1000)) s1
   let s3 = (s1 <> s2)
   case s3 of
     RelNever xs -> trace (unlines ("inconsistent merge" : xs)) (pure $ counterexample "" True)
     s4 -> do
       let size = sizeForRel s4
-      n <- genFromSize size
-      ans <- genFromRelSpec ["testMergeRelSpec " ++ show s1 ++ " " ++ show s2] n (choose (1, 1000)) s4
+      m <- genFromSize size
+      ans <- genFromRelSpec ["testMergeRelSpec " ++ show s1 ++ " " ++ show s2] m (choose (1, 1000)) s4
       pure $
         counterexample
           ( "s1="
-              ++ showR s1
+              ++ show s1
               ++ "\ns2="
-              ++ showR s2
+              ++ show s2
               ++ "\ns1<>s2="
-              ++ showR s4
+              ++ show s4
               ++ "\nans="
               ++ show ans
               ++ "\nrun s1="
@@ -420,25 +470,40 @@ testMergeRelSpec = do
           )
           (runRelSpec ans s4 && runRelSpec ans s2 && runRelSpec ans s1)
 
-tryManyMerge :: Gen (Int, [String])
+consistent :: (LiftT a, Semigroup a) => a -> a -> Maybe a
+consistent x y = case runTyped (liftT (x <> y)) of
+  Left _ -> Nothing
+  Right spec -> Just spec
+
+tryManyMerge :: Gen (Int, Int, [String])
 tryManyMerge = do
-  xs <- vectorOf 25 (genRelSpec ["foo1"] Nothing (choose (1, 100)) IntR)
-  ys <- vectorOf 25 (genRelSpec ["foo2"] Nothing (choose (1, 100)) IntR)
+  n <- chooseInt (3, 10)
+  xs <- vectorOf 60 (genRelSpec ["foo1"] n (choose (1, 100)) IntR)
+  ys <- vectorOf 60 (genRelSpec ["foo2"] n (choose (1, 100)) IntR)
   let ok RelAny = False
       ok _ = True
-      consistent x y = case runTyped (liftT (x <> y)) of
-        Left _ -> Nothing
-        Right spec -> Just spec
       check (x, y, m) = do
         let size = sizeForRel m
-        n <- genFromSize size
-        z <- genFromRelSpec @TT ["FOO"] n (choose (1, 100)) m
+        i <- genFromSize size
+        let wordsX =
+              [ "s1<>s2 Size = " ++ show (sizeForRel m)
+              , "s1<>s2 = " ++ show m
+              , "s2 Size = " ++ show (sizeForRel x)
+              , "s2 = " ++ show x
+              , "s1 Size = " ++ show (sizeForRel y)
+              , "s1 = " ++ show y
+              , "GenFromRelSpec " ++ show i ++ " n=" ++ show n
+              ]
+        z <- genFromRelSpec @TT wordsX i (choose (1, 100)) m
         pure (x, runRelSpec z x, y, runRelSpec z y, z, runRelSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
-          [ "s1 = " ++ show s1
+          [ "\ns1 = " ++ show s1
+          , "s1 Size = " ++ show (sizeForRel s1)
           , "s2 = " ++ show s2
+          , "s2 Size = " ++ show (sizeForRel s2)
           , "s1 <> s2 = " ++ show s3
+          , "s1<>s2 Size = " ++ show (sizeForRel s3)
           , "v = genFromRelSpec (s1 <> s2) = " ++ show v
           , "runRelSpec v s1 = " ++ show run1
           , "runRelSpec v s2 = " ++ show run2
@@ -447,14 +512,22 @@ tryManyMerge = do
       pr x@(_, a, _, b, _, c, _) = if not (a && b && c) then Just (showAns x) else Nothing
   let trips = [(x, y, m) | x <- xs, y <- ys, ok x && ok y, Just m <- [consistent x y]]
   ts <- mapM check trips
-  pure $ (length trips, Maybe.catMaybes (map pr ts))
+  pure $ (n, length trips, Maybe.catMaybes (map pr ts))
 
 reportManyMerge :: IO ()
 reportManyMerge = do
-  (n, bad) <- generate tryManyMerge
+  (n, passed, bad) <- generate tryManyMerge
   if null bad
-    then putStr ("passed " ++ show n ++ " tests. ")
+    then putStrLn ("passed " ++ show passed ++ " tests. Spec size " ++ show n)
     else do mapM_ putStrLn bad; error "TestFails"
+
+-- | Generates two random RelSpec, and then merges them. Raises an error
+observeMerge :: Gen (RelSpec era Int)
+observeMerge = do
+  n <- chooseInt (3, 10)
+  x <- genRelSpec ["observeMerge"] n (choose (1, 100)) IntR
+  y <- genRelSpec ["observeMerge"] n (choose (1, 100)) IntR
+  monadTyped (liftT (x <> y))
 
 -- ==========================================================
 
@@ -465,15 +538,13 @@ data RngSpec era rng where
   -- \^ The set must have Adds instance and add up to 'rng'
   RngSum ::
     Adds rng =>
-    SumCond ->
-    rng ->
+    Size -> -- the sum of all the elements must fall in the range denoted by the Size
     RngSpec era rng
   -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
   RngProj ::
-    Sums x c =>
-    SumCond ->
+    (Sums x c) =>
     Rep era c ->
-    c ->
+    Size -> -- the sum of all the elements must fall in the range denoted by the Size
     RngSpec era x
   -- | The range has exactly these elements
   RngElem :: Eq r => Rep era r -> [r] -> RngSpec era r
@@ -498,11 +569,11 @@ instance LiftT (RngSpec era a) where
   dropT (Typed (Right x)) = x
 
 showRngSpec :: RngSpec era t -> String
-showRngSpec (RngSum cond r) = sepsP ["RngSum", show cond, show r]
-showRngSpec (RngProj cond r c) = sepsP ["RngProj", show cond, show r, show c]
+showRngSpec (RngSum sz) = sepsP ["RngSum", show sz]
+showRngSpec (RngProj r sz) = sepsP ["RngProj", show r, show sz]
 showRngSpec (RngElem r cs) = sepsP ["RngElem", show r, synopsis (ListR r) cs]
 showRngSpec (RngRel x) = sepsP ["RngRel", show x]
-showRngSpec RngAny = "None"
+showRngSpec RngAny = "RngAny"
 showRngSpec (RngNever _) = "RngNever"
 
 mergeRngSpec :: forall r era. RngSpec era r -> RngSpec era r -> (RngSpec era r)
@@ -516,32 +587,43 @@ mergeRngSpec a@(RngElem _ xs) b@(RngElem _ ys) =
   if xs == ys
     then a
     else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, "The elements are not the same"]
-mergeRngSpec a@(RngElem _xrep xs) b@(RngSum cond tot) =
+mergeRngSpec a@(RngElem _xrep xs) b@(RngSum siz) =
   let computed = sumAdds xs
-   in if runCond cond computed tot
+   in if runSize (toI computed) siz
         then a
         else
           RngNever
             [ "The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b
             , "The computed sum("
                 ++ show computed
-                ++ ") and the constrained total("
-                ++ show tot
-                ++ ") are not the same"
+                ++ ") and the range denoted by the size("
+                ++ show siz
+                ++ ") are not compatible."
             ]
-mergeRngSpec b@(RngSum _ _) a@(RngElem _ _) = mergeRngSpec a b
--- Given the right Sums instance we can probably compare RngElem and RngProj TODO
-
-mergeRngSpec a@(RngSum c1 x) b@(RngSum c2 y) =
-  if x == y
-    then RngSum (c1 <> c2) x
-    else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, show x ++ " =/= " ++ show y]
-mergeRngSpec a@(RngProj c1 r1 x) b@(RngProj c2 r2 y) =
+mergeRngSpec b@(RngSum _) a@(RngElem _ _) = mergeRngSpec a b
+mergeRngSpec a@(RngElem _xrep xs) b@(RngProj _ siz) =
+  let computed = projAdds xs
+   in if runSize (toI computed) siz
+        then a
+        else
+          RngNever
+            [ "The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b
+            , "The computed sum("
+                ++ show computed
+                ++ ") and the range denoted by the size("
+                ++ show siz
+                ++ ") are not compatible."
+            ]
+mergeRngSpec b@(RngProj _ _) a@(RngElem _ _) = mergeRngSpec a b
+mergeRngSpec a@(RngSum sz1) b@(RngSum sz2) =
+  case sz1 <> sz2 of
+    SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
+    sz3 -> RngSum sz3
+mergeRngSpec a@(RngProj r1 s1) b@(RngProj r2 s2) =
   case testEql r1 r2 of
-    Just Refl ->
-      if x == y
-        then RngProj (c1 <> c2) r1 x
-        else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, show x ++ " =/= " ++ show y]
+    Just Refl -> case s1 <> s2 of
+      SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
+      s3 -> RngProj r1 s3
     Nothing -> RngNever [show a, show b, "The RngSpec's are inconsistent.", show r1 ++ " =/= " ++ show r2]
 mergeRngSpec a@(RngRel r1) b@(RngRel r2) =
   case r1 <> r2 of
@@ -552,35 +634,21 @@ mergeRngSpec a b = RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ 
 -- ===================================================================
 
 -- | Compute the Size that is appropriate for a RngSpec
-sizeForRng :: RngSpec era dom -> Size
+sizeForRng :: forall dom era. RngSpec era dom -> Size
 sizeForRng (RngRel x) = sizeForRel x
-sizeForRng (RngSum LTH tot) = SzLeast (addCount tot - 2)
-sizeForRng (RngSum _ tot) = SzLeast (addCount tot - 1)
-sizeForRng (RngProj LTH _ tot) = SzLeast (addCount tot - 2)
-sizeForRng (RngProj _ _ tot) = SzLeast (addCount tot - 1)
+sizeForRng (RngSum sz) =
+  let smallest = smallInc @dom
+   in if smallest > 0
+        then SzRng 1 (minSize sz `div` smallest)
+        else SzLeast 1
+sizeForRng (RngProj (_r :: (Rep era c)) sz) =
+  let smallest = smallInc @c
+   in if smallest > 0
+        then SzRng 1 (minSize sz `div` smallest)
+        else SzLeast 1
 sizeForRng (RngElem _ xs) = SzExact (length xs)
 sizeForRng RngAny = SzAny
 sizeForRng (RngNever _) = SzAny
-
--- | Is a RngSpec consistent with a given size
-rngCanHaveSize :: RngSpec era dom -> Size -> Bool
-rngCanHaveSize rngspec size = case rngspec of
-  RngRel x -> relCanHaveSize x size
-  RngSum c tot -> minSize size >= 1 && condConsistency c size tot
-  RngProj c _ tot -> minSize size >= 1 && condConsistency c size tot
-  RngElem _ xs -> case size of SzExact n -> n == length xs; _ -> False
-  RngAny -> True
-  RngNever _ -> False
-
-condConsistency :: SumCond -> Size -> c -> Bool
-condConsistency _ _ _ = undefined -- FIXME complete this function
-{-
-condConsistency EQL count total = total >= count
-condConsistency GTE count total = total > count
-condConsistency GTH count total = total + 1 > count
-condConsistency LTE count total = total >= count - 1
-condConsistency LTH count total = total > count - 1
--}
 
 -- ------------------------------------------
 -- generators for test functions.
@@ -589,24 +657,26 @@ condConsistency LTH count total = total > count - 1
 --   The generated list is consistent with the RngSpec given as input.
 genFromRngSpec :: forall era r. [String] -> Int -> Gen r -> RngSpec era r -> Gen [r]
 genFromRngSpec msgs n genr x = case x of
-  (RngNever xs) -> errorMess "RngNever in genFromRngSpec" xs
+  (RngNever xs) -> errorMess "RngNever in genFromRngSpec" (xs ++ (msg : msgs))
   RngAny -> vectorOf n genr
-  (RngSum cond tot) -> partitionBy msgs cond n tot
-  (RngProj cond _ tot) -> do
-    rs <- partitionBy (msg : msgs) cond n tot
+  (RngSum sz) -> do
+    tot <- genFromSize sz
+    partition (msg : msgs) n (fromI (msg : msgs) tot)
+  (RngProj _ sz) -> do
+    tot <- genFromSize sz
+    rs <- partition (("partition " ++ show tot) : msg : msgs) n (fromI (msg : msgs) tot)
     mapM (genT msgs) rs
   (RngRel relspec) -> Set.toList <$> genFromRelSpec (msg : msgs) n genr relspec
   (RngElem _ xs) -> pure xs
   where
-    msg = "genFromRngSpec " ++ show x
+    msg = "genFromRngSpec " ++ show n ++ " " ++ show x
 
--- | Generate a random RngSpec, appropriate for a given size. In order to accomodate any SumCOnd
+-- | Generate a random RngSpec, appropriate for a given size. In order to accomodate any OrdCond
 --   (EQL, LTH, LTE, GTE, GTH) in RngSum and RngProj, we make the total a bit larger than 'n'
 genRngSpec ::
   forall w c era.
   ( Adds w
   , Sums w c
-  , Era era
   ) =>
   Int ->
   Gen w ->
@@ -615,22 +685,20 @@ genRngSpec ::
   Gen (RngSpec era w)
 genRngSpec 0 _ repw _ = pure $ RngRel (RelEqual repw Set.empty)
 genRngSpec n g repw repc = do
-  wtotal <- fromCount @w <$> choose (n + 3, 50) -- A bit larger than 'n'
-  ctotal <- fromCount @c <$> choose (n + 3, 50)
   frequency
-    [ (3, do (c, tot) <- genCond wtotal; pure (RngSum c tot))
-    , (2, do (c, tot) <- genCond ctotal; pure (RngProj c repc tot))
-    , (4, RngRel <$> genRelSpec @w ["genRngSpec "] (Just n) g repw)
+    [ (3, do sz <- genBigSize n; pure (RngSum sz))
+    , (2, do sz <- genBigSize n; pure (RngProj repc sz))
+    , (4, RngRel <$> genRelSpec @w ["genRngSpec "] n g repw)
     , (1, pure RngAny)
-    , (2, RngElem repw <$> vectorOf n (genRep repw))
+    , (2, RngElem repw <$> vectorOf n g)
     ]
 
 runRngSpec :: [r] -> RngSpec era r -> Bool
 runRngSpec _ (RngNever _) = False
 runRngSpec _ RngAny = True
 runRngSpec ll (RngElem _ xs) = ll == xs
-runRngSpec ll (RngSum cond tot) = runCond cond (sumAdds ll) tot
-runRngSpec ll (RngProj cond _ tot) = runCond cond (projAdds ll) tot
+runRngSpec ll (RngSum sz) = runSize (toI (sumAdds ll)) sz
+runRngSpec ll (RngProj _ sz) = runSize (toI (projAdds ll)) sz
 runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 
 -- ------------------------------------------
@@ -644,26 +712,9 @@ instance Sums Coin Word64 where
   getsum (Coin n) = fromIntegral n
   genT _ n = pure (Coin (fromIntegral n))
 
-genCond :: Adds t => t -> Gen (SumCond, t)
-genCond total = frequency (map fix [EQL, LTH, LTE, GTH, GTE])
-  where
-    fix LTH = (1, pure (LTH, add total (fromCount 1)))
-    fix sumcond = (1, pure (sumcond, total))
-
-genConsistentSumCond :: SumCond -> Gen SumCond
-genConsistentSumCond x = case x of
-  EQL -> pure EQL
-  LTH -> elements [LTH]
-  LTE -> elements [EQL]
-  GTH -> elements [GTE]
-  GTE -> elements [EQL, GTH]
-  CondNever xs -> errorMess "CondNever in genConsistentSumCond" xs
-  CondAny -> elements [EQL, LTE, GTH, GTE]
-
 genConsistentRngSpec ::
   ( Adds w
   , Sums w c
-  , Era era
   ) =>
   Int ->
   Gen w ->
@@ -676,9 +727,17 @@ genConsistentRngSpec n g repw repc = do
     RngAny -> genRngSpec n g repw repc
     RngRel RelAny -> genRngSpec n g repw repc
     RngRel x -> RngRel <$> genConsistentRelSpec msgs g x
-    RngSum c tot -> do c2 <- genConsistentSumCond c; elements [RngSum c2 tot, RngSum c tot]
-    RngProj c r tot -> do c2 <- genConsistentSumCond c; elements [RngProj c2 r tot, RngProj c r tot]
-    RngElem _ xs -> pure (RngSum EQL (sumAdds xs))
+    RngSum sz -> do
+      sz2 <- suchThat genSize (Maybe.isJust . consistent sz)
+      pure $ RngSum sz2
+    RngProj rep sz -> do
+      sz2 <- suchThat genSize (Maybe.isJust . consistent sz)
+      pure $ RngProj rep sz2
+    RngElem _ xs ->
+      frequency
+        [ (1, pure $ RngSum (SzExact (toI (sumAdds xs))))
+        , (1, pure $ RngProj repc (SzExact (toI (projAdds xs))))
+        ]
     RngNever xs -> errorMess "RngNever in genConsistentRngSpec" xs
   pure (x1, x2)
   where
@@ -686,11 +745,20 @@ genConsistentRngSpec n g repw repc = do
 
 -- Tests
 
+testConsistentRng :: Gen Property
+testConsistentRng = do
+  n <- chooseInt (3, 10)
+  (s1, s2) <- genConsistentRngSpec @_ @_ @TT n (choose (1, 1000)) Word64R CoinR
+  case s1 <> s2 of
+    RngNever ms -> pure $ counterexample (unlines (["genConsistentRng fails", show s1, show s2] ++ ms)) False
+    _ -> pure $ counterexample "" True
+
 testSoundRngSpec :: Gen Property
 testSoundRngSpec = do
   n <- choose (2, 8)
   spec <- genRngSpec n (choose (1, 1000)) Word64R CoinR
-  list <- genFromRngSpec @TT ["testSoundRngSpec " ++ show spec] n (choose (1, 1000)) spec
+  let msgs = ["testSoundRngSpec " ++ show n ++ " " ++ show spec]
+  list <- genFromRngSpec @TT msgs n (choose (1, 1000)) spec
   pure $
     counterexample
       ("spec=" ++ show spec ++ "\nlist=" ++ show list)
@@ -704,10 +772,34 @@ testMergeRngSpec = do
     s3 -> do
       let size = sizeForRng s3
       n <- genFromSize size
-      list <- genFromRngSpec @TT ["testMergeRngSpec"] n (choose (1, 1000)) s3
+      let wordsX =
+            [ "s1=" ++ show s1
+            , "s2=" ++ show s2
+            , "s3=" ++ show s3
+            , "size=" ++ show size
+            , "n=" ++ show n
+            , "testMergeRngSpec"
+            ]
+      list <- genFromRngSpec @TT wordsX n (choose (1, 1000)) s3
       pure $
         counterexample
-          ""
+          ( "s1="
+              ++ show s1
+              ++ "\n  s2="
+              ++ show s2
+              ++ "\n  s3="
+              ++ show s3
+              ++ "\n  size="
+              ++ show size
+              ++ "\n  n="
+              ++ show n
+              ++ "\n  list="
+              ++ synopsis (ListR Word64R) list
+              ++ "\n  run1="
+              ++ show (runRngSpec list s1)
+              ++ "\n run2="
+              ++ show (runRngSpec list s2)
+          )
           (runRngSpec list s1 && runRngSpec list s2)
 
 -- =====================================================
@@ -725,6 +817,8 @@ data MapSpec era dom rng where
     RelSpec era dom ->
     RngSpec era rng ->
     MapSpec era dom rng
+  -- | Currently used to generate from (Component x fields) Pred. The plan
+  --   is to replace it with some sort of FieldSpec soon.
   MapUnique :: Rep era (Map dom rng) -> Unique dom rng -> MapSpec era dom rng
   -- | Something is inconsistent
   MapNever :: [String] -> MapSpec era dom rng
@@ -774,7 +868,7 @@ mergeMapSpec spec1 spec2 = case (spec1, spec2) of
 -- | Use 'mapSpec' instead of 'MapSpec' to check size consistency at creation time.
 --   Runs in the type monad, so errors are caught and reported as Solver-time errors.
 --   This should avoid many Gen-time errors, as many of those are cause by size
---   inconsistencies. We can all so use this in mergeMapSpec, to catch size
+--   inconsistencies. We can also use this in mergeMapSpec, to catch size
 --   inconsistencies there as well as (\ a b c -> dropT (mapSpec a b c)) has the same
 --   type as MapSpec, but pushes the reports of inconsistencies into MapNever.
 mapSpec :: Ord dom => Size -> RelSpec era dom -> RngSpec era rng -> Typed (MapSpec era dom rng)
@@ -796,6 +890,7 @@ mapSpec sz1 rel rng = case (sz1 <> sz2 <> sz3) of
 -- ------------------------------------------
 -- MapSpec test functions
 
+-- | test a Map against a MapSpec
 runMapSpec :: Ord d => Map d r -> MapSpec era d r -> Bool
 runMapSpec _ (MapNever xs) = errorMess "MapNever in runMapSpec" xs
 runMapSpec _ (MapSpec SzAny RelAny RngAny) = True
@@ -805,6 +900,7 @@ runMapSpec m (MapSpec sz dom rng) =
     && runRngSpec (Map.elems m) rng
 runMapSpec _ (MapUnique _ _) = error "Remove MapUnique, replace with RelSpec (RelEqual)"
 
+-- | compute a Size that bounds a MapSpec
 sizeForMapSpec :: MapSpec era d r -> Size
 sizeForMapSpec (MapSpec sz _ _) = sz
 sizeForMapSpec (MapNever _) = SzAny
@@ -813,6 +909,7 @@ sizeForMapSpec (MapUnique _ _) = SzAny
 -- ----------------------------------------
 -- MapSpec generators
 
+-- | Generate a random MapSpec
 genMapSpec ::
   forall era dom w c.
   (Ord dom, Era era, Adds w, Sums w c) =>
@@ -824,20 +921,29 @@ genMapSpec ::
 genMapSpec genD repd repw repc = frequency [(1, pure mempty), (6, genmapspec)]
   where
     genmapspec = do
-      relspec <- genRelSpec ["genMapSpec"] Nothing genD repd
-      let size = sizeForRel relspec
-      n <- genFromSize size
+      n <- chooseInt (1, 15)
+      relspec <- genRelSpec ["genMapSpec " ++ show n ++ " " ++ show repd] n genD repd
       rngspec <- genRngSpec n (genRep @era repw) repw repc
       pure (MapSpec (SzExact n) relspec rngspec)
 
 -- | Generate a (Map d t) from a (MapSpec era d r)
-genFromMapSpec :: forall era w dom. Ord dom => Gen dom -> Gen w -> MapSpec era dom w -> Gen (Map dom w)
-genFromMapSpec _ _ (MapNever xs) = errorMess "MapNever in genFromMapSpec" xs
-genFromMapSpec _ _ (MapUnique _ (Unique _ gen)) = gen
-genFromMapSpec genD genR ms@(MapSpec size rel rng) = do
+genFromMapSpec :: forall era w dom. Ord dom => (V era (Map dom w)) -> [String] -> Gen dom -> Gen w -> MapSpec era dom w -> Gen (Map dom w)
+genFromMapSpec nm _ _ _ (MapNever xs) = errorMess ("genFromMapSpec " ++ (show nm) ++ " (MapNever _) fails") xs
+genFromMapSpec _ _ _ _ (MapUnique _ (Unique _ gen)) = gen
+genFromMapSpec nm msgs genD genR ms@(MapSpec size rel rng) = do
   n <- genFromSize size
-  dom <- genFromRelSpec ["genFromRelSpec " ++ show n, " GenFromMapSpec " ++ show ms] n genD rel
-  rangelist <- genFromRngSpec ["genFromRngSpec " ++ show n, "genFromMapSpec " ++ show ms] n genR rng
+  dom <-
+    genFromRelSpec
+      (("GenFromMapSpec " ++ (show nm) ++ "\n   " ++ show ms) : msgs)
+      n
+      genD
+      rel
+  rangelist <-
+    genFromRngSpec
+      (("genFromMapSpec " ++ (show nm) ++ "\n   " ++ show ms) : msgs)
+      n
+      genR
+      rng
   let dsize = Set.size dom
       rsize = length rangelist
   if dsize == rsize
@@ -848,8 +954,8 @@ genFromMapSpec genD genR ms@(MapSpec size rel rng) = do
 
 genMapSpecIsSound :: Gen Property
 genMapSpecIsSound = do
-  spec <- genMapSpec (chooseInt (1, 1000)) IntR Word64R CoinR
-  mp <- genFromMapSpec @TT (choose (1, 10000)) (choose (1, 10000)) spec
+  spec <- genMapSpec (chooseInt (1, 10000)) IntR Word64R CoinR
+  mp <- genFromMapSpec @TT (V "mapSpecIsSound" (MapR IntR Word64R) No) [] (choose (1, 10000)) (choose (1, 10000)) spec
   pure $ counterexample ("spec = " ++ show spec ++ "\nmp = " ++ show mp) (runMapSpec mp spec)
 
 -- ===================================================================================
@@ -911,9 +1017,9 @@ sizeForSetSpec (SetNever _) = SzAny
 
 genSetSpec :: Ord s => [String] -> Gen s -> Rep era s -> Gen (SetSpec era s)
 genSetSpec msgs genS repS = do
-  r <- genRelSpec ("from genSetSpec" : msgs) Nothing genS repS
-  let size = sizeForRel r
-  pure (SetSpec size r)
+  size <- chooseInt (0, 10)
+  r <- genRelSpec ("from genSetSpec" : msgs) size genS repS
+  pure (SetSpec (SzExact size) r)
 
 genFromSetSpec :: forall era a. [String] -> Gen a -> SetSpec era a -> Gen (Set a)
 genFromSetSpec msgs genS (SetSpec sz rp) = do
@@ -929,88 +1035,20 @@ genSetSpecIsSound = do
   where
     msgs = ["genSetSpecIsSound"]
 
--- =============================================================
-
-data SumSpec t where
-  SumSpec :: Adds t => SumCond -> Maybe t -> Maybe t -> SumSpec t
-  SumNever :: [String] -> SumSpec t
-
-instance Show t => Show (SumSpec t) where show = showSumSpec
-
-instance (Adds t) => Semigroup (SumSpec t) where (<>) = mergeSumSpec
-instance (Adds t) => Monoid (SumSpec t) where mempty = SumSpec CondAny Nothing Nothing
-
-instance LiftT (SumSpec t) where
-  liftT (SumNever xs) = failT xs
-  liftT x = pure x
-  dropT (Typed (Left s)) = SumNever s
-  dropT (Typed (Right x)) = x
-
-sizeForSumSpec :: SumSpec t -> Size
-sizeForSumSpec _ = SzAny
-
-showM :: Show a => Maybe a -> String
-showM Nothing = "Nothing"
-showM (Just x) = "(Just " ++ show x ++ ")"
-
-showSumSpec :: SumSpec a -> String
-showSumSpec (SumSpec scond x r) = "(SumSpec " ++ showM x ++ show scond ++ showM r ++ ")"
-showSumSpec (SumNever _) = "SumNever"
-
-sameMaybe :: (Show x, Eq x) => Maybe x -> Maybe x -> Either [String] (Maybe x)
-sameMaybe Nothing Nothing = Right Nothing
-sameMaybe (Just x) Nothing = Right (Just x)
-sameMaybe Nothing (Just x) = Right (Just x)
-sameMaybe (Just x) (Just y) =
-  if x == y
-    then Right (Just x)
-    else Left ["Not the same in sameMaybe: " ++ show (x, y)]
-
-mergeSumSpec :: (Adds t) => SumSpec t -> SumSpec t -> SumSpec t
-mergeSumSpec (SumNever xs) (SumNever ys) = SumNever (xs ++ ys)
-mergeSumSpec (SumNever xs) _ = SumNever xs
-mergeSumSpec _ (SumNever xs) = SumNever xs
-mergeSumSpec (SumSpec sc1 x a) (SumSpec sc2 y b) = case (sameMaybe x y, sameMaybe a b, sc1 <> sc2) of
-  (Right _, Right _, CondNever xs) -> SumNever xs
-  (Right z, Right c, sc3) -> SumSpec sc3 z c
-  (Left z, Right _, CondNever w) -> SumNever (w ++ z)
-  (Left z, Right _, _) -> SumNever z
-  (Right _, Left c, CondNever w) -> SumNever (w ++ c)
-  (Right _, Left c, _) -> SumNever c
-  (Left z, Left c, CondNever w) -> SumNever (w ++ z ++ c)
-  (Left z, Left c, _) -> SumNever (z ++ c)
-
--- | Interpretation of SumSpec
-genFromSumSpec :: (Adds t, Era era) => [String] -> Rep era t -> SumSpec t -> Typed (Gen t)
-genFromSumSpec ms rep spec =
-  let msg = seps ["From genFromSum", show rep, show spec]
-      msgs = msg : ms
-   in explain msg $ case spec of
-        (SumNever zs) -> failT (msg : zs)
-        (SumSpec _ Nothing Nothing) -> pure $ genRep rep
-        (SumSpec _ (Just t) Nothing) -> pure $ pure t -- Recall this comes from (x :=: y) so no SumCond is involved
-        (SumSpec cond Nothing (Just tot)) -> pure $ adjust msgs cond 1 tot
-        (SumSpec cond (Just x) (Just tot)) ->
-          if runCond cond x tot
-            then pure $ pure x
-            else failT (["Sum condition not met: " ++ show x ++ show cond ++ show tot] ++ ms)
-
 -- =======================================================
 -- Specifications for Lists
 
 data ElemSpec era t where
-  -- \^ The set must have Adds instance and add up to 'tot'
+  -- \^ The set must add up to 'tot', which is in the range of Size
   ElemSum ::
     Adds t =>
-    SumCond ->
-    t ->
+    Size ->
     ElemSpec era t
-  -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
+  -- | The range must sum upto 'c', which is in the range of Size, through the projection witnessed by the (Sums t c) class
   ElemProj ::
     Sums x c =>
-    SumCond ->
     Rep era c ->
-    c ->
+    Size ->
     ElemSpec era x
   -- | The range has exactly these elements
   ElemEqual :: Eq t => Rep era t -> [t] -> ElemSpec era t
@@ -1032,8 +1070,8 @@ instance LiftT (ElemSpec era t) where
   dropT (Typed (Right x)) = x
 
 showElemSpec :: ElemSpec era a -> String
-showElemSpec (ElemSum c tot) = sepsP ["ElemSum", show c, show tot]
-showElemSpec (ElemProj c r tot) = sepsP ["ElemProj", show c, show r, show tot]
+showElemSpec (ElemSum sz) = sepsP ["ElemSum", show sz]
+showElemSpec (ElemProj r sz) = sepsP ["ElemProj", show r, show sz]
 showElemSpec (ElemEqual r xs) = sepsP ["ElemEqual", show r, synopsis (ListR r) xs]
 showElemSpec (ElemNever _) = "ElemNever"
 showElemSpec ElemAny = "ElemAny"
@@ -1054,9 +1092,9 @@ mergeElemSpec a@(ElemEqual r xs) b@(ElemEqual _ ys) =
         , "  " ++ show b
         , synopsis (ListR r) xs ++ " =/= " ++ synopsis (ListR r) ys
         ]
-mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum cond tot) =
+mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum sz) =
   let computed = sumAdds xs
-   in if runCond cond computed tot
+   in if runSize (toI computed) sz
         then a
         else
           ElemNever
@@ -1065,48 +1103,48 @@ mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum cond tot) =
             , "  " ++ show b
             , "The computed sum("
                 ++ show computed
-                ++ ") and the constrained total("
-                ++ show tot
-                ++ ") are not the same"
+                ++ ") is not in the allowed range of the Size("
+                ++ show sz
+                ++ ")"
             ]
-mergeElemSpec b@(ElemSum _ _) a@(ElemEqual _ _) = mergeElemSpec a b
+mergeElemSpec b@(ElemSum _) a@(ElemEqual _ _) = mergeElemSpec a b
 -- Given the right Sums instance we can probably compare ElemEqual and ElemProj TODO
 
-mergeElemSpec a@(ElemSum c1 x) b@(ElemSum c2 y) =
-  if x == y
-    then ElemSum (c1 <> c2) x
-    else
-      ElemNever
-        [ "The ElemSpec's are inconsistent."
-        , "  " ++ show a
-        , "  " ++ show b
-        , show x ++ " =/= " ++ show y
-        ]
-mergeElemSpec a@(ElemProj c1 r1 x) b@(ElemProj c2 r2 y) =
+mergeElemSpec a@(ElemSum sz1) b@(ElemSum sz2) =
+  case sz1 <> sz2 of
+    SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
+    sz3 -> ElemSum sz3
+mergeElemSpec a@(ElemProj r1 sz1) b@(ElemProj r2 sz2) =
   case testEql r1 r2 of
     Just Refl ->
-      if x == y
-        then ElemProj (c1 <> c2) r1 x
-        else ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b, show x ++ " =/= " ++ show y]
+      case sz1 <> sz2 of
+        SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
+        sz3 -> ElemProj r1 sz3
     Nothing -> ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
 mergeElemSpec a b = ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
 
-sizeForElemSpec :: ElemSpec era a -> Size
+sizeForElemSpec :: forall a era. ElemSpec era a -> Size
 sizeForElemSpec (ElemNever _) = SzAny
 sizeForElemSpec ElemAny = SzAny
 sizeForElemSpec (ElemEqual _ x) = SzExact (length x)
-sizeForElemSpec (ElemSum LTH tot) = SzLeast (addCount tot - 2)
-sizeForElemSpec (ElemSum _ tot) = SzLeast (addCount tot - 1)
-sizeForElemSpec (ElemProj LTH _ tot) = SzLeast (addCount tot - 2)
-sizeForElemSpec (ElemProj _ _ tot) = SzLeast (addCount tot - 1)
+sizeForElemSpec (ElemSum sz) =
+  let smallest = smallInc @a
+   in if smallest > 0
+        then SzRng 1 (minSize sz `div` smallest)
+        else SzLeast 1
+sizeForElemSpec (ElemProj (_r :: (Rep era c)) sz) =
+  let smallest = smallInc @c
+   in if smallest > 0
+        then SzRng 1 (minSize sz `div` smallest)
+        else SzLeast 1
 
 runElemSpec :: [a] -> ElemSpec era a -> Bool
 runElemSpec xs spec = case spec of
   ElemNever _ -> False -- ErrorMess "ElemNever in runElemSpec" []
   ElemAny -> True
   ElemEqual _ ys -> xs == ys
-  ElemSum cond tot -> runCond cond (sumAdds xs) tot
-  ElemProj cond _ tot -> runCond cond (projAdds xs) tot
+  ElemSum sz -> runSize (toI (sumAdds xs)) sz
+  ElemProj _ sz -> runSize (toI (projAdds xs)) sz
 
 genElemSpec ::
   forall w c era.
@@ -1118,20 +1156,8 @@ genElemSpec ::
 genElemSpec (SzRng count j) repw repc
   | count == j && count >= 1 =
       frequency
-        [
-          ( 2
-          , do
-              total <- greater count -- Total must be bigger than count
-              (c, tot) <- genCond total
-              pure (ElemSum c tot)
-          )
-        ,
-          ( 2
-          , do
-              total <- greater count
-              (c, tot) <- genCond total
-              pure (ElemProj c repc tot)
-          )
+        [ (2, ElemSum <$> genBigSize j)
+        , (2, ElemProj repc <$> genBigSize j)
         , (2, ElemEqual repw <$> vectorOf count (genRep repw))
         , (1, pure ElemAny)
         ]
@@ -1152,9 +1178,12 @@ genFromElemSpec msgs genr n x = case x of
   (ElemNever xs) -> errorMess "RngNever in genFromElemSpec" xs
   ElemAny -> vectorOf n genr
   (ElemEqual _ xs) -> pure xs
-  (ElemSum cond tot) -> partitionBy msgs cond n tot
-  (ElemProj cond _ tot) -> do
-    rs <- partitionBy (msg : msgs) cond n tot
+  (ElemSum sz) -> do
+    tot <- genFromSize sz
+    partition msgs n (fromI (msg : msgs) tot)
+  (ElemProj _ sz) -> do
+    tot <- genFromSize sz
+    rs <- partition msgs n (fromI (msg : msgs) tot)
     mapM (genT msgs) rs
   where
     msg = "genFromElemSpec " ++ show n ++ " " ++ show x
@@ -1263,30 +1292,9 @@ testSoundListSpec = do
       ("spec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
       (runListSpec list spec)
 
--- ========================================================
-
-main :: IO ()
-main =
-  defaultMain $
-    testGroup
-      "Spec tests"
-      [ testProperty "test Size generators" testSoundSize
-      , testProperty "test merging Size" testMergeSize
-      , testProperty "we generate consistent RelSpecs" testConsistent
-      , testProperty "test RelSpec generators" testSoundRelSpec
-      , testProperty "test mergeRelSpec" testMergeRelSpec
-      , testProperty "test RngSpec generators" testSoundRngSpec
-      , testProperty "test mergeRngSpec" testMergeRngSpec
-      , testProperty "test More Sound Merge" reportManyMerge
-      , testProperty "test MapSpec generators" genMapSpecIsSound
-      , testProperty "test SetSpec generators" genSetSpecIsSound
-      , testProperty "test ElemSpec generators" testSoundElemSpec
-      , testProperty "test ListSpec generators" testSoundListSpec
-      ]
-
--- :main --quickcheck-replay=740521
-
--- =============================================
+-- ================================================
+-- Synthetic classes used to control the size of
+-- things in the tests.
 
 class (Arbitrary t, Adds t) => TestAdd t where
   anyAdds :: Gen t
@@ -1330,7 +1338,8 @@ someMap r = do
   ds <- vectorOf n (genRep r)
   pure $ Map.fromList (zip ds rs)
 
--- ==============================
+-- ===================================
+-- Some proto-tests, to be fixed soon
 
 aMap :: Era era => Gen (MapSpec era Int Word64)
 aMap = genMapSpec (chooseInt (1, 1000)) IntR Word64R CoinR
@@ -1339,7 +1348,7 @@ testm :: Gen (MapSpec TT Int Word64)
 testm = do
   a <- aMap @TT
   b <- aMap
-  pure (ioTyped (liftT (a <> b)))
+  monadTyped (liftT (a <> b))
 
 aList :: Era era => Gen (ListSpec era Word64)
 aList = genListSpec Word64R CoinR
@@ -1348,4 +1357,109 @@ testl :: Gen (ListSpec TT Word64)
 testl = do
   a <- aList @TT
   b <- aList
-  pure (ioTyped (liftT (a <> b)))
+  monadTyped (liftT (a <> b))
+
+-- =======================================================================
+-- Operations on SumV (defined in Types.hs)
+
+genSumV :: Gen SumV
+genSumV =
+  frequency
+    [ (1, vLeft <$> elements ["x", "y"] <*> genOrdCond <*> choose (-5, 25))
+    , (2, vRight <$> choose (-5, 25) <*> genOrdCond <*> choose (-5, 25) <*> elements ["x", "y"])
+    ]
+
+genNonNegSumV :: Gen SumV
+genNonNegSumV =
+  frequency
+    [
+      ( 1
+      , do
+          v <- elements ["x", "y"]
+          c <- genOrdCond
+          case c of
+            LTH -> vLeft v c <$> choose (1, 30) -- LTH and choice is 0, means negative number
+            _ -> vLeft v c <$> choose (0, 30)
+      )
+    ,
+      ( 1
+      , do
+          n <- choose (1, 30)
+          cond <- genOrdCond
+          m <- choose (0, n - 1)
+          v <- elements ["x", "y"]
+          pure $ vRight n cond m v
+      )
+    ]
+
+genOrdCond :: Gen OrdCond
+genOrdCond = elements [EQL, LTH, LTE, GTH, GTE, CondAny]
+
+runSumV :: forall c. Adds c => c -> SumV -> Bool
+runSumV c (SumVSize _ size) = runSize (toI c) size
+runSumV _ SumVAny = True
+runSumV _ (SumVNever _) = False
+
+tryManySumV :: Gen SumV -> ([String] -> SumV -> Gen Int) -> Gen (Int, [String])
+tryManySumV genSum genFromSum = do
+  xs <- vectorOf 25 genSum
+  ys <- vectorOf 25 genSum
+  let check (x, y, m) = do
+        z <- genFromSum ["test tryManySumV"] m
+        pure (x, runSumV z x, y, runSumV z y, z, runSumV z m, m)
+      showAns :: (SumV, Bool, SumV, Bool, Int, Bool, SumV) -> String
+      showAns (s1, run1, s2, run2, v, run3, s3) =
+        unlines
+          [ "s1 = " ++ show s1
+          , "s2 = " ++ show s2
+          , "s1 <> s2 = " ++ show s3
+          , "v = genFromRelSpec (s1 <> s2) = " ++ show v
+          , "runSumV s1 v = " ++ show run1
+          , "runSumV s2 v = " ++ show run2
+          , "runSumV (s1 <> s2) v = " ++ show run3
+          ]
+      pr x@(_, a, _, b, _, c, _) = if not (a && b && c) then Just (showAns x) else Nothing
+  let trips = [(x, y, m) | x <- xs, y <- ys, Just m <- [consistent x y]]
+  ts <- mapM check trips
+  pure $ (length trips, Maybe.catMaybes (map pr ts))
+
+reportManySumV :: IO ()
+reportManySumV = do
+  (passed, bad) <- generate (tryManySumV genSumV genFromSumV)
+  if null bad
+    then putStrLn ("passed " ++ show passed ++ " tests.")
+    else do mapM_ putStrLn bad; error "TestFails"
+
+reportManyNonNegSumV :: IO ()
+reportManyNonNegSumV = do
+  (passed, bad) <- generate (tryManySumV genNonNegSumV genFromNonNegSumV)
+  if null bad
+    then putStrLn ("passed " ++ show passed ++ " tests.")
+    else do mapM_ putStrLn bad; error "TestFails"
+
+-- ========================================================
+
+main :: IO ()
+main =
+  defaultMain $
+    testGroup
+      "Spec tests"
+      [ testProperty "test Size generators" testSoundSize
+      , testProperty "test genFromSize is non-negative" testNonNegSize
+      , testProperty "test merging Size" testMergeSize
+      , testProperty "we generate consistent RelSpecs" testConsistentRel
+      , testProperty "test RelSpec generators" testSoundRelSpec
+      , testProperty "test mergeRelSpec" testMergeRelSpec
+      , testProperty "test Consistent RngSpec generators" testConsistentRng
+      , testProperty "test RngSpec generators" testSoundRngSpec
+      , testProperty "test mergeRngSpec" testMergeRngSpec
+      , testProperty "test More Sound Merge Rng" reportManyMerge
+      , testProperty "test MapSpec generators" genMapSpecIsSound
+      , testProperty "test SetSpec generators" genSetSpecIsSound
+      , testProperty "test ElemSpec generators" testSoundElemSpec
+      , testProperty "test ListSpec generators" testSoundListSpec
+      , testProperty "test Sound MergeSumV" reportManySumV
+      , testProperty "test Sound non-negative MergeSumV" reportManyNonNegSumV
+      ]
+
+-- :main --quickcheck-replay=740521

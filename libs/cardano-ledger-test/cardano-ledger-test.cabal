@@ -16,64 +16,66 @@ source-repository head
     subdir:   libs/cardano-ledger-test
 
 library
-  import:             base, project-config
-  hs-source-dirs:     src
-  default-language: Haskell2010
-  ghc-options:
+    exposed-modules:
+        Test.Cardano.Ledger.Alonzo.Tools
+        Test.Cardano.Ledger.Constrained.Ast
+        Test.Cardano.Ledger.Constrained.Classes
+        Test.Cardano.Ledger.Constrained.Combinators
+        Test.Cardano.Ledger.Constrained.Env
+        Test.Cardano.Ledger.Constrained.Examples
+        Test.Cardano.Ledger.Constrained.Lenses
+        Test.Cardano.Ledger.Constrained.Monad
+        Test.Cardano.Ledger.Constrained.Spec
+        Test.Cardano.Ledger.Constrained.Tests
+        Test.Cardano.Ledger.Constrained.TypeRep
+        Test.Cardano.Ledger.Constrained.Vars
+        Test.Cardano.Ledger.Constrained.Rewrite
+        Test.Cardano.Ledger.Constrained.Size
+        Test.Cardano.Ledger.Constrained.Solver
+        Test.Cardano.Ledger.Examples.BabbageFeatures
+        Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
+        Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
+        Test.Cardano.Ledger.Examples.AlonzoBBODY
+        Test.Cardano.Ledger.Examples.AlonzoCollectInputs
+        Test.Cardano.Ledger.Examples.AlonzoAPI
+        Test.Cardano.Ledger.Examples.Consensus
+        Test.Cardano.Ledger.Examples.STSTestUtils
+        Test.Cardano.Ledger.Generic.AggPropTests
+        Test.Cardano.Ledger.Generic.ApplyTx
+        Test.Cardano.Ledger.Generic.Consensus
+        Test.Cardano.Ledger.Generic.Indexed
+        Test.Cardano.Ledger.Generic.Fields
+        Test.Cardano.Ledger.Generic.Functions
+        Test.Cardano.Ledger.Generic.GenState
+        Test.Cardano.Ledger.Generic.TxGen
+        Test.Cardano.Ledger.Generic.Proof
+        Test.Cardano.Ledger.Generic.MockChain
+        Test.Cardano.Ledger.Generic.ModelState
+        Test.Cardano.Ledger.Generic.PrettyCore
+        Test.Cardano.Ledger.Generic.Properties
+        Test.Cardano.Ledger.Generic.Same
+        Test.Cardano.Ledger.Generic.Scriptic
+        Test.Cardano.Ledger.Generic.Trace
+        Test.Cardano.Ledger.Generic.Updaters
+        Test.Cardano.Ledger.NoThunks
+        Test.Cardano.Ledger.Rational
+        Test.Cardano.Ledger.TestableEra
+        Test.Cardano.Ledger.ValueFromList
+        Test.Cardano.Ledger.Tickf
+
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
         -Wunused-packages
-  exposed-modules:
-    Test.Cardano.Ledger.Alonzo.Tools
-    Test.Cardano.Ledger.Constrained.Ast
-    Test.Cardano.Ledger.Constrained.Classes
-    Test.Cardano.Ledger.Constrained.Combinators
-    Test.Cardano.Ledger.Constrained.Env
-    Test.Cardano.Ledger.Constrained.Examples
-    Test.Cardano.Ledger.Constrained.Lenses
-    Test.Cardano.Ledger.Constrained.Monad
-    Test.Cardano.Ledger.Constrained.Spec
-    Test.Cardano.Ledger.Constrained.Tests
-    Test.Cardano.Ledger.Constrained.TypeRep
-    Test.Cardano.Ledger.Constrained.Vars
-    Test.Cardano.Ledger.Constrained.Rewrite
-    Test.Cardano.Ledger.Constrained.Solver
-    Test.Cardano.Ledger.Examples.BabbageFeatures
-    Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
-    Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
-    Test.Cardano.Ledger.Examples.AlonzoBBODY
-    Test.Cardano.Ledger.Examples.AlonzoCollectInputs
-    Test.Cardano.Ledger.Examples.AlonzoAPI
-    Test.Cardano.Ledger.Examples.Consensus
-    Test.Cardano.Ledger.Examples.STSTestUtils
-    Test.Cardano.Ledger.Generic.AggPropTests
-    Test.Cardano.Ledger.Generic.ApplyTx
-    Test.Cardano.Ledger.Generic.Consensus
-    Test.Cardano.Ledger.Generic.Indexed
-    Test.Cardano.Ledger.Generic.Fields
-    Test.Cardano.Ledger.Generic.Functions
-    Test.Cardano.Ledger.Generic.GenState
-    Test.Cardano.Ledger.Generic.TxGen
-    Test.Cardano.Ledger.Generic.Proof
-    Test.Cardano.Ledger.Generic.MockChain
-    Test.Cardano.Ledger.Generic.ModelState
-    Test.Cardano.Ledger.Generic.PrettyCore
-    Test.Cardano.Ledger.Generic.Properties
-    Test.Cardano.Ledger.Generic.Same
-    Test.Cardano.Ledger.Generic.Scriptic
-    Test.Cardano.Ledger.Generic.Trace
-    Test.Cardano.Ledger.Generic.Updaters
-    Test.Cardano.Ledger.NoThunks
-    Test.Cardano.Ledger.Rational
-    Test.Cardano.Ledger.TestableEra
-    Test.Cardano.Ledger.ValueFromList
-    Test.Cardano.Ledger.Tickf
 
     other-modules:    
     build-depends:
         base >=4.14 && <4.17,
         array,
         bytestring,
+        cardano-data,
         cardano-crypto-class,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.1,
@@ -92,7 +94,7 @@ library
         cardano-protocol-tpraos >=1.0,
         cardano-slotting,
         containers,
-        hspec-expectations,        
+        hspec-expectations,
         vector-map,
         data-default-class,
         microlens,
