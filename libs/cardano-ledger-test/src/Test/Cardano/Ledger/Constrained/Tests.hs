@@ -34,6 +34,7 @@ import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (EQL), Size (SzRng))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
@@ -337,7 +338,7 @@ genPred env =
             -- for now, since sumBeforeParts is anyway disabled due to TODO/SumSet.
             -- count <- choose (1, min 3 val)
             let count = 1
-            partSums <- intPartition ["sumdToC in Tests.hs"] (show IntR) 1 count val
+            partSums <- partitionInt 1 ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
             pure (SumsTo EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
@@ -481,7 +482,7 @@ prop_soundness' strict info =
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
           ensureTyped (compile info preds) $ \graph ->
             forAll (genDependGraph False testProof graph) . flip checkRight $ \subst ->
-              let env = substToEnv subst emptyEnv
+              let env = errorTyped $ substToEnv subst emptyEnv
                   checkPred pr = counterexample ("Failed: " ++ show pr) $ ensureTyped (runPred env pr) id
                   n = let Env e = gEnv genenv in Map.size e
                in tabulate "Var count" [show n] $

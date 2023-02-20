@@ -38,6 +38,7 @@ import Data.Int (Int64)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
+import Test.Cardano.Ledger.Mary.ValueSpec ()
 import Test.Cardano.Ledger.Shelley.Generator.TxAuxData (genMetadata')
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.QuickCheck (
@@ -99,9 +100,8 @@ instance
   forall era c.
   ( Era era
   , c ~ EraCrypto era
-  , Crypto c
-  , FromCBOR (Annotator (Timelock era))
-  , ToCBOR (Script era)
+  , DecCBOR (Annotator (Timelock era))
+  , EncCBOR (Script era)
   , Arbitrary (Script era)
   ) =>
   Arbitrary (AllegraTxAuxData era)
@@ -129,7 +129,6 @@ genScriptSeq = do
 
 instance
   ( Era era
-  , Crypto (EraCrypto era)
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)
   , Arbitrary (PPUPPredFailure era)
@@ -139,7 +138,7 @@ instance
   arbitrary = genericArbitraryU
 
 instance
-  (EraTxOut era, Crypto (EraCrypto era), Arbitrary (TxOut era)) =>
+  (EraTxOut era, Arbitrary (TxOut era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (AllegraTxBody era)
   where
   arbitrary =
@@ -158,7 +157,7 @@ instance
 -------------------------------------------------------------------------------}
 
 instance
-  (EraTxOut era, Crypto (EraCrypto era), Arbitrary (TxOut era)) =>
+  (EraTxOut era, Arbitrary (TxOut era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (MaryTxBody era)
   where
   arbitrary =
@@ -171,28 +170,7 @@ instance
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> arbitrary
-      <*> genMintValues
-
-instance Crypto c => Arbitrary (PolicyID c) where
-  arbitrary = PolicyID <$> arbitrary
-
-instance Crypto c => Arbitrary (MultiAsset c) where
-  arbitrary = MultiAsset <$> arbitrary
-
-instance Crypto c => Arbitrary (MaryValue c) where
-  arbitrary = MaryValue <$> (fromIntegral <$> positives) <*> (multiAssetFromListBounded <$> triples)
-    where
-      triples = arbitrary :: Gen [(PolicyID c, AssetName, Word64)]
-      positives = arbitrary :: Gen Word64
-
-  shrink (MaryValue ada assets) =
-    concat
-      [ -- Shrink the ADA value
-        flip MaryValue assets <$> shrink ada
-      , -- Shrink the non-ADA assets by reducing the list length
-        MaryValue ada <$> shrink assets
-      ]
+      <*> scale (`div` 15) genMintValues
 
 -- | When generating values for the mint field, we do two things:
 --
