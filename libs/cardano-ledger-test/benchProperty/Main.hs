@@ -49,7 +49,6 @@ import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainEvent (..), TestChainPredicateFailure (..))
 import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (relevantCasesAreCovered)
 import qualified Test.Tasty as T
-import Test.Tasty.QuickCheck
 
 -- ===============================================================
 
@@ -64,9 +63,7 @@ instance Embed (AlonzoUTXOW (AlonzoEra TestCrypto)) (ShelleyLEDGER (AlonzoEra Te
 profileCover :: IO ()
 profileCover =
   T.defaultMain $
-    testProperty
-      "Chain and Ledger traces cover the relevant cases"
-      (withMaxSuccess 1 (relevantCasesAreCovered @(AlonzoEra TestCrypto)))
+    relevantCasesAreCovered @(AlonzoEra TestCrypto) 1
 
 main :: IO ()
 main = profileCover

@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
-  poolReapProps,
+  tests,
 )
 where
 
@@ -58,24 +58,27 @@ import Test.QuickCheck (
   Testable (..),
   conjoin,
  )
+import Test.Tasty (TestTree)
+import Test.Tasty.QuickCheck (testProperty)
 
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --
 ----------------------------------------------------------------------
 
-poolReapProps ::
+tests ::
   forall era.
   ( ChainProperty era
   , EraGen era
   , EraGovernance era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
-  Property
-poolReapProps =
-  forAllChainTrace traceLen defaultConstants $ \tr ->
-    conjoin $
-      map removedAfterPoolreap_ $
-        filter (not . sameEpoch) (chainSstWithTick tr)
+  TestTree
+tests =
+  testProperty "pool is removed from stake pool and retiring maps" $
+    forAllChainTrace traceLen defaultConstants $ \tr ->
+      conjoin $
+        map removedAfterPoolreap_ $
+          filter (not . sameEpoch) (chainSstWithTick tr)
   where
     poolState = dpsPState . lsDPState . esLState . nesEs . chainNes
 

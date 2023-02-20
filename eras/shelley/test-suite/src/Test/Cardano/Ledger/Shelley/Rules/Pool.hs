@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Pool (
-  poolProps,
+  tests,
 )
 where
 
@@ -61,10 +61,12 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.QuickCheck (
   Testable (..),
  )
+import Test.Tasty (TestTree)
+import Test.Tasty.QuickCheck (testProperty)
 
 -- | Various properties of the POOL STS Rule, tested on longer traces
 -- (double the default length)
-poolProps ::
+tests ::
   forall era.
   ( EraGen era
   , EraGovernance era
@@ -72,15 +74,16 @@ poolProps ::
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ProtVerAtMost era 8
   ) =>
-  Property
-poolProps =
-  forAllChainTrace @era traceLen defaultConstants $ \tr -> do
-    let ssts = sourceSignalTargets tr
-    conjoin . concat $
-      [ map poolRetirement ssts
-      , map poolRegistration ssts
-      , map poolStateIsInternallyConsistent ssts
-      ]
+  TestTree
+tests =
+  testProperty "properties of the POOL STS" $
+    forAllChainTrace @era traceLen defaultConstants $ \tr -> do
+      let ssts = sourceSignalTargets tr
+      conjoin . concat $
+        [ map poolRetirement ssts
+        , map poolRegistration ssts
+        , map poolStateIsInternallyConsistent ssts
+        ]
 
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.

@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (
-  collisionFreeProps,
+  tests,
 ) where
 
 import Cardano.Ledger.Block (bbody)
@@ -56,9 +56,11 @@ import Test.QuickCheck (
   counterexample,
   (===),
  )
+import Test.Tasty (TestTree)
+import Test.Tasty.QuickCheck (testProperty)
 
 -- | Tx inputs are eliminated, outputs added to utxo and TxIds are unique
-collisionFreeProps ::
+tests ::
   forall era ledger.
   ( EraGen era
   , EraGovernance era
@@ -66,19 +68,20 @@ collisionFreeProps ::
   , TestingLedger era ledger
   , QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
-  Property
-collisionFreeProps =
-  forAllChainTrace @era traceLen defaultConstants $ \tr -> do
-    let ssts = sourceSignalTargets tr
-    conjoin . concat $
-      [ -- collision freeness
-        map (eliminateTxInputs @era @ledger) ssts
-      , map (newEntriesAndUniqueTxIns @era @ledger) ssts
-      , -- no double spend
-        map noDoubleSpend ssts
-      , -- tx signatures
-        map (requiredMSigSignaturesSubset @era @ledger) ssts
-      ]
+  TestTree
+tests =
+  testProperty "inputs are eliminated, outputs added to utxo and TxIds are unique" $
+    forAllChainTrace @era traceLen defaultConstants $ \tr -> do
+      let ssts = sourceSignalTargets tr
+      conjoin . concat $
+        [ -- collision freeness
+          map (eliminateTxInputs @era @ledger) ssts
+        , map (newEntriesAndUniqueTxIns @era @ledger) ssts
+        , -- no double spend
+          map noDoubleSpend ssts
+        , -- tx signatures
+          map (requiredMSigSignaturesSubset @era @ledger) ssts
+        ]
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
