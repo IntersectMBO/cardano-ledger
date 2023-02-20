@@ -25,7 +25,6 @@ import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
 import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake
 import Test.Tasty
-import Test.Tasty.QuickCheck (testProperty)
 
 type A = AlonzoEra TestCrypto
 
@@ -54,8 +53,8 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Alonzo tests - nightly"
-    [ CDDL.tests 50
-    , Shelley.propertyTests @A @(AlonzoLEDGER A)
-    , IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy A)
-    , ChainTrace.tests
-    ]
+    $ Shelley.commonTests @A @(AlonzoLEDGER A)
+      ++ [ CDDL.tests 50
+         , IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy A)
+         , ChainTrace.tests
+         ]

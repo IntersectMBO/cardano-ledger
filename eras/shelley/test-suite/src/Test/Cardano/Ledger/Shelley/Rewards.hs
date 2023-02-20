@@ -15,7 +15,7 @@
 -- generalized, and then moved to the Generator/Trace/ directory which computes
 -- property tests in all eras.
 module Test.Cardano.Ledger.Shelley.Rewards (
-  rewardTests,
+  tests,
   C,
   defaultMain,
   newEpochProp,
@@ -808,8 +808,8 @@ reward
 chainlen :: Word64
 chainlen = 200
 
-rewardTests :: TestTree
-rewardTests =
+tests :: TestTree
+tests =
   testGroup
     "Reward Tests"
     [ testProperty "Sum of rewards is bounded by reward pot" $

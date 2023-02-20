@@ -18,9 +18,17 @@ import Test.Cardano.Ledger.Mary.Golden (goldenScaledMinDeposit)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
 import Test.Cardano.Ledger.Mary.Value (valTests)
 import Test.Cardano.Ledger.MaryEraGen ()
-import Test.Cardano.Ledger.Shelley.PropertyTests (minimalPropertyTests, propertyTests)
+import qualified Test.Cardano.Ledger.Shelley.Address.Bootstrap as Bootstrap (
+  bootstrapHashTest,
+ )
+import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley (commonTests)
+import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
+import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (onlyValidChainSignalsAreGenerated, relevantCasesAreCovered)
+import qualified Test.Cardano.Ledger.Shelley.WitVKeys as WitVKeys (tests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
+import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty
+import qualified Test.Tasty.QuickCheck as TQC
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
 type instance EraRule "TICKN" (MaryEra _c) = TPraos.TICKN
@@ -50,7 +58,14 @@ allegraTests =
   testGroup
     "Allegra Ledger Tests"
     [ allegraTranslationTests
-    , minimalPropertyTests @Allegra @(ShelleyLEDGER Allegra)
+    , ( localOption
+          (TQC.QuickCheckMaxRatio 50)
+          (ClassifyTraces.relevantCasesAreCovered @Allegra (maxSuccess stdArgs))
+      )
+    , AdaPreservation.tests @Allegra @(ShelleyLEDGER Allegra) (maxSuccess stdArgs)
+    , ClassifyTraces.onlyValidChainSignalsAreGenerated @Allegra
+    , Bootstrap.bootstrapHashTest
+    , WitVKeys.tests @(EraCrypto Allegra)
     , testScriptPostTranslation
     ]
 
@@ -70,12 +85,10 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        [ propertyTests @Allegra @(ShelleyLEDGER Allegra)
-        ]
+        (Shelley.commonTests @Allegra @(ShelleyLEDGER Allegra))
     , testGroup
         "Mary Ledger - nightly"
-        [ propertyTests @Mary @(ShelleyLEDGER Mary)
-        ]
+        (Shelley.commonTests @Mary @(ShelleyLEDGER Mary))
     ]
 
 main :: IO ()

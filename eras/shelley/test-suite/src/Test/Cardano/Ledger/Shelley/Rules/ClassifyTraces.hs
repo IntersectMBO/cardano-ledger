@@ -91,6 +91,8 @@ import Test.QuickCheck (
   property,
   withMaxSuccess,
  )
+import Test.Tasty (TestTree)
+import qualified Test.Tasty.QuickCheck as TQC
 
 -- =================================================================
 
@@ -102,14 +104,19 @@ relevantCasesAreCovered ::
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ProtVerAtMost era 8
   ) =>
-  Property
-relevantCasesAreCovered = do
-  let tl = 100
-  checkCoverage $
-    forAllBlind
-      (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p defaultConstants) genesisChainSt)
-      relevantCasesAreCoveredForTrace
+  Int ->
+  TestTree
+relevantCasesAreCovered n =
+  TQC.testProperty
+    "Chain and Ledger traces cover the relevant cases"
+    (TQC.withMaxSuccess n prop)
   where
+    prop = do
+      let tl = 100
+      checkCoverage $
+        forAllBlind
+          (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p defaultConstants) genesisChainSt)
+          relevantCasesAreCoveredForTrace
     p :: Proxy era
     p = Proxy
     genesisChainSt = Just $ mkGenesisChainState (genEnv p defaultConstants)
@@ -299,16 +306,18 @@ onlyValidLedgerSignalsAreGenerated ::
   , Show (Signal ledger)
   , EraGovernance era
   ) =>
-  Property
+  TestTree
 onlyValidLedgerSignalsAreGenerated =
-  withMaxSuccess 200 $
-    onlyValidSignalsAreGeneratedFromInitState
-      @ledger
-      testGlobals
-      100
-      ge
-      genesisLedgerSt
+  TQC.testProperty "Only valid CHAIN STS signals are generated" prop
   where
+    prop =
+      withMaxSuccess 200 $
+        onlyValidSignalsAreGeneratedFromInitState
+          @ledger
+          testGlobals
+          100
+          ge
+          genesisLedgerSt
     p :: Proxy era
     p = Proxy
     ge = genEnv p defaultConstants
@@ -379,15 +388,17 @@ onlyValidChainSignalsAreGenerated ::
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGovernance era
   ) =>
-  Property
+  TestTree
 onlyValidChainSignalsAreGenerated =
-  withMaxSuccess 100 $
-    onlyValidSignalsAreGeneratedFromInitState @(CHAIN era)
-      testGlobals
-      100
-      (genEnv p defaultConstants)
-      genesisChainSt
+  TQC.testProperty "Only valid CHAIN STS signals are generated" prop
   where
+    prop =
+      withMaxSuccess 100 $
+        onlyValidSignalsAreGeneratedFromInitState @(CHAIN era)
+          testGlobals
+          100
+          (genEnv p defaultConstants)
+          genesisChainSt
     p :: Proxy era
     p = Proxy
     genesisChainSt = Just $ mkGenesisChainState (genEnv p defaultConstants)

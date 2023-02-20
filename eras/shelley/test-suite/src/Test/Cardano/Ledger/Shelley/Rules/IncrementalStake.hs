@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
-  incrStakeComputationProp,
+  incrStakeComputationTest,
   incrStakeComparisonTest,
   stakeDistr,
   aggregateUtxoCoinByCredential,
@@ -77,7 +77,7 @@ import Test.QuickCheck (
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
 
-incrStakeComputationProp ::
+incrStakeComputationTest ::
   forall era ledger.
   ( EraGen era
   , EraGovernance era
@@ -85,15 +85,16 @@ incrStakeComputationProp ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
-  Property
-incrStakeComputationProp =
-  forAllChainTrace @era longTraceLen defaultConstants {maxMajorPV = natVersion @8} $ \tr -> do
-    let ssts = sourceSignalTargets tr
+  TestTree
+incrStakeComputationTest =
+  testProperty "incremental stake calc" $
+    forAllChainTrace @era longTraceLen defaultConstants {maxMajorPV = natVersion @8} $ \tr -> do
+      let ssts = sourceSignalTargets tr
 
-    conjoin . concat $
-      [ -- preservation properties
-        map (incrStakeComp @era @ledger) ssts
-      ]
+      conjoin . concat $
+        [ -- preservation properties
+          map (incrStakeComp @era @ledger) ssts
+        ]
 
 incrStakeComp ::
   forall era ledger.

@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Deleg (
-  delegProps,
+  tests,
 )
 where
 
@@ -56,10 +56,12 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.QuickCheck (
   Testable (..),
  )
+import Test.Tasty (TestTree)
+import Test.Tasty.QuickCheck (testProperty)
 
 -- | Various properties of the POOL STS Rule, tested on longer traces
 -- (double the default length)
-delegProps ::
+tests ::
   forall era.
   ( EraGen era
   , EraGovernance era
@@ -67,11 +69,12 @@ delegProps ::
   , ChainProperty era
   , ProtVerAtMost era 8
   ) =>
-  Property
-delegProps =
-  forAllChainTrace @era traceLen defaultConstants $ \tr -> do
-    conjoin $
-      map chainProp (sourceSignalTargets tr)
+  TestTree
+tests =
+  testProperty "properties of the DELEG STS" $
+    forAllChainTrace @era traceLen defaultConstants $ \tr -> do
+      conjoin $
+        map chainProp (sourceSignalTargets tr)
   where
     delegProp :: DelegEnv era -> SourceSignalTarget (ShelleyDELEG era) -> Property
     delegProp denv delegSst =
