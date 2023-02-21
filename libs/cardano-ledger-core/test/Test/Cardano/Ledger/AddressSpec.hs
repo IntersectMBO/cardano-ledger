@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.AddressSpec (spec) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
-import Cardano.Ledger.Binary (Version, decodeFull', encCBOR, natVersion, serialize')
+import Cardano.Ledger.Binary (Version, decodeFull', natVersion, serialize')
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import qualified Data.Binary.Put as B
@@ -23,39 +23,51 @@ import Data.Either
 import Data.Maybe (isNothing)
 import Data.Proxy
 import Data.Word
-import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, mkTrip, roundTripExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (
+  cborTrip,
+  roundTripExpectation,
+  roundTripRangeExpectation,
+ )
 import Test.Cardano.Ledger.Common hiding ((.&.))
 import Test.Cardano.Ledger.Core.Address
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (genAddrBadPtr, genCompactAddrBadPtr)
 import Test.Cardano.Ledger.Core.Utils (runFailError)
 
 spec :: Spec
-spec = do
+spec = describe "Address" $ do
   describe "CompactAddr" $ do
     prop "compactAddr/decompactAddr round trip" $
-      propCompactAddrRoundTrip @StandardCrypto
+      forAll genAddrBadPtr $
+        propCompactAddrRoundTrip @StandardCrypto
     prop "Compact address binary representation" $
-      propCompactSerializationAgree @StandardCrypto
+      forAll genAddrBadPtr $
+        propCompactSerializationAgree @StandardCrypto
     prop "Ensure Addr failures on incorrect binary data" $
       propDecompactErrors @StandardCrypto
     prop "Ensure RewardAcnt failures on incorrect binary data" $
       propDeserializeRewardAcntErrors @StandardCrypto
-    prop "RoundTrip" $
+    prop "RoundTrip-valid" $
       roundTripExpectation @(CompactAddr StandardCrypto) cborTrip
-    prop "Decompact addr with junk" $ propDecompactAddrWithJunk @StandardCrypto
+    prop "RoundTrip-invalid" $
+      forAll genCompactAddrBadPtr $
+        roundTripRangeExpectation @(CompactAddr StandardCrypto)
+          cborTrip
+          (natVersion @2)
+          (natVersion @6)
+    prop "Decompact addr with junk" $
+      propDecompactAddrWithJunk @StandardCrypto
     prop "Same as old decompactor" $ propSameAsOldDecompactAddr @StandardCrypto
   describe "Addr" $ do
-    prop "RoundTrip" $
+    prop "RoundTrip-valid" $
       roundTripExpectation @(Addr StandardCrypto) cborTrip
-    prop "RoundTrip (fromCborAddr)" $
-      roundTripExpectation @(Addr StandardCrypto) (mkTrip encCBOR fromCborAddr)
+    prop "RoundTrip-invalid" $
+      forAll genAddrBadPtr $
+        roundTripRangeExpectation @(Addr StandardCrypto) cborTrip (natVersion @2) (natVersion @6)
     prop "Deserializing an address matches old implementation" $
       propValidateNewDeserialize @StandardCrypto
   describe "RewardAcnt" $ do
     prop "RewardAcnt" $
       roundTripExpectation @(RewardAcnt StandardCrypto) cborTrip
-    prop "RewardAcnt (fromCborRewardAcnt)" $
-      roundTripExpectation @(RewardAcnt StandardCrypto) (mkTrip encCBOR fromCborRewardAcnt)
 
 propSameAsOldDecompactAddr :: forall c. Crypto c => CompactAddr c -> Expectation
 propSameAsOldDecompactAddr cAddr = do
@@ -71,7 +83,7 @@ propDecompactAddrWithJunk ::
   BS.ByteString ->
   Expectation
 propDecompactAddrWithJunk addr junk = do
-  -- Add garbage to the end of serializaed non-Byron address
+  -- Add garbage to the end of serialized non-Byron address
   bs <- case addr of
     AddrBootstrap _ -> pure $ serialiseAddr addr
     _ -> do
@@ -97,15 +109,16 @@ propDecompactAddrWithJunk addr junk = do
     -- Decode as compact address
     cAddr :: CompactAddr c <-
       either (error . show) pure $ decodeFull' version cbor
-    -- Ensure that garbage is gone
-    decompactAddr cAddr `shouldBe` addr
+    -- Ensure that garbage is gone (decodeAddr will fail otherwise)
+    decodeAddr (serialiseAddr (decompactAddr cAddr)) `shouldReturn` addr
 
 propValidateNewDeserialize :: forall c. (HasCallStack, Crypto c) => Addr c -> Property
-propValidateNewDeserialize addr =
+propValidateNewDeserialize addr = property $ do
   let bs = serialiseAddr addr
       deserializedOld = runFailError $ deserialiseAddrOld @c bs
       deserializedNew = runFailError $ decodeAddr @c bs
-   in deserializedNew === addr .&&. deserializedOld === deserializedNew
+  deserializedNew `shouldBe` addr
+  deserializedOld `shouldBe` deserializedNew
 
 propCompactAddrRoundTrip :: Crypto c => Addr c -> Property
 propCompactAddrRoundTrip addr =
@@ -160,7 +173,8 @@ propDecompactErrors addr = do
                 , serializeSuffix [genGood32, genGood16, genBad16]
                 , serializeSuffix [genGood32, genGood16, genGood16, genGood16]
                 , -- We need to reset the first bit, to indicate that no more bytes do
-                  -- follow. This is similar to (except the original suffix is retained):
+                  -- follow. Besides the fact that the original suffix is retained, this
+                  -- is similar to:
                   --
                   -- serializeSuffix [genGood8, genGood32, genGood16, genGood16]
                   (\x -> BS.singleton (x .&. 0b01111111) <> suffix) <$> arbitrary

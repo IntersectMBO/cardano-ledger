@@ -13,6 +13,9 @@
 
 module Test.Cardano.Ledger.Core.Arbitrary (
   module Test.Cardano.Ledger.Binary.Arbitrary,
+  genAddrBadPtr,
+  genCompactAddrBadPtr,
+  genBadPtr,
 )
 where
 
@@ -26,7 +29,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
-  CertIx,
+  CertIx (..),
   DnsName,
   Network (..),
   NonNegativeInterval,
@@ -37,7 +40,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   SlotNo (..),
   StrictMaybe,
-  TxIx,
+  TxIx (..),
   UnitInterval,
   Url,
   mkActiveSlotCoeff,
@@ -211,10 +214,10 @@ instance GenValid NonNegativeInterval where
   shrinkValid _ = []
 
 instance Arbitrary TxIx where
-  arbitrary = mkTxIxPartial . toInteger <$> (arbitrary :: Gen Word16)
+  arbitrary = TxIx <$> arbitrary
 
 instance Arbitrary CertIx where
-  arbitrary = mkCertIxPartial . toInteger <$> (arbitrary :: Gen Word16)
+  arbitrary = CertIx <$> arbitrary
 
 instance Arbitrary ProtVer where
   arbitrary = ProtVer <$> arbitrary <*> arbitrary
@@ -241,10 +244,19 @@ instance Crypto c => Arbitrary (TxIn c) where
 ------------------------------------------------------------------------------------------
 
 instance Arbitrary Ptr where
-  arbitrary = Ptr <$> genSlotNo <*> arbitrary <*> arbitrary
-    where
-      -- We are only allowing 32bit large slot numbers in Ptrs
-      genSlotNo = SlotNo . (fromIntegral :: Word32 -> Word64) <$> arbitrary
+  arbitrary = genValidPtr
+
+-- | Generate a Ptr that contains values that are allowed on the wire
+genValidPtr :: Gen Ptr
+genValidPtr =
+  Ptr
+    <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> arbitrary)
+    <*> (mkTxIxPartial . toInteger <$> (arbitrary :: Gen Word16))
+    <*> (mkCertIxPartial . toInteger <$> (arbitrary :: Gen Word16))
+
+-- | Generate a Ptr with full 64bit range for values. Not allowed starting in Babbage
+genBadPtr :: Gen Ptr
+genBadPtr = Ptr <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (Credential r c) where
   arbitrary =
@@ -331,24 +343,36 @@ instance Arbitrary (BootstrapAddress c) where
   arbitrary = BootstrapAddress <$> hedgehog Byron.genAddress
 
 instance Crypto c => Arbitrary (Addr c) where
-  arbitrary =
-    frequency
-      [ (8, Addr <$> arbitrary <*> arbitrary <*> arbitrary)
-      , (2, AddrBootstrap <$> arbitrary)
-      ]
+  arbitrary = genAddrWith arbitrary
   shrink = genericShrink
+
+genAddrWith :: Crypto c => Gen Ptr -> Gen (Addr c)
+genAddrWith genPtr =
+  frequency
+    [ (8, Addr <$> arbitrary <*> arbitrary <*> genStakeRefWith genPtr)
+    , (2, AddrBootstrap <$> arbitrary)
+    ]
+
+genAddrBadPtr :: Crypto c => Gen (Addr c)
+genAddrBadPtr = genAddrWith genBadPtr
+
+genCompactAddrBadPtr :: Crypto c => Gen (CompactAddr c)
+genCompactAddrBadPtr = compactAddr <$> genAddrBadPtr
 
 instance Crypto c => Arbitrary (CompactAddr c) where
   arbitrary = compactAddr <$> arbitrary
 
 instance Crypto c => Arbitrary (StakeReference c) where
-  arbitrary =
-    frequency
-      [ (80, StakeRefBase <$> arbitrary)
-      , (5, StakeRefPtr <$> arbitrary)
-      , (15, pure StakeRefNull)
-      ]
+  arbitrary = genStakeRefWith arbitrary
   shrink = genericShrink
+
+genStakeRefWith :: Crypto c => Gen Ptr -> Gen (StakeReference c)
+genStakeRefWith genPtr =
+  frequency
+    [ (80, StakeRefBase <$> arbitrary)
+    , (5, StakeRefPtr <$> genPtr)
+    , (15, pure StakeRefNull)
+    ]
 
 instance Crypto c => Arbitrary (RewardAcnt c) where
   arbitrary = RewardAcnt <$> arbitrary <*> arbitrary

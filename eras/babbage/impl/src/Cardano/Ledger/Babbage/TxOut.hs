@@ -244,7 +244,7 @@ instance NFData (BabbageTxOut era) where
 
 viewCompactTxOut ::
   forall era.
-  EraTxOut era =>
+  (Era era, Val (Value era)) =>
   BabbageTxOut era ->
   (CompactAddr (EraCrypto era), CompactForm (Value era), Datum era, StrictMaybe (Script era))
 viewCompactTxOut txOut = case txOut of
@@ -368,7 +368,7 @@ mkTxOutCompact ::
 mkTxOutCompact addr cAddr cVal = mkTxOut addr cAddr (fromCompact cVal)
 
 pattern TxOutCompact ::
-  (EraTxOut era, HasCallStack) =>
+  (Era era, Val (Value era), Compactible (Value era), HasCallStack) =>
   CompactAddr (EraCrypto era) ->
   CompactForm (Value era) ->
   BabbageTxOut era
@@ -381,7 +381,7 @@ pattern TxOutCompact addr vl <-
       | otherwise = TxOutCompact' cAddr cVal
 
 pattern TxOutCompactDH ::
-  (EraTxOut era, HasCallStack) =>
+  (Era era, Val (Value era), Compactible (Value era), HasCallStack) =>
   CompactAddr (EraCrypto era) ->
   CompactForm (Value era) ->
   DataHash (EraCrypto era) ->
@@ -400,19 +400,11 @@ instance
   (Era era, Val (Value era), EncCBOR (Value era), EncCBOR (Script era)) =>
   EncCBOR (BabbageTxOut era)
   where
-  encCBOR (BabbageTxOut addr v d s) = encodeTxOut (compactAddr addr) v d s
-
--- FIXME: ^ Starting with Babbage we need to reserialize all Addresses.  It is
--- safe to reserialize an address, because we do not rely on this instance for
--- computing a hash of a transaction and it is only used in storing TxOuts in
--- the ledger state.
---
--- After Vasil Hardfork we can switch it back to a more efficient version below:
---
--- encCBOR (TxOutCompact addr cv) = encodeTxOut @era addr cv NoDatum SNothing
--- encCBOR (TxOutCompactDH addr cv dh) = encodeTxOut @era addr cv (DatumHash dh) SNothing
--- encCBOR (TxOutCompactDatum addr cv d) = encodeTxOut addr cv (Datum d) SNothing
--- encCBOR (TxOutCompactRefScript addr cv d rs) = encodeTxOut addr cv d (SJust rs)
+  encCBOR = \case
+    TxOutCompactRefScript addr cv d rs -> encodeTxOut addr cv d (SJust rs)
+    TxOutCompactDatum addr cv d -> encodeTxOut addr cv (Datum d) SNothing
+    TxOutCompactDH addr cv dh -> encodeTxOut @era addr cv (DatumHash dh) SNothing
+    TxOutCompact addr cv -> encodeTxOut @era addr cv NoDatum SNothing
 
 instance
   ( Era era
@@ -479,17 +471,17 @@ decodeBabbageTxOut = do
 {-# INLINE encodeTxOut #-}
 encodeTxOut ::
   forall era.
-  (Era era, EncCBOR (Value era), EncCBOR (Script era)) =>
+  (Era era, Compactible (Value era), EncCBOR (Value era), EncCBOR (Script era)) =>
   CompactAddr (EraCrypto era) ->
-  Value era ->
+  CompactForm (Value era) ->
   Datum era ->
   StrictMaybe (Script era) ->
   Encoding
-encodeTxOut addr val datum script =
+encodeTxOut cAddr cVal datum script =
   encode $
     Keyed (,,,,)
-      !> Key 0 (To addr)
-      !> Key 1 (To val)
+      !> Key 0 (To cAddr)
+      !> Key 1 (To (fromCompact cVal))
       !> Omit (== NoDatum) (Key 2 (To datum))
       !> encodeKeyedStrictMaybeWith 3 encodeNestedCbor script
 
