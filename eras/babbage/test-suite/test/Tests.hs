@@ -3,22 +3,21 @@
 
 module Main where
 
+import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
 import Test.Cardano.Ledger.Babbage.TxInfo (txInfoTests)
-import Test.Tasty
-import Test.TestScenario (TestScenario (..), mainWithTestScenario)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 
--- ====================================================================================
+main :: IO ()
+main = do
+  nightly <- lookupEnv "NIGHTLY"
+  defaultMain $ case nightly of
+    Nothing -> defaultTests
+    Just _ -> nightlyTests
 
-tests :: TestTree
-tests = askOption $ \case
-  Nightly -> nightlyTests
-  Fast -> fastTests
-  _ -> mainTests
-
-mainTests :: TestTree
-mainTests =
+defaultTests :: TestTree
+defaultTests =
   testGroup
     "Babbage tests"
     [ Tripping.tests
@@ -26,22 +25,9 @@ mainTests =
     , CDDL.tests 5
     ]
 
-fastTests :: TestTree
-fastTests =
-  testGroup
-    "Babbage tests"
-    [ Tripping.tests
-    , txInfoTests
-    , CDDL.tests 1
-    ]
-
 nightlyTests :: TestTree
 nightlyTests =
   testGroup
-    "Babbage tests"
+    "Babbage tests - nightly"
     [ CDDL.tests 50
     ]
-
--- main entry point
-main :: IO ()
-main = mainWithTestScenario tests
