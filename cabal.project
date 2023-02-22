@@ -44,16 +44,18 @@ packages:
   libs/cardano-ledger-core
   libs/cardano-ledger-binary
   libs/cardano-ledger-pretty
-  libs/cardano-ledger-test
   libs/cardano-protocol-tpraos
-  libs/plutus-preprocessor
-  libs/ledger-state
   libs/non-integral
   libs/small-steps
   libs/small-steps-test
   libs/cardano-data
   libs/set-algebra
   libs/vector-map
+
+  -- Packages used for development that are not released to CHaPs:
+  libs/cardano-ledger-test
+  libs/plutus-preprocessor
+  libs/ledger-state
 
 program-options
   ghc-options: -Werror
