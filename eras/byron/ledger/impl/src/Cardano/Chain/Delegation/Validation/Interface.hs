@@ -33,10 +33,14 @@ import Cardano.Ledger.Binary (
   Annotated (..),
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   serialize',
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
@@ -63,6 +67,12 @@ data State = State
   , activationState :: !Activation.State
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
+
+instance ToCBOR State where
+  toCBOR = toByronCBOR
+
+instance FromCBOR State where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR State where
   decCBOR = do

@@ -6,8 +6,12 @@ module Cardano.Crypto.Orphans () where
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
   Size,
+  ToCBOR (..),
   encodeBytes,
+  fromByronCBOR,
+  toByronCBOR,
   toCborError,
   withWordSize,
  )
@@ -57,6 +61,19 @@ instance FromJSON Ed25519.Signature where
 
 instance ToJSON Ed25519.Signature where
   toJSON = toJSON . makeByteString64 . toByteString
+
+instance ToCBOR Ed25519.PublicKey where
+  toCBOR = toByronCBOR
+instance FromCBOR Ed25519.PublicKey where
+  fromCBOR = fromByronCBOR
+instance ToCBOR Ed25519.SecretKey where
+  toCBOR = toByronCBOR
+instance FromCBOR Ed25519.SecretKey where
+  fromCBOR = fromByronCBOR
+instance ToCBOR Ed25519.Signature where
+  toCBOR = toByronCBOR
+instance FromCBOR Ed25519.Signature where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Ed25519.PublicKey where
   encCBOR = encodeBytes . toByteString

@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -9,7 +11,13 @@ module Cardano.Ledger.Shelley.Governance (
   ShelleyPPUPState (..),
 ) where
 
-import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary (
+  DecCBOR (decCBOR),
+  EncCBOR (encCBOR),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+ )
 import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -76,6 +84,12 @@ instance
       RecD ShelleyPPUPState
         <! From
         <! From
+
+instance (Era era, EncCBOR (PParamsUpdate era)) => ToCBOR (ShelleyPPUPState era) where
+  toCBOR = toEraCBOR @era
+
+instance (Era era, DecCBOR (PParamsUpdate era)) => FromCBOR (ShelleyPPUPState era) where
+  fromCBOR = fromEraCBOR @era
 
 instance Default (ShelleyPPUPState era) where
   def = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates

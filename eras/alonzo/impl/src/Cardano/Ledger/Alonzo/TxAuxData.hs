@@ -53,6 +53,7 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
   EncCBOR (..),
+  ToCBOR,
   TokenType (..),
   decodeStrictSeq,
   peekTokenType,
@@ -106,6 +107,9 @@ deriving via
   InspectHeapNamed "AlonzoTxAuxDataRaw" (AlonzoTxAuxDataRaw era)
   instance
     NoThunks (AlonzoTxAuxDataRaw era)
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (AlonzoTxAuxData era)
 
 instance Era era => EncCBOR (AlonzoTxAuxDataRaw era) where
   encCBOR AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus} =
@@ -215,7 +219,7 @@ emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
 -- Version with serialized bytes.
 
 newtype AlonzoTxAuxData era = AuxiliaryDataConstr (MemoBytes AlonzoTxAuxDataRaw era)
-  deriving newtype (EncCBOR, SafeToHash)
+  deriving newtype (ToCBOR, SafeToHash)
 
 instance Memoized AlonzoTxAuxData where
   type RawType AlonzoTxAuxData = AlonzoTxAuxDataRaw

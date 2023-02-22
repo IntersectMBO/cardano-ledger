@@ -27,7 +27,16 @@ import Cardano.Chain.UTxO.TxPayload (
  )
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
@@ -52,6 +61,12 @@ instance B.Buildable TxProof where
       (txpNumber proof)
       (txpRoot proof)
       (txpWitnessesHash proof)
+
+instance ToCBOR TxProof where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxProof where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR TxProof where
   encCBOR proof =

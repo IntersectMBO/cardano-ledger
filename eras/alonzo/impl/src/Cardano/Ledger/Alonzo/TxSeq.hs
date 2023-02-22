@@ -35,7 +35,7 @@ import Cardano.Ledger.Binary (
   encodeFoldableMapEncoder,
   encodePreEncoded,
   encodedSizeExpr,
-  serializeEncoding,
+  serialize,
   withSlice,
  )
 import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
@@ -105,7 +105,7 @@ pattern AlonzoTxSeq xs <-
     AlonzoTxSeq txns =
       let version = eraProtVerLow @era
           serializeFoldablePreEncoded x =
-            serializeEncoding version $
+            serialize version $
               encodeFoldableEncoder encodePreEncoded x
           metaChunk index m = encodeIndexed <$> strictMaybeToMaybe m
             where
@@ -117,10 +117,10 @@ pattern AlonzoTxSeq xs <-
             , txSeqWitsBytes =
                 serializeFoldablePreEncoded $ originalBytes . view witsTxL <$> txns
             , txSeqMetadataBytes =
-                serializeEncoding version . encodeFoldableMapEncoder metaChunk $
+                serialize version . encodeFoldableMapEncoder metaChunk $
                   fmap originalBytes . view auxDataTxL <$> txns
             , txSeqIsValidBytes =
-                serializeEncoding version $ encCBOR $ nonValidatingIndices txns
+                serialize version $ encCBOR $ nonValidatingIndices txns
             }
 
 {-# COMPLETE AlonzoTxSeq #-}

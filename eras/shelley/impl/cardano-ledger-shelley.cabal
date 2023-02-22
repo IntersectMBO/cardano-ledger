@@ -127,7 +127,10 @@ library
         ghc-options: -fno-ignore-asserts
 
 library testlib
-    exposed-modules:  Test.Cardano.Ledger.Shelley.Arbitrary
+    exposed-modules:
+        Test.Cardano.Ledger.Shelley.Arbitrary
+        Test.Cardano.Ledger.Shelley.Binary.Golden
+
     visibility:       public
     hs-source-dirs:   testlib
     default-language: Haskell2010
@@ -138,7 +141,27 @@ library testlib
 
     build-depends:
         base >=4.12 && <4.17,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley,
         generic-random,
+        containers,
+        vector-map,
         mtl
+
+test-suite tests
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:    Test.Cardano.Ledger.Shelley.Binary.GoldenSpec
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        base,
+        cardano-ledger-core:testlib,
+        cardano-ledger-shelley,
+        testlib

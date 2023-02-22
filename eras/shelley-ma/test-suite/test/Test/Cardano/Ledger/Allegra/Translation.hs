@@ -17,7 +17,7 @@ import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.TranslationTools (translateEraEncCBOR)
+import Test.Cardano.Ledger.TranslationTools (translateEraEncCBOR, translateEraEncoding)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty)
@@ -39,15 +39,22 @@ allegraTranslationTests :: TestTree
 allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (testTranslation @S.ShelleyTx)
+    [ testProperty "Tx compatibility" $
+        translateEraEncoding @Allegra @S.ShelleyTx () toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
-    , testProperty "ShelleyPPUPState compatibility" (testTranslation @S.ShelleyPPUPState)
+    , testProperty "ShelleyPPUPState compatibility" $
+        translateEraEncoding @Allegra @S.ShelleyPPUPState () toCBOR toCBOR
     , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)
-    , testProperty "UTxO compatibility" (testTranslation @S.UTxO)
-    , testProperty "UTxOState compatibility" (testTranslation @S.UTxOState)
-    , testProperty "LedgerState compatibility" (testTranslation @S.LedgerState)
-    , testProperty "EpochState compatibility" (testTranslation @S.EpochState)
-    , testProperty "ShelleyTxWits compatibility" (testTranslation @S.ShelleyTxWits)
+    , testProperty "UTxO compatibility" $
+        translateEraEncoding @Allegra @S.UTxO () toCBOR toCBOR
+    , testProperty "UTxOState compatibility" $
+        translateEraEncoding @Allegra @S.UTxOState () toCBOR toCBOR
+    , testProperty "LedgerState compatibility" $
+        translateEraEncoding @Allegra @S.LedgerState () toCBOR toCBOR
+    , testProperty "EpochState compatibility" $
+        translateEraEncoding @Allegra @S.EpochState () toCBOR toCBOR
+    , testProperty "ShelleyTxWits compatibility" $
+        translateEraEncoding @Allegra @S.ShelleyTxWits () toCBOR toCBOR
     , testProperty "Update compatibility" (testTranslation @S.Update)
     ]
 

@@ -16,7 +16,16 @@ import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber (..))
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters (..))
 import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude hiding (empty)
 import Data.Aeson (ToJSON)
 import Data.Text.Lazy.Builder (Builder)
@@ -99,6 +108,12 @@ instance B.Buildable ProtocolParametersUpdate where
 
 -- Used for debugging purposes only
 instance ToJSON ProtocolParametersUpdate
+
+instance ToCBOR ProtocolParametersUpdate where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ProtocolParametersUpdate where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR ProtocolParametersUpdate where
   encCBOR ppu =

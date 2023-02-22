@@ -74,7 +74,6 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (unCoin), rationalToCoinViaCeiling)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Rules.ValidationMode (
   Inject (..),
   InjectMaybe (..),
@@ -207,7 +206,7 @@ deriving stock instance
   Show (AlonzoUtxoPredFailure era)
 
 deriving stock instance
-  ( Crypto (EraCrypto era)
+  ( Era era
   , Eq (Value era)
   , Eq (TxOut era)
   , Eq (PredicateFailure (EraRule "UTXOS" era))

@@ -72,13 +72,14 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
   encodeMapLen,
   encodeNull,
   encodePreEncoded,
   serialize',
-  serializeEncoding',
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -344,6 +345,12 @@ instance Era era => DecCBOR (AlonzoPParams Identity era) where
         <! From -- appCollateralPercentage
         <! From -- appMaxCollateralInputs
 
+instance Era era => ToCBOR (AlonzoPParams Identity era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (AlonzoPParams Identity era) where
+  fromCBOR = fromEraCBOR @era
+
 instance ToJSON (AlonzoPParams Identity era) where
   toJSON AlonzoPParams {..} =
     Aeson.object
@@ -599,6 +606,12 @@ instance Era era => DecCBOR (AlonzoPParams StrictMaybe era) where
   decCBOR =
     decode (SparseKeyed "PParamsUpdate" emptyAlonzoPParamsUpdate updateField [])
 
+instance Era era => ToCBOR (AlonzoPParams StrictMaybe era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
+  fromCBOR = fromEraCBOR @era
+
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
 
@@ -639,7 +652,7 @@ getLanguageView pp lang =
         costModelEncoding
   where
     costModel = Map.lookup lang (costModelsValid $ pp ^. ppCostModelsL)
-    costModelEncoding = serializeEncoding' version $ maybe encodeNull encodeCostModel costModel
+    costModelEncoding = serialize' version $ maybe encodeNull encodeCostModel costModel
     version = BT.pvMajor $ pp ^. ppProtocolVersionL
 
 encodeLangViews :: Set LangDepView -> Encoding

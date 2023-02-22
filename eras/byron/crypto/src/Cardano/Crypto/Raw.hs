@@ -5,7 +5,7 @@ module Cardano.Crypto.Raw (
 )
 where
 
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Prelude
@@ -14,4 +14,4 @@ import Prelude
 --   processed as a sequence of bytes, not as a separate entity. It's used in
 --   crypto and binary code.
 newtype Raw = Raw ByteString
-  deriving (Eq, Ord, Show, NFData, DecCBOR, EncCBOR)
+  deriving (Eq, Ord, Show, NFData, DecCBOR, EncCBOR, FromCBOR, ToCBOR)

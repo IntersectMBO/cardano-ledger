@@ -27,10 +27,14 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeWord8,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
@@ -66,6 +70,12 @@ data CandidateProtocolUpdate = CandidateProtocolUpdate
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData, NoThunks)
 
+instance ToCBOR CandidateProtocolUpdate where
+  toCBOR = toByronCBOR
+
+instance FromCBOR CandidateProtocolUpdate where
+  fromCBOR = fromByronCBOR
+
 instance DecCBOR CandidateProtocolUpdate where
   decCBOR = do
     enforceSize "CandidateProtocolUpdate" 3
@@ -88,6 +98,12 @@ data Endorsement = Endorsement
   deriving (Eq, Show, Ord, Generic)
   deriving anyclass (NFData, NoThunks)
 
+instance ToCBOR Endorsement where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Endorsement where
+  fromCBOR = fromByronCBOR
+
 instance DecCBOR Endorsement where
   decCBOR = do
     enforceSize "Endorsement" 2
@@ -106,6 +122,12 @@ data Error
     -- protocol version.
     MultipleProposalsForProtocolVersion ProtocolVersion
   deriving (Eq, Show)
+
+instance ToCBOR Error where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Error where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Error where
   encCBOR (MultipleProposalsForProtocolVersion protocolVersion) =

@@ -22,12 +22,16 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
   decodeBytesCanonical,
   decodeFull,
   decodeFullDecoder,
   decodeWord32Canonical,
+  fromByronCBOR,
   serialize,
+  toByronCBOR,
   toCborError,
  )
 import Cardano.Prelude hiding (toCborError)
@@ -76,6 +80,12 @@ For address there are two attributes:
   - 1 - derivation path, defaults to 'Nothing'.
 
 -}
+
+instance ToCBOR (Attributes AddrAttributes) where
+  toCBOR = toByronCBOR
+
+instance FromCBOR (Attributes AddrAttributes) where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR (Attributes AddrAttributes) where
   -- FIXME @avieth it was observed that for a 150kb block, this call to
@@ -155,6 +165,12 @@ newtype HDAddressPayload = HDAddressPayload
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (EncCBOR, HeapWords)
   deriving anyclass (NFData, NoThunks)
+
+instance ToCBOR HDAddressPayload where
+  toCBOR = toByronCBOR
+
+instance FromCBOR HDAddressPayload where
+  fromCBOR = fromByronCBOR
 
 -- Used for debugging purposes only
 instance ToJSON HDAddressPayload where

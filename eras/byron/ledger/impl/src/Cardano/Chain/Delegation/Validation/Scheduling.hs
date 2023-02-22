@@ -30,12 +30,16 @@ import Cardano.Ledger.Binary (
   Decoder,
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (State, cborError)
 import Data.Sequence ((|>))
@@ -62,6 +66,12 @@ data State = State
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
+instance ToCBOR State where
+  toCBOR = toByronCBOR
+
+instance FromCBOR State where
+  fromCBOR = fromByronCBOR
+
 instance DecCBOR State where
   decCBOR = do
     enforceSize "State" 2
@@ -81,6 +91,12 @@ data ScheduledDelegation = ScheduledDelegation
   , sdDelegate :: !KeyHash
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
+
+instance ToCBOR ScheduledDelegation where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ScheduledDelegation where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR ScheduledDelegation where
   decCBOR = do
@@ -109,6 +125,12 @@ data Error
   | -- | This delegation is for a past or for a too future epoch
     WrongEpoch EpochNumber EpochNumber
   deriving (Eq, Show)
+
+instance ToCBOR Error where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Error where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Error where
   encCBOR err = case err of

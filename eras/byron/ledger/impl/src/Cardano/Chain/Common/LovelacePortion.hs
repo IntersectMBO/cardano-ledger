@@ -16,7 +16,14 @@ module Cardano.Chain.Common.LovelacePortion (
 where
 
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import Control.Monad (fail)
 import qualified Data.Aeson as Aeson
@@ -59,6 +66,12 @@ instance B.Buildable LovelacePortion where
 
 -- Used for debugging purposes only
 instance Aeson.ToJSON LovelacePortion
+
+instance ToCBOR LovelacePortion where
+  toCBOR = toByronCBOR
+
+instance FromCBOR LovelacePortion where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR LovelacePortion where
   encCBOR = encCBOR . unLovelacePortion

@@ -62,9 +62,13 @@ import Cardano.Ledger.Binary (
   Decoded (..),
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
   cborError,
+  fromByronCBOR,
   serialize,
+  toByronCBOR,
   withWordSize,
  )
 import Cardano.Prelude hiding (cborError)
@@ -135,12 +139,18 @@ instance
 instance ToJSONKey (AbstractHash algo a) where
   toJSONKey = toJSONKeyText (sformat hashHexF)
 
+instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash algo a) where
+  toCBOR = toByronCBOR
+
 instance (Typeable algo, Typeable a, HashAlgorithm algo) => EncCBOR (AbstractHash algo a) where
   encCBOR (AbstractHash h) = encCBOR h
 
   encodedSizeExpr _ _ =
     let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
      in fromInteger (toInteger (withWordSize realSz + realSz))
+
+instance (Typeable algo, Typeable a, HashAlgorithm algo) => FromCBOR (AbstractHash algo a) where
+  fromCBOR = fromByronCBOR
 
 instance
   (Typeable algo, Typeable a, HashAlgorithm algo) =>

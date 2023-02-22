@@ -10,7 +10,15 @@ module Cardano.Crypto.Signing.Safe.PassPhrase (
 )
 where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), toCborError)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  fromByronCBOR,
+  toByronCBOR,
+  toCborError,
+ )
 import Cardano.Prelude hiding (toCborError)
 import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as ByteArray
@@ -40,6 +48,12 @@ instance Buildable PassPhrase where
 
 instance Default PassPhrase where
   def = emptyPassphrase
+
+instance ToCBOR PassPhrase where
+  toCBOR = toByronCBOR
+
+instance FromCBOR PassPhrase where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR PassPhrase where
   encCBOR pp = encCBOR (ByteArray.convert pp :: ByteString)

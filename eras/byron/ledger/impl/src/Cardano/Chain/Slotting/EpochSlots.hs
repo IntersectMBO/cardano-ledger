@@ -11,7 +11,14 @@ where
 
 import Cardano.Chain.Slotting.EpochNumber
 import Cardano.Chain.Slotting.SlotNumber
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import Data.Data (Data)
 import Formatting.Buildable (Buildable)
@@ -22,6 +29,12 @@ newtype EpochSlots = EpochSlots
   { unEpochSlots :: Word64
   }
   deriving (Data, Eq, Ord, Read, Show, Buildable, Generic, NoThunks)
+
+instance ToCBOR EpochSlots where
+  toCBOR = toByronCBOR
+
+instance FromCBOR EpochSlots where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR EpochSlots where
   encCBOR = encCBOR . unEpochSlots

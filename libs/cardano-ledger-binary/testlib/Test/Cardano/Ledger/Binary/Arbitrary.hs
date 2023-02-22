@@ -109,10 +109,6 @@ instance DSIGNAlgorithm v => Arbitrary (SigDSIGN v) where
 instance DSIGNAlgorithm v => Arbitrary (SignedDSIGN v a) where
   arbitrary = SignedDSIGN <$> arbitrary
 
-instance VRFAlgorithm v => Arbitrary (OutputVRF v) where
-  arbitrary =
-    OutputVRF <$> genByteString (fromIntegral (sizeOutputVRF (Proxy :: Proxy v)))
-
 instance
   (ContextVRF v ~ (), Signable v ~ SignableRepresentation, VRFAlgorithm v) =>
   Arbitrary (CertifiedVRF v a)

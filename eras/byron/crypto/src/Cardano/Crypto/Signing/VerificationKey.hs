@@ -25,7 +25,11 @@ import Cardano.Ledger.Binary (
   Decoder,
   EncCBOR (..),
   Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
   decodeBytesCanonical,
+  fromByronCBOR,
+  toByronCBOR,
   toCborError,
  )
 import Cardano.Prelude hiding (toCborError)
@@ -71,6 +75,12 @@ instance Monad m => TJC.ToJSON m VerificationKey where
 
 instance MonadError SchemaError m => TJC.FromJSON m VerificationKey where
   fromJSON = parseJSString parseFullVerificationKey
+
+instance ToCBOR VerificationKey where
+  toCBOR = toByronCBOR
+
+instance FromCBOR VerificationKey where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR VerificationKey where
   encCBOR (VerificationKey a) = encCBORXPub a

@@ -26,8 +26,12 @@ import Cardano.Ledger.Binary (
   Decoder,
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
   toCborError,
  )
 import Cardano.Prelude hiding (toCborError)
@@ -47,6 +51,12 @@ data TxSizeLinear
 
 instance B.Buildable TxSizeLinear where
   build (TxSizeLinear a b) = bprint (build . " + " . build . "*s") a b
+
+instance ToCBOR TxSizeLinear where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxSizeLinear where
+  fromCBOR = fromByronCBOR
 
 -- Used for debugging purposes only
 instance ToJSON TxSizeLinear

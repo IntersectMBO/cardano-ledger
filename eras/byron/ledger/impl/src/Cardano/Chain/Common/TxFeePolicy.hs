@@ -30,9 +30,13 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (DecoderErrorUnknownTag),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import qualified Data.Aeson as Aeson
@@ -73,6 +77,12 @@ instance B.Buildable TxFeePolicy where
 
 -- Used for debugging purposes only
 instance Aeson.ToJSON TxFeePolicy
+
+instance ToCBOR TxFeePolicy where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxFeePolicy where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR TxFeePolicy where
   encCBOR policy = case policy of

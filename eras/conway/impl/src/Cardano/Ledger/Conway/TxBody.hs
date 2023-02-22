@@ -58,6 +58,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   Sized (..),
+  ToCBOR (..),
   mkSized,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -201,7 +202,7 @@ instance
         ]
 
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
-  deriving (Generic, SafeToHash, EncCBOR)
+  deriving (Generic, SafeToHash, ToCBOR)
 
 deriving instance
   (EraPParams era, NoThunks (TxOut era)) =>
@@ -511,3 +512,6 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
 
 instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
   encCBOR = encode . encodeTxBodyRaw
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (ConwayTxBody era)

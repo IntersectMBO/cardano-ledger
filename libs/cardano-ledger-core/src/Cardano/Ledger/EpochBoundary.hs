@@ -42,6 +42,7 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (encCBOR),
   Interns,
+  decNoShareCBOR,
   decSharePlusLensCBOR,
   decodeRecordNamedT,
   encodeListLen,
@@ -214,6 +215,9 @@ instance
       <> encCBOR ssStakeSet
       <> encCBOR ssStakeGo
       <> encCBOR ssFee
+
+instance CC.Crypto c => DecCBOR (SnapShots c) where
+  decCBOR = decNoShareCBOR
 
 instance CC.Crypto c => DecShareCBOR (SnapShots c) where
   type Share (SnapShots c) = Share (SnapShot c)

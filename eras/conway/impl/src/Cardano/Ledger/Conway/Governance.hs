@@ -27,7 +27,14 @@ module Cardano.Ledger.Conway.Governance (
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..))
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeEnumBounded, encodeEnum)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeEnumBounded,
+  encodeEnum,
+ )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -241,22 +248,18 @@ data GovernanceActionState era = GovernanceActionState
 
 deriving instance EraPParams era => Eq (GovernanceActionState era)
 
-instance EraPParams era => NoThunks (GovernanceActionState era)
-
 deriving instance EraPParams era => Show (GovernanceActionState era)
+
+instance EraPParams era => NoThunks (GovernanceActionState era)
 
 instance EraPParams era => NFData (GovernanceActionState era)
 
 newtype ConwayTallyState era
   = ConwayTallyState
       (Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era))
-  deriving (Generic)
-
-deriving instance EraPParams era => Eq (ConwayTallyState era)
+  deriving (Eq, Generic, NFData)
 
 deriving instance EraPParams era => Show (ConwayTallyState era)
-
-deriving instance EraPParams era => NFData (ConwayTallyState era)
 
 instance EraPParams era => NoThunks (ConwayTallyState era)
 
@@ -272,11 +275,24 @@ makeGovAction GovernanceActionInfo {..} =
     , gasAction = gaiAction
     }
 
-instance EraPParams era => EncCBOR (ConwayTallyState era) where
-  encCBOR = undefined
+instance Era era => EncCBOR (ConwayTallyState era) where
+  encCBOR _ =
+    -- FIXME: implement the actual encoder. Has to put this ugly thing here instead of an
+    -- error because consensus already has golden tests for Conway
+    encCBOR (mempty :: Map () ())
 
-instance EraPParams era => DecCBOR (ConwayTallyState era) where
-  decCBOR = undefined
+instance Era era => DecCBOR (ConwayTallyState era) where
+  decCBOR = do
+    _ :: Map () () <- decCBOR
+    -- FIXME: implement the actual decoder. Has to put this ugly thing here instead of an
+    -- error because consensus already has golden tests for Conway
+    pure (ConwayTallyState mempty)
+
+instance Era era => ToCBOR (ConwayTallyState era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (ConwayTallyState era) where
+  fromCBOR = fromEraCBOR @era
 
 instance Crypto c => EraGovernance (ConwayEra c) where
   type GovernanceState (ConwayEra c) = ConwayTallyState (ConwayEra c)

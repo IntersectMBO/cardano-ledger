@@ -12,9 +12,13 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Dropper,
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   dropWord64,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
@@ -30,6 +34,12 @@ newtype ChainDifficulty = ChainDifficulty
 
 -- Used for debugging purposes only
 instance ToJSON ChainDifficulty
+
+instance ToCBOR ChainDifficulty where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ChainDifficulty where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR ChainDifficulty where
   encCBOR cd = encodeListLen 1 <> encCBOR (unChainDifficulty cd)

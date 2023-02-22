@@ -114,7 +114,9 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (..),
   Encoding,
+  FromCBOR (..),
   Size,
+  ToCBOR (..),
   annotatedDecoder,
   byronProtVer,
   cborError,
@@ -123,9 +125,11 @@ import Cardano.Ledger.Binary (
   dropInt32,
   encodeListLen,
   enforceSize,
-  serializeEncoding,
+  fromByronCBOR,
+  serialize,
   szCases,
   szGreedy,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
@@ -491,7 +495,7 @@ wrapHeaderBytes = mappend "\130\SOH"
 --   For backwards compatibility we have to take the hash of the header
 --   serialised with 'encCBORHeaderToHash'
 hashHeader :: EpochSlots -> Header -> HeaderHash
-hashHeader es = unsafeAbstractHash . serializeEncoding byronProtVer . encCBORHeaderToHash es
+hashHeader es = unsafeAbstractHash . serialize byronProtVer . encCBORHeaderToHash es
 
 headerHashAnnotated :: AHeader ByteString -> HeaderHash
 headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
@@ -659,6 +663,15 @@ instance B.Buildable BlockSignature where
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ABlockSignature a)
 
+instance ToCBOR BlockSignature where
+  toCBOR = toByronCBOR
+
+instance FromCBOR BlockSignature where
+  fromCBOR = fromByronCBOR
+
+instance FromCBOR (ABlockSignature ByteSpan) where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR BlockSignature where
   encCBOR (ABlockSignature cert sig) =
     -- Tag 0 was previously used for BlockSignature (no delegation)
@@ -719,6 +732,12 @@ data ToSign = ToSign
   , tsSoftwareVersion :: !SoftwareVersion
   }
   deriving (Eq, Show, Generic)
+
+instance ToCBOR ToSign where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ToSign where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR ToSign where
   encCBOR ts =

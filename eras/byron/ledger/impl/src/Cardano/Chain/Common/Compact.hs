@@ -14,7 +14,17 @@ where
 
 import Cardano.Chain.Common.Address (Address (..))
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), byronProtVer, decodeFull', serialize')
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  byronProtVer,
+  decodeFull',
+  fromByronCBOR,
+  serialize',
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as BSS (fromShort, toShort)
@@ -31,6 +41,12 @@ newtype CompactAddress = CompactAddress ShortByteString
   deriving (Eq, Ord, Generic, Show)
   deriving newtype (HeapWords, NoThunks)
   deriving anyclass (NFData)
+
+instance ToCBOR CompactAddress where
+  toCBOR = toByronCBOR
+
+instance FromCBOR CompactAddress where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR CompactAddress where
   decCBOR = CompactAddress . BSS.toShort <$> decCBOR

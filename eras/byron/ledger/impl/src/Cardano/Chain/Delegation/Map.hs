@@ -21,7 +21,14 @@ module Cardano.Chain.Delegation.Map (
 where
 
 import Cardano.Chain.Common.KeyHash (KeyHash)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude hiding (Map)
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
@@ -33,6 +40,12 @@ newtype Map = Map
   }
   deriving (Eq, Show, Generic)
   deriving anyclass (NFData)
+
+instance ToCBOR Map where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Map where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR Map where
   decCBOR = Map . Bimap.fromList <$> decCBOR

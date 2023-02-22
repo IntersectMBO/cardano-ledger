@@ -38,8 +38,10 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (Share, decShareCBOR),
   EncCBOR (..),
+  FromCBOR (..),
   Interns,
-  decodeMapNoDuplicates,
+  ToCBOR (..),
+  decodeMap,
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
@@ -54,7 +56,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   verifySignedDSIGN,
  )
-import Cardano.Ledger.Keys.WitVKey
+import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
@@ -62,7 +64,7 @@ import Control.Monad ((<$!>))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default)
 import Data.Foldable (foldMap', toList)
-import Data.Kind
+import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Set (Set)
@@ -78,16 +80,23 @@ import Quiet (Quiet (Quiet))
 newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (EraCrypto era)) (TxOut era)}
   deriving (Default, Generic, Semigroup)
 
+instance (EncCBOR (TxOut era), Era era) => ToCBOR (UTxO era) where
+  toCBOR = toEraCBOR @era
+
+instance (DecCBOR (TxOut era), Era era) => FromCBOR (UTxO era) where
+  fromCBOR = fromEraCBOR @era
+
 deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
 
 deriving instance (Era era, NFData (TxOut era)) => NFData (UTxO era)
 
-deriving newtype instance
-  (Eq (TxOut era), Crypto (EraCrypto era)) => Eq (UTxO era)
+deriving newtype instance (Era era, Eq (TxOut era)) => Eq (UTxO era)
 
-deriving newtype instance Crypto (EraCrypto era) => Monoid (UTxO era)
+deriving newtype instance Era era => Monoid (UTxO era)
 
 deriving newtype instance (Era era, EncCBOR (TxOut era)) => EncCBOR (UTxO era)
+
+deriving newtype instance (Era era, DecCBOR (TxOut era)) => DecCBOR (UTxO era)
 
 instance
   ( Crypto (EraCrypto era)
@@ -100,15 +109,7 @@ instance
     Share (UTxO era) =
       Interns (Credential 'Staking (EraCrypto era))
   decShareCBOR credsInterns =
-    UTxO <$!> decodeMapNoDuplicates decCBOR (decShareCBOR credsInterns)
-
-instance
-  ( DecCBOR (TxOut era)
-  , Era era
-  ) =>
-  DecCBOR (UTxO era)
-  where
-  decCBOR = UTxO <$!> decodeMapNoDuplicates decCBOR decCBOR
+    UTxO <$!> decodeMap decCBOR (decShareCBOR credsInterns)
 
 deriving via
   Quiet (UTxO era)

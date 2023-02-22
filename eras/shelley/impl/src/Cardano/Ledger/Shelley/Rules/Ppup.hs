@@ -4,8 +4,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -54,6 +57,7 @@ import Cardano.Ledger.Slot (
   epochInfoFirst,
   (*-),
  )
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
@@ -71,6 +75,8 @@ data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
 
 instance NoThunks VotingPeriod
+
+instance NFData VotingPeriod
 
 instance EncCBOR VotingPeriod where
   encCBOR VoteForThisEpoch = encCBOR (0 :: Word8)
@@ -109,6 +115,8 @@ data ShelleyPpupPredFailure era
   deriving (Show, Eq, Generic)
 
 instance NoThunks (ShelleyPpupPredFailure era)
+
+instance NFData (ShelleyPpupPredFailure era)
 
 newtype PpupEvent era = NewEpoch EpochNo
 

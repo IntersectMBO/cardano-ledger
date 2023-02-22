@@ -124,7 +124,7 @@ newtype FullByteString = Full BSL.ByteString
 --   used during decoding to finish construction of a vaue of type @a@. A typical use is
 --   some type that stores the bytes that were used to deserialize it.  For example the
 --   type @Inner@ below is constructed using the helper function @makeInner@ which
---   serializes and stores its bytes (using 'serializeEncoding').  Note how we build the
+--   serializes and stores its bytes (using 'serialize').  Note how we build the
 --   'Annotator' by abstracting over the full bytes, and using those original bytes to
 --   fill the bytes field of the constructor @Inner@.  The 'EncCBOR' instance just reuses
 --   the stored bytes to produce an encoding (using 'encodePreEncoded').
@@ -133,7 +133,7 @@ newtype FullByteString = Full BSL.ByteString
 -- data Inner = Inner Int Bool LByteString
 --
 -- makeInner :: Int -> Bool -> Inner
--- makeInner i b = Inner i b (serializeEncoding (encCBOR i <> encCBOR b))
+-- makeInner i b = Inner i b (serialize (encCBOR i <> encCBOR b))
 --
 -- instance EncCBOR Inner where
 --   encCBOR (Inner _ _ bytes) = encodePreEncoded bytes

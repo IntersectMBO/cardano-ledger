@@ -28,11 +28,14 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR,
   decodeInteger,
   decodeWord64,
   ifDecoderVersionAtLeast,
   natVersion,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr))
 import Control.DeepSeq (NFData)
@@ -61,7 +64,10 @@ newtype Coin = Coin {unCoin :: Integer}
     )
   deriving (Show) via Quiet Coin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (PartialOrd, EncCBOR, HeapWords)
+  deriving newtype (PartialOrd, ToCBOR, EncCBOR, HeapWords)
+
+instance FromCBOR Coin where
+  fromCBOR = Coin . toInteger <$> Plain.decodeWord64
 
 instance DecCBOR Coin where
   decCBOR =
@@ -71,7 +77,7 @@ instance DecCBOR Coin where
       (Coin <$> decodeInteger)
 
 newtype DeltaCoin = DeltaCoin Integer
-  deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, DecCBOR, EncCBOR, HeapWords)
+  deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, ToCBOR, DecCBOR, EncCBOR, HeapWords)
   deriving (Show) via Quiet DeltaCoin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd)
@@ -96,7 +102,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
-    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord)
+    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord, ToCBOR)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c

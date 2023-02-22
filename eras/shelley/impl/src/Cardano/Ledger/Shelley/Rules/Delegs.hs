@@ -62,6 +62,7 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UMapCompact (Trip (..), UMap (..), View (..), fromCompact)
 import qualified Cardano.Ledger.UMapCompact as UM
+import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈))
 import Control.State.Transition (
@@ -118,6 +119,10 @@ deriving stock instance
   ( Eq (PredicateFailure (EraRule "DELPL" era))
   ) =>
   Eq (ShelleyDelegsPredFailure era)
+
+instance
+  NFData (PredicateFailure (EraRule "DELPL" era)) =>
+  NFData (ShelleyDelegsPredFailure era)
 
 instance
   ( EraTx era

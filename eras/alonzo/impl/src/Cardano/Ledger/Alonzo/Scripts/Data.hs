@@ -45,6 +45,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
+  ToCBOR (..),
   decodeFullAnnotator,
   decodeNestedCborBytes,
   encodeTag,
@@ -102,7 +103,10 @@ instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
 
 newtype Data era = DataConstr (MemoBytes PlutusData era)
   deriving (Eq, Generic)
-  deriving newtype (SafeToHash, EncCBOR, NFData)
+  deriving newtype (SafeToHash, ToCBOR, NFData)
+
+-- | Encodes memoized bytes created upon construction.
+instance Typeable era => EncCBOR (Data era)
 
 instance Memoized Data where
   type RawType Data = PlutusData

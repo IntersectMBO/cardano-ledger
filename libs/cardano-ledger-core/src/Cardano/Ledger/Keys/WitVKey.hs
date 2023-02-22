@@ -16,21 +16,19 @@ module Cardano.Ledger.Keys.WitVKey (
 )
 where
 
-import Cardano.Ledger.Binary (
-  Annotator (..),
-  DecCBOR (decCBOR),
-  EncCBOR (..),
-  annotatorSlice,
-  decodeRecordNamed,
-  encodeListLen,
-  encodePreEncoded,
-  serializeEncoding,
-  shelleyProtVer,
- )
-import Cardano.Ledger.Binary.Crypto (
+import Cardano.Crypto.DSIGN.Class (
   decodeSignedDSIGN,
   encodeSignedDSIGN,
  )
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  DecCBOR (..),
+  EncCBOR (..),
+  ToCBOR (..),
+  annotatorSlice,
+  fromPlainDecoder,
+ )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (
@@ -85,15 +83,19 @@ instance (Typeable kr, Crypto c) => Ord (WitVKey kr c) where
     -- compliance with Ord laws.
     comparing wvkKeyHash x y <> comparing (hashSignature @c . wvkSig) x y
 
-instance (Typeable kr, Crypto c) => EncCBOR (WitVKey kr c) where
-  encCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
+instance (Typeable kr, Crypto c) => Plain.ToCBOR (WitVKey kr c) where
+  toCBOR = Plain.encodePreEncoded . BSL.toStrict . wvkBytes
+
+-- | Encodes memoized bytes created upon construction.
+instance (Typeable kr, Crypto c) => EncCBOR (WitVKey kr c)
 
 instance (Typeable kr, Crypto c) => DecCBOR (Annotator (WitVKey kr c)) where
   decCBOR =
     annotatorSlice $
-      decodeRecordNamed "WitVKey" (const 2) $
-        fmap pure $
-          mkWitVKey <$> decCBOR <*> decodeSignedDSIGN
+      fromPlainDecoder $
+        Plain.decodeRecordNamed "WitVKey" (const 2) $
+          fmap pure $
+            mkWitVKey <$> Plain.fromCBOR <*> decodeSignedDSIGN
     where
       mkWitVKey k sig = WitVKeyInternal k sig (asWitness $ hashKey k)
 
@@ -107,9 +109,9 @@ pattern WitVKey k s <-
   where
     WitVKey k s =
       let bytes =
-            serializeEncoding shelleyProtVer $
-              encodeListLen 2
-                <> encCBOR k
+            Plain.serialize $
+              Plain.encodeListLen 2
+                <> Plain.toCBOR k
                 <> encodeSignedDSIGN s
           hash = asWitness $ hashKey k
        in WitVKeyInternal k s hash bytes

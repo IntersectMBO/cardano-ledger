@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -29,16 +30,17 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
   Interns (..),
-  decNoShareCBOR,
+  ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
  )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
-import Cardano.Ledger.Core (Era (EraCrypto), EraTxOut (..), Value, ppMinUTxOValueL)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
@@ -141,23 +143,21 @@ instance (Era era, EncCBOR (CompactForm (Value era))) => EncCBOR (ShelleyTxOut e
       <> encCBOR addr
       <> encCBOR coin
 
-instance
-  (Era era, DecCBOR (CompactForm (Value era))) =>
-  DecCBOR (ShelleyTxOut era)
-  where
-  decCBOR = decNoShareCBOR
-
--- This instance does not do any sharing and is isomorphic to DecCBOR
--- use the weakest constraint necessary
-instance
-  (Era era, DecCBOR (CompactForm (Value era))) =>
-  DecShareCBOR (ShelleyTxOut era)
-  where
-  type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  decShareCBOR _ =
+instance (Era era, DecCBOR (CompactForm (Value era))) => DecCBOR (ShelleyTxOut era) where
+  decCBOR =
     decodeRecordNamed "ShelleyTxOut" (const 2) $ do
       cAddr <- decCBOR
       TxOutCompact cAddr <$> decCBOR
+
+instance (Era era, DecCBOR (CompactForm (Value era))) => DecShareCBOR (ShelleyTxOut era) where
+  type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
+  decShareCBOR _ = decCBOR
+
+instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut era) where
+  toCBOR = toEraCBOR @era
+
+instance (Era era, DecCBOR (CompactForm (Value era))) => FromCBOR (ShelleyTxOut era) where
+  fromCBOR = fromEraCBOR @era
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords

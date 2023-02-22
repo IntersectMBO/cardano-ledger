@@ -47,8 +47,8 @@ import Cardano.Ledger.Binary (
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodePreEncoded,
-  serializeEncoding,
-  serializeEncoding',
+  serialize,
+  serialize',
   withSlice,
  )
 import Cardano.Ledger.Core
@@ -140,7 +140,7 @@ pattern ShelleyTxSeq xs <-
     ShelleyTxSeq txns =
       let version = eraProtVerLow @era
           serializeFoldable x =
-            serializeEncoding version $
+            serialize version $
               encodeFoldableEncoder encodePreEncoded x
           metaChunk index m = encodePair <$> strictMaybeToMaybe m
             where
@@ -153,7 +153,7 @@ pattern ShelleyTxSeq xs <-
               txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns
             , -- bytes encoding a (Map Int (TxAuxData))
               txSeqMetadataBytes =
-                serializeEncoding version . encodeFoldableMapEncoder metaChunk $
+                serialize version . encodeFoldableMapEncoder metaChunk $
                   coreAuxDataBytes @era <$> txns
             }
 
@@ -249,7 +249,7 @@ instance EraTx era => DecCBOR (Annotator (ShelleyTxSeq era)) where
   decCBOR = txSeqDecoder False
 
 bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
-bBodySize (ProtVer v _) = BS.length . serializeEncoding' v . encCBORGroup
+bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s

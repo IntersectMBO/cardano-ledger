@@ -71,6 +71,7 @@ import Cardano.Ledger.Slot (
  )
 import Cardano.Ledger.UMapCompact (RDPair (..), View (..), compactCoinOrError, fromCompact)
 import qualified Cardano.Ledger.UMapCompact as UM
+import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, range, singleton, (∉), (∪), (⨃))
 import Control.State.Transition
@@ -149,6 +150,8 @@ instance EraPParams era => STS (ShelleyDELEG era) where
   transitionRules = [delegationTransition]
 
 instance NoThunks (ShelleyDelegPredFailure era)
+
+instance NFData (ShelleyDelegPredFailure era)
 
 instance
   (Era era, Typeable (Script era)) =>

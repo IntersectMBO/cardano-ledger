@@ -28,8 +28,12 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError,
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import qualified Data.Map.Strict as M
@@ -57,6 +61,12 @@ instance Monad m => ToJSON m GenesisNonAvvmBalances where
 
 instance MonadError SchemaError m => FromJSON m GenesisNonAvvmBalances where
   fromJSON = fmap GenesisNonAvvmBalances . fromJSON
+
+instance ToCBOR GenesisNonAvvmBalances where
+  toCBOR = toByronCBOR
+
+instance FromCBOR GenesisNonAvvmBalances where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR GenesisNonAvvmBalances where
   encCBOR (GenesisNonAvvmBalances gnab) =

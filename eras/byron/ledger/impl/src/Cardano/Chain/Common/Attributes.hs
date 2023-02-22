@@ -34,11 +34,15 @@ import Cardano.Ledger.Binary (
   Dropper,
   EncCBOR (..),
   Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeMapLen,
   dropBytes,
   dropMap,
   dropWord8,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON (..))
@@ -113,6 +117,12 @@ instance Buildable (Attributes ()) where
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (Attributes a)
+
+instance ToCBOR (Attributes ()) where
+  toCBOR = toByronCBOR
+
+instance FromCBOR (Attributes ()) where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR (Attributes ()) where
   encCBOR = encCBORAttributes []

@@ -22,7 +22,7 @@ import Cardano.Ledger.Binary (
   decodeSimpleCanonical,
   decodeStringCanonical,
   peekTokenType,
-  serializeEncoding,
+  serialize,
   withSlice,
  )
 import Cardano.Ledger.Core
@@ -44,7 +44,7 @@ tests = testProperty "LangDepView encoding is canonical" (canonicalLangDepView @
 canonicalLangDepView :: forall c. Crypto c => PParams (AlonzoEra c) -> Set Language -> Property
 canonicalLangDepView pparams langs =
   let langViews = Set.fromList $ getLanguageView pparams <$> Set.toList langs
-      encodedViews = serializeEncoding (eraProtVerHigh @(AlonzoEra c)) $ encodeLangViews langViews
+      encodedViews = serialize (eraProtVerHigh @(AlonzoEra c)) $ encodeLangViews langViews
       base16String = show (B16.encode $ LBS.toStrict encodedViews)
    in counterexample base16String $ case isCanonical encodedViews of
         Right () -> QCP.succeeded

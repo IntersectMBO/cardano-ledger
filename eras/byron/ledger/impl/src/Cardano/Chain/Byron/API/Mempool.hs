@@ -47,6 +47,12 @@ data ApplyMempoolPayloadErr
   | MempoolUpdateVoteErr U.Iface.Error
   deriving (Eq, Show)
 
+instance ToCBOR ApplyMempoolPayloadErr where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ApplyMempoolPayloadErr where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR ApplyMempoolPayloadErr where
   encCBOR (MempoolTxErr err) =
     encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR err
