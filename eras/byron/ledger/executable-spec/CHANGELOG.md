@@ -1,5 +1,5 @@
-# Revision history for byron-spec-ledger
+# Version history for `byron-spec-ledger`
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 0.1.0.0
 
-* First version. Released on an unsuspecting world.
+* First properly versioned release.

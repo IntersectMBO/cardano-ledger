@@ -1,5 +1,6 @@
-# Revision history for cardano-protocol-tpraos
+# Version history for `cardano-protocol-tpraos`
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 1.0.0.0
 
-* First version. Released on an unsuspecting world.
+* First properly versioned release.
+

@@ -1,16 +1,17 @@
-cabal-version: 3.0
-name:          cardano-ledger-conway
-version:       0.1.0.0
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
-synopsis:      Cardano ledger with an updated on-chain governance system.
+cabal-version:      3.0
+name:               cardano-ledger-conway
+version:            1.0.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:           Cardano ledger with an updated on-chain governance system.
 description:
     This package builds upon the Babbage ledger with an updtaed on-chain governance system.
 
-category:      Network
-build-type:    Simple
+category:           Network
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
@@ -57,12 +58,13 @@ library
         bytestring,
         cardano-crypto-class,
         cardano-ledger-binary,
-        cardano-ledger-allegra,
-        cardano-ledger-alonzo,
-        cardano-ledger-babbage,
-        cardano-ledger-core,
-        cardano-ledger-mary,
-        cardano-ledger-shelley,
+        cardano-ledger-allegra >=1.0,
+        cardano-ledger-alonzo >=1.0,
+        cardano-ledger-babbage >=1.0,
+        cardano-ledger-core >=1.0,
+        cardano-ledger-mary >=1.0,
+        cardano-ledger-shelley >=1.0,
+        cardano-strict-containers,
         containers,
         data-default-class,
         deepseq,
@@ -70,5 +72,4 @@ library
         nothunks,
         set-algebra,
         small-steps,
-        validation-selective,
-        cardano-strict-containers
+        validation-selective

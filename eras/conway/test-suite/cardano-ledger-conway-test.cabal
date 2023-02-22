@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-conway-test
-version:       0.1.0.0
+version:       1.0.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -34,15 +34,15 @@ library
 
     build-depends:
         base >=4.12 && <4.17,
-        cardano-ledger-alonzo,
+        cardano-ledger-alonzo ^>=1.0,
         cardano-ledger-alonzo-test,
-        cardano-ledger-babbage,
+        cardano-ledger-babbage ^>=1.0,
         cardano-ledger-babbage-test,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        cardano-ledger-conway,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-allegra,
-        cardano-ledger-mary,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} ^>=1.0,
+        cardano-ledger-conway ^>=1.0,
+        cardano-ledger-core:{cardano-ledger-core, testlib} ^>=1.0,
+        cardano-ledger-allegra ^>=1.0,
+        cardano-ledger-mary ^>=1.0,
         cardano-ledger-shelley-ma-test,
         cardano-slotting,
         containers,

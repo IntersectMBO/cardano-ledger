@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               non-integral
-version:            0.1.0.0
+version:            1.0.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -8,7 +8,7 @@ description:        Implementation decision for non-integer calculations
 build-type:         Simple
 extra-source-files:
     README.md
-    ChangeLog.md
+    CHANGELOG.md
 
 source-repository head
     type:     git

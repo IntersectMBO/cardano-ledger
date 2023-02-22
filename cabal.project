@@ -29,12 +29,6 @@ packages:
   eras/babbage/test-suite
   eras/conway/impl
   eras/conway/test-suite
-  eras/byron/chain/executable-spec
-  eras/byron/ledger/executable-spec
-  eras/byron/ledger/impl
-  eras/byron/ledger/impl/test
-  eras/byron/crypto
-  eras/byron/crypto/test
   eras/mary/impl
   eras/shelley/impl
   eras/shelley/test-suite
@@ -52,7 +46,21 @@ packages:
   libs/set-algebra
   libs/vector-map
 
-  -- Packages used for development that are not released to CHaPs:
+  -- == Byron era ==
+  -- byron-spec-chain:
+  eras/byron/chain/executable-spec
+  -- byron-spec-ledger:
+  eras/byron/ledger/executable-spec
+  -- cardano-ledger-byron:
+  eras/byron/ledger/impl
+  -- cardano-ledger-byron-test:
+  eras/byron/ledger/impl/test
+  -- cardano-crypto-wrapper:
+  eras/byron/crypto
+  -- cardano-crypto-test:
+  eras/byron/crypto/test
+
+  -- Packages used during development and are not released to CHaPs:
   libs/cardano-ledger-test
   libs/plutus-preprocessor
   libs/ledger-state

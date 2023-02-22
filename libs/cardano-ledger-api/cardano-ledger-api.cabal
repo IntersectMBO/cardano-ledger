@@ -1,17 +1,18 @@
-cabal-version: 3.0
-name:          cardano-ledger-api
-version:       0.1.0.0
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
-synopsis:      Public API for the cardano ledger codebase
+cabal-version:      3.0
+name:               cardano-ledger-api
+version:            1.0.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:           Public API for the cardano ledger codebase
 description:
     This package a public interface into the cardano ledger codebase. It also
     provides functionality that works for all eras and is useful for downstream
     packages.
 
-build-type:    Custom
+build-type:         Custom
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
@@ -47,14 +48,14 @@ library
 
     build-depends:
         base >=4.12 && <4.17,
-        cardano-ledger-allegra,
-        cardano-ledger-alonzo,
-        cardano-ledger-babbage,
-        cardano-ledger-binary,
-        cardano-ledger-conway,
-        cardano-ledger-core,
-        cardano-ledger-mary,
-        cardano-ledger-shelley,
+        cardano-ledger-allegra >=1.0,
+        cardano-ledger-alonzo >=1.0,
+        cardano-ledger-babbage >=1.0,
+        cardano-ledger-binary >=1.0,
+        cardano-ledger-conway >=1.0,
+        cardano-ledger-core >=1.0,
+        cardano-ledger-mary >=1.0,
+        cardano-ledger-shelley >=1.0,
         microlens
 
 test-suite cardano-ledger-api-test

@@ -1,4 +1,4 @@
-# Revision history for plutus-preprocessor
+# Version history for plutus-preprocessor
 
 ## 0.1.0.0 -- YYYY-mm-dd
 

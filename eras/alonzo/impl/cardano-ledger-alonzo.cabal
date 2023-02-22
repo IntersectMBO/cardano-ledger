@@ -1,17 +1,18 @@
-cabal-version: 3.0
-name:          cardano-ledger-alonzo
-version:       0.1.0.0
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
-synopsis:      Cardano ledger introducing Plutus Core
+cabal-version:      3.0
+name:               cardano-ledger-alonzo
+version:            1.0.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:           Cardano ledger introducing Plutus Core
 description:
     This package builds upon the Mary ledger with support for extended UTxO
     via Plutus Core.
 
-category:      Network
-build-type:    Simple
+category:           Network
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
@@ -63,13 +64,15 @@ library
         base-deriving-via,
         base64-bytestring,
         bytestring,
-        cardano-data,
-        cardano-ledger-allegra,
+        cardano-data >=1.0,
+        cardano-ledger-allegra >=1.0,
         cardano-crypto-class,
         cardano-ledger-binary,
-        cardano-ledger-core,
-        cardano-ledger-mary,
+        cardano-ledger-core >=1.0,
+        cardano-ledger-mary >=1.0,
+        cardano-ledger-shelley >=1.0,
         cardano-slotting,
+        cardano-strict-containers,
         containers,
         data-default-class,
         deepseq,
@@ -82,11 +85,9 @@ library
         plutus-core ^>=1.1,
         prettyprinter,
         serialise,
-        set-algebra,
-        cardano-ledger-shelley,
+        set-algebra >=1.0,
         scientific,
-        small-steps,
-        cardano-strict-containers,
+        small-steps >=1.0,
         text,
         time,
         transformers,

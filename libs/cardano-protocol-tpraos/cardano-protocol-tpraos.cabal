@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-protocol-tpraos
-version:       0.1.0.0
+version:       1.0.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -34,14 +34,14 @@ library
         base >=4.12 && <4.17,
         bytestring,
         cardano-crypto-class,
-        cardano-ledger-allegra,
-        cardano-ledger-alonzo,
-        cardano-ledger-babbage,
-        cardano-ledger-binary,
-        cardano-ledger-conway,
-        cardano-ledger-core,
-        cardano-ledger-mary,
-        cardano-ledger-shelley,
+        cardano-ledger-allegra >=1.0,
+        cardano-ledger-alonzo >=1.0,
+        cardano-ledger-babbage >=1.0,
+        cardano-ledger-binary >=1.0,
+        cardano-ledger-conway >=1.0,
+        cardano-ledger-core >=1.0,
+        cardano-ledger-mary >=1.0,
+        cardano-ledger-shelley >=1.0,
         cardano-slotting,
         containers,
         deepseq,
