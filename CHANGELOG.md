@@ -1,14 +1,37 @@
 # Changelog
-All notable changes to this repository will be documented in this file.
-At at later date we may adopt per-Haskell-package changelogs.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
-in the naming of release branches.
+We have adopted per-Haskell-package changelogs. Please see the `CHANGELOG.md` for each
+individual package for any notable changes.
 
+Below was the last `cardano-ledger` repository branch based release and we now have fully
+switched to [CHaPs](https://github.com/input-output-hk/cardano-haskell-packages).
 
-## [Unreleased]
+## Release tag `ledger/1.2.0`
 
+Changes recorded below are for all of the package versions in the list:
+
+  * `small-steps-1.0.0.0`
+  * `small-steps-test-1.0.0.0`
+  * `vector-map-1.0.0.0`
+  * `cardano-data-1.0.0.0`
+  * `set-algebra-1.0.0.0`
+  * `cardano-ledger-binary-1.0.0.0`
+  * `cardano-ledger-core-1.0.0.0`
+  * `cardano-protocol-tpraos-1.0.0.0`
+  * `cardano-ledger-api-1.0.0.0`
+  * `cardano-ledger-pretty-1.0.0.0`
+  * `cardano-ledger-shelley-1.0.0.0`
+  * `cardano-ledger-allegra-1.0.0.0`
+  * `cardano-ledger-mary-1.0.0.0`
+  * `cardano-ledger-alonzo-1.0.0.0`
+  * `cardano-ledger-babbage-1.0.0.0`
+  * `cardano-ledger-conway-1.0.0.0`
+  * `cardano-ledger-shelley-ma-1.0.0.0`
+  * `cardano-ledger-alonzo-test-1.0.0.0`
+  * `cardano-ledger-babbage-test-1.0.0.0`
+  * `cardano-ledger-conway-test-1.0.0.0`
+  * `cardano-ledger-shelley-ma-test-1.0.0.0`
+  * `cardano-ledger-shelley-test-1.0.0.0`
 
 ### Added
 
@@ -351,7 +374,7 @@ in the naming of release branches.
 - Enforce that the CostModel deserializers expect a specific length prior to version 9.
 - Starting in version 9, duplicate keys in CBOR maps are not longer allowed
 
-## Release branch 1.1.x
+## Release tag `ledger/1.1.0`
 
 ### Added
 - New `calculatePoolDistr'` function which is similar to `calculatePoolDistr` but has a new
@@ -546,7 +569,7 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
 - The error message for failed Plutus V2 scripts was being obscured by a bug which has now been fixed.
   #2888
 
-## Release branch 1.0.x
+## Release tag `ledger/1.0.0`
 
 The first release branch in the cardano-ledger repository,
 namely `release/1.0.0`, branches from the
