@@ -32,9 +32,9 @@ let
 
     tools = {
       cabal = "3.8.1.0";
-      ghcid = "0.8.7";
+      ghcid = "0.8.8";
       fourmolu = "0.10.1.0";
-      haskell-language-server="1.8.0.0";
+      haskell-language-server="1.9.0.0";
     };
 
     # Prevents cabal from choosing alternate plans, so that
