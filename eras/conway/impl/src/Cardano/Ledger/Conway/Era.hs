@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules (BabbageUTXO, BabbageUTXOW)
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley.Rules (
 -- | The Conway era
 data ConwayEra c
 
-instance CC.Crypto c => Era (ConwayEra c) where
+instance Crypto c => Era (ConwayEra c) where
   type PreviousEra (ConwayEra c) = BabbageEra c
   type EraCrypto (ConwayEra c) = c
   type ProtVerLow (ConwayEra c) = 9

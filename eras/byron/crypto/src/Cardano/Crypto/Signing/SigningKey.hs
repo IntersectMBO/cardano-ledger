@@ -14,7 +14,17 @@ where
 
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..), shortVerificationKeyHexF)
 import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Ledger.Binary (DecCBOR (..), Decoder, EncCBOR (..), Encoding, toCborError)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  Decoder,
+  EncCBOR (..),
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  fromByronCBOR,
+  toByronCBOR,
+  toCborError,
+ )
 import Cardano.Prelude hiding (toCborError)
 import Formatting (bprint)
 import Formatting.Buildable
@@ -51,6 +61,12 @@ encCBORXPrv a = encCBOR $ CC.unXPrv a
 
 decCBORXPrv :: Decoder s CC.XPrv
 decCBORXPrv = toCborError . CC.xprv =<< decCBOR @ByteString
+
+instance ToCBOR SigningKey where
+  toCBOR = toByronCBOR
+
+instance FromCBOR SigningKey where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR SigningKey where
   encCBOR (SigningKey a) = encCBORXPrv a

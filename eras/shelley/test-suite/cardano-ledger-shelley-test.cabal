@@ -175,6 +175,7 @@ test-suite cardano-ledger-shelley-test
         cborg,
         containers,
         data-default-class,
+        deepseq,
         groups,
         iproute,
         microlens,

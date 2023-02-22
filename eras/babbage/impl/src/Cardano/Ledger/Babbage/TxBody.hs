@@ -129,6 +129,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   Sized (..),
+  ToCBOR (..),
   mkSized,
  )
 import Cardano.Ledger.Binary.Coders
@@ -206,8 +207,7 @@ deriving instance
   Show (BabbageTxBodyRaw era)
 
 newtype BabbageTxBody era = TxBodyConstr (MemoBytes BabbageTxBodyRaw era)
-  deriving (EncCBOR)
-  deriving newtype (SafeToHash)
+  deriving newtype (SafeToHash, ToCBOR)
 
 instance Memoized BabbageTxBody where
   type RawType BabbageTxBody = BabbageTxBodyRaw
@@ -640,6 +640,9 @@ txnetworkid' = btbrTxNetworkId . getMemoRawType
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (BabbageTxBody era)
 
 instance
   (Era era, EncCBOR (TxOut era), EncCBOR (PParamsUpdate era)) =>

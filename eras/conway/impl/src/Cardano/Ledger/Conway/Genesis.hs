@@ -1,7 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Genesis (
@@ -10,8 +14,15 @@ module Cardano.Ledger.Conway.Genesis (
 where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis, alonzoGenesisAesonPairs)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+ )
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Data.Aeson (FromJSON (..), ToJSON, object, withObject, (.:))
@@ -29,19 +40,26 @@ data ConwayGenesis c = ConwayGenesis
 
 instance NoThunks (ConwayGenesis c)
 
-instance Crypto c => DecCBOR (ConwayGenesis c) where
-  decCBOR =
-    decode $
-      RecD ConwayGenesis
-        <! From
-        <! From
+-- | Genesis are always encoded with the version of era they are defined in.
+instance Crypto c => DecCBOR (ConwayGenesis c)
 
-instance Crypto c => EncCBOR (ConwayGenesis c) where
-  encCBOR (ConwayGenesis alonzoGenesis genDelegs) =
-    encode $
-      Rec ConwayGenesis
-        !> To alonzoGenesis
-        !> To genDelegs
+instance Crypto c => EncCBOR (ConwayGenesis c)
+
+instance Crypto c => ToCBOR (ConwayGenesis c) where
+  toCBOR ConwayGenesis {cgAlonzoGenesis, cgGenDelegs} =
+    toEraCBOR @(ConwayEra c) $
+      encode $
+        Rec ConwayGenesis
+          !> To cgAlonzoGenesis
+          !> To cgGenDelegs
+
+instance Crypto c => FromCBOR (ConwayGenesis c) where
+  fromCBOR =
+    eraDecoder @(ConwayEra c) $
+      decode $
+        RecD ConwayGenesis
+          <! From
+          <! From
 
 instance Crypto c => ToJSON (ConwayGenesis c) where
   toJSON (ConwayGenesis alonzoGenesis genDelegs) =

@@ -26,8 +26,12 @@ import Cardano.Ledger.Binary (
   ByteSpan,
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
@@ -54,6 +58,15 @@ data ABody a = ABody
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (ABody a)
+
+instance ToCBOR Body where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Body where
+  fromCBOR = fromByronCBOR
+
+instance FromCBOR (ABody ByteSpan) where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Body where
   encCBOR bc =

@@ -49,14 +49,14 @@ import Cardano.Ledger.Binary (
   encodeInteger,
   encodeListLen,
   encodeMapLen,
-  encodePreEncoded,
   encodeString,
   peekTokenType,
-  serializeEncoding,
+  serialize,
   withSlice,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (toCBOR), encodePreEncoded)
 import Cardano.Ledger.Core (Era (..), EraTxAuxData (..), eraProtVerLow)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.SafeHash (
   HashAnnotated,
@@ -107,7 +107,7 @@ type Metadata era = ShelleyTxAuxData era
 
 {-# DEPRECATED Metadata "Use `ShelleyTxAuxData` instead" #-}
 
-instance CC.Crypto c => EraTxAuxData (ShelleyEra c) where
+instance Crypto c => EraTxAuxData (ShelleyEra c) where
   type TxAuxData (ShelleyEra c) = ShelleyTxAuxData (ShelleyEra c)
 
   validateTxAuxData _ (ShelleyTxAuxData m) = all validMetadatum m
@@ -135,13 +135,16 @@ pattern ShelleyTxAuxData m <-
   ShelleyTxAuxData' m _
   where
     ShelleyTxAuxData m =
-      let bytes = serializeEncoding (eraProtVerLow @era) $ encCBOR m
+      let bytes = serialize (eraProtVerLow @era) $ encCBOR m
        in ShelleyTxAuxData' m bytes
 
 {-# COMPLETE ShelleyTxAuxData #-}
 
-instance Typeable era => EncCBOR (ShelleyTxAuxData era) where
-  encCBOR = encodePreEncoded . LBS.toStrict . mdBytes
+instance Typeable era => Plain.ToCBOR (ShelleyTxAuxData era) where
+  toCBOR = Plain.encodePreEncoded . LBS.toStrict . mdBytes
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (ShelleyTxAuxData era)
 
 instance Typeable era => DecCBOR (Annotator (ShelleyTxAuxData era)) where
   decCBOR = do

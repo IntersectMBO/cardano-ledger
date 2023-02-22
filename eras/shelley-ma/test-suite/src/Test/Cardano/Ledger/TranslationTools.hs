@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -11,11 +12,8 @@ module Test.Cardano.Ledger.TranslationTools (
 )
 where
 
-import Cardano.Ledger.Binary (
-  EncCBOR (..),
-  Encoding,
-  serializeEncoding',
- )
+import Cardano.Ledger.Binary (EncCBOR (..), toPlainEncoding)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.TreeDiff (diffExprNoColor)
 import Control.Monad
@@ -35,8 +33,13 @@ translateEraPartial tc fe =
     Right result -> result
     Left err -> error $ "TranslateEra failure: " <> show err
 
--- Tests that the serializing before translation or after translating
--- does not change the result
+-- Tests that the serializing before translation or after translating does not change the
+-- result
+--
+-- FIXME: This property only holds for annotated types. Replace this test with a better
+-- one, since there is no requirement for two different eras to encode the type in the
+-- same way. There is, however a requirement that the encoding from a previous era, must
+-- be decodable by the current era.
 translateEraEncoding ::
   forall era f.
   ( HasCallStack
@@ -44,15 +47,15 @@ translateEraEncoding ::
   , Show (TranslationError era f)
   ) =>
   TranslationContext era ->
-  (f era -> Encoding) ->
-  (f (PreviousEra era) -> Encoding) ->
+  (f era -> Plain.Encoding) ->
+  (f (PreviousEra era) -> Plain.Encoding) ->
   f (PreviousEra era) ->
   Assertion
 translateEraEncoding tc encodeThisEra encodePreviousEra x =
   let previousEra =
-        serializeEncoding' (eraProtVerHigh @(PreviousEra era)) (encodePreviousEra x)
+        Plain.serialize' (encodePreviousEra x)
       currentEra =
-        serializeEncoding' (eraProtVerLow @era) (encodeThisEra $ translateEraPartial @era tc x)
+        Plain.serialize' (encodeThisEra $ translateEraPartial @era tc x)
    in unless (previousEra == currentEra) $
         assertFailure $
           diffExprNoColor (CBORBytes previousEra) (CBORBytes currentEra)
@@ -71,4 +74,8 @@ translateEraEncCBOR ::
   TranslationContext era ->
   f (PreviousEra era) ->
   Assertion
-translateEraEncCBOR _ tc = translateEraEncoding @era tc encCBOR encCBOR
+translateEraEncCBOR _ tc =
+  translateEraEncoding @era
+    tc
+    (toEraCBOR @era)
+    (toPlainEncoding (eraProtVerHigh @(PreviousEra era)) . encCBOR)

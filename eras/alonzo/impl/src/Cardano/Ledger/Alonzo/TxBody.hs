@@ -87,6 +87,7 @@ import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
   EncCBOR (..),
+  ToCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
@@ -149,7 +150,7 @@ deriving instance
   Show (AlonzoTxBodyRaw era)
 
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
-  deriving (EncCBOR)
+  deriving (ToCBOR)
   deriving newtype (SafeToHash)
 
 instance Memoized AlonzoTxBody where
@@ -399,6 +400,9 @@ txnetworkid' = atbrTxNetworkId . getMemoRawType
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (AlonzoTxBody era)
 
 instance
   (Era era, EncCBOR (TxOut era), EncCBOR (PParamsUpdate era)) =>

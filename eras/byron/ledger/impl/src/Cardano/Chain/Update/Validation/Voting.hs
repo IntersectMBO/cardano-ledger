@@ -38,11 +38,15 @@ import Cardano.Ledger.Binary (
   Decoder,
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (State, cborError)
 import qualified Data.Map.Strict as M
@@ -80,6 +84,12 @@ data Error
   | VotingVoterNotDelegate KeyHash
   | VotingVoteAlreadyCast KeyHash
   deriving (Eq, Show)
+
+instance ToCBOR Error where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Error where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR Error where
   encCBOR err = case err of

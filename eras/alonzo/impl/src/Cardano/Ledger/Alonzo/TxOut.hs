@@ -58,9 +58,10 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (Share, decShareCBOR),
   DecoderError (DecoderErrorCustom),
   EncCBOR (encCBOR),
+  FromCBOR (..),
   Interns,
+  ToCBOR (..),
   cborError,
-  decNoShareCBOR,
   decodeBreakOr,
   decodeListLenOrIndef,
   encodeListLen,
@@ -347,23 +348,9 @@ instance
   (Era era, Show (Value era), DecCBOR (CompactForm (Value era)), Val (Value era)) =>
   DecCBOR (AlonzoTxOut era)
   where
-  decCBOR = decNoShareCBOR
-  {-# INLINE decCBOR #-}
-
-instance
-  (Era era, Val (Value era), DecCBOR (CompactForm (Value era)), Show (Value era)) =>
-  DecShareCBOR (AlonzoTxOut era)
-  where
-  type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  decShareCBOR credsInterns = do
+  decCBOR = do
     lenOrIndef <- decodeListLenOrIndef
-    let internTxOut = \case
-          TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
-            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
-          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
-            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
-          txOut -> txOut
-    internTxOut <$!> case lenOrIndef of
+    case lenOrIndef of
       Nothing -> do
         (a, ca) <- fromCborBothAddr
         cv <- decCBOR
@@ -383,7 +370,36 @@ instance
         cv <- decCBOR
         mkTxOutCompact a ca cv . SJust <$> decCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
+  {-# INLINEABLE decCBOR #-}
+
+instance
+  (Era era, Val (Value era), DecCBOR (CompactForm (Value era)), Show (Value era)) =>
+  DecShareCBOR (AlonzoTxOut era)
+  where
+  type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
+  decShareCBOR credsInterns = do
+    let internTxOut = \case
+          TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
+            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
+          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
+            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
+          txOut -> txOut
+    internTxOut <$!> decCBOR
   {-# INLINEABLE decShareCBOR #-}
+
+instance
+  (Era era, Val (Value era)) =>
+  ToCBOR (AlonzoTxOut era)
+  where
+  toCBOR = toEraCBOR @era
+  {-# INLINE toCBOR #-}
+
+instance
+  (Era era, Show (Value era), DecCBOR (CompactForm (Value era)), Val (Value era)) =>
+  FromCBOR (AlonzoTxOut era)
+  where
+  fromCBOR = fromEraCBOR @era
+  {-# INLINE fromCBOR #-}
 
 instance (EraTxOut era, ToJSON (Value era)) => ToJSON (AlonzoTxOut era) where
   toJSON (AlonzoTxOut addr v dataHash) =

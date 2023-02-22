@@ -22,11 +22,15 @@ import Cardano.Ledger.Binary (
   Decoder,
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON, ToJSONKey)
@@ -52,6 +56,12 @@ instance ToJSON SystemTag
 -- Used for debugging purposes only
 instance ToJSONKey SystemTag
 
+instance ToCBOR SystemTag where
+  toCBOR = toByronCBOR
+
+instance FromCBOR SystemTag where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR SystemTag where
   encCBOR = encCBOR . getSystemTag
 
@@ -65,6 +75,12 @@ data SystemTagError
   = SystemTagNotAscii Text
   | SystemTagTooLong Text
   deriving (Eq, Show, Data)
+
+instance ToCBOR SystemTagError where
+  toCBOR = toByronCBOR
+
+instance FromCBOR SystemTagError where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR SystemTagError where
   encCBOR err = case err of

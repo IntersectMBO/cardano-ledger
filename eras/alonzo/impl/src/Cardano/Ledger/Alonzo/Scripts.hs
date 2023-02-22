@@ -66,6 +66,7 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (encCBOR),
   Encoding,
+  ToCBOR (toCBOR),
   cborError,
   decodeMapByKey,
   encodeFoldableAsDefLenList,
@@ -118,7 +119,6 @@ import Data.Measure (BoundedMeasure, Measure)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Semigroup (All (..))
 import Data.Text (Text)
-import Data.Typeable (Typeable)
 import Data.Vector as Vector (toList)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
@@ -810,10 +810,12 @@ instance EncCBOR Prices where
 instance DecCBOR Prices where
   decCBOR = decode $ RecD Prices <! From <! From
 
-instance (Typeable (EraCrypto era), Typeable era) => EncCBOR (AlonzoScript era) where
-  encCBOR x = encode (encodeScript x)
+instance Era era => EncCBOR (AlonzoScript era)
 
-encodeScript :: (Typeable era) => AlonzoScript era -> Encode 'Open (AlonzoScript era)
+instance Era era => ToCBOR (AlonzoScript era) where
+  toCBOR = toEraCBOR @era . encode . encodeScript
+
+encodeScript :: Era era => AlonzoScript era -> Encode 'Open (AlonzoScript era)
 encodeScript (TimelockScript i) = Sum TimelockScript 0 !> To i
 -- Use the EncCBOR instance of ShortByteString:
 encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s

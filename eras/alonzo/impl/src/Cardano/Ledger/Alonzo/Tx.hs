@@ -69,8 +69,8 @@ module Cardano.Ledger.Alonzo.Tx (
   -- Segwit
   alonzoSegwitTx,
   -- Other
-  encCBORForSizeComputation,
-  encCBORForMempoolSubmission,
+  toCBORForSizeComputation,
+  toCBORForMempoolSubmission,
 )
 where
 
@@ -114,11 +114,12 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (encCBOR),
   Encoding,
+  ToCBOR (..),
   decodeNullMaybe,
   encodeListLen,
   encodeNullMaybe,
-  serializeEncoding,
-  serializeEncoding',
+  serialize,
+  serialize',
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
@@ -156,7 +157,7 @@ import NoThunks.Class (NoThunks)
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks, NFData)
+  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR)
 
 data AlonzoTx era = AlonzoTx
   { body :: !(TxBody era)
@@ -223,8 +224,8 @@ sizeAlonzoTxF =
   to $
     fromIntegral
       . LBS.length
-      . serializeEncoding (eraProtVerLow @era)
-      . encCBORForSizeComputation
+      . serialize (eraProtVerLow @era)
+      . toCBORForSizeComputation
 {-# INLINEABLE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx era) IsValid
@@ -280,7 +281,7 @@ deriving instance Typeable era => NoThunks (ScriptIntegrity era)
 instance Era era => SafeToHash (ScriptIntegrity era) where
   originalBytes (ScriptIntegrity m d l) =
     let dBytes = if nullDats d then mempty else originalBytes d
-        lBytes = serializeEncoding' (eraProtVerLow @era) (encodeLangViews l)
+        lBytes = serialize' (eraProtVerLow @era) (encodeLangViews l)
      in originalBytes m <> dBytes <> lBytes
 
 instance
@@ -315,14 +316,14 @@ isTwoPhaseScriptAddress tx =
 -- | This ensures that the size of transactions from Mary is unchanged.
 -- The individual components all store their bytes; the only work we do in this
 -- function is concatenating
-encCBORForSizeComputation ::
+toCBORForSizeComputation ::
   ( EncCBOR (TxBody era)
   , EncCBOR (TxWits era)
   , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
-encCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
+toCBORForSizeComputation AlonzoTx {body, wits, auxiliaryData} =
   encodeListLen 3
     <> encCBOR body
     <> encCBOR wits
@@ -466,10 +467,6 @@ indexedRdmrs tx sp = case rdptr @era (tx ^. bodyTxL) sp of
 -- Serialisation
 --------------------------------------------------------------------------------
 
-deriving newtype instance DecCBOR IsValid
-
-deriving newtype instance EncCBOR IsValid
-
 -- | Construct an annotated Alonzo style transaction.
 alonzoSegwitTx ::
   AlonzoEraTx era =>
@@ -505,15 +502,15 @@ alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
 -- Note that this serialisation is neither the serialisation used on-chain
 -- (where Txs are deconstructed using segwit), nor the serialisation used for
 -- computing the transaction size (which omits the `IsValid` field for
--- compatibility with Mary - see 'encCBORForSizeComputation').
-encCBORForMempoolSubmission ::
+-- compatibility with Mary - see 'toCBORForSizeComputation').
+toCBORForMempoolSubmission ::
   ( EncCBOR (TxBody era)
   , EncCBOR (TxWits era)
   , EncCBOR (TxAuxData era)
   ) =>
   AlonzoTx era ->
   Encoding
-encCBORForMempoolSubmission
+toCBORForMempoolSubmission
   AlonzoTx {body, wits, auxiliaryData, isValid} =
     encode $
       Rec AlonzoTx
@@ -530,7 +527,17 @@ instance
   ) =>
   EncCBOR (AlonzoTx era)
   where
-  encCBOR = encCBORForMempoolSubmission
+  encCBOR = toCBORForMempoolSubmission
+
+instance
+  ( Era era
+  , EncCBOR (TxBody era)
+  , EncCBOR (TxAuxData era)
+  , EncCBOR (TxWits era)
+  ) =>
+  ToCBOR (AlonzoTx era)
+  where
+  toCBOR = toEraCBOR @era
 
 instance
   ( Typeable era

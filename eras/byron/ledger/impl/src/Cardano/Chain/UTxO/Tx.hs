@@ -32,10 +32,14 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (DecoderErrorUnknownTag),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   szCases,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
@@ -80,6 +84,12 @@ instance B.Buildable Tx where
       attrsBuilder
         | attributesAreKnown attrs = mempty
         | otherwise = bprint (", attributes: " . build) attrs
+
+instance ToCBOR Tx where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Tx where
+  fromCBOR = fromByronCBOR
 
 -- Used for debugging purposes only
 instance ToJSON Tx
@@ -143,6 +153,12 @@ instance B.Buildable TxIn where
 -- Used for debugging purposes only
 instance ToJSON TxIn
 
+instance ToCBOR TxIn where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxIn where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR TxIn where
   encCBOR (TxInUtxo txInHash txInIndex) =
     encodeListLen 2
@@ -194,6 +210,12 @@ instance EncCBOR TxOut where
 
   encodedSizeExpr size pxy =
     1 + size (txOutAddress <$> pxy) + size (txOutValue <$> pxy)
+
+instance ToCBOR TxOut where
+  toCBOR = toByronCBOR
+
+instance FromCBOR TxOut where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR TxOut where
   decCBOR = do

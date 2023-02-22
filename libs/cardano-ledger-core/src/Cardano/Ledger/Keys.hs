@@ -82,9 +82,10 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
-  encodedVerKeyDSIGNSizeExpr,
  )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
@@ -175,18 +176,15 @@ deriving instance Crypto c => NoThunks (VKey kd c)
 
 instance HasKeyRole VKey
 
-instance
-  (Crypto c, Typeable kd) =>
-  DecCBOR (VKey kd c)
-  where
-  decCBOR = VKey <$> decodeVerKeyDSIGN
+instance (Crypto c, Typeable kd) => FromCBOR (VKey kd c) where
+  fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
 
-instance
-  (Crypto c, Typeable kd) =>
-  EncCBOR (VKey kd c)
-  where
-  encCBOR (VKey vk) = encodeVerKeyDSIGN vk
-  encodedSizeExpr _size proxy = encodedVerKeyDSIGNSizeExpr ((\(VKey k) -> k) <$> proxy)
+instance (Crypto c, Typeable kd) => ToCBOR (VKey kd c) where
+  toCBOR = DSIGN.encodeVerKeyDSIGN . unVKey
+
+deriving instance (Crypto c, Typeable kd) => DecCBOR (VKey kd c)
+
+deriving instance (Crypto c, Typeable kd) => EncCBOR (VKey kd c)
 
 data KeyPair (kd :: KeyRole) c = KeyPair
   { vKey :: !(VKey kd c)
@@ -228,6 +226,14 @@ newtype KeyHash (discriminator :: KeyRole) c
   = KeyHash (Hash.Hash (ADDRHASH c) (DSIGN.VerKeyDSIGN (DSIGN c)))
   deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoThunks, Generic)
+
+deriving instance
+  (Crypto c, Typeable disc) =>
+  ToCBOR (KeyHash disc c)
+
+deriving instance
+  (Crypto c, Typeable disc) =>
+  FromCBOR (KeyHash disc c)
 
 deriving instance
   (Crypto c, Typeable disc) =>

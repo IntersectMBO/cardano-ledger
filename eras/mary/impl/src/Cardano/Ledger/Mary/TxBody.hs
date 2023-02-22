@@ -38,7 +38,7 @@ where
 
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Core
@@ -62,16 +62,12 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Set as Set (Set, map)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.
-
-newtype MaryTxBody era = TxBodyConstr (MemoBytes MaryTxBodyRaw era)
-  deriving newtype (SafeToHash)
 
 newtype MaryTxBodyRaw era = MaryTxBodyRaw (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era)
 
@@ -94,6 +90,12 @@ deriving newtype instance
   NoThunks (MaryTxBodyRaw era)
 
 deriving newtype instance AllegraEraTxBody era => DecCBOR (MaryTxBodyRaw era)
+
+newtype MaryTxBody era = TxBodyConstr (MemoBytes MaryTxBodyRaw era)
+  deriving newtype (SafeToHash, ToCBOR)
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (MaryTxBody era)
 
 instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
   decCBOR = pure <$> decCBOR
@@ -123,8 +125,6 @@ deriving newtype instance
   , Era era
   ) =>
   NFData (MaryTxBody era)
-
-deriving newtype instance Typeable era => EncCBOR (MaryTxBody era)
 
 deriving via
   Mem MaryTxBodyRaw era

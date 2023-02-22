@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -14,9 +15,11 @@
 
 module Cardano.Ledger.Binary.Decoding.DecCBOR (
   DecCBOR (..),
+  fromByronCBOR,
 )
 where
 
+import qualified Cardano.Binary as Plain (Decoder, FromCBOR (..))
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, SeedSizeDSIGN, SigDSIGN, SignKeyDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashFromBytes, sizeHash)
 import Cardano.Crypto.KES.Class (KESAlgorithm, OptimizedKESAlgorithm, SigKES, SignKeyKES, VerKeyKES)
@@ -39,7 +42,7 @@ import qualified Cardano.Crypto.VRF.Praos as Praos
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
-import Cardano.Ledger.Binary.Version (Version)
+import Cardano.Ledger.Binary.Version (Version, byronProtVer)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -82,6 +85,8 @@ import Prelude hiding (decodeFloat)
 
 class Typeable a => DecCBOR a where
   decCBOR :: Decoder s a
+  default decCBOR :: Plain.FromCBOR a => Decoder s a
+  decCBOR = fromPlainDecoder Plain.fromCBOR
 
   -- | Validate decoding of a Haskell value, without the need to actually construct
   -- it. Coule be slightly faster than `decCBOR`, however it should respect this law:
@@ -95,6 +100,11 @@ class Typeable a => DecCBOR a where
 
 instance DecCBOR Version where
   decCBOR = decodeVersion
+
+-- | Convert a versioned `DecCBOR` instance to a plain `Plain.Decoder` using Byron protocol
+-- version.
+fromByronCBOR :: DecCBOR a => Plain.Decoder s a
+fromByronCBOR = toPlainDecoder byronProtVer decCBOR
 
 --------------------------------------------------------------------------------
 -- Primitive types

@@ -15,8 +15,12 @@ import Cardano.Chain.Common.Compact (CompactAddress, toCompactAddress)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import qualified Data.Set as Set
@@ -29,6 +33,12 @@ data UTxOConfiguration = UTxOConfiguration
   -- use these addresses as transaction inputs will be deemed invalid.
   }
   deriving (Eq, Show, Generic, NoThunks)
+
+instance ToCBOR UTxOConfiguration where
+  toCBOR = toByronCBOR
+
+instance FromCBOR UTxOConfiguration where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR UTxOConfiguration where
   encCBOR (UTxOConfiguration tcAssetLockedSrcAddrs_) =

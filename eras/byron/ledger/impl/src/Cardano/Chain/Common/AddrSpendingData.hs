@@ -19,12 +19,16 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLenCanonical,
   decodeWord8Canonical,
   encodeListLen,
+  fromByronCBOR,
   matchSize,
   szCases,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
@@ -48,6 +52,12 @@ instance B.Buildable AddrSpendingData where
   build = \case
     VerKeyASD vk -> bprint ("VerKeyASD " . build) vk
     RedeemASD rvk -> bprint ("RedeemASD " . build) rvk
+
+instance ToCBOR AddrSpendingData where
+  toCBOR = toByronCBOR
+
+instance FromCBOR AddrSpendingData where
+  fromCBOR = fromByronCBOR
 
 -- Tag 1 was previously used for scripts, but never appeared on the chain
 instance EncCBOR AddrSpendingData where
@@ -82,6 +92,12 @@ data AddrType
 
 -- Used for debugging purposes only
 instance ToJSON AddrType
+
+instance ToCBOR AddrType where
+  toCBOR = toByronCBOR
+
+instance FromCBOR AddrType where
+  fromCBOR = fromByronCBOR
 
 -- Tag 1 was previously used for scripts, but never appeared on the chain
 instance EncCBOR AddrType where

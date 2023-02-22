@@ -19,7 +19,7 @@ index-state: 2022-12-24T00:00:00Z
 index-state:
   , hackage.haskell.org 2022-12-24T00:00:00Z
 -- Bump this if you need newer packages from CHaP
-  , cardano-haskell-packages 2022-11-02T15:34:17Z
+  , cardano-haskell-packages 2023-02-21T23:27:00Z
 
 packages:
   eras/allegra/impl
@@ -77,7 +77,8 @@ test-show-details: streaming
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
-  Unique:hashable
+  Unique:hashable,
+  plutus-core:cardano-crypto-class
 
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer

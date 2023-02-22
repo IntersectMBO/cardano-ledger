@@ -35,17 +35,16 @@ module Cardano.Ledger.Shelley.API.Mempool (
 where
 
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Core (
-  Era,
-  EraIndependentTxBody,
-  EraPParams,
-  EraRule,
-  EraTx (Tx),
-  PreviousEra,
-  TranslateEra (..),
-  TranslationContext,
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeFoldableAsIndefLenList,
+  ifEncodingVersionAtLeast,
+  natVersion,
  )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
@@ -222,21 +221,48 @@ deriving stock instance
   (Show (PredicateFailure (EraRule "LEDGER" era))) =>
   Show (ApplyTxError era)
 
+-- TODO: This instance can be switched back to a derived version, once we are officially
+-- in the Conway era:
+--
+-- deriving newtype instance
+--   ( Era era
+--   , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
+--   ) =>
+--   EncCBOR (ApplyTxError era)
+
 instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   EncCBOR (ApplyTxError era)
   where
-  encCBOR (ApplyTxError es) = encCBOR es
+  encCBOR (ApplyTxError failures) =
+    ifEncodingVersionAtLeast
+      (natVersion @9)
+      (encCBOR failures)
+      (encodeFoldableAsIndefLenList encCBOR failures)
+
+deriving newtype instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  DecCBOR (ApplyTxError era)
+
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  ToCBOR (ApplyTxError era)
+  where
+  toCBOR = toEraCBOR @era
 
 instance
   ( Era era
   , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
-  DecCBOR (ApplyTxError era)
+  FromCBOR (ApplyTxError era)
   where
-  decCBOR = ApplyTxError <$> decCBOR
+  fromCBOR = fromEraCBOR @era
 
 -- | Old 'applyTxs'
 applyTxs ::

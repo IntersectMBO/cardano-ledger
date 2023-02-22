@@ -47,6 +47,8 @@ import Cardano.Ledger.Binary (
   DecCBORGroup (..),
   EncCBOR (..),
   EncCBORGroup (..),
+  FromCBOR (..),
+  ToCBOR (..),
   decodeMapContents,
   decodeRecordNamed,
   decodeWord,
@@ -219,6 +221,12 @@ instance Era era => DecCBOR (ShelleyPParams Identity era) where
         <*> decCBORGroup -- sppProtocolVersion :: ProtVer
         <*> decCBOR -- sppMinUTxOValue    :: Natural
         <*> decCBOR -- sppMinPoolCost     :: Natural
+
+instance Era era => ToCBOR (ShelleyPParams Identity era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (ShelleyPParams Identity era) where
+  fromCBOR = fromEraCBOR @era
 
 instance ToJSON (ShelleyPParams Identity era) where
   toJSON pp =
@@ -393,7 +401,13 @@ instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
       (fail $ "duplicate keys: " <> show fields)
     pure $ foldr ($) emptyShelleyPParamsUpdate (snd <$> mapParts)
 
--- | Update operation for protocol parameters structure @PParams
+instance Era era => ToCBOR (ShelleyPParams StrictMaybe era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
+  fromCBOR = fromEraCBOR @era
+
+-- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
   deriving (Generic)
@@ -406,17 +420,13 @@ deriving instance Show (PParamsUpdate era) => Show (ProposedPPUpdates era)
 
 instance NoThunks (PParamsUpdate era) => NoThunks (ProposedPPUpdates era)
 
-instance
-  (Era era, EncCBOR (PParamsUpdate era)) =>
-  EncCBOR (ProposedPPUpdates era)
-  where
-  encCBOR (ProposedPPUpdates m) = encCBOR m
+deriving instance (Era era, ToCBOR (PParamsUpdate era)) => ToCBOR (ProposedPPUpdates era)
 
-instance
-  (Era era, DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (ProposedPPUpdates era)
-  where
-  decCBOR = ProposedPPUpdates <$> decCBOR
+deriving instance (Era era, FromCBOR (PParamsUpdate era)) => FromCBOR (ProposedPPUpdates era)
+
+deriving instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (ProposedPPUpdates era)
+
+deriving instance (Era era, DecCBOR (PParamsUpdate era)) => DecCBOR (ProposedPPUpdates era)
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty

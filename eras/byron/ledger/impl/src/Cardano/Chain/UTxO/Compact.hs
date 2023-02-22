@@ -35,7 +35,16 @@ import Cardano.Chain.Common.Lovelace (Lovelace)
 import Cardano.Chain.UTxO.Tx (TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto.Hashing (hashToBytes, unsafeHashFromBytes)
 import Cardano.HeapWords (HeapWords (..), heapWordsUnpacked)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)
@@ -74,6 +83,12 @@ instance HeapWords CompactTxIn where
     -- +---------------------------------------------+
     --
     6
+
+instance ToCBOR CompactTxIn where
+  toCBOR = toByronCBOR
+
+instance FromCBOR CompactTxIn where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR CompactTxIn where
   decCBOR = do
@@ -136,6 +151,12 @@ instance HeapWords CompactTxId where
     -- +-----------------------------------+
     --
     5
+
+instance ToCBOR CompactTxId where
+  toCBOR = toByronCBOR
+
+instance FromCBOR CompactTxId where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR CompactTxId where
   decCBOR = do
@@ -221,6 +242,12 @@ instance HeapWords CompactTxOut where
     --                +--------------+
     --
     3 + heapWordsUnpacked compactAddr
+
+instance ToCBOR CompactTxOut where
+  toCBOR = toByronCBOR
+
+instance FromCBOR CompactTxOut where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR CompactTxOut where
   decCBOR = do

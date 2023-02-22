@@ -55,7 +55,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
@@ -87,6 +86,7 @@ import Cardano.Ledger.UTxO (
   txouts,
  )
 import qualified Cardano.Ledger.Val as Val
+import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Assertion (..),
@@ -107,7 +107,6 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -179,8 +178,15 @@ instance
   NoThunks (ShelleyUtxoPredFailure era)
 
 instance
-  ( Typeable era
-  , CC.Crypto (EraCrypto era)
+  ( Era era
+  , NFData (Value era)
+  , NFData (TxOut era)
+  , NFData (PPUPPredFailure era)
+  ) =>
+  NFData (ShelleyUtxoPredFailure era)
+
+instance
+  ( Era era
   , EncCBOR (Value era)
   , EncCBOR (TxOut era)
   , EncCBOR (PPUPPredFailure era)

@@ -57,10 +57,14 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoded (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   annotatedDecoder,
   decCBORAnnotated,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import qualified Cardano.Ledger.Binary as Binary (annotation)
 import Cardano.Prelude
@@ -169,6 +173,12 @@ recoverVoteId = hashDecoded
 -- Vote Binary Serialization
 --------------------------------------------------------------------------------
 
+instance ToCBOR Vote where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Vote where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR Vote where
   encCBOR uv =
     encodeListLen 4
@@ -183,6 +193,9 @@ instance EncCBOR Vote where
 
 instance DecCBOR Vote where
   decCBOR = void <$> decCBOR @(AVote ByteSpan)
+
+instance FromCBOR (AVote ByteSpan) where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR (AVote ByteSpan) where
   decCBOR = do

@@ -15,6 +15,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   fromPlainEncodingWithVersion,
   withCurrentEncodingVersion,
   enforceEncodingVersion,
+  ifEncodingVersionAtLeast,
 
   -- ** Custom
   encodeVersion,
@@ -30,6 +31,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   -- *** Containers
   encodeList,
   encodeSeq,
+  encodeStrictSeq,
   encodeSet,
   encodeMap,
   encodeVMap,
@@ -40,6 +42,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
   encodeFoldableMapEncoder,
+  lengthThreshold,
 
   -- *** Time
   encodeUTCTime,
@@ -106,6 +109,7 @@ import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Ratio (Ratio, denominator, numerator)
 import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Time.Calendar.OrdinalDate (toOrdinalDate)
@@ -426,7 +430,7 @@ lengthThreshold = 23
 -- Set
 --------------------------------------------------------------------------------
 
--- Usage of fromIntegral in `exactListLenEncoding` is safe, since it is an internal function
+-- | Usage of fromIntegral in `exactListLenEncoding` is safe, since it is an internal function
 -- and is applied to List's size.
 exactListLenEncoding :: Int -> Encoding -> Encoding
 exactListLenEncoding len contents =
@@ -484,6 +488,10 @@ encodeList encodeValue xs =
 encodeSeq :: (a -> Encoding) -> Seq.Seq a -> Encoding
 encodeSeq encodeValue f = variableListLenEncoding (Seq.length f) (foldMap' encodeValue f)
 {-# INLINE encodeSeq #-}
+
+encodeStrictSeq :: (a -> Encoding) -> SSeq.StrictSeq a -> Encoding
+encodeStrictSeq encodeValue = encodeSeq encodeValue . SSeq.fromStrict
+{-# INLINE encodeStrictSeq #-}
 
 --------------------------------------------------------------------------------
 -- Vector

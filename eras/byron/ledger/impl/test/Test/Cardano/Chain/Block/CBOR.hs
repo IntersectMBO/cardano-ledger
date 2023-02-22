@@ -56,7 +56,7 @@ import Cardano.Crypto (
   sign,
   toVerification,
  )
-import Cardano.Ledger.Binary (byronProtVer, decodeFullDecoder, dropBytes, serializeEncoding)
+import Cardano.Ledger.Binary (byronProtVer, decodeFullDecoder, dropBytes, serialize)
 import Cardano.Prelude
 import Data.Coerce (coerce)
 import Data.Maybe (fromJust)
@@ -112,7 +112,7 @@ ts_roundTripHeaderCompat =
     roundTripsHeaderCompat esh@(WithEpochSlots es _) =
       trippingBuildable
         esh
-        (serializeEncoding byronProtVer . encCBORHeaderToHash es . unWithEpochSlots)
+        (serialize byronProtVer . encCBORHeaderToHash es . unWithEpochSlots)
         ( fmap (WithEpochSlots es . fromJust)
             . decodeFullDecoder byronProtVer "Header" (decCBORHeaderToHash es)
         )
@@ -133,7 +133,7 @@ ts_roundTripBlockCompat =
     roundTripsBlockCompat esb@(WithEpochSlots es _) =
       trippingBuildable
         esb
-        (serializeEncoding byronProtVer . encCBORABOBBlock es . unWithEpochSlots)
+        (serialize byronProtVer . encCBORABOBBlock es . unWithEpochSlots)
         ( fmap (WithEpochSlots es . fromJust)
             . decodeFullDecoder byronProtVer "Block" (decCBORABOBBlock es)
         )
@@ -173,7 +173,7 @@ ts_roundTripBoundaryBlock =
     roundTripsBVD (pm, bvd) =
       trippingBuildable
         bvd
-        (serializeEncoding byronProtVer . encCBORABoundaryBlock pm)
+        (serialize byronProtVer . encCBORABoundaryBlock pm)
         ( fmap (dropSize . fmap (const ()))
             <$> decodeFullDecoder byronProtVer "BoundaryBlock" decCBORABoundaryBlock
         )

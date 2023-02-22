@@ -64,9 +64,13 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoded (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   annotatedDecoder,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
@@ -136,6 +140,12 @@ recoverUpId = hashDecoded
 -- Proposal Binary Serialization
 --------------------------------------------------------------------------------
 
+instance ToCBOR Proposal where
+  toCBOR = toByronCBOR
+
+instance FromCBOR Proposal where
+  fromCBOR = fromByronCBOR
+
 instance EncCBOR Proposal where
   encCBOR proposal =
     encodeListLen 7
@@ -151,6 +161,9 @@ instance EncCBOR Proposal where
 
 instance DecCBOR Proposal where
   decCBOR = void <$> decCBOR @(AProposal ByteSpan)
+
+instance FromCBOR (AProposal ByteSpan) where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR (AProposal ByteSpan) where
   decCBOR = do
@@ -223,6 +236,12 @@ instance ToJSON ProposalBody
 --------------------------------------------------------------------------------
 -- ProposalBody Binary Serialization
 --------------------------------------------------------------------------------
+
+instance ToCBOR ProposalBody where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ProposalBody where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR ProposalBody where
   encCBOR pb =

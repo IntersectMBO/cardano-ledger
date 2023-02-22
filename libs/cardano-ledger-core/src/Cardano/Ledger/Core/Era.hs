@@ -27,10 +27,14 @@ module Cardano.Ledger.Core.Era (
   notSupportedInThisEraL,
   eraProtVerLow,
   eraProtVerHigh,
+  toEraCBOR,
+  fromEraCBOR,
+  eraDecoder,
 )
 where
 
-import Cardano.Ledger.BaseTypes (MaxVersion, MinVersion, Version, natVersion)
+import Cardano.Ledger.Binary
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
 import Data.Kind (Constraint, Type)
 import Data.Typeable (Typeable)
@@ -49,8 +53,13 @@ class
   , KnownNat (ProtVerHigh era)
   , ProtVerLow era <= ProtVerHigh era
   , MinVersion <= ProtVerLow era
-  , ProtVerLow era <= MaxVersion
   , MinVersion <= ProtVerHigh era
+  , -- We need to make sure that there is never a case that MaxVersion equals to the highest
+    -- protocol version for the era, otherwise we can never upgrade to the next version:
+    CmpNat (ProtVerLow era) MaxVersion ~ 'LT
+  , CmpNat (ProtVerHigh era) MaxVersion ~ 'LT
+  , -- These two are redundant and can be removed once support for GHC-8.10 is dropped:
+    ProtVerLow era <= MaxVersion
   , ProtVerHigh era <= MaxVersion
   ) =>
   Era era
@@ -174,3 +183,21 @@ notSupportedInThisEra = error "Impossible: Function is not supported in this era
 -- Without using `lens` we hit a ghc bug, which results in a redundant constraint warning
 notSupportedInThisEraL :: HasCallStack => Lens' a b
 notSupportedInThisEraL = lens notSupportedInThisEra notSupportedInThisEra
+
+-- | Convert a type that implements `EncCBOR` to plain `Plain.Encoding` using the lowest
+-- protocol version for the supplied @era@
+toEraCBOR :: forall era t. (Era era, EncCBOR t) => t -> Plain.Encoding
+toEraCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
+{-# INLINE toEraCBOR #-}
+
+-- | Convert a type that implements `DecCBOR` to plain `Plain.Decoder` using the lowest
+-- protocol version for the supplied @era@
+fromEraCBOR :: forall era t s. (Era era, DecCBOR t) => Plain.Decoder s t
+fromEraCBOR = eraDecoder @era decCBOR
+{-# INLINE fromEraCBOR #-}
+
+-- | Convert a versioned `Decoder` to plain a `Plain.Decoder` using the lowest protocol
+-- version for the supplied @era@
+eraDecoder :: forall era t s. (Era era, DecCBOR t) => Decoder s t -> Plain.Decoder s t
+eraDecoder = toPlainDecoder (eraProtVerLow @era)
+{-# INLINE eraDecoder #-}

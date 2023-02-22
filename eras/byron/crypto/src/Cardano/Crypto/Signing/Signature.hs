@@ -46,9 +46,13 @@ import Cardano.Ledger.Binary (
   Decoder,
   EncCBOR (..),
   Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
+  fromByronCBOR,
+  serialize,
   serialize',
-  serializeEncoding,
+  toByronCBOR,
   toCborError,
  )
 import Cardano.Prelude hiding (toCborError)
@@ -126,6 +130,12 @@ encCBORXSignature a = encCBOR $ CC.unXSignature a
 decCBORXSignature :: Decoder s CC.XSignature
 decCBORXSignature = toCborError . CC.xsignature =<< decCBOR
 
+instance Typeable a => ToCBOR (Signature a) where
+  toCBOR = toByronCBOR
+
+instance Typeable a => FromCBOR (Signature a) where
+  fromCBOR = fromByronCBOR
+
 instance Typeable a => EncCBOR (Signature a) where
   encCBOR (Signature a) = encCBORXSignature a
   encodedSizeExpr _ _ = 66
@@ -152,7 +162,7 @@ sign pm tag sk = signEncoded pm tag sk . encCBOR
 signEncoded ::
   ProtocolMagicId -> SignTag -> SigningKey -> Encoding -> Signature a
 signEncoded pm tag sk =
-  coerce . signRaw pm (Just tag) sk . BSL.toStrict . serializeEncoding byronProtVer
+  coerce . signRaw pm (Just tag) sk . BSL.toStrict . serialize byronProtVer
 
 -- | Sign a 'Raw' bytestring
 signRaw ::
@@ -200,7 +210,7 @@ verifySignature ::
 verifySignature toEnc pm tag vk x sig =
   verifySignatureRaw
     vk
-    (signTag pm tag <> BSL.toStrict (serializeEncoding byronProtVer $ toEnc x))
+    (signTag pm tag <> BSL.toStrict (serialize byronProtVer $ toEnc x))
     (coerce sig)
 
 -- | Verify a signature

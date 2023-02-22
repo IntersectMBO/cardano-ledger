@@ -18,12 +18,16 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeWord8,
   encodeListLen,
   encodePreEncoded,
   enforceSize,
+  fromByronCBOR,
   recoverBytes,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 
@@ -43,6 +47,18 @@ data AMempoolPayload a
   | -- | An update vote payload.
     MempoolUpdateVote !(Update.AVote a)
   deriving (Eq, Show, Functor)
+
+instance ToCBOR MempoolPayload where
+  toCBOR = toByronCBOR
+
+instance FromCBOR MempoolPayload where
+  fromCBOR = fromByronCBOR
+
+instance ToCBOR (AMempoolPayload ByteString) where
+  toCBOR = toByronCBOR
+
+instance FromCBOR (AMempoolPayload ByteSpan) where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR MempoolPayload where
   encCBOR (MempoolTx tp) =

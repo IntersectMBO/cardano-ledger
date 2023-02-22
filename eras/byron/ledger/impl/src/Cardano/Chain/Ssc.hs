@@ -24,6 +24,8 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   Dropper,
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   cborError,
   decodeListLen,
   dropBytes,
@@ -34,7 +36,9 @@ import Cardano.Ledger.Binary (
   dropWord64,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   matchSize,
+  toByronCBOR,
  )
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
@@ -48,6 +52,12 @@ import NoThunks.Class (NoThunks (..))
 data SscPayload
   = SscPayload
   deriving (Eq, Show, Generic, NFData)
+
+instance ToCBOR SscPayload where
+  toCBOR = toByronCBOR
+
+instance FromCBOR SscPayload where
+  fromCBOR = fromByronCBOR
 
 -- Used for debugging purposes only
 instance ToJSON SscPayload
@@ -91,6 +101,12 @@ dropSscPayload = do
 data SscProof
   = SscProof
   deriving (Eq, Show, Generic, NFData, NoThunks)
+
+instance ToCBOR SscProof where
+  toCBOR = toByronCBOR
+
+instance FromCBOR SscProof where
+  fromCBOR = fromByronCBOR
 
 -- Used for debugging purposes only
 instance ToJSON SscProof

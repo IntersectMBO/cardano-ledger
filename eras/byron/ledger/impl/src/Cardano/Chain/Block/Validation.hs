@@ -112,10 +112,14 @@ import Cardano.Ledger.Binary (
   Annotated (..),
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   byronProtVer,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
   serialize',
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Control.Monad.Trans.Resource (ResIO)
@@ -142,6 +146,12 @@ data ChainValidationState = ChainValidationState
   , cvsDelegationState :: !DI.State
   }
   deriving (Eq, Show, Generic, NFData, NoThunks)
+
+instance ToCBOR ChainValidationState where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ChainValidationState where
+  fromCBOR = fromByronCBOR
 
 instance DecCBOR ChainValidationState where
   decCBOR = do

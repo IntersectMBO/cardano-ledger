@@ -66,7 +66,6 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   encodeListLen,
   encodeNull,
-  encodePreEncoded,
   encodedSigKESSizeExpr,
   encodedVerKeyVRFSizeExpr,
   hashEncCBOR,
@@ -77,6 +76,7 @@ import Cardano.Ledger.Binary (
   szCases,
   withWordSize,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
@@ -299,9 +299,10 @@ pattern BHeader bHeaderBody' bHeaderSig' <-
 
 {-# COMPLETE BHeader #-}
 
-instance Crypto c => EncCBOR (BHeader c) where
-  encCBOR (BHeader' _ _ bytes) = encodePreEncoded bytes
+instance Crypto c => Plain.ToCBOR (BHeader c) where
+  toCBOR (BHeader' _ _ bytes) = Plain.encodePreEncoded bytes
 
+instance Crypto c => EncCBOR (BHeader c) where
   encodedSizeExpr size proxy =
     1
       + encodedSizeExpr size (bHeaderBody' <$> proxy)

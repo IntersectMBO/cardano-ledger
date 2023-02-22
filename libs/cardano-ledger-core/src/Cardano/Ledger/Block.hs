@@ -31,9 +31,9 @@ import Cardano.Ledger.Binary (
   annotatorSlice,
   decodeRecordNamed,
   encodeListLen,
-  encodePreEncoded,
-  serializeEncoding,
+  serialize,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -79,7 +79,7 @@ pattern Block h txns <-
   where
     Block h txns =
       let bytes =
-            serializeEncoding (eraProtVerLow @era) $
+            serialize (eraProtVerLow @era) $
               encodeListLen (1 + listLen txns) <> encCBOR h <> encCBORGroup txns
        in Block' h txns bytes
 
@@ -113,8 +113,10 @@ pattern UnsafeUnserialisedBlock h txns <-
 
 {-# COMPLETE UnsafeUnserialisedBlock #-}
 
-instance (EraTx era, Typeable h) => EncCBOR (Block h era) where
-  encCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
+instance (EraTx era, Typeable h) => EncCBOR (Block h era)
+
+instance (EraTx era, Typeable h) => Plain.ToCBOR (Block h era) where
+  toCBOR (Block' _ _ blockBytes) = Plain.encodePreEncoded $ BSL.toStrict blockBytes
 
 instance
   forall h era.

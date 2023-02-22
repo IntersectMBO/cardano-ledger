@@ -129,7 +129,7 @@ data Encode (w :: Wrapped) t where
   Keyed :: t -> Encode ('Closed 'Sparse) t
   -- | Label an (component, field, argument) to be encoded using an existing EncCBOR instance.
   To :: EncCBOR a => a -> Encode ('Closed 'Dense) a
-  -- | Label a  (component, field, argument) to be encoded using the given encoding function.
+  -- | Label an (component, field, argument) to be encoded using an existing EncCBOR instance.
   E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
   -- | Lift one Encode to another with a different type. Used to make a Functor instance of (Encode w).
   MapE :: (a -> b) -> Encode w a -> Encode w b

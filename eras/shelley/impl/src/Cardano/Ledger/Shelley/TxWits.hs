@@ -49,12 +49,12 @@ import Cardano.Ledger.Binary (
   decodeMapContents,
   decodeWord,
   encodeMapLen,
-  encodePreEncoded,
   encodeWord,
   invalidKey,
-  serializeEncoding,
+  serialize,
   withSlice,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (..), encodePreEncoded)
 import Cardano.Ledger.Core (
   Era (EraCrypto),
   EraScript (Script, hashScript),
@@ -186,8 +186,11 @@ instance Crypto c => EraTxWits (ShelleyEra c) where
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
-instance Era era => EncCBOR (ShelleyTxWits era) where
-  encCBOR (ShelleyTxWitsConstr w) = encodePreEncoded $ BSL.toStrict $ txWitsBytes w
+instance Era era => Plain.ToCBOR (ShelleyTxWits era) where
+  toCBOR (ShelleyTxWitsConstr w) = Plain.encodePreEncoded $ BSL.toStrict $ txWitsBytes w
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (ShelleyTxWits era)
 
 instance EraScript era => Semigroup (ShelleyTxWits era) where
   (ShelleyTxWits a b c) <> y | Set.null a && Map.null b && Set.null c = y
@@ -208,16 +211,16 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
   ShelleyTxWitsConstr (WitnessSet' addrWits scriptWits bootWits _)
   where
     ShelleyTxWits awits scriptWitMap bootstrapWits =
-      let encodeMapElement ix enc x =
-            if null x then Nothing else Just (encodeWord ix <> enc x)
+      let encodeIndexedMaybe ix x =
+            if null x then Nothing else Just $ encodeWord ix <> encCBOR x
           l =
             catMaybes
-              [ encodeMapElement 0 encCBOR awits
-              , encodeMapElement 1 encCBOR (Map.elems scriptWitMap)
-              , encodeMapElement 2 encCBOR bootstrapWits
+              [ encodeIndexedMaybe 0 awits
+              , encodeIndexedMaybe 1 (Map.elems scriptWitMap)
+              , encodeIndexedMaybe 2 bootstrapWits
               ]
           n = fromIntegral $ length l
-          witsBytes = serializeEncoding (eraProtVerLow @era) $ encodeMapLen n <> fold l
+          witsBytes = serialize (eraProtVerLow @era) $ encodeMapLen n <> fold l
        in ShelleyTxWitsConstr
             ( WitnessSet'
                 { addrWits' = awits

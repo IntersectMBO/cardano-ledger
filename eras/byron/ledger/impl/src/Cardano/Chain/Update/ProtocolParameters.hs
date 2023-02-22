@@ -22,7 +22,16 @@ import Cardano.Chain.Common (
  )
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber (..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, enforceSize)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
+ )
 import Cardano.Prelude
 import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
@@ -150,6 +159,12 @@ instance MonadError SchemaError m => FromJSON m ProtocolParameters where
       <*> fromJSField obj "softforkRule"
       <*> fromJSField obj "txFeePolicy"
       <*> fromJSField obj "unlockStakeEpoch"
+
+instance ToCBOR ProtocolParameters where
+  toCBOR = toByronCBOR
+
+instance FromCBOR ProtocolParameters where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR ProtocolParameters where
   encCBOR pp =

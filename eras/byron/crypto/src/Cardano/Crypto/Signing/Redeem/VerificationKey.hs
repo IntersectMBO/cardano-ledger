@@ -23,7 +23,7 @@ module Cardano.Crypto.Signing.Redeem.VerificationKey (
 where
 
 import Cardano.Crypto.Orphans ()
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Prelude
 import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519
@@ -67,7 +67,7 @@ import Text.JSON.Canonical (
 type RedeemVerificationKey :: Type
 newtype RedeemVerificationKey
   = RedeemVerificationKey Ed25519.PublicKey
-  deriving (Eq, Show, Generic, NFData, DecCBOR, EncCBOR)
+  deriving (Eq, Show, Generic, NFData, DecCBOR, EncCBOR, FromCBOR, ToCBOR)
   deriving (NoThunks) via InspectHeap RedeemVerificationKey
 
 -- Note that normally we would not provide any Ord instances.

@@ -70,6 +70,7 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (..),
+  ToCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -163,6 +164,9 @@ deriving instance
 deriving instance
   (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
   Show (ShelleyTxBodyRaw era)
+
+-- | Encodes memoized bytes created upon construction.
+instance Era era => EncCBOR (ShelleyTxBody era)
 
 instance
   ( Era era
@@ -258,7 +262,7 @@ instance
 
 newtype ShelleyTxBody era = TxBodyConstr (MemoBytes ShelleyTxBodyRaw era)
   deriving (Generic, Typeable)
-  deriving newtype (SafeToHash, EncCBOR)
+  deriving newtype (SafeToHash, ToCBOR)
 
 instance Memoized ShelleyTxBody where
   type RawType ShelleyTxBody = ShelleyTxBodyRaw

@@ -13,9 +13,13 @@ import Cardano.Crypto.Raw (Raw)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   dropBytes,
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
@@ -32,6 +36,12 @@ newtype InstallerHash = InstallerHash
 
 instance B.Buildable InstallerHash where
   build (InstallerHash h) = bprint ("{ installer hash: " . build . " }") h
+
+instance ToCBOR InstallerHash where
+  toCBOR = toByronCBOR
+
+instance FromCBOR InstallerHash where
+  fromCBOR = fromByronCBOR
 
 -- Used for debugging purposes only
 instance ToJSON InstallerHash

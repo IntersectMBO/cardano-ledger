@@ -23,8 +23,12 @@ import Cardano.Chain.Slotting.SlotNumber (SlotNumber (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import Formatting (bprint, ords)
@@ -45,6 +49,12 @@ instance B.Buildable EpochAndSlotCount where
       (ords . " slot of " . ords . " epoch")
       (unSlotCount $ slotCount eas)
       (getEpochNumber $ epochNo eas)
+
+instance ToCBOR EpochAndSlotCount where
+  toCBOR = toByronCBOR
+
+instance FromCBOR EpochAndSlotCount where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR EpochAndSlotCount where
   encCBOR eas = encodeListLen 2 <> encCBOR (epochNo eas) <> encCBOR (slotCount eas)

@@ -17,8 +17,12 @@ import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodeListLen,
   enforceSize,
+  fromByronCBOR,
+  toByronCBOR,
  )
 import Cardano.Prelude
 import NoThunks.Class (NoThunks (..))
@@ -37,6 +41,12 @@ instance Monad m => ToJSON m GenesisAvvmBalances where
 
 instance MonadError SchemaError m => FromJSON m GenesisAvvmBalances where
   fromJSON = fmap (GenesisAvvmBalances . forceElemsToWHNF) . fromJSON
+
+instance ToCBOR GenesisAvvmBalances where
+  toCBOR = toByronCBOR
+
+instance FromCBOR GenesisAvvmBalances where
+  fromCBOR = fromByronCBOR
 
 instance EncCBOR GenesisAvvmBalances where
   encCBOR (GenesisAvvmBalances gab) =
