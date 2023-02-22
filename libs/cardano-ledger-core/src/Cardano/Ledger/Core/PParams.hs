@@ -23,7 +23,7 @@ module Cardano.Ledger.Core.PParams (
   PParamsUpdate (..),
   emptyPParamsUpdate,
 
-  -- * PParams lens helpers
+  -- * PParams lens
   ppMinFeeAL,
   ppMinFeeBL,
   ppMaxBBSizeL,
@@ -42,7 +42,7 @@ module Cardano.Ledger.Core.PParams (
   ppMinUTxOValueL,
   ppMinPoolCostL,
 
-  -- * PParamsUpdate lens helpers
+  -- * PParamsUpdate lens
   ppuMinFeeAL,
   ppuMinFeeBL,
   ppuMaxBBSizeL,
