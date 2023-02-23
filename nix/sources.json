@@ -17,10 +17,10 @@
         "homepage": "",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "3cff8347412de23bc0843238e0ea0b7aa26e0918",
-        "sha256": "0frc9yg2grar1qgdagqnzf48y3x34jy4zpfh6w79v33p1ygrbhic",
+        "rev": "897c1249791993dec81a293f54c59fb2c9b68f17",
+        "sha256": "0sqbs30imjb3snr99nj4bqmqc1clakrhvjvsflg8b1i0aj7cwl36",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/hackage.nix/archive/3cff8347412de23bc0843238e0ea0b7aa26e0918.tar.gz",
+        "url": "https://github.com/input-output-hk/hackage.nix/archive/897c1249791993dec81a293f54c59fb2c9b68f17.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "b3c99d7f13df89a9a918c835ecb7114098912962"
     },
