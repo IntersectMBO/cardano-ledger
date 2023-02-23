@@ -1,11 +1,12 @@
-cabal-version: 3.0
-name:          cardano-ledger-shelley
-version:       0.2.0.0
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
-synopsis:      Shelley Ledger Executable Model
-build-type:    Simple
+cabal-version:      3.0
+name:               cardano-ledger-shelley
+version:            1.0.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+synopsis:           Shelley Ledger Executable Model
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
@@ -100,12 +101,12 @@ library
         bytestring,
         cardano-crypto-class,
         cardano-crypto-wrapper,
-        cardano-data,
+        cardano-data >=1.0,
         cardano-ledger-binary,
         cardano-ledger-byron,
-        cardano-ledger-core,
+        cardano-ledger-core >=1.0,
         cardano-slotting,
-        vector-map,
+        vector-map >=1.0,
         containers,
         data-default-class,
         deepseq,
@@ -115,8 +116,8 @@ library
         microlens,
         nothunks,
         quiet,
-        set-algebra,
-        small-steps,
+        set-algebra >=1.0,
+        small-steps >=1.0,
         cardano-strict-containers,
         text,
         time,
@@ -140,7 +141,7 @@ library testlib
         -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley,

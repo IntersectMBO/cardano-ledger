@@ -15,11 +15,11 @@ repository cardano-haskell-packages
 -- NOTE: repeating the index-state for Hackage is a temporary workaround
 -- for hackage.nix limited parsing ability.
 -- Bump both the following dates if you need newer packages from Hackage
-index-state: 2022-12-24T00:00:00Z
+index-state: 2023-02-22T00:00:00Z
 index-state:
-  , hackage.haskell.org 2022-12-24T00:00:00Z
+  , hackage.haskell.org 2023-02-22T00:00:00Z
 -- Bump this if you need newer packages from CHaP
-  , cardano-haskell-packages 2023-02-21T23:27:00Z
+  , cardano-haskell-packages 2023-02-22T19:09:40Z
 
 packages:
   eras/allegra/impl
@@ -29,12 +29,6 @@ packages:
   eras/babbage/test-suite
   eras/conway/impl
   eras/conway/test-suite
-  eras/byron/chain/executable-spec
-  eras/byron/ledger/executable-spec
-  eras/byron/ledger/impl
-  eras/byron/ledger/impl/test
-  eras/byron/crypto
-  eras/byron/crypto/test
   eras/mary/impl
   eras/shelley/impl
   eras/shelley/test-suite
@@ -44,16 +38,32 @@ packages:
   libs/cardano-ledger-core
   libs/cardano-ledger-binary
   libs/cardano-ledger-pretty
-  libs/cardano-ledger-test
   libs/cardano-protocol-tpraos
-  libs/plutus-preprocessor
-  libs/ledger-state
   libs/non-integral
   libs/small-steps
   libs/small-steps-test
   libs/cardano-data
   libs/set-algebra
   libs/vector-map
+
+  -- == Byron era ==
+  -- byron-spec-chain:
+  eras/byron/chain/executable-spec
+  -- byron-spec-ledger:
+  eras/byron/ledger/executable-spec
+  -- cardano-ledger-byron:
+  eras/byron/ledger/impl
+  -- cardano-ledger-byron-test:
+  eras/byron/ledger/impl/test
+  -- cardano-crypto-wrapper:
+  eras/byron/crypto
+  -- cardano-crypto-test:
+  eras/byron/crypto/test
+
+  -- Packages used during development and are not released to CHaPs:
+  libs/cardano-ledger-test
+  libs/plutus-preprocessor
+  libs/ledger-state
 
 program-options
   ghc-options: -Werror
@@ -78,7 +88,6 @@ allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
   Unique:hashable,
-  plutus-core:cardano-crypto-class
 
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer

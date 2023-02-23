@@ -1,4 +1,4 @@
-# Version history for `set-algebra`
+# Changelog for `cardano-ledger-pretty`
 
 ## 1.0.0.0
 

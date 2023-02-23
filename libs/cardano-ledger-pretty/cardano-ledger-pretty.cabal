@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-pretty
-version:            0.1.0.0
+version:            1.0.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -9,7 +9,7 @@ description:        Pretty Printers for the Cardano Ledger
 build-type:         Simple
 extra-source-files:
     README.md
-    ChangeLog.md
+    CHANGELOG.md
 
 source-repository head
     type:     git
@@ -35,15 +35,15 @@ library
         bech32,
         bytestring,
         cardano-crypto-class,
-        cardano-ledger-allegra,
-        cardano-ledger-alonzo,
-        cardano-ledger-babbage,
+        cardano-ledger-allegra >=1.0,
+        cardano-ledger-alonzo >=1.0,
+        cardano-ledger-babbage >=1.0,
         cardano-ledger-byron,
-        cardano-ledger-conway,
-        cardano-ledger-core,
-        cardano-ledger-mary,
-        cardano-ledger-shelley,
-        cardano-protocol-tpraos,
+        cardano-ledger-conway >=1.0,
+        cardano-ledger-core >=1.0,
+        cardano-ledger-mary >=1.0,
+        cardano-ledger-shelley >=1.0,
+        cardano-protocol-tpraos >=1.0,
         cardano-slotting,
         containers,
         hashable,
@@ -51,7 +51,7 @@ library
         microlens,
         plutus-ledger-api,
         prettyprinter,
-        small-steps,
+        small-steps >=1.0,
         cardano-strict-containers,
         text,
-        vector-map
+        vector-map >=1.0

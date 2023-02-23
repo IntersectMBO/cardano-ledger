@@ -1,4 +1,4 @@
-# Version history for `set-algebra`
+# Version history for `cardano-ledger-babbage`
 
 ## 1.0.0.0
 

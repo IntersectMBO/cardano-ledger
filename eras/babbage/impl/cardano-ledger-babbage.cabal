@@ -1,10 +1,10 @@
-cabal-version: 3.0
-name:          cardano-ledger-babbage
-version:       0.1.0.0
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+cabal-version:      3.0
+name:               cardano-ledger-babbage
+version:            1.0.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
 synopsis:
     Cardano ledger introducing refrence scripts and inline datums
 
@@ -12,8 +12,9 @@ description:
     This package builds upon the Alonzo ledger with support for reference scripts,
     reference inputs and inline datums.
 
-category:      Network
-build-type:    Simple
+category:           Network
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
@@ -55,13 +56,13 @@ library
         aeson,
         bytestring,
         cardano-crypto-class,
-        cardano-data,
-        cardano-ledger-allegra,
-        cardano-ledger-alonzo,
+        cardano-data >=1.0,
+        cardano-ledger-allegra >=1.0,
+        cardano-ledger-alonzo >=1.0,
         cardano-ledger-binary,
-        cardano-ledger-core,
-        cardano-ledger-mary,
-        cardano-ledger-shelley,
+        cardano-ledger-core >=1.0,
+        cardano-ledger-mary >=1.0,
+        cardano-ledger-shelley >=1.0,
         cardano-slotting,
         cardano-strict-containers,
         containers,

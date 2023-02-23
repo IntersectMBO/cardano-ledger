@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               byron-spec-chain
-version:            0.1.0.0
+version:            1.0.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -8,7 +8,7 @@ homepage:           https://github.com/input-output-hk/cardano-legder
 synopsis:           Executable specification of the Cardano blockchain
 category:           Testing
 build-type:         Simple
-extra-source-files: ChangeLog.md
+extra-source-files: CHANGELOG.md
 
 library
     exposed-modules:
@@ -31,7 +31,7 @@ library
         bimap >=0.4 && <0.5,
         bytestring,
         containers,
-        byron-spec-ledger,
+        byron-spec-ledger >=1.0,
         hashable,
         hedgehog >=1.0.4,
         microlens,
@@ -54,10 +54,10 @@ test-suite chain-rules-test
         "-with-rtsopts=-K4m -M300m"
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         containers,
         data-ordlist,
-        hedgehog >=1.0.4,
+        hedgehog,
         microlens,
         tasty,
         tasty-hedgehog,

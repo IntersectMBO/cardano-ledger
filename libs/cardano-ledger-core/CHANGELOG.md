@@ -1,5 +1,5 @@
-# Revision history for cardano-ledger-core
+# Version history for `cardano-ledger-core`
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 1.0.0.0
 
-* First version. Released on an unsuspecting world.
+* First properly versioned release.

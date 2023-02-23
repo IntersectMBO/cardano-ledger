@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               byron-spec-ledger
-version:            0.1.0.0
+version:            1.0.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -36,7 +36,7 @@ library
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.18,
+        base >=4.12 && <4.17,
         bimap >=0.4 && <0.5,
         bytestring,
         cardano-crypto-class,
@@ -73,16 +73,16 @@ test-suite byron-spec-ledger-test
         "-with-rtsopts=-K4m -M150m"
 
     build-depends:
-        base >=4.12 && <4.18,
-        bimap >=0.4 && <0.5,
+        base,
+        bimap,
         containers,
-        hedgehog >=1.0.4,
+        hedgehog,
         microlens,
         microlens-th,
         tasty,
         tasty-hunit,
         tasty-hedgehog,
-        Unique >=0.4.7.6,
+        Unique,
         byron-spec-ledger,
         small-steps,
         small-steps-test

@@ -1,16 +1,17 @@
-cabal-version: 3.0
-name:          cardano-ledger-allegra
-version:       0.1.0.0
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
-synopsis:      Allegra ledger era that introduces time lock support.
+cabal-version:      3.0
+name:               cardano-ledger-allegra
+version:            1.0.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:           Allegra ledger era that introduces time lock support.
 description:
     This package builds upon Shelley era with support for timelocks.
 
-category:      Network
-build-type:    Simple
+category:           Network
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
@@ -50,15 +51,15 @@ library
         bytestring,
         cardano-crypto-class,
         cardano-ledger-binary,
-        cardano-ledger-core,
+        cardano-ledger-core >=1.0,
+        cardano-ledger-shelley >=1.0,
+        cardano-strict-containers,
         cardano-slotting,
         cborg,
         containers,
         deepseq,
         microlens,
         nothunks,
-        cardano-ledger-shelley,
-        small-steps,
-        cardano-strict-containers,
+        small-steps >=1.0,
         transformers,
         validation-selective

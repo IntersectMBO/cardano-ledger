@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-shelley-ma
-version:       0.1.0.0
+version:       1.0.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -40,6 +40,6 @@ library
 
     build-depends:
         base >=4.12 && <4.17,
-        cardano-ledger-allegra,
-        cardano-ledger-mary,
-        cardano-ledger-shelley
+        cardano-ledger-allegra ^>=1.0.0,
+        cardano-ledger-mary ^>=1.0.0,
+        cardano-ledger-shelley ^>=1.0.0

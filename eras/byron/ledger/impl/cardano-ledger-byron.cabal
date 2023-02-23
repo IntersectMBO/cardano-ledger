@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-byron
-version:            0.1.0.0
+version:            1.0.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -112,7 +112,9 @@ data-files:
     golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic
 
 data-dir:           test
-extra-source-files: README.md
+extra-source-files:
+    README.md
+    CHANGELOG.md
 
 flag test-normal-form
     description: Test ledger state normal form during epoch validation

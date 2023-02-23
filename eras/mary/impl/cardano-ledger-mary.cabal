@@ -1,17 +1,18 @@
-cabal-version: 3.0
-name:          cardano-ledger-mary
-version:       0.1.0.0
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
-synopsis:      Cardano ledger with multiasset support.
+cabal-version:      3.0
+name:               cardano-ledger-mary
+version:            1.0.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:           Cardano ledger with multiasset support.
 description:
     This package extends the Allegra ledger with support for
     native tokens.
 
-category:      Network
-build-type:    Simple
+category:           Network
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
@@ -50,10 +51,10 @@ library
         base16-bytestring,
         cardano-crypto-class,
         cardano-data,
-        cardano-ledger-allegra,
+        cardano-ledger-allegra >=1.0,
         cardano-ledger-binary,
-        cardano-ledger-core,
-        cardano-ledger-shelley,
+        cardano-ledger-core >=1.0,
+        cardano-ledger-shelley >=1.0,
         containers,
         deepseq,
         groups,
@@ -73,7 +74,7 @@ library testlib
         -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         base16-bytestring,
         bytestring,
         containers,
@@ -95,7 +96,7 @@ test-suite tests
         -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         base16-bytestring,
         bytestring,
         cardano-crypto-class,

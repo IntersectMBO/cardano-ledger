@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-binary
-version:       0.1.0.0
+version:       1.0.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -75,7 +75,7 @@ library
         transformers >=0.5,
         tree-diff,
         vector,
-        vector-map
+        vector-map >=1.0
 
 library testlib
     exposed-modules:

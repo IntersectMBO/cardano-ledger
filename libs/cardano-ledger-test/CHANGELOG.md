@@ -1,4 +1,4 @@
-# Revision history for cardano-ledger-test
+# Version history for cardano-ledger-test
 
 ## 0.1.0.0 -- YYYY-mm-dd
 

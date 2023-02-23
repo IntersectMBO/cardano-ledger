@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-shelley-ma-test
-version:       0.1.0.0
+version:       1.0.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -48,8 +48,8 @@ library
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-pretty,
-        cardano-ledger-allegra,
-        cardano-ledger-mary:{cardano-ledger-mary, testlib},
+        cardano-ledger-allegra ^>=1.0,
+        cardano-ledger-mary:{cardano-ledger-mary, testlib} ^>=1.0,
         cardano-slotting,
         containers,
         generic-random,
