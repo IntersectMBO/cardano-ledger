@@ -8,13 +8,11 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Deposits (
-  depositsProps,
+  tests,
 )
 where
 
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
-  -- Helper Functions
-  -- Helper Constraints
   shortChainTrace,
  )
 
@@ -53,22 +51,22 @@ import Test.QuickCheck (
   (===),
  )
 import Test.Tasty (TestTree, testGroup)
-import qualified Test.Tasty.QuickCheck as TQC
+import Test.Tasty.QuickCheck (testProperty)
 
 -- | Tests that redundant Deposit information is consistent
-depositsProps ::
+tests ::
   forall era.
   ( EraGen era
   , EraGovernance era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
   TestTree
-depositsProps =
+tests =
   testGroup
     "Deposit Invariants"
-    [ TQC.testProperty "Non negative deposits" (shortChainTrace defaultConstants (nonNegativeDeposits @era))
-    , TQC.testProperty "Deposits = KeyDeposits + PoolDeposits" (shortChainTrace defaultConstants (depositInvariant @era))
-    , TQC.testProperty "Reward domain = Deposit domain" (shortChainTrace defaultConstants (rewardDepositDomainInvariant @era))
+    [ testProperty "Non negative deposits" (shortChainTrace defaultConstants (nonNegativeDeposits @era))
+    , testProperty "Deposits = KeyDeposits + PoolDeposits" (shortChainTrace defaultConstants (depositInvariant @era))
+    , testProperty "Reward domain = Deposit domain" (shortChainTrace defaultConstants (rewardDepositDomainInvariant @era))
     ]
 
 -- | Check that deposits are always non-negative

@@ -8,8 +8,8 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
-  incrStakeComputationProp,
-  incrStakeComparisonProp,
+  incrStakeComputationTest,
+  incrStakeComparisonTest,
   stakeDistr,
   aggregateUtxoCoinByCredential,
 ) where
@@ -74,8 +74,10 @@ import Test.QuickCheck (
   counterexample,
   (===),
  )
+import Test.Tasty (TestTree)
+import Test.Tasty.QuickCheck (testProperty)
 
-incrStakeComputationProp ::
+incrStakeComputationTest ::
   forall era ledger.
   ( EraGen era
   , EraGovernance era
@@ -83,15 +85,16 @@ incrStakeComputationProp ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
-  Property
-incrStakeComputationProp =
-  forAllChainTrace @era longTraceLen defaultConstants {maxMajorPV = natVersion @8} $ \tr -> do
-    let ssts = sourceSignalTargets tr
+  TestTree
+incrStakeComputationTest =
+  testProperty "incremental stake calc" $
+    forAllChainTrace @era longTraceLen defaultConstants {maxMajorPV = natVersion @8} $ \tr -> do
+      let ssts = sourceSignalTargets tr
 
-    conjoin . concat $
-      [ -- preservation properties
-        map (incrStakeComp @era @ledger) ssts
-      ]
+      conjoin . concat $
+        [ -- preservation properties
+          map (incrStakeComp @era @ledger) ssts
+        ]
 
 incrStakeComp ::
   forall era ledger.
@@ -140,19 +143,20 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
           ptrs = ptrsMap . dpsDState $ dp
           ptrs' = ptrsMap . dpsDState $ dp'
 
-incrStakeComparisonProp ::
+incrStakeComparisonTest ::
   forall era.
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGovernance era
   ) =>
   Proxy era ->
-  Property
-incrStakeComparisonProp Proxy =
-  forAllChainTrace traceLen (defaultConstants {maxMajorPV = natVersion @8}) $ \tr ->
-    conjoin $
-      map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era ((nesEs . chainNes) target)) $
-        filter (not . sameEpoch) (sourceSignalTargets tr)
+  TestTree
+incrStakeComparisonTest Proxy =
+  testProperty "Incremental stake distribution at epoch boundaries agrees" $
+    forAllChainTrace traceLen (defaultConstants {maxMajorPV = natVersion @8}) $ \tr ->
+      conjoin $
+        map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era ((nesEs . chainNes) target)) $
+          filter (not . sameEpoch) (sourceSignalTargets tr)
   where
     sameEpoch SourceSignalTarget {source, target} = epoch source == epoch target
     epoch = nesEL . chainNes

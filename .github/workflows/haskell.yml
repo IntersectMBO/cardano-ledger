@@ -5,6 +5,9 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "**" ]
+  schedule:
+    # "Nightly" builds: Every day at 06:00 UTC
+    - cron: '0 6 * * *'
 
 jobs:
   build:
@@ -31,6 +34,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
+      if: ${{ github.event_name == 'schedule' }}
+      run: |
+        echo "NIGHTLY=true" >> $GITHUB_ENV
 
     - name: Set up Ruby 2.7
       uses: ruby/setup-ruby@v1

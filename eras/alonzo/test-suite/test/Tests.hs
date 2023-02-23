@@ -4,68 +4,57 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
-import Test.Cardano.Ledger.Alonzo.Examples (plutusScriptExamples)
-import Test.Cardano.Ledger.Alonzo.Golden as Golden
-import Test.Cardano.Ledger.Alonzo.PropertyTests (alonzoPropertyTests, fastPropertyTests)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
+import Data.Proxy (Proxy (..))
+import System.Environment (lookupEnv)
+import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
+import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
+import qualified Test.Cardano.Ledger.Alonzo.PlutusScriptExamples as PlutusScriptExamples
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
-import Test.Cardano.Ledger.Alonzo.TxInfo (txInfoTests)
+import qualified Test.Cardano.Ledger.Alonzo.TxInfo as TxInfo
+import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
+import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
+import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake
 import Test.Tasty
-import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
--- ====================================================================================
+type A = AlonzoEra TestCrypto
 
-tests :: TestTree
-tests = askOption $ \case
-  Nightly -> nightlyTests
-  Fast -> fastTests
-  _ -> mainTests
+main :: IO ()
+main = do
+  nightly <- lookupEnv "NIGHTLY"
+  defaultMain $ case nightly of
+    Nothing -> defaultTests
+    Just _ -> nightlyTests
 
-mainTests :: TestTree
-mainTests =
+defaultTests :: TestTree
+defaultTests =
   testGroup
     "Alonzo tests"
-    [ fastPropertyTests -- These are still pretty slow (it is just that a few are omitted)
+    [ AdaPreservation.tests @A @(AlonzoLEDGER A) 50
     , Tripping.tests
     , Translation.tests
     , Canonical.tests
     , CDDL.tests 5
-    , Golden.goldenUTxOEntryMinAda
-    , Golden.goldenSerialization
-    , Golden.goldenGenesisSerialization
-    , Golden.goldenMinFee
-    , Golden.goldenScriptIntegrity
-    , plutusScriptExamples
-    , txInfoTests
-    ]
-
-fastTests :: TestTree
-fastTests =
-  testGroup
-    "Alonzo tests"
-    [ Tripping.tests
-    , Translation.tests
-    , CDDL.tests 1
-    , Golden.goldenUTxOEntryMinAda
-    , Golden.goldenSerialization
-    , Golden.goldenScriptIntegrity
-    , plutusScriptExamples
-    , txInfoTests
+    , Golden.tests
+    , PlutusScriptExamples.tests
+    , TxInfo.tests
     ]
 
 nightlyTests :: TestTree
 nightlyTests =
   testGroup
-    "Alonzo tests"
-    [ alonzoPropertyTests -- These are the full property tests
-    , CDDL.tests 50
-    ]
-
--- main entry point
-main :: IO ()
-main = mainWithTestScenario tests
+    "Alonzo tests - nightly"
+    $ Shelley.commonTests @A @(AlonzoLEDGER A)
+      ++ [ CDDL.tests 50
+         , IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy A)
+         , ChainTrace.tests
+         ]

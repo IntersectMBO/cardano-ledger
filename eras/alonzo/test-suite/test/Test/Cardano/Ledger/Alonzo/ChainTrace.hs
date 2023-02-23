@@ -9,7 +9,9 @@
 -- Embed instances for (AlonzoEra TestCrypto)
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Ledger.Alonzo.PropertyTests where
+module Test.Cardano.Ledger.Alonzo.ChainTrace (
+  tests,
+) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
@@ -26,7 +28,6 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition
 import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
 import qualified Data.Map.Strict as Map
-import Data.Proxy
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
@@ -36,14 +37,12 @@ import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
-import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,
   ChainEvent (..),
   ChainState (..),
   TestChainPredicateFailure (..),
  )
-import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (incrStakeComparisonProp)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
   ledgerTraceFromBlock,
@@ -52,7 +51,6 @@ import Test.QuickCheck (
   Property,
   conjoin,
   counterexample,
-  withMaxSuccess,
   (.&&.),
   (===),
  )
@@ -70,6 +68,12 @@ traceLen = 100
 
 data HasPlutus = HasPlutus | NoPlutus
   deriving (Show)
+
+tests :: TestTree
+tests =
+  TQC.testProperty "alonzo specific" $
+    forAllChainTrace @A traceLen defaultConstants $ \tr ->
+      conjoin $ map alonzoSpecificProps (sourceSignalTargets tr)
 
 alonzoSpecificProps ::
   SourceSignalTarget (CHAIN A) ->
@@ -157,34 +161,3 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
                               ]
                        )
               )
-
-alonzoTraceTests :: Property
-alonzoTraceTests =
-  forAllChainTrace @A traceLen defaultConstants $ \tr ->
-    conjoin $ map alonzoSpecificProps (sourceSignalTargets tr)
-
-propertyTests :: TestTree
-propertyTests =
-  TQC.testProperty "alonzo specific" alonzoTraceTests
-
--- | The same property tests run in all the other Eras, specialized to the Alonzo Era.
-alonzoPropertyTests :: TestTree
-alonzoPropertyTests =
-  testGroup
-    "Alonzo property tests"
-    [ Shelley.propertyTests @A @(AlonzoLEDGER A)
-    , propertyTests
-    , TQC.testProperty
-        "Incremental stake distribution at epoch boundaries agrees"
-        (incrStakeComparisonProp (Proxy :: Proxy A))
-    ]
-
--- | A select subset of all the property tests
-fastPropertyTests :: TestTree
-fastPropertyTests =
-  testGroup
-    "Fast Alonzo Property Tests"
-    [ TQC.testProperty
-        "total amount of Ada is preserved (Chain)"
-        (withMaxSuccess 50 (Shelley.adaPreservationProps @A @(AlonzoLEDGER A)))
-    ]

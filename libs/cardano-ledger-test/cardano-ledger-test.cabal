@@ -112,7 +112,6 @@ test-suite cardano-ledger-test
     build-depends:
         base,
         cardano-ledger-test,
-        cardano-ledger-shelley-test,
         tasty,
         data-default-class
 
@@ -183,5 +182,4 @@ benchmark benchProperty
         small-steps,
         cardano-ledger-shelley,
         cardano-ledger-shelley-test,
-        tasty-quickcheck,
         tasty

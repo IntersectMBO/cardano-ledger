@@ -8,7 +8,10 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Ledger.Alonzo.Examples where
+module Test.Cardano.Ledger.Alonzo.PlutusScriptExamples (
+  tests,
+)
+where
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Language (Language (..))
@@ -99,8 +102,8 @@ redeemer102 = getRawPlutusScript "redeemeris102" Generated.redeemerIs102
 oddredeemer2 :: ShortByteString
 oddredeemer2 = getRawPlutusScript "oddredeemer2" Generated.oddRedeemer2
 
-plutusScriptExamples :: TestTree
-plutusScriptExamples =
+tests :: TestTree
+tests =
   testGroup
     "run plutus script directly"
     [ testCase "always true" $

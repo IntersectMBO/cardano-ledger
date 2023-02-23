@@ -76,9 +76,9 @@ test-suite cardano-ledger-alonzo-test
     main-is:          Tests.hs
     hs-source-dirs:   test
     other-modules:
-        Test.Cardano.Ledger.Alonzo.Examples
+        Test.Cardano.Ledger.Alonzo.ChainTrace
         Test.Cardano.Ledger.Alonzo.Golden
-        Test.Cardano.Ledger.Alonzo.PropertyTests
+        Test.Cardano.Ledger.Alonzo.PlutusScriptExamples
         Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
         Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
         Test.Cardano.Ledger.Alonzo.Serialisation.Tripping

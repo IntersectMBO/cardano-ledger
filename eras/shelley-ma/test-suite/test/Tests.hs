@@ -10,6 +10,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary, MaryEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
+import System.Environment (lookupEnv)
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.AllegraEraGen ()
@@ -18,23 +19,31 @@ import Test.Cardano.Ledger.Mary.Golden (goldenScaledMinDeposit)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
 import Test.Cardano.Ledger.Mary.Value (valTests)
 import Test.Cardano.Ledger.MaryEraGen ()
-import Test.Cardano.Ledger.Shelley.PropertyTests (minimalPropertyTests, propertyTests)
+import qualified Test.Cardano.Ledger.Shelley.Address.Bootstrap as Bootstrap (
+  bootstrapHashTest,
+ )
+import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley (commonTests)
+import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
+import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (onlyValidChainSignalsAreGenerated, relevantCasesAreCovered)
+import qualified Test.Cardano.Ledger.Shelley.WitVKeys as WitVKeys (tests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
+import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty
-import Test.TestScenario (TestScenario (..), mainWithTestScenario)
+import qualified Test.Tasty.QuickCheck as TQC
 
 type instance EraRule "TICKN" (MaryEra _c) = TPraos.TICKN
 
 type instance EraRule "TICKN" (AllegraEra _c) = TPraos.TICKN
 
-tests :: TestTree
-tests = askOption $ \case
-  Nightly -> nightlyTests
-  Fast -> mainTests
-  _ -> mainTests
+main :: IO ()
+main = do
+  nightly <- lookupEnv "NIGHTLY"
+  defaultMain $ case nightly of
+    Nothing -> defaultTests
+    Just _ -> nightlyTests
 
-mainTests :: TestTree
-mainTests =
+defaultTests :: TestTree
+defaultTests =
   testGroup
     "ShelleyMA Ledger Tests"
     [ allegraTests
@@ -50,7 +59,14 @@ allegraTests =
   testGroup
     "Allegra Ledger Tests"
     [ allegraTranslationTests
-    , minimalPropertyTests @Allegra @(ShelleyLEDGER Allegra)
+    , ( localOption
+          (TQC.QuickCheckMaxRatio 50)
+          (ClassifyTraces.relevantCasesAreCovered @Allegra (maxSuccess stdArgs))
+      )
+    , AdaPreservation.tests @Allegra @(ShelleyLEDGER Allegra) (maxSuccess stdArgs)
+    , ClassifyTraces.onlyValidChainSignalsAreGenerated @Allegra
+    , Bootstrap.bootstrapHashTest
+    , WitVKeys.tests @(EraCrypto Allegra)
     , testScriptPostTranslation
     ]
 
@@ -70,13 +86,8 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        [ propertyTests @Allegra @(ShelleyLEDGER Allegra)
-        ]
+        (Shelley.commonTests @Allegra @(ShelleyLEDGER Allegra))
     , testGroup
         "Mary Ledger - nightly"
-        [ propertyTests @Mary @(ShelleyLEDGER Mary)
-        ]
+        (Shelley.commonTests @Mary @(ShelleyLEDGER Mary))
     ]
-
-main :: IO ()
-main = mainWithTestScenario tests

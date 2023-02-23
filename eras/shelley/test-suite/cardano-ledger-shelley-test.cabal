@@ -63,7 +63,7 @@ library
         Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
         Test.Cardano.Ledger.Shelley.ShelleyTranslation
         Test.Cardano.Ledger.Shelley.Utils
-        Test.TestScenario
+        Test.Cardano.Ledger.Shelley.WitVKeys
 
     hs-source-dirs:   src
     default-language: Haskell2010
