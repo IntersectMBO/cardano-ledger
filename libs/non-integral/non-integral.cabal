@@ -23,7 +23,7 @@ library
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
-    build-depends:    base >=4.12 && <4.17
+    build-depends:    base >=4.14 && <4.17
 
 test-suite non-integral-test
     type:             exitcode-stdio-1.0
@@ -37,6 +37,6 @@ test-suite non-integral-test
         -O2 -threaded -rtsopts -with-rtsopts=-N
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         non-integral,
         QuickCheck

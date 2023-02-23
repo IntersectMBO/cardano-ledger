@@ -72,7 +72,7 @@ library
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base >=4.14 && <4.17,
         QuickCheck >=2.13.2,
         base16-bytestring >=1,
         bytestring,
@@ -156,10 +156,10 @@ test-suite cardano-ledger-shelley-test
         -threaded -rtsopts -with-rtsopts=-N "-with-rtsopts=-K4m -M250m"
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         QuickCheck,
         aeson >=2,
-        base16-bytestring >=1,
+        base16-bytestring,
         binary,
         bytestring,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
@@ -206,7 +206,7 @@ benchmark mainbench
         -threaded -rtsopts -O2
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         QuickCheck,
         cardano-crypto-class,
         cardano-crypto-praos,

@@ -25,7 +25,7 @@ executable plutus-preprocessor
     other-modules:    PlutusScripts
     default-language: Haskell2010
     build-depends:
-        base,
+        base >=4.14 && <4.17,
         bytestring,
         cardano-ledger-alonzo,
         flat,
@@ -44,6 +44,6 @@ executable plutus-debug
     hs-source-dirs:   src
     default-language: Haskell2010
     build-depends:
-        base,
+        base >=4.14 && <4.17,
         cardano-ledger-alonzo,
         cardano-ledger-core

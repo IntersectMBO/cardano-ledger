@@ -227,7 +227,7 @@ library
         -Wno-safe -Wno-unsafe -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base >=4.14 && <4.17,
         aeson,
         base58-bytestring,
         bimap >=0.4 && <0.5,
@@ -329,9 +329,9 @@ test-suite cardano-ledger-byron-test
         "-with-rtsopts=-K450K -M500M"
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         base16-bytestring >=1,
-        bimap >=0.4 && <0.5,
+        bimap,
         bytestring,
         cardano-crypto,
         cardano-crypto-test,
@@ -381,7 +381,7 @@ test-suite epoch-validation-normal-form-test
         "-with-rtsopts=-K450K -M500M"
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         bytestring,
         cardano-ledger,
         cardano-ledger-binary,

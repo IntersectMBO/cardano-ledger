@@ -1,5 +1,26 @@
 cradle:
   cabal:
+    - path: "eras/allegra/impl/src"
+      component: "lib:cardano-ledger-allegra"
+
+    - path: "eras/alonzo/impl/src"
+      component: "lib:cardano-ledger-alonzo"
+
+    - path: "eras/alonzo/test-suite/src"
+      component: "lib:cardano-ledger-alonzo-test"
+
+    - path: "eras/alonzo/test-suite/test"
+      component: "cardano-ledger-alonzo-test:test:cardano-ledger-alonzo-test"
+
+    - path: "eras/babbage/impl/src"
+      component: "lib:cardano-ledger-babbage"
+
+    - path: "eras/babbage/test-suite/src"
+      component: "lib:cardano-ledger-babbage-test"
+
+    - path: "eras/babbage/test-suite/test"
+      component: "cardano-ledger-babbage-test:test:cardano-ledger-babbage-test"
+
     - path: "eras/byron/chain/executable-spec/src"
       component: "lib:byron-spec-chain"
 
@@ -9,7 +30,10 @@ cradle:
     - path: "eras/byron/crypto/src"
       component: "lib:cardano-crypto-wrapper"
 
-    - path: "eras/byron/crypto/test/"
+    - path: "eras/byron/crypto/test"
+      component: "cardano-crypto-wrapper:test:test"
+
+    - path: "eras/byron/crypto/test/./"
       component: "lib:cardano-crypto-test"
 
     - path: "eras/byron/ledger/executable-spec/src"
@@ -24,47 +48,11 @@ cradle:
     - path: "eras/byron/ledger/impl/test"
       component: "cardano-ledger-byron:test:cardano-ledger-byron-test"
 
-    - path: "eras/shelley/impl/src"
-      component: "lib:cardano-ledger-shelley"
+    - path: "eras/byron/ledger/impl/test"
+      component: "cardano-ledger-byron:test:epoch-validation-normal-form-test"
 
-    - path: "eras/shelley/test-suite/src"
-      component: "lib:cardano-ledger-shelley-test"
-
-    - path: "eras/shelley/test-suite/test"
-      component: "cardano-ledger-shelley-test:test:cardano-ledger-shelley-test"
-
-    - path: "eras/shelley/test-suite/bench"
-      component: "cardano-ledger-shelley-test:bench:mainbench"
-
-    - path: "eras/allegra/impl/src"
-      component: "lib:cardano-ledger-allegra"
-
-    - path: "eras/mary/impl/src"
-      component: "lib:cardano-ledger-mary"
-
-    - path: "eras/mary/impl/test"
-      component: "cardano-ledger-mary:lib:testlib"
-
-    - path: "eras/shelley-ma/impl/src"
-      component: "lib:cardano-ledger-shelley-ma"
-
-    - path: "eras/shelley-ma/test-suite/src"
-      component: "lib:cardano-ledger-shelley-ma-test"
-
-    - path: "eras/shelley-ma/test-suite/test"
-      component: "test:cardano-ledger-shelley-ma-test"
-
-    - path: "eras/alonzo/impl/src"
-      component: "lib:cardano-ledger-alonzo"
-
-    - path: "eras/alonzo/test-suite/src"
-      component: "cardano-ledger-alonzo-test"
-
-    - path: "eras/alonzo/test-suite/test"
-      component: "cardano-ledger-alonzo-test:test:cardano-ledger-alonzo-test"
-
-    - path: "eras/babbage/impl/src"
-      component: "lib:cardano-ledger-babbage"
+    - path: "eras/byron/ledger/impl/test/./"
+      component: "lib:cardano-ledger-byron-test"
 
     - path: "eras/conway/impl/src"
       component: "lib:cardano-ledger-conway"
@@ -75,32 +63,74 @@ cradle:
     - path: "eras/conway/test-suite/test"
       component: "cardano-ledger-conway-test:test:cardano-ledger-conway-test"
 
-    - path: "eras/babbage/test-suite/src"
-      component: "cardano-ledger-babbage-test"
+    - path: "eras/mary/impl/src"
+      component: "lib:cardano-ledger-mary"
 
-    - path: "eras/babbage/test-suite/test"
-      component: "cardano-ledger-babbage-test:test:cardano-ledger-babbage-test"
+    - path: "eras/mary/impl/test"
+      component: "cardano-ledger-mary:lib:testlib"
 
-    - path: "libs/cardano-ledger-test/src"
-      component: "lib:cardano-ledger-test"
+    - path: "eras/mary/impl/test"
+      component: "cardano-ledger-mary:test:tests"
 
-    - path: "libs/cardano-ledger-test/test"
-      component: "test:cardano-ledger-test"
+    - path: "eras/shelley/impl/src"
+      component: "lib:cardano-ledger-shelley"
 
-    - path: "libs/cardano-ledger-test/bench"
-      component: "cardano-ledger-test:bench:bench"
+    - path: "eras/shelley/impl/testlib"
+      component: "cardano-ledger-shelley:lib:testlib"
 
-    - path: "libs/small-steps/src"
-      component: "lib:small-steps"
+    - path: "eras/shelley/impl/test"
+      component: "cardano-ledger-shelley:test:tests"
+
+    - path: "eras/shelley/test-suite/src"
+      component: "lib:cardano-ledger-shelley-test"
+
+    - path: "eras/shelley/test-suite/test"
+      component: "cardano-ledger-shelley-test:test:cardano-ledger-shelley-test"
+
+    - path: "eras/shelley/test-suite/bench/Main.hs"
+      component: "cardano-ledger-shelley-test:bench:mainbench"
+
+    - path: "eras/shelley/test-suite/bench/BenchUTxOAggregate.hs"
+      component: "cardano-ledger-shelley-test:bench:mainbench"
+
+    - path: "eras/shelley/test-suite/bench/BenchValidation.hs"
+      component: "cardano-ledger-shelley-test:bench:mainbench"
+
+    - path: "eras/shelley/test-suite/bench/Cardano/Ledger/Shelley/Bench/Gen.hs"
+      component: "cardano-ledger-shelley-test:bench:mainbench"
+
+    - path: "eras/shelley/test-suite/bench/Cardano/Ledger/Shelley/Bench/Rewards.hs"
+      component: "cardano-ledger-shelley-test:bench:mainbench"
+
+    - path: "eras/shelley-ma/impl/src"
+      component: "lib:cardano-ledger-shelley-ma"
+
+    - path: "eras/shelley-ma/test-suite/src"
+      component: "lib:cardano-ledger-shelley-ma-test"
+
+    - path: "eras/shelley-ma/test-suite/test"
+      component: "cardano-ledger-shelley-ma-test:test:cardano-ledger-shelley-ma-test"
 
     - path: "libs/cardano-data/src"
       component: "lib:cardano-data"
 
+    - path: "libs/cardano-data/testlib"
+      component: "cardano-data:lib:testlib"
+
     - path: "libs/cardano-data/test"
-      component: "test:cardano-data-tests"
+      component: "cardano-data:test:cardano-data-tests"
+
+    - path: "libs/cardano-ledger-api/src"
+      component: "lib:cardano-ledger-api"
+
+    - path: "libs/cardano-ledger-api/test"
+      component: "cardano-ledger-api:test:cardano-ledger-api-test"
+
+    - path: "libs/cardano-ledger-api/doctests"
+      component: "cardano-ledger-api:test:doctests"
 
     - path: "libs/cardano-ledger-binary/src"
-      component: "cardano-ledger-binary:lib:cardano-ledger-binary"
+      component: "lib:cardano-ledger-binary"
 
     - path: "libs/cardano-ledger-binary/testlib"
       component: "cardano-ledger-binary:lib:testlib"
@@ -108,20 +138,68 @@ cradle:
     - path: "libs/cardano-ledger-binary/test"
       component: "cardano-ledger-binary:test:tests"
 
-    - path: "libs/small-steps/src"
-      component: "lib:small-steps-test"
-
-    - path: "libs/small-steps-test/test"
-      component: "small-steps-test:test:examples"
-
-    - path: "libs/cardano-ledger-api/src"
-      component: "lib:cardano-ledger-api"
-
     - path: "libs/cardano-ledger-core/src"
       component: "lib:cardano-ledger-core"
 
     - path: "libs/cardano-ledger-core/testlib"
       component: "cardano-ledger-core:lib:testlib"
+
+    - path: "libs/cardano-ledger-core/test"
+      component: "cardano-ledger-core:test:tests"
+
+    - path: "libs/cardano-ledger-pretty/src"
+      component: "lib:cardano-ledger-pretty"
+
+    - path: "libs/cardano-ledger-test/src"
+      component: "lib:cardano-ledger-test"
+
+    - path: "libs/cardano-ledger-test/test"
+      component: "cardano-ledger-test:test:cardano-ledger-test"
+
+    - path: "libs/cardano-ledger-test/bench/Main.hs"
+      component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/ApplyTx.hs"
+      component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/ApplyTx/Gen.hs"
+      component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/EpochBoundary.hs"
+      component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/Serialisation/Generators.hs"
+      component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/SumStake.hs"
+      component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/TxOut.hs"
+      component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/StakeDistr.hs"
+      component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/cardano-ledger-test/benchProperty/Main.hs"
+      component: "cardano-ledger-test:bench:benchProperty"
+
+    - path: "libs/cardano-protocol-tpraos/src"
+      component: "lib:cardano-protocol-tpraos"
+
+    - path: "libs/ledger-state/src"
+      component: "lib:ledger-state"
+
+    - path: "libs/ledger-state/app/Main.hs"
+      component: "ledger-state:exe:ledger-state"
+
+    - path: "libs/ledger-state/bench/Memory.hs"
+      component: "ledger-state:bench:memory"
+
+    - path: "libs/ledger-state/bench/Performance.hs"
+      component: "ledger-state:bench:performance"
+
+    - path: "libs/ledger-state/bench/Address.hs"
+      component: "ledger-state:bench:address"
 
     - path: "libs/non-integral/src"
       component: "lib:non-integral"
@@ -129,14 +207,14 @@ cradle:
     - path: "libs/non-integral/test"
       component: "non-integral:test:non-integral-test"
 
-    - path: "libs/vector-map/src"
-      component: "lib:vector-map"
+    - path: "libs/plutus-preprocessor/src/Main.hs"
+      component: "plutus-preprocessor:exe:plutus-preprocessor"
 
-    - path: "libs/vector-map/test"
-      component: "vector-map:test:tests"
+    - path: "libs/plutus-preprocessor/src/PlutusScripts.hs"
+      component: "plutus-preprocessor:exe:plutus-preprocessor"
 
-    - path: "libs/vector-map/bench"
-      component: "vector-map:bench:bench"
+    - path: "libs/plutus-preprocessor/src/Debug.hs"
+      component: "plutus-preprocessor:exe:plutus-debug"
 
     - path: "libs/set-algebra/src"
       component: "lib:set-algebra"
@@ -144,14 +222,20 @@ cradle:
     - path: "libs/set-algebra/test"
       component: "set-algebra:test:tests"
 
-    - path: "libs/cardano-ledger-pretty/src"
-      component: "lib:cardano-ledger-pretty"
+    - path: "libs/small-steps/src"
+      component: "lib:small-steps"
 
-    - path: "libs/cardano-protocol-tpraos"
-      component: "lib:cardano-protocol-tpraos"
+    - path: "libs/small-steps-test/src"
+      component: "lib:small-steps-test"
 
-    - path: "libs/ledger-state"
-      component: "lib:ledger-state"
+    - path: "libs/small-steps-test/test"
+      component: "small-steps-test:test:examples"
 
-    - path: "libs/ledger-state/bench"
-      component: "ledger-state:bench:address"
+    - path: "libs/vector-map/src"
+      component: "lib:vector-map"
+
+    - path: "libs/vector-map/test"
+      component: "vector-map:test:tests"
+
+    - path: "libs/vector-map/bench/Bench.hs"
+      component: "vector-map:bench:bench"

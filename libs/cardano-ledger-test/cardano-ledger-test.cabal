@@ -57,7 +57,7 @@ library
         -Wunused-packages
 
     build-depends:
-        base >=4.12 && <4.17,
+        base >=4.14 && <4.17,
         array,
         bytestring,
         cardano-crypto-class,
@@ -110,7 +110,7 @@ test-suite cardano-ledger-test
         -Wunused-packages -rtsopts -threaded
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         cardano-ledger-test,
         tasty,
         data-default-class
@@ -135,7 +135,7 @@ benchmark bench
         -Wunused-packages -threaded -rtsopts -O2
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         aeson,
         bytestring,
         cardano-crypto-class,
@@ -175,7 +175,7 @@ benchmark benchProperty
         -Wunused-packages -threaded -rtsopts -O2
 
     build-depends:
-        base >=4.12 && <4.17,
+        base,
         cardano-ledger-alonzo,
         cardano-ledger-alonzo-test,
         cardano-ledger-shelley-ma-test,
