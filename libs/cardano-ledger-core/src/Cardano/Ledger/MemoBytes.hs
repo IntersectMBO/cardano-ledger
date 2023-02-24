@@ -87,7 +87,7 @@ data MemoBytes t era = Memo'
   , mbBytes :: ShortByteString
   , mbHash :: SafeHash (EraCrypto era) (MemoHashIndex t)
   }
-  deriving (NoThunks) via AllowThunksIn '["mbBytes"] (MemoBytes t era)
+  deriving (NoThunks) via AllowThunksIn '["mbBytes", "mbHash"] (MemoBytes t era)
 
 pattern Memo :: Era era => t era -> ShortByteString -> MemoBytes t era
 pattern Memo memoType memoBytes <-
