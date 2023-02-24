@@ -122,7 +122,7 @@ import Data.Text (Text)
 import Data.Vector as Vector (toList)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..), allNoThunks)
+import NoThunks.Class (NoThunks (..), allNoThunks)
 import Numeric.Natural (Natural)
 import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
 import qualified PlutusLedgerApi.V1 as PV1 (
@@ -167,16 +167,11 @@ instance DecCBOR (Annotator BinaryPlutus) where
 data AlonzoScript era
   = TimelockScript !(Timelock era)
   | PlutusScript !Language !ShortByteString
-  deriving (Eq, Generic)
+  deriving (Eq, Generic, NoThunks)
 
 instance (EraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
   show s@(PlutusScript v _) = "PlutusScript " ++ show v ++ " " ++ show (hashScript @era s)
-
-deriving via
-  InspectHeapNamed "AlonzoScript" (AlonzoScript era)
-  instance
-    NoThunks (AlonzoScript era)
 
 instance NFData (AlonzoScript era)
 
