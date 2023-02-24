@@ -165,8 +165,8 @@ instance DecCBOR (Annotator BinaryPlutus) where
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
-  = TimelockScript (Timelock era)
-  | PlutusScript Language ShortByteString
+  = TimelockScript !(Timelock era)
+  | PlutusScript !Language !ShortByteString
   deriving (Eq, Generic)
 
 instance (EraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
