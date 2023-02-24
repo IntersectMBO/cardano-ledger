@@ -10,6 +10,7 @@ to the issue.
 - [ ] Commits have useful messages
 - [ ] New tests are added if needed and existing tests are updated
 - [ ] Any changes are noted in the [changelog](https://github.com/input-output-hk/cardano-ledger/blob/master/CHANGELOG.md)
-- [ ] Code is formatted with [`fourmolu`](https://github.com/fourmolu/fourmolu) (which can be run with `scripts/fourmolize.sh`)
-- [ ] Cabal files are formatted (which can be done with `scripts/cabal-format.sh`)
+- [ ] Code is formatted with [`fourmolu`](https://github.com/fourmolu/fourmolu) (use `scripts/fourmolize.sh`)
+- [ ] Cabal files are formatted (use `scripts/cabal-format.sh`)
+- [ ] `hie.yaml` has been updated (use `scripts/gen-hie.sh`)
 - [ ] Self-reviewed the diff
