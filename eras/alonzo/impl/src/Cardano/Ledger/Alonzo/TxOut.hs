@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -98,7 +99,7 @@ data Addr28Extra
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
-  deriving (Eq)
+  deriving (Eq, Generic, NoThunks)
 
 data DataHash32
   = DataHash32
@@ -106,7 +107,7 @@ data DataHash32
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
-  deriving (Eq)
+  deriving (Eq, Generic, NoThunks)
 
 decodeAddress28 ::
   forall c.

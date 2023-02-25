@@ -367,8 +367,8 @@ instance ToExpr (BootstrapAddress c) where
 ------------------------------------------------------------------------------------------
 
 newtype CompactAddr c = UnsafeCompactAddr ShortByteString
-  deriving stock (Eq, Ord)
-  deriving newtype (NFData)
+  deriving stock (Eq, Generic, Ord)
+  deriving newtype (NoThunks, NFData)
 
 instance Crypto c => Show (CompactAddr c) where
   show c = show (decompactAddr c)
