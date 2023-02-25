@@ -296,15 +296,17 @@ test7 loud = do
 
 pstateConstraints :: [Pred era]
 pstateConstraints =
-  [ Sized (ExactSize 12) poolsUniv
+  [ Sized (ExactSize 20) poolsUniv
+  , Sized (AtMost 5) (Dom futureRegPools) -- Small enough that its leaves some slack with poolsUniv
+  , Sized (AtMost 4) (Dom retiring) -- Small enough that its leaves some slack with poolsUniv
+  , Sized (AtLeast 5) (Dom regPools) -- Large enough that retiring is a strict subset
   , (Dom regPools) :<=: poolsUniv
-  , (Dom retiring) :<=: poolsUniv
-  , (Dom futureRegPools) :<=: poolsUniv
   , (Dom poolDeposits) :<=: poolsUniv
   , (Dom regPools) :=: (Dom poolDeposits)
   , (Dom retiring) :<=: (Dom regPools)
-  , Disjoint (Dom retiring) (Dom futureRegPools)
-  , (Dom futureRegPools) :<=: (Dom regPools)
+  , (Dom futureRegPools) :<=: poolsUniv
+  , Disjoint (Dom futureRegPools) (Dom retiring)
+  -- , (Dom futureRegPools) :<=: (Dom regPools)  I am pretty sure we don't want this
   ]
 
 test8 :: Gen Property
@@ -516,10 +518,9 @@ test16 =
 univPreds :: Proof era -> [Pred era]
 univPreds p =
   [ Sized (ExactSize 12) credsUniv
-  , Sized (ExactSize 12) poolsUniv
+  , Sized (ExactSize 20) poolsUniv
   , Sized (ExactSize 12) genesisUniv
   , Sized (ExactSize 12) txinUniv
-  , Sized (Range 1 6) (Dom poolDistr) -- Greater than 1, smaller than size of poolsUniv
   , Dom poolDistr :<=: poolsUniv
   , Dom regPools :<=: poolsUniv
   , Dom retiring :<=: poolsUniv
@@ -551,11 +552,14 @@ univPreds p =
 
 pstatePreds :: Proof era -> [Pred era]
 pstatePreds _p =
-  [ Dom poolDistr :=: Dom regPools
-  , Dom poolDistr :=: Dom poolDeposits
-  , Dom retiring :<=: Dom poolDistr
-  , Dom futureRegPools :<=: Dom poolDistr
-  , Disjoint (Dom retiring) (Dom futureRegPools)
+  [ Sized (AtMost 5) (Dom futureRegPools) -- Small enough that its leaves some slack with poolsUniv
+  , Sized (AtMost 4) (Dom retiring) -- Small enough that its leaves some slack with poolsUniv
+  , Sized (AtLeast 5) (Dom regPools) -- Large enough that retiring is a strict subset
+  , Dom regPools :=: Dom poolDistr
+  , Dom regPools :=: Dom poolDeposits
+  , Dom retiring :<=: Dom regPools
+  , -- , Dom futureRegPools :<=: Dom poolDistr
+    Disjoint (Dom futureRegPools) (Dom retiring)
   ]
 
 dstatePreds :: Proof era -> [Pred era]

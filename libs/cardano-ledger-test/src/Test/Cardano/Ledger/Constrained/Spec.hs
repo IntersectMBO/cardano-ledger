@@ -40,9 +40,10 @@ import Test.Cardano.Ledger.Constrained.Classes (
  )
 import Test.Cardano.Ledger.Constrained.Combinators (
   errorMess,
+  fixSet,
+  itemFromSet,
   setSized,
   subsetFromSet,
-  subsetFromSetWithSize,
   suchThatErr,
   superSetFromSet,
   superSetFromSetWithSize,
@@ -150,23 +151,33 @@ testMergeSize = do
 -- =====================================================
 -- RelSpec
 
--- | Stores information to describe sets with relational constraints such as
---   equality (x == y) subset (x ⊆ y) disjointness ( x ∩ y = ∅) superset (x ⊇ y).
---   The information stored is used to compute the sets. Some times it is about
---   what is in the set, and sometimes it is about what is NOT in the set.
 data RelSpec era dom where
-  -- \^ There is no restriction on the domain. Denotes the universe.
-  RelAny :: RelSpec era dom
-  -- | Must be a subset
-  RelSubset :: Ord dom => Rep era dom -> Set dom -> RelSpec era dom
-  -- | To get a superset, pick things not in this set, and union with the original
-  RelSuperset :: Ord dom => Rep era dom -> Set dom -> RelSpec era dom
-  -- | pick things, not in this set, and then union them together
-  RelDisjoint :: Ord dom => Rep era dom -> Set dom -> RelSpec era dom
-  -- | Exactly things in this set
-  RelEqual :: Ord dom => Rep era dom -> Set dom -> RelSpec era dom
-  -- | Something is inconsistent
-  RelNever :: [String] -> RelSpec era dom
+  RelAny ::
+    -- | There is no restriction on the set. Denotes the universe.
+    RelSpec era dom
+  RelEqual ::
+    Ord dom =>
+    Rep era dom ->
+    Set dom ->
+    -- | Must be a subset
+    RelSpec era dom
+  RelNever ::
+    [String] ->
+    -- | Something is inconsistent
+    RelSpec era dom
+  RelOper ::
+    Ord d =>
+    Rep era d ->
+    Set d ->
+    Maybe (Set d) ->
+    Set d ->
+    -- | Denotes things like: (x == y) equality, (x ⊆ y) subset, ( x ∩ y = ∅) disjointness, (x ⊇ y) superset.
+    RelSpec era d
+
+relSubset, relSuperset, relDisjoint :: Ord t => Rep era t -> Set t -> RelSpec era t
+relSubset r set = RelOper r Set.empty (Just set) Set.empty
+relSuperset r set = RelOper r set Nothing Set.empty
+relDisjoint r set = RelOper r Set.empty Nothing set
 
 instance Monoid (RelSpec era dom) where mempty = RelAny
 
@@ -183,100 +194,72 @@ instance LiftT (RelSpec era a) where
 
 showRelSpec :: RelSpec era dom -> String
 showRelSpec RelAny = "RelAny"
-showRelSpec (RelSubset r x) = sepsP ["RelSubset ", synopsis (SetR r) x]
-showRelSpec (RelSuperset r x) = sepsP ["RelSuperset", synopsis (SetR r) x]
-showRelSpec (RelDisjoint r x) = sepsP ["RelDisjoint", synopsis (SetR r) x]
+showRelSpec (RelOper r x (Just s) y) | Set.null y && x == s = sepsP ["RelEqual", synopsis (SetR r) x]
+showRelSpec (RelOper r x (Just s) y) | Set.null x && Set.null y = sepsP ["RelSubset", synopsis (SetR r) s]
+showRelSpec (RelOper _ x Nothing y) | Set.null x && Set.null y = "RelAny"
+showRelSpec (RelOper r x Nothing y) | Set.null y = sepsP ["RelSuperset", synopsis (SetR r) x]
+showRelSpec (RelOper r x Nothing y) | Set.null x = sepsP ["RelDisjoint", synopsis (SetR r) y]
+showRelSpec (RelOper r x Nothing y) = sepsP ["RelOper", synopsis (SetR r) x, "Univ", synopsis (SetR r) y]
+showRelSpec (RelOper r x (Just y) z) = sepsP ["RelOper", synopsis (SetR r) x, synopsis (SetR r) y, synopsis (SetR r) z]
 showRelSpec (RelEqual r x) = sepsP ["RelEqual", synopsis (SetR r) x]
 showRelSpec (RelNever _) = "RelNever"
 
-showR :: Show dom => RelSpec era dom -> String
-showR (RelDisjoint _ xs) = "Disjoint " ++ show xs
-showR (RelSuperset _ xs) = "Superset " ++ show xs
-showR (RelSubset _ xs) = "Subset " ++ show xs
-showR (RelEqual _ xs) = "Subset " ++ show xs
-showR x = show x
-
--- | Merge two RelSpec's, return (RelNever _) if they are inconsistent. if we think of
---   each RelSpec as defining a set, then the merge is the intersection of the two sets.
-mergeRelSpec :: forall r era. RelSpec era r -> RelSpec era r -> (RelSpec era r)
+mergeRelSpec :: RelSpec era d -> RelSpec era d -> RelSpec era d
 mergeRelSpec (RelNever xs) (RelNever ys) = RelNever (xs ++ ys)
 mergeRelSpec d@(RelNever _) _ = d
 mergeRelSpec _ d@(RelNever _) = d
-mergeRelSpec d RelAny = d
-mergeRelSpec RelAny d = d
--- Subset on left
-mergeRelSpec (RelSubset _ x) (RelSubset r y) = RelSubset r (Set.intersection x y)
-mergeRelSpec a@(RelSubset r x) b@(RelSuperset _ y) =
-  if Set.isSubsetOf y x
-    then RelEqual r x
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec (RelSubset r x) (RelDisjoint _ y) = RelSubset r (Set.difference x y)
-mergeRelSpec b@(RelSubset _ x) a@(RelEqual r y) =
-  if Set.isSubsetOf y x
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
--- Superset on left
-mergeRelSpec a@(RelSuperset _ y) b@(RelSubset r x) =
-  if Set.isSubsetOf y x
-    then RelEqual r x
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec a@(RelSuperset _ _) b@(RelDisjoint _ _) = mergeRelSpec b a
-mergeRelSpec a@(RelSuperset _ x) b@(RelEqual r y) =
-  if Set.isSubsetOf x y
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec (RelSuperset r y) (RelSuperset _ x) = RelSuperset r (Set.union y x)
--- Disjoint on left
-mergeRelSpec (RelDisjoint r y) (RelSubset _ x) = RelSubset r (Set.difference x y)
-mergeRelSpec b@(RelDisjoint _ _) a@(RelSuperset _ _) =
-  RelNever
-    [ "The RelSpec's may be inconsistent."
-    , "  " ++ show a
-    , "  " ++ show b
-    , "While there may exist a solution, it cannot be expressed using "
-        ++ "RelEqual, RelSubset, RelSuperset or RelDisjoint."
-    , "Try reformulating using (X :<=: _) rather than (_ :<=: X)."
-    ]
-mergeRelSpec (RelDisjoint r y) (RelDisjoint _ x) = RelDisjoint r (Set.union y x)
-mergeRelSpec b@(RelDisjoint _ x) a@(RelEqual r y) =
-  if Set.disjoint y x
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
--- Equal on the left
-mergeRelSpec a@(RelEqual r y) b@(RelSubset _ x) =
-  if Set.isSubsetOf y x
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec a@(RelEqual r y) b@(RelSuperset _ x) =
-  if Set.isSubsetOf x y
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec a@(RelEqual r y) b@(RelDisjoint _ x) =
-  if Set.disjoint y x
-    then RelEqual r y
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
-mergeRelSpec a@(RelEqual r xs) b@(RelEqual _ ys) =
-  if xs == ys
-    then RelEqual r ys
-    else RelNever ["The RelSpec's are inconsistent.", "   " ++ show a, "   " ++ show b]
+mergeRelSpec RelAny x = x
+mergeRelSpec x RelAny = x
+mergeRelSpec (RelEqual r x) y = mergeRelSpec (RelOper r x (Just x) Set.empty) y
+mergeRelSpec y (RelEqual r x) = mergeRelSpec y (RelOper r x (Just x) Set.empty)
+mergeRelSpec a@(RelOper r must1 may1 cant1) b@(RelOper _ must2 may2 cant2) =
+  dropT $
+    explain ("merging " ++ show a ++ "\n        " ++ show b) $
+      relOper r (Set.union must1 must2) (interSectM may1 may2) (Set.union cant1 cant2)
 
--- ==================================================
--- Some RelSpecs are inconsistent with some Sizes
--- For example, you can't make a subset of 'xs', of size 'n',
--- if 'xs' has less then 'n' elements. It will be crucial to
--- track this information, when building specs.
+relOper :: Ord d => Rep era d -> Set d -> Maybe (Set d) -> Set d -> Typed (RelSpec era d)
+relOper r sup sub disj =
+  explain
+    ("Checking RelSpec self consistency\n   " ++ show (RelOper r sup sub disj))
+    (help sup sub disj)
+  where
+    help must (Just may) cant | must == may && Set.disjoint must cant = pure $ RelEqual r must
+    help must Nothing cant =
+      if Set.disjoint must cant
+        then pure $ RelOper r must Nothing cant
+        else pure $ RelNever ["'must' " ++ synopsis (SetR r) must ++ " Is not disjoint from: 'disj' " ++ synopsis (SetR r) cant]
+    help must (Just may) cant = case (Set.isSubsetOf must may, True {- Set.disjoint may cant -}) of
+      (True, True) -> pure $ RelOper r must (Just may) cant
+      (False, True) -> failT ["'must' " ++ synopsis (SetR r) must ++ " Is not a subset of: 'may' " ++ synopsis (SetR r) may]
 
--- | Compute the size that is appropriate for a RelSpec
+{-
+      (True,False) -> failT ["'may' "++synopsis (SetR r) may ++" Is not disjoint from: 'disj' "++synopsis (SetR r) cant ]
+      (False,False) -> failT ["'may' "++synopsis (SetR r) may ++" Is not disjoint from: 'disj' "++synopsis (SetR r) cant
+                             ,"'must' "++synopsis (SetR r) must ++" Is not a subset of: 'may' "++synopsis (SetR r) may ]
+-}
+
+-- | The interpretation of (Just set) is set, and of Nothing is the universe (all possible sets)
+interSectM :: Ord a => Maybe (Set a) -> Maybe (Set a) -> Maybe (Set a)
+interSectM Nothing Nothing = Nothing
+interSectM Nothing x = x
+interSectM x Nothing = x
+interSectM (Just x) (Just y) = Just (Set.intersection x y)
+
+runRelSpec :: Ord t => Set t -> RelSpec era t -> Bool
+runRelSpec s (RelEqual _ set) = s == set
+runRelSpec _ RelAny = True
+runRelSpec _ (RelNever xs) = errorMess "RelNever in call to runRelSpec" xs
+runRelSpec s (RelOper _ sup Nothing disj) = Set.isSubsetOf sup s && Set.disjoint s disj
+runRelSpec s (RelOper _ sup (Just sub) disj) = Set.isSubsetOf sup s && Set.isSubsetOf s sub && Set.disjoint s disj
+
+-- | Compute the Size that bounds the size of a set generated from a RelSpec
 sizeForRel :: RelSpec era dom -> Size
-sizeForRel (RelSubset _ s) = SzMost (Set.size s)
-sizeForRel (RelSuperset _ s) = SzLeast (Set.size s)
 sizeForRel (RelEqual _ s) = SzExact (Set.size s)
-sizeForRel (RelDisjoint _ _) = SzAny
 sizeForRel RelAny = SzAny
 sizeForRel (RelNever _) = SzAny
-
--- -------------------------------------
--- RelSpec tests
+sizeForRel (RelOper _ sup Nothing _) = SzLeast (Set.size sup)
+sizeForRel (RelOper _ sup (Just sub) _) | Set.null sup = SzMost (Set.size sub)
+sizeForRel (RelOper _ sup (Just sub) _) = SzRng (Set.size sup) (Set.size sub)
 
 genFromRelSpec :: forall era t. Ord t => [String] -> Int -> Gen t -> RelSpec era t -> Gen (Set t)
 genFromRelSpec msgs n g spec =
@@ -284,119 +267,145 @@ genFromRelSpec msgs n g spec =
    in case spec of
         RelNever xs -> errorMess "RelNever in genFromSpec" (msgs ++ xs)
         RelAny -> setSized (msg : msgs) n g
-        RelSubset _ x -> subsetFromSetWithSize (msg : msgs) x n
-        RelSuperset _ x -> superSetFromSetWithSize (msg : msgs) n g x
         RelEqual _ s -> pure s
-        RelDisjoint _ set -> genSet n (suchThatErr (msg : msgs) g (\x -> not (Set.member x set)))
+        RelOper _ sup Nothing dis ->
+          -- add things (not in disj) to 'sup' until you get to size 'n'
+          fixSet (msg : msgs) (10 * n) n (suchThatErr (msg : msgs) g (`Set.notMember` dis)) sup
+        RelOper _ sup (Just sub) dis ->
+          -- add things (from (sub - disj)) to 'sup' until you get to size 'n'
+          fixSet (msg : msgs) (10 * n) n (itemFromSet (msg : msgs) (Set.difference sub dis)) sup
 
-runRelSpec :: Ord t => Set t -> RelSpec era t -> Bool
-runRelSpec s (RelSubset _ x) = Set.isSubsetOf s x
-runRelSpec new (RelSuperset _ old) = Set.isSubsetOf old new
-runRelSpec s (RelDisjoint _ set) = all (\x -> not (Set.member x set)) s
-runRelSpec s (RelEqual _ set) = s == set
-runRelSpec _ RelAny = True
-runRelSpec _ (RelNever xs) = errorMess "RelNever in call to runRelSpec" xs
-
--- ----------------------------------------
--- RelSpec generators
-
-genRelSpec :: Ord dom => [String] -> Maybe Int -> Gen dom -> Rep era dom -> Gen (RelSpec era dom)
-genRelSpec _ Nothing genD r = do
-  frequency
-    [ (1, RelSubset r <$> someSet genD)
-    , (1, RelSuperset r <$> someSet genD)
-    , (1, RelDisjoint r <$> someSet genD)
-    , (1, RelEqual r <$> someSet genD)
-    , (1, pure RelAny)
-    ]
-genRelSpec _ (Just 0) _ r = pure $ RelEqual r Set.empty
-genRelSpec msg (Just n) genD r = do
+genRelSpec :: Ord dom => [String] -> Int -> Gen dom -> Rep era dom -> Gen (RelSpec era dom)
+genRelSpec _ 0 _ r = pure $ RelEqual r Set.empty
+genRelSpec msg n genD r = do
   smaller <- choose (1, n)
   larger <- choose (n, n + atleastdelta)
-  let msgs = ("genRelSpec " ++ show n) : msg
+  let msgs = ("genRelSpec " ++ show n ++ " " ++ show r) : msg
   frequency
-    [ (1, RelSubset r <$> setSized msgs larger genD)
-    , (1, RelSuperset r <$> setSized msgs smaller genD)
-    , (1, RelDisjoint r <$> someSet genD)
-    , (1, RelEqual r <$> setSized msgs n genD)
+    [
+      ( 1
+      , do
+          sup <- setSized ("sup of RelOper Nothing" : msgs) smaller genD
+          dis <- someSet (suchThatErr ("dis of RelOper Nothing" : msgs) genD (`Set.notMember` sup))
+          monadTyped (relOper r sup Nothing dis)
+      )
+    ,
+      ( 2
+      , do
+          sup <- setSized ("sup of RelOper Just" : msgs) smaller genD
+          sub <- superSetFromSetWithSize ("sub of RelOper Just" : msgs) larger genD sup
+          dis <- setSized ("dis of RelOper Some" : msgs) 3 (suchThatErr msgs genD (`Set.notMember` sub))
+          monadTyped (relOper r sup (Just sub) dis)
+      )
+    , (1, RelEqual r <$> setSized ("RelEqual" : msgs) n genD)
     , (1, pure RelAny)
     ]
 
-genDisjoint :: Ord a => [String] -> Set a -> Gen a -> Gen (Set a)
-genDisjoint msgs s gen = someSet (suchThatErr ("from genDisjoint" : msgs) gen (`Set.notMember` s))
+-- | Generate another set which is disjoint from the input 'set'
+--   Note that the empty set is always a solution.
+--   These sets tend to be rather small (size <= atleastdelta)
+genDisjoint :: Ord a => Set a -> Gen a -> Gen (Set a)
+genDisjoint set gen = help atleastdelta Set.empty
+  where
+    help n answer | n < 0 = pure answer
+    help n answer = do
+      x <- gen
+      help (n - 1) (if Set.member x set then answer else Set.insert x answer)
 
+-- | Generate another RelSpec, guaranteed to be consistent with the input
+--   Where (consistent a b) means:  (a <> b) =/= (RelNever _)
+--   See the property test 'genConsistent'
 genConsistentRelSpec :: [String] -> Gen dom -> RelSpec era dom -> Gen (RelSpec era dom)
 genConsistentRelSpec msg g x = case x of
-  RelSubset r s ->
+  RelOper r sup Nothing disj ->
     frequency
-      [ (1, pure (RelSubset r s))
-      , (1, pure RelAny)
-      , (1, RelSuperset r <$> subsetFromSet msgs s)
-      , (1, RelDisjoint r <$> genDisjoint msgs s g)
-      , (3, pure (RelEqual r s))
+      [ (1, pure RelAny)
+      ,
+        ( 1
+        , do
+            disj2 <- genDisjoint sup g
+            sup2 <- genDisjoint (disj <> disj2) g
+            pure $ RelOper r sup2 Nothing disj2
+        )
+      ,
+        ( 1
+        , do
+            sub2 <- (`Set.difference` disj) <$> superSetFromSet g sup
+            sup2 <- subsetFromSet ((show x ++ " gen sub") : msgs) sup
+            disj2 <- genDisjoint sub2 g
+            pure $ RelOper r sup2 (Just sub2) disj2
+        )
       ]
-  RelSuperset r s ->
+  RelOper r sup (Just sub) disj ->
     frequency
-      [ (1, pure (RelSuperset r s))
-      , (1, pure RelAny)
-      , (1, RelSubset r <$> superSetFromSet g s)
+      [ (1, pure RelAny)
+      ,
+        ( 1
+        , do
+            disj2 <- genDisjoint sub g
+            sup2 <- subsetFromSet ((show x ++ " gen sup") : msgs) sub
+            pure $ RelOper r sup2 Nothing disj2
+        )
+      ,
+        ( 1
+        , do
+            sub2 <- (`Set.difference` disj) <$> superSetFromSet g sup
+            sup2 <- subsetFromSet ((show x ++ " gen sup") : msgs) sup
+            disj2 <- genDisjoint (sub <> sub2) g
+            pure $ RelOper r sup2 (Just (sub <> sub2)) disj2
+        )
       ]
-  RelDisjoint r s ->
-    frequency [(1, pure RelAny), (1, pure (RelDisjoint r s))]
   RelEqual r s ->
     frequency
       [ (1, pure $ RelEqual r s)
       , (1, pure RelAny)
-      , (1, RelSubset r <$> superSetFromSet g s)
-      , (1, RelDisjoint r <$> genDisjoint msgs s g)
+      , (1, RelOper r s (Just s) <$> genDisjoint s g)
       ]
   RelAny -> pure RelAny
   RelNever _ -> error "RelNever in genConsistentRelSpec"
   where
     msgs = ("genConsistentRelSpec " ++ show x) : msg
 
--- -----------------------------
--- Actual tests for RelSpec
+-- ==================
+-- Actual property tests for Relpec
 
 testConsistent :: Gen Property
 testConsistent = do
-  spec1 <- genRelSpec ["testConsistent"] Nothing (choose (1, 1000)) Word64R
-  spec2 <- genConsistentRelSpec ["testConsistent"] (choose (1, 1000)) spec1
-  pure $
-    counterexample
-      ("spec1=" ++ show spec1 ++ "\n  " ++ show spec2)
-      ( case (spec1 <> spec2) of
-          RelNever _ -> False
-          _ -> True
-      )
+  n <- chooseInt (3, 10)
+  s1 <- genRelSpec ["from genConsistent " ++ show n] n (choose (1, 1000)) IntR
+  s2 <- genConsistentRelSpec ["from genConsistent " ++ show n] (choose (1, 1000)) s1
+  case s1 <> s2 of
+    RelNever ms -> pure $ counterexample (unlines (["genConsistent fails", show s1, show s2] ++ ms)) False
+    _ -> pure $ counterexample "" True
 
 testSoundRelSpec :: Gen Property
 testSoundRelSpec = do
   n <- chooseInt (3, 10)
-  s1 <- genRelSpec ["genRelSpec " ++ show n] (Just n) (choose (1, 1000)) Word64R
-  ans <- genFromRelSpec @TT ["genFromRelSpec " ++ show n ++ " " ++ show s1] n (choose (1, 1000)) s1
+  s1 <- genRelSpec ["from testSoundRelSpec " ++ show n] n (choose (1, 10000)) Word64R
+  ans <- genFromRelSpec @TT ["from testSoundRelSpec " ++ show n] n (choose (1, 10000)) s1
   pure $ counterexample ("spec=" ++ show s1 ++ "\nans=" ++ show ans) (runRelSpec ans s1)
 
 testMergeRelSpec :: Gen Property
 testMergeRelSpec = do
   let msg = ["testMergeRelSpec"]
-  s1 <- genRelSpec (("genRelSpec") : msg) Nothing (choose (1, 1000)) Word64R
+  n <- chooseInt (0, 10)
+  s1 <- genRelSpec (("genRelSpec") : msg) n (choose (1, 1000)) Word64R
   s2 <- genConsistentRelSpec (("genConsistentRepSpec " ++ show s1) : msg) (choose (1, 1000)) s1
   let s3 = (s1 <> s2)
   case s3 of
     RelNever xs -> trace (unlines ("inconsistent merge" : xs)) (pure $ counterexample "" True)
     s4 -> do
       let size = sizeForRel s4
-      n <- genFromSize size
-      ans <- genFromRelSpec ["testMergeRelSpec " ++ show s1 ++ " " ++ show s2] n (choose (1, 1000)) s4
+      m <- genFromSize size
+      ans <- genFromRelSpec ["testMergeRelSpec " ++ show s1 ++ " " ++ show s2] m (choose (1, 1000)) s4
       pure $
         counterexample
           ( "s1="
-              ++ showR s1
+              ++ show s1
               ++ "\ns2="
-              ++ showR s2
+              ++ show s2
               ++ "\ns1<>s2="
-              ++ showR s4
+              ++ show s4
               ++ "\nans="
               ++ show ans
               ++ "\nrun s1="
@@ -408,10 +417,11 @@ testMergeRelSpec = do
           )
           (runRelSpec ans s4 && runRelSpec ans s2 && runRelSpec ans s1)
 
-tryManyMerge :: Gen (Int, [String])
+tryManyMerge :: Gen (Int, Int, [String])
 tryManyMerge = do
-  xs <- vectorOf 25 (genRelSpec ["foo1"] Nothing (choose (1, 100)) IntR)
-  ys <- vectorOf 25 (genRelSpec ["foo2"] Nothing (choose (1, 100)) IntR)
+  n <- chooseInt (3, 10)
+  xs <- vectorOf 60 (genRelSpec ["foo1"] n (choose (1, 100)) IntR)
+  ys <- vectorOf 60 (genRelSpec ["foo2"] n (choose (1, 100)) IntR)
   let ok RelAny = False
       ok _ = True
       consistent x y = case runTyped (liftT (x <> y)) of
@@ -419,8 +429,8 @@ tryManyMerge = do
         Right spec -> Just spec
       check (x, y, m) = do
         let size = sizeForRel m
-        n <- genFromSize size
-        z <- genFromRelSpec @TT ["FOO"] n (choose (1, 100)) m
+        i <- genFromSize size
+        z <- genFromRelSpec @TT ["FOO"] i (choose (1, 100)) m
         pure (x, runRelSpec z x, y, runRelSpec z y, z, runRelSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
@@ -435,14 +445,22 @@ tryManyMerge = do
       pr x@(_, a, _, b, _, c, _) = if not (a && b && c) then Just (showAns x) else Nothing
   let trips = [(x, y, m) | x <- xs, y <- ys, ok x && ok y, Just m <- [consistent x y]]
   ts <- mapM check trips
-  pure $ (length trips, Maybe.catMaybes (map pr ts))
+  pure $ (n, length trips, Maybe.catMaybes (map pr ts))
 
 reportManyMerge :: IO ()
 reportManyMerge = do
-  (n, bad) <- generate tryManyMerge
+  (n, passed, bad) <- generate tryManyMerge
   if null bad
-    then putStr ("passed " ++ show n ++ " tests. ")
+    then putStrLn ("passed " ++ show passed ++ " tests. Spec size " ++ show n)
     else do mapM_ putStrLn bad; error "TestFails"
+
+-- | Generates two random RelSpec, and then merges them. Raises an error
+observeMerge :: Gen (RelSpec era Int)
+observeMerge = do
+  n <- chooseInt (3, 10)
+  x <- genRelSpec ["observeMerge"] n (choose (1, 100)) IntR
+  y <- genRelSpec ["observeMerge"] n (choose (1, 100)) IntR
+  monadTyped (liftT (x <> y))
 
 -- ==========================================================
 
@@ -588,7 +606,7 @@ genRngSpec n g repw repc = do
   frequency
     [ (3, do (c, tot) <- genCond wtotal; pure (RngSum c tot))
     , (2, do (c, tot) <- genCond ctotal; pure (RngProj c repc tot))
-    , (4, RngRel <$> genRelSpec @w ["genRngSpec "] (Just n) g repw)
+    , (4, RngRel <$> genRelSpec @w ["genRngSpec "] n g repw)
     , (1, pure RngAny)
     , (2, RngElem repw <$> vectorOf n (genRep repw))
     ]
@@ -794,20 +812,29 @@ genMapSpec ::
 genMapSpec genD repd repw repc = frequency [(1, pure mempty), (6, genmapspec)]
   where
     genmapspec = do
-      relspec <- genRelSpec ["genMapSpec"] Nothing genD repd
-      let size = sizeForRel relspec
-      n <- genFromSize size
+      n <- chooseInt (1, 15)
+      relspec <- genRelSpec ["genMapSpec"] n genD repd
       rngspec <- genRngSpec n (genRep @era repw) repw repc
       pure (MapSpec (SzExact n) relspec rngspec)
 
 -- | Generate a (Map d t) from a (MapSpec era d r)
-genFromMapSpec :: forall era w dom. Ord dom => Gen dom -> Gen w -> MapSpec era dom w -> Gen (Map dom w)
-genFromMapSpec _ _ (MapNever xs) = errorMess "MapNever in genFromMapSpec" xs
-genFromMapSpec _ _ (MapUnique _ (Unique _ gen)) = gen
-genFromMapSpec genD genR ms@(MapSpec size rel rng) = do
+genFromMapSpec :: forall era w dom. Ord dom => String -> Gen dom -> Gen w -> MapSpec era dom w -> Gen (Map dom w)
+genFromMapSpec nm _ _ (MapNever xs) = errorMess ("genFromMapSpec " ++ nm ++ " (MapNever _) fails") xs
+genFromMapSpec _ _ _ (MapUnique _ (Unique _ gen)) = gen
+genFromMapSpec nm genD genR ms@(MapSpec size rel rng) = do
   n <- genFromSize size
-  dom <- genFromRelSpec ["genFromRelSpec " ++ show n, " GenFromMapSpec " ++ show ms] n genD rel
-  rangelist <- genFromRngSpec ["genFromRngSpec " ++ show n, "genFromMapSpec " ++ show ms] n genR rng
+  dom <-
+    genFromRelSpec
+      ["genFromRelSpec " ++ show n, "GenFromMapSpec " ++ nm ++ " " ++ show ms]
+      n
+      genD
+      rel
+  rangelist <-
+    genFromRngSpec
+      ["genFromRngSpec " ++ show n, "genFromMapSpec " ++ nm ++ " " ++ show ms]
+      n
+      genR
+      rng
   let dsize = Set.size dom
       rsize = length rangelist
   if dsize == rsize
@@ -819,7 +846,7 @@ genFromMapSpec genD genR ms@(MapSpec size rel rng) = do
 genMapSpecIsSound :: Gen Property
 genMapSpecIsSound = do
   spec <- genMapSpec (chooseInt (1, 1000)) IntR Word64R CoinR
-  mp <- genFromMapSpec @TT (choose (1, 10000)) (choose (1, 10000)) spec
+  mp <- genFromMapSpec @TT "mapSpecIsSound" (choose (1, 10000)) (choose (1, 10000)) spec
   pure $ counterexample ("spec = " ++ show spec ++ "\nmp = " ++ show mp) (runMapSpec mp spec)
 
 -- ===================================================================================
@@ -881,9 +908,9 @@ sizeForSetSpec (SetNever _) = SzAny
 
 genSetSpec :: Ord s => [String] -> Gen s -> Rep era s -> Gen (SetSpec era s)
 genSetSpec msgs genS repS = do
-  r <- genRelSpec ("from genSetSpec" : msgs) Nothing genS repS
-  let size = sizeForRel r
-  pure (SetSpec size r)
+  size <- chooseInt (0, 10)
+  r <- genRelSpec ("from genSetSpec" : msgs) size genS repS
+  pure (SetSpec (SzExact size) r)
 
 genFromSetSpec :: forall era a. [String] -> Gen a -> SetSpec era a -> Gen (Set a)
 genFromSetSpec msgs genS (SetSpec sz rp) = do

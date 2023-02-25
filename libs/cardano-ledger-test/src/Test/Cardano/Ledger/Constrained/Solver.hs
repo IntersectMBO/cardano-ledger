@@ -51,7 +51,11 @@ import Test.Cardano.Ledger.Constrained.Spec (
   genFromSize,
   genFromSumSpec,
   mapSpec,
+  relDisjoint,
+  relSubset,
+  relSuperset,
   sepsP,
+  setSpec,
   showMapSpec,
   showSetSpec,
   showSumSpec,
@@ -229,34 +233,34 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     | Name v1 == Name v2 -> do
         With _ <- hasOrd rng (Id undefined)
         With n <- simplifySet rng expr
-        mapSpec SzAny RelAny (RngRel (RelSubset rng n))
+        mapSpec SzAny RelAny (RngRel (relSubset rng n))
   (Rng expr :<=: (Var v2))
     | Name v1 == Name v2 -> do
         With _ <- hasOrd rng (Id undefined)
         With n <- simplifySet rng expr
-        mapSpec SzAny RelAny (RngRel (RelSuperset rng n))
+        mapSpec SzAny RelAny (RngRel (relSuperset rng n))
   (expr :=: Dom (Var v2))
     | Name v1 == Name v2 -> do
         let SetR a = termRep expr
         Refl <- sameRep dom a
         mm <- simplify expr
-        mapSpec (SzExact (Set.size mm)) (RelSubset dom mm) RngAny
+        mapSpec (SzExact (Set.size mm)) (relSubset dom mm) RngAny
   (Dom (Var v2) :=: expr)
     | Name v1 == Name v2 -> do
         let SetR a = termRep expr
         Refl <- sameRep dom a
         mm <- simplify expr
-        mapSpec (SzExact (Set.size mm)) (RelSubset dom mm) RngAny
+        mapSpec (SzExact (Set.size mm)) (relSubset dom mm) RngAny
   (Dom (Var v2) :<=: expr)
     | Name v1 == Name v2 -> do
         With _ <- hasOrd dom dom
         With n <- simplifySet dom expr
-        mapSpec (SzMost (Set.size n)) (RelSubset dom n) RngAny
+        mapSpec (SzMost (Set.size n)) (relSubset dom n) RngAny
   (expr :<=: Dom (Var v2))
     | Name v1 == Name v2 -> do
         With _ <- hasOrd dom dom
         With n <- simplifySet dom expr
-        mapSpec (SzLeast (Set.size n)) (RelSuperset dom n) RngAny
+        mapSpec (SzLeast (Set.size n)) (relSuperset dom n) RngAny
   (SumsTo cond expr xs) | exactlyOne (isMapVar (Name v1)) xs -> do
     let cRep = termRep expr
     t <- simplify expr
@@ -266,13 +270,13 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> mapSpec sz RelAny RngAny
   (HasDom (Var v2) expr) | Name v1 == Name v2 -> do
     With set <- simplifySet dom expr
-    mapSpec (SzMost (Set.size set)) (RelSubset dom set) RngAny
+    mapSpec (SzMost (Set.size set)) (relSubset dom set) RngAny
   (Disjoint expr (Dom (Var v2))) | Name v1 == Name v2 -> do
     With set <- simplifySet dom expr
-    mapSpec SzAny (RelDisjoint dom set) RngAny
+    mapSpec SzAny (relDisjoint dom set) RngAny
   (Disjoint (Dom (Var v2)) expr) | Name v1 == Name v2 -> do
     With set <- simplifySet dom expr
-    mapSpec SzAny (RelDisjoint dom set) RngAny
+    mapSpec SzAny (relDisjoint dom set) RngAny
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
@@ -313,29 +317,27 @@ solveMaps v@(V nm (MapR _ _) _) cs =
 --   which describes the constraints implied by the Pred 'predicate'
 solveSet :: V era (Set a) -> Pred era -> Typed (SetSpec era a)
 solveSet v1@(V _ (SetR r) _) predicate = case predicate of
-  (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> do
-    --      With none2 <- explain "XX5" $ hasOrd r RngAny
-    pure (SetSpec sz RelAny)
+  (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> setSpec sz RelAny
   (Var v2 :=: expr) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
-    pure $ SetSpec SzAny (RelEqual r set)
+    setSpec (SzExact (Set.size set)) (RelEqual r set)
   (expr :=: v2@(Var _)) -> solveSet v1 (v2 :=: expr)
   (Var v2 :<=: expr) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
-    pure $ SetSpec SzAny (RelSubset r set)
+    setSpec (SzMost (Set.size set)) (relSubset r set)
   (expr :<=: Var v2) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
-    pure $ SetSpec SzAny (RelSuperset r set)
+    setSpec (SzLeast (Set.size set)) (relSuperset r set)
   (Disjoint (Var v2) expr) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
-    pure $ SetSpec SzAny (RelDisjoint r set)
+    setSpec SzAny (relDisjoint r set)
   (Disjoint expr (Var v2)) -> solveSet v1 (Disjoint (Var v2) expr)
-  (Random (Var v2)) | Name v1 == Name v2 -> pure $ SetSpec SzAny RelAny
-  (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> pure $ SetSpec sz RelAny
+  (Random (Var v2)) | Name v1 == Name v2 -> setSpec SzAny RelAny
+  (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> setSpec sz RelAny
   (HasDom mterm (Var v2)) | Name v1 == Name v2 -> do
     let MapR _ rng = termRep mterm
     mval <- simplifyAtType (MapR r rng) mterm
-    pure $ SetSpec (SzExact (Map.size mval)) (RelEqual r (Map.keysSet mval))
+    setSpec (SzExact (Map.size mval)) (RelEqual r (Map.keysSet mval))
   cond -> failT ["Can't solveSet " ++ show cond ++ " for variable " ++ show v1]
 
 solveSets :: V era (Set a) -> [Pred era] -> Typed (SetSpec era a)
@@ -533,7 +535,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
   cs -> case r1 of
     MapR dom rng -> do
       spec <- solveMaps v1 cs
-      pure $ genFromMapSpec (genRep dom) (genRep rng) spec
+      pure $ genFromMapSpec nam (genRep dom) (genRep rng) spec
     SetR r -> do
       spec <- solveSets v1 cs
       pure $ genFromSetSpec [] (genRep r) spec

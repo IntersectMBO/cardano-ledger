@@ -48,8 +48,12 @@ fixSet mess numtrys size genA s = help numtrys s
       EQ -> pure set
       GT -> help (trys - 1) (iterate Set.deleteMin set !! (Set.size set - size))
       LT -> do
-        new <- Set.fromList <$> vectorOf (size - Set.size set) genA
-        help (trys - 1) (Set.union new set)
+        -- new <- Set.fromList <$> vectorOf (size - Set.size set) genA
+        -- help (trys - 1) (Set.union new set)
+        x <- genA
+        if Set.member x set
+          then help (trys - 1) set
+          else help trys (Set.insert x set)
 
 mapSized :: Ord a => [String] -> Int -> Gen a -> Gen b -> Gen (Map a b)
 mapSized mess size genA genB = setSized (("From mapSized " ++ show size) : mess) size genA >>= addRange
