@@ -137,7 +137,8 @@ getPlutusData (getMemoRawType -> PlutusData d) = d
 -- exported, in order to prevent invalid creation of data from arbitrary binary
 -- data. Use `makeBinaryData` for smart construction.
 newtype BinaryData era = BinaryData ShortByteString
-  deriving newtype (Eq, Ord, Show, SafeToHash)
+  deriving newtype (Eq, NoThunks, Ord, Show, SafeToHash)
+  deriving (Generic)
 
 instance (EraCrypto era ~ c) => HashAnnotated (BinaryData era) EraIndependentData c
 
@@ -201,7 +202,7 @@ data Datum era
   = NoDatum
   | DatumHash !(DataHash (EraCrypto era))
   | Datum !(BinaryData era)
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generic, NoThunks, Ord, Show)
 
 instance Era era => EncCBOR (Datum era) where
   encCBOR d = encode $ case d of

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -107,9 +108,10 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), (:~:) (Refl))
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.))
-import NoThunks.Class (InspectHeapNamed (..), NoThunks)
+import NoThunks.Class (NoThunks)
 import Prelude hiding (lookup)
 
 data BabbageTxOut era
@@ -138,6 +140,7 @@ data BabbageTxOut era
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
+  deriving (Generic)
 
 instance Crypto c => EraTxOut (BabbageEra c) where
   {-# SPECIALIZE instance EraTxOut (BabbageEra StandardCrypto) #-}
@@ -308,7 +311,7 @@ instance
   where
   show = show . viewTxOut
 
-deriving via InspectHeapNamed "BabbageTxOut" (BabbageTxOut era) instance NoThunks (BabbageTxOut era)
+instance (Era era, NoThunks (CompactForm (Value era)), NoThunks (Script era)) => NoThunks (BabbageTxOut era)
 
 pattern BabbageTxOut ::
   (Era era, Val (Value era), HasCallStack) =>

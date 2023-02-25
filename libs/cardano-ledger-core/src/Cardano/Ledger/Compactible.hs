@@ -11,6 +11,7 @@ where
 
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Data.Kind (Type)
+import NoThunks.Class (NoThunks)
 
 --------------------------------------------------------------------------------
 
@@ -25,6 +26,7 @@ class
   ( Show (CompactForm a)
   , Eq (CompactForm a)
   , EncCBOR (CompactForm a)
+  , NoThunks (CompactForm a)
   ) =>
   Compactible a
   where
