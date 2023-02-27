@@ -49,6 +49,7 @@ library
         base >=4.14 && <4.17,
         bytestring,
         base16-bytestring,
+        aeson,
         cardano-crypto-class,
         cardano-data,
         cardano-ledger-allegra >=1.1,
