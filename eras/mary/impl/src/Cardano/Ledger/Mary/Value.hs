@@ -66,6 +66,10 @@ import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_, when)
 import Control.Monad.ST (runST)
+import Data.Aeson (ToJSON (..), object, (.=))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
@@ -91,6 +95,7 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Semigroup as Semigroup (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (Text)
 import Data.Text.Encoding (decodeLatin1)
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64)
@@ -109,7 +114,13 @@ newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
     )
 
 instance Show AssetName where
-  show = show . BS16.encode . SBS.fromShort . assetName
+  show = show . assetNameToBytesAsHex
+
+assetNameToBytesAsHex :: AssetName -> BS.ByteString
+assetNameToBytesAsHex = BS16.encode . SBS.fromShort . assetName
+
+assetNameToTextAsHex :: AssetName -> Text
+assetNameToTextAsHex = decodeLatin1 . assetNameToBytesAsHex
 
 instance DecCBOR AssetName where
   decCBOR = do
@@ -118,9 +129,8 @@ instance DecCBOR AssetName where
       then
         cborError $
           DecoderErrorCustom "asset name exceeds 32 bytes:" $
-            decodeLatin1 $
-              BS16.encode $
-                SBS.fromShort an
+            assetNameToTextAsHex $
+              AssetName an
       else pure $ AssetName an
 
 -- | Policy ID
@@ -129,7 +139,7 @@ newtype PolicyID c = PolicyID {policyID :: ScriptHash c}
 
 -- | The MultiAssets map
 newtype MultiAsset c = MultiAsset (Map (PolicyID c) (Map AssetName Integer))
-  deriving (Show, Generic)
+  deriving (Show, Generic, ToJSON)
 
 instance Crypto c => Eq (MultiAsset c) where
   (MultiAsset x) == (MultiAsset y) = pointWise (pointWise (==)) x y
@@ -368,6 +378,33 @@ decodeIntegerBounded64 = do
   where
     maxval = fromIntegral (maxBound :: Int64)
     minval = fromIntegral (minBound :: Int64)
+
+-- ========================================================================
+-- JSON
+
+instance ToJSON (MaryValue era) where
+  toJSON = object . toMaryValuePairs
+  toEncoding = Aeson.pairs . mconcat . toMaryValuePairs
+
+toMaryValuePairs :: Aeson.KeyValue a => MaryValue crypto -> [a]
+toMaryValuePairs (MaryValue l ps) =
+  [ "lovelace" .= l
+  , "policies" .= ps
+  ]
+
+instance ToJSON AssetName where
+  toJSON = Aeson.String . assetNameToTextAsHex
+
+instance ToJSONKey AssetName where
+  toJSONKey = toJSONKeyText assetNameToTextAsHex
+
+instance ToJSON (PolicyID era) where
+  toJSON (PolicyID (ScriptHash h)) = Aeson.String (Hash.hashToTextAsHex h)
+
+instance ToJSONKey (PolicyID era) where
+  toJSONKey = toJSONKeyText render
+    where
+      render (PolicyID (ScriptHash h)) = Hash.hashToTextAsHex h
 
 -- ========================================================================
 -- Compactible

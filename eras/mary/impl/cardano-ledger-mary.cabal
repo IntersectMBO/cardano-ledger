@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-mary
-version:            1.0.0.0
+version:            1.0.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -49,6 +49,7 @@ library
         base >=4.14 && <4.17,
         bytestring,
         base16-bytestring,
+        aeson,
         cardano-crypto-class,
         cardano-data,
         cardano-ledger-allegra >=1.0,
