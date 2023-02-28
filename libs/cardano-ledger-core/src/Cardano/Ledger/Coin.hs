@@ -77,10 +77,10 @@ instance DecCBOR Coin where
       (Coin <$> decodeInteger)
 
 newtype DeltaCoin = DeltaCoin Integer
-  deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, ToCBOR, DecCBOR, EncCBOR, HeapWords)
+  deriving (Eq, Ord, Generic, Enum, NoThunks, HeapWords)
   deriving (Show) via Quiet DeltaCoin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (PartialOrd)
+  deriving newtype (PartialOrd, NFData, ToCBOR, DecCBOR, EncCBOR, ToJSON, FromJSON)
 
 addDeltaCoin :: Coin -> DeltaCoin -> Coin
 addDeltaCoin (Coin x) (DeltaCoin y) = Coin (x + y)

@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -44,7 +45,7 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Core (EraCrypto, EraPParams, PParams, ppPoolDepositL)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -61,6 +62,7 @@ import Cardano.Ledger.UMapCompact (RDPair (..), UMap (UMap), View (Delegations, 
 import qualified Cardano.Ledger.UMapCompact as UM
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
 import Data.Map.Strict (Map)
@@ -81,14 +83,21 @@ instance NoThunks (FutureGenDeleg c)
 
 instance NFData (FutureGenDeleg c)
 
-instance CC.Crypto c => EncCBOR (FutureGenDeleg c) where
+instance Crypto c => EncCBOR (FutureGenDeleg c) where
   encCBOR (FutureGenDeleg a b) =
     encodeListLen 2 <> encCBOR a <> encCBOR b
 
-instance CC.Crypto c => DecCBOR (FutureGenDeleg c) where
+instance Crypto c => DecCBOR (FutureGenDeleg c) where
   decCBOR =
     decodeRecordNamed "FutureGenDeleg" (const 2) $
       FutureGenDeleg <$> decCBOR <*> decCBOR
+
+instance Crypto c => ToJSON (FutureGenDeleg c) where
+  toJSON fGenDeleg =
+    object
+      [ "fGenDelegSlot" .= fGenDelegSlot fGenDeleg
+      , "fGenDelegGenKeyHash" .= fGenDelegGenKeyHash fGenDeleg
+      ]
 
 -- | InstantaneousRewards captures the pending changes to the ledger
 -- state caused by MIR certificates. It consists of two mappings,
@@ -110,6 +119,18 @@ instance NoThunks (InstantaneousRewards c)
 
 instance NFData (InstantaneousRewards c)
 
+instance Crypto c => ToJSON (InstantaneousRewards c) where
+  toJSON = object . toInstantaneousRewardsPair
+  toEncoding = pairs . mconcat . toInstantaneousRewardsPair
+
+toInstantaneousRewardsPair :: (KeyValue a, Crypto c) => InstantaneousRewards c -> [a]
+toInstantaneousRewardsPair InstantaneousRewards {..} =
+  [ "iRReserves" .= iRReserves
+  , "iRTreasury" .= iRTreasury
+  , "deltaReserves" .= deltaReserves
+  , "deltaTreasury" .= deltaTreasury
+  ]
+
 -- | The state used by the DELEG rule, which roughly tracks stake
 -- delegation and some governance features.
 data DState c = DState
@@ -130,7 +151,7 @@ instance NoThunks (InstantaneousRewards c) => NoThunks (DState c)
 
 instance NFData (InstantaneousRewards c) => NFData (DState c)
 
-instance (CC.Crypto c, EncCBOR (InstantaneousRewards c)) => EncCBOR (DState c) where
+instance (Crypto c, EncCBOR (InstantaneousRewards c)) => EncCBOR (DState c) where
   encCBOR (DState unified fgs gs ir) =
     encodeListLen 4
       <> encCBOR unified
@@ -138,7 +159,7 @@ instance (CC.Crypto c, EncCBOR (InstantaneousRewards c)) => EncCBOR (DState c) w
       <> encCBOR gs
       <> encCBOR ir
 
-instance (CC.Crypto c, DecShareCBOR (InstantaneousRewards c)) => DecShareCBOR (DState c) where
+instance (Crypto c, DecShareCBOR (InstantaneousRewards c)) => DecShareCBOR (DState c) where
   type
     Share (DState c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
@@ -149,6 +170,18 @@ instance (CC.Crypto c, DecShareCBOR (InstantaneousRewards c)) => DecShareCBOR (D
       gs <- lift decCBOR
       ir <- decSharePlusLensCBOR _1
       pure $ DState unified fgs gs ir
+
+instance Crypto c => ToJSON (DState c) where
+  toJSON = object . toDStatePair
+  toEncoding = pairs . mconcat . toDStatePair
+
+toDStatePair :: (KeyValue a, Crypto c) => DState c -> [a]
+toDStatePair DState {..} =
+  [ "unified" .= dsUnified
+  , "fGenDelegs" .= Map.toList (dsFutureGenDelegs)
+  , "genDelegs" .= dsGenDelegs
+  , "irwd" .= dsIRewards
+  ]
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState c = PState
@@ -171,14 +204,12 @@ instance NoThunks (PState c)
 
 instance NFData (PState c)
 
-instance CC.Crypto c => EncCBOR (PState c) where
+instance Crypto c => EncCBOR (PState c) where
   encCBOR (PState a b c d) =
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
-instance CC.Crypto c => DecShareCBOR (PState c) where
-  type
-    Share (PState c) =
-      Interns (KeyHash 'StakePool c)
+instance Crypto c => DecShareCBOR (PState c) where
+  type Share (PState c) = Interns (KeyHash 'StakePool c)
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
     psStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
@@ -186,8 +217,20 @@ instance CC.Crypto c => DecShareCBOR (PState c) where
     psDeposits <- decSharePlusLensCBOR (toMemptyLens _1 id)
     pure PState {psStakePoolParams, psFutureStakePoolParams, psRetiring, psDeposits}
 
-instance (CC.Crypto c, DecShareCBOR (PState c)) => DecCBOR (PState c) where
+instance (Crypto c, DecShareCBOR (PState c)) => DecCBOR (PState c) where
   decCBOR = decNoShareCBOR
+
+instance Crypto c => ToJSON (PState c) where
+  toJSON = object . toPStatePair
+  toEncoding = pairs . mconcat . toPStatePair
+
+toPStatePair :: (KeyValue a, Crypto c) => PState c -> [a]
+toPStatePair PState {..} =
+  [ "stakePoolParams" .= psStakePoolParams
+  , "futureStakePoolParams" .= psFutureStakePoolParams
+  , "retiring" .= psRetiring
+  , "deposits" .= psDeposits
+  ]
 
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
@@ -201,11 +244,11 @@ instance NoThunks (InstantaneousRewards c) => NoThunks (DPState c)
 
 instance NFData (InstantaneousRewards c) => NFData (DPState c)
 
-instance CC.Crypto c => EncCBOR (InstantaneousRewards c) where
+instance Crypto c => EncCBOR (InstantaneousRewards c) where
   encCBOR (InstantaneousRewards irR irT dR dT) =
     encodeListLen 4 <> encCBOR irR <> encCBOR irT <> encCBOR dR <> encCBOR dT
 
-instance CC.Crypto c => DecShareCBOR (InstantaneousRewards c) where
+instance Crypto c => DecShareCBOR (InstantaneousRewards c) where
   type Share (InstantaneousRewards c) = Interns (Credential 'Staking c)
   decSharePlusCBOR =
     decodeRecordNamedT "InstantaneousRewards" (const 4) $ do
@@ -215,21 +258,14 @@ instance CC.Crypto c => DecShareCBOR (InstantaneousRewards c) where
       dT <- lift decCBOR
       pure $ InstantaneousRewards irR irT dR dT
 
-instance
-  CC.Crypto c =>
-  EncCBOR (DPState c)
-  where
+instance Crypto c => EncCBOR (DPState c) where
   encCBOR DPState {dpsPState, dpsDState} =
     encodeListLen 2
       <> encCBOR dpsPState -- We get better sharing when encoding pstate before dstate
       <> encCBOR dpsDState
 
-instance CC.Crypto c => DecShareCBOR (DPState c) where
-  type
-    Share (DPState c) =
-      ( Interns (Credential 'Staking c)
-      , Interns (KeyHash 'StakePool c)
-      )
+instance Crypto c => DecShareCBOR (DPState c) where
+  type Share (DPState c) = (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
   decSharePlusCBOR = decodeRecordNamedT "DPState" (const 2) $ do
     dpsPState <- decSharePlusLensCBOR _2
     dpsDState <- decSharePlusCBOR
@@ -237,6 +273,16 @@ instance CC.Crypto c => DecShareCBOR (DPState c) where
 
 instance Default (DPState c) where
   def = DPState def def
+
+instance Crypto c => ToJSON (DPState c) where
+  toJSON = object . toDPStatePairs
+  toEncoding = pairs . mconcat . toDPStatePairs
+
+toDPStatePairs :: (KeyValue a, Crypto c) => DPState c -> [a]
+toDPStatePairs DPState {..} =
+  [ "dstate" .= dpsDState
+  , "pstate" .= dpsPState
+  ]
 
 instance Default (InstantaneousRewards c) where
   def = InstantaneousRewards Map.empty Map.empty mempty mempty
