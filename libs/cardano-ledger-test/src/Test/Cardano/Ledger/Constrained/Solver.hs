@@ -222,13 +222,13 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
         s <- simplify expr
         let SetR a = termRep expr
         Refl <- sameRep rng a
-        mapSpec (SzExact (Set.size s)) RelAny (RngRel (RelEqual rng s))
+        mapSpec (SzLeast (Set.size s)) RelAny (RngRel (RelEqual rng s))
   (Rng (Var v2) :=: expr)
     | Name v1 == Name v2 -> do
         s <- simplify expr
         let SetR a = termRep expr
         Refl <- sameRep rng a
-        mapSpec (SzExact (Set.size s)) RelAny (RngRel (RelEqual rng s))
+        mapSpec (SzLeast (Set.size s)) RelAny (RngRel (RelEqual rng s))
   (Rng (Var v2) :<=: expr)
     | Name v1 == Name v2 -> do
         With _ <- hasOrd rng (Id undefined)
@@ -281,6 +281,9 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
 
+-- | We are solving for a (V era (Map d r)). This must occor exactly once in the [Sum era c]
+--   That can only happen in a (RngSum cond c) or a (RngProj cond rep c) constructor of 'Sum'
+--   Because we don't know if 'c' can have negative values, we do the summation as an Integer
 solveMapSummands ::
   Adds c =>
   [String] ->
@@ -375,7 +378,7 @@ solveSum v1@(V _ r _) c =
         (Negate (Var v2) :=: expr) | Name v1 == Name v2 -> do
           Refl <- sameRep r DeltaCoinR
           DeltaCoin n <- simplifyAtType DeltaCoinR expr
-          pure $ SumSpec EQL (Just (DeltaCoin (-n))) Nothing
+          pure $ SumSpec EQL Nothing (Just (DeltaCoin (-n)))
         (Random (Var v2)) | Name v1 == Name v2 -> pure $ SumSpec EQL Nothing Nothing
         (SumsTo cond (Delta (Fixed (Lit CoinR (Coin n)))) xs@(_ : _)) -> do
           rhsTotal <- sumWithUniqueV v1 xs
@@ -431,6 +434,10 @@ unique v1 (c, ns) (One (Var v2)) =
     then pure (c, Name v1 : ns)
     else failT ["Unexpected Name in 'unique' " ++ show v2]
 unique v1 (c, ns) (One (Delta (Var v2@(V _ CoinR _)))) =
+  if Name v1 == Name v2
+    then pure (c, Name v1 : ns)
+    else failT ["Unexpected Name in 'unique' " ++ show v2]
+unique v1 (c, ns) (One (Negate (Var v2@(V _nam DeltaCoinR _)))) =
   if Name v1 == Name v2
     then pure (c, Name v1 : ns)
     else failT ["Unexpected Name in 'unique' " ++ show v2]
@@ -535,7 +542,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
   cs -> case r1 of
     MapR dom rng -> do
       spec <- solveMaps v1 cs
-      pure $ genFromMapSpec nam (genRep dom) (genRep rng) spec
+      pure $ genFromMapSpec v1 (map show cs) (genRep dom) (genRep rng) spec
     SetR r -> do
       spec <- solveSets v1 cs
       pure $ genFromSetSpec [] (genRep r) spec

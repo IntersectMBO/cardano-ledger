@@ -34,7 +34,9 @@ suchThatErr msgs gen p = do
 -- =======================================================================
 
 setSized :: Ord a => [String] -> Int -> Gen a -> Gen (Set a)
-setSized mess size gen = do set <- (Set.fromList <$> vectorOf size gen); fixSet mess (size * 10) size gen set
+setSized mess size gen = do
+  set <- (Set.fromList <$> vectorOf size gen)
+  fixSet (("setSized " ++ show size) : mess) 1000 {-(size * 4)-} size gen set
 
 fixSet :: Ord a => [String] -> Int -> Int -> Gen a -> Set a -> Gen (Set a)
 fixSet mess numtrys size genA s = help numtrys s
@@ -48,15 +50,17 @@ fixSet mess numtrys size genA s = help numtrys s
       EQ -> pure set
       GT -> help (trys - 1) (iterate Set.deleteMin set !! (Set.size set - size))
       LT -> do
-        -- new <- Set.fromList <$> vectorOf (size - Set.size set) genA
-        -- help (trys - 1) (Set.union new set)
-        x <- genA
-        if Set.member x set
-          then help (trys - 1) set
-          else help trys (Set.insert x set)
+        new <- Set.fromList <$> vectorOf (size - Set.size set) genA
+        help (trys - 1) (Set.union new set)
+
+{-
+x <- genA
+if Set.member x set
+  then help (trys - 1) set
+  else help trys (Set.insert x set) -}
 
 mapSized :: Ord a => [String] -> Int -> Gen a -> Gen b -> Gen (Map a b)
-mapSized mess size genA genB = setSized (("From mapSized " ++ show size) : mess) size genA >>= addRange
+mapSized mess size genA genB = setSized (("mapSized " ++ show size) : mess) size genA >>= addRange
   where
     addRange set = Set.foldl' accum (pure Map.empty) set
     accum ansGen dom = do ans <- ansGen; rng <- genB; pure (Map.insert dom rng ans)
@@ -66,7 +70,7 @@ coinSized n = pure (Coin (fromIntegral n))
 
 setFromSubsetWithSize :: Ord a => [String] -> Set a -> Int -> Gen a -> Gen (Set a)
 setFromSubsetWithSize mess subset n gen = do
-  additions <- setSized (("From setFromSubsetWithSize " ++ show n) : mess) n gen
+  additions <- setSized (("setFromSubsetWithSize " ++ show n) : mess) n gen
   pure (Set.union subset additions)
 
 subsetFromSetWithSize :: Ord a => [String] -> Set a -> Int -> Gen (Set a)
@@ -83,7 +87,7 @@ subsetFromSetWithSize mess set n = help set Set.empty n
             mess
       | count <= 0 = pure target
       | otherwise = do
-          item <- itemFromSet ("From subsetFromSetWithSize" : mess) source
+          item <- itemFromSet (("subsetFromSetWithSize " ++ show n) : mess) source
           help (Set.delete item source) (Set.insert item target) (count - 1)
 
 subsetFromSetWithSize2 :: [String] -> Set a -> Int -> Gen (Set a)
@@ -108,7 +112,7 @@ subsetFromSetWithSize2 mess set n
 
 mapFromSubset :: Ord a => [String] -> Map a b -> Int -> Gen a -> Gen b -> Gen (Map a b)
 mapFromSubset mess subset n genA genB = do
-  additions <- mapSized ("From MapFromSubset " : mess) n genA genB
+  additions <- mapSized (("mapFromSubset " ++ show n) : mess) n genA genB
   pure (Map.union subset additions)
 
 mapFromSet :: Ord a => Set a -> Gen b -> Gen (Map a b)
@@ -143,8 +147,10 @@ subsetFromSet mess set = do
 
 superSetFromSet :: Ord a => Gen a -> Set a -> Gen (Set a)
 superSetFromSet genA setA = do
-  Positive n <- arbitrary
-  superSetFromSetWithSize ["supersetFromSet"] (n + Set.size setA) genA setA
+  n <- choose (0, 4)
+  if n == 0
+    then pure setA
+    else superSetFromSetWithSize ["supersetFromSet " ++ show n] (n + Set.size setA) genA setA
 
 superSetFromSetWithSize :: Ord a => [String] -> Int -> Gen a -> Set a -> Gen (Set a)
 superSetFromSetWithSize mess n _ setA

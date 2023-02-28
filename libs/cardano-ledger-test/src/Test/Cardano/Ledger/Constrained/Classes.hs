@@ -64,6 +64,7 @@ import Test.QuickCheck (
   frequency,
   shuffle,
   vectorOf,
+  -- generate,
  )
 import Prelude hiding (subtract)
 
@@ -73,6 +74,7 @@ import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
 
 -- import  Cardano.Ledger.Conway.Governance(ConwayTallyState(..))
 -- import Lens.Micro
+import GHC.Real (denominator, numerator, (%))
 
 -- =====================================================================
 -- Partitioning a value into a bunch of pieces, that sum to that value
@@ -180,6 +182,8 @@ class (Ord x, Show x) => Adds x where
   addCount :: x -> Int
   fromCount :: Int -> x
   greater :: Int -> Gen x -- Generate an 'x' larger than 'Int'
+  fromI :: [String] -> Int -> x
+  toI :: x -> Int
 
   -- | Adjusts the total 'x' to account for differences in SumCond's EQL LTH LTE GTH and GTE
   adjust :: [String] -> SumCond -> Int -> x -> Gen x
@@ -207,6 +211,9 @@ instance Adds Word64 where
   fromCount x = fromIntegral x
   greater n = fromIntegral <$> choose (n + 1, n + greaterDelta)
   adjust msgs cond count total = fromInteger <$> adjustTotalForCond msgs cond (fromIntegral count) (fromIntegral total)
+  fromI _ n | n >= 0 = fromIntegral n
+  fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Word64.") msgs
+  toI = fromIntegral
 
 instance Adds Int where
   add = (+)
@@ -217,6 +224,8 @@ instance Adds Int where
   fromCount x = x
   greater n = choose (n + 1, n + greaterDelta)
   adjust msgs cond count total = fromInteger <$> adjustTotalForCond msgs cond (fromIntegral count) (fromIntegral total)
+  fromI _ n = n
+  toI n = n
 
 instance Adds Natural where
   add = (+)
@@ -230,6 +239,9 @@ instance Adds Natural where
   fromCount x = fromIntegral x
   greater n = fromIntegral <$> choose (n + 1, n + greaterDelta)
   adjust msgs cond count total = fromInteger <$> adjustTotalForCond msgs cond (fromIntegral count) (fromIntegral total)
+  fromI _ n | n >= 0 = fromIntegral n
+  fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Natural.") msgs
+  toI = fromIntegral
 
 instance Adds Rational where
   add = (+)
@@ -241,6 +253,8 @@ instance Adds Rational where
   greater n = fromIntegral <$> choose (n + 1, n + greaterDelta)
   adjust _ EQL _ x = pure x
   adjust msgs _ _ _ = errorMess ("partition for Rational only works for EQL") msgs
+  fromI _ n = (fromIntegral n * 1000) % 1
+  toI r = (round r) `div` 1000
 
 instance Adds Coin where
   add = (<+>)
@@ -254,21 +268,31 @@ instance Adds Coin where
   fromCount n = (Coin (fromIntegral n))
   greater n = (Coin . fromIntegral) <$> choose (n + 1, n + greaterDelta)
   adjust msgs cond count (Coin total) = Coin <$> adjustTotalForCond msgs cond (fromIntegral count) total
+  fromI _ n | n >= 0 = Coin (fromIntegral n)
+  fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Coin.") msgs
+  toI (Coin n) = fromIntegral n
 
 instance Adds DeltaCoin where
   add = (<+>)
   subtract _ (DeltaCoin n) (DeltaCoin m) = DeltaCoin (n - m)
   zero = DeltaCoin 0
-  partition msgs size _ | size < 1 = errorMess ("DeltaCoin partition applied to bad size: " ++ show size) msgs
-  partition _ 1 total = pure [total]
-  partition msgs n total = do
-    x <- arbitrary
-    xs <- partition msgs (n - 1) (subtract [] total x)
-    pure (x : xs)
+  partition msgs size total = goDeltaCoin (DeltaCoin (-4)) msgs size total
+
+  {-
+    partition msgs size _ | size < 1 = errorMess ("DeltaCoin partition applied to bad size: " ++ show size) msgs
+    partition _ 1 total = pure [total]
+    partition msgs n total = do
+      x <- arbitrary
+      xs <- partition msgs (n - 1) (subtract [] total x)
+      pure (x : xs)
+  -}
   addCount (DeltaCoin n) = if n < 0 then fromIntegral (-n) else fromIntegral n
   fromCount n = DeltaCoin (fromIntegral n)
   greater n = (DeltaCoin . fromIntegral) <$> choose (n + 1, n + greaterDelta)
-  adjust msgs cond count (DeltaCoin total) = DeltaCoin <$> adjustTotalForCond msgs cond (fromIntegral count) total
+  adjust msgs cond count (DeltaCoin total) =
+    DeltaCoin <$> adjustTotalForCond msgs cond (fromIntegral count) total
+  fromI _ n = DeltaCoin (fromIntegral n)
+  toI (DeltaCoin n) = (fromIntegral n)
 
 adjustTotalForCond :: [String] -> SumCond -> Integer -> Integer -> Gen Integer
 adjustTotalForCond msgs condition count total = case condition of
@@ -697,11 +721,123 @@ instance Semigroup SumCond where
   GTE <> GTH = GTH
   GTE <> GTE = GTE
 
-runCond :: Adds c => SumCond -> c -> c -> Bool
+runCond :: Ord c => SumCond -> c -> c -> Bool
 runCond EQL x y = x == y
 runCond LTH x y = x < y
 runCond LTE x y = x <= y
 runCond GTH x y = x > y
 runCond GTE x y = x >= y
 runCond CondAny _ _ = True
-runCond (CondNever xs) _ _ = error (unlines xs)
+runCond (CondNever _) _ _ = False
+
+-- ==========================================================================
+-- ==========================================================================
+
+-- | Generate a list of length 'size' that sums to 'total', where the minimum element is (>= 'smallest')
+integerPartition :: [String] -> String -> Integer -> Int -> Integer -> Gen [Integer]
+integerPartition msgs typname smallest size total
+  | size == 0 = errorMess (zeroCount "integerPartition" total) msgs
+  | fromIntegral size > total =
+      errorMess
+        ( "Can't partition "
+            ++ show total
+            ++ " into "
+            ++ show size
+            ++ " positive pieces at type "
+            ++ typname
+        )
+        msgs
+  | size < 1 =
+      errorMess
+        ( "Can only make a partion of positive number of pieces: "
+            ++ show size
+            ++ " total: "
+            ++ show total
+            ++ " smallest: "
+            ++ show smallest
+        )
+        msgs
+  --   | smallest < 0 = errorMess ("The minimum choice must be positive : " ++ show smallest) msgs
+  | smallest * (fromIntegral size) > total =
+      errorMess
+        ( "Can't partition "
+            ++ show total
+            ++ " into "
+            ++ show size
+            ++ " pieces, each (>= "
+            ++ show smallest
+            ++ ")"
+        )
+        msgs
+  | total < 1 = errorMess ("Total must be positive: " ++ show total) msgs
+  | otherwise =
+      let mean = total `div` (fromIntegral (size + 1))
+          go 1 total1
+            | total1 < 1 = errorMess ("Ran out of choices(2), total went negative: " ++ show total1) msgs
+            | otherwise = pure [total1]
+          go 2 total1 = do
+            z <- choose (smallest, total1 - 1)
+            pure [z, total1 - z]
+          go size1 total1 = do
+            let hi =
+                  min
+                    (max 1 mean)
+                    (total1 - (size1 - 1))
+            x <- choose (smallest, hi)
+            xs <- go (size1 - 1) (total1 - x)
+            pure (x : xs)
+       in do
+            ws <- go (fromIntegral size) total
+            shuffle ws
+
+goRational :: Rational -> [String] -> Int -> Rational -> Gen [Rational]
+goRational smallest msgs size total = do
+  let scale = lcm (denominator smallest) (denominator total)
+      iSmallest = numerator (smallest * (scale % 1))
+      iTotal = numerator (total * (scale % 1))
+  is <- integerPartition msgs ("Rational*" ++ show scale) iSmallest size iTotal
+  pure (map (\i -> i % scale) is)
+
+goCoin :: Coin -> Int -> Coin -> Gen [Coin]
+goCoin (Coin small) n (Coin total) = map Coin <$> integerPartition [] "Coin" small n total
+
+goDeltaCoin :: DeltaCoin -> [String] -> Int -> DeltaCoin -> Gen [DeltaCoin]
+goDeltaCoin (DeltaCoin small) msgs n (DeltaCoin total) = map DeltaCoin <$> integerPartition msgs "DeltaCoin" small n total
+
+goInt :: Int -> Int -> Int -> Gen [Int]
+goInt small n total = map fromIntegral <$> integerPartition [] "Int" (fromIntegral small) n (fromIntegral total)
+
+goWord64 :: Word64 -> Int -> Word64 -> Gen [Word64]
+goWord64 small n total = map fromIntegral <$> integerPartition [] "Word64" (fromIntegral small) n (fromIntegral total)
+
+switch :: SumCond -> SumCond
+switch EQL = EQL
+switch LTH = GTE
+switch LTE = GTH
+switch GTH = LTE
+switch GTE = LTH
+switch x = x
+
+{-
+nonNegSumV :: forall c. Adds c => [String] -> (String,SumCond,Integer) -> Gen c
+nonNegSumV msgs (_,EQL,n) | n >= 0 = pure (fromI msgs n)
+nonNegSumV msgs (_,LTH,n) | n >= 1 = fromI msgs <$> choose(0,n-1)
+nonNegSumV msgs (_,LTE,n) | n >= 0 = fromI msgs <$> choose(0,n)
+nonNegSumV msgs (_,GTH,n) =
+  if n>=0
+     then fromI msgs <$> choose(n+1,n+5)
+     else fromI msgs <$> choose(1,5)
+nonNegSumV msgs (_,GTE,n) =
+  if n>=0
+     then fromI msgs <$> choose(n,n+5)
+     else fromI msgs <$> choose(1,5)
+nonNegSumV msgs (s,cond,n) = errorMess ("Can't solve: "++s++show cond++"("++show (fromI @c msgs n)++")") msgs
+
+anySumV :: forall c. Adds c => [String] -> (String,SumCond,Integer) -> Gen c
+anySumV msgs (_,EQL,n) = pure (fromI msgs n)
+anySumV msgs (_,LTH,n) = fromI msgs <$> choose(n-4,n-1)
+anySumV msgs (_,LTE,n) = fromI msgs <$> choose(n-4,n)
+anySumV msgs (_,GTH,n) = fromI msgs <$> choose(n+1,n+5)
+anySumV msgs (_,GTE,n) = fromI msgs <$> choose(n,n+5)
+anySumV msgs (s,cond,n) = errorMess ("Can't solve: "++s++show cond++"("++show (fromI @c msgs n)++")") msgs
+-}

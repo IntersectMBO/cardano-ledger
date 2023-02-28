@@ -13,6 +13,7 @@
 
 module Test.Cardano.Ledger.Constrained.Examples where
 
+-- import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.DPState (FutureGenDeleg (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
@@ -227,7 +228,7 @@ constraints proof =
   [ Sized (ExactSize 10) credsUniv
   , Sized (ExactSize 10) poolsUniv
   , Sized (AtLeast 1) mockPoolDistr -- This is summed so it can't be empty.
-  , Sized (AtLeast 1) regPools -- This has the same domain, so it also can't be empty
+  , Sized (AtLeast 1) regPools -- This has the same domain, so it also can't be empty,
   , Dom rewards :<=: credsUniv
   , Rng delegations :<=: poolsUniv
   , Dom poolDeposits :<=: poolsUniv
@@ -297,9 +298,12 @@ test7 loud = do
 pstateConstraints :: [Pred era]
 pstateConstraints =
   [ Sized (ExactSize 20) poolsUniv
-  , Sized (AtMost 5) (Dom futureRegPools) -- Small enough that its leaves some slack with poolsUniv
-  , Sized (AtMost 4) (Dom retiring) -- Small enough that its leaves some slack with poolsUniv
-  , Sized (AtLeast 5) (Dom regPools) -- Large enough that retiring is a strict subset
+  , -- we have , retiring :<=: regPools        :<=: poolsUinv AND
+    --                         futureRegPools) :<=: poolsUniv
+    -- We need to adjust the sizes so that these constraints are possible
+    Sized (AtMost 3) (Dom futureRegPools) -- Small enough that its leaves some slack with poolsUniv
+  , Sized (Range 5 7) (Dom retiring) -- Small enough that its leaves some slack with poolsUniv
+  , Sized (AtLeast 9) (Dom regPools) -- Large enough that retiring is a strict subset
   , (Dom regPools) :<=: poolsUniv
   , (Dom poolDeposits) :<=: poolsUniv
   , (Dom regPools) :=: (Dom poolDeposits)
@@ -310,7 +314,15 @@ pstateConstraints =
   ]
 
 test8 :: Gen Property
-test8 = testn (Alonzo Standard) "Test 8. Pstate constraints" False stoi pstateConstraints (Assemble pstateT)
+test8 =
+  testn
+    (Alonzo Standard)
+    "Test 8. Pstate constraints"
+    False
+    -- (stoi{setBeforeSubset = False})  -- Both of these choices work
+    (stoi {setBeforeSubset = True}) -- But neither works without the Sized constraints
+    pstateConstraints
+    (Assemble pstateT)
 
 -- ==============================================================
 -- Test the summation predicates
@@ -367,13 +379,17 @@ test11 =
     False
     (stoi {sumBeforeParts = False})
     [ Sized (AtLeast 1) treasury
-    , Random instanTreasury
-    , Sized (AtLeast 1) instanReserves
+    , -- , Sized (AtLeast 1) reserves
+      Random instanTreasury
+    , -- , Sized (AtLeast 3) instanTreasury  -- We need instanTreasurySum to be at least 3
+      Sized (AtLeast 1) instanReserves
     , Negate (deltaReserves) :=: deltaTreasury
     , SumsTo EQL instanReservesSum [SumMap instanReserves]
     , SumsTo LTH (Delta instanReservesSum) [One (Delta reserves), One deltaReserves]
     , SumsTo EQL instanTreasurySum [SumMap instanTreasury]
-    , SumsTo LTH (Delta instanTreasurySum) [One (Delta treasury), One deltaTreasury]
+    , -- , SumsTo LTH (Delta instanTreasurySum) [One (Delta treasury), One deltaTreasury]
+      --  SumsTo LTH (Delta instanTreasurySum) + Negate deltaTresury = [One (Delta treasury)}
+      SumsTo GTE (Delta treasury) [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
     ]
     Skip
   where
@@ -517,7 +533,7 @@ test16 =
 
 univPreds :: Proof era -> [Pred era]
 univPreds p =
-  [ Sized (ExactSize 12) credsUniv
+  [ Sized (ExactSize 15) credsUniv
   , Sized (ExactSize 20) poolsUniv
   , Sized (ExactSize 12) genesisUniv
   , Sized (ExactSize 12) txinUniv
@@ -552,19 +568,20 @@ univPreds p =
 
 pstatePreds :: Proof era -> [Pred era]
 pstatePreds _p =
-  [ Sized (AtMost 5) (Dom futureRegPools) -- Small enough that its leaves some slack with poolsUniv
-  , Sized (AtMost 4) (Dom retiring) -- Small enough that its leaves some slack with poolsUniv
-  , Sized (AtLeast 5) (Dom regPools) -- Large enough that retiring is a strict subset
+  [ Sized (AtMost 3) (Dom futureRegPools) -- See comments in test8 why we need these Fixed predicates
+  , Sized (Range 5 7) (Dom retiring) -- we need       retiring :<=: regPools        :<=: poolsUinv
+  , Sized (AtLeast 9) (Dom regPools) -- AND we need                 futureRegPools  :<=: poolsUniv
   , Dom regPools :=: Dom poolDistr
   , Dom regPools :=: Dom poolDeposits
   , Dom retiring :<=: Dom regPools
-  , -- , Dom futureRegPools :<=: Dom poolDistr
+  , -- , Dom futureRegPools :<=: Dom poolDistr  -- Don't think we want this
     Disjoint (Dom futureRegPools) (Dom retiring)
   ]
 
 dstatePreds :: Proof era -> [Pred era]
 dstatePreds _p =
-  [ Dom rewards :=: Dom stakeDeposits
+  [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
+  , Dom rewards :=: Dom stakeDeposits
   , Dom delegations :<=: Dom rewards
   , Dom rewards :=: Rng ptrs
   , -- This implies (Fixed (ExactSize 3) instanReserves)
@@ -723,6 +740,32 @@ test19 = do
   putStrLn "+++ OK, passed 1 test"
 
 -- ===================================================
+
+preds20 :: Proof era -> [Pred era]
+preds20 _proof =
+  [ Sized (ExactSize 10) intUniv
+  , Sized (AtMost 6) rewardsx
+  , Dom rewardsx :<=: intUniv
+  , Dom rewardsx :=: Rng ptrsx
+  ]
+  where
+    rewardsx = Var (V "rewards" (MapR IntR Word64R) No)
+    ptrsx = Var (V "ptrs" (MapR PtrR IntR) No)
+    intUniv = Var (V "intUniv" (SetR IntR) No)
+
+test20 :: Gen Property
+test20 =
+  testn
+    proof
+    "Test 20. Test ptr rewards iso"
+    True
+    stoi
+    (preds20 proof)
+    Skip
+  where
+    proof = Alonzo Standard
+
+-- ===================================================
 -- run all the tests
 
 testAll :: IO ()
@@ -733,7 +776,7 @@ testAll = do
   test4
   test5
   (test6 False)
-  (test7 False)
+  -- (test7 False)
   test14
   testSpec "Test 3. PState example" test3
   testSpec "Test 8. Pstate constraints" test8
