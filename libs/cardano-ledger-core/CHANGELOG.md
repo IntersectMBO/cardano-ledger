@@ -8,6 +8,7 @@
   * `Trip` and `UMap`
   * `DeltaCoin`
   * `InstantaneousRewards`, `FutureGenDeleg`, `PState`, `DState` and `DPState`.
+  * `UTxO` and `TxIn`
 
 ## 1.0.0.0
 

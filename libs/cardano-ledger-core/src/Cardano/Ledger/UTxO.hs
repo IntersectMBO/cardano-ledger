@@ -61,6 +61,7 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
+import Data.Aeson (ToJSON)
 import Data.Coerce (coerce)
 import Data.Default.Class (Default)
 import Data.Foldable (foldMap', toList)
@@ -115,6 +116,8 @@ deriving via
   Quiet (UTxO era)
   instance
     (Show (TxOut era), Crypto (EraCrypto era)) => Show (UTxO era)
+
+deriving newtype instance (Era era, ToJSON (TxOut era)) => ToJSON (UTxO era)
 
 -- | Compute the UTxO inputs of a transaction.
 -- txins has the same problems as txouts, see notes below.

@@ -23,16 +23,20 @@ module Cardano.Ledger.TxIn (
 )
 where
 
+import Cardano.Crypto.Hash.Class (hashToTextAsHex)
 import Cardano.HeapWords (HeapWords (..))
 import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON (..))
+import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import Data.Text (Text)
+import qualified Data.Text as Text
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
@@ -63,6 +67,19 @@ deriving newtype instance Crypto c => NFData (TxId c)
 instance Crypto c => HeapWords (TxIn c) where
   heapWords (TxIn txId _) =
     2 + HW.heapWords txId + 1 {- txIx -}
+
+instance Crypto c => ToJSON (TxIn c) where
+  toJSON = toJSON . txInToText
+  toEncoding = toEncoding . txInToText
+
+instance Crypto c => ToJSONKey (TxIn c) where
+  toJSONKey = toJSONKeyText txInToText
+
+txInToText :: TxIn c -> Text
+txInToText (TxIn (TxId txidHash) ix) =
+  hashToTextAsHex (extractHash txidHash)
+    <> Text.pack "#"
+    <> Text.pack (show ix)
 
 -- | The input of a UTxO.
 data TxIn c = TxIn !(TxId c) {-# UNPACK #-} !TxIx
