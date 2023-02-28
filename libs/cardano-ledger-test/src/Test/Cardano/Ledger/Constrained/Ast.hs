@@ -23,11 +23,11 @@ import Data.Text (Text, pack)
 import qualified Data.Universe as Univ (Any (..))
 import Data.Word (Word64)
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Count (..), Sizeable (..), SumCond (..), Sums (..), runCond)
-import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
+import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Count (..), Sizeable (..), Sums (..))
 import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env, Field (..), Name (..), V (..), findVar, storeVar)
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
-import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), Size (..), synopsis, testEql, (:~:) (Refl))
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), runOrdCond, runSize)
+import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), synopsis, testEql, (:~:) (Refl))
 
 -- ================================================
 
@@ -53,7 +53,7 @@ data Pred era where
   (:=:) :: Eq a => Term era a -> Term era a -> Pred era
   (:<=:) :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
   Disjoint :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
-  SumsTo :: Adds c => SumCond -> Term era c -> [Sum era c] -> Pred era
+  SumsTo :: Adds c => OrdCond -> Term era c -> [Sum era c] -> Pred era
   Random :: Term era t -> Pred era
   HasDom :: Ord d => Term era (Map d r) -> Term era (Set d) -> Pred era
   Component :: Term era t -> [AnyF era t] -> Pred era
@@ -392,7 +392,7 @@ runPred env (SumsTo cond x ys) = do
   x2 <- runTerm env x
   is <- mapM (runSum env) ys
   let y2 = List.foldl' add zero is
-  pure (runCond cond x2 y2)
+  pure (runOrdCond cond x2 y2)
 runPred _ (Random _) = pure True
 runPred env (HasDom m s) = do
   m2 <- runTerm env m
@@ -405,13 +405,6 @@ runPred env (CanFollow x y) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
   pure (canFollow x2 y2)
-
-runSize :: Int -> Size -> Bool
-runSize _ (SzNever xs) = errorMess "SzNever in runSizeSpec" xs
-runSize _ SzAny = True
-runSize n (SzLeast m) = n >= m
-runSize n (SzMost m) = n <= m
-runSize n (SzRng i j) = n >= i && n <= j
 
 runComp :: Env era -> s -> AnyF era s -> Typed Bool
 runComp _ _ (AnyF (Field _ _ No)) = pure False

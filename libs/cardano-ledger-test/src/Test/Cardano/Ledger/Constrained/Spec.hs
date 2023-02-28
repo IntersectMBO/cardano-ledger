@@ -29,13 +29,10 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Debug.Trace (trace)
-import Test.Cardano.Ledger.Constrained.Ast (runSize)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
-  SumCond (..),
   Sums (..),
   projAdds,
-  runCond,
   sumAdds,
   --  anySumV,
   --  nonNegSumV,
@@ -52,9 +49,21 @@ import Test.Cardano.Ledger.Constrained.Combinators (
  )
 import Test.Cardano.Ledger.Constrained.Env (Access (No), V (..))
 import Test.Cardano.Ledger.Constrained.Monad
+import Test.Cardano.Ledger.Constrained.Size (
+  OrdCond (..),
+  Size (..),
+  SumV (..),
+  atleastdelta,
+  atmostany,
+  runOrdCond,
+  runSize,
+  seps,
+  sepsP,
+  vLeft,
+  vRight,
+ )
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
-  Size (..),
   genRep,
   synopsis,
   testEql,
@@ -81,27 +90,8 @@ import Prelude hiding (subtract)
 -- | used when we run tests, and we have to pick some concrete Era
 type TT = MaryEra C_Crypto
 
-seps :: [String] -> String
-seps xs = List.intercalate " " xs
-
-sepsP :: [String] -> String
-sepsP xs = "(" ++ List.intercalate " " xs ++ ")"
-
-sepn :: [String] -> String
-sepn xs = List.intercalate "\n   " xs
-
 -- ============================================================
 -- Operators for Size (Defined in TypeRep.hs)
-
--- | Used in tests so things don't get too large
-atleastdelta :: Int
-atleastdelta = 5
-
--- | Used in tests so things don't get too large
---   If we can't find an era using things of size 10
---   using things of size 100, isn't going to help.
-atmostany :: Int
-atmostany = 10
 
 maxSize :: Size -> Int
 maxSize SzAny = atmostany
@@ -221,6 +211,9 @@ showRelSpec (RelOper r x (Just y) z) = sepsP ["RelOper", synopsis (SetR r) x, sy
 showRelSpec (RelEqual r x) = sepsP ["RelEqual", synopsis (SetR r) x]
 showRelSpec (RelNever _) = "RelNever"
 
+synSet :: Ord t => Rep era t -> Set t -> String
+synSet r s = synopsis (SetR r) s
+
 mergeRelSpec :: RelSpec era d -> RelSpec era d -> RelSpec era d
 mergeRelSpec (RelNever xs) (RelNever ys) = RelNever (xs ++ ys)
 mergeRelSpec d@(RelNever _) _ = d
@@ -231,8 +224,28 @@ mergeRelSpec (RelEqual r x) y = mergeRelSpec (RelOper r x (Just x) Set.empty) y
 mergeRelSpec y (RelEqual r x) = mergeRelSpec y (RelOper r x (Just x) Set.empty)
 mergeRelSpec a@(RelOper r must1 may1 cant1) b@(RelOper _ must2 may2 cant2) =
   dropT $
-    explain ("merging " ++ show a ++ "\n        " ++ show b) $
-      relOper r (Set.union must1 must2) (interSectM may1 may2) (Set.union cant1 cant2)
+    explain ("merging a=" ++ show a ++ "\n        b=" ++ show b) $
+      requireAll
+        [
+          ( Set.disjoint must1 cant2
+          ,
+            [ "The 'must' set of a("
+                ++ synSet r must1
+                ++ ") is not disjoint from the 'cant' set of b("
+                ++ synSet r cant2
+            ]
+          )
+        ,
+          ( Set.disjoint must2 cant1
+          ,
+            [ "The 'must' set of b("
+                ++ synSet r must2
+                ++ ") is not disjoint from the 'cant' set of a("
+                ++ synSet r cant1
+            ]
+          )
+        ]
+        (relOper r (Set.union must1 must2) (interSectM may1 may2) (Set.union cant1 cant2))
 
 -- | Check that RelOper invariants hold
 relOper :: Ord d => Rep era d -> Set d -> Maybe (Set d) -> Set d -> Typed (RelSpec era d)
@@ -523,13 +536,13 @@ data RngSpec era rng where
   -- \^ The set must have Adds instance and add up to 'rng'
   RngSum ::
     Adds rng =>
-    SumCond ->
+    OrdCond ->
     rng ->
     RngSpec era rng
   -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
   RngProj ::
     Sums x c =>
-    SumCond ->
+    OrdCond ->
     Rep era c ->
     c ->
     RngSpec era x
@@ -576,7 +589,7 @@ mergeRngSpec a@(RngElem _ xs) b@(RngElem _ ys) =
     else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, "The elements are not the same"]
 mergeRngSpec a@(RngElem _xrep xs) b@(RngSum cond tot) =
   let computed = sumAdds xs
-   in if runCond cond computed tot
+   in if runOrdCond cond computed tot
         then a
         else
           RngNever
@@ -667,8 +680,8 @@ runRngSpec :: [r] -> RngSpec era r -> Bool
 runRngSpec _ (RngNever _) = False
 runRngSpec _ RngAny = True
 runRngSpec ll (RngElem _ xs) = ll == xs
-runRngSpec ll (RngSum cond tot) = runCond cond (sumAdds ll) tot
-runRngSpec ll (RngProj cond _ tot) = runCond cond (projAdds ll) tot
+runRngSpec ll (RngSum cond tot) = runOrdCond cond (sumAdds ll) tot
+runRngSpec ll (RngProj cond _ tot) = runOrdCond cond (projAdds ll) tot
 runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 
 -- ------------------------------------------
@@ -682,20 +695,20 @@ instance Sums Coin Word64 where
   getsum (Coin n) = fromIntegral n
   genT _ n = pure (Coin (fromIntegral n))
 
-genCond :: Adds t => t -> Gen (SumCond, t)
+genCond :: Adds t => t -> Gen (OrdCond, t)
 genCond total = frequency (map fix [EQL, LTH, LTE, GTH, GTE])
   where
     fix LTH = (1, pure (LTH, add total (fromCount 1)))
     fix sumcond = (1, pure (sumcond, total))
 
-genConsistentSumCond :: SumCond -> Gen SumCond
-genConsistentSumCond x = case x of
+genConsistentOrdCond :: OrdCond -> Gen OrdCond
+genConsistentOrdCond x = case x of
   EQL -> pure EQL
   LTH -> elements [LTH]
   LTE -> elements [EQL]
   GTH -> elements [GTE]
   GTE -> elements [EQL, GTH]
-  CondNever xs -> errorMess "CondNever in genConsistentSumCond" xs
+  CondNever xs -> errorMess "CondNever in genConsistentOrdCond" xs
   CondAny -> elements [EQL, LTE, GTH, GTE]
 
 genConsistentRngSpec ::
@@ -714,8 +727,8 @@ genConsistentRngSpec n g repw repc = do
     RngAny -> genRngSpec n g repw repc
     RngRel RelAny -> genRngSpec n g repw repc
     RngRel x -> RngRel <$> genConsistentRelSpec msgs g x
-    RngSum c tot -> do c2 <- genConsistentSumCond c; elements [RngSum c2 tot, RngSum c tot]
-    RngProj c r tot -> do c2 <- genConsistentSumCond c; elements [RngProj c2 r tot, RngProj c r tot]
+    RngSum c tot -> do c2 <- genConsistentOrdCond c; elements [RngSum c2 tot, RngSum c tot]
+    RngProj c r tot -> do c2 <- genConsistentOrdCond c; elements [RngProj c2 r tot, RngProj c r tot]
     RngElem _ xs -> pure (RngSum EQL (sumAdds xs))
     RngNever xs -> errorMess "RngNever in genConsistentRngSpec" xs
   pure (x1, x2)
@@ -1016,7 +1029,7 @@ genSetSpecIsSound = do
 -- =============================================================
 
 data SumSpec t where
-  SumSpec :: Adds t => SumCond -> Maybe t -> Maybe t -> SumSpec t
+  SumSpec :: Adds t => OrdCond -> Maybe t -> Maybe t -> SumSpec t
   SumNever :: [String] -> SumSpec t
 
 instance Show t => Show (SumSpec t) where show = showSumSpec
@@ -1072,10 +1085,10 @@ genFromSumSpec ms rep spec =
    in explain msg $ case spec of
         (SumNever zs) -> failT (msg : zs)
         (SumSpec _ Nothing Nothing) -> pure $ genRep rep
-        (SumSpec _ (Just t) Nothing) -> pure $ pure t -- Recall this comes from (x :=: y) so no SumCond is involved
+        (SumSpec _ (Just t) Nothing) -> pure $ pure t -- Recall this comes from (x :=: y) so no OrdCond is involved
         (SumSpec cond Nothing (Just tot)) -> pure $ adjust msgs cond 1 tot
         (SumSpec cond (Just x) (Just tot)) ->
-          if runCond cond x tot
+          if runOrdCond cond x tot
             then pure $ pure x
             else failT (["Sum condition not met: " ++ show x ++ show cond ++ show tot] ++ ms)
 
@@ -1086,13 +1099,13 @@ data ElemSpec era t where
   -- \^ The set must have Adds instance and add up to 'tot'
   ElemSum ::
     Adds t =>
-    SumCond ->
+    OrdCond ->
     t ->
     ElemSpec era t
   -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
   ElemProj ::
     Sums x c =>
-    SumCond ->
+    OrdCond ->
     Rep era c ->
     c ->
     ElemSpec era x
@@ -1140,7 +1153,7 @@ mergeElemSpec a@(ElemEqual r xs) b@(ElemEqual _ ys) =
         ]
 mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum cond tot) =
   let computed = sumAdds xs
-   in if runCond cond computed tot
+   in if runOrdCond cond computed tot
         then a
         else
           ElemNever
@@ -1189,8 +1202,8 @@ runElemSpec xs spec = case spec of
   ElemNever _ -> False -- ErrorMess "ElemNever in runElemSpec" []
   ElemAny -> True
   ElemEqual _ ys -> xs == ys
-  ElemSum cond tot -> runCond cond (sumAdds xs) tot
-  ElemProj cond _ tot -> runCond cond (projAdds xs) tot
+  ElemSum cond tot -> runOrdCond cond (sumAdds xs) tot
+  ElemProj cond _ tot -> runOrdCond cond (projAdds xs) tot
 
 genElemSpec ::
   forall w c era.
@@ -1415,7 +1428,7 @@ testl = do
   monadTyped (liftT (a <> b))
 
 -- =======================================================================
-
+{-
 -- | A specification of summation. like: lhs = ∑ rhs
 --   The idea is that the 'rhs' can contain multiple terms: lhs = ∑ r1 + r2 + r3
 --   Other example conditions:  (lhs < ∑ rhs), and (lhs >= ∑ rhs)
@@ -1427,9 +1440,9 @@ testl = do
 --   This allows the instance to deal with special conditions.
 --   There are two (non-failure) possibilities 1) Var on the left, 2) Var on the right
 --   We supply functions
---      vLeft  :: String -> SumCond -> Integer -> SumV
+--      vLeft  :: String -> OrdCond -> Integer -> SumV
 --                SumsTo x <= 4 + 6 + 9 ===> (vLeft x LTE 19) == (SumVSize x (AtMost 19))
---      vRight :: Integer -> SumCond -> Integer -> String -> SumV
+--      vRight :: Integer -> OrdCond -> Integer -> String -> SumV
 --                SumsTo 8 < 2 + x + 3 ===> (vRight 8 LTH 5 x) == (SumVSize x (AtLeast 4))
 --   But internally we store the information as a String and a Size (I.e. a range of Int)
 data SumV where
@@ -1437,13 +1450,13 @@ data SumV where
   SumVAny :: SumV
   SumVNever :: [String] -> SumV
 
-vLeft :: String -> SumCond -> Int -> SumV
+vLeft :: String -> OrdCond -> Int -> SumV
 vLeft s cond n = uncurry SumVSize (tripToSize (s, cond, n))
 
-vRight :: Int -> SumCond -> Int -> String -> SumV
+vRight :: Int -> OrdCond -> Int -> String -> SumV
 vRight n cond m s = uncurry SumVSize (tripToSize (s, switch cond, n - m))
   where
-    switch :: SumCond -> SumCond
+    switch :: OrdCond -> OrdCond
     switch EQL = EQL
     switch LTH = GTH
     switch LTE = GTH
@@ -1483,23 +1496,24 @@ mergeSumV a@(SumVSize s1 size1) b@(SumVSize s2 size2) =
         [ "vars " ++ s1 ++ " and " ++ s2 ++ " are not the same."
         , show a ++ " " ++ show b ++ " are inconsistent."
         ]
+-}
 
 genSumV :: Gen SumV
 genSumV =
   frequency
-    [ (1, vLeft <$> elements ["x", "y"] <*> genSumCond <*> choose (-5, 25))
-    , (2, vRight <$> choose (-5, 25) <*> genSumCond <*> choose (-5, 25) <*> elements ["x", "y"])
+    [ (1, vLeft <$> elements ["x", "y"] <*> genOrdCond <*> choose (-5, 25))
+    , (2, vRight <$> choose (-5, 25) <*> genOrdCond <*> choose (-5, 25) <*> elements ["x", "y"])
     ]
 
 genNonNegSumV :: Gen SumV
 genNonNegSumV =
   frequency
-    [ (1, vLeft <$> elements ["x", "y"] <*> genSumCond <*> choose (0, 30))
+    [ (1, vLeft <$> elements ["x", "y"] <*> genOrdCond <*> choose (0, 30))
     ,
       ( 2
       , do
           n <- choose (1, 30)
-          cond <- genSumCond
+          cond <- genOrdCond
           m <- choose (0, n - 1)
           v <- elements ["x", "y"]
           pure $ vRight n cond m v
@@ -1516,7 +1530,7 @@ genFromNonNegSumV _ SumVAny = pure zero
 genFromNonNegSumV msgs s@(SumVSize _ size) = fromI (("genFromSumV " ++ show s) : msgs) <$> genFromSize size
 genFromNonNegSumV msgs (SumVNever _) = errorMess ("genFromSumV applied to SumVNever") msgs
 
-tripToSize :: (String, SumCond, Int) -> (String, Size)
+tripToSize :: (String, OrdCond, Int) -> (String, Size)
 tripToSize (s, EQL, n) = (s, SzExact n)
 tripToSize (s, LTH, n) = (s, SzMost (n - 1))
 tripToSize (s, LTE, n) = (s, SzMost n)
@@ -1525,8 +1539,8 @@ tripToSize (s, GTE, n) = (s, SzLeast n)
 tripToSize (s, CondAny, _) = (s, SzAny)
 tripToSize (s, CondNever xs, _) = (s, SzNever xs)
 
-genSumCond :: Gen SumCond
-genSumCond = elements [EQL, LTH, LTE, GTH, GTE, CondAny]
+genOrdCond :: Gen OrdCond
+genOrdCond = elements [EQL, LTH, LTE, GTH, GTE, CondAny]
 
 runSumV :: forall c. Adds c => c -> SumV -> Bool
 runSumV c (SumVSize _ size) = runSize (toI c) size

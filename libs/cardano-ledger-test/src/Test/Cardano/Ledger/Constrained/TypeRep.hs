@@ -31,7 +31,6 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   liftUTxO,
   Proof (..),
   Evidence (..),
-  Size (SzExact, ..),
 )
 where
 
@@ -81,6 +80,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
   unValue,
  )
 import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
+import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
@@ -460,6 +460,7 @@ synopsisPParam p x = withEraPParams p help
         ++ (synopsis (ProtVerR p) (x ^. Core.ppProtocolVersionL))
         ++ "}"
 
+{-
 -- ==========================================================================
 -- The type Size is defined in TypeRep.hs, because its type must be known in
 -- Ast.hs (which it needs an (Rep era Size) SizeR defined here). It also acts
@@ -517,3 +518,4 @@ instance Monoid Size where mempty = SzAny
 
 instance Semigroup Size where
   (<>) = mergeSize
+-}

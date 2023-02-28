@@ -1,0 +1,259 @@
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE GADTs #-}
+
+module Test.Cardano.Ledger.Constrained.Size
+ ( Size(..,SzExact),
+   SumV(..),
+   vLeft,
+   vRight,
+   OrdCond(..),
+   negOrdCond,
+   seps,
+   sepsP,
+   sepn,
+   runOrdCond,
+   runSize,
+   atleastdelta,
+   atmostany,
+ ) where
+
+import qualified Data.List as List
+import Test.Cardano.Ledger.Constrained.Combinators(errorMess)
+
+-- ==============================================
+
+seps :: [String] -> String
+seps xs = List.intercalate " " xs
+
+sepsP :: [String] -> String
+sepsP xs = "(" ++ List.intercalate " " xs ++ ")"
+
+sepn :: [String] -> String
+sepn xs = List.intercalate "\n   " xs
+
+-- | Used in tests so things don't get too large
+atleastdelta :: Int
+atleastdelta = 5
+
+-- | Used in tests so things don't get too large
+--   If we can't find an era using things of size 10
+--   using things of size 100, isn't going to help.
+atmostany :: Int
+atmostany = 10
+
+-- =======================================================================================
+-- The type Size and SumV are defined in their own file because its type must be known 
+-- in many other modules, so to avoid recursive cycles this module depends on only Combinators
+-- They act like a Spec, so there are Spec like Monoid and Semigroup instances.
+
+data Size
+  = SzNever [String]
+  | SzAny
+  | SzLeast Int
+  | SzMost Int
+  | SzRng Int Int -- (SzRng i j) = [i .. j] . Invariant i <= j
+  deriving (Ord, Eq)
+
+sameR :: Size -> Maybe Int
+sameR (SzRng x y) = if x == y then Just x else Nothing
+sameR _ = Nothing
+
+pattern SzExact :: Int -> Size
+pattern SzExact x <- (sameR -> Just x)
+  where
+    SzExact x = (SzRng x x)
+
+instance Show Size where
+  show (SzNever _) = "NeverSize"
+  show SzAny = "AnySize"
+  show (SzLeast n) = "(AtLeast " ++ show n ++ ")"
+  show (SzMost n) = "(AtMost " ++ show n ++ ")"
+  show (SzRng i j) = "(Range " ++ show i ++ " " ++ show j ++ ")"
+
+mergeSize :: Size -> Size -> Size
+mergeSize SzAny x = x
+mergeSize x SzAny = x
+mergeSize (SzNever xs) (SzNever ys) = SzNever (xs ++ ys)
+mergeSize _ (SzNever xs) = SzNever xs
+mergeSize (SzNever xs) _ = SzNever xs
+mergeSize (SzLeast x) (SzLeast y) = SzLeast (max x y)
+mergeSize (SzLeast x) (SzMost y) | x <= y = SzRng x y
+mergeSize (SzLeast x) (SzRng i j) | x <= i = SzRng i j
+mergeSize (SzLeast x) (SzRng i j) | x >= i && x <= j = SzRng x j
+mergeSize (SzMost x) (SzMost y) = SzMost (min x y)
+mergeSize (SzMost y) (SzLeast x) | x <= y = SzRng x y
+mergeSize (SzMost x) (SzRng i j) | x >= j = SzRng i j
+mergeSize (SzMost x) (SzRng i j) | x >= i && x <= j = SzRng i x
+mergeSize (SzRng i j) (SzLeast x) | x <= i = SzRng i j
+mergeSize (SzRng i j) (SzLeast x) | x >= i && x <= j = SzRng x j
+mergeSize (SzRng i j) (SzMost x) | x >= j = SzRng i j
+mergeSize (SzRng i j) (SzMost x) | x >= i && x <= j = SzRng i x
+mergeSize (SzRng i j) (SzRng m n) | x <= y = SzRng x y
+  where
+    x = max i m
+    y = min j n
+mergeSize a b = SzNever ["Size specifications " ++ show a ++ " and " ++ show b ++ " are inconsistent."]
+
+instance Monoid Size where mempty = SzAny
+
+instance Semigroup Size where
+  (<>) = mergeSize
+
+runSize :: Int -> Size -> Bool
+runSize _ (SzNever xs) = errorMess "SzNever in runSizeSpec" xs
+runSize _ SzAny = True
+runSize n (SzLeast m) = n >= m
+runSize n (SzMost m) = n <= m
+runSize n (SzRng i j) = n >= i && n <= j
+
+-- =========================================================================
+-- SumV
+-- =========================================================================
+
+-- | A specification of summation. like: lhs = ∑ rhs
+--   The idea is that the 'rhs' can contain multiple terms: lhs = ∑ r1 + r2 + r3
+--   Other example conditions:  (lhs < ∑ rhs), and (lhs >= ∑ rhs)
+--   The invariant is that only a single variable appears in the summation.
+--   It can appear on either side. If it appears in the 'rhs' then there
+--   may be other, constant terms, in the rhs:  7 = ∑ 3 + v + 9
+--   We always do the sums and solving at type Int, and cast back and forth to
+--   accommodate other types with (Adds c) instances, using the methods 'fromI" and 'toI'
+--   This allows the instance to deal with special conditions.
+--   There are two (non-failure) possibilities 1) Var on the left, 2) Var on the right
+--   We supply functions
+--      vLeft  :: String -> OrdCond -> Integer -> SumV
+--                SumsTo x <= 4 + 6 + 9 ===> (vLeft x LTE 19) == (SumVSize x (AtMost 19))
+--      vRight :: Integer -> OrdCond -> Integer -> String -> SumV
+--                SumsTo 8 < 2 + x + 3 ===> (vRight 8 LTH 5 x) == (SumVSize x (AtLeast 4))
+--   But internally we store the information as a String and a Size (I.e. a range of Int)
+data SumV where
+  SumVSize :: String -> Size -> SumV
+  SumVAny :: SumV
+  SumVNever :: [String] -> SumV
+
+vLeft :: String -> OrdCond -> Int -> SumV
+vLeft s cond n = uncurry SumVSize (tripToSize (s, cond, n))
+
+vRight :: Int -> OrdCond -> Int -> String -> SumV
+vRight n cond m s = uncurry SumVSize (tripToSize (s, negOrdCond cond, n - m))
+  
+negOrdCond :: OrdCond -> OrdCond
+negOrdCond EQL = EQL
+negOrdCond LTH = GTH
+negOrdCond LTE = GTH
+negOrdCond GTH = LTH
+negOrdCond GTE = LTH
+negOrdCond x = x
+
+instance Show SumV where show = showSumV
+
+instance Semigroup SumV where (<>) = mergeSumV
+instance Monoid SumV where mempty = SumVAny
+
+showSumV :: SumV -> String
+showSumV SumVAny = "SumVAny"
+showSumV (SumVSize s size) = sepsP ["SumVSize", s, show size]
+showSumV (SumVNever _) = "SumVNever"
+
+mergeSumV :: SumV -> SumV -> SumV
+mergeSumV (SumVNever xs) (SumVNever ys) = SumVNever (xs ++ ys)
+mergeSumV x@(SumVNever _) _ = x
+mergeSumV _ x@(SumVNever _) = x
+mergeSumV SumVAny x = x
+mergeSumV x SumVAny = x
+mergeSumV a@(SumVSize s1 size1) b@(SumVSize s2 size2) =
+  if s1 == s2
+    then case size1 <> size2 of
+      (SzNever xs) -> SumVNever (xs ++ [show a ++ " " ++ show a ++ " are inconsistent."])
+      size3 -> SumVSize s1 size3
+    else
+      SumVNever
+        [ "vars " ++ s1 ++ " and " ++ s2 ++ " are not the same."
+        , show a ++ " " ++ show b ++ " are inconsistent."
+        ]
+
+-- =========================================================================
+-- OrdCond
+-- x <= y
+--   ^     paramerterize over the condition
+--
+-- EQL = (==), LTH = (<), LTE = (<=), GTH = (>), GTE = (>=)
+-- =========================================================================
+
+-- | First order representation of the Ord comparisons
+data OrdCond = EQL | LTH | LTE | GTH | GTE | CondNever [String] | CondAny
+  deriving (Eq)
+
+instance Show OrdCond where
+  show EQL = " = ∑ "
+  show LTH = " < ∑ "
+  show LTE = " <= ∑ "
+  show GTH = " > ∑ "
+  show GTE = " >= ∑ "
+  show (CondNever xs) = unlines xs
+  show CondAny = " `always` ∑ "
+
+-- TODO get rid of this Monoid instance, use tripToSize logic instead
+instance Monoid OrdCond where
+  mempty = CondAny
+
+instance Semigroup OrdCond where
+  CondAny <> x = x
+  x <> CondAny = x
+  CondNever xs <> CondNever ys = CondNever (xs ++ ys)
+  CondNever xs <> _ = CondNever xs
+  _ <> CondNever xs = CondNever xs
+  EQL <> EQL = EQL
+  EQL <> LTH = CondNever ["EQL and LTH are not compatible."]
+  EQL <> LTE = EQL
+  EQL <> GTH = CondNever ["EQL and GTH are not compatible."]
+  EQL <> GTE = EQL
+  LTH <> EQL = CondNever ["LTH and EQL are not compatible."]
+  LTH <> LTH = LTH
+  -- while technically (LTH <> LTE = LTH) holds, moving to LTH,
+  -- changes the adjust value, this could cause failures.
+  -- Same reasoning holds for (LTE <> LTH = LTH)
+  LTH <> LTE = CondNever ["LTE and LTH  are not compatible."]
+  LTH <> GTH = CondNever ["LTH and GTH are not compatible."]
+  LTH <> GTE = CondNever ["LTH and GTE are not compatible."]
+  LTE <> EQL = EQL
+  LTE <> LTH = CondNever ["LTE and LTH  are not compatible."]
+  LTE <> LTE = LTE
+  LTE <> GTH = CondNever ["LTE and GTH are not compatible."]
+  LTE <> GTE = CondNever ["LTE and GTE are not compatible."]
+  GTH <> EQL = CondNever ["GTH and EQL are not compatible."]
+  GTH <> LTH = CondNever ["GTH and LTH are not compatible."]
+  GTH <> LTE = CondNever ["GTH and LTE are not compatible."]
+  GTH <> GTH = GTH
+  GTH <> GTE = GTH
+  GTE <> EQL = EQL
+  GTE <> LTH = CondNever ["GTE and LTH are not compatible."]
+  GTE <> LTE = CondNever ["GTE and LTE are not compatible."]
+  GTE <> GTH = GTH
+  GTE <> GTE = GTE
+
+
+
+always :: c -> c -> Bool
+always _ _ = True
+
+runOrdCond :: Ord c => OrdCond -> c -> c -> Bool
+runOrdCond EQL x y = x == y
+runOrdCond LTH x y = x < y
+runOrdCond LTE x y = x <= y
+runOrdCond GTH x y = x > y
+runOrdCond GTE x y = x >= y
+runOrdCond CondAny x y = always x y -- Always True
+runOrdCond (CondNever _) _ _ = False
+
+-- | Translate an OrdCond on an Int, into a Size which
+--   specifies the Int range on which the OrdCond is True.
+tripToSize :: (String, OrdCond, Int) -> (String, Size)
+tripToSize (s, EQL, n) = (s, SzExact n)
+tripToSize (s, LTH, n) = (s, SzMost (n - 1))
+tripToSize (s, LTE, n) = (s, SzMost n)
+tripToSize (s, GTH, n) = (s, SzLeast (n + 1))
+tripToSize (s, GTE, n) = (s, SzLeast n)
+tripToSize (s, CondAny, _) = (s, SzAny)
+tripToSize (s, CondNever xs, _) = (s, SzNever xs)

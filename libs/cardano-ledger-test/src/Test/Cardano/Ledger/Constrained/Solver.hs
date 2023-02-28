@@ -29,15 +29,19 @@ import Test.Cardano.Ledger.Constrained.Classes (
   Count (..),
   FromInt (fromInt),
   Sizeable (getsize),
-  SumCond (..),
   Sums (..),
-  negSumCond,
-  runCond,
  )
 import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite (DependGraph (..), OrderInfo, compile)
+import Test.Cardano.Ledger.Constrained.Size (
+  OrdCond (..),
+  Size (..),
+  negOrdCond,
+  runOrdCond,
+  sepsP,
+ )
 import Test.Cardano.Ledger.Constrained.Spec (
   MapSpec (..),
   RelSpec (..),
@@ -54,7 +58,6 @@ import Test.Cardano.Ledger.Constrained.Spec (
   relDisjoint,
   relSubset,
   relSuperset,
-  sepsP,
   setSpec,
   showMapSpec,
   showSetSpec,
@@ -62,7 +65,6 @@ import Test.Cardano.Ledger.Constrained.Spec (
  )
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
-  Size (..),
   genRep,
   genSizedRep,
   synopsis,
@@ -265,7 +267,7 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     let cRep = termRep expr
     t <- simplify expr
     With (Id tx) <- hasAdds cRep (Id t)
-    explain ("Solving (" ++ show predicate ++ ")") (solveMapSummands [msg] (negSumCond cond) v1 tx xs)
+    explain ("Solving (" ++ show predicate ++ ")") (solveMapSummands [msg] (negOrdCond cond) v1 tx xs)
   (Random (Var v2)) | Name v1 == Name v2 -> mapSpec SzAny RelAny RngAny
   (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> mapSpec sz RelAny RngAny
   (HasDom (Var v2) expr) | Name v1 == Name v2 -> do
@@ -287,7 +289,7 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
 solveMapSummands ::
   Adds c =>
   [String] ->
-  SumCond ->
+  OrdCond ->
   V era (Map dom rng) ->
   c ->
   [Sum era c] ->
@@ -383,21 +385,21 @@ solveSum v1@(V _ r _) c =
         (SumsTo cond (Delta (Fixed (Lit CoinR (Coin n)))) xs@(_ : _)) -> do
           rhsTotal <- sumWithUniqueV v1 xs
           case (r, rhsTotal) of
-            (DeltaCoinR, DeltaCoin m) -> pure (SumSpec (negSumCond cond) Nothing (Just (DeltaCoin (n - m))))
+            (DeltaCoinR, DeltaCoin m) -> pure (SumSpec (negOrdCond cond) Nothing (Just (DeltaCoin (n - m))))
             (CoinR, DeltaCoin m) -> do
               coin <- deltaToCoin (DeltaCoin (n - m))
-              pure (SumSpec (negSumCond cond) Nothing (Just coin))
+              pure (SumSpec (negOrdCond cond) Nothing (Just coin))
             (rep, x) -> failT ["Impossible SumsTo: " ++ show rep ++ " " ++ show x]
         (SumsTo cond (Fixed (Lit CoinR (Coin n))) xs@(_ : _)) -> do
           rhsTotal <- sumWithUniqueV v1 xs
           case (r, rhsTotal) of
-            (DeltaCoinR, Coin m) -> pure (SumSpec (negSumCond cond) Nothing (Just (DeltaCoin (n - m))))
-            (CoinR, Coin m) -> pure (SumSpec (negSumCond cond) Nothing (Just (Coin (n - m))))
+            (DeltaCoinR, Coin m) -> pure (SumSpec (negOrdCond cond) Nothing (Just (DeltaCoin (n - m))))
+            (CoinR, Coin m) -> pure (SumSpec (negOrdCond cond) Nothing (Just (Coin (n - m))))
             (rep, x) -> failT ["Impossible SumsTo: " ++ show rep ++ " " ++ show x]
         (SumsTo cond (Fixed (Lit nrep n)) xs@(_ : _)) -> do
           Refl <- sameRep r nrep
           rhsTotal <- sumWithUniqueV v1 xs
-          pure (SumSpec (negSumCond cond) Nothing (Just (subtract msg n rhsTotal)))
+          pure (SumSpec (negOrdCond cond) Nothing (Just (subtract msg n rhsTotal)))
         (SumsTo cond (Var v2@(V _ r2 _)) xs@(_ : _)) | Name v1 == Name v2 -> do
           Refl <- sameRep r r2
           With (Id n) <- simplifySums r xs

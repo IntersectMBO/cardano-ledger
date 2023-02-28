@@ -71,6 +71,7 @@ import Prelude hiding (subtract)
 import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..))
 import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
 
 -- import  Cardano.Ledger.Conway.Governance(ConwayTallyState(..))
 -- import Lens.Micro
@@ -185,10 +186,10 @@ class (Ord x, Show x) => Adds x where
   fromI :: [String] -> Int -> x
   toI :: x -> Int
 
-  -- | Adjusts the total 'x' to account for differences in SumCond's EQL LTH LTE GTH and GTE
-  adjust :: [String] -> SumCond -> Int -> x -> Gen x
+  -- | Adjusts the total 'x' to account for differences in OrdCond's EQL LTH LTE GTH and GTE
+  adjust :: [String] -> OrdCond -> Int -> x -> Gen x
 
-  partitionBy :: [String] -> SumCond -> Int -> x -> Gen [x]
+  partitionBy :: [String] -> OrdCond -> Int -> x -> Gen [x]
   partitionBy msgs cond count total = do b <- adjust msgs cond count total; partition msgs count b
 
 sumAdds :: (Foldable t, Adds c) => t c -> c
@@ -294,7 +295,7 @@ instance Adds DeltaCoin where
   fromI _ n = DeltaCoin (fromIntegral n)
   toI (DeltaCoin n) = (fromIntegral n)
 
-adjustTotalForCond :: [String] -> SumCond -> Integer -> Integer -> Gen Integer
+adjustTotalForCond :: [String] -> OrdCond -> Integer -> Integer -> Gen Integer
 adjustTotalForCond msgs condition count total = case condition of
   EQL -> pure total
   GTE -> do Positive m <- arbitrary; choose (total, total + m)
@@ -663,6 +664,7 @@ genUTxO p = case p of
 --          ^ paramerterize over the condition
 -- EQL = (==), LTH = (<), LTE = (<=), GTH = (>), GTE = (>=)
 
+{-
 data SumCond = EQL | LTH | LTE | GTH | GTE | CondNever [String] | CondAny
   deriving (Eq)
 
@@ -729,7 +731,7 @@ runCond GTH x y = x > y
 runCond GTE x y = x >= y
 runCond CondAny _ _ = True
 runCond (CondNever _) _ _ = False
-
+-}
 -- ==========================================================================
 -- ==========================================================================
 
@@ -810,7 +812,8 @@ goInt small n total = map fromIntegral <$> integerPartition [] "Int" (fromIntegr
 goWord64 :: Word64 -> Int -> Word64 -> Gen [Word64]
 goWord64 small n total = map fromIntegral <$> integerPartition [] "Word64" (fromIntegral small) n (fromIntegral total)
 
-switch :: SumCond -> SumCond
+{-
+switch :: OrdCond -> OrdCond
 switch EQL = EQL
 switch LTH = GTE
 switch LTE = GTH
@@ -818,7 +821,6 @@ switch GTH = LTE
 switch GTE = LTH
 switch x = x
 
-{-
 nonNegSumV :: forall c. Adds c => [String] -> (String,SumCond,Integer) -> Gen c
 nonNegSumV msgs (_,EQL,n) | n >= 0 = pure (fromI msgs n)
 nonNegSumV msgs (_,LTH,n) | n >= 1 = fromI msgs <$> choose(0,n-1)

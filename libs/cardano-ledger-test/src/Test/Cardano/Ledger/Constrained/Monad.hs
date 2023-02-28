@@ -19,14 +19,14 @@ module Test.Cardano.Ledger.Constrained.Monad (
   testHasCond,
   errorTyped,
   monadTyped,
+  requireAll,
 ) where
 
 import Data.Set (Set)
-import Test.Cardano.Ledger.Constrained.Classes (SumCond (..))
+import Test.Cardano.Ledger.Constrained.Size (Size (..), SumV (..))
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Proof (..),
   Rep (..),
-  Size (..),
   synopsis,
   testEql,
   (:~:) (Refl),
@@ -44,16 +44,24 @@ class LiftT x where
   liftT :: x -> Typed x
   dropT :: Typed x -> x
 
+{-
 instance LiftT SumCond where
   liftT (CondNever xs) = failT xs
   liftT x = pure x
   dropT (Typed (Left s)) = CondNever s
   dropT (Typed (Right x)) = x
+-}
 
 instance LiftT Size where
   liftT (SzNever xs) = failT xs
   liftT x = pure x
   dropT (Typed (Left s)) = SzNever s
+  dropT (Typed (Right x)) = x
+
+instance LiftT SumV where
+  liftT (SumVNever xs) = failT xs
+  liftT x = pure x
+  dropT (Typed (Left s)) = SumVNever s
   dropT (Typed (Right x)) = x
 
 -- ==================================
@@ -69,6 +77,12 @@ explain _ (Typed (Right x)) = Typed (Right x)
 
 mergeExplain :: (Monoid x, LiftT x) => String -> x -> x -> x
 mergeExplain message x y = dropT (explain message (liftT (x <> y)))
+
+requireAll :: [(Bool, [String])] -> Typed a -> Typed a
+requireAll xs answer = if null bad then answer else failT (concat msgs)
+  where
+    bad = filter (not . fst) xs
+    msgs = map snd bad
 
 -- ======================================================
 -- converting from a (Typed t) to something else

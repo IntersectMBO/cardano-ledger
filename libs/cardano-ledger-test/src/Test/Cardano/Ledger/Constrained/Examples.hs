@@ -26,11 +26,12 @@ import Data.Map (Map)
 import qualified Data.Set as Set
 import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Classes (Adds (..), SumCond (..), Sums (genT))
+import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Sums (genT))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Spec (TT)
 import Test.Cardano.Ledger.Constrained.TypeRep
@@ -223,12 +224,16 @@ test5 = failn (Mary Mock) "Test 5. Bad Sum, impossible partition." False stoi cs
 -- ===========================================================
 -- Example list of Constraints for test4 and test5
 
+commonSize :: Term era Int
+commonSize = Var (V "commonSize" IntR No)
+
 constraints :: Proof era -> [Pred era]
 constraints proof =
   [ Sized (ExactSize 10) credsUniv
   , Sized (ExactSize 10) poolsUniv
-  , Sized (AtLeast 1) mockPoolDistr -- This is summed so it can't be empty.
-  , Sized (AtLeast 1) regPools -- This has the same domain, so it also can't be empty,
+  , Sized (AtLeast 1) commonSize
+  , Sized (ExactSize 1) mockPoolDistr -- This is summed so it can't be empty.
+  , Sized (ExactSize 1) regPools -- This has the same domain, so it must have the same size
   , Dom rewards :<=: credsUniv
   , Rng delegations :<=: poolsUniv
   , Dom poolDeposits :<=: poolsUniv
@@ -241,7 +246,7 @@ constraints proof =
   , Dom regPools :<=: poolsUniv
   , Dom retiring :<=: Dom regPools
   , SumsTo EQL deposits [SumMap stakeDeposits, SumMap poolDeposits]
-  , SumsTo EQL (Fixed (Lit RationalR 1)) [SumMap mockPoolDistr]
+  , SumsTo EQL (Fixed (Lit RationalR 1)) [SumMap mockPoolDistr] -- FOR SOME REASON, This must have size 1, TODO fix this
   , SumsTo
       EQL
       totalAda
@@ -776,7 +781,7 @@ testAll = do
   test4
   test5
   (test6 False)
-  -- (test7 False)
+  (test7 False)
   test14
   testSpec "Test 3. PState example" test3
   testSpec "Test 8. Pstate constraints" test8
