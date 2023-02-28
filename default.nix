@@ -33,7 +33,7 @@ let
 
     checks = recurseIntoAttrs {
       # `checks.tests` collect results of executing the tests:
-      tests = collectChecks haskellPackages;
+      tests = collectChecks' haskellPackages;
     };
 
     shell = import ./shell.nix {
