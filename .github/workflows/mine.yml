@@ -23,5 +23,5 @@ jobs:
     steps:
       - name: "Say Hello Mona it's Monday"
         run: |
-          echo "{{ github.event.head_commit.message}}"
+          echo "${{ github.event.head_commit.message}}"
 
