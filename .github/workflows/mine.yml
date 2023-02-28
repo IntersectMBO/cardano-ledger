@@ -23,10 +23,5 @@ jobs:
     steps:
       - name: "Say Hello Mona it's Monday"
         run: |
-          echo "GITHUB_ACTION- $GITHUB_ACTION"
-          echo "github.action- ${{ github.action }}"
-          echo "GITHUB_REF- $GITHUB_REF"
-          echo "github.ref- ${{ github.ref }}"
-          echo "GITHUB_REF_NAME- $GITHUB_REF_NAME"
-          echo "github.ref.name- ${{ github.ref.name }}"
+          echo "{{ github.event.head_commit.message}}"
 
