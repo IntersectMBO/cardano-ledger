@@ -1,4 +1,10 @@
 name: Haskell CI
+# If it's a scheduled (for us: nightly) build, set the name of this run to a static value, so we can identify it easier.
+# Otherwise, replicate the default run name: either the PR title if it exists, or the commit message otherwise.
+run-name: |
+       ${{github.event_name == 'schedule' && 'Haskell CI - NIGHTLY'
+         || github.event.pull_request.title == '' && github.event.head_commit.message
+         || github.event.pull_request.title}}
 
 on:
   push:
