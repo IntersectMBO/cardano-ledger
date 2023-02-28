@@ -328,13 +328,9 @@ newtype GenDelegs c = GenDelegs
   deriving (Eq, DecCBOR, NoThunks, NFData, Generic, FromJSON)
   deriving (Show) via Quiet (GenDelegs c)
 
-deriving instance
-  (Crypto c) =>
-  EncCBOR (GenDelegs c)
+deriving instance Crypto c => EncCBOR (GenDelegs c)
 
-deriving instance
-  Crypto c =>
-  ToJSON (GenDelegs c)
+deriving instance Crypto c => ToJSON (GenDelegs c)
 
 newtype GKeys c = GKeys {unGKeys :: Set (VKey 'Genesis c)}
   deriving (Eq, NoThunks, Generic)
