@@ -1,0 +1,32 @@
+name: Mine
+run-name: ${{ github.event_name == 'schedule' && 'NIGHTLY'}}
+on:
+  push:
+    branches: [ "master" ]
+  workflow_dispatch:
+  schedule:
+    # "Nightly" builds: Every day at 06:00 UTC
+    - cron: '0 6 * * *'
+
+env:
+  xxx: YOOO
+  # xxx: ${{ github.event.number == 0 && 'master' ||  format('pr-{0}', github.event.number)  }}
+  something: ${{ github.event_name == 'schedule' && 'NIGHTLY' || 'PR'}}
+  # somethingElse: ${{ github.event.name == 'push' }}
+  # somethingElse: ${{ github.event.name == 'push' }}
+
+jobs:
+  greeting_job:
+    runs-on: ubuntu-latest
+    env:
+      Greeting: Hello
+    steps:
+      - name: "Say Hello Mona it's Monday"
+        run: |
+          echo "GITHUB_ACTION- $GITHUB_ACTION"
+          echo "github.action- ${{ github.action }}"
+          echo "GITHUB_REF- $GITHUB_REF"
+          echo "github.ref- ${{ github.ref }}"
+          echo "GITHUB_REF_NAME- $GITHUB_REF_NAME"
+          echo "github.ref.name- ${{ github.ref.name }}"
+
