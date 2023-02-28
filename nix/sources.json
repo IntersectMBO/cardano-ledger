@@ -59,7 +59,7 @@
         "rev": "f5dad40450d272a1ea2413f4a67ac08760649e89",
         "sha256": "06nq3rn63csy4bx0dkbg1wzzm2jgf6cnfixq1cx4qikpyzixca6i",
         "type": "tarball",
-        "url": "https://github.com/nixos/nixpkgs/archive/f5dad40450d272a1ea2413f4a67ac08760649e89.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/f5dad40450d272a1ea2413f4a67ac08760649e89.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
