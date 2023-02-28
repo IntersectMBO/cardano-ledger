@@ -196,3 +196,20 @@ jobs:
 
     - name: Regenerate hie.yaml and confirm that it is in sync
       run: ./scripts/gen-hie.sh
+
+  nix-build:
+    name: Build nix derivations and enter nix-shell
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v19
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+            substituters = https://cache.iog.io https://cache.nixos.org/
+      - name: nix-build
+        run: nix-build
+      - name: nix-shell
+        run: nix-shell shell.nix
