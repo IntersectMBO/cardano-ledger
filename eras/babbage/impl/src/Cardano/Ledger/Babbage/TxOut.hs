@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -104,6 +105,7 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Monad ((<$!>))
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
@@ -247,6 +249,28 @@ deriving stock instance
 instance NFData (BabbageTxOut era) where
   rnf = rwhnf
 
+instance
+  (Era era, ToJSON (Datum era), ToJSON (Script era), Val (Value era)) =>
+  ToJSON (BabbageTxOut era)
+  where
+  toJSON = object . toBabbageTxOutPairs
+  toEncoding = pairs . mconcat . toBabbageTxOutPairs
+
+toBabbageTxOutPairs ::
+  ( Era era
+  , KeyValue a
+  , Val (Value era)
+  , ToJSON (Script era)
+  ) =>
+  BabbageTxOut era ->
+  [a]
+toBabbageTxOutPairs (BabbageTxOut !addr !val !dat !mRefScript) =
+  [ "address" .= addr
+  , "value" .= val
+  , "datum" .= dat
+  , "referenceScript" .= mRefScript
+  ]
+
 viewCompactTxOut ::
   forall era.
   (Era era, Val (Value era)) =>
@@ -306,7 +330,7 @@ viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataH
         Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
 
 instance
-  (Era era, Show (Value era), Show (Script era), Val (Value era)) =>
+  (Era era, Show (Script era), Val (Value era)) =>
   Show (BabbageTxOut era)
   where
   show = show . viewTxOut
@@ -401,53 +425,26 @@ pattern TxOutCompactDH addr vl dh <-
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
-instance
-  (Era era, Val (Value era), EncCBOR (Value era), EncCBOR (Script era)) =>
-  ToCBOR (BabbageTxOut era)
-  where
+instance (EraScript era, Val (Value era)) => ToCBOR (BabbageTxOut era) where
   toCBOR = toEraCBOR @era
   {-# INLINE toCBOR #-}
 
-instance
-  ( Era era
-  , Val (Value era)
-  , DecCBOR (Annotator (Script era))
-  , DecCBOR (Value era)
-  ) =>
-  FromCBOR (BabbageTxOut era)
-  where
+instance (EraScript era, Val (Value era)) => FromCBOR (BabbageTxOut era) where
   fromCBOR = fromEraCBOR @era
   {-# INLINE fromCBOR #-}
 
-instance
-  (Era era, Val (Value era), EncCBOR (Value era), EncCBOR (Script era)) =>
-  EncCBOR (BabbageTxOut era)
-  where
+instance (EraScript era, Val (Value era)) => EncCBOR (BabbageTxOut era) where
   encCBOR = \case
     TxOutCompactRefScript addr cv d rs -> encodeTxOut addr cv d (SJust rs)
     TxOutCompactDatum addr cv d -> encodeTxOut addr cv (Datum d) SNothing
     TxOutCompactDH addr cv dh -> encodeTxOut @era addr cv (DatumHash dh) SNothing
     TxOutCompact addr cv -> encodeTxOut @era addr cv NoDatum SNothing
 
-instance
-  ( Era era
-  , Val (Value era)
-  , DecCBOR (Annotator (Script era))
-  , DecCBOR (Value era)
-  ) =>
-  DecCBOR (BabbageTxOut era)
-  where
+instance (EraScript era, Val (Value era)) => DecCBOR (BabbageTxOut era) where
   decCBOR = decodeBabbageTxOut
   {-# INLINE decCBOR #-}
 
-instance
-  ( Era era
-  , Val (Value era)
-  , DecCBOR (Annotator (Script era))
-  , DecCBOR (Value era)
-  ) =>
-  DecShareCBOR (BabbageTxOut era)
-  where
+instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   decShareCBOR credsInterns =
     internTxOut <$!> decodeBabbageTxOut
@@ -459,9 +456,7 @@ instance
           TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
         txOut -> txOut
 
-decodeBabbageTxOut ::
-  (Era era, Val (Value era), DecCBOR (Annotator (Script era)), DecCBOR (Value era)) =>
-  Decoder s (BabbageTxOut era)
+decodeBabbageTxOut :: (EraScript era, Val (Value era)) => Decoder s (BabbageTxOut era)
 decodeBabbageTxOut = do
   peekTokenType >>= \case
     TypeMapLenIndef -> decodeTxOut fromCborBothAddr
@@ -495,7 +490,7 @@ decodeBabbageTxOut = do
 {-# INLINE encodeTxOut #-}
 encodeTxOut ::
   forall era.
-  (Era era, Compactible (Value era), EncCBOR (Value era), EncCBOR (Script era)) =>
+  (EraScript era, Val (Value era)) =>
   CompactAddr (EraCrypto era) ->
   CompactForm (Value era) ->
   Datum era ->
@@ -519,7 +514,7 @@ data DecodingTxOut era = DecodingTxOut
 {-# INLINE decodeTxOut #-}
 decodeTxOut ::
   forall s era.
-  (Era era, Val (Value era), DecCBOR (Value era), DecCBOR (Annotator (Script era))) =>
+  (EraScript era, Val (Value era)) =>
   (forall s'. Decoder s' (Addr (EraCrypto era), CompactAddr (EraCrypto era))) ->
   Decoder s (BabbageTxOut era)
 decodeTxOut decAddr = do
@@ -668,7 +663,7 @@ txOutScript :: BabbageTxOut era -> Maybe (Script era)
 txOutScript = strictMaybeToMaybe . getScriptBabbageTxOut
 {-# DEPRECATED txOutScript "In favor of `dataTxOutL` or `getScriptBabbageTxOut`" #-}
 
-decodeCIC :: (DecCBOR (Annotator b)) => T.Text -> Decoder s b
+decodeCIC :: DecCBOR (Annotator b) => T.Text -> Decoder s b
 decodeCIC s = do
   version <- getDecoderVersion
   lbs <- decodeNestedCborBytes

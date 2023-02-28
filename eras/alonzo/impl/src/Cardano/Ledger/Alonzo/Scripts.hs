@@ -83,6 +83,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
   (<*!),
  )
+import Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -99,6 +100,7 @@ import Data.Aeson (
   FromJSON (..),
   Object,
   ToJSON (..),
+  Value (String),
   object,
   withArray,
   withObject,
@@ -199,6 +201,9 @@ instance Crypto c => EraScript (AlonzoEra c) where
       PlutusScript PlutusV1 _ -> "\x01"
       PlutusScript PlutusV2 _ -> "\x02"
 
+instance Era era => ToJSON (AlonzoScript era) where
+  toJSON = String . serializeAsHexText
+
 -- ===========================================
 
 -- | Arbitrary execution unit in which we measure the cost of scripts in terms
@@ -241,19 +246,18 @@ instance NoThunks ExUnits
 instance NFData ExUnits
 
 instance ToJSON ExUnits where
-  toJSON ExUnits {exUnitsMem = m, exUnitsSteps = s} =
-    object
-      [ "exUnitsMem" .= toJSON m
-      , "exUnitsSteps" .= toJSON s
-      ]
+  toJSON exUnits@(ExUnits _ _) =
+    let ExUnits {exUnitsMem, exUnitsSteps} = exUnits
+     in object
+          [ "exUnitsMem" .= toJSON exUnitsMem
+          , "exUnitsSteps" .= toJSON exUnitsSteps
+          ]
 
 instance FromJSON ExUnits where
   parseJSON = withObject "exUnits" $ \o -> do
-    mem <- o .: "exUnitsMem"
-    steps <- o .: "exUnitsSteps"
-    bmem <- checkWord64Bounds mem
-    bsteps <- checkWord64Bounds steps
-    return $ ExUnits bmem bsteps
+    exUnitsMem <- checkWord64Bounds =<< o .: "exUnitsMem"
+    exUnitsSteps <- checkWord64Bounds =<< o .: "exUnitsSteps"
+    pure $ ExUnits {exUnitsMem, exUnitsSteps}
     where
       checkWord64Bounds n =
         if n >= fromIntegral (minBound @Word64)
