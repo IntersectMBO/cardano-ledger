@@ -1,4 +1,5 @@
 name: Haskell CI
+run-name: "Haskell CI - ${{ github.event_name == 'schedule' && 'NIGHTLY' || 'PR'}}"
 
 on:
   push:
