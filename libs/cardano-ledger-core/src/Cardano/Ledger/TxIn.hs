@@ -27,11 +27,12 @@ import Cardano.HeapWords (HeapWords (..))
 import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (..), decodeRecordNamed, encodeListLen)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
@@ -49,17 +50,17 @@ import NoThunks.Class (NoThunks (..))
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId c = TxId {_unTxId :: SafeHash c EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks)
+  deriving newtype (NoThunks, ToJSON, FromJSON)
 
-deriving newtype instance CC.Crypto c => HeapWords (TxId c)
+deriving newtype instance Crypto c => HeapWords (TxId c)
 
-deriving newtype instance CC.Crypto c => EncCBOR (TxId c)
+deriving newtype instance Crypto c => EncCBOR (TxId c)
 
-deriving newtype instance CC.Crypto c => DecCBOR (TxId c)
+deriving newtype instance Crypto c => DecCBOR (TxId c)
 
-deriving newtype instance CC.Crypto c => NFData (TxId c)
+deriving newtype instance Crypto c => NFData (TxId c)
 
-instance CC.Crypto c => HeapWords (TxIn c) where
+instance Crypto c => HeapWords (TxIn c) where
   heapWords (TxIn txId _) =
     2 + HW.heapWords txId + 1 {- txIx -}
 
@@ -78,17 +79,17 @@ deriving instance Ord (TxIn c)
 
 deriving instance Show (TxIn c)
 
-deriving instance CC.Crypto c => NFData (TxIn c)
+deriving instance Crypto c => NFData (TxIn c)
 
 instance NoThunks (TxIn c)
 
-instance CC.Crypto c => EncCBOR (TxIn c) where
+instance Crypto c => EncCBOR (TxIn c) where
   encCBOR (TxIn txId index) =
     encodeListLen 2
       <> encCBOR txId
       <> encCBOR index
 
-instance CC.Crypto c => DecCBOR (TxIn c) where
+instance Crypto c => DecCBOR (TxIn c) where
   decCBOR =
     decodeRecordNamed
       "TxIn"

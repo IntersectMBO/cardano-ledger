@@ -7,6 +7,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -92,6 +93,8 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
 import Control.Exception (assert)
 import Control.Monad.Trans.State.Strict (StateT (..))
+import Data.Aeson (ToJSON (..), object, (.=))
+import qualified Data.Aeson as Aeson
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -118,16 +121,12 @@ data RDPair = RDPair
   deriving (Show, Eq, Ord, Generic, NoThunks, NFData)
 
 instance EncCBOR RDPair where
-  encCBOR (RDPair (CompactCoin rew) (CompactCoin deposit)) =
-    encodeListLen 2 <> encCBOR rew <> encCBOR deposit
+  encCBOR RDPair {rdReward, rdDeposit} =
+    encodeListLen 2 <> encCBOR rdReward <> encCBOR rdDeposit
 
 instance DecCBOR RDPair where
   decCBOR =
-    decodeRecordNamed "RDPair" (const 2) $
-      do
-        a <- decCBOR
-        b <- decCBOR
-        pure (RDPair (CompactCoin a) (CompactCoin b))
+    decodeRecordNamed "RDPair" (const 2) $ RDPair <$> decCBOR <*> decCBOR
 
 -- ===================================================================
 -- UMAP
@@ -162,6 +161,18 @@ data Trip c
   | TFFE {-# UNPACK #-} !RDPair !(Set Ptr)
   | TFFF {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c)
   deriving (Eq, Ord, Generic, NoThunks, NFData)
+
+instance (Crypto c) => ToJSON (Trip c) where
+  toJSON = object . toTripPair
+  toEncoding = Aeson.pairs . mconcat . toTripPair
+
+toTripPair :: (Aeson.KeyValue a, Crypto c) => Trip c -> [a]
+toTripPair (Triple !rd !ptr !pool) =
+  [ "reward" .= fmap rdReward rd
+  , "deposit" .= fmap rdDeposit rd
+  , "ptr" .= ptr
+  , "pool" .= pool
+  ]
 
 -- | We can view all of the constructors as a Triple.
 viewTrip :: Trip c -> (StrictMaybe RDPair, Set Ptr, StrictMaybe (KeyHash 'StakePool c))
@@ -239,6 +250,16 @@ instance Show (Trip c) where
 --   keys and one more in the inverse direction with @Ptr@ for keys and @(Credential 'Staking c)@ for values.
 data UMap c = UMap !(Map (Credential 'Staking c) (Trip c)) !(Map Ptr (Credential 'Staking c))
   deriving (Show, Eq, Generic, NoThunks, NFData)
+
+instance Crypto c => ToJSON (UMap c) where
+  toJSON = object . toUMapPair
+  toEncoding = Aeson.pairs . mconcat . toUMapPair
+
+toUMapPair :: (Aeson.KeyValue a, Crypto c) => UMap c -> [a]
+toUMapPair (UMap !m1 !m2) =
+  [ "credentials" .= m1
+  , "pointers" .= m2
+  ]
 
 -- | It is worthwhile stating the invariant that holds on a Unified Map
 --   The 'ptrmap' and the 'ptrT' field of the 'tripmap' are inverses.
