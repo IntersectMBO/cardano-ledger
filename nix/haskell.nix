@@ -46,6 +46,7 @@ let
         packages.cardano-ledger-shelley-test.components.tests.cardano-ledger-shelley-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         packages.cardano-ledger-alonzo-test.components.tests.cardano-ledger-alonzo-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         packages.cardano-ledger-babbage-test.components.tests.cardano-ledger-babbage-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
+        packages.cardano-ledger-conway-test.components.tests.cardano-ledger-conway-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         enableLibraryProfiling = profiling;
         # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
         packages.small-steps.components.tests.doctests.buildable = lib.mkForce false;
