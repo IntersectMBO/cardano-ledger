@@ -154,7 +154,7 @@ genPolicyID = PolicyID <$> arbitrary
 -- ===========================================================================
 -- Tests that Val instances really align with the Albelian Group Supertype
 
-albelianlist :: forall v. (Show v, Val v) => [(v -> v -> Property, String)]
+albelianlist :: forall v. Val v => [(v -> v -> Property, String)]
 albelianlist =
   [ (\x y -> x <+> y === x <> y, "<+> is <>")
   , (\_ _ -> (zero @v) === mempty, "zero is mempty")
