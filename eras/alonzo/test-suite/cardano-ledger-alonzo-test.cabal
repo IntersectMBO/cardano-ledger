@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-alonzo-test
-version:       1.0.0.0
+version:       1.0.1.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -49,11 +49,11 @@ library
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-pretty,
-        cardano-ledger-allegra ^>=1.0,
-        cardano-ledger-shelley ^>=1.0,
-        cardano-ledger-shelley-test ^>=1.0,
-        cardano-ledger-mary ^>=1.0,
-        cardano-ledger-shelley-ma-test ^>=1.0,
+        cardano-ledger-allegra ^>=1.1,
+        cardano-ledger-shelley ^>=1.1,
+        cardano-ledger-shelley-test >=1.0,
+        cardano-ledger-mary ^>=1.1,
+        cardano-ledger-shelley-ma-test >=1.0,
         cardano-protocol-tpraos ^>=1.0,
         cardano-slotting,
         cardano-strict-containers,

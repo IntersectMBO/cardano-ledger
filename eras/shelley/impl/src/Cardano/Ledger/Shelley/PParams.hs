@@ -499,6 +499,10 @@ deriving instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (ProposedPPU
 
 deriving instance (Era era, DecCBOR (PParamsUpdate era)) => DecCBOR (ProposedPPUpdates era)
 
+instance EraPParams era => ToJSON (ProposedPPUpdates era) where
+  toJSON (ProposedPPUpdates ppUpdates) = toJSON $ Map.toList ppUpdates
+  toEncoding (ProposedPPUpdates ppUpdates) = toEncoding $ Map.toList ppUpdates
+
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
 

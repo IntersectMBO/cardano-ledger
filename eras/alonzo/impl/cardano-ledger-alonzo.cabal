@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-alonzo
-version:            1.0.0.1
+version:            1.1.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -65,12 +65,12 @@ library
         base64-bytestring,
         bytestring,
         cardano-data >=1.0,
-        cardano-ledger-allegra >=1.0,
+        cardano-ledger-allegra >=1.1,
         cardano-crypto-class,
         cardano-ledger-binary,
         cardano-ledger-core >=1.1,
-        cardano-ledger-mary >=1.0,
-        cardano-ledger-shelley >=1.0,
+        cardano-ledger-mary >=1.1,
+        cardano-ledger-shelley >=1.1,
         cardano-slotting,
         cardano-strict-containers,
         containers,
