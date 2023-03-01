@@ -206,7 +206,7 @@ viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataH
 viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
 viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
 
-instance (Era era, Val (Value era), Show (Value era)) => Show (AlonzoTxOut era) where
+instance (Era era, Val (Value era)) => Show (AlonzoTxOut era) where
   show = show . viewTxOut -- FIXME: showing tuple is ugly
 
 deriving via InspectHeapNamed "AlonzoTxOut" (AlonzoTxOut era) instance NoThunks (AlonzoTxOut era)
@@ -345,10 +345,7 @@ instance
       <> encCBOR cv
       <> encCBOR dh
 
-instance
-  (Era era, Show (Value era), DecCBOR (CompactForm (Value era)), Val (Value era)) =>
-  DecCBOR (AlonzoTxOut era)
-  where
+instance (Era era, Val (Value era)) => DecCBOR (AlonzoTxOut era) where
   decCBOR = do
     lenOrIndef <- decodeListLenOrIndef
     case lenOrIndef of
@@ -373,10 +370,7 @@ instance
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
   {-# INLINEABLE decCBOR #-}
 
-instance
-  (Era era, Val (Value era), DecCBOR (CompactForm (Value era)), Show (Value era)) =>
-  DecShareCBOR (AlonzoTxOut era)
-  where
+instance (Era era, Val (Value era)) => DecShareCBOR (AlonzoTxOut era) where
   type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   decShareCBOR credsInterns = do
     let internTxOut = \case
@@ -388,21 +382,15 @@ instance
     internTxOut <$!> decCBOR
   {-# INLINEABLE decShareCBOR #-}
 
-instance
-  (Era era, Val (Value era)) =>
-  ToCBOR (AlonzoTxOut era)
-  where
+instance (Era era, Val (Value era)) => ToCBOR (AlonzoTxOut era) where
   toCBOR = toEraCBOR @era
   {-# INLINE toCBOR #-}
 
-instance
-  (Era era, Show (Value era), DecCBOR (CompactForm (Value era)), Val (Value era)) =>
-  FromCBOR (AlonzoTxOut era)
-  where
+instance (Era era, Val (Value era)) => FromCBOR (AlonzoTxOut era) where
   fromCBOR = fromEraCBOR @era
   {-# INLINE fromCBOR #-}
 
-instance (EraTxOut era, ToJSON (Value era)) => ToJSON (AlonzoTxOut era) where
+instance (Era era, Val (Value era)) => ToJSON (AlonzoTxOut era) where
   toJSON (AlonzoTxOut addr v dataHash) =
     object
       [ "address" .= toJSON addr

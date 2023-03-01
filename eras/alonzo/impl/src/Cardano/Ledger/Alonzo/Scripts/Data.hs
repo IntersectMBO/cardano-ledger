@@ -73,6 +73,7 @@ import Cardano.Ledger.SafeHash (
  )
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON (..), Value (Null))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Typeable (Typeable)
@@ -216,6 +217,16 @@ instance Era era => DecCBOR (Datum era) where
       decodeDatum 0 = SumD DatumHash <! From
       decodeDatum 1 = SumD Datum <! From
       decodeDatum k = Invalid k
+
+instance Era era => ToJSON (Datum era) where
+  toJSON d =
+    case datumDataHash d of
+      SNothing -> Null
+      SJust dh -> toJSON dh
+  toEncoding d =
+    case datumDataHash d of
+      SNothing -> toEncoding Null
+      SJust dh -> toEncoding dh
 
 -- | Get the Hash of the datum.
 datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (EraCrypto era))

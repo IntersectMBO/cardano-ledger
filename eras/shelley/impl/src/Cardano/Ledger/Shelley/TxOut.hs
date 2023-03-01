@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -44,6 +45,8 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
+import Cardano.Ledger.Val (Val)
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 
 import Control.DeepSeq (NFData (rnf))
 import Data.ByteString.Short (ShortByteString, pack)
@@ -86,8 +89,7 @@ addrEitherShelleyTxOutL =
 {-# INLINE addrEitherShelleyTxOutL #-}
 
 valueEitherShelleyTxOutL ::
-  (Show (Value era), Compactible (Value era)) =>
-  Lens' (ShelleyTxOut era) (Either (Value era) (CompactForm (Value era)))
+  Val (Value era) => Lens' (ShelleyTxOut era) (Either (Value era) (CompactForm (Value era)))
 valueEitherShelleyTxOutL =
   lens
     (Right . txOutCompactValue)
@@ -108,7 +110,7 @@ instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (ShelleyTxO
       + heapWords (packedADDRHASH (Proxy :: Proxy era))
       + heapWords vl
 
-instance (Era era, Compactible (Value era), Show (Value era)) => Show (ShelleyTxOut era) where
+instance (Era era, Val (Value era)) => Show (ShelleyTxOut era) where
   show = show . viewCompactTxOut -- FIXME: showing TxOut as a tuple is just sad
 
 deriving instance Eq (CompactForm (Value era)) => Eq (ShelleyTxOut era)
@@ -119,7 +121,7 @@ instance NFData (ShelleyTxOut era) where
 deriving via InspectHeapNamed "TxOut" (ShelleyTxOut era) instance NoThunks (ShelleyTxOut era)
 
 pattern ShelleyTxOut ::
-  (HasCallStack, EraTxOut era) =>
+  (HasCallStack, Era era, Val (Value era)) =>
   Addr (EraCrypto era) ->
   Value era ->
   ShelleyTxOut era
@@ -133,7 +135,7 @@ pattern ShelleyTxOut addr vl <-
 
 {-# COMPLETE ShelleyTxOut #-}
 
-viewCompactTxOut :: (Era era, Compactible (Value era)) => ShelleyTxOut era -> (Addr (EraCrypto era), Value era)
+viewCompactTxOut :: (Era era, Val (Value era)) => ShelleyTxOut era -> (Addr (EraCrypto era), Value era)
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 
@@ -158,6 +160,16 @@ instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut er
 
 instance (Era era, DecCBOR (CompactForm (Value era))) => FromCBOR (ShelleyTxOut era) where
   fromCBOR = fromEraCBOR @era
+
+instance (Era era, Val (Value era)) => ToJSON (ShelleyTxOut era) where
+  toJSON = object . toTxOutPair
+  toEncoding = pairs . mconcat . toTxOutPair
+
+toTxOutPair :: (KeyValue a, Era era, Val (Value era)) => ShelleyTxOut era -> [a]
+toTxOutPair (ShelleyTxOut !addr !amount) =
+  [ "address" .= addr
+  , "amount" .= amount
+  ]
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords

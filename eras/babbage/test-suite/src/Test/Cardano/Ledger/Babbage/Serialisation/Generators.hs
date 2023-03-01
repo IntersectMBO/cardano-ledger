@@ -169,24 +169,12 @@ instance
       , MalformedReferenceScripts <$> arbitrary
       ]
 
-instance
-  ( Era era
-  , EncCBOR (PParamsUpdate era)
-  ) =>
-  Twiddle (Update era)
-  where
+instance EraPParams era => Twiddle (Update era) where
   twiddle v = twiddle v . toTerm v
 
 instance Twiddle a => Twiddle (Sized a)
 
-instance
-  ( Era era
-  , Val (Value era)
-  , EncCBOR (Value era)
-  , EncCBOR (Script era)
-  ) =>
-  Twiddle (BabbageTxOut era)
-  where
+instance (EraScript era, Val (Value era)) => Twiddle (BabbageTxOut era) where
   twiddle v = twiddle v . toTerm v
 
 instance

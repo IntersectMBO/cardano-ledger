@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -16,15 +17,27 @@ module Cardano.Ledger.Val (
 )
 where
 
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
+import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON)
 import Data.Coerce
 import Data.Foldable (foldl')
 import Data.Group (Abelian)
+import NoThunks.Class (NoThunks)
 
 class
   ( Compactible t
+  , EncCBOR (CompactForm t)
+  , DecCBOR (CompactForm t)
   , Abelian t
+  , NoThunks t
+  , EncCBOR t
+  , DecCBOR t
+  , ToJSON t
+  , NFData t
+  , Show t
   , Eq t
   ) =>
   Val t

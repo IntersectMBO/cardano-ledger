@@ -186,12 +186,7 @@ class
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
-  ( Compactible (Value era)
-  , NoThunks (Value era)
-  , NFData (Value era)
-  , Show (Value era)
-  , Val (Value era)
-  , Eq (Value era)
+  ( Val (Value era)
   , ToJSON (TxOut era)
   , DecCBOR (Value era)
   , DecCBOR (CompactForm (Value era))
