@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Binary.Arbitrary (
 )
 where
 
-import Numeric.Half
 import Cardano.Crypto.DSIGN.Class hiding (Signable)
 import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
@@ -30,6 +29,7 @@ import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Codec.CBOR.Term
 import qualified Data.ByteString as BS (ByteString, pack, unpack)
 import qualified Data.ByteString.Lazy as BSL (ByteString, fromChunks, fromStrict, toChunks)
+import Numeric.Half
 #if MIN_VERSION_bytestring(0,11,1)
 import qualified Data.ByteString.Short as SBS
 #else
