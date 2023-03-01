@@ -19,6 +19,7 @@
   * `utxosStakeDistr`
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 * Added `ToJSON` instance for `ShelleyTxOut`
+* Added `ToJSON` instance for `AlonzoPParams StrictMaybe`
 
 ## 1.0.0.0
 
