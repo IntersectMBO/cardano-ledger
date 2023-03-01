@@ -82,6 +82,7 @@ Known limitations of the code that the tests avoid
   - Constraints of the form `n = Σ sum X` cannot be solved, so we set `sumBeforeParts` to false (see
     TODO/sumBeforeParts).
   - HasDom constraints don't work with non-variable domains.
+  - Can't solve `Sized n (Rng X)` (see TODO/sizedRng)
 
 -}
 
@@ -248,13 +249,6 @@ genMapLiteralWithRng env krep vrep (Lit _ vals) = do
 data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
 
--- genType :: Gen (TypeInEra era)
--- genType = elements [ TypeInEra IntR
---                    , TypeInEra (SetR IntR)
---                    , TypeInEra (ListR IntR)
---                    , TypeInEra (MapR IntR IntR)
---                    ]
-
 genBaseType :: Gen (TypeInEra era)
 genBaseType = elements [TypeInEra IntR]
 
@@ -305,8 +299,12 @@ genPred env =
         Left errs -> pure (errPred errs, env')
         Right val -> k tm val env'
 
+    -- TODO/sizedRng
+    noSizedRng (Sized _ Rng{}, _) = False
+    noSizedRng _                  = True
+
     -- Fixed size
-    fixedSizedC = do
+    fixedSizedC = flip suchThat noSizedRng $ do
       TypeInEra rep <- genBaseType
       withValue (genTerm env (SetR rep) (VarTerm 1)) $ \set val env' ->
         let n = ExactSize (getsize val)
