@@ -2,6 +2,7 @@ module Main where
 
 import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Binary.Failure as Failure
+import qualified Test.Cardano.Ledger.Binary.PlainSpec as PlainSpec
 import qualified Test.Cardano.Ledger.Binary.RoundTripSpec as RoundTripSpec
 import qualified Test.Cardano.Ledger.Binary.Vintage.Coders as Vintage.Coders
 import qualified Test.Cardano.Ledger.Binary.Vintage.Drop as Vintage.Drop
@@ -20,6 +21,7 @@ spec = do
     it "Drop" $ Vintage.Drop.tests `shouldReturn` True
     it "Failure" $ Vintage.Failure.tests `shouldReturn` True
     Vintage.Coders.spec
+  PlainSpec.spec
   describe "Versioned" $ do
     RoundTripSpec.spec
     Failure.spec
