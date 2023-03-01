@@ -611,14 +611,3 @@ prop_soundness' strict whitelist info =
                                        , err <- errs ] ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
 
--- Why is this not triggered by tests?
-bug :: Gen (Either [String] (Subst TestEra))
-bug = genDependGraph True testProof graph
-  where
-    info  = OrderInfo {sumBeforeParts = False, sizeBeforeArg = True, setBeforeSubset = True, mapBeforeDom = False}
-    a = V "A" (MapR IntR IntR) No
-    preds = [ Sized (ExactSize 1) (Dom (Var a))
-            , HasDom (Var a) (Fixed $ Lit (SetR IntR) $ Set.singleton 6)
-            ]
-    graph = either (error . unlines) id $ runTyped $ compile info preds
-
