@@ -7,7 +7,8 @@
 
   perSystem = {lib, ...}: {
     tullia = let
-      ciInputName = "GitHub event";
+      ciInputName = "GitHub Push or PR";
+      repository = "input-output-hk/cardano-ledger";
     in rec {
       tasks.ci = {
         config,
@@ -26,14 +27,16 @@
             # bind-mounted into the container, so we don't need to fetch the
             # source from GitHub and we don't want to report a GitHub status.
             enable = config.actionRun.facts != {};
-            repository = "input-output-hk/cardano-ledger";
+            inherit repository;
+            remote = config.preset.github.lib.readRepository ciInputName null;
             revision = config.preset.github.lib.readRevision ciInputName null;
           };
         };
 
         command.text = config.preset.github.status.lib.reportBulk {
           bulk.text = ''
-            nix eval .#hydraJobs --apply __attrNames --json | nix-systems -i
+            nix eval .#hydraJobs --apply __attrNames --json |
+            nix-systems -i
           '';
           each.text = ''nix build -L .#hydraJobs."$1".required'';
           skippedDescription =
@@ -42,7 +45,12 @@
         };
 
         memory = 1024 * 8;
-        nomad.resources.cpu = 10000;
+
+        nomad = {
+          resources.cpu = 10000;
+
+          driver = "exec";
+        };
       };
 
       actions."cardano-ledger/ci" = {
@@ -55,13 +63,13 @@
 
           let github = {
             #input: "${ciInputName}"
-            #repo: "input-output-hk/cardano-ledger"
+            #repo: "${repository}"
           }
 
           #lib.merge
           #ios: [
-            #lib.io.github_push & github,
-            { #lib.io.github_pr, github, #target_default: false },
+            {#lib.io.github_push, github, #default_branch: true},
+            {#lib.io.github_pr,   github, #target_default: false},
           ]
         '';
       };
