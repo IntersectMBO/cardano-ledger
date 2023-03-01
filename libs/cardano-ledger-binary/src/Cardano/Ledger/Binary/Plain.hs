@@ -13,7 +13,7 @@ module Cardano.Ledger.Binary.Plain (
   decodeRecordSum,
   decodeListLikeT,
   serializeAsHexText,
-  decodeFullFromHexText
+  decodeFullFromHexText,
 )
 where
 
