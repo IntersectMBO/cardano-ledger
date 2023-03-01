@@ -126,7 +126,7 @@ genHalf = do
   half <- Half <$> arbitrary
   if isInfinite half || isDenormalized half || isNaN half
     then genHalf
-    else pure $ uncurry encodeFloat $ decodeFloat half
+    else pure $ fromHalf half
 
 deriving instance Arbitrary ByteArray
 
