@@ -12,6 +12,8 @@ module Cardano.Ledger.Binary.Plain (
   decodeRecordNamedT,
   decodeRecordSum,
   decodeListLikeT,
+  serializeAsHexText,
+  decodeFullFromHexText
 )
 where
 
@@ -20,7 +22,20 @@ import Codec.CBOR.Term
 import Control.Monad (unless)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
+import Data.ByteString.Base16 as B16
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+
+-- | Encode a type as CBOR and encode it as base16
+serializeAsHexText :: ToCBOR a => a -> Text.Text
+serializeAsHexText = Text.decodeLatin1 . B16.encode . serialize'
+
+-- | Try decoding base16 encode bytes and then try to decoding them as CBOR
+decodeFullFromHexText :: FromCBOR a => Text.Text -> Either DecoderError a
+decodeFullFromHexText txt =
+  case B16.decode (Text.encodeUtf8 txt) of
+    Left err -> Left $ DecoderErrorCustom "Invalid Hex encoding:" (Text.pack err)
+    Right bs -> decodeFull' bs
 
 -- | Report an error when a numeric key of the type constructor doesn't match.
 invalidKey :: MonadFail m => Word -> m a
