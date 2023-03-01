@@ -2,7 +2,8 @@
 
 ## 1.1.0.0
 
-* Add `ToJSON` superclass constraints for `EraTxOut`.
+* Add `ToJSON (PParamsHKD f era)` superclass constraints for `EraPParams`.
+* Add `ToJSON (TxOut era)` superclass constraints for `EraTxOut`.
 * Add superclass constraints for `Val`:
   * `NoThunks`, `EncCBOR`, `DecCBOR`, `ToJSON`, `NFData`, `Show`
   * `EncCBOR (CompactForm t)`, `DecCBOR (CompactForm t)`

@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -27,6 +28,10 @@ module Cardano.Ledger.Shelley.PParams (
   Update (..),
   pvCanFollow,
 
+  -- * JSON helpers
+  shelleyCommonPParamsHKDPairs,
+  shelleyCommonPParamsHKDPairsV6,
+
   -- * Deprecated
   updatePParams,
 )
@@ -35,13 +40,13 @@ where
 import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   Nonce (NeutralNonce),
+  ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
   invalidKey,
   strictMaybeToMaybe,
   succVersion,
  )
-import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecCBORGroup (..),
@@ -60,7 +65,7 @@ import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.HKD (HKD)
+import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -68,7 +73,7 @@ import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
-import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
+import Data.Aeson (FromJSON (..), Key, KeyValue, ToJSON (..), object, pairs, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
@@ -76,9 +81,10 @@ import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import Data.Proxy
 import Data.Void
 import GHC.Generics (Generic)
-import Lens.Micro (lens)
+import Lens.Micro (lens, (^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -114,7 +120,7 @@ data ShelleyPParams f era = ShelleyPParams
   -- ^ Decentralization parameter
   , sppExtraEntropy :: !(HKD f Nonce)
   -- ^ Extra entropy
-  , sppProtocolVersion :: !(HKD f BT.ProtVer)
+  , sppProtocolVersion :: !(HKD f ProtVer)
   -- ^ Protocol version
   , sppMinUTxOValue :: !(HKD f Coin)
   -- ^ Minimum UTxO value
@@ -228,27 +234,24 @@ instance Era era => ToCBOR (ShelleyPParams Identity era) where
 instance Era era => FromCBOR (ShelleyPParams Identity era) where
   fromCBOR = fromEraCBOR @era
 
-instance ToJSON (ShelleyPParams Identity era) where
-  toJSON pp =
-    Aeson.object
-      [ "minFeeA" .= sppMinFeeA pp
-      , "minFeeB" .= sppMinFeeB pp
-      , "maxBlockBodySize" .= sppMaxBBSize pp
-      , "maxTxSize" .= sppMaxTxSize pp
-      , "maxBlockHeaderSize" .= sppMaxBHSize pp
-      , "keyDeposit" .= sppKeyDeposit pp
-      , "poolDeposit" .= sppPoolDeposit pp
-      , "eMax" .= sppEMax pp
-      , "nOpt" .= sppNOpt pp
-      , "a0" .= sppA0 pp
-      , "rho" .= sppRho pp
-      , "tau" .= sppTau pp
-      , "decentralisationParam" .= sppD pp
-      , "extraEntropy" .= sppExtraEntropy pp
-      , "protocolVersion" .= sppProtocolVersion pp
-      , "minUTxOValue" .= sppMinUTxOValue pp
-      , "minPoolCost" .= sppMinPoolCost pp
-      ]
+instance
+  ( EraPParams era
+  , PParamsHKD Identity era ~ ShelleyPParams Identity era
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
+  ) =>
+  ToJSON (ShelleyPParams Identity era)
+  where
+  toJSON = object . shelleyPParamsPairs
+  toEncoding = pairs . mconcat . shelleyPParamsPairs
+
+shelleyPParamsPairs ::
+  forall era a.
+  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, KeyValue a) =>
+  PParamsHKD Identity era ->
+  [a]
+shelleyPParamsPairs pp =
+  uncurry (.=) <$> shelleyPParamsHKDPairs (Proxy @Identity) pp
 
 instance FromJSON (ShelleyPParams Identity era) where
   parseJSON =
@@ -289,7 +292,7 @@ emptyShelleyPParams =
     , sppTau = minBound
     , sppD = minBound
     , sppExtraEntropy = NeutralNonce
-    , sppProtocolVersion = BT.ProtVer (eraProtVerLow @era) 0
+    , sppProtocolVersion = ProtVer (eraProtVerLow @era) 0
     , sppMinUTxOValue = mempty
     , sppMinPoolCost = mempty
     }
@@ -370,7 +373,7 @@ instance Era era => EncCBOR (ShelleyPParams StrictMaybe era) where
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
     where
-      encodeMapElement ix encoder x = SJust (encodeWord ix <> encoder x)
+      encodeMapElement i encoder x = SJust (encodeWord i <> encoder x)
 
 instance Era era => DecCBOR (ShelleyPParams StrictMaybe era) where
   decCBOR = do
@@ -407,6 +410,74 @@ instance Era era => ToCBOR (ShelleyPParams StrictMaybe era) where
 instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
 
+instance
+  ( EraPParams era
+  , PParamsHKD StrictMaybe era ~ ShelleyPParams StrictMaybe era
+  , ProtVerAtMost era 4
+  , ProtVerAtMost era 6
+  ) =>
+  ToJSON (ShelleyPParams StrictMaybe era)
+  where
+  toJSON = object . shelleyPParamsUpdatePairs
+  toEncoding = pairs . mconcat . shelleyPParamsUpdatePairs
+
+shelleyPParamsUpdatePairs ::
+  forall era a.
+  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, KeyValue a) =>
+  PParamsHKD StrictMaybe era ->
+  [a]
+shelleyPParamsUpdatePairs pp =
+  [ k .= v
+  | (k, SJust v) <- shelleyPParamsHKDPairs (Proxy @StrictMaybe) pp
+  ]
+
+shelleyPParamsHKDPairs ::
+  forall f era.
+  (HKDFunctor f, EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
+  Proxy f ->
+  PParamsHKD f era ->
+  [(Key, HKD f Aeson.Value)]
+shelleyPParamsHKDPairs px pp =
+  shelleyCommonPParamsHKDPairs px pp
+    ++ shelleyCommonPParamsHKDPairsV6 px pp
+    ++ [("minUTxOValue", hkdMap px (toJSON @Coin) (pp ^. hkdMinUTxOValueL @era @f))]
+
+-- | These are the fields that are common only up to major protocol version 6
+shelleyCommonPParamsHKDPairsV6 ::
+  forall f era.
+  (HKDFunctor f, EraPParams era, ProtVerAtMost era 6) =>
+  Proxy f ->
+  PParamsHKD f era ->
+  [(Key, HKD f Aeson.Value)]
+shelleyCommonPParamsHKDPairsV6 px pp =
+  [ ("decentralisationParam", hkdMap px (toJSON @UnitInterval) (pp ^. hkdDL @era @f))
+  , ("extraEntropy", hkdMap px (toJSON @Nonce) (pp ^. hkdExtraEntropyL @era @f))
+  ]
+
+-- | These are the fields that are common across all eras
+shelleyCommonPParamsHKDPairs ::
+  forall f era.
+  (HKDFunctor f, EraPParams era) =>
+  Proxy f ->
+  PParamsHKD f era ->
+  [(Key, HKD f Aeson.Value)]
+shelleyCommonPParamsHKDPairs px pp =
+  [ ("minFeeA", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeAL @_ @f :: HKD f Coin))
+  , ("minFeeB", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeBL @era @f))
+  , ("maxBlockBodySize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxBBSizeL @era @f))
+  , ("maxTxSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxTxSizeL @era @f))
+  , ("maxBlockHeaderSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxBHSizeL @era @f))
+  , ("keyDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
+  , ("poolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
+  , ("eMax", hkdMap px (toJSON @EpochNo) (pp ^. hkdEMaxL @era @f))
+  , ("nOpt", hkdMap px (toJSON @Natural) (pp ^. hkdNOptL @era @f))
+  , ("a0", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
+  , ("rho", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
+  , ("tau", hkdMap px (toJSON @UnitInterval) (pp ^. hkdTauL @era @f))
+  , ("protocolVersion", hkdMap px (toJSON @ProtVer) (pp ^. hkdProtocolVersionL @era @f))
+  , ("minPoolCost", hkdMap px (toJSON @Coin) (pp ^. hkdMinPoolCostL @era @f))
+  ]
+
 -- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
@@ -435,9 +506,9 @@ updatePParams :: EraPParams era => PParams era -> PParamsUpdate era -> PParams e
 updatePParams = applyPPUpdates
 {-# DEPRECATED updatePParams "Use applyPPUpdates instead" #-}
 
-pvCanFollow :: BT.ProtVer -> StrictMaybe BT.ProtVer -> Bool
+pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
-pvCanFollow (BT.ProtVer m n) (SJust (BT.ProtVer m' n')) =
+pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
   (succVersion m, 0) == (Just m', n') || (m, n + 1) == (m', n')
 
 -- ==============================================

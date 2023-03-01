@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams (..),
   LangDepView (..),
   OrdExUnits (..),
+  alonzoCommonPParamsHKDPairs,
   encodeLangViews,
   getLanguageView,
  )
@@ -82,10 +83,18 @@ import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson as Aeson (
+  Key,
+  KeyValue ((.=)),
+  ToJSON (..),
+  object,
+  pairs,
+ )
+import qualified Data.Aeson as Aeson (Value)
 import Data.Functor.Identity (Identity (..))
 import Data.Proxy (Proxy (Proxy))
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, to)
+import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -285,6 +294,21 @@ instance Era era => DecCBOR (BabbagePParams Identity era) where
 instance Era era => FromCBOR (BabbagePParams Identity era) where
   fromCBOR = fromEraCBOR @era
 
+instance
+  (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era) =>
+  ToJSON (BabbagePParams Identity era)
+  where
+  toJSON = object . babbagePParamsPairs
+  toEncoding = pairs . mconcat . babbagePParamsPairs
+
+babbagePParamsPairs ::
+  forall era a.
+  (BabbageEraPParams era, KeyValue a) =>
+  PParamsHKD Identity era ->
+  [a]
+babbagePParamsPairs pp =
+  uncurry (.=) <$> babbagePParamsHKDPairs (Proxy @Identity) pp
+
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
 emptyBabbagePParams =
@@ -419,6 +443,33 @@ instance Era era => ToCBOR (BabbagePParams StrictMaybe era) where
 
 instance Era era => FromCBOR (BabbagePParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
+
+instance
+  (PParamsHKD StrictMaybe era ~ BabbagePParams StrictMaybe era, BabbageEraPParams era) =>
+  ToJSON (BabbagePParams StrictMaybe era)
+  where
+  toJSON = object . babbagePParamsUpdatePairs
+  toEncoding = pairs . mconcat . babbagePParamsUpdatePairs
+
+babbagePParamsUpdatePairs ::
+  forall era a.
+  (BabbageEraPParams era, KeyValue a) =>
+  PParamsHKD StrictMaybe era ->
+  [a]
+babbagePParamsUpdatePairs pp =
+  [ k .= v
+  | (k, SJust v) <- babbagePParamsHKDPairs (Proxy @StrictMaybe) pp
+  ]
+
+babbagePParamsHKDPairs ::
+  forall era f.
+  (BabbageEraPParams era, HKDFunctor f) =>
+  Proxy f ->
+  PParamsHKD f era ->
+  [(Key, HKD f Aeson.Value)]
+babbagePParamsHKDPairs px pp =
+  alonzoCommonPParamsHKDPairs px pp
+    ++ [("coinsPerUTxOByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdCoinsPerUTxOByteL @_ @f))]
 
 upgradeBabbagePParams ::
   forall f c.
