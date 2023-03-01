@@ -34,6 +34,7 @@ import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Spec (TT)
+import Test.Cardano.Ledger.Constrained.Tests (prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..))
@@ -795,3 +796,4 @@ testAll = do
   testSpec "Test 18b. Projection test" test18b
   test19
   testSpec "Test 20. ptr & rewards are inverses" test20
+  testSpec "Constraint soundness" $ pure $ property prop_soundness
