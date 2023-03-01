@@ -619,7 +619,7 @@ bug = genDependGraph True testProof graph
   where
     info  = OrderInfo {sumBeforeParts = False, sizeBeforeArg = True, setBeforeSubset = True, mapBeforeDom = False}
     a = V "A" (MapR IntR IntR) No
-    preds = [ Sized (Size 1) (Dom (Var a))
+    preds = [ Sized (ExactSize 1) (Dom (Var a))
             , HasDom (Var a) (Fixed $ Lit (SetR IntR) $ Set.singleton 6)
             ]
     graph = either (error . unlines) id $ runTyped $ compile info preds
