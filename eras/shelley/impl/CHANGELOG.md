@@ -2,11 +2,13 @@
 
 ## 1.1.0.0
 
+* Add `ToJSON (GovernanceState era)` superclass constraint for `EraCovernance`
 * Add `ToJSON` instance for:
   * `ShelleyTxOut`
   * `AlonzoPParams StrictMaybe`
   * `ProposedPPUpdates` and `ShelleyPPUPState`
-* Add `ToJSON (GovernanceState era)` superclass constraint for `EraCovernance`
+  * `AccountState`, `EpochState`, `UTxOState`, `IncrementalStake` and `LedgerState`
+  * `Likelihood` and `NonMyopic`
 
 ## 1.0.0.0
 

@@ -14,6 +14,7 @@
   * `DeltaCoin` and `CompactForm DeltaCoin`
   * `InstantaneousRewards`, `FutureGenDeleg`, `PState`, `DState` and `DPState`.
   * `UTxO` and `TxIn`
+  * `Stake`, `SnapShot`, `SnapShots`, `PoolDistr` and `IndividualPoolStake`
 
 ## 1.0.0.0
 
