@@ -7,6 +7,8 @@ module Test.Cardano.Ledger.Constrained.Size (
   SumV (..),
   vLeft,
   vRight,
+  vLeftSize,
+  vRightSize,
   OrdCond (..),
   negOrdCond,
   seps,
@@ -26,6 +28,7 @@ module Test.Cardano.Ledger.Constrained.Size (
 
 import qualified Data.List as List
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
+import Test.Cardano.Ledger.Constrained.Monad (LiftT (..), Typed (..), failT)
 import Test.QuickCheck (Gen, chooseInt)
 
 -- ==============================================
@@ -61,6 +64,12 @@ data Size
   | SzMost Int
   | SzRng Int Int -- (SzRng i j) = [i .. j] . Invariant i <= j
   deriving (Ord, Eq)
+
+instance LiftT Size where
+  liftT (SzNever xs) = failT xs
+  liftT x = pure x
+  dropT (Typed (Left s)) = SzNever s
+  dropT (Typed (Right x)) = x
 
 sameR :: Size -> Maybe Int
 sameR (SzRng x y) = if x == y then Just x else Nothing
@@ -163,13 +172,25 @@ data SumV where
   SumVAny :: SumV
   SumVNever :: [String] -> SumV
 
+instance LiftT SumV where
+  liftT (SumVNever xs) = failT xs
+  liftT x = pure x
+  dropT (Typed (Left s)) = SumVNever s
+  dropT (Typed (Right x)) = x
+
 -- Translate some thing like [SumsTo x <= 4 + 6 + 9] where the variable 'x' is on the left
 vLeft :: String -> OrdCond -> Int -> SumV
-vLeft x cond n = SumVSize x (tripToSize (x, cond, n))
+vLeft x cond n = SumVSize x (vLeftSize x cond n)
+
+vLeftSize :: String -> OrdCond -> Int -> Size
+vLeftSize x cond n = tripToSize (x, cond, n)
 
 -- Translate some thing like [SumsTo 8 < 2 + x + 3] where the variable 'x' is on the right
 vRight :: Int -> OrdCond -> Int -> String -> SumV
-vRight n cond m s = SumVSize s (tripToSize (s, negOrdCond cond, n - m))
+vRight n cond m s = SumVSize s (vRightSize n cond m s)
+
+vRightSize :: Int -> OrdCond -> Int -> String -> Size
+vRightSize n cond m s = tripToSize (s, negOrdCond cond, n - m)
 
 -- Translate some thing like [SumsTo (Negate x) <= 4 + 6 + 9] where the variable 'x'
 -- is on the left, and we want to produce its negation.
@@ -237,47 +258,6 @@ instance Show OrdCond where
   show GTE = " >= ∑ "
   show (CondNever xs) = unlines xs
   show CondAny = " `always` ∑ "
-
-{-
--- TODO get rid of this Monoid instance, use tripToSize logic instead
-instance Monoid OrdCond where
-  mempty = CondAny
-
-instance Semigroup OrdCond where
-  CondAny <> x = x
-  x <> CondAny = x
-  CondNever xs <> CondNever ys = CondNever (xs ++ ys)
-  CondNever xs <> _ = CondNever xs
-  _ <> CondNever xs = CondNever xs
-  EQL <> EQL = EQL
-  EQL <> LTH = CondNever ["EQL and LTH are not compatible."]
-  EQL <> LTE = EQL
-  EQL <> GTH = CondNever ["EQL and GTH are not compatible."]
-  EQL <> GTE = EQL
-  LTH <> EQL = CondNever ["LTH and EQL are not compatible."]
-  LTH <> LTH = LTH
-  -- while technically (LTH <> LTE = LTH) holds, moving to LTH,
-  -- changes the adjust value, this could cause failures.
-  -- Same reasoning holds for (LTE <> LTH = LTH)
-  LTH <> LTE = CondNever ["LTE and LTH  are not compatible."]
-  LTH <> GTH = CondNever ["LTH and GTH are not compatible."]
-  LTH <> GTE = CondNever ["LTH and GTE are not compatible."]
-  LTE <> EQL = EQL
-  LTE <> LTH = CondNever ["LTE and LTH  are not compatible."]
-  LTE <> LTE = LTE
-  LTE <> GTH = CondNever ["LTE and GTH are not compatible."]
-  LTE <> GTE = CondNever ["LTE and GTE are not compatible."]
-  GTH <> EQL = CondNever ["GTH and EQL are not compatible."]
-  GTH <> LTH = CondNever ["GTH and LTH are not compatible."]
-  GTH <> LTE = CondNever ["GTH and LTE are not compatible."]
-  GTH <> GTH = GTH
-  GTH <> GTE = GTH
-  GTE <> EQL = EQL
-  GTE <> LTH = CondNever ["GTE and LTH are not compatible."]
-  GTE <> LTE = CondNever ["GTE and LTE are not compatible."]
-  GTE <> GTH = GTH
-  GTE <> GTE = GTE
--}
 
 always :: c -> c -> Bool
 always _ _ = True

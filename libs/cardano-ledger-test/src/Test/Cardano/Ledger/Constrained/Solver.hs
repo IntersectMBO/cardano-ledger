@@ -84,6 +84,68 @@ ifTrace traceOn message a = case traceOn of
 -- ==================================================
 -- Computing if a type has instances
 
+-- =================
+
+hasOrd :: Rep era t -> s t -> Typed (HasCond Ord (s t))
+hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
+  where
+    help :: Rep era t -> s t -> Typed (HasCond Ord (s t))
+    help CoinR t = pure $ With t
+    help r@(_ :-> _) _ = failT [show r ++ " does not have an Ord instance."]
+    help (MapR _ b) m = do
+      With _ <- help b undefined
+      pure (With m)
+    help (SetR _) s = pure $ With s
+    help (ListR a) l = do
+      With _ <- help a undefined
+      pure $ With l
+    help CredR c = pure $ With c
+    help PoolHashR p = pure $ With p
+    help GenHashR p = pure $ With p
+    help GenDelegHashR p = pure $ With p
+    help WitHashR p = pure $ With p
+    help PoolParamsR pp = pure $ With pp
+    help EpochR e = pure $ With e
+    help RationalR r = pure $ With r
+    help Word64R w = pure $ With w
+    help IntR i = pure $ With i
+    help NaturalR i = pure $ With i
+    help FloatR i = pure $ With i
+    help TxInR t = pure $ With t
+    help StringR s = pure $ With s
+    help (ValueR (Shelley _)) v = pure $ With v
+    help (ValueR (Allegra _)) v = pure $ With v
+    help UnitR v = pure $ With v
+    help (ValueR _) _ = failT ["Value does not have Ord instance in post Allegra eras"]
+    help (TxOutR _) _ = failT ["TxOut does not have Ord instance"]
+    help (UTxOR _) _ = failT ["UTxO does not have Ord instance"]
+    help DeltaCoinR v = pure $ With v
+    help GenDelegPairR v = pure $ With v
+    help FutureGenDelegR v = pure $ With v
+    help (PPUPStateR _) _ = failT ["PPUPState does not have Ord instance"]
+    help PtrR v = pure $ With v
+    help SnapShotsR _ = failT ["SnapShot does not have Ord instance"]
+    help IPoolStakeR _ = failT ["IndividualPoolStake does not have Ord instance"]
+    help (PParamsR _) _ = failT ["PParams does not have Ord instance"]
+    help (PParamsUpdateR _) _ = failT ["PParamsUpdate does not have Ord instance"]
+    help RewardR v = pure $ With v
+    help (MaybeR a) l = do
+      With _ <- help a undefined
+      pure $ With l
+    help NewEpochStateR _ = failT ["NewEpochStateR does not have Ord instance"]
+    help (ProtVerR _) v = pure $ With v
+    help SlotNoR v = pure $ With v
+    help SizeR v = pure $ With v
+
+-- | Used to test hasOrd
+testHasCond :: Rep era [t] -> t -> IO ()
+testHasCond (ListR rep) t = case hasOrd rep [t] of
+  Typed (Right (With x)) -> print (synopsis (ListR rep) x)
+  Typed (Left xs) -> putStrLn $ unlines xs
+testHasCond _ _ = error "testHasCond only works on lists"
+
+-- ===============================
+
 -- | Is there an Adds instance for 't'
 hasAdds :: Rep era t -> (s t) -> Typed (HasCond Adds (s t))
 hasAdds IntR x = pure $ With x
@@ -99,6 +161,8 @@ isAddsType rep = case hasAdds rep (Id (undefined :: t)) of
   (Typed (Right (With _))) -> True
   (Typed (Left _)) -> False
 
+-- ==================================
+
 -- | Is there an Count instance for 't'
 hasCount :: Rep era t -> (s t) -> Typed (HasCond Count (s t))
 hasCount IntR x = pure $ With x
@@ -110,6 +174,8 @@ isCountType :: forall era t. Rep era t -> Bool
 isCountType rep = case hasCount rep (Id (undefined :: t)) of
   (Typed (Right (With _))) -> True
   (Typed (Left _)) -> False
+
+-- =================================
 
 -- | Is there a FromInt instance for 't'
 hasFromInt :: Rep era t -> (s t) -> Typed (HasCond FromInt (s t))
@@ -126,6 +192,11 @@ isFromIntType rep = case hasFromInt rep (Id (undefined :: t)) of
 
 -- ==================================================
 -- Extras, simple helper functions
+
+sameRep :: Rep era i -> Rep era j -> Typed (i :~: j)
+sameRep r1 r2 = case testEql r1 r2 of
+  Just x -> pure x
+  Nothing -> failT ["Type error in sameRep:\n  " ++ show r1 ++ " =/=\n  " ++ show r2]
 
 known :: Rep era s -> Literal era t -> Maybe s
 known s (Lit r x) = case testEql s r of Nothing -> Nothing; Just Refl -> Just x
@@ -152,11 +223,6 @@ isMapVar _ _ = False
 exactlyOne :: (a -> Bool) -> [a] -> Bool
 exactlyOne _ [] = False
 exactlyOne pp (x : xs) = pp x && all (not . pp) xs || exactlyOne pp xs
-
-sumFromDyn :: Rep era t -> Dyn era -> Typed (HasCond Adds (Id t))
-sumFromDyn rep (Dyn rep2 m) = case (testEql rep rep2) of
-  Just Refl -> hasAdds rep2 (Id m)
-  Nothing -> failT ["(Dyn " ++ show rep2 ++ " _) does not store expected type: " ++ show rep]
 
 -- | Make a generator for a Map type when there is a Projection from the domain of the map.
 projOnDom ::

@@ -338,7 +338,7 @@ genPred env =
             -- for now, since sumBeforeParts is anyway disabled due to TODO/SumSet.
             -- count <- choose (1, min 3 val)
             let count = 1
-            partSums <- intPartition ["sumdToC in Tests.hs"] (show IntR) 1 count val
+            partSums <- partitionInt 1 ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
             pure (SumsTo EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')

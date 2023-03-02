@@ -26,7 +26,7 @@ errorMess extra mess = error (unlines ("\nGen-time error" : (reverse (extra : me
 -- | suchThat version that tracks Gen-time errors
 suchThatErr :: [String] -> Gen a -> (a -> Bool) -> Gen a
 suchThatErr msgs gen p = do
-  x <- suchThatMaybe gen p
+  x <- suchThatMaybe (resize 1000 gen) p
   case x of
     Just y -> pure y
     Nothing -> errorMess "SuchThat times out" msgs

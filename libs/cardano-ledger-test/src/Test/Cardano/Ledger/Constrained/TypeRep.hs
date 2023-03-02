@@ -378,7 +378,7 @@ genSizedRep ::
   Int ->
   Rep era t ->
   Gen t
-genSizedRep _ CoinR = do Positive n <- arbitrary; pure (Coin n)
+genSizedRep _ CoinR = do Positive n <- arbitrary; pure (Coin n) -- We never store (Coin 0) so we don't generate it
 genSizedRep n (_a :-> b) = const <$> genSizedRep n b
 genSizedRep n r@(MapR a b) = do
   mapSized ["From genSizedRep " ++ show r] n (genSizedRep n a) (genSizedRep n b)
@@ -393,7 +393,7 @@ genSizedRep _ GenDelegHashR = arbitrary
 genSizedRep _ PoolParamsR = arbitrary
 genSizedRep _ EpochR = arbitrary
 genSizedRep _ RationalR = arbitrary
-genSizedRep _ Word64R = resize 500 arbitrary
+genSizedRep _ Word64R = choose (0, 1000)
 genSizedRep _ IntR = resize 500 arbitrary
 genSizedRep _ NaturalR = arbitrary
 genSizedRep _ FloatR = arbitrary

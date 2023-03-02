@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -77,7 +78,7 @@ import GHC.Real (denominator, numerator, (%))
 
 -- =====================================================================
 -- Partitioning a value into a bunch of pieces, that sum to that value
-
+{-
 -- | Generate a list of length 'size' that sums to 'total', where the minimum element is (>= 'smallest')
 intPartition :: [String] -> String -> Int -> Int -> Int -> Gen [Int]
 intPartition msgs typname smallest size total
@@ -134,7 +135,7 @@ intPartition msgs typname smallest size total
        in do
             ws <- go size total
             shuffle ws
-
+-}
 gauss :: Floating a => a -> a -> a -> a
 gauss mean stdev x = (1 / (stdev * (sqrt (2 * pi)))) * exp (negate ((1 / 2) * ((x - mean) / stdev) ** 2))
 
@@ -149,6 +150,7 @@ zeroCount fname total =
     ++ " [SumMap x]) where 'x' is the emptyset.\n"
     ++ "Try adding (Sized (Range 1 m) (Dom x)) constraint to force 'x' to have at least 1 element"
 
+{-
 rationalPartition :: [String] -> Int -> Rational -> Gen [Rational]
 rationalPartition msgs 0 total = errorMess (zeroCount "rationalPartition" total) msgs
 rationalPartition msgs n total = do
@@ -169,7 +171,7 @@ deltaCoinPartition msgs (DeltaCoin smallest) size (DeltaCoin total) =
 naturalPartition :: [String] -> Natural -> Int -> Natural -> Gen [Natural]
 naturalPartition msgs smallest size total =
   map (fromIntegral) <$> intPartition msgs "Natural" (fromIntegral smallest) size (fromIntegral total)
-
+-}
 -- ==========================================
 -- The Adds class
 
@@ -179,11 +181,9 @@ class (Ord x, Show x) => Adds x where
   zero :: x
   partition :: [String] -> Int -> x -> Gen [x]
   genAddsSumV :: [String] -> SumV -> Gen x
-  addCount :: x -> Int
-  fromCount :: Int -> x
   fromI :: [String] -> Int -> x
   toI :: x -> Int
-  nonNegative :: x -> Bool -- Not that 'x' is nonNegative, but that no 'x' is ever negative.
+  smallI :: x
 
 sumAdds :: (Foldable t, Adds c) => t c -> c
 sumAdds xs = List.foldl' add zero xs
@@ -207,26 +207,22 @@ instance Adds Word64 where
   add = (+)
   subtract _ = (-)
   zero = 0
-  partition msgs count total = map fromIntegral <$> (intPartition msgs "Int" 1 count (fromIntegral total))
+  partition = partitionWord64 0
   genAddsSumV = genFromNonNegSumV
-  addCount x = fromIntegral x
-  fromCount x = fromIntegral x
   fromI _ n | n >= 0 = fromIntegral n
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Word64.") msgs
   toI = fromIntegral
-  nonNegative = const True
+  smallI = 0
 
 instance Adds Int where
   add = (+)
   subtract _ = (-)
   zero = 0
-  partition msgs = intPartition msgs "Int" 1
+  partition = partitionInt 0
   genAddsSumV = genFromSumV
-  addCount x = x
-  fromCount x = x
   fromI _ n = n
   toI n = n
-  nonNegative = const False
+  smallI = 0
 
 instance Adds Natural where
   add = (+)
@@ -235,28 +231,22 @@ instance Adds Natural where
       then errorMess ("(subtract @Natural " ++ show x ++ " " ++ show y ++ ") is not possible") msg
       else x - y
   zero = 0
-  partition msgs = naturalPartition msgs 1
+  partition = partitionNatural 1
   genAddsSumV = genFromNonNegSumV
-  addCount x = fromIntegral x
-  fromCount x = fromIntegral x
   fromI _ n | n >= 0 = fromIntegral n
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Natural.") msgs
   toI = fromIntegral
-  nonNegative = const True
+  smallI = 1
 
 instance Adds Rational where
   add = (+)
   subtract _ = (-)
   zero = 0
-
-  -- partition = rationalPartition
-  partition = goRational (1 % 10000)
+  partition = partitionRational (1 % 10000)
   genAddsSumV = genFromSumV
-  addCount _ = 2 -- Not as arbitrary as it seems
-  fromCount n = fromIntegral n
   fromI _ n = (fromIntegral n `div` 1000) % 1
   toI r = round (r * 1000)
-  nonNegative = const False
+  smallI = (1 % 10000)
 
 instance Adds Coin where
   add = (<+>)
@@ -265,27 +255,25 @@ instance Adds Coin where
       then errorMess ("(subtract @Coin " ++ show n ++ " " ++ show m ++ ") is not possible") msg
       else Coin (n - m)
   zero = Coin 0
-  partition msgs = coinPartition msgs (Coin 1)
+  partition = partitionCoin (Coin 1)
   genAddsSumV = genFromNonNegSumV
-  addCount (Coin n) = fromInteger n
-  fromCount n = (Coin (fromIntegral n))
   fromI _ n | n >= 0 = Coin (fromIntegral n)
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Coin.") msgs
   toI (Coin n) = fromIntegral n
-  nonNegative = const True
+  smallI = (Coin 1)
 
 instance Adds DeltaCoin where
   add = (<+>)
   subtract _ (DeltaCoin n) (DeltaCoin m) = DeltaCoin (n - m)
   zero = DeltaCoin 0
-  partition msgs size total = goDeltaCoin (DeltaCoin (-4)) msgs size total
+  partition msgs size total = partitionDeltaCoin (DeltaCoin (-4)) msgs size total
   genAddsSumV = genFromSumV
-
-  addCount (DeltaCoin n) = if n < 0 then fromIntegral (-n) else fromIntegral n
-  fromCount n = DeltaCoin (fromIntegral n)
   fromI _ n = DeltaCoin (fromIntegral n)
   toI (DeltaCoin n) = (fromIntegral n)
-  nonNegative = const False
+  smallI = DeltaCoin (-4)
+
+smallInc :: forall c. Adds c => Int
+smallInc = toI (smallI @c)
 
 -- ===========================================================================
 -- The Sums class, for summing a projected c (where Adds c) from some richer type
@@ -619,7 +607,7 @@ genUTxO p = case p of
 integerPartition :: [String] -> String -> Integer -> Int -> Integer -> Gen [Integer]
 integerPartition msgs typname smallest size total
   | size == 0 = errorMess (zeroCount "integerPartition" total) msgs
-  | fromIntegral size > total =
+  | fromIntegral size > total && smallest /= 0 =
       errorMess
         ( "Can't partition "
             ++ show total
@@ -627,6 +615,9 @@ integerPartition msgs typname smallest size total
             ++ show size
             ++ " positive pieces at type "
             ++ typname
+            ++ " (smallest = "
+            ++ show smallest
+            ++ ")"
         )
         msgs
   | size < 1 =
@@ -672,22 +663,25 @@ integerPartition msgs typname smallest size total
             ws <- go (fromIntegral size) total
             shuffle ws
 
-goRational :: Rational -> [String] -> Int -> Rational -> Gen [Rational]
-goRational smallest msgs size total = do
+partitionRational :: Rational -> [String] -> Int -> Rational -> Gen [Rational]
+partitionRational smallest msgs size total = do
   let scale = lcm (denominator smallest) (denominator total)
       iSmallest = numerator (smallest * (scale % 1))
       iTotal = numerator (total * (scale % 1))
   is <- integerPartition msgs ("Rational*" ++ show scale) iSmallest size iTotal
   pure (map (\i -> i % scale) is)
 
-goCoin :: Coin -> Int -> Coin -> Gen [Coin]
-goCoin (Coin small) n (Coin total) = map Coin <$> integerPartition [] "Coin" small n total
+partitionCoin :: Coin -> [String] -> Int -> Coin -> Gen [Coin]
+partitionCoin (Coin small) msgs n (Coin total) = map Coin <$> integerPartition msgs "Coin" small n total
 
-goDeltaCoin :: DeltaCoin -> [String] -> Int -> DeltaCoin -> Gen [DeltaCoin]
-goDeltaCoin (DeltaCoin small) msgs n (DeltaCoin total) = map DeltaCoin <$> integerPartition msgs "DeltaCoin" small n total
+partitionDeltaCoin :: DeltaCoin -> [String] -> Int -> DeltaCoin -> Gen [DeltaCoin]
+partitionDeltaCoin (DeltaCoin small) msgs n (DeltaCoin total) = map DeltaCoin <$> integerPartition msgs "DeltaCoin" small n total
 
-goInt :: Int -> Int -> Int -> Gen [Int]
-goInt small n total = map fromIntegral <$> integerPartition [] "Int" (fromIntegral small) n (fromIntegral total)
+partitionInt :: Int -> [String] -> Int -> Int -> Gen [Int]
+partitionInt small msgs n total = map fromIntegral <$> integerPartition msgs "Int" (fromIntegral small) n (fromIntegral total)
 
-goWord64 :: Word64 -> Int -> Word64 -> Gen [Word64]
-goWord64 small n total = map fromIntegral <$> integerPartition [] "Word64" (fromIntegral small) n (fromIntegral total)
+partitionWord64 :: Word64 -> [String] -> Int -> Word64 -> Gen [Word64]
+partitionWord64 small msgs n total = map fromIntegral <$> integerPartition msgs "Word64" (fromIntegral small) n (fromIntegral total)
+
+partitionNatural :: Natural -> [String] -> Int -> Natural -> Gen [Natural]
+partitionNatural small msgs n total = map fromIntegral <$> integerPartition msgs "Word64" (fromIntegral small) n (fromIntegral total)

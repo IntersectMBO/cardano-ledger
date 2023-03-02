@@ -18,7 +18,6 @@ module Test.Cardano.Ledger.Constrained.Env (
   storeVar,
   P (..),
   bulkStore,
-  Dyn (..),
   Name (..),
   Access (..),
 ) where
@@ -30,7 +29,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import Data.Universe (Shaped (..))
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Monad (Dyn (..), Typed (..), failT)
+import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
 
 -- ================================================================
