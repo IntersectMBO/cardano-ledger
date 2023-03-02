@@ -32,10 +32,10 @@ import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Sums (..),
+  genFromNonNegSumV,
+  genFromSumV,
   projAdds,
   sumAdds,
-  --  anySumV,
-  --  nonNegSumV,
  )
 import Test.Cardano.Ledger.Constrained.Combinators (
   errorMess,
@@ -55,7 +55,7 @@ import Test.Cardano.Ledger.Constrained.Size (
   SumV (..),
   atleastdelta,
   atmostany,
-  runOrdCond,
+  genFromSize,
   runSize,
   seps,
   sepsP,
@@ -113,32 +113,29 @@ genSize =
     [ (1, SzLeast <$> pos)
     , (1, SzMost <$> anyAdds)
     , (4, (\x -> SzRng x x) <$> pos)
-    , (1, do lo <- anyAdds; hi <- greater lo; pure (SzRng lo hi))
+    , (1, do lo <- anyAdds; hi <- choose (lo + 1, lo + 6); pure (SzRng lo hi))
     ]
 
--- | Use to generate real sizes, where there are no negative numbers,
---   and the smallest possible size is 0.
---   Use this only where you know it is NOT SzNever
-genFromSize :: Size -> Gen Int
-genFromSize (SzNever _) = error "Bad call to (genFromSize(SzNever ..))."
-genFromSize SzAny = chooseInt (0, atmostany)
-genFromSize (SzRng i j) = chooseInt (i, j)
-genFromSize (SzLeast i) = chooseInt (i, i + atleastdelta)
-genFromSize (SzMost i) = chooseInt (0, i)
-
--- | Similar to genFromSize, but allows negative numbers (unlike size where the smallest Int is 0)
-genFromIntRange :: Size -> Gen Int
-genFromIntRange (SzNever _) = error "Bad call to (genFromIntRange(SzNever ..))."
-genFromIntRange SzAny = chooseInt (-atmostany, atmostany)
-genFromIntRange (SzRng i j) = chooseInt (i, j)
-genFromIntRange (SzLeast i) = chooseInt (i, i + atleastdelta)
-genFromIntRange (SzMost i) = chooseInt (i - atmostany, i)
+genBigSize :: Gen Size
+genBigSize =
+  frequency
+    [ (1, SzLeast <$> choose (0, 30))
+    , (1, SzMost <$> choose (1, 30))
+    , (1, (\x -> SzRng x x) <$> choose (1, 30))
+    , (1, do lo <- choose (1, 30); hi <- choose (lo + 1, lo + 30); pure (SzRng lo hi))
+    ]
 
 testSoundSize :: Gen Bool
 testSoundSize = do
   spec <- genSize
   ans <- genFromSize spec
   pure $ runSize ans spec
+
+testNonNegSize :: Gen Bool
+testNonNegSize = do
+  spec <- genSize
+  ans <- genFromSize spec
+  pure $ ans >= 0
 
 testMergeSize :: Gen Bool
 testMergeSize = do
@@ -536,15 +533,13 @@ data RngSpec era rng where
   -- \^ The set must have Adds instance and add up to 'rng'
   RngSum ::
     Adds rng =>
-    OrdCond ->
-    rng ->
+    Size -> -- the sum of all the elements must fall in the range denoted by the Size
     RngSpec era rng
   -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
   RngProj ::
-    Sums x c =>
-    OrdCond ->
+    (Sums x c) =>
     Rep era c ->
-    c ->
+    Size -> -- the sum of all the elements must fall in the range denoted by the Size
     RngSpec era x
   -- | The range has exactly these elements
   RngElem :: Eq r => Rep era r -> [r] -> RngSpec era r
@@ -569,8 +564,8 @@ instance LiftT (RngSpec era a) where
   dropT (Typed (Right x)) = x
 
 showRngSpec :: RngSpec era t -> String
-showRngSpec (RngSum cond r) = sepsP ["RngSum", show cond, show r]
-showRngSpec (RngProj cond r c) = sepsP ["RngProj", show cond, show r, show c]
+showRngSpec (RngSum sz) = sepsP ["RngSum", show sz]
+showRngSpec (RngProj r sz) = sepsP ["RngProj", show r, show sz]
 showRngSpec (RngElem r cs) = sepsP ["RngElem", show r, synopsis (ListR r) cs]
 showRngSpec (RngRel x) = sepsP ["RngRel", show x]
 showRngSpec RngAny = "RngAny"
@@ -587,32 +582,31 @@ mergeRngSpec a@(RngElem _ xs) b@(RngElem _ ys) =
   if xs == ys
     then a
     else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, "The elements are not the same"]
-mergeRngSpec a@(RngElem _xrep xs) b@(RngSum cond tot) =
+mergeRngSpec a@(RngElem _xrep xs) b@(RngSum siz) =
   let computed = sumAdds xs
-   in if runOrdCond cond computed tot
+   in if runSize (toI computed) siz
         then a
         else
           RngNever
             [ "The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b
             , "The computed sum("
                 ++ show computed
-                ++ ") and the constrained total("
-                ++ show tot
-                ++ ") are not the same"
+                ++ ") and the range denoted by the size("
+                ++ show siz
+                ++ ") are not compatible."
             ]
-mergeRngSpec b@(RngSum _ _) a@(RngElem _ _) = mergeRngSpec a b
+mergeRngSpec b@(RngSum _) a@(RngElem _ _) = mergeRngSpec a b
 -- Given the right Sums instance we can probably compare RngElem and RngProj TODO
 
-mergeRngSpec a@(RngSum c1 x) b@(RngSum c2 y) =
-  if x == y
-    then RngSum (c1 <> c2) x
-    else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, show x ++ " =/= " ++ show y]
-mergeRngSpec a@(RngProj c1 r1 x) b@(RngProj c2 r2 y) =
+mergeRngSpec a@(RngSum sz1) b@(RngSum sz2) =
+  case sz1 <> sz2 of
+    SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
+    sz3 -> RngSum sz3
+mergeRngSpec a@(RngProj r1 s1) b@(RngProj r2 s2) =
   case testEql r1 r2 of
-    Just Refl ->
-      if x == y
-        then RngProj (c1 <> c2) r1 x
-        else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, show x ++ " =/= " ++ show y]
+    Just Refl -> case s1 <> s2 of
+      SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
+      s3 -> RngProj r1 s3
     Nothing -> RngNever [show a, show b, "The RngSpec's are inconsistent.", show r1 ++ " =/= " ++ show r2]
 mergeRngSpec a@(RngRel r1) b@(RngRel r2) =
   case r1 <> r2 of
@@ -625,10 +619,8 @@ mergeRngSpec a b = RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ 
 -- | Compute the Size that is appropriate for a RngSpec
 sizeForRng :: RngSpec era dom -> Size
 sizeForRng (RngRel x) = sizeForRel x
-sizeForRng (RngSum LTH tot) = SzRng 1 (addCount tot - 2)
-sizeForRng (RngSum _ tot) = SzRng 1 (addCount tot - 1)
-sizeForRng (RngProj LTH _ tot) = SzRng 1 (addCount tot - 2)
-sizeForRng (RngProj _ _ tot) = SzRng 1 (addCount tot - 1)
+sizeForRng (RngSum _sz) = SzLeast 1 -- (min (maxSize _sz) 1)
+sizeForRng (RngProj _ _sz) = SzLeast 1
 sizeForRng (RngElem _ xs) = SzExact (length xs)
 sizeForRng RngAny = SzAny
 sizeForRng (RngNever _) = SzAny
@@ -642,16 +634,19 @@ genFromRngSpec :: forall era r. [String] -> Int -> Gen r -> RngSpec era r -> Gen
 genFromRngSpec msgs n genr x = case x of
   (RngNever xs) -> errorMess "RngNever in genFromRngSpec" (xs ++ msgs)
   RngAny -> vectorOf n genr
-  (RngSum cond tot) -> partitionBy msgs cond n tot
-  (RngProj cond _ tot) -> do
-    rs <- partitionBy (msg : msgs) cond n tot
+  (RngSum sz) -> do
+    tot <- genFromSize sz
+    partition msgs n (fromI (("genFromRngSpec " ++ show x) : msgs) tot)
+  (RngProj _ sz) -> do
+    tot <- genFromSize sz
+    rs <- partition msgs n (fromI (("genFromRngSpec " ++ show x) : msgs) tot)
     mapM (genT msgs) rs
   (RngRel relspec) -> Set.toList <$> genFromRelSpec (msg : msgs) n genr relspec
   (RngElem _ xs) -> pure xs
   where
     msg = "genFromRngSpec " ++ show n ++ " " ++ show x
 
--- | Generate a random RngSpec, appropriate for a given size. In order to accomodate any SumCOnd
+-- | Generate a random RngSpec, appropriate for a given size. In order to accomodate any OrdCond
 --   (EQL, LTH, LTE, GTE, GTH) in RngSum and RngProj, we make the total a bit larger than 'n'
 genRngSpec ::
   forall w c era.
@@ -666,11 +661,9 @@ genRngSpec ::
   Gen (RngSpec era w)
 genRngSpec 0 _ repw _ = pure $ RngRel (RelEqual repw Set.empty)
 genRngSpec n g repw repc = do
-  wtotal <- fromCount @w <$> choose (n + 3, 50) -- A bit larger than 'n'
-  ctotal <- fromCount @c <$> choose (n + 3, 50)
   frequency
-    [ (3, do (c, tot) <- genCond wtotal; pure (RngSum c tot))
-    , (2, do (c, tot) <- genCond ctotal; pure (RngProj c repc tot))
+    [ (3, do sz <- genBigSize; pure (RngSum sz))
+    , (2, do sz <- genBigSize; pure (RngProj repc sz))
     , (4, RngRel <$> genRelSpec @w ["genRngSpec "] n g repw)
     , (1, pure RngAny)
     , (2, RngElem repw <$> vectorOf n (genRep repw))
@@ -680,8 +673,8 @@ runRngSpec :: [r] -> RngSpec era r -> Bool
 runRngSpec _ (RngNever _) = False
 runRngSpec _ RngAny = True
 runRngSpec ll (RngElem _ xs) = ll == xs
-runRngSpec ll (RngSum cond tot) = runOrdCond cond (sumAdds ll) tot
-runRngSpec ll (RngProj cond _ tot) = runOrdCond cond (projAdds ll) tot
+runRngSpec ll (RngSum sz) = runSize (toI (sumAdds ll)) sz
+runRngSpec ll (RngProj _ sz) = runSize (toI (projAdds ll)) sz
 runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 
 -- ------------------------------------------
@@ -727,9 +720,17 @@ genConsistentRngSpec n g repw repc = do
     RngAny -> genRngSpec n g repw repc
     RngRel RelAny -> genRngSpec n g repw repc
     RngRel x -> RngRel <$> genConsistentRelSpec msgs g x
-    RngSum c tot -> do c2 <- genConsistentOrdCond c; elements [RngSum c2 tot, RngSum c tot]
-    RngProj c r tot -> do c2 <- genConsistentOrdCond c; elements [RngProj c2 r tot, RngProj c r tot]
-    RngElem _ xs -> pure (RngSum EQL (sumAdds xs))
+    RngSum sz -> do
+      sz2 <- suchThat genSize (Maybe.isJust . consistent sz)
+      pure $ RngSum sz2
+    RngProj rep sz -> do
+      sz2 <- suchThat genSize (Maybe.isJust . consistent sz)
+      pure $ RngProj rep sz2
+    RngElem _ xs ->
+      frequency
+        [ (1, pure $ RngSum (SzExact (toI (sumAdds xs))))
+        , (1, pure $ RngProj repc (SzExact (toI (sumAdds xs))))
+        ]
     RngNever xs -> errorMess "RngNever in genConsistentRngSpec" xs
   pure (x1, x2)
   where
@@ -1026,88 +1027,20 @@ genSetSpecIsSound = do
   where
     msgs = ["genSetSpecIsSound"]
 
--- =============================================================
-
-data SumSpec t where
-  SumSpec :: Adds t => OrdCond -> Maybe t -> Maybe t -> SumSpec t
-  SumNever :: [String] -> SumSpec t
-
-instance Show t => Show (SumSpec t) where show = showSumSpec
-
-instance (Adds t) => Semigroup (SumSpec t) where (<>) = mergeSumSpec
-instance (Adds t) => Monoid (SumSpec t) where mempty = SumSpec CondAny Nothing Nothing
-
-instance LiftT (SumSpec t) where
-  liftT (SumNever xs) = failT xs
-  liftT x = pure x
-  dropT (Typed (Left s)) = SumNever s
-  dropT (Typed (Right x)) = x
-
-sizeForSumSpec :: SumSpec t -> Size
-sizeForSumSpec _ = SzAny
-
-showM :: Show a => Maybe a -> String
-showM Nothing = "Nothing"
-showM (Just x) = "(Just " ++ show x ++ ")"
-
-showSumSpec :: SumSpec a -> String
-showSumSpec (SumSpec scond x r) = "(SumSpec " ++ showM x ++ show scond ++ showM r ++ ")"
-showSumSpec (SumNever _) = "SumNever"
-
-sameMaybe :: (Show x, Eq x) => Maybe x -> Maybe x -> Either [String] (Maybe x)
-sameMaybe Nothing Nothing = Right Nothing
-sameMaybe (Just x) Nothing = Right (Just x)
-sameMaybe Nothing (Just x) = Right (Just x)
-sameMaybe (Just x) (Just y) =
-  if x == y
-    then Right (Just x)
-    else Left ["Not the same in sameMaybe: " ++ show (x, y)]
-
-mergeSumSpec :: (Adds t) => SumSpec t -> SumSpec t -> SumSpec t
-mergeSumSpec (SumNever xs) (SumNever ys) = SumNever (xs ++ ys)
-mergeSumSpec (SumNever xs) _ = SumNever xs
-mergeSumSpec _ (SumNever xs) = SumNever xs
-mergeSumSpec (SumSpec sc1 x a) (SumSpec sc2 y b) = case (sameMaybe x y, sameMaybe a b, sc1 <> sc2) of
-  (Right _, Right _, CondNever xs) -> SumNever xs
-  (Right z, Right c, sc3) -> SumSpec sc3 z c
-  (Left z, Right _, CondNever w) -> SumNever (w ++ z)
-  (Left z, Right _, _) -> SumNever z
-  (Right _, Left c, CondNever w) -> SumNever (w ++ c)
-  (Right _, Left c, _) -> SumNever c
-  (Left z, Left c, CondNever w) -> SumNever (w ++ z ++ c)
-  (Left z, Left c, _) -> SumNever (z ++ c)
-
--- | Interpretation of SumSpec
-genFromSumSpec :: (Adds t, Era era) => [String] -> Rep era t -> SumSpec t -> Typed (Gen t)
-genFromSumSpec ms rep spec =
-  let msg = seps ["From genFromSum", show rep, show spec]
-      msgs = msg : ms
-   in explain msg $ case spec of
-        (SumNever zs) -> failT (msg : zs)
-        (SumSpec _ Nothing Nothing) -> pure $ genRep rep
-        (SumSpec _ (Just t) Nothing) -> pure $ pure t -- Recall this comes from (x :=: y) so no OrdCond is involved
-        (SumSpec cond Nothing (Just tot)) -> pure $ adjust msgs cond 1 tot
-        (SumSpec cond (Just x) (Just tot)) ->
-          if runOrdCond cond x tot
-            then pure $ pure x
-            else failT (["Sum condition not met: " ++ show x ++ show cond ++ show tot] ++ ms)
-
 -- =======================================================
 -- Specifications for Lists
 
 data ElemSpec era t where
-  -- \^ The set must have Adds instance and add up to 'tot'
+  -- \^ The set must add up to 'tot', which is in the range of Size
   ElemSum ::
     Adds t =>
-    OrdCond ->
-    t ->
+    Size ->
     ElemSpec era t
-  -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
+  -- | The range must sum upto 'c', which is in the range of Size, through the projection witnessed by the (Sums t c) class
   ElemProj ::
     Sums x c =>
-    OrdCond ->
     Rep era c ->
-    c ->
+    Size ->
     ElemSpec era x
   -- | The range has exactly these elements
   ElemEqual :: Eq t => Rep era t -> [t] -> ElemSpec era t
@@ -1129,8 +1062,8 @@ instance LiftT (ElemSpec era t) where
   dropT (Typed (Right x)) = x
 
 showElemSpec :: ElemSpec era a -> String
-showElemSpec (ElemSum c tot) = sepsP ["ElemSum", show c, show tot]
-showElemSpec (ElemProj c r tot) = sepsP ["ElemProj", show c, show r, show tot]
+showElemSpec (ElemSum sz) = sepsP ["ElemSum", show sz]
+showElemSpec (ElemProj r sz) = sepsP ["ElemProj", show r, show sz]
 showElemSpec (ElemEqual r xs) = sepsP ["ElemEqual", show r, synopsis (ListR r) xs]
 showElemSpec (ElemNever _) = "ElemNever"
 showElemSpec ElemAny = "ElemAny"
@@ -1151,9 +1084,9 @@ mergeElemSpec a@(ElemEqual r xs) b@(ElemEqual _ ys) =
         , "  " ++ show b
         , synopsis (ListR r) xs ++ " =/= " ++ synopsis (ListR r) ys
         ]
-mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum cond tot) =
+mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum sz) =
   let computed = sumAdds xs
-   in if runOrdCond cond computed tot
+   in if runSize (toI computed) sz
         then a
         else
           ElemNever
@@ -1162,29 +1095,23 @@ mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum cond tot) =
             , "  " ++ show b
             , "The computed sum("
                 ++ show computed
-                ++ ") and the constrained total("
-                ++ show tot
-                ++ ") are not the same"
+                ++ ") is not in the allowed range of the Size("
+                ++ show sz
+                ++ ")"
             ]
-mergeElemSpec b@(ElemSum _ _) a@(ElemEqual _ _) = mergeElemSpec a b
+mergeElemSpec b@(ElemSum _) a@(ElemEqual _ _) = mergeElemSpec a b
 -- Given the right Sums instance we can probably compare ElemEqual and ElemProj TODO
 
-mergeElemSpec a@(ElemSum c1 x) b@(ElemSum c2 y) =
-  if x == y
-    then ElemSum (c1 <> c2) x
-    else
-      ElemNever
-        [ "The ElemSpec's are inconsistent."
-        , "  " ++ show a
-        , "  " ++ show b
-        , show x ++ " =/= " ++ show y
-        ]
-mergeElemSpec a@(ElemProj c1 r1 x) b@(ElemProj c2 r2 y) =
+mergeElemSpec a@(ElemSum sz1) b@(ElemSum sz2) =
+  case sz1 <> sz2 of
+    SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
+    sz3 -> ElemSum sz3
+mergeElemSpec a@(ElemProj r1 sz1) b@(ElemProj r2 sz2) =
   case testEql r1 r2 of
     Just Refl ->
-      if x == y
-        then ElemProj (c1 <> c2) r1 x
-        else ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b, show x ++ " =/= " ++ show y]
+      case sz1 <> sz2 of
+        SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
+        sz3 -> ElemProj r1 sz3
     Nothing -> ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
 mergeElemSpec a b = ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
 
@@ -1192,18 +1119,16 @@ sizeForElemSpec :: ElemSpec era a -> Size
 sizeForElemSpec (ElemNever _) = SzAny
 sizeForElemSpec ElemAny = SzAny
 sizeForElemSpec (ElemEqual _ x) = SzExact (length x)
-sizeForElemSpec (ElemSum LTH tot) = SzLeast (addCount tot - 2)
-sizeForElemSpec (ElemSum _ tot) = SzLeast (addCount tot - 1)
-sizeForElemSpec (ElemProj LTH _ tot) = SzLeast (addCount tot - 2)
-sizeForElemSpec (ElemProj _ _ tot) = SzLeast (addCount tot - 1)
+sizeForElemSpec (ElemSum _) = SzLeast 1
+sizeForElemSpec (ElemProj _ _) = SzLeast 1
 
 runElemSpec :: [a] -> ElemSpec era a -> Bool
 runElemSpec xs spec = case spec of
   ElemNever _ -> False -- ErrorMess "ElemNever in runElemSpec" []
   ElemAny -> True
   ElemEqual _ ys -> xs == ys
-  ElemSum cond tot -> runOrdCond cond (sumAdds xs) tot
-  ElemProj cond _ tot -> runOrdCond cond (projAdds xs) tot
+  ElemSum sz -> runSize (toI (sumAdds xs)) sz
+  ElemProj _ sz -> runSize (toI (projAdds xs)) sz
 
 genElemSpec ::
   forall w c era.
@@ -1215,20 +1140,8 @@ genElemSpec ::
 genElemSpec (SzRng count j) repw repc
   | count == j && count >= 1 =
       frequency
-        [
-          ( 2
-          , do
-              total <- greater count -- Total must be bigger than count
-              (c, tot) <- genCond total
-              pure (ElemSum c tot)
-          )
-        ,
-          ( 2
-          , do
-              total <- greater count
-              (c, tot) <- genCond total
-              pure (ElemProj c repc tot)
-          )
+        [ (2, ElemSum <$> genBigSize)
+        , (2, ElemProj repc <$> genBigSize)
         , (2, ElemEqual repw <$> vectorOf count (genRep repw))
         , (1, pure ElemAny)
         ]
@@ -1249,9 +1162,12 @@ genFromElemSpec msgs genr n x = case x of
   (ElemNever xs) -> errorMess "RngNever in genFromElemSpec" xs
   ElemAny -> vectorOf n genr
   (ElemEqual _ xs) -> pure xs
-  (ElemSum cond tot) -> partitionBy msgs cond n tot
-  (ElemProj cond _ tot) -> do
-    rs <- partitionBy (msg : msgs) cond n tot
+  (ElemSum sz) -> do
+    tot <- genFromSize sz
+    partition msgs n (fromI (msg : msgs) tot)
+  (ElemProj _ sz) -> do
+    tot <- genFromSize sz
+    rs <- partition msgs n (fromI (msg : msgs) tot)
     mapM (genT msgs) rs
   where
     msg = "genFromElemSpec " ++ show n ++ " " ++ show x
@@ -1428,75 +1344,7 @@ testl = do
   monadTyped (liftT (a <> b))
 
 -- =======================================================================
-{-
--- | A specification of summation. like: lhs = ∑ rhs
---   The idea is that the 'rhs' can contain multiple terms: lhs = ∑ r1 + r2 + r3
---   Other example conditions:  (lhs < ∑ rhs), and (lhs >= ∑ rhs)
---   The invariant is that only a single variable appears in the summation.
---   It can appear on either side. If it appears in the 'rhs' then there
---   may be other, constant terms, in the rhs:  7 = ∑ 3 + v + 9
---   We always do the sums and solving at type Int, and cast back and forth to
---   accommodate other types with (Adds c) instances, using the methods 'fromI" and 'toI'
---   This allows the instance to deal with special conditions.
---   There are two (non-failure) possibilities 1) Var on the left, 2) Var on the right
---   We supply functions
---      vLeft  :: String -> OrdCond -> Integer -> SumV
---                SumsTo x <= 4 + 6 + 9 ===> (vLeft x LTE 19) == (SumVSize x (AtMost 19))
---      vRight :: Integer -> OrdCond -> Integer -> String -> SumV
---                SumsTo 8 < 2 + x + 3 ===> (vRight 8 LTH 5 x) == (SumVSize x (AtLeast 4))
---   But internally we store the information as a String and a Size (I.e. a range of Int)
-data SumV where
-  SumVSize :: String -> Size -> SumV
-  SumVAny :: SumV
-  SumVNever :: [String] -> SumV
-
-vLeft :: String -> OrdCond -> Int -> SumV
-vLeft s cond n = uncurry SumVSize (tripToSize (s, cond, n))
-
-vRight :: Int -> OrdCond -> Int -> String -> SumV
-vRight n cond m s = uncurry SumVSize (tripToSize (s, switch cond, n - m))
-  where
-    switch :: OrdCond -> OrdCond
-    switch EQL = EQL
-    switch LTH = GTH
-    switch LTE = GTH
-    switch GTH = LTH
-    switch GTE = LTH
-    switch x = x
-
-instance Show SumV where show = showSumV
-
-instance Semigroup SumV where (<>) = mergeSumV
-instance Monoid SumV where mempty = SumVAny
-
-instance LiftT SumV where
-  liftT (SumVNever xs) = failT xs
-  liftT x = pure x
-  dropT (Typed (Left s)) = SumVNever s
-  dropT (Typed (Right x)) = x
-
-showSumV :: SumV -> String
-showSumV SumVAny = "SumVAny"
-showSumV (SumVSize s size) = sepsP ["SumVSize", s, show size]
-showSumV (SumVNever _) = "SumVNever"
-
-mergeSumV :: SumV -> SumV -> SumV
-mergeSumV (SumVNever xs) (SumVNever ys) = SumVNever (xs ++ ys)
-mergeSumV x@(SumVNever _) _ = x
-mergeSumV _ x@(SumVNever _) = x
-mergeSumV SumVAny x = x
-mergeSumV x SumVAny = x
-mergeSumV a@(SumVSize s1 size1) b@(SumVSize s2 size2) =
-  if s1 == s2
-    then case size1 <> size2 of
-      (SzNever xs) -> SumVNever (xs ++ [show a ++ " " ++ show a ++ " are inconsistent."])
-      size3 -> SumVSize s1 size3
-    else
-      SumVNever
-        [ "vars " ++ s1 ++ " and " ++ s2 ++ " are not the same."
-        , show a ++ " " ++ show b ++ " are inconsistent."
-        ]
--}
+-- Operations on SumV (defined in Types.hs)
 
 genSumV :: Gen SumV
 genSumV =
@@ -1508,9 +1356,17 @@ genSumV =
 genNonNegSumV :: Gen SumV
 genNonNegSumV =
   frequency
-    [ (1, vLeft <$> elements ["x", "y"] <*> genOrdCond <*> choose (0, 30))
+    [
+      ( 1
+      , do
+          v <- elements ["x", "y"]
+          c <- genOrdCond
+          case c of
+            LTH -> vLeft v c <$> choose (1, 30) -- LTH and choice is 0, means negative number
+            _ -> vLeft v c <$> choose (0, 30)
+      )
     ,
-      ( 2
+      ( 1
       , do
           n <- choose (1, 30)
           cond <- genOrdCond
@@ -1519,25 +1375,6 @@ genNonNegSumV =
           pure $ vRight n cond m v
       )
     ]
-
-genFromSumV :: forall c. Adds c => [String] -> SumV -> Gen c
-genFromSumV _ SumVAny = pure zero
-genFromSumV msgs s@(SumVSize _ size) = fromI (("genFromSumV " ++ show s) : msgs) <$> genFromIntRange size
-genFromSumV msgs (SumVNever _) = errorMess ("genFromSumV applied to SumVNever") msgs
-
-genFromNonNegSumV :: forall c. Adds c => [String] -> SumV -> Gen c
-genFromNonNegSumV _ SumVAny = pure zero
-genFromNonNegSumV msgs s@(SumVSize _ size) = fromI (("genFromSumV " ++ show s) : msgs) <$> genFromSize size
-genFromNonNegSumV msgs (SumVNever _) = errorMess ("genFromSumV applied to SumVNever") msgs
-
-tripToSize :: (String, OrdCond, Int) -> (String, Size)
-tripToSize (s, EQL, n) = (s, SzExact n)
-tripToSize (s, LTH, n) = (s, SzMost (n - 1))
-tripToSize (s, LTE, n) = (s, SzMost n)
-tripToSize (s, GTH, n) = (s, SzLeast (n + 1))
-tripToSize (s, GTE, n) = (s, SzLeast n)
-tripToSize (s, CondAny, _) = (s, SzAny)
-tripToSize (s, CondNever xs, _) = (s, SzNever xs)
 
 genOrdCond :: Gen OrdCond
 genOrdCond = elements [EQL, LTH, LTE, GTH, GTE, CondAny]
@@ -1592,6 +1429,7 @@ main =
     testGroup
       "Spec tests"
       [ testProperty "test Size generators" testSoundSize
+      , testProperty "test genFromSize is non-negative" testNonNegSize
       , testProperty "test merging Size" testMergeSize
       , testProperty "we generate consistent RelSpecs" testConsistentRel
       , testProperty "test RelSpec generators" testSoundRelSpec

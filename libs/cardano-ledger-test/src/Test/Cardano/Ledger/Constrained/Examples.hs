@@ -14,7 +14,7 @@
 module Test.Cardano.Ledger.Constrained.Examples where
 
 -- import Cardano.Ledger.Credential (Credential, Ptr)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.DPState (FutureGenDeleg (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
@@ -31,7 +31,7 @@ import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..)) -- ,vLeft,vRight)
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Spec (TT)
 import Test.Cardano.Ledger.Constrained.TypeRep
@@ -307,8 +307,12 @@ pstateConstraints =
     --                         futureRegPools) :<=: poolsUniv
     -- We need to adjust the sizes so that these constraints are possible
     Sized (AtMost 3) (Dom futureRegPools) -- Small enough that its leaves some slack with poolsUniv
-  , Sized (Range 5 7) (Dom retiring) -- Small enough that its leaves some slack with poolsUniv
+  , Sized (Range 5 6) (Dom retiring) -- Small enough that its leaves some slack with poolsUniv
   , Sized (AtLeast 9) (Dom regPools) -- Large enough that retiring is a strict subset
+  -- the disjoint set futureRegPools can be as big as three
+  -- the must set can be as big as 6
+  -- so the may set can't be bigger than 6
+  -- or we get an error like:   Size inconsistency. We need 7. The most we can get from (sub-disj) is 6
   , (Dom regPools) :<=: poolsUniv
   , (Dom poolDeposits) :<=: poolsUniv
   , (Dom regPools) :=: (Dom poolDeposits)
@@ -317,6 +321,23 @@ pstateConstraints =
   , Disjoint (Dom futureRegPools) (Dom retiring)
   -- , (Dom futureRegPools) :<=: (Dom regPools)  I am pretty sure we don't want this
   ]
+
+{-
+retiring: (Map (KeyHash 'StakePool c) EpochNo)
+   Sized (Range 5 7) (Dom retiring),
+   (Dom retiring) ⊆  (Dom regPools),
+   Disjoint (Dom futureRegPools) (Dom retiring)
+
+retiring
+   Sized (Range 5 7) (Dom retiring),
+   (Dom retiring) ⊆  (Dom Map{(KeyHash 'PoolStake #"1bc4542f) -> (PoolParams (KeyHash 'PoolStake #"d8131092)) | size = 9}),
+   Disjoint (Dom Map{(KeyHash 'PoolStake #"1bc4542f) -> (PoolParams (KeyHash 'PoolStake #"1ce6a5a0)) | size = 3}) (Dom retiring)
+Note that retiring provides 9, but if futureRegPools is 3, then 9-3 means we can get atmost 6, but we need 7
+
+\*** Failed! (after 86 tests):
+Exception:
+
+-}
 
 test8 :: Gen Property
 test8 =
@@ -553,7 +574,6 @@ univPreds p =
   , Dom markPoolDistr :<=: poolsUniv
   , Dom setPools :<=: poolsUniv
   , Dom goPools :<=: poolsUniv
-  , Dom poolDistr :<=: poolsUniv
   , Dom stakeDeposits :<=: credsUniv
   , Dom delegations :<=: credsUniv
   , Dom rewards :<=: credsUniv
@@ -574,7 +594,7 @@ univPreds p =
 pstatePreds :: Proof era -> [Pred era]
 pstatePreds _p =
   [ Sized (AtMost 3) (Dom futureRegPools) -- See comments in test8 why we need these Fixed predicates
-  , Sized (Range 5 7) (Dom retiring) -- we need       retiring :<=: regPools        :<=: poolsUinv
+  , Sized (Range 5 6) (Dom retiring) -- we need       retiring :<=: regPools        :<=: poolsUinv
   , Sized (AtLeast 9) (Dom regPools) -- AND we need                 futureRegPools  :<=: poolsUniv
   , Dom regPools :=: Dom poolDistr
   , Dom regPools :=: Dom poolDeposits
@@ -700,8 +720,7 @@ projPreds2 :: Proof era -> [Pred era]
 projPreds2 _proof =
   [ Dom genDelegs :<=: genesisUniv
   , Sized (ExactSize 12) futGDUniv
-  , --  , (Dom futureGenDelegs) :<=: futGDUniv
-    Sized (ExactSize 6) genesisUniv
+  , Sized (ExactSize 6) genesisUniv
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   ]
   where
@@ -716,7 +735,7 @@ test18b :: Gen Property
 test18b =
   testn
     proof
-    "Test 18b. Projection test"
+    "Test 18b. Projection test with subset"
     False
     stoi
     (projPreds2 proof)
@@ -763,7 +782,7 @@ test20 =
   testn
     proof
     "Test 20. Test ptr rewards iso"
-    True
+    False
     stoi
     (preds20 proof)
     Skip
@@ -791,7 +810,33 @@ testAll = do
   testSpec "Test 12. CanFollow tests" test12
   testSpec "Test 13. Component tests" test13
   testSpec "Test 15. Summation on Natural" test15
-  testSpec "Test 11C. Test NonEmpty subset" test16
+  testSpec "Test 16. Test NonEmpty subset" test16
   testSpec "Test 17. Full NewEpochState" test17 -- This fails sometimes, see note about test11
   testSpec "Test 18a. Projection test" test18a
   testSpec "Test 18b. Projection test" test18b
+  test19
+  testSpec "Test 20. ptr & rewards are inverses" test20
+
+-- ================================================
+-- March 1, 2023
+{-
+
+  Gen-time error
+  (Delta ₳ 1) < ∑ (Delta reserves) + ▵₳ 5
+  Solving for variable reserves
+  genFromSumV (SumVSize reserves (AtLeast -3))
+  can't convert -2 into a Coin.
+-}
+
+test31 :: Gen Property
+test31 =
+  testn
+    proof
+    "Test 31"
+    False
+    (stoi {sumBeforeParts = False})
+    [ SumsTo LTH (Delta (Fixed (Lit CoinR (Coin 1)))) [One (Delta reserves), One (Fixed (Lit DeltaCoinR (DeltaCoin 5)))]
+    ]
+    Skip
+  where
+    proof = Alonzo Standard

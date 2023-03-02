@@ -1,25 +1,32 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE GADTs #-}
 
-module Test.Cardano.Ledger.Constrained.Size
- ( Size(..,SzExact),
-   SumV(..),
-   vLeft,
-   vRight,
-   OrdCond(..),
-   negOrdCond,
-   seps,
-   sepsP,
-   sepn,
-   runOrdCond,
-   runSize,
-   atleastdelta,
-   atmostany,
- ) where
+module Test.Cardano.Ledger.Constrained.Size (
+  Size (.., SzExact),
+  SumV (..),
+  vLeft,
+  vRight,
+  OrdCond (..),
+  negOrdCond,
+  seps,
+  sepsP,
+  sepn,
+  runOrdCond,
+  runSize,
+  atleastdelta,
+  atmostany,
+  genFromSize,
+  genFromIntRange,
+  vLeftNeg,
+  vRightNeg,
+  tripToSize,
+  negateSize,
+) where
 
 import qualified Data.List as List
-import Test.Cardano.Ledger.Constrained.Combinators(errorMess)
+import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
+import Test.QuickCheck (Gen, chooseInt)
 
 -- ==============================================
 
@@ -43,7 +50,7 @@ atmostany :: Int
 atmostany = 10
 
 -- =======================================================================================
--- The type Size and SumV are defined in their own file because its type must be known 
+-- The type Size and SumV are defined in their own file because its type must be known
 -- in many other modules, so to avoid recursive cycles this module depends on only Combinators
 -- They act like a Spec, so there are Spec like Monoid and Semigroup instances.
 
@@ -70,6 +77,12 @@ instance Show Size where
   show (SzLeast n) = "(AtLeast " ++ show n ++ ")"
   show (SzMost n) = "(AtMost " ++ show n ++ ")"
   show (SzRng i j) = "(Range " ++ show i ++ " " ++ show j ++ ")"
+
+negateSize :: Size -> Size
+negateSize (SzLeast n) = SzMost (-n)
+negateSize (SzMost n) = SzLeast (-n)
+negateSize (SzRng i j) = SzRng (-j) (-i)
+negateSize x = x
 
 mergeSize :: Size -> Size -> Size
 mergeSize SzAny x = x
@@ -107,6 +120,24 @@ runSize n (SzLeast m) = n >= m
 runSize n (SzMost m) = n <= m
 runSize n (SzRng i j) = n >= i && n <= j
 
+-- | Use to generate real sizes, where there are no negative numbers,
+--   and the smallest possible size is 0.
+--   Use this only where you know it is NOT SzNever
+genFromSize :: Size -> Gen Int
+genFromSize (SzNever _) = error "Bad call to (genFromSize(SzNever ..))."
+genFromSize SzAny = chooseInt (0, atmostany)
+genFromSize (SzRng i j) = chooseInt (max i 0, j)
+genFromSize (SzLeast i) = chooseInt (max i 0, (max i 0) + atleastdelta)
+genFromSize (SzMost i) = chooseInt (0, i)
+
+-- | Similar to genFromSize, but allows negative numbers (unlike size where the smallest Int is 0)
+genFromIntRange :: Size -> Gen Int
+genFromIntRange (SzNever _) = error "Bad call to (genFromIntRange(SzNever ..))."
+genFromIntRange SzAny = chooseInt (-atmostany, atmostany)
+genFromIntRange (SzRng i j) = chooseInt (i, j)
+genFromIntRange (SzLeast i) = chooseInt (i, i + atleastdelta)
+genFromIntRange (SzMost i) = chooseInt (i - atmostany, i)
+
 -- =========================================================================
 -- SumV
 -- =========================================================================
@@ -132,12 +163,25 @@ data SumV where
   SumVAny :: SumV
   SumVNever :: [String] -> SumV
 
+-- Translate some thing like [SumsTo x <= 4 + 6 + 9] where the variable 'x' is on the left
 vLeft :: String -> OrdCond -> Int -> SumV
-vLeft s cond n = uncurry SumVSize (tripToSize (s, cond, n))
+vLeft x cond n = SumVSize x (tripToSize (x, cond, n))
 
+-- Translate some thing like [SumsTo 8 < 2 + x + 3] where the variable 'x' is on the right
 vRight :: Int -> OrdCond -> Int -> String -> SumV
-vRight n cond m s = uncurry SumVSize (tripToSize (s, negOrdCond cond, n - m))
-  
+vRight n cond m s = SumVSize s (tripToSize (s, negOrdCond cond, n - m))
+
+-- Translate some thing like [SumsTo (Negate x) <= 4 + 6 + 9] where the variable 'x'
+-- is on the left, and we want to produce its negation.
+vLeftNeg :: String -> OrdCond -> Int -> SumV
+vLeftNeg s cond n = SumVSize s (negateSize (tripToSize (s, cond, n)))
+
+-- Translate some thing like [SumsTo 8 < 2 + (Negate x) + 3] where the
+-- variable 'x' is on the right, and we want to produce its negation.
+vRightNeg :: Int -> OrdCond -> Int -> String -> SumV
+vRightNeg n cond m s = SumVSize s (negateSize (tripToSize (s, negOrdCond cond, n - m)))
+
+-- | Not exactly conditional negation, but what we need to make 'vRight' work out
 negOrdCond :: OrdCond -> OrdCond
 negOrdCond EQL = EQL
 negOrdCond LTH = GTH
@@ -194,6 +238,7 @@ instance Show OrdCond where
   show (CondNever xs) = unlines xs
   show CondAny = " `always` ∑ "
 
+{-
 -- TODO get rid of this Monoid instance, use tripToSize logic instead
 instance Monoid OrdCond where
   mempty = CondAny
@@ -232,8 +277,7 @@ instance Semigroup OrdCond where
   GTE <> LTE = CondNever ["GTE and LTE are not compatible."]
   GTE <> GTH = GTH
   GTE <> GTE = GTE
-
-
+-}
 
 always :: c -> c -> Bool
 always _ _ = True
@@ -247,13 +291,16 @@ runOrdCond GTE x y = x >= y
 runOrdCond CondAny x y = always x y -- Always True
 runOrdCond (CondNever _) _ _ = False
 
--- | Translate an OrdCond on an Int, into a Size which
+-- | Translate an OrdCond on Int, into a Size which
 --   specifies the Int range on which the OrdCond is True.
-tripToSize :: (String, OrdCond, Int) -> (String, Size)
-tripToSize (s, EQL, n) = (s, SzExact n)
-tripToSize (s, LTH, n) = (s, SzMost (n - 1))
-tripToSize (s, LTE, n) = (s, SzMost n)
-tripToSize (s, GTH, n) = (s, SzLeast (n + 1))
-tripToSize (s, GTE, n) = (s, SzLeast n)
-tripToSize (s, CondAny, _) = (s, SzAny)
-tripToSize (s, CondNever xs, _) = (s, SzNever xs)
+--   The triple (s, EQL, 2) denotes s = 2
+--              (s, LTH, 7) denotes s < 7
+--   and each of these corresponds to a range encoded in Size
+tripToSize :: (String, OrdCond, Int) -> Size
+tripToSize (_s, EQL, n) = SzExact n
+tripToSize (_s, LTH, n) = SzMost (n - 1)
+tripToSize (_s, LTE, n) = SzMost n
+tripToSize (_s, GTH, n) = SzLeast (n + 1)
+tripToSize (_s, GTE, n) = SzLeast n
+tripToSize (_s, CondAny, _) = SzAny
+tripToSize (_s, CondNever xs, _) = SzNever xs

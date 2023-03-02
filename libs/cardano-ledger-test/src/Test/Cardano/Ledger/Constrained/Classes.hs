@@ -38,7 +38,7 @@ import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Constrained.Combinators (errorMess, suchThatErr)
+import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
@@ -57,21 +57,19 @@ import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (
   Arbitrary (..),
   Gen,
-  Positive (..),
   choose,
   chooseInt,
   elements,
   frequency,
   shuffle,
   vectorOf,
-  -- generate,
  )
 import Prelude hiding (subtract)
 
 import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..))
 import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
+import Test.Cardano.Ledger.Constrained.Size (SumV (..), genFromIntRange, genFromSize)
 
 -- import  Cardano.Ledger.Conway.Governance(ConwayTallyState(..))
 -- import Lens.Micro
@@ -180,17 +178,12 @@ class (Ord x, Show x) => Adds x where
   subtract :: [String] -> x -> x -> x
   zero :: x
   partition :: [String] -> Int -> x -> Gen [x]
+  genAddsSumV :: [String] -> SumV -> Gen x
   addCount :: x -> Int
   fromCount :: Int -> x
-  greater :: Int -> Gen x -- Generate an 'x' larger than 'Int'
   fromI :: [String] -> Int -> x
   toI :: x -> Int
-
-  -- | Adjusts the total 'x' to account for differences in OrdCond's EQL LTH LTE GTH and GTE
-  adjust :: [String] -> OrdCond -> Int -> x -> Gen x
-
-  partitionBy :: [String] -> OrdCond -> Int -> x -> Gen [x]
-  partitionBy msgs cond count total = do b <- adjust msgs cond count total; partition msgs count b
+  nonNegative :: x -> Bool -- Not that 'x' is nonNegative, but that no 'x' is ever negative.
 
 sumAdds :: (Foldable t, Adds c) => t c -> c
 sumAdds xs = List.foldl' add zero xs
@@ -200,33 +193,40 @@ projAdds xs = List.foldl' accum zero xs
   where
     accum ans x = add ans (getsum x)
 
-greaterDelta :: Int
-greaterDelta = 2
+genFromSumV :: forall c. Adds c => [String] -> SumV -> Gen c
+genFromSumV _ SumVAny = pure zero
+genFromSumV msgs s@(SumVSize _ size) = fromI (("genFromSumV " ++ show s) : msgs) <$> genFromIntRange size
+genFromSumV msgs (SumVNever _) = errorMess ("genFromSumV applied to SumVNever") msgs
+
+genFromNonNegSumV :: forall c. Adds c => [String] -> SumV -> Gen c
+genFromNonNegSumV _ SumVAny = pure zero
+genFromNonNegSumV msgs s@(SumVSize _ size) = fromI (("genFromSumV " ++ show s) : msgs) <$> genFromSize size
+genFromNonNegSumV msgs (SumVNever _) = errorMess ("genFromSumV applied to SumVNever") msgs
 
 instance Adds Word64 where
   add = (+)
   subtract _ = (-)
   zero = 0
   partition msgs count total = map fromIntegral <$> (intPartition msgs "Int" 1 count (fromIntegral total))
+  genAddsSumV = genFromNonNegSumV
   addCount x = fromIntegral x
   fromCount x = fromIntegral x
-  greater n = fromIntegral <$> choose (n + 1, n + greaterDelta)
-  adjust msgs cond count total = fromInteger <$> adjustTotalForCond msgs cond (fromIntegral count) (fromIntegral total)
   fromI _ n | n >= 0 = fromIntegral n
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Word64.") msgs
   toI = fromIntegral
+  nonNegative = const True
 
 instance Adds Int where
   add = (+)
   subtract _ = (-)
   zero = 0
   partition msgs = intPartition msgs "Int" 1
+  genAddsSumV = genFromSumV
   addCount x = x
   fromCount x = x
-  greater n = choose (n + 1, n + greaterDelta)
-  adjust msgs cond count total = fromInteger <$> adjustTotalForCond msgs cond (fromIntegral count) (fromIntegral total)
   fromI _ n = n
   toI n = n
+  nonNegative = const False
 
 instance Adds Natural where
   add = (+)
@@ -236,26 +236,27 @@ instance Adds Natural where
       else x - y
   zero = 0
   partition msgs = naturalPartition msgs 1
+  genAddsSumV = genFromNonNegSumV
   addCount x = fromIntegral x
   fromCount x = fromIntegral x
-  greater n = fromIntegral <$> choose (n + 1, n + greaterDelta)
-  adjust msgs cond count total = fromInteger <$> adjustTotalForCond msgs cond (fromIntegral count) (fromIntegral total)
   fromI _ n | n >= 0 = fromIntegral n
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Natural.") msgs
   toI = fromIntegral
+  nonNegative = const True
 
 instance Adds Rational where
   add = (+)
   subtract _ = (-)
   zero = 0
-  partition = rationalPartition
+
+  -- partition = rationalPartition
+  partition = goRational (1 % 10000)
+  genAddsSumV = genFromSumV
   addCount _ = 2 -- Not as arbitrary as it seems
   fromCount n = fromIntegral n
-  greater n = fromIntegral <$> choose (n + 1, n + greaterDelta)
-  adjust _ EQL _ x = pure x
-  adjust msgs _ _ _ = errorMess ("partition for Rational only works for EQL") msgs
-  fromI _ n = (fromIntegral n * 1000) % 1
-  toI r = (round r) `div` 1000
+  fromI _ n = (fromIntegral n `div` 1000) % 1
+  toI r = round (r * 1000)
+  nonNegative = const False
 
 instance Adds Coin where
   add = (<+>)
@@ -265,79 +266,26 @@ instance Adds Coin where
       else Coin (n - m)
   zero = Coin 0
   partition msgs = coinPartition msgs (Coin 1)
+  genAddsSumV = genFromNonNegSumV
   addCount (Coin n) = fromInteger n
   fromCount n = (Coin (fromIntegral n))
-  greater n = (Coin . fromIntegral) <$> choose (n + 1, n + greaterDelta)
-  adjust msgs cond count (Coin total) = Coin <$> adjustTotalForCond msgs cond (fromIntegral count) total
   fromI _ n | n >= 0 = Coin (fromIntegral n)
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Coin.") msgs
   toI (Coin n) = fromIntegral n
+  nonNegative = const True
 
 instance Adds DeltaCoin where
   add = (<+>)
   subtract _ (DeltaCoin n) (DeltaCoin m) = DeltaCoin (n - m)
   zero = DeltaCoin 0
   partition msgs size total = goDeltaCoin (DeltaCoin (-4)) msgs size total
+  genAddsSumV = genFromSumV
 
-  {-
-    partition msgs size _ | size < 1 = errorMess ("DeltaCoin partition applied to bad size: " ++ show size) msgs
-    partition _ 1 total = pure [total]
-    partition msgs n total = do
-      x <- arbitrary
-      xs <- partition msgs (n - 1) (subtract [] total x)
-      pure (x : xs)
-  -}
   addCount (DeltaCoin n) = if n < 0 then fromIntegral (-n) else fromIntegral n
   fromCount n = DeltaCoin (fromIntegral n)
-  greater n = (DeltaCoin . fromIntegral) <$> choose (n + 1, n + greaterDelta)
-  adjust msgs cond count (DeltaCoin total) =
-    DeltaCoin <$> adjustTotalForCond msgs cond (fromIntegral count) total
   fromI _ n = DeltaCoin (fromIntegral n)
   toI (DeltaCoin n) = (fromIntegral n)
-
-adjustTotalForCond :: [String] -> OrdCond -> Integer -> Integer -> Gen Integer
-adjustTotalForCond msgs condition count total = case condition of
-  EQL -> pure total
-  GTE -> do Positive m <- arbitrary; choose (total, total + m)
-  GTH -> do Positive m <- arbitrary; choose (total + 1, total + m)
-  LTH ->
-    if count + 1 > total - 1
-      then
-        errorMess
-          ( "find n : "
-              ++ show count
-              ++ " < n  &&  n < "
-              ++ show total
-              ++ "\n"
-              ++ "[ SumsTo Term(count="
-              ++ show count
-              ++ ") LTH Sums(total="
-              ++ show total
-              ++ ") ]"
-              ++ " Cannot be solved."
-          )
-          msgs
-      else choose (count + 1, total - 1) -- (\ n -> count < n && n < total)
-  LTE ->
-    if count + 1 > total + 1
-      then
-        errorMess
-          ( "find n : "
-              ++ show count
-              ++ " < n  &&  n <= "
-              ++ show total
-              ++ "\n"
-              ++ "[ SumsTo Term(count="
-              ++ show count
-              ++ ") LTE Sums(total="
-              ++ show total
-              ++ ") ]"
-              ++ " Cannot be solved."
-          )
-          msgs
-      else choose (count + 1, total) -- (\ n -> count < n && n <= total)
-  CondAny -> suchThatErr msgs arbitrary (\x -> x > count)
-  CondNever xs -> errorMess "adjustTotalForCond called with (NeverCond _)" (msgs ++ xs)
+  nonNegative = const False
 
 -- ===========================================================================
 -- The Sums class, for summing a projected c (where Adds c) from some richer type
@@ -362,16 +310,15 @@ instance (Reflect era) => Sums (TxOut era) Coin where
 txOutCoinL :: (Core.EraTxOut era) => Lens' (Core.TxOut era) Coin
 txOutCoinL = lens (\x -> coin (x ^. Core.valueTxOutL)) (\x c -> x & Core.valueTxOutL .~ (modifyCoin (const c) (x ^. Core.valueTxOutL)))
 
-genTxOutX :: Proof era -> Coin -> Gen (TxOut era)
-genTxOutX proof coins = do
-  (TxOut p txout) <- genTxOut proof
+genTxOutX :: forall era. Proof era -> Coin -> Gen (TxOut era)
+genTxOutX p coins =
   case p of
-    Shelley _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Allegra _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Mary _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Alonzo _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Babbage _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Conway _ -> pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Shelley _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Allegra _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Mary _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Alonzo _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Babbage _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Conway _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
 
 instance Reflect era => Sums (Value era) Coin where
   getsum (Value (Shelley _) v) = v
@@ -606,6 +553,11 @@ genValue p = case p of
   (Conway _) -> Value p <$> arbitrary
 
 genTxOut :: Proof era -> Gen (TxOut era)
+genTxOut p = do
+  n <- choose (1, 100)
+  genTxOutX p (Coin n)
+
+{-
 genTxOut p = case p of
   (Shelley _) -> TxOut p <$> arbitrary
   (Allegra _) -> TxOut p <$> arbitrary
@@ -613,6 +565,7 @@ genTxOut p = case p of
   (Alonzo _) -> TxOut p <$> arbitrary
   (Babbage _) -> TxOut p <$> arbitrary
   (Conway _) -> TxOut p <$> arbitrary
+-}
 
 genPParams :: Proof era -> Gen (PParams era)
 genPParams p = case p of
@@ -659,79 +612,6 @@ genUTxO p = case p of
   (Babbage _) -> arbitrary
   (Conway _) -> arbitrary
 
--- =========================================================================
--- SumsTo x <= [One y, SumMap z]
---          ^ paramerterize over the condition
--- EQL = (==), LTH = (<), LTE = (<=), GTH = (>), GTE = (>=)
-
-{-
-data SumCond = EQL | LTH | LTE | GTH | GTE | CondNever [String] | CondAny
-  deriving (Eq)
-
-negSumCond :: SumCond -> SumCond
-negSumCond EQL = EQL
-negSumCond LTH = GTH
-negSumCond LTE = GTH
-negSumCond GTH = LTH
-negSumCond GTE = LTH
-negSumCond x = x
-
-instance Show SumCond where
-  show EQL = " = ∑ "
-  show LTH = " < ∑ "
-  show LTE = " <= ∑ "
-  show GTH = " > ∑ "
-  show GTE = " >= ∑ "
-  show (CondNever xs) = unlines xs
-  show CondAny = " ∑? "
-
-instance Monoid SumCond where
-  mempty = CondAny
-
-instance Semigroup SumCond where
-  CondAny <> x = x
-  x <> CondAny = x
-  CondNever xs <> CondNever ys = CondNever (xs ++ ys)
-  CondNever xs <> _ = CondNever xs
-  _ <> CondNever xs = CondNever xs
-  EQL <> EQL = EQL
-  EQL <> LTH = CondNever ["EQL and LTH are not compatible."]
-  EQL <> LTE = EQL
-  EQL <> GTH = CondNever ["EQL and GTH are not compatible."]
-  EQL <> GTE = EQL
-  LTH <> EQL = CondNever ["LTH and EQL are not compatible."]
-  LTH <> LTH = LTH
-  -- while technically (LTH <> LTE = LTH) holds, moving to LTH,
-  -- changes the adjust value, this could cause failures.
-  -- Same reasoning holds for (LTE <> LTH = LTH)
-  LTH <> LTE = CondNever ["LTE and LTH  are not compatible."]
-  LTH <> GTH = CondNever ["LTH and GTH are not compatible."]
-  LTH <> GTE = CondNever ["LTH and GTE are not compatible."]
-  LTE <> EQL = EQL
-  LTE <> LTH = CondNever ["LTE and LTH  are not compatible."]
-  LTE <> LTE = LTE
-  LTE <> GTH = CondNever ["LTE and GTH are not compatible."]
-  LTE <> GTE = CondNever ["LTE and GTE are not compatible."]
-  GTH <> EQL = CondNever ["GTH and EQL are not compatible."]
-  GTH <> LTH = CondNever ["GTH and LTH are not compatible."]
-  GTH <> LTE = CondNever ["GTH and LTE are not compatible."]
-  GTH <> GTH = GTH
-  GTH <> GTE = GTH
-  GTE <> EQL = EQL
-  GTE <> LTH = CondNever ["GTE and LTH are not compatible."]
-  GTE <> LTE = CondNever ["GTE and LTE are not compatible."]
-  GTE <> GTH = GTH
-  GTE <> GTE = GTE
-
-runCond :: Ord c => SumCond -> c -> c -> Bool
-runCond EQL x y = x == y
-runCond LTH x y = x < y
-runCond LTE x y = x <= y
-runCond GTH x y = x > y
-runCond GTE x y = x >= y
-runCond CondAny _ _ = True
-runCond (CondNever _) _ _ = False
--}
 -- ==========================================================================
 -- ==========================================================================
 
@@ -811,35 +691,3 @@ goInt small n total = map fromIntegral <$> integerPartition [] "Int" (fromIntegr
 
 goWord64 :: Word64 -> Int -> Word64 -> Gen [Word64]
 goWord64 small n total = map fromIntegral <$> integerPartition [] "Word64" (fromIntegral small) n (fromIntegral total)
-
-{-
-switch :: OrdCond -> OrdCond
-switch EQL = EQL
-switch LTH = GTE
-switch LTE = GTH
-switch GTH = LTE
-switch GTE = LTH
-switch x = x
-
-nonNegSumV :: forall c. Adds c => [String] -> (String,SumCond,Integer) -> Gen c
-nonNegSumV msgs (_,EQL,n) | n >= 0 = pure (fromI msgs n)
-nonNegSumV msgs (_,LTH,n) | n >= 1 = fromI msgs <$> choose(0,n-1)
-nonNegSumV msgs (_,LTE,n) | n >= 0 = fromI msgs <$> choose(0,n)
-nonNegSumV msgs (_,GTH,n) =
-  if n>=0
-     then fromI msgs <$> choose(n+1,n+5)
-     else fromI msgs <$> choose(1,5)
-nonNegSumV msgs (_,GTE,n) =
-  if n>=0
-     then fromI msgs <$> choose(n,n+5)
-     else fromI msgs <$> choose(1,5)
-nonNegSumV msgs (s,cond,n) = errorMess ("Can't solve: "++s++show cond++"("++show (fromI @c msgs n)++")") msgs
-
-anySumV :: forall c. Adds c => [String] -> (String,SumCond,Integer) -> Gen c
-anySumV msgs (_,EQL,n) = pure (fromI msgs n)
-anySumV msgs (_,LTH,n) = fromI msgs <$> choose(n-4,n-1)
-anySumV msgs (_,LTE,n) = fromI msgs <$> choose(n-4,n)
-anySumV msgs (_,GTH,n) = fromI msgs <$> choose(n+1,n+5)
-anySumV msgs (_,GTE,n) = fromI msgs <$> choose(n,n+5)
-anySumV msgs (s,cond,n) = errorMess ("Can't solve: "++s++show cond++"("++show (fromI @c msgs n)++")") msgs
--}
