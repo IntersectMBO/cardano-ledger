@@ -9,6 +9,7 @@
   * `ProposedPPUpdates` and `ShelleyPPUPState`
   * `AccountState`, `EpochState`, `UTxOState`, `IncrementalStake` and `LedgerState`
   * `Likelihood` and `NonMyopic`
+  * `RewardUpdate` and `PulsingRewUpdate`
 
 ## 1.0.0.0
 
