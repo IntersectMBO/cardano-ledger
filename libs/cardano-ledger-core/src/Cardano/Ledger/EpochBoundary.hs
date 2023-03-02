@@ -249,11 +249,11 @@ instance Crypto c => ToJSON (SnapShots c) where
   toJSON = object . toSnapShotsPair
   toEncoding = pairs . mconcat . toSnapShotsPair
 
-toSnapShotsPair ::  ( KeyValue a  , Crypto crypto  ) => SnapShots crypto -> [a]
+toSnapShotsPair :: (KeyValue a, Crypto crypto) => SnapShots crypto -> [a]
 toSnapShotsPair ss@(SnapShots !_ _ _ _ _) =
   -- ssStakeMarkPoolDistr is omitted on purpose
   let SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee} = ss
-  in  [ "pstakeMark" .= ssStakeMark
+   in [ "pstakeMark" .= ssStakeMark
       , "pstakeSet" .= ssStakeSet
       , "pstakeGo" .= ssStakeGo
       , "feeSS" .= ssFee

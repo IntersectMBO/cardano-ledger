@@ -15,6 +15,7 @@
   * `InstantaneousRewards`, `FutureGenDeleg`, `PState`, `DState` and `DPState`.
   * `UTxO` and `TxIn`
   * `Stake`, `SnapShot`, `SnapShots`, `PoolDistr` and `IndividualPoolStake`
+  * `Reward` and `RewardType`
 
 ## 1.0.0.0
 
