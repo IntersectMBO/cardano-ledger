@@ -63,6 +63,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
@@ -213,6 +214,18 @@ instance Data.Group.Group (IncrementalStake c) where
 
 instance Default (IncrementalStake c) where
   def = IStake Map.empty Map.empty
+
+instance Crypto c => ToJSON (IncrementalStake c) where
+  toJSON = object . toIncrementalStakePairs
+  toEncoding = pairs . mconcat . toIncrementalStakePairs
+
+toIncrementalStakePairs ::
+  (KeyValue a, Crypto crypto) => IncrementalStake crypto -> [a]
+toIncrementalStakePairs iStake@(IStake _ _) =
+  let IStake {..} = iStake -- guard against addition or removal of fields
+   in [ "credentials" .= credMap
+      , "pointers" .= ptrMap
+      ]
 
 -- =============================
 
