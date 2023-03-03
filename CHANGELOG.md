@@ -107,6 +107,7 @@ Changes recorded below are for all of the package versions in the list:
 
 ### Changed
 
+- Renamed `GenesisDelegCert` to `ConstitutionalDelegCert`: #3176
 - Fix `ToCBOR`/`FromCBOR` insatance for `PParams Babbage` and `PParams Alonzo`: #3297 and #3288
 - Disallow decoding a 0-value `MultiAsset` in the de-serialization. #3241
 - Move `Wdrl` to `Core`. Also rename it to `Withdrawals`, while switching `Test.Cardano.Ledger.Generic.Fields.Withdrawals` to `Withdrawals'` #3239
