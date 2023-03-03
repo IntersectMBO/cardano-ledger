@@ -1,6 +1,6 @@
 module Cardano.Ledger.Api.PParams (
   -- * PParams
-  PParams (..),
+  PParams,
   emptyPParams,
   UpgradePParams,
   upgradePParams,
@@ -8,12 +8,12 @@ module Cardano.Ledger.Api.PParams (
   downgradePParams,
 
   -- * PParamsUpdate
-  PParamsUpdate (..),
+  PParamsUpdate,
   emptyPParamsUpdate,
   upgradePParamsUpdate,
   downgradePParamsUpdate,
 
-  -- * Babbage params
+  -- * Shelley params
 
   -- | Protocol parameters introduced in Shelley era
 
@@ -121,9 +121,10 @@ module Cardano.Ledger.Api.PParams (
   ppuMaxTxSizeL,
 
   -- * Alonzo params
+
+  -- | Protocol parameters introduced in Alonzo era
   UpgradeAlonzoPParams (..),
   DowngradeAlonzoPParams (..),
-  -- | Protocolo parameters introduced in Alonzo era
 
   -- ** @CostModels@
 
@@ -213,8 +214,6 @@ where
 import Cardano.Ledger.Alonzo.Core (
   AlonzoEraPParams (..),
   CoinPerWord (..),
-  DowngradeAlonzoPParams (..),
-  UpgradeAlonzoPParams (..),
   ppCoinsPerUTxOWordL,
   ppCollateralPercentageL,
   ppCostModelsL,
@@ -232,12 +231,20 @@ import Cardano.Ledger.Alonzo.Core (
   ppuMaxValSizeL,
   ppuPricesL,
  )
+import Cardano.Ledger.Alonzo.PParams (
+  DowngradeAlonzoPParams (..),
+  UpgradeAlonzoPParams (..),
+ )
 import Cardano.Ledger.Babbage.Core (
   BabbageEraPParams (..),
   CoinPerByte (..),
-  DowngradeBabbagePParams (..),
   ppCoinsPerUTxOByteL,
   ppuCoinsPerUTxOByteL,
+ )
+import Cardano.Ledger.Babbage.PParams (
+  DowngradeBabbagePParams (..),
+  coinsPerUTxOByteToCoinsPerUTxOWord,
+  coinsPerUTxOWordToCoinsPerUTxOByte,
  )
 import Cardano.Ledger.Core (
   EraPParams (DowngradePParams, UpgradePParams, ppDG),
