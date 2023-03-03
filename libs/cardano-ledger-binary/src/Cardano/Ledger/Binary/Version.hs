@@ -31,6 +31,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import GHC.TypeLits (KnownNat, natVal, type (<=))
@@ -43,7 +44,7 @@ import NoThunks.Class (NoThunks)
 -- | Protocol version number that is used during encoding and decoding. All supported
 -- versions are in the range from `MinVersion` to `MaxVersion`.
 newtype Version = Version Word64
-  deriving (Eq, Ord, Show, Enum, NFData, NoThunks, ToCBOR)
+  deriving (Eq, Ord, Show, Enum, NFData, NoThunks, ToCBOR, ToJSON)
 
 -- | Minimum supported version
 type MinVersion = 0
@@ -58,6 +59,9 @@ instance Bounded Version where
 instance FromCBOR Version where
   fromCBOR = fromCBOR >>= mkVersion64
 
+instance FromJSON Version where
+  parseJSON v = parseJSON v >>= mkVersion64
+
 -- | Same as `natVersionProxy`, construct a version from a type level `Nat`, except it can be
 -- supplied through @TypeApplications@.
 natVersion :: forall v. (KnownNat v, MinVersion <= v, v <= MaxVersion) => Version
@@ -70,8 +74,8 @@ natVersionProxy = Version . fromInteger . natVal
 -- | Construct a `Version` and fail if the supplied value is not a supported version number.
 mkVersion :: (Integral i, MonadFail m) => i -> m Version
 mkVersion v
-  | vi < toInteger (minBound :: Word64) = fail $ "Decoder version is too small: " ++ show vi
-  | vi > toInteger (maxBound :: Word64) = fail $ "Decoder version is too big: " ++ show vi
+  | vi < toInteger (minBound :: Word64) = fail $ "Version is too small: " ++ show vi
+  | vi > toInteger (maxBound :: Word64) = fail $ "Version is too big: " ++ show vi
   | otherwise = mkVersion64 (fromIntegral v)
   where
     vi = toInteger v
@@ -83,7 +87,7 @@ mkVersion64 v
       pure (Version (fromIntegral v))
   | otherwise =
       fail $
-        "Unsupported decoder version: "
+        "Unsupported version value: "
           ++ show v
           ++ ". Expected value in bounds: ["
           ++ show minVersion
@@ -94,7 +98,7 @@ mkVersion64 v
     Version minVersion = minBound
     Version maxVersion = maxBound
 
--- | Convert a `Version` to an ingegral.
+-- | Convert a `Version` to an `Integral` value.
 --
 -- /Note/ - Version spans a fairly small range of non-negative numbers, so this should be
 -- safe even for smallest integral types.
