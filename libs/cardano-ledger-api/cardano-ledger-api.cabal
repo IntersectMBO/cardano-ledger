@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-api
-version:            1.0.0.0
+version:            1.1.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -33,6 +33,7 @@ library
         Cardano.Ledger.Api.Scripts
         Cardano.Ledger.Api.Scripts.Data
         Cardano.Ledger.Api.Tx
+        Cardano.Ledger.Api.Tx.Address
         Cardano.Ledger.Api.Tx.AuxData
         Cardano.Ledger.Api.Tx.Body
         Cardano.Ledger.Api.Tx.Out
