@@ -74,8 +74,8 @@ natVersionProxy = Version . fromInteger . natVal
 -- | Construct a `Version` and fail if the supplied value is not a supported version number.
 mkVersion :: (Integral i, MonadFail m) => i -> m Version
 mkVersion v
-  | vi < toInteger (minBound :: Word64) = fail $ "Decoder version is too small: " ++ show vi
-  | vi > toInteger (maxBound :: Word64) = fail $ "Decoder version is too big: " ++ show vi
+  | vi < toInteger (minBound :: Word64) = fail $ "Version is too small: " ++ show vi
+  | vi > toInteger (maxBound :: Word64) = fail $ "Version is too big: " ++ show vi
   | otherwise = mkVersion64 (fromIntegral v)
   where
     vi = toInteger v
@@ -87,7 +87,7 @@ mkVersion64 v
       pure (Version (fromIntegral v))
   | otherwise =
       fail $
-        "Unsupported decoder version: "
+        "Unsupported version value: "
           ++ show v
           ++ ". Expected value in bounds: ["
           ++ show minVersion
@@ -98,7 +98,7 @@ mkVersion64 v
     Version minVersion = minBound
     Version maxVersion = maxBound
 
--- | Convert a `Version` to an ingegral.
+-- | Convert a `Version` to an `Integral` value.
 --
 -- /Note/ - Version spans a fairly small range of non-negative numbers, so this should be
 -- safe even for smallest integral types.
