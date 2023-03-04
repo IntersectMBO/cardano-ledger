@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Constrained.Examples where
 
--- import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.DPState (FutureGenDeleg (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
@@ -23,6 +22,7 @@ import Control.Exception (ErrorCall (..))
 import Control.Monad (when)
 import qualified Data.List as List
 import Data.Map (Map)
+import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Ast
@@ -31,14 +31,15 @@ import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..)) -- ,vLeft,vRight)
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Spec (TT)
+import Test.Cardano.Ledger.Constrained.Tests (prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..))
-import Test.Cardano.Ledger.Generic.Proof (C_Crypto, Reflect (..))
-import Test.Hspec.Expectations (shouldThrow)
+import Test.Cardano.Ledger.Generic.Proof (Reflect (..), Standard)
+import Test.Hspec (shouldThrow)
 import Test.QuickCheck hiding (Fixed, total)
 
 -- ===========================================
@@ -65,8 +66,7 @@ stoi = standardOrderInfo
 
 genMaybeCounterExample :: Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen (Maybe String)
 genMaybeCounterExample proof _testname loud order cs target = do
-  let cs2 = (remDom cs)
-  let cs3 = removeEqual cs2 []
+  let cs3 = removeEqual cs []
   let cs4 = removeSameVar cs3 []
   graph@(DependGraph _) <- monadTyped $ compile order cs
   let messages1 =
@@ -75,8 +75,6 @@ genMaybeCounterExample proof _testname loud order cs target = do
           else
             [ "Constraints"
             , show cs
-            , "Introduce new variables"
-            , show cs2
             , "Substitute for Equality"
             , show cs3
             , "Remove syntactic tautologies"
@@ -95,7 +93,7 @@ genMaybeCounterExample proof _testname loud order cs target = do
     Right x -> pure x
   env <- monadTyped $ substToEnv subst emptyEnv
   testTriples <- monadTyped (mapM (makeTest env) cs)
-  let messages2 = ("\nSubstitution produced after solving\n" : (map show subst))
+  let messages2 = "\nSubstitution produced after solving\n" : map show subst
   messages3 <- case target of
     Skip -> pure []
     Assemble t -> do
@@ -107,7 +105,7 @@ genMaybeCounterExample proof _testname loud order cs target = do
           then Nothing -- Indicates success, nothing bad happened
           else Just ("Some conditions fail\n" ++ explainBad bad subst)
   if loud
-    then trace (unlines (messages2 ++ messages3)) (pure $ ans)
+    then trace (unlines (messages2 ++ messages3)) (pure ans)
     else pure ans
 
 explainBad :: [(String, Bool, Pred era)] -> [SubItem era] -> String
@@ -161,7 +159,7 @@ testSpec name p = do
 
 -- | Used to test cyclic dependencies
 cyclicPred :: [Pred era]
-cyclicPred = [a :<=: b, b :<=: c, Random d, c :<=: a]
+cyclicPred = [a :⊆: b, b :⊆: c, Random d, c :⊆: a]
   where
     a = Var (V "a" (SetR IntR) No)
     b = Var (V "b" (SetR IntR) No)
@@ -181,7 +179,7 @@ test2 :: Bool -> IO ()
 test2 loud = do
   putStrLn "testing: genT of Sums class, generates list with sum 30"
   when loud $ putStrLn "======================================================="
-  zs <- generate (genT @[Reward C_Crypto] ["test2"] (Coin 30) :: Gen [Reward C_Crypto])
+  zs <- generate (genT @[Reward Standard] ["test2"] (Coin 30) :: Gen [Reward Standard])
   let getcoin (Reward _ _ c) = c
       total = List.foldl' (\c r -> add c (getcoin r)) (Coin 0) zs
   if total /= (Coin 30)
@@ -190,66 +188,63 @@ test2 loud = do
 
 -- ===================================
 test3 :: Gen Property
-test3 = testn (Mary Mock) "Test 3. PState example" False stoi cs (Assemble pstateT)
+test3 = testn (Mary Standard) "Test 3. PState example" False stoi cs (Assemble pstateT)
   where
     cs =
       [ Sized (ExactSize 10) poolsUniv
       , Sized (Range 1 7) (Dom mockPoolDistr) -- At least 1, but smaller than the poolsUniv
       , Dom mockPoolDistr :=: Dom regPools -- or mockPoolDistr can't sum to (1%1) if its empty
       , Dom mockPoolDistr :=: Dom poolDeposits
-      , Dom mockPoolDistr :<=: poolsUniv
-      , Dom futureRegPools :<=: poolsUniv
-      , Dom retiring :<=: Dom regPools
-      , SumsTo EQL (Fixed (Lit RationalR 1)) [SumMap mockPoolDistr]
+      , Dom mockPoolDistr :⊆: poolsUniv
+      , Dom futureRegPools :⊆: poolsUniv
+      , Dom retiring :⊆: Dom regPools
+      , SumsTo (1 % 1000) (Lit RationalR 1) EQL [SumMap mockPoolDistr]
       ]
 
 -- ==============================
 
 test4 :: IO ()
-test4 = failn (Mary Mock) "Test 4. Inconsistent Size" False stoi cs Skip
+test4 = failn (Mary Standard) "Test 4. Inconsistent Size" False stoi cs Skip
   where
     cs =
       [ Sized (ExactSize 5) rewards
-      , SumsTo GTH (Fixed (Lit CoinR (Coin 5))) [SumMap rewards]
+      , SumsTo (Coin 1) (Lit CoinR (Coin 5)) GTH [SumMap rewards]
       ]
 
 test5 :: IO ()
-test5 = failn (Mary Mock) "Test 5. Bad Sum, impossible partition." False stoi cs Skip
+test5 = failn (Mary Standard) "Test 5. Bad Sum, impossible partition." False stoi cs Skip
   where
     cs =
       [ Sized (ExactSize 5) rewards
-      , SumsTo EQL (Fixed (Lit CoinR (Coin 4))) [SumMap rewards]
+      , SumsTo (Coin 1) (Lit CoinR (Coin 4)) EQL [SumMap rewards]
       ]
 
 -- ===========================================================
 -- Example list of Constraints for test4 and test5
 
-commonSize :: Term era Int
-commonSize = Var (V "commonSize" IntR No)
-
 constraints :: Proof era -> [Pred era]
 constraints proof =
   [ Sized (ExactSize 10) credsUniv
   , Sized (ExactSize 10) poolsUniv
-  , Sized (AtLeast 1) commonSize
-  , Sized (ExactSize 1) mockPoolDistr -- This is summed so it can't be empty.
-  , Sized (ExactSize 1) regPools -- This has the same domain, so it must have the same size
-  , Dom rewards :<=: credsUniv
-  , Rng delegations :<=: poolsUniv
-  , Dom poolDeposits :<=: poolsUniv
+  , Sized (AtLeast 1) mockPoolDistr -- This is summed so it can't be empty.
+  , Sized (AtLeast 1) regPools -- This has the same domain, so it can't be empty either
+  , Dom rewards :⊆: credsUniv
+  , Rng delegations :⊆: poolsUniv
+  , Dom poolDeposits :⊆: poolsUniv
   , Dom rewards :=: Dom stakeDeposits
-  , Dom stakeDeposits :<=: credsUniv
-  , Dom delegations :<=: credsUniv
-  , Dom delegations :<=: Dom rewards
+  , Dom stakeDeposits :⊆: credsUniv
+  , Dom delegations :⊆: credsUniv
+  , Dom delegations :⊆: Dom rewards
   , Dom regPools :=: Dom mockPoolDistr
   , Dom regPools :=: Dom poolDeposits
-  , Dom regPools :<=: poolsUniv
-  , Dom retiring :<=: Dom regPools
-  , SumsTo EQL deposits [SumMap stakeDeposits, SumMap poolDeposits]
-  , SumsTo EQL (Fixed (Lit RationalR 1)) [SumMap mockPoolDistr] -- FOR SOME REASON, This must have size 1, TODO fix this
+  , Dom regPools :⊆: poolsUniv
+  , Dom retiring :⊆: Dom regPools
+  , SumsTo (Coin 1) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [SumMap mockPoolDistr]
   , SumsTo
-      EQL
+      (Coin 1)
       totalAda
+      EQL
       [ One utxoCoin
       , One treasury
       , One reserves
@@ -270,7 +265,7 @@ test6 :: Bool -> IO ()
 test6 loud = do
   putStrLn "testing: find a viable order of variables"
   when loud $ putStrLn "======================================================="
-  case runTyped (compile standardOrderInfo $ constraints (Shelley Mock)) of
+  case runTyped (compile standardOrderInfo $ constraints (Shelley Standard)) of
     Right x ->
       if loud
         then print x
@@ -282,7 +277,7 @@ test7 :: Bool -> IO ()
 test7 loud = do
   putStrLn "testing: compute a solution"
   when loud $ putStrLn "======================================================="
-  let proof = Shelley Mock
+  let proof = Shelley Standard
   when loud $ putStrLn (show $ constraints proof)
   graph <- monadTyped $ compile standardOrderInfo $ constraints proof
   when loud $ putStrLn (show graph)
@@ -303,8 +298,8 @@ test7 loud = do
 pstateConstraints :: [Pred era]
 pstateConstraints =
   [ Sized (ExactSize 20) poolsUniv
-  , -- we have , retiring :<=: regPools        :<=: poolsUinv AND
-    --                         futureRegPools) :<=: poolsUniv
+  , -- we have , retiring :⊆: regPools        :⊆: poolsUinv AND
+    --                         futureRegPools) :⊆: poolsUniv
     -- We need to adjust the sizes so that these constraints are possible
     Sized (AtMost 3) (Dom futureRegPools) -- Small enough that its leaves some slack with poolsUniv
   , Sized (Range 5 6) (Dom retiring) -- Small enough that its leaves some slack with poolsUniv
@@ -313,24 +308,24 @@ pstateConstraints =
   -- the must set can be as big as 6
   -- so the may set can't be bigger than 6
   -- or we get an error like:   Size inconsistency. We need 7. The most we can get from (sub-disj) is 6
-  , (Dom regPools) :<=: poolsUniv
-  , (Dom poolDeposits) :<=: poolsUniv
+  , (Dom regPools) :⊆: poolsUniv
+  , (Dom poolDeposits) :⊆: poolsUniv
   , (Dom regPools) :=: (Dom poolDeposits)
-  , (Dom retiring) :<=: (Dom regPools)
-  , (Dom futureRegPools) :<=: poolsUniv
+  , (Dom retiring) :⊆: (Dom regPools)
+  , (Dom futureRegPools) :⊆: poolsUniv
   , Disjoint (Dom futureRegPools) (Dom retiring)
-  -- , (Dom futureRegPools) :<=: (Dom regPools)  I am pretty sure we don't want this
+  -- , (Dom futureRegPools) :⊆: (Dom regPools)  I am pretty sure we don't want this
   ]
 
 {-
 retiring: (Map (KeyHash 'StakePool c) EpochNo)
    Sized (Range 5 7) (Dom retiring),
-   (Dom retiring) ⊆  (Dom regPools),
+   (Dom retiring) :⊆:  (Dom regPools),
    Disjoint (Dom futureRegPools) (Dom retiring)
 
 retiring
    Sized (Range 5 7) (Dom retiring),
-   (Dom retiring) ⊆  (Dom Map{(KeyHash 'PoolStake #"1bc4542f) -> (PoolParams (KeyHash 'PoolStake #"d8131092)) | size = 9}),
+   (Dom retiring) :⊆:  (Dom Map{(KeyHash 'PoolStake #"1bc4542f) -> (PoolParams (KeyHash 'PoolStake #"d8131092)) | size = 9}),
    Disjoint (Dom Map{(KeyHash 'PoolStake #"1bc4542f) -> (PoolParams (KeyHash 'PoolStake #"1ce6a5a0)) | size = 3}) (Dom retiring)
 Note that retiring provides 9, but if futureRegPools is 3, then 9-3 means we can get atmost 6, but we need 7
 
@@ -356,11 +351,11 @@ test8 =
 sumPreds :: Reflect era => Proof era -> [Pred era]
 sumPreds proof =
   [ Random totalAda
-  , fees :=: Fixed (Lit CoinR (Coin 400))
-  , deposits :=: Fixed (Lit CoinR (Coin 200))
-  , SumsTo LTE totalAda [One fees, One deposits, One utxoAmt]
-  , SumsTo EQL (Fixed (Lit RationalR 1)) [Project RationalR poolDistr]
-  , SumsTo GTH utxoAmt [Project CoinR (utxo proof)]
+  , fees :=: (Lit CoinR (Coin 400))
+  , deposits :=: (Lit CoinR (Coin 200))
+  , SumsTo (Coin 1) totalAda LTE [One fees, One deposits, One utxoAmt]
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [Project RationalR poolDistr]
+  , SumsTo (Coin 1) utxoAmt GTH [Project CoinR (utxo proof)]
   , Sized (AtLeast 1) (utxo proof) -- Any map that is summed, to a nonzero amount, can't be empty.
   , Sized (AtLeast 1) poolDistr
   ]
@@ -379,11 +374,11 @@ test10 =
     stoi
     [ Random x
     , Sized (AtLeast 2) y -- We Shouldn't need this, but without it breaks the LTH case  ? < 2 can't be solved
-    , SumsTo LTH tsumLTH [One x, One y]
-    , SumsTo LTE tsumLTE [One x, One y]
-    , SumsTo GTH tsumGTH [One x, One y]
-    , SumsTo GTE tsumGTE [One x, One y]
-    , SumsTo EQL tsumEQL [One x, One y]
+    , SumsTo (Coin 1) tsumLTH LTH [One x, One y]
+    , SumsTo (Coin 1) tsumLTE LTE [One x, One y]
+    , SumsTo (Coin 1) tsumGTH GTH [One x, One y]
+    , SumsTo (Coin 1) tsumGTE GTE [One x, One y]
+    , SumsTo (Coin 1) tsumEQL EQL [One x, One y]
     ]
     Skip
   where
@@ -395,7 +390,7 @@ test10 =
     tsumGTE = Var (V "tsumGTE" rep No)
     tsumEQL = Var (V "tsumEQL" rep No)
     rep = CoinR
-    proof = Mary Mock
+    proof = Mary Standard
 
 test11 :: Gen Property
 test11 =
@@ -405,35 +400,19 @@ test11 =
     False
     (stoi {sumBeforeParts = False})
     [ Sized (AtLeast 1) treasury
-    , -- , Sized (AtLeast 1) reserves
-      Random instanTreasury
-    , -- , Sized (AtLeast 3) instanTreasury  -- We need instanTreasurySum to be at least 3
-      Sized (AtLeast 1) instanReserves
+    , Random instanTreasury
+    , Sized (AtLeast 1) instanReserves
     , Negate (deltaReserves) :=: deltaTreasury
-    , SumsTo EQL instanReservesSum [SumMap instanReserves]
-    , SumsTo LTH (Delta instanReservesSum) [One (Delta reserves), One deltaReserves]
-    , SumsTo EQL instanTreasurySum [SumMap instanTreasury]
-    , -- , SumsTo LTH (Delta instanTreasurySum) [One (Delta treasury), One deltaTreasury]
-      --  SumsTo LTH (Delta instanTreasurySum) + Negate deltaTresury = [One (Delta treasury)}
-      SumsTo GTE (Delta treasury) [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
+    , SumsTo (Coin 1) instanReservesSum EQL [SumMap instanReserves]
+    , SumsTo (DeltaCoin 1) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
+    , SumsTo (Coin 1) instanTreasurySum EQL [SumMap instanTreasury]
+    , SumsTo (DeltaCoin 1) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
     ]
     Skip
   where
     instanReservesSum = Var (V "instanReservesSum" CoinR No)
     instanTreasurySum = Var (V "instanTreasurySum" CoinR No)
     proof = Alonzo Standard
-
-{- Still get this failure very occaisionaly (about 1 every 2000)
-   I think this is a problem with the Predicates, we are underconstraing things
-   I think there are some assumptions about what things can (or cannot be) the
-   empty set (map), and we are not capturing that. I don't understand it enough
-   to debug.
-when    (stoi{sumBeforeParts = True})
-(Delta ₳ 1) < ∑ (Delta reserves) + ▵₳ 3
-Given (Add s), Solving for reserves::c. Predicates
-  (Delta ₳ 1) < ∑ (Delta reserves) + ▵₳ 3
-DeltaCoin is negative: DeltaCoin (-2). Can't convert to Coin
--}
 
 -- =====================================================
 
@@ -465,8 +444,9 @@ componentPreds proof =
   , Sized size llx -- Note since size denotes a range, llx and mm could have different sizes
   , Sized size mm
   , SumsTo
+      (Coin 1)
+      (Lit CoinR (Coin 100))
       EQL
-      (Fixed $ Lit CoinR (Coin 100))
       [ One (minFeeA proof)
       , One (minFeeB proof)
       ]
@@ -495,7 +475,7 @@ test13 =
 test14 :: IO ()
 test14 =
   failn
-    (Allegra Mock)
+    (Allegra Standard)
     "Test 14. Catch unsolveable use of Sized"
     False
     stoi
@@ -518,7 +498,7 @@ test15 =
     , Sized (AtLeast 1) (maxBHSize proof)
     , -- if both maxTxSize and maxBHSize are Random it may be impossible to solve
       -- because  both might be 0, and maxBBSize <= 0, is inconsistent.
-      SumsTo LTE (maxBBSize proof) [One (maxBHSize proof), One (maxTxSize proof)]
+      SumsTo 1 (maxBBSize proof) LTE [One (maxBHSize proof), One (maxTxSize proof)]
     , Component
         (pparams proof)
         [field pp (maxTxSize proof), field pp (maxBHSize proof), field pp (maxBBSize proof)]
@@ -534,11 +514,11 @@ preds16 :: Reflect era => Proof era -> [Pred era]
 preds16 _proof =
   [ Sized (ExactSize 6) poolsUniv
   , Sized (Range 1 3) (Dom poolDistr) -- At least 1 but smaller than the poolsUniv
-  , Dom poolDistr :<=: poolsUniv
-  , SumsTo EQL (Fixed (Lit RationalR 1)) [Project RationalR poolDistr]
+  , Dom poolDistr :⊆: poolsUniv
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [Project RationalR poolDistr]
   , Sized (Range 1 4) (Dom foox) -- At least 1 but smaller than the poolsUniv
-  , Dom foox :<=: poolsUniv
-  , SumsTo EQL (Fixed (Lit RationalR 1)) [SumMap foox]
+  , Dom foox :⊆: poolsUniv
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [SumMap foox]
   ]
   where
     foox = Var (V "foo" (MapR PoolHashR RationalR) No)
@@ -563,43 +543,43 @@ univPreds p =
   , Sized (ExactSize 20) poolsUniv
   , Sized (ExactSize 12) genesisUniv
   , Sized (ExactSize 12) txinUniv
-  , Dom poolDistr :<=: poolsUniv
-  , Dom regPools :<=: poolsUniv
-  , Dom retiring :<=: poolsUniv
-  , Dom futureRegPools :<=: poolsUniv
-  , Dom poolDeposits :<=: poolsUniv
-  , Dom prevBlocksMade :<=: poolsUniv
-  , Dom currBlocksMade :<=: poolsUniv
-  , Dom markPools :<=: poolsUniv
-  , Dom markPoolDistr :<=: poolsUniv
-  , Dom setPools :<=: poolsUniv
-  , Dom goPools :<=: poolsUniv
-  , Dom stakeDeposits :<=: credsUniv
-  , Dom delegations :<=: credsUniv
-  , Dom rewards :<=: credsUniv
-  , Dom markStake :<=: credsUniv
-  , Dom markDelegs :<=: credsUniv
-  , Dom setStake :<=: credsUniv
-  , Dom setDelegs :<=: credsUniv
-  , Dom goStake :<=: credsUniv
-  , Dom goDelegs :<=: credsUniv
-  , Dom instanReserves :<=: credsUniv
-  , Dom instanTreasury :<=: credsUniv
-  , Dom (proposalsT p) :<=: genesisUniv
-  , Dom (futureProposalsT p) :<=: genesisUniv
-  , Dom genDelegs :<=: genesisUniv
-  , Dom (utxo p) :<=: txinUniv
+  , Dom poolDistr :⊆: poolsUniv
+  , Dom regPools :⊆: poolsUniv
+  , Dom retiring :⊆: poolsUniv
+  , Dom futureRegPools :⊆: poolsUniv
+  , Dom poolDeposits :⊆: poolsUniv
+  , Dom prevBlocksMade :⊆: poolsUniv
+  , Dom currBlocksMade :⊆: poolsUniv
+  , Dom markPools :⊆: poolsUniv
+  , Dom markPoolDistr :⊆: poolsUniv
+  , Dom setPools :⊆: poolsUniv
+  , Dom goPools :⊆: poolsUniv
+  , Dom stakeDeposits :⊆: credsUniv
+  , Dom delegations :⊆: credsUniv
+  , Dom rewards :⊆: credsUniv
+  , Dom markStake :⊆: credsUniv
+  , Dom markDelegs :⊆: credsUniv
+  , Dom setStake :⊆: credsUniv
+  , Dom setDelegs :⊆: credsUniv
+  , Dom goStake :⊆: credsUniv
+  , Dom goDelegs :⊆: credsUniv
+  , Dom instanReserves :⊆: credsUniv
+  , Dom instanTreasury :⊆: credsUniv
+  , Dom (proposalsT p) :⊆: genesisUniv
+  , Dom (futureProposalsT p) :⊆: genesisUniv
+  , Dom genDelegs :⊆: genesisUniv
+  , Dom (utxo p) :⊆: txinUniv
   ]
 
 pstatePreds :: Proof era -> [Pred era]
 pstatePreds _p =
   [ Sized (AtMost 3) (Dom futureRegPools) -- See comments in test8 why we need these Fixed predicates
-  , Sized (Range 5 6) (Dom retiring) -- we need       retiring :<=: regPools        :<=: poolsUinv
-  , Sized (AtLeast 9) (Dom regPools) -- AND we need                 futureRegPools  :<=: poolsUniv
+  , Sized (Range 5 6) (Dom retiring) -- we need       retiring :⊆: regPools        :⊆: poolsUinv
+  , Sized (AtLeast 9) (Dom regPools) -- AND we need                 futureRegPools  :⊆: poolsUniv
   , Dom regPools :=: Dom poolDistr
   , Dom regPools :=: Dom poolDeposits
-  , Dom retiring :<=: Dom regPools
-  , -- , Dom futureRegPools :<=: Dom poolDistr  -- Don't think we want this
+  , Dom retiring :⊆: Dom regPools
+  , -- , Dom futureRegPools :⊆: Dom poolDistr  -- Don't think we want this
     Disjoint (Dom futureRegPools) (Dom retiring)
   ]
 
@@ -607,7 +587,7 @@ dstatePreds :: Proof era -> [Pred era]
 dstatePreds _p =
   [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
   , Dom rewards :=: Dom stakeDeposits
-  , Dom delegations :<=: Dom rewards
+  , Dom delegations :⊆: Dom rewards
   , Dom rewards :=: Rng ptrs
   , -- This implies (Fixed (ExactSize 3) instanReserves)
     -- But it also implies that the new introduced variable instanReservesDom also has size 3
@@ -618,10 +598,10 @@ dstatePreds _p =
   , Random instanTreasury
   , Sized (AtLeast 1) instanReserves
   , Negate (deltaReserves) :=: deltaTreasury
-  , SumsTo EQL instanReservesSum [SumMap instanReserves]
-  , SumsTo LTH (Delta instanReservesSum) [One (Delta reserves), One deltaReserves]
-  , SumsTo EQL instanTreasurySum [SumMap instanTreasury]
-  , SumsTo LTH (Delta instanTreasurySum) [One (Delta treasury), One deltaTreasury]
+  , SumsTo (Coin 1) instanReservesSum EQL [SumMap instanReserves]
+  , SumsTo (DeltaCoin 1) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
+  , SumsTo (Coin 1) instanTreasurySum EQL [SumMap instanTreasury]
+  , SumsTo (DeltaCoin 1) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   ]
   where
@@ -633,9 +613,9 @@ accountstatePreds _p = [] -- Constraints on reserves and treasury appear in dsta
 
 utxostatePreds :: Reflect era => Proof era -> [Pred era]
 utxostatePreds proof =
-  [ SumsTo EQL utxoCoin [Project CoinR (utxo proof)]
-  , SumsTo EQL deposits [SumMap stakeDeposits, SumMap poolDeposits]
-  , SumsTo EQL totalAda [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
+  [ SumsTo (Coin 1) utxoCoin EQL [Project CoinR (utxo proof)]
+  , SumsTo (Coin 1) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
+  , SumsTo (Coin 1) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
   , Random fees
   , Random (proposalsT proof)
   , Random (futureProposalsT proof)
@@ -658,8 +638,8 @@ epochstatePreds proof =
   , Sized (AtLeast 1) (maxBHSize proof)
   , Sized (AtLeast 1) (maxTxSize proof)
   , -- , Random (maxBBSize proof) -- This will cause underflow on Natural
-    SumsTo EQL (Fixed (Lit RationalR 1)) [Project RationalR markPoolDistr]
-  , SumsTo LTE (maxBBSize proof) [One (maxBHSize proof), One (maxTxSize proof)]
+    SumsTo (1 % 1000) (Lit RationalR 1) EQL [Project RationalR markPoolDistr]
+  , SumsTo 1 (maxBBSize proof) LTE [One (maxBHSize proof), One (maxTxSize proof)]
   , Component
       (pparams proof)
       [field pp (maxTxSize proof), field pp (maxBHSize proof), field pp (maxBBSize proof)]
@@ -672,7 +652,7 @@ newepochstatePreds _proof =
   [ Random epochNo
   , Sized (ExactSize 8) (Dom prevBlocksMade) -- Both prevBlocksMade and prevBlocksMadeDom will have size 8
   , Sized (ExactSize 8) (Dom currBlocksMade)
-  , SumsTo EQL (Fixed (Lit RationalR 1)) [Project RationalR poolDistr]
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [Project RationalR poolDistr]
   ]
 
 newepochConstraints :: Reflect era => Proof era -> [Pred era]
@@ -718,7 +698,7 @@ projPreds1 _proof =
 
 projPreds2 :: Proof era -> [Pred era]
 projPreds2 _proof =
-  [ Dom genDelegs :<=: genesisUniv
+  [ Dom genDelegs :⊆: genesisUniv
   , Sized (ExactSize 12) futGDUniv
   , Sized (ExactSize 6) genesisUniv
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
@@ -739,7 +719,7 @@ test18b =
     False
     stoi
     (projPreds2 proof)
-    (Assemble (Constr "Pair" (,) $> futureGenDelegs $> genDelegs))
+    (Assemble (Constr "Pair" (,) ^$ futureGenDelegs ^$ genDelegs))
   where
     proof = Alonzo Standard
 
@@ -759,7 +739,7 @@ help19 _proof = do
 test19 :: IO ()
 test19 = do
   putStrLn "testing: Test 19. test of projOnDom function"
-  ans <- generate (help19 (Mary Mock))
+  ans <- generate (help19 (Mary Standard))
   putStrLn (synopsis (MapR (FutureGenDelegR @TT) GenDelegPairR) ans) -- (ppMap pcFutureGenDeleg pcGenDelegPair ans))
   putStrLn "+++ OK, passed 1 test"
 
@@ -769,7 +749,7 @@ preds20 :: Proof era -> [Pred era]
 preds20 _proof =
   [ Sized (ExactSize 10) intUniv
   , Sized (AtMost 6) rewardsx
-  , Dom rewardsx :<=: intUniv
+  , Dom rewardsx :⊆: intUniv
   , Dom rewardsx :=: Rng ptrsx
   ]
   where
@@ -816,27 +796,4 @@ testAll = do
   testSpec "Test 18b. Projection test" test18b
   test19
   testSpec "Test 20. ptr & rewards are inverses" test20
-
--- ================================================
--- March 1, 2023
-{-
-
-  Gen-time error
-  (Delta ₳ 1) < ∑ (Delta reserves) + ▵₳ 5
-  Solving for variable reserves
-  genFromSumV (SumVSize reserves (AtLeast -3))
-  can't convert -2 into a Coin.
--}
-
-test31 :: Gen Property
-test31 =
-  testn
-    proof
-    "Test 31"
-    False
-    (stoi {sumBeforeParts = False})
-    [ SumsTo LTH (Delta (Fixed (Lit CoinR (Coin 1)))) [One (Delta reserves), One (Fixed (Lit DeltaCoinR (DeltaCoin 5)))]
-    ]
-    Skip
-  where
-    proof = Alonzo Standard
+  testSpec "Constraint soundness" $ pure $ property prop_soundness

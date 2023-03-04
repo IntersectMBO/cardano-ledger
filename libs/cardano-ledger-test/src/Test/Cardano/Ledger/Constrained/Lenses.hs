@@ -11,7 +11,8 @@ import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair, GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, rewards)
+import Cardano.Ledger.Shelley.Governance (GovernanceState (..))
+import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, esLStateL, rewards)
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (deltaReserves, deltaTreasury)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
 import Cardano.Ledger.UMapCompact (
@@ -27,10 +28,6 @@ import Cardano.Ledger.UMapCompact (
   unify,
  )
 import Cardano.Ledger.UTxO (UTxO (..))
-
--- import Control.State.Transition.Extended (State)
-
-import Cardano.Ledger.Shelley.Governance (GovernanceState (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -41,9 +38,6 @@ import qualified Data.Set as Set
 import Data.VMap (VB, VMap)
 import Lens.Micro
 import Numeric.Natural (Natural)
-
--- import Cardano.Ledger.Shelley.PParams(ProposedPPUpdates(..))
--- import Cardano.Ledger.Core(PParamsUpdate)
 
 -- ====================================================
 -- Lenses
@@ -65,11 +59,11 @@ iRReservesL = lens iRReserves (\ds u -> ds {iRReserves = u})
 iRTreasuryL :: Lens' (InstantaneousRewards c) (Map (Credential 'Staking c) Coin)
 iRTreasuryL = lens iRTreasury (\ds u -> ds {iRTreasury = u})
 
-deltaResL :: Lens' (InstantaneousRewards c) DeltaCoin
-deltaResL = lens LS.deltaReserves (\ds u -> ds {LS.deltaReserves = u})
+deltaReservesL :: Lens' (InstantaneousRewards c) DeltaCoin
+deltaReservesL = lens LS.deltaReserves (\ds u -> ds {LS.deltaReserves = u})
 
-deltaTreasL :: Lens' (InstantaneousRewards c) DeltaCoin
-deltaTreasL = lens LS.deltaTreasury (\ds u -> ds {LS.deltaTreasury = u})
+deltaTreasuryL :: Lens' (InstantaneousRewards c) DeltaCoin
+deltaTreasuryL = lens LS.deltaTreasury (\ds u -> ds {LS.deltaTreasury = u})
 
 -- ===================================
 -- DState
