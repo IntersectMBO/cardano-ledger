@@ -6,20 +6,23 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
   compile,
   removeSameVar,
   removeEqual,
-  remDom,
   DependGraph (..),
   accumdep,
   OrderInfo (..),
   standardOrderInfo,
   initialOrder,
-  strategyRhsMap,
   showGraph,
   listEq,
   cpeq,
   cteq,
+  strategyRhsMap,
+  mkNewVar,
+  addP,
+  addPred,
 ) where
 
 import qualified Data.Array as A
+import Data.Foldable (toList)
 import Data.Graph (Graph, SCC (AcyclicSCC, CyclicSCC), Vertex, graphFromEdges, stronglyConnComp)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
@@ -27,52 +30,16 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Field (..), Name (..), V (..))
+import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), V (..))
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
 
 -- ======================================================================
 
-{-
-Consider the following [Pred]
-
-Sized 6 poolsUniv
-(Dom foo) ⊆  poolsUniv
-1 % 1 = ∑ sum foo
-
-Either we introduce a new varible fooDom or we don't
-
-DO NOT INTRODUCE fooDom         INTRODUCE fooDom
-1 % 1 = ∑ sum foo               1 % 1 = ∑ sum foo
-(Dom foo) ⊆  poolsUniv          fooDom ⊆  poolsUniv
-Sized 6 poolsUniv               Sized 6 poolsUniv
-                                HasDomain foo fooDom
-
-Pick a variable ordering WITH Introducing fooDom
-
-poolsUniv: (Set (KeyHash 'StakePool c) )     | Sized 6 poolsUniv
-fooDom: (Set (KeyHash 'StakePool c) )        | fooDom ⊆  poolsUniv
-foo: (Map (KeyHash 'StakePool c) Rational)   | 1 % 1 = ∑ sum foo, HasDomain foo fooDom Any
-
-It is POSSIBLE fooDom is choosen to be the empty set. It just needs to be a subset of poolsUniv
-This means foo is the empty set
-And the sum foo is 0, which is not equal to (1 % 1)
-The problem is we pick a subset too soon, there is more information about fooDom we don't know yet
-
-Pick a variable ordering WITHOUT Introducing fooDom
-
-poolsUniv: (Set (KeyHash 'StakePool c) )     | Sized 6 poolsUniv
-foo: (Map (KeyHash 'StakePool c) Rational)   | 1 % 1 = ∑ sum foo, (Dom foo) ⊆  poolsUniv
-
-Here we know we are solving for foo, We can force a pick of a NONEMPTY subset of poolsUniv.
-So the strategy is to never introduce a new variable xxDom for any variable xx of type (Map a b)
-that appears on the rhs of a SumsTo.
--}
-
 -- | Compute the names of all variables of type (Map a b) that appear on the
 --   rhs of a (SumsTo test lhs rhs) that appear in a [Pred]
 rhsMapNames :: Set (Name era) -> Pred era -> Set (Name era)
-rhsMapNames ans (SumsTo _ _ rhs) = List.foldl' rhsSumNames ans rhs
+rhsMapNames ans (SumsTo _ _ _ rhs) = List.foldl' rhsSumNames ans rhs
 rhsMapNames ans _ = ans
 
 rhsSumNames :: Set (Name era) -> Sum era c -> Set (Name era)
@@ -95,13 +62,18 @@ typedEq x y = case testEql (termRep x) (termRep y) of
   Just Refl -> cteq x y
   Nothing -> False
 
+cEq :: Eq c => Term era c -> Term era a -> c -> a -> Bool
+cEq t1 t2 c1 c2 = case testEql (termRep t1) (termRep t2) of
+  Just Refl -> c1 == c2
+  Nothing -> False
+
 listEq :: (a -> b -> Bool) -> [a] -> [b] -> Bool
 listEq _ [] [] = True
 listEq eqf (x : xs) (y : ys) = eqf x y && listEq eqf xs ys
 listEq _ _ _ = False
 
 -- | Conservative Term equality
-cteq :: Term era t -> Term era s -> Bool
+cteq :: Term era t -> Term era t -> Bool
 cteq (Var x) (Var y) = Name x == Name y
 cteq (Dom x) (Dom y) = typedEq x y
 cteq (Rng x) (Rng y) = typedEq x y
@@ -113,12 +85,11 @@ cteq _ _ = False
 cpeq :: Pred era -> Pred era -> Bool
 cpeq (Sized x a) (Sized y b) = cteq x y && typedEq a b
 cpeq (x :=: a) (y :=: b) = typedEq x y && typedEq a b
-cpeq (x :<=: a) (y :<=: b) = typedEq x y && typedEq a b
+cpeq (x :⊆: a) (y :⊆: b) = typedEq x y && typedEq a b
 cpeq (Disjoint x a) (Disjoint y b) = typedEq x y && typedEq a b
 cpeq (Random x) (Random y) = typedEq x y
-cpeq (HasDom x a) (HasDom y b) = typedEq x y && typedEq a b
 cpeq (CanFollow x a) (CanFollow y b) = typedEq x y && typedEq a b
-cpeq (SumsTo c x xs) (SumsTo d y ys) = typedEq x y && listEq cseq xs ys && c == d
+cpeq (SumsTo i x c xs) (SumsTo j y d ys) = cEq x y i j && typedEq x y && listEq cseq xs ys && c == d
 cpeq (Component x xs) (Component y ys) = typedEq x y && listEq anyWeq xs ys
 cpeq _ _ = False
 
@@ -157,79 +128,36 @@ addPred bad orig names ans newps =
     then addP orig ans
     else foldr addP ans newps
 
-removeDom :: forall era. (Pred era -> [Name era] -> [Pred era] -> [Pred era] -> [Pred era]) -> [Pred era] -> [Pred era]
-removeDom push cs = (List.foldl' help [] cs)
-  where
-    help :: [Pred era] -> Pred era -> [Pred era]
-    help ans c = case c of
-      Sized x (Dom old@(Var v1@(V _ (MapR _ _) _))) -> push c [Name v1] ans [Sized x newVar, HasDom old newVar]
-        where
-          newVar = mkNewVar old
-      (Dom left@(Var v1@(V _ (MapR d1 _) _))) :=: (Dom right@(Var v2@(V _ (MapR d2 _) _))) ->
-        let leftVar = mkNewVar left
-            rightVar = mkNewVar right
-         in case testEql d1 d2 of
-              Just Refl -> push c [Name v1, Name v2] ans [leftVar :=: rightVar, HasDom left leftVar, HasDom right rightVar]
-              Nothing -> ans
-      x :=: (Dom old@(Var v1@(V _ (MapR _ _) _))) -> push c [Name v1] ans [x :=: newVar, HasDom old newVar]
-        where
-          newVar = mkNewVar old
-      (Dom left@(Var v1@(V _ (MapR d1 _) _))) :<=: (Dom right@(Var v2@(V _ (MapR d2 _) _))) ->
-        let leftVar = mkNewVar left
-            rightVar = mkNewVar right
-         in case testEql d1 d2 of
-              Just Refl -> push c [Name v1, Name v2] ans [leftVar :<=: rightVar, HasDom left leftVar, HasDom right rightVar]
-              Nothing -> ans
-      x :<=: (Dom old@(Var v1@(V _ (MapR _ _) _))) -> push c [Name v1] ans [x :<=: newVar, HasDom old newVar]
-        where
-          newVar = mkNewVar old
-      (Dom old@(Var v1@(V _ (MapR _ _) _))) :<=: x -> push c [Name v1] ans [newVar :<=: x, HasDom old newVar]
-        where
-          newVar = mkNewVar old
-      Disjoint (Dom left@(Var v1@(V _ (MapR d1 _) _))) (Dom right@(Var v2@(V _ (MapR d2 _) _))) ->
-        let leftVar = mkNewVar left
-            rightVar = mkNewVar right
-         in case testEql d1 d2 of
-              Just Refl -> push c [Name v1, Name v2] ans [Disjoint leftVar rightVar, HasDom left leftVar, HasDom right rightVar]
-              Nothing -> ans
-      Disjoint x (Dom old@(Var v1@(V _ (MapR _ _) _))) -> push c [Name v1] ans [Disjoint x newVar, HasDom old newVar]
-        where
-          newVar = mkNewVar old
-      Disjoint (Dom old@(Var v1@(V _ (MapR _ _) _))) x -> push c [Name v1] ans [Disjoint newVar x, HasDom old newVar]
-        where
-          newVar = mkNewVar old
-      other -> push c [] [other] ans
-
 removeSameVar :: [Pred era] -> [Pred era] -> [Pred era]
 removeSameVar [] ans = reverse ans
 removeSameVar ((Var v :=: Var u) : more) ans | Name v == Name u = removeSameVar more ans
-removeSameVar ((Var v :<=: Var u) : more) ans | Name v == Name u = removeSameVar more ans
+removeSameVar ((Var v :⊆: Var u) : more) ans | Name v == Name u = removeSameVar more ans
+removeSameVar (Disjoint (Var v@(V _ rep _)) (Var u) : more) ans | Name v == Name u = removeSameVar more ((Lit rep mempty :=: Var v) : ans)
 removeSameVar (m : more) ans = removeSameVar more (m : ans)
 
 removeEqual :: [Pred era] -> [Pred era] -> [Pred era]
 removeEqual [] ans = reverse ans
 removeEqual ((Var v :=: Var u) : more) ans | Name v == Name u = removeEqual more ans
-removeEqual ((Var v :=: expr) : more) ans = removeEqual (map sub more) ((Var v :=: expr) : (map sub ans))
+removeEqual ((Var v :=: expr@Lit {}) : more) ans = removeEqual (map sub more) ((Var v :=: expr) : map sub ans)
   where
     sub = substPred [SubItem v expr]
-removeEqual ((e1 :=: e2) : more) ans | cteq e1 e2 = removeEqual more ans
+removeEqual ((expr@Lit {} :=: Var v) : more) ans = removeEqual (map sub more) ((expr :=: Var v) : map sub ans)
+  where
+    sub = substPred [SubItem v expr]
 removeEqual (m : more) ans = removeEqual more (m : ans)
 
--- | Introduce new xxDom variables, only if 'xx' does not
---   appear on the rhs of a (SumsTo test lhs rhs)
-remDom :: forall era. [Pred era] -> [Pred era]
-remDom ps = removeDom (addPred bad) ps
+removeTrivial :: forall era. [Pred era] -> [Pred era]
+removeTrivial = filter (not . trivial)
   where
-    bad = strategyRhsMap ps
-
-noDomain :: Bool
-noDomain = True
+    trivial p | null (varsOfPred mempty p) =
+      case runTyped $ runPred (Env mempty) p of
+        Left {} -> False
+        Right valid -> valid
+    trivial (e1 :=: e2) = cteq e1 e2
+    trivial _ = False
 
 rewrite :: [Pred era] -> [Pred era]
-rewrite cs =
-  if noDomain
-    then removeSameVar (removeEqual cs []) []
-    else removeSameVar (removeEqual (remDom cs) []) []
+rewrite cs = removeTrivial $ removeSameVar (removeEqual cs []) []
 
 -- ==============================================================
 -- Build a Dependency Graph that extracts an ordering on the
@@ -238,7 +166,7 @@ rewrite cs =
 -- one variable, and all other Terms are constants (Fixed (Lit rep x))
 
 -- | An Ordering
-data DependGraph era = DependGraph [(Name era, [Pred era])]
+newtype DependGraph era = DependGraph [(Name era, [Pred era])]
 
 instance Show (DependGraph era) where
   show (DependGraph xs) = unlines (map f xs)
@@ -301,7 +229,6 @@ data OrderInfo = OrderInfo
   { sumBeforeParts :: Bool
   , sizeBeforeArg :: Bool
   , setBeforeSubset :: Bool
-  , mapBeforeDom :: Bool
   }
   deriving (Show, Eq)
 
@@ -311,12 +238,11 @@ standardOrderInfo =
     { sumBeforeParts = False
     , sizeBeforeArg = True
     , setBeforeSubset = True
-    , mapBeforeDom = False
     }
 
 accumdep :: OrderInfo -> Map (Name era) (Set (Name era)) -> Pred era -> Map (Name era) (Set (Name era))
 accumdep info answer c = case c of
-  sub :<=: set ->
+  sub :⊆: set ->
     if setBeforeSubset info
       then mkDeps (vars set) (vars sub) answer
       else mkDeps (vars sub) (vars set) answer
@@ -326,11 +252,7 @@ accumdep info answer c = case c of
     if sizeBeforeArg info
       then mkDeps (vars size) (vars arg) answer
       else mkDeps (vars arg) (vars size) answer
-  HasDom mp dom ->
-    if mapBeforeDom info
-      then mkDeps (vars mp) (vars dom) answer
-      else mkDeps (vars dom) (vars mp) answer
-  SumsTo _ sm parts ->
+  SumsTo _ sm _ parts ->
     if sumBeforeParts info
       then mkDeps (vars sm) (List.foldl' varsOfSum Set.empty parts) answer
       else mkDeps (List.foldl' varsOfSum Set.empty parts) (vars sm) answer
@@ -367,8 +289,12 @@ initialOrder info cs0 = do
     flatOrError (CyclicSCC xs : _) = failT [message, show info, unlines (map (("  " ++) . show) usesNames)]
       where
         names = map getname xs
-        usesNames = map fst $ filter (any (`elem` names) . snd) $ map (\pr -> (pr, varsOfPred Set.empty pr)) cs0
-        theCycle = map show (names ++ [head names])
+        namesSet = Set.fromList names
+        usesNames =
+          [pr | pr <- cs0, any (`Set.member` namesSet) (varsOfPred Set.empty pr)]
+        theCycle = case names of
+          [] -> map show names
+          (x : _) -> map show (names ++ [x])
         message = "Cycle in dependencies: " ++ List.intercalate " <= " theCycle
 
 -- | Construct the DependGraph
@@ -379,7 +305,7 @@ compile info cs = do
   mkDependGraph (length orderedNames) [] orderedNames [] simple
 
 showGraph :: (Vertex -> String) -> Graph -> String
-showGraph nameof g = unlines (map show (zip names (foldr (:) [] zs)))
+showGraph nameof g = unlines (map show (zip names (toList zs)))
   where
     (lo, hi) = A.bounds g
     names = map nameof [lo .. hi]

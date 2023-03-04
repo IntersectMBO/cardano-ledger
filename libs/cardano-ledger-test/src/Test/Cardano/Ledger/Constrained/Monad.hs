@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Constrained.Monad (
   failT,
   explain,
   mergeExplain,
-  HasCond (..),
+  HasConstraint (..),
   Id (..),
   errorTyped,
   monadTyped,
@@ -57,16 +57,16 @@ errorTyped t = case runTyped t of
 
 -- | Pushes the (Left msgs) into a call to 'error', then injects into a Monad
 monadTyped :: Monad m => Typed t -> m t
-monadTyped t = pure (errorTyped t)
+monadTyped t = pure $! errorTyped t
 
 -- ================================================================
 -- Computing runtime evidence of a constraint.
 
-data Id x = Id x
+newtype Id x = Id x
 
 -- | runTime evidence that the index 'i' of an indexed type '(s i)'
 --   is constrained by the class 'c'. If one has an un-indexed type
 --   't' one can always use (Id t) instead. Eg
 --   With (Id x) <- hasOrd repT (Id t)
-data HasCond c t where
-  With :: c t => (s t) -> HasCond c (s t)
+data HasConstraint c t where
+  With :: c t => s t -> HasConstraint c (s t)

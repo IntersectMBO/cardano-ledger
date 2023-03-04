@@ -23,7 +23,7 @@
 --   A closely related class is (Indexed s t). We would like a total ordering on (t i) and (t j),
 --   where the indices, i and j, are different. We do this by ensuring every value of type (t i)
 --   has a unique Shape, and that the type Shape has a total order. Every closed singleton can
---   be totally ordered this way. Other indexed type are used to make well type terms. I.e.
+--   be totally ordered this way. Other indexed types are used to make well-type terms. I.e.
 --   Indexed s t => Exp t, denotes a Haskell data type Exp, related to the type t.
 --   Note, unlike singletons, there may not be a unique value of type (Exp t), but there may be
 --   a unique Shape for every value.
@@ -48,7 +48,7 @@ import Type.Reflection (TypeRep, pattern App, pattern Con, pattern Fun)
 
 -- ==================================================
 
--- | Type synonym, so when can use ( :~: ) without TypeOperators
+-- | Type synonym, so we can use ( :~: ) without TypeOperators
 type Eql x y = x :~: y
 
 -- | Given (Singleton T), a value of type (T i) has exactly 0 or 1 inhabitants,
@@ -88,14 +88,17 @@ class Singleton rep => Universe rep t where
 -- Each one adding more detail, so that the types can do more
 
 -- | Hide the index for any indexed type 't'
-data Any t where Any :: (t i) -> Any t
+data Any t where
+  Any :: t i -> Any t
 
 deriving instance (forall i. Show (t i)) => Show (Any t)
 
 -- | Hide the index for a singleton type 't'
-data Some t where Some :: Singleton t => (t i) -> Some t
+data Some t where
+  Some :: Singleton t => t i -> Some t
 
-data Dyn rep where Dyn :: Singleton rep => rep t -> t -> Dyn rep
+data Dyn rep where
+  Dyn :: Singleton t => t i -> i -> Dyn t
 
 -- ==============================================================================
 
@@ -185,7 +188,7 @@ instance Singleton TypeRep where
   cmpIndex = compareTypeRep
 
 -- =============================================================
--- An very simple closed Singleton type
+-- A very simple closed Singleton type
 
 data R t where
   IntR :: R Int

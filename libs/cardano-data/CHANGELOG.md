@@ -7,6 +7,8 @@
   'CanonicalMap', which can result in a crash.
   This was the root cause of https://github.com/input-output-hk/cardano-node/issues/4826.
 
+* Added New module Data.Universe, reusable code for defining closed singleton types.
+
 ## 1.0.0.0
 
 * First properly versioned released.
