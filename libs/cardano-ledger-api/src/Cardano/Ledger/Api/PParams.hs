@@ -125,6 +125,8 @@ module Cardano.Ledger.Api.PParams (
   -- | Protocol parameters introduced in Alonzo era
   UpgradeAlonzoPParams (..),
   DowngradeAlonzoPParams (..),
+  LangDepView (..),
+  getLanguageView,
 
   -- ** @CostModels@
 
@@ -233,7 +235,9 @@ import Cardano.Ledger.Alonzo.Core (
  )
 import Cardano.Ledger.Alonzo.PParams (
   DowngradeAlonzoPParams (..),
+  LangDepView (..),
   UpgradeAlonzoPParams (..),
+  getLanguageView,
  )
 import Cardano.Ledger.Babbage.Core (
   BabbageEraPParams (..),
