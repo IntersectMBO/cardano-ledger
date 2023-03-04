@@ -9,6 +9,8 @@
 * Export `Withdrawals` from `Cardano.Ledger.Api.Tx.Body`
 * Export `ShelleyTxAuxData`, `AllegraTxAuxData` and `AlonzoTxAuxData` from
   `Cardano.Ledger.Api.Tx.AuxData`
+* Export `LangDepView` and `getLanguageView` from `Cardano.Ledger.Api.PParams`
+
 
 ## 1.0.0.0
 
