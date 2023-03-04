@@ -20,13 +20,13 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   compareRep,
   genSizedRep,
   genRep,
-  TxOut (..),
+  TxOutF (..),
   unTxOut,
-  Value (..),
+  ValueF (..),
   unValue,
-  PParams (..),
+  PParamsF (..),
   unPParams,
-  PParamsUpdate (..),
+  PParamsUpdateF (..),
   unPParamsUpdate,
   liftUTxO,
   Proof (..),
@@ -63,17 +63,16 @@ import Prettyprinter (hsep)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Classes (
-  PParams (..),
-  PParamsUpdate (..),
-  TxOut (..),
-  Value (..),
+  PParamsF (..),
+  PParamsUpdateF (..),
+  TxOutF (..),
+  ValueF (..),
   genPParams,
   genPParamsUpdate,
   genTxOut,
   genUTxO,
   genValue,
   liftUTxO,
-  txOutCoinL,
   unPParams,
   unPParamsUpdate,
   unTxOut,
@@ -124,13 +123,14 @@ data Rep era t where
   TxInR :: Rep era (TxIn (EraCrypto era))
   StringR :: Rep era String
   UnitR :: Rep era ()
+  PairR :: Rep era a -> Rep era b -> Rep era (a, b)
   ProtVerR :: Proof era -> Rep era ProtVer -- We need the Proof to get arbitrary instances correct
   -- \^ Rep's for type families (or those that embed type families)
-  ValueR :: Proof era -> Rep era (Value era)
+  ValueR :: Proof era -> Rep era (ValueF era)
   UTxOR :: Proof era -> Rep era (UTxO era)
-  TxOutR :: Proof era -> Rep era (TxOut era)
-  PParamsR :: Proof era -> Rep era (PParams era)
-  PParamsUpdateR :: Proof era -> Rep era (PParamsUpdate era)
+  TxOutR :: Proof era -> Rep era (TxOutF era)
+  PParamsR :: Proof era -> Rep era (PParamsF era)
+  PParamsUpdateR :: Proof era -> Rep era (PParamsUpdateF era)
   --
   DeltaCoinR :: Rep era DeltaCoin
   GenDelegPairR :: Rep era (GenDelegPair (EraCrypto era))
@@ -179,6 +179,10 @@ instance Singleton (Rep e) where
   testEql TxInR TxInR = Just Refl
   testEql StringR StringR = Just Refl
   testEql UnitR UnitR = Just Refl
+  testEql (PairR a b) (PairR x y) = do
+    Refl <- testEql a x
+    Refl <- testEql b y
+    Just Refl
   testEql (ProtVerR c) (ProtVerR d) =
     do Refl <- testEql c d; pure Refl
   testEql (ValueR c) (ValueR d) =
@@ -214,9 +218,9 @@ instance Show (Rep era t) where
   show CoinR = "Coin"
   show (a :-> b) = "(" ++ show a ++ " -> " ++ show b ++ ")"
   show (MapR a b) = "(Map " ++ show a ++ " " ++ show b ++ ")"
-  show (SetR a) = "(Set " ++ show a ++ " " ++ ")"
+  show (SetR a) = "(Set " ++ show a ++ ")"
   show (ListR a) = "[" ++ show a ++ "]"
-  show CredR = "Cred" -- "(Credential 'Staking c)"
+  show CredR = "(Credential 'Staking c)"
   show PoolHashR = "(KeyHash 'StakePool c)"
   show WitHashR = "(KeyHash 'Witness c)"
   show GenHashR = "(KeyHash 'Genesis c)"
@@ -243,6 +247,7 @@ instance Show (Rep era t) where
   show IPoolStakeR = "(IndividualPoolStake c)"
   show SnapShotsR = "(SnapShots c)"
   show UnitR = "()"
+  show (PairR a b) = "(" ++ show a ++ ", " ++ show b ++ ")"
   show RewardR = "(Reward c)"
   show (MaybeR x) = "(Maybe " ++ show x ++ ")"
   show NewEpochStateR = "NewEpochState"
@@ -282,8 +287,8 @@ synopsis TxInR txin = show (pcTxIn txin)
 synopsis StringR s = show s
 synopsis (ValueR _) x = show x
 synopsis (TxOutR _) x = show x
-synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOut p) mp) ++ " )"
-synopsis (PParamsR _) (PParams p x) = synopsisPParam p x
+synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
+synopsis (PParamsR _) (PParamsF p x) = synopsisPParam p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
@@ -293,6 +298,7 @@ synopsis PtrR p = show p
 synopsis IPoolStakeR p = show (pcIndividualPoolStake p)
 synopsis SnapShotsR _ = "SnapShots ..."
 synopsis UnitR () = "()"
+synopsis (PairR a b) (x, y) = "(" ++ synopsis a x ++ ", " ++ synopsis b y ++ ")"
 synopsis RewardR x = show (pcReward x)
 synopsis (MaybeR _) Nothing = "Nothing"
 synopsis (MaybeR x) (Just y) = "(Just " ++ synopsis x y ++ ")"
@@ -311,13 +317,13 @@ synSum (MapR _ IPoolStakeR) m = ", sum = " ++ show (Map.foldl' accum 0 m)
     accum z (IndividualPoolStake rat _) = z + rat
 synSum (MapR _ (TxOutR proof)) m = ", sum = " ++ show (Map.foldl' (accum proof) (Coin 0) m)
   where
-    accum :: Proof era -> Coin -> TxOut era -> Coin
-    accum (Shelley _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Allegra _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Mary _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Alonzo _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Babbage _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Conway _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
+    accum :: Proof era -> Coin -> TxOutF era -> Coin
+    accum (Shelley _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+    accum (Allegra _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+    accum (Mary _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+    accum (Alonzo _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+    accum (Babbage _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+    accum (Conway _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
 synSum (SetR CoinR) m = ", sum = " ++ show (pcCoin (Set.foldl' (<>) mempty m))
 synSum (SetR RationalR) m = ", sum = " ++ show (Set.foldl' (+) 0 m)
 synSum (ListR CoinR) m = ", sum = " ++ show (List.foldl' (<>) mempty m)
@@ -367,6 +373,7 @@ instance Shaped (Rep era) any where
   shape (ProtVerR x) = Nary 35 [shape x]
   shape SlotNoR = Nullary 36
   shape SizeR = Nullary 37
+  shape (PairR a b) = Nary 38 [shape a, shape b]
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -404,7 +411,7 @@ genSizedRep _ (TxOutR p) = genTxOut p
 genSizedRep _n (UTxOR p) = genUTxO p
 genSizedRep _ (PParamsR p) = genPParams p
 genSizedRep _ (PParamsUpdateR p) = genPParamsUpdate p
-genSizedRep _ DeltaCoinR = arbitrary
+genSizedRep _ DeltaCoinR = DeltaCoin <$> choose (-1000, 1000)
 genSizedRep _ GenDelegPairR = arbitrary
 genSizedRep _ FutureGenDelegR = arbitrary
 genSizedRep _ r@(PPUPStateR _) = genpup r
@@ -412,6 +419,7 @@ genSizedRep _ PtrR = arbitrary
 genSizedRep _ IPoolStakeR = arbitrary
 genSizedRep _ SnapShotsR = arbitrary
 genSizedRep _ UnitR = arbitrary
+genSizedRep n (PairR a b) = (,) <$> genSizedRep n a <*> genSizedRep n b
 genSizedRep _ RewardR = arbitrary
 genSizedRep n (MaybeR x) = frequency [(1, pure Nothing), (5, Just <$> genSizedRep n x)]
 genSizedRep _ NewEpochStateR = undefined
@@ -441,7 +449,7 @@ genpup (PPUPStateR (Allegra _)) = arbitrary
 genpup (PPUPStateR (Mary _)) = arbitrary
 genpup (PPUPStateR (Alonzo _)) = arbitrary
 genpup (PPUPStateR (Babbage _)) = arbitrary
-genpup (PPUPStateR (Conway _)) = arbitrary
+genpup (PPUPStateR (Conway _)) = arbitrary -- FIXME when Conway is fully defined.
 
 -- ===========================
 
@@ -459,63 +467,3 @@ synopsisPParam p x = withEraPParams p help
         ++ ", protoVersion="
         ++ (synopsis (ProtVerR p) (x ^. Core.ppProtocolVersionL))
         ++ "}"
-
-{-
--- ==========================================================================
--- The type Size is defined in TypeRep.hs, because its type must be known in
--- Ast.hs (which it needs an (Rep era Size) SizeR defined here). It also acts
--- like a Spec, so here are its Spec like Monoid and Semigroup instances.
-
-data Size
-  = SzNever [String]
-  | SzAny
-  | SzLeast Int
-  | SzMost Int
-  | SzRng Int Int -- (SzRng i j) = [i .. j] . Invariant i <= j
-  deriving (Ord, Eq)
-
-sameR :: Size -> Maybe Int
-sameR (SzRng x y) = if x == y then Just x else Nothing
-sameR _ = Nothing
-
-pattern SzExact :: Int -> Size
-pattern SzExact x <- (sameR -> Just x)
-  where
-    SzExact x = (SzRng x x)
-
-instance Show Size where
-  show (SzNever _) = "NeverSize"
-  show SzAny = "AnySize"
-  show (SzLeast n) = "(AtLeast " ++ show n ++ ")"
-  show (SzMost n) = "(AtMost " ++ show n ++ ")"
-  show (SzRng i j) = "(Range " ++ show i ++ " " ++ show j ++ ")"
-
-mergeSize :: Size -> Size -> Size
-mergeSize SzAny x = x
-mergeSize x SzAny = x
-mergeSize (SzNever xs) (SzNever ys) = SzNever (xs ++ ys)
-mergeSize _ (SzNever xs) = SzNever xs
-mergeSize (SzNever xs) _ = SzNever xs
-mergeSize (SzLeast x) (SzLeast y) = SzLeast (max x y)
-mergeSize (SzLeast x) (SzMost y) | x <= y = SzRng x y
-mergeSize (SzLeast x) (SzRng i j) | x <= i = SzRng i j
-mergeSize (SzLeast x) (SzRng i j) | x >= i && x <= j = SzRng x j
-mergeSize (SzMost x) (SzMost y) = SzMost (min x y)
-mergeSize (SzMost y) (SzLeast x) | x <= y = SzRng x y
-mergeSize (SzMost x) (SzRng i j) | x >= j = SzRng i j
-mergeSize (SzMost x) (SzRng i j) | x >= i && x <= j = SzRng i x
-mergeSize (SzRng i j) (SzLeast x) | x <= i = SzRng i j
-mergeSize (SzRng i j) (SzLeast x) | x >= i && x <= j = SzRng x j
-mergeSize (SzRng i j) (SzMost x) | x >= j = SzRng i j
-mergeSize (SzRng i j) (SzMost x) | x >= i && x <= j = SzRng i x
-mergeSize (SzRng i j) (SzRng m n) | x <= y = SzRng x y
-  where
-    x = max i m
-    y = min j n
-mergeSize a b = SzNever ["Size specifications " ++ show a ++ " and " ++ show b ++ " are inconsistent."]
-
-instance Monoid Size where mempty = SzAny
-
-instance Semigroup Size where
-  (<>) = mergeSize
--}

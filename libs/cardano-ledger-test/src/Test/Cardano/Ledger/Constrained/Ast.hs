@@ -1,11 +1,8 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | The types that make up the Abstract Syntax Trees of the Language
@@ -31,31 +28,25 @@ import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), synopsis, testEql, (:~
 
 -- ================================================
 
-data Literal era t where
-  Lit :: Rep era t -> t -> Literal era t
-
 data Term era t where
-  Fixed :: Literal era t -> Term era t
+  Lit :: Rep era t -> t -> Term era t
   Var :: V era t -> Term era t
   Dom :: Ord a => Term era (Map a b) -> Term era (Set a)
   Rng :: (Ord a, Ord b) => Term era (Map a b) -> Term era (Set b)
-  ProjM :: (Ord a, Eq t) => Lens' b t -> Rep era t -> Term era (Map a b) -> Term era (Map a t)
+  ProjM :: (Ord a) => Lens' b t -> Rep era t -> Term era (Map a b) -> Term era (Map a t)
   ProjS :: (Ord b, Ord t) => Lens' b t -> Rep era t -> Term era (Set b) -> Term era (Set t)
   Delta :: Term era Coin -> Term era DeltaCoin
   Negate :: Term era DeltaCoin -> Term era DeltaCoin
 
 infix 4 :=:
 
-infix 4 :<=:
-
 data Pred era where
   Sized :: Sizeable t => Term era Size -> Term era t -> Pred era
   (:=:) :: Eq a => Term era a -> Term era a -> Pred era
-  (:<=:) :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
+  Subset :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
   Disjoint :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
-  SumsTo :: Adds c => OrdCond -> Term era c -> [Sum era c] -> Pred era
+  SumsTo :: Adds c => c -> Term era c -> OrdCond -> [Sum era c] -> Pred era
   Random :: Term era t -> Pred era
-  HasDom :: Ord d => Term era (Map d r) -> Term era (Set d) -> Pred era
   Component :: Term era t -> [AnyF era t] -> Pred era
   CanFollow :: Count n => Term era n -> Term era n -> Pred era
 
@@ -63,31 +54,35 @@ data Sum era c where
   SumMap :: Adds c => Term era (Map a c) -> Sum era c
   SumList :: Adds c => Term era [c] -> Sum era c
   One :: Term era c -> Sum era c
-  Project :: forall x c a era. Sums x c => Rep era c -> Term era (Map a x) -> Sum era c
+  Project :: forall x c a era. Sums x c => Rep era c -> Term era (Map a x) -> Sum era c -- TODO uses lenses here
 
 -- ====================================================================
 -- Special patterns for building literal Terms of type Size and Word64
 
+infix 4 :⊆:
+pattern (:⊆:) :: forall era. (forall a. Ord a => Term era (Set a) -> Term era (Set a) -> Pred era)
+pattern x :⊆: y = Subset x y
+
 pattern ExactSize :: Int -> Term era Size
 pattern ExactSize x <- (sameRng -> Just x)
   where
-    ExactSize x = Fixed (Lit SizeR (SzRng x x))
+    ExactSize x = Lit SizeR (SzRng x x)
 
 pattern AtLeast :: Int -> Term era Size
-pattern AtLeast n = Fixed (Lit SizeR (SzLeast n))
+pattern AtLeast n = Lit SizeR (SzLeast n)
 
 pattern Size :: Size -> Term era Size
-pattern Size n = Fixed (Lit SizeR n)
+pattern Size n = Lit SizeR n
 
 pattern AtMost :: Int -> Term era Size
-pattern AtMost n = Fixed (Lit SizeR (SzMost n))
+pattern AtMost n = Lit SizeR (SzMost n)
 
 pattern Range :: Int -> Int -> Term era Size
-pattern Range i j <- Fixed (Lit SizeR (SzRng i j))
+pattern Range i j <- Lit SizeR (SzRng i j)
   where
     Range i j =
       if i <= j
-        then Fixed (Lit SizeR (SzRng i j))
+        then Lit SizeR (SzRng i j)
         else
           error
             ( "Bad call to "
@@ -100,11 +95,11 @@ pattern Range i j <- Fixed (Lit SizeR (SzRng i j))
             )
 
 sameRng :: Term era Size -> Maybe Int
-sameRng (Fixed (Lit SizeR (SzRng x y))) = if x == y then Just x else Nothing
+sameRng (Lit SizeR (SzRng x y)) = if x == y then Just x else Nothing
 sameRng _ = Nothing
 
 pattern Word64 :: Word64 -> Term era Word64
-pattern Word64 x = Fixed (Lit Word64R x)
+pattern Word64 x = Lit Word64R x
 
 -- ====================================================================
 
@@ -115,14 +110,14 @@ data Target era t where
   (:$) :: Target era (a -> b) -> Target era a -> Target era b
   Constr :: String -> (a -> b) -> Target era (a -> b)
 
-infixl 0 $>
+infixl 0 ^$
 
 -- | Version of (:$) That takes a Term on the right, rather than a Target
-($>) :: Target era (a -> t) -> Term era a -> Target era t
-($>) f x = f :$ (Simple x)
+(^$) :: Target era (a -> t) -> Term era a -> Target era t
+(^$) f x = f :$ Simple x
 
 constTarget :: t -> Target era t
-constTarget t = Constr "constTarget" (const t) $> (Fixed (Lit UnitR ()))
+constTarget t = Constr "constTarget" (const t) ^$ (Lit UnitR ())
 
 -- ===================================
 
@@ -131,11 +126,8 @@ showL _f _sep [] = ""
 showL f _sep [t] = f t
 showL f sep (t : ts) = f t ++ sep ++ showL f sep ts
 
-instance Show (Literal era t) where
-  show (Lit r k) = synopsis r k
-
 instance Show (Term era t) where
-  show (Fixed k) = show k
+  show (Lit r k) = synopsis r k
   show (Var (V nm _rep _)) = nm -- ++ "::" ++ show _rep
   show (Dom x) = "(Dom " ++ show x ++ ")"
   show (Rng x) = "(Rng " ++ show x ++ ")"
@@ -154,11 +146,10 @@ instance Show (Sum era c) where
 instance Show (Pred era) where
   show (Sized n t) = "Sized " ++ show n ++ " " ++ show t
   show (x :=: y) = show x ++ " :=: " ++ show y
-  show (x :<=: y) = show x ++ " ⊆  " ++ show y
+  show (Subset x y) = show x ++ " ⊆  " ++ show y
   show (Disjoint x y) = "Disjoint " ++ show x ++ " " ++ show y
-  show (SumsTo cond c m) = show c ++ show cond ++ showL show " + " m
+  show (SumsTo i c cond m) = "SumsTo (" ++ show i ++ ") " ++ show c ++ show cond ++ showL show " + " m
   show (Random x) = "Random " ++ show x
-  show (HasDom m s) = "HasDomain " ++ show m ++ " " ++ show s
   show (Component t ws) = "Component " ++ show t ++ " " ++ show ws
   show (CanFollow x y) = "CanFollow " ++ show x ++ " " ++ show y
   showList xs ans = unlines (ans : (map show xs))
@@ -204,7 +195,7 @@ targetPair x = (nameOf x, targetRecord x [])
 
 varsOfTerm :: Set (Name era) -> Term era t -> Set (Name era)
 varsOfTerm ans s = case s of
-  Fixed _ -> ans
+  Lit _ _ -> ans
   Var v@(V _ _ _) -> Set.insert (Name v) ans
   Dom x -> varsOfTerm ans x
   Rng x -> varsOfTerm ans x
@@ -226,11 +217,10 @@ varsOfPred :: Set (Name era) -> Pred era -> Set (Name era)
 varsOfPred ans s = case s of
   Sized a b -> varsOfTerm (varsOfTerm ans a) b
   (a :=: b) -> varsOfTerm (varsOfTerm ans a) b
-  (a :<=: b) -> varsOfTerm (varsOfTerm ans a) b
+  (Subset a b) -> varsOfTerm (varsOfTerm ans a) b
   (Disjoint a b) -> varsOfTerm (varsOfTerm ans a) b
-  SumsTo _ x xs -> List.foldl' varsOfSum (varsOfTerm ans x) xs
+  SumsTo _ x _ xs -> List.foldl' varsOfSum (varsOfTerm ans x) xs
   Random x -> varsOfTerm ans x
-  HasDom a b -> varsOfTerm (varsOfTerm ans a) b
   Component t cs -> varsOfTerm (List.foldl' varsOfComponent ans cs) t
     where
       varsOfComponent l (AnyF (Field n r a)) = Set.insert (Name $ V n r a) l
@@ -248,7 +238,7 @@ varsOfSum ans (Project _ x) = varsOfTerm ans x
 
 substToEnv :: [SubItem era] -> Env era -> Typed (Env era)
 substToEnv [] ans = pure ans
-substToEnv ((SubItem v (Fixed (Lit _ t))) : more) ans =
+substToEnv ((SubItem v (Lit _ t)) : more) ans =
   substToEnv more (storeVar v t ans)
 substToEnv ((SubItem _ e) : _) _ = failT ["Not Literal expr in substToEnv: " ++ show e]
 
@@ -284,7 +274,7 @@ findV (SubItem (V n2 rep2 _) kn : more) v@(V n1 rep1 _) =
 
 substTerm :: Subst era -> Term era t -> Term era t
 substTerm sub (Var v) = findV sub v
-substTerm _ (Fixed k) = Fixed k
+substTerm _ (Lit r k) = Lit r k
 substTerm sub (Dom x) = Dom (substTerm sub x)
 substTerm sub (Rng x) = Rng (substTerm sub x)
 substTerm sub (ProjM l r x) = ProjM l r (substTerm sub x)
@@ -295,15 +285,14 @@ substTerm sub (Negate x) = Negate (substTerm sub x)
 substPred :: Subst era -> Pred era -> Pred era
 substPred sub (Sized a b) = Sized (substTerm sub a) (substTerm sub b)
 substPred sub (a :=: b) = (substTerm sub a) :=: (substTerm sub b)
-substPred sub (a :<=: b) = (substTerm sub a) :<=: (substTerm sub b)
+substPred sub (Subset a b) = (substTerm sub a) `Subset` (substTerm sub b)
 substPred sub (Disjoint a b) = Disjoint (substTerm sub a) (substTerm sub b)
-substPred sub (SumsTo cond a b) = SumsTo cond (substTerm sub a) (map (substSum sub) b)
+substPred sub (SumsTo i a cond b) = SumsTo i (substTerm sub a) cond (map (substSum sub) b)
 substPred sub (Random x) = Random (substTerm sub x)
-substPred sub (HasDom a b) = HasDom (substTerm sub a) (substTerm sub b)
 substPred sub (Component t cs) = Component (substTerm sub t) (substComp <$> cs)
   where
     substComp (AnyF w@(Field n r a)) = AnyF $ case findV sub (V n r a) of
-      (Fixed (Lit rep x)) -> FConst rep x a
+      (Lit rep x) -> FConst rep x a
       _ -> w
     substComp x@(AnyF (FConst _ _ _)) = x
 substPred sub (CanFollow a b) = CanFollow (substTerm sub a) (substTerm sub b)
@@ -322,35 +311,35 @@ substTarget _ (Constr n f) = Constr n f
 -- ======================================================
 -- Symbolic evaluators
 
--- | Simplify Terms that only contain Fixed (or constant) sub-Terms
+-- | Simplify Terms that only contain Literals (or constant) sub-Terms
 simplify :: Term era t -> Typed t
-simplify (Fixed (Lit _ x)) = pure x
-simplify (Dom (Fixed (Lit _ x))) = pure (Map.keysSet x)
+simplify (Lit _ x) = pure x
+simplify (Dom (Lit _ x)) = pure (Map.keysSet x)
 simplify (Dom (ProjM _ _ t)) = simplify (Dom t)
-simplify (Rng (Fixed (Lit _ x))) = pure (Set.fromList (Map.elems x))
-simplify (Rng (ProjM l _ (Fixed (Lit _ m)))) = pure (Set.fromList (Map.elems (Map.map (\x -> x ^. l) m)))
-simplify (ProjM l _ (Fixed (Lit _ x))) = pure (Map.map (\z -> z ^. l) x)
-simplify (ProjS l _ (Fixed (Lit _ x))) = pure (Set.map (\z -> z ^. l) x)
+simplify (Rng (Lit _ x)) = pure (Set.fromList (Map.elems x))
+simplify (Rng (ProjM l _ (Lit _ m))) = pure (Set.fromList (Map.elems (Map.map (\x -> x ^. l) m)))
+simplify (ProjM l _ (Lit _ x)) = pure (Map.map (\z -> z ^. l) x)
+simplify (ProjS l _ (Lit _ x)) = pure (Set.map (\z -> z ^. l) x)
 simplify (ProjS l _ t) = do
   s <- simplify t
   pure (Set.map (\z -> z ^. l) s)
-simplify (Delta (Fixed (Lit CoinR (Coin n)))) = pure (DeltaCoin n)
-simplify (Negate (Fixed (Lit DeltaCoinR (DeltaCoin n)))) = pure (DeltaCoin (-n))
+simplify (Delta (Lit CoinR (Coin n))) = pure (DeltaCoin n)
+simplify (Negate (Lit DeltaCoinR (DeltaCoin n))) = pure (DeltaCoin (-n))
 simplify x = failT ["Can't simplify term: " ++ show x ++ ", to a value."]
 
 -- | Simplify constant Sum's
 simplifySum :: Sum era c -> Typed c
-simplifySum (One (Fixed (Lit _ x))) = pure x
-simplifySum (One (Delta (Fixed (Lit CoinR (Coin n))))) = pure (DeltaCoin n)
-simplifySum (One (Negate (Fixed (Lit DeltaCoinR (DeltaCoin n))))) = pure (DeltaCoin (-n))
-simplifySum (SumMap (Fixed (Lit _ m))) = pure (Map.foldl' add zero m)
-simplifySum (SumList (Fixed (Lit _ m))) = pure (List.foldl' add zero m)
-simplifySum (Project _ (Fixed (Lit _ m))) = pure (List.foldl' (\ans x -> add ans (getsum x)) zero m)
+simplifySum (One (Lit _ x)) = pure x
+simplifySum (One (Delta (Lit CoinR (Coin n)))) = pure (DeltaCoin n)
+simplifySum (One (Negate (Lit DeltaCoinR (DeltaCoin n)))) = pure (DeltaCoin (-n))
+simplifySum (SumMap (Lit _ m)) = pure (Map.foldl' add zero m)
+simplifySum (SumList (Lit _ m)) = pure (List.foldl' add zero m)
+simplifySum (Project _ (Lit _ m)) = pure (List.foldl' (\ans x -> add ans (getSum x)) zero m)
 simplifySum x = failT ["Can't simplify Sum: " ++ show x ++ ", to a value."]
 
--- | Fully evaluate an Term, looking up the variables in the Env.
+-- | Fully evaluate a `Term`, looking up the variables in the `Env`.
 runTerm :: Env era -> Term era t -> Typed t
-runTerm _ (Fixed (Lit _ x)) = pure x
+runTerm _ (Lit _ x) = pure x
 runTerm env (Dom x) = do
   m <- runTerm env x
   pure (Map.keysSet m)
@@ -384,20 +373,16 @@ runPred env (Disjoint x y) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
   pure (Set.disjoint x2 y2)
-runPred env (x :<=: y) = do
+runPred env (Subset x y) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
   pure (Set.isSubsetOf x2 y2)
-runPred env (SumsTo cond x ys) = do
+runPred env (SumsTo _ x cond ys) = do
   x2 <- runTerm env x
   is <- mapM (runSum env) ys
   let y2 = List.foldl' add zero is
   pure (runOrdCond cond x2 y2)
 runPred _ (Random _) = pure True
-runPred env (HasDom m s) = do
-  m2 <- runTerm env m
-  s2 <- runTerm env s
-  pure (Set.isSubsetOf (Map.keysSet m2) s2)
 runPred env (Component t cs) = do
   t' <- runTerm env t
   and <$> mapM (runComp env t') cs
@@ -415,20 +400,12 @@ runComp env t (AnyF (Field n r a@(Yes _ l))) = do
 runComp _ t (AnyF (FConst _ v (Yes _ l))) = pure $ t ^. l == v
 
 termRep :: Term era t -> Rep era t
-termRep (Fixed (Lit r _)) = r
+termRep (Lit r _) = r
 termRep (Var (V _ r _)) = r
-termRep (Dom t) = SetR r
-  where
-    MapR r _ = termRep t
-termRep (Rng t) = SetR r
-  where
-    MapR _ r = termRep t
-termRep (ProjM _ t x) = MapR a t
-  where
-    MapR a _ = termRep x
-termRep (ProjS _ t x) = SetR t
-  where
-    SetR _a = termRep x
+termRep (Dom (termRep -> MapR r _)) = SetR r
+termRep (Rng (termRep -> MapR _ r)) = SetR r
+termRep (ProjM _ t (termRep -> MapR a _)) = MapR a t
+termRep (ProjS _ t (termRep -> SetR _)) = SetR t
 termRep (Delta _) = DeltaCoinR
 termRep (Negate _) = DeltaCoinR
 
@@ -438,7 +415,7 @@ runSum env (SumList t) = List.foldl' add zero <$> runTerm env t
 runSum env (One t) = runTerm env t
 runSum env (Project _ t) = Map.foldl' accum zero <$> runTerm env t
   where
-    accum ans x = add ans (getsum x)
+    accum ans x = add ans (getSum x)
 
 makeTest :: Env era -> Pred era -> Typed (String, Bool, Pred era)
 makeTest env c = do

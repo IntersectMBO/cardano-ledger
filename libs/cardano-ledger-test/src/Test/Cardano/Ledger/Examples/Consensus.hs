@@ -4,7 +4,6 @@
 
 module Test.Cardano.Ledger.Examples.Consensus (genericConsensusTest) where
 
-import Cardano.Ledger.Core (TranslationContext)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Pretty (PDoc, ppString, text)
@@ -19,7 +18,6 @@ import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
 oneTest ::
   ( Reflect era
-  , Eq (TranslationContext era)
   , EraCrypto era ~ StandardCrypto
   ) =>
   Proof era ->

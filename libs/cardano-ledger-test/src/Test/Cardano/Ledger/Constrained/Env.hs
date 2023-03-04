@@ -36,10 +36,11 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 -- V
 
 -- | A proto variable. May or may not contain a Lens (encoded as Access)
-data V era t where V :: String -> Rep era t -> Access era s t -> V era t
+data V era t where
+  V :: String -> Rep era t -> Access era s t -> V era t
 
 data Access era s t where
-  Yes :: forall s t era. Rep era s -> Lens' s t -> Access era s t
+  Yes :: Rep era s -> Lens' s t -> Access era s t
   No :: Access era s t
 
 instance Show (V era t) where
@@ -50,7 +51,8 @@ instance Show (V era t) where
 
 -- | An existentially quantified (V era t), hiding the 't'
 --   Usefull because unlike (V era t), it has both Eq and Ord instances
-data Name era where Name :: V era t -> Name era
+data Name era where
+  Name :: V era t -> Name era
 
 instance Show (Name era) where
   show (Name (V n _ _)) = n
@@ -63,10 +65,7 @@ instance Ord (Name era) where
   compare v1@(Name (V n1 rep1 _)) v2@(Name (V n2 rep2 _)) =
     if v1 == v2
       then EQ
-      else case compare n1 n2 of
-        LT -> LT
-        GT -> GT
-        EQ -> compareRep rep1 rep2
+      else compare n1 n2 <> compareRep rep1 rep2
 
 -- ================================================================
 -- Field
@@ -114,7 +113,7 @@ instance Shaped (V era) (Rep era) where
 
 -- We are ignoring the Accessfield on purpose
 
-data Env era = Env (Map String (Payload era))
+newtype Env era = Env (Map String (Payload era))
 
 instance Show (Env era) where
   show (Env m) = unlines (map f (Map.toList m))
@@ -139,7 +138,8 @@ storeVar (V name rep access) t (Env m) = Env (Map.insert name (Payload rep t acc
 -- ============================================
 -- Group a bunch of bindings into a list
 
-data P era where P :: V era t -> t -> P era
+data P era where
+  P :: V era t -> t -> P era
 
 instance Show (P era) where
   show (P (V nm rep _) t) = nm ++ " = " ++ synopsis rep t

@@ -70,7 +70,6 @@ library
         -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
         -Wunused-packages
 
-    other-modules:    
     build-depends:
         base >=4.14 && <4.17,
         array,
@@ -94,13 +93,14 @@ library
         cardano-protocol-tpraos >=1.0,
         cardano-slotting,
         containers,
-        hspec-expectations,
+        groups,
         vector-map,
         data-default-class,
         microlens,
         mtl,
         nothunks,
         plutus-core,
+        hspec,
         plutus-ledger-api ^>=1.1,
         prettyprinter,
         QuickCheck,

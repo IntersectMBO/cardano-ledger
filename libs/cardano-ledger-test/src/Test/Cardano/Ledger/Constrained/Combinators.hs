@@ -12,6 +12,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck hiding (Fixed, total)
 
@@ -20,23 +21,51 @@ import Test.QuickCheck hiding (Fixed, total)
 
 -- | Report a Gen-time error from the current message 'extra' and the
 --   [messages] 'mess' describing the path to this call site.
-errorMess :: String -> [String] -> a
+errorMess :: HasCallStack => String -> [String] -> a
 errorMess extra mess = error (unlines ("\nGen-time error" : (reverse (extra : mess))))
 
 -- | suchThat version that tracks Gen-time errors
 suchThatErr :: [String] -> Gen a -> (a -> Bool) -> Gen a
-suchThatErr msgs gen p = do
-  x <- suchThatMaybe (resize 1000 gen) p
-  case x of
-    Just y -> pure y
-    Nothing -> errorMess "SuchThat times out" msgs
+suchThatErr msgs gen p = sized $ \n -> try (10 :: Int) n
+  where
+    try 0 _ = errorMess "SuchThat times out" msgs
+    try k sz = do
+      x <- resize sz $ suchThatMaybe gen p
+      case x of
+        Just y -> pure y
+        Nothing -> try (k - 1) (sz + 5)
 
 -- =======================================================================
+
+-- | add items from 'source' to 'base' until size 'n' is reached.
+addUntilSize :: Ord a => [String] -> Set a -> Set a -> Int -> Gen (Set a)
+addUntilSize msgs base source n = do
+  let possible = Set.difference source base
+      p = Set.size possible
+      m = Set.size base
+      loop result _ | Set.size result >= n = pure result
+      loop _ extra
+        | Set.null extra =
+            errorMess
+              ( "There are not enough unused elements in 'source'("
+                  ++ show p
+                  ++ ") to reach the size 'n'("
+                  ++ show n
+                  ++ ")"
+              )
+              msgs
+      loop result extra = do
+        i <- choose (0, Set.size extra - 1)
+        loop (Set.insert (Set.elemAt i extra) result) (Set.deleteAt i extra)
+  case compare m n of
+    EQ -> pure base
+    GT -> errorMess ("The size(" ++ show m ++ ") of the 'base' set exceeds the target size(" ++ show n ++ ")") msgs
+    LT -> loop base possible
 
 setSized :: Ord a => [String] -> Int -> Gen a -> Gen (Set a)
 setSized mess size gen = do
   set <- (Set.fromList <$> vectorOf size gen)
-  fixSet (("setSized " ++ show size) : mess) 1000 {-(size * 4)-} size gen set
+  fixSet (("setSized " ++ show size) : mess) 1000 size gen set
 
 fixSet :: Ord a => [String] -> Int -> Int -> Gen a -> Set a -> Gen (Set a)
 fixSet mess numtrys size genA s = help numtrys s
@@ -50,14 +79,9 @@ fixSet mess numtrys size genA s = help numtrys s
       EQ -> pure set
       GT -> help (trys - 1) (iterate Set.deleteMin set !! (Set.size set - size))
       LT -> do
-        new <- Set.fromList <$> vectorOf (size - Set.size set) genA
-        help (trys - 1) (Set.union new set)
-
-{-
-x <- genA
-if Set.member x set
-  then help (trys - 1) set
-  else help trys (Set.insert x set) -}
+        let need = size - Set.size set
+        new <- Set.fromList . take need . filter (`Set.notMember` set) <$> vectorOf size genA
+        sized $ \n -> resize (n + 5) $ help (trys - 1) (Set.union new set)
 
 mapSized :: Ord a => [String] -> Int -> Gen a -> Gen b -> Gen (Map a b)
 mapSized mess size genA genB = setSized (("mapSized " ++ show size) : mess) size genA >>= addRange
