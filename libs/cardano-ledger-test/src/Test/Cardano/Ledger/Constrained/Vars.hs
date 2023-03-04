@@ -54,9 +54,9 @@ import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Ast (Target (..), Term (Var), constTarget, ppTarget, ($>))
 import Test.Cardano.Ledger.Constrained.Classes (
   GovernanceState (..),
-  PParams (..),
-  PParamsUpdate (..),
-  TxOut (..),
+  PParamsF (..),
+  PParamsUpdateF (..),
+  TxOutF (..),
   governanceProposedL,
   liftUTxO,
   pparamsWrapperL,
@@ -221,14 +221,14 @@ poolDepositsL = nesEsL . esLStateL . lsDPStateL . dpsPStateL . psDepositsL
 
 -- UTxOState
 
-utxo :: Proof era -> Term era (Map (TxIn (EraCrypto era)) (TxOut era))
+utxo :: Proof era -> Term era (Map (TxIn (EraCrypto era)) (TxOutF era))
 utxo p = Var $ V "utxo" (MapR TxInR (TxOutR p)) (Yes NewEpochStateR (utxoL p))
 
-utxoL :: Proof era -> NELens era (Map (TxIn (EraCrypto era)) (TxOut era))
+utxoL :: Proof era -> NELens era (Map (TxIn (EraCrypto era)) (TxOutF era))
 utxoL proof = nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL . unUtxoL proof
 
-unUtxoL :: Proof era -> Lens' (UTxO era) (Map (TxIn (EraCrypto era)) (TxOut era))
-unUtxoL p = lens (Map.map (TxOut p) . unUTxO) (\(UTxO _) new -> (liftUTxO new))
+unUtxoL :: Proof era -> Lens' (UTxO era) (Map (TxIn (EraCrypto era)) (TxOutF era))
+unUtxoL p = lens (Map.map (TxOutF p) . unUTxO) (\(UTxO _) new -> (liftUTxO new))
 
 deposits :: Term era Coin
 deposits = Var $ V "deposits" CoinR (Yes NewEpochStateR depositsL)
@@ -255,11 +255,11 @@ ppupsL (Conway _) = error "Conway era does not have a PPUPState, in ppupsL"
 
 -- nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL . ???
 
-proposalsT :: Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+proposalsT :: Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 proposalsT p = Var (V "proposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
 futureProposalsT ::
-  Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+  Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 futureProposalsT p = Var (V "futureProposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
 ppupStateT :: Proof era -> Target era (ShelleyPPUPState era)
@@ -318,11 +318,13 @@ snapshots = Var (V "snapshots" SnapShotsR (Yes NewEpochStateR snapshotsL))
 snapshotsL :: NELens era (SnapShots (EraCrypto era))
 snapshotsL = nesEsL . esSnapshotsL
 
-prevpparams :: Proof era -> Term era (PParams era)
-prevpparams p = Var (V "prevpparams" (PParamsR p) No) -- (Yes NewEpochStateR (nesEsL . esPrevPpL)))
+prevpparams :: Proof era -> Term era (PParamsF era)
+prevpparams p = Var (V "prevpparams" (PParamsR p) No)
 
-pparams :: Proof era -> Term era (PParams era)
-pparams p = Var (V "pparams" (PParamsR p) No) -- (Yes NewEpochStateR (nesEsL . esPpL)))
+-- TODO fix this lens to use PParamsF instead of PParams (Yes NewEpochStateR (nesEsL . esPrevPpL)))
+
+pparams :: Proof era -> Term era (PParamsF era)
+pparams p = Var (V "pparams" (PParamsR p) No) -- TODO fix me too (Yes NewEpochStateR (nesEsL . esPpL)))
 
 nmLikelihoodsT :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) [Float])
 nmLikelihoodsT = Var (V "likelihoodsNM" (MapR PoolHashR (ListR FloatR)) (Yes NewEpochStateR (nesEsL . esNonMyopicL . nmLikelihoodsL)))
@@ -615,18 +617,18 @@ utxoStateT p = Constr "UTxOState" (utxofun p) $> (pparams p) $> utxo p $> deposi
   where
     utxofun ::
       Proof era ->
-      PParams era ->
-      Map (TxIn (EraCrypto era)) (TxOut era) ->
+      PParamsF era ->
+      Map (TxIn (EraCrypto era)) (TxOutF era) ->
       Coin ->
       Coin ->
       GovernanceState era ->
       UTxOState era
-    utxofun (Shelley _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Mary _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Allegra _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Alonzo _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Babbage _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Conway _) (PParams _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Shelley _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Mary _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Allegra _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Alonzo _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Babbage _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Conway _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
 
 -- | Target for DPState
 dpstateT :: Target era (DPState (EraCrypto era))

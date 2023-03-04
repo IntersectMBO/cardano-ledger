@@ -20,13 +20,13 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   compareRep,
   genSizedRep,
   genRep,
-  TxOut (..),
+  TxOutF (..),
   unTxOut,
-  Value (..),
+  ValueF (..),
   unValue,
-  PParams (..),
+  PParamsF (..),
   unPParams,
-  PParamsUpdate (..),
+  PParamsUpdateF (..),
   unPParamsUpdate,
   liftUTxO,
   Proof (..),
@@ -63,10 +63,10 @@ import Prettyprinter (hsep)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Classes (
-  PParams (..),
-  PParamsUpdate (..),
-  TxOut (..),
-  Value (..),
+  PParamsF (..),
+  PParamsUpdateF (..),
+  TxOutF (..),
+  ValueF (..),
   genPParams,
   genPParamsUpdate,
   genTxOut,
@@ -126,11 +126,11 @@ data Rep era t where
   UnitR :: Rep era ()
   ProtVerR :: Proof era -> Rep era ProtVer -- We need the Proof to get arbitrary instances correct
   -- \^ Rep's for type families (or those that embed type families)
-  ValueR :: Proof era -> Rep era (Value era)
+  ValueR :: Proof era -> Rep era (ValueF era)
   UTxOR :: Proof era -> Rep era (UTxO era)
-  TxOutR :: Proof era -> Rep era (TxOut era)
-  PParamsR :: Proof era -> Rep era (PParams era)
-  PParamsUpdateR :: Proof era -> Rep era (PParamsUpdate era)
+  TxOutR :: Proof era -> Rep era (TxOutF era)
+  PParamsR :: Proof era -> Rep era (PParamsF era)
+  PParamsUpdateR :: Proof era -> Rep era (PParamsUpdateF era)
   --
   DeltaCoinR :: Rep era DeltaCoin
   GenDelegPairR :: Rep era (GenDelegPair (EraCrypto era))
@@ -282,8 +282,8 @@ synopsis TxInR txin = show (pcTxIn txin)
 synopsis StringR s = show s
 synopsis (ValueR _) x = show x
 synopsis (TxOutR _) x = show x
-synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOut p) mp) ++ " )"
-synopsis (PParamsR _) (PParams p x) = synopsisPParam p x
+synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
+synopsis (PParamsR _) (PParamsF p x) = synopsisPParam p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
@@ -311,13 +311,13 @@ synSum (MapR _ IPoolStakeR) m = ", sum = " ++ show (Map.foldl' accum 0 m)
     accum z (IndividualPoolStake rat _) = z + rat
 synSum (MapR _ (TxOutR proof)) m = ", sum = " ++ show (Map.foldl' (accum proof) (Coin 0) m)
   where
-    accum :: Proof era -> Coin -> TxOut era -> Coin
-    accum (Shelley _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Allegra _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Mary _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Alonzo _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Babbage _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
-    accum (Conway _) z (TxOut _ out) = z <+> (out ^. txOutCoinL)
+    accum :: Proof era -> Coin -> TxOutF era -> Coin
+    accum (Shelley _) z (TxOutF _ out) = z <+> (out ^. txOutCoinL)
+    accum (Allegra _) z (TxOutF _ out) = z <+> (out ^. txOutCoinL)
+    accum (Mary _) z (TxOutF _ out) = z <+> (out ^. txOutCoinL)
+    accum (Alonzo _) z (TxOutF _ out) = z <+> (out ^. txOutCoinL)
+    accum (Babbage _) z (TxOutF _ out) = z <+> (out ^. txOutCoinL)
+    accum (Conway _) z (TxOutF _ out) = z <+> (out ^. txOutCoinL)
 synSum (SetR CoinR) m = ", sum = " ++ show (pcCoin (Set.foldl' (<>) mempty m))
 synSum (SetR RationalR) m = ", sum = " ++ show (Set.foldl' (+) 0 m)
 synSum (ListR CoinR) m = ", sum = " ++ show (List.foldl' (<>) mempty m)

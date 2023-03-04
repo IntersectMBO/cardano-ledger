@@ -32,8 +32,8 @@ import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Sums (..),
-  genFromNonNegSumV,
-  genFromSumV,
+  genFromNonNegSumSpec,
+  genFromSumSpec,
   projAdds,
   smallInc,
   sumAdds,
@@ -53,7 +53,7 @@ import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Size (
   OrdCond (..),
   Size (..),
-  SumV (..),
+  SumSpec (..),
   atleastdelta,
   atmostany,
   genFromSize,
@@ -75,7 +75,6 @@ import Test.Cardano.Ledger.Generic.Proof (C_Crypto, MaryEra)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (Fixed, total)
-import Prelude hiding (subtract)
 
 -- ===========================================================
 {- TODO, possible extensions and improvements, so we don't forget
@@ -535,7 +534,7 @@ observeMerge = do
 --   There are 3 cases RngSum, RngProj, and RngRel. They are all mutually inconsistent.
 --   So while any Map may constrain its range, it can only choose ONE of the cases.
 data RngSpec era rng where
-  -- \^ The set must have Adds instance and add up to 'rng'
+  -- | The set must have Adds instance and add up to 'rng'
   RngSum ::
     Adds rng =>
     Size -> -- the sum of all the elements must fall in the range denoted by the Size
@@ -705,11 +704,11 @@ runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 -- generators for RngSpec
 
 instance Sums Word64 Coin where
-  getsum n = Coin $ fromIntegral n
+  getSum n = Coin $ fromIntegral n
   genT _ (Coin n) = pure (fromIntegral n)
 
 instance Sums Coin Word64 where
-  getsum (Coin n) = fromIntegral n
+  getSum (Coin n) = fromIntegral n
   genT _ n = pure (Coin (fromIntegral n))
 
 genConsistentRngSpec ::
@@ -811,7 +810,7 @@ instance Show (Unique dom rng) where
 
 -- | Indicates which constraints (if any) a Map must adhere to
 data MapSpec era dom rng where
-  -- \^ The map may be constrained 3 ways. 1) Its size(Size) 2) its domain(RelSpec) 3) its range(RngSpec)
+  -- | The map may be constrained 3 ways. 1) Its size(Size) 2) its domain(RelSpec) 3) its range(RngSpec)
   MapSpec ::
     Size ->
     RelSpec era dom ->
@@ -1039,7 +1038,7 @@ genSetSpecIsSound = do
 -- Specifications for Lists
 
 data ElemSpec era t where
-  -- \^ The set must add up to 'tot', which is in the range of Size
+  -- | The set must add up to 'tot', which is in the range of Size
   ElemSum ::
     Adds t =>
     Size ->
@@ -1360,17 +1359,17 @@ testl = do
   monadTyped (liftT (a <> b))
 
 -- =======================================================================
--- Operations on SumV (defined in Types.hs)
+-- Operations on SumSpec (defined in Types.hs)
 
-genSumV :: Gen SumV
-genSumV =
+genSumSpec :: Adds c => Gen (SumSpec c)
+genSumSpec =
   frequency
-    [ (1, vLeft <$> elements ["x", "y"] <*> genOrdCond <*> choose (-5, 25))
-    , (2, vRight <$> choose (-5, 25) <*> genOrdCond <*> choose (-5, 25) <*> elements ["x", "y"])
+    [ (1, vLeft (fromI [] 1) <$> elements ["x", "y"] <*> genOrdCond <*> choose (-5, 25))
+    , (2, vRight (fromI [] 1) <$> choose (-5, 25) <*> genOrdCond <*> choose (-5, 25) <*> elements ["x", "y"])
     ]
 
-genNonNegSumV :: Gen SumV
-genNonNegSumV =
+genNonNegSumSpec :: Adds c => Gen (SumSpec c)
+genNonNegSumSpec =
   frequency
     [
       ( 1
@@ -1378,8 +1377,8 @@ genNonNegSumV =
           v <- elements ["x", "y"]
           c <- genOrdCond
           case c of
-            LTH -> vLeft v c <$> choose (1, 30) -- LTH and choice is 0, means negative number
-            _ -> vLeft v c <$> choose (0, 30)
+            LTH -> vLeft (fromI [] 1) v c <$> choose (1, 30) -- LTH and choice is 0, means negative number
+            _ -> vLeft (fromI [] 1) v c <$> choose (0, 30)
       )
     ,
       ( 1
@@ -1388,51 +1387,51 @@ genNonNegSumV =
           cond <- genOrdCond
           m <- choose (0, n - 1)
           v <- elements ["x", "y"]
-          pure $ vRight n cond m v
+          pure $ vRight (fromI [] 1) n cond m v
       )
     ]
 
 genOrdCond :: Gen OrdCond
 genOrdCond = elements [EQL, LTH, LTE, GTH, GTE, CondAny]
 
-runSumV :: forall c. Adds c => c -> SumV -> Bool
-runSumV c (SumVSize _ size) = runSize (toI c) size
-runSumV _ SumVAny = True
-runSumV _ (SumVNever _) = False
+runSumSpec :: forall c. Adds c => c -> SumSpec c -> Bool
+runSumSpec c (SumSpecSize _ _ size) = runSize (toI c) size
+runSumSpec _ SumSpecAny = True
+runSumSpec _ (SumSpecNever _) = False
 
-tryManySumV :: Gen SumV -> ([String] -> SumV -> Gen Int) -> Gen (Int, [String])
-tryManySumV genSum genFromSum = do
+tryManySumSpec :: Gen (SumSpec Int) -> ([String] -> SumSpec Int -> Gen Int) -> Gen (Int, [String])
+tryManySumSpec genSum genFromSum = do
   xs <- vectorOf 25 genSum
   ys <- vectorOf 25 genSum
   let check (x, y, m) = do
-        z <- genFromSum ["test tryManySumV"] m
-        pure (x, runSumV z x, y, runSumV z y, z, runSumV z m, m)
-      showAns :: (SumV, Bool, SumV, Bool, Int, Bool, SumV) -> String
+        z <- genFromSum ["test tryManySumSpec"] m
+        pure (x, runSumSpec z x, y, runSumSpec z y, z, runSumSpec z m, m)
+      showAns :: (SumSpec c, Bool, SumSpec c, Bool, Int, Bool, SumSpec c) -> String
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
           [ "s1 = " ++ show s1
           , "s2 = " ++ show s2
           , "s1 <> s2 = " ++ show s3
           , "v = genFromRelSpec (s1 <> s2) = " ++ show v
-          , "runSumV s1 v = " ++ show run1
-          , "runSumV s2 v = " ++ show run2
-          , "runSumV (s1 <> s2) v = " ++ show run3
+          , "runSumSpec s1 v = " ++ show run1
+          , "runSumSpec s2 v = " ++ show run2
+          , "runSumSpec (s1 <> s2) v = " ++ show run3
           ]
       pr x@(_, a, _, b, _, c, _) = if not (a && b && c) then Just (showAns x) else Nothing
   let trips = [(x, y, m) | x <- xs, y <- ys, Just m <- [consistent x y]]
   ts <- mapM check trips
   pure $ (length trips, Maybe.catMaybes (map pr ts))
 
-reportManySumV :: IO ()
-reportManySumV = do
-  (passed, bad) <- generate (tryManySumV genSumV genFromSumV)
+reportManySumSpec :: IO ()
+reportManySumSpec = do
+  (passed, bad) <- generate (tryManySumSpec genSumSpec genFromSumSpec)
   if null bad
     then putStrLn ("passed " ++ show passed ++ " tests.")
     else do mapM_ putStrLn bad; error "TestFails"
 
-reportManyNonNegSumV :: IO ()
-reportManyNonNegSumV = do
-  (passed, bad) <- generate (tryManySumV genNonNegSumV genFromNonNegSumV)
+reportManyNonNegSumSpec :: IO ()
+reportManyNonNegSumSpec = do
+  (passed, bad) <- generate (tryManySumSpec genNonNegSumSpec genFromNonNegSumSpec)
   if null bad
     then putStrLn ("passed " ++ show passed ++ " tests.")
     else do mapM_ putStrLn bad; error "TestFails"
@@ -1458,8 +1457,8 @@ main =
       , testProperty "test SetSpec generators" genSetSpecIsSound
       , testProperty "test ElemSpec generators" testSoundElemSpec
       , testProperty "test ListSpec generators" testSoundListSpec
-      , testProperty "test Sound MergeSumV" reportManySumV
-      , testProperty "test Sound non-negative MergeSumV" reportManyNonNegSumV
+      , testProperty "test Sound MergeSumSpec" reportManySumSpec
+      , testProperty "test Sound non-negative MergeSumSpec" reportManyNonNegSumSpec
       ]
 
 -- :main --quickcheck-replay=740521

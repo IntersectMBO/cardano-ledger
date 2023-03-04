@@ -66,7 +66,7 @@ fails in these cases:
 
 Current limitations of the tests
   - Only IntR and SetR IntR types (and Word64R for size constraints)
-  - Only generates Sized, :<=:, Disjoint, and SumsTo(SumSet) constraints
+  - Only generates Sized, `Subset`, Disjoint, and SumsTo(SumSet) constraints
 
 Known limitations of the code that the tests avoid
   - Constraints of the form `Sized X t` cannot be solved (with X unknown), even with sizeBeforeArg =
@@ -287,7 +287,7 @@ genPred env =
                 (`Set.isSubsetOf` val)
                 (Lit (SetR rep) <$> subsetFromSet ["From genPred subsetC"] val)
                 (VarTerm d)
-            pure (sub :<=: sup, markSolved (vars sub) d env'')
+            pure (sub `Subset` sup, markSolved (vars sub) d env'')
       | otherwise = do
           -- Known subset
           TypeInEra rep <- genBaseType
@@ -300,7 +300,7 @@ genPred env =
                 (Set.isSubsetOf val)
                 (Lit (SetR rep) . Set.union val <$> genRep (SetR rep))
                 (VarTerm d)
-            pure (sub :<=: sup, markSolved (vars sup) d env'')
+            pure (sub `Subset` sup, markSolved (vars sup) d env'')
 
     -- Disjoint, left KnownTerm and right VarTerm
     disjointC = do
@@ -341,7 +341,7 @@ genPred env =
             partSums <- partitionInt 1 ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
-            pure (SumsTo EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+            pure (SumsTo 1 EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
       | otherwise = do
           -- Known sets
           let genParts 0 env0 k = k [] 0 env0
@@ -359,7 +359,7 @@ genPred env =
                 (== tot)
                 (pure $ Lit IntR tot)
                 (VarTerm d)
-            pure (SumsTo EQL sumTm parts, markSolved (vars sumTm) d env'')
+            pure (SumsTo 1 EQL sumTm parts, markSolved (vars sumTm) d env'')
 
 genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
 genPreds = \env -> do
@@ -386,7 +386,7 @@ shrinkPreds (preds, env) =
     shrinkPred c = [r | r <- randoms c, def r == def c, not . null $ def r]
 
     randoms (Sized n t) = [Random n, Random t]
-    randoms (s :<=: t) = [Random s, Random t]
+    randoms (s `Subset` t) = [Random s, Random t]
     randoms (s :=: t) = [Random s, Random t]
     randoms (Disjoint s t) = [Random s, Random t]
     randoms _ = []
@@ -447,7 +447,7 @@ showTerm (Fixed (Lit rep t)) = showVal rep t
 showTerm t = show t
 
 showPred :: Pred era -> String
-showPred (sub :<=: sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
+showPred (sub `Subset` sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
 showPred (Disjoint s t) = "Disjoint " ++ showTerm s ++ " " ++ showTerm t
 showPred pr = show pr
 
@@ -459,7 +459,7 @@ showEnv (Env vmap) = unlines $ map pr $ Map.toList vmap
 predConstr :: Pred era -> String
 predConstr Sized {} = "Sized"
 predConstr (_ :=: _) = ":=:"
-predConstr (_ :<=: _) = ":<=:"
+predConstr (_ `Subset` _) = "Subset"
 predConstr Disjoint {} = "Disjoint"
 predConstr SumsTo {} = "SumsTo"
 predConstr Random {} = "Random"

@@ -7,23 +7,21 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
-
--- {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Test.Cardano.Ledger.Constrained.Classes where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc)
+import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
+import qualified Cardano.Ledger.Shelley.Governance as Gov (GovernanceState (..))
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
-import Cardano.Ledger.Shelley.Rewards (Reward (..))
+import qualified Cardano.Ledger.Shelley.PParams as PP (ProposedPPUpdates (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (coin, modifyCoin, (<+>)))
@@ -35,11 +33,13 @@ import Data.Maybe.Strict (StrictMaybe (SJust))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
+import GHC.Real (denominator, numerator, (%))
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
+import Test.Cardano.Ledger.Constrained.Size (SumSpec (..), genFromIntRange, genFromSize)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
@@ -67,75 +67,9 @@ import Test.QuickCheck (
  )
 import Prelude hiding (subtract)
 
-import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
-import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..))
-import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
-import Test.Cardano.Ledger.Constrained.Size (SumV (..), genFromIntRange, genFromSize)
-
--- import  Cardano.Ledger.Conway.Governance(ConwayTallyState(..))
--- import Lens.Micro
-import GHC.Real (denominator, numerator, (%))
-
 -- =====================================================================
--- Partitioning a value into a bunch of pieces, that sum to that value
-{-
--- | Generate a list of length 'size' that sums to 'total', where the minimum element is (>= 'smallest')
-intPartition :: [String] -> String -> Int -> Int -> Int -> Gen [Int]
-intPartition msgs typname smallest size total
-  | size == 0 = errorMess (zeroCount "intPartition" total) msgs
-  | size > total =
-      errorMess
-        ( "Can't partition "
-            ++ show total
-            ++ " into "
-            ++ show size
-            ++ " positive pieces at type "
-            ++ typname
-        )
-        msgs
-  | size < 1 =
-      errorMess
-        ( "Can only make a partion of positive number of pieces: "
-            ++ show size
-            ++ " total: "
-            ++ show total
-            ++ " smallest: "
-            ++ show smallest
-        )
-        msgs
-  | smallest < 0 = errorMess ("The minimum choice must be positive : " ++ show smallest) msgs
-  | smallest * size > total =
-      errorMess
-        ( "Can't partition "
-            ++ show total
-            ++ " into "
-            ++ show size
-            ++ " pieces, each (>= "
-            ++ show smallest
-            ++ ")"
-        )
-        msgs
-  | total < 1 = errorMess ("Total must be positive: " ++ show total) msgs
-  | otherwise =
-      let mean = total `div` size + 1
-          go 1 total1
-            | total1 < 1 = errorMess ("Ran out of choices(2), total went negative: " ++ show total1) msgs
-            | otherwise = pure [total1]
-          go 2 total1 = do
-            z <- chooseInt (smallest, total1 - 1)
-            pure [z, total1 - z]
-          go size1 total1 = do
-            let hi =
-                  min
-                    (max 1 mean)
-                    (total1 - (size1 - 1))
-            x <- chooseInt (smallest, hi)
-            xs <- go (size1 - 1) (total1 - x)
-            pure (x : xs)
-       in do
-            ws <- go size total
-            shuffle ws
--}
+-- Helper functions
+
 gauss :: Floating a => a -> a -> a -> a
 gauss mean stdev x = (1 / (stdev * (sqrt (2 * pi)))) * exp (negate ((1 / 2) * ((x - mean) / stdev) ** 2))
 
@@ -150,37 +84,15 @@ zeroCount fname total =
     ++ " [SumMap x]) where 'x' is the emptyset.\n"
     ++ "Try adding (Sized (Range 1 m) (Dom x)) constraint to force 'x' to have at least 1 element"
 
-{-
-rationalPartition :: [String] -> Int -> Rational -> Gen [Rational]
-rationalPartition msgs 0 total = errorMess (zeroCount "rationalPartition" total) msgs
-rationalPartition msgs n total = do
-  let iScale = n * 1000
-      rScale :: Rational
-      rScale = fromIntegral iScale
-  is <- intPartition msgs "Rational" (iScale `div` n) n (round (total * rScale))
-  pure (map ((/ rScale) . fromIntegral) is)
-
-coinPartition :: [String] -> Coin -> Int -> Coin -> Gen [Coin]
-coinPartition msgs (Coin smallest) size (Coin total) =
-  map (Coin . fromIntegral) <$> intPartition msgs "Coin" (fromIntegral smallest) size (fromIntegral total)
-
-deltaCoinPartition :: [String] -> DeltaCoin -> Int -> DeltaCoin -> Gen [DeltaCoin]
-deltaCoinPartition msgs (DeltaCoin smallest) size (DeltaCoin total) =
-  map (DeltaCoin . fromIntegral) <$> intPartition msgs "DeltaCoin" (fromIntegral smallest) size (fromIntegral total)
-
-naturalPartition :: [String] -> Natural -> Int -> Natural -> Gen [Natural]
-naturalPartition msgs smallest size total =
-  map (fromIntegral) <$> intPartition msgs "Natural" (fromIntegral smallest) size (fromIntegral total)
--}
 -- ==========================================
 -- The Adds class
 
 class (Ord x, Show x) => Adds x where
   add :: x -> x -> x
-  subtract :: [String] -> x -> x -> x
+  minus :: [String] -> x -> x -> x
   zero :: x
   partition :: [String] -> Int -> x -> Gen [x]
-  genAddsSumV :: [String] -> SumV -> Gen x
+  genAdds :: [String] -> SumSpec x -> Gen x
   fromI :: [String] -> Int -> x
   toI :: x -> Int
   smallI :: x
@@ -191,24 +103,24 @@ sumAdds xs = List.foldl' add zero xs
 projAdds :: (Foldable t, Sums a b) => t a -> b
 projAdds xs = List.foldl' accum zero xs
   where
-    accum ans x = add ans (getsum x)
+    accum ans x = add ans (getSum x)
 
-genFromSumV :: forall c. Adds c => [String] -> SumV -> Gen c
-genFromSumV _ SumVAny = pure zero
-genFromSumV msgs s@(SumVSize _ size) = fromI (("genFromSumV " ++ show s) : msgs) <$> genFromIntRange size
-genFromSumV msgs (SumVNever _) = errorMess ("genFromSumV applied to SumVNever") msgs
+genFromSumSpec :: forall c. Adds c => [String] -> SumSpec c -> Gen c
+genFromSumSpec _ SumSpecAny = pure zero
+genFromSumSpec msgs s@(SumSpecSize _ _ size) = fromI (("genFromSumSpec " ++ show s) : msgs) <$> genFromIntRange size
+genFromSumSpec msgs (SumSpecNever _) = errorMess ("genFromSumSpec applied to SumSpecNever") msgs
 
-genFromNonNegSumV :: forall c. Adds c => [String] -> SumV -> Gen c
-genFromNonNegSumV _ SumVAny = pure zero
-genFromNonNegSumV msgs s@(SumVSize _ size) = fromI (("genFromSumV " ++ show s) : msgs) <$> genFromSize size
-genFromNonNegSumV msgs (SumVNever _) = errorMess ("genFromSumV applied to SumVNever") msgs
+genFromNonNegSumSpec :: forall c. Adds c => [String] -> SumSpec c -> Gen c
+genFromNonNegSumSpec _ SumSpecAny = pure zero
+genFromNonNegSumSpec msgs s@(SumSpecSize _ _ size) = fromI (("genFromSumSpec " ++ show s) : msgs) <$> genFromSize size
+genFromNonNegSumSpec msgs (SumSpecNever _) = errorMess ("genFromSumSpec applied to SumSpecNever") msgs
 
 instance Adds Word64 where
   add = (+)
-  subtract _ = (-)
+  minus _ = (-)
   zero = 0
   partition = partitionWord64 0
-  genAddsSumV = genFromNonNegSumV
+  genAdds = genFromNonNegSumSpec
   fromI _ n | n >= 0 = fromIntegral n
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Word64.") msgs
   toI = fromIntegral
@@ -216,23 +128,23 @@ instance Adds Word64 where
 
 instance Adds Int where
   add = (+)
-  subtract _ = (-)
+  minus _ = (-)
   zero = 0
   partition = partitionInt 0
-  genAddsSumV = genFromSumV
+  genAdds = genFromSumSpec
   fromI _ n = n
   toI n = n
   smallI = 0
 
 instance Adds Natural where
   add = (+)
-  subtract msg x y =
+  minus msg x y =
     if x < y
-      then errorMess ("(subtract @Natural " ++ show x ++ " " ++ show y ++ ") is not possible") msg
+      then errorMess ("(minus @Natural " ++ show x ++ " " ++ show y ++ ") is not possible") msg
       else x - y
   zero = 0
   partition = partitionNatural 1
-  genAddsSumV = genFromNonNegSumV
+  genAdds = genFromNonNegSumSpec
   fromI _ n | n >= 0 = fromIntegral n
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Natural.") msgs
   toI = fromIntegral
@@ -240,23 +152,23 @@ instance Adds Natural where
 
 instance Adds Rational where
   add = (+)
-  subtract _ = (-)
+  minus _ = (-)
   zero = 0
   partition = partitionRational (1 % 10000)
-  genAddsSumV = genFromSumV
+  genAdds = genFromSumSpec
   fromI _ n = (fromIntegral n `div` 1000) % 1
   toI r = round (r * 1000)
   smallI = (1 % 10000)
 
 instance Adds Coin where
   add = (<+>)
-  subtract msg (Coin n) (Coin m) =
+  minus msg (Coin n) (Coin m) =
     if n < m
-      then errorMess ("(subtract @Coin " ++ show n ++ " " ++ show m ++ ") is not possible") msg
+      then errorMess ("(minus @Coin " ++ show n ++ " " ++ show m ++ ") is not possible") msg
       else Coin (n - m)
   zero = Coin 0
   partition = partitionCoin (Coin 1)
-  genAddsSumV = genFromNonNegSumV
+  genAdds = genFromNonNegSumSpec
   fromI _ n | n >= 0 = Coin (fromIntegral n)
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Coin.") msgs
   toI (Coin n) = fromIntegral n
@@ -264,10 +176,10 @@ instance Adds Coin where
 
 instance Adds DeltaCoin where
   add = (<+>)
-  subtract _ (DeltaCoin n) (DeltaCoin m) = DeltaCoin (n - m)
+  minus _ (DeltaCoin n) (DeltaCoin m) = DeltaCoin (n - m)
   zero = DeltaCoin 0
   partition msgs size total = partitionDeltaCoin (DeltaCoin (-4)) msgs size total
-  genAddsSumV = genFromSumV
+  genAdds = genFromSumSpec
   fromI _ n = DeltaCoin (fromIntegral n)
   toI (DeltaCoin n) = (fromIntegral n)
   smallI = DeltaCoin (-4)
@@ -279,57 +191,41 @@ smallInc = toI (smallI @c)
 -- The Sums class, for summing a projected c (where Adds c) from some richer type
 
 class (Show x, Adds x) => Sums t x | t -> x where
-  getsum :: t -> x
+  getSum :: t -> x
   genT :: [String] -> x -> Gen t
 
 instance GoodCrypto c => Sums (IndividualPoolStake c) Rational where
-  getsum (IndividualPoolStake r _) = r
+  getSum (IndividualPoolStake r _) = r
   genT _ r = IndividualPoolStake r <$> arbitrary
 
-instance (Reflect era) => Sums (TxOut era) Coin where
-  getsum (TxOut (Shelley _) t) = coin (t ^. Core.valueTxOutL)
-  getsum (TxOut (Allegra _) t) = coin (t ^. Core.valueTxOutL)
-  getsum (TxOut (Mary _) t) = coin (t ^. Core.valueTxOutL)
-  getsum (TxOut (Alonzo _) t) = coin (t ^. Core.valueTxOutL)
-  getsum (TxOut (Babbage _) t) = coin (t ^. Core.valueTxOutL)
-  getsum (TxOut (Conway _) t) = coin (t ^. Core.valueTxOutL)
+instance (Reflect era) => Sums (TxOutF era) Coin where
+  getSum (TxOutF _ t) = coin (t ^. valueTxOutL)
   genT _ cn = genTxOutX reify cn
 
-txOutCoinL :: (Core.EraTxOut era) => Lens' (Core.TxOut era) Coin
-txOutCoinL = lens (\x -> coin (x ^. Core.valueTxOutL)) (\x c -> x & Core.valueTxOutL .~ (modifyCoin (const c) (x ^. Core.valueTxOutL)))
+txOutCoinL :: (EraTxOut era) => Lens' (TxOut era) Coin
+txOutCoinL = lens (\x -> coin (x ^. valueTxOutL)) (\x c -> x & valueTxOutL .~ (modifyCoin (const c) (x ^. valueTxOutL)))
 
-genTxOutX :: forall era. Proof era -> Coin -> Gen (TxOut era)
+genTxOutX :: Proof era -> Coin -> Gen (TxOutF era)
 genTxOutX p coins =
   case p of
-    Shelley _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Allegra _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Mary _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Alonzo _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Babbage _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
-    Conway _ -> do txout <- arbitrary; pure $ TxOut p (txout & txOutCoinL .~ coins)
+    Shelley _ -> do txout <- arbitrary; pure $ TxOutF p (txout & txOutCoinL .~ coins)
+    Allegra _ -> do txout <- arbitrary; pure $ TxOutF p (txout & txOutCoinL .~ coins)
+    Mary _ -> do txout <- arbitrary; pure $ TxOutF p (txout & txOutCoinL .~ coins)
+    Alonzo _ -> do txout <- arbitrary; pure $ TxOutF p (txout & txOutCoinL .~ coins)
+    Babbage _ -> do txout <- arbitrary; pure $ TxOutF p (txout & txOutCoinL .~ coins)
+    Conway _ -> do txout <- arbitrary; pure $ TxOutF p (txout & txOutCoinL .~ coins)
 
-instance Reflect era => Sums (Value era) Coin where
-  getsum (Value (Shelley _) v) = v
-  getsum (Value (Allegra _) v) = v
-  getsum (Value (Mary _) v) = coin v
-  getsum (Value (Alonzo _) v) = coin v
-  getsum (Value (Babbage _) v) = coin v
-  getsum (Value (Conway _) v) = coin v
+instance Reflect era => Sums (ValueF era) Coin where
+  getSum (ValueF _ v) = coin v
   genT _ cn = genValueX reify cn
 
-genValueX :: Proof era -> Coin -> Gen (Value era)
+genValueX :: Reflect era => Proof era -> Coin -> Gen (ValueF era)
 genValueX proof cn = do
-  (Value p v) <- genValue proof
-  case p of
-    (Shelley _) -> pure (Value p cn)
-    (Allegra _) -> pure (Value p cn)
-    (Mary _) -> pure (Value p (modifyCoin (const cn) v))
-    (Alonzo _) -> pure (Value p (modifyCoin (const cn) v))
-    (Babbage _) -> pure (Value p (modifyCoin (const cn) v))
-    (Conway _) -> pure (Value p (modifyCoin (const cn) v))
+  (ValueF p v) <- genValue proof
+  pure (ValueF p (modifyCoin (const cn) v))
 
 instance Crypto c => Sums [Reward c] Coin where
-  getsum ss = List.foldl' accum (Coin 0) ss
+  getSum ss = List.foldl' accum (Coin 0) ss
     where
       accum ans (Reward _ _ c) = add ans c
   genT _ (Coin 1) = (: []) <$> (updateRew (Coin 1) <$> arbitrary)
@@ -410,84 +306,82 @@ instance Count EpochNo where
 -- Special accomodation for Type Families
 -- ============================================================================
 
-data TxOut era where
-  TxOut :: Proof era -> Core.TxOut era -> TxOut era
+data TxOutF era where
+  TxOutF :: Proof era -> TxOut era -> TxOutF era
 
-unTxOut :: TxOut era -> Core.TxOut era
-unTxOut (TxOut _ x) = x
-
--- ======
-data Value era where
-  Value :: Proof era -> Core.Value era -> Value era
-
-unValue :: Value era -> Core.Value era
-unValue (Value _ v) = v
-
-instance Ord (Value (ShelleyEra c)) where
-  compare (Value _ coin1) (Value _ coin2) = compare coin1 coin2
-instance Eq (Value (ShelleyEra c)) where
-  x == y = compare x y == EQ
-
-instance Ord (Value (AllegraEra c)) where
-  compare (Value _ coin1) (Value _ coin2) = compare coin1 coin2
-instance Eq (Value (AllegraEra c)) where
-  x == y = compare x y == EQ
+unTxOut :: TxOutF era -> TxOut era
+unTxOut (TxOutF _ x) = x
 
 -- ======
-data PParams era where
-  PParams :: Proof era -> Core.PParams era -> PParams era
+data ValueF era where
+  ValueF :: Proof era -> Value era -> ValueF era
 
-unPParams :: PParams era -> Core.PParams era
-unPParams (PParams _ p) = p
+unValue :: ValueF era -> Value era
+unValue (ValueF _ v) = v
 
-pparamsWrapperL :: Lens' (PParams era) (Core.PParams era)
-pparamsWrapperL = lens unPParams (\(PParams p _) pp -> PParams p pp)
+instance Ord (ValueF (ShelleyEra c)) where
+  compare (ValueF _ coin1) (ValueF _ coin2) = compare coin1 coin2
+instance Eq (ValueF (ShelleyEra c)) where
+  x == y = compare x y == EQ
+
+instance Ord (ValueF (AllegraEra c)) where
+  compare (ValueF _ coin1) (ValueF _ coin2) = compare coin1 coin2
+instance Eq (ValueF (AllegraEra c)) where
+  x == y = compare x y == EQ
+
+-- ======
+data PParamsF era where
+  PParamsF :: Proof era -> PParams era -> PParamsF era
+
+unPParams :: PParamsF era -> PParams era
+unPParams (PParamsF _ p) = p
+
+pparamsWrapperL :: Lens' (PParamsF era) (PParams era)
+pparamsWrapperL = lens unPParams (\(PParamsF p _) pp -> PParamsF p pp)
 
 -- =======
 
-data PParamsUpdate era where
-  PParamsUpdate :: Proof era -> Core.PParamsUpdate era -> PParamsUpdate era
+data PParamsUpdateF era where
+  PParamsUpdateF :: Proof era -> PParamsUpdate era -> PParamsUpdateF era
 
-unPParamsUpdate :: PParamsUpdate era -> Core.PParamsUpdate era
-unPParamsUpdate (PParamsUpdate _ p) = p
+unPParamsUpdate :: PParamsUpdateF era -> PParamsUpdate era
+unPParamsUpdate (PParamsUpdateF _ p) = p
 
-pparamsUpdateWrapperL :: Lens' (PParamsUpdate era) (Core.PParamsUpdate era)
-pparamsUpdateWrapperL = lens unPParamsUpdate (\(PParamsUpdate p _) pp -> PParamsUpdate p pp)
+pparamsUpdateWrapperL :: Lens' (PParamsUpdateF era) (PParamsUpdate era)
+pparamsUpdateWrapperL = lens unPParamsUpdate (\(PParamsUpdateF p _) pp -> PParamsUpdateF p pp)
 
 -- =====================
 
-data ProposedPPUpdates era where
-  ProposedPPUpdates :: Proof era -> Core.ProposedPPUpdates era -> ProposedPPUpdates era
+data ProposedPPUpdatesF era where
+  ProposedPPUpdatesF :: Proof era -> PP.ProposedPPUpdates era -> ProposedPPUpdatesF era
 
--- newtype Core.ProposedPPUpdates era = Core.ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (Core.PParamsUpdate era))
+unProposedPPUpdates :: ProposedPPUpdatesF era -> PP.ProposedPPUpdates era
+unProposedPPUpdates (ProposedPPUpdatesF _ x) = x
 
-unProposedPPUpdates :: ProposedPPUpdates era -> Core.ProposedPPUpdates era
-unProposedPPUpdates (ProposedPPUpdates _ x) = x
+proposedCoreL :: Lens' (PP.ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+proposedCoreL = lens (\(PP.ProposedPPUpdates m) -> m) (\(PP.ProposedPPUpdates _) m -> PP.ProposedPPUpdates m)
 
-proposedCoreL :: Lens' (Core.ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (Core.PParamsUpdate era))
-proposedCoreL = lens (\(Core.ProposedPPUpdates m) -> m) (\(Core.ProposedPPUpdates _) m -> Core.ProposedPPUpdates m)
-
-proposedWrapperL :: Lens' (ProposedPPUpdates era) (Core.ProposedPPUpdates era)
-proposedWrapperL = lens unProposedPPUpdates (\(ProposedPPUpdates p _) pp -> ProposedPPUpdates p pp)
+proposedWrapperL :: Lens' (ProposedPPUpdatesF era) (PP.ProposedPPUpdates era)
+proposedWrapperL = lens unProposedPPUpdates (\(ProposedPPUpdatesF p _) pp -> ProposedPPUpdatesF p pp)
 
 coreMapL ::
   Proof era ->
   Lens'
-    (Map (KeyHash 'Genesis (EraCrypto era)) (Core.PParamsUpdate era))
     (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
-coreMapL p = lens (fmap (PParamsUpdate p)) (\_ b -> fmap unPParamsUpdate b)
+    (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+coreMapL p = lens (fmap (PParamsUpdateF p)) (\_ b -> fmap unPParamsUpdate b)
 
-proposedMapL :: Lens' (ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+proposedMapL :: Lens' (ProposedPPUpdatesF era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 proposedMapL =
   lens
-    (\(ProposedPPUpdates p x) -> x ^. (proposedCoreL . (coreMapL p)))
-    (\(ProposedPPUpdates p x) y -> ProposedPPUpdates p (x & (proposedCoreL . (coreMapL p)) .~ y))
+    (\(ProposedPPUpdatesF p x) -> x ^. (proposedCoreL . (coreMapL p)))
+    (\(ProposedPPUpdatesF p x) y -> ProposedPPUpdatesF p (x & (proposedCoreL . (coreMapL p)) .~ y))
 
 -- ====================
 
-data GovernanceState era = GovernanceState (Proof era) (Core.GovernanceState era)
+data GovernanceState era = GovernanceState (Proof era) (Gov.GovernanceState era)
 
-unGovernanceState :: GovernanceState era -> Core.GovernanceState era
+unGovernanceState :: GovernanceState era -> Gov.GovernanceState era
 unGovernanceState (GovernanceState _ x) = x
 
 governanceProposedL :: Lens' (GovernanceState era) (ShelleyPPUPState era)
@@ -496,7 +390,7 @@ governanceProposedL =
     (\(GovernanceState p x) -> getPPUP p x)
     (\(GovernanceState p _) y -> GovernanceState p (putPPUP p y))
 
-getPPUP :: forall era. Proof era -> Core.GovernanceState era -> ShelleyPPUPState era
+getPPUP :: forall era. Proof era -> Gov.GovernanceState era -> ShelleyPPUPState era
 getPPUP (Shelley _) x = x
 getPPUP (Allegra _) x = x
 getPPUP (Mary _) x = x
@@ -504,83 +398,73 @@ getPPUP (Alonzo _) x = x
 getPPUP (Babbage _) x = x
 getPPUP (Conway _) _ = def @(ShelleyPPUPState era)
 
-putPPUP :: forall era. Proof era -> ShelleyPPUPState era -> Core.GovernanceState era
+putPPUP :: forall era. Proof era -> ShelleyPPUPState era -> Gov.GovernanceState era
 putPPUP (Shelley _) x = x
 putPPUP (Allegra _) x = x
 putPPUP (Mary _) x = x
 putPPUP (Alonzo _) x = x
 putPPUP (Babbage _) x = x
-putPPUP (Conway _) _ = Core.emptyGovernanceState @era
+putPPUP (Conway _) _ = Gov.emptyGovernanceState @era
 
 -- ================
-liftUTxO :: Map (TxIn (EraCrypto era)) (TxOut era) -> UTxO era
+liftUTxO :: Map (TxIn (EraCrypto era)) (TxOutF era) -> UTxO era
 liftUTxO m = UTxO (Map.map unTxOut m)
 
-instance Show (TxOut era) where
-  show (TxOut p t) = show (unReflect pcTxOut p t :: PDoc)
+instance Show (TxOutF era) where
+  show (TxOutF p t) = show (unReflect pcTxOut p t :: PDoc)
 
-instance Show (Value era) where
-  show (Value p t) = show (pcVal p t)
+instance Show (ValueF era) where
+  show (ValueF p t) = show (pcVal p t)
 
-instance Show (PParams era) where
-  show (PParams _ _) = "PParams ..."
+instance Show (PParamsF era) where
+  show (PParamsF _ _) = "PParamsF ..."
 
-instance Show (PParamsUpdate era) where
-  show (PParamsUpdate _ _) = "PParamsUpdate ..."
+instance Show (PParamsUpdateF era) where
+  show (PParamsUpdateF _ _) = "PParamsUpdateF ..."
 
-instance Show (ProposedPPUpdates era) where
-  show (ProposedPPUpdates _ _) = "ProposedPPUdates ..."
+instance Show (ProposedPPUpdatesF era) where
+  show (ProposedPPUpdatesF _ _) = "ProposedPPUdatesF ..."
 
-genValue :: Proof era -> Gen (Value era)
+genValue :: Proof era -> Gen (ValueF era)
 genValue p = case p of
-  (Shelley _) -> Value p <$> arbitrary
-  (Allegra _) -> Value p <$> arbitrary
-  (Mary _) -> Value p <$> arbitrary
-  (Alonzo _) -> Value p <$> arbitrary
-  (Babbage _) -> Value p <$> arbitrary
-  (Conway _) -> Value p <$> arbitrary
+  (Shelley _) -> ValueF p <$> arbitrary
+  (Allegra _) -> ValueF p <$> arbitrary
+  (Mary _) -> ValueF p <$> arbitrary
+  (Alonzo _) -> ValueF p <$> arbitrary
+  (Babbage _) -> ValueF p <$> arbitrary
+  (Conway _) -> ValueF p <$> arbitrary
 
-genTxOut :: Proof era -> Gen (TxOut era)
+genTxOut :: Proof era -> Gen (TxOutF era)
 genTxOut p = do
-  n <- choose (1, 100)
+  n <- frequency [(2, choose (1, 100)), (1, choose (101, 1000))]
   genTxOutX p (Coin n)
 
-{-
-genTxOut p = case p of
-  (Shelley _) -> TxOut p <$> arbitrary
-  (Allegra _) -> TxOut p <$> arbitrary
-  (Mary _) -> TxOut p <$> arbitrary
-  (Alonzo _) -> TxOut p <$> arbitrary
-  (Babbage _) -> TxOut p <$> arbitrary
-  (Conway _) -> TxOut p <$> arbitrary
--}
-
-genPParams :: Proof era -> Gen (PParams era)
+genPParams :: Proof era -> Gen (PParamsF era)
 genPParams p = case p of
-  (Shelley _) -> PParams p <$> arbitrary
-  (Allegra _) -> PParams p <$> arbitrary
-  (Mary _) -> PParams p <$> arbitrary
-  (Alonzo _) -> PParams p <$> arbitrary
-  (Babbage _) -> PParams p <$> arbitrary
-  (Conway _) -> PParams p <$> arbitrary
+  (Shelley _) -> PParamsF p <$> arbitrary
+  (Allegra _) -> PParamsF p <$> arbitrary
+  (Mary _) -> PParamsF p <$> arbitrary
+  (Alonzo _) -> PParamsF p <$> arbitrary
+  (Babbage _) -> PParamsF p <$> arbitrary
+  (Conway _) -> PParamsF p <$> arbitrary
 
-genPParamsUpdate :: Proof era -> Gen (PParamsUpdate era)
+genPParamsUpdate :: Proof era -> Gen (PParamsUpdateF era)
 genPParamsUpdate p = case p of
-  (Shelley _) -> PParamsUpdate p <$> genShelleyPParamsUpdate defaultConstants def
-  (Allegra _) -> PParamsUpdate p <$> genShelleyPParamsUpdate defaultConstants def
-  (Mary _) -> PParamsUpdate p <$> genShelleyPParamsUpdate defaultConstants def
-  (Alonzo _) -> PParamsUpdate p <$> arbitrary
-  (Babbage _) -> PParamsUpdate p <$> arbitrary
-  (Conway _) -> PParamsUpdate p <$> arbitrary
+  (Shelley _) -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
+  (Allegra _) -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
+  (Mary _) -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
+  (Alonzo _) -> PParamsUpdateF p <$> arbitrary
+  (Babbage _) -> PParamsUpdateF p <$> arbitrary
+  (Conway _) -> PParamsUpdateF p <$> arbitrary
 
-genProposedPPUpdates :: Proof era -> Gen (ProposedPPUpdates era)
+genProposedPPUpdates :: Proof era -> Gen (ProposedPPUpdatesF era)
 genProposedPPUpdates p = case p of
-  (Shelley _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
-  (Allegra _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
-  (Mary _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
-  (Alonzo _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
-  (Babbage _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
-  (Conway _) -> ProposedPPUpdates p . Core.ProposedPPUpdates <$> arbitrary
+  (Shelley _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  (Allegra _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  (Mary _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  (Alonzo _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  (Babbage _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  (Conway _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
 
 genGovernanceState :: Proof era -> Gen (GovernanceState era)
 genGovernanceState p = case p of
@@ -589,7 +473,7 @@ genGovernanceState p = case p of
   (Mary _) -> GovernanceState p <$> arbitrary
   (Alonzo _) -> GovernanceState p <$> arbitrary
   (Babbage _) -> GovernanceState p <$> arbitrary
-  (Conway _) -> pure $ GovernanceState p Core.emptyGovernanceState
+  (Conway _) -> pure $ GovernanceState p Gov.emptyGovernanceState
 
 genUTxO :: Proof era -> Gen (UTxO era)
 genUTxO p = case p of
@@ -601,6 +485,8 @@ genUTxO p = case p of
   (Conway _) -> arbitrary
 
 -- ==========================================================================
+-- A Single Partition function on Integer, we use to do all partitions by
+-- using wrapper functions.
 -- ==========================================================================
 
 -- | Generate a list of length 'size' that sums to 'total', where the minimum element is (>= 'smallest')
@@ -620,7 +506,7 @@ integerPartition msgs typname smallest size total
             ++ ")"
         )
         msgs
-  | size < 1 =
+  | size <= 0 =
       errorMess
         ( "Can only make a partion of positive number of pieces: "
             ++ show size
@@ -630,7 +516,6 @@ integerPartition msgs typname smallest size total
             ++ show smallest
         )
         msgs
-  --   | smallest < 0 = errorMess ("The minimum choice must be positive : " ++ show smallest) msgs
   | smallest * (fromIntegral size) > total =
       errorMess
         ( "Can't partition "
@@ -672,16 +557,21 @@ partitionRational smallest msgs size total = do
   pure (map (\i -> i % scale) is)
 
 partitionCoin :: Coin -> [String] -> Int -> Coin -> Gen [Coin]
-partitionCoin (Coin small) msgs n (Coin total) = map Coin <$> integerPartition msgs "Coin" small n total
+partitionCoin (Coin small) msgs n (Coin total) =
+  map Coin <$> integerPartition msgs "Coin" small n total
 
 partitionDeltaCoin :: DeltaCoin -> [String] -> Int -> DeltaCoin -> Gen [DeltaCoin]
-partitionDeltaCoin (DeltaCoin small) msgs n (DeltaCoin total) = map DeltaCoin <$> integerPartition msgs "DeltaCoin" small n total
+partitionDeltaCoin (DeltaCoin small) msgs n (DeltaCoin total) =
+  map DeltaCoin <$> integerPartition msgs "DeltaCoin" small n total
 
 partitionInt :: Int -> [String] -> Int -> Int -> Gen [Int]
-partitionInt small msgs n total = map fromIntegral <$> integerPartition msgs "Int" (fromIntegral small) n (fromIntegral total)
+partitionInt small msgs n total =
+  map fromIntegral <$> integerPartition msgs "Int" (fromIntegral small) n (fromIntegral total)
 
 partitionWord64 :: Word64 -> [String] -> Int -> Word64 -> Gen [Word64]
-partitionWord64 small msgs n total = map fromIntegral <$> integerPartition msgs "Word64" (fromIntegral small) n (fromIntegral total)
+partitionWord64 small msgs n total =
+  map fromIntegral <$> integerPartition msgs "Word64" (fromIntegral small) n (fromIntegral total)
 
 partitionNatural :: Natural -> [String] -> Int -> Natural -> Gen [Natural]
-partitionNatural small msgs n total = map fromIntegral <$> integerPartition msgs "Word64" (fromIntegral small) n (fromIntegral total)
+partitionNatural small msgs n total =
+  map fromIntegral <$> integerPartition msgs "Word64" (fromIntegral small) n (fromIntegral total)

@@ -72,7 +72,7 @@ that appears on the rhs of a SumsTo.
 -- | Compute the names of all variables of type (Map a b) that appear on the
 --   rhs of a (SumsTo test lhs rhs) that appear in a [Pred]
 rhsMapNames :: Set (Name era) -> Pred era -> Set (Name era)
-rhsMapNames ans (SumsTo _ _ rhs) = List.foldl' rhsSumNames ans rhs
+rhsMapNames ans (SumsTo _ _ _ rhs) = List.foldl' rhsSumNames ans rhs
 rhsMapNames ans _ = ans
 
 rhsSumNames :: Set (Name era) -> Sum era c -> Set (Name era)
@@ -95,6 +95,11 @@ typedEq x y = case testEql (termRep x) (termRep y) of
   Just Refl -> cteq x y
   Nothing -> False
 
+cEq :: Eq c => Term era c -> Term era a -> c -> a -> Bool
+cEq t1 t2 c1 c2 = case testEql (termRep t1) (termRep t2) of
+  Just Refl -> c1 == c2
+  Nothing -> False
+
 listEq :: (a -> b -> Bool) -> [a] -> [b] -> Bool
 listEq _ [] [] = True
 listEq eqf (x : xs) (y : ys) = eqf x y && listEq eqf xs ys
@@ -113,12 +118,12 @@ cteq _ _ = False
 cpeq :: Pred era -> Pred era -> Bool
 cpeq (Sized x a) (Sized y b) = cteq x y && typedEq a b
 cpeq (x :=: a) (y :=: b) = typedEq x y && typedEq a b
-cpeq (x :<=: a) (y :<=: b) = typedEq x y && typedEq a b
+cpeq (x :⊆: a) (y :⊆: b) = typedEq x y && typedEq a b
 cpeq (Disjoint x a) (Disjoint y b) = typedEq x y && typedEq a b
 cpeq (Random x) (Random y) = typedEq x y
 cpeq (HasDom x a) (HasDom y b) = typedEq x y && typedEq a b
 cpeq (CanFollow x a) (CanFollow y b) = typedEq x y && typedEq a b
-cpeq (SumsTo c x xs) (SumsTo d y ys) = typedEq x y && listEq cseq xs ys && c == d
+cpeq (SumsTo i c x xs) (SumsTo j d y ys) = cEq x y i j && typedEq x y && listEq cseq xs ys && c == d
 cpeq (Component x xs) (Component y ys) = typedEq x y && listEq anyWeq xs ys
 cpeq _ _ = False
 
@@ -174,16 +179,16 @@ removeDom push cs = (List.foldl' help [] cs)
       x :=: (Dom old@(Var v1@(V _ (MapR _ _) _))) -> push c [Name v1] ans [x :=: newVar, HasDom old newVar]
         where
           newVar = mkNewVar old
-      (Dom left@(Var v1@(V _ (MapR d1 _) _))) :<=: (Dom right@(Var v2@(V _ (MapR d2 _) _))) ->
+      (Dom left@(Var v1@(V _ (MapR d1 _) _))) :⊆: (Dom right@(Var v2@(V _ (MapR d2 _) _))) ->
         let leftVar = mkNewVar left
             rightVar = mkNewVar right
          in case testEql d1 d2 of
-              Just Refl -> push c [Name v1, Name v2] ans [leftVar :<=: rightVar, HasDom left leftVar, HasDom right rightVar]
+              Just Refl -> push c [Name v1, Name v2] ans [leftVar :⊆: rightVar, HasDom left leftVar, HasDom right rightVar]
               Nothing -> ans
-      x :<=: (Dom old@(Var v1@(V _ (MapR _ _) _))) -> push c [Name v1] ans [x :<=: newVar, HasDom old newVar]
+      x :⊆: (Dom old@(Var v1@(V _ (MapR _ _) _))) -> push c [Name v1] ans [x :⊆: newVar, HasDom old newVar]
         where
           newVar = mkNewVar old
-      (Dom old@(Var v1@(V _ (MapR _ _) _))) :<=: x -> push c [Name v1] ans [newVar :<=: x, HasDom old newVar]
+      (Dom old@(Var v1@(V _ (MapR _ _) _))) :⊆: x -> push c [Name v1] ans [newVar :⊆: x, HasDom old newVar]
         where
           newVar = mkNewVar old
       Disjoint (Dom left@(Var v1@(V _ (MapR d1 _) _))) (Dom right@(Var v2@(V _ (MapR d2 _) _))) ->
@@ -203,7 +208,7 @@ removeDom push cs = (List.foldl' help [] cs)
 removeSameVar :: [Pred era] -> [Pred era] -> [Pred era]
 removeSameVar [] ans = reverse ans
 removeSameVar ((Var v :=: Var u) : more) ans | Name v == Name u = removeSameVar more ans
-removeSameVar ((Var v :<=: Var u) : more) ans | Name v == Name u = removeSameVar more ans
+removeSameVar ((Var v :⊆: Var u) : more) ans | Name v == Name u = removeSameVar more ans
 removeSameVar (m : more) ans = removeSameVar more (m : ans)
 
 removeEqual :: [Pred era] -> [Pred era] -> [Pred era]
@@ -216,7 +221,7 @@ removeEqual ((e1 :=: e2) : more) ans | cteq e1 e2 = removeEqual more ans
 removeEqual (m : more) ans = removeEqual more (m : ans)
 
 -- | Introduce new xxDom variables, only if 'xx' does not
---   appear on the rhs of a (SumsTo test lhs rhs)
+--   appear on the rhs of a (SumsTo i test lhs rhs)
 remDom :: forall era. [Pred era] -> [Pred era]
 remDom ps = removeDom (addPred bad) ps
   where
@@ -316,7 +321,7 @@ standardOrderInfo =
 
 accumdep :: OrderInfo -> Map (Name era) (Set (Name era)) -> Pred era -> Map (Name era) (Set (Name era))
 accumdep info answer c = case c of
-  sub :<=: set ->
+  sub :⊆: set ->
     if setBeforeSubset info
       then mkDeps (vars set) (vars sub) answer
       else mkDeps (vars sub) (vars set) answer
@@ -330,7 +335,7 @@ accumdep info answer c = case c of
     if mapBeforeDom info
       then mkDeps (vars mp) (vars dom) answer
       else mkDeps (vars dom) (vars mp) answer
-  SumsTo _ sm parts ->
+  SumsTo _ _ sm parts ->
     if sumBeforeParts info
       then mkDeps (vars sm) (List.foldl' varsOfSum Set.empty parts) answer
       else mkDeps (List.foldl' varsOfSum Set.empty parts) (vars sm) answer

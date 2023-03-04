@@ -4,7 +4,7 @@
 
 module Test.Cardano.Ledger.Constrained.Size (
   Size (.., SzExact),
-  SumV (..),
+  SumSpec (..),
   vLeft,
   vRight,
   vLeftSize,
@@ -28,7 +28,7 @@ module Test.Cardano.Ledger.Constrained.Size (
 
 import qualified Data.List as List
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
-import Test.Cardano.Ledger.Constrained.Monad (LiftT (..), Typed (..), failT)
+import Test.Cardano.Ledger.Constrained.Monad (LiftT (..), Typed (..), failT, requireAll)
 import Test.QuickCheck (Gen, chooseInt)
 
 -- ==============================================
@@ -53,7 +53,7 @@ atmostany :: Int
 atmostany = 10
 
 -- =======================================================================================
--- The type Size and SumV are defined in their own file because its type must be known
+-- The type Size and SumSpec are defined in their own file because its type must be known
 -- in many other modules, so to avoid recursive cycles this module depends on only Combinators
 -- They act like a Spec, so there are Spec like Monoid and Semigroup instances.
 
@@ -148,7 +148,7 @@ genFromIntRange (SzLeast i) = chooseInt (i, i + atleastdelta)
 genFromIntRange (SzMost i) = chooseInt (i - atmostany, i)
 
 -- =========================================================================
--- SumV
+-- SumSpec
 -- =========================================================================
 
 -- | A specification of summation. like: lhs = ∑ rhs
@@ -162,45 +162,45 @@ genFromIntRange (SzMost i) = chooseInt (i - atmostany, i)
 --   This allows the instance to deal with special conditions.
 --   There are two (non-failure) possibilities 1) Var on the left, 2) Var on the right
 --   We supply functions
---      vLeft  :: String -> OrdCond -> Integer -> SumV
---                SumsTo x <= 4 + 6 + 9 ===> (vLeft x LTE 19) == (SumVSize x (AtMost 19))
---      vRight :: Integer -> OrdCond -> Integer -> String -> SumV
---                SumsTo 8 < 2 + x + 3 ===> (vRight 8 LTH 5 x) == (SumVSize x (AtLeast 4))
+--      vLeft  :: c -> String -> OrdCond -> Integer -> SumSpec c
+--                SumsTo c x <= 4 + 6 + 9 ===> (vLeft i x LTE 19) == (SumSpecSize c x (AtMost 19))
+--      vRight :: c -> Integer -> OrdCond -> Integer -> String -> SumSpec c
+--                SumsTo c 8 < 2 + x + 3 ===> (vRight c 8 LTH 5 x) == (SumSpecSize c x (AtLeast 4))
 --   But internally we store the information as a String and a Size (I.e. a range of Int)
-data SumV where
-  SumVSize :: String -> Size -> SumV
-  SumVAny :: SumV
-  SumVNever :: [String] -> SumV
+data SumSpec c where
+  SumSpecSize :: (Ord c, Show c) => c -> String -> Size -> SumSpec c
+  SumSpecAny :: SumSpec c
+  SumSpecNever :: [String] -> SumSpec c
 
-instance LiftT SumV where
-  liftT (SumVNever xs) = failT xs
+instance LiftT (SumSpec c) where
+  liftT (SumSpecNever xs) = failT xs
   liftT x = pure x
-  dropT (Typed (Left s)) = SumVNever s
+  dropT (Typed (Left s)) = SumSpecNever s
   dropT (Typed (Right x)) = x
 
--- Translate some thing like [SumsTo x <= 4 + 6 + 9] where the variable 'x' is on the left
-vLeft :: String -> OrdCond -> Int -> SumV
-vLeft x cond n = SumVSize x (vLeftSize x cond n)
+-- Translate some thing like [SumsTo c x <= 4 + 6 + 9] where the variable 'x' is on the left
+vLeft :: (Show c, Ord c) => c -> String -> OrdCond -> Int -> (SumSpec c)
+vLeft c x cond n = SumSpecSize c x (vLeftSize x cond n)
 
 vLeftSize :: String -> OrdCond -> Int -> Size
 vLeftSize x cond n = tripToSize (x, cond, n)
 
--- Translate some thing like [SumsTo 8 < 2 + x + 3] where the variable 'x' is on the right
-vRight :: Int -> OrdCond -> Int -> String -> SumV
-vRight n cond m s = SumVSize s (vRightSize n cond m s)
+-- Translate some thing like [SumsTo c 8 < 2 + x + 3] where the variable 'x' is on the right
+vRight :: (Ord c, Show c) => c -> Int -> OrdCond -> Int -> String -> SumSpec c
+vRight c n cond m s = SumSpecSize c s (vRightSize n cond m s)
 
 vRightSize :: Int -> OrdCond -> Int -> String -> Size
 vRightSize n cond m s = tripToSize (s, negOrdCond cond, n - m)
 
 -- Translate some thing like [SumsTo (Negate x) <= 4 + 6 + 9] where the variable 'x'
 -- is on the left, and we want to produce its negation.
-vLeftNeg :: String -> OrdCond -> Int -> SumV
-vLeftNeg s cond n = SumVSize s (negateSize (tripToSize (s, cond, n)))
+vLeftNeg :: (Show c, Ord c) => c -> String -> OrdCond -> Int -> (SumSpec c)
+vLeftNeg c s cond n = SumSpecSize c s (negateSize (tripToSize (s, cond, n)))
 
 -- Translate some thing like [SumsTo 8 < 2 + (Negate x) + 3] where the
 -- variable 'x' is on the right, and we want to produce its negation.
-vRightNeg :: Int -> OrdCond -> Int -> String -> SumV
-vRightNeg n cond m s = SumVSize s (negateSize (tripToSize (s, negOrdCond cond, n - m)))
+vRightNeg :: (Show c, Ord c) => c -> Int -> OrdCond -> Int -> String -> SumSpec c
+vRightNeg c n cond m s = SumSpecSize c s (negateSize (tripToSize (s, negOrdCond cond, n - m)))
 
 -- | Not exactly conditional negation, but what we need to make 'vRight' work out
 negOrdCond :: OrdCond -> OrdCond
@@ -211,32 +211,44 @@ negOrdCond GTH = LTH
 negOrdCond GTE = LTH
 negOrdCond x = x
 
-instance Show SumV where show = showSumV
+instance Show (SumSpec c) where show = showSumSpec
 
-instance Semigroup SumV where (<>) = mergeSumV
-instance Monoid SumV where mempty = SumVAny
+instance Semigroup (SumSpec c) where (<>) = mergeSumSpec
+instance Monoid (SumSpec c) where mempty = SumSpecAny
 
-showSumV :: SumV -> String
-showSumV SumVAny = "SumVAny"
-showSumV (SumVSize s size) = sepsP ["SumVSize", s, show size]
-showSumV (SumVNever _) = "SumVNever"
+showSumSpec :: SumSpec c -> String
+showSumSpec SumSpecAny = "SumSpecAny"
+showSumSpec (SumSpecSize c s size) = sepsP ["SumSpecSize", show c, s, show size]
+showSumSpec (SumSpecNever _) = "SumSpecNever"
 
-mergeSumV :: SumV -> SumV -> SumV
-mergeSumV (SumVNever xs) (SumVNever ys) = SumVNever (xs ++ ys)
-mergeSumV x@(SumVNever _) _ = x
-mergeSumV _ x@(SumVNever _) = x
-mergeSumV SumVAny x = x
-mergeSumV x SumVAny = x
-mergeSumV a@(SumVSize s1 size1) b@(SumVSize s2 size2) =
-  if s1 == s2
-    then case size1 <> size2 of
-      (SzNever xs) -> SumVNever (xs ++ [show a ++ " " ++ show a ++ " are inconsistent."])
-      size3 -> SumVSize s1 size3
-    else
-      SumVNever
-        [ "vars " ++ s1 ++ " and " ++ s2 ++ " are not the same."
-        , show a ++ " " ++ show b ++ " are inconsistent."
-        ]
+mergeSumSpec :: SumSpec c -> SumSpec c -> SumSpec c
+mergeSumSpec (SumSpecNever xs) (SumSpecNever ys) = SumSpecNever (xs ++ ys)
+mergeSumSpec x@(SumSpecNever _) _ = x
+mergeSumSpec _ x@(SumSpecNever _) = x
+mergeSumSpec SumSpecAny x = x
+mergeSumSpec x SumSpecAny = x
+mergeSumSpec a@(SumSpecSize c1 s1 size1) b@(SumSpecSize c2 s2 size2) =
+  dropT $
+    requireAll
+      [
+        ( s1 == s2
+        ,
+          [ "vars " ++ s1 ++ " and " ++ s2 ++ " are not the same."
+          , show a ++ " " ++ show b ++ " are inconsistent."
+          ]
+        )
+      ,
+        ( c1 == c2
+        ,
+          [ "smallest " ++ show s1 ++ " and " ++ show s2 ++ " are not the same."
+          , show a ++ " " ++ show b ++ " are inconsistent."
+          ]
+        )
+      ]
+      ( case size1 <> size2 of
+          (SzNever xs) -> failT (xs ++ [show a ++ " " ++ show a ++ " are inconsistent."])
+          size3 -> pure $ SumSpecSize c1 s1 size3
+      )
 
 -- =========================================================================
 -- OrdCond
