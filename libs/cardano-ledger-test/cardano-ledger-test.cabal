@@ -70,7 +70,6 @@ library
         -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
         -Wunused-packages
 
-    other-modules:    
     build-depends:
         base >=4.14 && <4.17,
         array,

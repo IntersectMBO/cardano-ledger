@@ -19,7 +19,7 @@
 --   (SumSpec n t)         denotes Gen([t]), a list of length 'n' that adds up to 't'
 module Test.Cardano.Ledger.Constrained.Spec where
 
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Era (..))
 import qualified Data.List as List
 import Data.Map.Strict (Map)
@@ -32,10 +32,9 @@ import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Sums (..),
-  genFromNonNegSumSpec,
-  genFromSumSpec,
+  genFromAddsSpec,
+  genFromNonNegAddsSpec,
   projAdds,
-  smallInc,
   sumAdds,
  )
 import Test.Cardano.Ledger.Constrained.Combinators (
@@ -51,9 +50,9 @@ import Test.Cardano.Ledger.Constrained.Combinators (
 import Test.Cardano.Ledger.Constrained.Env (Access (No), V (..))
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Size (
+  AddsSpec (..),
   OrdCond (..),
   Size (..),
-  SumSpec (..),
   atleastdelta,
   atmostany,
   genFromSize,
@@ -537,11 +536,13 @@ data RngSpec era rng where
   -- | The set must have Adds instance and add up to 'rng'
   RngSum ::
     Adds rng =>
+    rng -> -- the smallest element in the partition (usually 0 or 1)
     Size -> -- the sum of all the elements must fall in the range denoted by the Size
     RngSpec era rng
   -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
   RngProj ::
     (Sums x c) =>
+    c -> -- the smallest element in the partition (usually 0 or 1)
     Rep era c ->
     Size -> -- the sum of all the elements must fall in the range denoted by the Size
     RngSpec era x
@@ -568,8 +569,8 @@ instance LiftT (RngSpec era a) where
   dropT (Typed (Right x)) = x
 
 showRngSpec :: RngSpec era t -> String
-showRngSpec (RngSum sz) = sepsP ["RngSum", show sz]
-showRngSpec (RngProj r sz) = sepsP ["RngProj", show r, show sz]
+showRngSpec (RngSum small sz) = sepsP ["RngSum", show small, show sz]
+showRngSpec (RngProj small r sz) = sepsP ["RngProj", show small, show r, show sz]
 showRngSpec (RngElem r cs) = sepsP ["RngElem", show r, synopsis (ListR r) cs]
 showRngSpec (RngRel x) = sepsP ["RngRel", show x]
 showRngSpec RngAny = "RngAny"
@@ -586,7 +587,7 @@ mergeRngSpec a@(RngElem _ xs) b@(RngElem _ ys) =
   if xs == ys
     then a
     else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, "The elements are not the same"]
-mergeRngSpec a@(RngElem _xrep xs) b@(RngSum siz) =
+mergeRngSpec a@(RngElem _xrep xs) b@(RngSum _ siz) =
   let computed = sumAdds xs
    in if runSize (toI computed) siz
         then a
@@ -599,8 +600,8 @@ mergeRngSpec a@(RngElem _xrep xs) b@(RngSum siz) =
                 ++ show siz
                 ++ ") are not compatible."
             ]
-mergeRngSpec b@(RngSum _) a@(RngElem _ _) = mergeRngSpec a b
-mergeRngSpec a@(RngElem _xrep xs) b@(RngProj _ siz) =
+mergeRngSpec b@(RngSum _ _) a@(RngElem _ _) = mergeRngSpec a b
+mergeRngSpec a@(RngElem _xrep xs) b@(RngProj _ _ siz) =
   let computed = projAdds xs
    in if runSize (toI computed) siz
         then a
@@ -613,16 +614,16 @@ mergeRngSpec a@(RngElem _xrep xs) b@(RngProj _ siz) =
                 ++ show siz
                 ++ ") are not compatible."
             ]
-mergeRngSpec b@(RngProj _ _) a@(RngElem _ _) = mergeRngSpec a b
-mergeRngSpec a@(RngSum sz1) b@(RngSum sz2) =
+mergeRngSpec b@(RngProj _ _ _) a@(RngElem _ _) = mergeRngSpec a b
+mergeRngSpec a@(RngSum small1 sz1) b@(RngSum small2 sz2) =
   case sz1 <> sz2 of
     SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
-    sz3 -> RngSum sz3
-mergeRngSpec a@(RngProj r1 s1) b@(RngProj r2 s2) =
+    sz3 -> RngSum (min small1 small2) sz3
+mergeRngSpec a@(RngProj sm1 r1 s1) b@(RngProj sm2 r2 s2) =
   case testEql r1 r2 of
     Just Refl -> case s1 <> s2 of
       SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
-      s3 -> RngProj r1 s3
+      s3 -> RngProj (min sm1 sm2) r1 s3
     Nothing -> RngNever [show a, show b, "The RngSpec's are inconsistent.", show r1 ++ " =/= " ++ show r2]
 mergeRngSpec a@(RngRel r1) b@(RngRel r2) =
   case r1 <> r2 of
@@ -635,16 +636,14 @@ mergeRngSpec a b = RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ 
 -- | Compute the Size that is appropriate for a RngSpec
 sizeForRng :: forall dom era. RngSpec era dom -> Size
 sizeForRng (RngRel x) = sizeForRel x
-sizeForRng (RngSum sz) =
-  let smallest = smallInc @dom
-   in if smallest > 0
-        then SzRng 1 (minSize sz `div` smallest)
-        else SzLeast 1
-sizeForRng (RngProj (_r :: (Rep era c)) sz) =
-  let smallest = smallInc @c
-   in if smallest > 0
-        then SzRng 1 (minSize sz `div` smallest)
-        else SzLeast 1
+sizeForRng (RngSum small sz) =
+  if toI small > 0
+    then SzRng 1 (minSize sz `div` toI small)
+    else SzLeast 1
+sizeForRng (RngProj small (_r :: (Rep era c)) sz) =
+  if toI small > 0
+    then SzRng 1 (minSize sz `div` toI small)
+    else SzLeast 1
 sizeForRng (RngElem _ xs) = SzExact (length xs)
 sizeForRng RngAny = SzAny
 sizeForRng (RngNever _) = SzAny
@@ -658,12 +657,12 @@ genFromRngSpec :: forall era r. [String] -> Int -> Gen r -> RngSpec era r -> Gen
 genFromRngSpec msgs n genr x = case x of
   (RngNever xs) -> errorMess "RngNever in genFromRngSpec" (xs ++ (msg : msgs))
   RngAny -> vectorOf n genr
-  (RngSum sz) -> do
+  (RngSum small sz) -> do
     tot <- genFromSize sz
-    partition (msg : msgs) n (fromI (msg : msgs) tot)
-  (RngProj _ sz) -> do
+    partition small (msg : msgs) n (fromI (msg : msgs) tot)
+  (RngProj small _ sz) -> do
     tot <- genFromSize sz
-    rs <- partition (("partition " ++ show tot) : msg : msgs) n (fromI (msg : msgs) tot)
+    rs <- partition small (("partition " ++ show tot) : msg : msgs) n (fromI (msg : msgs) tot)
     mapM (genT msgs) rs
   (RngRel relspec) -> Set.toList <$> genFromRelSpec (msg : msgs) n genr relspec
   (RngElem _ xs) -> pure xs
@@ -685,19 +684,37 @@ genRngSpec ::
 genRngSpec 0 _ repw _ = pure $ RngRel (RelEqual repw Set.empty)
 genRngSpec n g repw repc = do
   frequency
-    [ (3, do sz <- genBigSize n; pure (RngSum sz))
-    , (2, do sz <- genBigSize n; pure (RngProj repc sz))
+    [
+      ( 3
+      , do
+          smallest <- genSmall @w -- Chooses smallest appropriate for type 'w'
+          sz <- genBigSize (max 1 (smallest * n))
+          pure (RngSum (fromI ["genRngSpec " ++ show n] smallest) sz)
+      )
+    ,
+      ( 2
+      , do
+          smallest <- genSmall @c
+          sz <- genBigSize (max 1 (smallest * n))
+          pure (RngProj (fromI ["genRngSpec " ++ show n] smallest) repc sz)
+      )
     , (4, RngRel <$> genRelSpec @w ["genRngSpec "] n g repw)
     , (1, pure RngAny)
     , (2, RngElem repw <$> vectorOf n g)
     ]
 
+baz :: Int -> Gen (RngSpec TT Word64)
+baz n = do
+  smallest <- choose (0, 2)
+  sz <- genBigSize (max 1 (smallest * n))
+  pure (RngSum (fromI ["genRngSpec " ++ show n] smallest) sz)
+
 runRngSpec :: [r] -> RngSpec era r -> Bool
 runRngSpec _ (RngNever _) = False
 runRngSpec _ RngAny = True
 runRngSpec ll (RngElem _ xs) = ll == xs
-runRngSpec ll (RngSum sz) = runSize (toI (sumAdds ll)) sz
-runRngSpec ll (RngProj _ sz) = runSize (toI (projAdds ll)) sz
+runRngSpec ll (RngSum _ sz) = runSize (toI (sumAdds ll)) sz
+runRngSpec ll (RngProj _ _ sz) = runSize (toI (projAdds ll)) sz
 runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 
 -- ------------------------------------------
@@ -706,6 +723,10 @@ runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 instance Sums Word64 Coin where
   getSum n = Coin $ fromIntegral n
   genT _ (Coin n) = pure (fromIntegral n)
+
+instance Sums Int DeltaCoin where
+  getSum n = DeltaCoin $ fromIntegral n
+  genT _ (DeltaCoin n) = pure (fromIntegral n)
 
 instance Sums Coin Word64 where
   getSum (Coin n) = fromIntegral n
@@ -726,16 +747,16 @@ genConsistentRngSpec n g repw repc = do
     RngAny -> genRngSpec n g repw repc
     RngRel RelAny -> genRngSpec n g repw repc
     RngRel x -> RngRel <$> genConsistentRelSpec msgs g x
-    RngSum sz -> do
+    RngSum sm sz -> do
       sz2 <- suchThat genSize (Maybe.isJust . consistent sz)
-      pure $ RngSum sz2
-    RngProj rep sz -> do
+      pure $ RngSum (add sm (fromI msgs 2)) sz2 -- Make the smaller bigger
+    RngProj sm rep sz -> do
       sz2 <- suchThat genSize (Maybe.isJust . consistent sz)
-      pure $ RngProj rep sz2
+      pure $ RngProj (add sm (fromI msgs 2)) rep sz2
     RngElem _ xs ->
       frequency
-        [ (1, pure $ RngSum (SzExact (toI (sumAdds xs))))
-        , (1, pure $ RngProj repc (SzExact (toI (projAdds xs))))
+        [ (1, pure $ RngSum (fromI msgs 1) (SzExact (toI (sumAdds xs))))
+        , (1, pure $ RngProj (fromI msgs 1) repc (SzExact (toI (projAdds xs))))
         ]
     RngNever xs -> errorMess "RngNever in genConsistentRngSpec" xs
   pure (x1, x2)
@@ -1038,14 +1059,17 @@ genSetSpecIsSound = do
 -- Specifications for Lists
 
 data ElemSpec era t where
-  -- | The set must add up to 'tot', which is in the range of Size
+  -- | The set must add up to 'tot', which is any number in the scope of Size
   ElemSum ::
     Adds t =>
+    t -> -- The smallest allowed
     Size ->
     ElemSpec era t
-  -- | The range must sum upto 'c', which is in the range of Size, through the projection witnessed by the (Sums t c) class
+  -- | The range must sum upto 'c', which is any number in the scope of Size,
+  --   through the projection witnessed by the (Sums t c) class
   ElemProj ::
     Sums x c =>
+    c -> -- The smallest allowed
     Rep era c ->
     Size ->
     ElemSpec era x
@@ -1069,8 +1093,8 @@ instance LiftT (ElemSpec era t) where
   dropT (Typed (Right x)) = x
 
 showElemSpec :: ElemSpec era a -> String
-showElemSpec (ElemSum sz) = sepsP ["ElemSum", show sz]
-showElemSpec (ElemProj r sz) = sepsP ["ElemProj", show r, show sz]
+showElemSpec (ElemSum small sz) = sepsP ["ElemSum", show small, show sz]
+showElemSpec (ElemProj small r sz) = sepsP ["ElemProj", show small, show r, show sz]
 showElemSpec (ElemEqual r xs) = sepsP ["ElemEqual", show r, synopsis (ListR r) xs]
 showElemSpec (ElemNever _) = "ElemNever"
 showElemSpec ElemAny = "ElemAny"
@@ -1091,7 +1115,7 @@ mergeElemSpec a@(ElemEqual r xs) b@(ElemEqual _ ys) =
         , "  " ++ show b
         , synopsis (ListR r) xs ++ " =/= " ++ synopsis (ListR r) ys
         ]
-mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum sz) =
+mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum _ sz) =
   let computed = sumAdds xs
    in if runSize (toI computed) sz
         then a
@@ -1106,19 +1130,19 @@ mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum sz) =
                 ++ show sz
                 ++ ")"
             ]
-mergeElemSpec b@(ElemSum _) a@(ElemEqual _ _) = mergeElemSpec a b
+mergeElemSpec b@(ElemSum _ _) a@(ElemEqual _ _) = mergeElemSpec a b
 -- Given the right Sums instance we can probably compare ElemEqual and ElemProj TODO
 
-mergeElemSpec a@(ElemSum sz1) b@(ElemSum sz2) =
+mergeElemSpec a@(ElemSum sm1 sz1) b@(ElemSum sm2 sz2) =
   case sz1 <> sz2 of
     SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
-    sz3 -> ElemSum sz3
-mergeElemSpec a@(ElemProj r1 sz1) b@(ElemProj r2 sz2) =
+    sz3 -> ElemSum (min sm1 sm2) sz3
+mergeElemSpec a@(ElemProj sm1 r1 sz1) b@(ElemProj sm2 r2 sz2) =
   case testEql r1 r2 of
     Just Refl ->
       case sz1 <> sz2 of
         SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
-        sz3 -> ElemProj r1 sz3
+        sz3 -> ElemProj (min sm1 sm2) r1 sz3
     Nothing -> ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
 mergeElemSpec a b = ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
 
@@ -1126,24 +1150,22 @@ sizeForElemSpec :: forall a era. ElemSpec era a -> Size
 sizeForElemSpec (ElemNever _) = SzAny
 sizeForElemSpec ElemAny = SzAny
 sizeForElemSpec (ElemEqual _ x) = SzExact (length x)
-sizeForElemSpec (ElemSum sz) =
-  let smallest = smallInc @a
-   in if smallest > 0
-        then SzRng 1 (minSize sz `div` smallest)
-        else SzLeast 1
-sizeForElemSpec (ElemProj (_r :: (Rep era c)) sz) =
-  let smallest = smallInc @c
-   in if smallest > 0
-        then SzRng 1 (minSize sz `div` smallest)
-        else SzLeast 1
+sizeForElemSpec (ElemSum smallest sz) =
+  if toI smallest > 0
+    then SzRng 1 (minSize sz `div` toI smallest)
+    else SzLeast 1
+sizeForElemSpec (ElemProj smallest (_r :: (Rep era c)) sz) =
+  if toI smallest > 0
+    then SzRng 1 (minSize sz `div` toI smallest)
+    else SzLeast 1
 
 runElemSpec :: [a] -> ElemSpec era a -> Bool
 runElemSpec xs spec = case spec of
   ElemNever _ -> False -- ErrorMess "ElemNever in runElemSpec" []
   ElemAny -> True
   ElemEqual _ ys -> xs == ys
-  ElemSum sz -> runSize (toI (sumAdds xs)) sz
-  ElemProj _ sz -> runSize (toI (projAdds xs)) sz
+  ElemSum _ sz -> runSize (toI (sumAdds xs)) sz
+  ElemProj _ _ sz -> runSize (toI (projAdds xs)) sz
 
 genElemSpec ::
   forall w c era.
@@ -1152,19 +1174,34 @@ genElemSpec ::
   Rep era w ->
   Rep era c ->
   Gen (ElemSpec era w)
-genElemSpec (SzRng count j) repw repc
-  | count == j && count >= 1 =
-      frequency
-        [ (2, ElemSum <$> genBigSize j)
-        , (2, ElemProj repc <$> genBigSize j)
-        , (2, ElemEqual repw <$> vectorOf count (genRep repw))
+genElemSpec siz {- @(SzRng count j) -} repw repc = do
+  let lo = minSize siz
+      hi = maxSize siz
+  if lo >= 1
+    then
+      frequency -- Can't really generate Sums, when size (n) is 0.
+        [
+          ( 2
+          , do
+              smallest <- genSmall @w -- Chooses smallest appropriate for type 'w'
+              sz <- genBigSize (max 1 (smallest * hi))
+              pure (ElemSum (fromI ["genRngSpec " ++ show siz] smallest) sz)
+          )
+        ,
+          ( 2
+          , do
+              smallest <- genSmall @c
+              sz <- genBigSize (max 1 (smallest * hi))
+              pure (ElemProj (fromI ["genRngSpec " ++ show siz] smallest) repc sz)
+          )
+        , (2, ElemEqual repw <$> do n <- genFromSize siz; vectorOf n (genRep repw))
         , (1, pure ElemAny)
         ]
-genElemSpec size repw _ =
-  frequency
-    [ (3, ElemEqual repw <$> (do count <- genFromSize size; vectorOf count (genRep repw)))
-    , (1, pure ElemAny)
-    ]
+    else
+      frequency
+        [ (3, ElemEqual repw <$> do n <- genFromSize siz; vectorOf n (genRep repw))
+        , (1, pure ElemAny)
+        ]
 
 genFromElemSpec ::
   forall era r.
@@ -1177,12 +1214,12 @@ genFromElemSpec msgs genr n x = case x of
   (ElemNever xs) -> errorMess "RngNever in genFromElemSpec" xs
   ElemAny -> vectorOf n genr
   (ElemEqual _ xs) -> pure xs
-  (ElemSum sz) -> do
+  (ElemSum small sz) -> do
     tot <- genFromSize sz
-    partition msgs n (fromI (msg : msgs) tot)
-  (ElemProj _ sz) -> do
+    partition small msgs n (fromI (msg : msgs) tot)
+  (ElemProj small _ sz) -> do
     tot <- genFromSize sz
-    rs <- partition msgs n (fromI (msg : msgs) tot)
+    rs <- partition small msgs n (fromI (msg : msgs) tot)
     mapM (genT msgs) rs
   where
     msg = "genFromElemSpec " ++ show n ++ " " ++ show x
@@ -1276,7 +1313,7 @@ testSoundElemSpec = do
   size <- genSize
   spec <- genElemSpec size Word64R CoinR
   n <- genFromSize size
-  list <- genFromElemSpec @TT ["testSoundElemSpec"] (choose (1, 1000)) n spec
+  list <- genFromElemSpec @TT ["testSoundElemSpec " ++ show spec ++ " " ++ show n] (choose (1, 1000)) n spec
   pure $
     counterexample
       ("size=" ++ show size ++ "\nspec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
@@ -1359,82 +1396,89 @@ testl = do
   monadTyped (liftT (a <> b))
 
 -- =======================================================================
--- Operations on SumSpec (defined in Types.hs)
+-- Operations on AddsSpec (defined in Types.hs)
 
-genSumSpec :: Adds c => Gen (SumSpec c)
-genSumSpec =
-  frequency
-    [ (1, vLeft (fromI [] 1) <$> elements ["x", "y"] <*> genOrdCond <*> choose (-5, 25))
-    , (2, vRight (fromI [] 1) <$> choose (-5, 25) <*> genOrdCond <*> choose (-5, 25) <*> elements ["x", "y"])
-    ]
+genAddsSpec :: Gen (AddsSpec c)
+genAddsSpec = do
+  v <- elements ["x", "y"]
+  c <- genOrdCond
+  rhs <- choose (-5, 25)
+  lhs <- choose (-5, 25)
+  elements [vLeft v c rhs, vRight lhs c rhs v]
 
-genNonNegSumSpec :: Adds c => Gen (SumSpec c)
-genNonNegSumSpec =
-  frequency
-    [
-      ( 1
-      , do
-          v <- elements ["x", "y"]
-          c <- genOrdCond
-          case c of
-            LTH -> vLeft (fromI [] 1) v c <$> choose (1, 30) -- LTH and choice is 0, means negative number
-            _ -> vLeft (fromI [] 1) v c <$> choose (0, 30)
-      )
-    ,
-      ( 1
-      , do
-          n <- choose (1, 30)
-          cond <- genOrdCond
-          m <- choose (0, n - 1)
-          v <- elements ["x", "y"]
-          pure $ vRight (fromI [] 1) n cond m v
-      )
-    ]
+genNonNegAddsSpec :: Gen (AddsSpec c)
+genNonNegAddsSpec = do
+  v <- elements ["x", "y"]
+  c <- genOrdCond
+  lhs <- choose (10, 30)
+  rhs <- choose (1, lhs - 1)
+  let lhs' = case c of
+        LTH -> lhs + 1
+        _ -> lhs
+  elements [vLeft v c rhs, vRight lhs' c rhs v]
 
 genOrdCond :: Gen OrdCond
-genOrdCond = elements [EQL, LTH, LTE, GTH, GTE, CondAny]
+genOrdCond = elements [EQL, LTH, LTE, GTH, GTE] -- We deliberately don't include CondAny
 
-runSumSpec :: forall c. Adds c => c -> SumSpec c -> Bool
-runSumSpec c (SumSpecSize _ _ size) = runSize (toI c) size
-runSumSpec _ SumSpecAny = True
-runSumSpec _ (SumSpecNever _) = False
+runAddsSpec :: forall c. Adds c => c -> AddsSpec c -> Bool
+runAddsSpec c (AddsSpecSize _ size) = runSize (toI c) size
+runAddsSpec _ AddsSpecAny = True
+runAddsSpec _ (AddsSpecNever _) = False
 
-tryManySumSpec :: Gen (SumSpec Int) -> ([String] -> SumSpec Int -> Gen Int) -> Gen (Int, [String])
-tryManySumSpec genSum genFromSum = do
+tryManyAddsSpec :: Gen (AddsSpec Int) -> ([String] -> AddsSpec Int -> Gen Int) -> Gen (Int, [String])
+tryManyAddsSpec genSum genFromSum = do
   xs <- vectorOf 25 genSum
   ys <- vectorOf 25 genSum
   let check (x, y, m) = do
-        z <- genFromSum ["test tryManySumSpec"] m
-        pure (x, runSumSpec z x, y, runSumSpec z y, z, runSumSpec z m, m)
-      showAns :: (SumSpec c, Bool, SumSpec c, Bool, Int, Bool, SumSpec c) -> String
+        z <- genFromSum ["test tryManyAddsSpec"] m
+        pure (x, runAddsSpec z x, y, runAddsSpec z y, z, runAddsSpec z m, m)
+      showAns :: (AddsSpec c, Bool, AddsSpec c, Bool, Int, Bool, AddsSpec c) -> String
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
           [ "s1 = " ++ show s1
           , "s2 = " ++ show s2
           , "s1 <> s2 = " ++ show s3
           , "v = genFromRelSpec (s1 <> s2) = " ++ show v
-          , "runSumSpec s1 v = " ++ show run1
-          , "runSumSpec s2 v = " ++ show run2
-          , "runSumSpec (s1 <> s2) v = " ++ show run3
+          , "runAddsSpec s1 v = " ++ show run1
+          , "runAddsSpec s2 v = " ++ show run2
+          , "runAddsSpec (s1 <> s2) v = " ++ show run3
           ]
       pr x@(_, a, _, b, _, c, _) = if not (a && b && c) then Just (showAns x) else Nothing
   let trips = [(x, y, m) | x <- xs, y <- ys, Just m <- [consistent x y]]
   ts <- mapM check trips
   pure $ (length trips, Maybe.catMaybes (map pr ts))
 
-reportManySumSpec :: IO ()
-reportManySumSpec = do
-  (passed, bad) <- generate (tryManySumSpec genSumSpec genFromSumSpec)
+reportManyAddsSpec :: IO ()
+reportManyAddsSpec = do
+  (passed, bad) <- generate (tryManyAddsSpec genAddsSpec genFromAddsSpec)
   if null bad
     then putStrLn ("passed " ++ show passed ++ " tests.")
     else do mapM_ putStrLn bad; error "TestFails"
 
-reportManyNonNegSumSpec :: IO ()
-reportManyNonNegSumSpec = do
-  (passed, bad) <- generate (tryManySumSpec genNonNegSumSpec genFromNonNegSumSpec)
+reportManyNonNegAddsSpec :: IO ()
+reportManyNonNegAddsSpec = do
+  (passed, bad) <- generate (tryManyAddsSpec genNonNegAddsSpec genFromNonNegAddsSpec)
   if null bad
     then putStrLn ("passed " ++ show passed ++ " tests.")
     else do mapM_ putStrLn bad; error "TestFails"
+
+testSoundNonNegAddsSpec :: Gen Property
+testSoundNonNegAddsSpec = do
+  spec <- genNonNegAddsSpec @Int
+  c <- genFromNonNegAddsSpec ["testSoundAddsSpec " ++ show spec] spec
+  pure $
+    counterexample
+      ("AddsSpec=" ++ show spec ++ "\ngenerated value " ++ show c)
+      (runAddsSpec c spec)
+
+testSoundAddsSpec :: Gen Property
+testSoundAddsSpec = do
+  spec <- genAddsSpec @Int
+  c <- genFromAddsSpec ["testSoundAddsSpec " ++ show spec] spec
+  pure $
+    counterexample
+      ("AddsSpec=" ++ show spec ++ "\ngenerated value " ++ show c)
+      (runAddsSpec c spec)
 
 -- ========================================================
 
@@ -1457,8 +1501,10 @@ main =
       , testProperty "test SetSpec generators" genSetSpecIsSound
       , testProperty "test ElemSpec generators" testSoundElemSpec
       , testProperty "test ListSpec generators" testSoundListSpec
-      , testProperty "test Sound MergeSumSpec" reportManySumSpec
-      , testProperty "test Sound non-negative MergeSumSpec" reportManyNonNegSumSpec
+      , testProperty "test Sound MergeAddsSpec" reportManyAddsSpec
+      , testProperty "test Sound non-negative MergeAddsSpec" reportManyNonNegAddsSpec
+      , testProperty "test Sound non-negative AddsSpec" testSoundNonNegAddsSpec
+      , testProperty "test Sound any AddsSpec" testSoundAddsSpec
       ]
 
 -- :main --quickcheck-replay=740521

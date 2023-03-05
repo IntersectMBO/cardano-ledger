@@ -39,7 +39,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
-import Test.Cardano.Ledger.Constrained.Size (SumSpec (..), genFromIntRange, genFromSize)
+import Test.Cardano.Ledger.Constrained.Size (AddsSpec (..), genFromIntRange, genFromSize)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
@@ -73,17 +73,6 @@ import Prelude hiding (subtract)
 gauss :: Floating a => a -> a -> a -> a
 gauss mean stdev x = (1 / (stdev * (sqrt (2 * pi)))) * exp (negate ((1 / 2) * ((x - mean) / stdev) ** 2))
 
-zeroCount :: Show a => [Char] -> a -> [Char]
-zeroCount fname total =
-  fname
-    ++ " called with count=(0) and total=("
-    ++ show total
-    ++ ") \n"
-    ++ "Probably due to (SumsTo comparison "
-    ++ show total
-    ++ " [SumMap x]) where 'x' is the emptyset.\n"
-    ++ "Try adding (Sized (Range 1 m) (Dom x)) constraint to force 'x' to have at least 1 element"
-
 -- ==========================================
 -- The Adds class
 
@@ -91,11 +80,14 @@ class (Ord x, Show x) => Adds x where
   add :: x -> x -> x
   minus :: [String] -> x -> x -> x
   zero :: x
-  partition :: [String] -> Int -> x -> Gen [x]
-  genAdds :: [String] -> SumSpec x -> Gen x
+  partition :: x -> [String] -> Int -> x -> Gen [x]
+  genAdds :: [String] -> AddsSpec x -> Gen x
   fromI :: [String] -> Int -> x
   toI :: x -> Int
-  smallI :: x
+  genSmall :: Gen Int -- Used in testing to get smallest appropriate for 'x'
+
+-- ================
+-- helper functions
 
 sumAdds :: (Foldable t, Adds c) => t c -> c
 sumAdds xs = List.foldl' add zero xs
@@ -105,36 +97,43 @@ projAdds xs = List.foldl' accum zero xs
   where
     accum ans x = add ans (getSum x)
 
-genFromSumSpec :: forall c. Adds c => [String] -> SumSpec c -> Gen c
-genFromSumSpec _ SumSpecAny = pure zero
-genFromSumSpec msgs s@(SumSpecSize _ _ size) = fromI (("genFromSumSpec " ++ show s) : msgs) <$> genFromIntRange size
-genFromSumSpec msgs (SumSpecNever _) = errorMess ("genFromSumSpec applied to SumSpecNever") msgs
+genFromAddsSpec :: [String] -> AddsSpec c -> Gen Int
+genFromAddsSpec _ AddsSpecAny = elements [-1, 0, 1, 10]
+genFromAddsSpec _ (AddsSpecSize _ size) = genFromIntRange size
+genFromAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec applied to AddsSpecNever") msgs
 
-genFromNonNegSumSpec :: forall c. Adds c => [String] -> SumSpec c -> Gen c
-genFromNonNegSumSpec _ SumSpecAny = pure zero
-genFromNonNegSumSpec msgs s@(SumSpecSize _ _ size) = fromI (("genFromSumSpec " ++ show s) : msgs) <$> genFromSize size
-genFromNonNegSumSpec msgs (SumSpecNever _) = errorMess ("genFromSumSpec applied to SumSpecNever") msgs
+genFromNonNegAddsSpec :: [String] -> AddsSpec c -> Gen Int
+genFromNonNegAddsSpec _ AddsSpecAny = elements [0, 1, 10]
+genFromNonNegAddsSpec _ (AddsSpecSize _ size) = genFromSize size
+genFromNonNegAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec applied to AddsSpecNever") msgs
+
+-- ================
+-- Adds instances
 
 instance Adds Word64 where
   add = (+)
   minus _ = (-)
   zero = 0
-  partition = partitionWord64 0
-  genAdds = genFromNonNegSumSpec
-  fromI _ n | n >= 0 = fromIntegral n
+  partition = partitionWord64
+  genAdds msgs spec = fromI ms <$> genFromNonNegAddsSpec ms spec
+    where
+      ms = msgs ++ ["genAdds Word64"]
+  fromI _ m | m >= 0 = fromIntegral m
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Word64.") msgs
   toI = fromIntegral
-  smallI = 0
+  genSmall = elements [0, 1, 2]
 
 instance Adds Int where
   add = (+)
   minus _ = (-)
   zero = 0
-  partition = partitionInt 0
-  genAdds = genFromSumSpec
+  partition = partitionInt
+  genAdds msgs spec = fromI ms <$> genFromAddsSpec ms spec
+    where
+      ms = msgs ++ ["genAdds Int"]
   fromI _ n = n
   toI n = n
-  smallI = 0
+  genSmall = elements [-2, 0, 1, 2]
 
 instance Adds Natural where
   add = (+)
@@ -143,22 +142,26 @@ instance Adds Natural where
       then errorMess ("(minus @Natural " ++ show x ++ " " ++ show y ++ ") is not possible") msg
       else x - y
   zero = 0
-  partition = partitionNatural 1
-  genAdds = genFromNonNegSumSpec
+  partition = partitionNatural
+  genAdds msgs spec = fromI ms <$> genFromNonNegAddsSpec ms spec
+    where
+      ms = msgs ++ ["genAdds Natural"]
   fromI _ n | n >= 0 = fromIntegral n
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Natural.") msgs
   toI = fromIntegral
-  smallI = 1
+  genSmall = elements [0, 1, 2]
 
 instance Adds Rational where
   add = (+)
   minus _ = (-)
   zero = 0
-  partition = partitionRational (1 % 10000)
-  genAdds = genFromSumSpec
+  partition = partitionRational
+  genAdds msgs spec = fromI ms <$> genFromAddsSpec ms spec
+    where
+      ms = msgs ++ ["genAdds Rational"]
   fromI _ n = (fromIntegral n `div` 1000) % 1
   toI r = round (r * 1000)
-  smallI = (1 % 10000)
+  genSmall = elements [0, 1]
 
 instance Adds Coin where
   add = (<+>)
@@ -167,25 +170,26 @@ instance Adds Coin where
       then errorMess ("(minus @Coin " ++ show n ++ " " ++ show m ++ ") is not possible") msg
       else Coin (n - m)
   zero = Coin 0
-  partition = partitionCoin (Coin 1)
-  genAdds = genFromNonNegSumSpec
+  partition = partitionCoin
+  genAdds msgs spec = fromI ms <$> genFromNonNegAddsSpec ms spec
+    where
+      ms = msgs ++ ["genAdds Coin"]
   fromI _ n | n >= 0 = Coin (fromIntegral n)
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Coin.") msgs
   toI (Coin n) = fromIntegral n
-  smallI = (Coin 1)
+  genSmall = elements [0, 1, 2]
 
 instance Adds DeltaCoin where
   add = (<+>)
   minus _ (DeltaCoin n) (DeltaCoin m) = DeltaCoin (n - m)
   zero = DeltaCoin 0
-  partition msgs size total = partitionDeltaCoin (DeltaCoin (-4)) msgs size total
-  genAdds = genFromSumSpec
+  partition = partitionDeltaCoin
+  genAdds msgs spec = fromI ms <$> genFromAddsSpec ms spec
+    where
+      ms = msgs ++ ["genAdds DeltaCoin"]
   fromI _ n = DeltaCoin (fromIntegral n)
   toI (DeltaCoin n) = (fromIntegral n)
-  smallI = DeltaCoin (-4)
-
-smallInc :: forall c. Adds c => Int
-smallInc = toI (smallI @c)
+  genSmall = elements [-2, 0, 1, 2]
 
 -- ===========================================================================
 -- The Sums class, for summing a projected c (where Adds c) from some richer type
@@ -231,7 +235,7 @@ instance Crypto c => Sums [Reward c] Coin where
   genT _ (Coin 1) = (: []) <$> (updateRew (Coin 1) <$> arbitrary)
   genT msgs (Coin n) | n > 1 = do
     size <- chooseInt (1, fromIntegral n)
-    cs <- partition msgs size (Coin n)
+    cs <- partition (Coin 1) msgs size (Coin n)
     list <- vectorOf size (arbitrary :: Gen (Reward c))
     pure $ zipWith (updateRew @c) cs list
   genT msgs c = errorMess ("Coin in genT must be positive: " ++ show c) msgs
@@ -489,12 +493,34 @@ genUTxO p = case p of
 -- using wrapper functions.
 -- ==========================================================================
 
--- | Generate a list of length 'size' that sums to 'total', where the minimum element is (>= 'smallest')
-integerPartition :: [String] -> String -> Integer -> Int -> Integer -> Gen [Integer]
-integerPartition msgs typname smallest size total
-  | size == 0 = errorMess (zeroCount "integerPartition" total) msgs
-  | fromIntegral size > total && smallest /= 0 =
-      errorMess
+zeroCount :: Show a => [Char] -> a -> [Char]
+zeroCount fname total =
+  fname
+    ++ " called with count=(0) and total=("
+    ++ show total
+    ++ ") \n"
+    ++ "Probably due to (SumsTo comparison "
+    ++ show total
+    ++ " [SumMap x]) where 'x' is the emptyset.\n"
+    ++ "Try adding (Sized (Range 1 m) (Dom x)) constraint to force 'x' to have at least 1 element"
+
+legalCallPartition :: [String] -> String -> Integer -> Int -> Integer -> Maybe [String]
+legalCallPartition msgs typname smallest size total
+  | size == 0 && smallest > 0 -- Just (zeroCount "integerPartition" total : msgs)
+    =
+      Just
+        ( [ "partition at type " ++ typname
+          , "smallest="
+              ++ show smallest
+              ++ ", size="
+              ++ show size
+              ++ ", total="
+              ++ show total
+          ]
+            ++ msgs
+        )
+  | fromIntegral size > total && smallest > 0 =
+      Just $
         ( "Can't partition "
             ++ show total
             ++ " into "
@@ -505,19 +531,19 @@ integerPartition msgs typname smallest size total
             ++ show smallest
             ++ ")"
         )
-        msgs
+          : msgs
   | size <= 0 =
-      errorMess
-        ( "Can only make a partion of positive number of pieces: "
+      Just $
+        ( "Can only make a partition of a positive number of pieces: "
             ++ show size
-            ++ " total: "
+            ++ ", total: "
             ++ show total
-            ++ " smallest: "
+            ++ ", smallest: "
             ++ show smallest
         )
-        msgs
-  | smallest * (fromIntegral size) > total =
-      errorMess
+          : msgs
+  | smallest > 0 && smallest * (fromIntegral size) > total =
+      Just $
         ( "Can't partition "
             ++ show total
             ++ " into "
@@ -526,27 +552,44 @@ integerPartition msgs typname smallest size total
             ++ show smallest
             ++ ")"
         )
-        msgs
-  | total < 1 = errorMess ("Total must be positive: " ++ show total) msgs
-  | otherwise =
-      let mean = total `div` (fromIntegral (size + 1))
-          go 1 total1
-            | total1 < 1 = errorMess ("Ran out of choices(2), total went negative: " ++ show total1) msgs
-            | otherwise = pure [total1]
-          go 2 total1 = do
-            z <- choose (smallest, total1 - 1)
-            pure [z, total1 - z]
-          go size1 total1 = do
-            let hi =
-                  min
-                    (max 1 mean)
-                    (total1 - (size1 - 1))
-            x <- choose (smallest, hi)
-            xs <- go (size1 - 1) (total1 - x)
-            pure (x : xs)
-       in do
-            ws <- go (fromIntegral size) total
-            shuffle ws
+          : msgs
+  | total < 1 && smallest > 0 =
+      Just $
+        ( "Total ("
+            ++ show total
+            ++ ") must be positive when smallest("
+            ++ show smallest
+            ++ ") is positive."
+        )
+          : msgs
+  | True = Nothing
+
+-- | Generate a list of length 'size' that sums to 'total', where the minimum element is (>= 'smallest')
+integerPartition :: [String] -> String -> Integer -> Int -> Integer -> Gen [Integer]
+integerPartition msgs typname smallest size total
+  | total == 0 && smallest <= 0 = pure (replicate size 0)
+  | True = case legalCallPartition msgs typname smallest size total of
+      Just (x : xs) -> errorMess x xs
+      Just [] -> errorMess "legalCallPartition returns []" []
+      Nothing ->
+        let mean = total `div` (fromIntegral (size + 1))
+            go 1 total1
+              | total1 < 1 = errorMess ("Ran out of choices(2), total went negative: " ++ show total1) msgs
+              | otherwise = pure [total1]
+            go 2 total1 = do
+              z <- choose (smallest, total1 - 1)
+              pure [z, total1 - z]
+            go size1 total1 = do
+              let hi =
+                    min
+                      (max 1 mean)
+                      (total1 - (size1 - 1))
+              x <- choose (smallest, hi)
+              xs <- go (size1 - 1) (total1 - x)
+              pure (x : xs)
+         in do
+              ws <- go (fromIntegral size) total
+              shuffle ws
 
 partitionRational :: Rational -> [String] -> Int -> Rational -> Gen [Rational]
 partitionRational smallest msgs size total = do
