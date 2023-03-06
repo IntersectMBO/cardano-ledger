@@ -202,8 +202,7 @@ isMapVar n1 (Project _ (Var v2)) = n1 == Name v2
 isMapVar _ _ = False
 
 exactlyOne :: (a -> Bool) -> [a] -> Bool
-exactlyOne _ [] = False
-exactlyOne pp (x : xs) = pp x && all (not . pp) xs || exactlyOne pp xs
+exactlyOne pp xs = 1 == length (filter pp xs)
 
 -- | Make a generator for a Map type when there is a Projection from the domain of the map.
 projOnDom ::
