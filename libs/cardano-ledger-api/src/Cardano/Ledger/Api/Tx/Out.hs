@@ -32,7 +32,6 @@
 -- +++ OK, passed 100 tests.
 module Cardano.Ledger.Api.Tx.Out (
   module Cardano.Ledger.Api.Tx.Address,
-  module Cardano.Ledger.Api.Scripts.Data,
   EraTxOut,
   mkBasicTxOut,
 
@@ -58,18 +57,21 @@ module Cardano.Ledger.Api.Tx.Out (
   -- * Alonzo Era
   AlonzoEraTxOut,
   dataHashTxOutL,
+  DataHash,
   datumTxOutF,
 
   -- * Babbage Era
   BabbageEraTxOut,
   dataTxOutL,
+  Data (..),
   datumTxOutL,
+  Datum (..),
   referenceScriptTxOutL,
 )
 where
 
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..))
-import Cardano.Ledger.Api.Scripts.Data
+import Cardano.Ledger.Api.Scripts.Data (Data (..), DataHash, Datum (..))
 import Cardano.Ledger.Api.Tx.Address
 import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))
 import Cardano.Ledger.Binary
