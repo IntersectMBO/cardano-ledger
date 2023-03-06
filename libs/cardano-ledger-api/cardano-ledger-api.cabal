@@ -31,6 +31,7 @@ library
         Cardano.Ledger.Api.Tx.Address
         Cardano.Ledger.Api.Tx.AuxData
         Cardano.Ledger.Api.Tx.Body
+        Cardano.Ledger.Api.Tx.In
         Cardano.Ledger.Api.Tx.Out
         Cardano.Ledger.Api.Tx.Wits
         Cardano.Ledger.Api.UTxO
