@@ -74,11 +74,6 @@ Current limitations of the tests
   - Only generates Sized, `Subset`, Disjoint, and SumsTo(SumSet) constraints
 
 Known limitations of the code that the tests avoid
-  - Constraints of the form `Sized X t` cannot be solved (with X unknown), even with sizeBeforeArg =
-    False. On the other hand `Sized n X` is no problem regardless of the value of sizeBeforeArg. See
-    TODO/sizeBeforeArg for where these constraints a disabled in the tests.
-  - Superset constraints cannot be solved, meaning `setBeforeSubset` is always set to True (see
-    TODO/supersetConstraints).
   - Constraints of the form `n = Σ sum X` cannot be solved, so we set `sumBeforeParts` to false (see
     TODO/sumBeforeParts).
   - HasDom constraints don't work with non-variable domains.
@@ -104,14 +99,11 @@ type Depth = Int
 instance Arbitrary OrderInfo where
   arbitrary = do
     info <- OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-    -- TODO/supersetConstraints: RngSpec can't represent superset constraints at the moment, so
-    -- setBeforeSubset = False doesn't work.
     -- TODO/sumBeforeParts: The solver can't solve constraints of the form `n = Σ sum X` for known
     -- `n` and unknown `X`, so we set `sumBeforeParts` to False.
     pure
       info
-        { setBeforeSubset = True
-        , sumBeforeParts = False
+        { sumBeforeParts = False
         }
   shrink info = [standardOrderInfo | info /= standardOrderInfo]
 
@@ -248,6 +240,13 @@ data TypeInEra era where
 genBaseType :: Gen (TypeInEra era)
 genBaseType = elements [TypeInEra IntR]
 
+genType :: Gen (TypeInEra era)
+genType = elements [ TypeInEra IntR
+                   , TypeInEra (SetR IntR)
+                   , TypeInEra (ListR IntR)
+                   , TypeInEra (MapR IntR IntR)
+                   ]
+
 -- | Unsatisfiable constraint returned if we fail during constraint generation.
 errPred :: [String] -> Pred era
 errPred errs = Fixed (Lit (ListR StringR) ["Errors:"]) :=: Fixed (Lit (ListR StringR) errs)
@@ -278,8 +277,8 @@ genPred :: forall era. Era era => GenEnv era -> Gen (Pred era, GenEnv era)
 genPred env =
   frequency $
     [(1, fixedSizedC)]
-      ++ [(1, varSizedC) | False]
-      ++ [(1, subsetC)] -- TODO/sizeBeforeArg: we can't solve these at the moment
+      ++ [(1, varSizedC)]
+      ++ [(1, subsetC)]
       ++ [(1, disjointC)]
       ++ [(1, sumsToC)]
       ++ [(1, hasDomC)]
