@@ -286,10 +286,10 @@ mapWithSum n = do
 
 genOrdCoin :: OrdCond -> Coin -> Gen Coin
 genOrdCoin EQL n = pure n
-genOrdCoin cond n = frequency [(1, pure $ n ~~ Coin 1),
-                              (1, pure n),
-                              (1, pure $ n <> Coin 1),
-                              (10, arbitrary)]
+genOrdCoin cond n = frequency ([(1, pure $ n ~~ Coin 1) | n > Coin 0] ++
+                               [(1, pure n),
+                                (1, pure $ n <> Coin 1),
+                                (10, arbitrary)])
                   `suchThat` flip (runOrdCond cond) n
 
 genPred :: forall era. Era era => GenEnv era -> Gen (Pred era, GenEnv era)
