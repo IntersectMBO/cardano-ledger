@@ -31,7 +31,6 @@ module Cardano.Ledger.Alonzo.Scripts.Data (
   makeBinaryData,
   binaryDataToData,
   dataToBinaryData,
-  decodeBinaryData,
   Datum (..),
   datumDataHash,
 )
@@ -151,6 +150,8 @@ instance Era era => DecCBOR (BinaryData era) where
     bs <- decodeNestedCborBytes
     either fail pure $! makeBinaryData (toShort bs)
 
+-- | Construct `BinaryData` from a buffer of bytes, while ensuring that it can be later
+-- safely converted to `Data` with `binaryDataToData`
 makeBinaryData :: Era era => ShortByteString -> Either String (BinaryData era)
 makeBinaryData sbs = do
   let binaryData = BinaryData sbs
@@ -165,8 +166,8 @@ decodeBinaryData (BinaryData sbs) = do
   pure (DataConstr (mkMemoBytes plutusData $ shortToLazy sbs))
 
 -- | It is safe to convert `BinaryData` to `Data` because the only way to
--- construct `BinaryData` is thorugh smart constructor `makeBinaryData` that
--- takes care of verification.
+-- construct `BinaryData` is through the smart constructor `makeBinaryData` that
+-- takes care of validation.
 binaryDataToData :: Era era => BinaryData era -> Data era
 binaryDataToData binaryData =
   case decodeBinaryData binaryData of
