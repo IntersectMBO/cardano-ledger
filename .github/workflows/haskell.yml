@@ -14,6 +14,9 @@ on:
   schedule:
     # "Nightly" builds: Every day at 06:00 UTC
     - cron: '0 6 * * *'
+  # for running the workflow manually - useful for branches without PRs, for which jobs don't get ran automatically
+  workflow_dispatch:
+
 # Cancel running actions when a new action on the same PR is started
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
