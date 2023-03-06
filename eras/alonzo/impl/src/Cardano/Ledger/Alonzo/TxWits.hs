@@ -267,7 +267,7 @@ pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
 
 {-# COMPLETE TxDats' #-}
 
-pattern TxDats :: Era era => Typeable era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
+pattern TxDats :: Era era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
 pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
   where
     TxDats m = mkMemoized (TxDatsRaw m)
