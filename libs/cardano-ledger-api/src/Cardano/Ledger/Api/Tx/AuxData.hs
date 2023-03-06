@@ -3,16 +3,23 @@ module Cardano.Ledger.Api.Tx.AuxData (
 
   -- * Shelley
   ShelleyTxAuxData (..),
+  Metadatum (..),
 
   -- * Allegra
   AllegraTxAuxData (..),
 
   -- * Alonzo
   AlonzoTxAuxData (..),
+  mkAlonzoTxAuxData,
+  getAlonzoTxAuxDataScripts,
 )
 where
 
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
+import Cardano.Ledger.Alonzo.TxAuxData (
+  AlonzoTxAuxData (..),
+  getAlonzoTxAuxDataScripts,
+  mkAlonzoTxAuxData,
+ )
 import Cardano.Ledger.Core (EraTxAuxData (..))
-import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData (..))
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
