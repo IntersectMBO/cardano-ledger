@@ -21,8 +21,10 @@ module Test.Cardano.Ledger.Constrained.Tests where
 import Control.Arrow (first)
 import Control.Monad
 import Data.Foldable (fold)
-import Data.List (intercalate, partition, isPrefixOf)
+import Data.List (intercalate, isPrefixOf)
+import qualified Data.List as List
 import Data.Map (Map)
+import Data.Group
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -31,12 +33,13 @@ import Test.Cardano.Ledger.Constrained.Ast
 
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley
-import Test.Cardano.Ledger.Constrained.Classes hiding (partition)
+import Cardano.Ledger.Coin
+import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (EQL), Size (SzRng))
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (SzRng), runOrdCond)
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
@@ -70,8 +73,8 @@ fails in these cases:
     non-empty set for C to have a solution.
 
 Current limitations of the tests
-  - Only IntR and SetR IntR types (and Word64R for size constraints)
-  - Only generates Sized, `Subset`, Disjoint, and SumsTo(SumSet) constraints
+  - Only CoinR and SetR CoinR types (and Word64R for size constraints)
+  - Only generates Sized, Subset, Disjoint, and SumsTo(SumSet) constraints
 
 Known limitations of the code that the tests avoid
   - Constraints of the form `n = Σ sum X` cannot be solved, so we set `sumBeforeParts` to false (see
@@ -242,13 +245,13 @@ data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
 
 genBaseType :: Gen (TypeInEra era)
-genBaseType = elements [TypeInEra IntR]
+genBaseType = elements [TypeInEra CoinR]
 
 genType :: Gen (TypeInEra era)
-genType = elements [ TypeInEra IntR
-                   , TypeInEra (SetR IntR)
-                   , TypeInEra (ListR IntR)
-                   , TypeInEra (MapR IntR IntR)
+genType = elements [ TypeInEra CoinR
+                   , TypeInEra (SetR CoinR)
+                   , TypeInEra (ListR CoinR)
+                   , TypeInEra (MapR CoinR CoinR)
                    ]
 
 -- | Unsatisfiable constraint returned if we fail during constraint generation.
@@ -268,14 +271,28 @@ setWithSum n = fixUp <$> arbitrary
       where
         missing = n - sum s
 
-listWithSum :: Int -> Gen [Int]
+listWithSum :: Coin -> Gen [Coin]
 listWithSum n = fixUp <$> arbitrary
   where
     fixUp s
-      | missing == 0 = s
-      | otherwise = missing : s
+      | missing == Coin 0 = s
+      | otherwise         = missing : s
       where
-        missing = n - sum s
+        missing = n ~~ fold s
+
+mapWithSum :: Coin -> Gen (Map Coin Coin)
+mapWithSum n = do
+  rng <- listWithSum n
+  dom <- Set.toList <$> setSized [] (length rng) arbitrary
+  pure $ Map.fromList $ zip dom rng
+
+genOrdCoin :: OrdCond -> Coin -> Gen Coin
+genOrdCoin EQL n = pure n
+genOrdCoin cond n = frequency [(1, pure $ n ~~ Coin 1),
+                              (1, pure n),
+                              (1, pure $ n <> Coin 1),
+                              (10, arbitrary)]
+                  `suchThat` flip (runOrdCond cond) n
 
 genPred :: forall era. Era era => GenEnv era -> Gen (Pred era, GenEnv era)
 genPred env =
@@ -368,11 +385,11 @@ genPred env =
             (VarTerm d)
         pure (Disjoint lhs rhs, markSolved (vars rhs) d env'')
 
-    -- SumsTo constraint, only [Int] at the moment.
+    -- SumsTo constraint, only Map Int Int at the moment.
     sumsToC
       | sumBeforeParts (gOrder env) =
           -- Known sum
-          withValue (genTerm' env IntR (> 10) (Literal IntR . (+ 10) . getPositive <$> arbitrary) KnownTerm) $ \sumTm val env' -> do
+          withValue (genTerm' env CoinR (> Coin 10) (Literal CoinR . (<> Coin 10) <$> arbitrary) KnownTerm) $ \sumTm val env' -> do
             let d = 1 + depthOf env' sumTm
 
                 genParts [] env0 = pure ([], env0)
@@ -380,38 +397,39 @@ genPred env =
                   (t, env1) <-
                     genTerm'
                       env0
-                      (ListR IntR)
-                      ((== n) . sum)
-                      (Literal (ListR IntR) <$> listWithSum n)
+                      (MapR CoinR CoinR)
+                      ((== n) . fold)
+                      (Literal (MapR CoinR CoinR) <$> mapWithSum n)
                       (VarTerm d)
-                  first (SumList t :) <$> genParts ns env1
+                  first (SumMap t :) <$> genParts ns env1
             -- TODO: It's unclear what the requirements are on the parts when solving sumBeforeParts.
             -- The solver fails if you have multiple unknown variables. Generating only a single part
             -- for now, since sumBeforeParts is anyway disabled due to TODO/SumSet.
             -- count <- choose (1, min 3 val)
             let count = 1
-            partSums <- partitionInt 1 ["sumdToC in Tests.hs"] count val
+            partSums <- partition ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
             pure (SumsTo 1 sumTm EQL parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
       | otherwise = do
           -- Known sets
-          let genParts 0 env0 k = k [] 0 env0
+          let genParts 0 env0 k = k [] (Coin 0) env0
               genParts n env0 k =
-                withValue (genTerm env0 (ListR IntR) KnownTerm) $ \set val env1 ->
+                withValue (genTerm env0 (MapR CoinR CoinR) KnownTerm) $ \expr val env1 ->
                   genParts (n - 1) env1 $ \parts tot ->
-                    k (SumList set : parts) (sum val + tot)
+                    k (SumMap expr : parts) (fold val <> tot)
           count <- choose (1, 3 :: Int)
+          cmp <- elements [EQL, LTH, LTE, GTH, GTE]
           genParts count env $ \parts tot env' -> do
             let d = 1 + maximum (0 : map (depthOfSum env') parts)
             (sumTm, env'') <-
               genTerm'
                 env'
-                IntR
-                (== tot)
-                (pure $ Literal IntR tot)
+                CoinR
+                (flip (runOrdCond cmp) tot)
+                (Literal CoinR <$> genOrdCoin cmp tot)
                 (VarTerm d)
-            pure (SumsTo 1 sumTm EQL parts, markSolved (vars sumTm) d env'')
+            pure (SumsTo 1 cmp sumTm parts, markSolved (vars sumTm) d env'')
 
     hasDomC
       | mapBeforeDom (gOrder env) = do
@@ -462,7 +480,7 @@ genPreds = \env -> do
 withEq :: Rep era t -> (Eq t => a) -> Maybe a
 withEq (SetR r)     cont = withEq r cont
 withEq (MapR kr vr) cont = join $ withEq kr (withEq vr cont)
-withEq IntR         cont = Just cont
+withEq CoinR         cont = Just cont
 withEq _            _    = Nothing
 
 -- We can't drop constraints due to dependency limitations. There needs to be at least one
@@ -504,7 +522,7 @@ shrinkPreds (preds, env) =
       | null rdy = False
       | otherwise = depCheck (foldMap def rdy <> solved) rest
       where
-        (rdy, rest) = partition canSolve preds'
+        (rdy, rest) = List.partition canSolve preds'
         canSolve c = Set.isSubsetOf (use c) solved
 
     deps c = accumdep (gOrder env) mempty c
@@ -519,7 +537,7 @@ testProof :: Proof TestEra
 testProof = Shelley Mock
 
 testEnv :: Env TestEra
-testEnv = Env $ Map.fromList [("A", Payload IntR 5 No)]
+testEnv = Env $ Map.fromList [("A", Payload CoinR (Coin 5) No)]
 
 ensureRight :: Testable prop => Either [String] a -> (a -> prop) -> Property
 ensureRight (Left errs) _ = counterexample (unlines errs) False
@@ -581,7 +599,8 @@ prop_soundness :: OrderInfo -> Property
 prop_soundness = prop_soundness' False []
 
 defaultWhitelist :: [String]
-defaultWhitelist = ["Cannot make subset of size", "Cycle in dependencies"]
+-- defaultWhitelist = ["Cannot make subset of size", "Cycle in dependencies"]
+defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "The MapSpec's are inconsistent"]
 
 -- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
 --   constraints.
@@ -591,6 +610,7 @@ prop_soundness' strict whitelist info =
     counterexample ("\n-- Order --\n" ++ show info) $
       counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
+          within 100000 $
           checkTyped (compile info preds) $ \graph ->
             forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
               let env = errorTyped $ substToEnv subst emptyEnv
