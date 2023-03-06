@@ -146,7 +146,7 @@ data Tag
     Mint
   | -- | Validates certificate transactions
     Cert
-  | -- | Validates withdrawl from a reward account
+  | -- | Validates withdrawal from a reward account
     Rewrd
   deriving (Eq, Generic, Ord, Show, Enum, Bounded)
 

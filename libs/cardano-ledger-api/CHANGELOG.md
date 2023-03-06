@@ -18,6 +18,8 @@
   `binaryDataToData`, `dataToBinaryData`, `datumDataHash`, `getPlutusData`,
   `hashBinaryData` and `makeBinaryData`.
 * Export `IsValid` from `Cardano.Ledger.Api.Tx`
+* Export from `Cardano.Ledger.Api.Tx.AuxData`: `mkAlonzoTxAuxData` and `getAlonzoTxAuxDataScripts`
+
 
 ## 1.0.0.0
 
