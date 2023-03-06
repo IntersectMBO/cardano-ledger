@@ -10,6 +10,10 @@
 * Export `ShelleyTxAuxData`, `AllegraTxAuxData` and `AlonzoTxAuxData` from
   `Cardano.Ledger.Api.Tx.AuxData`
 * Export `LangDepView` and `getLanguageView` from `Cardano.Ledger.Api.PParams`
+* Hide the internal compact versions from TxOut interface: `compactValueTxOutL`,
+  `valueEitherTxOutL`, `compactAddrTxOutL` and `addrEitherTxOutL`
+* Export `coinTxOutL` and `bootAddrTxOutF`
+* Export `ValidityInterval`
 
 
 ## 1.0.0.0
