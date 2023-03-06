@@ -81,6 +81,8 @@ Known limitations of the code that the tests avoid
     TODO/sumBeforeParts).
   - HasDom constraints don't work with non-variable domains.
   - Can't solve `Sized n (Rng X)` (see TODO/sizedRng)
+  - Random X, N < Σ sum X can pick X = {} (N :: Coin) and then crash on the sum constraint
+    (TODO/negativeCoin)
 
 -}
 
@@ -415,8 +417,8 @@ genPred env =
                   genParts (n - 1) env1 $ \parts tot ->
                     k (SumMap expr : parts) (fold val <> tot)
           count <- choose (1, 3 :: Int)
-          cmp <- elements [EQL, LTH, LTE, GTH, GTE]
           genParts count env $ \parts tot env' -> do
+            cmp <- elements $ [EQL, LTE, GTH, GTE] ++ [LTH | tot > Coin 0, False] -- TODO/negativeCoin
             let d = 1 + maximum (0 : map (depthOfSum env') parts)
             (sumTm, env'') <-
               genTerm'
