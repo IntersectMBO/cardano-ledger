@@ -27,7 +27,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Field (..), Name (..), V (..))
+import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Field (..), Name (..), V (..), Env (..))
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
 
@@ -106,7 +106,7 @@ listEq eqf (x : xs) (y : ys) = eqf x y && listEq eqf xs ys
 listEq _ _ _ = False
 
 -- | Conservative Term equality
-cteq :: Term era t -> Term era s -> Bool
+cteq :: Term era t -> Term era t -> Bool
 cteq (Var x) (Var y) = Name x == Name y
 cteq (Dom x) (Dom y) = typedEq x y
 cteq (Rng x) (Rng y) = typedEq x y
@@ -215,10 +215,12 @@ removeSameVar (m : more) ans = removeSameVar more (m : ans)
 removeEqual :: [Pred era] -> [Pred era] -> [Pred era]
 removeEqual [] ans = reverse ans
 removeEqual ((Var v :=: Var u) : more) ans | Name v == Name u = removeEqual more ans
-removeEqual ((Var v :=: expr) : more) ans = removeEqual (map sub more) ((Var v :=: expr) : (map sub ans))
+removeEqual ((Var v :=: expr@Fixed{}) : more) ans = removeEqual (map sub more) ((Var v :=: expr) : map sub ans)
   where
     sub = substPred [SubItem v expr]
-removeEqual ((e1 :=: e2) : more) ans | cteq e1 e2 = removeEqual more ans
+removeEqual ((expr@Fixed{} :=: Var v) : more) ans = removeEqual (map sub more) ((expr :=: Var v) : map sub ans)
+  where
+    sub = substPred [SubItem v expr]
 removeEqual (m : more) ans = removeEqual more (m : ans)
 
 -- | Introduce new xxDom variables, only if 'xx' does not
@@ -228,14 +230,24 @@ remDom ps = removeDom (addPred bad) ps
   where
     bad = strategyRhsMap ps
 
+removeTrivial :: forall era. [Pred era] -> [Pred era]
+removeTrivial = filter (not . trivial)
+  where
+    trivial p | null (varsOfPred mempty p) =
+      case runTyped $ runPred (Env mempty) p of
+        Left{}      -> False
+        Right valid -> valid
+    trivial (e1 :=: e2) = cteq e1 e2
+    trivial _ = False
+
 noDomain :: Bool
 noDomain = True
 
 rewrite :: [Pred era] -> [Pred era]
-rewrite cs =
-  if noDomain
-    then removeSameVar (removeEqual cs []) []
-    else removeSameVar (removeEqual (remDom cs) []) []
+rewrite cs = removeTrivial $ removeSameVar (removeEqual (remDom' cs) []) []
+  where
+    remDom' | noDomain  = id
+            | otherwise = remDom
 
 -- ==============================================================
 -- Build a Dependency Graph that extracts an ordering on the

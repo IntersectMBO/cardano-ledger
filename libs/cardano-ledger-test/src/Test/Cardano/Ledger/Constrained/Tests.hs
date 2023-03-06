@@ -496,9 +496,6 @@ shrinkPreds (preds, env) =
         (rdy, rest) = partition canSolve preds'
         canSolve c = Set.isSubsetOf (use c) solved
 
-    -- Note: accumdep treats equality constraints strangely (as `() -> lhs, rhs`).
-    -- Here we use `lhs -> rhs` instead.
-    deps (lhs :=: rhs) = Map.fromSet (const $ vars lhs) (vars rhs)
     deps c = accumdep (gOrder env) mempty c
     def = Map.keysSet . deps
     use = fold . deps
