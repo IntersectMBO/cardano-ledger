@@ -283,6 +283,11 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
         With _ <- hasOrd rng (Id undefined)
         With n <- simplifySet rng expr
         mapSpec SzAny RelAny (RngRel (relSubset rng n))
+  (expr `Subset` Rng (Var v2))
+    | Name v1 == Name v2 -> do
+        With _ <- hasOrd rng (Id undefined)
+        With n <- simplifySet rng expr
+        mapSpec SzAny RelAny (RngRel (relSuperset rng n))
   (Rng expr `Subset` (Var v2))
     | Name v1 == Name v2 -> do
         With _ <- hasOrd rng (Id undefined)
