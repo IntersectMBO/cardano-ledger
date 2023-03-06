@@ -234,7 +234,7 @@ data RelSpec era dom where
   -- | Denotes things like: (x == y) equality, (x ⊆ y) subset, ( x ∩ y = ∅) disjointness, (x ⊇ y) superset.
   --   Invariants of r@(RepOper must (Just may) cant)
   -- 1) must is a subset of may
-  -- 2) must is disjoint from cant
+  -- 2) must and may are disjoint from cant
   -- 3) (sizeFromRel r) is realizable E.g.  (SzRng 10 3) is NOT realizable
   RelOper ::
     Ord d =>
@@ -305,7 +305,11 @@ mergeRelSpec a@(RelOper r must1 may1 cant1) b@(RelOper _ must2 may2 cant2) =
             ]
           )
         ]
-        (relOper r (Set.union must1 must2) (interSectM may1 may2) (Set.union cant1 cant2))
+        (relOper r must may cant)
+  where
+    must = Set.union must1 must2
+    cant = Set.union cant1 cant2
+    may  = (`Set.difference` cant) <$> interSectM may1 may2
 
 -- ==================
 -- Helper functions for defining mergeRelSpec and
@@ -369,6 +373,15 @@ relOper r must may cant =
               ,
                 [ "'must' "
                     ++ synopsis (SetR r) must
+                    ++ "Is not disjoint from: 'cant' "
+                    ++ synopsis (SetR r) cant
+                ]
+              )
+            ,
+              ( maybe True (\ may' -> Set.disjoint may' cant) may
+              ,
+                [ "'may' "
+                    ++ maybe "Nothing" (synopsis $ SetR r) may
                     ++ "Is not disjoint from: 'cant' "
                     ++ synopsis (SetR r) cant
                 ]
