@@ -214,7 +214,7 @@ instance Show (Rep era t) where
   show CoinR = "Coin"
   show (a :-> b) = "(" ++ show a ++ " -> " ++ show b ++ ")"
   show (MapR a b) = "(Map " ++ show a ++ " " ++ show b ++ ")"
-  show (SetR a) = "(Set " ++ show a ++ " " ++ ")"
+  show (SetR a) = "(Set " ++ show a ++ ")"
   show (ListR a) = "[" ++ show a ++ "]"
   show CredR = "(Credential 'Staking c)"
   show PoolHashR = "(KeyHash 'StakePool c)"
