@@ -17,6 +17,7 @@
 * Export from `Cardano.Ledger.Api.Scripts.Data`: `BinaryData`, `DataHash`, `Datum`,
   `binaryDataToData`, `dataToBinaryData`, `datumDataHash`, `getPlutusData`,
   `hashBinaryData` and `makeBinaryData`.
+* Export `IsValid` from `Cardano.Ledger.Api.Tx`
 
 ## 1.0.0.0
 
