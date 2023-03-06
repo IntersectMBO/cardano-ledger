@@ -679,38 +679,12 @@ mergeRngSpec (RngRel RelAny) x = x
 mergeRngSpec x (RngRel RelAny) = x
 mergeRngSpec _ (RngNever xs) = RngNever xs
 mergeRngSpec (RngNever xs) _ = RngNever xs
-mergeRngSpec a@(RngElem _ xs) b@(RngElem _ ys) =
-  if xs == ys
-    then a
-    else RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b, "The elements are not the same"]
-mergeRngSpec a@(RngElem _xrep xs) b@(RngSum _ siz) =
-  let computed = sumAdds xs
-   in if runSize (toI computed) siz
-        then a
-        else
-          RngNever
-            [ "The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b
-            , "The computed sum("
-                ++ show computed
-                ++ ") and the range denoted by the size("
-                ++ show siz
-                ++ ") are not compatible."
-            ]
-mergeRngSpec b@(RngSum _ _) a@(RngElem _ _) = mergeRngSpec a b
-mergeRngSpec a@(RngElem _xrep xs) b@(RngProj _ _ siz) =
-  let computed = projAdds xs
-   in if runSize (toI computed) siz
-        then a
-        else
-          RngNever
-            [ "The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b
-            , "The computed sum("
-                ++ show computed
-                ++ ") and the range denoted by the size("
-                ++ show siz
-                ++ ") are not compatible."
-            ]
-mergeRngSpec b@(RngProj _ _ _) a@(RngElem _ _) = mergeRngSpec a b
+mergeRngSpec a@(RngElem _ xs) b
+  | runRngSpec xs b = a
+  | otherwise = RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b]
+mergeRngSpec a b@(RngElem _ xs)
+  | runRngSpec xs a = b
+  | otherwise = RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b]
 mergeRngSpec a@(RngSum small1 sz1) b@(RngSum small2 sz2) =
   case sz1 <> sz2 of
     SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
