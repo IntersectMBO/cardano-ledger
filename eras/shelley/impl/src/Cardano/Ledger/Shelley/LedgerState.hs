@@ -88,6 +88,7 @@ module Cardano.Ledger.Shelley.LedgerState (
 
 import Cardano.Ledger.DPState
 import Cardano.Ledger.Era (EraCrypto)
+import Cardano.Ledger.IncrementalStake
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.LedgerState.NewEpochState

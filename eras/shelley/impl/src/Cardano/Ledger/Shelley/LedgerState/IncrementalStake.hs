@@ -48,6 +48,7 @@ import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   Stake (..),
  )
+import Cardano.Ledger.IncrementalStake (IncrementalStake (..))
 import Cardano.Ledger.Keys (
   KeyRole (..),
  )

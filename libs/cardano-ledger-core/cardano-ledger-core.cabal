@@ -42,6 +42,7 @@ library
         Cardano.Ledger.Era
         Cardano.Ledger.Hashes
         Cardano.Ledger.HKD
+        Cardano.Ledger.IncrementalStake
         Cardano.Ledger.Keys
         Cardano.Ledger.Keys.Bootstrap
         Cardano.Ledger.Keys.WitVKey

@@ -28,6 +28,7 @@ import Cardano.Ledger.DPState (
   DState (..),
   InstantaneousRewards (..),
  )
+import Cardano.Ledger.IncrementalStake (IncrementalStake (..))
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
