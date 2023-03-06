@@ -16,6 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    if: ${{ github.event.pull_request.draft == false }}
 
     env:
       # Modify this value to "invalidate" the cabal cache.
@@ -128,6 +129,7 @@ jobs:
 
   fourmolu:
     runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.draft == false }}
 
     defaults:
       run:
@@ -151,6 +153,7 @@ jobs:
 
   cabal-format:
     runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.draft == false }}
 
     defaults:
       run:
@@ -165,6 +168,7 @@ jobs:
       run: ./scripts/cabal-format.sh
 
   gen-hie:
+    if: ${{ github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
 
     defaults:
