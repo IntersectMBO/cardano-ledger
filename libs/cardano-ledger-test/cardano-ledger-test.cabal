@@ -93,6 +93,7 @@ library
         cardano-protocol-tpraos,
         cardano-slotting,
         containers,
+        groups,
         vector-map,
         data-default-class,
         microlens,
