@@ -30,6 +30,7 @@ module Cardano.Ledger.Api.Tx.Body (
   -- * Allegra Era
   AllegraEraTxBody,
   vldtTxBodyL,
+  ValidityInterval (..),
 
   -- * Mary Era
   MaryEraTxBody,
