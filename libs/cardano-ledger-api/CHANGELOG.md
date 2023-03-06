@@ -4,6 +4,7 @@
 
 * Addition of `Cardano.Ledger.Api.PParams`
 * Addition of `Cardano.Ledger.Api.Tx.Address`
+* Addition of `Cardano.Ledger.Api.Tx.In`
 * Hide `ShelleyTxBody`, `AlonzoTxBody`, `BabbageTxBody` from `Cardano.Ledger.Api.Tx.Body`
 * Export `Withdrawals` from `Cardano.Ledger.Api.Tx.Body`
 * Export `ShelleyTxAuxData`, `AllegraTxAuxData` and `AlonzoTxAuxData` from
