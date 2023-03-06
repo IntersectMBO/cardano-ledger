@@ -278,6 +278,7 @@ genPred env =
   frequency $
     [(1, fixedSizedC)]
       ++ [(1, varSizedC)]
+      ++ [(1, eqC)]
       ++ [(1, subsetC)]
       ++ [(1, disjointC)]
       ++ [(1, sumsToC)]
@@ -313,6 +314,13 @@ genPred env =
         let var = V name SizeR No
             intn = getsize val
         pure (Sized (Var var) set, addSolvedVar var (SzRng intn intn) (1 + depthOf env' set) env')
+
+    eqC = do
+      TypeInEra rep <- genType
+      withValue (genTerm env rep KnownTerm) $ \lhs val env' -> do
+        let d = 1 + depthOf env' lhs
+        (rhs, env'') <- genTerm' env' rep (== val) (pure $ Lit rep val) (VarTerm d)
+        pure (lhs :=: rhs, markSolved (vars rhs) d env'')
 
     subsetC
       | setBeforeSubset (gOrder env) = do
