@@ -52,6 +52,7 @@ import Test.Cardano.Ledger.Constrained.Spec (
   genFromSetSpec,
   mapSpec,
   relDisjoint,
+  relEqual,
   relSubset,
   relSuperset,
   setSpec,
@@ -252,7 +253,7 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   (Var v2 :=: expr) | Name v1 == Name v2 -> do
     m1 <- simplifyAtType r expr
     With _ <- hasOrd rng rng
-    mapSpec SzAny (RelEqual dom (Map.keysSet m1)) (RngElem rng (Map.elems m1))
+    mapSpec SzAny (relEqual dom (Map.keysSet m1)) (RngElem rng (Map.elems m1))
   (expr :=: v2@(Var _)) -> solveMap v1 (v2 :=: expr)
   -- TODO recast these in terms of Fields
   (ProjS lensbt _trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Fixed (Lit (SetR _srep) x)) | Name v1 == Name v2 -> do
@@ -270,13 +271,13 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
         s <- simplify expr
         let SetR a = termRep expr
         Refl <- sameRep rng a
-        mapSpec (SzLeast (Set.size s)) RelAny (RngRel (RelEqual rng s))
+        mapSpec (SzLeast (Set.size s)) RelAny (RngRel (relEqual rng s))
   (Rng (Var v2) :=: expr)
     | Name v1 == Name v2 -> do
         s <- simplify expr
         let SetR a = termRep expr
         Refl <- sameRep rng a
-        mapSpec (SzLeast (Set.size s)) RelAny (RngRel (RelEqual rng s))
+        mapSpec (SzLeast (Set.size s)) RelAny (RngRel (relEqual rng s))
   (Rng (Var v2) `Subset` expr)
     | Name v1 == Name v2 -> do
         With _ <- hasOrd rng (Id undefined)
@@ -374,7 +375,7 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
   (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> setSpec sz RelAny
   (Var v2 :=: expr) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
-    setSpec (SzExact (Set.size set)) (RelEqual r set)
+    setSpec (SzExact (Set.size set)) (relEqual r set)
   (expr :=: v2@(Var _)) -> solveSet v1 (v2 :=: expr)
   (Var v2 `Subset` expr) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
@@ -391,7 +392,7 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
   (HasDom mterm (Var v2)) | Name v1 == Name v2 -> do
     let MapR _ rng = termRep mterm
     mval <- simplifyAtType (MapR r rng) mterm
-    setSpec (SzExact (Map.size mval)) (RelEqual r (Map.keysSet mval))
+    setSpec (SzExact (Map.size mval)) (relEqual r (Map.keysSet mval))
   cond -> failT ["Can't solveSet " ++ show cond ++ " for variable " ++ show v1]
 
 solveSets :: V era (Set a) -> [Pred era] -> Typed (SetSpec era a)

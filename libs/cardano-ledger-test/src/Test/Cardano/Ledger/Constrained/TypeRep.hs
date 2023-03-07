@@ -216,7 +216,7 @@ instance Show (Rep era t) where
   show (MapR a b) = "(Map " ++ show a ++ " " ++ show b ++ ")"
   show (SetR a) = "(Set " ++ show a ++ " " ++ ")"
   show (ListR a) = "[" ++ show a ++ "]"
-  show CredR = "Cred" -- "(Credential 'Staking c)"
+  show CredR = "(Credential 'Staking c)"
   show PoolHashR = "(KeyHash 'StakePool c)"
   show WitHashR = "(KeyHash 'Witness c)"
   show GenHashR = "(KeyHash 'Genesis c)"
@@ -441,7 +441,7 @@ genpup (PPUPStateR (Allegra _)) = arbitrary
 genpup (PPUPStateR (Mary _)) = arbitrary
 genpup (PPUPStateR (Alonzo _)) = arbitrary
 genpup (PPUPStateR (Babbage _)) = arbitrary
-genpup (PPUPStateR (Conway _)) = arbitrary
+genpup (PPUPStateR (Conway _)) = arbitrary -- FIXME
 
 -- ===========================
 
@@ -459,63 +459,3 @@ synopsisPParam p x = withEraPParams p help
         ++ ", protoVersion="
         ++ (synopsis (ProtVerR p) (x ^. Core.ppProtocolVersionL))
         ++ "}"
-
-{-
--- ==========================================================================
--- The type Size is defined in TypeRep.hs, because its type must be known in
--- Ast.hs (which it needs an (Rep era Size) SizeR defined here). It also acts
--- like a Spec, so here are its Spec like Monoid and Semigroup instances.
-
-data Size
-  = SzNever [String]
-  | SzAny
-  | SzLeast Int
-  | SzMost Int
-  | SzRng Int Int -- (SzRng i j) = [i .. j] . Invariant i <= j
-  deriving (Ord, Eq)
-
-sameR :: Size -> Maybe Int
-sameR (SzRng x y) = if x == y then Just x else Nothing
-sameR _ = Nothing
-
-pattern SzExact :: Int -> Size
-pattern SzExact x <- (sameR -> Just x)
-  where
-    SzExact x = (SzRng x x)
-
-instance Show Size where
-  show (SzNever _) = "NeverSize"
-  show SzAny = "AnySize"
-  show (SzLeast n) = "(AtLeast " ++ show n ++ ")"
-  show (SzMost n) = "(AtMost " ++ show n ++ ")"
-  show (SzRng i j) = "(Range " ++ show i ++ " " ++ show j ++ ")"
-
-mergeSize :: Size -> Size -> Size
-mergeSize SzAny x = x
-mergeSize x SzAny = x
-mergeSize (SzNever xs) (SzNever ys) = SzNever (xs ++ ys)
-mergeSize _ (SzNever xs) = SzNever xs
-mergeSize (SzNever xs) _ = SzNever xs
-mergeSize (SzLeast x) (SzLeast y) = SzLeast (max x y)
-mergeSize (SzLeast x) (SzMost y) | x <= y = SzRng x y
-mergeSize (SzLeast x) (SzRng i j) | x <= i = SzRng i j
-mergeSize (SzLeast x) (SzRng i j) | x >= i && x <= j = SzRng x j
-mergeSize (SzMost x) (SzMost y) = SzMost (min x y)
-mergeSize (SzMost y) (SzLeast x) | x <= y = SzRng x y
-mergeSize (SzMost x) (SzRng i j) | x >= j = SzRng i j
-mergeSize (SzMost x) (SzRng i j) | x >= i && x <= j = SzRng i x
-mergeSize (SzRng i j) (SzLeast x) | x <= i = SzRng i j
-mergeSize (SzRng i j) (SzLeast x) | x >= i && x <= j = SzRng x j
-mergeSize (SzRng i j) (SzMost x) | x >= j = SzRng i j
-mergeSize (SzRng i j) (SzMost x) | x >= i && x <= j = SzRng i x
-mergeSize (SzRng i j) (SzRng m n) | x <= y = SzRng x y
-  where
-    x = max i m
-    y = min j n
-mergeSize a b = SzNever ["Size specifications " ++ show a ++ " and " ++ show b ++ " are inconsistent."]
-
-instance Monoid Size where mempty = SzAny
-
-instance Semigroup Size where
-  (<>) = mergeSize
--}

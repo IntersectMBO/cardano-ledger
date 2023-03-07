@@ -153,7 +153,7 @@ genFromIntRange (SzMost i) = chooseInt (i - atmostany, i)
 -- =========================================================================
 
 -- | A specification of summation. like: lhs = ∑ rhs
---   The idea is that the 'rhs' can contain multiple terms: lhs = ∑ r1 + r2 + r3
+--   The idea is that the 'rhs' can contain multiple terms: rhs = ∑ r1 + r2 + r3
 --   Other example conditions:  (lhs < ∑ rhs), and (lhs >= ∑ rhs)
 --   The invariant is that only a single variable appears in the summation.
 --   It can appear on either side. If it appears in the 'rhs' then there
@@ -170,9 +170,11 @@ genFromIntRange (SzMost i) = chooseInt (i - atmostany, i)
 --   But internally we store the information as a String and a Size (I.e. a range of Int)
 data AddsSpec c where
   AddsSpecSize ::
-    String -> -- name
-    Size -> -- total (range)
-    AddsSpec c --
+    String ->
+    -- | name
+    Size ->
+    -- | total (range like (4 .. 12))
+    AddsSpec c
   AddsSpecAny :: AddsSpec c
   AddsSpecNever :: [String] -> AddsSpec c
 
@@ -241,9 +243,8 @@ negOrdCond :: OrdCond -> OrdCond
 negOrdCond EQL = EQL
 negOrdCond LTH = GTH
 negOrdCond LTE = GTH
-negOrdCond GTH = LTH
+negOrdCond GTH = LTE
 negOrdCond GTE = LTH
-negOrdCond x = x
 
 -- | Translate (s,cond,n), into a Size which
 --   specifies the Int range on which the OrdCond is True.
@@ -251,14 +252,12 @@ negOrdCond x = x
 --              (s, LTH, 7) denotes s < 7
 --              (s, GTH, 5) denotes s > 5 ...
 ordCondToSize :: (String, OrdCond, Int) -> Size
-ordCondToSize (s, cond, n) = case cond of
+ordCondToSize (_, cond, n) = case cond of
   EQL -> SzExact n
   LTH -> SzMost (n - 1)
   LTE -> SzMost n
   GTH -> SzLeast (n + 1)
   GTE -> SzLeast n
-  CondAny -> SzAny
-  CondNever xs -> SzNever (("Can't build a Size for: " ++ s ++ show cond ++ show n) : xs)
 
 -- =========================================================================
 -- OrdCond
@@ -269,7 +268,7 @@ ordCondToSize (s, cond, n) = case cond of
 -- =========================================================================
 
 -- | First order representation of the Ord comparisons
-data OrdCond = EQL | LTH | LTE | GTH | GTE | CondNever [String] | CondAny
+data OrdCond = EQL | LTH | LTE | GTH | GTE
   deriving (Eq)
 
 instance Show OrdCond where
@@ -278,11 +277,6 @@ instance Show OrdCond where
   show LTE = " <= ∑ "
   show GTH = " > ∑ "
   show GTE = " >= ∑ "
-  show (CondNever xs) = unlines xs
-  show CondAny = " `always` ∑ "
-
-always :: c -> c -> Bool
-always _ _ = True
 
 runOrdCond :: Ord c => OrdCond -> c -> c -> Bool
 runOrdCond EQL x y = x == y
@@ -290,5 +284,3 @@ runOrdCond LTH x y = x < y
 runOrdCond LTE x y = x <= y
 runOrdCond GTH x y = x > y
 runOrdCond GTE x y = x >= y
-runOrdCond CondAny x y = always x y -- Always True
-runOrdCond (CondNever _) _ _ = False
