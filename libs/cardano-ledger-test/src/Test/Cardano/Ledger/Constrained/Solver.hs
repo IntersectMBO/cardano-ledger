@@ -114,6 +114,10 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help (ValueR (Shelley _)) v = pure $ With v
     help (ValueR (Allegra _)) v = pure $ With v
     help UnitR v = pure $ With v
+    help (PairR a b) p = do
+      With _ <- help a undefined
+      With _ <- help b undefined
+      pure $ With p
     help (ValueR _) _ = failT ["Value does not have Ord instance in post Allegra eras"]
     help (TxOutR _) _ = failT ["TxOut does not have Ord instance"]
     help (UTxOR _) _ = failT ["UTxO does not have Ord instance"]
