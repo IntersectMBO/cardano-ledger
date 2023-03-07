@@ -987,7 +987,7 @@ witnessFieldSummary wit = case wit of
   (BootWits s) -> ("BootStrap Witnesses", ppInt (Set.size s))
   (ScriptWits s) -> ("Script Witnesses", ppInt (Map.size s))
   (DataWits m) -> ("Data Witnesses", ppInt (Map.size (unTxDats m)))
-  (RdmrWits (Redeemers' m)) -> ("Redeemer Witnesses", ppInt (Map.size m))
+  (RdmrWits (Redeemers m)) -> ("Redeemer Witnesses", ppInt (Map.size m))
 
 witnessSummary :: Era era => Proof era -> TxWits era -> PDoc
 witnessSummary proof wits =

@@ -19,6 +19,10 @@
   `hashBinaryData` and `makeBinaryData`.
 * Export `IsValid` from `Cardano.Ledger.Api.Tx`
 * Export from `Cardano.Ledger.Api.Tx.AuxData`: `mkAlonzoTxAuxData` and `getAlonzoTxAuxDataScripts`
+* Export from `Cardano.Ledger.Api.Tx.Wits`: `WitVKey`, `BootstrapWitness`,
+  `AlonzoEraTxWits`, `TxDats`, `unTxDats`, `Redeemers`, `unRedeemers`, `RdmrPtr` and
+  `Tag`.
+* Export from `Cardano.Ledger.Api.Scripts`: `CostModels` and `ValidityInterval`.
 
 
 ## 1.0.0.0
