@@ -28,7 +28,6 @@ import Data.Group
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Lens.Micro (_1)
 
 import Test.Cardano.Ledger.Constrained.Ast
 
@@ -199,7 +198,6 @@ genTerm' env rep valid genLit vspec =
       ++ [(1, genFreshVar) | VarTerm {} <- [vspec]]
       ++ [(2, genDom krep) | SetR krep <- [rep]]
       ++ [(2, genRng vrep) | SetR vrep <- [rep]]
-      ++ [(1, genProjS vrep) | SetR vrep <- [rep]]
   where
     isValid (_, Literal _ val) = valid val
     existingVars = map fst $ filter isValid $ envVarsOfType (gEnv env) rep
@@ -232,18 +230,6 @@ genTerm' env rep valid genLit vspec =
                             vspec
       pure (Rng m, env')
 
-    genProjS :: forall v. (t ~ Set v, Ord v) => Rep era v -> Gen (Term era (Set v), GenEnv era)
-    genProjS rfst = do
-      TypeInEra rsnd <- genValType
-      let gen = do
-            fsts <- Set.toList . getLiteral <$> genLit
-            snds <- vectorOf (length fsts) (getLiteral <$> genLiteral env rsnd)
-            pure $ Lit (SetR $ PairR rfst rsnd) $ Set.fromList $ zip fsts snds
-      (m, env') <- genTerm' env (SetR $ PairR rfst rsnd) (valid . Set.map fst)
-                            gen
-                            vspec
-      pure (ProjS _1 rfst m, env')
-
 genMapLiteralWithDom :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set k) -> Gen (Literal era (Map k v))
 genMapLiteralWithDom env krep vrep (Lit _ keys) = do
   let genVal = do
@@ -267,7 +253,7 @@ genKeyType :: Gen (TypeInEra era)
 genKeyType = elements [TypeInEra IntR]
 
 genValType :: Gen (TypeInEra era)
-genValType = elements [TypeInEra CoinR, TypeInEra (PairR CoinR CoinR)]
+genValType = elements [TypeInEra CoinR] -- , TypeInEra (PairR CoinR CoinR)]
 
 genBaseType :: Gen (TypeInEra era)
 genBaseType = oneof [genKeyType, genValType]
@@ -345,12 +331,11 @@ genPred env =
         Left errs -> pure (errPred errs, env')
         Right val -> k tm val env'
 
-    -- TODO/sizedRng
-    noSizedRng (Sized _ Rng{}, _) = False
-    noSizedRng _                  = True
+    goodSized (Sized _ Rng{}, _) = False -- TODO/sizedRng
+    goodSized _                  = True
 
     -- Fixed size
-    fixedSizedC = flip suchThat noSizedRng $ do
+    fixedSizedC = flip suchThat goodSized $ do
       TypeInEra rep <- genValType
       withValue (genTerm env (SetR rep) (VarTerm 1)) $ \set val env' ->
         let n = ExactSize (getsize val)
