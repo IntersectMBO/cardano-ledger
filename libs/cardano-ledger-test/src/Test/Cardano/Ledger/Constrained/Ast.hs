@@ -33,7 +33,7 @@ data Term era t where
   Var :: V era t -> Term era t
   Dom :: Ord a => Term era (Map a b) -> Term era (Set a)
   Rng :: (Ord a, Ord b) => Term era (Map a b) -> Term era (Set b)
-  ProjM :: (Ord a, Eq t) => Lens' b t -> Rep era t -> Term era (Map a b) -> Term era (Map a t)
+  ProjM :: (Ord a) => Lens' b t -> Rep era t -> Term era (Map a b) -> Term era (Map a t)
   ProjS :: (Ord b, Ord t) => Lens' b t -> Rep era t -> Term era (Set b) -> Term era (Set t)
   Delta :: Term era Coin -> Term era DeltaCoin
   Negate :: Term era DeltaCoin -> Term era DeltaCoin
