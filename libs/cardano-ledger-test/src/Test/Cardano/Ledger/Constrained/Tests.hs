@@ -28,6 +28,7 @@ import Data.Group
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Lens.Micro (_1)
 
 import Test.Cardano.Ledger.Constrained.Ast
 
@@ -184,6 +185,9 @@ data VarSpec
     KnownTerm
   deriving (Eq, Show)
 
+getLiteral :: Literal era t -> t
+getLiteral (Lit _ x) = x
+
 genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm env rep vspec = genTerm' env rep (const True) (genLiteral env rep) vspec
 
@@ -195,6 +199,7 @@ genTerm' env rep valid genLit vspec =
       ++ [(1, genFreshVar) | VarTerm {} <- [vspec]]
       ++ [(2, genDom krep) | SetR krep <- [rep]]
       ++ [(2, genRng vrep) | SetR vrep <- [rep]]
+      ++ [(1, genProjS vrep) | SetR vrep <- [rep]]
   where
     isValid (_, Literal _ val) = valid val
     existingVars = map fst $ filter isValid $ envVarsOfType (gEnv env) rep
@@ -213,7 +218,7 @@ genTerm' env rep valid genLit vspec =
 
     genDom :: forall k. (t ~ Set k, Ord k) => Rep era k -> Gen (Term era (Set k), GenEnv era)
     genDom krep = do
-      TypeInEra vrep <- genBaseType
+      TypeInEra vrep <- genValType
       (m, env') <- genTerm' env (MapR krep vrep) (valid . Map.keysSet)
                             (genLit >>= genMapLiteralWithDom env krep vrep)
                             vspec
@@ -221,11 +226,23 @@ genTerm' env rep valid genLit vspec =
 
     genRng :: forall v. (t ~ Set v, Ord v) => Rep era v -> Gen (Term era (Set v), GenEnv era)
     genRng vrep = do
-      TypeInEra krep <- genBaseType
+      TypeInEra krep <- genKeyType
       (m, env') <- genTerm' env (MapR krep vrep) (valid . Set.fromList . Map.elems)
                             (genLit >>= genMapLiteralWithRng env krep vrep)
                             vspec
       pure (Rng m, env')
+
+    genProjS :: forall v. (t ~ Set v, Ord v) => Rep era v -> Gen (Term era (Set v), GenEnv era)
+    genProjS rfst = do
+      TypeInEra rsnd <- genValType
+      let gen = do
+            fsts <- Set.toList . getLiteral <$> genLit
+            snds <- vectorOf (length fsts) (getLiteral <$> genLiteral env rsnd)
+            pure $ Lit (SetR $ PairR rfst rsnd) $ Set.fromList $ zip fsts snds
+      (m, env') <- genTerm' env (SetR $ PairR rfst rsnd) (valid . Set.map fst)
+                            gen
+                            vspec
+      pure (ProjS _1 rfst m, env')
 
 genMapLiteralWithDom :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set k) -> Gen (Literal era (Map k v))
 genMapLiteralWithDom env krep vrep (Lit _ keys) = do
@@ -246,15 +263,25 @@ genMapLiteralWithRng env krep vrep (Lit _ vals) = do
 data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
 
+genKeyType :: Gen (TypeInEra era)
+genKeyType = elements [TypeInEra IntR]
+
+genValType :: Gen (TypeInEra era)
+genValType = elements [TypeInEra CoinR, TypeInEra (PairR CoinR CoinR)]
+
 genBaseType :: Gen (TypeInEra era)
-genBaseType = elements [TypeInEra CoinR]
+genBaseType = oneof [genKeyType, genValType]
 
 genType :: Gen (TypeInEra era)
-genType = elements [ TypeInEra CoinR
-                   , TypeInEra (SetR CoinR)
-                   , TypeInEra (ListR CoinR)
-                   , TypeInEra (MapR CoinR CoinR)
-                   ]
+genType = oneof [ genBaseType
+                , setR <$> genValType
+                , listR <$> genValType
+                , mapR <$> genKeyType <*> genValType
+                ]
+  where
+    setR  (TypeInEra t) = TypeInEra (SetR t)
+    listR (TypeInEra t) = TypeInEra (ListR t)
+    mapR  (TypeInEra s) (TypeInEra t) = TypeInEra (MapR s t)
 
 -- | Unsatisfiable constraint returned if we fail during constraint generation.
 errPred :: [String] -> Pred era
@@ -324,14 +351,14 @@ genPred env =
 
     -- Fixed size
     fixedSizedC = flip suchThat noSizedRng $ do
-      TypeInEra rep <- genBaseType
+      TypeInEra rep <- genValType
       withValue (genTerm env (SetR rep) (VarTerm 1)) $ \set val env' ->
         let n = ExactSize (getsize val)
          in pure (Sized n set, markSolved (vars set) 1 env')
 
     -- Fresh variable for size.
     varSizedC = do
-      TypeInEra rep <- genBaseType
+      TypeInEra rep <- genValType
       withValue (genTerm env (SetR rep) KnownTerm) $ \set val env' -> do
         name <- genFreshVarName env'
         let var = V name SizeR No
@@ -348,7 +375,7 @@ genPred env =
     subsetC
       | setBeforeSubset (gOrder env) = do
           -- Known superset
-          TypeInEra rep <- genBaseType
+          TypeInEra rep <- genValType
           withValue (genTerm env (SetR rep) KnownTerm) $ \sup val env' -> do
             let d = 1 + depthOf env' sup
             (sub, env'') <-
@@ -361,7 +388,7 @@ genPred env =
             pure (sub `Subset` sup, markSolved (vars sub) d env'')
       | otherwise = do
           -- Known subset
-          TypeInEra rep <- genBaseType
+          TypeInEra rep <- genValType
           withValue (genTerm env (SetR rep) KnownTerm) $ \sub val env' -> do
             let d = 1 + depthOf env' sub
             (sup, env'') <-
@@ -375,7 +402,7 @@ genPred env =
 
     -- Disjoint, left KnownTerm and right VarTerm
     disjointC = do
-      TypeInEra rep <- genBaseType
+      TypeInEra rep <- genValType
       withValue (genTerm env (SetR rep) KnownTerm) $ \lhs val env' -> do
         let d = 1 + depthOf env' lhs
         (rhs, env'') <-
@@ -436,8 +463,8 @@ genPred env =
     hasDomC
       | mapBeforeDom (gOrder env) = do
         -- Known map
-        TypeInEra krep <- genBaseType
-        TypeInEra vrep <- genBaseType
+        TypeInEra krep <- genKeyType
+        TypeInEra vrep <- genValType
         withValue (genTerm env (MapR krep vrep) KnownTerm) $ \mapTm val env' -> do
           let d = 1 + depthOf env' mapTm
           (domTm, env'') <-
@@ -453,8 +480,8 @@ genPred env =
 
       | otherwise = do
         -- Known domain
-        TypeInEra krep <- genBaseType
-        TypeInEra vrep <- genBaseType
+        TypeInEra krep <- genKeyType
+        TypeInEra vrep <- genValType
         withValue (genTerm env (SetR krep) KnownTerm) $ \domTm val env' -> do
           let d = 1 + depthOf env' domTm
           (mapTm, env'') <-
@@ -601,7 +628,6 @@ prop_soundness :: OrderInfo -> Property
 prop_soundness = prop_soundness' False []
 
 defaultWhitelist :: [String]
--- defaultWhitelist = ["Cannot make subset of size", "Cycle in dependencies"]
 defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "The MapSpec's are inconsistent"]
 
 -- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
