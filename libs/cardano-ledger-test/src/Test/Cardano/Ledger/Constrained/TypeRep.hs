@@ -124,6 +124,7 @@ data Rep era t where
   TxInR :: Rep era (TxIn (EraCrypto era))
   StringR :: Rep era String
   UnitR :: Rep era ()
+  PairR :: Rep era a -> Rep era b -> Rep era (a, b)
   ProtVerR :: Proof era -> Rep era ProtVer -- We need the Proof to get arbitrary instances correct
   -- \^ Rep's for type families (or those that embed type families)
   ValueR :: Proof era -> Rep era (ValueF era)
@@ -179,6 +180,10 @@ instance Singleton (Rep e) where
   testEql TxInR TxInR = Just Refl
   testEql StringR StringR = Just Refl
   testEql UnitR UnitR = Just Refl
+  testEql (PairR a b) (PairR x y) = do
+    Refl <- testEql a x
+    Refl <- testEql b y
+    Just Refl
   testEql (ProtVerR c) (ProtVerR d) =
     do Refl <- testEql c d; pure Refl
   testEql (ValueR c) (ValueR d) =
@@ -243,6 +248,7 @@ instance Show (Rep era t) where
   show IPoolStakeR = "(IndividualPoolStake c)"
   show SnapShotsR = "(SnapShots c)"
   show UnitR = "()"
+  show (PairR a b) = "(" ++ show a ++ ", " ++ show b ++ ")"
   show RewardR = "(Reward c)"
   show (MaybeR x) = "(Maybe " ++ show x ++ ")"
   show NewEpochStateR = "NewEpochState"
@@ -293,6 +299,7 @@ synopsis PtrR p = show p
 synopsis IPoolStakeR p = show (pcIndividualPoolStake p)
 synopsis SnapShotsR _ = "SnapShots ..."
 synopsis UnitR () = "()"
+synopsis (PairR a b) (x, y) = "(" ++ synopsis a x ++ ", " ++ synopsis b y ++ ")"
 synopsis RewardR x = show (pcReward x)
 synopsis (MaybeR _) Nothing = "Nothing"
 synopsis (MaybeR x) (Just y) = "(Just " ++ synopsis x y ++ ")"
@@ -367,6 +374,7 @@ instance Shaped (Rep era) any where
   shape (ProtVerR x) = Nary 35 [shape x]
   shape SlotNoR = Nullary 36
   shape SizeR = Nullary 37
+  shape (PairR a b) = Nary 38 [shape a, shape b]
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -412,6 +420,7 @@ genSizedRep _ PtrR = arbitrary
 genSizedRep _ IPoolStakeR = arbitrary
 genSizedRep _ SnapShotsR = arbitrary
 genSizedRep _ UnitR = arbitrary
+genSizedRep n (PairR a b) = (,) <$> genSizedRep n a <*> genSizedRep n b
 genSizedRep _ RewardR = arbitrary
 genSizedRep n (MaybeR x) = frequency [(1, pure Nothing), (5, Just <$> genSizedRep n x)]
 genSizedRep _ NewEpochStateR = undefined
