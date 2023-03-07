@@ -18,6 +18,7 @@
 
 module Test.Cardano.Ledger.Constrained.Tests where
 
+import Prelude hiding (subtract)
 import Control.Arrow (first)
 import Control.Monad
 import Data.Foldable (fold)
@@ -249,7 +250,7 @@ genKeyType :: Gen (TypeInEra era)
 genKeyType = elements [TypeInEra IntR]
 
 genValType :: Gen (TypeInEra era)
-genValType = elements [TypeInEra CoinR] -- , TypeInEra (PairR CoinR CoinR)]
+genValType = elements [TypeInEra CoinR, TypeInEra DeltaCoinR] -- , TypeInEra (PairR CoinR CoinR)]
 
 genBaseType :: Gen (TypeInEra era)
 genBaseType = oneof [genKeyType, genValType]
@@ -297,13 +298,15 @@ mapWithSum n = do
   dom <- Set.toList <$> setSized [] (length rng) arbitrary
   pure $ Map.fromList $ zip dom rng
 
-genOrdCoin :: OrdCond -> Coin -> Gen Coin
-genOrdCoin EQL n = pure n
-genOrdCoin cond n = frequency ([(1, pure $ n ~~ Coin 1) | n > Coin 0] ++
-                               [(1, pure n),
-                                (1, pure $ n <> Coin 1),
-                                (10, arbitrary)])
-                  `suchThat` flip (runOrdCond cond) n
+genFromOrdCond :: (Arbitrary c, Adds c) => OrdCond -> Bool -> c -> Gen c
+genFromOrdCond EQL _ n = pure n
+genFromOrdCond cond canBeNegative n =
+  suchThatErr ["genFromOrdCond " ++ show cond ++ " " ++ show n]
+    (frequency $ [(1, pure $ subtract ["genFromOrdCond"] n (fromI [] 1)) | n > zero || canBeNegative] ++
+                 [(1, pure n),
+                  (1, pure $ add n (fromI [] 1)),
+                  (10, arbitrary)])
+    (flip (runOrdCond cond) n)
 
 genPred :: forall era. Era era => GenEnv era -> Gen (Pred era, GenEnv era)
 genPred env =
@@ -421,25 +424,34 @@ genPred env =
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
             pure (SumsTo 1 EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
-      | otherwise = do
-          -- Known sets
-          let genParts 0 env0 k = k [] (Coin 0) env0
-              genParts n env0 k =
-                withValue (genTerm env0 (MapR CoinR CoinR) KnownTerm) $ \expr val env1 ->
-                  genParts (n - 1) env1 $ \parts tot ->
-                    k (SumMap expr : parts) (fold val <> tot)
-          count <- choose (1, 3 :: Int)
-          genParts count env $ \parts tot env' -> do
-            cmp <- elements $ [EQL, LTE, GTH, GTE] ++ [LTH | tot > Coin 0, False] -- TODO/negativeCoin
-            let d = 1 + maximum (0 : map (depthOfSum env') parts)
-            (sumTm, env'') <-
-              genTerm'
-                env'
-                CoinR
-                (flip (runOrdCond cmp) tot)
-                (Lit CoinR <$> genOrdCoin cmp tot)
-                (VarTerm d)
-            pure (SumsTo 1 cmp sumTm parts, markSolved (vars sumTm) d env'')
+      | otherwise =
+          oneof [ sumCKnownSets CoinR False
+                , sumCKnownSets DeltaCoinR True
+                ]
+
+    sumCKnownSets :: forall c. (Adds c, Arbitrary c)
+                  => Rep era c
+                  -> Bool
+                  -> Gen (Pred era, GenEnv era)
+    sumCKnownSets rep canBeNegative = do
+      let genParts 0 env0 k = k [] zero env0
+          genParts n env0 k = do
+            TypeInEra krep <- genKeyType
+            withValue (genTerm env0 (MapR krep rep) KnownTerm) $ \expr val env1 ->
+              genParts (n - 1) env1 $ \parts tot ->
+                k (SumMap expr : parts) (add (sumAdds val) tot)
+      count <- choose (1, 3 :: Int)
+      genParts count env $ \parts tot env' -> do
+        cmp <- elements $ [EQL, LTE, GTH, GTE] ++ [LTH | canBeNegative] -- TODO/negativeCoin
+        let d = 1 + maximum (0 : map (depthOfSum env') parts)
+        (sumTm, env'') <-
+          genTerm'
+            env'
+            rep
+            (flip (runOrdCond cmp) tot)
+            (Lit rep <$> genFromOrdCond cmp canBeNegative tot)
+            (VarTerm d)
+        pure (SumsTo 1 cmp sumTm parts, markSolved (vars sumTm) d env'')
 
     hasDomC
       | mapBeforeDom (gOrder env) = do
