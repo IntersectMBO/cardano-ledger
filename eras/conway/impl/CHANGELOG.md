@@ -9,6 +9,8 @@
   * `GovernanceActionIx`
   * `GovernanceActionId`
 * Add `ToJSONKey` instance for `GovernanceActionId`
+* Rename `transDCert` to `toShelleyDCert`
+* Add `fromShelleyDCertMaybe`
 
 ## 1.0.0.0
 

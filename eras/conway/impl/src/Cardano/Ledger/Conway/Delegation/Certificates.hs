@@ -3,7 +3,8 @@
 
 module Cardano.Ledger.Conway.Delegation.Certificates (
   ConwayDCert (..),
-  transDCert,
+  toShelleyDCert,
+  fromShelleyDCertMaybe,
 )
 where
 
@@ -102,7 +103,13 @@ instance Crypto c => EncCBOR (ConwayDCert c) where
         <> encCBOR kh
         <> encCBOR vrf
 
-transDCert :: ConwayDCert c -> DCert c
-transDCert (ConwayDCertDeleg dc) = DCertDeleg dc
-transDCert (ConwayDCertPool pc) = DCertPool pc
-transDCert (ConwayDCertConstitutional gdc) = DCertGenesis gdc
+toShelleyDCert :: ConwayDCert c -> DCert c
+toShelleyDCert (ConwayDCertDeleg dc) = DCertDeleg dc
+toShelleyDCert (ConwayDCertPool pc) = DCertPool pc
+toShelleyDCert (ConwayDCertConstitutional gdc) = DCertGenesis gdc
+
+fromShelleyDCertMaybe :: DCert c -> Maybe (ConwayDCert c)
+fromShelleyDCertMaybe (DCertDeleg dc) = Just $ ConwayDCertDeleg dc
+fromShelleyDCertMaybe (DCertPool pc) = Just $ ConwayDCertPool pc
+fromShelleyDCertMaybe (DCertGenesis gdc) = Just $ ConwayDCertConstitutional gdc
+fromShelleyDCertMaybe DCertMir {} = Nothing

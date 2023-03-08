@@ -17,7 +17,7 @@ module Cardano.Ledger.Pretty.Conway (
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), transDCert)
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), toShelleyDCert)
 import Cardano.Ledger.Conway.Governance (
   ConwayTallyState (..),
   GovernanceAction (..),
@@ -161,7 +161,7 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionInfo era) where
       ]
 
 instance forall c. PrettyA (ConwayDCert c) where
-  prettyA = prettyA . transDCert
+  prettyA = prettyA . toShelleyDCert
 
 instance Crypto c => PrettyA (PParams (ConwayEra c)) where
   prettyA = ppBabbagePParams
