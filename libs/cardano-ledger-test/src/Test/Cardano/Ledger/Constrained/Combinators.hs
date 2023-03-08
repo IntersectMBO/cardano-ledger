@@ -25,7 +25,7 @@ errorMess extra mess = error (unlines ("\nGen-time error" : (reverse (extra : me
 
 -- | suchThat version that tracks Gen-time errors
 suchThatErr :: [String] -> Gen a -> (a -> Bool) -> Gen a
-suchThatErr msgs gen p = sized $ \ n -> try (10 :: Int) n
+suchThatErr msgs gen p = sized $ \n -> try (10 :: Int) n
   where
     try 0 _ = errorMess "SuchThat times out" msgs
     try k sz = do
@@ -80,7 +80,7 @@ fixSet mess numtrys size genA s = help numtrys s
       LT -> do
         let need = size - Set.size set
         new <- Set.fromList . take need . filter (`Set.notMember` set) <$> vectorOf size genA
-        sized $ \ n -> resize (n + 5) $ help (trys - 1) (Set.union new set)
+        sized $ \n -> resize (n + 5) $ help (trys - 1) (Set.union new set)
 
 {-
 x <- genA
