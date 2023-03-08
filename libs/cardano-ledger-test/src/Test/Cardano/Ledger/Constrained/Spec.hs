@@ -28,6 +28,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Debug.Trace (trace)
+import Test.Cardano.Ledger.Constrained.Ast (Literal (..), Pred (..), Sum (..), Term (..), runPred)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Sums (..),
@@ -37,16 +38,16 @@ import Test.Cardano.Ledger.Constrained.Classes (
   sumAdds,
  )
 import Test.Cardano.Ledger.Constrained.Combinators (
+  addUntilSize,
   errorMess,
   fixSet,
-  itemFromSet,
   setSized,
   subsetFromSet,
   suchThatErr,
   superSetFromSet,
   superSetFromSetWithSize,
  )
-import Test.Cardano.Ledger.Constrained.Env (Access (No), V (..))
+import Test.Cardano.Ledger.Constrained.Env (Access (No), V (..), emptyEnv, storeVar)
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Size (
   AddsSpec (..),
@@ -54,6 +55,7 @@ import Test.Cardano.Ledger.Constrained.Size (
   Size (..),
   atleastdelta,
   atmostany,
+  genFromIntRange,
   genFromSize,
   runSize,
   seps,
@@ -104,14 +106,30 @@ minSize (SzMost _) = 0
 minSize (SzRng i _) = i
 minSize (SzNever xs) = errorMess "SzNever in minSize" xs
 
+-- | Generate a Size with all positive numbers, This is used where
+--   we want Size to denote things that must be >= 0. Coin, Word64, Natural
 genSize :: Gen Size
 genSize =
   frequency
     [ (1, SzLeast <$> pos)
-    , (1, SzMost <$> anyAdds)
-    , (4, (\x -> SzRng x x) <$> pos)
-    , (1, do lo <- anyAdds; hi <- choose (lo + 1, lo + 6); pure (SzRng lo hi))
+    , (1, SzMost <$> chooseInt (0, atmostany))
+    , (1, (\x -> SzRng x x) <$> pos)
+    , (1, do lo <- chooseInt (0, atmostany); hi <- choose (lo + 1, lo + 6); pure (SzRng lo hi))
     ]
+
+-- | Generate a Size denoting an Int range, across both positive
+--   and negative numbers. DeltaCoin, Int, Rational. This is used
+--   when we use Size to denote OrdCond on types with negative values
+genSizeRange :: Gen Size
+genSizeRange =
+  frequency
+    [ (1, SzLeast <$> someInt)
+    , (1, SzMost <$> someInt)
+    , (1, (\x -> SzRng x x) <$> someInt)
+    , (1, do lo <- someInt; hi <- choose (lo + 1, lo + atmostany); pure (SzRng lo hi))
+    ]
+  where
+    someInt = chooseInt (-atmostany, atmostany)
 
 genBigSize :: Int -> Gen Size
 genBigSize n =
@@ -144,6 +162,63 @@ testMergeSize = do
     spec -> do
       ans <- genFromSize spec
       pure $ runSize ans spec && runSize ans spec1 && runSize ans spec2
+
+-- ==============
+
+genSizeByRep :: forall t era. Adds t => Rep era t -> Gen Size
+genSizeByRep IntR = genSizeRange
+genSizeByRep DeltaCoinR = genSizeRange
+genSizeByRep RationalR = genSizeRange
+genSizeByRep Word64R = genSize
+genSizeByRep CoinR = genSize
+genSizeByRep NaturalR = genSize
+genSizeByRep r = error ("genSizeByRep " ++ show r ++ " does not have an Adds instance." ++ seq (zero @t) "")
+
+genFromSizeByRep :: forall t era. Adds t => Rep era t -> Size -> Gen Int
+genFromSizeByRep IntR = genFromIntRange
+genFromSizeByRep DeltaCoinR = genFromIntRange
+genFromSizeByRep RationalR = genFromIntRange
+genFromSizeByRep Word64R = genFromSize
+genFromSizeByRep CoinR = genFromSize
+genFromSizeByRep NaturalR = genFromSize
+genFromSizeByRep r = error ("genFromSizeByRep " ++ show r ++ ", does not have an Adds instance." ++ seq (zero @t) "")
+
+data SomeAdd era where Some :: Adds t => Rep era t -> SomeAdd era
+
+instance Show (SomeAdd era) where
+  show (Some x) = show x
+
+genAddsRep :: Gen (SomeAdd era)
+genAddsRep = elements [Some IntR, Some DeltaCoinR, Some RationalR, Some Word64R, Some CoinR, Some NaturalR]
+
+testMergeSize2 :: Gen Property
+testMergeSize2 = do
+  Some rep <- genAddsRep
+  spec1 <- genSizeByRep rep
+  spec2 <- genSizeByRep rep
+  case (spec1 <> spec2) of
+    SzNever _xs -> pure $ property True
+    SzAny -> pure $ property True
+    spec -> do
+      ans <- genFromSizeByRep rep spec
+      pure $
+        counterexample
+          ( "at type="
+              ++ show rep
+              ++ ", spec1="
+              ++ show spec1
+              ++ ", spec2="
+              ++ show spec2
+              ++ ", spec1<>spec2="
+              ++ show spec
+              ++ ", ans="
+              ++ show ans
+          )
+          (runSize ans spec && runSize ans spec1 && runSize ans spec2)
+
+main2 :: IO ()
+main2 =
+  defaultMain $ testProperty "Size2" testMergeSize2
 
 -- =====================================================
 -- RelSpec
@@ -351,7 +426,9 @@ genFromRelSpec msgs g n spec =
                         ++ show m
                     )
                     (msg : msgs)
-                GT -> fixSet (("choices " ++ show (Set.size choices)) : msg : msgs) 1000 n (itemFromSet (msg : msgs) choices) must
+                GT -> addUntilSize (msg : msgs) must choices n
+
+-- fixSet (("choices " ++ show (Set.size choices)) : msg : msgs) 1000 n (itemFromSet (msg : msgs) choices) must
 
 --- TODO  fixSet based on removal from a set.
 
@@ -1634,12 +1711,41 @@ testl = do
 -- =======================================================================
 -- Operations on AddsSpec (defined in Types.hs)
 
+testV :: V era DeltaCoin
+testV = (V "x" DeltaCoinR No)
+
+genSumsTo :: Gen (Pred era)
+genSumsTo = do
+  c <- genOrdCond
+  let v = Var testV
+  rhs <- (Fixed . Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
+  lhs <- (Fixed . Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
+  elements [SumsTo (DeltaCoin 1) c v [One rhs], SumsTo (DeltaCoin 1) c lhs [One rhs, One v]]
+
+solveSumsTo :: Pred era -> AddsSpec c
+solveSumsTo (SumsTo _ cond (Fixed (Lit DeltaCoinR n)) [One (Fixed (Lit DeltaCoinR m)), One (Var (V nam _ _))]) =
+  vRight (toI n) cond (toI m) nam
+solveSumsTo (SumsTo _ cond (Var (V nam DeltaCoinR _)) [One (Fixed (Lit DeltaCoinR m))]) =
+  vLeft nam cond (toI m)
+solveSumsTo x = AddsSpecNever ["solveSumsTo " ++ show x]
+
+condReverse :: Gen Property
+condReverse = do
+  predicate <- genSumsTo
+  let addsSpec = solveSumsTo predicate
+  let msgs = ["condFlip", show predicate, show addsSpec]
+  n <- genFromAddsSpec msgs addsSpec
+  let env = storeVar testV (fromI (show n : msgs) n) emptyEnv
+  case runTyped (runPred env predicate) of
+    Right x -> pure (counterexample (unlines (show n : msgs)) x)
+    Left xs -> errorMess "runTyped in condFlip fails" (xs ++ (show n : msgs))
+
 genAddsSpec :: Gen (AddsSpec c)
 genAddsSpec = do
   v <- elements ["x", "y"]
   c <- genOrdCond
-  rhs <- choose (-5, 25)
-  lhs <- choose (-5, 25)
+  rhs <- choose (-25, 25)
+  lhs <- choose (-25, 25)
   elements [vLeft v c rhs, vRight lhs c rhs v]
 
 genNonNegAddsSpec :: Gen (AddsSpec c)
@@ -1654,7 +1760,7 @@ genNonNegAddsSpec = do
   elements [vLeft v c rhs, vRight lhs' c rhs v]
 
 genOrdCond :: Gen OrdCond
-genOrdCond = elements [EQL, LTH, LTE, GTH, GTE] -- We deliberately don't include CondAny
+genOrdCond = elements [EQL, LTH, LTE, GTH, GTE]
 
 runAddsSpec :: forall c. Adds c => c -> AddsSpec c -> Bool
 runAddsSpec c (AddsSpecSize _ size) = runSize (toI c) size
@@ -1680,7 +1786,7 @@ tryManyAddsSpec genSum genFromSum = do
           [ "s1 = " ++ show s1
           , "s2 = " ++ show s2
           , "s1 <> s2 = " ++ show s3
-          , "v = genFromRelSpec (s1 <> s2) = " ++ show v
+          , "v = genFromAdsSpec (s1 <> s2) = " ++ show v
           , "runAddsSpec s1 v = " ++ show run1
           , "runAddsSpec s2 v = " ++ show run2
           , "runAddsSpec (s1 <> s2) v = " ++ show run3
@@ -1715,12 +1821,12 @@ testSoundNonNegAddsSpec = do
 
 testSoundAddsSpec :: Gen Property
 testSoundAddsSpec = do
-  spec <- genAddsSpec @Int
+  spec <- genAddsSpec @DeltaCoin
   c <- genFromAddsSpec ["testSoundAddsSpec " ++ show spec] spec
   pure $
     counterexample
       ("AddsSpec=" ++ show spec ++ "\ngenerated value " ++ show c)
-      (runAddsSpec c spec)
+      (runAddsSpec (fromI ["testSoundAddsSpec"] c) spec)
 
 -- ========================================================
 
@@ -1729,7 +1835,8 @@ main =
   defaultMain $
     testGroup
       "Spec tests"
-      [ testGroup
+      [ testProperty "reversing OrdCond" condReverse
+      , testGroup
           "Size test"
           [ testProperty "test Size sound" testSoundSize
           , testProperty "test genFromSize is non-negative" testNonNegSize

@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Constrained.Size (
   vLeftSize,
   vRightSize,
   OrdCond (..),
-  negOrdCond,
+  reverseOrdCond,
   seps,
   sepsP,
   sepn,
@@ -226,7 +226,7 @@ vRight :: Int -> OrdCond -> Int -> String -> AddsSpec c
 vRight n cond m s = AddsSpecSize s (vRightSize n cond m s)
 
 vRightSize :: Int -> OrdCond -> Int -> String -> Size
-vRightSize n cond m s = ordCondToSize (s, negOrdCond cond, n - m)
+vRightSize n cond m s = ordCondToSize (s, reverseOrdCond cond, n - m)
 
 -- Translate some thing like [SumsTo (Negate x) <= 4 + 6 + 9] where the variable 'x'
 -- is on the left, and we want to produce its negation.
@@ -236,15 +236,27 @@ vLeftNeg s cond n = AddsSpecSize s (negateSize (ordCondToSize (s, cond, n)))
 -- Translate some thing like [SumsTo 8 < 2 + (Negate x) + 3] where the
 -- variable 'x' is on the right, and we want to produce its negation.
 vRightNeg :: Int -> OrdCond -> Int -> String -> AddsSpec c
-vRightNeg n cond m s = AddsSpecSize s (negateSize (ordCondToSize (s, negOrdCond cond, n - m)))
+vRightNeg n cond m s = AddsSpecSize s (negateSize (ordCondToSize (s, reverseOrdCond cond, n - m)))
 
--- | Not exactly conditional negation, but what we need to make 'vRight' work out
-negOrdCond :: OrdCond -> OrdCond
-negOrdCond EQL = EQL
-negOrdCond LTH = GTH
-negOrdCond LTE = GTH
-negOrdCond GTH = LTE
-negOrdCond GTE = LTH
+-- | This function `reverseOrdCond` has been defined to handle the Pred SumsTo when the
+--   variable is on the left-hand-side (lhs) of the OrdCond operator. In order to do that
+--   we must multiply both sides of the inequality by (-1). For example consider
+--   [SumsTo (DeltaCoin 1) ▵₳ -2 > ∑ ▵₳ -1 + x]
+--                 Note variable x on the lhs ^
+--    To solve we subtract 'x' from both sides, and add '▵₳ -2' from bothsides
+--    getting      (-x) > ∑  (▵₳ -1) + (▵₳ -2)
+--    reduced to   (-x) > ∑  (▵₳ -3)
+--    to solve we must multiply both sides by (-1)
+--                 x ?? ∑  (▵₳ 3)
+-- What operator do we replace ?? by to make the original (▵₳ -2 > ∑ ▵₳ -1 + x) True?
+-- The change in the operator is called "reversing" the operator. See
+-- https://www.mathsisfun.com/algebra/inequality-solving.html for one explantion.
+reverseOrdCond :: OrdCond -> OrdCond
+reverseOrdCond EQL = EQL
+reverseOrdCond LTH = GTH
+reverseOrdCond LTE = GTE
+reverseOrdCond GTH = LTH
+reverseOrdCond GTE = LTE
 
 -- | Translate (s,cond,n), into a Size which
 --   specifies the Int range on which the OrdCond is True.

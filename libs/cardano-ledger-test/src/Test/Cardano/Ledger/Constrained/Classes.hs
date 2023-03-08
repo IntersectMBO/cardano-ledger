@@ -39,7 +39,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
-import Test.Cardano.Ledger.Constrained.Size (AddsSpec (..), genFromIntRange, genFromSize)
+import Test.Cardano.Ledger.Constrained.Size (AddsSpec (..), Size (..), genFromIntRange, genFromSize)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
@@ -98,12 +98,12 @@ projAdds xs = List.foldl' accum zero xs
     accum ans x = add ans (getSum x)
 
 genFromAddsSpec :: [String] -> AddsSpec c -> Gen Int
-genFromAddsSpec _ AddsSpecAny = elements [-1, 0, 1, 10]
+genFromAddsSpec _ AddsSpecAny = genFromIntRange SzAny
 genFromAddsSpec _ (AddsSpecSize _ size) = genFromIntRange size
 genFromAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec applied to AddsSpecNever") msgs
 
 genFromNonNegAddsSpec :: [String] -> AddsSpec c -> Gen Int
-genFromNonNegAddsSpec _ AddsSpecAny = elements [0, 1, 10]
+genFromNonNegAddsSpec _ AddsSpecAny = genFromSize SzAny
 genFromNonNegAddsSpec _ (AddsSpecSize _ size) = genFromSize size
 genFromNonNegAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec applied to AddsSpecNever") msgs
 

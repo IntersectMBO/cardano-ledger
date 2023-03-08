@@ -33,6 +33,31 @@ suchThatErr msgs gen p = do
 
 -- =======================================================================
 
+-- | add items from 'source' to 'base' until size 'n' is reached.
+addUntilSize :: Ord a => [String] -> Set a -> Set a -> Int -> Gen (Set a)
+addUntilSize msgs base source n = do
+  let possible = Set.difference source base
+      p = Set.size possible
+      m = Set.size base
+      loop result _ | Set.size result >= n = pure result
+      loop _ extra
+        | Set.null extra =
+            errorMess
+              ( "There are not enough unused elements in 'source'("
+                  ++ show p
+                  ++ ") to reach the size 'n'("
+                  ++ show n
+                  ++ ")"
+              )
+              msgs
+      loop result extra = do
+        i <- choose (0, Set.size extra - 1)
+        loop (Set.insert (Set.elemAt i extra) result) (Set.deleteAt i extra)
+  case compare m n of
+    EQ -> pure base
+    GT -> errorMess ("The size(" ++ show m ++ ") of the 'base' set exceeds the target size(" ++ show n ++ ")") msgs
+    LT -> loop base possible
+
 setSized :: Ord a => [String] -> Int -> Gen a -> Gen (Set a)
 setSized mess size gen = do
   set <- (Set.fromList <$> vectorOf size gen)

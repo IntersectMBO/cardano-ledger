@@ -155,7 +155,7 @@ instance Show (Pred era) where
   show (x :=: y) = show x ++ " :=: " ++ show y
   show (Subset x y) = show x ++ " ⊆  " ++ show y
   show (Disjoint x y) = "Disjoint " ++ show x ++ " " ++ show y
-  show (SumsTo i cond c m) = "SumsTo " ++ show i ++ " " ++ show c ++ show cond ++ showL show " + " m
+  show (SumsTo i cond c m) = "SumsTo (" ++ show i ++ ") " ++ show c ++ show cond ++ showL show " + " m
   show (Random x) = "Random " ++ show x
   show (HasDom m s) = "HasDomain " ++ show m ++ " " ++ show s
   show (Component t ws) = "Component " ++ show t ++ " " ++ show ws
