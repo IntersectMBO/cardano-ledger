@@ -19,13 +19,13 @@ import Data.Pulse (foldlM')
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Debug.Trace (trace)
-import Lens.Micro (Lens', (&), (.~))
+import Lens.Micro (Lens')
+import qualified Lens.Micro as Lens
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Count (..),
-  FromInt (fromInt),
   Sizeable (getsize),
   Sums (..),
  )
@@ -87,15 +87,16 @@ ifTrace traceOn message a = case traceOn of
 hasOrd :: Rep era t -> s t -> Typed (HasCond Ord (s t))
 hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
   where
+    err t c = error ("hasOrd function 'help' evaluates its second arg at type " ++ show t ++ ", in " ++ c ++ " case.")
     help :: Rep era t -> s t -> Typed (HasCond Ord (s t))
     help CoinR t = pure $ With t
     help r@(_ :-> _) _ = failT [show r ++ " does not have an Ord instance."]
-    help (MapR _ b) m = do
-      With _ <- help b undefined -- TODO  use error
+    help r@(MapR _ b) m = do
+      With _ <- help b (err b (show r))
       pure (With m)
     help (SetR _) s = pure $ With s
-    help (ListR a) l = do
-      With _ <- help a undefined
+    help r@(ListR a) l = do
+      With _ <- help a (err a (show r))
       pure $ With l
     help CredR c = pure $ With c
     help PoolHashR p = pure $ With p
@@ -127,8 +128,8 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help (PParamsR _) _ = failT ["PParams does not have Ord instance"]
     help (PParamsUpdateR _) _ = failT ["PParamsUpdate does not have Ord instance"]
     help RewardR v = pure $ With v
-    help (MaybeR a) l = do
-      With _ <- help a undefined
+    help r@(MaybeR a) l = do
+      With _ <- help a (err a (show r))
       pure $ With l
     help NewEpochStateR _ = failT ["NewEpochStateR does not have Ord instance"]
     help (ProtVerR _) v = pure $ With v
@@ -155,7 +156,7 @@ hasAdds NaturalR x = pure $ With x
 hasAdds r _ = failT [show r ++ " does not have Adds instance."]
 
 isAddsType :: forall era t. Rep era t -> Bool
-isAddsType rep = case hasAdds rep (Id (undefined :: t)) of
+isAddsType rep = case hasAdds rep rep of
   (Typed (Right (With _))) -> True
   (Typed (Left _)) -> False
 
@@ -169,22 +170,7 @@ hasCount EpochR x = pure $ With x
 hasCount r _ = failT [show r ++ " does not have Count instance."]
 
 isCountType :: forall era t. Rep era t -> Bool
-isCountType rep = case hasCount rep (Id (undefined :: t)) of
-  (Typed (Right (With _))) -> True
-  (Typed (Left _)) -> False
-
--- =================================
-
--- | Is there a FromInt instance for 't'                                   TODO get rud of this
-hasFromInt :: Rep era t -> (s t) -> Typed (HasCond FromInt (s t))
-hasFromInt IntR x = pure $ With x
-hasFromInt Word64R x = pure $ With x
-hasFromInt CoinR x = pure $ With x
-hasFromInt NaturalR x = pure $ With x
-hasFromInt r _ = failT [show r ++ " does not have FromInt instance."]
-
-isFromIntType :: forall era t. Rep era t -> Bool
-isFromIntType rep = case hasFromInt rep (Id (undefined :: t)) of
+isCountType rep = case hasCount rep rep of
   (Typed (Right (With _))) -> True
   (Typed (Left _)) -> False
 
@@ -233,14 +219,13 @@ projOnDom setA lensDomA repDom repRng = do
   pairs <- mapM (\d -> do r <- genRep repRng; pure (d, r)) ds
   pure (Map.fromList pairs)
   where
-    genThenOverwriteA a = do b <- genRep repDom; pure (b & lensDomA .~ a)
+    genThenOverwriteA a = do b <- genRep repDom; pure (Lens.set lensDomA a b)
 
 atLeast :: (Era era, Adds c) => Rep era c -> c -> Gen c
 atLeast rep c = add c <$> genRep rep
 
 -- ================================================================
 -- Solver for variables of type (Map dom rng)
-
 solveMap :: forall dom rng era. Era era => V era (Map dom rng) -> Pred era -> Typed (MapSpec era dom rng)
 solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   (Sized (Lit SizeR sz) (Var v2))
@@ -277,15 +262,9 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
         mapSpec (SzLeast (Set.size s)) RelAny (RngRel (relEqual rng s))
   (Rng (Var v2) `Subset` expr)
     | Name v1 == Name v2 -> do
-        With _ <- hasOrd rng (Id undefined)
+        With _ <- hasOrd rng rng
         With n <- simplifySet rng expr
         mapSpec SzAny RelAny (RngRel (relSubset rng n))
-  -- TODO is this possible?
-  (Rng expr `Subset` (Var v2))
-    | Name v1 == Name v2 -> do
-        With _ <- hasOrd rng (Id undefined)
-        With n <- simplifySet rng expr
-        mapSpec SzAny RelAny (RngRel (relSuperset rng n))
   (expr :=: Dom (Var v2))
     | Name v1 == Name v2 -> do
         let SetR a = termRep expr
@@ -411,7 +390,12 @@ solveSum v1@(V nam r _) predx =
     ((Var v2) :=: expr) | Name v1 == Name v2 -> do
       n <- simplifyAtType r expr
       pure $ vLeft nam EQL (toI n)
-    -- TODO    (expr :=: Delta(Var v2))   (Delta(Var v2) :=: expr)
+    (expr :=: Delta (Var v2@(V _ CoinR _))) | Name v1 == Name v2 -> do
+      DeltaCoin n <- simplify expr
+      pure $ vLeft nam EQL (toI (Coin n))
+    -- This is an EQL test (x :=: y), so whether the
+    -- variable is on the Left or the Right does not matter
+    (Delta (Var v2) :=: expr) -> solveSum v1 (expr :=: (Delta (Var v2)))
     (expr :=: Negate (Var v2)) | Name v1 == Name v2 -> do
       Refl <- sameRep r DeltaCoinR
       DeltaCoin n <- simplifyAtType DeltaCoinR expr
@@ -421,8 +405,6 @@ solveSum v1@(V nam r _) predx =
       DeltaCoin n <- simplifyAtType DeltaCoinR expr
       pure $ vLeft nam EQL (toI (DeltaCoin (-n)))
     (Random (Var v2)) | Name v1 == Name v2 -> pure AddsSpecAny
-    -- TODO unit tests for all of the many different SumsTo cases
-
     (SumsTo _ (Delta (Lit _ n)) cond xs@(_ : _)) -> do
       (rhsTotal, needsNeg) <- intSumWithUniqueV v1 xs
       case r of
@@ -540,7 +522,7 @@ data Update t where Update :: Eq s => s -> Lens' t s -> Update t
 
 update :: t -> [Update t] -> t
 update t [] = t
-update t (Update s l : more) = update (t & l .~ s) more -- TODO set t (l1 . l2 . l3) s  , access  (t .^ (l1 . l2 . l3))
+update t (Update s l : more) = update (Lens.set l s t) more
 
 anyToUpdate :: Rep era t1 -> (AnyF era t2) -> Typed (Update t1)
 anyToUpdate rep1 (AnyF (FConst _ s (Yes rep2 l))) = do
@@ -584,9 +566,9 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
   [Sized (Var v2) (Lit SizeR x)] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 SizeR
     pure (pure (SzExact (getsize x)))
-  [Sized (Lit SizeR sz) (Var v2)] | isFromIntType r1 && Name v1 == Name v2 -> do
-    With _ <- hasFromInt r1 r1
-    pure $ fromInt <$> genFromSize sz
+  [Sized (Lit SizeR sz) (Var v2)] | isAddsType r1 && Name v1 == Name v2 -> do
+    With _ <- hasAdds r1 r1
+    pure $ fromI ["dispatch " ++ show v1 ++ " " ++ show preds] <$> genFromSize sz
   [Random (Var v2)] | Name v1 == Name v2 -> pure $ genRep r1
   cs -> case r1 of
     MapR dom rng -> do

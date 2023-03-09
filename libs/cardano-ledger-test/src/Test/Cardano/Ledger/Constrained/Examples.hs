@@ -221,16 +221,12 @@ test5 = failn (Mary Mock) "Test 5. Bad Sum, impossible partition." False stoi cs
 -- ===========================================================
 -- Example list of Constraints for test4 and test5
 
-commonSize :: Term era Int
-commonSize = Var (V "commonSize" IntR No)
-
 constraints :: Proof era -> [Pred era]
 constraints proof =
   [ Sized (ExactSize 10) credsUniv
   , Sized (ExactSize 10) poolsUniv
-  , Sized (AtLeast 1) commonSize
-  , Sized (ExactSize 1) mockPoolDistr -- This is summed so it can't be empty.
-  , Sized (ExactSize 1) regPools -- This has the same domain, so it must have the same size
+  , Sized (AtLeast 1) mockPoolDistr -- This is summed so it can't be empty.
+  , Sized (AtLeast 1) regPools -- This has the same domain, so it can't be empty either
   , Dom rewards :⊆: credsUniv
   , Rng delegations :⊆: poolsUniv
   , Dom poolDeposits :⊆: poolsUniv
@@ -243,7 +239,7 @@ constraints proof =
   , Dom regPools :⊆: poolsUniv
   , Dom retiring :⊆: Dom regPools
   , SumsTo (Coin 1) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
-  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [SumMap mockPoolDistr] -- FOR SOME REASON, This must have size 1, TODO fix this
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [SumMap mockPoolDistr]
   , SumsTo
       (Coin 1)
       totalAda

@@ -270,15 +270,6 @@ instance Show t => Sizeable [t] where
 instance Sizeable Coin where
   getsize (Coin n) = fromIntegral n
 
--- | Types which can reasonably be described by a positive Int
-class Sizeable t => FromInt t where
-  fromInt :: Int -> t
-
-instance FromInt Int where fromInt n = n
-instance FromInt Natural where fromInt n = fromIntegral n
-instance FromInt Coin where fromInt n = Coin (fromIntegral n)
-instance FromInt Word64 where fromInt n = fromIntegral n
-
 -- ===========================================================
 -- The Count classs 0,1,2,3,4 ...
 

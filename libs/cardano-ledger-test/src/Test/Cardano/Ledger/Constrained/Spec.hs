@@ -428,10 +428,6 @@ genFromRelSpec msgs g n spec =
                     (msg : msgs)
                 GT -> addUntilSize (msg : msgs) must choices n
 
--- fixSet (("choices " ++ show (Set.size choices)) : msg : msgs) 1000 n (itemFromSet (msg : msgs) choices) must
-
---- TODO  fixSet based on removal from a set.
-
 -- | Generate a random RelSpec
 genRelSpec :: Ord dom => [String] -> Gen dom -> Rep era dom -> Int -> Gen (RelSpec era dom)
 genRelSpec _ _ r 0 = pure $ relEqual r Set.empty

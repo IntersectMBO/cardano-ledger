@@ -12,6 +12,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, ProtVer (..), StrictM
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (
   EraPParams,
+  PParams,
   ppMaxBBSizeL,
   ppMaxBHSizeL,
   ppMaxTxSizeL,
@@ -318,13 +319,15 @@ snapshots = Var (V "snapshots" SnapShotsR (Yes NewEpochStateR snapshotsL))
 snapshotsL :: NELens era (SnapShots (EraCrypto era))
 snapshotsL = nesEsL . esSnapshotsL
 
-prevpparams :: Proof era -> Term era (PParamsF era)
-prevpparams p = Var (V "prevpparams" (PParamsR p) No)
+-- | Lens' from the Core PParams to the Model PParamsF which embeds a (Proof era)
+ppFL :: Proof era -> Lens' (PParams era) (PParamsF era)
+ppFL p = lens (\pp -> PParamsF p pp) (\_ (PParamsF _ qq) -> qq)
 
--- TODO fix this lens to use PParamsF instead of PParams (Yes NewEpochStateR (nesEsL . esPrevPpL)))
+prevpparams :: Proof era -> Term era (PParamsF era)
+prevpparams p = Var (V "prevpparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . esPrevPpL . ppFL p)))
 
 pparams :: Proof era -> Term era (PParamsF era)
-pparams p = Var (V "pparams" (PParamsR p) No) -- TODO fix me too (Yes NewEpochStateR (nesEsL . esPpL)))
+pparams p = Var (V "pparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . esPpL . ppFL p)))
 
 nmLikelihoodsT :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) [Float])
 nmLikelihoodsT = Var (V "likelihoodsNM" (MapR PoolHashR (ListR FloatR)) (Yes NewEpochStateR (nesEsL . esNonMyopicL . nmLikelihoodsL)))
