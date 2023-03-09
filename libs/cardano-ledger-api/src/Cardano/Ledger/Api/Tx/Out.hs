@@ -71,6 +71,7 @@ module Cardano.Ledger.Api.Tx.Out (
 where
 
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..))
+import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Api.Scripts.Data (Data (..), DataHash, Datum (..))
 import Cardano.Ledger.Api.Tx.Address
 import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))

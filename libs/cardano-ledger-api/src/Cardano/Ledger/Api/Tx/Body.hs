@@ -65,6 +65,7 @@ where
 import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
+import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Api.Scripts
 import Cardano.Ledger.Api.Tx.Out
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)

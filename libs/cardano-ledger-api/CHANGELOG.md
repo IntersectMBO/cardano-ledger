@@ -23,6 +23,12 @@
   `AlonzoEraTxWits`, `TxDats`, `unTxDats`, `Redeemers`, `unRedeemers`, `RdmrPtr` and
   `Tag`.
 * Export from `Cardano.Ledger.Api.Scripts`: `CostModels` and `ValidityInterval`.
+* Export from `Cardano.Ledger.Api.Era`:
+  * `Era`
+  * `ByronEra`
+  * And protocol version related functionality: `eraProtVerHigh`, `eraProtVerLow`,
+    `AtLeastEra`, `AtMostEra`, `ExactEra`, `ProtVerAtLeast`, `ProtVerAtMost`,
+    `ProtVerInBounds`, `atLeastEra` and `atMostEra`
 
 
 ## 1.0.0.0

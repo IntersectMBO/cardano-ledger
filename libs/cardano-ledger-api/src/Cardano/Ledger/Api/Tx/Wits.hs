@@ -43,6 +43,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemers,
   unTxDats,
  )
+import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Core (EraTxWits (..))
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
