@@ -315,7 +315,7 @@ genFromOrdCond cond canBeNegative n =
   suchThatErr
     ["genFromOrdCond " ++ show cond ++ " " ++ show n]
     ( frequency $
-        [(1, pure $ subtract ["genFromOrdCond"] n (fromI [] 1)) | n > zero || canBeNegative]
+        [(1, pure $ minus ["genFromOrdCond"] n (fromI [] 1)) | n > zero || canBeNegative]
           ++ [ (1, pure n)
              , (1, pure $ add n (fromI [] 1))
              , (10, arbitrary)
@@ -435,10 +435,11 @@ genPred env =
             -- for now, since sumBeforeParts is anyway disabled due to TODO/SumSet.
             -- count <- choose (1, min 3 val)
             let count = 1
-            partSums <- partition ["sumdToC in Tests.hs"] count val
+            small <- genSmall @Coin
+            partSums <- partition (fromI [] small) ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
-            pure (SumsTo 1 EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+            pure (SumsTo (fromI [] small) EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
       | otherwise =
           oneof
             [ sumCKnownSets CoinR False
@@ -469,7 +470,8 @@ genPred env =
             (flip (runOrdCond cmp) tot)
             (Lit rep <$> genFromOrdCond cmp canBeNegative tot)
             (VarTerm d)
-        pure (SumsTo 1 cmp sumTm parts, markSolved (vars sumTm) d env'')
+        small <- genSmall @c
+        pure (SumsTo (fromI [] small) cmp sumTm parts, markSolved (vars sumTm) d env'')
 
     hasDomC
       | mapBeforeDom (gOrder env) = do
