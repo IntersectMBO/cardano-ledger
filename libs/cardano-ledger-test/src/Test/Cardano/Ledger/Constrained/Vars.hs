@@ -51,7 +51,7 @@ import qualified Data.VMap as VMap
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Constrained.Ast (Target (..), Term (Var), constTarget, ppTarget, ($>))
+import Test.Cardano.Ledger.Constrained.Ast (Target (..), Term (Var), constTarget, ppTarget, (^$))
 import Test.Cardano.Ledger.Constrained.Classes (
   GovernanceState (..),
   PParamsF (..),
@@ -263,7 +263,7 @@ futureProposalsT ::
 futureProposalsT p = Var (V "futureProposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
 ppupStateT :: Proof era -> Target era (ShelleyPPUPState era)
-ppupStateT p = Constr "PPUPState" ppupfun $> proposalsT p $> futureProposalsT p
+ppupStateT p = Constr "PPUPState" ppupfun ^$ proposalsT p ^$ futureProposalsT p
   where
     ppupfun x y =
       ShelleyPPUPState
@@ -364,7 +364,7 @@ markPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (
 markPoolsL = nesEsL . esSnapshotsL . ssStakeMarkL . ssPoolParamsL . vmapL
 
 markSnapShotT :: Target era (SnapShot (EraCrypto era))
-markSnapShotT = Constr "SnapShot" snapfun $> markStake $> markDelegs $> markPools
+markSnapShotT = Constr "SnapShot" snapfun ^$ markStake ^$ markDelegs ^$ markPools
   where
     snapfun x y z =
       SnapShot
@@ -391,7 +391,7 @@ setPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (E
 setPoolsL = nesEsL . esSnapshotsL . ssStakeSetL . ssPoolParamsL . vmapL
 
 setSnapShotT :: Target era (SnapShot (EraCrypto era))
-setSnapShotT = Constr "SnapShot" snapfun $> setStake $> setDelegs $> setPools
+setSnapShotT = Constr "SnapShot" snapfun ^$ setStake ^$ setDelegs ^$ setPools
   where
     snapfun x y z =
       SnapShot
@@ -418,7 +418,7 @@ goPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (Er
 goPoolsL = nesEsL . esSnapshotsL . ssStakeGoL . ssPoolParamsL . vmapL
 
 goSnapShotT :: Target era (SnapShot (EraCrypto era))
-goSnapShotT = Constr "SnapShot" snapfun $> goStake $> goDelegs $> goPools
+goSnapShotT = Constr "SnapShot" snapfun ^$ goStake ^$ goDelegs ^$ goPools
   where
     snapfun x y z =
       SnapShot
@@ -585,11 +585,11 @@ newEpochStateConstr
 newEpochStateT :: Proof era -> Target era (NewEpochState era)
 newEpochStateT proof =
   Constr "NewEpochState" (newEpochStateConstr proof)
-    $> epochNo
-    $> prevBlocksMade
-    $> currBlocksMade
+    ^$ epochNo
+    ^$ prevBlocksMade
+    ^$ currBlocksMade
     :$ epochStateT proof
-    $> poolDistr
+    ^$ poolDistr
 
 -- | Target for EpochState
 epochStateT :: Proof era -> Target era (EpochState era)
@@ -598,14 +598,14 @@ epochStateT proof =
     :$ accountStateT
     :$ snapShotsT
     :$ ledgerStateT proof
-    $> prevpparams proof
-    $> pparams proof
+    ^$ prevpparams proof
+    ^$ pparams proof
   where
     epochStateFun a s l pp p = EpochState a s l (unPParams pp) (unPParams p) (NonMyopic Map.empty (Coin 0))
 
 -- | Target for AccountState
 accountStateT :: Target era AccountState
-accountStateT = Constr "AccountState" AccountState $> treasury $> reserves
+accountStateT = Constr "AccountState" AccountState ^$ treasury ^$ reserves
 
 -- | Target for LedgerState
 ledgerStateT :: Proof era -> Target era (LedgerState era)
@@ -613,7 +613,7 @@ ledgerStateT proof = Constr "LedgerState" LedgerState :$ utxoStateT proof :$ dps
 
 -- | Target for UTxOState
 utxoStateT :: Proof era -> Target era (UTxOState era)
-utxoStateT p = Constr "UTxOState" (utxofun p) $> (pparams p) $> utxo p $> deposits $> fees :$ governanceStateT p
+utxoStateT p = Constr "UTxOState" (utxofun p) ^$ (pparams p) ^$ utxo p ^$ deposits ^$ fees :$ governanceStateT p
   where
     utxofun ::
       Proof era ->
@@ -636,18 +636,18 @@ dpstateT = Constr "DPState" DPState :$ dstateT :$ pstateT
 
 -- | Target for PState
 pstateT :: Target era (PState (EraCrypto era))
-pstateT = Constr "PState" PState $> regPools $> futureRegPools $> retiring $> poolDeposits
+pstateT = Constr "PState" PState ^$ regPools ^$ futureRegPools ^$ retiring ^$ poolDeposits
 
 -- | Target for DState
 dstateT :: Target era (DState (EraCrypto era))
 dstateT =
   Constr "DState" dstate
-    $> rewards
-    $> stakeDeposits
-    $> delegations
-    $> ptrs
-    $> futureGenDelegs
-    $> genDelegs
+    ^$ rewards
+    ^$ stakeDeposits
+    ^$ delegations
+    ^$ ptrs
+    ^$ futureGenDelegs
+    ^$ genDelegs
     :$ instantaneousRewardsT
 
 -- | Abstract construcor function for DState
@@ -666,10 +666,10 @@ dstate rew dep deleg ptr fgen gen instR =
 instantaneousRewardsT :: Target era (DPS.InstantaneousRewards (EraCrypto era))
 instantaneousRewardsT =
   Constr "InstantaneousRewards" DPS.InstantaneousRewards
-    $> instanReserves
-    $> instanTreasury
-    $> deltaReserves
-    $> deltaTreasury
+    ^$ instanReserves
+    ^$ instanTreasury
+    ^$ deltaReserves
+    ^$ deltaTreasury
 
 -- | A String that pretty prints the complete set of variables
 allvars :: String

@@ -38,7 +38,7 @@ import Test.Cardano.Ledger.Constrained.Size (OrdCond (EQL), Size (SzRng))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-import Test.QuickCheck hiding (Fixed, total)
+import Test.QuickCheck hiding (total)
 
 {-
 
@@ -97,7 +97,7 @@ type Depth = Int
 
 instance Arbitrary OrderInfo where
   arbitrary = do
-    info <- OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+    info <- OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary
     -- TODO/supersetConstraints: RngSpec can't represent superset constraints at the moment, so
     -- setBeforeSubset = False doesn't work.
     -- TODO/SumSet: The generator for a Set with a given sum doesn't work (it doesn't account for
@@ -133,6 +133,10 @@ depthOfSum env = \case
   One t -> depthOf env t
   Project _ t -> depthOf env t
 
+data Literal era t where Literal :: Rep era t -> t -> Literal era t
+fixed :: Literal era t -> Term era t
+fixed (Literal r t) = Lit r t
+
 genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen (Literal era t)
 genLiteral env rep =
   case rep of
@@ -140,16 +144,16 @@ genLiteral env rep =
     _ -> unconstrained rep
   where
     unconstrained :: forall a. Rep era a -> Gen (Literal era a)
-    unconstrained r = Lit r <$> genRep r
+    unconstrained r = Literal r <$> genRep r
 
     setLiteral :: forall a. Ord a => Rep era a -> Gen (Literal era (Set a))
     setLiteral erep = do
-      let knownSets = [val | (_, Lit _ val) <- envVarsOfType (gEnv env) (SetR erep)]
+      let knownSets = [val | (_, Literal _ val) <- envVarsOfType (gEnv env) (SetR erep)]
           gen = oneof $ genRep (SetR erep) : map pure knownSets
       set1 <- gen
       set2 <- gen
       op <- elements [const, const id, Set.union, Set.intersection, Set.difference, flip Set.difference]
-      pure $ Lit (SetR erep) $ op set1 set2
+      pure $ Literal (SetR erep) $ op set1 set2
 
 genFreshVarName :: GenEnv era -> Gen String
 genFreshVarName env = elements varNames
@@ -166,7 +170,7 @@ envVarsOfType (Env env) rep = concatMap wellTyped $ Map.toList env
   where
     wellTyped (name, Payload rep' val access) =
       case testEql rep rep' of
-        Just Refl -> [(V name rep access, Lit rep val)]
+        Just Refl -> [(V name rep access, Literal rep val)]
         Nothing -> []
 
 data VarSpec
@@ -188,18 +192,18 @@ genTerm' env rep valid genLit vspec =
       ++ [(5, genExistingVar) | not $ null allowedVars]
       ++ [(1, genFreshVar) | VarTerm {} <- [vspec]]
   where
-    isValid (_, Lit _ val) = valid val
+    isValid (_, Literal _ val) = valid val
     existingVars = map fst $ filter isValid $ envVarsOfType (gEnv env) rep
     allowedVars = case vspec of
       VarTerm d -> filter ((>= d) . depthOfName env . Name) existingVars
       KnownTerm -> filter ((`Map.member` gSolved env) . Name) existingVars
 
-    genFixed = (,env) . Fixed <$> genLit
+    genFixed = (,env) . fixed <$> genLit
     genExistingVar = (,env) . Var <$> elements allowedVars
 
     genFreshVar = do
       name <- genFreshVarName env
-      Lit _ val <- genLit
+      Literal _ val <- genLit
       let var = V name rep No
       pure (Var var, addVar var val env)
 
@@ -214,7 +218,7 @@ genBaseType = elements [TypeInEra IntR]
 
 -- | Unsatisfiable constraint returned if we fail during constraint generation.
 errPred :: [String] -> Pred era
-errPred errs = Fixed (Lit (ListR StringR) ["Errors:"]) :=: Fixed (Lit (ListR StringR) errs)
+errPred errs = (Lit (ListR StringR) ["Errors:"]) :=: (Lit (ListR StringR) errs)
 
 -- This is very ad hoc
 setWithSum :: Int -> Gen (Set Int)
@@ -285,7 +289,7 @@ genPred env =
                 env'
                 (SetR rep)
                 (`Set.isSubsetOf` val)
-                (Lit (SetR rep) <$> subsetFromSet ["From genPred subsetC"] val)
+                (Literal (SetR rep) <$> subsetFromSet ["From genPred subsetC"] val)
                 (VarTerm d)
             pure (sub `Subset` sup, markSolved (vars sub) d env'')
       | otherwise = do
@@ -298,7 +302,7 @@ genPred env =
                 env'
                 (SetR rep)
                 (Set.isSubsetOf val)
-                (Lit (SetR rep) . Set.union val <$> genRep (SetR rep))
+                (Literal (SetR rep) . Set.union val <$> genRep (SetR rep))
                 (VarTerm d)
             pure (sub `Subset` sup, markSolved (vars sup) d env'')
 
@@ -312,7 +316,7 @@ genPred env =
             env'
             (SetR rep)
             (Set.disjoint val)
-            (Lit (SetR rep) . (`Set.difference` val) <$> genRep (SetR rep))
+            (Literal (SetR rep) . (`Set.difference` val) <$> genRep (SetR rep))
             (VarTerm d)
         pure (Disjoint lhs rhs, markSolved (vars rhs) d env'')
 
@@ -320,7 +324,7 @@ genPred env =
     sumsToC
       | sumBeforeParts (gOrder env) =
           -- Known sum
-          withValue (genTerm' env IntR (> 10) (Lit IntR . (+ 10) . getPositive <$> arbitrary) KnownTerm) $ \sumTm val env' -> do
+          withValue (genTerm' env IntR (> 10) (Literal IntR . (+ 10) . getPositive <$> arbitrary) KnownTerm) $ \sumTm val env' -> do
             let d = 1 + depthOf env' sumTm
 
                 genParts [] env0 = pure ([], env0)
@@ -330,7 +334,7 @@ genPred env =
                       env0
                       (ListR IntR)
                       ((== n) . sum)
-                      (Lit (ListR IntR) <$> listWithSum n)
+                      (Literal (ListR IntR) <$> listWithSum n)
                       (VarTerm d)
                   first (SumList t :) <$> genParts ns env1
             -- TODO: It's unclear what the requirements are on the parts when solving sumBeforeParts.
@@ -341,7 +345,7 @@ genPred env =
             partSums <- partitionInt 1 ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
-            pure (SumsTo 1 EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+            pure (SumsTo 1 sumTm EQL parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
       | otherwise = do
           -- Known sets
           let genParts 0 env0 k = k [] 0 env0
@@ -357,9 +361,9 @@ genPred env =
                 env'
                 IntR
                 (== tot)
-                (pure $ Lit IntR tot)
+                (pure $ Literal IntR tot)
                 (VarTerm d)
-            pure (SumsTo 1 EQL sumTm parts, markSolved (vars sumTm) d env'')
+            pure (SumsTo 1 sumTm EQL parts, markSolved (vars sumTm) d env'')
 
 genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
 genPreds = \env -> do
@@ -443,7 +447,7 @@ showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) +
 showVal rep t = synopsis rep t
 
 showTerm :: Term era t -> String
-showTerm (Fixed (Lit rep t)) = showVal rep t
+showTerm (Lit rep t) = showVal rep t
 showTerm t = show t
 
 showPred :: Pred era -> String
@@ -463,7 +467,6 @@ predConstr (_ `Subset` _) = "Subset"
 predConstr Disjoint {} = "Disjoint"
 predConstr SumsTo {} = "SumsTo"
 predConstr Random {} = "Random"
-predConstr HasDom {} = "HasDom"
 predConstr Component {} = "Component"
 predConstr CanFollow {} = "CanFollow"
 

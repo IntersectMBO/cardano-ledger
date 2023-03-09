@@ -65,8 +65,7 @@ stoi = standardOrderInfo
 
 genMaybeCounterExample :: Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen (Maybe String)
 genMaybeCounterExample proof _testname loud order cs target = do
-  let cs2 = remDom cs
-  let cs3 = removeEqual cs2 []
+  let cs3 = removeEqual cs []
   let cs4 = removeSameVar cs3 []
   graph@(DependGraph _) <- monadTyped $ compile order cs
   let messages1 =
@@ -75,8 +74,6 @@ genMaybeCounterExample proof _testname loud order cs target = do
           else
             [ "Constraints"
             , show cs
-            , "Introduce new variables"
-            , show cs2
             , "Substitute for Equality"
             , show cs3
             , "Remove syntactic tautologies"
@@ -200,7 +197,7 @@ test3 = testn (Mary Mock) "Test 3. PState example" False stoi cs (Assemble pstat
       , Dom mockPoolDistr :⊆: poolsUniv
       , Dom futureRegPools :⊆: poolsUniv
       , Dom retiring :⊆: Dom regPools
-      , SumsTo (1 % 1000) EQL (Fixed (Lit RationalR 1)) [SumMap mockPoolDistr]
+      , SumsTo (1 % 1000) (Lit RationalR 1) EQL [SumMap mockPoolDistr]
       ]
 
 -- ==============================
@@ -210,7 +207,7 @@ test4 = failn (Mary Mock) "Test 4. Inconsistent Size" False stoi cs Skip
   where
     cs =
       [ Sized (ExactSize 5) rewards
-      , SumsTo (Coin 1) GTH (Fixed (Lit CoinR (Coin 5))) [SumMap rewards]
+      , SumsTo (Coin 1) (Lit CoinR (Coin 5)) GTH [SumMap rewards]
       ]
 
 test5 :: IO ()
@@ -218,7 +215,7 @@ test5 = failn (Mary Mock) "Test 5. Bad Sum, impossible partition." False stoi cs
   where
     cs =
       [ Sized (ExactSize 5) rewards
-      , SumsTo (Coin 1) EQL (Fixed (Lit CoinR (Coin 4))) [SumMap rewards]
+      , SumsTo (Coin 1) (Lit CoinR (Coin 4)) EQL [SumMap rewards]
       ]
 
 -- ===========================================================
@@ -245,12 +242,12 @@ constraints proof =
   , Dom regPools :=: Dom poolDeposits
   , Dom regPools :⊆: poolsUniv
   , Dom retiring :⊆: Dom regPools
-  , SumsTo (Coin 1) EQL deposits [SumMap stakeDeposits, SumMap poolDeposits]
-  , SumsTo (1 % 1000) EQL (Fixed (Lit RationalR 1)) [SumMap mockPoolDistr] -- FOR SOME REASON, This must have size 1, TODO fix this
+  , SumsTo (Coin 1) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [SumMap mockPoolDistr] -- FOR SOME REASON, This must have size 1, TODO fix this
   , SumsTo
       (Coin 1)
-      EQL
       totalAda
+      EQL
       [ One utxoCoin
       , One treasury
       , One reserves
@@ -357,11 +354,11 @@ test8 =
 sumPreds :: Reflect era => Proof era -> [Pred era]
 sumPreds proof =
   [ Random totalAda
-  , fees :=: Fixed (Lit CoinR (Coin 400))
-  , deposits :=: Fixed (Lit CoinR (Coin 200))
-  , SumsTo (Coin 1) LTE totalAda [One fees, One deposits, One utxoAmt]
-  , SumsTo (1 % 1000) EQL (Fixed (Lit RationalR 1)) [Project RationalR poolDistr]
-  , SumsTo (Coin 1) GTH utxoAmt [Project CoinR (utxo proof)]
+  , fees :=: (Lit CoinR (Coin 400))
+  , deposits :=: (Lit CoinR (Coin 200))
+  , SumsTo (Coin 1) totalAda LTE [One fees, One deposits, One utxoAmt]
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [Project RationalR poolDistr]
+  , SumsTo (Coin 1) utxoAmt GTH [Project CoinR (utxo proof)]
   , Sized (AtLeast 1) (utxo proof) -- Any map that is summed, to a nonzero amount, can't be empty.
   , Sized (AtLeast 1) poolDistr
   ]
@@ -380,11 +377,11 @@ test10 =
     stoi
     [ Random x
     , Sized (AtLeast 2) y -- We Shouldn't need this, but without it breaks the LTH case  ? < 2 can't be solved
-    , SumsTo (Coin 1) LTH tsumLTH [One x, One y]
-    , SumsTo (Coin 1) LTE tsumLTE [One x, One y]
-    , SumsTo (Coin 1) GTH tsumGTH [One x, One y]
-    , SumsTo (Coin 1) GTE tsumGTE [One x, One y]
-    , SumsTo (Coin 1) EQL tsumEQL [One x, One y]
+    , SumsTo (Coin 1) tsumLTH LTH [One x, One y]
+    , SumsTo (Coin 1) tsumLTE LTE [One x, One y]
+    , SumsTo (Coin 1) tsumGTH GTH [One x, One y]
+    , SumsTo (Coin 1) tsumGTE GTE [One x, One y]
+    , SumsTo (Coin 1) tsumEQL EQL [One x, One y]
     ]
     Skip
   where
@@ -409,10 +406,10 @@ test11 =
     , Random instanTreasury
     , Sized (AtLeast 1) instanReserves
     , Negate (deltaReserves) :=: deltaTreasury
-    , SumsTo (Coin 1) EQL instanReservesSum [SumMap instanReserves]
-    , SumsTo (DeltaCoin 1) LTH (Delta instanReservesSum) [One (Delta reserves), One deltaReserves]
-    , SumsTo (Coin 1) EQL instanTreasurySum [SumMap instanTreasury]
-    , SumsTo (DeltaCoin 1) GTE (Delta treasury) [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
+    , SumsTo (Coin 1) instanReservesSum EQL [SumMap instanReserves]
+    , SumsTo (DeltaCoin 1) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
+    , SumsTo (Coin 1) instanTreasurySum EQL [SumMap instanTreasury]
+    , SumsTo (DeltaCoin 1) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
     ]
     Skip
   where
@@ -451,8 +448,8 @@ componentPreds proof =
   , Sized size mm
   , SumsTo
       (Coin 1)
+      (Lit CoinR (Coin 100))
       EQL
-      (Fixed $ Lit CoinR (Coin 100))
       [ One (minFeeA proof)
       , One (minFeeB proof)
       ]
@@ -504,7 +501,7 @@ test15 =
     , Sized (AtLeast 1) (maxBHSize proof)
     , -- if both maxTxSize and maxBHSize are Random it may be impossible to solve
       -- because  both might be 0, and maxBBSize <= 0, is inconsistent.
-      SumsTo 1 LTE (maxBBSize proof) [One (maxBHSize proof), One (maxTxSize proof)]
+      SumsTo 1 (maxBBSize proof) LTE [One (maxBHSize proof), One (maxTxSize proof)]
     , Component
         (pparams proof)
         [field pp (maxTxSize proof), field pp (maxBHSize proof), field pp (maxBBSize proof)]
@@ -521,10 +518,10 @@ preds16 _proof =
   [ Sized (ExactSize 6) poolsUniv
   , Sized (Range 1 3) (Dom poolDistr) -- At least 1 but smaller than the poolsUniv
   , Dom poolDistr :⊆: poolsUniv
-  , SumsTo (1 % 1000) EQL (Fixed (Lit RationalR 1)) [Project RationalR poolDistr]
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [Project RationalR poolDistr]
   , Sized (Range 1 4) (Dom foox) -- At least 1 but smaller than the poolsUniv
   , Dom foox :⊆: poolsUniv
-  , SumsTo (1 % 1000) EQL (Fixed (Lit RationalR 1)) [SumMap foox]
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [SumMap foox]
   ]
   where
     foox = Var (V "foo" (MapR PoolHashR RationalR) No)
@@ -604,10 +601,10 @@ dstatePreds _p =
   , Random instanTreasury
   , Sized (AtLeast 1) instanReserves
   , Negate (deltaReserves) :=: deltaTreasury
-  , SumsTo (Coin 1) EQL instanReservesSum [SumMap instanReserves]
-  , SumsTo (DeltaCoin 1) LTH (Delta instanReservesSum) [One (Delta reserves), One deltaReserves]
-  , SumsTo (Coin 1) EQL instanTreasurySum [SumMap instanTreasury]
-  , SumsTo (DeltaCoin 1) LTH (Delta instanTreasurySum) [One (Delta treasury), One deltaTreasury]
+  , SumsTo (Coin 1) instanReservesSum EQL [SumMap instanReserves]
+  , SumsTo (DeltaCoin 1) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
+  , SumsTo (Coin 1) instanTreasurySum EQL [SumMap instanTreasury]
+  , SumsTo (DeltaCoin 1) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   ]
   where
@@ -619,9 +616,9 @@ accountstatePreds _p = [] -- Constraints on reserves and treasury appear in dsta
 
 utxostatePreds :: Reflect era => Proof era -> [Pred era]
 utxostatePreds proof =
-  [ SumsTo (Coin 1) EQL utxoCoin [Project CoinR (utxo proof)]
-  , SumsTo (Coin 1) EQL deposits [SumMap stakeDeposits, SumMap poolDeposits]
-  , SumsTo (Coin 1) EQL totalAda [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
+  [ SumsTo (Coin 1) utxoCoin EQL [Project CoinR (utxo proof)]
+  , SumsTo (Coin 1) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
+  , SumsTo (Coin 1) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
   , Random fees
   , Random (proposalsT proof)
   , Random (futureProposalsT proof)
@@ -644,8 +641,8 @@ epochstatePreds proof =
   , Sized (AtLeast 1) (maxBHSize proof)
   , Sized (AtLeast 1) (maxTxSize proof)
   , -- , Random (maxBBSize proof) -- This will cause underflow on Natural
-    SumsTo (1 % 1000) EQL (Fixed (Lit RationalR 1)) [Project RationalR markPoolDistr]
-  , SumsTo 1 LTE (maxBBSize proof) [One (maxBHSize proof), One (maxTxSize proof)]
+    SumsTo (1 % 1000) (Lit RationalR 1) EQL [Project RationalR markPoolDistr]
+  , SumsTo 1 (maxBBSize proof) LTE [One (maxBHSize proof), One (maxTxSize proof)]
   , Component
       (pparams proof)
       [field pp (maxTxSize proof), field pp (maxBHSize proof), field pp (maxBBSize proof)]
@@ -658,7 +655,7 @@ newepochstatePreds _proof =
   [ Random epochNo
   , Sized (ExactSize 8) (Dom prevBlocksMade) -- Both prevBlocksMade and prevBlocksMadeDom will have size 8
   , Sized (ExactSize 8) (Dom currBlocksMade)
-  , SumsTo (1 % 1000) EQL (Fixed (Lit RationalR 1)) [Project RationalR poolDistr]
+  , SumsTo (1 % 1000) (Lit RationalR 1) EQL [Project RationalR poolDistr]
   ]
 
 newepochConstraints :: Reflect era => Proof era -> [Pred era]
@@ -725,7 +722,7 @@ test18b =
     False
     stoi
     (projPreds2 proof)
-    (Assemble (Constr "Pair" (,) $> futureGenDelegs $> genDelegs))
+    (Assemble (Constr "Pair" (,) ^$ futureGenDelegs ^$ genDelegs))
   where
     proof = Alonzo Standard
 

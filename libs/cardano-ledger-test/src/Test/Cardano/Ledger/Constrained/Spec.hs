@@ -28,7 +28,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Debug.Trace (trace)
-import Test.Cardano.Ledger.Constrained.Ast (Literal (..), Pred (..), Sum (..), Term (..), runPred)
+import Test.Cardano.Ledger.Constrained.Ast (Pred (..), Sum (..), Term (..), runPred)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Sums (..),
@@ -74,7 +74,7 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Proof (C_Crypto, MaryEra)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
-import Test.Tasty.QuickCheck hiding (Fixed, total)
+import Test.Tasty.QuickCheck hiding (total)
 
 -- ===========================================================
 {- TODO, possible extensions and improvements, so we don't forget
@@ -1718,14 +1718,14 @@ genSumsTo :: Gen (Pred era)
 genSumsTo = do
   c <- genOrdCond
   let v = Var testV
-  rhs <- (Fixed . Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
-  lhs <- (Fixed . Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
-  elements [SumsTo (DeltaCoin 1) c v [One rhs], SumsTo (DeltaCoin 1) c lhs [One rhs, One v]]
+  rhs <- (Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
+  lhs <- (Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
+  elements [SumsTo (DeltaCoin 1) v c [One rhs], SumsTo (DeltaCoin 1) lhs c [One rhs, One v]]
 
 solveSumsTo :: Pred era -> AddsSpec c
-solveSumsTo (SumsTo _ cond (Fixed (Lit DeltaCoinR n)) [One (Fixed (Lit DeltaCoinR m)), One (Var (V nam _ _))]) =
+solveSumsTo (SumsTo _ (Lit DeltaCoinR n) cond [One (Lit DeltaCoinR m), One (Var (V nam _ _))]) =
   vRight (toI n) cond (toI m) nam
-solveSumsTo (SumsTo _ cond (Var (V nam DeltaCoinR _)) [One (Fixed (Lit DeltaCoinR m))]) =
+solveSumsTo (SumsTo _ (Var (V nam DeltaCoinR _)) cond [One (Lit DeltaCoinR m)]) =
   vLeft nam cond (toI m)
 solveSumsTo x = AddsSpecNever ["solveSumsTo " ++ show x]
 

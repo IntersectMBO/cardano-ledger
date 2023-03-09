@@ -239,10 +239,10 @@ vRightNeg :: Int -> OrdCond -> Int -> String -> AddsSpec c
 vRightNeg n cond m s = AddsSpecSize s (negateSize (ordCondToSize (s, reverseOrdCond cond, n - m)))
 
 -- | This function `reverseOrdCond` has been defined to handle the Pred SumsTo when the
---   variable is on the left-hand-side (lhs) of the OrdCond operator. In order to do that
+--   variable is on the right-hand-side (rhs) of the OrdCond operator. In order to do that
 --   we must multiply both sides of the inequality by (-1). For example consider
 --   [SumsTo (DeltaCoin 1) ▵₳ -2 > ∑ ▵₳ -1 + x]
---                 Note variable x on the lhs ^
+--                 Note variable x on the rhs ^
 --    To solve we subtract 'x' from both sides, and add '▵₳ -2' from bothsides
 --    getting      (-x) > ∑  (▵₳ -1) + (▵₳ -2)
 --    reduced to   (-x) > ∑  (▵₳ -3)
