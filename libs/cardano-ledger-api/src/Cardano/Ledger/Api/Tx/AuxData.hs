@@ -21,5 +21,6 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   getAlonzoTxAuxDataScripts,
   mkAlonzoTxAuxData,
  )
+import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Core (EraTxAuxData (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))

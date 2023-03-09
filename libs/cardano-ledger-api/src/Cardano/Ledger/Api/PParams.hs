@@ -239,6 +239,7 @@ import Cardano.Ledger.Alonzo.PParams (
   UpgradeAlonzoPParams (..),
   getLanguageView,
  )
+import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Babbage.Core (
   BabbageEraPParams (..),
   CoinPerByte (..),

@@ -52,6 +52,7 @@ module Cardano.Ledger.Api.Tx (
 where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Wits
