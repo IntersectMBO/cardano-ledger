@@ -40,7 +40,8 @@ library
         Cardano.Ledger.Api.Tx.Out
         Cardano.Ledger.Api.Tx.Wits
         Cardano.Ledger.Api.UTxO
-
+    other-modules:
+        Cardano.Ledger.Api.Scripts.Tools
     hs-source-dirs:   src
     default-language: Haskell2010
     ghc-options:
@@ -50,6 +51,8 @@ library
 
     build-depends:
         base >=4.14 && <4.17,
+        array,
+        bytestring,
         cardano-ledger-allegra >=1.0,
         cardano-ledger-alonzo >=1.0,
         cardano-ledger-babbage >=1.0,
@@ -58,7 +61,11 @@ library
         cardano-ledger-core >=1.0,
         cardano-ledger-mary >=1.0,
         cardano-ledger-shelley >=1.0,
-        microlens
+        cardano-slotting,
+        containers,
+        microlens,
+        plutus-ledger-api,
+        text
 
 test-suite cardano-ledger-api-test
     type:             exitcode-stdio-1.0

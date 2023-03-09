@@ -64,6 +64,7 @@ library
         cardano-ledger-allegra,
         cardano-ledger-alonzo,
         cardano-ledger-alonzo-test,
+        cardano-ledger-api,
         cardano-ledger-babbage,
         cardano-ledger-babbage-test,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
