@@ -30,7 +30,8 @@
   * And protocol version related functionality: `eraProtVerHigh`, `eraProtVerLow`,
     `AtLeastEra`, `AtMostEra`, `ExactEra`, `ProtVerAtLeast`, `ProtVerAtMost`,
     `ProtVerInBounds`, `atLeastEra` and `atMostEra`
-
+* Move `Cardano.Ledger.Alonzo.Tools` module from `cardano-ledegr-alonzo` into
+  `Cardano.Ledger.Api.Scripts`
 
 ## 1.0.0.0
 

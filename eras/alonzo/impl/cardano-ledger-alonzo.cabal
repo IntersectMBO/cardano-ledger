@@ -31,7 +31,6 @@ library
         Cardano.Ledger.Alonzo.Rules
         Cardano.Ledger.Alonzo.Scripts
         Cardano.Ledger.Alonzo.Scripts.Data
-        Cardano.Ledger.Alonzo.Tools
         Cardano.Ledger.Alonzo.Translation
         Cardano.Ledger.Alonzo.Tx
         Cardano.Ledger.Alonzo.TxAuxData
@@ -60,7 +59,6 @@ library
     build-depends:
         base >=4.14 && <4.17,
         aeson >=2,
-        array,
         base-deriving-via,
         base64-bytestring,
         bytestring,
