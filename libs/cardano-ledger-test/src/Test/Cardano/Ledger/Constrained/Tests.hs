@@ -186,7 +186,7 @@ data VarSpec
   deriving (Eq, Show)
 
 getLiteral :: Literal era t -> t
-getLiteral (Lit _ x) = x
+getLiteral (Literal _ x) = x
 
 genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm env rep vspec = genTerm' env rep (const True) (genLiteral env rep) vspec
@@ -232,20 +232,20 @@ genTerm' env rep valid genLit vspec =
       pure (Rng m, env')
 
 genMapLiteralWithDom :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set k) -> Gen (Literal era (Map k v))
-genMapLiteralWithDom env krep vrep (Lit _ keys) = do
+genMapLiteralWithDom env krep vrep (Literal _ keys) = do
   let genVal = do
-        Lit _ v <- genLiteral env vrep
+        Literal _ v <- genLiteral env vrep
         pure v
-  Lit (MapR krep vrep) <$> traverse (\ _ -> genVal) (Map.fromSet (const ()) keys)
+  Literal (MapR krep vrep) <$> traverse (\ _ -> genVal) (Map.fromSet (const ()) keys)
 
 genMapLiteralWithRng :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set v) -> Gen (Literal era (Map k v))
-genMapLiteralWithRng env krep vrep (Lit _ vals) = do
+genMapLiteralWithRng env krep vrep (Literal _ vals) = do
   let genKey = do
-        Lit _ k <- genLiteral env krep
+        Literal _ k <- genLiteral env krep
         pure k
   keys <- setSized [] (Set.size vals) genKey
   valsList <- shuffle $ Set.toList vals
-  pure $ Lit (MapR krep vrep) $ Map.fromList $ zip (Set.toList keys) valsList
+  pure $ Literal (MapR krep vrep) $ Map.fromList $ zip (Set.toList keys) valsList
 
 data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
@@ -306,7 +306,7 @@ genFromOrdCond :: (Arbitrary c, Adds c) => OrdCond -> Bool -> c -> Gen c
 genFromOrdCond EQL _ n = pure n
 genFromOrdCond cond canBeNegative n =
   suchThatErr ["genFromOrdCond " ++ show cond ++ " " ++ show n]
-    (frequency $ [(1, pure $ subtract ["genFromOrdCond"] n (fromI [] 1)) | n > zero || canBeNegative] ++
+    (frequency $ [(1, pure $ minus ["genFromOrdCond"] n (fromI [] 1)) | n > zero || canBeNegative] ++
                  [(1, pure n),
                   (1, pure $ add n (fromI [] 1)),
                   (10, arbitrary)])
@@ -357,7 +357,7 @@ genPred env =
       TypeInEra rep <- genType
       withValue (genTerm env rep KnownTerm) $ \lhs val env' -> do
         let d = 1 + depthOf env' lhs
-        (rhs, env'') <- genTerm' env' rep (== val) (pure $ Lit rep val) (VarTerm d)
+        (rhs, env'') <- genTerm' env' rep (== val) (pure $ Literal rep val) (VarTerm d)
         pure (lhs :=: rhs, markSolved (vars rhs) d env'')
 
     subsetC
@@ -424,10 +424,11 @@ genPred env =
             -- for now, since sumBeforeParts is anyway disabled due to TODO/SumSet.
             -- count <- choose (1, min 3 val)
             let count = 1
-            partSums <- partition ["sumdToC in Tests.hs"] count val
+            small <- genSmall @Coin
+            partSums <- partition (fromI [] small) ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
-            pure (SumsTo 1 EQL sumTm parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+            pure (SumsTo (fromI [] small) sumTm EQL parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
       | otherwise =
           oneof [ sumCKnownSets CoinR False
                 , sumCKnownSets DeltaCoinR True
@@ -455,10 +456,11 @@ genPred env =
             (flip (runOrdCond cmp) tot)
             (Literal rep <$> genFromOrdCond cmp canBeNegative tot)
             (VarTerm d)
-        pure (SumsTo 1 cmp sumTm parts, markSolved (vars sumTm) d env'')
+        small <- genSmall @c
+        pure (SumsTo (fromI [] small) sumTm cmp parts, markSolved (vars sumTm) d env'')
 
-    hasDomC
-      | mapBeforeDom (gOrder env) = do
+    hasDomC =
+      oneof [ do
         -- Known map
         TypeInEra krep <- genKeyType
         TypeInEra vrep <- genValType
@@ -469,13 +471,11 @@ genPred env =
               env'
               (SetR krep)
               (== Map.keysSet val)
-              (pure $ Lit (SetR krep) $ Map.keysSet val)
+              (pure $ Literal (SetR krep) $ Map.keysSet val)
               (VarTerm d)
-          -- pure (domTm :=: Dom mapTm, env'')
           pure (Dom mapTm :=: domTm, env'')
-          -- pure (HasDom mapTm domTm, env'')
 
-      | otherwise = do
+      , do
         -- Known domain
         TypeInEra krep <- genKeyType
         TypeInEra vrep <- genValType
@@ -486,11 +486,10 @@ genPred env =
               env'
               (MapR krep vrep)
               ((val ==) . Map.keysSet)
-              (genMapLiteralWithDom env krep vrep $ Lit (SetR krep) val)
+              (genMapLiteralWithDom env krep vrep $ Literal (SetR krep) val)
               (VarTerm d)
           pure (domTm :=: Dom mapTm, env'')
-          -- pure (Dom mapTm :=: domTm, env'')
-          -- pure (HasDom mapTm domTm, env'')
+      ]
 
 genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
 genPreds = \env -> do
