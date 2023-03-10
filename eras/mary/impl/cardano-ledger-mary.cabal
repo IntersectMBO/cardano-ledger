@@ -22,12 +22,13 @@ source-repository head
 library
     exposed-modules:
         Cardano.Ledger.Mary
-        Cardano.Ledger.Mary.Translation
-        Cardano.Ledger.Mary.Value
+        Cardano.Ledger.Mary.Delegation
         Cardano.Ledger.Mary.Core
+        Cardano.Ledger.Mary.Translation
         Cardano.Ledger.Mary.TxBody
         Cardano.Ledger.Mary.TxOut
         Cardano.Ledger.Mary.UTxO
+        Cardano.Ledger.Mary.Value
 
     hs-source-dirs:   src
     other-modules:
