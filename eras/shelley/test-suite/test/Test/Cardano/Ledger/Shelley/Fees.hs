@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -32,19 +33,17 @@ import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (
   Addr,
   Credential (..),
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
   MultiSig (..),
-  PoolCert (..),
   PoolParams (..),
   RewardAcnt (..),
+  ShelleyDelegCert (..),
   ShelleyTxBody (..),
   ShelleyTxOut (..),
   TxIn (..),
   hashVerKeyVRF,
  )
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
@@ -239,7 +238,7 @@ txbRegisterStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)]
+    , stbCerts = StrictSeq.fromList [ShelleyDCertDeleg (RegKey aliceSHK)]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
@@ -269,7 +268,7 @@ txbDelegateStake =
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts =
         StrictSeq.fromList
-          [ DCertDeleg
+          [ ShelleyDCertDeleg
               (Delegate $ Delegation bobSHK alicePoolKH)
           ]
     , stbWithdrawals = Withdrawals Map.empty
@@ -302,7 +301,7 @@ txbDeregisterStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)]
+    , stbCerts = StrictSeq.fromList [ShelleyDCertDeleg (DeRegKey aliceSHK)]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10

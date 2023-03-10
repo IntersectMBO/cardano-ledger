@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -54,7 +55,8 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (DCert (DCertDeleg), DelegCert (DeRegKey), ProtVer (..), UTxO (..))
+import Cardano.Ledger.Shelley.API (ProtVer (..), ShelleyDelegCert (..), UTxO (..))
+import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -501,7 +503,14 @@ certRedeemers =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Cert 0) (Data (PV1.I 42), ExUnits 5000 5000)
 
-refscriptForDelegCert :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
+refscriptForDelegCert ::
+  forall era.
+  ( Scriptic era
+  , EraTxBody era
+  , ShelleyEraDCert era
+  ) =>
+  Proof era ->
+  TestCaseData era
 refscriptForDelegCert pf =
   TestCaseData
     { txBody =
@@ -511,7 +520,7 @@ refscriptForDelegCert pf =
           , RefInputs' [anotherTxIn]
           , Collateral' [yetAnotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]]
-          , Certs' [DCertDeleg (DeRegKey (ScriptHashObj (hashScript @era $ alwaysAlt 2 pf)))]
+          , Certs' [ShelleyDCertDeleg (DeRegKey (ScriptHashObj (hashScript @era $ alwaysAlt 2 pf)))]
           , Txfee (Coin 5)
           , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] certRedeemers mempty)
           ]

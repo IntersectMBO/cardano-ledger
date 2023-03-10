@@ -36,8 +36,6 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
-  ConstitutionalDelegCert (..),
-  DCert (..),
   ShelleyTxBody (..),
   ShelleyTxOut (..),
  )

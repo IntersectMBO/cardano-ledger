@@ -33,6 +33,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
   CollectError (..),
@@ -47,6 +48,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.Alonzo.TxInfo (
+  EraPlutusContext,
   ExtendedUTxO (..),
   PlutusDebug (..),
   ScriptFailure (..),
@@ -66,7 +68,8 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize')
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
-import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.Delegation (ShelleyDCert)
+import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState), ShelleyPPUPState)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
@@ -114,6 +117,7 @@ instance
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
+  , DCert era ~ ShelleyDCert era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
@@ -124,6 +128,7 @@ instance
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -158,6 +163,7 @@ utxosTransition ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
+  , DCert era ~ ShelleyDCert era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
@@ -168,6 +174,7 @@ utxosTransition ::
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -191,6 +198,7 @@ scriptsTransition ::
   , BaseM sts ~ ReaderT Globals m
   , PredicateFailure sts ~ AlonzoUtxosPredFailure era
   , AlonzoEraPParams era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   SlotNo ->
   PParams era ->
@@ -229,6 +237,7 @@ scriptsValidateTransition ::
   , ProtVerAtMost era 8
   , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsValidateTransition = do
@@ -266,6 +275,7 @@ scriptsNotValidateTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , Script era ~ AlonzoScript era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsNotValidateTransition = do
@@ -360,7 +370,7 @@ data AlonzoUtxosPredFailure era
     --         consequences of not detecting this means scripts get dropped, so things
     --         might validate that shouldn't. So we double check in the function
     --         collectTwoPhaseScriptInputs, it should find data for every Script.
-    CollectErrors [CollectError (EraCrypto era)]
+    CollectErrors [CollectError era]
   | UpdateFailure (PPUPPredFailure era)
   deriving
     (Generic)
@@ -369,8 +379,7 @@ instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) wher
   inject () = UpdateFailure ()
 
 instance
-  ( Era era
-  , Show (TxOut era)
+  ( EraDCert era
   , EncCBOR (PPUPPredFailure era)
   ) =>
   EncCBOR (AlonzoUtxosPredFailure era)
@@ -382,6 +391,7 @@ instance
 
 instance
   ( Era era
+  , DecCBOR (DCert era)
   , DecCBOR (PPUPPredFailure era)
   ) =>
   DecCBOR (AlonzoUtxosPredFailure era)
@@ -394,13 +404,17 @@ instance
       dec n = Invalid n
 
 deriving stock instance
-  ( Show (Shelley.UTxOState era)
+  ( Era era
+  , Show (DCert era)
+  , Show (Shelley.UTxOState era)
   , Show (PPUPPredFailure era)
   ) =>
   Show (AlonzoUtxosPredFailure era)
 
 instance
-  ( Eq (Shelley.UTxOState era)
+  ( Era era
+  , Eq (DCert era)
+  , Eq (Shelley.UTxOState era)
   , Eq (PPUPPredFailure era)
   ) =>
   Eq (AlonzoUtxosPredFailure era)
@@ -411,7 +425,9 @@ instance
   _ == _ = False
 
 instance
-  ( NoThunks (Shelley.UTxOState era)
+  ( Era era
+  , NoThunks (DCert era)
+  , NoThunks (Shelley.UTxOState era)
   , NoThunks (PPUPPredFailure era)
   ) =>
   NoThunks (AlonzoUtxosPredFailure era)

@@ -25,7 +25,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelplPredFailure,
   UtxoEnv,
  )
-import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -51,7 +50,7 @@ instance
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
-  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert era
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
@@ -60,7 +59,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
   , Tx era ~ AlonzoTx era
   , ProtVerAtMost era 8
   ) =>

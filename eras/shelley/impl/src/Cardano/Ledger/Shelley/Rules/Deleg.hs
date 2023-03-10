@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -25,7 +26,6 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -35,6 +35,8 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   VerKeyVRF,
  )
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Delegation (ShelleyDelegCert (..), pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -50,10 +52,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   rewards,
  )
 import Cardano.Ledger.Shelley.TxBody (
-  ConstitutionalDelegCert (..),
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
@@ -138,9 +136,9 @@ data ShelleyDelegPredFailure era
 
 newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
-instance EraPParams era => STS (ShelleyDELEG era) where
+instance (EraPParams era, ShelleyEraDCert era) => STS (ShelleyDELEG era) where
   type State (ShelleyDELEG era) = DState era
-  type Signal (ShelleyDELEG era) = DCert (EraCrypto era)
+  type Signal (ShelleyDELEG era) = DCert era
   type Environment (ShelleyDELEG era) = DelegEnv era
   type BaseM (ShelleyDELEG era) = ShelleyBase
   type PredicateFailure (ShelleyDELEG era) = ShelleyDelegPredFailure era
@@ -259,12 +257,12 @@ instance
         pure (3, MIRNegativeTransfer pot amt)
       k -> invalidKey k
 
-delegationTransition :: EraPParams era => TransitionRule (ShelleyDELEG era)
+delegationTransition :: (ShelleyEraDCert era, EraPParams era) => TransitionRule (ShelleyDELEG era)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
   case c of
-    DCertDeleg (RegKey hk) -> do
+    ShelleyDCertDeleg (RegKey hk) -> do
       -- (hk ∉ dom (rewards ds))
       UM.notMember hk (rewards ds) ?! StakeKeyAlreadyRegisteredDELEG hk
       let u1 = dsUnified ds
@@ -272,7 +270,7 @@ delegationTransition = do
           u2 = RewardDeposits u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
           u3 = Ptrs u2 UM.∪ (ptr, hk)
       pure (ds {dsUnified = u3})
-    DCertDeleg (DeRegKey hk) -> do
+    ShelleyDCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeKeyNotRegisteredDELEG hk
@@ -285,7 +283,7 @@ delegationTransition = do
           u3 = Ptrs u2 UM.⋫ Set.singleton hk
           u4 = ds {dsUnified = u3}
       pure u4
-    DCertDeleg (Delegate (Delegation hk dpool)) -> do
+    ShelleyDCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeDelegationImpossibleDELEG hk
@@ -321,7 +319,10 @@ delegationTransition = do
           { dsFutureGenDelegs =
               eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
           }
-    DCertMir (MIRCert targetPot mirTarget) -> do
+    DCertPool _ -> do
+      failBecause WrongCertificateTypeDELEG -- this always fails
+      pure ds
+    _ | Just (MIRCert targetPot mirTarget) <- getDCertMir c -> do
       checkSlotNotTooLate slot
       case mirTarget of
         StakeAddressesMIR credCoinMap -> do
@@ -372,12 +373,13 @@ delegationTransition = do
             else do
               failBecause MIRTransferNotCurrentlyAllowed
               pure ds
-    DCertPool _ -> do
+    _ -> do
+      -- The impossible case
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds
 
 checkSlotNotTooLate ::
-  EraPParams era =>
+  (ShelleyEraDCert era, EraPParams era) =>
   SlotNo ->
   Rule (ShelleyDELEG era) 'Transition ()
 checkSlotNotTooLate slot = do

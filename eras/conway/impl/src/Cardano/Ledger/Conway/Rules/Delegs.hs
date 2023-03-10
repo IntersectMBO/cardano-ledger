@@ -30,12 +30,11 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.CertState (PState)
-import Cardano.Ledger.Conway.Era (ConwayDELEGS)
+import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEGS)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   Coin,
-  DCert,
   DState (..),
   DelegEnv,
   DelegsEnv (..),
@@ -122,7 +121,7 @@ instance
   ( EraTx era
   , ShelleyEraTxBody era
   , State (EraRule "CERT" era) ~ CertState era
-  , Signal (EraRule "CERT" era) ~ DCert (EraCrypto era)
+  , Signal (EraRule "CERT" era) ~ DCert era
   , Environment (EraRule "CERT" era) ~ DelplEnv era
   , EraRule "DELEGS" era ~ ConwayDELEGS era
   , Embed (EraRule "CERT" era) (ConwayDELEGS era)
@@ -130,7 +129,7 @@ instance
   STS (ConwayDELEGS era)
   where
   type State (ConwayDELEGS era) = CertState era
-  type Signal (ConwayDELEGS era) = Seq (DCert (EraCrypto era))
+  type Signal (ConwayDELEGS era) = Seq (DCert era)
   type Environment (ConwayDELEGS era) = DelegsEnv era
   type BaseM (ConwayDELEGS era) = ShelleyBase
   type
@@ -147,7 +146,7 @@ conwayDelegsTransition ::
   , State (EraRule "CERT" era) ~ CertState era
   , Embed (EraRule "CERT" era) (ConwayDELEGS era)
   , Environment (EraRule "CERT" era) ~ DelplEnv era
-  , Signal (EraRule "CERT" era) ~ DCert (EraCrypto era)
+  , Signal (EraRule "CERT" era) ~ DCert era
   , EraRule "DELEGS" era ~ ConwayDELEGS era
   ) =>
   TransitionRule (ConwayDELEGS era)
@@ -175,18 +174,22 @@ conwayDelegsTransition = do
 
 instance
   ( Era era
+  , STS (ConwayCERT era)
+  , BaseM (ConwayCERT era) ~ ShelleyBase
+  , PredicateFailure (ConwayCERT era) ~ ShelleyDelplPredFailure era
+  , Event (ConwayCERT era) ~ ShelleyDelplEvent era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , State (EraRule "POOL" era) ~ PState era
   , State (EraRule "DELEG" era) ~ DState era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , Signal (EraRule "POOL" era) ~ DCert (EraCrypto era)
-  , Signal (EraRule "DELEG" era) ~ DCert (EraCrypto era)
+  , Signal (EraRule "POOL" era) ~ DCert era
+  , Signal (EraRule "DELEG" era) ~ DCert era
   , PredicateFailure (EraRule "CERT" era) ~ ShelleyDelplPredFailure era
   , Event (EraRule "CERT" era) ~ ShelleyDelplEvent era
   ) =>
-  Embed (ShelleyDELPL era) (ConwayDELEGS era)
+  Embed (ConwayCERT era) (ConwayDELEGS era)
   where
   wrapFailed = CertFailure
   wrapEvent = CertEvent

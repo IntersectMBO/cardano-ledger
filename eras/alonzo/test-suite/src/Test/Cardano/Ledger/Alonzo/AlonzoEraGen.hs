@@ -70,7 +70,6 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -251,7 +250,7 @@ genAlonzoTxBody ::
   SlotNo ->
   Set.Set (TxIn c) ->
   StrictSeq (TxOut (AlonzoEra c)) ->
-  StrictSeq (DCert c) ->
+  StrictSeq (DCert (AlonzoEra c)) ->
   Withdrawals c ->
   Coin ->
   StrictMaybe (Update (AlonzoEra c)) ->
@@ -492,7 +491,7 @@ addRedeemMap ::
   Crypto c =>
   TxBody (AlonzoEra c) ->
   (PV1.Data, Natural, Natural) ->
-  ScriptPurpose c ->
+  ScriptPurpose (AlonzoEra c) ->
   Map RdmrPtr (Data (AlonzoEra c), ExUnits) ->
   Map RdmrPtr (Data (AlonzoEra c), ExUnits)
 addRedeemMap body1 (dat, space, steps) purpose ans =

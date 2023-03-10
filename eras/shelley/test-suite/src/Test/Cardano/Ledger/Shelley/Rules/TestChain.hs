@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -77,6 +78,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 
+import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   runShelleyBase,
@@ -179,7 +181,6 @@ poolTraceFromBlock ::
   ( ChainProperty era
   , ShelleyEraTxBody era
   , EraSegWits era
-  , ProtVerAtMost era 8
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->
@@ -228,7 +229,7 @@ delegTraceFromBlock chainSt block =
        in DelegEnv s ptr reserves pp
     delegSt0 =
       certDState (lsCertState ledgerSt0)
-    delegCert (DCertDeleg _) = True
+    delegCert (ShelleyDCertDeleg _) = True
     delegCert (DCertMir _) = True
     delegCert _ = False
 

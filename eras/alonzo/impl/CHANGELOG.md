@@ -10,6 +10,14 @@
 * Added support for Plutus V3 in the types and functions that use `Language`.
   (Note that the Alonzo ledger era rules do not allow V3 scripts, however.).
 * Fix a bug of converting a mint field to the plutus context: [#3398](https://github.com/input-output-hk/cardano-ledger/pull/3398)
+* Change parametrization of `ScriptPurpose`, `CollectError` and `TransactionScriptFailure`
+  from `c`rypto to `era`
+* Add `EraDCert` and `ShelleyEraDCert` instances to `AlonzoEra`
+* Add `PlutusDCert`
+* Add `unDCertV1`, `unDCertV2`, `unDCertV3`
+* Add `EraPlutusContext`
+* Add `EraPlutusContext 'PlutusV1` instance to `AlonzoEra`
+* Rename `transDCert` to `transShelleyDCert`
 
 ## 1.1.0.0
 

@@ -15,7 +15,8 @@ module Cardano.Ledger.Conway (
 where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Binary (sizedValue)
@@ -42,17 +43,36 @@ type Conway = ConwayEra StandardCrypto
 
 -- =====================================================
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (ConwayEra c) where
+instance
+  ( Crypto c
+  , DSignable c (Hash c EraIndependentTxBody)
+  , EraPlutusContext 'PlutusV2 (ConwayEra c)
+  , EraPlutusContext 'PlutusV3 (ConwayEra c)
+  ) =>
+  API.ApplyTx (ConwayEra c)
+  where
   reapplyTx = reapplyAlonzoTx
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
+instance
+  ( Crypto c
+  , DSignable c (Hash c EraIndependentTxBody)
+  , EraPlutusContext 'PlutusV2 (ConwayEra c)
+  , EraPlutusContext 'PlutusV3 (ConwayEra c)
+  ) =>
+  API.ApplyBlock (ConwayEra c)
 
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = ConwayGenesis c
   fromShelleyPParams =
     error "Unimplemented: Current interface is too limited and needs replacement for Conway to work"
 
-instance Crypto c => ExtendedUTxO (ConwayEra c) where
+instance
+  ( Crypto c
+  , EraPlutusContext 'PlutusV2 (ConwayEra c)
+  , EraPlutusContext 'PlutusV3 (ConwayEra c)
+  ) =>
+  ExtendedUTxO (ConwayEra c)
+  where
   txInfo = conwayTxInfo
   txscripts = babbageTxScripts
   getAllowedSupplimentalDataHashes txBody (UTxO utxo) =

@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -56,9 +57,11 @@ import Cardano.Ledger.Shelley.API (
   LedgerState (..),
   PoolParams (..),
   ProtVer (..),
+  ShelleyDelegCert (..),
   UTxO (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
+import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyPredFailure (..),
@@ -70,9 +73,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure (..),
  )
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  DelegCert (..),
-  PoolCert (..),
   PoolMetadata (..),
   RewardAcnt (..),
  )
@@ -146,6 +146,7 @@ alonzoBBODYexamplesP ::
   , EraSegWits era
   , EraGovernance era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , ShelleyEraDCert era
   ) =>
   Proof era ->
   TestTree
@@ -199,6 +200,7 @@ testAlonzoBlock ::
   , Scriptic era
   , EraSegWits era
   , Value era ~ MaryValue (EraCrypto era)
+  , ShelleyEraDCert era
   ) =>
   Proof era ->
   Block (BHeaderView (EraCrypto era)) era
@@ -390,6 +392,7 @@ validatingTxWithCert ::
   ( Scriptic era
   , EraTx era
   , GoodCrypto (EraCrypto era)
+  , ShelleyEraDCert era
   ) =>
   Proof era ->
   Tx era
@@ -404,14 +407,14 @@ validatingTxWithCert pf =
         ]
     ]
 
-validatingBodyWithCert :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
+validatingBodyWithCert :: (Scriptic era, EraTxBody era, ShelleyEraDCert era) => Proof era -> TxBody era
 validatingBodyWithCert pf =
   newTxBody
     pf
     [ Inputs' [mkGenesisTxIn 3]
     , Collateral' [mkGenesisTxIn 13]
     , Outputs' [validatingTxWithCertOut pf]
-    , Certs' [DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)]
+    , Certs' [ShelleyDCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)]
     , Txfee (Coin 5)
     , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemrsWithCert mempty)
     ]
@@ -434,6 +437,7 @@ notValidatingTxWithCert ::
   ( Scriptic era
   , EraTx era
   , GoodCrypto (EraCrypto era)
+  , ShelleyEraDCert era
   ) =>
   Proof era ->
   Tx era
@@ -454,7 +458,7 @@ notValidatingTxWithCert pf =
         [ Inputs' [mkGenesisTxIn 4]
         , Collateral' [mkGenesisTxIn 14]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
-        , Certs' [DCertDeleg (DeRegKey $ scriptStakeCredFail pf)]
+        , Certs' [ShelleyDCertDeleg (DeRegKey $ scriptStakeCredFail pf)]
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersWithCert mempty)
         ]
@@ -594,6 +598,7 @@ testBBodyState ::
   , Value era ~ MaryValue (EraCrypto era)
   , EraGovernance era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , ShelleyEraDCert era
   ) =>
   Proof era ->
   ShelleyBbodyState era

@@ -91,13 +91,14 @@ allegraFields ::
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
   , ProtVerAtMost era 8
+  , PrettyA (DCert era)
   ) =>
   TxBody era ->
   [(Text, PDoc)]
 allegraFields txBody =
   [ ("inputs", ppSet ppTxIn (txBody ^. inputsTxBodyL))
   , ("outputs", ppStrictSeq prettyA (txBody ^. outputsTxBodyL))
-  , ("certificates", ppStrictSeq ppDCert (txBody ^. certsTxBodyG))
+  , ("certificates", ppStrictSeq prettyA (txBody ^. certsTxBodyL))
   , ("withdrawals", ppWithdrawals (txBody ^. withdrawalsTxBodyL))
   , ("txfee", ppCoin (txBody ^. feeTxBodyL))
   , ("vldt", ppValidityInterval (txBody ^. vldtTxBodyL))
@@ -111,6 +112,7 @@ instance
   , PrettyA (PParamsUpdate era)
   , TxBody era ~ AllegraTxBody era
   , ProtVerAtMost era 8
+  , PrettyA (DCert era)
   ) =>
   PrettyA (AllegraTxBody era)
   where
@@ -122,6 +124,7 @@ instance
   , PrettyA (PParamsUpdate era)
   , TxBody era ~ MaryTxBody era
   , ProtVerAtMost era 8
+  , PrettyA (DCert era)
   ) =>
   PrettyA (MaryTxBody era)
   where

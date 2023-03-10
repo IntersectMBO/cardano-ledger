@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -45,6 +46,11 @@ import Cardano.Ledger.PoolDistr (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Delegation (
+  ShelleyDCert (..),
+  ShelleyDelegCert (..),
+  pattern ShelleyDCertDeleg,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PulsingRewUpdate (..),
@@ -65,13 +71,9 @@ import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
-  PoolCert (..),
   PoolParams (..),
   RewardAcnt (..),
   ShelleyTxBody (..),
@@ -193,12 +195,12 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
-        ( [ DCertDeleg (RegKey Cast.aliceSHK)
-          , DCertDeleg (RegKey Cast.bobSHK)
-          , DCertDeleg (RegKey Cast.carlSHK)
+        ( [ ShelleyDCertDeleg (RegKey Cast.aliceSHK)
+          , ShelleyDCertDeleg (RegKey Cast.bobSHK)
+          , ShelleyDCertDeleg (RegKey Cast.carlSHK)
           , DCertPool (RegPool Cast.alicePoolParams)
           ]
-            ++ [ DCertMir
+            ++ [ ShelleyDCertMir
                   ( MIRCert
                       ReservesMIR
                       ( StakeAddressesMIR $
@@ -304,8 +306,8 @@ txbodyEx2 =
           ]
     , stbCerts =
         StrictSeq.fromList
-          [ DCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
-          , DCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.alicePoolKeys))
+          [ ShelleyDCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
+          , ShelleyDCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.alicePoolKeys))
           ]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = feeTx2
@@ -471,7 +473,7 @@ txbodyEx4 =
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)]
     , stbCerts =
         StrictSeq.fromList
-          [DCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))]
+          [ShelleyDCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = feeTx4
     , stbTTL = SlotNo 500
@@ -863,7 +865,7 @@ txbodyEx10 =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.singleton $ ShelleyTxOut Cast.bobAddr (Val.inject bobAda10))
-    (StrictSeq.fromList [DCertDeleg (DeRegKey Cast.bobSHK)])
+    (StrictSeq.fromList [ShelleyDCertDeleg (DeRegKey Cast.bobSHK)])
     (Withdrawals $ Map.singleton (RewardAcnt Testnet Cast.bobSHK) bobRAcnt8)
     feeTx10
     (SlotNo 500)

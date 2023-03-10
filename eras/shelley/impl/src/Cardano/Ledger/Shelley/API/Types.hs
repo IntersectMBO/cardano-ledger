@@ -73,10 +73,9 @@ import Cardano.Ledger.PoolDistr as X (
   individualPoolStake,
  )
 import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
-import Cardano.Ledger.Shelley.Delegation.Certificates as X (
-  DCert (..),
-  DelegCert (..),
+import Cardano.Ledger.Shelley.Delegation as X (
   PoolCert (..),
+  ShelleyDelegCert (..),
  )
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (

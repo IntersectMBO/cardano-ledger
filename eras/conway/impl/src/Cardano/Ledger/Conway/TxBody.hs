@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -76,8 +75,9 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   ConwayEraTxBody (..),
+  ShelleyEraDCert,
  )
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert)
+import Cardano.Ledger.Conway.Delegation (ConwayDCert)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Conway.PParams ()
@@ -126,7 +126,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrOutputs :: !(StrictSeq (Sized (TxOut era)))
   , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
-  , ctbrCerts :: !(StrictSeq (ConwayDCert (EraCrypto era)))
+  , ctbrCerts :: !(StrictSeq (ConwayDCert era))
   , ctbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , ctbrTxfee :: !Coin
   , ctbrVldt :: !ValidityInterval
@@ -155,7 +155,11 @@ deriving instance
   Show (ConwayTxBodyRaw era)
 
 instance
-  (EraPParams era, DecCBOR (TxOut era)) =>
+  ( EraPParams era
+  , DecCBOR (TxOut era)
+  , ShelleyEraDCert era
+  , DCert era ~ ConwayDCert era
+  ) =>
   DecCBOR (ConwayTxBodyRaw era)
   where
   decCBOR =
@@ -224,7 +228,11 @@ instance (c ~ EraCrypto era) => HashAnnotated (ConwayTxBody era) EraIndependentT
   hashAnnotated = getMemoSafeHash
 
 instance
-  (DecCBOR (TxOut era), EraPParams era) =>
+  ( DecCBOR (TxOut era)
+  , EraPParams era
+  , ShelleyEraDCert era
+  , DCert era ~ ConwayDCert era
+  ) =>
   DecCBOR (Annotator (ConwayTxBodyRaw era))
   where
   decCBOR = pure <$> decCBOR
@@ -232,7 +240,11 @@ instance
 deriving via
   (Mem ConwayTxBodyRaw era)
   instance
-    (DecCBOR (TxOut era), EraPParams era) =>
+    ( DecCBOR (TxOut era)
+    , EraPParams era
+    , ShelleyEraDCert era
+    , DCert era ~ ConwayDCert era
+    ) =>
     DecCBOR (Annotator (ConwayTxBody era))
 
 mkConwayTxBody :: ConwayEraTxBody era => ConwayTxBody era
@@ -293,7 +305,15 @@ instance Crypto c => EraTxBody (ConwayEra c) where
   withdrawalsTxBodyL = lensMemoRawType ctbrWithdrawals (\txb x -> txb {ctbrWithdrawals = x})
   {-# INLINE withdrawalsTxBodyL #-}
 
-instance Crypto c => ShelleyEraTxBody (ConwayEra c) where
+  certsTxBodyL = lensMemoRawType ctbrCerts (\txb x -> txb {ctbrCerts = x})
+  {-# INLINE certsTxBodyL #-}
+
+instance
+  ( Crypto c
+  , ShelleyEraDCert (ConwayEra c)
+  ) =>
+  ShelleyEraTxBody (ConwayEra c)
+  where
   {-# SPECIALIZE instance ShelleyEraTxBody (ConwayEra StandardCrypto) #-}
 
   ttlTxBodyL = notSupportedInThisEraL
@@ -303,12 +323,6 @@ instance Crypto c => ShelleyEraTxBody (ConwayEra c) where
   {-# INLINE updateTxBodyL #-}
 
   updateTxBodyG = to (const SNothing)
-
-  certsTxBodyL = notSupportedInThisEraL
-  {-# INLINE certsTxBodyL #-}
-
-  -- TODO Fix this once DCert is a type family
-  certsTxBodyG = undefined
 
 instance Crypto c => AllegraEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra StandardCrypto) #-}
@@ -375,7 +389,6 @@ instance Crypto c => ConwayEraTxBody (ConwayEra c) where
     lensMemoRawType ctbrVotingProcedures (\txb x -> txb {ctbrVotingProcedures = x})
   proposalProceduresTxBodyL =
     lensMemoRawType ctbrProposalProcedures (\txb x -> txb {ctbrProposalProcedures = x})
-  conwayCertsTxBodyL = lensMemoRawType ctbrCerts (\txb x -> txb {ctbrCerts = x})
 
 pattern ConwayTxBody ::
   ConwayEraTxBody era =>
@@ -385,7 +398,7 @@ pattern ConwayTxBody ::
   StrictSeq (Sized (TxOut era)) ->
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
-  StrictSeq (ConwayDCert (EraCrypto era)) ->
+  StrictSeq (ConwayDCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->

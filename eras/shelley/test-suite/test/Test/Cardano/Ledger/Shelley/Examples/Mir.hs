@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -28,7 +29,12 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..), MIRCert (..))
+import Cardano.Ledger.Shelley.Delegation (
+  MIRCert (..),
+  ShelleyDCert (..),
+  ShelleyDelegCert (..),
+  pattern ShelleyDCertDeleg,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -47,7 +53,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
   MIRPot (..),
   MIRTarget (..),
   ShelleyTxBody (..),
@@ -137,8 +142,8 @@ txbodyEx1 pot =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
-        [ DCertMir (MIRCert pot ir)
-        , DCertDeleg (RegKey Cast.aliceSHK)
+        [ ShelleyDCertMir (MIRCert pot ir)
+        , ShelleyDCertDeleg (RegKey Cast.aliceSHK)
         ]
     )
     (Withdrawals Map.empty)

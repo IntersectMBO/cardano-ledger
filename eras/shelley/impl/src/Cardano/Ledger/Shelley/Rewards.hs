@@ -49,7 +49,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.EpochBoundary (Stake (..), maxPool')
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.Delegation.PoolParams (poolSpec)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.UMap (compactCoinOrError)
@@ -104,7 +103,8 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
         <> rationalToCoinViaFloor
           (coinToRational (f <-> c) * (m' + (1 - m') * s / sigma))
   where
-    (c, m, _) = poolSpec pool
+    c = ppCost pool
+    m = ppMargin pool
     m' = unboundRational m
 
 -- | Calculate pool member reward
@@ -120,7 +120,8 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
       rationalToCoinViaFloor $
         fromIntegral (f' - c) * (1 - m') * t / sigma
   where
-    (Coin c, m, _) = poolSpec pool
+    Coin c = ppCost pool
+    m = ppMargin pool
     m' = unboundRational m
 
 sumRewards ::

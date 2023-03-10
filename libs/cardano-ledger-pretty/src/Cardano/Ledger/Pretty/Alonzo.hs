@@ -223,7 +223,11 @@ ppTxOut (AlonzoTxOut addr val dhash) =
   ppSexp "TxOut" [ppAddr addr, prettyA val, ppStrictMaybe ppSafeHash dhash]
 
 ppTxBody ::
-  (AlonzoEraTxBody era, PrettyA (TxOut era), PrettyA (PParamsUpdate era)) =>
+  ( AlonzoEraTxBody era
+  , PrettyA (TxOut era)
+  , PrettyA (PParamsUpdate era)
+  , PrettyA (DCert era)
+  ) =>
   AlonzoTxBody era ->
   PDoc
 ppTxBody (AlonzoTxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
@@ -232,7 +236,7 @@ ppTxBody (AlonzoTxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
     [ ("inputs", ppSet ppTxIn i)
     , ("collateral", ppSet ppTxIn ifee)
     , ("outputs", ppStrictSeq prettyA o)
-    , ("certificates", ppStrictSeq ppDCert c)
+    , ("certificates", ppStrictSeq prettyA c)
     , ("withdrawals", ppWithdrawals w)
     , ("txfee", ppCoin fee)
     , ("vldt", ppValidityInterval vi)
@@ -248,13 +252,17 @@ ppAuxDataHash :: AuxiliaryDataHash c -> PDoc
 ppAuxDataHash (AuxiliaryDataHash axh) = ppSafeHash axh
 
 instance
-  (AlonzoEraTxBody era, PrettyA (TxOut era), PrettyA (PParamsUpdate era)) =>
+  ( AlonzoEraTxBody era
+  , PrettyA (TxOut era)
+  , PrettyA (PParamsUpdate era)
+  , PrettyA (DCert era)
+  ) =>
   PrettyA (AlonzoTxBody era)
   where
   prettyA = ppTxBody
 
 instance (EraTxOut era, PrettyA (Value era)) => PrettyA (AlonzoTxOut era) where
-  prettyA x = ppTxOut x
+  prettyA = ppTxOut
 
 ppRdmrPtr :: RdmrPtr -> PDoc
 ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [ppTag tag, ppWord64 w]

@@ -171,8 +171,10 @@ instance
 
 instance
   ( EraTxOut era
+  , EraDCert era
   , Arbitrary (TxOut era)
   , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (DCert era)
   ) =>
   Arbitrary (AlonzoTxBody era)
   where
@@ -368,6 +370,7 @@ instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   , Arbitrary (ShelleyUtxowPredFailure era)
+  , Arbitrary (DCert era)
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
   where
@@ -379,7 +382,12 @@ instance
       , PPViewHashesDontMatch <$> arbitrary <*> arbitrary
       ]
 
-instance Crypto c => Arbitrary (ScriptPurpose c) where
+instance
+  ( Era era
+  , Arbitrary (DCert era)
+  ) =>
+  Arbitrary (ScriptPurpose era)
+  where
   arbitrary =
     oneof
       [ Minting <$> arbitrary

@@ -214,6 +214,7 @@ instance PrettyA (DataHash era) where prettyA = ppDataHash
 ppTxBody ::
   ( PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
+  , PrettyA (DCert era)
   ) =>
   BabbageTxBody era ->
   PDoc
@@ -226,7 +227,7 @@ ppTxBody x =
     , ("outputs", ppStrictSeq prettyA (outputs' x))
     , ("collateral return", ppStrictMaybe prettyA (collateralReturn' x))
     , ("total collateral", ppStrictMaybe ppCoin (totalCollateral' x))
-    , ("certificates", ppStrictSeq ppDCert (certs' x))
+    , ("certificates", ppStrictSeq prettyA (certs' x))
     , ("withdrawals", ppWithdrawals (withdrawals' x))
     , ("txfee", ppCoin (txfee' x))
     , ("vldt", ppValidityInterval (vldt' x))
@@ -242,6 +243,7 @@ instance
   ( EraTxOut era
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
+  , PrettyA (DCert era)
   ) =>
   PrettyA (BabbageTxBody era)
   where

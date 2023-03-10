@@ -15,7 +15,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, ExUnits (..), Tag (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
+import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Api.Tx (TransactionScriptFailure (..), evalTxExUnits)
@@ -109,6 +109,7 @@ testExUnitCalculation ::
   , Script era ~ AlonzoScript era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   Tx era ->
   UTxOState era ->
@@ -142,6 +143,7 @@ exampleExUnitCalc ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , EraGovernance era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   Proof era ->
   IO ()
@@ -165,6 +167,7 @@ exampleInvalidExUnitCalc ::
   , Signable
       (DSIGN (EraCrypto era))
       (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   Proof era ->
   IO ()
@@ -258,6 +261,7 @@ updateTxExUnits ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   Tx era ->
   UTxO era ->
@@ -269,7 +273,7 @@ updateTxExUnits tx utxo ei ss err =
   let res = evalTxExUnits testPParams tx utxo ei ss
    in case res of
         Left e -> err (show e)
-        Right (rdmrs :: Map RdmrPtr (Either (TransactionScriptFailure (EraCrypto era)) ExUnits)) ->
+        Right (rdmrs :: Map RdmrPtr (Either (TransactionScriptFailure era) ExUnits)) ->
           replaceRdmrs tx <$> traverse (failLeft err) rdmrs
 
 replaceRdmrs ::

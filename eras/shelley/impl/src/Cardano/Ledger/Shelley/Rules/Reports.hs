@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Tools for reporting things in readable manner. Used in Rules to implement
@@ -15,7 +15,6 @@ module Cardano.Ledger.Shelley.Rules.Reports (
   showSafeHash,
   synopsisCert,
   synopsisCoinMap,
-  trim,
   showTxCerts,
   produceEqualsConsumed,
 )
@@ -26,12 +25,16 @@ import Cardano.Ledger.CertState (
   InstantaneousRewards (..),
  )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (PParams, TxBody, withdrawalsTxBodyL)
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Delegation (
+  ShelleyDelegCert (..),
+  isInstantaneousRewards,
+  pattern ShelleyDCertDeleg,
+ )
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
@@ -41,31 +44,29 @@ import Lens.Micro ((^.))
 -- ===============================================
 -- Reporting Certificates
 
-trim :: Int -> String -> String
-trim n s = take n s
-
 showCred :: Credential x c -> String
 showCred (ScriptHashObj (ScriptHash x)) = show x
 showCred (KeyHashObj (KeyHash x)) = show x
 
-synopsisCert :: DCert c -> String
+synopsisCert :: ShelleyEraDCert era => DCert era -> String
 synopsisCert x = case x of
-  DCertDeleg (RegKey cred) -> "RegKey " ++ trim 10 (showCred cred)
-  DCertDeleg (DeRegKey cred) -> "DeRegKey " ++ trim 10 (showCred cred)
-  DCertDeleg (Delegate _) -> "Delegation"
-  DCertPool (RegPool pool) -> let KeyHash hash = ppId pool in "RegPool " ++ trim 10 (show hash)
+  ShelleyDCertDeleg (RegKey cred) -> "RegKey " ++ take 10 (showCred cred)
+  ShelleyDCertDeleg (DeRegKey cred) -> "DeRegKey " ++ take 10 (showCred cred)
+  ShelleyDCertDeleg (Delegate _) -> "Delegation"
+  DCertPool (RegPool pool) -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
   DCertPool (RetirePool khash e) -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
   DCertGenesis _ -> "GenesisCert"
-  DCertMir _ -> "MirCert"
+  _ | isInstantaneousRewards x -> "MirCert"
+  _ -> error "Impossible"
 
 showKeyHash :: KeyHash c x -> String
-showKeyHash (KeyHash hash) = trim 10 (show hash)
+showKeyHash (KeyHash hash) = take 10 (show hash)
 
-showCerts :: [DCert c] -> String
+showCerts :: (ShelleyEraDCert era) => [DCert era] -> String
 showCerts certs = unlines (map (("  " ++) . synopsisCert) certs)
 
-showTxCerts :: ShelleyEraTxBody era => TxBody era -> String
-showTxCerts txb = showCerts (toList (txb ^. certsTxBodyG))
+showTxCerts :: (ShelleyEraTxBody era) => TxBody era -> String
+showTxCerts txb = showCerts (toList (txb ^. certsTxBodyL))
 
 -- | Display a synopsis of a map to Coin
 synopsisCoinMap :: Maybe (Map.Map k Coin) -> String
@@ -105,7 +106,7 @@ showListy showElem list = unlines (map showElem (toList list))
 
 showRewardAcct :: RewardAcnt c -> [Char]
 showRewardAcct (RewardAcnt {getRwdNetwork = network, getRwdCred = cred}) =
-  show network ++ " " ++ (showCred cred)
+  show network ++ " " ++ showCred cred
 
 showWithdrawal :: Withdrawals c -> String
 showWithdrawal (Withdrawals m) = showMap (("   " ++) . showRewardAcct) show m
@@ -113,11 +114,11 @@ showWithdrawal (Withdrawals m) = showMap (("   " ++) . showRewardAcct) show m
 showIR :: InstantaneousRewards c -> String
 showIR (InstantaneousRewards m n x y) =
   unlines
-    [ "IRReseves " ++ showMap (("   " ++) . trim 10 . showCred) show m
-    , "IRTreasury " ++ showMap (("   " ++) . trim 10 . showCred) show n
+    [ "IRReseves " ++ showMap (("   " ++) . take 10 . showCred) show m
+    , "IRTreasury " ++ showMap (("   " ++) . take 10 . showCred) show n
     , "DeltaReserves " ++ show x
     , "DeltaTreasury " ++ show y
     ]
 
 showSafeHash :: SafeHash c i -> String
-showSafeHash x = trim 12 (show (extractHash x))
+showSafeHash x = take 12 (show (extractHash x))

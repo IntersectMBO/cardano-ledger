@@ -21,7 +21,6 @@ import Cardano.Ledger.Pretty ()
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   Coin (..),
-  DCert,
   Update,
  )
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
@@ -106,12 +105,14 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
  -----------------------------------------------------------------------------}
 
 genTxBody ::
-  EraTxOut era =>
+  ( EraTxOut era
+  , EraDCert era
+  ) =>
   PParams era ->
   SlotNo ->
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert (EraCrypto era)) ->
+  StrictSeq (DCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->

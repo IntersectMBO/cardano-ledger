@@ -21,12 +21,9 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking))
+import Cardano.Ledger.Shelley.Delegation (ShelleyDCert (..), ShelleyDelegCert (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
-  PoolCert (..),
   PoolParams (..),
   RewardAcnt (..),
   Withdrawals (..),
@@ -133,7 +130,7 @@ epochBoundary proof transactionEpoch modelEpoch model =
   where
     ru = createRUpdNonPulsing' proof model
 
-applyTxSimple :: EraPParams era => Proof era -> Int -> Model era -> TxField era -> Model era
+applyTxSimple :: Reflect era => Proof era -> Int -> Model era -> TxField era -> Model era
 applyTxSimple proof count model field = case field of
   Body body1 -> applyTxBody proof count model body1
   BodyI fs -> List.foldl' (applyField proof count) model fs
@@ -142,10 +139,10 @@ applyTxSimple proof count model field = case field of
   AuxData _ -> model
   Valid _ -> model
 
-applyTxBody :: EraPParams era => Proof era -> Int -> Model era -> TxBody era -> Model era
+applyTxBody :: Reflect era => Proof era -> Int -> Model era -> TxBody era -> Model era
 applyTxBody proof count model tx = List.foldl' (applyField proof count) model (abstractTxBody proof tx)
 
-applyField :: EraPParams era => Proof era -> Int -> Model era -> TxBodyField era -> Model era
+applyField :: Reflect era => Proof era -> Int -> Model era -> TxBodyField era -> Model era
 applyField proof count model field = case field of
   (Inputs txins) -> model {mUTxO = Map.withoutKeys (mUTxO model) txins}
   (Outputs seqo) -> case Map.lookup count (mIndex model) of
@@ -162,9 +159,18 @@ applyWithdrawals :: Proof era -> Model era -> RewardAcnt (EraCrypto era) -> Coin
 applyWithdrawals _proof model (RewardAcnt _network cred) coin =
   model {mRewards = Map.adjust (\c -> c <-> coin) cred (mRewards model)}
 
-applyCert :: EraPParams era => Model era -> DCert (EraCrypto era) -> Model era
-applyCert model dcert = case dcert of
-  (DCertDeleg (RegKey x)) ->
+applyCert :: forall era. Reflect era => Model era -> DCert era -> Model era
+applyCert = case reify @era of
+  Shelley _ -> applyShelleyCert
+  Mary _ -> applyShelleyCert
+  Allegra _ -> applyShelleyCert
+  Alonzo _ -> applyShelleyCert
+  Babbage _ -> applyShelleyCert
+  Conway _ -> undefined -- TODO once Conway era is done
+
+applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyDCert era -> Model era
+applyShelleyCert model dcert = case dcert of
+  (ShelleyDCertDelegCert (RegKey x)) ->
     model
       { mRewards = Map.insert x (Coin 0) (mRewards model)
       , mKeyDeposits = Map.insert x (pp ^. ppKeyDepositL) (mKeyDeposits model)
@@ -172,7 +178,7 @@ applyCert model dcert = case dcert of
       }
     where
       pp = mPParams model
-  (DCertDeleg (DeRegKey x)) -> case Map.lookup x (mRewards model) of
+  (ShelleyDCertDelegCert (DeRegKey x)) -> case Map.lookup x (mRewards model) of
     Nothing -> error ("DeRegKey not in rewards: " <> show (pcCredential x))
     Just (Coin 0) ->
       model
@@ -185,9 +191,9 @@ applyCert model dcert = case dcert of
           Nothing -> mempty
           Just c -> c
     Just (Coin _n) -> error "DeRegKey with non-zero balance"
-  (DCertDeleg (Delegate (Delegation cred hash))) ->
+  (ShelleyDCertDelegCert (Delegate (Delegation cred hash))) ->
     model {mDelegations = Map.insert cred hash (mDelegations model)}
-  (DCertPool (RegPool poolparams)) ->
+  (ShelleyDCertPool (RegPool poolparams)) ->
     model
       { mPoolParams = Map.insert hk poolparams (mPoolParams model)
       , mDeposited =
@@ -203,15 +209,15 @@ applyCert model dcert = case dcert of
     where
       hk = ppId poolparams
       pp = mPParams model
-  (DCertPool (RetirePool keyhash epoch)) ->
+  (ShelleyDCertPool (RetirePool keyhash epoch)) ->
     model
       { mRetiring = Map.insert keyhash epoch (mRetiring model)
       , mDeposited = mDeposited model <-> pp ^. ppPoolDepositL
       }
     where
       pp = mPParams model
-  (DCertGenesis _) -> model
-  (DCertMir _) -> model
+  (ShelleyDCertGenesis _) -> model
+  (ShelleyDCertMir _) -> model
 
 -- =========================================================
 -- What to do if the second phase does not validatate.

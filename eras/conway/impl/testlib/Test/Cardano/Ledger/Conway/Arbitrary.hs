@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation.Certificates
+import Cardano.Ledger.Conway.Delegation
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
@@ -44,7 +44,7 @@ instance Crypto c => Arbitrary (ConwayDelegCert c) where
       , ConwayUnDeleg <$> arbitrary <*> arbitrary
       ]
 
-instance Crypto c => Arbitrary (ConwayDCert c) where
+instance Era era => Arbitrary (ConwayDCert era) where
   arbitrary =
     oneof
       [ ConwayDCertDeleg <$> arbitrary

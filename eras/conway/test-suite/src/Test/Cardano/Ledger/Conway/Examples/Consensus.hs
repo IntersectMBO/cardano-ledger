@@ -29,7 +29,7 @@ import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
+import Cardano.Ledger.Conway.Delegation (ConwayDCert (..))
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Rules (ConwayDELEGS, ConwayDelegsPredFailure (..), ConwayLEDGER)
 import Cardano.Ledger.Conway.Translation ()
@@ -38,7 +38,6 @@ import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs (..), asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -46,7 +45,6 @@ import Cardano.Ledger.Shelley.API (
   ApplyTxError (..),
   Network (..),
   NewEpochState (..),
-  PoolCert (..),
   ProposedPPUpdates (..),
   RewardAcnt (..),
   TxId (..),
@@ -117,7 +115,7 @@ collateralOutput =
     NoDatum
     SNothing
 
-exampleConwayCerts :: CC.Crypto c => StrictSeq (ConwayDCert c)
+exampleConwayCerts :: Era era => StrictSeq (ConwayDCert era)
 exampleConwayCerts =
   StrictSeq.fromList -- TODO should I add the new certs here?
     [ ConwayDCertPool (RegPool examplePoolParams)

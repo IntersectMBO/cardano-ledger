@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -128,12 +129,11 @@ import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
 import Cardano.Ledger.Language (nonNativeLanguages)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..), unWithdrawals)
+import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), unWithdrawals)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), rwhnf)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (
@@ -368,20 +368,29 @@ totExUnits tx =
 -- Figure 6:Indexing script and data objects
 -- ===============================================================
 
-data ScriptPurpose c
-  = Minting !(PolicyID c)
-  | Spending !(TxIn c)
-  | Rewarding !(RewardAcnt c) -- Not sure if this is the right type.
-  | Certifying !(DCert c)
-  deriving (Eq, Show, Generic, NoThunks, NFData)
+data ScriptPurpose era
+  = Minting !(PolicyID (EraCrypto era))
+  | Spending !(TxIn (EraCrypto era))
+  | Rewarding !(RewardAcnt (EraCrypto era))
+  | Certifying !(DCert era)
+  deriving (Generic)
 
-instance (Crypto c) => EncCBOR (ScriptPurpose c) where
-  encCBOR (Minting x) = encode (Sum Minting 0 !> To x)
-  encCBOR (Spending x) = encode (Sum Spending 1 !> To x)
-  encCBOR (Rewarding x) = encode (Sum Rewarding 2 !> To x)
+deriving instance (Era era, Eq (DCert era)) => Eq (ScriptPurpose era)
+deriving instance (Era era, Show (DCert era)) => Show (ScriptPurpose era)
+deriving instance (Era era, NoThunks (DCert era)) => NoThunks (ScriptPurpose era)
+
+instance (Era era, NFData (DCert era)) => NFData (ScriptPurpose era) where
+  rnf = \case
+    Certifying c -> rnf c
+    sp -> rwhnf sp
+
+instance (Era era, EncCBOR (DCert era)) => EncCBOR (ScriptPurpose era) where
+  encCBOR (Minting x) = encode (Sum (Minting @era) 0 !> To x)
+  encCBOR (Spending x) = encode (Sum (Spending @era) 1 !> To x)
+  encCBOR (Rewarding x) = encode (Sum (Rewarding @era) 2 !> To x)
   encCBOR (Certifying x) = encode (Sum Certifying 3 !> To x)
 
-instance (Crypto c) => DecCBOR (ScriptPurpose c) where
+instance (Era era, DecCBOR (DCert era)) => DecCBOR (ScriptPurpose era) where
   decCBOR = decode (Summands "ScriptPurpose" dec)
     where
       dec 0 = SumD Minting <! From
@@ -425,28 +434,33 @@ rdptr ::
   forall era.
   MaryEraTxBody era =>
   TxBody era ->
-  ScriptPurpose (EraCrypto era) ->
+  ScriptPurpose era ->
   StrictMaybe RdmrPtr
-rdptr txBody (Minting (PolicyID hash)) =
-  RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (ScriptHash (EraCrypto era)))
-rdptr txBody (Spending txin) = RdmrPtr Spend <$> indexOf txin (txBody ^. inputsTxBodyL)
-rdptr txBody (Rewarding racnt) = RdmrPtr Rewrd <$> indexOf racnt (unWithdrawals (txBody ^. withdrawalsTxBodyL))
-rdptr txBody (Certifying d) = RdmrPtr Cert <$> indexOf d (txBody ^. certsTxBodyG)
+rdptr txBody = \case
+  Minting (PolicyID hash) ->
+    RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (ScriptHash (EraCrypto era)))
+  Spending txin ->
+    RdmrPtr Spend <$> indexOf txin (txBody ^. inputsTxBodyL)
+  Rewarding racnt ->
+    RdmrPtr Rewrd <$> indexOf racnt (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  Certifying d ->
+    RdmrPtr Cert <$> indexOf d (txBody ^. certsTxBodyL)
 
 rdptrInv ::
   forall era.
   MaryEraTxBody era =>
   TxBody era ->
   RdmrPtr ->
-  StrictMaybe (ScriptPurpose (EraCrypto era))
-rdptrInv txBody (RdmrPtr Mint idx) =
-  Minting . PolicyID <$> fromIndex idx (txBody ^. mintedTxBodyF)
-rdptrInv txBody (RdmrPtr Spend idx) =
-  Spending <$> fromIndex idx (txBody ^. inputsTxBodyL)
-rdptrInv txBody (RdmrPtr Rewrd idx) =
-  Rewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
-rdptrInv txBody (RdmrPtr Cert idx) =
-  Certifying <$> fromIndex idx (txBody ^. certsTxBodyG)
+  StrictMaybe (ScriptPurpose era)
+rdptrInv txBody = \case
+  RdmrPtr Mint idx ->
+    Minting . PolicyID <$> fromIndex idx (txBody ^. mintedTxBodyF)
+  RdmrPtr Spend idx ->
+    Spending <$> fromIndex idx (txBody ^. inputsTxBodyL)
+  RdmrPtr Rewrd idx ->
+    Rewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  RdmrPtr Cert idx ->
+    Certifying <$> fromIndex idx (txBody ^. certsTxBodyL)
 
 {-# DEPRECATED getMapFromValue "No longer used" #-}
 getMapFromValue :: MaryValue c -> Map.Map (PolicyID c) (Map.Map AssetName Integer)
@@ -457,7 +471,7 @@ indexedRdmrs ::
   forall era.
   (MaryEraTxBody era, AlonzoEraTxWits era, EraTx era) =>
   Tx era ->
-  ScriptPurpose (EraCrypto era) ->
+  ScriptPurpose era ->
   Maybe (Data era, ExUnits)
 indexedRdmrs tx sp = case rdptr @era (tx ^. bodyTxL) sp of
   SNothing -> Nothing

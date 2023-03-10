@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
-import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyEraTxBody, WitVKey, Withdrawals)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody, WitVKey, Withdrawals)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn)
 import Cardano.Ledger.UTxO (UTxO)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
@@ -194,7 +194,7 @@ class
     SlotNo ->
     Set (TxIn (EraCrypto era)) ->
     StrictSeq (TxOut era) ->
-    StrictSeq (DCert (EraCrypto era)) ->
+    StrictSeq (DCert era) ->
     Withdrawals (EraCrypto era) ->
     Coin ->
     StrictMaybe (Update era) ->

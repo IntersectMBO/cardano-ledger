@@ -60,7 +60,7 @@ getConsumedMaryValue pp lookupRefund (UTxO u) txBody = consumedValue <> txBody ^
     consumedValue =
       balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
         <> inject (refunds <> withdrawals)
-    refunds = keyCertsRefunds pp lookupRefund (txBody ^. certsTxBodyG)
+    refunds = keyCertsRefunds pp lookupRefund (txBody ^. certsTxBodyL)
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 -- | Computes the set of script hashes required to unlock the transaction inputs and the

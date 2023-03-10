@@ -6,6 +6,7 @@
   * `DState`
   * `PState`
   * `VState`
+* Add `EraDCert`, `ShelleyEraDCert` instances to `MaryEra`
 
 ## 1.1.0.0
 

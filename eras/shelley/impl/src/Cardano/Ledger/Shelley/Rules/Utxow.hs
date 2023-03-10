@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -66,12 +67,11 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTestOnSignal,
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Delegation.Certificates (
+import Cardano.Ledger.Shelley.Delegation (
   delegCWitness,
-  genesisCWitness,
   isInstantaneousRewards,
-  poolCWitness,
   requiresVKeyWitness,
+  pattern ShelleyDCertDeleg,
  )
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
@@ -90,8 +90,6 @@ import Cardano.Ledger.Shelley.Tx (
   witsFromTxWitnesses,
  )
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  PoolCert (..),
   PoolParams (..),
   ShelleyEraTxBody (..),
   WitVKey (..),
@@ -507,14 +505,14 @@ witsVKeyNeeded utxo' tx genDelegs =
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr accum Set.empty (txBody ^. certsTxBodyG)
+    owners = foldr accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
             (Set.map asWitness (ppOwners pool))
             ans
         accum _cert ans = ans
-    cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
+    cwitness (ShelleyDCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
     cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
     cwitness (DCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
     cwitness c = error $ show c ++ " does not have a witness"
@@ -522,7 +520,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyG)
+    certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
@@ -576,7 +574,7 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
         StrictSeq.forceToStrict
           . Seq.filter isInstantaneousRewards
           . StrictSeq.fromStrict
-          $ txBody ^. certsTxBodyG
+          $ txBody ^. certsTxBodyL
    in failureUnless
         (not (null mirCerts) ==> Set.size genSig >= fromIntegral coreNodeQuorum)
         $ MIRInsufficientGenesisSigsUTXOW genSig

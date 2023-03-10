@@ -26,6 +26,7 @@ import Control.State.Transition.Extended (Embed (..), STS (..))
 instance
   ( EraTxOut era
   , EraGovernance era
+  , EraDCert era
   , Script era ~ AlonzoScript era
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
@@ -44,6 +45,7 @@ instance
 instance
   ( EraTxOut era
   , EraGovernance era
+  , EraDCert era
   , PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era
   , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , Eq (PPUPPredFailure era)

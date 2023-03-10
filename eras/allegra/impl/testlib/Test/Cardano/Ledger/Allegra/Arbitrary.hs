@@ -102,7 +102,12 @@ instance
   arbitrary = genericArbitraryU
 
 instance
-  (EraTxOut era, Era era, Arbitrary (TxOut era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  ( EraTxOut era
+  , EraDCert era
+  , Arbitrary (TxOut era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (DCert era)
+  ) =>
   Arbitrary (AllegraTxBody era)
   where
   arbitrary =

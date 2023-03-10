@@ -26,6 +26,7 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -33,21 +34,18 @@ import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
   MultiSig (..),
   NominalDiffTimeMicro (..),
+  ShelleyDelegCert,
   ShelleyGenesis (..),
   ShelleyGenesisStaking (ShelleyGenesisStaking),
   ShelleyTx (ShelleyTx),
   ShelleyTxBody (ShelleyTxBody),
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation.Certificates (
-  ConstitutionalDelegCert,
-  DCert,
-  DelegCert,
-  Delegation,
+import Cardano.Ledger.Shelley.Delegation (
   MIRCert,
   MIRPot,
   MIRTarget (SendToOppositePotMIR, StakeAddressesMIR),
-  PoolCert,
+  ShelleyDCert,
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -357,14 +355,13 @@ genMetadatum :: Gen (Word64, Metadatum)
 genMetadatum = do
   (,)
     <$> arbitrary
-    <*> ( oneof
-            [ genDatumInt
-            , genDatumString
-            , genDatumBytestring
-            , genMetadatumList
-            , genMetadatumMap
-            ]
-        )
+    <*> oneof
+      [ genDatumInt
+      , genDatumString
+      , genDatumBytestring
+      , genMetadatumList
+      , genMetadatumMap
+      ]
 
 genDatumInt :: Gen Metadatum
 genDatumInt =
@@ -442,11 +439,11 @@ vectorOfMetadatumSimple = do
 -- Era-independent generators ------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (DCert c) where
+instance Era era => Arbitrary (ShelleyDCert era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (DelegCert c) where
+instance Crypto c => Arbitrary (ShelleyDelegCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -519,7 +516,12 @@ newtype StakeProportion = StakeProportion Rational
   deriving (Show)
 
 instance
-  (EraTxOut era, Arbitrary (PParamsUpdate era), Arbitrary (TxOut era)) =>
+  ( EraTxOut era
+  , Arbitrary (PParamsUpdate era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (DCert era)
+  , EncCBOR (DCert era)
+  ) =>
   Arbitrary (ShelleyTxBody era)
   where
   arbitrary =

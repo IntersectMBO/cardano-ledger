@@ -9,9 +9,7 @@ where
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
-  DCert (..),
   Network (..),
-  PoolCert (..),
   PoolEnv (..),
   PoolParams (..),
   RewardAcnt (..),

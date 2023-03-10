@@ -56,7 +56,6 @@ import Cardano.Ledger.Shelley.Rules.Delegs (
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts, synopsisCoinMap)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
-import Cardano.Ledger.Shelley.TxBody (DCert (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Cardano.Ledger.UMap (depositView)
 import Control.DeepSeq (NFData (..))
@@ -175,7 +174,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
   , ProtVerAtMost era 8
   ) =>
   STS (ShelleyLEDGER era)
@@ -204,16 +203,14 @@ instance
 ledgerTransition ::
   forall era.
   ( EraTx era
-  , ShelleyEraTxBody era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
-  , ProtVerAtMost era 8
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do

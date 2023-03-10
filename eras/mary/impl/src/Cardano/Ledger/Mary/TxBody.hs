@@ -5,13 +5,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -42,6 +39,7 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Core
+import Cardano.Ledger.Mary.Delegation ()
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxOut ()
 import Cardano.Ledger.Mary.Value
@@ -56,7 +54,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
@@ -72,21 +69,21 @@ import NoThunks.Class (NoThunks (..))
 newtype MaryTxBodyRaw era = MaryTxBodyRaw (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era)
 
 deriving newtype instance
-  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
   NFData (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
   Eq (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
   Show (MaryTxBodyRaw era)
 
 deriving instance Generic (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (MaryTxBodyRaw era)
 
 deriving newtype instance AllegraEraTxBody era => DecCBOR (MaryTxBodyRaw era)
@@ -100,30 +97,27 @@ instance Era era => EncCBOR (MaryTxBody era)
 instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
   decCBOR = pure <$> decCBOR
 
-deriving newtype instance EraTxOut era => EncCBOR (MaryTxBodyRaw era)
+deriving newtype instance (EraTxOut era, EraDCert era) => EncCBOR (MaryTxBodyRaw era)
 
 instance Memoized MaryTxBody where
   type RawType MaryTxBody = MaryTxBodyRaw
 
 deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
   Eq (MaryTxBody era)
 
 deriving newtype instance
-  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
   Show (MaryTxBody era)
 
 deriving instance Generic (MaryTxBody era)
 
 deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (MaryTxBody era)
 
 deriving newtype instance
-  ( NFData (TxOut era)
-  , NFData (PParamsUpdate era)
-  , Era era
-  ) =>
+  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
   NFData (MaryTxBody era)
 
 deriving via
@@ -138,10 +132,10 @@ instance (c ~ EraCrypto era, Era era) => HashAnnotated (MaryTxBody era) EraIndep
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern MaryTxBody ::
-  EraTxOut era =>
+  (EraTxOut era, EraDCert era) =>
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert (EraCrypto era)) ->
+  StrictSeq (DCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
@@ -204,7 +198,7 @@ pattern MaryTxBody
 
 -- | This is a helper Lens creator for any Memoized type.
 lensMaryTxBodyRaw ::
-  EraTxOut era =>
+  (EraTxOut era, EraDCert era) =>
   (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era -> a) ->
   ( AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era ->
     b ->
@@ -248,6 +242,10 @@ instance Crypto c => EraTxBody (MaryEra c) where
     lensMaryTxBodyRaw atbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
+  certsTxBodyL =
+    lensMaryTxBodyRaw atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
+  {-# INLINEABLE certsTxBodyL #-}
+
 instance Crypto c => ShelleyEraTxBody (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (MaryEra StandardCrypto) #-}
 
@@ -257,10 +255,6 @@ instance Crypto c => ShelleyEraTxBody (MaryEra c) where
   updateTxBodyL =
     lensMaryTxBodyRaw atbrUpdate $ \txBodyRaw update -> txBodyRaw {atbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
-
-  certsTxBodyL =
-    lensMaryTxBodyRaw atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
-  {-# INLINEABLE certsTxBodyL #-}
 
 instance Crypto c => AllegraEraTxBody (MaryEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (MaryEra StandardCrypto) #-}

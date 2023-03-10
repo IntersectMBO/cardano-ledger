@@ -24,9 +24,9 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.EpochBoundary (SnapShot (ssPoolParams), emptySnapShot)
-import Cardano.Ledger.Era (EraCrypto (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -35,8 +35,6 @@ import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  PoolCert (..),
   PoolParams (..),
   ShelleyTxBody (..),
   ShelleyTxOut (..),

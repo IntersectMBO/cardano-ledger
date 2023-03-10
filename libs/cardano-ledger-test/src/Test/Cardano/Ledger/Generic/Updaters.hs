@@ -25,7 +25,6 @@ import Cardano.Ledger.Babbage.TxBody as Babbage (
   BabbageTxOut (..),
   Datum (..),
  )
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
   ShelleyTx (..),
  )
@@ -216,7 +215,6 @@ updateTxBody pf txBody dt =
       RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
-      ConwayCerts certs -> txBody & conwayCertsTxBodyL .~ certs
       _ -> txBody
 {-# NOINLINE updateTxBody #-}
 

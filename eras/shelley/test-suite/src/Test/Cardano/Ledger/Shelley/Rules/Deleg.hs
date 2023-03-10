@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Deleg (
 where
 
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Shelley.API (ShelleyDELEG)
+import Cardano.Ledger.Shelley.API (ShelleyDELEG, ShelleyDelegCert (..))
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -45,6 +45,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.QuickCheck (Property, conjoin, counterexample)
 
+import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   delegTraceFromBlock,
   forAllChainTrace,
@@ -94,10 +95,10 @@ tests =
        in conjoin (map (delegProp delegEnv) delegSsts)
 
 -- | Check stake key registration
-keyRegistration :: SourceSignalTarget (ShelleyDELEG era) -> Property
+keyRegistration :: (ShelleyEraDCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyRegistration
   SourceSignalTarget
-    { signal = (DCertDeleg (RegKey hk))
+    { signal = (ShelleyDCertDeleg (RegKey hk))
     , target = targetSt
     } =
     conjoin
@@ -111,10 +112,10 @@ keyRegistration
 keyRegistration _ = property ()
 
 -- | Check stake key de-registration
-keyDeRegistration :: SourceSignalTarget (ShelleyDELEG era) -> Property
+keyDeRegistration :: (ShelleyEraDCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDeRegistration
   SourceSignalTarget
-    { signal = (DCertDeleg (DeRegKey hk))
+    { signal = ShelleyDCertDeleg (DeRegKey hk)
     , target = targetSt
     } =
     conjoin
@@ -128,10 +129,10 @@ keyDeRegistration
 keyDeRegistration _ = property ()
 
 -- | Check stake key delegation
-keyDelegation :: SourceSignalTarget (ShelleyDELEG era) -> Property
+keyDelegation :: (ShelleyEraDCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDelegation
   SourceSignalTarget
-    { signal = (DCertDeleg (Delegate (Delegation from to)))
+    { signal = ShelleyDCertDeleg (Delegate (Delegation from to))
     , target = targetSt
     } =
     let fromImage = eval (rng (Set.singleton from `UM.domRestrictedView` delegations targetSt))
@@ -169,7 +170,7 @@ rewardsSumInvariant
           ]
 
 checkInstantaneousRewards ::
-  EraPParams era =>
+  (EraPParams era, ShelleyEraDCert era, ProtVerAtMost era 8) =>
   DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property

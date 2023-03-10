@@ -4,7 +4,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -99,6 +98,7 @@ instance
 instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
+  , Arbitrary (DCert era)
   ) =>
   Arbitrary (BabbageUtxowPredFailure era)
   where
@@ -131,6 +131,7 @@ instance
   , Arbitrary (Value era)
   , Arbitrary (Script era)
   , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (DCert era)
   ) =>
   Arbitrary (BabbageTxBody era)
   where

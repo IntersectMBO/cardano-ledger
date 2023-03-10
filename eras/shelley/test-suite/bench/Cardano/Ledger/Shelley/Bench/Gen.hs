@@ -15,7 +15,6 @@ import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
   CertState,
-  DCert,
   DelplEnv,
   ShelleyLEDGERS,
   ShelleyTx,
@@ -108,11 +107,12 @@ genTriple ::
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
-  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert era
   , Tx era ~ ShelleyTx era
   , EraGovernance era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
+  , ProtVerAtMost era 8
   ) =>
   Proxy era ->
   Int ->

@@ -6,8 +6,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Alonzo.PlutusScriptApi (
   -- Figure 8
@@ -24,27 +26,24 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi (
 )
 where
 
-import Cardano.Ledger.Alonzo.Core (MaryEraTxBody (..))
+import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), indexedRdmrs, txdats')
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
+import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxInfo (
+  EraPlutusContext,
   ExtendedUTxO (..),
   ScriptResult (..),
   TranslationError (..),
   runPLCScript,
   valContext,
  )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), AlonzoTxWits, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Core hiding (TranslationError)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -66,7 +65,7 @@ import NoThunks.Class (NoThunks)
 -- ===============================================================
 
 -- | Only the Spending ScriptPurpose contains TxIn
-getSpendingTxIn :: ScriptPurpose c -> Maybe (TxIn c)
+getSpendingTxIn :: ScriptPurpose era -> Maybe (TxIn (EraCrypto era))
 getSpendingTxIn = \case
   Spending txin -> Just txin
   Minting _policyid -> Nothing
@@ -76,34 +75,38 @@ getSpendingTxIn = \case
 -- | Get the Data associated with a ScriptPurpose. Only the Spending
 --   ScriptPurpose contains Data. The null list is returned for the other kinds.
 getDatumAlonzo ::
-  (AlonzoEraTxOut era, EraTx era, TxWits era ~ AlonzoTxWits era) =>
+  (AlonzoEraTxWits era, AlonzoEraTxOut era, EraTx era) =>
   Tx era ->
   UTxO era ->
-  ScriptPurpose (EraCrypto era) ->
+  ScriptPurpose era ->
   Maybe (Data era)
 getDatumAlonzo tx (UTxO m) sp = do
   txIn <- getSpendingTxIn sp
   txOut <- Map.lookup txIn m
   SJust hash <- Just $ txOut ^. dataHashTxOutL
-  Map.lookup hash (unTxDats $ txdats' (tx ^. witsTxL))
+  Map.lookup hash (unTxDats $ tx ^. witsTxL . datsTxWitsL)
 
 -- ========================================================================
 
--- | When collecting inputs for twophase scripts, 3 things can go wrong.
-data CollectError c
-  = NoRedeemer !(ScriptPurpose c)
-  | NoWitness !(ScriptHash c)
+-- | When collecting inputs for two phase scripts, 3 things can go wrong.
+data CollectError era
+  = NoRedeemer !(ScriptPurpose era)
+  | NoWitness !(ScriptHash (EraCrypto era))
   | NoCostModel !Language
-  | BadTranslation !(TranslationError c)
-  deriving (Eq, Show, Generic, NoThunks)
+  | BadTranslation !(TranslationError (EraCrypto era))
+  deriving (Generic)
 
-instance (Crypto c) => EncCBOR (CollectError c) where
+deriving instance (Era era, Eq (DCert era)) => Eq (CollectError era)
+deriving instance (Era era, Show (DCert era)) => Show (CollectError era)
+deriving instance (Era era, NoThunks (DCert era)) => NoThunks (CollectError era)
+
+instance EraDCert era => EncCBOR (CollectError era) where
   encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
-  encCBOR (NoWitness x) = encode $ Sum NoWitness 1 !> To x
+  encCBOR (NoWitness x) = encode $ Sum (NoWitness @era) 1 !> To x
   encCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
-  encCBOR (BadTranslation x) = encode $ Sum BadTranslation 3 !> To x
+  encCBOR (BadTranslation x) = encode $ Sum (BadTranslation @era) 3 !> To x
 
-instance (Crypto c) => DecCBOR (CollectError c) where
+instance (Era era, DecCBOR (DCert era)) => DecCBOR (CollectError era) where
   decCBOR = decode (Summands "CollectError" dec)
     where
       dec 0 = SumD NoRedeemer <! From
@@ -122,8 +125,8 @@ instance (Crypto c) => DecCBOR (CollectError c) where
 -- by use of the (partial) language function, which is not defined on 1-phase scripts.
 knownToNotBe1Phase ::
   Map.Map (ScriptHash (EraCrypto era)) (AlonzoScript era) ->
-  (ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era)) ->
-  Maybe (ScriptPurpose (EraCrypto era), Language, ShortByteString)
+  (ScriptPurpose era, ScriptHash (EraCrypto era)) ->
+  Maybe (ScriptPurpose era, Language, ShortByteString)
 knownToNotBe1Phase scriptsAvailable (sp, sh) = do
   PlutusScript lang script <- sh `Map.lookup` scriptsAvailable
   Just (sp, lang, script)
@@ -144,13 +147,14 @@ collectTwoPhaseScriptInputs ::
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   , AlonzoEraPParams era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
   PParams era ->
   Tx era ->
   UTxO era ->
-  Either [CollectError (EraCrypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
+  Either [CollectError era] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   let usedLanguages = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
       costModels = costModelsValid $ pp ^. ppCostModelsL

@@ -64,6 +64,7 @@ library
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Core.Era
+        Cardano.Ledger.Core.DCert
         Cardano.Ledger.Core.PParams
         Cardano.Ledger.Core.Translation
 

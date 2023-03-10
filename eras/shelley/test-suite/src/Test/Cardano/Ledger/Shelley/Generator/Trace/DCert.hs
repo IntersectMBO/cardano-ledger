@@ -19,8 +19,8 @@ where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, TxIx)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API (
   AccountState,
@@ -29,7 +29,6 @@ import Cardano.Ledger.Shelley.API (
   Ptr (..),
   ShelleyDELPL,
  )
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   keyCertsRefundsCertState,
@@ -102,13 +101,13 @@ instance
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
-  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert era
   ) =>
   STS (CERTS era)
   where
   type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
   type State (CERTS era) = (CertState era, CertIx)
-  type Signal (CERTS era) = Maybe (DCert (EraCrypto era), CertCred era)
+  type Signal (CERTS era) = Maybe (DCert era, CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
   type Event (CERTS era) = CertsEvent era
 
@@ -122,7 +121,7 @@ certsTransition ::
   ( Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
-  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert era
   ) =>
   TransitionRule (CERTS era)
 certsTransition = do
@@ -160,7 +159,8 @@ instance
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
-  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert era
+  , ProtVerAtMost era 8
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
   where
@@ -195,7 +195,8 @@ genDCerts ::
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
-  , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , Signal (Core.EraRule "DELPL" era) ~ DCert era
+  , ProtVerAtMost era 8
   ) =>
   GenEnv era ->
   Core.PParams era ->
@@ -204,7 +205,7 @@ genDCerts ::
   TxIx ->
   AccountState ->
   Gen
-    ( StrictSeq (DCert (EraCrypto era))
+    ( StrictSeq (DCert era)
     , Coin
     , Coin
     , CertState era
