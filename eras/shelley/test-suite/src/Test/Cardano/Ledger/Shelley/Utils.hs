@@ -109,8 +109,8 @@ import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
+import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.QuickCheck (Arbitrary (..), chooseAny)
 import Test.Tasty.HUnit (
   Assertion,
   (@?=),
@@ -149,18 +149,6 @@ instance Split Coin where
     | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
 
 type GenesisKeyPair c = KeyPair 'Genesis c
-
-data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
-  deriving (Eq, Show)
-
-instance Arbitrary RawSeed where
-  arbitrary =
-    RawSeed
-      <$> chooseAny
-      <*> chooseAny
-      <*> chooseAny
-      <*> chooseAny
-      <*> chooseAny
 
 instance EncCBOR RawSeed where
   encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)

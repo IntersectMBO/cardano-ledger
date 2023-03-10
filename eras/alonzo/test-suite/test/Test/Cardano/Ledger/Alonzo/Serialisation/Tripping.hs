@@ -24,6 +24,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (zipMemoRawType)
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip

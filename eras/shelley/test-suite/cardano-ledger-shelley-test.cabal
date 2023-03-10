@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-shelley-test
-version:       1.0.0.0
+version:       1.1.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -81,13 +81,13 @@ library
         cardano-crypto-test,
         cardano-crypto-wrapper,
         cardano-data,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
         cardano-ledger-byron,
         cardano-ledger-byron-test,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.0,
         cardano-ledger-pretty,
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} ^>=1.0,
-        cardano-protocol-tpraos,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} ^>=1.1,
+        cardano-protocol-tpraos >=1.0,
         cardano-slotting,
         cborg,
         containers,
@@ -168,8 +168,8 @@ test-suite cardano-ledger-shelley-test
         cardano-ledger-byron,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-pretty,
-        cardano-ledger-shelley,
-        cardano-ledger-shelley-test,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+        cardano-ledger-shelley-test >=1.1,
         cardano-protocol-tpraos,
         cardano-slotting,
         cborg,
@@ -212,8 +212,8 @@ benchmark mainbench
         cardano-crypto-praos,
         cardano-data,
         cardano-ledger-binary:testlib,
-        cardano-ledger-core,
-        cardano-ledger-shelley,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test,
         cardano-protocol-tpraos,
         cardano-slotting,

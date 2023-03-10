@@ -31,7 +31,7 @@ library
     build-depends:
         base >=4.14 && <4.17,
         deepseq,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
         hedgehog >=1.0.4,
         tasty-hunit,
         microlens,

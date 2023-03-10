@@ -76,7 +76,8 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredKeys,
   ledgerStateWithNregisteredPools,
  )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
+
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
@@ -226,7 +227,7 @@ epochAt x =
       , bench "incrementalStakeDistr" (nf action2im arg)
       , env (pure (updateStakeDistribution emptyPParams mempty mempty utxo)) $ \incStake ->
           bench "incrementalStakeDistr (no update)" $
-            nf (incrementalStakeDistr (emptyPParams @C) incStake dstate) pstate
+            nf (incrementalStakeDistr (emptyPParams @(ShelleyEra StandardCrypto)) incStake dstate) pstate
       ]
   where
     n = 10000 :: Int

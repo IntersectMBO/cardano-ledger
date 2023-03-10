@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -47,8 +46,8 @@ import Data.Hashable (hash)
 import Data.Sequence.Strict (StrictSeq (..), fromList)
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Allegra.Arbitrary ()
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
@@ -79,7 +78,7 @@ instance (CryptoClass.Crypto c) => ScriptClass (AllegraEra c) where
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
+instance CryptoClass.Crypto c => EraGen (AllegraEra c) where
   genGenesisValue (GenEnv _keySpace _scriptspace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     genCoin minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge _utxo _pparams = genTxBody
@@ -120,7 +119,7 @@ genTxBody slot ins outs cert wdrl fee upd ad = do
     , [] -- Allegra does not need any additional script witnesses
     )
 
-instance Mock c => MinGenTxout (AllegraEra c) where
+instance CryptoClass.Crypto c => MinGenTxout (AllegraEra c) where
   calcEraMinUTxO _txout pp = pp ^. ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do

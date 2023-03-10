@@ -20,7 +20,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T (pack)
 import qualified Data.Text.Encoding as T
 import Data.Word (Word64)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 

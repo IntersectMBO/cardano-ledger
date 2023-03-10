@@ -103,7 +103,7 @@ library testlib
         cardano-binary,
         cardano-crypto-class,
         cardano-crypto-tests,
-        cardano-ledger-binary,
+        cardano-ledger-binary >=1.0,
         cardano-prelude-test,
         cardano-strict-containers,
         cardano-slotting,

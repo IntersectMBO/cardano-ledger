@@ -13,6 +13,7 @@ import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes

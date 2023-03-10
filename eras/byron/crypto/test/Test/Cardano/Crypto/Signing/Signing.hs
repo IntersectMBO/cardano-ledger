@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Crypto.Signing.Signing (tests) where
+module Test.Cardano.Crypto.Signing.Signing (tests, genData) where
 
 import Cardano.Crypto.Signing (SignTag (..), sign, toVerification, verifySignature)
 import Cardano.Ledger.Binary (encCBOR)

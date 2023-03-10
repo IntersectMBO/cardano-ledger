@@ -43,12 +43,12 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (B, B_Crypto)
-import Test.Cardano.Ledger.Shelley.Generator.Block (genBlockWithTxGen)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (
+import Test.Cardano.Ledger.Shelley.Constants (
   defaultConstants,
   maxGenesisUTxOouts,
   minGenesisUTxOouts,
  )
+import Test.Cardano.Ledger.Shelley.Generator.Block (genBlockWithTxGen)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
   GenEnv (..),

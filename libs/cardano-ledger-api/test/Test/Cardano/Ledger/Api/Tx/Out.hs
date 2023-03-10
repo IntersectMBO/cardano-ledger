@@ -20,7 +20,7 @@ import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Identity
 import Lens.Micro
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
 propSetShelleyMinTxOut ::

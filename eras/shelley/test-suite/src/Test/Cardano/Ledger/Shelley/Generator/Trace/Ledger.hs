@@ -46,7 +46,7 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import GHC.Stack
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (
   EraGen (..),

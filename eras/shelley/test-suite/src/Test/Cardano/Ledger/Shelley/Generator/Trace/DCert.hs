@@ -64,7 +64,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
 import Test.Cardano.Ledger.Shelley.Generator.Delegation (CertCred (..), genDCert)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))

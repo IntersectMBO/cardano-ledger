@@ -10,17 +10,14 @@
 
 module Test.Cardano.Ledger.Mary.ValueSpec (spec) where
 
-import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
 import Cardano.Ledger.BaseTypes (natVersion)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Hashes
 import Cardano.Ledger.Mary.Value
 import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Short as SBS
 import Data.CanonicalMaps (canonicalInsert)
-import qualified Data.Map.Strict as Map (empty)
 import GHC.Exts
 import Test.Cardano.Data
 import Test.Cardano.Ledger.Binary.RoundTrip (
@@ -30,7 +27,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripFailureCborRangeExpectation,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary
+import Test.Cardano.Ledger.Mary.Arbitrary (genEmptyMultiAsset, genMaryValue, genMultiAsset)
 
 spec :: Spec
 spec = do
@@ -69,61 +66,6 @@ spec = do
 
 instance IsString AssetName where
   fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack
-
-instance Arbitrary AssetName where
-  arbitrary =
-    AssetName
-      <$> oneof
-        [ do
-            len <- choose (1, 32)
-            genShortByteString len
-        , -- We need duplicates for quality tests
-          elements digitByteStrings
-        ]
-
-digitByteStrings :: IsString s => [s]
-digitByteStrings = [fromString [x] | x <- ['0' .. '9']]
-
-hashOfDigitByteStrings :: HashAlgorithm h => [Hash h a]
-hashOfDigitByteStrings = castHash . hashWith id <$> digitByteStrings
-
-instance Crypto c => Arbitrary (PolicyID c) where
-  arbitrary =
-    PolicyID . ScriptHash
-      <$> oneof
-        [ arbitrary
-        , elements hashOfDigitByteStrings
-        ]
-
-instance Crypto c => Arbitrary (MultiAsset c) where
-  arbitrary =
-    genMultiAsset $
-      toInteger
-        <$> oneof
-          [ choose (1 :: Int, maxBound)
-          , choose (minBound :: Int, -1)
-          ]
-
-instance Crypto c => Arbitrary (MaryValue c) where
-  arbitrary = do
-    v <- toInteger <$> choose (0 :: Int, maxBound)
-    ma <-
-      genMultiAsset $ toInteger <$> choose (1 :: Int, maxBound)
-    pure $ MaryValue v ma
-
-genMultiAsset :: Crypto c => Gen Integer -> Gen (MultiAsset c)
-genMultiAsset genAmount =
-  MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbitrary genAmount)
-
-genEmptyMultiAsset :: Crypto c => Gen (MultiAsset c)
-genEmptyMultiAsset =
-  MultiAsset <$> genNonEmptyMap arbitrary (pure Map.empty)
-
-genMaryValue :: Gen (MultiAsset c) -> Gen (MaryValue c)
-genMaryValue genMA = do
-  i <- toInteger <$> choose (0 :: Int, maxBound)
-  ma <- genMA
-  pure $ MaryValue i ma
 
 propCanonicalConstructionAgrees ::
   Crypto c =>

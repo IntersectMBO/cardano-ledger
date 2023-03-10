@@ -7,6 +7,7 @@ where
 import Cardano.Ledger.Core
 import Criterion.Main
 import Test.Cardano.Ledger.EraBuffet
+import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck
 

@@ -51,6 +51,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
+import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
@@ -93,6 +94,9 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
+
+instance (Era era, EncCBOR (f era), Arbitrary (f era)) => Arbitrary (Sized (f era)) where
+  arbitrary = mkSized (eraProtVerHigh @era) <$> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.BaseTypes --------------------------------------------------------------

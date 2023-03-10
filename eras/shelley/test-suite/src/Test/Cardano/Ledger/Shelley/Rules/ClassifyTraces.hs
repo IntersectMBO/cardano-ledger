@@ -73,7 +73,7 @@ import Data.Semigroup (Sum (..))
 import Data.Sequence.Strict (StrictSeq)
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
+import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)

@@ -9,7 +9,7 @@
 -- >>> import qualified Data.Sequence.Strict as StrictSeq
 -- >>> import Cardano.Ledger.Api.Era (Babbage)
 -- >>> import Lens.Micro
--- >>> import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+-- >>> import Test.Cardano.Ledger.Babbage.Arbitrary ()
 --
 -- Here's an example on how to build a Babbage era unbalanced transaction containing a single
 -- transaction output using the provided interface.

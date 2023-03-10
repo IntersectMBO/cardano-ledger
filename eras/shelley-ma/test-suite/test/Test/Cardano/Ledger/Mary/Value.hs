@@ -7,12 +7,11 @@
 {-# LANGUAGE NoMonoLocalBinds #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
--- surpresses orphan warnings on Arbitray (Value era),  Arbitrary AssetName,  Arbitrary (PolicyID C)
-
 module Test.Cardano.Ledger.Mary.Value (valTests) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact, toCompact)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -32,8 +31,7 @@ import Data.CanonicalMaps (
  )
 import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
-import Test.Cardano.Ledger.Mary.ValueSpec ()
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import qualified Test.QuickCheck as QC
@@ -113,17 +111,17 @@ insert2 combine pid aid new m1 =
 
 -- 3 functions that build Values from Policy Asset triples.
 
-valueFromList :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
+valueFromList :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
 valueFromList list c = MaryValue c $ foldr acc mempty list
   where
     acc (policy, asset, count) m = insertMultiAsset (+) policy asset count m
 
-valueFromList3 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
+valueFromList3 :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
 valueFromList3 list c = foldr acc (MaryValue c mempty) list
   where
     acc (policy, asset, count) m = insert3 (+) policy asset count m
 
-valueFromList2 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
+valueFromList2 :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
 valueFromList2 list c = foldr acc (MaryValue c mempty) list
   where
     acc (policy, asset, count) m = insert2 (+) policy asset count m
@@ -148,7 +146,7 @@ genB = resize 4 arbitrary
 genAssetName :: Gen AssetName
 genAssetName = AssetName <$> genB
 
-genPolicyID :: Gen (PolicyID C_Crypto)
+genPolicyID :: Gen (PolicyID StandardCrypto)
 genPolicyID = PolicyID <$> arbitrary
 
 -- ===========================================================================
@@ -170,7 +168,7 @@ albelianTests =
     [ testGroup "albelian Coin" $
         map (\(prop, name) -> testProperty name prop) (albelianlist @Coin)
     , testGroup "albelian Value" $
-        map (\(prop, name) -> testProperty name prop) (albelianlist @(MaryValue C_Crypto))
+        map (\(prop, name) -> testProperty name prop) (albelianlist @(MaryValue StandardCrypto))
     ]
 
 -- ===================================================================
@@ -218,7 +216,7 @@ polyCoinTests = testGroup "polyCoinTests" (map f (proplist @Coin))
     f (fun, name) = testProperty name fun
 
 polyValueTests :: TestTree
-polyValueTests = testGroup "polyValueTests" (map f (proplist @(MaryValue C_Crypto)))
+polyValueTests = testGroup "polyValueTests" (map f (proplist @(MaryValue StandardCrypto)))
   where
     f (fun, name) = testProperty name fun
 
@@ -227,7 +225,7 @@ polyValueTests = testGroup "polyValueTests" (map f (proplist @(MaryValue C_Crypt
 -- Testing that insert, lookup, and coin interact properly
 
 valuePropList ::
-  [(Integer -> Integer -> MaryValue C_Crypto -> PolicyID C_Crypto -> AssetName -> Bool, String)]
+  [(Integer -> Integer -> MaryValue StandardCrypto -> PolicyID StandardCrypto -> AssetName -> Bool, String)]
 valuePropList =
   [ (\_ _ x _ _ -> coin (modifyCoin f x) == modifyCoin f (coin x), "coinModify")
   , (\_ _ _ p a -> insertValue pickOld p a 0 zero == zero, "Nozeros")
@@ -294,9 +292,9 @@ monoValueTests = testGroup "Value specific tests" (map (\(f, n) -> testProperty 
 
 valueGroup ::
   [ ( Integer ->
-      MaryValue C_Crypto ->
-      MaryValue C_Crypto ->
-      PolicyID C_Crypto ->
+      MaryValue StandardCrypto ->
+      MaryValue StandardCrypto ->
+      PolicyID StandardCrypto ->
       AssetName ->
       Property
     , String

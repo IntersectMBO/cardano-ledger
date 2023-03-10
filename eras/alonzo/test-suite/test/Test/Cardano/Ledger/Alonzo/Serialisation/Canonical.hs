@@ -33,6 +33,7 @@ import Data.ByteString.Lazy as LBS
 import Data.Functor.Compose (Compose (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import qualified Test.QuickCheck.Property as QCP
 import Test.Tasty

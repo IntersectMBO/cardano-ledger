@@ -34,8 +34,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (ledgerEnv)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import qualified Test.Cardano.Ledger.Shelley.Generator.Block as GenBlock
-import Test.Cardano.Ledger.Shelley.Generator.Constants (
+import Test.Cardano.Ledger.Shelley.Constants (
   Constants (
     maxGenesisUTxOouts,
     maxMinFeeA,
@@ -43,6 +42,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Constants (
   ),
   defaultConstants,
  )
+import qualified Test.Cardano.Ledger.Shelley.Generator.Block as GenBlock
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), ScriptSpace (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)

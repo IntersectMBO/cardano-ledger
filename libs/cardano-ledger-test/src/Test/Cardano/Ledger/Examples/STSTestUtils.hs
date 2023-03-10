@@ -87,6 +87,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.TxWits (keyBy)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -94,7 +95,6 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import qualified Data.List as List
-import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Natural (Natural)
 import GHC.Stack
@@ -505,6 +505,3 @@ findMismatch _ _ = Nothing
 
 isSubset :: Eq t => [t] -> [t] -> Bool
 isSubset small big = List.all (`List.elem` big) small
-
-keyBy :: Ord k => (a -> k) -> [a] -> Map k a
-keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs

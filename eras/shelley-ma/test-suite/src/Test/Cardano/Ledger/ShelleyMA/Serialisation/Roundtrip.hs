@@ -20,7 +20,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripAnnRangeExpectation,
   roundTripCborExpectation,
  )
-import Test.Cardano.Ledger.Mary.ValueSpec ()
+import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Generator.TxAuxData ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
