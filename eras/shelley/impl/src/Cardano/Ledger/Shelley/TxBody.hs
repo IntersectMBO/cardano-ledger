@@ -273,8 +273,6 @@ instance Crypto c => EraTxBody (ShelleyEra c) where
 
   type TxBody (ShelleyEra c) = ShelleyTxBody (ShelleyEra c)
 
-  type DCert (ShelleyEra c) = ShelleyDCert (ShelleyEra c)
-
   mkBasicTxBody = mkMemoized basicShelleyTxBodyRaw
 
   allInputsTxBodyF = inputsTxBodyL

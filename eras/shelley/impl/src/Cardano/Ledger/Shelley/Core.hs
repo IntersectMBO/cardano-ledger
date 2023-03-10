@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
@@ -22,6 +23,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.Delegation.Certificates ( DelegCert )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe)
@@ -35,6 +37,12 @@ class EraTxBody era => ShelleyEraTxBody era where
   updateTxBodyG :: SimpleGetter (TxBody era) (StrictMaybe (Update era))
   default updateTxBodyG :: ProtVerAtMost era 8 => SimpleGetter (TxBody era) (StrictMaybe (Update era))
   updateTxBodyG = updateTxBodyL
+
+  getDCertDeleg :: DCert era -> Maybe (DelegCert (EraCrypto era))
+
+
+pattern DCertDeleg :: ShelleyEraTxBody era => DelegCert (EraCrypto era) -> DCert era
+pattern DCertDeleg d <- (getDCertDeleg -> Just d)
 
 type Wdrl c = Withdrawals c
 {-# DEPRECATED Wdrl "In favor of `Cardano.Ledger.Address.Withdrawals`" #-}

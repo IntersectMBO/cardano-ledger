@@ -40,10 +40,11 @@ where
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
-  ToCBOR(..), FromCBOR(..),
   DecCBORGroup (..),
   EncCBOR (..),
   EncCBORGroup (..),
+  FromCBOR (..),
+  ToCBOR (..),
   TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
   decodeRecordNamed,
   decodeRecordSum,
@@ -52,8 +53,8 @@ import Cardano.Ledger.Binary (
   listLenInt,
   peekTokenType,
  )
-import Cardano.Ledger.Core
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
@@ -70,38 +71,16 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
--- | The delegation of one stake key to another.
-data Delegation c = Delegation
-  { dDelegator :: !(StakeCredential c)
-  , dDelegatee :: !(KeyHash 'StakePool c)
-  }
-  deriving (Eq, Generic, Show, NFData)
 
-instance NoThunks (Delegation c)
+instance Crypto c => EraDCert (ShelleyEra c) where
+  {-# SPECIALIZE instance EraDCert (ShelleyEra StandardCrypto) #-}
 
-data DelegCert c
-  = -- | A stake key registration certificate.
-    RegKey !(StakeCredential c)
-  | -- | A stake key deregistration certificate.
-    DeRegKey !(StakeCredential c)
-  | -- | A stake delegation certificate.
-    Delegate !(Delegation c)
-  deriving (Show, Generic, Eq, NFData)
+  type DCert (ShelleyEra c) = ShelleyDCert (ShelleyEra c)
 
-data PoolCert c
-  = -- | A stake pool registration certificate.
-    RegPool !(PoolParams c)
-  | -- | A stake pool retirement certificate.
-    RetirePool !(KeyHash 'StakePool c) !EpochNo
-  deriving (Show, Generic, Eq, NFData)
 
--- | Genesis key delegation certificate
-data ConstitutionalDelegCert c
-  = ConstitutionalDelegCert
-      !(KeyHash 'Genesis c)
-      !(KeyHash 'GenesisDelegate c)
-      !(Hash c (VerKeyVRF c))
-  deriving (Show, Generic, Eq, NFData)
+class EraDCert era => ShelleyEraDCert era where
+
+  getDCertMIR :: DCert era -> Maybe (MIRCert (EraCrypto era))
 
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
@@ -129,10 +108,7 @@ data MIRTarget c
 
 deriving instance NoThunks (MIRTarget c)
 
-instance
-  Crypto c =>
-  DecCBOR (MIRTarget c)
-  where
+instance Crypto c => DecCBOR (MIRTarget c) where
   decCBOR = do
     peekTokenType >>= \case
       TypeMapLen -> StakeAddressesMIR <$> decCBOR
@@ -140,10 +116,7 @@ instance
       TypeMapLenIndef -> StakeAddressesMIR <$> decCBOR
       _ -> SendToOppositePotMIR <$> decCBOR
 
-instance
-  Crypto c =>
-  EncCBOR (MIRTarget c)
-  where
+instance Crypto c => EncCBOR (MIRTarget c) where
   encCBOR (StakeAddressesMIR m) = encCBOR m
   encCBOR (SendToOppositePotMIR c) = encCBOR c
 
@@ -154,17 +127,13 @@ data MIRCert c = MIRCert
   }
   deriving (Show, Generic, Eq, NFData)
 
-instance
-  Crypto c =>
-  DecCBOR (MIRCert c)
-  where
+instance NoThunks (MIRCert c)
+
+instance Crypto c => DecCBOR (MIRCert c) where
   decCBOR =
     decodeRecordNamed "MIRCert" (const 2) (MIRCert <$> decCBOR <*> decCBOR)
 
-instance
-  Crypto c =>
-  EncCBOR (MIRCert c)
-  where
+instance Crypto c => EncCBOR (MIRCert c) where
   encCBOR (MIRCert pot targets) =
     encodeListLen 2
       <> encCBOR pot
@@ -177,14 +146,6 @@ data ShelleyDCert era
   | ShelleyDCertGenesis !(ConstitutionalDelegCert (EraCrypto era))
   | ShelleyDCertMir !(MIRCert (EraCrypto era))
   deriving (Show, Generic, Eq, NFData)
-
-instance NoThunks (DelegCert c)
-
-instance NoThunks (PoolCert c)
-
-instance NoThunks (ConstitutionalDelegCert c)
-
-instance NoThunks (MIRCert c)
 
 instance NoThunks (ShelleyDCert era)
 
@@ -231,7 +192,6 @@ instance Era era => ToCBOR (ShelleyDCert era) where
 instance Era era => FromCBOR (ShelleyDCert era) where
   fromCBOR = fromEraCBOR @era
 
-
 instance Era era => DecCBOR (ShelleyDCert era) where
   decCBOR = decodeRecordSum "DCert crypto" $
     \case
@@ -261,19 +221,6 @@ instance Era era => DecCBOR (ShelleyDCert era) where
         x <- decCBOR
         pure (2, ShelleyDCertMir x)
       k -> invalidKey k
-
--- | Determine the certificate author
-delegCWitness :: DelegCert c -> Credential 'Staking c
-delegCWitness (RegKey _) = error "no witness in key registration certificate"
-delegCWitness (DeRegKey hk) = hk
-delegCWitness (Delegate delegation) = dDelegator delegation
-
-poolCWitness :: PoolCert c -> Credential 'StakePool c
-poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
-poolCWitness (RetirePool k _) = KeyHashObj k
-
-genesisCWitness :: ConstitutionalDelegCert c -> KeyHash 'Genesis c
-genesisCWitness (ConstitutionalDelegCert gk _ _) = gk
 
 -- | Check for 'RegKey' constructor
 isRegKey :: ShelleyDCert c -> Bool
