@@ -2,10 +2,15 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Core.DCert (
   EraDCert (..),
+  pattern DCertDeleg,
+  pattern DCertPool,
+  pattern DCertGenesis,
   Delegation (..),
   DelegCert (..),
   delegCWitness,
@@ -17,7 +22,7 @@ module Cardano.Ledger.Core.DCert (
 where
 
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
-import Cardano.Ledger.Core.Era
+import Cardano.Ledger.Core.Era (Era (EraCrypto))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Keys (
   Hash,
@@ -46,11 +51,32 @@ class
   where
   type DCert era = (r :: Type) | r -> era
 
+  mkDCertDeleg :: DelegCert (EraCrypto era) -> DCert era
+
   getDCertDeleg :: DCert era -> Maybe (DelegCert (EraCrypto era))
+
+  mkDCertPool :: PoolCert (EraCrypto era) -> DCert era
 
   getDCertPool :: DCert era -> Maybe (PoolCert (EraCrypto era))
 
+  mkDCertGenesis :: ConstitutionalDelegCert (EraCrypto era) -> DCert era
+
   getDCertGenesis :: DCert era -> Maybe (ConstitutionalDelegCert (EraCrypto era))
+
+pattern DCertDeleg :: EraDCert era => DelegCert (EraCrypto era) -> DCert era
+pattern DCertDeleg d <- (getDCertDeleg -> Just d)
+  where
+    DCertDeleg d = mkDCertDeleg d
+
+pattern DCertPool :: EraDCert era => PoolCert (EraCrypto era) -> DCert era
+pattern DCertPool d <- (getDCertPool -> Just d)
+  where
+    DCertPool d = mkDCertPool d
+
+pattern DCertGenesis :: EraDCert era => ConstitutionalDelegCert (EraCrypto era) -> DCert era
+pattern DCertGenesis d <- (getDCertGenesis -> Just d)
+  where
+    DCertGenesis d = mkDCertGenesis d
 
 -- | The delegation of one stake key to another.
 data Delegation c = Delegation

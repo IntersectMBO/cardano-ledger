@@ -32,6 +32,7 @@ library
         Cardano.Ledger.Shelley.AdaPots
         Cardano.Ledger.Shelley.BlockChain
         Cardano.Ledger.Shelley.Core
+        Cardano.Ledger.Shelley.Delegation
         Cardano.Ledger.Shelley.Delegation.Certificates
         Cardano.Ledger.Shelley.Delegation.PoolParams
         Cardano.Ledger.Shelley.EpochBoundary

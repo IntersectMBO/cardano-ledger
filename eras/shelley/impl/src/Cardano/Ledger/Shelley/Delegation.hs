@@ -7,17 +7,16 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Shelley.Delegation.Certificates (
-  Delegation (..),
+  pattern DCertMIR
   ShelleyDCert (..),
-  DelegCert (..),
-  PoolCert (..),
-  ConstitutionalDelegCert (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
@@ -34,6 +33,18 @@ module Cardano.Ledger.Shelley.Delegation.Certificates (
   isReservesMIRCert,
   isTreasuryMIRCert,
   requiresVKeyWitness,
+  -- * Re-exports
+  EraDCert (..),
+  pattern DCertDeleg,
+  pattern DCertPool,
+  pattern DCertGenesis,
+  Delegation (..),
+  DelegCert (..),
+  delegCWitness,
+  PoolCert (..),
+  poolCWitness,
+  ConstitutionalDelegCert (..),
+  genesisCWitness,
 )
 where
 
@@ -71,16 +82,19 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-
 instance Crypto c => EraDCert (ShelleyEra c) where
   {-# SPECIALIZE instance EraDCert (ShelleyEra StandardCrypto) #-}
 
   type DCert (ShelleyEra c) = ShelleyDCert (ShelleyEra c)
 
-
 class EraDCert era => ShelleyEraDCert era where
-
+  mkDCertMIR :: MIRCert (EraCrypto era) -> DCert era
   getDCertMIR :: DCert era -> Maybe (MIRCert (EraCrypto era))
+
+pattern DCertMIR :: EraDCert era => MIRCert (EraCrypto era) -> DCert era
+pattern DCertMIR d <- (getDCertMIR -> Just d)
+  where
+    DCertMIR d = mkDCertMIR d
 
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
