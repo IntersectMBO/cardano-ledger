@@ -16,6 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxBody (
+  DCert,
   DelegCert (..),
   Delegation (..),
   ConstitutionalDelegCert (..),

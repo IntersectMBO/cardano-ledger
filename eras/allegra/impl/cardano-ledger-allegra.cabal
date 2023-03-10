@@ -31,6 +31,7 @@ library
 
     hs-source-dirs:   src
     other-modules:
+        Cardano.Ledger.Allegra.Delegation
         Cardano.Ledger.Allegra.Era
         Cardano.Ledger.Allegra.PParams
         Cardano.Ledger.Allegra.TxOut
