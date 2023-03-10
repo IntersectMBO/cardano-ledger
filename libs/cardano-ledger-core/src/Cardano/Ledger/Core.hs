@@ -163,11 +163,21 @@ class
   , NFData (TxBody era)
   , Show (TxBody era)
   , Eq (TxBody era)
+  , DecCBOR (DCert era)
+  , EncCBOR (DCert era)
+  , ToCBOR (DCert era)
+  , FromCBOR (DCert era)
+  , NoThunks (DCert era)
+  , NFData (DCert era)
+  , Show (DCert era)
+  , Eq (DCert era)
   ) =>
   EraTxBody era
   where
   -- | The body of a transaction.
   type TxBody era = (r :: Type) | r -> era
+
+  type DCert era = (r :: Type) | r -> era
 
   mkBasicTxBody :: TxBody era
 
@@ -182,6 +192,8 @@ class
   auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
 
   allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
+
+  certsTxBodyL :: Lens' (TxBody era) (StrictSeq (DCert era))
 
 -- | Abstract interface into specific fields of a `TxOut`
 class

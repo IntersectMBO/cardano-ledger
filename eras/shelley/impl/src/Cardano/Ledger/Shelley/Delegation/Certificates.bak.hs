@@ -7,12 +7,14 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Delegation.Certificates (
   Delegation (..),
-  DCert (..),
+  ShelleyDCert (..),
   DelegCert (..),
   PoolCert (..),
   ConstitutionalDelegCert (..),
@@ -38,6 +40,7 @@ where
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
+  ToCBOR(..), FromCBOR(..),
   DecCBORGroup (..),
   EncCBOR (..),
   EncCBORGroup (..),
@@ -49,9 +52,10 @@ import Cardano.Ledger.Binary (
   listLenInt,
   peekTokenType,
  )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
@@ -126,7 +130,7 @@ data MIRTarget c
 deriving instance NoThunks (MIRTarget c)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   DecCBOR (MIRTarget c)
   where
   decCBOR = do
@@ -137,7 +141,7 @@ instance
       _ -> SendToOppositePotMIR <$> decCBOR
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   EncCBOR (MIRTarget c)
   where
   encCBOR (StakeAddressesMIR m) = encCBOR m
@@ -151,14 +155,14 @@ data MIRCert c = MIRCert
   deriving (Show, Generic, Eq, NFData)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   DecCBOR (MIRCert c)
   where
   decCBOR =
     decodeRecordNamed "MIRCert" (const 2) (MIRCert <$> decCBOR <*> decCBOR)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   EncCBOR (MIRCert c)
   where
   encCBOR (MIRCert pot targets) =
@@ -167,11 +171,11 @@ instance
       <> encCBOR targets
 
 -- | A heavyweight certificate.
-data DCert c
-  = DCertDeleg !(DelegCert c)
-  | DCertPool !(PoolCert c)
-  | DCertGenesis !(ConstitutionalDelegCert c)
-  | DCertMir !(MIRCert c)
+data ShelleyDCert era
+  = ShelleyDCertDeleg !(DelegCert (EraCrypto era))
+  | ShelleyDCertPool !(PoolCert (EraCrypto era))
+  | ShelleyDCertGenesis !(ConstitutionalDelegCert (EraCrypto era))
+  | ShelleyDCertMir !(MIRCert (EraCrypto era))
   deriving (Show, Generic, Eq, NFData)
 
 instance NoThunks (DelegCert c)
@@ -182,83 +186,80 @@ instance NoThunks (ConstitutionalDelegCert c)
 
 instance NoThunks (MIRCert c)
 
-instance NoThunks (DCert c)
+instance NoThunks (ShelleyDCert era)
 
 -- CBOR
 
-instance
-  CC.Crypto c =>
-  EncCBOR (DCert c)
-  where
+instance Era era => EncCBOR (ShelleyDCert era) where
   encCBOR = \case
-    -- DCertDeleg
-    DCertDeleg (RegKey cred) ->
+    ShelleyDCertDeleg (RegKey cred) ->
       encodeListLen 2
         <> encCBOR (0 :: Word8)
         <> encCBOR cred
-    DCertDeleg (DeRegKey cred) ->
+    ShelleyDCertDeleg (DeRegKey cred) ->
       encodeListLen 2
         <> encCBOR (1 :: Word8)
         <> encCBOR cred
-    DCertDeleg (Delegate (Delegation cred poolkh)) ->
+    ShelleyDCertDeleg (Delegate (Delegation cred poolkh)) ->
       encodeListLen 3
         <> encCBOR (2 :: Word8)
         <> encCBOR cred
         <> encCBOR poolkh
-    -- DCertPool
-    DCertPool (RegPool poolParams) ->
+    ShelleyDCertPool (RegPool poolParams) ->
       encodeListLen (1 + listLen poolParams)
         <> encCBOR (3 :: Word8)
         <> encCBORGroup poolParams
-    DCertPool (RetirePool vk epoch) ->
+    ShelleyDCertPool (RetirePool vk epoch) ->
       encodeListLen 3
         <> encCBOR (4 :: Word8)
         <> encCBOR vk
         <> encCBOR epoch
-    -- DCertGenesis
-    DCertGenesis (ConstitutionalDelegCert gk kh vrf) ->
+    ShelleyDCertGenesis (ConstitutionalDelegCert gk kh vrf) ->
       encodeListLen 4
         <> encCBOR (5 :: Word8)
         <> encCBOR gk
         <> encCBOR kh
         <> encCBOR vrf
-    -- DCertMIR
-    DCertMir mir ->
+    ShelleyDCertMir mir ->
       encodeListLen 2
         <> encCBOR (6 :: Word8)
         <> encCBOR mir
 
-instance
-  CC.Crypto c =>
-  DecCBOR (DCert c)
-  where
+instance Era era => ToCBOR (ShelleyDCert era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (ShelleyDCert era) where
+  fromCBOR = fromEraCBOR @era
+
+
+instance Era era => DecCBOR (ShelleyDCert era) where
   decCBOR = decodeRecordSum "DCert crypto" $
     \case
       0 -> do
         x <- decCBOR
-        pure (2, DCertDeleg . RegKey $ x)
+        pure (2, ShelleyDCertDeleg . RegKey $ x)
       1 -> do
         x <- decCBOR
-        pure (2, DCertDeleg . DeRegKey $ x)
+        pure (2, ShelleyDCertDeleg . DeRegKey $ x)
       2 -> do
         a <- decCBOR
         b <- decCBOR
-        pure (3, DCertDeleg $ Delegate (Delegation a b))
+        pure (3, ShelleyDCertDeleg $ Delegate (Delegation a b))
       3 -> do
         group <- decCBORGroup
-        pure (fromIntegral (1 + listLenInt group), DCertPool (RegPool group))
+        pure (fromIntegral (1 + listLenInt group), ShelleyDCertPool (RegPool group))
       4 -> do
         a <- decCBOR
         b <- decCBOR
-        pure (3, DCertPool $ RetirePool a (EpochNo b))
+        pure (3, ShelleyDCertPool $ RetirePool a (EpochNo b))
       5 -> do
         a <- decCBOR
         b <- decCBOR
         c <- decCBOR
-        pure (4, DCertGenesis $ ConstitutionalDelegCert a b c)
+        pure (4, ShelleyDCertGenesis $ ConstitutionalDelegCert a b c)
       6 -> do
         x <- decCBOR
-        pure (2, DCertMir x)
+        pure (2, ShelleyDCertMir x)
       k -> invalidKey k
 
 -- | Determine the certificate author
@@ -275,51 +276,51 @@ genesisCWitness :: ConstitutionalDelegCert c -> KeyHash 'Genesis c
 genesisCWitness (ConstitutionalDelegCert gk _ _) = gk
 
 -- | Check for 'RegKey' constructor
-isRegKey :: DCert c -> Bool
-isRegKey (DCertDeleg (RegKey _)) = True
+isRegKey :: ShelleyDCert c -> Bool
+isRegKey (ShelleyDCertDeleg (RegKey _)) = True
 isRegKey _ = False
 
 -- | Check for 'DeRegKey' constructor
-isDeRegKey :: DCert c -> Bool
-isDeRegKey (DCertDeleg (DeRegKey _)) = True
+isDeRegKey :: ShelleyDCert c -> Bool
+isDeRegKey (ShelleyDCertDeleg (DeRegKey _)) = True
 isDeRegKey _ = False
 
 -- | Check for 'Delegation' constructor
-isDelegation :: DCert c -> Bool
-isDelegation (DCertDeleg (Delegate _)) = True
+isDelegation :: ShelleyDCert c -> Bool
+isDelegation (ShelleyDCertDeleg (Delegate _)) = True
 isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
-isGenesisDelegation :: DCert c -> Bool
-isGenesisDelegation (DCertGenesis ConstitutionalDelegCert {}) = True
+isGenesisDelegation :: ShelleyDCert c -> Bool
+isGenesisDelegation (ShelleyDCertGenesis ConstitutionalDelegCert {}) = True
 isGenesisDelegation _ = False
 
 -- | Check for 'RegPool' constructor
-isRegPool :: DCert c -> Bool
-isRegPool (DCertPool (RegPool _)) = True
+isRegPool :: ShelleyDCert c -> Bool
+isRegPool (ShelleyDCertPool (RegPool _)) = True
 isRegPool _ = False
 
 -- | Check for 'RetirePool' constructor
-isRetirePool :: DCert c -> Bool
-isRetirePool (DCertPool (RetirePool _ _)) = True
+isRetirePool :: ShelleyDCert c -> Bool
+isRetirePool (ShelleyDCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
-isInstantaneousRewards :: DCert c -> Bool
-isInstantaneousRewards (DCertMir _) = True
+isInstantaneousRewards :: ShelleyDCert c -> Bool
+isInstantaneousRewards (ShelleyDCertMir _) = True
 isInstantaneousRewards _ = False
 
-isReservesMIRCert :: DCert c -> Bool
-isReservesMIRCert (DCertMir (MIRCert ReservesMIR _)) = True
+isReservesMIRCert :: ShelleyDCert c -> Bool
+isReservesMIRCert (ShelleyDCertMir (MIRCert ReservesMIR _)) = True
 isReservesMIRCert _ = False
 
-isTreasuryMIRCert :: DCert c -> Bool
-isTreasuryMIRCert (DCertMir (MIRCert TreasuryMIR _)) = True
+isTreasuryMIRCert :: ShelleyDCert c -> Bool
+isTreasuryMIRCert (ShelleyDCertMir (MIRCert TreasuryMIR _)) = True
 isTreasuryMIRCert _ = False
 
 -- | Returns True for delegation certificates that require at least
 -- one witness, and False otherwise. It is mainly used to ensure
 -- that calling a variant of 'cwitness' is safe.
-requiresVKeyWitness :: DCert c -> Bool
-requiresVKeyWitness (DCertMir (MIRCert _ _)) = False
-requiresVKeyWitness (DCertDeleg (RegKey _)) = False
+requiresVKeyWitness :: ShelleyDCert c -> Bool
+requiresVKeyWitness (ShelleyDCertMir (MIRCert _ _)) = False
+requiresVKeyWitness (ShelleyDCertDeleg (RegKey _)) = False
 requiresVKeyWitness _ = True
