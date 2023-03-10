@@ -17,7 +17,6 @@ module Cardano.Ledger.Shelley.Internal (
   showSafeHash,
   synopsisCert,
   synopsisCoinMap,
-  trim,
   showTxCerts,
 )
 where
@@ -39,7 +38,6 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showWithdrawal,
   synopsisCert,
   synopsisCoinMap,
-  trim,
  )
 import Cardano.Ledger.Val ((<->))
 import Debug.Trace (trace)

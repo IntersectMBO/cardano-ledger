@@ -49,11 +49,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   psStakePoolParams,
   rewards,
  )
-import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv (..), ShelleyDELPL, ShelleyDelplEvent, ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules.Delpl (
+  DelplEnv (..),
+  ShelleyDELPL,
+  ShelleyDelplEvent,
+  ShelleyDelplPredFailure,
+ )
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
   Ptr (..),
   RewardAcnt (..),
   ShelleyEraTxBody (..),
@@ -130,12 +132,12 @@ instance
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
-  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert era
   ) =>
   STS (ShelleyDELEGS era)
   where
   type State (ShelleyDELEGS era) = DPState (EraCrypto era)
-  type Signal (ShelleyDELEGS era) = Seq (DCert (EraCrypto era))
+  type Signal (ShelleyDELEGS era) = Seq (DCert era)
   type Environment (ShelleyDELEGS era) = DelegsEnv era
   type BaseM (ShelleyDELEGS era) = ShelleyBase
   type
@@ -199,7 +201,7 @@ delegsTransition ::
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
-  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , Signal (EraRule "DELPL" era) ~ DCert era
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
@@ -265,7 +267,7 @@ delegsTransition = do
             | (RewardAcnt _ cred, coin) <- Map.toList withdrawals_
             ]
         f :: Coin -> Trip (EraCrypto era) -> Bool
-        f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == (fromCompact coin2)
+        f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == fromCompact coin2
         f _ _ = False
 
 instance

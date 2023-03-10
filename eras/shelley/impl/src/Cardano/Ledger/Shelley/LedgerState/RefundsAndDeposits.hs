@@ -1,9 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   totalTxDeposits,
@@ -16,13 +14,10 @@ where
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.DPState (DPState (..), DState (..), PState (..))
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), isRegKey)
+import Cardano.Ledger.Shelley.Delegation (isRegKey)
 import Cardano.Ledger.Shelley.TxBody (
   PoolParams (..),
   ShelleyEraTxBody (..),
-  pattern DeRegKey,
-  pattern RegKey,
-  pattern RegPool,
  )
 import Cardano.Ledger.UMapCompact (
   RDPair (..),
@@ -48,10 +43,10 @@ import Lens.Micro ((^.))
 -- Note that this is not an issue for key registrations since subsequent
 -- registration certificates would be invalid.
 totalCertsDeposits ::
-  EraPParams era =>
+  (EraDCert era, EraPParams era) =>
   PParams era ->
-  DPState c ->
-  [DCert c] ->
+  DPState (EraCrypto era) ->
+  [DCert era] ->
   Coin
 totalCertsDeposits pp dpstate certs =
   numKeys <×> pp ^. ppKeyDepositL
@@ -71,14 +66,14 @@ totalTxDeposits ::
   DPState (EraCrypto era) ->
   TxBody era ->
   Coin
-totalTxDeposits pp dpstate txb = totalCertsDeposits pp dpstate (toList $ txb ^. certsTxBodyG)
+totalTxDeposits pp dpstate txb = totalCertsDeposits pp dpstate (toList $ txb ^. certsTxBodyL)
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefunds ::
-  EraPParams era =>
+  (EraDCert era, EraPParams era) =>
   PParams era ->
-  DPState c ->
-  [DCert c] ->
+  DPState (EraCrypto era) ->
+  [DCert era] ->
   Coin
 keyCertsRefunds pp dpstate certs = snd (foldl' accum (initialKeys, Coin 0) certs)
   where
@@ -101,4 +96,4 @@ keyTxRefunds ::
   DPState (EraCrypto era) ->
   TxBody era ->
   Coin
-keyTxRefunds pp dpstate tx = keyCertsRefunds pp dpstate (toList $ tx ^. certsTxBodyG)
+keyTxRefunds pp dpstate tx = keyCertsRefunds pp dpstate (toList $ tx ^. certsTxBodyL)

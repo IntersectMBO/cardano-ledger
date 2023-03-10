@@ -11,18 +11,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Delegation.Certificates (
-  pattern DCertMIR
+module Cardano.Ledger.Shelley.Delegation (
+  ShelleyEraDCert(..),
+  pattern DCertMir,
   ShelleyDCert (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
-  delegCWitness,
-  poolCWitness,
-  genesisCWitness,
   isRegKey,
   isDeRegKey,
   isDelegation,
@@ -33,6 +33,7 @@ module Cardano.Ledger.Shelley.Delegation.Certificates (
   isReservesMIRCert,
   isTreasuryMIRCert,
   requiresVKeyWitness,
+
   -- * Re-exports
   EraDCert (..),
   pattern DCertDeleg,
@@ -66,15 +67,10 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
-  Hash,
-  KeyHash (..),
-  KeyRole (..),
-  VerKeyVRF,
- )
-import Cardano.Ledger.PoolParams
+import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)
@@ -87,14 +83,37 @@ instance Crypto c => EraDCert (ShelleyEra c) where
 
   type DCert (ShelleyEra c) = ShelleyDCert (ShelleyEra c)
 
-class EraDCert era => ShelleyEraDCert era where
-  mkDCertMIR :: MIRCert (EraCrypto era) -> DCert era
-  getDCertMIR :: DCert era -> Maybe (MIRCert (EraCrypto era))
+  mkDCertDeleg = ShelleyDCertDeleg
 
-pattern DCertMIR :: EraDCert era => MIRCert (EraCrypto era) -> DCert era
-pattern DCertMIR d <- (getDCertMIR -> Just d)
+  getDCertDeleg (ShelleyDCertDeleg c) = Just c
+  getDCertDeleg _ = Nothing
+
+  mkDCertPool = ShelleyDCertPool
+
+  getDCertPool (ShelleyDCertPool c) = Just c
+  getDCertPool _ = Nothing
+
+  mkDCertGenesis = ShelleyDCertGenesis
+
+  getDCertGenesis (ShelleyDCertGenesis c) = Just c
+  getDCertGenesis _ = Nothing
+
+class EraDCert era => ShelleyEraDCert era where
+  mkDCertMir :: MIRCert (EraCrypto era) -> DCert era
+  getDCertMir :: DCert era -> Maybe (MIRCert (EraCrypto era))
+
+instance Crypto c => ShelleyEraDCert (ShelleyEra c) where
+  {-# SPECIALIZE instance ShelleyEraDCert (ShelleyEra StandardCrypto) #-}
+
+  mkDCertMir = ShelleyDCertMir
+
+  getDCertMir (ShelleyDCertMir c) = Just c
+  getDCertMir _ = Nothing
+
+pattern DCertMir :: ShelleyEraDCert era => MIRCert (EraCrypto era) -> DCert era
+pattern DCertMir d <- (getDCertMir -> Just d)
   where
-    DCertMIR d = mkDCertMIR d
+    DCertMir d = mkDCertMir d
 
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
@@ -237,51 +256,51 @@ instance Era era => DecCBOR (ShelleyDCert era) where
       k -> invalidKey k
 
 -- | Check for 'RegKey' constructor
-isRegKey :: ShelleyDCert c -> Bool
-isRegKey (ShelleyDCertDeleg (RegKey _)) = True
+isRegKey :: EraDCert era => DCert era -> Bool
+isRegKey (DCertDeleg (RegKey _)) = True
 isRegKey _ = False
 
 -- | Check for 'DeRegKey' constructor
-isDeRegKey :: ShelleyDCert c -> Bool
-isDeRegKey (ShelleyDCertDeleg (DeRegKey _)) = True
+isDeRegKey :: EraDCert era => DCert era -> Bool
+isDeRegKey (DCertDeleg (DeRegKey _)) = True
 isDeRegKey _ = False
 
 -- | Check for 'Delegation' constructor
-isDelegation :: ShelleyDCert c -> Bool
-isDelegation (ShelleyDCertDeleg (Delegate _)) = True
+isDelegation :: EraDCert era => DCert era -> Bool
+isDelegation (DCertDeleg (Delegate _)) = True
 isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
-isGenesisDelegation :: ShelleyDCert c -> Bool
-isGenesisDelegation (ShelleyDCertGenesis ConstitutionalDelegCert {}) = True
+isGenesisDelegation :: EraDCert era => DCert era -> Bool
+isGenesisDelegation (DCertGenesis ConstitutionalDelegCert {}) = True
 isGenesisDelegation _ = False
 
 -- | Check for 'RegPool' constructor
-isRegPool :: ShelleyDCert c -> Bool
-isRegPool (ShelleyDCertPool (RegPool _)) = True
+isRegPool :: EraDCert era => DCert era -> Bool
+isRegPool (DCertPool (RegPool _)) = True
 isRegPool _ = False
 
 -- | Check for 'RetirePool' constructor
-isRetirePool :: ShelleyDCert c -> Bool
-isRetirePool (ShelleyDCertPool (RetirePool _ _)) = True
+isRetirePool :: EraDCert era => DCert era -> Bool
+isRetirePool (DCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
-isInstantaneousRewards :: ShelleyDCert c -> Bool
-isInstantaneousRewards (ShelleyDCertMir _) = True
+isInstantaneousRewards :: ShelleyEraDCert era => DCert era -> Bool
+isInstantaneousRewards (DCertMir _) = True
 isInstantaneousRewards _ = False
 
-isReservesMIRCert :: ShelleyDCert c -> Bool
-isReservesMIRCert (ShelleyDCertMir (MIRCert ReservesMIR _)) = True
+isReservesMIRCert :: ShelleyEraDCert era => DCert era -> Bool
+isReservesMIRCert (DCertMir (MIRCert ReservesMIR _)) = True
 isReservesMIRCert _ = False
 
-isTreasuryMIRCert :: ShelleyDCert c -> Bool
-isTreasuryMIRCert (ShelleyDCertMir (MIRCert TreasuryMIR _)) = True
+isTreasuryMIRCert :: ShelleyEraDCert era => DCert era -> Bool
+isTreasuryMIRCert (DCertMir (MIRCert TreasuryMIR _)) = True
 isTreasuryMIRCert _ = False
 
 -- | Returns True for delegation certificates that require at least
 -- one witness, and False otherwise. It is mainly used to ensure
 -- that calling a variant of 'cwitness' is safe.
-requiresVKeyWitness :: ShelleyDCert c -> Bool
-requiresVKeyWitness (ShelleyDCertMir (MIRCert _ _)) = False
-requiresVKeyWitness (ShelleyDCertDeleg (RegKey _)) = False
+requiresVKeyWitness :: ShelleyEraDCert era => DCert era -> Bool
+requiresVKeyWitness (DCertMir (MIRCert _ _)) = False
+requiresVKeyWitness (DCertDeleg (RegKey _)) = False
 requiresVKeyWitness _ = True

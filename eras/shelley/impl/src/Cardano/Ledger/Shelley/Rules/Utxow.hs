@@ -66,13 +66,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTestOnSignal,
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Delegation.Certificates (
-  delegCWitness,
-  genesisCWitness,
-  isInstantaneousRewards,
-  poolCWitness,
-  requiresVKeyWitness,
- )
+import Cardano.Ledger.Shelley.Delegation (isInstantaneousRewards, requiresVKeyWitness)
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
@@ -90,8 +84,6 @@ import Cardano.Ledger.Shelley.Tx (
   witsFromTxWitnesses,
  )
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  PoolCert (..),
   PoolParams (..),
   ShelleyEraTxBody (..),
   WitVKey (..),
@@ -507,7 +499,7 @@ witsVKeyNeeded utxo' tx genDelegs =
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr accum Set.empty (txBody ^. certsTxBodyG)
+    owners = foldr accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
@@ -522,7 +514,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyG)
+    certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
@@ -576,7 +568,7 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
         StrictSeq.forceToStrict
           . Seq.filter isInstantaneousRewards
           . StrictSeq.fromStrict
-          $ txBody ^. certsTxBodyG
+          $ txBody ^. certsTxBodyL
    in failureUnless
         (not (null mirCerts) ==> Set.size genSig >= fromIntegral coreNodeQuorum)
         $ MIRInsufficientGenesisSigsUTXOW genSig

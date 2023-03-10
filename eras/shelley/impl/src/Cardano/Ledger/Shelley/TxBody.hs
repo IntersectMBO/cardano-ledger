@@ -62,7 +62,6 @@ module Cardano.Ledger.Shelley.TxBody (
   valueEitherShelleyTxOutL,
 ) where
 
-import Cardano.Ledger.Shelley.Delegation.Certificates (ShelleyDCert)
 import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
@@ -104,14 +103,10 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation.Certificates (
-  ConstitutionalDelegCert (..),
-  DelegCert (..),
-  Delegation (..),
+import Cardano.Ledger.Shelley.Delegation (
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
-  PoolCert (..),
  )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)

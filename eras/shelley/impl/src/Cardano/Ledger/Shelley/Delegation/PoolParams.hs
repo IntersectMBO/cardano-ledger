@@ -1,5 +1,4 @@
-module Cardano.Ledger.Shelley.Delegation.PoolParams
-  {-# DEPRECATED "Use `Cardano.Ledger.Shelley.Delegation` instead" #-} (
+module Cardano.Ledger.Shelley.Delegation.PoolParams (
   poolSpec,
 )
 where
@@ -10,4 +9,4 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 
 poolSpec :: PoolParams c -> (Coin, UnitInterval, Coin)
 poolSpec pool = (ppCost pool, ppMargin pool, ppPledge pool)
-{-# DEPRECATED `poolSpec` "Use accessor functions directly `ppCost`, `ppMargin` and `ppPledge`" #-}
+{-# DEPRECATED poolSpec "Use accessor functions directly `ppCost`, `ppMargin` and `ppPledge`" #-}
