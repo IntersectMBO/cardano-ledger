@@ -38,7 +38,8 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 class
-  ( DecCBOR (DCert era)
+  ( Era era
+  , DecCBOR (DCert era)
   , EncCBOR (DCert era)
   , ToCBOR (DCert era)
   , FromCBOR (DCert era)

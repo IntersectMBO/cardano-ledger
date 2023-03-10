@@ -24,6 +24,7 @@ library
         Cardano.Ledger.Alonzo
         Cardano.Ledger.Alonzo.Core
         Cardano.Ledger.Alonzo.Data
+        Cardano.Ledger.Alonzo.Delegation
         Cardano.Ledger.Alonzo.Genesis
         Cardano.Ledger.Alonzo.Language
         Cardano.Ledger.Alonzo.PlutusScriptApi

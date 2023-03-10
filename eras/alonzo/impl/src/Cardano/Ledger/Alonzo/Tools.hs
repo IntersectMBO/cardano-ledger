@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Alonzo.Tools (
   evaluateTransactionExecutionUnits,
@@ -46,7 +47,8 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
-import Cardano.Ledger.Shelley.Tx (TxIn)
+import Cardano.Ledger.Shelley.Delegation (ShelleyDCert)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -63,48 +65,58 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 
 -- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
-data TransactionScriptFailure c
+data TransactionScriptFailure era
   = -- | A redeemer was supplied that does not point to a
     --  valid plutus evaluation site in the given transaction.
-    RedeemerNotNeeded !RdmrPtr !(ScriptHash c)
+    RedeemerNotNeeded !RdmrPtr !(ScriptHash (EraCrypto era))
   | -- | A redeemer was supplied which points to a script hash which
     -- we cannot connect to a Plutus script.
     RedeemerPointsToUnknownScriptHash !RdmrPtr
   | -- | Missing redeemer. The first parameter is the redeemer pointer which cannot be resolved,
     -- and the second parameter is the map of pointers which can be resolved.
-    MissingScript !RdmrPtr !(Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language), ScriptHash c))
+    MissingScript
+      !RdmrPtr
+      !( Map
+          RdmrPtr
+          (ScriptPurpose era, Maybe (ShortByteString, Language), ScriptHash (EraCrypto era))
+       )
   | -- | Missing datum.
-    MissingDatum !(DataHash c)
+    MissingDatum !(DataHash (EraCrypto era))
   | -- | Plutus evaluation error, for any version
     ValidationFailure ValidationFailed
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
-    UnknownTxIn !(TxIn c)
+    UnknownTxIn !(TxIn (EraCrypto era))
   | -- | A redeemer points to a transaction input which is not
     --  plutus locked.
-    InvalidTxIn !(TxIn c)
+    InvalidTxIn !(TxIn (EraCrypto era))
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
     IncompatibleBudget !PV1.ExBudget
   | -- | There was no cost model for a given version of Plutus in the ledger state
     NoCostModelInLedgerState !Language
-  deriving (Eq, Show)
+
+deriving instance (Era era, Eq (DCert era)) => Eq (TransactionScriptFailure era)
+
+deriving instance (Era era, Show (DCert era)) => Show (TransactionScriptFailure era)
 
 data ValidationFailed where
-  ValidationFailedV1 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV1 -> ValidationFailed
-  ValidationFailedV2 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV2 -> ValidationFailed
+  ValidationFailedV1 ::
+    !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV1 -> ValidationFailed
+  ValidationFailedV2 ::
+    !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV2 -> ValidationFailed
 
-deriving instance Eq (ValidationFailed)
+deriving instance Eq ValidationFailed
 
-deriving instance Show (ValidationFailed)
+deriving instance Show ValidationFailed
 
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
 note e Nothing = Left e
 
-type RedeemerReport c = Map RdmrPtr (Either (TransactionScriptFailure c) ExUnits)
+type RedeemerReport era = Map RdmrPtr (Either (TransactionScriptFailure era) ExUnits)
 
-type RedeemerReportWithLogs c = Map RdmrPtr (Either (TransactionScriptFailure c) ([Text], ExUnits))
+type RedeemerReportWithLogs era = Map RdmrPtr (Either (TransactionScriptFailure era) ([Text], ExUnits))
 
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
@@ -118,6 +130,7 @@ evaluateTransactionExecutionUnits ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
+  , DCert era ~ ShelleyDCert era
   ) =>
   PParams era ->
   -- | The transaction.
@@ -134,9 +147,9 @@ evaluateTransactionExecutionUnits ::
   --  sufficient execution budget.
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReport (EraCrypto era))
+  Either (TranslationError (EraCrypto era)) (RedeemerReport era)
 evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
-  fmap (Map.map (fmap snd)) $ evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels
+  Map.map (fmap snd) <$> evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels
 
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
@@ -150,6 +163,7 @@ evaluateTransactionExecutionUnitsWithLogs ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
+  , DCert era ~ ShelleyDCert era
   ) =>
   PParams era ->
   -- | The transaction.
@@ -166,7 +180,7 @@ evaluateTransactionExecutionUnitsWithLogs ::
   --  sufficient execution budget with logs of the script.
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs (EraCrypto era))
+  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs era)
 evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels = do
   let getInfo :: Language -> Either (TranslationError (EraCrypto era)) VersionedTxInfo
       getInfo lang = txInfo pp lang ei sysS utxo tx
@@ -201,7 +215,7 @@ evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels = do
       Map Language VersionedTxInfo ->
       RdmrPtr ->
       (Data era, ExUnits) ->
-      Either (TransactionScriptFailure (EraCrypto era)) ([Text], ExUnits)
+      Either (TransactionScriptFailure era) ([Text], ExUnits)
     findAndCount info pointer (rdmr, exunits) = do
       (sp, mscript, sh) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $

@@ -86,7 +86,6 @@ import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoEraTxOut (..),
-  ShelleyEraTxBody (..),
   mintTxBodyL,
   vldtTxBodyL,
  )
@@ -120,16 +119,9 @@ import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import Cardano.Ledger.Language (IsLanguage (..), Language (..), SLanguage (..), fromSLanguage)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
+import Cardano.Ledger.Shelley.Delegation
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
-  PoolCert (..),
-  PoolParams (..),
-  WitVKey (..),
-  Withdrawals (..),
- )
+import Cardano.Ledger.Shelley.TxBody (PoolParams (..), WitVKey (..), Withdrawals (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
@@ -262,7 +254,8 @@ transStakeReference StakeRefNull = Nothing
 transCred :: Credential kr c -> PV1.Credential
 transCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
-transCred (ScriptHashObj (ScriptHash sh)) = PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
+transCred (ScriptHashObj (ScriptHash sh)) =
+  PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 
 transAddr :: Addr c -> Maybe PV1.Address
 transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
@@ -360,7 +353,7 @@ transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 transMultiAsset :: MultiAsset c -> PV1.Value
 transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 mempty m
   where
-    accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
+    accum1 ans sym = Map.foldlWithKey' accum2 ans
       where
         accum2 ans2 tok quantity =
           PV1.unionWith
@@ -376,21 +369,21 @@ transValue (MaryValue n m) = justAda <> transMultiAsset m
 -- =============================================
 -- translate fileds like DCert, Withdrawals, and similar
 
-transDCert :: DCert c -> PV1.DCert
-transDCert (DCertDeleg (RegKey stkcred)) =
+transDCert :: ShelleyDCert era -> PV1.DCert
+transDCert (ShelleyDCertDeleg (RegKey stkcred)) =
   PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stkcred))
-transDCert (DCertDeleg (DeRegKey stkcred)) =
+transDCert (ShelleyDCertDeleg (DeRegKey stkcred)) =
   PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stkcred))
-transDCert (DCertDeleg (Delegate (Delegation stkcred keyhash))) =
+transDCert (ShelleyDCertDeleg (Delegate (Delegation stkcred keyhash))) =
   PV1.DCertDelegDelegate
     (PV1.StakingHash (transStakeCred stkcred))
     (transKeyHash keyhash)
-transDCert (DCertPool (RegPool pp)) =
+transDCert (ShelleyDCertPool (RegPool pp)) =
   PV1.DCertPoolRegister (transKeyHash (ppId pp)) (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppVrf pp))))
-transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
+transDCert (ShelleyDCertPool (RetirePool keyhash (EpochNo i))) =
   PV1.DCertPoolRetire (transKeyHash keyhash) (fromIntegral i)
-transDCert (DCertGenesis _) = PV1.DCertGenesis
-transDCert (DCertMir _) = PV1.DCertMir
+transDCert (ShelleyDCertGenesis _) = PV1.DCertGenesis
+transDCert (ShelleyDCertMir _) = PV1.DCertMir
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
@@ -428,7 +421,7 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
 -- ===================================
 -- translate Script Purpose
 
-transScriptPurpose :: ScriptPurpose c -> PV1.ScriptPurpose
+transScriptPurpose :: DCert era ~ ShelleyDCert era => ScriptPurpose era -> PV1.ScriptPurpose
 transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
 transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
@@ -467,7 +460,7 @@ class ExtendedUTxO era where
   getDatum ::
     Tx era ->
     UTxO era ->
-    ScriptPurpose (EraCrypto era) ->
+    ScriptPurpose era ->
     Maybe (Data era)
 
 getTxOutDatum :: AlonzoEraTxOut era => TxOut era -> Datum era
@@ -478,6 +471,7 @@ alonzoTxInfo ::
   forall era.
   ( EraTx era
   , AlonzoEraTxBody era
+  , DCert era ~ ShelleyDCert era
   , Value era ~ MaryValue (EraCrypto era)
   , TxWits era ~ AlonzoTxWits era
   ) =>
@@ -504,7 +498,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
           , PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee)
           , PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL)
-          , PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyG)
+          , PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyL)
           , PV1.txInfoWdrl = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
           , PV1.txInfoValidRange = timeRange
           , PV1.txInfoSignatories = map transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
@@ -526,14 +520,14 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
 -- | valContext pairs transaction data with a script purpose.
 --   See figure 22 of the Alonzo specification.
 valContext ::
-  Era era =>
+  (Era era, DCert era ~ ShelleyDCert era) =>
   VersionedTxInfo ->
-  ScriptPurpose (EraCrypto era) ->
+  ScriptPurpose era ->
   Data era
 valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 
-data ScriptFailure = PlutusSF Text (PlutusDebug)
+data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)
 
 data ScriptResult
@@ -621,7 +615,7 @@ instance
     pData <- decCBOR
     protVer <- decCBOR
     -- We need to return a tuple here, with the size of the tag in bytes.
-    pure $ (1, PlutusDebugLang slang costModel exUnits sbs pData protVer)
+    pure (1, PlutusDebugLang slang costModel exUnits sbs pData protVer)
 
 data PlutusDebug where
   PlutusDebug :: (IsLanguage l, Typeable l) => PlutusDebugLang l -> PlutusDebug
