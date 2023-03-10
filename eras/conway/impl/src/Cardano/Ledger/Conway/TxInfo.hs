@@ -1,16 +1,20 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxInfo (conwayTxInfo) where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.TxInfo (
+  EraPlutusContext,
   TranslationError (..),
   VersionedTxInfo (..),
+  unDCertV3,
  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (
@@ -23,11 +27,12 @@ import Cardano.Ledger.Babbage.TxBody (
   AlonzoEraTxBody (..),
   BabbageEraTxBody (..),
   MaryEraTxBody (..),
-  ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfoV1, babbageTxInfoV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as B
+import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -36,11 +41,23 @@ import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.Monad (zipWithM)
+import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Lens.Micro
 import qualified PlutusLedgerApi.V3 as PV3
+
+-- TODO implement this once Plutus releases an API with new certs
+
+instance (Crypto c, EraDCert (ConwayEra c)) => EraPlutusContext 'PlutusV1 (ConwayEra c) where
+  transDCert = undefined
+
+instance (Crypto c, EraDCert (ConwayEra c)) => EraPlutusContext 'PlutusV2 (ConwayEra c) where
+  transDCert = undefined
+
+instance (Crypto c, EraDCert (ConwayEra c)) => EraPlutusContext 'PlutusV3 (ConwayEra c) where
+  transDCert = undefined
 
 conwayTxInfo ::
   forall era.
@@ -48,6 +65,9 @@ conwayTxInfo ::
   , AlonzoEraTxWits era
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
+  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext 'PlutusV2 era
+  , EraPlutusContext 'PlutusV3 era
   ) =>
   PParams era ->
   Language ->
@@ -71,6 +91,8 @@ conwayTxInfoV3 ::
   , AlonzoEraTxWits era
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
+  , EraPlutusContext 'PlutusV3 era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   PV3.POSIXTimeRange ->
   Tx era ->
@@ -92,7 +114,7 @@ conwayTxInfoV3 timeRange tx utxo = do
       , PV3.txInfoReferenceInputs = refInputs
       , PV3.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
       , PV3.txInfoMint = Alonzo.transMultiAsset multiAsset
-      , PV3.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+      , PV3.txInfoDCert = toList $ fmap (unDCertV3 . Alonzo.transDCert) (txBody ^. certsTxBodyL)
       , PV3.txInfoWdrl = PV3.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV3.txInfoValidRange = timeRange
       , PV3.txInfoSignatories =

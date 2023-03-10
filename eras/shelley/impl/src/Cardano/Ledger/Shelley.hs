@@ -10,6 +10,7 @@ module Cardano.Ledger.Shelley (
 where
 
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.Delegation ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Rules ()

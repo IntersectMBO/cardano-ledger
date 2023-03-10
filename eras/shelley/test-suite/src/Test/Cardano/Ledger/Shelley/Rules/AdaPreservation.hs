@@ -63,7 +63,6 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showMap,
   showWithdrawal,
   synopsisCert,
-  trim,
  )
 import Cardano.Ledger.TreeDiff (ediffEq)
 import Cardano.Ledger.UMap (sumRewardsView)
@@ -111,7 +110,6 @@ tests ::
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , ProtVerAtMost era 8
   , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   Int ->
@@ -129,7 +127,6 @@ adaPreservationProps ::
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , ProtVerAtMost era 8
   , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   Property
@@ -173,7 +170,6 @@ checkPreservation ::
   forall era.
   ( EraSegWits era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   (SourceSignalTarget (CHAIN era), Int) ->
@@ -194,9 +190,9 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
           , "\n\nCurrent protocol parameters\n"
           , show currPP
           , "\nReward Accounts before update\n"
-          , showMap (trim 10 . showCred) show (UM.unUnify oldRAs)
+          , showMap (take 10 . showCred) show (UM.unUnify oldRAs)
           , "\nReward Accounts after update\n"
-          , showMap (trim 10 . showCred) show (UM.unUnify newRAs)
+          , showMap (take 10 . showCred) show (UM.unUnify newRAs)
           , "\nRetiring pools before update\n"
           , showMap (infoRetire oldPoolDeposit) show oldRetire
           , "\nRetiring pools after update\n"

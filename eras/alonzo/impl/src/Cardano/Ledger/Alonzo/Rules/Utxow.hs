@@ -3,8 +3,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -26,7 +28,7 @@ where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
+import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred, unWithdrawals)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
@@ -66,13 +68,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
+import Cardano.Ledger.PoolParams (ppOwners)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.Delegation.Certificates (
-  delegCWitness,
-  genesisCWitness,
-  poolCWitness,
-  requiresVKeyWitness,
- )
+import Cardano.Ledger.Shelley.Delegation (delegCWitness, requiresVKeyWitness, pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   witsFromTxWitnesses,
@@ -86,12 +84,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn (..), extractKeyHashWitnessSet)
-import Cardano.Ledger.Shelley.TxBody (
-  DCert (DCertDeleg, DCertGenesis, DCertPool),
-  PoolCert (RegPool),
-  PoolParams (..),
-  unWithdrawals,
- )
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txinLookup)
 import Control.Monad.Trans.Reader (asks)
@@ -115,7 +107,7 @@ data AlonzoUtxowPredFailure era
   = ShelleyInAlonzoUtxowPredFailure !(ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
-      ![(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+      ![(ScriptPurpose era, ScriptHash (EraCrypto era))]
   | MissingRequiredDatums
       !(Set (DataHash (EraCrypto era)))
       -- ^ Set of missing data hashes
@@ -144,20 +136,23 @@ data AlonzoUtxowPredFailure era
 
 deriving instance
   ( Era era
-  , Show (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Show
+  , Show (DCert era)
   , Show (Script era)
+  , Show (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Show
   ) =>
   Show (AlonzoUtxowPredFailure era)
 
 deriving instance
   ( Era era
-  , Eq (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Eq
+  , Eq (DCert era)
   , Eq (Script era)
+  , Eq (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Eq
   ) =>
   Eq (AlonzoUtxowPredFailure era)
 
 instance
   ( Era era
+  , NoThunks (DCert era)
   , NoThunks (Script era)
   , NoThunks (PredicateFailure (EraRule "UTXO" era))
   ) =>
@@ -165,53 +160,48 @@ instance
 
 instance
   ( Era era
+  , EncCBOR (DCert era)
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (TxAuxData era)
   , EncCBOR (Script era)
   ) =>
   EncCBOR (AlonzoUtxowPredFailure era)
   where
-  encCBOR x = encode (encodePredFail x)
+  encCBOR =
+    encode . \case
+      ShelleyInAlonzoUtxowPredFailure x -> Sum ShelleyInAlonzoUtxowPredFailure 0 !> To x
+      MissingRedeemers x -> Sum MissingRedeemers 1 !> To x
+      MissingRequiredDatums x y -> Sum MissingRequiredDatums 2 !> To x !> To y
+      NonOutputSupplimentaryDatums x y -> Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
+      PPViewHashesDontMatch x y -> Sum PPViewHashesDontMatch 4 !> To x !> To y
+      MissingRequiredSigners x -> Sum MissingRequiredSigners 5 !> To x
+      UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 6 !> To x
+      ExtraRedeemers x -> Sum ExtraRedeemers 7 !> To x
 
 newtype AlonzoUtxowEvent era
   = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
 
-encodePredFail ::
-  ( Era era
-  , EncCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (Script era)
-  , Typeable (TxAuxData era)
-  ) =>
-  AlonzoUtxowPredFailure era ->
-  Encode 'Open (AlonzoUtxowPredFailure era)
-encodePredFail (ShelleyInAlonzoUtxowPredFailure x) = Sum ShelleyInAlonzoUtxowPredFailure 0 !> E encCBOR x
-encodePredFail (MissingRedeemers x) = Sum MissingRedeemers 1 !> To x
-encodePredFail (MissingRequiredDatums x y) = Sum MissingRequiredDatums 2 !> To x !> To y
-encodePredFail (NonOutputSupplimentaryDatums x y) = Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
-encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
-encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
-encodePredFail (UnspendableUTxONoDatumHash x) = Sum UnspendableUTxONoDatumHash 6 !> To x
-encodePredFail (ExtraRedeemers x) = Sum ExtraRedeemers 7 !> To x
-
 instance
   ( Era era
+  , DecCBOR (DCert era)
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   DecCBOR (AlonzoUtxowPredFailure era)
   where
-  decCBOR = decode (Summands "(UtxowPredicateFail" decodePredFail)
+  decCBOR = decode (Summands "UtxowPredicateFail" decodePredFail)
 
 decodePredFail ::
   ( Era era
+  , DecCBOR (DCert era)
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   Word ->
   Decode 'Open (AlonzoUtxowPredFailure era)
-decodePredFail 0 = SumD ShelleyInAlonzoUtxowPredFailure <! D decCBOR
+decodePredFail 0 = SumD ShelleyInAlonzoUtxowPredFailure <! From
 decodePredFail 1 = SumD MissingRedeemers <! From
 decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
 decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
@@ -458,24 +448,24 @@ witsVKeyNeeded utxo' tx genDelegs =
     wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
       where
-        accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
+        accum key _ = Set.union (extractKeyHashWitnessSet [getRwdCred key])
     owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr' accum Set.empty (txBody ^. certsTxBodyG)
+    owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
             (Set.map asWitness (ppOwners pool))
             ans
         accum _cert ans = ans
-    cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
+    cwitness (ShelleyDCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
     cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
-    cwitness (DCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
+    cwitness (DCertGenesis c) = Set.singleton (asWitness $ genesisCWitness c)
     cwitness c = error $ show c ++ " does not have a witness"
     -- key reg requires no witness but this is already filtered out by requiresVKeyWitness
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyG)
+    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans

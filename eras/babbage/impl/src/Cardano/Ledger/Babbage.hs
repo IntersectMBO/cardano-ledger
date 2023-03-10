@@ -20,10 +20,12 @@ where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Core
+import Cardano.Ledger.Babbage.Delegation ()
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Rules ()
@@ -63,7 +65,7 @@ instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
 
   fromShelleyPParams ag = translateEra' () . API.fromShelleyPParams ag
 
-instance Crypto c => ExtendedUTxO (BabbageEra c) where
+instance (Crypto c, EraPlutusContext 'PlutusV2 (BabbageEra c)) => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
   txscripts = babbageTxScripts
   getAllowedSupplimentalDataHashes txBody (UTxO utxo) =

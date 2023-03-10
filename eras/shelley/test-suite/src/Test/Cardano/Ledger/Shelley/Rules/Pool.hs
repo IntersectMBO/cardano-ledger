@@ -72,7 +72,6 @@ tests ::
   , EraGovernance era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , ProtVerAtMost era 8
   ) =>
   TestTree
 tests =
@@ -91,7 +90,6 @@ poolRetirement ::
   ( ChainProperty era
   , EraSegWits era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -110,7 +108,6 @@ poolRegistration ::
   ( ChainProperty era
   , EraSegWits era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -126,7 +123,6 @@ poolStateIsInternallyConsistent ::
   ( ChainProperty era
   , EraSegWits era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -136,7 +132,7 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
   where
     (_, poolTr) = poolTraceFromBlock chainSt block
 
-poolRegistrationProp :: SourceSignalTarget (ShelleyPOOL era) -> Property
+poolRegistrationProp :: EraDCert era => SourceSignalTarget (ShelleyPOOL era) -> Property
 poolRegistrationProp
   SourceSignalTarget
     { signal = (DCertPool (RegPool poolParams))
@@ -173,7 +169,7 @@ poolRegistrationProp
               ]
 poolRegistrationProp _ = property ()
 
-poolRetirementProp :: EpochNo -> EpochNo -> SourceSignalTarget (ShelleyPOOL era) -> Property
+poolRetirementProp :: EraDCert era => EpochNo -> EpochNo -> SourceSignalTarget (ShelleyPOOL era) -> Property
 poolRetirementProp
   currentEpoch@(EpochNo ce)
   (EpochNo maxEpoch)

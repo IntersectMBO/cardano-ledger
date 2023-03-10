@@ -15,6 +15,7 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
   utxosTransition,
 ) where
 
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
   collectTwoPhaseScriptInputs,
   evalScripts,
@@ -32,7 +33,7 @@ import Cardano.Ledger.Alonzo.Rules (
   when2Phase,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
+import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core
@@ -40,6 +41,7 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.Shelley.Delegation (ShelleyDCert)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
@@ -74,8 +76,10 @@ instance
   , BabbageEraTxBody era
   , ExtendedUTxO era
   , EraUTxO era
+  , EraPlutusContext 'PlutusV1 era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
+  , DCert era ~ ShelleyDCert era
   , Script era ~ AlonzoScript era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
@@ -116,6 +120,7 @@ utxosTransition ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
+  , DCert era ~ ShelleyDCert era
   , Script era ~ AlonzoScript era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
@@ -126,6 +131,7 @@ utxosTransition ::
   , EncCBOR (PPUPPredFailure era)
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -150,6 +156,7 @@ scriptsYes ::
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsYes = do
@@ -203,6 +210,7 @@ scriptsNo ::
   , BabbageEraTxBody era
   , Tx era ~ AlonzoTx era
   , Script era ~ AlonzoScript era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsNo = do

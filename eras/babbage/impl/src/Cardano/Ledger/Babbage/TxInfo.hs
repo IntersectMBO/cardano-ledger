@@ -1,9 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.TxInfo where
 
@@ -13,9 +15,14 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
 import Cardano.Ledger.Alonzo.TxInfo (
+  EraPlutusContext,
+  PlutusDCert (..),
   TranslationError (..),
   TxOutSource (..),
   VersionedTxInfo (..),
+  transShelleyDCert,
+  unDCertV1,
+  unDCertV2,
  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (
@@ -24,6 +31,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemers,
   unTxDats,
  )
+import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxBody (
   AllegraEraTxBody (..),
   AlonzoEraTxBody (..),
@@ -31,10 +39,10 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxBody (..),
   BabbageEraTxOut (..),
   MaryEraTxBody (..),
-  ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -44,6 +52,7 @@ import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.Monad (unless, when, zipWithM)
+import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -155,7 +164,9 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  (MaryEraTxBody era) =>
+  ( MaryEraTxBody era
+  , Alonzo.EraPlutusContext 'PlutusV1 era
+  ) =>
   TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
   Either (TranslationError (EraCrypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
@@ -164,12 +175,20 @@ transRedeemerPtr txb (ptr, (d, _)) =
     SNothing -> Left (RdmrPtrPointsToNothing ptr)
     SJust sp -> Right (Alonzo.transScriptPurpose sp, transRedeemer d)
 
+instance Crypto c => EraPlutusContext 'PlutusV1 (BabbageEra c) where
+  transDCert = DCertPlutusV1 . transShelleyDCert
+
+instance Crypto c => EraPlutusContext 'PlutusV2 (BabbageEra c) where
+  transDCert = DCertPlutusV2 . transShelleyDCert
+
 babbageTxInfo ::
   forall era.
   ( EraTx era
   , AlonzoEraTxWits era
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
+  , Alonzo.EraPlutusContext 'PlutusV1 era
+  , Alonzo.EraPlutusContext 'PlutusV2 era
   ) =>
   PParams era ->
   Language ->
@@ -193,6 +212,7 @@ babbageTxInfoV1 ::
   , AlonzoEraTxWits era
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   PV1.POSIXTimeRange ->
   Tx era ->
@@ -212,8 +232,8 @@ babbageTxInfoV1 timeRange tx utxo = do
       { PV1.txInfoInputs = inputs
       , PV1.txInfoOutputs = outputs
       , PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
-      , PV1.txInfoMint = Alonzo.transMintValue multiAsset
-      , PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+      , PV1.txInfoMint = Alonzo.transMultiAsset multiAsset
+      , PV1.txInfoDCert = toList $ fmap (unDCertV1 . Alonzo.transDCert) (txBody ^. certsTxBodyL)
       , PV1.txInfoWdrl = Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV1.txInfoValidRange = timeRange
       , PV1.txInfoSignatories =
@@ -235,6 +255,8 @@ babbageTxInfoV2 ::
   , AlonzoEraTxWits era
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
+  , EraPlutusContext 'PlutusV2 era
+  , EraPlutusContext 'PlutusV1 era
   ) =>
   PV2.POSIXTimeRange ->
   Tx era ->
@@ -255,8 +277,8 @@ babbageTxInfoV2 timeRange tx utxo = do
       , PV2.txInfoOutputs = outputs
       , PV2.txInfoReferenceInputs = refInputs
       , PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
-      , PV2.txInfoMint = Alonzo.transMintValue multiAsset
-      , PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+      , PV2.txInfoMint = Alonzo.transMultiAsset multiAsset
+      , PV2.txInfoDCert = toList $ fmap (unDCertV2 . Alonzo.transDCert) (txBody ^. certsTxBodyL)
       , PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV2.txInfoValidRange = timeRange
       , PV2.txInfoSignatories =

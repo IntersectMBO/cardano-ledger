@@ -36,7 +36,7 @@ import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
-import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyTxOut (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>))
@@ -98,7 +98,7 @@ genTxBody ::
   SlotNo ->
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert (EraCrypto era)) ->
+  StrictSeq (DCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->

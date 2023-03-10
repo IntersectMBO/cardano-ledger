@@ -89,7 +89,7 @@ getDatumBabbage ::
   ) =>
   Tx era ->
   UTxO era ->
-  ScriptPurpose (EraCrypto era) ->
+  ScriptPurpose era ->
   Maybe (Data era)
 getDatumBabbage tx (UTxO m) sp = do
   txIn <- getSpendingTxIn sp

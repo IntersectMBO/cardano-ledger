@@ -18,7 +18,11 @@ module Cardano.Ledger.Pretty.Conway (
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), ConwayDelegCert (..), Delegatee (..))
+import Cardano.Ledger.Conway.Delegation (
+  ConwayDCert (..),
+  ConwayDelegCert (..),
+  Delegatee (..),
+ )
 import Cardano.Ledger.Conway.Governance (
   Anchor,
   ConwayGovernance (..),
@@ -114,6 +118,11 @@ instance PrettyA (ConwayDelegCert c) where
       [ ("Stake Credential", prettyA stakeCredential)
       , ("Deposit", prettyA deposit)
       ]
+  prettyA (ConwayRegKey c) =
+    ppRecord
+      "ConwayRegKey"
+      [ ("StakeCredential", prettyA c)
+      ]
 
 ppConwayDCert :: ConwayDCert c -> PDoc
 ppConwayDCert (ConwayDCertDeleg dc) = ppSexp "ConwayDCertDeleg" [prettyA dc]
@@ -137,7 +146,6 @@ ppConwayTxBody txb =
     , ("outputs", ppStrictSeq prettyA (txb ^. outputsTxBodyL))
     , ("collateral return", ppStrictMaybe prettyA (txb ^. collateralReturnTxBodyL))
     , ("total collateral", ppStrictMaybe ppCoin $ txb ^. totalCollateralTxBodyL)
-    , ("certificates", ppStrictSeq ppConwayDCert $ txb ^. conwayCertsTxBodyL)
     , ("withdrawals", ppWithdrawals $ txb ^. withdrawalsTxBodyL)
     , ("transaction fee", ppCoin $ txb ^. feeTxBodyL)
     , ("validity interval", ppValidityInterval $ txb ^. vldtTxBodyL)
@@ -189,9 +197,7 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
       [("hash", prettyA c)]
 
 instance forall c. PrettyA (ConwayDCert c) where
-  prettyA (ConwayDCertDeleg delegCert) = prettyA delegCert
-  prettyA (ConwayDCertPool poolCert) = prettyA poolCert
-  prettyA (ConwayDCertConstitutional constDelegCert) = prettyA constDelegCert
+  prettyA = ppConwayDCert
 
 instance Crypto c => PrettyA (PParams (ConwayEra c)) where
   prettyA = ppBabbagePParams

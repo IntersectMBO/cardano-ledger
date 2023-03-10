@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -37,16 +38,18 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Delegation (
+  isInstantaneousRewards,
+  pattern ShelleyDCertDeleg,
+ )
 import Cardano.Ledger.Shelley.Era (ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  PoolCert (..),
   PoolMetadata (..),
   PoolParams (..),
   getRwdNetwork,
@@ -104,10 +107,10 @@ instance NoThunks (ShelleyPoolPredFailure era)
 
 instance NFData (ShelleyPoolPredFailure era)
 
-instance EraPParams era => STS (ShelleyPOOL era) where
+instance (ShelleyEraDCert era, EraPParams era) => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState era
 
-  type Signal (ShelleyPOOL era) = DCert (EraCrypto era)
+  type Signal (ShelleyPOOL era) = DCert era
 
   type Environment (ShelleyPOOL era) = PoolEnv era
 
@@ -165,7 +168,10 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         pure (3, PoolMedataHashTooBig poolID s)
       k -> invalidKey k
 
-poolDelegationTransition :: forall era. EraPParams era => TransitionRule (ShelleyPOOL era)
+poolDelegationTransition ::
+  forall era.
+  (ShelleyEraDCert era, EraPParams era) =>
+  TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let stpools = psStakePoolParams ps
@@ -227,12 +233,16 @@ poolDelegationTransition = do
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
       pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk e)}
-    DCertDeleg _ -> do
+    ShelleyDCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
-      pure ps
-    DCertMir _ -> do
-      failBecause $ WrongCertificateTypePOOL 1
       pure ps
     DCertGenesis _ -> do
       failBecause $ WrongCertificateTypePOOL 2
+      pure ps
+    _ | isInstantaneousRewards c -> do
+      failBecause $ WrongCertificateTypePOOL 1
+      pure ps
+    _ -> do
+      -- Impossible case
+      failBecause $ WrongCertificateTypePOOL 3
       pure ps

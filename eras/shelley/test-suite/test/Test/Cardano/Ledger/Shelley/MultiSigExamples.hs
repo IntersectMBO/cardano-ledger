@@ -133,7 +133,12 @@ aliceAndBobOrCarlOrDaria =
     , RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: EraTxOut era => [(Addr (EraCrypto era), Value era)] -> ShelleyTxBody era
+initTxBody ::
+  ( EraTxOut era
+  , EraDCert era
+  ) =>
+  [(Addr (EraCrypto era), Value era)] ->
+  ShelleyTxBody era
 initTxBody addrs =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
@@ -146,7 +151,9 @@ initTxBody addrs =
     SNothing
 
 makeTxBody ::
-  EraTxOut era =>
+  ( EraTxOut era
+  , EraDCert era
+  ) =>
   [TxIn (EraCrypto era)] ->
   [(Addr (EraCrypto era), Value era)] ->
   Withdrawals (EraCrypto era) ->

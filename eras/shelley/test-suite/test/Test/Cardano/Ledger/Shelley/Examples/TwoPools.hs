@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -51,6 +52,7 @@ import Cardano.Ledger.PoolDistr (
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Delegation (ShelleyDelegCert (..), pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate (..),
   RewardUpdate (..),
@@ -75,10 +77,6 @@ import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
-  PoolCert (..),
   PoolParams (..),
   RewardAcnt (..),
   ShelleyTxBody (..),
@@ -191,14 +189,14 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
-        [ DCertDeleg (RegKey Cast.aliceSHK)
-        , DCertDeleg (RegKey Cast.bobSHK)
-        , DCertDeleg (RegKey Cast.carlSHK)
+        [ ShelleyDCertDeleg (RegKey Cast.aliceSHK)
+        , ShelleyDCertDeleg (RegKey Cast.bobSHK)
+        , ShelleyDCertDeleg (RegKey Cast.carlSHK)
         , DCertPool (RegPool alicePoolParams')
         , DCertPool (RegPool bobPoolParams')
-        , DCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
-        , DCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys))
-        , DCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))
+        , ShelleyDCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
+        , ShelleyDCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys))
+        , ShelleyDCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))
         ]
     )
     (Withdrawals Map.empty)

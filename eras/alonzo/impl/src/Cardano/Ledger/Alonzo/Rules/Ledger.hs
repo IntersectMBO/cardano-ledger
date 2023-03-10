@@ -44,7 +44,6 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersPredFailure (..),
   depositEqualsObligation,
  )
-import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition (
   Assertion (..),
   Embed (..),
@@ -72,7 +71,7 @@ ledgerTransition ::
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
@@ -90,7 +89,7 @@ ledgerTransition = do
           TRC
             ( DelegsEnv slot txIx pp tx account
             , dpstate
-            , StrictSeq.fromStrict $ txBody ^. certsTxBodyG
+            , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )
       else pure dpstate
 
@@ -117,7 +116,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ AlonzoTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
   , ProtVerAtMost era 8
   ) =>
   STS (AlonzoLEDGER era)

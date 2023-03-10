@@ -10,6 +10,7 @@ module Cardano.Ledger.Allegra (
 )
 where
 
+import Cardano.Ledger.Allegra.Delegation ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.Rules ()

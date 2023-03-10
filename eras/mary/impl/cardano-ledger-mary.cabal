@@ -26,12 +26,13 @@ flag asserts
 library
     exposed-modules:
         Cardano.Ledger.Mary
-        Cardano.Ledger.Mary.Translation
-        Cardano.Ledger.Mary.Value
+        Cardano.Ledger.Mary.Delegation
         Cardano.Ledger.Mary.Core
+        Cardano.Ledger.Mary.Translation
         Cardano.Ledger.Mary.TxBody
         Cardano.Ledger.Mary.TxOut
         Cardano.Ledger.Mary.UTxO
+        Cardano.Ledger.Mary.Value
 
     hs-source-dirs:   src
     other-modules:
@@ -59,7 +60,7 @@ library
         cardano-ledger-allegra >=1.1,
         cardano-ledger-binary >=1.0,
         cardano-ledger-core ^>=1.2,
-        cardano-ledger-shelley >=1.1,
+        cardano-ledger-shelley ^>=1.2,
         containers,
         deepseq,
         groups,

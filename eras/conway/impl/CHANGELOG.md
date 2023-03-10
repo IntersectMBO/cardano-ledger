@@ -12,7 +12,7 @@
 * Add `ConwayDelegsPredFailure`
 * Renamed `DELPL` to `CERT`
 * Added `ConwayDELEGS` rule
-* Added `ConwayCERT` rule synonym
+* Added `ConwayCERT` rule
 * Added `ConwayDelegsPredFailure` rule
 * Added `ConwayDelegsEvent` rule
 * Change the Conway txInfo to allow Plutus V3
@@ -20,13 +20,18 @@
   in the script context for the transaction minting field.
 * Added instances for ConwayDelegsPredFailure:
   `NoThunks`, `EncCBOR`, `DecCBOR`, and `Arbitrary`
+* Added `GovernanceActionMetadata`
+* Added `RatifyEnv` and `RatifySignal`
+* Add `ConwayEraDCert`
+* Add `EraDCert`, `ShelleyEraDCert`, `ConwayEraDCert` instances to `ConwayEra`
+* Add `EraPlutusContext 'PlutusV1` instance to `ConwayEra`
+* Add `EraPlutusContext 'PlutusV2` instance to `ConwayEra`
+* Add `EraPlutusContext 'PlutusV3` instance to `ConwayEra`
 
 ## 1.1.0.0
 
 * Added `RATIFY` rule
 * Added `ConwayGovernance`
-* Added `RatifyEnv` and `RatifySignal`
-* Added `EnactState` and `RatifyState`
 * Added lenses:
   * `cgTallyL`
   * `cgRatifyL`

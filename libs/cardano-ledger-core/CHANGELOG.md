@@ -15,6 +15,7 @@
   * `dpsDState` -> `certDState`
   * `obligationDPState` -> `obligationCertState`
 * Add support for `PlutusV3`
+* Add `certsTxBodyL` to `EraTxBody`
 
 ## 1.1.0.0
 

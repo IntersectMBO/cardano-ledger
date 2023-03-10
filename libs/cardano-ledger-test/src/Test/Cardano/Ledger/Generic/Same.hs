@@ -392,7 +392,7 @@ sameTxWits proof@(Conway _) x y = sameAlonzoTxWits proof x y
 -- Comparing TxBody for Sameness
 
 sameShelleyTxBody ::
-  Reflect era =>
+  (Reflect era, PrettyA (DCert era)) =>
   Proof era ->
   ShelleyTxBody era ->
   ShelleyTxBody era ->
@@ -400,7 +400,7 @@ sameShelleyTxBody ::
 sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Withdrawals w1) f1 s1 pu1 d1) (ShelleyTxBody i2 o2 c2 (Withdrawals w2) f2 s2 pu2 d2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
-  , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
+  , ("DCert", eqVia (ppList prettyA . toList) c1 c2)
   , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
   , ("Fee", eqVia pcCoin f1 f2)
   , ("TimeToLive", eqVia ppSlotNo s1 s2)
@@ -409,7 +409,7 @@ sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Withdrawals w1) f1 s1 pu1 d1) (
   ]
 
 sameAllegraTxBody ::
-  Reflect era =>
+  (Reflect era, PrettyA (DCert era)) =>
   Proof era ->
   AllegraTxBody era ->
   AllegraTxBody era ->
@@ -417,7 +417,7 @@ sameAllegraTxBody ::
 sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1) (AllegraTxBody i2 o2 c2 (Withdrawals w2) f2 v2 pu2 d2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
-  , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
+  , ("DCert", eqVia (ppList prettyA . toList) c1 c2)
   , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
   , ("Fee", eqVia pcCoin f1 f2)
   , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
@@ -426,7 +426,7 @@ sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1) (
   ]
 
 sameMaryTxBody ::
-  Reflect era =>
+  (Reflect era, PrettyA (DCert era)) =>
   Proof era ->
   MaryTxBody era ->
   MaryTxBody era ->
@@ -434,7 +434,7 @@ sameMaryTxBody ::
 sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1 m1) (MaryTxBody i2 o2 c2 (Withdrawals w2) f2 v2 pu2 d2 m2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
-  , ("DCert", eqVia (ppList pcDCert . toList) c1 c2)
+  , ("DCert", eqVia (ppList prettyA . toList) c1 c2)
   , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
   , ("Fee", eqVia pcCoin f1 f2)
   , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
@@ -444,7 +444,7 @@ sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1 m1) (Mar
   ]
 
 sameAlonzoTxBody ::
-  Reflect era =>
+  (Reflect era, PrettyA (DCert era)) =>
   Proof era ->
   AlonzoTxBody era ->
   AlonzoTxBody era ->
@@ -456,7 +456,7 @@ sameAlonzoTxBody
     [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
     , ("Collateral", eqVia (ppSet pcTxIn) cl1 cl2)
     , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
-    , ("Certs", eqVia (ppList pcDCert . toList) c1 c2)
+    , ("Certs", eqVia (ppList prettyA . toList) c1 c2)
     , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
     , ("Fee", eqVia pcCoin f1 f2)
     , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
@@ -471,6 +471,7 @@ sameAlonzoTxBody
 sameBabbageTxBody ::
   ( Reflect era
   , BabbageEraTxBody era
+  , PrettyA (DCert era)
   ) =>
   Proof era ->
   BabbageTxBody era ->
@@ -486,7 +487,7 @@ sameBabbageTxBody
     , ("Outputs", eqVia (ppList (pcTxOut proof . sizedValue) . toList) o1 o2)
     , ("ColReturn", eqVia (ppStrictMaybe (pcTxOut proof . sizedValue)) cr1 cr2)
     , ("TotalCol", eqVia (ppStrictMaybe pcCoin) tc1 tc2)
-    , ("Certs", eqVia (ppList pcDCert . toList) c1 c2)
+    , ("Certs", eqVia (ppList prettyA . toList) c1 c2)
     , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
     , ("Fee", eqVia pcCoin f1 f2)
     , ("ValidityInterval", eqVia ppValidityInterval v1 v2)

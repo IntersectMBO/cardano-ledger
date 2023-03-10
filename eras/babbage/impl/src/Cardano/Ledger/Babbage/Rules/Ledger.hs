@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -41,7 +40,6 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersPredFailure (LedgerFailure),
   depositEqualsObligation,
  )
-import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition (
   Assertion (..),
   Embed (..),
@@ -61,7 +59,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
+  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
   ) =>
   STS (BabbageLEDGER era)
   where

@@ -2,12 +2,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -37,6 +34,7 @@ instance (EraScript era, Val (Value era)) => Twiddle (BabbageTxOut era) where
 instance
   ( Era era
   , Twiddle (TxOut era)
+  , Twiddle (DCert era)
   , BabbageEraTxBody era
   ) =>
   Twiddle (BabbageTxBody era)

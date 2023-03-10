@@ -168,11 +168,11 @@ collectInputs ::
   Tx era ->
   UTxO era ->
   Either
-    [CollectError (EraCrypto era)]
+    [CollectError era]
     [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
-collectInputs (Alonzo _) = collectTwoPhaseScriptInputs @era
-collectInputs (Babbage _) = collectTwoPhaseScriptInputs @era
-collectInputs (Conway _) = collectTwoPhaseScriptInputs @era
+collectInputs (Alonzo _) = collectTwoPhaseScriptInputs
+collectInputs (Babbage _) = collectTwoPhaseScriptInputs
+collectInputs (Conway _) = collectTwoPhaseScriptInputs
 collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 
 getTxInfo ::

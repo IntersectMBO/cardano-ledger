@@ -29,12 +29,11 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
-  DCert (..),
   LedgerEnv (..),
   ShelleyLEDGER,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation.Certificates (pattern RegPool)
+import Cardano.Ledger.Shelley.Delegation (ShelleyDCert (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState (..),
@@ -283,7 +282,7 @@ data AliceToBob = AliceToBob
   , fee :: Coin
   , deposits :: Coin
   , refunds :: Coin
-  , certs :: [DCert C_Crypto]
+  , certs :: [DCert C]
   , ttl :: SlotNo
   , signers :: [KeyPair 'Witness C_Crypto]
   }
@@ -647,7 +646,7 @@ testPoolCostTooSmall =
       , fee = Coin 997
       , deposits = Coin 250
       , refunds = Coin 0
-      , certs = [DCertPool $ RegPool alicePoolParamsSmallCost]
+      , certs = [ShelleyDCertPool $ RegPool alicePoolParamsSmallCost]
       , ttl = SlotNo 0
       , signers =
           ( [ asWitness alicePay

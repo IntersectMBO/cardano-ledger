@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,6 +26,7 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API hiding (KeyPair, vKey)
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
@@ -465,10 +467,10 @@ exampleTxIns =
     [ TxIn (TxId (mkDummySafeHash Proxy 1)) minBound
     ]
 
-exampleCerts :: Crypto c => StrictSeq (DCert c)
+exampleCerts :: (ShelleyEraDCert era, ProtVerAtMost era 8) => StrictSeq (DCert era)
 exampleCerts =
   StrictSeq.fromList
-    [ DCertDeleg (RegKey (keyToCredential exampleStakeKey))
+    [ ShelleyDCertDeleg (RegKey (keyToCredential exampleStakeKey))
     , DCertPool (RegPool examplePoolParams)
     , DCertMir $
         MIRCert ReservesMIR $

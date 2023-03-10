@@ -6,6 +6,7 @@
   * `DState`
   * `PState`
   * `VState`
+* Add `ShelleyEraDCert` instance for `AllegraEra`
 
 ## 1.1.0.0
 

@@ -292,21 +292,6 @@ data GovernanceProcedure era
   | GovernanceProposalProcedure !(ProposalProcedure era)
   deriving (Eq, Generic)
 
-instance EraPParams era => DecCBOR (GovernanceProcedure era) where
-  decCBOR = decode $ Summands "GovernanceProcedure" dec
-    where
-      dec 0 = SumD GovernanceVotingProcedure <! From
-      dec 1 = SumD GovernanceProposalProcedure <! From
-      dec n = Invalid n
-
-instance EraPParams era => EncCBOR (GovernanceProcedure era) where
-  encCBOR (GovernanceVotingProcedure vProc) =
-    encode @_ @(GovernanceProcedure era) $
-      Sum GovernanceVotingProcedure 0 !> To vProc
-  encCBOR (GovernanceProposalProcedure pProc) =
-    encode @_ @(GovernanceProcedure era) $
-      Sum GovernanceProposalProcedure 1 !> To pProc
-
 instance EraPParams era => NoThunks (GovernanceProcedure era)
 
 instance EraPParams era => NFData (GovernanceProcedure era)

@@ -82,7 +82,7 @@ data ConwayDELEGS era
 
 type instance EraRule "DELEGS" (ConwayEra c) = ConwayDELEGS (ConwayEra c)
 
-type ConwayCERT era = API.ShelleyDELPL era
+data ConwayCERT era
 
 type instance EraRule "CERT" (ConwayEra c) = ConwayCERT (ConwayEra c)
 

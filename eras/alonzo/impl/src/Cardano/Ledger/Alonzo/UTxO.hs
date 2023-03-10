@@ -2,8 +2,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.UTxO (
@@ -23,8 +26,8 @@ import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), DelegCert (..), Delegation (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..), getRwdCred)
+import Cardano.Ledger.Shelley.Delegation (ShelleyDelegCert (..), ShelleyEraDCert, pattern ShelleyDCertDeleg)
+import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), getRwdCred)
 import Cardano.Ledger.Shelley.UTxO (scriptCred)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
@@ -42,8 +45,10 @@ import Lens.Micro.Extras (view)
 
 -- | Alonzo era style scripts needed require also a `ScriptPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
-  = AlonzoScriptsNeeded [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
-  deriving (Eq, Show)
+  = AlonzoScriptsNeeded [(ScriptPurpose era, ScriptHash (EraCrypto era))]
+
+deriving instance (Era era, Eq (DCert era)) => Eq (AlonzoScriptsNeeded era)
+deriving instance (Era era, Show (DCert era)) => Show (AlonzoScriptsNeeded era)
 
 instance Crypto c => EraUTxO (AlonzoEra c) where
   type ScriptsNeeded (AlonzoEra c) = AlonzoScriptsNeeded (AlonzoEra c)
@@ -131,7 +136,7 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
   where
     collect ::
       TxIn (EraCrypto era) ->
-      Maybe (ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))
+      Maybe (ScriptPurpose era, ScriptHash (EraCrypto era))
     collect !i = do
       addr <- view addrTxOutL <$> Map.lookup i u
       hash <- getScriptHash addr
@@ -146,18 +151,19 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
           hash <- scriptCred $ getRwdCred accnt
           return (Rewarding accnt, hash)
 
-    !cert = foldl' addOnlyCwitness [] (txBody ^. certsTxBodyG)
+    !cert = foldl' addOnlyCwitness [] (txBody ^. certsTxBodyL)
 
     !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ txBody ^. mintedTxBodyF
 
 -- | We only find certificate witnesses in Delegating and Deregistration DCerts that have
 -- ScriptHashObj credentials.
 addOnlyCwitness ::
-  [(ScriptPurpose c, ScriptHash c)] ->
-  DCert c ->
-  [(ScriptPurpose c, ScriptHash c)]
-addOnlyCwitness !ans (DCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
-  (Certifying $ DCertDeleg c, hk) : ans
-addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
-  (Certifying $ DCertDeleg c, hk) : ans
+  ShelleyEraDCert era =>
+  [(ScriptPurpose era, ScriptHash (EraCrypto era))] ->
+  DCert era ->
+  [(ScriptPurpose era, ScriptHash (EraCrypto era))]
+addOnlyCwitness !ans (ShelleyDCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
+  (Certifying $ ShelleyDCertDeleg c, hk) : ans
+addOnlyCwitness !ans (ShelleyDCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
+  (Certifying $ ShelleyDCertDeleg c, hk) : ans
 addOnlyCwitness !ans _ = ans

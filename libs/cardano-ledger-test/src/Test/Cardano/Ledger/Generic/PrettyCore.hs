@@ -35,7 +35,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), ProtVer (..), SlotNo (..), TxIx (..), txIxToInt)
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
+import Cardano.Ledger.Conway.Delegation (ConwayDCert (..))
 import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
 import Cardano.Ledger.Conway.Rules (ConwayNewEpochPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -63,6 +63,7 @@ import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaES, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Delegation (ShelleyDCert (..), ShelleyDelegCert (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState (..),
@@ -97,10 +98,6 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
  )
 import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
-  PoolCert (..),
   PoolParams (..),
   ShelleyTxOut (..),
   WitVKey (..),
@@ -258,6 +255,7 @@ instance
 ppUtxowPredicateFail ::
   ( PrettyA (PredicateFailure (EraRule "UTXO" era))
   , PrettyCore era
+  , PrettyA (DCert era)
   ) =>
   AlonzoUtxowPredFailure era ->
   PDoc
@@ -292,6 +290,7 @@ ppUtxowPredicateFail (ExtraRedeemers x) =
 instance
   ( PrettyA (PredicateFailure (EraRule "UTXO" era))
   , PrettyCore era
+  , PrettyA (DCert era)
   ) =>
   PrettyA (AlonzoUtxowPredFailure era)
   where
@@ -531,7 +530,7 @@ instance PrettyA (ShelleyDelegPredFailure era) where
 -- Predicate Failure for Alonzo UTXOS
 
 ppUtxosPredicateFailure ::
-  PrettyA (PPUPPredFailure era) =>
+  (PrettyA (PPUPPredFailure era), PrettyA (DCert era)) =>
   AlonzoUtxosPredFailure era ->
   PDoc
 ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
@@ -544,16 +543,21 @@ ppUtxosPredicateFailure (CollectErrors es) =
   ppRecord' mempty [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
 ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = prettyA p
 
-instance PrettyA (PPUPPredFailure era) => PrettyA (AlonzoUtxosPredFailure era) where
+instance
+  ( PrettyA (PPUPPredFailure era)
+  , PrettyA (DCert era)
+  ) =>
+  PrettyA (AlonzoUtxosPredFailure era)
+  where
   prettyA = ppUtxosPredicateFailure
 
-ppCollectError :: CollectError c -> PDoc
+ppCollectError :: PrettyA (DCert era) => CollectError era -> PDoc
 ppCollectError (NoRedeemer sp) = ppSexp "NoRedeemer" [ppScriptPurpose sp]
 ppCollectError (NoWitness sh) = ppSexp "NoWitness" [ppScriptHash sh]
 ppCollectError (NoCostModel l) = ppSexp "NoCostModel" [ppLanguage l]
 ppCollectError (BadTranslation x) = ppSexp "BadTranslation" [ppString (show x)]
 
-instance PrettyA (CollectError c) where
+instance PrettyA (DCert c) => PrettyA (CollectError c) where
   prettyA = ppCollectError
 
 ppTagMismatchDescription :: TagMismatchDescription -> PDoc
@@ -734,13 +738,13 @@ ppWitHashes :: Set (KeyHash 'Witness c) -> PDoc
 ppWitHashes hs = ppSexp "WitHashes" [ppSet ppKeyHash hs]
 
 -- Defined in ‘Cardano.Ledger.Alonzo.Tx’
-ppScriptPurpose :: ScriptPurpose c -> PDoc
+ppScriptPurpose :: PrettyA (DCert era) => ScriptPurpose era -> PDoc
 ppScriptPurpose (Minting policy) = ppSexp "Minting" [prettyA policy] -- FIXME fill in the blanks
 ppScriptPurpose (Spending txin) = ppSexp "Spending" [ppTxIn txin]
 ppScriptPurpose (Rewarding acct) = ppSexp "Rewarding" [ppRewardAcnt' acct]
-ppScriptPurpose (Certifying dcert) = ppSexp "Certifying" [ppDCert dcert]
+ppScriptPurpose (Certifying dcert) = ppSexp "Certifying" [prettyA dcert]
 
-instance PrettyA (ScriptPurpose c) where
+instance PrettyA (DCert era) => PrettyA (ScriptPurpose era) where
   prettyA = ppScriptPurpose
 
 instance PrettyA x => PrettyA [x] where prettyA xs = ppList prettyA xs
@@ -1379,12 +1383,12 @@ pcPoolParams x =
 
 instance PrettyC (PoolParams era) era where prettyC _ = pcPoolParams
 
-pcDelegCert :: DelegCert c -> PDoc
+pcDelegCert :: ShelleyDelegCert c -> PDoc
 pcDelegCert (RegKey cred) = ppSexp "RegKey" [pcCredential cred]
 pcDelegCert (DeRegKey cred) = ppSexp "DeRegKey" [pcCredential cred]
 pcDelegCert (Delegate (Delegation x y)) = ppSexp "Delegate" [pcCredential x, pcKeyHash y]
 
-instance c ~ EraCrypto era => PrettyC (DelegCert c) era where prettyC _ = pcDelegCert
+instance c ~ EraCrypto era => PrettyC (ShelleyDelegCert c) era where prettyC _ = pcDelegCert
 
 pcPoolCert :: PoolCert c -> PDoc
 pcPoolCert (RegPool poolp) = ppSexp "RegPool" [pcPoolParams poolp]
@@ -1392,18 +1396,18 @@ pcPoolCert (RetirePool keyhash epoch) = ppSexp "RetirePool" [pcKeyHash keyhash, 
 
 instance c ~ EraCrypto era => PrettyC (PoolCert c) era where prettyC _ = pcPoolCert
 
-pcDCert :: DCert c -> PDoc
-pcDCert (DCertDeleg x) = pcDelegCert x
-pcDCert (DCertPool x) = pcPoolCert x
-pcDCert (DCertGenesis _) = ppString "GenesisCert"
-pcDCert (DCertMir _) = ppString "MirCert"
+pcShelleyDCert :: ShelleyDCert c -> PDoc
+pcShelleyDCert (ShelleyDCertDelegCert x) = pcDelegCert x
+pcShelleyDCert (ShelleyDCertPool x) = pcPoolCert x
+pcShelleyDCert (ShelleyDCertGenesis _) = ppString "GenesisCert"
+pcShelleyDCert (ShelleyDCertMir _) = ppString "MirCert"
 
 pcConwayDCert :: ConwayDCert c -> PDoc
 pcConwayDCert (ConwayDCertDeleg dc) = prettyA dc
 pcConwayDCert (ConwayDCertPool poolc) = pcPoolCert poolc
 pcConwayDCert (ConwayDCertConstitutional _) = ppString "GenesisCert"
 
-instance c ~ EraCrypto era => PrettyC (DCert c) era where prettyC _ = pcDCert
+instance c ~ EraCrypto era => PrettyC (ShelleyDCert c) era where prettyC _ = pcShelleyDCert
 
 pcRewardAcnt :: RewardAcnt c -> PDoc
 pcRewardAcnt (RewardAcnt net cred) = ppSexp "RewAccnt" [pcNetwork net, pcCredential cred]
@@ -1414,7 +1418,13 @@ pcExUnits :: ExUnits -> PDoc
 pcExUnits (ExUnits mem step) =
   ppSexp "ExUnits" [ppNatural mem, ppNatural step]
 
-pcTxBodyField :: Reflect era => Proof era -> TxBodyField era -> [(Text, PDoc)]
+pcTxBodyField ::
+  ( Reflect era
+  , PrettyA (DCert era)
+  ) =>
+  Proof era ->
+  TxBodyField era ->
+  [(Text, PDoc)]
 pcTxBodyField proof x = case x of
   Inputs s -> [("spend inputs", ppSet pcTxIn s)]
   Collateral s -> [("coll inputs", ppSet pcTxIn s)]
@@ -1424,7 +1434,7 @@ pcTxBodyField proof x = case x of
   CollateralReturn (SJust txout) -> [("coll return", pcTxOut proof txout)]
   TotalCol SNothing -> []
   TotalCol (SJust c) -> [("total coll", pcCoin c)]
-  Certs xs -> [("certs", ppList pcDCert (toList xs))]
+  Certs xs -> [("certs", ppList prettyA (toList xs))]
   Withdrawals' (Withdrawals m) -> [("withdrawal", ppMap pcRewardAcnt pcCoin m)]
   Txfee c -> [("fee", pcCoin c)]
   Vldt v -> [("validity interval", ppValidityInterval v)]
@@ -1440,9 +1450,15 @@ pcTxBodyField proof x = case x of
   Txnetworkid SNothing -> []
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
   GovernanceProcs ga -> [("governance procedures", ppStrictSeq prettyA ga)]
-  ConwayCerts certs -> [("conway certs", ppStrictSeq prettyA certs)]
 
-pcTxField :: forall era. Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
+pcTxField ::
+  forall era.
+  ( Reflect era
+  , PrettyA (DCert era)
+  ) =>
+  Proof era ->
+  TxField era ->
+  [(Text, PDoc)]
 pcTxField proof x = case x of
   Body b -> [("txbody hash", ppSafeHash (hashAnnotated b)), ("body", pcTxBody proof b)]
   BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
@@ -1477,17 +1493,17 @@ pcWitnesses proof wits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)
 
-pcTx :: Reflect era => Proof era -> Tx era -> PDoc
+pcTx :: (Reflect era, PrettyA (DCert era)) => Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where
     fields = abstractTx proof tx
-    pairs = concat (map (pcTxField proof) fields)
+    pairs = concatMap (pcTxField proof) fields
 
-pcTxBody :: Reflect era => Proof era -> TxBody era -> PDoc
+pcTxBody :: (Reflect era, PrettyA (DCert era)) => Proof era -> TxBody era -> PDoc
 pcTxBody proof txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody
-    pairs = concat (map (pcTxBodyField proof) fields)
+    pairs = concatMap (pcTxBodyField proof) fields
 
 instance PrettyC (ConwayTallyState era) era where
   prettyC proof (ConwayTallyState x) = case proof of

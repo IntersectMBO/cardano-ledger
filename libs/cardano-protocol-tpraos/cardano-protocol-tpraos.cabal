@@ -41,7 +41,7 @@ library
         cardano-ledger-conway >=1.1,
         cardano-ledger-core ^>=1.2,
         cardano-ledger-mary >=1.1,
-        cardano-ledger-shelley >=1.1,
+        cardano-ledger-shelley ^>=1.2,
         cardano-slotting,
         containers,
         deepseq,

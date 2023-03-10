@@ -16,7 +16,6 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
   Credential (..),
-  DCert (..),
   DState (..),
   DelegEnv (..),
   InstantaneousRewards (..),
