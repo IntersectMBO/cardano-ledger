@@ -284,8 +284,10 @@ instance Era era => FromCBOR (ConwayTallyState era) where
   fromCBOR = fromEraCBOR @era
 
 data EnactState era = EnactState
-  { ensCC :: !(StrictMaybe (Set (KeyHash 'Voting (EraCrypto era)), Rational))
+  { ensCommittee :: !(StrictMaybe (Set (KeyHash 'Voting (EraCrypto era)), Rational))
+  -- ^ Constitutional Committee
   , ensConstitution :: !(SafeHash (EraCrypto era) ByteString)
+  -- ^ Hash of the Constitution
   , ensProtVer :: !ProtVer
   , ensPParams :: !(PParams era)
   }
@@ -298,7 +300,7 @@ instance EraPParams era => ToJSON (EnactState era) where
 toEnactStatePairs :: (KeyValue a, EraPParams era) => EnactState era -> [a]
 toEnactStatePairs cg@(EnactState _ _ _ _) =
   let EnactState {..} = cg
-   in [ "cc" .= ensCC
+   in [ "committee" .= ensCommittee
       , "constitution" .= ensConstitution
       , "protVer" .= ensProtVer
       , "pparams" .= ensPParams
@@ -329,7 +331,7 @@ instance (Era era, EraPParams era) => EncCBOR (EnactState era) where
   encCBOR EnactState {..} =
     encode $
       Rec EnactState
-        !> To ensCC
+        !> To ensCommittee
         !> To ensConstitution
         !> To ensProtVer
         !> To ensPParams
