@@ -309,7 +309,7 @@ mergeRelSpec a@(RelOper r must1 may1 cant1) b@(RelOper _ must2 may2 cant2) =
   where
     must = Set.union must1 must2
     cant = Set.union cant1 cant2
-    may  = (`Set.difference` cant) <$> interSectM may1 may2
+    may = (`Set.difference` cant) <$> interSectM may1 may2
 
 -- ==================
 -- Helper functions for defining mergeRelSpec and
@@ -378,7 +378,7 @@ relOper r must may cant =
                 ]
               )
             ,
-              ( maybe True (\ may' -> Set.disjoint may' cant) may
+              ( maybe True (\may' -> Set.disjoint may' cant) may
               ,
                 [ "'may' "
                     ++ maybe "Nothing" (synopsis $ SetR r) may
