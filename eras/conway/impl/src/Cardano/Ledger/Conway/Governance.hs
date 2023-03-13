@@ -264,23 +264,14 @@ instance EraPParams era => NoThunks (ConwayTallyState era)
 instance Default (ConwayTallyState era) where
   def = ConwayTallyState mempty
 
-instance Era era => EncCBOR (ConwayTallyState era) where
-  encCBOR _ =
-    -- FIXME: implement the actual encoder. Has to put this ugly thing here instead of an
-    -- error because consensus already has golden tests for Conway
-    encCBOR (mempty :: Map () ())
+deriving instance EraPParams era => EncCBOR (ConwayTallyState era)
 
-instance Era era => DecCBOR (ConwayTallyState era) where
-  decCBOR = do
-    _ :: Map () () <- decCBOR
-    -- FIXME: implement the actual decoder. Has to put this ugly thing here instead of an
-    -- error because consensus already has golden tests for Conway
-    pure (ConwayTallyState mempty)
+deriving instance EraPParams era => DecCBOR (ConwayTallyState era)
 
-instance Era era => ToCBOR (ConwayTallyState era) where
+instance EraPParams era => ToCBOR (ConwayTallyState era) where
   toCBOR = toEraCBOR @era
 
-instance Era era => FromCBOR (ConwayTallyState era) where
+instance EraPParams era => FromCBOR (ConwayTallyState era) where
   fromCBOR = fromEraCBOR @era
 
 data EnactState era = EnactState
@@ -310,7 +301,7 @@ deriving instance Eq (PParams era) => Eq (EnactState era)
 
 deriving instance Show (PParams era) => Show (EnactState era)
 
-instance (Era era, EraPParams era) => Default (EnactState era) where
+instance EraPParams era => Default (EnactState era) where
   def =
     EnactState
       def
@@ -318,7 +309,7 @@ instance (Era era, EraPParams era) => Default (EnactState era) where
       (ProtVer (eraProtVerLow @era) 0)
       def
 
-instance (Era era, EraPParams era) => DecCBOR (EnactState era) where
+instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR =
     decode $
       RecD EnactState
@@ -327,7 +318,7 @@ instance (Era era, EraPParams era) => DecCBOR (EnactState era) where
         <! From
         <! From
 
-instance (Era era, EraPParams era) => EncCBOR (EnactState era) where
+instance EraPParams era => EncCBOR (EnactState era) where
   encCBOR EnactState {..} =
     encode $
       Rec EnactState
@@ -348,14 +339,14 @@ data RatifyState era = RatifyState
 
 instance EraPParams era => Default (RatifyState era)
 
-instance (Era era, EraPParams era) => DecCBOR (RatifyState era) where
+instance EraPParams era => DecCBOR (RatifyState era) where
   decCBOR =
     decode $
       RecD RatifyState
         <! From
         <! From
 
-instance (Era era, EraPParams era) => EncCBOR (RatifyState era) where
+instance EraPParams era => EncCBOR (RatifyState era) where
   encCBOR RatifyState {..} =
     encode $
       Rec RatifyState
