@@ -450,13 +450,23 @@ genPred env =
             , sumCKnownSets DeltaCoinR True
             ]
 
+    -- Avoid constraints where the same variable appears in multiple parts, since we can't solve
+    -- these when the variable is unknown.
+    uniqueVars (SumsTo _ _ _ parts) =
+      and
+        [ Set.disjoint us vs
+        | us : vss <- List.tails $ map (varsOfSum mempty) parts
+        , vs <- vss
+        ]
+    uniqueVars _ = True
+
     sumCKnownSets ::
       forall c.
       (Adds c, Arbitrary c) =>
       Rep era c ->
       Bool ->
       Gen (Pred era, GenEnv era)
-    sumCKnownSets rep canBeNegative = do
+    sumCKnownSets rep canBeNegative = flip suchThat (uniqueVars . fst) $ do
       let genParts 0 env0 k = k [] zero env0
           genParts n env0 k = do
             TypeInEra krep <- genKeyType
