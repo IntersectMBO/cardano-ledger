@@ -48,9 +48,12 @@ class
   where
   type GovernanceState era = (r :: Type) | r -> era
 
+  -- | Construct empty governance state
   emptyGovernanceState :: GovernanceState era
   emptyGovernanceState = def
 
+  -- | Returns `Nothing` for all eras starting with Conway, otherwise returns proposed
+  -- pparams updates
   getProposedPPUpdates :: GovernanceState era -> Maybe (ProposedPPUpdates era)
   getProposedPPUpdates _ = Nothing
 

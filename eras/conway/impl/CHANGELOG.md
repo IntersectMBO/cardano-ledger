@@ -21,7 +21,6 @@
   * `GovernanceActionIx`
   * `GovernanceActionId`
 * Add `ToJSONKey` instance for `GovernanceActionId` #3323
-* Reinstate `Vote` type #3326
 * Fix `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyState` #3323
 * Add `Anchor` and `AnchorDataHash` types. #3323
 
