@@ -17,7 +17,6 @@
   * `utxosFees`
   * `utxosGovernance`
   * `utxosStakeDistr`
-* Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 * Added `ToJSON` instance for `ShelleyTxOut`
 * Added `ToJSON` instance for `AlonzoPParams StrictMaybe`
 * Added `ToJSON (GovernanceState era)` superclass constraint for `EraGovernance`
@@ -28,6 +27,10 @@
   * `AccountState`, `EpochState`, `UTxOState`, `IncrementalStake` and `LedgerState`
   * `Likelihood` and `NonMyopic`
   * `RewardUpdate` and `PulsingRewUpdate`
+
+### `testlib`
+
+* Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 
 ## 1.0.0.0
 

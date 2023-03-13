@@ -4,7 +4,10 @@
 
 * Add `ToJSON`/`FromJSON` instances for `Version`
 * Add `decodeFullFromHexText` and `serializeAsHexText`
-* Add `Arbitrary` instance for `Term` to `testlib`.
+
+### `testlib`
+
+* Add `Arbitrary` instance for `Term`
 
 ## 1.0.0.0
 
