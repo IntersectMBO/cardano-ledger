@@ -773,8 +773,10 @@ instance EncCBOR a => EncCBOR (Maybe a) where
     szCases [Case "Nothing" 1, Case "Just" (1 + size (Proxy @a))]
 
 instance EncCBOR a => EncCBOR (SMaybe.StrictMaybe a) where
-  encCBOR SMaybe.SNothing = encodeListLen 0
-  encCBOR (SMaybe.SJust x) = encodeListLen 1 <> encCBOR x
+  encCBOR = encodeStrictMaybe encCBOR
+
+  encodedSizeExpr size _ =
+    szCases [Case "SNothing" 1, Case "SJust" (1 + size (Proxy @a))]
 
 instance (Ord k, EncCBOR k, EncCBOR v) => EncCBOR (Map.Map k v) where
   encCBOR = encodeMap encCBOR encCBOR

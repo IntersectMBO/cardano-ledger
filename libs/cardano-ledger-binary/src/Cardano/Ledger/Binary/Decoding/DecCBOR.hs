@@ -343,8 +343,8 @@ instance DecCBOR a => DecCBOR (Maybe a) where
   dropCBOR _ = () <$ decodeMaybe (dropCBOR (Proxy @a))
 
 instance DecCBOR a => DecCBOR (SMaybe.StrictMaybe a) where
-  decCBOR = SMaybe.maybeToStrictMaybe <$> decodeMaybe decCBOR
-  dropCBOR _ = () <$ decodeMaybe (dropCBOR (Proxy @a))
+  decCBOR = decodeStrictMaybe decCBOR
+  dropCBOR _ = () <$ decodeStrictMaybe (dropCBOR (Proxy @a))
 
 instance DecCBOR a => DecCBOR (SSeq.StrictSeq a) where
   decCBOR = decodeStrictSeq decCBOR

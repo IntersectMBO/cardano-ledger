@@ -21,6 +21,8 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeVersion,
   encodeMaybe,
   encodeNullMaybe,
+  encodeStrictMaybe,
+  encodeNullStrictMaybe,
   encodePair,
   encodeTuple,
   encodeRatio,
@@ -106,6 +108,7 @@ import Data.Foldable as F (foldMap', foldl')
 import Data.IP (IPv4, IPv6, toHostAddress, toHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (Sum (..))
 import Data.Ratio (Ratio, denominator, numerator)
 import qualified Data.Sequence as Seq
@@ -321,6 +324,20 @@ encodeNullMaybe :: (a -> Encoding) -> Maybe a -> Encoding
 encodeNullMaybe encodeValue = \case
   Nothing -> encodeNull
   Just x -> encodeValue x
+
+encodeStrictMaybe :: (a -> Encoding) -> StrictMaybe a -> Encoding
+encodeStrictMaybe encodeValue = \case
+  SNothing -> encodeListLen 0
+  SJust x -> encodeListLen 1 <> encodeValue x
+
+-- | Alternative way to encode a Maybe type.
+--
+-- /Note/ - this is not the default method for encoding `StrictMaybe`, use
+-- `encodeStrictMaybe` instead
+encodeNullStrictMaybe :: (a -> Encoding) -> StrictMaybe a -> Encoding
+encodeNullStrictMaybe encodeValue = \case
+  SNothing -> encodeNull
+  SJust x -> encodeValue x
 
 encodeTuple :: (a -> Encoding) -> (b -> Encoding) -> (a, b) -> Encoding
 encodeTuple encodeFirst encodeSecond (x, y) =
