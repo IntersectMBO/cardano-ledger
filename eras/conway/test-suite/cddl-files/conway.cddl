@@ -136,8 +136,7 @@ vote =
   [ governance_action_id : governance_action_id
   , voter_role
   , voter_role_key_hash  : stake_credential
-  , metadata_url         : url
-  , metadata_hash        : $hash32
+  , anchor               : anchor / null
   , decision
   ]
 
@@ -145,6 +144,11 @@ vote =
 ; DRep - 1
 ; SPO - 2
 voter_role = 0 .. 2
+
+anchor =
+  [ anchor_url       : url
+  , anchor_data_hash : $hash32
+  ]
 
 ; no - 0
 ; yes - 1

@@ -3,7 +3,7 @@
 ## 1.1.0.0
 
 * Added `RATIFY` rule
-* Added `GovernanceActionMetadata`
+* Added `ConwayGovernance`
 * Added `RatifyEnv` and `RatifySignal`
 * Added `EnactState` and `RatifyState`
 * Added lenses:
@@ -21,7 +21,9 @@
   * `GovernanceActionIx`
   * `GovernanceActionId`
 * Add `ToJSONKey` instance for `GovernanceActionId` #3323
+* Reinstate `Vote` type #3326
 * Fix `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyState` #3323
+* Add `Anchor` and `AnchorDataHash` types. #3323
 
 ### `testlib`
 

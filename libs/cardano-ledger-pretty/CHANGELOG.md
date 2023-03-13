@@ -10,7 +10,6 @@
     * `StrictMaybe a` #3291
     * `VoteDecision` #3291
   * Added `PrettyA` instances for new Conway data types:
-    * `GovernanceActionMetadata` #3291
     * `RatifyEnv` #3291
     * `RatifySignal` #3291
 
