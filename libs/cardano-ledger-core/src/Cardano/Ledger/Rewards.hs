@@ -4,7 +4,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Rewards (
@@ -25,6 +27,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -46,6 +49,8 @@ instance NoThunks RewardType
 
 instance NFData RewardType
 
+instance ToJSON RewardType
+
 instance EncCBOR RewardType where
   encCBOR MemberReward = encodeWord 0
   encCBOR LeaderReward = encodeWord 1
@@ -65,9 +70,9 @@ instance DecCBOR RewardType where
 --
 -- * the number of Lovelace in the reward
 data Reward c = Reward
-  { rewardType :: RewardType
-  , rewardPool :: KeyHash 'StakePool c
-  , rewardAmount :: Coin
+  { rewardType :: !RewardType
+  , rewardPool :: !(KeyHash 'StakePool c)
+  , rewardAmount :: !Coin
   }
   deriving (Eq, Show, Generic)
 
@@ -91,3 +96,15 @@ instance Crypto c => EncCBOR (Reward c) where
 instance Crypto c => DecCBOR (Reward c) where
   decCBOR =
     decode $ RecD Reward <! From <! From <! From
+
+instance Crypto c => ToJSON (Reward c) where
+  toJSON = object . toRewardPair
+  toEncoding = pairs . mconcat . toRewardPair
+
+toRewardPair :: (KeyValue a, Crypto c) => Reward c -> [a]
+toRewardPair r@(Reward _ _ _) =
+  let Reward {..} = r
+   in [ "rewardType" .= rewardType
+      , "rewardPool" .= rewardPool
+      , "rewardAmount" .= rewardAmount
+      ]

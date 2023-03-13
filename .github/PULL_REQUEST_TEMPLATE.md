@@ -6,11 +6,10 @@ to the issue.
 
 # Checklist
 
-- [ ] Commit sequence broadly makes sense
-- [ ] Commits have useful messages
+- [ ] Commit sequence broadly makes sense and commits have useful messages
 - [ ] New tests are added if needed and existing tests are updated
-- [ ] Any changes are noted in the [changelog](https://github.com/input-output-hk/cardano-ledger/blob/master/CHANGELOG.md)
-- [ ] Code is formatted with [`fourmolu`](https://github.com/fourmolu/fourmolu) (use `scripts/fourmolize.sh`)
-- [ ] Cabal files are formatted (use `scripts/cabal-format.sh`)
-- [ ] `hie.yaml` has been updated (use `scripts/gen-hie.sh`)
+- [ ] Any changes are noted in the `CHANGELOG.md` for affected package
+- [x] Code is formatted with [`fourmolu`](https://github.com/fourmolu/fourmolu) (use `scripts/fourmolize.sh`)
+- [x] Cabal files are formatted (use `scripts/cabal-format.sh`)
+- [x] [`hie.yaml`](https://github.com/input-output-hk/cardano-ledger/blob/master/hie.yaml) has been updated (use `scripts/gen-hie.sh`)
 - [ ] Self-reviewed the diff

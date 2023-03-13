@@ -201,7 +201,7 @@ instance PrettyA (PParams era) => PrettyA (EnactState era) where
     let EnactState {..} = ens
      in ppRecord
           "EnactState"
-          [ ("Constitutional Committee", prettyA ensCC)
+          [ ("Constitutional Committee", prettyA ensCommittee)
           , ("PParams", prettyA ensPParams)
           , ("ProtVer", prettyA ensProtVer)
           , ("Constitution", prettyA ensConstitution)
@@ -217,7 +217,7 @@ instance
     let RatifyState {..} = rs
      in ppRecord
           "RatifyState"
-          [ ("EnactState", prettyA rsES)
+          [ ("EnactState", prettyA rsEnactState)
           , ("Future", prettyA rsFuture)
           ]
 

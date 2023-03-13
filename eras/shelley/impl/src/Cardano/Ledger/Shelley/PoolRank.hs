@@ -48,7 +48,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
 import Cardano.Ledger.Core (Era (..), EraPParams, PParams, ppA0L, ppNOptL)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (maxPool)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
@@ -57,6 +57,7 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default, def)
 import Data.Foldable (find)
 import Data.Function (on)
@@ -105,6 +106,10 @@ instance Semigroup Likelihood where
 
 instance Monoid Likelihood where
   mempty = Likelihood $ StrictSeq.forceToStrict $ Seq.replicate (length samplePositions) (LogWeight 0)
+
+instance ToJSON Likelihood where
+  toJSON = toJSON . fmap fromLogWeight . unLikelihood
+  toEncoding = toEncoding . fmap fromLogWeight . unLikelihood
 
 normalizeLikelihood :: Likelihood -> Likelihood
 normalizeLikelihood (Likelihood xs) = Likelihood $ (\x -> x - m) <$> xs
@@ -229,7 +234,7 @@ instance NoThunks (NonMyopic c)
 
 instance NFData (NonMyopic c)
 
-instance CC.Crypto c => EncCBOR (NonMyopic c) where
+instance Crypto c => EncCBOR (NonMyopic c) where
   encCBOR
     NonMyopic
       { likelihoodsNM = aps
@@ -239,13 +244,24 @@ instance CC.Crypto c => EncCBOR (NonMyopic c) where
         <> encCBOR aps
         <> encCBOR rp
 
-instance CC.Crypto c => DecShareCBOR (NonMyopic c) where
+instance Crypto c => DecShareCBOR (NonMyopic c) where
   type Share (NonMyopic c) = Interns (KeyHash 'StakePool c)
   decSharePlusCBOR = do
     decodeRecordNamedT "NonMyopic" (const 2) $ do
       likelihoodsNM <- decSharePlusLensCBOR (toMemptyLens _1 id)
       rewardPotNM <- lift decCBOR
       pure $ NonMyopic {likelihoodsNM, rewardPotNM}
+
+instance Crypto crypto => ToJSON (NonMyopic crypto) where
+  toJSON = object . toNonMyopicPair
+  toEncoding = pairs . mconcat . toNonMyopicPair
+
+toNonMyopicPair :: (KeyValue a, Crypto crypto) => NonMyopic crypto -> [a]
+toNonMyopicPair nm@(NonMyopic _ _) =
+  let NonMyopic {likelihoodsNM, rewardPotNM} = nm
+   in [ "likelihoodsNM" .= likelihoodsNM
+      , "rewardPotNM" .= rewardPotNM
+      ]
 
 -- | Desirability calculation for non-myopic utility,
 -- corresponding to f^~ in section 5.6.1 of

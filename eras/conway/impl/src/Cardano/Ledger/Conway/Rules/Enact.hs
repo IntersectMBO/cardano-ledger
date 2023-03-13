@@ -50,6 +50,6 @@ enactmentTransition = do
         newPP = ensPParams st `applyPPUpdates` ppup
     HardForkInitiation pv -> pure $ st {ensProtVer = pv}
     TreasuryWithdrawals _ -> undefined -- TODO implement when added to spec
-    NoConfidence -> pure $ st {ensCC = SNothing}
-    NewCommittee mems q -> pure $ st {ensCC = SJust (mems, q)}
+    NoConfidence -> pure $ st {ensCommittee = SNothing}
+    NewCommittee mems q -> pure $ st {ensCommittee = SJust (mems, q)}
     NewConstitution c -> pure $ st {ensConstitution = c}

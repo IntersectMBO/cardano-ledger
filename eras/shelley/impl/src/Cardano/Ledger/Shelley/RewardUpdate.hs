@@ -7,15 +7,29 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | How to compute the reward update compuation. Also, how to spread the
 --     compuation over many blocks, once the chain reaches a stability point.
-module Cardano.Ledger.Shelley.RewardUpdate where
+module Cardano.Ledger.Shelley.RewardUpdate (
+  RewardEvent,
+  RewardAns (..),
+  Pulser,
+  RewardUpdate (..),
+  emptyRewardUpdate,
+  RewardSnapShot (..),
+  FreeVars (..),
+  rewardStakePoolMember,
+  RewardPulser (..),
+  clearRecent,
+  PulsingRewUpdate (..),
+) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Binary (
@@ -46,6 +60,7 @@ import Cardano.Ledger.Shelley.Rewards (
  )
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData (..))
+import Data.Aeson (KeyValue, ToJSON (..), Value (Null), object, pairs, (.=))
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Kind (Type)
@@ -62,7 +77,7 @@ import NoThunks.Class (NoThunks (..), allNoThunks)
 
 -- ===============================================================
 
-type RewardEvent c = (Map (Credential 'Staking c) (Set (Reward c)))
+type RewardEvent c = Map (Credential 'Staking c) (Set (Reward c))
 
 -- | The result of reward calculation is a pair of aggregate Maps.
 --   One for the accumulated answer, and one for the answer since the last pulse
@@ -101,10 +116,7 @@ instance NoThunks (RewardUpdate c)
 
 instance NFData (RewardUpdate c)
 
-instance
-  Crypto c =>
-  EncCBOR (RewardUpdate c)
-  where
+instance Crypto c => EncCBOR (RewardUpdate c) where
   encCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
       <> encCBOR dt
@@ -113,10 +125,7 @@ instance
       <> encCBOR (invert df) -- TODO change Coin serialization to use integers?
       <> encCBOR nm
 
-instance
-  Crypto c =>
-  DecCBOR (RewardUpdate c)
-  where
+instance Crypto c => DecCBOR (RewardUpdate c) where
   decCBOR = do
     decodeRecordNamed "RewardUpdate" (const 5) $ do
       dt <- decCBOR
@@ -125,6 +134,20 @@ instance
       df <- decCBOR -- TODO change Coin serialization to use integers?
       nm <- decNoShareCBOR
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
+
+instance Crypto c => ToJSON (RewardUpdate c) where
+  toJSON = object . toRewardUpdatePair
+  toEncoding = pairs . mconcat . toRewardUpdatePair
+
+toRewardUpdatePair :: (KeyValue a, Crypto c) => RewardUpdate c -> [a]
+toRewardUpdatePair ru@(RewardUpdate _ _ _ _ _) =
+  let RewardUpdate {..} = ru
+   in [ "deltaT" .= deltaT
+      , "deltaR" .= deltaR
+      , "rs" .= rs
+      , "deltaF" .= deltaF
+      , "nonMyopic" .= nonMyopic
+      ]
 
 emptyRewardUpdate :: RewardUpdate c
 emptyRewardUpdate =
@@ -212,7 +235,7 @@ instance Crypto c => EncCBOR (FreeVars c) where
             !> To fvPoolRewardInfo
         )
 
-instance (Crypto c) => DecCBOR (FreeVars c) where
+instance Crypto c => DecCBOR (FreeVars c) where
   decCBOR =
     decode
       ( RecD FreeVars
@@ -333,6 +356,14 @@ instance Crypto c => DecCBOR (PulsingRewUpdate c) where
       decPS n = Invalid n
 
 instance NFData (PulsingRewUpdate c)
+
+instance Crypto c => ToJSON (PulsingRewUpdate c) where
+  toJSON = \case
+    Pulsing _ _ -> Null
+    Complete ru -> toJSON ru
+  toEncoding = \case
+    Pulsing _ _ -> toEncoding Null
+    Complete ru -> toEncoding ru
 
 -- ===============================================================
 

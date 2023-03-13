@@ -77,10 +77,10 @@ instance DecCBOR Coin where
       (Coin <$> decodeInteger)
 
 newtype DeltaCoin = DeltaCoin Integer
-  deriving (Eq, Ord, Generic, Enum, NoThunks, NFData, ToCBOR, DecCBOR, EncCBOR, HeapWords)
+  deriving (Eq, Ord, Generic, Enum, NoThunks, HeapWords)
   deriving (Show) via Quiet DeltaCoin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (PartialOrd)
+  deriving newtype (PartialOrd, NFData, ToCBOR, DecCBOR, EncCBOR, ToJSON, FromJSON)
 
 addDeltaCoin :: Coin -> DeltaCoin -> Coin
 addDeltaCoin (Coin x) (DeltaCoin y) = Coin (x + y)
@@ -102,7 +102,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
-    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord, ToCBOR)
+    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord, ToCBOR, ToJSON, FromJSON)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
@@ -110,7 +110,7 @@ instance Compactible Coin where
 
 instance Compactible DeltaCoin where
   newtype CompactForm DeltaCoin = CompactDeltaCoin Word64
-    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim)
+    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, ToJSON, Prim)
 
   toCompact (DeltaCoin dc) = CompactDeltaCoin <$> integerToWord64 dc
   fromCompact (CompactDeltaCoin cdc) = DeltaCoin (unCoin (word64ToCoin cdc))

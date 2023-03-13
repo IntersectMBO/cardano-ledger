@@ -26,8 +26,10 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOri
 import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
-import qualified Data.ByteString as BS (ByteString)
-import qualified Data.ByteString.Lazy as BSL (ByteString, fromStrict)
+import Codec.CBOR.Term
+import qualified Data.ByteString as BS (ByteString, pack, unpack)
+import qualified Data.ByteString.Lazy as BSL (ByteString, fromChunks, fromStrict, toChunks)
+import Numeric.Half
 #if MIN_VERSION_bytestring(0,11,1)
 import qualified Data.ByteString.Short as SBS
 #else
@@ -39,8 +41,11 @@ import Data.Maybe.Strict
 import qualified Data.Primitive.ByteArray as Prim (ByteArray (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Primitive as VP
+import Data.Word
 import GHC.Stack
 import System.Random.Stateful hiding (genByteString, genShortByteString)
 import Test.Cardano.Ledger.Binary.Random (QC (QC))
@@ -49,6 +54,79 @@ import Test.Crypto.KES ()
 import Test.Crypto.VRF ()
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
+
+firstUnreservedTag :: Word64
+firstUnreservedTag = 6
+
+-- | Simple values that are either unassigned or don't have a specialized type already
+simple :: [Word8]
+simple = [0 .. 19] ++ [23] ++ [32 ..]
+
+instance Arbitrary Term where
+  arbitrary =
+    oneof
+      [ TInt <$> choose (minBound, maxBound)
+      , TInteger
+          <$> oneof
+            [ choose (toInteger (maxBound :: Int) + 1, toInteger (maxBound :: Word64))
+            , choose (negate (toInteger (maxBound :: Word64)), toInteger (minBound :: Int) - 1)
+            ]
+      , TBytes <$> (genByteString . getNonNegative =<< arbitrary)
+      , TBytesI <$> (genLazyByteString . getNonNegative =<< arbitrary)
+      , TString . T.pack <$> arbitrary
+      , TStringI . TL.pack <$> arbitrary
+      , TList <$> listOf smallerTerm
+      , TListI <$> listOf smallerTerm
+      , TMap <$> listOf smallerTerm
+      , TMapI <$> listOf smallerTerm
+      , TTagged <$> choose (firstUnreservedTag, maxBound :: Word64) <*> smallerTerm
+      , TBool <$> arbitrary
+      , pure TNull
+      , TSimple <$> elements simple
+      , THalf <$> genHalf
+      , TFloat <$> arbitrary
+      , TDouble <$> arbitrary
+      ]
+    where
+      smallerTerm :: Arbitrary a => Gen a
+      smallerTerm = scale (`div` 5) arbitrary
+
+  -- Shrinker was shamelessly stolen from cbor package.
+  shrink (TInt n) = [TInt n' | n' <- shrink n]
+  shrink (TInteger n) = [TInteger n' | n' <- shrink n]
+  shrink (TBytes ws) = [TBytes (BS.pack ws') | ws' <- shrink (BS.unpack ws)]
+  shrink (TBytesI wss) =
+    [ TBytesI (BSL.fromChunks (map BS.pack wss'))
+    | wss' <- shrink (map BS.unpack (BSL.toChunks wss))
+    ]
+  shrink (TString cs) = [TString (T.pack cs') | cs' <- shrink (T.unpack cs)]
+  shrink (TStringI css) =
+    [ TStringI (TL.fromChunks (map T.pack css'))
+    | css' <- shrink (map T.unpack (TL.toChunks css))
+    ]
+  shrink (TList xs@[x]) = x : [TList xs' | xs' <- shrink xs]
+  shrink (TList xs) = [TList xs' | xs' <- shrink xs]
+  shrink (TListI xs@[x]) = x : [TListI xs' | xs' <- shrink xs]
+  shrink (TListI xs) = [TListI xs' | xs' <- shrink xs]
+  shrink (TMap xys@[(x, y)]) = x : y : [TMap xys' | xys' <- shrink xys]
+  shrink (TMap xys) = [TMap xys' | xys' <- shrink xys]
+  shrink (TMapI xys@[(x, y)]) = x : y : [TMapI xys' | xys' <- shrink xys]
+  shrink (TMapI xys) = [TMapI xys' | xys' <- shrink xys]
+  shrink (TTagged w t) =
+    t : [TTagged w' t' | (w', t') <- shrink (w, t), fromIntegral w' >= firstUnreservedTag]
+  shrink (TBool _) = []
+  shrink TNull = []
+  shrink (TSimple w) = [TSimple w' | w' <- shrink w, w `elem` simple]
+  shrink (THalf _f) = []
+  shrink (TFloat f) = [TFloat f' | f' <- shrink f]
+  shrink (TDouble f) = [TDouble f' | f' <- shrink f]
+
+genHalf :: Gen Float
+genHalf = do
+  half <- Half <$> arbitrary
+  if isInfinite half || isDenormalized half || isNaN half
+    then genHalf
+    else pure $ fromHalf half
 
 deriving instance Arbitrary ByteArray
 

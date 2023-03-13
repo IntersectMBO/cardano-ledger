@@ -65,6 +65,7 @@ import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Foldable (fold)
@@ -100,6 +101,10 @@ deriving instance (Typeable index, Crypto c) => FromCBOR (SafeHash c index)
 deriving instance (Typeable index, Crypto c) => EncCBOR (SafeHash c index)
 
 deriving instance (Typeable index, Crypto c) => DecCBOR (SafeHash c index)
+
+deriving instance Crypto c => ToJSON (SafeHash c index)
+
+deriving instance Crypto c => FromJSON (SafeHash c index)
 
 {-# DEPRECATED HasAlgorithm "Use `Hash.HashAlgorithm (HASH c)` instead" #-}
 

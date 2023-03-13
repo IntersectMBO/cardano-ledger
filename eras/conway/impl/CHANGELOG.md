@@ -2,23 +2,31 @@
 
 ## 1.1.0.0
 
-Added:
- * Added `RATIFY` rule
- * Added `GovernanceActionMetadata`
- * Added `RatifyEnv` and `RatifySignal`
- * Added lenses:
-   * `cgTallyL`
-   * `cgRatifyL`
-   * `cgVoterRolesL`
+* Added `RATIFY` rule
+* Added `GovernanceActionMetadata`
+* Added `RatifyEnv` and `RatifySignal`
+* Added `EnactState` and `RatifyState`
+* Added lenses:
+  * `cgTallyL`
+  * `cgRatifyL`
+  * `cgVoterRolesL`
+* Removed `GovernanceActionInfo`
+* Replaced `ctbrVotes` and `ctbrGovActions` with `ctbrGovProcedure`
+* Renamed `ENACTMENT` to `ENACT`
+* Add `ToJSON` instance for: #3323
+  * `ConwayGovernance`
+  * `ConwayTallyState`
+  * `GovernanceAction`
+  * `GovernanceActionState`
+  * `GovernanceActionIx`
+  * `GovernanceActionId`
+* Add `ToJSONKey` instance for `GovernanceActionId` #3323
+* Fix `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyState` #3323
 
-Removed:
- * Removed `GovernanceActionInfo`
- * Removed `Vote`
+### `testlib`
 
-Changed:
- * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
- * Replaced `ctbrVotes` and `ctbrGovActions` with `ctbrGovProcedure`
- * Renamed `ENACTMENT` to `ENACT`
+* Fix `Arbitrary` for `ConwayTallyState`. #3323
+* Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 
 ## 1.0.0.0
 

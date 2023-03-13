@@ -62,6 +62,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
@@ -92,6 +93,17 @@ instance EncCBOR AccountState where
 instance DecCBOR AccountState where
   decCBOR =
     decodeRecordNamed "AccountState" (const 2) $ AccountState <$> decCBOR <*> decCBOR
+
+instance ToJSON AccountState where
+  toJSON = object . toAccountStatePairs
+  toEncoding = pairs . mconcat . toAccountStatePairs
+
+toAccountStatePairs :: KeyValue a => AccountState -> [a]
+toAccountStatePairs as@(AccountState _ _) =
+  let AccountState {asTreasury, asReserves} = as
+   in [ "treasury" .= asTreasury
+      , "reserves" .= asReserves
+      ]
 
 instance NoThunks AccountState
 
@@ -191,6 +203,27 @@ instance (EraTxOut era, EraGovernance era) => ToCBOR (EpochState era) where
 instance (EraTxOut era, EraGovernance era) => FromCBOR (EpochState era) where
   fromCBOR = fromEraCBOR @era
 
+instance (EraTxOut era, EraGovernance era) => ToJSON (EpochState era) where
+  toJSON = object . toEpochStatePairs
+  toEncoding = pairs . mconcat . toEpochStatePairs
+
+toEpochStatePairs ::
+  ( EraTxOut era
+  , EraGovernance era
+  , KeyValue a
+  ) =>
+  EpochState era ->
+  [a]
+toEpochStatePairs es@(EpochState _ _ _ _ _ _) =
+  let EpochState {..} = es
+   in [ "esAccountState" .= esAccountState
+      , "esSnapshots" .= esSnapshots
+      , "esLState" .= esLState
+      , "esPrevPp" .= esPrevPp
+      , "esPp" .= esPp
+      , "esNonMyopic" .= esNonMyopic
+      ]
+
 -- =============================
 
 -- | Incremental Stake, Stake along with possible missed coins from danging Ptrs.
@@ -230,6 +263,18 @@ instance Data.Group.Group (IncrementalStake c) where
 
 instance Default (IncrementalStake c) where
   def = IStake Map.empty Map.empty
+
+instance Crypto c => ToJSON (IncrementalStake c) where
+  toJSON = object . toIncrementalStakePairs
+  toEncoding = pairs . mconcat . toIncrementalStakePairs
+
+toIncrementalStakePairs ::
+  (KeyValue a, Crypto crypto) => IncrementalStake crypto -> [a]
+toIncrementalStakePairs iStake@(IStake _ _) =
+  let IStake {..} = iStake -- guard against addition or removal of fields
+   in [ "credentials" .= credMap
+      , "pointers" .= ptrMap
+      ]
 
 -- =============================
 
@@ -321,6 +366,21 @@ instance (EraTxOut era, EraGovernance era) => ToCBOR (UTxOState era) where
 
 instance (EraTxOut era, EraGovernance era) => FromCBOR (UTxOState era) where
   fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
+
+instance (EraTxOut era, EraGovernance era) => ToJSON (UTxOState era) where
+  toJSON = object . toUTxOStatePairs
+  toEncoding = pairs . mconcat . toUTxOStatePairs
+
+toUTxOStatePairs ::
+  (EraTxOut era, EraGovernance era, KeyValue a) => UTxOState era -> [a]
+toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _) =
+  let UTxOState {..} = utxoState
+   in [ "utxo" .= utxosUtxo
+      , "deposited" .= utxosDeposited
+      , "fees" .= utxosFees
+      , "ppups" .= utxosGovernance
+      , "stake" .= utxosStakeDistr
+      ]
 
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState
@@ -501,6 +561,18 @@ instance (EraTxOut era, EraGovernance era) => ToCBOR (LedgerState era) where
 
 instance (EraTxOut era, EraGovernance era) => FromCBOR (LedgerState era) where
   fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
+
+instance (EraTxOut era, EraGovernance era) => ToJSON (LedgerState era) where
+  toJSON = object . toLedgerStatePairs
+  toEncoding = pairs . mconcat . toLedgerStatePairs
+
+toLedgerStatePairs ::
+  (EraTxOut era, EraGovernance era, KeyValue a) => LedgerState era -> [a]
+toLedgerStatePairs ls@(LedgerState _ _) =
+  let LedgerState {..} = ls
+   in [ "utxoState" .= lsUTxOState
+      , "delegationState" .= lsDPState
+      ]
 
 -- ====================================================
 

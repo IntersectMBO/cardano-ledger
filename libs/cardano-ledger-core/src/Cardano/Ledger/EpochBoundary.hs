@@ -8,9 +8,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -57,7 +57,7 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppVrf))
@@ -65,6 +65,7 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -81,14 +82,14 @@ import Numeric.Natural (Natural)
 newtype Stake c = Stake
   { unStake :: VMap VB VP (Credential 'Staking c) (CompactForm Coin)
   }
-  deriving (Show, Eq, NFData, Generic)
+  deriving (Show, Eq, NFData, Generic, ToJSON)
 
 deriving newtype instance Typeable c => NoThunks (Stake c)
 
 deriving newtype instance
-  CC.Crypto c => EncCBOR (Stake c)
+  Crypto c => EncCBOR (Stake c)
 
-instance CC.Crypto c => DecShareCBOR (Stake c) where
+instance Crypto c => DecShareCBOR (Stake c) where
   type Share (Stake c) = Share (VMap VB VP (Credential 'Staking c) (CompactForm Coin))
   getShare = getShare . unStake
   decShareCBOR = fmap Stake . decShareCBOR
@@ -162,7 +163,7 @@ instance Typeable c => NoThunks (SnapShot c)
 instance NFData (SnapShot c)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   EncCBOR (SnapShot c)
   where
   encCBOR
@@ -176,7 +177,7 @@ instance
         <> encCBOR d
         <> encCBOR p
 
-instance CC.Crypto c => DecShareCBOR (SnapShot c) where
+instance Crypto c => DecShareCBOR (SnapShot c) where
   type
     Share (SnapShot c) =
       (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
@@ -185,6 +186,18 @@ instance CC.Crypto c => DecShareCBOR (SnapShot c) where
     ssDelegations <- decSharePlusCBOR
     ssPoolParams <- decSharePlusLensCBOR (toMemptyLens _1 _2)
     pure SnapShot {ssStake, ssDelegations, ssPoolParams}
+
+instance Crypto c => ToJSON (SnapShot c) where
+  toJSON = object . toSnapShotPair
+  toEncoding = pairs . mconcat . toSnapShotPair
+
+toSnapShotPair :: (KeyValue a, Crypto c) => SnapShot c -> [a]
+toSnapShotPair ss@(SnapShot _ _ _) =
+  let SnapShot {..} = ss
+   in [ "stake" .= ssStake
+      , "delegations" .= ssDelegations
+      , "poolParams" .= ssPoolParams
+      ]
 
 -- | Snapshots of the stake distribution.
 --
@@ -205,7 +218,7 @@ data SnapShots c = SnapShots
 instance NFData (SnapShots c)
 
 instance
-  CC.Crypto c =>
+  Crypto c =>
   EncCBOR (SnapShots c)
   where
   encCBOR (SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee}) =
@@ -216,10 +229,10 @@ instance
       <> encCBOR ssStakeGo
       <> encCBOR ssFee
 
-instance CC.Crypto c => DecCBOR (SnapShots c) where
+instance Crypto c => DecCBOR (SnapShots c) where
   decCBOR = decNoShareCBOR
 
-instance CC.Crypto c => DecShareCBOR (SnapShots c) where
+instance Crypto c => DecShareCBOR (SnapShots c) where
   type Share (SnapShots c) = Share (SnapShot c)
   decSharePlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
     !ssStakeMark <- decSharePlusCBOR
@@ -232,11 +245,26 @@ instance CC.Crypto c => DecShareCBOR (SnapShots c) where
 instance Default (SnapShots c) where
   def = emptySnapShots
 
+instance Crypto c => ToJSON (SnapShots c) where
+  toJSON = object . toSnapShotsPair
+  toEncoding = pairs . mconcat . toSnapShotsPair
+
+toSnapShotsPair :: (KeyValue a, Crypto crypto) => SnapShots crypto -> [a]
+toSnapShotsPair ss@(SnapShots !_ _ _ _ _) =
+  -- ssStakeMarkPoolDistr is omitted on purpose
+  let SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee} = ss
+   in [ "pstakeMark" .= ssStakeMark
+      , "pstakeSet" .= ssStakeSet
+      , "pstakeGo" .= ssStakeGo
+      , "feeSS" .= ssFee
+      ]
+
 emptySnapShot :: SnapShot c
 emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots c
-emptySnapShots = SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
+emptySnapShots =
+  SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
 
 -- =======================================
 

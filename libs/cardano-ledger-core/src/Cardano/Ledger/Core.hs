@@ -107,6 +107,7 @@ import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.Kind (Type)
@@ -185,12 +186,8 @@ class
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
-  ( Compactible (Value era)
-  , NoThunks (Value era)
-  , NFData (Value era)
-  , Show (Value era)
-  , Val (Value era)
-  , Eq (Value era)
+  ( Val (Value era)
+  , ToJSON (TxOut era)
   , DecCBOR (Value era)
   , DecCBOR (CompactForm (Value era))
   , EncCBOR (Value era)

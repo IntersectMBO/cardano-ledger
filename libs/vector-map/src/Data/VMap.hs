@@ -50,6 +50,7 @@ module Data.VMap (
 where
 
 import Control.DeepSeq
+import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
 import qualified Data.Map.Strict as Map
 import Data.Maybe as Maybe hiding (mapMaybe)
 import Data.TreeDiff.Class (ToExpr (toExpr))
@@ -89,6 +90,19 @@ instance (VG.Vector kv k, VG.Vector vv v, Ord k) => Exts.IsList (VMap kv vv k v)
   {-# INLINE fromListN #-}
   toList = toAscList
   {-# INLINE toList #-}
+
+instance
+  (VG.Vector vk k, VG.Vector vv v, ToJSONKey k, ToJSON v) =>
+  ToJSON (VMap vk vv k v)
+  where
+  toJSON = toJSON . toMap
+  toEncoding = toEncoding . toMap
+
+instance
+  (VG.Vector vk k, VG.Vector vv v, Ord k, FromJSONKey k, FromJSON v) =>
+  FromJSON (VMap vk vv k v)
+  where
+  parseJSON = fmap fromMap . parseJSON
 
 empty :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v
 empty = VMap VG.empty

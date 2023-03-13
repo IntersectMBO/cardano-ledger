@@ -51,6 +51,9 @@ module Cardano.Ledger.Alonzo.PParams (
   LangDepView (..),
   encodeLangViews,
   OrdExUnits (..),
+
+  -- * JSON helpers
+  alonzoCommonPParamsHKDPairs,
 )
 where
 
@@ -98,18 +101,26 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..), emptyPPPUpdates)
+import Cardano.Ledger.Shelley.PParams (
+  ShelleyPParams (..),
+  emptyPPPUpdates,
+  shelleyCommonPParamsHKDPairs,
+  shelleyCommonPParamsHKDPairsV6,
+ )
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
+  Key,
   KeyValue ((.=)),
-  ToJSON (toJSON),
+  ToJSON (..),
   object,
+  pairs,
   withObject,
   (.!=),
   (.:),
  )
+import qualified Data.Aeson as Aeson (Value)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
@@ -351,34 +362,17 @@ instance Era era => ToCBOR (AlonzoPParams Identity era) where
 instance Era era => FromCBOR (AlonzoPParams Identity era) where
   fromCBOR = fromEraCBOR @era
 
-instance ToJSON (AlonzoPParams Identity era) where
-  toJSON AlonzoPParams {..} =
-    Aeson.object
-      [ "minFeeA" .= appMinFeeA
-      , "minFeeB" .= appMinFeeB
-      , "maxBlockBodySize" .= appMaxBBSize
-      , "maxTxSize" .= appMaxTxSize
-      , "maxBlockHeaderSize" .= appMaxBHSize
-      , "keyDeposit" .= appKeyDeposit
-      , "poolDeposit" .= appPoolDeposit
-      , "eMax" .= appEMax
-      , "nOpt" .= appNOpt
-      , "a0" .= appA0
-      , "rho" .= appRho
-      , "tau" .= appTau
-      , "decentralisationParam" .= appD
-      , "extraEntropy" .= appExtraEntropy
-      , "protocolVersion" .= appProtocolVersion
-      , "minPoolCost" .= appMinPoolCost
-      , "lovelacePerUTxOWord" .= appCoinsPerUTxOWord
-      , "costmdls" .= appCostModels
-      , "prices" .= appPrices
-      , "maxTxExUnits" .= appMaxTxExUnits
-      , "maxBlockExUnits" .= appMaxBlockExUnits
-      , "maxValSize" .= appMaxValSize
-      , "collateralPercentage" .= appCollateralPercentage
-      , "maxCollateralInputs " .= appMaxCollateralInputs
-      ]
+instance Crypto c => ToJSON (AlonzoPParams Identity (AlonzoEra c)) where
+  toJSON = object . alonzoPParamsPairs
+  toEncoding = pairs . mconcat . alonzoPParamsPairs
+
+alonzoPParamsPairs ::
+  forall c a.
+  (Crypto c, KeyValue a) =>
+  PParamsHKD Identity (AlonzoEra c) ->
+  [a]
+alonzoPParamsPairs pp =
+  uncurry (.=) <$> alonzoPParamsHKDPairs (Proxy @Identity) pp
 
 instance FromJSON (AlonzoPParams Identity era) where
   parseJSON =
@@ -611,6 +605,49 @@ instance Era era => ToCBOR (AlonzoPParams StrictMaybe era) where
 
 instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
+
+instance Crypto c => ToJSON (AlonzoPParams StrictMaybe (AlonzoEra c)) where
+  toJSON = object . alonzoPParamsUpdatePairs
+  toEncoding = pairs . mconcat . alonzoPParamsUpdatePairs
+
+alonzoPParamsUpdatePairs ::
+  forall c a.
+  (Crypto c, KeyValue a) =>
+  PParamsHKD StrictMaybe (AlonzoEra c) ->
+  [a]
+alonzoPParamsUpdatePairs pp =
+  [ k .= v
+  | (k, SJust v) <- alonzoPParamsHKDPairs (Proxy @StrictMaybe) pp
+  ]
+
+alonzoPParamsHKDPairs ::
+  forall f c.
+  (HKDFunctor f, Crypto c) =>
+  Proxy f ->
+  PParamsHKD f (AlonzoEra c) ->
+  [(Key, HKD f Aeson.Value)]
+alonzoPParamsHKDPairs px pp =
+  alonzoCommonPParamsHKDPairs px pp
+    ++ shelleyCommonPParamsHKDPairsV6 px pp
+    ++ [("lovelacePerUTxOWord", hkdMap px (toJSON @CoinPerWord) (pp ^. hkdCoinsPerUTxOWordL @_ @f))]
+
+-- | These are the fields that are common across all eras starting with Alonzo.
+alonzoCommonPParamsHKDPairs ::
+  forall f era.
+  (HKDFunctor f, AlonzoEraPParams era) =>
+  Proxy f ->
+  PParamsHKD f era ->
+  [(Key, HKD f Aeson.Value)]
+alonzoCommonPParamsHKDPairs px pp =
+  shelleyCommonPParamsHKDPairs px pp
+    ++ [ ("costmdls", hkdMap px (toJSON @CostModels) (pp ^. hkdCostModelsL @era @f))
+       , ("prices", hkdMap px (toJSON @Prices) (pp ^. hkdPricesL @era @f))
+       , ("maxTxExUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxTxExUnitsL @era @f))
+       , ("maxBlockExUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxBlockExUnitsL @era @f))
+       , ("maxValSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxValSizeL @era @f))
+       , ("collateralPercentage", hkdMap px (toJSON @Natural) (pp ^. hkdCollateralPercentageL @era @f))
+       , ("maxCollateralInputs", hkdMap px (toJSON @Natural) (pp ^. hkdMaxCollateralInputsL @era @f))
+       ]
 
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"

@@ -37,10 +37,7 @@ instance Crypto c => Arbitrary (ConwayDCert c) where
 -- Cardano.Ledger.Conway.Governance ------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
--- FIXME: replace with when serialziation is fixed:
--- deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayTallyState era)
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayTallyState era) where
-  arbitrary = pure $ ConwayTallyState mempty
+deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayTallyState era)
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceActionState era) where
   arbitrary =

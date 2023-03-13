@@ -7,8 +7,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- | The stake distribution, aggregated by stake pool (as opposed to stake credential),
 -- plays a primary role in Cardano's proof of stake network.
@@ -24,11 +24,12 @@ module Cardano.Ledger.PoolDistr (
 where
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -53,7 +54,7 @@ data IndividualPoolStake c = IndividualPoolStake
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
 
-instance CC.Crypto c => EncCBOR (IndividualPoolStake c) where
+instance Crypto c => EncCBOR (IndividualPoolStake c) where
   encCBOR (IndividualPoolStake stake vrf) =
     mconcat
       [ encodeListLen 2
@@ -61,21 +62,31 @@ instance CC.Crypto c => EncCBOR (IndividualPoolStake c) where
       , encCBOR vrf
       ]
 
-instance CC.Crypto c => DecCBOR (IndividualPoolStake c) where
+instance Crypto c => DecCBOR (IndividualPoolStake c) where
   decCBOR =
     decodeRecordNamed "IndividualPoolStake" (const 2) $
       IndividualPoolStake
         <$> decCBOR
         <*> decCBOR
 
+instance Crypto c => ToJSON (IndividualPoolStake c) where
+  toJSON = object . toIndividualPoolStakePair
+  toEncoding = pairs . mconcat . toIndividualPoolStakePair
+
+toIndividualPoolStakePair :: (KeyValue a, Crypto c) => IndividualPoolStake c -> [a]
+toIndividualPoolStakePair indivPoolStake@(IndividualPoolStake _ _) =
+  let IndividualPoolStake {..} = indivPoolStake
+   in [ "individualPoolStake" .= individualPoolStake
+      , "individualPoolStakeVrf" .= individualPoolStakeVrf
+      ]
+
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'.
 newtype PoolDistr c = PoolDistr
-  { unPoolDistr ::
-      Map (KeyHash 'StakePool c) (IndividualPoolStake c)
+  { unPoolDistr :: Map (KeyHash 'StakePool c) (IndividualPoolStake c)
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (EncCBOR, DecCBOR, NFData, NoThunks)
+  deriving newtype (EncCBOR, DecCBOR, NFData, NoThunks, ToJSON)
 
 -- ===============================
 

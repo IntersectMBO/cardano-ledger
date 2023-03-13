@@ -18,7 +18,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.Binary (EncCBOR, Sized, Term (..))
+import Cardano.Ledger.Binary (Sized, Term (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Val (Val)
 import Data.Maybe (catMaybes)
@@ -26,24 +26,12 @@ import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..), emptyOrNothing, toTerm, twiddleStrictMaybe)
 import Test.QuickCheck
 
-instance
-  ( Era era
-  , EncCBOR (PParamsUpdate era)
-  ) =>
-  Twiddle (Update era)
-  where
+instance EraPParams era => Twiddle (Update era) where
   twiddle v = twiddle v . toTerm v
 
 instance Twiddle a => Twiddle (Sized a)
 
-instance
-  ( Era era
-  , Val (Value era)
-  , EncCBOR (Value era)
-  , EncCBOR (Script era)
-  ) =>
-  Twiddle (BabbageTxOut era)
-  where
+instance (EraScript era, Val (Value era)) => Twiddle (BabbageTxOut era) where
   twiddle v = twiddle v . toTerm v
 
 instance

@@ -46,8 +46,11 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON (..),
   FromJSONKey,
+  KeyValue,
   ToJSON (..),
   ToJSONKey,
+  object,
+  pairs,
   (.:),
   (.=),
  )
@@ -142,6 +145,19 @@ instance FromCBOR Ptr where
   fromCBOR = do
     (slotNo, txIx, certIx) <- fromCBOR
     pure $ Ptr slotNo txIx certIx
+
+instance ToJSON Ptr where
+  toJSON = object . toPtrPair
+  toEncoding = pairs . mconcat . toPtrPair
+
+instance ToJSONKey Ptr
+
+toPtrPair :: KeyValue a => Ptr -> [a]
+toPtrPair (Ptr slotNo txIndex certIndex) =
+  [ "slot" .= slotNo
+  , "txIndex" .= txIndex
+  , "certIndex" .= certIndex
+  ]
 
 instance Show Ptr where
   showsPrec n (Ptr slotNo txIx certIx)
