@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,6 +27,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
 import GHC.Generics (Generic)
@@ -39,6 +42,7 @@ class
   , EncCBOR (GovernanceState era)
   , DecCBOR (GovernanceState era)
   , Default (GovernanceState era)
+  , ToJSON (GovernanceState era)
   ) =>
   EraGovernance era
   where
@@ -90,6 +94,16 @@ instance (Era era, EncCBOR (PParamsUpdate era)) => ToCBOR (ShelleyPPUPState era)
 
 instance (Era era, DecCBOR (PParamsUpdate era)) => FromCBOR (ShelleyPPUPState era) where
   fromCBOR = fromEraCBOR @era
+
+instance EraPParams era => ToJSON (ShelleyPPUPState era) where
+  toJSON = object . toPPUPStatePairs
+  toEncoding = pairs . mconcat . toPPUPStatePairs
+
+toPPUPStatePairs :: (KeyValue a, EraPParams era) => ShelleyPPUPState era -> [a]
+toPPUPStatePairs ShelleyPPUPState {..} =
+  [ "proposals" .= proposals
+  , "futureProposals" .= futureProposals
+  ]
 
 instance Default (ShelleyPPUPState era) where
   def = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates

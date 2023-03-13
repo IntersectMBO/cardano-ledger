@@ -18,7 +18,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.Binary (EncCBOR, Sized, Term (..))
+import Cardano.Ledger.Binary (Sized, Term (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Val (Val)
 import Data.Maybe (catMaybes)

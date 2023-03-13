@@ -59,10 +59,11 @@ library
         bytestring,
         cardano-crypto-class,
         cardano-ledger-binary >=1.0,
+        cardano-ledger-binary,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo >=1.1,
         cardano-ledger-babbage >=1.1,
-        cardano-ledger-core >=1.0,
+        cardano-ledger-core >=1.1,
         cardano-ledger-mary >=1.1,
         cardano-ledger-shelley >=1.1,
         cardano-strict-containers,
@@ -73,9 +74,9 @@ library
         nothunks,
         set-algebra,
         small-steps,
+        text,
         transformers,
-        validation-selective,
-        cardano-strict-containers
+        validation-selective
 
 library testlib
     exposed-modules:  Test.Cardano.Ledger.Conway.Arbitrary

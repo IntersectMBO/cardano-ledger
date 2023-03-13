@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -33,7 +34,15 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (..))
 import Cardano.Ledger.Slot (EpochNo (..))
-import Control.State.Transition.Extended (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans)
+import Control.State.Transition.Extended (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  trans,
+ )
+import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -85,7 +94,7 @@ epochsToExpire :: EpochNo
 epochsToExpire = 10
 
 accepted :: RatifyEnv era -> GovernanceActionState era -> Bool
-accepted RatifyEnv {..} GovernanceActionState {..} =
+accepted RatifyEnv {reRoles, reStakeDistr} GovernanceActionState {gasVotes} =
   length (votedYesHashes ConstitutionalCommittee) > ccThreshold
     && acceptedBySPOs
   where
@@ -97,8 +106,8 @@ accepted RatifyEnv {..} GovernanceActionState {..} =
     isSPO SPO = True
     isSPO _ = False
     spoStakeMap = Map.restrictKeys (Map.mapKeys coerceKeyRole reStakeDistr) allSPOKeyHashes
-    Coin totalStakeHeldBySPOs = mconcat $ Map.elems spoStakeMap
-    Coin acceptedStake = mconcat . Map.elems . Map.restrictKeys spoStakeMap $ votedYesHashes SPO
+    Coin totalStakeHeldBySPOs = fold spoStakeMap
+    Coin acceptedStake = fold . Map.restrictKeys spoStakeMap $ votedYesHashes SPO
     acceptedBySPOs =
       totalStakeHeldBySPOs > 0 && acceptedStake % totalStakeHeldBySPOs > spoThreshold
 
@@ -113,20 +122,20 @@ ratifyTransition ::
   TransitionRule (ConwayRATIFY era)
 ratifyTransition = do
   TRC
-    ( env@RatifyEnv {..}
-      , st@RatifyState {..}
+    ( env@RatifyEnv {reCurrentEpoch}
+      , st@RatifyState {rsEnactState, rsFuture}
       , RatifySignal rsig
       ) <-
     judgmentContext
 
   case rsig of
-    act@(_, ast@GovernanceActionState {..}) :<| sigs -> do
+    act@(_, ast@GovernanceActionState {gasAction, gasProposedIn}) :<| sigs -> do
       let expired = gasProposedIn + epochsToExpire < reCurrentEpoch
       if accepted env ast
         then do
           -- Update ENACT state with the governance action that was ratified
-          es <- trans @(EraRule "ENACT" era) $ TRC ((), rsES, gasAction)
-          let st' = st {rsES = es}
+          es <- trans @(EraRule "ENACT" era) $ TRC ((), rsEnactState, gasAction)
+          let st' = st {rsEnactState = es}
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
           st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)

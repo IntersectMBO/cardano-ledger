@@ -217,7 +217,7 @@ instance
     let RatifyState {..} = rs
      in ppRecord
           "RatifyState"
-          [ ("EnactState", prettyA rsES)
+          [ ("EnactState", prettyA rsEnactState)
           , ("Future", prettyA rsFuture)
           ]
 
