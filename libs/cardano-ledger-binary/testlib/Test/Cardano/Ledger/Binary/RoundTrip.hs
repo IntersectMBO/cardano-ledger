@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,24 +10,46 @@
 
 -- | Defines reusable abstractions for testing RoundTrip properties of CBOR instances
 module Test.Cardano.Ledger.Binary.RoundTrip (
+  -- * Spec
   roundTripSpec,
   roundTripRangeSpec,
-  roundTripFailureExpectation,
+
+  -- * Expectations
+
+  -- ** Trip
   roundTripExpectation,
+  roundTripRangeExpectation,
+  roundTripFailureExpectation,
+  roundTripRangeFailureExpectation,
+
+  -- ** Enc/DecCBOR
   roundTripCborExpectation,
+  roundTripCborRangeExpectation,
+  roundTripCborFailureExpectation,
+  roundTripCborRangeFailureExpectation,
   roundTripAnnExpectation,
   roundTripAnnRangeExpectation,
   roundTripAnnFailureExpectation,
-  roundTripAnnFailureRangeExpectation,
+  roundTripAnnRangeFailureExpectation,
+
+  -- ** Embed
   embedTripSpec,
   embedTripExpectation,
   embedTripAnnExpectation,
+  embedTripFailureExpectation,
+  embedTripRangeFailureExpectation,
   roundTripTwiddledProperty,
   roundTripAnnTwiddledProperty,
+
+  -- * Tripping failure
   RoundTripFailure (..),
+
+  -- * Tripping definitions
   Trip (..),
   mkTrip,
   cborTrip,
+
+  -- * Tripping functions
   roundTrip,
   roundTripTwiddled,
   roundTripAnn,
@@ -36,10 +57,6 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   embedTrip,
   embedTripAnn,
   embedTripLabel,
-  roundTripRangeExpectation,
-  roundTripCborRangeExpectation,
-  roundTripFailureCborRangeExpectation,
-  roundTripFailureCborExpectation,
 )
 where
 
@@ -104,14 +121,14 @@ roundTripExpectation ::
   Expectation
 roundTripExpectation trip = roundTripRangeExpectation trip minBound maxBound
 
-roundTripFailureCborExpectation ::
+roundTripCborFailureExpectation ::
   forall t.
   (EncCBOR t, DecCBOR t, HasCallStack) =>
   t ->
   Expectation
-roundTripFailureCborExpectation = roundTripFailureExpectation (cborTrip @t @t)
+roundTripCborFailureExpectation = roundTripFailureExpectation (cborTrip @t @t)
 
-roundTripFailureCborRangeExpectation ::
+roundTripCborRangeFailureExpectation ::
   forall t.
   (EncCBOR t, DecCBOR t, HasCallStack) =>
   -- | From Version
@@ -120,18 +137,18 @@ roundTripFailureCborRangeExpectation ::
   Version ->
   t ->
   Expectation
-roundTripFailureCborRangeExpectation = roundTripFailureRangeExpectation (cborTrip @t)
+roundTripCborRangeFailureExpectation = roundTripRangeFailureExpectation (cborTrip @t)
 
 roundTripFailureExpectation ::
-  (EncCBOR t, HasCallStack) =>
+  (Typeable t, HasCallStack) =>
   Trip t t ->
   t ->
   Expectation
-roundTripFailureExpectation trip = roundTripFailureRangeExpectation trip minBound maxBound
+roundTripFailureExpectation trip = roundTripRangeFailureExpectation trip minBound maxBound
 
-roundTripFailureRangeExpectation ::
+roundTripRangeFailureExpectation ::
   forall t.
-  (EncCBOR t, HasCallStack) =>
+  (Typeable t, HasCallStack) =>
   Trip t t ->
   -- | From Version
   Version ->
@@ -139,11 +156,37 @@ roundTripFailureRangeExpectation ::
   Version ->
   t ->
   Expectation
-roundTripFailureRangeExpectation trip fromVersion toVersion t =
+roundTripRangeFailureExpectation = embedTripRangeFailureExpectation
+
+embedTripFailureExpectation ::
+  (Typeable b, HasCallStack) =>
+  Trip a b ->
+  a ->
+  Expectation
+embedTripFailureExpectation trip = embedTripRangeFailureExpectation trip minBound maxBound
+
+embedTripRangeFailureExpectation ::
+  forall a b.
+  (Typeable b, HasCallStack) =>
+  Trip a b ->
+  -- | From Version
+  Version ->
+  -- | To Version
+  Version ->
+  a ->
+  Expectation
+embedTripRangeFailureExpectation trip fromVersion toVersion t =
   forM_ [fromVersion .. toVersion] $ \version ->
-    case roundTrip version trip t of
-      Left _ -> pure ()
-      Right _ -> expectationFailure $ "Should not have deserialized: " <> showExpr (CBORBytes (serialize' version t))
+    case embedTripLabelExtra (typeLabel @b) version version trip t of
+      (Left _, _, _) -> pure ()
+      (Right _, _, bs) ->
+        expectationFailure $
+          mconcat
+            [ "Should not have deserialized: <version: "
+            , show version
+            , "> "
+            , showExpr (CBORBytes (BSL.toStrict bs))
+            ]
 
 -- | Verify that round triping through the binary form holds for a range of versions.
 --
@@ -207,15 +250,15 @@ roundTripAnnFailureExpectation ::
   (ToCBOR t, DecCBOR (Annotator t), HasCallStack) =>
   t ->
   Expectation
-roundTripAnnFailureExpectation = roundTripAnnFailureRangeExpectation (natVersion @2) maxBound
+roundTripAnnFailureExpectation = roundTripAnnRangeFailureExpectation (natVersion @2) maxBound
 
-roundTripAnnFailureRangeExpectation ::
+roundTripAnnRangeFailureExpectation ::
   (ToCBOR t, DecCBOR (Annotator t), HasCallStack) =>
   Version ->
   Version ->
   t ->
   Expectation
-roundTripAnnFailureRangeExpectation fromVersion toVersion t =
+roundTripAnnRangeFailureExpectation fromVersion toVersion t =
   forM_ [fromVersion .. toVersion] $ \version ->
     case roundTripAnn version t of
       Left _ -> pure ()
@@ -350,9 +393,14 @@ cborTrip = Trip encCBOR decCBOR (dropCBOR (Proxy @b))
 mkTrip :: forall a b. (a -> Encoding) -> (forall s. Decoder s b) -> Trip a b
 mkTrip encoder decoder = Trip encoder decoder (() <$ decoder)
 
+-- | Check that serialization forllowed by deserialization of the value produces the same
+-- value back. We also check that re-serialization is idempotent. In other words, we
+-- ensure that deserialization does not modify the decoded value in a way that its binary
+-- representation has changed. Dropper is checked as well.
 roundTrip :: forall t. Typeable t => Version -> Trip t t -> t -> Either RoundTripFailure t
 roundTrip version trip val = do
-  (val', encoding, encodedBytes) <- embedTripLabelExtra (typeLabel @t) version version trip val
+  let (res, encoding, encodedBytes) = embedTripLabelExtra (typeLabel @t) version version trip val
+  val' <- res
   let reserialized = serialize version (tripEncoder trip val')
   if reserialized /= encodedBytes
     then
@@ -405,7 +453,8 @@ embedTripLabel ::
   a ->
   Either RoundTripFailure b
 embedTripLabel lbl encVersion decVersion trip s =
-  (\(val, _, _) -> val) <$> embedTripLabelExtra lbl encVersion decVersion trip s
+  case embedTripLabelExtra lbl encVersion decVersion trip s of
+    (res, _, _) -> res
 
 embedTripLabelExtra ::
   forall a b.
@@ -416,22 +465,23 @@ embedTripLabelExtra ::
   Version ->
   Trip a b ->
   a ->
-  Either RoundTripFailure (b, Plain.Encoding, BSL.ByteString)
+  (Either RoundTripFailure b, Plain.Encoding, BSL.ByteString)
 embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
-  case decodeFullDecoder decVersion lbl decoder encodedBytes of
-    Right val
-      | Nothing <- mDropperError -> Right (val, encoding, encodedBytes)
-      | Just err <- mDropperError ->
-          Left $
-            RoundTripFailure encVersion decVersion encoding encodedBytes Nothing (Just err) Nothing
-    Left err ->
-      let mErr = do
-            dropperError <- mDropperError
-            guard (dropperError /= err)
-            pure dropperError
-       in Left $
-            RoundTripFailure encVersion decVersion encoding encodedBytes Nothing mErr (Just err)
+  (result, encoding, encodedBytes)
   where
+    mkFailure = RoundTripFailure encVersion decVersion encoding encodedBytes Nothing
+    result =
+      case decodeFullDecoder decVersion lbl decoder encodedBytes of
+        Right val
+          | Nothing <- mDropperError -> Right val
+          | Just err <- mDropperError -> Left $ mkFailure (Just err) Nothing
+        Left err ->
+          -- In case of failure we only record dropper error if it differs from the
+          -- decoder failure:
+          let mErr = do
+                dropperError <- mDropperError
+                dropperError <$ guard (dropperError /= err)
+           in Left $ mkFailure mErr (Just err)
     encoding = toPlainEncoding encVersion (encoder s)
     encodedBytes = Plain.serialize encoding
     mDropperError =
