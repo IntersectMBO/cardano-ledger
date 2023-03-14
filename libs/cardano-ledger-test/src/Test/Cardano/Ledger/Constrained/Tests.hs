@@ -128,28 +128,24 @@ depthOfSum env = \case
   One t -> depthOf env t
   Project _ t -> depthOf env t
 
-data Literal era t where Literal :: Rep era t -> t -> Literal era t
-fixed :: Literal era t -> Term era t
-fixed (Literal r t) = Lit r t
-
-genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen (Literal era t)
+genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen t
 genLiteral env rep =
   case rep of
     SetR erep -> setLiteral erep
     MapR _ _ -> unconstrained rep -- TODO: more clever generation for maps
     _ -> unconstrained rep
   where
-    unconstrained :: forall a. Rep era a -> Gen (Literal era a)
-    unconstrained r = Literal r <$> genRep r
+    unconstrained :: forall a. Rep era a -> Gen a
+    unconstrained r = genRep r
 
-    setLiteral :: forall a. Ord a => Rep era a -> Gen (Literal era (Set a))
+    setLiteral :: forall a. Ord a => Rep era a -> Gen (Set a)
     setLiteral erep = do
-      let knownSets = [val | (_, Literal _ val) <- envVarsOfType (gEnv env) (SetR erep)]
+      let knownSets = [val | (_, val) <- envVarsOfType (gEnv env) (SetR erep)]
           gen = oneof $ genRep (SetR erep) : map pure knownSets
       set1 <- gen
       set2 <- gen
       op <- elements [const, const id, Set.union, Set.intersection, Set.difference, flip Set.difference]
-      pure $ Literal (SetR erep) $ op set1 set2
+      pure $ op set1 set2
 
 genFreshVarName :: GenEnv era -> Gen String
 genFreshVarName = elements . varNames
@@ -159,12 +155,12 @@ genFreshVarName = elements . varNames
       where
         Env vmap = gEnv env
 
-envVarsOfType :: Env era -> Rep era t -> [(V era t, Literal era t)]
+envVarsOfType :: Env era -> Rep era t -> [(V era t, t)]
 envVarsOfType (Env env) rep = concatMap wellTyped $ Map.toList env
   where
     wellTyped (name, Payload rep' val access) =
       case testEql rep rep' of
-        Just Refl -> [(V name rep access, Literal rep val)]
+        Just Refl -> [(V name rep access, val)]
         Nothing -> []
 
 data VarSpec
@@ -176,13 +172,10 @@ data VarSpec
     KnownTerm
   deriving (Eq, Show)
 
-getLiteral :: Literal era t -> t
-getLiteral (Literal _ x) = x
-
 genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm env rep vspec = genTerm' env rep (const True) (genLiteral env rep) vspec
 
-genTerm' :: forall era t. Era era => GenEnv era -> Rep era t -> (t -> Bool) -> Gen (Literal era t) -> VarSpec -> Gen (Term era t, GenEnv era)
+genTerm' :: forall era t. Era era => GenEnv era -> Rep era t -> (t -> Bool) -> Gen t -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm' env rep valid genLit vspec =
   frequency $
     [(5, genFixed) | vspec == KnownTerm]
@@ -191,18 +184,18 @@ genTerm' env rep valid genLit vspec =
       ++ [(2, genDom krep) | SetR krep <- [rep]]
       ++ [(2, genRng vrep) | SetR vrep <- [rep]]
   where
-    isValid (_, Literal _ val) = valid val
+    isValid (_, val) = valid val
     existingVars = map fst $ filter isValid $ envVarsOfType (gEnv env) rep
     allowedVars = case vspec of
       VarTerm d -> filter ((>= d) . depthOfName env . Name) existingVars
       KnownTerm -> filter ((`Map.member` gSolved env) . Name) existingVars
 
-    genFixed = (,env) . fixed <$> genLit
+    genFixed = (,env) . Lit rep <$> genLit
     genExistingVar = (,env) . Var <$> elements allowedVars
 
     genFreshVar = do
       name <- genFreshVarName env
-      Literal _ val <- genLit
+      val <- genLit
       let var = V name rep No
       pure (Var var, addVar var val env)
 
@@ -214,7 +207,7 @@ genTerm' env rep valid genLit vspec =
           env
           (MapR krep vrep)
           (valid . Map.keysSet)
-          (genLit >>= genMapLiteralWithDom env krep vrep)
+          (genLit >>= genMapLiteralWithDom env vrep)
           vspec
       pure (Dom m, env')
 
@@ -226,25 +219,22 @@ genTerm' env rep valid genLit vspec =
           env
           (MapR krep vrep)
           (valid . Set.fromList . Map.elems)
-          (genLit >>= genMapLiteralWithRng env krep vrep)
+          (genLit >>= genMapLiteralWithRng env krep)
           vspec
       pure (Rng m, env')
 
-genMapLiteralWithDom :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set k) -> Gen (Literal era (Map k v))
-genMapLiteralWithDom env krep vrep (Literal _ keys) = do
+genMapLiteralWithDom :: Era era => GenEnv era -> Rep era v -> Set k -> Gen (Map k v)
+genMapLiteralWithDom env vrep keys = do
   let genVal = do
-        Literal _ v <- genLiteral env vrep
+        v <- genLiteral env vrep
         pure v
-  Literal (MapR krep vrep) <$> traverse (\_ -> genVal) (Map.fromSet (const ()) keys)
+  traverse (\_ -> genVal) (Map.fromSet (const ()) keys)
 
-genMapLiteralWithRng :: (Era era, Ord k) => GenEnv era -> Rep era k -> Rep era v -> Literal era (Set v) -> Gen (Literal era (Map k v))
-genMapLiteralWithRng env krep vrep (Literal _ vals) = do
-  let genKey = do
-        Literal _ k <- genLiteral env krep
-        pure k
-  keys <- setSized [] (Set.size vals) genKey
+genMapLiteralWithRng :: (Era era, Ord k) => GenEnv era -> Rep era k -> Set v -> Gen (Map k v)
+genMapLiteralWithRng env krep vals = do
+  keys <- setSized [] (Set.size vals) (genLiteral env krep)
   valsList <- shuffle $ Set.toList vals
-  pure $ Literal (MapR krep vrep) $ Map.fromList $ zip (Set.toList keys) valsList
+  pure $ Map.fromList $ zip (Set.toList keys) valsList
 
 data TypeInEra era where
   TypeInEra :: (Show t, Ord t) => Rep era t -> TypeInEra era
@@ -362,7 +352,7 @@ genPredicate env =
       TypeInEra rep <- genType
       withValue (genTerm env rep KnownTerm) $ \lhs val env' -> do
         let d = 1 + depthOf env' lhs
-        (rhs, env'') <- genTerm' env' rep (== val) (pure $ Literal rep val) (VarTerm d)
+        (rhs, env'') <- genTerm' env' rep (== val) (pure val) (VarTerm d)
         pure (lhs :=: rhs, markSolved (vars rhs) d env'')
 
     subsetC
@@ -376,7 +366,7 @@ genPredicate env =
                 env'
                 (SetR rep)
                 (`Set.isSubsetOf` val)
-                (Literal (SetR rep) <$> subsetFromSet ["From genPredicate subsetC"] val)
+                (subsetFromSet ["From genPredicate subsetC"] val)
                 (VarTerm d)
             pure (sub `Subset` sup, markSolved (vars sub) d env'')
       | otherwise = do
@@ -389,7 +379,7 @@ genPredicate env =
                 env'
                 (SetR rep)
                 (Set.isSubsetOf val)
-                (Literal (SetR rep) . Set.union val <$> genRep (SetR rep))
+                (Set.union val <$> genRep (SetR rep))
                 (VarTerm d)
             pure (sub `Subset` sup, markSolved (vars sup) d env'')
 
@@ -403,7 +393,7 @@ genPredicate env =
             env'
             (SetR rep)
             (Set.disjoint val)
-            (Literal (SetR rep) . (`Set.difference` val) <$> genRep (SetR rep))
+            ((`Set.difference` val) <$> genRep (SetR rep))
             (VarTerm d)
         pure (Disjoint lhs rhs, markSolved (vars rhs) d env'')
 
@@ -411,7 +401,7 @@ genPredicate env =
     sumsToC
       | sumBeforeParts (gOrder env) =
           -- Known sum
-          withValue (genTerm' env CoinR (> Coin 10) (Literal CoinR . (<> Coin 10) <$> arbitrary) KnownTerm) $ \sumTm val env' -> do
+          withValue (genTerm' env CoinR (> Coin 10) ((<> Coin 10) <$> arbitrary) KnownTerm) $ \sumTm val env' -> do
             let d = 1 + depthOf env' sumTm
 
                 genParts [] env0 = pure ([], env0)
@@ -421,7 +411,7 @@ genPredicate env =
                       env0
                       (MapR CoinR CoinR)
                       ((== n) . fold)
-                      (Literal (MapR CoinR CoinR) <$> mapWithSum n)
+                      (mapWithSum n)
                       (VarTerm d)
                   first (SumMap t :) <$> genParts ns env1
             -- TODO: It's unclear what the requirements are on the parts when solving sumBeforeParts.
@@ -472,7 +462,7 @@ genPredicate env =
             env'
             rep
             (flip (runOrdCond cmp) tot)
-            (Literal rep <$> genFromOrdCond cmp canBeNegative tot)
+            (genFromOrdCond cmp canBeNegative tot)
             (VarTerm d)
         small <- genSmall @c
         pure (SumsTo (fromI [] small) sumTm cmp parts, markSolved (vars sumTm) d env'')
@@ -490,7 +480,7 @@ genPredicate env =
                   env'
                   (SetR krep)
                   (== Map.keysSet val)
-                  (pure $ Literal (SetR krep) $ Map.keysSet val)
+                  (pure $ Map.keysSet val)
                   (VarTerm d)
               pure (Dom mapTm :=: domTm, env'')
         , do
@@ -504,7 +494,7 @@ genPredicate env =
                   env'
                   (MapR krep vrep)
                   ((val ==) . Map.keysSet)
-                  (genMapLiteralWithDom env krep vrep $ Literal (SetR krep) val)
+                  (genMapLiteralWithDom env vrep val)
                   (VarTerm d)
               pure (domTm :=: Dom mapTm, env'')
         ]
@@ -688,4 +678,3 @@ runPreds ps = do
   Right g <- pure $ runTyped $ compile info ps
   subst <- generate $ genDependGraph True testProof g
   print subst
-
