@@ -23,22 +23,23 @@ source-repository head
 
 library
     exposed-modules:
+        Cardano.Ledger.Babbage
+        Cardano.Ledger.Babbage.Collateral
+        Cardano.Ledger.Babbage.Core
         Cardano.Ledger.Babbage.PParams
+        Cardano.Ledger.Babbage.Rules
+        Cardano.Ledger.Babbage.Scripts
         Cardano.Ledger.Babbage.Tx
         Cardano.Ledger.Babbage.TxBody
         Cardano.Ledger.Babbage.TxOut
         Cardano.Ledger.Babbage.TxInfo
         Cardano.Ledger.Babbage.TxWits
         Cardano.Ledger.Babbage.Translation
-        Cardano.Ledger.Babbage.Scripts
-        Cardano.Ledger.Babbage.Collateral
-        Cardano.Ledger.Babbage.Rules
-        Cardano.Ledger.Babbage.Core
-        Cardano.Ledger.Babbage
 
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Babbage.Era
+        Cardano.Ledger.Babbage.Delegation
         Cardano.Ledger.Babbage.Rules.Utxow
         Cardano.Ledger.Babbage.Rules.Utxo
         Cardano.Ledger.Babbage.Rules.Utxos

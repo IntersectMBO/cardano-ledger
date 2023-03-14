@@ -116,6 +116,7 @@ import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
   ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.Babbage.Core
+import Cardano.Ledger.Babbage.Delegation ()
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Scripts ()
@@ -148,7 +149,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
@@ -171,7 +171,7 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
   , btbrOutputs :: !(StrictSeq (Sized (TxOut era)))
   , btbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , btbrTotalCollateral :: !(StrictMaybe Coin)
-  , btbrCerts :: !(StrictSeq (DCert (EraCrypto era)))
+  , btbrCerts :: !(StrictSeq (DCert era))
   , btbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , btbrTxFee :: !Coin
   , btbrValidityInterval :: !ValidityInterval
@@ -191,19 +191,19 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
 type instance MemoHashIndex BabbageTxBodyRaw = EraIndependentTxBody
 
 deriving instance
-  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
   Eq (BabbageTxBodyRaw era)
 
 instance
-  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (BabbageTxBodyRaw era)
 
 instance
-  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
   NFData (BabbageTxBodyRaw era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
   Show (BabbageTxBodyRaw era)
 
 newtype BabbageTxBody era = TxBodyConstr (MemoBytes BabbageTxBodyRaw era)
@@ -213,7 +213,7 @@ instance Memoized BabbageTxBody where
   type RawType BabbageTxBody = BabbageTxBodyRaw
 
 deriving newtype instance
-  (Era era, NFData (TxOut era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
   NFData (BabbageTxBody era)
 
 inputsBabbageTxBodyL ::
@@ -265,7 +265,7 @@ updateBabbageTxBodyL =
 {-# INLINEABLE updateBabbageTxBodyL #-}
 
 certsBabbageTxBodyL ::
-  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictSeq (DCert (EraCrypto era)))
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictSeq (DCert era))
 certsBabbageTxBodyL =
   lensMemoRawType btbrCerts $ \txBodyRaw certs -> txBodyRaw {btbrCerts = certs}
 {-# INLINEABLE certsBabbageTxBodyL #-}
@@ -389,6 +389,9 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   withdrawalsTxBodyL = withdrawalsBabbbageTxBodyL
   {-# INLINE withdrawalsTxBodyL #-}
 
+  certsTxBodyL = certsBabbageTxBodyL
+  {-# INLINE certsTxBodyL #-}
+
 instance Crypto c => ShelleyEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (BabbageEra StandardCrypto) #-}
 
@@ -397,9 +400,6 @@ instance Crypto c => ShelleyEraTxBody (BabbageEra c) where
 
   updateTxBodyL = updateBabbageTxBodyL
   {-# INLINE updateTxBodyL #-}
-
-  certsTxBodyL = certsBabbageTxBodyL
-  {-# INLINE certsTxBodyL #-}
 
 instance Crypto c => AllegraEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (BabbageEra StandardCrypto) #-}
@@ -456,25 +456,25 @@ instance Crypto c => BabbageEraTxBody (BabbageEra c) where
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
   Eq (BabbageTxBody era)
 
 deriving instance
-  (Era era, NoThunks (TxOut era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (BabbageTxBody era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
   Show (BabbageTxBody era)
 
 deriving via
   (Mem BabbageTxBodyRaw era)
   instance
-    (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+    (Era era, DecCBOR (TxOut era), DecCBOR (DCert era), DecCBOR (PParamsUpdate era)) =>
     DecCBOR (Annotator (BabbageTxBody era))
 
 instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+  (Era era, DecCBOR (TxOut era), DecCBOR (DCert era), DecCBOR (PParamsUpdate era)) =>
   DecCBOR (Annotator (BabbageTxBodyRaw era))
   where
   decCBOR = pure <$> decCBOR
@@ -487,7 +487,7 @@ pattern BabbageTxBody ::
   StrictSeq (Sized (TxOut era)) ->
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
-  StrictSeq (DCert (EraCrypto era)) ->
+  StrictSeq (DCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
@@ -594,7 +594,7 @@ referenceInputs' :: BabbageTxBody era -> Set (TxIn (EraCrypto era))
 outputs' :: BabbageTxBody era -> StrictSeq (TxOut era)
 collateralReturn' :: BabbageTxBody era -> StrictMaybe (TxOut era)
 totalCollateral' :: BabbageTxBody era -> StrictMaybe Coin
-certs' :: BabbageTxBody era -> StrictSeq (DCert (EraCrypto era))
+certs' :: BabbageTxBody era -> StrictSeq (DCert era)
 txfee' :: BabbageTxBody era -> Coin
 withdrawals' :: BabbageTxBody era -> Withdrawals (EraCrypto era)
 vldt' :: BabbageTxBody era -> ValidityInterval
@@ -645,7 +645,7 @@ txnetworkid' = btbrTxNetworkId . getMemoRawType
 instance Era era => EncCBOR (BabbageTxBody era)
 
 instance
-  (Era era, EncCBOR (TxOut era), EncCBOR (PParamsUpdate era)) =>
+  (Era era, EncCBOR (TxOut era), EncCBOR (DCert era), EncCBOR (PParamsUpdate era)) =>
   EncCBOR (BabbageTxBodyRaw era)
   where
   encCBOR
@@ -691,7 +691,7 @@ instance
           !> encodeKeyedStrictMaybe 15 btbrTxNetworkId
 
 instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (PParamsUpdate era)) =>
+  (Era era, DecCBOR (TxOut era), DecCBOR (DCert era), DecCBOR (PParamsUpdate era)) =>
   DecCBOR (BabbageTxBodyRaw era)
   where
   decCBOR =

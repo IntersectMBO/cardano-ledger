@@ -26,12 +26,12 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxBody (..),
   BabbageEraTxOut (..),
   MaryEraTxBody (..),
-  ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley.Delegation (ShelleyDCert)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
@@ -150,7 +150,9 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  (MaryEraTxBody era) =>
+  ( MaryEraTxBody era
+  , DCert era ~ ShelleyDCert era
+  ) =>
   TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
   Either (TranslationError (EraCrypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
@@ -163,6 +165,7 @@ babbageTxInfo ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
+  , DCert era ~ ShelleyDCert era
   , Value era ~ MaryValue (EraCrypto era)
   , TxWits era ~ AlonzoTxWits era
   ) =>
@@ -191,7 +194,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
           , PV1.txInfoOutputs = outputs
           , PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
           , PV1.txInfoMint = Alonzo.transMultiAsset multiAsset
-          , PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+          , PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyL)
           , PV1.txInfoWdrl = Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
           , PV1.txInfoValidRange = timeRange
           , PV1.txInfoSignatories =
@@ -215,7 +218,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
           , PV2.txInfoReferenceInputs = refInputs
           , PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
           , PV2.txInfoMint = Alonzo.transMultiAsset multiAsset
-          , PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+          , PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyL)
           , PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
           , PV2.txInfoValidRange = timeRange
           , PV2.txInfoSignatories =

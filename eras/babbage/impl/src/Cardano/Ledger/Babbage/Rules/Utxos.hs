@@ -15,6 +15,7 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
   utxosTransition,
 ) where
 
+import Cardano.Ledger.Shelley.Delegation (ShelleyDCert)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
   collectTwoPhaseScriptInputs,
   evalScripts,
@@ -76,6 +77,7 @@ instance
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
+  , DCert era ~ ShelleyDCert era
   , Script era ~ AlonzoScript era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
@@ -116,6 +118,7 @@ utxosTransition ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
+  , DCert era ~ ShelleyDCert era
   , Script era ~ AlonzoScript era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
@@ -143,6 +146,7 @@ scriptsYes ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
+  , DCert era ~ ShelleyDCert era
   , Script era ~ AlonzoScript era
   , STS (BabbageUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
@@ -202,6 +206,7 @@ scriptsNo ::
   , STS (BabbageUTXOS era)
   , BabbageEraTxBody era
   , Tx era ~ AlonzoTx era
+  , DCert era ~ ShelleyDCert era
   , Script era ~ AlonzoScript era
   ) =>
   TransitionRule (BabbageUTXOS era)

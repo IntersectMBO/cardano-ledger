@@ -129,7 +129,7 @@ import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
 import Cardano.Ledger.Language (nonNativeLanguages)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..), unWithdrawals)
+import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), unWithdrawals)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
