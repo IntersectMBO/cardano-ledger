@@ -20,20 +20,20 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), toShelleyDCert)
 import Cardano.Ledger.Conway.Governance (
+  Anchor,
   ConwayGovernance (..),
   ConwayTallyState (..),
   GovernanceAction (..),
   GovernanceActionId (..),
   GovernanceActionIx (..),
   GovernanceActionState (..),
-  VoteDecision (..),
+  Vote (..),
   VoterRole (..),
  )
 import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure (..),
   ConwayTallyPredFailure,
   EnactState (..),
-  GovernanceMetadata,
   GovernanceProcedure,
   PredicateFailure,
   RatifyState (..),
@@ -108,7 +108,7 @@ ppConwayTxBody txb =
     , ("governance procedures", ppStrictSeq prettyA $ txb ^. govProcsTxBodyL)
     ]
 
-instance PrettyA VoteDecision where
+instance PrettyA Vote where
   prettyA = viaShow
 
 instance EraPParams era => PrettyA (GovernanceProcedure era) where
@@ -181,7 +181,7 @@ instance PrettyA GovernanceActionIx where
 instance PrettyA VoterRole where
   prettyA = ppString . show
 
-instance PrettyA (GovernanceMetadata era) where
+instance PrettyA (Anchor era) where
   prettyA = viaShow
 
 instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionState era) where

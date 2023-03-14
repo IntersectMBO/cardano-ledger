@@ -33,7 +33,6 @@ module Cardano.Ledger.Api.Governance (
 
   -- ** Vote
   Vote (..),
-  VoteDecision (..),
 
   -- *** Anchor
   Anchor (..),
@@ -55,7 +54,6 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceActionState (..),
   RatifyState (..),
   Vote (..),
-  VoteDecision (..),
   VoterRole (..),
   -- Lenses
 

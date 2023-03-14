@@ -25,6 +25,11 @@
 * Add `Anchor` and `AnchorDataHash` types. #3323
 * Rename `transDCert` to `toShelleyDCert`
 * Add `fromShelleyDCertMaybe`
+* Renamed `Vote` type to `VotingProcedure`
+* Add `ProposalProcedure`
+* Use `VotingProcedure` and `ProposalProcedure` in `GovernanceProcedure`
+* Rename `VoteDecision` to `Vote`. Rename `No`/`Yes` -> `VoteNo`/`VoteYes`.
+* Remove `GovernanceMetadata` in favor of `Anchor`
 
 ### `testlib`
 

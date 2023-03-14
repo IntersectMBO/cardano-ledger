@@ -85,34 +85,32 @@ vote_info =
   , stake_credential
   ]
 
-governance_procedure = 
-  [ voting_procedure
-  // proposal_procedure
+governance_procedure =
+  [ (0, voting_procedure)
+  // (1, proposal_procedure)
   ]
 
 voting_procedure =
-  ( 0
-  , governance_action_id
+  [ governance_action_id
   , voter_role
   , stake_credential
-  , decision
-  , governance_metadata
-  )
+  , vote
+  , anchor / null
+  ]
 
 proposal_procedure =
-  ( 1
-  , deposit : coin
+  [ deposit : coin
   , $addr_keyhash
   , governance_action
-  , governance_metadata
-  )
+  , anchor / null
+  ]
 
 governance_metadata =
   [ url
   , $hash32
   ]
 
-governance_action = 
+governance_action =
   [ parameter_change_action
   // hard_fork_initiation_action
   // treasury_withdrawals_action
@@ -132,14 +130,6 @@ new_committee = (4, [* $addr_keyhash], rational)
 
 new_constitution = (5, $hash32)
 
-vote =
-  [ governance_action_id : governance_action_id
-  , voter_role
-  , voter_role_key_hash  : stake_credential
-  , anchor               : anchor / null
-  , decision
-  ]
-
 ; constitutional committee - 0
 ; DRep - 1
 ; SPO - 2
@@ -153,7 +143,7 @@ anchor =
 ; no - 0
 ; yes - 1
 ; abstain - 2
-decision = 0 .. 2
+vote = 0 .. 2
 
 governance_action_id =
   [ transaction_id          : $hash32
