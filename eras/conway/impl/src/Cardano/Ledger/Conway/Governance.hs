@@ -18,27 +18,32 @@ module Cardano.Ledger.Conway.Governance (
   EnactState (..),
   RatifyState (..),
   ConwayGovernance (..),
+  -- Lenses
+  cgTallyL,
+  cgRatifyL,
+  cgVoterRolesL,
   GovernanceAction (..),
   GovernanceActionState (..),
   GovernanceActionIx (..),
   GovernanceActionId (..),
   VoterRole (..),
   VoteDecision (..),
-  -- Lenses
-  cgTallyL,
-  cgRatifyL,
-  cgVoterRolesL,
+  Vote (..),
+  Anchor (..),
+  AnchorDataHash,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
-import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), StrictMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), StrictMaybe, Url)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
   decodeEnumBounded,
+  decodeNullStrictMaybe,
   encodeEnum,
+  encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -58,7 +63,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.TxIn (TxId (..))
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (rnf), rwhnf)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import Data.ByteString (ByteString)
@@ -160,6 +165,91 @@ govActionIdToText (GovernanceActionId (TxId txidHash) (GovernanceActionIx ix)) =
   hashToTextAsHex (extractHash txidHash)
     <> Text.pack "#"
     <> Text.pack (show ix)
+
+data AnchorDataHash
+
+data Anchor c = Anchor
+  { anchorUrl :: !Url
+  , anchorDataHash :: !(SafeHash c AnchorDataHash)
+  }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks (Anchor c)
+
+instance Crypto c => NFData (Anchor c) where
+  rnf = rwhnf
+
+instance Crypto c => DecCBOR (Anchor c) where
+  decCBOR =
+    decode $
+      RecD Anchor
+        <! From
+        <! From
+
+instance Crypto c => EncCBOR (Anchor c) where
+  encCBOR Anchor {..} =
+    encode $
+      Rec Anchor
+        !> To anchorUrl
+        !> To anchorDataHash
+
+instance Crypto c => ToJSON (Anchor c) where
+  toJSON = object . toAnchorPairs
+  toEncoding = pairs . mconcat . toAnchorPairs
+
+toAnchorPairs :: (KeyValue a, Crypto c) => Anchor c -> [a]
+toAnchorPairs vote@(Anchor _ _) =
+  let Anchor {..} = vote
+   in [ "url" .= anchorUrl
+      , "dataHash" .= anchorDataHash
+      ]
+
+data Vote era = Vote
+  { voteGovActionId :: !(GovernanceActionId (EraCrypto era))
+  , voteRole :: !VoterRole
+  , voteRoleKeyHash :: !(KeyHash 'Voting (EraCrypto era))
+  , voteAnchor :: !(StrictMaybe (Anchor (EraCrypto era)))
+  , voteDecision :: !VoteDecision
+  }
+  deriving (Generic, Eq, Show)
+
+instance NoThunks (Vote era)
+
+instance Crypto (EraCrypto era) => NFData (Vote era)
+
+instance Era era => DecCBOR (Vote era) where
+  decCBOR =
+    decode $
+      RecD Vote
+        <! From
+        <! From
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
+        <! From
+
+instance Era era => EncCBOR (Vote era) where
+  encCBOR Vote {..} =
+    encode $
+      Rec (Vote @era)
+        !> To voteGovActionId
+        !> To voteRole
+        !> To voteRoleKeyHash
+        !> E (encodeNullStrictMaybe encCBOR) voteAnchor
+        !> To voteDecision
+
+instance EraPParams era => ToJSON (Vote era) where
+  toJSON = object . toVotePairs
+  toEncoding = pairs . mconcat . toVotePairs
+
+toVotePairs :: (KeyValue a, EraPParams era) => Vote era -> [a]
+toVotePairs vote@(Vote _ _ _ _ _) =
+  let Vote {..} = vote
+   in [ "govActionId" .= voteGovActionId
+      , "role" .= voteRole
+      , "roleKeyHash" .= voteRoleKeyHash
+      , "anchor" .= voteAnchor
+      , "decision" .= voteDecision
+      ]
 
 data VoterRole
   = ConstitutionalCommittee

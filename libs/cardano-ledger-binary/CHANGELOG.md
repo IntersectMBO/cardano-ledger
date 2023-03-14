@@ -4,6 +4,10 @@
 
 * Add `ToJSON`/`FromJSON` instances for `Version`
 * Add `decodeFullFromHexText` and `serializeAsHexText`
+* Add `Arbitrary` instance for `Term` to `testlib`.
+* Add `encodeStrictMaybe`/`decodeStrictMaybe` and `encodeNullStrictMaybe`/`decodeNullStrictMaybe`
+* Fix CBOR instance for `StrictMaybe`. It was never used in Byron, so special
+  serialization is not needed for pre-protocol version `2`.
 
 ### `testlib`
 

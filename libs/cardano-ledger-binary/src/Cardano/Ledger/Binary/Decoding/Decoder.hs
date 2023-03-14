@@ -52,9 +52,11 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 
   -- *** Containers
   decodeMaybe,
+  decodeNullMaybe,
+  decodeStrictMaybe,
+  decodeNullStrictMaybe,
   decodeEither,
   decodeList,
-  decodeNullMaybe,
   decodeVector,
   decodeSet,
   setTag,
@@ -238,6 +240,7 @@ import Data.Functor.Compose (Compose (..))
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
@@ -496,6 +499,23 @@ decodeNullMaybe decoder = do
       decodeNull
       pure Nothing
     _ -> Just <$> decoder
+
+-- | Unlike `decodeMaybe` this allows variable as well as exact list length encoding for
+-- all versions, because Byron never used `StrictMaybe` type.
+decodeStrictMaybe :: Decoder s a -> Decoder s (StrictMaybe a)
+decodeStrictMaybe = fmap maybeToStrictMaybe . decodeMaybeVarLen
+
+-- | Alternative way to decode a `StrictMaybe` type.
+--
+-- /Note/ - this is not the default method for decoding `StrictMaybe`, use
+-- `decodeStrictMaybe` instead.
+decodeNullStrictMaybe :: Decoder s a -> Decoder s (StrictMaybe a)
+decodeNullStrictMaybe decoder = do
+  peekTokenType >>= \case
+    C.TypeNull -> do
+      decodeNull
+      pure SNothing
+    _ -> SJust <$> decoder
 
 decodeEither :: Decoder s a -> Decoder s b -> Decoder s (Either a b)
 decodeEither decodeLeft decodeRight = do

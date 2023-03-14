@@ -107,8 +107,10 @@ spec = do
     roundTripSpec @Prim.ByteArray cborTrip
     roundTripSpec @ByteArray cborTrip
     roundTripSpec @SlicedByteArray cborTrip
-    let maybeNullTrip = mkTrip (encodeNullMaybe encCBOR) (decodeNullMaybe decCBOR)
-    roundTripSpec @(Maybe Integer) maybeNullTrip
+    roundTripSpec @(Maybe Integer) $
+      mkTrip (encodeNullMaybe encCBOR) (decodeNullMaybe decCBOR)
+    roundTripSpec @(StrictMaybe Integer) $
+      mkTrip (encodeNullStrictMaybe encCBOR) (decodeNullStrictMaybe decCBOR)
     describe "Slotting" $
       describe "Mock" $ do
         roundTripSpec @BlockNo cborTrip
