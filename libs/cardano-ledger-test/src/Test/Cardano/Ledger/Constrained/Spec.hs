@@ -56,6 +56,7 @@ import Test.Cardano.Ledger.Constrained.Size (
   atleastdelta,
   atmostany,
   genFromIntRange,
+  genFromNonNegIntRange,
   genFromSize,
   runSize,
   seps,
@@ -178,9 +179,9 @@ genFromSizeByRep :: forall t era. Adds t => Rep era t -> Size -> Gen Int
 genFromSizeByRep IntR = genFromIntRange
 genFromSizeByRep DeltaCoinR = genFromIntRange
 genFromSizeByRep RationalR = genFromIntRange
-genFromSizeByRep Word64R = genFromSize
-genFromSizeByRep CoinR = genFromSize
-genFromSizeByRep NaturalR = genFromSize
+genFromSizeByRep Word64R = genFromNonNegIntRange
+genFromSizeByRep CoinR = genFromNonNegIntRange
+genFromSizeByRep NaturalR = genFromNonNegIntRange
 genFromSizeByRep r = error ("genFromSizeByRep " ++ show r ++ ", does not have an Adds instance." ++ seq (zero @t) "")
 
 data SomeAdd era where Some :: Adds t => Rep era t -> SomeAdd era
@@ -737,10 +738,10 @@ genFromRngSpec msgs genr n x = case x of
   (RngNever xs) -> errorMess "RngNever in genFromRngSpec" (xs ++ (msg : msgs))
   RngAny -> vectorOf n genr
   (RngSum small sz) -> do
-    tot <- genFromSize sz
+    tot <- genFromIntRange sz
     partition small (msg : msgs) n (fromI (msg : msgs) tot)
   (RngProj small _ sz) -> do
-    tot <- genFromSize sz
+    tot <- genFromIntRange sz
     rs <- partition small (("partition " ++ show tot) : msg : msgs) n (fromI (msg : msgs) tot)
     mapM (genT msgs) rs
   (RngRel relspec) -> Set.toList <$> genFromRelSpec (msg : msgs) genr n relspec
@@ -1422,10 +1423,10 @@ genFromElemSpec msgs genr n x = case x of
   ElemAny -> vectorOf n genr
   (ElemEqual _ xs) -> pure xs
   (ElemSum small sz) -> do
-    tot <- genFromSize sz
+    tot <- genFromIntRange sz
     partition small msgs n (fromI (msg : msgs) tot)
   (ElemProj small _ sz) -> do
-    tot <- genFromSize sz
+    tot <- genFromIntRange sz
     rs <- partition small msgs n (fromI (msg : msgs) tot)
     mapM (genT msgs) rs
   where

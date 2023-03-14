@@ -39,7 +39,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
-import Test.Cardano.Ledger.Constrained.Size (AddsSpec (..), Size (..), genFromIntRange, genFromSize)
+import Test.Cardano.Ledger.Constrained.Size (AddsSpec (..), Size (..), genFromIntRange, genFromNonNegIntRange)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
@@ -125,8 +125,8 @@ genFromAddsSpec _ (AddsSpecSize _ size) = genFromIntRange size
 genFromAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec applied to AddsSpecNever") msgs
 
 genFromNonNegAddsSpec :: [String] -> AddsSpec c -> Gen Int
-genFromNonNegAddsSpec _ AddsSpecAny = genFromSize SzAny
-genFromNonNegAddsSpec _ (AddsSpecSize _ size) = genFromSize size
+genFromNonNegAddsSpec _ AddsSpecAny = genFromNonNegIntRange SzAny
+genFromNonNegAddsSpec _ (AddsSpecSize _ size) = genFromNonNegIntRange size
 genFromNonNegAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec applied to AddsSpecNever") msgs
 
 -- ================

@@ -22,6 +22,7 @@ module Test.Cardano.Ledger.Constrained.Size (
   atmostany,
   genFromSize,
   genFromIntRange,
+  genFromNonNegIntRange,
   vLeftNeg,
   vRightNeg,
   negateSize,
@@ -136,9 +137,9 @@ runSize n (SzRng i j) = n >= i && n <= j
 genFromSize :: Size -> Gen Int
 genFromSize (SzNever _) = error "Bad call to (genFromSize(SzNever ..))."
 genFromSize SzAny = chooseInt (0, atmostany)
-genFromSize (SzRng i j) = chooseInt (max i 0, j)
-genFromSize (SzLeast i) = chooseInt (max i 0, (max i 0) + atleastdelta)
-genFromSize (SzMost i) = chooseInt (0, i)
+genFromSize (SzRng i j) = chooseInt (max i 0, max i $ min atmostany j)
+genFromSize (SzLeast i) = chooseInt (max i 0, max i 0 + atleastdelta)
+genFromSize (SzMost i) = chooseInt (0, min atmostany i)
 
 -- | Similar to genFromSize, but allows negative numbers (unlike size where the smallest Int is 0)
 genFromIntRange :: Size -> Gen Int
@@ -147,6 +148,9 @@ genFromIntRange SzAny = chooseInt (-atmostany, atmostany)
 genFromIntRange (SzRng i j) = chooseInt (i, j)
 genFromIntRange (SzLeast i) = chooseInt (i, i + atleastdelta)
 genFromIntRange (SzMost i) = chooseInt (i - atmostany, i)
+
+genFromNonNegIntRange :: Size -> Gen Int
+genFromNonNegIntRange sz = max 0 <$> genFromIntRange sz
 
 -- =========================================================================
 -- AddsSpec

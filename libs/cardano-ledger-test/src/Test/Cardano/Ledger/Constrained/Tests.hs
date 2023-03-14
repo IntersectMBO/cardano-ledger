@@ -79,9 +79,6 @@ Current limitations of the tests
   - Only generates Sized, Subset, Disjoint, and SumsTo(SumSet) constraints
 
 Known limitations of the code that the tests avoid
-  - Constraints of the form `n = Σ sum X` cannot be solved, so we set `sumBeforeParts` to false (see
-    TODO/sumBeforeParts).
-  - HasDom constraints don't work with non-variable domains.
   - Can't solve `Sized n (Rng X)` (see TODO/sizedRng)
   - Random X, N < Σ sum X can pick X = {} (N :: Coin) and then crash on the sum constraint
     (TODO/negativeCoin)
@@ -104,14 +101,7 @@ data GenEnv era = GenEnv
 type Depth = Int
 
 instance Arbitrary OrderInfo where
-  arbitrary = do
-    info <- OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary
-    -- TODO/sumBeforeParts: The solver can't solve constraints of the form `n = Σ sum X` for known
-    -- `n` and unknown `X`, so we set `sumBeforeParts` to False.
-    pure
-      info
-        { sumBeforeParts = False
-        }
+  arbitrary = OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary
   shrink info = [standardOrderInfo | info /= standardOrderInfo]
 
 addVar :: V era t -> t -> GenEnv era -> GenEnv era
@@ -691,3 +681,11 @@ prop_soundness' strict whitelist info =
         ]
         ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
+
+runPreds :: [Pred TestEra] -> IO ()
+runPreds ps = do
+  let info = standardOrderInfo
+  Right g <- pure $ runTyped $ compile info ps
+  subst <- generate $ genDependGraph True testProof g
+  print subst
+
