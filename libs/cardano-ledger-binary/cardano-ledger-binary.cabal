@@ -133,6 +133,7 @@ test-suite tests
     other-modules:
         Test.Cardano.Ledger.Binary.Failure
         Test.Cardano.Ledger.Binary.PlainSpec
+        Test.Cardano.Ledger.Binary.Success
         Test.Cardano.Ledger.Binary.RoundTripSpec
         Test.Cardano.Ledger.Binary.Vintage.Coders
         Test.Cardano.Ledger.Binary.Vintage.Drop
