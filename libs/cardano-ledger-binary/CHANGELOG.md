@@ -13,6 +13,8 @@
 * Fix deserializer for `Rational` and allow optionally tag `30` starting with protocol version `2`
 * Fix serializer for `Ratio` and encode tag `30` starting with protocol version `2`
 * Add new encoder `encodeRatioNoTag` for `Ratio`
+* Changed: Starting in version 9, duplicate keys in CBOR sets are not longer allowed.
+  Additionally, the CBOR set tag 258 is permitted but not enforced.
 
 ### `testlib`
 

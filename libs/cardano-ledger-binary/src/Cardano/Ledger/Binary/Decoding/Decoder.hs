@@ -759,8 +759,11 @@ decodeSetSkel fromDistinctDescList decodeValue = do
 
 -- | `Decoder` for `Set.Set`. Versions variance:
 --
--- * [>= 2] - Allows variable as well as exact list length encoding. Duplicates are
---   silently ignored
+-- * [>= 9] - Allows variable as well as exact list length encoding. Duplicates are
+--   not allowed. Set tag 258 is permitted, but not enforced.
+--
+-- * [>= 2, < 9] - Allows variable as well as exact list length encoding. Duplicates are
+--   silently ignored, set tag 258 is not permitted.
 --
 -- * [< 2] - Expects exact list length encoding and enforces strict order
 --   without any duplicates. Also enforces special set tag 258, which was
@@ -769,8 +772,35 @@ decodeSet :: Ord a => Decoder s a -> Decoder s (Set.Set a)
 decodeSet valueDecoder =
   ifDecoderVersionAtLeast
     (natVersion @2)
-    (Set.fromList <$> decodeCollection decodeListLenOrIndef valueDecoder)
+    ( ifDecoderVersionAtLeast
+        (natVersion @9)
+        (decodeSetEnforceNoDuplicates valueDecoder)
+        (Set.fromList <$> decodeCollection decodeListLenOrIndef valueDecoder)
+    )
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
+
+-- Decode a Set as a either a definite or indefinite list. Duplicates are
+--   not allowed. Set tag 258 is permitted, but not enforced.
+decodeSetEnforceNoDuplicates ::
+  forall s a.
+  Ord a =>
+  Decoder s a ->
+  Decoder s (Set.Set a)
+decodeSetEnforceNoDuplicates decodeElement = do
+  allowTag setTag
+  decodeListLenOrIndef >>= \case
+    Just len -> loop (\x -> pure (x - 1, x <= 0)) len Set.empty
+    Nothing -> loop (\x -> (,) x <$> decodeBreakOr) () Set.empty
+  where
+    loop :: (t -> Decoder s (t, Bool)) -> t -> Set.Set a -> Decoder s (Set.Set a)
+    loop condition prevStep !acc = do
+      (nextStep, shouldStop) <- condition prevStep
+      if shouldStop
+        then pure acc
+        else do
+          a <- decodeElement
+          when (a `Set.member` acc) $ fail "Duplicate key detected in the Set"
+          loop condition nextStep (Set.insert a acc)
 
 decodeContainerSkelWithReplicate ::
   -- | How to get the size of the container
