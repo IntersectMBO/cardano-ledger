@@ -27,14 +27,16 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceActionId (..),
   GovernanceActionIx (..),
   GovernanceActionState (..),
+  GovernanceProcedure,
+  ProposalProcedure (..),
   Vote (..),
   VoterRole (..),
+  VotingProcedure (..),
  )
 import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure (..),
   ConwayTallyPredFailure,
   EnactState (..),
-  GovernanceProcedure,
   PredicateFailure,
   RatifyState (..),
  )
@@ -105,10 +107,17 @@ ppConwayTxBody txb =
     , ("script integrity hash", ppStrictMaybe ppSafeHash $ txb ^. scriptIntegrityHashTxBodyL)
     , ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash $ txb ^. auxDataHashTxBodyL)
     , ("network id", ppStrictMaybe ppNetwork $ txb ^. networkIdTxBodyL)
-    , ("governance procedures", ppStrictSeq prettyA $ txb ^. govProcsTxBodyL)
+    , ("voting procedures", ppStrictSeq prettyA $ txb ^. votingProceduresTxBodyL)
+    , ("proposal procedures", ppStrictSeq prettyA $ txb ^. proposalProceduresTxBodyL)
     ]
 
 instance PrettyA Vote where
+  prettyA = viaShow
+
+instance EraPParams era => PrettyA (VotingProcedure era) where
+  prettyA = viaShow
+
+instance EraPParams era => PrettyA (ProposalProcedure era) where
   prettyA = viaShow
 
 instance EraPParams era => PrettyA (GovernanceProcedure era) where

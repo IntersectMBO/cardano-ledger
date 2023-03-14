@@ -67,7 +67,8 @@ transaction_body =
   , ? 16 : transaction_output       ; collateral return
   , ? 17 : coin                     ; total collateral
   , ? 18 : set<transaction_input>   ; reference inputs
-  , ? 19 : [* governance_procedure] ; New; governance procedures
+  , ? 19 : [* voting_procedure]     ; New; Voting procedures
+  , ? 20 : [* proposal_procedure]   ; New; Proposal procedures
   }
 
 governance_action_state =

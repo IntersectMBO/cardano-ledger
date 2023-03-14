@@ -61,7 +61,7 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, toShelleyDCert)
-import Cardano.Ledger.Conway.Rules (GovernanceProcedure)
+import Cardano.Ledger.Conway.Governance (GovernanceProcedure (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), hashKey)
@@ -313,7 +313,7 @@ abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mn
   , AdHash adh
   , Txnetworkid net
   ]
-abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net gp) =
+abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net vp pp) =
   [ Inputs inp
   , Collateral col
   , RefInputs ref
@@ -329,7 +329,7 @@ abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl 
   , WppHash sih
   , AdHash adh
   , Txnetworkid net
-  , GovernanceProcs gp
+  , GovernanceProcs $ (GovernanceVotingProcedure <$> vp) <> (GovernanceProposalProcedure <$> pp)
   ]
 abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdrl fee vldt up req mnt sih adh net) =
   [ Inputs inp

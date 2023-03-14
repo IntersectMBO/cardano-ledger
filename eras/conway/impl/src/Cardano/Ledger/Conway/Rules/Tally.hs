@@ -20,23 +20,10 @@
 module Cardano.Ledger.Conway.Rules.Tally (
   ConwayTALLY,
   TallyEnv (..),
-  GovernanceProcedure (..),
   ConwayTallyPredFailure,
 ) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayTALLY)
 import Cardano.Ledger.Conway.Governance (
@@ -44,12 +31,13 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceAction,
   GovernanceActionId (..),
   GovernanceActionState (..),
+  GovernanceProcedure (..),
   ProposalProcedure (..),
   Vote,
   VoterRole,
   VotingProcedure (..),
  )
-import Cardano.Ledger.Core (Era (..), EraPParams)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
@@ -75,42 +63,14 @@ data TallyEnv era = TallyEnv
   , teRoles :: !(Map (Credential 'Voting (EraCrypto era)) VoterRole)
   }
 
-data GovernanceProcedure era
-  = GovernanceVotingProcedure !(VotingProcedure era)
-  | GovernanceProposalProcedure !(ProposalProcedure era)
-  deriving (Eq, Generic)
-
-instance Era era => NFData (ConwayTallyPredFailure era)
-
-instance EraPParams era => DecCBOR (GovernanceProcedure era) where
-  decCBOR =
-    decode $
-      Summands "GovernanceProcedure" dec
-    where
-      dec 0 =
-        SumD GovernanceVotingProcedure <! From
-      dec 1 =
-        SumD GovernanceProposalProcedure <! From
-      dec n = Invalid n
-
-instance EraPParams era => EncCBOR (GovernanceProcedure era) where
-  encCBOR (GovernanceVotingProcedure vProc) =
-    encode @_ @(GovernanceProcedure era) $
-      Sum GovernanceVotingProcedure 0 !> To vProc
-  encCBOR (GovernanceProposalProcedure pProc) =
-    encode @_ @(GovernanceProcedure era) $
-      Sum GovernanceProposalProcedure 1 !> To pProc
-
-instance EraPParams era => NoThunks (GovernanceProcedure era)
-
-instance EraPParams era => NFData (GovernanceProcedure era)
-
-deriving instance EraPParams era => Show (GovernanceProcedure era)
-
 data ConwayTallyPredFailure era
   = VoterDoesNotHaveRole !(Credential 'Voting (EraCrypto era)) !VoterRole
   | GovernanceActionDoesNotExist !(GovernanceActionId (EraCrypto era))
   deriving (Eq, Show, Generic)
+
+instance Era era => NFData (ConwayTallyPredFailure era)
+
+instance Era era => NoThunks (ConwayTallyPredFailure era)
 
 instance Era era => STS (ConwayTALLY era) where
   type State (ConwayTALLY era) = ConwayTallyState era
