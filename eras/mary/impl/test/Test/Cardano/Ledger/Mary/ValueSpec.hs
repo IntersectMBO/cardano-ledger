@@ -22,9 +22,9 @@ import GHC.Exts
 import Test.Cardano.Data
 import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripCborExpectation,
+  roundTripCborFailureExpectation,
   roundTripCborRangeExpectation,
-  roundTripFailureCborExpectation,
-  roundTripFailureCborRangeExpectation,
+  roundTripCborRangeFailureExpectation,
  )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Arbitrary (genEmptyMultiAsset, genMaryValue, genMultiAsset)
@@ -40,29 +40,29 @@ spec = do
       prop "Negative Coin succeeds for pre-Conway" $
         \(Negative i) -> roundTripCborRangeExpectation minBound (natVersion @8) (Coin i)
       prop "Negative Coin fails to deserialise for Conway" $
-        \(Negative i) -> roundTripFailureCborRangeExpectation (natVersion @9) (natVersion @9) (Coin i)
+        \(Negative i) -> roundTripCborRangeFailureExpectation (natVersion @9) (natVersion @9) (Coin i)
     context "MultiAsset" $ do
       prop "Non-zero-valued MultiAsset succeeds for all eras" $
         roundTripCborExpectation @(MultiAsset StandardCrypto)
-      prop "zero-valued MultiAsset fails for pre-Conway, due to pruning, and for Conway, due to decoder implementation" $
+      prop "Zero-valued MultiAsset fails for Conway" $
         forAll (genMultiAsset @StandardCrypto (pure 0)) $
-          roundTripFailureCborExpectation
+          roundTripCborRangeFailureExpectation (natVersion @9) maxBound
       prop "Empty MultiAsset fails for Conway" $
         forAll (genEmptyMultiAsset @StandardCrypto) $
-          roundTripFailureCborRangeExpectation (natVersion @9) (natVersion @9)
+          roundTripCborRangeFailureExpectation (natVersion @9) maxBound
     context "MaryValue" $ do
       prop "Positive MaryValue succeeds for all eras" $
-        forAll (genMaryValue (genMultiAsset @StandardCrypto (toInteger . getPositive @Int <$> arbitrary))) $
+        forAll (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> chooseInt (1, maxBound)))) $
           roundTripCborExpectation
       prop "Negative MaryValue fails for all eras" $
-        forAll (genMaryValue (genMultiAsset @StandardCrypto (toInteger . getNegative @Int <$> arbitrary))) $
-          roundTripFailureCborExpectation
-      prop "Zero MaryValue fails for pre-Conway, due to pruning, and for Conway, due to decoder implementation" $
+        forAll (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> chooseInt (minBound, -1)))) $
+          roundTripCborFailureExpectation
+      prop "Zero MaryValue fails for Conway" $
         forAll (genMaryValue (genMultiAsset @StandardCrypto (pure 0))) $
-          roundTripFailureCborExpectation
+          roundTripCborRangeFailureExpectation (natVersion @9) maxBound
       prop "Empty MaryValue fails for Conway" $
         forAll (genMaryValue (genEmptyMultiAsset @StandardCrypto)) $
-          roundTripFailureCborRangeExpectation (natVersion @9) (natVersion @9)
+          roundTripCborRangeFailureExpectation (natVersion @9) maxBound
 
 instance IsString AssetName where
   fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack
