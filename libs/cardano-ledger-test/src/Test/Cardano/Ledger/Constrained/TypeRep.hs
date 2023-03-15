@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   compareRep,
   genSizedRep,
   genRep,
+  shrinkRep,
   TxOutF (..),
   unTxOut,
   ValueF (..),
@@ -53,6 +54,7 @@ import Cardano.Ledger.Val (Val ((<+>)))
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Universe (Eql, Shape (..), Shaped (..), Singleton (..), cmpIndex, (:~:) (Refl))
@@ -460,6 +462,52 @@ genpup (PPUPStateR (Mary _)) = arbitrary
 genpup (PPUPStateR (Alonzo _)) = arbitrary
 genpup (PPUPStateR (Babbage _)) = arbitrary
 genpup (PPUPStateR (Conway _)) = arbitrary -- FIXME when Conway is fully defined.
+
+-- ===========================
+-- QuickCheck shrinking
+
+-- Not all types in the universe have Arbitrary instances and thus don't shrink (the `[]` cases).
+-- TODO: add instances for these types.
+shrinkRep :: Era era => Rep era t -> t -> [t]
+shrinkRep CoinR t = shrink t
+shrinkRep (_ :-> _) _ = []
+shrinkRep (MapR a b) t = shrinkMapBy Map.fromList Map.toList (shrinkRep $ ListR (PairR a b)) t
+shrinkRep (SetR a) t = shrinkMapBy Set.fromList Set.toList (shrinkRep $ ListR a) t
+shrinkRep (ListR a) t = shrinkList (shrinkRep a) t
+shrinkRep CredR t = shrink t
+shrinkRep PoolHashR t = shrink t
+shrinkRep WitHashR t = shrink t
+shrinkRep GenHashR t = shrink t
+shrinkRep GenDelegHashR t = shrink t
+shrinkRep PoolParamsR t = shrink t
+shrinkRep EpochR t = shrink t
+shrinkRep RationalR t = shrink t
+shrinkRep Word64R t = shrink t
+shrinkRep IntR t = shrink t
+shrinkRep NaturalR t = shrink t
+shrinkRep FloatR t = shrink t
+shrinkRep TxInR t = shrink t
+shrinkRep (ValueR _) _ = []
+shrinkRep (TxOutR _) _ = []
+shrinkRep (UTxOR _) _ = []
+shrinkRep (PParamsR _) _ = []
+shrinkRep (PParamsUpdateR _) _ = []
+shrinkRep StringR t = shrink t
+shrinkRep DeltaCoinR t = shrink t
+shrinkRep GenDelegPairR t = shrink t
+shrinkRep FutureGenDelegR t = shrink t
+shrinkRep (PPUPStateR _) _ = []
+shrinkRep PtrR t = shrink t
+shrinkRep IPoolStakeR t = shrink t
+shrinkRep SnapShotsR t = shrink t
+shrinkRep UnitR t = shrink t
+shrinkRep (PairR a b) (x, y) = [(x', y) | x' <- shrinkRep a x] ++ [(x, y') | y' <- shrinkRep b y]
+shrinkRep RewardR t = shrink t
+shrinkRep (MaybeR a) t = shrinkMapBy listToMaybe maybeToList (shrinkRep $ ListR a) t
+shrinkRep NewEpochStateR _ = []
+shrinkRep (ProtVerR _) t = shrink t
+shrinkRep SlotNoR t = shrink t
+shrinkRep SizeR _ = []
 
 -- ===========================
 

@@ -21,7 +21,7 @@ import qualified Data.Universe as Univ (Any (..))
 import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Count (..), Sizeable (..), Sums (..))
-import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env, Field (..), Name (..), V (..), findVar, storeVar)
+import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), Payload (..), V (..), findVar, storeVar)
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), runOrdCond, runSize)
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), synopsis, testEql, (:~:) (Refl))
@@ -236,11 +236,19 @@ varsOfSum ans (Project _ x) = varsOfTerm ans x
 -- =====================================================
 -- Subtitution of (V era t) inside of (Spec era t)
 
-substToEnv :: [SubItem era] -> Env era -> Typed (Env era)
+type Subst era = [SubItem era]
+
+substToEnv :: Subst era -> Env era -> Typed (Env era)
 substToEnv [] ans = pure ans
 substToEnv ((SubItem v (Lit _ t)) : more) ans =
   substToEnv more (storeVar v t ans)
 substToEnv ((SubItem _ e) : _) _ = failT ["Not Literal expr in substToEnv: " ++ show e]
+
+envToSubst :: Env era -> Subst era
+envToSubst (Env env) =
+  [ SubItem (V x rep acc) (Lit rep t)
+  | (x, Payload rep t acc) <- Map.toList env
+  ]
 
 data SubItem era where
   SubItem :: V era t -> Term era t -> SubItem era
@@ -250,8 +258,6 @@ instance Show (SubItem era) where
 
 pad :: Int -> String -> String
 pad n x = x ++ replicate (n - length x) ' '
-
-type Subst era = [SubItem era]
 
 extend :: V era t -> Term era t -> Subst era -> Subst era
 extend v k xs = (SubItem v k) : xs
