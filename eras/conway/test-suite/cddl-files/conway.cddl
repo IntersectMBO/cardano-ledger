@@ -86,11 +86,6 @@ vote_info =
   , stake_credential
   ]
 
-governance_procedure =
-  [ (0, voting_procedure)
-  // (1, proposal_procedure)
-  ]
-
 voting_procedure =
   [ governance_action_id
   , voter_role
@@ -101,7 +96,7 @@ voting_procedure =
 
 proposal_procedure =
   [ deposit : coin
-  , $addr_keyhash
+  , $hash28
   , governance_action
   , anchor / null
   ]
@@ -117,11 +112,12 @@ governance_action =
   // treasury_withdrawals_action
   // no_confidence
   // new_committee
+  // new_constitution
   ]
 
 parameter_change_action = (0, protocol_param_update)
 
-hard_fork_initiation_action = (1, protocol_version)
+hard_fork_initiation_action = (1, [protocol_version])
 
 treasury_withdrawals_action = (2, { $addr_keyhash => coin })
 
