@@ -88,7 +88,7 @@ library
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-pretty,
         cardano-ledger-mary,
-        cardano-ledger-shelley,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test,
         cardano-ledger-shelley-ma-test,
         cardano-protocol-tpraos,

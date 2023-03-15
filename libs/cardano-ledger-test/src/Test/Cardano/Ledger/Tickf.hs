@@ -19,6 +19,7 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams (ppVrf))
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.VMap as VMap
+import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck

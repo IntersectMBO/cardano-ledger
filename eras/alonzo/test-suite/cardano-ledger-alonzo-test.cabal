@@ -102,7 +102,7 @@ test-suite cardano-ledger-alonzo-test
         cardano-ledger-core,
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
         cardano-ledger-shelley-ma-test,
-        cardano-protocol-tpraos,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
         cardano-slotting,
         containers,
         data-default-class,

@@ -18,6 +18,7 @@ import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
+import Test.Cardano.Protocol.TPraos.Arbitrary ()
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
