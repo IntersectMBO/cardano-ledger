@@ -16,6 +16,7 @@
   * `UTxO` and `TxIn`
   * `Stake`, `SnapShot`, `SnapShots`, `PoolDistr` and `IndividualPoolStake`
   * `Reward` and `RewardType`
+  * `AuxiliaryDataHash`
 
 ## 1.0.0.0
 
