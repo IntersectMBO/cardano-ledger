@@ -39,6 +39,7 @@ import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
+import Test.Cardano.Ledger.Constrained.Shrink
 import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (SzRng), runOrdCond)
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
@@ -626,33 +627,20 @@ predConstr Random {} = "Random"
 predConstr Component {} = "Component"
 predConstr CanFollow {} = "CanFollow"
 
--- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
---   actually satisfies the constraints.
-prop_soundness :: OrderInfo -> Property
-prop_soundness = prop_soundness' False []
-
-defaultWhitelist :: [String]
-defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "The MapSpec's are inconsistent"]
-
--- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
---   constraints.
-prop_soundness' :: Bool -> [String] -> OrderInfo -> Property
-prop_soundness' strict whitelist info =
+constraintProperty :: Maybe Int -> Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
+constraintProperty timeout strict whitelist info prop =
   forAllShrink (genPreds $ initEnv info) shrinkPreds $ \(preds, genenv) ->
     counterexample ("\n-- Order --\n" ++ show info) $
       counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
-          within 100000 $
+          maybe id within timeout $
             checkTyped (compile info preds) $ \graph ->
               forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
                 let env = errorTyped $ substToEnv subst emptyEnv
-                    checkPred pr = counterexample ("Failed: " ++ showPred pr) $ ensureTyped (runPred env pr) id
                     n = let Env e = gEnv genenv in Map.size e
                  in tabulate "Var count" [show n] $
                       tabulate "Constraint types" (map predConstr preds) $
-                        counterexample ("-- Solution --\n" ++ showEnv env) $
-                          conjoin $
-                            map checkPred preds
+                        prop preds graph env
   where
     checkTyped
       | strict = checkWhitelist . runTyped
@@ -671,9 +659,45 @@ prop_soundness' strict whitelist info =
         ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
 
+checkPredicates :: [Pred TestEra] -> Env TestEra -> Property
+checkPredicates preds env =
+  counterexample ("-- Solution --\n" ++ showEnv env) $
+    conjoin $
+      map checkPred preds
+  where
+    checkPred pr = counterexample ("Failed: " ++ showPred pr) $ ensureTyped (runPred env pr) id
+
 runPreds :: [Pred TestEra] -> IO ()
 runPreds ps = do
   let info = standardOrderInfo
   Right g <- pure $ runTyped $ compile info ps
   subst <- generate $ genDependGraph True testProof g
   print subst
+
+-- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
+--   actually satisfies the constraints.
+prop_soundness :: OrderInfo -> Property
+prop_soundness = prop_soundness' False []
+
+defaultWhitelist :: [String]
+defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "The MapSpec's are inconsistent"]
+
+-- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
+--   constraints.
+prop_soundness' :: Bool -> [String] -> OrderInfo -> Property
+prop_soundness' strict whitelist info =
+  constraintProperty (Just 100000) strict whitelist info $ \preds _graph env ->
+    checkPredicates preds env
+
+-- | Check that shrinking is sound, i.e. that all shrink steps preserves constraint satisfaction.
+prop_shrinking :: OrderInfo -> Property
+prop_shrinking = prop_shrinking' False []
+
+prop_shrinking' :: Bool -> [String] -> OrderInfo -> Property
+prop_shrinking' strict whitelist info =
+  constraintProperty Nothing strict whitelist info $ \preds graph env ->
+    counterexample ("-- Original solution --\n" ++ showEnv env) $
+      let envs = shrinkEnv graph env
+       in tabulate "Shrinkings" [show $ length envs] $
+            conjoin $
+              map (checkPredicates preds) envs
