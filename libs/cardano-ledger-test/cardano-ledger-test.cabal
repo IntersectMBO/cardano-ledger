@@ -30,6 +30,7 @@ library
         Test.Cardano.Ledger.Constrained.TypeRep
         Test.Cardano.Ledger.Constrained.Vars
         Test.Cardano.Ledger.Constrained.Rewrite
+        Test.Cardano.Ledger.Constrained.Shrink
         Test.Cardano.Ledger.Constrained.Size
         Test.Cardano.Ledger.Constrained.Solver
         Test.Cardano.Ledger.Examples.BabbageFeatures

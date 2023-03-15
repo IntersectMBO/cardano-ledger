@@ -16,6 +16,9 @@ module Test.Cardano.Ledger.Constrained.Env (
   emptyEnv,
   findVar,
   storeVar,
+  findName,
+  storeName,
+  restrictEnv,
   P (..),
   bulkStore,
   Name (..),
@@ -134,6 +137,20 @@ findVar (V name rep1 _) (Env m) =
 
 storeVar :: V era t -> t -> Env era -> Env era
 storeVar (V name rep access) t (Env m) = Env (Map.insert name (Payload rep t access) m)
+
+-- | Untyped version of 'findVar'.
+findName :: Name era -> Env era -> Maybe (Payload era)
+findName (Name (V name _ _)) (Env env) = Map.lookup name env
+
+-- | Untyped version of 'storeVar'.
+storeName :: Name era -> Payload era -> Env era -> Env era
+storeName (Name (V name _ _)) p (Env env) = Env $ Map.insert name p env
+
+-- | Drop any names that are not in the given list from an environment.
+restrictEnv :: [Name era] -> Env era -> Env era
+restrictEnv names (Env env) = Env $ Map.filterWithKey (\x _ -> elem x xs) env
+  where
+    xs = [x | Name (V x _ _) <- names]
 
 -- ============================================
 -- Group a bunch of bindings into a list
