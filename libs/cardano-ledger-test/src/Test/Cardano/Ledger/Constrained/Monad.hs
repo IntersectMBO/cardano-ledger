@@ -21,6 +21,9 @@ module Test.Cardano.Ledger.Constrained.Monad (
 newtype Typed x = Typed {runTyped :: Either [String] x}
   deriving (Functor, Applicative, Monad)
 
+instance MonadFail Typed where
+  fail err = failT [err]
+
 failT :: [String] -> Typed a
 failT ss = Typed (Left ss)
 
