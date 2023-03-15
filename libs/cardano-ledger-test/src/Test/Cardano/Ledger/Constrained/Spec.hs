@@ -81,6 +81,8 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (total)
 
+type TestEra = BabbageEra Standard
+
 data SomeLens era t where
   SomeLens :: Adds c => (Lens' t c) -> SomeLens era t
 
@@ -698,10 +700,10 @@ data RngSpec era rng where
 instance Show (RngSpec era t) where
   show = showRngSpec
 
-instance Monoid (RngSpec era rng) where
+instance Era era => Monoid (RngSpec era rng) where
   mempty = RngAny
 
-instance Semigroup (RngSpec era rng) where
+instance Era era => Semigroup (RngSpec era rng) where
   (<>) = mergeRngSpec
 
 instance LiftT (RngSpec era a) where
@@ -824,6 +826,7 @@ runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 -- generators for RngSpec
 
 genConsistentRngSpec ::
+  forall era w c.
   (Ord w, Adds w) =>
   Int ->
   Gen w ->
@@ -859,7 +862,7 @@ word64CoinL = lens (Coin . fromIntegral) (\_w (Coin n) -> fromIntegral n)
 testConsistentRng :: Gen Property
 testConsistentRng = do
   n <- chooseInt (3, 10)
-  (s1, s2) <- genConsistentRngSpec n (choose (1, 1000)) Word64R CoinR (SomeLens word64CoinL)
+  (s1, s2) <- genConsistentRngSpec @TestEra n (choose (1, 1000)) Word64R CoinR (SomeLens word64CoinL)
   case s1 <> s2 of
     RngNever ms -> pure $ counterexample (unlines (["genConsistentRng fails", show s1, show s2] ++ ms)) False
     _ -> pure $ counterexample "" True
@@ -977,10 +980,10 @@ data MapSpec era dom rng where
 instance Ord d => Show (MapSpec w d r) where
   show = showMapSpec
 
-instance Ord dom => Semigroup (MapSpec era dom rng) where
+instance (Ord dom, Era era) => Semigroup (MapSpec era dom rng) where
   (<>) = mergeMapSpec
 
-instance Ord dom => Monoid (MapSpec era dom rng) where
+instance (Ord dom, Era era) => Monoid (MapSpec era dom rng) where
   mempty = MapSpec SzAny RelAny PairAny RngAny
 
 instance LiftT (MapSpec era a b) where
@@ -1458,10 +1461,10 @@ data ElemSpec era t where
 instance Show (ElemSpec era a) where
   show = showElemSpec
 
-instance Semigroup (ElemSpec era a) where
+instance Era era => Semigroup (ElemSpec era a) where
   (<>) = mergeElemSpec
 
-instance Monoid (ElemSpec era a) where
+instance Era era => Monoid (ElemSpec era a) where
   mempty = ElemAny
 
 instance LiftT (ElemSpec era t) where
@@ -1477,7 +1480,7 @@ showElemSpec (ElemEqual r xs) = sepsP ["ElemEqual", show r, synopsis (ListR r) x
 showElemSpec (ElemNever _) = "ElemNever"
 showElemSpec ElemAny = "ElemAny"
 
-mergeElemSpec :: ElemSpec era a -> ElemSpec era a -> ElemSpec era a
+mergeElemSpec :: Era era => ElemSpec era a -> ElemSpec era a -> ElemSpec era a
 mergeElemSpec (ElemNever xs) (ElemNever ys) = ElemNever (xs ++ ys)
 mergeElemSpec (ElemNever xs) _ = ElemNever xs
 mergeElemSpec _ (ElemNever ys) = ElemNever ys
@@ -1658,10 +1661,10 @@ data ListSpec era t where
 instance Show (ListSpec era a) where
   show = showListSpec
 
-instance Semigroup (ListSpec era a) where
+instance Era era => Semigroup (ListSpec era a) where
   (<>) = mergeListSpec
 
-instance Monoid (ListSpec era a) where
+instance Era era => Monoid (ListSpec era a) where
   mempty = ListSpec SzAny ElemAny
 
 instance LiftT (ListSpec era t) where
@@ -1674,7 +1677,7 @@ showListSpec :: ListSpec era a -> String
 showListSpec (ListSpec s xs) = sepsP ["ListSpec", show s, show xs]
 showListSpec (ListNever _) = "ListNever"
 
-mergeListSpec :: ListSpec era a -> ListSpec era a -> ListSpec era a
+mergeListSpec :: Era era => ListSpec era a -> ListSpec era a -> ListSpec era a
 mergeListSpec (ListNever xs) (ListNever ys) = ListNever (xs ++ ys)
 mergeListSpec (ListNever xs) (ListSpec _ _) = ListNever xs
 mergeListSpec (ListSpec _ _) (ListNever xs) = ListNever xs
@@ -1881,7 +1884,7 @@ genSumsTo = do
   lhs <- (Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
   elements [SumsTo (Left (DeltaCoin 1)) v c [One rhs], SumsTo (Left (DeltaCoin 1)) lhs c [One rhs, One v]]
 
-solveSumsTo :: Pred era -> AddsSpec c
+solveSumsTo :: Era era => Pred era -> AddsSpec c
 solveSumsTo (SumsTo _ (Lit DeltaCoinR n) cond [One (Lit DeltaCoinR m), One (Var (V nam _ _))]) =
   varOnRight n cond m nam
 solveSumsTo (SumsTo _ (Var (V nam DeltaCoinR _)) cond [One (Lit DeltaCoinR m)]) =
@@ -1895,7 +1898,7 @@ condReverse = do
   let msgs = ["condFlip", show predicate, show addsSpec]
   n <- genFromAddsSpec msgs addsSpec
   let env = storeVar testV (fromI (show n : msgs) n) emptyEnv
-  case runTyped (runPred env predicate) of
+  case runTyped (runPred @(BabbageEra Standard) env predicate) of
     Right x -> pure (counterexample (unlines (show n : msgs)) x)
     Left xs -> errorMess "runTyped in condFlip fails" (xs ++ (show n : msgs))
 
