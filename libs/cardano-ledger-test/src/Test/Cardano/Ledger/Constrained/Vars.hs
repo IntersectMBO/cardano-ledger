@@ -121,7 +121,7 @@ import qualified Test.Cardano.Ledger.Shelley.Utils as Utils
 -- Where fooPart1 :: Term era a, and fooPart2 :: Term era b
 -- And fooPart1 has an (Access foo a)
 -- And fooPart2 has an (Access foo b)
-field :: Rep era s -> Term era t -> AnyF era s
+field :: Era era => Rep era s -> Term era t -> AnyF era s
 field repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
   Just Refl -> AnyF (Field name rept repS2 l)
   Nothing ->

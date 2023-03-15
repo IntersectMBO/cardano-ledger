@@ -694,20 +694,20 @@ adjustColInput {- colInputt sumColt extraColt -} env = do
   (env6, _) <- updateTarget override txterm (txTarget (Lit (TxBodyR reify) body) bootWits keyWits) env5
   pure env6
 
-updateVal :: (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
+updateVal :: Era era => (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
 updateVal adjust term@(Var v) delta env = do
   varV <- runTerm env term
   pure $ storeVar v (adjust varV delta) env
 updateVal _ v _ _ = failT ["Non Var in updateVal: " ++ show v]
 
-updateTerm :: (a -> b -> a) -> Term era a -> Term era b -> Env era -> Typed (Env era)
+updateTerm :: Era era => (a -> b -> a) -> Term era a -> Term era b -> Env era -> Typed (Env era)
 updateTerm adjust term@(Var v) delta env = do
   varV <- runTerm env term
   deltaV <- runTerm env delta
   pure $ storeVar v (adjust varV deltaV) env
 updateTerm _ v _ _ = failT ["Non Var in updateTerm: " ++ show v]
 
-updateTarget :: (a -> b -> a) -> Term era a -> Target era b -> Env era -> Typed (Env era, b)
+updateTarget :: Era era => (a -> b -> a) -> Term era a -> Target era b -> Env era -> Typed (Env era, b)
 updateTarget adjust term@(Var v) delta env = do
   varV <- runTerm env term
   deltaV <- runTarget env delta

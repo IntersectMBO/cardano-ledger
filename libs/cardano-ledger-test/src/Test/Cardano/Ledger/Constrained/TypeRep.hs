@@ -55,6 +55,8 @@ import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..), mkTxIxPartial)
+import Cardano.Ledger.Address (Addr(..))
+import Cardano.Ledger.BaseTypes (EpochNo, ProtVer (..), SlotNo (..))
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (GovernanceAction (..))
@@ -100,9 +102,10 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Universe (Eql, Shape (..), Shaped (..), Singleton (..), cmpIndex, (:~:) (Refl))
+import Data.Universe (Eql, Shape (..), Shaped (..), Singleton (..), cmpIndex)
 import Data.Word (Word16, Word64)
 import Formatting (formatToString)
+import Data.Typeable
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Prettyprinter (hsep)
@@ -143,7 +146,6 @@ import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
-  pcAddr,
   pcCoin,
   pcConwayTxCert,
   pcDRep,
@@ -177,6 +179,9 @@ import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck hiding (Fixed, total)
 
+data IsTypeable a where
+  IsTypeable :: Typeable a => IsTypeable a
+
 -- =======================================================================
 infixr 0 :->
 
@@ -188,6 +193,7 @@ data Rep era t where
   MapR :: Ord a => Rep era a -> Rep era b -> Rep era (Map a b)
   SetR :: Ord a => Rep era a -> Rep era (Set a)
   ListR :: Rep era a -> Rep era [a]
+  AddrR :: Rep era (Addr (EraCrypto era))
   CredR :: Rep era (Credential 'Staking (EraCrypto era))
   VCredR :: Rep era (Credential 'Voting (EraCrypto era))
   PoolHashR :: Rep era (KeyHash 'StakePool (EraCrypto era))
@@ -242,7 +248,6 @@ data Rep era t where
   ExUnitsR :: Rep era ExUnits
   TagR :: Rep era Tag
   DataHashR :: Rep era (DataHash (EraCrypto era))
-  AddrR :: Rep era (Addr (EraCrypto era))
   PCredR :: Rep era (Credential 'Payment (EraCrypto era))
   ShelleyTxCertR :: Rep era (ShelleyTxCert era)
   ConwayTxCertR :: Rep era (ConwayTxCert era)
@@ -276,126 +281,98 @@ stringR = ListR CharR
 -- ===========================================================
 -- Proof of Rep equality
 
-instance Singleton (Rep e) where
-  testEql RationalR RationalR = Just Refl
-  testEql CoinR CoinR = Just Refl
-  testEql EpochR EpochR = Just Refl
-  testEql (a :-> b) (x :-> y) = do
-    Refl <- testEql a x
-    Refl <- testEql b y
-    Just Refl
-  testEql (MapR a b) (MapR x y) = do
-    Refl <- testEql a x
-    Refl <- testEql b y
-    Just Refl
-  testEql (SetR a) (SetR b) = do
-    Refl <- testEql a b
-    Just Refl
-  testEql (ListR a) (ListR b) = do
-    Refl <- testEql a b
-    Just Refl
-  testEql CredR CredR = Just Refl
-  testEql VCredR VCredR = Just Refl
-  testEql PoolHashR PoolHashR = Just Refl
-  testEql WitHashR WitHashR = Just Refl
-  testEql GenHashR GenHashR = Just Refl
-  testEql GenDelegHashR GenDelegHashR = Just Refl
-  testEql VHashR VHashR = Just Refl
-  testEql PoolParamsR PoolParamsR = Just Refl
-  testEql NewEpochStateR NewEpochStateR = Just Refl
-  testEql IntR IntR = Just Refl
-  testEql FloatR FloatR = Just Refl
-  testEql NaturalR NaturalR = Just Refl
-  testEql Word64R Word64R = Just Refl
-  testEql TxInR TxInR = Just Refl
-  testEql CharR CharR = Just Refl
-  testEql UnitR UnitR = Just Refl
-  testEql (PairR a b) (PairR x y) = do
-    Refl <- testEql a x
-    Refl <- testEql b y
-    Just Refl
-  testEql (ProtVerR c) (ProtVerR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql (ValueR c) (ValueR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql (UTxOR p1) (UTxOR p2) = do
-    Refl <- testEql p1 p2
-    pure Refl
-  testEql (TxOutR c) (TxOutR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql (PParamsR c) (PParamsR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql (PParamsUpdateR c) (PParamsUpdateR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql DeltaCoinR DeltaCoinR = Just Refl
-  testEql GenDelegPairR GenDelegPairR = Just Refl
-  testEql FutureGenDelegR FutureGenDelegR = Just Refl
-  testEql (PPUPStateR c) (PPUPStateR d) = do Refl <- testEql c d; pure Refl
-  testEql PtrR PtrR = Just Refl
-  testEql IPoolStakeR IPoolStakeR = Just Refl
-  testEql SnapShotsR SnapShotsR = Just Refl
-  testEql RewardR RewardR = Just Refl
-  testEql (MaybeR c) (MaybeR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql SlotNoR SlotNoR = Just Refl
-  testEql SizeR SizeR = Just Refl
-  testEql (WitnessesFieldR c) (WitnessesFieldR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql MultiAssetR MultiAssetR = pure Refl
-  testEql PolicyIDR PolicyIDR = pure Refl
-  testEql AssetNameR AssetNameR = pure Refl
-  testEql (TxCertR c) (TxCertR d) = do Refl <- testEql c d; pure Refl
-  testEql ValidityIntervalR ValidityIntervalR = Just Refl
-  testEql RewardAcntR RewardAcntR = Just Refl
-  testEql KeyPairR KeyPairR = Just Refl
-  testEql (GenR x) (GenR y) = do Refl <- testEql x y; pure Refl
-  testEql (ScriptR c) (ScriptR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql ScriptHashR ScriptHashR = Just Refl
-  testEql NetworkR NetworkR = Just Refl
-  testEql RdmrPtrR RdmrPtrR = Just Refl
-  testEql DataR DataR = pure Refl
-  testEql DatumR DatumR = pure Refl
-  testEql ExUnitsR ExUnitsR = Just Refl
-  testEql TagR TagR = Just Refl
-  testEql DataHashR DataHashR = Just Refl
-  testEql AddrR AddrR = Just Refl
-  testEql PCredR PCredR = Just Refl
-  testEql ConwayTxCertR ConwayTxCertR = Just Refl
-  testEql ShelleyTxCertR ShelleyTxCertR = Just Refl
-  testEql MIRPotR MIRPotR = Just Refl
-  testEql IsValidR IsValidR = Just Refl
-  testEql IntegerR IntegerR = Just Refl
-  testEql (ScriptsNeededR c) (ScriptsNeededR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql (ScriptPurposeR c) (ScriptPurposeR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql (TxBodyR c) (TxBodyR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql BootstrapWitnessR BootstrapWitnessR = Just Refl
-  testEql SigningKeyR SigningKeyR = Just Refl
-  testEql (TxWitsR c) (TxWitsR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql PayHashR PayHashR = Just Refl
-  testEql (TxR c) (TxR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql ScriptIntegrityHashR ScriptIntegrityHashR = Just Refl
-  testEql AuxiliaryDataHashR AuxiliaryDataHashR = Just Refl
-  testEql GovernanceActionR GovernanceActionR = Just Refl
-  testEql (WitVKeyR c) (WitVKeyR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql (TxAuxDataR c) (TxAuxDataR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql CommColdHashR CommColdHashR = Just Refl
-  testEql CommHotHashR CommHotHashR = Just Refl
-  testEql LanguageR LanguageR = Just Refl
-  testEql (LedgerStateR c) (LedgerStateR d) =
-    do Refl <- testEql c d; pure Refl
-  testEql StakeHashR StakeHashR = Just Refl
-  testEql BoolR BoolR = Just Refl
-  testEql DRepR DRepR = Just Refl
-  testEql _ _ = Nothing
+repTypeable :: Era era => Rep era t -> IsTypeable t
+repTypeable r = case r of
+  StakeHashR{} -> IsTypeable
+  BoolR{} -> IsTypeable
+  DRepR{} -> IsTypeable
+  WitVKeyR{} -> IsTypeable
+  TxAuxDataR{} -> IsTypeable
+  LanguageR{} -> IsTypeable
+  LedgerStateR{} -> IsTypeable
+  TxR{} -> IsTypeable
+  ScriptIntegrityHashR{} -> IsTypeable
+  AuxiliaryDataHashR{} -> IsTypeable
+  GovernanceActionR{} -> IsTypeable
+  BootstrapWitnessR{} -> IsTypeable
+  SigningKeyR{} -> IsTypeable
+  TxWitsR{} -> IsTypeable
+  PayHashR{} -> IsTypeable
+  IntegerR{} -> IsTypeable
+  ScriptsNeededR{} -> IsTypeable
+  ScriptPurposeR{} -> IsTypeable
+  TxBodyR{} -> IsTypeable
+  ShelleyTxCertR{} -> IsTypeable
+  ConwayTxCertR{} -> IsTypeable
+  MIRPotR{} -> IsTypeable
+  IsValidR{} -> IsTypeable
+  ExUnitsR{} -> IsTypeable
+  TagR{} -> IsTypeable
+  DataHashR{} -> IsTypeable
+  PCredR{} -> IsTypeable
+  NetworkR{} -> IsTypeable
+  RdmrPtrR{} -> IsTypeable
+  DataR{}    -> IsTypeable
+  DatumR{}   -> IsTypeable
+  KeyPairR{} -> IsTypeable
+  GenR (repTypeable -> IsTypeable) -> IsTypeable{}
+  ScriptR{}            -> IsTypeable
+  ScriptHashR{}        -> IsTypeable
+  TxCertR{}            -> IsTypeable
+  RewardAcntR{}        -> IsTypeable
+  ValidityIntervalR{}  -> IsTypeable
+  AssetNameR {}        -> IsTypeable
+  WitnessesFieldR{}    -> IsTypeable
+  MultiAssetR{}        -> IsTypeable
+  PolicyIDR{}          -> IsTypeable
+  CharR{}              -> IsTypeable
+  RationalR{}          -> IsTypeable
+  CoinR{}              -> IsTypeable
+  EpochR{}             -> IsTypeable
+  AddrR{}              -> IsTypeable
+  CredR{}              -> IsTypeable
+  VCredR{}             -> IsTypeable
+  PoolHashR{}          -> IsTypeable
+  WitHashR{}           -> IsTypeable
+  GenHashR{}           -> IsTypeable
+  GenDelegHashR{}      -> IsTypeable
+  VHashR{}             -> IsTypeable
+  PoolParamsR{}        -> IsTypeable
+  NewEpochStateR{}     -> IsTypeable
+  IntR{}               -> IsTypeable
+  FloatR{}             -> IsTypeable
+  NaturalR{}           -> IsTypeable
+  Word64R{}            -> IsTypeable
+  TxInR{}              -> IsTypeable
+  UnitR{}              -> IsTypeable
+  ProtVerR{}           -> IsTypeable
+  ValueR{}             -> IsTypeable
+  UTxOR{}              -> IsTypeable
+  TxOutR{}             -> IsTypeable
+  PParamsR{}           -> IsTypeable
+  PParamsUpdateR{}     -> IsTypeable
+  DeltaCoinR{}         -> IsTypeable
+  GenDelegPairR{}      -> IsTypeable
+  FutureGenDelegR{}    -> IsTypeable
+  PPUPStateR{}         -> IsTypeable
+  PtrR{}               -> IsTypeable
+  IPoolStakeR{}        -> IsTypeable
+  SnapShotsR{}         -> IsTypeable
+  RewardR{}            -> IsTypeable
+  SlotNoR{}            -> IsTypeable
+  SizeR{}              -> IsTypeable
+  CommColdHashR{}      -> IsTypeable
+  CommHotHashR{}       -> IsTypeable
+  (repTypeable         -> IsTypeable) :-> (repTypeable -> IsTypeable) -> IsTypeable
+  MapR (repTypeable    -> IsTypeable) (repTypeable -> IsTypeable) -> IsTypeable
+  SetR (repTypeable    -> IsTypeable) -> IsTypeable
+  ListR (repTypeable   -> IsTypeable) -> IsTypeable
+  PairR (repTypeable   -> IsTypeable) (repTypeable -> IsTypeable) -> IsTypeable
+  MaybeR (repTypeable  -> IsTypeable) -> IsTypeable
 
+instance Era era => Singleton (Rep era) where
+  testEql (repTypeable -> IsTypeable :: IsTypeable a)
+          (repTypeable -> IsTypeable :: IsTypeable b) = eqT @a @b
   cmpIndex x y = compare (shape x) (shape y)
 
 -- ============================================================
@@ -407,6 +384,7 @@ instance Show (Rep era t) where
   show (MapR a b) = "(Map " ++ show a ++ " " ++ show b ++ ")"
   show (SetR a) = "(Set " ++ show a ++ ")"
   show (ListR a) = "[" ++ show a ++ "]"
+  show AddrR = "Addr"
   show CredR = "(Credential 'Staking c)"
   show PoolHashR = "(KeyHash 'StakePool c)"
   show WitHashR = "(KeyHash 'Witness c)"
@@ -461,7 +439,6 @@ instance Show (Rep era t) where
   show ExUnitsR = "ExUnits"
   show TagR = "Tag"
   show DataHashR = "(DataHash c)"
-  show AddrR = "(Addr c)"
   show PCredR = "(Credential 'Payment c)"
   show ConwayTxCertR = "(ConwayTxCert era)"
   show ShelleyTxCertR = "(ShelleyTxCert era)"
@@ -508,6 +485,7 @@ synopsis (ListR Word64R) x = show x
 synopsis rep@(ListR a) ll = case ll of
   [] -> "(empty::" ++ show (ListR a) ++ "]"
   (d : _) -> "[" ++ synopsis a d ++ " | size = " ++ show (length ll) ++ synSum rep ll ++ "]"
+synopsis AddrR a = show a
 synopsis CredR c = show (credSummary c)
 synopsis PoolHashR k = "(KeyHash 'PoolStake " ++ show (keyHashSummary k) ++ ")"
 synopsis GenHashR k = "(KeyHash 'Genesis " ++ show (keyHashSummary k) ++ ")"
@@ -560,7 +538,6 @@ synopsis DatumR x = show (pcDatum x)
 synopsis ExUnitsR (ExUnits m d) = "(ExUnits mem=" ++ show m ++ " data=" ++ show d ++ ")"
 synopsis TagR x = show x
 synopsis DataHashR x = show (pcDataHash x)
-synopsis AddrR x = show (pcAddr x)
 synopsis PCredR c = show (credSummary c)
 synopsis ConwayTxCertR x = show (pcConwayTxCert x)
 synopsis ShelleyTxCertR x = show (pcShelleyTxCert x)
@@ -704,7 +681,7 @@ instance Shaped (Rep era) any where
   shape BoolR = Nullary 84
   shape DRepR = Nullary 85
 
-compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
+compareRep :: forall era t s. Era era => Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
 
 -- ================================================
@@ -724,8 +701,9 @@ genSizedRep n (_a :-> b) = const <$> genSizedRep n b
 genSizedRep n r@(MapR a b) = do
   mapSized ["From genSizedRep " ++ show r] n (genRep a) (genRep b)
 genSizedRep n r@(SetR a) = do
-  setSized ["From genSizedRep " ++ show r] n (genRep a)
-genSizedRep n (ListR a) = vectorOf n (genRep a)
+  setSized ["From genSizedRep " ++ show r] n (genSizedRep n a)
+genSizedRep n (ListR a) = vectorOf n (genSizedRep n a)
+genSizedRep _ AddrR = arbitrary
 genSizedRep _ CredR = arbitrary
 genSizedRep _ PoolHashR = arbitrary
 genSizedRep _ WitHashR = arbitrary
@@ -790,7 +768,6 @@ genSizedRep n DatumR =
 genSizedRep _ ExUnitsR = arbitrary
 genSizedRep _ TagR = arbitrary
 genSizedRep _ DataHashR = arbitrary
-genSizedRep _ AddrR = arbitrary
 genSizedRep _ PCredR = arbitrary
 genSizedRep _ ShelleyTxCertR = arbitrary
 genSizedRep _ ConwayTxCertR = arbitrary

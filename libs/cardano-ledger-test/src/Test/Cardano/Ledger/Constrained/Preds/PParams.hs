@@ -15,6 +15,7 @@ import Cardano.Ledger.BaseTypes (
   boundRational,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Api.Era
 import GHC.Num (Natural)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Constrained.Ast
@@ -30,7 +31,7 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Tasty.QuickCheck
 
-extract :: Term era t -> Term era s -> Pred era
+extract :: Era era => Term era t -> Term era s -> Pred era
 extract term@(Var (V _ _ (Yes r1 lens))) record =
   case testEql r1 (termRep record) of
     Just Refl -> term :<-: (Constr "lookup" (\x -> x ^. lens) ^$ record)
