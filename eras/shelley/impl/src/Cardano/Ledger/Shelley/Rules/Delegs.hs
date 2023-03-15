@@ -104,7 +104,7 @@ data ShelleyDelegsPredFailure era
   = DelegateeNotRegisteredDELEG
       !(KeyHash 'StakePool (EraCrypto era)) -- target pool which is not registered
   | WithdrawalsNotInRewardsDELEGS
-      !(Map (RewardAcnt (EraCrypto era)) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
+      !(Map (RewardAcnt (EraCrypto era)) Coin) -- withdrawals that are missing or do not withdrawal the entire amount
   | DelplFailure (PredicateFailure (EraRule "DELPL" era)) -- Subtransition Failures
   deriving (Generic)
 

@@ -155,7 +155,7 @@ adaPreservationProps =
       , -- well formed deposits
         map nonNegativeDeposits ssts
       , -- non-epoch-boundary preservation properties
-        map checkWithdrawlBound noEpochBoundarySsts
+        map checkWithdrawalBound noEpochBoundarySsts
       , map (utxoDepositsIncreaseByFeesWithdrawals @era @ledger) noEpochBoundarySsts
       , map potsSumIncreaseWithdrawalsPerBlock noEpochBoundarySsts
       , map feesNonDecreasing noEpochBoundarySsts
@@ -298,10 +298,10 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
 
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
-checkWithdrawlBound ::
+checkWithdrawalBound ::
   EraGen era => SourceSignalTarget (CHAIN era) -> Property
-checkWithdrawlBound SourceSignalTarget {source, signal, target} =
-  counterexample "checkWithdrawlBound" $
+checkWithdrawalBound SourceSignalTarget {source, signal, target} =
+  counterexample "checkWithdrawalBound" $
     rewardDelta === withdrawals signal
   where
     rewardDelta :: Coin
