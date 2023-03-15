@@ -60,7 +60,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, transDCert)
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, toShelleyDCert)
 import Cardano.Ledger.Conway.Rules (GovernanceProcedure)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -320,7 +320,7 @@ abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl 
   , Outputs (sizedValue <$> out)
   , CollateralReturn (sizedValue <$> colret)
   , TotalCol totcol
-  , Certs $ transDCert <$> cert
+  , Certs $ toShelleyDCert <$> cert
   , Withdrawals' wdrl
   , Txfee fee
   , Vldt vldt

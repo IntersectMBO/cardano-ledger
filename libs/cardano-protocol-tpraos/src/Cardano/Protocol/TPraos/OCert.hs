@@ -30,11 +30,15 @@ import Cardano.Ledger.Binary (
   DecCBORGroup (..),
   EncCBOR (..),
   EncCBORGroup (..),
+  FromCBOR (..),
+  ToCBOR (..),
   encodedSigDSIGNSizeExpr,
   encodedVerKeyKESSizeExpr,
+  fromPlainDecoder,
+  fromPlainEncoding,
   runByteBuilder,
  )
-import Cardano.Ledger.Binary.Crypto
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto (Crypto, KES)
 import Cardano.Ledger.Keys (
   KeyHash,
@@ -58,8 +62,8 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 
 data OCertEnv c = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash 'StakePool c)
-  , ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate c)
+  { ocertEnvStPools :: !(Set (KeyHash 'StakePool c))
+  , ocertEnvGenDelegs :: !(Set (KeyHash 'GenesisDelegate c))
   }
   deriving (Show, Eq)
 
@@ -76,7 +80,7 @@ currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | otherwise = Nothing
 
 newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
-  deriving (Eq, Generic, Ord, NoThunks, DecCBOR, EncCBOR)
+  deriving (Eq, Generic, Ord, NoThunks, DecCBOR, EncCBOR, ToCBOR, FromCBOR)
   deriving (Show) via Quiet KESPeriod
 
 data OCert c = OCert
@@ -98,15 +102,12 @@ deriving instance Crypto c => Show (OCert c)
 
 instance Crypto c => NoThunks (OCert c)
 
-instance
-  (Crypto c) =>
-  EncCBORGroup (OCert c)
-  where
-  encCBORGroup ocert =
-    encodeVerKeyKES (ocertVkHot ocert)
-      <> encCBOR (ocertN ocert)
-      <> encCBOR (ocertKESPeriod ocert)
-      <> encodeSignedDSIGN (ocertSigma ocert)
+-- Serialization of OCerts cannot be versioned, unless it gets parameterized by era.
+-- Therefore we use plain encoding for defining the versioned one, instead of the oppoit
+-- approach how it is done for types with versioned serialization
+
+instance Crypto c => EncCBORGroup (OCert c) where
+  encCBORGroup = fromPlainEncoding . encodeOCertFields
   encodedGroupSizeExpr size proxy =
     encodedVerKeyKESSizeExpr (ocertVkHot <$> proxy)
       + encodedSizeExpr size (toWord . ocertN <$> proxy)
@@ -119,16 +120,30 @@ instance
   listLen _ = 4
   listLenBound _ = 4
 
-instance
-  (Crypto c) =>
-  DecCBORGroup (OCert c)
-  where
-  decCBORGroup =
-    OCert
-      <$> decodeVerKeyKES
-      <*> decCBOR
-      <*> decCBOR
-      <*> decodeSignedDSIGN
+instance Crypto c => DecCBORGroup (OCert c) where
+  decCBORGroup = fromPlainDecoder decodeOCertFields
+
+instance Crypto c => ToCBOR (OCert c) where
+  toCBOR ocert = Plain.encodeListLen (listLen ocert) <> encodeOCertFields ocert
+
+instance Crypto c => FromCBOR (OCert c) where
+  fromCBOR =
+    Plain.decodeRecordNamed "OCert" (fromIntegral . listLen) decodeOCertFields
+
+encodeOCertFields :: Crypto c => OCert c -> Plain.Encoding
+encodeOCertFields ocert =
+  KES.encodeVerKeyKES (ocertVkHot ocert)
+    <> Plain.toCBOR (ocertN ocert)
+    <> Plain.toCBOR (ocertKESPeriod ocert)
+    <> DSIGN.encodeSignedDSIGN (ocertSigma ocert)
+
+decodeOCertFields :: Crypto c => Plain.Decoder s (OCert c)
+decodeOCertFields =
+  OCert
+    <$> KES.decodeVerKeyKES
+    <*> Plain.fromCBOR
+    <*> Plain.fromCBOR
+    <*> DSIGN.decodeSignedDSIGN
 
 kesPeriod :: SlotNo -> ShelleyBase KESPeriod
 kesPeriod (SlotNo s) =

@@ -8,6 +8,8 @@
 * Add `encodeStrictMaybe`/`decodeStrictMaybe` and `encodeNullStrictMaybe`/`decodeNullStrictMaybe`
 * Fix CBOR instance for `StrictMaybe`. It was never used in Byron, so special
   serialization is not needed for pre-protocol version `2`.
+* Re-export crypto related encoding and decoding functions for `VRF`, `KES` and `DSIGN`
+  from `Cardano.Ledger.Binary.Plain`
 
 ### `testlib`
 

@@ -4,6 +4,8 @@
 
 * Add `ToJSON` instance for `AlonzoTxOut`, `AlonzoScript` and `Datum`
 * Add `ToJSON` instance for `AlonzoPParams StrictMaybe`
+* Stop exporting an internal function `decodeBinaryData`
+* Remove redundant `Redeemers'` pattern synonym.
 
 ###`testlib`
 

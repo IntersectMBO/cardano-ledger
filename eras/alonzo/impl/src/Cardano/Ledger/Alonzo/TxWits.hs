@@ -19,10 +19,7 @@
 
 module Cardano.Ledger.Alonzo.TxWits (
   RdmrPtr (..),
-  Redeemers (
-    Redeemers,
-    Redeemers'
-  ),
+  Redeemers (Redeemers),
   unRedeemers,
   nullRedeemers,
   TxDats (TxDats, TxDats'),
@@ -158,14 +155,6 @@ deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Redeemers era)
 -- =====================================================
 -- Pattern for Redeemers
 
-pattern Redeemers' ::
-  Era era =>
-  Map RdmrPtr (Data era, ExUnits) ->
-  Redeemers era
-pattern Redeemers' rs <- (getMemoRawType -> RedeemersRaw rs)
-
-{-# COMPLETE Redeemers' #-}
-
 pattern Redeemers ::
   forall era.
   Era era =>
@@ -179,7 +168,7 @@ pattern Redeemers rs <-
 {-# COMPLETE Redeemers #-}
 
 unRedeemers :: Era era => Redeemers era -> Map RdmrPtr (Data era, ExUnits)
-unRedeemers (Redeemers' rs) = rs
+unRedeemers (Redeemers rs) = rs
 
 nullRedeemers :: Era era => Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
@@ -231,8 +220,8 @@ instance (Era era, Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era
   (<>) x y | isEmptyTxWitness x = y
   (<>) x y | isEmptyTxWitness y = x
   (<>)
-    (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers' e))
-    (getMemoRawType -> AlonzoTxWitsRaw u v w x (Redeemers' y)) =
+    (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e))
+    (getMemoRawType -> AlonzoTxWitsRaw u v w x (Redeemers y)) =
       AlonzoTxWits (a <> u) (b <> v) (c <> w) (d <> x) (Redeemers (e <> y))
 
 instance (Era era, Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits era) where
@@ -250,7 +239,7 @@ deriving instance
   NFData (AlonzoTxWits era)
 
 isEmptyTxWitness :: Era era => AlonzoTxWits era -> Bool
-isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers' e)) =
+isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
@@ -268,7 +257,7 @@ pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
 
 {-# COMPLETE TxDats' #-}
 
-pattern TxDats :: Era era => Typeable era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
+pattern TxDats :: Era era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
 pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
   where
     TxDats m = mkMemoized (TxDatsRaw m)

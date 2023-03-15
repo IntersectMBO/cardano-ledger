@@ -23,6 +23,8 @@
 * Add `ToJSONKey` instance for `GovernanceActionId` #3323
 * Fix `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyState` #3323
 * Add `Anchor` and `AnchorDataHash` types. #3323
+* Rename `transDCert` to `toShelleyDCert`
+* Add `fromShelleyDCertMaybe`
 
 ### `testlib`
 

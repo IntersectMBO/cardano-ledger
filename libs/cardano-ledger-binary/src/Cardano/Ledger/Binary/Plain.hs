@@ -14,10 +14,41 @@ module Cardano.Ledger.Binary.Plain (
   decodeListLikeT,
   serializeAsHexText,
   decodeFullFromHexText,
+
+  -- * DSIGN
+  C.encodeVerKeyDSIGN,
+  C.decodeVerKeyDSIGN,
+  C.encodeSignKeyDSIGN,
+  C.decodeSignKeyDSIGN,
+  C.encodeSigDSIGN,
+  C.decodeSigDSIGN,
+  C.encodeSignedDSIGN,
+  C.decodeSignedDSIGN,
+
+  -- * KES
+  C.encodeVerKeyKES,
+  C.decodeVerKeyKES,
+  C.encodeSignKeyKES,
+  C.decodeSignKeyKES,
+  C.encodeSigKES,
+  C.decodeSigKES,
+  C.encodeSignedKES,
+  C.decodeSignedKES,
+
+  -- * VRF
+  C.encodeVerKeyVRF,
+  C.decodeVerKeyVRF,
+  C.encodeSignKeyVRF,
+  C.decodeSignKeyVRF,
+  C.encodeCertVRF,
+  C.decodeCertVRF,
 )
 where
 
 import Cardano.Binary hiding (encodedSizeExpr)
+import qualified Cardano.Crypto.DSIGN.Class as C
+import qualified Cardano.Crypto.KES.Class as C
+import qualified Cardano.Crypto.VRF.Class as C
 import Codec.CBOR.Term
 import Control.Monad (unless)
 import Control.Monad.Trans (MonadTrans (..))
