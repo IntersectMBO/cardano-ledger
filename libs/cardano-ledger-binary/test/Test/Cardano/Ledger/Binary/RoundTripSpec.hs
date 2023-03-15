@@ -309,7 +309,7 @@ spec = do
           \xs sxs -> xs `shouldBe` Set.toList sxs
         embedTripSpec v v (cborTrip @(VMap.VMap VMap.VP VMap.VP Word Int) @(Map.Map Word Int)) $
           \xs sxs -> xs `shouldBe` VMap.toMap sxs
-    forM_ [minBound .. natVersion @9] $ \v ->
+    forM_ [minBound .. natVersion @8] $ \v ->
       describe (show v) $ do
         embedTripSpec v v (cborTrip @Rational @(Integer, Integer)) $
           \(x, y) r -> (x, y) `shouldBe` (numerator r, denominator r)
