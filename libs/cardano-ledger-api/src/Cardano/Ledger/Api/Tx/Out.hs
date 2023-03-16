@@ -31,33 +31,60 @@
 -- :}
 -- +++ OK, passed 100 tests.
 module Cardano.Ledger.Api.Tx.Out (
-  module Cardano.Ledger.Api.Scripts.Data,
-  EraTxOut (..),
+  module Cardano.Ledger.Api.Tx.Address,
+  EraTxOut,
+  mkBasicTxOut,
+
+  -- ** Value
+  valueTxOutL,
+  coinTxOutL,
+  isAdaOnlyTxOutF,
+
+  -- ** Address
+  addrTxOutL,
+  bootAddrTxOutF,
+
+  -- ** Size
+  getMinCoinTxOut,
   setMinCoinTxOut,
+  getMinCoinSizedTxOut,
   setMinCoinSizedTxOut,
   ensureMinCoinTxOut,
   ensureMinCoinSizedTxOut,
 
   -- * Shelley, Allegra and Mary Era
-  ShelleyTxOut,
 
   -- * Alonzo Era
-  AlonzoTxOut,
-  AlonzoEraTxOut (..),
+  AlonzoEraTxOut,
+  dataHashTxOutL,
+  DataHash,
+  datumTxOutF,
 
   -- * Babbage Era
-  BabbageTxOut,
-  BabbageEraTxOut (..),
+  BabbageEraTxOut,
+  dataTxOutL,
+  Data (..),
+  datumTxOutL,
+  Datum (..),
+  referenceScriptTxOutL,
 )
 where
 
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxOut)
-import Cardano.Ledger.Api.Scripts.Data
-import Cardano.Ledger.Babbage.TxBody (BabbageEraTxOut (..), BabbageTxOut)
+import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..))
+import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.Api.Scripts.Data (Data (..), DataHash, Datum (..))
+import Cardano.Ledger.Api.Tx.Address
+import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Core (EraTxOut (..), PParams, coinTxOutL, eraProtVerLow)
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut)
+import Cardano.Ledger.Core (
+  EraTxOut (..),
+  PParams,
+  bootAddrTxOutF,
+  coinTxOutL,
+  eraProtVerLow,
+  isAdaOnlyTxOutF,
+ )
 import Lens.Micro
 
 setMinCoinTxOutInternal ::

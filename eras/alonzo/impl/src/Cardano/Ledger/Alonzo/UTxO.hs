@@ -40,7 +40,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Extras (view)
 
--- | Alonzo era style scritps needed require also a `ScriptPurpose`, not only the `ScriptHash`
+-- | Alonzo era style scripts needed require also a `ScriptPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
   = AlonzoScriptsNeeded [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
   deriving (Eq, Show)

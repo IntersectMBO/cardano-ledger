@@ -32,28 +32,35 @@ module Cardano.Ledger.Api.Tx (
   module Cardano.Ledger.Api.Tx.Body,
   module Cardano.Ledger.Api.Tx.AuxData,
   module Cardano.Ledger.Api.Tx.Wits,
-  EraTx (..),
 
-  -- * Shelley, Allegra and Mary Era
-  ShelleyTx,
-
-  -- * Alonzo and Babbage Era
-  AlonzoTx,
-  AlonzoEraTx (..),
+  -- * Shelley onwards
+  EraTx,
+  mkBasicTx,
+  bodyTxL,
+  witsTxL,
+  auxDataTxL,
+  validateScript,
+  sizeTxF,
+  getMinFeeTx,
   setMinFeeTx,
+
+  -- * Alonzo onwards
+  AlonzoEraTx,
+  isValidTxL,
+  IsValid (..),
 )
 where
 
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Wits
 import Cardano.Ledger.Core (EraTx (..), PParams)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Lens.Micro ((&), (.~), (^.))
 
--- | Calculate and update the fee in the transaction until it has the smallest possible value according to
--- the settings in the protocol parameters.
+-- | Calculate and update the fee in the transaction until it has the smallest possible
+-- value according to the settings in the protocol parameters.
 setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
 setMinFeeTx pp tx =
   let curMinFee = getMinFeeTx pp tx

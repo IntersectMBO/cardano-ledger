@@ -6,10 +6,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Alonzo.Tools (
-  evaluateTransactionExecutionUnits,
-  evaluateTransactionExecutionUnitsWithLogs,
+module Cardano.Ledger.Api.Scripts.Tools (
   TransactionScriptFailure (..),
+  ValidationFailed (..),
+  evaluateTransactionExecutionUnits,
+  RedeemerReport,
+  evaluateTransactionExecutionUnitsWithLogs,
+  RedeemerReportWithLogs,
 )
 where
 

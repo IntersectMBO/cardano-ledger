@@ -342,7 +342,7 @@ ledgerDeRegisterStakeKeys x y state =
 -- ===========================================================
 -- Reward Withdrawal example
 
--- Create a transaction body that withdrawls from reward accounts,
+-- Create a transaction body that withdrawals from reward accounts,
 -- corresponding to the keys seeded with (RawSeed x 0 0 0 0) to (RawSeed y 0 0 0 0).
 txbWithdrawals :: Word64 -> Word64 -> ShelleyTxBody B
 txbWithdrawals x y =
@@ -359,7 +359,7 @@ txbWithdrawals x y =
     SNothing
     SNothing
 
--- Create a transaction that withdrawls from a reward accounts.
+-- Create a transaction that withdrawals from a reward accounts.
 -- It spends the genesis coin indexed by 1.
 txWithdrawals :: Word64 -> Word64 -> ShelleyTx B
 txWithdrawals x y =
@@ -369,7 +369,7 @@ txWithdrawals x y =
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredKeys n m,
 -- so that keys (RawSeed n 0 0 0 0) through (RawSeed m 0 0 0 0) are already registered,
--- make reward withdrawls for keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
+-- make reward withdrawals for keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [x, y] must be contained in [n, m].
 ledgerRewardWithdrawals :: Word64 -> Word64 -> LedgerState B -> ()
 ledgerRewardWithdrawals x y state = testLEDGER state (txWithdrawals x y) ledgerEnv

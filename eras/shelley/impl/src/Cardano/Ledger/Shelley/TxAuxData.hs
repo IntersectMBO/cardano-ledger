@@ -97,7 +97,7 @@ instance NFData Metadatum where
     S _ -> ()
 
 data ShelleyTxAuxData era = ShelleyTxAuxData'
-  { mdMap :: Map Word64 Metadatum
+  { mdMap :: !(Map Word64 Metadatum)
   , mdBytes :: LBS.ByteString
   }
   deriving (Eq, Show, Ord, Generic)
@@ -127,7 +127,10 @@ instance SafeToHash (ShelleyTxAuxData era) where
 
 instance c ~ EraCrypto era => HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData c
 
-hashShelleyTxAuxData :: Era era => ShelleyTxAuxData era -> SafeHash (EraCrypto era) EraIndependentTxAuxData
+hashShelleyTxAuxData ::
+  Era era =>
+  ShelleyTxAuxData era ->
+  SafeHash (EraCrypto era) EraIndependentTxAuxData
 hashShelleyTxAuxData = hashAnnotated
 
 pattern ShelleyTxAuxData :: forall era. Era era => Map Word64 Metadatum -> ShelleyTxAuxData era
