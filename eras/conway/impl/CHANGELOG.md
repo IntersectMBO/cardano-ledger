@@ -31,6 +31,9 @@
 * Rename `VoteDecision` to `Vote`. Rename `No`/`Yes` -> `VoteNo`/`VoteYes`.
 * Export `govActionIdToText`
 * Export constructors for `ConwayTallyPredFailure`
+* Add `ensTreasury` and `ensWithdrawals` to `EnactState` #3339
+* Add `EnactPredFailure` as the failure for `ENACT` and `RATIFY` #3339
+* Add `RatifyFailure` to `ConwayNewEpochPredFailure` #3339
 
 ### `testlib`
 

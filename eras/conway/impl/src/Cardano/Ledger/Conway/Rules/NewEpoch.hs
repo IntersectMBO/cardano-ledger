@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -28,6 +27,7 @@ import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayNEWEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (ConwayGovernance (..), ConwayTallyState (..), cgTallyL)
+import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..), RatifyState (..))
 import Cardano.Ledger.Credential (Credential)
@@ -59,14 +59,17 @@ data ConwayNewEpochPredFailure era
   = EpochFailure !(PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
   | CorruptRewardUpdate
       !(RewardUpdate (EraCrypto era)) -- The reward update which violates an invariant
+  | RatifyFailure !(PredicateFailure (EraRule "RATIFY" era))
 
 deriving instance
   ( Eq (PredicateFailure (EraRule "EPOCH" era))
+  , Eq (PredicateFailure (EraRule "RATIFY" era))
   ) =>
   Eq (ConwayNewEpochPredFailure era)
 
 deriving instance
   ( Show (PredicateFailure (EraRule "EPOCH" era))
+  , Show (PredicateFailure (EraRule "RATIFY" era))
   ) =>
   Show (ConwayNewEpochPredFailure era)
 
@@ -124,12 +127,12 @@ instance
   , STS (ConwayRATIFY era)
   , BaseM (ConwayRATIFY era) ~ ShelleyBase
   , Event (ConwayRATIFY era) ~ Void
-  , PredicateFailure (ConwayRATIFY era) ~ Void
+  , PredicateFailure (EraRule "RATIFY" era) ~ EnactPredFailure era
   ) =>
   Embed (ConwayRATIFY era) (ConwayNEWEPOCH era)
   where
   wrapEvent = absurd
-  wrapFailed = absurd
+  wrapFailed = RatifyFailure
 
 newEpochTransition ::
   forall era.
