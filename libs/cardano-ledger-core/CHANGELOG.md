@@ -19,6 +19,10 @@
   * `Reward` and `RewardType`
   * `AuxiliaryDataHash`
   * `Credential`
+* Make `getConsumedValue` accept a deposit lookup function instead of a `DPState`
+* Add `lookupDepositDState` and `lookupRewardDState`. Former can be used with
+  `getConsumedValue` to regain previous behavior.
+
 
 ## 1.0.0.0
 

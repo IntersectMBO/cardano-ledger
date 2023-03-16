@@ -22,6 +22,7 @@ module Cardano.Ledger.Shelley.UTxO (
   scriptCred,
   scriptStakeCred,
   getConsumedCoin,
+  consumed,
   produced,
   txup,
   module UTxO,
@@ -32,15 +33,19 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.DPState (DPState)
+import Cardano.Ledger.DPState (DPState (..), PState (..), lookupDepositDState)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (
   DCert (..),
   requiresVKeyWitness,
  )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
+  keyCertsRefunds,
+  totalCertsDeposits,
+ )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
@@ -121,6 +126,15 @@ getShelleyScriptsNeeded u txBody =
     scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
     certificates = toList (txBody ^. certsTxBodyG)
 
+consumed ::
+  EraUTxO era =>
+  PParams era ->
+  DPState (EraCrypto era) ->
+  UTxO era ->
+  TxBody era ->
+  Value era
+consumed pp dpstate = getConsumedValue pp (lookupDepositDState (dpsDState dpstate))
+
 -- | Compute the lovelace which are created by the transaction
 produced ::
   ShelleyEraTxBody era =>
@@ -128,26 +142,36 @@ produced ::
   DPState (EraCrypto era) ->
   TxBody era ->
   Value era
-produced pp dpstate txBody =
-  balance (txouts txBody)
+produced pp dpstate =
+  getProducedValue pp (`Map.member` psStakePoolParams (dpsPState dpstate))
+
+getProducedValue ::
+  ShelleyEraTxBody era =>
+  PParams era ->
+  -- | Check whether a pool with a supplied PoolStakeId is already registered.
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  TxBody era ->
+  Value era
+getProducedValue pp isRegPoolId txBody =
+  sumAllValue (txBody ^. outputsTxBodyL)
     <+> Val.inject
-      (txBody ^. feeTxBodyL <+> totalTxDeposits pp dpstate txBody)
+      (txBody ^. feeTxBodyL <+> totalCertsDeposits pp isRegPoolId (txBody ^. certsTxBodyG))
 
 -- | Compute the lovelace which are destroyed by the transaction
 getConsumedCoin ::
   ShelleyEraTxBody era =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  (StakeCredential (EraCrypto era) -> Maybe Coin) ->
   UTxO era ->
   TxBody era ->
   Coin
-getConsumedCoin pp dpstate (UTxO u) txBody =
+getConsumedCoin pp lookupRefund (UTxO u) txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds dpstate tx -}
   coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
     <> refunds
     <> withdrawals
   where
-    refunds = keyTxRefunds pp dpstate txBody
+    refunds = keyCertsRefunds pp lookupRefund (txBody ^. certsTxBodyG)
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set.Set (ScriptHash (EraCrypto era)))

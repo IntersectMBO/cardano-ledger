@@ -65,4 +65,5 @@ compareAdaPots xlabel x ylabel y =
     ]
   where
     n = 25
-    oneline name f = pad n name ++ pad n (show (f x)) ++ pad n (show (f y)) ++ pad n (show (f y <-> f x))
+    oneline name f =
+      pad n name ++ pad n (show (f x)) ++ pad n (show (f y)) ++ pad n (show (f y <-> f x))

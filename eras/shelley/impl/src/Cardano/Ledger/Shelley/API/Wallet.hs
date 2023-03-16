@@ -97,6 +97,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   RewardUpdate,
   UTxOState (..),
   circulation,
+  consumed,
   createRUpd,
   incrementalStakeDistr,
   produced,
@@ -510,7 +511,7 @@ evaluateTransactionBalance ::
   -- | The difference between what the transaction consumes and what it produces.
   Value era
 evaluateTransactionBalance pp dpstate u txb =
-  getConsumedValue pp dpstate u txb <-> produced pp dpstate txb
+  consumed pp dpstate u txb <-> produced pp dpstate txb
 
 --------------------------------------------------------------------------------
 -- Shelley specifics

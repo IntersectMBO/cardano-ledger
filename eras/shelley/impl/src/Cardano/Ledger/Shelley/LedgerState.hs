@@ -47,6 +47,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   nullWitHashes,
   diffWitHashes,
   minfee,
+  consumed,
   produced,
   witsFromTxWitnesses,
 
@@ -57,7 +58,9 @@ module Cardano.Ledger.Shelley.LedgerState (
   totalTxDeposits,
   obligationDPState,
   keyCertsRefunds,
+  keyCertsRefundsDPState,
   totalCertsDeposits,
+  totalCertsDepositsDPState,
 
   -- * Epoch boundary
   incrementalStakeDistr,
@@ -107,7 +110,7 @@ import Cardano.Ledger.Shelley.PParams (
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUPPredFailure, ShelleyPPUPState (..))
 import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
-import Cardano.Ledger.Shelley.UTxO (produced)
+import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Data.Default.Class (def)
 import Data.Set (Set)
 import qualified Data.Set as Set

@@ -28,6 +28,9 @@
   * `Likelihood` and `NonMyopic`
   * `RewardUpdate` and `PulsingRewUpdate`
 * Added of `ToJSON`/`FromJSON` instances for `LogWeight`
+* Change `totalCertsDeposits` to accept a function that checks for registered pools,
+  rather than the `DPState`. Use `totalCertsDepositsDPState` for the previous behavior
+* Added `getProducedValue` and `totalCertsDepositsDPState`.
 
 ### `testlib`
 

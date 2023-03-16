@@ -30,7 +30,11 @@ import Cardano.Ledger.Shelley.API (
   ShelleyDELPL,
  )
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
-import Cardano.Ledger.Shelley.LedgerState (DPState (..), keyCertsRefunds, totalCertsDeposits)
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  keyCertsRefundsDPState,
+  totalCertsDepositsDPState,
+ )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
@@ -228,10 +232,10 @@ genDCerts
         (certs, creds) = unzip certsCreds
         (scriptCreds, keyCreds) = partition isScript creds
         keyCreds' = concat (keyCreds : map scriptWitnesses scriptCreds)
-        refunds = keyCertsRefunds pparams dpState certs
+        refunds = keyCertsRefundsDPState pparams dpState certs
     pure
       ( StrictSeq.fromList certs
-      , totalCertsDeposits pparams dpState certs
+      , totalCertsDepositsDPState pparams dpState certs
       , refunds
       , lastState_
       ,

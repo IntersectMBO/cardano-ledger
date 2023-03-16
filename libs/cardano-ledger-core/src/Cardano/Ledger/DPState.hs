@@ -14,6 +14,8 @@
 module Cardano.Ledger.DPState (
   DPState (..),
   DState (..),
+  lookupDepositDState,
+  lookupRewardDState,
   PState (..),
   InstantaneousRewards (..),
   FutureGenDeleg (..),
@@ -43,8 +45,9 @@ import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
  )
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraCrypto, EraPParams, PParams, ppPoolDepositL)
-import Cardano.Ledger.Credential (Credential (..), Ptr)
+import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -182,6 +185,22 @@ toDStatePair DState {..} =
   , "genDelegs" .= dsGenDelegs
   , "irwd" .= dsIRewards
   ]
+
+-- | Function that looks up the deposit for currently delegated staking credential
+lookupDepositDState :: DState c -> (StakeCredential c -> Maybe Coin)
+lookupDepositDState dstate =
+  let currentRewardDeposits = RewardDeposits $ dsUnified dstate
+   in \k -> do
+        RDPair _ deposit <- UM.lookup k currentRewardDeposits
+        Just $! fromCompact deposit
+
+-- | Function that looks up curret reward for the delegated staking credential.
+lookupRewardDState :: DState c -> (StakeCredential c -> Maybe Coin)
+lookupRewardDState dstate =
+  let currentRewardDeposits = RewardDeposits $ dsUnified dstate
+   in \k -> do
+        RDPair reward _ <- UM.lookup k currentRewardDeposits
+        Just $! fromCompact reward
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState c = PState
