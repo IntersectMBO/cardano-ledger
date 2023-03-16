@@ -3,6 +3,7 @@
 ## 1.1.0.0
 
 * Addition of `ToJSON` instances for `AssetName`, `PolicyID`, `MultiAsset` and `MaryValue`.
+* Add `ToJSONKey`/`FromJSONKey` instances for `PolicyID`
 
 ### `testlib`
 

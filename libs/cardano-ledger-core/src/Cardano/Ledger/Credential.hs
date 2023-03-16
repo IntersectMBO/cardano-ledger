@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Credential (
@@ -47,7 +48,7 @@ import Data.Aeson (
   FromJSON (..),
   FromJSONKey,
   KeyValue,
-  ToJSON (..),
+  ToJSON,
   ToJSONKey,
   object,
   pairs,
@@ -112,6 +113,8 @@ data StakeReference c
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance NoThunks (StakeReference c)
+
+deriving instance Crypto c => ToJSON (StakeReference c)
 
 -- TODO: implement this optimization:
 -- We expect that `SlotNo` will fit into `Word32` for a very long time,

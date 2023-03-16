@@ -7,6 +7,7 @@
 * Add superclass constraints for `Val`:
   * `NoThunks`, `EncCBOR`, `DecCBOR`, `ToJSON`, `NFData`, `Show`
   * `EncCBOR (CompactForm t)`, `DecCBOR (CompactForm t)`
+* Add `ToJSONKey`/`FromJSONKey` instances for `ScriptHash`
 * Add `ToJSON`/`FromJSON` instances for `CompactForm Coin`, `SafeHash` and `TxId`
 * Add `ToJSON` instances for:
   * `Ptr`, `CertIx`, `TxIx`
@@ -16,6 +17,8 @@
   * `UTxO` and `TxIn`
   * `Stake`, `SnapShot`, `SnapShots`, `PoolDistr` and `IndividualPoolStake`
   * `Reward` and `RewardType`
+  * `AuxiliaryDataHash`
+  * `Credential`
 
 ## 1.0.0.0
 

@@ -29,6 +29,8 @@
 * Add `ProposalProcedure`
 * Use `VotingProcedure` and `ProposalProcedure` in `GovernanceProcedure`
 * Rename `VoteDecision` to `Vote`. Rename `No`/`Yes` -> `VoteNo`/`VoteYes`.
+* Export `govActionIdToText`
+* Export constructors for `ConwayTallyPredFailure`
 
 ### `testlib`
 

@@ -27,6 +27,7 @@
   * `AccountState`, `EpochState`, `UTxOState`, `IncrementalStake` and `LedgerState`
   * `Likelihood` and `NonMyopic`
   * `RewardUpdate` and `PulsingRewUpdate`
+* Added of `ToJSON`/`FromJSON` instances for `LogWeight`
 
 ### `testlib`
 

@@ -26,6 +26,7 @@ module Cardano.Ledger.Conway.Governance (
   GovernanceActionState (..),
   GovernanceActionIx (..),
   GovernanceActionId (..),
+  govActionIdToText,
   VoterRole (..),
   Vote (..),
   VotingProcedure (..),
