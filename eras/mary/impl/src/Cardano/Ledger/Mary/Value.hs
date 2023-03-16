@@ -61,12 +61,12 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), decodePositiveCoin, int
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), trimExprViaShow)
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_, when)
 import Control.Monad.ST (runST)
-import Data.Aeson (ToJSON (..), object, (.=))
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString as BS
@@ -135,14 +135,27 @@ instance DecCBOR AssetName where
 
 -- | Policy ID
 newtype PolicyID c = PolicyID {policyID :: ScriptHash c}
-  deriving (Show, Eq, EncCBOR, DecCBOR, Ord, NoThunks, NFData, Generic)
+  deriving
+    ( Show
+    , Eq
+    , Ord
+    , Generic
+    , NoThunks
+    , NFData
+    , EncCBOR
+    , DecCBOR
+    , ToJSON
+    , FromJSON
+    , ToJSONKey
+    , FromJSONKey
+    )
 
 -- | The MultiAssets map
 newtype MultiAsset c = MultiAsset (Map (PolicyID c) (Map AssetName Integer))
   deriving (Show, Generic, ToJSON)
 
 instance Crypto c => Eq (MultiAsset c) where
-  (MultiAsset x) == (MultiAsset y) = pointWise (pointWise (==)) x y
+  MultiAsset x == MultiAsset y = pointWise (pointWise (==)) x y
 
 instance NFData (MultiAsset cypto) where
   rnf (MultiAsset m) = rnf m
@@ -150,8 +163,8 @@ instance NFData (MultiAsset cypto) where
 instance NoThunks (MultiAsset c)
 
 instance Semigroup (MultiAsset c) where
-  (MultiAsset m) <> (MultiAsset m1) =
-    MultiAsset (canonicalMapUnion (canonicalMapUnion (+)) m m1)
+  MultiAsset m1 <> MultiAsset m2 =
+    MultiAsset (canonicalMapUnion (canonicalMapUnion (+)) m1 m2)
 
 instance Monoid (MultiAsset c) where
   mempty = MultiAsset mempty
@@ -179,8 +192,8 @@ instance NFData (MaryValue c) where
 instance NoThunks (MaryValue c)
 
 instance Semigroup (MaryValue c) where
-  MaryValue c m <> MaryValue c1 m1 =
-    MaryValue (c + c1) (m <> m1)
+  MaryValue c1 m1 <> MaryValue c2 m2 =
+    MaryValue (c1 + c2) (m1 <> m2)
 
 instance Monoid (MaryValue c) where
   mempty = MaryValue 0 mempty
@@ -329,10 +342,7 @@ decodeMultiAssetMaps decodeAmount = do
 decodeMultiAssetMint :: Crypto c => Decoder s (MultiAsset c)
 decodeMultiAssetMint = decodeMultiAssetMaps decodeIntegerBounded64
 
-instance
-  Crypto c =>
-  EncCBOR (MaryValue c)
-  where
+instance Crypto c => EncCBOR (MaryValue c) where
   encCBOR (MaryValue c ma@(MultiAsset m)) =
     if Map.null m
       then encCBOR c
@@ -342,10 +352,7 @@ instance
             !> To c
             !> To ma
 
-instance
-  Crypto c =>
-  DecCBOR (MaryValue c)
-  where
+instance Crypto c => DecCBOR (MaryValue c) where
   decCBOR = decodeValue
 
 -- Note: we do not use `decodeInt64` from the cborg library here because the
@@ -382,11 +389,11 @@ decodeIntegerBounded64 = do
 -- ========================================================================
 -- JSON
 
-instance ToJSON (MaryValue era) where
+instance Crypto c => ToJSON (MaryValue c) where
   toJSON = object . toMaryValuePairs
   toEncoding = Aeson.pairs . mconcat . toMaryValuePairs
 
-toMaryValuePairs :: Aeson.KeyValue a => MaryValue crypto -> [a]
+toMaryValuePairs :: Crypto c => Aeson.KeyValue a => MaryValue c -> [a]
 toMaryValuePairs (MaryValue l ps) =
   [ "lovelace" .= l
   , "policies" .= ps
@@ -397,14 +404,6 @@ instance ToJSON AssetName where
 
 instance ToJSONKey AssetName where
   toJSONKey = toJSONKeyText assetNameToTextAsHex
-
-instance ToJSON (PolicyID era) where
-  toJSON (PolicyID (ScriptHash h)) = Aeson.String (Hash.hashToTextAsHex h)
-
-instance ToJSONKey (PolicyID era) where
-  toJSONKey = toJSONKeyText render
-    where
-      render (PolicyID (ScriptHash h)) = Hash.hashToTextAsHex h
 
 -- ========================================================================
 -- Compactible
@@ -899,4 +898,4 @@ instance ToExpr (MultiAsset c)
 instance ToExpr (PolicyID c)
 
 instance ToExpr AssetName where
-  toExpr (AssetName sbs) = App "AssetName" [trimExprViaShow 10 sbs]
+  toExpr an = App "AssetName" [toExpr (assetNameToTextAsHex an)]

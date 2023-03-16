@@ -35,7 +35,7 @@ import Cardano.Ledger.Crypto (ADDRHASH, Crypto)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
-import Data.Aeson
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -88,3 +88,7 @@ deriving newtype instance Crypto c => DecCBOR (ScriptHash c)
 deriving newtype instance Crypto c => ToJSON (ScriptHash c)
 
 deriving newtype instance Crypto c => FromJSON (ScriptHash c)
+
+deriving newtype instance Crypto c => ToJSONKey (ScriptHash c)
+
+deriving newtype instance Crypto c => FromJSONKey (ScriptHash c)
