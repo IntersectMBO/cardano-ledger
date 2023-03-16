@@ -92,9 +92,9 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> arbitrary
-      <*> genMintValues
+      <*> scale (`div` 15) genMintValues
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
