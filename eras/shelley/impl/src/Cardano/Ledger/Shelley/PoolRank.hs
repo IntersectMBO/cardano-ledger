@@ -57,7 +57,7 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (FromJSON, KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default, def)
 import Data.Foldable (find)
 import Data.Function (on)
@@ -79,7 +79,7 @@ import Numeric.Natural (Natural)
 import Quiet
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}
-  deriving (Eq, Generic, Ord, Num, NFData, NoThunks, EncCBOR, DecCBOR)
+  deriving (Eq, Generic, Ord, Num, NFData, NoThunks, EncCBOR, DecCBOR, ToJSON, FromJSON)
   deriving (Show) via Quiet LogWeight
 
 toLogWeight :: Double -> LogWeight
