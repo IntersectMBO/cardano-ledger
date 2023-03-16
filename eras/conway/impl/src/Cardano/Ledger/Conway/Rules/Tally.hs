@@ -20,7 +20,7 @@
 module Cardano.Ledger.Conway.Rules.Tally (
   ConwayTALLY,
   TallyEnv (..),
-  ConwayTallyPredFailure,
+  ConwayTallyPredFailure (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
