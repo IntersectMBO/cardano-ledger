@@ -67,7 +67,7 @@ deriving instance Arbitrary GovernanceActionIx
 instance Arbitrary VoterRole where
   arbitrary = arbitraryBoundedEnum
 
-instance Arbitrary VoteDecision where
+instance Arbitrary Vote where
   arbitrary = arbitraryBoundedEnum
 
 instance
@@ -100,6 +100,7 @@ instance
       <*> arbitrary
       -- FIXME: For now this is turned off, rountrip tests in consensus are failing
       <*> pure mempty -- arbitrary
+      <*> pure mempty -- arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Conway.Rules -----------------------------------------------------------
@@ -114,17 +115,23 @@ instance Era era => Arbitrary (TallyEnv era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Crypto c => Arbitrary (GovernanceMetadata c) where
+instance Crypto c => Arbitrary (Anchor c) where
   arbitrary =
-    GovernanceMetadata
+    Anchor
       <$> arbitrary
       <*> arbitrary
+
+instance Era era => Arbitrary (VotingProcedure era) where
+  arbitrary = VotingProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedure era) where
+  arbitrary = ProposalProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProcedure era) where
   arbitrary =
     oneof
-      [ VotingProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-      , ProposalProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+      [ GovernanceVotingProcedure <$> arbitrary
+      , GovernanceProposalProcedure <$> arbitrary
       ]
 
 instance

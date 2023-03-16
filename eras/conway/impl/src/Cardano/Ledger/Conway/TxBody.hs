@@ -36,7 +36,8 @@ module Cardano.Ledger.Conway.TxBody (
     ctbScriptIntegrityHash,
     ctbAdHash,
     ctbTxNetworkId,
-    ctbGovProcs
+    ctbVotingProcedures,
+    ctbProposalProcedures
   ),
 ) where
 
@@ -78,8 +79,8 @@ import Cardano.Ledger.Conway.Core (
  )
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, toShelleyDCert)
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Conway.PParams ()
-import Cardano.Ledger.Conway.Rules.Tally (GovernanceProcedure)
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Core
@@ -135,7 +136,8 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
   , ctbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   , ctbrTxNetworkId :: !(StrictMaybe Network)
-  , ctbrGovProcs :: !(StrictSeq (GovernanceProcedure era))
+  , ctbrVotingProcedures :: !(StrictSeq (VotingProcedure era))
+  , ctbrProposalProcedures :: !(StrictSeq (ProposalProcedure era))
   }
   deriving (Generic, Typeable)
 
@@ -188,7 +190,8 @@ instance
       bodyFields 16 = ofield (\x tx -> tx {ctbrCollateralReturn = x}) From
       bodyFields 17 = ofield (\x tx -> tx {ctbrTotalCollateral = x}) From
       bodyFields 18 = field (\x tx -> tx {ctbrReferenceInputs = x}) From
-      bodyFields 19 = field (\x tx -> tx {ctbrGovProcs = x}) From
+      bodyFields 19 = field (\x tx -> tx {ctbrVotingProcedures = x}) From
+      bodyFields 20 = field (\x tx -> tx {ctbrProposalProcedures = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields :: [(Word, String)]
       requiredFields =
@@ -254,6 +257,7 @@ basicConwayTxBodyRaw =
     SNothing
     SNothing
     SNothing
+    mempty
     mempty
 
 instance Crypto c => EraTxBody (ConwayEra c) where
@@ -367,7 +371,10 @@ instance Crypto c => BabbageEraTxBody (ConwayEra c) where
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 instance Crypto c => ConwayEraTxBody (ConwayEra c) where
-  govProcsTxBodyL = lensMemoRawType ctbrGovProcs (\txb x -> txb {ctbrGovProcs = x})
+  votingProceduresTxBodyL =
+    lensMemoRawType ctbrVotingProcedures (\txb x -> txb {ctbrVotingProcedures = x})
+  proposalProceduresTxBodyL =
+    lensMemoRawType ctbrProposalProcedures (\txb x -> txb {ctbrProposalProcedures = x})
   conwayCertsTxBodyL = lensMemoRawType ctbrCerts (\txb x -> txb {ctbrCerts = x})
 
 pattern ConwayTxBody ::
@@ -387,7 +394,8 @@ pattern ConwayTxBody ::
   StrictMaybe (ScriptIntegrityHash (EraCrypto era)) ->
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   StrictMaybe Network ->
-  StrictSeq (GovernanceProcedure era) ->
+  StrictSeq (VotingProcedure era) ->
+  StrictSeq (ProposalProcedure era) ->
   ConwayTxBody era
 pattern ConwayTxBody
   { ctbSpendInputs
@@ -405,7 +413,8 @@ pattern ConwayTxBody
   , ctbScriptIntegrityHash
   , ctbAdHash
   , ctbTxNetworkId
-  , ctbGovProcs
+  , ctbVotingProcedures
+  , ctbProposalProcedures
   } <-
   ( getMemoRawType ->
       ConwayTxBodyRaw
@@ -424,7 +433,8 @@ pattern ConwayTxBody
         , ctbrScriptIntegrityHash = ctbScriptIntegrityHash
         , ctbrAuxDataHash = ctbAdHash
         , ctbrTxNetworkId = ctbTxNetworkId
-        , ctbrGovProcs = ctbGovProcs
+        , ctbrVotingProcedures = ctbVotingProcedures
+        , ctbrProposalProcedures = ctbProposalProcedures
         }
     )
   where
@@ -444,7 +454,8 @@ pattern ConwayTxBody
       scriptIntegrityHashX
       adHashX
       txnetworkidX
-      govActions =
+      votingProcedures
+      proposalProcedures =
         mkMemoized $
           ConwayTxBodyRaw
             inputsX
@@ -462,7 +473,8 @@ pattern ConwayTxBody
             scriptIntegrityHashX
             adHashX
             txnetworkidX
-            govActions
+            votingProcedures
+            proposalProcedures
 
 {-# COMPLETE ConwayTxBody #-}
 
@@ -496,7 +508,8 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> encodeKeyedStrictMaybe 11 ctbrScriptIntegrityHash
         !> encodeKeyedStrictMaybe 7 ctbrAuxDataHash
         !> encodeKeyedStrictMaybe 15 ctbrTxNetworkId
-        !> Omit null (Key 19 (To ctbrGovProcs))
+        !> Omit null (Key 19 (To ctbrVotingProcedures))
+        !> Omit null (Key 20 (To ctbrProposalProcedures))
 
 instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
   encCBOR = encode . encodeTxBodyRaw

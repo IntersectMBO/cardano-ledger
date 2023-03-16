@@ -26,7 +26,7 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceActionId,
   GovernanceActionState (..),
   RatifyState (..),
-  VoteDecision (..),
+  Vote (..),
   VoterRole (..),
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactState (..))
@@ -100,7 +100,7 @@ accepted RatifyEnv {reRoles, reStakeDistr} GovernanceActionState {gasVotes} =
   where
     votedYesHashes role = Set.map snd . Map.keysSet $ Map.filterWithKey fil gasVotes
       where
-        fil (role', _) Yes | role == role' = True
+        fil (role', _) VoteYes | role == role' = True
         fil _ _ = False
     allSPOKeyHashes = Map.keysSet $ Map.filter isSPO reRoles
     isSPO SPO = True

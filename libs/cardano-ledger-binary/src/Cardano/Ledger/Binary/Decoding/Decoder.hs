@@ -368,15 +368,22 @@ decodeVersion = decodeWord64 >>= mkVersion64
 
 -- | `Decoder` for `Rational`. Versions variance:
 --
+-- * [>= 9] - Allows variable as well as exact list length encoding. Consumes tag 30 if
+--   one is present, but does not enforce it.
+--
 -- * [>= 2] - Allows variable as well as exact list length encoding.
 --
 -- * [== 1] - Expects exact list length encoding.
 decodeRational :: Decoder s Rational
 decodeRational =
   ifDecoderVersionAtLeast
-    (natVersion @2)
-    decodeRationalWithoutTag
-    decodeRationalFixedSizeTuple
+    (natVersion @9)
+    (allowTag 30 >> decodeRationalWithoutTag)
+    ( ifDecoderVersionAtLeast
+        (natVersion @2)
+        decodeRationalWithoutTag
+        decodeRationalFixedSizeTuple
+    )
   where
     decodeRationalFixedSizeTuple = do
       enforceSize "Rational" 2

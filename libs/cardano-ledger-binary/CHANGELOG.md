@@ -10,6 +10,9 @@
   serialization is not needed for pre-protocol version `2`.
 * Re-export crypto related encoding and decoding functions for `VRF`, `KES` and `DSIGN`
   from `Cardano.Ledger.Binary.Plain`
+* Fix deserializer for `Rational` and allow optionally tag `30` starting with protocol version `2`
+* Fix serializer for `Ratio` and encode tag `30` starting with protocol version `2`
+* Add new encoder `encodeRatioNoTag` for `Ratio`
 
 ### `testlib`
 

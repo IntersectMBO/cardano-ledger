@@ -27,8 +27,10 @@ module Cardano.Ledger.Conway.Governance (
   GovernanceActionIx (..),
   GovernanceActionId (..),
   VoterRole (..),
-  VoteDecision (..),
   Vote (..),
+  VotingProcedure (..),
+  ProposalProcedure (..),
+  GovernanceProcedure (..),
   Anchor (..),
   AnchorDataHash,
 ) where
@@ -204,52 +206,108 @@ toAnchorPairs vote@(Anchor _ _) =
       , "dataHash" .= anchorDataHash
       ]
 
-data Vote era = Vote
-  { voteGovActionId :: !(GovernanceActionId (EraCrypto era))
-  , voteRole :: !VoterRole
-  , voteRoleKeyHash :: !(KeyHash 'Voting (EraCrypto era))
-  , voteAnchor :: !(StrictMaybe (Anchor (EraCrypto era)))
-  , voteDecision :: !VoteDecision
+data VotingProcedure era = VotingProcedure
+  { vProcGovActionId :: !(GovernanceActionId (EraCrypto era))
+  , vProcRole :: !VoterRole
+  , vProcRoleKeyHash :: !(Credential 'Voting (EraCrypto era))
+  , vProcVote :: !Vote
+  , vProcAnchor :: !(StrictMaybe (Anchor (EraCrypto era)))
   }
   deriving (Generic, Eq, Show)
 
-instance NoThunks (Vote era)
+instance NoThunks (VotingProcedure era)
 
-instance Crypto (EraCrypto era) => NFData (Vote era)
+instance Crypto (EraCrypto era) => NFData (VotingProcedure era)
 
-instance Era era => DecCBOR (Vote era) where
+instance Era era => DecCBOR (VotingProcedure era) where
   decCBOR =
     decode $
-      RecD Vote
+      RecD VotingProcedure
+        <! From
         <! From
         <! From
         <! From
         <! D (decodeNullStrictMaybe decCBOR)
-        <! From
 
-instance Era era => EncCBOR (Vote era) where
-  encCBOR Vote {..} =
+instance Era era => EncCBOR (VotingProcedure era) where
+  encCBOR VotingProcedure {..} =
     encode $
-      Rec (Vote @era)
-        !> To voteGovActionId
-        !> To voteRole
-        !> To voteRoleKeyHash
-        !> E (encodeNullStrictMaybe encCBOR) voteAnchor
-        !> To voteDecision
+      Rec (VotingProcedure @era)
+        !> To vProcGovActionId
+        !> To vProcRole
+        !> To vProcRoleKeyHash
+        !> To vProcVote
+        !> E (encodeNullStrictMaybe encCBOR) vProcAnchor
 
-instance EraPParams era => ToJSON (Vote era) where
-  toJSON = object . toVotePairs
-  toEncoding = pairs . mconcat . toVotePairs
+instance EraPParams era => ToJSON (VotingProcedure era) where
+  toJSON = object . toVotingProcedurePairs
+  toEncoding = pairs . mconcat . toVotingProcedurePairs
 
-toVotePairs :: (KeyValue a, EraPParams era) => Vote era -> [a]
-toVotePairs vote@(Vote _ _ _ _ _) =
-  let Vote {..} = vote
-   in [ "govActionId" .= voteGovActionId
-      , "role" .= voteRole
-      , "roleKeyHash" .= voteRoleKeyHash
-      , "anchor" .= voteAnchor
-      , "decision" .= voteDecision
+toVotingProcedurePairs :: (KeyValue a, EraPParams era) => VotingProcedure era -> [a]
+toVotingProcedurePairs vProc@(VotingProcedure _ _ _ _ _) =
+  let VotingProcedure {..} = vProc
+   in [ "govActionId" .= vProcGovActionId
+      , "role" .= vProcRole
+      , "roleKeyHash" .= vProcRoleKeyHash
+      , "anchor" .= vProcAnchor
+      , "decision" .= vProcVote
       ]
+
+data ProposalProcedure era = ProposalProcedure
+  { pProcDeposit :: !Coin
+  , pProcReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
+  , pProcGovernanceAction :: !(GovernanceAction era)
+  , pProcAnchor :: !(StrictMaybe (Anchor (EraCrypto era)))
+  }
+  deriving (Generic, Eq, Show)
+
+instance EraPParams era => NoThunks (ProposalProcedure era)
+
+instance EraPParams era => NFData (ProposalProcedure era)
+
+instance EraPParams era => DecCBOR (ProposalProcedure era) where
+  decCBOR =
+    decode $
+      RecD ProposalProcedure
+        <! From
+        <! From
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
+
+instance EraPParams era => EncCBOR (ProposalProcedure era) where
+  encCBOR ProposalProcedure {..} =
+    encode $
+      Rec (ProposalProcedure @era)
+        !> To pProcDeposit
+        !> To pProcReturnAddr
+        !> To pProcGovernanceAction
+        !> E (encodeNullStrictMaybe encCBOR) pProcAnchor
+
+data GovernanceProcedure era
+  = GovernanceVotingProcedure !(VotingProcedure era)
+  | GovernanceProposalProcedure !(ProposalProcedure era)
+  deriving (Eq, Generic)
+
+instance EraPParams era => DecCBOR (GovernanceProcedure era) where
+  decCBOR = decode $ Summands "GovernanceProcedure" dec
+    where
+      dec 0 = SumD GovernanceVotingProcedure <! From
+      dec 1 = SumD GovernanceProposalProcedure <! From
+      dec n = Invalid n
+
+instance EraPParams era => EncCBOR (GovernanceProcedure era) where
+  encCBOR (GovernanceVotingProcedure vProc) =
+    encode @_ @(GovernanceProcedure era) $
+      Sum GovernanceVotingProcedure 0 !> To vProc
+  encCBOR (GovernanceProposalProcedure pProc) =
+    encode @_ @(GovernanceProcedure era) $
+      Sum GovernanceProposalProcedure 1 !> To pProc
+
+instance EraPParams era => NoThunks (GovernanceProcedure era)
+
+instance EraPParams era => NFData (GovernanceProcedure era)
+
+deriving instance EraPParams era => Show (GovernanceProcedure era)
 
 data VoterRole
   = ConstitutionalCommittee
@@ -269,26 +327,26 @@ instance NoThunks VoterRole
 
 instance NFData VoterRole
 
-data VoteDecision
-  = No
-  | Yes
+data Vote
+  = VoteNo
+  | VoteYes
   | Abstain
   deriving (Generic, Eq, Show, Enum, Bounded)
 
-instance ToJSON VoteDecision
+instance ToJSON Vote
 
-instance NoThunks VoteDecision
+instance NoThunks Vote
 
-instance NFData VoteDecision
+instance NFData Vote
 
-instance DecCBOR VoteDecision where
+instance DecCBOR Vote where
   decCBOR = decodeEnumBounded
 
-instance EncCBOR VoteDecision where
+instance EncCBOR Vote where
   encCBOR = encodeEnum
 
 data GovernanceActionState era = GovernanceActionState
-  { gasVotes :: !(Map (VoterRole, Credential 'Voting (EraCrypto era)) VoteDecision)
+  { gasVotes :: !(Map (VoterRole, Credential 'Voting (EraCrypto era)) Vote)
   , gasDeposit :: !Coin
   , gasReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
   , gasAction :: !(GovernanceAction era)

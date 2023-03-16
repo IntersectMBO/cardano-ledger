@@ -32,12 +32,12 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayTALLY)
-import Cardano.Ledger.Conway.Governance (ConwayGovernance (..), ConwayTallyState)
-import Cardano.Ledger.Conway.Rules.Tally (
-  ConwayTallyPredFailure,
+import Cardano.Ledger.Conway.Governance (
+  ConwayGovernance (..),
+  ConwayTallyState,
   GovernanceProcedure (..),
-  TallyEnv (..),
  )
+import Cardano.Ledger.Conway.Rules.Tally (ConwayTallyPredFailure, TallyEnv (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
@@ -247,7 +247,9 @@ ledgerTransition = do
   let DPState dstate _pstate = dpstate
       genDelegs = dsGenDelegs dstate
 
-  let govProcedures = txBody ^. govProcsTxBodyL
+  let govProcedures =
+        (GovernanceVotingProcedure <$> txBody ^. votingProceduresTxBodyL)
+          <> (GovernanceProposalProcedure <$> txBody ^. proposalProceduresTxBodyL)
   let govSt = utxosGovernance utxoSt
   epoch <- liftSTS $ do
     ei <- asks epochInfoPure

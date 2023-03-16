@@ -67,7 +67,8 @@ transaction_body =
   , ? 16 : transaction_output       ; collateral return
   , ? 17 : coin                     ; total collateral
   , ? 18 : set<transaction_input>   ; reference inputs
-  , ? 19 : [* governance_procedure] ; New; governance procedures
+  , ? 19 : [* voting_procedure]     ; New; Voting procedures
+  , ? 20 : [* proposal_procedure]   ; New; Proposal procedures
   }
 
 governance_action_state =
@@ -85,44 +86,38 @@ vote_info =
   , stake_credential
   ]
 
-governance_procedure = 
-  [ voting_procedure
-  // proposal_procedure
-  ]
-
 voting_procedure =
-  ( 0
-  , governance_action_id
+  [ governance_action_id
   , voter_role
   , stake_credential
-  , decision
-  , governance_metadata
-  )
+  , vote
+  , anchor / null
+  ]
 
 proposal_procedure =
-  ( 1
-  , deposit : coin
-  , $addr_keyhash
+  [ deposit : coin
+  , $hash28
   , governance_action
-  , governance_metadata
-  )
+  , anchor / null
+  ]
 
 governance_metadata =
   [ url
   , $hash32
   ]
 
-governance_action = 
+governance_action =
   [ parameter_change_action
   // hard_fork_initiation_action
   // treasury_withdrawals_action
   // no_confidence
   // new_committee
+  // new_constitution
   ]
 
 parameter_change_action = (0, protocol_param_update)
 
-hard_fork_initiation_action = (1, protocol_version)
+hard_fork_initiation_action = (1, [protocol_version])
 
 treasury_withdrawals_action = (2, { $addr_keyhash => coin })
 
@@ -131,14 +126,6 @@ no_confidence = 3
 new_committee = (4, [* $addr_keyhash], rational)
 
 new_constitution = (5, $hash32)
-
-vote =
-  [ governance_action_id : governance_action_id
-  , voter_role
-  , voter_role_key_hash  : stake_credential
-  , anchor               : anchor / null
-  , decision
-  ]
 
 ; constitutional committee - 0
 ; DRep - 1
@@ -153,7 +140,7 @@ anchor =
 ; no - 0
 ; yes - 1
 ; abstain - 2
-decision = 0 .. 2
+vote = 0 .. 2
 
 governance_action_id =
   [ transaction_id          : $hash32
@@ -488,7 +475,9 @@ posInt64 = 1 .. 9223372036854775807
 nonZeroInt64 = negInt64 / posInt64 ; this is the same as the current int64 definition but without zero
 natNum = 1 .. 4294967295 ; non-zero 32bit uint
 
-value = coin / [coin,multiasset<natNum>]
+positive_coin = 1 .. 18446744073709551615
+
+value = positive_coin / [positive_coin,multiasset<natNum>]
 
 mint = multiasset<nonZeroInt64>
 

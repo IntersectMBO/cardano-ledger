@@ -161,6 +161,7 @@ exampleTxBodyConway =
     (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
     (SJust Mainnet) -- txnetworkid
     mempty
+    mempty
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 
