@@ -11,6 +11,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use record patterns" #-}
 
 module Cardano.Ledger.Conway.Governance (
   EraGovernance (..),
@@ -430,6 +433,8 @@ data EnactState era = EnactState
   -- ^ Hash of the Constitution
   , ensProtVer :: !ProtVer
   , ensPParams :: !(PParams era)
+  , ensTreasury :: !Coin
+  , ensWithdrawals :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
   }
   deriving (Generic)
 
@@ -438,12 +443,14 @@ instance EraPParams era => ToJSON (EnactState era) where
   toEncoding = pairs . mconcat . toEnactStatePairs
 
 toEnactStatePairs :: (KeyValue a, EraPParams era) => EnactState era -> [a]
-toEnactStatePairs cg@(EnactState _ _ _ _) =
+toEnactStatePairs cg@(EnactState _ _ _ _ _ _) =
   let EnactState {..} = cg
    in [ "committee" .= ensCommittee
       , "constitution" .= ensConstitution
       , "protVer" .= ensProtVer
       , "pparams" .= ensPParams
+      , "treasury" .= ensTreasury
+      , "withdrawals" .= ensWithdrawals
       ]
 
 deriving instance Eq (PParams era) => Eq (EnactState era)
@@ -457,11 +464,15 @@ instance EraPParams era => Default (EnactState era) where
       def
       (ProtVer (eraProtVerLow @era) 0)
       def
+      (Coin 0)
+      def
 
 instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR =
     decode $
       RecD EnactState
+        <! From
+        <! From
         <! From
         <! From
         <! From
@@ -475,6 +486,8 @@ instance EraPParams era => EncCBOR (EnactState era) where
         !> To ensConstitution
         !> To ensProtVer
         !> To ensPParams
+        !> To ensTreasury
+        !> To ensWithdrawals
 
 instance EraPParams era => NFData (EnactState era)
 

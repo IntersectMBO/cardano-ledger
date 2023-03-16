@@ -858,6 +858,7 @@ ppShelleyNewEpochPredicateFailure (MirFailure _) =
 ppConwayNewEpochPredicateFailure ::
   forall era.
   ( PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
+  , PredicateFailure (EraRule "RATIFY" era) ~ Conway.EnactPredFailure era
   , Reflect era
   ) =>
   ConwayNewEpochPredFailure era ->
@@ -865,6 +866,15 @@ ppConwayNewEpochPredicateFailure ::
 ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = ppEpochPredicateFailure @era x
 ppConwayNewEpochPredicateFailure (Conway.CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
+ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = ppRatifyPredicateFailure @era x
+
+ppRatifyPredicateFailure :: Conway.EnactPredFailure era -> PDoc
+ppRatifyPredicateFailure (Conway.EnactTreasuryInsufficientFunds wdrl tr) =
+  ppRecord
+    "EnactTreasuryInsufficientFunds"
+    [ ("Withdrawals", prettyA wdrl)
+    , ("Treasury", prettyA tr)
+    ]
 
 instance
   ( Reflect era

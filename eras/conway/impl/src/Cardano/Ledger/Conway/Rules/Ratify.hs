@@ -4,7 +4,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -29,7 +28,7 @@ import Cardano.Ledger.Conway.Governance (
   Vote (..),
   VoterRole (..),
  )
-import Cardano.Ledger.Conway.Rules.Enact (EnactState (..))
+import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (..))
@@ -48,7 +47,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Set as Set
-import Data.Void (Void, absurd)
+import Data.Void (absurd)
 
 data RatifyEnv era = RatifyEnv
   { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
@@ -59,8 +58,8 @@ data RatifyEnv era = RatifyEnv
 newtype RatifySignal era
   = RatifySignal
       ( StrictSeq
-          ( (GovernanceActionId (EraCrypto era))
-          , (GovernanceActionState era)
+          ( GovernanceActionId (EraCrypto era)
+          , GovernanceActionState era
           )
       )
 
@@ -74,7 +73,7 @@ instance
   STS (ConwayRATIFY era)
   where
   type Environment (ConwayRATIFY era) = RatifyEnv era
-  type PredicateFailure (ConwayRATIFY era) = Void
+  type PredicateFailure (ConwayRATIFY era) = EnactPredFailure era
   type Signal (ConwayRATIFY era) = RatifySignal era
   type State (ConwayRATIFY era) = RatifyState era
   type BaseM (ConwayRATIFY era) = ShelleyBase
@@ -147,5 +146,5 @@ ratifyTransition = do
     Empty -> pure st
 
 instance EraGovernance era => Embed (ConwayENACT era) (ConwayRATIFY era) where
-  wrapFailed = absurd
+  wrapFailed = id
   wrapEvent = absurd

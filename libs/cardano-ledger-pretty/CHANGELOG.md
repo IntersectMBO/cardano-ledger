@@ -12,6 +12,7 @@
   * Added `PrettyA` instances for new Conway data types:
     * `RatifyEnv` #3291
     * `RatifySignal` #3291
+  * Add pretty printing for `ensTreasury` and `ensWithdrawals` #3339
 
 * Changed:
   * Changed the prettyprinter of `ConwayTxBody` to account for the new

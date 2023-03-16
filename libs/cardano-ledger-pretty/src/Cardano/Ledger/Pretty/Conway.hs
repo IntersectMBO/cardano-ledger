@@ -206,7 +206,7 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionState era) wher
           ]
 
 instance PrettyA (PParams era) => PrettyA (EnactState era) where
-  prettyA ens@(EnactState _ _ _ _) =
+  prettyA ens@(EnactState _ _ _ _ _ _) =
     let EnactState {..} = ens
      in ppRecord
           "EnactState"
@@ -214,6 +214,8 @@ instance PrettyA (PParams era) => PrettyA (EnactState era) where
           , ("PParams", prettyA ensPParams)
           , ("ProtVer", prettyA ensProtVer)
           , ("Constitution", prettyA ensConstitution)
+          , ("Treasury", prettyA ensTreasury)
+          , ("Withdrawals", prettyA ensWithdrawals)
           ]
 
 instance
