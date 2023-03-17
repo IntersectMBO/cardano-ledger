@@ -381,49 +381,49 @@ utxoInductive ::
 utxoInductive = do
   TRC (UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo _ _ ppup _ = u
-  let txb = tx ^. bodyTxL
+      txBody = tx ^. bodyTxL
+      outputs = txBody ^. outputsTxBodyL
 
   {- txttl txb ≥ slot -}
-  runTest $ validateTimeToLive txb slot
+  runTest $ validateTimeToLive txBody slot
 
   {- txins txb ≠ ∅ -}
-  runTest $ validateInputSetEmptyUTxO txb
+  runTest $ validateInputSetEmptyUTxO txBody
 
   {- minfee pp tx ≤ txfee txb -}
   runTest $ validateFeeTooSmallUTxO pp tx
 
   {- txins txb ⊆ dom utxo -}
-  runTest $ validateBadInputsUTxO utxo $ txb ^. inputsTxBodyL
+  runTest $ validateBadInputsUTxO utxo $ txBody ^. inputsTxBodyL
 
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTest . validateWrongNetwork netId . toList $ txb ^. outputsTxBodyL
+  runTest $ validateWrongNetwork netId outputs
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
-  runTest $ validateWrongNetworkWithdrawal netId txb
+  runTest $ validateWrongNetworkWithdrawal netId txBody
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ validateValueNotConservedUTxO pp utxo dpstate txb
+  runTest $ validateValueNotConservedUTxO pp utxo dpstate txBody
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputs = txouts txb
   {- ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp) -}
   runTest $ validateOutputTooSmallUTxO pp outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runTest $ validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
+  runTest $ validateOutputBootAddrAttrsTooBig outputs
 
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
 
-  let refunded = keyTxRefunds pp dpstate txb
-  let totalDeposits' = totalTxDeposits pp dpstate txb
+  let refunded = keyTxRefunds pp dpstate txBody
+  let totalDeposits' = totalTxDeposits pp dpstate txBody
   let depositChange = totalDeposits' Val.<-> refunded
-  tellEvent $ TotalDeposits (hashAnnotated txb) depositChange
-  pure $! updateUTxOState pp u txb depositChange ppup'
+  tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
+  pure $! updateUTxOState pp u txBody depositChange ppup'
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).
@@ -482,17 +482,17 @@ validateBadInputsUTxO utxo txins =
 --
 -- > ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId
 validateWrongNetwork ::
-  EraTxOut era =>
+  (EraTxOut era, Foldable f) =>
   Network ->
-  [TxOut era] ->
+  f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
-validateWrongNetwork netId outs =
+validateWrongNetwork netId outputs =
   failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
   where
     addrsWrongNetwork =
       filter
         (\a -> getNetwork a /= netId)
-        (view addrTxOutL <$> outs)
+        (view addrTxOutL <$> toList outputs)
 
 -- | Make sure all addresses match the supplied NetworkId
 --
@@ -534,11 +534,11 @@ validateValueNotConservedUTxO pp utxo dpstate txb =
 --
 -- > ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp)
 validateOutputTooSmallUTxO ::
-  EraTxOut era =>
+  (EraTxOut era, Foldable f) =>
   PParams era ->
-  UTxO era ->
+  f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
-validateOutputTooSmallUTxO pp (UTxO outputs) =
+validateOutputTooSmallUTxO pp outputs =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
     -- minUTxOValue deposit comparison done as Coin because this rule is correct
@@ -547,15 +547,15 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
     outputsTooSmall =
       filter
         (\txOut -> txOut ^. coinTxOutL < getMinCoinTxOut pp txOut)
-        (Map.elems outputs)
+        (toList outputs)
 
 -- | Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
 -- It is important to limit their overall size.
 --
 -- > ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64
 validateOutputBootAddrAttrsTooBig ::
-  EraTxOut era =>
-  [TxOut era] ->
+  (EraTxOut era, Foldable f) =>
+  f (TxOut era) ->
   Test (ShelleyUtxoPredFailure era)
 validateOutputBootAddrAttrsTooBig outputs =
   failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
@@ -567,7 +567,7 @@ validateOutputBootAddrAttrsTooBig outputs =
               Just addr -> bootstrapAddressAttrsSize addr > 64
               _ -> False
         )
-        outputs
+        (toList outputs)
 
 -- | Ensure that the size of the transaction does not exceed the @maxTxSize@ protocol parameter
 --
