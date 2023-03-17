@@ -19,7 +19,6 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
   validateTotalCollateral,
   validateCollateralEqBalance,
   validateOutputTooSmallUTxO,
-  validateOutputTooBigUTxO,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
@@ -32,8 +31,11 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (..),
   utxoPredFailMaToAlonzo,
   utxoPredFailShelleyToAlonzo,
+ )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   validateExUnitsTooBigUTxO,
   validateInsufficientCollateral,
+  validateOutputTooBigUTxO,
   validateOutsideForecast,
   validateScriptsNotPaidUTxO,
   validateTooManyCollateralInputs,
@@ -49,13 +51,12 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.BaseTypes (
-  ProtVer (..),
   ShelleyBase,
   epochInfo,
   networkId,
   systemStart,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..), serialize)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Rules.ValidationMode (
@@ -85,9 +86,8 @@ import Control.State.Transition.Extended (
   trans,
  )
 import Data.Bifunctor (first)
-import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import Data.Foldable (Foldable (foldl'), sequenceA_, toList)
+import Data.Foldable (sequenceA_, toList)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -204,12 +204,12 @@ validateTotalCollateral ::
 validateTotalCollateral pp txBody utxoCollateral =
   sequenceA_
     [ -- Part 3: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
-      fromAlonzoValidation $ validateScriptsNotPaidUTxO utxoCollateral
+      fromAlonzoValidation $ Alonzo.validateScriptsNotPaidUTxO utxoCollateral
     , -- Part 4: isAdaOnly balance
       fromAlonzoValidation $
         validateCollateralContainsNonADA txBody utxoCollateral
     , -- Part 5: balance ≥ ⌈txfee txb ∗ (collateralPercent pp) / 100⌉
-      fromAlonzoValidation $ validateInsufficientCollateral pp txBody bal
+      fromAlonzoValidation $ Alonzo.validateInsufficientCollateral pp txBody bal
     , -- Part 6: (txcoll tx ≠ ◇) ⇒ balance = txcoll tx
       validateCollateralEqBalance bal (txBody ^. totalCollateralTxBodyL)
     , -- Part 7: collInputs tx ≠ ∅
@@ -261,14 +261,14 @@ validateCollateralEqBalance bal txcoll =
 
 -- > getValue txout ≥ inject ( serSize txout ∗ coinsPerUTxOByte pp )
 validateOutputTooSmallUTxO ::
-  EraTxOut era =>
+  (EraTxOut era, Foldable f) =>
   PParams era ->
-  [Sized (TxOut era)] ->
+  f (Sized (TxOut era)) ->
   Test (BabbageUtxoPredFailure era)
 validateOutputTooSmallUTxO pp outs =
   failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
   where
-    outs' = map (\out -> (sizedValue out, getMinCoinSizedTxOut pp out)) outs
+    outs' = map (\out -> (sizedValue out, getMinCoinSizedTxOut pp out)) (toList outs)
     outputsTooSmall =
       filter
         ( \(out, minSize) ->
@@ -281,27 +281,6 @@ validateOutputTooSmallUTxO pp outs =
                     (Val.inject minSize)
         )
         outs'
-
--- > serSize (getValue txout) ≤ maxValSize pp
-validateOutputTooBigUTxO ::
-  ( EraTxOut era
-  , AlonzoEraPParams era
-  ) =>
-  PParams era ->
-  [TxOut era] ->
-  Test (AlonzoUtxoPredFailure era)
-validateOutputTooBigUTxO pp outs =
-  failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
-  where
-    maxValSize = pp ^. ppMaxValSizeL
-    protVer = pp ^. ppProtocolVersionL
-    outputsTooBig = foldl' accum [] outs
-    accum ans txOut =
-      let v = txOut ^. valueTxOutL
-          serSize = fromIntegral $ BSL.length $ serialize (pvMajor protVer) v
-       in if serSize > maxValSize
-            then (fromIntegral serSize, fromIntegral maxValSize, txOut) : ans
-            else ans
 
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
@@ -335,7 +314,7 @@ utxoTransition = do
   ei <- liftSTS $ asks epochInfo
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast ei slot sysSt tx
+  runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
@@ -354,12 +333,12 @@ utxoTransition = do
    cannot contain ada -}
 
   {-   ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout ∗ coinsPerUTxOByte pp) -}
-  let allSizedOutputs = toList (txBody ^. allSizedOutputsTxBodyF)
+  let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
   runTest $ validateOutputTooSmallUTxO pp allSizedOutputs
 
   let allOutputs = fmap sizedValue allSizedOutputs
   {-   ∀ txout ∈ allOuts txb, serSize (getValue txout) ≤ maxValSize pp   -}
-  runTest $ validateOutputTooBigUTxO pp allOutputs
+  runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ allOuts txb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
@@ -373,16 +352,16 @@ utxoTransition = do
   runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
 
   {- (txnetworkid txb = NetworkId) ∨ (txnetworkid txb = ◇) -}
-  runTestOnSignal $ validateWrongNetworkInTxBody netId txBody
+  runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
 
   {- txsize tx ≤ maxTxSize pp -}
   runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
   {-   totExunits tx ≤ maxTxExUnits pp    -}
-  runTest $ validateExUnitsTooBigUTxO pp tx
+  runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
-  runTest $ validateTooManyCollateralInputs pp txBody
+  runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
 
   trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 

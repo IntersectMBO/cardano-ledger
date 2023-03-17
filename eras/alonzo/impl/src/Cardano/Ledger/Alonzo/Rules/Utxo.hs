@@ -22,6 +22,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxo (
   utxoPredFailShelleyToAlonzo,
   validateCollateralContainsNonADA,
   validateExUnitsTooBigUTxO,
+  validateOutputTooBigUTxO,
   validateInsufficientCollateral,
   validateOutsideForecast,
   validateScriptsNotPaidUTxO,
@@ -88,7 +89,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue, txouts)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -362,11 +363,11 @@ validateOutsideForecast ei slotNo sysSt tx =
 --
 -- > ∀ txout ∈ txouts txb, getValue txout ≥ inject (utxoEntrySize txout ∗ coinsPerUTxOWord pp)
 validateOutputTooSmallUTxO ::
-  AlonzoEraTxOut era =>
+  (AlonzoEraTxOut era, Foldable f) =>
   PParams era ->
-  UTxO era ->
+  f (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
-validateOutputTooSmallUTxO pp (UTxO outputs) =
+validateOutputTooSmallUTxO pp outputs =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
     outputsTooSmall =
@@ -376,7 +377,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
              in -- pointwise is used because non-ada amounts must be >= 0 too
                 not $ Val.pointwise (>=) v (Val.inject $ getMinCoinTxOut pp txOut)
         )
-        (Map.elems outputs)
+        (toList outputs)
 
 -- | Ensure that there are no `TxOut`s that have `Value` of size larger
 -- than @MaxValSize@. We use serialized length of `Value` because this Value
@@ -386,16 +387,17 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 validateOutputTooBigUTxO ::
   ( EraTxOut era
   , AlonzoEraPParams era
+  , Foldable f
   ) =>
   PParams era ->
-  UTxO era ->
+  f (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
-validateOutputTooBigUTxO pp (UTxO outputs) =
+validateOutputTooBigUTxO pp outputs =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
     maxValSize = pp ^. ppMaxValSizeL
     protVer = pp ^. ppProtocolVersionL
-    outputsTooBig = foldl' accum [] $ Map.elems outputs
+    outputsTooBig = foldl' accum [] outputs
     accum ans txOut =
       let v = txOut ^. valueTxOutL
           serSize = fromIntegral $ BSL.length $ serialize (pvMajor protVer) v
@@ -503,7 +505,7 @@ utxoTransition = do
   {- adaPolicy ∉ supp mint tx
      above check not needed because mint field of type MultiAsset cannot contain ada -}
 
-  let outputs = txouts txBody
+  let outputs = txBody ^. outputsTxBodyL
   {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject (uxoEntrySizetxout ∗ coinsPerUTxOWord p) -}
   runTest $ validateOutputTooSmallUTxO pp outputs
 
@@ -511,12 +513,12 @@ utxoTransition = do
   runTest $ validateOutputTooBigUTxO pp outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig (Map.elems (unUTxO outputs))
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig outputs
 
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTestOnSignal $ Shelley.validateWrongNetwork netId . toList $ txBody ^. outputsTxBodyL
+  runTestOnSignal $ Shelley.validateWrongNetwork netId outputs
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody

@@ -4,6 +4,8 @@
 
 * Add `ToJSON` instance for `BabbageTxOut`.
 * Add `ToJSON` instance for `BabbagePParams Identity` and `BabbagePParams StrictMaybe`
+* Removed validation function `validateOutputTooBigUTxO`, in favor of the same function
+  from `cardano-ledger-alonzo`.
 
 ###`testlib`
 
