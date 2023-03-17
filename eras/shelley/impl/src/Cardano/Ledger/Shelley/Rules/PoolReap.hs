@@ -130,8 +130,8 @@ poolReapTransition = do
       Map.partitionWithKey
         (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
         (Map.mapKeys getRwdCred rewardAcnts')
-    refunded = fold $ Map.elems refunds
-    unclaimed = fold $ Map.elems mRefunds
+    refunded = fold refunds
+    unclaimed = fold mRefunds
 
   tellEvent $
     let rewardAcntsWithPool =

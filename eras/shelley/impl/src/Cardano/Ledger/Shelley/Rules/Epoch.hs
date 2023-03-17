@@ -21,7 +21,6 @@ module Cardano.Ledger.Shelley.Rules.Epoch (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
@@ -209,10 +208,10 @@ epochTransition = do
     -- kept (dsUnified of DState and psDeposits of PState) are adjusted by
     -- the rules, So we can recompute the utxosDeposited field using adjustedDPState
     -- since we have the invariant that: obligationDPState dpstate == utxosDeposited utxostate
-    Coin oblgNew = obligationDPState adjustedDPstate
-    Coin reserves = asReserves acnt'
-    utxoSt''' = utxoSt'' {utxosDeposited = Coin oblgNew}
-    acnt'' = acnt' {asReserves = Coin reserves}
+    oblgNew = obligationDPState adjustedDPstate
+    reserves = asReserves acnt'
+    utxoSt''' = utxoSt'' {utxosDeposited = oblgNew}
+    acnt'' = acnt' {asReserves = reserves}
   pure $
     epochState'
       { esAccountState = acnt''

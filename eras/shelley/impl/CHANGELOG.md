@@ -32,6 +32,7 @@
   rather than the `DPState`. Use `totalCertsDepositsDPState` for the previous behavior
 * Added `getProducedValue` and `totalCertsDepositsDPState`.
 * Deprecate `evaluateTransactionBalance`
+* Change types in `StakePoolRetirementWrongEpochPOOL` from `Word64` to `EpochNo`
 
 ### `testlib`
 
