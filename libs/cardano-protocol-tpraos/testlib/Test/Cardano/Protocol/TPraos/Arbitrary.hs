@@ -35,9 +35,6 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.QuickCheck (Arbitrary, arbitrary, frequency, genericShrink, shrink)
 
--- import Cardano.Ledger.Alonzo (Alonzo)
--- import Cardano.Ledger.Babbage (Babbage)
-
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> arbitrary
 
@@ -101,16 +98,6 @@ instance Crypto c => Arbitrary (OCert c) where
 
 deriving newtype instance Arbitrary KESPeriod
 
--- genBlock ::
---   forall era h.
---   ( EraSegWits era
---   , Mock (EraCrypto era)
---   , Arbitrary (Tx era)
---   , VRF.Signable (VRF (EraCrypto era)) ~ SignableRepresentation
---   , h ~ BHeader (EraCrypto era)
---   ) =>
---   Gen (Block h era)
--- genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 instance
   ( Crypto c
   , Era era
@@ -125,19 +112,3 @@ instance
     Block
       <$> arbitrary
       <*> (toTxSeq @era <$> arbitrary)
-
--- instance
---   Arbitrary (Block (BHeader StandardCrypto) Alonzo)
---   where
---   arbitrary =
---     Block
---       <$> arbitrary
---       <*> (toTxSeq @Alonzo <$> arbitrary)
-
--- instance
---   Arbitrary (Block (BHeader StandardCrypto) Babbage)
---   where
---   arbitrary =
---     Block
---       <$> arbitrary
---       <*> (toTxSeq @Babbage <$> arbitrary)
