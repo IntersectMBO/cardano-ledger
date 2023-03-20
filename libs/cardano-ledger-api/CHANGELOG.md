@@ -32,6 +32,7 @@
     `ProtVerInBounds`, `atLeastEra` and `atMostEra`
 * Move `Cardano.Ledger.Alonzo.Tools` module from `cardano-ledegr-alonzo` into
   `Cardano.Ledger.Api.Scripts`
+* Addition of `evalBalanceTxBody`
 
 ## 1.0.0.0
 

@@ -22,6 +22,7 @@ module Cardano.Ledger.Shelley.UTxO (
   scriptCred,
   scriptStakeCred,
   getConsumedCoin,
+  getProducedValue,
   consumed,
   produced,
   txup,
