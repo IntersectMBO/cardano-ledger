@@ -5,10 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Api.Tx.Out (
-  txOutSpec,
-)
-where
+module Test.Cardano.Ledger.Api.Tx.Out (spec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Out
@@ -91,8 +88,8 @@ propSetEnsureMinTxOut =
     sizedValue (ensureMinCoinSizedTxOut pp txOutSz) ^. coinTxOutL
       `shouldSatisfy` (>= (sizedValue (setMinCoinSizedTxOut pp txOutSz) ^. coinTxOutL))
 
-txOutSpec :: Spec
-txOutSpec =
+spec :: Spec
+spec =
   describe "TxOut" $ do
     describe "ShelleyEra" $ do
       propSetShelleyMinTxOut @Shelley
