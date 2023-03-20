@@ -54,7 +54,7 @@ library
         cardano-ledger-shelley-test ^>=1.1,
         cardano-ledger-mary ^>=1.1,
         cardano-ledger-shelley-ma-test ^>=1.1,
-        cardano-protocol-tpraos ^>=1.0,
+        cardano-protocol-tpraos ^>=1.1,
         cardano-slotting,
         cardano-strict-containers,
         cborg,

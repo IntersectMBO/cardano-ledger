@@ -79,7 +79,7 @@ test-suite cardano-ledger-babbage-test
         cardano-ledger-shelley,
         cardano-ledger-shelley-ma-test,
         cardano-ledger-shelley-test,
-        cardano-protocol-tpraos >=1.0,
+        cardano-protocol-tpraos >=1.1,
         cardano-slotting,
         containers,
         data-default-class,

@@ -43,7 +43,7 @@ library
         cardano-ledger-core >=1.0,
         cardano-ledger-mary >=1.0,
         cardano-ledger-shelley >=1.1,
-        cardano-protocol-tpraos >=1.0,
+        cardano-protocol-tpraos >=1.1,
         cardano-slotting,
         containers,
         hashable,
