@@ -137,14 +137,14 @@ freeCostModelV1 :: CostModel
 freeCostModelV1 =
   fromRight (error "corrupt freeCostModelV1") $
     mkCostModel PlutusV1 $
-      const 0 <$> (enumerate @PV1.ParamName)
+      0 <$ (enumerate @PV1.ParamName)
 
 -- | A cost model that sets everything as being free
 freeCostModelV2 :: CostModel
 freeCostModelV2 =
   fromRight (error "corrupt freeCostModelV2") $
     mkCostModel PlutusV1 $
-      const 0 <$> (enumerate @PV2.ParamName)
+      0 <$ (enumerate @PV2.ParamName)
 
 someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
 someKeys _pf = KeyPair vk sk
@@ -158,9 +158,9 @@ someAddr pf = Addr Testnet pCred sCred
     pCred = KeyHashObj . hashKey . vKey $ someKeys pf
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
--- Create an address with a given payment script.The proof here is used only as a Proxy.
-someScriptAddr :: forall era. (Scriptic era) => Script era -> Proof era -> Addr (EraCrypto era)
-someScriptAddr s _pf = Addr Testnet pCred sCred
+-- Create an address with a given payment script.
+someScriptAddr :: forall era. Scriptic era => Script era -> Addr (EraCrypto era)
+someScriptAddr s = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
     (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 0)
@@ -202,14 +202,14 @@ initUTxO pf =
     alwaysSucceedsOutput =
       newTxOut
         pf
-        [ Address (someScriptAddr (always 3 pf) pf)
+        [ Address (someScriptAddr (always 3 pf))
         , Amount (inject $ Coin 5000)
         , DHash' [hashData $ datumExample1 @era]
         ]
     alwaysFailsOutput =
       newTxOut
         pf
-        [ Address (someScriptAddr (never 0 pf) pf)
+        [ Address (someScriptAddr (never 0 pf))
         , Amount (inject $ Coin 3000)
         , DHash' [hashData $ datumExample2 @era]
         ]
@@ -227,13 +227,13 @@ initUTxO pf =
     unspendableOut =
       newTxOut
         pf
-        [ Address (someScriptAddr (always 3 pf) pf)
+        [ Address (someScriptAddr (always 3 pf))
         , Amount (inject $ Coin 5000)
         ]
     alwaysSucceedsOutputV2 =
       newTxOut
         pf
-        [ Address (someScriptAddr (alwaysAlt 3 pf) pf)
+        [ Address (someScriptAddr (alwaysAlt 3 pf))
         , Amount (inject $ Coin 5000)
         , DHash' [hashData $ datumExample1 @era]
         ]

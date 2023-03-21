@@ -5,25 +5,25 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Alonzo.Tools (tests, testExUnitCalculation) where
+module Test.Cardano.Ledger.Alonzo.Tools (tests) where
 
 import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModel, ExUnits (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, ExUnits (..), Tag (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
-import Cardano.Ledger.Api.Tx (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, natVersion)
+import Cardano.Ledger.Api.Tx (TransactionScriptFailure (..), evalTxExUnits)
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
@@ -32,15 +32,16 @@ import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended (STS (BaseM, Environment, Signal, State), TRC (TRC))
-import Data.Array (Array, array)
 import Data.Default.Class (Default (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.CostModel (freeCostModel, freeV1CostModels)
+import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
@@ -50,13 +51,6 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkTxDats,
   someAddr,
   someKeys,
- )
-import Test.Cardano.Ledger.Generic.Fields (
-  PParamsField (..),
-  TxBodyField (..),
-  TxField (..),
-  TxOutField (..),
-  WitnessesField (..),
  )
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
@@ -101,7 +95,7 @@ testSystemStart :: SystemStart
 testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 -- checks plutus script validation against a tx which has had
--- its ex units replaced by the output of evaluateTransactionExecutionUnits
+-- its ex units replaced by the output of evalTxExUnits
 testExUnitCalculation ::
   forall era m.
   ( MonadFail m
@@ -116,17 +110,15 @@ testExUnitCalculation ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
-  Proof era ->
   Tx era ->
   UTxOState era ->
   UtxoEnv era ->
   EpochInfo (Either Text) ->
   SystemStart ->
-  Array Language CostModel ->
   (forall a. String -> m a) ->
   m ()
-testExUnitCalculation proof tx utxoState ue ei ss costmdls err = do
-  tx' <- updateTxExUnits proof tx utxo ei ss costmdls err
+testExUnitCalculation tx utxoState ue ei ss err = do
+  tx' <- updateTxExUnits tx utxo ei ss err
   _ <-
     failLeft err $
       runShelleyBase $
@@ -155,13 +147,11 @@ exampleExUnitCalc ::
   IO ()
 exampleExUnitCalc proof =
   testExUnitCalculation
-    proof
     (exampleTx proof (RdmrPtr Spend 0))
     (ustate proof)
-    (uenv proof)
+    uenv
     exampleEpochInfo
     testSystemStart
-    costmodels
     assertFailure
 
 exampleInvalidExUnitCalc ::
@@ -180,61 +170,59 @@ exampleInvalidExUnitCalc ::
   IO ()
 exampleInvalidExUnitCalc proof = do
   let result =
-        evaluateTransactionExecutionUnits @era
-          (pparams proof)
+        evalTxExUnits @era
+          testPParams
           (exampleTx proof (RdmrPtr Spend 1))
           (initUTxO proof)
           exampleEpochInfo
           testSystemStart
-          costmodels
   case result of
     Left err ->
       assertFailure $
-        "evaluateTransactionExecutionUnits should not have failed, but it did with: " ++ show err
+        "evalTxExUnits should not have failed, but it did with: " ++ show err
     Right report ->
       case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
         [] ->
-          assertFailure "evaluateTransactionExecutionUnits should have produced a failing report"
+          assertFailure "evalTxExUnits should have produced a failing report"
         [(_, failure)] ->
           RedeemerPointsToUnknownScriptHash (RdmrPtr Spend 1)
             @=? failure
         failures ->
           assertFailure $
-            "evaluateTransactionExecutionUnits produce failing scripts with unexpected errors: "
+            "evalTxExUnits produce failing scripts with unexpected errors: "
               ++ show failures
 
 exampleTx ::
   ( Scriptic era
-  , EraTxBody era
+  , AlonzoEraTx era
   , Signable (DSIGN (EraCrypto era)) (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   RdmrPtr ->
   Tx era
 exampleTx pf ptr =
-  newTx
-    pf
-    [ Body (validatingBody pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , DataWits' [Data (PV1.I 123)]
-        , RdmrWits $
-            Redeemers $
-              Map.singleton ptr (Data (PV1.I 42), ExUnits 5000 5000)
-        ]
-    ]
+  mkBasicTx (validatingBody pf)
+    & witsTxL .~ wits
+  where
+    wits =
+      mkBasicTxWits
+        & addrTxWitsL
+          .~ Set.fromList [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
+        & hashScriptTxWitsL .~ [always 3 pf]
+        & hashDataTxWitsL .~ [Data (PV1.I 123)]
+        & rdmrsTxWitsL
+          .~ Redeemers (Map.singleton ptr (Data (PV1.I 42), ExUnits 5000 5000))
 
-validatingBody :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
+validatingBody :: (Scriptic era, AlonzoEraTxBody era) => Proof era -> TxBody era
 validatingBody pf =
-  newTxBody
-    pf
-    [ Inputs' [mkGenesisTxIn 1]
-    , Collateral' [mkGenesisTxIn 11]
-    , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
-    , Txfee (Coin 5)
-    , WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
-    ]
+  mkBasicTxBody
+    & inputsTxBodyL .~ Set.fromList [mkGenesisTxIn 1]
+    & collateralInputsTxBodyL .~ Set.fromList [mkGenesisTxIn 11]
+    & outputsTxBodyL
+      .~ SSeq.fromList [mkBasicTxOut (someAddr pf) (inject $ Coin 4995)]
+    & feeTxBodyL .~ Coin 5
+    & scriptIntegrityHashTxBodyL
+      .~ newScriptIntegrityHash pf testPParams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123)))
   where
     redeemers =
       Redeemers $
@@ -243,11 +231,8 @@ validatingBody pf =
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
-uenv :: EraPParams era => Proof era -> UtxoEnv era
-uenv pf = UtxoEnv (SlotNo 0) (pparams pf) def (GenDelegs mempty)
-
-costmodels :: Array Language CostModel
-costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, freeCostModel PlutusV1)]
+uenv :: AlonzoEraPParams era => UtxoEnv era
+uenv = UtxoEnv (SlotNo 0) testPParams def (GenDelegs mempty)
 
 ustate ::
   ( EraTxOut era
@@ -274,34 +259,31 @@ updateTxExUnits ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   ) =>
-  Proof era ->
   Tx era ->
   UTxO era ->
   EpochInfo (Either Text) ->
   SystemStart ->
-  Array Language CostModel ->
   (forall a. String -> m a) ->
   m (Tx era)
-updateTxExUnits proof tx utxo ei ss costmdls err =
-  let res = evaluateTransactionExecutionUnits (pparams proof) tx utxo ei ss costmdls
+updateTxExUnits tx utxo ei ss err =
+  let res = evalTxExUnits testPParams tx utxo ei ss
    in case res of
         Left e -> err (show e)
         Right (rdmrs :: Map RdmrPtr (Either (TransactionScriptFailure (EraCrypto era)) ExUnits)) ->
-          replaceRdmrs proof tx <$> traverse (failLeft err) rdmrs
+          replaceRdmrs tx <$> traverse (failLeft err) rdmrs
 
 replaceRdmrs ::
   forall era.
   (AlonzoEraTxWits era, EraTx era) =>
-  Proof era ->
   Tx era ->
   Map RdmrPtr ExUnits ->
   Tx era
-replaceRdmrs pf tx rdmrs = updateTx pf tx (WitnessesI [RdmrWits newrdmrs])
+replaceRdmrs tx rdmrs = tx & witsTxL . rdmrsTxWitsL .~ newRdmrs
   where
-    newrdmrs = foldr replaceRdmr (tx ^. witsTxL . rdmrsTxWitsL) (Map.assocs rdmrs)
+    newRdmrs = Map.foldrWithKey replaceRdmr (tx ^. witsTxL . rdmrsTxWitsL) rdmrs
 
-    replaceRdmr :: (RdmrPtr, ExUnits) -> Redeemers era -> Redeemers era
-    replaceRdmr (ptr, ex) x@(Redeemers r) =
+    replaceRdmr :: RdmrPtr -> ExUnits -> Redeemers era -> Redeemers era
+    replaceRdmr ptr ex x@(Redeemers r) =
       case Map.lookup ptr r of
         Just (dat, _ex) -> Redeemers $ Map.insert ptr (dat, ex) r
         Nothing -> x
@@ -310,13 +292,11 @@ failLeft :: (Monad m, Show e) => (String -> m a) -> Either e a -> m a
 failLeft _ (Right a) = pure a
 failLeft err (Left e) = err (show e)
 
-pparams :: EraPParams era => Proof era -> PParams era
-pparams proof =
-  newPParams
-    proof
-    [ Costmdls freeV1CostModels
-    , MaxValSize 1000000000
-    , MaxTxExUnits $ ExUnits 100000000 100000000
-    , MaxBlockExUnits $ ExUnits 100000000 100000000
-    , ProtocolVersion $ ProtVer (natVersion @5) 0
-    ]
+testPParams :: forall era. AlonzoEraPParams era => PParams era
+testPParams =
+  emptyPParams
+    & ppCostModelsL .~ freeV1CostModels
+    & ppMaxValSizeL .~ 1000000000
+    & ppMaxTxExUnitsL .~ ExUnits 100000000 100000000
+    & ppMaxBlockExUnitsL .~ ExUnits 100000000 100000000
+    & ppProtocolVersionL .~ ProtVer (eraProtVerHigh @era) 0
