@@ -33,6 +33,9 @@
 * Move `Cardano.Ledger.Alonzo.Tools` module from `cardano-ledegr-alonzo` into
   `Cardano.Ledger.Api.Scripts`
 * Addition of `evalBalanceTxBody`
+* Addition of `evalTxExUnits` and `evalTxExUnitsWithLogs`. Deprecated
+  `evaluateTransactionExecutionUnits` and `evaluateTransactionExecutionUnitsWithLogs` if
+  favor of the newly added ones.
 
 ## 1.0.0.0
 
