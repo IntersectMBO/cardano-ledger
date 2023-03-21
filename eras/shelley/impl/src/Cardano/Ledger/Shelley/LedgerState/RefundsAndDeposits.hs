@@ -1,6 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -8,14 +10,18 @@
 module Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   totalTxDeposits,
   totalCertsDeposits,
+  totalCertsDepositsDPState,
   keyTxRefunds,
   keyCertsRefunds,
+  keyCertsRefundsDPState,
 )
 where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.DPState (DPState (..), DState (..), PState (..))
+import Cardano.Ledger.Credential (StakeCredential)
+import Cardano.Ledger.DPState (DPState (..), PState (..), lookupDepositDState)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), isRegKey)
 import Cardano.Ledger.Shelley.TxBody (
   PoolParams (..),
@@ -24,16 +30,11 @@ import Cardano.Ledger.Shelley.TxBody (
   pattern RegKey,
   pattern RegPool,
  )
-import Cardano.Ledger.UMapCompact (
-  RDPair (..),
-  View (RewardDeposits),
-  compactCoinOrError,
-  fromCompact,
- )
-import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<+>), (<×>))
-import Data.Foldable (foldl', toList)
+import Data.Foldable (foldMap', foldl')
 import qualified Data.Map.Strict as Map
+import Data.Monoid (Sum (..))
+import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
 -- | Determine the total deposit amount needed from a TxBody.
@@ -48,52 +49,79 @@ import Lens.Micro ((^.))
 -- Note that this is not an issue for key registrations since subsequent
 -- registration certificates would be invalid.
 totalCertsDeposits ::
-  EraPParams era =>
+  (EraPParams era, Foldable f) =>
   PParams era ->
-  DPState c ->
-  [DCert c] ->
+  -- | Check whether a pool with a supplied PoolStakeId is already registered.
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  f (DCert (EraCrypto era)) ->
   Coin
-totalCertsDeposits pp dpstate certs =
+totalCertsDeposits pp isRegPool certs =
   numKeys <×> pp ^. ppKeyDepositL
-    <+> snd (foldl' accum (regpools, Coin 0) certs)
+    <+> numNewRegPoolCerts <×> pp ^. ppPoolDepositL
   where
-    numKeys = length $ filter isRegKey certs
-    regpools = psStakePoolParams (dpsPState dpstate)
-    accum (!pools, !ans) (DCertPool (RegPool poolparam)) =
-      if Map.member (ppId poolparam) pools -- We don't pay a deposit on a pool that is already registered
-        then (pools, ans)
-        else (Map.insert (ppId poolparam) poolparam pools, ans <+> pp ^. ppPoolDepositL)
-    accum ans _ = ans
+    numKeys = getSum @Int $ foldMap' (\x -> if isRegKey x then 1 else 0) certs
+    numNewRegPoolCerts = Set.size (foldl' addNewPoolIds Set.empty certs)
+    addNewPoolIds regPoolIds = \case
+      DCertPool (RegPool (PoolParams {ppId}))
+        -- We don't pay a deposit on a pool that is already registered or duplicated in the certs
+        | not (isRegPool ppId || Set.member ppId regPoolIds) -> Set.insert ppId regPoolIds
+      _ -> regPoolIds
 
+totalCertsDepositsDPState ::
+  (EraPParams era, Foldable f) =>
+  PParams era ->
+  DPState (EraCrypto era) ->
+  f (DCert (EraCrypto era)) ->
+  Coin
+totalCertsDepositsDPState pp dpstate =
+  totalCertsDeposits pp (`Map.member` psStakePoolParams (dpsPState dpstate))
+
+-- | Calculates the total amount of deposits needed for all pool registration and
+-- stake delegation certificates to be valid.
 totalTxDeposits ::
   ShelleyEraTxBody era =>
   PParams era ->
   DPState (EraCrypto era) ->
   TxBody era ->
   Coin
-totalTxDeposits pp dpstate txb = totalCertsDeposits pp dpstate (toList $ txb ^. certsTxBodyG)
+totalTxDeposits pp dpstate txb =
+  totalCertsDepositsDPState pp dpstate (txb ^. certsTxBodyG)
+
+-- | Compute the key deregistration refunds in a transaction
+keyCertsRefundsDPState ::
+  (EraPParams era, Foldable f) =>
+  PParams era ->
+  DPState (EraCrypto era) ->
+  f (DCert (EraCrypto era)) ->
+  Coin
+keyCertsRefundsDPState pp dpstate = keyCertsRefunds pp (lookupDepositDState (dpsDState dpstate))
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefunds ::
-  EraPParams era =>
+  (EraPParams era, Foldable f) =>
   PParams era ->
-  DPState c ->
-  [DCert c] ->
+  -- | Function that can lookup current deposit, in case when the stake key is registered.
+  (StakeCredential (EraCrypto era) -> Maybe Coin) ->
+  f (DCert (EraCrypto era)) ->
   Coin
-keyCertsRefunds pp dpstate certs = snd (foldl' accum (initialKeys, Coin 0) certs)
+keyCertsRefunds pp lookupDeposit certs = snd (foldl' accum (mempty, Coin 0) certs)
   where
-    initialKeys = (RewardDeposits . dsUnified . dpsDState) dpstate
-    keyDeposit = compactCoinOrError (pp ^. ppKeyDepositL)
-    accum (!keys, !ans) (DCertDeleg (RegKey k)) =
-      -- Deposit is added locally to the growing 'keys'
-      (RewardDeposits $ UM.insert k (RDPair mempty keyDeposit) keys, ans)
-    accum (!keys, !ans) (DCertDeleg (DeRegKey k)) =
-      -- If the key is registered, lookup the deposit in the locally growing 'keys'
-      -- if it is not registered, then just return ans
-      case UM.lookup k keys of
-        Just (RDPair _ deposit) -> (keys, ans <+> fromCompact deposit)
-        Nothing -> (keys, ans)
-    accum ans _ = ans
+    keyDeposit = pp ^. ppKeyDepositL
+    accum (!regKeys, !totalRefunds) = \case
+      DCertDeleg (RegKey k) ->
+        -- Need to track new delegations in case that the same key is later deregistered in
+        -- the same transaction.
+        (Set.insert k regKeys, totalRefunds)
+      DCertDeleg (DeRegKey k)
+        -- We first check if there was already a registration certificate in this
+        -- transaction.
+        | Set.member k regKeys -> (Set.delete k regKeys, totalRefunds <+> keyDeposit)
+        -- Check for the deposit left during registration in some previous
+        -- transaction. This de-registration check will be matched first, despite being
+        -- the last case to match, because registration is not possible without
+        -- de-registration.
+        | Just deposit <- lookupDeposit k -> (regKeys, totalRefunds <+> deposit)
+      _ -> (regKeys, totalRefunds)
 
 keyTxRefunds ::
   ShelleyEraTxBody era =>
@@ -101,4 +129,4 @@ keyTxRefunds ::
   DPState (EraCrypto era) ->
   TxBody era ->
   Coin
-keyTxRefunds pp dpstate tx = keyCertsRefunds pp dpstate (toList $ tx ^. certsTxBodyG)
+keyTxRefunds pp dpstate tx = keyCertsRefundsDPState pp dpstate (tx ^. certsTxBodyG)

@@ -47,9 +47,8 @@ import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.DPState (DPState)
 import Cardano.Ledger.Keys (
   DSignable,
   Hash,
@@ -204,7 +203,13 @@ class EraTxBody era => EraUTxO era where
   type ScriptsNeeded era = (r :: Type) | r -> era
 
   -- | Calculate all the value that is being consumed by the transaction.
-  getConsumedValue :: PParams era -> DPState (EraCrypto era) -> UTxO era -> TxBody era -> Value era
+  getConsumedValue ::
+    PParams era ->
+    -- | Function that can lookup current delegation deposits
+    (StakeCredential (EraCrypto era) -> Maybe Coin) ->
+    UTxO era ->
+    TxBody era ->
+    Value era
 
   -- | Produce all the information required for figuring out which scripts are required
   -- for the transaction to be valid, once those scripts are evaluated

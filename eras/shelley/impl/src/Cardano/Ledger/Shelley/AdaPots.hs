@@ -76,8 +76,9 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
     DPState dstate _ = lsDPState ls
     rewards_ = fromCompact $ sumRewardsView (rewards dstate)
     coins = coinBalance u
-    keyDeposits_ = (fromCompact . sumDepositView . RewardDeposits . dsUnified . dpsDState . lsDPState) ls
-    poolDeposits_ = fold ((psDeposits . dpsPState . lsDPState) ls)
+    keyDeposits_ =
+      fromCompact . sumDepositView . RewardDeposits . dsUnified . dpsDState $ lsDPState ls
+    poolDeposits_ = fold (psDeposits . dpsPState $ lsDPState ls)
 
 -- | Calculate the total ada in the epoch state
 totalAdaES :: EraTxOut era => EpochState era -> Coin
@@ -94,10 +95,10 @@ totalAdaES cs =
       , reservesAdaPot
       , rewardsAdaPot
       , utxoAdaPot
-      , -- keyDepositAdaPot,  -- We don't count these two, as their
-      -- poolDepositAdaPot, -- sum is always depositsAdaPot
-      depositsAdaPot
+      , depositsAdaPot
       , feesAdaPot
+      -- , keyDepositAdaPot  -- We don't count these two, as their
+      -- , poolDepositAdaPot -- sum is always depositsAdaPot
       } = totalAdaPotsES cs
 
 -- =============================================
@@ -110,15 +111,32 @@ data Consumed = Consumed
 
 instance Show Consumed where
   show (Consumed (Coin i) (Coin r) (Coin w)) =
-    "Consumed(Inputs " ++ show i ++ ", Refunds " ++ show r ++ ", Withdrawals " ++ show w ++ ") = " ++ show (i + r + w)
+    "Consumed(Inputs "
+      ++ show i
+      ++ ", Refunds "
+      ++ show r
+      ++ ", Withdrawals "
+      ++ show w
+      ++ ") = "
+      ++ show (i + r + w)
 
 -- | Itemizing what is Produced by a transaction
 data Produced = Produced
-  {proOutputs :: !Coin, proFees :: !Coin, proDeposits :: !Coin}
+  { proOutputs :: !Coin
+  , proFees :: !Coin
+  , proDeposits :: !Coin
+  }
 
 instance Show Produced where
   show (Produced (Coin out) (Coin f) (Coin d)) =
-    "Produced(Outputs " ++ show out ++ ", Fees " ++ show f ++ ", Deposits " ++ show d ++ ") = " ++ show (out + f + d)
+    "Produced(Outputs "
+      ++ show out
+      ++ ", Fees "
+      ++ show f
+      ++ ", Deposits "
+      ++ show d
+      ++ ") = "
+      ++ show (out + f + d)
 
 -- =========================
 
@@ -130,11 +148,12 @@ consumedTxBody ::
   DPState (EraCrypto era) ->
   UTxO era ->
   Consumed
-consumedTxBody txBody pp dpstate (UTxO u) = Consumed {conInputs = i, conRefunds = r, conWithdrawals = w}
-  where
-    i = coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
-    r = keyTxRefunds pp dpstate txBody
-    w = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
+consumedTxBody txBody pp dpstate (UTxO u) =
+  Consumed
+    { conInputs = coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+    , conRefunds = keyTxRefunds pp dpstate txBody
+    , conWithdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
+    }
 
 -- | Compute the Coin part of what is produced by a TxBody, itemized as a 'Produced'
 producedTxBody ::
@@ -143,8 +162,9 @@ producedTxBody ::
   PParams era ->
   DPState (EraCrypto era) ->
   Produced
-producedTxBody txBody pp dpstate = Produced {proOutputs = out, proFees = f, proDeposits = d}
-  where
-    out = coinBalance (txouts txBody)
-    f = txBody ^. feeTxBodyL
-    d = totalTxDeposits pp dpstate txBody
+producedTxBody txBody pp dpstate =
+  Produced
+    { proOutputs = coinBalance (txouts txBody)
+    , proFees = txBody ^. feeTxBodyL
+    , proDeposits = totalTxDeposits pp dpstate txBody
+    }

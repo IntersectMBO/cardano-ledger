@@ -67,7 +67,7 @@ import Control.State.Transition (
   (?!),
  )
 import qualified Data.ByteString as BS
-import Data.Word (Word64, Word8)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -83,9 +83,9 @@ data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
       !(KeyHash 'StakePool (EraCrypto era)) -- KeyHash which cannot be retired since it is not registered
   | StakePoolRetirementWrongEpochPOOL
-      !Word64 -- Current Epoch
-      !Word64 -- The epoch listed in the Pool Retirement Certificate
-      !Word64 -- The first epoch that is too far out for retirement
+      !EpochNo -- Current Epoch
+      !EpochNo -- The epoch listed in the Pool Retirement Certificate
+      !EpochNo -- The first epoch that is too far out for retirement
   | WrongCertificateTypePOOL
       !Word8 -- The disallowed certificate (this case should never happen)
   | StakePoolCostTooLowPOOL
@@ -206,7 +206,7 @@ poolDelegationTransition = do
           tellEvent $ ReregisterPool hk
           -- hk is already registered, so we want to reregister it. That means adding it to the
           -- Future pool params (if it is not there already), and overriding the range with the new 'poolParam',
-          -- if it is (using ⨃ ). We must also unretire it, if it has been schedule for retirement.
+          -- if it is (using ⨃ ). We must also unretire it, if it has been scheduled for retirement.
           -- The deposit does not change. One pays the deposit just once. Only if it is fully retired
           -- (i.e. it's deposit has been refunded, and it has been removed from the registered pools).
           -- does it need to pay a new deposit (at the current deposit amount). But of course,
@@ -216,21 +216,17 @@ poolDelegationTransition = do
               { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam)
               , psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
               }
-    DCertPool (RetirePool hk (EpochNo e)) -> do
+    DCertPool (RetirePool hk e) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom stpools) ?! StakePoolNotRegisteredOnKeyPOOL hk
-      EpochNo cepoch <- liftSTS $ do
+      cepoch <- liftSTS $ do
         ei <- asks epochInfoPure
         epochInfoEpoch ei slot
-      let EpochNo maxEpoch = pp ^. ppEMaxL
-      cepoch
-        < e
-        && e
-        <= cepoch
-        + maxEpoch
+      let maxEpoch = pp ^. ppEMaxL
+      (cepoch < e && e <= cepoch + maxEpoch)
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
-      pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk (EpochNo e))}
+      pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk e)}
     DCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps

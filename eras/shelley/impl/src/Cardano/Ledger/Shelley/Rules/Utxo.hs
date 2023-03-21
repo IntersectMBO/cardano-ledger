@@ -61,7 +61,13 @@ import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
 import Cardano.Ledger.Shelley.Governance
-import Cardano.Ledger.Shelley.LedgerState (DPState (..), PPUPPredFailure, UTxOState (..), keyTxRefunds, totalTxDeposits)
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  PPUPPredFailure,
+  UTxOState (..),
+  keyTxRefunds,
+  totalTxDeposits,
+ )
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (
@@ -77,10 +83,10 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.UTxO (produced, txup)
+import Cardano.Ledger.Shelley.UTxO (consumed, produced, txup)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UTxO (
-  EraUTxO (getConsumedValue),
+  EraUTxO,
   UTxO (..),
   balance,
   txouts,
@@ -527,7 +533,7 @@ validateValueNotConservedUTxO pp utxo dpstate txb =
   failureUnless (consumedValue == producedValue) $
     (ValueNotConservedUTxO consumedValue producedValue)
   where
-    consumedValue = getConsumedValue pp dpstate utxo txb
+    consumedValue = consumed pp dpstate utxo txb
     producedValue = produced pp dpstate txb
 
 -- | Ensure there are no `TxOut`s that have less than @minUTxOValue@
