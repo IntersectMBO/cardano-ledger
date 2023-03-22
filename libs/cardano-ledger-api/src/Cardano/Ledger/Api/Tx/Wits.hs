@@ -16,8 +16,9 @@ module Cardano.Ledger.Api.Tx.Wits (
   bootAddrTxWitsL,
   BootstrapWitness,
 
-  -- ** Script address witness
+  -- ** Script witness
   scriptTxWitsL,
+  hashScriptTxWitsL,
 
   -- * Alonzo onwards
   AlonzoEraTxWits,
@@ -46,7 +47,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unTxDats,
  )
 import Cardano.Ledger.Api.Era ()
-import Cardano.Ledger.Core (EraTxWits (..))
+import Cardano.Ledger.Core (EraTxWits (..), hashScriptTxWitsL)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (WitVKey), witVKeyBytes, witVKeyHash)

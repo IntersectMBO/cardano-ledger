@@ -33,6 +33,7 @@ module Cardano.Ledger.Core (
   EraTxAuxData (..),
   EraTxWits (..),
   EraScript (..),
+  hashScriptTxWitsL,
   Value,
   EraPParams (..),
 
@@ -111,7 +112,8 @@ import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.Kind (Type)
-import Data.Map (Map, mapMaybe)
+import Data.Map (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
@@ -398,6 +400,16 @@ class
 
   scriptTxWitsL :: Lens' (TxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 
+-- | This is a helper lens that will hash the scripts when adding as witnesses.
+hashScriptTxWitsL ::
+  EraTxWits era =>
+  Lens (TxWits era) (TxWits era) (Map (ScriptHash (EraCrypto era)) (Script era)) [Script era]
+hashScriptTxWitsL =
+  lens
+    (\wits -> wits ^. scriptTxWitsL)
+    (\wits ss -> wits & scriptTxWitsL .~ Map.fromList [(hashScript s, s) | s <- ss])
+{-# INLINEABLE hashScriptTxWitsL #-}
+
 -- | Era STS map
 type family EraRule (k :: Symbol) era :: Type
 
@@ -522,11 +534,11 @@ data PhasedScript phase era where
   Phase2Script :: Language -> ShortByteString -> PhasedScript 'PhaseTwo era
 
 getPhase1 :: EraScript era => Map k (Script era) -> Map k (Script era, PhasedScript 'PhaseOne era)
-getPhase1 = mapMaybe phase1
+getPhase1 = Map.mapMaybe phase1
   where
     phase1 s = case phaseScript PhaseOneRep s of
       Just ps -> Just (s, ps)
       Nothing -> Nothing
 
 getPhase2 :: EraScript era => Map k (Script era) -> Map k (PhasedScript 'PhaseTwo era)
-getPhase2 = mapMaybe (phaseScript PhaseTwoRep)
+getPhase2 = Map.mapMaybe (phaseScript PhaseTwoRep)
