@@ -20,6 +20,7 @@
 module Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesisStaking (..),
   ShelleyGenesis (..),
+  shelleyGenesisPairs,
   ValidationErr (..),
   NominalDiffTimeMicro (..),
   emptyGenesisStaking,
@@ -130,6 +131,13 @@ data ShelleyGenesisStaking c = ShelleyGenesisStaking
 
 instance NoThunks (ShelleyGenesisStaking c)
 
+instance Semigroup (ShelleyGenesisStaking c) where
+  (<>) (ShelleyGenesisStaking p1 s1) (ShelleyGenesisStaking p2 s2) =
+    ShelleyGenesisStaking (p1 <> p2) (s1 <> s2)
+
+instance Monoid (ShelleyGenesisStaking c) where
+  mempty = ShelleyGenesisStaking mempty mempty
+
 instance Crypto c => EncCBOR (ShelleyGenesisStaking c) where
   encCBOR (ShelleyGenesisStaking pools stake) =
     encodeListLen 2 <> encCBOR pools <> encCBOR stake
@@ -143,11 +151,7 @@ instance Crypto c => DecCBOR (ShelleyGenesisStaking c) where
 
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking c
-emptyGenesisStaking =
-  ShelleyGenesisStaking
-    { sgsPools = mempty
-    , sgsStake = mempty
-    }
+emptyGenesisStaking = mempty
 
 -- | Unlike @'NominalDiffTime'@ that supports @'Pico'@ precision, this type
 -- only supports @'Micro'@ precision.
@@ -230,11 +234,11 @@ sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
 instance Crypto c => ToJSON (ShelleyGenesis c) where
-  toJSON = Aeson.object . toShelleyGenesisPairs
-  toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
+  toJSON = Aeson.object . shelleyGenesisPairs
+  toEncoding = Aeson.pairs . mconcat . shelleyGenesisPairs
 
-toShelleyGenesisPairs :: (Aeson.KeyValue a, Crypto c) => ShelleyGenesis c -> [a]
-toShelleyGenesisPairs
+shelleyGenesisPairs :: (Aeson.KeyValue a, Crypto c) => ShelleyGenesis c -> [a]
+shelleyGenesisPairs
   ShelleyGenesis
     { sgSystemStart
     , sgNetworkMagic
@@ -288,8 +292,8 @@ instance Crypto c => FromJSON (ShelleyGenesis c) where
         <*> obj .: "maxLovelaceSupply"
         <*> obj .: "protocolParams"
         <*> (forceElemsToWHNF <$> obj .: "genDelegs")
-        <*> (forceElemsToWHNF <$> obj .: "initialFunds")
-        <*> obj .:? "staking" .!= emptyGenesisStaking
+        <*> (forceElemsToWHNF <$> obj .: "initialFunds") -- TODO: disable
+        <*> obj .:? "staking" .!= emptyGenesisStaking -- TODO: remove
     where
       forceUTCTime date =
         let !day = utctDay date

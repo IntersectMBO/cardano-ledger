@@ -7,6 +7,7 @@
 
 module Cardano.Ledger.Conway.Genesis (
   ConwayGenesis (..),
+  toConwayGenesisPairs,
 )
 where
 
@@ -16,12 +17,13 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams)
+import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams, upgradeConwayPParamsUpdatePairs)
 import Cardano.Ledger.Crypto (Crypto)
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
   ToJSON (..),
+  Value (..),
   object,
   pairs,
   withObject,
@@ -61,19 +63,20 @@ instance Crypto c => ToJSON (ConwayGenesis c) where
 
 instance Crypto c => FromJSON (ConwayGenesis c) where
   parseJSON =
-    withObject "ConwayGenesis" $ \obj ->
+    withObject "ConwayGenesis" $ \obj -> do
+      upgradeProtocolPParams <- parseJSON (Object obj)
       ConwayGenesis
-        <$> obj .: "upgradeProtocolParams"
+        <$> pure upgradeProtocolPParams
         <*> obj .: "constitution"
         <*> obj .: "committee"
 
 toConwayGenesisPairs :: (Crypto c, KeyValue a) => ConwayGenesis c -> [a]
 toConwayGenesisPairs cg@(ConwayGenesis _ _ _) =
   let ConwayGenesis {..} = cg
-   in [ "upgradeProtocolParams" .= cgUpgradePParams
-      , "constitution" .= cgConstitution
+   in [ "constitution" .= cgConstitution
       , "committee" .= cgCommittee
       ]
+        ++ upgradeConwayPParamsUpdatePairs cgUpgradePParams
 
 instance Crypto c => Default (ConwayGenesis c) where
   def = ConwayGenesis def def def

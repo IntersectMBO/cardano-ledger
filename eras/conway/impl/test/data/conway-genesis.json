@@ -1,41 +1,39 @@
 {
-  "upgradeProtocolParams":{
-     "poolVotingThresholds":{
-        "pvtCommitteeNormal":0,
-        "pvtCommitteeNoConfidence":0,
-        "pvtHardForkInitiation":0,
-        "pvtMotionNoConfidence":0
-     },
-     "dRepVotingThresholds":{
-        "dvtMotionNoConfidence":0,
-        "dvtCommitteeNormal":0,
-        "dvtCommitteeNoConfidence":0,
-        "dvtUpdateToConstitution":0,
-        "dvtHardForkInitiation":0,
-        "dvtPPNetworkGroup":0,
-        "dvtPPEconomicGroup":0,
-        "dvtPPTechnicalGroup":0,
-        "dvtPPGovGroup":0,
-        "dvtTreasuryWithdrawal":0
-     },
-     "committeeMinSize":0,
-     "committeeMaxTermLength":0,
-     "govActionLifetime":0,
-     "govActionDeposit":0,
-     "dRepDeposit":0,
-     "dRepActivity":0
+  "poolVotingThresholds": {
+    "pvtCommitteeNormal": 0,
+    "pvtCommitteeNoConfidence": 0,
+    "pvtHardForkInitiation": 0,
+    "pvtMotionNoConfidence": 0
   },
+  "dRepVotingThresholds": {
+    "dvtMotionNoConfidence": 0,
+    "dvtCommitteeNormal": 0,
+    "dvtCommitteeNoConfidence": 0,
+    "dvtUpdateToConstitution": 0,
+    "dvtHardForkInitiation": 0,
+    "dvtPPNetworkGroup": 0,
+    "dvtPPEconomicGroup": 0,
+    "dvtPPTechnicalGroup": 0,
+    "dvtPPGovGroup": 0,
+    "dvtTreasuryWithdrawal": 0
+  },
+  "committeeMinSize": 0,
+  "committeeMaxTermLength": 0,
+  "govActionLifetime": 0,
+  "govActionDeposit": 0,
+  "dRepDeposit": 0,
+  "dRepActivity": 0,
   "constitution": {
     "anchor": {
       "url": "",
       "dataHash": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   },
-  "committee" :{
-    "members" : {
-       "keyHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 1 ,
-       "scriptHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 2
-     },
+  "committee": {
+    "members": {
+      "keyHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 1,
+      "scriptHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 2
+    },
     "quorum": 0.5
   }
 }

@@ -34,6 +34,7 @@ library
         Cardano.Ledger.Babbage.TxOut
         Cardano.Ledger.Babbage.TxInfo
         Cardano.Ledger.Babbage.TxWits
+        Cardano.Ledger.Babbage.Transition
         Cardano.Ledger.Babbage.Translation
 
     hs-source-dirs:   src

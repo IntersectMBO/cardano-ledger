@@ -25,7 +25,7 @@ module Cardano.Ledger.Alonzo.Genesis (
     agCollateralPercentage,
     agMaxCollateralInputs
   ),
-  alonzoGenesisAesonPairs,
+  toAlonzoGenesisPairs,
 
   -- * Deprecated
   coinsPerUTxOWord,
@@ -58,7 +58,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Data.Aeson (FromJSON (..), ToJSON (..), object, (.:), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
 import GHC.Generics (Generic)
@@ -188,10 +188,11 @@ instance FromJSON AlonzoGenesis where
     return AlonzoGenesis {..}
 
 instance ToJSON AlonzoGenesis where
-  toJSON = object . alonzoGenesisAesonPairs
+  toJSON = object . toAlonzoGenesisPairs
+  toEncoding = pairs . mconcat . toAlonzoGenesisPairs
 
-alonzoGenesisAesonPairs :: Aeson.KeyValue a => AlonzoGenesis -> [a]
-alonzoGenesisAesonPairs ag =
+toAlonzoGenesisPairs :: Aeson.KeyValue a => AlonzoGenesis -> [a]
+toAlonzoGenesisPairs ag =
   [ "lovelacePerUTxOWord" .= coinsPerUTxOWord ag
   , "costModels" .= costmdls ag
   , "executionPrices" .= prices ag

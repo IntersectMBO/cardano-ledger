@@ -30,6 +30,7 @@ module Cardano.Ledger.Conway.PParams (
   encodeLangViews,
   upgradeConwayPParams,
   UpgradeConwayPParams (..),
+  upgradeConwayPParamsUpdatePairs,
   PoolVotingThresholds (..),
   DRepVotingThresholds (..),
   ConwayEraPParams (..),

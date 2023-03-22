@@ -29,6 +29,7 @@ library
         Cardano.Ledger.Conway.TxInfo
         Cardano.Ledger.Conway.TxOut
         Cardano.Ledger.Conway.TxWits
+        Cardano.Ledger.Conway.Transition
         Cardano.Ledger.Conway.Translation
         Cardano.Ledger.Conway.Scripts
         Cardano.Ledger.Conway
