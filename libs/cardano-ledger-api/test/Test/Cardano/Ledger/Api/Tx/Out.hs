@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Api.Tx.Out (spec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Out
-import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (strictMaybeToMaybe, pvMajor)
 import Cardano.Ledger.Binary (Sized (sizedValue), mkSized, serialize)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
@@ -64,7 +64,7 @@ propSetBabbageMinTxOut =
   prop "setBabbageMinTxOut" $ \(pp :: PParams era) (txOut :: TxOut era) ->
     within 1000000 $ -- just in case if there is a problem with termination
       let txOut' = setMinCoinTxOut pp txOut
-          sz = toInteger (BSL.length (serialize (eraProtVerLow @era) txOut'))
+          sz = toInteger (BSL.length (serialize (pvMajor (pp ^. ppProtocolVersionL)) txOut'))
        in txOut' ^. coinTxOutL
             `shouldBe` Coin ((160 + sz) * unCoin (unCoinPerByte (pp ^. ppCoinsPerUTxOByteL)))
 
