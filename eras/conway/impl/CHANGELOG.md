@@ -46,7 +46,7 @@
   * `EnactState`
   * `RatifyState`
   * `ConwayGovernance`
-
+* Fix `Arbitrary` for `ConwayTxBody`.
 
 ## 1.0.0.0
 
