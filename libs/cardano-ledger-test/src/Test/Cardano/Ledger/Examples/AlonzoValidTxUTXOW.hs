@@ -732,7 +732,7 @@ validatingSupplimentaryDatumTxOut :: forall era. (EraTxBody era, Scriptic era) =
 validatingSupplimentaryDatumTxOut pf =
   newTxOut
     pf
-    [ Address (someScriptAddr (always 3 pf) pf)
+    [ Address (someScriptAddr (always 3 pf))
     , Amount (inject $ Coin 995)
     , DHash' [hashData $ validatingSupplimentaryDatum @era]
     ]

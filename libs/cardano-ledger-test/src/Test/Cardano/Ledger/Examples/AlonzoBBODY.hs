@@ -112,7 +112,13 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Scriptic (HasTokens (..), PostShelley, Scriptic (..), after, matchkey)
+import Test.Cardano.Ledger.Generic.Scriptic (
+  HasTokens (..),
+  PostShelley,
+  Scriptic (..),
+  after,
+  matchkey,
+ )
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
@@ -615,7 +621,7 @@ testBBodyState pf =
       alwaysFailsOutput =
         newTxOut
           pf
-          [ Address (someScriptAddr (never 0 pf) pf)
+          [ Address (someScriptAddr (never 0 pf))
           , Amount (inject $ Coin 3000)
           , DHash' [hashData $ anotherDatum @era]
           ]
@@ -631,13 +637,13 @@ testBBodyState pf =
       unspendableOut =
         newTxOut
           pf
-          [ Address (someScriptAddr (always 3 pf) pf)
+          [ Address (someScriptAddr (always 3 pf))
           , Amount (inject $ Coin 5000)
           ]
       alwaysSucceedsOutputV2 =
         newTxOut
           pf
-          [ Address (someScriptAddr (alwaysAlt 3 pf) pf)
+          [ Address (someScriptAddr (alwaysAlt 3 pf))
           , Amount (inject $ Coin 5000)
           , DHash' [hashData $ someDatum @era]
           ]

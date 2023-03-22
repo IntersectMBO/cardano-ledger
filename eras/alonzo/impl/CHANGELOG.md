@@ -7,6 +7,7 @@
 * Stop exporting an internal function `decodeBinaryData`
 * Remove redundant `Redeemers'` pattern synonym.
 * Move `Cardano.Ledger.Alonzo.Tools` module into `cardano-ledger-api:Cardano.Ledger.Api.Scripts`
+* Add helper lens `hashDataTxWitsL`
 
 ###`testlib`
 

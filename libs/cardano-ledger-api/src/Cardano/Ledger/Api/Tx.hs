@@ -48,11 +48,31 @@ module Cardano.Ledger.Api.Tx (
   AlonzoEraTx,
   isValidTxL,
   IsValid (..),
+
+  -- ** Execution units
+  evalTxExUnits,
+  evaluateTransactionExecutionUnits,
+  RedeemerReport,
+  evalTxExUnitsWithLogs,
+  evaluateTransactionExecutionUnitsWithLogs,
+  RedeemerReportWithLogs,
+  TransactionScriptFailure (..),
+  ValidationFailed (..),
 )
 where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.Api.Scripts.ExUnits (
+  RedeemerReport,
+  RedeemerReportWithLogs,
+  TransactionScriptFailure (..),
+  ValidationFailed (..),
+  evalTxExUnits,
+  evalTxExUnitsWithLogs,
+  evaluateTransactionExecutionUnits,
+  evaluateTransactionExecutionUnitsWithLogs,
+ )
 import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Wits
