@@ -43,6 +43,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   datsAlonzoTxWitsL,
   rdmrsAlonzoTxWitsL,
   AlonzoEraTxWits (..),
+  hashDataTxWitsL,
   unTxDats,
   nullDats,
 )
@@ -92,7 +93,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens')
+import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 -- ==========================================
@@ -429,6 +430,15 @@ instance (EraScript (AlonzoEra c), Crypto c) => AlonzoEraTxWits (AlonzoEra c) wh
 
   rdmrsTxWitsL = rdmrsAlonzoTxWitsL
   {-# INLINE rdmrsTxWitsL #-}
+
+-- | This is a convenience Lens that will hash the `Data` when it is being added to the
+-- `TxWits`. See `datsTxWitsL` for a version that aloows setting `TxDats` instead.
+hashDataTxWitsL :: AlonzoEraTxWits era => Lens (TxWits era) (TxWits era) (TxDats era) [Data era]
+hashDataTxWitsL =
+  lens
+    (\wits -> wits ^. datsTxWitsL)
+    (\wits ds -> wits & datsTxWitsL .~ TxDats (Map.fromList [(hashData d, d) | d <- ds]))
+{-# INLINEABLE hashDataTxWitsL #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation
