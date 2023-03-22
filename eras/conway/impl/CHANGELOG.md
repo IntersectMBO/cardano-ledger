@@ -34,6 +34,8 @@
 * Add `ensTreasury` and `ensWithdrawals` to `EnactState` #3339
 * Add `EnactPredFailure` as the failure for `ENACT` and `RATIFY` #3339
 * Add `RatifyFailure` to `ConwayNewEpochPredFailure` #3339
+* Add `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyPredFailure`
+* Add `ToCBOR`/`FromCBOR` for `ConwayGovernance`
 
 ### `testlib`
 
