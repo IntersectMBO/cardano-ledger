@@ -37,6 +37,38 @@ instance Crypto c => Arbitrary (ConwayDCert c) where
 -- Cardano.Ledger.Conway.Governance ------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+instance
+  (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
+  Arbitrary (ConwayGovernance era)
+  where
+  arbitrary =
+    ConwayGovernance
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance
+  (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
+  Arbitrary (RatifyState era)
+  where
+  arbitrary =
+    RatifyState
+      <$> arbitrary
+      <*> arbitrary
+
+instance
+  (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
+  Arbitrary (EnactState era)
+  where
+  arbitrary =
+    EnactState
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
 deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayTallyState era)
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceActionState era) where
@@ -132,6 +164,13 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProced
     oneof
       [ GovernanceVotingProcedure <$> arbitrary
       , GovernanceProposalProcedure <$> arbitrary
+      ]
+
+instance Era era => Arbitrary (ConwayTallyPredFailure era) where
+  arbitrary =
+    oneof
+      [ VoterDoesNotHaveRole <$> arbitrary <*> arbitrary
+      , GovernanceActionDoesNotExist <$> arbitrary
       ]
 
 instance
