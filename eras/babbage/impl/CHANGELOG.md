@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.4.4.1
+## 1.4.5.0
 
-*
+* Add `EraTransition` instance.
 
 ## 1.4.4.0
 

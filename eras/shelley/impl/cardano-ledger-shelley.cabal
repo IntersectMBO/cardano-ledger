@@ -51,6 +51,7 @@ library
         Cardano.Ledger.Shelley.SoftForks
         Cardano.Ledger.Shelley.StabilityWindow
         Cardano.Ledger.Shelley.Rules
+        Cardano.Ledger.Shelley.Transition
         Cardano.Ledger.Shelley.Translation
         Cardano.Ledger.Shelley.Tx
         Cardano.Ledger.Shelley.TxAuxData

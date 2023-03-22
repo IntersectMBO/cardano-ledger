@@ -5,6 +5,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- CanStartFromGenesis
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage (
@@ -27,6 +29,7 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Rules ()
+import Cardano.Ledger.Babbage.Transition ()
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.Tx (
   babbageTxScripts,

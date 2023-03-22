@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Add `LatestKnownEra`
+* Add `Cardano.Ledger.Api.Transition` module
 * Add the dormant-epochs counter to `DRep` expiry in `queryDRepState` #3729
   * If it is not zero.
 * Rename:

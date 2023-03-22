@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-babbage
-version:            1.4.4.0
+version:            1.4.5.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -34,6 +34,7 @@ library
         Cardano.Ledger.Babbage.TxOut
         Cardano.Ledger.Babbage.TxInfo
         Cardano.Ledger.Babbage.TxWits
+        Cardano.Ledger.Babbage.Transition
         Cardano.Ledger.Babbage.Translation
 
     hs-source-dirs:   src

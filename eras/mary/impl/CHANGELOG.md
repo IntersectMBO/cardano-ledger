@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.3.3.1
+## 1.3.4.0
 
-*
+* Add `EraTransition` instance.
 
 ## 1.3.3.0
 

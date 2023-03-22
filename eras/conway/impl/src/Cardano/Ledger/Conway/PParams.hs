@@ -30,6 +30,7 @@ module Cardano.Ledger.Conway.PParams (
   encodeLangViews,
   upgradeConwayPParams,
   UpgradeConwayPParams (..),
+  toUpgradeConwayPParamsUpdatePairs,
   PoolVotingThresholds (..),
   DRepVotingThresholds (..),
   ConwayEraPParams (..),
@@ -687,11 +688,11 @@ conwayUpgradePParamsHKDPairs px pp =
   ]
 
 instance ToJSON (UpgradeConwayPParams Identity) where
-  toJSON = object . upgradeConwayPParamsUpdatePairs
-  toEncoding = pairs . mconcat . upgradeConwayPParamsUpdatePairs
+  toJSON = object . toUpgradeConwayPParamsUpdatePairs
+  toEncoding = pairs . mconcat . toUpgradeConwayPParamsUpdatePairs
 
-upgradeConwayPParamsUpdatePairs :: KeyValue a => UpgradeConwayPParams Identity -> [a]
-upgradeConwayPParamsUpdatePairs upp =
+toUpgradeConwayPParamsUpdatePairs :: KeyValue a => UpgradeConwayPParams Identity -> [a]
+toUpgradeConwayPParamsUpdatePairs upp =
   uncurry (.=) <$> upgradeConwayPParamsHKDPairs upp
 
 upgradeConwayPParamsHKDPairs :: UpgradeConwayPParams Identity -> [(Key, Aeson.Value)]

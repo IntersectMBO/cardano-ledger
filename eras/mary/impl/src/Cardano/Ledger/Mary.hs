@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- CanStartFromGenesis
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary (
@@ -20,6 +22,7 @@ import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.Scripts ()
+import Cardano.Ledger.Mary.Transition ()
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Mary.TxBody (MaryTxBody)
