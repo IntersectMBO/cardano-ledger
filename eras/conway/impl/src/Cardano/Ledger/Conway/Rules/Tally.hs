@@ -5,6 +5,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -24,6 +25,8 @@ module Cardano.Ledger.Conway.Rules.Tally (
 ) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayTALLY)
 import Cardano.Ledger.Conway.Governance (
@@ -71,6 +74,24 @@ data ConwayTallyPredFailure era
 instance Era era => NFData (ConwayTallyPredFailure era)
 
 instance Era era => NoThunks (ConwayTallyPredFailure era)
+
+instance EraPParams era => DecCBOR (ConwayTallyPredFailure era) where
+  decCBOR = decode $ Summands "ConwayTallyPredFailure" $ \case
+    0 -> SumD VoterDoesNotHaveRole <! From <! From
+    1 -> SumD GovernanceActionDoesNotExist <! From
+    k -> Invalid k
+
+instance EraPParams era => EncCBOR (ConwayTallyPredFailure era) where
+  encCBOR =
+    encode . \case
+      VoterDoesNotHaveRole cred vr -> Sum (VoterDoesNotHaveRole @era) 0 !> To cred !> To vr
+      GovernanceActionDoesNotExist gid -> Sum (GovernanceActionDoesNotExist @era) 1 !> To gid
+
+instance EraPParams era => ToCBOR (ConwayTallyPredFailure era) where
+  toCBOR = toEraCBOR @era
+
+instance EraPParams era => FromCBOR (ConwayTallyPredFailure era) where
+  fromCBOR = fromEraCBOR @era
 
 instance Era era => STS (ConwayTALLY era) where
   type State (ConwayTALLY era) = ConwayTallyState era
