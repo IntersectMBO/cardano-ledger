@@ -12,12 +12,14 @@ module Test.Cardano.Ledger.Mary.ValueSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (natVersion)
 import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Compactible (fromCompact, toCompact)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Value
 import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Short as SBS
 import Data.CanonicalMaps (canonicalInsert)
+import Data.Maybe (fromJust)
 import GHC.Exts
 import Test.Cardano.Data
 import Test.Cardano.Ledger.Binary.RoundTrip (
@@ -27,7 +29,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripCborRangeFailureExpectation,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Mary.Arbitrary (genEmptyMultiAsset, genMaryValue, genMultiAsset)
+import Test.Cardano.Ledger.Mary.Arbitrary (genEmptyMultiAsset, genMaryValue, genMultiAsset, genMultiAssetToFail)
 
 spec :: Spec
 spec = do
@@ -65,6 +67,14 @@ spec = do
       prop "Empty MaryValue fails for Conway" $
         forAll (genMaryValue (genEmptyMultiAsset @StandardCrypto)) $
           roundTripCborRangeFailureExpectation (natVersion @9) maxBound
+  describe "MaryValue compacting" $ do
+    prop "Canonical generator" $
+      \(ma :: MaryValue StandardCrypto) ->
+        fromCompact @(MaryValue StandardCrypto) (fromJust (toCompact ma)) === ma
+    prop "Failing generator" $
+      forAll (genMaryValue (genMultiAssetToFail 2000)) $
+        \(ma :: MaryValue StandardCrypto) ->
+          fromCompact @(MaryValue StandardCrypto) (fromJust (toCompact ma)) =/= ma
 
 instance IsString AssetName where
   fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack

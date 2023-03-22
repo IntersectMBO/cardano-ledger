@@ -81,7 +81,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import PlutusPrelude (enumerate)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Mary.Arbitrary (genMintValues)
+import Test.Cardano.Ledger.Mary.Arbitrary ()
 
 instance Era era => Arbitrary (Data era) where
   arbitrary = Data <$> arbitrary
@@ -184,7 +184,7 @@ instance
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> scale (`div` 15) genMintValues
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

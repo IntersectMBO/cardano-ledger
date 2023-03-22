@@ -20,7 +20,6 @@ import Control.State.Transition.Extended (STS (Event))
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Mary.Arbitrary (genMintValues)
 
 instance Crypto c => Arbitrary (ConwayGenesis c) where
   arbitrary = ConwayGenesis <$> arbitrary
@@ -142,7 +141,7 @@ instance
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> scale (`div` 15) genMintValues
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
