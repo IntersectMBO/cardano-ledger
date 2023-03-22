@@ -7,7 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Api.Scripts.Tools (
+module Cardano.Ledger.Api.Scripts.ExUnits (
   TransactionScriptFailure (..),
   ValidationFailed (..),
   evalTxExUnits,

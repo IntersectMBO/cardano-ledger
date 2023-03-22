@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
-import Cardano.Ledger.Api.Scripts (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Api.Tx (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
