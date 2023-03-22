@@ -130,9 +130,8 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      -- FIXME: For now this is turned off, rountrip tests in consensus are failing
-      <*> pure mempty -- arbitrary
-      <*> pure mempty -- arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Conway.Rules -----------------------------------------------------------
