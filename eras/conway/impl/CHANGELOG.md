@@ -41,6 +41,12 @@
 
 * Fix `Arbitrary` for `ConwayTallyState`. #3323
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
+* Add `Arbitrary` instances for:
+  * `ConwayTallyPredFailure`
+  * `EnactState`
+  * `RatifyState`
+  * `ConwayGovernance`
+
 
 ## 1.0.0.0
 
