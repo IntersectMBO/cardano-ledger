@@ -83,7 +83,7 @@ library
         canonical-json,
         cardano-ledger-binary >=1.0,
         cardano-crypto,
-        cardano-prelude,
+        cardano-prelude >=0.1.0.1,
         heapwords,
         cryptonite,
         data-default,
