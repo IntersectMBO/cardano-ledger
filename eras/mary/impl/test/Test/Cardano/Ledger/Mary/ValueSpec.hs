@@ -71,10 +71,12 @@ spec = do
     prop "Canonical generator" $
       \(ma :: MaryValue StandardCrypto) ->
         fromCompact @(MaryValue StandardCrypto) (fromJust (toCompact ma)) === ma
-    prop "Failing generator" $
-      forAll (genMaryValue (genMultiAssetToFail 2000)) $
-        \(ma :: MaryValue StandardCrypto) ->
-          fromCompact @(MaryValue StandardCrypto) (fromJust (toCompact ma)) =/= ma
+    it "Failing generator" $
+      expectFailure $
+        property $
+          forAll (genMaryValue genMultiAssetToFail) $
+            \(ma :: MaryValue StandardCrypto) ->
+              fromCompact @(MaryValue StandardCrypto) (fromJust (toCompact ma)) === ma
 
 instance IsString AssetName where
   fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack

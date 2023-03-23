@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Api.Tx.Out (spec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Out
-import Cardano.Ledger.BaseTypes (strictMaybeToMaybe, pvMajor)
+import Cardano.Ledger.BaseTypes (pvMajor, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (Sized (sizedValue), mkSized, serialize)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core

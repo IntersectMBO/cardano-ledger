@@ -31,11 +31,13 @@ import Test.QuickCheck (
   Gen,
   arbitrary,
   choose,
+  chooseInt,
   elements,
   frequency,
   listOf,
   oneof,
   resize,
+  scale,
   vectorOf,
  )
 
@@ -43,8 +45,8 @@ instance Arbitrary AssetName where
   arbitrary =
     AssetName
       <$> frequency
-        [ (1, elements digitByteStrings)
-        , (99, genShortByteString =<< choose (1, 32))
+        [ (3, elements digitByteStrings)
+        , (7, genShortByteString =<< choose (1, 32))
         ]
 
 instance
@@ -123,21 +125,32 @@ genMultiAssetTriple genAmount = (,,) <$> arbitrary <*> arbitrary <*> genAmount
 --   1. The asset names and policy ids are deduplicated
 --   2. Not all generated asset names are 32-bytes long
 -- But, exceeding this number does make the probability of causing overflow > 0.
-genMultiAsset :: Crypto c => Gen Integer -> Gen (MultiAsset c)
-genMultiAsset genAmount =
-  multiAssetFromListBounded
-    <$> resize 910 (listOf $ genMultiAssetTriple $ fromIntegral <$> genAmount)
+genMultiAsset :: forall c. Crypto c => Gen Integer -> Gen (MultiAsset c)
+genMultiAsset genAmount = do
+  MultiAsset ma <-
+    oneof
+      [ MultiAsset <$> genNonEmptyMap (arbitrary :: Gen (PolicyID c)) (genNonEmptyMap arbitrary genAmount)
+      , multiAssetFromListBounded <$> listOf (genMultiAssetTriple $ fromIntegral <$> genAmount)
+      ]
+  if sum (length <$> ma) > 910
+    then scale (`div` 2) $ genMultiAsset genAmount
+    else pure $ MultiAsset ma
 
--- For negative tests
-genMultiAssetToFail :: Crypto c => Int -> Gen (MultiAsset c)
-genMultiAssetToFail triplesSize =
+-- For negative tests, we need a definite generator that causes overflow
+genMultiAssetToFail :: Crypto c => Gen (MultiAsset c)
+genMultiAssetToFail = do
+  n <- chooseInt (200, 500) -- The generator can use a lot of resources if the number is made arbitrarily large.
+  let triplesSize = n + 910
   multiAssetFromListBounded @Int64
-    <$> vectorOf
+    <$> resize
       triplesSize
-      ( (,,)
-          <$> arbitrary
-          <*> (AssetName <$> genShortByteString 32)
-          <*> (fromIntegral <$> choose (1 :: Int, maxBound))
+      ( vectorOf
+          triplesSize
+          ( (,,)
+              <$> arbitrary
+              <*> (AssetName <$> genShortByteString 32)
+              <*> (fromIntegral <$> chooseInt (1, maxBound))
+          )
       )
 
 instance Crypto c => Arbitrary (MultiAsset c) where
