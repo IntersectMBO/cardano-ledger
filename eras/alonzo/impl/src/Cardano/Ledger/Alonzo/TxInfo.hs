@@ -533,7 +533,7 @@ valContext ::
 valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 
-data ScriptFailure = PlutusSF Text (PlutusDebug)
+data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)
 
 data ScriptResult
@@ -621,7 +621,7 @@ instance
     pData <- decCBOR
     protVer <- decCBOR
     -- We need to return a tuple here, with the size of the tag in bytes.
-    pure $ (1, PlutusDebugLang slang costModel exUnits sbs pData protVer)
+    pure $ (7, PlutusDebugLang slang costModel exUnits sbs pData protVer)
 
 data PlutusDebug where
   PlutusDebug :: (IsLanguage l, Typeable l) => PlutusDebugLang l -> PlutusDebug
