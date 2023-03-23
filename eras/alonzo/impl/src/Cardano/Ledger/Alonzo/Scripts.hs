@@ -300,7 +300,7 @@ zipSemiExUnits f (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `f` m2) <> (s1 `f` s2)
 -- to hide the evaluation context.
 data CostModel = CostModel
   { cmLanguage :: !Language
-  , cmMap :: [Integer]
+  , cmValues :: ![Integer]
   , cmEvalCtx :: !PV1.EvaluationContext
   }
   deriving (Generic)
@@ -689,7 +689,15 @@ mkCostModelsLenient = Map.foldrWithKey addRawCostModel (CostModels mempty mempty
 -- upon deserialization.
 flattenCostModel :: CostModels -> Map Word8 [Integer]
 flattenCostModel (CostModels validCMs _ invalidCMs) =
-  Map.foldrWithKey (\lang cm -> Map.insert (fromIntegral $ fromEnum lang) (cmMap cm)) invalidCMs validCMs
+  Map.foldrWithKey (\lang cm -> Map.insert (toWord8 lang) (cmValues cm)) invalidCMs validCMs
+  where
+    toWord8 lang =
+      case fromEnum lang of
+        li
+          | 0 <= li && li <= fromIntegral (maxBound :: Word8) -> fromIntegral li
+          | otherwise ->
+              -- This should be impossible while we have under 256 versions of Plutus
+              error $ "Overflow encountered during conversion of the language: " ++ show lang
 
 instance NoThunks CostModels
 
