@@ -598,18 +598,13 @@ instance
   EncCBOR (PlutusDebugLang l)
   where
   encCBOR (PlutusDebugLang slang costModel exUnits sbs pData protVer) =
-    let tag =
-          case slang of
-            SPlutusV1 -> 0
-            SPlutusV2 -> 1
-     in encode $
-          Sum PlutusDebugLang tag
-            !> To slang
-            !> E encodeCostModel costModel
-            !> To exUnits
-            !> To sbs
-            !> To pData
-            !> To protVer
+    encode $
+      Sum (PlutusDebugLang slang) (fromIntegral (fromEnum (fromSLanguage slang)))
+        !> E encodeCostModel costModel
+        !> To exUnits
+        !> To sbs
+        !> To pData
+        !> To protVer
 
 instance
   forall (l :: Language).
@@ -617,16 +612,16 @@ instance
   DecCBOR (PlutusDebugLang l)
   where
   decCBOR = decodeRecordSum "PlutusDebugLang" $ \tag -> do
-    let lang = fromSLanguage $ isLanguage @l
+    let slang = isLanguage @l
+        lang = fromSLanguage slang
     when (fromEnum lang /= fromIntegral tag) $ fail $ "Unexpected language: " <> show tag
-    slang <- decCBOR
     costModel <- decodeCostModelFailHard lang
     exUnits <- decCBOR
     sbs <- decCBOR
     pData <- decCBOR
     protVer <- decCBOR
     -- We need to return a tuple here, with the size of the tag in bytes.
-    pure $ (1, PlutusDebugLang slang costModel exUnits sbs pData protVer)
+    pure $ (6, PlutusDebugLang slang costModel exUnits sbs pData protVer)
 
 data PlutusDebug where
   PlutusDebug :: (IsLanguage l, Typeable l) => PlutusDebugLang l -> PlutusDebug
