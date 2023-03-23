@@ -94,7 +94,6 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
-  DecoderError (..),
   EncCBOR (..),
   Version,
   decodeFull',
@@ -138,10 +137,12 @@ import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.Monad (when)
+import Control.Monad.Trans.Fail
 import Data.ByteString as BS (ByteString, length)
 import qualified Data.ByteString.Base64 as B64
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import qualified Data.ByteString.UTF8 as BSU
+import qualified Data.Foldable as F (asum)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -652,18 +653,19 @@ debugPlutus version db =
     Left e -> DebugBadHex (show e)
     Right bs ->
       let plutusDebugLangDecoder ::
-            (Typeable l, IsLanguage l) =>
-            Either DecoderError (PlutusDebugLang l)
-          plutusDebugLangDecoder = decodeFull' version bs
+            forall l. (Typeable l, IsLanguage l) => Proxy l -> Fail String PlutusDebug
+          plutusDebugLangDecoder _ =
+            FailT $
+              pure $
+                either (Left . pure . show) (Right . PlutusDebug) $
+                  decodeFull' @(PlutusDebugLang l) version bs
           plutusDebugDecoder =
-            case plutusDebugLangDecoder @'PlutusV1 of
-              Right plutusDebug -> pure $ PlutusDebug plutusDebug
-              Left _ ->
-                case plutusDebugLangDecoder @'PlutusV2 of
-                  Right plutusDebug -> pure $ PlutusDebug plutusDebug
-                  Left err -> Left err
-       in case plutusDebugDecoder of
-            Left e -> DebugCannotDecode (show e)
+            F.asum
+              [ plutusDebugLangDecoder (Proxy @'PlutusV1)
+              , plutusDebugLangDecoder (Proxy @'PlutusV2)
+              ]
+       in case runFail plutusDebugDecoder of
+            Left e -> DebugCannotDecode e
             Right (PlutusDebug (PlutusDebugLang sl costModel exUnits scripts pData protVer)) ->
               let evalV1 =
                     PV1.evaluateScriptRestricting
