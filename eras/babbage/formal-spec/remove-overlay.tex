@@ -76,11 +76,11 @@ To retire the $\mathsf{OVERLAY}$ STS, we inline the definition of its
 'decentralized' case and drop all the unnecessary variables from its environment.
 It is invoked in $\mathsf{CHAIN}$, which needs to be adjusted accordingly.
 
-As there is now only a singe VRF check, slight modifications are needed for the
+As there is now only a single VRF check, slight modifications are needed for the
 definition of the block header body \text{BHBody} type and the function \text{vrfChecks}.
 The Shelley era accessor functions $\fun{bleader}$ and $\fun{bnonce}$ are replaced with new functions
 which make use of the VRF range extension as described in \cite{vrf-range-extension}[4.1],
-to re-use the singe VRF value.
+to re-use the single VRF value.
 
 \begin{figure*}[htb]
   %

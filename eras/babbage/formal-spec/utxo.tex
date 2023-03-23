@@ -33,9 +33,9 @@ overflow, we let this number be $2^{16} - 1$.
     & \fun{feesOK} : \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo = \\
     &~~      \minfee{pp}{tx} \leq \txfee{tx} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
-    &~~~~~~~~~~\forall (a, \wcard, \wcard) \in \fun{range}~(\fun{collInputs}~tx \restrictdom \var{utxo}), a \in \AddrVKey \\
+    &~~~~~~~~~~\forall (a, \wcard, \wcard, \wcard) \in \fun{range}~(\fun{collInputs}~tx \restrictdom \var{utxo}), a \in \AddrVKey \\
     &~~~~~~\wedge \fun{adaOnly}~\var{balance} \\
-    &~~~~~~\wedge \var{balance} \geq \hldiff{\lceil \txfee{txb} * \fun{collateralPercent}~pp / 100 \rceil} \\
+    &~~~~~~\wedge \var{balance} \geq \hldiff{\txfee{txb} * \fun{collateralPercent}~pp / 100} \\
     &~~~~~~\wedge \hldiff{(\fun{txcoll}~tx \neq \Nothing) \Rightarrow \var{balance} = \fun{txcoll}~tx} \\
     &~~~~~~\wedge \fun{collInputs}~{tx} \neq \emptyset) \\
     &~~      \where \\
@@ -196,8 +196,8 @@ In the UTXO rule, we switch from a manual estimation of the size consumed by $\U
       \forall txout \in \hldiff{\fun{allOuts}~txb},\\
       \fun{serSize}~(\fun{getValue}~txout) \leq \fun{maxValSize}~pp \\~
       \\
-      \forall (\wcard\mapsto (a,~\wcard)) \in \hldiff{\fun{allOuts}~txb}, a \in \AddrBS \Rightarrow \fun{bootstrapAttrsSize}~a \leq 64 \\
-      \forall (\wcard\mapsto (a,~\wcard)) \in \hldiff{\fun{allOuts}~txb}, \fun{netId}~a = \NetworkId
+      \forall (\wcard\mapsto (a,~\wcard, \wcard, \wcard)) \in \hldiff{\fun{allOuts}~txb}, a \in \AddrBS \Rightarrow \fun{bootstrapAttrsSize}~a \leq 64 \\
+      \forall (\wcard\mapsto (a,~\wcard, \wcard, \wcard)) \in \hldiff{\fun{allOuts}~txb}, \fun{netId}~a = \NetworkId
       \\
       \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId \\
       (\fun{txnetworkid}~\var{txb} = \NetworkId) \vee (\fun{txnetworkid}~\var{txb} = \Nothing)
@@ -290,7 +290,7 @@ addresses.
       \var{inputHashes}\leteq \left\{ h \,\middle|
         {
           \begin{array}{l}
-            (a, \_, h) \in \range(\var{utxo}|_{\fun{spendInputs}~tx}) \\
+            (a, \_, h, \_) \in \range(\var{utxo}|_{\fun{spendInputs}~tx}) \\
             \fun{isTwoPhaseScriptAddress}~tx~\hldiff{utxo}~a \\
           \end{array}
         }
@@ -299,7 +299,7 @@ addresses.
       \forall \var{s} \in (\fun{txscripts}~txw~\hldiff{utxo~\var{neededHashes}}) \cap \ScriptPhOne,
       \fun{validateScript}~\var{s}~\var{tx}\\~\\
       \var{neededHashes} - \hldiff{\dom (\fun{refScripts}~tx~utxo)} = \dom (\fun{txwitscripts}~txw) \\~\\
-      \var{inputHashes} \subseteq_{\{h \mid (\wcard, \wcard, h)\in\fun{allOuts}~tx \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}} \dom (\fun{txdats}~{txw})  \\~\\
+      \var{inputHashes} \subseteq_{\{h \mid (\wcard, \wcard, h, \wcard)\in\fun{allOuts}~tx \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}} \dom (\fun{txdats}~{txw})  \\~\\
       \\~\\
       \dom (\fun{txrdmrs}~tx) = \left\{ \fun{rdptr}~txb~sp \,\middle|
         {
