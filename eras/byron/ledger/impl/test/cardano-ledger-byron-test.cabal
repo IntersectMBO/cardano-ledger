@@ -188,7 +188,7 @@ library
         cardano-crypto,
         cardano-crypto-test,
         cardano-crypto-wrapper,
-        cardano-prelude,
+        cardano-prelude >=0.1.0.1,
         cardano-prelude-test,
         containers,
         byron-spec-chain,
