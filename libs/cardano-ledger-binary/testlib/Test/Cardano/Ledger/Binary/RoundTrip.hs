@@ -57,6 +57,9 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   embedTrip,
   embedTripAnn,
   embedTripLabel,
+
+  -- * Verbosity
+  FailureVerbosity (..),
 )
 where
 
@@ -156,18 +159,21 @@ roundTripRangeFailureExpectation ::
   Version ->
   t ->
   Expectation
-roundTripRangeFailureExpectation = embedTripRangeFailureExpectation
+roundTripRangeFailureExpectation = embedTripRangeFailureExpectation Maximal
 
 embedTripFailureExpectation ::
   (Typeable b, HasCallStack) =>
   Trip a b ->
   a ->
   Expectation
-embedTripFailureExpectation trip = embedTripRangeFailureExpectation trip minBound maxBound
+embedTripFailureExpectation trip = embedTripRangeFailureExpectation Maximal trip minBound maxBound
+
+data FailureVerbosity = Maximal | Minimal
 
 embedTripRangeFailureExpectation ::
   forall a b.
   (Typeable b, HasCallStack) =>
+  FailureVerbosity ->
   Trip a b ->
   -- | From Version
   Version ->
@@ -175,18 +181,21 @@ embedTripRangeFailureExpectation ::
   Version ->
   a ->
   Expectation
-embedTripRangeFailureExpectation trip fromVersion toVersion t =
+embedTripRangeFailureExpectation llvl trip fromVersion toVersion t =
   forM_ [fromVersion .. toVersion] $ \version ->
     case embedTripLabelExtra (typeLabel @b) version version trip t of
       (Left _, _, _) -> pure ()
       (Right _, _, bs) ->
         expectationFailure $
-          mconcat
-            [ "Should not have deserialized: <version: "
-            , show version
-            , "> "
-            , showExpr (CBORBytes (BSL.toStrict bs))
-            ]
+          case llvl of
+            Maximal ->
+              mconcat
+                [ "Should not have deserialized: <version: "
+                , show version
+                , "> "
+                , showExpr (CBORBytes (BSL.toStrict bs))
+                ]
+            Minimal -> "Failed"
 
 -- | Verify that round triping through the binary form holds for a range of versions.
 --

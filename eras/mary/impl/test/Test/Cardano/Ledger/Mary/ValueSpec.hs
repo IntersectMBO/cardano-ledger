@@ -20,6 +20,9 @@ import Data.Maybe (fromJust)
 import GHC.Exts
 import Test.Cardano.Data
 import Test.Cardano.Ledger.Binary.RoundTrip (
+  FailureVerbosity (Minimal),
+  cborTrip,
+  embedTripRangeFailureExpectation,
   roundTripCborExpectation,
   roundTripCborFailureExpectation,
   roundTripCborRangeExpectation,
@@ -75,7 +78,15 @@ spec = do
       it "Too many assets should fail" $
         expectFailure $
           property $
-            forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) roundTripCborFailureExpectation
+            forAll
+              (genMaryValue (genMultiAssetToFail @StandardCrypto))
+              ( embedTripRangeFailureExpectation @(MaryValue StandardCrypto) @(MaryValue StandardCrypto)
+                  Minimal
+                  cborTrip
+                  minBound
+                  maxBound
+              )
+
   describe "MaryValue compacting" $ do
     prop "Canonical generator" $
       \(ma :: MaryValue StandardCrypto) ->

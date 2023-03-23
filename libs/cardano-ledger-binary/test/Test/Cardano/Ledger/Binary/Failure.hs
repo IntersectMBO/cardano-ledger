@@ -8,7 +8,7 @@ import Cardano.Ledger.Binary
 import Data.Map (Map)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
-import Test.Cardano.Ledger.Binary.RoundTrip (Trip (..), embedTripRangeFailureExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (FailureVerbosity (Maximal), Trip (..), embedTripRangeFailureExpectation)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
@@ -57,7 +57,7 @@ prop_shouldFailMapWithDupKeys =
   forAllBlind genDuplicateAssocListEncoding $
     \mapEncoding ->
       let trip = Trip id (decCBOR @(Map Int Int)) (dropCBOR (Proxy @(Map Int Int)))
-       in property $ embedTripRangeFailureExpectation trip (natVersion @9) maxBound mapEncoding
+       in property $ embedTripRangeFailureExpectation Maximal trip (natVersion @9) maxBound mapEncoding
 
 -- | Starting in version 9, do not accept duplicates in CBOR sets
 prop_shouldFailSetWithDupKeys :: Property
@@ -65,7 +65,7 @@ prop_shouldFailSetWithDupKeys =
   forAllBlind genDuplicateListEncoding $
     \setEncoding ->
       let trip = Trip id (decCBOR @(Set Int)) (dropCBOR (Proxy @(Set Int)))
-       in property $ embedTripRangeFailureExpectation trip (natVersion @9) maxBound setEncoding
+       in property $ embedTripRangeFailureExpectation Maximal trip (natVersion @9) maxBound setEncoding
 
 spec :: Spec
 spec = do
