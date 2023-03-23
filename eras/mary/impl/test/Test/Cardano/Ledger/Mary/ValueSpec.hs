@@ -67,16 +67,21 @@ spec = do
       prop "Empty MaryValue fails for Conway" $
         forAll (genMaryValue (genEmptyMultiAsset @StandardCrypto)) $
           roundTripCborRangeFailureExpectation (natVersion @9) maxBound
+      it "Too many assets should fail" $
+        expectFailure $
+          property $
+            forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) $
+              roundTripCborFailureExpectation
   describe "MaryValue compacting" $ do
     prop "Canonical generator" $
       \(ma :: MaryValue StandardCrypto) ->
-        fromCompact @(MaryValue StandardCrypto) (fromJust (toCompact ma)) === ma
+        fromCompact (fromJust (toCompact ma)) === ma
     it "Failing generator" $
       expectFailure $
         property $
-          forAll (genMaryValue genMultiAssetToFail) $
-            \(ma :: MaryValue StandardCrypto) ->
-              fromCompact @(MaryValue StandardCrypto) (fromJust (toCompact ma)) === ma
+          forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) $
+            \ma ->
+              fromCompact (fromJust (toCompact ma)) === ma
 
 instance IsString AssetName where
   fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack

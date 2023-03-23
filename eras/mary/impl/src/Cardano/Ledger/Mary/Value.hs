@@ -81,13 +81,13 @@ import Data.CanonicalMaps (
 import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
-import Data.List (sortOn)
+import Data.List (nub, sortOn)
 import Data.Map (Map)
 import Data.Map.Internal (
   link,
   link2,
  )
-import Data.Map.Strict (assocs)
+import Data.Map.Strict (assocs, foldr', keys, keysSet)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Primitive.ByteArray as BA
@@ -334,10 +334,21 @@ encodeMultiAssetMaps (MultiAsset m) = encCBOR m
 decodeMultiAssetMaps :: Crypto c => (forall t. Decoder t Integer) -> Decoder s (MultiAsset c)
 decodeMultiAssetMaps decodeAmount = do
   ma <- decodeMap decCBOR (decodeMap decCBOR decodeAmount)
-  ifDecoderVersionAtLeast
-    (natVersion @9)
-    (MultiAsset ma <$ forM_ ma (\m -> when (Map.null m) $ fail "Empty Assets are not allowed"))
-    (pure $ MultiAsset $ prune ma)
+  -- compact form inequality: 
+  --   8n (Word64) + 2n (Word16) + 2n (Word16) + 28p (policy ids) + sum of lengths of unique asset names <= 65535
+  -- where: n = number of assets, p = number of unique policy ids
+  let numUniqPolicies = length $ keysSet ma
+      numAssets = sum $ length <$> ma
+      sumLengthsUniqAssetNames = sum . fmap SBS.length . nub . foldr' (<>) [] $ fmap assetName . keys <$> ma
+      highestOffset = 12 * numAssets + 28 * numUniqPolicies + sumLengthsUniqAssetNames
+  if highestOffset >= 65535
+    then 
+      fail "MultiAsset too big to compact, has too many assets. Ideal number is < 910."
+    else 
+      ifDecoderVersionAtLeast
+        (natVersion @9)
+        (MultiAsset ma <$ forM_ ma (\m -> when (Map.null m) $ fail "Empty Assets are not allowed"))
+        (pure $ MultiAsset $ prune ma)
 
 decodeMultiAssetMint :: Crypto c => Decoder s (MultiAsset c)
 decodeMultiAssetMint = decodeMultiAssetMaps decodeIntegerBounded64
