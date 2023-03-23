@@ -334,7 +334,7 @@ encodeMultiAssetMaps (MultiAsset m) = encCBOR m
 decodeMultiAssetMaps :: Crypto c => (forall t. Decoder t Integer) -> Decoder s (MultiAsset c)
 decodeMultiAssetMaps decodeAmount = do
   ma <- decodeMap decCBOR (decodeMap decCBOR decodeAmount)
-  -- compact form inequality: 
+  -- compact form inequality:
   --   8n (Word64) + 2n (Word16) + 2n (Word16) + 28p (policy ids) + sum of lengths of unique asset names <= 65535
   -- where: n = number of assets, p = number of unique policy ids
   let numUniqPolicies = length $ keysSet ma
@@ -342,9 +342,8 @@ decodeMultiAssetMaps decodeAmount = do
       sumLengthsUniqAssetNames = sum . fmap SBS.length . nub . foldr' (<>) [] $ fmap assetName . keys <$> ma
       highestOffset = 12 * numAssets + 28 * numUniqPolicies + sumLengthsUniqAssetNames
   if highestOffset >= 65535
-    then 
-      fail "MultiAsset too big to compact, has too many assets. Ideal number is < 910."
-    else 
+    then fail "MultiAsset too big to compact, has too many assets. Ideal number is < 910."
+    else
       ifDecoderVersionAtLeast
         (natVersion @9)
         (MultiAsset ma <$ forM_ ma (\m -> when (Map.null m) $ fail "Empty Assets are not allowed"))

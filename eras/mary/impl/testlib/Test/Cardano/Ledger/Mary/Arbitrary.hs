@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Mary.Arbitrary (
   genMaryValue,
   genMultiAsset,
   genMultiAssetToFail,
+  genMultiAssetZero,
 ) where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
@@ -34,7 +35,7 @@ import Test.QuickCheck (
   chooseInt,
   elements,
   frequency,
-  listOf,
+  listOf1,
   oneof,
   resize,
   scale,
@@ -129,12 +130,16 @@ genMultiAsset :: forall c. Crypto c => Gen Integer -> Gen (MultiAsset c)
 genMultiAsset genAmount = do
   MultiAsset ma <-
     oneof
-      [ MultiAsset <$> genNonEmptyMap (arbitrary :: Gen (PolicyID c)) (genNonEmptyMap arbitrary genAmount)
-      , multiAssetFromListBounded <$> listOf (genMultiAssetTriple $ fromIntegral <$> genAmount)
+      [ MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbitrary genAmount)
+      , multiAssetFromListBounded <$> listOf1 (genMultiAssetTriple $ fromIntegral <$> genAmount)
       ]
   if sum (length <$> ma) > 910
     then scale (`div` 2) $ genMultiAsset genAmount
     else pure $ MultiAsset ma
+
+-- | For tests, because `insertMultiAsset` called through `genMultiAsset` filters out zero values
+genMultiAssetZero :: Crypto c => Gen (MultiAsset c)
+genMultiAssetZero = MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbitrary (pure 0))
 
 -- For negative tests, we need a definite generator that causes overflow
 genMultiAssetToFail :: Crypto c => Gen (MultiAsset c)

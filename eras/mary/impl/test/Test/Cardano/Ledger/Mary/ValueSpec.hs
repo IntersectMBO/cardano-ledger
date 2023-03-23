@@ -1,10 +1,7 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -29,7 +26,13 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripCborRangeFailureExpectation,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Mary.Arbitrary (genEmptyMultiAsset, genMaryValue, genMultiAsset, genMultiAssetToFail)
+import Test.Cardano.Ledger.Mary.Arbitrary (
+  genEmptyMultiAsset,
+  genMaryValue,
+  genMultiAsset,
+  genMultiAssetToFail,
+  genMultiAssetZero,
+ )
 
 spec :: Spec
 spec = do
@@ -49,20 +52,22 @@ spec = do
       prop "Non-zero-valued MultiAsset succeeds for all eras" $
         roundTripCborExpectation @(MultiAsset StandardCrypto)
       prop "Zero-valued MultiAsset fails for Conway" $
-        forAll (genMultiAsset @StandardCrypto (pure 0)) $
+        forAll (genMultiAssetZero @StandardCrypto) $
           roundTripCborRangeFailureExpectation (natVersion @9) maxBound
       prop "Empty MultiAsset fails for Conway" $
         forAll (genEmptyMultiAsset @StandardCrypto) $
           roundTripCborRangeFailureExpectation (natVersion @9) maxBound
     context "MaryValue" $ do
       prop "Positive MaryValue succeeds for all eras" $
-        forAll (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> chooseInt (1, maxBound)))) $
+        forAll
+          (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> chooseInt (1, maxBound))))
           roundTripCborExpectation
       prop "Negative MaryValue fails for all eras" $
-        forAll (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> chooseInt (minBound, -1)))) $
+        forAll
+          (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> chooseInt (minBound, -1))))
           roundTripCborFailureExpectation
       prop "Zero MaryValue fails for Conway" $
-        forAll (genMaryValue (genMultiAsset @StandardCrypto (pure 0))) $
+        forAll (genMaryValue (genMultiAssetZero @StandardCrypto)) $
           roundTripCborRangeFailureExpectation (natVersion @9) maxBound
       prop "Empty MaryValue fails for Conway" $
         forAll (genMaryValue (genEmptyMultiAsset @StandardCrypto)) $
@@ -70,18 +75,17 @@ spec = do
       it "Too many assets should fail" $
         expectFailure $
           property $
-            forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) $
-              roundTripCborFailureExpectation
+            forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) roundTripCborFailureExpectation
   describe "MaryValue compacting" $ do
     prop "Canonical generator" $
       \(ma :: MaryValue StandardCrypto) ->
-        fromCompact (fromJust (toCompact ma)) === ma
+        fromCompact (fromJust (toCompact ma)) == ma
     it "Failing generator" $
       expectFailure $
         property $
           forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) $
             \ma ->
-              fromCompact (fromJust (toCompact ma)) === ma
+              fromCompact (fromJust (toCompact ma)) == ma
 
 instance IsString AssetName where
   fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack
