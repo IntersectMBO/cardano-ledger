@@ -93,3 +93,37 @@ and the Ada contained in them was returned to the reserves.
 In the $\mathsf{CHAIN}$ rule in Figure~\ref{fig:rules:chain}, the $\mathsf{TICKN}$ rule uses
 the last block hash of the previous epoch to create the new epoch nonce.
 In the implemenation, however, the \textit{penultimate} block hash of the previous epoch is used.
+
+\subsection{Deposit tracking}
+\label{sec:deposit-tracking}
+
+In this specification, individual deposits (for stake credential and stake pool registrations) are not tracked by the ledger.
+Deposits are returned according to the current protocol parameters.
+When the values of these two protocol parameters change, the deposoit pot
+is adjusted by adding to, or removing from, the reserves.
+
+This has several problems:
+\begin{itemize}
+  \item Most people expect a deposit to be paid back exactly.
+  \item We cannot increase the deposit amount once the reserves hits zero.
+  \item If it becomes known that the deposit amount is going to be increased, free Lovelace can be earned by registering credentials.
+  \item Because of the problems above, it is going to be incredibly hard to ever change the values.
+  \item There is a serious issue involving hard forks.
+        The consensus layer makes the decision about whether or not to enact a hard fork based on
+	the protocol parameter update state two stability windows before the end of the epoch.
+	However, the ledger will reject a protocol parameter update on the epoch boundary
+	if the deposit pot adjustments cannot be reconciled with the reseve pot.
+	This means that if quorum is met regarding changing the major protocol version,
+	but the update is rejected on the epoch boundary, consensus will change the era but the
+	ledger will not change the major protocol version, leaving the ledger in a split-brain state.
+\end{itemize}
+
+Because we never actually changed the values of the two deposits amounts in the protocol parameters
+on mainnet, we were able to retroactively change the behavior.
+We made the following changes:
+\begin{itemize}
+  \item Individual deposits are tracked in the \DState.
+  \item The amount deposited is always returned.
+\end{itemize}
+
+This was implemented \href{https://github.com/input-output-hk/cardano-ledger/pull/3127}{here}.
