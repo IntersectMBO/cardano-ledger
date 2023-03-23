@@ -9,6 +9,8 @@ module Cardano.Crypto.Signing.SigningKey (
   toVerification,
   encCBORXPrv,
   decCBORXPrv,
+  toCBORXPrv,
+  fromCBORXPrv,
 )
 where
 
@@ -25,6 +27,7 @@ import Cardano.Ledger.Binary (
   toByronCBOR,
   toCborError,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Prelude hiding (toCborError)
 import Formatting (bprint)
 import Formatting.Buildable
@@ -61,6 +64,12 @@ encCBORXPrv a = encCBOR $ CC.unXPrv a
 
 decCBORXPrv :: Decoder s CC.XPrv
 decCBORXPrv = toCborError . CC.xprv =<< decCBOR @ByteString
+
+toCBORXPrv :: CC.XPrv -> Plain.Encoding
+toCBORXPrv a = toCBOR $ CC.unXPrv a
+
+fromCBORXPrv :: Plain.Decoder s CC.XPrv
+fromCBORXPrv = toCborError . CC.xprv =<< fromCBOR @ByteString
 
 instance ToCBOR SigningKey where
   toCBOR = toByronCBOR
