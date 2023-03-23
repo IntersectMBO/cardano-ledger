@@ -65,7 +65,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), PPUPPredFailure)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -86,7 +86,6 @@ import Control.State.Transition.Extended (
   trans,
  )
 import Data.Bifunctor (first)
-import Data.Coerce (coerce)
 import Data.Foldable (sequenceA_, toList)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
@@ -300,8 +299,9 @@ utxoTransition ::
   ) =>
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
+  TRC (env@(Shelley.UtxoEnv slot pp dpstate _genDelegs), ls, tx) <- judgmentContext
+  let u = lsUTxOState ls
+      Shelley.UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
   let txBody = body tx
@@ -363,7 +363,8 @@ utxoTransition = do
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
 
-  trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+  newu <- trans @(EraRule "UTXOS" era) (TRC (env, u, tx))
+  pure (ls {lsUTxOState = newu})
 
 --------------------------------------------------------------------------------
 -- BabbageUTXO STS
@@ -386,7 +387,7 @@ instance
   ) =>
   STS (BabbageUTXO era)
   where
-  type State (BabbageUTXO era) = Shelley.UTxOState era
+  type State (BabbageUTXO era) = Shelley.LedgerState era
   type Signal (BabbageUTXO era) = AlonzoTx era
   type Environment (BabbageUTXO era) = UtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase

@@ -83,6 +83,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTestOnSignal,
  )
 import Cardano.Ledger.Shelley.LedgerState (
+  LedgerState (..),
   PPUPPredFailure,
   UTxOState (UTxOState),
  )
@@ -100,7 +101,6 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.Foldable (foldl', sequenceA_, toList)
 import qualified Data.Map.Strict as Map
@@ -469,8 +469,9 @@ utxoTransition ::
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
-  TRC (UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo _deposits _fees _ppup _ = u
+  TRC (env@(UtxoEnv slot pp dpstate _genDelegs), ls, tx) <- judgmentContext
+  let u = lsUTxOState ls
+      UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
   let txBody = tx ^. bodyTxL
@@ -534,7 +535,9 @@ utxoTransition = do
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
 
-  trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+  -- trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+  newutxostate <- trans @(EraRule "UTXOS" era) (TRC (env, u, tx))
+  pure (ls {lsUTxOState = newutxostate})
 
 --------------------------------------------------------------------------------
 -- AlonzoUTXO STS
@@ -553,7 +556,7 @@ instance
   ) =>
   STS (AlonzoUTXO era)
   where
-  type State (AlonzoUTXO era) = UTxOState era
+  type State (AlonzoUTXO era) = LedgerState era
   type Signal (AlonzoUTXO era) = Tx era
   type Environment (AlonzoUTXO era) = UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase

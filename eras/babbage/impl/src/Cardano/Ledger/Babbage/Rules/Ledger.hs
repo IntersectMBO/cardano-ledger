@@ -20,7 +20,6 @@ import Cardano.Ledger.Babbage.Era (BabbageLEDGER)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
   LedgerState (..),
   UTxOState (..),
   obligationDPState,
@@ -57,10 +56,10 @@ instance
   , Embed (EraRule "DELEGS" era) (BabbageLEDGER era)
   , Embed (EraRule "UTXOW" era) (BabbageLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   ) =>
   STS (BabbageLEDGER era)

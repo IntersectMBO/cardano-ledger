@@ -130,7 +130,7 @@ genTx ::
   , Mock (EraCrypto era)
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ LedgerState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   GenEnv era ->
@@ -153,7 +153,7 @@ genTx
         constants
       )
   (LedgerEnv slot txIx pparams reserves)
-  (LedgerState utxoSt@(UTxOState utxo _ _ _ _) dpState) =
+  ls@(LedgerState utxoSt@(UTxOState utxo _ _ _ _) dpState) =
     do
       -------------------------------------------------------------------------
       -- Generate the building blocks of a TxBody
@@ -180,7 +180,7 @@ genTx
           pparams
           (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
-        genDCerts ge pparams dpState slot txIx reserves
+        genDCerts ge pparams ls slot txIx reserves
       metadata <- genEraAuxiliaryData @era constants
       -------------------------------------------------------------------------
       -- Gather Key TxWits and Scripts, prepare a constructor for Tx Wits

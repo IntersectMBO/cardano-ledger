@@ -171,10 +171,10 @@ instance
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
   ) =>
@@ -207,34 +207,34 @@ ledgerTransition ::
   , ShelleyEraTxBody era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , ProtVerAtMost era 8
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
-  dpstate' <-
+  TRC (LedgerEnv slot txIx pp account, ls0@(LedgerState _ dpstate), tx) <- judgmentContext
+  ls1 <-
     trans @(EraRule "DELEGS" era) $
       TRC
         ( DelegsEnv slot txIx pp tx account
-        , dpstate
+        , ls0
         , StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )
   let genDelegs = dsGenDelegs (dpsDState dpstate)
 
-  utxoSt' <-
+  ls2 <-
     trans @(EraRule "UTXOW" era) $
       TRC
         ( UtxoEnv slot pp dpstate genDelegs
-        , utxoSt
+        , ls1
         , tx
         )
-  pure (LedgerState utxoSt' dpstate')
+  pure ls2
 
 instance
   ( Era era

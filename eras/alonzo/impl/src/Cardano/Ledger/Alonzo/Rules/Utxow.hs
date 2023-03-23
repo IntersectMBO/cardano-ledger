@@ -74,6 +74,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (
   requiresVKeyWitness,
  )
 import Cardano.Ledger.Shelley.LedgerState (
+  LedgerState (..),
   UTxOState (..),
   witsFromTxWitnesses,
  )
@@ -340,19 +341,20 @@ alonzoStyleWitness ::
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , State (EraRule "UTXO" era) ~ UTxOState era
+  , State (EraRule "UTXO" era) ~ LedgerState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (UtxoEnv slot pp stakepools genDelegs, ls, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
-  let utxo = utxosUtxo u
+  let u = lsUTxOState ls
+      utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses @era tx
 
@@ -413,7 +415,7 @@ alonzoStyleWitness = do
   runTest $ ppViewHashesMatch tx pp utxo scriptsHashesNeeded
 
   trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+    TRC (UtxoEnv slot pp stakepools genDelegs, ls, tx)
 
 -- ================================
 
@@ -508,13 +510,13 @@ instance
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , State (EraRule "UTXO" era) ~ UTxOState era
+  , State (EraRule "UTXO" era) ~ LedgerState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXOW era)
   where
-  type State (AlonzoUTXOW era) = UTxOState era
+  type State (AlonzoUTXOW era) = LedgerState era
   type Signal (AlonzoUTXOW era) = Tx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase

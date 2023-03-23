@@ -19,9 +19,7 @@ import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState,
   LedgerState (..),
-  UTxOState,
   genesisState,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -78,16 +76,16 @@ instance
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ LedgerState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
   ) =>
@@ -113,7 +111,7 @@ instance
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ LedgerState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)

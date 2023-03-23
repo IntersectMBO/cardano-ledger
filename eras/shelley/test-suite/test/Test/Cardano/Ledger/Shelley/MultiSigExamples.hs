@@ -73,6 +73,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
+import Test.Cardano.Ledger.Shelley.Address.Bootstrap (dPStateZero)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
   Mock,
  )
@@ -84,6 +85,7 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
 
+-- =========================================================
 -- Multi-Signature tests
 
 -- This compile-time test asserts that the script hash and key hash use the
@@ -239,18 +241,16 @@ initialUTxOState aliceKeep msigs =
               Map.empty
               Nothing
        in ( txid $ tx ^. bodyTxL
-          , runShelleyBase $
-              applySTSTest @(ShelleyUTXOW (ShelleyEra c))
-                ( TRC
-                    ( UtxoEnv
-                        (SlotNo 0)
-                        initPParams
-                        def
-                        (GenDelegs Map.empty)
-                    , lsUTxOState genesis
-                    , tx
-                    )
-                )
+          , runShelleyBase $ do
+              ls <-
+                applySTSTest @(ShelleyUTXOW (ShelleyEra c))
+                  ( TRC
+                      ( UtxoEnv (SlotNo 0) initPParams def (GenDelegs Map.empty)
+                      , LedgerState (lsUTxOState genesis) dPStateZero
+                      , tx
+                      )
+                  )
+              pure (lsUTxOState <$> ls)
           )
 
 -- | Start from genesis, consume Alice's and Bob's coins, create an output
@@ -293,15 +293,13 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         (Map.fromList $ map (\scr -> (hashScript @(ShelleyEra c) scr, scr)) unlockScripts)
         Nothing
     utxoSt' =
-      runShelleyBase $
-        applySTSTest @(ShelleyUTXOW (ShelleyEra c))
-          ( TRC
-              ( UtxoEnv
-                  (SlotNo 0)
-                  initPParams
-                  def
-                  (GenDelegs Map.empty)
-              , utxoSt
-              , tx
-              )
-          )
+      runShelleyBase $ do
+        xx <-
+          applySTSTest @(ShelleyUTXOW (ShelleyEra c))
+            ( TRC
+                ( UtxoEnv (SlotNo 0) initPParams def (GenDelegs Map.empty)
+                , LedgerState utxoSt dPStateZero
+                , tx
+                )
+            )
+        pure (lsUTxOState <$> xx)

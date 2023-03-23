@@ -79,22 +79,22 @@ import Test.Tasty.QuickCheck (testProperty)
 genTxAndUTXOState :: Reflect era => Proof era -> GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
 genTxAndUTXOState proof@(Conway _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Babbage _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Alonzo _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Mary _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Allegra _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Shelley _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), ledgerState, vtx), genState)
 
 genTxAndLEDGERState ::
   forall era.

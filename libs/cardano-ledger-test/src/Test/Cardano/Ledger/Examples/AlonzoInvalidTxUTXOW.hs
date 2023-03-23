@@ -53,7 +53,7 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
@@ -118,7 +118,7 @@ tests =
 alonzoUTXOWTests ::
   forall era.
   ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era))
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , GoodCrypto (EraCrypto era)
   , HasTokens era
   , EraTx era

@@ -15,7 +15,6 @@ import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
   DCert,
-  DPState,
   DelplEnv,
   ShelleyLEDGERS,
   ShelleyTx,
@@ -23,6 +22,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
+  LedgerState (..),
   NewEpochState (..),
  )
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -107,7 +107,7 @@ genTriple ::
   , Mock (EraCrypto era)
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ LedgerState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   , Tx era ~ ShelleyTx era
   , EraGovernance era

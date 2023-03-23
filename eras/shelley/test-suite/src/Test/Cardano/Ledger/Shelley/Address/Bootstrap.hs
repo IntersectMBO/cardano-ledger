@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Shelley.Address.Bootstrap (
   bootstrapHashTest,
   genSignature,
   aliceByronAddr,
+  dPStateZero,
 )
 where
 
@@ -42,7 +43,15 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
+  DState (..),
+  IncrementalStake (..),
+  InstantaneousRewards (..),
+  LedgerState (..),
+  PState (..),
+  UTxOState (..),
+ )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyPPUPState (..), ShelleyUTXOW, ShelleyUtxowPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Tx (
@@ -58,6 +67,7 @@ import Cardano.Ledger.Shelley.TxWits (
  )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
+import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<->))
 import Data.ByteString (ByteString)
@@ -137,6 +147,9 @@ utxoState0 =
     , utxosStakeDistr = mempty
     }
 
+ledgerState0 :: LedgerState C
+ledgerState0 = LedgerState utxoState0 dPStateZero
+
 tx :: ShelleyTx C
 tx = ShelleyTx txBody mempty {bootWits = Set.fromList [aliceWitness]} SNothing
 
@@ -156,6 +169,9 @@ utxoState1 =
     txid = TxId $ hashAnnotated txBody
     bobResult = (mkTxInPartial txid 0, ShelleyTxOut bobAddr coinsToBob)
     aliceResult = (mkTxInPartial txid 1, ShelleyTxOut aliceAddr (Coin 998990))
+
+ledgerState1 :: LedgerState C
+ledgerState1 = ledgerState0 {lsUTxOState = utxoState1}
 
 utxoEnv :: UtxoEnv C
 utxoEnv =
@@ -232,15 +248,15 @@ testBootstrapSpending :: Assertion
 testBootstrapSpending =
   testSTS @(ShelleyUTXOW C)
     utxoEnv
-    utxoState0
+    ledgerState0
     tx
-    (Right utxoState1)
+    (Right ledgerState1)
 
 testBootstrapNotSpending :: Assertion
 testBootstrapNotSpending =
   testSTS @(ShelleyUTXOW C)
     utxoEnv
-    utxoState0
+    ledgerState0
     txBad
     (Left [InvalidWitnessesUTXOW [aliceVKey]])
 
@@ -254,3 +270,32 @@ instance Cardano.Ledger.Crypto.Crypto C_crypto where
   type DSIGN C_crypto = DSIGN.Ed25519DSIGN
   type HASH C_crypto = HASH Original.C_Crypto
   type ADDRHASH C_crypto = Hash.Blake2b_224
+
+-- =====================================
+
+genDelegsZero :: GenDelegs c
+genDelegsZero = GenDelegs Map.empty
+
+instantaneousRewardsZero :: InstantaneousRewards c
+instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty
+
+dStateZero :: DState c
+dStateZero =
+  DState
+    { dsUnified = UM.empty
+    , dsFutureGenDelegs = Map.empty
+    , dsGenDelegs = genDelegsZero
+    , dsIRewards = instantaneousRewardsZero
+    }
+
+pStateZero :: PState c
+pStateZero =
+  PState
+    { psStakePoolParams = Map.empty
+    , psFutureStakePoolParams = Map.empty
+    , psRetiring = Map.empty
+    , psDeposits = Map.empty
+    }
+
+dPStateZero :: DPState c
+dPStateZero = DPState dStateZero pStateZero

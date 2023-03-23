@@ -41,7 +41,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (
-  UTxOState (..),
+  LedgerState (..),
   smartUTxOState,
  )
 import Cardano.Ledger.Shelley.TxBody (
@@ -59,6 +59,7 @@ import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
+import Test.Cardano.Ledger.Examples.BabbageFeatures (liftU)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
   alwaysSucceedsHash,
@@ -99,7 +100,7 @@ tests =
 
 alonzoUTXOWTests ::
   forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era
+  ( State (EraRule "UTXOW" era) ~ LedgerState era
   , GoodCrypto (EraCrypto era)
   , HasTokens era
   , EraTx era
@@ -228,8 +229,8 @@ validatingState ::
   , EraGovernance era
   ) =>
   Proof era ->
-  UTxOState era
-validatingState pf = smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
+  LedgerState era
+validatingState pf = liftU (smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def)
   where
     utxo = expectedUTxO' pf (ExpectSuccess (validatingBody pf) (validatingTxOut pf)) 1
 
@@ -283,8 +284,8 @@ notValidatingState ::
   , EraGovernance era
   ) =>
   Proof era ->
-  UTxOState era
-notValidatingState pf = smartUTxOState (pp pf) (expectedUTxO' pf ExpectFailure 2) (Coin 0) (Coin 5) def
+  LedgerState era
+notValidatingState pf = liftU (smartUTxOState (pp pf) (expectedUTxO' pf ExpectFailure 2) (Coin 0) (Coin 5) def)
 
 -- =========================================================================
 --  Example 3: Process a CERT transaction with a succeeding Plutus script.
@@ -335,8 +336,8 @@ validatingWithCertState ::
   , EraGovernance era
   ) =>
   Proof era ->
-  UTxOState era
-validatingWithCertState pf = smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
+  LedgerState era
+validatingWithCertState pf = liftU $ smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
   where
     utxo = expectedUTxO' pf (ExpectSuccess (validatingWithCertBody pf) (validatingWithCertTxOut pf)) 3
 
@@ -383,8 +384,8 @@ notValidatingWithCertState ::
   , EraGovernance era
   ) =>
   Proof era ->
-  UTxOState era
-notValidatingWithCertState pf = smartUTxOState (pp pf) (expectedUTxO' pf ExpectFailure 4) (Coin 0) (Coin 5) def
+  LedgerState era
+notValidatingWithCertState pf = liftU $ smartUTxOState (pp pf) (expectedUTxO' pf ExpectFailure 4) (Coin 0) (Coin 5) def
 
 -- ==============================================================================
 --  Example 5: Process a WITHDRAWAL transaction with a succeeding Plutus script.
@@ -437,8 +438,8 @@ validatingWithWithdrawalTxOut pf = newTxOut pf [Address (someAddr pf), Amount (i
 validatingWithWithdrawalState ::
   (EraTxBody era, PostShelley era, EraGovernance era) =>
   Proof era ->
-  UTxOState era
-validatingWithWithdrawalState pf = smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
+  LedgerState era
+validatingWithWithdrawalState pf = liftU $ smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
   where
     utxo = expectedUTxO' pf (ExpectSuccess (validatingWithWithdrawalBody pf) (validatingWithWithdrawalTxOut pf)) 5
 
@@ -486,8 +487,8 @@ notValidatingTxWithWithdrawal pf =
 notValidatingWithWithdrawalState ::
   (EraTxBody era, PostShelley era, EraGovernance era) =>
   Proof era ->
-  UTxOState era
-notValidatingWithWithdrawalState pf = smartUTxOState (pp pf) (expectedUTxO' pf ExpectFailure 6) (Coin 0) (Coin 5) def
+  LedgerState era
+notValidatingWithWithdrawalState pf = liftU $ smartUTxOState (pp pf) (expectedUTxO' pf ExpectFailure 6) (Coin 0) (Coin 5) def
 
 -- =============================================================================
 --  Example 7: Process a MINT transaction with a succeeding Plutus script.
@@ -544,8 +545,8 @@ validatingWithMintState ::
   forall era.
   (PostShelley era, EraTxBody era, HasTokens era, Value era ~ MaryValue (EraCrypto era), EraGovernance era) =>
   Proof era ->
-  UTxOState era
-validatingWithMintState pf = smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
+  LedgerState era
+validatingWithMintState pf = liftU $ smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
   where
     utxo = expectedUTxO' pf (ExpectSuccess (validatingWithMintBody pf) (validatingWithMintTxOut pf)) 7
 
@@ -592,8 +593,8 @@ notValidatingWithMintTx pf =
 notValidatingWithMintState ::
   (EraTxBody era, PostShelley era, EraGovernance era) =>
   Proof era ->
-  UTxOState era
-notValidatingWithMintState pf = smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
+  LedgerState era
+notValidatingWithMintState pf = liftU $ smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
   where
     utxo = expectedUTxO' pf ExpectFailure 8
 
@@ -684,8 +685,8 @@ validatingManyScriptsState ::
   forall era.
   (EraTxBody era, PostShelley era, HasTokens era, Value era ~ MaryValue (EraCrypto era), EraGovernance era) =>
   Proof era ->
-  UTxOState era
-validatingManyScriptsState pf = smartUTxOState (pp pf) (UTxO utxo) (Coin 0) (Coin 5) def
+  LedgerState era
+validatingManyScriptsState pf = liftU $ smartUTxOState (pp pf) (UTxO utxo) (Coin 0) (Coin 5) def
   where
     utxo =
       Map.insert (TxIn (txid (validatingManyScriptsBody pf)) minBound) (validatingManyScriptsTxOut pf) $
@@ -741,8 +742,8 @@ validatingSupplimentaryDatumState ::
   forall era.
   (EraTxBody era, PostShelley era, EraGovernance era) =>
   Proof era ->
-  UTxOState era
-validatingSupplimentaryDatumState pf = smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
+  LedgerState era
+validatingSupplimentaryDatumState pf = liftU $ smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
   where
     utxo = expectedUTxO' pf (ExpectSuccess (validatingSupplimentaryDatumBody pf) (validatingSupplimentaryDatumTxOut pf)) 3
 
@@ -797,8 +798,8 @@ validatingMultipleEqualCertsOut pf = newTxOut pf [Address (someAddr pf), Amount 
 validatingMultipleEqualCertsState ::
   (EraTxBody era, PostShelley era, EraGovernance era) =>
   Proof era ->
-  UTxOState era
-validatingMultipleEqualCertsState pf = smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
+  LedgerState era
+validatingMultipleEqualCertsState pf = liftU $ smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
   where
     utxo = expectedUTxO' pf (ExpectSuccess (validatingMultipleEqualCertsBody pf) (validatingMultipleEqualCertsOut pf)) 3
 
@@ -845,8 +846,8 @@ validatingNonScriptOutWithDatumState ::
   , EraGovernance era
   ) =>
   Proof era ->
-  UTxOState era
-validatingNonScriptOutWithDatumState pf = smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
+  LedgerState era
+validatingNonScriptOutWithDatumState pf = liftU $ smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def
   where
     utxo = expectedUTxO' pf (ExpectSuccess (validatingNonScriptOutWithDatumTxBody pf) (validatingNonScriptOutWithDatumTxOut pf)) 103
 

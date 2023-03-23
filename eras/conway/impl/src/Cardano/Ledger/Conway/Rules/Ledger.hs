@@ -161,10 +161,10 @@ instance
   , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "TALLY" era) (ConwayLEDGER era)
   , Embed (EraRule "DELEGS" era) (ConwayLEDGER era)
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
@@ -217,10 +217,10 @@ ledgerTransition ::
   , Embed (EraRule "TALLY" era) (someLEDGER era)
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
   , Environment (EraRule "TALLY" era) ~ TallyEnv era
@@ -230,19 +230,19 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, ls0@(LedgerState _ dpstate), tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
-  dpstate' <-
+  ls1 <-
     if tx ^. isValidTxL == IsValid True
       then
         trans @(EraRule "DELEGS" era) $
           TRC
             ( DelegsEnv slot txIx pp tx account
-            , dpstate
+            , ls0
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyG
             )
-      else pure dpstate
+      else pure ls0
 
   let DPState dstate _pstate = dpstate
       genDelegs = dsGenDelegs dstate
@@ -250,7 +250,8 @@ ledgerTransition = do
   let govProcedures =
         (GovernanceVotingProcedure <$> txBody ^. votingProceduresTxBodyL)
           <> (GovernanceProposalProcedure <$> txBody ^. proposalProceduresTxBodyL)
-  let govSt = utxosGovernance utxoSt
+  let utxoSt = lsUTxOState ls1
+      govSt = utxosGovernance utxoSt
   epoch <- liftSTS $ do
     ei <- asks epochInfoPure
     epochInfoEpoch ei slot
@@ -261,15 +262,12 @@ ledgerTransition = do
         , cgTally govSt
         , StrictSeq.fromStrict govProcedures
         )
-
-  utxoSt' <-
-    trans @(EraRule "UTXOW" era) $
-      TRC
-        ( UtxoEnv @era slot pp dpstate genDelegs
-        , utxoSt {utxosGovernance = govSt {cgTally = tallySt'}}
-        , tx
-        )
-  pure $ LedgerState utxoSt' dpstate'
+  trans @(EraRule "UTXOW" era) $
+    TRC
+      ( UtxoEnv @era slot pp dpstate genDelegs
+      , ls1 {lsUTxOState = utxoSt {utxosGovernance = govSt {cgTally = tallySt'}}}
+      , tx
+      )
 
 instance
   ( Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -278,7 +276,7 @@ instance
   , EraUTxO era
   , BabbageEraTxBody era
   , Embed (EraRule "UTXO" era) (BabbageUTXOW era)
-  , State (EraRule "UTXO" era) ~ UTxOState era
+  , State (EraRule "UTXO" era) ~ LedgerState era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , Script era ~ AlonzoScript era
   , TxOut era ~ BabbageTxOut era
@@ -297,9 +295,10 @@ instance
 
 instance
   ( EraTx era
+  , EraGovernance era
   , ShelleyEraTxBody era
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ LedgerState era
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
@@ -323,8 +322,8 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
-  , State (EraRule "UTXOW" era) ~ UTxOState era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "UTXOW" era) ~ LedgerState era
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , State (EraRule "TALLY" era) ~ ConwayTallyState era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era

@@ -80,7 +80,7 @@ import Cardano.Ledger.Shelley.API (
   UTxO (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
-import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyState,
@@ -109,6 +109,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
+import Test.Cardano.Ledger.Shelley.Address.Bootstrap (dPStateZero)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
@@ -365,7 +366,7 @@ testUTXOWsubset (UTXOW other) _ = error ("Cannot use testUTXOW in era " ++ show 
 -- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
 testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
   let env = UtxoEnv (SlotNo 0) pparam def (GenDelegs mempty)
-      state = smartUTxOState pparam utxo (Coin 0) (Coin 0) def
+      state = LedgerState (smartUTxOState pparam utxo (Coin 0) (Coin 0) def) dPStateZero
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
@@ -396,7 +397,7 @@ testUTXOWwith ::
   Assertion
 testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
   let env = UtxoEnv (SlotNo 0) pparams def (GenDelegs mempty)
-      state = smartUTxOState pparams utxo (Coin 0) (Coin 0) def
+      state = LedgerState (smartUTxOState pparams utxo (Coin 0) (Coin 0) def) dPStateZero
    in case proof of
         Conway _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (cont expected)

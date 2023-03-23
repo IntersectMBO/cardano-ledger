@@ -19,8 +19,10 @@ import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
+  DPState (..),
   DState (..),
   InstantaneousRewards (..),
+  LedgerState (..),
   delegations,
   rewards,
  )
@@ -103,10 +105,10 @@ keyRegistration
     conjoin
       [ counterexample
           "a newly registered key should have a reward account"
-          ((UM.member hk (rewards targetSt)) :: Bool)
+          ((UM.member hk (rewards (dpsDState (lsDPState targetSt)))) :: Bool)
       , counterexample
           "a newly registered key should have a reward account with 0 balance"
-          ((UM.rdReward <$> UM.lookup hk (rewards targetSt)) == Just mempty)
+          ((UM.rdReward <$> UM.lookup hk (rewards (dpsDState (lsDPState targetSt)))) == Just mempty)
       ]
 keyRegistration _ = property ()
 
@@ -120,10 +122,10 @@ keyDeRegistration
     conjoin
       [ counterexample
           "a deregistered stake key should no longer be in the rewards mapping"
-          ((UM.notMember hk (rewards targetSt)) :: Bool)
+          ((UM.notMember hk (rewards (dpsDState (lsDPState targetSt)))) :: Bool)
       , counterexample
           "a deregistered stake key should no longer be in the delegations mapping"
-          ((UM.notMember hk (delegations targetSt)) :: Bool)
+          ((UM.notMember hk (delegations (dpsDState (lsDPState targetSt)))) :: Bool)
       ]
 keyDeRegistration _ = property ()
 
@@ -134,11 +136,11 @@ keyDelegation
     { signal = (DCertDeleg (Delegate (Delegation from to)))
     , target = targetSt
     } =
-    let fromImage = eval (rng (Set.singleton from `UM.domRestrictedView` delegations targetSt))
+    let fromImage = eval (rng (Set.singleton from `UM.domRestrictedView` delegations (dpsDState (lsDPState targetSt))))
      in conjoin
           [ counterexample
               "a delegated key should have a reward account"
-              ((UM.member from (rewards targetSt)) :: Bool)
+              ((UM.member from (rewards (dpsDState (lsDPState targetSt)))) :: Bool)
           , counterexample
               "a registered stake credential should be delegated"
               ((eval (to ∈ fromImage)) :: Bool)
@@ -153,8 +155,8 @@ keyDelegation _ = property ()
 rewardsSumInvariant :: SourceSignalTarget (ShelleyDELEG era) -> Property
 rewardsSumInvariant
   SourceSignalTarget {source, target} =
-    let sourceRewards = UM.compactRewView (dsUnified source)
-        targetRewards = UM.compactRewView (dsUnified target)
+    let sourceRewards = UM.compactRewView (dsUnified (dpsDState (lsDPState source)))
+        targetRewards = UM.compactRewView (dsUnified (dpsDState (lsDPState target)))
         rewardsSum = foldl' (<>) mempty
      in conjoin
           [ counterexample
@@ -176,49 +178,51 @@ checkInstantaneousRewards ::
 checkInstantaneousRewards
   denv
   SourceSignalTarget {source, signal, target} =
-    case signal of
-      DCertMir (MIRCert ReservesMIR (StakeAddressesMIR irwd)) ->
-        conjoin
-          [ counterexample
-              "a ReservesMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target))
-          , counterexample
-              "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
-              ( if (HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv)
-                  then -- In the Alonzo era, repeated fields are added
+    let sourceX = dpsDState (lsDPState source)
+        targetX = dpsDState (lsDPState target)
+     in case signal of
+          DCertMir (MIRCert ReservesMIR (StakeAddressesMIR irwd)) ->
+            conjoin
+              [ counterexample
+                  "a ReservesMIR certificate should add all entries to the `irwd` mapping"
+                  (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards targetX))
+              , counterexample
+                  "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
+                  ( if (HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv)
+                      then -- In the Alonzo era, repeated fields are added
 
-                    ( (fold $ iRReserves $ dsIRewards source)
-                        `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRReserves $ dsIRewards target))
-                    )
-                  else -- Prior to the Alonzo era, repeated fields overridden
+                        ( (fold $ iRReserves $ dsIRewards sourceX)
+                            `addDeltaCoin` (fold irwd)
+                            == (fold $ (iRReserves $ dsIRewards targetX))
+                        )
+                      else -- Prior to the Alonzo era, repeated fields overridden
 
-                    ( (fold $ (iRReserves $ dsIRewards source) Map.\\ irwd)
-                        `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRReserves $ dsIRewards target))
-                    )
-              )
-          ]
-      DCertMir (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
-        conjoin
-          [ counterexample
-              "a TreasuryMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards target))
-          , counterexample
-              "a TreasuryMIR certificate should add* the total value to the `irwd` map"
-              ( if HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
-                  then -- In the Alonzo era, repeated fields are added
+                        ( (fold $ (iRReserves $ dsIRewards sourceX) Map.\\ irwd)
+                            `addDeltaCoin` (fold irwd)
+                            == (fold $ (iRReserves $ dsIRewards targetX))
+                        )
+                  )
+              ]
+          DCertMir (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
+            conjoin
+              [ counterexample
+                  "a TreasuryMIR certificate should add all entries to the `irwd` mapping"
+                  (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards targetX))
+              , counterexample
+                  "a TreasuryMIR certificate should add* the total value to the `irwd` map"
+                  ( if HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
+                      then -- In the Alonzo era, repeated fields are added
 
-                    ( (fold $ iRTreasury $ dsIRewards source)
-                        `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRTreasury $ dsIRewards target))
-                    )
-                  else -- Prior to the Alonzo era, repeated fields overridden
+                        ( (fold $ iRTreasury $ dsIRewards sourceX)
+                            `addDeltaCoin` (fold irwd)
+                            == (fold $ (iRTreasury $ dsIRewards targetX))
+                        )
+                      else -- Prior to the Alonzo era, repeated fields overridden
 
-                    ( (fold $ (iRTreasury $ dsIRewards source) Map.\\ irwd)
-                        `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRTreasury $ dsIRewards target))
-                    )
-              )
-          ]
-      _ -> property ()
+                        ( (fold $ (iRTreasury $ dsIRewards sourceX) Map.\\ irwd)
+                            `addDeltaCoin` (fold irwd)
+                            == (fold $ (iRTreasury $ dsIRewards targetX))
+                        )
+                  )
+              ]
+          _ -> property ()

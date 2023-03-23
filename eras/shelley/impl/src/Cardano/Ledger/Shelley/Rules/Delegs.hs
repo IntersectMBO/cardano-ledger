@@ -41,9 +41,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS)
+import Cardano.Ledger.Shelley.Governance (EraGovernance)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
   DPState (..),
+  LedgerState (LedgerState, lsDPState),
   dpsDState,
   dsUnified,
   psStakePoolParams,
@@ -126,15 +128,16 @@ instance
 
 instance
   ( EraTx era
+  , EraGovernance era
   , ShelleyEraTxBody era
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ LedgerState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (ShelleyDELEGS era)
   where
-  type State (ShelleyDELEGS era) = DPState (EraCrypto era)
+  type State (ShelleyDELEGS era) = LedgerState era
   type Signal (ShelleyDELEGS era) = Seq (DCert (EraCrypto era))
   type Environment (ShelleyDELEGS era) = DelegsEnv era
   type BaseM (ShelleyDELEGS era) = ShelleyBase
@@ -195,15 +198,16 @@ instance
 delegsTransition ::
   forall era.
   ( EraTx era
+  , EraGovernance era
   , ShelleyEraTxBody era
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ LedgerState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
-  TRC (env@(DelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv slot txIx pp tx acnt), ls@(LedgerState _ dpstate), certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
 
   case certificates of
@@ -229,12 +233,13 @@ delegsTransition = do
               Map.empty
               withdrawals_
           unified' = rewards' UM.⨃ drainedRewardAccounts
-      pure $ dpstate {dpsDState = ds {dsUnified = unified'}}
+      pure $ ls {lsDPState = dpstate {dpsDState = ds {dsUnified = unified'}}}
     gamma :|> c -> do
-      dpstate' <-
-        trans @(ShelleyDELEGS era) $ TRC (env, dpstate, gamma)
+      ls2 <-
+        trans @(ShelleyDELEGS era) $ TRC (env, ls, gamma)
 
-      let isDelegationRegistered = case c of
+      let dpstate' = lsDPState ls2
+          isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
               let stPools_ = psStakePoolParams $ dpsPState dpstate'
                   targetPool = dDelegatee deleg
@@ -245,10 +250,10 @@ delegsTransition = do
       isDelegationRegistered ?!: id
 
       -- It is impossible to have 65535 number of certificates in a
-      -- transaction, therefore partial function is justified.
+      -- transaction, therefore partial function, mkCertIxPartial, is justified.
       let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(EraRule "DELPL" era) $
-        TRC (DelplEnv slot ptr pp acnt, dpstate', c)
+        TRC (DelplEnv slot ptr pp acnt, (ls2 {lsDPState = dpstate'}), c)
   where
     -- @withdrawals_@ is small and @rewards@ big, better to transform the former
     -- than the latter into the right shape so we can call 'Map.isSubmapOf'.

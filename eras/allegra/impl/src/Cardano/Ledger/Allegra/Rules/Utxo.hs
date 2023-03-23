@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -151,8 +152,9 @@ utxoTransition ::
   ) =>
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _ _ ppup _ = u
+  TRC (Shelley.UtxoEnv slot pp dpstate genDelegs, ls, tx) <- judgmentContext
+  let u = Shelley.lsUTxOState ls
+      Shelley.UTxOState utxo _ _ ppup _ = u
   let txb = tx ^. bodyTxL
 
   {- ininterval slot (txvld tx) -}
@@ -202,8 +204,8 @@ utxoTransition = do
 
   let refunded = keyTxRefunds pp dpstate txb
   let depositChange = totalTxDeposits pp dpstate txb Val.<-> refunded
-
-  pure $! Shelley.updateUTxOState pp u txb depositChange ppup'
+  let !newutxostate = Shelley.updateUTxOState pp u txb depositChange ppup'
+  pure (ls {Shelley.lsUTxOState = newutxostate})
 
 -- | Ensure the transaction is within the validity window.
 --
@@ -277,7 +279,7 @@ instance
   ) =>
   STS (AllegraUTXO era)
   where
-  type State (AllegraUTXO era) = Shelley.UTxOState era
+  type State (AllegraUTXO era) = Shelley.LedgerState era
   type Signal (AllegraUTXO era) = ShelleyTx era
   type Environment (AllegraUTXO era) = Shelley.UtxoEnv era
   type BaseM (AllegraUTXO era) = ShelleyBase

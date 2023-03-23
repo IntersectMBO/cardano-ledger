@@ -71,7 +71,6 @@ import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
   EpochState (..),
   FilteredRewards (..),
   LedgerState (..),
@@ -80,6 +79,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   circulation,
   completeRupd,
   createRUpd,
+  dpsDState,
   filterAllRewards,
   lsDPState,
   rewards,

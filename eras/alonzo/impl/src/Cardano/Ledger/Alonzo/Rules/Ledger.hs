@@ -72,40 +72,40 @@ ledgerTransition ::
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , AlonzoEraTx era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, ls0@(LedgerState _ dpstate), tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
-  dpstate' <-
+  ls1 <-
     if tx ^. isValidTxL == IsValid True
       then
         trans @(EraRule "DELEGS" era) $
           TRC
             ( DelegsEnv slot txIx pp tx account
-            , dpstate
+            , ls0
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyG
             )
-      else pure dpstate
+      else pure ls0
 
   let DPState dstate _pstate = dpstate
       genDelegs = dsGenDelegs dstate
 
-  utxoSt' <-
+  ls2 <-
     trans @(EraRule "UTXOW" era) $
       TRC
         ( UtxoEnv @era slot pp dpstate genDelegs
-        , utxoSt
+        , ls1
         , tx
         )
-  pure $ LedgerState utxoSt' dpstate'
+  pure $ ls2
 
 instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
@@ -114,10 +114,10 @@ instance
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , Signal (EraRule "UTXOW" era) ~ AlonzoTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ LedgerState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
   ) =>

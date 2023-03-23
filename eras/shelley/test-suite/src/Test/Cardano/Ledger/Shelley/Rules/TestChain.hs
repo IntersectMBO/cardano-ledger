@@ -207,7 +207,8 @@ poolTraceFromBlock chainSt block =
 -- | Reconstruct a DELEG trace from all the transaction certificates in a Block
 delegTraceFromBlock ::
   forall era.
-  ( ChainProperty era
+  ( EraGovernance era
+  , ChainProperty era
   , ShelleyEraTxBody era
   , EraSegWits era
   , ProtVerAtMost era 8
@@ -218,7 +219,7 @@ delegTraceFromBlock ::
 delegTraceFromBlock chainSt block =
   ( delegEnv
   , runShelleyBase $
-      Trace.closure @(ShelleyDELEG era) delegEnv delegSt0 blockCerts
+      Trace.closure @(ShelleyDELEG era) delegEnv ledgerSt0 blockCerts
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -229,9 +230,6 @@ delegTraceFromBlock chainSt block =
           dummyCertIx = minBound
           ptr = Ptr s txIx dummyCertIx
        in DelegEnv s ptr reserves pp
-    delegSt0 =
-      let LedgerState _ (DPState delegSt0_ _) = ledgerSt0
-       in delegSt0_
     delegCert (DCertDeleg _) = True
     delegCert (DCertMir _) = True
     delegCert _ = False

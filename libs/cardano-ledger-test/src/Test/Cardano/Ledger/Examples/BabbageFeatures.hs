@@ -55,7 +55,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (DCert (DCertDeleg), DelegCert (DeRegKey), ProtVer (..), UTxO (..))
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
@@ -91,6 +91,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
+import Test.Cardano.Ledger.Shelley.Address.Bootstrap (dPStateZero)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, testCase)
@@ -1035,9 +1036,12 @@ txFromTestCaseData
             )
      in tx
 
+liftU :: UTxOState era -> LedgerState era
+liftU utxo = LedgerState utxo dPStateZero
+
 testExpectSuccessValid ::
   forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era
+  ( State (EraRule "UTXOW" era) ~ LedgerState era
   , GoodCrypto (EraCrypto era)
   , PostShelley era
   , EraTx era
@@ -1057,10 +1061,9 @@ testExpectSuccessValid
 
         newTxIn = TxIn (txid txBody') minBound
         newTxInOut = [newTxIn] `zip` (maybeToList . StrictSeq.lookup 0) (getOutputs pf txBody')
-
-        initUtxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
+        initUtxo = ((UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral')
         expectedUtxo = UTxO $ Map.fromList (newTxInOut ++ refInputs' ++ collateral')
-        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) fees def
+        expectedState = liftU (smartUTxOState (pp pf) expectedUtxo (Coin 0) fees def)
         assumedValidTx = trustMeP pf True tx'
      in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedValidTx (Right expectedState)
 
@@ -1081,7 +1084,7 @@ newColReturn
 
 testExpectSuccessInvalid ::
   forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era
+  ( State (EraRule "UTXOW" era) ~ LedgerState era
   , TxBody era ~ BabbageTxBody era
   , GoodCrypto (EraCrypto era)
   , PostShelley era
@@ -1101,13 +1104,13 @@ testExpectSuccessInvalid
         initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
         colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
         expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
-        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) colBallance def
+        expectedState = liftU (smartUTxOState (pp pf) expectedUtxo (Coin 0) colBallance def)
         assumedInvalidTx = trustMeP pf False tx'
      in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedInvalidTx (Right expectedState)
 
 testExpectFailure ::
   forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era
+  ( State (EraRule "UTXOW" era) ~ LedgerState era
   , GoodCrypto (EraCrypto era)
   , PostShelley era
   , BabbageEraTxBody era
@@ -1130,7 +1133,7 @@ genericBabbageFeatures ::
   forall era.
   ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era))
   , BabbageBased era (PredicateFailure (EraRule "UTXOW" era))
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ LedgerState era
   , TxBody era ~ BabbageTxBody era
   , GoodCrypto (EraCrypto era)
   , BabbageEraTxBody era

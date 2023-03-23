@@ -14,7 +14,7 @@ import Cardano.Ledger.Allegra.Rules.Utxo (AllegraUTXO, AllegraUtxoPredFailure)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (..),
   ShelleyUtxowPredFailure (..),
@@ -42,14 +42,14 @@ instance
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AllegraUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , State (EraRule "UTXO" era) ~ UTxOState era
+  , State (EraRule "UTXO" era) ~ LedgerState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , ProtVerAtMost era 8
   ) =>
   STS (AllegraUTXOW era)
   where
-  type State (AllegraUTXOW era) = UTxOState era
+  type State (AllegraUTXOW era) = LedgerState era
   type Signal (AllegraUTXOW era) = Tx era
   type Environment (AllegraUTXOW era) = UtxoEnv era
   type BaseM (AllegraUTXOW era) = ShelleyBase

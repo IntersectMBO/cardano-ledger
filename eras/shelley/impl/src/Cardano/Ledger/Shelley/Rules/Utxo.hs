@@ -63,6 +63,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   DPState (..),
+  LedgerState (LedgerState, lsUTxOState),
   PPUPPredFailure,
   UTxOState (..),
   keyTxRefunds,
@@ -313,7 +314,7 @@ instance
   ) =>
   STS (ShelleyUTXO era)
   where
-  type State (ShelleyUTXO era) = UTxOState era
+  type State (ShelleyUTXO era) = LedgerState era
   type Signal (ShelleyUTXO era) = ShelleyTx era
   type Environment (ShelleyUTXO era) = UtxoEnv era
   type BaseM (ShelleyUTXO era) = ShelleyBase
@@ -326,7 +327,7 @@ instance
     AssertionViolation
       { avSTS
       , avMsg
-      , avCtx = TRC (UtxoEnv _slot pp dpstate _, UTxOState {utxosDeposited, utxosUtxo}, tx)
+      , avCtx = TRC (UtxoEnv _slot pp dpstate _, LedgerState {lsUTxOState = UTxOState {utxosDeposited, utxosUtxo}}, tx)
       } =
       "AssertionViolation ("
         <> avSTS
@@ -346,20 +347,20 @@ instance
   assertions =
     [ PreCondition
         "Deposit pot must not be negative (pre)"
-        (\(TRC (_, st, _)) -> utxosDeposited st >= mempty)
+        (\(TRC (_, st, _)) -> utxosDeposited (lsUTxOState st) >= mempty)
     , PostCondition
         "UTxO must increase fee pot"
-        (\(TRC (_, st, _)) st' -> utxosFees st' >= utxosFees st)
+        (\(TRC (_, ls, _)) ls' -> utxosFees (lsUTxOState ls') >= utxosFees (lsUTxOState ls))
     , PostCondition
         "Deposit pot must not be negative (post)"
-        (\_ st' -> utxosDeposited st' >= mempty)
+        (\_ st' -> utxosDeposited (lsUTxOState st') >= mempty)
     , let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> balance (utxosUtxo us)
           withdrawals :: TxBody era -> Value era
           withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
-            ( \(TRC (UtxoEnv _ _pp _pools _, us, tx)) us' ->
-                (utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us')
+            ( \(TRC (UtxoEnv _ _pp _pools _, ls, tx)) ls' ->
+                (utxoBalance (lsUTxOState ls) <> withdrawals (tx ^. bodyTxL) == utxoBalance (lsUTxOState ls'))
             )
     ]
 
@@ -373,7 +374,7 @@ utxoInductive ::
   , Embed (EraRule "PPUP" era) (utxo era)
   , BaseM (utxo era) ~ ShelleyBase
   , Environment (utxo era) ~ UtxoEnv era
-  , State (utxo era) ~ UTxOState era
+  , State (utxo era) ~ LedgerState era
   , Signal (utxo era) ~ Tx era
   , PredicateFailure (utxo era) ~ ShelleyUtxoPredFailure era
   , Event (utxo era) ~ UtxoEvent era
@@ -385,8 +386,9 @@ utxoInductive ::
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo _ _ ppup _ = u
+  TRC (UtxoEnv slot pp dpstate genDelegs, ls, tx) <- judgmentContext
+  let u = lsUTxOState ls
+      UTxOState utxo _ _ ppup _ = u
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
 
@@ -429,7 +431,8 @@ utxoInductive = do
   let totalDeposits' = totalTxDeposits pp dpstate txBody
   let depositChange = totalDeposits' Val.<-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
-  pure $! updateUTxOState pp u txBody depositChange ppup'
+  let !newutxostate = updateUTxOState pp u txBody depositChange ppup'
+  pure $! ls {lsUTxOState = newutxostate}
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).

@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.LedgerState (
   DPState (..),
+  LedgerState (..),
   keyCertsRefundsDPState,
   totalCertsDepositsDPState,
  )
@@ -101,13 +102,13 @@ instance
   ( Era era
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
-  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (Core.EraRule "DELPL" era) ~ LedgerState era
   , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (CERTS era)
   where
   type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
-  type State (CERTS era) = (DPState (EraCrypto era), CertIx)
+  type State (CERTS era) = (LedgerState era, CertIx)
   type Signal (CERTS era) = Maybe (DCert (EraCrypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
   type Event (CERTS era) = CertsEvent era
@@ -121,7 +122,7 @@ certsTransition ::
   forall era.
   ( Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
-  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (Core.EraRule "DELPL" era) ~ LedgerState era
   , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (CERTS era)
@@ -159,7 +160,7 @@ instance
   ( EraGen era
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
-  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (Core.EraRule "DELPL" era) ~ LedgerState era
   , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
@@ -173,13 +174,13 @@ instance
         constants
       )
     (slot, _txIx, pparams, accountState)
-    (dpState, _certIx) =
+    (ledgerState, _certIx) =
       genDCert
         constants
         ks
         pparams
         accountState
-        dpState
+        (lsDPState ledgerState)
         slot
 
   shrinkSignal = const []
@@ -194,12 +195,12 @@ genDCerts ::
   ( EraGen era
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
-  , State (Core.EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (Core.EraRule "DELPL" era) ~ LedgerState era
   , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   GenEnv era ->
   Core.PParams era ->
-  DPState (EraCrypto era) ->
+  LedgerState era ->
   SlotNo ->
   TxIx ->
   AccountState ->
@@ -217,12 +218,12 @@ genDCerts
         Constants {maxCertsPerTx}
       )
   pparams
-  dpState
+  ls@(LedgerState _ dpState)
   slot
   txIx
   acnt = do
     let env = (slot, txIx, pparams, acnt)
-        st0 = (dpState, minBound)
+        st0 = (ls, minBound)
 
     certsTrace <-
       QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0
@@ -237,7 +238,7 @@ genDCerts
       ( StrictSeq.fromList certs
       , totalCertsDepositsDPState pparams dpState certs
       , refunds
-      , lastState_
+      , lsDPState (lastState_)
       ,
         ( concat (keyCredAsWitness <$> keyCreds')
         , extractScriptCred <$> scriptCreds

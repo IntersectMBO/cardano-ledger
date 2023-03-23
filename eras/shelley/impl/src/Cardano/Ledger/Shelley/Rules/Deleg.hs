@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -28,6 +29,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.DPState (DPState (..), DState (..), dpsDState)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -37,17 +39,15 @@ import Cardano.Ledger.Keys (
   VerKeyVRF,
  )
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG)
+import Cardano.Ledger.Shelley.Governance (EraGovernance)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DState (..),
   FutureGenDeleg (..),
   InstantaneousRewards (..),
+  LedgerState (..),
   availableAfterMIR,
   delegations,
-  dsFutureGenDelegs,
-  dsGenDelegs,
-  dsIRewards,
   rewards,
  )
 import Cardano.Ledger.Shelley.TxBody (
@@ -139,8 +139,8 @@ data ShelleyDelegPredFailure era
 
 newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
-instance EraPParams era => STS (ShelleyDELEG era) where
-  type State (ShelleyDELEG era) = DState (EraCrypto era)
+instance (EraGovernance era, EraPParams era) => STS (ShelleyDELEG era) where
+  type State (ShelleyDELEG era) = LedgerState era
   type Signal (ShelleyDELEG era) = DCert (EraCrypto era)
   type Environment (ShelleyDELEG era) = DelegEnv era
   type BaseM (ShelleyDELEG era) = ShelleyBase
@@ -260,10 +260,14 @@ instance
         pure (3, MIRNegativeTransfer pot amt)
       k -> invalidKey k
 
-delegationTransition :: EraPParams era => TransitionRule (ShelleyDELEG era)
+delegationTransition :: forall era. (EraGovernance era) => TransitionRule (ShelleyDELEG era)
 delegationTransition = do
-  TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
-  let pv = pp ^. ppProtocolVersionL
+  TRC (DelegEnv slot ptr acnt pp, ls0, c) <- judgmentContext
+  let dps0 = lsDPState ls0
+      ds = dpsDState dps0
+      updateDstate :: DState (EraCrypto era) -> LedgerState era
+      updateDstate dstate = ls0 {lsDPState = dps0 {dpsDState = dstate}}
+      pv = pp ^. ppProtocolVersionL
   case c of
     DCertDeleg (RegKey hk) -> do
       -- (hk ∉ dom (rewards ds))
@@ -272,7 +276,7 @@ delegationTransition = do
           deposit = compactCoinOrError (pp ^. ppKeyDepositL)
           u2 = RewardDeposits u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
           u3 = Ptrs u2 UM.∪ (ptr, hk)
-      pure (ds {dsUnified = u3})
+      pure (updateDstate (ds {dsUnified = u3}))
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       -- (hk ∈ dom (rewards ds))
@@ -285,13 +289,13 @@ delegationTransition = do
           u2 = Set.singleton hk UM.⋪ Delegations u1
           u3 = Ptrs u2 UM.⋫ Set.singleton hk
           u4 = ds {dsUnified = u3}
-      pure u4
+      pure (updateDstate u4)
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeDelegationImpossibleDELEG hk
 
-      pure (ds {dsUnified = delegations ds UM.⨃ Map.singleton hk dpool})
+      pure (updateDstate (ds {dsUnified = delegations ds UM.⨃ Map.singleton hk dpool}))
     DCertGenesis (ConstitutionalDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
@@ -318,10 +322,12 @@ delegationTransition = do
         ?! DuplicateGenesisVRFDELEG vrf
 
       pure $
-        ds
-          { dsFutureGenDelegs =
-              eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
-          }
+        updateDstate
+          ( ds
+              { dsFutureGenDelegs =
+                  eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
+              }
+          )
     DCertMir (MIRCert targetPot mirTarget) -> do
       checkSlotNotTooLate slot
       case mirTarget of
@@ -340,7 +346,7 @@ delegationTransition = do
               else do
                 all (>= mempty) credCoinMap ?! MIRNegativesNotCurrentlyAllowed
                 pure (Map.union credCoinMap' instantaneousRewards, potAmount)
-          updateReservesAndTreasury targetPot combinedMap available ds
+          updateDstate <$> updateReservesAndTreasury targetPot combinedMap available ds
         SendToOppositePotMIR coin ->
           if HardForks.allowMIRTransfer pv
             then do
@@ -351,7 +357,7 @@ delegationTransition = do
               let ir = dsIRewards ds
                   dr = deltaReserves ir
                   dt = deltaTreasury ir
-              case targetPot of
+              updateDstate <$> case targetPot of
                 ReservesMIR ->
                   pure $
                     ds
@@ -372,13 +378,13 @@ delegationTransition = do
                       }
             else do
               failBecause MIRTransferNotCurrentlyAllowed
-              pure ds
+              pure (updateDstate ds)
     DCertPool _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
-      pure ds
+      pure (updateDstate ds)
 
 checkSlotNotTooLate ::
-  EraPParams era =>
+  (EraGovernance era) =>
   SlotNo ->
   Rule (ShelleyDELEG era) 'Transition ()
 checkSlotNotTooLate slot = do
@@ -402,7 +408,6 @@ updateReservesAndTreasury targetPot combinedMap available ds = do
   requiredForRewards
     <= available
     ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
-  pure $
-    case targetPot of
-      ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}
-      TreasuryMIR -> ds {dsIRewards = (dsIRewards ds) {iRTreasury = combinedMap}}
+  pure $ case targetPot of
+    ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}
+    TreasuryMIR -> ds {dsIRewards = (dsIRewards ds) {iRTreasury = combinedMap}}

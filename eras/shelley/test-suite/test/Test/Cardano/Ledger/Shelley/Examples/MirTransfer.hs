@@ -17,9 +17,11 @@ import Cardano.Ledger.Shelley.API (
   AccountState (..),
   Credential (..),
   DCert (..),
+  DPState (..),
   DState (..),
   DelegEnv (..),
   InstantaneousRewards (..),
+  LedgerState (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
@@ -43,9 +45,9 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 type ShelleyTest = ShelleyEra C_Crypto
 
 ignoreAllButIRWD ::
-  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (DState C_Crypto) ->
+  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (LedgerState ShelleyTest) ->
   Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto)
-ignoreAllButIRWD = fmap dsIRewards
+ignoreAllButIRWD = fmap (dsIRewards . dpsDState . lsDPState)
 
 env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
 env pv acnt =
@@ -71,13 +73,16 @@ testMirTransfer ::
   Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto) ->
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
+  let ledgerstate = def {lsDPState = def {dpsDState = def {dsIRewards = ir}}}
+      expectedledgerstate = def {lsDPState = def {dpsDState = def {dsIRewards = expected}}}
   checkTrace @(ShelleyDELEG ShelleyTest) runShelleyBase (env pv acnt) $
-    (pure (def {dsIRewards = ir})) .- (DCertMir (MIRCert pot target)) .->> (def {dsIRewards = expected})
+    (pure ledgerstate) .- (DCertMir (MIRCert pot target)) .->> (expectedledgerstate)
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
-  let st =
+  let ledgerstate = def {lsDPState = def {dpsDState = def {dsIRewards = ir}}}
+      st =
         runShelleyBase $
           applySTSTest @(ShelleyDELEG ShelleyTest)
-            (TRC (env pv acnt, def {dsIRewards = ir}, DCertMir (MIRCert pot target)))
+            (TRC (env pv acnt, ledgerstate, DCertMir (MIRCert pot target)))
   (ignoreAllButIRWD st) @?= predicateFailure
 
 alice :: Credential 'Staking C_Crypto
