@@ -8,6 +8,7 @@
 * Remove redundant `Redeemers'` pattern synonym.
 * Move `Cardano.Ledger.Alonzo.Tools` module into `cardano-ledger-api:Cardano.Ledger.Api.Scripts`
 * Add helper lens `hashDataTxWitsL`
+* Rename `smMap` to `cmValues`
 
 ###`testlib`
 
