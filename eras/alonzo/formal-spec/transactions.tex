@@ -185,7 +185,7 @@ in a transaction that is needed for witnessing, namely:
   \item VKey signatures;
   \item a map of scripts indexed by their hashes, including phase-2 scripts;
   \item a map of terms of type $\Datum$ indexed by their hashes, containing all required datum objects
-  as well as any optional ones that are posted for communication; and
+  as well as any supplemental ones that are posted for communication (see \ref{sec:wits}); and
   \item a map of a pair of a $\Redeemer$ object and an $\ExUnits$ value indexed by $\RdmrPtr$,
   containing the redeemers and execution units budgets.
 \end{itemize}
@@ -278,8 +278,8 @@ Scripts and datum objects whose hashes are specified on-chain do not require to 
 signed when included in a transaction. That is, script hashes locking UTxOs (as well as
 with the datum hashes these UTxOs contain), and also the posted
 certificates, minting policies, and reward addresses do not need to be signed.
-The optional datum objects, however, could be stripped from the transaction without making
-it invalid. The optional datums are stored in the same map the required ones, so,
+The supplemental datum objects (see \ref{sec:wits}), however, could be stripped from the transaction without making
+it invalid. The supplemental datums are stored in the same map the required ones, so,
 for this reason, we do include all datum objects in the script integrity hash calculation.
 %
 The hash of the indexed redeemer structure and the protocol parameters that are used by
@@ -294,7 +294,7 @@ arguments to a new script interpreter.
 
 The body of the transaction, alongside the witness data, are required for script validation.
 Script validation should not depend on the auxiliary data in any way. Script validation
-may require certain optional datums to be posted. For this reason, we include optional
+may require certain supplemental datums (see \ref{sec:wits}) to be posted. For this reason, we include supplemental
 datums in the part of the transaction (the witnesses) which scripts do see.
 Any metadata that a user wants to expose to a transaction can be included in the
 redeemer, whose purpose is to contain all user-supplied data relevant to validation.
