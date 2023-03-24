@@ -90,6 +90,7 @@ library
         containers,
         data-default-class,
         deepseq,
+        FailT,
         groups,
         heapwords,
         iproute,
@@ -176,8 +177,9 @@ test-suite tests
         bytestring,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core,
-        testlib,
         cardano-crypto-class,
+        FailT,
+        testlib,
         genvalidity,
         genvalidity-scientific,
         scientific

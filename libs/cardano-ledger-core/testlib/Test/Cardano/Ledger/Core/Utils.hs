@@ -1,18 +1,12 @@
 module Test.Cardano.Ledger.Core.Utils (
   unsafeBoundRational,
   epsilonMaybeEq,
-  Fail (..),
-  runFailError,
 )
 where
 
-import Cardano.Ledger.Address (Fail (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (boundRational))
 import Data.Maybe (fromMaybe)
 import Test.Cardano.Ledger.Common
-
-runFailError :: HasCallStack => Fail a -> a
-runFailError = either error id . runFail
 
 -- | Convert to a bounded rational type why throwing an error on failure
 unsafeBoundRational :: (HasCallStack, BoundedRational r) => Rational -> r
