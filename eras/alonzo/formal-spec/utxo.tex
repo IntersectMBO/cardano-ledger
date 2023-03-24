@@ -799,8 +799,9 @@ additional ones;
     \item The only datums included in a transaction have hashes that are either in a UTxO
     corresponding to a transaction input, or in a transaction output. The
     output datums are for communication only, and are therefore optional, hence
-    the use of subset equality. No additional
-    datums are permitted.
+    the use of subset equality. No additional datums are permitted.
+    We call the datums corresponding to the inputs the \textbf{required datums}
+    and the datums corresponding to the outputs the \textbf{supplemental datums}.
 
     \item For every item that needs to be validated by a phase-2 script, and that
     phase-2 script is present, the transaction contains
