@@ -36,6 +36,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   transPolicyID,
   transAssetName,
   transMultiAsset,
+  transMintValue,
   transValue,
   transDCert,
   transWithdrawals,
@@ -370,6 +371,17 @@ transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 mempty m
             ans2
             (PV1.singleton (transPolicyID sym) (transAssetName tok) quantity)
 
+-- | Hysterical raisins:
+--
+-- Previously transaction body contained a mint field with MaryValue instead of a
+-- MultiAsset, which has changed since then to just MultiAsset (because minting ADA
+-- makes no sense). However, if we don't preserve previous translation, scripts that
+-- previously succeeded will fail.
+transMintValue :: MultiAsset c -> PV1.Value
+transMintValue m = transMultiAsset m <> justZeroAda
+  where
+    justZeroAda = PV1.singleton PV1.adaSymbol PV1.adaToken 0
+
 transValue :: MaryValue c -> PV1.Value
 transValue (MaryValue n m) = justAda <> transMultiAsset m
   where
@@ -507,7 +519,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns
           , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
           , PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee)
-          , PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL)
+          , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
           , PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyG)
           , PV1.txInfoWdrl = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
           , PV1.txInfoValidRange = timeRange
