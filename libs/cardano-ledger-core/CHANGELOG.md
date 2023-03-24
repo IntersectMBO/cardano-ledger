@@ -23,6 +23,12 @@
 * Add `lookupDepositDState` and `lookupRewardDState`. Former can be used with
   `getConsumedValue` to regain previous behavior.
 * Add `hashScriptTxWitsL`
+* Remove custom `Fail` type, in favor of
+  [`FailT`](https://hackage.haskell.org/package/FailT) package
+
+### `testlib`
+
+* Remove `runFailError` in favor of `errorFail` from `FailT` package
 
 ## 1.0.0.0
 
