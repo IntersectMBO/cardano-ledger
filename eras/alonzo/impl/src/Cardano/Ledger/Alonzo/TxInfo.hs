@@ -360,7 +360,7 @@ transAssetName :: AssetName -> PV1.TokenName
 transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 
 transMultiAsset :: MultiAsset c -> PV1.Value
-transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 mempty m
+transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 justZeroAda m
   where
     accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
       where
@@ -369,6 +369,12 @@ transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 mempty m
             (+)
             ans2
             (PV1.singleton (transPolicyID sym) (transAssetName tok) quantity)
+    -- Hysterical raisins:
+    --
+    -- Previously we store MultiAssets as MaryValue as a mint field in a transaction body,
+    -- which has changed since then to just MultiAsset. However if we don't preserve
+    -- previous translation, scripts that previously succeeded will fail.
+    justZeroAda = PV1.singleton PV1.adaSymbol PV1.adaToken 0
 
 transValue :: MaryValue c -> PV1.Value
 transValue (MaryValue n m) = justAda <> transMultiAsset m
