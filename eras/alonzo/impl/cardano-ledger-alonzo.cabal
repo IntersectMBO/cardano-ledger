@@ -61,6 +61,7 @@ library
         aeson >=2,
         base-deriving-via,
         base64-bytestring,
+        base16-bytestring,
         bytestring,
         cardano-data >=1.0,
         cardano-ledger-allegra >=1.1,

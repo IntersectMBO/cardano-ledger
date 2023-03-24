@@ -263,7 +263,8 @@ transStakeReference StakeRefNull = Nothing
 transCred :: Credential kr c -> PV1.Credential
 transCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
-transCred (ScriptHashObj (ScriptHash sh)) = PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
+transCred (ScriptHashObj (ScriptHash sh)) =
+  PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 
 transAddr :: Addr c -> Maybe PV1.Address
 transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
@@ -387,7 +388,9 @@ transDCert (DCertDeleg (Delegate (Delegation stkcred keyhash))) =
     (PV1.StakingHash (transStakeCred stkcred))
     (transKeyHash keyhash)
 transDCert (DCertPool (RegPool pp)) =
-  PV1.DCertPoolRegister (transKeyHash (ppId pp)) (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppVrf pp))))
+  PV1.DCertPoolRegister
+    (transKeyHash (ppId pp))
+    (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppVrf pp))))
 transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
   PV1.DCertPoolRetire (transKeyHash keyhash) (fromIntegral i)
 transDCert (DCertGenesis _) = PV1.DCertGenesis
@@ -531,8 +534,10 @@ valContext ::
   VersionedTxInfo ->
   ScriptPurpose (EraCrypto era) ->
   Data era
-valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
-valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
+valContext (TxInfoPV1 txinfo) sp =
+  Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
+valContext (TxInfoPV2 txinfo) sp =
+  Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 
 data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)
@@ -700,7 +705,8 @@ debugPlutus version db =
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
 -- of PV1.evaluateScriptRestricting which is the interface to Plutus, and in the impementation
--- we try to track why a script failed (if it does) by the [String] in the Fails constructor of ScriptResut.
+-- we try to track why a script failed (if it does) by the [String] in the Fails constructor of
+-- ScriptResut.
 
 -- | Run a Plutus Script, given the script and the bounds on resources it is allocated.
 runPLCScript ::
@@ -725,8 +731,10 @@ runPLCScript proxy pv lang cm scriptbytestring units ds =
     (_, Left e) -> explainPlutusFailure proxy pv lang scriptbytestring e ds cm units
     (_, Right _) ->
       scriptPass $ case lang of
-        PlutusV1 -> PlutusDebug $ PlutusDebugLang SPlutusV1 cm units scriptbytestring (PlutusData ds) pv
-        PlutusV2 -> PlutusDebug $ PlutusDebugLang SPlutusV2 cm units scriptbytestring (PlutusData ds) pv
+        PlutusV1 ->
+          PlutusDebug $ PlutusDebugLang SPlutusV1 cm units scriptbytestring (PlutusData ds) pv
+        PlutusV2 ->
+          PlutusDebug $ PlutusDebugLang SPlutusV2 cm units scriptbytestring (PlutusData ds) pv
   where
     plutusPV = transProtocolVersion pv
     plutusInterpreter PlutusV1 = PV1.evaluateScriptRestricting plutusPV
