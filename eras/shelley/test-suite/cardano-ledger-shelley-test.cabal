@@ -87,7 +87,7 @@ library
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.0,
         cardano-ledger-pretty,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib} ^>=1.1,
-        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.1,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.0.1,
         cardano-slotting,
         cborg,
         containers,
