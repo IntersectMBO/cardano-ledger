@@ -54,7 +54,6 @@ module Cardano.Ledger.Address (
   fromCborBackwardsBothAddr,
   decodeRewardAcnt,
   fromCborRewardAcnt,
-  Fail (..),
   Withdrawals (..),
 )
 where
@@ -93,6 +92,7 @@ import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, unless, when)
+import Control.Monad.Trans.Fail
 import Control.Monad.Trans.State (StateT, evalStateT, get, modify', state)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -509,12 +509,6 @@ headerIsStakingScript = (`testBit` 5)
 headerIsBaseAddress :: Header -> Bool
 headerIsBaseAddress = not . (`testBit` 6)
 {-# INLINE headerIsBaseAddress #-}
-
-newtype Fail a = Fail {runFail :: Either String a}
-  deriving newtype (Functor, Applicative, Monad)
-
-instance MonadFail Fail where
-  fail = Fail . Left
 
 decodeAddrEither ::
   forall c.

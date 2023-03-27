@@ -36,6 +36,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   transPolicyID,
   transAssetName,
   transMultiAsset,
+  transMintValue,
   transValue,
   transDCert,
   transWithdrawals,
@@ -94,7 +95,6 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
-  DecoderError (..),
   EncCBOR (..),
   Version,
   decodeFull',
@@ -138,10 +138,12 @@ import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.Monad (when)
+import Control.Monad.Trans.Fail
 import Data.ByteString as BS (ByteString, length)
 import qualified Data.ByteString.Base64 as B64
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import qualified Data.ByteString.UTF8 as BSU
+import qualified Data.Foldable as F (asum)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -262,7 +264,8 @@ transStakeReference StakeRefNull = Nothing
 transCred :: Credential kr c -> PV1.Credential
 transCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
-transCred (ScriptHashObj (ScriptHash sh)) = PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
+transCred (ScriptHashObj (ScriptHash sh)) =
+  PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 
 transAddr :: Addr c -> Maybe PV1.Address
 transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
@@ -368,6 +371,17 @@ transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 mempty m
             ans2
             (PV1.singleton (transPolicyID sym) (transAssetName tok) quantity)
 
+-- | Hysterical raisins:
+--
+-- Previously transaction body contained a mint field with MaryValue instead of a
+-- MultiAsset, which has changed since then to just MultiAsset (because minting ADA
+-- makes no sense). However, if we don't preserve previous translation, scripts that
+-- previously succeeded will fail.
+transMintValue :: MultiAsset c -> PV1.Value
+transMintValue m = transMultiAsset m <> justZeroAda
+  where
+    justZeroAda = PV1.singleton PV1.adaSymbol PV1.adaToken 0
+
 transValue :: MaryValue c -> PV1.Value
 transValue (MaryValue n m) = justAda <> transMultiAsset m
   where
@@ -386,7 +400,9 @@ transDCert (DCertDeleg (Delegate (Delegation stkcred keyhash))) =
     (PV1.StakingHash (transStakeCred stkcred))
     (transKeyHash keyhash)
 transDCert (DCertPool (RegPool pp)) =
-  PV1.DCertPoolRegister (transKeyHash (ppId pp)) (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppVrf pp))))
+  PV1.DCertPoolRegister
+    (transKeyHash (ppId pp))
+    (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppVrf pp))))
 transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
   PV1.DCertPoolRetire (transKeyHash keyhash) (fromIntegral i)
 transDCert (DCertGenesis _) = PV1.DCertGenesis
@@ -503,7 +519,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns
           , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
           , PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee)
-          , PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL)
+          , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
           , PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyG)
           , PV1.txInfoWdrl = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
           , PV1.txInfoValidRange = timeRange
@@ -530,10 +546,12 @@ valContext ::
   VersionedTxInfo ->
   ScriptPurpose (EraCrypto era) ->
   Data era
-valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
-valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
+valContext (TxInfoPV1 txinfo) sp =
+  Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
+valContext (TxInfoPV2 txinfo) sp =
+  Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 
-data ScriptFailure = PlutusSF Text (PlutusDebug)
+data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)
 
 data ScriptResult
@@ -583,48 +601,34 @@ data PlutusDebugLang (l :: Language) where
 instance Show (PlutusDebugLang l) where
   show _ = "PlutusDebug Omitted"
 
-deriving instance forall (l :: Language). (Eq (SLanguage l)) => Eq (PlutusDebugLang l)
+deriving instance Eq (SLanguage l) => Eq (PlutusDebugLang l)
 
 deriving instance Generic (PlutusDebugLang l)
 
-instance
-  forall (l :: Language).
-  (Typeable l, IsLanguage l, EncCBOR (SLanguage l)) =>
-  EncCBOR (PlutusDebugLang l)
-  where
+instance (IsLanguage l, EncCBOR (SLanguage l)) => EncCBOR (PlutusDebugLang l) where
   encCBOR (PlutusDebugLang slang costModel exUnits sbs pData protVer) =
-    let tag =
-          case slang of
-            SPlutusV1 -> 0
-            SPlutusV2 -> 1
-     in encode $
-          Sum PlutusDebugLang tag
-            !> To slang
-            !> E encodeCostModel costModel
-            !> To exUnits
-            !> To sbs
-            !> To pData
-            !> To protVer
+    encode $
+      Sum (PlutusDebugLang slang) (fromIntegral (fromEnum (fromSLanguage slang)))
+        !> E encodeCostModel costModel
+        !> To exUnits
+        !> To sbs
+        !> To pData
+        !> To protVer
 
-instance
-  forall (l :: Language).
-  (Typeable l, IsLanguage l) =>
-  DecCBOR (PlutusDebugLang l)
-  where
+instance IsLanguage l => DecCBOR (PlutusDebugLang l) where
   decCBOR = decodeRecordSum "PlutusDebugLang" $ \tag -> do
-    let lang = fromSLanguage $ isLanguage @l
+    let slang = isLanguage @l
+        lang = fromSLanguage slang
     when (fromEnum lang /= fromIntegral tag) $ fail $ "Unexpected language: " <> show tag
-    slang <- decCBOR
     costModel <- decodeCostModelFailHard lang
     exUnits <- decCBOR
     sbs <- decCBOR
     pData <- decCBOR
     protVer <- decCBOR
-    -- We need to return a tuple here, with the size of the tag in bytes.
-    pure $ (1, PlutusDebugLang slang costModel exUnits sbs pData protVer)
+    pure (6, PlutusDebugLang slang costModel exUnits sbs pData protVer)
 
 data PlutusDebug where
-  PlutusDebug :: (IsLanguage l, Typeable l) => PlutusDebugLang l -> PlutusDebug
+  PlutusDebug :: IsLanguage l => PlutusDebugLang l -> PlutusDebug
 
 deriving instance Show PlutusDebug
 
@@ -633,7 +637,7 @@ instance EncCBOR PlutusDebug where
 
 data PlutusError
   = PlutusErrorV1 PV1.EvaluationError
-  | PlutusErrorV2 PV2.EvaluationError -- TODO: Should this also be made a GADT?
+  | PlutusErrorV2 PV2.EvaluationError
   deriving (Show)
 
 data PlutusDebugInfo
@@ -652,18 +656,19 @@ debugPlutus version db =
     Left e -> DebugBadHex (show e)
     Right bs ->
       let plutusDebugLangDecoder ::
-            (Typeable l, IsLanguage l) =>
-            Either DecoderError (PlutusDebugLang l)
-          plutusDebugLangDecoder = decodeFull' version bs
+            forall l. IsLanguage l => Proxy l -> Fail String PlutusDebug
+          plutusDebugLangDecoder _ =
+            FailT $
+              pure $
+                either (Left . pure . show) (Right . PlutusDebug) $
+                  decodeFull' @(PlutusDebugLang l) version bs
           plutusDebugDecoder =
-            case plutusDebugLangDecoder @'PlutusV1 of
-              Right plutusDebug -> pure $ PlutusDebug plutusDebug
-              Left _ ->
-                case plutusDebugLangDecoder @'PlutusV2 of
-                  Right plutusDebug -> pure $ PlutusDebug plutusDebug
-                  Left err -> Left err
-       in case plutusDebugDecoder of
-            Left e -> DebugCannotDecode (show e)
+            F.asum
+              [ plutusDebugLangDecoder (Proxy @'PlutusV1)
+              , plutusDebugLangDecoder (Proxy @'PlutusV2)
+              ]
+       in case runFail plutusDebugDecoder of
+            Left e -> DebugCannotDecode e
             Right (PlutusDebug (PlutusDebugLang sl costModel exUnits scripts pData protVer)) ->
               let evalV1 =
                     PV1.evaluateScriptRestricting
@@ -698,7 +703,8 @@ debugPlutus version db =
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
 -- of PV1.evaluateScriptRestricting which is the interface to Plutus, and in the impementation
--- we try to track why a script failed (if it does) by the [String] in the Fails constructor of ScriptResut.
+-- we try to track why a script failed (if it does) by the [String] in the Fails constructor of
+-- ScriptResut.
 
 -- | Run a Plutus Script, given the script and the bounds on resources it is allocated.
 runPLCScript ::
@@ -723,8 +729,10 @@ runPLCScript proxy pv lang cm scriptbytestring units ds =
     (_, Left e) -> explainPlutusFailure proxy pv lang scriptbytestring e ds cm units
     (_, Right _) ->
       scriptPass $ case lang of
-        PlutusV1 -> PlutusDebug $ PlutusDebugLang SPlutusV1 cm units scriptbytestring (PlutusData ds) pv
-        PlutusV2 -> PlutusDebug $ PlutusDebugLang SPlutusV2 cm units scriptbytestring (PlutusData ds) pv
+        PlutusV1 ->
+          PlutusDebug $ PlutusDebugLang SPlutusV1 cm units scriptbytestring (PlutusData ds) pv
+        PlutusV2 ->
+          PlutusDebug $ PlutusDebugLang SPlutusV2 cm units scriptbytestring (PlutusData ds) pv
   where
     plutusPV = transProtocolVersion pv
     plutusInterpreter PlutusV1 = PV1.evaluateScriptRestricting plutusPV

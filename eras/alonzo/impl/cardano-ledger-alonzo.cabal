@@ -74,6 +74,7 @@ library
         containers,
         data-default-class,
         deepseq,
+        FailT,
         heapwords,
         measures,
         mtl,

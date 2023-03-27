@@ -14,6 +14,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (Version, decodeFull', natVersion, serialize')
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
+import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.Binary.Put as B
 import Data.Bits
 import qualified Data.ByteString as BS
@@ -31,7 +32,6 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
 import Test.Cardano.Ledger.Common hiding ((.&.))
 import Test.Cardano.Ledger.Core.Address
 import Test.Cardano.Ledger.Core.Arbitrary (genAddrBadPtr, genCompactAddrBadPtr)
-import Test.Cardano.Ledger.Core.Utils (runFailError)
 
 spec :: Spec
 spec = describe "Address" $ do
@@ -115,8 +115,8 @@ propDecompactAddrWithJunk addr junk = do
 propValidateNewDeserialize :: forall c. (HasCallStack, Crypto c) => Addr c -> Property
 propValidateNewDeserialize addr = property $ do
   let bs = serialiseAddr addr
-      deserializedOld = runFailError $ deserialiseAddrOld @c bs
-      deserializedNew = runFailError $ decodeAddr @c bs
+      deserializedOld = errorFail $ deserialiseAddrOld @c bs
+      deserializedNew = errorFail $ decodeAddr @c bs
   deserializedNew `shouldBe` addr
   deserializedOld `shouldBe` deserializedNew
 
