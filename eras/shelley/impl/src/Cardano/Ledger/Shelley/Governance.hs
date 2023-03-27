@@ -41,6 +41,8 @@ class
   , NFData (GovernanceState era)
   , EncCBOR (GovernanceState era)
   , DecCBOR (GovernanceState era)
+  , ToCBOR (GovernanceState era)
+  , FromCBOR (GovernanceState era)
   , Default (GovernanceState era)
   , ToJSON (GovernanceState era)
   ) =>

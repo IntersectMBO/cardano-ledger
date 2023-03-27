@@ -489,6 +489,12 @@ instance EraPParams era => EncCBOR (EnactState era) where
         !> To ensTreasury
         !> To ensWithdrawals
 
+instance EraPParams era => ToCBOR (EnactState era) where
+  toCBOR = toEraCBOR @era
+
+instance EraPParams era => FromCBOR (EnactState era) where
+  fromCBOR = fromEraCBOR @era
+
 instance EraPParams era => NFData (EnactState era)
 
 instance EraPParams era => NoThunks (EnactState era)
@@ -514,6 +520,12 @@ instance EraPParams era => EncCBOR (RatifyState era) where
       Rec RatifyState
         !> To rsEnactState
         !> To rsFuture
+
+instance EraPParams era => ToCBOR (RatifyState era) where
+  toCBOR = toEraCBOR @era
+
+instance EraPParams era => FromCBOR (RatifyState era) where
+  fromCBOR = fromEraCBOR @era
 
 instance EraPParams era => NFData (RatifyState era)
 
@@ -561,6 +573,12 @@ instance EraPParams era => EncCBOR (ConwayGovernance era) where
         !> To cgTally
         !> To cgRatify
         !> To cgVoterRoles
+
+instance EraPParams era => ToCBOR (ConwayGovernance era) where
+  toCBOR = toEraCBOR @era
+
+instance EraPParams era => FromCBOR (ConwayGovernance era) where
+  fromCBOR = fromEraCBOR @era
 
 instance EraPParams era => Default (ConwayGovernance era)
 

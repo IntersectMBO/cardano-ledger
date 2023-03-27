@@ -34,11 +34,19 @@
 * Add `ensTreasury` and `ensWithdrawals` to `EnactState` #3339
 * Add `EnactPredFailure` as the failure for `ENACT` and `RATIFY` #3339
 * Add `RatifyFailure` to `ConwayNewEpochPredFailure` #3339
+* Add `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyPredFailure`
+* Add `ToCBOR`/`FromCBOR` for `ConwayGovernance`
 
 ### `testlib`
 
 * Fix `Arbitrary` for `ConwayTallyState`. #3323
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
+* Add `Arbitrary` instances for:
+  * `ConwayTallyPredFailure`
+  * `EnactState`
+  * `RatifyState`
+  * `ConwayGovernance`
+* Fix `Arbitrary` for `ConwayTxBody`.
 
 ## 1.0.0.0
 
