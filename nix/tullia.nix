@@ -69,7 +69,7 @@
           #lib.merge
           #ios: [
             {#lib.io.github_push, github, #default_branch: true},
-            {#lib.io.github_pr,   github, #target_default: false},
+            {#lib.io.github_pr,   github},
           ]
         '';
       };
