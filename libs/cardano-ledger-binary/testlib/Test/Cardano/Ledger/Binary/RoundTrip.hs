@@ -57,9 +57,6 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   embedTrip,
   embedTripAnn,
   embedTripLabel,
-
-  -- * Verbosity
-  FailureVerbosity (..),
 )
 where
 
@@ -159,21 +156,18 @@ roundTripRangeFailureExpectation ::
   Version ->
   t ->
   Expectation
-roundTripRangeFailureExpectation = embedTripRangeFailureExpectation Maximal
+roundTripRangeFailureExpectation = embedTripRangeFailureExpectation
 
 embedTripFailureExpectation ::
   (Typeable b, HasCallStack) =>
   Trip a b ->
   a ->
   Expectation
-embedTripFailureExpectation trip = embedTripRangeFailureExpectation Maximal trip minBound maxBound
-
-data FailureVerbosity = Maximal | Minimal
+embedTripFailureExpectation trip = embedTripRangeFailureExpectation trip minBound maxBound
 
 embedTripRangeFailureExpectation ::
   forall a b.
   (Typeable b, HasCallStack) =>
-  FailureVerbosity ->
   Trip a b ->
   -- | From Version
   Version ->
@@ -181,21 +175,18 @@ embedTripRangeFailureExpectation ::
   Version ->
   a ->
   Expectation
-embedTripRangeFailureExpectation llvl trip fromVersion toVersion t =
+embedTripRangeFailureExpectation trip fromVersion toVersion t =
   forM_ [fromVersion .. toVersion] $ \version ->
     case embedTripLabelExtra (typeLabel @b) version version trip t of
       (Left _, _, _) -> pure ()
       (Right _, _, bs) ->
         expectationFailure $
-          case llvl of
-            Maximal ->
-              mconcat
-                [ "Should not have deserialized: <version: "
-                , show version
-                , "> "
-                , showExpr (CBORBytes (BSL.toStrict bs))
-                ]
-            Minimal -> "Failed"
+          mconcat
+            [ "Should not have deserialized: <version: "
+            , show version
+            , "> "
+            , showExpr (CBORBytes (BSL.toStrict bs))
+            ]
 
 -- | Verify that round triping through the binary form holds for a range of versions.
 --
@@ -348,7 +339,7 @@ data RoundTripFailure = RoundTripFailure
   -- ^ Produced plain encoding
   , rtfEncodedBytes :: BSL.ByteString
   -- ^ Serialized encoding using the version in this failure
-  , rtfReEncodedBytes :: Maybe (BSL.ByteString)
+  , rtfReEncodedBytes :: Maybe BSL.ByteString
   -- ^ Re-serialized bytes, if there was a mismatch between the binary form and the
   -- reserialization of the data type.
   , rtfDropperError :: Maybe DecoderError

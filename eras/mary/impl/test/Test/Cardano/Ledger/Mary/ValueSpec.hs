@@ -10,7 +10,9 @@ module Test.Cardano.Ledger.Mary.ValueSpec (spec) where
 import Cardano.Ledger.BaseTypes (natVersion)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Compactible (fromCompact, toCompact)
+import Cardano.Ledger.Core (eraProtVerLow)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Value
 import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Char8 as BS8
@@ -20,7 +22,6 @@ import Data.Maybe (fromJust)
 import GHC.Exts
 import Test.Cardano.Data
 import Test.Cardano.Ledger.Binary.RoundTrip (
-  FailureVerbosity (Minimal),
   cborTrip,
   embedTripRangeFailureExpectation,
   roundTripCborExpectation,
@@ -81,22 +82,21 @@ spec = do
             forAll
               (genMaryValue (genMultiAssetToFail @StandardCrypto))
               ( embedTripRangeFailureExpectation @(MaryValue StandardCrypto) @(MaryValue StandardCrypto)
-                  Minimal
                   cborTrip
-                  minBound
+                  (eraProtVerLow @Mary)
                   maxBound
               )
 
   describe "MaryValue compacting" $ do
     prop "Canonical generator" $
       \(ma :: MaryValue StandardCrypto) ->
-        fromCompact (fromJust (toCompact ma)) == ma
+        fromCompact (fromJust (toCompact ma)) `shouldBe` ma
     it "Failing generator" $
       expectFailure $
         property $
           forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) $
             \ma ->
-              fromCompact (fromJust (toCompact ma)) == ma
+              fromCompact (fromJust (toCompact ma)) `shouldBe` ma
 
 instance IsString AssetName where
   fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack
