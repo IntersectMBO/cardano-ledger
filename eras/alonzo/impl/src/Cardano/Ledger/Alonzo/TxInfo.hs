@@ -601,15 +601,11 @@ data PlutusDebugLang (l :: Language) where
 instance Show (PlutusDebugLang l) where
   show _ = "PlutusDebug Omitted"
 
-deriving instance forall (l :: Language). (Eq (SLanguage l)) => Eq (PlutusDebugLang l)
+deriving instance Eq (SLanguage l) => Eq (PlutusDebugLang l)
 
 deriving instance Generic (PlutusDebugLang l)
 
-instance
-  forall (l :: Language).
-  (Typeable l, IsLanguage l, EncCBOR (SLanguage l)) =>
-  EncCBOR (PlutusDebugLang l)
-  where
+instance (IsLanguage l, EncCBOR (SLanguage l)) => EncCBOR (PlutusDebugLang l) where
   encCBOR (PlutusDebugLang slang costModel exUnits sbs pData protVer) =
     encode $
       Sum (PlutusDebugLang slang) (fromIntegral (fromEnum (fromSLanguage slang)))
@@ -619,11 +615,7 @@ instance
         !> To pData
         !> To protVer
 
-instance
-  forall (l :: Language).
-  (Typeable l, IsLanguage l) =>
-  DecCBOR (PlutusDebugLang l)
-  where
+instance IsLanguage l => DecCBOR (PlutusDebugLang l) where
   decCBOR = decodeRecordSum "PlutusDebugLang" $ \tag -> do
     let slang = isLanguage @l
         lang = fromSLanguage slang
@@ -636,7 +628,7 @@ instance
     pure (6, PlutusDebugLang slang costModel exUnits sbs pData protVer)
 
 data PlutusDebug where
-  PlutusDebug :: (IsLanguage l, Typeable l) => PlutusDebugLang l -> PlutusDebug
+  PlutusDebug :: IsLanguage l => PlutusDebugLang l -> PlutusDebug
 
 deriving instance Show PlutusDebug
 
@@ -664,7 +656,7 @@ debugPlutus version db =
     Left e -> DebugBadHex (show e)
     Right bs ->
       let plutusDebugLangDecoder ::
-            forall l. (Typeable l, IsLanguage l) => Proxy l -> Fail String PlutusDebug
+            forall l. IsLanguage l => Proxy l -> Fail String PlutusDebug
           plutusDebugLangDecoder _ =
             FailT $
               pure $

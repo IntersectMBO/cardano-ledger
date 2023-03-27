@@ -104,18 +104,10 @@ deriving instance Eq (SLanguage l)
 
 deriving instance Show (SLanguage l)
 
-instance
-  forall (l :: Language).
-  (Typeable l, IsLanguage l) =>
-  EncCBOR (SLanguage l)
-  where
+instance IsLanguage l => EncCBOR (SLanguage l) where
   encCBOR = encCBOR . fromSLanguage
 
-instance
-  forall (l :: Language).
-  (Typeable l, IsLanguage l) =>
-  DecCBOR (SLanguage l)
-  where
+instance IsLanguage l => DecCBOR (SLanguage l) where
   decCBOR = toSLanguage =<< decCBOR @Language
 
 -- | Reflection for '@SLanguage@'
@@ -126,7 +118,7 @@ fromSLanguage = \case
 
 -- | For implicit reflection on '@SLanguage@'
 -- See "Cardano.Ledger.Alonzo.TxInfo" for example usage
-class IsLanguage l where
+class Typeable l => IsLanguage (l :: Language) where
   isLanguage :: SLanguage l
 
 instance IsLanguage 'PlutusV1 where
@@ -135,7 +127,7 @@ instance IsLanguage 'PlutusV1 where
 instance IsLanguage 'PlutusV2 where
   isLanguage = SPlutusV2
 
-toSLanguage :: forall (l :: Language) m. (IsLanguage l, MonadFail m) => Language -> m (SLanguage l)
+toSLanguage :: forall l m. (IsLanguage l, MonadFail m) => Language -> m (SLanguage l)
 toSLanguage lang
   | fromSLanguage thisLanguage == lang = pure thisLanguage
   | otherwise =
