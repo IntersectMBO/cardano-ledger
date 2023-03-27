@@ -26,10 +26,7 @@
     parts,
     ...
   } @ inputs:
-    parts.lib.mkFlake {
-      inherit self;
-      specialArgs = {inherit inputs;};
-    } ({
+    parts.lib.mkFlake {inherit inputs;} ({
       config,
       lib,
       ...
