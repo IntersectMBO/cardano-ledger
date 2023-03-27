@@ -139,6 +139,9 @@ delegations = Var $ V "delegations" (MapR CredR PoolHashR) (Yes NewEpochStateR d
 delegationsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 delegationsL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsUnifiedL . delegationsUMapL
 
+voteproxy :: Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'Voting (EraCrypto era)))
+voteproxy = Var $ V "voteproxy" (MapR CredR VoteHashR) No
+
 stakeDeposits :: Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 stakeDeposits = Var $ V "stakeDeposits" (MapR CredR CoinR) (Yes NewEpochStateR stakeDepositsL)
 
@@ -648,6 +651,7 @@ dstateT =
     ^$ rewards
     ^$ stakeDeposits
     ^$ delegations
+    ^$ voteproxy
     ^$ ptrs
     ^$ futureGenDelegs
     ^$ genDelegs
@@ -658,13 +662,14 @@ dstate ::
   Map (Credential 'Staking c) Coin ->
   Map (Credential 'Staking c) Coin ->
   Map (Credential 'Staking c) (KeyHash 'StakePool c) ->
+  Map (Credential 'Staking c) (KeyHash 'Voting c) ->
   Map Ptr (Credential 'Staking c) ->
   Map (FutureGenDeleg c) (GenDelegPair c) ->
   Map (KeyHash 'Genesis c) (GenDelegPair c) ->
   DPS.InstantaneousRewards c ->
   DState c
-dstate rew dep deleg ptr fgen gen instR =
-  DState (unSplitUMap (Split rew dep deleg undefined ptr)) fgen (GenDelegs gen) instR
+dstate rew dep deleg drep ptr fgen gen instR =
+  DState (unSplitUMap (Split rew dep deleg drep undefined ptr)) fgen (GenDelegs gen) instR
 
 instantaneousRewardsT :: Target era (DPS.InstantaneousRewards (EraCrypto era))
 instantaneousRewardsT =

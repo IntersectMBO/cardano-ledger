@@ -19,10 +19,10 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), ShelleyEra, Standard)
 import Test.Cardano.Ledger.Incremental (
   Cred,
-  DRep (..),
+  DRep,
   IncrementalState (..),
   Pool,
-  f1,
+  credDistrFromUtxo,
   slow,
   smartIS,
   update,
@@ -55,8 +55,8 @@ genUTxO _p n =
 genDel :: (Ord cred, Era era) => proxy era -> Int -> Gen cred -> Gen (Map cred (Pool era))
 genDel _p n gcred = Map.fromList <$> vectorOf n ((,) <$> gcred <*> arbitrary)
 
-genVote :: (Ord cred) => proxy era -> Int -> Gen cred -> Gen (Map cred (DRep era))
-genVote _p n gcred = Map.fromList <$> vectorOf n ((,) <$> gcred <*> (DRep <$> choose (1, 1000)))
+genVote :: (Era era, Ord cred) => proxy era -> Int -> Gen cred -> Gen (Map cred (DRep era))
+genVote _p n gcred = Map.fromList <$> vectorOf n ((,) <$> gcred <*> arbitrary)
 
 genKey :: Map k v -> Gen k
 genKey m = do
@@ -95,7 +95,7 @@ setupEnv ::
 setupEnv = do
   let p = (Shelley Standard)
   utxo <- generate (genUTxO p 1000000)
-  let MM creds = f1 utxo
+  let MM creds = credDistrFromUtxo utxo
       gcred = genKey creds
   vote <- generate $ genVote p 3000 gcred
   delegate <- generate $ genDel p 3000 gcred
@@ -110,7 +110,7 @@ setupEnv = do
   putStrLn ("creds size = " ++ show (Map.size creds))
   diff1 <- generate $ genUtxoDiff p 3 (genKey utxo)
   diff2 <- generate $ genMapDiff p 3 gcred (arbitrary @(Pool (ShelleyEra Standard)))
-  diff3 <- generate $ genMapDiff p 3 gcred (DRep <$> choose (1, 3000))
+  diff3 <- generate $ genMapDiff p 3 gcred arbitrary
   pure (is, diff1, diff2, diff3)
 
 -- | The benchmark

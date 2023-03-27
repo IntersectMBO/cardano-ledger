@@ -143,6 +143,7 @@ data Rep era t where
   MaybeR :: Rep era t -> Rep era (Maybe t)
   SlotNoR :: Rep era SlotNo
   SizeR :: Rep era Size
+  VoteHashR :: Rep era (KeyHash 'Voting (EraCrypto era))
 
 -- ===========================================================
 -- Proof of Rep equality
@@ -208,6 +209,7 @@ instance Singleton (Rep e) where
     do Refl <- testEql c d; pure Refl
   testEql SlotNoR SlotNoR = Just Refl
   testEql SizeR SizeR = Just Refl
+  testEql VoteHashR VoteHashR = Just Refl
   testEql _ _ = Nothing
   cmpIndex x y = compare (shape x) (shape y)
 
@@ -254,6 +256,7 @@ instance Show (Rep era t) where
   show (ProtVerR x) = "(ProtVer " ++ show x ++ ")"
   show SlotNoR = "(SlotNo c)"
   show SizeR = "Size"
+  show VoteHashR = "(KeyHash 'Voting c)"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -306,6 +309,7 @@ synopsis NewEpochStateR _ = "NewEpochStateR ..."
 synopsis (ProtVerR _) (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 synopsis SlotNoR x = show x
 synopsis SizeR x = show x
+synopsis VoteHashR k = "(KeyHash 'Voting " ++ show (keyHashSummary k) ++ ")"
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -374,6 +378,7 @@ instance Shaped (Rep era) any where
   shape SlotNoR = Nullary 36
   shape SizeR = Nullary 37
   shape (PairR a b) = Nary 38 [shape a, shape b]
+  shape VoteHashR = Nullary 39
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -426,6 +431,7 @@ genSizedRep _ NewEpochStateR = undefined
 genSizedRep _ (ProtVerR proof) = genProtVer proof
 genSizedRep _ SlotNoR = arbitrary
 genSizedRep _ SizeR = do lo <- choose (1, 6); hi <- choose (6, 10); pure (SzRng lo hi)
+genSizedRep _ VoteHashR = arbitrary
 
 genRep ::
   Era era =>

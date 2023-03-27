@@ -565,7 +565,7 @@ getDStateNoSharing dstateId = do
         pure (Keys.coerceKeyRole credential, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards delegations ptrs
+      { dsUnified = unify rewards delegations ptrs Map.empty
       , dsFutureGenDelegs = unEnc dStateFGenDelegs
       , dsGenDelegs = dStateGenDelegs
       , dsIRewards =
@@ -619,7 +619,7 @@ getDStateWithSharing dstateId = do
         pure (cred, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards delegations ptrs
+      { dsUnified = unify rewards delegations ptrs Map.empty
       , dsFutureGenDelegs = unEnc dStateFGenDelegs
       , dsGenDelegs = dStateGenDelegs
       , dsIRewards =

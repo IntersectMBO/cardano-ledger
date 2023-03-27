@@ -265,7 +265,7 @@ delegsTransition = do
             | (RewardAcnt _ cred, coin) <- Map.toList withdrawals_
             ]
         f :: Coin -> Trip (EraCrypto era) -> Bool
-        f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == (fromCompact coin2)
+        f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _ _) = coin1 == (fromCompact coin2)
         f _ _ = False
 
 instance

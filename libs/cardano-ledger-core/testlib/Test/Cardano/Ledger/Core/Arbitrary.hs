@@ -460,7 +460,7 @@ instance Arbitrary RDPair where
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (Trip c) where
-  arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (UMap c) where

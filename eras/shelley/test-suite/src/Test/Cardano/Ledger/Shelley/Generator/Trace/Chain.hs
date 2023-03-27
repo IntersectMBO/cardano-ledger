@@ -241,6 +241,7 @@ registerGenesisStaking
                 (Map.map pairWithDepositsButNoRewards . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
                 (Map.mapKeys KeyHashObj $ LM.toMap sgsStake)
                 (UM.ptrView (dsUnified (dpsDState oldDPState)))
+                Map.empty
           }
 
       -- We consider pools as having been registered in slot 0

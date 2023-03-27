@@ -278,42 +278,69 @@ data Split c = Split
   { spRew :: Map (Credential 'Staking c) Coin
   , spDep :: Map (Credential 'Staking c) Coin
   , spDel :: Map (Credential 'Staking c) (KeyHash 'StakePool c)
+  , spDrep :: Map (Credential 'Staking c) (KeyHash 'Voting c)
   , spRevPtr :: Map (Credential 'Staking c) (Set Ptr)
   , spPtr :: Map Ptr (Credential 'Staking c)
   }
 
 -- | Used to build the abstract view from the map of triples
 accumUM :: Split c -> Credential 'Staking c -> Trip c -> Split c
-accumUM sp key (Triple (SJust (RDPair r d)) ptrs (SJust p)) =
+accumUM sp key (Triple (SJust (RDPair r d)) ptrs (SJust p) (SJust q)) =
+  sp
+    { spRew = Map.insert key (fromCompact r) (spRew sp)
+    , spDep = Map.insert key (fromCompact d) (spDep sp)
+    , spDel = Map.insert key p (spDel sp)
+    , spDrep = Map.insert key q (spDrep sp)
+    , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
+    }
+accumUM sp key (Triple (SJust (RDPair r d)) ptrs (SJust p) SNothing) =
   sp
     { spRew = Map.insert key (fromCompact r) (spRew sp)
     , spDep = Map.insert key (fromCompact d) (spDep sp)
     , spDel = Map.insert key p (spDel sp)
     , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
     }
-accumUM sp key (Triple SNothing ptrs (SJust p)) =
+accumUM sp key (Triple SNothing ptrs (SJust p) SNothing) =
   sp
     { spDel = Map.insert key p (spDel sp)
     , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
     }
-accumUM sp key (Triple (SJust (RDPair r d)) ptrs SNothing) =
+accumUM sp key (Triple SNothing ptrs (SJust p) (SJust q)) =
+  sp
+    { spDel = Map.insert key p (spDel sp)
+    , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
+    , spDrep = Map.insert key q (spDrep sp)
+    }
+accumUM sp key (Triple (SJust (RDPair r d)) ptrs SNothing SNothing) =
   sp
     { spRew = Map.insert key (fromCompact r) (spRew sp)
     , spDep = Map.insert key (fromCompact d) (spDep sp)
     , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
     }
-accumUM sp key (Triple SNothing ptrs SNothing) =
+accumUM sp key (Triple (SJust (RDPair r d)) ptrs SNothing (SJust q)) =
+  sp
+    { spRew = Map.insert key (fromCompact r) (spRew sp)
+    , spDep = Map.insert key (fromCompact d) (spDep sp)
+    , spDrep = Map.insert key q (spDrep sp)
+    , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
+    }
+accumUM sp key (Triple SNothing ptrs SNothing SNothing) =
   sp {spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)}
+accumUM sp key (Triple SNothing ptrs SNothing (SJust q)) =
+  sp
+    { spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
+    , spDrep = Map.insert key q (spDrep sp)
+    }
 
 -- | The abstraction function, from concrete (UMap) to abstract (Split)
 splitUMap :: UMap c -> Split c
 splitUMap (UMap trips ptr) = Map.foldlWithKey' accumUM empty trips
   where
-    empty = Split Map.empty Map.empty Map.empty Map.empty ptr
+    empty = Split Map.empty Map.empty Map.empty Map.empty Map.empty ptr
 
 -- | The concretization function from abstract (Split) to concrete (UMap)
 unSplitUMap :: Split c -> UMap c
-unSplitUMap (Split rew dep deleg _revptr ptr) = unify (merge rew dep) deleg ptr
+unSplitUMap (Split rew dep deleg drep _revptr ptr) = unify (merge rew dep) deleg ptr drep
   where
     merge x y | Map.keysSet x /= Map.keysSet y = error "different domains"
     merge x y = Map.intersectionWith rdpair x y

@@ -323,7 +323,7 @@ sameLedgerFail (Babbage _) x y = eqByShow x y
 sameLedgerFail (Conway _) x y = eqByShow x y
 {-# NOINLINE sameLedgerFail #-}
 
-sameTransCtx ::
+sameTransCtx :: -- Eq (TranslationContext (ShelleyEra c)) =>
   Proof era ->
   TranslationContext era ->
   TranslationContext era ->
