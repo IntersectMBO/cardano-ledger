@@ -633,8 +633,7 @@ instance
     sbs <- decCBOR
     pData <- decCBOR
     protVer <- decCBOR
-    -- We need to return a tuple here, with the size of the tag in bytes.
-    pure $ (6, PlutusDebugLang slang costModel exUnits sbs pData protVer)
+    pure (6, PlutusDebugLang slang costModel exUnits sbs pData protVer)
 
 data PlutusDebug where
   PlutusDebug :: (IsLanguage l, Typeable l) => PlutusDebugLang l -> PlutusDebug
@@ -646,7 +645,7 @@ instance EncCBOR PlutusDebug where
 
 data PlutusError
   = PlutusErrorV1 PV1.EvaluationError
-  | PlutusErrorV2 PV2.EvaluationError -- TODO: Should this also be made a GADT?
+  | PlutusErrorV2 PV2.EvaluationError
   deriving (Show)
 
 data PlutusDebugInfo
