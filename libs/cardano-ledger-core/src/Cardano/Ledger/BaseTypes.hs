@@ -54,10 +54,12 @@ module Cardano.Ledger.BaseTypes (
   TxIx (..),
   txIxToInt,
   txIxFromIntegral,
+  mkTxIx,
   mkTxIxPartial,
   CertIx (..),
   certIxToInt,
   certIxFromIntegral,
+  mkCertIx,
   mkCertIxPartial,
 
   -- * STS Base
@@ -670,6 +672,10 @@ newtype TxIx = TxIx Word64
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
 
+-- | Construct a `TxIx` from a 16 bit unsigned integer
+mkTxIx :: Word16 -> TxIx
+mkTxIx = TxIx . fromIntegral
+
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
 
@@ -689,6 +695,10 @@ mkTxIxPartial i =
 newtype CertIx = CertIx Word64
   deriving stock (Eq, Ord, Show)
   deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
+
+-- | Construct a `CertIx` from a 16 bit unsigned integer
+mkCertIx :: Word16 -> CertIx
+mkCertIx = CertIx . fromIntegral
 
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16

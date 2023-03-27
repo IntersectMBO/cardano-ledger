@@ -411,31 +411,31 @@ fromCborCompactAddr = snd <$> fromCborBothAddr
 -- that it was encoded as.
 fromCborBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
 fromCborBothAddr = do
-  sbs <- decCBOR
-  ifDecoderVersionAtLeast (natVersion @7) (decodeAddrStrict sbs) (decodeAddrDropSlack sbs)
+  ifDecoderVersionAtLeast (natVersion @7) decodeAddrRigorous fromCborBackwardsBothAddr
   where
     -- Starting with Babbage we no longer allow addresses with garbage in them.
-    decodeAddrStrict sbs = flip evalStateT 0 $ do
-      addr <- decodeAddrStateAllowLeftoverT False sbs
-      pure (addr, UnsafeCompactAddr sbs)
-    -- Prior to Babbage era we did not check if a binary blob representing an address was
-    -- fully consumed, so unfortunately we must preserve this behavior. However, we do not
-    -- need to preserve the unconsumed bytes in memory, therefore we can to drop the
-    -- garbage after we successfully decoded the malformed address. We also need to allow
-    -- bogus pointer address to be deserializeable prior to Babbage era.
-    decodeAddrDropSlack sbs = flip evalStateT 0 $ do
-      addr <- decodeAddrStateAllowLeftoverT True sbs
-      bytesConsumed <- get
-      let sbsCropped = SBS.toShort $ BS.take bytesConsumed $ SBS.fromShort sbs
-      pure (addr, UnsafeCompactAddr sbsCropped)
+    decodeAddrRigorous = do
+      sbs <- decCBOR
+      flip evalStateT 0 $ do
+        addr <- decodeAddrStateAllowLeftoverT False sbs
+        pure (addr, UnsafeCompactAddr sbs)
+    {-# INLINE decodeAddrRigorous #-}
 {-# INLINE fromCborBothAddr #-}
 
-fromCborBackwardsBothAddr ::
-  forall c s.
-  Crypto c =>
-  Decoder s (Addr c, CompactAddr c)
-fromCborBackwardsBothAddr = fromCborBothAddr
-{-# DEPRECATED fromCborBackwardsBothAddr "Use `fromCborBothAddr` instead, they are the same" #-}
+-- | Prior to Babbage era we did not check if a binary blob representing an address was
+-- fully consumed, so unfortunately we must preserve this behavior. However, we do not
+-- need to preserve the unconsumed bytes in memory, therefore we can to drop the
+-- garbage after we successfully decoded the malformed address. We also need to allow
+-- bogus pointer address to be deserializeable prior to Babbage era.
+fromCborBackwardsBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
+fromCborBackwardsBothAddr = do
+  sbs <- decCBOR
+  flip evalStateT 0 $ do
+    addr <- decodeAddrStateAllowLeftoverT True sbs
+    bytesConsumed <- get
+    let sbsCropped = SBS.toShort $ BS.take bytesConsumed $ SBS.fromShort sbs
+    pure (addr, UnsafeCompactAddr sbsCropped)
+{-# INLINE fromCborBackwardsBothAddr #-}
 
 class AddressBuffer b where
   bufLength :: b -> Int
