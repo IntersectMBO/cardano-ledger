@@ -45,6 +45,7 @@ import Cardano.Ledger.Address (
   CompactAddr,
   compactAddr,
   decompactAddr,
+  fromCborBackwardsBothAddr,
   fromCborBothAddr,
  )
 import Cardano.Ledger.Alonzo.Scripts.Data (
@@ -441,13 +442,16 @@ instance (EraScript era, Val (Value era)) => EncCBOR (BabbageTxOut era) where
     TxOutCompact addr cv -> encodeTxOut @era addr cv NoDatum SNothing
 
 instance (EraScript era, Val (Value era)) => DecCBOR (BabbageTxOut era) where
-  decCBOR = decodeBabbageTxOut
+  decCBOR = decodeBabbageTxOut fromCborBothAddr
   {-# INLINE decCBOR #-}
 
 instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   decShareCBOR credsInterns =
-    internTxOut <$!> decodeBabbageTxOut
+    -- Even in Babbage the ledger state still contains garbage pointers that we need to
+    -- deal with. This will be taken care of upon entry to Conway era. After which this
+    -- backwards compatibility shim can be removed.
+    internTxOut <$!> decodeBabbageTxOut fromCborBackwardsBothAddr
     where
       internTxOut = \case
         TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
@@ -456,18 +460,24 @@ instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) whe
           TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
         txOut -> txOut
 
-decodeBabbageTxOut :: (EraScript era, Val (Value era)) => Decoder s (BabbageTxOut era)
-decodeBabbageTxOut = do
+decodeBabbageTxOut ::
+  (EraScript era, Val (Value era)) =>
+  -- | We need to use a backwards compatible decoder for any address in a pre-babbage
+  -- TxOut format. This is needed in order to get rid of bogus pointers from the ledger
+  -- state in Conway
+  (forall s'. Decoder s' (Addr (EraCrypto era), CompactAddr (EraCrypto era))) ->
+  Decoder s (BabbageTxOut era)
+decodeBabbageTxOut decAddr = do
   peekTokenType >>= \case
-    TypeMapLenIndef -> decodeTxOut fromCborBothAddr
-    TypeMapLen -> decodeTxOut fromCborBothAddr
+    TypeMapLenIndef -> decodeTxOut decAddr
+    TypeMapLen -> decodeTxOut decAddr
     _ -> oldTxOut
   where
     oldTxOut = do
       lenOrIndef <- decodeListLenOrIndef
       case lenOrIndef of
         Nothing -> do
-          (a, ca) <- fromCborBothAddr
+          (a, ca) <- decAddr
           v <- decCBOR
           decodeBreakOr >>= \case
             True -> pure $ mkTxOut a ca v NoDatum SNothing
@@ -475,17 +485,17 @@ decodeBabbageTxOut = do
               dh <- decCBOR
               decodeBreakOr >>= \case
                 True -> pure $ mkTxOut a ca v (DatumHash dh) SNothing
-                False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
+                False -> cborError $ DecoderErrorCustom "TxOut" "Excess terms in TxOut"
         Just 2 -> do
-          (a, ca) <- fromCborBothAddr
+          (a, ca) <- decAddr
           v <- decCBOR
           pure $ mkTxOut a ca v NoDatum SNothing
         Just 3 -> do
-          (a, ca) <- fromCborBothAddr
+          (a, ca) <- decAddr
           v <- decCBOR
           dh <- decCBOR
           pure $ mkTxOut a ca v (DatumHash dh) SNothing
-        Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
+        Just _ -> cborError $ DecoderErrorCustom "TxOut" "Wrong number of terms in TxOut"
 
 {-# INLINE encodeTxOut #-}
 encodeTxOut ::

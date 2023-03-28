@@ -21,6 +21,7 @@ module Cardano.Ledger.Credential (
   ptrCertIx,
   StakeCredential,
   StakeReference (..),
+  normalizePtr,
 )
 where
 
@@ -58,7 +59,7 @@ import Data.Aeson (
 import qualified Data.Aeson as Aeson
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)
-import Data.Word (Word8)
+import Data.Word
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet (Quiet (Quiet))
@@ -140,6 +141,21 @@ deriving instance Crypto c => ToJSON (StakeReference c)
 data Ptr = Ptr !SlotNo !TxIx !CertIx
   deriving (Eq, Ord, Generic, NFData, NoThunks)
   deriving (EncCBOR, DecCBOR) via CBORGroup Ptr
+
+-- | Convert any invalid `Ptr` to a `Ptr` that contains all zeros for its fields. Any
+-- pointer that contains a `SlotNo`, `TxIx` or `CertIx` that is too large to fit into
+-- `Word32`, `Word16` and `Word16` respectively is considered to be an invalid
+-- `Ptr`. Valid `Ptr`s will be returned unmodified.
+--
+-- /Note/ - This is in no way related to dangling pointers, with an exception that any
+-- invalid `Ptr` is guarateed to be a dangling `Ptr`.
+normalizePtr :: Ptr -> Ptr
+normalizePtr ptr@(Ptr (SlotNo slotNo) (TxIx txIx) (CertIx certIx))
+  | slotNo > fromIntegral (maxBound :: Word32)
+      || txIx > fromIntegral (maxBound :: Word16)
+      || certIx > fromIntegral (maxBound :: Word16) =
+      Ptr (SlotNo 0) (TxIx 0) (CertIx 0)
+  | otherwise = ptr
 
 instance ToCBOR Ptr where
   toCBOR (Ptr slotNo txIx certIx) = toCBOR (slotNo, txIx, certIx)

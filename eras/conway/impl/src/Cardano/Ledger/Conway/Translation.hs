@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -13,6 +14,7 @@
 
 module Cardano.Ledger.Conway.Translation where
 
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (translateTimelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
@@ -24,6 +26,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
+import Cardano.Ledger.Credential (StakeReference (..), normalizePtr)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.API (
   DPState (..),
@@ -144,7 +147,26 @@ translateTxOut ::
   TxOut (BabbageEra c) ->
   TxOut (ConwayEra c)
 translateTxOut (BabbageTxOut addr value d s) =
-  BabbageTxOut addr value (translateDatum d) (translateScript <$> s)
+  BabbageTxOut (addrPtrNormalize addr) value (translateDatum d) (translateScript <$> s)
+
+-- | This function is implemented solely for the purpose of translating garbage pointers
+-- into knowingly invalid ones. Any pointer that contains a SlotNo, TxIx or CertIx that
+-- is too large to fit into Word32, Word16 and Word16 respectively, will have all of its
+-- values set to 0 using `normalizePtr`.
+--
+-- There are two reasons why we can safely do that at the Babbage/Conway era boundary:
+--
+-- * Invalid pointers are no longer allowed in transactions starting with Babbage era
+--
+-- * There are only a handful of `Ptr`s on mainnet that are invalid.
+--
+-- Once the transition is complete and we are officially in Conway era, this translation
+-- logic can be removed in favor of a fixed deserializer that does the same thing for all
+-- eras prior to Babbage.
+addrPtrNormalize :: Addr c -> Addr c
+addrPtrNormalize = \case
+  Addr n cred (StakeRefPtr ptr) -> Addr n cred (StakeRefPtr (normalizePtr ptr))
+  addr -> addr
 
 translateDatum :: Datum (BabbageEra c) -> Datum (ConwayEra c)
 translateDatum = \case
