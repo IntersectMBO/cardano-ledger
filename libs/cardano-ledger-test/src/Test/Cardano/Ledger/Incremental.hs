@@ -24,11 +24,11 @@ module Test.Cardano.Ledger.Incremental where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Coin (Coin (..), Diff (DiffCoin))
-import Cardano.Ledger.Core (EraTxOut (..), TxOut, coinTxOutL)
+import Cardano.Ledger.Core (EraTxOut (..), TxOut, coinTxOutL, EraPParams(..),PParams(..),ppProtocolVersionL)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..)) --  DPState (..), DState (..), PState (..), UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..),DState (..),DPState (..),PState (..),delegations) -- UTxOState (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMapCompact (MapLike (..), View (..))
 import qualified Cardano.Ledger.UMapCompact as UM
@@ -55,6 +55,10 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Proof (ShelleyEra, Standard)
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (Fixed, total)
+import Cardano.Ledger.EpochBoundary (SnapShot (..),Stake(..))
+import qualified Data.VMap as VMap
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+import Control.Exception (assert)
 
 type TT = ShelleyEra Standard
 
@@ -104,107 +108,8 @@ try cred x =
     then trace ("cred=" ++ show cred ++ " " ++ show x) x
     else x
 
-{-
-changeDm ::
-  (Show cred, Ord cred, Ord drep, Show drep) =>
-  Map cred Coin ->
-  Map cred drep ->
-  Map drep (MonoidRngD (Diff Coin)) ->
-  cred ->
-  MonoidRngD (Diff Coin) ->
-  Map drep (MonoidRngD (Diff Coin))
-changeDm m n ans cred dcoin = case try cred (dcoin, Map.lookup cred m, Map.lookup cred n) of
-  (Del, Nothing, Nothing) -> ans
-  (Del, Nothing, Just _) -> ans
-  (Del, Just _, Nothing) -> ans
-  (Del, Just (Coin c2), Just r2) -> insertC r2 (Comb (DiffCoin (-c2))) ans
-  (Write _, Nothing, Nothing) -> ans
-  (Write c1, Nothing, Just r2) -> insertC r2 (Comb c1) ans
-  (Write _, Just _, Nothing) -> ans
-  (Write (DiffCoin c1), Just (Coin c2), Just r2) ->
-    insertC r2 (Comb (DiffCoin (c1 - c2))) ans
-  (Comb _, Nothing, Nothing) -> ans
-  (Comb c1, Nothing, Just r2) -> insertC r2 (Comb c1) ans
-  (Comb _, Just _, Nothing) -> ans
-  (Comb (DiffCoin c1), Just _, Just r2) -> insertC r2 (Comb (DiffCoin c1)) ans
-
-changeDmDn ::
-  (Show cred, Ord cred, Show drep, Ord drep) =>
-  Map cred Coin ->
-  Map cred drep ->
-  Map drep (MonoidRngD (Diff Coin)) ->
-  cred ->
-  (MonoidRngD (Diff Coin), BinaryRngD drep) ->
-  Map drep (MonoidRngD (Diff Coin))
-changeDmDn m n ans cred (dcoin, drep) = case try cred (dcoin, drep, Map.lookup cred m, Map.lookup cred n) of
-  (Del, Omit, Nothing, Nothing) -> ans
-  (Del, Omit, Nothing, Just _) -> ans
-  (Del, Omit, Just _, Nothing) -> ans
-  (Del, Omit, Just (Coin c2), Just r2) ->
-    insertC r2 (Comb (DiffCoin (-c2))) ans
-  (Del, Edit _, Nothing, Nothing) -> ans
-  (Del, Edit _, Nothing, Just _) -> ans
-  (Del, Edit _, Just _, Nothing) -> ans
-  (Del, Edit _, Just (Coin c2), Just r2) ->
-    insertC r2 (Comb (DiffCoin (-c2))) ans
-  (Write _, Omit, Nothing, Nothing) -> ans
-  (Write _, Omit, Nothing, Just _) -> ans
-  (Write _, Omit, Just _, Nothing) -> ans
-  (Write _, Omit, Just (Coin c2), Just r2) ->
-    insertC r2 (Comb (DiffCoin (-c2))) ans
-  (Write c1, Edit r1, Nothing, Nothing) ->
-    insertC r1 (Comb c1) ans
-  (Write c1, Edit r1, Nothing, Just _) ->
-    insertC r1 (Comb c1) ans
-  (Write c1, Edit r1, Just _, Nothing) -> insertC r1 (Comb c1) ans
-  (Write c1, Edit r1, Just (Coin c2), Just r2) ->
-    insertC r1 (Comb c1) (insertC r2 (Comb (DiffCoin (-c2))) ans)
-  (Comb _, Omit, Nothing, Nothing) -> ans
-  (Comb _, Omit, Nothing, Just _) -> ans
-  (Comb _, Omit, Just _, Nothing) -> ans
-  (Comb _, Omit, Just (Coin c2), Just r2) ->
-    insertC r2 (Comb (DiffCoin (-c2))) ans
-  (Comb c1, Edit r1, Nothing, Nothing) ->
-    insertC r1 (Comb c1) ans
-  (Comb c1, Edit r1, Nothing, Just _) -> insertC r1 (Comb c1) ans
-  (Comb (DiffCoin c1), Edit r1, Just (Coin c2), Nothing) ->
-    insertC r1 (Comb (DiffCoin (c1 + c2))) ans
-  (Comb (DiffCoin c3), Edit r1, Just (Coin c2), Just r2) ->
-    insertC r1 (Comb (DiffCoin (c3 + c2))) (insertC r2 (Comb (DiffCoin (-c2))) ans)
-
-changeDn ::
-  (Show cred, Ord cred, Ord drep, Show drep) =>
-  Map cred Coin ->
-  Map cred drep ->
-  Map drep (MonoidRngD (Diff Coin)) ->
-  cred ->
-  BinaryRngD drep ->
-  Map drep (MonoidRngD (Diff Coin))
-changeDn m n ans cred dd = case try cred (dd, Map.lookup cred m, Map.lookup cred n) of
-  (Omit, Nothing, Nothing) -> ans
-  (Omit, Nothing, Just _) -> ans
-  (Omit, Just _, Nothing) -> ans
-  (Omit, Just (Coin c2), Just r2) ->
-    insertC r2 (Comb (DiffCoin (-c2))) ans
-  (Edit _, Nothing, Nothing) -> ans
-  (Edit _, Nothing, Just _) -> ans
-  (Edit r1, Just (Coin c2), Nothing) ->
-    insertC r1 (Comb (DiffCoin c2)) ans
-  (Edit r1, Just (Coin c2), Just r2) ->
-    insertC r2 (Comb (DiffCoin (-c2))) (insertC r1 (Comb (DiffCoin c2)) ans)
--}
 -- ======================================================
-
-{-
--- | A stub type, until we decide what a DRep is.
-newtype DRep era = DRep Integer
-  deriving (Eq, Ord, Show)
-
-deriving newtype instance NFData (DRep era)
-
-instance (Arbitrary (DRep era)) where
-  arbitrary = DRep <$> resize 5000 arbitrary
--}
+ 
 
 instance (Arbitrary (Diff Coin)) where
   arbitrary = DiffCoin <$> arbitrary
@@ -495,19 +400,6 @@ computeDRepDistr' ::
 computeDRepDistr' = f0'
 
 -- =========================================================================
-{-
- { isUtxo :: !(Map (TxIn (EraCrypto era)) (TxOut era))
-  , isDelegate :: !(Map (Cred era) (Pool era))
-  , isVoteProxy :: !(Map (Cred era) (DRep era))
--}
-
-data ILCState era = ILCState
-  { ilcCredDistr :: !(MonoidMap (Cred era) Coin)
-  , ilcPtrDistr :: !(MonoidMap Ptr Coin)
-  , ilcPoolDistr :: !(MonoidMap (Pool era) Coin)
-  , ilcDRepDistr :: !(MonoidMap (DRep era) Coin)
-  }
-
 utxoL :: Lens' (LedgerState era) (UTxO era)
 utxoL = lsUTxOStateL . utxosUtxoL
 
@@ -523,8 +415,15 @@ drepL = lsDPStateL . dpsDStateL . dsUnifiedL . umapD
 umapD :: Lens' (UM.UMap c) (View c (Credential 'Staking c) (KeyHash 'Voting c))
 umapD = lens Dreps (\_umap (Dreps um) -> um)
 
+
 ilcL :: Lens' (LedgerState era) (ILCState era)
 ilcL = lsDPStateL . undefined
+data ILCState era = ILCState
+  { ilcCredDistr :: !(MonoidMap (Cred era) Coin)
+  , ilcPtrDistr :: !(MonoidMap Ptr Coin)
+  , ilcPoolDistr :: !(MonoidMap (Pool era) Coin)
+  , ilcDRepDistr :: !(MonoidMap (DRep era) Coin)
+  }
 
 updateILC ::
   forall era.
@@ -542,18 +441,60 @@ updateILC dUtxo dPool dDrep ls =
     & drepL .~ voteNew
   where
     UTxO utxo = ls ^. utxoL
-    del = ls ^. poolL
-    vote = ls ^. drepL
+    delegs = ls ^. poolL
+    votes = ls ^. drepL
     (ILCState credDistr ptrDistr poolDistr drepDistr) = ls ^. ilcL
     utxoNew = utxo `applyDiff` dUtxo
-    delNew = del `applyDiff` dPool
-    voteNew = vote `applyDiff` dDrep
+    delNew = delegs `applyDiff` dPool
+    voteNew = votes `applyDiff` dDrep
     cdiff :: Diff (MonoidMap (Cred era) Coin)
     cdiff = credDistrFromUtxo' utxo dUtxo
     cred' = credDistr `applyDiff` cdiff
     ptr' = ptrDistr `applyDiff` (ptrDistrFromUtxo' utxo dUtxo)
-    pool' = poolDistr `applyDiff` (computePoolDistr'2 del dPool cred' cdiff)
-    drep' = drepDistr `applyDiff` (computeDRepDistr'2 vote dDrep cred' cdiff)
+    pool' = poolDistr `applyDiff` (computePoolDistr'2 delegs dPool cred' cdiff)
+    drep' = drepDistr `applyDiff` (computeDRepDistr'2 votes dDrep cred' cdiff)
+
+addStakingDelegation
+  :: EraTxOut era =>
+     Credential 'Staking (EraCrypto era)
+     -> KeyHash 'StakePool (EraCrypto era)
+     -> LedgerState era
+     -> LedgerState era
+addStakingDelegation cred kh = updateILC (Dn Map.empty) (Dl (Map.singleton cred (Edit kh))) (Dl Map.empty)
+
+removeStakingDelegation
+  :: EraTxOut era =>
+     Credential 'Staking (EraCrypto era)
+     -> LedgerState era
+     -> LedgerState era
+removeStakingDelegation cred = updateILC (Dn Map.empty) (Dl (Map.singleton cred Omit)) (Dl Map.empty)
+
+addVotingProxy
+  :: EraTxOut era =>
+     Credential 'Staking (EraCrypto era)
+     -> KeyHash 'Voting (EraCrypto era)
+     -> LedgerState era
+     -> LedgerState era
+addVotingProxy cred kh = updateILC (Dn Map.empty) (Dl Map.empty) (Dl (Map.singleton cred (Edit kh)))
+
+removeVotingProxy
+  :: EraTxOut era =>
+     Credential 'Staking (EraCrypto era)
+     -> LedgerState era
+     -> LedgerState era
+removeVotingProxy cred = updateILC (Dn Map.empty) (Dl Map.empty) (Dl (Map.singleton cred Omit))
+
+updateUTxO ::
+  EraTxOut era =>
+  UTxO era ->
+  UTxO era ->
+  LedgerState era ->
+  LedgerState era
+updateUTxO (UTxO utxoDel) (UTxO utxoAdd) = updateILC (Dn diffs2) (Dl Map.empty) (Dl Map.empty)
+  where diffs1 = Map.foldlWithKey remove Map.empty utxoDel
+        remove ans txin _txout = Map.insert txin Omit ans
+        diffs2 = Map.foldlWithKey add diffs1 utxoAdd
+        add ans txin txout = Map.insert txin (Edit txout) ans
 
 -- The derivative of computePoolDistr adjusted for the fact that the the first
 -- arg is a View, rather than a Map.
@@ -691,3 +632,60 @@ changeDn2 m n ans cred dd = case try cred (dd, lookupLike cred m, lookupLike cre
     insertC r1 (Comb (DiffCoin c2)) ans
   (Edit r1, Just (Coin c2), Just r2) ->
     insertC r2 (Comb (DiffCoin (-c2))) (insertC r1 (Comb (DiffCoin c2)) ans)
+
+-------------------------------------------------------------------
+
+makeSnapShot ::
+  forall era.
+  EraPParams era =>
+  PParams era ->
+  LedgerState era ->
+  SnapShot (EraCrypto era)
+makeSnapShot pp ledgerState =
+  SnapShot
+    (Stake $ VMap.fromMap (UM.compactCoinOrError <$> step2))
+    delegate
+    (VMap.fromMap poolParams)
+  where
+    dstate = (dpsDState . lsDPState) ledgerState
+    UM.UMap triplesMap ptrsMap = dsUnified dstate
+    poolParams = (psStakePoolParams . dpsPState . lsDPState) ledgerState
+    ILCState (MM credDistr) (MM ptrDistr) _poolDistr _voteDistr = ledgerState ^. ilcL
+    delegate = UM.viewToVMap (delegations dstate)
+    ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
+    -- pre Conway: (dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake)
+    -- afterwards we forgo ptr resolution: (dom activeDelegs ◁ credStake)
+    step1 =
+      if ignorePtrs
+        then credDistr
+        else -- Resolve inserts and deletes which were indexed by ptrs, by looking them up 
+             -- in the ptrsMap and combining the result of the lookup with the credDistr.
+          Map.foldlWithKey' addResolvedPointer credDistr ptrDistr
+    addResolvedPointer ans ptr coin =
+      case Map.lookup ptr ptrsMap of 
+        Just cred | VMap.member cred delegate -> Map.insertWith (<>) cred coin ans
+        _ -> ans          
+    step2 = addRewardsAndCreds triplesMap step1
+
+
+-- | Aggregate active stake by merging two maps. The rewards map from the
+--   UMap, and the computed incremental stake. Only keep the active stake of
+--   the rewards. This can be determined by if there is a (SJust deleg) in
+--   the Triple.  The incemental stake is alway active, since it is recomputed
+--   on every change.
+addRewardsAndCreds :: Ord k => Map k (UM.Trip c) -> Map k Coin -> Map k Coin
+addRewardsAndCreds m1 m2 = assert (Map.valid m) m
+  where
+    m =
+      Map.mergeWithKey
+        -- How to merge the ranges of the two maps where they have a common key. Below
+        -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
+        (\_k trip coin2 -> extractAndAdd coin2 <$> UM.tripRewardActiveDelegation trip)
+        -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
+        (Map.mapMaybe (\trip -> UM.fromCompact . UM.rdReward <$> UM.tripRewardActiveDelegation trip))
+        -- what to do when a key is only in 'incremental', keep everything, because we know it is active.
+        id
+        m1
+        m2
+    extractAndAdd :: Coin -> UM.RDPair -> Coin
+    extractAndAdd coin (UM.RDPair rew _dep) = coin <> UM.fromCompact rew

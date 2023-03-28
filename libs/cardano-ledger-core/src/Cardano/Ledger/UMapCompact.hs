@@ -307,8 +307,12 @@ instance Show (Trip c) where
 
 -- =====================================================
 
--- | A unified map represents 4 Maps with domain @(Credential 'Staking c)@ for
---   keys and one more in the inverse direction with @Ptr@ for keys and @(Credential 'Staking c)@ for values.
+-- | A unified map represents 4 Maps with domain @(Credential 'Staking c)@
+--   1) Map (Credential 'Staking c) RDPair  -- (RDPair rewardCoin depositCoin)
+--   2) Map (Credential 'Staking c) (Set Ptr)
+--   3) Map (Credential 'Staking c) (StrictMaybe (KeyHash 'StakePool c))
+--   4) Map (Credential 'Staking c) (StrictMaybe (KeyHash 'Voting c))
+--   and one more map in the inverse direction with @Ptr@ for keys and @(Credential 'Staking c)@ for values.
 data UMap c = UMap !(Map (Credential 'Staking c) (Trip c)) !(Map Ptr (Credential 'Staking c))
   deriving (Show, Eq, Generic, NoThunks, NFData)
 
