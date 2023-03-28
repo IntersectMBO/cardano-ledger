@@ -14,6 +14,7 @@ import Cardano.Ledger.Core (eraProtVerLow)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Value
+import Control.Exception (AssertionFailed (AssertionFailed), evaluate)
 import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Short as SBS
@@ -22,8 +23,6 @@ import Data.Maybe (fromJust)
 import GHC.Exts
 import Test.Cardano.Data
 import Test.Cardano.Ledger.Binary.RoundTrip (
-  cborTrip,
-  embedTripRangeFailureExpectation,
   roundTripCborExpectation,
   roundTripCborFailureExpectation,
   roundTripCborRangeExpectation,
@@ -81,8 +80,7 @@ spec = do
           property $
             forAll
               (genMaryValue (genMultiAssetToFail @StandardCrypto))
-              ( embedTripRangeFailureExpectation @(MaryValue StandardCrypto) @(MaryValue StandardCrypto)
-                  cborTrip
+              ( roundTripCborRangeExpectation @(MaryValue StandardCrypto)
                   (eraProtVerLow @Mary)
                   maxBound
               )
@@ -91,12 +89,11 @@ spec = do
     prop "Canonical generator" $
       \(ma :: MaryValue StandardCrypto) ->
         fromCompact (fromJust (toCompact ma)) `shouldBe` ma
-    it "Failing generator" $
-      expectFailure $
-        property $
-          forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) $
-            \ma ->
-              fromCompact (fromJust (toCompact ma)) `shouldBe` ma
+    prop "Failing generator" $
+      forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) $
+        \ma ->
+          evaluate (fromCompact (fromJust (toCompact ma)))
+            `shouldThrow` (\(AssertionFailed errorMsg) -> take 16 errorMsg == "Assertion failed")
 
 instance IsString AssetName where
   fromString = AssetName . either error SBS.toShort . BS16.decode . BS8.pack

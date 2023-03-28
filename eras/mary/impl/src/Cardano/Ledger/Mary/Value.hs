@@ -64,6 +64,7 @@ import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
+import Control.Exception (assert)
 import Control.Monad (forM_, when)
 import Control.Monad.ST (runST)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), object, (.=))
@@ -339,7 +340,7 @@ decodeMultiAssetMaps decodeAmount = do
   -- maximum size for the asset name is 32 bytes, so:
   -- 8n + 2n + 2n + 28p + 32n <= 65535
   -- where: n = total number of assets, p = number of unique policy ids
-  let numPolicies = Map.size ma
+  let numPolicies = length ma
       numAssetNames = sum $ length <$> ma
   if 44 * numAssetNames + 28 * numPolicies > 65535
     then fail "MultiAsset too big to compact"
@@ -571,8 +572,8 @@ to ::
 to (MaryValue ada (MultiAsset m))
   | Map.null m =
       CompactValueAdaOnly . CompactCoin <$> integerToWord64 ada
-to v = do
-  c <- integerToWord64 ada
+to v@(MaryValue _ (MultiAsset ma)) = do
+  c <- assert (44 * sum (length <$> ma) + 28 * length ma < 65535) (integerToWord64 ada)
   -- Here we convert the (pid, assetName, quantity) triples into
   -- (Int, (Word16,Word16,Word64))
   -- These represent the index, pid offset, asset name offset, and quantity.
@@ -707,7 +708,8 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
 from :: forall c. (Crypto c) => CompactValue c -> MaryValue c
 from (CompactValueAdaOnly (CompactCoin c)) = MaryValue (fromIntegral c) (MultiAsset Map.empty)
 from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
-  valueFromList (fromIntegral c) triples
+  let mv@(MaryValue _ (MultiAsset maMap)) = valueFromList (fromIntegral c) triples
+   in assert (44 * sum (length <$> maMap) + 28 * length maMap < 65535) mv
   where
     n = fromIntegral numAssets
 
