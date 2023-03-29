@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -8,6 +9,7 @@
 
 module Test.Cardano.Ledger.Conway.Arbitrary () where
 
+import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates
@@ -17,6 +19,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Crypto (Crypto)
 import Control.State.Transition.Extended (STS (Event))
+import Data.Functor.Identity (Identity)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -230,3 +233,40 @@ instance
   Arbitrary (ConwayTickfEvent era)
   where
   arbitrary = undefined
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.Conway ILC instances ---------------------------------------------------
+------------------------------------------------------------------------------------------
+{-
+src/Cardano/Ledger/Conway/Governance.hs
+448:instance ILC (EnactState era) where
+521:instance ILC (RatifyState era) where
+584:instance ILC (ConwayGovernance era) where
+-}
+
+instance
+  ( Era era
+  , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (Diff (EnactState era))
+  where
+  arbitrary = EnactState' <$> arbitrary
+
+instance
+  ( Era era
+  , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (Diff (RatifyState era))
+  where
+  arbitrary = RatifyState' <$> arbitrary <*> arbitrary
+
+instance
+  ( Era era
+  , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (Diff (ConwayGovernance era))
+  where
+  arbitrary = ConwayGovernance' <$> arbitrary <*> arbitrary <*> arbitrary

@@ -69,6 +69,9 @@ cradle:
     - path: "eras/conway/impl/testlib"
       component: "cardano-ledger-conway:lib:testlib"
 
+    - path: "eras/conway/impl/test"
+      component: "cardano-ledger-conway:test:tests"
+
     - path: "eras/conway/test-suite/src"
       component: "lib:cardano-ledger-conway-test"
 

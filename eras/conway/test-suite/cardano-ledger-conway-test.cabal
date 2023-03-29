@@ -74,9 +74,10 @@ test-suite cardano-ledger-conway-test
         bytestring,
         cardano-ledger-allegra,
         cardano-ledger-alonzo,
+        cardano-data:testlib,
         cardano-ledger-babbage,
-        cardano-ledger-conway,
+        cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-conway-test,
-        cardano-ledger-core,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley-test,
         tasty

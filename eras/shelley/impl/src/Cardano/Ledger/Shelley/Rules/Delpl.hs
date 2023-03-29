@@ -51,6 +51,7 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq
 import Control.State.Transition
+import Data.Incremental (ILC (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -104,7 +105,7 @@ instance
   , Signal (EraRule "DELEG" era) ~ DCert (EraCrypto era)
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , State (EraRule "POOL" era) ~ PState (EraCrypto era)
+  , State (EraRule "POOL" era) ~ Diff (PState (EraCrypto era))
   , Signal (EraRule "POOL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (ShelleyDELPL era)
@@ -165,21 +166,22 @@ delplTransition ::
   , Signal (EraRule "DELEG" era) ~ DCert (EraCrypto era)
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , State (EraRule "POOL" era) ~ PState (EraCrypto era)
+  , State (EraRule "POOL" era) ~ Diff (PState (EraCrypto era))
   , Signal (EraRule "POOL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do
   TRC (DelplEnv slot ptr pp acnt, d, c) <- judgmentContext
+  let pstate = dpsPState d
   case c of
     DCertPool (RegPool _) -> do
-      ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
-      pure $ d {dpsPState = ps}
+      dps <-
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp pstate, totalDiff pstate, c)
+      pure $ d {dpsPState = applyDiff pstate dps}
     DCertPool (RetirePool _ _) -> do
-      ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
-      pure $ d {dpsPState = ps}
+      dps <-
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp pstate, totalDiff pstate, c)
+      pure $ d {dpsPState = applyDiff pstate dps}
     DCertGenesis ConstitutionalDelegCert {} -> do
       ds <-
         trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)

@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,6 +13,7 @@
 module Cardano.Ledger.Shelley.Governance (
   EraGovernance (..),
   ShelleyPPUPState (..),
+  Diff (ShelleyPPUPState'),
 ) where
 
 import Cardano.Ledger.Binary (
@@ -23,13 +26,16 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), emptyPPPUpdates)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
+import Data.Incremental (ILC (..), ($$))
 import Data.Kind (Type)
+import Data.Map (Map)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -71,6 +77,28 @@ data ShelleyPPUPState era = ShelleyPPUPState
   , futureProposals :: !(ProposedPPUpdates era)
   }
   deriving (Generic)
+
+instance ILC (ShelleyPPUPState era) where
+  data Diff (ShelleyPPUPState era) = ShelleyPPUPState'
+    { diffProposals :: !(Diff (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era)))
+    , diffFutureProposals :: !(Diff (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era)))
+    }
+  applyDiff ShelleyPPUPState {..} ShelleyPPUPState' {..} =
+    ShelleyPPUPState
+      { proposals = ProposedPPUpdates (unProposedPPUpdates proposals $$ diffProposals)
+      , futureProposals = ProposedPPUpdates (unProposedPPUpdates futureProposals $$ diffProposals)
+      }
+  extend x y =
+    ShelleyPPUPState'
+      { diffProposals = extend (diffProposals x) (diffProposals y)
+      , diffFutureProposals = extend (diffFutureProposals x) (diffFutureProposals y)
+      }
+  zero = ShelleyPPUPState' zero zero
+  totalDiff _ = ShelleyPPUPState' zero zero
+
+deriving instance Show (PParamsUpdate era) => Show (Diff (ShelleyPPUPState era))
+
+deriving instance Eq (PParamsUpdate era) => Eq (Diff (ShelleyPPUPState era))
 
 deriving instance Show (PParamsUpdate era) => Show (ShelleyPPUPState era)
 

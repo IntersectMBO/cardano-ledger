@@ -58,6 +58,7 @@ library
         aeson,
         bytestring,
         cardano-crypto-class,
+        cardano-data,
         cardano-ledger-binary >=1.1,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo >=1.1,
@@ -97,3 +98,22 @@ library testlib
         cardano-ledger-core,
         cardano-ledger-mary:testlib,
         small-steps
+
+test-suite tests
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:    Test.Cardano.Ledger.Conway.DiffSpec
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        base,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-conway,
+        testlib,
+        cardano-ledger-core,
+        cardano-data:testlib

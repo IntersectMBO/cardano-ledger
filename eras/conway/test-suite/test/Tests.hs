@@ -4,6 +4,7 @@
 module Main where
 
 import Cardano.Ledger.Conway (Conway)
+import Test.Cardano.Ledger.Common (hspec)
 import qualified Test.Cardano.Ledger.Conway.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Conway.Serialisation.Roundtrip as Roundtrip
 import Test.Tasty (TestTree, defaultMain, testGroup)

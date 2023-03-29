@@ -17,6 +17,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use record patterns" #-}
 
 module Cardano.Ledger.Shelley.LedgerState.Types where
 
@@ -58,6 +61,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
@@ -65,6 +69,7 @@ import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
+import Data.Incremental (ILC (..), MonoidMap (..), unMM, ($$))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
@@ -241,6 +246,27 @@ data IncrementalStake c = IStake
   }
   deriving (Generic, Show, Eq, Ord, NoThunks, NFData)
 
+instance ILC (IncrementalStake c) where
+  data Diff (IncrementalStake c) = IStake'
+    { diffCredMap :: !(Diff (MonoidMap (Credential 'Staking c) Coin))
+    , diffPtrMap :: !(Diff (MonoidMap Ptr Coin))
+    }
+  applyDiff IStake {..} IStake' {..} =
+    IStake
+      { credMap = unMM (MM credMap $$ diffCredMap)
+      , ptrMap = unMM (MM ptrMap $$ diffPtrMap)
+      }
+  extend x y =
+    IStake'
+      { diffCredMap = extend (diffCredMap x) (diffCredMap y)
+      , diffPtrMap = extend (diffPtrMap x) (diffPtrMap y)
+      }
+  zero = IStake' mempty mempty
+  totalDiff (IStake x y) = IStake' (totalDiff (MM x)) (totalDiff (MM y))
+
+deriving instance Eq (Diff (IncrementalStake c))
+deriving instance Show (Diff (IncrementalStake c))
+
 instance Crypto c => EncCBOR (IncrementalStake c) where
   encCBOR (IStake st dangle) =
     encodeListLen 2 <> encCBOR st <> encCBOR dangle
@@ -293,6 +319,37 @@ data UTxOState era = UTxOState
   , utxosStakeDistr :: !(IncrementalStake (EraCrypto era))
   }
   deriving (Generic)
+
+instance ILC (GovernanceState era) => ILC (UTxOState era) where
+  data Diff (UTxOState era) = UTxOState'
+    { diffUtxosUtxo :: !(Diff (Map (TxIn (EraCrypto era)) (TxOut era)))
+    , diffUtxosDeposited :: !(Diff Coin)
+    , diffUtxosFees :: !(Diff Coin)
+    , diffUtxosGovernance :: !(Diff (GovernanceState era))
+    , diffUtxosStakeDistr :: !(Diff (IncrementalStake (EraCrypto era)))
+    }
+  applyDiff UTxOState {..} UTxOState' {..} =
+    UTxOState
+      { utxosUtxo = UTxO (unUTxO utxosUtxo $$ diffUtxosUtxo)
+      , utxosDeposited = utxosDeposited $$ diffUtxosDeposited
+      , utxosFees = utxosFees $$ diffUtxosFees
+      , utxosGovernance = utxosGovernance $$ diffUtxosGovernance
+      , utxosStakeDistr = utxosStakeDistr $$ diffUtxosStakeDistr
+      }
+  extend x y =
+    UTxOState'
+      { diffUtxosUtxo = extend (diffUtxosUtxo x) (diffUtxosUtxo y)
+      , diffUtxosDeposited = extend (diffUtxosDeposited x) (diffUtxosDeposited y)
+      , diffUtxosFees = extend (diffUtxosFees x) (diffUtxosFees y)
+      , diffUtxosGovernance = extend (diffUtxosGovernance x) (diffUtxosGovernance y)
+      , diffUtxosStakeDistr = extend (diffUtxosStakeDistr x) (diffUtxosStakeDistr y)
+      }
+  zero = UTxOState' zero zero zero zero zero
+  totalDiff (UTxOState (UTxO v) w x y z) =
+    UTxOState' (totalDiff v) (totalDiff w) (totalDiff x) (totalDiff y) (totalDiff z)
+
+deriving instance (Eq (Diff (GovernanceState era)), Eq (TxOut era)) => Eq (Diff (UTxOState era))
+deriving instance (Show (Diff (GovernanceState era)), Show (TxOut era)) => Show (Diff (UTxOState era))
 
 utxosUtxoL :: Lens' (UTxOState era) (UTxO era)
 utxosUtxoL = lens utxosUtxo (\x y -> x {utxosUtxo = y})
@@ -499,6 +556,21 @@ data LedgerState era = LedgerState
   , lsDPState :: !(DPState (EraCrypto era))
   }
   deriving (Generic)
+
+instance ILC (GovernanceState era) => ILC (LedgerState era) where
+  data Diff (LedgerState era) = LedgerState' (Diff (UTxOState era)) (Diff (DPState (EraCrypto era)))
+  applyDiff (LedgerState x y) (LedgerState' xD yD) = LedgerState (x $$ xD) (y $$ yD)
+  zero = LedgerState' zero zero
+  extend (LedgerState' x y) (LedgerState' a b) = LedgerState' (extend x a) (extend y b)
+  totalDiff (LedgerState x y) = LedgerState' (totalDiff x) (totalDiff y)
+
+deriving instance
+  (Eq (Diff (GovernanceState era)), Eq (TxOut era)) =>
+  Eq (Diff (LedgerState era))
+
+deriving instance
+  (Show (TxOut era), Show (Diff (GovernanceState era))) =>
+  Show (Diff (LedgerState era))
 
 lsUTxOStateL :: Lens' (LedgerState era) (UTxOState era)
 lsUTxOStateL = lens lsUTxOState (\x y -> x {lsUTxOState = y})

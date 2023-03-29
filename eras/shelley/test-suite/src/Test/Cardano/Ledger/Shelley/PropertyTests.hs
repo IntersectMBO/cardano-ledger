@@ -81,3 +81,14 @@ commonTests =
   , ByronTranslation.testGroupByronTranslation
   , ShelleyTranslation.testGroupShelleyTranslation
   ]
+
+-- ================================
+-- an example how one might debug one test, which can be replayed
+-- import Test.Tasty (defaultMain)
+-- import Cardano.Ledger.Crypto(StandardCrypto)
+-- import Cardano.Ledger.Shelley(ShelleyEra)
+-- main :: IO ()
+-- main = main = defaultMain (Pool.tests @(ShelleyEra StandardCrypto))
+-- Then in ghci, one can just type
+-- :main --quickcheck-replay=443873
+-- =================================

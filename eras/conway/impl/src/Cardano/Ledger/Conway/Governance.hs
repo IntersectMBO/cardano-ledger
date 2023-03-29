@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -37,6 +38,7 @@ module Cardano.Ledger.Conway.Governance (
   GovernanceProcedure (..),
   Anchor (..),
   AnchorDataHash,
+  Diff (EnactState', RatifyState', ConwayGovernance'),
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
@@ -74,6 +76,14 @@ import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import Data.ByteString (ByteString)
 import Data.Default.Class (Default (..))
+import Data.Functor.Identity (Identity)
+import Data.Incremental (
+  Diff (Total', Zero),
+  ILC (..),
+  Total,
+  applyTotal,
+  ($$),
+ )
 import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -438,6 +448,16 @@ data EnactState era = EnactState
   }
   deriving (Generic)
 
+instance ILC (EnactState era) where
+  newtype Diff (EnactState era) = EnactState' (Diff (Total (EnactState era)))
+  applyDiff x (EnactState' y) = applyTotal x y
+  extend (EnactState' x) (EnactState' y) = EnactState' $ extend x y
+  zero = EnactState' Zero
+  totalDiff x = EnactState' (Total' x)
+
+deriving instance Eq (PParamsHKD Identity era) => Eq (Diff (EnactState era))
+deriving instance Show (PParamsHKD Identity era) => Show (Diff (EnactState era))
+
 instance EraPParams era => ToJSON (EnactState era) where
   toJSON = object . toEnactStatePairs
   toEncoding = pairs . mconcat . toEnactStatePairs
@@ -453,8 +473,7 @@ toEnactStatePairs cg@(EnactState _ _ _ _ _ _) =
       , "withdrawals" .= ensWithdrawals
       ]
 
-deriving instance Eq (PParams era) => Eq (EnactState era)
-
+deriving instance (Eq (PParamsHKD Identity era), Eq (PParams era)) => Eq (EnactState era)
 deriving instance Show (PParams era) => Show (EnactState era)
 
 instance EraPParams era => Default (EnactState era) where
@@ -505,6 +524,29 @@ data RatifyState era = RatifyState
   }
   deriving (Generic, Eq, Show)
 
+instance ILC (RatifyState era) where
+  data Diff (RatifyState era) = RatifyState'
+    { diffRsEnactState :: !(Diff (EnactState era))
+    , diffRsFuture :: !(Diff (Total (StrictSeq (GovernanceActionId (EraCrypto era), GovernanceActionState era))))
+    }
+  applyDiff RatifyState {..} RatifyState' {..} =
+    RatifyState
+      { rsEnactState = rsEnactState $$ diffRsEnactState
+      , rsFuture = case diffRsFuture of
+          Zero -> rsFuture
+          Total' x -> x
+      }
+  extend x y =
+    RatifyState'
+      { diffRsEnactState = extend (diffRsEnactState x) (diffRsEnactState y)
+      , diffRsFuture = extend (diffRsFuture x) (diffRsFuture y)
+      }
+  zero = RatifyState' zero zero
+  totalDiff (RatifyState x y) = RatifyState' (totalDiff x) (Total' y)
+
+deriving instance EraPParams era => Eq (Diff (RatifyState era))
+deriving instance EraPParams era => Show (Diff (RatifyState era))
+
 instance EraPParams era => Default (RatifyState era)
 
 instance EraPParams era => DecCBOR (RatifyState era) where
@@ -548,6 +590,31 @@ data ConwayGovernance era = ConwayGovernance
   , cgVoterRoles :: !(Map (Credential 'Voting (EraCrypto era)) VoterRole)
   }
   deriving (Generic, Eq, Show)
+
+instance ILC (ConwayGovernance era) where
+  data Diff (ConwayGovernance era) = ConwayGovernance'
+    { diffCgTally :: !(Diff (Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era)))
+    , diffCgRatify :: !(Diff (RatifyState era))
+    , diffCgVoterRoles :: !(Diff (Map (Credential 'Voting (EraCrypto era)) VoterRole))
+    }
+  applyDiff ConwayGovernance {..} ConwayGovernance' {..} =
+    ConwayGovernance
+      { cgTally = ConwayTallyState (unConwayTallyState cgTally $$ diffCgTally)
+      , cgRatify = cgRatify $$ diffCgRatify
+      , cgVoterRoles = cgVoterRoles $$ diffCgVoterRoles
+      }
+  extend x y =
+    ConwayGovernance'
+      { diffCgTally = extend (diffCgTally x) (diffCgTally y)
+      , diffCgRatify = extend (diffCgRatify x) (diffCgRatify y)
+      , diffCgVoterRoles = extend (diffCgVoterRoles x) (diffCgVoterRoles y)
+      }
+  zero = ConwayGovernance' zero zero zero
+  totalDiff (ConwayGovernance (ConwayTallyState x) y z) =
+    ConwayGovernance' (totalDiff x) (totalDiff y) (totalDiff z)
+
+deriving instance (EraPParams era) => (Eq (Diff (ConwayGovernance era)))
+deriving instance (EraPParams era) => (Show (Diff (ConwayGovernance era)))
 
 cgTallyL :: Lens' (ConwayGovernance era) (ConwayTallyState era)
 cgTallyL = lens cgTally (\x y -> x {cgTally = y})

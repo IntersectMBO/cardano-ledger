@@ -12,6 +12,7 @@ module Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (..),
   DeltaCoin (..),
+  Diff (DiffCoin),
   word64ToCoin,
   coinToRational,
   rationalToCoinViaFloor,
@@ -41,6 +42,7 @@ import Cardano.Ledger.TreeDiff (ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
+import Data.Incremental (ILC (..))
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Primitive.Types
@@ -150,3 +152,20 @@ decodePositiveCoin = do
   if n == 0
     then fail "Expected a positive Coin. Got 0 (zero)."
     else pure $ Coin (toInteger n)
+
+-- ===========================================
+-- Incremental Lambda Calculus instances
+
+-- The Diff of a Coin is Coin-like, except it can store negative values
+-- We could use DeltaCoin, but we need newtype for the instance
+instance ILC Coin where
+  {-# SPECIALIZE instance ILC Coin #-}
+  newtype Diff Coin = DiffCoin Integer
+    deriving newtype (Eq, Show, NFData)
+  applyDiff (Coin n) (DiffCoin m) = Coin (n + m)
+  zero = DiffCoin 0
+  extend (DiffCoin n) (DiffCoin m) = DiffCoin (n + m)
+  totalDiff _ = zero
+
+-- {-# SPECIALIZE instance Semigroup (MonoidD Coin) #-}
+-- {-# SPECIALIZE instance Semigroup (BinaryD Coin) #-}

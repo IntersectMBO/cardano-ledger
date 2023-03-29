@@ -23,6 +23,7 @@ library
         Data.UMap
         Data.ListMap
         Data.Universe
+        Data.Incremental
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -54,6 +55,7 @@ library testlib
 
     build-depends:
         base,
+        cardano-data,
         containers,
         hspec,
         QuickCheck
@@ -62,7 +64,10 @@ test-suite cardano-data-tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-    other-modules:    Test.Cardano.Data.MapExtrasSpec
+    other-modules:
+        Test.Cardano.Data.MapExtrasSpec
+        Test.Cardano.Data.IlcTest
+
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
