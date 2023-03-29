@@ -49,8 +49,8 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock
 
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = ConwayGenesis c
-  fromShelleyPParams cg =
-    translateEra' (cgGenDelegs cg) . API.fromShelleyPParams (cgAlonzoGenesis cg)
+  fromShelleyPParams =
+    error "Unimplemented: Current interface is too limited and needs replacement for Conway to work"
 
 instance Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo

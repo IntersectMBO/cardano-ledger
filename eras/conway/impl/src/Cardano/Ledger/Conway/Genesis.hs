@@ -13,7 +13,6 @@ module Cardano.Ledger.Conway.Genesis (
 )
 where
 
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis, alonzoGenesisAesonPairs)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -26,15 +25,13 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Data.Aeson (FromJSON (..), ToJSON, object, withObject, (.:))
-import qualified Data.Aeson as Aeson (Value (Object))
 import Data.Aeson.Types (KeyValue (..), ToJSON (..))
 import Data.Unit.Strict (forceElemsToWHNF)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
-data ConwayGenesis c = ConwayGenesis
-  { cgAlonzoGenesis :: !AlonzoGenesis
-  , cgGenDelegs :: !(GenDelegs c)
+newtype ConwayGenesis c = ConwayGenesis
+  { cgGenDelegs :: GenDelegs c
   }
   deriving (Eq, Generic, Show)
 
@@ -46,12 +43,12 @@ instance Crypto c => DecCBOR (ConwayGenesis c)
 instance Crypto c => EncCBOR (ConwayGenesis c)
 
 instance Crypto c => ToCBOR (ConwayGenesis c) where
-  toCBOR ConwayGenesis {cgAlonzoGenesis, cgGenDelegs} =
-    toEraCBOR @(ConwayEra c) $
-      encode $
-        Rec ConwayGenesis
-          !> To cgAlonzoGenesis
-          !> To cgGenDelegs
+  toCBOR cg@(ConwayGenesis _) =
+    let ConwayGenesis {cgGenDelegs} = cg
+     in toEraCBOR @(ConwayEra c) $
+          encode $
+            Rec ConwayGenesis
+              !> To cgGenDelegs
 
 instance Crypto c => FromCBOR (ConwayGenesis c) where
   fromCBOR =
@@ -59,14 +56,13 @@ instance Crypto c => FromCBOR (ConwayGenesis c) where
       decode $
         RecD ConwayGenesis
           <! From
-          <! From
 
 instance Crypto c => ToJSON (ConwayGenesis c) where
-  toJSON (ConwayGenesis alonzoGenesis genDelegs) =
-    object (alonzoGenesisAesonPairs alonzoGenesis ++ ["genDelegs" .= toJSON genDelegs])
+  toJSON cg@(ConwayGenesis _) =
+    let ConwayGenesis {cgGenDelegs} = cg
+     in object ["genDelegs" .= toJSON cgGenDelegs]
 
 instance Crypto c => FromJSON (ConwayGenesis c) where
   parseJSON = withObject "ConwayGenesis" $ \obj -> do
-    alonzoGenesis <- parseJSON (Aeson.Object obj)
-    genDelegs <- forceElemsToWHNF obj .: "genDelegs"
-    pure $ ConwayGenesis alonzoGenesis genDelegs
+    cgGenDelegs <- forceElemsToWHNF obj .: "genDelegs"
+    pure $ ConwayGenesis {cgGenDelegs}

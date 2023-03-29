@@ -36,6 +36,7 @@
 * Add `RatifyFailure` to `ConwayNewEpochPredFailure` #3339
 * Add `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyPredFailure`
 * Add `ToCBOR`/`FromCBOR` for `ConwayGovernance`
+* Remove `cgAlonzoGenesis` from `ConwayGenesis`.
 
 ### `testlib`
 

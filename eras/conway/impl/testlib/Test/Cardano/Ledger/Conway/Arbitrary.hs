@@ -23,7 +23,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Arbitrary (genMintValues)
 
 instance Crypto c => Arbitrary (ConwayGenesis c) where
-  arbitrary = ConwayGenesis <$> arbitrary <*> arbitrary
+  arbitrary = ConwayGenesis <$> arbitrary
 
 instance Crypto c => Arbitrary (ConwayDCert c) where
   arbitrary =

@@ -32,7 +32,7 @@
 -- +++ OK, passed 100 tests.
 module Cardano.Ledger.Api.Tx.Out (
   module Cardano.Ledger.Api.Tx.Address,
-  EraTxOut,
+  EraTxOut (TxOut),
   mkBasicTxOut,
 
   -- ** Value

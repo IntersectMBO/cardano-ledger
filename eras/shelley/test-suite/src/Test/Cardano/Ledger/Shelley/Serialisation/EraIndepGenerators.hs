@@ -9,12 +9,11 @@ module Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators (genCoherent
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
-import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (
   BlockNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.Crypto (DSIGN, KES, VRF)
+import Cardano.Ledger.Crypto (DSIGN, KES)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Protocol.TPraos.API (PraosCrypto)
@@ -43,7 +42,6 @@ genCoherentBlock ::
   forall era.
   ( EraSegWits era
   , Arbitrary (Tx era)
-  , VRF.Signable (VRF (EraCrypto era)) ~ SignableRepresentation
   , KES.Signable (KES (EraCrypto era)) ~ SignableRepresentation
   , DSIGN.Signable (DSIGN (EraCrypto era)) ~ SignableRepresentation
   , PraosCrypto (EraCrypto era)
