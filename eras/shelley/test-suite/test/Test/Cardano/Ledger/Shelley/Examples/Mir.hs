@@ -151,7 +151,7 @@ txbodyEx1 pot =
     aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> Coin 7)
 
 mirWits :: Crypto c => [Int] -> [KeyPair 'Witness c]
-mirWits nodes = asWitness <$> map (\x -> cold . coreNodeIssuerKeys $ x) nodes
+mirWits = map (asWitness . aikCold . coreNodeIssuerKeys)
 
 sufficientMIRWits :: Crypto c => [KeyPair 'Witness c]
 sufficientMIRWits = mirWits [0 .. 4]
@@ -260,7 +260,7 @@ mirFailWits pot =
         ]
     )
   where
-    ws = Set.fromList $ asWitness <$> map (\x -> hk . coreNodeIssuerKeys $ x) [0 .. 3]
+    ws = Set.fromList $ map (asWitness . aikColdKeyHash . coreNodeIssuerKeys) [0 .. 3]
 
 -- === Block 1, Slot 10, Epoch 0, Insufficient MIR funds, Reserves Example
 --

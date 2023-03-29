@@ -45,8 +45,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   dsUnified,
   rewards,
  )
-import Control.DeepSeq (rnf)
-
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegsPredFailure (..),
   ShelleyDelplPredFailure (..),
@@ -85,6 +83,7 @@ import Cardano.Ledger.Shelley.TxWits (
 import qualified Cardano.Ledger.UMapCompact as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
+import Control.DeepSeq (rnf)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -108,7 +107,7 @@ import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
 import Test.Cardano.Ledger.Shelley.Arbitrary (ASC (ASC), StakeProportion (StakeProportion), VRFNatVal (VRFNatVal))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
-import Test.Cardano.Ledger.Shelley.Generator.Core (genesisCoins)
+import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
@@ -631,7 +630,7 @@ alicePoolParamsSmallCost =
             }
     }
   where
-    (_skVrf, vkVrf) = mkVRFKeyPair (RawSeed 0 0 0 0 2)
+    vkVrf = vrfVerKey $ mkVRFKeyPair @C_Crypto (RawSeed 0 0 0 0 2)
 
 testPoolCostTooSmall :: Assertion
 testPoolCostTooSmall =

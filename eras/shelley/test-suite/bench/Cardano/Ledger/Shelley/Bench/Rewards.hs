@@ -53,6 +53,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
   GenEnv (..),
   ScriptSpace (..),
+  VRFKeyPair (..),
   geConstants,
   geKeySpace,
   ksStakePools,
@@ -136,12 +137,12 @@ genChainInEpoch epoch = do
       ShelleyGenesisStaking
         { sgsPools =
             LM.ListMap
-              [ (hk, pp)
-              | (AllIssuerKeys {vrf, hk}, (owner : _)) <- stakeMap
+              [ (aikColdKeyHash, pp)
+              | (AllIssuerKeys {aikVrf, aikColdKeyHash}, (owner : _)) <- stakeMap
               , let pp =
                       PoolParams
-                        { ppId = hk
-                        , ppVrf = hashVerKeyVRF $ snd vrf
+                        { ppId = aikColdKeyHash
+                        , ppVrf = hashVerKeyVRF $ vrfVerKey aikVrf
                         , ppPledge = Coin 1
                         , ppCost = Coin 1
                         , ppMargin = minBound
@@ -153,8 +154,8 @@ genChainInEpoch epoch = do
               ]
         , sgsStake =
             LM.ListMap
-              [ (dlg, hk)
-              | (AllIssuerKeys {hk}, dlgs) <- stakeMap
+              [ (dlg, aikColdKeyHash)
+              | (AllIssuerKeys {aikColdKeyHash}, dlgs) <- stakeMap
               , dlg <- dlgs
               ]
         }

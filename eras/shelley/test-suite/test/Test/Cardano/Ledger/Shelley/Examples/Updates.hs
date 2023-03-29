@@ -154,9 +154,9 @@ txEx1 =
           mkWitnessesVKey
             (hashAnnotated $ txbodyEx1 @c)
             ( [asWitness Cast.alicePay]
-                <> [ asWitness . cold $ coreNodeIssuerKeys 0
-                   , asWitness . cold $ coreNodeIssuerKeys 3
-                   , asWitness . cold $ coreNodeIssuerKeys 4
+                <> [ asWitness . aikCold $ coreNodeIssuerKeys 0
+                   , asWitness . aikCold $ coreNodeIssuerKeys 3
+                   , asWitness . aikCold $ coreNodeIssuerKeys 4
                    ]
             )
       }
@@ -229,8 +229,8 @@ txEx2 =
           mkWitnessesVKey
             (hashAnnotated $ txbodyEx2 @c)
             ( [asWitness Cast.alicePay]
-                <> [ asWitness . cold $ coreNodeIssuerKeys 1
-                   , asWitness . cold $ coreNodeIssuerKeys 5
+                <> [ asWitness . aikCold $ coreNodeIssuerKeys 1
+                   , asWitness . aikCold $ coreNodeIssuerKeys 5
                    ]
             )
       }
@@ -304,7 +304,7 @@ txEx3 =
       { addrWits =
           mkWitnessesVKey
             (hashAnnotated $ txbodyEx3 @c)
-            [asWitness Cast.alicePay, asWitness . cold $ coreNodeIssuerKeys 1]
+            [asWitness Cast.alicePay, asWitness . aikCold $ coreNodeIssuerKeys 1]
       }
     SNothing
 

@@ -227,13 +227,13 @@ txEx1 =
             (hashAnnotated (txbodyEx1 @c))
             ( (asWitness <$> [Cast.alicePay, Cast.carlPay])
                 <> (asWitness <$> [Cast.aliceStake])
-                <> [asWitness $ cold Cast.alicePoolKeys]
+                <> [asWitness $ aikCold Cast.alicePoolKeys]
                 <> ( asWitness
-                      <$> [ cold (coreNodeIssuerKeys 0)
-                          , cold (coreNodeIssuerKeys 1)
-                          , cold (coreNodeIssuerKeys 2)
-                          , cold (coreNodeIssuerKeys 3)
-                          , cold (coreNodeIssuerKeys 4)
+                      <$> [ aikCold (coreNodeIssuerKeys 0)
+                          , aikCold (coreNodeIssuerKeys 1)
+                          , aikCold (coreNodeIssuerKeys 2)
+                          , aikCold (coreNodeIssuerKeys 3)
+                          , aikCold (coreNodeIssuerKeys 4)
                           ]
                    )
             )
@@ -304,8 +304,8 @@ txbodyEx2 =
           ]
     , stbCerts =
         StrictSeq.fromList
-          [ DCertDeleg (Delegate $ Delegation Cast.aliceSHK (hk Cast.alicePoolKeys))
-          , DCertDeleg (Delegate $ Delegation Cast.bobSHK (hk Cast.alicePoolKeys))
+          [ DCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
+          , DCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.alicePoolKeys))
           ]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = feeTx2
@@ -430,10 +430,10 @@ snapEx3 =
           , (Cast.bobSHK, bobInitCoin)
           ]
     , EB.ssDelegations =
-        [ (Cast.aliceSHK, hk Cast.alicePoolKeys)
-        , (Cast.bobSHK, hk Cast.alicePoolKeys)
+        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+        , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
-    , EB.ssPoolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
+    , EB.ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
 expectedStEx3 ::
@@ -471,7 +471,7 @@ txbodyEx4 =
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)]
     , stbCerts =
         StrictSeq.fromList
-          [DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))]
+          [DCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = feeTx4
     , stbTTL = SlotNo 500
@@ -574,18 +574,18 @@ snapEx5 =
           , (Cast.bobSHK, bobInitCoin)
           ]
     , EB.ssDelegations =
-        [ (Cast.aliceSHK, hk Cast.alicePoolKeys)
-        , (Cast.carlSHK, hk Cast.alicePoolKeys)
-        , (Cast.bobSHK, hk Cast.alicePoolKeys)
+        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+        , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
-    , EB.ssPoolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
+    , EB.ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
 pdEx5 :: forall c. Cr.Crypto c => PoolDistr c
 pdEx5 =
   PoolDistr $
     Map.singleton
-      (hk $ Cast.alicePoolKeys @c)
+      (aikColdKeyHash $ Cast.alicePoolKeys @c)
       (IndividualPoolStake 1 (Cast.aliceVRFKeyHash @c))
 
 expectedStEx5 ::
@@ -600,7 +600,7 @@ expectedStEx5 =
     . C.setOCertCounter coreNodeHK 1
     $ expectedStEx4
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 220
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 220
 
 -- === Block 5, Slot 220, Epoch 2
 --
@@ -645,8 +645,8 @@ expectedStEx6 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (Sh
 expectedStEx6 =
   C.evolveNonceFrozen (getBlockNonce (blockEx6 @c))
     . C.newLab blockEx6
-    . C.setOCertCounter (coerceKeyRole $ hk Cast.alicePoolKeys) 0
-    . C.incrBlockCount (hk Cast.alicePoolKeys)
+    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.alicePoolKeys) 0
+    . C.incrBlockCount (aikColdKeyHash Cast.alicePoolKeys)
     . C.pulserUpdate pulserEx6
     $ expectedStEx5
 
@@ -688,7 +688,7 @@ expectedStEx7 =
     . C.setOCertCounter coreNodeHK 1
     $ expectedStEx6
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 310
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 310
 
 -- === Block 7, Slot 310, Epoch 3
 --
@@ -750,11 +750,12 @@ alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
 nonMyopicEx8 :: forall c. Cr.Crypto c => NonMyopic c
 nonMyopicEx8 =
   NonMyopic
-    (Map.singleton (hk Cast.alicePoolKeys) alicePerfEx8)
+    (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx8)
     rewardPot8
 
 pulserEx8 :: forall c. (ExMock c) => PulsingRewUpdate c
-pulserEx8 = makeCompletedPulser (BlocksMade $ Map.singleton (hk Cast.alicePoolKeys) 1) expectedStEx7
+pulserEx8 =
+  makeCompletedPulser (BlocksMade $ Map.singleton (aikColdKeyHash Cast.alicePoolKeys) 1) expectedStEx7
 
 rewardUpdateEx8 :: forall c. Cr.Crypto c => RewardUpdate c
 rewardUpdateEx8 =
@@ -765,11 +766,11 @@ rewardUpdateEx8 =
         Map.fromList
           [
             ( Cast.aliceSHK
-            , Set.singleton $ Reward LeaderReward (hk Cast.alicePoolKeys) aliceRAcnt8
+            , Set.singleton $ Reward LeaderReward (aikColdKeyHash Cast.alicePoolKeys) aliceRAcnt8
             )
           ,
             ( Cast.bobSHK
-            , Set.singleton $ Reward MemberReward (hk Cast.alicePoolKeys) bobRAcnt8
+            , Set.singleton $ Reward MemberReward (aikColdKeyHash Cast.alicePoolKeys) bobRAcnt8
             )
           ]
     , deltaF = DeltaCoin 0
@@ -784,7 +785,7 @@ expectedStEx8 =
     . C.pulserUpdate pulserEx8
     $ expectedStEx7
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 390
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 390
 
 -- === Block 8, Slot 390, Epoch 3
 --
@@ -835,7 +836,7 @@ expectedStEx9 =
     . C.setOCertCounter coreNodeHK 2
     $ expectedStEx8
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 410
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 410
 
 -- === Block 9, Slot 410, Epoch 4
 --
@@ -928,7 +929,7 @@ txbodyEx11 =
   ShelleyTxBody
     (Set.fromList [TxIn (txid txbodyEx4) minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
-    (StrictSeq.fromList [DCertPool (RetirePool (hk Cast.alicePoolKeys) aliceRetireEpoch)])
+    (StrictSeq.fromList [DCertPool (RetirePool (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch)])
     (Withdrawals Map.empty)
     feeTx11
     (SlotNo 500)
@@ -944,7 +945,7 @@ txEx11 =
           mkWitnessesVKey
             (hashAnnotated (txbodyEx11 @c))
             ( [asWitness Cast.alicePay]
-                <> [asWitness $ cold Cast.alicePoolKeys]
+                <> [asWitness $ aikCold Cast.alicePoolKeys]
             )
       }
     SNothing
@@ -982,7 +983,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
 nonMyopicEx11 :: forall c. Cr.Crypto c => NonMyopic c
 nonMyopicEx11 =
   NonMyopic
-    (Map.singleton (hk Cast.alicePoolKeys) (alicePerfEx11 @c))
+    (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) (alicePerfEx11 @c))
     (Coin 0)
 
 pulserEx11 :: forall c. (ExMock c) => PulsingRewUpdate c
@@ -1005,7 +1006,7 @@ expectedStEx11 =
     . C.feesAndDeposits ppEx feeTx11 [] []
     . C.newUTxO txbodyEx11
     . C.pulserUpdate pulserEx11
-    . C.stageRetirement (hk Cast.alicePoolKeys) aliceRetireEpoch
+    . C.stageRetirement (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch
     $ expectedStEx10
 
 -- === Block 11, Slot 490, Epoch 4
@@ -1047,8 +1048,8 @@ snapEx12 =
           , (Cast.carlSHK, carlMIR)
           ]
     , EB.ssDelegations =
-        [ (Cast.aliceSHK, hk Cast.alicePoolKeys)
-        , (Cast.carlSHK, hk Cast.alicePoolKeys)
+        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
     }
 
@@ -1061,7 +1062,7 @@ expectedStEx12 =
     . C.reapPool Cast.alicePoolParams
     $ expectedStEx11
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 510
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @(ShelleyEra c) ppEx 510
 
 -- === Block 12, Slot 510, Epoch 5
 --

@@ -39,6 +39,7 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
@@ -66,6 +67,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
   slotFromEpoch,
   testGlobals,
  )
+import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
 
@@ -130,23 +132,31 @@ genBlockWithTxGen
         kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
         cs = chainOCertIssue chainSt
         m = getKESPeriodRenewalNo issuerKeys kp
-        hotKeys = drop (fromIntegral m) (hot issuerKeys)
-        keys = issuerKeys {hot = hotKeys}
+        hotKeys =
+          fromMaybe
+            ( error $
+                "No more hot keys left. Tried dropping "
+                  ++ show m
+                  ++ " from: "
+                  ++ show (aikHot issuerKeys)
+            )
+            (NE.nonEmpty $ NE.drop (fromIntegral m) (aikHot issuerKeys))
+        keys = issuerKeys {aikHot = hotKeys}
 
         -- And issue a new ocert
         n' =
           currentIssueNo
             ( OCertEnv
-                (Set.fromList $ hk <$> ksStakePools)
+                (Set.fromList $ aikColdKeyHash <$> ksStakePools)
                 (eval (dom ksIndexedGenDelegates))
             )
             cs
-            ((coerceKeyRole . hashKey . vKey . cold) issuerKeys)
+            (coerceKeyRole . hashKey . vKey $ aikCold issuerKeys)
         issueNumber =
           if n' == Nothing
             then error "no issue number available"
             else fromIntegral m
-        oCert = mkOCert keys issueNumber ((fst . head) hotKeys)
+        oCert = mkOCert keys issueNumber (fst $ NE.head hotKeys)
 
     mkBlock
       <$> pure hashheader
@@ -216,12 +226,12 @@ selectNextSlotWithLeader
             Nothing ->
               coerce
                 <$> List.find
-                  ( \(AllIssuerKeys {vrf, hk}) ->
-                      isLeader hk (fst vrf)
+                  ( \(AllIssuerKeys {aikVrf, aikColdKeyHash}) ->
+                      isLeader aikColdKeyHash (vrfSignKey aikVrf)
                   )
                   ksStakePools
             Just (ActiveSlot x) ->
-              fmap coerce $
+              coerce $
                 Map.lookup x cores
                   >>= \y -> Map.lookup (genDelegKeyHash y) ksIndexedGenDelegates
             _ -> Nothing

@@ -89,6 +89,7 @@ import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (
   C_Crypto,
  )
 import Test.Cardano.Ledger.Shelley.Generator.Core (
+  VRFKeyPair (..),
   genesisCoins,
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
@@ -394,18 +395,18 @@ firstStakePoolKeyHash :: KeyHash 'StakePool B_Crypto
 firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 
 vrfKeyHash :: Hash B_Crypto (VerKeyVRF B_Crypto)
-vrfKeyHash = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0
+vrfKeyHash = hashVerKeyVRF . vrfVerKey . mkVRFKeyPair @B_Crypto $ RawSeed 0 0 0 0 0
 
 mkPoolParameters :: KeyPair 'StakePool B_Crypto -> PoolParams B_Crypto
 mkPoolParameters keys =
   PoolParams
-    { ppId = (hashKey . vKey) keys
+    { ppId = hashKey (vKey keys)
     , ppVrf = vrfKeyHash
     , ppPledge = Coin 0
     , ppCost = Coin 0
     , ppMargin = unsafeBoundRational 0
     , ppRewardAcnt = RewardAcnt Testnet firstStakeKeyCred
-    , ppOwners = Set.singleton $ (hashKey . vKey) stakeKeyOne
+    , ppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
     , ppRelays = StrictSeq.empty
     , ppMetadata = SNothing
     }

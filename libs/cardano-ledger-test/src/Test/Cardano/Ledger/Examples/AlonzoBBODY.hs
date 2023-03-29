@@ -58,7 +58,6 @@ import Cardano.Ledger.Shelley.API (
   ProtVer (..),
   UTxO (..),
  )
-import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
@@ -125,6 +124,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
   mkKeyPair,
   mkVRFKeyPair,
  )
+import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
@@ -573,7 +573,7 @@ poolMDHTooBigTx pf =
         poolParams =
           PoolParams
             { ppId = coerceKeyRole . hashKey . vKey $ someKeys pf
-            , ppVrf = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0
+            , ppVrf = hashVerKeyVRF . vrfVerKey . mkVRFKeyPair @(EraCrypto era) $ RawSeed 0 0 0 0 0
             , ppPledge = Coin 0
             , ppCost = Coin 0
             , ppMargin = minBound

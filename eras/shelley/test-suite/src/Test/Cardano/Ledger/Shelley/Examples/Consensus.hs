@@ -38,6 +38,7 @@ import Cardano.Slotting.EpochInfo
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
 import Data.Default.Class
+import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -174,8 +175,8 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
     keys :: AllIssuerKeys (EraCrypto era) 'StakePool
     keys = exampleKeys
 
-    (_, (hotKey, _)) = head $ hot keys
-    KeyPair vKeyCold _ = cold keys
+    hotKey = kesSignKey $ snd $ NE.head $ aikHot keys
+    KeyPair vKeyCold _ = aikCold keys
 
     blockHeader :: BHeader (EraCrypto era)
     blockHeader = BHeader blockHeaderBody (signedKES () 0 blockHeaderBody hotKey)
@@ -187,9 +188,9 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
         , bheaderSlotNo = SlotNo 9
         , bheaderPrev = BlockHash (HashHeader (mkDummyHash (2 :: Int)))
         , bheaderVk = coerceKeyRole vKeyCold
-        , bheaderVrfVk = snd $ vrf keys
-        , bheaderEta = mkCertifiedVRF (mkBytes 0) (fst $ vrf keys)
-        , bheaderL = mkCertifiedVRF (mkBytes 1) (fst $ vrf keys)
+        , bheaderVrfVk = vrfVerKey $ aikVrf keys
+        , bheaderEta = mkCertifiedVRF (mkBytes 0) (vrfSignKey $ aikVrf keys)
+        , bheaderL = mkCertifiedVRF (mkBytes 1) (vrfSignKey $ aikVrf keys)
         , bsize = 2345
         , bhash = hashTxSeq @era blockBody
         , bheaderOCert = mkOCert keys 0 (KESPeriod 0)
@@ -230,7 +231,7 @@ exampleTx mkWitnesses txBody auxData =
     keyPairWits =
       [ asWitness examplePayKey
       , asWitness exampleStakeKey
-      , asWitness $ cold (exampleKeys @(EraCrypto era) @'StakePool)
+      , asWitness $ aikCold (exampleKeys @(EraCrypto era) @'StakePool)
       ]
 
 exampleProposedPParamsUpdates ::
@@ -250,7 +251,7 @@ examplePoolDistr =
         ( mkKeyHash 1
         , IndividualPoolStake
             1
-            (hashVerKeyVRF (snd (vrf (exampleKeys @c))))
+            (hashVerKeyVRF (vrfVerKey (aikVrf (exampleKeys @c))))
         )
       ]
 
@@ -504,7 +505,7 @@ exampleKeys =
   AllIssuerKeys
     coldKey
     (mkVRFKeyPair (Proxy @c) 1)
-    [(KESPeriod 0, mkKESKeyPair (RawSeed 1 0 0 0 3))]
+    ((KESPeriod 0, mkKESKeyPair (RawSeed 1 0 0 0 3)) NE.:| [])
     (hashKey (vKey coldKey))
   where
     coldKey = mkDSIGNKeyPair 1
@@ -532,11 +533,11 @@ mkDSIGNKeyPair byte = KeyPair (VKey $ DSIGN.deriveVerKeyDSIGN sk) sk
 
 mkVRFKeyPair ::
   forall c.
-  VRFAlgorithm (VRF c) =>
+  Crypto c =>
   Proxy c ->
   Word8 ->
-  (Cardano.Ledger.Keys.SignKeyVRF c, Cardano.Ledger.Keys.VerKeyVRF c)
-mkVRFKeyPair _ byte = (sk, VRF.deriveVerKeyVRF sk)
+  VRFKeyPair c
+mkVRFKeyPair _ byte = VRFKeyPair sk (VRF.deriveVerKeyVRF sk)
   where
     seed =
       Seed.mkSeedFromBytes $
@@ -549,8 +550,8 @@ mkVRFKeyPair _ byte = (sk, VRF.deriveVerKeyVRF sk)
 examplePoolParams :: forall c. Crypto c => PoolParams c
 examplePoolParams =
   PoolParams
-    { ppId = hashKey $ vKey $ cold poolKeys
-    , ppVrf = hashVerKeyVRF $ snd $ vrf poolKeys
+    { ppId = hashKey $ vKey $ aikCold poolKeys
+    , ppVrf = hashVerKeyVRF $ vrfVerKey $ aikVrf poolKeys
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1

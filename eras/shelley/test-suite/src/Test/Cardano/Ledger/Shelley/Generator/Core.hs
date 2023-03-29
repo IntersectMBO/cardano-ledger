@@ -13,6 +13,8 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
+  VRFKeyPair (..),
+  KESKeyPair (..),
   GenEnv (..),
   ScriptSpace (..),
   TwoPhase3ArgInfo (..),
@@ -56,9 +58,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Crypto.VRF (evalCertified)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
@@ -69,7 +69,6 @@ import Cardano.Ledger.BaseTypes (
   epochInfoPure,
   stabilityWindow,
  )
-import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (DataHash)
 import Cardano.Ledger.Credential (
@@ -79,25 +78,16 @@ import Cardano.Ledger.Credential (
   pattern StakeRefBase,
   pattern StakeRefPtr,
  )
-import Cardano.Ledger.Crypto (DSIGN)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
-  HasKeyRole (coerceKeyRole),
   Hash,
   KeyHash,
   KeyRole (..),
-  SignKeyKES,
-  SignKeyVRF,
   VKey,
-  VerKeyKES,
-  VerKeyVRF,
   asWitness,
   hashKey,
-  signedDSIGN,
-  signedKES,
  )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
-import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.Tx (
   pattern TxIn,
@@ -114,38 +104,22 @@ import Cardano.Ledger.Slot (
   (*-),
  )
 import Cardano.Ledger.UTxO (UTxO (UTxO))
-import Cardano.Protocol.TPraos.BHeader (
-  BHeader,
-  HashHeader,
-  mkSeed,
-  seedEta,
-  seedL,
-  pattern BHBody,
-  pattern BHeader,
-  pattern BlockHash,
- )
-import Cardano.Protocol.TPraos.OCert (
-  KESPeriod (..),
-  OCert,
-  OCertSignable (..),
-  pattern OCert,
- )
+import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCert)
 import Codec.Serialise (serialise)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Data.ByteString.Lazy (toStrict)
-import Data.Coerce (coerce)
+import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio (denominator, numerator, (%))
-import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, mkAddr, mkCred, vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock, Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
   ScriptClass,
@@ -158,13 +132,22 @@ import Test.Cardano.Ledger.Shelley.Utils (
   GenesisKeyPair,
   RawSeed (..),
   epochFromSlotNo,
-  evolveKESUntil,
   maxKESIterations,
   maxLLSupply,
-  mkCertifiedVRF,
   mkGenKey,
   mkKeyPair,
   runShelleyBase,
+ )
+import Test.Cardano.Protocol.Crypto.VRF.Fake (NatNonce (..))
+import Test.Cardano.Protocol.TPraos.Create (
+  AllIssuerKeys (..),
+  KESKeyPair (..),
+  VRFKeyPair (..),
+  mkBHBody,
+  mkBHeader,
+  mkBlock,
+  mkBlockFakeVRF,
+  mkOCert,
  )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -175,14 +158,6 @@ type PreAlonzo era =
   )
 
 -- =========================================
-
-data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
-  { cold :: KeyPair r v
-  , vrf :: (SignKeyVRF v, VerKeyVRF v)
-  , hot :: [(KESPeriod, (SignKeyKES v, VerKeyKES v))]
-  , hk :: KeyHash r v
-  }
-  deriving (Show)
 
 type DataHash c = SafeHash c EraIndependentData
 
@@ -332,19 +307,19 @@ genWord64 lower upper =
 -- Note: we index all possible genesis delegate keys, that is,
 -- core nodes and all potential keys.
 mkGenesisDelegatesHashMap ::
-  (CC.Crypto c) =>
+  Crypto c =>
   [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
   [AllIssuerKeys c 'GenesisDelegate] ->
   Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate)
 mkGenesisDelegatesHashMap coreNodes genesisDelegates =
   Map.fromList (f <$> allDelegateKeys)
   where
-    f issuerKeys = ((hashKey . vKey . cold) issuerKeys, issuerKeys)
+    f issuerKeys = (hashKey . vKey $ aikCold issuerKeys, issuerKeys)
     allDelegateKeys = (snd <$> coreNodes) <> genesisDelegates
 
 -- | Generate a mapping from stake key hash to stake key pair, from a list of
 -- (payment, staking) key pairs.
-mkStakeKeyHashMap :: (CC.Crypto c) => KeyPairs c -> Map (KeyHash 'Staking c) (KeyPair 'Staking c)
+mkStakeKeyHashMap :: (Crypto c) => KeyPairs c -> Map (KeyHash 'Staking c) (KeyPair 'Staking c)
 mkStakeKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -353,7 +328,7 @@ mkStakeKeyHashMap keyPairs =
 -- | Generate a mapping from payment key hash to keypair
 -- from a list of (payment, staking) key pairs.
 mkPayKeyHashMap ::
-  (CC.Crypto c) =>
+  Crypto c =>
   KeyPairs c ->
   Map (KeyHash 'Payment c) (KeyPair 'Payment c)
 mkPayKeyHashMap keyPairs =
@@ -477,6 +452,10 @@ unitIntervalToNatural ui =
   toNat ((toInteger (maxBound :: Word64) % 1) * unboundRational ui)
   where
     toNat r = fromInteger (numerator r `quot` denominator r)
+{-# DEPRECATED
+  unitIntervalToNatural
+  "This function has been made private in cardano-protocol-tpraos:testlib. Open an issue if you need it"
+  #-}
 
 mkBlockHeader ::
   Mock c =>
@@ -502,153 +481,17 @@ mkBlockHeader ::
   -- | Block body hash
   Hash c EraIndependentBlockBody ->
   BHeader c
-mkBlockHeader protVer prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
-  let (_, (sHot, _)) = head $ hot pkeys
-      KeyPair vKeyCold _ = cold pkeys
-      nonceNonce = mkSeed seedEta s enonce
-      leaderNonce = mkSeed seedL s enonce
-      bhb =
-        BHBody
-          blockNo
-          s
-          (BlockHash prev)
-          (coerceKeyRole vKeyCold)
-          (snd $ vrf pkeys)
-          (coerce $ evalCertified () nonceNonce (fst $ vrf pkeys))
-          (coerce $ evalCertified () leaderNonce (fst $ vrf pkeys))
-          bodySize
-          bodyHash
-          oCert
-          protVer
-      kpDiff = kesPeriod - c0
-      hotKey = case evolveKESUntil sHot (KESPeriod 0) (KESPeriod kpDiff) of
-        Nothing ->
-          error ("could not evolve key to iteration " ++ show (c0, kesPeriod, kpDiff))
-        Just hkey -> hkey
-      sig = signedKES () kpDiff bhb hotKey
-   in BHeader bhb sig
+mkBlockHeader protVer prev pKeys slotNo blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
+  let bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
+   in mkBHeader pKeys kesPeriod c0 bhBody
+{-# DEPRECATED mkBlockHeader "In favor of `mkBHeader` and `mkBHBody`" #-}
 
-mkBlock ::
-  forall era r.
-  (EraSegWits era, Mock (EraCrypto era)) =>
-  -- | Hash of previous block
-  HashHeader (EraCrypto era) ->
-  -- | All keys in the stake pool
-  AllIssuerKeys (EraCrypto era) r ->
-  -- | Transactions to record
-  [Tx era] ->
-  -- | Current slot
-  SlotNo ->
-  -- | Block number/chain length/chain "difficulty"
-  BlockNo ->
-  -- | EpochNo nonce
-  Nonce ->
-  -- | Period of KES (key evolving signature scheme)
-  Word ->
-  -- | KES period of key registration
-  Word ->
-  -- | Operational certificate
-  OCert (EraCrypto era) ->
-  Block (BHeader (EraCrypto era)) era
-mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
-  let protVer = ProtVer (eraProtVerHigh @era) 0
-      txseq = (toTxSeq @era . StrictSeq.fromList) txns
-      bodySize = fromIntegral $ bBodySize protVer txseq
-      bodyHash = hashTxSeq @era txseq
-      bh = mkBlockHeader protVer prev pkeys s blockNo enonce kesPeriod c0 oCert bodySize bodyHash
-   in Block bh txseq
-
--- | Create a block with a faked VRF result.
-mkBlockFakeVRF ::
-  forall era r.
-  (EraSegWits era, ExMock (EraCrypto era)) =>
-  -- | Hash of previous block
-  HashHeader (EraCrypto era) ->
-  -- | All keys in the stake pool
-  AllIssuerKeys (EraCrypto era) r ->
-  -- | Transactions to record
-  [Tx era] ->
-  -- | Current slot
-  SlotNo ->
-  -- | Block number/chain length/chain "difficulty"
-  BlockNo ->
-  -- | EpochNo nonce
-  Nonce ->
-  -- | Block nonce
-  NatNonce ->
-  -- | Praos leader value
-  UnitInterval ->
-  -- | Period of KES (key evolving signature scheme)
-  Word ->
-  -- | KES period of key registration
-  Word ->
-  -- | Operational certificate
-  OCert (EraCrypto era) ->
-  Block (BHeader (EraCrypto era)) era
-mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
-  let (_, (sHot, _)) = head $ hot pkeys
-      KeyPair vKeyCold _ = cold pkeys
-      nonceNonce = mkSeed seedEta s enonce
-      leaderNonce = mkSeed seedL s enonce
-      txseq = toTxSeq @era (StrictSeq.fromList txns)
-      protVer = ProtVer (eraProtVerHigh @era) 0
-      bhb =
-        BHBody
-          blockNo
-          s
-          (BlockHash prev)
-          (coerceKeyRole vKeyCold)
-          (snd $ vrf pkeys)
-          ( mkCertifiedVRF
-              (WithResult nonceNonce (fromIntegral bnonce))
-              (fst $ vrf pkeys)
-          )
-          ( mkCertifiedVRF
-              (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
-              (fst $ vrf pkeys)
-          )
-          (fromIntegral $ bBodySize protVer txseq)
-          (hashTxSeq @era txseq)
-          oCert
-          protVer
-      kpDiff = kesPeriod - c0
-      hotKey = case evolveKESUntil sHot (KESPeriod 0) (KESPeriod kpDiff) of
-        Nothing ->
-          error ("could not evolve key to iteration " ++ show (c0, kesPeriod, kpDiff))
-        Just hkey -> hkey
-      sig = signedKES () kpDiff bhb hotKey
-      bh = BHeader bhb sig
-   in Block bh txseq
-
--- | We provide our own nonces to 'mkBlock', which we then wish to recover as
--- the output of the VRF functions. In general, however, we just derive them
--- from a natural. Since the nonce is a hash, we do not want to recover it to
--- find a preimage. In testing, therefore, we just wrap the raw natural, which
--- we then encode into the fake VRF implementation.
-newtype NatNonce = NatNonce Natural
-
-mkOCert ::
-  forall c r.
-  (CC.Crypto c, Signable (DSIGN c) (OCertSignable c)) =>
-  AllIssuerKeys c r ->
-  Word64 ->
-  KESPeriod ->
-  OCert c
-mkOCert pkeys n c0 =
-  let (_, (_, vKeyHot)) = head $ hot pkeys
-      KeyPair _vKeyCold sKeyCold = cold pkeys
-   in OCert
-        vKeyHot
-        n
-        c0
-        (signedDSIGN @c sKeyCold (OCertSignable vKeyHot n c0))
-
--- | Takes a set of KES hot keys and checks to see whether there is one whose
+-- | Takes a sequence of KES hot keys and checks to see whether there is one whose
 -- range contains the current KES period. If so, return its index in the list of
 -- hot keys.
 getKESPeriodRenewalNo :: AllIssuerKeys h r -> KESPeriod -> Integer
 getKESPeriodRenewalNo keys (KESPeriod kp) =
-  go (hot keys) 0 kp
+  go (NE.toList (aikHot keys)) 0 kp
   where
     go [] _ _ = error "did not find enough KES renewals"
     go ((KESPeriod p, _) : rest) n k =

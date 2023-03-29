@@ -79,6 +79,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
@@ -321,7 +322,7 @@ genDelegation
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
-  (Era era) =>
+  Era era =>
   -- | Core nodes
   [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
@@ -333,10 +334,10 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     then pure Nothing
     else do
       gk <- QC.elements genesisDelegators
-      AllIssuerKeys {cold, vrf} <- QC.elements availableDelegatees
+      AllIssuerKeys {aikCold, aikVrf} <- QC.elements availableDelegatees
       case Map.lookup (hashVKey gk) genDelegs_ of
         Nothing -> pure Nothing
-        Just _ -> return $ mkCert gk cold (snd vrf)
+        Just _ -> return $ mkCert gk aikCold (vrfVerKey aikVrf)
   where
     allDelegateKeys = (snd <$> coreNodes) <> delegateKeys
     hashVKey = hashKey . vKey
@@ -350,14 +351,16 @@ genGenesisDelegation coreNodes delegateKeys dpState =
             )
         , CoreKeyCred [gkey]
         )
-    (GenDelegs genDelegs_) = dsGenDelegs $ dpsDState dpState
+    GenDelegs genDelegs_ = dsGenDelegs $ dpsDState dpState
     genesisDelegator k = eval (k ∈ dom genDelegs_)
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
-    notActiveDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems genDelegs_))
+    notActiveDelegatee k =
+      not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems genDelegs_))
     fGenDelegs = dsFutureGenDelegs $ dpsDState dpState
-    notFutureDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems fGenDelegs))
+    notFutureDelegatee k =
+      not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems fGenDelegs))
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
-    availableDelegatees = filter (notDelegatee . hashVKey . cold) allDelegateKeys
+    availableDelegatees = filter (notDelegatee . hashVKey . aikCold) allDelegateKeys
 
 -- | Generate PoolParams and the key witness.
 genStakePool ::
@@ -389,8 +392,8 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
       let interval = unsafeBoundRational $ fromIntegral marginPercent % 100
           pps =
             PoolParams
-              (hashKey . vKey . cold $ allPoolKeys)
-              (hashVerKeyVRF . snd . vrf $ allPoolKeys)
+              (hashKey . vKey $ aikCold allPoolKeys)
+              (hashVerKeyVRF . vrfVerKey $ aikVrf allPoolKeys)
               pledge
               cost
               interval
@@ -398,7 +401,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
               Set.empty
               StrictSeq.empty
               SNothing
-       in (pps, cold allPoolKeys)
+       in (pps, aikCold allPoolKeys)
 
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
@@ -426,13 +429,13 @@ genRetirePool ::
   SlotNo ->
   Gen (Maybe (DCert (EraCrypto era), CertCred era))
 genRetirePool _pp poolKeys pState slot =
-  if (null retireable)
+  if null retireable
     then pure Nothing
     else
       ( \keyHash epoch ->
           Just
             ( DCertPool (RetirePool keyHash epoch)
-            , PoolCred (cold $ lookupHash keyHash)
+            , PoolCred (aikCold $ lookupHash keyHash)
             )
       )
         <$> QC.elements retireable
@@ -445,7 +448,7 @@ genRetirePool _pp poolKeys pState slot =
     lookupHash hk' =
       fromMaybe
         (error "genRetirePool: could not find keyHash")
-        (List.find (\x -> hk x == hk') poolKeys)
+        (List.find (\x -> aikColdKeyHash x == hk') poolKeys)
     EpochNo cepoch = epochFromSlotNo slot
     epochLow = cepoch + 1
     -- if epochHigh is more than a few epochs above epochLow, then
@@ -501,7 +504,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
       else
         Just
           ( DCertMir (MIRCert pot (StakeAddressesMIR credCoinMap))
-          , DelegateCred (cold <$> coreSigners)
+          , DelegateCred (aikCold <$> coreSigners)
           )
 
 -- | Generate an InstantaneousRewards Transfer
@@ -539,7 +542,7 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
       else
         Just
           ( DCertMir (MIRCert pot (SendToOppositePotMIR $ Coin amount))
-          , DelegateCred (cold <$> coreSigners)
+          , DelegateCred (aikCold <$> coreSigners)
           )
 
 genInstantaneousRewards ::

@@ -125,7 +125,7 @@ txEx1 =
             (hashAnnotated $ txbodyEx1 @c)
             ( [asWitness $ Cast.alicePay]
                 <> [asWitness $ Cast.aliceStake]
-                <> [asWitness $ cold Cast.alicePoolKeys]
+                <> [asWitness $ aikCold Cast.alicePoolKeys]
             )
       }
     SNothing
@@ -205,7 +205,7 @@ txEx2 =
             (hashAnnotated $ txbodyEx2 @c)
             ( (asWitness <$> [Cast.alicePay])
                 <> (asWitness <$> [Cast.aliceStake])
-                <> [asWitness $ cold Cast.alicePoolKeys]
+                <> [asWitness $ aikCold Cast.alicePoolKeys]
             )
       }
     SNothing
@@ -296,7 +296,7 @@ blockEx3 =
 
 snapEx3 :: Cr.Crypto c => SnapShot c
 snapEx3 =
-  emptySnapShot {ssPoolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]}
+  emptySnapShot {ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]}
 
 expectedStEx3 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx3 =

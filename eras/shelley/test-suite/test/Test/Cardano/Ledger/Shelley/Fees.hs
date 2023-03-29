@@ -11,8 +11,6 @@ module Test.Cardano.Ledger.Shelley.Fees (
 )
 where
 
-import Cardano.Crypto.VRF (VRFAlgorithm)
-import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
@@ -22,7 +20,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as Cr
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
@@ -73,6 +71,7 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey, vKey)
+import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils (
@@ -89,35 +88,35 @@ sizeTest b16 tx = do
   Base16.encode (Plain.serialize tx) @?= b16
   (tx ^. sizeTxF) @?= toInteger (BSL.length b16 `div` 2)
 
-alicePay :: forall c. Cr.Crypto c => KeyPair 'Payment c
+alicePay :: forall c. Crypto c => KeyPair 'Payment c
 alicePay = KeyPair @'Payment @c vk sk
   where
     (sk, vk) = mkKeyPair @c (RawSeed 0 0 0 0 0)
 
-aliceStake :: forall c. Cr.Crypto c => KeyPair 'Staking c
+aliceStake :: forall c. Crypto c => KeyPair 'Staking c
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @c (RawSeed 0 0 0 0 1)
 
-aliceSHK :: forall c. Cr.Crypto c => Credential 'Staking c
+aliceSHK :: forall c. Crypto c => Credential 'Staking c
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
-alicePool :: forall c. Cr.Crypto c => KeyPair 'StakePool c
+alicePool :: forall c. Crypto c => KeyPair 'StakePool c
 alicePool = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @c (RawSeed 0 0 0 0 2)
 
-alicePoolKH :: forall c. Cr.Crypto c => KeyHash 'StakePool c
+alicePoolKH :: forall c. Crypto c => KeyHash 'StakePool c
 alicePoolKH = (hashKey . vKey) alicePool
 
-aliceVRF :: forall v. VRFAlgorithm v => (VRF.SignKeyVRF v, VRF.VerKeyVRF v)
+aliceVRF :: forall c. Crypto c => VRFKeyPair c
 aliceVRF = mkVRFKeyPair (RawSeed 0 0 0 0 3)
 
-alicePoolParams :: forall c. Cr.Crypto c => PoolParams c
+alicePoolParams :: forall c. Crypto c => PoolParams c
 alicePoolParams =
   PoolParams
     { ppId = alicePoolKH
-    , ppVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF c)
+    , ppVrf = hashVerKeyVRF . vrfVerKey $ aliceVRF @c
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
@@ -136,26 +135,26 @@ alicePoolParams =
             }
     }
 
-aliceAddr :: forall c. Cr.Crypto c => Addr c
+aliceAddr :: forall c. Crypto c => Addr c
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-bobPay :: forall c. Cr.Crypto c => KeyPair 'Payment c
+bobPay :: forall c. Crypto c => KeyPair 'Payment c
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @c (RawSeed 1 0 0 0 0)
 
-bobStake :: forall c. Cr.Crypto c => KeyPair 'Staking c
+bobStake :: forall c. Crypto c => KeyPair 'Staking c
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @c (RawSeed 1 0 0 0 1)
 
-bobSHK :: forall c. Cr.Crypto c => Credential 'Staking c
+bobSHK :: forall c. Crypto c => Credential 'Staking c
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
-bobAddr :: forall c. Cr.Crypto c => Addr c
+bobAddr :: forall c. Crypto c => Addr c
 bobAddr = mkAddr (bobPay, bobStake)
 
-carlPay :: forall c. Cr.Crypto c => KeyPair 'Payment c
+carlPay :: forall c. Crypto c => KeyPair 'Payment c
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 2 0 0 0 0)

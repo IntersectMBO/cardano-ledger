@@ -70,7 +70,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
-  AllIssuerKeys (cold),
+  AllIssuerKeys (aikCold),
   genInteger,
   genNatural,
   genWord64,
@@ -337,7 +337,7 @@ genUpdate
         then -- discard
           pure (Nothing, [])
         else
-          let wits = asWitness . cold <$> coreSigners
+          let wits = asWitness . aikCold <$> coreSigners
            in QC.frequency
                 [
                   ( frequencyTxUpdates

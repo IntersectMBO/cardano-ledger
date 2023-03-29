@@ -49,8 +49,6 @@ import Cardano.Crypto.Hash (
  )
 import Cardano.Crypto.KES (
   KESAlgorithm (..),
-  SignKeyKES,
-  VerKeyKES,
   deriveVerKeyKES,
   genKeyKES,
  )
@@ -59,7 +57,6 @@ import Cardano.Crypto.VRF (
   CertifiedVRF,
   SignKeyVRF,
   VRFAlgorithm (..),
-  VerKeyVRF,
   certifiedOutput,
   deriveVerKeyVRF,
   evalCertified,
@@ -78,14 +75,13 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (DSIGN)
+import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
-import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Slotting.EpochInfo (
   epochInfoEpoch,
   epochInfoFirst,
@@ -111,6 +107,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Protocol.TPraos.Create (KESKeyPair (..), VRFKeyPair (..), evolveKESUntil)
 import Test.Tasty.HUnit (
   Assertion,
   (@?=),
@@ -193,13 +190,13 @@ mkKeyPair' seed = KeyPair vk sk
     (sk, vk) = mkKeyPair seed
 
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
-mkVRFKeyPair ::
-  VRFAlgorithm v =>
-  RawSeed ->
-  (SignKeyVRF v, VerKeyVRF v)
+mkVRFKeyPair :: Crypto c => RawSeed -> VRFKeyPair c
 mkVRFKeyPair seed =
   let sk = genKeyVRF $ mkSeedFromWords seed
-   in (sk, deriveVerKeyVRF sk)
+   in VRFKeyPair
+        { vrfSignKey = sk
+        , vrfVerKey = deriveVerKeyVRF sk
+        }
 
 -- | For testing purposes, create a VRF value
 mkCertifiedVRF ::
@@ -215,13 +212,13 @@ mkCertifiedVRF a sk =
   coerce $ evalCertified () a sk
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair ::
-  KESAlgorithm v =>
-  RawSeed ->
-  (SignKeyKES v, VerKeyKES v)
+mkKESKeyPair :: Crypto c => RawSeed -> KESKeyPair c
 mkKESKeyPair seed =
   let sk = genKeyKES $ mkSeedFromWords seed
-   in (sk, deriveVerKeyKES sk)
+   in KESKeyPair
+        { kesSignKey = sk
+        , kesVerKey = deriveVerKeyKES sk
+        }
 
 testGlobals :: Globals
 testGlobals =
@@ -251,24 +248,6 @@ slotFromEpoch = runIdentity . epochInfoFirst (epochInfoPure testGlobals)
 
 epochSize :: EpochNo -> EpochSize
 epochSize = runIdentity . epochInfoSize (epochInfoPure testGlobals)
-
--- | Try to evolve KES key until specific KES period is reached, given the
--- current KES period.
-evolveKESUntil ::
-  (KESAlgorithm v, ContextKES v ~ ()) =>
-  SignKeyKES v ->
-  -- | Current KES period
-  KESPeriod ->
-  -- | Target KES period
-  KESPeriod ->
-  Maybe (SignKeyKES v)
-evolveKESUntil sk1 (KESPeriod current) (KESPeriod target) = go sk1 current target
-  where
-    go !_ c t | t < c = Nothing
-    go !sk c t | c == t = Just sk
-    go !sk c t = case updateKES () sk c of
-      Nothing -> Nothing
-      Just sk' -> go sk' (c + 1) t
 
 maxKESIterations :: Word64
 maxKESIterations = runShelleyBase (asks maxKESEvo)
