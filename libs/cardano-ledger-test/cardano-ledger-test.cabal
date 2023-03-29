@@ -38,11 +38,9 @@ library
         Test.Cardano.Ledger.Examples.AlonzoBBODY
         Test.Cardano.Ledger.Examples.AlonzoCollectInputs
         Test.Cardano.Ledger.Examples.AlonzoAPI
-        Test.Cardano.Ledger.Examples.Consensus
         Test.Cardano.Ledger.Examples.STSTestUtils
         Test.Cardano.Ledger.Generic.AggPropTests
         Test.Cardano.Ledger.Generic.ApplyTx
-        Test.Cardano.Ledger.Generic.Consensus
         Test.Cardano.Ledger.Generic.Indexed
         Test.Cardano.Ledger.Generic.Fields
         Test.Cardano.Ledger.Generic.Functions
@@ -84,14 +82,13 @@ library
         cardano-ledger-babbage-test,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
-        cardano-ledger-conway-test,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-pretty,
         cardano-ledger-mary,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test,
         cardano-ledger-shelley-ma-test,
-        cardano-protocol-tpraos >=1.0,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.0,
         cardano-slotting,
         containers,
         groups,
