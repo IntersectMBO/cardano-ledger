@@ -40,6 +40,7 @@ import Paths_cardano_ledger_shelley_test (getDataFileName)
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
+import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   mkKeyPair,
@@ -254,12 +255,12 @@ exampleShelleyGenesis =
     poolParams =
       L.PoolParams
         { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
-        , L.ppVrf = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 1 0 0 0 2)
+        , L.ppVrf = hashVerKeyVRF . vrfVerKey $ mkVRFKeyPair @c (RawSeed 1 0 0 0 2)
         , L.ppPledge = L.Coin 1
         , L.ppCost = L.Coin 5
         , L.ppMargin = unsafeBoundRational 0.25
         , L.ppRewardAcnt = L.RewardAcnt L.Testnet Cast.aliceSHK
-        , L.ppOwners = Set.singleton $ (hashKey . vKey) Cast.aliceStake
+        , L.ppOwners = Set.singleton $ hashKey (vKey Cast.aliceStake)
         , L.ppRelays = relays
         , L.ppMetadata =
             L.SJust $

@@ -33,7 +33,6 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Nonce (..),
-  ProtVer (..),
   StrictMaybe (..),
   mkNonceFromNumber,
   strictMaybeToMaybe,
@@ -48,7 +47,6 @@ import Cardano.Ledger.Binary (
   encodeFoldableMapEncoder,
   encodePreEncoded,
   serialize,
-  serialize',
   withSlice,
  )
 import Cardano.Ledger.Core
@@ -60,7 +58,6 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
@@ -247,9 +244,6 @@ txSeqDecoder lax = do
 
 instance EraTx era => DecCBOR (Annotator (ShelleyTxSeq era)) where
   decCBOR = txSeqDecoder False
-
-bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
-bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s

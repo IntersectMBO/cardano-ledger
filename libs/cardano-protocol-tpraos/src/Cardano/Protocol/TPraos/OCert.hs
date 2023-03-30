@@ -156,11 +156,7 @@ kesPeriod (SlotNo s) =
 data OCertSignable c
   = OCertSignable !(VerKeyKES c) !Word64 !KESPeriod
 
-instance
-  forall c.
-  Crypto c =>
-  SignableRepresentation (OCertSignable c)
-  where
+instance Crypto c => SignableRepresentation (OCertSignable c) where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $

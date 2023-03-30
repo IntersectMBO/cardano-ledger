@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -15,16 +16,16 @@ module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (
 where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
-import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
-import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
+  Hash,
   KeyRole (..),
+  VerKeyVRF,
   asWitness,
   hashKey,
   hashVerKeyVRF,
@@ -71,6 +72,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Init (
 import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makePulser')
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   NatNonce (..),
+  VRFKeyPair (..),
   genesisCoins,
   mkBlockFakeVRF,
   mkOCert,
@@ -119,16 +121,13 @@ newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
 
-newGenesisVrfKH ::
-  forall h v.
-  (HashAlgorithm h, VRF.VRFAlgorithm v) =>
-  Hash.Hash h (VRF.VerKeyVRF v)
-newGenesisVrfKH = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 9 8 7 6 5)
+newGenesisVrfKH :: forall c. Crypto c => Hash c (VerKeyVRF c)
+newGenesisVrfKH = hashVerKeyVRF (vrfVerKey (mkVRFKeyPair @c (RawSeed 9 8 7 6 5)))
 
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx1 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -138,7 +137,7 @@ txbodyEx1 =
             ( ConstitutionalDelegCert
                 (hashKey (coreNodeVK 0))
                 (hashKey (vKey newGenDelegate))
-                newGenesisVrfKH
+                (newGenesisVrfKH @c)
             )
         ]
     )
@@ -198,7 +197,7 @@ newGenDeleg ::
   (FutureGenDeleg c, GenDelegPair c)
 newGenDeleg =
   ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK 0)
-  , GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH
+  , GenDelegPair (hashKey . vKey $ newGenDelegate) (newGenesisVrfKH @c)
   )
 
 expectedStEx1 ::

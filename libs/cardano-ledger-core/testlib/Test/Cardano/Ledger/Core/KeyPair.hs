@@ -29,7 +29,6 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
  )
 import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (
   DSignable,
   HasKeyRole,
@@ -73,13 +72,13 @@ instance Crypto c => NoThunks (KeyPair kd c)
 instance HasKeyRole KeyPair
 
 mkAddr ::
-  CC.Crypto c =>
+  Crypto c =>
   (KeyPair 'Payment c, KeyPair 'Staking c) ->
   Addr c
 mkAddr (payKey, stakeKey) = Addr Testnet (mkCred payKey) (StakeRefBase $ mkCred stakeKey)
 
 mkCred ::
-  CC.Crypto c =>
+  Crypto c =>
   KeyPair kr c ->
   Credential kr c
 mkCred k = KeyHashObj . hashKey $ vKey k
@@ -120,7 +119,7 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
    in mkWitnessesVKey txbodyHash (Map.elems witKeys)
 
 mkVKeyRwdAcnt ::
-  CC.Crypto c =>
+  Crypto c =>
   Network ->
   KeyPair 'Staking c ->
   RewardAcnt c

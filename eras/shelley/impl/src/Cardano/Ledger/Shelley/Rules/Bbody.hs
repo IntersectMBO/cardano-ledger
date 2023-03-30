@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
+import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,

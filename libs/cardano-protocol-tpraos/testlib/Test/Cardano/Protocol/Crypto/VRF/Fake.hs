@@ -11,7 +11,8 @@
 
 -- | Fake implementation of VRF, where the random value isn't random but given
 -- by the creator.
-module Test.Cardano.Crypto.VRF.Fake (
+module Test.Cardano.Protocol.Crypto.VRF.Fake (
+  NatNonce (..),
   FakeVRF,
   VerKeyVRF (..),
   SignKeyVRF (..),
@@ -48,6 +49,14 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Numeric.Natural
+
+-- | We provide our own nonces to 'mkBlock', which we then wish to recover as
+-- the output of the VRF functions. In general, however, we just derive them
+-- from a natural. Since the nonce is a hash, we do not want to recover it to
+-- find a preimage. In testing, therefore, we just wrap the raw natural, which
+-- we then encode into the fake VRF implementation.
+newtype NatNonce = NatNonce Natural
 
 data FakeVRF
 
@@ -103,12 +112,12 @@ instance VRFAlgorithm FakeVRF where
 
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed getRandomWord64
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
-  evalVRF () a sk = evalVRF' a sk
+  evalVRF () a sk = evalFakeVRF a sk
 
   -- This implementation of `verifyVRF` checks the real result, which is hidden
   -- in the certificate, but ignores the produced value, which is set to be the
   -- result of the sneaking.
-  verifyVRF () (VerKeyFakeVRF n) a c = snd (evalVRF' a (SignKeyFakeVRF n)) == snd c
+  verifyVRF () (VerKeyFakeVRF n) a c = snd (evalFakeVRF a (SignKeyFakeVRF n)) == snd c
 
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
@@ -142,12 +151,12 @@ instance VRFAlgorithm FakeVRF where
     | otherwise =
         Nothing
 
-evalVRF' ::
+evalFakeVRF ::
   SneakilyContainResult a =>
   a ->
   SignKeyVRF FakeVRF ->
   (OutputVRF FakeVRF, CertVRF FakeVRF)
-evalVRF' a sk@(SignKeyFakeVRF n) =
+evalFakeVRF a sk@(SignKeyFakeVRF n) =
   let y = sneakilyExtractResult a sk
       p = unsneakilyExtractPayload a
       realValue =

@@ -21,7 +21,6 @@ source-repository head
 
 library
     exposed-modules:
-        Test.Cardano.Crypto.VRF.Fake
         Test.Cardano.Ledger.TerseTools
         Test.Cardano.Ledger.Shelley.Address.Bootstrap
         Test.Cardano.Ledger.Shelley.BenchmarkFunctions
@@ -169,7 +168,7 @@ test-suite cardano-ledger-shelley-test
         cardano-ledger-pretty,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test >=1.1,
-        cardano-protocol-tpraos,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
         cardano-slotting,
         cborg,
         containers,

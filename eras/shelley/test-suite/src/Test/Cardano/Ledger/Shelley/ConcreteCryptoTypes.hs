@@ -24,7 +24,7 @@ import Cardano.Ledger.BaseTypes (Seed)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
-import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
+import Test.Cardano.Protocol.Crypto.VRF.Fake (FakeVRF)
 
 -- | Mocking constraints used in generators
 type Mock c =

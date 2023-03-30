@@ -42,6 +42,7 @@ module Cardano.Ledger.Core (
   Era (..),
   -- $segWit
   EraSegWits (..),
+  bBodySize,
 
   -- * Phases
   Phase (..),
@@ -89,7 +90,9 @@ import Cardano.Ledger.Binary (
   Interns,
   Sized (sizedValue),
   ToCBOR,
+  encCBORGroup,
   mkSized,
+  serialize',
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -500,6 +503,9 @@ class
 
   -- | The number of segregated components
   numSegComponents :: Word64
+
+bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
+bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 -- ====================================================
 -- Reflecting the phase of scripts into types

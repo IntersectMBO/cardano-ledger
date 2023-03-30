@@ -196,9 +196,9 @@ txbodyEx1 =
         , DCertDeleg (RegKey Cast.carlSHK)
         , DCertPool (RegPool alicePoolParams')
         , DCertPool (RegPool bobPoolParams')
-        , DCertDeleg (Delegate $ Delegation Cast.aliceSHK (hk Cast.alicePoolKeys))
-        , DCertDeleg (Delegate $ Delegation Cast.bobSHK (hk Cast.bobPoolKeys))
-        , DCertDeleg (Delegate $ Delegation Cast.carlSHK (hk Cast.alicePoolKeys))
+        , DCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
+        , DCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys))
+        , DCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))
         ]
     )
     (Withdrawals Map.empty)
@@ -217,7 +217,7 @@ txEx1 =
             (hashAnnotated $ txbodyEx1)
             ( (asWitness <$> [Cast.alicePay])
                 <> (asWitness <$> [Cast.aliceStake, Cast.bobStake, Cast.carlStake])
-                <> (asWitness <$> [cold Cast.alicePoolKeys, cold Cast.bobPoolKeys])
+                <> (asWitness <$> [aikCold Cast.alicePoolKeys, aikCold Cast.bobPoolKeys])
             )
       }
     SNothing
@@ -328,13 +328,13 @@ snapEx3 =
           , (Cast.carlSHK, carlInitCoin)
           ]
     , EB.ssDelegations =
-        [ (Cast.aliceSHK, hk Cast.alicePoolKeys)
-        , (Cast.bobSHK, hk Cast.bobPoolKeys)
-        , (Cast.carlSHK, hk Cast.alicePoolKeys)
+        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
+        , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
+        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
     , EB.ssPoolParams =
-        [ (hk Cast.alicePoolKeys, alicePoolParams')
-        , (hk Cast.bobPoolKeys, bobPoolParams')
+        [ (aikColdKeyHash Cast.alicePoolKeys, alicePoolParams')
+        , (aikColdKeyHash Cast.bobPoolKeys, bobPoolParams')
         ]
     }
 
@@ -435,22 +435,22 @@ pdEx5 =
   PoolDistr $
     Map.fromList
       [
-        ( hk $ Cast.alicePoolKeys @c
+        ( aikColdKeyHash $ Cast.alicePoolKeys @c
         , IndividualPoolStake alicePoolStake (Cast.aliceVRFKeyHash @c)
         )
       ,
-        ( hk $ Cast.bobPoolKeys @c
+        ( aikColdKeyHash $ Cast.bobPoolKeys @c
         , IndividualPoolStake bobPoolStake (Cast.bobVRFKeyHash @c)
         )
       ]
 
 expectedStEx5 :: ChainState C
 expectedStEx5 =
-  C.incrBlockCount (hk Cast.alicePoolKeys)
+  C.incrBlockCount (aikColdKeyHash Cast.alicePoolKeys)
     . C.newSnapshot snapEx3 (Coin 0)
     . C.applyRewardUpdate rewardUpdateEx4
     . C.setPoolDistr pdEx5
-    . C.setOCertCounter (coerceKeyRole $ hk Cast.alicePoolKeys) 0
+    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.alicePoolKeys) 0
     . C.newEpoch blockEx5 -- This must be processed before the incrBlockCount
     $ expectedStEx4
 
@@ -484,8 +484,8 @@ expectedStEx6 :: ChainState C
 expectedStEx6 =
   C.evolveNonceFrozen (getBlockNonce (blockEx6))
     . C.newLab blockEx6
-    . C.setOCertCounter (coerceKeyRole $ hk Cast.alicePoolKeys) 0
-    . C.incrBlockCount (hk Cast.alicePoolKeys)
+    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.alicePoolKeys) 0
+    . C.incrBlockCount (aikColdKeyHash Cast.alicePoolKeys)
     . C.rewardUpdate emptyRewardUpdate
     $ expectedStEx5
 
@@ -518,8 +518,8 @@ expectedStEx7 :: ChainState C
 expectedStEx7 =
   C.evolveNonceFrozen (getBlockNonce (blockEx7))
     . C.newLab blockEx7
-    . C.setOCertCounter (coerceKeyRole $ hk Cast.bobPoolKeys) 0
-    . C.incrBlockCount (hk Cast.bobPoolKeys)
+    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.bobPoolKeys) 0
+    . C.incrBlockCount (aikColdKeyHash Cast.bobPoolKeys)
     $ expectedStEx6
 
 -- === Block 7, Slot 295, Epoch 2
@@ -560,7 +560,7 @@ expectedStEx8 =
     . C.applyRewardUpdate emptyRewardUpdate
     $ expectedStEx7
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @C ppEx 310
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C ppEx 310
 
 -- === Block 8, Slot 310, Epoch 3
 --
@@ -683,8 +683,8 @@ nonMyopicEx9 :: forall c. ExMock c => NonMyopic c
 nonMyopicEx9 =
   NonMyopic
     ( Map.fromList
-        [ (hk Cast.alicePoolKeys, alicePerfEx9)
-        , (hk Cast.bobPoolKeys, bobPerfEx9)
+        [ (aikColdKeyHash Cast.alicePoolKeys, alicePerfEx9)
+        , (aikColdKeyHash Cast.bobPoolKeys, bobPerfEx9)
         ]
     )
     bigR
@@ -710,7 +710,7 @@ pulserEx9 pp =
   makeCompletedPulser
     ( BlocksMade $
         Map.fromList
-          [(hk Cast.alicePoolKeys, 2), (hk Cast.bobPoolKeys, 1)]
+          [(aikColdKeyHash Cast.alicePoolKeys, 2), (aikColdKeyHash Cast.bobPoolKeys, 1)]
     )
     expectedStEx8'
   where
@@ -724,7 +724,7 @@ expectedStEx9 pp =
     . C.pulserUpdate (pulserEx9 pp)
     $ expectedStEx8
   where
-    coreNodeHK = coerceKeyRole . hk $ coreNodeKeysBySchedule @C ppEx 390
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C ppEx 390
 
 -- === Block 9, Slot 390, Epoch 3
 --
@@ -739,9 +739,9 @@ twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx)
 carlsRewards :: forall c. ExMock c => Set (Reward c)
 carlsRewards =
   Set.fromList
-    [ Reward MemberReward (hk Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c)
-    , Reward LeaderReward (hk Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c)
-    , Reward LeaderReward (hk Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
+    [ Reward MemberReward (aikColdKeyHash Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c)
+    , Reward LeaderReward (aikColdKeyHash Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c)
+    , Reward LeaderReward (aikColdKeyHash Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
     ]
 
 rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Reward c))
@@ -783,13 +783,11 @@ twoPoolsExample =
     "two pools"
     [ testCase "create non-aggregated pulser" $ testCHAINExample twoPools9
     , testCase "non-aggregated pulser is correct" $
-        ( (Complete (rewardUpdateEx9 ppEx rsEx9Agg))
-            @?= (fst . runShelleyBase . completeStep $ pulserEx9 ppEx)
-        )
+        Complete (rewardUpdateEx9 ppEx rsEx9Agg)
+          @?= (fst . runShelleyBase . completeStep $ pulserEx9 ppEx)
     , testCase "aggregated pulser is correct" $
-        ( (Complete (rewardUpdateEx9 ppProtVer3 rsEx9Agg))
-            @?= (fst . runShelleyBase . completeStep $ pulserEx9 ppProtVer3)
-        )
+        Complete (rewardUpdateEx9 ppProtVer3 rsEx9Agg)
+          @?= (fst . runShelleyBase . completeStep $ pulserEx9 ppProtVer3)
     , testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg
     , testCase "create legacy aggregatedRewards" testAggregateRewardsLegacy
     , testCase "create new aggregatedRewards" testAggregateRewardsNew
