@@ -175,20 +175,6 @@ test1 = do
   runCompile cyclicPred
   putStrLn "+++ OK, passed 1 test."
 
--- ===========================================
--- Test that the genT method of Sums works.
-
-test2 :: Bool -> IO ()
-test2 loud = do
-  putStrLn "testing: genT of Sums class, generates list with sum 30"
-  when loud $ putStrLn "======================================================="
-  zs <- generate (genT @[Reward Standard] ["test2"] (Coin 30) :: Gen [Reward Standard])
-  let getcoin (Reward _ _ c) = c
-      total = List.foldl' (\c r -> add c (getcoin r)) (Coin 0) zs
-  if total /= (Coin 30)
-    then error ("Does not add to 30\n" ++ (unlines (map show zs)))
-    else putStrLn "+++ OK, passed 1 test."
-
 -- ===================================
 test3 :: Gen Property
 test3 = testn (Mary Standard) "Test 3. PState example" False stoi cs (Assemble pstateT)
@@ -402,11 +388,17 @@ test11 =
     "Test 11. Instanaeous Sum Tests"
     False
     (stoi {sumBeforeParts = False})
-    [ Sized (AtLeast 1) treasury
-    , Random instanTreasury
-    , Sized (AtLeast 1) instanReserves
-    , Negate (deltaReserves) :=: deltaTreasury
-    , SumsTo (Right (Coin 1)) instanReservesSum EQL [SumMap instanReserves]
+    [ -- Before treasury instanTreasury
+      Sized (AtLeast 1) treasury
+    , SumsTo (Left (DeltaCoin 1)) (Delta treasury) GTH [One deltaTreasury]
+    , SumsTo (Left (DeltaCoin 1)) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
+    , SumsTo (Left (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
+    -- , SumsTo (Left (Coin 1)) treasury GTE [One instanTreasurySum ]
+ -- 
+  --  , Random instanTreasury
+   -- , Sized (AtLeast 1) instanReserves
+  --  , Negate (deltaReserves) :=: deltaTreasury
+  --  , SumsTo (Right (Coin 1)) instanReservesSum EQL [SumMap instanReserves]
     , SumsTo (Right (DeltaCoin 1)) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
     , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
     , SumsTo (Right (DeltaCoin 1)) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
@@ -799,7 +791,6 @@ test21 seed = do
 testAll :: IO ()
 testAll = do
   test1
-  (test2 False)
   test19
   test4
   test5

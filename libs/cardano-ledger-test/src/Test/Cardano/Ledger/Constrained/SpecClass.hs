@@ -18,7 +18,7 @@ import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Common (Arbitrary (arbitrary), Gen)
-import Test.Cardano.Ledger.Constrained.Classes (Adds, Sums)
+import Test.Cardano.Ledger.Constrained.Classes (Adds)
 import Test.Cardano.Ledger.Constrained.Monad (LiftT)
 import Test.Cardano.Ledger.Constrained.Size (Size (..), genFromSize, runSize)
 import Test.Cardano.Ledger.Constrained.Spec (
@@ -209,28 +209,28 @@ instance
   genFromS msgs _count g spec = genFromSetSpec msgs g spec
 
 instance
-  (Era era, HasRep a, HasRep b, Sums a b, Adds a) =>
+  (Era era, HasRep a, Adds a) =>
   Specification (ElemSpec era a) [a]
   where
   type Count (ElemSpec era a) = Size
   type Generators (ElemSpec era a) = Gen a
   type Reps (ElemSpec era a) = ()
-  type Lenses (ElemSpec era a) = ()
+  type Lenses (ElemSpec era a) = SomeLens era a
   runS = runElemSpec
-  genS _msgs count _g _ _ = genElemSpec hasRep hasRep count
+  genS _msgs count _g _ sl = genElemSpec hasRep sl count
   sizeForS = sizeForElemSpec
   genFromS msgs count g spec = genFromElemSpec msgs g count spec
 
 instance
-  (Era era, HasRep a, HasRep b, Sums a b, Adds a) =>
+  (Era era, HasRep a, Adds a) =>
   Specification (ListSpec era a) [a]
   where
   type Count (ListSpec era a) = Size
   type Generators (ListSpec era a) = Gen a
   type Reps (ListSpec era a) = ()
-  type Lenses (ListSpec era a) = ()
+  type Lenses (ListSpec era a) = SomeLens era a
   runS = runListSpec
-  genS _msgs count _g _ _ = genListSpec hasRep hasRep count
+  genS _msgs count _g _ sl = genListSpec hasRep sl count
   sizeForS = sizeForListSpec
   genFromS msgs _count g spec = genFromListSpec msgs g spec
 
@@ -254,7 +254,9 @@ main =
           , testProperty "RelSpec" $ testSound @(RelSpec TT Int) () () 10 arbitrary
           , testProperty "RngSpec" $
               testSound @(RngSpec TT Int) (SomeLens intDeltaCoinL) IntR 10 arbitrary
-          , testProperty "ListSpec" $ testSound @(ListSpec TT Int) () () SzAny arbitrary
-          , testProperty "ElemSpec" $ testSound @(ElemSpec TT Int) () () SzAny arbitrary
+          , testProperty "ListSpec" $
+              testSound @(ListSpec TT Int) (SomeLens intDeltaCoinL) () SzAny arbitrary
+          , testProperty "ElemSpec" $
+              testSound @(ElemSpec TT Int) (SomeLens intDeltaCoinL) () SzAny arbitrary
           ]
       ]

@@ -719,7 +719,6 @@ genSizedRep n CoinR =
   if n == 0
     then do Positive m <- arbitrary; pure (Coin m)
     else pure (Coin (fromIntegral n))
--- frequency [(1, pure (Coin 0)), (5,] -- We never store (Coin 0) so we don't generate it
 genSizedRep n (_a :-> b) = const <$> genSizedRep n b
 genSizedRep n r@(MapR a b) = do
   mapSized ["From genSizedRep " ++ show r] n (genRep a) (genRep b)

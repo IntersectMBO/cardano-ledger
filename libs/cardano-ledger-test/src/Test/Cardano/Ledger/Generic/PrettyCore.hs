@@ -913,7 +913,7 @@ ppShelleyNewEpochPredicateFailure ::
   ) =>
   ShelleyNewEpochPredFailure era ->
   PDoc
-ppShelleyNewEpochPredicateFailure (EpochFailure x) = prettyA x
+ppShelleyNewEpochPredicateFailure (EpochFailure x) = ppEpochPredicateFailure @era x
 ppShelleyNewEpochPredicateFailure (CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
 ppShelleyNewEpochPredicateFailure (MirFailure _) =
@@ -927,10 +927,10 @@ ppConwayNewEpochPredicateFailure ::
   ) =>
   ConwayNewEpochPredFailure era ->
   PDoc
-ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = prettyA x
-ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = prettyA x
+ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = ppEpochPredicateFailure @era x
 ppConwayNewEpochPredicateFailure (Conway.CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
+ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = ppRatifyPredicateFailure @era x
 
 ppRatifyPredicateFailure :: Conway.EnactPredFailure era -> PDoc
 ppRatifyPredicateFailure (Conway.EnactTreasuryInsufficientFunds wdrl tr) =

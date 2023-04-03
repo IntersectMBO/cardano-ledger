@@ -108,28 +108,44 @@ import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 -- Helper functions
 
 gauss :: Floating a => a -> a -> a -> a
-gauss mean stdev x = (1 / (stdev * (sqrt (2 * pi)))) * exp (negate ((1 / 2) * ((x - mean) / stdev) ** 2))
+gauss mean stdev x = (1 / (stdev * sqrt (2 * pi))) * exp (negate ((1 / 2) * ((x - mean) / stdev) ** 2))
 
--- ==========================================
--- The Adds class
-
+-- | The Adds class
+--
 -- Some methods of 'Adds' like 'minus', 'genAdds', 'partition' and 'fromI' are partial.
--- That is they might not be defined on all inputs. The [String] is a representation
+-- That is they might not be defined on all inputs. The `[string]` is a representation
 -- of a stack trace, that describes what the sytem was doing, so if the function is partial
 -- it can raise an appropriate error. The function
 -- Test.Cardano.Ledger.Constrained.Combinators(errorMess) is used to raise an error
 -- and properly report the stack trace.
-
 class (Eq x, Show x) => Adds x where
-  add :: x -> x -> x
-  minus :: [String] -> x -> x -> x
+  -- | Additive identity
   zero :: x
 
-  -- | 'partition 7 trace 4 235', generate a list of length 4 that
-  --   adds up t0 235, where the smallest number is >= 7
+  -- | Just the unit of increment.
+  one :: x
+
+  -- | Add two of these
+  add :: x -> x -> x
+
+  -- | Subtract one from another
+  minus :: [String] -> x -> x -> x
+
+  -- | Increase by unit of increment
+  increaseBy1 :: Int -> Int
+  increaseBy1 n = add n one
+
+  -- | Decrease by unit of increment
+  decreaseBy1 :: Int -> Int
+  decreaseBy1 n = minus ["Minus"] n one
+
+  -- | Generate a list of values
+  -- @ partition 7 trace 4 235 @ generate a list of length 4 that
+  -- adds up t0 235, where the smallest number is >= 7
   partition :: x -> [String] -> Int -> x -> Gen [x]
 
-  -- | 'genAdds trace spec' generate an 'x' in the range specified by 'spec'
+  -- | Generate a single value
+  -- @ genAdds trace spec @ generates an 'x' in the range specified by 'spec'
   genAdds :: [String] -> AddsSpec x -> Gen x
 
   -- | Analogous to fromIntegral, translate an Int to an appropriate 'x'
@@ -139,67 +155,82 @@ class (Eq x, Show x) => Adds x where
   toI :: x -> Int
 
   -- | Used in testing to get appropriate 'smallest' values to test
-  --   'partition smallest trace count total'. The generator should choose from
-  --   several values appropriate for the type 'x'. choose [0,1,2] would be
-  --   appropriate for Natural, since there are no negative Natural numbers.
+  -- 'partition smallest trace count total'. The generator should choose from
+  -- several values appropriate for the type 'x'. choose [0,1,2] would be
+  -- appropriate for Natural, since there are no negative Natural numbers.
   genSmall :: Gen Int
 
   runOrdCondition :: OrdCond -> x -> x -> Bool
 
-  -- runOrdCondition = undefined
-  smallerOf :: Adds x => x -> x -> x
-
--- smallerOf = undefined
-
--- ================
--- helper functions
+  smallerOf :: x -> x -> x
 
 sumAdds :: (Foldable t, Adds c) => t c -> c
-sumAdds xs = List.foldl' add zero xs
-
-projAdds :: (Foldable t, Sums a b) => t a -> b
-projAdds xs = List.foldl' accum zero xs
-  where
-    accum ans x = add ans (getSum x) -- TODO: Remove after removing Sums constraint over ElemSpec
+sumAdds = List.foldl' add zero
 
 lensAdds :: (Foldable t, Adds b) => Lens' a b -> t a -> b
-lensAdds l xs = List.foldl' accum zero xs
+lensAdds l = List.foldl' accum zero
   where
     accum ans x = add ans (x ^. l)
 
 genFromAddsSpec :: [String] -> AddsSpec c -> Gen Int
 genFromAddsSpec _ AddsSpecAny = genFromIntRange SzAny
 genFromAddsSpec _ (AddsSpecSize _ size) = genFromIntRange size
-genFromAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec applied to AddsSpecNever") msgs
+genFromAddsSpec msgs (AddsSpecNever _) = errorMess "genFromAddsSpec applied to AddsSpecNever" msgs
 
 genFromNonNegAddsSpec :: [String] -> AddsSpec c -> Gen Int
 genFromNonNegAddsSpec _ AddsSpecAny = genFromNonNegIntRange SzAny
 genFromNonNegAddsSpec _ (AddsSpecSize _ size) = genFromNonNegIntRange size
-genFromNonNegAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec applied to AddsSpecNever") msgs
+genFromNonNegAddsSpec msgs (AddsSpecNever _) = errorMess "genFromAddsSpec applied to AddsSpecNever" msgs
 
 -- ================
 -- Adds instances
 
 instance Adds ExUnits where
+  zero = ExUnits 0 0
+  one = ExUnits 1 1
   add (ExUnits a b) (ExUnits c d) = ExUnits (a + c) (b + d)
   minus msgs (ExUnits a b) (ExUnits c d) =
     ExUnits
       (minus ("Ex memory" : msgs) a c)
       (minus ("Ex steps" : msgs) b d)
-  zero = ExUnits 0 0
+  increaseBy1 n = let (i, j) = unpair n in pair (increaseBy1 @Natural i) (increaseBy1 @Natural j)
+  decreaseBy1 n = let (i, j) = unpair n in pair (decreaseBy1 @Natural i) (decreaseBy1 @Natural j)
   partition (ExUnits smallestmemory smalleststeps) msgs count (ExUnits memory steps) = do
     memG <- partition smallestmemory ("Ex memory" : msgs) count memory
     stepsG <- partition smalleststeps ("Ex steps" : msgs) count steps
     pure (zipWith ExUnits memG stepsG)
-  genAdds msgs spec = fromI ms <$> genFromNonNegAddsSpec ms spec
+  genAdds msgs = \case
+    AddsSpecAny -> errorMess "AddsSpecAny" ms
+    AddsSpecNever msgs' -> errorMess "AddsSpecNever" $ ms <> msgs'
+    AddsSpecSize msg sz -> case sz of
+      SzLeast n ->
+        let (i, j) = unpair n
+         in do
+              ig <- fromIntegral <$> genFromSize (SzLeast i)
+              jg <- fromIntegral <$> genFromSize (SzLeast j)
+              pure $ ExUnits ig jg
+      SzMost n ->
+        let (i, j) = unpair n
+         in do
+              ig <- fromIntegral <$> genFromSize (SzMost i)
+              jg <- fromIntegral <$> genFromSize (SzMost j)
+              pure $ ExUnits ig jg
+      SzExact n ->
+        let (i, j) = unpair n
+         in do
+              ig <- fromIntegral <$> genFromSize (SzExact i)
+              jg <- fromIntegral <$> genFromSize (SzExact j)
+              pure $ ExUnits ig jg
+      SzNever m -> errorMess "AddsSpecSize SzNever" $ ms <> [msg] <> m
+      _ -> errorMess "AddsSpecSize SzAny or SzRng" $ ms <> [msg]
     where
       ms = msgs ++ ["genAdds ExUnits"]
   fromI msgs n = ExUnits mem step
     where
       (memInt, stepInt) = unpair n
-      mem = fromI ("Ex memory" : msgs) (fromIntegral memInt)
-      step = fromI ("Ex steps" : msgs) (fromIntegral stepInt)
-  toI (ExUnits mem step) = pair (fromIntegral mem) (fromIntegral step)
+      mem = fromI ("Ex memory" : msgs) memInt
+      step = fromI ("Ex steps" : msgs) stepInt
+  toI (ExUnits mem step) = pair (toI mem) (toI step)
   genSmall = oneof [pure $ toI (ExUnits 1 1), pure $ toI (ExUnits 2 2), pure $ toI (ExUnits 3 1)]
 
   -- Some ExUnits are incomparable: i.e. x=(ExUnits 5 7) and y=(ExUnits 8 3)
@@ -209,22 +240,20 @@ instance Adds ExUnits where
   runOrdCondition LTE x y = runOrdCondition LTH x y || runOrdCondition EQL x y
   runOrdCondition GTH (ExUnits a b) (ExUnits c d) = a > c && b > d
   runOrdCondition GTE x y = runOrdCondition GTH x y || runOrdCondition EQL x y
-  smallerOf x y =
-    if runOrdCondition LTE x y
-      then x
-      else
-        if runOrdCondition GTE x y
-          then y
-          else
-            errorMess
-              "ExUnits are incomparable, can't choose the 'smallerOf'"
-              [show x, show y]
+  smallerOf x y
+    | runOrdCondition LTE x y = x
+    | runOrdCondition GTE x y = y
+    | otherwise = errorMess "ExUnits are incomparable, can't choose the 'smallerOf'" [show x, show y]
 
 -- ================
 instance Adds Word64 where
-  add = (+)
-  minus _ = (-)
   zero = 0
+  one = 1
+  add = (+)
+  minus msg x y =
+    if x < y
+      then errorMess ("(minus @Word64 " ++ show x ++ " " ++ show y ++ ") is not possible") msg
+      else x - y
   partition = partitionWord64
   genAdds msgs spec = fromI ms <$> genFromNonNegAddsSpec ms spec
     where
@@ -237,9 +266,10 @@ instance Adds Word64 where
   smallerOf = min
 
 instance Adds Int where
+  zero = 0
+  one = 1
   add = (+)
   minus _ = (-)
-  zero = 0
   partition = partitionInt
   genAdds msgs spec = fromI ms <$> genFromAddsSpec ms spec
     where
@@ -251,12 +281,13 @@ instance Adds Int where
   smallerOf = min
 
 instance Adds Natural where
+  zero = 0
+  one = 1
   add = (+)
   minus msg x y =
     if x < y
       then errorMess ("(minus @Natural " ++ show x ++ " " ++ show y ++ ") is not possible") msg
       else x - y
-  zero = 0
   partition = partitionNatural
   genAdds msgs spec = fromI ms <$> genFromNonNegAddsSpec ms spec
     where
@@ -269,9 +300,10 @@ instance Adds Natural where
   smallerOf = min
 
 instance Adds Rational where
+  zero = 0
+  one = 1
   add = (+)
   minus _ = (-)
-  zero = 0
   partition = partitionRational
   genAdds msgs spec = fromI ms <$> genFromAddsSpec ms spec
     where
@@ -283,12 +315,13 @@ instance Adds Rational where
   smallerOf = min
 
 instance Adds Coin where
+  zero = Coin 0
+  one = Coin 1
   add = (<+>)
   minus msg (Coin n) (Coin m) =
     if n < m
       then errorMess ("(minus @Coin " ++ show n ++ " " ++ show m ++ ") is not possible") msg
       else Coin (n - m)
-  zero = Coin 0
   partition = partitionCoin
   genAdds msgs spec = fromI ms <$> genFromNonNegAddsSpec ms spec
     where
@@ -301,9 +334,10 @@ instance Adds Coin where
   smallerOf = min
 
 instance Adds DeltaCoin where
+  zero = DeltaCoin 0
+  one = DeltaCoin 1
   add = (<+>)
   minus _ (DeltaCoin n) (DeltaCoin m) = DeltaCoin (n - m)
-  zero = DeltaCoin 0
   partition = partitionDeltaCoin
   genAdds msgs spec = fromI ms <$> genFromAddsSpec ms spec
     where
@@ -766,6 +800,44 @@ genUTxO p = case p of
   (Alonzo _) -> arbitrary
   (Babbage _) -> arbitrary
   (Conway _) -> arbitrary
+
+-- ========================
+
+data ScriptsNeededF era where
+  ScriptsNeededF :: Proof era -> ScriptsNeeded era -> ScriptsNeededF era
+
+unScriptsNeededF :: ScriptsNeededF era -> ScriptsNeeded era
+unScriptsNeededF (ScriptsNeededF _ v) = v
+
+instance Show (ScriptsNeededF era) where
+  show (ScriptsNeededF p t) = show (pcScriptsNeeded p t)
+
+-- ========================
+
+data ScriptF era where
+  ScriptF :: Proof era -> Script era -> ScriptF era
+
+unScriptF :: ScriptF era -> Script era
+unScriptF (ScriptF _ v) = v
+
+instance Show (ScriptF era) where
+  show (ScriptF p t) = show ((unReflect pcScript p t) :: PDoc)
+
+instance Eq (ScriptF era) where
+  (ScriptF (Shelley _) x) == (ScriptF (Shelley _) y) = x == y
+  (ScriptF (Allegra _) x) == (ScriptF (Allegra _) y) = x == y
+  (ScriptF (Mary _) x) == (ScriptF (Mary _) y) = x == y
+  (ScriptF (Alonzo _) x) == (ScriptF (Alonzo _) y) = x == y
+  (ScriptF (Babbage _) x) == (ScriptF (Babbage _) y) = x == y
+  (ScriptF (Conway _) x) == (ScriptF (Conway _) y) = x == y
+
+genScriptF :: Era era => Proof era -> Gen (ScriptF era)
+genScriptF proof = do
+  tag <- arbitrary
+  vi <- arbitrary
+  m <- Map.fromList <$> (vectorOf 5 arbitrary)
+  corescript <- genCoreScript proof tag m vi
+  pure (ScriptF proof corescript)
 
 -- ========================
 
