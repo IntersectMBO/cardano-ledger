@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.TxAuxData (
-  AllegraTxAuxData (AllegraTxAuxData, ..),
+  AllegraTxAuxData (AllegraTxAuxData),
 
   -- * Deprecations
   AuxiliaryData,
