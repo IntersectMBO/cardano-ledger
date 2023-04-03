@@ -11,7 +11,7 @@
 
 module Test.Cardano.Ledger.Constrained.Classes where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -32,6 +32,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Universe (Singleton (..), (:~:) (Refl))
 import Data.Word (Word64)
 import GHC.Real (denominator, numerator, (%))
 import Lens.Micro
@@ -274,6 +275,12 @@ instance Sizeable Int where
 instance Sizeable Word64 where
   getSize n = fromIntegral n
 
+instance Sizeable EpochNo where
+  getSize (EpochNo n) = fromIntegral n
+
+instance Sizeable SlotNo where
+  getSize (SlotNo n) = fromIntegral n
+
 instance (Show dom, Show rng) => Sizeable (Map dom rng) where
   getSize m = Map.size m
 
@@ -319,6 +326,33 @@ instance Count EpochNo where
   genPred n = pure (n - 1)
   genSucc n = pure (n + 1)
 
+instance Count SlotNo where
+  canFollow predX succX = predX + 1 == succX
+  genPred n | n == 0 = error ("genPredFromSucc @SlotNo is undefined on " ++ show n)
+  genPred n = pure (n - 1)
+  genSucc n = pure (n + 1)
+
+-- =======================================================================
+-- The FromList class
+
+class (Eq a, Eq (t a)) => FromList t a where
+  makeFromList :: [a] -> t a
+  getList :: t a -> [a]
+
+instance Eq a => FromList [] a where
+  makeFromList xs = xs
+  getList xs = xs
+
+instance (Ord a) => FromList Set a where
+  makeFromList xs = Set.fromList xs
+  getList = Set.toList
+
+instance Eq a => FromList Maybe a where
+  makeFromList [] = Nothing
+  makeFromList (x : _) = Just x
+  getList Nothing = []
+  getList (Just x) = [x]
+
 -- ============================================================================
 -- Special accomodation for Type Families
 -- ============================================================================
@@ -328,6 +362,17 @@ data TxOutF era where
 
 unTxOut :: TxOutF era -> TxOut era
 unTxOut (TxOutF _ x) = x
+
+instance Eq (TxOutF era) where
+  TxOutF p1 x1 == TxOutF p2 x2 = case testEql p1 p2 of
+    Just Refl -> case p1 of
+      Shelley _ -> x1 == x2
+      Allegra _ -> x1 == x2
+      Mary _ -> x1 == x2
+      Alonzo _ -> x1 == x2
+      Babbage _ -> x1 == x2
+      Conway _ -> x1 == x2
+    Nothing -> False
 
 -- ======
 data ValueF era where
