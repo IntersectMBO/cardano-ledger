@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.TxAuxData (
-  AllegraTxAuxData (AllegraTxAuxData, AllegraTxAuxData', ..),
+  AllegraTxAuxData (AllegraTxAuxData, ..),
 
   -- * Deprecations
   AuxiliaryData,
@@ -130,16 +130,6 @@ pattern AllegraTxAuxData blob sp <- (getMemoRawType -> AllegraTxAuxDataRaw blob 
 type AuxiliaryData = AllegraTxAuxData
 
 {-# DEPRECATED AuxiliaryData "Use `AllegraTxAuxData` instead" #-}
-
-pattern AllegraTxAuxData' ::
-  Era era =>
-  Map Word64 Metadatum ->
-  StrictSeq (Timelock era) ->
-  AllegraTxAuxData era
-pattern AllegraTxAuxData' blob sp <-
-  (getMemoRawType -> AllegraTxAuxDataRaw blob sp)
-
-{-# COMPLETE AllegraTxAuxData' #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation

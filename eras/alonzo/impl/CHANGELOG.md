@@ -11,7 +11,6 @@
 * Rename `smMap` to `cmValues`
 * Remove redundant pattern synonym `AlonzoTxAuxData'{atadMetadata',atadTimelock',atadPlutus'}`
 
-
 ###`testlib`
 
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
