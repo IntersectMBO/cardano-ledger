@@ -34,7 +34,7 @@ module Cardano.Ledger.Api.Tx (
   module Cardano.Ledger.Api.Tx.Wits,
 
   -- * Shelley onwards
-  EraTx,
+  EraTx (Tx),
   mkBasicTx,
   bodyTxL,
   witsTxL,

@@ -17,6 +17,7 @@
 
 module Cardano.Ledger.TxIn (
   TxId (..),
+  _unTxId,
   TxIn (TxIn),
   mkTxInPartial,
   TxIx,
@@ -52,9 +53,13 @@ import NoThunks.Class (NoThunks (..))
 -- ====================================================================================
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId c = TxId {_unTxId :: SafeHash c EraIndependentTxBody}
+newtype TxId c = TxId {unTxId :: SafeHash c EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, ToJSON, FromJSON)
+
+_unTxId :: TxId c -> SafeHash c EraIndependentTxBody
+_unTxId = unTxId
+{-# DEPRECATED _unTxId "In favor of `unTxId`" #-}
 
 deriving newtype instance Crypto c => HeapWords (TxId c)
 

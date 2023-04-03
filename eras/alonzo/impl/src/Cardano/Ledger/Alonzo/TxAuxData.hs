@@ -23,13 +23,9 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   -- * AlonzoTxAuxData
   AlonzoTxAuxData (
     AlonzoTxAuxData,
-    AlonzoTxAuxData',
     atadMetadata,
     atadTimelock,
-    atadPlutus,
-    atadMetadata',
-    atadTimelock',
-    atadPlutus'
+    atadPlutus
   ),
   mkAlonzoTxAuxData,
   AuxiliaryDataHash (..),
@@ -154,7 +150,7 @@ mkAlonzoTxAuxData atadrMetadata allScripts =
         ]
 
 getAlonzoTxAuxDataScripts :: Era era => AlonzoTxAuxData era -> StrictSeq (AlonzoScript era)
-getAlonzoTxAuxDataScripts AlonzoTxAuxData' {atadTimelock' = timelocks, atadPlutus' = plutus} =
+getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadTimelock = timelocks, atadPlutus = plutus} =
   mconcat $
     (TimelockScript <$> timelocks)
       : [ PlutusScript lang . unBinaryPlutus <$> StrictSeq.fromList (NE.toList plutusScripts)
@@ -282,14 +278,3 @@ pattern AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} <-
       mkMemoized $ AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus}
 
 {-# COMPLETE AlonzoTxAuxData #-}
-
-pattern AlonzoTxAuxData' ::
-  Era era =>
-  Map Word64 Metadatum ->
-  StrictSeq (Timelock era) ->
-  Map Language (NE.NonEmpty BinaryPlutus) ->
-  AlonzoTxAuxData era
-pattern AlonzoTxAuxData' {atadMetadata', atadTimelock', atadPlutus'} <-
-  (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata' atadTimelock' atadPlutus')
-
-{-# COMPLETE AlonzoTxAuxData' #-}

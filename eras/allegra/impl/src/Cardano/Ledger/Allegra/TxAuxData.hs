@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.TxAuxData (
-  AllegraTxAuxData (AllegraTxAuxData, AllegraTxAuxData', ..),
+  AllegraTxAuxData (AllegraTxAuxData),
 
   -- * Deprecations
   AuxiliaryData,
@@ -38,7 +38,6 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core (
   Era (..),
   EraTxAuxData (hashTxAuxData, validateTxAuxData),
-  Script,
  )
 import qualified Cardano.Ledger.Core as Core (TxAuxData)
 import Cardano.Ledger.Crypto (Crypto (HASH))
@@ -86,7 +85,7 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   }
   deriving (Generic, Eq)
 
-instance (Crypto c) => EraTxAuxData (AllegraEra c) where
+instance Crypto c => EraTxAuxData (AllegraEra c) where
   type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
   hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
@@ -118,7 +117,7 @@ deriving newtype instance Era era => NoThunks (AllegraTxAuxData era)
 deriving newtype instance NFData (AllegraTxAuxData era)
 
 pattern AllegraTxAuxData ::
-  (EncCBOR (Script era), Era era) =>
+  Era era =>
   Map Word64 Metadatum ->
   StrictSeq (Timelock era) ->
   AllegraTxAuxData era
@@ -132,31 +131,18 @@ type AuxiliaryData = AllegraTxAuxData
 
 {-# DEPRECATED AuxiliaryData "Use `AllegraTxAuxData` instead" #-}
 
-pattern AllegraTxAuxData' ::
-  Era era =>
-  Map Word64 Metadatum ->
-  StrictSeq (Timelock era) ->
-  AllegraTxAuxData era
-pattern AllegraTxAuxData' blob sp <-
-  (getMemoRawType -> AllegraTxAuxDataRaw blob sp)
-
-{-# COMPLETE AllegraTxAuxData' #-}
-
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance (Era era, EncCBOR (Script era)) => EncCBOR (AllegraTxAuxDataRaw era) where
+instance Era era => EncCBOR (AllegraTxAuxDataRaw era) where
   encCBOR (AllegraTxAuxDataRaw blob sp) =
     encode (Rec AllegraTxAuxDataRaw !> To blob !> To sp)
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AllegraTxAuxData era)
 
-instance
-  (Era era, DecCBOR (Annotator (Script era))) =>
-  DecCBOR (Annotator (AllegraTxAuxDataRaw era))
-  where
+instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
   decCBOR =
     peekTokenType >>= \case
       TypeMapLen -> decodeFromMap
@@ -183,5 +169,4 @@ instance
 deriving via
   (Mem AllegraTxAuxDataRaw era)
   instance
-    (Era era, DecCBOR (Annotator (Script era))) =>
-    DecCBOR (Annotator (AllegraTxAuxData era))
+    Era era => DecCBOR (Annotator (AllegraTxAuxData era))

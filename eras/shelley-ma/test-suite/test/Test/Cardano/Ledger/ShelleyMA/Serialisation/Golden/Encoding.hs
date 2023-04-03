@@ -163,7 +163,7 @@ scriptGoldenTest =
               )
         )
 
-metadataNoScriptsGoldenTest :: forall era. (Era era, Script era ~ Timelock era) => TestTree
+metadataNoScriptsGoldenTest :: forall era. Era era => TestTree
 metadataNoScriptsGoldenTest =
   checkEncodingCBORAnnotated
     (eraProtVerHigh @era)
@@ -179,7 +179,7 @@ metadataNoScriptsGoldenTest =
     )
 
 -- CONTINUE also Scripts
-metadataWithScriptsGoldenTest :: forall era. (Era era, Script era ~ Timelock era) => TestTree
+metadataWithScriptsGoldenTest :: forall era. Era era => TestTree
 metadataWithScriptsGoldenTest =
   checkEncodingCBORAnnotated
     (eraProtVerHigh @era)
