@@ -26,6 +26,7 @@
 * Remove custom `Fail` type, in favor of
   [`FailT`](https://hackage.haskell.org/package/FailT) package
 * Move `bBodySize` into `Cardano.Ledger.Core`
+* Rename `TxId` field from `_unTxId` to `unTxId`
 
 ### `testlib`
 

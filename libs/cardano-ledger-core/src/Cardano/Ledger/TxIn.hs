@@ -52,7 +52,7 @@ import NoThunks.Class (NoThunks (..))
 -- ====================================================================================
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId c = TxId {_unTxId :: SafeHash c EraIndependentTxBody}
+newtype TxId c = TxId {unTxId :: SafeHash c EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, ToJSON, FromJSON)
 

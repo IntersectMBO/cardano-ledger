@@ -51,7 +51,7 @@ instance PersistFieldSql ShortByteString where
   sqlType _ = SqlBlob
 
 instance PersistField (TxId C) where
-  toPersistValue = PersistByteString . hashToBytes . extractHash . _unTxId
+  toPersistValue = PersistByteString . hashToBytes . extractHash . unTxId
   fromPersistValue (PersistByteString bs) =
     case hashFromBytes bs of
       Nothing -> Left "Invalid number of bytes for the hash"
