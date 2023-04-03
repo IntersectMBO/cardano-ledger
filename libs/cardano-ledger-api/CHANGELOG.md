@@ -18,7 +18,7 @@
 * Export from `Cardano.Ledger.Api.Scripts.Data`: `BinaryData`, `DataHash`, `Datum`,
   `binaryDataToData`, `dataToBinaryData`, `datumDataHash`, `getPlutusData`,
   `hashBinaryData` and `makeBinaryData`.
-* Export `IsValid` from `Cardano.Ledger.Api.Tx`
+* Export `Tx` and `IsValid` from `Cardano.Ledger.Api.Tx`
 * Export from `Cardano.Ledger.Api.Tx.AuxData`: `mkAlonzoTxAuxData` and `getAlonzoTxAuxDataScripts`
 * Export from `Cardano.Ledger.Api.Tx.Wits`: `WitVKey`, `BootstrapWitness`,
   `AlonzoEraTxWits`, `TxDats`, `unTxDats`, `Redeemers`, `unRedeemers`, `RdmrPtr` and
@@ -27,7 +27,7 @@
 * Export from `Cardano.Ledger.Api.Era`:
   * `Era`
   * `ByronEra`
-  * And protocol version related functionality: `eraProtVerHigh`, `eraProtVerLow`,
+  * Protocol version related functionality: `eraProtVerHigh`, `eraProtVerLow`,
     `AtLeastEra`, `AtMostEra`, `ExactEra`, `ProtVerAtLeast`, `ProtVerAtMost`,
     `ProtVerInBounds`, `atLeastEra` and `atMostEra`
 * Move `Cardano.Ledger.Alonzo.Tools` module from `cardano-ledegr-alonzo` into
