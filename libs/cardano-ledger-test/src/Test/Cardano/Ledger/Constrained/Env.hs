@@ -112,7 +112,7 @@ data Payload era where
   Payload :: Rep era t -> t -> Access era s t -> Payload era
 
 instance Shaped (V era) (Rep era) where
-  shape (V n1 rep _) = Nary 0 [Esc StringR n1, shape rep]
+  shape (V n1 rep _) = Nary 0 [Esc (ListR CharR) n1, shape rep]
 
 -- We are ignoring the Accessfield on purpose
 
