@@ -30,6 +30,7 @@ module Cardano.Ledger.Mary.Value (
   valueFromList,
   ToExpr (..),
   CompactValue (..),
+  isMultiAssetSmallEnough,
 )
 where
 
@@ -335,20 +336,13 @@ encodeMultiAssetMaps (MultiAsset m) = encCBOR m
 decodeMultiAssetMaps :: Crypto c => (forall t. Decoder t Integer) -> Decoder s (MultiAsset c)
 decodeMultiAssetMaps decodeAmount = do
   ma <- decodeMap decCBOR (decodeMap decCBOR decodeAmount)
-  -- compact form inequality:
-  --   8n (Word64) + 2n (Word16) + 2n (Word16) + 28p (policy ids) + sum of lengths of unique asset names <= 65535
-  -- maximum size for the asset name is 32 bytes, so:
-  -- 8n + 2n + 2n + 28p + 32n <= 65535
-  -- where: n = total number of assets, p = number of unique policy ids
-  let numPolicies = length ma
-      numAssetNames = sum $ length <$> ma
-  if 44 * numAssetNames + 28 * numPolicies > 65535
-    then fail "MultiAsset too big to compact"
-    else
+  if isMultiAssetSmallEnough (MultiAsset ma)
+    then
       ifDecoderVersionAtLeast
         (natVersion @9)
         (MultiAsset ma <$ forM_ ma (\m -> when (Map.null m) $ fail "Empty Assets are not allowed"))
         (pure $ MultiAsset $ prune ma)
+    else fail "MultiAsset too big to compact"
 
 decodeMultiAssetMint :: Crypto c => Decoder s (MultiAsset c)
 decodeMultiAssetMint = decodeMultiAssetMaps decodeIntegerBounded64
@@ -572,8 +566,8 @@ to ::
 to (MaryValue ada (MultiAsset m))
   | Map.null m =
       CompactValueAdaOnly . CompactCoin <$> integerToWord64 ada
-to v@(MaryValue _ (MultiAsset ma)) = do
-  c <- assert (44 * sum (length <$> ma) + 28 * length ma < 65535) (integerToWord64 ada)
+to v@(MaryValue _ ma) = do
+  c <- assert (isMultiAssetSmallEnough ma) (integerToWord64 ada)
   -- Here we convert the (pid, assetName, quantity) triples into
   -- (Int, (Word16,Word16,Word64))
   -- These represent the index, pid offset, asset name offset, and quantity.
@@ -687,6 +681,18 @@ to v@(MaryValue _ (MultiAsset ma)) = do
       q' <- integerToWord64 q
       pure (pidOffset pid, assetNameOffset aname, q')
 
+-- | Unlike `representationSize`, this function cheaply checks whether
+-- any offset within a MultiAsset compact representation is likely to overflow Word16.
+--
+-- compact form inequality:
+--   8n (Word64) + 2n (Word16) + 2n (Word16) + 28p (policy ids) + sum of lengths of unique asset names <= 65535
+-- maximum size for the asset name is 32 bytes, so:
+-- 8n + 2n + 2n + 28p + 32n <= 65535
+-- where: n = total number of assets, p = number of unique policy ids
+isMultiAssetSmallEnough :: MultiAsset c -> Bool
+isMultiAssetSmallEnough (MultiAsset ma) =
+  44 * sum (length <$> ma) + 28 * length ma <= 65535
+
 representationSize ::
   forall c.
   Crypto c =>
@@ -708,8 +714,8 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
 from :: forall c. (Crypto c) => CompactValue c -> MaryValue c
 from (CompactValueAdaOnly (CompactCoin c)) = MaryValue (fromIntegral c) (MultiAsset Map.empty)
 from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
-  let mv@(MaryValue _ (MultiAsset maMap)) = valueFromList (fromIntegral c) triples
-   in assert (44 * sum (length <$> maMap) + 28 * length maMap < 65535) mv
+  let mv@(MaryValue _ ma) = valueFromList (fromIntegral c) triples
+   in assert (isMultiAssetSmallEnough ma) mv
   where
     n = fromIntegral numAssets
 

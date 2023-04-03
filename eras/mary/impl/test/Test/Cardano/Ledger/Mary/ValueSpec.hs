@@ -84,7 +84,6 @@ spec = do
                   (eraProtVerLow @Mary)
                   maxBound
               )
-
   describe "MaryValue compacting" $ do
     prop "Canonical generator" $
       \(ma :: MaryValue StandardCrypto) ->

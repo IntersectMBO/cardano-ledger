@@ -23,6 +23,7 @@ import Cardano.Ledger.Mary.Value (
   MaryValue (..),
   MultiAsset (..),
   PolicyID (..),
+  isMultiAssetSmallEnough,
  )
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Data.Int (Int64)
@@ -133,14 +134,14 @@ genMultiAssetTriple genAmount = (,,) <$> arbitrary <*> arbitrary <*> genAmount
 -- But, exceeding this number does make the probability of causing overflow > 0.
 genMultiAsset :: forall c. Crypto c => Gen Integer -> Gen (MultiAsset c)
 genMultiAsset genAmount = do
-  MultiAsset ma <-
+  ma <-
     oneof
       [ MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbitrary genAmount)
       , multiAssetFromListBounded <$> listOf1 (genMultiAssetTriple $ fromIntegral <$> genAmount)
       ]
-  if 44 * sum (length <$> ma) + 28 * length ma > 65535
-    then scale (`div` 2) $ genMultiAsset genAmount
-    else pure $ MultiAsset ma
+  if isMultiAssetSmallEnough ma
+    then pure ma
+    else scale (`div` 2) $ genMultiAsset genAmount
 
 -- | For tests, because `insertMultiAsset` called through `genMultiAsset` filters out zero values
 genMultiAssetZero :: Crypto c => Gen (MultiAsset c)
@@ -151,24 +152,18 @@ genMultiAssetZero = MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbi
 genMultiAssetToFail :: forall c. Crypto c => Gen (MultiAsset c)
 genMultiAssetToFail = do
   let genAssetNameToFail = AssetName <$> genShortByteString 32
-  (numP, numA) <-
-    oneof
-      -- Ensure that #policies <= #assets by minimizing the policies and maximizing the assets.
-      [ do
-          numAssetNames <- chooseInt (1, 1489) -- n > 1489 will produce negative `minNumPolicyIds`
-          let minNumPolicyIds = (65535 - 44 * numAssetNames) `div` 28
-          numPolicyIds <- (minNumPolicyIds +) . getPositive <$> arbitrary
-          pure (min numPolicyIds numAssetNames, max numPolicyIds numAssetNames)
-      , do
-          numPolicyIds <- chooseInt (1, 2340) -- p > 2340 will produce negative `minNumAssetNames`
-          let minNumAssetNames = (65535 - 28 * numPolicyIds) `div` 44
-          numAssetNames <- (minNumAssetNames +) . getPositive <$> arbitrary
-          pure (min numPolicyIds numAssetNames, max numPolicyIds numAssetNames)
-      ]
+  (numP, numA) <- do
+    -- When numAssetNames > 1489 it is enough to have at least 1 policy id
+    numAssetNames <- chooseInt (1, 1500)
+    -- Make at least 1 policy id
+    let minNumPolicyIds = max 0 ((65535 - 44 * numAssetNames) `div` 28)
+    numPolicyIds <- (minNumPolicyIds +) . getPositive <$> arbitrary
+    -- Ensure we have at least as many asset names as there are policy ids
+    pure (numPolicyIds, max numPolicyIds numAssetNames)
 
   -- Here we generate separately a list of asset names and a list of policy ids and
   -- randomly shuffle them into a MultiAsset, ensuring that each policy has at least one asset.
-  ps <- vectorOf numP (arbitrary :: Gen (PolicyID c))
+  ps <- vectorOf numP (PolicyID . ScriptHash <$> arbitrary)
   as <- vectorOf numA $ (,) <$> genAssetNameToFail <*> (getNonZero @Int <$> arbitrary)
   let initialTriples = zipWith (\p (a, v) -> (p, a, v)) ps as -- All policies should have at least one asset
       remainingAs = drop numP as
@@ -180,11 +175,10 @@ genMultiAssetToFail = do
       )
       remainingAs
   let MultiAsset ma = multiAssetFromListBounded $ initialTriples <> remainingTriples
+  -- Ensure that the large numbers aren't reduced due to duplicates.
+  -- This is impossible in practice, since PRNG produces uniform values.
   if length ma == numP && sum (length <$> ma) == numA
-    then -- Ensure that the large numbers aren't reduced due to duplicates
-    -- In practice, this occurs more often than anticipated, especially,
-    -- with duplicate policy ids.
-      pure $ MultiAsset ma
+    then pure $ MultiAsset ma
     else genMultiAssetToFail
 
 instance Crypto c => Arbitrary (MultiAsset c) where
