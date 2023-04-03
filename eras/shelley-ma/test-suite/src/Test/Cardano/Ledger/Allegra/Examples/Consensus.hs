@@ -73,5 +73,5 @@ exampleTimelock =
       , RequireSignature (mkKeyHash 100)
       ]
 
-exampleAllegraTxAuxData :: (Era era, Script era ~ Timelock era) => AllegraTxAuxData era
+exampleAllegraTxAuxData :: Era era => AllegraTxAuxData era
 exampleAllegraTxAuxData = AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])
