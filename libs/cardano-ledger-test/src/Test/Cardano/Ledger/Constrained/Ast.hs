@@ -20,7 +20,7 @@ import Data.Text (Text, pack)
 import qualified Data.Universe as Univ (Any (..))
 import Data.Word (Word64)
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Count (..), Sizeable (..), Sums (..))
+import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Count (..), FromList (..), Sizeable (..), Sums (..))
 import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), Payload (..), V (..), findVar, storeVar)
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), runOrdCond, runSize)
@@ -37,8 +37,10 @@ data Term era t where
   ProjS :: (Ord b, Ord t) => Lens' b t -> Rep era t -> Term era (Set b) -> Term era (Set t)
   Delta :: Term era Coin -> Term era DeltaCoin
   Negate :: Term era DeltaCoin -> Term era DeltaCoin
+  Restrict :: Ord a => Term era (Set a) -> Term era (Map a b) -> Term era (Map a b)
 
 infix 4 :=:
+infix 4 :<-:
 
 data Pred era where
   Sized :: Sizeable t => Term era Size -> Term era t -> Pred era
@@ -49,6 +51,12 @@ data Pred era where
   Random :: Term era t -> Pred era
   Component :: Term era t -> [AnyF era t] -> Pred era
   CanFollow :: Count n => Term era n -> Term era n -> Pred era
+  Member :: Ord a => Term era a -> Term era (Set a) -> Pred era
+  NotMember :: Ord a => Term era a -> Term era (Set a) -> Pred era
+  (:<-:) :: Term era t -> Target era t -> Pred era
+  List :: FromList f t => Term era (f t) -> [Term era t] -> Pred era
+  Choose :: Eq t => Size -> Term era [t] -> [(Target era t, [Pred era])] -> Pred era
+  Maybe :: Term era (Maybe t) -> Target era t -> [Pred era] -> Pred era
 
 data Sum era c where
   SumMap :: Adds c => Term era (Map a c) -> Sum era c
@@ -135,6 +143,7 @@ instance Show (Term era t) where
   show (ProjS _ r t) = "(ProjS " ++ show r ++ " " ++ show t ++ ")"
   show (Delta x) = "(Delta " ++ show x ++ ")"
   show (Negate x) = "(Negate " ++ show x ++ ")"
+  show (Restrict r t) = "(Restrict " ++ show r ++ " " ++ show t ++ ")"
   showList xs ans = unlines (ans : (map show xs))
 
 instance Show (Sum era c) where
@@ -152,7 +161,18 @@ instance Show (Pred era) where
   show (Random x) = "Random " ++ show x
   show (Component t ws) = "Component " ++ show t ++ " " ++ show ws
   show (CanFollow x y) = "CanFollow " ++ show x ++ " " ++ show y
+  show (Member x y) = "Member " ++ show x ++ " " ++ show y
+  show (NotMember x y) = "NotMember " ++ show x ++ " " ++ show y
+  show (x :<-: y) = show x ++ " :<-: " ++ showT y
+  show (List t xs) = "List " ++ show t ++ " [" ++ showL show ", " xs ++ "]"
+  show (Choose s term xs) = unlines (("Choose " ++ show s ++ " " ++ show term) : (map showchoices xs))
+    where
+      showchoices (target, ps) = showAllTarget target ++ showT target ++ " | " ++ showL show ", " ps ++ ")"
+  show (Maybe term target ps) = "Maybe " ++ show term ++ showAllTarget target ++ " | " ++ showL show ", " ps
   showList xs ans = unlines (ans : (map show xs))
+
+showAllTarget :: Target era t -> [Char]
+showAllTarget tar = "  (forall " ++ showL show " " (Set.toList (varsOfTarget Set.empty tar)) ++ ". "
 
 instance Show (Target era t) where
   show (Constr nm _f) = nm
@@ -161,6 +181,15 @@ instance Show (Target era t) where
     where
       pp :: Univ.Any (Target era) -> String
       pp (Univ.Any spec) = show spec
+
+-- | "Print a Target as nested applications"
+showT :: forall era t. Target era t -> String
+showT (Constr nm _f) = nm
+showT (Simple x) = show x
+showT (f :$ x) = "(" ++ showT f ++ " " ++ showL pp " " (args x) ++ ")"
+  where
+    pp :: Univ.Any (Target era) -> String
+    pp (Univ.Any spec) = showT spec
 
 args :: Target era t -> [Univ.Any (Target era)]
 args (x :$ xs) = Univ.Any x : args xs
@@ -203,6 +232,7 @@ varsOfTerm ans s = case s of
   (ProjS _ _ x) -> varsOfTerm ans x
   Delta x -> varsOfTerm ans x
   Negate x -> varsOfTerm ans x
+  Restrict st mp -> varsOfTerm (varsOfTerm ans st) mp
 
 vars :: Term era t -> Set (Name era)
 vars x = varsOfTerm Set.empty x
@@ -225,7 +255,19 @@ varsOfPred ans s = case s of
     where
       varsOfComponent l (AnyF (Field n r a)) = Set.insert (Name $ V n r a) l
       varsOfComponent l (AnyF (FConst _ _ _)) = l
-  (CanFollow a b) -> varsOfTerm (varsOfTerm ans a) b
+  CanFollow a b -> varsOfTerm (varsOfTerm ans a) b
+  Member a b -> varsOfTerm (varsOfTerm ans a) b
+  NotMember a b -> varsOfTerm (varsOfTerm ans a) b
+  a :<-: b -> varsOfTarget (varsOfTerm ans a) b
+  List a bs -> List.foldl' varsOfTerm (varsOfTerm ans a) bs
+  Choose _ term pairs -> varsOfTerm (varsOfPairs ans pairs) term
+  Maybe term target ps -> varsOfTerm (varsOfPairs ans [(target, ps)]) term
+
+varsOfPairs :: Set (Name era) -> [(Target era t2, [Pred era])] -> Set (Name era)
+varsOfPairs ans1 [] = ans1
+varsOfPairs ans1 ((t, ps) : more) = varsOfPairs (act ans1 t ps) more
+  where
+    act ans2 tar preds = Set.union (Set.difference (List.foldl' varsOfPred Set.empty preds) (varsOfTarget Set.empty tar)) ans2
 
 varsOfSum :: Set (Name era) -> Sum era r -> Set (Name era)
 varsOfSum ans (SumMap y) = varsOfTerm ans y
@@ -288,6 +330,7 @@ substTerm sub (ProjM l r x) = ProjM l r (substTerm sub x)
 substTerm sub (ProjS l r x) = ProjS l r (substTerm sub x)
 substTerm sub (Delta x) = Delta (substTerm sub x)
 substTerm sub (Negate x) = Negate (substTerm sub x)
+substTerm sub (Restrict s m) = Restrict (substTerm sub s) (substTerm sub m)
 
 substPred :: Subst era -> Pred era -> Pred era
 substPred sub (Sized a b) = Sized (substTerm sub a) (substTerm sub b)
@@ -303,6 +346,21 @@ substPred sub (Component t cs) = Component (substTerm sub t) (substComp <$> cs)
       _ -> w
     substComp x@(AnyF (FConst _ _ _)) = x
 substPred sub (CanFollow a b) = CanFollow (substTerm sub a) (substTerm sub b)
+substPred sub (Member a b) = Member (substTerm sub a) (substTerm sub b)
+substPred sub (NotMember a b) = NotMember (substTerm sub a) (substTerm sub b)
+substPred sub (a :<-: b) = substTerm sub a :<-: substTarget sub b
+substPred sub (List a b) = List (substTerm sub a) (map (substTerm sub) b)
+substPred sub (Choose sz t pairs) = Choose sz (substTerm sub t) (map (subPair sub) pairs)
+  where
+    subPair sub0 (tar, ps) = (tar, map (substPred (sub1 ++ sub0)) ps)
+      where
+        sub1 = substFromTarget tar
+substPred sub (Maybe term target ps) = Maybe (substTerm sub term) target (map (substPred (sub1 ++ sub)) ps)
+  where
+    sub1 = substFromTarget target
+
+substFromTarget :: Target era t -> Subst era
+substFromTarget tar = map (\(Name v) -> SubItem v (Var v)) (Set.toList (varsOfTarget Set.empty tar))
 
 substSum :: Subst era -> Sum era t -> Sum era t
 substSum sub (SumMap x) = SumMap (substTerm sub x)
@@ -332,6 +390,10 @@ simplify (ProjS l _ t) = do
   pure (Set.map (\z -> z ^. l) s)
 simplify (Delta (Lit CoinR (Coin n))) = pure (DeltaCoin n)
 simplify (Negate (Lit DeltaCoinR (DeltaCoin n))) = pure (DeltaCoin (-n))
+simplify (Restrict s m) = do
+  sv <- simplify s
+  mv <- simplify m
+  pure (Map.restrictKeys mv sv)
 simplify x = failT ["Can't simplify term: " ++ show x ++ ", to a value."]
 
 -- | Simplify constant Sum's
@@ -343,6 +405,14 @@ simplifySum (SumMap (Lit _ m)) = pure (Map.foldl' add zero m)
 simplifySum (SumList (Lit _ m)) = pure (List.foldl' add zero m)
 simplifySum (Project _ (Lit _ m)) = pure (List.foldl' (\ans x -> add ans (getSum x)) zero m)
 simplifySum x = failT ["Can't simplify Sum: " ++ show x ++ ", to a value."]
+
+simplifyTarget :: Target era t -> Typed t
+simplifyTarget (Simple t) = simplify t
+simplifyTarget (Constr _ f) = pure f
+simplifyTarget (x :$ y) = do
+  f <- simplifyTarget x
+  z <- simplifyTarget y
+  pure (f z)
 
 -- | Fully evaluate a `Term`, looking up the variables in the `Env`.
 runTerm :: Env era -> Term era t -> Typed t
@@ -362,6 +432,18 @@ runTerm env (Delta x) = do
 runTerm env (Negate x) = do
   DeltaCoin n <- runTerm env x
   pure (DeltaCoin (-n))
+runTerm env (Restrict s m) = do
+  sv <- runTerm env s
+  mv <- runTerm env m
+  pure (Map.restrictKeys mv sv)
+
+runTarget :: Env era -> Target era t -> Typed t
+runTarget env (Simple t) = runTerm env t
+runTarget _ (Constr _ f) = pure f
+runTarget env (x :$ y) = do
+  f <- runTarget env x
+  z <- runTarget env y
+  pure (f z)
 
 runPred :: Env era -> Pred era -> Typed Bool
 runPred env (Sized w x) = do
@@ -393,6 +475,34 @@ runPred env (CanFollow x y) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
   pure (canFollow x2 y2)
+runPred env (Member x y) = do
+  x2 <- runTerm env x
+  y2 <- runTerm env y
+  pure (Set.member x2 y2)
+runPred env (NotMember x y) = do
+  x2 <- runTerm env x
+  y2 <- runTerm env y
+  pure (Set.notMember x2 y2)
+runPred env (x :<-: y) = do
+  _x2 <- runTerm env x
+  _y2 <- runTarget env y
+  pure True
+runPred env (List x y) = do
+  x2 <- runTerm env x
+  y2 <- mapM (runTerm env) y
+  pure (x2 == makeFromList y2)
+runPred env (Maybe x tar ps) = do
+  m <- runTerm env x
+  case m of
+    Nothing -> pure True
+    (Just y) -> do
+      ans <- mapM (runPred (bind tar y env)) ps
+      pure (and ans)
+runPred _ (p@(Choose _ _ _)) = failT ["Choose predicate in runPred", show p]
+
+bind :: Target era t -> t -> Env era -> Env era
+bind (Simple (Var v)) x env = storeVar v x env
+bind t _ _ = error ("Non simple Target in bind: " ++ show t)
 
 runComp :: Env era -> s -> AnyF era s -> Typed Bool
 runComp _ _ (AnyF (Field _ _ No)) = pure False
@@ -411,6 +521,7 @@ termRep (ProjM _ t (termRep -> MapR a _)) = MapR a t
 termRep (ProjS _ t (termRep -> SetR _)) = SetR t
 termRep (Delta _) = DeltaCoinR
 termRep (Negate _) = DeltaCoinR
+termRep (Restrict _ m) = termRep m
 
 runSum :: Env era -> Sum era c -> Typed c
 runSum env (SumMap t) = Map.foldl' add zero <$> runTerm env t

@@ -260,7 +260,7 @@ genType =
 
 -- | Unsatisfiable constraint returned if we fail during constraint generation.
 errPred :: [String] -> Pred era
-errPred errs = Lit (ListR StringR) ["Errors:"] :=: Lit (ListR StringR) errs
+errPred errs = Lit (ListR stringR) ["Errors:"] :=: Lit (ListR stringR) errs
 
 -- This is very ad hoc
 setWithSum :: Int -> Gen (Set Int)
@@ -626,6 +626,12 @@ predConstr SumsTo {} = "SumsTo"
 predConstr Random {} = "Random"
 predConstr Component {} = "Component"
 predConstr CanFollow {} = "CanFollow"
+predConstr Member {} = "Member"
+predConstr NotMember {} = "NotMember"
+predConstr (:<-:) {} = ":<-:"
+predConstr List {} = "List"
+predConstr Choose {} = "Choose"
+predConstr Maybe {} = "Maybe"
 
 constraintProperty :: Maybe Int -> Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
 constraintProperty timeout strict whitelist info prop =

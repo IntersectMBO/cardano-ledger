@@ -32,10 +32,13 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   liftUTxO,
   Proof (..),
   Evidence (..),
+  stringR,
 )
 where
 
-import Cardano.Ledger.BaseTypes (EpochNo, ProtVer (..), SlotNo (..))
+import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -43,9 +46,12 @@ import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
-import Cardano.Ledger.Pretty (ppInteger, ppString)
+import Cardano.Ledger.Pretty (ppInteger, ppRecord', ppString)
+import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
+import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.TxIn (TxIn)
@@ -83,18 +89,23 @@ import Test.Cardano.Ledger.Constrained.Classes (
 import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
   pcCoin,
+  pcDCert,
   pcFutureGenDeleg,
   pcGenDelegPair,
   pcIndividualPoolStake,
   pcReward,
+  pcRewardAcnt,
+  pcScriptHash,
   pcTxIn,
+  pcWitnessesField,
   withEraPParams,
  )
-import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..))
+import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), unReflect)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
@@ -127,7 +138,7 @@ data Rep era t where
   NaturalR :: Rep era Natural
   Word64R :: Rep era Word64
   TxInR :: Rep era (TxIn (EraCrypto era))
-  StringR :: Rep era String
+  CharR :: Rep era Char
   UnitR :: Rep era ()
   PairR :: Rep era a -> Rep era b -> Rep era (a, b)
   ProtVerR :: Proof era -> Rep era ProtVer -- We need the Proof to get arbitrary instances correct
@@ -149,6 +160,16 @@ data Rep era t where
   MaybeR :: Rep era t -> Rep era (Maybe t)
   SlotNoR :: Rep era SlotNo
   SizeR :: Rep era Size
+  MultiAssetR :: Rep era (MultiAsset (EraCrypto era))
+  PolicyIDR :: Rep era (PolicyID (EraCrypto era))
+  WitnessesFieldR :: Proof era -> Rep era (WitnessesField era)
+  AssetNameR :: Rep era AssetName
+  DCertR :: Rep era (DCert (EraCrypto era))
+  RewardAcntR :: Rep era (RewardAcnt (EraCrypto era))
+  ValidityIntervalR :: Rep era ValidityInterval
+
+stringR :: Rep era String
+stringR = ListR CharR
 
 -- ===========================================================
 -- Proof of Rep equality
@@ -183,7 +204,7 @@ instance Singleton (Rep e) where
   testEql NaturalR NaturalR = Just Refl
   testEql Word64R Word64R = Just Refl
   testEql TxInR TxInR = Just Refl
-  testEql StringR StringR = Just Refl
+  testEql CharR CharR = Just Refl
   testEql UnitR UnitR = Just Refl
   testEql (PairR a b) (PairR x y) = do
     Refl <- testEql a x
@@ -214,6 +235,14 @@ instance Singleton (Rep e) where
     do Refl <- testEql c d; pure Refl
   testEql SlotNoR SlotNoR = Just Refl
   testEql SizeR SizeR = Just Refl
+  testEql (WitnessesFieldR c) (WitnessesFieldR d) =
+    do Refl <- testEql c d; pure Refl
+  testEql MultiAssetR MultiAssetR = pure Refl
+  testEql PolicyIDR PolicyIDR = pure Refl
+  testEql AssetNameR AssetNameR = pure Refl
+  testEql DCertR DCertR = Just Refl
+  testEql ValidityIntervalR ValidityIntervalR = Just Refl
+  testEql RewardAcntR RewardAcntR = Just Refl
   testEql _ _ = Nothing
   cmpIndex x y = compare (shape x) (shape y)
 
@@ -244,7 +273,7 @@ instance Show (Rep era t) where
   show (UTxOR x) = "(UTxO " ++ show x ++ ")"
   show (PParamsR x) = "(PParams " ++ show x ++ ")"
   show (PParamsUpdateR x) = "(PParamsUpdate " ++ show x ++ ")"
-  show StringR = "String"
+  show CharR = "Char"
   show DeltaCoinR = "DeltaCoin"
   show GenDelegPairR = "(GenDelegPair c)"
   show FutureGenDelegR = "(FutureGenDeleg c)"
@@ -262,8 +291,15 @@ instance Show (Rep era t) where
   show SizeR = "Size"
   show VCredR = "VCredR"
   show VHashR = "VHashR"
-  show CommColdHashR = "CommColdHashR"
-  show CommHotHashR = "CommHotHashR"
+  show CommColdHashR = "CommColdHash"
+  show CommHotHashR = "CommHotHash"
+  show MultiAssetR = "(MutiAsset c)"
+  show PolicyIDR = "(PolicyID c)"
+  show (WitnessesFieldR p) = "(WitnessesField " ++ show p ++ ")"
+  show AssetNameR = "AssetName"
+  show DCertR = "(DCert c)"
+  show RewardAcntR = "(RewardAcnt c)"
+  show ValidityIntervalR = "ValidityInterval"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -294,7 +330,7 @@ synopsis IntR n = show n
 synopsis NaturalR n = show n
 synopsis FloatR n = show n
 synopsis TxInR txin = show (pcTxIn txin)
-synopsis StringR s = show s
+synopsis CharR s = show s
 synopsis (ValueR _) x = show x
 synopsis (TxOutR _) x = show x
 synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
@@ -320,6 +356,16 @@ synopsis VCredR x = show x
 synopsis VHashR x = show x
 synopsis CommColdHashR x = show x
 synopsis CommHotHashR x = show x
+synopsis VCredR x = show (credSummary x)
+synopsis VHashR x = show (credSummary x)
+synopsis MultiAssetR (MultiAsset x) = "(MultiAsset num tokens = " ++ show (Map.size x) ++ ")"
+synopsis PolicyIDR (PolicyID x) = show (pcScriptHash x)
+synopsis (WitnessesFieldR p) x = show $ ppRecord' mempty $ unReflect pcWitnessesField p x
+synopsis AssetNameR (AssetName x) = take 10 (show x)
+synopsis DCertR x = show (pcDCert x)
+synopsis RewardAcntR x = show (pcRewardAcnt x)
+synopsis ValidityIntervalR x = show (ppValidityInterval x)
+
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -365,7 +411,7 @@ instance Shaped (Rep era) any where
   shape Word64R = Nullary 13
   shape IntR = Nullary 14
   shape TxInR = Nullary 15
-  shape StringR = Nullary 16
+  shape CharR = Nullary 16
   shape (ValueR p) = Nary 17 [shape p]
   shape (TxOutR p) = Nary 18 [shape p]
   shape (UTxOR p) = Nary 19 [shape p]
@@ -392,6 +438,13 @@ instance Shaped (Rep era) any where
   shape VHashR = Nullary 40
   shape CommColdHashR = Nullary 41
   shape CommHotHashR = Nullary 42
+  shape MultiAssetR = Nullary 43
+  shape PolicyIDR = Nullary 44
+  shape (WitnessesFieldR p) = Nary 45 [shape p]
+  shape AssetNameR = Nullary 46
+  shape DCertR = Nullary 47
+  shape RewardAcntR = Nullary 48
+  shape ValidityIntervalR = Nullary 49
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -399,6 +452,7 @@ compareRep x y = cmpIndex @(Rep era) x y
 -- ================================================
 
 genSizedRep ::
+  forall era t.
   (Era era) =>
   Int ->
   Rep era t ->
@@ -416,14 +470,14 @@ genSizedRep _ WitHashR = arbitrary
 genSizedRep _ GenHashR = arbitrary
 genSizedRep _ GenDelegHashR = arbitrary
 genSizedRep _ PoolParamsR = arbitrary
-genSizedRep _ EpochR = arbitrary
+genSizedRep n EpochR = pure $ EpochNo $ fromIntegral n
 genSizedRep _ RationalR = arbitrary
 genSizedRep _ Word64R = choose (0, 1000)
 genSizedRep _ IntR = arbitrary
 genSizedRep _ NaturalR = arbitrary
 genSizedRep _ FloatR = arbitrary
 genSizedRep _ TxInR = arbitrary
-genSizedRep n StringR = vectorOf n arbitrary
+genSizedRep _ CharR = arbitrary
 genSizedRep _ (ValueR p) = genValue p
 genSizedRep _ (TxOutR p) = genTxOut p
 genSizedRep _n (UTxOR p) = genUTxO p
@@ -448,6 +502,14 @@ genSizedRep _ VCredR = arbitrary
 genSizedRep _ VHashR = arbitrary
 genSizedRep _ CommColdHashR = arbitrary
 genSizedRep _ CommHotHashR = arbitrary
+genSizedRep _ MultiAssetR = arbitrary
+genSizedRep _ PolicyIDR = arbitrary
+genSizedRep _ (WitnessesFieldR _) = pure $ AddrWits Set.empty
+genSizedRep _ AssetNameR = arbitrary
+genSizedRep _ RewardAcntR = arbitrary
+genSizedRep _ DCertR = arbitrary
+genSizedRep _ ValidityIntervalR = arbitrary
+>>>>>>> c13b8783a (Added Vars, TypeReps for Tx. file genTx.hs)
 
 genRep ::
   Era era =>
@@ -502,7 +564,7 @@ shrinkRep (TxOutR _) _ = []
 shrinkRep (UTxOR _) _ = []
 shrinkRep (PParamsR _) _ = []
 shrinkRep (PParamsUpdateR _) _ = []
-shrinkRep StringR t = shrink t
+shrinkRep CharR t = shrink t
 shrinkRep DeltaCoinR t = shrink t
 shrinkRep GenDelegPairR t = shrink t
 shrinkRep FutureGenDelegR t = shrink t
@@ -518,6 +580,13 @@ shrinkRep NewEpochStateR _ = []
 shrinkRep (ProtVerR _) t = shrink t
 shrinkRep SlotNoR t = shrink t
 shrinkRep SizeR _ = []
+shrinkRep MultiAssetR t = shrink t
+shrinkRep PolicyIDR t = shrink t
+shrinkRep (WitnessesFieldR _) _ = []
+shrinkRep AssetNameR t = shrink t
+shrinkRep DCertR t = shrink t
+shrinkRep RewardAcntR t = shrink t
+shrinkRep ValidityIntervalR _ = []
 
 -- ===========================
 
