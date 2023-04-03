@@ -3,7 +3,9 @@
 
 module Test.Cardano.Ledger.Constrained.Rewrite (
   rewrite,
+  rewriteGen,
   compile,
+  compileGen,
   removeSameVar,
   removeEqual,
   DependGraph (..),
@@ -31,8 +33,10 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), V (..))
-import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
+import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT, monadTyped)
+import Test.Cardano.Ledger.Constrained.Size (genFromSize)
 import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.QuickCheck
 
 -- ======================================================================
 
@@ -159,6 +163,68 @@ removeTrivial = filter (not . trivial)
 rewrite :: [Pred era] -> [Pred era]
 rewrite cs = removeTrivial $ removeSameVar (removeEqual cs []) []
 
+-- =========================================================
+-- Expanding (Choose _ _ _) into several simpler [Pred era]
+
+fresh :: (Int, Subst era) -> Target era t -> (Int, Subst era)
+fresh (n, sub) (Constr _ _) = (n, sub)
+fresh (n, sub) (Simple (Var v@(V nm rep acc))) = (n + 1, SubItem v (Var (V (nm ++ "." ++ show n) rep acc)) : sub)
+fresh (n, sub) (Simple expr) = mksub n (Set.toList (varsOfTerm Set.empty expr))
+  where
+    mksub m names = (n + length names, sub2 ++ sub)
+      where
+        sub2 = zipWith (\(Name v@(V nm r _)) m1 -> SubItem v (Var (V (nm ++ "." ++ show m1) r No))) names [m ..]
+fresh (n, sub) (f :$ x) = fresh (fresh (n, sub) f) x
+
+freshVars :: Int -> Int -> V era [t] -> ([Term era t], Int)
+freshVars m count (V nm (ListR rep) _) = ([Var (V (nm ++ "." ++ show c) rep No) | c <- [m .. m + (count - 1)]], m + count)
+
+freshPairs :: ((Int, Subst era), [(Target era t, [Pred era])]) -> (Target era t, [Pred era]) -> ((Int, Subst era), [(Target era t, [Pred era])])
+freshPairs (xx, ans) (tar, ps) = (yy, (target2, ps2) : ans)
+  where
+    yy@(_, sub) = fresh xx tar
+    target2 = substTarget sub tar
+    ps2 = map (substPred sub) ps
+
+rewriteChoose :: Int -> Pred era -> Gen ([Pred era], Int)
+rewriteChoose m0 (Choose size (Var v) ps) = do
+  count <- genFromSize size
+  ps2 <- vectorOf count (elements ps)
+  let ((m1, _), ps3) = List.foldl' freshPairs ((m0, []), []) ps2
+      (xs, m2) = freshVars m1 count v
+  pure (concat (map snd ps3) ++ zipWith (:<-:) xs (map fst ps3) ++ [List (Var v) xs], m2)
+rewriteChoose m0 (Maybe (Var v) target preds) = do
+  count <- chooseInt (0, 1) -- 0 is Nothing, 1 is Just
+  if count == 0
+    then pure ([Var v :<-: (Constr "(const Nothing)" (const Nothing) ^$ (Lit UnitR ()))], m0)
+    else
+      let (m1, subst) = fresh (m0, []) target
+          target2 = substTarget subst target
+          ps2 = map (substPred subst) preds
+       in -- (x,m2) = (Var (V (nm++"."++show m1) r No),m1+1)
+          pure (ps2 ++ [Var v :<-: (Constr "Just" Just :$ target2)], m1)
+rewriteChoose m0 p = pure ([p], m0)
+
+removeChoose :: ([Pred era], Int) -> [Pred era] -> Gen ([Pred era], Int)
+removeChoose (ps, m) [] = pure (reverse ps, m)
+removeChoose (ps, m) (p : more) = do
+  (ps2, m1) <- rewriteChoose m p
+  removeChoose (ps2 ++ ps, m1) more
+
+rewriteGen :: (Int, [Pred era]) -> Gen (Int, [Pred era])
+rewriteGen (m, cs) = do
+  (ps, m1) <- removeChoose ([], m) cs
+  pure (m1, removeTrivial $ removeSameVar (removeEqual ps []) [])
+
+-- | Construct the DependGraph
+compileGen :: OrderInfo -> [Pred era] -> Gen (Int, DependGraph era)
+compileGen info cs = do
+  (m, simple) <- rewriteGen (0, cs)
+  graph <- monadTyped $ do
+    orderedNames <- initialOrder info simple
+    mkDependGraph (length orderedNames) [] orderedNames [] simple
+  pure (m, graph)
+
 -- ==============================================================
 -- Build a Dependency Graph that extracts an ordering on the
 -- variables in the [Pred] we are trying to solve. The idea is that
@@ -259,6 +325,11 @@ accumdep info answer c = case c of
   Component t cs -> mkDeps (componentVars cs) (vars t) answer
   -- One has to evaluate the terms in 'cs' first, otherwise 't' will be evaluated, and then it will
   -- be too late to overide the projections with the values of the vars in 'cs'
+  Member t cs -> mkDeps (vars t) (vars cs) answer
+  NotMember t cs -> mkDeps (vars t) (vars cs) answer
+  t :<-: ts -> mkDeps (varsOfTarget Set.empty ts) (vars t) answer
+  List t cs -> mkDeps (List.foldl' varsOfTerm Set.empty cs) (vars t) answer
+  -- Choose _ t cs -> This should be rewritten before we call initalOrder
   other -> Set.foldl' accum answer (varsOfPred Set.empty other)
     where
       accum ans v = Map.insertWith (Set.union) v Set.empty ans

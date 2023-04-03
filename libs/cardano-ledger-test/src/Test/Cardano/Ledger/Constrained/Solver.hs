@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.Constrained.Solver where
 
+import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Era (..))
 import qualified Data.List as List
@@ -26,28 +27,33 @@ import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Count (..),
+  FromList (..),
   Sizeable (getSize),
   Sums (..),
  )
+import Test.Cardano.Ledger.Constrained.Combinators (itemFromSet, suchThatErr)
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
-import Test.Cardano.Ledger.Constrained.Rewrite (DependGraph (..), OrderInfo, compile)
+import Test.Cardano.Ledger.Constrained.Rewrite (DependGraph (..), OrderInfo, compileGen)
 import Test.Cardano.Ledger.Constrained.Size (
   AddsSpec (..),
   OrdCond (..),
   Size (..),
-  genFromSize,
+  genFromIntRange,
   vLeft,
   vRight,
   vRightNeg,
   vRightSize,
  )
 import Test.Cardano.Ledger.Constrained.Spec (
+  ElemSpec (..),
+  ListSpec (..),
   MapSpec (..),
   RelSpec (..),
   RngSpec (..),
   SetSpec (..),
   Unique (..),
+  genFromListSpec,
   genFromMapSpec,
   genFromSetSpec,
   mapSpec,
@@ -111,7 +117,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help NaturalR i = pure $ With i
     help FloatR i = pure $ With i
     help TxInR t = pure $ With t
-    help StringR s = pure $ With s
+    help CharR s = pure $ With s
     help (ValueR (Shelley _)) v = pure $ With v
     help (ValueR (Allegra _)) v = pure $ With v
     help UnitR v = pure $ With v
@@ -141,6 +147,22 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help SizeR v = pure $ With v
     help VCredR v = pure $ With v
     help VHashR v = pure $ With v
+    help MultiAssetR _ = failT ["MultiAsset does not have Ord instance"]
+    help PolicyIDR v = pure $ With v
+    help (WitnessesFieldR _) _ = failT ["WitnessesField does not have Ord instance"]
+    help AssetNameR v = pure $ With v
+    help DCertR _ = failT ["DCert does not have Ord instance"]
+    help RewardAcntR v = pure $ With v
+    help ValidityIntervalR v = pure $ With v
+
+hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
+hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
+  where
+    help :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
+    help (TxOutR _) v = pure $ With v
+    help x v = do
+      With y <- hasOrd x v
+      pure (With y)
 
 -- ===============================
 
@@ -166,6 +188,7 @@ hasCount :: Rep era t -> s t -> Typed (HasConstraint Count (s t))
 hasCount IntR x = pure $ With x
 hasCount (ProtVerR _) x = pure $ With x
 hasCount EpochR x = pure $ With x
+hasCount SlotNoR x = pure $ With x
 hasCount r _ = failT [show r ++ " does not have Count instance."]
 
 isCountType :: forall era t. Rep era t -> Bool
@@ -193,6 +216,12 @@ simplifySet r1 term = do
   x <- simplify term
   Refl <- sameRep (SetR r1) (termRep term)
   pure (With x)
+
+simplifyList :: Rep era rng -> Term era y -> Typed (HasConstraint Ord [rng])
+simplifyList r1 term = do
+  x <- simplify term
+  Refl <- sameRep (ListR r1) (termRep term)
+  hasOrd r1 x
 
 -- | Is the Sum a variable (of a map). Only SumMap and Project store maps.
 isMapVar :: Name era -> Sum era c -> Bool
@@ -232,9 +261,15 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     | Name v1 == Name v2 -> mapSpec sz RelAny RngAny
   (Var v2 :=: expr) | Name v1 == Name v2 -> do
     m1 <- simplifyAtType r expr
-    With _ <- hasOrd rng rng
+    With _ <- hasEq rng rng
     mapSpec SzAny (relEqual dom (Map.keysSet m1)) (RngElem rng (Map.elems m1))
   (expr :=: v2@(Var _)) -> solveMap v1 (v2 :=: expr)
+  (expr1 :=: Restrict expr2 (Var v2@(V _ (MapR a _) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep a dom
+    val1 <- simplify expr1
+    val2 <- simplify expr2
+    mapSpec (SzLeast (Map.size val1)) (relSuperset dom val2) RngAny
+  (Restrict expr1 expr2 :=: expr3) -> solveMap v1 (expr3 :=: Restrict expr1 expr2)
   -- TODO recast these in terms of Fields
   (ProjS lensbt _trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Lit (SetR _srep) x) | Name v1 == Name v2 -> do
     Refl <- sameRep dom brep
@@ -315,6 +350,22 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     With _ <- hasOrd rng rng
     With set <- simplifySet rng expr
     mapSpec SzAny RelAny (RngRel $ relDisjoint rng set)
+  (Member expr (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom a
+    x <- simplify expr
+    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton x)) RngAny
+  (Member expr (Rng (Var v2@(V _ (MapR _ b) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep rng b
+    x <- simplify expr
+    mapSpec (SzLeast 1) RelAny (RngRel (relSuperset rng (Set.singleton x)))
+  (NotMember expr (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom a
+    x <- simplify expr
+    mapSpec SzAny (relDisjoint dom (Set.singleton x)) RngAny
+  (NotMember expr (Rng (Var v2@(V _ (MapR _ b) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep rng b
+    x <- simplify expr
+    mapSpec SzAny RelAny (RngRel (relDisjoint rng (Set.singleton x)))
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
@@ -366,6 +417,12 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
     With set <- simplifySet r expr
     setSpec (SzExact (Set.size set)) (relEqual r set)
   (expr :=: v2@(Var _)) -> solveSet v1 (v2 :=: expr)
+  (expr1 :=: Restrict (Var v2@(V _ (SetR a) _)) expr2) | Name v1 == Name v2 -> do
+    Refl <- sameRep a r
+    val1 <- simplify expr1
+    val2 <- simplify expr2
+    setSpec (SzExact (Map.size val1)) (relEqual r (Map.keysSet val2))
+  (Restrict expr1 expr2 :=: expr3) -> solveSet v1 (expr3 :=: Restrict expr1 expr2)
   (Var v2 `Subset` expr) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
     setSpec (SzMost (Set.size set)) (relSubset r set)
@@ -376,6 +433,14 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
     With set <- simplifySet r expr
     setSpec SzAny (relDisjoint r set)
   (Disjoint expr (Var v2)) -> solveSet v1 (Disjoint (Var v2) expr)
+  (Member expr (Var v2@(V _ (SetR a) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep a r
+    x <- simplify expr
+    setSpec (SzLeast 1) (relSuperset r (Set.singleton x))
+  (NotMember expr (Var v2@(V _ (SetR a) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep a r
+    x <- simplify expr
+    setSpec SzAny (relDisjoint r (Set.singleton x))
   (Random (Var v2)) | Name v1 == Name v2 -> setSpec SzAny RelAny
   cond -> failT ["Can't solveSet " ++ show cond ++ " for variable " ++ show v1]
 
@@ -507,6 +572,34 @@ intSumWithUniqueV v@(V nam _ _) ss = do
     [] -> failT ["Failed to find the unique name: " ++ nam ++ " in" ++ show ss]
     (_ : _ : _) -> failT ["The expected unique name: " ++ nam ++ " occurs more than once in " ++ show ss]
 
+-- ===========================================================
+-- Solving for variables with type List
+
+-- | Given a variable: 'v1', with a List type, compute a ListSpec
+--   which describes the constraints implied by the Pred 'predicate'
+solveList :: V era [a] -> Pred era -> Typed (ListSpec era a)
+solveList v1@(V _ (ListR r) _) predicate = case predicate of
+  (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> pure $ ListSpec sz ElemAny
+  (Var v2 :=: expr) | Name v1 == Name v2 -> do
+    With xs <- simplifyList r expr
+    pure $ ListSpec (SzExact (length xs)) (ElemEqual r xs)
+  (expr :=: v2@(Var _)) -> solveList v1 (v2 :=: expr)
+  (Random (Var v2)) | Name v1 == Name v2 -> pure $ ListSpec SzAny ElemAny
+  (List (Var v2@(V _ (ListR r2) _)) xs) | Name v1 == Name v2 -> do
+    Refl <- sameRep r r2
+    ys <- mapM simplify xs
+    pure $ ListSpec (SzExact (length ys)) (ElemEqual r ys)
+  cond -> failT ["Can't solveList " ++ show cond ++ " for variable " ++ show v1]
+
+solveLists :: V era [a] -> [Pred era] -> Typed (ListSpec era a)
+solveLists v@(V nm (ListR _) _) cs =
+  explain ("\nSolving for " ++ nm ++ ", List Predicates\n" ++ unlines (map (("  " ++) . show) cs)) $
+    foldlM' accum mempty cs
+  where
+    accum spec cond = do
+      condspec <- solveList v cond
+      liftT (spec <> condspec)
+
 -- ===================================================
 -- Helper functions for use in 'dispatch'
 
@@ -529,6 +622,18 @@ genCount v1@(V _ r1 _) [CanFollow (Var v2@(V _ r2 _)) predExpr] | Name v1 == Nam
   Refl <- sameRep r1 r2
   predVal <- simplify predExpr
   pure (genSucc predVal)
+genCount v1@(V _ r1 _) [Sized sz (Var v2@(V _ EpochR _))] | Name v1 == Name v2 = do
+  Refl <- sameRep r1 EpochR
+  size <- simplify sz
+  pure $ do
+    n <- genFromIntRange size
+    pure $ EpochNo $ fromIntegral n
+genCount v1@(V _ r1 _) [Sized sz (Var v2@(V _ SlotNoR _))] | Name v1 == Name v2 = do
+  Refl <- sameRep r1 SlotNoR
+  size <- simplify sz
+  pure $ do
+    n <- genFromIntRange size
+    pure $ SlotNo $ fromIntegral n
 genCount v@(V _ r _) cs = failT zs
   where
     zs = ("Cannot solve: genCount " ++ show v ++ " at type " ++ show r ++ " on Predicates") : map show cs
@@ -585,7 +690,26 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     pure (pure (SzExact (getSize x)))
   [Sized (Lit SizeR sz) (Var v2)] | isAddsType r1 && Name v1 == Name v2 -> do
     With _ <- hasAdds r1 r1
-    pure $ fromI ["dispatch " ++ show v1 ++ " " ++ show preds] <$> genFromSize sz
+    pure $ fromI ["dispatch " ++ show v1 ++ " " ++ show preds] <$> genFromIntRange sz
+  [Var v2@(V _ r2 _) :<-: target] | Name v1 == Name v2 ->
+    do
+      Refl <- sameRep r1 r2
+      x <- simplifyTarget @era @t target
+      pure (pure x)
+  [Member (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    set <- simplify expr
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    pure (fst <$> (itemFromSet msgs set))
+  [NotMember (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    set <- simplify expr
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    pure $ suchThatErr msgs (genRep r2) (`Set.notMember` set)
+  [List (Var v2@(V _ (MaybeR r2) _)) expr] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 (MaybeR r2)
+    xs <- mapM simplify expr
+    pure $ (pure (makeFromList xs))
   [Random (Var v2)] | Name v1 == Name v2 -> pure $ genRep r1
   cs -> case r1 of
     MapR dom rng -> do
@@ -594,6 +718,9 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     SetR r -> do
       spec <- solveSets v1 cs
       pure $ genFromSetSpec [] (genRep r) spec
+    ListR r -> do
+      spec <- solveLists v1 cs
+      pure $ genFromListSpec [] (genRep r) spec
     _other
       | isAddsType r1 -> do
           With v2 <- hasAdds r1 v1
@@ -659,7 +786,7 @@ solveOneVar subst (Name (v@(V _ r _)), ps) = do
 
 toolChain :: Era era => Proof era -> OrderInfo -> [Pred era] -> Gen (Env era)
 toolChain _proof order cs = do
-  DependGraph pairs <- monadTyped $ compile order cs
+  (_count, DependGraph pairs) <- compileGen order cs
   subst <- foldlM' solveOneVar [] pairs
   monadTyped $ substToEnv subst emptyEnv
 

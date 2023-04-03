@@ -53,14 +53,6 @@ data Assembler era where
   Assemble :: PrettyC t era => Target era t -> Assembler era
   Skip :: Assembler era
 
-runTarget :: Env era -> Target era t -> Typed t
-runTarget _ (Constr _ c) = pure c
-runTarget env (Simple e) = runTerm env e
-runTarget env (f :$ x) = do
-  g <- runTarget env f
-  y <- runTarget env x
-  pure (g y)
-
 stoi :: OrderInfo
 stoi = standardOrderInfo
 

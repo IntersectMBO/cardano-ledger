@@ -11,10 +11,14 @@ module Test.Cardano.Ledger.Constrained.Vars where
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.CertState (CertState (..), DState (..), FutureGenDeleg (..), PState (..), VState (..))
 import qualified Cardano.Ledger.CertState as DPS (InstantaneousRewards (..))
+import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, ProtVer (..), SlotNo (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (
   EraPParams,
   PParams,
+  TxBody,
   ppMaxBBSizeL,
   ppMaxBHSizeL,
   ppMaxTxSizeL,
@@ -28,6 +32,7 @@ import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair, GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
+import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -70,9 +75,12 @@ import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), testEql, (:~:) (Refl))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..))
 
 import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
+import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..))
 import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
+import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
+import Test.Cardano.Ledger.Generic.Updaters (newTxBody)
 
 -- ================================================================
 
@@ -772,3 +780,42 @@ maxBHSize p =
         NaturalR
         (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBHSizeL)))
     )
+
+-- =================================================================
+-- TxBody vars
+
+inputs :: Term era (Set (TxIn (EraCrypto era)))
+inputs = Var $ V "inputs" (SetR TxInR) No
+
+collateral :: Term era (Set (TxIn (EraCrypto era)))
+collateral = Var $ V "collateral" (SetR TxInR) No
+
+refInputs :: Term era (Set (TxIn (EraCrypto era)))
+refInputs = Var $ V "refInputs" (SetR TxInR) No
+
+outputs :: Proof era -> Term era [TxOutF era]
+outputs p = Var $ V "outputs" (ListR (TxOutR p)) No
+
+collateralReturn :: Proof era -> Term era (TxOutF era)
+collateralReturn p = Var $ V "collateralReturn" (TxOutR p) No
+
+totalCol :: Term era Coin
+totalCol = Var $ V "totalCol" CoinR No
+
+certs :: Term era [DCert (EraCrypto era)]
+certs = Var $ V "certs" (ListR DCertR) No
+
+withdrawals :: forall era. Term era (Map (RewardAcnt (EraCrypto era)) Coin)
+withdrawals = Var $ V "withdrawals" (MapR (RewardAcntR @era) CoinR) No
+
+txfee :: Term era Coin
+txfee = Var $ V "txfee" CoinR No
+
+ttl :: Term era SlotNo
+ttl = Var $ V "ttl" SlotNoR No
+
+validityInterval :: Term era ValidityInterval
+validityInterval = Var $ V "validityInterval" ValidityIntervalR No
+
+mint :: Term era (MultiAsset (EraCrypto era))
+mint = Var $ V "mint" MultiAssetR No
