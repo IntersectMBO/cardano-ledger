@@ -10,6 +10,10 @@
 * Add helper lens `hashDataTxWitsL`
 * Rename `smMap` to `cmValues`
 * Remove redundant pattern synonym `AlonzoTxAuxData'{atadMetadata',atadTimelock',atadPlutus'}`
+* Addition of `costModelToMap`, `costModelFromMap` and `costModelParamNames`
+* Made it possible for `FromJSON` to decode `CostModels` both as the new approach:
+  1. as a list of cost models values,
+  2. and the old approach of mapping from the parameter name to the cost model value
 
 ###`testlib`
 

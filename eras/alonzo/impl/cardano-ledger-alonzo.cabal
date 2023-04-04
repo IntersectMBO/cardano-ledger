@@ -92,8 +92,7 @@ library
         transformers,
         tree-diff,
         utf8-string,
-        validation-selective,
-        vector
+        validation-selective
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-name-shadowing
