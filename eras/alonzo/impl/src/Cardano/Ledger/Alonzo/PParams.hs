@@ -69,7 +69,14 @@ import Cardano.Ledger.Alonzo.Scripts (
   getCostModelParams,
   zipSemiExUnits,
  )
-import Cardano.Ledger.BaseTypes (EpochNo (..), NonNegativeInterval, Nonce (NeutralNonce), StrictMaybe (..), UnitInterval, isSNothing)
+import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
+  NonNegativeInterval,
+  Nonce (NeutralNonce),
+  StrictMaybe (..),
+  UnitInterval,
+  isSNothing,
+ )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),

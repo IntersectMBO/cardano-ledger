@@ -41,6 +41,9 @@ module Cardano.Ledger.Alonzo.Scripts (
   getCostModelLanguage,
   getCostModelParams,
   getEvaluationContext,
+  costModelParamNames,
+  costModelToMap,
+  costModelFromMap,
   ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
   ExUnits',
   Prices (..),
@@ -93,22 +96,21 @@ import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
-import Control.Monad (when)
+import Control.Monad (forM, when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
 import Data.Aeson (
-  Array,
   FromJSON (..),
   Object,
   ToJSON (..),
-  Value (String),
+  Value (Array, Object, String),
   object,
-  withArray,
   withObject,
   (.:),
   (.:?),
   (.=),
  )
 import qualified Data.Aeson as Aeson (Value)
+import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.DerivingVia (InstantiatedAt (..))
@@ -116,26 +118,26 @@ import Data.Either (isRight)
 import Data.Int (Int64)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe, maybeToList)
 import Data.Measure (BoundedMeasure, Measure)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Semigroup (All (..))
-import Data.Text (Text)
-import Data.Vector as Vector (toList)
+import Data.Text as T (Text, pack)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), allNoThunks)
 import Numeric.Natural (Natural)
 import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
+import qualified PlutusLedgerApi.Common as Plutus (showParamName)
 import qualified PlutusLedgerApi.V1 as PV1 (
   CostModelApplyError (..),
   EvaluationContext,
+  ParamName,
   ProtocolVersion (ProtocolVersion),
   ScriptDecodeError,
   assertScriptWellFormed,
   mkEvaluationContext,
  )
-import qualified PlutusLedgerApi.V2 as PV2 (assertScriptWellFormed, mkEvaluationContext)
+import qualified PlutusLedgerApi.V2 as PV2 (ParamName, assertScriptWellFormed, mkEvaluationContext)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -327,9 +329,9 @@ instance NFData CostModel where
 
 instance FromJSON CostModels where
   parseJSON = withObject "CostModels" $ \o -> do
-    v1CostModels <- legacyParseCostModels o
-    v2CostModels <- parseCostModels o
-    pure $ CostModels (Map.fromList (v1CostModels ++ v2CostModels)) mempty mempty
+    cms <- mapM (parseCostModels o) [PlutusV1 .. PlutusV2]
+    let cmsMap = Map.fromList [(cmLanguage cm, cm) | Just cm <- cms]
+    pure $ CostModels cmsMap mempty mempty
 
 -- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does
 -- no longer require the map as a parameter to `mkEvaluationContext`, but the list of
@@ -337,208 +339,62 @@ instance FromJSON CostModels where
 -- is that they are sorted in the order given by the `ParamName` enum, so even though we
 -- just have to pass the list to plutus, we still need to use the names of the parameters
 -- in order to sort the list.  In new versions, we want to represent the costmodel
--- parameters directly as a list, so we can avoid this reordering, hence the name of this
--- function.
-legacyParseCostModels :: Object -> Parser [(Language, CostModel)]
-legacyParseCostModels o = do
-  plutusV1 <- o .:? "PlutusV1"
-  cms <- traverse (validateCostModel PlutusV1 . cmParamValues) plutusV1
-  pure $ maybeToList cms
-  where
-    cmParamValues :: Map Text Integer -> [Integer]
-    cmParamValues cmMap = mapMaybe (`Map.lookup` cmMap) plutusV1ParamNames
+-- parameters directly as a list, so we can avoid this reordering.
+parseCostModels :: Object -> Language -> Parser (Maybe CostModel)
+parseCostModels o lang = do
+  plutusCostModelValueMaybe <- o .:? fromString (show lang)
+  forM plutusCostModelValueMaybe $ \plutusCostModelValue ->
+    case plutusCostModelValue of
+      Object _ -> costModelFromMap lang =<< parseJSON plutusCostModelValue
+      Array _ -> validateCostModel lang =<< parseJSON plutusCostModelValue
+      _ -> fail $ "Expected either an Array or an Object, but got: " ++ show plutusCostModelValue
 
-parseCostModels :: Object -> Parser [(Language, CostModel)]
-parseCostModels o = do
-  plutusV2 <- o .:? "PlutusV2"
-  maybeCostModels <- traverse (withArray "PlutusV2 values" parseCostModelsV2) plutusV2
-  pure $ maybeToList maybeCostModels
+costModelFromMap :: MonadFail m => Language -> Map Text Integer -> m CostModel
+costModelFromMap lang cmMap =
+  mapM lookupFail paramNames >>= validateCostModel lang
   where
-    parseCostModelsV2 :: Array -> Parser ((Language, CostModel))
-    parseCostModelsV2 array = do
-      paramValues <- mapM parseJSON $ Vector.toList array
-      validateCostModel PlutusV2 paramValues
+    paramNames = costModelParamNames lang
+    lookupFail paramName =
+      case Map.lookup paramName cmMap of
+        Nothing -> fail $ "Unrecognized cost model parameter name: " ++ show paramName
+        Just v -> pure v
 
--- | We list the param names instead of using `enumerate PlutusLedgerApi.V1.ParamName`,
--- because there is a difference in 6 parameter names between the ones appearing alonzo
--- genesis files and the values returned by plutus via `showParamName` on the `ParamName`
--- enum.  This listed is sorted in the order given by `ParamName` enum, so we can use it
--- to sort the costmodel param values before passing them to plutus `mkEvaluationContext`.
+costModelToMap :: CostModel -> Map Text Integer
+costModelToMap cm =
+  Map.fromList $ zip (costModelParamNames (cmLanguage cm)) (cmValues cm)
+
+costModelParamNames :: Language -> [Text]
+costModelParamNames = \case
+  PlutusV1 -> plutusV1ParamNames
+  PlutusV2 -> plutusV2ParamNames
+
+-- | There is a difference in 6 parameter names between the ones appearing alonzo genesis
+-- files and the values returned by plutus via `showParamName` on the `ParamName` enum.
+-- This listed is sorted in the order given by `ParamName` enum, so we can use it to sort
+-- the costmodel param values before passing them to plutus `mkEvaluationContext`.
 plutusV1ParamNames :: [Text]
 plutusV1ParamNames =
-  [ "addInteger-cpu-arguments-intercept"
-  , "addInteger-cpu-arguments-slope"
-  , "addInteger-memory-arguments-intercept"
-  , "addInteger-memory-arguments-slope"
-  , "appendByteString-cpu-arguments-intercept"
-  , "appendByteString-cpu-arguments-slope"
-  , "appendByteString-memory-arguments-intercept"
-  , "appendByteString-memory-arguments-slope"
-  , "appendString-cpu-arguments-intercept"
-  , "appendString-cpu-arguments-slope"
-  , "appendString-memory-arguments-intercept"
-  , "appendString-memory-arguments-slope"
-  , "bData-cpu-arguments"
-  , "bData-memory-arguments"
-  , "blake2b-cpu-arguments-intercept"
-  , "blake2b-cpu-arguments-slope"
-  , "blake2b-memory-arguments"
-  , "cekApplyCost-exBudgetCPU"
-  , "cekApplyCost-exBudgetMemory"
-  , "cekBuiltinCost-exBudgetCPU"
-  , "cekBuiltinCost-exBudgetMemory"
-  , "cekConstCost-exBudgetCPU"
-  , "cekConstCost-exBudgetMemory"
-  , "cekDelayCost-exBudgetCPU"
-  , "cekDelayCost-exBudgetMemory"
-  , "cekForceCost-exBudgetCPU"
-  , "cekForceCost-exBudgetMemory"
-  , "cekLamCost-exBudgetCPU"
-  , "cekLamCost-exBudgetMemory"
-  , "cekStartupCost-exBudgetCPU"
-  , "cekStartupCost-exBudgetMemory"
-  , "cekVarCost-exBudgetCPU"
-  , "cekVarCost-exBudgetMemory"
-  , "chooseData-cpu-arguments"
-  , "chooseData-memory-arguments"
-  , "chooseList-cpu-arguments"
-  , "chooseList-memory-arguments"
-  , "chooseUnit-cpu-arguments"
-  , "chooseUnit-memory-arguments"
-  , "consByteString-cpu-arguments-intercept"
-  , "consByteString-cpu-arguments-slope"
-  , "consByteString-memory-arguments-intercept"
-  , "consByteString-memory-arguments-slope"
-  , "constrData-cpu-arguments"
-  , "constrData-memory-arguments"
-  , "decodeUtf8-cpu-arguments-intercept"
-  , "decodeUtf8-cpu-arguments-slope"
-  , "decodeUtf8-memory-arguments-intercept"
-  , "decodeUtf8-memory-arguments-slope"
-  , "divideInteger-cpu-arguments-constant"
-  , "divideInteger-cpu-arguments-model-arguments-intercept"
-  , "divideInteger-cpu-arguments-model-arguments-slope"
-  , "divideInteger-memory-arguments-intercept"
-  , "divideInteger-memory-arguments-minimum"
-  , "divideInteger-memory-arguments-slope"
-  , "encodeUtf8-cpu-arguments-intercept"
-  , "encodeUtf8-cpu-arguments-slope"
-  , "encodeUtf8-memory-arguments-intercept"
-  , "encodeUtf8-memory-arguments-slope"
-  , "equalsByteString-cpu-arguments-constant"
-  , "equalsByteString-cpu-arguments-intercept"
-  , "equalsByteString-cpu-arguments-slope"
-  , "equalsByteString-memory-arguments"
-  , "equalsData-cpu-arguments-intercept"
-  , "equalsData-cpu-arguments-slope"
-  , "equalsData-memory-arguments"
-  , "equalsInteger-cpu-arguments-intercept"
-  , "equalsInteger-cpu-arguments-slope"
-  , "equalsInteger-memory-arguments"
-  , "equalsString-cpu-arguments-constant"
-  , "equalsString-cpu-arguments-intercept"
-  , "equalsString-cpu-arguments-slope"
-  , "equalsString-memory-arguments"
-  , "fstPair-cpu-arguments"
-  , "fstPair-memory-arguments"
-  , "headList-cpu-arguments"
-  , "headList-memory-arguments"
-  , "iData-cpu-arguments"
-  , "iData-memory-arguments"
-  , "ifThenElse-cpu-arguments"
-  , "ifThenElse-memory-arguments"
-  , "indexByteString-cpu-arguments"
-  , "indexByteString-memory-arguments"
-  , "lengthOfByteString-cpu-arguments"
-  , "lengthOfByteString-memory-arguments"
-  , "lessThanByteString-cpu-arguments-intercept"
-  , "lessThanByteString-cpu-arguments-slope"
-  , "lessThanByteString-memory-arguments"
-  , "lessThanEqualsByteString-cpu-arguments-intercept"
-  , "lessThanEqualsByteString-cpu-arguments-slope"
-  , "lessThanEqualsByteString-memory-arguments"
-  , "lessThanEqualsInteger-cpu-arguments-intercept"
-  , "lessThanEqualsInteger-cpu-arguments-slope"
-  , "lessThanEqualsInteger-memory-arguments"
-  , "lessThanInteger-cpu-arguments-intercept"
-  , "lessThanInteger-cpu-arguments-slope"
-  , "lessThanInteger-memory-arguments"
-  , "listData-cpu-arguments"
-  , "listData-memory-arguments"
-  , "mapData-cpu-arguments"
-  , "mapData-memory-arguments"
-  , "mkCons-cpu-arguments"
-  , "mkCons-memory-arguments"
-  , "mkNilData-cpu-arguments"
-  , "mkNilData-memory-arguments"
-  , "mkNilPairData-cpu-arguments"
-  , "mkNilPairData-memory-arguments"
-  , "mkPairData-cpu-arguments"
-  , "mkPairData-memory-arguments"
-  , "modInteger-cpu-arguments-constant"
-  , "modInteger-cpu-arguments-model-arguments-intercept"
-  , "modInteger-cpu-arguments-model-arguments-slope"
-  , "modInteger-memory-arguments-intercept"
-  , "modInteger-memory-arguments-minimum"
-  , "modInteger-memory-arguments-slope"
-  , "multiplyInteger-cpu-arguments-intercept"
-  , "multiplyInteger-cpu-arguments-slope"
-  , "multiplyInteger-memory-arguments-intercept"
-  , "multiplyInteger-memory-arguments-slope"
-  , "nullList-cpu-arguments"
-  , "nullList-memory-arguments"
-  , "quotientInteger-cpu-arguments-constant"
-  , "quotientInteger-cpu-arguments-model-arguments-intercept"
-  , "quotientInteger-cpu-arguments-model-arguments-slope"
-  , "quotientInteger-memory-arguments-intercept"
-  , "quotientInteger-memory-arguments-minimum"
-  , "quotientInteger-memory-arguments-slope"
-  , "remainderInteger-cpu-arguments-constant"
-  , "remainderInteger-cpu-arguments-model-arguments-intercept"
-  , "remainderInteger-cpu-arguments-model-arguments-slope"
-  , "remainderInteger-memory-arguments-intercept"
-  , "remainderInteger-memory-arguments-minimum"
-  , "remainderInteger-memory-arguments-slope"
-  , "sha2_256-cpu-arguments-intercept"
-  , "sha2_256-cpu-arguments-slope"
-  , "sha2_256-memory-arguments"
-  , "sha3_256-cpu-arguments-intercept"
-  , "sha3_256-cpu-arguments-slope"
-  , "sha3_256-memory-arguments"
-  , "sliceByteString-cpu-arguments-intercept"
-  , "sliceByteString-cpu-arguments-slope"
-  , "sliceByteString-memory-arguments-intercept"
-  , "sliceByteString-memory-arguments-slope"
-  , "sndPair-cpu-arguments"
-  , "sndPair-memory-arguments"
-  , "subtractInteger-cpu-arguments-intercept"
-  , "subtractInteger-cpu-arguments-slope"
-  , "subtractInteger-memory-arguments-intercept"
-  , "subtractInteger-memory-arguments-slope"
-  , "tailList-cpu-arguments"
-  , "tailList-memory-arguments"
-  , "trace-cpu-arguments"
-  , "trace-memory-arguments"
-  , "unBData-cpu-arguments"
-  , "unBData-memory-arguments"
-  , "unConstrData-cpu-arguments"
-  , "unConstrData-memory-arguments"
-  , "unIData-cpu-arguments"
-  , "unIData-memory-arguments"
-  , "unListData-cpu-arguments"
-  , "unListData-memory-arguments"
-  , "unMapData-cpu-arguments"
-  , "unMapData-memory-arguments"
-  , "verifySignature-cpu-arguments-intercept"
-  , "verifySignature-cpu-arguments-slope"
-  , "verifySignature-memory-arguments"
-  ]
+  map (\newName -> Map.findWithDefault newName newName oldNewMapping) newNames
+  where
+    newNames = T.pack . Plutus.showParamName <$> [minBound .. maxBound :: PV1.ParamName]
+    oldNewMapping =
+      Map.fromList
+        [ ("blake2b_256-cpu-arguments-intercept", "blake2b-cpu-arguments-intercept")
+        , ("blake2b_256-cpu-arguments-slope", "blake2b-cpu-arguments-slope")
+        , ("blake2b_256-memory-arguments", "blake2b-memory-arguments")
+        , ("verifyEd25519Signature-cpu-arguments-intercept", "verifySignature-cpu-arguments-intercept")
+        , ("verifyEd25519Signature-cpu-arguments-slope", "verifySignature-cpu-arguments-slope")
+        , ("verifyEd25519Signature-memory-arguments", "verifySignature-memory-arguments")
+        ]
 
-validateCostModel :: MonadFail m => Language -> [Integer] -> m (Language, CostModel)
+plutusV2ParamNames :: [Text]
+plutusV2ParamNames = T.pack . Plutus.showParamName <$> [minBound .. maxBound :: PV2.ParamName]
+
+validateCostModel :: MonadFail m => Language -> [Integer] -> m CostModel
 validateCostModel lang cmps =
   case mkCostModel lang cmps of
     Left err -> fail $ show err
-    Right cm -> pure (lang, cm)
+    Right cm -> pure cm
 
 -- | Convert cost model parameters to a cost model, making use of the
 --  conversion function mkEvaluationContext from the Plutus API.
