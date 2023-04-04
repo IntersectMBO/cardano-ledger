@@ -37,6 +37,7 @@
 * Add `EncCBOR`/`DecCBOR` and `ToCBOR`/`FromCBOR` for `ConwayTallyPredFailure`
 * Add `ToCBOR`/`FromCBOR` for `ConwayGovernance`
 * Remove `cgAlonzoGenesis` from `ConwayGenesis`.
+* Set `ConwayGenesis` as `TranslationContext`
 
 ### `testlib`
 
