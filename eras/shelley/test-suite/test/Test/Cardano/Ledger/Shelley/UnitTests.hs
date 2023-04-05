@@ -37,11 +37,11 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates (pattern RegPool)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   IncrementalStake (..),
   LedgerState (..),
   UTxOState (..),
-  dpsDState,
+  certDState,
   dsUnified,
   rewards,
  )
@@ -332,16 +332,16 @@ utxoState =
     def
     (IStake mempty mempty)
 
-dpState :: DPState C_Crypto
-dpState = DPState def def
+dpState :: CertState C
+dpState = CertState def def def
 
 ledgerState :: LedgerState C
 ledgerState = LedgerState utxoState dpState
 
-addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState C_Crypto
-addReward dp ra c = dp {dpsDState = ds {dsUnified = rewards'}}
+addReward :: CertState C -> Credential 'Staking C_Crypto -> Coin -> CertState C
+addReward dp ra c = dp {certDState = ds {dsUnified = rewards'}}
   where
-    ds = dpsDState dp
+    ds = certDState dp
     rewards' = UM.insert ra (UM.RDPair (UM.compactCoinOrError c) (UM.CompactCoin 2)) (rewards ds)
 
 -- Any key deposit works in this test ^

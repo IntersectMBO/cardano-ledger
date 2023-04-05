@@ -1,5 +1,12 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.1.1.0
+
+* Add `TranslateEra` instances for:
+  * `DState`
+  * `PState`
+  * `VState`
+
 ## 1.1.0.0
 
 * Addition of `ToJSON` instances for `AssetName`, `PolicyID`, `MultiAsset` and `MaryValue`.

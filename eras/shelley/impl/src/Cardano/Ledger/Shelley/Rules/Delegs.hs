@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -19,6 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
   ShelleyDelegsPredFailure (..),
   ShelleyDelegsEvent (..),
   PredicateFailure,
+  delegsTransition,
 )
 where
 
@@ -43,8 +45,8 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
-  DPState (..),
-  dpsDState,
+  CertState (..),
+  certDState,
   dsUnified,
   psStakePoolParams,
   rewards,
@@ -111,13 +113,11 @@ data ShelleyDelegsPredFailure era
 newtype ShelleyDelegsEvent era = DelplEvent (Event (EraRule "DELPL" era))
 
 deriving stock instance
-  ( Show (PredicateFailure (EraRule "DELPL" era))
-  ) =>
+  Show (PredicateFailure (EraRule "DELPL" era)) =>
   Show (ShelleyDelegsPredFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (EraRule "DELPL" era))
-  ) =>
+  Eq (PredicateFailure (EraRule "DELPL" era)) =>
   Eq (ShelleyDelegsPredFailure era)
 
 instance
@@ -129,12 +129,13 @@ instance
   , ShelleyEraTxBody era
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   ) =>
   STS (ShelleyDELEGS era)
   where
-  type State (ShelleyDELEGS era) = DPState (EraCrypto era)
+  type State (ShelleyDELEGS era) = CertState era
   type Signal (ShelleyDELEGS era) = Seq (DCert (EraCrypto era))
   type Environment (ShelleyDELEGS era) = DelegsEnv era
   type BaseM (ShelleyDELEGS era) = ShelleyBase
@@ -198,8 +199,9 @@ delegsTransition ::
   , ShelleyEraTxBody era
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
+  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
@@ -208,7 +210,7 @@ delegsTransition = do
 
   case certificates of
     Empty -> do
-      let ds = dpsDState dpstate
+      let ds = certDState dpstate
           withdrawals_ = unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
           rewards' = rewards ds
       isSubmapOf withdrawals_ rewards' -- withdrawals_ ⊆ rewards
@@ -229,14 +231,14 @@ delegsTransition = do
               Map.empty
               withdrawals_
           unified' = rewards' UM.⨃ drainedRewardAccounts
-      pure $ dpstate {dpsDState = ds {dsUnified = unified'}}
+      pure $ dpstate {certDState = ds {dsUnified = unified'}}
     gamma :|> c -> do
       dpstate' <-
         trans @(ShelleyDELEGS era) $ TRC (env, dpstate, gamma)
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
-              let stPools_ = psStakePoolParams $ dpsPState dpstate'
+              let stPools_ = psStakePoolParams $ certPState dpstate'
                   targetPool = dDelegatee deleg
                in if eval (targetPool ∈ dom stPools_)
                     then Right ()
@@ -265,7 +267,7 @@ delegsTransition = do
             | (RewardAcnt _ cred, coin) <- Map.toList withdrawals_
             ]
         f :: Coin -> Trip (EraCrypto era) -> Bool
-        f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == (fromCompact coin2)
+        f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == fromCompact coin2
         f _ _ = False
 
 instance

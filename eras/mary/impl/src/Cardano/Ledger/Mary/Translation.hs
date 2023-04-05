@@ -4,8 +4,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -79,12 +79,30 @@ instance Crypto c => TranslateEra (MaryEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
+instance Crypto c => TranslateEra (MaryEra c) DState where
+  translateEra _ DState {..} = pure DState {..}
+
+instance Crypto c => TranslateEra (MaryEra c) VState where
+  translateEra _ VState {..} = pure VState {..}
+
+instance Crypto c => TranslateEra (MaryEra c) PState where
+  translateEra _ PState {..} = pure PState {..}
+
+instance Crypto c => TranslateEra (MaryEra c) CertState where
+  translateEra ctxt ls =
+    pure
+      CertState
+        { certDState = translateEra' ctxt $ certDState ls
+        , certPState = translateEra' ctxt $ certPState ls
+        , certVState = translateEra' ctxt $ certVState ls
+        }
+
 instance Crypto c => TranslateEra (MaryEra c) LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
-        , lsDPState = lsDPState ls
+        , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
 instance Crypto c => TranslateEra (MaryEra c) ProposedPPUpdates where

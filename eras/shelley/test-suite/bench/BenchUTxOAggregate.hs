@@ -9,6 +9,7 @@ import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (toCompact)
+import Cardano.Ledger.Core (Era (..))
 import Cardano.Ledger.Credential (
   Credential (..),
   Ptr (..),
@@ -51,7 +52,7 @@ import Test.QuickCheck
 genTestCase ::
   Int -> -- The size of the utxo
   Int -> -- the number of addresses
-  Gen (DState StandardCrypto, PState StandardCrypto, UTxO (ShelleyEra StandardCrypto))
+  Gen (DState (ShelleyEra StandardCrypto), PState (ShelleyEra StandardCrypto), UTxO (ShelleyEra StandardCrypto))
 genTestCase numUTxO numAddr = do
   addrs :: [Addr StandardCrypto] <- replicateM numAddr arbitrary
   let packedAddrs = Seq.fromList addrs
@@ -84,11 +85,11 @@ genTestCase numUTxO numAddr = do
   pure (dstate, pstate, UTxO utxo)
 
 makeStatePair ::
-  Map (Credential 'Staking c) Coin ->
-  Map (Credential 'Staking c) (KeyHash 'StakePool c) ->
-  Map Ptr (Credential 'Staking c) ->
-  Map (KeyHash 'StakePool c) (PoolParams c) ->
-  (DState c, PState c)
+  Map (Credential 'Staking (EraCrypto era)) Coin ->
+  Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
+  Map Ptr (Credential 'Staking (EraCrypto era)) ->
+  Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
+  (DState era, PState era)
 makeStatePair rewards' delegs ptrs' poolParams =
   ( DState
       (UM.unify (Map.map rdPair rewards') delegs ptrs')

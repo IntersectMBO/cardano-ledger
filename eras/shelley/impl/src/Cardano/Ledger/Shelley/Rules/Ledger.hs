@@ -40,12 +40,12 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
-  DPState (..),
+  CertState (..),
   DState (..),
   LedgerState (..),
   PState (..),
   UTxOState (..),
-  obligationDPState,
+  obligationCertState,
  )
 import Cardano.Ledger.Shelley.Rules.Delegs (
   DelegsEnv (..),
@@ -174,7 +174,7 @@ instance
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
   ) =>
@@ -197,7 +197,7 @@ instance
         "Deposit pot must equal obligation (ShelleyLedger)"
         ( \(TRC (_, _, _))
            (LedgerState utxoSt dpstate) ->
-              obligationDPState dpstate == utxosDeposited utxoSt
+              obligationCertState dpstate == utxosDeposited utxoSt
         )
     ]
 
@@ -207,7 +207,7 @@ ledgerTransition ::
   , ShelleyEraTxBody era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
@@ -225,7 +225,7 @@ ledgerTransition = do
         , dpstate
         , StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )
-  let genDelegs = dsGenDelegs (dpsDState dpstate)
+  let genDelegs = dsGenDelegs (certDState dpstate)
 
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $
@@ -270,7 +270,7 @@ depositEqualsObligation ::
   String
 depositEqualsObligation
   AssertionViolation {avSTS, avMsg, avCtx = (TRC (LedgerEnv slot _ pp _, _, tx)), avState} =
-    let dpstate = lsDPState <$> avState
+    let dpstate = lsCertState <$> avState
         utxo = (utxosUtxo . lsUTxOState) <$> avState
         txb = tx ^. bodyTxL
      in "\n\nAssertionViolation ("
@@ -284,9 +284,9 @@ depositEqualsObligation
           <> "\nutxosDeposited = "
           <> show ((utxosDeposited . lsUTxOState) <$> avState)
           <> "\nKey Deposits summary = "
-          <> synopsisCoinMap ((depositView . dsUnified . dpsDState . lsDPState) <$> avState)
+          <> synopsisCoinMap ((depositView . dsUnified . certDState . lsCertState) <$> avState)
           <> "\nPool Deposits summary = "
-          <> synopsisCoinMap ((psDeposits . dpsPState . lsDPState) <$> avState)
+          <> synopsisCoinMap ((psDeposits . certPState . lsCertState) <$> avState)
           <> "\nConsumed = "
           <> show (consumedTxBody txb pp <$> dpstate <*> utxo)
           <> "\nProduced = "

@@ -37,7 +37,7 @@ import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -45,8 +45,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
+  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
+import Cardano.Ledger.Shelley.Translation ()
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
@@ -114,11 +116,13 @@ eqVia pcf x y = if x == y then Nothing else Just (notEq (pcf x) (pcf y))
 class Same era t where
   same :: Proof era -> t -> t -> [(String, Maybe PDoc)]
 
-instance (EraCrypto era ~ c) => Same era (DPState c) where
-  same proof (DPState d1 p1) (DPState d2 p2) =
-    extendLabel "DState " (same proof d1 d2) ++ extendLabel "PState " (same proof p1 p2)
+instance Same era (CertState era) where
+  same proof (CertState d1 p1 v1) (CertState d2 p2 v2) =
+    extendLabel "DState " (same proof d1 d2)
+      ++ extendLabel "PState " (same proof p1 p2)
+      ++ extendLabel "VState " (same proof v1 v2)
 
-instance (EraCrypto era ~ c) => Same era (PState c) where
+instance Same era (PState era) where
   same _proof (PState pp1 fpp1 ret1 d1) (PState pp2 fpp2 ret2 d2) =
     [ ("PoolParams", eqByShow pp1 pp2)
     , ("FuturePoolParams", eqByShow fpp1 fpp2)
@@ -126,12 +130,18 @@ instance (EraCrypto era ~ c) => Same era (PState c) where
     , ("Deposits", eqByShow d1 d2)
     ]
 
-instance (EraCrypto era ~ c) => Same era (DState c) where
+instance Same era (DState era) where
   same _proof (DState u1 fgd1 gd1 ir1) (DState u2 fgd2 gd2 ir2) =
     [ ("Unified", eqByShow u1 u2)
     , ("FutureGenDelegs", eqByShow fgd1 fgd2)
     , ("GenDelegs", eqByShow gd1 gd2)
     , ("InstantaneousRewards", eqByShow ir1 ir2)
+    ]
+
+instance Same era (VState era) where
+  same _proof (VState dr1 cchk1) (VState dr2 cchk2) =
+    [ ("DReps", eqByShow dr1 dr2)
+    , ("CC Hot Keys", eqByShow cchk1 cchk2)
     ]
 
 sameUTxO :: Proof era -> UTxO era -> UTxO era -> Maybe PDoc
@@ -174,7 +184,7 @@ instance Reflect era => Same era (UTxOState era) where
 instance Reflect era => Same era (LedgerState era) where
   same proof x1 x2 =
     extendLabel "UTxOState " (same proof (lsUTxOState x1) (lsUTxOState x2))
-      ++ extendLabel "DPState " (same proof (lsDPState x1) (lsDPState x2))
+      ++ extendLabel "CertState " (same proof (lsCertState x1) (lsCertState x2))
 
 instance Reflect era => Same era (EpochState era) where
   same proof e1 e2 =

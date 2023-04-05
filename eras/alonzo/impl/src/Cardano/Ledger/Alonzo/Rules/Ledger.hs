@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -23,11 +22,11 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   LedgerState (..),
   UTxOState (..),
-  obligationDPState,
+  obligationCertState,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
@@ -72,7 +71,7 @@ ledgerTransition ::
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
@@ -95,7 +94,7 @@ ledgerTransition = do
             )
       else pure dpstate
 
-  let DPState dstate _pstate = dpstate
+  let CertState _ _pstate dstate = dpstate
       genDelegs = dsGenDelegs dstate
 
   utxoSt' <-
@@ -117,7 +116,7 @@ instance
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ AlonzoTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
   ) =>
@@ -139,7 +138,7 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation (AlonzoLEDGER)"
         ( \(TRC (_, _, _))
-           (LedgerState utxoSt dpstate) -> obligationDPState dpstate == utxosDeposited utxoSt
+           (LedgerState utxoSt dpstate) -> obligationCertState dpstate == utxosDeposited utxoSt
         )
     ]
 

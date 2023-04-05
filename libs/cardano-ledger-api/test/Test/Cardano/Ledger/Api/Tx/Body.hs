@@ -10,9 +10,9 @@ module Test.Cardano.Ledger.Api.Tx.Body (spec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Body
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.DPState
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates
@@ -30,7 +30,7 @@ import Test.Cardano.Ledger.Common
 totalTxDeposits ::
   ShelleyEraTxBody era =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   TxBody era ->
   Coin
 totalTxDeposits pp dpstate txb =
@@ -38,7 +38,7 @@ totalTxDeposits pp dpstate txb =
   where
     certs = toList (txb ^. certsTxBodyG)
     numKeys = length $ filter isRegKey certs
-    regpools = psStakePoolParams (dpsPState dpstate)
+    regpools = psStakePoolParams (certPState dpstate)
     accum (!pools, !ans) (DCertPool (RegPool poolparam)) =
       -- We don't pay a deposit on a pool that is already registered
       if Map.member (ppId poolparam) pools
@@ -49,13 +49,13 @@ totalTxDeposits pp dpstate txb =
 keyTxRefunds ::
   ShelleyEraTxBody era =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   TxBody era ->
   Coin
 keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
   where
     certs = tx ^. certsTxBodyG
-    initialKeys = UM.RewardDeposits $ dsUnified $ dpsDState dpstate
+    initialKeys = UM.RewardDeposits $ dsUnified $ certDState dpstate
     keyDeposit = UM.compactCoinOrError (pp ^. ppKeyDepositL)
     accum (!keys, !ans) (DCertDeleg (RegKey k)) =
       -- Deposit is added locally to the growing 'keys'
@@ -73,7 +73,7 @@ keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
 evaluateTransactionBalance ::
   (EraUTxO era, MaryEraTxBody era) =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   UTxO era ->
   TxBody era ->
   Value era
@@ -93,14 +93,14 @@ evaluateTransactionBalance pp dpstate (UTxO u) txBody = consumed <-> produced
 -- undelegation certificates respectively.
 genTxBodyFrom ::
   (ShelleyEraTxBody era, AtMostEra BabbageEra era, Arbitrary (TxBody era)) =>
-  DPState (EraCrypto era) ->
+  CertState era ->
   UTxO era ->
   Gen (TxBody era)
-genTxBodyFrom DPState {dpsDState, dpsPState} (UTxO u) = do
+genTxBodyFrom CertState {certDState, certPState} (UTxO u) = do
   txBody <- arbitrary
   inputs <- sublistOf (Map.keys u)
-  unDelegCreds <- sublistOf (toList (UM.domain (UM.RewardDeposits $ dsUnified dpsDState)))
-  deRegKeys <- sublistOf (Map.elems (psStakePoolParams dpsPState))
+  unDelegCreds <- sublistOf (toList (UM.domain (UM.RewardDeposits $ dsUnified certDState)))
+  deRegKeys <- sublistOf (Map.elems (psStakePoolParams certPState))
   certs <-
     shuffle $
       toList (txBody ^. certsTxBodyL)
@@ -115,7 +115,7 @@ genTxBodyFrom DPState {dpsDState, dpsPState} (UTxO u) = do
 propEvalBalanceTxBody ::
   (EraUTxO era, MaryEraTxBody era, AtMostEra BabbageEra era, Arbitrary (TxBody era)) =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   UTxO era ->
   Property
 propEvalBalanceTxBody pp dpState utxo =
@@ -124,8 +124,8 @@ propEvalBalanceTxBody pp dpState utxo =
       evalBalanceTxBody pp lookupRefund isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalance pp dpState utxo txBody
   where
-    lookupRefund = lookupDepositDState (dpsDState dpState)
-    isRegPoolId = (`Map.member` psStakePoolParams (dpsPState dpState))
+    lookupRefund = lookupDepositDState (certDState dpState)
+    isRegPoolId = (`Map.member` psStakePoolParams (certPState dpState))
 
 spec :: Spec
 spec =

@@ -341,7 +341,7 @@ exampleNewEpochState value ppp pp =
                     , utxosGovernance = emptyGovernanceState
                     , utxosStakeDistr = mempty
                     }
-              , lsDPState = def
+              , lsCertState = def
               }
         , esPrevPp = ppp
         , esPp = pp

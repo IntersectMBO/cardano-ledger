@@ -105,7 +105,7 @@ instance NoThunks (ShelleyPoolPredFailure era)
 instance NFData (ShelleyPoolPredFailure era)
 
 instance EraPParams era => STS (ShelleyPOOL era) where
-  type State (ShelleyPOOL era) = PState (EraCrypto era)
+  type State (ShelleyPOOL era) = PState era
 
   type Signal (ShelleyPOOL era) = DCert (EraCrypto era)
 

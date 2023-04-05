@@ -38,11 +38,11 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (DCert)
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   LedgerState (..),
   UTxOState (..),
-  dpsDState,
+  certDState,
   ptrsMap,
   rewards,
  )
@@ -130,7 +130,7 @@ genTx ::
   , Mock (EraCrypto era)
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
   GenEnv era ->
@@ -170,7 +170,7 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((Map.map (UM.fromCompact . UM.rdReward) . UM.unUnify . rewards . dpsDState) dpState)
+          ((Map.map (UM.fromCompact . UM.rdReward) . UM.unUnify . rewards . certDState) dpState)
       (update, updateWits) <-
         genUpdate
           constants
@@ -219,7 +219,7 @@ genTx
 
       outputAddrs <-
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
-          >>= genPtrAddrs (dpsDState dpState')
+          >>= genPtrAddrs (certDState dpState')
 
       !_ <- when (coin spendingBalance < mempty) $ myDiscard "Negative spending balance"
 
@@ -870,7 +870,7 @@ genRecipients len keys scripts = do
     scriptToCred' :: Script era -> Credential kr (EraCrypto era)
     scriptToCred' = ScriptHashObj . hashScript @era
 
-genPtrAddrs :: DState c -> [Addr c] -> Gen [Addr c]
+genPtrAddrs :: DState era -> [Addr (EraCrypto era)] -> Gen [Addr (EraCrypto era)]
 genPtrAddrs ds addrs = do
   let pointers = ptrsMap ds
   n <- QC.choose (0, min (Map.size pointers) (length addrs))

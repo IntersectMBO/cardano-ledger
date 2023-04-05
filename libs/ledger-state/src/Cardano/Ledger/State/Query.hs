@@ -4,7 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.State.Query where
@@ -31,6 +30,7 @@ import Control.Monad
 import Control.Monad.Trans.Reader
 import Data.Conduit.Internal (zipSources)
 import Data.Conduit.List (sourceList)
+import Data.Default.Class (def)
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
@@ -90,7 +90,7 @@ insertUTxO utxo stateKey = do
           , utxoEntryStateId = stateKey
           }
 
-insertDState :: MonadIO m => Shelley.DState C -> ReaderT SqlBackend m DStateId
+insertDState :: MonadIO m => Shelley.DState CurrentEra -> ReaderT SqlBackend m DStateId
 insertDState Shelley.DState {..} = do
   let irDeltaReserves = Shelley.deltaReserves dsIRewards
   let irDeltaTreasury = Shelley.deltaTreasury dsIRewards
@@ -118,12 +118,12 @@ insertLedgerState ::
 insertLedgerState epochStateKey Shelley.LedgerState {..} = do
   stateKey <- insertUTxOState lsUTxOState
   insertUTxO (Shelley.utxosUtxo lsUTxOState) stateKey
-  dstateKey <- insertDState $ Shelley.dpsDState lsDPState
+  dstateKey <- insertDState $ Shelley.certDState lsCertState
   insert_
     LedgerState
       { ledgerStateUtxoId = stateKey
       , ledgerStateDstateId = dstateKey
-      , ledgerStatePstateBin = Shelley.dpsPState lsDPState
+      , ledgerStatePstateBin = Shelley.certPState lsCertState
       , ledgerStateEpochStateId = epochStateKey
       }
 
@@ -509,7 +509,7 @@ getLedgerState ::
   MonadIO m =>
   Shelley.UTxO CurrentEra ->
   LedgerState ->
-  Shelley.DState C ->
+  Shelley.DState CurrentEra ->
   ReaderT SqlBackend m (Shelley.LedgerState CurrentEra)
 getLedgerState utxo LedgerState {..} dstate = do
   UtxoState {..} <- getJust ledgerStateUtxoId
@@ -517,15 +517,16 @@ getLedgerState utxo LedgerState {..} dstate = do
     Shelley.LedgerState
       { Shelley.lsUTxOState =
           Shelley.smartUTxOState emptyPParams utxo utxoStateDeposited utxoStateFees utxoStatePpups -- Maintain invariant
-      , Shelley.lsDPState =
-          Shelley.DPState
-            { Shelley.dpsDState = dstate
-            , Shelley.dpsPState = ledgerStatePstateBin
+      , Shelley.lsCertState =
+          Shelley.CertState
+            { Shelley.certDState = dstate
+            , Shelley.certPState = ledgerStatePstateBin
+            , Shelley.certVState = def
             }
       }
 
 getDStateNoSharing ::
-  MonadIO m => Key DState -> ReaderT SqlBackend m (Shelley.DState C)
+  MonadIO m => Key DState -> ReaderT SqlBackend m (Shelley.DState CurrentEra)
 getDStateNoSharing dstateId = do
   DState {..} <- getJust dstateId
   rewards <-
@@ -535,7 +536,7 @@ getDStateNoSharing dstateId = do
         Credential credential <- getJust rewardCredentialId
         pure (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
   -- FIXME the deposit is not accounted for ^
-  -- The PR ts-keydeposit-intoUMap breaks this tool since it changes the DPState data type.
+  -- The PR ts-keydeposit-intoUMap breaks this tool since it changes the CertState data type.
   -- https://github.com/input-output-hk/cardano-ledger/pull/3217
   -- All the FIXME-s in this file will have to be addressed in a follow on PR
   delegations <-
@@ -578,7 +579,7 @@ getDStateNoSharing dstateId = do
       }
 
 getDStateWithSharing ::
-  MonadIO m => Key DState -> ReaderT SqlBackend m (Shelley.DState C)
+  MonadIO m => Key DState -> ReaderT SqlBackend m (Shelley.DState CurrentEra)
 getDStateWithSharing dstateId = do
   DState {..} <- getJust dstateId
   rewards <-
@@ -631,7 +632,7 @@ getDStateWithSharing dstateId = do
             }
       }
 
-loadDStateNoSharing :: MonadUnliftIO m => T.Text -> m (Shelley.DState C)
+loadDStateNoSharing :: MonadUnliftIO m => T.Text -> m (Shelley.DState CurrentEra)
 loadDStateNoSharing fp =
   runSqlite fp $ getDStateNoSharing (DStateKey (SqlBackendKey 1))
 

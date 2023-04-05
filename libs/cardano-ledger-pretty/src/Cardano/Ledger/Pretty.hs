@@ -51,6 +51,7 @@ import Cardano.Ledger.BaseTypes (
   txIxToInt,
  )
 import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.CertState (VState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -86,7 +87,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
@@ -633,10 +634,16 @@ ppAccountState (AccountState tr re) =
     , ("reserves", ppCoin re)
     ]
 
-ppDPState :: DPState c -> PDoc
-ppDPState (DPState d p) = ppRecord "DPState" [("dstate", ppDState d), ("pstate", ppPState p)]
+ppCertState :: CertState era -> PDoc
+ppCertState (CertState v p d) =
+  ppRecord
+    "CertState"
+    [ ("vstate", prettyA v)
+    , ("pstate", ppPState p)
+    , ("dstate", ppDState d)
+    ]
 
-ppDState :: DState c -> PDoc
+ppDState :: DState era -> PDoc
 ppDState (DState unified future gen irwd) =
   ppRecord
     "DState"
@@ -774,14 +781,14 @@ ppLedgerState (LedgerState u d) =
   ppRecord
     "LedgerState"
     [ ("utxoState", ppUTxOState u)
-    , ("delegationState", ppDPState d)
+    , ("delegationState", ppCertState d)
     ]
 
 instance PrettyA AccountState where
   prettyA = ppAccountState
 
-instance PrettyA (DPState c) where
-  prettyA = ppDPState
+instance PrettyA (CertState c) where
+  prettyA = ppCertState
 
 instance PrettyA (DState c) where
   prettyA = ppDState
@@ -1654,6 +1661,14 @@ instance PrettyA (GenDelegPair c) where
 
 instance PrettyA (GenDelegs c) where
   prettyA = ppGenDelegs
+
+instance PrettyA (VState era) where
+  prettyA st@(VState _ _) =
+    ppRecord
+      "VState"
+      [ ("DReps", prettyA $ vsDReps st)
+      , ("CC Hot Keys", prettyA $ vsCCHotKeys st)
+      ]
 
 -- ======================================================
 

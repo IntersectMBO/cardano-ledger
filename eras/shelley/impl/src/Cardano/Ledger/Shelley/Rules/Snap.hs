@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -33,7 +32,7 @@ import Cardano.Ledger.EpochBoundary (
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   LedgerState (..),
   UTxOState (..),
   incrementalStakeDistr,
@@ -88,7 +87,8 @@ snapTransition ::
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake) (DPState dstate pstate)) pp = snapEnv
+  -- TODO Handle VState
+  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake) (CertState _ pstate dstate)) pp = snapEnv
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
       istakeSnap = incrementalStakeDistr pp incStake dstate pstate
 

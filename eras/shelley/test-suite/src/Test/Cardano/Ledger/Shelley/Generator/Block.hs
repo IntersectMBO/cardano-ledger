@@ -239,8 +239,8 @@ selectNextSlotWithLeader
           chainSt = tickChainState slotNo origChainState
           epochNonce = chainEpochNonce chainSt
           poolDistr = unPoolDistr . nesPd . chainNes $ chainSt
-          dpstate = (lsDPState . esLState . nesEs . chainNes) chainSt
-          (GenDelegs cores) = (dsGenDelegs . dpsDState) dpstate
+          dpstate = (lsCertState . esLState . nesEs . chainNes) chainSt
+          (GenDelegs cores) = (dsGenDelegs . certDState) dpstate
           firstEpochSlot = slotFromEpoch (epochFromSlotNo slotNo)
           f = activeSlotCoeff testGlobals
           getUnitInterval :: PParams era -> UnitInterval

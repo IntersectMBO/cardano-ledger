@@ -61,11 +61,11 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
-import Cardano.Ledger.DPState
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -581,20 +581,21 @@ genRightPreferenceUMap = do
   pure (umap, Map.fromList $ zip subdomain coins)
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.DPState -------------------------------------------------------------------
+-- Cardano.Ledger.CertState -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (DPState c) where
-  arbitrary = DPState <$> arbitrary <*> arbitrary
+instance Era era => Arbitrary (CertState era) where
+  arbitrary = CertState <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (DState c) where
+instance Era era => Arbitrary (DState era) where
   arbitrary = DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-  shrink = genericShrink
 
-instance Crypto c => Arbitrary (PState c) where
+instance Era era => Arbitrary (PState era) where
   arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-  shrink = genericShrink
+
+instance Era era => Arbitrary (VState era) where
+  arbitrary = VState <$> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (InstantaneousRewards c) where
   arbitrary = InstantaneousRewards <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

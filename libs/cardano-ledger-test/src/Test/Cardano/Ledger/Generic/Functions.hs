@@ -45,13 +45,14 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   PState (..),
   UTxOState (..),
+  VState (..),
  )
 import Cardano.Ledger.Shelley.TxBody (
   DCert (..),
@@ -395,7 +396,7 @@ instance Reflect era => TotalAda (UTxOState era) where
 
 -- we don't add in the _deposits, because it is invariant that this
 -- is equal to the sum of the key deposit map and the pool deposit map
--- So these are accounted for in the instance (TotalAda (DPState era))
+-- So these are accounted for in the instance (TotalAda (CertState era))
 
 instance Reflect era => TotalAda (UTxO era) where
   totalAda (UTxO m) = foldl accum mempty m
@@ -410,8 +411,11 @@ instance TotalAda (DState era) where
 instance TotalAda (PState era) where
   totalAda pstate = Fold.fold (psDeposits pstate)
 
-instance TotalAda (DPState era) where
-  totalAda (DPState ds ps) = totalAda ds <> totalAda ps
+instance TotalAda (VState era) where
+  totalAda _ = mempty
+
+instance TotalAda (CertState era) where
+  totalAda (CertState ds ps vs) = totalAda ds <> totalAda ps <> totalAda vs
 
 instance TotalAda (ShelleyPPUPState era) where
   totalAda _ = mempty

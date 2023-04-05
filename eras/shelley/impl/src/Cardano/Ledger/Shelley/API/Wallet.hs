@@ -89,7 +89,7 @@ import Cardano.Ledger.Shelley.AdaPots (
   totalAdaPotsES,
  )
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -184,7 +184,7 @@ getPools ::
   Set (KeyHash 'StakePool (EraCrypto era))
 getPools = Map.keysSet . f
   where
-    f = psStakePoolParams . dpsPState . lsDPState . esLState . nesEs
+    f = psStakePoolParams . certPState . lsCertState . esLState . nesEs
 
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
@@ -195,7 +195,7 @@ getPoolParameters ::
   Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
 getPoolParameters = Map.restrictKeys . f
   where
-    f = psStakePoolParams . dpsPState . lsDPState . esLState . nesEs
+    f = psStakePoolParams . certPState . lsCertState . esLState . nesEs
 
 -- | Get pool sizes, but in terms of total stake
 --
@@ -307,8 +307,8 @@ currentSnapshot ss =
     pp = esPp $ nesEs ss
     ledgerState = esLState $ nesEs ss
     incrementalStake = utxosStakeDistr $ lsUTxOState ledgerState
-    dstate = dpsDState $ lsDPState ledgerState
-    pstate = dpsPState $ lsDPState ledgerState
+    dstate = certDState $ lsCertState ledgerState
+    pstate = certPState $ lsCertState ledgerState
 
 -- | Information about a stake pool
 data RewardInfoPool = RewardInfoPool
@@ -503,7 +503,7 @@ evaluateTransactionBalance ::
   -- | Current protocol parameters
   PParams era ->
   -- | Where the deposit info is stored
-  DPState (EraCrypto era) ->
+  CertState era ->
   -- | The UTxO relevant to the transaction.
   UTxO era ->
   -- | The transaction being evaluated for balance.

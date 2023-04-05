@@ -13,8 +13,8 @@
 
 module Test.Cardano.Ledger.Constrained.Examples where
 
+import Cardano.Ledger.CertState (FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.DPState (FutureGenDeleg (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
 import Cardano.Ledger.Shelley.Rewards (Reward (..))

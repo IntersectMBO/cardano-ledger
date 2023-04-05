@@ -31,7 +31,7 @@ import Cardano.Ledger.Shelley.Bench.Gen (
 import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   LedgerState (..),
   PState (..),
@@ -169,8 +169,8 @@ profileUTxO = do
 -- ==========================================
 -- Registering Stake Keys
 
-touchDPState :: DPState c -> Int
-touchDPState (DPState _x _y) = 1
+touchCertState :: CertState c -> Int
+touchCertState (CertState _x _y _z) = 1
 
 touchUTxOState :: Cardano.Ledger.Shelley.LedgerState.UTxOState cryto -> Int
 touchUTxOState (UTxOState _utxo _deposited _fees _ppups _) = 2
@@ -182,7 +182,7 @@ profileCreateRegKeys = do
   -- mainbench: internal error: PAP object entered!
   -- (GHC version 8.6.5 for x86_64_unknown_linux)
   -- Please report this as a GHC bug:  http://www.haskell.org/ghc/reportabug
-  let touch (LedgerState x y) = touchUTxOState x + touchDPState y
+  let touch (LedgerState x y) = touchUTxOState x + touchCertState y
   putStrLn ("Exit profiling " ++ show (touch state))
 
 -- ============================================
@@ -205,7 +205,7 @@ profileCreateRegPools :: Word64 -> IO ()
 profileCreateRegPools size = do
   putStrLn "Enter profiling pool creation"
   let state = ledgerStateWithNregisteredPools 1 size
-  let touch (LedgerState x y) = touchUTxOState x + touchDPState y
+  let touch (LedgerState x y) = touchUTxOState x + touchCertState y
   putStrLn ("Exit profiling " ++ show (touch state))
 
 -- ==========================================
@@ -234,14 +234,14 @@ epochAt x =
 
 action2m ::
   EraTxOut era =>
-  (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
+  (DState era, PState era, UTxO era) ->
   EB.SnapShot (EraCrypto era)
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 action2im ::
   forall era.
   EraTxOut era =>
-  (DState (EraCrypto era), PState (EraCrypto era), UTxO era) ->
+  (DState era, PState era, UTxO era) ->
   EB.SnapShot (EraCrypto era)
 action2im (dstate, pstate, utxo) =
   let pp = emptyPParams @era

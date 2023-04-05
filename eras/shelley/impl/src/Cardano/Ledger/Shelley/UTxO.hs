@@ -32,11 +32,11 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import Cardano.Ledger.CertState (CertState (..), PState (..), lookupDepositDState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.DPState (DPState (..), PState (..), lookupDepositDState)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (
   DCert (..),
@@ -130,21 +130,21 @@ getShelleyScriptsNeeded u txBody =
 consumed ::
   EraUTxO era =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   UTxO era ->
   TxBody era ->
   Value era
-consumed pp dpstate = getConsumedValue pp (lookupDepositDState (dpsDState dpstate))
+consumed pp dpstate = getConsumedValue pp (lookupDepositDState (certDState dpstate))
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
   ShelleyEraTxBody era =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   TxBody era ->
   Value era
 produced pp dpstate =
-  getProducedValue pp (`Map.member` psStakePoolParams (dpsPState dpstate))
+  getProducedValue pp (`Map.member` psStakePoolParams (certPState dpstate))
 
 getProducedValue ::
   ShelleyEraTxBody era =>

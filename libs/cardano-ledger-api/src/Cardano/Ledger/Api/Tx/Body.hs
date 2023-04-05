@@ -85,10 +85,10 @@ import Cardano.Ledger.Val ((<->))
 -- | Evaluate the difference between the value currently being consumed by a transaction
 -- and the total value being produced. This value will be zero for a valid transaction.
 --
--- In case when full `Cardano.Ledger.DPState` is available then this can be simplified to:
+-- In case when full `Cardano.Ledger.CertState` is available then this can be simplified to:
 --
--- > let lookupRefund = lookupDepositDState (dpsDState dpState)
--- > let isRegPoolId = (`Map.member` psStakePoolParams (dpsPState dpState))
+-- > let lookupRefund = lookupDepositDState (certDState dpState)
+-- > let isRegPoolId = (`Map.member` psStakePoolParams (certPState dpState))
 -- > evalBalanceTxBody pp lookupRefund isRegPoolId utxo txBody
 evalBalanceTxBody ::
   (EraUTxO era, ShelleyEraTxBody era) =>

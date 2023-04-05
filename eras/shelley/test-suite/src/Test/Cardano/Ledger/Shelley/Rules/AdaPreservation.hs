@@ -33,7 +33,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Internal (compareAdaPots)
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -231,13 +231,13 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
     ru' = nesRu . chainNes $ source
     lsOld = esLState . nesEs . chainNes $ source
     lsNew = esLState . nesEs . chainNes $ target
-    oldRAs = rewards . dpsDState . lsDPState $ lsOld
-    newRAs = rewards . dpsDState . lsDPState $ lsNew
-    oldDPState = lsDPState $ lsOld
-    oldRetire = psRetiring . dpsPState . lsDPState $ lsOld
-    newRetire = psRetiring . dpsPState . lsDPState $ lsNew
-    oldPoolDeposit = psDeposits . dpsPState . lsDPState $ lsOld
-    newPoolDeposit = psDeposits . dpsPState . lsDPState $ lsNew
+    oldRAs = rewards . certDState . lsCertState $ lsOld
+    newRAs = rewards . certDState . lsCertState $ lsNew
+    oldCertState = lsCertState $ lsOld
+    oldRetire = psRetiring . certPState . lsCertState $ lsOld
+    newRetire = psRetiring . certPState . lsCertState $ lsNew
+    oldPoolDeposit = psDeposits . certPState . lsCertState $ lsOld
+    newPoolDeposit = psDeposits . certPState . lsCertState $ lsNew
 
     proposal = votedValue (proposals . utxosGovernance . lsUTxOState $ lsOld) currPP 5
     obligationMsgs = case proposal of
@@ -247,7 +247,7 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
         , show proposal'
         ]
 
-    mir = dsIRewards . dpsDState . lsDPState $ lsOld
+    mir = dsIRewards . certDState . lsCertState $ lsOld
     isRegistered kh _ = UM.member kh oldRAs
     (regMirRes, unRegMirRes) = Map.partitionWithKey isRegistered (iRReserves mir)
     (regMirTre, unRegMirTre) = Map.partitionWithKey isRegistered (iRTreasury mir)
@@ -292,9 +292,9 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
         ++ "\ncerts:"
         ++ showListy (("   " ++) . synopsisCert) (toList $ tx ^. bodyTxL . certsTxBodyL)
         ++ "total deposits "
-        ++ show (totalTxDeposits currPP oldDPState (tx ^. bodyTxL))
+        ++ show (totalTxDeposits currPP oldCertState (tx ^. bodyTxL))
         ++ "\ntotal refunds "
-        ++ show (keyTxRefunds currPP oldDPState (tx ^. bodyTxL))
+        ++ show (keyTxRefunds currPP oldCertState (tx ^. bodyTxL))
 
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
@@ -306,8 +306,8 @@ checkWithdrawalBound SourceSignalTarget {source, signal, target} =
   where
     rewardDelta :: Coin
     rewardDelta =
-      fromCompact (sumRewardsView (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ source))
-        <-> fromCompact (sumRewardsView (rewards . dpsDState . lsDPState . esLState . nesEs . chainNes $ target))
+      fromCompact (sumRewardsView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ source))
+        <-> fromCompact (sumRewardsView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ target))
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals minus Fees (for all transactions in a block)
@@ -398,11 +398,11 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         { source =
           LedgerState
             UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f}
-            DPState {dpsDState = DState {dsUnified = umap1}}
+            CertState {certDState = DState {dsUnified = umap1}}
         , target =
           LedgerState
             UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'}
-            DPState {dpsDState = DState {dsUnified = umap2}}
+            CertState {certDState = DState {dsUnified = umap2}}
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)
@@ -424,7 +424,7 @@ potsRewardsDecreaseByWithdrawalsPerTx SourceSignalTarget {source = chainSt, sign
       map rewardsDecreaseByWithdrawals $
         sourceSignalTargets ledgerTr
   where
-    rewardsSum = UM.fromCompact . sumRewardsView . rewards . dpsDState
+    rewardsSum = UM.fromCompact . sumRewardsView . rewards . certDState
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     rewardsDecreaseByWithdrawals
       SourceSignalTarget

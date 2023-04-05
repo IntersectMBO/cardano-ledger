@@ -76,9 +76,9 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
-  dpsDState,
+  certDState,
   dsGenDelegs,
-  lsDPState,
+  lsCertState,
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
@@ -190,8 +190,8 @@ instance Crypto c => GetLedgerView (BabbageEra c) where
         , lvPoolDistr = pd
         , lvGenDelegs =
             dsGenDelegs
-              . dpsDState
-              . lsDPState
+              . certDState
+              . lsCertState
               $ esLState es
         , lvChainChecks = pparamsToChainChecksPParams . esPp $ es
         }
@@ -218,8 +218,8 @@ instance Crypto c => GetLedgerView (ConwayEra c) where
         , lvPoolDistr = pd
         , lvGenDelegs =
             dsGenDelegs
-              . dpsDState
-              . lsDPState
+              . certDState
+              . lsCertState
               $ esLState es
         , lvChainChecks = pparamsToChainChecksPParams . esPp $ es
         }
@@ -287,8 +287,8 @@ view
           , lvPoolDistr = pd
           , lvGenDelegs =
               dsGenDelegs
-                . dpsDState
-                . lsDPState
+                . certDState
+                . lsCertState
                 $ esLState es
           , lvChainChecks = pparamsToChainChecksPParams . esPp $ es
           }

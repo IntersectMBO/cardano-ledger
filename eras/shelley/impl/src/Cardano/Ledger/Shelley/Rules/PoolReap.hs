@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -7,7 +6,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -29,11 +27,11 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (..),
   PState (..),
   UTxOState (..),
-  obligationDPState,
+  obligationCertState,
   rewards,
  )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
@@ -61,8 +59,8 @@ import NoThunks.Class (NoThunks (..))
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era
   , prAcnt :: AccountState
-  , prDState :: DState (EraCrypto era)
-  , prPState :: PState (EraCrypto era)
+  , prDState :: DState era
+  , prPState :: PState era
   }
 
 deriving stock instance Show (UTxOState era) => Show (ShelleyPoolreapState era)
@@ -93,7 +91,7 @@ instance (Default (ShelleyPoolreapState era), EraPParams era) => STS (ShelleyPOO
     [ PostCondition
         "Deposit pot must equal obligation (PoolReap)"
         ( \(TRC (_, _, _)) st ->
-            obligationDPState (DPState (prDState st) (prPState st)) == utxosDeposited (prUTxOSt st)
+            obligationCertState (CertState def (prPState st) (prDState st)) == utxosDeposited (prUTxOSt st)
         )
     , PostCondition
         "PoolReap may not create or remove reward accounts"

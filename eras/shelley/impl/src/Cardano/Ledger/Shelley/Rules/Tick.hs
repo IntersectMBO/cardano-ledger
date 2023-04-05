@@ -35,7 +35,7 @@ import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
@@ -126,8 +126,8 @@ adoptGenesisDelegs ::
 adoptGenesisDelegs es slot = es'
   where
     ls = esLState es
-    dp = lsDPState ls
-    ds = dpsDState dp
+    dp = lsCertState ls
+    ds = certDState dp
     fGenDelegs = dsFutureGenDelegs ds
     GenDelegs genDelegs = dsGenDelegs ds
     (curr, fGenDelegs') = Map.partitionWithKey (\(FutureGenDeleg s _) _ -> s <= slot) fGenDelegs
@@ -144,8 +144,8 @@ adoptGenesisDelegs es slot = es'
         { dsFutureGenDelegs = fGenDelegs'
         , dsGenDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
         }
-    dp' = dp {dpsDState = ds'}
-    ls' = ls {lsDPState = dp'}
+    dp' = dp {certDState = ds'}
+    ls' = ls {lsCertState = dp'}
     es' = es {esLState = ls'}
 
 -- | This is a limited version of 'bheadTransition' which is suitable for the

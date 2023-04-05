@@ -10,7 +10,7 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -127,7 +127,8 @@ depositInvariant ::
   SourceSignalTarget (MOCKCHAIN era) ->
   Property
 depositInvariant SourceSignalTarget {source = mockChainSt} =
-  let LedgerState {lsUTxOState = utxost, lsDPState = DPState dstate pstate} = (esLState . nesEs . mcsNes) mockChainSt
+  let LedgerState {lsUTxOState = utxost, lsCertState = CertState _vstate pstate dstate} = (esLState . nesEs . mcsNes) mockChainSt
+      -- TODO handle VState
       allDeposits = utxosDeposited utxost
       sumCoin m = Map.foldl' (<+>) (Coin 0) m
       keyDeposits = fromCompact $ sumDepositView (RewardDeposits (dsUnified dstate))
@@ -146,7 +147,8 @@ rewardDepositDomainInvariant ::
   SourceSignalTarget (MOCKCHAIN era) ->
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
-  let LedgerState {lsDPState = DPState dstate _} = (esLState . nesEs . mcsNes) mockChainSt
+  let LedgerState {lsCertState = CertState _ _ dstate} = (esLState . nesEs . mcsNes) mockChainSt
+      -- TODO VState
       rewardDomain = domain (RewardDeposits (dsUnified dstate))
       depositDomain = Map.keysSet (depositView (dsUnified dstate))
    in counterexample

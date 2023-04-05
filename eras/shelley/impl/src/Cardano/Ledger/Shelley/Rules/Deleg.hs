@@ -5,7 +5,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -140,7 +139,7 @@ data ShelleyDelegPredFailure era
 newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
 instance EraPParams era => STS (ShelleyDELEG era) where
-  type State (ShelleyDELEG era) = DState (EraCrypto era)
+  type State (ShelleyDELEG era) = DState era
   type Signal (ShelleyDELEG era) = DCert (EraCrypto era)
   type Environment (ShelleyDELEG era) = DelegEnv era
   type BaseM (ShelleyDELEG era) = ShelleyBase
@@ -395,8 +394,8 @@ updateReservesAndTreasury ::
   MIRPot ->
   Map.Map (Credential 'Staking (EraCrypto era)) Coin ->
   Coin ->
-  DState (EraCrypto era) ->
-  Rule (ShelleyDELEG era) 'Transition (DState (EraCrypto era))
+  DState era ->
+  Rule (ShelleyDELEG era) 'Transition (DState era)
 updateReservesAndTreasury targetPot combinedMap available ds = do
   let requiredForRewards = fold combinedMap
   requiredForRewards

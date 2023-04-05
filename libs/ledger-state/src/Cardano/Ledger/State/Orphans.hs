@@ -121,16 +121,16 @@ deriving via Enc (AlonzoTxOut CurrentEra) instance PersistField (AlonzoTxOut Cur
 
 deriving via Enc (AlonzoTxOut CurrentEra) instance PersistFieldSql (AlonzoTxOut CurrentEra)
 
-instance DecCBOR (DState C) where
+instance DecCBOR (DState CurrentEra) where
   decCBOR = decNoShareCBOR
 
-deriving via Enc (DState C) instance PersistField (DState C)
+deriving via Enc (DState CurrentEra) instance PersistField (DState CurrentEra)
 
-deriving via Enc (DState C) instance PersistFieldSql (DState C)
+deriving via Enc (DState CurrentEra) instance PersistFieldSql (DState CurrentEra)
 
-deriving via Enc (PState C) instance PersistField (PState C)
+deriving via Enc (PState CurrentEra) instance PersistField (PState CurrentEra)
 
-deriving via Enc (PState C) instance PersistFieldSql (PState C)
+deriving via Enc (PState CurrentEra) instance PersistFieldSql (PState CurrentEra)
 
 deriving via Enc (GenDelegs C) instance PersistField (GenDelegs C)
 

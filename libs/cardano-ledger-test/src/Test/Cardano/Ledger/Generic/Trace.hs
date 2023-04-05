@@ -42,7 +42,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (dsUnified),
   EpochState (..),
   LedgerState (..),
@@ -218,7 +218,7 @@ makeEpochState gstate ledgerstate =
     }
 
 snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
-snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (DPState dstate pstate)) =
+snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (CertState _ pstate dstate)) =
   SnapShots snap (calculatePoolDistr snap) snap snap f
   where
     snap = stakeDistr u dstate pstate
@@ -246,9 +246,9 @@ raiseMockError ::
   String
 raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (utxosUtxo . lsUTxOState . esLState) epochstate
-      _ssPoolParams = (psStakePoolParams . dpsPState . lsDPState . esLState) epochstate
-      _pooldeposits = (psDeposits . dpsPState . lsDPState . esLState) epochstate
-      _keydeposits = (UM.depositView . dsUnified . dpsDState . lsDPState . esLState) epochstate
+      _ssPoolParams = (psStakePoolParams . certPState . lsCertState . esLState) epochstate
+      _pooldeposits = (psDeposits . certPState . lsCertState . esLState) epochstate
+      _keydeposits = (UM.depositView . dsUnified . certDState . lsCertState . esLState) epochstate
    in show $
         vsep
           [ ppString "==================================="

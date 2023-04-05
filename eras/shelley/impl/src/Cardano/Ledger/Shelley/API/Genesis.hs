@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -14,8 +13,8 @@ import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types (
   AccountState (AccountState),
+  CertState (CertState),
   Coin (Coin),
-  DPState (DPState),
   DState (dsGenDelegs),
   EpochState (EpochState),
   GenDelegs (GenDelegs),
@@ -89,7 +88,7 @@ initialStateFromGenesis sg ag =
         emptySnapShots
         ( LedgerState
             (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) def)
-            (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
+            (CertState def def (def {dsGenDelegs = GenDelegs genDelegs}))
         )
         (fromShelleyPParams ag pp)
         (fromShelleyPParams ag pp)

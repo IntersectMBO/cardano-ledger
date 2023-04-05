@@ -14,8 +14,8 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
+  CertState,
   DCert,
-  DPState,
   DelplEnv,
   ShelleyLEDGERS,
   ShelleyTx,
@@ -99,7 +99,7 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 -- 1) genEnv from a (Proxy era)
 -- 2) genChainState from a GenEnv
 -- 3) get a UTxOState from the ChainState
--- 4) get a DPState from the ChainState
+-- 4) get a CertState from the ChainState
 -- 5) get a Transaction (Tx) from GenEnv and ChainState
 
 genTriple ::
@@ -107,7 +107,7 @@ genTriple ::
   , Mock (EraCrypto era)
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   , Tx era ~ ShelleyTx era
   , EraGovernance era

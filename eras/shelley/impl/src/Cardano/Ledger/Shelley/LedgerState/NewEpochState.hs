@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
@@ -18,15 +17,15 @@ import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
  )
+import Cardano.Ledger.CertState (
+  CertState (..),
+  DState (..),
+  InstantaneousRewards (..),
+ )
 import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (CompactCoin),
   addDeltaCoin,
- )
-import Cardano.Ledger.DPState (
-  DPState (..),
-  DState (..),
-  InstantaneousRewards (..),
  )
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -67,7 +66,7 @@ getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
-    LedgerState _ (DPState (DState {dsGenDelegs = (GenDelegs genDelegs)}) _) = ls
+    LedgerState _ (CertState _ _ DState {dsGenDelegs = (GenDelegs genDelegs)}) = ls
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
@@ -86,7 +85,7 @@ genesisState genDelegs0 utxo0 =
         emptyGovernanceState
         (IStake mempty Map.empty)
     )
-    (DPState dState def)
+    (CertState def def dState)
   where
     dState = def {dsGenDelegs = GenDelegs genDelegs0}
 
@@ -106,8 +105,8 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     -- to emphasize this point.
 
     currentPool = (utxosDeposited . lsUTxOState) ls
-    txDeposits = totalTxDeposits pp (lsDPState ls) txBody
-    txRefunds = keyTxRefunds pp (lsDPState ls) txBody
+    txDeposits = totalTxDeposits pp (lsCertState ls) txBody
+    txRefunds = keyTxRefunds pp (lsCertState ls) txBody
 
 -- Remove the rewards from the UMap, but leave the deposits alone
 reapRewards ::

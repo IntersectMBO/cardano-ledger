@@ -1,8 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -51,12 +49,10 @@ import Cardano.Ledger.Shelley.API (
   PoolCert (..),
   ProposedPPUpdates (..),
   RewardAcnt (..),
+  ShelleyDELEGS,
   TxId (..),
  )
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyDELEGS,
-  ShelleyDelegsPredFailure (..),
- )
+import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (SlotNo (..))

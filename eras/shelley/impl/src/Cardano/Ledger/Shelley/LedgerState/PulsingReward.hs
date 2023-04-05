@@ -26,6 +26,10 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   activeSlotVal,
  )
+import Cardano.Ledger.CertState (
+  CertState (..),
+  rewards,
+ )
 import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
@@ -33,10 +37,6 @@ import Cardano.Ledger.Coin (
   toDeltaCoin,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.DPState (
-  DPState (..),
-  rewards,
- )
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   SnapShots (..),
@@ -127,7 +127,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
       Coin reserves = asReserves acnt
-      ds = dpsDState $ lsDPState ls
+      ds = certDState $ lsCertState ls
       -- reserves and rewards change
       deltaR1 =
         rationalToCoinViaFloor $

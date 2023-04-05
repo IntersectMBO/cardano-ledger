@@ -27,6 +27,13 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
+import Cardano.Ledger.CertState (
+  CertState (..),
+  DState (..),
+  PState (..),
+  delegations,
+  rewards,
+ )
 import Cardano.Ledger.Coin (
   Coin (..),
   addDeltaCoin,
@@ -36,13 +43,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (StakeRefBase, StakeRefPtr),
- )
-import Cardano.Ledger.DPState (
-  DPState (..),
-  DState (..),
-  PState (..),
-  delegations,
-  rewards,
  )
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
@@ -194,8 +194,8 @@ incrementalStakeDistr ::
   EraPParams era =>
   PParams era ->
   IncrementalStake (EraCrypto era) ->
-  DState (EraCrypto era) ->
-  PState (EraCrypto era) ->
+  DState era ->
+  PState era ->
   SnapShot (EraCrypto era)
 incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
   SnapShot
@@ -276,8 +276,8 @@ applyRUpdFiltered
     where
       !epochStateAns = EpochState as' ss ls' pr pp nm'
       utxoState_ = lsUTxOState ls
-      dpState = lsDPState ls
-      dState = dpsDState dpState
+      dpState = lsCertState ls
+      dState = certDState dpState
       prevPParams = esPrevPp es
       prevProVer = prevPParams ^. ppProtocolVersionL
       filteredRewards@FilteredRewards
@@ -296,9 +296,9 @@ applyRUpdFiltered
         ls
           { lsUTxOState =
               utxoState_ {utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru}
-          , lsDPState =
+          , lsCertState =
               dpState
-                { dpsDState =
+                { certDState =
                     dState
                       { dsUnified = rewards dState UM.∪+ registeredAggregated
                       }
@@ -311,12 +311,12 @@ data FilteredRewards era = FilteredRewards
     -- they are never used, so this keeps them from being evaluated.
 
     frRegistered :: !(Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
-  -- ^ These are registered, in the current Unified map of the DPState
+  -- ^ These are registered, in the current Unified map of the CertState
   , frShelleyIgnored :: Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
   -- ^ These are registered, but ignored in the ShelleyEra because of backward
   --   compatibility in non-Shelley Eras, this field will be Map.empty
   , frUnregistered :: Set (Credential 'Staking (EraCrypto era))
-  -- ^ These are NOT registered in the current Unified map of the DPState
+  -- ^ These are NOT registered in the current Unified map of the CertState
   , frTotalUnregistered :: Coin
   -- ^ Total Coin of the unregistered rewards. These will end up in the Treasury or Reserves.
   }
@@ -333,7 +333,7 @@ instance NFData (FilteredRewards era) where
 filterAllRewards' ::
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   ProtVer ->
-  DState (EraCrypto era) ->
+  DState era ->
   FilteredRewards era
 filterAllRewards' rs protVer dState =
   FilteredRewards registered shelleyIgnored unregistered totalUnregistered
@@ -353,4 +353,4 @@ filterAllRewards ::
 filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState
   where
     prevPP = esPrevPp epochstate ^. ppProtocolVersionL
-    dState = (dpsDState . lsDPState . esLState) epochstate
+    dState = (certDState . lsCertState . esLState) epochstate

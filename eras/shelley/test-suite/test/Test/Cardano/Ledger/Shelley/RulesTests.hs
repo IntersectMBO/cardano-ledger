@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
-  obligationDPState,
+  obligationCertState,
  )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
@@ -568,7 +568,7 @@ setDepositsToObligation nes = nes {nesEs = es {esLState = ls {lsUTxOState = utxo
   where
     es = nesEs nes
     ls = esLState es
-    utxoState = (lsUTxOState ls) {utxosDeposited = obligationDPState $ lsDPState ls}
+    utxoState = (lsUTxOState ls) {utxosDeposited = obligationCertState $ lsCertState ls}
 
 -- | This property test checks the correctness of the TICKF transation.
 -- TICKF is used by the consensus layer to get a ledger view in a computationally

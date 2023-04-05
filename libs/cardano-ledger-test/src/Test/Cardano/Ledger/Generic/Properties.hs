@@ -137,7 +137,7 @@ testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
   -- trc encodes the initial (generated) state, vtx is the transaction
   case applySTSByProof proof trc of
     Right ledgerState' ->
-      -- UTxOState and DPState after applying the transaction $$$
+      -- UTxOState and CertState after applying the transaction $$$
       classify (coerce (isValid' proof vtx)) "TxValid" $
         totalAda ledgerState' === totalAda ledgerState
     Left errs ->

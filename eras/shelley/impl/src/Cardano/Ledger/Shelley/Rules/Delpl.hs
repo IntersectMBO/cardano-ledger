@@ -33,11 +33,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
-  DPState,
+  CertState,
   DState,
   PState,
-  dpsDState,
-  dpsPState,
+  certDState,
+  certPState,
  )
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..), ShelleyDELEG, ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
@@ -100,16 +100,16 @@ instance
   ( Era era
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , State (EraRule "DELEG" era) ~ DState (EraCrypto era)
+  , State (EraRule "DELEG" era) ~ DState era
   , Signal (EraRule "DELEG" era) ~ DCert (EraCrypto era)
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , State (EraRule "POOL" era) ~ PState (EraCrypto era)
+  , State (EraRule "POOL" era) ~ PState era
   , Signal (EraRule "POOL" era) ~ DCert (EraCrypto era)
   ) =>
   STS (ShelleyDELPL era)
   where
-  type State (ShelleyDELPL era) = DPState (EraCrypto era)
+  type State (ShelleyDELPL era) = CertState era
   type Signal (ShelleyDELPL era) = DCert (EraCrypto era)
   type Environment (ShelleyDELPL era) = DelplEnv era
   type BaseM (ShelleyDELPL era) = ShelleyBase
@@ -161,11 +161,11 @@ delplTransition ::
   forall era.
   ( Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , State (EraRule "DELEG" era) ~ DState (EraCrypto era)
+  , State (EraRule "DELEG" era) ~ DState era
   , Signal (EraRule "DELEG" era) ~ DCert (EraCrypto era)
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , State (EraRule "POOL" era) ~ PState (EraCrypto era)
+  , State (EraRule "POOL" era) ~ PState era
   , Signal (EraRule "POOL" era) ~ DCert (EraCrypto era)
   ) =>
   TransitionRule (ShelleyDELPL era)
@@ -174,31 +174,31 @@ delplTransition = do
   case c of
     DCertPool (RegPool _) -> do
       ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
-      pure $ d {dpsPState = ps}
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, c)
+      pure $ d {certPState = ps}
     DCertPool (RetirePool _ _) -> do
       ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
-      pure $ d {dpsPState = ps}
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, c)
+      pure $ d {certPState = ps}
     DCertGenesis ConstitutionalDelegCert {} -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
-      pure $ d {dpsDState = ds}
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
+      pure $ d {certDState = ds}
     DCertDeleg (RegKey _) -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
-      pure $ d {dpsDState = ds}
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
+      pure $ d {certDState = ds}
     DCertDeleg (DeRegKey _) -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
-      pure $ d {dpsDState = ds}
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
+      pure $ d {certDState = ds}
     DCertDeleg (Delegate _) -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
-      pure $ d {dpsDState = ds}
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
+      pure $ d {certDState = ds}
     DCertMir _ -> do
-      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
-      pure $ d {dpsDState = ds}
+      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
+      pure $ d {certDState = ds}
 
 instance
   ( Era era

@@ -30,9 +30,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   UTxOState (..),
   esLState,
-  lsDPState,
+  lsCertState,
   lsUTxOState,
-  pattern DPState,
+  pattern CertState,
   pattern EpochState,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
@@ -100,7 +100,7 @@ instance
         coreNodeQuorum <- liftSTS $ asks quorum
 
         let utxoSt = lsUTxOState ls
-            DPState dstate pstate = lsDPState ls
+            CertState _ pstate dstate = lsCertState ls
             pup = proposals . utxosGovernance $ utxoSt
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupSt' <-
