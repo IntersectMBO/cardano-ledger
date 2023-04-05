@@ -20,10 +20,10 @@ import Cardano.Ledger.Babbage.Era (BabbageLEDGER)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   LedgerState (..),
   UTxOState (..),
-  obligationDPState,
+  obligationCertState,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
@@ -60,7 +60,7 @@ instance
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   ) =>
   STS (BabbageLEDGER era)
@@ -82,7 +82,7 @@ instance
         "Deposit pot must equal obligation (BabbageLEDGER)"
         ( \(TRC (_, _, _))
            (LedgerState utxoSt dpstate) ->
-              obligationDPState dpstate
+              obligationCertState dpstate
                 == utxosDeposited utxoSt
         )
     ]

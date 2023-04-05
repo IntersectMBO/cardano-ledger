@@ -70,7 +70,7 @@ LedgerState
   utxoId UtxoStateId
   dstateId DStateId
   epochStateId EpochStateId
-  pstateBin (Shelley.PState C)
+  pstateBin (Shelley.PState CurrentEra)
   UniqueLedgerStateUtxoId utxoId
   UniqueLedgerStateDStateId dstateId
   UniqueLedgerStateEpochStateId epochStateId

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,6 +16,7 @@ import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.CertState (PState (..), VState (..))
 import Cardano.Ledger.Core (upgradePParams, upgradePParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -25,6 +27,8 @@ import Cardano.Ledger.Era (
  )
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.API (
+  CertState (..),
+  DState (..),
   EpochState (..),
   NewEpochState (..),
   StrictMaybe (..),
@@ -101,12 +105,30 @@ instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
+instance Crypto c => TranslateEra (AlonzoEra c) DState where
+  translateEra _ DState {..} = pure DState {..}
+
+instance Crypto c => TranslateEra (AlonzoEra c) VState where
+  translateEra _ VState {..} = pure VState {..}
+
+instance Crypto c => TranslateEra (AlonzoEra c) PState where
+  translateEra _ PState {..} = pure PState {..}
+
+instance Crypto c => TranslateEra (AlonzoEra c) CertState where
+  translateEra ctxt ls =
+    pure
+      CertState
+        { certDState = translateEra' ctxt $ certDState ls
+        , certPState = translateEra' ctxt $ certPState ls
+        , certVState = translateEra' ctxt $ certVState ls
+        }
+
 instance Crypto c => TranslateEra (AlonzoEra c) API.LedgerState where
   translateEra ctxt ls =
     return
       API.LedgerState
         { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
-        , API.lsDPState = API.lsDPState ls
+        , API.lsCertState = translateEra' ctxt $ API.lsCertState ls
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where

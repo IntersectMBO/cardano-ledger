@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -22,11 +21,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   PState (..),
   UTxOState (utxosDeposited),
-  obligationDPState,
+  obligationCertState,
  )
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
@@ -50,8 +49,8 @@ data ShelleyNewppState era
 
 data NewppEnv era
   = NewppEnv
-      (DState (EraCrypto era))
-      (PState (EraCrypto era))
+      (DState era)
+      (PState era)
       (UTxOState era)
 
 data ShelleyNewppPredFailure era
@@ -94,7 +93,7 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligationDPState (DPState dstate pstate)
+      let Coin oblgCurr = obligationCertState (CertState def pstate dstate)
       Coin oblgCurr
         == utxosDeposited utxoSt
         ?! UnexpectedDepositPot (Coin oblgCurr) (utxosDeposited utxoSt)

@@ -34,6 +34,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.CertState (VState (..))
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
   chainChecks,
@@ -61,7 +62,7 @@ import Cardano.Ledger.Shelley.AdaPots (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -217,7 +218,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     (Coin 0)
                     emptyGovernanceState
                 )
-                (DPState (def {dsGenDelegs = GenDelegs genDelegs}) def)
+                (CertState def def (def {dsGenDelegs = GenDelegs genDelegs}))
             )
             pp
             pp
@@ -336,7 +337,7 @@ chainTransition =
         let NewEpochState e1 _ _ _ _ _ _ = nes
             NewEpochState e2 _ bcur es _ _pd _ = nes'
         let EpochState account _ ls _ pp' _ = es
-        let LedgerState _ (DPState DState {dsGenDelegs = genDelegs} PState {}) = ls
+        let LedgerState _ (CertState VState {} PState {} DState {dsGenDelegs = genDelegs}) = ls
         let ph = lastAppliedHash lab
             etaPH = prevHashToNonce ph
 

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -17,9 +18,12 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
+  CertState (..),
+  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
+  PState (..),
   ProposedPPUpdates (..),
   ShelleyPPUPState (..),
   ShelleyTx (..),
@@ -27,6 +31,7 @@ import Cardano.Ledger.Shelley.API (
   UTxO (..),
   UTxOState (..),
   Update,
+  VState (..),
  )
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (
   returnRedeemAddrsToReserves,
@@ -118,12 +123,30 @@ instance Crypto c => TranslateEra (AllegraEra c) UTxOState where
         , utxosStakeDistr = utxosStakeDistr us
         }
 
+instance Crypto c => TranslateEra (AllegraEra c) DState where
+  translateEra _ DState {..} = pure DState {..}
+
+instance Crypto c => TranslateEra (AllegraEra c) VState where
+  translateEra _ VState {..} = pure VState {..}
+
+instance Crypto c => TranslateEra (AllegraEra c) PState where
+  translateEra _ PState {..} = pure PState {..}
+
+instance Crypto c => TranslateEra (AllegraEra c) CertState where
+  translateEra ctxt ls =
+    pure
+      CertState
+        { certDState = translateEra' ctxt $ certDState ls
+        , certPState = translateEra' ctxt $ certPState ls
+        , certVState = translateEra' ctxt $ certVState ls
+        }
+
 instance Crypto c => TranslateEra (AllegraEra c) LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
         { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
-        , lsDPState = lsDPState ls
+        , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) EpochState where

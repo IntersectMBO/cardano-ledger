@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -162,9 +161,10 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
               , utxosGovernance = emptyGovernanceState
               , utxosStakeDistr = IStake mempty Map.empty
               }
-        , lsDPState =
-            DPState
-              { dpsDState = def {dsGenDelegs = genDelegs}
-              , dpsPState = def
+        , lsCertState =
+            CertState
+              { certDState = def {dsGenDelegs = genDelegs}
+              , certPState = def
+              , certVState = def
               }
         }

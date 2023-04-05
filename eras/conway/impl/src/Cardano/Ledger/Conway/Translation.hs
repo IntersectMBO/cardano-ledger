@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,7 +5,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -30,12 +28,14 @@ import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Credential (StakeReference (..), normalizePtr)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.API (
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   NewEpochState (..),
+  PState (..),
   StrictMaybe (..),
   UTxOState (..),
+  VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import Data.Coerce
@@ -112,15 +112,33 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
+instance Crypto c => TranslateEra (ConwayEra c) DState where
+  translateEra _ DState {..} = pure DState {..}
+
+instance Crypto c => TranslateEra (ConwayEra c) VState where
+  translateEra _ VState {..} = pure VState {..}
+
+instance Crypto c => TranslateEra (ConwayEra c) PState where
+  translateEra _ PState {..} = pure PState {..}
+
+instance Crypto c => TranslateEra (ConwayEra c) CertState where
+  translateEra ctxt ls =
+    pure
+      CertState
+        { certDState = translateEra' ctxt $ certDState ls
+        , certPState = translateEra' ctxt $ certPState ls
+        , certVState = translateEra' ctxt $ certVState ls
+        }
+
 instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
   translateEra conwayGenesis ls =
     pure
       API.LedgerState
         { API.lsUTxOState = translateEra' conwayGenesis $ API.lsUTxOState ls
-        , API.lsDPState = updateGenesisKeys $ API.lsDPState ls
+        , API.lsCertState = updateGenesisKeys . translateEra' conwayGenesis $ API.lsCertState ls
         }
     where
-      updateGenesisKeys (DPState dstate pstate) = DPState dstate' pstate
+      updateGenesisKeys (CertState vstate pstate dstate) = CertState vstate pstate dstate'
         where
           dstate' = dstate {dsGenDelegs = cgGenDelegs conwayGenesis}
 

@@ -27,7 +27,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   InstantaneousRewards (..),
   RewardAccounts,
-  dpsDState,
+  certDState,
   dsIRewards,
   dsUnified,
   esAccountState,
@@ -36,7 +36,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   esPp,
   esPrevPp,
   esSnapshots,
-  lsDPState,
+  lsCertState,
   rewards,
   pattern EpochState,
  )
@@ -85,7 +85,7 @@ instance (Typeable era, Default (EpochState era)) => STS (ShelleyMIR era) where
     [ PostCondition
         "MIR may not create or remove reward accounts"
         ( \(TRC (_, st, _)) st' ->
-            let r = rewards . dpsDState . lsDPState . esLState
+            let r = rewards . certDState . lsCertState . esLState
              in length (r st) == length (r st')
         )
     ]
@@ -105,8 +105,8 @@ mirTransition = do
       , ()
       ) <-
     judgmentContext
-  let dpState = lsDPState ls
-      ds = dpsDState dpState
+  let dpState = lsCertState ls
+      ds = certDState dpState
       rewards' = rewards ds
       reserves = asReserves acnt
       treasury = asTreasury acnt
@@ -129,9 +129,9 @@ mirTransition = do
             }
           ss
           ls
-            { lsDPState =
+            { lsCertState =
                 dpState
-                  { dpsDState =
+                  { certDState =
                       ds
                         { dsUnified = rewards' UM.∪+ Map.map compactCoinOrError update
                         , dsIRewards = emptyInstantaneousRewards
@@ -152,9 +152,9 @@ mirTransition = do
           acnt
           ss
           ls
-            { lsDPState =
+            { lsCertState =
                 dpState
-                  { dpsDState =
+                  { certDState =
                       ds {dsIRewards = emptyInstantaneousRewards}
                   }
             }

@@ -62,7 +62,7 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   PPUPPredFailure,
   UTxOState (..),
   keyTxRefunds,
@@ -124,7 +124,7 @@ data UtxoEnv era
   = UtxoEnv
       SlotNo
       (PParams era)
-      (DPState (EraCrypto era))
+      (CertState era)
       (GenDelegs (EraCrypto era))
 
 deriving instance Show (PParams era) => Show (UtxoEnv era)
@@ -526,7 +526,7 @@ validateValueNotConservedUTxO ::
   ) =>
   PParams era ->
   UTxO era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
 validateValueNotConservedUTxO pp utxo dpstate txb =

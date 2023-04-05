@@ -66,7 +66,7 @@ import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   IncrementalStake (..),
@@ -76,6 +76,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
+  VState (..),
   completeRupd,
   smartUTxOState,
  )
@@ -210,8 +211,8 @@ pStateZero =
     , psDeposits = Map.empty
     }
 
-dPStateZero :: DPState c
-dPStateZero = DPState dStateZero pStateZero
+dPStateZero :: CertState era
+dPStateZero = CertState def pStateZero dStateZero
 
 incrementalStakeZero :: IncrementalStake c
 incrementalStakeZero = IStake Map.empty Map.empty
@@ -296,7 +297,7 @@ testMNES = mNewEpochStateZero
 class Extract t era where
   extract :: ModelNewEpochState era -> t
 
-instance EraCrypto era ~ c => Extract (DState c) era where
+instance Extract (DState era) era where
   extract x =
     DState
       (UM.unify (makeRewards x) (mDelegations x) Map.empty)
@@ -313,11 +314,14 @@ makeRewards mnes = Map.mapWithKey f credRewMap
       Just dep -> UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError dep)
       Nothing -> error ("In makeRewards the reward and deposit maps are not in synch " ++ show cred)
 
-instance EraCrypto era ~ c => Extract (PState c) era where
+instance Extract (PState era) era where
   extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x) Map.empty
 
-instance EraCrypto era ~ c => Extract (DPState c) era where
-  extract x = DPState (extract x) (extract x)
+instance Extract (VState era) era where
+  extract _ = VState def def
+
+instance Extract (CertState era) era where
+  extract x = CertState (extract x) (extract x) (extract x)
 
 instance Reflect era => Extract (UTxOState era) era where
   extract x =
@@ -355,11 +359,11 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
 abstract :: NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
-    { mPoolParams = (psStakePoolParams . dpsPState . lsDPState . esLState . nesEs) x
-    , mPoolDeposits = (psDeposits . dpsPState . lsDPState . esLState . nesEs) x
-    , mRewards = (UM.rewView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x
-    , mDelegations = (UM.delView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x
-    , mKeyDeposits = (UM.depositView . dsUnified . dpsDState . lsDPState . esLState . nesEs) x
+    { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
+    , mPoolDeposits = (psDeposits . certPState . lsCertState . esLState . nesEs) x
+    , mRewards = (UM.rewView . dsUnified . certDState . lsCertState . esLState . nesEs) x
+    , mDelegations = (UM.delView . dsUnified . certDState . lsCertState . esLState . nesEs) x
+    , mKeyDeposits = (UM.depositView . dsUnified . certDState . lsCertState . esLState . nesEs) x
     , mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x
     , mMutFee = Map.empty
     , mAccountState = (esAccountState . nesEs) x
@@ -370,8 +374,8 @@ abstract x =
     , mCount = 0
     , mIndex = Map.empty
     , -- below here NO EFFECT until we model EpochBoundary
-      mFPoolParams = (psFutureStakePoolParams . dpsPState . lsDPState . esLState . nesEs) x
-    , mRetiring = (psRetiring . dpsPState . lsDPState . esLState . nesEs) x
+      mFPoolParams = (psFutureStakePoolParams . certPState . lsCertState . esLState . nesEs) x
+    , mRetiring = (psRetiring . certPState . lsCertState . esLState . nesEs) x
     , mSnapshots = (esSnapshots . nesEs) x
     , mEL = nesEL x
     , mBprev = unBlocksMade (nesBprev x)

@@ -68,19 +68,19 @@ deltaTreasuryL = lens LS.deltaTreasury (\ds u -> ds {LS.deltaTreasury = u})
 -- ===================================
 -- DState
 
-dsUnifiedL :: Lens' (DState c) (UMap c)
+dsUnifiedL :: Lens' (DState era) (UMap (EraCrypto era))
 dsUnifiedL = lens dsUnified (\ds u -> ds {dsUnified = u})
 
-dsGenDelegsL :: Lens' (DState c) (GenDelegs c)
+dsGenDelegsL :: Lens' (DState era) (GenDelegs (EraCrypto era))
 dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
 
 unGenDelegsL :: Lens' (GenDelegs c) (Map (KeyHash 'Genesis c) (GenDelegPair c))
 unGenDelegsL = lens unGenDelegs (\(GenDelegs _) new -> GenDelegs new)
 
-dsIRewardsL :: Lens' (DState c) (InstantaneousRewards c)
+dsIRewardsL :: Lens' (DState era) (InstantaneousRewards (EraCrypto era))
 dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
 
-dsFutureGenDelegsL :: Lens' (DState c) (Map (FutureGenDeleg c) (GenDelegPair c))
+dsFutureGenDelegsL :: Lens' (DState era) (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
 
 -- Lenses for (FutureGenDeleg c)
@@ -93,26 +93,41 @@ fGenDelegGenKeyHashL = lens fGenDelegGenKeyHash (\ds u -> ds {fGenDelegGenKeyHas
 -- ===================================
 -- PState
 
-psStakePoolParamsL :: Lens' (PState c) (Map (KeyHash 'StakePool c) (PoolParams c))
+psStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 psStakePoolParamsL = lens psStakePoolParams (\ds u -> ds {psStakePoolParams = u})
 
-psFutureStakePoolParamsL :: Lens' (PState c) (Map (KeyHash 'StakePool c) (PoolParams c))
+psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ds u -> ds {psFutureStakePoolParams = u})
 
-psRetiringL :: Lens' (PState c) (Map (KeyHash 'StakePool c) EpochNo)
+psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
 psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})
 
-psDepositsL :: Lens' (PState c) (Map (KeyHash 'StakePool c) Coin)
+psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
 
+-- ===================================
+-- VState
+
+vsDRepsL :: Lens' (VState era) (Set (Credential 'Voting (EraCrypto era)))
+vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
+
+vsCCHotKeysL ::
+  Lens'
+    (VState era)
+    (Map (KeyHash 'Voting (EraCrypto era)) (KeyHash 'Voting (EraCrypto era)))
+vsCCHotKeysL = lens vsCCHotKeys (\vs u -> vs {vsCCHotKeys = u})
+
 -- ========================================
--- DPState
+-- CertState
 
-dpsDStateL :: Lens' (DPState c) (DState c)
-dpsDStateL = lens dpsDState (\ds u -> ds {dpsDState = u})
+certDStateL :: Lens' (CertState era) (DState era)
+certDStateL = lens certDState (\ds u -> ds {certDState = u})
 
-dpsPStateL :: Lens' (DPState c) (PState c)
-dpsPStateL = lens dpsPState (\ds u -> ds {dpsPState = u})
+certPStateL :: Lens' (CertState era) (PState era)
+certPStateL = lens certPState (\ds u -> ds {certPState = u})
+
+certVStateL :: Lens' (CertState era) (VState era)
+certVStateL = lens certVState (\ds u -> ds {certVState = u})
 
 -- ========================================
 -- UTxOState
@@ -147,8 +162,8 @@ isPtrMapL = lens ptrMap (\ds u -> ds {ptrMap = u})
 lsUTxOStateL :: Lens' (LedgerState era) (UTxOState era)
 lsUTxOStateL = lens lsUTxOState (\ds u -> ds {lsUTxOState = u})
 
-lsDPStateL :: Lens' (LedgerState era) (DPState (EraCrypto era))
-lsDPStateL = lens lsDPState (\ds u -> ds {lsDPState = u})
+lsCertStateL :: Lens' (LedgerState era) (CertState era)
+lsCertStateL = lens lsCertState (\ds u -> ds {lsCertState = u})
 
 -- ==========================================
 -- AccountState
@@ -235,7 +250,7 @@ nesEsL :: Lens' (NewEpochState era) (EpochState era)
 nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
 
 unifiedL :: Lens' (NewEpochState era) (UMap (EraCrypto era))
-unifiedL = nesEsL . esLStateL . lsDPStateL . dpsDStateL . dsUnifiedL
+unifiedL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 nesELL :: Lens' (NewEpochState era) EpochNo
 nesELL = lens nesEL (\ds u -> ds {nesEL = u})

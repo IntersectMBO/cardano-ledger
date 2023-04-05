@@ -1,5 +1,12 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.1.1.0
+
+* Add `TranslateEra` instances for:
+  * `DState`
+  * `PState`
+  * `VState`
+
 ## 1.1.0.0
 
 * Remove redundant pattern synonym `AllegraTxAuxData'`

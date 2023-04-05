@@ -2,7 +2,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -19,7 +18,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -83,9 +82,9 @@ depositInvariant ::
   SourceSignalTarget (CHAIN era) ->
   Property
 depositInvariant SourceSignalTarget {source = chainSt} =
-  let LedgerState {lsUTxOState = utxost, lsDPState = DPState dstate pstate} = (esLState . nesEs . chainNes) chainSt
+  let LedgerState {lsUTxOState = utxost, lsCertState = CertState _vstate pstate dstate} = (esLState . nesEs . chainNes) chainSt
       allDeposits = utxosDeposited utxost
-      sumCoin m = Map.foldl' (<+>) (Coin 0) m
+      sumCoin = Map.foldl' (<+>) (Coin 0)
       keyDeposits = (UM.fromCompact . UM.sumDepositView . UM.RewardDeposits . dsUnified) dstate
       poolDeposits = sumCoin (psDeposits pstate)
    in counterexample
@@ -102,7 +101,7 @@ rewardDepositDomainInvariant ::
   SourceSignalTarget (CHAIN era) ->
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
-  let LedgerState {lsDPState = DPState dstate _} = (esLState . nesEs . chainNes) chainSt
+  let LedgerState {lsCertState = CertState {certDState = dstate}} = (esLState . nesEs . chainNes) chainSt
       rewardDomain = UM.domain (UM.RewardDeposits (dsUnified dstate))
       depositDomain = Map.keysSet (depositView (dsUnified dstate))
    in counterexample

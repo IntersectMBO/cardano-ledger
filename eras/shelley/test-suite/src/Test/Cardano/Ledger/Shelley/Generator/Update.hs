@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.API (
   Update,
  )
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   UTxOState (..),
  )
@@ -314,7 +314,7 @@ genUpdate ::
   [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
   Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
   PParams era ->
-  (UTxOState era, DPState (EraCrypto era)) ->
+  (UTxOState era, CertState era) ->
   Gen (Maybe (Update era), [KeyPair 'Witness (EraCrypto era)])
 genUpdate
   c@Constants {frequencyTxUpdates}
@@ -327,7 +327,7 @@ genUpdate
       nodes <- take 5 <$> QC.shuffle coreNodes
 
       let e = epochFromSlotNo s
-          (GenDelegs genDelegs) = (dsGenDelegs . dpsDState) delegPoolSt
+          GenDelegs genDelegs = dsGenDelegs (certDState delegPoolSt)
           genesisKeys = fst <$> nodes
           coreSigners =
             catMaybes $

@@ -40,10 +40,10 @@ import Cardano.Ledger.Binary (
   toPlainDecoder,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
+import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.DPState (DPState)
 import Cardano.Ledger.EpochBoundary (
   SnapShots (..),
  )
@@ -496,15 +496,15 @@ instance
 data LedgerState era = LedgerState
   { lsUTxOState :: !(UTxOState era)
   -- ^ The current unspent transaction outputs.
-  , lsDPState :: !(DPState (EraCrypto era))
+  , lsCertState :: !(CertState era)
   }
   deriving (Generic)
 
 lsUTxOStateL :: Lens' (LedgerState era) (UTxOState era)
 lsUTxOStateL = lens lsUTxOState (\x y -> x {lsUTxOState = y})
 
-lsDPStateL :: Lens' (LedgerState era) (DPState (EraCrypto era))
-lsDPStateL = lens lsDPState (\x y -> x {lsDPState = y})
+lsCertStateL :: Lens' (LedgerState era) (CertState era)
+lsCertStateL = lens lsCertState (\x y -> x {lsCertState = y})
 
 deriving stock instance
   ( EraTxOut era
@@ -536,9 +536,9 @@ instance
   ) =>
   EncCBOR (LedgerState era)
   where
-  encCBOR LedgerState {lsUTxOState, lsDPState} =
+  encCBOR LedgerState {lsUTxOState, lsCertState} =
     encodeListLen 2
-      <> encCBOR lsDPState -- encode delegation state first to improve sharing
+      <> encCBOR lsCertState -- encode delegation state first to improve sharing
       <> encCBOR lsUTxOState
 
 instance
@@ -552,9 +552,9 @@ instance
       (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
   decSharePlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
-      lsDPState <- decSharePlusCBOR
+      lsCertState <- decSharePlusCBOR
       lsUTxOState <- decShareLensCBOR _1
-      pure LedgerState {lsUTxOState, lsDPState}
+      pure LedgerState {lsUTxOState, lsCertState}
 
 instance (EraTxOut era, EraGovernance era) => ToCBOR (LedgerState era) where
   toCBOR = toEraCBOR @era
@@ -571,7 +571,7 @@ toLedgerStatePairs ::
 toLedgerStatePairs ls@(LedgerState _ _) =
   let LedgerState {..} = ls
    in [ "utxoState" .= lsUTxOState
-      , "delegationState" .= lsDPState
+      , "delegationState" .= lsCertState
       ]
 
 -- ====================================================

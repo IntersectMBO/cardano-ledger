@@ -10,17 +10,17 @@
 module Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   totalTxDeposits,
   totalCertsDeposits,
-  totalCertsDepositsDPState,
+  totalCertsDepositsCertState,
   keyTxRefunds,
   keyCertsRefunds,
-  keyCertsRefundsDPState,
+  keyCertsRefundsCertState,
 )
 where
 
+import Cardano.Ledger.CertState (CertState (..), PState (..), lookupDepositDState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (StakeCredential)
-import Cardano.Ledger.DPState (DPState (..), PState (..), lookupDepositDState)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), isRegKey)
 import Cardano.Ledger.Shelley.TxBody (
@@ -67,34 +67,34 @@ totalCertsDeposits pp isRegPool certs =
         | not (isRegPool ppId || Set.member ppId regPoolIds) -> Set.insert ppId regPoolIds
       _ -> regPoolIds
 
-totalCertsDepositsDPState ::
+totalCertsDepositsCertState ::
   (EraPParams era, Foldable f) =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   f (DCert (EraCrypto era)) ->
   Coin
-totalCertsDepositsDPState pp dpstate =
-  totalCertsDeposits pp (`Map.member` psStakePoolParams (dpsPState dpstate))
+totalCertsDepositsCertState pp dpstate =
+  totalCertsDeposits pp (`Map.member` psStakePoolParams (certPState dpstate))
 
 -- | Calculates the total amount of deposits needed for all pool registration and
 -- stake delegation certificates to be valid.
 totalTxDeposits ::
   ShelleyEraTxBody era =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   TxBody era ->
   Coin
 totalTxDeposits pp dpstate txb =
-  totalCertsDepositsDPState pp dpstate (txb ^. certsTxBodyG)
+  totalCertsDepositsCertState pp dpstate (txb ^. certsTxBodyG)
 
 -- | Compute the key deregistration refunds in a transaction
-keyCertsRefundsDPState ::
+keyCertsRefundsCertState ::
   (EraPParams era, Foldable f) =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   f (DCert (EraCrypto era)) ->
   Coin
-keyCertsRefundsDPState pp dpstate = keyCertsRefunds pp (lookupDepositDState (dpsDState dpstate))
+keyCertsRefundsCertState pp dpstate = keyCertsRefunds pp (lookupDepositDState (certDState dpstate))
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefunds ::
@@ -126,7 +126,7 @@ keyCertsRefunds pp lookupDeposit certs = snd (foldl' accum (mempty, Coin 0) cert
 keyTxRefunds ::
   ShelleyEraTxBody era =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   TxBody era ->
   Coin
-keyTxRefunds pp dpstate tx = keyCertsRefundsDPState pp dpstate (tx ^. certsTxBodyG)
+keyTxRefunds pp dpstate tx = keyCertsRefundsCertState pp dpstate (tx ^. certsTxBodyG)

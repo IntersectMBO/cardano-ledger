@@ -191,7 +191,7 @@ instance
     tail $
       LedgerState
         <$> (lsUTxOState : shrink lsUTxOState)
-        <*> (lsDPState : shrink lsDPState)
+        <*> (lsCertState : shrink lsCertState)
 
 instance
   ( EraTxOut era

@@ -71,7 +71,7 @@ import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   EpochState (..),
   FilteredRewards (..),
   LedgerState (..),
@@ -81,7 +81,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   completeRupd,
   createRUpd,
   filterAllRewards,
-  lsDPState,
+  lsCertState,
   rewards,
   updateNonMyopic,
  )
@@ -540,7 +540,7 @@ createRUpdOld ::
 createRUpdOld slotsPerEpoch b es@(EpochState acnt ss ls pr _ nm) maxSupply =
   createRUpdOld_ @era slotsPerEpoch b ss reserves pr totalStake rs nm
   where
-    ds = dpsDState $ lsDPState ls
+    ds = certDState $ lsCertState ls
     rs = UM.domain $ rewards ds
     reserves = asReserves acnt
     totalStake = circulation es maxSupply

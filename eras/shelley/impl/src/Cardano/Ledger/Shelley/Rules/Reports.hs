@@ -21,13 +21,13 @@ module Cardano.Ledger.Shelley.Rules.Reports (
 )
 where
 
-import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (Era (..), EraCrypto, PParams, TxBody, withdrawalsTxBodyL)
-import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DPState (
-  DPState (..),
+import Cardano.Ledger.CertState (
+  CertState (..),
   InstantaneousRewards (..),
  )
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Core (PParams, TxBody, withdrawalsTxBodyL)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
@@ -78,7 +78,7 @@ synopsisCoinMap Nothing = "SYNOPSIS NOTHING"
 produceEqualsConsumed ::
   ShelleyEraTxBody era =>
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   UTxO era ->
   TxBody era ->
   String

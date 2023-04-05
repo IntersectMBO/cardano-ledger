@@ -81,7 +81,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates as X (
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   IncrementalStake (..),
@@ -93,6 +93,7 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   RewardUpdate (..),
   ShelleyPPUPState (..),
   UTxOState (..),
+  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams as X (
   ProposedPPUpdates (..),

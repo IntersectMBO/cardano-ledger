@@ -139,6 +139,8 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help (ProtVerR _) v = pure $ With v
     help SlotNoR v = pure $ With v
     help SizeR v = pure $ With v
+    help VCredR v = pure $ With v
+    help VHashR v = pure $ With v
 
 -- ===============================
 

@@ -198,7 +198,7 @@ registerGenesisStaking
       keyDeposit = (UM.compactCoinOrError . view ppKeyDepositL . esPp . nesEs) oldChainNes
       oldEpochState = nesEs oldChainNes
       oldLedgerState = esLState oldEpochState
-      oldDPState = lsDPState oldLedgerState
+      oldCertState = lsCertState oldLedgerState
 
       -- Note that this is only applicable in the initial configuration where
       -- there is no existing stake distribution, since it would completely
@@ -221,33 +221,33 @@ registerGenesisStaking
           }
       newLedgerState =
         oldLedgerState
-          { lsDPState = newDPState
+          { lsCertState = newCertState
           }
-      newDPState =
-        oldDPState
-          { dpsDState = newDState
-          , dpsPState = newPState
+      newCertState =
+        oldCertState
+          { certDState = newDState
+          , certPState = newPState
           }
       -- New delegation state. Since we're using base addresses, we only care
       -- about updating the 'ssDelegations' field.
       --
       -- See STS DELEG for details
       pairWithDepositsButNoRewards _ = UM.RDPair (UM.CompactCoin 0) keyDeposit
-      newDState :: DState (EraCrypto era)
+      newDState :: DState era
       newDState =
-        (dpsDState oldDPState)
+        (certDState oldCertState)
           { dsUnified =
               UM.unify
                 (Map.map pairWithDepositsButNoRewards . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
                 (Map.mapKeys KeyHashObj $ LM.toMap sgsStake)
-                (UM.ptrView (dsUnified (dpsDState oldDPState)))
+                (UM.ptrView (dsUnified (certDState oldCertState)))
           }
 
       -- We consider pools as having been registered in slot 0
       -- See STS POOL for details
-      newPState :: PState (EraCrypto era)
+      newPState :: PState era
       newPState =
-        (dpsPState oldDPState)
+        (certPState oldCertState)
           { psStakePoolParams = LM.toMap sgsPools
           }
 

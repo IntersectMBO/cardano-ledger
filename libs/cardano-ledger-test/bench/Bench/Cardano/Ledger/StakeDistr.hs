@@ -39,9 +39,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate (Complete, Pulsing),
   RewardUpdate (..),
   applyRUpdFiltered,
-  dpsDState,
+  certDState,
   filterAllRewards,
-  lsDPState,
+  lsCertState,
   rewards,
  )
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, sumRewards)
@@ -231,7 +231,7 @@ tickfRuleBench =
                                 )
                                 ( \registeredAggregated ->
                                     bench "union+" $
-                                      let dState = (dpsDState . lsDPState . esLState . nesEs) nes
+                                      let dState = (certDState . lsCertState . esLState . nesEs) nes
                                        in whnf (rewards dState UM.∪+) registeredAggregated
                                 )
                             ]

@@ -4,6 +4,16 @@
 
 - Deprecate `Cardano.Ledger.UMapCompact` in favor of `Cardano.Ledger.UMap` and add tests for it. #3371
   - Add `Cardano.Ledger.UMap.rdPairView` to view the reward-deposits pair from the `UMap`.
+* Replace `DPState c` with `CertState era`
+* Add `VState`
+* Add `certVState`
+* Parametrize `DState` and `PState` by era
+* Rename `Cardano.Ledger.DPState` module to `Cardano.Ledger.CertState`
+* Rename:
+  * `lsDPState` -> `lsCertState`
+  * `dpsPState` -> `certPState`
+  * `dpsDState` -> `certDState`
+  * `obligationDPState` -> `obligationCertState`
 
 ## 1.1.0.0
 

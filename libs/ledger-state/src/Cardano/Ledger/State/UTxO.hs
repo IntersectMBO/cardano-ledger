@@ -433,7 +433,7 @@ instance AggregateStat DStateStats where
       , gsVerKeyVRF = dssHashVerKeyVRF
       }
 
-countDStateStats :: DState C -> DStateStats
+countDStateStats :: DState CurrentEra -> DStateStats
 countDStateStats DState {..} =
   DStateStats
     { dssCredentialStaking =
@@ -471,7 +471,7 @@ instance AggregateStat PStateStats where
   aggregateStat PStateStats {..} =
     (aggregateStat pssPoolParamsStats) {gsKeyHashStakePool = pssKeyHashStakePool}
 
-countPStateStats :: PState C -> PStateStats
+countPStateStats :: PState CurrentEra -> PStateStats
 countPStateStats PState {..} =
   PStateStats
     { pssKeyHashStakePool =
@@ -509,8 +509,8 @@ countLedgerStateStats :: LedgerState CurrentEra -> LedgerStateStats
 countLedgerStateStats LedgerState {..} =
   LedgerStateStats
     { lssUTxOStats = countUTxOStats (utxosUtxo lsUTxOState)
-    , lssDStateStats = countDStateStats (dpsDState lsDPState)
-    , lssPStateStats = countPStateStats (dpsPState lsDPState)
+    , lssDStateStats = countDStateStats (certDState lsCertState)
+    , lssPStateStats = countPStateStats (certPState lsCertState)
     }
 
 data TxInStats = TxInStats

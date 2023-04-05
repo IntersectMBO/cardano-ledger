@@ -16,6 +16,7 @@
 module Cardano.Ledger.Conway.Rules.Ledger (
   ConwayLEDGER,
   ConwayLedgerPredFailure (..),
+  ConwayLedgerEvent (..),
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
@@ -42,19 +43,20 @@ import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   LedgerState (..),
   UTxOState (..),
-  obligationDPState,
+  obligationCertState,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
-  DelplEnv (..),
+  DelplEnv,
   LedgerEnv (..),
   ShelleyDELEGS,
   ShelleyDelegsEvent,
   ShelleyDelegsPredFailure,
+  ShelleyDelplPredFailure,
   ShelleyLEDGERS,
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
@@ -164,7 +166,7 @@ instance
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
@@ -198,7 +200,7 @@ instance
         "Deposit pot must equal obligation"
         ( \(TRC (_, _, _))
            (LedgerState utxoSt dpstate) ->
-              obligationDPState dpstate
+              obligationCertState dpstate
                 == utxosDeposited utxoSt
         )
     ]
@@ -217,7 +219,7 @@ ledgerTransition ::
   , Embed (EraRule "TALLY" era) (someLEDGER era)
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
@@ -230,7 +232,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt certState, tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
   dpstate' <-
@@ -239,12 +241,12 @@ ledgerTransition = do
         trans @(EraRule "DELEGS" era) $
           TRC
             ( DelegsEnv slot txIx pp tx account
-            , dpstate
+            , certState
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyG
             )
-      else pure dpstate
+      else pure certState
 
-  let DPState dstate _pstate = dpstate
+  let dstate = certDState certState
       genDelegs = dsGenDelegs dstate
 
   let govProcedures =
@@ -265,7 +267,7 @@ ledgerTransition = do
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp dpstate genDelegs
+        ( UtxoEnv @era slot pp certState genDelegs
         , utxoSt {utxosGovernance = govSt {cgTally = tallySt'}}
         , tx
         )
@@ -299,8 +301,9 @@ instance
   ( EraTx era
   , ShelleyEraTxBody era
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
-  , State (EraRule "DELPL" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELPL" era) ~ CertState era
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
+  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
   , Event (EraRule "DELEGS" era) ~ ShelleyDelegsEvent era
@@ -324,7 +327,7 @@ instance
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , State (EraRule "DELEGS" era) ~ DPState (EraCrypto era)
+  , State (EraRule "DELEGS" era) ~ CertState era
   , State (EraRule "TALLY" era) ~ ConwayTallyState era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era

@@ -17,15 +17,15 @@ module Cardano.Ledger.Shelley.AdaPots (
   producedTxBody,
 ) where
 
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core
-import Cardano.Ledger.DPState (
-  DPState (..),
+import Cardano.Ledger.CertState (
+  CertState (..),
   DState (..),
   PState (..),
   rewards,
  )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   keyTxRefunds,
   totalTxDeposits,
@@ -73,12 +73,12 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
     }
   where
     UTxOState u deposits fees_ _ _ = lsUTxOState ls
-    DPState dstate _ = lsDPState ls
+    CertState _ _ dstate = lsCertState ls
     rewards_ = fromCompact $ sumRewardsView (rewards dstate)
     coins = coinBalance u
     keyDeposits_ =
-      fromCompact . sumDepositView . RewardDeposits . dsUnified . dpsDState $ lsDPState ls
-    poolDeposits_ = fold (psDeposits . dpsPState $ lsDPState ls)
+      fromCompact . sumDepositView . RewardDeposits . dsUnified . certDState $ lsCertState ls
+    poolDeposits_ = fold (psDeposits . certPState $ lsCertState ls)
 
 -- | Calculate the total ada in the epoch state
 totalAdaES :: EraTxOut era => EpochState era -> Coin
@@ -145,7 +145,7 @@ consumedTxBody ::
   ShelleyEraTxBody era =>
   TxBody era ->
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   UTxO era ->
   Consumed
 consumedTxBody txBody pp dpstate (UTxO u) =
@@ -160,7 +160,7 @@ producedTxBody ::
   ShelleyEraTxBody era =>
   TxBody era ->
   PParams era ->
-  DPState (EraCrypto era) ->
+  CertState era ->
   Produced
 producedTxBody txBody pp dpstate =
   Produced

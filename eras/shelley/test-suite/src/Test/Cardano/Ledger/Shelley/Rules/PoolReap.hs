@@ -26,7 +26,7 @@ import Cardano.Ledger.Block (
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -80,7 +80,7 @@ tests =
         map removedAfterPoolreap_ $
           filter (not . sameEpoch) (chainSstWithTick tr)
   where
-    poolState = dpsPState . lsDPState . esLState . nesEs . chainNes
+    poolState = certPState . lsCertState . esLState . nesEs . chainNes
 
     removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
     removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =
@@ -90,9 +90,9 @@ tests =
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
 removedAfterPoolreap ::
-  forall c.
-  PState c ->
-  PState c ->
+  forall era.
+  PState era ->
+  PState era ->
   EpochNo ->
   Property
 removedAfterPoolreap p p' e =
@@ -105,7 +105,7 @@ removedAfterPoolreap p p' e =
     stp' = psStakePoolParams p'
     retiring = psRetiring p
     retiring' = psRetiring p'
-    retire :: Set.Set (KeyHash 'StakePool c) -- This declaration needed to disambiguate 'eval'
+    retire :: Set.Set (KeyHash 'StakePool (EraCrypto era)) -- This declaration needed to disambiguate 'eval'
     retire = eval (dom (retiring ▷ setSingleton e))
 
 sameEpoch ::

@@ -11,8 +11,9 @@
 -- as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (..),
+  VState (..),
   emptyDState,
   rewards,
   delegations,
@@ -56,11 +57,11 @@ module Cardano.Ledger.Shelley.LedgerState (
   payPoolDeposit,
   refundPoolDeposit,
   totalTxDeposits,
-  obligationDPState,
+  obligationCertState,
   keyCertsRefunds,
-  keyCertsRefundsDPState,
+  keyCertsRefundsCertState,
   totalCertsDeposits,
-  totalCertsDepositsDPState,
+  totalCertsDepositsCertState,
 
   -- * Epoch boundary
   incrementalStakeDistr,
@@ -96,7 +97,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   utxosGovernanceL,
 ) where
 
-import Cardano.Ledger.DPState
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake

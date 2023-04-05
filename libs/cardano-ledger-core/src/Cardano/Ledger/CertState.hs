@@ -4,27 +4,27 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.DPState (
-  DPState (..),
+module Cardano.Ledger.CertState (
+  CertState (..),
   DState (..),
-  lookupDepositDState,
-  lookupRewardDState,
   PState (..),
+  VState (..),
   InstantaneousRewards (..),
   FutureGenDeleg (..),
+  lookupDepositDState,
+  lookupRewardDState,
   rewards,
   delegations,
   ptrsMap,
   payPoolDeposit,
   refundPoolDeposit,
-  obligationDPState,
+  obligationCertState,
 )
 where
 
@@ -41,12 +41,13 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   toMemptyLens,
  )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
  )
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core (EraCrypto, EraPParams, PParams, ppPoolDepositL)
+import Cardano.Ledger.Core (Era, EraCrypto, EraPParams, PParams, ppPoolDepositL)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
@@ -70,6 +71,7 @@ import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.), _1, _2)
 import NoThunks.Class (NoThunks (..))
@@ -136,25 +138,25 @@ toInstantaneousRewardsPair InstantaneousRewards {..} =
 
 -- | The state used by the DELEG rule, which roughly tracks stake
 -- delegation and some governance features.
-data DState c = DState
-  { dsUnified :: !(UMap c)
+data DState era = DState
+  { dsUnified :: !(UMap (EraCrypto era))
   -- ^ Unified Reward Maps. This contains the reward map (which is the source
   -- of truth regarding the registered stake credentials, the deposit map,
   -- the delegation map, and the stake credential pointer map.
-  , dsFutureGenDelegs :: !(Map (FutureGenDeleg c) (GenDelegPair c))
+  , dsFutureGenDelegs :: !(Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
   -- ^ Future genesis key delegations
-  , dsGenDelegs :: !(GenDelegs c)
+  , dsGenDelegs :: !(GenDelegs (EraCrypto era))
   -- ^ Genesis key delegations
-  , dsIRewards :: !(InstantaneousRewards c)
+  , dsIRewards :: !(InstantaneousRewards (EraCrypto era))
   -- ^ Instantaneous Rewards
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (InstantaneousRewards c) => NoThunks (DState c)
+instance NoThunks (DState era)
 
-instance NFData (InstantaneousRewards c) => NFData (DState c)
+instance NFData (DState era)
 
-instance (Crypto c, EncCBOR (InstantaneousRewards c)) => EncCBOR (DState c) where
+instance (Era era, EncCBOR (InstantaneousRewards (EraCrypto era))) => EncCBOR (DState era) where
   encCBOR (DState unified fgs gs ir) =
     encodeListLen 4
       <> encCBOR unified
@@ -162,10 +164,10 @@ instance (Crypto c, EncCBOR (InstantaneousRewards c)) => EncCBOR (DState c) wher
       <> encCBOR gs
       <> encCBOR ir
 
-instance (Crypto c, DecShareCBOR (InstantaneousRewards c)) => DecShareCBOR (DState c) where
+instance (Era era, DecShareCBOR (InstantaneousRewards (EraCrypto era))) => DecShareCBOR (DState era) where
   type
-    Share (DState c) =
-      (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
+    Share (DState era) =
+      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
   decSharePlusCBOR =
     decodeRecordNamedT "DState" (const 4) $ do
       unified <- decSharePlusCBOR
@@ -174,20 +176,20 @@ instance (Crypto c, DecShareCBOR (InstantaneousRewards c)) => DecShareCBOR (DSta
       ir <- decSharePlusLensCBOR _1
       pure $ DState unified fgs gs ir
 
-instance Crypto c => ToJSON (DState c) where
+instance Era era => ToJSON (DState era) where
   toJSON = object . toDStatePair
   toEncoding = pairs . mconcat . toDStatePair
 
-toDStatePair :: (KeyValue a, Crypto c) => DState c -> [a]
+toDStatePair :: (KeyValue a, Era era) => DState era -> [a]
 toDStatePair DState {..} =
   [ "unified" .= dsUnified
-  , "fGenDelegs" .= Map.toList (dsFutureGenDelegs)
+  , "fGenDelegs" .= Map.toList dsFutureGenDelegs
   , "genDelegs" .= dsGenDelegs
   , "irwd" .= dsIRewards
   ]
 
 -- | Function that looks up the deposit for currently delegated staking credential
-lookupDepositDState :: DState c -> (StakeCredential c -> Maybe Coin)
+lookupDepositDState :: DState era -> (StakeCredential (EraCrypto era) -> Maybe Coin)
 lookupDepositDState dstate =
   let currentRewardDeposits = RewardDeposits $ dsUnified dstate
    in \k -> do
@@ -195,7 +197,7 @@ lookupDepositDState dstate =
         Just $! fromCompact deposit
 
 -- | Function that looks up curret reward for the delegated staking credential.
-lookupRewardDState :: DState c -> (StakeCredential c -> Maybe Coin)
+lookupRewardDState :: DState era -> (StakeCredential (EraCrypto era) -> Maybe Coin)
 lookupRewardDState dstate =
   let currentRewardDeposits = RewardDeposits $ dsUnified dstate
    in \k -> do
@@ -203,32 +205,32 @@ lookupRewardDState dstate =
         Just $! fromCompact reward
 
 -- | The state used by the POOL rule, which tracks stake pool information.
-data PState c = PState
-  { psStakePoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c))
+data PState era = PState
+  { psStakePoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
   -- ^ The stake pool parameters.
-  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool c) (PoolParams c))
+  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
   -- ^ The future stake pool parameters.
   -- Changes to existing stake pool parameters are staged in order
   -- to give delegators time to react to changes.
   -- See section 11.2, "Example Illustration of the Reward Cycle",
   -- of the Shelley Ledger Specification for a sequence diagram.
-  , psRetiring :: !(Map (KeyHash 'StakePool c) EpochNo)
+  , psRetiring :: !(Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
   -- ^ A map of retiring stake pools to the epoch when they retire.
-  , psDeposits :: !(Map (KeyHash 'StakePool c) Coin)
+  , psDeposits :: !(Map (KeyHash 'StakePool (EraCrypto era)) Coin)
   -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (PState c)
+instance NoThunks (PState era)
 
-instance NFData (PState c)
+instance NFData (PState era)
 
-instance Crypto c => EncCBOR (PState c) where
+instance Era era => EncCBOR (PState era) where
   encCBOR (PState a b c d) =
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
-instance Crypto c => DecShareCBOR (PState c) where
-  type Share (PState c) = Interns (KeyHash 'StakePool c)
+instance Era era => DecShareCBOR (PState era) where
+  type Share (PState era) = Interns (KeyHash 'StakePool (EraCrypto era))
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
     psStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
@@ -236,14 +238,14 @@ instance Crypto c => DecShareCBOR (PState c) where
     psDeposits <- decSharePlusLensCBOR (toMemptyLens _1 id)
     pure PState {psStakePoolParams, psFutureStakePoolParams, psRetiring, psDeposits}
 
-instance (Crypto c, DecShareCBOR (PState c)) => DecCBOR (PState c) where
+instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
 
-instance Crypto c => ToJSON (PState c) where
+instance Era era => ToJSON (PState era) where
   toJSON = object . toPStatePair
   toEncoding = pairs . mconcat . toPStatePair
 
-toPStatePair :: (KeyValue a, Crypto c) => PState c -> [a]
+toPStatePair :: (KeyValue a, Era era) => PState era -> [a]
 toPStatePair PState {..} =
   [ "stakePoolParams" .= psStakePoolParams
   , "futureStakePoolParams" .= psFutureStakePoolParams
@@ -251,17 +253,49 @@ toPStatePair PState {..} =
   , "deposits" .= psDeposits
   ]
 
--- | The state associated with the DELPL rule, which combines the DELEG rule
--- and the POOL rule.
-data DPState c = DPState
-  { dpsDState :: !(DState c)
-  , dpsPState :: !(PState c)
+data VState era = VState
+  { vsDReps :: !(Set (Credential 'Voting (EraCrypto era)))
+  , vsCCHotKeys ::
+      !( Map
+          (KeyHash 'Voting (EraCrypto era))
+          (KeyHash 'Voting (EraCrypto era))
+       )
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (InstantaneousRewards c) => NoThunks (DPState c)
+instance Default (VState era) where
+  def = VState def def
 
-instance NFData (InstantaneousRewards c) => NFData (DPState c)
+instance NoThunks (VState era)
+
+instance NFData (VState era)
+
+instance Era era => DecCBOR (VState era) where
+  decCBOR =
+    decode $
+      RecD VState
+        <! From
+        <! From
+
+instance Era era => EncCBOR (VState era) where
+  encCBOR VState {..} =
+    encode $
+      Rec (VState @era)
+        !> To vsDReps
+        !> To vsCCHotKeys
+
+-- | The state associated with the DELPL rule, which combines the DELEG rule
+-- and the POOL rule.
+data CertState era = CertState
+  { certVState :: !(VState era)
+  , certPState :: !(PState era)
+  , certDState :: !(DState era)
+  }
+  deriving (Show, Eq, Generic)
+
+instance NoThunks (CertState c)
+
+instance NFData (CertState c)
 
 instance Crypto c => EncCBOR (InstantaneousRewards c) where
   encCBOR (InstantaneousRewards irR irT dR dT) =
@@ -277,36 +311,38 @@ instance Crypto c => DecShareCBOR (InstantaneousRewards c) where
       dT <- lift decCBOR
       pure $ InstantaneousRewards irR irT dR dT
 
-instance Crypto c => EncCBOR (DPState c) where
-  encCBOR DPState {dpsPState, dpsDState} =
-    encodeListLen 2
-      <> encCBOR dpsPState -- We get better sharing when encoding pstate before dstate
-      <> encCBOR dpsDState
+instance Era era => EncCBOR (CertState era) where
+  encCBOR CertState {certPState, certDState, certVState} =
+    encodeListLen 3
+      <> encCBOR certVState
+      <> encCBOR certPState
+      <> encCBOR certDState
 
-instance Crypto c => DecShareCBOR (DPState c) where
-  type Share (DPState c) = (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
-  decSharePlusCBOR = decodeRecordNamedT "DPState" (const 2) $ do
-    dpsPState <- decSharePlusLensCBOR _2
-    dpsDState <- decSharePlusCBOR
-    pure DPState {dpsPState, dpsDState}
+instance Era era => DecShareCBOR (CertState era) where
+  type Share (CertState era) = (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
+  decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
+    certVState <- lift decCBOR -- TODO: add sharing of DRep credentials
+    certPState <- decSharePlusLensCBOR _2
+    certDState <- decSharePlusCBOR
+    pure CertState {certPState, certDState, certVState}
 
-instance Default (DPState c) where
-  def = DPState def def
+instance Default (CertState era) where
+  def = CertState def def def
 
-instance Crypto c => ToJSON (DPState c) where
-  toJSON = object . toDPStatePairs
-  toEncoding = pairs . mconcat . toDPStatePairs
+instance Era era => ToJSON (CertState era) where
+  toJSON = object . toCertStatePairs
+  toEncoding = pairs . mconcat . toCertStatePairs
 
-toDPStatePairs :: (KeyValue a, Crypto c) => DPState c -> [a]
-toDPStatePairs DPState {..} =
-  [ "dstate" .= dpsDState
-  , "pstate" .= dpsPState
+toCertStatePairs :: (KeyValue a, Era era) => CertState era -> [a]
+toCertStatePairs CertState {..} =
+  [ "dstate" .= certDState
+  , "pstate" .= certPState
   ]
 
 instance Default (InstantaneousRewards c) where
   def = InstantaneousRewards Map.empty Map.empty mempty mempty
 
-instance Default (DState c) where
+instance Default (DState era) where
   def =
     DState
       UM.empty
@@ -318,16 +354,16 @@ instance Default (PState c) where
   def =
     PState Map.empty Map.empty Map.empty Map.empty
 
-rewards :: DState c -> View c (Credential 'Staking c) RDPair
+rewards :: DState era -> View (EraCrypto era) (Credential 'Staking (EraCrypto era)) RDPair
 rewards = RewardDeposits . dsUnified
 
 delegations ::
-  DState c ->
-  View c (Credential 'Staking c) (KeyHash 'StakePool c)
+  DState era ->
+  View (EraCrypto era) (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
 delegations = Delegations . dsUnified
 
 -- | get the actual ptrs map, we don't need a view
-ptrsMap :: DState c -> Map Ptr (Credential 'Staking c)
+ptrsMap :: DState era -> Map Ptr (Credential 'Staking (EraCrypto era))
 ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 
 -- ==========================================================
@@ -340,8 +376,8 @@ payPoolDeposit ::
   EraPParams era =>
   KeyHash 'StakePool (EraCrypto era) ->
   PParams era ->
-  PState (EraCrypto era) ->
-  PState (EraCrypto era)
+  PState era ->
+  PState era
 payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
   where
     pool = psDeposits pstate
@@ -349,7 +385,7 @@ payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
       | Map.notMember keyhash pool = Map.insert keyhash (pp ^. ppPoolDepositL) pool
       | otherwise = pool
 
-refundPoolDeposit :: KeyHash 'StakePool c -> PState c -> (Coin, PState c)
+refundPoolDeposit :: KeyHash 'StakePool (EraCrypto era) -> PState era -> (Coin, PState era)
 refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
   where
     pool = psDeposits pstate
@@ -360,17 +396,19 @@ refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
 -- | Calculate total possible refunds in the system. There is an invariant that
 --   this should be the same as the utxosDeposited field of the UTxOState. Note that
 --   this does not depend upon the current values of the Key and Pool deposits of the PParams.
-obligationDPState :: DPState era -> Coin
-obligationDPState (DPState DState {dsUnified = umap} PState {psDeposits = stakePools}) =
+obligationCertState :: CertState era -> Coin
+obligationCertState (CertState VState {} PState {psDeposits = stakePools} DState {dsUnified = umap}) =
   UM.fromCompact (UM.sumDepositView (RewardDeposits umap)) <> foldl' (<>) (Coin 0) stakePools
 
 -- =====================================================
 
-instance ToExpr (DPState c)
+instance ToExpr (CertState era)
 
-instance ToExpr (PState c)
+instance ToExpr (PState era)
 
-instance ToExpr (DState c)
+instance ToExpr (DState era)
+
+instance ToExpr (VState era)
 
 instance ToExpr (FutureGenDeleg c)
 

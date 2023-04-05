@@ -1,5 +1,13 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.2.0.0
+
+* Replace `DPState c` with `CertState era`
+* Add `TranslateEra` instances for:
+  * `DState`
+  * `PState`
+  * `VState`
+
 ## 1.1.0.0
 
 * Add `ToJSON` instance for `AlonzoTxOut`, `AlonzoScript` and `Datum`

@@ -72,7 +72,7 @@ import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
@@ -110,6 +110,7 @@ import Cardano.Protocol.TPraos.BHeader (
   prevHashToNonce,
  )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
+import Data.Default.Class (Default (..))
 import Data.Foldable (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -163,7 +164,7 @@ newLab b cs =
 -- | = Update Fees and Deposits
 --
 -- Update the fee pot and deposit pot with the new fees and deposits
--- adjust the deposit tables in the UTxOState and the DPState.
+-- adjust the deposit tables in the UTxOState and the CertState.
 -- Notes
 --   1) do not give this function duplicates in the 'stakes' or 'pools' inputs.
 --   2) do not use this function when crossing the epoch boundary,
@@ -182,7 +183,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    DPState dstate pstate = lsDPState ls
+    CertState vstate pstate dstate = lsCertState ls
     utxoSt = lsUTxOState ls
     utxoSt' =
       utxoSt
@@ -192,7 +193,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
               <+> (newcount <×> ppEx ^. ppPoolDepositL)
         , utxosFees = (utxosFees utxoSt) <+> newFees
         }
-    ls' = ls {lsUTxOState = utxoSt', lsDPState = dpstate'}
+    ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
     -- Count the number of new pools, because we don't take a deposit for existing pools
     -- This strategy DOES NOT WORK if there are duplicate PoolParams in one call
     newcount = foldl' accum 0 pools
@@ -201,9 +202,10 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
       Map.fromList (map (\cred -> (cred, UM.compactCoinOrError (ppEx ^. ppKeyDepositL))) stakes)
     newPools = Map.fromList (map (\p -> (ppId p, ppEx ^. ppPoolDepositL)) pools)
     dpstate' =
-      DPState
-        dstate {dsUnified = UM.unionKeyDeposits (RewardDeposits (dsUnified dstate)) newDeposits}
+      CertState
+        vstate
         pstate {psDeposits = Map.unionWith (\old _new -> old) newPools (psDeposits pstate)}
+        dstate {dsUnified = UM.unionKeyDeposits (RewardDeposits (dsUnified dstate)) newDeposits}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -218,7 +220,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    DPState dstate pstate = lsDPState ls
+    CertState _vstate pstate dstate = lsCertState ls
     refund = case UM.lookup key (RewardDeposits (dsUnified dstate)) of
       Nothing -> Coin 0
       Just (RDPair _ ccoin) -> fromCompact ccoin
@@ -228,10 +230,10 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
         { utxosDeposited = (utxosDeposited utxoSt) <-> refund
         , utxosFees = (utxosFees utxoSt) <+> newFees
         }
-    ls' = ls {lsUTxOState = utxoSt', lsDPState = dpstate'}
+    ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
-    dpstate' = DPState dstate {dsUnified = UM.adjust zeroD key (RewardDeposits (dsUnified dstate))} pstate
+    dpstate' = CertState def pstate dstate {dsUnified = UM.adjust zeroD key (RewardDeposits (dsUnified dstate))}
     zeroD (RDPair x _) = RDPair x (UM.CompactCoin 0)
 
 -- | = Update the UTxO
@@ -276,8 +278,8 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ds = dpsDState dps
+    dps = lsCertState ls
+    ds = certDState dps
     ds' =
       ds
         { dsUnified =
@@ -286,8 +288,8 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
                 um2 = (Ptrs um1 UM.∪ (ptr, cred))
              in um2
         }
-    dps' = dps {dpsDState = ds'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certDState = ds'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -307,8 +309,8 @@ deregStakeCred cred cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ds = dpsDState dps
+    dps = lsCertState ls
+    ds = certDState dps
     ds' =
       ds
         { dsUnified =
@@ -318,8 +320,8 @@ deregStakeCred cred cs = cs {chainNes = nes'}
                 um3 = (UM.delete cred (Delegations um2))
              in um3
         }
-    dps' = dps {dpsDState = ds'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certDState = ds'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -338,14 +340,14 @@ delegation cred pool cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ds = dpsDState dps
+    dps = lsCertState ls
+    ds = certDState dps
     ds' =
       ds
         { dsUnified = (UM.insert cred pool (delegations ds))
         }
-    dps' = dps {dpsDState = ds'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certDState = ds'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -362,14 +364,14 @@ newPool pool cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ps = dpsPState dps
+    dps = lsCertState ls
+    ps = certPState dps
     ps' =
       ps
         { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
         }
-    dps' = dps {dpsPState = ps'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certPState = ps'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -384,14 +386,14 @@ reregPool pool cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ps = dpsPState dps
+    dps = lsCertState ls
+    ps = certPState dps
     ps' =
       ps
         { psFutureStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
         }
-    dps' = dps {dpsPState = ps'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certPState = ps'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -406,15 +408,15 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ps = dpsPState dps
+    dps = lsCertState ls
+    ps = certPState dps
     ps' =
       ps
         { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
         , psFutureStakePoolParams = Map.delete (ppId pool) (psStakePoolParams ps)
         }
-    dps' = dps {dpsPState = ps'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certPState = ps'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -432,11 +434,11 @@ stageRetirement kh e cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ps = dpsPState dps
+    dps = lsCertState ls
+    ps = certPState dps
     ps' = ps {psRetiring = Map.insert kh e (psRetiring ps)}
-    dps' = dps {dpsPState = ps'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certPState = ps'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -455,8 +457,8 @@ reapPool pool cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ps = dpsPState dps
+    dps = lsCertState ls
+    ps = certPState dps
     ps' =
       ps
         { psRetiring = Map.delete kh (psRetiring ps)
@@ -464,7 +466,7 @@ reapPool pool cs = cs {chainNes = nes'}
         , psDeposits = Map.delete kh (psDeposits ps)
         }
     pp = esPp es
-    ds = dpsDState dps
+    ds = certDState dps
     RewardAcnt _ rewardAddr = ppRewardAcnt pool
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
@@ -484,8 +486,8 @@ reapPool pool cs = cs {chainNes = nes'}
     as' = as {asTreasury = (asTreasury as) <+> unclaimed}
     utxoSt = lsUTxOState ls
     utxoSt' = utxoSt {utxosDeposited = (utxosDeposited utxoSt) <-> (pp ^. ppPoolDepositL)}
-    dps' = dps {dpsPState = ps', dpsDState = ds'}
-    ls' = ls {lsDPState = dps', lsUTxOState = utxoSt'}
+    dps' = dps {certPState = ps', certDState = ds'}
+    ls' = ls {lsCertState = dps', lsUTxOState = utxoSt'}
     es' = es {esLState = ls', esAccountState = as'}
     nes' = nes {nesEs = es'}
 
@@ -504,8 +506,8 @@ mir cred pot amnt cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ds = dpsDState dps
+    dps = lsCertState ls
+    ds = certDState dps
     InstantaneousRewards
       { iRReserves = ir
       , iRTreasury = it
@@ -516,8 +518,8 @@ mir cred pot amnt cs = cs {chainNes = nes'}
       ReservesMIR -> InstantaneousRewards (Map.insert cred amnt ir) it dr dt
       TreasuryMIR -> InstantaneousRewards ir (Map.insert cred amnt it) dr dt
     ds' = ds {dsIRewards = irwd'}
-    dps' = dps {dpsDState = ds'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certDState = ds'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -536,15 +538,15 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ds = dpsDState dps
+    dps = lsCertState ls
+    ds = certDState dps
     ds' =
       ds
         { dsUnified = rewards ds UM.∪+ Map.map UM.compactCoinOrError newrewards
         , dsIRewards = emptyInstantaneousRewards
         }
-    dps' = dps {dpsDState = ds'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certDState = ds'}
+    ls' = ls {lsCertState = dps'}
     as = esAccountState es
     as' =
       if pot == ReservesMIR
@@ -789,11 +791,11 @@ setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ds = dpsDState dps
+    dps = lsCertState ls
+    ds = certDState dps
     ds' = ds {dsFutureGenDelegs = Map.insert fg gd (dsFutureGenDelegs ds)}
-    dps' = dps {dpsDState = ds'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certDState = ds'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -808,15 +810,15 @@ adoptFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    dps = lsDPState ls
-    ds = dpsDState dps
+    dps = lsCertState ls
+    ds = certDState dps
     gds = GenDelegs $ (Map.insert (fGenDelegGenKeyHash fg) gd (unGenDelegs (dsGenDelegs ds)))
     ds' =
       ds
         { dsFutureGenDelegs = Map.delete fg (dsFutureGenDelegs ds)
         , dsGenDelegs = gds
         }
-    dps' = dps {dpsDState = ds'}
-    ls' = ls {lsDPState = dps'}
+    dps' = dps {certDState = ds'}
+    ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}

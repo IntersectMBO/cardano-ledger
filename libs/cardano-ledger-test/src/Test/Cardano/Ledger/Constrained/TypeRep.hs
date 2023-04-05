@@ -110,10 +110,12 @@ data Rep era t where
   SetR :: Ord a => Rep era a -> Rep era (Set a)
   ListR :: Rep era a -> Rep era [a]
   CredR :: Rep era (Credential 'Staking (EraCrypto era))
+  VCredR :: Rep era (Credential 'Voting (EraCrypto era))
   PoolHashR :: Rep era (KeyHash 'StakePool (EraCrypto era))
   WitHashR :: Rep era (KeyHash 'Witness (EraCrypto era))
   GenHashR :: Rep era (KeyHash 'Genesis (EraCrypto era))
   GenDelegHashR :: Rep era (KeyHash 'GenesisDelegate (EraCrypto era))
+  VHashR :: Rep era (KeyHash 'Voting (EraCrypto era))
   PoolParamsR :: Rep era (PoolParams (EraCrypto era))
   NewEpochStateR :: Rep era (NewEpochState era)
   IntR :: Rep era Int
@@ -254,6 +256,8 @@ instance Show (Rep era t) where
   show (ProtVerR x) = "(ProtVer " ++ show x ++ ")"
   show SlotNoR = "(SlotNo c)"
   show SizeR = "Size"
+  show VCredR = "VCredR"
+  show VHashR = "VHashR"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -306,6 +310,8 @@ synopsis NewEpochStateR _ = "NewEpochStateR ..."
 synopsis (ProtVerR _) (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 synopsis SlotNoR x = show x
 synopsis SizeR x = show x
+synopsis VCredR x = show x
+synopsis VHashR x = show x
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -374,6 +380,8 @@ instance Shaped (Rep era) any where
   shape SlotNoR = Nullary 36
   shape SizeR = Nullary 37
   shape (PairR a b) = Nary 38 [shape a, shape b]
+  shape VCredR = Nullary 39
+  shape VHashR = Nullary 40
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -426,6 +434,8 @@ genSizedRep _ NewEpochStateR = undefined
 genSizedRep _ (ProtVerR proof) = genProtVer proof
 genSizedRep _ SlotNoR = arbitrary
 genSizedRep _ SizeR = do lo <- choose (1, 6); hi <- choose (6, 10); pure (SzRng lo hi)
+genSizedRep _ VCredR = arbitrary
+genSizedRep _ VHashR = arbitrary
 
 genRep ::
   Era era =>

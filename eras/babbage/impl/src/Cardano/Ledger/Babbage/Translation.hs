@@ -24,9 +24,13 @@ import Cardano.Ledger.Binary (DecoderError)
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.API (
+  CertState (..),
+  DState (..),
   EpochState (..),
   NewEpochState (..),
+  PState (..),
   StrictMaybe (..),
+  VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import qualified Data.Map.Strict as Map
@@ -100,12 +104,30 @@ instance Crypto c => TranslateEra (BabbageEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
+instance Crypto c => TranslateEra (BabbageEra c) DState where
+  translateEra _ DState {..} = pure DState {..}
+
+instance Crypto c => TranslateEra (BabbageEra c) VState where
+  translateEra _ VState {..} = pure VState {..}
+
+instance Crypto c => TranslateEra (BabbageEra c) PState where
+  translateEra _ PState {..} = pure PState {..}
+
+instance Crypto c => TranslateEra (BabbageEra c) CertState where
+  translateEra ctxt ls =
+    pure
+      CertState
+        { certDState = translateEra' ctxt $ certDState ls
+        , certPState = translateEra' ctxt $ certPState ls
+        , certVState = translateEra' ctxt $ certVState ls
+        }
+
 instance Crypto c => TranslateEra (BabbageEra c) API.LedgerState where
   translateEra ctxt ls =
     pure
       API.LedgerState
         { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
-        , API.lsDPState = API.lsDPState ls
+        , API.lsCertState = translateEra' ctxt $ API.lsCertState ls
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where

@@ -43,7 +43,7 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 type ShelleyTest = ShelleyEra C_Crypto
 
 ignoreAllButIRWD ::
-  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (DState C_Crypto) ->
+  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (DState ShelleyTest) ->
   Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto)
 ignoreAllButIRWD = fmap dsIRewards
 

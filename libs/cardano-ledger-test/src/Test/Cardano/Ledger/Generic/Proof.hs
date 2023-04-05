@@ -222,11 +222,11 @@ runSTS (MOCKCHAIN _proof) x cont = cont (runShelleyBase (applySTSTest x))
 --   :t goSTS (UTXOW (Babbage Mock))
 --   goSTS (LEDGER (Babbage Mock))
 --     :: LedgerEnv (BabbageEra C_Crypto)
---        -> (UTxOState (BabbageEra C_Crypto), DPState C_Crypto)
+--        -> (UTxOState (BabbageEra C_Crypto), CertState C_Crypto)
 --        -> Cardano.Ledger.Alonzo.Tx.AlonzoTx (BabbageEra C_Crypto)
 --        -> (Either
 --              [LedgerPredicateFailure (BabbageEra C_Crypto)]
---              (UTxOState (BabbageEra C_Crypto), DPState C_Crypto)
+--              (UTxOState (BabbageEra C_Crypto), CertState C_Crypto)
 --        -> ans)
 --        -> ans
 -- @@@

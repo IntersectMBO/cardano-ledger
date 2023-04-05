@@ -35,10 +35,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   esPp,
   esPrevPp,
   esSnapshots,
-  lsDPState,
+  lsCertState,
   lsUTxOState,
-  obligationDPState,
-  pattern DPState,
+  obligationCertState,
+  pattern CertState,
   pattern EpochState,
  )
 import Cardano.Ledger.Shelley.Rewards ()
@@ -172,7 +172,7 @@ epochTransition = do
       ) <-
     judgmentContext
   let utxoSt = lsUTxOState ls
-  let DPState dstate pstate = lsDPState ls
+  let CertState vstate pstate dstate = lsCertState ls
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
 
@@ -187,12 +187,12 @@ epochTransition = do
     trans @(EraRule "POOLREAP" era) $
       TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
-  let adjustedDPstate = DPState dstate' pstate''
+  let adjustedCertState = CertState vstate pstate'' dstate'
       epochState' =
         EpochState
           acnt'
           ss'
-          (ls {lsUTxOState = utxoSt', lsDPState = adjustedDPstate})
+          (ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState})
           pr
           pp
           nm
@@ -206,9 +206,9 @@ epochTransition = do
     -- At the epoch boundary refunds are made, so we need to change what
     -- the utxosDeposited field is. The other two places where deposits are
     -- kept (dsUnified of DState and psDeposits of PState) are adjusted by
-    -- the rules, So we can recompute the utxosDeposited field using adjustedDPState
-    -- since we have the invariant that: obligationDPState dpstate == utxosDeposited utxostate
-    oblgNew = obligationDPState adjustedDPstate
+    -- the rules, So we can recompute the utxosDeposited field using adjustedCertState
+    -- since we have the invariant that: obligationCertState dpstate == utxosDeposited utxostate
+    oblgNew = obligationCertState adjustedCertState
     reserves = asReserves acnt'
     utxoSt''' = utxoSt'' {utxosDeposited = oblgNew}
     acnt'' = acnt' {asReserves = reserves}

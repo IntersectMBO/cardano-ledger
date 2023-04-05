@@ -32,7 +32,7 @@ import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   EpochState (..),
   IncrementalStake (..),
@@ -140,8 +140,8 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
         where
           utxoBal = coinBalance u'
           incrStakeBal = fold (credMap sd') <> fold (ptrMap sd')
-          ptrs = ptrsMap . dpsDState $ dp
-          ptrs' = ptrsMap . dpsDState $ dp'
+          ptrs = ptrsMap $ certDState dp
+          ptrs' = ptrsMap $ certDState dp'
 
 incrStakeComparisonTest ::
   forall era.
@@ -168,7 +168,7 @@ checkIncrementalStake ::
   Property
 checkIncrementalStake es =
   let
-    (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate)) = esLState es
+    (LedgerState (UTxOState utxo _ _ _ incStake) (CertState _vstate pstate dstate)) = esLState es
     stake = stakeDistr @era utxo dstate pstate
     istake = incrementalStakeDistr (esPp es) incStake dstate pstate
    in
@@ -190,8 +190,8 @@ stakeDistr ::
   forall era.
   EraTxOut era =>
   UTxO era ->
-  DState (EraCrypto era) ->
-  PState (EraCrypto era) ->
+  DState era ->
+  PState era ->
   SnapShot (EraCrypto era)
 stakeDistr u ds ps =
   SnapShot

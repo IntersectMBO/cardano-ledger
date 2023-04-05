@@ -89,12 +89,12 @@ import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DPState (..),
+  CertState (..),
   DState (..),
   LedgerState (..),
   PState (..),
   RewardAccounts,
-  obligationDPState,
+  obligationCertState,
   smartUTxOState,
  )
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
@@ -693,7 +693,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
   where
     umap = UM.unify (Map.map rdpair (gsInitialRewards gstate)) (gsInitialDelegations gstate) Map.empty
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovernanceState
-    dpstate = DPState dstate pstate
+    dpstate = CertState def pstate dstate
     dstate =
       DState
         umap
@@ -702,7 +702,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         instantaneousRewardsZero
     pstate = PState pools Map.empty Map.empty (fmap (const poolDeposit) pools)
     -- In a wellformed LedgerState the deposited equals the obligation
-    deposited = obligationDPState dpstate
+    deposited = obligationCertState dpstate
     pools = gsInitialPoolParams gstate
     pp = mPParams (gsModel gstate)
     keyDeposit = pp ^. ppKeyDepositL
