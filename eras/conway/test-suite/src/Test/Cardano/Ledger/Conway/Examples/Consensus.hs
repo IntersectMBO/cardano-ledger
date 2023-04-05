@@ -32,6 +32,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Rules (ConwayLEDGER)
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
@@ -205,5 +206,8 @@ exampleConwayNewEpochState =
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
 
-exampleConwayGenesis :: GenDelegs c
-exampleConwayGenesis = GenDelegs Map.empty
+exampleConwayGenesis :: ConwayGenesis c
+exampleConwayGenesis =
+  ConwayGenesis
+    { cgGenDelegs = GenDelegs Map.empty
+    }

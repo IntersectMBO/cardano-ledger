@@ -23,6 +23,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
@@ -56,7 +57,7 @@ import Lens.Micro
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance TranslationContext (ConwayEra c) = API.GenDelegs c
+type instance TranslationContext (ConwayEra c) = ConwayGenesis c
 
 instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
   translateEra ctxt nes =
@@ -112,16 +113,16 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
         }
 
 instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
-  translateEra newGenDelegs ls =
+  translateEra conwayGenesis ls =
     pure
       API.LedgerState
-        { API.lsUTxOState = translateEra' newGenDelegs $ API.lsUTxOState ls
+        { API.lsUTxOState = translateEra' conwayGenesis $ API.lsUTxOState ls
         , API.lsDPState = updateGenesisKeys $ API.lsDPState ls
         }
     where
       updateGenesisKeys (DPState dstate pstate) = DPState dstate' pstate
         where
-          dstate' = dstate {dsGenDelegs = newGenDelegs}
+          dstate' = dstate {dsGenDelegs = cgGenDelegs conwayGenesis}
 
 instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
   translateEra ctxt us =
