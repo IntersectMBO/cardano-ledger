@@ -1,5 +1,11 @@
 # Changelog for `cardano-ledger-pretty`
 
+## 1.1.1.0
+
+ * Added `PrettyA` instances for:
+   * `Delegatee era` #3372
+   * `ConwayDelegCert c` #3372
+
 ## 1.1.0.0
 
 * Added:

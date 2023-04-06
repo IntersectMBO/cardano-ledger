@@ -40,6 +40,7 @@ class EraTxBody era => ShelleyEraTxBody era where
 
   certsTxBodyL :: ProtVerAtMost era 8 => Lens' (TxBody era) (StrictSeq (DCert (EraCrypto era)))
 
+  -- TODO remove this once DCert becomes a type family
   certsTxBodyG :: SimpleGetter (TxBody era) (StrictSeq (DCert (EraCrypto era)))
   default certsTxBodyG :: ProtVerAtMost era 8 => SimpleGetter (TxBody era) (StrictSeq (DCert (EraCrypto era)))
   certsTxBodyG = certsTxBodyL

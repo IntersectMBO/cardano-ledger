@@ -18,7 +18,7 @@ module Cardano.Ledger.Pretty.Conway (
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), toShelleyDCert)
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..), ConwayDelegCert (..), Delegatee (..))
 import Cardano.Ledger.Conway.Governance (
   Anchor,
   ConwayGovernance (..),
@@ -48,7 +48,6 @@ import Cardano.Ledger.Pretty (
   ppAuxiliaryDataHash,
   ppCoin,
   ppConstitutionalDelegCert,
-  ppDelegCert,
   ppKeyHash,
   ppNetwork,
   ppPoolCert,
@@ -76,8 +75,47 @@ instance
   where
   prettyA = ppConwayTxBody
 
+instance PrettyA (Delegatee era) where
+  prettyA (DelegStake skh) =
+    ppRecord
+      "DelegStake"
+      [ ("Staking Key Hash", prettyA skh)
+      ]
+  prettyA (DelegVote vc) =
+    ppRecord
+      "DelegVote"
+      [ ("Voting Credential", prettyA vc)
+      ]
+  prettyA (DelegStakeVote skh vc) =
+    ppRecord
+      "DelegStakeVote"
+      [ ("Staking Key Hash", prettyA skh)
+      , ("Voting Credential", prettyA vc)
+      ]
+
+instance PrettyA (ConwayDelegCert c) where
+  prettyA (ConwayDeleg stakeCredential delegatee deposit) =
+    ppRecord
+      "ConwayDeleg"
+      [ ("Stake Credential", prettyA stakeCredential)
+      , ("Delegatee", prettyA delegatee)
+      , ("Deposit", prettyA deposit)
+      ]
+  prettyA (ConwayReDeleg stakeCredential delegatee) =
+    ppRecord
+      "ConwayReDeleg"
+      [ ("Stake Credential", prettyA stakeCredential)
+      , ("Delegatee", prettyA delegatee)
+      ]
+  prettyA (ConwayUnDeleg stakeCredential deposit) =
+    ppRecord
+      "ConwayUnDeleg"
+      [ ("Stake Credential", prettyA stakeCredential)
+      , ("Deposit", prettyA deposit)
+      ]
+
 ppConwayDCert :: ConwayDCert c -> PDoc
-ppConwayDCert (ConwayDCertDeleg dc) = ppSexp "ConwayDCertDeleg" [ppDelegCert dc]
+ppConwayDCert (ConwayDCertDeleg dc) = ppSexp "ConwayDCertDeleg" [prettyA dc]
 ppConwayDCert (ConwayDCertPool pc) = ppSexp "ConwayDCertPool" [ppPoolCert pc]
 ppConwayDCert (ConwayDCertConstitutional gdc) = ppSexp "ConwayDCertConstitutional" [ppConstitutionalDelegCert gdc]
 
@@ -150,7 +188,9 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
       [("hash", prettyA c)]
 
 instance forall c. PrettyA (ConwayDCert c) where
-  prettyA = prettyA . toShelleyDCert
+  prettyA (ConwayDCertDeleg delegCert) = prettyA delegCert
+  prettyA (ConwayDCertPool poolCert) = prettyA poolCert
+  prettyA (ConwayDCertConstitutional constDelegCert) = prettyA constDelegCert
 
 instance Crypto c => PrettyA (PParams (ConwayEra c)) where
   prettyA = ppBabbagePParams

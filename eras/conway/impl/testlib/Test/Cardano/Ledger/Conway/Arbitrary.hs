@@ -25,6 +25,22 @@ import Test.Cardano.Ledger.Mary.Arbitrary (genMintValues)
 instance Crypto c => Arbitrary (ConwayGenesis c) where
   arbitrary = ConwayGenesis <$> arbitrary
 
+instance Crypto c => Arbitrary (Delegatee c) where
+  arbitrary =
+    oneof
+      [ DelegStake <$> arbitrary
+      , DelegVote <$> arbitrary
+      , DelegStakeVote <$> arbitrary <*> arbitrary
+      ]
+
+instance Crypto c => Arbitrary (ConwayDelegCert c) where
+  arbitrary =
+    oneof
+      [ ConwayDeleg <$> arbitrary <*> arbitrary <*> arbitrary
+      , ConwayReDeleg <$> arbitrary <*> arbitrary
+      , ConwayUnDeleg <$> arbitrary <*> arbitrary
+      ]
+
 instance Crypto c => Arbitrary (ConwayDCert c) where
   arbitrary =
     oneof

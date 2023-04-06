@@ -46,7 +46,6 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (..),
-  DelegCert (..),
   Network (..),
   NewEpochState (..),
   PoolCert (..),
@@ -73,7 +72,7 @@ import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
-import Test.Cardano.Ledger.Shelley.Examples.Consensus (examplePoolParams, exampleStakeKey, keyToCredential)
+import Test.Cardano.Ledger.Shelley.Examples.Consensus (examplePoolParams)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 
 -- ==============================================================
@@ -126,9 +125,8 @@ collateralOutput =
 
 exampleConwayCerts :: CC.Crypto c => StrictSeq (ConwayDCert c)
 exampleConwayCerts =
-  StrictSeq.fromList
-    [ ConwayDCertDeleg (RegKey (keyToCredential exampleStakeKey))
-    , ConwayDCertPool (RegPool examplePoolParams)
+  StrictSeq.fromList -- TODO should I add the new certs here?
+    [ ConwayDCertPool (RegPool examplePoolParams)
     ]
 
 exampleTxBodyConway :: TxBody Conway

@@ -266,20 +266,26 @@ script_data_hash = $hash32
 ; 1001 - 1101: future formats
 
 certificate =
-  [ stake_registration
-  // stake_deregistration
-  // stake_delegation
-  // pool_registration
+  [ pool_registration
   // pool_retirement
-  // genesis_key_delegation
+  // constitutional_deleg_cert
+  // deleg_cert
+  // redeleg_cert
+  // undeleg_cert
   ]
 
-stake_registration = (0, stake_credential)
-stake_deregistration = (1, stake_credential)
-stake_delegation = (2, stake_credential, pool_keyhash)
+delegatee =
+  [ 0, pool_keyhash
+  // 1, voting_credential
+  // 2, pool_keyhash, voting_credential
+  ]
+
 pool_registration = (3, pool_params)
 pool_retirement = (4, pool_keyhash, epoch)
-genesis_key_delegation = (5, genesishash, genesis_delegate_hash, vrf_keyhash)
+constitutional_deleg_cert = (5, genesishash, genesis_delegate_hash, vrf_keyhash)
+deleg_cert = (6, stake_credential, delegatee, coin)
+redeleg_cert = (7, stake_credential, delegatee)
+undeleg_cert = (8, stake_credential, coin)
 
 move_instantaneous_reward = [ 0 / 1, { * stake_credential => delta_coin } / coin ]
 ; The first field determines where the funds are drawn from.
@@ -289,10 +295,13 @@ move_instantaneous_reward = [ 0 / 1, { * stake_credential => delta_coin } / coin
 
 delta_coin = int
 
-stake_credential =
+credential =
   [  0, addr_keyhash
   // 1, scripthash
   ]
+
+stake_credential = credential
+voting_credential = credential
 
 pool_params = ( operator:       pool_keyhash
               , vrf_keyhash:    vrf_keyhash

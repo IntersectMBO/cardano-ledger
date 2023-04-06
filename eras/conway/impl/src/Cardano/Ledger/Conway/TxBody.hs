@@ -77,7 +77,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   ConwayEraTxBody (..),
  )
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, toShelleyDCert)
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Conway.PParams ()
@@ -99,7 +99,6 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
-  getterMemoRawType,
   lensMemoRawType,
   mkMemoized,
  )
@@ -308,7 +307,8 @@ instance Crypto c => ShelleyEraTxBody (ConwayEra c) where
   certsTxBodyL = notSupportedInThisEraL
   {-# INLINE certsTxBodyL #-}
 
-  certsTxBodyG = getterMemoRawType (fmap toShelleyDCert . ctbrCerts)
+  -- TODO Fix this once DCert is a type family
+  certsTxBodyG = undefined
 
 instance Crypto c => AllegraEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra StandardCrypto) #-}

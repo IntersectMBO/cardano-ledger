@@ -1398,7 +1398,7 @@ pcDCert (DCertGenesis _) = ppString "GenesisCert"
 pcDCert (DCertMir _) = ppString "MirCert"
 
 pcConwayDCert :: ConwayDCert c -> PDoc
-pcConwayDCert (ConwayDCertDeleg dc) = pcDelegCert dc
+pcConwayDCert (ConwayDCertDeleg dc) = prettyA dc
 pcConwayDCert (ConwayDCertPool poolc) = pcPoolCert poolc
 pcConwayDCert (ConwayDCertConstitutional _) = ppString "GenesisCert"
 
