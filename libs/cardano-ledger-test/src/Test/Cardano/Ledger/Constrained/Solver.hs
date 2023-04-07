@@ -52,7 +52,6 @@ import Test.Cardano.Ledger.Constrained.Spec (
   RelSpec (..),
   RngSpec (..),
   SetSpec (..),
-  Unique (..),
   genFromListSpec,
   genFromMapSpec,
   genFromSetSpec,
@@ -88,7 +87,7 @@ ifTrace traceOn message a = case traceOn of
 -- ==================================================
 -- Computing if a type has instances
 
--- =================
+-- ======= Ord =======
 
 hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
 hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
@@ -164,7 +163,7 @@ hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
       With y <- hasOrd x v
       pure (With y)
 
--- ===============================
+-- ============ Adds ==============
 
 -- | Is there an Adds instance for 't'
 hasAdds :: Rep era t -> (s t) -> Typed (HasConstraint Adds (s t))
@@ -181,7 +180,7 @@ isAddsType rep = case hasAdds rep rep of
   (Typed (Right (With _))) -> True
   (Typed (Left _)) -> False
 
--- ==================================
+-- ============= Count ================
 
 -- | Is there an Count instance for 't'
 hasCount :: Rep era t -> s t -> Typed (HasConstraint Count (s t))
@@ -233,6 +232,7 @@ exactlyOne :: (a -> Bool) -> [a] -> Bool
 exactlyOne pp xs = 1 == length (filter pp xs)
 
 -- | Make a generator for a Map type when there is a Projection from the domain of the map.
+--   This has been superceeded by the RelLens  RelSpec
 projOnDom ::
   forall era a dom rng.
   (Era era, Ord dom) =>
@@ -270,17 +270,20 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     val2 <- simplify expr2
     mapSpec (SzLeast (Map.size val1)) (relSuperset dom val2) RngAny
   (Restrict expr1 expr2 :=: expr3) -> solveMap v1 (expr3 :=: Restrict expr1 expr2)
-  -- TODO recast these in terms of Fields
-  (ProjS lensbt _trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Lit (SetR _srep) x) | Name v1 == Name v2 -> do
+  (ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Lit (SetR drep) x) | Name v1 == Name v2 -> do
     Refl <- sameRep dom brep
-    pure (MapUnique (MapR dom rng) (Unique (show predicate) (projOnDom x lensbt dom rng)))
-  (ProjS lensbt _trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Dom (Lit (MapR _drep _) x))
+    mapSpec (SzExact (Set.size x)) (RelLens lensbt dom trep (relEqual drep x)) RngAny
+  (ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Dom (Lit (MapR drep _) x))
     | Name v1 == Name v2 -> do
         Refl <- sameRep dom brep
-        pure (MapUnique (MapR dom rng) (Unique (show predicate) (projOnDom (Map.keysSet x) lensbt dom rng)))
-  (Lit (SetR _srep) x) :=: ProjS lensbt _trep (Dom (Var v2@(V _ (MapR brep _) _))) | Name v1 == Name v2 -> do
+        mapSpec (SzExact (Map.size x)) (RelLens lensbt dom trep (relEqual drep (Map.keysSet x))) RngAny
+  (ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) `Subset` Dom (Lit (MapR drep _) x))
+    | Name v1 == Name v2 -> do
+        Refl <- sameRep dom brep
+        mapSpec (SzMost (Map.size x)) (RelLens lensbt dom trep (relSubset drep (Map.keysSet x))) RngAny
+  (Lit (SetR drep) x) :=: ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) | Name v1 == Name v2 -> do
     Refl <- sameRep dom brep
-    pure (MapUnique (MapR dom rng) (Unique (show predicate) (projOnDom x lensbt dom rng)))
+    mapSpec (SzExact (Set.size x)) (RelLens lensbt dom trep (relEqual drep x)) RngAny
   (expr :=: Rng (Var v2))
     | Name v1 == Name v2 -> do
         s <- simplify expr

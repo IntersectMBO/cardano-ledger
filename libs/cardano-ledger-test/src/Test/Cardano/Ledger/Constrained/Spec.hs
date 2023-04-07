@@ -28,6 +28,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Debug.Trace (trace)
+import Lens.Micro hiding (set)
 import Test.Cardano.Ledger.Constrained.Ast (Pred (..), Sum (..), Term (..), runPred)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
@@ -247,6 +248,9 @@ data RelSpec era dom where
     -- | Can't set
     Set d ->
     RelSpec era d
+  -- RelLens :: Ord b => Lens' dom b -> Rep era dom -> Rep era b -> Set b -> RelSpec era dom
+  -- Try this
+  RelLens :: Ord b => Lens' dom b -> Rep era dom -> Rep era b -> (RelSpec era b) -> RelSpec era dom
 
 relSubset, relSuperset, relDisjoint, relEqual :: Ord t => Rep era t -> Set t -> RelSpec era t
 relSubset r set = RelOper r Set.empty (Just set) Set.empty
@@ -277,6 +281,7 @@ showRelSpec (RelOper r x Nothing y) | Set.null y = sepsP ["RelSuperset", synopsi
 showRelSpec (RelOper r x Nothing y) | Set.null x = sepsP ["RelDisjoint", synopsis (SetR r) y]
 showRelSpec (RelOper r x Nothing y) = sepsP ["RelOper", synopsis (SetR r) x, "Univ", synopsis (SetR r) y]
 showRelSpec (RelOper r x (Just y) z) = sepsP ["RelOper", synopsis (SetR r) x, synopsis (SetR r) y, synopsis (SetR r) z]
+showRelSpec (RelLens _ repd repb relsp) = sepsP ["RelLens", "(Lens' " ++ show repd ++ " " ++ show repb ++ ")", show relsp]
 showRelSpec (RelNever _) = "RelNever"
 
 mergeRelSpec :: RelSpec era d -> RelSpec era d -> RelSpec era d
@@ -285,6 +290,12 @@ mergeRelSpec d@(RelNever _) _ = d
 mergeRelSpec _ d@(RelNever _) = d
 mergeRelSpec RelAny x = x
 mergeRelSpec x RelAny = x
+mergeRelSpec x y@RelLens {} = mergeRelSpec y x
+mergeRelSpec a@RelLens {} b =
+  RelNever
+    [ "merging a=" ++ show a ++ "\n        b=" ++ show b
+    , "RelLens is inconsistent with everything, and can't be merged."
+    ]
 mergeRelSpec a@(RelOper r must1 may1 cant1) b@(RelOper _ must2 may2 cant2) =
   dropT $
     explain ("merging a=" ++ show a ++ "\n        b=" ++ show b) $
@@ -344,6 +355,7 @@ sizeForRel (RelNever _) = SzAny
 sizeForRel (RelOper _ must Nothing _) = SzLeast (Set.size must)
 sizeForRel (RelOper _ must (Just may) _) | Set.null must = SzMost (Set.size may)
 sizeForRel (RelOper _ must (Just may) cant) = SzRng (Set.size must) (Set.size (Set.difference may cant))
+sizeForRel (RelLens _ _ _ spec) = sizeForRel spec
 
 maybeSynopsis :: Rep e t -> Maybe t -> String
 maybeSynopsis r (Just x) = synopsis r x
@@ -416,9 +428,10 @@ runRelSpec _ RelAny = True
 runRelSpec _ (RelNever xs) = errorMess "RelNever in call to runRelSpec" xs
 runRelSpec s (RelOper _ must Nothing cant) = Set.isSubsetOf must s && Set.disjoint s cant
 runRelSpec s (RelOper _ must (Just may) cant) = Set.isSubsetOf must s && Set.isSubsetOf s may && Set.disjoint s cant
+runRelSpec s (RelLens lensdb _ _ spec) = runRelSpec (Set.map (\x -> x ^. lensdb) s) spec
 
 -- | return a generator that always generates things that meet the RelSpec
-genFromRelSpec :: forall era t. Ord t => [String] -> Gen t -> Int -> RelSpec era t -> Gen (Set t)
+genFromRelSpec :: forall era t. (Era era, Ord t) => [String] -> Gen t -> Int -> RelSpec era t -> Gen (Set t)
 genFromRelSpec msgs g n spec =
   let msg = "genFromRelSpec " ++ show n ++ " " ++ show spec
    in case spec of
@@ -443,8 +456,21 @@ genFromRelSpec msgs g n spec =
                     )
                     (msg : msgs)
                 GT -> addUntilSize (msg : msgs) must choices n
+        RelLens lensDB repD repB specB -> do
+          -- This case supercedes the "projOnDom" function.
+          setB <- genFromRelSpec msgs (genRep repB) n specB
+          -- Generate (Set B), we will use these, to fixup a (Set D)
+          -- where we overwrite the B field of D
+          let accum ansG b =
+                do
+                  ans <- ansG
+                  d <- genRep repD -- Generate the D
+                  pure $ Set.insert (d & lensDB .~ b) ans
+          -- Overwrite the B field of D, and insert the changed value D{B=b}
+          Set.foldl' accum (pure Set.empty) setB
 
 -- | Generate a random RelSpec
+--   We deliberately do NOT generate RelLens, as it is inconsistent with everything.
 genRelSpec :: Ord dom => [String] -> Gen dom -> Rep era dom -> Int -> Gen (RelSpec era dom)
 genRelSpec _ _ r 0 = pure $ relEqual r Set.empty
 genRelSpec msg genD r n = do
@@ -490,6 +516,7 @@ genDisjoint set gen = help atLeastDelta Set.empty
 --   See the property test 'genConsistent'
 genConsistentRelSpec :: [String] -> Gen dom -> RelSpec era dom -> Gen (RelSpec era dom)
 genConsistentRelSpec msg g x = case x of
+  r@(RelLens {}) -> error ("Can't generate a consistent spec for " ++ show r)
   RelOper r must Nothing cant ->
     frequency
       [ (1, pure RelAny)
@@ -563,7 +590,7 @@ testMergeRelSpec = do
     s4 -> do
       let size = sizeForRel s4
       m <- genFromSize size
-      ans <- genFromRelSpec ["testMergeRelSpec " ++ show s1 ++ " " ++ show s2] (choose (1, 1000)) m s4
+      ans <- genFromRelSpec @TT ["testMergeRelSpec " ++ show s1 ++ " " ++ show s2] (choose (1, 1000)) m s4
       pure $
         counterexample
           ( "s1="
@@ -736,7 +763,7 @@ sizeForRng (RngNever _) = SzAny
 
 -- | Generate an arbitrary size [r] for a particular size 'n'
 --   The generated list is consistent with the RngSpec given as input.
-genFromRngSpec :: forall era r. [String] -> Gen r -> Int -> RngSpec era r -> Gen [r]
+genFromRngSpec :: forall era r. Era era => [String] -> Gen r -> Int -> RngSpec era r -> Gen [r]
 genFromRngSpec msgs genr n x = case x of
   (RngNever xs) -> errorMess "RngNever in genFromRngSpec" (xs ++ (msg : msgs))
   RngAny -> vectorOf n genr
@@ -945,11 +972,6 @@ reportManyMergeRngSpec = do
 
 -- =====================================================
 
-data Unique dom rng = Unique String (Gen (Map dom rng))
-
-instance Show (Unique dom rng) where
-  show (Unique s _) = s
-
 -- | Indicates which constraints (if any) a Map must adhere to
 data MapSpec era dom rng where
   -- | The map may be constrained 3 ways. 1) Its size(Size) 2) its domain(RelSpec) 3) its range(RngSpec)
@@ -958,9 +980,6 @@ data MapSpec era dom rng where
     RelSpec era dom ->
     RngSpec era rng ->
     MapSpec era dom rng
-  -- | Currently used to generate from (Component x fields) Pred. The plan
-  --   is to replace it with some sort of FieldSpec soon.
-  MapUnique :: Rep era (Map dom rng) -> Unique dom rng -> MapSpec era dom rng
   -- | Something is inconsistent
   MapNever :: [String] -> MapSpec era dom rng
 
@@ -981,7 +1000,6 @@ instance LiftT (MapSpec era a b) where
 
 showMapSpec :: MapSpec era dom rng -> String
 showMapSpec (MapSpec w d r) = sepsP ["MapSpec", show w, showRelSpec d, showRngSpec r]
-showMapSpec (MapUnique _ (Unique nm _)) = "(MapUnique " ++ nm ++ ")"
 showMapSpec (MapNever _) = "MapNever"
 
 mergeMapSpec :: Ord dom => MapSpec era dom rng -> MapSpec era dom rng -> MapSpec era dom rng
@@ -996,18 +1014,6 @@ mergeMapSpec spec1 spec2 = case (spec1, spec2) of
     r -> case mergeRelSpec d1 d2 of
       RelNever msgs -> MapNever (["The MapSpec's are inconsistent.", "  " ++ show spec1, "  " ++ show spec2] ++ msgs)
       d -> dropT (explain ("While merging\n   " ++ show spec1 ++ "\n   " ++ show spec2) (mapSpec (s1 <> s2) d r))
-  (MapUnique _ x, y) ->
-    MapNever
-      [ "(Unique " ++ show x
-      , "is never mergeable which another MapSpec such as"
-      , showMapSpec y
-      ]
-  (y, MapUnique _ x) ->
-    MapNever
-      [ "(Unique " ++ show x
-      , "is never mergeable which another MapSpec such as"
-      , showMapSpec y
-      ]
 
 -- | Use 'mapSpec' instead of 'MapSpec' to check size consistency at creation time.
 --   Runs in the type monad, so errors are caught and reported as Solver-time errors.
@@ -1042,13 +1048,11 @@ runMapSpec m (MapSpec sz dom rng) =
   runSize (Map.size m) sz
     && runRelSpec (Map.keysSet m) dom
     && runRngSpec (Map.elems m) rng
-runMapSpec _ (MapUnique _ _) = error "Remove MapUnique, replace with RelSpec (relEqual)"
 
 -- | compute a Size that bounds a MapSpec
 sizeForMapSpec :: MapSpec era d r -> Size
 sizeForMapSpec (MapSpec sz _ _) = sz
 sizeForMapSpec (MapNever _) = SzAny
-sizeForMapSpec (MapUnique _ _) = SzAny
 
 -- ----------------------------------------
 -- MapSpec generators
@@ -1071,9 +1075,16 @@ genMapSpec genD repd repw repc n = frequency [(1, pure mempty), (6, genmapspec)]
       pure (MapSpec (SzExact n) relspec rngspec)
 
 -- | Generate a (Map d t) from a (MapSpec era d r)
-genFromMapSpec :: forall era w dom. Ord dom => (V era (Map dom w)) -> [String] -> Gen dom -> Gen w -> MapSpec era dom w -> Gen (Map dom w)
+genFromMapSpec ::
+  forall era w dom.
+  (Era era, Ord dom) =>
+  (V era (Map dom w)) ->
+  [String] ->
+  Gen dom ->
+  Gen w ->
+  MapSpec era dom w ->
+  Gen (Map dom w)
 genFromMapSpec nm _ _ _ (MapNever xs) = errorMess ("genFromMapSpec " ++ (show nm) ++ " (MapNever _) fails") xs
-genFromMapSpec _ _ _ _ (MapUnique _ (Unique _ gen)) = gen
 genFromMapSpec nm msgs genD genR ms@(MapSpec size rel rng) = do
   n <- genFromSize size
   dom <-
@@ -1205,7 +1216,7 @@ genSetSpec msgs genS repS size = do
   r <- genRelSpec ("from genSetSpec" : msgs) genS repS size
   pure (SetSpec (SzExact size) r)
 
-genFromSetSpec :: forall era a. [String] -> Gen a -> SetSpec era a -> Gen (Set a)
+genFromSetSpec :: forall era a. Era era => [String] -> Gen a -> SetSpec era a -> Gen (Set a)
 genFromSetSpec msgs genS (SetSpec sz rp) = do
   n <- genFromSize sz
   genFromRelSpec ("genFromSetSpec" : msgs) genS n rp

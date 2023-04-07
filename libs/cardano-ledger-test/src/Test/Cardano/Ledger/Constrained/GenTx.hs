@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
 module Test.Cardano.Ledger.Constrained.GenTx where
@@ -10,7 +11,7 @@ import Cardano.Ledger.Core (EraTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.DPState (FutureGenDeleg (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
-import Cardano.Ledger.Keys (GenDelegPair)
+import Cardano.Ledger.Keys (GenDelegPair, KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Pretty (ppMap)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), DelegCert (..), Delegation (..), PoolCert (..))
@@ -25,6 +26,7 @@ import Data.Ratio ((%))
 import qualified Data.Set as Set
 import qualified Data.Universe as Univ (Any (..))
 import Debug.Trace (trace)
+import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Sums (genT), unTxOut)
 import Test.Cardano.Ledger.Constrained.Env
@@ -33,7 +35,7 @@ import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Rewrite (compileGen, rewriteGen)
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), genFromSize)
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), genFromIntRange, genFromSize)
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Spec (TT)
 import Test.Cardano.Ledger.Constrained.Tests (prop_soundness)
@@ -91,35 +93,81 @@ tar f s = Constr s f
 var :: String -> Rep era t -> Term era t
 var s r = Var (V s r No)
 
+getRwdCredL :: Lens' (RewardAcnt c) (Credential 'Staking c)
+getRwdCredL = lens getRwdCred (\r c -> r {getRwdCred = c})
+
+-- =====================================================================
+-- First order representations of functions that construct DCert
+-- values. For use in building 'Target's. We will apply these to (Term Era t)
+-- variables, (using  (:$) and (^$)) to indicate how to construct a
+-- DCert from the random values assigned to those variables.
+-- Thus:  delegateF :$ (delegationF ^$ stkCred ^$ poolHash)
+-- builds a random 'delegation' DCert from the random values assigned to
+-- 'Term's :  'stkCred' and 'poolHash', which are generated using the 'Pred's that
+-- mention those 'Term's. By convention we name these "functional" targets by
+-- post-fixing their names with a captial "F"
+
+regKeyF :: Target era (StakeCredential c -> DCert c)
+regKeyF = Constr "regKeyF" (DCertDeleg . RegKey)
+
+deRegKeyF :: Target era (StakeCredential c -> DCert c)
+deRegKeyF = Constr "deRegKeyF" (DCertDeleg . DeRegKey)
+
+delegateF :: Target era (Delegation c -> DCert c)
+delegateF = Constr "delegateF" (DCertDeleg . Delegate)
+
+delegationF :: Target era (StakeCredential c -> KeyHash 'StakePool c -> Delegation c)
+delegationF = Constr "DelegationF" Delegation
+
+retirePoolF :: Target era (KeyHash 'StakePool c -> EpochNo -> DCert c)
+retirePoolF = Constr "retirePoolF" (\h e -> DCertPool (RetirePool h e))
+
 testbody :: Reflect era => Proof era -> [Pred era]
 testbody p =
   [ Random rewards
   , Random regPools
+  , Random mint
   , Sized (Range 1 3) epochNo
   , Sized (Range 100 150) currentSlot
+  , Sized (Range 0 3) beginDelta
+  , Sized (Range 1 15) endDelta
   , Sized (ExactSize 5) (utxo p)
   , Sized (Range 1 4) inputs
-  , Subset inputs (Dom (utxo p))
+  , Sized (Range 2 4) (outputs p)
+  , Sized (Range 0 2) withdrawals
   , Sized (Range 0 1) refInputs
-  , Subset refInputs (Dom (utxo p))
   , Sized (Range 1 2) collateral
+  , Subset inputs (Dom (utxo p))
+  , Subset refInputs (Dom (utxo p))
   , Subset collateral (Dom (utxo p))
   , spending :=: Restrict inputs (utxo p)
   , SumsTo (Coin 1) inputsCoin EQL [Project CoinR spending]
-  , Sized (Range 2 4) (outputs p)
-  , Sized (Range 0 2) withdrawals
-  , Random mint
+  , zeroRewards :<-: (Constr "filter (==0)" (Map.filter (== (Coin 0))) ^$ rewards)
+  , Subset (ProjS getRwdCredL CredR (Dom withdrawals)) (Dom zeroRewards)
   , Choose
       (SzRng 1 4)
       certs
-      [ (regT, [NotMember regkey (Dom rewards)])
-      , (deregT, [Member deregkey (Dom rewards)])
-      , (delT, [Member poolHash (Dom regPools), Member stkCred (Dom rewards)])
-      , (retirePoolT, [Member poolHash (Dom regPools), CanFollow epoch epochNo])
+      [ (regKeyF ^$ regkey, [NotMember regkey (Dom rewards)])
+      , (deRegKeyF ^$ deregkey, [Member deregkey (Dom rewards)])
+      ,
+        ( delegateF :$ (delegationF ^$ stkCred ^$ poolHash)
+        , [Member poolHash (Dom regPools), Member stkCred (Dom rewards)]
+        )
+      ,
+        ( retirePoolF ^$ poolHash ^$ epoch
+        , [Member poolHash (Dom regPools), CanFollow epoch epochNo]
+        )
       ]
   , Maybe someKey (Simple (var "x" CredR)) [Member (var "x" CredR) (Dom rewards)]
   , ttl :<-: (Constr "(+5)" (\x -> x + 5) ^$ currentSlot)
-  , validityInterval :<-: (Constr "(-4)x(+5)" (\x -> ValidityInterval (SJust (x - 4)) (SJust (x + 5))) ^$ currentSlot)
+  , validityInterval
+      :<-: ( Constr
+              "(-i)x(+j)"
+              (\i x j -> ValidityInterval (SJust (x - i)) (SJust (x + j)))
+              ^$ beginDelta
+              ^$ currentSlot
+              ^$ endDelta
+           )
   , txfee :=: inputsCoin
   ]
   where
@@ -130,13 +178,12 @@ testbody p =
     stkCred = var "stkCred" CredR
     poolHash = var "poolHash" PoolHashR
     epoch = var "epoch" EpochR
-    retirePoolT = tar DCertPool "DCertPool" :$ (tar RetirePool "RetirePool" ^$ poolHash ^$ epoch)
-    regT = tar (DCertDeleg . RegKey) "(DCertDeleg . RegKey)" ^$ regkey
-    deregT = tar (DCertDeleg . DeRegKey) "(DCertDeleg . DeRegKey)" ^$ deregkey
-    delT = tar (DCertDeleg . Delegate) "(DCertDeleg . Delegate)" :$ (tar Delegation "Delegation" ^$ stkCred ^$ poolHash)
     someKey = var "someKey" (MaybeR CredR)
     slot = var "slot" SlotNoR
     currentSlot = var "currentSlot" SlotNoR
+    endDelta = var "endDelta" SlotNoR
+    beginDelta = var "beginDelta" SlotNoR
+    zeroRewards = var "zeroRewards" (MapR CredR CoinR)
 
 go :: Reflect era => Proof era -> [Pred era] -> Gen (Env era, TxBody era)
 go proof ps = do
@@ -154,61 +201,64 @@ showRewrites = do
         Choose
           (SzRng 1 4)
           certs
-          [ (regT, [Member regkey (Dom rewards)])
-          , (deregT, [Member deregkey (Dom rewards)])
-          , (delT, [Member poolHash (Dom regPools), Member stkCred (Dom rewards)])
+          [ (regKeyF ^$ regkey, [NotMember regkey (Dom rewards)])
+          , (deRegKeyF ^$ deregkey, [Member deregkey (Dom rewards)])
+          ,
+            ( delegateF :$ (delegationF ^$ stkCred ^$ poolHash)
+            , [Member poolHash (Dom regPools), Member stkCred (Dom rewards)]
+            )
+          ,
+            ( retirePoolF ^$ poolHash ^$ epoch
+            , [Member poolHash (Dom regPools), CanFollow epoch epochNo]
+            )
           ]
       choice2 = Maybe someKey (Simple (var "x" CredR)) [Member (var "x" CredR) (Dom rewards)]
       regkey = var "regkey" CredR
       deregkey = var "deregkey" CredR
       stkCred = var "stkCred" CredR
       poolHash = var "poolHash" PoolHashR
-      regT = tar (DCertDeleg . RegKey) "(DCertDeleg . RegKey)" ^$ regkey
-      deregT = tar (DCertDeleg . DeRegKey) "(DCertDeleg . DeRegKey)" ^$ deregkey
-      delT = tar (DCertDeleg . Delegate) "(DCertDeleg . Delegate)" :$ (tar Delegation "Delegation" ^$ stkCred ^$ poolHash)
       someKey = var "someKey" (MaybeR CredR)
-  (_, newps) <- generate $ rewriteGen (1, [choice2])
-  putStrLn (show choice)
+      epoch = var "epoch" EpochR
+  (_, newps) <- generate $ rewriteGen (1, [choice, choice2])
+  putStrLn (show [choice, choice2])
   putStrLn (show newps)
 
 {- How does the Choose Constraint operate
 
    Choose (SzRng 1 4) certs
-     [ (regT,[Member regkey (Dom rewards)])
-     , (deregT,[Member deregkey (Dom rewards)])
-     , (delT,[Member poolHash (Dom regPools),Member stkCred (Dom rewards)])
-     ]
+        [ (regKeyF ^$ regkey, [NotMember regkey (Dom rewards)])
+        , (deRegKeyF ^$ deregkey, [Member deregkey (Dom rewards)])
+        , (delegateF :$ (delegationF  ^$ stkCred ^$ poolHash),
+             [Member poolHash (Dom regPools), Member stkCred (Dom rewards)])
+        , (retirePoolF ^$ poolHash ^$ epoch,
+             [Member poolHash (Dom regPools), CanFollow epoch epochNo])
+        ]
 
 intended semantics
 
 Choose (Range 1 4) certs
-  (forall regkey. Member regkey (Dom rewards))
-  (forall deregkey. Member deregkey (Dom rewards))
-  (forall poolHash stkCred. Member poolHash (Dom regPools), Member stkCred (Dom rewards))
+  (forall regkey. (regKeyF regkey) | NotMember regkey (Dom rewards))
+  (forall deregkey. (deRegKeyF deregkey) | Member deregkey (Dom rewards))
+  (forall poolHash stkCred. (delegateF (DelegationF stkCred) poolHash) | Member poolHash (Dom regPools), Member stkCred (Dom rewards))
+  (forall epoch poolHash. ((retirePoolF poolHash) epoch) | Member poolHash (Dom regPools), CanFollow epoch epochNo)
 
 The intent is to generate a list with between 1 and 4 elements
 and bind it to the variable "certs". Each of the (between 1 and 4)
 elements in randomly chosen from the 3 choices, and for each choice
 constraints are made true. The bound variables in the forall are freshly
-instantiated. The unbound variables (regPools rewards) are global.
-It works by rewriting the one Choose constraint to N simpler constraints
+instantiated. The unbound variables (regPools rewards, epochNo) are global.
+It works by rewriting the one Choose constraint to many simpler constraints
 
-Here is an example where we choose the maximum of 4 choices
+Here is an example where we choose 3 of the choices
 
-List certs [certs.6, certs.7, certs.8, certs.9]
-Targets certs.9 (? :$ deregkey.1)
-Targets certs.8 (? :$ regkey.2)
-Targets certs.7 (? :$ (? :$ stkCred.3) :$ poolHash.4)
-Targets certs.6 (? :$ regkey.5)
+List certs [certs.6, certs.7, certs.8]
+certs.8 :<-: (deRegKeyF deregkey.1)
+certs.7 :<-: (delegateF (DelegationF stkCred.2) poolHash.3)
+certs.6 :<-: (delegateF (DelegationF stkCred.4) poolHash.5)
 Member deregkey.1 (Dom rewards)
-Member regkey.2 (Dom rewards)
-Member stkCred.3 (Dom rewards)
-Member poolHash.4 (Dom regPools)
-Member regkey.5 (Dom rewards)
+Member stkCred.2 (Dom rewards)
+Member poolHash.3 (Dom regPools)
+Member stkCred.4 (Dom rewards)
+Member poolHash.5 (Dom regPools)
 
 -}
-
-delegate = tar (DCertDeleg . Delegate) "(DCertDeleg . Delegate)" :$ (tar Delegation "Delegation" ^$ stkCred ^$ poolHash)
-  where
-    poolHash = var "poolHash" PoolHashR
-    stkCred = var "stkCred" CredR

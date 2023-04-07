@@ -446,7 +446,8 @@ genSizedRep ::
   Int ->
   Rep era t ->
   Gen t
-genSizedRep _ CoinR = do Positive n <- arbitrary; pure (Coin n) -- We never store (Coin 0) so we don't generate it
+genSizedRep _ CoinR =
+  frequency [(1, pure (Coin 0)), (5, do Positive n <- arbitrary; pure (Coin n))] -- We never store (Coin 0) so we don't generate it
 genSizedRep n (_a :-> b) = const <$> genSizedRep n b
 genSizedRep n r@(MapR a b) = do
   mapSized ["From genSizedRep " ++ show r] n (genSizedRep n a) (genSizedRep n b)
