@@ -55,13 +55,12 @@ import Cardano.Ledger.Shelley.Rules.Rupd (
   ShelleyRUPD,
   ShelleyRupdPredFailure,
  )
-import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
+import Cardano.Ledger.Shelley.Rules.Upec (UpecState (..))
 import Cardano.Ledger.Slot (EpochNo (unEpochNo), SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
-import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -297,38 +296,35 @@ to tick the ledger state to a future slot.
 ------------------------------------------------------------------------------}
 
 newtype ShelleyTickfPredFailure era
-  = TickfUpecFailure (PredicateFailure (EraRule "UPEC" era)) -- Subtransition Failures
+  = TickfNewEpochFailure (PredicateFailure (EraRule "NEWEPOCH" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
   ( Era era
-  , Show (PredicateFailure (EraRule "UPEC" era))
+  , Show (PredicateFailure (EraRule "NEWEPOCH" era))
   ) =>
   Show (ShelleyTickfPredFailure era)
 
 deriving stock instance
   ( Era era
-  , Eq (PredicateFailure (EraRule "UPEC" era))
+  , Eq (PredicateFailure (EraRule "NEWEPOCH" era))
   ) =>
   Eq (ShelleyTickfPredFailure era)
 
 instance
-  ( NoThunks (PredicateFailure (EraRule "UPEC" era))
+  ( NoThunks (PredicateFailure (EraRule "NEWEPOCH" era))
   ) =>
   NoThunks (ShelleyTickfPredFailure era)
 
 newtype ShelleyTickfEvent era
-  = TickfUpecEvent (Event (EraRule "UPEC" era)) -- Subtransition Events
+  = TickfNewEpochEvent (Event (EraRule "NEWEPOCH" era)) -- Subtransition Events
 
 instance
   ( Era era
-  , EraPParams era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
-  , Signal (EraRule "UPEC" era) ~ ()
-  , State (EraRule "UPEC" era) ~ UpecState era
-  , Environment (EraRule "UPEC" era) ~ EpochState era
-  , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
-  , GovernanceState era ~ ShelleyPPUPState era
+  , Embed (EraRule "NEWEPOCH" era) (ShelleyTICKF era)
+  , Environment (EraRule "NEWEPOCH" era) ~ ()
+  , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
+  , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   ) =>
   STS (ShelleyTICKF era)
   where
@@ -347,16 +343,15 @@ instance
   transitionRules =
     [ do
         TRC ((), nes, slot) <- judgmentContext
-        validatingTickTransitionFORECAST nes slot
+        validatingTickTransition nes slot
     ]
 
 instance
-  ( Era era
-  , STS (ShelleyUPEC era)
-  , PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era
-  , Event (EraRule "UPEC" era) ~ Void
+  ( STS (ShelleyNEWEPOCH era)
+  , PredicateFailure (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochPredFailure era
+  , Event (EraRule "NEWEPOCH" era) ~ ShelleyNewEpochEvent era
   ) =>
-  Embed (ShelleyUPEC era) (ShelleyTICKF era)
+  Embed (ShelleyNEWEPOCH era) (ShelleyTICKF era)
   where
-  wrapFailed = TickfUpecFailure
-  wrapEvent = TickfUpecEvent
+  wrapFailed = TickfNewEpochFailure
+  wrapEvent = TickfNewEpochEvent

@@ -49,10 +49,10 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyEPOCH,
   ShelleyMIR,
   ShelleyNEWEPOCH,
-  ShelleyTICKF,
+  -- ShelleyTICKF,
   adoptGenesisDelegs,
   updateRewards,
-  validatingTickTransitionFORECAST,
+  -- validatingTickTransitionFORECAST,
  )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
 import qualified Cardano.Ledger.UMapCompact as UM
@@ -175,12 +175,12 @@ adoptGenesisDelegsR ::
   EpochState era
 adoptGenesisDelegsR slot nes = adoptGenesisDelegs (nesEs nes) slot
 
-tickfR2 ::
-  Globals ->
-  Cardano.Slotting.Slot.SlotNo ->
-  NewEpochState CurrentEra ->
-  NewEpochState CurrentEra
-tickfR2 globals slot nes = liftRule globals (TRC ((), nes, slot)) (validatingTickTransitionFORECAST @ShelleyTICKF nes slot)
+-- tickfR2 ::
+--   Globals ->
+--   Cardano.Slotting.Slot.SlotNo ->
+--   NewEpochState CurrentEra ->
+--   NewEpochState CurrentEra
+-- tickfR2 globals slot nes = liftRule globals (TRC ((), nes, slot)) (validatingTickTransitionFORECAST @ShelleyTICKF nes slot)
 
 mirR :: Globals -> EpochState CurrentEra -> EpochState CurrentEra
 mirR globals es' = liftApplySTS globals (applySTS @(ShelleyMIR CurrentEra) (TRC ((), es', ())))
@@ -200,8 +200,8 @@ tickfRuleBench =
       let pv = esPp (nesEs nes) ^. ppProtocolVersionL
        in bgroup
             "Tickf Benchmarks"
-            [ bench "validatingTickTransitionfunction" $ whnf (tickfR2 globals (SlotNo 156953303)) nes
-            , bgroup
+            [ -- bench "validatingTickTransitionfunction" $ whnf (tickfR2 globals (SlotNo 156953303)) nes
+              bgroup
                 "Tick subparts"
                 [ bench "adoptGenesisDelegs" $ whnf (adoptGenesisDelegsR (SlotNo 156953303)) nes
                 , bench "newEpoch" $ whnf (newEpochR globals (nesEL nes + 1)) nes
