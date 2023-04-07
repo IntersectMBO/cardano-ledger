@@ -25,12 +25,17 @@ library
         Test.Cardano.Ledger.Constrained.Examples
         Test.Cardano.Ledger.Constrained.Lenses
         Test.Cardano.Ledger.Constrained.Monad
+        Test.Cardano.Ledger.Constrained.Preds.PParams
+        Test.Cardano.Ledger.Constrained.Preds.Universes
+        Test.Cardano.Ledger.Constrained.Preds.TxBody
+        Test.Cardano.Ledger.Constrained.Preds.DPState
         Test.Cardano.Ledger.Constrained.Spec
         Test.Cardano.Ledger.Constrained.Tests
         Test.Cardano.Ledger.Constrained.TypeRep
         Test.Cardano.Ledger.Constrained.Vars
         Test.Cardano.Ledger.Constrained.Rewrite
         Test.Cardano.Ledger.Constrained.Shrink
+        Test.Cardano.Ledger.Constrained.Scripts
         Test.Cardano.Ledger.Constrained.Size
         Test.Cardano.Ledger.Constrained.Solver
         Test.Cardano.Ledger.Examples.BabbageFeatures

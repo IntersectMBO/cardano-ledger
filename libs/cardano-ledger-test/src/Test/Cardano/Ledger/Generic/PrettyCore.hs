@@ -1505,7 +1505,7 @@ pcTxBodyField proof x = case x of
   WppHash (SJust h) -> [("integrity hash", trim (ppSafeHash h))]
   AdHash SNothing -> []
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
-  Txnetworkid SNothing -> []
+  Txnetworkid SNothing -> [("network id", ppString "Nothing")]
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
   GovernanceProcs ga -> [("governance procedures", prettyA ga)]
   CurrentTreasuryValue ctv -> [("current treasury value", prettyA ctv)]
@@ -1680,6 +1680,8 @@ pcPParamsSynopsis p x = withEraPParams p help
         [ ("maxBBSize", ppNatural (x ^. Core.ppMaxBBSizeL))
         , ("maxBHSize", ppNatural (x ^. Core.ppMaxBHSizeL))
         , ("maxTxSize", ppNatural (x ^. Core.ppMaxTxSizeL))
+        , ("poolDeposit", pcCoin (x ^. Core.ppPoolDepositL))
+        , ("keyDeposit", pcCoin (x ^. Core.ppKeyDepositL))
         , ("protVer", ppString (showProtver (x ^. Core.ppProtocolVersionL)))
         ]
 

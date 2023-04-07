@@ -104,7 +104,7 @@ instance Arbitrary OrderInfo where
   shrink info = [standardOrderInfo | info /= standardOrderInfo]
 
 addVar :: V era t -> t -> GenEnv era -> GenEnv era
-addVar var val env = env {gEnv = storeVar var val $ gEnv env}
+addVar vvar val env = env {gEnv = storeVar vvar val $ gEnv env}
 
 markSolved :: Set (Name era) -> Depth -> GenEnv era -> GenEnv era
 markSolved solved d env = env {gSolved = Map.unionWith max new (gSolved env)}
@@ -112,7 +112,7 @@ markSolved solved d env = env {gSolved = Map.unionWith max new (gSolved env)}
     new = Map.fromSet (const d) solved
 
 addSolvedVar :: V era t -> t -> Depth -> GenEnv era -> GenEnv era
-addSolvedVar var val d = markSolved (Set.singleton $ Name var) d . addVar var val
+addSolvedVar vvar val d = markSolved (Set.singleton $ Name vvar) d . addVar vvar val
 
 depthOfName :: GenEnv era -> Name era -> Depth
 depthOfName env x = Map.findWithDefault 0 x (gSolved env)
@@ -195,8 +195,8 @@ genTerm' env rep valid genLit vspec =
     genFreshVar = do
       name <- genFreshVarName env
       val <- genLit
-      let var = V name rep No
-      pure (Var var, addVar var val env)
+      let vvar = V name rep No
+      pure (Var vvar, addVar vvar val env)
 
     genDom :: forall k. (t ~ Set k, Ord k) => Rep era k -> Gen (Term era (Set k), GenEnv era)
     genDom krep = do
@@ -341,9 +341,9 @@ genPredicate env =
       TypeInEra rep <- genValType
       withValue (genTerm env (SetR rep) KnownTerm) $ \set val env' -> do
         name <- genFreshVarName env'
-        let var = V name SizeR No
+        let vvar = V name SizeR No
             intn = getSize val
-        pure (Sized (Var var) set, addSolvedVar var (SzRng intn intn) (1 + depthOf env' set) env')
+        pure (Sized (Var vvar) set, addSolvedVar vvar (SzRng intn intn) (1 + depthOf env' set) env')
 
     eqC = do
       TypeInEra rep <- genType
@@ -628,10 +628,12 @@ predConstr Component {} = "Component"
 predConstr CanFollow {} = "CanFollow"
 predConstr Member {} = "Member"
 predConstr NotMember {} = "NotMember"
+predConstr MapMember {} = "MapMember"
 predConstr (:<-:) {} = ":<-:"
 predConstr List {} = "List"
 predConstr Choose {} = "Choose"
 predConstr Maybe {} = "Maybe"
+predConstr GenFrom {} = "GenFrom"
 
 constraintProperty :: Maybe Int -> Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
 constraintProperty timeout strict whitelist info prop =
