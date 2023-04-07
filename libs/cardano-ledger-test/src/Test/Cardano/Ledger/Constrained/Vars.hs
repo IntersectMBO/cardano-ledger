@@ -8,22 +8,23 @@
 
 module Test.Cardano.Ledger.Constrained.Vars where
 
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, ProtVer (..), StrictMaybe (..))
-import Cardano.Ledger.CertState (CertState (..), DState (..), FutureGenDeleg (..), PState (..), VState (..))
-import qualified Cardano.Ledger.CertState as DPS (InstantaneousRewards (..))
 import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, ProtVer (..), SlotNo (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, Network (..), ProtVer (..), SlotNo (..), StrictMaybe (..))
+import Cardano.Ledger.CertState (CertState (..), DState (..), FutureGenDeleg (..), PState (..), VState (..))
+import qualified Cardano.Ledger.CertState as DPS (InstantaneousRewards (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (
   EraPParams,
   PParams,
   TxBody,
+  ppKeyDepositL,
   ppMaxBBSizeL,
   ppMaxBHSizeL,
   ppMaxTxSizeL,
   ppMinFeeAL,
   ppMinFeeBL,
+  ppPoolDepositL,
   ppProtocolVersionL,
  )
 import Cardano.Ledger.Credential (Credential, Ptr)
@@ -62,6 +63,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
   GovernanceState (..),
   PParamsF (..),
   PParamsUpdateF (..),
+  ScriptF (..),
   TxOutF (..),
   governanceProposedL,
   liftUTxO,
@@ -72,6 +74,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
 import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Field (..), Name (..), V (..))
 import Test.Cardano.Ledger.Constrained.Lenses
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), testEql, (:~:) (Refl))
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..))
 
 import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
@@ -81,6 +84,12 @@ import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..)
 import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody)
+
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Alonzo.Tx (ScriptIntegrity (..))
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Hashes (DataHash, ScriptHash)
 
 -- ================================================================
 
@@ -544,17 +553,41 @@ totalAda = Var $ V "totalAda" CoinR No
 utxoCoin :: Term era Coin
 utxoCoin = Var $ V "utxoCoin" CoinR No
 
+-- | The universe of Staking Credentials. A credential is either KeyHash of a ScriptHash
 credsUniv :: Term era (Set (Credential 'Staking (EraCrypto era)))
 credsUniv = Var $ V "credsUniv" (SetR CredR) No
 
+-- | The universe of Voting Credentials. A credential is either KeyHash of a ScriptHash
+voteUniv :: Term era (Set (Credential 'Voting (EraCrypto era)))
+voteUniv = Var $ V "voteUniv" (SetR VCredR) No
+
+-- | The universe of Payment Credentials. A credential is either KeyHash of a ScriptHash
+payUniv :: Term era (Set (Credential 'Payment (EraCrypto era)))
+payUniv = Var $ V "payUniv" (SetR PCredR) No
+
+-- | The universe of Scripts (and their hashes) useable in spending contexts
+--  That means if they are Plutus scripts then they will be passed an additional
+--  argument (the TxInfo context)
+spendscriptUniv :: Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
+spendscriptUniv p = Var (V "spendscriptUniv" (MapR ScriptHashR (ScriptR p)) No)
+
+-- | The universe of StakePool key hashes. These hashes hash the cold key of the
+--   Pool operators.
 poolsUniv :: Term era (Set (KeyHash 'StakePool (EraCrypto era)))
 poolsUniv = Var $ V "poolsUniv" (SetR PoolHashR) No
 
-genesisUniv :: Term era (Set (KeyHash 'Genesis (EraCrypto era)))
-genesisUniv = Var $ V "genesisUniv" (SetR GenHashR) No
+-- | The universe of the Genesis key hashes and their signing and validating GenDelegPairs
+genesisUniv :: Term era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+genesisUniv = Var $ V "genesisUniv" (MapR GenHashR GenDelegPairR) No
 
+-- | The universe of TxIns. Pais of TxId: hashes of previously run transaction bodies,
+--   and TxIx: indexes of one of the bodies outputs.
 txinUniv :: Term era (Set (TxIn (EraCrypto era)))
 txinUniv = Var $ V "txinUniv" (SetR TxInR) No
+
+-- | The universe of key hashes, and the signing and validating key pairs they represent.
+keymapUniv :: Term era (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
+keymapUniv = Var (V "keymapUniv" (MapR WitHashR KeyPairR) No)
 
 -- ====================================================================
 -- Targets for sub types of NewEpochState
@@ -781,6 +814,22 @@ maxBHSize p =
         (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBHSizeL)))
     )
 
+poolDepAmt :: Proof era -> Term era Coin
+poolDepAmt p =
+  Var $
+    V
+      "poolDepAmt"
+      CoinR
+      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppPoolDepositL)))
+
+keyDepAmt :: Proof era -> Term era Coin
+keyDepAmt p =
+  Var $
+    V
+      "keyDepAmt"
+      CoinR
+      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppKeyDepositL)))
+
 -- =================================================================
 -- TxBody vars
 
@@ -819,3 +868,15 @@ validityInterval = Var $ V "validityInterval" ValidityIntervalR No
 
 mint :: Term era (MultiAsset (EraCrypto era))
 mint = Var $ V "mint" MultiAssetR No
+
+reqSignerHashes :: Term era (Set (KeyHash 'Witness (EraCrypto era)))
+reqSignerHashes = Var $ V "reqSignerHashes" (SetR WitHashR) No
+
+networkID :: Term era (Maybe Network)
+networkID = Var $ V "networkID" (MaybeR NetworkR) No
+
+redeemers :: Proof era -> Term era (Map RdmrPtr (Data era, ExUnits))
+redeemers p = Var $ V "redeemers" (MapR RdmrPtrR (PairR (DataR p) ExUnitsR)) No
+
+txdats :: Proof era -> Term era (Map (DataHash (EraCrypto era)) (Data era))
+txdats p = Var $ V "txdats" (MapR DataHashR (DataR p)) No

@@ -25,6 +25,7 @@ import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Fi
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), runOrdCond, runSize)
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), synopsis, testEql, (:~:) (Refl))
+import Test.QuickCheck (Gen)
 
 -- ================================================
 
@@ -33,6 +34,7 @@ data Term era t where
   Var :: V era t -> Term era t
   Dom :: Ord a => Term era (Map a b) -> Term era (Set a)
   Rng :: (Ord a, Ord b) => Term era (Map a b) -> Term era (Set b)
+  Elems :: (Ord a, Eq b) => Term era (Map a b) -> Term era [b]
   ProjM :: (Ord a) => Lens' b t -> Rep era t -> Term era (Map a b) -> Term era (Map a t)
   ProjS :: (Ord b, Ord t) => Lens' b t -> Rep era t -> Term era (Set b) -> Term era (Set t)
   Delta :: Term era Coin -> Term era DeltaCoin
@@ -53,7 +55,9 @@ data Pred era where
   CanFollow :: Count n => Term era n -> Term era n -> Pred era
   Member :: Ord a => Term era a -> Term era (Set a) -> Pred era
   NotMember :: Ord a => Term era a -> Term era (Set a) -> Pred era
+  MapMember :: (Ord k, Eq v, Ord v) => Term era k -> Term era v -> Term era (Map k v) -> Pred era
   (:<-:) :: Term era t -> Target era t -> Pred era
+  GenFrom :: Term era t -> Target era (Gen t) -> Pred era
   List :: FromList f t => Term era (f t) -> [Term era t] -> Pred era
   Choose :: Eq t => Size -> Term era [t] -> [(Target era t, [Pred era])] -> Pred era
   Maybe :: Term era (Maybe t) -> Target era t -> [Pred era] -> Pred era
@@ -109,6 +113,13 @@ sameRng _ = Nothing
 pattern Word64 :: Word64 -> Term era Word64
 pattern Word64 x = Lit Word64R x
 
+var :: String -> Rep era t -> Term era t
+var s r = Var (V s r No)
+
+unVar :: Term era t -> V era t
+unVar (Var v) = v
+unVar x = error ("Non Var in unVar: " ++ show x)
+
 -- ====================================================================
 
 infixl 0 :$
@@ -139,6 +150,7 @@ instance Show (Term era t) where
   show (Var (V nm _rep _)) = nm -- ++ "::" ++ show _rep
   show (Dom x) = "(Dom " ++ show x ++ ")"
   show (Rng x) = "(Rng " ++ show x ++ ")"
+  show (Elems x) = "(Elems " ++ show x ++ ")"
   show (ProjM _ r t) = "(ProjM " ++ show r ++ " " ++ show t ++ ")"
   show (ProjS _ r t) = "(ProjS " ++ show r ++ " " ++ show t ++ ")"
   show (Delta x) = "(Delta " ++ show x ++ ")"
@@ -163,7 +175,9 @@ instance Show (Pred era) where
   show (CanFollow x y) = "CanFollow " ++ show x ++ " " ++ show y
   show (Member x y) = "Member " ++ show x ++ " " ++ show y
   show (NotMember x y) = "NotMember " ++ show x ++ " " ++ show y
+  show (MapMember k v m) = "MapMember " ++ show k ++ " " ++ show v ++ " " ++ show m
   show (x :<-: y) = show x ++ " :<-: " ++ showT y
+  show (GenFrom x y) = "GenFrom " ++ show x ++ " " ++ showT y
   show (List t xs) = "List " ++ show t ++ " [" ++ showL show ", " xs ++ "]"
   show (Choose s term xs) = unlines (("Choose " ++ show s ++ " " ++ show term) : (map showchoices xs))
     where
@@ -228,6 +242,7 @@ varsOfTerm ans s = case s of
   Var v@(V _ _ _) -> Set.insert (Name v) ans
   Dom x -> varsOfTerm ans x
   Rng x -> varsOfTerm ans x
+  Elems x -> varsOfTerm ans x
   (ProjM _ _ x) -> varsOfTerm ans x
   (ProjS _ _ x) -> varsOfTerm ans x
   Delta x -> varsOfTerm ans x
@@ -258,7 +273,9 @@ varsOfPred ans s = case s of
   CanFollow a b -> varsOfTerm (varsOfTerm ans a) b
   Member a b -> varsOfTerm (varsOfTerm ans a) b
   NotMember a b -> varsOfTerm (varsOfTerm ans a) b
+  MapMember k v m -> varsOfTerm (varsOfTerm (varsOfTerm ans k) v) m
   a :<-: b -> varsOfTarget (varsOfTerm ans a) b
+  GenFrom a b -> varsOfTarget (varsOfTerm ans a) b
   List a bs -> List.foldl' varsOfTerm (varsOfTerm ans a) bs
   Choose _ term pairs -> varsOfTerm (varsOfPairs ans pairs) term
   Maybe term target ps -> varsOfTerm (varsOfPairs ans [(target, ps)]) term
@@ -297,6 +314,7 @@ data SubItem era where
 
 instance Show (SubItem era) where
   show (SubItem (V nm _rep _) expr) = pad 14 nm ++ " = " ++ show expr
+  showList xs ans = unlines (ans : (map show xs))
 
 pad :: Int -> String -> String
 pad n x = x ++ replicate (n - length x) ' '
@@ -326,6 +344,7 @@ substTerm sub (Var v) = findV sub v
 substTerm _ (Lit r k) = Lit r k
 substTerm sub (Dom x) = Dom (substTerm sub x)
 substTerm sub (Rng x) = Rng (substTerm sub x)
+substTerm sub (Elems x) = Elems (substTerm sub x)
 substTerm sub (ProjM l r x) = ProjM l r (substTerm sub x)
 substTerm sub (ProjS l r x) = ProjS l r (substTerm sub x)
 substTerm sub (Delta x) = Delta (substTerm sub x)
@@ -348,7 +367,9 @@ substPred sub (Component t cs) = Component (substTerm sub t) (substComp <$> cs)
 substPred sub (CanFollow a b) = CanFollow (substTerm sub a) (substTerm sub b)
 substPred sub (Member a b) = Member (substTerm sub a) (substTerm sub b)
 substPred sub (NotMember a b) = NotMember (substTerm sub a) (substTerm sub b)
+substPred sub (MapMember k v m) = MapMember (substTerm sub k) (substTerm sub v) (substTerm sub m)
 substPred sub (a :<-: b) = substTerm sub a :<-: substTarget sub b
+substPred sub (GenFrom a b) = GenFrom (substTerm sub a) (substTarget sub b)
 substPred sub (List a b) = List (substTerm sub a) (map (substTerm sub) b)
 substPred sub (Choose sz t pairs) = Choose sz (substTerm sub t) (map (subPair sub) pairs)
   where
@@ -383,6 +404,8 @@ simplify (Dom (Lit _ x)) = pure (Map.keysSet x)
 simplify (Dom (ProjM _ _ t)) = simplify (Dom t)
 simplify (Rng (Lit _ x)) = pure (Set.fromList (Map.elems x))
 simplify (Rng (ProjM l _ (Lit _ m))) = pure (Set.fromList (Map.elems (Map.map (\x -> x ^. l) m)))
+simplify (Elems (Lit _ x)) = pure (Map.elems x)
+simplify (Elems (ProjM l _ (Lit _ m))) = pure (Map.elems (Map.map (\x -> x ^. l) m))
 simplify (ProjM l _ (Lit _ x)) = pure (Map.map (\z -> z ^. l) x)
 simplify (ProjS l _ (Lit _ x)) = pure (Set.map (\z -> z ^. l) x)
 simplify (ProjS l _ t) = do
@@ -419,6 +442,7 @@ runTerm :: Env era -> Term era t -> Typed t
 runTerm _ (Lit _ x) = pure x
 runTerm env (Dom x) = Map.keysSet <$> runTerm env x
 runTerm env (Rng x) = Set.fromList . Map.elems <$> runTerm env x
+runTerm env (Elems x) = Map.elems <$> runTerm env x
 runTerm env (Var v) = findVar v env
 runTerm env (ProjM l _ x) = do
   m <- runTerm env x
@@ -483,7 +507,16 @@ runPred env (NotMember x y) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
   pure (Set.notMember x2 y2)
+runPred env (MapMember k v m) = do
+  k' <- runTerm env k
+  v' <- runTerm env v
+  m' <- runTerm env m
+  pure $ Map.isSubmapOf (Map.singleton k' v') m'
 runPred env (x :<-: y) = do
+  _x2 <- runTerm env x
+  _y2 <- runTarget env y
+  pure True
+runPred env (GenFrom x y) = do
   _x2 <- runTerm env x
   _y2 <- runTarget env y
   pure True
@@ -517,6 +550,7 @@ termRep (Lit r _) = r
 termRep (Var (V _ r _)) = r
 termRep (Dom (termRep -> MapR r _)) = SetR r
 termRep (Rng (termRep -> MapR _ r)) = SetR r
+termRep (Elems (termRep -> MapR _ r)) = ListR r
 termRep (ProjM _ t (termRep -> MapR a _)) = MapR a t
 termRep (ProjS _ t (termRep -> SetR _)) = SetR t
 termRep (Delta _) = DeltaCoinR

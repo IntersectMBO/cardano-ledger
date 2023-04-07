@@ -36,20 +36,25 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits, Tag)
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..))
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
+import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Pretty (ppInteger, ppRecord', ppString)
+import Cardano.Ledger.Pretty.Alonzo (ppRdmrPtr)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.LedgerState
@@ -73,10 +78,12 @@ import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Classes (
   PParamsF (..),
   PParamsUpdateF (..),
+  ScriptF (..),
   TxOutF (..),
   ValueF (..),
   genPParams,
   genPParamsUpdate,
+  genScriptF,
   genTxOut,
   genUTxO,
   genValue,
@@ -89,21 +96,26 @@ import Test.Cardano.Ledger.Constrained.Classes (
 import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
+  pcAddr,
   pcCoin,
   pcDCert,
+  pcData,
+  pcDataHash,
+  pcExUnits,
   pcFutureGenDeleg,
   pcGenDelegPair,
   pcIndividualPoolStake,
+  pcPParamsSynopsis,
   pcReward,
   pcRewardAcnt,
   pcScriptHash,
   pcTxIn,
   pcWitnessesField,
-  withEraPParams,
  )
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), unReflect)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -167,6 +179,18 @@ data Rep era t where
   DCertR :: Rep era (DCert (EraCrypto era))
   RewardAcntR :: Rep era (RewardAcnt (EraCrypto era))
   ValidityIntervalR :: Rep era ValidityInterval
+  KeyPairR :: Rep era (KeyPair 'Witness (EraCrypto era))
+  GenR :: Rep era x -> Rep era (Gen x)
+  ScriptR :: Proof era -> Rep era (ScriptF era)
+  ScriptHashR :: Rep era (ScriptHash (EraCrypto era))
+  NetworkR :: Rep era Network
+  RdmrPtrR :: Rep era RdmrPtr
+  DataR :: Proof era -> Rep era (Data era)
+  ExUnitsR :: Rep era ExUnits
+  TagR :: Rep era Tag
+  DataHashR :: Rep era (DataHash (EraCrypto era))
+  AddrR :: Rep era (Addr (EraCrypto era))
+  PCredR :: Rep era (Credential 'Payment (EraCrypto era))
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -193,6 +217,7 @@ instance Singleton (Rep e) where
     Refl <- testEql a b
     Just Refl
   testEql CredR CredR = Just Refl
+  testEql VCredR VCredR = Just Refl
   testEql PoolHashR PoolHashR = Just Refl
   testEql WitHashR WitHashR = Just Refl
   testEql GenHashR GenHashR = Just Refl
@@ -243,6 +268,19 @@ instance Singleton (Rep e) where
   testEql DCertR DCertR = Just Refl
   testEql ValidityIntervalR ValidityIntervalR = Just Refl
   testEql RewardAcntR RewardAcntR = Just Refl
+  testEql KeyPairR KeyPairR = Just Refl
+  testEql (GenR x) (GenR y) = do Refl <- testEql x y; pure Refl
+  testEql (ScriptR c) (ScriptR d) =
+    do Refl <- testEql c d; pure Refl
+  testEql ScriptHashR ScriptHashR = Just Refl
+  testEql NetworkR NetworkR = Just Refl
+  testEql RdmrPtrR RdmrPtrR = Just Refl
+  testEql (DataR c) (DataR d) = do Refl <- testEql c d; pure Refl
+  testEql ExUnitsR ExUnitsR = Just Refl
+  testEql TagR TagR = Just Refl
+  testEql DataHashR DataHashR = Just Refl
+  testEql AddrR AddrR = Just Refl
+  testEql PCredR PCredR = Just Refl
   testEql _ _ = Nothing
   cmpIndex x y = compare (shape x) (shape y)
 
@@ -300,6 +338,18 @@ instance Show (Rep era t) where
   show DCertR = "(DCert c)"
   show RewardAcntR = "(RewardAcnt c)"
   show ValidityIntervalR = "ValidityInterval"
+  show KeyPairR = "(KeyPair 'Witness era)"
+  show (GenR x) = "(Gen " ++ show x ++ ")"
+  show (ScriptR x) = "(Script " ++ show x ++ ")"
+  show ScriptHashR = "(ScriptHash c)"
+  show NetworkR = "Network"
+  show RdmrPtrR = "RdmrPtr"
+  show (DataR p) = "(Data " ++ show p ++ ")"
+  show ExUnitsR = "ExUnits"
+  show TagR = "Tag"
+  show DataHashR = "(DataHash c)"
+  show AddrR = "(Addr c)"
+  show PCredR = "(Credential 'Payment c)"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -334,7 +384,7 @@ synopsis CharR s = show s
 synopsis (ValueR _) x = show x
 synopsis (TxOutR _) x = show x
 synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
-synopsis (PParamsR _) (PParamsF p x) = synopsisPParam p x
+synopsis (PParamsR _) (PParamsF p x) = show $ pcPParamsSynopsis p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
@@ -357,7 +407,7 @@ synopsis VHashR x = show x
 synopsis CommColdHashR x = show x
 synopsis CommHotHashR x = show x
 synopsis VCredR x = show (credSummary x)
-synopsis VHashR x = show (credSummary x)
+synopsis VHashR x = "(KeyHash 'Voting " ++ show (keyHashSummary x) ++ ")"
 synopsis MultiAssetR (MultiAsset x) = "(MultiAsset num tokens = " ++ show (Map.size x) ++ ")"
 synopsis PolicyIDR (PolicyID x) = show (pcScriptHash x)
 synopsis (WitnessesFieldR p) x = show $ ppRecord' mempty $ unReflect pcWitnessesField p x
@@ -365,6 +415,24 @@ synopsis AssetNameR (AssetName x) = take 10 (show x)
 synopsis DCertR x = show (pcDCert x)
 synopsis RewardAcntR x = show (pcRewardAcnt x)
 synopsis ValidityIntervalR x = show (ppValidityInterval x)
+synopsis KeyPairR _ = "(KeyPairR ...)"
+synopsis (GenR x) _ = "(Gen " ++ show x ++ " ...)"
+synopsis (ScriptR _) x = show x -- The Show instance uses pcScript
+synopsis ScriptHashR x = show (pcScriptHash x)
+synopsis NetworkR x = show x
+synopsis RdmrPtrR x = show (ppRdmrPtr x)
+synopsis (DataR p) x = case p of
+  Shelley _ -> show (pcData x)
+  Allegra _ -> show (pcData x)
+  Mary _ -> show (pcData x)
+  Alonzo _ -> show (pcData x)
+  Babbage _ -> show (pcData x)
+  Conway _ -> show (pcData x)
+synopsis ExUnitsR x = show (pcExUnits x)
+synopsis TagR x = show x
+synopsis DataHashR x = show (pcDataHash x)
+synopsis AddrR x = show (pcAddr x)
+synopsis PCredR c = show (credSummary c)
 
 
 synSum :: Rep era a -> a -> String
@@ -445,6 +513,25 @@ instance Shaped (Rep era) any where
   shape DCertR = Nullary 47
   shape RewardAcntR = Nullary 48
   shape ValidityIntervalR = Nullary 49
+  shape MultiAssetR = Nullary 50
+  shape PolicyIDR = Nullary 51
+  shape (WitnessesFieldR p) = Nary 52 [shape p]
+  shape AssetNameR = Nullary 53
+  shape DCertR = Nullary 54
+  shape RewardAcntR = Nullary 55
+  shape ValidityIntervalR = Nullary 56
+  shape KeyPairR = Nullary 57
+  shape (GenR x) = Nary 58 [shape x]
+  shape (ScriptR p) = Nary 59 [shape p]
+  shape ScriptHashR = Nullary 60
+  shape NetworkR = Nullary 61
+  shape RdmrPtrR = Nullary 62
+  shape (DataR p) = Nary 63 [shape p]
+  shape ExUnitsR = Nullary 64
+  shape TagR = Nullary 65
+  shape DataHashR = Nullary 67
+  shape AddrR = Nullary 68
+  shape PCredR = Nullary 69
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -457,7 +544,8 @@ genSizedRep ::
   Int ->
   Rep era t ->
   Gen t
-genSizedRep _ CoinR = do Positive n <- arbitrary; pure (Coin n) -- We never store (Coin 0) so we don't generate it
+genSizedRep _ CoinR =
+  frequency [(1, pure (Coin 0)), (5, do Positive n <- arbitrary; pure (Coin n))] -- We never store (Coin 0) so we don't generate it
 genSizedRep n (_a :-> b) = const <$> genSizedRep n b
 genSizedRep n r@(MapR a b) = do
   mapSized ["From genSizedRep " ++ show r] n (genSizedRep n a) (genSizedRep n b)
@@ -509,7 +597,18 @@ genSizedRep _ AssetNameR = arbitrary
 genSizedRep _ RewardAcntR = arbitrary
 genSizedRep _ DCertR = arbitrary
 genSizedRep _ ValidityIntervalR = arbitrary
->>>>>>> c13b8783a (Added Vars, TypeReps for Tx. file genTx.hs)
+genSizedRep _ KeyPairR = arbitrary
+genSizedRep n (GenR x) = pure (genSizedRep n x)
+genSizedRep _ (ScriptR p) = genScriptF p
+genSizedRep _ ScriptHashR = arbitrary
+genSizedRep _ NetworkR = arbitrary
+genSizedRep n RdmrPtrR = RdmrPtr <$> arbitrary <*> choose (0, fromIntegral n)
+genSizedRep _ (DataR _) = arbitrary
+genSizedRep _ ExUnitsR = arbitrary
+genSizedRep _ TagR = arbitrary
+genSizedRep _ DataHashR = arbitrary
+genSizedRep _ AddrR = arbitrary
+genSizedRep _ PCredR = arbitrary
 
 genRep ::
   Era era =>
@@ -587,9 +686,24 @@ shrinkRep AssetNameR t = shrink t
 shrinkRep DCertR t = shrink t
 shrinkRep RewardAcntR t = shrink t
 shrinkRep ValidityIntervalR _ = []
+shrinkRep KeyPairR t = shrink t
+shrinkRep (GenR _) _ = []
+shrinkRep (ScriptR _) _ = []
+shrinkRep ScriptHashR t = shrink t
+shrinkRep VCredR t = shrink t
+shrinkRep VHashR t = shrink t
+shrinkRep NetworkR t = shrink t
+shrinkRep RdmrPtrR t = shrink t
+shrinkRep (DataR _) _ = []
+shrinkRep ExUnitsR t = shrink t
+shrinkRep TagR t = shrink t
+shrinkRep DataHashR t = shrink t
+shrinkRep AddrR t = shrink t
+shrinkRep PCredR t = shrink t
 
 -- ===========================
 
+{-
 synopsisPParam :: forall era. Proof era -> Core.PParams era -> String
 synopsisPParam p x = withEraPParams p help
   where
@@ -604,3 +718,4 @@ synopsisPParam p x = withEraPParams p help
         ++ ", protoVersion="
         ++ (synopsis (ProtVerR p) (x ^. Core.ppProtocolVersionL))
         ++ "}"
+-}

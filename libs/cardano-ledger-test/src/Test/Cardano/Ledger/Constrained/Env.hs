@@ -23,6 +23,7 @@ module Test.Cardano.Ledger.Constrained.Env (
   bulkStore,
   Name (..),
   Access (..),
+  otherFromEnv,
 ) where
 
 import Data.List (intercalate)
@@ -151,6 +152,9 @@ restrictEnv :: [Name era] -> Env era -> Env era
 restrictEnv names (Env env) = Env $ Map.filterWithKey (\x _ -> elem x xs) env
   where
     xs = [x | Name (V x _ _) <- names]
+
+otherFromEnv :: [String] -> Env era -> [String]
+otherFromEnv known (Env m) = [n ++ " = " ++ synopsis r t | (n, Payload r t _) <- Map.toList m, not (elem n known)]
 
 -- ============================================
 -- Group a bunch of bindings into a list

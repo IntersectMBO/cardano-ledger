@@ -218,3 +218,13 @@ superItemFromSet genA set =
     [ (3, fst <$> itemFromSet ["Not possible since set is not empty"] set)
     , (1, suchThat genA (`Set.notMember` set))
     ]
+
+-- | Pick a random (key,value) pair from a Map
+genFromMap :: [String] -> Map k a -> Gen (k, a)
+genFromMap msgs m
+  | n == 0 = errorMess "The map is empty in genFromMap" msgs
+  | otherwise = do
+      i <- choose (0, n - 1)
+      pure $ Map.elemAt i m
+  where
+    n = Map.size m

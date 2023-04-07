@@ -40,9 +40,11 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
+import Test.Cardano.Ledger.Constrained.Scripts (genCoreScript)
 import Test.Cardano.Ledger.Constrained.Size (AddsSpec (..), Size (..), genFromIntRange, genFromNonNegIntRange)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
+import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Generic.PrettyCore (pcScript, pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
   AllegraEra,
   GoodCrypto,
@@ -63,6 +65,13 @@ import Test.QuickCheck (
   shuffle,
   vectorOf,
  )
+
+-- import Test.Cardano.Ledger.Generic.GenState(genScript,small,runGenRS,GenRS,elementsT,GenState(..))
+-- import Cardano.Ledger.Alonzo.Scripts(Tag(..))
+-- import Control.Monad (join, replicateM, when, zipWithM_)
+-- import qualified Control.Monad.Trans.Class as Trans(MonadTrans (lift))
+-- import Data.Default.Class (Default (def))
+-- import Cardano.Ledger.Alonzo.Tx(IsValid(..))
 
 -- =====================================================================
 -- Helper functions
@@ -545,6 +554,25 @@ genUTxO p = case p of
   (Alonzo _) -> arbitrary
   (Babbage _) -> arbitrary
   (Conway _) -> arbitrary
+
+-- ========================
+
+data ScriptF era where
+  ScriptF :: Proof era -> Script era -> ScriptF era
+
+unScriptF :: ScriptF era -> Script era
+unScriptF (ScriptF _ v) = v
+
+instance Show (ScriptF era) where
+  show (ScriptF p t) = show ((unReflect pcScript p t) :: PDoc)
+
+genScriptF :: Era era => Proof era -> Gen (ScriptF era)
+genScriptF proof = do
+  tag <- arbitrary
+  vi <- arbitrary
+  m <- Map.fromList <$> (vectorOf 5 arbitrary)
+  corescript <- genCoreScript proof tag m vi
+  pure (ScriptF proof corescript)
 
 -- ==========================================================================
 -- A Single Partition function on Integer, we use to do all partitions by
