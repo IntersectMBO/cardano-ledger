@@ -135,8 +135,7 @@ newEpochTransition ::
   , EraGovernance era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
-  , -- Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era),
-    Environment (EraRule "MIR" era) ~ ()
+  , Environment (EraRule "MIR" era) ~ ()
   , State (EraRule "MIR" era) ~ EpochState era
   , Signal (EraRule "MIR" era) ~ ()
   , Environment (EraRule "EPOCH" era) ~ ()
@@ -151,22 +150,22 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , src@(NewEpochState (EpochNo eL) _ bcur es ru _pd _)
-      , e@(EpochNo e_)
+      , src@(NewEpochState eNoL _ bcur es ru _pd _)
+      , eNo
       ) <-
     judgmentContext
-  if e_ /= eL + 1
+  if eNo /= eNoL + 1
     then pure src
     else do
       es' <- case ru of
         SNothing -> (pure es)
         SJust p@(Pulsing _ _) -> do
           (ans, event) <- liftSTS (completeRupd p)
-          tellReward (DeltaRewardEvent (RupdEvent e event))
-          (updateRewards es e ans)
-        SJust (Complete ru') -> updateRewards es e ru'
+          tellReward (DeltaRewardEvent (RupdEvent eNo event))
+          updateRewards es eNo ans
+        SJust (Complete ru') -> updateRewards es eNo ru'
       es'' <- trans @(EraRule "MIR" era) $ TRC ((), es', ())
-      es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', e)
+      es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', eNo)
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
       -- let pd' = ssStakeMarkPoolDistr (esSnapshots es)
@@ -189,7 +188,7 @@ newEpochTransition = do
       -- See ADR-7.
       pure $
         src
-          { nesEL = e
+          { nesEL = eNo
           , nesBprev = bcur
           , nesBcur = BlocksMade mempty
           , nesEs = es'''
@@ -237,22 +236,9 @@ updateRewards ::
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   let totRs = sumRewards (esPrevPp es ^. ppProtocolVersionL) rs_
   Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
-  let (!es', filtered) = applyRUpdFiltered ru' es
+  let !(!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)
   -- This event (which is only generated once per epoch) must be generated even if the
   -- map is empty (db-sync depends on it).
   tellEvent $ TotalRewardEvent e (frRegistered filtered)
   pure es'
-
-{-
-data FilteredRewards era = FilteredRewards
-  { -- Only the first component is strict on purpose. The others are lazy because in most instances
-    -- they are never used, so this keeps them from being evaluated.
-    -- | These are registered, but in the ShelleyEra they are ignored because of backward compatibility
-    --  in other Eras, this field will be the Map.empty
-    frRegistered :: !(Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))),
-    frShelleyIgnored :: Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))),
-    frUnregistered :: Set (Credential 'Staking (EraCrypto era)),
-    frTotalUnregistered :: Coin
-  }
-  -}
