@@ -258,7 +258,7 @@ bheadTransition = do
   -- so that it can remain a thunk when the consensus
   -- layer computes the ledger view across the epoch boundary.
   let !_ = ssStakeMark . esSnapshots . nesEs $ nes'
-      !_ = ssStakeMarkPoolDistr . esSnapshots . nesEs $ nes'
+  -- !_ = ssStakeMarkPoolDistr . esSnapshots . nesEs $ nes'
 
   ru'' <-
     trans @(EraRule "RUPD" era) $
