@@ -28,6 +28,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   genRewardVal,
   genPositiveVal,
   genGenState,
+  genGenEnv,
   genValidityInterval,
   getBlocksizeMax,
   getCertificateMax,

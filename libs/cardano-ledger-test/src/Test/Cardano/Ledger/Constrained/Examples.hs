@@ -557,9 +557,9 @@ univPreds p =
   , Dom goDelegs :⊆: credsUniv
   , Dom instanReserves :⊆: credsUniv
   , Dom instanTreasury :⊆: credsUniv
-  , Dom (proposalsT p) :⊆: genesisUniv
-  , Dom (futureProposalsT p) :⊆: genesisUniv
-  , Dom genDelegs :⊆: genesisUniv
+  , Dom (proposalsT p) :⊆: Dom genesisUniv
+  , Dom (futureProposalsT p) :⊆: Dom genesisUniv
+  , Dom genDelegs :⊆: Dom genesisUniv
   , Dom (utxo p) :⊆: txinUniv
   ]
 
@@ -690,9 +690,9 @@ projPreds1 _proof =
 
 projPreds2 :: Proof era -> [Pred era]
 projPreds2 _proof =
-  [ Dom genDelegs :⊆: genesisUniv
+  [ Dom genDelegs :⊆: Dom genesisUniv
   , Sized (ExactSize 12) futGDUniv
-  , Sized (ExactSize 6) genesisUniv
+  , Sized (ExactSize 6) (Dom genesisUniv)
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   ]
   where

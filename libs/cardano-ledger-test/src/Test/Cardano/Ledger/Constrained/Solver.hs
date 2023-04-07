@@ -49,10 +49,10 @@ import Test.Cardano.Ledger.Constrained.Spec (
   ElemSpec (..),
   ListSpec (..),
   MapSpec (..),
+  PairSpec (PairAny, PairSpec),
   RelSpec (..),
   RngSpec (..),
   SetSpec (..),
-  Unique (..),
   genFromListSpec,
   genFromMapSpec,
   genFromSetSpec,
@@ -88,7 +88,7 @@ ifTrace traceOn message a = case traceOn of
 -- ==================================================
 -- Computing if a type has instances
 
--- =================
+-- ======= Ord =======
 
 hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
 hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
@@ -154,6 +154,16 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help DCertR _ = failT ["DCert does not have Ord instance"]
     help RewardAcntR v = pure $ With v
     help ValidityIntervalR v = pure $ With v
+    help KeyPairR _ = failT ["KeyPair does not have Ord instance"]
+    help (GenR _) _ = failT ["Gen does not have Ord instance"]
+    help (ScriptR _) _ = failT ["Script does not have Ord instance"]
+    help ScriptHashR v = pure $ With v
+    help NetworkR v = pure $ With v
+    help TagR v = pure $ With v
+    help ExUnitsR _ = failT ["ExUnits does not have Ord instance"]
+    help RdmrPtrR v = pure $ With v
+    help (DataR _) _ = failT ["Data does not have Ord instance"]
+    help DataHashR v = pure $ With v
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
@@ -164,7 +174,7 @@ hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
       With y <- hasOrd x v
       pure (With y)
 
--- ===============================
+-- ============ Adds ==============
 
 -- | Is there an Adds instance for 't'
 hasAdds :: Rep era t -> (s t) -> Typed (HasConstraint Adds (s t))
@@ -181,7 +191,7 @@ isAddsType rep = case hasAdds rep rep of
   (Typed (Right (With _))) -> True
   (Typed (Left _)) -> False
 
--- ==================================
+-- ============= Count ================
 
 -- | Is there an Count instance for 't'
 hasCount :: Rep era t -> s t -> Typed (HasConstraint Count (s t))
@@ -233,6 +243,7 @@ exactlyOne :: (a -> Bool) -> [a] -> Bool
 exactlyOne pp xs = 1 == length (filter pp xs)
 
 -- | Make a generator for a Map type when there is a Projection from the domain of the map.
+--   This has been superceeded by the RelLens  RelSpec
 projOnDom ::
   forall era a dom rng.
   (Era era, Ord dom) =>
@@ -256,116 +267,129 @@ atLeast rep c = add c <$> genRep rep
 solveMap :: forall dom rng era. Era era => V era (Map dom rng) -> Pred era -> Typed (MapSpec era dom rng)
 solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   (Sized (Lit SizeR sz) (Var v2))
-    | Name v1 == Name v2 -> mapSpec sz RelAny RngAny
+    | Name v1 == Name v2 -> mapSpec sz RelAny PairAny RngAny
   (Sized (Lit SizeR sz) (Dom (Var v2)))
-    | Name v1 == Name v2 -> mapSpec sz RelAny RngAny
+    | Name v1 == Name v2 -> mapSpec sz RelAny PairAny RngAny
   (Var v2 :=: expr) | Name v1 == Name v2 -> do
     m1 <- simplifyAtType r expr
     With _ <- hasEq rng rng
-    mapSpec SzAny (relEqual dom (Map.keysSet m1)) (RngElem rng (Map.elems m1))
+    mapSpec SzAny (relEqual dom (Map.keysSet m1)) PairAny (RngElem rng (Map.elems m1))
   (expr :=: v2@(Var _)) -> solveMap v1 (v2 :=: expr)
   (expr1 :=: Restrict expr2 (Var v2@(V _ (MapR a _) _))) | Name v1 == Name v2 -> do
     Refl <- sameRep a dom
     val1 <- simplify expr1
     val2 <- simplify expr2
-    mapSpec (SzLeast (Map.size val1)) (relSuperset dom val2) RngAny
+    mapSpec (SzLeast (Map.size val1)) (relSuperset dom val2) PairAny RngAny
   (Restrict expr1 expr2 :=: expr3) -> solveMap v1 (expr3 :=: Restrict expr1 expr2)
-  -- TODO recast these in terms of Fields
-  (ProjS lensbt _trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Lit (SetR _srep) x) | Name v1 == Name v2 -> do
+  (ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Lit (SetR drep) x) | Name v1 == Name v2 -> do
     Refl <- sameRep dom brep
-    pure (MapUnique (MapR dom rng) (Unique (show predicate) (projOnDom x lensbt dom rng)))
-  (ProjS lensbt _trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Dom (Lit (MapR _drep _) x))
+    mapSpec (SzExact (Set.size x)) (RelLens lensbt dom trep (relEqual drep x)) PairAny RngAny
+  (ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Dom (Lit (MapR drep _) x))
     | Name v1 == Name v2 -> do
         Refl <- sameRep dom brep
-        pure (MapUnique (MapR dom rng) (Unique (show predicate) (projOnDom (Map.keysSet x) lensbt dom rng)))
-  (Lit (SetR _srep) x) :=: ProjS lensbt _trep (Dom (Var v2@(V _ (MapR brep _) _))) | Name v1 == Name v2 -> do
+        mapSpec (SzExact (Map.size x)) (RelLens lensbt dom trep (relEqual drep (Map.keysSet x))) PairAny RngAny
+  (ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) `Subset` Dom (Lit (MapR drep _) x))
+    | Name v1 == Name v2 -> do
+        Refl <- sameRep dom brep
+        mapSpec (SzMost (Map.size x)) (RelLens lensbt dom trep (relSubset drep (Map.keysSet x))) PairAny RngAny
+  (Lit (SetR drep) x) :=: ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) | Name v1 == Name v2 -> do
     Refl <- sameRep dom brep
-    pure (MapUnique (MapR dom rng) (Unique (show predicate) (projOnDom x lensbt dom rng)))
+    mapSpec (SzExact (Set.size x)) (RelLens lensbt dom trep (relEqual drep x)) PairAny RngAny
   (expr :=: Rng (Var v2))
     | Name v1 == Name v2 -> do
         s <- simplify expr
         let SetR a = termRep expr
         Refl <- sameRep rng a
-        mapSpec (SzLeast (Set.size s)) RelAny (RngRel (relEqual rng s))
+        mapSpec (SzLeast (Set.size s)) RelAny PairAny (RngRel (relEqual rng s))
   (Rng (Var v2) :=: expr)
     | Name v1 == Name v2 -> do
         s <- simplify expr
         let SetR a = termRep expr
         Refl <- sameRep rng a
-        mapSpec (SzLeast (Set.size s)) RelAny (RngRel (relEqual rng s))
+        mapSpec (SzLeast (Set.size s)) RelAny PairAny (RngRel (relEqual rng s))
   (Rng (Var v2) `Subset` expr)
     | Name v1 == Name v2 -> do
         With _ <- hasOrd rng rng
         With n <- simplifySet rng expr
-        mapSpec SzAny RelAny (RngRel (relSubset rng n))
+        mapSpec SzAny RelAny PairAny (RngRel (relSubset rng n))
   (expr `Subset` Rng (Var v2))
     | Name v1 == Name v2 -> do
         With _ <- hasOrd rng rng
         With n <- simplifySet rng expr
-        mapSpec SzAny RelAny (RngRel (relSuperset rng n))
+        mapSpec SzAny RelAny PairAny (RngRel (relSuperset rng n))
   (Rng expr `Subset` (Var v2))
     | Name v1 == Name v2 -> do
         With _ <- hasOrd rng rng
         With n <- simplifySet rng expr
-        mapSpec SzAny RelAny (RngRel (relSuperset rng n))
+        mapSpec SzAny RelAny PairAny (RngRel (relSuperset rng n))
   (expr :=: Dom (Var v2))
     | Name v1 == Name v2 -> do
         let SetR a = termRep expr
         Refl <- sameRep dom a
         mm <- simplify expr
-        mapSpec (SzExact (Set.size mm)) (relSubset dom mm) RngAny
+        mapSpec (SzExact (Set.size mm)) (relSubset dom mm) PairAny RngAny
   (Dom (Var v2) :=: expr)
     | Name v1 == Name v2 -> do
         let SetR a = termRep expr
         Refl <- sameRep dom a
         mm <- simplify expr
-        mapSpec (SzExact (Set.size mm)) (relSubset dom mm) RngAny
+        mapSpec (SzExact (Set.size mm)) (relSubset dom mm) PairAny RngAny
   (Dom (Var v2) `Subset` expr)
     | Name v1 == Name v2 -> do
         With _ <- hasOrd dom dom
         With n <- simplifySet dom expr
-        mapSpec (SzMost (Set.size n)) (relSubset dom n) RngAny
+        mapSpec (SzMost (Set.size n)) (relSubset dom n) PairAny RngAny
   (expr `Subset` Dom (Var v2))
     | Name v1 == Name v2 -> do
         With _ <- hasOrd dom dom
         With n <- simplifySet dom expr
-        mapSpec (SzLeast (Set.size n)) (relSuperset dom n) RngAny
+        mapSpec (SzLeast (Set.size n)) (relSuperset dom n) PairAny RngAny
   (SumsTo small expr cond xs) | exactlyOne (isMapVar (Name v1)) xs -> do
     t <- simplify expr
     rngspec <- solveMapSummands small t [msg] cond v1 0 xs
-    mapSpec SzAny RelAny rngspec
-  (Random (Var v2)) | Name v1 == Name v2 -> mapSpec SzAny RelAny RngAny
-  (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> mapSpec sz RelAny RngAny
+    mapSpec SzAny RelAny PairAny rngspec
+  (Random (Var v2)) | Name v1 == Name v2 -> mapSpec SzAny RelAny PairAny RngAny
+  (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> mapSpec sz RelAny PairAny RngAny
   (Disjoint expr (Dom (Var v2))) | Name v1 == Name v2 -> do
     With set <- simplifySet dom expr
-    mapSpec SzAny (relDisjoint dom set) RngAny
+    mapSpec SzAny (relDisjoint dom set) PairAny RngAny
   (Disjoint (Dom (Var v2)) expr) | Name v1 == Name v2 -> do
     With set <- simplifySet dom expr
-    mapSpec SzAny (relDisjoint dom set) RngAny
+    mapSpec SzAny (relDisjoint dom set) PairAny RngAny
   (Disjoint expr (Rng (Var v2))) | Name v1 == Name v2 -> do
     With _ <- hasOrd rng rng
     With set <- simplifySet rng expr
-    mapSpec SzAny RelAny (RngRel $ relDisjoint rng set)
+    mapSpec SzAny RelAny PairAny (RngRel $ relDisjoint rng set)
   (Disjoint (Rng (Var v2)) expr) | Name v1 == Name v2 -> do
     With _ <- hasOrd rng rng
     With set <- simplifySet rng expr
-    mapSpec SzAny RelAny (RngRel $ relDisjoint rng set)
+    mapSpec SzAny RelAny PairAny (RngRel $ relDisjoint rng set)
   (Member expr (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
     Refl <- sameRep dom a
     x <- simplify expr
-    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton x)) RngAny
+    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton x)) PairAny RngAny
   (Member expr (Rng (Var v2@(V _ (MapR _ b) _)))) | Name v1 == Name v2 -> do
     Refl <- sameRep rng b
     x <- simplify expr
-    mapSpec (SzLeast 1) RelAny (RngRel (relSuperset rng (Set.singleton x)))
+    mapSpec (SzLeast 1) RelAny PairAny (RngRel (relSuperset rng (Set.singleton x)))
   (NotMember expr (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
     Refl <- sameRep dom a
     x <- simplify expr
-    mapSpec SzAny (relDisjoint dom (Set.singleton x)) RngAny
+    mapSpec SzAny (relDisjoint dom (Set.singleton x)) PairAny RngAny
   (NotMember expr (Rng (Var v2@(V _ (MapR _ b) _)))) | Name v1 == Name v2 -> do
     Refl <- sameRep rng b
     x <- simplify expr
-    mapSpec SzAny RelAny (RngRel (relDisjoint rng (Set.singleton x)))
+    mapSpec SzAny RelAny PairAny (RngRel (relDisjoint rng (Set.singleton x)))
+  (MapMember exprK exprV (Var v2@(V _ (MapR dom2 rng2) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom dom2
+    Refl <- sameRep rng rng2
+    k <- simplify exprK
+    v <- simplify exprV
+    mapSpec
+      (SzLeast 1)
+      (relSuperset dom (Set.singleton k))
+      (PairSpec dom rng (Map.singleton k v))
+      (RngRel (relSuperset rng (Set.singleton v)))
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
@@ -399,7 +423,7 @@ solveMapSummands _ _ msg _ v _ [] = failT (("Does not have exactly one summand w
 
 solveMaps :: (Era era, Ord dom) => V era (Map dom rng) -> [Pred era] -> Typed (MapSpec era dom rng)
 solveMaps v@(V _ (MapR _ _) _) cs =
-  foldlM' accum (MapSpec SzAny RelAny RngAny) cs
+  foldlM' accum (MapSpec SzAny RelAny PairAny RngAny) cs
   where
     accum spec cond = do
       condspec <- solveMap v cond
@@ -691,25 +715,45 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
   [Sized (Lit SizeR sz) (Var v2)] | isAddsType r1 && Name v1 == Name v2 -> do
     With _ <- hasAdds r1 r1
     pure $ fromI ["dispatch " ++ show v1 ++ " " ++ show preds] <$> genFromIntRange sz
-  [Var v2@(V _ r2 _) :<-: target] | Name v1 == Name v2 ->
-    do
-      Refl <- sameRep r1 r2
-      x <- simplifyTarget @era @t target
-      pure (pure x)
+  [GenFrom (Var v2@(V _ r2 _)) target] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    x <- simplifyTarget @era @(Gen t) target
+    pure x
+  [Var v2@(V _ r2 _) :<-: target] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    x <- simplifyTarget @era @t target
+    pure (pure x)
   [Member (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     set <- simplify expr
     let msgs = ("Solving for variable " ++ nam) : map show preds
-    pure (fst <$> (itemFromSet msgs set))
+    pure (fst <$> itemFromSet msgs set)
   [NotMember (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     set <- simplify expr
     let msgs = ("Solving for variable " ++ nam) : map show preds
     pure $ suchThatErr msgs (genRep r2) (`Set.notMember` set)
+  [MapMember (Var v2@(V _ r2 _)) exprVal exprMap] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    m <- simplify exprMap
+    v <- simplify exprVal
+    let m2 = Map.filter (== v) m
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    if Map.null m2
+      then failT (("The value: " ++ synopsis (termRep exprVal) v ++ " is not in the range of the map.") : msgs)
+      else pure (fst <$> itemFromSet msgs (Map.keysSet m2))
+  [MapMember exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    m <- simplify exprMap
+    k <- simplify exprKey
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    case Map.lookup k m of
+      Just v -> pure (pure v)
+      Nothing -> failT (("The key: " ++ synopsis (termRep exprKey) k ++ " is not in the map.") : msgs)
   [List (Var v2@(V _ (MaybeR r2) _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 (MaybeR r2)
     xs <- mapM simplify expr
-    pure $ (pure (makeFromList xs))
+    pure $ pure (makeFromList xs)
   [Random (Var v2)] | Name v1 == Name v2 -> pure $ genRep r1
   cs -> case r1 of
     MapR dom rng -> do
@@ -784,10 +828,17 @@ solveOneVar subst (Name (v@(V _ r _)), ps) = do
   t <- genOneT
   pure (SubItem v (Lit r t) : subst)
 
-toolChain :: Era era => Proof era -> OrderInfo -> [Pred era] -> Gen (Env era)
-toolChain _proof order cs = do
-  (_count, DependGraph pairs) <- compileGen order cs
-  subst <- foldlM' solveOneVar [] pairs
+toolChainSub :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Subst era)
+toolChainSub _proof order cs subst0 = do
+  (_count, DependGraph pairs) <- compileGen order (map (substPred subst0) cs)
+  subst <- foldlM' solveOneVar subst0 pairs
+  let isTempV (SubItem (V k _ _) _) = not (elem '.' k)
+  pure $ filter isTempV subst
+
+toolChain :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Env era)
+toolChain _proof order cs subst0 = do
+  subst <- toolChainSub _proof order cs subst0
   monadTyped $ substToEnv subst emptyEnv
 
+-- InitUniv p >>= (toolChainSub p _ _ _)  >>= (toolChainSub p _ _ _) >>= (toolChain p _ _)
 -- =======================================================================
