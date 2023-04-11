@@ -26,13 +26,14 @@ import Cardano.Ledger.Mary.Value (
   isMultiAssetSmallEnough,
  )
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
+import Data.Bool (bool)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.String (IsString (fromString))
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
-import Test.Cardano.Ledger.Binary.Arbitrary (genShortByteString)
+import Test.Cardano.Ledger.Binary.Arbitrary (genByteString, genShortByteString)
 import Test.QuickCheck (
   Arbitrary,
   Gen,
@@ -149,9 +150,11 @@ genMultiAssetZero = MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbi
 
 -- For negative tests, we need a definite generator that will produce just large-enough MultiAssets
 -- that will fail decoding, but not large-enough to consume too much resource.
-genMultiAssetToFail :: forall c. Crypto c => Gen (MultiAsset c)
-genMultiAssetToFail = do
+-- The first Bool argument indicates whether the generation is for use in a MaryValue (MaryValue MultiAssets have Positive values)
+genMultiAssetToFail :: forall c. Crypto c => Bool -> Gen (MultiAsset c)
+genMultiAssetToFail isForMaryValue = do
   let genAssetNameToFail = AssetName <$> genShortByteString 32
+      genPolicyIDToFail = PolicyID . ScriptHash . castHash . hashWith id <$> genByteString 28
   (numP, numA) <- do
     -- When numAssetNames > 1489 it is enough to have at least 1 policy id
     numAssetNames <- chooseInt (1, 1500)
@@ -163,8 +166,12 @@ genMultiAssetToFail = do
 
   -- Here we generate separately a list of asset names and a list of policy ids and
   -- randomly shuffle them into a MultiAsset, ensuring that each policy has at least one asset.
-  ps <- vectorOf numP (PolicyID . ScriptHash <$> arbitrary)
-  as <- vectorOf numA $ (,) <$> genAssetNameToFail <*> (getNonZero @Int <$> arbitrary)
+  ps <- vectorOf numP genPolicyIDToFail
+  as <-
+    vectorOf numA $
+      (,)
+        <$> genAssetNameToFail
+        <*> bool (getNonZero @Int <$> arbitrary) (getPositive @Int <$> arbitrary) isForMaryValue
   let initialTriples = zipWith (\p (a, v) -> (p, a, v)) ps as -- All policies should have at least one asset
       remainingAs = drop numP as
   remainingTriples <-
@@ -179,7 +186,7 @@ genMultiAssetToFail = do
   -- This is impossible in practice, since PRNG produces uniform values.
   if length ma == numP && sum (length <$> ma) == numA
     then pure $ MultiAsset ma
-    else genMultiAssetToFail
+    else genMultiAssetToFail isForMaryValue
 
 instance Crypto c => Arbitrary (MultiAsset c) where
   arbitrary =

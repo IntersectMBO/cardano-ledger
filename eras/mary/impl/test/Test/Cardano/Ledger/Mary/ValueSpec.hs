@@ -79,7 +79,7 @@ spec = do
         expectFailure $
           property $
             forAll
-              (genMaryValue (genMultiAssetToFail @StandardCrypto))
+              (genMaryValue (genMultiAssetToFail @StandardCrypto True))
               ( roundTripCborRangeExpectation @(MaryValue StandardCrypto)
                   (eraProtVerLow @Mary)
                   maxBound
@@ -89,7 +89,7 @@ spec = do
       \(ma :: MaryValue StandardCrypto) ->
         fromCompact (fromJust (toCompact ma)) `shouldBe` ma
     prop "Failing generator" $
-      forAll (genMaryValue (genMultiAssetToFail @StandardCrypto)) $
+      forAll (genMaryValue (genMultiAssetToFail @StandardCrypto True)) $
         \ma ->
           evaluate (fromCompact (fromJust (toCompact ma)))
             `shouldThrow` (\(AssertionFailed errorMsg) -> take 16 errorMsg == "Assertion failed")
