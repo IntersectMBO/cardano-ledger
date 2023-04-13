@@ -56,6 +56,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 slice :: BSL.ByteString -> ByteSpan -> BSL.ByteString
 slice bytes (ByteSpan start end) =
   BSL.take (end - start) $ BSL.drop start bytes
+{-# INLINE slice #-}
 
 -- | A pair of offsets delimiting the beginning and end of a substring of a ByteString
 data ByteSpan = ByteSpan !ByteOffset !ByteOffset
@@ -91,11 +92,13 @@ instance FromJSON b => FromJSON (Annotated b ()) where
 annotatedDecoder :: Decoder s a -> Decoder s (Annotated a ByteSpan)
 annotatedDecoder vd =
   decodeWithByteSpan vd <&> \(x, start, end) -> Annotated x (ByteSpan start end)
+{-# INLINE annotatedDecoder #-}
 
 -- | A decoder for a value paired with an annotation specifying the start and end
 -- of the consumed bytes.
 decCBORAnnotated :: DecCBOR a => Decoder s (Annotated a ByteSpan)
 decCBORAnnotated = annotatedDecoder decCBOR
+{-# INLINE decCBORAnnotated #-}
 
 annotationBytes :: Functor f => BSL.ByteString -> f ByteSpan -> f BS.ByteString
 annotationBytes bytes = fmap (BSL.toStrict . slice bytes)
@@ -175,6 +178,7 @@ annotatorSlice ::
 annotatorSlice dec = do
   (k, bytes) <- withSlice dec
   pure $ k <*> bytes
+{-# INLINE annotatorSlice #-}
 
 -- | Pairs the decoder result with an annotator that can be used to construct the exact
 -- bytes used to decode the result.
@@ -182,6 +186,7 @@ withSlice :: Decoder s a -> Decoder s (a, Annotator BSL.ByteString)
 withSlice dec = do
   Annotated r byteSpan <- annotatedDecoder dec
   return (r, Annotator (\(Full bsl) -> slice bsl byteSpan))
+{-# INLINE withSlice #-}
 
 -- TODO: Implement version that matches the length of a list with the size of the Set in
 -- order to enforce no duplicates.
@@ -189,6 +194,7 @@ decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set.Se
 decodeAnnSet dec = do
   xs <- decodeList dec
   pure (Set.fromList <$> sequence xs)
+{-# INLINE decodeAnnSet #-}
 
 --------------------------------------------------------------------------------
 -- Plutus
@@ -196,3 +202,4 @@ decodeAnnSet dec = do
 
 instance DecCBOR (Annotator PV1.Data) where
   decCBOR = pure <$> fromPlainDecoder Serialise.decode
+  {-# INLINE decCBOR #-}
