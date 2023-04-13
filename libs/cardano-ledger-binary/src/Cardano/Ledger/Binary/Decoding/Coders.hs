@@ -139,6 +139,7 @@ invalidField n = field (flip $ const @t @Void) (Invalid n)
 -- A special case of 'field'
 fieldA :: (Applicative ann) => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
 fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
+{-# INLINE fieldA #-}
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 fieldAA ::
@@ -147,6 +148,7 @@ fieldAA ::
   Decode ('Closed d) (ann x) ->
   Field (ann t)
 fieldAA update dec = Field (liftA2 update) (decode dec)
+{-# INLINE fieldAA #-}
 
 -- ==================================================================
 -- Decode
@@ -376,14 +378,17 @@ infixl 4 <?
 -- | Infix form of @ApplyD@ with the same infixity and precedence as @($)@.
 (<!) :: Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
 x <! y = ApplyD x y
+{-# INLINE (<!) #-}
 
 -- | Infix form of @ApplyAnn@ with the same infixity and precedence as @($)@.
 (<*!) :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
 x <*! y = ApplyAnn x y
+{-# INLINE (<*!) #-}
 
 -- | Infix form of @ApplyErr@ with the same infixity and precedence as @($)@.
 (<?) :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 f <? y = ApplyErr f y
+{-# INLINE (<?) #-}
 
 hsize :: Decode w t -> Int
 hsize (Summands _ _) = 1
@@ -401,12 +406,15 @@ hsize (TagD _ _) = 1
 hsize (Ann x) = hsize x
 hsize (ApplyAnn f x) = hsize f + hsize x
 hsize (ApplyErr f x) = hsize f + hsize x
+{-# INLINE hsize #-}
 
 decode :: Decode w t -> Decoder s t
 decode x = fmap snd (decodE x)
+{-# INLINE decode #-}
 
 decodE :: Decode w t -> Decoder s (Int, t)
 decodE x = decodeCount x 0
+{-# INLINE decodE #-}
 
 decodeCount :: forall (w :: Wrapped) s t. Decode w t -> Int -> Decoder s (Int, t)
 decodeCount (Summands nm f) n = (n + 1,) <$> decodeRecordSum nm (decodE . f)
@@ -438,6 +446,7 @@ decodeCount (ApplyErr cn g) n = do
   case f y of
     Right z -> pure (i, z)
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
+{-# INLINEABLE decodeCount #-}
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
@@ -470,6 +479,7 @@ decodeClosed (ApplyErr cn g) = do
   case f y of
     Right z -> pure z
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
+{-# INLINEABLE decodeClosed #-}
 
 decodeSparse ::
   Typeable a =>
@@ -486,6 +496,7 @@ decodeSparse name initial pick required = do
   if all (\(key, _name) -> member key used) required
     then pure v
     else unusedRequiredKeys used required (show (typeOf initial))
+{-# INLINEABLE decodeSparse #-}
 
 -- | Given a function that picks a Field from a key, decodes that field
 --   and returns a (t -> t) transformer, which when applied, will
@@ -497,6 +508,7 @@ applyField f seen name = do
     then duplicateKey name tag
     else case f tag of
       Field update d -> d >>= \v -> pure (update v, insert tag seen)
+{-# INLINEABLE applyField #-}
 
 -- | Decode a Map Block of key encoded data for type t
 --   given a function that picks the right box for a given key, and an
@@ -507,6 +519,7 @@ getSparseBlock 0 initial _pick seen _name = pure (initial, seen)
 getSparseBlock n initial pick seen name = do
   (transform, seen2) <- applyField pick seen name
   getSparseBlock (n - 1) (transform initial) pick seen2 name
+{-# INLINEABLE getSparseBlock #-}
 
 getSparseBlockIndef :: t -> (Word -> Field t) -> Set Word -> String -> Decoder s (t, Set Word)
 getSparseBlockIndef initial pick seen name =
@@ -515,6 +528,7 @@ getSparseBlockIndef initial pick seen name =
     False -> do
       (transform, seen2) <- applyField pick seen name
       getSparseBlockIndef (transform initial) pick seen2 name
+{-# INLINEABLE getSparseBlockIndef #-}
 
 -- ======================================================
 -- (Decode ('Closed 'Dense)) and (Decode ('Closed 'Sparse)) are applicative
@@ -524,10 +538,13 @@ getSparseBlockIndef initial pick seen name =
 instance Functor (Decode w) where
   fmap f (Map g x) = Map (f . g) x
   fmap f x = Map f x
+  {-# INLINE fmap #-}
 
 instance Applicative (Decode ('Closed d)) where
-  pure x = Emit x
+  pure = Emit
+  {-# INLINE pure #-}
   f <*> x = ApplyD f x
+  {-# INLINE (<*>) #-}
 
 -- | Use `Cardano.Ledger.Binary.Coders.encodeDual` and `decodeDual`, when you want to
 -- guarantee that a type has both `EncCBOR` and `FromCBR` instances.
@@ -536,17 +553,20 @@ decodeDual = D decCBOR
   where
     -- Enforce EncCBOR constraint on t
     _encCBOR = encCBOR (undefined :: t)
+{-# INLINE decodeDual #-}
 
 -- =============================================================================
 
 listDecodeA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
 listDecodeA dx = D (sequence <$> decodeList (decode dx))
+{-# INLINE listDecodeA #-}
 
 setDecodeA ::
   Ord x =>
   Decode ('Closed 'Dense) (Annotator x) ->
   Decode ('Closed 'Dense) (Annotator (Set x))
 setDecodeA dx = D (decodeAnnSet (decode dx))
+{-# INLINE setDecodeA #-}
 
 mapDecodeA ::
   Ord k =>
@@ -554,6 +574,7 @@ mapDecodeA ::
   Decode ('Closed 'Dense) (Annotator v) ->
   Decode ('Closed 'Dense) (Annotator (Map.Map k v))
 mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
+{-# INLINE mapDecodeA #-}
 
 --------------------------------------------------------------------------------
 -- Utility functions for working with CBOR
@@ -565,6 +586,7 @@ duplicateKey name k =
     DecoderErrorCustom
       "Duplicate key:"
       (Text.pack $ show k ++ " while decoding type " ++ name)
+{-# NOINLINE duplicateKey #-}
 
 unusedRequiredKeys :: Set Word -> [(Word, String)] -> String -> Decoder s a
 unusedRequiredKeys used required name =
@@ -578,7 +600,9 @@ unusedRequiredKeys used required name =
     message [pair] = report pair ++ message []
     message (pair : more) = report pair ++ ", and " ++ message more
     report (k, f) = "field " ++ f ++ " with key " ++ show k
+{-# NOINLINE unusedRequiredKeys #-}
 
 -- | Prevent decoding until the 'Version' is at least the provided version.
 guardUntilAtLeast :: DecCBOR a => String -> Version -> Decode ('Closed 'Dense) a
 guardUntilAtLeast errMessage v = D (unlessDecoderVersionAtLeast v (fail errMessage) >> decCBOR)
+{-# INLINE guardUntilAtLeast #-}
