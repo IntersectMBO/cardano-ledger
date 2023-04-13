@@ -186,10 +186,11 @@ instance Crypto c => EraTx (AlonzoEra c) where
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) tx = validateTimelock @(AlonzoEra c) script tx
+  validateScript (Phase1Script script) = validateTimelock @(AlonzoEra c) script
   {-# INLINE validateScript #-}
 
   getMinFeeTx = alonzoMinFeeTx
+  {-# INLINE getMinFeeTx #-}
 
 class (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era) => AlonzoEraTx era where
   isValidTxL :: Lens' (Tx era) IsValid
@@ -388,6 +389,7 @@ instance (Crypto c) => DecCBOR (ScriptPurpose c) where
       dec 2 = SumD Rewarding <! From
       dec 3 = SumD Certifying <! From
       dec n = Invalid n
+  {-# INLINE decCBOR #-}
 
 -- =======================================
 
@@ -557,6 +559,7 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
+  {-# INLINE decCBOR #-}
 
 -- =======================================================================
 -- Some generic functions that compute over Tx. We try to be abstract over

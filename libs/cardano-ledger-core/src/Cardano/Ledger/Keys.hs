@@ -178,6 +178,7 @@ instance HasKeyRole VKey
 
 instance (Crypto c, Typeable kd) => FromCBOR (VKey kd c) where
   fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
+  {-# INLINE fromCBOR #-}
 
 instance (Crypto c, Typeable kd) => ToCBOR (VKey kd c) where
   toCBOR = DSIGN.encodeVerKeyDSIGN . unVKey
@@ -307,6 +308,7 @@ instance Crypto c => DecCBOR (GenDelegPair c) where
       "GenDelegPair"
       (const 2)
       (GenDelegPair <$> decCBOR <*> decCBOR)
+  {-# INLINE decCBOR #-}
 
 instance Crypto c => ToJSON (GenDelegPair c) where
   toJSON (GenDelegPair d v) =
