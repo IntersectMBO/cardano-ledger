@@ -2,16 +2,13 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Address (
@@ -64,6 +61,7 @@ import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Ledger.BaseTypes (
   CertIx (..),
   Network (..),
+  SlotNo (..),
   TxIx (..),
   byronProtVer,
   natVersion,
@@ -87,12 +85,11 @@ import Cardano.Ledger.Credential (
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, unless, when)
-import Control.Monad.Trans.Fail
+import Control.Monad.Trans.Fail (runFail)
 import Control.Monad.Trans.State (StateT, evalStateT, get, modify', state)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -102,7 +99,7 @@ import qualified Data.Aeson.Types as Aeson
 import Data.Binary (Put)
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B
-import Data.Bits
+import Data.Bits (Bits (clearBit, setBit, shiftL, shiftR, testBit, (.&.), (.|.)))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
@@ -121,7 +118,7 @@ import GHC.Show (intToDigit)
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Numeric (showIntAtBase)
-import Quiet
+import Quiet (Quiet (Quiet))
 
 mkRwdAcnt ::
   Network ->
@@ -129,24 +126,29 @@ mkRwdAcnt ::
   RewardAcnt c
 mkRwdAcnt network script@(ScriptHashObj _) = RewardAcnt network script
 mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
+-- TODO: Deprecate in favor of RewardAcnt. This is just a synonym.
 
 -- | Serialise an address to the external format.
 serialiseAddr :: Addr c -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
+{-# INLINE serialiseAddr #-}
 
 -- | Deserialise an address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
 deserialiseAddr :: Crypto c => ByteString -> Maybe (Addr c)
 deserialiseAddr = decodeAddr
+{-# INLINE deserialiseAddr #-}
 
 -- | Serialise a reward account to the external format.
 serialiseRewardAcnt :: RewardAcnt c -> ByteString
 serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
+{-# INLINE serialiseRewardAcnt #-}
 
 -- | Deserialise a reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
 deserialiseRewardAcnt :: Crypto c => ByteString -> Maybe (RewardAcnt c)
 deserialiseRewardAcnt = decodeRewardAcnt
+{-# INLINE deserialiseRewardAcnt #-}
 
 -- | An address for UTxO.
 --
@@ -255,6 +257,7 @@ putAddr (Addr network pc sr) =
           let header = setPayCredBit $ netId `setBit` isEnterpriseAddr `setBit` notBaseAddr
           B.putWord8 header
           putCredential pc
+{-# INLINE putAddr #-}
 
 putRewardAcnt :: RewardAcnt c -> Put
 putRewardAcnt (RewardAcnt network cred) = do
@@ -266,13 +269,16 @@ putRewardAcnt (RewardAcnt network cred) = do
       header = setPayCredBit (netId .|. rewardAcntPrefix)
   B.putWord8 header
   putCredential cred
+{-# INLINE putRewardAcnt #-}
 
 putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
+{-# INLINE putHash #-}
 
 putCredential :: Credential kr c -> Put
 putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
+{-# INLINE putCredential #-}
 
 -- | The size of the extra attributes in a bootstrp (ie Byron) address. Used
 -- to help enforce that people do not post huge ones on the chain.
@@ -319,15 +325,19 @@ putVariableLengthWord64 = putWord7s . word64ToWord7s
 
 instance Crypto c => EncCBOR (Addr c) where
   encCBOR = encCBOR . B.runPut . putAddr
+  {-# INLINE encCBOR #-}
 
 instance Crypto c => DecCBOR (Addr c) where
   decCBOR = fromCborAddr
+  {-# INLINE decCBOR #-}
 
 instance Crypto c => EncCBOR (RewardAcnt c) where
   encCBOR = encCBOR . B.runPut . putRewardAcnt
+  {-# INLINE encCBOR #-}
 
 instance Crypto c => DecCBOR (RewardAcnt c) where
   decCBOR = fromCborRewardAcnt
+  {-# INLINE decCBOR #-}
 
 newtype BootstrapAddress c = BootstrapAddress
   { unBootstrapAddress :: Byron.Address
@@ -376,6 +386,7 @@ instance Crypto c => Show (CompactAddr c) where
 -- | Unwrap the compact address and get to the address' binary representation.
 unCompactAddr :: CompactAddr c -> ShortByteString
 unCompactAddr (UnsafeCompactAddr sbs) = sbs
+{-# INLINE unCompactAddr #-}
 
 compactAddr :: Addr c -> CompactAddr c
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
@@ -889,7 +900,7 @@ instance Crypto c => DecCBOR (CompactAddr c) where
   decCBOR = fromCborCompactAddr
   {-# INLINE decCBOR #-}
 
--- | Efficiently check whether compated adddress is an address with a credential
+-- | Efficiently check whether compacted adddress is an address with a credential
 -- that is a payment script.
 isPayCredScriptCompactAddr :: CompactAddr c -> Bool
 isPayCredScriptCompactAddr (UnsafeCompactAddr bytes) =

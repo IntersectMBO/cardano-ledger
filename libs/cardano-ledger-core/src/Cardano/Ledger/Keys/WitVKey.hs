@@ -98,6 +98,8 @@ instance (Typeable kr, Crypto c) => DecCBOR (Annotator (WitVKey kr c)) where
             mkWitVKey <$> Plain.fromCBOR <*> decodeSignedDSIGN
     where
       mkWitVKey k sig = WitVKeyInternal k sig (asWitness $ hashKey k)
+      {-# INLINE mkWitVKey #-}
+  {-# INLINE decCBOR #-}
 
 pattern WitVKey ::
   (Typeable kr, Crypto c) =>
