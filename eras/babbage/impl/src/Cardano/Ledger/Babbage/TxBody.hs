@@ -237,7 +237,8 @@ feeBabbageTxBodyL =
 auxDataHashBabbageTxBodyL ::
   BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
 auxDataHashBabbageTxBodyL =
-  lensMemoRawType btbrAuxDataHash $ \txBodyRaw auxDataHash -> txBodyRaw {btbrAuxDataHash = auxDataHash}
+  lensMemoRawType btbrAuxDataHash $
+    \txBodyRaw auxDataHash -> txBodyRaw {btbrAuxDataHash = auxDataHash}
 {-# INLINEABLE auxDataHashBabbageTxBodyL #-}
 
 allInputsBabbageTxBodyF ::
@@ -253,9 +254,12 @@ mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (ScriptHash (EraCr
 mintedBabbageTxBodyF = to (Set.map policyID . policies . btbrMint . getMemoRawType)
 {-# INLINEABLE mintedBabbageTxBodyF #-}
 
-withdrawalsBabbbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) (Withdrawals (EraCrypto era))
+withdrawalsBabbbageTxBodyL ::
+  BabbageEraTxBody era =>
+  Lens' (BabbageTxBody era) (Withdrawals (EraCrypto era))
 withdrawalsBabbbageTxBodyL =
-  lensMemoRawType btbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {btbrWithdrawals = withdrawals}
+  lensMemoRawType btbrWithdrawals $
+    \txBodyRaw withdrawals -> txBodyRaw {btbrWithdrawals = withdrawals}
 {-# INLINEABLE withdrawalsBabbbageTxBodyL #-}
 
 updateBabbageTxBodyL ::
@@ -727,12 +731,14 @@ instance
       bodyFields 14 = field (\x tx -> tx {btbrReqSignerHashes = x}) From
       bodyFields 15 = ofield (\x tx -> tx {btbrTxNetworkId = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
+      {-# INLINE bodyFields #-}
       requiredFields :: [(Word, String)]
       requiredFields =
         [ (0, "inputs")
         , (1, "outputs")
         , (2, "fee")
         ]
+  {-# INLINE decCBOR #-}
 
 basicBabbageTxBodyRaw :: BabbageTxBodyRaw era
 basicBabbageTxBodyRaw =

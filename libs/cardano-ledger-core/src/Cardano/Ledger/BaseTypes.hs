@@ -651,6 +651,7 @@ instance DecCBOR Network where
     word8ToNetwork <$> decCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
+  {-# INLINE decCBOR #-}
 
 -- | Blocks made
 newtype BlocksMade c = BlocksMade
