@@ -87,6 +87,7 @@ class Typeable a => DecCBOR a where
   decCBOR :: Decoder s a
   default decCBOR :: Plain.FromCBOR a => Decoder s a
   decCBOR = fromPlainDecoder Plain.fromCBOR
+  {-# INLINE decCBOR #-}
 
   -- | Validate decoding of a Haskell value, without the need to actually construct
   -- it. Coule be slightly faster than `decCBOR`, however it should respect this law:
@@ -100,11 +101,13 @@ class Typeable a => DecCBOR a where
 
 instance DecCBOR Version where
   decCBOR = decodeVersion
+  {-# INLINE decCBOR #-}
 
 -- | Convert a versioned `DecCBOR` instance to a plain `Plain.Decoder` using Byron protocol
 -- version.
 fromByronCBOR :: DecCBOR a => Plain.Decoder s a
 fromByronCBOR = toPlainDecoder byronProtVer decCBOR
+{-# INLINE fromByronCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Primitive types
@@ -112,9 +115,11 @@ fromByronCBOR = toPlainDecoder byronProtVer decCBOR
 
 instance DecCBOR () where
   decCBOR = decodeNull
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Bool where
   decCBOR = decodeBool
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Numeric data
@@ -122,48 +127,63 @@ instance DecCBOR Bool where
 
 instance DecCBOR Integer where
   decCBOR = decodeInteger
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Natural where
   decCBOR = decodeNatural
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Word where
   decCBOR = decodeWord
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Word8 where
   decCBOR = decodeWord8
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Word16 where
   decCBOR = decodeWord16
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Word32 where
   decCBOR = decodeWord32
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Word64 where
   decCBOR = decodeWord64
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Int where
   decCBOR = decodeInt
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Int8 where
   decCBOR = decodeInt8
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Int16 where
   decCBOR = decodeInt16
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Int32 where
   decCBOR = decodeInt32
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Int64 where
   decCBOR = decodeInt64
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Float where
   decCBOR = decodeFloat
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Double where
   decCBOR = decodeDouble
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Rational where
   decCBOR = decodeRational
+  {-# INLINE decCBOR #-}
 
 deriving newtype instance Typeable p => DecCBOR (Fixed p)
 
@@ -172,12 +192,15 @@ instance DecCBOR Void where
 
 instance DecCBOR Term where
   decCBOR = decodeTerm
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR IPv4 where
   decCBOR = decodeIPv4
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR IPv6 where
   decCBOR = decodeIPv6
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Tagged
@@ -185,7 +208,7 @@ instance DecCBOR IPv6 where
 
 instance (Typeable s, DecCBOR a) => DecCBOR (Tagged s a) where
   decCBOR = Tagged <$> decCBOR
-
+  {-# INLINE decCBOR #-}
   dropCBOR _ = dropCBOR (Proxy @a)
 
 --------------------------------------------------------------------------------
@@ -199,6 +222,7 @@ instance (DecCBOR a, DecCBOR b) => DecCBOR (a, b) where
     !y <- decCBOR
     return (x, y)
   dropCBOR _ = decodeListLenOf 2 <* dropCBOR (Proxy @a) <* dropCBOR (Proxy @b)
+  {-# INLINE decCBOR #-}
 
 instance (DecCBOR a, DecCBOR b, DecCBOR c) => DecCBOR (a, b, c) where
   decCBOR = do
@@ -212,6 +236,7 @@ instance (DecCBOR a, DecCBOR b, DecCBOR c) => DecCBOR (a, b, c) where
       <* dropCBOR (Proxy @a)
       <* dropCBOR (Proxy @b)
       <* dropCBOR (Proxy @c)
+  {-# INLINE decCBOR #-}
 
 instance (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d) => DecCBOR (a, b, c, d) where
   decCBOR = do
@@ -227,6 +252,7 @@ instance (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d) => DecCBOR (a, b, c, d) wh
       <* dropCBOR (Proxy @b)
       <* dropCBOR (Proxy @c)
       <* dropCBOR (Proxy @d)
+  {-# INLINE decCBOR #-}
 
 instance
   (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d, DecCBOR e) =>
@@ -247,6 +273,7 @@ instance
       <* dropCBOR (Proxy @c)
       <* dropCBOR (Proxy @d)
       <* dropCBOR (Proxy @e)
+  {-# INLINE decCBOR #-}
 
 instance
   (DecCBOR a, DecCBOR b, DecCBOR c, DecCBOR d, DecCBOR e, DecCBOR f) =>
@@ -269,6 +296,7 @@ instance
       <* dropCBOR (Proxy @d)
       <* dropCBOR (Proxy @e)
       <* dropCBOR (Proxy @f)
+  {-# INLINE decCBOR #-}
 
 instance
   ( DecCBOR a
@@ -300,35 +328,45 @@ instance
       <* dropCBOR (Proxy @e)
       <* dropCBOR (Proxy @f)
       <* dropCBOR (Proxy @g)
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR BS.ByteString where
   decCBOR = decodeBytes
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR T.Text where
   decCBOR = decodeString
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR BSL.ByteString where
   decCBOR = BSL.fromStrict <$> decCBOR
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR ShortByteString where
   decCBOR = do
     BA (Prim.ByteArray ba) <- decodeByteArray
     return $ SBS ba
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR ByteArray where
   decCBOR = decodeByteArray
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Prim.ByteArray where
   decCBOR = unBA <$> decodeByteArray
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR SlicedByteArray where
   decCBOR = fromByteArray . unBA <$> decodeByteArray
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR a => DecCBOR [a] where
   decCBOR = decodeList decCBOR
+  {-# INLINE decCBOR #-}
 
 instance (DecCBOR a, DecCBOR b) => DecCBOR (Either a b) where
   decCBOR = decodeEither (decCBOR >>= \a -> a `seq` pure a) (decCBOR >>= \a -> a `seq` pure a)
+  {-# INLINE decCBOR #-}
   dropCBOR _ = () <$ decodeEither (dropCBOR (Proxy :: Proxy a)) (dropCBOR (Proxy :: Proxy b))
 
 instance DecCBOR a => DecCBOR (NonEmpty a) where
@@ -337,26 +375,33 @@ instance DecCBOR a => DecCBOR (NonEmpty a) where
     case nonEmpty ls of
       Nothing -> cborError $ DecoderErrorEmptyList "NonEmpty"
       Just ne -> pure ne
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR a => DecCBOR (Maybe a) where
   decCBOR = decodeMaybe decCBOR
+  {-# INLINE decCBOR #-}
   dropCBOR _ = () <$ decodeMaybe (dropCBOR (Proxy @a))
 
 instance DecCBOR a => DecCBOR (SMaybe.StrictMaybe a) where
   decCBOR = decodeStrictMaybe decCBOR
+  {-# INLINE decCBOR #-}
   dropCBOR _ = () <$ decodeStrictMaybe (dropCBOR (Proxy @a))
 
 instance DecCBOR a => DecCBOR (SSeq.StrictSeq a) where
   decCBOR = decodeStrictSeq decCBOR
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR a => DecCBOR (Seq.Seq a) where
   decCBOR = decodeSeq decCBOR
+  {-# INLINE decCBOR #-}
 
 instance (Ord a, DecCBOR a) => DecCBOR (Set.Set a) where
   decCBOR = decodeSet decCBOR
+  {-# INLINE decCBOR #-}
 
 instance (Ord k, DecCBOR k, DecCBOR v) => DecCBOR (Map.Map k v) where
   decCBOR = decodeMap decCBOR decCBOR
+  {-# INLINE decCBOR #-}
 
 instance
   ( Ord k
@@ -370,6 +415,7 @@ instance
   DecCBOR (VMap.VMap kv av k a)
   where
   decCBOR = decodeVMap decCBOR decCBOR
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR a => DecCBOR (V.Vector a) where
   decCBOR = decodeVector decCBOR
@@ -393,6 +439,7 @@ instance (DecCBOR a, VU.Unbox a) => DecCBOR (VU.Vector a) where
 
 instance DecCBOR UTCTime where
   decCBOR = decodeUTCTime
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Crypto
@@ -404,12 +451,15 @@ instance DecCBOR UTCTime where
 
 instance DSIGNAlgorithm v => DecCBOR (VerKeyDSIGN v) where
   decCBOR = decodeVerKeyDSIGN
+  {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm v => DecCBOR (SignKeyDSIGN v) where
   decCBOR = decodeSignKeyDSIGN
+  {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
   decCBOR = decodeSigDSIGN
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Hash
@@ -429,6 +479,7 @@ instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
         where
           expected = sizeHash (Proxy :: Proxy h)
           actual = BS.length bs
+  {-# INLINEABLE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- KES
@@ -439,72 +490,90 @@ instance
   DecCBOR (VerKeyKES (SimpleKES d t))
   where
   decCBOR = decodeVerKeyKES
+  {-# INLINE decCBOR #-}
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
   DecCBOR (SignKeyKES (SimpleKES d t))
   where
   decCBOR = decodeSignKeyKES
+  {-# INLINE decCBOR #-}
 
 instance
   (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
   DecCBOR (SigKES (SimpleKES d t))
   where
   decCBOR = decodeSigKES
+  {-# INLINE decCBOR #-}
 
 instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (VerKeyKES (SumKES h d)) where
   decCBOR = decodeVerKeyKES
+  {-# INLINE decCBOR #-}
 
 instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (SignKeyKES (SumKES h d)) where
   decCBOR = decodeSignKeyKES
+  {-# INLINE decCBOR #-}
 
 instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (SigKES (SumKES h d)) where
   decCBOR = decodeSigKES
+  {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm d => DecCBOR (VerKeyKES (CompactSingleKES d)) where
   decCBOR = decodeVerKeyKES
+  {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm d => DecCBOR (SignKeyKES (CompactSingleKES d)) where
   decCBOR = decodeSignKeyKES
+  {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm d => DecCBOR (SigKES (CompactSingleKES d)) where
   decCBOR = decodeSigKES
+  {-# INLINE decCBOR #-}
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
   DecCBOR (VerKeyKES (CompactSumKES h d))
   where
   decCBOR = decodeVerKeyKES
+  {-# INLINE decCBOR #-}
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
   DecCBOR (SignKeyKES (CompactSumKES h d))
   where
   decCBOR = decodeSignKeyKES
+  {-# INLINE decCBOR #-}
 
 instance
   (OptimizedKESAlgorithm d, HashAlgorithm h) =>
   DecCBOR (SigKES (CompactSumKES h d))
   where
   decCBOR = decodeSigKES
+  {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm d => DecCBOR (VerKeyKES (SingleKES d)) where
   decCBOR = decodeVerKeyKES
+  {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm d => DecCBOR (SignKeyKES (SingleKES d)) where
   decCBOR = decodeSignKeyKES
+  {-# INLINE decCBOR #-}
 
 instance DSIGNAlgorithm d => DecCBOR (SigKES (SingleKES d)) where
   decCBOR = decodeSigKES
+  {-# INLINE decCBOR #-}
 
 instance KnownNat t => DecCBOR (VerKeyKES (MockKES t)) where
   decCBOR = decodeVerKeyKES
+  {-# INLINE decCBOR #-}
 
 instance KnownNat t => DecCBOR (SignKeyKES (MockKES t)) where
   decCBOR = decodeSignKeyKES
+  {-# INLINE decCBOR #-}
 
 instance KnownNat t => DecCBOR (SigKES (MockKES t)) where
   decCBOR = decodeSigKES
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- VRF
@@ -512,30 +581,39 @@ instance KnownNat t => DecCBOR (SigKES (MockKES t)) where
 
 instance DecCBOR (VerKeyVRF SimpleVRF) where
   decCBOR = decodeVerKeyVRF
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR (SignKeyVRF SimpleVRF) where
   decCBOR = decodeSignKeyVRF
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR (CertVRF SimpleVRF) where
   decCBOR = decodeCertVRF
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR (VerKeyVRF MockVRF) where
   decCBOR = decodeVerKeyVRF
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR (SignKeyVRF MockVRF) where
   decCBOR = decodeSignKeyVRF
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR (CertVRF MockVRF) where
   decCBOR = decodeCertVRF
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.Proof where
   decCBOR = decCBOR >>= Praos.proofFromBytes
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.SignKey where
   decCBOR = decCBOR >>= Praos.skFromBytes
+  {-# INLINE decCBOR #-}
 
 instance DecCBOR Praos.VerKey where
   decCBOR = decCBOR >>= Praos.vkFromBytes
+  {-# INLINE decCBOR #-}
 
 deriving instance DecCBOR (VerKeyVRF Praos.PraosVRF)
 
@@ -551,6 +629,7 @@ instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
       <$ enforceSize "CertifiedVRF" 2
       <*> decCBOR
       <*> decodeCertVRF
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Slotting
@@ -558,9 +637,11 @@ instance (VRFAlgorithm v, Typeable a) => DecCBOR (CertifiedVRF v a) where
 
 instance DecCBOR SlotNo where
   decCBOR = fromPlainDecoder Serialise.decode
+  {-# INLINE decCBOR #-}
 
 instance (Serialise.Serialise t, Typeable t) => DecCBOR (WithOrigin t) where
   decCBOR = fromPlainDecoder Serialise.decode
+  {-# INLINE decCBOR #-}
 
 deriving instance DecCBOR EpochNo
 
@@ -570,6 +651,7 @@ deriving instance DecCBOR SystemStart
 
 instance DecCBOR BlockNo where
   decCBOR = fromPlainDecoder decode
+  {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
 -- Plutus
@@ -577,3 +659,4 @@ instance DecCBOR BlockNo where
 
 instance DecCBOR PV1.Data where
   decCBOR = fromPlainDecoder decode
+  {-# INLINE decCBOR #-}
