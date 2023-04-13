@@ -92,11 +92,13 @@ unsafeDeserialize' version = unsafeDeserialize version . BSL.fromStrict
 --   decoder specified in `DecCBOR`.
 decodeFull :: forall a. DecCBOR a => Version -> BSL.ByteString -> Either DecoderError a
 decodeFull version = decodeFullDecoder version (label $ Proxy @a) decCBOR
+{-# INLINE decodeFull #-}
 
 -- | Same as `decodeFull`, except accepts a strict `BS.ByteString` as input
 -- instead of the lazy one.
 decodeFull' :: forall a. DecCBOR a => Version -> BS.ByteString -> Either DecoderError a
 decodeFull' version = decodeFull version . BSL.fromStrict
+{-# INLINE decodeFull' #-}
 
 -- | Same as `decodeFull`, except instead of relying on the `DecCBOR` instance
 -- the `Decoder` must be suplied manually.
@@ -118,6 +120,7 @@ decodeFullDecoder version lbl decoder bs =
         then pure x
         else Left $ DecoderErrorLeftover lbl leftover
     Left (e, _) -> Left $ DecoderErrorDeserialiseFailure lbl e
+{-# INLINE decodeFullDecoder #-}
 
 -- | Same as `decodeFullDecoder`, except works on strict `BS.ByteString`
 decodeFullDecoder' ::
@@ -127,6 +130,7 @@ decodeFullDecoder' ::
   BS.ByteString ->
   Either DecoderError a
 decodeFullDecoder' version lbl decoder = decodeFullDecoder version lbl decoder . BSL.fromStrict
+{-# INLINE decodeFullDecoder' #-}
 
 -- | Deserialise a Haskell type from a 'BSL.ByteString' input, which be consumed
 -- incrementally using the provided 'Decoder'. Unlike `decodeFullDecoder` there
@@ -139,6 +143,7 @@ deserialiseDecoder ::
   Either (Read.DeserialiseFailure, BS.ByteString) (a, BS.ByteString)
 deserialiseDecoder version decoder bs0 =
   runST (supplyAllInput bs0 =<< Read.deserialiseIncremental (toPlainDecoder version decoder))
+{-# INLINE deserialiseDecoder #-}
 
 supplyAllInput ::
   BSL.ByteString ->
@@ -150,6 +155,7 @@ supplyAllInput bs (Read.Partial k) = case bs of
   BSL.Chunk chunk bs' -> k (Just chunk) >>= supplyAllInput bs'
   BSL.Empty -> k Nothing >>= supplyAllInput BSL.Empty
 supplyAllInput _ (Read.Fail bs _ exn) = return (Left (exn, bs))
+{-# INLINE supplyAllInput #-}
 
 --------------------------------------------------------------------------------
 -- Annotator
@@ -165,6 +171,7 @@ decodeFullAnnotator ::
   Either DecoderError a
 decodeFullAnnotator v lbl decoder bytes =
   (\x -> runAnnotator x (Full bytes)) <$> decodeFullDecoder v lbl decoder bytes
+{-# INLINE decodeFullAnnotator #-}
 
 -- | Same as `decodeFullDecoder`, decodes a Haskell value from a lazy
 -- `BSL.ByteString`, requiring that the full ByteString is consumed, and
@@ -179,6 +186,7 @@ decodeFullAnnotatedBytes ::
   Either DecoderError (f BS.ByteString)
 decodeFullAnnotatedBytes v lbl decoder bytes =
   annotationBytes bytes <$> decodeFullDecoder v lbl decoder bytes
+{-# INLINE decodeFullAnnotatedBytes #-}
 
 --------------------------------------------------------------------------------
 -- Nested CBOR-in-CBOR
@@ -195,6 +203,7 @@ decodeNestedCborTag = do
       DecoderErrorUnknownTag
         "decodeNestedCborTag"
         (fromIntegral t)
+{-# INLINE decodeNestedCborTag #-}
 
 -- | Remove the the semantic tag 24 from the enclosed CBOR data item,
 -- decoding back the inner `ByteString` as a proper Haskell type.
@@ -204,6 +213,7 @@ decodeNestedCbor = do
   bs <- decodeNestedCborBytes
   version <- getDecoderVersion
   either cborError pure $ decodeFull' version bs
+{-# INLINE decodeNestedCbor #-}
 
 -- | Like `decodeKnownCborDataItem`, but assumes nothing about the Haskell
 -- type we want to deserialise back, therefore it yields the `ByteString`
@@ -215,9 +225,8 @@ decodeNestedCbor = do
 --
 -- then `decodeNestedCborBytes` yields the inner 'DEADBEEF', unchanged.
 decodeNestedCborBytes :: Decoder s BS.ByteString
-decodeNestedCborBytes = do
-  decodeNestedCborTag
-  decodeBytes
+decodeNestedCborBytes = decodeNestedCborTag >> decodeBytes
+{-# INLINE decodeNestedCborBytes #-}
 
 decodeAnnotator ::
   Version ->
