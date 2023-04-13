@@ -1,29 +1,38 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Cardano.Ledger.Conway.Delegation.Certificates (
   ConwayDCert (..),
-  toShelleyDCert,
-  fromShelleyDCertMaybe,
+  ConwayDelegCert (..),
+  Delegatee (..),
 )
 where
 
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
-  DecCBORGroup (..),
   EncCBOR (..),
   EncCBORGroup (..),
+  decCBORGroup,
   decodeRecordSum,
   encodeListLen,
   listLenInt,
  )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Credential (Credential, StakeCredential)
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (
   ConstitutionalDelegCert (..),
-  DCert (..),
-  DelegCert (..),
-  Delegation (..),
   PoolCert (..),
  )
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -32,8 +41,56 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
+-- | First type argument is the deposit
+data Delegatee c
+  = DelegStake !(KeyHash 'StakePool c)
+  | DelegVote !(Credential 'Voting c)
+  | DelegStakeVote !(KeyHash 'StakePool c) !(Credential 'Voting c)
+  deriving (Show, Generic, Eq)
+
+instance Crypto c => DecCBOR (Delegatee c) where
+  decCBOR = decode . Summands "Delegatee" $ \case
+    0 ->
+      SumD DelegStake
+        <! From
+    1 ->
+      SumD DelegVote
+        <! From
+    2 ->
+      SumD DelegStakeVote
+        <! From
+        <! From
+    k -> Invalid k
+
+instance Crypto c => EncCBOR (Delegatee c) where
+  encCBOR x = encode $ case x of
+    DelegStake kh ->
+      Sum DelegStake 0
+        !> To kh
+    DelegVote c ->
+      Sum DelegVote 1
+        !> To c
+    DelegStakeVote kh c ->
+      Sum DelegStakeVote 2
+        !> To kh
+        !> To c
+
+instance NFData (Delegatee c)
+
+instance NoThunks (Delegatee c)
+
+data ConwayDelegCert c
+  = ConwayDeleg !(StakeCredential c) !(Delegatee c) !Coin
+  | ConwayReDeleg !(StakeCredential c) !(Delegatee c)
+  | ConwayUnDeleg !(StakeCredential c) !Coin
+  deriving (Show, Generic, Eq)
+
+instance NFData (ConwayDelegCert c)
+
+instance NoThunks (ConwayDelegCert c)
+
 data ConwayDCert c
-  = ConwayDCertDeleg !(DelegCert c)
+  = ConwayDCertDeleg !(ConwayDelegCert c)
   | ConwayDCertPool !(PoolCert c)
   | ConwayDCertConstitutional !(ConstitutionalDelegCert c)
   deriving (Show, Generic, Eq)
@@ -45,19 +102,9 @@ instance NoThunks (ConwayDCert c)
 instance Crypto c => DecCBOR (ConwayDCert c) where
   decCBOR = decodeRecordSum "ConwayDCert" $
     \case
-      0 -> do
-        x <- decCBOR
-        pure (2, ConwayDCertDeleg . RegKey $ x)
-      1 -> do
-        x <- decCBOR
-        pure (2, ConwayDCertDeleg . DeRegKey $ x)
-      2 -> do
-        a <- decCBOR
-        b <- decCBOR
-        pure (3, ConwayDCertDeleg $ Delegate (Delegation a b))
       3 -> do
         group <- decCBORGroup
-        pure (fromIntegral (1 + listLenInt group), ConwayDCertPool (RegPool group))
+        pure (listLenInt group + 1, ConwayDCertPool (RegPool group))
       4 -> do
         a <- decCBOR
         b <- decCBOR
@@ -67,25 +114,23 @@ instance Crypto c => DecCBOR (ConwayDCert c) where
         b <- decCBOR
         c <- decCBOR
         pure (4, ConwayDCertConstitutional $ ConstitutionalDelegCert a b c)
+      6 -> do
+        cred <- decCBOR
+        delegatee <- decCBOR
+        deposit <- decCBOR
+        pure (4, ConwayDCertDeleg $ ConwayDeleg cred delegatee deposit)
+      7 -> do
+        cred <- decCBOR
+        delegatee <- decCBOR
+        pure (3, ConwayDCertDeleg $ ConwayReDeleg cred delegatee)
+      8 -> do
+        cred <- decCBOR
+        deposit <- decCBOR
+        pure (3, ConwayDCertDeleg $ ConwayUnDeleg cred deposit)
       k -> invalidKey k
 
 instance Crypto c => EncCBOR (ConwayDCert c) where
   encCBOR = \case
-    -- DCertDeleg
-    ConwayDCertDeleg (RegKey cred) ->
-      encodeListLen 2
-        <> encCBOR (0 :: Word8)
-        <> encCBOR cred
-    ConwayDCertDeleg (DeRegKey cred) ->
-      encodeListLen 2
-        <> encCBOR (1 :: Word8)
-        <> encCBOR cred
-    ConwayDCertDeleg (Delegate (Delegation cred poolkh)) ->
-      encodeListLen 3
-        <> encCBOR (2 :: Word8)
-        <> encCBOR cred
-        <> encCBOR poolkh
-    -- DCertPool
     ConwayDCertPool (RegPool poolParams) ->
       encodeListLen (1 + listLen poolParams)
         <> encCBOR (3 :: Word8)
@@ -95,21 +140,25 @@ instance Crypto c => EncCBOR (ConwayDCert c) where
         <> encCBOR (4 :: Word8)
         <> encCBOR vk
         <> encCBOR epoch
-    -- DCertGenesis
     ConwayDCertConstitutional (ConstitutionalDelegCert gk kh vrf) ->
       encodeListLen 4
         <> encCBOR (5 :: Word8)
         <> encCBOR gk
         <> encCBOR kh
         <> encCBOR vrf
-
-toShelleyDCert :: ConwayDCert c -> DCert c
-toShelleyDCert (ConwayDCertDeleg dc) = DCertDeleg dc
-toShelleyDCert (ConwayDCertPool pc) = DCertPool pc
-toShelleyDCert (ConwayDCertConstitutional gdc) = DCertGenesis gdc
-
-fromShelleyDCertMaybe :: DCert c -> Maybe (ConwayDCert c)
-fromShelleyDCertMaybe (DCertDeleg dc) = Just $ ConwayDCertDeleg dc
-fromShelleyDCertMaybe (DCertPool pc) = Just $ ConwayDCertPool pc
-fromShelleyDCertMaybe (DCertGenesis gdc) = Just $ ConwayDCertConstitutional gdc
-fromShelleyDCertMaybe DCertMir {} = Nothing
+    ConwayDCertDeleg (ConwayDeleg cred delegatee deposit) ->
+      encodeListLen 4
+        <> encCBOR (6 :: Word8)
+        <> encCBOR cred
+        <> encCBOR delegatee
+        <> encCBOR deposit
+    ConwayDCertDeleg (ConwayReDeleg cred delegatee) ->
+      encodeListLen 3
+        <> encCBOR (7 :: Word8)
+        <> encCBOR cred
+        <> encCBOR delegatee
+    ConwayDCertDeleg (ConwayUnDeleg cred deposit) ->
+      encodeListLen 3
+        <> encCBOR (8 :: Word8)
+        <> encCBOR cred
+        <> encCBOR deposit

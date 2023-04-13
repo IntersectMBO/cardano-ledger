@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.2.0.0
+
+* Added `ConwayDelegCert` and `Delegatee` #3372
+* Removed `toShelleyDCert` and `fromShelleyDCertMaybe` #3372
+
 ## 1.1.0.0
 
 * Added `RATIFY` rule

@@ -60,7 +60,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert, toShelleyDCert)
+import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert)
 import Cardano.Ledger.Conway.Governance (GovernanceProcedure (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -313,14 +313,14 @@ abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mn
   , AdHash adh
   , Txnetworkid net
   ]
-abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net vp pp) =
+abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol _cert wdrl fee vldt req mnt sih adh net vp pp) =
   [ Inputs inp
   , Collateral col
   , RefInputs ref
   , Outputs (sizedValue <$> out)
   , CollateralReturn (sizedValue <$> colret)
   , TotalCol totcol
-  , Certs $ toShelleyDCert <$> cert
+  , Certs undefined -- TODO fix once DCert is a type family
   , Withdrawals' wdrl
   , Txfee fee
   , Vldt vldt
