@@ -293,18 +293,22 @@ instance MonadFail (Decoder s) where
 -- versions.
 fromPlainDecoder :: C.Decoder s a -> Decoder s a
 fromPlainDecoder d = Decoder (const d)
+{-# INLINE fromPlainDecoder #-}
 
 -- | Extract the underlying `C.Decoder` by specifying the concrete version to be used.
 toPlainDecoder :: Version -> Decoder s a -> C.Decoder s a
 toPlainDecoder v (Decoder d) = d v
+{-# INLINE toPlainDecoder #-}
 
 -- | Use the supplied decoder as a plain decoder with current version.
 withPlainDecoder :: Decoder s a -> (C.Decoder s a -> C.Decoder s b) -> Decoder s b
 withPlainDecoder vd f = Decoder $ \curVersion -> f (toPlainDecoder curVersion vd)
+{-# INLINE withPlainDecoder #-}
 
 -- | Ignore the current version of the decoder and enforce the supplied one instead.
 enforceDecoderVersion :: Version -> Decoder s a -> Decoder s a
 enforceDecoderVersion version = fromPlainDecoder . toPlainDecoder version
+{-# INLINE enforceDecoderVersion #-}
 
 --------------------------------------------------------------------------------
 -- Working with current decoder version
@@ -317,6 +321,7 @@ enforceDecoderVersion version = fromPlainDecoder . toPlainDecoder version
 -- Right 3
 getDecoderVersion :: Decoder s Version
 getDecoderVersion = Decoder pure
+{-# INLINE getDecoderVersion #-}
 
 -- | Conditionally choose the newer or older decoder, depending on the current
 -- version. Version in the context of encoders/decoders is the major protocol
@@ -344,6 +349,7 @@ ifDecoderVersionAtLeast atLeast newerDecoder olderDecoder = do
   if cur >= atLeast
     then newerDecoder
     else olderDecoder
+{-# INLINE ifDecoderVersionAtLeast #-}
 
 -- | Optionally run a decoder depending on the current version and the supplied one.
 whenDecoderVersionAtLeast ::
@@ -355,6 +361,7 @@ whenDecoderVersionAtLeast ::
 whenDecoderVersionAtLeast atLeast decoder = do
   cur <- getDecoderVersion
   when (cur >= atLeast) (void decoder)
+{-# INLINE whenDecoderVersionAtLeast #-}
 
 --------------------------------------------------------------------------------
 -- Error reporting
@@ -365,6 +372,7 @@ showDecoderError = formatToString build
 
 decodeVersion :: Decoder s Version
 decodeVersion = decodeWord64 >>= mkVersion64
+{-# INLINE decodeVersion #-}
 
 -- | `Decoder` for `Rational`. Versions variance:
 --
@@ -392,6 +400,7 @@ decodeRational =
       if d <= 0
         then cborError $ DecoderErrorCustom "Rational" "invalid denominator"
         else return $! n % d
+{-# INLINEABLE decodeRational #-}
 
 -- | Future `Decoder` for `Rational` type. This decoder will be applied in future and is
 -- prepared here as use case on how to do upgrades to serialization. Versions variance:
@@ -424,6 +433,7 @@ _decodeRationalFuture = do
 -- <https://peteroupc.github.io/CBOR/rational.html>
 decodeRationalWithTag :: Decoder s Rational
 decodeRationalWithTag = assertTag 30 >> decodeRationalWithoutTag
+{-# INLINE decodeRationalWithTag #-}
 
 decodeRationalWithoutTag :: Decoder s Rational
 decodeRationalWithoutTag = do
@@ -433,6 +443,7 @@ decodeRationalWithoutTag = do
       when (d == 0) (fail "Denominator cannot be zero")
       pure $! n % d
     _ -> cborError $ DecoderErrorSizeMismatch "Rational" 2 numValues
+{-# INLINEABLE decodeRationalWithoutTag #-}
 
 --------------------------------------------------------------------------------
 -- Containers
@@ -449,12 +460,14 @@ decodeList decodeValue =
     (natVersion @2)
     (decodeCollection decodeListLenOrIndef decodeValue)
     (decodeListWith decodeValue)
+{-# INLINEABLE decodeList #-}
 
 -- | @'Decoder'@ for list.
 decodeListWith :: Decoder s a -> Decoder s [a]
 decodeListWith decodeValue = do
   decodeListLenIndef
   decodeSequenceLenIndef (flip (:)) [] reverse decodeValue
+{-# INLINE decodeListWith #-}
 
 -- | `Decoder` for `Maybe`. Versions variance:
 --
@@ -467,6 +480,7 @@ decodeMaybe decodeValue = do
     (natVersion @2)
     (decodeMaybeVarLen decodeValue)
     (decodeMaybeExactLen decodeValue)
+{-# INLINEABLE decodeMaybe #-}
 
 decodeMaybeExactLen :: Decoder s a -> Decoder s (Maybe a)
 decodeMaybeExactLen decodeValue = do
@@ -477,6 +491,7 @@ decodeMaybeExactLen decodeValue = do
       !x <- decodeValue
       return (Just x)
     _ -> fail "too many elements while decoding Maybe."
+{-# INLINEABLE decodeMaybeExactLen #-}
 
 decodeMaybeVarLen :: Decoder s a -> Decoder s (Maybe a)
 decodeMaybeVarLen decodeValue = do
@@ -495,6 +510,7 @@ decodeMaybeVarLen decodeValue = do
           unless isBreak2 $
             fail "too many elements in break-style decoding of Maybe."
           pure (Just x)
+{-# INLINEABLE decodeMaybeVarLen #-}
 
 -- | Alternative way to decode a Maybe type.
 --
@@ -506,11 +522,13 @@ decodeNullMaybe decoder = do
       decodeNull
       pure Nothing
     _ -> Just <$> decoder
+{-# INLINE decodeNullMaybe #-}
 
 -- | Unlike `decodeMaybe` this allows variable as well as exact list length encoding for
 -- all versions, because Byron never used `StrictMaybe` type.
 decodeStrictMaybe :: Decoder s a -> Decoder s (StrictMaybe a)
 decodeStrictMaybe = fmap maybeToStrictMaybe . decodeMaybeVarLen
+{-# INLINE decodeStrictMaybe #-}
 
 -- | Alternative way to decode a `StrictMaybe` type.
 --
@@ -523,6 +541,7 @@ decodeNullStrictMaybe decoder = do
       decodeNull
       pure SNothing
     _ -> SJust <$> decoder
+{-# INLINE decodeNullStrictMaybe #-}
 
 decodeEither :: Decoder s a -> Decoder s b -> Decoder s (Either a b)
 decodeEither decodeLeft decodeRight = do
@@ -532,10 +551,12 @@ decodeEither decodeLeft decodeRight = do
     0 -> Left <$> decodeLeft
     1 -> Right <$> decodeRight
     _ -> cborError $ DecoderErrorUnknownTag "Either" (fromIntegral t)
+{-# INLINEABLE decodeEither #-}
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder = do
   runIdentityT $ decodeRecordNamedT name getRecordSize (lift decoder)
+{-# INLINE decodeRecordNamed #-}
 
 decodeRecordNamedT ::
   (MonadTrans m, Monad (m (Decoder s))) =>
@@ -552,6 +573,7 @@ decodeRecordNamedT name getRecordSize decoder = do
       isBreak <- decodeBreakOr
       unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
   pure x
+{-# INLINEABLE decodeRecordNamedT #-}
 
 decodeRecordSum :: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
 decodeRecordSum name decoder = do
@@ -564,6 +586,7 @@ decodeRecordSum name decoder = do
       isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
       unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
   pure x
+{-# INLINEABLE decodeRecordSum #-}
 
 decodeEnumBounded :: forall a s. (Enum a, Bounded a, Typeable a) => Decoder s a
 decodeEnumBounded = do
@@ -571,9 +594,11 @@ decodeEnumBounded = do
   if fromEnum (minBound :: a) <= n && n <= fromEnum (maxBound :: a)
     then pure $ toEnum n
     else fail $ "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
+{-# INLINEABLE decodeEnumBounded #-}
 
 decodeWithOrigin :: Decoder s a -> Decoder s (WithOrigin a)
 decodeWithOrigin f = withOriginFromMaybe <$> decodeMaybe f
+{-# INLINE decodeWithOrigin #-}
 
 --------------------------------------------------------------------------------
 -- Decoder for Map
@@ -611,6 +636,7 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
       !k <- decodeKey
       !v <- decodeValue k
       return (k, v)
+    {-# INLINE decodeEntry #-}
 
     -- Decode all the entries, enforcing canonicity by ensuring that the
     -- previous key is smaller than the next one.
@@ -625,10 +651,11 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
       if newKey > previousKey
         then decodeEntries (remainingPairs - 1) newKey (p : acc)
         else cborError $ DecoderErrorCanonicityViolation "Map"
-{-# INLINE decodeMapSkel #-}
+{-# INLINEABLE decodeMapSkel #-}
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
+{-# INLINE decodeCollection #-}
 
 decodeCollectionWithLen ::
   Decoder s (Maybe Int) ->
@@ -643,6 +670,7 @@ decodeCollectionWithLen lenOrIndef el = do
       condition >>= \case
         False -> pure (n, reverse acc)
         True -> action >>= \v -> loop (n + 1, v : acc) condition action
+{-# INLINEABLE decodeCollectionWithLen #-}
 
 decodeIsListByKey ::
   forall k t v s.
@@ -660,6 +688,7 @@ decodeIsListByKey decodeKey decodeValueFor =
       !key <- decodeKey
       !value <- decodeValueFor key
       pure (key, value)
+{-# INLINEABLE decodeIsListByKey #-}
 
 -- | `Decoder` for `Map.Map`. Versions variance:
 --
@@ -685,6 +714,7 @@ decodeMap ::
   Decoder s v ->
   Decoder s (Map.Map k v)
 decodeMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
+{-# INLINE decodeMap #-}
 
 -- | Just like `decodeMap`, but also gives access to the key for the value decoder.
 decodeMapByKey ::
@@ -701,6 +731,7 @@ decodeMapByKey decodeKey decodeValue =
         (decodeIsListByKey decodeKey decodeValue)
     )
     (decodeMapSkel Map.fromDistinctDescList decodeKey decodeValue)
+{-# INLINEABLE decodeMapByKey #-}
 
 -- | Decode `VMap`. Unlike `decodeMap` it does not behavee differently for
 -- version prior to 2.
@@ -710,6 +741,7 @@ decodeVMap ::
   Decoder s v ->
   Decoder s (VMap.VMap kv vv k v)
 decodeVMap decodeKey decodeValue = decodeIsListByKey decodeKey (const decodeValue)
+{-# INLINE decodeVMap #-}
 
 -- | We stitch a `258` in from of a (Hash)Set, so that tools which
 -- programmatically check for canonicity can recognise it from a normal
@@ -727,6 +759,7 @@ decodeSetTag :: Decoder s ()
 decodeSetTag = do
   t <- decodeTag
   when (t /= setTag) $ cborError $ DecoderErrorUnknownTag "Set" (fromIntegral t)
+{-# INLINE decodeSetTag #-}
 
 decodeSetSkel ::
   forall a s c.
@@ -755,7 +788,7 @@ decodeSetSkel fromDistinctDescList decodeValue = do
       if newValue > previousValue
         then decodeEntries (remainingEntries - 1) newValue (newValue : acc)
         else cborError $ DecoderErrorCanonicityViolation "Set"
-{-# INLINE decodeSetSkel #-}
+{-# INLINEABLE decodeSetSkel #-}
 
 -- | `Decoder` for `Set.Set`. Versions variance:
 --
@@ -778,6 +811,7 @@ decodeSet valueDecoder =
         (Set.fromList <$> decodeCollection decodeListLenOrIndef valueDecoder)
     )
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
+{-# INLINEABLE decodeSet #-}
 
 -- Decode a Set as a either a definite or indefinite list. Duplicates are
 --   not allowed. Set tag 258 is permitted, but not enforced.
@@ -801,6 +835,7 @@ decodeSetEnforceNoDuplicates decodeElement = do
           a <- decodeElement
           when (a `Set.member` acc) $ fail "Duplicate key detected in the Set"
           loop condition nextStep (Set.insert a acc)
+{-# INLINEABLE decodeSetEnforceNoDuplicates #-}
 
 decodeContainerSkelWithReplicate ::
   -- | How to get the size of the container
@@ -845,11 +880,13 @@ decodeVector decodeValue =
 -- well as exact list length encoding
 decodeSeq :: Decoder s a -> Decoder s (Seq.Seq a)
 decodeSeq decoder = Seq.fromList <$> decodeCollection decodeListLenOrIndef decoder
+{-# INLINE decodeSeq #-}
 
 -- | Decoder for `SSeq.StrictSeq`. Same behavior for all versions, allows variable as
 -- well as exact list length encoding.
 decodeStrictSeq :: Decoder s a -> Decoder s (SSeq.StrictSeq a)
 decodeStrictSeq decoder = SSeq.fromList <$> decodeCollection decodeListLenOrIndef decoder
+{-# INLINE decodeStrictSeq #-}
 
 decodeAccWithLen ::
   Decoder s (Maybe Int) ->
@@ -870,6 +907,7 @@ decodeAccWithLen lenOrIndef combine acc0 action = do
             v <- action
             loop (i + 1) (v `combine` acc)
   loop 0 acc0
+{-# INLINEABLE decodeAccWithLen #-}
 
 -- | Just like `decodeMap`, but assumes that there are no duplicate keys, which is not enforced.
 decodeMapNoDuplicates :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
@@ -885,6 +923,8 @@ decodeMapNoDuplicates decodeKey decodeValue =
       !key <- decodeKey
       !value <- decodeValue
       pure (key, value)
+    {-# INLINE decodeInlinedPair #-}
+{-# INLINEABLE decodeMapNoDuplicates #-}
 
 -- | Just like `decodeMap`, but fails on duplicate keys
 decodeMapEnforceNoDuplicates ::
@@ -904,16 +944,15 @@ decodeMapEnforceNoDuplicates decodeKey decodeValueFor = do
       if shouldStop
         then pure acc
         else do
-          (k, v) <- decodeInlinedPair
-          when (k `Map.member` acc) $ fail "Duplicate key detected in the Map"
-          loop condition nextStep (Map.insert k v acc)
-    decodeInlinedPair = do
-      !key <- decodeKey
-      !value <- decodeValueFor key
-      pure (key, value)
+          !key <- decodeKey
+          !value <- decodeValueFor key
+          when (key `Map.member` acc) $ fail "Duplicate key detected in the Map"
+          loop condition nextStep (Map.insert key value acc)
+{-# INLINEABLE decodeMapEnforceNoDuplicates #-}
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
+{-# INLINE decodeMapContents #-}
 
 decodeMapTraverse ::
   (Ord a, Applicative t) =>
@@ -922,6 +961,7 @@ decodeMapTraverse ::
   Decoder s (t (Map.Map a b))
 decodeMapTraverse decodeKey decodeValue =
   fmap Map.fromList <$> decodeMapContentsTraverse decodeKey decodeValue
+{-# INLINE decodeMapTraverse #-}
 
 decodeMapContentsTraverse ::
   Applicative t =>
@@ -932,6 +972,8 @@ decodeMapContentsTraverse decodeKey decodeValue =
   sequenceA <$> decodeMapContents decodeInlinedPair
   where
     decodeInlinedPair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue
+    {-# INLINE decodeInlinedPair #-}
+{-# INLINE decodeMapContentsTraverse #-}
 
 --------------------------------------------------------------------------------
 -- Time
@@ -958,6 +1000,8 @@ decodeUTCTime =
         UTCTime
           (fromOrdinalDate year dayOfYear)
           (picosecondsToDiffTime timeOfDayPico)
+    {-# INLINE timeDecoder #-}
+{-# INLINEABLE decodeUTCTime #-}
 
 --------------------------------------------------------------------------------
 -- Network
@@ -980,6 +1024,7 @@ binaryGetDecoder allowLeftOver name getter = do
       | allowLeftOver || BSL.null leftOver -> pure ha
       | otherwise ->
           cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
+{-# INLINEABLE binaryGetDecoder #-}
 
 decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
@@ -988,6 +1033,7 @@ decodeIPv4 =
       (natVersion @9)
       (binaryGetDecoder False "decodeIPv4" getWord32le)
       (binaryGetDecoder True "decodeIPv4" getWord32le)
+{-# INLINEABLE decodeIPv4 #-}
 
 getHostAddress6 :: Get HostAddress6
 getHostAddress6 = do
@@ -996,6 +1042,7 @@ getHostAddress6 = do
   !w3 <- getWord32le
   !w4 <- getWord32le
   return (w1, w2, w3, w4)
+{-# INLINEABLE getHostAddress6 #-}
 
 decodeIPv6 :: Decoder s IPv6
 decodeIPv6 =
@@ -1004,6 +1051,7 @@ decodeIPv6 =
       (natVersion @9)
       (binaryGetDecoder False "decodeIPv6" getHostAddress6)
       (binaryGetDecoder True "decodeIPv6" getHostAddress6)
+{-# INLINEABLE decodeIPv6 #-}
 
 --------------------------------------------------------------------------------
 -- Wrapped CBORG decoders
@@ -1015,6 +1063,7 @@ decodeTagMaybe =
     C.TypeTag -> Just . fromIntegral <$> decodeTag
     C.TypeTag64 -> Just <$> decodeTag64
     _ -> pure Nothing
+{-# INLINEABLE decodeTagMaybe #-}
 
 allowTag :: Word -> Decoder s ()
 allowTag tagExpected = do
@@ -1023,6 +1072,7 @@ allowTag tagExpected = do
     unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
       fail $
         "Expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
+{-# INLINEABLE allowTag #-}
 
 assertTag :: Word -> Decoder s ()
 assertTag tagExpected = do
@@ -1033,11 +1083,13 @@ assertTag tagExpected = do
   unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
     fail $
       "Expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
+{-# INLINEABLE assertTag #-}
 
 -- | Enforces that the input size is the same as the decoded one, failing in
 --   case it's not
 enforceSize :: Text.Text -> Int -> Decoder s ()
 enforceSize lbl requestedSize = decodeListLen >>= matchSize lbl requestedSize
+{-# INLINEABLE enforceSize #-}
 
 -- | Compare two sizes, failing if they are not equal
 matchSize :: Text.Text -> Int -> Int -> Decoder s ()
@@ -1048,75 +1100,99 @@ matchSize lbl requestedSize actualSize =
         lbl
         requestedSize
         actualSize
+{-# INLINE matchSize #-}
 
 decodeBool :: Decoder s Bool
 decodeBool = fromPlainDecoder C.decodeBool
+{-# INLINE decodeBool #-}
 
 decodeBreakOr :: Decoder s Bool
 decodeBreakOr = fromPlainDecoder C.decodeBreakOr
+{-# INLINE decodeBreakOr #-}
 
 decodeByteArray :: Decoder s ByteArray
 decodeByteArray = fromPlainDecoder C.decodeByteArray
+{-# INLINE decodeByteArray #-}
 
 decodeByteArrayCanonical :: Decoder s ByteArray
 decodeByteArrayCanonical = fromPlainDecoder C.decodeByteArrayCanonical
+{-# INLINE decodeByteArrayCanonical #-}
 
 decodeBytes :: Decoder s BS.ByteString
 decodeBytes = fromPlainDecoder C.decodeBytes
+{-# INLINE decodeBytes #-}
 
 decodeBytesCanonical :: Decoder s BS.ByteString
 decodeBytesCanonical = fromPlainDecoder C.decodeBytesCanonical
+{-# INLINE decodeBytesCanonical #-}
 
 decodeBytesIndef :: Decoder s ()
 decodeBytesIndef = fromPlainDecoder C.decodeBytesIndef
+{-# INLINE decodeBytesIndef #-}
 
 decodeDouble :: Decoder s Double
 decodeDouble = fromPlainDecoder C.decodeDouble
+{-# INLINE decodeDouble #-}
 
 decodeDoubleCanonical :: Decoder s Double
 decodeDoubleCanonical = fromPlainDecoder C.decodeDoubleCanonical
+{-# INLINE decodeDoubleCanonical #-}
 
 decodeFloat :: Decoder s Float
 decodeFloat = fromPlainDecoder C.decodeFloat
+{-# INLINE decodeFloat #-}
 
 decodeFloat16Canonical :: Decoder s Float
 decodeFloat16Canonical = fromPlainDecoder C.decodeFloat16Canonical
+{-# INLINE decodeFloat16Canonical #-}
 
 decodeFloatCanonical :: Decoder s Float
 decodeFloatCanonical = fromPlainDecoder C.decodeFloatCanonical
+{-# INLINE decodeFloatCanonical #-}
 
 decodeInt :: Decoder s Int
 decodeInt = fromPlainDecoder C.decodeInt
+{-# INLINE decodeInt #-}
 
 decodeInt16 :: Decoder s Int16
 decodeInt16 = fromPlainDecoder C.decodeInt16
+{-# INLINE decodeInt16 #-}
 
 decodeInt16Canonical :: Decoder s Int16
 decodeInt16Canonical = fromPlainDecoder C.decodeInt16Canonical
+{-# INLINE decodeInt16Canonical #-}
 
 decodeInt32 :: Decoder s Int32
 decodeInt32 = fromPlainDecoder C.decodeInt32
+{-# INLINE decodeInt32 #-}
 
 decodeInt32Canonical :: Decoder s Int32
 decodeInt32Canonical = fromPlainDecoder C.decodeInt32Canonical
+{-# INLINE decodeInt32Canonical #-}
 
 decodeInt64 :: Decoder s Int64
 decodeInt64 = fromPlainDecoder C.decodeInt64
+{-# INLINE decodeInt64 #-}
 
 decodeInt64Canonical :: Decoder s Int64
 decodeInt64Canonical = fromPlainDecoder C.decodeInt64Canonical
+{-# INLINE decodeInt64Canonical #-}
 
 decodeInt8 :: Decoder s Int8
 decodeInt8 = fromPlainDecoder C.decodeInt8
+{-# INLINE decodeInt8 #-}
 
 decodeInt8Canonical :: Decoder s Int8
 decodeInt8Canonical = fromPlainDecoder C.decodeInt8Canonical
+{-# INLINE decodeInt8Canonical #-}
 
 decodeIntCanonical :: Decoder s Int
 decodeIntCanonical = fromPlainDecoder C.decodeIntCanonical
+{-# INLINE decodeIntCanonical #-}
 
 decodeInteger :: Decoder s Integer
 decodeInteger = fromPlainDecoder C.decodeInteger
+{-# INLINE decodeInteger #-}
 
 decodeNatural :: Decoder s Natural
 decodeNatural = do
@@ -1124,143 +1200,188 @@ decodeNatural = do
   if n >= 0
     then return $! fromInteger n
     else cborError $ DecoderErrorCustom "Natural" "got a negative number"
+{-# INLINEABLE decodeNatural #-}
 
 decodeIntegerCanonical :: Decoder s Integer
 decodeIntegerCanonical = fromPlainDecoder C.decodeIntegerCanonical
+{-# INLINE decodeIntegerCanonical #-}
 
 decodeListLen :: Decoder s Int
 decodeListLen = fromPlainDecoder C.decodeListLen
+{-# INLINE decodeListLen #-}
 
 decodeListLenCanonical :: Decoder s Int
 decodeListLenCanonical = fromPlainDecoder C.decodeListLenCanonical
+{-# INLINE decodeListLenCanonical #-}
 
 decodeListLenCanonicalOf :: Int -> Decoder s ()
 decodeListLenCanonicalOf = fromPlainDecoder . C.decodeListLenCanonicalOf
+{-# INLINE decodeListLenCanonicalOf #-}
 
 decodeListLenIndef :: Decoder s ()
 decodeListLenIndef = fromPlainDecoder C.decodeListLenIndef
+{-# INLINE decodeListLenIndef #-}
 
 decodeListLenOf :: Int -> Decoder s ()
 decodeListLenOf = fromPlainDecoder . C.decodeListLenOf
+{-# INLINE decodeListLenOf #-}
 
 decodeListLenOrIndef :: Decoder s (Maybe Int)
 decodeListLenOrIndef = fromPlainDecoder C.decodeListLenOrIndef
+{-# INLINE decodeListLenOrIndef #-}
 
 decodeMapLen :: Decoder s Int
 decodeMapLen = fromPlainDecoder C.decodeMapLen
+{-# INLINE decodeMapLen #-}
 
 decodeMapLenCanonical :: Decoder s Int
 decodeMapLenCanonical = fromPlainDecoder C.decodeMapLenCanonical
+{-# INLINE decodeMapLenCanonical #-}
 
 decodeMapLenIndef :: Decoder s ()
 decodeMapLenIndef = fromPlainDecoder C.decodeMapLenIndef
+{-# INLINE decodeMapLenIndef #-}
 
 decodeMapLenOrIndef :: Decoder s (Maybe Int)
 decodeMapLenOrIndef = fromPlainDecoder C.decodeMapLenOrIndef
+{-# INLINE decodeMapLenOrIndef #-}
 
 decodeNegWord :: Decoder s Word
 decodeNegWord = fromPlainDecoder C.decodeNegWord
+{-# INLINE decodeNegWord #-}
 
 decodeNegWord64 :: Decoder s Word64
 decodeNegWord64 = fromPlainDecoder C.decodeNegWord64
+{-# INLINE decodeNegWord64 #-}
 
 decodeNegWord64Canonical :: Decoder s Word64
 decodeNegWord64Canonical = fromPlainDecoder C.decodeNegWord64Canonical
+{-# INLINE decodeNegWord64Canonical #-}
 
 decodeNegWordCanonical :: Decoder s Word
 decodeNegWordCanonical = fromPlainDecoder C.decodeNegWordCanonical
+{-# INLINE decodeNegWordCanonical #-}
 
 decodeNull :: Decoder s ()
 decodeNull = fromPlainDecoder C.decodeNull
+{-# INLINE decodeNull #-}
 
 decodeSequenceLenIndef :: (r -> a -> r) -> r -> (r -> b) -> Decoder s a -> Decoder s b
-decodeSequenceLenIndef a b c dec =
-  withPlainDecoder dec $ C.decodeSequenceLenIndef a b c
+decodeSequenceLenIndef a b c dec = withPlainDecoder dec $ C.decodeSequenceLenIndef a b c
+{-# INLINE decodeSequenceLenIndef #-}
 
 decodeSequenceLenN :: (r -> a -> r) -> r -> (r -> b) -> Int -> Decoder s a -> Decoder s b
-decodeSequenceLenN a b c n dec =
-  withPlainDecoder dec $ C.decodeSequenceLenN a b c n
+decodeSequenceLenN a b c n dec = withPlainDecoder dec $ C.decodeSequenceLenN a b c n
+{-# INLINE decodeSequenceLenN #-}
 
 decodeSimple :: Decoder s Word8
 decodeSimple = fromPlainDecoder C.decodeSimple
+{-# INLINE decodeSimple #-}
 
 decodeSimpleCanonical :: Decoder s Word8
 decodeSimpleCanonical = fromPlainDecoder C.decodeSimpleCanonical
+{-# INLINE decodeSimpleCanonical #-}
 
 decodeString :: Decoder s Text.Text
 decodeString = fromPlainDecoder C.decodeString
+{-# INLINE decodeString #-}
 
 decodeStringCanonical :: Decoder s Text.Text
 decodeStringCanonical = fromPlainDecoder C.decodeStringCanonical
+{-# INLINE decodeStringCanonical #-}
 
 decodeStringIndef :: Decoder s ()
 decodeStringIndef = fromPlainDecoder C.decodeStringIndef
+{-# INLINE decodeStringIndef #-}
 
 decodeTag :: Decoder s Word
 decodeTag = fromPlainDecoder C.decodeTag
+{-# INLINE decodeTag #-}
 
 decodeTag64 :: Decoder s Word64
 decodeTag64 = fromPlainDecoder C.decodeTag64
+{-# INLINE decodeTag64 #-}
 
 decodeTag64Canonical :: Decoder s Word64
 decodeTag64Canonical = fromPlainDecoder C.decodeTag64Canonical
+{-# INLINE decodeTag64Canonical #-}
 
 decodeTagCanonical :: Decoder s Word
 decodeTagCanonical = fromPlainDecoder C.decodeTagCanonical
+{-# INLINE decodeTagCanonical #-}
 
 decodeUtf8ByteArray :: Decoder s ByteArray
 decodeUtf8ByteArray = fromPlainDecoder C.decodeUtf8ByteArray
+{-# INLINE decodeUtf8ByteArray #-}
 
 decodeUtf8ByteArrayCanonical :: Decoder s ByteArray
 decodeUtf8ByteArrayCanonical = fromPlainDecoder C.decodeUtf8ByteArrayCanonical
+{-# INLINE decodeUtf8ByteArrayCanonical #-}
 
 decodeWithByteSpan :: Decoder s a -> Decoder s (a, C.ByteOffset, C.ByteOffset)
 decodeWithByteSpan d = withPlainDecoder d C.decodeWithByteSpan
+{-# INLINE decodeWithByteSpan #-}
 
 decodeWord :: Decoder s Word
 decodeWord = fromPlainDecoder C.decodeWord
+{-# INLINE decodeWord #-}
 
 decodeWord16 :: Decoder s Word16
 decodeWord16 = fromPlainDecoder C.decodeWord16
+{-# INLINE decodeWord16 #-}
 
 decodeWord16Canonical :: Decoder s Word16
 decodeWord16Canonical = fromPlainDecoder C.decodeWord16Canonical
+{-# INLINE decodeWord16Canonical #-}
 
 decodeWord32 :: Decoder s Word32
 decodeWord32 = fromPlainDecoder C.decodeWord32
+{-# INLINE decodeWord32 #-}
 
 decodeWord32Canonical :: Decoder s Word32
 decodeWord32Canonical = fromPlainDecoder C.decodeWord32Canonical
+{-# INLINE decodeWord32Canonical #-}
 
 decodeWord64 :: Decoder s Word64
 decodeWord64 = fromPlainDecoder C.decodeWord64
+{-# INLINE decodeWord64 #-}
 
 decodeWord64Canonical :: Decoder s Word64
 decodeWord64Canonical = fromPlainDecoder C.decodeWord64Canonical
+{-# INLINE decodeWord64Canonical #-}
 
 decodeWord8 :: Decoder s Word8
 decodeWord8 = fromPlainDecoder C.decodeWord8
+{-# INLINE decodeWord8 #-}
 
 decodeWord8Canonical :: Decoder s Word8
 decodeWord8Canonical = fromPlainDecoder C.decodeWord8Canonical
+{-# INLINE decodeWord8Canonical #-}
 
 decodeWordCanonical :: Decoder s Word
 decodeWordCanonical = fromPlainDecoder C.decodeWordCanonical
+{-# INLINE decodeWordCanonical #-}
 
 decodeWordCanonicalOf :: Word -> Decoder s ()
 decodeWordCanonicalOf = fromPlainDecoder . C.decodeWordCanonicalOf
+{-# INLINE decodeWordCanonicalOf #-}
 
 decodeWordOf :: Word -> Decoder s ()
 decodeWordOf = fromPlainDecoder . C.decodeWordOf
+{-# INLINE decodeWordOf #-}
 
 decodeTerm :: Decoder s C.Term
 decodeTerm = fromPlainDecoder C.decodeTerm
+{-# INLINE decodeTerm #-}
 
 peekAvailable :: Decoder s Int
 peekAvailable = fromPlainDecoder C.peekAvailable
+{-# INLINE peekAvailable #-}
 
 peekByteOffset :: Decoder s C.ByteOffset
 peekByteOffset = fromPlainDecoder C.peekByteOffset
+{-# INLINE peekByteOffset #-}
 
 peekTokenType :: Decoder s C.TokenType
 peekTokenType = fromPlainDecoder C.peekTokenType
+{-# INLINE peekTokenType #-}

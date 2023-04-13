@@ -58,6 +58,7 @@ instance Bounded Version where
 
 instance FromCBOR Version where
   fromCBOR = fromCBOR >>= mkVersion64
+  {-# INLINE fromCBOR #-}
 
 instance FromJSON Version where
   parseJSON v = parseJSON v >>= mkVersion64
@@ -66,10 +67,12 @@ instance FromJSON Version where
 -- supplied through @TypeApplications@.
 natVersion :: forall v. (KnownNat v, MinVersion <= v, v <= MaxVersion) => Version
 natVersion = natVersionProxy (Proxy @v)
+{-# INLINE natVersion #-}
 
 -- | Safely construct a `Version` from a type level `Nat`, which is supplied as a `Proxy`
 natVersionProxy :: (KnownNat v, MinVersion <= v, v <= MaxVersion) => Proxy v -> Version
 natVersionProxy = Version . fromInteger . natVal
+{-# INLINE natVersionProxy #-}
 
 -- | Construct a `Version` and fail if the supplied value is not a supported version number.
 mkVersion :: (Integral i, MonadFail m) => i -> m Version
@@ -79,6 +82,7 @@ mkVersion v
   | otherwise = mkVersion64 (fromIntegral v)
   where
     vi = toInteger v
+{-# INLINEABLE mkVersion #-}
 
 -- | Construct a `Version` and fail if the supplied value is not supported version number.
 mkVersion64 :: MonadFail m => Word64 -> m Version
@@ -97,6 +101,7 @@ mkVersion64 v
   where
     Version minVersion = minBound
     Version maxVersion = maxBound
+{-# INLINEABLE mkVersion64 #-}
 
 -- | Convert a `Version` to an `Integral` value.
 --
@@ -104,23 +109,28 @@ mkVersion64 v
 -- safe even for smallest integral types.
 getVersion :: Integral i => Version -> i
 getVersion (Version w64) = fromIntegral w64
+{-# INLINE getVersion #-}
 
 -- | Extract `Word64` representation of the `Version`
 getVersion64 :: Version -> Word64
 getVersion64 (Version w64) = w64
+{-# INLINE getVersion64 #-}
 
 -- | Increment version by 1.
 succVersion :: MonadFail m => Version -> m Version
 succVersion (Version v64) = mkVersion64 (v64 + 1)
+{-# INLINE succVersion #-}
 
 allVersions :: [Version]
 allVersions = [minBound .. maxBound]
 
 byronProtVer :: Version
 byronProtVer = natVersion @1
+{-# INLINE byronProtVer #-}
 
 shelleyProtVer :: Version
 shelleyProtVer = natVersion @2
+{-# INLINE shelleyProtVer #-}
 
 -- ==================================
 
