@@ -423,10 +423,12 @@ getCostModelParams (CostModel _ cm _) = cm
 
 decodeCostModelsCollectingErrors :: Decoder s CostModels
 decodeCostModelsCollectingErrors = mkCostModelsLenient <$> decCBOR
+{-# INLINE decodeCostModelsCollectingErrors #-}
 
 decodeCostModelsFailingOnError :: Decoder s CostModels
 decodeCostModelsFailingOnError =
   CostModels <$> decodeMapByKey decCBOR legacyDecodeCostModel <*> pure mempty <*> pure mempty
+{-# INLINE decodeCostModelsFailingOnError #-}
 
 decodeCostModels :: Decoder s CostModels
 decodeCostModels =
@@ -434,6 +436,7 @@ decodeCostModels =
     (natVersion @9)
     decodeCostModelsCollectingErrors
     decodeCostModelsFailingOnError
+{-# INLINEABLE decodeCostModels #-}
 
 -- | Prior to version 9, each 'CostModel' was expected to be serialized as
 -- an array of integers of a specific length (depending on the version of Plutus).
@@ -468,6 +471,7 @@ legacyDecodeCostModel lang = do
   case mkCostModel lang values of
     Left e -> fail $ show e
     Right cm -> pure cm
+{-# INLINEABLE legacyDecodeCostModel #-}
 
 decodeCostModelFailHard :: Language -> Decoder s CostModel
 decodeCostModelFailHard lang = do
@@ -475,6 +479,7 @@ decodeCostModelFailHard lang = do
   case checked of
     Left e -> fail $ show e
     Right cm -> pure cm
+{-# INLINEABLE decodeCostModelFailHard #-}
 
 getEvaluationContext :: CostModel -> PV1.EvaluationContext
 getEvaluationContext (CostModel _ _ ec) = ec
@@ -566,6 +571,7 @@ instance NFData CostModels
 
 instance DecCBOR CostModels where
   decCBOR = decodeCostModels
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR CostModels where
   encCBOR = encCBOR . flattenCostModel
@@ -653,6 +659,7 @@ instance DecCBOR Tag where
     word8ToTag <$> decCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Tag" "Unknown redeemer tag"
       Just n -> pure n
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR ExUnits where
   encCBOR (ExUnits m s) = encode $ Rec ExUnits !> To m !> To s
@@ -669,14 +676,18 @@ instance DecCBOR ExUnits where
               DecoderErrorCustom "ExUnits field" "values must not exceed maxBound :: Int64"
           )
         pure $ wordToNatural x
+      {-# INLINE decNat #-}
       wordToNatural :: Word64 -> Natural
       wordToNatural = fromIntegral
+      {-# INLINE wordToNatural #-}
+  {-# INLINE decCBOR #-}
 
 instance EncCBOR Prices where
   encCBOR (Prices m s) = encode $ Rec Prices !> To m !> To s
 
 instance DecCBOR Prices where
   decCBOR = decode $ RecD Prices <! From <! From
+  {-# INLINE decCBOR #-}
 
 instance Era era => EncCBOR (AlonzoScript era)
 
@@ -699,6 +710,8 @@ instance Era era => DecCBOR (Annotator (AlonzoScript era)) where
       decodeScript 2 = Ann (SumD $ PlutusScript PlutusV2) <*! Ann (D (guardPlutus PlutusV2 >> decCBOR))
       decodeScript 3 = Ann (SumD $ PlutusScript PlutusV3) <*! Ann (D (guardPlutus PlutusV3 >> decCBOR))
       decodeScript n = Invalid n
+      {-# INLINE decodeScript #-}
+  {-# INLINE decCBOR #-}
 
 -- | Test that every Alonzo script represents a real Script.
 --     Run deepseq to see that there are no infinite computations and that
