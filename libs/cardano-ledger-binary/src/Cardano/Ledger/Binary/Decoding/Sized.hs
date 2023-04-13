@@ -56,6 +56,7 @@ decodeSized :: Decoder s a -> Decoder s (Sized a)
 decodeSized decoder = do
   Annotated v (ByteSpan start end) <- annotatedDecoder decoder
   pure $! Sized v $! end - start
+{-# INLINE decodeSized #-}
 
 sizedDecoder :: Decoder s a -> Decoder s (Sized a)
 sizedDecoder = decodeSized
@@ -63,6 +64,7 @@ sizedDecoder = decodeSized
 
 instance DecCBOR a => DecCBOR (Sized a) where
   decCBOR = decodeSized decCBOR
+  {-# INLINE decCBOR #-}
 
 -- | Discards the size.
 instance EncCBOR a => EncCBOR (Sized a) where
