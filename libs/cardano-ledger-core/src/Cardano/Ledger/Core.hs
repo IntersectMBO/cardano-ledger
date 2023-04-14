@@ -272,7 +272,7 @@ class
   -- The utility of this function comes from the fact that TxOut usually stores
   -- the address in either one of two forms: compacted or unpacked. In order to
   -- avoid extroneous conversions in `getTxOutAddr` and `getTxOutCompactAddr` we
-  -- can define just this functionality. Also sometimes it crutial to know at
+  -- can define just this functionality. Also sometimes it is crucial to know at
   -- the callsite which form of address we have readily available without any
   -- conversions (eg. searching millions of TxOuts for a particular address)
   addrEitherTxOutL :: Lens' (TxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
