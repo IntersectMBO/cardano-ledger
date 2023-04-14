@@ -5,10 +5,10 @@
         "homepage": "https://input-output-hk.github.io/cardano-haskell-packages/",
         "owner": "input-output-hk",
         "repo": "cardano-haskell-packages",
-        "rev": "07bb6c7f3d5f6245fbc7b222ea082487736bdb67",
-        "sha256": "1mnms5r7bwjz2raw5v7mnl8svzl7jz6lqv64d1a9ccql3dhyp4wy",
+        "rev": "da79f0066b66d0ef6efbaf70c892a7f60767d406",
+        "sha256": "0b06fbhcxhiga993lc46hbwyhbba1lx5nhbbd52pl1vrzfxbfd49",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-haskell-packages/archive/07bb6c7f3d5f6245fbc7b222ea082487736bdb67.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-haskell-packages/archive/da79f0066b66d0ef6efbaf70c892a7f60767d406.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "hackage.nix": {

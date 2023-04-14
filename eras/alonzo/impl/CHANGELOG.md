@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.2.0.0
+
+* Remove orphan `NoThunks` instance for `Plutus.Core.Data` type and depend on a newer
+  version of `plutus-core`
+
 ## 1.1.0.0
 
 * Add `ToJSON` instance for `AlonzoTxOut`, `AlonzoScript` and `Datum`

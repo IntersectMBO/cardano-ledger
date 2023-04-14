@@ -80,12 +80,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1 -- NOTE PV1.Data === PV2.Data
 
--- =====================================================================
--- PV1.Data is the type that Plutus expects as data. For both V1 and V2.
--- It is imported from the Plutus package, but it needs a few additional
--- instances to also work in the ledger.
-deriving instance NoThunks PV1.Data
-
 -- ============================================================================
 -- the newtype Data is a wrapper around the type that Plutus expects as data.
 -- The newtype will memoize the serialized bytes.
