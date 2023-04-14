@@ -26,7 +26,6 @@ import Cardano.Ledger.Mary.Value (
   isMultiAssetSmallEnough,
  )
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
-import Data.Bool (bool)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty)
 import Data.Maybe.Strict (StrictMaybe)
@@ -171,7 +170,7 @@ genMultiAssetToFail isForMaryValue = do
     vectorOf numA $
       (,)
         <$> genAssetNameToFail
-        <*> bool (getNonZero @Int <$> arbitrary) (getPositive @Int <$> arbitrary) isForMaryValue
+        <*> if isForMaryValue then getPositive @Int <$> arbitrary else getNonZero @Int <$> arbitrary
   let initialTriples = zipWith (\p (a, v) -> (p, a, v)) ps as -- All policies should have at least one asset
       remainingAs = drop numP as
   remainingTriples <-

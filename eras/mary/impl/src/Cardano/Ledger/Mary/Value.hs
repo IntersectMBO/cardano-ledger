@@ -92,6 +92,7 @@ import Data.Map.Internal (
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import qualified Data.Monoid as M (Sum (Sum, getSum))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
 import qualified Data.Semigroup as Semigroup (Sum (..))
@@ -691,7 +692,7 @@ to v@(MaryValue _ ma) = do
 -- where: n = total number of assets, p = number of unique policy ids
 isMultiAssetSmallEnough :: MultiAsset c -> Bool
 isMultiAssetSmallEnough (MultiAsset ma) =
-  44 * sum (length <$> ma) + 28 * length ma <= 65535
+  44 * M.getSum (foldMap' (M.Sum . length) ma) + 28 * length ma <= 65535
 
 representationSize ::
   forall c.
