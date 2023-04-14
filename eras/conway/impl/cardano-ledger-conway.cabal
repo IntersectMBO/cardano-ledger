@@ -95,5 +95,4 @@ library testlib
         cardano-ledger-alonzo:testlib,
         cardano-ledger-conway,
         cardano-ledger-core,
-        cardano-ledger-mary:testlib,
         small-steps

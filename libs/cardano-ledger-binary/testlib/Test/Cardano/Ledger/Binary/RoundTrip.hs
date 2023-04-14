@@ -339,7 +339,7 @@ data RoundTripFailure = RoundTripFailure
   -- ^ Produced plain encoding
   , rtfEncodedBytes :: BSL.ByteString
   -- ^ Serialized encoding using the version in this failure
-  , rtfReEncodedBytes :: Maybe (BSL.ByteString)
+  , rtfReEncodedBytes :: Maybe BSL.ByteString
   -- ^ Re-serialized bytes, if there was a mismatch between the binary form and the
   -- reserialization of the data type.
   , rtfDropperError :: Maybe DecoderError

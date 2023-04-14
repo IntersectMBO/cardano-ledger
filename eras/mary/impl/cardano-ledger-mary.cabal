@@ -19,6 +19,10 @@ source-repository head
     location: https://github.com/input-output-hk/cardano-ledger
     subdir:   eras/mary/impl
 
+flag asserts
+    description: Enable assertions
+    default:     False
+
 library
     exposed-modules:
         Cardano.Ledger.Mary
@@ -64,6 +68,9 @@ library
         primitive,
         cardano-strict-containers,
         text
+
+    if flag(asserts)
+        ghc-options: -fno-ignore-asserts
 
 library testlib
     exposed-modules:  Test.Cardano.Ledger.Mary.Arbitrary

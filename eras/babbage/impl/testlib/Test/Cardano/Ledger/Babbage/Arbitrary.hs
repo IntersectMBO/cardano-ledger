@@ -21,7 +21,6 @@ import Cardano.Ledger.Binary (Sized)
 import Control.State.Transition (STS (PredicateFailure))
 import Data.Functor.Identity (Identity)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Mary.Arbitrary (genMintValues)
 import Test.QuickCheck
 
 deriving instance Arbitrary CoinPerByte
@@ -144,7 +143,7 @@ instance
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
-      <*> scale (`div` 15) genMintValues
+      <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

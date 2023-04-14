@@ -92,6 +92,5 @@ library testlib
         cardano-ledger-babbage,
         cardano-ledger-binary,
         cardano-ledger-core,
-        cardano-ledger-mary:testlib,
         small-steps,
         QuickCheck
