@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.0.1.1
+
+*
+
 ## 1.0.1.0
 
 * Add `ToCBOR`/`FromCBOR` instaces for `OCert` and `KESPeriod`
