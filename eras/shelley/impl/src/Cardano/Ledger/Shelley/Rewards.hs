@@ -52,7 +52,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation.PoolParams (poolSpec)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
-import Cardano.Ledger.UMapCompact (compactCoinOrError)
+import Cardano.Ledger.UMap (compactCoinOrError)
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)

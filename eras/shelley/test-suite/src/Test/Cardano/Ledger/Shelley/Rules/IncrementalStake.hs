@@ -45,7 +45,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   ptrsMap,
  )
 import Cardano.Ledger.Shelley.TxBody
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Control.SetAlgebra (dom, eval, (▷), (◁))
 import Control.State.Transition.Trace (

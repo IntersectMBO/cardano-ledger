@@ -38,8 +38,8 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.UMapCompact (View (Delegations, RewardDeposits), compactCoinOrError)
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (View (Delegations, RewardDeposits), compactCoinOrError)
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
 import Control.State.Transition (

@@ -17,7 +17,7 @@ import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Delegation.Certificates
 import Cardano.Ledger.Shelley.UTxO hiding (consumed, produced)
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
 import Data.Foldable
 import qualified Data.Map.Strict as Map

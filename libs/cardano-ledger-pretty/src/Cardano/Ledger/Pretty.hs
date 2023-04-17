@@ -158,7 +158,7 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMapCompact (RDPair (..), Trip (Triple), UMap (..))
+import Cardano.Ledger.UMap (RDPair (..), Trip (Triple), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),

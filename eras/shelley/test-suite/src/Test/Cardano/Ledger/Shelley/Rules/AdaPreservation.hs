@@ -66,8 +66,8 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   trim,
  )
 import Cardano.Ledger.TreeDiff (ediffEq)
-import Cardano.Ledger.UMapCompact (sumRewardsView)
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (sumRewardsView)
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (BHeader (..))

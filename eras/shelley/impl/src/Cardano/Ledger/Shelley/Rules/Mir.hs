@@ -40,8 +40,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   rewards,
   pattern EpochState,
  )
-import Cardano.Ledger.UMapCompact (compactCoinOrError)
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (compactCoinOrError)
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (eval, (∪+))
 import Control.State.Transition (

@@ -69,8 +69,8 @@ import Cardano.Ledger.Slot (
   (*-),
   (+*),
  )
-import Cardano.Ledger.UMapCompact (RDPair (..), View (..), compactCoinOrError, fromCompact)
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (RDPair (..), View (..), compactCoinOrError, fromCompact)
+import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, range, singleton, (∉), (∪), (⨃))

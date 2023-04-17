@@ -61,8 +61,8 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.UMapCompact (RDPair (..), UMap (UMap), View (Delegations, RewardDeposits))
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), View (Delegations, RewardDeposits))
+import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))

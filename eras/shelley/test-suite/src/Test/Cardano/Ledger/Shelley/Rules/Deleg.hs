@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
 import Cardano.Ledger.Shelley.TxBody
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Control.SetAlgebra (eval, rng, (∈))
 import Control.State.Transition.Trace (
   SourceSignalTarget (..),

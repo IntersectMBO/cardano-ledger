@@ -56,13 +56,13 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
-import Cardano.Ledger.UMapCompact (
+import Cardano.Ledger.UMap (
   Trip,
   UMap (..),
   compactCoinOrError,
   member,
  )
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (
   UTxO (..),
  )

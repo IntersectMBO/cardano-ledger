@@ -60,7 +60,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxOut (..),
  )
 import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)

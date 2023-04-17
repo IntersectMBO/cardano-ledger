@@ -17,7 +17,7 @@
 --   and a fourth one in the inverse direction.
 --   The advantage of using 'UMap' is that 'UMap' stores all the information compactly, by exploiting the
 --   the large amount of sharing in the 2 maps.
-module Cardano.Ledger.UMapCompact (
+module Cardano.Ledger.UMap (
   -- * Constructing 'UMap'
   -- $UMAP
   Trip (Triple),
@@ -80,6 +80,7 @@ module Cardano.Ledger.UMapCompact (
   size,
   unify,
   RDPair (..),
+  rdPairView,
 )
 where
 
@@ -304,11 +305,11 @@ data View c k v where
 -- short hand constructors and selectors
 
 -- | Construct a RewardDeposits View from the two maps that make up a UMap
-rewards ::
+rdPairs ::
   Map (Credential 'Staking c) (Trip c) ->
   Map Ptr (Credential 'Staking c) ->
   View c (Credential 'Staking c) RDPair
-rewards x y = RewardDeposits (UMap x y)
+rdPairs x y = RewardDeposits (UMap x y)
 
 -- | Construct a Delegations View from the two maps that make up a UMap
 delegations ::
@@ -362,6 +363,10 @@ compactRewView x = Map.map rdReward $ unUnify (RewardDeposits x)
 -- | Materialize the Deposit  Map from a 'UMap'
 depositView :: UMap c -> Map.Map (Credential 'Staking c) Coin
 depositView x = Map.map (fromCompact . rdDeposit) $ unUnify (RewardDeposits x)
+
+-- | Materialize the RDPairs Map from a 'UMap'
+rdPairView :: UMap c -> Map.Map (Credential 'Staking c) RDPair
+rdPairView x = unUnify (RewardDeposits x)
 
 -- | Materialize the Delegation Map from a 'UMap'
 delView :: UMap c -> Map.Map (Credential 'Staking c) (KeyHash 'StakePool c)
@@ -434,7 +439,7 @@ delete' ::
   View c k v ->
   View c k v
 delete' stakeid (RewardDeposits (UMap tripmap ptrmap)) =
-  rewards (Map.update ok stakeid tripmap) ptrmap
+  rdPairs (Map.update ok stakeid tripmap) ptrmap
   where
     ok (Triple _ ptr poolid) = zeroMaybe (Triple SNothing ptr poolid)
 delete' stakeid (Delegations (UMap tripmap ptrmap)) =
@@ -475,7 +480,7 @@ insertWith' ::
   View c k v ->
   View c k v
 insertWith' comb stakeid newpair (RewardDeposits (UMap tripmap ptrmap)) =
-  rewards (Map.alter comb2 stakeid tripmap) ptrmap
+  rdPairs (Map.alter comb2 stakeid tripmap) ptrmap
   where
     -- Here 'v' is (CompactForm Coin), but the UMap stores Word64,
     -- so there is some implict coercion going on here using the Triple pattern

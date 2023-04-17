@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxOut (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (
   UTxO (..),
  )

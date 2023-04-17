@@ -28,7 +28,7 @@ import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
  )
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.API

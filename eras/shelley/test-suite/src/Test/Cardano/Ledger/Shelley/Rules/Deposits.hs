@@ -31,8 +31,8 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   synopsisCoinMap,
  )
 import Cardano.Ledger.TreeDiff (diffExpr)
-import Cardano.Ledger.UMapCompact (depositView)
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (depositView)
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition.Trace (
   SourceSignalTarget (..),

@@ -60,8 +60,8 @@ import Cardano.Ledger.Shelley.TxBody (
   Withdrawals (..),
  )
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.UMapCompact (Trip (..), UMap (..), View (..), fromCompact)
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (Trip (..), UMap (..), View (..), fromCompact)
+import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈))

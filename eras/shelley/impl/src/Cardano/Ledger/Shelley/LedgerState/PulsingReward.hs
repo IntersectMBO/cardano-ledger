@@ -77,7 +77,7 @@ import Cardano.Ledger.Shelley.TxBody (
   getRwdCred,
  )
 import Cardano.Ledger.Slot (EpochSize (..))
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Group (invert)
 import Data.Map.Strict (Map)
