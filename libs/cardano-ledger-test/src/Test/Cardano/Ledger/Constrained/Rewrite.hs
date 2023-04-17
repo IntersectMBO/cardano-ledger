@@ -327,6 +327,8 @@ accumdep info answer c = case c of
   -- be too late to overide the projections with the values of the vars in 'cs'
   Member t cs -> mkDeps (vars t) (vars cs) answer
   NotMember t cs -> mkDeps (vars t) (vars cs) answer
+  MapMember k v m -> mkDeps (vars k) (vars v) (mkDeps (vars v) (vars m) answer)
+  NotMapMember k v m -> mkDeps (vars k) (vars v) (mkDeps (vars v) (vars m) answer)
   t :<-: ts -> mkDeps (varsOfTarget Set.empty ts) (vars t) answer
   GenFrom t ts -> mkDeps (varsOfTarget Set.empty ts) (vars t) answer
   List t cs -> mkDeps (List.foldl' varsOfTerm Set.empty cs) (vars t) answer

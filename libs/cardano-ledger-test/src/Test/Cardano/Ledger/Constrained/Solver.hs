@@ -374,6 +374,18 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     Refl <- sameRep rng b
     x <- simplify expr
     mapSpec SzAny RelAny PairAny (RngRel (relDisjoint rng (Set.singleton x)))
+  (MapMember exprKey exprVal (Var v2@(V _ (MapR dom' rng') _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom dom'
+    Refl <- sameRep rng rng'
+    k <- simplify exprKey
+    v <- simplify exprVal
+    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton k)) (RngRel (relSuperset rng (Set.singleton v)))
+  (NotMapMember exprKey exprVal (Var v2@(V _ (MapR dom' rng') _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom dom'
+    Refl <- sameRep rng rng'
+    k <- simplify exprKey
+    v <- simplify exprVal
+    mapSpec SzAny (relDisjoint dom (Set.singleton k)) (RngRel (relDisjoint rng (Set.singleton v)))
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
