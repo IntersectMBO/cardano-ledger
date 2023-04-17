@@ -32,12 +32,13 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayTALLY)
+import Cardano.Ledger.Conway.Era (ConwayDELEGS, ConwayLEDGER, ConwayTALLY)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovernance (..),
   ConwayTallyState,
   GovernanceProcedure (..),
  )
+import Cardano.Ledger.Conway.Rules.Delegs (ConwayDelegsEvent, ConwayDelegsPredFailure)
 import Cardano.Ledger.Conway.Rules.Tally (ConwayTallyPredFailure, TallyEnv (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -53,10 +54,6 @@ import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
   DelplEnv,
   LedgerEnv (..),
-  ShelleyDELEGS,
-  ShelleyDelegsEvent,
-  ShelleyDelegsPredFailure,
-  ShelleyDelplPredFailure,
   ShelleyLEDGERS,
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
@@ -300,15 +297,16 @@ instance
 instance
   ( EraTx era
   , ShelleyEraTxBody era
-  , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
-  , State (EraRule "DELPL" era) ~ CertState era
-  , Environment (EraRule "DELPL" era) ~ DelplEnv era
-  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
-  , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
-  , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
-  , Event (EraRule "DELEGS" era) ~ ShelleyDelegsEvent era
+  , Embed (EraRule "CERT" era) (ConwayDELEGS era)
+  , State (EraRule "CERT" era) ~ CertState era
+  , Environment (EraRule "CERT" era) ~ DelplEnv era
+  , Signal (EraRule "CERT" era) ~ DCert (EraCrypto era)
+  , PredicateFailure (EraRule "DELEGS" era) ~ ConwayDelegsPredFailure era
+  , Event (EraRule "DELEGS" era) ~ ConwayDelegsEvent era
+  , Embed (EraRule "CERT" era) (ConwayDELEGS era)
+  , EraRule "DELEGS" era ~ ConwayDELEGS era
   ) =>
-  Embed (ShelleyDELEGS era) (ConwayLEDGER era)
+  Embed (ConwayDELEGS era) (ConwayLEDGER era)
   where
   wrapFailed = ConwayDelegsFailure
   wrapEvent = DelegsEvent

@@ -20,12 +20,16 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
   ShelleyDelegsPredFailure (..),
   ShelleyDelegsEvent (..),
   PredicateFailure,
-  delegsTransition,
+  zeroRewards,
+  isDelegationRegistered,
+  drainedRewardAccounts,
+  isSubmapOfUM,
 )
 where
 
 import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes (
+  Network,
   ShelleyBase,
   TxIx,
   invalidKey,
@@ -64,6 +68,7 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UMap (Trip (..), UMap (..), View (..), fromCompact)
 import qualified Cardano.Ledger.UMap as UM
+import Control.Arrow (left)
 import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈))
@@ -131,7 +136,7 @@ instance
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
-  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
+  , EraRule "DELEGS" era ~ ShelleyDELEGS era
   ) =>
   STS (ShelleyDELEGS era)
   where
@@ -201,7 +206,7 @@ delegsTransition ::
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
-  , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
+  , EraRule "DELEGS" era ~ ShelleyDELEGS era
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
@@ -209,66 +214,84 @@ delegsTransition = do
   network <- liftSTS $ asks networkId
 
   case certificates of
-    Empty -> do
-      let ds = certDState dpstate
-          withdrawals_ = unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
-          rewards' = rewards ds
-      isSubmapOf withdrawals_ rewards' -- withdrawals_ ⊆ rewards
-        ?! WithdrawalsNotInRewardsDELEGS
-          ( Map.differenceWith
-              (\x y -> if x /= y then Just x else Nothing)
-              withdrawals_
-              (Map.mapKeys (mkRwdAcnt network) (UM.rewView (dsUnified ds)))
-          )
-
-      let drainedRewardAccounts :: Map.Map (Credential 'Staking (EraCrypto era)) UM.RDPair
-          drainedRewardAccounts =
-            Map.foldrWithKey
-              ( \(RewardAcnt _ cred) _coin ->
-                  Map.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0))
-                  -- Note that the deposit (CompactCoin 0) will be ignored.
-              )
-              Map.empty
-              withdrawals_
-          unified' = rewards' UM.⨃ drainedRewardAccounts
-      pure $ dpstate {certDState = ds {dsUnified = unified'}}
+    Empty -> zeroRewards dpstate tx network
     gamma :|> c -> do
       dpstate' <-
         trans @(ShelleyDELEGS era) $ TRC (env, dpstate, gamma)
-
-      let isDelegationRegistered = case c of
-            DCertDeleg (Delegate deleg) ->
-              let stPools_ = psStakePoolParams $ certPState dpstate'
-                  targetPool = dDelegatee deleg
-               in if eval (targetPool ∈ dom stPools_)
-                    then Right ()
-                    else Left $ DelegateeNotRegisteredDELEG targetPool
-            _ -> Right ()
-      isDelegationRegistered ?!: id
-
+      left DelegateeNotRegisteredDELEG (isDelegationRegistered @era dpstate' c)
+        ?!: id
       -- It is impossible to have 65535 number of certificates in a
       -- transaction, therefore partial function is justified.
       let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(EraRule "DELPL" era) $
         TRC (DelplEnv slot ptr pp acnt, dpstate', c)
+
+isDelegationRegistered ::
+  CertState era ->
+  DCert (EraCrypto era) ->
+  Either (KeyHash 'StakePool (EraCrypto era)) ()
+isDelegationRegistered dpstate' c = case c of
+  DCertDeleg (Delegate deleg) ->
+    let stPools_ = psStakePoolParams $ certPState dpstate'
+        targetPool = dDelegatee deleg
+     in if eval (targetPool ∈ dom stPools_)
+          then Right ()
+          else Left targetPool
+  _ -> Right ()
+
+-- @withdrawals_@ is small and @rewards@ big, better to transform the former
+-- than the latter into the right shape so we can call 'Map.isSubmapOf'.
+isSubmapOfUM ::
+  forall era.
+  Map (RewardAcnt (EraCrypto era)) Coin ->
+  View (EraCrypto era) (Credential 'Staking (EraCrypto era)) UM.RDPair ->
+  Bool
+isSubmapOfUM ws (RewardDeposits (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
   where
-    -- @withdrawals_@ is small and @rewards@ big, better to transform the former
-    -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
-    isSubmapOf ::
-      Map (RewardAcnt (EraCrypto era)) Coin ->
-      View (EraCrypto era) (Credential 'Staking c) UM.RDPair ->
-      Bool
-    isSubmapOf withdrawals_ (RewardDeposits (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
-      where
-        withdrawalMap :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
-        withdrawalMap =
-          Map.fromList
-            [ (cred, coin)
-            | (RewardAcnt _ cred, coin) <- Map.toList withdrawals_
-            ]
-        f :: Coin -> Trip (EraCrypto era) -> Bool
-        f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == fromCompact coin2
-        f _ _ = False
+    withdrawalMap :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
+    withdrawalMap =
+      Map.fromList
+        [ (cred, coin)
+        | (RewardAcnt _ cred, coin) <- Map.toList ws
+        ]
+    f :: Coin -> Trip (EraCrypto era) -> Bool
+    f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == fromCompact coin2
+    f _ _ = False
+
+drainedRewardAccounts ::
+  Map (RewardAcnt (EraCrypto era)) a ->
+  Map.Map (Credential 'Staking (EraCrypto era)) UM.RDPair
+drainedRewardAccounts =
+  Map.foldrWithKey
+    ( \(RewardAcnt _ cred) _coin ->
+        Map.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0))
+        -- Note that the deposit (CompactCoin 0) will be ignored.
+    )
+    Map.empty
+
+zeroRewards ::
+  forall era.
+  ( EraTx era
+  , State (EraRule "DELEGS" era) ~ CertState era
+  , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
+  ) =>
+  CertState era ->
+  Tx era ->
+  Network ->
+  TransitionRule (EraRule "DELEGS" era)
+zeroRewards dpstate tx network = do
+  let ds = certDState dpstate
+      wdrls = unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
+      rewards' = rewards ds
+  isSubmapOfUM @era wdrls rewards' -- withdrawals_ ⊆ rewards
+    ?! WithdrawalsNotInRewardsDELEGS @era
+      ( Map.differenceWith
+          (\x y -> if x /= y then Just x else Nothing)
+          wdrls
+          (Map.mapKeys (mkRwdAcnt network) (UM.rewView (dsUnified ds)))
+      )
+  let unified' = rewards' UM.⨃ drainedRewardAccounts @era wdrls
+  pure $ dpstate {certDState = ds {dsUnified = unified'}}
 
 instance
   ( Era era

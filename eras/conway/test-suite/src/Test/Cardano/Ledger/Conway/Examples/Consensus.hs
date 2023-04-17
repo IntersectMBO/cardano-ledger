@@ -31,7 +31,7 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Delegation.Certificates (ConwayDCert (..))
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Rules (ConwayLEDGER)
+import Cardano.Ledger.Conway.Rules (ConwayDELEGS, ConwayDelegsPredFailure (..), ConwayLEDGER)
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
@@ -49,10 +49,8 @@ import Cardano.Ledger.Shelley.API (
   PoolCert (..),
   ProposedPPUpdates (..),
   RewardAcnt (..),
-  ShelleyDELEGS,
   TxId (..),
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegsPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -83,7 +81,7 @@ ledgerExamplesConway =
     , SLE.sleApplyTxError =
         ApplyTxError $
           pure $
-            wrapFailed @(ShelleyDELEGS Conway) @(ConwayLEDGER Conway) $
+            wrapFailed @(ConwayDELEGS Conway) @(ConwayLEDGER Conway) $
               DelegateeNotRegisteredDELEG @Conway (SLE.mkKeyHash 1)
     , SLE.sleRewardsCredentials =
         Set.fromList

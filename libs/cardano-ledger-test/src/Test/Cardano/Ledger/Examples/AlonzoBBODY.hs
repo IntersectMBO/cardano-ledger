@@ -33,7 +33,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block (..), txid)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayDelegsPredFailure (..), ConwayLedgerPredFailure (..))
 
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -672,7 +672,7 @@ makeTooBig proof@(Babbage _) =
   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof@(Conway _) =
-  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayDelegsFailure . DelplFailure . PoolFailure $
+  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayDelegsFailure . CertFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 

@@ -8,6 +8,11 @@
 * Rename `obligationDPState` to `obligationCertState`
 * Rename `keyCertsRefundsDPState` to `keyCertsRefundsCertState`
 * Rename `totalCertsDepositsDPState` to `totalCertsDepositsCertState`
+* Added new functions to `DELEGS` rule
+  * `zeroRewards`
+  * `isDelegationRegistered`
+  * `drainedRewardAccounts`
+  * `isSubmapOfUM`
 
 ## 1.1.0.0
 
