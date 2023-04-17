@@ -116,7 +116,7 @@ reapRewards ::
   UMap c
 reapRewards (UMap tmap ptrmap) withdrawals = UMap (Map.mapWithKey g tmap) ptrmap
   where
-    g k (Triple x y z) = Triple (fmap (removeRewards k) x) y z
+    g k (Triple x y z w) = Triple (fmap (removeRewards k) x) y z w
     removeRewards k v@(RDPair _ d) =
       if k `Map.member` withdrawals then RDPair (CompactCoin 0) d else v
 

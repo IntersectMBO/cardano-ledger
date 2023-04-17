@@ -299,7 +299,7 @@ class Extract t era where
 instance EraCrypto era ~ c => Extract (DState c) era where
   extract x =
     DState
-      (UM.unify (makeRewards x) (mDelegations x) Map.empty)
+      (UM.unify (makeRewards x) (mDelegations x) Map.empty Map.empty)
       Map.empty
       genDelegsZero
       instantaneousRewardsZero

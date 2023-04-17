@@ -419,12 +419,13 @@ ppRDPair (RDPair rew dep) =
     ]
 
 ppTrip :: Trip c -> PDoc
-ppTrip (Triple mpair set mpool) =
+ppTrip (Triple mpair set mpool drep) =
   ppSexp
     "Triple"
     [ ppStrictMaybe ppRDPair mpair
     , ppSet ppPtr set
     , ppStrictMaybe ppKeyHash mpool
+    , ppStrictMaybe ppKeyHash drep
     ]
 
 ppUnifiedMap :: UMap c -> PDoc

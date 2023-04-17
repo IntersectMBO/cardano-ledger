@@ -7,6 +7,7 @@ import System.IO (
   stdout,
   utf8,
  )
+import Test.Cardano.Data.Incremental (ilcTests)
 import Test.Cardano.Data.MapExtrasSpec (mapExtrasSpec)
 import Test.Hspec
 import Test.Hspec.Runner
@@ -22,6 +23,7 @@ spec :: Spec
 spec =
   describe "cardano-data" $ do
     describe "MapExtras" mapExtrasSpec
+    ilcTests
 
 main :: IO ()
 main = do
