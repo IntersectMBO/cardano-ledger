@@ -48,8 +48,6 @@ import Data.MapExtras (
   noKeys,
  )
 import qualified Data.Set as Set
-import Data.UMap (Tag (..), View (..))
-import qualified Data.UMap as UM
 import Prelude hiding (lookup)
 
 -- ===============================================================================
@@ -220,7 +218,6 @@ compute (DRestrict (Base SetR (Sett set)) (Base MapR m)) = Map.restrictKeys m se
 compute (DRestrict (SetSingleton k) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Singleton k _v) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Dom (Base MapR x)) (Base MapR y)) = Map.intersection y x
-compute (DRestrict (Dom (Base (ViewR _) x)) (Base MapR y)) = UM.domRestrict x y
 -- This case inspired by set expression in EpochBoundary.hs
 -- (dom (delegs ▷ Set.singleton hk) ◁ stake) in EpochBoundart.hs
 -- ((dom (Map(62)? ▷ (setSingleton _ ))) ◁ Map(63)?) which has this structure
@@ -368,9 +365,6 @@ fromList MapR combine xs = Map.fromListWith combine xs
 fromList ListR combine xs = fromPairs combine xs
 fromList SetR combine xs = foldr (addp combine) (Sett (Set.empty)) xs
 fromList SingleR combine xs = foldr (addp combine) Fail xs
-fromList (ViewR Rew) combine xs = foldr (addp combine) (Rewards UM.empty) xs
-fromList (ViewR Del) combine xs = foldr (addp combine) (Delegations UM.empty) xs
-fromList (ViewR Ptr) combine xs = foldr (addp combine) (Ptrs UM.empty) xs
 
 -- =======================================================================================
 
@@ -384,9 +378,6 @@ materialize ListR x = fromPairs (\l _r -> l) (runCollect x [] (:))
 materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
 materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))
 materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
-materialize (ViewR Rew) x = runCollect x (Rewards UM.empty) (\(k, v) ans -> UM.insert' k v ans)
-materialize (ViewR Del) x = runCollect x (Delegations UM.empty) (\(k, v) ans -> UM.insert' k v ans)
-materialize (ViewR Ptr) x = runCollect x (Ptrs UM.empty) (\(k, v) ans -> UM.insert' k v ans)
 
 -- =========================================================================================
 -- Now we make an iterator that collects triples, on the intersection

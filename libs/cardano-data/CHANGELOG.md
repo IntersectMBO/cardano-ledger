@@ -1,5 +1,9 @@
 # Version history for `cardano-data`
 
+## 1.1.0.0
+
+- Remove `Data.UMap` #3371
+
 ## 1.0.1.0
 
 * Fix - A bug was fixed in the `canonicalInsert` function.
