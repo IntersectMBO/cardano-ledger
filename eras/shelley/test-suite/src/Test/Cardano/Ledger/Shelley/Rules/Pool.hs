@@ -32,6 +32,7 @@ import Cardano.Protocol.TPraos.BHeader (
   bheaderSlotNo,
  )
 import Control.SetAlgebra (dom, eval, (∈), (∉))
+import Control.State.Transition (STS (State))
 import Control.State.Transition.Trace (
   SourceSignalTarget (..),
   TraceOrder (OldestFirst),
@@ -97,9 +98,9 @@ poolRetirement ::
   Property
 poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
-    map (poolRetirementProp currentEpoch maxEpoch) (sourceSignalTargets poolTr)
+    map (poolRetirementProp unDiff currentEpoch maxEpoch) (sourceSignalTargets poolTr)
   where
-    (chainSt', poolTr) = poolTraceFromBlock chainSt block
+    (chainSt', poolTr, unDiff) = poolTraceFromBlock chainSt block
     bhb = bhbody $ bheader block
     currentEpoch = (epochFromSlotNo . bheaderSlotNo) bhb
     maxEpoch = (view ppEMaxL . esPp . nesEs . chainNes) chainSt'
@@ -116,9 +117,9 @@ poolRegistration ::
   Property
 poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
   conjoin $
-    map poolRegistrationProp (sourceSignalTargets poolTr)
+    map (poolRegistrationProp unDiff) (sourceSignalTargets poolTr)
   where
-    (_, poolTr) = poolTraceFromBlock chainSt block
+    (_, poolTr, unDiff) = poolTraceFromBlock chainSt block
 
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
@@ -132,49 +133,56 @@ poolStateIsInternallyConsistent ::
   Property
 poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = block}) =
   conjoin $
-    map poolStateIsInternallyConsistentProp (traceStates OldestFirst poolTr)
+    map (poolStateIsInternallyConsistentProp . unDiff) (traceStates OldestFirst poolTr)
   where
-    (_, poolTr) = poolTraceFromBlock chainSt block
+    (_, poolTr, unDiff) = poolTraceFromBlock chainSt block
 
-poolRegistrationProp :: SourceSignalTarget (ShelleyPOOL era) -> Property
+poolRegistrationProp :: (State (ShelleyPOOL era) -> PState (EraCrypto era)) -> SourceSignalTarget (ShelleyPOOL era) -> Property
 poolRegistrationProp
+  unDiff
   SourceSignalTarget
     { signal = (DCertPool (RegPool poolParams))
     , source = sourceSt
     , target = targetSt
     } =
     let hk = ppId poolParams
-        reRegistration = eval (hk ∈ dom (psStakePoolParams sourceSt))
+        reRegistration = eval (hk ∈ dom (psStakePoolParams (unDiff sourceSt)))
      in if reRegistration
           then
             conjoin
               [ counterexample
                   "Pre-existing PoolParams must still be registered in pParams"
-                  (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool)
+                  (eval (hk ∈ dom (psStakePoolParams (unDiff targetSt))) :: Bool)
               , counterexample
                   "New PoolParams are registered in future Params map"
-                  (Map.lookup hk (psFutureStakePoolParams targetSt) === Just poolParams)
+                  (Map.lookup hk (psFutureStakePoolParams (unDiff targetSt)) === Just poolParams)
               , counterexample
                   "PoolParams are removed in 'retiring'"
-                  (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
+                  (eval (hk ∉ dom (psRetiring (unDiff targetSt))) :: Bool)
               ]
           else -- first registration
 
             conjoin
               [ counterexample
                   "New PoolParams are registered in pParams"
-                  (Map.lookup hk (psStakePoolParams targetSt) === Just poolParams)
+                  (Map.lookup hk (psStakePoolParams (unDiff targetSt)) === Just poolParams)
               , counterexample
                   "PoolParams are not present in 'future pool params'"
-                  (eval (hk ∉ dom (psFutureStakePoolParams targetSt)) :: Bool)
+                  (eval (hk ∉ dom (psFutureStakePoolParams (unDiff targetSt))) :: Bool)
               , counterexample
                   "PoolParams are removed in 'retiring'"
-                  (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
+                  (eval (hk ∉ dom (psRetiring (unDiff targetSt))) :: Bool)
               ]
-poolRegistrationProp _ = property ()
+poolRegistrationProp _ _ = property ()
 
-poolRetirementProp :: EpochNo -> EpochNo -> SourceSignalTarget (ShelleyPOOL era) -> Property
+poolRetirementProp ::
+  (State (ShelleyPOOL era) -> PState (EraCrypto era)) ->
+  EpochNo ->
+  EpochNo ->
+  SourceSignalTarget (ShelleyPOOL era) ->
+  Property
 poolRetirementProp
+  unDiff
   currentEpoch@(EpochNo ce)
   (EpochNo maxEpoch)
   SourceSignalTarget {source = sourceSt, target = targetSt, signal = (DCertPool (RetirePool hk e))} =
@@ -184,15 +192,15 @@ poolRetirementProp
           (currentEpoch < e && e < EpochNo (ce + maxEpoch))
       , counterexample
           "hk must be in source stPools"
-          (eval (hk ∈ dom (psStakePoolParams sourceSt)) :: Bool)
+          (eval (hk ∈ dom (psStakePoolParams (unDiff sourceSt))) :: Bool)
       , counterexample
           "hk must be in target stPools"
-          (eval (hk ∈ dom (psStakePoolParams targetSt)) :: Bool)
+          (eval (hk ∈ dom (psStakePoolParams (unDiff targetSt))) :: Bool)
       , counterexample
           "hk must be in target's retiring"
-          (eval (hk ∈ dom (psRetiring targetSt)) :: Bool)
+          (eval (hk ∈ dom (psRetiring (unDiff targetSt))) :: Bool)
       ]
-poolRetirementProp _ _ _ = property ()
+poolRetirementProp _ _ _ _ = property ()
 
 poolStateIsInternallyConsistentProp :: PState c -> Property
 poolStateIsInternallyConsistentProp PState {psStakePoolParams = pParams_, psRetiring = retiring_} = do

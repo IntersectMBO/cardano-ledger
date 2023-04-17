@@ -22,6 +22,7 @@ source-repository head
 library
     exposed-modules:
         Test.Cardano.Ledger.TerseTools
+        Test.Cardano.Ledger.Shelley.ShelleyDiffTests
         Test.Cardano.Ledger.Shelley.Address.Bootstrap
         Test.Cardano.Ledger.Shelley.BenchmarkFunctions
         Test.Cardano.Ledger.Shelley.ByronTranslation
@@ -79,7 +80,7 @@ library
         cardano-crypto-class,
         cardano-crypto-test,
         cardano-crypto-wrapper,
-        cardano-data,
+        cardano-data:{cardano-data, testlib},
         cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
         cardano-ledger-byron,
         cardano-ledger-byron-test,

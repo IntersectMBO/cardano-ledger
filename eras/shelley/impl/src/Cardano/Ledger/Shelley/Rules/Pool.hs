@@ -39,6 +39,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
+import Cardano.Ledger.DPState (Diff (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
@@ -55,7 +56,7 @@ import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
+import Control.SetAlgebra (dom, eval, (∈), (∉))
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -67,13 +68,14 @@ import Control.State.Transition (
   (?!),
  )
 import qualified Data.ByteString as BS
+import Data.Incremental (deleteD, insertD, ($$))
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data PoolEnv era
-  = PoolEnv !SlotNo !(PParams era)
+  = PoolEnv !SlotNo !(PParams era) !(PState (EraCrypto era))
 
 deriving instance Show (PParams era) => Show (PoolEnv era)
 
@@ -105,7 +107,7 @@ instance NoThunks (ShelleyPoolPredFailure era)
 instance NFData (ShelleyPoolPredFailure era)
 
 instance EraPParams era => STS (ShelleyPOOL era) where
-  type State (ShelleyPOOL era) = PState (EraCrypto era)
+  type State (ShelleyPOOL era) = Diff (PState (EraCrypto era))
 
   type Signal (ShelleyPOOL era) = DCert (EraCrypto era)
 
@@ -167,8 +169,8 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
 
 poolDelegationTransition :: forall era. EraPParams era => TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
-  TRC (PoolEnv slot pp, ps, c) <- judgmentContext
-  let stpools = psStakePoolParams ps
+  TRC (PoolEnv slot pp ps, ps', c) <- judgmentContext
+  let stpools = psStakePoolParams ps $$ diffPsStakePoolParams ps'
   let pv = pp ^. ppProtocolVersionL
   case c of
     DCertPool (RegPool poolParam) -> do
@@ -198,10 +200,14 @@ poolDelegationTransition = do
           -- register new, Pool-Reg
           tellEvent $ RegisterPool hk
           pure $
-            payPoolDeposit hk pp $
-              ps
-                { psStakePoolParams = eval (psStakePoolParams ps ∪ singleton hk poolParam)
-                }
+            payPoolDeposit
+              hk
+              pp
+              (ps $$ ps')
+              ( ps'
+                  { diffPsStakePoolParams = insertD hk poolParam <> diffPsStakePoolParams ps'
+                  }
+              )
         else do
           tellEvent $ ReregisterPool hk
           -- hk is already registered, so we want to reregister it. That means adding it to the
@@ -212,9 +218,9 @@ poolDelegationTransition = do
           -- does it need to pay a new deposit (at the current deposit amount). But of course,
           -- if that has happened, we cannot be in this branch of the if statement.
           pure $
-            ps
-              { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam)
-              , psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
+            ps'
+              { diffPsFutureStakePoolParams = insertD hk poolParam <> diffPsFutureStakePoolParams ps'
+              , diffPsRetiring = deleteD hk <> diffPsRetiring ps'
               }
     DCertPool (RetirePool hk e) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
@@ -226,13 +232,13 @@ poolDelegationTransition = do
       (cepoch < e && e <= cepoch + maxEpoch)
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
-      pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk e)}
+      pure $ ps' {diffPsRetiring = insertD hk e}
     DCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
-      pure ps
+      pure ps'
     DCertMir _ -> do
       failBecause $ WrongCertificateTypePOOL 1
-      pure ps
+      pure ps'
     DCertGenesis _ -> do
       failBecause $ WrongCertificateTypePOOL 2
-      pure ps
+      pure ps'

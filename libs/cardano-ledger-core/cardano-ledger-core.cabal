@@ -137,6 +137,7 @@ library testlib
         binary,
         bytestring,
         cardano-crypto-class,
+        cardano-data:{cardano-data, testlib},
         cardano-ledger-core,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-byron-test,
@@ -163,6 +164,7 @@ test-suite tests
     other-modules:
         Test.Cardano.Ledger.AddressSpec
         Test.Cardano.Ledger.BaseTypesSpec
+        Test.Cardano.Ledger.CoreDiffTests
 
     default-language: Haskell2010
     ghc-options:
@@ -175,6 +177,7 @@ test-suite tests
         aeson,
         binary,
         bytestring,
+        cardano-data:testlib,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core,
         cardano-crypto-class,

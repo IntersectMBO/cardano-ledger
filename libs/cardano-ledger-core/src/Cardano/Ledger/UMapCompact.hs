@@ -80,11 +80,13 @@ module Cardano.Ledger.UMapCompact (
   size,
   unify,
   RDPair (..),
+  Diff (UMap', RDPair'),
+  Triple' (..),
 )
 where
 
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), Diff (DiffCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Crypto (Crypto)
@@ -109,6 +111,9 @@ import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (lookup)
+
+import Data.Incremental hiding (zero)
+import qualified Data.Incremental as ILC
 
 -- ================================================
 
@@ -818,3 +823,56 @@ instance ToExpr RDPair
 instance ToExpr (Trip c)
 
 instance ToExpr (UMap c)
+
+-- ============================================================================
+
+-- pattern Triple :: StrictMaybe RDPair -> Set Ptr -> StrictMaybe (KeyHash 'StakePool c) -> Trip c
+
+-- | How the range of the UMap might change. Note we deliberately do NOT
+--   include the (Set Ptr) as this is redundant information storing the
+--   inverse of the Ptrs map. This will be changed when we make changes to the Ptrs map.
+data Triple' c = Triple' (Diff RDPair) (BinaryRngD (KeyHash 'StakePool c))
+  deriving (Eq, Show)
+
+instance Semigroup (Triple' c) where
+  (Triple' x y) <> (Triple' i j) = Triple' (x <> i) (y <> j)
+
+-- But. Note there is no Monoid instance for Triple', but that is OK
+
+instance ILC RDPair where
+  data Diff RDPair = RDPair' (Diff Coin) (Diff Coin)
+    deriving (Eq, Show)
+  applyDiff (RDPair (CompactCoin x) (CompactCoin y)) (RDPair' (DiffCoin i) (DiffCoin j)) =
+    (RDPair (CompactCoin (x + fromIntegral i)) (CompactCoin (y + fromIntegral j)))
+  zero = RDPair' (DiffCoin 0) (DiffCoin 0)
+  extend (RDPair' (DiffCoin x) (DiffCoin y)) (RDPair' (DiffCoin i) (DiffCoin j)) =
+    RDPair' (DiffCoin (x + i)) (DiffCoin (y + j))
+  totalDiff _ = RDPair' (DiffCoin 0) (DiffCoin 0)
+
+instance Semigroup RDPair where
+  (RDPair x y) <> (RDPair a b) = RDPair (addCompact x a) (addCompact y b)
+instance Monoid RDPair where
+  mempty = RDPair (CompactCoin 0) (CompactCoin 0)
+
+instance ILC (UMap c) where
+  data Diff (UMap c)
+    = UMap'
+        (Map (Credential 'Staking c) (Triple' c))
+        (Map Ptr (BinaryRngD (Credential 'Staking c)))
+    deriving (Eq, Show)
+  applyDiff um0 (UMap' umD ptrmD) = Map.foldlWithKey' accumUm um1 umD
+    where
+      um1 = Map.foldlWithKey' accumPtr um0 ptrmD
+      accumPtr um2 ptr DeleteD = delete ptr (Ptrs um2)
+      accumPtr um2 ptr (WriteD v) = insert ptr v (Ptrs um2)
+      accumUm um3 cred (Triple' rd' ptr') =
+        case ptr' of
+          DeleteD -> delete cred (Delegations um4)
+          WriteD keyhash -> insert cred keyhash (Delegations um4)
+        where
+          um4 = case lookup cred (RewardDeposits um3) of
+            Just rd -> insert cred (applyDiff rd rd') (RewardDeposits um3)
+            Nothing -> insert cred (applyDiff mempty rd') (RewardDeposits um3)
+  zero = UMap' Map.empty Map.empty
+  extend (UMap' x y) (UMap' i j) = UMap' (Map.unionWith (<>) x i) (Map.unionWith (<>) y j)
+  totalDiff _ = UMap' Map.empty Map.empty

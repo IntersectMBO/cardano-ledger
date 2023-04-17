@@ -36,6 +36,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
+  PState,
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -65,6 +66,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitS
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
+import Data.Incremental (ILC (..))
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.Set as Set
@@ -185,11 +187,11 @@ poolTraceFromBlock ::
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->
-  (ChainState era, Trace (ShelleyPOOL era))
+  (ChainState era, Trace (ShelleyPOOL era), State (ShelleyPOOL era) -> PState (EraCrypto era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt
-  , runShelleyBase $
-      Trace.closure @(ShelleyPOOL era) poolEnv poolSt0 poolCerts
+  , runShelleyBase $ Trace.closure @(ShelleyPOOL era) poolEnv (totalDiff poolSt0) poolCerts
+  , applyDiff poolSt0
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -197,7 +199,7 @@ poolTraceFromBlock chainSt block =
     poolCerts = filter poolCert (certs txs)
     poolEnv =
       let (LedgerEnv s _ pp _) = ledgerEnv
-       in PoolEnv s pp
+       in PoolEnv s pp poolSt0
     poolSt0 =
       let LedgerState _ (DPState _ poolSt0_) = ledgerSt0
        in poolSt0_

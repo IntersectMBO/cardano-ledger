@@ -87,7 +87,7 @@ import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (genDiffCoin, genDiffMonoidMap)
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
@@ -752,3 +752,25 @@ instance Arbitrary RawSeed where
       <*> chooseAny
       <*> chooseAny
       <*> chooseAny
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.Shelley ILC instances --------------------------------------------------
+------------------------------------------------------------------------------------------
+
+instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (Diff (ShelleyPPUPState era)) where
+  arbitrary = ShelleyPPUPState' <$> arbitrary <*> arbitrary
+
+instance Crypto c => Arbitrary (Diff (IncrementalStake c)) where
+  arbitrary = IStake' <$> genDiffMonoidMap arbitrary genDiffCoin <*> genDiffMonoidMap arbitrary genDiffCoin
+
+instance
+  (Era era, Arbitrary (TxOut era), Arbitrary (Diff (GovernanceState era))) =>
+  Arbitrary (Diff (UTxOState era))
+  where
+  arbitrary = UTxOState' <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance
+  (Era era, Arbitrary (TxOut era), Arbitrary (Diff (GovernanceState era))) =>
+  Arbitrary (Diff (LedgerState era))
+  where
+  arbitrary = LedgerState' <$> arbitrary <*> arbitrary

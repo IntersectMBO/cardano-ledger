@@ -94,6 +94,9 @@ module Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
   utxosFeesL,
   utxosGovernanceL,
+
+  -- * ILC instances
+  Diff (IStake', UTxOState', LedgerState'),
 ) where
 
 import Cardano.Ledger.DPState

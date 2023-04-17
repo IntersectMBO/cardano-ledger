@@ -16,6 +16,16 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genAddrBadPtr,
   genCompactAddrBadPtr,
   genBadPtr,
+  genCoin,
+  genDiffCoin,
+  genMonoidMap,
+  genDiffMonoidMap,
+  genDiffDState,
+  genDiffPState,
+  genDiffDPState,
+  genDiffInstantaneousRewards,
+  genDiffRDPair,
+  genDiffUMap,
 )
 where
 
@@ -76,10 +86,14 @@ import Cardano.Ledger.PoolParams (
  )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMapCompact (RDPair (..), Trip (Triple), UMap (UMap))
+import Cardano.Ledger.UMapCompact (RDPair (..), Trip (Triple), Triple' (..), UMap (UMap))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad.Identity (Identity)
 import Data.GenValidity
+import Data.Incremental (
+  Diff (Dm, Dn),
+  MonoidMap (..),
+ )
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Text as T
@@ -89,6 +103,10 @@ import Data.Word (Word16, Word32, Word64)
 import GHC.Stack
 import Generic.Random (genericArbitraryU)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
+import Test.Cardano.Data (
+  genBinaryRngD,
+  genMonoidRngD,
+ )
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
@@ -515,3 +533,77 @@ instance Crypto c => Arbitrary (Stake c) where
         let pair = (,) <$> arbitrary <*> (CompactCoin <$> genWord64 n)
         list <- frequency [(1, pure []), (99, vectorOf n pair)]
         pure (Map.fromList list)
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger ILC instances ----------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+genCoin :: Gen Coin
+genCoin = Coin <$> choose (100, 500)
+
+genDiffCoin :: Gen (Diff Coin)
+genDiffCoin = DiffCoin <$> choose (-20, 20)
+
+genTriple' :: Crypto c => Gen (Triple' c)
+genTriple' = Triple' <$> genDiffRDPair <*> genBinaryRngD arbitrary
+
+genDiffRDPair :: Gen (Diff RDPair)
+genDiffRDPair = RDPair' <$> (DiffCoin <$> choose (-20, 20)) <*> (DiffCoin <$> choose (-20, 20))
+
+genDiffUMap :: Crypto c => Gen (Diff (UMap c))
+genDiffUMap =
+  UMap'
+    <$> (Map.fromList <$> listOf ((,) <$> arbitrary <*> genTriple'))
+    <*> (Map.fromList <$> listOf ((,) <$> arbitrary <*> genBinaryRngD arbitrary))
+
+genMonoidMap :: Ord k => Gen k -> Gen v -> Gen (MonoidMap k v)
+genMonoidMap genk genv = (MM . Map.fromList) <$> listOf ((,) <$> genk <*> genv)
+
+genDiffMonoidMap :: Ord k => Gen k -> Gen (Diff v) -> Gen (Diff (MonoidMap k v))
+genDiffMonoidMap genk genvdiff = (Dm . Map.fromList) <$> listOf ((,) <$> genk <*> genMonoidRngD genvdiff)
+
+genDiffMap :: Ord k => Gen k -> Gen v -> Gen (Diff (Map.Map k v))
+genDiffMap genk genv = (Dn . Map.fromList) <$> listOf ((,) <$> genk <*> genBinaryRngD genv)
+
+genDiffInstantaneousRewards :: Crypto c => Gen (Diff (InstantaneousRewards c))
+genDiffInstantaneousRewards =
+  InstantaneousRewards'
+    <$> genDiffMonoidMap arbitrary genDiffCoin
+    <*> genDiffMonoidMap arbitrary genDiffCoin
+    <*> genDiffCoin
+    <*> genDiffCoin
+
+genDiffDState :: Crypto c => Gen (Diff (DState c))
+genDiffDState =
+  DState'
+    <$> genDiffUMap
+    <*> genDiffMap arbitrary arbitrary
+    <*> genDiffMap arbitrary arbitrary
+    <*> genDiffInstantaneousRewards
+
+genDiffPState :: Crypto c => Gen (Diff (PState c))
+genDiffPState = PState' <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+genDiffDPState :: Crypto c => Gen (Diff (DPState c))
+genDiffDPState = DPState' <$> genDiffDState <*> genDiffPState
+
+instance Crypto c => Arbitrary (Diff (DPState c)) where
+  arbitrary = genDiffDPState
+
+instance Crypto c => Arbitrary (Diff (PState c)) where
+  arbitrary = genDiffPState
+
+instance Crypto c => Arbitrary (Diff (DState c)) where
+  arbitrary = genDiffDState
+
+instance Crypto c => Arbitrary (Diff (InstantaneousRewards c)) where
+  arbitrary = genDiffInstantaneousRewards
+
+instance Crypto c => Arbitrary (Diff (UMap c)) where
+  arbitrary = genDiffUMap
+
+instance Arbitrary (Diff RDPair) where
+  arbitrary = genDiffRDPair
+
+instance Arbitrary (Diff Coin) where
+  arbitrary = genDiffCoin

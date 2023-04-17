@@ -2,12 +2,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -25,6 +24,7 @@ module Cardano.Ledger.DPState (
   payPoolDeposit,
   refundPoolDeposit,
   obligationDPState,
+  Diff (..),
 )
 where
 
@@ -44,6 +44,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
+  Diff (DiffCoin),
  )
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraCrypto, EraPParams, PParams, ppPoolDepositL)
@@ -68,6 +69,7 @@ import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
+import Data.Incremental (ILC (..), MonoidMap (..), insertD, unMM, ($$))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
@@ -118,6 +120,26 @@ data InstantaneousRewards c = InstantaneousRewards
   }
   deriving (Show, Eq, Generic)
 
+instance ILC (InstantaneousRewards c) where
+  data Diff (InstantaneousRewards c) = InstantaneousRewards'
+    { diffReserves :: !(Diff (MonoidMap (Credential 'Staking c) Coin))
+    , diffTreasury :: !(Diff (MonoidMap (Credential 'Staking c) Coin))
+    , diffDeltaReserves :: !(Diff Coin)
+    , diffDeltaTreasury :: !(Diff Coin)
+    }
+    deriving (Eq, Show)
+  applyDiff (InstantaneousRewards w x (DeltaCoin y) (DeltaCoin z)) (InstantaneousRewards' wd xd (DiffCoin yd) (DiffCoin zd)) =
+    InstantaneousRewards
+      (unMM (applyDiff (MM w) wd))
+      (unMM (applyDiff (MM x) xd))
+      (DeltaCoin (y + yd))
+      (DeltaCoin (z + zd))
+  zero = InstantaneousRewards' zero zero zero zero
+  extend (InstantaneousRewards' w x y z) (InstantaneousRewards' a b c d) =
+    InstantaneousRewards' (extend w a) (extend x b) (extend y c) (extend z d)
+  totalDiff (InstantaneousRewards w x (DeltaCoin y) (DeltaCoin z)) =
+    InstantaneousRewards' (totalDiff (MM w)) (totalDiff (MM x)) (totalDiff (Coin y)) (totalDiff (Coin z))
+
 instance NoThunks (InstantaneousRewards c)
 
 instance NFData (InstantaneousRewards c)
@@ -150,6 +172,21 @@ data DState c = DState
   }
   deriving (Show, Eq, Generic)
 
+instance ILC (DState c) where
+  data Diff (DState c)
+    = DState'
+        !(Diff (UMap c))
+        !(Diff (Map (FutureGenDeleg c) (GenDelegPair c)))
+        !(Diff (Map (KeyHash 'Genesis c) (GenDelegPair c)))
+        !(Diff (InstantaneousRewards c))
+    deriving (Eq, Show)
+  applyDiff (DState u f (GenDelegs g) i) (DState' ud fd gd iD) =
+    DState (u $$ ud) (f $$ fd) (GenDelegs (g $$ gd)) (i $$ iD)
+  zero = DState' zero zero zero zero
+  extend (DState' w x y z) (DState' a b c d) = DState' (extend w a) (extend x b) (extend y c) (extend z d)
+  totalDiff (DState w x (GenDelegs y) z) =
+    DState' (totalDiff w) (totalDiff x) (totalDiff y) (totalDiff z)
+
 instance NoThunks (InstantaneousRewards c) => NoThunks (DState c)
 
 instance NFData (InstantaneousRewards c) => NFData (DState c)
@@ -181,7 +218,7 @@ instance Crypto c => ToJSON (DState c) where
 toDStatePair :: (KeyValue a, Crypto c) => DState c -> [a]
 toDStatePair DState {..} =
   [ "unified" .= dsUnified
-  , "fGenDelegs" .= Map.toList (dsFutureGenDelegs)
+  , "fGenDelegs" .= Map.toList dsFutureGenDelegs
   , "genDelegs" .= dsGenDelegs
   , "irwd" .= dsIRewards
   ]
@@ -218,6 +255,25 @@ data PState c = PState
   -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
+
+instance ILC (PState c) where
+  data Diff (PState c) = PState'
+    { diffPsStakePoolParams :: !(Diff (Map (KeyHash 'StakePool c) (PoolParams c)))
+    , diffPsFutureStakePoolParams :: !(Diff (Map (KeyHash 'StakePool c) (PoolParams c)))
+    , diffPsRetiring :: !(Diff (Map (KeyHash 'StakePool c) EpochNo))
+    , diffPsDeposits :: !(Diff (Map (KeyHash 'StakePool c) Coin))
+    }
+    deriving (Eq, Show)
+  applyDiff (PState w x y z) (PState' wd xd yd zd) =
+    PState (w $$ wd) (x $$ xd) (y $$ yd) (z $$ zd)
+  zero = PState' zero zero zero zero
+  extend (PState' w x y z) (PState' a b c d) =
+    PState' (w `extend` a) (x `extend` b) (y `extend` c) (z `extend` d)
+  totalDiff (PState w x y z) =
+    PState' (totalDiff w) (totalDiff x) (totalDiff y) (totalDiff z)
+
+instance Default (Diff (PState c)) where
+  def = undefined
 
 instance NoThunks (PState c)
 
@@ -258,6 +314,15 @@ data DPState c = DPState
   , dpsPState :: !(PState c)
   }
   deriving (Show, Eq, Generic)
+
+instance ILC (DPState c) where
+  data Diff (DPState c) = DPState' (Diff (DState c)) (Diff (PState c))
+    deriving (Eq, Show)
+  applyDiff (DPState d p) (DPState' dD pD) = DPState (d $$ dD) (p $$ pD)
+  zero = DPState' zero zero
+  extend (DPState' x y) (DPState' a b) = DPState' (extend x a) (extend y b)
+  totalDiff (DPState w x) =
+    DPState' (totalDiff w) (totalDiff x)
 
 instance NoThunks (InstantaneousRewards c) => NoThunks (DPState c)
 
@@ -341,13 +406,14 @@ payPoolDeposit ::
   KeyHash 'StakePool (EraCrypto era) ->
   PParams era ->
   PState (EraCrypto era) ->
-  PState (EraCrypto era)
-payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
+  Diff (PState (EraCrypto era)) ->
+  Diff (PState (EraCrypto era))
+payPoolDeposit keyhash pp pstate pstate' = pstate' {diffPsDeposits = newpool <> diffPsDeposits pstate'}
   where
-    pool = psDeposits pstate
+    pool = psDeposits pstate $$ diffPsDeposits pstate'
     newpool
-      | Map.notMember keyhash pool = Map.insert keyhash (pp ^. ppPoolDepositL) pool
-      | otherwise = pool
+      | Map.notMember keyhash pool = insertD keyhash (pp ^. ppPoolDepositL)
+      | otherwise = zero
 
 refundPoolDeposit :: KeyHash 'StakePool c -> PState c -> (Coin, PState c)
 refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
