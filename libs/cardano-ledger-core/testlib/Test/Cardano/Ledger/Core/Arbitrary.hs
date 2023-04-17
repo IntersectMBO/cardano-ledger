@@ -16,6 +16,12 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genAddrBadPtr,
   genCompactAddrBadPtr,
   genBadPtr,
+  genValidUMap,
+  genValidUMapNonEmpty,
+  genValidTriples,
+  genValidTriplesNonEmpty,
+  genInvariantNonEmpty,
+  genRightPreferenceUMap,
 )
 where
 
@@ -55,13 +61,14 @@ import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto (DSIGN))
+import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
 import Cardano.Ledger.DPState
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
   KeyHash (..),
+  KeyRole (StakePool, Staking),
   VKey (..),
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
@@ -76,7 +83,7 @@ import Cardano.Ledger.PoolParams (
  )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMapCompact (RDPair (..), Trip (Triple), UMap (UMap))
+import Cardano.Ledger.UMap (RDPair (..), Trip (Triple), UMap (UMap), View (RewardDeposits), unUnify, unify)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad.Identity (Identity)
 import Data.GenValidity
@@ -465,7 +472,84 @@ instance Crypto c => Arbitrary (Trip c) where
 
 instance Crypto c => Arbitrary (UMap c) where
   arbitrary = UMap <$> arbitrary <*> arbitrary
-  shrink = genericShrink
+
+-- | Used for testing UMap operations
+genValidTriples ::
+  Gen
+    ( Map.Map (Credential 'Staking StandardCrypto) RDPair
+    , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+    , Map.Map Ptr (Credential 'Staking StandardCrypto)
+    )
+genValidTriples = scale (* 2) $ do
+  creds :: [Credential 'Staking StandardCrypto] <- arbitrary
+  let nCreds = length creds
+  rdPairs :: [RDPair] <- vectorOf nCreds arbitrary
+  delegs :: [KeyHash 'StakePool StandardCrypto] <- vectorOf nCreds arbitrary
+  ptrs :: [Ptr] <- arbitrary
+  pure
+    ( Map.fromList $ zip creds rdPairs
+    , Map.fromList $ zip creds delegs
+    , Map.fromList $ zip ptrs creds
+    )
+
+genValidTriplesNonEmpty ::
+  Gen
+    ( Map.Map (Credential 'Staking StandardCrypto) RDPair
+    , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+    , Map.Map Ptr (Credential 'Staking StandardCrypto)
+    )
+genValidTriplesNonEmpty = scale (* 2) $ do
+  Positive nCreds <- arbitrary
+  nPtrs <- chooseInt (1, nCreds)
+  creds :: [Credential 'Staking StandardCrypto] <- vectorOf nCreds arbitrary
+  rdPairs :: [RDPair] <- vectorOf nCreds arbitrary
+  delegs :: [KeyHash 'StakePool StandardCrypto] <- vectorOf nCreds arbitrary
+  ptrs :: [Ptr] <- vectorOf nPtrs arbitrary
+  pure
+    ( Map.fromList $ zip creds rdPairs
+    , Map.fromList $ zip creds delegs
+    , Map.fromList $ zip ptrs creds
+    )
+
+genValidUMap :: Gen (UMap StandardCrypto)
+genValidUMap = do
+  (rdPairs, delegs, ptrs) <- genValidTriples
+  pure $ unify rdPairs delegs ptrs
+
+genValidUMapNonEmpty :: Gen (UMap StandardCrypto)
+genValidUMapNonEmpty = do
+  (rdPairs, delegs, ptrs) <- genValidTriplesNonEmpty
+  pure $ unify rdPairs delegs ptrs
+
+genExcludingKey :: (Ord k, Arbitrary k) => Map.Map k a -> Gen k
+genExcludingKey ks = do
+  k <- arbitrary
+  if k `Map.member` ks
+    then genExcludingKey ks
+    else pure k
+
+genInvariantNonEmpty :: Gen (Credential 'Staking StandardCrypto, Ptr, UMap StandardCrypto)
+genInvariantNonEmpty = do
+  umap@(UMap tripmap ptrmap) <- genValidUMapNonEmpty
+  cred <-
+    oneof
+      [ elements $ Map.keys tripmap
+      , genExcludingKey tripmap
+      ]
+  ptr <-
+    oneof
+      [ elements $ Map.keys ptrmap
+      , genExcludingKey ptrmap
+      ]
+  pure (cred, ptr, umap)
+
+genRightPreferenceUMap :: Gen (UMap StandardCrypto, Map.Map (Credential 'Staking StandardCrypto) RDPair)
+genRightPreferenceUMap = do
+  umap <- genValidUMap
+  let rdMap = unUnify $ RewardDeposits umap
+  subdomain <- sublistOf $ Map.keys rdMap
+  coins <- vectorOf (length subdomain) arbitrary
+  pure (umap, Map.fromList $ zip subdomain coins)
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DPState -------------------------------------------------------------------
