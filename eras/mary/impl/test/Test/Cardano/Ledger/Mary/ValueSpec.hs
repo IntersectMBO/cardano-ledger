@@ -76,14 +76,13 @@ spec = do
         forAll (genMaryValue (genEmptyMultiAsset @StandardCrypto)) $
           roundTripCborRangeFailureExpectation (natVersion @9) maxBound
       it "Too many assets should fail" $
-        expectFailure $
-          property $
-            forAll
-              (genMaryValue (genMultiAssetToFail @StandardCrypto True))
-              ( roundTripCborRangeExpectation @(MaryValue StandardCrypto)
-                  (eraProtVerLow @Mary)
-                  maxBound
-              )
+        property $
+          forAll
+            (genMaryValue (genMultiAssetToFail @StandardCrypto True))
+            ( roundTripCborRangeFailureExpectation @(MaryValue StandardCrypto)
+                (eraProtVerLow @Mary)
+                maxBound
+            )
   describe "MaryValue compacting" $ do
     prop "Canonical generator" $
       \(ma :: MaryValue StandardCrypto) ->
