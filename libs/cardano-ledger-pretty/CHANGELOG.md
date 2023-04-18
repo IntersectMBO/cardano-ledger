@@ -5,6 +5,7 @@
  * Added `PrettyA` instances for:
    * `Delegatee era` #3372
    * `ConwayDelegCert c` #3372
+ * Plutus V3 is now pretty
 
 ## 1.1.0.0
 

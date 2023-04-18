@@ -18,7 +18,6 @@ import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
 import Cardano.Ledger.Babbage.TxBody ()
-import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -26,6 +25,7 @@ import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx ()
+import Cardano.Ledger.Conway.TxInfo (conwayTxInfo)
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
@@ -53,7 +53,7 @@ instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
     error "Unimplemented: Current interface is too limited and needs replacement for Conway to work"
 
 instance Crypto c => ExtendedUTxO (ConwayEra c) where
-  txInfo = babbageTxInfo
+  txInfo = conwayTxInfo
   txscripts = babbageTxScripts
   getAllowedSupplimentalDataHashes txBody (UTxO utxo) =
     Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]

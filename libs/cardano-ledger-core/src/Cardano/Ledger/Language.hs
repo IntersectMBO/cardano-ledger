@@ -16,7 +16,15 @@
 --     versions of old languages) will be added here.
 module Cardano.Ledger.Language where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeEnumBounded, encodeEnum)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  Decoder,
+  EncCBOR (..),
+  decodeEnumBounded,
+  encodeEnum,
+  natVersion,
+  unlessDecoderVersionAtLeast,
+ )
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (
@@ -48,6 +56,7 @@ import NoThunks.Class (NoThunks)
 data Language
   = PlutusV1
   | PlutusV2
+  | PlutusV3
   deriving (Eq, Generic, Show, Ord, Enum, Bounded, Ix)
 
 instance NoThunks Language
@@ -78,10 +87,12 @@ instance FromJSONKey Language where
 languageToText :: Language -> Text
 languageToText PlutusV1 = "PlutusV1"
 languageToText PlutusV2 = "PlutusV2"
+languageToText PlutusV3 = "PlutusV3"
 
 languageFromText :: MonadFail m => Text -> m Language
 languageFromText "PlutusV1" = pure PlutusV1
 languageFromText "PlutusV2" = pure PlutusV2
+languageFromText "PlutusV3" = pure PlutusV3
 languageFromText lang = fail $ "Error decoding Language: " ++ show lang
 
 instance EncCBOR Language where
@@ -99,6 +110,7 @@ instance ToExpr Language
 data SLanguage (l :: Language) where
   SPlutusV1 :: SLanguage 'PlutusV1
   SPlutusV2 :: SLanguage 'PlutusV2
+  SPlutusV3 :: SLanguage 'PlutusV3
 
 deriving instance Eq (SLanguage l)
 
@@ -115,6 +127,7 @@ fromSLanguage :: SLanguage l -> Language
 fromSLanguage = \case
   SPlutusV1 -> PlutusV1
   SPlutusV2 -> PlutusV2
+  SPlutusV3 -> PlutusV3
 
 -- | For implicit reflection on '@SLanguage@'
 -- See "Cardano.Ledger.Alonzo.TxInfo" for example usage
@@ -126,6 +139,9 @@ instance IsLanguage 'PlutusV1 where
 
 instance IsLanguage 'PlutusV2 where
   isLanguage = SPlutusV2
+
+instance IsLanguage 'PlutusV3 where
+  isLanguage = SPlutusV3
 
 toSLanguage :: forall l m. (IsLanguage l, MonadFail m) => Language -> m (SLanguage l)
 toSLanguage lang
@@ -139,3 +155,14 @@ toSLanguage lang
   where
     thisLanguage :: SLanguage l
     thisLanguage = isLanguage
+
+-- | Prevent decoding a version of Plutus until
+-- the appropriate protocol version.
+guardPlutus :: Language -> Decoder s ()
+guardPlutus lang =
+  let v = case lang of
+        PlutusV1 -> natVersion @5
+        PlutusV2 -> natVersion @7
+        PlutusV3 -> natVersion @9
+   in unlessDecoderVersionAtLeast v $
+        fail (show lang <> " is not supported until " <> show v <> " major protocol version")

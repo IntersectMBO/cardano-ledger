@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-conway-test
-version:       1.1.0.0
+version:       1.1.1.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -60,6 +60,7 @@ test-suite cardano-ledger-conway-test
     hs-source-dirs:   test
     other-modules:
         Test.Cardano.Ledger.Conway.Serialisation.CDDL
+        Test.Cardano.Ledger.Conway.TxInfo
         Paths_cardano_ledger_conway_test
 
     default-language: Haskell2010
@@ -75,6 +76,7 @@ test-suite cardano-ledger-conway-test
         cardano-ledger-allegra,
         cardano-ledger-alonzo,
         cardano-ledger-babbage,
+        cardano-ledger-babbage-test >=1.1.1 && <1.2,
         cardano-ledger-conway,
         cardano-ledger-conway-test,
         cardano-ledger-core,

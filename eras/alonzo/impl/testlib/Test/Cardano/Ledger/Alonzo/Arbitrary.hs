@@ -17,8 +17,10 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   alwaysFails,
   costModelParamsCount,
   FlexibleCostModels (..),
+  genAlonzoScript,
 ) where
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language)
@@ -79,6 +81,7 @@ import qualified PlutusLedgerApi.Test.Examples as Plutus (
  )
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
+import qualified PlutusLedgerApi.V3 as PV3
 import PlutusPrelude (enumerate)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
@@ -106,7 +109,7 @@ instance Arbitrary PV1.Data where
       gendata _ = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
 instance
-  ( Arbitrary (Script era)
+  ( Arbitrary (AlonzoScript era)
   , Era era
   ) =>
   Arbitrary (AlonzoTxAuxData era)
@@ -205,14 +208,22 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance Era era => Arbitrary (AlonzoScript era) where
-  arbitrary = do
-    lang <- arbitrary -- The language is not present in the Script serialization
-    frequency
-      [ (1, pure (alwaysSucceeds lang 1))
-      , (1, pure (alwaysFails lang 1))
-      , (10, TimelockScript <$> arbitrary)
-      ]
+genAlonzoScript ::
+  forall era.
+  ( Era era
+  ) =>
+  [Language] ->
+  Gen (AlonzoScript era)
+genAlonzoScript langs = do
+  lang <- elements langs -- The language is not present in the Script serialization
+  frequency
+    [ (1, pure (alwaysSucceeds lang 1))
+    , (1, pure (alwaysFails lang 1))
+    , (10, TimelockScript <$> arbitrary)
+    ]
+
+instance Crypto c => Arbitrary (AlonzoScript (AlonzoEra c)) where
+  arbitrary = genAlonzoScript [PlutusV1]
 
 instance Arbitrary Language where
   arbitrary = elements nonNativeLanguages
@@ -224,6 +235,7 @@ costModelParamsCount :: Language -> Int
 costModelParamsCount lang = case lang of
   PlutusV1 -> length (enumerate @PV1.ParamName)
   PlutusV2 -> length (enumerate @PV2.ParamName)
+  PlutusV3 -> length (enumerate @PV3.ParamName)
 
 genCostModel :: Language -> Gen (Language, CostModel)
 genCostModel lang = (,) lang <$> genValidCostModel lang

@@ -14,6 +14,7 @@
   * `dpsPState` -> `certPState`
   * `dpsDState` -> `certDState`
   * `obligationDPState` -> `obligationCertState`
+* Add support for `PlutusV3`
 
 ## 1.1.0.0
 

@@ -68,6 +68,7 @@ import Lens.Micro
 import qualified PlutusLedgerApi.Common as Plutus
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
+import qualified PlutusLedgerApi.V3 as PV3
 
 -- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
 data TransactionScriptFailure c
@@ -100,6 +101,7 @@ data TransactionScriptFailure c
 data ValidationFailed where
   ValidationFailedV1 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV1 -> ValidationFailed
   ValidationFailedV2 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV2 -> ValidationFailed
+  ValidationFailedV3 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV3 -> ValidationFailed
 
 deriving instance Eq (ValidationFailed)
 
@@ -338,6 +340,9 @@ evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
           PlutusV2 ->
             let debug = PlutusDebugLang SPlutusV2 cm exunits script (PlutusData pArgs) protVer
              in Left $ ValidationFailure $ ValidationFailedV2 e logs debug
+          PlutusV3 ->
+            let debug = PlutusDebugLang SPlutusV3 cm exunits script (PlutusData pArgs) protVer
+             in Left $ ValidationFailure $ ValidationFailedV3 e logs debug
         (logs, Right exBudget) ->
           note (IncompatibleBudget exBudget) $ (,) logs <$> exBudgetToExUnits exBudget
       where
@@ -347,3 +352,4 @@ evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
         interpreter = \case
           PlutusV1 -> PV1.evaluateScriptRestricting plutusProtVer PV1.Verbose
           PlutusV2 -> PV2.evaluateScriptRestricting plutusProtVer PV2.Verbose
+          PlutusV3 -> PV3.evaluateScriptRestricting plutusProtVer PV3.Verbose
