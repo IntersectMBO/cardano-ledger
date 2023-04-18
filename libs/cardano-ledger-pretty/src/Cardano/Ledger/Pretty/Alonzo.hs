@@ -69,6 +69,7 @@ instance
 ppLanguage :: Language -> PDoc
 ppLanguage PlutusV1 = ppString "PlutusV1"
 ppLanguage PlutusV2 = ppString "PlutusV2"
+ppLanguage PlutusV3 = ppString "PlutusV3"
 
 instance PrettyA Language where
   prettyA = ppLanguage

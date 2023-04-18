@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.1.1.0
+
+* Add `unlessDecoderVersionAtLeast` and `guardUntilAtLeast`
+
 ## 1.1.0.0
 
 * Add `ToJSON`/`FromJSON` instances for `Version`

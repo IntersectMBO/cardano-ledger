@@ -39,6 +39,7 @@ babbageScriptPrefixTag script =
     TimelockScript _ -> nativeMultiSigTag -- "\x00"
     PlutusScript PlutusV1 _ -> "\x01"
     PlutusScript PlutusV2 _ -> "\x02"
+    PlutusScript PlutusV3 _ -> "\x03"
 
 type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock (BabbageEra c)
 

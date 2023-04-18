@@ -41,7 +41,7 @@ where
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Language (Language (..), guardPlutus)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), BinaryPlutus (..), validScript)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
@@ -112,14 +112,22 @@ instance Era era => EncCBOR (AlonzoTxAuxDataRaw era) where
     encode $
       Tag 259 $
         Keyed
-          ( \m ts mps1 mps2 ->
+          ( \m ts mps1 mps2 mps3 ->
               AlonzoTxAuxDataRaw m ts $
-                Map.fromList [(pv, ps) | (pv, Just ps) <- [(PlutusV1, mps1), (PlutusV2, mps2)]]
+                Map.fromList
+                  [ (pv, ps)
+                  | (pv, Just ps) <-
+                      [ (PlutusV1, mps1)
+                      , (PlutusV2, mps2)
+                      , (PlutusV3, mps3)
+                      ]
+                  ]
           )
           !> Omit null (Key 0 $ To atadrMetadata)
           !> Omit null (Key 1 $ To atadrTimelock)
           !> Omit isNothing (Key 2 $ E (maybe mempty encCBOR) (Map.lookup PlutusV1 atadrPlutus))
           !> Omit isNothing (Key 3 $ E (maybe mempty encCBOR) (Map.lookup PlutusV2 atadrPlutus))
+          !> Omit isNothing (Key 4 $ E (maybe mempty encCBOR) (Map.lookup PlutusV3 atadrPlutus))
 
 -- | Helper function that will construct Auxiliary data from Metadatum map and a list of scripts.
 --
@@ -133,19 +141,21 @@ mkAlonzoTxAuxData ::
 mkAlonzoTxAuxData atadrMetadata allScripts =
   mkMemoized $ AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus}
   where
-    partitionScripts (tss, pss1, pss2) =
+    partitionScripts (tss, pss1, pss2, pss3) =
       \case
-        TimelockScript ts -> (ts :<| tss, pss1, pss2)
-        PlutusScript PlutusV1 ps1 -> (tss, BinaryPlutus ps1 : pss1, pss2)
-        PlutusScript PlutusV2 ps2 -> (tss, pss1, BinaryPlutus ps2 : pss2)
-    (atadrTimelock, plutusV1Scripts, plutusV2Scripts) =
-      foldr (flip partitionScripts) (mempty, mempty, mempty) allScripts
+        TimelockScript ts -> (ts :<| tss, pss1, pss2, pss3)
+        PlutusScript PlutusV1 ps1 -> (tss, BinaryPlutus ps1 : pss1, pss2, pss3)
+        PlutusScript PlutusV2 ps2 -> (tss, pss1, BinaryPlutus ps2 : pss2, pss3)
+        PlutusScript PlutusV3 ps3 -> (tss, pss1, pss2, BinaryPlutus ps3 : pss3)
+    (atadrTimelock, plutusV1Scripts, plutusV2Scripts, plutusV3Scripts) =
+      foldr (flip partitionScripts) (mempty, mempty, mempty, mempty) allScripts
     atadrPlutus =
       Map.fromList
         [ (lang, scripts)
         | (lang, Just scripts) <-
             [ (PlutusV1, NE.nonEmpty plutusV1Scripts)
             , (PlutusV2, NE.nonEmpty plutusV2Scripts)
+            , (PlutusV3, NE.nonEmpty plutusV3Scripts)
             ]
         ]
 
@@ -169,7 +179,7 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
       TypeListLenIndef -> decodeShelleyMA
       TypeTag -> decodeAlonzo
       TypeTag64 -> decodeAlonzo
-      _ -> error "Failed to decode AuxiliaryData"
+      _ -> fail "Failed to decode AuxiliaryData"
     where
       decodeShelley =
         decode
@@ -204,8 +214,9 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
         fieldAA
           (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x})
           (D (sequence <$> decodeStrictSeq decCBOR))
-      auxDataField 2 = fieldA (addPlutusScripts PlutusV1) From
-      auxDataField 3 = fieldA (addPlutusScripts PlutusV2) From
+      auxDataField 2 = fieldA (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
+      auxDataField 3 = fieldA (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
+      auxDataField 4 = fieldA (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
       auxDataField n = field (\_ t -> t) (Invalid n)
 
 emptyAuxData :: AlonzoTxAuxDataRaw era

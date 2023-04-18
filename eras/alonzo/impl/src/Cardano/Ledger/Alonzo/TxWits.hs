@@ -52,7 +52,7 @@ where
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Language (Language (..), guardPlutus)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData)
 import Cardano.Ledger.Binary (
@@ -451,7 +451,7 @@ instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw er
   encCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
     encode $
       Keyed
-        (\a b c d e f g -> AlonzoTxWitsRaw a b (c <> d <> e) f g)
+        (\a b c d e f g h -> AlonzoTxWitsRaw a b (c <> d <> e <> f) g h)
         !> Omit null (Key 0 $ To vkeys)
         !> Omit null (Key 2 $ To boots)
         !> Omit
@@ -475,6 +475,13 @@ instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw er
                 (encCBOR . mapMaybe unwrapPS2 . Map.elems)
                 (Map.filter (isPlutus PlutusV2) scripts)
           )
+        !> Omit
+          null
+          ( Key 7 $
+              E
+                (encCBOR . mapMaybe unwrapPS3 . Map.elems)
+                (Map.filter (isPlutus PlutusV3) scripts)
+          )
         !> Omit nullDats (Key 4 $ To dats)
         !> Omit nullRedeemers (Key 5 $ To rdmrs)
     where
@@ -484,6 +491,8 @@ instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw er
       unwrapPS1 _ = Nothing
       unwrapPS2 (PlutusScript PlutusV2 x) = Just x
       unwrapPS2 _ = Nothing
+      unwrapPS3 (PlutusScript PlutusV3 x) = Just x
+      unwrapPS3 _ = Nothing
 
       isTimelock (TimelockScript _) = True
       isTimelock (PlutusScript _ _) = False
@@ -551,7 +560,7 @@ instance
       txWitnessField 3 =
         fieldA
           addScripts
-          (fmap (PlutusScript PlutusV1) <$> From)
+          (decodePlutus PlutusV1)
       txWitnessField 4 =
         fieldAA
           (\x wits -> wits {atwrDatsTxWits = x})
@@ -560,8 +569,14 @@ instance
       txWitnessField 6 =
         fieldA
           addScripts
-          (fmap (PlutusScript PlutusV2) <$> From)
+          (decodePlutus PlutusV2)
+      txWitnessField 7 =
+        fieldA
+          addScripts
+          (decodePlutus PlutusV3)
       txWitnessField n = field (\_ t -> t) (Invalid n)
+
+      decodePlutus lang = fmap (PlutusScript lang) <$> D (guardPlutus lang >> decCBOR)
 
       addScripts :: [AlonzoScript era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
       addScripts x wits = wits {atwrScriptTxWits = getKeys ([] :: [era]) x <> atwrScriptTxWits wits}

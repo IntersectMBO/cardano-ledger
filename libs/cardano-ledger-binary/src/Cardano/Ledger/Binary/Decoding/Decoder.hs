@@ -27,6 +27,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   getDecoderVersion,
   ifDecoderVersionAtLeast,
   whenDecoderVersionAtLeast,
+  unlessDecoderVersionAtLeast,
 
   -- ** Error reporting
   cborError,
@@ -355,6 +356,16 @@ whenDecoderVersionAtLeast ::
 whenDecoderVersionAtLeast atLeast decoder = do
   cur <- getDecoderVersion
   when (cur >= atLeast) (void decoder)
+
+-- | Optionally run a decoder depending on the current version and the supplied one.
+unlessDecoderVersionAtLeast ::
+  Version ->
+  -- | Run this decoder whenever current decoder version is smaller to the supplied `Version`
+  Decoder s a ->
+  Decoder s ()
+unlessDecoderVersionAtLeast atLeast decoder = do
+  cur <- getDecoderVersion
+  unless (cur >= atLeast) (void decoder)
 
 --------------------------------------------------------------------------------
 -- Error reporting

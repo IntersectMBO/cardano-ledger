@@ -55,6 +55,7 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   invalidKey,
   unusedRequiredKeys,
   duplicateKey,
+  guardUntilAtLeast,
 )
 where
 
@@ -62,6 +63,7 @@ import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Encoding.EncCBOR (EncCBOR (encCBOR))
+import Cardano.Ledger.Binary.Version (Version)
 import Control.Applicative (liftA2)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -576,3 +578,7 @@ unusedRequiredKeys used required name =
     message [pair] = report pair ++ message []
     message (pair : more) = report pair ++ ", and " ++ message more
     report (k, f) = "field " ++ f ++ " with key " ++ show k
+
+-- | Prevent decoding until the 'Version' is at least the provided version.
+guardUntilAtLeast :: DecCBOR a => String -> Version -> Decode ('Closed 'Dense) a
+guardUntilAtLeast errMessage v = D (unlessDecoderVersionAtLeast v (fail errMessage) >> decCBOR)

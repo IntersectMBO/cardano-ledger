@@ -161,6 +161,7 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import PlutusLedgerApi.V1.Contexts ()
 import qualified PlutusLedgerApi.V2 as PV2
+import qualified PlutusLedgerApi.V3 as PV3
 import Prettyprinter (Pretty (..))
 
 -- =========================================================
@@ -455,6 +456,7 @@ transScriptPurpose (Certifying dcert) = PV1.Certifying (transDCert dcert)
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
   | TxInfoPV2 PV2.TxInfo
+  | TxInfoPV3 PV3.TxInfo
   deriving (Show, Eq)
 
 -- | Where we keep functions that differ from Era to Era but which
@@ -551,6 +553,8 @@ valContext (TxInfoPV1 txinfo) sp =
   Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp =
   Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
+valContext (TxInfoPV3 txinfo) sp =
+  Data (PV3.toData (PV3.ScriptContext txinfo (transScriptPurpose sp)))
 
 data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)
@@ -639,6 +643,7 @@ instance EncCBOR PlutusDebug where
 data PlutusError
   = PlutusErrorV1 PV1.EvaluationError
   | PlutusErrorV2 PV2.EvaluationError
+  | PlutusErrorV3 PV3.EvaluationError
   deriving (Show)
 
 data PlutusDebugInfo
@@ -667,6 +672,7 @@ debugPlutus version db =
             F.asum
               [ plutusDebugLangDecoder (Proxy @'PlutusV1)
               , plutusDebugLangDecoder (Proxy @'PlutusV2)
+              , plutusDebugLangDecoder (Proxy @'PlutusV3)
               ]
        in case runFail plutusDebugDecoder of
             Left e -> DebugCannotDecode e
@@ -685,6 +691,13 @@ debugPlutus version db =
                       (getEvaluationContext costModel)
                       (transExUnits exUnits)
                       scripts
+                  evalV3 =
+                    PV3.evaluateScriptRestricting
+                      (transProtocolVersion protVer)
+                      PV3.Verbose
+                      (getEvaluationContext costModel)
+                      (transExUnits exUnits)
+                      scripts
                in case sl of
                     SPlutusV1 ->
                       case evalV1 $ unPlutusData pData of
@@ -697,6 +710,13 @@ debugPlutus version db =
                       case evalV2 $ unPlutusData pData of
                         (logs, Left e) ->
                           DebugInfo logs (PlutusErrorV2 e) $
+                            PlutusDebug $
+                              PlutusDebugLang sl costModel exUnits scripts pData protVer
+                        (_, Right ex) -> DebugSuccess ex
+                    SPlutusV3 ->
+                      case evalV3 $ unPlutusData pData of
+                        (logs, Left e) ->
+                          DebugInfo logs (PlutusErrorV3 e) $
                             PlutusDebug $
                               PlutusDebugLang sl costModel exUnits scripts pData protVer
                         (_, Right ex) -> DebugSuccess ex
@@ -734,10 +754,13 @@ runPLCScript proxy pv lang cm scriptbytestring units ds =
           PlutusDebug $ PlutusDebugLang SPlutusV1 cm units scriptbytestring (PlutusData ds) pv
         PlutusV2 ->
           PlutusDebug $ PlutusDebugLang SPlutusV2 cm units scriptbytestring (PlutusData ds) pv
+        PlutusV3 ->
+          PlutusDebug $ PlutusDebugLang SPlutusV3 cm units scriptbytestring (PlutusData ds) pv
   where
     plutusPV = transProtocolVersion pv
     plutusInterpreter PlutusV1 = PV1.evaluateScriptRestricting plutusPV
-    plutusInterpreter PlutusV2 = PV2.evaluateScriptRestricting plutusPV -- TODO: Make class to unify all plutus versioned operations
+    plutusInterpreter PlutusV2 = PV2.evaluateScriptRestricting plutusPV
+    plutusInterpreter PlutusV3 = PV3.evaluateScriptRestricting plutusPV -- TODO: Make class to unify all plutus versioned operations
 
 -- | Explain why a script might fail. Scripts come in two flavors:
 --
@@ -768,65 +791,44 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
       firstLine = "\nThe " ++ show lang ++ " script (" ++ name ++ ") fails."
       pvLine = "The protocol version is: " ++ show pv
       plutusError = "The plutus error is: " ++ show e
+
+      getCtxAsString :: Language -> PV1.Data -> Maybe String
+      getCtxAsString PlutusV1 d = show . pretty <$> (PV1.fromData d :: Maybe PV1.ScriptContext)
+      getCtxAsString PlutusV2 d = show . pretty <$> (PV2.fromData d :: Maybe PV2.ScriptContext)
+      getCtxAsString PlutusV3 d = show . pretty <$> (PV3.fromData d :: Maybe PV3.ScriptContext)
+
+      ctxMessage info =
+        case getCtxAsString lang info of
+          Nothing ->
+            concat
+              [ "The third data argument does not translate to a "
+              , show lang
+              , " script context\n"
+              , show info
+              ]
+          Just ctx -> "The script context is:\n" ++ ctx
+
       dataLines =
         case ds of
           [dat, redeemer, info] ->
-            case lang of
-              PlutusV1 ->
-                case PV1.fromData info of
-                  Nothing ->
-                    [ "The data is: " ++ show dat
-                    , "The redeemer is: " ++ show redeemer
-                    , "The third data argument, does not translate to a V1 script context\n" ++ show info
-                    ]
-                  Just info2 ->
-                    [ "The data is: " ++ show dat
-                    , "The redeemer is: " ++ show redeemer
-                    , "The script context is:\n" ++ show (pretty (info2 :: PV1.ScriptContext))
-                    ]
-              PlutusV2 ->
-                case PV2.fromData info of
-                  Nothing ->
-                    [ "The data is: " ++ show dat
-                    , "The redeemer is: " ++ show redeemer
-                    , "The third data argument, does not translate to a V2 script context\n" ++ show info
-                    ]
-                  Just info2 ->
-                    [ "The data is: " ++ show dat
-                    , "The redeemer is: " ++ show redeemer
-                    , "The script context is:\n" ++ show (pretty (info2 :: PV2.ScriptContext))
-                    ]
+            [ "The datum is: " ++ show dat
+            , "The redeemer is: " ++ show redeemer
+            , ctxMessage info
+            ]
           [redeemer, info] ->
-            case lang of
-              PlutusV1 ->
-                case PV1.fromData info of
-                  Nothing ->
-                    [ "The redeemer is: " ++ show redeemer
-                    , "The second data argument, does not translate to a V1 script context\n" ++ show info
-                    ]
-                  Just info2 ->
-                    [ "The redeemer is: " ++ show redeemer
-                    , "The script context is:\n" ++ show (pretty (info2 :: PV1.ScriptContext))
-                    ]
-              PlutusV2 ->
-                case PV2.fromData info of
-                  Nothing ->
-                    [ "The redeemer is: " ++ show redeemer
-                    , "The second data argument, does not translate to a V2 script context\n" ++ show info
-                    ]
-                  Just info2 ->
-                    [ "The redeemer is: " ++ show redeemer
-                    , "The script context is:\n" ++ show (pretty (info2 :: PV2.ScriptContext))
-                    ]
+            [ "The redeemer is: " ++ show redeemer
+            , ctxMessage info
+            ]
           _ ->
             [ "Received an unexpected number of Data"
-            , "The data was:\n" ++ show ds
+            , "The data is:\n" ++ show ds
             ]
       line = pack . unlines $ firstLine : plutusError : pvLine : dataLines
 
       db = case lang of
         PlutusV1 -> PlutusDebug $ PlutusDebugLang SPlutusV1 cm eu scriptbytestring (PlutusData ds) pv
         PlutusV2 -> PlutusDebug $ PlutusDebugLang SPlutusV2 cm eu scriptbytestring (PlutusData ds) pv
+        PlutusV3 -> PlutusDebug $ PlutusDebugLang SPlutusV3 cm eu scriptbytestring (PlutusData ds) pv
    in scriptFail $ PlutusSF line db
 
 {-# DEPRECATED validPlutusdata "Plutus data bytestrings are not restricted to sixty-four bytes." #-}

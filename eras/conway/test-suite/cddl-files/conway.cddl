@@ -71,16 +71,6 @@ transaction_body =
   , ? 20 : [* proposal_procedure]   ; New; Proposal procedures
   }
 
-governance_action_state =
-  [ votes             : {vote_info => vote}
-  , deposit_amount    : coin
-  , reward_address    : $addr_keyhash
-  , metadata_url      : url
-  , metadata_hash     : $hash32
-  , governance_action
-  , proposed_in       : epoch
-  ]
-
 vote_info =
   [ voter_role
   , stake_credential
@@ -99,11 +89,6 @@ proposal_procedure =
   , $hash28
   , governance_action
   , anchor / null
-  ]
-
-governance_metadata =
-  [ url
-  , $hash32
   ]
 
 governance_action =
@@ -219,6 +204,8 @@ script_data_hash = $hash32
 ;   - the language ID tag is encoded as expected.
 ;     Concretely, this means that the language version for V2 is encoded as
 ;     01 in hex.
+; For PlutusV3 (language id 2), the language view is the following:
+;   - the value of costmdls map at key 2 is encoded as a definite length list.
 ;
 ; Note that each Plutus language represented inside a transaction must have
 ; a cost model in the costmdls protocol parameter in order to execute,
@@ -287,12 +274,6 @@ deleg_cert = (6, stake_credential, delegatee, coin)
 redeleg_cert = (7, stake_credential, delegatee)
 undeleg_cert = (8, stake_credential, coin)
 
-move_instantaneous_reward = [ 0 / 1, { * stake_credential => delta_coin } / coin ]
-; The first field determines where the funds are drawn from.
-; 0 denotes the reserves, 1 denotes the treasury.
-; If the second field is a map, funds are moved to stake credentials,
-; otherwise the funds are given to the other accounting pot.
-
 delta_coin = int
 
 credential =
@@ -342,13 +323,6 @@ url = tstr .size (0..64)
 
 withdrawals = { * reward_account => coin }
 
-update = [ proposed_protocol_parameter_updates
-         , epoch
-         ]
-
-proposed_protocol_parameter_updates =
-  { * genesishash => protocol_param_update }
-
 protocol_param_update =
   { ? 0:  uint               ; minfee A
   , ? 1:  uint               ; minfee B
@@ -382,10 +356,12 @@ transaction_witness_set =
   , ? 4: [* plutus_data ]
   , ? 5: [* redeemer ]
   , ? 6: [* plutus_v2_script ]
+  , ? 7: [* plutus_v3_script ]
   }
 
 plutus_v1_script = bytes
 plutus_v2_script = bytes
+plutus_v3_script = bytes
 
 plutus_data =
     constr<plutus_data>
@@ -415,6 +391,7 @@ redeemer_tag =
   / 1 ; mintTag  "Mint"
   / 2 ; certTag  "Cert"
   / 3 ; wdrlTag  "Reward"
+  ; TODO / 4 ; drepTag  "DRep"
 ex_units = [mem: uint, steps: uint]
 
 ex_unit_prices =
@@ -422,6 +399,7 @@ ex_unit_prices =
 
 language = 0 ; Plutus v1
          / 1 ; Plutus v2
+         / 2 ; Plutus v3
 
 potential_languages = 0 .. 255
 
@@ -432,6 +410,7 @@ potential_languages = 0 .. 255
 ;
 ; { ? 0 : [ 166* int ] ; Plutus v1, only 166 integers are used, but more are accepted (and ignored)
 ; , ? 1 : [ 175* int ] ; Plutus v2, only 175 integers are used, but more are accepted (and ignored)
+; , ? 2 : [ 179* int ] ; Plutus v3, only 179 integers are used, but more are accepted (and ignored)
 ; }
 costmdls = { * potential_languages => [int] }
 
@@ -454,6 +433,7 @@ auxiliary_data =
       , ? 1 => [ * native_script ]
       , ? 2 => [ * plutus_v1_script ]
       , ? 3 => [ * plutus_v2_script ]
+      , ? 4 => [ * plutus_v3_script ]
       })
 
 vkeywitness = [ $vkey, $signature ]
@@ -522,10 +502,11 @@ pool_metadata_hash    = $hash32
 ; To compute a script hash, note that you must prepend
 ; a tag to the bytes of the script before hashing.
 ; The tag is determined by the language.
-; The tags in the Babbage era are:
+; The tags in the Conway era are:
 ;   "\x00" for multisig scripts
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
+;   "\x03" for Plutus V3 scripts
 scripthash            = $hash28
 
 datum_hash = $hash32
@@ -535,4 +516,4 @@ datum_option = [ 0, $hash32 // 1, data ]
 
 script_ref = #6.24(bytes .cbor script)
 
-script = [ 0, native_script // 1, plutus_v1_script // 2, plutus_v2_script ]
+script = [ 0, native_script // 1, plutus_v1_script // 2, plutus_v2_script // 3, plutus_v3_script ]

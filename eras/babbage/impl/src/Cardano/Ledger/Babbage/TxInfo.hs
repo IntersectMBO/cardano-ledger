@@ -18,7 +18,12 @@ import Cardano.Ledger.Alonzo.TxInfo (
   VersionedTxInfo (..),
  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr, unRedeemers, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (
+  AlonzoEraTxWits (..),
+  RdmrPtr,
+  unRedeemers,
+  unTxDats,
+ )
 import Cardano.Ledger.Babbage.TxBody (
   AllegraEraTxBody (..),
   AlonzoEraTxBody (..),
@@ -162,9 +167,9 @@ transRedeemerPtr txb (ptr, (d, _)) =
 babbageTxInfo ::
   forall era.
   ( EraTx era
+  , AlonzoEraTxWits era
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
-  , TxWits era ~ AlonzoTxWits era
   ) =>
   PParams era ->
   Language ->
@@ -176,61 +181,95 @@ babbageTxInfo ::
 babbageTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ Alonzo.transVITime pp ei sysS interval
   case lang of
-    PlutusV1 -> do
-      let refInputs = txBody ^. referenceInputsTxBodyL
-      unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
-      inputs <- mapM (txInfoInV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
-      outputs <-
-        zipWithM
-          (txInfoOutV1 . TxOutFromOutput)
-          [minBound ..]
-          (foldr (:) [] outs)
-      pure . TxInfoPV1 $
-        PV1.TxInfo
-          { PV1.txInfoInputs = inputs
-          , PV1.txInfoOutputs = outputs
-          , PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
-          , PV1.txInfoMint = Alonzo.transMintValue multiAsset
-          , PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
-          , PV1.txInfoWdrl = Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
-          , PV1.txInfoValidRange = timeRange
-          , PV1.txInfoSignatories =
-              map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
-          , PV1.txInfoData = map Alonzo.transDataPair datpairs
-          , PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
-          }
-    PlutusV2 -> do
-      inputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
-      refInputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
-      outputs <-
-        zipWithM
-          (txInfoOutV2 . TxOutFromOutput)
-          [minBound ..]
-          (foldr (:) [] outs)
-      rdmrs' <- mapM (transRedeemerPtr txBody) rdmrs
-      pure . TxInfoPV2 $
-        PV2.TxInfo
-          { PV2.txInfoInputs = inputs
-          , PV2.txInfoOutputs = outputs
-          , PV2.txInfoReferenceInputs = refInputs
-          , PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
-          , PV2.txInfoMint = Alonzo.transMintValue multiAsset
-          , PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
-          , PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
-          , PV2.txInfoValidRange = timeRange
-          , PV2.txInfoSignatories =
-              map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
-          , PV2.txInfoRedeemers = PV2.fromList rdmrs'
-          , PV2.txInfoData = PV2.fromList $ map Alonzo.transDataPair datpairs
-          , PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
-          }
+    PlutusV1 -> babbageTxInfoV1 timeRange tx utxo
+    PlutusV2 -> babbageTxInfoV2 timeRange tx utxo
+    _ -> Left $ LanguageNotSupported lang
+  where
+    interval = tx ^. bodyTxL ^. vldtTxBodyL
+
+babbageTxInfoV1 ::
+  forall era.
+  ( EraTx era
+  , AlonzoEraTxWits era
+  , BabbageEraTxBody era
+  , Value era ~ MaryValue (EraCrypto era)
+  ) =>
+  PV1.POSIXTimeRange ->
+  Tx era ->
+  UTxO era ->
+  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+babbageTxInfoV1 timeRange tx utxo = do
+  let refInputs = txBody ^. referenceInputsTxBodyL
+  unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
+  inputs <- mapM (txInfoInV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+  outputs <-
+    zipWithM
+      (txInfoOutV1 . TxOutFromOutput)
+      [minBound ..]
+      (foldr (:) [] outs)
+  pure . TxInfoPV1 $
+    PV1.TxInfo
+      { PV1.txInfoInputs = inputs
+      , PV1.txInfoOutputs = outputs
+      , PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
+      , PV1.txInfoMint = Alonzo.transMintValue multiAsset
+      , PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+      , PV1.txInfoWdrl = Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
+      , PV1.txInfoValidRange = timeRange
+      , PV1.txInfoSignatories =
+          map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
+      , PV1.txInfoData = map Alonzo.transDataPair datpairs
+      , PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
+      }
   where
     txBody = tx ^. bodyTxL
     witnesses = tx ^. witsTxL
     outs = txBody ^. outputsTxBodyL
     fee = txBody ^. feeTxBodyL
     multiAsset = txBody ^. mintTxBodyL
-    interval = txBody ^. vldtTxBodyL
+    datpairs = Map.toList (unTxDats $ witnesses ^. datsTxWitsL)
 
-    datpairs = Map.toList (unTxDats $ txdats' witnesses)
-    rdmrs = Map.toList (unRedeemers $ txrdmrs' witnesses)
+babbageTxInfoV2 ::
+  forall era.
+  ( EraTx era
+  , AlonzoEraTxWits era
+  , BabbageEraTxBody era
+  , Value era ~ MaryValue (EraCrypto era)
+  ) =>
+  PV2.POSIXTimeRange ->
+  Tx era ->
+  UTxO era ->
+  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+babbageTxInfoV2 timeRange tx utxo = do
+  inputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+  refInputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
+  outputs <-
+    zipWithM
+      (txInfoOutV2 . TxOutFromOutput)
+      [minBound ..]
+      (foldr (:) [] outs)
+  rdmrs' <- mapM (transRedeemerPtr txBody) rdmrs
+  pure . TxInfoPV2 $
+    PV2.TxInfo
+      { PV2.txInfoInputs = inputs
+      , PV2.txInfoOutputs = outputs
+      , PV2.txInfoReferenceInputs = refInputs
+      , PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
+      , PV2.txInfoMint = Alonzo.transMintValue multiAsset
+      , PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyG)
+      , PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
+      , PV2.txInfoValidRange = timeRange
+      , PV2.txInfoSignatories =
+          map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
+      , PV2.txInfoRedeemers = PV2.fromList rdmrs'
+      , PV2.txInfoData = PV2.fromList $ map Alonzo.transDataPair datpairs
+      , PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
+      }
+  where
+    txBody = tx ^. bodyTxL
+    witnesses = tx ^. witsTxL
+    outs = txBody ^. outputsTxBodyL
+    fee = txBody ^. feeTxBodyL
+    multiAsset = txBody ^. mintTxBodyL
+    datpairs = Map.toList (unTxDats $ witnesses ^. datsTxWitsL)
+    rdmrs = Map.toList (unRedeemers $ witnesses ^. rdmrsTxWitsL)

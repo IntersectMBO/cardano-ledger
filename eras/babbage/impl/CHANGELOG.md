@@ -7,6 +7,9 @@
   * `DState`
   * `PState`
   * `VState`
+* Added support for Plutus V3 in the types and functions that use `Language`.
+  (Note that the Alonzo and Babbage ledger era rules do not allow V3 scripts, however.).
+  Addition of `babbageTxInfoV1` and `babbageTxInfoV2`
 
 ## 1.1.0.0
 

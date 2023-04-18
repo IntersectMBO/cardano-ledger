@@ -34,7 +34,9 @@ tests =
           (eraProtVerLow @Babbage)
           (eraProtVerHigh @Babbage)
     , testProperty "babbage/TxOut" $
-        roundTripCborExpectation @(TxOut Babbage)
+        roundTripCborRangeExpectation @(TxOut Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/TxBody" $
         roundTripAnnRangeExpectation @(TxBody Babbage)
           (eraProtVerLow @Babbage)
@@ -64,7 +66,9 @@ tests =
           (eraProtVerLow @Babbage)
           (eraProtVerHigh @Babbage)
     , testProperty "babbage/BabbageUtxoPredFailure" $
-        roundTripCborExpectation @(BabbageUtxoPredFailure Babbage)
+        roundTripCborRangeExpectation @(BabbageUtxoPredFailure Babbage)
+          (eraProtVerLow @Babbage)
+          (eraProtVerHigh @Babbage)
     , testProperty "babbage/Block" $
         roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) Babbage)
           (eraProtVerLow @Babbage)

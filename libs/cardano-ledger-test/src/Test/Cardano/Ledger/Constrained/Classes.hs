@@ -40,7 +40,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
 import Test.Cardano.Ledger.Constrained.Size (AddsSpec (..), Size (..), genFromIntRange, genFromNonNegIntRange)
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxOut, pcVal)
 import Test.Cardano.Ledger.Generic.Proof (
   AllegraEra,

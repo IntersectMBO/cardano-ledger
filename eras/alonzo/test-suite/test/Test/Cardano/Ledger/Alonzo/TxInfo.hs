@@ -122,6 +122,13 @@ transVITimeUpperBoundIsOpen = do
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
     Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False))
 
+expectLanguageNotSupported :: Language -> Assertion
+expectLanguageNotSupported lang =
+  expectTranslationError
+    lang
+    (txEx shelleyInput shelleyOutput)
+    (LanguageNotSupported lang)
+
 tests :: TestTree
 tests =
   testGroup
@@ -134,12 +141,9 @@ tests =
             silentlyIgnore (txEx byronInput shelleyOutput)
         ]
     , testGroup
-        "Plutus V2"
-        [ testCase "translation error for V2 in Alonzo" $
-            expectTranslationError
-              PlutusV2
-              (txEx shelleyInput shelleyOutput)
-              (LanguageNotSupported PlutusV2)
+        "Plutus VX, X > 1"
+        [ testCase "translation error for V2 in Alonzo" (expectLanguageNotSupported PlutusV2)
+        , testCase "translation error for V3 in Alonzo" (expectLanguageNotSupported PlutusV3)
         ]
     , testGroup
         "transVITime"

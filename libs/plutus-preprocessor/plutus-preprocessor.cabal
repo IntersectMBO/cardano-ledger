@@ -30,9 +30,9 @@ executable plutus-preprocessor
         cardano-ledger-alonzo >=1.2,
         flat,
         hashable >=1.4.1.0,
-        plutus-tx ^>=1.5,
-        plutus-tx-plugin ^>=1.5,
-        plutus-ledger-api ^>=1.5,
+        plutus-tx,
+        plutus-tx-plugin,
+        plutus-ledger-api,
         serialise,
         template-haskell
 
