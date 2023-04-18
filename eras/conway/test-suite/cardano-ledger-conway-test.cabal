@@ -34,7 +34,7 @@ library
 
     build-depends:
         base >=4.14 && <4.17,
-        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} ^>=1.1,
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} ^>=1.2,
         cardano-ledger-babbage ^>=1.1,
         cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
         cardano-strict-containers,

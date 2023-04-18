@@ -147,6 +147,7 @@ import qualified Data.Foldable as F (asum)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import Data.SatInt (SatInt, fromSatInt)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
@@ -433,12 +434,12 @@ transExUnits (ExUnits mem steps) =
 exBudgetToExUnits :: PV1.ExBudget -> Maybe ExUnits
 exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
   ExUnits
-    <$> safeFromInteger memory
-    <*> safeFromInteger steps
+    <$> safeFromSatInt memory
+    <*> safeFromSatInt steps
   where
-    safeFromInteger :: Integral a => a -> Maybe Natural
-    safeFromInteger i
-      | i >= 0 = Just $ fromIntegral i
+    safeFromSatInt :: SatInt -> Maybe Natural
+    safeFromSatInt i
+      | i >= 0 = Just . fromInteger $ fromSatInt i
       | otherwise = Nothing
 
 -- ===================================

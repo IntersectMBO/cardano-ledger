@@ -27,12 +27,12 @@ executable plutus-preprocessor
     build-depends:
         base >=4.14 && <4.17,
         bytestring,
-        cardano-ledger-alonzo >=1.1,
+        cardano-ledger-alonzo >=1.2,
         flat,
         hashable >=1.4.1.0,
-        plutus-tx ^>=1.1,
-        plutus-tx-plugin ^>=1.1.1,
-        plutus-ledger-api ^>=1.1,
+        plutus-tx ^>=1.5,
+        plutus-tx-plugin ^>=1.5,
+        plutus-ledger-api ^>=1.5,
         serialise,
         template-haskell
 

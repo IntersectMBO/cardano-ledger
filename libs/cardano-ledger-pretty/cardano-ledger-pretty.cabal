@@ -36,7 +36,7 @@ library
         bytestring,
         cardano-crypto-class,
         cardano-ledger-allegra >=1.1,
-        cardano-ledger-alonzo >=1.1,
+        cardano-ledger-alonzo >=1.2,
         cardano-ledger-babbage >=1.1,
         cardano-ledger-byron,
         cardano-ledger-conway >=1.1,
