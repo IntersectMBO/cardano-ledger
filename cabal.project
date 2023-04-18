@@ -68,6 +68,9 @@ packages:
 program-options
   ghc-options: -Werror
 
+package plutus-preprocessor
+  haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
+
 package cardano-ledger-core
   flags: +asserts
 
