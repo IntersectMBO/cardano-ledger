@@ -18,9 +18,8 @@ module Cardano.Ledger.Conway.Rules.Delegs (
   ConwayDelegsEvent (..),
 ) where
 
-import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, mkCertIxPartial)
-import Cardano.Ledger.CertState (PState, rewards)
+import Cardano.Ledger.CertState (PState)
 import Cardano.Ledger.Conway.Era (ConwayDELEGS)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (
@@ -33,31 +32,44 @@ import Cardano.Ledger.Shelley.API (
   DelplEnv (..),
   KeyHash,
   KeyRole (..),
-  Network,
   PoolEnv,
   Ptr (..),
   RewardAcnt,
   ShelleyDELPL,
-  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody)
-import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure, drainedRewardAccounts, isDelegationRegistered, isSubmapOfUM)
-import qualified Cardano.Ledger.UMap as UM
-import Control.Arrow (ArrowChoice (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelplEvent,
+  ShelleyDelplPredFailure,
+  drainWithdrawals,
+  validateDelegationRegistered,
+  validateZeroRewards,
+ )
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition.Extended (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans, (?!), (?!:))
+import Control.State.Transition.Extended (
+  Embed (..),
+  STS (..),
+  TRC (..),
+  TransitionRule,
+  judgmentContext,
+  liftSTS,
+  trans,
+  validateTrans,
+ )
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
 data ConwayDelegsPredFailure era
-  = DelegateeNotRegisteredDELEG
-      !(KeyHash 'StakePool (EraCrypto era)) -- target pool which is not registered
-  | WithdrawalsNotInRewardsDELEGS
-      !(Map (RewardAcnt (EraCrypto era)) Coin) -- withdrawals that are missing or do not withdrawal the entire amount
-  | CertFailure (PredicateFailure (EraRule "CERT" era)) -- Subtransition Failures
+  = -- | Target pool which is not registered
+    DelegateeNotRegisteredDELEG
+      !(KeyHash 'StakePool (EraCrypto era))
+  | -- | Withdrawals that are missing or do not withdrawal the entire amount
+    WithdrawalsNotInRewardsDELEGS
+      !(Map (RewardAcnt (EraCrypto era)) Coin)
+  | -- | CERT rule subtransition Failures
+    CertFailure !(PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
 
 deriving instance
@@ -103,45 +115,26 @@ conwayDelegsTransition ::
   ) =>
   TransitionRule (ConwayDELEGS era)
 conwayDelegsTransition = do
-  TRC (env@(DelegsEnv slot txIx pp tx acnt), dpstate, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv slot txIx pp tx acnt), certState, certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
 
   case certificates of
-    Empty -> zeroRewards dpstate tx network
+    Empty -> do
+      let dState = certDState certState
+          withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+      validateTrans WithdrawalsNotInRewardsDELEGS $
+        validateZeroRewards dState withdrawals network
+      pure $ certState {certDState = drainWithdrawals dState withdrawals}
     gamma :|> c -> do
-      dpstate' <-
-        trans @(ConwayDELEGS era) $ TRC (env, dpstate, gamma)
-      left DelegateeNotRegisteredDELEG (isDelegationRegistered @era dpstate' c)
-        ?!: id
+      certState' <-
+        trans @(ConwayDELEGS era) $ TRC (env, certState, gamma)
+      validateTrans DelegateeNotRegisteredDELEG $
+        validateDelegationRegistered certState' c
       -- It is impossible to have 65535 number of certificates in a
       -- transaction, therefore partial function is justified.
       let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(EraRule "CERT" era) $
-        TRC (DelplEnv slot ptr pp acnt, dpstate', c)
-
-zeroRewards ::
-  forall era.
-  ( EraTx era
-  , State (EraRule "DELEGS" era) ~ CertState era
-  , PredicateFailure (EraRule "DELEGS" era) ~ ConwayDelegsPredFailure era
-  ) =>
-  CertState era ->
-  Tx era ->
-  Network ->
-  TransitionRule (EraRule "DELEGS" era)
-zeroRewards dpstate tx network = do
-  let ds = certDState dpstate
-      wdrls = unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
-      rewards' = rewards ds
-  isSubmapOfUM @era wdrls rewards' -- withdrawals_ ⊆ rewards
-    ?! WithdrawalsNotInRewardsDELEGS @era
-      ( Map.differenceWith
-          (\x y -> if x /= y then Just x else Nothing)
-          wdrls
-          (Map.mapKeys (mkRwdAcnt network) (UM.rewView (dsUnified ds)))
-      )
-  let unified' = rewards' UM.⨃ drainedRewardAccounts @era wdrls
-  pure $ dpstate {certDState = ds {dsUnified = unified'}}
+        TRC (DelplEnv slot ptr pp acnt, certState', c)
 
 instance
   ( Era era
