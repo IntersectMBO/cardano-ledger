@@ -723,16 +723,36 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     Refl <- sameRep r1 r2
     set <- simplify expr
     let msgs = ("Solving for variable " ++ nam) : map show preds
-    pure (fst <$> (itemFromSet msgs set))
+    pure (fst <$> itemFromSet msgs set)
   [NotMember (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     set <- simplify expr
     let msgs = ("Solving for variable " ++ nam) : map show preds
     pure $ suchThatErr msgs (genRep r2) (`Set.notMember` set)
+  [MapMember (Var v2@(V _ r2 _)) _exprVal exprMap] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    m <- simplify exprMap
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    pure (fst <$> itemFromSet msgs (Map.keysSet m))
+  [MapMember _exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    m <- simplify exprMap
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    pure (fst <$> itemFromSet msgs (Set.fromList (Map.elems m)))
+  [NotMapMember (Var v2@(V _ r2 _)) _exprVal exprMap] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    m <- simplify exprMap
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    pure $ suchThatErr msgs (genRep r2) (`Map.notMember` m)
+  [NotMapMember _exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    m <- simplify exprMap
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    pure $ suchThatErr msgs (genRep r2) (`notElem` Map.elems m)
   [List (Var v2@(V _ (MaybeR r2) _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 (MaybeR r2)
     xs <- mapM simplify expr
-    pure $ (pure (makeFromList xs))
+    pure $ pure (makeFromList xs)
   [Random (Var v2)] | Name v1 == Name v2 -> pure $ genRep r1
   cs -> case r1 of
     MapR dom rng -> do

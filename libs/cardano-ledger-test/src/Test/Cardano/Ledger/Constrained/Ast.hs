@@ -54,8 +54,8 @@ data Pred era where
   CanFollow :: Count n => Term era n -> Term era n -> Pred era
   Member :: Ord a => Term era a -> Term era (Set a) -> Pred era
   NotMember :: Ord a => Term era a -> Term era (Set a) -> Pred era
-  MapMember :: (Ord k, Eq v, Ord v) =>  Term era k -> Term era v -> Term era (Map k v) -> Pred era
-  NotMapMember :: (Ord k, Eq v, Ord v) =>  Term era k -> Term era v -> Term era (Map k v) -> Pred era
+  MapMember :: (Ord k, Eq v, Ord v) => Term era k -> Term era v -> Term era (Map k v) -> Pred era
+  NotMapMember :: (Ord k, Eq v, Ord v) => Term era k -> Term era v -> Term era (Map k v) -> Pred era
   (:<-:) :: Term era t -> Target era t -> Pred era
   GenFrom :: Term era t -> Target era (Gen t) -> Pred era
   List :: FromList f t => Term era (f t) -> [Term era t] -> Pred era
@@ -501,7 +501,7 @@ runPred env (MapMember x y z) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
   z2 <- runTerm env z
-  pure $ Set.member x2 (Map.keysSet  z2) && Set.member y2 (Set.fromList (Map.elems z2))
+  pure $ Set.member x2 (Map.keysSet z2) && Set.member y2 (Set.fromList (Map.elems z2))
 runPred env (NotMapMember x y z) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
