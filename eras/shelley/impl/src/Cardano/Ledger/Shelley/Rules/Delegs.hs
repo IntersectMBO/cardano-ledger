@@ -259,11 +259,7 @@ isSubmapOfUM ::
 isSubmapOfUM ws (RewardDeposits (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
   where
     withdrawalMap :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
-    withdrawalMap =
-      Map.fromList
-        [ (cred, coin)
-        | (RewardAcnt _ cred, coin) <- Map.toList ws
-        ]
+    withdrawalMap = Map.mapKeys (\(RewardAcnt _ cred) -> cred) ws
     f :: Coin -> Trip (EraCrypto era) -> Bool
     f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == fromCompact coin2
     f _ _ = False
