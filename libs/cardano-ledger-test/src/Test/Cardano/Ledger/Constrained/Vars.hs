@@ -8,12 +8,11 @@
 
 module Test.Cardano.Ledger.Constrained.Vars where
 
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, ProtVer (..), StrictMaybe (..))
-import Cardano.Ledger.CertState (CertState (..), DState (..), FutureGenDeleg (..), PState (..), VState (..))
-import qualified Cardano.Ledger.CertState as DPS (InstantaneousRewards (..))
 import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, ProtVer (..), SlotNo (..), StrictMaybe (..))
+import Cardano.Ledger.CertState (CertState (..), DState (..), FutureGenDeleg (..), PState (..), VState (..))
+import qualified Cardano.Ledger.CertState as DPS (InstantaneousRewards (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (
   EraPParams,

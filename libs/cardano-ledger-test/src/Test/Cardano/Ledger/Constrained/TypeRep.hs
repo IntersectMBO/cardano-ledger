@@ -45,6 +45,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
@@ -73,10 +74,12 @@ import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Classes (
   PParamsF (..),
   PParamsUpdateF (..),
+  ScriptF (..),
   TxOutF (..),
   ValueF (..),
   genPParams,
   genPParamsUpdate,
+  genScriptF,
   genTxOut,
   genUTxO,
   genValue,
@@ -89,6 +92,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
 import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
@@ -165,6 +169,10 @@ data Rep era t where
   DCertR :: Rep era (DCert (EraCrypto era))
   RewardAcntR :: Rep era (RewardAcnt (EraCrypto era))
   ValidityIntervalR :: Rep era ValidityInterval
+  KeyPairR :: Rep era (KeyPair 'Witness (EraCrypto era))
+  GenR :: Rep era x -> Rep era (Gen x)
+  ScriptR :: Proof era -> Rep era (ScriptF era)
+  ScriptHashR :: Rep era (ScriptHash (EraCrypto era))
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -241,6 +249,11 @@ instance Singleton (Rep e) where
   testEql DCertR DCertR = Just Refl
   testEql ValidityIntervalR ValidityIntervalR = Just Refl
   testEql RewardAcntR RewardAcntR = Just Refl
+  testEql KeyPairR KeyPairR = Just Refl
+  testEql (GenR x) (GenR y) = do Refl <- testEql x y; pure Refl
+  testEql (ScriptR c) (ScriptR d) =
+    do Refl <- testEql c d; pure Refl
+  testEql ScriptHashR ScriptHashR = Just Refl
   testEql _ _ = Nothing
   cmpIndex x y = compare (shape x) (shape y)
 
@@ -296,6 +309,10 @@ instance Show (Rep era t) where
   show DCertR = "(DCert c)"
   show RewardAcntR = "(RewardAcnt c)"
   show ValidityIntervalR = "ValidityInterval"
+  show KeyPairR = "(KeyPair 'Witness era)"
+  show (GenR x) = "(Gen " ++ show x ++ ")"
+  show (ScriptR x) = "(Script " ++ show x ++ ")"
+  show ScriptHashR = "(ScriptHash c)"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -349,7 +366,7 @@ synopsis (ProtVerR _) (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 synopsis SlotNoR x = show x
 synopsis SizeR x = show x
 synopsis VCredR x = show (credSummary x)
-synopsis VHashR x = show (credSummary x)
+synopsis VHashR x = "(KeyHash 'Voting " ++ show (keyHashSummary x) ++ ")"
 synopsis MultiAssetR (MultiAsset x) = "(MultiAsset num tokens = " ++ show (Map.size x) ++ ")"
 synopsis PolicyIDR (PolicyID x) = show (pcScriptHash x)
 synopsis (WitnessesFieldR p) x = show $ ppRecord' mempty $ unReflect pcWitnessesField p x
@@ -357,6 +374,10 @@ synopsis AssetNameR (AssetName x) = take 10 (show x)
 synopsis DCertR x = show (pcDCert x)
 synopsis RewardAcntR x = show (pcRewardAcnt x)
 synopsis ValidityIntervalR x = show (ppValidityInterval x)
+synopsis KeyPairR _ = "(KeyPairR ...)"
+synopsis (GenR x) _ = "(Gen " ++ show x ++ " ...)"
+synopsis (ScriptR _) x = show x -- The Show instance uses pcScript
+synopsis ScriptHashR x = show (pcScriptHash x)
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -434,6 +455,10 @@ instance Shaped (Rep era) any where
   shape DCertR = Nullary 45
   shape RewardAcntR = Nullary 46
   shape ValidityIntervalR = Nullary 47
+  shape KeyPairR = Nullary 48
+  shape (GenR x) = Nary 49 [shape x]
+  shape (ScriptR p) = Nary 50 [shape p]
+  shape ScriptHashR = Nullary 51
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -497,6 +522,10 @@ genSizedRep _ AssetNameR = arbitrary
 genSizedRep _ RewardAcntR = arbitrary
 genSizedRep _ DCertR = arbitrary
 genSizedRep _ ValidityIntervalR = arbitrary
+genSizedRep _ KeyPairR = arbitrary
+genSizedRep n (GenR x) = pure (genSizedRep n x)
+genSizedRep _ (ScriptR p) = genScriptF p
+genSizedRep _ ScriptHashR = arbitrary
 
 genRep ::
   Era era =>
@@ -574,6 +603,12 @@ shrinkRep AssetNameR t = shrink t
 shrinkRep DCertR t = shrink t
 shrinkRep RewardAcntR t = shrink t
 shrinkRep ValidityIntervalR _ = []
+shrinkRep KeyPairR t = shrink t
+shrinkRep (GenR _) _ = []
+shrinkRep (ScriptR _) _ = []
+shrinkRep ScriptHashR t = shrink t
+shrinkRep VCredR t = shrink t
+shrinkRep VHashR t = shrink t
 
 -- ===========================
 

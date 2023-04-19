@@ -25,6 +25,7 @@ import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Fi
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), runOrdCond, runSize)
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), synopsis, testEql, (:~:) (Refl))
+import Test.QuickCheck (Gen)
 
 -- ================================================
 
@@ -54,6 +55,7 @@ data Pred era where
   Member :: Ord a => Term era a -> Term era (Set a) -> Pred era
   NotMember :: Ord a => Term era a -> Term era (Set a) -> Pred era
   (:<-:) :: Term era t -> Target era t -> Pred era
+  GenFrom :: Term era t -> Target era (Gen t) -> Pred era
   List :: FromList f t => Term era (f t) -> [Term era t] -> Pred era
   Choose :: Eq t => Size -> Term era [t] -> [(Target era t, [Pred era])] -> Pred era
   Maybe :: Term era (Maybe t) -> Target era t -> [Pred era] -> Pred era
@@ -164,6 +166,7 @@ instance Show (Pred era) where
   show (Member x y) = "Member " ++ show x ++ " " ++ show y
   show (NotMember x y) = "NotMember " ++ show x ++ " " ++ show y
   show (x :<-: y) = show x ++ " :<-: " ++ showT y
+  show (GenFrom x y) = "GenFrom " ++ show x ++ " " ++ showT y
   show (List t xs) = "List " ++ show t ++ " [" ++ showL show ", " xs ++ "]"
   show (Choose s term xs) = unlines (("Choose " ++ show s ++ " " ++ show term) : (map showchoices xs))
     where
@@ -259,6 +262,7 @@ varsOfPred ans s = case s of
   Member a b -> varsOfTerm (varsOfTerm ans a) b
   NotMember a b -> varsOfTerm (varsOfTerm ans a) b
   a :<-: b -> varsOfTarget (varsOfTerm ans a) b
+  GenFrom a b -> varsOfTarget (varsOfTerm ans a) b
   List a bs -> List.foldl' varsOfTerm (varsOfTerm ans a) bs
   Choose _ term pairs -> varsOfTerm (varsOfPairs ans pairs) term
   Maybe term target ps -> varsOfTerm (varsOfPairs ans [(target, ps)]) term
@@ -297,6 +301,7 @@ data SubItem era where
 
 instance Show (SubItem era) where
   show (SubItem (V nm _rep _) expr) = pad 14 nm ++ " = " ++ show expr
+  showList xs ans = unlines (ans : (map show xs))
 
 pad :: Int -> String -> String
 pad n x = x ++ replicate (n - length x) ' '
@@ -349,6 +354,7 @@ substPred sub (CanFollow a b) = CanFollow (substTerm sub a) (substTerm sub b)
 substPred sub (Member a b) = Member (substTerm sub a) (substTerm sub b)
 substPred sub (NotMember a b) = NotMember (substTerm sub a) (substTerm sub b)
 substPred sub (a :<-: b) = substTerm sub a :<-: substTarget sub b
+substPred sub (GenFrom a b) = GenFrom (substTerm sub a) (substTarget sub b)
 substPred sub (List a b) = List (substTerm sub a) (map (substTerm sub) b)
 substPred sub (Choose sz t pairs) = Choose sz (substTerm sub t) (map (subPair sub) pairs)
   where
@@ -484,6 +490,10 @@ runPred env (NotMember x y) = do
   y2 <- runTerm env y
   pure (Set.notMember x2 y2)
 runPred env (x :<-: y) = do
+  _x2 <- runTerm env x
+  _y2 <- runTarget env y
+  pure True
+runPred env (GenFrom x y) = do
   _x2 <- runTerm env x
   _y2 <- runTarget env y
   pure True

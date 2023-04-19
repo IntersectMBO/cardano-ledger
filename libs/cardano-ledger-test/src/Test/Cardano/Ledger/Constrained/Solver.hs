@@ -153,6 +153,10 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help DCertR _ = failT ["DCert does not have Ord instance"]
     help RewardAcntR v = pure $ With v
     help ValidityIntervalR v = pure $ With v
+    help KeyPairR _ = failT ["KeyPair does not have Ord instance"]
+    help (GenR _) _ = failT ["Gen does not have Ord instance"]
+    help (ScriptR _) _ = failT ["Script does not have Ord instance"]
+    help ScriptHashR v = pure $ With v
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
@@ -694,11 +698,14 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
   [Sized (Lit SizeR sz) (Var v2)] | isAddsType r1 && Name v1 == Name v2 -> do
     With _ <- hasAdds r1 r1
     pure $ fromI ["dispatch " ++ show v1 ++ " " ++ show preds] <$> genFromIntRange sz
-  [Var v2@(V _ r2 _) :<-: target] | Name v1 == Name v2 ->
-    do
-      Refl <- sameRep r1 r2
-      x <- simplifyTarget @era @t target
-      pure (pure x)
+  [GenFrom (Var v2@(V _ r2 _)) target] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    x <- simplifyTarget @era @(Gen t) target
+    pure x
+  [Var v2@(V _ r2 _) :<-: target] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    x <- simplifyTarget @era @t target
+    pure (pure x)
   [Member (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     set <- simplify expr
@@ -787,10 +794,17 @@ solveOneVar subst (Name (v@(V _ r _)), ps) = do
   t <- genOneT
   pure (SubItem v (Lit r t) : subst)
 
-toolChain :: Era era => Proof era -> OrderInfo -> [Pred era] -> Gen (Env era)
-toolChain _proof order cs = do
-  (_count, DependGraph pairs) <- compileGen order cs
-  subst <- foldlM' solveOneVar [] pairs
+toolChainSub :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Subst era)
+toolChainSub _proof order cs subst0 = do
+  (_count, DependGraph pairs) <- compileGen order (map (substPred subst0) cs)
+  subst <- foldlM' solveOneVar subst0 pairs
+  let isTempV (SubItem (V k _ _) _) = not (elem '.' k)
+  pure $ filter isTempV subst
+
+toolChain :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Env era)
+toolChain _proof order cs subst0 = do
+  subst <- toolChainSub _proof order cs subst0
   monadTyped $ substToEnv subst emptyEnv
 
+-- InitUniv p >>= (toolChainSub p _ _ _)  >>= (toolChainSub p _ _ _) >>= (toolChain p _ _)
 -- =======================================================================
