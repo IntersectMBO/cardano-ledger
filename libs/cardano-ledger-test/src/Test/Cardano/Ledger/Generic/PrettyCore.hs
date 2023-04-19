@@ -105,14 +105,14 @@ import Cardano.Ledger.Shelley.TxBody (
   WitVKey (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMapCompact (
+import Cardano.Ledger.UMap (
   delView,
   depositView,
   fromCompact,
   ptrView,
   rewView,
  )
-import qualified Cardano.Ledger.UMapCompact as UM (UMap, View (..), size)
+import qualified Cardano.Ledger.UMap as UM (UMap, View (..), size)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))

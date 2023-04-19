@@ -100,7 +100,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))

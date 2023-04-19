@@ -20,7 +20,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
 import Cardano.Ledger.TreeDiff (diffExpr)
-import Cardano.Ledger.UMapCompact (View (RewardDeposits), depositView, domain, fromCompact, sumDepositView)
+import Cardano.Ledger.UMap (View (RewardDeposits), depositView, domain, fromCompact, sumDepositView)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))

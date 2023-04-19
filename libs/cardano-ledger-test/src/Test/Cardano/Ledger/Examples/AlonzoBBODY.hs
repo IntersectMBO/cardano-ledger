@@ -77,8 +77,8 @@ import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt (..),
  )
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UMapCompact (View (RewardDeposits))
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (View (RewardDeposits))
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (inject, (<+>), (<->))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended (STS (..))

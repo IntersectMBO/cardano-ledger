@@ -84,7 +84,7 @@ import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate 
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad.Trans ()
 import Data.Default.Class (Default (def))

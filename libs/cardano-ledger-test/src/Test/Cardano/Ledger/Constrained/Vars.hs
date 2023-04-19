@@ -43,7 +43,7 @@ import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (Complete))
 import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UMapCompact (compactCoinOrError, fromCompact)
+import Cardano.Ledger.UMap (compactCoinOrError, fromCompact)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

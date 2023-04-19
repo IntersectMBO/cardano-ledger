@@ -91,13 +91,13 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
-import Cardano.Ledger.UMapCompact (
+import Cardano.Ledger.UMap (
   RDPair (..),
   View (Delegations, Ptrs, RewardDeposits),
   fromCompact,
   unView,
  )
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import Cardano.Protocol.TPraos.BHeader (

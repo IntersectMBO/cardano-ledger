@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-core
-version:            1.1.0.0
+version:            1.2.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -58,6 +58,7 @@ library
         Cardano.Ledger.TxIn
         Cardano.Ledger.UTxO
         Cardano.Ledger.Val
+        Cardano.Ledger.UMap
         Cardano.Ledger.UMapCompact
 
     hs-source-dirs:   src
@@ -163,6 +164,7 @@ test-suite tests
     other-modules:
         Test.Cardano.Ledger.AddressSpec
         Test.Cardano.Ledger.BaseTypesSpec
+        Test.Cardano.Ledger.UMapSpec
 
     default-language: Haskell2010
     ghc-options:
@@ -178,6 +180,7 @@ test-suite tests
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core,
         cardano-crypto-class,
+        containers,
         FailT,
         testlib,
         genvalidity,

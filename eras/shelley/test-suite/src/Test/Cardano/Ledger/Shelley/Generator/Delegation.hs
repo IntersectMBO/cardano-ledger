@@ -53,7 +53,7 @@ import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈))
 import Data.Foldable (fold)

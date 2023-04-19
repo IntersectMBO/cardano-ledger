@@ -15,7 +15,7 @@ import Cardano.Ledger.Shelley.Governance (GovernanceState (..))
 import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, esLStateL, rewards)
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (deltaReserves, deltaTreasury)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
-import Cardano.Ledger.UMapCompact (
+import Cardano.Ledger.UMap (
   RDPair (..),
   Trip (Triple),
   UMap (..),

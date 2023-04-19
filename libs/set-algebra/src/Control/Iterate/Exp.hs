@@ -28,7 +28,6 @@ import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.UMap (UnifiedView (..), View)
 import Text.PrettyPrint.ANSI.Leijen (Doc, align, parens, text, vsep, (<+>))
 import Prelude hiding (lookup)
 
@@ -121,17 +120,6 @@ instance (Ord k) => HasExp (Single k v) (Single k v) where
   toExp x = Base SingleR x
 
 type OrdAll coin cred pool ptr k = (Ord k, Ord coin, Ord cred, Ord ptr, Ord pool)
-
-instance
-  ( UnifiedView coin cred pool ptr k v
-  , OrdAll coin cred pool ptr k
-  , Monoid coin
-  ) =>
-  HasExp
-    (View coin cred pool ptr k v)
-    (View coin cred pool ptr k v)
-  where
-  toExp x = Base (ViewR tag) x
 
 -- =========================================================================================
 -- When we build an Exp, we want to make sure all Sets with one element become (SetSingleton x)
@@ -529,12 +517,6 @@ instance Ord k => HasQuery (Map.Map k v) k v where
 
 instance Ord k => HasQuery (Single k v) k v where
   query xs = BaseD SingleR xs
-
-instance
-  (UnifiedView coin cred pool ptr k v, Monoid coin, Ord k, Ord coin, Ord cred, Ord ptr, Ord pool) =>
-  HasQuery (View coin cred pool ptr k v) k v
-  where
-  query xs = BaseD (ViewR tag) xs
 
 -- =================================================
 -- Show Instance of Query

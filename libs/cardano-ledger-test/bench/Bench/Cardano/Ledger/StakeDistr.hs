@@ -55,7 +55,7 @@ import Cardano.Ledger.Shelley.Rules (
   -- validatingTickTransitionFORECAST,
  )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo)
 import Cardano.Slotting.Time (mkSlotLength)

@@ -16,7 +16,6 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (StrictTriple (..), splitMemberSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.UMap as UM
 
 --  $ClassesForSetAlgebra
 
@@ -87,19 +86,12 @@ data BaseRep f k v where
   SetR :: Basic Sett => BaseRep Sett k ()
   ListR :: Basic List => BaseRep List k v
   SingleR :: Basic Single => BaseRep Single k v
-  ViewR ::
-    (Monoid coin, Ord cred, Ord ptr, Ord coin, Ord pool) =>
-    UM.Tag coin cred pool ptr k v ->
-    BaseRep (UM.View coin cred pool ptr) k v
 
 instance Show (BaseRep f k v) where
   show MapR = "Map"
   show SetR = "Set"
   show ListR = "List"
   show SingleR = "Single"
-  show (ViewR UM.Rew) = "ViewR-cred-coin"
-  show (ViewR UM.Del) = "ViewR-cred-keyhash"
-  show (ViewR UM.Ptr) = "ViewR-ptr-cred"
 
 -- ==================================================================
 -- Now for each Basic type we provide instances
@@ -278,41 +270,6 @@ instance Iter Map.Map where
   isnull = Map.null
   lookup = Map.lookup
 
--- ==========================================================================
--- Basic ViewMap
-
-instance
-  (Monoid coin, Ord coin, Ord cred, Ord ptr, Ord pool) =>
-  Basic (UM.View coin cred pool ptr)
-  where
-  addkv (k, v) m comb = UM.insertWith' comb k v m
-  addpair = UM.insert'
-  removekey = UM.delete'
-  domain = UM.domain
-  range = UM.range
-
-instance
-  (Ord coin, Ord cred, Ord ptr) =>
-  Iter (UM.View coin cred pool ptr)
-  where
-  nxt m =
-    Collect
-      ( \ans f ->
-          case UM.next m of
-            Nothing -> ans
-            Just (k, v, nextm) -> f (k, v, nextm) ans
-      )
-  lub key m =
-    Collect
-      ( \ans f ->
-          case UM.leastUpperBound key m of
-            Nothing -> ans
-            Just (k, v, nextm) -> f (k, v, nextm) ans
-      )
-  haskey = UM.member
-  isnull = UM.isNull
-  lookup = UM.lookup
-
 -- ===========================================================================
 
 -- | Every iterable type type forms an isomorphism with some Base type. For most
@@ -342,9 +299,5 @@ instance Embed (Single k v) (Single k v) where
 
 -- Necessary when asking Boolean queries like: (⊆),(∈),(∉)
 instance Embed Bool Bool where
-  toBase xs = xs
-  fromBase xs = xs
-
-instance Embed (UM.View coin cred pool ptr k v) (UM.View coin cred pool ptr k v) where
   toBase xs = xs
   fromBase xs = xs

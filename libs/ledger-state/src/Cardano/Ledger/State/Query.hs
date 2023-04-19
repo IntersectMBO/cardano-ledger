@@ -22,8 +22,8 @@ import Cardano.Ledger.State.Transform
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
-import Cardano.Ledger.UMapCompact (delView, ptrView, rewView, unify)
-import qualified Cardano.Ledger.UMapCompact as UM
+import Cardano.Ledger.UMap (delView, ptrView, rewView, unify)
+import qualified Cardano.Ledger.UMap as UM
 import qualified Cardano.Ledger.UTxO as Shelley
 import Conduit
 import Control.Foldl (Fold (..))

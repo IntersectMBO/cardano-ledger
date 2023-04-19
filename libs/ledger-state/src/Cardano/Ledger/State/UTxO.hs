@@ -27,7 +27,7 @@ import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
-import Cardano.Ledger.UMapCompact (delView, ptrView, rewView)
+import Cardano.Ledger.UMap (delView, ptrView, rewView)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))

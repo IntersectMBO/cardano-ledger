@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-core`
 
+## 1.2.0.0
+
+- Deprecate `Cardano.Ledger.UMapCompact` in favor of `Cardano.Ledger.UMap` and add tests for it. #3371
+  - Add `Cardano.Ledger.UMap.rdPairView` to view the reward-deposits pair from the `UMap`.
+
 ## 1.1.0.0
 
 * Add `ToJSON (PParamsHKD f era)` superclass constraints for `EraPParams`.

@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
-import Cardano.Ledger.UMapCompact (RDPair (..), Trip (..), UMap (..))
+import Cardano.Ledger.UMap (RDPair (..), Trip (..), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Default.Class (def)

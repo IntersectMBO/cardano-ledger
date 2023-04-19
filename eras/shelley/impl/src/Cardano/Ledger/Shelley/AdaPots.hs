@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), unWithdrawals)
-import Cardano.Ledger.UMapCompact (View (RewardDeposits), sumDepositView, sumRewardsView)
+import Cardano.Ledger.UMap (View (RewardDeposits), sumDepositView, sumRewardsView)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map

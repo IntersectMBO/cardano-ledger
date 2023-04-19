@@ -80,7 +80,7 @@ import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
   addrWits,
  )
-import qualified Cardano.Ledger.UMapCompact as UM
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.DeepSeq (rnf)
