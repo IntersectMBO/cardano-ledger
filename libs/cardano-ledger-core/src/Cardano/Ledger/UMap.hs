@@ -243,14 +243,23 @@ pattern Triple a b c <-
 {-# COMPLETE Triple #-}
 
 instance Show (Trip c) where
-  show (Triple a b c) = "(Triple " ++ show a ++ " " ++ show b ++ " " ++ show c ++ ")"
+  show (Triple a b c) = "(Triple (" ++ show a ++ ", " ++ show b ++ ", " ++ show c ++ "))"
 
 -- =====================================================
 
 -- | A unified map represents 4 Maps with domain @(Credential 'Staking c)@ for
 --   keys and one more in the inverse direction with @Ptr@ for keys and @(Credential 'Staking c)@ for values.
 data UMap c = UMap !(Map (Credential 'Staking c) (Trip c)) !(Map Ptr (Credential 'Staking c))
-  deriving (Show, Eq, Generic, NoThunks, NFData)
+  deriving (Eq, Generic, NoThunks, NFData)
+
+instance Show (UMap c) where
+  show (UMap tripmap ptrmap) =
+    unlines
+      [ "(UMap ("
+      , show tripmap
+      , show ptrmap
+      , "))"
+      ]
 
 instance Crypto c => ToJSON (UMap c) where
   toJSON = object . toUMapPair
@@ -503,9 +512,11 @@ insertWith' comb ptr stake (Ptrs (UMap tripmap ptrmap)) =
         where
           ok (Triple c set d) = zeroMaybe (Triple c (Set.delete pointer set) d)
       -- Add the new pointer to the set in Triple
-      tripmap2 = Map.update addPtr newstake (retract oldstake ptr tripmap)
+      tripmap2 = Map.alter addPtr newstake (retract oldstake ptr tripmap)
         where
-          addPtr (Triple a set b) = Just (Triple a (Set.insert ptr set) b)
+          addPtr = \case
+            Just (Triple a set b) -> Just (Triple a (Set.insert ptr set) b)
+            Nothing -> Just (Triple SNothing (Set.singleton ptr) SNothing)
       ptrmap2 = Map.insert ptr newstake ptrmap
    in Ptrs (UMap tripmap2 ptrmap2)
 

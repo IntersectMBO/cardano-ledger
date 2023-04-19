@@ -22,6 +22,9 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genValidTriplesNonEmpty,
   genInvariantNonEmpty,
   genRightPreferenceUMap,
+  genInsertDeleteRoundtripRDPair,
+  genInsertDeleteRoundtripDelegation,
+  genInsertDeleteRoundtripPtr,
 )
 where
 
@@ -527,6 +530,32 @@ genExcludingKey ks = do
   if k `Map.member` ks
     then genExcludingKey ks
     else pure k
+
+genInsertDeleteRoundtripRDPair :: Gen (UMap StandardCrypto, Credential 'Staking StandardCrypto, RDPair)
+genInsertDeleteRoundtripRDPair = do
+  umap@(UMap tripmap _prtmap) <- genValidUMap
+  k <- genExcludingKey tripmap
+  v <- arbitrary
+  pure (umap, k, v)
+
+genInsertDeleteRoundtripDelegation ::
+  Gen
+    ( UMap StandardCrypto
+    , Credential 'Staking StandardCrypto
+    , KeyHash 'StakePool StandardCrypto
+    )
+genInsertDeleteRoundtripDelegation = do
+  umap@(UMap tripmap _prtmap) <- genValidUMap
+  k <- genExcludingKey tripmap
+  v <- arbitrary
+  pure (umap, k, v)
+
+genInsertDeleteRoundtripPtr :: Gen (UMap StandardCrypto, Ptr, Credential 'Staking StandardCrypto)
+genInsertDeleteRoundtripPtr = do
+  umap@(UMap _tripmap ptrmap) <- genValidUMap
+  k <- genExcludingKey ptrmap
+  v <- arbitrary
+  pure (umap, k, v)
 
 genInvariantNonEmpty :: Gen (Credential 'Staking StandardCrypto, Ptr, UMap StandardCrypto)
 genInvariantNonEmpty = do

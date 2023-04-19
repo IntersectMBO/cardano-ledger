@@ -40,7 +40,14 @@ import qualified Cardano.Ledger.UMap as UMap (lookup)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary (genInvariantNonEmpty, genRightPreferenceUMap, genValidTriples, genValidUMap)
+import Test.Cardano.Ledger.Core.Arbitrary (
+  genInsertDeleteRoundtripDelegation,
+  genInsertDeleteRoundtripPtr,
+  genInsertDeleteRoundtripRDPair,
+  genInvariantNonEmpty,
+  genRightPreferenceUMap,
+  genValidTriples,
+ )
 
 data Action
   = InsertRDPair (Credential 'Staking StandardCrypto) RDPair
@@ -167,15 +174,15 @@ spec = do
     describe "Insert-delete roundtrip" $ do
       prop "RDPair" $
         forAll
-          ((,,) <$> genValidUMap <*> arbitrary <*> arbitrary)
+          genInsertDeleteRoundtripRDPair
           (\(umap, k, v) -> umap === unView (delete' k (insert' k v (RewardDeposits umap))))
       prop "Delegations" $
         forAll
-          ((,,) <$> genValidUMap <*> arbitrary <*> arbitrary)
+          genInsertDeleteRoundtripDelegation
           (\(umap, k, v) -> umap === unView (delete' k (insert' k v (Delegations umap))))
       prop "Ptrs" $
         forAll
-          ((,,) <$> genValidUMap <*> arbitrary <*> arbitrary)
+          genInsertDeleteRoundtripPtr
           (\(umap, k, v) -> umap === unView (delete' k (insert' k v (Ptrs umap))))
     prop "Size" $ forAll genValidTriples sizeTest
     describe "Membership" $ do
