@@ -192,6 +192,9 @@ cradle:
     - path: "libs/cardano-ledger-test/benchProperty/Main.hs"
       component: "cardano-ledger-test:bench:benchProperty"
 
+    - path: "libs/cardano-protocol-core/src"
+      component: "lib:cardano-protocol-core"
+
     - path: "libs/cardano-protocol-tpraos/src"
       component: "lib:cardano-protocol-tpraos"
 

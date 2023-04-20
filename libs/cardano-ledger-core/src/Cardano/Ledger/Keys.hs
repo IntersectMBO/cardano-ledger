@@ -38,12 +38,10 @@ module Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
   GKeys (..),
-
-  -- * KES
-  KESignable,
-
-  -- * VRF
-  VRFSignable,
+  GenesisVRF,
+  toGenesisVRF,
+  fromGenesisVRF,
+  hashGenesisVRF,
 
   -- * Re-exports from cardano-crypto-class
   decodeSignedDSIGN,
@@ -63,15 +61,9 @@ module Cardano.Ledger.Keys (
   VRF.verifyVRF,
 
   -- * Re-parametrised types over `crypto`
-  CertifiedVRF,
   Hash,
   SignedDSIGN,
   SignKeyDSIGN,
-  SignedKES,
-  SignKeyKES,
-  SignKeyVRF,
-  VerKeyKES,
-  VerKeyVRF,
 )
 where
 
@@ -88,7 +80,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Crypto
-import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
+import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
@@ -270,26 +262,27 @@ hashKey ::
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 
 --------------------------------------------------------------------------------
--- KES
---------------------------------------------------------------------------------
-
-type KESignable c = KES.Signable (KES c)
-
---------------------------------------------------------------------------------
--- VRF
---------------------------------------------------------------------------------
-
-type VRFSignable c = VRF.Signable (VRF c)
-
---------------------------------------------------------------------------------
 -- Genesis delegation
 --
 -- TODO should this really live in here?
 --------------------------------------------------------------------------------
+data GenesisVRF
+
+toGenesisVRF :: Hash.Hash h (VRF.VerKeyVRF v) -> Hash.Hash h GenesisVRF
+toGenesisVRF = Hash.castHash
+
+fromGenesisVRF :: Hash.Hash h GenesisVRF -> Hash.Hash h (VRF.VerKeyVRF v)
+fromGenesisVRF = Hash.castHash
+
+hashGenesisVRF ::
+  (Hash.HashAlgorithm h, VRF.VRFAlgorithm v) =>
+  VRF.VerKeyVRF v ->
+  Hash.Hash h GenesisVRF
+hashGenesisVRF = toGenesisVRF . VRF.hashVerKeyVRF
 
 data GenDelegPair c = GenDelegPair
   { genDelegKeyHash :: !(KeyHash 'GenesisDelegate c)
-  , genDelegVrfHash :: !(Hash c (VerKeyVRF c))
+  , genDelegVrfHash :: !(Hash c GenesisVRF)
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -350,18 +343,6 @@ type Hash c = Hash.Hash (HASH c)
 type SignedDSIGN c = DSIGN.SignedDSIGN (DSIGN c)
 
 type SignKeyDSIGN c = DSIGN.SignKeyDSIGN (DSIGN c)
-
-type SignedKES c = KES.SignedKES (KES c)
-
-type SignKeyKES c = KES.SignKeyKES (KES c)
-
-type VerKeyKES c = KES.VerKeyKES (KES c)
-
-type CertifiedVRF c = VRF.CertifiedVRF (VRF c)
-
-type SignKeyVRF c = VRF.SignKeyVRF (VRF c)
-
-type VerKeyVRF c = VRF.VerKeyVRF (VRF c)
 
 -- ===============================================
 

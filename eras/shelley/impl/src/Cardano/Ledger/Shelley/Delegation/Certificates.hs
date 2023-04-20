@@ -53,10 +53,10 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (
+  GenesisVRF,
   Hash,
   KeyHash (..),
   KeyRole (..),
-  VerKeyVRF,
  )
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -96,7 +96,7 @@ data ConstitutionalDelegCert c
   = ConstitutionalDelegCert
       !(KeyHash 'Genesis c)
       !(KeyHash 'GenesisDelegate c)
-      !(Hash c (VerKeyVRF c))
+      !(Hash c GenesisVRF)
   deriving (Show, Generic, Eq, NFData)
 
 data MIRPot = ReservesMIR | TreasuryMIR

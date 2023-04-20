@@ -102,7 +102,7 @@ tests =
           (eraProtVerLow @Alonzo)
           (eraProtVerHigh @Alonzo)
     , testProperty "alonzo/Block" $
-        roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) Alonzo)
+        roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto StandardCrypto) Alonzo)
           (eraProtVerLow @Alonzo)
           (eraProtVerHigh @Alonzo)
     ]

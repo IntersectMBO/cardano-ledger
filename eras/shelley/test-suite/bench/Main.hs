@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -78,6 +79,7 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
  )
 
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Protocol.HeaderCrypto
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
@@ -109,12 +111,14 @@ data BenchCrypto
 
 instance CryptoClass.Crypto BenchCrypto where
   type DSIGN BenchCrypto = Ed25519DSIGN
-  type KES BenchCrypto = Sum6KES Ed25519DSIGN Blake2b_256
-  type VRF BenchCrypto = PraosVRF
   type HASH BenchCrypto = Blake2b_256
   type ADDRHASH BenchCrypto = Blake2b_224
 
-instance PraosCrypto BenchCrypto
+instance HeaderCrypto BenchCrypto where
+  type KES BenchCrypto = Sum6KES Ed25519DSIGN Blake2b_256
+  type VRF BenchCrypto = PraosVRF
+
+instance PraosCrypto BenchCrypto BenchCrypto
 
 type BenchEra = ShelleyEra BenchCrypto
 
@@ -263,13 +267,13 @@ validGroup =
     runAtUTxOSize n =
       bgroup
         (show n)
-        [ env (validateInput @BenchEra n) $ \arg ->
+        [ env (validateInput @BenchEra @BenchCrypto n) $ \arg ->
             bgroup
               "block"
               [ bench "applyBlockTransition" (nfIO $ benchValidate arg)
               , bench "reapplyBlockTransition" (nf benchreValidate arg)
               ]
-        , env (genUpdateInputs @BenchEra n) $ \arg ->
+        , env (genUpdateInputs @BenchEra @BenchCrypto n) $ \arg ->
             bgroup
               "protocol"
               [ bench "updateChainDepState" (nf updateChain arg)
@@ -281,7 +285,7 @@ validGroup =
 
 profileValid :: IO ()
 profileValid = do
-  state <- validateInput @BenchEra 10000
+  state <- validateInput @BenchEra @BenchCrypto 10000
   let ans = sum [applyBlock @BenchEra state n | n <- [1 .. 10000 :: Int]]
   print ans
 
@@ -380,7 +384,7 @@ varyDelegState tag fixed changes initstate action =
 
 main :: IO ()
 main = do
-  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) 1000
+  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) (Proxy :: Proxy BenchCrypto) 1000
   defaultMain
     [ bgroup
         "vary input size"

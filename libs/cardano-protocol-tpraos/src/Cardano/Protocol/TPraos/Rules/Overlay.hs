@@ -19,6 +19,12 @@ module Cardano.Protocol.TPraos.Rules.Overlay (
   classifyOverlaySlot,
   lookupInOverlaySchedule,
   overlaySlots,
+  toPoolStakeVRF,
+  fromPoolStakeVRF,
+  hashPoolStakeVRF,
+  toGenesisVRF,
+  fromGenesisVRF,
+  hashGenesisVRF,
 )
 where
 
@@ -49,19 +55,28 @@ import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
   Hash,
-  KESignable,
   KeyHash (..),
   KeyRole (..),
-  VerKeyVRF,
   coerceKeyRole,
+  fromGenesisVRF,
+  hashGenesisVRF,
   hashKey,
   hashVerKeyVRF,
+  toGenesisVRF,
  )
 import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
+  fromPoolStakeVRF,
+  hashPoolStakeVRF,
+  toPoolStakeVRF,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
+import Cardano.Protocol.HeaderCrypto
+import Cardano.Protocol.HeaderKeys (
+  KESignable,
+  VerKeyVRF,
+ )
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (BHeader),
@@ -89,7 +104,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data OVERLAY c
+data OVERLAY c hc
 
 data OverlayEnv c
   = OverlayEnv
@@ -101,25 +116,25 @@ data OverlayEnv c
 
 instance NoThunks (OverlayEnv c)
 
-data OverlayPredicateFailure c
+data OverlayPredicateFailure c hc
   = VRFKeyUnknown
       !(KeyHash 'StakePool c) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
       !(KeyHash 'StakePool c) -- KeyHash of block issuer
-      !(Hash c (VerKeyVRF c)) -- VRF KeyHash registered with stake pool
-      !(Hash c (VerKeyVRF c)) -- VRF KeyHash from Header
+      !(Hash c (VerKeyVRF hc)) -- VRF KeyHash registered with stake pool
+      !(Hash c (VerKeyVRF hc)) -- VRF KeyHash from Header
   | VRFKeyBadNonce
       !Nonce -- Nonce constant to distinguish VRF nonce values
       !SlotNo -- Slot used for VRF calculation
       !Nonce -- Epoch nonce used for VRF calculation
-      !(VRF.CertifiedVRF (VRF c) Nonce) -- VRF calculated nonce value
+      !(VRF.CertifiedVRF (VRF hc) Nonce) -- VRF calculated nonce value
   | VRFKeyBadLeaderValue
       !Nonce -- Leader constant to distinguish VRF leader values
       !SlotNo -- Slot used for VRF calculation
       !Nonce -- Epoch nonce used for VRF calculation
-      !(VRF.CertifiedVRF (VRF c) Nonce) -- VRF calculated leader value
+      !(VRF.CertifiedVRF (VRF hc) Nonce) -- VRF calculated leader value
   | VRFLeaderValueTooBig
-      !(VRF.OutputVRF (VRF c)) -- VRF Leader value
+      !(VRF.OutputVRF (VRF hc)) -- VRF Leader value
       !Rational -- stake pool's relative stake
       !ActiveSlotCoeff -- Praos active slot coefficient value
   | NotActiveSlotOVERLAY
@@ -129,53 +144,54 @@ data OverlayPredicateFailure c
       !(KeyHash 'GenesisDelegate c) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
       !(KeyHash 'BlockIssuer c) -- KeyHash of block issuer
-      !(Hash c (VerKeyVRF c)) -- VRF KeyHash registered with genesis delegation
-      !(Hash c (VerKeyVRF c)) -- VRF KeyHash from Header
+      !(Hash c (VerKeyVRF hc)) -- VRF KeyHash registered with genesis delegation
+      !(Hash c (VerKeyVRF hc)) -- VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
       !(KeyHash 'Genesis c) -- KeyHash which does not correspond to o genesis node
-  | OcertFailure (PredicateFailure (OCERT c)) -- Subtransition Failures
+  | OcertFailure (PredicateFailure (OCERT c hc)) -- Subtransition Failures
   deriving (Generic)
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
-  , VRF.Signable (VRF c) Seed
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
+  , VRF.Signable (VRF hc) Seed
   ) =>
-  STS (OVERLAY c)
+  STS (OVERLAY c hc)
   where
   type
-    State (OVERLAY c) =
+    State (OVERLAY c hc) =
       Map (KeyHash 'BlockIssuer c) Word64
 
   type
-    Signal (OVERLAY c) =
-      BHeader c
+    Signal (OVERLAY c hc) =
+      BHeader c hc
 
-  type Environment (OVERLAY c) = OverlayEnv c
-  type BaseM (OVERLAY c) = ShelleyBase
-  type PredicateFailure (OVERLAY c) = OverlayPredicateFailure c
+  type Environment (OVERLAY c hc) = OverlayEnv c
+  type BaseM (OVERLAY c hc) = ShelleyBase
+  type PredicateFailure (OVERLAY c hc) = OverlayPredicateFailure c hc
 
   initialRules = []
 
   transitionRules = [overlayTransition]
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF c)) =>
-  Show (OverlayPredicateFailure c)
+  (VRF.VRFAlgorithm (VRF hc)) =>
+  Show (OverlayPredicateFailure c hc)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF c)) =>
-  Eq (OverlayPredicateFailure c)
+  (VRF.VRFAlgorithm (VRF hc)) =>
+  Eq (OverlayPredicateFailure c hc)
 
 vrfChecks ::
-  forall c.
-  ( Crypto c
-  , VRF.Signable (VRF c) Seed
+  forall c hc.
+  ( HeaderCrypto hc
+  , VRF.Signable (VRF hc) Seed
   ) =>
   Nonce ->
-  BHBody c ->
-  Either (PredicateFailure (OVERLAY c)) ()
+  BHBody c hc ->
+  Either (PredicateFailure (OVERLAY c hc)) ()
 vrfChecks eta0 bhb = do
   unless
     ( VRF.verifyCertified
@@ -198,23 +214,26 @@ vrfChecks eta0 bhb = do
     slot = bheaderSlotNo bhb
 
 praosVrfChecks ::
-  forall c.
+  forall c hc.
   ( Crypto c
-  , VRF.Signable (VRF c) Seed
+  , HeaderCrypto hc
+  , VRF.Signable (VRF hc) Seed
   ) =>
   Nonce ->
   PoolDistr c ->
   ActiveSlotCoeff ->
-  BHBody c ->
-  Either (PredicateFailure (OVERLAY c)) ()
+  BHBody c hc ->
+  Either (PredicateFailure (OVERLAY c hc)) ()
 praosVrfChecks eta0 (PoolDistr pd) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
     Nothing -> throwError $ VRFKeyUnknown hk
     Just (IndividualPoolStake sigma vrfHK) -> do
+      let vrfHKfromHeader = hashVerKeyVRF vrfK
+          vrfHKregistered = fromPoolStakeVRF vrfHK
       unless
-        (vrfHK == hashVerKeyVRF vrfK)
-        (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))
+        (vrfHKregistered == vrfHKfromHeader)
+        (throwError $ VRFKeyWrongVRFKey hk vrfHKregistered vrfHKfromHeader)
       vrfChecks eta0 bhb
       unless
         (checkLeaderValue (VRF.certifiedOutput $ bheaderL bhb) sigma f)
@@ -224,14 +243,15 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
     vrfK = bheaderVrfVk bhb
 
 pbftVrfChecks ::
-  forall c.
+  forall c hc.
   ( Crypto c
-  , VRF.Signable (VRF c) Seed
+  , HeaderCrypto hc
+  , VRF.Signable (VRF hc) Seed
   ) =>
-  Hash c (VerKeyVRF c) ->
+  Hash c (VerKeyVRF hc) ->
   Nonce ->
-  BHBody c ->
-  Either (PredicateFailure (OVERLAY c)) ()
+  BHBody c hc ->
+  Either (PredicateFailure (OVERLAY c hc)) ()
 pbftVrfChecks vrfHK eta0 bhb = do
   unless
     (vrfHK == hashVerKeyVRF vrfK)
@@ -243,13 +263,14 @@ pbftVrfChecks vrfHK eta0 bhb = do
     vrfK = bheaderVrfVk bhb
 
 overlayTransition ::
-  forall c.
+  forall c hc.
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
-  , VRF.Signable (VRF c) Seed
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
+  , VRF.Signable (VRF hc) Seed
   ) =>
-  TransitionRule (OVERLAY c)
+  TransitionRule (OVERLAY c hc)
 overlayTransition =
   judgmentContext
     >>= \( TRC
@@ -280,7 +301,7 @@ overlayTransition =
                 failBecause $ UnknownGenesisKeyOVERLAY gkey
               Just (GenDelegPair genDelegsKey genesisVrfKH) -> do
                 vkh == coerceKeyRole genDelegsKey ?! WrongGenesisColdKeyOVERLAY vkh genDelegsKey
-                pbftVrfChecks genesisVrfKH eta0 bhb ?!: id
+                pbftVrfChecks (fromGenesisVRF genesisVrfKH) eta0 bhb ?!: id
 
         let oce =
               OCertEnv
@@ -288,19 +309,20 @@ overlayTransition =
                 , ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
                 }
 
-        trans @(OCERT c) $ TRC (oce, cs, bh)
+        trans @(OCERT c hc) $ TRC (oce, cs, bh)
 
 instance
-  (VRF.VRFAlgorithm (VRF c)) =>
-  NoThunks (OverlayPredicateFailure c)
+  (VRF.VRFAlgorithm (VRF hc)) =>
+  NoThunks (OverlayPredicateFailure c hc)
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
-  , VRF.Signable (VRF c) Seed
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
+  , VRF.Signable (VRF hc) Seed
   ) =>
-  Embed (OCERT c) (OVERLAY c)
+  Embed (OCERT c hc) (OVERLAY c hc)
   where
   wrapFailed = OcertFailure
 

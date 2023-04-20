@@ -20,12 +20,18 @@
 module Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
+  PoolStakeVRF,
+  fromPoolStakeVRF,
+  hashPoolStakeVRF,
+  toPoolStakeVRF,
 )
 where
 
+import qualified Cardano.Crypto.Hash as Hash
+import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
+import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
@@ -49,10 +55,24 @@ import NoThunks.Class (NoThunks (..))
 -- delegated to a registered stake pool.
 data IndividualPoolStake c = IndividualPoolStake
   { individualPoolStake :: !Rational
-  , individualPoolStakeVrf :: !(Hash c (VerKeyVRF c))
+  , individualPoolStakeVrf :: !(Hash c PoolStakeVRF)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
+
+data PoolStakeVRF
+
+toPoolStakeVRF :: Hash.Hash h (VRF.VerKeyVRF v) -> Hash.Hash h PoolStakeVRF
+toPoolStakeVRF = Hash.castHash
+
+fromPoolStakeVRF :: Hash.Hash h PoolStakeVRF -> Hash.Hash h (VRF.VerKeyVRF v)
+fromPoolStakeVRF = Hash.castHash
+
+hashPoolStakeVRF ::
+  (Hash.HashAlgorithm h, VRF.VRFAlgorithm v) =>
+  VRF.VerKeyVRF v ->
+  Hash.Hash h PoolStakeVRF
+hashPoolStakeVRF = toPoolStakeVRF . VRF.hashVerKeyVRF
 
 instance Crypto c => EncCBOR (IndividualPoolStake c) where
   encCBOR (IndividualPoolStake stake vrf) =

@@ -46,6 +46,7 @@ import Cardano.Ledger.Shelley.PParams (
   pattern Update,
  )
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
   bhbody,
@@ -97,11 +98,11 @@ import qualified Test.Tasty.QuickCheck as TQC
 -- =================================================================
 
 relevantCasesAreCovered ::
-  forall era.
+  forall era hc.
   ( EraGen era
   , EraGovernance era
-  , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , ChainProperty era hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , ProtVerAtMost era 8
   ) =>
   Int ->
@@ -115,23 +116,27 @@ relevantCasesAreCovered n =
       let tl = 100
       checkCoverage $
         forAllBlind
-          (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p defaultConstants) genesisChainSt)
+          (traceFromInitState @(CHAIN era hc) testGlobals tl (genEnv p q defaultConstants) genesisChainSt)
           relevantCasesAreCoveredForTrace
+
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (genEnv p defaultConstants)
+
+    q :: Proxy hc
+    q = Proxy
+    genesisChainSt = Just $ mkGenesisChainState (genEnv p q defaultConstants)
 
 relevantCasesAreCoveredForTrace ::
-  forall era.
-  ( ChainProperty era
+  forall era hc.
+  ( ChainProperty era hc
   , EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
   ) =>
-  Trace (CHAIN era) ->
+  Trace (CHAIN era hc) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block (BHeader (EraCrypto era)) era -> [Tx era]
+  let blockTxs :: Block (BHeader (EraCrypto era) hc) era -> [Tx era]
       blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
@@ -297,9 +302,10 @@ hasMetadata tx = f (tx ^. bodyTxL . auxDataHashTxBodyL)
     f (SJust _) = True
 
 onlyValidLedgerSignalsAreGenerated ::
-  forall era ledger.
+  forall era hc ledger.
   ( EraGen era
-  , QC.HasTrace ledger (GenEnv era)
+  , HeaderCrypto hc
+  , QC.HasTrace ledger (GenEnv era hc)
   , QC.BaseEnv ledger ~ Globals
   , State ledger ~ LedgerState era
   , Show (Environment ledger)
@@ -314,21 +320,25 @@ onlyValidLedgerSignalsAreGenerated =
       withMaxSuccess 200 $
         onlyValidSignalsAreGeneratedFromInitState
           @ledger
+          @(GenEnv era hc)
           testGlobals
           100
           ge
           genesisLedgerSt
     p :: Proxy era
     p = Proxy
-    ge = genEnv p defaultConstants
+    q :: Proxy hc
+    q = Proxy
+    ge = genEnv p q defaultConstants
     genesisLedgerSt = Just $ mkGenesisLedgerState ge
 
 -- | Check that the abstract transaction size function
 -- actually bounds the number of bytes in the serialized transaction.
 propAbstractSizeBoundsBytes ::
-  forall era.
+  forall era hc.
   ( EraGen era
-  , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  , HeaderCrypto hc
+  , QC.HasTrace (ShelleyLEDGER era) (GenEnv era hc)
   , EraGovernance era
   ) =>
   Property
@@ -338,7 +348,7 @@ propAbstractSizeBoundsBytes = property $ do
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
-    (genEnv p defaultConstants)
+    (genEnv p q defaultConstants)
     genesisLedgerSt
     $ \tr -> do
       let txs :: [Tx era]
@@ -347,14 +357,17 @@ propAbstractSizeBoundsBytes = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p defaultConstants)
+    q :: Proxy hc
+    q = Proxy
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p q defaultConstants)
 
 -- | Check that the abstract transaction size function
 -- is not off by an acceptable order of magnitude.
 propAbstractSizeNotTooBig ::
-  forall era.
+  forall era hc.
   ( EraGen era
-  , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  , HeaderCrypto hc
+  , QC.HasTrace (ShelleyLEDGER era) (GenEnv era hc)
   , EraGovernance era
   ) =>
   Property
@@ -371,7 +384,7 @@ propAbstractSizeNotTooBig = property $ do
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
-    (genEnv p defaultConstants)
+    (genEnv p q defaultConstants)
     genesisLedgerSt
     $ \tr -> do
       let txs :: [Tx era]
@@ -380,12 +393,15 @@ propAbstractSizeNotTooBig = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p defaultConstants)
+    q :: Proxy hc
+    q = Proxy
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p q defaultConstants)
 
 onlyValidChainSignalsAreGenerated ::
-  forall era.
+  forall era hc.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , HeaderCrypto hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , EraGovernance era
   ) =>
   TestTree
@@ -394,17 +410,23 @@ onlyValidChainSignalsAreGenerated =
   where
     prop =
       withMaxSuccess 100 $
-        onlyValidSignalsAreGeneratedFromInitState @(CHAIN era)
+        onlyValidSignalsAreGeneratedFromInitState @(CHAIN era hc) @(GenEnv era hc)
           testGlobals
           100
-          (genEnv p defaultConstants)
+          (genEnv p q defaultConstants)
           genesisChainSt
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (genEnv p defaultConstants)
+    q :: Proxy hcrypto
+    q = Proxy
+    genesisChainSt = Just $ mkGenesisChainState (genEnv p q defaultConstants)
 
 -- | Counts the epochs spanned by this trace
-epochsInTrace :: forall era. Era era => [Block (BHeader (EraCrypto era)) era] -> Int
+epochsInTrace ::
+  forall era hc.
+  (Era era, HeaderCrypto hc) =>
+  [Block (BHeader (EraCrypto era) hc) era] ->
+  Int
 epochsInTrace [] = 0
 epochsInTrace bs =
   fromIntegral $ toEpoch - fromEpoch + 1

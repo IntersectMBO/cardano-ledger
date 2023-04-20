@@ -72,11 +72,11 @@ import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 -- ==============================================================
 
 -- | ShelleyLedgerExamples for Conway era
-ledgerExamplesConway :: SLE.ShelleyLedgerExamples Conway
+ledgerExamplesConway :: SLE.ShelleyLedgerExamples Conway StandardCrypto
 ledgerExamplesConway =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
-    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Conway)
+    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Conway) (Proxy @StandardCrypto)
     , SLE.sleTx = exampleTransactionInBlock
     , SLE.sleApplyTxError =
         ApplyTxError $
@@ -99,7 +99,7 @@ ledgerExamplesConway =
       SLE.ShelleyResultExamples
         { SLE.srePParams = def
         , SLE.sreProposedPPUpdates = examplePPPU
-        , SLE.srePoolDistr = SLE.examplePoolDistr
+        , SLE.srePoolDistr = SLE.examplePoolDistr (Proxy @StandardCrypto) (Proxy @StandardCrypto)
         , SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards
         , SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
@@ -120,7 +120,7 @@ collateralOutput =
 exampleConwayCerts :: CC.Crypto c => StrictSeq (ConwayDCert c)
 exampleConwayCerts =
   StrictSeq.fromList -- TODO should I add the new certs here?
-    [ ConwayDCertPool (RegPool examplePoolParams)
+    [ ConwayDCertPool (RegPool $ examplePoolParams (Proxy @StandardCrypto))
     ]
 
 exampleTxBodyConway :: TxBody Conway
@@ -194,6 +194,7 @@ exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
 exampleConwayNewEpochState :: NewEpochState Conway
 exampleConwayNewEpochState =
   SLE.exampleNewEpochState
+    (Proxy @StandardCrypto)
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))

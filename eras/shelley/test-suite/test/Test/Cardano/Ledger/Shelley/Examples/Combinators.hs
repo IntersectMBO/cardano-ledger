@@ -100,6 +100,7 @@ import Cardano.Ledger.UMap (
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader,
@@ -149,9 +150,9 @@ evolveNonceUnfrozen n cs =
 -- Note: do not use this function when crossing the epoch boundary,
 -- instead use 'newEpoch'.
 newLab ::
-  forall era.
-  (Era era) =>
-  Block (BHeader (EraCrypto era)) era ->
+  forall era hc.
+  (Era era, HeaderCrypto hc) =>
+  Block (BHeader (EraCrypto era) hc) era ->
   ChainState era ->
   ChainState era
 newLab b cs =
@@ -670,9 +671,9 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- Note: This function subsumes the manipulations done by
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
-  forall era.
-  (EraPParams era, ProtVerAtMost era 6) =>
-  Block (BHeader (EraCrypto era)) era ->
+  forall era hc.
+  (EraPParams era, ProtVerAtMost era 6, HeaderCrypto hc) =>
+  Block (BHeader (EraCrypto era) hc) era ->
   ChainState era ->
   ChainState era
 newEpoch b cs = cs'

@@ -75,7 +75,6 @@ import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (Staking),
   VKey (..),
-  VerKeyKES,
   hashKey,
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
@@ -161,6 +160,8 @@ import Cardano.Ledger.Slot (
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (RDPair (..), Trip (Triple), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
+import Cardano.Protocol.HeaderKeys (VerKeyKES)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (BHeader),
@@ -463,7 +464,7 @@ instance PrettyA (HashHeader c) where
 instance PrettyA t => PrettyA (WithOrigin t) where
   prettyA = ppWithOrigin prettyA
 
-ppBHBody :: Crypto c => BHBody c -> PDoc
+ppBHBody :: (Crypto c, HeaderCrypto hc) => BHBody c hc -> PDoc
 ppBHBody (BHBody bn sn prev vk vrfvk eta l size hash ocert protver) =
   ppRecord
     "BHBody"
@@ -484,7 +485,7 @@ ppPrevHash :: PrevHash c -> PDoc
 ppPrevHash GenesisHash = ppString "GenesisHash"
 ppPrevHash (BlockHash x) = ppSexp "BlockHashppHashHeader" [ppHashHeader x]
 
-ppBHeader :: Crypto c => BHeader c -> PDoc
+ppBHeader :: (Crypto c, HeaderCrypto hc) => BHeader c hc -> PDoc
 ppBHeader (BHeader bh sig) =
   ppRecord
     "BHeader"
@@ -500,10 +501,10 @@ ppBlock (UnserialisedBlock bh seqx) =
     , ("TxSeq", prettyA seqx)
     ]
 
-instance Crypto c => PrettyA (BHBody c) where
+instance (Crypto c, HeaderCrypto hc) => PrettyA (BHBody c hc) where
   prettyA = ppBHBody
 
-instance Crypto c => PrettyA (BHeader c) where
+instance (Crypto c, HeaderCrypto hc) => PrettyA (BHeader c hc) where
   prettyA = ppBHeader
 
 instance PrettyA (PrevHash c) where
@@ -1500,19 +1501,19 @@ ppOCertEnv (OCertEnv ps ds) =
     , ("ocertEnvGenDelegs", ppSet ppKeyHash ds)
     ]
 
-ppOCert :: forall c. Crypto c => OCert c -> PDoc
+ppOCert :: forall c hc. (Crypto c, HeaderCrypto hc) => OCert c hc -> PDoc
 ppOCert (OCert vk n per sig) =
   ppRecord
     "OCert"
-    [ ("ocertVkKot", ppVerKeyKES (Proxy @c) vk)
+    [ ("ocertVkKot", ppVerKeyKES (Proxy @hc) vk)
     , ("ocertN", pretty n)
     , ("ocertKESPeriod", ppKESPeriod per)
     , ("ocertSigma", ppSignedDSIGN sig)
     ]
 
-ppOCertSignable :: forall c. Crypto c => OCertSignable c -> PDoc
+ppOCertSignable :: forall hc. (HeaderCrypto hc) => OCertSignable hc -> PDoc
 ppOCertSignable (OCertSignable verkes w per) =
-  ppSexp "OCertSignable" [ppVerKeyKES (Proxy @c) verkes, pretty w, ppKESPeriod per]
+  ppSexp "OCertSignable" [ppVerKeyKES (Proxy @hc) verkes, pretty w, ppKESPeriod per]
 
 instance PrettyA KESPeriod where
   prettyA = ppKESPeriod
@@ -1520,10 +1521,10 @@ instance PrettyA KESPeriod where
 instance PrettyA (OCertEnv c) where
   prettyA = ppOCertEnv
 
-instance Crypto c => PrettyA (OCert c) where
+instance (Crypto c, HeaderCrypto hc) => PrettyA (OCert c hc) where
   prettyA = ppOCert
 
-instance Crypto c => PrettyA (OCertSignable c) where
+instance (HeaderCrypto hc) => PrettyA (OCertSignable hc) where
   prettyA = ppOCertSignable
 
 -- ==========================================
@@ -1641,7 +1642,7 @@ ppGenDelegPair (GenDelegPair (KeyHash x) y) =
 ppGKeys :: Crypto c => GKeys c -> PDoc
 ppGKeys (GKeys x) = ppSexp "GKeys" [ppSet ppVKey x]
 
-ppVerKeyKES :: forall c. Crypto c => Proxy c -> VerKeyKES c -> PDoc
+ppVerKeyKES :: forall hc. HeaderCrypto hc => Proxy hc -> VerKeyKES hc -> PDoc
 ppVerKeyKES Proxy x = reAnnotate (Width 5 :) (viaShow x)
 
 ppGenDelegs :: GenDelegs c -> PDoc

@@ -23,8 +23,9 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (KES, VRF), DSIGN)
+import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Keys (signedKES)
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto (KES, VRF))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (BHBody),
@@ -60,10 +61,11 @@ instance Crypto c => Arbitrary (OBftSlot c) where
 
 instance
   ( Crypto c
-  , VRF.Signable (VRF c) ~ SignableRepresentation
-  , KES.Signable (KES c) ~ SignableRepresentation
+  , HeaderCrypto hc
+  , VRF.Signable (VRF hc) ~ SignableRepresentation
+  , KES.Signable (KES hc) ~ SignableRepresentation
   ) =>
-  Arbitrary (BHeader c)
+  Arbitrary (BHeader c hc)
   where
   arbitrary = do
     bhBody <- arbitrary
@@ -72,13 +74,14 @@ instance
     pure $ BHeader bhBody sig
 
 genBHeader ::
-  ( DSIGN.Signable (DSIGN c) (OCertSignable c)
-  , VRF.Signable (VRF c) Seed
-  , KES.Signable (KES c) (BHBody c)
+  ( DSIGN.Signable (DSIGN c) (OCertSignable hc)
+  , VRF.Signable (VRF hc) Seed
+  , KES.Signable (KES hc) (BHBody c hc)
   , Crypto c
+  , HeaderCrypto hc
   ) =>
-  [AllIssuerKeys c r] ->
-  Gen (BHeader c)
+  [AllIssuerKeys c hc r] ->
+  Gen (BHeader c hc)
 genBHeader aiks = do
   prevHash <- arbitrary
   allPoolKeys <- elements aiks
@@ -97,9 +100,10 @@ genBHeader aiks = do
 
 instance
   ( Crypto c
-  , VRF.Signable (VRF c) ~ SignableRepresentation
+  , HeaderCrypto hc
+  , VRF.Signable (VRF hc) ~ SignableRepresentation
   ) =>
-  Arbitrary (BHBody c)
+  Arbitrary (BHBody c hc)
   where
   arbitrary =
     BHBody
@@ -120,7 +124,7 @@ instance Crypto c => Arbitrary (PrevHash c) where
     hash <- arbitrary
     frequency [(1, pure GenesisHash), (9999, pure (BlockHash hash))]
 
-instance Crypto c => Arbitrary (OCert c) where
+instance (Crypto c, HeaderCrypto hc) => Arbitrary (OCert c hc) where
   arbitrary =
     OCert
       <$> arbitrary
@@ -133,26 +137,28 @@ deriving newtype instance Arbitrary KESPeriod
 instance
   ( Era era
   , c ~ EraCrypto era
+  , HeaderCrypto hc
   , EraSegWits era
-  , KES.Signable (KES c) ~ SignableRepresentation
-  , VRF.Signable (VRF c) ~ SignableRepresentation
+  , KES.Signable (KES hc) ~ SignableRepresentation
+  , VRF.Signable (VRF hc) ~ SignableRepresentation
   , Arbitrary (Tx era)
   ) =>
-  Arbitrary (Block (BHeader c) era)
+  Arbitrary (Block (BHeader c hc) era)
   where
   arbitrary = Block <$> arbitrary <*> (toTxSeq <$> arbitrary)
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
-  ( DSIGN.Signable (DSIGN c) (OCertSignable c)
-  , VRF.Signable (VRF c) Seed
-  , KES.Signable (KES c) (BHBody c)
+  ( DSIGN.Signable (DSIGN c) (OCertSignable hc)
+  , VRF.Signable (VRF hc) Seed
+  , KES.Signable (KES hc) (BHBody c hc)
   , EraSegWits era
   , Arbitrary (Tx era)
   , c ~ EraCrypto era
+  , HeaderCrypto hc
   ) =>
-  [AllIssuerKeys c r] ->
-  Gen (Block (BHeader c) era)
+  [AllIssuerKeys c hc r] ->
+  Gen (Block (BHeader c hc) era)
 genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
 
 -- | For some purposes, a totally random block generator may not be suitable.
@@ -164,15 +170,15 @@ genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
 --
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
-  forall era r.
+  forall era hc r.
   ( EraSegWits era
   , Arbitrary (Tx era)
-  , KES.Signable (KES (EraCrypto era)) ~ SignableRepresentation
+  , KES.Signable (KES hc) ~ SignableRepresentation
   , DSIGN.Signable (DSIGN (EraCrypto era)) ~ SignableRepresentation
-  , PraosCrypto (EraCrypto era)
+  , PraosCrypto (EraCrypto era) hc
   ) =>
-  [AllIssuerKeys (EraCrypto era) r] ->
-  Gen (Block (BHeader (EraCrypto era)) era)
+  [AllIssuerKeys (EraCrypto era) hc r] ->
+  Gen (Block (BHeader (EraCrypto era) hc) era)
 genCoherentBlock aiks = do
   prevHash <- arbitrary :: Gen (HashHeader (EraCrypto era))
   allPoolKeys <- elements aiks

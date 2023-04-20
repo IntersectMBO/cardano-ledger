@@ -74,6 +74,7 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
+import Cardano.Protocol.HeaderCrypto
 import Control.Exception (assert)
 import Control.Monad.Identity (Identity)
 import qualified Data.ByteString.Char8 as BS (length, pack)

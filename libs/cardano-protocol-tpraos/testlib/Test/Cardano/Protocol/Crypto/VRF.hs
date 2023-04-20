@@ -8,8 +8,8 @@ module Test.Cardano.Protocol.Crypto.VRF (
 ) where
 
 import qualified Cardano.Crypto.VRF.Class as VRF
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
+import Cardano.Protocol.HeaderCrypto
+import Cardano.Protocol.HeaderKeys (
   SignKeyVRF,
   VerKeyVRF,
  )

@@ -39,7 +39,7 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Alonzo tests"
-    [ AdaPreservation.tests @A @(AlonzoLEDGER A) 50
+    [ AdaPreservation.tests @A @(AlonzoLEDGER A) @TestCrypto 50
     , Tripping.tests
     , Translation.tests
     , Canonical.tests
@@ -53,8 +53,8 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Alonzo tests - nightly"
-    $ Shelley.commonTests @A @(AlonzoLEDGER A)
+    $ Shelley.commonTests @A @(AlonzoLEDGER A) @TestCrypto
       ++ [ CDDL.tests 50
-         , IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy A)
+         , IncrementalStake.incrStakeComparisonTest (Proxy @A) (Proxy @TestCrypto)
          , ChainTrace.tests
          ]

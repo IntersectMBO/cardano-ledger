@@ -18,13 +18,13 @@ import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 
 -- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesMary :: ShelleyLedgerExamples Mary
+ledgerExamplesMary :: ShelleyLedgerExamples Mary StandardCrypto
 ledgerExamplesMary =
   defaultShelleyLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @Mary))
     id
     (exampleMultiAssetValue 1)
-    ((exampleAllegraTxBody (exampleMultiAssetValue 1)) & mintTxBodyL .~ exampleMultiAsset 1)
+    ((exampleAllegraTxBody (Proxy @StandardCrypto) (exampleMultiAssetValue 1)) & mintTxBodyL .~ exampleMultiAsset 1)
     exampleAllegraTxAuxData
     mempty
 

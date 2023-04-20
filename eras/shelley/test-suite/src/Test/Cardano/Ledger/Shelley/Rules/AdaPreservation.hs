@@ -105,12 +105,12 @@ import Test.Tasty (TestTree)
 import qualified Test.Tasty.QuickCheck as TQC
 
 tests ::
-  forall era ledger.
+  forall era ledger hc.
   ( EraGen era
   , EraGovernance era
   , TestingLedger era ledger
-  , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , ChainProperty era hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , ProtVerAtMost era 8
   , GovernanceState era ~ ShelleyPPUPState era
   ) =>
@@ -119,23 +119,23 @@ tests ::
 tests n =
   TQC.testProperty
     "total amount of Ada is preserved (Chain)"
-    (withMaxSuccess n (adaPreservationProps @era @ledger))
+    (withMaxSuccess n (adaPreservationProps @era @ledger @hc))
 
 -- | Various preservation properties
 adaPreservationProps ::
-  forall era ledger.
+  forall era ledger hc.
   ( EraGen era
   , EraGovernance era
   , TestingLedger era ledger
-  , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , ChainProperty era hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , ProtVerAtMost era 8
   , GovernanceState era ~ ShelleyPPUPState era
   ) =>
   Property
 adaPreservationProps =
   forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
-    let ssts :: [SourceSignalTarget (CHAIN era)]
+    let ssts :: [SourceSignalTarget (CHAIN era hc)]
         -- In this test, the STS Signal has this definition
         -- Signal(CHAIN era) = Block (BHeader (EraCrypto era)) era
         ssts = sourceSignalTargets tr
@@ -170,13 +170,13 @@ infoRetire deposits keyhash = showKeyHash keyhash ++ extra
 
 -- ADA should be preserved for all state transitions in the generated trace
 checkPreservation ::
-  forall era.
+  forall era hc.
   ( EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
   , GovernanceState era ~ ShelleyPPUPState era
   ) =>
-  (SourceSignalTarget (CHAIN era), Int) ->
+  (SourceSignalTarget (CHAIN era hc), Int) ->
   Property
 checkPreservation (SourceSignalTarget {source, target, signal}, count) =
   counterexample
@@ -299,7 +299,7 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
 checkWithdrawalBound ::
-  EraGen era => SourceSignalTarget (CHAIN era) -> Property
+  EraGen era => SourceSignalTarget (CHAIN era hc) -> Property
 checkWithdrawalBound SourceSignalTarget {source, signal, target} =
   counterexample "checkWithdrawalBound" $
     rewardDelta === withdrawals signal
@@ -312,12 +312,12 @@ checkWithdrawalBound SourceSignalTarget {source, signal, target} =
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals minus Fees (for all transactions in a block)
 utxoDepositsIncreaseByFeesWithdrawals ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraGen era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target} =
   counterexample "utxoDepositsIncreaseByFeesWithdrawals" $
@@ -330,13 +330,13 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
     circulation chainSt =
       let UTxOState {utxosUtxo = u, utxosDeposited = d} = us chainSt
        in coinBalance u <+> d
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger source signal
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger source signal
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals for all transactions in a block
 potsSumIncreaseWithdrawalsPerBlock ::
-  (ChainProperty era, EraGen era) =>
-  SourceSignalTarget (CHAIN era) ->
+  (ChainProperty era hc, EraGen era) =>
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 potsSumIncreaseWithdrawalsPerBlock SourceSignalTarget {source, signal, target} =
   counterexample
@@ -351,12 +351,12 @@ potsSumIncreaseWithdrawalsPerBlock SourceSignalTarget {source, signal, target} =
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
 -- increases by sum of withdrawals in a transaction
 potsSumIncreaseWithdrawalsPerTx ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraGen era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "potsSumIncreaseWithdrawalsPerTx" $
@@ -364,7 +364,7 @@ potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = b
       map sumIncreaseWithdrawals $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     sumIncreaseWithdrawals :: SourceSignalTarget ledger -> Property
     sumIncreaseWithdrawals
       SourceSignalTarget
@@ -379,12 +379,12 @@ potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = b
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraSegWits era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "potsSumIncreaseByRewardsPerTx" $
@@ -392,7 +392,7 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
       map sumIncreaseRewards $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     sumIncreaseRewards
       SourceSignalTarget
         { source =
@@ -411,12 +411,12 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWithdrawalsPerTx ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraGen era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 potsRewardsDecreaseByWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "potsRewardsDecreaseByWithdrawalsPerTx" $
@@ -425,7 +425,7 @@ potsRewardsDecreaseByWithdrawalsPerTx SourceSignalTarget {source = chainSt, sign
         sourceSignalTargets ledgerTr
   where
     rewardsSum = UM.fromCompact . sumRewardsView . rewards . certDState
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     rewardsDecreaseByWithdrawals
       SourceSignalTarget
         { source = LedgerState _ dpstate
@@ -450,12 +450,12 @@ potsRewardsDecreaseByWithdrawalsPerTx SourceSignalTarget {source = chainSt, sign
 -- | Preserve the balance in a transaction, i.e., the sum of the consumed value
 -- equals the sum of the created value.
 preserveBalance ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraGen era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "preserveBalance" $
@@ -463,7 +463,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
       map createdIsConsumed $
         sourceSignalTargets ledgerTr
   where
-    (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     pp_ = (esPp . nesEs . chainNes) tickedChainSt
 
     createdIsConsumed SourceSignalTarget {source = ledgerSt, signal = tx, target = ledgerSt'} =
@@ -487,13 +487,13 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , TestingLedger era ledger
   , ShelleyEraTxBody era
   , EraSegWits era
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "preserveBalanceRestricted" $
@@ -501,7 +501,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
       map createdIsConsumed $
         sourceSignalTargets ledgerTr
   where
-    (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     pp_ = (esPp . nesEs . chainNes) tickedChainSt
 
     createdIsConsumed
@@ -523,12 +523,12 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
               <> totalTxDeposits pp_ dpstate txb
 
 preserveOutputsTx ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraGen era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "preserveOutputsTx" $
@@ -536,7 +536,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
       map outputPreserved $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     outputPreserved
       SourceSignalTarget
         { target = LedgerState (UTxOState {utxosUtxo = UTxO utxo}) _
@@ -548,12 +548,12 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
                 .||. counterexample "TxOuts are not a subset of UTxO" (outs `Map.isSubmapOf` utxo)
 
 canRestrictUTxO ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraSegWits era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "canRestrictUTxO" $
@@ -563,9 +563,9 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
         (sourceSignalTargets ledgerTrFull)
         (sourceSignalTargets ledgerTrRestr)
   where
-    (_, ledgerTrFull) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTrFull) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     (UTxO irrelevantUTxO, ledgerTrRestr) =
-      ledgerTraceFromBlockWithRestrictedUTxO @era @ledger chainSt block
+      ledgerTraceFromBlockWithRestrictedUTxO @era @hc @ledger chainSt block
     outputPreserved
       SourceSignalTarget {target = LedgerState (UTxOState {utxosUtxo = UTxO uFull}) _}
       SourceSignalTarget {target = LedgerState (UTxOState {utxosUtxo = UTxO uRestr}) _} =
@@ -576,9 +576,9 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
             === (uRestr `Map.union` irrelevantUTxO)
 
 withdrawals ::
-  forall era.
+  forall era hc.
   EraGen era =>
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader (EraCrypto era) hc) era ->
   Coin
 withdrawals (UnserialisedBlock _ txseq) =
   foldl'
@@ -606,7 +606,7 @@ txFees ledgerTr =
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 nonNegativeDeposits SourceSignalTarget {source = chainSt} =
   let es = (nesEs . chainNes) chainSt
@@ -615,7 +615,7 @@ nonNegativeDeposits SourceSignalTarget {source = chainSt} =
 
 -- | Checks that the fees are non-decreasing when not at an epoch boundary
 feesNonDecreasing ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 feesNonDecreasing SourceSignalTarget {source, target} =
   counterexample ("feesNonDecreasing: " <> show (fees_ source) <> " <= " <> show (fees_ target)) $
@@ -627,8 +627,8 @@ feesNonDecreasing SourceSignalTarget {source, target} =
        in fees
 
 sameEpoch ::
-  forall era.
-  SourceSignalTarget (CHAIN era) ->
+  forall era hc.
+  SourceSignalTarget (CHAIN era hc) ->
   Bool
 sameEpoch SourceSignalTarget {source, target} =
   epoch source == epoch target

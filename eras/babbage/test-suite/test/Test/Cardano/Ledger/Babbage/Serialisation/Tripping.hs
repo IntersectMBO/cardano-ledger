@@ -66,7 +66,7 @@ tests =
     , testProperty "babbage/BabbageUtxoPredFailure" $
         roundTripCborExpectation @(BabbageUtxoPredFailure Babbage)
     , testProperty "babbage/Block" $
-        roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) Babbage)
+        roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto StandardCrypto) Babbage)
           (eraProtVerLow @Babbage)
           (eraProtVerHigh @Babbage)
     ]

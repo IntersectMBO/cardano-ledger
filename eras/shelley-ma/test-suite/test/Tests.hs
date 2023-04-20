@@ -7,6 +7,7 @@ module Main where
 
 import Cardano.Ledger.Allegra (Allegra, AllegraEra)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary (Mary, MaryEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
@@ -61,10 +62,10 @@ allegraTests =
     [ allegraTranslationTests
     , ( localOption
           (TQC.QuickCheckMaxRatio 50)
-          (ClassifyTraces.relevantCasesAreCovered @Allegra (maxSuccess stdArgs))
+          (ClassifyTraces.relevantCasesAreCovered @Allegra @StandardCrypto (maxSuccess stdArgs))
       )
-    , AdaPreservation.tests @Allegra @(ShelleyLEDGER Allegra) (maxSuccess stdArgs)
-    , ClassifyTraces.onlyValidChainSignalsAreGenerated @Allegra
+    , AdaPreservation.tests @Allegra @(ShelleyLEDGER Allegra) @StandardCrypto (maxSuccess stdArgs)
+    , ClassifyTraces.onlyValidChainSignalsAreGenerated @Allegra @StandardCrypto
     , Bootstrap.bootstrapHashTest
     , WitVKeys.tests @(EraCrypto Allegra)
     , testScriptPostTranslation
@@ -86,8 +87,8 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        (Shelley.commonTests @Allegra @(ShelleyLEDGER Allegra))
+        (Shelley.commonTests @Allegra @(ShelleyLEDGER Allegra) @StandardCrypto)
     , testGroup
         "Mary Ledger - nightly"
-        (Shelley.commonTests @Mary @(ShelleyLEDGER Mary))
+        (Shelley.commonTests @Mary @(ShelleyLEDGER Mary) @StandardCrypto)
     ]

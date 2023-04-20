@@ -36,17 +36,20 @@ import Cardano.Ledger.Binary.Plain (
   decodeRecordNamed,
   encodeListLen,
  )
-import Cardano.Ledger.Crypto (Crypto, VRF)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   DSignable,
   GenDelegs (..),
-  KESignable,
   KeyHash,
   KeyRole (..),
-  VRFSignable,
  )
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto, VRF)
+import Cardano.Protocol.HeaderKeys (
+  KESignable,
+  VRFSignable,
+ )
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
@@ -69,7 +72,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data PRTCL c
+data PRTCL c hc
 
 data PrtclState c
   = PrtclState
@@ -117,8 +120,8 @@ data PrtclEnv c
 
 instance NoThunks (PrtclEnv c)
 
-data PrtclPredicateFailure c
-  = OverlayFailure (PredicateFailure (OVERLAY c)) -- Subtransition Failures
+data PrtclPredicateFailure c hc
+  = OverlayFailure (PredicateFailure (OVERLAY c hc)) -- Subtransition Failures
   | UpdnFailure (PredicateFailure (UPDN c)) -- Subtransition Failures
   deriving (Generic)
 
@@ -127,49 +130,51 @@ data PrtclEvent c
   | NoEvent Void
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF c)) =>
-  Show (PrtclPredicateFailure c)
+  (VRF.VRFAlgorithm (VRF hc)) =>
+  Show (PrtclPredicateFailure c hc)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF c)) =>
-  Eq (PrtclPredicateFailure c)
+  (VRF.VRFAlgorithm (VRF hc)) =>
+  Eq (PrtclPredicateFailure c hc)
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
+  , VRFSignable hc Seed
   ) =>
-  STS (PRTCL c)
+  STS (PRTCL c hc)
   where
   type
-    State (PRTCL c) =
+    State (PRTCL c hc) =
       PrtclState c
 
   type
-    Signal (PRTCL c) =
-      BHeader c
+    Signal (PRTCL c hc) =
+      BHeader c hc
 
   type
-    Environment (PRTCL c) =
+    Environment (PRTCL c hc) =
       PrtclEnv c
 
-  type BaseM (PRTCL c) = ShelleyBase
-  type PredicateFailure (PRTCL c) = PrtclPredicateFailure c
-  type Event (PRTCL c) = PrtclEvent c
+  type BaseM (PRTCL c hc) = ShelleyBase
+  type PredicateFailure (PRTCL c hc) = PrtclPredicateFailure c hc
+  type Event (PRTCL c hc) = PrtclEvent c
 
   initialRules = []
 
   transitionRules = [prtclTransition]
 
 prtclTransition ::
-  forall c.
+  forall c hc.
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
+  , VRFSignable hc Seed
   ) =>
-  TransitionRule (PRTCL c)
+  TransitionRule (PRTCL c hc)
 prtclTransition = do
   TRC
     ( PrtclEnv dval pd dms eta0
@@ -189,7 +194,7 @@ prtclTransition = do
         , slot
         )
   cs' <-
-    trans @(OVERLAY c) $
+    trans @(OVERLAY c hc) $
       TRC (OverlayEnv dval pd dms eta0, cs, bh)
 
   pure $
@@ -198,26 +203,28 @@ prtclTransition = do
       etaV'
       etaC'
 
-instance (Crypto c) => NoThunks (PrtclPredicateFailure c)
+instance (Crypto c, HeaderCrypto hc) => NoThunks (PrtclPredicateFailure c hc)
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
+  , VRFSignable hc Seed
   ) =>
-  Embed (OVERLAY c) (PRTCL c)
+  Embed (OVERLAY c hc) (PRTCL c hc)
   where
   wrapFailed = OverlayFailure
   wrapEvent = NoEvent
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
+  , VRFSignable hc Seed
   ) =>
-  Embed (UPDN c) (PRTCL c)
+  Embed (UPDN c) (PRTCL c hc)
   where
   wrapFailed = UpdnFailure
   wrapEvent = UpdnEvent
@@ -243,9 +250,9 @@ data PrtlSeqFailure c
 instance Crypto c => NoThunks (PrtlSeqFailure c)
 
 prtlSeqChecks ::
-  (MonadError (PrtlSeqFailure c) m, Crypto c) =>
+  (MonadError (PrtlSeqFailure c) m, Crypto c, HeaderCrypto hc) =>
   WithOrigin (LastAppliedBlock c) ->
-  BHeader c ->
+  BHeader c hc ->
   m ()
 prtlSeqChecks lab bh =
   case lab of

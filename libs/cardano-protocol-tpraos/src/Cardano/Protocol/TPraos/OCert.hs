@@ -39,14 +39,15 @@ import Cardano.Ledger.Binary (
   runByteBuilder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto (Crypto, KES)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
   SignedDSIGN,
-  VerKeyKES,
   coerceKeyRole,
  )
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto, KES)
+import Cardano.Protocol.HeaderKeys (VerKeyKES)
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
@@ -83,30 +84,30 @@ newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
   deriving (Eq, Generic, Ord, NoThunks, DecCBOR, EncCBOR, ToCBOR, FromCBOR)
   deriving (Show) via Quiet KESPeriod
 
-data OCert c = OCert
-  { ocertVkHot :: !(VerKeyKES c)
+data OCert c hc = OCert
+  { ocertVkHot :: !(VerKeyKES hc)
   -- ^ The operational hot key
   , ocertN :: !Word64
   -- ^ counter
   , ocertKESPeriod :: !KESPeriod
   -- ^ Start of key evolving signature period
-  , ocertSigma :: !(SignedDSIGN c (OCertSignable c))
+  , ocertSigma :: !(SignedDSIGN c (OCertSignable hc))
   -- ^ Signature of block operational certificate content
   }
   deriving (Generic)
-  deriving (EncCBOR) via (CBORGroup (OCert c))
+  deriving (EncCBOR) via (CBORGroup (OCert c hc))
 
-deriving instance Crypto c => Eq (OCert c)
+deriving instance (Crypto c, HeaderCrypto hc) => Eq (OCert c hc)
 
-deriving instance Crypto c => Show (OCert c)
+deriving instance (Crypto c, HeaderCrypto hc) => Show (OCert c hc)
 
-instance Crypto c => NoThunks (OCert c)
+instance (Crypto c, HeaderCrypto hc) => NoThunks (OCert c hc)
 
 -- Serialization of OCerts cannot be versioned, unless it gets parameterized by era.
 -- Therefore we use plain encoding for defining the versioned one, instead of the oppoit
 -- approach how it is done for types with versioned serialization
 
-instance Crypto c => EncCBORGroup (OCert c) where
+instance (Crypto c, HeaderCrypto hc) => EncCBORGroup (OCert c hc) where
   encCBORGroup = fromPlainEncoding . encodeOCertFields
   encodedGroupSizeExpr size proxy =
     encodedVerKeyKESSizeExpr (ocertVkHot <$> proxy)
@@ -120,24 +121,24 @@ instance Crypto c => EncCBORGroup (OCert c) where
   listLen _ = 4
   listLenBound _ = 4
 
-instance Crypto c => DecCBORGroup (OCert c) where
+instance (Crypto c, HeaderCrypto hc) => DecCBORGroup (OCert c hc) where
   decCBORGroup = fromPlainDecoder decodeOCertFields
 
-instance Crypto c => ToCBOR (OCert c) where
+instance (Crypto c, HeaderCrypto hc) => ToCBOR (OCert c hc) where
   toCBOR ocert = Plain.encodeListLen (listLen ocert) <> encodeOCertFields ocert
 
-instance Crypto c => FromCBOR (OCert c) where
+instance (Crypto c, HeaderCrypto hc) => FromCBOR (OCert c hc) where
   fromCBOR =
     Plain.decodeRecordNamed "OCert" (fromIntegral . listLen) decodeOCertFields
 
-encodeOCertFields :: Crypto c => OCert c -> Plain.Encoding
+encodeOCertFields :: (Crypto c, HeaderCrypto hc) => OCert c hc -> Plain.Encoding
 encodeOCertFields ocert =
   KES.encodeVerKeyKES (ocertVkHot ocert)
     <> Plain.toCBOR (ocertN ocert)
     <> Plain.toCBOR (ocertKESPeriod ocert)
     <> DSIGN.encodeSignedDSIGN (ocertSigma ocert)
 
-decodeOCertFields :: Crypto c => Plain.Decoder s (OCert c)
+decodeOCertFields :: (Crypto c, HeaderCrypto hc) => Plain.Decoder s (OCert c hc)
 decodeOCertFields =
   OCert
     <$> KES.decodeVerKeyKES
@@ -156,11 +157,15 @@ kesPeriod (SlotNo s) =
 data OCertSignable c
   = OCertSignable !(VerKeyKES c) !Word64 !KESPeriod
 
-instance Crypto c => SignableRepresentation (OCertSignable c) where
+instance
+  forall hc.
+  HeaderCrypto hc =>
+  SignableRepresentation (OCertSignable hc)
+  where
   getSignableRepresentation (OCertSignable vk counter period) =
     runByteBuilder
       ( fromIntegral $
-          KES.sizeVerKeyKES (Proxy @(KES c))
+          KES.sizeVerKeyKES (Proxy @(KES hc))
             + 8
             + 8
       )
@@ -169,6 +174,6 @@ instance Crypto c => SignableRepresentation (OCertSignable c) where
         <> BS.word64BE (fromIntegral $ unKESPeriod period)
 
 -- | Extract the signable part of an operational certificate (for verification)
-ocertToSignable :: OCert c -> OCertSignable c
+ocertToSignable :: OCert c hc -> OCertSignable hc
 ocertToSignable OCert {ocertVkHot, ocertN, ocertKESPeriod} =
   OCertSignable ocertVkHot ocertN ocertKESPeriod

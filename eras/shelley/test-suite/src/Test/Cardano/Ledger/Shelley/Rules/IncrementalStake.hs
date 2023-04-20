@@ -47,6 +47,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.TxBody
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
+import Cardano.Protocol.HeaderCrypto
 import Control.SetAlgebra (dom, eval, (▷), (◁))
 import Control.State.Transition.Trace (
   SourceSignalTarget (..),
@@ -78,12 +79,12 @@ import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
 
 incrStakeComputationTest ::
-  forall era ledger.
+  forall era ledger hc.
   ( EraGen era
   , EraGovernance era
   , TestingLedger era ledger
-  , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , ChainProperty era hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   ) =>
   TestTree
 incrStakeComputationTest =
@@ -93,20 +94,20 @@ incrStakeComputationTest =
 
       conjoin . concat $
         [ -- preservation properties
-          map (incrStakeComp @era @ledger) ssts
+          map (incrStakeComp @era @ledger @hc) ssts
         ]
 
 incrStakeComp ::
-  forall era ledger.
-  (EraSegWits era, ChainProperty era, TestingLedger era ledger) =>
-  SourceSignalTarget (CHAIN era) ->
+  forall era ledger hc.
+  (EraSegWits era, ChainProperty era hc, TestingLedger era ledger) =>
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
     map checkIncrStakeComp $
       sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     checkIncrStakeComp :: SourceSignalTarget ledger -> Property
     checkIncrStakeComp
       SourceSignalTarget
@@ -144,16 +145,18 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
           ptrs' = ptrsMap $ certDState dp'
 
 incrStakeComparisonTest ::
-  forall era.
+  forall era hc.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , HeaderCrypto hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , EraGovernance era
   ) =>
   Proxy era ->
+  Proxy hc ->
   TestTree
-incrStakeComparisonTest Proxy =
+incrStakeComparisonTest Proxy Proxy =
   testProperty "Incremental stake distribution at epoch boundaries agrees" $
-    forAllChainTrace traceLen (defaultConstants {maxMajorPV = natVersion @8}) $ \tr ->
+    forAllChainTrace @era @hc traceLen (defaultConstants {maxMajorPV = natVersion @8}) $ \tr ->
       conjoin $
         map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era ((nesEs . chainNes) target)) $
           filter (not . sameEpoch) (sourceSignalTargets tr)

@@ -20,13 +20,13 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (Crypto, HASH, StandardCrypto, VRF)
+import Cardano.Ledger.Crypto (Crypto, HASH, StandardCrypto)
 import Cardano.Ledger.Keys (
   KeyRole (..),
   asWitness,
   hashKey,
-  hashVerKeyVRF,
  )
+import Cardano.Ledger.PoolDistr (hashPoolStakeVRF)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   DCert (..),
@@ -82,6 +82,7 @@ import Cardano.Ledger.Shelley.TxWits (
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Protocol.HeaderCrypto (VRF)
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.DeepSeq (rnf)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
@@ -615,7 +616,7 @@ alicePoolParamsSmallCost :: PoolParams C_Crypto
 alicePoolParamsSmallCost =
   PoolParams
     { ppId = hashKey . vKey $ alicePoolColdKeys
-    , ppVrf = hashVerKeyVRF vkVrf
+    , ppVrf = hashPoolStakeVRF vkVrf
     , ppPledge = Coin 1
     , ppCost = Coin 5 -- Too Small!
     , ppMargin = unsafeBoundRational 0.1

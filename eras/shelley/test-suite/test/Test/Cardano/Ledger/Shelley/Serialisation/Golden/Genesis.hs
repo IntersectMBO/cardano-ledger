@@ -20,10 +20,12 @@ import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core (emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
 import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
-import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF)
+import Cardano.Ledger.Keys (GenesisVRF, hashKey)
+import Cardano.Ledger.PoolDistr (hashPoolStakeVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad
 import Data.Aeson hiding (Encoding)
@@ -31,6 +33,7 @@ import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.Proxy
 import Data.Scientific (Scientific)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -63,7 +66,7 @@ golden_json_ShelleyGenesis =
   goldenTestJSON example =<< getDataFileName "test/Golden/ShelleyGenesis"
   where
     example :: ShelleyGenesis StandardCrypto
-    example = exampleShelleyGenesis
+    example = exampleShelleyGenesis (Proxy @StandardCrypto)
 
 golden_cbor_ShelleyGenesis :: Assertion
 golden_cbor_ShelleyGenesis =
@@ -72,7 +75,7 @@ golden_cbor_ShelleyGenesis =
       (diffExpr (CBORBytes expected) (CBORBytes received))
   where
     example :: ShelleyGenesis StandardCrypto
-    example = exampleShelleyGenesis
+    example = exampleShelleyGenesis (Proxy @StandardCrypto)
 
     received = Plain.serialize' expectedTokens
     expected = Plain.serialize' example
@@ -190,10 +193,11 @@ tests =
     ]
 
 exampleShelleyGenesis ::
-  forall c.
-  Crypto c =>
+  forall c hc.
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy hc ->
   ShelleyGenesis c
-exampleShelleyGenesis =
+exampleShelleyGenesis _ =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
     , sgNetworkMagic = 4036000900
@@ -223,7 +227,7 @@ exampleShelleyGenesis =
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
     delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate c
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: Hash.Hash (HASH c) (L.VerKeyVRF c)
+    delegVrfKeyHash :: Hash.Hash (HASH c) (GenesisVRF)
     delegVrfKeyHash = "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
     initialFundedAddress :: L.Addr c
     initialFundedAddress =
@@ -255,7 +259,7 @@ exampleShelleyGenesis =
     poolParams =
       L.PoolParams
         { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
-        , L.ppVrf = hashVerKeyVRF . vrfVerKey $ mkVRFKeyPair @c (RawSeed 1 0 0 0 2)
+        , L.ppVrf = hashPoolStakeVRF . vrfVerKey $ mkVRFKeyPair @hc (RawSeed 1 0 0 0 2)
         , L.ppPledge = L.Coin 1
         , L.ppCost = L.Coin 5
         , L.ppMargin = unsafeBoundRational 0.25

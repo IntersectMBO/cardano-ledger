@@ -40,7 +40,7 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (..),
  )
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   KeyRole (..),
   coerceKeyRole,
@@ -48,6 +48,7 @@ import Cardano.Ledger.Keys (
   hashVerKeyVRF,
  )
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.PoolDistr (toPoolStakeVRF)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
@@ -573,7 +574,7 @@ poolMDHTooBigTx pf =
         poolParams =
           PoolParams
             { ppId = coerceKeyRole . hashKey . vKey $ someKeys pf
-            , ppVrf = hashVerKeyVRF . vrfVerKey . mkVRFKeyPair @(EraCrypto era) $ RawSeed 0 0 0 0 0
+            , ppVrf = toPoolStakeVRF . hashVerKeyVRF . vrfVerKey . mkVRFKeyPair @StandardCrypto $ RawSeed 0 0 0 0 0
             , ppPledge = Coin 0
             , ppCost = Coin 0
             , ppMargin = minBound
@@ -676,7 +677,7 @@ makeTooBig proof@(Conway _) =
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 
-coldKeys :: CC.Crypto c => KeyPair 'BlockIssuer c
+coldKeys :: Crypto c => KeyPair 'BlockIssuer c
 coldKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
@@ -706,8 +707,8 @@ scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 successDeposit :: UM.CompactForm Coin
 successDeposit = UM.CompactCoin 7
 
-hashsize :: forall c. CC.Crypto c => Int
-hashsize = fromIntegral $ sizeHash ([] @(CC.HASH c))
+hashsize :: forall c. Crypto c => Int
+hashsize = fromIntegral $ sizeHash ([] @(HASH c))
 
 -- ============================== PParams ===============================
 

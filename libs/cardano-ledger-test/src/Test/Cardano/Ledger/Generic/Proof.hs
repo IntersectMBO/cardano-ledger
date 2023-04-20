@@ -52,23 +52,17 @@ module Test.Cardano.Ledger.Generic.Proof (
 
 import Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as CH
-import Cardano.Crypto.KES.Class (ContextKES)
-import qualified Cardano.Crypto.KES.Class as KES (Signable)
-import Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import qualified Cardano.Ledger.BaseTypes as Base (Seed)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH, KES, StandardCrypto, VRF)
+import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Protocol.TPraos.API (PraosCrypto)
-import Cardano.Protocol.TPraos.BHeader (BHBody)
 import Cardano.Protocol.TPraos.OCert
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Kind (Type)
@@ -125,12 +119,7 @@ type GoodCrypto c =
   , DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
   , DSIGNAlgorithm (DSIGN c)
   , DSIGN.Signable (DSIGN c) (OCertSignable c)
-  , VRF.Signable (VRF c) Base.Seed
-  , KES.Signable (KES c) (BHBody c)
-  , ContextKES (KES c) ~ ()
-  , ContextVRF (VRF c) ~ ()
   , CH.HashAlgorithm (HASH c)
-  , PraosCrypto c
   )
 
 class (GoodCrypto c) => ReflectC c where

@@ -11,6 +11,8 @@
 -- |  AlonzoEra instances for EraGen and ScriptClass
 module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
+import qualified Cardano.Crypto.DSIGN as DSIGN
+import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
@@ -109,7 +111,7 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts (
  )
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockContext)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
@@ -131,10 +133,10 @@ import Test.QuickCheck hiding ((><))
 -- ============================================================
 
 -- | We are choosing new TxOut to pay fees, We want only Key locked addresss with Ada only values.
-vKeyLockedAdaOnly :: Mock c => TxOut (AlonzoEra c) -> Bool
+vKeyLockedAdaOnly :: Crypto c => TxOut (AlonzoEra c) -> Bool
 vKeyLockedAdaOnly txOut = vKeyLocked txOut && isAdaOnly (txOut ^. valueTxOutL)
 
-phase2scripts3Arg :: forall c. Mock c => [TwoPhase3ArgInfo (AlonzoEra c)]
+phase2scripts3Arg :: forall c. Crypto c => [TwoPhase3ArgInfo (AlonzoEra c)]
 phase2scripts3Arg =
   [ TwoPhase3ArgInfo
       (alwaysSucceeds PlutusV1 3)
@@ -154,7 +156,7 @@ phase2scripts3Arg =
       False
   ]
 
-phase2scripts2Arg :: forall c. Mock c => [TwoPhase2ArgInfo (AlonzoEra c)]
+phase2scripts2Arg :: forall c. Crypto c => [TwoPhase2ArgInfo (AlonzoEra c)]
 phase2scripts2Arg =
   [ TwoPhase2ArgInfo
       (alwaysSucceeds PlutusV1 2)
@@ -167,21 +169,21 @@ phase2scripts2Arg =
   , TwoPhase2ArgInfo (alwaysFails PlutusV1 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 2)) (P.I 1, bigMem, bigStep) False
   ]
 
-phase2scripts3ArgSucceeds :: forall c. Mock c => AlonzoScript (AlonzoEra c) -> Bool
+phase2scripts3ArgSucceeds :: forall c. Crypto c => AlonzoScript (AlonzoEra c) -> Bool
 phase2scripts3ArgSucceeds script =
   maybe True getSucceeds3 $
     List.find (\info -> getScript3 @(AlonzoEra c) info == script) phase2scripts3Arg
 
-phase2scripts2ArgSucceeds :: forall c. Mock c => AlonzoScript (AlonzoEra c) -> Bool
+phase2scripts2ArgSucceeds :: forall c. Crypto c => AlonzoScript (AlonzoEra c) -> Bool
 phase2scripts2ArgSucceeds script =
   maybe True getSucceeds2 $
     List.find (\info -> getScript2 @(AlonzoEra c) info == script) phase2scripts2Arg
 
-genPlutus2Arg :: Mock c => Gen (Maybe (TwoPhase2ArgInfo (AlonzoEra c)))
+genPlutus2Arg :: Crypto c => Gen (Maybe (TwoPhase2ArgInfo (AlonzoEra c)))
 genPlutus2Arg = frequency [(10, Just <$> elements phase2scripts2Arg), (90, pure Nothing)]
 
 -- | Gen a Mint value in the Alonzo Era, with a 10% chance that it includes an AlonzoScript
-genAlonzoMint :: Mock c => MultiAsset c -> Gen (MultiAsset c, [AlonzoScript (AlonzoEra c)])
+genAlonzoMint :: Crypto c => MultiAsset c -> Gen (MultiAsset c, [AlonzoScript (AlonzoEra c)])
 genAlonzoMint startvalue = do
   ans <- genPlutus2Arg
   case ans of
@@ -216,7 +218,7 @@ genSet gen =
     , (1, Set.fromList <$> sequence [gen, gen])
     ]
 
-genAux :: forall c. Mock c => Constants -> Gen (StrictMaybe (AlonzoTxAuxData (AlonzoEra c)))
+genAux :: forall c. Crypto c => Constants -> Gen (StrictMaybe (AlonzoTxAuxData (AlonzoEra c)))
 genAux constants = do
   maybeAux <- genEraAuxiliaryData @(MaryEra c) constants
   pure $
@@ -238,14 +240,14 @@ unTime :: AlonzoScript era -> Timelock era
 unTime (TimelockScript x) = x
 unTime (PlutusScript _ _) = error "Plutus in Timelock"
 
-okAsCollateral :: forall c. Mock c => UTxO (AlonzoEra c) -> TxIn c -> Bool
+okAsCollateral :: forall c. Crypto c => UTxO (AlonzoEra c) -> TxIn c -> Bool
 okAsCollateral utxo inputx =
   maybe False vKeyLockedAdaOnly $ Map.lookup inputx (unUTxO utxo)
 
 genAlonzoTxBody ::
-  forall c.
-  Mock c =>
-  GenEnv (AlonzoEra c) ->
+  forall c hc.
+  (MockContext c) =>
+  GenEnv (AlonzoEra c) hc ->
   UTxO (AlonzoEra c) ->
   PParams (AlonzoEra c) ->
   SlotNo ->
@@ -366,7 +368,7 @@ bigMem = 50000
 bigStep :: Natural
 bigStep = 99999
 
-instance Mock c => EraGen (AlonzoEra c) where
+instance (MockContext c, DSIGN.Signable (DSIGN c) ~ SignableRepresentation) => EraGen (AlonzoEra c) where
   genEraAuxiliaryData = genAux
   genGenesisValue = maryGenesisValue
   genEraTwoPhase3Arg = phase2scripts3Arg
@@ -517,7 +519,7 @@ getDataMap (scriptInfo3, _) = Map.foldlWithKey' accum Map.empty
         Just (TwoPhase3ArgInfo _script _hash dat _redeem _) ->
           Map.insert (hashData @era dat) (Data dat) ans
 
-instance Mock c => MinGenTxout (AlonzoEra c) where
+instance MockContext c => MinGenTxout (AlonzoEra c) where
   calcEraMinUTxO txOut pp = utxoEntrySize txOut <×> unCoinPerWord (pp ^. ppCoinsPerUTxOWordL)
   addValToTxOut v (AlonzoTxOut a u _b) = AlonzoTxOut a (v <+> u) (dataFromAddr a)
   genEraTxOut genv genVal addrs = do
@@ -532,7 +534,7 @@ instance Mock c => MinGenTxout (AlonzoEra c) where
 -- | If an Address is script address, we can find a potential data hash for it from
 --   genEraTwoPhase3Arg, which contains all known 3 arg plutus scripts in the tests set.
 -- If the script has is not in that map, then its data hash is SNothing.
-dataFromAddr :: forall c. Mock c => Addr c -> StrictMaybe (DataHash c)
+dataFromAddr :: forall c. MockContext c => Addr c -> StrictMaybe (DataHash c)
 dataFromAddr (Addr _network (ScriptHashObj shash) _stakeref) =
   let f info = shash == hashScript @(AlonzoEra c) (getScript3 @(AlonzoEra c) info)
    in case List.find f genEraTwoPhase3Arg of
@@ -544,7 +546,7 @@ dataFromAddr _ = SNothing
 --   genEraTwoPhase3Arg, which contains all known 3 arg plutus scripts stores the data.
 dataMapFromTxOut ::
   forall c.
-  Mock c =>
+  MockContext c =>
   [TxOut (AlonzoEra c)] ->
   TxDats (AlonzoEra c) ->
   TxDats (AlonzoEra c)
@@ -557,7 +559,7 @@ dataMapFromTxOut txouts datahashmap = Prelude.foldl accum datahashmap txouts
         Just info -> TxDats (Map.insert dhash (Data (getData3 info)) m)
         Nothing -> ans
 
-addMaybeDataHashToTxOut :: Mock c => TxOut (AlonzoEra c) -> TxOut (AlonzoEra c)
+addMaybeDataHashToTxOut :: MockContext c => TxOut (AlonzoEra c) -> TxOut (AlonzoEra c)
 addMaybeDataHashToTxOut (AlonzoTxOut addr val _) = AlonzoTxOut addr val (dataFromAddr addr)
 
 someLeaf ::

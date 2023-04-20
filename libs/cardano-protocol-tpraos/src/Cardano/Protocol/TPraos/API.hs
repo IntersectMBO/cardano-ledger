@@ -1,3 +1,5 @@
+-- TODO: Review getLeaderSchedule signature that causes it
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -6,6 +8,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -58,16 +61,13 @@ import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordName
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto, VRF)
+import Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (
   DSignable,
   GenDelegPair (..),
   GenDelegs (..),
-  KESignable,
   KeyHash,
   KeyRole (..),
-  SignKeyVRF,
-  VRFSignable,
   coerceKeyRole,
  )
 import Cardano.Ledger.Mary (MaryEra)
@@ -82,6 +82,13 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Protocol.HeaderCrypto as CC (VRF)
+import qualified Cardano.Protocol.HeaderCrypto as CC (HeaderCrypto)
+import Cardano.Protocol.HeaderKeys (
+  KESignable,
+  SignKeyVRF,
+  VRFSignable,
+ )
 import Cardano.Protocol.TPraos.BHeader (
   BHBody,
   BHeader,
@@ -120,21 +127,21 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 -- =======================================================
-
+-- PraosCrypto is parametrized by two type parameters,
+-- crypto (Standard or Body crypto) and header crypto
 class
-  ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  ( CC.Crypto c
+  , CC.HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
+  , VRFSignable hc Seed
   ) =>
-  PraosCrypto c
+  PraosCrypto c hc
 
-instance PraosCrypto StandardCrypto
+instance PraosCrypto CC.StandardCrypto CC.StandardCrypto
 
 class
-  ( Eq (ChainTransitionError (EraCrypto era))
-  , Show (ChainTransitionError (EraCrypto era))
-  , Show (LedgerView (EraCrypto era))
+  ( Show (LedgerView (EraCrypto era))
   , Show (FutureLedgerViewError era)
   , STS (EraRule "TICKF" era)
   , BaseM (EraRule "TICKF" era) ~ ShelleyBase
@@ -171,17 +178,17 @@ class
     m (LedgerView (EraCrypto era))
   futureLedgerView = futureView
 
-instance Crypto c => GetLedgerView (ShelleyEra c)
+instance CC.Crypto c => GetLedgerView (ShelleyEra c)
 
-instance Crypto c => GetLedgerView (AllegraEra c)
+instance (CC.Crypto c) => GetLedgerView (AllegraEra c)
 
-instance Crypto c => GetLedgerView (MaryEra c)
+instance (CC.Crypto c) => GetLedgerView (MaryEra c)
 
-instance Crypto c => GetLedgerView (AlonzoEra c)
+instance (CC.Crypto c) => GetLedgerView (AlonzoEra c)
 
 -- Note that although we do not use TPraos in the Babbage era, we include this
 -- because it makes it simpler to get the ledger view for Praos.
-instance Crypto c => GetLedgerView (BabbageEra c) where
+instance (CC.Crypto c) => GetLedgerView (BabbageEra c) where
   currentLedgerView
     NewEpochState {nesPd = pd, nesEs = es} =
       LedgerView
@@ -209,7 +216,7 @@ instance Crypto c => GetLedgerView (BabbageEra c) where
 
 -- Note that although we do not use TPraos in the Conway era, we include this
 -- because it makes it simpler to get the ledger view for Praos.
-instance Crypto c => GetLedgerView (ConwayEra c) where
+instance (CC.Crypto c) => GetLedgerView (ConwayEra c) where
   currentLedgerView
     NewEpochState {nesPd = pd, nesEs = es} =
       LedgerView
@@ -436,15 +443,15 @@ instance Crypto c => ToCBOR (ChainDepState c) where
         , toCBOR csLabNonce
         ]
 
-newtype ChainTransitionError c
-  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL c)]
+newtype ChainTransitionError c hc
+  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL c hc)]
   deriving (Generic)
 
-instance (Crypto c) => NoThunks (ChainTransitionError c)
+instance (CC.Crypto c, CC.HeaderCrypto hc) => NoThunks (ChainTransitionError c hc)
 
-deriving instance (Crypto c) => Eq (ChainTransitionError c)
+deriving instance (CC.Crypto c, CC.HeaderCrypto hc) => Eq (ChainTransitionError c hc)
 
-deriving instance (Crypto c) => Show (ChainTransitionError c)
+deriving instance (CC.Crypto c, CC.HeaderCrypto hc) => Show (ChainTransitionError c hc)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::
@@ -479,13 +486,13 @@ tickChainDepState
 --
 --   This also updates the last applied block hash.
 updateChainDepState ::
-  forall c m.
-  ( PraosCrypto c
-  , MonadError (ChainTransitionError c) m
+  forall c hc m.
+  ( PraosCrypto c hc
+  , MonadError (ChainTransitionError c hc) m
   ) =>
   Globals ->
   LedgerView c ->
-  BHeader c ->
+  BHeader c hc ->
   ChainDepState c ->
   m (ChainDepState c)
 updateChainDepState
@@ -506,7 +513,7 @@ updateChainDepState
     where
       res =
         flip runReader globals
-          . applySTS @(STS.Prtcl.PRTCL c)
+          . applySTS @(STS.Prtcl.PRTCL c hc)
           $ TRC
             ( mkPrtclEnv lv epochNonce
             , csProtocol
@@ -520,11 +527,11 @@ updateChainDepState
 --   or consistent with the chain it is being applied to; the caller must ensure
 --   that this is valid through having previously applied it.
 reupdateChainDepState ::
-  forall c.
-  PraosCrypto c =>
+  forall c hc.
+  PraosCrypto c hc =>
   Globals ->
   LedgerView c ->
-  BHeader c ->
+  BHeader c hc ->
   ChainDepState c ->
   ChainDepState c
 reupdateChainDepState
@@ -539,7 +546,7 @@ reupdateChainDepState
     where
       res =
         flip runReader globals
-          . reapplySTS @(STS.Prtcl.PRTCL c)
+          . reapplySTS @(STS.Prtcl.PRTCL c hc)
           $ TRC
             ( mkPrtclEnv lv epochNonce
             , csProtocol
@@ -553,13 +560,14 @@ reupdateChainDepState
 --   eligible to lead.
 getLeaderSchedule ::
   ( EraPParams era
-  , VRF.Signable (VRF (EraCrypto era)) Seed
+  , CC.HeaderCrypto hc
+  , VRF.Signable (VRF hc) Seed
   ) =>
   Globals ->
   NewEpochState era ->
   ChainDepState (EraCrypto era) ->
   KeyHash 'StakePool (EraCrypto era) ->
-  SignKeyVRF (EraCrypto era) ->
+  SignKeyVRF hc ->
   PParams era ->
   Set SlotNo
 getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlots

@@ -8,8 +8,8 @@ module Test.Cardano.Protocol.Crypto.KES (
 ) where
 
 import qualified Cardano.Crypto.KES.Class as KES
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
+import Cardano.Protocol.HeaderCrypto
+import Cardano.Protocol.HeaderKeys (
   SignKeyKES,
   VerKeyKES,
  )

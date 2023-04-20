@@ -45,12 +45,12 @@ import Test.Tasty (TestTree, localOption, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
 
 commonTests ::
-  forall era ledger.
+  forall era ledger hc.
   ( EraGen era
   , EraGovernance era
-  , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
-  , QC.HasTrace ledger (GenEnv era)
+  , ChainProperty era hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
+  , QC.HasTrace ledger (GenEnv era hc)
   , Embed (EraRule "DELEGS" era) ledger
   , Embed (EraRule "UTXOW" era) ledger
   , Environment ledger ~ LedgerEnv era
@@ -63,20 +63,20 @@ commonTests ::
   ) =>
   [TestTree]
 commonTests =
-  [ (localOption (TQC.QuickCheckMaxRatio 100) $ (ClassifyTraces.relevantCasesAreCovered @era (maxSuccess stdArgs)))
-  , Deleg.tests @era
-  , Pool.tests @era
-  , PoolReap.tests @era
+  [ (localOption (TQC.QuickCheckMaxRatio 100) $ (ClassifyTraces.relevantCasesAreCovered @era @hc (maxSuccess stdArgs)))
+  , Deleg.tests @era @hc
+  , Pool.tests @era @hc
+  , PoolReap.tests @era @hc
   , testGroup
       "CHAIN level Properties"
-      [ AdaPreservation.tests @era @ledger (maxSuccess stdArgs)
-      , ColllisionFree.tests @era @ledger
-      , IncrementalStake.incrStakeComputationTest @era @ledger
+      [ AdaPreservation.tests @era @ledger @hc (maxSuccess stdArgs)
+      , ColllisionFree.tests @era @ledger @hc
+      , IncrementalStake.incrStakeComputationTest @era @ledger @hc
       ]
   , testGroup
       "Trace generators properties"
-      [ ClassifyTraces.onlyValidLedgerSignalsAreGenerated @era @ledger
-      , ClassifyTraces.onlyValidChainSignalsAreGenerated @era
+      [ ClassifyTraces.onlyValidLedgerSignalsAreGenerated @era @hc @ledger
+      , ClassifyTraces.onlyValidChainSignalsAreGenerated @era @hc
       ]
   , ByronTranslation.testGroupByronTranslation
   , ShelleyTranslation.testGroupShelleyTranslation

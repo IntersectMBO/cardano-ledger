@@ -47,6 +47,7 @@ import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
+  toPoolStakeVRF,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley
@@ -96,12 +97,14 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -163,7 +166,7 @@ initUTxO =
     ]
 
 initStTwoPools :: ChainState C
-initStTwoPools = initSt initUTxO
+initStTwoPools = initSt (Proxy @C_Crypto) (Proxy @C_Crypto) initUTxO
 
 --
 -- Block 1, Slot 10, Epoch 0
@@ -179,11 +182,11 @@ aliceCoinEx1 =
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-alicePoolParams' :: Crypto c => PoolParams c
-alicePoolParams' = Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.carlSHK}
+alicePoolParams' :: (Crypto c, HeaderCrypto hc) => Proxy c -> Proxy hc -> PoolParams c
+alicePoolParams' pc phc = (Cast.alicePoolParams pc phc) {ppRewardAcnt = RewardAcnt Testnet Cast.carlSHK}
 
-bobPoolParams' :: Crypto c => PoolParams c
-bobPoolParams' = Cast.bobPoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.carlSHK}
+bobPoolParams' :: (Crypto c, HeaderCrypto hc) => Proxy c -> Proxy hc -> PoolParams c
+bobPoolParams' pc phc = (Cast.bobPoolParams pc phc) {ppRewardAcnt = RewardAcnt Testnet Cast.carlSHK}
 
 txbodyEx1 :: TxBody C
 txbodyEx1 =
@@ -194,11 +197,11 @@ txbodyEx1 =
         [ DCertDeleg (RegKey Cast.aliceSHK)
         , DCertDeleg (RegKey Cast.bobSHK)
         , DCertDeleg (RegKey Cast.carlSHK)
-        , DCertPool (RegPool alicePoolParams')
-        , DCertPool (RegPool bobPoolParams')
-        , DCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
-        , DCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys))
-        , DCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))
+        , DCertPool (RegPool $ alicePoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto))
+        , DCertPool (RegPool $ bobPoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto))
+        , DCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash $ Cast.alicePoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto)))
+        , DCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash $ Cast.bobPoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto)))
+        , DCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash $ Cast.alicePoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto)))
         ]
     )
     (Withdrawals Map.empty)
@@ -214,15 +217,15 @@ txEx1 =
     mempty
       { addrWits =
           mkWitnessesVKey
-            (hashAnnotated $ txbodyEx1)
+            (hashAnnotated txbodyEx1)
             ( (asWitness <$> [Cast.alicePay])
                 <> (asWitness <$> [Cast.aliceStake, Cast.bobStake, Cast.carlStake])
-                <> (asWitness <$> [aikCold Cast.alicePoolKeys, aikCold Cast.bobPoolKeys])
+                <> (asWitness <$> [aikCold $ Cast.alicePoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto), aikCold $ Cast.bobPoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto)])
             )
       }
     SNothing
 
-blockEx1 :: HasCallStack => Block (BHeader C_Crypto) C
+blockEx1 :: HasCallStack => Block (BHeader C_Crypto C_Crypto) C
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -230,7 +233,7 @@ blockEx1 =
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @C_Crypto)
+    (nonce0 (Proxy @C_Crypto))
     (NatNonce 1)
     minBound
     0
@@ -239,18 +242,18 @@ blockEx1 =
 
 expectedStEx1 :: ChainState C
 expectedStEx1 =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx1))
+  C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK] [alicePoolParams', bobPoolParams']
+    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK] [alicePoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto), bobPoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto)]
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
     . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 2))
-    . C.newPool alicePoolParams'
-    . C.newPool bobPoolParams'
-    . C.delegation Cast.aliceSHK (ppId alicePoolParams')
-    . C.delegation Cast.bobSHK (ppId bobPoolParams')
-    . C.delegation Cast.carlSHK (ppId alicePoolParams')
+    . C.newPool (alicePoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto))
+    . C.newPool (bobPoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto))
+    . C.delegation Cast.aliceSHK (ppId $ alicePoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto))
+    . C.delegation Cast.bobSHK (ppId $ bobPoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto))
+    . C.delegation Cast.carlSHK (ppId $ alicePoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto))
     $ initStTwoPools
 
 -- === Block 1, Slot 10, Epoch 0
@@ -262,13 +265,13 @@ expectedStEx1 =
 -- This is the only block in this example that includes a transaction,
 -- and after this block is processed, the UTxO will consist entirely
 -- of Alice's new coin aliceCoinEx1, and Bob and Carls initial genesis coins.
-twoPools1 :: CHAINExample (BHeader C_Crypto) C
+twoPools1 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools1 = CHAINExample initStTwoPools blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 90, Epoch 0
 --
-blockEx2 :: Block (BHeader C_Crypto) C
+blockEx2 :: Block (BHeader C_Crypto C_Crypto) C
 blockEx2 =
   mkBlockFakeVRF
     (bhHash $ bheader blockEx1)
@@ -276,7 +279,7 @@ blockEx2 =
     []
     (SlotNo 90)
     (BlockNo 2)
-    (nonce0 @C_Crypto)
+    (nonce0 (Proxy @C_Crypto))
     (NatNonce 2)
     minBound
     4
@@ -285,7 +288,7 @@ blockEx2 =
 
 expectedStEx2 :: ChainState C
 expectedStEx2 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx2))
+  C.evolveNonceFrozen (getBlockNonce blockEx2)
     . C.newLab blockEx2
     . C.rewardUpdate emptyRewardUpdate
     $ expectedStEx1
@@ -293,7 +296,7 @@ expectedStEx2 =
 -- === Block 2, Slot 90, Epoch 0
 --
 -- Create an empty block near the end of epoch 0 to close out the epoch.
-twoPools2 :: CHAINExample (BHeader C_Crypto) C
+twoPools2 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
@@ -301,24 +304,24 @@ twoPools2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 --
 
 epoch1Nonce :: Nonce
-epoch1Nonce = chainCandidateNonce (expectedStEx2)
+epoch1Nonce = chainCandidateNonce expectedStEx2
 
-blockEx3 :: Block (BHeader C_Crypto) C
+blockEx3 :: Block (BHeader C_Crypto C_Crypto) C
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader C_Crypto) blockEx2)
+    (bhHash $ bheader @(BHeader C_Crypto C_Crypto) blockEx2)
     (coreNodeKeysBySchedule @C ppEx 110)
     []
     (SlotNo 110)
     (BlockNo 3)
-    (epoch1Nonce)
+    epoch1Nonce
     (NatNonce 3)
     minBound
     5
     0
     (mkOCert (coreNodeKeysBySchedule @C ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: ExMock c => EB.SnapShot c
+snapEx3 :: forall c hc. ExMock c hc => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
     { EB.ssStake =
@@ -328,42 +331,45 @@ snapEx3 =
           , (Cast.carlSHK, carlInitCoin)
           ]
     , EB.ssDelegations =
-        [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
-        , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
-        , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
+        [ (Cast.aliceSHK, aikColdKeyHash $ Cast.alicePoolKeys pc phc)
+        , (Cast.bobSHK, aikColdKeyHash $ Cast.bobPoolKeys pc phc)
+        , (Cast.carlSHK, aikColdKeyHash $ Cast.alicePoolKeys pc phc)
         ]
     , EB.ssPoolParams =
-        [ (aikColdKeyHash Cast.alicePoolKeys, alicePoolParams')
-        , (aikColdKeyHash Cast.bobPoolKeys, bobPoolParams')
+        [ (aikColdKeyHash $ Cast.alicePoolKeys pc phc, alicePoolParams' pc phc)
+        , (aikColdKeyHash $ Cast.bobPoolKeys pc phc, bobPoolParams' pc phc)
         ]
     }
+  where
+    pc = Proxy @c
+    phc = Proxy @hc
 
 expectedStEx3 :: ChainState C
 expectedStEx3 =
   C.newEpoch blockEx3
-    . C.newSnapshot snapEx3 feeTx1
+    . C.newSnapshot (snapEx3 @C_Crypto @C_Crypto) feeTx1
     . C.applyRewardUpdate emptyRewardUpdate
     $ expectedStEx2
 
 -- === Block 3, Slot 110, Epoch 1
 --
 -- Create an empty block at the begining of epoch 1 to trigger the epoch change.
-twoPools3 :: CHAINExample (BHeader C_Crypto) C
+twoPools3 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
 -- Block 4, Slot 190, Epoch 1
 --
 
-blockEx4 :: Block (BHeader C_Crypto) C
+blockEx4 :: Block (BHeader C_Crypto C_Crypto) C
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader C_Crypto) blockEx3)
+    (bhHash $ bheader @(BHeader C_Crypto C_Crypto) blockEx3)
     (coreNodeKeysBySchedule @C ppEx 190)
     []
     (SlotNo 190)
     (BlockNo 4)
-    (epoch1Nonce)
+    epoch1Nonce
     (NatNonce 4)
     minBound
     9
@@ -385,7 +391,7 @@ rewardUpdateEx4 =
 
 expectedStEx4 :: ChainState C
 expectedStEx4 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx4))
+  C.evolveNonceFrozen (getBlockNonce blockEx4)
     . C.newLab blockEx4
     . C.rewardUpdate rewardUpdateEx4
     $ expectedStEx3
@@ -394,32 +400,32 @@ expectedStEx4 =
 --
 -- Create an empty block near the end of epoch 0 to close out the epoch,
 -- preparing the way for the first non-empty pool distribution.
-twoPools4 :: CHAINExample (BHeader C_Crypto) C
+twoPools4 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 epoch2Nonce :: Nonce
 epoch2Nonce =
-  chainCandidateNonce (expectedStEx4)
-    ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx2))
+  chainCandidateNonce expectedStEx4
+    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx2)
 
 --
 -- Block 5, Slot 221, Epoch 2
 --
 
-blockEx5 :: Block (BHeader C_Crypto) C
+blockEx5 :: Block (BHeader C_Crypto C_Crypto) C
 blockEx5 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader C_Crypto) blockEx4)
-    Cast.alicePoolKeys
+    (bhHash $ bheader @(BHeader C_Crypto C_Crypto) blockEx4)
+    (Cast.alicePoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto))
     []
     (SlotNo 221) -- odd slots open for decentralization
     (BlockNo 5)
-    (epoch2Nonce)
+    epoch2Nonce
     (NatNonce 5)
     minBound
     11
     10
-    (mkOCert Cast.alicePoolKeys 0 (KESPeriod 10))
+    (mkOCert (Cast.alicePoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto)) 0 (KESPeriod 10))
 
 activeStakeEx5 :: Integer
 activeStakeEx5 = sum $ map unCoin [aliceCoinEx1, bobInitCoin, carlInitCoin]
@@ -430,27 +436,30 @@ alicePoolStake = (unCoin aliceCoinEx1 + unCoin carlInitCoin) % activeStakeEx5
 bobPoolStake :: Rational
 bobPoolStake = unCoin bobInitCoin % activeStakeEx5
 
-pdEx5 :: forall c. Crypto c => PoolDistr c
+pdEx5 :: forall c hc. (Crypto c, HeaderCrypto hc) => PoolDistr c
 pdEx5 =
   PoolDistr $
     Map.fromList
       [
-        ( aikColdKeyHash $ Cast.alicePoolKeys @c
-        , IndividualPoolStake alicePoolStake (Cast.aliceVRFKeyHash @c)
+        ( aikColdKeyHash $ Cast.alicePoolKeys pc phc
+        , IndividualPoolStake alicePoolStake $ toPoolStakeVRF (Cast.aliceVRFKeyHash pc phc)
         )
       ,
-        ( aikColdKeyHash $ Cast.bobPoolKeys @c
-        , IndividualPoolStake bobPoolStake (Cast.bobVRFKeyHash @c)
+        ( aikColdKeyHash $ Cast.bobPoolKeys pc phc
+        , IndividualPoolStake bobPoolStake $ toPoolStakeVRF (Cast.bobVRFKeyHash pc phc)
         )
       ]
+  where
+    pc = Proxy @c
+    phc = Proxy @hc
 
 expectedStEx5 :: ChainState C
 expectedStEx5 =
-  C.incrBlockCount (aikColdKeyHash Cast.alicePoolKeys)
-    . C.newSnapshot snapEx3 (Coin 0)
+  C.incrBlockCount (aikColdKeyHash $ Cast.alicePoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto))
+    . C.newSnapshot (snapEx3 @C_Crypto @C_Crypto) (Coin 0)
     . C.applyRewardUpdate rewardUpdateEx4
-    . C.setPoolDistr pdEx5
-    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.alicePoolKeys) 0
+    . C.setPoolDistr (pdEx5 @C_Crypto @C_Crypto)
+    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash $ Cast.alicePoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto)) 0
     . C.newEpoch blockEx5 -- This must be processed before the incrBlockCount
     $ expectedStEx4
 
@@ -458,74 +467,86 @@ expectedStEx5 =
 --
 -- Create the first non-empty pool distribution by starting the epoch 2.
 -- Moreover, Alice's pool produces the block.
-twoPools5 :: CHAINExample (BHeader C_Crypto) C
+twoPools5 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 
 --
 -- Block 6, Slot 295, Epoch 2
 --
 
-blockEx6 :: Block (BHeader C_Crypto) C
+blockEx6 :: Block (BHeader C_Crypto C_Crypto) C
 blockEx6 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader C_Crypto) blockEx5)
-    Cast.alicePoolKeys
+    (bhHash $ bheader @(BHeader C_Crypto C_Crypto) blockEx5)
+    (Cast.alicePoolKeys pc phc)
     []
     (SlotNo 295) -- odd slots open for decentralization
     (BlockNo 6)
-    (epoch2Nonce)
+    epoch2Nonce
     (NatNonce 6)
     minBound
     14
     14
-    (mkOCert Cast.alicePoolKeys 0 (KESPeriod 14))
+    (mkOCert (Cast.alicePoolKeys pc phc) 0 (KESPeriod 14))
+  where
+    pc = Proxy @C_Crypto
+    phc = Proxy @C_Crypto
 
 expectedStEx6 :: ChainState C
 expectedStEx6 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx6))
+  C.evolveNonceFrozen (getBlockNonce blockEx6)
     . C.newLab blockEx6
-    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.alicePoolKeys) 0
-    . C.incrBlockCount (aikColdKeyHash Cast.alicePoolKeys)
+    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash $ Cast.alicePoolKeys pc phc) 0
+    . C.incrBlockCount (aikColdKeyHash $ Cast.alicePoolKeys pc phc)
     . C.rewardUpdate emptyRewardUpdate
     $ expectedStEx5
+  where
+    pc = Proxy @C_Crypto
+    phc = Proxy @C_Crypto
 
 -- === Block 6, Slot 295, Epoch 2
 --
 -- Alice's pool produces a second block.
-twoPools6 :: CHAINExample (BHeader C_Crypto) C
+twoPools6 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools6 = CHAINExample expectedStEx5 blockEx6 (Right expectedStEx6)
 
 --
 -- Block 7, Slot 297, Epoch 2
 --
 
-blockEx7 :: Block (BHeader C_Crypto) C
+blockEx7 :: Block (BHeader C_Crypto C_Crypto) C
 blockEx7 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader C_Crypto) blockEx6)
-    Cast.bobPoolKeys
+    (bhHash $ bheader @(BHeader C_Crypto C_Crypto) blockEx6)
+    (Cast.bobPoolKeys pc phc)
     []
     (SlotNo 297) -- odd slots open for decentralization
     (BlockNo 7)
-    (epoch2Nonce)
+    epoch2Nonce
     (NatNonce 7)
     minBound
     14
     14
-    (mkOCert Cast.bobPoolKeys 0 (KESPeriod 14))
+    (mkOCert (Cast.bobPoolKeys pc phc) 0 (KESPeriod 14))
+  where
+    pc = Proxy @C_Crypto
+    phc = Proxy @C_Crypto
 
 expectedStEx7 :: ChainState C
 expectedStEx7 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx7))
+  C.evolveNonceFrozen (getBlockNonce blockEx7)
     . C.newLab blockEx7
-    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.bobPoolKeys) 0
-    . C.incrBlockCount (aikColdKeyHash Cast.bobPoolKeys)
+    . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash $ Cast.bobPoolKeys pc phc) 0
+    . C.incrBlockCount (aikColdKeyHash $ Cast.bobPoolKeys pc phc)
     $ expectedStEx6
+  where
+    pc = Proxy @C_Crypto
+    phc = Proxy @C_Crypto
 
 -- === Block 7, Slot 295, Epoch 2
 --
 -- Bob's pool produces a block.
-twoPools7 :: CHAINExample (BHeader C_Crypto) C
+twoPools7 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 --
@@ -534,53 +555,53 @@ twoPools7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 epoch3Nonce :: Nonce
 epoch3Nonce =
-  chainCandidateNonce (expectedStEx7)
-    ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx4))
+  chainCandidateNonce expectedStEx7
+    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx4)
 
-blockEx8 :: Block (BHeader C_Crypto) C
+blockEx8 :: Block (BHeader C_Crypto C_Crypto) C
 blockEx8 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader C_Crypto) blockEx7)
+    (bhHash $ bheader @(BHeader C_Crypto C_Crypto) blockEx7)
     (coreNodeKeysBySchedule @C ppEx 310)
     []
     (SlotNo 310)
     (BlockNo 8)
-    (epoch3Nonce)
+    epoch3Nonce
     (NatNonce 8)
     minBound
     15
     15
-    (mkOCert (coreNodeKeysBySchedule @C ppEx 310) 1 (KESPeriod 15))
+    (mkOCert (coreNodeKeysBySchedule @C @C_Crypto ppEx 310) 1 (KESPeriod 15))
 
 expectedStEx8 :: ChainState C
 expectedStEx8 =
   C.newEpoch blockEx8
-    . C.newSnapshot snapEx3 (Coin 0)
+    . C.newSnapshot (snapEx3 @C_Crypto @C_Crypto) (Coin 0)
     . C.setOCertCounter coreNodeHK 1
     . C.applyRewardUpdate emptyRewardUpdate
     $ expectedStEx7
   where
-    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C ppEx 310
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C @C_Crypto ppEx 310
 
 -- === Block 8, Slot 310, Epoch 3
 --
 -- Create an empty block to start epoch 3.
-twoPools8 :: CHAINExample (BHeader C_Crypto) C
+twoPools8 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 
 --
 -- Block 9, Slot 390, Epoch 3
 --
 
-blockEx9 :: Block (BHeader C_Crypto) C
+blockEx9 :: Block (BHeader C_Crypto C_Crypto) C
 blockEx9 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader C_Crypto) blockEx8)
+    (bhHash $ bheader @(BHeader C_Crypto C_Crypto) blockEx8)
     (coreNodeKeysBySchedule @C ppEx 390)
     []
     (SlotNo 390)
     (BlockNo 9)
-    (epoch3Nonce)
+    epoch3Nonce
     (NatNonce 9)
     minBound
     19
@@ -625,43 +646,43 @@ aliceStakeShareTot = (unCoin aliceCoinEx1 + unCoin carlInitCoin) % circulation
 bobStakeShareTot :: Rational
 bobStakeShareTot = unCoin bobInitCoin % circulation
 
-alicePoolRewards :: forall c. ExMock c => Coin
+alicePoolRewards :: forall c hc. ExMock c hc => Coin
 alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
     appPerf = mkApparentPerformance (ppEx @(ShelleyEra c) ^. ppDL) alicePoolStake 2 3
-    pledge = fromIntegral . unCoin . ppPledge $ alicePoolParams' @c
+    pledge = fromIntegral . unCoin . ppPledge $ alicePoolParams' (Proxy @C_Crypto) (Proxy @C_Crypto)
     pr = pledge % circulation
     maxP = EB.maxPool @(ShelleyEra c) ppEx bigR aliceStakeShareTot pr
 
-carlMemberRewardsFromAlice :: forall c. ExMock c => Coin
+carlMemberRewardsFromAlice :: forall c hc. ExMock c hc => Coin
 carlMemberRewardsFromAlice =
   memberRew
-    (alicePoolRewards @c)
-    (alicePoolParams' @c)
+    (alicePoolRewards @c @hc)
+    (alicePoolParams' (Proxy @c) (Proxy @hc))
     (StakeShare $ unCoin carlInitCoin % circulation)
     (StakeShare aliceStakeShareTot)
 
-carlLeaderRewardsFromAlice :: forall c. ExMock c => Coin
+carlLeaderRewardsFromAlice :: forall c hc. ExMock c hc => Coin
 carlLeaderRewardsFromAlice =
   leaderRew
-    (alicePoolRewards @c)
-    (alicePoolParams' @c)
+    (alicePoolRewards @c @hc)
+    (alicePoolParams' (Proxy @c) (Proxy @hc))
     (StakeShare $ unCoin aliceCoinEx1 % circulation)
     (StakeShare aliceStakeShareTot)
 
-bobPoolRewards :: forall c. ExMock c => Coin
+bobPoolRewards :: forall c hc. ExMock c hc => Coin
 bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP))
   where
     appPerf = mkApparentPerformance (ppEx @(ShelleyEra c) ^. ppDL) bobPoolStake 1 3
-    pledge = fromIntegral . unCoin . ppPledge $ bobPoolParams' @c
+    pledge = fromIntegral . unCoin . ppPledge $ bobPoolParams' (Proxy @c) (Proxy @hc)
     pr = pledge % circulation
     maxP = EB.maxPool @(ShelleyEra c) ppEx bigR bobStakeShareTot pr
 
-carlLeaderRewardsFromBob :: forall c. ExMock c => Coin
+carlLeaderRewardsFromBob :: forall c hc. ExMock c hc => Coin
 carlLeaderRewardsFromBob =
   leaderRew
-    (bobPoolRewards @c)
-    (bobPoolParams' @c)
+    (bobPoolRewards @c @hc)
+    (bobPoolParams' (Proxy @c) (Proxy @hc))
     (StakeShare $ unCoin bobInitCoin % circulation)
     (StakeShare bobStakeShareTot)
 
@@ -679,15 +700,18 @@ bobPerfEx9 = likelihood blocks t (epochSize $ EpochNo 3)
     t = leaderProbability f bobPoolStake (unsafeBoundRational 0.5)
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx9 :: forall c. ExMock c => NonMyopic c
+nonMyopicEx9 :: forall c hc. ExMock c hc => NonMyopic c
 nonMyopicEx9 =
   NonMyopic
     ( Map.fromList
-        [ (aikColdKeyHash Cast.alicePoolKeys, alicePerfEx9)
-        , (aikColdKeyHash Cast.bobPoolKeys, bobPerfEx9)
+        [ (aikColdKeyHash $ Cast.alicePoolKeys pc phc, alicePerfEx9)
+        , (aikColdKeyHash $ Cast.bobPoolKeys pc phc, bobPerfEx9)
         ]
     )
     bigR
+  where
+    pc = Proxy @c
+    phc = Proxy @hc
 
 rewardUpdateEx9 ::
   PParams C ->
@@ -699,7 +723,7 @@ rewardUpdateEx9 pp rewards =
     , deltaR = invert (toDeltaCoin deltaR1Ex9) <> toDeltaCoin deltaR2Ex9
     , rs = rewards
     , deltaF = DeltaCoin 0
-    , nonMyopic = nonMyopicEx9
+    , nonMyopic = nonMyopicEx9 @C_Crypto @C_Crypto
     }
   where
     pv = pp ^. ppProtocolVersionL
@@ -710,42 +734,45 @@ pulserEx9 pp =
   makeCompletedPulser
     ( BlocksMade $
         Map.fromList
-          [(aikColdKeyHash Cast.alicePoolKeys, 2), (aikColdKeyHash Cast.bobPoolKeys, 1)]
+          [(aikColdKeyHash $ Cast.alicePoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto), 2), (aikColdKeyHash $ Cast.bobPoolKeys (Proxy @C_Crypto) (Proxy @C_Crypto), 1)]
     )
     expectedStEx8'
   where
-    expectedStEx8' = C.setPrevPParams pp (expectedStEx8)
+    expectedStEx8' = C.setPrevPParams pp expectedStEx8
 
 expectedStEx9 :: PParams C -> ChainState C
 expectedStEx9 pp =
-  C.evolveNonceFrozen (getBlockNonce (blockEx9))
+  C.evolveNonceFrozen (getBlockNonce blockEx9)
     . C.newLab blockEx9
     . C.setOCertCounter coreNodeHK 2
     . C.pulserUpdate (pulserEx9 pp)
     $ expectedStEx8
   where
-    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C ppEx 390
+    coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C @C_Crypto ppEx 390
 
 -- === Block 9, Slot 390, Epoch 3
 --
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
-twoPools9 :: CHAINExample (BHeader (EraCrypto C)) C
+twoPools9 :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx)
 
 --
 -- Now test with Aggregation
 --
-carlsRewards :: forall c. ExMock c => Set (Reward c)
+carlsRewards :: forall c hc. ExMock c hc => Set (Reward c)
 carlsRewards =
   Set.fromList
-    [ Reward MemberReward (aikColdKeyHash Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c)
-    , Reward LeaderReward (aikColdKeyHash Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c)
-    , Reward LeaderReward (aikColdKeyHash Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
+    [ Reward MemberReward (aikColdKeyHash $ Cast.alicePoolKeys pc phc) (carlMemberRewardsFromAlice @c @hc)
+    , Reward LeaderReward (aikColdKeyHash $ Cast.alicePoolKeys pc phc) (carlLeaderRewardsFromAlice @c @hc)
+    , Reward LeaderReward (aikColdKeyHash $ Cast.bobPoolKeys pc phc) (carlLeaderRewardsFromBob @c @hc)
     ]
+  where
+    pc = Proxy @c
+    phc = Proxy @hc
 
-rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Reward c))
-rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
+rsEx9Agg :: forall c hc. ExMock c hc => Map (Credential 'Staking c) (Set (Reward c))
+rsEx9Agg = Map.singleton Cast.carlSHK (carlsRewards @c @hc)
 
 ppProtVer3 :: PParams C
 ppProtVer3 = ppEx & ppProtocolVersionL .~ ProtVer (natVersion @3) 0
@@ -758,20 +785,20 @@ expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
 
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
-twoPools9Agg :: CHAINExample (BHeader C_Crypto) C
+twoPools9Agg :: CHAINExample (BHeader C_Crypto C_Crypto) C C_Crypto
 twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 
 testAggregateRewardsLegacy :: HasCallStack => Assertion
 testAggregateRewardsLegacy = do
-  let expectedReward = carlLeaderRewardsFromBob @(EraCrypto C)
-  expectedReward @?= rewardAmount (minimum (carlsRewards @(EraCrypto C)))
-  aggregateRewards @C_Crypto (ppEx ^. ppProtocolVersionL @C) rsEx9Agg
+  let expectedReward = carlLeaderRewardsFromBob @C_Crypto @C_Crypto
+  expectedReward @?= rewardAmount (minimum (carlsRewards @C_Crypto @C_Crypto))
+  aggregateRewards @C_Crypto (ppEx ^. ppProtocolVersionL @C) (rsEx9Agg @C_Crypto @C_Crypto)
     @?= Map.singleton Cast.carlSHK expectedReward
 
 testAggregateRewardsNew :: Assertion
 testAggregateRewardsNew =
-  aggregateRewards @C_Crypto (ppProtVer3 ^. ppProtocolVersionL @C) rsEx9Agg
-    @?= Map.singleton Cast.carlSHK (foldMap rewardAmount (carlsRewards @(EraCrypto C)))
+  aggregateRewards @C_Crypto (ppProtVer3 ^. ppProtocolVersionL @C) (rsEx9Agg @C_Crypto @C_Crypto)
+    @?= Map.singleton Cast.carlSHK (foldMap rewardAmount (carlsRewards @C_Crypto @C_Crypto))
 
 --
 -- Two Pools Test Group
@@ -783,10 +810,10 @@ twoPoolsExample =
     "two pools"
     [ testCase "create non-aggregated pulser" $ testCHAINExample twoPools9
     , testCase "non-aggregated pulser is correct" $
-        Complete (rewardUpdateEx9 ppEx rsEx9Agg)
+        Complete (rewardUpdateEx9 ppEx $ rsEx9Agg @C_Crypto @C_Crypto)
           @?= (fst . runShelleyBase . completeStep $ pulserEx9 ppEx)
     , testCase "aggregated pulser is correct" $
-        Complete (rewardUpdateEx9 ppProtVer3 rsEx9Agg)
+        Complete (rewardUpdateEx9 ppProtVer3 $ rsEx9Agg @C_Crypto @C_Crypto)
           @?= (fst . runShelleyBase . completeStep $ pulserEx9 ppProtVer3)
     , testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg
     , testCase "create legacy aggregatedRewards" testAggregateRewardsLegacy

@@ -28,7 +28,7 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   Addr,
   Credential (..),
@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTxBody (..),
   ShelleyTxOut (..),
   TxIn (..),
-  hashVerKeyVRF,
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Tx (
@@ -61,11 +60,14 @@ import Cardano.Ledger.Shelley.TxWits (
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.HeaderCrypto
+import Cardano.Protocol.TPraos.Rules.Overlay (hashPoolStakeVRF)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map (empty, singleton)
 import Data.Maybe (fromJust)
+import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
@@ -109,14 +111,18 @@ alicePool = KeyPair vk sk
 alicePoolKH :: forall c. Crypto c => KeyHash 'StakePool c
 alicePoolKH = (hashKey . vKey) alicePool
 
-aliceVRF :: forall c. Crypto c => VRFKeyPair c
+aliceVRF :: forall hc. HeaderCrypto hc => VRFKeyPair hc
 aliceVRF = mkVRFKeyPair (RawSeed 0 0 0 0 3)
 
-alicePoolParams :: forall c. Crypto c => PoolParams c
-alicePoolParams =
+alicePoolParams ::
+  forall c hc.
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy hc ->
+  PoolParams c
+alicePoolParams _ =
   PoolParams
     { ppId = alicePoolKH
-    , ppVrf = hashVerKeyVRF . vrfVerKey $ aliceVRF @c
+    , ppVrf = hashPoolStakeVRF . vrfVerKey $ aliceVRF @hc
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
@@ -328,12 +334,16 @@ txDeregisterStakeBytes16 :: BSL.ByteString
 txDeregisterStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c11131400018182583900e9686d801fa32aeb4390c2f2a53bb0314a9c744c46a2cada394a371fc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df760a02185e030a048182018200581cc6852b6aaed73bcf346a57ef99adae3000b51c7c59faaeb15993df76a100818258204628aaf16d6e1baa061d1296419542cb09287c639163d0fdbdac0ff23699797e5840409db925fa592b7f4c76e44d738789f4b0ffb2b9cf4567af127121d635491b4eb736e8c92571f1329f14d06aad7ec42ca654ae65eb63b0b01d30cc4454aee80cf6"
 
 -- | Transaction which registers a stake pool
-txbRegisterPool :: ShelleyTxBody Shelley
-txbRegisterPool =
+txbRegisterPool ::
+  forall c hc.
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy hc ->
+  ShelleyTxBody (ShelleyEra c)
+txbRegisterPool _phc =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)]
+    , stbCerts = StrictSeq.fromList [DCertPool (RegPool $ alicePoolParams (Proxy @hc))]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
@@ -344,10 +354,10 @@ txbRegisterPool =
 txRegisterPool :: ShelleyTx Shelley
 txRegisterPool =
   ShelleyTx
-    { body = txbRegisterPool
+    { body = txbRegisterPool (Proxy @StandardCrypto)
     , wits =
         mempty
-          { addrWits = mkWitnessesVKey (hashAnnotated txbRegisterPool) [alicePay]
+          { addrWits = mkWitnessesVKey (hashAnnotated $ txbRegisterPool (Proxy @StandardCrypto)) [alicePay]
           }
     , auxiliaryData = SNothing
     }

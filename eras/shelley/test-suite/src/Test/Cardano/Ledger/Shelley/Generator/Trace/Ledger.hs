@@ -37,6 +37,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -74,7 +75,8 @@ genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
 -- with meaningful delegation certificates.
 instance
   ( EraGen era
-  , Mock (EraCrypto era)
+  , HeaderCrypto hc
+  , Mock (EraCrypto era) hc
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -91,7 +93,7 @@ instance
   , Signal (EraRule "DELEGS" era) ~ Seq (DCert (EraCrypto era))
   , ProtVerAtMost era 8
   ) =>
-  TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  TQC.HasTrace (ShelleyLEDGER era) (GenEnv era hc)
   where
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) minBound
@@ -106,10 +108,10 @@ instance
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 instance
-  forall era.
+  forall era hc.
   ( EraGen era
   , EraGovernance era
-  , Mock (EraCrypto era)
+  , Mock (EraCrypto era) hc
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -120,7 +122,7 @@ instance
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , ProtVerAtMost era 8
   ) =>
-  TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
+  TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era hc)
   where
   envGen GenEnv {geConstants} =
     LedgersEnv (SlotNo 0)
@@ -169,12 +171,13 @@ instance
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  forall a era ledger.
+  forall a era ledger hc.
   ( EraGen era
   , EraGovernance era
+  , HeaderCrypto hc
   ) =>
-  GenEnv era ->
+  GenEnv era hc ->
   IRC ledger ->
   Gen (Either a (LedgerState era))
 mkGenesisLedgerState ge@(GenEnv _ _ c) _ =
-  Right . genesisState (genesisDelegs0 c) <$> genUtxo0 ge
+  Right . genesisState (genesisDelegs0 @(EraCrypto era) @hc c) <$> genUtxo0 ge

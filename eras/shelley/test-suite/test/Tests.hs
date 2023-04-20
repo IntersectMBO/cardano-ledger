@@ -8,7 +8,7 @@ import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Shelley.Address.Bootstrap as Bootstrap (
   bootstrapHashTest,
  )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import qualified Test.Cardano.Ledger.Shelley.Pretty as Pretty (prettyTest)
 import Test.Cardano.Ledger.Shelley.PropertyTests (commonTests)
 import qualified Test.Cardano.Ledger.Shelley.Rewards as Rewards (tests)
@@ -46,13 +46,13 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Shelley tests"
-    [ Deposits.tests @C
+    [ Deposits.tests @C @C_Crypto
     , ( localOption
           (QuickCheckMaxRatio 50)
-          (ClassifyTraces.relevantCasesAreCovered @C (maxSuccess stdArgs))
+          (ClassifyTraces.relevantCasesAreCovered @C @C_Crypto (maxSuccess stdArgs))
       )
-    , AdaPreservation.tests @C @(ShelleyLEDGER C) (maxSuccess stdArgs)
-    , ClassifyTraces.onlyValidChainSignalsAreGenerated @C
+    , AdaPreservation.tests @C @(ShelleyLEDGER C) @C_Crypto (maxSuccess stdArgs)
+    , ClassifyTraces.onlyValidChainSignalsAreGenerated @C @C_Crypto
     , Bootstrap.bootstrapHashTest
     , WitVKeys.tests @(EraCrypto C)
     , Rewards.tests
@@ -69,4 +69,4 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Shelley tests - nightly"
-    $ [Serialisation.tests 50] ++ commonTests @C @(ShelleyLEDGER C)
+    $ [Serialisation.tests 50] ++ commonTests @C @(ShelleyLEDGER C) @C_Crypto

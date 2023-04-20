@@ -16,6 +16,8 @@ where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
+import Cardano.Protocol.HeaderCrypto
+import Cardano.Protocol.HeaderKeys
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
 import Control.Monad.Trans.Reader (asks)
@@ -27,7 +29,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data OCERT c
+data OCERT c hc
 
 data OcertPredicateFailure c
   = KESBeforeStartOCERT
@@ -56,30 +58,32 @@ instance NoThunks (OcertPredicateFailure c)
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
   ) =>
-  STS (OCERT c)
+  STS (OCERT c hc)
   where
   type
-    State (OCERT c) =
+    State (OCERT c hc) =
       Map (KeyHash 'BlockIssuer c) Word64
   type
-    Signal (OCERT c) =
-      BHeader c
-  type Environment (OCERT c) = OCertEnv c
-  type BaseM (OCERT c) = ShelleyBase
-  type PredicateFailure (OCERT c) = OcertPredicateFailure c
+    Signal (OCERT c hc) =
+      BHeader c hc
+  type Environment (OCERT c hc) = OCertEnv c
+  type BaseM (OCERT c hc) = ShelleyBase
+  type PredicateFailure (OCERT c hc) = OcertPredicateFailure c
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
 
 ocertTransition ::
   ( Crypto c
-  , DSignable c (OCertSignable c)
-  , KESignable c (BHBody c)
+  , HeaderCrypto hc
+  , DSignable c (OCertSignable hc)
+  , KESignable hc (BHBody c hc)
   ) =>
-  TransitionRule (OCERT c)
+  TransitionRule (OCERT c hc)
 ocertTransition =
   judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
     let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb

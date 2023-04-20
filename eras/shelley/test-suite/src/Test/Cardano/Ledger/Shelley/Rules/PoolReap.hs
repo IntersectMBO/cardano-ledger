@@ -66,11 +66,11 @@ import Test.Tasty.QuickCheck (testProperty)
 ----------------------------------------------------------------------
 
 tests ::
-  forall era.
-  ( ChainProperty era
+  forall era hc.
+  ( ChainProperty era hc
   , EraGen era
   , EraGovernance era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   ) =>
   TestTree
 tests =
@@ -82,7 +82,7 @@ tests =
   where
     poolState = certPState . lsCertState . esLState . nesEs . chainNes
 
-    removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
+    removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era hc) -> Property
     removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =
       let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
        in removedAfterPoolreap (poolState source) (poolState target) e
@@ -109,8 +109,8 @@ removedAfterPoolreap p p' e =
     retire = eval (dom (retiring ▷ setSingleton e))
 
 sameEpoch ::
-  forall era.
-  SourceSignalTarget (CHAIN era) ->
+  forall era hc.
+  SourceSignalTarget (CHAIN era hc) ->
   Bool
 sameEpoch SourceSignalTarget {source, target} =
   epoch source == epoch target
