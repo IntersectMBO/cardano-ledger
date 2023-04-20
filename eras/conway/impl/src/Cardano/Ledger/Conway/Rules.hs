@@ -1,4 +1,5 @@
 module Cardano.Ledger.Conway.Rules (
+  module Cardano.Ledger.Conway.Rules.Delegs,
   module Cardano.Ledger.Conway.Rules.Enact,
   module Cardano.Ledger.Conway.Rules.Epoch,
   module Cardano.Ledger.Conway.Rules.Ledger,
@@ -10,6 +11,7 @@ module Cardano.Ledger.Conway.Rules (
 )
 where
 
+import Cardano.Ledger.Conway.Rules.Delegs
 import Cardano.Ledger.Conway.Rules.Enact
 import Cardano.Ledger.Conway.Rules.Epoch
 import Cardano.Ledger.Conway.Rules.Ledger

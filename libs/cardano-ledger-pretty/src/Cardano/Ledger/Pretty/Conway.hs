@@ -34,6 +34,7 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedure (..),
  )
 import Cardano.Ledger.Conway.Rules (
+  ConwayDelegsPredFailure (..),
   ConwayLedgerPredFailure (..),
   ConwayTallyPredFailure,
   EnactState (..),
@@ -286,3 +287,17 @@ instance
           , ("Ratify", prettyA cgRatify)
           , ("VoterRoles", prettyA cgVoterRoles)
           ]
+
+instance
+  PrettyA (PredicateFailure (EraRule "CERT" era)) =>
+  PrettyA (ConwayDelegsPredFailure era)
+  where
+  prettyA (DelegateeNotRegisteredDELEG x) =
+    ppRecord
+      "DelegateeNotRegisteredDELEG"
+      [("KeyHash", prettyA x)]
+  prettyA (WithdrawalsNotInRewardsDELEGS x) =
+    ppRecord
+      "WithdrawalsNotInRewardsDELEGS"
+      [("Missing Withdrawals", prettyA x)]
+  prettyA (CertFailure x) = prettyA x

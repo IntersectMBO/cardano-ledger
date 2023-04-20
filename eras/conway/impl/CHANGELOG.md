@@ -4,13 +4,17 @@
 
 * Added `ConwayDelegCert` and `Delegatee` #3372
 * Removed `toShelleyDCert` and `fromShelleyDCertMaybe` #3372
-* Replace `DELPL` rule with `CERT`
 * Replace `DPState c` with `CertState era`
 * Add `TranslateEra` instances for:
   * `DState`
   * `PState`
   * `VState`
 * Add `ConwayDelegsPredFailure`
+* Renamed `DELPL` to `CERT`
+* Added `ConwayDELEGS` rule
+* Added `ConwayCERT` rule synonym
+* Added `ConwayDelegsPredFailure` rule
+* Added `ConwayDelegsEvent` rule
 
 ## 1.1.0.0
 

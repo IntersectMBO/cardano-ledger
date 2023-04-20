@@ -8,6 +8,10 @@
 * Rename `obligationDPState` to `obligationCertState`
 * Rename `keyCertsRefundsDPState` to `keyCertsRefundsCertState`
 * Rename `totalCertsDepositsDPState` to `totalCertsDepositsCertState`
+* Added new functions to `DELEGS` rule
+  * `drainWithdrawals`
+  * `validateZeroRewards`
+  * `validateDelegationRegistered`
 
 ## 1.1.0.0
 

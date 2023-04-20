@@ -3,6 +3,8 @@
 
 module Cardano.Ledger.Conway.Era (
   ConwayEra,
+  ConwayCERT,
+  ConwayDELEGS,
   ConwayTALLY,
   ConwayNEWEPOCH,
   ConwayEPOCH,
@@ -76,6 +78,14 @@ data ConwayRATIFY era
 
 type instance EraRule "RATIFY" (ConwayEra c) = ConwayRATIFY (ConwayEra c)
 
+data ConwayDELEGS era
+
+type instance EraRule "DELEGS" (ConwayEra c) = ConwayDELEGS (ConwayEra c)
+
+type ConwayCERT era = API.ShelleyDELPL era
+
+type instance EraRule "CERT" (ConwayEra c) = ConwayCERT (ConwayEra c)
+
 -- Rules inherited from Babbage
 
 type instance EraRule "UTXO" (ConwayEra c) = BabbageUTXO (ConwayEra c)
@@ -89,10 +99,6 @@ type instance EraRule "BBODY" (ConwayEra c) = AlonzoBBODY (ConwayEra c)
 -- Rules inherited from Shelley
 
 type instance EraRule "DELEG" (ConwayEra c) = API.ShelleyDELEG (ConwayEra c)
-
-type instance EraRule "DELEGS" (ConwayEra c) = API.ShelleyDELEGS (ConwayEra c)
-
-type instance EraRule "DELPL" (ConwayEra c) = API.ShelleyDELPL (ConwayEra c)
 
 type instance EraRule "LEDGERS" (ConwayEra c) = API.ShelleyLEDGERS (ConwayEra c)
 
