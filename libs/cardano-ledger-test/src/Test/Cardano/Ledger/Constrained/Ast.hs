@@ -497,16 +497,20 @@ runPred env (NotMember x y) = do
   x2 <- runTerm env x
   y2 <- runTerm env y
   pure (Set.notMember x2 y2)
-runPred env (MapMember x y z) = do
-  x2 <- runTerm env x
-  y2 <- runTerm env y
-  z2 <- runTerm env z
-  pure $ Set.member x2 (Map.keysSet z2) && Set.member y2 (Set.fromList (Map.elems z2))
-runPred env (NotMapMember x y z) = do
-  x2 <- runTerm env x
-  y2 <- runTerm env y
-  z2 <- runTerm env z
-  pure $ not (Set.member x2 (Map.keysSet z2)) || not (Set.member y2 (Set.fromList (Map.elems z2)))
+runPred env (MapMember k v m) = do
+  k2 <- runTerm env k
+  v2 <- runTerm env v
+  m2 <- runTerm env m
+  pure $ case Map.lookup k2 m2
+    Nothing -> False
+    Just v -> v2 == v
+runPred env (NotMapMember k v m) = do
+  k2 <- runTerm env k
+  v2 <- runTerm env v
+  m2 <- runTerm env m
+  pure $ case Map.lookup k2 m2
+    Nothing -> True
+    Just v -> y2 /= v
 runPred env (x :<-: y) = do
   _x2 <- runTerm env x
   _y2 <- runTarget env y
