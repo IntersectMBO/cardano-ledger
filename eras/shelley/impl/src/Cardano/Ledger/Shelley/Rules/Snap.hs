@@ -27,10 +27,11 @@ import Cardano.Ledger.EpochBoundary (
   SnapShot (ssDelegations, ssStake),
   SnapShots (..),
   Stake (unStake),
-  calculatePoolDistr,
+  -- calculatePoolDistr,
   emptySnapShots,
  )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
   DPState (..),
@@ -109,7 +110,7 @@ snapTransition = do
   pure $
     SnapShots
       { ssStakeMark = istakeSnap
-      , ssStakeMarkPoolDistr = calculatePoolDistr istakeSnap
+      , ssStakeMarkPoolDistr = PoolDistr mempty -- calculatePoolDistr istakeSnap
       , -- ssStakeMarkPoolDistr exists for performance reasons, see ADR-7
         ssStakeSet = ssStakeMark s
       , ssStakeGo = ssStakeSet s
