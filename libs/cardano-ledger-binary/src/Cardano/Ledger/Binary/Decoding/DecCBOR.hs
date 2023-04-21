@@ -465,21 +465,7 @@ instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
 -- Hash
 --------------------------------------------------------------------------------
 
-instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
-  decCBOR = do
-    bs <- decodeBytes
-    case hashFromBytes bs of
-      Just x -> return x
-      Nothing ->
-        fail $
-          "hash bytes wrong size, expected "
-            ++ show expected
-            ++ " but got "
-            ++ show actual
-        where
-          expected = sizeHash (Proxy :: Proxy h)
-          actual = BS.length bs
-  {-# INLINEABLE decCBOR #-}
+instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a)
 
 --------------------------------------------------------------------------------
 -- KES
