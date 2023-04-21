@@ -236,7 +236,7 @@ updateRewards ::
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   let totRs = sumRewards (esPrevPp es ^. ppProtocolVersionL) rs_
   Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
-  let !(!es', filtered) = applyRUpdFiltered ru' es
+  let (!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)
   -- This event (which is only generated once per epoch) must be generated even if the
   -- map is empty (db-sync depends on it).
