@@ -82,7 +82,7 @@ mkVersion v
   | otherwise = mkVersion64 (fromIntegral v)
   where
     vi = toInteger v
-{-# INLINEABLE mkVersion #-}
+{-# INLINE mkVersion #-}
 
 -- | Construct a `Version` and fail if the supplied value is not supported version number.
 mkVersion64 :: MonadFail m => Word64 -> m Version
@@ -101,7 +101,7 @@ mkVersion64 v
   where
     Version minVersion = minBound
     Version maxVersion = maxBound
-{-# INLINEABLE mkVersion64 #-}
+{-# INLINE mkVersion64 #-}
 
 -- | Convert a `Version` to an `Integral` value.
 --

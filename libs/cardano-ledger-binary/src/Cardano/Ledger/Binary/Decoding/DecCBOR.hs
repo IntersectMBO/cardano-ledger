@@ -21,7 +21,7 @@ where
 
 import qualified Cardano.Binary as Plain (Decoder, FromCBOR (..))
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, SeedSizeDSIGN, SigDSIGN, SignKeyDSIGN, VerKeyDSIGN)
-import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, hashFromBytes, sizeHash)
+import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm)
 import Cardano.Crypto.KES.Class (KESAlgorithm, OptimizedKESAlgorithm, SigKES, SignKeyKES, VerKeyKES)
 import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
 import Cardano.Crypto.KES.CompactSum (CompactSumKES)
@@ -465,21 +465,7 @@ instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
 -- Hash
 --------------------------------------------------------------------------------
 
-instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a) where
-  decCBOR = do
-    bs <- decodeBytes
-    case hashFromBytes bs of
-      Just x -> return x
-      Nothing ->
-        fail $
-          "hash bytes wrong size, expected "
-            ++ show expected
-            ++ " but got "
-            ++ show actual
-        where
-          expected = sizeHash (Proxy :: Proxy h)
-          actual = BS.length bs
-  {-# INLINEABLE decCBOR #-}
+instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a)
 
 --------------------------------------------------------------------------------
 -- KES
