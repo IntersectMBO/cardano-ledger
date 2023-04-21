@@ -86,7 +86,7 @@ decodeRecordNamedT ::
 decodeRecordNamedT name getRecordSize decoder =
   decodeListLikeT name decoder $ \result n ->
     lift $ matchSize ("Record " <> name) n (getRecordSize result)
-{-# INLINEABLE decodeRecordNamedT #-}
+{-# INLINE decodeRecordNamedT #-}
 
 decodeRecordSum :: Text.Text -> (Word -> Decoder s (Int, a)) -> Decoder s a
 decodeRecordSum name decoder =
@@ -94,7 +94,7 @@ decodeRecordSum name decoder =
     snd <$> do
       decodeListLikeT name (lift (decodeWord >>= decoder)) $ \(size, _) n ->
         lift $ matchSize (Text.pack "Sum " <> name) size n
-{-# INLINEABLE decodeRecordSum #-}
+{-# INLINE decodeRecordSum #-}
 
 decodeListLikeT ::
   (MonadTrans m, Monad (m (Decoder s))) =>
@@ -114,4 +114,4 @@ decodeListLikeT name decoder actOnLength = do
       isBreak <- decodeBreakOr
       unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
   pure result
-{-# INLINEABLE decodeListLikeT #-}
+{-# INLINE decodeListLikeT #-}
