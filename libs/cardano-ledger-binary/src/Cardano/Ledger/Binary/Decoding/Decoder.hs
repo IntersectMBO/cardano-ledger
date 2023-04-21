@@ -411,7 +411,8 @@ decodeRational =
       if d <= 0
         then cborError $ DecoderErrorCustom "Rational" "invalid denominator"
         else return $! n % d
-{-# INLINEABLE decodeRational #-}
+    {-# INLINE decodeRationalFixedSizeTuple #-}
+{-# INLINE decodeRational #-}
 
 -- | Future `Decoder` for `Rational` type. This decoder will be applied in future and is
 -- prepared here as use case on how to do upgrades to serialization. Versions variance:
@@ -454,7 +455,7 @@ decodeRationalWithoutTag = do
       when (d == 0) (fail "Denominator cannot be zero")
       pure $! n % d
     _ -> cborError $ DecoderErrorSizeMismatch "Rational" 2 numValues
-{-# INLINEABLE decodeRationalWithoutTag #-}
+{-# INLINE decodeRationalWithoutTag #-}
 
 --------------------------------------------------------------------------------
 -- Containers
@@ -471,7 +472,7 @@ decodeList decodeValue =
     (natVersion @2)
     (decodeCollection decodeListLenOrIndef decodeValue)
     (decodeListWith decodeValue)
-{-# INLINEABLE decodeList #-}
+{-# INLINE decodeList #-}
 
 -- | @'Decoder'@ for list.
 decodeListWith :: Decoder s a -> Decoder s [a]
@@ -491,7 +492,7 @@ decodeMaybe decodeValue = do
     (natVersion @2)
     (decodeMaybeVarLen decodeValue)
     (decodeMaybeExactLen decodeValue)
-{-# INLINEABLE decodeMaybe #-}
+{-# INLINE decodeMaybe #-}
 
 decodeMaybeExactLen :: Decoder s a -> Decoder s (Maybe a)
 decodeMaybeExactLen decodeValue = do
@@ -502,7 +503,7 @@ decodeMaybeExactLen decodeValue = do
       !x <- decodeValue
       return (Just x)
     _ -> fail "too many elements while decoding Maybe."
-{-# INLINEABLE decodeMaybeExactLen #-}
+{-# INLINE decodeMaybeExactLen #-}
 
 decodeMaybeVarLen :: Decoder s a -> Decoder s (Maybe a)
 decodeMaybeVarLen decodeValue = do
@@ -521,7 +522,7 @@ decodeMaybeVarLen decodeValue = do
           unless isBreak2 $
             fail "too many elements in break-style decoding of Maybe."
           pure (Just x)
-{-# INLINEABLE decodeMaybeVarLen #-}
+{-# INLINE decodeMaybeVarLen #-}
 
 -- | Alternative way to decode a Maybe type.
 --
@@ -562,7 +563,7 @@ decodeEither decodeLeft decodeRight = do
     0 -> Left <$> decodeLeft
     1 -> Right <$> decodeRight
     _ -> cborError $ DecoderErrorUnknownTag "Either" (fromIntegral t)
-{-# INLINEABLE decodeEither #-}
+{-# INLINE decodeEither #-}
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder = do
@@ -584,7 +585,7 @@ decodeRecordNamedT name getRecordSize decoder = do
       isBreak <- decodeBreakOr
       unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
   pure x
-{-# INLINEABLE decodeRecordNamedT #-}
+{-# INLINE decodeRecordNamedT #-}
 
 decodeRecordSum :: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
 decodeRecordSum name decoder = do
@@ -597,7 +598,7 @@ decodeRecordSum name decoder = do
       isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
       unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
   pure x
-{-# INLINEABLE decodeRecordSum #-}
+{-# INLINE decodeRecordSum #-}
 
 decodeEnumBounded :: forall a s. (Enum a, Bounded a, Typeable a) => Decoder s a
 decodeEnumBounded = do
@@ -605,7 +606,7 @@ decodeEnumBounded = do
   if fromEnum (minBound :: a) <= n && n <= fromEnum (maxBound :: a)
     then pure $ toEnum n
     else fail $ "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
-{-# INLINEABLE decodeEnumBounded #-}
+{-# INLINE decodeEnumBounded #-}
 
 decodeWithOrigin :: Decoder s a -> Decoder s (WithOrigin a)
 decodeWithOrigin f = withOriginFromMaybe <$> decodeMaybe f
@@ -662,7 +663,7 @@ decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
       if newKey > previousKey
         then decodeEntries (remainingPairs - 1) newKey (p : acc)
         else cborError $ DecoderErrorCanonicityViolation "Map"
-{-# INLINEABLE decodeMapSkel #-}
+{-# INLINE decodeMapSkel #-}
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
@@ -681,7 +682,7 @@ decodeCollectionWithLen lenOrIndef el = do
       condition >>= \case
         False -> pure (n, reverse acc)
         True -> action >>= \v -> loop (n + 1, v : acc) condition action
-{-# INLINEABLE decodeCollectionWithLen #-}
+{-# INLINE decodeCollectionWithLen #-}
 
 decodeIsListByKey ::
   forall k t v s.
@@ -699,7 +700,8 @@ decodeIsListByKey decodeKey decodeValueFor =
       !key <- decodeKey
       !value <- decodeValueFor key
       pure (key, value)
-{-# INLINEABLE decodeIsListByKey #-}
+    {-# INLINE decodeInlinedPair #-}
+{-# INLINE decodeIsListByKey #-}
 
 -- | `Decoder` for `Map.Map`. Versions variance:
 --
@@ -742,7 +744,7 @@ decodeMapByKey decodeKey decodeValue =
         (decodeIsListByKey decodeKey decodeValue)
     )
     (decodeMapSkel Map.fromDistinctDescList decodeKey decodeValue)
-{-# INLINEABLE decodeMapByKey #-}
+{-# INLINE decodeMapByKey #-}
 
 -- | Decode `VMap`. Unlike `decodeMap` it does not behavee differently for
 -- version prior to 2.
@@ -799,7 +801,7 @@ decodeSetSkel fromDistinctDescList decodeValue = do
       if newValue > previousValue
         then decodeEntries (remainingEntries - 1) newValue (newValue : acc)
         else cborError $ DecoderErrorCanonicityViolation "Set"
-{-# INLINEABLE decodeSetSkel #-}
+{-# INLINE decodeSetSkel #-}
 
 -- | `Decoder` for `Set.Set`. Versions variance:
 --
@@ -822,7 +824,7 @@ decodeSet valueDecoder =
         (Set.fromList <$> decodeCollection decodeListLenOrIndef valueDecoder)
     )
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
-{-# INLINEABLE decodeSet #-}
+{-# INLINE decodeSet #-}
 
 -- Decode a Set as a either a definite or indefinite list. Duplicates are
 --   not allowed. Set tag 258 is permitted, but not enforced.
@@ -846,7 +848,7 @@ decodeSetEnforceNoDuplicates decodeElement = do
           a <- decodeElement
           when (a `Set.member` acc) $ fail "Duplicate key detected in the Set"
           loop condition nextStep (Set.insert a acc)
-{-# INLINEABLE decodeSetEnforceNoDuplicates #-}
+{-# INLINE decodeSetEnforceNoDuplicates #-}
 
 decodeContainerSkelWithReplicate ::
   -- | How to get the size of the container
@@ -918,7 +920,7 @@ decodeAccWithLen lenOrIndef combine acc0 action = do
             v <- action
             loop (i + 1) (v `combine` acc)
   loop 0 acc0
-{-# INLINEABLE decodeAccWithLen #-}
+{-# INLINE decodeAccWithLen #-}
 
 -- | Just like `decodeMap`, but assumes that there are no duplicate keys, which is not enforced.
 decodeMapNoDuplicates :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
@@ -935,7 +937,7 @@ decodeMapNoDuplicates decodeKey decodeValue =
       !value <- decodeValue
       pure (key, value)
     {-# INLINE decodeInlinedPair #-}
-{-# INLINEABLE decodeMapNoDuplicates #-}
+{-# INLINE decodeMapNoDuplicates #-}
 
 -- | Just like `decodeMap`, but fails on duplicate keys
 decodeMapEnforceNoDuplicates ::
@@ -959,7 +961,7 @@ decodeMapEnforceNoDuplicates decodeKey decodeValueFor = do
           !value <- decodeValueFor key
           when (key `Map.member` acc) $ fail "Duplicate key detected in the Map"
           loop condition nextStep (Map.insert key value acc)
-{-# INLINEABLE decodeMapEnforceNoDuplicates #-}
+{-# INLINE decodeMapEnforceNoDuplicates #-}
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
@@ -1012,7 +1014,7 @@ decodeUTCTime =
           (fromOrdinalDate year dayOfYear)
           (picosecondsToDiffTime timeOfDayPico)
     {-# INLINE timeDecoder #-}
-{-# INLINEABLE decodeUTCTime #-}
+{-# INLINE decodeUTCTime #-}
 
 --------------------------------------------------------------------------------
 -- Network
@@ -1035,7 +1037,7 @@ binaryGetDecoder allowLeftOver name getter = do
       | allowLeftOver || BSL.null leftOver -> pure ha
       | otherwise ->
           cborError $ DecoderErrorLeftover name (BSL.toStrict leftOver)
-{-# INLINEABLE binaryGetDecoder #-}
+{-# INLINE binaryGetDecoder #-}
 
 decodeIPv4 :: Decoder s IPv4
 decodeIPv4 =
@@ -1044,7 +1046,7 @@ decodeIPv4 =
       (natVersion @9)
       (binaryGetDecoder False "decodeIPv4" getWord32le)
       (binaryGetDecoder True "decodeIPv4" getWord32le)
-{-# INLINEABLE decodeIPv4 #-}
+{-# INLINE decodeIPv4 #-}
 
 getHostAddress6 :: Get HostAddress6
 getHostAddress6 = do
@@ -1053,7 +1055,7 @@ getHostAddress6 = do
   !w3 <- getWord32le
   !w4 <- getWord32le
   return (w1, w2, w3, w4)
-{-# INLINEABLE getHostAddress6 #-}
+{-# INLINE getHostAddress6 #-}
 
 decodeIPv6 :: Decoder s IPv6
 decodeIPv6 =
@@ -1062,7 +1064,7 @@ decodeIPv6 =
       (natVersion @9)
       (binaryGetDecoder False "decodeIPv6" getHostAddress6)
       (binaryGetDecoder True "decodeIPv6" getHostAddress6)
-{-# INLINEABLE decodeIPv6 #-}
+{-# INLINE decodeIPv6 #-}
 
 --------------------------------------------------------------------------------
 -- Wrapped CBORG decoders
@@ -1074,7 +1076,7 @@ decodeTagMaybe =
     C.TypeTag -> Just . fromIntegral <$> decodeTag
     C.TypeTag64 -> Just <$> decodeTag64
     _ -> pure Nothing
-{-# INLINEABLE decodeTagMaybe #-}
+{-# INLINE decodeTagMaybe #-}
 
 allowTag :: Word -> Decoder s ()
 allowTag tagExpected = do
@@ -1083,7 +1085,7 @@ allowTag tagExpected = do
     unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
       fail $
         "Expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
-{-# INLINEABLE allowTag #-}
+{-# INLINE allowTag #-}
 
 assertTag :: Word -> Decoder s ()
 assertTag tagExpected = do
@@ -1094,13 +1096,13 @@ assertTag tagExpected = do
   unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
     fail $
       "Expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
-{-# INLINEABLE assertTag #-}
+{-# INLINE assertTag #-}
 
 -- | Enforces that the input size is the same as the decoded one, failing in
 --   case it's not
 enforceSize :: Text.Text -> Int -> Decoder s ()
 enforceSize lbl requestedSize = decodeListLen >>= matchSize lbl requestedSize
-{-# INLINEABLE enforceSize #-}
+{-# INLINE enforceSize #-}
 
 -- | Compare two sizes, failing if they are not equal
 matchSize :: Text.Text -> Int -> Int -> Decoder s ()
@@ -1211,7 +1213,7 @@ decodeNatural = do
   if n >= 0
     then return $! fromInteger n
     else cborError $ DecoderErrorCustom "Natural" "got a negative number"
-{-# INLINEABLE decodeNatural #-}
+{-# INLINE decodeNatural #-}
 
 decodeIntegerCanonical :: Decoder s Integer
 decodeIntegerCanonical = fromPlainDecoder C.decodeIntegerCanonical

@@ -446,7 +446,7 @@ decodeCount (ApplyErr cn g) n = do
   case f y of
     Right z -> pure (i, z)
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
-{-# INLINEABLE decodeCount #-}
+{-# INLINE decodeCount #-}
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
@@ -479,7 +479,7 @@ decodeClosed (ApplyErr cn g) = do
   case f y of
     Right z -> pure z
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
-{-# INLINEABLE decodeClosed #-}
+{-# INLINE decodeClosed #-}
 
 decodeSparse ::
   Typeable a =>
@@ -496,7 +496,7 @@ decodeSparse name initial pick required = do
   if all (\(key, _name) -> member key used) required
     then pure v
     else unusedRequiredKeys used required (show (typeOf initial))
-{-# INLINEABLE decodeSparse #-}
+{-# INLINE decodeSparse #-}
 
 -- | Given a function that picks a Field from a key, decodes that field
 --   and returns a (t -> t) transformer, which when applied, will
@@ -508,7 +508,7 @@ applyField f seen name = do
     then duplicateKey name tag
     else case f tag of
       Field update d -> d >>= \v -> pure (update v, insert tag seen)
-{-# INLINEABLE applyField #-}
+{-# INLINE applyField #-}
 
 -- | Decode a Map Block of key encoded data for type t
 --   given a function that picks the right box for a given key, and an
@@ -519,7 +519,7 @@ getSparseBlock 0 initial _pick seen _name = pure (initial, seen)
 getSparseBlock n initial pick seen name = do
   (transform, seen2) <- applyField pick seen name
   getSparseBlock (n - 1) (transform initial) pick seen2 name
-{-# INLINEABLE getSparseBlock #-}
+{-# INLINE getSparseBlock #-}
 
 getSparseBlockIndef :: t -> (Word -> Field t) -> Set Word -> String -> Decoder s (t, Set Word)
 getSparseBlockIndef initial pick seen name =
@@ -528,7 +528,7 @@ getSparseBlockIndef initial pick seen name =
     False -> do
       (transform, seen2) <- applyField pick seen name
       getSparseBlockIndef (transform initial) pick seen2 name
-{-# INLINEABLE getSparseBlockIndef #-}
+{-# INLINE getSparseBlockIndef #-}
 
 -- ======================================================
 -- (Decode ('Closed 'Dense)) and (Decode ('Closed 'Sparse)) are applicative
