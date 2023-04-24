@@ -13,22 +13,20 @@ releasing the ledger packages on [CHaP](https://github.com/input-output-hk/carda
 **For security related issues** please consult the security file in the
 [Cardano engineering handbook](https://github.com/input-output-hk/cardano-engineering-handbook/blob/main/SECURITY.md).
 
-## Branching Model
+## Development
 
-We use [trunk based developement](https://trunkbaseddevelopment.com/).
-In particular, releases will be handled by release branches,
-starting with `release/1.0.x`.
-Normal development will branch off of master and be merged back to master.
-Only bug-fixes can be cherry-picked onto the release branches.
+We use trunk based developement. Normal development will branch off of master and be
+merged back to master.
 
-We use tags on the release branches to indicate patches, of the form `ledger/a.b.c`.
-We also use tags to indicate what version of the ledger was used in
-cardano-node releases, of the form `node/a.b.c` (possible with a `rc` or `rc1`, etc).
+### Releasing and versioning
+
+See documentation on the adopted [release and versioning processes](./RELEASING.md) in ledger.
 
 ### Releasing the ledger packages to CHaP
 
-When the ledger packages are released they should be released to [CHaP](https://github.com/input-output-hk/cardano-haskell-packages).
-See the CHaP README for [instructions](https://github.com/input-output-hk/cardano-haskell-packages#-from-github).
+Ledger packages are released to [CHaP](https://github.com/input-output-hk/cardano-haskell-packages).
+
+Also see the CHaP README for [instructions](https://github.com/input-output-hk/cardano-haskell-packages#-from-github).
 
 ## Building
 
