@@ -1,39 +1,37 @@
-
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Constrained.Scripts where
 
-import Test.Cardano.Ledger.Generic.GenState
-import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
-import Test.Cardano.Ledger.Generic.Proof
-import Test.QuickCheck
-import Numeric.Natural
-import Control.Monad (replicateM)
-import Cardano.Ledger.Core(Era(..),Script)
-import Cardano.Ledger.Allegra.Scripts (Timelock (..),ValidityInterval(..))
-import Cardano.Slotting.Slot (SlotNo (..))
-import Data.Maybe.Strict (StrictMaybe (..))
-import qualified Data.Sequence.Strict as Seq
+import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Tag (..))
+import Cardano.Ledger.Core (Era (..), Script)
 import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
   coerceKeyRole,
   hashKey,
  )
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
+import Cardano.Slotting.Slot (SlotNo (..))
+import Control.Monad (replicateM)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Test.Cardano.Ledger.Constrained.Combinators(errorMess)
-import Cardano.Ledger.Alonzo.Scripts(AlonzoScript(..),Tag(..))
+import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.Sequence.Strict as Seq
+import Numeric.Natural
+import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Functions (
   alwaysFalse,
   alwaysTrue,
   primaryLanguage,
  )
-
+import Test.Cardano.Ledger.Generic.GenState
+import Test.Cardano.Ledger.Generic.Proof
+import Test.QuickCheck
 
 -- ======================================
 
@@ -45,9 +43,9 @@ genKeyMap _proof = do
   let keyHash keyPair = ((coerceKeyRole . hashKey . vKey) keyPair, keyPair)
   pure (Map.fromList (map keyHash keyPairs))
 
-genMultiSig:: forall era. Era era => KeyMap era -> Proof era -> Gen(Shelley.MultiSig era)
+genMultiSig :: forall era. Era era => KeyMap era -> Proof era -> Gen (Shelley.MultiSig era)
 genMultiSig keymap _proof = do
-  let genNestedMultiSig :: Natural -> Gen(Shelley.MultiSig era)
+  let genNestedMultiSig :: Natural -> Gen (Shelley.MultiSig era)
       genNestedMultiSig k
         | k > 0 =
             oneof $
@@ -67,8 +65,7 @@ genMultiSig keymap _proof = do
         Shelley.RequireMOf m <$> replicateM n (genNestedMultiSig (k - 1))
   genNestedMultiSig (2 :: Natural)
 
-
-genTimelock:: forall era. Era era => KeyMap era -> ValidityInterval -> Proof era -> Gen(Timelock era)
+genTimelock :: forall era. Era era => KeyMap era -> ValidityInterval -> Proof era -> Gen (Timelock era)
 genTimelock keymap (ValidityInterval mBefore mAfter) _proof = do
   -- We need to limit how deep these timelocks can go, otherwise this generator will
   -- diverge. It also has to stay very shallow because it grows too fast.
@@ -127,20 +124,19 @@ genPlutusScript tag proof = do
   -- varying script hashes, which helps with the fuzziness
   let mlanguage = primaryLanguage proof
   if isValid
-     then alwaysTrue proof mlanguage . (+ numArgs) <$> (elements [0, 1, 2, 3 :: Natural])
-     else pure $ alwaysFalse proof mlanguage numArgs
+    then alwaysTrue proof mlanguage . (+ numArgs) <$> (elements [0, 1, 2, 3 :: Natural])
+    else pure $ alwaysFalse proof mlanguage numArgs
 
-
-genCoreScript :: forall era. Proof era -> Tag -> KeyMap era -> ValidityInterval -> Gen(Script era)
+genCoreScript :: forall era. Proof era -> Tag -> KeyMap era -> ValidityInterval -> Gen (Script era)
 genCoreScript proof tag keymap vi = case proof of
-  Conway _ -> frequency [(2,TimelockScript <$> genTimelock keymap vi proof), (1,genPlutusScript tag proof)]
-  Babbage _ -> frequency [(2,TimelockScript <$> genTimelock keymap vi proof), (1,genPlutusScript tag proof)]
-  Alonzo _ -> frequency [(2,TimelockScript <$> genTimelock keymap vi proof), (1,genPlutusScript tag proof)]
+  Conway _ -> frequency [(2, TimelockScript <$> genTimelock keymap vi proof), (1, genPlutusScript tag proof)]
+  Babbage _ -> frequency [(2, TimelockScript <$> genTimelock keymap vi proof), (1, genPlutusScript tag proof)]
+  Alonzo _ -> frequency [(2, TimelockScript <$> genTimelock keymap vi proof), (1, genPlutusScript tag proof)]
   Mary _ -> genTimelock keymap vi proof
   Allegra _ -> genTimelock keymap vi proof
   Shelley _ -> genMultiSig keymap proof
 
-genFromMap :: [String] -> Map k a -> Gen (k,a)
+genFromMap :: [String] -> Map k a -> Gen (k, a)
 genFromMap msgs m
   | n == 0 = errorMess "The map is empty in genFromMap" msgs
   | otherwise = do
@@ -149,9 +145,7 @@ genFromMap msgs m
   where
     n = Map.size m
 
-
 {-
-
 
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Env
@@ -162,12 +156,12 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
  pcScript,
  prettyScript,
  )
-import Cardano.Ledger.Pretty( 
+import Cardano.Ledger.Pretty(
  ppMap,
  ppString,
  ppList,
  )
- 
+
 -- ==================
 main = do
   m <- generate (genKeyMap (Babbage Standard))
@@ -177,7 +171,6 @@ main = do
       vi <- arbitrary
       vectorOf 10 (genCoreScript (Babbage Standard) tag m vi)
   putStrLn (show (ppList prettyScript ss))
-
 
 scriptT:: Proof era -> Tag -> Target era (Gen (Script era))
 scriptT p tag = Constr "GenCoreScript" (genCoreScript p tag)
