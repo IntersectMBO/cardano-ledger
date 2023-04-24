@@ -25,10 +25,9 @@ jobs:
         run: |
               git config --local user.name ${{ github.actor }}
               git config --local user.email "${{ github.actor }}@users.noreply.github.com"
-              cp -r ./haddocks/* ./
+              git add -A --force ./haddocks
+              git mv ./haddocks/* .
               rm -rf haddocks
-              git add -A --force
-              git commit -m "Updated"
 
       - name: Push to gh-pages
         uses: ad-m/github-push-action@v0.6.0
