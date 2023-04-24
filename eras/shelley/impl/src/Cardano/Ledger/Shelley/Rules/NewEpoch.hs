@@ -168,9 +168,9 @@ newEpochTransition = do
       es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', eNo)
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
-      -- let pd' = ssStakeMarkPoolDistr (esSnapshots es)
+      let pd' = ssStakeMarkPoolDistr (esSnapshots es)
       -- The spec sets pd' with:
-      let pd' = calculatePoolDistr (ssStakeSet $ esSnapshots es''')
+      -- pd' = calculatePoolDistr (ssStakeSet $ esSnapshots es'''),
       --
       -- This is equivalent to:
       -- pd' = ssStakeMarkPoolDistr (esSnapshots es)
