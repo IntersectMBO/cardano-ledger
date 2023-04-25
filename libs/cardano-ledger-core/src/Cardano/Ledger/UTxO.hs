@@ -158,6 +158,7 @@ verifyWitVKey ::
   WitVKey kr c ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash (coerce sig)
+{-# INLINE verifyWitVKey #-}
 
 -- | Determine the total balance contained in the UTxO.
 balance :: EraTxOut era => UTxO era -> Value era
