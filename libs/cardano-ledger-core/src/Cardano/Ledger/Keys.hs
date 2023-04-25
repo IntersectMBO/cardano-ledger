@@ -210,6 +210,7 @@ verifySignedDSIGN ::
   Bool
 verifySignedDSIGN (VKey vk) vd sigDSIGN =
   either (const False) (const True) $ DSIGN.verifySignedDSIGN () vk vd sigDSIGN
+{-# INLINE verifySignedDSIGN #-}
 
 -- | Hash a given signature
 hashSignature ::
@@ -217,6 +218,7 @@ hashSignature ::
   SignedDSIGN c (Hash c h) ->
   Hash c (SignedDSIGN c (Hash c h))
 hashSignature = Hash.hashWith (DSIGN.rawSerialiseSigDSIGN . coerce)
+{-# INLINE hashSignature #-}
 
 --------------------------------------------------------------------------------
 -- Key Hashes

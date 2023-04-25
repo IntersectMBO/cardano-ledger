@@ -194,6 +194,7 @@ class SafeToHash x => HashAnnotated x index c | x -> index c where
   -- and  @(HashAnnotated x i crypto)@ instances.
   hashAnnotated :: Hash.HashAlgorithm (HASH c) => x -> SafeHash c index
   hashAnnotated = makeHashWithExplicitProxys (Proxy @c) (Proxy @index)
+  {-# INLINE hashAnnotated #-}
 
 -- ========================================================================
 
@@ -207,7 +208,8 @@ class SafeToHash x => HashWithCrypto x index | x -> index where
     Proxy c ->
     x ->
     SafeHash c index
-  hashWithCrypto proxy y = makeHashWithExplicitProxys proxy (Proxy @index) y
+  hashWithCrypto proxy = makeHashWithExplicitProxys proxy (Proxy @index)
+  {-# INLINE hashWithCrypto #-}
 
 -- ======================================================================
 
