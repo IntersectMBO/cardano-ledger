@@ -379,9 +379,9 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     Refl <- sameRep rng rng2
     k <- simplify exprK
     v <- simplify exprV
-    mapSpec 
-      (SzLeast 1) 
-      (relSuperset dom (Set.singleton k)) 
+    mapSpec
+      (SzLeast 1)
+      (relSuperset dom (Set.singleton k))
       (PairSpec dom rng (Map.singleton k v))
       (RngRel (relSuperset rng (Set.singleton v)))
   other -> failT ["Cannot solve map condition: " ++ show other]
@@ -727,16 +727,23 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     set <- simplify expr
     let msgs = ("Solving for variable " ++ nam) : map show preds
     pure $ suchThatErr msgs (genRep r2) (`Set.notMember` set)
-  [MapMember (Var v2@(V _ r2 _)) _exprVal exprMap] | Name v1 == Name v2 -> do
+  [MapMember (Var v2@(V _ r2 _)) exprVal exprMap] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     m <- simplify exprMap
+    v <- simplify exprVal
+    let m2 = Map.filter (== v) m
     let msgs = ("Solving for variable " ++ nam) : map show preds
-    pure (fst <$> itemFromSet msgs (Map.keysSet m))
-  [MapMember _exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
+    if Map.null m2
+      then failT (("The value: " ++ show v ++ " is not in the range of the map.") : msgs)
+      else pure (fst <$> itemFromSet msgs (Map.keysSet m2))
+  [MapMember exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     m <- simplify exprMap
+    k <- simplify exprKey
     let msgs = ("Solving for variable " ++ nam) : map show preds
-    pure (fst <$> itemFromSet msgs (Set.fromList (Map.elems m)))
+    case Map.lookup k m of
+      Just v -> pure (pure v)
+      Nothing -> failT (("The key: " ++ show k ++ " is not in the map.") : msgs)
   [List (Var v2@(V _ (MaybeR r2) _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 (MaybeR r2)
     xs <- mapM simplify expr
