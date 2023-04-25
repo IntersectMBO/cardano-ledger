@@ -55,7 +55,6 @@ data Pred era where
   Member :: Ord a => Term era a -> Term era (Set a) -> Pred era
   NotMember :: Ord a => Term era a -> Term era (Set a) -> Pred era
   MapMember :: (Ord k, Eq v, Ord v) => Term era k -> Term era v -> Term era (Map k v) -> Pred era
-  NotMapMember :: (Ord k, Eq v, Ord v) => Term era k -> Term era v -> Term era (Map k v) -> Pred era
   (:<-:) :: Term era t -> Target era t -> Pred era
   GenFrom :: Term era t -> Target era (Gen t) -> Pred era
   List :: FromList f t => Term era (f t) -> [Term era t] -> Pred era
@@ -167,8 +166,7 @@ instance Show (Pred era) where
   show (CanFollow x y) = "CanFollow " ++ show x ++ " " ++ show y
   show (Member x y) = "Member " ++ show x ++ " " ++ show y
   show (NotMember x y) = "NotMember " ++ show x ++ " " ++ show y
-  show (MapMember x y z) = "MapMember " ++ show x ++ " " ++ show y ++ " " ++ show z
-  show (NotMapMember x y z) = "NotMapMember " ++ show x ++ " " ++ show y ++ " " ++ show z
+  show (MapMember k v m) = "MapMember " ++ show k ++ " " ++ show v ++ " " ++ show m
   show (x :<-: y) = show x ++ " :<-: " ++ showT y
   show (GenFrom x y) = "GenFrom " ++ show x ++ " " ++ showT y
   show (List t xs) = "List " ++ show t ++ " [" ++ showL show ", " xs ++ "]"
@@ -265,8 +263,7 @@ varsOfPred ans s = case s of
   CanFollow a b -> varsOfTerm (varsOfTerm ans a) b
   Member a b -> varsOfTerm (varsOfTerm ans a) b
   NotMember a b -> varsOfTerm (varsOfTerm ans a) b
-  MapMember a b c -> varsOfTerm (varsOfTerm (varsOfTerm ans a) b) c
-  NotMapMember a b c -> varsOfTerm (varsOfTerm (varsOfTerm ans a) b) c
+  MapMember k v m -> varsOfTerm (varsOfTerm (varsOfTerm ans k) v) m
   a :<-: b -> varsOfTarget (varsOfTerm ans a) b
   GenFrom a b -> varsOfTarget (varsOfTerm ans a) b
   List a bs -> List.foldl' varsOfTerm (varsOfTerm ans a) bs
@@ -359,8 +356,7 @@ substPred sub (Component t cs) = Component (substTerm sub t) (substComp <$> cs)
 substPred sub (CanFollow a b) = CanFollow (substTerm sub a) (substTerm sub b)
 substPred sub (Member a b) = Member (substTerm sub a) (substTerm sub b)
 substPred sub (NotMember a b) = NotMember (substTerm sub a) (substTerm sub b)
-substPred sub (MapMember a b c) = MapMember (substTerm sub a) (substTerm sub b) (substTerm sub c)
-substPred sub (NotMapMember a b c) = NotMapMember (substTerm sub a) (substTerm sub b) (substTerm sub c)
+substPred sub (MapMember k v m) = MapMember (substTerm sub k) (substTerm sub v) (substTerm sub m)
 substPred sub (a :<-: b) = substTerm sub a :<-: substTarget sub b
 substPred sub (GenFrom a b) = GenFrom (substTerm sub a) (substTarget sub b)
 substPred sub (List a b) = List (substTerm sub a) (map (substTerm sub) b)
@@ -498,19 +494,10 @@ runPred env (NotMember x y) = do
   y2 <- runTerm env y
   pure (Set.notMember x2 y2)
 runPred env (MapMember k v m) = do
-  k2 <- runTerm env k
-  v2 <- runTerm env v
-  m2 <- runTerm env m
-  pure $ case Map.lookup k2 m2
-    Nothing -> False
-    Just v -> v2 == v
-runPred env (NotMapMember k v m) = do
-  k2 <- runTerm env k
-  v2 <- runTerm env v
-  m2 <- runTerm env m
-  pure $ case Map.lookup k2 m2
-    Nothing -> True
-    Just v -> y2 /= v
+  k' <- runTerm env k
+  v' <- runTerm env v
+  m' <- runTerm env m
+  pure $ Map.isSubmapOf (Map.singleton k' v') m'
 runPred env (x :<-: y) = do
   _x2 <- runTerm env x
   _y2 <- runTarget env y

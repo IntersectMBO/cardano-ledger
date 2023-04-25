@@ -49,7 +49,7 @@ import Test.Cardano.Ledger.Constrained.Spec (
   ElemSpec (..),
   ListSpec (..),
   MapSpec (..),
-  PairSpec (PairAny),
+  PairSpec (PairAny, PairSpec),
   RelSpec (..),
   RngSpec (..),
   SetSpec (..),
@@ -374,18 +374,16 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     Refl <- sameRep rng b
     x <- simplify expr
     mapSpec SzAny RelAny PairAny (RngRel (relDisjoint rng (Set.singleton x)))
-  (MapMember exprKey exprVal (Var v2@(V _ (MapR dom' rng') _))) | Name v1 == Name v2 -> do
-    Refl <- sameRep dom dom'
-    Refl <- sameRep rng rng'
-    k <- simplify exprKey
-    v <- simplify exprVal
-    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton k)) (RngRel (relSuperset rng (Set.singleton v)))
-  (NotMapMember exprKey exprVal (Var v2@(V _ (MapR dom' rng') _))) | Name v1 == Name v2 -> do
-    Refl <- sameRep dom dom'
-    Refl <- sameRep rng rng'
-    k <- simplify exprKey
-    v <- simplify exprVal
-    mapSpec SzAny (relDisjoint dom (Set.singleton k)) (RngRel (relDisjoint rng (Set.singleton v)))
+  (MapMember exprK exprV (Var v2@(V _ (MapR dom2 rng2) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom dom2
+    Refl <- sameRep rng rng2
+    k <- simplify exprK
+    v <- simplify exprV
+    mapSpec 
+      (SzLeast 1) 
+      (relSuperset dom (Set.singleton k)) 
+      (PairSpec dom rng (Map.singleton k v))
+      (RngRel (relSuperset rng (Set.singleton v)))
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
@@ -739,16 +737,6 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     m <- simplify exprMap
     let msgs = ("Solving for variable " ++ nam) : map show preds
     pure (fst <$> itemFromSet msgs (Set.fromList (Map.elems m)))
-  [NotMapMember (Var v2@(V _ r2 _)) _exprVal exprMap] | Name v1 == Name v2 -> do
-    Refl <- sameRep r1 r2
-    m <- simplify exprMap
-    let msgs = ("Solving for variable " ++ nam) : map show preds
-    pure $ suchThatErr msgs (genRep r2) (`Map.notMember` m)
-  [NotMapMember _exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
-    Refl <- sameRep r1 r2
-    m <- simplify exprMap
-    let msgs = ("Solving for variable " ++ nam) : map show preds
-    pure $ suchThatErr msgs (genRep r2) (`notElem` Map.elems m)
   [List (Var v2@(V _ (MaybeR r2) _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 (MaybeR r2)
     xs <- mapM simplify expr
