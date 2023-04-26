@@ -61,7 +61,7 @@ import Cardano.Ledger.Credential (
   Credential (..),
   Ptr,
  )
-import Cardano.Ledger.EpochBoundary (SnapShot, SnapShots (..), calculatePoolDistr)
+import Cardano.Ledger.EpochBoundary (SnapShot, SnapShots (..))
 import Cardano.Ledger.Keys (
   GenDelegPair,
   GenDelegs (..),
@@ -612,7 +612,7 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
     snaps =
       SnapShots
         { ssStakeMark = snap
-        , ssStakeMarkPoolDistr = calculatePoolDistr snap
+        , ssStakeMarkPoolDistr = PoolDistr mempty
         , ssStakeSet = ssMark
         , ssStakeGo = ssSet
         , ssFee = fee

@@ -216,7 +216,7 @@ registerGenesisStaking
           , esSnapshots =
               (esSnapshots oldEpochState)
                 { ssStakeMark = initSnapShot
-                , ssStakeMarkPoolDistr = newPoolDistr
+                -- , ssStakeMarkPoolDistr = newPoolDistr
                 }
           }
       newLedgerState =
