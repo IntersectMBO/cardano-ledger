@@ -18,6 +18,9 @@
 * Change the Conway txInfo to allow Plutus V3
   NOTE - unlike V1 and V2, the ledger will no longer place the "zero ada" value
   in the script context for the transaction minting field.
+* Added instances for ConwayDelegsPredFailure:
+  Typeable, NoThunks, EncCBOR, DecCBOR, and Arbitary
+  (last three are undefined, however)
 
 ## 1.1.0.0
 
