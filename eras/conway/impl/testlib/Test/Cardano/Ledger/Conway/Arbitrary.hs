@@ -252,3 +252,18 @@ instance
   Arbitrary (ConwayTickfEvent era)
   where
   arbitrary = undefined
+
+-- DELEGS
+
+instance
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "CERT" era))
+  ) =>
+  Arbitrary (ConwayDelegsPredFailure era)
+  where
+  arbitrary =
+    oneof
+      [ DelegateeNotRegisteredDELEG <$> arbitrary
+      , WithdrawalsNotInRewardsDELEGS <$> arbitrary
+      , CertFailure <$> arbitrary
+      ]

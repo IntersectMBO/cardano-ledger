@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,6 +20,15 @@ module Cardano.Ledger.Conway.Rules.Delegs (
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, mkCertIxPartial)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.CertState (PState)
 import Cardano.Ledger.Conway.Era (ConwayDELEGS)
 import Cardano.Ledger.Core
@@ -60,6 +70,7 @@ import Data.Map.Strict (Map)
 import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import NoThunks.Class (NoThunks (..))
 
 data ConwayDelegsPredFailure era
   = -- | Target pool which is not registered
@@ -71,6 +82,32 @@ data ConwayDelegsPredFailure era
   | -- | CERT rule subtransition Failures
     CertFailure !(PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
+
+instance NoThunks (PredicateFailure (EraRule "CERT" era)) => NoThunks (ConwayDelegsPredFailure era)
+
+instance
+  ( Era era
+  , EncCBOR (PredicateFailure (EraRule "CERT" era))
+  ) =>
+  EncCBOR (ConwayDelegsPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      DelegateeNotRegisteredDELEG kh -> Sum (DelegateeNotRegisteredDELEG @era) 0 !> To kh
+      WithdrawalsNotInRewardsDELEGS rs -> Sum (WithdrawalsNotInRewardsDELEGS @era) 1 !> To rs
+      CertFailure x -> Sum (CertFailure @era) 2 !> To x
+
+instance
+  ( Era era
+  , DecCBOR (PredicateFailure (EraRule "CERT" era))
+  ) =>
+  DecCBOR (ConwayDelegsPredFailure era)
+  where
+  decCBOR = decode $ Summands "ConwayTallyPredFailure" $ \case
+    0 -> SumD DelegateeNotRegisteredDELEG <! From
+    1 -> SumD WithdrawalsNotInRewardsDELEGS <! From
+    2 -> SumD CertFailure <! From
+    k -> Invalid k
 
 deriving instance
   Eq (PredicateFailure (EraRule "CERT" era)) =>
