@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -83,13 +84,13 @@ genMaybeCounterExample proof _testname loud order cs target = do
   subst <- case result of
     Left msgs -> error (unlines msgs)
     Right x -> pure x
-  env <- monadTyped $ substToEnv subst emptyEnv
+  !env <- monadTyped $ substToEnv subst emptyEnv
   testTriples <- monadTyped (mapM (makeTest env) cs)
   let messages2 = "\nSubstitution produced after solving\n" : map show subst
-  messages3 <- case target of
+  !messages3 <- case target of
     Skip -> pure []
     Assemble t -> do
-      tval <- monadTyped (runTarget env t)
+      !tval <- monadTyped (runTarget env t)
       pure ["\nAssemble the pieces\n", show (prettyC proof tval)]
   let bad = filter (\(_, b, _) -> not b) testTriples
       ans =
