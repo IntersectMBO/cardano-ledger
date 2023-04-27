@@ -101,3 +101,13 @@ source-repository-package
   --sha256: 18apsg2lqjv9cc29nbd3hzj2hqhksqjj0s4xp2rdv8cbd27racjh
   subdir:
     cborg
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: ae6bafce6b06296bb88c7bc5c0376d9836060fbf
+  --sha256: sha256-1hO02IrT/xUo9UDjm/v90laczuHlPS4UaZzpA5096Ig=
+  subdir:
+    cardano-crypto-class
+    cardano-crypto-praos
+    cardano-crypto-tests

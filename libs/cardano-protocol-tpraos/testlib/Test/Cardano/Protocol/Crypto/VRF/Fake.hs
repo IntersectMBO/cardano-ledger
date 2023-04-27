@@ -117,7 +117,11 @@ instance VRFAlgorithm FakeVRF where
   -- This implementation of `verifyVRF` checks the real result, which is hidden
   -- in the certificate, but ignores the produced value, which is set to be the
   -- result of the sneaking.
-  verifyVRF () (VerKeyFakeVRF n) a c = snd (evalFakeVRF a (SignKeyFakeVRF n)) == snd c
+  verifyVRF () (VerKeyFakeVRF n) a c
+      | c == c'   = Just o
+      | otherwise = Nothing
+    where
+      (o, c') = evalFakeVRF a (SignKeyFakeVRF n)
 
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
