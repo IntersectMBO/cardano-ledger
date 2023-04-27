@@ -212,6 +212,7 @@ instance Singleton (Rep e) where
     Refl <- testEql a b
     Just Refl
   testEql CredR CredR = Just Refl
+  testEql VCredR VCredR = Just Refl
   testEql PoolHashR PoolHashR = Just Refl
   testEql WitHashR WitHashR = Just Refl
   testEql GenHashR GenHashR = Just Refl
