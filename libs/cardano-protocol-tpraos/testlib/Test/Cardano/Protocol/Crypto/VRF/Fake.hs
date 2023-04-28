@@ -106,7 +106,7 @@ instance VRFAlgorithm FakeVRF where
     deriving stock (Show, Generic)
     deriving newtype (Eq, Ord, NoThunks)
 
-  data CertVRF FakeVRF = CertFakeVRF !Word64 !Word16
+  data CertVRF FakeVRF = CertFakeVRF !Word64 !Word16 !(OutputVRF FakeVRF)
     deriving stock (Show, Eq, Ord, Generic)
     deriving anyclass (NoThunks)
 
@@ -114,20 +114,25 @@ instance VRFAlgorithm FakeVRF where
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
   evalVRF () a sk = evalFakeVRF a sk
 
-  -- This implementation of `verifyVRF` checks the real result, which is hidden
-  -- in the certificate, but ignores the produced value, which is set to be the
-  -- result of the sneaking.
-  verifyVRF () (VerKeyFakeVRF n) a c = snd (evalFakeVRF a (SignKeyFakeVRF n)) == snd c
+  -- This implementation of 'verifyVRF' checks the real proof, which is contained
+  -- in the certificate, but ignores the produced value, and insteads returns
+  -- the output which is stored in the 'CertFakeVRF'.
+  verifyVRF () (VerKeyFakeVRF n) a (CertFakeVRF _ proof o)
+    | proof == recomputedProof = Just o
+    | otherwise = Nothing
+    where
+      (OutputVRF recomputedProofBytes, _) = evalFakeVRF a (SignKeyFakeVRF n)
+      recomputedProof = fromIntegral . bytesToNatural $ recomputedProofBytes
 
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
-  sizeCertVRF _ = 10
+  sizeCertVRF _ = 26
   sizeOutputVRF _ = sizeHash (Proxy :: Proxy Blake2b_224)
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
-  rawSerialiseCertVRF (CertFakeVRF k s) =
-    writeBinaryWord64 k <> writeBinaryWord16 s
+  rawSerialiseCertVRF (CertFakeVRF k s (OutputVRF b)) =
+    writeBinaryWord64 k <> writeBinaryWord16 s <> b
 
   rawDeserialiseVerKeyVRF bs
     | [kb] <- splitsAt [8] bs
@@ -144,10 +149,10 @@ instance VRFAlgorithm FakeVRF where
         Nothing
 
   rawDeserialiseCertVRF bs
-    | [kb, smb] <- splitsAt [8, 2] bs
+    | [kb, smb, xs] <- splitsAt [8, 2, 16] bs
     , let k = readBinaryWord64 kb
     , let s = readBinaryWord16 smb =
-        Just $! CertFakeVRF k s
+        Just $! CertFakeVRF k s (OutputVRF xs)
     | otherwise =
         Nothing
 
@@ -159,13 +164,13 @@ evalFakeVRF ::
 evalFakeVRF a sk@(SignKeyFakeVRF n) =
   let y = sneakilyExtractResult a sk
       p = unsneakilyExtractPayload a
-      realValue =
+      proof =
         fromIntegral
           . bytesToNatural
           . hashToBytes
           . hashWithEncoder @Blake2b_224 shelleyProtVer id
           $ encCBOR p <> encCBOR sk
-   in (y, CertFakeVRF n realValue)
+   in (y, CertFakeVRF n proof y)
 
 instance DecCBOR (VerKeyVRF FakeVRF) where
   decCBOR = decodeVerKeyVRF
