@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-protocol-tpraos
-version:       1.0.1.0
+version:       1.0.2.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -77,7 +77,7 @@ library testlib
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-shelley:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-crypto-class,
+        cardano-crypto-class >=2.1.1,
         cardano-strict-containers,
         generic-random,
         nothunks
