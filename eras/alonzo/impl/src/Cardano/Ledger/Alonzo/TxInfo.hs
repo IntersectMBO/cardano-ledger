@@ -361,7 +361,10 @@ transAssetName :: AssetName -> PV1.TokenName
 transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 
 transMultiAsset :: MultiAsset c -> PV1.Value
-transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 mempty m
+transMultiAsset ma = transMultiAssetInternal ma mempty
+
+transMultiAssetInternal :: MultiAsset c -> PV1.Value -> PV1.Value
+transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAcc m
   where
     accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
       where
@@ -378,7 +381,7 @@ transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 mempty m
 -- makes no sense). However, if we don't preserve previous translation, scripts that
 -- previously succeeded will fail.
 transMintValue :: MultiAsset c -> PV1.Value
-transMintValue m = transMultiAsset m <> justZeroAda
+transMintValue m = transMultiAssetInternal m justZeroAda
   where
     justZeroAda = PV1.singleton PV1.adaSymbol PV1.adaToken 0
 
