@@ -9,6 +9,7 @@
   * `VState`
 * Added support for Plutus V3 in the types and functions that use `Language`.
   (Note that the Alonzo ledger era rules do not allow V3 scripts, however.).
+* Fix a bug of converting a mint field to the plutus context: [#3398](https://github.com/input-output-hk/cardano-ledger/pull/3398)
 
 ## 1.1.0.0
 
