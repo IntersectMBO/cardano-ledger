@@ -1,12 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -1149,27 +1151,27 @@ genMapSpec genD repd repw repc n = frequency [(1, pure mempty), (6, genmapspec)]
 genFromMapSpec ::
   forall era w dom.
   (Era era, Ord dom) =>
-  (V era (Map dom w)) ->
+  String ->
   [String] ->
   Gen dom ->
   Gen w ->
   MapSpec era dom w ->
   Gen (Map dom w)
 genFromMapSpec nm msgs _ _ (MapSpec _size _ (PairNever xs) _) =
-  errorMess ("genFromMapSpec " ++ (show nm) ++ " (PairNever _) fails") (msgs ++ xs)
+  errorMess ("genFromMapSpec " ++ nm ++ " (PairNever _) fails") (msgs ++ xs)
 genFromMapSpec nm _ _ _ (MapNever xs) =
-  errorMess ("genFromMapSpec " ++ (show nm) ++ " (MapNever _) fails") xs
+  errorMess ("genFromMapSpec " ++ nm ++ " (MapNever _) fails") xs
 genFromMapSpec nm msgs genD genR ms@(MapSpec size rel PairAny rng) = do
   n <- genFromSize size
   dom <-
     genFromRelSpec
-      (("GenFromMapSpec " ++ (show nm) ++ "\n   " ++ show ms) : msgs)
+      (("GenFromMapSpec " ++ nm ++ "\n   " ++ show ms) : msgs)
       genD
       n
       rel
   rangelist <-
     genFromRngSpec
-      (("genFromMapSpec " ++ (show nm) ++ "\n   " ++ show ms) : msgs)
+      (("genFromMapSpec " ++ nm ++ "\n   " ++ show ms) : msgs)
       genR
       n
       rng
@@ -1178,13 +1180,13 @@ genFromMapSpec nm msgs genD genR ms@(MapSpec size rel (PairSpec dr rr m) rng) = 
   n <- genFromSize size
   dom <-
     genFromRelSpec
-      (("GenFromMapSpec " ++ (show nm) ++ "\n   " ++ show ms) : msgs)
+      (("GenFromMapSpec " ++ nm ++ "\n   " ++ show ms) : msgs)
       genD
       n
       rel
   rangelist <-
     genFromRngSpec
-      (("genFromMapSpec " ++ (show nm) ++ "\n   " ++ show ms) : msgs)
+      (("genFromMapSpec " ++ nm ++ "\n   " ++ show ms) : msgs)
       genR
       n
       rng
@@ -1212,7 +1214,7 @@ genMapSpecIsSound :: Gen Property
 genMapSpecIsSound = do
   n <- chooseInt (1, 15)
   spec <- genMapSpec (chooseInt (1, 10000)) IntR Word64R CoinR n
-  mp <- genFromMapSpec @TT (V "mapSpecIsSound" (MapR IntR Word64R) No) [] (choose (1, 10000)) (choose (1, 10000)) spec
+  mp <- genFromMapSpec @TT "mapSpecIsSound" [] (choose (1, 10000)) (choose (1, 10000)) spec
   pure $ counterexample ("spec = " ++ show spec ++ "\nmp = " ++ show mp) (runMapSpec mp spec)
 
 manyMergeMapSpec :: Gen (Int, Int, [String])
@@ -1232,7 +1234,7 @@ manyMergeMapSpec = do
               , "s1 = " ++ show y
               , "GenFromMapSpec " ++ show i ++ " n=" ++ show n
               ]
-        z <- genFromMapSpec @TT (V "manyMergeMap" (MapR IntR Word64R) No) wordsX (choose (1, 100)) (choose (1, 100)) m
+        z <- genFromMapSpec @TT "manyMergeMap" wordsX (choose (1, 100)) (choose (1, 100)) m
         pure (x, runMapSpec z x, y, runMapSpec z y, z, runMapSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
@@ -1988,62 +1990,6 @@ main =
       ]
 
 -- :main --quickcheck-replay=740521
-
-{-
-Notes for making a class
-
-class Specification spec t where
-  type Count Size = ()
-       Count RelSpec = Int
-       Count RngSpec = Int
-       Count MapSpec = Int
-       Count SetSpec = Int
-       Count ElemSpec = Size
-       Count ListSpec = Size
-       Count AddsSpec = ()
-  runS :: t -> spec -> Bool
-  genS :: Count spec -> Gen spec
-  sizeForS :: spec -> Size
-  genFromS :: Int -> spec -> t  -- Some genFromS can be written in the instances to ignore the Int
-
-runSize :: Int -> Size -> Bool
-genSize :: Gen Size  --- isomprphic to () -> Gen Size
-genFromSize :: Size -> Gen Int
-
-runRelSpec :: Ord t => Set t -> RelSpec era t -> Bool
-genRelSpec :: Ord dom => [String] -> Gen dom -> Rep era dom -> Int -> Gen (RelSpec era dom)
-genFromRelSpec :: forall era t. Ord t => [String] -> Gen t -> Int -> RelSpec era t -> Gen (Set t)
-sizeForRel :: RelSpec era dom -> Size
-
-runRngSpec :: [r] -> RngSpec era r -> Bool
-genRngSpec :: Gen w -> Rep era w -> Rep era c -> Int -> Gen (RngSpec era w)
-genFromRngSpec :: forall era r. [String] -> Gen r -> Int -> RngSpec era r -> Gen [r]
-
-runMapSpec :: Ord d => Map d r -> MapSpec era d r -> Bool
-genMapSpec :: Gen dom -> Rep era dom -> Rep era w -> Rep era c -> Int -> Gen (MapSpec era dom w)
-genFromMapSpec :: V era (Map dom w) -> [String] -> Gen dom -> Gen w -> MapSpec era dom w -> Gen (Map dom w)
-sizeForMapSpec :: MapSpec era d r -> Size
-
-runSetSpec :: Set a -> SetSpec era a -> Bool
-genSetSpec :: Ord s => [String] -> Gen s -> Rep era s -> Int -> Gen (SetSpec era s)
-genFromSetSpec :: forall era a. [String] -> Gen a -> SetSpec era a -> Gen (Set a)
-sizeForSetSpec :: SetSpec era a -> Size
-
-runElemSpec :: [a] -> ElemSpec era a -> Bool
-genElemSpec :: Rep era w -> Rep era c -> Size -> Gen (ElemSpec era w)
-genFromElemSpec :: [String] -> Gen r -> Int -> ElemSpec era r -> Gen [r]
-sizeForElemSpec :: ElemSpec era a -> Size
-
-runListSpec :: [a] -> ListSpec era a -> Bool
-genListSpec :: Rep era w -> Rep era c -> Size -> Gen (ListSpec era w)
-genFromListSpec :: [String] -> Gen r -> ListSpec era r -> Gen [r]
-sizeForListSpec :: ListSpec era t -> Size
-
-runAddsSpec :: forall c. Adds c => c -> AddsSpec c -> Bool
-genAddsSpec :: Gen (AddsSpec c)
-genFromAddsSpec :: [String] -> AddsSpec c -> Gen Int
-sizeForAddsSpec :: AddsSpec c -> Size
--}
 
 -- | A map 'm1' meets the '(PairSpec _ _ m2)' specification if every
 --   (key,value) pair in 'm2' is in 'm1'.

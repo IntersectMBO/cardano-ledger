@@ -30,6 +30,7 @@ library
         Test.Cardano.Ledger.Constrained.Preds.TxBody
         Test.Cardano.Ledger.Constrained.Preds.DPState
         Test.Cardano.Ledger.Constrained.Spec
+        Test.Cardano.Ledger.Constrained.SpecClass
         Test.Cardano.Ledger.Constrained.Tests
         Test.Cardano.Ledger.Constrained.TypeRep
         Test.Cardano.Ledger.Constrained.Vars
