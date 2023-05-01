@@ -295,6 +295,7 @@ viewCompactTxOut txOut = case txOut of
     toDatum = \case
       SNothing -> NoDatum
       SJust dh -> DatumHash dh
+{-# INLINEABLE viewCompactTxOut #-}
 
 viewTxOut ::
   forall era.
@@ -329,6 +330,7 @@ viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataH
     (addr, val, mDataHash) =
       Alonzo.viewTxOut @era $
         Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
+{-# INLINEABLE viewTxOut #-}
 
 instance
   (Era era, Show (Script era), Val (Value era)) =>
@@ -336,7 +338,7 @@ instance
   where
   show = show . viewTxOut
 
-instance (Era era, NoThunks (CompactForm (Value era)), NoThunks (Script era)) => NoThunks (BabbageTxOut era)
+instance (Era era, NoThunks (Script era), Val (Value era)) => NoThunks (BabbageTxOut era)
 
 pattern BabbageTxOut ::
   (Era era, Val (Value era), HasCallStack) =>
@@ -384,6 +386,7 @@ mkTxOut _addr cAddr vl d rs =
           DatumHash dh -> TxOutCompactDH' cAddr cVal dh
           Datum binaryData -> TxOutCompactDatum cAddr cVal binaryData
         SJust rs' -> TxOutCompactRefScript cAddr cVal d rs'
+{-# INLINEABLE mkTxOut #-}
 
 -- TODO: Implement mkTxOut in terms of mkTxOutCompact, it will avoid unnecessary
 -- MultiAsset serilization/deserialization
@@ -396,6 +399,7 @@ mkTxOutCompact ::
   StrictMaybe (Script era) ->
   BabbageTxOut era
 mkTxOutCompact addr cAddr cVal = mkTxOut addr cAddr (fromCompact cVal)
+{-# INLINE mkTxOutCompact #-}
 
 pattern TxOutCompact ::
   (Era era, Val (Value era), Compactible (Value era), HasCallStack) =>
@@ -459,6 +463,7 @@ instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) whe
         TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
           TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
         txOut -> txOut
+  {-# INLINEABLE decShareCBOR #-}
 
 decodeBabbageTxOut ::
   (EraScript era, Val (Value era)) =>
@@ -496,8 +501,9 @@ decodeBabbageTxOut decAddr = do
           dh <- decCBOR
           pure $ mkTxOut a ca v (DatumHash dh) SNothing
         Just _ -> cborError $ DecoderErrorCustom "TxOut" "Wrong number of terms in TxOut"
+    {-# INLINE oldTxOut #-}
+{-# INLINEABLE decodeBabbageTxOut #-}
 
-{-# INLINE encodeTxOut #-}
 encodeTxOut ::
   forall era.
   (EraScript era, Val (Value era)) =>
@@ -513,6 +519,7 @@ encodeTxOut cAddr cVal datum script =
       !> Key 1 (To (fromCompact cVal))
       !> Omit (== NoDatum) (Key 2 (To datum))
       !> encodeKeyedStrictMaybeWith 3 encodeNestedCbor script
+{-# INLINE encodeTxOut #-}
 
 data DecodingTxOut era = DecodingTxOut
   { decodingTxOutAddr :: !(StrictMaybe (Addr (EraCrypto era), CompactAddr (EraCrypto era)))
@@ -521,7 +528,6 @@ data DecodingTxOut era = DecodingTxOut
   , decodingTxOutScript :: !(StrictMaybe (Script era))
   }
 
-{-# INLINE decodeTxOut #-}
 decodeTxOut ::
   forall s era.
   (EraScript era, Val (Value era)) =>
@@ -530,12 +536,13 @@ decodeTxOut ::
 decodeTxOut decAddr = do
   dtxo <- decode $ SparseKeyed "TxOut" initial bodyFields requiredFields
   case dtxo of
-    DecodingTxOut SNothing _ _ _ -> cborError $ DecoderErrorCustom "BabbageTxOut" "Impossible: no Addr"
-    DecodingTxOut (SJust (addr, cAddr)) val d script -> pure $ mkTxOut addr cAddr val d script
+    DecodingTxOut SNothing _ _ _ ->
+      cborError $ DecoderErrorCustom "BabbageTxOut" "Impossible: no Addr"
+    DecodingTxOut (SJust (addr, cAddr)) val d script ->
+      pure $ mkTxOut addr cAddr val d script
   where
     initial :: DecodingTxOut era
-    initial =
-      DecodingTxOut SNothing mempty NoDatum SNothing
+    initial = DecodingTxOut SNothing mempty NoDatum SNothing
     bodyFields :: (Word -> Field (DecodingTxOut era))
     bodyFields 0 =
       field
@@ -554,10 +561,12 @@ decodeTxOut decAddr = do
         (\x txo -> txo {decodingTxOutScript = x})
         (D $ decodeCIC "Script")
     bodyFields n = field (\_ t -> t) (Invalid n)
+    {-# INLINE bodyFields #-}
     requiredFields =
       [ (0, "addr")
       , (1, "val")
       ]
+{-# INLINE decodeTxOut #-}
 
 babbageMinUTxOValue ::
   BabbageEraPParams era =>
@@ -583,6 +592,7 @@ babbageMinUTxOValue pp sizedTxOut =
     -- out to be 978597 lovelace. Also the absolute minimum value will be
     -- 857690, because TxOut without staking address can't be less than 39 bytes
     constantOverhead = 160
+{-# INLINE babbageMinUTxOValue #-}
 
 getEitherAddrBabbageTxOut ::
   HashAlgorithm (ADDRHASH (EraCrypto era)) =>
@@ -599,6 +609,7 @@ getEitherAddrBabbageTxOut = \case
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
     | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"
+{-# INLINEABLE getEitherAddrBabbageTxOut #-}
 
 -- TODO: Switch to using `getDatumBabbageTxOut`
 getDataBabbageTxOut :: Era era => BabbageTxOut era -> StrictMaybe (Data era)
@@ -611,6 +622,7 @@ getDataBabbageTxOut = \case
     | otherwise -> SNothing
   TxOut_AddrHash28_AdaOnly {} -> SNothing
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> SNothing
+{-# INLINE getDataBabbageTxOut #-}
 
 -- TODO: Switch to using `getDatumBabbageTxOut`
 
@@ -630,6 +642,7 @@ getDataHashBabbageTxOut = \case
   TxOut_AddrHash28_AdaOnly {} -> SNothing
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 ->
     maybeToStrictMaybe $ decodeDataHash32 dataHash32
+{-# INLINE getDataHashBabbageTxOut #-}
 
 getScriptBabbageTxOut :: BabbageTxOut era -> StrictMaybe (Script era)
 getScriptBabbageTxOut = \case
@@ -639,6 +652,7 @@ getScriptBabbageTxOut = \case
   TxOutCompactRefScript _ _ _ s -> SJust s
   TxOut_AddrHash28_AdaOnly {} -> SNothing
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> SNothing
+{-# INLINE getScriptBabbageTxOut #-}
 
 getDatumBabbageTxOut :: Era era => BabbageTxOut era -> Datum era
 getDatumBabbageTxOut = \case
@@ -650,6 +664,7 @@ getDatumBabbageTxOut = \case
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32
     | Just dh <- decodeDataHash32 dataHash32 -> DatumHash dh
     | otherwise -> error "Impossible: Compacted a hash of non-standard size"
+{-# INLINEABLE getDatumBabbageTxOut #-}
 
 getCompactValueBabbageTxOut :: EraTxOut era => BabbageTxOut era -> CompactForm (Value era)
 getCompactValueBabbageTxOut =
@@ -660,6 +675,7 @@ getCompactValueBabbageTxOut =
     TxOutCompactRefScript _ cv _ _ -> cv
     TxOut_AddrHash28_AdaOnly _ _ cc -> injectCompact cc
     TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> injectCompact cc
+{-# INLINE getCompactValueBabbageTxOut #-}
 
 txOutData :: Era era => BabbageTxOut era -> Maybe (Data era)
 txOutData = strictMaybeToMaybe . getDataBabbageTxOut
@@ -680,3 +696,4 @@ decodeCIC s = do
   case decodeFullAnnotator version s decCBOR (LBS.fromStrict lbs) of
     Left e -> fail $ T.unpack s <> ": " <> show e
     Right x -> pure x
+{-# INLINEABLE decodeCIC #-}

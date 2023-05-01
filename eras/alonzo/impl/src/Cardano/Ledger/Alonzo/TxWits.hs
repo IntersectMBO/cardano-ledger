@@ -273,6 +273,7 @@ nullDats (TxDats' d) = Map.null d
 
 instance (Era era) => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
+  {-# INLINE decCBOR #-}
 
 -- | Note that 'TxDats' are based on 'MemoBytes' since we must preserve
 -- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
@@ -510,12 +511,15 @@ instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
         (rdmrPtr, dat, ex) <- decodeElement
         let f x y z = (x, (y, z))
         pure $ f rdmrPtr <$> dat <*> pure ex
+      {-# INLINE decodeAnnElement #-}
       decodeElement :: forall s. Decoder s (RdmrPtr, Annotator (Data era), ExUnits)
       decodeElement = do
         decodeRecordNamed
           "Redeemer"
           (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2)
           $ (,,) <$> decCBORGroup <*> decCBOR <*> decCBOR
+      {-# INLINE decodeElement #-}
+  {-# INLINE decCBOR #-}
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (Redeemers era)
@@ -575,11 +579,13 @@ instance
           addScripts
           (decodePlutus PlutusV3)
       txWitnessField n = field (\_ t -> t) (Invalid n)
+      {-# INLINE txWitnessField #-}
 
       decodePlutus lang = fmap (PlutusScript lang) <$> D (guardPlutus lang >> decCBOR)
 
       addScripts :: [AlonzoScript era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
       addScripts x wits = wits {atwrScriptTxWits = getKeys ([] :: [era]) x <> atwrScriptTxWits wits}
+      {-# INLINE addScripts #-}
       getKeys ::
         forall proxy e.
         EraScript e =>
@@ -587,6 +593,8 @@ instance
         [Script e] ->
         Map (ScriptHash (EraCrypto e)) (Script e)
       getKeys _ = keyBy (hashScript @e)
+      {-# INLINE getKeys #-}
+  {-# INLINE decCBOR #-}
 
 deriving via
   (Mem AlonzoTxWitsRaw era)

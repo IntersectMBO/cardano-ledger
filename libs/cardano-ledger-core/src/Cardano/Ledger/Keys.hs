@@ -178,6 +178,7 @@ instance HasKeyRole VKey
 
 instance (Crypto c, Typeable kd) => FromCBOR (VKey kd c) where
   fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
+  {-# INLINE fromCBOR #-}
 
 instance (Crypto c, Typeable kd) => ToCBOR (VKey kd c) where
   toCBOR = DSIGN.encodeVerKeyDSIGN . unVKey
@@ -209,6 +210,7 @@ verifySignedDSIGN ::
   Bool
 verifySignedDSIGN (VKey vk) vd sigDSIGN =
   either (const False) (const True) $ DSIGN.verifySignedDSIGN () vk vd sigDSIGN
+{-# INLINE verifySignedDSIGN #-}
 
 -- | Hash a given signature
 hashSignature ::
@@ -216,6 +218,7 @@ hashSignature ::
   SignedDSIGN c (Hash c h) ->
   Hash c (SignedDSIGN c (Hash c h))
 hashSignature = Hash.hashWith (DSIGN.rawSerialiseSigDSIGN . coerce)
+{-# INLINE hashSignature #-}
 
 --------------------------------------------------------------------------------
 -- Key Hashes
@@ -307,6 +310,7 @@ instance Crypto c => DecCBOR (GenDelegPair c) where
       "GenDelegPair"
       (const 2)
       (GenDelegPair <$> decCBOR <*> decCBOR)
+  {-# INLINE decCBOR #-}
 
 instance Crypto c => ToJSON (GenDelegPair c) where
   toJSON (GenDelegPair d v) =
