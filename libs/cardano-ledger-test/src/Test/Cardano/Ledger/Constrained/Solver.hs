@@ -776,7 +776,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
   cs -> case r1 of
     MapR dom rng -> do
       spec <- solveMaps v1 cs
-      pure $ genFromMapSpec v1 (map show cs) (genRep dom) (genRep rng) spec
+      pure $ genFromMapSpec nam (map show cs) (genRep dom) (genRep rng) spec
     SetR r -> do
       spec <- solveSets v1 cs
       pure $ genFromSetSpec [] (genRep r) spec
