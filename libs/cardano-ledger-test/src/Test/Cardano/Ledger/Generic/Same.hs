@@ -358,7 +358,7 @@ sameShelleyTxWits ::
   ShelleyTxWits era ->
   [(String, Maybe PDoc)]
 sameShelleyTxWits proof (ShelleyTxWits vk1 sh1 boot1) (ShelleyTxWits vk2 sh2 boot2) =
-  [ ("VKeyWits", eqVia (ppSet (pcWitVKey @era)) vk1 vk2)
+  [ ("VKeyWits", eqVia (ppSet (pcWitVKey proof)) vk1 vk2)
   , ("ScriptWits", eqVia (ppMap pcScriptHash (pcScript proof)) sh1 sh2)
   , ("BootWits", eqVia (\_ -> ppString "BOOTWITS") boot1 boot2)
   ]
@@ -374,7 +374,7 @@ sameAlonzoTxWits
   proof
   (AlonzoTxWits vk1 boot1 sh1 (TxDats d1) (Redeemers r1))
   (AlonzoTxWits vk2 boot2 sh2 (TxDats d2) (Redeemers r2)) =
-    [ ("VKeyWits", eqVia (ppSet (pcWitVKey @era)) vk1 vk2)
+    [ ("VKeyWits", eqVia (ppSet (pcWitVKey proof)) vk1 vk2)
     , ("BootWits", eqVia (\_ -> ppString "BOOTWITS") boot1 boot2)
     , ("ScriptWits", eqVia (ppMap pcScriptHash (pcScript proof)) sh1 sh2)
     , ("DataWits", eqVia (ppMap pcDataHash pcData) d1 d2)

@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Constrained.Classes where
 
@@ -17,13 +18,13 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.Pretty (PDoc)
+import Cardano.Ledger.Pretty (PDoc, ppString)
 import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov (GovernanceState (..))
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import qualified Cardano.Ledger.Shelley.PParams as PP (ProposedPPUpdates (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (ScriptsNeeded, UTxO (..))
 import Cardano.Ledger.Val (Val (coin, modifyCoin, (<+>)))
 import Data.Default.Class (Default (def))
 import qualified Data.List as List
@@ -32,7 +33,14 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Universe (Singleton (..), (:~:) (Refl))
+
+-- import Data.Universe (Singleton (..), (:~:) (Refl))
+
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
+import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Data.Word (Word64)
 import GHC.Real (denominator, numerator, (%))
 import Lens.Micro
@@ -40,17 +48,32 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess)
+import Test.Cardano.Ledger.Constrained.Pairing (pair, unpair)
 import Test.Cardano.Ledger.Constrained.Scripts (genCoreScript)
-import Test.Cardano.Ledger.Constrained.Size (AddsSpec (..), Size (..), genFromIntRange, genFromNonNegIntRange)
+import Test.Cardano.Ledger.Constrained.Size (
+  AddsSpec (..),
+  OrdCond (..),
+  Size (..),
+  genFromIntRange,
+  genFromNonNegIntRange,
+  runOrdCond,
+ )
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Ledger.Generic.PrettyCore (pcScript, pcTxOut, pcVal)
+import Test.Cardano.Ledger.Generic.PrettyCore (
+  pcScript,
+  pcScriptsNeeded,
+  pcTx,
+  pcTxBody,
+  pcTxCert,
+  pcTxOut,
+  pcVal,
+  pcWitnesses,
+ )
 import Test.Cardano.Ledger.Generic.Proof (
-  AllegraEra,
   GoodCrypto,
   Proof (..),
   Reflect (..),
-  ShelleyEra,
   unReflect,
  )
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
@@ -62,9 +85,14 @@ import Test.QuickCheck (
   chooseInt,
   elements,
   frequency,
+  oneof,
   shuffle,
+  suchThat,
+  -- generate,
   vectorOf,
  )
+
+-- import Debug.Trace
 
 -- import Test.Cardano.Ledger.Generic.GenState(genScript,small,runGenRS,GenRS,elementsT,GenState(..))
 -- import Cardano.Ledger.Alonzo.Scripts(Tag(..))
@@ -72,6 +100,9 @@ import Test.QuickCheck (
 -- import qualified Control.Monad.Trans.Class as Trans(MonadTrans (lift))
 -- import Data.Default.Class (Default (def))
 -- import Cardano.Ledger.Alonzo.Tx(IsValid(..))
+import Cardano.Ledger.Alonzo.TxWits ()
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 
 -- =====================================================================
 -- Helper functions
@@ -89,7 +120,7 @@ gauss mean stdev x = (1 / (stdev * (sqrt (2 * pi)))) * exp (negate ((1 / 2) * ((
 -- Test.Cardano.Ledger.Constrained.Combinators(errorMess) is used to raise an error
 -- and properly report the stack trace.
 
-class (Ord x, Show x) => Adds x where
+class (Eq x, Show x) => Adds x where
   add :: x -> x -> x
   minus :: [String] -> x -> x -> x
   zero :: x
@@ -113,6 +144,13 @@ class (Ord x, Show x) => Adds x where
   --   appropriate for Natural, since there are no negative Natural numbers.
   genSmall :: Gen Int
 
+  runOrdCondition :: OrdCond -> x -> x -> Bool
+
+  -- runOrdCondition = undefined
+  smallerOf :: Adds x => x -> x -> x
+
+-- smallerOf = undefined
+
 -- ================
 -- helper functions
 
@@ -122,7 +160,12 @@ sumAdds xs = List.foldl' add zero xs
 projAdds :: (Foldable t, Sums a b) => t a -> b
 projAdds xs = List.foldl' accum zero xs
   where
-    accum ans x = add ans (getSum x)
+    accum ans x = add ans (getSum x) -- TODO: Remove after removing Sums constraint over ElemSpec
+
+lensAdds :: (Foldable t, Adds b) => Lens' a b -> t a -> b
+lensAdds l xs = List.foldl' accum zero xs
+  where
+    accum ans x = add ans (x ^. l)
 
 genFromAddsSpec :: [String] -> AddsSpec c -> Gen Int
 genFromAddsSpec _ AddsSpecAny = genFromIntRange SzAny
@@ -137,6 +180,47 @@ genFromNonNegAddsSpec msgs (AddsSpecNever _) = errorMess ("genFromAddsSpec appli
 -- ================
 -- Adds instances
 
+instance Adds ExUnits where
+  add (ExUnits a b) (ExUnits c d) = ExUnits (a + c) (b + d)
+  minus msgs (ExUnits a b) (ExUnits c d) =
+    ExUnits
+      (minus ("Ex memory" : msgs) a c)
+      (minus ("Ex steps" : msgs) b d)
+  zero = ExUnits 0 0
+  partition (ExUnits smallestmemory smalleststeps) msgs count (ExUnits memory steps) = do
+    memG <- partition smallestmemory ("Ex memory" : msgs) count memory
+    stepsG <- partition smalleststeps ("Ex steps" : msgs) count steps
+    pure (zipWith ExUnits memG stepsG)
+  genAdds msgs spec = fromI ms <$> genFromNonNegAddsSpec ms spec
+    where
+      ms = msgs ++ ["genAdds ExUnits"]
+  fromI msgs n = ExUnits mem step
+    where
+      (memInt, stepInt) = unpair n
+      mem = fromI ("Ex memory" : msgs) (fromIntegral memInt)
+      step = fromI ("Ex steps" : msgs) (fromIntegral stepInt)
+  toI (ExUnits mem step) = pair (fromIntegral mem) (fromIntegral step)
+  genSmall = oneof [pure $ toI (ExUnits 1 1), pure $ toI (ExUnits 2 2), pure $ toI (ExUnits 3 1)]
+
+  -- Some ExUnits are incomparable: i.e. x=(ExUnits 5 7) and y=(ExUnits 8 3)
+  -- neither x<y  or y<x is true.
+  runOrdCondition EQL (ExUnits a b) (ExUnits c d) = a == c && b == d
+  runOrdCondition LTH (ExUnits a b) (ExUnits c d) = a < c && b < d
+  runOrdCondition LTE x y = runOrdCondition LTH x y || runOrdCondition EQL x y
+  runOrdCondition GTH (ExUnits a b) (ExUnits c d) = a > c && b > d
+  runOrdCondition GTE x y = runOrdCondition GTH x y || runOrdCondition EQL x y
+  smallerOf x y =
+    if runOrdCondition LTE x y
+      then x
+      else
+        if runOrdCondition GTE x y
+          then y
+          else
+            errorMess
+              "ExUnits are incomparable, can't choose the 'smallerOf'"
+              [show x, show y]
+
+-- ================
 instance Adds Word64 where
   add = (+)
   minus _ = (-)
@@ -149,6 +233,8 @@ instance Adds Word64 where
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Word64.") msgs
   toI = fromIntegral
   genSmall = elements [0, 1, 2]
+  runOrdCondition = runOrdCond
+  smallerOf = min
 
 instance Adds Int where
   add = (+)
@@ -161,6 +247,8 @@ instance Adds Int where
   fromI _ n = n
   toI n = n
   genSmall = elements [-2, -1, 0, 1, 2]
+  runOrdCondition = runOrdCond
+  smallerOf = min
 
 instance Adds Natural where
   add = (+)
@@ -177,6 +265,8 @@ instance Adds Natural where
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Natural.") msgs
   toI = fromIntegral
   genSmall = elements [0, 1, 2]
+  runOrdCondition = runOrdCond
+  smallerOf = min
 
 instance Adds Rational where
   add = (+)
@@ -189,6 +279,8 @@ instance Adds Rational where
   fromI _ n = (fromIntegral n `div` 1000) % 1
   toI r = round (r * 1000)
   genSmall = elements [0, 1]
+  runOrdCondition = runOrdCond
+  smallerOf = min
 
 instance Adds Coin where
   add = (<+>)
@@ -205,6 +297,8 @@ instance Adds Coin where
   fromI msgs m = errorMess ("can't convert " ++ show m ++ " into a Coin.") msgs
   toI (Coin n) = fromIntegral n
   genSmall = elements [0, 1, 2]
+  runOrdCondition = runOrdCond
+  smallerOf = min
 
 instance Adds DeltaCoin where
   add = (<+>)
@@ -217,6 +311,8 @@ instance Adds DeltaCoin where
   fromI _ n = DeltaCoin (fromIntegral n)
   toI (DeltaCoin n) = fromIntegral n
   genSmall = elements [-2, 0, 1, 2]
+  runOrdCondition = runOrdCond
+  smallerOf = min
 
 -- ===========================================================================
 -- The Sums class, for summing a projected c (where Adds c) from some richer type
@@ -302,8 +398,11 @@ instance Show t => Sizeable [t] where
 instance Sizeable Coin where
   getSize (Coin n) = fromIntegral n
 
+instance Sizeable (MultiAsset c) where
+  getSize (MultiAsset m) = Map.size m
+
 -- ===========================================================
--- The Count classs 0,1,2,3,4 ...
+-- The Count class 0,1,2,3,4 ...
 
 class Count t where
   -- | 'canFollow x y', is 'x' an appropriate successor to 'y'
@@ -341,31 +440,131 @@ instance Count SlotNo where
   genPred n = pure (n - 1)
   genSucc n = pure (n + 1)
 
--- =======================================================================
--- The FromList class
-
-class (Eq a, Eq (t a)) => FromList t a where
-  makeFromList :: [a] -> t a
-  getList :: t a -> [a]
-
-instance Eq a => FromList [] a where
-  makeFromList xs = xs
-  getList xs = xs
-
-instance (Ord a) => FromList Set a where
-  makeFromList xs = Set.fromList xs
-  getList = Set.toList
-
-instance Eq a => FromList Maybe a where
-  makeFromList [] = Nothing
-  makeFromList (x : _) = Just x
-  getList Nothing = []
-  getList (Just x) = [x]
-
 -- ============================================================================
 -- Special accomodation for Type Families
 -- ============================================================================
 
+data TxAuxDataF era where
+  TxAuxDataF :: Proof era -> TxAuxData era -> TxAuxDataF era
+
+hashTxAuxDataF :: Reflect era => TxAuxDataF era -> AuxiliaryDataHash (EraCrypto era)
+hashTxAuxDataF (TxAuxDataF _ x) = hashTxAuxData x
+
+unTxAuxData :: TxAuxDataF era -> TxAuxData era
+unTxAuxData (TxAuxDataF _ x) = x
+
+instance Show (TxAuxDataF era) where
+  show (TxAuxDataF p x) = show ((unReflect pcAuxData p x) :: PDoc)
+
+instance Eq (TxAuxDataF era) where
+  (TxAuxDataF (Shelley _) x) == (TxAuxDataF (Shelley _) y) = x == y
+  (TxAuxDataF (Allegra _) x) == (TxAuxDataF (Allegra _) y) = x == y
+  (TxAuxDataF (Mary _) x) == (TxAuxDataF (Mary _) y) = x == y
+  (TxAuxDataF (Alonzo _) x) == (TxAuxDataF (Alonzo _) y) = x == y
+  (TxAuxDataF (Babbage _) x) == (TxAuxDataF (Babbage _) y) = x == y
+  (TxAuxDataF (Conway _) x) == (TxAuxDataF (Conway _) y) = x == y
+
+pcAuxData :: Proof era -> TxAuxData era -> PDoc
+pcAuxData p _x = ppString ("TxAuxData " ++ show p) -- TODO make this more accurate
+
+genTxAuxDataF :: Proof era -> Gen (TxAuxDataF era)
+genTxAuxDataF p@(Shelley _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@(Allegra _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@(Mary _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@(Alonzo _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@(Babbage _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@(Conway _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+
+-- ==============
+
+data TxF era where
+  TxF :: Proof era -> Tx era -> TxF era
+
+unTxF :: TxF era -> Tx era
+unTxF (TxF _ x) = x
+
+instance Show (TxF era) where
+  show (TxF p x) = show ((unReflect pcTx p x) :: PDoc)
+
+instance Eq (TxF era) where
+  (TxF (Shelley _) x) == (TxF (Shelley _) y) = x == y
+  (TxF (Allegra _) x) == (TxF (Allegra _) y) = x == y
+  (TxF (Mary _) x) == (TxF (Mary _) y) = x == y
+  (TxF (Alonzo _) x) == (TxF (Alonzo _) y) = x == y
+  (TxF (Babbage _) x) == (TxF (Babbage _) y) = x == y
+  (TxF (Conway _) x) == (TxF (Conway _) y) = x == y
+
+-- ==============
+
+data TxWitsF era where
+  TxWitsF :: Proof era -> TxWits era -> TxWitsF era
+
+unTxWitsF :: TxWitsF era -> TxWits era
+unTxWitsF (TxWitsF _ x) = x
+
+instance Show (TxWitsF era) where
+  show (TxWitsF p x) = show ((unReflect pcWitnesses p x) :: PDoc)
+
+instance Eq (TxWitsF era) where
+  (TxWitsF (Shelley _) x) == (TxWitsF (Shelley _) y) = x == y
+  (TxWitsF (Allegra _) x) == (TxWitsF (Allegra _) y) = x == y
+  (TxWitsF (Mary _) x) == (TxWitsF (Mary _) y) = x == y
+  (TxWitsF (Alonzo _) x) == (TxWitsF (Alonzo _) y) = x == y
+  (TxWitsF (Babbage _) x) == (TxWitsF (Babbage _) y) = x == y
+  (TxWitsF (Conway _) x) == (TxWitsF (Conway _) y) = x == y
+
+-- ==============================
+
+data TxBodyF era where
+  TxBodyF :: Proof era -> TxBody era -> TxBodyF era
+
+unTxBodyF :: TxBodyF era -> TxBody era
+unTxBodyF (TxBodyF _ x) = x
+
+instance Show (TxBodyF era) where
+  show (TxBodyF p x) = show ((unReflect pcTxBody p x) :: PDoc)
+
+instance Eq (TxBodyF era) where
+  (TxBodyF (Shelley _) x) == (TxBodyF (Shelley _) y) = x == y
+  (TxBodyF (Allegra _) x) == (TxBodyF (Allegra _) y) = x == y
+  (TxBodyF (Mary _) x) == (TxBodyF (Mary _) y) = x == y
+  (TxBodyF (Alonzo _) x) == (TxBodyF (Alonzo _) y) = x == y
+  (TxBodyF (Babbage _) x) == (TxBodyF (Babbage _) y) = x == y
+  (TxBodyF (Conway _) x) == (TxBodyF (Conway _) y) = x == y
+
+-- ==================
+data TxCertF era where
+  TxCertF :: Proof era -> TxCert era -> TxCertF era
+
+unTxCertF :: TxCertF era -> TxCert era
+unTxCertF (TxCertF _ x) = x
+
+instance Show (TxCertF era) where
+  show (TxCertF p x) = show (pcTxCert p x)
+
+{-
+instance Ord (TxCertF era) where
+  compare (TxCertF p x) (TxCertF q y) =
+    case testEql p q of
+      Just Refl -> case p of
+         Shelley _ -> compare x y
+         Allegra _ -> compare x y
+         Mary _ -> compare x y
+         Alonzo _ -> compare x y
+         Babbage _ -> compare x y
+         Conway _ -> compare x y
+      Nothing -> cmpIndex p q
+-}
+
+instance Eq (TxCertF era) where
+  (TxCertF (Shelley _) x) == (TxCertF (Shelley _) y) = x == y
+  (TxCertF (Allegra _) x) == (TxCertF (Allegra _) y) = x == y
+  (TxCertF (Mary _) x) == (TxCertF (Mary _) y) = x == y
+  (TxCertF (Alonzo _) x) == (TxCertF (Alonzo _) y) = x == y
+  (TxCertF (Babbage _) x) == (TxCertF (Babbage _) y) = x == y
+  (TxCertF (Conway _) x) == (TxCertF (Conway _) y) = x == y
+
+-- =========
 data TxOutF era where
   TxOutF :: Proof era -> TxOut era -> TxOutF era
 
@@ -373,15 +572,21 @@ unTxOut :: TxOutF era -> TxOut era
 unTxOut (TxOutF _ x) = x
 
 instance Eq (TxOutF era) where
-  TxOutF p1 x1 == TxOutF p2 x2 = case testEql p1 p2 of
-    Just Refl -> case p1 of
-      Shelley _ -> x1 == x2
-      Allegra _ -> x1 == x2
-      Mary _ -> x1 == x2
-      Alonzo _ -> x1 == x2
-      Babbage _ -> x1 == x2
-      Conway _ -> x1 == x2
-    Nothing -> False
+  x1 == x2 = compare x1 x2 == EQ
+
+instance Ord (TxOutF era) where
+  compare (TxOutF (Shelley _) (ShelleyTxOut a1 v1)) (TxOutF (Shelley _) (ShelleyTxOut a2 v2)) =
+    compare a1 a2 <> compare v1 v2
+  compare (TxOutF (Allegra _) (ShelleyTxOut a1 v1)) (TxOutF (Allegra _) (ShelleyTxOut a2 v2)) =
+    compare (a1, v1) (a2, v2)
+  compare (TxOutF (Mary _) (ShelleyTxOut a1 v1)) (TxOutF (Mary _) (ShelleyTxOut a2 v2)) =
+    compare (a1, v1) (a2, v2)
+  compare (TxOutF (Alonzo _) (AlonzoTxOut a1 v1 d1)) (TxOutF (Alonzo _) (AlonzoTxOut a2 v2 d2)) =
+    compare (a1, v1, d1) (a2, v2, d2)
+  compare (TxOutF (Babbage _) (BabbageTxOut a1 v1 d1 x1)) (TxOutF (Babbage _) (BabbageTxOut a2 v2 d2 x2)) =
+    compare (a1, v1, d1, fmap hashScript x1) (a2, v2, d2, fmap hashScript x2)
+  compare (TxOutF (Conway _) (BabbageTxOut a1 v1 d1 x1)) (TxOutF (Conway _) (BabbageTxOut a2 v2 d2 x2)) =
+    compare (a1, v1, d1, fmap hashScript x1) (a2, v2, d2, fmap hashScript x2)
 
 -- ======
 data ValueF era where
@@ -390,15 +595,22 @@ data ValueF era where
 unValue :: ValueF era -> Value era
 unValue (ValueF _ v) = v
 
-instance Ord (ValueF (ShelleyEra c)) where
-  compare (ValueF _ coin1) (ValueF _ coin2) = compare coin1 coin2
-instance Eq (ValueF (ShelleyEra c)) where
+instance Crypto c => Ord (MaryValue c) where
+  compare (MaryValue c1 m1) (MaryValue c2 m2) = compare (c1, m1) (c2, m2)
+
+instance Crypto c => Ord (MultiAsset c) where
+  compare (MultiAsset m1) (MultiAsset m2) = compare m1 m2
+
+instance Eq (ValueF era) where
   x == y = compare x y == EQ
 
-instance Ord (ValueF (AllegraEra c)) where
-  compare (ValueF _ coin1) (ValueF _ coin2) = compare coin1 coin2
-instance Eq (ValueF (AllegraEra c)) where
-  x == y = compare x y == EQ
+instance Ord (ValueF era) where
+  (ValueF (Shelley _) x) `compare` (ValueF (Shelley _) y) = compare x y
+  (ValueF (Allegra _) x) `compare` (ValueF (Allegra _) y) = compare x y
+  (ValueF (Mary _) (MaryValue c1 m1)) `compare` (ValueF (Mary _) (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
+  (ValueF (Alonzo _) (MaryValue c1 m1)) `compare` (ValueF (Alonzo _) (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
+  (ValueF (Babbage _) (MaryValue c1 m1)) `compare` (ValueF (Babbage _) (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
+  (ValueF (Conway _) (MaryValue c1 m1)) `compare` (ValueF (Conway _) (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
 
 -- ======
 data PParamsF era where
@@ -557,6 +769,17 @@ genUTxO p = case p of
 
 -- ========================
 
+data ScriptsNeededF era where
+  ScriptsNeededF :: Proof era -> ScriptsNeeded era -> ScriptsNeededF era
+
+unScriptsNeededF :: ScriptsNeededF era -> ScriptsNeeded era
+unScriptsNeededF (ScriptsNeededF _ v) = v
+
+instance Show (ScriptsNeededF era) where
+  show (ScriptsNeededF p t) = show (pcScriptsNeeded p t)
+
+-- ========================
+
 data ScriptF era where
   ScriptF :: Proof era -> Script era -> ScriptF era
 
@@ -565,6 +788,14 @@ unScriptF (ScriptF _ v) = v
 
 instance Show (ScriptF era) where
   show (ScriptF p t) = show ((unReflect pcScript p t) :: PDoc)
+
+instance Eq (ScriptF era) where
+  (ScriptF (Shelley _) x) == (ScriptF (Shelley _) y) = x == y
+  (ScriptF (Allegra _) x) == (ScriptF (Allegra _) y) = x == y
+  (ScriptF (Mary _) x) == (ScriptF (Mary _) y) = x == y
+  (ScriptF (Alonzo _) x) == (ScriptF (Alonzo _) y) = x == y
+  (ScriptF (Babbage _) x) == (ScriptF (Babbage _) y) = x == y
+  (ScriptF (Conway _) x) == (ScriptF (Conway _) y) = x == y
 
 genScriptF :: Era era => Proof era -> Gen (ScriptF era)
 genScriptF proof = do
@@ -659,7 +890,7 @@ integerPartition msgs typname smallest size total
       Nothing ->
         let mean = total `div` fromIntegral (size + 1)
             go 1 total1
-              | total1 < 1 = errorMess ("Ran out of choices(2), total went negative: " ++ show total1) msgs
+              | total1 < 1 && smallest > 0 = errorMess ("Ran out of choices(2), total went negative: " ++ show total1) msgs
               | otherwise = pure [total1]
             go 2 total1 = do
               z <- choose (smallest, total1 - 1)

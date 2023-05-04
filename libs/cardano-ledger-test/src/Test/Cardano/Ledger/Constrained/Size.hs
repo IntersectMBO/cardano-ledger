@@ -230,6 +230,7 @@ vLeftSize x cond n = ordCondToSize (x, cond, n)
 vRight :: Int -> OrdCond -> Int -> String -> AddsSpec c
 vRight n cond m s = AddsSpecSize s (vRightSize n cond m s)
 
+-- vRightSize :: Adds c => c -> OrdCond -> Int ->String - Size
 vRightSize :: Int -> OrdCond -> Int -> String -> Size
 vRightSize n cond m s = ordCondToSize (s, reverseOrdCond cond, n - m)
 
@@ -276,8 +277,17 @@ ordCondToSize (_, cond, n) = case cond of
   GTH -> SzLeast (n + 1)
   GTE -> SzLeast n
 
+{-
+
+Classes.hs ExUnits Adds Instance
+genAdds msgs (AddsSpec name (SzMost n)) do
+  let (i,j) = unpair n
+  i2 <- genFromNonNegIntRange (SzMost i)
+  j2 <- genFromNonNegIntRange (SzMost j)
+  pure (ExUnits (fromI i2) (fromI j2))
+
+-}
 -- =========================================================================
--- OrdCond
 -- x <= y
 --   ^     paramerterize over the condition
 --

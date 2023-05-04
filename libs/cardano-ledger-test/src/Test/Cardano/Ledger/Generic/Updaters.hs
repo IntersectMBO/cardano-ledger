@@ -205,6 +205,7 @@ updateTxBody pf txBody dt =
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
       _ -> txBody
     Conway _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
       Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Mint mint -> txBody & mintTxBodyL .~ mint

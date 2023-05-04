@@ -40,7 +40,7 @@ import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Shrink
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (SzRng), runOrdCond)
+import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (SzRng))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Generic.Proof (Standard)
@@ -125,7 +125,8 @@ depthOfSum env = \case
   SumMap t -> depthOf env t
   SumList t -> depthOf env t
   One t -> depthOf env t
-  Project _ t -> depthOf env t
+  ProjOne _ _ t -> depthOf env t
+  ProjMap _ _ t -> depthOf env t
 
 genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen t
 genLiteral env rep =
@@ -296,13 +297,13 @@ genFromOrdCond cond canBeNegative n =
   suchThatErr
     ["genFromOrdCond " ++ show cond ++ " " ++ show n]
     ( frequency $
-        [(1, pure $ minus ["genFromOrdCond"] n (fromI [] 1)) | n > zero || canBeNegative]
+        [(1, pure $ minus ["genFromOrdCond"] n (fromI [] 1)) | runOrdCondition GTH n zero || canBeNegative]
           ++ [ (1, pure n)
              , (1, pure $ add n (fromI [] 1))
              , (10, arbitrary)
              ]
     )
-    (flip (runOrdCond cond) n)
+    (flip (runOrdCondition cond) n)
 
 genPredicate :: forall era. Era era => GenEnv era -> Gen (Pred era, GenEnv era)
 genPredicate env =
@@ -420,7 +421,8 @@ genPredicate env =
             partSums <- partition (fromI [] small) ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
-            pure (SumsTo (fromI [] small) sumTm EQL parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+            pure (SumsTo (Left (fromI [] small)) sumTm EQL parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+      -- FIXME Left means that sumTm is known. Not sure if that is what is needed here.
       | otherwise =
           oneof
             [ sumCKnownSets CoinR False
@@ -458,11 +460,12 @@ genPredicate env =
           genTerm'
             env'
             rep
-            (flip (runOrdCond cmp) tot)
+            (flip (runOrdCondition cmp) tot)
             (genFromOrdCond cmp canBeNegative tot)
             (VarTerm d)
         small <- genSmall @c
-        pure (SumsTo (fromI [] small) sumTm cmp parts, markSolved (vars sumTm) d env'')
+        pure (SumsTo (Right (fromI [] small)) sumTm cmp parts, markSolved (vars sumTm) d env'')
+    -- FIXME Right means that the parts are all known. Not sure if that is what is needed here.
 
     hasDomC =
       oneof
@@ -618,11 +621,13 @@ showEnv (Env vmap) = unlines $ map pr (Map.toList vmap)
     pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
 
 predConstr :: Pred era -> String
+predConstr MetaSize {} = "MetaSize"
 predConstr Sized {} = "Sized"
 predConstr (_ :=: _) = ":=:"
 predConstr (_ `Subset` _) = "Subset"
 predConstr Disjoint {} = "Disjoint"
 predConstr SumsTo {} = "SumsTo"
+predConstr SumSplit {} = "SumSplit"
 predConstr Random {} = "Random"
 predConstr Component {} = "Component"
 predConstr CanFollow {} = "CanFollow"
@@ -634,6 +639,11 @@ predConstr List {} = "List"
 predConstr Choose {} = "Choose"
 predConstr Maybe {} = "Maybe"
 predConstr GenFrom {} = "GenFrom"
+predConstr ForEach {} = "ForEach"
+predConstr SubMap {} = "SubMap"
+predConstr If {} = "If"
+predConstr Before {} = "Before"
+predConstr Oneof {} = "Oneof"
 
 constraintProperty :: Maybe Int -> Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
 constraintProperty timeout strict whitelist info prop =

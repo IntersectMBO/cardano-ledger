@@ -62,7 +62,6 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxCert (
-  ShelleyEraTxCert (..),
   ShelleyTxCert (..),
   pattern DelegStakeTxCert,
   pattern RegTxCert,
@@ -363,6 +362,7 @@ redeemerWitnessMaker tag listWithCred =
         | (ix, mCred) <- zip [0 ..] listWithCred
         , Just (genDat, cred) <- [mCred]
         ]
+      allValid :: [IsValid] -> IsValid
       allValid = IsValid . getAll . foldMap (\(IsValid v) -> All v)
    in fmap (first allValid . unzip . catMaybes) $
         forM creds $ \(ix, genDat, cred) ->
@@ -561,7 +561,7 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
-genShelleyDelegCert :: forall era. (Reflect era, ShelleyEraTxCert era) => GenRS era (TxCert era)
+genShelleyDelegCert :: forall era. Reflect era => GenRS era (TxCert era)
 genShelleyDelegCert =
   frequencyT
     [ (75, genShelleyRegCert)
@@ -624,7 +624,7 @@ genTxCert slot =
 --   Babbage _ -> mkShelleyTxCertDeleg
 --   Conway _ -> mkShelleyTxCertDeleg -- TODO write a generator for Conway certs
 
-genTxCerts :: forall era. (Reflect era, ShelleyEraTxCert era) => SlotNo -> GenRS era [TxCert era]
+genTxCerts :: forall era. Reflect era => SlotNo -> GenRS era [TxCert era]
 genTxCerts slot = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
         honest <- gets gsStableDelegators
@@ -755,10 +755,11 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
   pure (Map.union collaterals utxo, collaterals, excessColCoin)
 
 -- | This function is used to generate the Outputs of a TxBody, It is computed by taking the
---   Outputs of the range of the domain restricted UTxO, resticted by the Inputs of the TxBody,
+--   Outputs of the range of the (UTxO resticted by the Inputs of the TxBody),
 --   as input to the function, and then making new Outputs, where the sum of the Coin is the same.
 --   This way we generate a 'balanced' TxBody (modulo fees, deposits, refunds etc. which are
---   handled separately)
+--   handled separately). The idea is to make sum(txOuts) == sum(genRecipientsFrom txouts), the
+--   sum will be the same, but the size may be different.
 genRecipientsFrom :: Reflect era => [TxOut era] -> GenRS era [TxOut era]
 genRecipientsFrom txOuts = do
   let outCount = length txOuts
@@ -849,14 +850,14 @@ minus :: MUtxo era -> Maybe (UtxoEntry era) -> MUtxo era
 minus m Nothing = m
 minus m (Just (txin, _)) = Map.delete txin m
 
-genAlonzoTx :: forall era. (Reflect era, ShelleyEraTxCert era) => Proof era -> SlotNo -> GenRS era (UTxO era, Tx era)
+genAlonzoTx :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (UTxO era, Tx era)
 genAlonzoTx proof slot = do
   (utxo, tx, _fee, _old) <- genAlonzoTxAndInfo proof slot
   pure (utxo, tx)
 
 genAlonzoTxAndInfo ::
   forall era.
-  (Reflect era, ShelleyEraTxCert era) =>
+  Reflect era =>
   Proof era ->
   SlotNo ->
   GenRS

@@ -241,7 +241,7 @@ validateCollateralContainsNonADA txBody utxoCollateral =
     else failureUnless (Val.isAdaOnly bal) $
       case txBody ^. collateralReturnTxBodyL of
         SJust retTxOut
-          | not (Val.isAdaOnly colbal) ->
+          | {- not -} (Val.isAdaOnly colbal) ->
               CollateralContainsNonADA (retTxOut ^. valueTxOutL)
         _ -> CollateralContainsNonADA colbal
   where

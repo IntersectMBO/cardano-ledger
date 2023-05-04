@@ -10,9 +10,10 @@
 
 module Test.Cardano.Ledger.Constrained.Solver where
 
+import Cardano.Ledger.Alonzo.Scripts.Data (hashData)
 import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Core (Era (..))
+import Cardano.Ledger.Core (Era (..), hashScript)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -20,26 +21,26 @@ import Data.Pulse (foldlM')
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Debug.Trace (trace)
-import Lens.Micro (Lens')
+import Lens.Micro (Lens', (^.))
 import qualified Lens.Micro as Lens
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Count (..),
-  FromList (..),
+  ScriptF (..),
   Sizeable (getSize),
-  Sums (..),
  )
-import Test.Cardano.Ledger.Constrained.Combinators (itemFromSet, suchThatErr)
+import Test.Cardano.Ledger.Constrained.Combinators (errorMess, genFromMap, itemFromSet, suchThatErr)
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
-import Test.Cardano.Ledger.Constrained.Rewrite (DependGraph (..), OrderInfo, compileGen)
+import Test.Cardano.Ledger.Constrained.Rewrite (DependGraph (..), OrderInfo, compileGen, cpeq)
 import Test.Cardano.Ledger.Constrained.Size (
   AddsSpec (..),
   OrdCond (..),
   Size (..),
   genFromIntRange,
+  genFromSize,
   vLeft,
   vRight,
   vRightNeg,
@@ -49,6 +50,7 @@ import Test.Cardano.Ledger.Constrained.Spec (
   ElemSpec (..),
   ListSpec (..),
   MapSpec (..),
+  PairSide (..),
   PairSpec (PairAny, PairSpec),
   RelSpec (..),
   RngSpec (..),
@@ -66,12 +68,15 @@ import Test.Cardano.Ledger.Constrained.Spec (
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
   genRep,
+  genSizedRep,
+  hasEq,
+  hasOrd,
   synopsis,
   testEql,
   (:~:) (Refl),
  )
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Ledger.Generic.Proof (Proof (..))
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck hiding (Fixed, getSize, total)
 
@@ -88,107 +93,17 @@ ifTrace traceOn message a = case traceOn of
 -- ==================================================
 -- Computing if a type has instances
 
--- ======= Ord =======
-
-hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
-hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
-  where
-    err t c = error ("hasOrd function 'help' evaluates its second arg at type " ++ show t ++ ", in " ++ c ++ " case.")
-    help :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
-    help CoinR t = pure $ With t
-    help r@(_ :-> _) _ = failT [show r ++ " does not have an Ord instance."]
-    help r@(MapR _ b) m = do
-      With _ <- help b (err b (show r))
-      pure (With m)
-    help (SetR _) s = pure $ With s
-    help r@(ListR a) l = do
-      With _ <- help a (err a (show r))
-      pure $ With l
-    help CredR c = pure $ With c
-    help PoolHashR p = pure $ With p
-    help GenHashR p = pure $ With p
-    help GenDelegHashR p = pure $ With p
-    help WitHashR p = pure $ With p
-    help PoolParamsR pp = pure $ With pp
-    help EpochR e = pure $ With e
-    help RationalR r = pure $ With r
-    help Word64R w = pure $ With w
-    help IntR i = pure $ With i
-    help NaturalR i = pure $ With i
-    help FloatR i = pure $ With i
-    help TxInR t = pure $ With t
-    help CharR s = pure $ With s
-    help (ValueR (Shelley _)) v = pure $ With v
-    help (ValueR (Allegra _)) v = pure $ With v
-    help UnitR v = pure $ With v
-    help (PairR a b) p = do
-      With _ <- help a undefined
-      With _ <- help b undefined
-      pure $ With p
-    help (ValueR _) _ = failT ["Value does not have Ord instance in post Allegra eras"]
-    help (TxOutR _) _ = failT ["TxOut does not have Ord instance"]
-    help (UTxOR _) _ = failT ["UTxO does not have Ord instance"]
-    help DeltaCoinR v = pure $ With v
-    help GenDelegPairR v = pure $ With v
-    help FutureGenDelegR v = pure $ With v
-    help (PPUPStateR _) _ = failT ["PPUPState does not have Ord instance"]
-    help PtrR v = pure $ With v
-    help SnapShotsR _ = failT ["SnapShot does not have Ord instance"]
-    help IPoolStakeR _ = failT ["IndividualPoolStake does not have Ord instance"]
-    help (PParamsR _) _ = failT ["PParams does not have Ord instance"]
-    help (PParamsUpdateR _) _ = failT ["PParamsUpdate does not have Ord instance"]
-    help RewardR v = pure $ With v
-    help r@(MaybeR a) l = do
-      With _ <- help a (err a (show r))
-      pure $ With l
-    help NewEpochStateR _ = failT ["NewEpochStateR does not have Ord instance"]
-    help (ProtVerR _) v = pure $ With v
-    help SlotNoR v = pure $ With v
-    help SizeR v = pure $ With v
-    help VCredR v = pure $ With v
-    help VHashR v = pure $ With v
-    help CommColdHashR v = pure $ With v
-    help CommHotHashR v = pure $ With v
-    help MultiAssetR _ = failT ["MultiAsset does not have Ord instance"]
-    help PolicyIDR v = pure $ With v
-    help (WitnessesFieldR _) _ = failT ["WitnessesField does not have Ord instance"]
-    help AssetNameR v = pure $ With v
-    help DCertR _ = failT ["DCert does not have Ord instance"]
-    help RewardAcntR v = pure $ With v
-    help ValidityIntervalR v = pure $ With v
-    help KeyPairR _ = failT ["KeyPair does not have Ord instance"]
-    help (GenR _) _ = failT ["Gen does not have Ord instance"]
-    help (ScriptR _) _ = failT ["Script does not have Ord instance"]
-    help ScriptHashR v = pure $ With v
-    help NetworkR v = pure $ With v
-    help TagR v = pure $ With v
-    help ExUnitsR _ = failT ["ExUnits does not have Ord instance"]
-    help RdmrPtrR v = pure $ With v
-    help (DataR _) _ = failT ["Data does not have Ord instance"]
-    help DataHashR v = pure $ With v
-    help AddrR v = pure $ With v
-    help PCredR v = pure $ With v
-
-hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
-hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
-  where
-    help :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
-    help (TxOutR _) v = pure $ With v
-    help x v = do
-      With y <- hasOrd x v
-      pure (With y)
->>>>>>> c13b8783a (Added Vars, TypeReps for Tx. file genTx.hs)
-
 -- ============ Adds ==============
 
 -- | Is there an Adds instance for 't'
 hasAdds :: Rep era t -> (s t) -> Typed (HasConstraint Adds (s t))
-hasAdds IntR x = pure $ With x
+hasAdds ExUnitsR x = pure $ With x
 hasAdds Word64R x = pure $ With x
+hasAdds IntR x = pure $ With x
+hasAdds NaturalR x = pure $ With x
+hasAdds RationalR x = pure $ With x
 hasAdds CoinR x = pure $ With x
 hasAdds DeltaCoinR x = pure $ With x
-hasAdds RationalR x = pure $ With x
-hasAdds NaturalR x = pure $ With x
 hasAdds r _ = failT [show r ++ " does not have Adds instance."]
 
 isAddsType :: forall era t. Rep era t -> Bool
@@ -232,16 +147,16 @@ simplifySet r1 term = do
   Refl <- sameRep (SetR r1) (termRep term)
   pure (With x)
 
-simplifyList :: Rep era rng -> Term era y -> Typed (HasConstraint Ord [rng])
+simplifyList :: Rep era rng -> Term era y -> Typed (HasConstraint Eq [rng])
 simplifyList r1 term = do
   x <- simplify term
   Refl <- sameRep (ListR r1) (termRep term)
-  hasOrd r1 x
+  hasEq r1 x
 
 -- | Is the Sum a variable (of a map). Only SumMap and Project store maps.
 isMapVar :: Name era -> Sum era c -> Bool
 isMapVar n1 (SumMap (Var v2)) = n1 == Name v2
-isMapVar n1 (Project _ (Var v2)) = n1 == Name v2
+isMapVar n1 (ProjMap _ _ (Var v2)) = n1 == Name v2
 isMapVar _ _ = False
 
 exactlyOne :: (a -> Bool) -> [a] -> Bool
@@ -356,7 +271,7 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
         mapSpec (SzLeast (Set.size n)) (relSuperset dom n) PairAny RngAny
   (SumsTo small expr cond xs) | exactlyOne (isMapVar (Name v1)) xs -> do
     t <- simplify expr
-    rngspec <- solveMapSummands small t [msg] cond v1 0 xs
+    rngspec <- solveMapSummands (direct small) t [msg] cond v1 0 xs
     mapSpec SzAny RelAny PairAny rngspec
   (Random (Var v2)) | Name v1 == Name v2 -> mapSpec SzAny RelAny PairAny RngAny
   (Sized (Size sz) (Var v2)) | Name v1 == Name v2 -> mapSpec sz RelAny PairAny RngAny
@@ -374,13 +289,33 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     With _ <- hasOrd rng rng
     With set <- simplifySet rng expr
     mapSpec SzAny RelAny PairAny (RngRel $ relDisjoint rng set)
+  (Member (Left (HashS expr)) (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom a
+    ScriptF _ x <- simplifyAtType (ScriptR reify) expr
+    let hash = hashScript @era x
+    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton hash)) PairAny RngAny
+  (Member (Right (HashS expr)) (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom a
+    ScriptF _ x <- simplifyAtType (ScriptR reify) expr
+    let hash = hashScript @era x
+    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton hash)) PairAny RngAny
+  (Member (Left (HashD expr)) (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom a
+    x <- simplifyAtType DataR expr
+    let hash = hashData @era x
+    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton hash)) PairAny RngAny
+  (Member (Right (HashD expr)) (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom a
+    x <- simplifyAtType DataR expr
+    let hash = hashData @era x
+    mapSpec (SzLeast 1) (relSuperset dom (Set.singleton hash)) PairAny RngAny
   (Member expr (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
     Refl <- sameRep dom a
-    x <- simplify expr
+    x <- simplify (direct expr)
     mapSpec (SzLeast 1) (relSuperset dom (Set.singleton x)) PairAny RngAny
   (Member expr (Rng (Var v2@(V _ (MapR _ b) _)))) | Name v1 == Name v2 -> do
     Refl <- sameRep rng b
-    x <- simplify expr
+    x <- simplify (direct expr)
     mapSpec (SzLeast 1) RelAny PairAny (RngRel (relSuperset rng (Set.singleton x)))
   (NotMember expr (Dom (Var v2@(V _ (MapR a _) _)))) | Name v1 == Name v2 -> do
     Refl <- sameRep dom a
@@ -390,7 +325,7 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     Refl <- sameRep rng b
     x <- simplify expr
     mapSpec SzAny RelAny PairAny (RngRel (relDisjoint rng (Set.singleton x)))
-  (MapMember exprK exprV (Var v2@(V _ (MapR dom2 rng2) _))) | Name v1 == Name v2 -> do
+  (MapMember exprK exprV (Left (Var v2@(V _ (MapR dom2 rng2) _)))) | Name v1 == Name v2 -> do
     Refl <- sameRep dom dom2
     Refl <- sameRep rng rng2
     k <- simplify exprK
@@ -398,8 +333,47 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
     mapSpec
       (SzLeast 1)
       (relSuperset dom (Set.singleton k))
-      (PairSpec dom rng (Map.singleton k v))
+      (PairSpec dom rng VarOnRight (Map.singleton k v))
       (RngRel (relSuperset rng (Set.singleton v)))
+  (MapMember exprK exprV (Right (Var v2@(V _ (MapR dom2 rng2) _)))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom dom2
+    Refl <- sameRep rng rng2
+    k <- simplify exprK
+    v <- simplify exprV
+    mapSpec
+      (SzLeast 1)
+      (relSuperset dom (Set.singleton k))
+      (PairSpec dom rng VarOnRight (Map.singleton k v))
+      (RngRel (relSuperset rng (Set.singleton v)))
+  (List (Var v2@(V _ r2 _)) xs) | Name v1 == Name v2 -> do
+    Refl <- sameRep r r2
+    With _ <- hasOrd rng rng
+    let PairR dl rl = tsRep r2
+    ys <- mapM (simplifyAtType (PairR dl rl)) xs
+    let (ds, rs) = unzip ys
+    mapSpec
+      (SzExact (length ys))
+      (relEqual dl (makeFromList ds))
+      (PairSpec dom rng VarOnRight (Map.fromList ys))
+      (RngRel (relEqual rl (makeFromList rs)))
+  (SubMap subMapExpr (Var v2@(V _ (MapR dom2 rng2) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom dom2
+    Refl <- sameRep rng rng2
+    m <- simplify subMapExpr
+    mapSpec
+      (SzLeast (Map.size m))
+      (relSuperset dom (Map.keysSet m))
+      (PairSpec dom rng VarOnRight m)
+      (RngRel (relSuperset rng (Set.fromList (Map.elems m))))
+  (SubMap (Var v2@(V _ (MapR dom2 rng2) _)) subMapExpr) | Name v1 == Name v2 -> do
+    Refl <- sameRep dom dom2
+    Refl <- sameRep rng rng2
+    m <- simplify subMapExpr
+    mapSpec
+      (SzMost (Map.size m))
+      (relSubset dom (Map.keysSet m))
+      (PairSpec dom rng VarOnLeft m)
+      (RngRel (relSubset rng (Set.fromList (Map.elems m))))
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
@@ -417,9 +391,9 @@ solveMapSummands ::
   Int ->
   [Sum era c] ->
   Typed (RngSpec era rng)
-solveMapSummands small lhsC _ cond (V _ (MapR _ r) _) c [Project crep (Var (V name (MapR _ r1) _))] = do
+solveMapSummands small lhsC _ cond (V _ (MapR _ r) _) c [ProjMap _crep l (Var (V name (MapR _ r1) _))] = do
   Refl <- sameRep r r1
-  pure (RngProj small crep (vRightSize (toI lhsC) cond c name))
+  pure (RngProj small r l (vRightSize (toI lhsC) cond c name))
 solveMapSummands small lhsC _ cond (V _ (MapR _ r) _) c [SumMap (Var (V name (MapR _ r1) _))] = do
   Refl <- sameRep r r1
   pure (RngSum small (vRightSize (toI lhsC) cond c name))
@@ -475,15 +449,47 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
     With set <- simplifySet r expr
     setSpec SzAny (relDisjoint r set)
   (Disjoint expr (Var v2)) -> solveSet v1 (Disjoint (Var v2) expr)
+  (Member (Left (HashS expr)) (Var v2@(V _ (SetR ScriptHashR) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep r ScriptHashR
+    ScriptF _ x <- simplifyAtType (ScriptR reify) expr
+    let hash = hashScript @era x
+    setSpec (SzLeast 1) (relSuperset r (Set.singleton hash))
+  (Member (Right (HashS expr)) (Var v2@(V _ (SetR ScriptHashR) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep r ScriptHashR
+    ScriptF _ x <- simplifyAtType (ScriptR reify) expr
+    let hash = hashScript @era x
+    setSpec (SzLeast 1) (relSuperset r (Set.singleton hash))
+  (Member (Left (HashD expr)) (Var v2@(V _ (SetR DataHashR) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep r DataHashR
+    x <- simplifyAtType DataR expr
+    let hash = hashData @era x
+    setSpec (SzLeast 1) (relSuperset r (Set.singleton hash))
+  (Member (Right (HashD expr)) (Var v2@(V _ (SetR DataHashR) _))) | Name v1 == Name v2 -> do
+    Refl <- sameRep r DataHashR
+    x <- simplifyAtType DataR expr
+    let hash = hashData @era x
+    setSpec (SzLeast 1) (relSuperset r (Set.singleton hash))
   (Member expr (Var v2@(V _ (SetR a) _))) | Name v1 == Name v2 -> do
     Refl <- sameRep a r
-    x <- simplify expr
+    x <- simplify (direct expr)
     setSpec (SzLeast 1) (relSuperset r (Set.singleton x))
   (NotMember expr (Var v2@(V _ (SetR a) _))) | Name v1 == Name v2 -> do
     Refl <- sameRep a r
     x <- simplify expr
     setSpec SzAny (relDisjoint r (Set.singleton x))
+  (List (Var v2@(V _ (SetR r2) _)) xs) | Name v1 == Name v2 -> do
+    Refl <- sameRep r r2
+    ys <- mapM simplify xs
+    pure $ SetSpec (SzMost (length ys)) (relEqual r (makeFromList ys))
   (Random (Var v2)) | Name v1 == Name v2 -> setSpec SzAny RelAny
+  (ProjS lensbt trep (Var v2@(V _ (SetR brep) _)) :=: Dom (Lit (MapR drep _) x))
+    | Name v1 == Name v2 -> do
+        Refl <- sameRep r brep
+        setSpec (SzExact (Map.size x)) (RelLens lensbt r trep (relEqual drep (Map.keysSet x)))
+  (ProjS lensbt trep (Var v2@(V _ (SetR brep) _)) `Subset` Dom (Lit (MapR drep _) x))
+    | Name v1 == Name v2 -> do
+        Refl <- sameRep r brep
+        setSpec (SzMost (Map.size x)) (RelLens lensbt r trep (relSubset drep (Map.keysSet x)))
   cond -> failT ["Can't solveSet " ++ show cond ++ " for variable " ++ show v1]
 
 solveSets :: V era (Set a) -> [Pred era] -> Typed (SetSpec era a)
@@ -498,7 +504,7 @@ solveSets v@(V nm (SetR _) _) cs =
 -- ========================================================
 -- Solving for variables with an Adds instance
 
-solveSum :: Adds t => V era t -> Pred era -> Typed (AddsSpec t)
+solveSum :: forall era t. Adds t => V era t -> Pred era -> Typed (AddsSpec t)
 solveSum v1@(V nam r _) predx =
   case predx of
     (Sized expr (Var v2@(V nm _ _))) | Name v1 == Name v2 -> do
@@ -556,6 +562,10 @@ solveSum v1@(V nam r _) predx =
         CoinR -> pure $ vLeft nam cond rhsTotal
         DeltaCoinR -> pure $ vLeft nam cond rhsTotal
         other -> failT [show predx, show other ++ " should be either Coin or DeltaCoin"]
+    (Var v2@(V nm r2 _) :<-: tar) | Name v1 == Name v2 -> do
+      Refl <- sameRep r r2
+      x <- simplifyTarget @era @t tar
+      pure (AddsSpecSize nm (SzExact (toI x)))
     other -> failT ["Can't solveSum " ++ show (Name v1) ++ " = " ++ show other]
 
 solveSums :: Adds t => V era t -> [Pred era] -> Typed (AddsSpec t)
@@ -573,10 +583,17 @@ summandAsInt :: Adds c => Sum era c -> Typed Int
 summandAsInt (One (Lit _ x)) = pure (toI x)
 summandAsInt (One (Delta (Lit CoinR (Coin n)))) = pure (toI (DeltaCoin n))
 summandAsInt (One (Negate (Lit DeltaCoinR (DeltaCoin n)))) = pure (toI ((DeltaCoin (-n))))
+summandAsInt (ProjOne l CoinR (Lit _ x)) = pure (toI (x ^. l))
 summandAsInt (SumMap (Lit _ m)) = pure (toI (Map.foldl' add zero m))
 summandAsInt (SumList (Lit _ m)) = pure (toI (List.foldl' add zero m))
-summandAsInt (Project _ (Lit _ m)) = pure (toI (List.foldl' (\ans x -> add ans (getSum x)) zero m))
+summandAsInt (ProjMap _ l (Lit _ m)) = pure (toI (List.foldl' (\ans x -> add ans (x ^. l)) zero m))
 summandAsInt x = failT ["Can't compute summandAsInt: " ++ show x ++ ", to an Int."]
+
+genSum :: Adds x => Sum era x -> Rep era x -> x -> Subst era -> Gen (Subst era)
+genSum (One (Var v)) rep x sub = pure $ extend v (Lit rep x) sub
+genSum (One (Delta (Var v))) DeltaCoinR d sub = pure $ extend v (Lit CoinR (fromI [] (toI d))) sub
+genSum (One (Negate (Var v))) DeltaCoinR (DeltaCoin n) sub = pure $ extend v (Lit DeltaCoinR (DeltaCoin (-n))) sub
+genSum other rep x _ = errorMess ("Can't genSum " ++ show other) [show rep, show x]
 
 summandsAsInt :: Adds c => [Sum era c] -> Typed Int
 summandsAsInt [] = pure 0
@@ -600,6 +617,10 @@ unique2 v1 (c, b, ns) (One (Delta (Var v2@(V _ CoinR _)))) =
 unique2 v1 (c, _, ns) (One (Negate (Var v2@(V _nam DeltaCoinR _)))) =
   if Name v1 == Name v2
     then pure (c, True, Name v2 : ns)
+    else failT ["Unexpected Name in 'unique' " ++ show v2]
+unique2 v1 (c, b, ns) (ProjOne _ _ (Var v2)) =
+  if Name v1 == Name v2
+    then pure (c, b, Name v2 : ns)
     else failT ["Unexpected Name in 'unique' " ++ show v2]
 unique2 _ (c1, b, ns) sumexpr = do c2 <- summandAsInt sumexpr; pure (c1 + c2, b, ns)
 
@@ -627,8 +648,9 @@ solveList v1@(V _ (ListR r) _) predicate = case predicate of
     pure $ ListSpec (SzExact (length xs)) (ElemEqual r xs)
   (expr :=: v2@(Var _)) -> solveList v1 (v2 :=: expr)
   (Random (Var v2)) | Name v1 == Name v2 -> pure $ ListSpec SzAny ElemAny
-  (List (Var v2@(V _ (ListR r2) _)) xs) | Name v1 == Name v2 -> do
-    Refl <- sameRep r r2
+  (List (Var v2@(V _ r2 _)) xs) | Name v1 == Name v2 -> do
+    let r3 = tsRep r2
+    Refl <- sameRep r r3
     ys <- mapM simplify xs
     pure $ ListSpec (SzExact (length ys)) (ElemEqual r ys)
   cond -> failT ["Can't solveList " ++ show cond ++ " for variable " ++ show v1]
@@ -682,26 +704,34 @@ genCount v@(V _ r _) cs = failT zs
 
 -- | Used in solving Projections
 data Update t where
-  Update :: Eq s => s -> Lens' t s -> Update t
+  Update :: s -> Lens' t s -> Update t
 
 update :: t -> [Update t] -> t
 update t [] = t
 update t (Update s l : more) = update (Lens.set l s t) more
 
 anyToUpdate :: Rep era t1 -> (AnyF era t2) -> Typed (Update t1)
-anyToUpdate rep1 (AnyF (FConst _ s (Yes rep2 l))) = do
+anyToUpdate rep1 (AnyF (FConst _ s rep2 l)) = do
   Refl <- sameRep rep1 rep2
   pure (Update s l)
-anyToUpdate _ x = failT ["component is not WConst: " ++ show x]
+anyToUpdate _ x = failT ["component is not FConst: " ++ show x]
 
 intToNatural :: Int -> Natural
 intToNatural n = fromIntegral n
+
+isIf :: Pred era -> Bool
+isIf (If _ _ _) = True
+isIf _ = False
 
 -- ==================================================================================
 -- Given a variable ('v1' :: 't') and [Pred] that constrain it. Produce a (Gen t)
 
 -- | Dispatch on the type of the variable 'v1' being solved.
 dispatch :: forall t era. Era era => V era t -> [Pred era] -> Typed (Gen t)
+dispatch v1 preds | Just (If tar x y) <- List.find isIf preds = do
+  b <- simplifyTarget tar
+  let others = filter (not . isIf) preds
+  if b then dispatch v1 (x : others) else dispatch v1 (y : others)
 dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show preds) $ case preds of
   [Var v2 :=: Lit r2 t] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
@@ -711,18 +741,21 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     pure (pure t)
   [Sized (Var v2@(V _ r2 _)) term] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
-    -- Refl <- sameRep r2 SizeR
     x <- simplify term
     pure $ pure (SzExact (getSize x))
-  [cc@(Component (Var v2) cs)] | Name v1 == Name v2 -> explain ("Solving " ++ show cc) $ do
+  [Sized sizeterm (Var v2@(V _ r2 _))] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    sz <- simplify sizeterm
+    pure $ do n <- genFromSize sz; genSizedRep n r2
+  [cc@(Component (Right (Var v2)) cs)] | Name v1 == Name v2 -> explain ("Solving " ++ show cc) $ do
     pairs <- mapM (anyToUpdate r1) cs
     pure $ do t <- genRep r1; pure (update t pairs)
-  [Component (Var v2) cs, Random (Var v3)] | Name v1 == Name v2 && Name v1 == Name v3 -> do
+  [Component (Right (Var v2)) cs, Random (Var v3)] | Name v1 == Name v2 && Name v1 == Name v3 -> do
     pairs <- mapM (anyToUpdate r1) cs
     pure $ do
       t <- genRep r1
       pure (update t pairs)
-  [Random (Var v3), Component (Var v2) cs] | Name v1 == Name v2 && Name v1 == Name v3 -> do
+  [Random (Var v3), Component (Right (Var v2)) cs] | Name v1 == Name v2 && Name v1 == Name v3 -> do
     pairs <- mapM (anyToUpdate r1) cs
     pure $ do
       t <- genRep r1
@@ -741,11 +774,48 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     Refl <- sameRep r1 r2
     x <- simplifyTarget @era @t target
     pure (pure x)
-  [Member (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
+  [pred1@(Member (Left (HashS (Var v2@(V _ (ScriptR p) _)))) (Dom expr))] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 (ScriptR p)
+    case termRep expr of
+      mt@(MapR ScriptHashR (ScriptR _)) -> do
+        m <- simplifyAtType mt expr
+        pure (snd <$> genFromMap ["dispatch " ++ show v1 ++ " " ++ show preds] m)
+      other -> failT ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Script'.", show other]
+  [pred1@(Member (Right (HashS (Var v2@(V _ (ScriptR p) _)))) (Dom expr))] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 (ScriptR p)
+    case termRep expr of
+      mt@(MapR ScriptHashR (ScriptR _)) -> do
+        m <- simplifyAtType mt expr
+        pure (snd <$> genFromMap ["dispatch " ++ show v1 ++ " " ++ show preds] m)
+      other -> failT ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Script'.", show other]
+  [pred1@(Member (Left (HashD (Var v2@(V _ DataR _)))) (Dom expr))] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 DataR
+    case termRep expr of
+      mt@(MapR DataHashR DataR) -> do
+        m <- simplifyAtType mt expr
+        pure (snd <$> genFromMap ["dispatch " ++ show v1 ++ " " ++ show preds] m)
+      other -> failT ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Data'.", show other]
+  [pred1@(Member (Right (HashD (Var v2@(V _ DataR _)))) (Dom expr))] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 DataR
+    case termRep expr of
+      mt@(MapR DataHashR DataR) -> do
+        m <- simplifyAtType mt expr
+        pure (snd <$> genFromMap ["dispatch " ++ show v1 ++ " " ++ show preds] m)
+      other -> failT ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Data'.", show other]
+  [Member (Left (Var v2@(V _ r2 _))) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     set <- simplify expr
     let msgs = ("Solving for variable " ++ nam) : map show preds
-    pure (fst <$> itemFromSet msgs set)
+    if Set.null set
+      then failT (("The set is empty " ++ synopsis (termRep expr) set ++ ", can't find an element.") : msgs)
+      else pure (fst <$> itemFromSet msgs set)
+  [Member (Right (Var v2@(V _ r2 _))) expr] | Name v1 == Name v2 -> do
+    Refl <- sameRep r1 r2
+    set <- simplify expr
+    let msgs = ("Solving for variable " ++ nam) : map show preds
+    if Set.null set
+      then failT (("The set is empty " ++ synopsis (termRep expr) set ++ ", can't find an element.") : msgs)
+      else pure (fst <$> itemFromSet msgs set)
   [NotMember (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     set <- simplify expr
@@ -753,7 +823,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     pure $ suchThatErr msgs (genRep r2) (`Set.notMember` set)
   [MapMember (Var v2@(V _ r2 _)) exprVal exprMap] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
-    m <- simplify exprMap
+    m <- simplify (direct exprMap)
     v <- simplify exprVal
     let m2 = Map.filter (== v) m
     let msgs = ("Solving for variable " ++ nam) : map show preds
@@ -762,7 +832,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
       else pure (fst <$> itemFromSet msgs (Map.keysSet m2))
   [MapMember exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
-    m <- simplify exprMap
+    m <- simplify (direct exprMap)
     k <- simplify exprKey
     let msgs = ("Solving for variable " ++ nam) : map show preds
     case Map.lookup k m of
@@ -800,15 +870,16 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
                 ++ show r1
                 ++ " for conditions "
                 ++ show cs
+                ++ show (List.nubBy cpeq cs)
             ]
 
 genOrFail ::
   Era era =>
   Bool ->
   Either [String] (Subst era) ->
-  (Name era, [Pred era]) ->
+  ([Name era], [Pred era]) ->
   Gen (Either [String] (Subst era))
-genOrFail loud (Right subst) (Name v@(V _ rep _), conds) =
+genOrFail loud (Right subst) ([Name v@(V _ rep _)], conds) =
   case runTyped $
     ifTrace
       loud
@@ -819,43 +890,52 @@ genOrFail loud (Right subst) (Name v@(V _ rep _), conds) =
       ifTrace
         loud
         ("   " ++ synopsis rep t)
-        (pure (Right (SubItem v (Lit rep t) : subst)))
+        (pure (Right (extend v (Lit rep t) subst)))
     Left msgs -> pure (Left msgs)
+genOrFail _ (Right _) (names, _) = error ("Multiple names not handed yet " ++ show names)
 genOrFail _ (Left msgs) _ = pure (Left msgs)
 
 genOrFailList ::
   Era era =>
   Bool ->
   Either [String] (Subst era) ->
-  [(Name era, [Pred era])] ->
+  [([Name era], [Pred era])] ->
   Gen (Either [String] (Subst era))
 genOrFailList loud = foldlM' (genOrFail loud)
 
 genDependGraph :: Bool -> Proof era -> DependGraph era -> Gen (Either [String] (Subst era))
-genDependGraph loud (Shelley _) (DependGraph pairs) = genOrFailList loud (Right []) pairs
-genDependGraph loud (Allegra _) (DependGraph pairs) = genOrFailList loud (Right []) pairs
-genDependGraph loud (Mary _) (DependGraph pairs) = genOrFailList loud (Right []) pairs
-genDependGraph loud (Alonzo _) (DependGraph pairs) = genOrFailList loud (Right []) pairs
-genDependGraph loud (Babbage _) (DependGraph pairs) = genOrFailList loud (Right []) pairs
-genDependGraph loud (Conway _) (DependGraph pairs) = genOrFailList loud (Right []) pairs
+genDependGraph loud (Shelley _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud (Allegra _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud (Mary _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud (Alonzo _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud (Babbage _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud (Conway _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
 
 -- | Solve for one variable, and add its solution to the substitution
-solveOneVar :: Era era => Subst era -> (Name era, [Pred era]) -> Gen (Subst era)
-solveOneVar subst (Name (v@(V _ r _)), ps) = do
-  genOneT <- monadTyped (dispatch v (map (substPred subst) ps)) -- Sub solution for previously solved variables
-  t <- genOneT
-  pure (SubItem v (Lit r t) : subst)
+solveOneVar :: Era era => Subst era -> ([Name era], [Pred era]) -> Gen (Subst era)
+solveOneVar subst ([Name (v@(V _ r _))], ps) = do
+  !genOneT <- monadTyped (dispatch v (map (substPred subst) ps)) -- Sub solution for previously solved variables
+  !t <- genOneT
+  pure (extend v (Lit r t) subst)
+solveOneVar subst0 (names, preds) = case (names, map (substPred subst0) preds) of
+  (ns, [SumSplit small tot EQL suml]) | length ns == length suml -> do
+    !n <- monadTyped $ simplify tot
+    !zs <- partition small ["Partition, while solving multiple SumsTo vars.", show ns, show preds] (length ns) n
+    let rep = termRep tot
+    foldlM' (\ !sub (!sumx, !x) -> genSum (substSum sub sumx) rep x sub) subst0 (zip suml zs)
+  (ns, ps) -> errorMess "Not yet. multiple vars in solveOneVar" [show ns, show ps]
 
 toolChainSub :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Subst era)
 toolChainSub _proof order cs subst0 = do
-  (_count, DependGraph pairs) <- compileGen order (map (substPred subst0) cs)
-  subst <- foldlM' solveOneVar subst0 pairs
-  let isTempV (SubItem (V k _ _) _) = not (elem '.' k)
-  pure $ filter isTempV subst
+  (_count, DependGraph pairs) <- compileGen order (map (substPredWithVarTest subst0) cs)
+  Subst subst <- foldlM' solveOneVar subst0 pairs
+  let isTempV k = not (elem '.' k)
+  pure $ (Subst (Map.filterWithKey (\k _ -> isTempV k) subst))
 
 toolChain :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Env era)
 toolChain _proof order cs subst0 = do
-  subst <- toolChainSub _proof order cs subst0
+  (_count, DependGraph pairs) <- compileGen order (map (substPredWithVarTest subst0) cs)
+  subst <- foldlM' solveOneVar subst0 pairs
   monadTyped $ substToEnv subst emptyEnv
 
 -- InitUniv p >>= (toolChainSub p _ _ _)  >>= (toolChainSub p _ _ _) >>= (toolChain p _ _)

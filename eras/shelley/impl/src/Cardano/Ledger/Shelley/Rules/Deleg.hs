@@ -84,6 +84,7 @@ import Data.Maybe (isJust)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
+import Debug.Trace
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -342,7 +343,17 @@ delegationTransition = do
             if HardForks.allowMIRTransfer pv
               then do
                 let cm = Map.unionWith (<>) credCoinMap' instantaneousRewards
-                all (>= mempty) cm ?! MIRProducesNegativeUpdate
+                all (>= mempty) cm
+                  ?! ( trace
+                        ( "\ncredCoinMap= "
+                            ++ unlines (map show (Map.toList credCoinMap))
+                            ++ "\ninstantaneousRewards= "
+                            ++ unlines (map show (Map.toList instantaneousRewards))
+                            ++ "\ncm ="
+                            ++ unlines (map show (Map.toList cm))
+                        )
+                        $ MIRProducesNegativeUpdate
+                     )
                 pure (cm, potAmount `addDeltaCoin` delta)
               else do
                 all (>= mempty) credCoinMap ?! MIRNegativesNotCurrentlyAllowed
@@ -409,7 +420,15 @@ updateReservesAndTreasury targetPot combinedMap available ds = do
   let requiredForRewards = fold combinedMap
   requiredForRewards
     <= available
-    ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
+    ?! trace
+      ( "INSUFFINSTAN "
+          ++ unlines (map show (Map.toList combinedMap))
+          ++ "\nRequired ="
+          ++ show requiredForRewards
+          ++ "\nAvail="
+          ++ show available
+      )
+      (InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available)
   pure $
     case targetPot of
       ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}

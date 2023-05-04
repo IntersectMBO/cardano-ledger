@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Constrained.Preds.PParams (
   pParamsPreds,
@@ -8,10 +9,19 @@ module Test.Cardano.Ledger.Constrained.Preds.PParams (
 ) where
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as Script (Prices (..))
+import Cardano.Ledger.BaseTypes (
+  NonNegativeInterval,
+  boundRational,
+ )
 import Cardano.Ledger.Coin (Coin (..))
+import GHC.Num (Natural)
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Constrained.Ast
+import Test.Cardano.Ledger.Constrained.Env (Access (..), V (..))
 import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
+import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields
@@ -19,13 +29,6 @@ import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Tasty.QuickCheck
-
--- import Test.Cardano.Ledger.Constrained.Classes(PParamsF(..))
-
-import GHC.Num (Natural)
-import Lens.Micro ((^.))
-import Test.Cardano.Ledger.Constrained.Env (Access (..), V (..))
-import Test.Cardano.Ledger.Constrained.Solver
 
 extract :: Term era t -> Term era s -> Pred era
 extract term@(Var (V _ _ (Yes r1 lens))) record =
@@ -36,31 +39,37 @@ extract term _ = error ("Non Var term " ++ show term ++ " in extract2")
 
 -- =====================================================
 
+nonNegativeInterval :: Rational -> NonNegativeInterval
+nonNegativeInterval r = case (boundRational @NonNegativeInterval r) of
+  Just nn -> nn
+  Nothing -> error ("Can't make NonNegativeInterval from: " ++ show r)
+
 genPParams :: Reflect era => Proof era -> Natural -> Natural -> Natural -> Gen (PParamsF era)
 genPParams proof tx bb bh = do
-  maxTxExUnits <- arbitrary :: Gen ExUnits
-  maxCollateralInputs <- elements [2 .. 5]
-  collateralPercentage <- fromIntegral <$> chooseInt (1, 10000)
-  minfeeA <- Coin <$> choose (0, 1000)
-  minfeeB <- Coin <$> choose (0, 10000)
+  maxTxExUnits2 <- ExUnits <$> (fromIntegral <$> choose (100 :: Int, 10000)) <*> (fromIntegral <$> choose (100 :: Int, 10000))
+  maxCollateralInputs <- elements [3 .. 5]
+  collateralPercentage2 <- fromIntegral <$> chooseInt (1, 200)
+  minfeeA <- Coin <$> choose (0, 100)
+  minfeeB <- Coin <$> choose (0, 10)
   pure
     ( PParamsF proof $
         newPParams
           proof
           [ MinfeeA minfeeA
           , MinfeeB minfeeB
+          , Prices (Script.Prices (nonNegativeInterval 1.0) (nonNegativeInterval 1.0))
           , defaultCostModels proof
           , MaxValSize 1000
           , MaxTxSize tx
           , MaxBBSize bb
           , MaxBHSize bh
-          , MaxTxExUnits maxTxExUnits
+          , MaxTxExUnits maxTxExUnits2
           , MaxCollateralInputs maxCollateralInputs
-          , CollateralPercentage collateralPercentage
+          , CollateralPercentage collateralPercentage2
           , ProtocolVersion $ protocolVersion proof
           , PoolDeposit $ Coin 5
           , KeyDeposit $ Coin 2
-          , EMax 5
+          , EMax 100
           ]
     )
 
@@ -76,11 +85,25 @@ pParamsPreds p =
   , extract (protVer p) (pparams p)
   , extract (minFeeA p) (pparams p)
   , extract (minFeeB p) (pparams p)
+  , extract (keyDepAmt p) (pparams p)
+  , extract (poolDepAmt p) (pparams p)
+  , extract (maxEpoch p) (pparams p)
   , Sized (AtLeast 100) (maxBHSize p)
-  , Sized (AtLeast 100) (maxTxSize p)
-  , SumsTo 1 (maxBBSize p) LTE [One (maxBHSize p), One (maxTxSize p)]
+  , Sized (AtLeast 20000) (maxTxSize p)
+  , SumsTo (Right 1) (maxBBSize p) LTE [One (maxBHSize p), One (maxTxSize p)]
   , (protVer p) `CanFollow` (prevProtVer p)
   ]
+    ++ ( case whichPParams p of
+          PParamsShelleyToMary -> []
+          PParamsAlonzoToAlonzo ->
+            [ extract (maxTxExUnits p) (pparams p)
+            , extract (collateralPercentage p) (pparams p)
+            ]
+          PParamsBabbageToConway ->
+            [ extract (maxTxExUnits p) (pparams p)
+            , extract (collateralPercentage p) (pparams p)
+            ]
+       )
 
 pParamsStage ::
   Reflect era =>
@@ -92,6 +115,6 @@ pParamsStage proof = toolChainSub proof standardOrderInfo (pParamsPreds proof)
 mainPParams :: IO ()
 mainPParams = do
   let proof = Babbage Standard
-  subst <- generate (pParamsStage proof [])
+  subst <- generate (pParamsStage proof emptySubst)
   putStrLn "\n"
   putStrLn (show subst)
