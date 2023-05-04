@@ -46,9 +46,22 @@ module Test.Cardano.Ledger.Generic.Proof (
   AlonzoEra,
   BabbageEra,
   ConwayEra,
+  StandardCrypto,
   C_Crypto,
   specialize,
   unReflect,
+  ValueWit (..),
+  TxOutWit (..),
+  TxCertWit (..),
+  PParamsWit (..),
+  UTxOWit (..),
+  ScriptWit (..),
+  whichValue,
+  whichTxOut,
+  whichTxCert,
+  whichPParams,
+  whichUTxO,
+  whichScript,
 ) where
 
 import Cardano.Crypto.DSIGN as DSIGN
@@ -57,17 +70,48 @@ import Cardano.Crypto.KES.Class (ContextKES)
 import qualified Cardano.Crypto.KES.Class as KES (Signable)
 import Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Core (AlonzoEraPParams, AlonzoEraTxBody)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..), AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Core (BabbageEraPParams)
+import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.BaseTypes as Base (Seed)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Core
+import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..))
+import Cardano.Ledger.Core (
+  Era (EraCrypto),
+  EraPParams,
+  EraRule,
+  EraScript,
+  EraTx,
+  EraTxAuxData,
+  EraTxOut,
+  ProtVerAtMost,
+  Script,
+  TxCert,
+  TxOut,
+  TxWits,
+  Value,
+ )
 import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH, KES, StandardCrypto, VRF)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Core (EraGovernance, EraIndependentTxBody, ShelleyEraTxBody, ShelleyEraTxCert)
+import Cardano.Ledger.Shelley.Scripts (MultiSig)
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
+import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsNeeded)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHBody)
 import Cardano.Protocol.TPraos.OCert
@@ -148,6 +192,10 @@ instance ReflectC C_Crypto where
 class
   ( EraGovernance era
   , EraTx era
+  , EraUTxO era
+  , EraTxAuxData era
+  , ShelleyEraTxCert era
+  , ShelleyEraTxBody era
   , ReflectC (EraCrypto era)
   ) =>
   Reflect era
@@ -363,3 +411,96 @@ instance Shaped Proof any where
   shape (Alonzo c) = Nary 3 [shape c]
   shape (Babbage c) = Nary 4 [shape c]
   shape (Conway c) = Nary 5 [shape c]
+
+-- ======================================================
+-- GADT's that witness the special properties that hold
+-- for some type families
+
+data TxOutWit era where
+  TxOutShelleyToMary :: (TxOut era ~ ShelleyTxOut era, EraTxOut era, ProtVerAtMost era 8) => TxOutWit era
+  TxOutAlonzoToAlonzo :: (TxOut era ~ AlonzoTxOut era, AlonzoEraTxOut era, ProtVerAtMost era 8) => TxOutWit era
+  TxOutBabbageToConway :: (TxOut era ~ BabbageTxOut era, BabbageEraTxOut era) => TxOutWit era
+
+whichTxOut :: Proof era -> TxOutWit era
+whichTxOut (Shelley _) = TxOutShelleyToMary
+whichTxOut (Allegra _) = TxOutShelleyToMary
+whichTxOut (Mary _) = TxOutShelleyToMary
+whichTxOut (Alonzo _) = TxOutAlonzoToAlonzo
+whichTxOut (Babbage _) = TxOutBabbageToConway
+whichTxOut (Conway _) = TxOutBabbageToConway
+
+data TxCertWit era where
+  TxCertShelleyToBabbage :: (TxCert era ~ ShelleyTxCert era, ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCertWit era
+  TxCertConwayToConway :: (TxCert era ~ ConwayTxCert era, ConwayEraTxCert era) => TxCertWit era
+
+whichTxCert :: Proof era -> TxCertWit era
+whichTxCert (Shelley _) = TxCertShelleyToBabbage
+whichTxCert (Allegra _) = TxCertShelleyToBabbage
+whichTxCert (Mary _) = TxCertShelleyToBabbage
+whichTxCert (Alonzo _) = TxCertShelleyToBabbage
+whichTxCert (Babbage _) = TxCertShelleyToBabbage
+whichTxCert (Conway _) = TxCertConwayToConway
+
+data ValueWit era where
+  ValueShelleyToAllegra :: Value era ~ Coin => ValueWit era
+  ValueMaryToConway :: Value era ~ MaryValue (EraCrypto era) => ValueWit era
+
+whichValue :: Proof era -> ValueWit era
+whichValue (Shelley _) = ValueShelleyToAllegra
+whichValue (Allegra _) = ValueShelleyToAllegra
+whichValue (Mary _) = ValueMaryToConway
+whichValue (Alonzo _) = ValueMaryToConway
+whichValue (Babbage _) = ValueMaryToConway
+whichValue (Conway _) = ValueMaryToConway
+
+data PParamsWit era where
+  PParamsShelleyToMary :: EraPParams era => PParamsWit era
+  PParamsAlonzoToAlonzo :: AlonzoEraPParams era => PParamsWit era
+  PParamsBabbageToConway :: BabbageEraPParams era => PParamsWit era
+
+whichPParams :: Proof era -> PParamsWit era
+whichPParams (Shelley _) = PParamsShelleyToMary
+whichPParams (Allegra _) = PParamsShelleyToMary
+whichPParams (Mary _) = PParamsShelleyToMary
+whichPParams (Alonzo _) = PParamsAlonzoToAlonzo
+whichPParams (Babbage _) = PParamsBabbageToConway
+whichPParams (Conway _) = PParamsBabbageToConway
+
+data UTxOWit era where
+  UTxOShelleyToMary ::
+    ( EraUTxO era
+    , ScriptsNeeded era ~ ShelleyScriptsNeeded era
+    , TxWits era ~ ShelleyTxWits era
+    ) =>
+    UTxOWit era
+  UTxOAlonzoToConway ::
+    ( EraUTxO era
+    , AlonzoEraTxBody era
+    , AlonzoEraPParams era
+    , AlonzoEraTxOut era
+    , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+    , Script era ~ AlonzoScript era
+    , TxWits era ~ AlonzoTxWits era
+    ) =>
+    UTxOWit era
+
+whichUTxO :: Proof era -> UTxOWit era
+whichUTxO (Shelley _) = UTxOShelleyToMary
+whichUTxO (Allegra _) = UTxOShelleyToMary
+whichUTxO (Mary _) = UTxOShelleyToMary
+whichUTxO (Alonzo _) = UTxOAlonzoToConway
+whichUTxO (Babbage _) = UTxOAlonzoToConway
+whichUTxO (Conway _) = UTxOAlonzoToConway
+
+data ScriptWit era where
+  ScriptShelleyToShelley :: (Script era ~ MultiSig era, EraScript era) => ScriptWit era
+  ScriptAllegraToMary :: (Script era ~ Timelock era, EraScript era) => ScriptWit era
+  ScriptAlonzoToConway :: (Script era ~ AlonzoScript era, EraScript era) => ScriptWit era
+
+whichScript :: Proof era -> ScriptWit era
+whichScript (Shelley _) = ScriptShelleyToShelley
+whichScript (Allegra _) = ScriptAllegraToMary
+whichScript (Mary _) = ScriptAllegraToMary
+whichScript (Alonzo _) = ScriptAlonzoToConway
+whichScript (Babbage _) = ScriptAlonzoToConway
+whichScript (Conway _) = ScriptAlonzoToConway

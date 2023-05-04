@@ -35,11 +35,14 @@ import Lens.Micro hiding (set)
 import Test.Cardano.Ledger.Constrained.Ast (Pred (..), Sum (..), Term (..), runPred)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
-  Sums (..),
+  AddsSpec (..),
+  OrdCond (..),
   genFromAddsSpec,
   genFromNonNegAddsSpec,
-  projAdds,
+  lensAdds,
   sumAdds,
+  varOnLeft,
+  varOnRight,
  )
 import Test.Cardano.Ledger.Constrained.Combinators (
   addUntilSize,
@@ -47,6 +50,7 @@ import Test.Cardano.Ledger.Constrained.Combinators (
   fixSet,
   mapFromSubset,
   setSized,
+  subMapFromMapWithSize,
   subsetFromSet,
   suchThatErr,
   superSetFromSet,
@@ -55,8 +59,6 @@ import Test.Cardano.Ledger.Constrained.Combinators (
 import Test.Cardano.Ledger.Constrained.Env (Access (No), V (..), emptyEnv, storeVar)
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Size (
-  AddsSpec (..),
-  OrdCond (..),
   Size (..),
   atLeastDelta,
   atMostAny,
@@ -66,21 +68,21 @@ import Test.Cardano.Ledger.Constrained.Size (
   runSize,
   seps,
   sepsP,
-  vLeft,
-  vRight,
  )
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
+  format,
   genRep,
   synopsis,
-  testEql,
-  (:~:) (Refl),
  )
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Standard)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (total)
+
+data SomeLens era t where
+  SomeLens :: Adds c => (Lens' t c) -> SomeLens era t
 
 -- ===========================================================
 {- TODO, possible extensions and improvements, so we don't forget
@@ -362,7 +364,7 @@ sizeForRel (RelOper _ must (Just may) cant) = SzRng (Set.size must) (Set.size (S
 sizeForRel (RelLens _ _ _ spec) = sizeForRel spec
 
 maybeSynopsis :: Rep e t -> Maybe t -> String
-maybeSynopsis r (Just x) = synopsis r x
+maybeSynopsis r (Just x) = format r x
 maybeSynopsis _ _ = ""
 
 synSet :: Ord t => Rep era t -> Set t -> String
@@ -382,7 +384,7 @@ relOper r must may cant =
               ( univSubset must may
               ,
                 [ "'must' "
-                    ++ synopsis (SetR r) must
+                    ++ format (SetR r) must
                     ++ " Is not a subset of: 'may' "
                     ++ maybeSynopsis (SetR r) may
                 ]
@@ -677,11 +679,11 @@ data RngSpec era rng where
     rng -> -- the smallest element in the partition (usually 0 or 1)
     Size -> -- the sum of all the elements must fall in the range denoted by the Size
     RngSpec era rng
-  -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
   RngProj ::
-    Sums x c =>
+    Adds c =>
     c -> -- the smallest element in the partition (usually 0 or 1)
-    Rep era c ->
+    Rep era x ->
+    Lens' x c ->
     Size -> -- the sum of all the elements must fall in the range denoted by the Size
     RngSpec era x
   -- | The range has exactly these elements
@@ -710,7 +712,7 @@ instance LiftT (RngSpec era a) where
 
 showRngSpec :: RngSpec era t -> String
 showRngSpec (RngSum small sz) = sepsP ["RngSum", show small, show sz]
-showRngSpec (RngProj small r sz) = sepsP ["RngProj", show small, show r, show sz]
+showRngSpec (RngProj small xrep _l sz) = sepsP ["RngProj", show small, show xrep, show sz]
 showRngSpec (RngElem r cs) = sepsP ["RngElem", show r, synopsis (ListR r) cs]
 showRngSpec (RngRel x) = sepsP ["RngRel", show x]
 showRngSpec RngAny = "RngAny"
@@ -732,13 +734,7 @@ mergeRngSpec a b@(RngElem _ xs)
 mergeRngSpec a@(RngSum small1 sz1) b@(RngSum small2 sz2) =
   case sz1 <> sz2 of
     SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
-    sz3 -> RngSum (min small1 small2) sz3
-mergeRngSpec a@(RngProj sm1 r1 s1) b@(RngProj sm2 r2 s2) =
-  case testEql r1 r2 of
-    Just Refl -> case s1 <> s2 of
-      SzNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
-      s3 -> RngProj (min sm1 sm2) r1 s3
-    Nothing -> RngNever [show a, show b, "The RngSpec's are inconsistent.", show r1 ++ " =/= " ++ show r2]
+    sz3 -> RngSum (smallerOf small1 small2) sz3
 mergeRngSpec a@(RngRel r1) b@(RngRel r2) =
   case r1 <> r2 of
     RelNever xs -> RngNever (["The RngSpec's are inconsistent.\n  " ++ show a ++ "\n  " ++ show b] ++ xs)
@@ -751,11 +747,11 @@ mergeRngSpec a b = RngNever ["The RngSpec's are inconsistent.\n  " ++ show a ++ 
 sizeForRng :: forall dom era. RngSpec era dom -> Size
 sizeForRng (RngRel x) = sizeForRel x
 sizeForRng (RngSum small sz) =
-  if toI small > 0
+  if toI small > 0 && minSize sz > 0 && (minSize sz `div` toI small) > 0
     then SzRng 1 (minSize sz `div` toI small)
     else SzLeast 1
-sizeForRng (RngProj small (_r :: (Rep era c)) sz) =
-  if toI small > 0
+sizeForRng (RngProj small _ _l sz) =
+  if toI small > 0 && minSize sz > 0 && (minSize sz `div` toI small) > 0
     then SzRng 1 (minSize sz `div` toI small)
     else SzLeast 1
 sizeForRng (RngElem _ xs) = SzExact (length xs)
@@ -774,10 +770,10 @@ genFromRngSpec msgs genr n x = case x of
   (RngSum small sz) -> do
     tot <- genFromIntRange sz
     partition small (msg : msgs) n (fromI (msg : msgs) tot)
-  (RngProj small _ sz) -> do
+  (RngProj small xrep l sz) -> do
     tot <- genFromIntRange sz
     rs <- partition small (("partition " ++ show tot) : msg : msgs) n (fromI (msg : msgs) tot)
-    mapM (genT msgs) rs
+    mapM (\r -> do ans <- genRep xrep; pure (ans & l .~ r)) rs
   (RngRel relspec) -> Set.toList <$> genFromRelSpec (msg : msgs) genr n relspec
   (RngElem _ xs) -> pure xs
   where
@@ -786,17 +782,16 @@ genFromRngSpec msgs genr n x = case x of
 -- | Generate a random RngSpec, appropriate for a given size. In order to accomodate any OrdCond
 --   (EQL, LTH, LTE, GTE, GTH) in RngSum and RngProj, we make the total a bit larger than 'n'
 genRngSpec ::
-  forall w c era.
-  ( Adds w
-  , Sums w c
-  ) =>
+  forall w era.
+  (Ord w, Adds w) =>
   Gen w ->
   Rep era w ->
-  Rep era c ->
+  -- Rep era c ->
+  SomeLens era w ->
   Int ->
   Gen (RngSpec era w)
 genRngSpec _ repw _ 0 = pure $ RngRel (relEqual repw Set.empty)
-genRngSpec g repw repc n = do
+genRngSpec g repw (SomeLens (l :: Lens' w c)) n = do
   frequency
     [
       ( 3
@@ -810,7 +805,7 @@ genRngSpec g repw repc n = do
       , do
           smallest <- genSmall @c
           sz <- genBigSize (max 1 (smallest * n))
-          pure (RngProj (fromI ["genRngSpec " ++ show n] smallest) repc sz)
+          pure (RngProj (fromI ["genRngSpec " ++ show n] smallest) repw l sz)
       )
     , (4, RngRel <$> genRelSpec @w ["genRngSpec "] g repw n)
     , (1, pure RngAny)
@@ -822,61 +817,49 @@ runRngSpec _ (RngNever _) = False
 runRngSpec _ RngAny = True
 runRngSpec ll (RngElem _ xs) = ll == xs
 runRngSpec ll (RngSum _ sz) = runSize (toI (sumAdds ll)) sz
-runRngSpec ll (RngProj _ _ sz) = runSize (toI (projAdds ll)) sz
+runRngSpec ll (RngProj _ _ l sz) = runSize (toI (lensAdds l ll)) sz
 runRngSpec ll (RngRel rspec) = runRelSpec (Set.fromList ll) rspec
 
 -- ------------------------------------------
 -- generators for RngSpec
 
-instance Sums Word64 Coin where
-  getSum n = Coin $ fromIntegral n
-  genT _ (Coin n) = pure (fromIntegral n)
-
-instance Sums Int DeltaCoin where
-  getSum n = DeltaCoin $ fromIntegral n
-  genT _ (DeltaCoin n) = pure (fromIntegral n)
-
-instance Sums Coin Word64 where
-  getSum (Coin n) = fromIntegral n
-  genT _ n = pure (Coin (fromIntegral n))
-
 genConsistentRngSpec ::
-  ( Adds w
-  , Sums w c
-  ) =>
+  (Ord w, Adds w) =>
   Int ->
   Gen w ->
   Rep era w ->
   Rep era c ->
+  SomeLens era w ->
   Gen (RngSpec era w, RngSpec era w)
-genConsistentRngSpec n g repw repc = do
-  x1 <- genRngSpec g repw repc n
+genConsistentRngSpec n g repw repc sl@(SomeLens l) = do
+  x1 <- genRngSpec g repw sl n
   x2 <- case x1 of
-    RngAny -> genRngSpec g repw repc n
-    RngRel RelAny -> genRngSpec g repw repc n
+    RngAny -> genRngSpec g repw sl n
+    RngRel RelAny -> genRngSpec g repw sl n
     RngRel x -> RngRel <$> genConsistentRelSpec msgs g x
     RngSum sm sz -> do
       sz2 <- suchThat genSize (Maybe.isJust . consistent sz)
       pure $ RngSum (add sm (fromI msgs 2)) sz2 -- Make the smaller bigger
-    RngProj sm rep sz -> do
-      sz2 <- suchThat genSize (Maybe.isJust . consistent sz)
-      pure $ RngProj (add sm (fromI msgs 2)) rep sz2
+    RngProj _sm _rep _l _sz -> pure RngAny
     RngElem _ xs ->
       frequency
         [ (1, pure $ RngSum (fromI msgs 1) (SzExact (toI (sumAdds xs))))
-        , (1, pure $ RngProj (fromI msgs 1) repc (SzExact (toI (projAdds xs))))
+        , (1, pure $ RngProj (fromI msgs 1) repw l (SzExact (toI (lensAdds l xs))))
         ]
     RngNever xs -> errorMess "RngNever in genConsistentRngSpec" xs
   pure (x1, x2)
   where
     msgs = [seps ["genConsistentRngSpec", show repw, show repc]]
 
+word64CoinL :: Lens' Word64 Coin
+word64CoinL = lens (Coin . fromIntegral) (\_w (Coin n) -> fromIntegral n)
+
 -- Tests
 
 testConsistentRng :: Gen Property
 testConsistentRng = do
   n <- chooseInt (3, 10)
-  (s1, s2) <- genConsistentRngSpec @_ @_ @TT n (choose (1, 1000)) Word64R CoinR
+  (s1, s2) <- genConsistentRngSpec n (choose (1, 1000)) Word64R CoinR (SomeLens word64CoinL)
   case s1 <> s2 of
     RngNever ms -> pure $ counterexample (unlines (["genConsistentRng fails", show s1, show s2] ++ ms)) False
     _ -> pure $ counterexample "" True
@@ -884,7 +867,7 @@ testConsistentRng = do
 testSoundRngSpec :: Gen Property
 testSoundRngSpec = do
   n <- choose (2, 8)
-  spec <- genRngSpec (choose (1, 1000)) Word64R CoinR n
+  spec <- genRngSpec (choose (1, 1000)) Word64R (SomeLens word64CoinL) n
   let msgs = ["testSoundRngSpec " ++ show n ++ " " ++ show spec]
   list <- genFromRngSpec @TT msgs (choose (1, 1000)) n spec
   pure $
@@ -894,7 +877,7 @@ testSoundRngSpec = do
 
 testMergeRngSpec :: Gen Property
 testMergeRngSpec = do
-  (s1, s2) <- genConsistentRngSpec 3 (choose (1, 1000)) Word64R CoinR
+  (s1, s2) <- genConsistentRngSpec 3 (choose (1, 1000)) Word64R CoinR (SomeLens word64CoinL)
   case s1 <> s2 of
     RngNever _ -> trace ("inconsistent RngSpec " ++ show s1 ++ " " ++ show s2) (pure (counterexample "" True))
     s3 -> do
@@ -930,11 +913,14 @@ testMergeRngSpec = do
           )
           (runRngSpec list s1 && runRngSpec list s2)
 
+intDeltaCoinL :: Lens' Int DeltaCoin
+intDeltaCoinL = lens (DeltaCoin . fromIntegral) (\_i (DeltaCoin d) -> fromIntegral d)
+
 manyMergeRngSpec :: Gen (Int, Int, [String])
 manyMergeRngSpec = do
   n <- chooseInt (3, 10)
-  xs <- vectorOf 50 (genRngSpec (choose (1, 100)) IntR DeltaCoinR n)
-  ys <- vectorOf 50 (genRngSpec (choose (1, 100)) IntR DeltaCoinR n)
+  xs <- vectorOf 50 (genRngSpec (choose (1, 100)) IntR (SomeLens intDeltaCoinL) n)
+  ys <- vectorOf 50 (genRngSpec (choose (1, 100)) IntR (SomeLens intDeltaCoinL) n)
   let check (x, y, m) = do
         let size = sizeForRng m
         i <- genFromSize size
@@ -994,8 +980,7 @@ instance Ord d => Show (MapSpec w d r) where
 instance Ord dom => Semigroup (MapSpec era dom rng) where
   (<>) = mergeMapSpec
 
-
-instance (Ord dom) => Monoid (MapSpec era dom rng) where
+instance Ord dom => Monoid (MapSpec era dom rng) where
   mempty = MapSpec SzAny RelAny PairAny RngAny
 
 instance LiftT (MapSpec era a b) where
@@ -1005,7 +990,18 @@ instance LiftT (MapSpec era a b) where
   dropT (Typed (Right x)) = x
 
 showMapSpec :: MapSpec era dom rng -> String
-showMapSpec (MapSpec w d p r) = sepsP ["MapSpec", show w, showRelSpec d, showPairSpec p, showRngSpec r]
+showMapSpec (MapSpec w d p r) =
+  "("
+    ++ unlines
+      [ "MapSpec"
+      , "   " ++ show w
+      , "   "
+          ++ "   "
+          ++ showRelSpec d
+      , "   " ++ showPairSpec p
+      , "   " ++ showRngSpec r
+      ]
+    ++ ")"
 showMapSpec (MapNever _) = "MapNever"
 
 mergeMapSpec :: Ord dom => MapSpec era dom rng -> MapSpec era dom rng -> MapSpec era dom rng
@@ -1048,29 +1044,59 @@ mapSpec sz1 rel pair rng =
         size ->
           case (rel, pair, rng) of
             (_, PairAny, _) -> pure (MapSpec size rel pair rng)
-            ((RelOper _ mustd _ _), PairSpec d r m, (RngRel (RelOper _ mustr _ _))) ->
-              requireAll
-                [
-                  ( not (Map.keysSet m `Set.isSubsetOf` mustd)
-                  ,
-                    [ "Creating " ++ show (MapSpec sz1 rel pair rng) ++ " fails."
-                    , "It has PairSpec inconsistencies. The domain of"
-                    , "   " ++ synopsis (MapR d r) m ++ " is not a subset of the of the mustSet"
-                    , "   " ++ synopsis (SetR d) mustd
+            ((RelOper _ mustd _ _), PairSpec d r VarOnRight m, (RngRel (RelOper _ mustr _ _))) ->
+              explain
+                ("Creating " ++ show (MapSpec sz1 rel pair rng) ++ " fails.")
+                ( requireAll
+                    [
+                      ( (Map.keysSet m `Set.isSubsetOf` mustd)
+                      ,
+                        [ "sizes " ++ show (sz1, sz2, sz3, sz4)
+                        , "It has PairSpec inconsistencies. The domain of"
+                        , "   " ++ synopsis (MapR d r) m ++ " is not a subset of the of the mustSet"
+                        , "   " ++ synopsis (SetR d) mustd
+                        , "   TEST " ++ show (Map.keysSet m `Set.isSubsetOf` mustd)
+                        ]
+                      )
+                    ,
+                      ( (Set.fromList (Map.elems m) `Set.isSubsetOf` mustr)
+                      ,
+                        [ "It has PairSpec inconsistencies. The range of"
+                        , "   " ++ synopsis (MapR d r) m ++ " is not a subset of the of the mustSet"
+                        , "   " ++ synopsis (SetR r) mustr
+                        , "   TEST " ++ show (Map.keysSet m `Set.isSubsetOf` mustd)
+                        ]
+                      )
                     ]
-                  )
-                ,
-                  ( not (Set.fromList (Map.elems m) `Set.isSubsetOf` mustr)
-                  ,
-                    [ "Creating " ++ show (MapSpec sz1 rel pair rng) ++ " fails."
-                    , "It has PairSpec inconsistencies. The range of"
-                    , "   " ++ synopsis (MapR d r) m ++ " is not a subset of the of the mustSet"
-                    , "   " ++ synopsis (SetR r) mustr
+                    (pure (MapSpec size rel pair rng))
+                )
+            ((RelOper _ mustd _ _), PairSpec d r VarOnLeft m, (RngRel (RelOper _ mustr _ _))) ->
+              explain
+                ("Creating " ++ show (MapSpec sz1 rel pair rng) ++ " fails.")
+                ( requireAll
+                    [
+                      ( (mustd `Set.isSubsetOf` Map.keysSet m)
+                      ,
+                        [ "sizes " ++ show (sz1, sz2, sz3, sz4)
+                        , "It has PairSpec inconsistencies. The domain of"
+                        , "   " ++ synopsis (MapR d r) m ++ " is not a subset of the of the mustSet"
+                        , "   " ++ synopsis (SetR d) mustd
+                        , "   TEST " ++ show (Map.keysSet m `Set.isSubsetOf` mustd)
+                        ]
+                      )
+                    ,
+                      ( (mustr `Set.isSubsetOf` Set.fromList (Map.elems m))
+                      ,
+                        [ "It has PairSpec inconsistencies. The range of"
+                        , "   " ++ synopsis (MapR d r) m ++ " is not a subset of the of the mustSet"
+                        , "   " ++ synopsis (SetR r) mustr
+                        , "   TEST " ++ show (Map.keysSet m `Set.isSubsetOf` mustd)
+                        ]
+                      )
                     ]
-                  )
-                ]
-                (pure (MapSpec size rel pair rng))
-            (_, PairSpec _d _r _m, _) ->
+                    (pure (MapSpec size rel pair rng))
+                )
+            (_, PairSpec _d _r _side _m, _) ->
               failT
                 [ "Creating " ++ show (MapSpec sz1 rel pair rng) ++ " fails."
                 , "This spec has a non-PairAny PairSpec"
@@ -1108,19 +1134,21 @@ sizeForMapSpec (MapNever _) = SzAny
 
 -- | Generate a random MapSpec
 genMapSpec ::
-  forall era dom w c.
-  (Ord dom, Era era, Adds w, Sums w c) =>
+  forall era dom w.
+  (Ord dom, Era era, Ord w, Adds w) =>
   Gen dom ->
   Rep era dom ->
   Rep era w ->
-  Rep era c ->
+  -- Rep era c ->
+  -- (forall c. Adds c => Lens' w c) ->
+  SomeLens era w ->
   Int ->
   Gen (MapSpec era dom w)
-genMapSpec genD repd repw repc n = frequency [(1, pure mempty), (6, genmapspec)]
+genMapSpec genD repd repw l n = frequency [(1, pure mempty), (6, genmapspec)]
   where
     genmapspec = do
       relspec <- genRelSpec ["genMapSpec " ++ show n ++ " " ++ show repd] genD repd n
-      rngspec <- genRngSpec (genRep @era repw) repw repc n
+      rngspec <- genRngSpec (genRep @era repw) repw l n
       pure (MapSpec (SzExact n) relspec PairAny rngspec)
 
 -- | Generate a (Map d t) from a (MapSpec era d r)
@@ -1177,7 +1205,7 @@ genFromMapSpec nm msgs genD genR ms@(MapSpec size rel PairAny rng) = do
       n
       rng
   pure (Map.fromList (zip (Set.toList dom) rangelist))
-genFromMapSpec nm msgs genD genR ms@(MapSpec size rel (PairSpec dr rr m) rng) = do
+genFromMapSpec nm msgs genD genR ms@(MapSpec size rel (PairSpec dr rr varside m) rng) = do
   n <- genFromSize size
   dom <-
     genFromRelSpec
@@ -1192,37 +1220,53 @@ genFromMapSpec nm msgs genD genR ms@(MapSpec size rel (PairSpec dr rr m) rng) = 
       n
       rng
   let domainlist = Set.toList dom
-      (doms, rngs) = Map.foldlWithKey' accum (domainlist, rangelist) m
-      accum (ds, rs) k v = (remove dr "domain" k ds, remove rr "range" v rs)
-  pure (Map.union m (Map.fromList (zip doms rngs)))
+      extraPairs = pairSpecTransform varside dr rr m (domainlist, rangelist)
+  case varside of
+    VarOnRight -> pure (Map.union m (Map.fromList extraPairs))
+    VarOnLeft -> subMapFromMapWithSize n (Map.withoutKeys m (Set.fromList (map fst extraPairs)))
 
-remove :: Eq a => Rep era a -> [Char] -> a -> [a] -> [a]
-remove rep part x (y : ys) =
-  if x == y then ys else y : (remove rep part x ys)
-remove rep part x [] =
+-- | Transform the domain and range lists by removing the (domain,range) pairs from 'm'.
+--   for each pair (domain,range) remove domain from 'dlist' and range from 'rlist',
+--   then zip together the two remaining lists. The pairs in this list are 'extra'
+--   pairs which might me useful.
+--   Strategy depends on which term to (SubMap t1 t2) are variables.
+--   (SubMap xvar yexp) Break value of yexp into (x + extra), then answer: xvar = x
+--   (SubMap xexp yvar) Break value of xexp into (x + extra), then answer: yvar == x + extra
+pairSpecTransform :: (Ord d, Eq r) => PairSide -> Rep era d -> Rep era r -> Map d r -> ([d], [r]) -> [(d, r)]
+pairSpecTransform side drep rrep m (dlist, rlist) = zip doms rngs
+  where
+    accum (ds, rs) k v = (remove side "domain" drep k ds, remove side "range" rrep v rs)
+    (doms, rngs) = Map.foldlWithKey' accum (dlist, rlist) m
+
+remove :: Eq a => PairSide -> String -> Rep era a -> a -> [a] -> [a]
+remove side part rep x (y : ys) =
+  if x == y then ys else y : (remove side part rep x ys)
+remove VarOnLeft _part _rep _x [] = []
+remove VarOnRight part rep x [] =
   errorMess
-    ( "The "
+    ( "In SubMap, when the variable is on the right (i.e. (SubMap map var) ) the "
         ++ part
-        ++ " mustSet does not contain "
+        ++ "of map should contain "
         ++ synopsis rep x
         ++ " which appears in the "
         ++ part
         ++ " of the PairSpec."
+        ++ " But it does not."
     )
     ["genFromMapSpec"]
 
 genMapSpecIsSound :: Gen Property
 genMapSpecIsSound = do
   n <- chooseInt (1, 15)
-  spec <- genMapSpec (chooseInt (1, 10000)) IntR Word64R CoinR n
+  spec <- genMapSpec (chooseInt (1, 10000)) IntR Word64R (SomeLens word64CoinL) n
   mp <- genFromMapSpec @TT "mapSpecIsSound" [] (choose (1, 10000)) (choose (1, 10000)) spec
   pure $ counterexample ("spec = " ++ show spec ++ "\nmp = " ++ show mp) (runMapSpec mp spec)
 
 manyMergeMapSpec :: Gen (Int, Int, [String])
 manyMergeMapSpec = do
   n <- chooseInt (1, 10)
-  xs <- vectorOf 50 (genMapSpec (choose (1, 100)) IntR Word64R CoinR n)
-  ys <- vectorOf 50 (genMapSpec (choose (1, 100)) IntR Word64R CoinR n)
+  xs <- vectorOf 50 (genMapSpec (choose (1, 100)) IntR Word64R (SomeLens word64CoinL) n)
+  ys <- vectorOf 50 (genMapSpec (choose (1, 100)) IntR Word64R (SomeLens word64CoinL) n)
   let check (x, y, m) = do
         let msize = sizeForMapSpec m
         i <- genFromSize msize
@@ -1398,9 +1442,10 @@ data ElemSpec era t where
   -- | The range must sum upto 'c', which is any number in the scope of Size,
   --   through the projection witnessed by the (Sums t c) class
   ElemProj ::
-    Sums x c =>
+    Adds c =>
     c -> -- The smallest allowed
-    Rep era c ->
+    Rep era x ->
+    Lens' x c ->
     Size ->
     ElemSpec era x
   -- | The range has exactly these elements
@@ -1427,7 +1472,7 @@ instance LiftT (ElemSpec era t) where
 
 showElemSpec :: ElemSpec era a -> String
 showElemSpec (ElemSum small sz) = sepsP ["ElemSum", show small, show sz]
-showElemSpec (ElemProj small r sz) = sepsP ["ElemProj", show small, show r, show sz]
+showElemSpec (ElemProj small r _l sz) = sepsP ["ElemProj", show small, show r, show sz]
 showElemSpec (ElemEqual r xs) = sepsP ["ElemEqual", show r, synopsis (ListR r) xs]
 showElemSpec (ElemNever _) = "ElemNever"
 showElemSpec ElemAny = "ElemAny"
@@ -1466,15 +1511,17 @@ mergeElemSpec a@(ElemEqual _ xs) b@(ElemSum _ sz) =
 mergeElemSpec b@(ElemSum _ _) a@(ElemEqual _ _) = mergeElemSpec a b
 mergeElemSpec a@(ElemSum sm1 sz1) b@(ElemSum sm2 sz2) =
   case sz1 <> sz2 of
-    SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
-    sz3 -> ElemSum (min sm1 sm2) sz3
-mergeElemSpec a@(ElemProj sm1 r1 sz1) b@(ElemProj sm2 r2 sz2) =
+    SzNever xs -> ElemNever (sepsP ["The ElemSpec's are inconsistent.", show a, show b] : xs)
+    sz3 -> ElemSum (smallerOf sm1 sm2) sz3
+{-
+mergeElemSpec a@(ElemProj sm1 r1 _l1 sz1) b@(ElemProj sm2 r2 _l2 sz2) = -- TODO FIXME ElemProj cannot be merged
   case testEql r1 r2 of
     Just Refl ->
       case sz1 <> sz2 of
         SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
-        sz3 -> ElemProj (min sm1 sm2) r1 sz3
+        sz3 -> ElemProj (smallerOf sm1 sm2) r1 sz3
     Nothing -> ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
+-}
 mergeElemSpec a b = ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
 
 sizeForElemSpec :: forall a era. ElemSpec era a -> Size
@@ -1485,7 +1532,7 @@ sizeForElemSpec (ElemSum smallest sz) =
   if toI smallest > 0
     then SzRng 1 (minSize sz `div` toI smallest)
     else SzLeast 1
-sizeForElemSpec (ElemProj smallest (_r :: (Rep era c)) sz) =
+sizeForElemSpec (ElemProj smallest (_r :: (Rep era c)) _l sz) =
   if toI smallest > 0
     then SzRng 1 (minSize sz `div` toI smallest)
     else SzLeast 1
@@ -1496,16 +1543,17 @@ runElemSpec xs spec = case spec of
   ElemAny -> True
   ElemEqual _ ys -> xs == ys
   ElemSum _ sz -> runSize (toI (sumAdds xs)) sz
-  ElemProj _ _ sz -> runSize (toI (projAdds xs)) sz
+  ElemProj _ _ l sz -> runSize (toI (lensAdds l xs)) sz
 
 genElemSpec ::
-  forall w c era.
-  (Adds w, Sums w c, Era era) =>
+  forall w era.
+  (Adds w, Era era) =>
   Rep era w ->
-  Rep era c ->
+  -- Rep era c ->
+  SomeLens era w ->
   Size ->
   Gen (ElemSpec era w)
-genElemSpec repw repc siz = do
+genElemSpec repw (SomeLens (l :: Lens' w c)) siz = do
   let lo = minSize siz
       hi = maxSize siz
   if lo >= 1
@@ -1523,7 +1571,7 @@ genElemSpec repw repc siz = do
           , do
               smallest <- genSmall @c
               sz <- genBigSize (max 1 (smallest * hi))
-              pure (ElemProj (fromI ["genRngSpec " ++ show siz] smallest) repc sz)
+              pure (ElemProj (fromI ["genRngSpec " ++ show siz] smallest) repw l sz)
           )
         , (2, ElemEqual repw <$> do n <- genFromSize siz; vectorOf n (genRep repw))
         , (1, pure ElemAny)
@@ -1536,6 +1584,7 @@ genElemSpec repw repc siz = do
 
 genFromElemSpec ::
   forall era r.
+  Era era =>
   [String] ->
   Gen r ->
   Int ->
@@ -1548,18 +1597,18 @@ genFromElemSpec msgs genr n x = case x of
   (ElemSum small sz) -> do
     tot <- genFromIntRange sz
     partition small msgs n (fromI (msg : msgs) tot)
-  (ElemProj small _ sz) -> do
+  (ElemProj small xrep l sz) -> do
     tot <- genFromIntRange sz
     rs <- partition small msgs n (fromI (msg : msgs) tot)
-    mapM (genT msgs) rs
+    mapM (\r -> do ans <- genRep xrep; pure (ans & l .~ r)) rs
   where
     msg = "genFromElemSpec " ++ show n ++ " " ++ show x
 
 manyMergeElemSpec :: Gen (Size, Int, [String])
 manyMergeElemSpec = do
   size <- genSize
-  xs <- vectorOf 40 (genElemSpec Word64R CoinR size)
-  ys <- vectorOf 40 (genElemSpec Word64R CoinR size)
+  xs <- vectorOf 40 (genElemSpec Word64R (SomeLens word64CoinL) size)
+  ys <- vectorOf 40 (genElemSpec Word64R (SomeLens word64CoinL) size)
   let check (x, y, m) = do
         let msize = sizeForElemSpec m
         i <- genFromSize msize
@@ -1661,18 +1710,20 @@ runListSpec xs spec = case spec of
   ListSpec sx es -> runSize (length xs) sx && runElemSpec xs es
 
 genListSpec ::
-  forall w c era.
-  (Adds w, Sums w c, Era era) =>
+  forall w era.
+  (Adds w, Era era) =>
   Rep era w ->
-  Rep era c ->
+  -- Rep era c ->
+  SomeLens era w ->
   Size ->
   Gen (ListSpec era w)
-genListSpec repw repc size = do
-  e <- genElemSpec repw repc size
+genListSpec repw l size = do
+  e <- genElemSpec repw l size
   pure (ListSpec size e)
 
 genFromListSpec ::
   forall era r.
+  Era era =>
   [String] ->
   Gen r ->
   ListSpec era r ->
@@ -1687,7 +1738,7 @@ genFromListSpec msgs genr (ListSpec size e) = do
 testSoundElemSpec :: Gen Property
 testSoundElemSpec = do
   size <- genSize
-  spec <- genElemSpec Word64R CoinR size
+  spec <- genElemSpec Word64R (SomeLens word64CoinL) size
   n <- genFromSize size
   list <- genFromElemSpec @TT ["testSoundElemSpec " ++ show spec ++ " " ++ show n] (choose (1, 1000)) n spec
   pure $
@@ -1698,7 +1749,7 @@ testSoundElemSpec = do
 testSoundListSpec :: Gen Property
 testSoundListSpec = do
   size <- genSize
-  spec <- genListSpec Word64R CoinR size
+  spec <- genListSpec Word64R (SomeLens word64CoinL) size
   list <- genFromListSpec @TT ["testSoundListSpec"] (choose (1, 1000)) spec
   pure $
     counterexample
@@ -1708,8 +1759,8 @@ testSoundListSpec = do
 manyMergeListSpec :: Gen (Size, Int, [String])
 manyMergeListSpec = do
   size <- genSize
-  xs <- vectorOf 40 (genListSpec Word64R CoinR size)
-  ys <- vectorOf 40 (genListSpec Word64R CoinR size)
+  xs <- vectorOf 40 (genListSpec Word64R (SomeLens word64CoinL) size)
+  ys <- vectorOf 40 (genListSpec Word64R (SomeLens word64CoinL) size)
   let check (x, y, m) = do
         let msize = sizeForListSpec m
         i <- genFromSize msize
@@ -1778,7 +1829,7 @@ genSet n gen = do
   xs <- vectorOf 20 gen
   pure (Set.fromList (take n (List.nub xs)))
 
-testSet :: TestAdd t => Gen (Set t)
+testSet :: (Ord t, TestAdd t) => Gen (Set t)
 testSet = do
   n <- pos @Int
   Set.fromList <$> vectorOf n anyAdds
@@ -1799,7 +1850,7 @@ someMap r = do
 -- Some proto-tests, to be fixed soon
 
 aMap :: Era era => Gen (MapSpec era Int Word64)
-aMap = genMapSpec (chooseInt (1, 1000)) IntR Word64R CoinR 4
+aMap = genMapSpec (chooseInt (1, 1000)) IntR Word64R (SomeLens word64CoinL) 4
 
 testm :: Gen (MapSpec TT Int Word64)
 testm = do
@@ -1808,7 +1859,7 @@ testm = do
   monadTyped (liftT (a <> b))
 
 aList :: Era era => Gen (ListSpec era Word64)
-aList = genSize >>= genListSpec Word64R CoinR
+aList = genSize >>= genListSpec Word64R (SomeLens word64CoinL)
 
 testl :: Gen (ListSpec TT Word64)
 testl = do
@@ -1828,13 +1879,13 @@ genSumsTo = do
   let v = Var testV
   rhs <- (Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
   lhs <- (Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
-  elements [SumsTo (DeltaCoin 1) v c [One rhs], SumsTo (DeltaCoin 1) lhs c [One rhs, One v]]
+  elements [SumsTo (Left (DeltaCoin 1)) v c [One rhs], SumsTo (Left (DeltaCoin 1)) lhs c [One rhs, One v]]
 
 solveSumsTo :: Pred era -> AddsSpec c
 solveSumsTo (SumsTo _ (Lit DeltaCoinR n) cond [One (Lit DeltaCoinR m), One (Var (V nam _ _))]) =
-  vRight (toI n) cond (toI m) nam
+  varOnRight n cond m nam
 solveSumsTo (SumsTo _ (Var (V nam DeltaCoinR _)) cond [One (Lit DeltaCoinR m)]) =
-  vLeft nam cond (toI m)
+  varOnLeft nam cond m
 solveSumsTo x = AddsSpecNever ["solveSumsTo " ++ show x]
 
 condReverse :: Gen Property
@@ -1848,24 +1899,25 @@ condReverse = do
     Right x -> pure (counterexample (unlines (show n : msgs)) x)
     Left xs -> errorMess "runTyped in condFlip fails" (xs ++ (show n : msgs))
 
-genAddsSpec :: Gen (AddsSpec c)
+genAddsSpec :: forall c. Adds c => Gen (AddsSpec c)
 genAddsSpec = do
   v <- elements ["x", "y"]
   c <- genOrdCond
-  rhs <- choose (-25, 25)
-  lhs <- choose (-25, 25)
-  elements [vLeft v c rhs, vRight lhs c rhs v]
+  rhs <- fromI @c ["genAddsSpec"] <$> choose @Int (-25, 25)
+  lhs <- fromI @c ["genAddsSpec"] <$> choose @Int (-25, 25)
+  elements [varOnLeft v c rhs, varOnRight lhs c rhs v]
 
-genNonNegAddsSpec :: Gen (AddsSpec c)
+genNonNegAddsSpec :: forall c. Adds c => Gen (AddsSpec c)
 genNonNegAddsSpec = do
   v <- elements ["x", "y"]
   c <- genOrdCond
-  lhs <- choose (10, 30)
-  rhs <- choose (1, lhs - 1)
+  lhs <- choose @Int (10, 30)
+  rhs <- choose @Int (1, lhs - 1)
   let lhs' = case c of
         LTH -> lhs + 1
         _ -> lhs
-  elements [vLeft v c rhs, vRight lhs' c rhs v]
+      fromX x = fromI @c ["genNonNegAddsSpec"] x
+  elements [varOnLeft v c $ fromX rhs, varOnRight (fromX lhs') c (fromX rhs) v]
 
 genOrdCond :: Gen OrdCond
 genOrdCond = elements [EQL, LTH, LTE, GTH, GTE]
@@ -1988,20 +2040,37 @@ main =
           , testProperty "test Sound non-negative AddsSpec" testSoundNonNegAddsSpec
           , testProperty "test Sound any AddsSpec" testSoundAddsSpec
           ]
+      , testGroup
+          "PairSpec test"
+          [ testProperty "test sound PairSpec" testSoundPairSpec
+          , testProperty "test ConsistentPair" testConsistentPair
+          , testProperty "test merge PairSpec" testMergePairSpec
+          , testProperty "test More consistent PairSpec" reportManyMergePairSpec
+          ]
       ]
 
 -- :main --quickcheck-replay=740521
 
+data PairSide = VarOnLeft | VarOnRight
+  deriving (Show, Eq)
+
 -- | A map 'm1' meets the '(PairSpec _ _ m2)' specification if every
 --   (key,value) pair in 'm2' is in 'm1'.
 data PairSpec era a b where
-  PairSpec :: (Ord a, Eq b) => Rep era a -> Rep era b -> Map a b -> PairSpec era a b
+  PairSpec :: (Ord a, Eq b) => Rep era a -> Rep era b -> PairSide -> Map a b -> PairSpec era a b
   PairNever :: [String] -> PairSpec era a b
   PairAny :: PairSpec era a b
 
+-- TODO Add a second map to PairSpec
+-- PairSpec :: (Ord a, Eq b) => Rep era a -> Rep era b -> Map a b -> Maybe(Map a b) -> PairSpec era a b
+-- This way (PairSpec d r m1 (Just m2))     Implies  m1 <= x <= m2,  where (<=) is the Map.isSubmapOf relation
+-- This way (PairSpec d r empty (Just m2))  Implies  x <= m2,
+-- This way (PairSpec d r m1 Nothing)       Implies  m1 <= x         Note that Nothing denotes the Map that contains every pair
+-- This way we can get rid of the PairSide argument, and make chains like m1 <= x <= m2,
+
 anyPairSpec :: PairSpec era d r -> Bool
 anyPairSpec PairAny = True
-anyPairSpec (PairSpec _ _ m) = Map.null m
+anyPairSpec (PairSpec _ _ _ m) = Map.null m
 anyPairSpec _ = False
 
 instance Monoid (PairSpec era a b) where
@@ -2022,7 +2091,7 @@ instance LiftT (PairSpec era dom rng) where
 showPairSpec :: PairSpec era dom rng -> String
 showPairSpec (PairNever _) = "PairNever"
 showPairSpec PairAny = "PairAny"
-showPairSpec (PairSpec dom rng mp) = sepsP ["PairSpec", show dom, show rng, synopsis (MapR dom rng) mp]
+showPairSpec (PairSpec dom rng side mp) = sepsP ["PairSpec", show dom, show rng, show side, synopsis (MapR dom rng) mp]
 
 mergePairSpec :: PairSpec era a b -> PairSpec era a b -> PairSpec era a b
 mergePairSpec (PairNever xs) (PairNever ys) = PairNever (xs ++ ys)
@@ -2030,20 +2099,19 @@ mergePairSpec d@(PairNever _) _ = d
 mergePairSpec _ d@(PairNever _) = d
 mergePairSpec PairAny x = x
 mergePairSpec x PairAny = x
-mergePairSpec a@(PairSpec d r m1) b@(PairSpec _ _ m2) =
+mergePairSpec (PairSpec d r VarOnRight m1) (PairSpec _ _ VarOnRight m2) =
   let accum (Right zs) key v =
         case Map.lookup key zs of
           Nothing -> Right (Map.insert key v zs)
           Just u ->
             if u == v
-              then Right zs
+              then Right (zs)
               else
                 Left
-                  [ "The PairSpecs"
-                  , "   " ++ show a ++ " and"
-                  , "   "
-                      ++ show b
-                      ++ " are inconsistent."
+                  [ "The PairSpecs with VarOnRight"
+                  , "   " ++ format (MapR d r) m1 ++ " and"
+                  , "   " ++ format (MapR d r) m2
+                  , " are inconsistent."
                   , "The key "
                       ++ synopsis d key
                       ++ " has multiple values: "
@@ -2054,34 +2122,82 @@ mergePairSpec a@(PairSpec d r m1) b@(PairSpec _ _ m2) =
       accum (Left xs) _ _ = Left xs
    in case Map.foldlWithKey' accum (Right m1) m2 of
         Left xs -> PairNever xs
-        Right m3 -> PairSpec d r m3
+        Right m3 -> PairSpec d r VarOnRight m3
+mergePairSpec (PairSpec d r VarOnLeft m1) (PairSpec _ _ VarOnLeft m2) =
+  let accum (Right zs) key v =
+        -- Testing that the instersection of the domains, map to the same range.
+        case Map.lookup key m1 of -- If that is True, we use this intersection as the new map
+          Nothing -> Right zs
+          Just u ->
+            if u == v
+              then Right (Map.insert key u zs)
+              else
+                Left
+                  [ "The PairSpecs with VarOnLeft"
+                  , "   " ++ format (MapR d r) m1 ++ " and"
+                  , "   " ++ format (MapR d r) m2
+                  , "are inconsistent."
+                  , "The key "
+                      ++ synopsis d key
+                      ++ " has multiple values: "
+                      ++ synopsis r v
+                      ++ " and "
+                      ++ synopsis (MapR d r) m1
+                  ]
+      accum (Left xs) _ _ = Left xs
+   in case Map.foldlWithKey' accum (Right Map.empty) m2 of
+        Left xs -> PairNever xs
+        Right m3 -> PairSpec d r VarOnLeft m3
+mergePairSpec a b =
+  PairNever
+    [ "The PairSpecs"
+    , "   " ++ show a ++ " and"
+    , "   " ++ show b
+    , " are inconsistent."
+    , "They have the var on different sides."
+    ]
 
 sizeForPairSpec :: PairSpec era dom rng -> Size
 sizeForPairSpec PairAny = SzAny
 sizeForPairSpec (PairNever msgs) = SzNever (msgs ++ ["From sizeForPairSpec."])
-sizeForPairSpec (PairSpec _ _ m) = SzLeast (Map.size m)
+sizeForPairSpec (PairSpec _ _ VarOnRight m) = SzLeast (Map.size m)
+sizeForPairSpec (PairSpec _ _ VarOnLeft m) = SzMost (Map.size m)
 
 runPairSpec :: (Ord dom, Eq rng) => Map dom rng -> PairSpec era dom rng -> Bool
 runPairSpec _ PairAny = True
 runPairSpec _ (PairNever xs) = errorMess "PairNever in call to runPairSpec" xs
-runPairSpec m1 (PairSpec _ _ m2) = Map.isSubmapOf m2 m1
+runPairSpec m1 (PairSpec _ _ VarOnRight m2) = Map.isSubmapOf m2 m1
+-- all pairs in m2 are in m1
+-- So when we say (SubMap expr var) we store the pairs from expr in 'm2'
+-- and insist that when solving 'var' it contains the pairs from 'm2' and possibly more pairs
+runPairSpec m1 (PairSpec _ _ VarOnLeft m2) = Map.isSubmapOf m1 m2
 
 genPairSpec :: (Era era, Ord dom, Eq rng) => Rep era dom -> Rep era rng -> Gen (PairSpec era dom rng)
 genPairSpec domr rngr =
   frequency
     [ (1, pure PairAny)
-    , (1, pure (PairSpec domr rngr Map.empty))
-    , (4, PairSpec domr rngr <$> (Map.singleton <$> genRep domr <*> genRep rngr))
+    , (1, pure (PairSpec domr rngr VarOnRight Map.empty))
+    , (1, pure (PairSpec domr rngr VarOnLeft Map.empty))
+    , (4, PairSpec domr rngr VarOnRight <$> (Map.singleton <$> genRep domr <*> genRep rngr))
+    , (4, PairSpec domr rngr VarOnLeft <$> (Map.singleton <$> genRep domr <*> genRep rngr))
     ,
-      ( 2
+      ( 4
       , do
           d1 <- genRep domr
           d2 <- genRep domr
           r1 <- genRep rngr
           r2 <- genRep rngr
-          pure (PairSpec domr rngr (Map.fromList [(d1, r1), (d2, r2)]))
+          elements
+            [ PairSpec domr rngr VarOnRight (Map.fromList [(d1, r1), (d2, r2)])
+            , PairSpec domr rngr VarOnRight (Map.fromList [(d1, r1), (d2, r2)])
+            ]
       )
     ]
+
+fixSide :: PairSide -> PairSpec era a b -> PairSpec era a b
+fixSide _ (PairNever xs) = PairNever xs
+fixSide _ PairAny = PairAny
+fixSide side (PairSpec d r _ m) = PairSpec d r side m
 
 genConsistentPairSpec ::
   (Ord dom, Era era, Eq rng) =>
@@ -2091,26 +2207,42 @@ genConsistentPairSpec ::
   Gen (PairSpec era dom rng)
 genConsistentPairSpec _domr _rngr (PairNever xs) = errorMess "PairNever in genConsistentPairSpec" xs
 genConsistentPairSpec domr rngr PairAny = genPairSpec domr rngr
-genConsistentPairSpec domr rngr (PairSpec _d _r m) | Map.null m = genPairSpec domr rngr
-genConsistentPairSpec _ _ (PairSpec d r m) =
+genConsistentPairSpec domr rngr (PairSpec _d _r VarOnRight m) | Map.null m = fixSide VarOnRight <$> genPairSpec domr rngr
+genConsistentPairSpec domr rngr (PairSpec _d _r VarOnLeft m) | Map.null m = fixSide VarOnLeft <$> genPairSpec domr rngr
+genConsistentPairSpec _ _ (PairSpec d r VarOnRight m) =
   frequency
     [ (1, pure PairAny)
-    , (1, do n <- choose (0, Map.size m - 1); pure (PairSpec d r (Map.deleteAt n m)))
+    , (1, do n <- choose (0, Map.size m - 1); pure (PairSpec d r VarOnRight (Map.deleteAt n m)))
     ,
       ( 1
       , do
           d1 <- suchThatErr ["genConsistentPairSpec"] (genRep d) (not . (`Map.member` m))
           r1 <- genRep r
-          pure (PairSpec d r (Map.insert d1 r1 m))
+          pure (PairSpec d r VarOnRight (Map.insert d1 r1 m))
+      )
+    ]
+genConsistentPairSpec _ _ (PairSpec d r VarOnLeft m) =
+  frequency
+    [ (1, pure PairAny)
+    , (1, do n <- choose (0, Map.size m - 1); pure (PairSpec d r VarOnLeft (Map.deleteAt n m)))
+    ,
+      ( 1
+      , do
+          d1 <- suchThatErr ["genConsistentPairSpec"] (genRep d) (not . (`Map.member` m))
+          r1 <- genRep r
+          pure (PairSpec d r VarOnLeft (Map.insert d1 r1 m))
       )
     ]
 
 genFromPairSpec :: (Era era, Ord dom) => [String] -> PairSpec era dom rng -> Gen (Map dom rng)
 genFromPairSpec msgs (PairNever xs) = errorMess "genFromPairSpec failed due to PairNever" (msgs ++ xs)
 genFromPairSpec _msgs PairAny = pure $ Map.empty
-genFromPairSpec msgs p@(PairSpec domr rngr mp) = do
+genFromPairSpec msgs p@(PairSpec domr rngr VarOnRight mp) = do
   n <- (+ (Map.size mp)) <$> choose (0, 10)
   mapFromSubset (msgs ++ ["genFromPairSpec " ++ show p]) mp n (genRep domr) (genRep rngr)
+genFromPairSpec msgs (PairSpec _domr _rngr VarOnLeft mp) = do
+  domset <- subsetFromSet (msgs ++ ["from genFromPairSpec VarOnLeft"]) (Map.keysSet mp)
+  pure (Map.restrictKeys mp domset)
 
 -- ============================================
 -- tests for Pair Spec
@@ -2202,14 +2334,3 @@ reportManyMergePairSpec = do
   if null bad
     then putStrLn ("passed " ++ show passed ++ " tests")
     else do mapM_ putStrLn bad; error "TestFails"
-
-main3 :: IO ()
-main3 =
-  defaultMain $
-    testGroup
-      "PairSpec test"
-      [ testProperty "test sound PairSpec" testSoundPairSpec
-      , testProperty "test ConsistentPair" testConsistentPair
-      , testProperty "test merge PairSpec" testMergePairSpec
-      , testProperty "test More consistent PairSpec" reportManyMergePairSpec
-      ]

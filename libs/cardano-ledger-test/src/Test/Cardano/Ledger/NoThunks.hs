@@ -8,9 +8,6 @@ module Test.Cardano.Ledger.NoThunks (
   test,
 ) where
 
-import Cardano.Ledger.Core
-import Cardano.Ledger.Pretty (PrettyA)
-import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert)
 import Control.State.Transition.Extended (STS)
 import Data.Default.Class (def)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)
@@ -37,8 +34,6 @@ testThunks ::
   forall era.
   ( Reflect era
   , STS (MOCKCHAIN era)
-  , PrettyA (TxCert era)
-  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Int ->

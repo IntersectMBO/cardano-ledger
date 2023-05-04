@@ -14,6 +14,12 @@ import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.TypeRep
 
+justOneName :: [([Name era], [Pred era])] -> [(Name era, [Pred era])]
+justOneName xs = foldr accum [] xs -- FIXME throw away new style DependGraph elements
+  where
+    accum ([x], cs) ans = (x, cs) : ans
+    accum _ ans = ans
+
 -- | Shrink an environment subject to the constraints in the given dependency graph.
 --   The strategy is
 --    * pick a variable
@@ -26,7 +32,7 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 shrinkEnv :: Era era => DependGraph era -> Env era -> [Env era]
 shrinkEnv (DependGraph vs) env =
   [ env'
-  | (before, (x, cs), after) <- splits vs
+  | (before, (x, cs), after) <- splits (justOneName vs)
   , env' <- shrinkOneVar env (map fst before) x cs after
   ]
   where
