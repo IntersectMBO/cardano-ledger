@@ -33,6 +33,7 @@ library
         Test.Cardano.Ledger.Alonzo.PlutusScripts
         Test.Cardano.Ledger.Alonzo.Serialisation.Generators
         Test.Cardano.Ledger.Alonzo.Scripts
+        Test.Cardano.Ledger.Alonzo.TranslationInstance
         Test.Cardano.Ledger.Alonzo.Trace
 
     hs-source-dirs:   src
@@ -65,9 +66,48 @@ library
         plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.6,
         QuickCheck,
         random,
+        serialise,
         small-steps >=1.0,
         small-steps-test,
+        time,
         transformers
+
+executable gen-golden
+    main-is:          Test/Cardano/Ledger/Alonzo/GenGoldenTranslationFile.hs
+    hs-source-dirs:   src
+    other-modules:
+        Paths_cardano_ledger_alonzo_test
+        Test.Cardano.Ledger.Alonzo.AlonzoEraGen
+        Test.Cardano.Ledger.Alonzo.CostModel
+        Test.Cardano.Ledger.Alonzo.PlutusScripts
+        Test.Cardano.Ledger.Alonzo.Serialisation.Generators
+        Test.Cardano.Ledger.Alonzo.TranslationInstance
+
+    default-language: Haskell2010
+    build-depends:
+        base,
+        bytestring,
+        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.2,
+        cardano-ledger-allegra >=1.1,
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+        cardano-ledger-alonzo-test,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-mary:{cardano-ledger-mary, testlib},
+        cardano-ledger-pretty,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+        cardano-ledger-shelley-test >=1.1,
+        cardano-strict-containers,
+        cborg,
+        microlens,
+        cardano-ledger-shelley-ma-test,
+        cardano-slotting,
+        containers,
+        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
+        plutus-tx,
+        random,
+        QuickCheck,
+        serialise,
+        time
 
 test-suite cardano-ledger-alonzo-test
     type:             exitcode-stdio-1.0
@@ -99,7 +139,7 @@ test-suite cardano-ledger-alonzo-test
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-alonzo-test,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        cardano-ledger-core,
+        cardano-ledger-core >=1.0,
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
         cardano-ledger-shelley-ma-test,
         cardano-protocol-tpraos,
