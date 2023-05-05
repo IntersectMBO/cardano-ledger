@@ -16,7 +16,7 @@ file :: String
 file = "eras/alonzo/test-suite/golden/translations.cbor"
 
 -- | Generates arguments for `alonzoTxInfo`, applies them to `alonzoTxInfo`
--- and serializes both arguments and result to golden/translations.cbor file.AlonzoEraTxOut
+-- and serializes both arguments and result to golden/translations.cbor file
 main :: IO ()
 main = do
   putStrLn "Generating golden files for TxInfo"

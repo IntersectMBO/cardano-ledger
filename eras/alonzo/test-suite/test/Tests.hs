@@ -14,6 +14,7 @@ import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
 import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
+import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScriptExamples as PlutusScriptExamples
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
@@ -45,6 +46,7 @@ defaultTests =
     , Canonical.tests
     , CDDL.tests 5
     , Golden.tests
+    , GoldenTranslation.tests
     , PlutusScriptExamples.tests
     , TxInfo.tests
     ]

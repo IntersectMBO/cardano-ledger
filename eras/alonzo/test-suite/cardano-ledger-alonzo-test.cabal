@@ -90,7 +90,6 @@ executable gen-golden
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.2,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
-        cardano-ledger-alonzo-test,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
         cardano-ledger-pretty,
@@ -116,6 +115,7 @@ test-suite cardano-ledger-alonzo-test
     other-modules:
         Test.Cardano.Ledger.Alonzo.ChainTrace
         Test.Cardano.Ledger.Alonzo.Golden
+        Test.Cardano.Ledger.Alonzo.GoldenTranslation
         Test.Cardano.Ledger.Alonzo.PlutusScriptExamples
         Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
         Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
