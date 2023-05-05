@@ -484,7 +484,7 @@ data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
   | TxInfoPV2 PV2.TxInfo
   | TxInfoPV3 PV3.TxInfo
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 -- | Where we keep functions that differ from Era to Era but which
 --   deal with the extra things in the TxOut (Scripts, DataHash, Datum, etc)
