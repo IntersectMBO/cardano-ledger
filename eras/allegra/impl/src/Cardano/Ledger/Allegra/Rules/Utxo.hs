@@ -14,6 +14,7 @@
 
 module Cardano.Ledger.Allegra.Rules.Utxo (
   AllegraUTXO,
+  AllegraUtxoEvent (..),
   AllegraUtxoPredFailure (..),
   validateOutsideValidityIntervalUTxO,
 )
@@ -50,6 +51,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   Test,
   runTest,
  )
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, keyTxRefunds, totalTxDeposits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -131,8 +133,9 @@ instance
   ) =>
   NoThunks (AllegraUtxoPredFailure era)
 
-newtype AllegraUtxoEvent era
+data AllegraUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))
+  | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
 
 -- | The UTxO transition rule for the Allegra era.
 utxoTransition ::
@@ -202,7 +205,7 @@ utxoTransition = do
 
   let refunded = keyTxRefunds pp dpstate txb
   let depositChange = totalTxDeposits pp dpstate txb Val.<-> refunded
-
+  tellEvent $ TotalDeposits (hashAnnotated txb) depositChange
   pure $! Shelley.updateUTxOState pp u txb depositChange ppup'
 
 -- | Ensure the transaction is within the validity window.
