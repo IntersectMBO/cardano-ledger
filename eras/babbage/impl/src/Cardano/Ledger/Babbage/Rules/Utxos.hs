@@ -41,6 +41,7 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
@@ -168,6 +169,7 @@ scriptsYes = do
       {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
       protVer = pp ^. ppProtocolVersionL
       depositChange = totalTxDeposits pp dpstate txBody <-> refunded
+  tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 

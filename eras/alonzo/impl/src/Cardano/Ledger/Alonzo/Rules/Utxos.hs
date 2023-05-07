@@ -66,8 +66,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize')
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState), ShelleyPPUPState)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
@@ -142,6 +144,7 @@ instance
 
 data AlonzoUtxosEvent era
   = AlonzoPpupToUtxosEvent (Event (EraRule "PPUP" era))
+  | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | SuccessfulPlutusScriptsEvent (NonEmpty PlutusDebug)
   | FailedPlutusScriptsEvent (NonEmpty PlutusDebug)
 
@@ -247,7 +250,7 @@ scriptsValidateTransition = do
       protVer = pp ^. ppProtocolVersionL
       refunded = keyTxRefunds pp dpstate txBody
       depositChange = totalTxDeposits pp dpstate txBody <-> refunded
-
+  tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
   () <- pure $! traceEvent validBegin ()
 
   scriptsTransition slot pp tx utxo $ \case
