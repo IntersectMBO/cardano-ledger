@@ -253,21 +253,19 @@ script_data_hash = $hash32
 ; 1001 - 1101: future formats
 
 certificate =
-  [ stake_registration ; Deprecated - stake_registration does nothing in Conway
+  [ stake_registration
   // stake_deregistration
   // stake_delegation
   // pool_registration
   // pool_retirement
   // constitutional_deleg_cert
-  // deleg_cert
-  // redeleg_cert
-  // undeleg_cert
-  ]
-
-delegatee =
-  [ 0, pool_keyhash
-  // 1, voting_credential
-  // 2, pool_keyhash, voting_credential
+  // reg_cert
+  // unreg_cert
+  // vote_deleg_cert
+  // stake_vote_deleg_cert
+  // stake_reg_deleg_cert
+  // vote_reg_deleg_cert
+  // stake_vote_reg_deleg_cert
   ]
 
 stake_registration = (0, stake_credential)
@@ -277,9 +275,13 @@ pool_registration = (3, pool_params)
 pool_retirement = (4, pool_keyhash, epoch)
 constitutional_deleg_cert = (5, genesishash, genesis_delegate_hash, vrf_keyhash)
 ; number 6 used to be the MIR certificate, which is deprecated in Conway
-deleg_cert = (7, stake_credential, delegatee, coin)
-redeleg_cert = (8, stake_credential, delegatee)
-undeleg_cert = (9, stake_credential, coin)
+reg_cert = (7, stake_credential, coin)
+unreg_cert = (8, stake_credential, coin)
+vote_deleg_cert = (9, stake_credential, voting_credential)
+stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, voting_credential)
+stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
+vote_reg_deleg_cert = (12, stake_credential, voting_credential, coin)
+stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, voting_credential, coin)
 
 delta_coin = int
 
