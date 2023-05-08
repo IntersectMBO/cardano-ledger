@@ -621,7 +621,6 @@ may either be from the current epoch or an earlier one, so we split them using $
   where $\fun{keyRefunds}$ is defined in Figure~\ref{fig:functions:deposits-refunds}.
   This iterates $\fun{keyRefund}$ from the same figure,
   which in turn just looks up the creation slot for a transaction and returns $R_c$.
-  The function to calculate the value of decayed deposits, $\fun{decayedTx}$, is defined in Figure~\ref{fig:functions:deposits-decay}.
   This iterates $\fun{decayedKey}$ from the same figure.
   Therefore, to show that
   \begin{equation}\label{deleted-is-refunds-plus-decayed}
