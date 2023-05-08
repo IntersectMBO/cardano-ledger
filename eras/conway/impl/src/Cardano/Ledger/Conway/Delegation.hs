@@ -19,22 +19,16 @@ where
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
+  Decoder,
   EncCBOR (..),
-  EncCBORGroup (..),
+  Encoding,
   FromCBOR (..),
   ToCBOR (..),
   decodeRecordSum,
   encodeListLen,
+  encodeWord8,
   toPlainDecoder,
   toPlainEncoding,
- )
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -43,14 +37,16 @@ import Cardano.Ledger.Credential (Credential, StakeCredential)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation (
-  ShelleyDCert (..),
   ShelleyDelegCert (..),
   ShelleyEraDCert (..),
-  shelleyDCertDecoder,
+  commonDCertDecoder,
+  encodeConstitutionalCert,
+  encodePoolCert,
+  encodeShelleyDelegCert,
+  shelleyDCertDelegDecoder,
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -66,16 +62,9 @@ instance Crypto c => EraDCert (ConwayEra c) where
   getDCertGenesis _ = Nothing
 
 instance Crypto c => ShelleyEraDCert (ConwayEra c) where
-  mkShelleyDCertDeleg = transShelleyDeleg
+  mkShelleyDCertDeleg = ConwayDCertDeleg . fromShelleyDelegCert
 
-  getShelleyDCertDeleg (ConwayDCertDeleg (ConwayDeleg c (DelegStake kh) SNothing)) =
-    Just $ Delegate (Delegation c kh)
-  getShelleyDCertDeleg (ConwayDCertDeleg (ConwayReDeleg c (DelegStake kh))) =
-    Just $ Delegate (Delegation c kh)
-  getShelleyDCertDeleg (ConwayDCertDeleg (ConwayUnDeleg c SNothing)) =
-    Just $ DeRegKey c
-  getShelleyDCertDeleg (ConwayDCertDeleg (ConwayRegKey c)) =
-    Just $ RegKey c
+  getShelleyDCertDeleg (ConwayDCertDeleg conwayDelegCert) = toShelleyDelegCert conwayDelegCert
   getShelleyDCertDeleg _ = Nothing
 
   mkDCertMir = notSupportedInThisEra
@@ -97,42 +86,34 @@ data Delegatee c
   | DelegStakeVote !(KeyHash 'StakePool c) !(Credential 'Voting c)
   deriving (Show, Generic, Eq)
 
-instance Crypto c => DecCBOR (Delegatee c) where
-  decCBOR = decode . Summands "Delegatee" $ \case
-    0 ->
-      SumD DelegStake
-        <! From
-    1 ->
-      SumD DelegVote
-        <! From
-    2 ->
-      SumD DelegStakeVote
-        <! From
-        <! From
-    k -> Invalid k
-
-instance Crypto c => EncCBOR (Delegatee c) where
-  encCBOR x = encode $ case x of
-    DelegStake kh ->
-      Sum DelegStake 0
-        !> To kh
-    DelegVote c ->
-      Sum DelegVote 1
-        !> To c
-    DelegStakeVote kh c ->
-      Sum DelegStakeVote 2
-        !> To kh
-        !> To c
-
 instance NFData (Delegatee c)
 
 instance NoThunks (Delegatee c)
 
+-- | Certificates for registration and delegation of stake to Pools and DReps. Comparing
+-- to previous eras, there is now ability to:
+--
+-- * Register and delegate with a single certificate: `ConwayRegDelegCert`
+--
+-- * Ability to delegate to DReps with `DelegVote` and `DelegStakeVote`
+--
+-- * Ability to specify the deposit amount. Deposits during registration and
+--   unregistration in Conway are optional, which will change in the future era. They are
+--   optional only for the smooth transition from Babbage to Conway. Validity of deposits
+--   is checked by the @CERT@ rule.
 data ConwayDelegCert c
-  = ConwayDeleg !(StakeCredential c) !(Delegatee c) !(StrictMaybe Coin)
-  | ConwayReDeleg !(StakeCredential c) !(Delegatee c)
-  | ConwayUnDeleg !(StakeCredential c) !(StrictMaybe Coin)
-  | ConwayRegKey !(StakeCredential c)
+  = -- | Register staking credential. Deposit, when present, must match the expected deposit
+    -- amount specified by `ppKeyDepositL` in the protocol parameters.
+    ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
+  | -- | De-Register the staking credential. Deposit, if present, must match the amount
+    -- that was left as a deposit upon stake credential registration.
+    ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
+  | -- | Redelegate to another delegatee. Staking credential must already be registered.
+    ConwayDelegCert !(StakeCredential c) !(Delegatee c)
+  | -- | This is a new type of certificate, which allows to register staking credential
+    -- and delegate within a single certificate. Deposit is required and must match the
+    -- expected deposit amount specified by `ppKeyDepositL` in the protocol parameters.
+    ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
   deriving (Show, Generic, Eq)
 
 instance NFData (ConwayDelegCert c)
@@ -158,87 +139,116 @@ instance
   fromCBOR = toPlainDecoder (eraProtVerLow @era) decCBOR
 
 instance
-  ( ShelleyEraDCert era
+  ( ConwayEraDCert era
   , DCert era ~ ConwayDCert era
   ) =>
   DecCBOR (ConwayDCert era)
   where
-  decCBOR = decodeRecordSum "ConwayDCert" $
-    \case
-      t | t <= 5 -> do
-        shelleyDCertDecoder @era t
-      7 -> do
-        cred <- decCBOR
-        delegatee <- decCBOR
-        deposit <- decCBOR
-        pure (4, ConwayDCertDeleg $ ConwayDeleg cred delegatee (SJust deposit))
-      8 -> do
-        cred <- decCBOR
-        delegatee <- decCBOR
-        pure (3, ConwayDCertDeleg $ ConwayReDeleg cred delegatee)
-      9 -> do
-        cred <- decCBOR
-        deposit <- decCBOR
-        pure (3, ConwayDCertDeleg $ ConwayUnDeleg cred (SJust deposit))
-      k -> invalidKey k
+  decCBOR = decodeRecordSum "ConwayDCert" $ \case
+    t
+      | 0 <= t && t < 3 -> shelleyDCertDelegDecoder t
+      | 3 <= t && t < 6 -> commonDCertDecoder t
+      | t == 6 -> fail "MIR certificates are no longer supported"
+      | 7 <= t -> conwayDCertDelegDecoder t
+    t -> invalidKey t
+
+conwayDCertDelegDecoder :: ConwayEraDCert era => Word -> Decoder s (Int, DCert era)
+conwayDCertDelegDecoder = \case
+  7 -> do
+    cred <- decCBOR
+    deposit <- SJust <$> decCBOR
+    pure (3, mkConwayDCertDeleg $ ConwayRegCert cred deposit)
+  8 -> do
+    cred <- decCBOR
+    deposit <- SJust <$> decCBOR
+    pure (3, mkConwayDCertDeleg $ ConwayUnRegCert cred deposit)
+  9 -> delegCertDecoder 3 (DelegVote <$> decCBOR)
+  10 -> delegCertDecoder 4 (DelegStakeVote <$> decCBOR <*> decCBOR)
+  11 -> regDelegCertDecoder 4 (DelegStake <$> decCBOR)
+  12 -> regDelegCertDecoder 4 (DelegVote <$> decCBOR)
+  13 -> regDelegCertDecoder 5 (DelegStakeVote <$> decCBOR <*> decCBOR)
+  k -> invalidKey k
+  where
+    delegCertDecoder n decodeDelegatee = do
+      cred <- decCBOR
+      delegatee <- decodeDelegatee
+      pure (n, mkConwayDCertDeleg $ ConwayDelegCert cred delegatee)
+    {-# INLINE delegCertDecoder #-}
+    regDelegCertDecoder n decodeDelegatee = do
+      cred <- decCBOR
+      delegatee <- decodeDelegatee
+      deposit <- decCBOR
+      pure (n, mkConwayDCertDeleg $ ConwayRegDelegCert cred delegatee deposit)
+    {-# INLINE regDelegCertDecoder #-}
+{-# INLINE conwayDCertDelegDecoder #-}
 
 instance (Era era, Val (Value era)) => ToCBOR (ConwayDCert era) where
   toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 
 instance (Era era, Val (Value era)) => EncCBOR (ConwayDCert era) where
   encCBOR = \case
-    ConwayDCertDeleg (ConwayRegKey c) ->
-      -- Shelley backwards compatibility
-      encCBOR . ShelleyDCertDelegCert @era $ RegKey c
-    ConwayDCertPool (RegPool poolParams) ->
-      encodeListLen (1 + listLen poolParams)
-        <> encCBOR (3 :: Word8)
-        <> encCBORGroup poolParams
-    ConwayDCertPool (RetirePool vk epoch) ->
-      encodeListLen 3
-        <> encCBOR (4 :: Word8)
-        <> encCBOR vk
-        <> encCBOR epoch
-    ConwayDCertConstitutional (ConstitutionalDelegCert gk kh vrf) ->
-      encodeListLen 4
-        <> encCBOR (5 :: Word8)
-        <> encCBOR gk
-        <> encCBOR kh
-        <> encCBOR vrf
-    ConwayDCertDeleg (ConwayDeleg cred delegatee (SJust deposit)) ->
-      encodeListLen 4
-        <> encCBOR (7 :: Word8)
-        <> encCBOR cred
-        <> encCBOR delegatee
-        <> encCBOR deposit
-    ConwayDCertDeleg (ConwayDeleg cred (DelegStake kh) SNothing) ->
-      -- Shelley backwards compatibility
-      encCBOR . ShelleyDCertDelegCert @era . Delegate $ Delegation cred kh
-    ConwayDCertDeleg (ConwayDeleg cred delegatee SNothing) ->
-      -- This should never happen, since we don't allow delegating to DReps
-      -- using Shelley delegation certs.
-      encodeListLen 4
-        <> encCBOR (7 :: Word8)
-        <> encCBOR cred
-        <> encCBOR delegatee
-        <> encCBOR (zero :: Value era)
-    ConwayDCertDeleg (ConwayReDeleg cred delegatee) ->
-      encodeListLen 3
-        <> encCBOR (8 :: Word8)
-        <> encCBOR cred
-        <> encCBOR delegatee
-    ConwayDCertDeleg (ConwayUnDeleg cred (SJust deposit)) ->
-      encodeListLen 3
-        <> encCBOR (9 :: Word8)
-        <> encCBOR cred
-        <> encCBOR deposit
-    ConwayDCertDeleg (ConwayUnDeleg cred SNothing) ->
-      -- Shelley backwards compatibility
-      encCBOR . ShelleyDCertDelegCert @era $ DeRegKey cred
+    ConwayDCertDeleg delegCert -> encodeConwayDelegCert delegCert
+    ConwayDCertPool poolCert -> encodePoolCert poolCert
+    ConwayDCertConstitutional constCert -> encodeConstitutionalCert constCert
 
-transShelleyDeleg :: ShelleyDelegCert (EraCrypto era) -> ConwayDCert era
-transShelleyDeleg (Delegate (Delegation c kh)) =
-  ConwayDCertDeleg (ConwayDeleg c (DelegStake kh) SNothing)
-transShelleyDeleg (RegKey c) = ConwayDCertDeleg $ ConwayRegKey c
-transShelleyDeleg (DeRegKey c) =
-  ConwayDCertDeleg (ConwayUnDeleg c SNothing)
+encodeConwayDelegCert :: Crypto c => ConwayDelegCert c -> Encoding
+encodeConwayDelegCert = \case
+  -- Shelley backwards compatibility
+  ConwayRegCert cred SNothing -> encodeShelleyDelegCert $ RegKey cred
+  ConwayUnRegCert cred SNothing -> encodeShelleyDelegCert $ DeRegKey cred
+  ConwayDelegCert cred (DelegStake poolId) ->
+    encodeShelleyDelegCert $ Delegate (Delegation cred poolId)
+  -- New in Conway
+  ConwayRegCert cred (SJust deposit) ->
+    encodeListLen 3
+      <> encodeWord8 7
+      <> encCBOR cred
+      <> encCBOR deposit
+  ConwayUnRegCert cred (SJust deposit) ->
+    encodeListLen 3
+      <> encodeWord8 8
+      <> encCBOR cred
+      <> encCBOR deposit
+  ConwayDelegCert cred (DelegVote drep) ->
+    encodeListLen 3
+      <> encodeWord8 9
+      <> encCBOR cred
+      <> encCBOR drep
+  ConwayDelegCert cred (DelegStakeVote poolId dRep) ->
+    encodeListLen 4
+      <> encodeWord8 10
+      <> encCBOR cred
+      <> encCBOR poolId
+      <> encCBOR dRep
+  ConwayRegDelegCert cred (DelegStake poolId) deposit ->
+    encodeListLen 4
+      <> encodeWord8 11
+      <> encCBOR cred
+      <> encCBOR poolId
+      <> encCBOR deposit
+  ConwayRegDelegCert cred (DelegVote drep) deposit ->
+    encodeListLen 4
+      <> encodeWord8 12
+      <> encCBOR cred
+      <> encCBOR drep
+      <> encCBOR deposit
+  ConwayRegDelegCert cred (DelegStakeVote poolId dRep) deposit ->
+    encodeListLen 5
+      <> encodeWord8 13
+      <> encCBOR cred
+      <> encCBOR poolId
+      <> encCBOR dRep
+      <> encCBOR deposit
+
+fromShelleyDelegCert :: ShelleyDelegCert c -> ConwayDelegCert c
+fromShelleyDelegCert = \case
+  RegKey c -> ConwayRegCert c SNothing
+  DeRegKey c -> ConwayUnRegCert c SNothing
+  Delegate (Delegation c kh) -> ConwayDelegCert c (DelegStake kh)
+
+toShelleyDelegCert :: ConwayDelegCert c -> Maybe (ShelleyDelegCert c)
+toShelleyDelegCert = \case
+  ConwayRegCert c SNothing -> Just $ RegKey c
+  ConwayUnRegCert c SNothing -> Just $ DeRegKey c
+  ConwayDelegCert c (DelegStake kh) -> Just $ Delegate (Delegation c kh)
+  _ -> Nothing

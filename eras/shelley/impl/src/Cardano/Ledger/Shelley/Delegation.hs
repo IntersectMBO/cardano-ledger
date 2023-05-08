@@ -36,7 +36,12 @@ module Cardano.Ledger.Shelley.Delegation (
   isReservesMIRCert,
   isTreasuryMIRCert,
   requiresVKeyWitness,
-  shelleyDCertDecoder,
+  -- ** Serialization helpers
+  shelleyDCertDelegDecoder,
+  commonDCertDecoder,
+  encodeShelleyDelegCert,
+  encodePoolCert,
+  encodeConstitutionalCert,
 
   -- * Re-exports
   EraDCert (..),
@@ -57,6 +62,7 @@ import Cardano.Ledger.Binary (
   Decoder,
   EncCBOR (..),
   EncCBORGroup (..),
+  Encoding,
   FromCBOR (..),
   ToCBOR (..),
   TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
@@ -64,6 +70,7 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   decodeWord,
   encodeListLen,
+  encodeWord8,
   listLenInt,
   peekTokenType,
  )
@@ -73,11 +80,9 @@ import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust, isNothing)
-import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -132,8 +137,8 @@ data MIRPot = ReservesMIR | TreasuryMIR
 deriving instance NoThunks MIRPot
 
 instance EncCBOR MIRPot where
-  encCBOR ReservesMIR = encCBOR (0 :: Word8)
-  encCBOR TreasuryMIR = encCBOR (1 :: Word8)
+  encCBOR ReservesMIR = encodeWord8 0
+  encCBOR TreasuryMIR = encodeWord8 1
 
 instance DecCBOR MIRPot where
   decCBOR =
@@ -197,38 +202,40 @@ instance NoThunks (ShelleyDCert era)
 
 instance Era era => EncCBOR (ShelleyDCert era) where
   encCBOR = \case
-    ShelleyDCertDelegCert (RegKey cred) ->
-      encodeListLen 2
-        <> encCBOR (0 :: Word8)
-        <> encCBOR cred
-    ShelleyDCertDelegCert (DeRegKey cred) ->
-      encodeListLen 2
-        <> encCBOR (1 :: Word8)
-        <> encCBOR cred
-    ShelleyDCertDelegCert (Delegate (Delegation cred poolkh)) ->
-      encodeListLen 3
-        <> encCBOR (2 :: Word8)
-        <> encCBOR cred
-        <> encCBOR poolkh
-    ShelleyDCertPool (RegPool poolParams) ->
-      encodeListLen (1 + listLen poolParams)
-        <> encCBOR (3 :: Word8)
-        <> encCBORGroup poolParams
-    ShelleyDCertPool (RetirePool vk epoch) ->
-      encodeListLen 3
-        <> encCBOR (4 :: Word8)
-        <> encCBOR vk
-        <> encCBOR epoch
-    ShelleyDCertGenesis (ConstitutionalDelegCert gk kh vrf) ->
-      encodeListLen 4
-        <> encCBOR (5 :: Word8)
-        <> encCBOR gk
-        <> encCBOR kh
-        <> encCBOR vrf
+    ShelleyDCertDelegCert delegCert -> encodeShelleyDelegCert delegCert
+    ShelleyDCertPool poolCert -> encodePoolCert poolCert
+    ShelleyDCertGenesis constCert -> encodeConstitutionalCert constCert
     ShelleyDCertMir mir ->
-      encodeListLen 2
-        <> encCBOR (6 :: Word8)
-        <> encCBOR mir
+      encodeListLen 2 <> encodeWord8 6 <> encCBOR mir
+
+encodeShelleyDelegCert :: Crypto c => ShelleyDelegCert c -> Encoding
+encodeShelleyDelegCert = \case
+  RegKey cred ->
+    encodeListLen 2 <> encodeWord8 0 <> encCBOR cred
+  DeRegKey cred ->
+    encodeListLen 2 <> encodeWord8 1 <> encCBOR cred
+  Delegate (Delegation cred poolkh) ->
+    encodeListLen 3 <> encodeWord8 2 <> encCBOR cred <> encCBOR poolkh
+
+encodePoolCert :: Crypto c => PoolCert c -> Encoding
+encodePoolCert = \case
+  RegPool poolParams ->
+    encodeListLen (1 + listLen poolParams)
+      <> encodeWord8 3
+      <> encCBORGroup poolParams
+  RetirePool vk epoch ->
+    encodeListLen 3
+      <> encodeWord8 4
+      <> encCBOR vk
+      <> encCBOR epoch
+
+encodeConstitutionalCert :: Crypto c => ConstitutionalDelegCert c -> Encoding
+encodeConstitutionalCert (ConstitutionalDelegCert gk kh vrf) =
+  encodeListLen 4
+    <> encodeWord8 5
+    <> encCBOR gk
+    <> encCBOR kh
+    <> encCBOR vrf
 
 instance Era era => ToCBOR (ShelleyDCert era) where
   toCBOR = toEraCBOR @era
@@ -247,39 +254,50 @@ instance
   ) =>
   DecCBOR (ShelleyDCert era)
   where
-  decCBOR = decodeRecordSum "DCert crypto" $ \case
+  decCBOR = decodeRecordSum "ShelleyDCert" $ \case
+    t
+      | 0 <= t && t < 3 -> shelleyDCertDelegDecoder t
+      | 3 <= t && t < 6 -> commonDCertDecoder t
     6 -> do
       x <- decCBOR
       pure (2, ShelleyDCertMir x)
-    x -> shelleyDCertDecoder @era x
+    x -> invalidKey x
+  {-# INLINE decCBOR #-}
 
-shelleyDCertDecoder ::
+shelleyDCertDelegDecoder ::
   ShelleyEraDCert era =>
   Word ->
   Decoder s (Int, DCert era)
-shelleyDCertDecoder 0 = do
-  x <- decCBOR
-  pure (2, ShelleyDCertDeleg . RegKey $ x)
-shelleyDCertDecoder 1 = do
-  x <- decCBOR
-  pure (2, ShelleyDCertDeleg . DeRegKey $ x)
-shelleyDCertDecoder 2 = do
-  a <- decCBOR
-  b <- decCBOR
-  pure (3, ShelleyDCertDeleg $ Delegate (Delegation a b))
-shelleyDCertDecoder 3 = do
-  group <- decCBORGroup
-  pure (fromIntegral (1 + listLenInt group), DCertPool (RegPool group))
-shelleyDCertDecoder 4 = do
-  a <- decCBOR
-  b <- decCBOR
-  pure (3, DCertPool $ RetirePool a (EpochNo b))
-shelleyDCertDecoder 5 = do
-  a <- decCBOR
-  b <- decCBOR
-  c <- decCBOR
-  pure (4, DCertGenesis $ ConstitutionalDelegCert a b c)
-shelleyDCertDecoder k = invalidKey k
+shelleyDCertDelegDecoder = \case
+  0 -> do
+    cred <- decCBOR
+    pure (2, ShelleyDCertDeleg $ RegKey cred)
+  1 -> do
+    cred <- decCBOR
+    pure (2, ShelleyDCertDeleg $ DeRegKey cred)
+  2 -> do
+    cred <- decCBOR
+    stakePool <- decCBOR
+    pure (3, ShelleyDCertDeleg $ Delegate (Delegation cred stakePool))
+  k -> invalidKey k
+{-# INLINE shelleyDCertDelegDecoder #-}
+
+commonDCertDecoder :: EraDCert era => Word -> Decoder s (Int, DCert era)
+commonDCertDecoder = \case
+  3 -> do
+    group <- decCBORGroup
+    pure (1 + listLenInt group, DCertPool (RegPool group))
+  4 -> do
+    a <- decCBOR
+    b <- decCBOR
+    pure (3, DCertPool $ RetirePool a b)
+  5 -> do
+    a <- decCBOR
+    b <- decCBOR
+    c <- decCBOR
+    pure (4, DCertGenesis $ ConstitutionalDelegCert a b c)
+  k -> invalidKey k
+{-# INLINE commonDCertDecoder #-}
 
 data ShelleyDelegCert c
   = -- | A stake key registration certificate.

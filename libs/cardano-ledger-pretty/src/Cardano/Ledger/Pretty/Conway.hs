@@ -99,29 +99,30 @@ instance PrettyA (Delegatee era) where
       ]
 
 instance PrettyA (ConwayDelegCert c) where
-  prettyA (ConwayDeleg stakeCredential delegatee deposit) =
+  prettyA (ConwayRegCert c deposit) =
+    ppRecord
+      "ConwayRegCert"
+      [ ("StakeCredential", prettyA c)
+      , ("Deposit", prettyA deposit)
+      ]
+  prettyA (ConwayUnRegCert c deposit) =
+    ppRecord
+      "ConwayUnRegCert"
+      [ ("StakeCredential", prettyA c)
+      , ("Deposit", prettyA deposit)
+      ]
+  prettyA (ConwayDelegCert stakeCredential delegatee) =
     ppRecord
       "ConwayDeleg"
       [ ("Stake Credential", prettyA stakeCredential)
       , ("Delegatee", prettyA delegatee)
-      , ("Deposit", prettyA deposit)
       ]
-  prettyA (ConwayReDeleg stakeCredential delegatee) =
+  prettyA (ConwayRegDelegCert stakeCredential delegatee deposit) =
     ppRecord
-      "ConwayReDeleg"
+      "ConwayRegDeleg"
       [ ("Stake Credential", prettyA stakeCredential)
       , ("Delegatee", prettyA delegatee)
-      ]
-  prettyA (ConwayUnDeleg stakeCredential deposit) =
-    ppRecord
-      "ConwayUnDeleg"
-      [ ("Stake Credential", prettyA stakeCredential)
       , ("Deposit", prettyA deposit)
-      ]
-  prettyA (ConwayRegKey c) =
-    ppRecord
-      "ConwayRegKey"
-      [ ("StakeCredential", prettyA c)
       ]
 
 ppConwayDCert :: ConwayDCert c -> PDoc
