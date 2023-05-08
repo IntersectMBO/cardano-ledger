@@ -25,6 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
  )
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended
@@ -58,10 +59,11 @@ import Test.QuickCheck (generate)
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
   ( EraGen era
+  , HeaderCrypto hc
   , EraGovernance era
   ) =>
   Int ->
-  GenEnv era ->
+  GenEnv era hc ->
   IO (ChainState era)
 genChainState n ge =
   let cs =
@@ -81,17 +83,17 @@ genChainState n ge =
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
-  ( Mock (EraCrypto era)
+  ( Mock (EraCrypto era) hc
   , EraGen era
   , MinLEDGER_STS era
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ ShelleyLEDGERS era
-  , QC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
+  , QC.HasTrace (ShelleyLEDGERS era) (GenEnv era hc)
   , ApplyBlock era
   ) =>
-  GenEnv era ->
+  GenEnv era hc ->
   ChainState era ->
-  IO (Block (BHeader (EraCrypto era)) era)
+  IO (Block (BHeader (EraCrypto era) hc) era)
 genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 -- The order one does this is important, since all these things must flow from the same
@@ -104,7 +106,7 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 genTriple ::
   ( EraGen era
-  , Mock (EraCrypto era)
+  , Mock (EraCrypto era) hc
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
@@ -115,10 +117,11 @@ genTriple ::
   , ProtVerAtMost era 6
   ) =>
   Proxy era ->
+  Proxy hc ->
   Int ->
-  IO (GenEnv era, ChainState era, GenEnv era -> IO (ShelleyTx era))
-genTriple proxy n = do
-  let ge = genEnv proxy defaultConstants
+  IO (GenEnv era hc, ChainState era, GenEnv era hc -> IO (ShelleyTx era))
+genTriple proxy q n = do
+  let ge = genEnv proxy q defaultConstants
   cs <- genChainState n ge
   let fun genenv = generate $ genTx genenv ledgerEnv (esLState (nesEs (chainNes cs)))
   pure (ge, cs, fun)

@@ -31,6 +31,7 @@ import Cardano.Ledger.Slot (
 import Cardano.Ledger.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
   LastAppliedBlock (..),
@@ -38,6 +39,7 @@ import Cardano.Protocol.TPraos.BHeader (
  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Data.Default.Class
+import Data.Proxy
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Examples.Federation (genDelegs)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
@@ -80,8 +82,9 @@ lastByronHeaderHash = HashHeader $ mkHash 0
 nonce0 ::
   forall c.
   Crypto c =>
+  Proxy c ->
   Nonce
-nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
+nonce0 _ = hashHeaderToNonce (lastByronHeaderHash @c)
 
 -- | === Initial Chain State
 --
@@ -89,21 +92,24 @@ nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 -- 'initialShelleyState' with the genesis delegation
 -- 'genDelegs' and any given starting 'UTxO' set.
 initSt ::
-  forall era.
+  forall era hc.
   ( EraTxOut era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
   , EraGovernance era
+  , HeaderCrypto hc
   ) =>
+  Proxy (EraCrypto era) ->
+  Proxy hc ->
   UTxO era ->
   ChainState era
-initSt utxo =
+initSt p _ utxo =
   initialShelleyState
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     (EpochNo 0)
     utxo
     (maxLLSupply <-> Val.coin (balance utxo))
-    genDelegs
+    (genDelegs (Proxy @(EraCrypto era)) (Proxy @hc))
     (ppEx @era)
-    (nonce0 @(EraCrypto era))
+    (nonce0 p)

@@ -48,9 +48,9 @@ import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
   KeyRole (..),
-  VerKeyVRF,
  )
 import Cardano.Ledger.Orphans ()
+import Cardano.Ledger.PoolDistr (PoolStakeVRF)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData ())
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
@@ -200,7 +200,7 @@ instance DecCBOR StakePoolRelay where
 -- | A stake pool.
 data PoolParams c = PoolParams
   { ppId :: !(KeyHash 'StakePool c)
-  , ppVrf :: !(Hash c (VerKeyVRF c))
+  , ppVrf :: !(Hash c PoolStakeVRF)
   , ppPledge :: !Coin
   , ppCost :: !Coin
   , ppMargin :: !UnitInterval

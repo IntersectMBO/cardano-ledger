@@ -59,7 +59,7 @@ import qualified Test.Tasty.QuickCheck as TQC
 
 type A = AlonzoEra TestCrypto
 
-instance Embed (AlonzoBBODY A) (CHAIN A) where
+instance Embed (AlonzoBBODY A) (CHAIN A TestCrypto) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
@@ -76,7 +76,7 @@ tests =
       conjoin $ map alonzoSpecificProps (sourceSignalTargets tr)
 
 alonzoSpecificProps ::
-  SourceSignalTarget (CHAIN A) ->
+  SourceSignalTarget (CHAIN A TestCrypto) ->
   Property
 alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $

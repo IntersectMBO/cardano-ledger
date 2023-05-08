@@ -45,6 +45,7 @@ import Cardano.Ledger.Keys (
   signedDSIGN,
   signedKES,
  )
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
@@ -70,21 +71,22 @@ import Test.Cardano.Protocol.Crypto.KES (KESKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF.Fake (NatNonce (..), WithResult (..))
 
-data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
+data AllIssuerKeys v hv (r :: KeyRole) = AllIssuerKeys
   { aikCold :: KeyPair r v
-  , aikVrf :: VRFKeyPair v
-  , aikHot :: NonEmpty (KESPeriod, KESKeyPair v)
+  , aikVrf :: VRFKeyPair hv
+  , aikHot :: NonEmpty (KESPeriod, KESKeyPair hv)
   , aikColdKeyHash :: KeyHash r v
   }
-  deriving (Show)
+
+deriving instance (Crypto v, HeaderCrypto hv) => Show (AllIssuerKeys v hv r)
 
 mkOCert ::
-  forall c r.
-  (Crypto c, Signable (DSIGN c) (OCertSignable c)) =>
-  AllIssuerKeys c r ->
+  forall c hc r.
+  (Crypto c, Signable (DSIGN c) (OCertSignable hc)) =>
+  AllIssuerKeys c hc r ->
   Word64 ->
   KESPeriod ->
-  OCert c
+  OCert c hc
 mkOCert pKeys kesPeriod keyRegKesPeriod =
   let vKeyHot = kesVerKey $ snd $ NE.head $ aikHot pKeys
       sKeyCold = sKey $ aikCold pKeys
@@ -101,15 +103,15 @@ mkBHBody ::
   , VRF.VRFAlgorithm (VRF v)
   ) =>
   ProtVer ->
-  HashHeader v ->
-  AllIssuerKeys v r ->
+  HashHeader c ->
+  AllIssuerKeys c v r ->
   SlotNo ->
   BlockNo ->
   Nonce ->
-  OCert v ->
+  OCert c v ->
   Natural ->
-  Hash v EraIndependentBlockBody ->
-  BHBody v
+  Hash c EraIndependentBlockBody ->
+  BHBody c v
 mkBHBody = mkBHBodyWithVRF (VRF.evalCertified ()) (VRF.evalCertified ())
 
 mkBHBodyFakeVRF ::
@@ -120,15 +122,15 @@ mkBHBodyFakeVRF ::
   NatNonce ->
   UnitInterval ->
   ProtVer ->
-  HashHeader v ->
-  AllIssuerKeys v r ->
+  HashHeader c ->
+  AllIssuerKeys c v r ->
   SlotNo ->
   BlockNo ->
   Nonce ->
-  OCert v ->
+  OCert c v ->
   Natural ->
-  Hash v EraIndependentBlockBody ->
-  BHBody v
+  Hash c EraIndependentBlockBody ->
+  BHBody c v
 mkBHBodyFakeVRF (NatNonce bnonce) l =
   mkBHBodyWithVRF
     (\nonce -> VRF.evalCertified () (WithResult nonce (fromIntegral bnonce)))
@@ -144,21 +146,21 @@ unitIntervalToWord64 ui =
     toWord64 r = fromInteger (numerator r `quot` denominator r)
 
 mkBHBodyWithVRF ::
-  ( Coercible a (VRF.CertifiedVRF (VRF c) Nonce)
-  , Coercible b (VRF.CertifiedVRF (VRF c) Natural)
+  ( Coercible a (VRF.CertifiedVRF (VRF hc) Nonce)
+  , Coercible b (VRF.CertifiedVRF (VRF hc) Natural)
   ) =>
-  (Seed -> VRF.SignKeyVRF (VRF c) -> a) ->
-  (Seed -> VRF.SignKeyVRF (VRF c) -> b) ->
+  (Seed -> VRF.SignKeyVRF (VRF hc) -> a) ->
+  (Seed -> VRF.SignKeyVRF (VRF hc) -> b) ->
   ProtVer ->
   HashHeader c ->
-  AllIssuerKeys c r ->
+  AllIssuerKeys c hc r ->
   SlotNo ->
   BlockNo ->
   Nonce ->
-  OCert c ->
+  OCert c hc ->
   Natural ->
   Hash c EraIndependentBlockBody ->
-  BHBody c
+  BHBody c hc
 mkBHBodyWithVRF mkVrfEta mkVrfL protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash =
   let nonceNonce = mkSeed seedEta slotNo enonce
       leaderNonce = mkSeed seedL slotNo enonce
@@ -178,13 +180,13 @@ mkBHBodyWithVRF mkVrfEta mkVrfL protVer prev pKeys slotNo blockNo enonce oCert b
         }
 
 mkBHeader ::
-  (Crypto c, KES.Signable (KES c) (BHBody c)) =>
-  AllIssuerKeys c r ->
+  (Crypto c, HeaderCrypto hc, KES.Signable (KES hc) (BHBody c hc)) =>
+  AllIssuerKeys c hc r ->
   Word ->
   -- | KES period of key registration
   Word ->
-  BHBody c ->
-  BHeader c
+  BHBody c hc ->
+  BHeader c hc
 mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody =
   let sHot = kesSignKey $ snd $ NE.head $ aikHot pKeys
       kpDiff = kesPeriod - keyRegKesPeriod
@@ -220,15 +222,16 @@ evolveKESUntil sk1 (KESPeriod current) (KESPeriod target) = go sk1 current targe
       Just sk' -> go sk' (c + 1) t
 
 mkBlock ::
-  forall era r.
+  forall era hc r.
   ( EraSegWits era
-  , VRF.Signable (VRF (EraCrypto era)) Seed
-  , KES.Signable (KES (EraCrypto era)) (BHBody (EraCrypto era))
+  , HeaderCrypto hc
+  , VRF.Signable (VRF hc) Seed
+  , KES.Signable (KES hc) (BHBody (EraCrypto era) hc)
   ) =>
   -- | Hash of previous block
   HashHeader (EraCrypto era) ->
   -- | All keys in the stake pool
-  AllIssuerKeys (EraCrypto era) r ->
+  AllIssuerKeys (EraCrypto era) hc r ->
   -- | Transactions to record
   [Tx era] ->
   -- | Current slot
@@ -242,8 +245,8 @@ mkBlock ::
   -- | KES period of key registration
   Word ->
   -- | Operational certificate
-  OCert (EraCrypto era) ->
-  Block (BHeader (EraCrypto era)) era
+  OCert (EraCrypto era) hc ->
+  Block (BHeader (EraCrypto era) hc) era
 mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
       txseq = toTxSeq @era (StrictSeq.fromList txns)
@@ -255,15 +258,16 @@ mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
-  forall era r.
+  forall era hc r.
   ( EraSegWits era
-  , VRF.Signable (VRF (EraCrypto era)) (WithResult Seed)
-  , KES.Signable (KES (EraCrypto era)) (BHBody (EraCrypto era))
+  , HeaderCrypto hc
+  , VRF.Signable (VRF hc) (WithResult Seed)
+  , KES.Signable (KES hc) (BHBody (EraCrypto era) hc)
   ) =>
   -- | Hash of previous block
   HashHeader (EraCrypto era) ->
   -- | All keys in the stake pool
-  AllIssuerKeys (EraCrypto era) r ->
+  AllIssuerKeys (EraCrypto era) hc r ->
   -- | Transactions to record
   [Tx era] ->
   -- | Current slot
@@ -281,8 +285,8 @@ mkBlockFakeVRF ::
   -- | KES period of key registration
   Word ->
   -- | Operational certificate
-  OCert (EraCrypto era) ->
-  Block (BHeader (EraCrypto era)) era
+  OCert (EraCrypto era) hc ->
+  Block (BHeader (EraCrypto era) hc) era
 mkBlockFakeVRF prev pKeys txns slotNo blockNo enonce bnonce l kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
       txSeq = toTxSeq @era (StrictSeq.fromList txns)

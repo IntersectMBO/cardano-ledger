@@ -52,11 +52,11 @@ import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 
 -- | ShelleyLedgerExamples for Alonzo era
-ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples Alonzo
+ledgerExamplesAlonzo :: SLE.ShelleyLedgerExamples Alonzo StandardCrypto
 ledgerExamplesAlonzo =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
-    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Alonzo)
+    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Alonzo) (Proxy @StandardCrypto)
     , SLE.sleTx = exampleTransactionInBlock
     , SLE.sleApplyTxError =
         ApplyTxError $
@@ -79,7 +79,7 @@ ledgerExamplesAlonzo =
       SLE.ShelleyResultExamples
         { SLE.srePParams = def
         , SLE.sreProposedPPUpdates = examplePPPU
-        , SLE.srePoolDistr = SLE.examplePoolDistr
+        , SLE.srePoolDistr = SLE.examplePoolDistr (Proxy @StandardCrypto) (Proxy @StandardCrypto)
         , SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards
         , SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
@@ -101,7 +101,7 @@ exampleTxBodyAlonzo =
             (SJust $ SLE.mkDummySafeHash Proxy 1) -- outputs
         ]
     )
-    SLE.exampleCerts -- txcerts
+    (SLE.exampleCerts (Proxy @StandardCrypto)) -- txcerts
     ( Withdrawals $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
@@ -162,6 +162,7 @@ exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
 exampleAlonzoNewEpochState :: NewEpochState Alonzo
 exampleAlonzoNewEpochState =
   SLE.exampleNewEpochState
+    (Proxy @StandardCrypto)
     (SLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOWordL .~ CoinPerWord (Coin 1))

@@ -52,7 +52,7 @@ import qualified Test.Tasty as T
 
 -- ===============================================================
 
-instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto)) where
+instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto) TestCrypto) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
@@ -63,7 +63,7 @@ instance Embed (AlonzoUTXOW (AlonzoEra TestCrypto)) (ShelleyLEDGER (AlonzoEra Te
 profileCover :: IO ()
 profileCover =
   T.defaultMain $
-    relevantCasesAreCovered @(AlonzoEra TestCrypto) 1
+    relevantCasesAreCovered @(AlonzoEra TestCrypto) @TestCrypto 1
 
 main :: IO ()
 main = profileCover

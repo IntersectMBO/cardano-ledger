@@ -33,11 +33,13 @@ import Cardano.Ledger.TreeDiff (diffExpr)
 import Cardano.Ledger.UMap (depositView)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Control.State.Transition.Trace (
   SourceSignalTarget (..),
  )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -54,32 +56,40 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- | Tests that redundant Deposit information is consistent
 tests ::
-  forall era.
+  forall era hc.
   ( EraGen era
+  , HeaderCrypto hc
   , EraGovernance era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   ) =>
   TestTree
 tests =
   testGroup
     "Deposit Invariants"
-    [ testProperty "Non negative deposits" (shortChainTrace defaultConstants (nonNegativeDeposits @era))
-    , testProperty "Deposits = KeyDeposits + PoolDeposits" (shortChainTrace defaultConstants (depositInvariant @era))
-    , testProperty "Reward domain = Deposit domain" (shortChainTrace defaultConstants (rewardDepositDomainInvariant @era))
+    [ testProperty "Non negative deposits" (shortChainTrace p q defaultConstants (nonNegativeDeposits p))
+    , testProperty "Deposits = KeyDeposits + PoolDeposits" (shortChainTrace p q defaultConstants depositInvariant)
+    , testProperty "Reward domain = Deposit domain" (shortChainTrace p q defaultConstants rewardDepositDomainInvariant)
     ]
+  where
+    p :: Proxy era
+    p = Proxy
+
+    q :: Proxy hc
+    q = Proxy
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
-  SourceSignalTarget (CHAIN era) ->
+  Proxy era ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
-nonNegativeDeposits SourceSignalTarget {source = chainSt} =
+nonNegativeDeposits _ SourceSignalTarget {source = chainSt} =
   let es = (nesEs . chainNes) chainSt
       UTxOState {utxosDeposited = d} = (lsUTxOState . esLState) es
    in counterexample ("nonNegativeDeposits: " ++ show d) (d >= mempty)
 
 -- | Check that the sum of key Deposits (in the UMap) and the pool Depoits (in psDeposits) are equal to the utsosDeposits
 depositInvariant ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 depositInvariant SourceSignalTarget {source = chainSt} =
   let LedgerState {lsUTxOState = utxost, lsCertState = CertState _vstate pstate dstate} = (esLState . nesEs . chainNes) chainSt
@@ -98,7 +108,7 @@ depositInvariant SourceSignalTarget {source = chainSt} =
         (allDeposits === keyDeposits <+> poolDeposits)
 
 rewardDepositDomainInvariant ::
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
   let LedgerState {lsCertState = CertState {certDState = dstate}} = (esLState . nesEs . chainNes) chainSt

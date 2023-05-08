@@ -85,6 +85,7 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
   HashHeader,
@@ -129,7 +130,7 @@ import NoThunks.Class (NoThunks (..))
 
 type instance EraRule "TICKN" (ShelleyEra c) = TICKN
 
-data CHAIN era
+data CHAIN era hcrypto
 
 data ChainState era = ChainState
   { chainNes :: NewEpochState era
@@ -148,44 +149,47 @@ deriving stock instance Eq (NewEpochState era) => Eq (ChainState era)
 
 instance NFData (NewEpochState era) => NFData (ChainState era)
 
-data TestChainPredicateFailure era
+data TestChainPredicateFailure era hc
   = RealChainPredicateFailure !ChainPredicateFailure
   | BbodyFailure !(PredicateFailure (EraRule "BBODY" era)) -- Subtransition Failures
   | TickFailure !(PredicateFailure (EraRule "TICK" era)) -- Subtransition Failures
   | TicknFailure !(PredicateFailure (EraRule "TICKN" era)) -- Subtransition Failures
-  | PrtclFailure !(PredicateFailure (PRTCL (EraCrypto era))) -- Subtransition Failures
+  | PrtclFailure !(PredicateFailure (PRTCL (EraCrypto era) hc)) -- Subtransition Failures
   | PrtclSeqFailure !(PrtlSeqFailure (EraCrypto era)) -- Subtransition Failures
   deriving (Generic)
 
-data ChainEvent era
+data ChainEvent era hc
   = BbodyEvent !(Event (EraRule "BBODY" era))
   | TickEvent !(Event (EraRule "TICK" era))
   | TicknEvent !(Event (EraRule "TICKN" era))
-  | PrtclEvent !(Event (PRTCL (EraCrypto era)))
+  | PrtclEvent !(Event (PRTCL (EraCrypto era) hc))
 
 deriving stock instance
   ( Era era
+  , HeaderCrypto hc
   , Show (PredicateFailure (EraRule "BBODY" era))
   , Show (PredicateFailure (EraRule "TICK" era))
   , Show (PredicateFailure (EraRule "TICKN" era))
   ) =>
-  Show (TestChainPredicateFailure era)
+  Show (TestChainPredicateFailure era hc)
 
 deriving stock instance
   ( Era era
+  , HeaderCrypto hc
   , Eq (PredicateFailure (EraRule "BBODY" era))
   , Eq (PredicateFailure (EraRule "TICK" era))
   , Eq (PredicateFailure (EraRule "TICKN" era))
   ) =>
-  Eq (TestChainPredicateFailure era)
+  Eq (TestChainPredicateFailure era hc)
 
 instance
   ( Era era
+  , HeaderCrypto hc
   , NoThunks (PredicateFailure (EraRule "BBODY" era))
   , NoThunks (PredicateFailure (EraRule "TICK" era))
   , NoThunks (PredicateFailure (EraRule "TICKN" era))
   ) =>
-  NoThunks (TestChainPredicateFailure era)
+  NoThunks (TestChainPredicateFailure era hc)
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
@@ -244,64 +248,66 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
 
 instance
   ( EraPParams era
-  , Embed (EraRule "BBODY" era) (CHAIN era)
+  , HeaderCrypto hc
+  , Embed (EraRule "BBODY" era) (CHAIN era hc)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
-  , Embed (EraRule "TICKN" era) (CHAIN era)
+  , Embed (EraRule "TICKN" era) (CHAIN era hc)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
   , State (EraRule "TICKN" era) ~ TicknState
   , Signal (EraRule "TICKN" era) ~ Bool
-  , Embed (EraRule "TICK" era) (CHAIN era)
+  , Embed (EraRule "TICK" era) (CHAIN era hc)
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Embed (PRTCL (EraCrypto era)) (CHAIN era)
+  , Embed (PRTCL (EraCrypto era) hc) (CHAIN era hc)
   , EncCBORGroup (TxSeq era)
   , ProtVerAtMost era 6
   , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
-  STS (CHAIN era)
+  STS (CHAIN era hc)
   where
   type
-    State (CHAIN era) =
+    State (CHAIN era hc) =
       ChainState era
 
   type
-    Signal (CHAIN era) =
-      Block (BHeader (EraCrypto era)) era
+    Signal (CHAIN era hc) =
+      Block (BHeader (EraCrypto era) hc) era
 
-  type Environment (CHAIN era) = ()
-  type BaseM (CHAIN era) = ShelleyBase
+  type Environment (CHAIN era hc) = ()
+  type BaseM (CHAIN era hc) = ShelleyBase
 
-  type PredicateFailure (CHAIN era) = TestChainPredicateFailure era
-  type Event (CHAIN era) = ChainEvent era
+  type PredicateFailure (CHAIN era hc) = TestChainPredicateFailure era hc
+  type Event (CHAIN era hc) = ChainEvent era hc
 
   initialRules = []
   transitionRules = [chainTransition]
 
 chainTransition ::
-  forall era.
-  ( STS (CHAIN era)
-  , Embed (EraRule "BBODY" era) (CHAIN era)
+  forall era hc.
+  ( HeaderCrypto hc
+  , STS (CHAIN era hc)
+  , Embed (EraRule "BBODY" era) (CHAIN era hc)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
-  , Embed (EraRule "TICKN" era) (CHAIN era)
+  , Embed (EraRule "TICKN" era) (CHAIN era hc)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
   , State (EraRule "TICKN" era) ~ TicknState
   , Signal (EraRule "TICKN" era) ~ Bool
-  , Embed (EraRule "TICK" era) (CHAIN era)
+  , Embed (EraRule "TICK" era) (CHAIN era hc)
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Embed (PRTCL (EraCrypto era)) (CHAIN era)
+  , Embed (PRTCL (EraCrypto era) hc) (CHAIN era hc)
   , EncCBORGroup (TxSeq era)
   , EraPParams era
   , ProtVerAtMost era 6
   , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
-  TransitionRule (CHAIN era)
+  TransitionRule (CHAIN era hc)
 chainTransition =
   judgmentContext
     >>= \( TRC
@@ -350,7 +356,7 @@ chainTransition =
               )
 
         PrtclState cs' etaV' etaC' <-
-          trans @(PRTCL (EraCrypto era)) $
+          trans @(PRTCL (EraCrypto era) hc) $
             TRC
               ( PrtclEnv (pp' ^. ppDL) _pd genDelegs eta0'
               , PrtclState cs etaV etaC
@@ -375,35 +381,35 @@ chainTransition =
 
 instance
   ( Era era
-  , Era era
+  , HeaderCrypto hc
   , STS (ShelleyBBODY era)
   , PredicateFailure (EraRule "BBODY" era) ~ ShelleyBbodyPredFailure era
   , Event (EraRule "BBODY" era) ~ Event (ShelleyBBODY era)
   ) =>
-  Embed (ShelleyBBODY era) (CHAIN era)
+  Embed (ShelleyBBODY era) (CHAIN era hc)
   where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
 instance
   ( Era era
-  , Era era
+  , HeaderCrypto hc
   , PredicateFailure (EraRule "TICKN" era) ~ TicknPredicateFailure
   , Event (EraRule "TICKN" era) ~ Void
   ) =>
-  Embed TICKN (CHAIN era)
+  Embed TICKN (CHAIN era hc)
   where
   wrapFailed = TicknFailure
   wrapEvent = TicknEvent
 
 instance
   ( Era era
-  , Era era
+  , HeaderCrypto hc
   , STS (ShelleyTICK era)
   , PredicateFailure (EraRule "TICK" era) ~ ShelleyTickPredFailure era
   , Event (EraRule "TICK" era) ~ ShelleyTickEvent era
   ) =>
-  Embed (ShelleyTICK era) (CHAIN era)
+  Embed (ShelleyTICK era) (CHAIN era hc)
   where
   wrapFailed = TickFailure
   wrapEvent = TickEvent
@@ -411,10 +417,10 @@ instance
 instance
   ( Era era
   , c ~ EraCrypto era
-  , Era era
-  , STS (PRTCL c)
+  , HeaderCrypto hc
+  , STS (PRTCL c hc)
   ) =>
-  Embed (PRTCL c) (CHAIN era)
+  Embed (PRTCL c hc) (CHAIN era hc)
   where
   wrapFailed = PrtclFailure
   wrapEvent = PrtclEvent

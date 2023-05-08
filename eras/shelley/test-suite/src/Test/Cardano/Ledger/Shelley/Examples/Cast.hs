@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -55,20 +54,23 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   Hash,
   KeyRole (..),
-  VerKeyVRF,
   hashKey,
   hashVerKeyVRF,
  )
+import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.TxBody (
   PoolMetadata (..),
   PoolParams (..),
   RewardAcnt (..),
  )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
+import Cardano.Protocol.HeaderKeys (VerKeyVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust)
+import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
@@ -97,8 +99,12 @@ aliceStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: Crypto c => AllIssuerKeys c 'StakePool
-alicePoolKeys =
+alicePoolKeys ::
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy c ->
+  Proxy hc ->
+  AllIssuerKeys c hc 'StakePool
+alicePoolKeys _ _ =
   AllIssuerKeys
     (KeyPair vkCold skCold)
     (mkVRFKeyPair (RawSeed 1 0 0 0 2))
@@ -124,11 +130,11 @@ alicePtrAddr :: Crypto c => Addr c
 alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) minBound minBound)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: forall c. Crypto c => PoolParams c
-alicePoolParams =
+alicePoolParams :: (Crypto c, HeaderCrypto hc) => Proxy c -> Proxy hc -> PoolParams c
+alicePoolParams p q =
   PoolParams
-    { ppId = hashKey . vKey $ aikCold alicePoolKeys
-    , ppVrf = hashVerKeyVRF . vrfVerKey $ aikVrf (alicePoolKeys @c)
+    { ppId = hashKey . vKey $ aikCold $ alicePoolKeys p q
+    , ppVrf = toPoolStakeVRF . hashVerKeyVRF . vrfVerKey $ aikVrf (alicePoolKeys p q)
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
@@ -145,10 +151,11 @@ alicePoolParams =
 
 -- | Alice's VRF key hash
 aliceVRFKeyHash ::
-  forall c.
-  Crypto c =>
-  Hash c (VerKeyVRF c)
-aliceVRFKeyHash = hashVerKeyVRF (vrfVerKey $ aikVrf (alicePoolKeys @c))
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy c ->
+  Proxy hc ->
+  Hash c (VerKeyVRF hc)
+aliceVRFKeyHash p q = hashVerKeyVRF (vrfVerKey $ aikVrf (alicePoolKeys p q))
 
 -- | Bob's payment key pair
 bobPay :: Crypto c => KeyPair 'Payment c
@@ -171,8 +178,8 @@ bobSHK :: Crypto c => Credential 'Staking c
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
-bobPoolKeys :: Crypto c => AllIssuerKeys c 'StakePool
-bobPoolKeys =
+bobPoolKeys :: (Crypto c, HeaderCrypto hc) => Proxy c -> Proxy hc -> AllIssuerKeys c hc 'StakePool
+bobPoolKeys _ _ =
   AllIssuerKeys
     (KeyPair vkCold skCold)
     (mkVRFKeyPair (RawSeed 2 0 0 0 2))
@@ -182,11 +189,11 @@ bobPoolKeys =
     (skCold, vkCold) = mkKeyPair (RawSeed 2 0 0 0 1)
 
 -- | Bob's stake pool parameters
-bobPoolParams :: forall c. Crypto c => PoolParams c
-bobPoolParams =
+bobPoolParams :: (Crypto c, HeaderCrypto hc) => Proxy c -> Proxy hc -> PoolParams c
+bobPoolParams p q =
   PoolParams
-    { ppId = hashKey . vKey $ aikCold bobPoolKeys
-    , ppVrf = hashVerKeyVRF . vrfVerKey $ aikVrf (bobPoolKeys @c)
+    { ppId = hashKey . vKey $ aikCold $ bobPoolKeys p q
+    , ppVrf = toPoolStakeVRF . hashVerKeyVRF . vrfVerKey $ aikVrf (bobPoolKeys p q)
     , ppPledge = Coin 2
     , ppCost = Coin 1
     , ppMargin = unsafeBoundRational 0.1
@@ -198,10 +205,11 @@ bobPoolParams =
 
 -- | Bob's VRF key hash
 bobVRFKeyHash ::
-  forall c.
-  Crypto c =>
-  Hash c (VerKeyVRF c)
-bobVRFKeyHash = hashVerKeyVRF (vrfVerKey $ aikVrf (bobPoolKeys @c))
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy c ->
+  Proxy hc ->
+  Hash c (VerKeyVRF hc)
+bobVRFKeyHash p q = hashVerKeyVRF (vrfVerKey $ aikVrf (bobPoolKeys p q))
 
 -- Carl's payment key pair
 carlPay :: Crypto c => KeyPair 'Payment c

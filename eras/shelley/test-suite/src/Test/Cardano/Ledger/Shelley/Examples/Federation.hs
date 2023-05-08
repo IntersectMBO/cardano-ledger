@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -32,8 +31,10 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
   hashKey,
   hashVerKeyVRF,
+  toGenesisVRF,
  )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay (
   OBftSlot (..),
@@ -43,6 +44,7 @@ import qualified Data.List
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((^.))
@@ -58,9 +60,9 @@ numCoreNodes :: Word64
 numCoreNodes = 7
 
 mkAllCoreNodeKeys ::
-  Crypto c =>
+  (Crypto c, HeaderCrypto hc) =>
   Word64 ->
-  AllIssuerKeys c r
+  AllIssuerKeys c hc r
 mkAllCoreNodeKeys w =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -71,13 +73,14 @@ mkAllCoreNodeKeys w =
     (skCold, vkCold) = mkKeyPair (RawSeed w 0 0 0 1)
 
 coreNodes ::
-  forall c.
-  Crypto c =>
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy c ->
+  Proxy hc ->
   [ ( (SignKeyDSIGN c, VKey 'Genesis c)
-    , AllIssuerKeys c 'GenesisDelegate
+    , AllIssuerKeys c hc 'GenesisDelegate
     )
   ]
-coreNodes =
+coreNodes _ _ =
   [ (mkGenKey (RawSeed x 0 0 0 0), mkAllCoreNodeKeys x)
   | x <- [101 .. 100 + numCoreNodes]
   ]
@@ -85,25 +88,36 @@ coreNodes =
 -- === Signing (Secret) Keys
 -- Retrieve the signing key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeSK :: forall c. Crypto c => Int -> SignKeyDSIGN c
-coreNodeSK = fst . fst . (coreNodes @c !!)
+coreNodeSK ::
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy c ->
+  Proxy hc ->
+  Int ->
+  SignKeyDSIGN c
+coreNodeSK p q = fst . fst . (coreNodes p q !!)
 
 -- | === Verification (Public) Keys
 -- Retrieve the verification key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeVK :: forall c. Crypto c => Int -> VKey 'Genesis c
-coreNodeVK = snd . fst . (coreNodes @c !!)
+coreNodeVK ::
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy c ->
+  Proxy hc ->
+  Int ->
+  VKey 'Genesis c
+coreNodeVK p q = snd . fst . (coreNodes p q !!)
 
 -- | === Block Issuer Keys
 -- Retrieve the block issuer keys (cold, VRF, and hot KES keys)
 -- for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeIssuerKeys ::
-  forall c.
-  Crypto c =>
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy c ->
+  Proxy hc ->
   Int ->
-  AllIssuerKeys c 'GenesisDelegate
-coreNodeIssuerKeys = snd . (coreNodes @c !!)
+  AllIssuerKeys c hc 'GenesisDelegate
+coreNodeIssuerKeys p q = snd . (coreNodes p q !!)
 
 -- | === Keys by Overlay Schedule
 -- Retrieve all the keys associated with a core node
@@ -111,22 +125,22 @@ coreNodeIssuerKeys = snd . (coreNodes @c !!)
 -- It will return an error if there is not a core node scheduled
 -- for the given slot.
 coreNodeKeysBySchedule ::
-  forall era.
-  (HasCallStack, EraPParams era) =>
+  forall era hc c.
+  (HasCallStack, EraPParams era, HeaderCrypto hc, Crypto c, c ~ EraCrypto era) =>
   PParams era ->
   Word64 ->
-  AllIssuerKeys (EraCrypto era) 'GenesisDelegate
+  AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
     firstSlot
-    (Map.keysSet genDelegs)
+    (Map.keysSet (genDelegs (Proxy @c) (Proxy @hc)))
     (pp ^. ppDG)
     (activeSlotCoeff testGlobals)
     slot' of
     Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot
     Just NonActiveSlot -> error $ "coreNodesForSlot: Non-active slot " <> show slot
     Just (ActiveSlot gkh) ->
-      case Data.List.find (\((_, gk), _) -> hashKey gk == gkh) coreNodes of
+      case Data.List.find (\((_, gk), _) -> hashKey gk == gkh) (coreNodes (Proxy @c) (Proxy @hc)) of
         Nothing ->
           error $
             "coreNodesForSlot: Cannot find key hash in coreNodes: "
@@ -140,16 +154,17 @@ coreNodeKeysBySchedule pp slot =
 -- The map from genesis/core node (verification) key hashes
 -- to their delegate's (verification) key hash.
 genDelegs ::
-  forall c.
-  Crypto c =>
+  (Crypto c, HeaderCrypto hc) =>
+  Proxy c ->
+  Proxy hc ->
   Map (KeyHash 'Genesis c) (GenDelegPair c)
-genDelegs =
+genDelegs p q =
   Map.fromList
     [ ( hashKey $ snd gkey
       , ( GenDelegPair
             (coerceKeyRole . hashKey . vKey $ aikCold pkeys)
-            (hashVerKeyVRF . vrfVerKey $ aikVrf pkeys)
+            (toGenesisVRF . hashVerKeyVRF . vrfVerKey $ aikVrf pkeys)
         )
       )
-    | (gkey, pkeys) <- coreNodes
+    | (gkey, pkeys) <- coreNodes p q
     ]

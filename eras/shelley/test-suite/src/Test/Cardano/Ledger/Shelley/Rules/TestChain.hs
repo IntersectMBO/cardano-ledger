@@ -44,6 +44,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader (..),
@@ -116,15 +117,17 @@ type TestingLedger era ledger =
 
 -- | Properties on really short chains, with only 100 successes
 shortChainTrace ::
-  forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , HeaderCrypto hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , EraGovernance era
   ) =>
+  Proxy era ->
+  Proxy hc ->
   Constants ->
-  (SourceSignalTarget (CHAIN era) -> Property) ->
+  (SourceSignalTarget (CHAIN era hc) -> Property) ->
   Property
-shortChainTrace constants f = withMaxSuccess 100 $ forAllChainTrace @era 10 constants $ \tr -> conjoin (map f (sourceSignalTargets tr))
+shortChainTrace _ _ constants f = withMaxSuccess 100 $ forAllChainTrace 10 constants $ \tr -> conjoin (map f (sourceSignalTargets tr))
 
 ----------------------------------------------------------------------
 -- Projections of CHAIN Trace
@@ -132,13 +135,13 @@ shortChainTrace constants f = withMaxSuccess 100 $ forAllChainTrace @era 10 cons
 
 -- | Reconstruct a LEDGER trace from the transactions in a Block and ChainState
 ledgerTraceFromBlock ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era hc ledger.
+  ( ChainProperty era hc
   , EraSegWits era
   , TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader (EraCrypto era) hc) era ->
   (ChainState era, Trace ledger)
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt
@@ -152,13 +155,13 @@ ledgerTraceFromBlock chainSt block =
 -- it restricts the UTxO state to only those needed by the block.
 -- It also returns the unused UTxO for comparison later.
 ledgerTraceFromBlockWithRestrictedUTxO ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era hc ledger.
+  ( ChainProperty era hc
   , EraSegWits era
   , TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader (EraCrypto era) hc) era ->
   (UTxO era, Trace ledger)
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO
@@ -175,14 +178,14 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::
-  forall era.
-  ( ChainProperty era
+  forall era hc.
+  ( ChainProperty era hc
   , ShelleyEraTxBody era
   , EraSegWits era
   , ProtVerAtMost era 8
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader (EraCrypto era) hc) era ->
   (ChainState era, Trace (ShelleyPOOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt
@@ -203,14 +206,14 @@ poolTraceFromBlock chainSt block =
 
 -- | Reconstruct a DELEG trace from all the transaction certificates in a Block
 delegTraceFromBlock ::
-  forall era.
-  ( ChainProperty era
+  forall era hc.
+  ( ChainProperty era hc
   , ShelleyEraTxBody era
   , EraSegWits era
   , ProtVerAtMost era 8
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader (EraCrypto era) hc) era ->
   (DelegEnv era, Trace (ShelleyDELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv
@@ -238,13 +241,14 @@ delegTraceFromBlock chainSt block =
 -- (in the same way that the CHAIN rule TICKs the slot before processing
 -- transactions with the LEDGERS rule)
 ledgerTraceBase ::
-  forall era.
+  forall era hc.
   ( EraSegWits era
   , GetLedgerView era
   , ApplyBlock era
+  , HeaderCrypto hc
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader (EraCrypto era) hc) era ->
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt
@@ -273,10 +277,10 @@ ledgerTraceBase chainSt block =
 -- a pool that was correctly retired, but is again registered by a certificate
 -- in the block following the transition.
 chainSstWithTick ::
-  forall era.
-  ChainProperty era =>
-  Trace (CHAIN era) ->
-  [SourceSignalTarget (CHAIN era)]
+  forall era hcrypto.
+  ChainProperty era hcrypto =>
+  Trace (CHAIN era hcrypto) ->
+  [SourceSignalTarget (CHAIN era hcrypto)]
 chainSstWithTick ledgerTr =
   map applyTick (sourceSignalTargets ledgerTr)
   where
@@ -290,40 +294,44 @@ chainSstWithTick ledgerTr =
 ---------------------------
 
 forAllChainTrace ::
-  forall era prop.
+  forall era hc prop.
   ( Testable prop
+  , HeaderCrypto hc
   , EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , EraGovernance era
   ) =>
   Word64 -> -- trace length
   Constants ->
-  (Trace (CHAIN era) -> prop) ->
+  (Trace (CHAIN era hc) -> prop) ->
   Property
 forAllChainTrace n constants prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
     forAllTraceFromInitState
       testGlobals
       n
-      (Preset.genEnv p constants)
-      (Just $ mkGenesisChainState (Preset.genEnv p constants))
+      (Preset.genEnv p q constants)
+      (Just $ mkGenesisChainState (Preset.genEnv p q constants))
       prop
   where
     p :: Proxy era
     p = Proxy
+    q :: Proxy hc
+    q = Proxy
 
 -- | Test a property on the first 'subtracecount' sub-Traces that end on an EpochBoundary
 forEachEpochTrace ::
-  forall era prop.
+  forall era hc prop.
   ( EraGen era
+  , HeaderCrypto hc
   , Testable prop
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , EraGovernance era
   ) =>
   Int ->
   Word64 ->
   Constants ->
-  (Trace (CHAIN era) -> prop) ->
+  (Trace (CHAIN era hc) -> prop) ->
   Property
 forEachEpochTrace subtracecount tracelen constants f = forAllChainTrace tracelen constants action
   where

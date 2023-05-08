@@ -16,9 +16,11 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default.Class
+import Data.Proxy
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..))
@@ -45,59 +47,67 @@ import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce)
 
 initStEx1 ::
   ( EraTxOut era
+  , HeaderCrypto hc
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
   , EraGovernance era
   ) =>
+  Proxy (EraCrypto era) ->
+  Proxy hc ->
   ChainState era
-initStEx1 = initSt (UTxO mempty)
+initStEx1 p q = initSt p q (UTxO mempty)
 
 blockEx1 ::
-  forall era.
+  forall era hc c.
   ( HasCallStack
   , EraSegWits era
-  , ExMock (EraCrypto era)
+  , ExMock (EraCrypto era) hc
+  , c ~ EraCrypto era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>
-  Block (BHeader (EraCrypto era)) era
+  Block (BHeader c hc) era
 blockEx1 =
-  mkBlockFakeVRF
+  mkBlockFakeVRF @era @hc
     lastByronHeaderHash
-    (coreNodeKeysBySchedule @era ppEx 10)
+    -- (coreNodeKeysBySchedule p q ppEx 10)
+    keys
     []
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @(EraCrypto era))
+    (nonce0 (Proxy @c))
     (NatNonce 1)
     minBound
     0
     0
-    (mkOCert (coreNodeKeysBySchedule @era ppEx 10) 0 (KESPeriod 0))
+    -- (mkOCert @(EraCrypto era) @hc (coreNodeKeysBySchedule p q ppEx 10) 0 (KESPeriod 0))
+    (mkOCert keys 0 (KESPeriod 0))
+  where
+    keys = coreNodeKeysBySchedule @era @hc @c ppEx 10
 
 blockNonce ::
-  forall era.
+  forall era hc.
   ( HasCallStack
   , EraSegWits era
-  , ExMock (EraCrypto era)
+  , ExMock (EraCrypto era) hc
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>
   Nonce
-blockNonce = getBlockNonce (blockEx1 @era)
+blockNonce = getBlockNonce (blockEx1 @era @hc)
 
 expectedStEx1 ::
-  forall era.
+  forall era hc.
   ( EraSegWits era
-  , ExMock (EraCrypto era)
+  , ExMock (EraCrypto era) hc
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , EraGovernance era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
-expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initStEx1
+expectedStEx1 = evolveNonceUnfrozen (blockNonce @era @hc) . newLab (blockEx1 @era @hc) $ initStEx1 (Proxy @(EraCrypto era)) (Proxy @hc)
 
 -- | = Empty Block Example
 --
@@ -107,12 +117,13 @@ expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initSt
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
 exEmptyBlock ::
-  ( ExMock (EraCrypto era)
+  forall era hc.
+  ( ExMock (EraCrypto era) hc
   , EraSegWits era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
   , EraGovernance era
   ) =>
-  CHAINExample (BHeader (EraCrypto era)) era
-exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)
+  CHAINExample (BHeader (EraCrypto era) hc) era hc
+exEmptyBlock = CHAINExample (initStEx1 (Proxy @(EraCrypto era)) (Proxy @hc)) blockEx1 (Right $ expectedStEx1 @era @hc)

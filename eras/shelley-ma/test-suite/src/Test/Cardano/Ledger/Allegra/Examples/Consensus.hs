@@ -13,7 +13,9 @@ import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.PParams (Update (..))
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
@@ -22,30 +24,32 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 
 -- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesAllegra :: ShelleyLedgerExamples Allegra
+ledgerExamplesAllegra :: ShelleyLedgerExamples Allegra StandardCrypto
 ledgerExamplesAllegra =
   defaultShelleyLedgerExamples
     (mkWitnessesPreAlonzo (Proxy @Allegra))
     id
     exampleCoin
-    (exampleAllegraTxBody exampleCoin)
+    (exampleAllegraTxBody (Proxy @StandardCrypto) exampleCoin)
     exampleAllegraTxAuxData
     ()
 
 exampleAllegraTxBody ::
-  forall era.
+  forall era hc.
   ( AllegraEraTxBody era
   , ProtVerAtMost era 8
+  , HeaderCrypto hc
   ) =>
+  Proxy hc ->
   Value era ->
   TxBody era
-exampleAllegraTxBody value =
+exampleAllegraTxBody p value =
   mkBasicTxBody
     & inputsTxBodyL .~ exampleTxIns
     & outputsTxBodyL
       .~ StrictSeq.singleton (mkBasicTxOut (mkAddr (examplePayKey, exampleStakeKey)) value)
-    & certsTxBodyL .~ exampleCerts
-    & withdrawalsTxBodyL .~ exampleWithdrawals
+    & certsTxBodyL .~ (exampleCerts p)
+    & withdrawalsTxBodyL .~ (exampleWithdrawals p)
     & feeTxBodyL .~ Coin 3
     & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))
     & updateTxBodyL .~ SJust (Update exampleProposedPPUpdates (EpochNo 0))

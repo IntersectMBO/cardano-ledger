@@ -62,11 +62,11 @@ import Test.Tasty.QuickCheck (testProperty)
 -- | Various properties of the POOL STS Rule, tested on longer traces
 -- (double the default length)
 tests ::
-  forall era.
+  forall era hc.
   ( EraGen era
   , EraGovernance era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
-  , ChainProperty era
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
+  , ChainProperty era hc
   , ProtVerAtMost era 8
   ) =>
   TestTree
@@ -85,7 +85,7 @@ tests =
         , rewardsSumInvariant delegSst
         , checkInstantaneousRewards denv delegSst
         ]
-    chainProp :: SourceSignalTarget (CHAIN era) -> Property
+    chainProp :: SourceSignalTarget (CHAIN era hc) -> Property
     chainProp (SourceSignalTarget {source = chainSt, signal = block}) =
       let delegInfo = delegTraceFromBlock chainSt block
           delegEnv = fst delegInfo

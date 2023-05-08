@@ -40,6 +40,7 @@ import Control.State.Transition.Trace (
  )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
@@ -67,11 +68,11 @@ import Test.Tasty.QuickCheck (testProperty)
 -- | Various properties of the POOL STS Rule, tested on longer traces
 -- (double the default length)
 tests ::
-  forall era.
+  forall era hc.
   ( EraGen era
   , EraGovernance era
-  , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , ChainProperty era hc
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   , ProtVerAtMost era 8
   ) =>
   TestTree
@@ -80,7 +81,7 @@ tests =
     forAllChainTrace @era traceLen defaultConstants $ \tr -> do
       let ssts = sourceSignalTargets tr
       conjoin . concat $
-        [ map poolRetirement ssts
+        [ map (poolRetirement (Proxy :: Proxy hc)) ssts
         , map poolRegistration ssts
         , map poolStateIsInternallyConsistent ssts
         ]
@@ -88,14 +89,15 @@ tests =
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.
 poolRetirement ::
-  ( ChainProperty era
+  ( ChainProperty era hc
   , EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  Proxy hc ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
-poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
+poolRetirement _ SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
     map (poolRetirementProp currentEpoch maxEpoch) (sourceSignalTargets poolTr)
   where
@@ -107,12 +109,12 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
 -- | Check that a newly registered pool key is registered and not
 -- in the retiring map.
 poolRegistration ::
-  ( ChainProperty era
+  ( ChainProperty era hc
   , EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
   conjoin $
@@ -123,12 +125,12 @@ poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
 poolStateIsInternallyConsistent ::
-  ( ChainProperty era
+  ( ChainProperty era hc
   , EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = block}) =
   conjoin $

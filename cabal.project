@@ -38,6 +38,7 @@ packages:
   libs/cardano-ledger-core
   libs/cardano-ledger-binary
   libs/cardano-ledger-pretty
+  libs/cardano-protocol-core
   libs/cardano-protocol-tpraos
   libs/non-integral
   libs/small-steps

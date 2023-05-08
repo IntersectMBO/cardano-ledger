@@ -41,7 +41,9 @@ import Control.SetAlgebra (dom, (▷), (◁))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.Proxy
 import qualified Data.Sequence as Seq
+
 import Data.Word (Word16)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -79,10 +81,13 @@ genTestCase numUTxO numAddr = do
 
   keyhash :: [KeyHash 'StakePool StandardCrypto] <- replicateM 400 arbitrary
   let delegs = Map.fromList (zip creds (cycle (take 200 keyhash)))
-  let pp = alicePoolParams
+  let pp = alicePoolParams prx prx
   let poolParams = Map.fromList (zip keyhash (replicate 400 pp))
   let (dstate, pstate) = makeStatePair rewards' delegs ptrs' poolParams
   pure (dstate, pstate, UTxO utxo)
+  where
+    prx :: Proxy StandardCrypto
+    prx = Proxy
 
 makeStatePair ::
   Map (Credential 'Staking (EraCrypto era)) Coin ->

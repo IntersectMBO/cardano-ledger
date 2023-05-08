@@ -31,6 +31,7 @@ import Cardano.Ledger.Slot (
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
@@ -85,26 +86,26 @@ import Test.QuickCheck (Gen)
 instance
   ( EraGen era
   , EraSegWits era
-  , Mock (EraCrypto era)
+  , Mock (EraCrypto era) hc
   , ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era
-  , MinCHAIN_STS era
-  , Embed (EraRule "BBODY" era) (CHAIN era)
+  , MinCHAIN_STS era hc
+  , Embed (EraRule "BBODY" era) (CHAIN era hc)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
-  , Embed (EraRule "TICKN" era) (CHAIN era)
+  , Embed (EraRule "TICKN" era) (CHAIN era hc)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
   , State (EraRule "TICKN" era) ~ TicknState
   , Signal (EraRule "TICKN" era) ~ Bool
-  , Embed (EraRule "TICK" era) (CHAIN era)
+  , Embed (EraRule "TICK" era) (CHAIN era hc)
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv era)
+  , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv era hc)
   ) =>
-  HasTrace (CHAIN era) (GenEnv era)
+  HasTrace (CHAIN era hc) (GenEnv era hc)
   where
   envGen _ = pure ()
 
@@ -112,7 +113,7 @@ instance
 
   shrinkSignal = (\_x -> []) -- shrinkBlock -- TO DO FIX ME
 
-  type BaseEnv (CHAIN era) = Globals
+  type BaseEnv (CHAIN era hc) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- | The first block of the Shelley era will point back to the last block of the Byron era.
@@ -127,12 +128,13 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- To achieve this we (1) use 'IRC CHAIN' (the "initial rule context") instead of simply 'Chain Env'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
-  forall era a.
+  forall era hc a.
   ( EraGen era
   , EraGovernance era
+  , HeaderCrypto hc
   ) =>
-  GenEnv era ->
-  IRC (CHAIN era) ->
+  GenEnv era hc ->
+  IRC (CHAIN era hc) ->
   Gen (Either a (ChainState era))
 mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do
   utxo0 <- genUtxo0 ge
@@ -150,7 +152,7 @@ mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do
       (hashHeaderToNonce (lastByronHeaderHash p))
   where
     epoch0 = EpochNo 0
-    delegs0 = genesisDelegs0 constants
+    delegs0 = genesisDelegs0 @(EraCrypto era) @hc constants
     -- We preload the initial state with some Treasury to enable generation
     -- of things dependent on Treasury (e.g. MIR Treasury certificates)
     withRewards :: ChainState h -> ChainState h

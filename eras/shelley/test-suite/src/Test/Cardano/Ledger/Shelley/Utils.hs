@@ -80,6 +80,7 @@ import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Slotting.EpochInfo (
@@ -113,8 +114,8 @@ import Test.Tasty.HUnit (
   (@?=),
  )
 
-type ChainProperty era =
-  ( Mock (EraCrypto era)
+type ChainProperty era hc =
+  ( Mock (EraCrypto era) hc
   , ApplyBlock era
   , GetLedgerView era
   , EraTx era
@@ -190,7 +191,7 @@ mkKeyPair' seed = KeyPair vk sk
     (sk, vk) = mkKeyPair seed
 
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
-mkVRFKeyPair :: Crypto c => RawSeed -> VRFKeyPair c
+mkVRFKeyPair :: HeaderCrypto hc => RawSeed -> VRFKeyPair hc
 mkVRFKeyPair seed =
   let sk = genKeyVRF $ mkSeedFromWords seed
    in VRFKeyPair
@@ -212,7 +213,7 @@ mkCertifiedVRF a sk =
   coerce $ evalCertified () a sk
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair :: Crypto c => RawSeed -> KESKeyPair c
+mkKESKeyPair :: HeaderCrypto hc => RawSeed -> KESKeyPair hc
 mkKESKeyPair seed =
   let sk = genKeyKES $ mkSeedFromWords seed
    in KESKeyPair
@@ -275,6 +276,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithEncoder @h shelleyProtVer encCBOR i)
 
-getBlockNonce :: forall era. Era era => Block (BHeader (EraCrypto era)) era -> Nonce
+getBlockNonce :: forall era hc. (Era era, HeaderCrypto hc) => Block (BHeader (EraCrypto era) hc) era -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

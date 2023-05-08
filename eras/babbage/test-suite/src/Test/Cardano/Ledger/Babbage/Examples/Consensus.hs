@@ -58,11 +58,11 @@ import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 
 -- | ShelleyLedgerExamples for Babbage era
-ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples Babbage
+ledgerExamplesBabbage :: SLE.ShelleyLedgerExamples Babbage StandardCrypto
 ledgerExamplesBabbage =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
-    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Babbage)
+    , SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @Babbage) (Proxy @StandardCrypto)
     , SLE.sleTx = exampleTransactionInBlock
     , SLE.sleApplyTxError =
         ApplyTxError $
@@ -85,7 +85,7 @@ ledgerExamplesBabbage =
       SLE.ShelleyResultExamples
         { SLE.srePParams = def
         , SLE.sreProposedPPUpdates = examplePPPU
-        , SLE.srePoolDistr = SLE.examplePoolDistr
+        , SLE.srePoolDistr = SLE.examplePoolDistr (Proxy @StandardCrypto) (Proxy @StandardCrypto)
         , SLE.sreNonMyopicRewards = SLE.exampleNonMyopicRewards
         , SLE.sreShelleyGenesis = SLE.testShelleyGenesis
         }
@@ -120,7 +120,7 @@ exampleTxBodyBabbage =
     )
     (SJust $ mkSized (eraProtVerHigh @Babbage) collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
-    SLE.exampleCerts -- txcerts
+    (SLE.exampleCerts (Proxy @StandardCrypto)) -- txcerts
     ( Withdrawals $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
@@ -181,6 +181,7 @@ exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
 exampleBabbageNewEpochState :: NewEpochState Babbage
 exampleBabbageNewEpochState =
   SLE.exampleNewEpochState
+    (Proxy @StandardCrypto)
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))

@@ -49,7 +49,7 @@ testCoreTypes =
   testGroup
     "Core Types"
     [ testProperty "Header" $
-        roundTripAnnExpectation @(TP.BHeader StandardCrypto)
+        roundTripAnnExpectation @(TP.BHeader StandardCrypto StandardCrypto)
     , testProperty "Block Header Hash" $
         roundTripExpectation @(TP.HashHeader StandardCrypto) cborTrip
     , testProperty "Bootstrap Witness" $
@@ -81,7 +81,7 @@ tests =
   testGroup
     "Serialisation roundtrip Property Tests"
     $ [ testProperty "Block" $
-          roundTripAnnRangeExpectation @(Block (TP.BHeader StandardCrypto) Shelley)
+          roundTripAnnRangeExpectation @(Block (TP.BHeader StandardCrypto StandardCrypto) Shelley)
             (eraProtVerLow @Shelley)
             (eraProtVerHigh @Shelley)
       , testProperty "TxBody" $

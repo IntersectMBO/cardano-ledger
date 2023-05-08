@@ -36,6 +36,7 @@ import Control.State.Transition.Extended (TRC (..))
 import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Proxy
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
@@ -121,6 +122,7 @@ testAliceSignsAlone =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Withdrawals Map.empty)
@@ -135,6 +137,7 @@ testAliceDoesntSign =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Withdrawals Map.empty)
@@ -148,6 +151,7 @@ testEverybodySigns =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Withdrawals Map.empty)
@@ -166,6 +170,7 @@ testWrongScript =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -179,6 +184,7 @@ testAliceOrBob =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOrBob, Coin 11000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -193,6 +199,7 @@ testAliceOrBob' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOrBob, Coin 11000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -207,6 +214,7 @@ testAliceAndBob =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Withdrawals Map.empty)
@@ -225,6 +233,7 @@ testAliceAndBob' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Withdrawals Map.empty)
@@ -242,6 +251,7 @@ testAliceAndBob'' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Withdrawals Map.empty)
@@ -255,6 +265,7 @@ testAliceAndBobOrCarl =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarl, Coin 11000)]
         [aliceAndBobOrCarl]
         (Withdrawals Map.empty)
@@ -269,6 +280,7 @@ testAliceAndBobOrCarl' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarl, Coin 11000)]
         [aliceAndBobOrCarl]
         (Withdrawals Map.empty)
@@ -283,6 +295,7 @@ testAliceAndBobOrCarlAndDaria =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlAndDaria, Coin 11000)]
         [aliceAndBobOrCarlAndDaria]
         (Withdrawals Map.empty)
@@ -297,6 +310,7 @@ testAliceAndBobOrCarlAndDaria' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlAndDaria, Coin 11000)]
         [aliceAndBobOrCarlAndDaria]
         (Withdrawals Map.empty)
@@ -311,6 +325,7 @@ testAliceAndBobOrCarlOrDaria =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Withdrawals Map.empty)
@@ -325,6 +340,7 @@ testAliceAndBobOrCarlOrDaria' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Withdrawals Map.empty)
@@ -339,6 +355,7 @@ testAliceAndBobOrCarlOrDaria'' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Withdrawals Map.empty)
@@ -355,6 +372,7 @@ testTwoScripts =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [ (aliceOrBob, Coin 10000)
         , (aliceAndBobOrCarl, Coin 1000)
         ]
@@ -377,6 +395,7 @@ testTwoScripts' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [ (aliceAndBob, Coin 10000)
         , (aliceAndBobOrCarl, Coin 1000)
         ]
@@ -396,6 +415,7 @@ testScriptAndSKey =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBob, Coin 10000)]
         [aliceAndBob]
         (Withdrawals Map.empty)
@@ -414,6 +434,7 @@ testScriptAndSKey' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOrBob, Coin 10000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -428,6 +449,7 @@ testScriptAndSKey'' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOrBob, Coin 10000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -442,6 +464,7 @@ testScriptAndSKey''' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceAndBobOrCarl, Coin 10000)]
         [aliceAndBobOrCarl]
         (Withdrawals Map.empty)
@@ -458,6 +481,7 @@ testRwdAliceSignsAlone =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         ( Withdrawals $
@@ -483,6 +507,7 @@ testRwdAliceSignsAlone' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly, bobOnly]
         ( Withdrawals $
@@ -505,6 +530,7 @@ testRwdAliceSignsAlone'' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly, bobOnly]
         ( Withdrawals $
@@ -534,6 +560,7 @@ testRwdAliceSignsAlone''' =
     utxoSt' =
       applyTxWithScript
         @C_Crypto
+        (Proxy :: Proxy C_Crypto)
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         ( Withdrawals $

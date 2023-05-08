@@ -10,12 +10,11 @@
 module Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen (genCoin) where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (DSIGN, KES)
+import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Pretty ()
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -34,12 +33,11 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>))
-import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.Monad (replicateM)
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import Data.Set (Set)
 import Lens.Micro.Extras (view)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockContext)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
@@ -61,9 +59,8 @@ import Test.QuickCheck (Gen)
  -----------------------------------------------------------------------------}
 
 instance
-  ( PraosCrypto c
+  ( MockContext c
   , DSIGN.Signable (DSIGN c) ~ SignableRepresentation
-  , KES.Signable (KES c) ~ SignableRepresentation
   ) =>
   EraGen (ShelleyEra c)
   where
@@ -137,7 +134,7 @@ genTimeToLive currentSlot = do
   ttl <- genNatural 50 100
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
-instance (Mock c) => MinGenTxout (ShelleyEra c) where
+instance (MockContext c) => MinGenTxout (ShelleyEra c) where
   calcEraMinUTxO _txout = view ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do

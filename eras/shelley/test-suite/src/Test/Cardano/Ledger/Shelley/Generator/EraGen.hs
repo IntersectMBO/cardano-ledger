@@ -129,12 +129,12 @@ type MinLEDGER_STS era =
   )
 
 -- | Minimal requirements on the CHAIN instances
-type MinCHAIN_STS era =
-  ( STS (CHAIN era)
-  , BaseM (CHAIN era) ~ ShelleyBase
-  , Environment (CHAIN era) ~ ()
-  , State (CHAIN era) ~ ChainState era
-  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
+type MinCHAIN_STS era hc =
+  ( STS (CHAIN era hc)
+  , BaseM (CHAIN era hc) ~ ShelleyBase
+  , Environment (CHAIN era hc) ~ ()
+  , State (CHAIN era hc) ~ ChainState era
+  , Signal (CHAIN era hc) ~ Block (BHeader (EraCrypto era) hc) era
   )
 
 -- | Minimal requirements on the UTxO instances
@@ -152,7 +152,7 @@ type MinUTXO_STS era =
 class Show (TxOut era) => MinGenTxout era where
   calcEraMinUTxO :: TxOut era -> PParams era -> Coin
   addValToTxOut :: Value era -> TxOut era -> TxOut era
-  genEraTxOut :: GenEnv era -> Gen (Value era) -> [Addr (EraCrypto era)] -> Gen [TxOut era]
+  genEraTxOut :: GenEnv era hc -> Gen (Value era) -> [Addr (EraCrypto era)] -> Gen [TxOut era]
 
 -- ======================================================================================
 -- The EraGen class. Generally one method for each type family in Cardano.Ledger.Core
@@ -174,7 +174,7 @@ class
   EraGen era
   where
   -- | Generate a genesis value for the Era
-  genGenesisValue :: GenEnv era -> Gen (Value era)
+  genGenesisValue :: GenEnv era hc -> Gen (Value era)
 
   -- | A list of three-phase scripts that can be chosen for payment when building a transaction
   genEraTwoPhase3Arg :: [TwoPhase3ArgInfo era]
@@ -188,7 +188,7 @@ class
   -- and a list of additional scripts for eras that sometimes require
   -- additional script witnessing.
   genEraTxBody ::
-    GenEnv era ->
+    GenEnv era hc ->
     UTxO era ->
     PParams era ->
     SlotNo ->
@@ -280,7 +280,7 @@ someKeyPairs c lower upper =
     <$> choose (lower, upper)
     <*> shuffle (keyPairs c)
 
-genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)
+genUtxo0 :: forall era hc. EraGen era => GenEnv era hc -> Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts @era c minGenesisUTxOouts maxGenesisUTxOouts

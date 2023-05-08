@@ -25,7 +25,7 @@ module Cardano.Ledger.Shelley.Genesis (
   sgActiveSlotCoeff,
   genesisUTxO,
   initialFundsPseudoTxIn,
-  validateGenesis,
+  -- validateGenesis,
   describeValidationErr,
   mkShelleyGlobals,
   nominalDiffTimeMicroToMicroseconds,
@@ -38,7 +38,8 @@ module Cardano.Ledger.Shelley.Genesis (
 where
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import Cardano.Crypto.KES.Class (totalPeriodsKES)
+
+-- import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Address (Addr, serialiseAddr)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
@@ -70,7 +71,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, HASH, KES)
+import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -87,8 +88,9 @@ import Data.Fixed (Fixed (..), Micro, Pico)
 import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes)
-import Data.Proxy (Proxy (..))
+
+-- import Data.Maybe (catMaybes)
+-- import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Time.Clock (
@@ -487,59 +489,59 @@ describeValidationErr (QuorumTooSmall q maxTooSmal nodes) =
     ]
 
 -- | Do some basic sanity checking on the Shelley genesis file.
-validateGenesis ::
-  forall c.
-  Crypto c =>
-  ShelleyGenesis c ->
-  Either [ValidationErr] ()
-validateGenesis
-  ShelleyGenesis
-    { sgEpochLength
-    , sgActiveSlotsCoeff
-    , sgMaxKESEvolutions
-    , sgSecurityParam
-    , sgUpdateQuorum
-    , sgGenDelegs
-    } =
-    case catMaybes errors of
-      [] -> Right ()
-      xs -> Left xs
-    where
-      errors =
-        [ checkEpochLength
-        , checkKesEvolutions
-        , checkQuorumSize
-        ]
-      checkEpochLength =
-        let activeSlotsCoeff = unboundRational sgActiveSlotsCoeff
-            minLength =
-              EpochSize . ceiling $
-                fromIntegral @_ @Double (3 * sgSecurityParam)
-                  / fromRational activeSlotsCoeff
-         in if minLength > sgEpochLength
-              then
-                Just $
-                  EpochNotLongEnough
-                    sgEpochLength
-                    sgSecurityParam
-                    activeSlotsCoeff
-                    minLength
-              else Nothing
-      checkKesEvolutions =
-        if sgMaxKESEvolutions
-          <= fromIntegral (totalPeriodsKES (Proxy @(KES c)))
-          then Nothing
-          else
-            Just $
-              MaxKESEvolutionsUnsupported
-                sgMaxKESEvolutions
-                (totalPeriodsKES (Proxy @(KES c)))
-      checkQuorumSize =
-        let numGenesisNodes = fromIntegral $ length sgGenDelegs
-            maxTooSmal = numGenesisNodes `div` 2
-         in if numGenesisNodes == 0 || sgUpdateQuorum > maxTooSmal
-              then Nothing
-              else Just $ QuorumTooSmall sgUpdateQuorum maxTooSmal numGenesisNodes
+-- validateGenesis ::
+--   forall c.
+--   Crypto c =>
+--   ShelleyGenesis c ->
+--   Either [ValidationErr] ()
+-- validateGenesis
+--   ShelleyGenesis
+--     { sgEpochLength
+--     , sgActiveSlotsCoeff
+--     , sgMaxKESEvolutions
+--     , sgSecurityParam
+--     , sgUpdateQuorum
+--     , sgGenDelegs
+--     } =
+--     case catMaybes errors of
+--       [] -> Right ()
+--       xs -> Left xs
+--     where
+--       errors =
+--         [ checkEpochLength
+--         , checkKesEvolutions
+--         , checkQuorumSize
+--         ]
+--       checkEpochLength =
+--         let activeSlotsCoeff = unboundRational sgActiveSlotsCoeff
+--             minLength =
+--               EpochSize . ceiling $
+--                 fromIntegral @_ @Double (3 * sgSecurityParam)
+--                   / fromRational activeSlotsCoeff
+--          in if minLength > sgEpochLength
+--               then
+--                 Just $
+--                   EpochNotLongEnough
+--                     sgEpochLength
+--                     sgSecurityParam
+--                     activeSlotsCoeff
+--                     minLength
+--               else Nothing
+--       checkKesEvolutions =
+--         if sgMaxKESEvolutions
+--           <= fromIntegral (totalPeriodsKES (Proxy @(KES c)))
+--           then Nothing
+--           else
+--             Just $
+--               MaxKESEvolutionsUnsupported
+--                 sgMaxKESEvolutions
+--                 (totalPeriodsKES (Proxy @(KES c)))
+--       checkQuorumSize =
+--         let numGenesisNodes = fromIntegral $ length sgGenDelegs
+--             maxTooSmal = numGenesisNodes `div` 2
+--          in if numGenesisNodes == 0 || sgUpdateQuorum > maxTooSmal
+--               then Nothing
+--               else Just $ QuorumTooSmall sgUpdateQuorum maxTooSmal numGenesisNodes
 
 {-------------------------------------------------------------------------------
   Construct 'Globals' using 'ShelleyGenesis'

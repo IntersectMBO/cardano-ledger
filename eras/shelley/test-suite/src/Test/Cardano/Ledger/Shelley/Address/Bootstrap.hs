@@ -60,6 +60,7 @@ import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<->))
+import Cardano.Protocol.HeaderCrypto
 import Data.ByteString (ByteString)
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
@@ -249,8 +250,10 @@ type C = ShelleyEra C_crypto
 data C_crypto
 
 instance Cardano.Ledger.Crypto.Crypto C_crypto where
-  type KES C_crypto = KES Original.C_Crypto
-  type VRF C_crypto = VRF Original.C_Crypto
   type DSIGN C_crypto = DSIGN.Ed25519DSIGN
   type HASH C_crypto = HASH Original.C_Crypto
   type ADDRHASH C_crypto = Hash.Blake2b_224
+
+instance HeaderCrypto C_crypto where
+  type KES C_crypto = KES Original.C_Crypto
+  type VRF C_crypto = VRF Original.C_Crypto

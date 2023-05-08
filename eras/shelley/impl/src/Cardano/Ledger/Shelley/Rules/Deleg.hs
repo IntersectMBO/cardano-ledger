@@ -30,10 +30,10 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
+  GenesisVRF,
   Hash,
   KeyHash,
   KeyRole (..),
-  VerKeyVRF,
  )
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
@@ -123,7 +123,7 @@ data ShelleyDelegPredFailure era
       !SlotNo -- current slot
       !SlotNo -- EraRule "MIR" must be submitted before this slot
   | DuplicateGenesisVRFDELEG
-      !(Hash (EraCrypto era) (VerKeyVRF (EraCrypto era))) -- VRF KeyHash which is already delegated to
+      !(Hash (EraCrypto era) GenesisVRF) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG

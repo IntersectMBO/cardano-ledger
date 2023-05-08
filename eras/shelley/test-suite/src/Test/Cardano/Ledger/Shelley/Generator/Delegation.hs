@@ -23,7 +23,9 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
   hashKey,
   hashVerKeyVRF,
+  toGenesisVRF,
  )
+import Cardano.Ledger.PoolDistr (toPoolStakeVRF)
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
   CertState (..),
@@ -54,6 +56,7 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import qualified Cardano.Ledger.UMap as UM
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈))
 import Data.Foldable (fold)
@@ -106,10 +109,10 @@ deriving instance (Era era, Show (Script era)) => Show (CertCred era)
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
 genDCert ::
-  forall era.
-  EraGen era =>
+  forall era hc.
+  (EraGen era, HeaderCrypto hc) =>
   Constants ->
-  KeySpace era ->
+  KeySpace era hc ->
   PParams era ->
   AccountState ->
   CertState era ->
@@ -322,11 +325,11 @@ genDelegation
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
-  Era era =>
+  (Era era, HeaderCrypto hc) =>
   -- | Core nodes
-  [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
+  [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
-  [AllIssuerKeys (EraCrypto era) 'GenesisDelegate] ->
+  [AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate] ->
   CertState era ->
   Gen (Maybe (DCert (EraCrypto era), CertCred era))
 genGenesisDelegation coreNodes delegateKeys dpState =
@@ -347,7 +350,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
             ( ConstitutionalDelegCert
                 (hashVKey gkey)
                 (hashVKey key)
-                (hashVerKeyVRF vrf)
+                (toGenesisVRF $ hashVerKeyVRF vrf)
             )
         , CoreKeyCred [gkey]
         )
@@ -364,10 +367,10 @@ genGenesisDelegation coreNodes delegateKeys dpState =
 
 -- | Generate PoolParams and the key witness.
 genStakePool ::
-  forall c.
-  Crypto c =>
+  forall c hc.
+  (Crypto c, HeaderCrypto hc) =>
   -- | Available keys for stake pool registration
-  [AllIssuerKeys c 'StakePool] ->
+  [AllIssuerKeys c hc 'StakePool] ->
   -- | KeyPairs containing staking keys to act as owners/reward account
   KeyPairs c ->
   -- | Minimum pool cost Protocol Param
@@ -393,7 +396,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
           pps =
             PoolParams
               (hashKey . vKey $ aikCold allPoolKeys)
-              (hashVerKeyVRF . vrfVerKey $ aikVrf allPoolKeys)
+              (toPoolStakeVRF . hashVerKeyVRF . vrfVerKey $ aikVrf allPoolKeys)
               pledge
               cost
               interval
@@ -405,8 +408,8 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
 
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
-  (Era era) =>
-  [AllIssuerKeys (EraCrypto era) 'StakePool] ->
+  (Era era, HeaderCrypto hc) =>
+  [AllIssuerKeys (EraCrypto era) hc 'StakePool] ->
   KeyPairs (EraCrypto era) ->
   Coin ->
   Gen (Maybe (DCert (EraCrypto era), CertCred era))
@@ -422,9 +425,9 @@ genRegPool poolKeys keyPairs minPoolCost = do
 -- constructed value, return the keypair which corresponds to the selected
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool ::
-  EraPParams era =>
+  (EraPParams era, HeaderCrypto hc) =>
   PParams era ->
-  [AllIssuerKeys (EraCrypto era) 'StakePool] ->
+  [AllIssuerKeys (EraCrypto era) hc 'StakePool] ->
   PState era ->
   SlotNo ->
   Gen (Maybe (DCert (EraCrypto era), CertCred era))
@@ -459,10 +462,10 @@ genRetirePool _pp poolKeys pState slot =
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewardsAccounts ::
-  EraPParams era =>
+  (EraPParams era, HeaderCrypto hc) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
+  Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->
@@ -509,10 +512,10 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
 
 -- | Generate an InstantaneousRewards Transfer
 genInstantaneousRewardsTransfer ::
-  EraPParams era =>
+  (EraPParams era, HeaderCrypto hc) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
+  Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->
@@ -546,10 +549,10 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
           )
 
 genInstantaneousRewards ::
-  EraPParams era =>
+  (EraPParams era, HeaderCrypto hc) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
+  Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->

@@ -61,12 +61,12 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- | Tx inputs are eliminated, outputs added to utxo and TxIds are unique
 tests ::
-  forall era ledger.
+  forall era ledger hc.
   ( EraGen era
   , EraGovernance era
-  , ChainProperty era
+  , ChainProperty era hc
   , TestingLedger era ledger
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era hc) (GenEnv era hc)
   ) =>
   TestTree
 tests =
@@ -75,7 +75,7 @@ tests =
       let ssts = sourceSignalTargets tr
       conjoin . concat $
         [ -- collision freeness
-          map (eliminateTxInputs @era @ledger) ssts
+          map (eliminateTxInputs @era @ledger @hc) ssts
         , map (newEntriesAndUniqueTxIns @era @ledger) ssts
         , -- no double spend
           map noDoubleSpend ssts
@@ -85,12 +85,12 @@ tests =
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraGen era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "eliminateTxInputs" $
@@ -98,7 +98,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
       map inputsEliminated $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     inputsEliminated
       SourceSignalTarget
         { target = LedgerState (UTxOState {utxosUtxo = (UTxO u')}) _
@@ -111,12 +111,12 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.
 newEntriesAndUniqueTxIns ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraGen era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "newEntriesAndUniqueTxIns" $
@@ -124,7 +124,7 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
       map newEntryPresent $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     newEntryPresent
       SourceSignalTarget
         { source = LedgerState (UTxOState {utxosUtxo = UTxO u}) _
@@ -142,12 +142,12 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
 -- of possible signatures for a multi-sig script which is a sub-set of the
 -- signatures of the tansaction.
 requiredMSigSignaturesSubset ::
-  forall era ledger.
-  ( ChainProperty era
+  forall era ledger hc.
+  ( ChainProperty era hc
   , EraGen era
   , TestingLedger era ledger
   ) =>
-  SourceSignalTarget (CHAIN era) ->
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = block} =
   counterexample "requiredMSigSignaturesSubset" $
@@ -155,7 +155,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
       map signaturesSubset $
         sourceSignalTargets ledgerTr
   where
-    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    (_, ledgerTr) = ledgerTraceFromBlock @era @hc @ledger chainSt block
     signaturesSubset :: SourceSignalTarget ledger -> Property
     signaturesSubset SourceSignalTarget {signal = tx} =
       let khs = keyHashSet tx
@@ -170,9 +170,9 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 
 --- | Check for absence of double spend in a block
 noDoubleSpend ::
-  forall era.
-  (ChainProperty era, EraGen era) =>
-  SourceSignalTarget (CHAIN era) ->
+  forall era hc.
+  (ChainProperty era hc, EraGen era) =>
+  SourceSignalTarget (CHAIN era hc) ->
   Property
 noDoubleSpend SourceSignalTarget {signal} =
   counterexample "noDoubleSpend" $

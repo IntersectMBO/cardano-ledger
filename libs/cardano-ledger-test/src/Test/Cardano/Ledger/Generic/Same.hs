@@ -53,6 +53,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Data.Foldable (toList)
 import Prettyprinter (Doc, indent, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.PrettyCore
@@ -238,10 +239,7 @@ sameWithDependency (SomeM labx actx x1 x2 : more) =
     [] -> sameWithDependency more
     ansx -> extendLabel (labx ++ " ") ansx ++ sameWithDependency more
 
-instance
-  Reflect era =>
-  Same era (ShelleyLedgerExamples era)
-  where
+instance (Reflect era, HeaderCrypto hc) => Same era (ShelleyLedgerExamples era hc) where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of
     (Block' h1 a1 _, Block' h2 a2 _) ->
       sameWithDependency

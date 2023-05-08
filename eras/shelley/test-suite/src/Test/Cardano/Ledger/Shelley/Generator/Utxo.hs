@@ -80,6 +80,7 @@ import Test.Cardano.Ledger.Core.KeyPair (
  )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
   Mock,
+  MockContext,
  )
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..), defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -125,15 +126,15 @@ myDiscard message = trace ("\nDiscarded trace: " ++ message) discard
 -- the generator 'Constants' so that there is sufficient spending balance.
 
 genTx ::
-  forall era.
+  forall era hc.
   ( EraGen era
-  , Mock (EraCrypto era)
+  , Mock (EraCrypto era) hc
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
-  GenEnv era ->
+  GenEnv era hc ->
   LedgerEnv era ->
   LedgerState era ->
   Gen (Tx era)
@@ -348,12 +349,12 @@ encodedLen x = fromIntegral $ BSL.length (serialize (eraProtVerHigh @era) x)
 -- | Do the work of computing what additioanl inputs we need to 'fix-up' the transaction
 -- so that it will balance.
 genNextDelta ::
-  forall era.
-  (EraGen era, Mock (EraCrypto era)) =>
+  forall era hc.
+  (EraGen era, Mock (EraCrypto era) hc) =>
   ScriptInfo era ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace era hc ->
   Tx era ->
   Int ->
   Delta era ->
@@ -465,9 +466,9 @@ genNextDelta
 -- genNextDelta repeatedly until genNextDelta delta = delta
 
 genNextDeltaTilFixPoint ::
-  forall era.
+  forall era hc.
   ( EraGen era
-  , Mock (EraCrypto era)
+  , Mock (EraCrypto era) hc
   ) =>
   ScriptInfo era ->
   Coin ->
@@ -475,7 +476,7 @@ genNextDeltaTilFixPoint ::
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace era hc ->
   Tx era ->
   Gen (Delta era)
 genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
@@ -486,16 +487,16 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
     (deltaZero initialfee pparams (head addr))
 
 applyDelta ::
-  forall era.
+  forall era hc.
   ( EraGen era
-  , Mock (EraCrypto era)
+  , Mock (EraCrypto era) hc
   ) =>
   UTxO era ->
   ScriptInfo era ->
   PParams era ->
   [KeyPair 'Witness (EraCrypto era)] ->
   Map (ScriptHash (EraCrypto era)) (Script era) ->
-  KeySpace era ->
+  KeySpace era hc ->
   Tx era ->
   Delta era ->
   Tx era
@@ -544,8 +545,8 @@ fix :: (Eq d, Monad m) => Int -> (Int -> d -> m d) -> d -> m d
 fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
-  forall era.
-  (EraGen era, Mock (EraCrypto era)) =>
+  forall era hc.
+  (EraGen era, Mock (EraCrypto era) hc) =>
   ScriptInfo era ->
   Coin ->
   [KeyPair 'Witness (EraCrypto era)] ->
@@ -554,7 +555,7 @@ converge ::
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace era hc ->
   Tx era ->
   Gen (Tx era)
 converge
@@ -647,7 +648,7 @@ mkScriptWits payScripts stakeScripts =
 
 mkTxWits ::
   forall era.
-  (EraGen era, Mock (EraCrypto era)) =>
+  (EraGen era, MockContext (EraCrypto era)) =>
   (UTxO era, TxBody era, ScriptInfo era) ->
   Map (KeyHash 'Payment (EraCrypto era)) (KeyPair 'Payment (EraCrypto era)) ->
   Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era)) ->

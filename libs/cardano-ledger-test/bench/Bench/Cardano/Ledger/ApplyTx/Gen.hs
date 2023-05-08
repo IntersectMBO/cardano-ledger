@@ -18,6 +18,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
+import qualified Cardano.Protocol.HeaderCrypto as CC
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Control.State.Transition.Trace (
@@ -63,9 +64,10 @@ instance NFData (ApplyTxEnv era) where
 
 -- | Generate a ledger state and transaction in a given era, given a seed.
 generateApplyTxEnvForEra ::
-  forall era.
+  forall era hc.
   ( EraGen era
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , CC.HeaderCrypto hc
+  , HasTrace (EraRule "LEDGER" era) (GenEnv era hc)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
@@ -73,10 +75,11 @@ generateApplyTxEnvForEra ::
   , EraGovernance era
   ) =>
   Proxy era ->
+  Proxy hc ->
   Int ->
   ApplyTxEnv era
-generateApplyTxEnvForEra eraProxy seed =
-  let ge = genEnv eraProxy defaultConstants
+generateApplyTxEnvForEra eraProxy hcProxy seed =
+  let ge = genEnv eraProxy hcProxy defaultConstants
       qcSeed = mkQCGen seed
       traceGen =
         traceFromInitState

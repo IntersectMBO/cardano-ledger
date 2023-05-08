@@ -107,7 +107,7 @@ genAuxiliaryData Constants {frequencyTxWithMetadata} =
     ]
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
-maryGenesisValue :: forall era c. CC.Crypto c => GenEnv era -> Gen (MaryValue c)
+maryGenesisValue :: forall era c hc. CC.Crypto c => GenEnv era hc -> Gen (MaryValue c)
 maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
   Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 

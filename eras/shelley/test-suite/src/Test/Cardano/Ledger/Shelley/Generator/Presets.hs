@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -29,7 +30,9 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
   hashKey,
   hashVerKeyVRF,
+  toGenesisVRF,
  )
+import Cardano.Protocol.HeaderCrypto
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map.Strict (Map)
@@ -53,12 +56,13 @@ import Test.Cardano.Ledger.Shelley.Utils (
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
 genEnv ::
-  forall era.
-  (EraGen era) =>
+  forall era hc.
+  (EraGen era, HeaderCrypto hc) =>
   Proxy era ->
+  Proxy hc ->
   Constants ->
-  GenEnv era
-genEnv _ constants =
+  GenEnv era hc
+genEnv _ _ constants =
   GenEnv
     (keySpace constants)
     (scriptSpace @era (genEraTwoPhase3Arg @era) (genEraTwoPhase2Arg @era))
@@ -80,10 +84,10 @@ scriptSpace scripts3 scripts2 =
 
 -- | Example keyspace for use in generators
 keySpace ::
-  forall era.
-  EraGen era =>
+  forall era hcrypto.
+  (EraGen era, HeaderCrypto hcrypto) =>
   Constants ->
-  KeySpace era
+  KeySpace era hcrypto
 keySpace c =
   KeySpace
     (coreNodeKeys c)
@@ -97,9 +101,10 @@ keySpace c =
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
 coreNodeKeys ::
-  Crypto c =>
+  forall c hc.
+  (Crypto c, HeaderCrypto hc) =>
   Constants ->
-  [(KeyPair 'Genesis c, AllIssuerKeys c 'GenesisDelegate)]
+  [(KeyPair 'Genesis c, AllIssuerKeys c hc 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (RawSeed x 0 0 0 0)
     , issuerKeys c 0 x
@@ -110,14 +115,20 @@ coreNodeKeys c@Constants {numCoreNodes} =
     toKeyPair (sk, vk) = KeyPair vk sk
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: Crypto c => Constants -> [AllIssuerKeys c 'GenesisDelegate]
+genesisDelegates ::
+  (Crypto c, HeaderCrypto hc) =>
+  Constants ->
+  [AllIssuerKeys c hc 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
   | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: Crypto c => Constants -> [AllIssuerKeys c 'StakePool]
+stakePoolKeys ::
+  (Crypto c, HeaderCrypto hc) =>
+  Constants ->
+  [AllIssuerKeys c hc 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
   | x <- [0 .. 50]
@@ -125,13 +136,13 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
-  (Crypto c) =>
+  (Crypto c, HeaderCrypto hc) =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.
   Word64 ->
   Word64 ->
-  AllIssuerKeys c r
+  AllIssuerKeys c hc r
 issuerKeys Constants {maxSlotTrace} ns x =
   let (skCold, vkCold) = mkKeyPair (RawSeed x 0 0 0 (ns + 1))
       iters =
@@ -156,8 +167,11 @@ issuerKeys Constants {maxSlotTrace} ns x =
         , aikColdKeyHash = hashKey vkCold
         }
 
+-- TODO: It might be possible to avoid the ambiguous type, by passing an argument
+-- AllIssuerKeys and then chaining the generators together.
 genesisDelegs0 ::
-  Crypto c =>
+  forall c hc.
+  (Crypto c, HeaderCrypto hc) =>
   Constants ->
   Map (KeyHash 'Genesis c) (GenDelegPair c)
 genesisDelegs0 c =
@@ -165,9 +179,9 @@ genesisDelegs0 c =
     [ ( hashVKey gkey
       , GenDelegPair
           (coerceKeyRole . hashVKey $ aikCold pkeys)
-          (hashVerKeyVRF . vrfVerKey $ aikVrf pkeys)
+          (toGenesisVRF . hashVerKeyVRF . vrfVerKey $ aikVrf pkeys)
       )
-    | (gkey, pkeys) <- coreNodeKeys c
+    | (gkey, pkeys) <- coreNodeKeys @c @hc c
     ]
   where
     hashVKey = hashKey . vKey

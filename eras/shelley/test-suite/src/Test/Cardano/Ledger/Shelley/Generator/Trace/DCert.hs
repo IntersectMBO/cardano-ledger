@@ -37,6 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.HeaderCrypto
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (
   BaseM,
@@ -157,12 +158,13 @@ instance
 
 instance
   ( EraGen era
+  , HeaderCrypto hc
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
   , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
-  QC.HasTrace (CERTS era) (GenEnv era)
+  QC.HasTrace (CERTS era) (GenEnv era hc)
   where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
@@ -190,14 +192,15 @@ instance
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genDCerts ::
-  forall era.
+  forall era hc.
   ( EraGen era
+  , HeaderCrypto hc
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
   , Signal (Core.EraRule "DELPL" era) ~ DCert (EraCrypto era)
   ) =>
-  GenEnv era ->
+  GenEnv era hc ->
   Core.PParams era ->
   CertState era ->
   SlotNo ->

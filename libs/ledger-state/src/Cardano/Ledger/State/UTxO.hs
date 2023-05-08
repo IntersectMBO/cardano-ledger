@@ -13,6 +13,7 @@
 
 module Cardano.Ledger.State.UTxO where
 
+import qualified Cardano.Crypto.Hash.Class as Hash (castHash)
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Scripts.Data
@@ -22,8 +23,9 @@ import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys (GenesisVRF)
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
+import Cardano.Ledger.PoolDistr (PoolStakeVRF, individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
@@ -282,7 +284,7 @@ instance AggregateStat RewardUpdateStats where
 
 data PoolDistrStats = PoolDistrStats
   { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool C))
-  , pdsStakePoolStakeVrf :: !(Stat (Hash C (VerKeyVRF C)))
+  , pdsStakePoolStakeVrf :: !(Stat (Hash C PoolStakeVRF))
   }
 
 instance Pretty PoolDistrStats where
@@ -297,7 +299,7 @@ instance AggregateStat PoolDistrStats where
   aggregateStat PoolDistrStats {..} =
     mempty
       { gsKeyHashStakePool = pdsStakePoolKeyHash
-      , gsVerKeyVRF = pdsStakePoolStakeVrf
+      , gsVerKeyVRF = toAggregateVRFStat pdsStakePoolStakeVrf
       }
 
 calcPoolDistrStats :: PoolDistr C -> PoolDistrStats
@@ -364,7 +366,7 @@ data EpochStateStats = EpochStateStats
   , essSnapShotsStats :: !SnapShotStats
   , essLedgerStateStats :: !LedgerStateStats
   , essNonMyopic :: !(Stat (KeyHash 'StakePool C))
-  , essAggregateStats :: !AggregateStats
+  , essAggregateStats :: AggregateStats
   }
 
 instance Pretty EpochStateStats where
@@ -409,7 +411,7 @@ data DStateStats = DStateStats
   , dssDelegations :: !(Stat (KeyHash 'StakePool C))
   , dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis C))
   , dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C))
-  , dssHashVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C)))
+  , dssHashVerKeyVRF :: !(Stat (Hash C GenesisVRF))
   }
 
 instance Pretty DStateStats where
@@ -430,7 +432,7 @@ instance AggregateStat DStateStats where
       , gsKeyHashStakePool = dssDelegations
       , gsKeyHashGenesis = dssKeyHashGenesis
       , gsKeyHashGenesisDelegate = dssKeyHashGenesisDelegate
-      , gsVerKeyVRF = dssHashVerKeyVRF
+      , gsVerKeyVRF = toAggregateVRFStat dssHashVerKeyVRF
       }
 
 countDStateStats :: DState CurrentEra -> DStateStats
@@ -633,12 +635,20 @@ countUTxOStats (UTxO m) =
     , usTxOutStats = countTxOutStats (Map.elems m)
     }
 
+data AggregateVRF
+
+toAggregateVRF :: Hash C v -> Hash C AggregateVRF
+toAggregateVRF = Hash.castHash
+
+toAggregateVRFStat :: Stat (Hash C v) -> Stat (Hash C AggregateVRF)
+toAggregateVRFStat (Stat unique count) = Stat (toAggregateVRF `Set.map` unique) count
+
 data AggregateStats = AggregateStats
   { gsCredentialStaking :: !(Stat (Credential 'Staking C))
   , gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool C))
   , gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis C))
   , gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C))
-  , gsVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C)))
+  , gsVerKeyVRF :: !(Stat (Hash C AggregateVRF))
   , gsScriptHash :: !(Stat (ScriptHash C))
   }
 

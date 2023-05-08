@@ -104,6 +104,7 @@ import Cardano.Ledger.Slot (
   (*-),
  )
 import Cardano.Ledger.UTxO (UTxO (UTxO))
+import Cardano.Protocol.HeaderCrypto (HeaderCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCert)
 import Codec.Serialise (serialise)
@@ -212,8 +213,8 @@ data ScriptSpace era = ScriptSpace
 deriving instance Show (Script era) => Show (ScriptSpace era)
 
 -- | Generator environment.
-data GenEnv era = GenEnv
-  { geKeySpace :: KeySpace era
+data GenEnv era hc = GenEnv
+  { geKeySpace :: KeySpace era hc
   , geScriptSpapce :: ScriptSpace era
   , geConstants :: Constants
   }
@@ -221,11 +222,11 @@ data GenEnv era = GenEnv
 -- | Collection of all keys which are required to generate a trace.
 --
 --   These are the _only_ keys which should be involved in the trace.
-data KeySpace era = KeySpace_
-  { ksCoreNodes :: [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)]
-  , ksGenesisDelegates :: [AllIssuerKeys (EraCrypto era) 'GenesisDelegate]
+data KeySpace era hc = KeySpace_
+  { ksCoreNodes :: [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate)]
+  , ksGenesisDelegates :: [AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate]
   -- ^ Bag of keys to be used for future genesis delegates
-  , ksStakePools :: [AllIssuerKeys (EraCrypto era) 'StakePool]
+  , ksStakePools :: [AllIssuerKeys (EraCrypto era) hc 'StakePool]
   -- ^ Bag of keys to be used for future stake pools
   , ksKeyPairs :: KeyPairs (EraCrypto era)
   -- ^ Bag of keys to be used for future payment/staking addresses
@@ -234,7 +235,7 @@ data KeySpace era = KeySpace_
   -- ^ Index over the payment keys in 'ksKeyPairs'
   , ksIndexedStakingKeys :: Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era))
   -- ^ Index over the staking keys in 'ksKeyPairs'
-  , ksIndexedGenDelegates :: Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate)
+  , ksIndexedGenDelegates :: Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate)
   -- ^ Index over the cold key hashes in Genesis Delegates
   , ksIndexedPayScripts :: Map (ScriptHash (EraCrypto era)) (Script era, Script era)
   -- ^ Index over the pay script hashes in Script pairs
@@ -242,17 +243,17 @@ data KeySpace era = KeySpace_
   -- ^ Index over the stake script hashes in Script pairs
   }
 
-deriving instance (Era era, Show (Script era)) => Show (KeySpace era)
+deriving instance (Era era, HeaderCrypto hc, Show (Script era)) => Show (KeySpace era hc)
 
 pattern KeySpace ::
-  forall era.
+  forall era hc.
   ScriptClass era =>
-  [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
-  [AllIssuerKeys (EraCrypto era) 'GenesisDelegate] ->
-  [AllIssuerKeys (EraCrypto era) 'StakePool] ->
+  [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate)] ->
+  [AllIssuerKeys (EraCrypto era) hc 'GenesisDelegate] ->
+  [AllIssuerKeys (EraCrypto era) hc 'StakePool] ->
   KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
-  KeySpace era
+  KeySpace era hc
 pattern KeySpace
   ksCoreNodes
   ksGenesisDelegates
@@ -307,10 +308,10 @@ genWord64 lower upper =
 -- Note: we index all possible genesis delegate keys, that is,
 -- core nodes and all potential keys.
 mkGenesisDelegatesHashMap ::
-  Crypto c =>
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  [AllIssuerKeys c 'GenesisDelegate] ->
-  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate)
+  (Crypto c) =>
+  [(GenesisKeyPair c, AllIssuerKeys c hc 'GenesisDelegate)] ->
+  [AllIssuerKeys c hc 'GenesisDelegate] ->
+  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c hc 'GenesisDelegate)
 mkGenesisDelegatesHashMap coreNodes genesisDelegates =
   Map.fromList (f <$> allDelegateKeys)
   where
@@ -458,12 +459,12 @@ unitIntervalToNatural ui =
   #-}
 
 mkBlockHeader ::
-  Mock c =>
+  Mock c hc =>
   ProtVer ->
   -- | Hash of previous block
   HashHeader c ->
   -- | All keys in the stake pool
-  AllIssuerKeys c r ->
+  AllIssuerKeys c hc r ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"
@@ -475,12 +476,12 @@ mkBlockHeader ::
   -- | KES period of key registration
   Word ->
   -- | Operational certificate
-  OCert c ->
+  OCert c hc ->
   -- | Block size
   Natural ->
   -- | Block body hash
   Hash c EraIndependentBlockBody ->
-  BHeader c
+  BHeader c hc
 mkBlockHeader protVer prev pKeys slotNo blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
   let bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
    in mkBHeader pKeys kesPeriod c0 bhBody
@@ -489,7 +490,7 @@ mkBlockHeader protVer prev pKeys slotNo blockNo enonce kesPeriod c0 oCert bodySi
 -- | Takes a sequence of KES hot keys and checks to see whether there is one whose
 -- range contains the current KES period. If so, return its index in the list of
 -- hot keys.
-getKESPeriodRenewalNo :: AllIssuerKeys h r -> KESPeriod -> Integer
+getKESPeriodRenewalNo :: AllIssuerKeys h hv r -> KESPeriod -> Integer
 getKESPeriodRenewalNo keys (KESPeriod kp) =
   go (NE.toList (aikHot keys)) 0 kp
   where
@@ -542,9 +543,9 @@ genPlutus (GenEnv _ (ScriptSpace scripts _) _) = gettriple <$> oneof (pure <$> s
 
 -- | Find the preallocated Script from its Hash.
 findPlutus ::
-  forall era.
+  forall era hc.
   Era era =>
-  GenEnv era ->
+  GenEnv era hc ->
   ScriptHash (EraCrypto era) ->
   (Script era, StrictMaybe (DataHash (EraCrypto era)))
 findPlutus (GenEnv keyspace (ScriptSpace _ _ mp3 mp2) _) hsh =

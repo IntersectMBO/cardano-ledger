@@ -48,10 +48,10 @@ import Test.Tasty (TestTree, testGroup, withResource)
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlAnnotatorTest @(BHeader StandardCrypto) v n "header"
+    [ cddlAnnotatorTest @(BHeader StandardCrypto StandardCrypto) v n "header"
     , cddlAnnotatorTest @(BootstrapWitness StandardCrypto) v n "bootstrap_witness"
-    , cddlTest @(BHBody StandardCrypto) v n "header_body"
-    , cddlGroupTest @(OCert StandardCrypto) v n "operational_cert"
+    , cddlTest @(BHBody StandardCrypto StandardCrypto) v n "header_body"
+    , cddlGroupTest @(OCert StandardCrypto StandardCrypto) v n "operational_cert"
     , cddlTest @(Addr StandardCrypto) v n "address"
     , cddlTest @(RewardAcnt StandardCrypto) v n "reward_account"
     , cddlTest @(Credential 'Staking StandardCrypto) v n "stake_credential"
@@ -66,7 +66,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest @(ProposedPPUpdates Shelley) v n "proposed_protocol_parameter_updates"
     , cddlTest @(PParamsUpdate Shelley) v n "protocol_param_update"
     , cddlAnnotatorTest @(ShelleyTx Shelley) v n "transaction"
-    , cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto) Shelley) v n "block"
+    , cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto StandardCrypto) Shelley) v n "block"
     ]
       <*> pure cddl
   where

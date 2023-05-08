@@ -26,6 +26,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
+import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyTxOut (..))
@@ -119,12 +120,12 @@ genChainInEpoch epoch = do
     applyBlk cs' blk =
       (either err id)
         . flip runReader testGlobals
-        . applySTS @(CHAIN B)
+        . applySTS @(CHAIN B B_Crypto)
         $ TRC ((), cs', blk)
       where
         err :: Show a => a -> b
         err msg = error $ "Panic! applyBlk failed: " <> (show msg)
-    ge = genEnv (Proxy @B) defaultConstants
+    ge = genEnv (Proxy @B) (Proxy @B_Crypto) defaultConstants
     -- Small UTxO set; we just want enough to stake to pools
     cs =
       (geConstants ge)
@@ -142,7 +143,7 @@ genChainInEpoch epoch = do
               , let pp =
                       PoolParams
                         { ppId = aikColdKeyHash
-                        , ppVrf = hashVerKeyVRF $ vrfVerKey aikVrf
+                        , ppVrf = toPoolStakeVRF $ hashVerKeyVRF $ vrfVerKey aikVrf
                         , ppPledge = Coin 1
                         , ppCost = Coin 1
                         , ppMargin = minBound

@@ -21,6 +21,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (def)
+import Data.Proxy
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
@@ -62,13 +63,17 @@ testPoolNetworkID pv poolParams e = do
 
 matchingNetworkIDPoolParams :: PoolParams C_Crypto
 matchingNetworkIDPoolParams =
-  Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.aliceSHK}
+  let p = Proxy @C_Crypto
+      q = Proxy @C_Crypto
+   in (Cast.alicePoolParams p q) {ppRewardAcnt = RewardAcnt Testnet Cast.aliceSHK}
 
 -- test globals use Testnet
 
 mismatchingNetworkIDPoolParams :: PoolParams C_Crypto
 mismatchingNetworkIDPoolParams =
-  Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Mainnet Cast.aliceSHK}
+  let p = Proxy @C_Crypto
+      q = Proxy @C_Crypto
+   in (Cast.alicePoolParams p q) {ppRewardAcnt = RewardAcnt Mainnet Cast.aliceSHK}
 
 -- test globals use Testnet
 
