@@ -36,6 +36,7 @@ module Cardano.Ledger.Shelley.Delegation (
   isReservesMIRCert,
   isTreasuryMIRCert,
   requiresVKeyWitness,
+
   -- ** Serialization helpers
   shelleyDCertDelegDecoder,
   commonDCertDecoder,

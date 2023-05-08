@@ -2,6 +2,7 @@
 
 ## 1.2.0.0
 
+* Added `toShelleyDelegCert` and `fromShelleyDelegCert`
 * Added `ConwayDelegCert` and `Delegatee` #3372
 * Removed `toShelleyDCert` and `fromShelleyDCertMaybe` #3372
 * Replace `DPState c` with `CertState era`
