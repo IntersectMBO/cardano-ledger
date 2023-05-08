@@ -13,6 +13,8 @@ module Cardano.Ledger.Conway.Delegation (
   ConwayDelegCert (..),
   Delegatee (..),
   ConwayEraDCert (..),
+  fromShelleyDelegCert,
+  toShelleyDelegCert,
 )
 where
 
