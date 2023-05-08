@@ -820,10 +820,10 @@ getShelleyDCertCredential = \case
 getConwayDCertCredential :: ConwayDCert era -> Maybe (Credential 'Staking (EraCrypto era))
 getConwayDCertCredential (ConwayDCertPool (RegPool PoolParams {..})) = Just . coerceKeyRole $ KeyHashObj ppId
 getConwayDCertCredential (ConwayDCertPool (RetirePool kh _)) = Just . coerceKeyRole $ KeyHashObj kh
-getConwayDCertCredential (ConwayDCertDeleg (ConwayDeleg dk _ _)) = Just dk
-getConwayDCertCredential (ConwayDCertDeleg (ConwayReDeleg _ _)) = Nothing
-getConwayDCertCredential (ConwayDCertDeleg (ConwayUnDeleg _ _)) = Nothing
-getConwayDCertCredential (ConwayDCertDeleg (ConwayRegKey _)) = Nothing
+getConwayDCertCredential (ConwayDCertDeleg (ConwayRegCert _ _)) = Nothing
+getConwayDCertCredential (ConwayDCertDeleg (ConwayUnRegCert cred _)) = Just cred
+getConwayDCertCredential (ConwayDCertDeleg (ConwayDelegCert cred _)) = Just cred
+getConwayDCertCredential (ConwayDCertDeleg (ConwayRegDelegCert cred _ _)) = Just cred
 getConwayDCertCredential (ConwayDCertConstitutional _) = Nothing
 
 genWithdrawals :: Reflect era => SlotNo -> GenRS era (Withdrawals (EraCrypto era), RewardAccounts (EraCrypto era))

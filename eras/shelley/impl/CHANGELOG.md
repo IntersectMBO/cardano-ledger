@@ -20,7 +20,8 @@
 * Make `DCert` into a type family with pattern synonyms and rename the actual type into
   `ShelleyDCert`
 * Remove `certsTxBodyL` and `certsTxBodyG` from `ShelleyEraTxBody`
-* Add `shelleyDCertDecoder`
+* Add helper functions `shelleyDCertDelegDecoder`, `commonDCertDecoder`, `encodeShelleyDelegCert`,
+  `encodePoolCert` and `encodeConstitutionalCert`
 * Rename `ShelleyDCertDeleg` to `ShelleyDCertDelegCert`
 
 ## 1.1.0.0

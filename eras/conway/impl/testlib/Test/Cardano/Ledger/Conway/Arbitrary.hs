@@ -39,9 +39,10 @@ instance Crypto c => Arbitrary (Delegatee c) where
 instance Crypto c => Arbitrary (ConwayDelegCert c) where
   arbitrary =
     oneof
-      [ ConwayDeleg <$> arbitrary <*> arbitrary <*> arbitrary
-      , ConwayReDeleg <$> arbitrary <*> arbitrary
-      , ConwayUnDeleg <$> arbitrary <*> arbitrary
+      [ ConwayRegCert <$> arbitrary <*> arbitrary
+      , ConwayUnRegCert <$> arbitrary <*> arbitrary
+      , ConwayDelegCert <$> arbitrary <*> arbitrary
+      , ConwayRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary
       ]
 
 instance Era era => Arbitrary (ConwayDCert era) where
