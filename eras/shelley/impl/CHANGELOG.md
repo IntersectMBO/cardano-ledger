@@ -2,7 +2,6 @@
 
 ## 1.2.0.0
 
-* Disable `TICKF` rule optimization: [#3375](https://github.com/input-output-hk/cardano-ledger/pull/3375)
 * Replace `DPState c` with `CertState era`
 * Parametrize `DState` and `PState` by era
 * Rename `obligationDPState` to `obligationCertState`
@@ -23,6 +22,10 @@
 * Add helper functions `shelleyDCertDelegDecoder`, `commonDCertDecoder`, `encodeShelleyDelegCert`,
   `encodePoolCert` and `encodeConstitutionalCert`
 * Rename `ShelleyDCertDeleg` to `ShelleyDCertDelegCert`
+
+## 1.1.1.0
+
+* Disable `TICKF` rule optimization: [#3375](https://github.com/input-output-hk/cardano-ledger/pull/3375)
 
 ## 1.1.0.0
 
