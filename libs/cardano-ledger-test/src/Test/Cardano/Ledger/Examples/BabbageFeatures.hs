@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
-  AlonzoUtxowPredFailure (NonOutputSupplimentaryDatums),
+  AlonzoUtxowPredFailure (MissingRequiredDatums, NonOutputSupplimentaryDatums),
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -959,6 +959,53 @@ malformedScriptWit pf =
         ]
     }
 
+-- =============================================================================
+-- Invalid:  There is no such thing as a "reference datum".
+-- In other words,  you cannot include a reference input that contains an
+-- inline datum and have it count for the datum witness where ever it is needed.
+-- =============================================================================
+
+noSuchThingAsReferenceDatum :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
+noSuchThingAsReferenceDatum pf =
+  TestCaseData
+    { txBody =
+        newTxBody
+          pf
+          [ Inputs' [someTxIn]
+          , RefInputs' [anotherTxIn] -- Note that this reference input has the required datum
+          , Collateral' [yetAnotherTxIn]
+          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
+          , Txfee (Coin 5)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers (TxDats mempty))
+          ]
+    , initOutputs =
+        InitOutputs
+          { ofInputs =
+              [ newTxOut
+                  pf
+                  [ Address (scriptAddr pf (alwaysAlt 3 pf))
+                  , Amount (inject $ Coin 5000)
+                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
+                  ]
+              ]
+          , ofRefInputs =
+              [ newTxOut
+                  pf
+                  [ Address (plainAddr pf)
+                  , Amount (inject $ Coin 5000)
+                  , FDatum (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
+                  -- Note that this inline datum does not witness the datum for the plutus script
+                  ]
+              ]
+          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          }
+    , keysForAddrWits = [someKeysPaymentKeyRole pf]
+    , otherWitsFields =
+        [ ScriptWits' [alwaysAlt 3 pf]
+        , RdmrWits validatingRedeemers
+        ]
+    }
+
 -- ====================================================================================
 
 class BabbageBased era failure where
@@ -1241,6 +1288,16 @@ genericBabbageFeatures pf =
               pf
               (largeOutput pf)
               (fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput' pf, Coin 8915)])
+        , testCase "no such thing as a reference datum" $
+            testExpectFailure
+              pf
+              (noSuchThingAsReferenceDatum pf)
+              ( fromPredFail @era
+                  ( MissingRequiredDatums
+                      (Set.singleton (hashData $ datumExampleSixtyFiveBytes @era))
+                      mempty
+                  )
+              )
         ]
     ]
 
