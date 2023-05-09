@@ -1,7 +1,11 @@
 # Changelog
 
+**THIS CHANGELOG HAS BEEN DEPRECATED**
+
 We have adopted per-Haskell-package changelogs. Please see the `CHANGELOG.md` for each
 individual package for any notable changes.
+
+See the [REALEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd) for an up-to-date information about Releasing and Versioning Process.
 
 Below was the last `cardano-ledger` repository branch based release and we now have fully
 switched to [CHaPs](https://github.com/input-output-hk/cardano-haskell-packages).

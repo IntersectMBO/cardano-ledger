@@ -208,14 +208,19 @@ diverged from a version on `master` significantly enough to make it impossible f
 version to be released from `master`. In other words a patch backporting. In such a
 scenario a few steps should be followed:
 
-1. A branch with a prefix `release/` need to be created from a tag of a package version
-   that is being updated. For example if a current version on `master` is
-   `cardano-ledger-core-1.22.10.0` then the latest `cardano-ledger-core-1.21.x` should be
-   used as base:
+1. Two ephemeral branches with a prefix `release/` need to be created. Both should branch
+   of from a tag of a package version that is being updated. For example if a current
+   version on `master` is `cardano-ledger-core-1.22.10.0` then the latest
+   `cardano-ledger-core-1.21.x` should be used as base:
 
    ```shell
+   $ git checkout -b release/cardano-ledger-core-1.21.2.1 cardano-ledger-core-1.21.2.1
+   $ git push -u origin release/cardano-ledger-core-1.21.2.1
    $ git checkout -b release/cardano-ledger-core-1.21.3.0 cardano-ledger-core-1.21.2.1
    ```
+
+   We'll need the first branch in order to use it as base when creating a PR for code
+   review.
 
 2. Changes that need to be released should be `cherry-pick`ed from master. If a fix on
    `master` was implemented in some incompatible fashion to the current release, then it
@@ -225,8 +230,8 @@ scenario a few steps should be followed:
 
 3. Regular release process should follow from here.
 
-4. Once the package has been released and a git tag for that release was created, the
-   `release/` branch can be removed.
+4. Once the package has been released and a git tag for that release was created, both of
+   the `release/` branches can be removed.
 
 This process does not accommodate backporting fixes to versions that are at least two major
 versions behind the one on `master`.
