@@ -32,8 +32,8 @@ allprops =
         Plain.roundTripCborExpectation @(ConwayGenesis (EraCrypto e))
     , testProperty "v9 CostModels" $
         roundTripCborRangeExpectation @FlexibleCostModels
-          (natVersion @9)
-          (natVersion @9)
+          (eraProtVerLow @Conway)
+          (eraProtVerHigh @Conway)
     , testProperty "Conway Script" $
         roundTripAnnRangeExpectation @(Script Conway)
           (eraProtVerLow @Conway)
@@ -44,6 +44,10 @@ allprops =
           (eraProtVerHigh @Conway)
     , testProperty "Conway AuxiliaryData" $
         roundTripAnnRangeExpectation @(TxAuxData Conway)
+          (eraProtVerLow @Conway)
+          (eraProtVerHigh @Conway)
+    , testProperty "Conway Certificate" $
+        roundTripCborRangeExpectation @(DCert Conway)
           (eraProtVerLow @Conway)
           (eraProtVerHigh @Conway)
     ]
