@@ -30,6 +30,7 @@ import Test.QuickCheck (
   Gen,
   arbitrary,
   generate,
+  oneof,
   suchThat,
   vectorOf,
  )
@@ -71,25 +72,27 @@ import qualified PlutusLedgerApi.V3 as PV3
 -- | Represents arguments passed to `alonzoTxInfo` along with the produced result.
 data TranslationInstance = TranslationInstance
   { tiPparams :: PParams Alonzo
+  , tiLanguage :: Language
   , tiUtxo :: UTxO Alonzo
   , tiTx :: AlonzoTx Alonzo
   , tiResult :: VersionedTxInfo
   }
   deriving (Show, Eq, Generic)
 
-translationInstances :: Int -> IO [TranslationInstance]
-translationInstances size =
-  generate $ vectorOf size genTranslationInstance
+translationInstances :: Int -> [Language] -> IO [TranslationInstance]
+translationInstances size ls =
+  generate $ vectorOf size (genTranslationInstance ls)
 
-genTranslationInstance :: Gen TranslationInstance
-genTranslationInstance = do
+genTranslationInstance :: [Language] -> Gen TranslationInstance
+genTranslationInstance ls = do
   pp <- genAlonzoPParams @(EraCrypto Alonzo) defaultConstants
   utxo <- arbitrary :: Gen (UTxO Alonzo)
   tx <- validTx
+  language <- oneof (pure <$> ls)
   let fullUtxo = utxoWithTx tx utxo
-  let vtxInfoE = alonzoTxInfo pp PlutusV1 epochInfo systemStart fullUtxo tx
+  let vtxInfoE = alonzoTxInfo pp language epochInfo systemStart fullUtxo tx
   let vtxInfo = either (error . show) id vtxInfoE
-  pure $ TranslationInstance pp fullUtxo tx vtxInfo
+  pure $ TranslationInstance pp language fullUtxo tx vtxInfo
 
 epochInfo :: EpochInfo (Either a)
 epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
@@ -146,10 +149,11 @@ instance DecCBOR VersionedTxInfo where
   decCBOR = fromPlainDecoder Cborg.decode
 
 instance EncCBOR TranslationInstance where
-  encCBOR (TranslationInstance pp u tx r) =
+  encCBOR (TranslationInstance pp l u tx r) =
     encode $
       Rec TranslationInstance
         !> To pp
+        !> To l
         !> To u
         !> To tx
         !> To r
@@ -158,6 +162,7 @@ instance DecCBOR (Annotator TranslationInstance) where
   decCBOR =
     decode $
       Ann (RecD TranslationInstance)
+        <*! Ann From
         <*! Ann From
         <*! Ann From
         <*! From

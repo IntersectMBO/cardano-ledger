@@ -49,17 +49,19 @@ readTranslationInstances = do
 checkTranslationInstances :: [TranslationInstance] -> Assertion
 checkTranslationInstances = mapM_ checkTranslationInstance
   where
-    checkTranslationInstance ti@(TranslationInstance pp utxo tx expected) =
-      let result = alonzoTxInfo pp PlutusV1 epochInfo systemStart utxo tx
+    checkTranslationInstance ti@(TranslationInstance pp l utxo tx expected) =
+      let result = alonzoTxInfo pp l epochInfo systemStart utxo tx
        in case result of
             Left e -> error $ show e
             Right info -> assertEqual (errorMessage ti) info expected
 
 errorMessage :: TranslationInstance -> String
-errorMessage (TranslationInstance pp utxo tx _) =
+errorMessage (TranslationInstance pp l utxo tx _) =
   "Unexpected txinfo with arguments: "
     <> "\n pp: "
     <> show pp
+    <> "\n language: "
+    <> show l
     <> "\n utxo: "
     <> show utxo
     <> "\n tx: "
