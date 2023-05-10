@@ -10,6 +10,7 @@ import Cardano.Ledger.Binary.Encoding (serialize)
 import qualified Data.ByteString.Lazy as BSL
 import Paths_cardano_ledger_alonzo_test ()
 
+import Cardano.Ledger.Language (Language (..))
 import Test.Cardano.Ledger.Alonzo.TranslationInstance (translationInstances)
 
 file :: String
@@ -20,6 +21,6 @@ file = "eras/alonzo/test-suite/golden/translations.cbor"
 main :: IO ()
 main = do
   putStrLn "Generating golden files for TxInfo"
-  instances <- translationInstances 100
+  instances <- translationInstances 100 [PlutusV1]
   let cbor = serialize (eraProtVerHigh @Alonzo) instances
   BSL.writeFile file cbor
