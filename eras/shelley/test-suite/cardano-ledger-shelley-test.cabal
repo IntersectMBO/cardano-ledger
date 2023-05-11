@@ -32,10 +32,10 @@ library
         Test.Cardano.Ledger.Shelley.Generator.Block
         Test.Cardano.Ledger.Shelley.Generator.Constants
         Test.Cardano.Ledger.Shelley.Generator.Core
-        --Test.Cardano.Ledger.Shelley.Generator.Delegation
+        Test.Cardano.Ledger.Shelley.Generator.Delegation
         Test.Cardano.Ledger.Shelley.Generator.Presets
         Test.Cardano.Ledger.Shelley.Generator.Trace.Chain
-        -- Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
+        Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
         Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert
         Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger
         Test.Cardano.Ledger.Shelley.Generator.TxAuxData
