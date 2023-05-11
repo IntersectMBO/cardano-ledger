@@ -8,7 +8,7 @@ The events come at the cost of performance, but are useful for understanding cha
 after each block is applied. Note that there are no guarantees about the ordering of the events
 for any given block.
 
-Note thet when we say that an event only occurs on an epoch boundary, we mean that it only occurs on the first
+Note that when we say that an event only occurs on an epoch boundary, we mean that it only occurs on the first
 block of a new epoch.
 
 ## List of Events
@@ -102,21 +102,25 @@ stake pool registration deposits) minus the sum of all refunds. It also contains
 the transaction hash.
 
 ### `RegisterPool poolID`
+
 This event happens for every new stake pool registration certificate.
 The field `poolID` is the stake pool ID.
 
 ### `ReregisterPool hk`
+
 This event happens for every stake pool re-registration certificate
 (a change in stake pool parameters).
 The field `poolID` is the stake pool ID.
 
 ### `SuccessfulPlutusScriptsEvent debugInformation`
+
 This event happens for every collection of Plutus scripts in a given transaction
 which successfully execute.
 The field `debugInformation` is a list of `PlutusDebug`, which is a record containing
 all the information needed to re-run a Plutus script.
 
 ### `FailedPlutusScriptsEvent debugInformation`
+
 This event is the same as `SuccessfulPlutusScriptsEvent`, except that it contains the
 information for all the failed Plutus scripts in a single transaction.
 
