@@ -1,5 +1,15 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.3.0.0
+
+* Introduction of `TxCert` and `EraTxCert`
+* Add `EraTxCert` and `ShelleyEraTxCert` instances to `AlonzoEra`
+* Add `PlutusTxCert`
+* Add `unTxCertV1`, `unTxCertV2`, `unTxCertV3`
+* Add `EraPlutusContext`
+* Add `EraPlutusContext 'PlutusV1` instance to `AlonzoEra`
+* Rename `transTxCert` to `transShelleyTxCert`
+
 ## 1.2.0.0
 
 * Replace `DPState c` with `CertState era`
@@ -12,12 +22,6 @@
 * Fix a bug of converting a mint field to the plutus context: [#3398](https://github.com/input-output-hk/cardano-ledger/pull/3398)
 * Change parametrization of `ScriptPurpose`, `CollectError` and `TransactionScriptFailure`
   from `c`rypto to `era`
-* Add `EraDCert` and `ShelleyEraDCert` instances to `AlonzoEra`
-* Add `PlutusDCert`
-* Add `unDCertV1`, `unDCertV2`, `unDCertV3`
-* Add `EraPlutusContext`
-* Add `EraPlutusContext 'PlutusV1` instance to `AlonzoEra`
-* Rename `transDCert` to `transShelleyDCert`
 
 ## 1.1.0.0
 
@@ -34,7 +38,7 @@
   1. as a list of cost models values,
   2. and the old approach of mapping from the parameter name to the cost model value
 
-###`testlib`
+### `testlib`
 
 * Consolidate all `Arbitrary` instances from the test package to under a new `testlib`. #3285
 

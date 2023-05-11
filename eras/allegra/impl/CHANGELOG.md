@@ -1,12 +1,16 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.2.0.0
+
+* Introduction of `TxCert` and `EraTxCert`
+* Add `EraTxCert` and `ShelleyEraTxCert` instances to `AllegraEra`
+
 ## 1.1.1.0
 
 * Add `TranslateEra` instances for:
   * `DState`
   * `PState`
   * `VState`
-* Add `ShelleyEraDCert` instance for `AllegraEra`
 
 ## 1.1.0.0
 

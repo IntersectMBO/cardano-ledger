@@ -1,11 +1,17 @@
 # Changelog for `cardano-ledger-pretty`
 
+## 1.2.0.0
+
+* Rename:
+  * `ppDCert` -> `ppShelleyTxCert`
+  * `ppConwayDCert` -> `ppConwayTxCert`
+
 ## 1.1.1.0
 
- * Added `PrettyA` instances for:
-   * `Delegatee era` #3372
-   * `ConwayDelegCert c` #3372
- * Plutus V3 is now pretty
+* Added `PrettyA` instances for:
+  * `Delegatee era` #3372
+  * `ConwayDelegCert c` #3372
+* Plutus V3 is now pretty
 
 ## 1.1.0.0
 
