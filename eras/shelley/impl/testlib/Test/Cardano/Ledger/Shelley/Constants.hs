@@ -16,11 +16,11 @@ data Constants = Constants
   -- ^ minimal number of transaction inputs to select
   , maxNumGenInputs :: Int
   -- ^ maximal number of transaction inputs to select
-  , frequencyRegKeyCert :: Int
+  , frequencyRegCert :: Int
   -- ^ Relative frequency of generated credential registration certificates
   , frequencyRegPoolCert :: Int
   -- ^ Relative frequency of generated pool registration certificates
-  , frequencyDelegationCert :: Int
+  , frequencyDelegCert :: Int
   -- ^ Relative frequency of generated delegation certificates
   , frequencyGenesisDelegationCert :: Int
   -- ^ Relative frequency of generated genesis delegation certificates
@@ -108,9 +108,9 @@ defaultConstants =
   Constants
     { minNumGenInputs = 1
     , maxNumGenInputs = 5
-    , frequencyRegKeyCert = 2
+    , frequencyRegCert = 2
     , frequencyRegPoolCert = 2
-    , frequencyDelegationCert = 3
+    , frequencyDelegCert = 3
     , frequencyGenesisDelegationCert = 1
     , frequencyDeRegKeyCert = 1
     , frequencyRetirePoolCert = 1

@@ -143,7 +143,7 @@ txbodyEx1 pot =
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
         [ ShelleyTxCertMir (MIRCert pot ir)
-        , ShelleyTxCertDeleg (RegKey Cast.aliceSHK)
+        , ShelleyTxCertDeleg (ShelleyRegCert Cast.aliceSHK)
         ]
     )
     (Withdrawals Map.empty)
@@ -153,7 +153,7 @@ txbodyEx1 pot =
     SNothing
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
-    aliceCoinEx1 = aliceInitCoin <-> (Val.inject $ feeTx1 <+> Coin 7)
+    aliceCoinEx1 = aliceInitCoin <-> Val.inject (feeTx1 <+> Coin 7)
 
 mirWits :: Crypto c => [Int] -> [KeyPair 'Witness c]
 mirWits = map (asWitness . aikCold . coreNodeIssuerKeys)

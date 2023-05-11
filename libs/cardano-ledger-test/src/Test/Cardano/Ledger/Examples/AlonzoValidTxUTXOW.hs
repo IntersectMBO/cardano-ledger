@@ -319,7 +319,7 @@ validatingWithCertBody pf =
     [ Inputs' [mkGenesisTxIn 3]
     , Collateral' [mkGenesisTxIn 13]
     , Outputs' [validatingWithCertTxOut pf]
-    , Certs' [ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)]
+    , Certs' [ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)]
     , Txfee (Coin 5)
     , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingWithCertRedeemers mempty)
     ]
@@ -374,7 +374,7 @@ notValidatingWithCertTx pf =
         [ Inputs' [mkGenesisTxIn 4]
         , Collateral' [mkGenesisTxIn 14]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
-        , Certs' [ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredFail pf)]
+        , Certs' [ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredFail pf)]
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
         ]
@@ -651,8 +651,8 @@ validatingManyScriptsBody pf =
     , Outputs' [validatingManyScriptsTxOut pf]
     , Txfee (Coin 5)
     , Certs'
-        [ ShelleyTxCertDeleg (DeRegKey $ timelockStakeCred pf)
-        , ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
+        [ ShelleyTxCertDeleg (ShelleyUnRegCert $ timelockStakeCred pf)
+        , ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)
         ]
     , Withdrawals'
         ( Withdrawals $
@@ -784,8 +784,8 @@ validatingMultipleEqualCertsBody pf =
     , Collateral' [mkGenesisTxIn 13]
     , Outputs' [validatingMultipleEqualCertsOut pf]
     , Certs'
-        [ ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
-        , ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
+        [ ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)
+        , ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
         ]
     , Txfee (Coin 5)
     , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingMultipleEqualCertsRedeemers mempty)

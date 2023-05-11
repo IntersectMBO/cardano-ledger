@@ -242,7 +242,7 @@ goldenEncodingTestsAllegra =
     , -- "full_txn_body"
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @Allegra testAddrE (Coin 2)
-          reg = ShelleyTxCertDeleg (RegKey testStakeCred)
+          reg = ShelleyTxCertDeleg (ShelleyRegCert testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
           mdh = hashTxAuxData @Allegra $ AllegraTxAuxData Map.empty StrictSeq.empty
@@ -396,7 +396,7 @@ goldenEncodingTestsMary =
     , -- "full_txn_body"
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @Mary testAddrE (Val.inject $ Coin 2)
-          reg = ShelleyTxCertDeleg (RegKey testStakeCred)
+          reg = ShelleyTxCertDeleg (ShelleyRegCert testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
           mdh = hashTxAuxData @Allegra $ AllegraTxAuxData Map.empty StrictSeq.empty

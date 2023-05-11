@@ -23,7 +23,6 @@ module Test.Cardano.Ledger.Generic.TxGen (
   coreTxBody,
   coreTxOut,
   genUTxO,
-  testTx,
 )
 where
 
@@ -72,7 +71,6 @@ import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (asks, get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
-import Data.Default.Class (Default (def))
 import qualified Data.Foldable as F
 import Data.Functor
 import qualified Data.List as List
@@ -124,15 +122,12 @@ import Test.Cardano.Ledger.Generic.GenState (
   modifyModelIndex,
   modifyModelMutFee,
   modifyModelUTxO,
-  runGenRS,
  )
 import Test.Cardano.Ledger.Generic.ModelState (
   MUtxo,
   ModelNewEpochState (..),
   UtxoEntry,
-  pcModelNewEpochState,
  )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
@@ -544,9 +539,14 @@ chooseGood :: (a -> Bool) -> Int -> [a] -> Gen (a, [a])
 chooseGood bad n xs = do
   let (good, others) =
         case xs of
-          [] -> error ("empty list in chooseGood, should never happen. n = " ++ show n ++ ", length xs = " ++ show (length xs))
+          [] ->
+            error $
+              "empty list in chooseGood, should never happen. n = "
+                ++ show n
+                ++ ", length xs = "
+                ++ show (length xs)
           [x] -> (x, [])
-          (x : y : more) -> if bad x then (y, (x : more)) else (x, y : more)
+          (x : y : more) -> if bad x then (y, x : more) else (x, y : more)
   tailx <- take (n - 1) <$> shuffle others
   result <- shuffle (good : tailx)
   pure (good, result)
@@ -557,17 +557,17 @@ chooseGood bad n xs = do
 genShelleyDelegCert :: forall era. Reflect era => GenRS era (ShelleyDelegCert (EraCrypto era))
 genShelleyDelegCert =
   frequencyT
-    [ (75, RegKey <$> genRegKey)
-    , (25, DeRegKey <$> genDeRegKey)
-    , (50, Delegate <$> genDelegation)
+    [ (75, genShelleyRegCert)
+    , (25, genShelleyUnRegCert)
+    , (50, genDelegation)
     ]
   where
-    genRegKey = genFreshRegCred @era Cert
-    genDeRegKey = genCredential Cert
+    genShelleyRegCert = ShelleyRegCert <$> genFreshRegCred @era Cert
+    genShelleyUnRegCert = ShelleyUnRegCert <$> genCredential Cert
     genDelegation = do
       rewardAccount <- genFreshRegCred Cert
-      (kh, _) <- genPool
-      pure $ Delegation {dDelegator = rewardAccount, dDelegatee = kh}
+      (poolId, _) <- genPool
+      pure $ ShelleyDelegCert rewardAccount poolId
 
 genTxCertDeleg :: forall era. Reflect era => GenRS era (TxCert era)
 genTxCertDeleg = case reify @era of
@@ -644,12 +644,12 @@ genTxCerts slot = do
                 Just _ -> pure (dc : dcs, ss, regCreds)
                 Nothing -> pure (dcs, ss, regCreds)
           _ | Just d <- getShelleyTxCertDelegG @era dc -> case d of
-            RegKey regCred ->
+            ShelleyRegCert regCred ->
               if regCred `Map.member` regCreds -- Can't register if it is already registered
                 then pure (dcs, ss, regCreds)
                 else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
-            DeRegKey deregCred ->
-              -- We can't make DeRegKey certificate if deregCred is not already registered
+            ShelleyUnRegCert deregCred ->
+              -- We can't make ShelleyUnRegCert certificate if deregCred is not already registered
               -- or if the Rewards balance for deregCred is not 0,
               -- or if the credential is one of the StableDelegators (which are never de-registered)
               case Map.lookup deregCred regCreds of
@@ -663,7 +663,7 @@ genTxCerts slot = do
                       insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
                         <$> lookupPlutusScript deregCred Cert
                 Just (Coin _) -> pure (dcs, ss, regCreds)
-            Delegate (Delegation delegCred delegKey) ->
+            ShelleyDelegCert delegCred delegKey ->
               let (dcs', regCreds') =
                     if delegCred `Map.member` regCreds
                       then (dcs, regCreds)
@@ -671,7 +671,7 @@ genTxCerts slot = do
                       -- so if it is not there, we put it there, otherwise we may
                       -- never generate a valid delegation.
 
-                        ( mkShelleyTxCertDelegG (RegKey delegCred) : dcs
+                        ( mkShelleyTxCertDelegG (ShelleyRegCert delegCred) : dcs
                         , Map.insert delegCred (Coin 99) regCreds
                         )
                in insertIfNotPresent dcs' regCreds' (Just delegKey)
@@ -807,9 +807,9 @@ getShelleyTxCertCredential :: ShelleyTxCert era -> Maybe (Credential 'Staking (E
 getShelleyTxCertCredential = \case
   ShelleyTxCertDelegCert d ->
     case d of
-      RegKey _rk -> Nothing -- we don't require witnesses for RegKey
-      DeRegKey drk -> Just drk
-      Delegate (Delegation dk _) -> Just dk
+      ShelleyRegCert _rk -> Nothing -- we don't require witnesses for ShelleyRegCert
+      ShelleyUnRegCert drk -> Just drk
+      ShelleyDelegCert dk _ -> Just dk
   ShelleyTxCertPool pc ->
     case pc of
       RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj ppId
@@ -955,7 +955,11 @@ genAlonzoTxAndInfo proof slot = do
   -- If Babbage era, or greater, add a stub for a CollateralReturn TxOut
   bogusCollReturn <-
     if Some proof >= Some (Babbage Mock)
-      then frequencyT [(1, pure SNothing), (9, (SJust . coreTxOut proof) <$> genTxOut proof (inject (Coin 0)))]
+      then
+        frequencyT
+          [ (1, pure SNothing)
+          , (9, SJust . coreTxOut proof <$> genTxOut proof (inject (Coin 0)))
+          ]
       else pure SNothing
   let updateCollReturn SNothing _ = SNothing
       updateCollReturn (SJust txout) v = SJust (injectFee proof v txout)
@@ -1064,8 +1068,8 @@ genAlonzoTxAndInfo proof slot = do
           , AuxData' []
           ]
   count <- gets (mCount . gsModel)
-  modifyGenStateInitialRewards (\x -> Map.union x newRewards)
-  modifyGenStateInitialUtxo (\x -> Map.union x (minus utxo maybeoldpair))
+  modifyGenStateInitialRewards (`Map.union` newRewards)
+  modifyGenStateInitialUtxo (`Map.union` minus utxo maybeoldpair)
   modifyModelCount (const (count + 1))
   modifyModelIndex (Map.insert count (TxId txBodyHash))
   modifyModelUTxO (const utxo)
@@ -1115,20 +1119,6 @@ instance
       ppRecord
         "Box"
         []
-
--- Sample things we might use in the Box
--- ("Tx", tcTx proof _sig)
--- ("Tx", prettyA _sig)
--- ("TRC state",prettyA _state)
--- ("GenEnv",pcGenState proof _gs)
-
-testTx :: IO ()
-testTx = do
-  let proof = Babbage Mock
-  ((_utxo, tx, _feepair, _), genstate) <- generate $ runGenRS proof def (genAlonzoTxAndInfo proof (SlotNo 0))
-  let m = gsModel genstate
-  putStrLn (show (pcTx proof tx))
-  putStrLn (show (pcModelNewEpochState proof m))
 
 -- ==============================================================================
 -- How we take the generated stuff and put it through the STS rule mechanism

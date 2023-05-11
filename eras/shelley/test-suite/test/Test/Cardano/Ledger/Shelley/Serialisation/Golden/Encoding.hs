@@ -521,7 +521,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "register_stake_reference"
-        (ShelleyTxCertDeleg @C (RegKey (testStakeCred @C_Crypto)))
+        (ShelleyTxCertDeleg @C (ShelleyRegCert (testStakeCred @C_Crypto)))
         ( T (TkListLen 2)
             <> T (TkWord 0) -- Reg cert
             <> S (testStakeCred @C_Crypto) -- keyhash
@@ -529,7 +529,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "deregister_stake_reference"
-        (ShelleyTxCertDeleg @C (DeRegKey (testStakeCred @C_Crypto)))
+        (ShelleyTxCertDeleg @C (ShelleyUnRegCert (testStakeCred @C_Crypto)))
         ( T (TkListLen 2)
             <> T (TkWord 1) -- DeReg cert
             <> S (testStakeCred @C_Crypto) -- keyhash
@@ -537,7 +537,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "stake_delegation"
-        (ShelleyTxCertDeleg @C (Delegate (Delegation (testStakeCred @C_Crypto) (hashKey . vKey $ testStakePoolKey))))
+        (ShelleyTxCertDeleg @C (ShelleyDelegCert (testStakeCred @C_Crypto) (hashKey $ vKey testStakePoolKey)))
         ( T
             ( TkListLen 3
                 . TkWord 2 -- delegation cert with key
@@ -817,7 +817,7 @@ tests =
             )
     , -- checkEncodingCBOR "full_txn_body"
       let tout = ShelleyTxOut @C testAddrE (Coin 2)
-          reg = ShelleyTxCertDeleg (RegKey (testStakeCred @C_Crypto))
+          reg = ShelleyTxCertDeleg (ShelleyRegCert (testStakeCred @C_Crypto))
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =

@@ -243,9 +243,8 @@ validateDelegationRegistered ::
   TxCert era ->
   Test (KeyHash 'StakePool (EraCrypto era))
 validateDelegationRegistered certState = \case
-  ShelleyTxCertDeleg (Delegate deleg) ->
+  ShelleyTxCertDeleg (ShelleyDelegCert _ targetPool) ->
     let stPools = psStakePoolParams $ certPState certState
-        targetPool = dDelegatee deleg
      in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
   _ -> pure ()
 

@@ -7,6 +7,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- Due to usage of Delegation
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Pretty where
 
@@ -1099,10 +1101,11 @@ ppTxOut (ShelleyTxOut addr val) =
     , prettyA val
     ]
 
-ppDelegCert :: ShelleyDelegCert c -> PDoc
-ppDelegCert (RegKey x) = ppSexp "RegKey" [ppCredential x]
-ppDelegCert (DeRegKey x) = ppSexp "DeRegKey" [ppCredential x]
-ppDelegCert (Delegate x) = ppSexp "Delegate" [ppDelegation x]
+ppShelleyDelegCert :: ShelleyDelegCert c -> PDoc
+ppShelleyDelegCert (ShelleyRegCert cred) = ppSexp "ShelleyRegCert" [ppCredential cred]
+ppShelleyDelegCert (ShelleyUnRegCert cred) = ppSexp "ShelleyUnRegCert" [ppCredential cred]
+ppShelleyDelegCert (ShelleyDelegCert cred poolId) =
+  ppSexp "ShelleyDelegCert" [ppCredential cred, ppKeyHash poolId]
 
 ppPoolCert :: PoolCert c -> PDoc
 ppPoolCert (RegPool x) = ppSexp "RegPool" [ppPoolParams x]
@@ -1123,7 +1126,7 @@ ppMIRCert :: MIRCert c -> PDoc
 ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 
 ppShelleyTxCert :: ShelleyTxCert c -> PDoc
-ppShelleyTxCert (ShelleyTxCertDelegCert x) = ppSexp "ShelleyTxCertDeleg" [ppDelegCert x]
+ppShelleyTxCert (ShelleyTxCertDelegCert x) = ppSexp "ShelleyTxCertDeleg" [ppShelleyDelegCert x]
 ppShelleyTxCert (ShelleyTxCertPool x) = ppSexp "TxCertPool" [ppPoolCert x]
 ppShelleyTxCert (ShelleyTxCertGenesis x) = ppSexp "TxCertGenesis" [ppConstitutionalDelegCert x]
 ppShelleyTxCert (ShelleyTxCertMir x) = ppSexp "TxCertMir" [ppMIRCert x]
@@ -1182,7 +1185,7 @@ instance
   prettyA = ppTxOut
 
 instance PrettyA (ShelleyDelegCert c) where
-  prettyA = ppDelegCert
+  prettyA = ppShelleyDelegCert
 
 instance PrettyA (PoolCert c) where
   prettyA = ppPoolCert

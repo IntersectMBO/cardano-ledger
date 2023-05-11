@@ -115,9 +115,9 @@ genTxCert ::
   Gen (Maybe (TxCert era, CertCred era))
 genTxCert
   c@( Constants
-        { frequencyRegKeyCert
+        { frequencyRegCert
         , frequencyRegPoolCert
-        , frequencyDelegationCert
+        , frequencyDelegCert
         , frequencyGenesisDelegationCert
         , frequencyDeRegKeyCert
         , frequencyRetirePoolCert
@@ -137,9 +137,9 @@ genTxCert
   dpState
   slot =
     QC.frequency
-      [ (frequencyRegKeyCert, genRegKeyCert c ksKeyPairs ksMSigScripts dState)
+      [ (frequencyRegCert, genRegKeyCert c ksKeyPairs ksMSigScripts dState)
       , (frequencyRegPoolCert, genRegPool ksStakePools ksKeyPairs (pparams ^. ppMinPoolCostL))
-      , (frequencyDelegationCert, genDelegation c ksKeyPairs ksMSigScripts dpState)
+      , (frequencyDelegCert, genDelegation c ksKeyPairs ksMSigScripts dpState)
       ,
         ( frequencyGenesisDelegationCert
         , genGenesisDelegation ksCoreNodes ksGenesisDelegates dpState
@@ -183,7 +183,7 @@ genRegKeyCert
               (_payKey, stakeKey) <- QC.elements availableKeys
               pure $
                 Just
-                  ( ShelleyTxCertDeleg (RegKey (mkCred stakeKey))
+                  ( ShelleyTxCertDeleg (ShelleyRegCert (mkCred stakeKey))
                   , NoCred
                   )
         )
@@ -195,7 +195,7 @@ genRegKeyCert
               (_, stakeScript) <- QC.elements availableScripts
               pure $
                 Just
-                  ( ShelleyTxCertDeleg (RegKey (scriptToCred' stakeScript))
+                  ( ShelleyTxCertDeleg (ShelleyRegCert (scriptToCred' stakeScript))
                   , NoCred
                   )
         )
@@ -224,7 +224,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
           [] -> pure Nothing
           _ -> do
             (_payKey, stakeKey) <- QC.elements availableKeys
-            pure $ Just (ShelleyTxCertDeleg (DeRegKey (mkCred stakeKey)), StakeCred stakeKey)
+            pure $ Just (ShelleyTxCertDeleg (ShelleyUnRegCert (mkCred stakeKey)), StakeCred stakeKey)
       )
     ,
       ( frequencyScriptCredDeReg
@@ -234,7 +234,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
             scriptPair@(_, stakeScript) <- QC.elements availableScripts
             pure $
               Just
-                ( ShelleyTxCertDeleg (DeRegKey (scriptToCred' stakeScript))
+                ( ShelleyTxCertDeleg (ShelleyUnRegCert (scriptToCred' stakeScript))
                 , ScriptCred scriptPair
                 )
       )
@@ -306,12 +306,12 @@ genDelegation
       scriptToCred' = ScriptHashObj . hashScript @era
       mkCert (_, delegatorKey) poolKey = Just (cert, StakeCred delegatorKey)
         where
-          cert = ShelleyTxCertDeleg (Delegate (Delegation (mkCred delegatorKey) poolKey))
+          cert = ShelleyTxCertDeleg (ShelleyDelegCert (mkCred delegatorKey) poolKey)
       mkCertFromScript (s, delegatorScript) poolKey =
         Just (scriptCert, ScriptCred (s, delegatorScript))
         where
           scriptCert =
-            ShelleyTxCertDeleg (Delegate (Delegation (scriptToCred' delegatorScript) poolKey))
+            ShelleyTxCertDeleg (ShelleyDelegCert (scriptToCred' delegatorScript) poolKey)
       registeredDelegate k = UM.member k (rewards (certDState dpState))
       availableDelegates = filter (registeredDelegate . mkCred . snd) keys
       availableDelegatesScripts =
@@ -353,10 +353,10 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     genesisDelegator k = eval (k ∈ dom genDelegs_)
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
     notActiveDelegatee k =
-      not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems genDelegs_))
+      coerceKeyRole k `List.notElem` fmap genDelegKeyHash (Map.elems genDelegs_)
     fGenDelegs = dsFutureGenDelegs $ certDState dpState
     notFutureDelegatee k =
-      not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems fGenDelegs))
+      coerceKeyRole k `List.notElem` fmap genDelegKeyHash (Map.elems fGenDelegs)
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . aikCold) allDelegateKeys
 

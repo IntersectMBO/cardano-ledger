@@ -107,11 +107,11 @@ keyCertsRefunds pp lookupDeposit certs = snd (foldl' accum (mempty, Coin 0) cert
   where
     keyDeposit = pp ^. ppKeyDepositL
     accum (!regKeys, !totalRefunds) = \case
-      ShelleyTxCertDeleg (RegKey k) ->
+      ShelleyTxCertDeleg (ShelleyRegCert k) ->
         -- Need to track new delegations in case that the same key is later deregistered in
         -- the same transaction.
         (Set.insert k regKeys, totalRefunds)
-      ShelleyTxCertDeleg (DeRegKey k)
+      ShelleyTxCertDeleg (ShelleyUnRegCert k)
         -- We first check if there was already a registration certificate in this
         -- transaction.
         | Set.member k regKeys -> (Set.delete k regKeys, totalRefunds <+> keyDeposit)

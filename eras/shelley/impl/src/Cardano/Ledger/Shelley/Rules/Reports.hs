@@ -50,9 +50,9 @@ showCred (KeyHashObj (KeyHash x)) = show x
 
 synopsisCert :: ShelleyEraTxCert era => TxCert era -> String
 synopsisCert x = case x of
-  ShelleyTxCertDeleg (RegKey cred) -> "RegKey " ++ take 10 (showCred cred)
-  ShelleyTxCertDeleg (DeRegKey cred) -> "DeRegKey " ++ take 10 (showCred cred)
-  ShelleyTxCertDeleg (Delegate _) -> "Delegation"
+  ShelleyTxCertDeleg (ShelleyRegCert cred) -> "ShelleyRegCert " ++ take 10 (showCred cred)
+  ShelleyTxCertDeleg (ShelleyUnRegCert cred) -> "ShelleyUnRegCert " ++ take 10 (showCred cred)
+  ShelleyTxCertDeleg (ShelleyDelegCert cred _) -> "ShelleyDelegCert" ++ take 10 (showCred cred)
   TxCertPool (RegPool pool) -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
   TxCertPool (RetirePool khash e) -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
   TxCertGenesis _ -> "GenesisCert"

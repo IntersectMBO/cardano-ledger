@@ -62,10 +62,10 @@ keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
     certs = tx ^. certsTxBodyL
     initialKeys = UM.RewardDeposits $ dsUnified $ certDState dpstate
     keyDeposit = UM.compactCoinOrError (pp ^. ppKeyDepositL)
-    accum (!keys, !ans) (ShelleyTxCertDeleg (RegKey k)) =
+    accum (!keys, !ans) (ShelleyTxCertDeleg (ShelleyRegCert k)) =
       -- Deposit is added locally to the growing 'keys'
       (UM.RewardDeposits $ UM.insert k (UM.RDPair mempty keyDeposit) keys, ans)
-    accum (!keys, !ans) (ShelleyTxCertDeleg (DeRegKey k)) =
+    accum (!keys, !ans) (ShelleyTxCertDeleg (ShelleyUnRegCert k)) =
       -- If the key is registered, lookup the deposit in the locally growing 'keys'
       -- if it is not registered, then just return ans
       case UM.lookup k keys of
@@ -109,7 +109,7 @@ genTxBodyFrom CertState {certDState, certPState} (UTxO u) = do
   certs <-
     shuffle $
       toList (txBody ^. certsTxBodyL)
-        <> (ShelleyTxCertDeleg . DeRegKey <$> unDelegCreds)
+        <> (ShelleyTxCertDeleg . ShelleyUnRegCert <$> unDelegCreds)
         <> (TxCertPool . RegPool <$> deRegKeys)
   pure
     ( txBody

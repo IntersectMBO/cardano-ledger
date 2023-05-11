@@ -10,7 +10,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+-- Due to Delegation usage
+{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
 
 module Test.Cardano.Ledger.Shelley.Arbitrary (
   collectionDatumMaxSize,

@@ -17,9 +17,7 @@ module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoBbodyPredFailure (..),
- )
+import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
@@ -414,7 +412,7 @@ validatingBodyWithCert pf =
     [ Inputs' [mkGenesisTxIn 3]
     , Collateral' [mkGenesisTxIn 13]
     , Outputs' [validatingTxWithCertOut pf]
-    , Certs' [ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)]
+    , Certs' [ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)]
     , Txfee (Coin 5)
     , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemrsWithCert mempty)
     ]
@@ -458,7 +456,7 @@ notValidatingTxWithCert pf =
         [ Inputs' [mkGenesisTxIn 4]
         , Collateral' [mkGenesisTxIn 14]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
-        , Certs' [ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredFail pf)]
+        , Certs' [ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredFail pf)]
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersWithCert mempty)
         ]

@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -416,22 +417,21 @@ instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
   transTxCert = TxCertPlutusV1 . transShelleyTxCert
 
 transShelleyTxCert :: ShelleyTxCert era -> PV1.DCert
-transShelleyTxCert (ShelleyTxCertDelegCert (RegKey stkcred)) =
-  PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stkcred))
-transShelleyTxCert (ShelleyTxCertDelegCert (DeRegKey stkcred)) =
-  PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stkcred))
-transShelleyTxCert (ShelleyTxCertDelegCert (Delegate (Delegation stkcred keyhash))) =
-  PV1.DCertDelegDelegate
-    (PV1.StakingHash (transStakeCred stkcred))
-    (transKeyHash keyhash)
-transShelleyTxCert (ShelleyTxCertPool (RegPool pp)) =
-  PV1.DCertPoolRegister
-    (transKeyHash (ppId pp))
-    (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppVrf pp))))
-transShelleyTxCert (ShelleyTxCertPool (RetirePool keyhash (EpochNo i))) =
-  PV1.DCertPoolRetire (transKeyHash keyhash) (fromIntegral i)
-transShelleyTxCert (ShelleyTxCertGenesis _) = PV1.DCertGenesis
-transShelleyTxCert (ShelleyTxCertMir _) = PV1.DCertMir
+transShelleyTxCert = \case
+  ShelleyTxCertDelegCert delegCert ->
+    case delegCert of
+      ShelleyRegCert stakeCred ->
+        PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stakeCred))
+      ShelleyUnRegCert stakeCred ->
+        PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stakeCred))
+      ShelleyDelegCert stakeCred keyHash ->
+        PV1.DCertDelegDelegate (PV1.StakingHash (transStakeCred stakeCred)) (transKeyHash keyHash)
+  ShelleyTxCertPool (RegPool PoolParams {ppId, ppVrf}) ->
+    PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
+  ShelleyTxCertPool (RetirePool keyHash (EpochNo i)) ->
+    PV1.DCertPoolRetire (transKeyHash keyHash) (fromIntegral i)
+  ShelleyTxCertGenesis _ -> PV1.DCertGenesis
+  ShelleyTxCertMir _ -> PV1.DCertMir
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp

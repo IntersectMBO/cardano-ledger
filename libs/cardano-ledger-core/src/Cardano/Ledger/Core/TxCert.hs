@@ -77,6 +77,7 @@ data Delegation c = Delegation
   , dDelegatee :: !(KeyHash 'StakePool c)
   }
   deriving (Eq, Generic, Show)
+{-# DEPRECATED Delegation "No longer used" #-}
 
 instance NFData (Delegation c) where
   rnf = rwhnf

@@ -130,8 +130,8 @@ depositsAndRefunds ::
   Coin
 depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) certificates
   where
-    accum ans (ShelleyTxCertDeleg (RegKey _)) = pp ^. ppKeyDepositL <+> ans
-    accum ans (ShelleyTxCertDeleg (DeRegKey hk)) =
+    accum ans (ShelleyTxCertDeleg (ShelleyRegCert _)) = pp ^. ppKeyDepositL <+> ans
+    accum ans (ShelleyTxCertDeleg (ShelleyUnRegCert hk)) =
       case Map.lookup hk keydeposits of
         Nothing -> ans
         Just c -> ans <-> c

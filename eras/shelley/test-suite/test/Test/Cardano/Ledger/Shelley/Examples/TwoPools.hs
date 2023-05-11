@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -143,13 +144,13 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 aliceInitCoin :: Coin
-aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin = Coin 10_000_000_000_000_000
 
 bobInitCoin :: Coin
-bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin = Coin 1_000_000_000_000_000
 
 carlInitCoin :: Coin
-carlInitCoin = Coin $ 5 * 1000 * 1000 * 1000 * 1000 * 1000
+carlInitCoin = Coin 5_000_000_000_000_000
 
 initUTxO :: UTxO C
 initUTxO =
@@ -189,14 +190,14 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
-        [ ShelleyTxCertDeleg (RegKey Cast.aliceSHK)
-        , ShelleyTxCertDeleg (RegKey Cast.bobSHK)
-        , ShelleyTxCertDeleg (RegKey Cast.carlSHK)
+        [ ShelleyTxCertDeleg (ShelleyRegCert Cast.aliceSHK)
+        , ShelleyTxCertDeleg (ShelleyRegCert Cast.bobSHK)
+        , ShelleyTxCertDeleg (ShelleyRegCert Cast.carlSHK)
         , TxCertPool (RegPool alicePoolParams')
         , TxCertPool (RegPool bobPoolParams')
-        , ShelleyTxCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
-        , ShelleyTxCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys))
-        , ShelleyTxCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))
+        , ShelleyTxCertDeleg (ShelleyDelegCert Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
+        , ShelleyTxCertDeleg (ShelleyDelegCert Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys))
+        , ShelleyTxCertDeleg (ShelleyDelegCert Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))
         ]
     )
     (Withdrawals Map.empty)
@@ -212,7 +213,7 @@ txEx1 =
     mempty
       { addrWits =
           mkWitnessesVKey
-            (hashAnnotated $ txbodyEx1)
+            (hashAnnotated txbodyEx1)
             ( (asWitness <$> [Cast.alicePay])
                 <> (asWitness <$> [Cast.aliceStake, Cast.bobStake, Cast.carlStake])
                 <> (asWitness <$> [aikCold Cast.alicePoolKeys, aikCold Cast.bobPoolKeys])
@@ -237,7 +238,7 @@ blockEx1 =
 
 expectedStEx1 :: ChainState C
 expectedStEx1 =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx1))
+  C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
     . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK] [alicePoolParams', bobPoolParams']
     . C.newUTxO txbodyEx1
@@ -283,7 +284,7 @@ blockEx2 =
 
 expectedStEx2 :: ChainState C
 expectedStEx2 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx2))
+  C.evolveNonceFrozen (getBlockNonce blockEx2)
     . C.newLab blockEx2
     . C.rewardUpdate emptyRewardUpdate
     $ expectedStEx1
@@ -299,7 +300,7 @@ twoPools2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 --
 
 epoch1Nonce :: Nonce
-epoch1Nonce = chainCandidateNonce (expectedStEx2)
+epoch1Nonce = chainCandidateNonce expectedStEx2
 
 blockEx3 :: Block (BHeader C_Crypto) C
 blockEx3 =
@@ -309,7 +310,7 @@ blockEx3 =
     []
     (SlotNo 110)
     (BlockNo 3)
-    (epoch1Nonce)
+    epoch1Nonce
     (NatNonce 3)
     minBound
     5
@@ -361,7 +362,7 @@ blockEx4 =
     []
     (SlotNo 190)
     (BlockNo 4)
-    (epoch1Nonce)
+    epoch1Nonce
     (NatNonce 4)
     minBound
     9
@@ -383,7 +384,7 @@ rewardUpdateEx4 =
 
 expectedStEx4 :: ChainState C
 expectedStEx4 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx4))
+  C.evolveNonceFrozen (getBlockNonce blockEx4)
     . C.newLab blockEx4
     . C.rewardUpdate rewardUpdateEx4
     $ expectedStEx3
@@ -397,8 +398,8 @@ twoPools4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 epoch2Nonce :: Nonce
 epoch2Nonce =
-  chainCandidateNonce (expectedStEx4)
-    ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx2))
+  chainCandidateNonce expectedStEx4
+    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx2)
 
 --
 -- Block 5, Slot 221, Epoch 2
@@ -412,7 +413,7 @@ blockEx5 =
     []
     (SlotNo 221) -- odd slots open for decentralization
     (BlockNo 5)
-    (epoch2Nonce)
+    epoch2Nonce
     (NatNonce 5)
     minBound
     11
@@ -471,7 +472,7 @@ blockEx6 =
     []
     (SlotNo 295) -- odd slots open for decentralization
     (BlockNo 6)
-    (epoch2Nonce)
+    epoch2Nonce
     (NatNonce 6)
     minBound
     14
@@ -480,7 +481,7 @@ blockEx6 =
 
 expectedStEx6 :: ChainState C
 expectedStEx6 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx6))
+  C.evolveNonceFrozen (getBlockNonce blockEx6)
     . C.newLab blockEx6
     . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.alicePoolKeys) 0
     . C.incrBlockCount (aikColdKeyHash Cast.alicePoolKeys)
@@ -505,7 +506,7 @@ blockEx7 =
     []
     (SlotNo 297) -- odd slots open for decentralization
     (BlockNo 7)
-    (epoch2Nonce)
+    epoch2Nonce
     (NatNonce 7)
     minBound
     14
@@ -514,7 +515,7 @@ blockEx7 =
 
 expectedStEx7 :: ChainState C
 expectedStEx7 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx7))
+  C.evolveNonceFrozen (getBlockNonce blockEx7)
     . C.newLab blockEx7
     . C.setOCertCounter (coerceKeyRole $ aikColdKeyHash Cast.bobPoolKeys) 0
     . C.incrBlockCount (aikColdKeyHash Cast.bobPoolKeys)
@@ -532,8 +533,8 @@ twoPools7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 epoch3Nonce :: Nonce
 epoch3Nonce =
-  chainCandidateNonce (expectedStEx7)
-    ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx4))
+  chainCandidateNonce expectedStEx7
+    ⭒ hashHeaderToNonce (bhHash $ bheader blockEx4)
 
 blockEx8 :: Block (BHeader C_Crypto) C
 blockEx8 =
@@ -543,7 +544,7 @@ blockEx8 =
     []
     (SlotNo 310)
     (BlockNo 8)
-    (epoch3Nonce)
+    epoch3Nonce
     (NatNonce 8)
     minBound
     15
@@ -578,7 +579,7 @@ blockEx9 =
     []
     (SlotNo 390)
     (BlockNo 9)
-    (epoch3Nonce)
+    epoch3Nonce
     (NatNonce 9)
     minBound
     19
@@ -712,11 +713,11 @@ pulserEx9 pp =
     )
     expectedStEx8'
   where
-    expectedStEx8' = C.setPrevPParams pp (expectedStEx8)
+    expectedStEx8' = C.setPrevPParams pp expectedStEx8
 
 expectedStEx9 :: PParams C -> ChainState C
 expectedStEx9 pp =
-  C.evolveNonceFrozen (getBlockNonce (blockEx9))
+  C.evolveNonceFrozen (getBlockNonce blockEx9)
     . C.newLab blockEx9
     . C.setOCertCounter coreNodeHK 2
     . C.pulserUpdate (pulserEx9 pp)

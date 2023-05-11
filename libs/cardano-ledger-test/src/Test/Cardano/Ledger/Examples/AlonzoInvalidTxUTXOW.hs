@@ -514,8 +514,8 @@ validatingManyScriptsBody pf =
     , Outputs' [txOut]
     , Txfee (Coin 5)
     , Certs'
-        [ ShelleyTxCertDeleg (DeRegKey $ timelockStakeCred pf)
-        , ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
+        [ ShelleyTxCertDeleg (ShelleyUnRegCert $ timelockStakeCred pf)
+        , ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)
         ]
     , Withdrawals'
         ( Withdrawals $
@@ -884,8 +884,8 @@ multipleEqualCertsInvalidTx pf =
         , Collateral' [mkGenesisTxIn 13]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
         , Certs'
-            [ ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
-            , ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
+            [ ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)
+            , ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
             ]
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)

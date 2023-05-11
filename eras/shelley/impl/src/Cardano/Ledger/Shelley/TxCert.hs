@@ -14,13 +14,14 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+-- Due to Delegation usage
+{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
 
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
   pattern TxCertMir,
   pattern ShelleyTxCertDeleg,
-  ShelleyDelegCert (..),
+  ShelleyDelegCert (.., RegKey, DeRegKey, Delegate),
   delegCWitness,
   ShelleyTxCert (..),
   MIRCert (..),
@@ -79,7 +80,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Map.Strict (Map)
@@ -211,12 +212,12 @@ instance Era era => EncCBOR (ShelleyTxCert era) where
 
 encodeShelleyDelegCert :: Crypto c => ShelleyDelegCert c -> Encoding
 encodeShelleyDelegCert = \case
-  RegKey cred ->
+  ShelleyRegCert cred ->
     encodeListLen 2 <> encodeWord8 0 <> encCBOR cred
-  DeRegKey cred ->
+  ShelleyUnRegCert cred ->
     encodeListLen 2 <> encodeWord8 1 <> encCBOR cred
-  Delegate (Delegation cred poolkh) ->
-    encodeListLen 3 <> encodeWord8 2 <> encCBOR cred <> encCBOR poolkh
+  ShelleyDelegCert cred poolId ->
+    encodeListLen 3 <> encodeWord8 2 <> encCBOR cred <> encCBOR poolId
 
 encodePoolCert :: Crypto c => PoolCert c -> Encoding
 encodePoolCert = \case
@@ -279,7 +280,7 @@ shelleyTxCertDelegDecoder = \case
   2 -> do
     cred <- decCBOR
     stakePool <- decCBOR
-    pure (3, ShelleyTxCertDeleg $ Delegate (Delegation cred stakePool))
+    pure (3, ShelleyTxCertDeleg $ ShelleyDelegCert cred stakePool)
   k -> invalidKey k
 {-# INLINE shelleyTxCertDelegDecoder #-}
 
@@ -301,13 +302,33 @@ commonTxCertDecoder = \case
 {-# INLINE commonTxCertDecoder #-}
 
 data ShelleyDelegCert c
-  = -- | A stake key registration certificate.
-    RegKey !(StakeCredential c)
-  | -- | A stake key deregistration certificate.
-    DeRegKey !(StakeCredential c)
+  = -- | A stake credential registration certificate.
+    ShelleyRegCert !(StakeCredential c)
+  | -- | A stake credential deregistration certificate.
+    ShelleyUnRegCert !(StakeCredential c)
   | -- | A stake delegation certificate.
-    Delegate !(Delegation c)
+    ShelleyDelegCert !(StakeCredential c) !(KeyHash 'StakePool c)
   deriving (Show, Generic, Eq)
+
+pattern RegKey :: StakeCredential c -> ShelleyDelegCert c
+pattern RegKey cred = ShelleyRegCert cred
+{-# DEPRECATED RegKey "In favor of `ShelleyRegCert`" #-}
+
+pattern DeRegKey :: StakeCredential c -> ShelleyDelegCert c
+pattern DeRegKey cred = ShelleyUnRegCert cred
+{-# DEPRECATED DeRegKey "In favor of `ShelleyUnRegCert`" #-}
+
+pattern Delegate :: Delegation c -> ShelleyDelegCert c
+pattern Delegate delegation <- (mkDelegation -> Just delegation)
+  where
+    Delegate (Delegation cred poolId) = ShelleyDelegCert cred poolId
+{-# DEPRECATED Delegate "In favor of `ShelleyDelegCert`" #-}
+
+{-# COMPLETE RegKey, DeRegKey, Delegate #-}
+
+mkDelegation :: ShelleyDelegCert c -> Maybe (Delegation c)
+mkDelegation (ShelleyDelegCert cred poolId) = Just (Delegation cred poolId)
+mkDelegation _ = Nothing
 
 instance NoThunks (ShelleyDelegCert c)
 
@@ -316,23 +337,23 @@ instance NFData (ShelleyDelegCert c) where
 
 -- | Determine the certificate author
 delegCWitness :: ShelleyDelegCert c -> Credential 'Staking c
-delegCWitness (RegKey _) = error "no witness in key registration certificate"
-delegCWitness (DeRegKey hk) = hk
-delegCWitness (Delegate delegation) = dDelegator delegation
+delegCWitness (ShelleyRegCert _) = error "no witness in key registration certificate"
+delegCWitness (ShelleyUnRegCert cred) = cred
+delegCWitness (ShelleyDelegCert cred _) = cred
 
--- | Check for 'RegKey' constructor
+-- | Check for 'ShelleyRegCert' constructor
 isRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
-isRegKey (ShelleyTxCertDeleg (RegKey _)) = True
+isRegKey (ShelleyTxCertDeleg (ShelleyRegCert _)) = True
 isRegKey _ = False
 
--- | Check for 'DeRegKey' constructor
+-- | Check for 'ShelleyUnRegCert' constructor
 isDeRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
-isDeRegKey (ShelleyTxCertDeleg (DeRegKey _)) = True
+isDeRegKey (ShelleyTxCertDeleg (ShelleyUnRegCert _)) = True
 isDeRegKey _ = False
 
--- | Check for 'Delegation' constructor
+-- | Check for 'ShelleyDelegCert' constructor
 isDelegation :: (ShelleyEraTxCert era) => TxCert era -> Bool
-isDelegation (ShelleyTxCertDeleg (Delegate _)) = True
+isDelegation (ShelleyTxCertDeleg (ShelleyDelegCert _ _)) = True
 isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
@@ -366,5 +387,5 @@ isTreasuryMIRCert x = case getTxCertMir x of
 -- one witness, and False otherwise. It is mainly used to ensure
 -- that calling a variant of 'cwitness' is safe.
 requiresVKeyWitness :: ShelleyEraTxCert era => TxCert era -> Bool
-requiresVKeyWitness (ShelleyTxCertDeleg (RegKey _)) = False
+requiresVKeyWitness (ShelleyTxCertDeleg (ShelleyRegCert _)) = False
 requiresVKeyWitness x = isNothing $ getTxCertMir x

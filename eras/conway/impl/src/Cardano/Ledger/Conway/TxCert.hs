@@ -196,10 +196,9 @@ instance (Era era, Val (Value era)) => EncCBOR (ConwayTxCert era) where
 encodeConwayDelegCert :: Crypto c => ConwayDelegCert c -> Encoding
 encodeConwayDelegCert = \case
   -- Shelley backwards compatibility
-  ConwayRegCert cred SNothing -> encodeShelleyDelegCert $ RegKey cred
-  ConwayUnRegCert cred SNothing -> encodeShelleyDelegCert $ DeRegKey cred
-  ConwayDelegCert cred (DelegStake poolId) ->
-    encodeShelleyDelegCert $ Delegate (Delegation cred poolId)
+  ConwayRegCert cred SNothing -> encodeShelleyDelegCert $ ShelleyRegCert cred
+  ConwayUnRegCert cred SNothing -> encodeShelleyDelegCert $ ShelleyUnRegCert cred
+  ConwayDelegCert cred (DelegStake poolId) -> encodeShelleyDelegCert $ ShelleyDelegCert cred poolId
   -- New in Conway
   ConwayRegCert cred (SJust deposit) ->
     encodeListLen 3
@@ -244,13 +243,13 @@ encodeConwayDelegCert = \case
 
 fromShelleyDelegCert :: ShelleyDelegCert c -> ConwayDelegCert c
 fromShelleyDelegCert = \case
-  RegKey c -> ConwayRegCert c SNothing
-  DeRegKey c -> ConwayUnRegCert c SNothing
-  Delegate (Delegation c kh) -> ConwayDelegCert c (DelegStake kh)
+  ShelleyRegCert cred -> ConwayRegCert cred SNothing
+  ShelleyUnRegCert cred -> ConwayUnRegCert cred SNothing
+  ShelleyDelegCert cred poolId -> ConwayDelegCert cred (DelegStake poolId)
 
 toShelleyDelegCert :: ConwayDelegCert c -> Maybe (ShelleyDelegCert c)
 toShelleyDelegCert = \case
-  ConwayRegCert c SNothing -> Just $ RegKey c
-  ConwayUnRegCert c SNothing -> Just $ DeRegKey c
-  ConwayDelegCert c (DelegStake kh) -> Just $ Delegate (Delegation c kh)
+  ConwayRegCert cred SNothing -> Just $ ShelleyRegCert cred
+  ConwayUnRegCert cred SNothing -> Just $ ShelleyUnRegCert cred
+  ConwayDelegCert cred (DelegStake poolId) -> Just $ ShelleyDelegCert cred poolId
   _ -> Nothing
