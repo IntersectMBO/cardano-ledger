@@ -56,9 +56,9 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), ShelleyDelegCert (..), UTxO (..))
-import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -507,7 +507,7 @@ refscriptForDelegCert ::
   forall era.
   ( Scriptic era
   , EraTxBody era
-  , ShelleyEraDCert era
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   TestCaseData era
@@ -520,7 +520,7 @@ refscriptForDelegCert pf =
           , RefInputs' [anotherTxIn]
           , Collateral' [yetAnotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]]
-          , Certs' [ShelleyDCertDeleg (DeRegKey (ScriptHashObj (hashScript @era $ alwaysAlt 2 pf)))]
+          , Certs' [ShelleyTxCertDeleg (DeRegKey (ScriptHashObj (hashScript @era $ alwaysAlt 2 pf)))]
           , Txfee (Coin 5)
           , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] certRedeemers mempty)
           ]

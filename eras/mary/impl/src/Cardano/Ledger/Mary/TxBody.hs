@@ -39,8 +39,8 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Mary.Delegation ()
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.TxCert ()
 import Cardano.Ledger.Mary.TxOut ()
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.MemoBytes (
@@ -69,21 +69,21 @@ import NoThunks.Class (NoThunks (..))
 newtype MaryTxBodyRaw era = MaryTxBodyRaw (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era)
 
 deriving newtype instance
-  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   Eq (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (MaryTxBodyRaw era)
 
 deriving instance Generic (MaryTxBodyRaw era)
 
 deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (MaryTxBodyRaw era)
 
 deriving newtype instance AllegraEraTxBody era => DecCBOR (MaryTxBodyRaw era)
@@ -97,27 +97,27 @@ instance Era era => EncCBOR (MaryTxBody era)
 instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
   decCBOR = pure <$> decCBOR
 
-deriving newtype instance (EraTxOut era, EraDCert era) => EncCBOR (MaryTxBodyRaw era)
+deriving newtype instance (EraTxOut era, EraTxCert era) => EncCBOR (MaryTxBodyRaw era)
 
 instance Memoized MaryTxBody where
   type RawType MaryTxBody = MaryTxBodyRaw
 
 deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   Eq (MaryTxBody era)
 
 deriving newtype instance
-  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (MaryTxBody era)
 
 deriving instance Generic (MaryTxBody era)
 
 deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (MaryTxBody era)
 
 deriving newtype instance
-  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (MaryTxBody era)
 
 deriving via
@@ -132,10 +132,10 @@ instance (c ~ EraCrypto era, Era era) => HashAnnotated (MaryTxBody era) EraIndep
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern MaryTxBody ::
-  (EraTxOut era, EraDCert era) =>
+  (EraTxOut era, EraTxCert era) =>
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
+  StrictSeq (TxCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
@@ -198,7 +198,7 @@ pattern MaryTxBody
 
 -- | This is a helper Lens creator for any Memoized type.
 lensMaryTxBodyRaw ::
-  (EraTxOut era, EraDCert era) =>
+  (EraTxOut era, EraTxCert era) =>
   (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era -> a) ->
   ( AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era ->
     b ->

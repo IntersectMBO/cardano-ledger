@@ -13,11 +13,11 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxBody
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Language (Language (..))
 import Control.State.Transition.Extended (STS (Event))
@@ -45,12 +45,12 @@ instance Crypto c => Arbitrary (ConwayDelegCert c) where
       , ConwayRegDelegCert <$> arbitrary <*> arbitrary <*> arbitrary
       ]
 
-instance Era era => Arbitrary (ConwayDCert era) where
+instance Era era => Arbitrary (ConwayTxCert era) where
   arbitrary =
     oneof
-      [ ConwayDCertDeleg <$> arbitrary
-      , ConwayDCertPool <$> arbitrary
-      , ConwayDCertConstitutional <$> arbitrary
+      [ ConwayTxCertDeleg <$> arbitrary
+      , ConwayTxCertPool <$> arbitrary
+      , ConwayTxCertConstitutional <$> arbitrary
       ]
 
 instance Crypto c => Arbitrary (AlonzoScript (ConwayEra c)) where

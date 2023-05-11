@@ -25,7 +25,7 @@ instance
   STS (ConwayCERT era)
   where
   type State (ConwayCERT era) = CertState era
-  type Signal (ConwayCERT era) = DCert era
+  type Signal (ConwayCERT era) = TxCert era
   type Environment (ConwayCERT era) = DelplEnv era
   type BaseM (ConwayCERT era) = ShelleyBase
   type PredicateFailure (ConwayCERT era) = ShelleyDelplPredFailure era

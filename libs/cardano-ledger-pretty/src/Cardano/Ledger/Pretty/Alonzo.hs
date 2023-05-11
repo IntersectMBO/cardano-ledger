@@ -226,7 +226,7 @@ ppTxBody ::
   ( AlonzoEraTxBody era
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   AlonzoTxBody era ->
   PDoc
@@ -255,7 +255,7 @@ instance
   ( AlonzoEraTxBody era
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   PrettyA (AlonzoTxBody era)
   where

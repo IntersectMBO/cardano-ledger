@@ -26,7 +26,6 @@ flag asserts
 library
     exposed-modules:
         Cardano.Ledger.Mary
-        Cardano.Ledger.Mary.Delegation
         Cardano.Ledger.Mary.Core
         Cardano.Ledger.Mary.Translation
         Cardano.Ledger.Mary.TxBody
@@ -41,6 +40,7 @@ library
         Cardano.Ledger.Mary.Scripts
         Cardano.Ledger.Mary.Tx
         Cardano.Ledger.Mary.TxAuxData
+        Cardano.Ledger.Mary.TxCert
         Cardano.Ledger.Mary.TxSeq
         Cardano.Ledger.Mary.TxWits
 

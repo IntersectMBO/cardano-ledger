@@ -58,7 +58,7 @@ module Cardano.Ledger.Core (
   -- * Re-exports
   module Cardano.Ledger.Hashes,
   module Cardano.Ledger.Core.Era,
-  module Cardano.Ledger.Core.DCert,
+  module Cardano.Ledger.Core.TxCert,
   module Cardano.Ledger.Core.PParams,
   module Cardano.Ledger.Core.Translation,
 
@@ -96,10 +96,10 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core.DCert
 import Cardano.Ledger.Core.Era
 import Cardano.Ledger.Core.PParams
 import Cardano.Ledger.Core.Translation
+import Cardano.Ledger.Core.TxCert
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes
@@ -161,7 +161,7 @@ class
 
 class
   ( EraTxOut era
-  , EraDCert era
+  , EraTxCert era
   , EraPParams era
   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , DecCBOR (Annotator (TxBody era))
@@ -191,7 +191,7 @@ class
 
   allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
 
-  certsTxBodyL :: Lens' (TxBody era) (StrictSeq (DCert era))
+  certsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxCert era))
 
 -- | Abstract interface into specific fields of a `TxOut`
 class

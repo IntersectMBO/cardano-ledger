@@ -11,9 +11,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (
+module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
   CERTS,
-  genDCerts,
+  genTxCerts,
 )
 where
 
@@ -69,9 +69,9 @@ import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
-import Test.Cardano.Ledger.Shelley.Generator.Delegation (CertCred (..), genDCert)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
+import Test.Cardano.Ledger.Shelley.Generator.TxCert (CertCred (..), genTxCert)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (Gen)
 
@@ -101,13 +101,13 @@ instance
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
-  , Signal (Core.EraRule "DELPL" era) ~ DCert era
+  , Signal (Core.EraRule "DELPL" era) ~ TxCert era
   ) =>
   STS (CERTS era)
   where
   type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
   type State (CERTS era) = (CertState era, CertIx)
-  type Signal (CERTS era) = Maybe (DCert era, CertCred era)
+  type Signal (CERTS era) = Maybe (TxCert era, CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
   type Event (CERTS era) = CertsEvent era
 
@@ -121,7 +121,7 @@ certsTransition ::
   ( Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
-  , Signal (Core.EraRule "DELPL" era) ~ DCert era
+  , Signal (Core.EraRule "DELPL" era) ~ TxCert era
   ) =>
   TransitionRule (CERTS era)
 certsTransition = do
@@ -159,7 +159,7 @@ instance
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
-  , Signal (Core.EraRule "DELPL" era) ~ DCert era
+  , Signal (Core.EraRule "DELPL" era) ~ TxCert era
   , ProtVerAtMost era 8
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
@@ -174,7 +174,7 @@ instance
       )
     (slot, _txIx, pparams, accountState)
     (dpState, _certIx) =
-      genDCert
+      genTxCert
         constants
         ks
         pparams
@@ -189,13 +189,13 @@ instance
 
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
-genDCerts ::
+genTxCerts ::
   forall era.
   ( EraGen era
   , Embed (Core.EraRule "DELPL" era) (CERTS era)
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
-  , Signal (Core.EraRule "DELPL" era) ~ DCert era
+  , Signal (Core.EraRule "DELPL" era) ~ TxCert era
   , ProtVerAtMost era 8
   ) =>
   GenEnv era ->
@@ -205,13 +205,13 @@ genDCerts ::
   TxIx ->
   AccountState ->
   Gen
-    ( StrictSeq (DCert era)
+    ( StrictSeq (TxCert era)
     , Coin
     , Coin
     , CertState era
     , ([KeyPair 'Witness (EraCrypto era)], [(Core.Script era, Core.Script era)])
     )
-genDCerts
+genTxCerts
   ge@( GenEnv
         KeySpace_ {ksIndexedStakingKeys}
         _scriptspace

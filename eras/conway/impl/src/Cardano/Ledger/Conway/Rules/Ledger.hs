@@ -164,7 +164,7 @@ instance
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
   , Environment (EraRule "TALLY" era) ~ TallyEnv era
   , State (EraRule "TALLY" era) ~ ConwayTallyState era
@@ -216,7 +216,7 @@ ledgerTransition ::
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
@@ -299,7 +299,7 @@ instance
   , Embed (EraRule "CERT" era) (ConwayDELEGS era)
   , State (EraRule "CERT" era) ~ CertState era
   , Environment (EraRule "CERT" era) ~ DelplEnv era
-  , Signal (EraRule "CERT" era) ~ DCert era
+  , Signal (EraRule "CERT" era) ~ TxCert era
   , PredicateFailure (EraRule "DELEGS" era) ~ ConwayDelegsPredFailure era
   , Event (EraRule "DELEGS" era) ~ ConwayDelegsEvent era
   , Embed (EraRule "CERT" era) (ConwayDELEGS era)
@@ -321,7 +321,7 @@ instance
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , Environment (EraRule "TALLY" era) ~ TallyEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "DELEGS" era) ~ CertState era

@@ -71,7 +71,7 @@ ledgerTransition ::
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
@@ -116,7 +116,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ AlonzoTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , ProtVerAtMost era 8
   ) =>
   STS (AlonzoLEDGER era)

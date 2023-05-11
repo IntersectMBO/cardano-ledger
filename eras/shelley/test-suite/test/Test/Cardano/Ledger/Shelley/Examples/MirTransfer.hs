@@ -71,12 +71,12 @@ testMirTransfer ::
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
   checkTrace @(ShelleyDELEG ShelleyTest) runShelleyBase (env pv acnt) $
-    (pure (def {dsIRewards = ir})) .- (DCertMir (MIRCert pot target)) .->> (def {dsIRewards = expected})
+    (pure (def {dsIRewards = ir})) .- (TxCertMir (MIRCert pot target)) .->> (def {dsIRewards = expected})
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyDELEG ShelleyTest)
-            (TRC (env pv acnt, def {dsIRewards = ir}, DCertMir (MIRCert pot target)))
+            (TRC (env pv acnt, def {dsIRewards = ir}, TxCertMir (MIRCert pot target)))
   (ignoreAllButIRWD st) @?= predicateFailure
 
 alice :: Credential 'Staking C_Crypto

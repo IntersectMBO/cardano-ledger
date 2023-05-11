@@ -34,12 +34,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Shelley.Delegation (
-  ShelleyDelegCert (..),
-  ShelleyEraDCert,
-  requiresVKeyWitness,
-  pattern ShelleyDCertDeleg,
- )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   keyCertsRefunds,
@@ -50,6 +44,12 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
   getRwdCred,
+ )
+import Cardano.Ledger.Shelley.TxCert (
+  ShelleyDelegCert (..),
+  ShelleyEraTxCert,
+  requiresVKeyWitness,
+  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO as UTxO
@@ -64,13 +64,13 @@ txup :: (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) => Tx era -> Mayb
 txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
 
 scriptStakeCred ::
-  ShelleyEraDCert era =>
-  DCert era ->
+  ShelleyEraTxCert era =>
+  TxCert era ->
   Maybe (ScriptHash (EraCrypto era))
-scriptStakeCred (ShelleyDCertDeleg (DeRegKey (KeyHashObj _))) = Nothing
-scriptStakeCred (ShelleyDCertDeleg (DeRegKey (ScriptHashObj hs))) = Just hs
-scriptStakeCred (ShelleyDCertDeleg (Delegate (Delegation (KeyHashObj _) _))) = Nothing
-scriptStakeCred (ShelleyDCertDeleg (Delegate (Delegation (ScriptHashObj hs) _))) = Just hs
+scriptStakeCred (ShelleyTxCertDeleg (DeRegKey (KeyHashObj _))) = Nothing
+scriptStakeCred (ShelleyTxCertDeleg (DeRegKey (ScriptHashObj hs))) = Just hs
+scriptStakeCred (ShelleyTxCertDeleg (Delegate (Delegation (KeyHashObj _) _))) = Nothing
+scriptStakeCred (ShelleyTxCertDeleg (Delegate (Delegation (ScriptHashObj hs) _))) = Just hs
 scriptStakeCred _ = Nothing
 
 scriptCred :: Credential kr c -> Maybe (ScriptHash c)

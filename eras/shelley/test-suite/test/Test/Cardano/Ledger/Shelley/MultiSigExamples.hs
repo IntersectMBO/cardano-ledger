@@ -135,7 +135,7 @@ aliceAndBobOrCarlOrDaria =
 
 initTxBody ::
   ( EraTxOut era
-  , EraDCert era
+  , EraTxCert era
   ) =>
   [(Addr (EraCrypto era), Value era)] ->
   ShelleyTxBody era
@@ -152,7 +152,7 @@ initTxBody addrs =
 
 makeTxBody ::
   ( EraTxOut era
-  , EraDCert era
+  , EraTxCert era
   ) =>
   [TxIn (EraCrypto era)] ->
   [(Addr (EraCrypto era), Value era)] ->

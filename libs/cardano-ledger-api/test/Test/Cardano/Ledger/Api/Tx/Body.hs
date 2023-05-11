@@ -16,10 +16,10 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (
+import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   isRegKey,
-  pattern ShelleyDCertDeleg,
+  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.Shelley.UTxO hiding (consumed, produced)
 import qualified Cardano.Ledger.UMap as UM
@@ -44,7 +44,7 @@ totalTxDeposits pp dpstate txb =
     certs = toList (txb ^. certsTxBodyL)
     numKeys = length $ filter isRegKey certs
     regpools = psStakePoolParams (certPState dpstate)
-    accum (!pools, !ans) (DCertPool (RegPool poolparam)) =
+    accum (!pools, !ans) (TxCertPool (RegPool poolparam)) =
       -- We don't pay a deposit on a pool that is already registered
       if Map.member (ppId poolparam) pools
         then (pools, ans)
@@ -62,10 +62,10 @@ keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
     certs = tx ^. certsTxBodyL
     initialKeys = UM.RewardDeposits $ dsUnified $ certDState dpstate
     keyDeposit = UM.compactCoinOrError (pp ^. ppKeyDepositL)
-    accum (!keys, !ans) (ShelleyDCertDeleg (RegKey k)) =
+    accum (!keys, !ans) (ShelleyTxCertDeleg (RegKey k)) =
       -- Deposit is added locally to the growing 'keys'
       (UM.RewardDeposits $ UM.insert k (UM.RDPair mempty keyDeposit) keys, ans)
-    accum (!keys, !ans) (ShelleyDCertDeleg (DeRegKey k)) =
+    accum (!keys, !ans) (ShelleyTxCertDeleg (DeRegKey k)) =
       -- If the key is registered, lookup the deposit in the locally growing 'keys'
       -- if it is not registered, then just return ans
       case UM.lookup k keys of
@@ -109,8 +109,8 @@ genTxBodyFrom CertState {certDState, certPState} (UTxO u) = do
   certs <-
     shuffle $
       toList (txBody ^. certsTxBodyL)
-        <> (ShelleyDCertDeleg . DeRegKey <$> unDelegCreds)
-        <> (DCertPool . RegPool <$> deRegKeys)
+        <> (ShelleyTxCertDeleg . DeRegKey <$> unDelegCreds)
+        <> (TxCertPool . RegPool <$> deRegKeys)
   pure
     ( txBody
         & inputsTxBodyL .~ Set.fromList inputs
@@ -142,6 +142,6 @@ spec =
     describe "BabbageEra" $ do
       prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Babbage
 
--- TODO: bring back when DCerts become a type family
+-- TODO: bring back when TxCerts become a type family
 -- describe "ConwayEra" $ do
 --   prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Conway

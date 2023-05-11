@@ -36,7 +36,6 @@ import Cardano.Ledger.Keys (
   VerKeyVRF,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (ShelleyDelegCert (..), pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -57,6 +56,7 @@ import Cardano.Ledger.Shelley.TxBody (
   MIRTarget (..),
   Ptr,
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Slot (
   Duration (..),
   EpochNo (..),
@@ -108,7 +108,7 @@ data ShelleyDelegPredFailure era
       !(Maybe Coin) -- The remaining reward account balance, if it exists
   | StakeDelegationImpossibleDELEG
       !(Credential 'Staking (EraCrypto era)) -- Credential that is not registered
-  | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
+  | WrongCertificateTypeDELEG -- The TxCertPool constructor should not be used by this transition
   | GenesisKeyNotInMappingDELEG
       !(KeyHash 'Genesis (EraCrypto era)) -- Unknown Genesis KeyHash
   | DuplicateGenesisDelegateDELEG
@@ -136,9 +136,9 @@ data ShelleyDelegPredFailure era
 
 newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
-instance (EraPParams era, ShelleyEraDCert era) => STS (ShelleyDELEG era) where
+instance (EraPParams era, ShelleyEraTxCert era) => STS (ShelleyDELEG era) where
   type State (ShelleyDELEG era) = DState era
-  type Signal (ShelleyDELEG era) = DCert era
+  type Signal (ShelleyDELEG era) = TxCert era
   type Environment (ShelleyDELEG era) = DelegEnv era
   type BaseM (ShelleyDELEG era) = ShelleyBase
   type PredicateFailure (ShelleyDELEG era) = ShelleyDelegPredFailure era
@@ -257,12 +257,12 @@ instance
         pure (3, MIRNegativeTransfer pot amt)
       k -> invalidKey k
 
-delegationTransition :: (ShelleyEraDCert era, EraPParams era) => TransitionRule (ShelleyDELEG era)
+delegationTransition :: (ShelleyEraTxCert era, EraPParams era) => TransitionRule (ShelleyDELEG era)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
   case c of
-    ShelleyDCertDeleg (RegKey hk) -> do
+    ShelleyTxCertDeleg (RegKey hk) -> do
       -- (hk ∉ dom (rewards ds))
       UM.notMember hk (rewards ds) ?! StakeKeyAlreadyRegisteredDELEG hk
       let u1 = dsUnified ds
@@ -270,7 +270,7 @@ delegationTransition = do
           u2 = RewardDeposits u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
           u3 = Ptrs u2 UM.∪ (ptr, hk)
       pure (ds {dsUnified = u3})
-    ShelleyDCertDeleg (DeRegKey hk) -> do
+    ShelleyTxCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeKeyNotRegisteredDELEG hk
@@ -283,13 +283,13 @@ delegationTransition = do
           u3 = Ptrs u2 UM.⋫ Set.singleton hk
           u4 = ds {dsUnified = u3}
       pure u4
-    ShelleyDCertDeleg (Delegate (Delegation hk dpool)) -> do
+    ShelleyTxCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeDelegationImpossibleDELEG hk
 
       pure (ds {dsUnified = delegations ds UM.⨃ Map.singleton hk dpool})
-    DCertGenesis (ConstitutionalDelegCert gkh vkh vrf) -> do
+    TxCertGenesis (ConstitutionalDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp
@@ -319,10 +319,10 @@ delegationTransition = do
           { dsFutureGenDelegs =
               eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
           }
-    DCertPool _ -> do
+    TxCertPool _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds
-    _ | Just (MIRCert targetPot mirTarget) <- getDCertMir c -> do
+    _ | Just (MIRCert targetPot mirTarget) <- getTxCertMir c -> do
       checkSlotNotTooLate slot
       case mirTarget of
         StakeAddressesMIR credCoinMap -> do
@@ -379,7 +379,7 @@ delegationTransition = do
       pure ds
 
 checkSlotNotTooLate ::
-  (ShelleyEraDCert era, EraPParams era) =>
+  (ShelleyEraTxCert era, EraPParams era) =>
   SlotNo ->
   Rule (ShelleyDELEG era) 'Transition ()
 checkSlotNotTooLate slot = do

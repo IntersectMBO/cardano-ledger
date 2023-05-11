@@ -131,7 +131,7 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
-        [ DCertGenesis
+        [ TxCertGenesis
             ( ConstitutionalDelegCert
                 (hashKey (coreNodeVK 0))
                 (hashKey (vKey newGenDelegate))

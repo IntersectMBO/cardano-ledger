@@ -33,8 +33,8 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
-import Cardano.Ledger.Shelley.Delegation (ShelleyDCert)
 import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val)
 import Codec.CBOR.Term (Term (..))
@@ -52,7 +52,7 @@ instance (Era era, Val (Value era)) => Twiddle (AlonzoTxOut era) where
 instance Twiddle SlotNo where
   twiddle v = twiddle v . toTerm v
 
-instance Era era => Twiddle (ShelleyDCert era) where
+instance Era era => Twiddle (ShelleyTxCert era) where
   twiddle v = twiddle v . toTerm v
 
 instance Crypto c => Twiddle (Withdrawals c) where

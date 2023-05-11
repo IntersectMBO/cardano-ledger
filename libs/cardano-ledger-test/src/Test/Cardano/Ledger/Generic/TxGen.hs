@@ -40,7 +40,7 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Delegation (ConwayDCert (..), ConwayDelegCert (..))
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
   KeyHash,
@@ -59,9 +59,9 @@ import Cardano.Ledger.Shelley.API (
   StakeReference (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.Delegation (ShelleyDCert (..), ShelleyEraDCert (..), pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
+import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..), ShelleyTxCert (..), pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -569,20 +569,20 @@ genShelleyDelegCert =
       (kh, _) <- genPool
       pure $ Delegation {dDelegator = rewardAccount, dDelegatee = kh}
 
-genDCertDeleg :: forall era. Reflect era => GenRS era (DCert era)
-genDCertDeleg = case reify @era of
-  Shelley _ -> ShelleyDCertDeleg <$> genShelleyDelegCert
-  Mary _ -> ShelleyDCertDeleg <$> genShelleyDelegCert
-  Allegra _ -> ShelleyDCertDeleg <$> genShelleyDelegCert
-  Alonzo _ -> ShelleyDCertDeleg <$> genShelleyDelegCert
-  Babbage _ -> ShelleyDCertDeleg <$> genShelleyDelegCert
-  Conway _ -> ShelleyDCertDeleg <$> genShelleyDelegCert
+genTxCertDeleg :: forall era. Reflect era => GenRS era (TxCert era)
+genTxCertDeleg = case reify @era of
+  Shelley _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
+  Mary _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
+  Allegra _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
+  Alonzo _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
+  Babbage _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
+  Conway _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
 
-genDCert :: forall era. Reflect era => SlotNo -> GenRS era (DCert era)
-genDCert slot =
+genTxCert :: forall era. Reflect era => SlotNo -> GenRS era (TxCert era)
+genTxCert slot =
   elementsT
-    [ genDCertDeleg
-    , DCertPool
+    [ genTxCertDeleg
+    , TxCertPool
         <$> frequencyT
           [ (75, RegPool <$> genFreshPool)
           , (25, RetirePool <$> genRetirementHash <*> genEpoch)
@@ -600,30 +600,30 @@ genDCert slot =
       delta <- lift $ choose (nextEpoch, maxEpoch)
       return . EpochNo $ (curEpoch + delta)
 
-getShelleyDCertDelegG :: forall era. Reflect era => DCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
-getShelleyDCertDelegG = case reify @era of
-  Shelley _ -> getShelleyDCertDeleg
-  Mary _ -> getShelleyDCertDeleg
-  Allegra _ -> getShelleyDCertDeleg
-  Alonzo _ -> getShelleyDCertDeleg
-  Babbage _ -> getShelleyDCertDeleg
-  Conway _ -> getShelleyDCertDeleg -- TODO write a generator for Conway certs
+getShelleyTxCertDelegG :: forall era. Reflect era => TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
+getShelleyTxCertDelegG = case reify @era of
+  Shelley _ -> getShelleyTxCertDeleg
+  Mary _ -> getShelleyTxCertDeleg
+  Allegra _ -> getShelleyTxCertDeleg
+  Alonzo _ -> getShelleyTxCertDeleg
+  Babbage _ -> getShelleyTxCertDeleg
+  Conway _ -> getShelleyTxCertDeleg -- TODO write a generator for Conway certs
 
-mkShelleyDCertDelegG :: forall era. Reflect era => ShelleyDelegCert (EraCrypto era) -> DCert era
-mkShelleyDCertDelegG = case reify @era of
-  Shelley _ -> mkShelleyDCertDeleg
-  Mary _ -> mkShelleyDCertDeleg
-  Allegra _ -> mkShelleyDCertDeleg
-  Alonzo _ -> mkShelleyDCertDeleg
-  Babbage _ -> mkShelleyDCertDeleg
-  Conway _ -> mkShelleyDCertDeleg -- TODO write a generator for Conway certs
+mkShelleyTxCertDelegG :: forall era. Reflect era => ShelleyDelegCert (EraCrypto era) -> TxCert era
+mkShelleyTxCertDelegG = case reify @era of
+  Shelley _ -> mkShelleyTxCertDeleg
+  Mary _ -> mkShelleyTxCertDeleg
+  Allegra _ -> mkShelleyTxCertDeleg
+  Alonzo _ -> mkShelleyTxCertDeleg
+  Babbage _ -> mkShelleyTxCertDeleg
+  Conway _ -> mkShelleyTxCertDeleg -- TODO write a generator for Conway certs
 
-genDCerts :: forall era. Reflect era => SlotNo -> GenRS era [DCert era]
-genDCerts slot = do
+genTxCerts :: forall era. Reflect era => SlotNo -> GenRS era [TxCert era]
+genTxCerts slot = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
         honest <- gets gsStableDelegators
-        dc <- genDCert slot
-        -- Workaround a misfeature where duplicate plutus scripts in DCert are ignored
+        dc <- genTxCert slot
+        -- Workaround a misfeature where duplicate plutus scripts in TxCert are ignored
         -- so if a duplicate might be generated, we don't do that generation
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
               | Just (_, scriptHash) <- mScriptHash =
@@ -634,7 +634,7 @@ genDCerts slot = do
         -- Generate registration and de-registration delegation certificates,
         -- while ensuring the proper registered/unregistered state in DState
         case dc of
-          DCertPool d -> case d of
+          TxCertPool d -> case d of
             RegPool _ -> pure (dc : dcs, ss, regCreds)
             RetirePool kh _ -> do
               -- We need to make sure that the pool is registered before
@@ -643,7 +643,7 @@ genDCerts slot = do
               case Map.lookup kh modelPools of
                 Just _ -> pure (dc : dcs, ss, regCreds)
                 Nothing -> pure (dcs, ss, regCreds)
-          _ | Just d <- getShelleyDCertDelegG @era dc -> case d of
+          _ | Just d <- getShelleyTxCertDelegG @era dc -> case d of
             RegKey regCred ->
               if regCred `Map.member` regCreds -- Can't register if it is already registered
                 then pure (dcs, ss, regCreds)
@@ -671,7 +671,7 @@ genDCerts slot = do
                       -- so if it is not there, we put it there, otherwise we may
                       -- never generate a valid delegation.
 
-                        ( mkShelleyDCertDelegG (RegKey delegCred) : dcs
+                        ( mkShelleyTxCertDelegG (RegKey delegCred) : dcs
                         , Map.insert delegCred (Coin 99) regCreds
                         )
                in insertIfNotPresent dcs' regCreds' (Just delegKey)
@@ -681,7 +681,7 @@ genDCerts slot = do
   n <- lift $ choose (0, maxcert)
   reward <- gets (mRewards . gsModel)
   let initSets ::
-        ( [DCert era]
+        ( [TxCert era]
         , Set (ScriptHash (EraCrypto era), Maybe (KeyHash 'StakePool (EraCrypto era)))
         , Map (Credential 'Staking (EraCrypto era)) Coin
         )
@@ -794,37 +794,37 @@ genRecipientsFrom txOuts = do
                 else coreTxOut reify fields : rs
   goNew extra txOuts []
 
-getDCertCredential :: forall era. Reflect era => DCert era -> Maybe (Credential 'Staking (EraCrypto era))
-getDCertCredential = case reify @era of
-  Shelley _ -> getShelleyDCertCredential
-  Mary _ -> getShelleyDCertCredential
-  Allegra _ -> getShelleyDCertCredential
-  Alonzo _ -> getShelleyDCertCredential
-  Babbage _ -> getShelleyDCertCredential
-  Conway _ -> getConwayDCertCredential
+getTxCertCredential :: forall era. Reflect era => TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
+getTxCertCredential = case reify @era of
+  Shelley _ -> getShelleyTxCertCredential
+  Mary _ -> getShelleyTxCertCredential
+  Allegra _ -> getShelleyTxCertCredential
+  Alonzo _ -> getShelleyTxCertCredential
+  Babbage _ -> getShelleyTxCertCredential
+  Conway _ -> getConwayTxCertCredential
 
-getShelleyDCertCredential :: ShelleyDCert era -> Maybe (Credential 'Staking (EraCrypto era))
-getShelleyDCertCredential = \case
-  ShelleyDCertDelegCert d ->
+getShelleyTxCertCredential :: ShelleyTxCert era -> Maybe (Credential 'Staking (EraCrypto era))
+getShelleyTxCertCredential = \case
+  ShelleyTxCertDelegCert d ->
     case d of
       RegKey _rk -> Nothing -- we don't require witnesses for RegKey
       DeRegKey drk -> Just drk
       Delegate (Delegation dk _) -> Just dk
-  ShelleyDCertPool pc ->
+  ShelleyTxCertPool pc ->
     case pc of
       RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj ppId
       RetirePool kh _ -> Just . coerceKeyRole $ KeyHashObj kh
-  ShelleyDCertGenesis _g -> Nothing
-  ShelleyDCertMir _m -> Nothing
+  ShelleyTxCertGenesis _g -> Nothing
+  ShelleyTxCertMir _m -> Nothing
 
-getConwayDCertCredential :: ConwayDCert era -> Maybe (Credential 'Staking (EraCrypto era))
-getConwayDCertCredential (ConwayDCertPool (RegPool PoolParams {..})) = Just . coerceKeyRole $ KeyHashObj ppId
-getConwayDCertCredential (ConwayDCertPool (RetirePool kh _)) = Just . coerceKeyRole $ KeyHashObj kh
-getConwayDCertCredential (ConwayDCertDeleg (ConwayRegCert _ _)) = Nothing
-getConwayDCertCredential (ConwayDCertDeleg (ConwayUnRegCert cred _)) = Just cred
-getConwayDCertCredential (ConwayDCertDeleg (ConwayDelegCert cred _)) = Just cred
-getConwayDCertCredential (ConwayDCertDeleg (ConwayRegDelegCert cred _ _)) = Just cred
-getConwayDCertCredential (ConwayDCertConstitutional _) = Nothing
+getConwayTxCertCredential :: ConwayTxCert era -> Maybe (Credential 'Staking (EraCrypto era))
+getConwayTxCertCredential (ConwayTxCertPool (RegPool PoolParams {..})) = Just . coerceKeyRole $ KeyHashObj ppId
+getConwayTxCertCredential (ConwayTxCertPool (RetirePool kh _)) = Just . coerceKeyRole $ KeyHashObj kh
+getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegCert _ _)) = Nothing
+getConwayTxCertCredential (ConwayTxCertDeleg (ConwayUnRegCert cred _)) = Just cred
+getConwayTxCertCredential (ConwayTxCertDeleg (ConwayDelegCert cred _)) = Just cred
+getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegDelegCert cred _ _)) = Just cred
+getConwayTxCertCredential (ConwayTxCertConstitutional _) = Nothing
 
 genWithdrawals :: Reflect era => SlotNo -> GenRS era (Withdrawals (EraCrypto era), RewardAccounts (EraCrypto era))
 genWithdrawals slot =
@@ -900,8 +900,8 @@ genAlonzoTxAndInfo proof slot = do
       , credential <- credentials
       ]
 
-  -- generate Withdrawals before DCerts, as Rewards are populated in the Model here,
-  -- and we need to avoid certain DCerts if they conflict with existing Rewards
+  -- generate Withdrawals before TxCerts, as Rewards are populated in the Model here,
+  -- and we need to avoid certain TxCerts if they conflict with existing Rewards
   (withdrawals@(Withdrawals wdrlMap), newRewards) <- genWithdrawals slot
   let withdrawalAmount = F.fold wdrlMap
 
@@ -913,8 +913,8 @@ genAlonzoTxAndInfo proof slot = do
   (IsValid v2, mkWithdrawalsWits) <-
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
-  dcerts <- genDCerts slot
-  let dcertCreds = map getDCertCredential dcerts
+  dcerts <- genTxCerts slot
+  let dcertCreds = map getTxCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
 

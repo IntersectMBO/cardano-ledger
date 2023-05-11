@@ -98,7 +98,7 @@ instance
 instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
-  , Arbitrary (DCert era)
+  , Arbitrary (TxCert era)
   ) =>
   Arbitrary (BabbageUtxowPredFailure era)
   where
@@ -131,7 +131,7 @@ instance
   , Arbitrary (Value era)
   , Arbitrary (Script era)
   , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (DCert era)
+  , Arbitrary (TxCert era)
   ) =>
   Arbitrary (BabbageTxBody era)
   where

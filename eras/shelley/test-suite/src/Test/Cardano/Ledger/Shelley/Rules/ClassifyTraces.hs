@@ -27,7 +27,13 @@ import Cardano.Ledger.Shelley.API (
   ShelleyLEDGER,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.PParams (
+  Update (..),
+  pattern ProposedPPUpdates,
+  pattern Update,
+ )
+import Cardano.Ledger.Shelley.TxCert (
   isDeRegKey,
   isDelegation,
   isGenesisDelegation,
@@ -36,13 +42,7 @@ import Cardano.Ledger.Shelley.Delegation (
   isReservesMIRCert,
   isRetirePool,
   isTreasuryMIRCert,
-  pattern ShelleyDCertDeleg,
- )
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
-import Cardano.Ledger.Shelley.PParams (
-  Update (..),
-  pattern ProposedPPUpdates,
-  pattern Update,
+  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Protocol.TPraos.BHeader (
@@ -189,7 +189,7 @@ relevantCasesAreCoveredForTrace tr = do
           , 20
           )
         ,
-          ( "at least 10% of `ShelleyDCertDeleg` certificates have script credentials"
+          ( "at least 10% of `ShelleyTxCertDeleg` certificates have script credentials"
           , 0.1 < scriptCredentialCertsRatio certs_
           , 60
           )
@@ -222,7 +222,7 @@ relevantCasesAreCoveredForTrace tr = do
 
 -- | Ratio of certificates with script credentials to the number of certificates
 -- that could have script credentials.
-scriptCredentialCertsRatio :: (ShelleyEraDCert c) => [DCert c] -> Double
+scriptCredentialCertsRatio :: (ShelleyEraTxCert c) => [TxCert c] -> Double
 scriptCredentialCertsRatio certs =
   ratioInt haveScriptCerts couldhaveScriptCerts
   where
@@ -230,9 +230,9 @@ scriptCredentialCertsRatio certs =
       length $
         filter
           ( \case
-              ShelleyDCertDeleg (RegKey (ScriptHashObj _)) -> True
-              ShelleyDCertDeleg (DeRegKey (ScriptHashObj _)) -> True
-              ShelleyDCertDeleg (Delegate (Delegation (ScriptHashObj _) _)) -> True
+              ShelleyTxCertDeleg (RegKey (ScriptHashObj _)) -> True
+              ShelleyTxCertDeleg (DeRegKey (ScriptHashObj _)) -> True
+              ShelleyTxCertDeleg (Delegate (Delegation (ScriptHashObj _) _)) -> True
               _ -> False
           )
           certs
@@ -240,7 +240,7 @@ scriptCredentialCertsRatio certs =
       length $
         filter
           ( \case
-              ShelleyDCertDeleg _ -> True
+              ShelleyTxCertDeleg _ -> True
               _ -> False
           )
           certs
@@ -251,7 +251,7 @@ certsByTx ::
   , EraTx era
   ) =>
   [Tx era] ->
-  [[DCert era]]
+  [[TxCert era]]
 certsByTx txs = toList . view certsTxBodyL . view bodyTxL <$> txs
 
 ratioInt :: Int -> Int -> Double

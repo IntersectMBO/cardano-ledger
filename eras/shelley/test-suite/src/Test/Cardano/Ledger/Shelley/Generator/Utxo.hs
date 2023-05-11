@@ -93,7 +93,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS, genDCerts)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (CERTS, genTxCerts)
 import Test.Cardano.Ledger.Shelley.Generator.Update (genUpdate)
 import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Gen, discard)
@@ -130,7 +130,7 @@ genTx ::
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
-  , Signal (EraRule "DELPL" era) ~ DCert era
+  , Signal (EraRule "DELPL" era) ~ TxCert era
   , ProtVerAtMost era 8
   ) =>
   GenEnv era ->
@@ -180,7 +180,7 @@ genTx
           pparams
           (utxoSt, dpState)
       (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
-        genDCerts ge pparams dpState slot txIx reserves
+        genTxCerts ge pparams dpState slot txIx reserves
       metadata <- genEraAuxiliaryData @era constants
       -------------------------------------------------------------------------
       -- Gather Key TxWits and Scripts, prepare a constructor for Tx Wits

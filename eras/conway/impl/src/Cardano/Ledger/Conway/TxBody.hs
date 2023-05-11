@@ -42,14 +42,6 @@ module Cardano.Ledger.Conway.TxBody (
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Babbage.Core (ScriptIntegrityHash)
-import Cardano.Ledger.Babbage.TxBody as BabbageTxBodyReExports (
-  AllegraEraTxBody (..),
-  AlonzoEraTxBody (..),
-  BabbageEraTxBody (..),
-  MaryEraTxBody (..),
-  ShelleyEraTxBody (..),
- )
 import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (
   Annotator,
@@ -73,17 +65,13 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (
-  ConwayEraTxBody (..),
-  ShelleyEraDCert,
- )
-import Cardano.Ledger.Conway.Delegation (ConwayDCert)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
+import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.TxOut ()
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (
@@ -103,9 +91,8 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.DeepSeq
+import Control.DeepSeq (NFData)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -126,7 +113,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrOutputs :: !(StrictSeq (Sized (TxOut era)))
   , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
-  , ctbrCerts :: !(StrictSeq (ConwayDCert era))
+  , ctbrCerts :: !(StrictSeq (ConwayTxCert era))
   , ctbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , ctbrTxfee :: !Coin
   , ctbrVldt :: !ValidityInterval
@@ -157,8 +144,8 @@ deriving instance
 instance
   ( EraPParams era
   , DecCBOR (TxOut era)
-  , ShelleyEraDCert era
-  , DCert era ~ ConwayDCert era
+  , ShelleyEraTxCert era
+  , TxCert era ~ ConwayTxCert era
   ) =>
   DecCBOR (ConwayTxBodyRaw era)
   where
@@ -230,8 +217,8 @@ instance (c ~ EraCrypto era) => HashAnnotated (ConwayTxBody era) EraIndependentT
 instance
   ( DecCBOR (TxOut era)
   , EraPParams era
-  , ShelleyEraDCert era
-  , DCert era ~ ConwayDCert era
+  , ShelleyEraTxCert era
+  , TxCert era ~ ConwayTxCert era
   ) =>
   DecCBOR (Annotator (ConwayTxBodyRaw era))
   where
@@ -242,8 +229,8 @@ deriving via
   instance
     ( DecCBOR (TxOut era)
     , EraPParams era
-    , ShelleyEraDCert era
-    , DCert era ~ ConwayDCert era
+    , ShelleyEraTxCert era
+    , TxCert era ~ ConwayTxCert era
     ) =>
     DecCBOR (Annotator (ConwayTxBody era))
 
@@ -310,7 +297,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
 
 instance
   ( Crypto c
-  , ShelleyEraDCert (ConwayEra c)
+  , ShelleyEraTxCert (ConwayEra c)
   ) =>
   ShelleyEraTxBody (ConwayEra c)
   where
@@ -398,7 +385,7 @@ pattern ConwayTxBody ::
   StrictSeq (Sized (TxOut era)) ->
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
-  StrictSeq (ConwayDCert era) ->
+  StrictSeq (ConwayTxCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->

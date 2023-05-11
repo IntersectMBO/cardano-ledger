@@ -106,13 +106,13 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
 
 genTxBody ::
   ( EraTxOut era
-  , EraDCert era
+  , EraTxCert era
   ) =>
   PParams era ->
   SlotNo ->
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
+  StrictSeq (TxCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->

@@ -45,7 +45,6 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (ShelleyDelegCert (..), pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   LedgerState (..),
@@ -68,6 +67,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ppRewardAcnt,
   ppVrf,
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
@@ -231,14 +231,14 @@ firstStakeKeyCred :: Credential 'Staking B_Crypto
 firstStakeKeyCred = stakeKeyToCred stakeKeyOne
 
 -- Create stake key registration certificates
-stakeKeyRegistrations :: [KeyPair 'Staking B_Crypto] -> StrictSeq (DCert B)
+stakeKeyRegistrations :: [KeyPair 'Staking B_Crypto] -> StrictSeq (TxCert B)
 stakeKeyRegistrations keys =
   StrictSeq.fromList $
-    fmap (ShelleyDCertDeleg . RegKey . (KeyHashObj . hashKey . vKey)) keys
+    fmap (ShelleyTxCertDeleg . RegKey . (KeyHashObj . hashKey . vKey)) keys
 
 -- Create a transaction body given a sequence of certificates.
 -- It spends the genesis coin given by the index ix.
-txbFromCerts :: TxIx -> StrictSeq (DCert B) -> ShelleyTxBody B
+txbFromCerts :: TxIx -> StrictSeq (TxCert B) -> ShelleyTxBody B
 txbFromCerts ix regCerts =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId ix])
@@ -311,7 +311,7 @@ txbDeRegStakeKey x y =
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.fromList [ShelleyTxOut aliceAddr (inject $ Coin 100)])
     ( StrictSeq.fromList $
-        fmap (ShelleyDCertDeleg . DeRegKey . stakeKeyToCred) (stakeKeys x y)
+        fmap (ShelleyTxCertDeleg . DeRegKey . stakeKeyToCred) (stakeKeys x y)
     )
     (Withdrawals Map.empty)
     (Coin 0)
@@ -410,8 +410,8 @@ mkPoolParameters keys =
     }
 
 -- Create stake pool registration certs
-poolRegCerts :: [KeyPair 'StakePool B_Crypto] -> StrictSeq (DCert B)
-poolRegCerts = StrictSeq.fromList . fmap (DCertPool . RegPool . mkPoolParameters)
+poolRegCerts :: [KeyPair 'StakePool B_Crypto] -> StrictSeq (TxCert B)
+poolRegCerts = StrictSeq.fromList . fmap (TxCertPool . RegPool . mkPoolParameters)
 
 -- Create a transaction that registers stake pools.
 txRegStakePools :: TxIx -> [KeyPair 'StakePool B_Crypto] -> ShelleyTx B
@@ -467,7 +467,7 @@ txbRetireStakePool x y =
     (StrictSeq.fromList [ShelleyTxOut aliceAddr (inject $ Coin 100)])
     ( StrictSeq.fromList $
         fmap
-          (\ks -> DCertPool $ RetirePool (mkPoolKeyHash ks) (EpochNo 1))
+          (\ks -> TxCertPool $ RetirePool (mkPoolKeyHash ks) (EpochNo 1))
           (poolColdKeys x y)
     )
     (Withdrawals Map.empty)
@@ -515,7 +515,7 @@ txbDelegate n m =
     (StrictSeq.fromList [ShelleyTxOut aliceAddr (inject $ Coin 100)])
     ( StrictSeq.fromList $
         fmap
-          (\ks -> ShelleyDCertDeleg $ Delegate (Delegation (stakeKeyToCred ks) firstStakePoolKeyHash))
+          (\ks -> ShelleyTxCertDeleg $ Delegate (Delegation (stakeKeyToCred ks) firstStakePoolKeyHash))
           (stakeKeys n m)
     )
     (Withdrawals Map.empty)

@@ -45,7 +45,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.QuickCheck (Property, conjoin, counterexample)
 
-import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   delegTraceFromBlock,
   forAllChainTrace,
@@ -95,10 +95,10 @@ tests =
        in conjoin (map (delegProp delegEnv) delegSsts)
 
 -- | Check stake key registration
-keyRegistration :: (ShelleyEraDCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyRegistration :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyRegistration
   SourceSignalTarget
-    { signal = (ShelleyDCertDeleg (RegKey hk))
+    { signal = (ShelleyTxCertDeleg (RegKey hk))
     , target = targetSt
     } =
     conjoin
@@ -112,10 +112,10 @@ keyRegistration
 keyRegistration _ = property ()
 
 -- | Check stake key de-registration
-keyDeRegistration :: (ShelleyEraDCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyDeRegistration :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDeRegistration
   SourceSignalTarget
-    { signal = ShelleyDCertDeleg (DeRegKey hk)
+    { signal = ShelleyTxCertDeleg (DeRegKey hk)
     , target = targetSt
     } =
     conjoin
@@ -129,10 +129,10 @@ keyDeRegistration
 keyDeRegistration _ = property ()
 
 -- | Check stake key delegation
-keyDelegation :: (ShelleyEraDCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyDelegation :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDelegation
   SourceSignalTarget
-    { signal = ShelleyDCertDeleg (Delegate (Delegation from to))
+    { signal = ShelleyTxCertDeleg (Delegate (Delegation from to))
     , target = targetSt
     } =
     let fromImage = eval (rng (Set.singleton from `UM.domRestrictedView` delegations targetSt))
@@ -170,7 +170,7 @@ rewardsSumInvariant
           ]
 
 checkInstantaneousRewards ::
-  (EraPParams era, ShelleyEraDCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
@@ -178,7 +178,7 @@ checkInstantaneousRewards
   denv
   SourceSignalTarget {source, signal, target} =
     case signal of
-      DCertMir (MIRCert ReservesMIR (StakeAddressesMIR irwd)) ->
+      TxCertMir (MIRCert ReservesMIR (StakeAddressesMIR irwd)) ->
         conjoin
           [ counterexample
               "a ReservesMIR certificate should add all entries to the `irwd` mapping"
@@ -200,7 +200,7 @@ checkInstantaneousRewards
                     )
               )
           ]
-      DCertMir (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
+      TxCertMir (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
         conjoin
           [ counterexample
               "a TreasuryMIR certificate should add all entries to the `irwd` mapping"

@@ -39,7 +39,7 @@ library
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Babbage.Era
-        Cardano.Ledger.Babbage.Delegation
+        Cardano.Ledger.Babbage.TxCert
         Cardano.Ledger.Babbage.Rules.Utxow
         Cardano.Ledger.Babbage.Rules.Utxo
         Cardano.Ledger.Babbage.Rules.Utxos

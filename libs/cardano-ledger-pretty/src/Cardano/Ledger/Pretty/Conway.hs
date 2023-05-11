@@ -18,11 +18,6 @@ module Cardano.Ledger.Pretty.Conway (
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Delegation (
-  ConwayDCert (..),
-  ConwayDelegCert (..),
-  Delegatee (..),
- )
 import Cardano.Ledger.Conway.Governance (
   Anchor,
   ConwayGovernance (..),
@@ -46,6 +41,11 @@ import Cardano.Ledger.Conway.Rules (
   RatifyState (..),
  )
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.Conway.TxCert (
+  ConwayDelegCert (..),
+  ConwayTxCert (..),
+  Delegatee (..),
+ )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Pretty (
   PDoc,
@@ -125,10 +125,10 @@ instance PrettyA (ConwayDelegCert c) where
       , ("Deposit", prettyA deposit)
       ]
 
-ppConwayDCert :: ConwayDCert c -> PDoc
-ppConwayDCert (ConwayDCertDeleg dc) = ppSexp "ConwayDCertDeleg" [prettyA dc]
-ppConwayDCert (ConwayDCertPool pc) = ppSexp "ConwayDCertPool" [ppPoolCert pc]
-ppConwayDCert (ConwayDCertConstitutional gdc) = ppSexp "ConwayDCertConstitutional" [ppConstitutionalDelegCert gdc]
+ppConwayTxCert :: ConwayTxCert c -> PDoc
+ppConwayTxCert (ConwayTxCertDeleg dc) = ppSexp "ConwayTxCertDeleg" [prettyA dc]
+ppConwayTxCert (ConwayTxCertPool pc) = ppSexp "ConwayTxCertPool" [ppPoolCert pc]
+ppConwayTxCert (ConwayTxCertConstitutional gdc) = ppSexp "ConwayTxCertConstitutional" [ppConstitutionalDelegCert gdc]
 
 ppConwayTxBody ::
   forall era.
@@ -197,8 +197,8 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
       "NewConstitution"
       [("hash", prettyA c)]
 
-instance forall c. PrettyA (ConwayDCert c) where
-  prettyA = ppConwayDCert
+instance forall c. PrettyA (ConwayTxCert c) where
+  prettyA = ppConwayTxCert
 
 instance Crypto c => PrettyA (PParams (ConwayEra c)) where
   prettyA = ppBabbagePParams

@@ -30,7 +30,6 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (ShelleyDCert (..), ShelleyDelegCert (..))
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
@@ -43,6 +42,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..), ShelleyDELEG, ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.TxBody (Ptr)
+import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq
 import Control.State.Transition
@@ -99,16 +99,16 @@ instance
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , State (EraRule "POOL" era) ~ PState era
-  , Signal (EraRule "DELEG" era) ~ DCert era
+  , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Signal (EraRule "POOL" era) ~ DCert era
-  , DCert era ~ ShelleyDCert era
+  , Signal (EraRule "POOL" era) ~ TxCert era
+  , TxCert era ~ ShelleyTxCert era
   ) =>
   STS (ShelleyDELPL era)
   where
   type State (ShelleyDELPL era) = CertState era
-  type Signal (ShelleyDELPL era) = DCert era
+  type Signal (ShelleyDELPL era) = TxCert era
   type Environment (ShelleyDELPL era) = DelplEnv era
   type BaseM (ShelleyDELPL era) = ShelleyBase
   type PredicateFailure (ShelleyDELPL era) = ShelleyDelplPredFailure era
@@ -161,41 +161,41 @@ delplTransition ::
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
   , State (EraRule "DELEG" era) ~ DState era
   , State (EraRule "POOL" era) ~ PState era
-  , Signal (EraRule "DELEG" era) ~ DCert era
+  , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Signal (EraRule "POOL" era) ~ DCert era
-  , DCert era ~ ShelleyDCert era
+  , Signal (EraRule "POOL" era) ~ TxCert era
+  , TxCert era ~ ShelleyTxCert era
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do
   TRC (DelplEnv slot ptr pp acnt, d, c) <- judgmentContext
   case c of
-    ShelleyDCertPool (RegPool _) -> do
+    ShelleyTxCertPool (RegPool _) -> do
       ps <-
         trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, c)
       pure $ d {certPState = ps}
-    ShelleyDCertPool (RetirePool _ _) -> do
+    ShelleyTxCertPool (RetirePool _ _) -> do
       ps <-
         trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, c)
       pure $ d {certPState = ps}
-    ShelleyDCertGenesis ConstitutionalDelegCert {} -> do
+    ShelleyTxCertGenesis ConstitutionalDelegCert {} -> do
       ds <-
         trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}
-    ShelleyDCertDelegCert (RegKey _) -> do
+    ShelleyTxCertDelegCert (RegKey _) -> do
       ds <-
         trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}
-    ShelleyDCertDelegCert (DeRegKey _) -> do
+    ShelleyTxCertDelegCert (DeRegKey _) -> do
       ds <-
         trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}
-    ShelleyDCertDelegCert (Delegate _) -> do
+    ShelleyTxCertDelegCert (Delegate _) -> do
       ds <-
         trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}
-    ShelleyDCertMir _ -> do
+    ShelleyTxCertMir _ -> do
       ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}
 
@@ -210,7 +210,7 @@ instance
   wrapEvent = PoolEvent
 
 instance
-  ( ShelleyEraDCert era
+  ( ShelleyEraTxCert era
   , EraPParams era
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   ) =>

@@ -33,7 +33,7 @@ library
         Cardano.Ledger.Conway
         Cardano.Ledger.Conway.Rules
         Cardano.Ledger.Conway.Core
-        Cardano.Ledger.Conway.Delegation
+        Cardano.Ledger.Conway.TxCert
 
     hs-source-dirs:   src
     other-modules:

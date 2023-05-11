@@ -8,8 +8,8 @@
 
 module Cardano.Ledger.Shelley.Core (
   ShelleyEraTxBody (..),
-  pattern DCertMir,
-  ShelleyEraDCert (..),
+  pattern TxCertMir,
+  ShelleyEraTxCert (..),
   Withdrawals (..),
   Wdrl,
   module Cardano.Ledger.Core,
@@ -21,16 +21,16 @@ where
 import Cardano.Ledger.Address
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Delegation
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Slot (SlotNo (..))
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe)
 import Lens.Micro (Lens', SimpleGetter)
 
-class (ShelleyEraDCert era, EraTxBody era) => ShelleyEraTxBody era where
+class (ShelleyEraTxCert era, EraTxBody era) => ShelleyEraTxBody era where
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo
 
   updateTxBodyL :: ProtVerAtMost era 8 => Lens' (TxBody era) (StrictMaybe (Update era))

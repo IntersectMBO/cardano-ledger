@@ -36,7 +36,7 @@ testThunks ::
   forall era.
   ( Reflect era
   , STS (MOCKCHAIN era)
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   Proof era ->
   Int ->

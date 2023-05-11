@@ -30,12 +30,12 @@ import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (
+import Cardano.Ledger.Shelley.TxBody
+import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   isInstantaneousRewards,
-  pattern ShelleyDCertDeleg,
+  pattern ShelleyTxCertDeleg,
  )
-import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
 import qualified Data.Map.Strict as Map
@@ -48,21 +48,21 @@ showCred :: Credential x c -> String
 showCred (ScriptHashObj (ScriptHash x)) = show x
 showCred (KeyHashObj (KeyHash x)) = show x
 
-synopsisCert :: ShelleyEraDCert era => DCert era -> String
+synopsisCert :: ShelleyEraTxCert era => TxCert era -> String
 synopsisCert x = case x of
-  ShelleyDCertDeleg (RegKey cred) -> "RegKey " ++ take 10 (showCred cred)
-  ShelleyDCertDeleg (DeRegKey cred) -> "DeRegKey " ++ take 10 (showCred cred)
-  ShelleyDCertDeleg (Delegate _) -> "Delegation"
-  DCertPool (RegPool pool) -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
-  DCertPool (RetirePool khash e) -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
-  DCertGenesis _ -> "GenesisCert"
+  ShelleyTxCertDeleg (RegKey cred) -> "RegKey " ++ take 10 (showCred cred)
+  ShelleyTxCertDeleg (DeRegKey cred) -> "DeRegKey " ++ take 10 (showCred cred)
+  ShelleyTxCertDeleg (Delegate _) -> "Delegation"
+  TxCertPool (RegPool pool) -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
+  TxCertPool (RetirePool khash e) -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
+  TxCertGenesis _ -> "GenesisCert"
   _ | isInstantaneousRewards x -> "MirCert"
   _ -> error "Impossible"
 
 showKeyHash :: KeyHash c x -> String
 showKeyHash (KeyHash hash) = take 10 (show hash)
 
-showCerts :: (ShelleyEraDCert era) => [DCert era] -> String
+showCerts :: (ShelleyEraTxCert era) => [TxCert era] -> String
 showCerts certs = unlines (map (("  " ++) . synopsisCert) certs)
 
 showTxCerts :: (ShelleyEraTxBody era) => TxBody era -> String

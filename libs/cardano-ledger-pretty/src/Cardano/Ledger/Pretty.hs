@@ -84,7 +84,6 @@ import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Delegation (ShelleyDCert (..), ShelleyDelegCert (..))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -143,6 +142,7 @@ import Cardano.Ledger.Shelley.TxBody (
   WitVKey (..),
   Withdrawals (..),
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
   prettyWitnessSetParts,
@@ -509,7 +509,7 @@ instance (Era era, PrettyA (Era.TxSeq era), PrettyA h) => PrettyA (Block h era) 
   prettyA = ppBlock
 
 -- =================================
--- Cardano.Ledger.Shelley.LedgerState.Delegation.Certificates
+-- Cardano.Ledger.Shelley.LedgerState.TxCert.Certificates
 
 ppPoolDistr :: PoolDistr c -> PDoc
 ppPoolDistr (PoolDistr mp) = ppSexp "PoolDistr" [ppMap ppKeyHash ppIndividualPoolStake mp]
@@ -1122,17 +1122,17 @@ ppMIRTarget (SendToOppositePotMIR c) = ppCoin c
 ppMIRCert :: MIRCert c -> PDoc
 ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 
-ppShelleyDCert :: ShelleyDCert c -> PDoc
-ppShelleyDCert (ShelleyDCertDelegCert x) = ppSexp "ShelleyDCertDeleg" [ppDelegCert x]
-ppShelleyDCert (ShelleyDCertPool x) = ppSexp "DCertPool" [ppPoolCert x]
-ppShelleyDCert (ShelleyDCertGenesis x) = ppSexp "DCertGenesis" [ppConstitutionalDelegCert x]
-ppShelleyDCert (ShelleyDCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
+ppShelleyTxCert :: ShelleyTxCert c -> PDoc
+ppShelleyTxCert (ShelleyTxCertDelegCert x) = ppSexp "ShelleyTxCertDeleg" [ppDelegCert x]
+ppShelleyTxCert (ShelleyTxCertPool x) = ppSexp "TxCertPool" [ppPoolCert x]
+ppShelleyTxCert (ShelleyTxCertGenesis x) = ppSexp "TxCertGenesis" [ppConstitutionalDelegCert x]
+ppShelleyTxCert (ShelleyTxCertMir x) = ppSexp "TxCertMir" [ppMIRCert x]
 
 ppTxBody ::
   ( EraTxOut era
   , PrettyA (PParamsUpdate era)
   , PrettyA (TxOut era)
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   ShelleyTxBody era ->
   PDoc
@@ -1196,14 +1196,14 @@ instance PrettyA MIRPot where
 instance PrettyA (MIRCert c) where
   prettyA = ppMIRCert
 
-instance PrettyA (ShelleyDCert c) where
-  prettyA = ppShelleyDCert
+instance PrettyA (ShelleyTxCert c) where
+  prettyA = ppShelleyTxCert
 
 instance
   ( EraTxOut era
   , PrettyA (PParamsUpdate era)
   , PrettyA (TxOut era)
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   , Era era
   ) =>
   PrettyA (ShelleyTxBody era)

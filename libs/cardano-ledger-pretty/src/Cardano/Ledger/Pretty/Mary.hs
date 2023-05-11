@@ -91,7 +91,7 @@ allegraFields ::
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
   , ProtVerAtMost era 8
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   TxBody era ->
   [(Text, PDoc)]
@@ -112,7 +112,7 @@ instance
   , PrettyA (PParamsUpdate era)
   , TxBody era ~ AllegraTxBody era
   , ProtVerAtMost era 8
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   PrettyA (AllegraTxBody era)
   where
@@ -124,7 +124,7 @@ instance
   , PrettyA (PParamsUpdate era)
   , TxBody era ~ MaryTxBody era
   , ProtVerAtMost era 8
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   PrettyA (MaryTxBody era)
   where

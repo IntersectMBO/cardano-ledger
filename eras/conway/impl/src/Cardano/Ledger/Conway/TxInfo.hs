@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,
   TranslationError (..),
   VersionedTxInfo (..),
-  unDCertV3,
+  unTxCertV3,
  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (
@@ -50,14 +50,14 @@ import qualified PlutusLedgerApi.V3 as PV3
 
 -- TODO implement this once Plutus releases an API with new certs
 
-instance (Crypto c, EraDCert (ConwayEra c)) => EraPlutusContext 'PlutusV1 (ConwayEra c) where
-  transDCert = undefined
+instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV1 (ConwayEra c) where
+  transTxCert = undefined
 
-instance (Crypto c, EraDCert (ConwayEra c)) => EraPlutusContext 'PlutusV2 (ConwayEra c) where
-  transDCert = undefined
+instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV2 (ConwayEra c) where
+  transTxCert = undefined
 
-instance (Crypto c, EraDCert (ConwayEra c)) => EraPlutusContext 'PlutusV3 (ConwayEra c) where
-  transDCert = undefined
+instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV3 (ConwayEra c) where
+  transTxCert = undefined
 
 conwayTxInfo ::
   forall era.
@@ -114,7 +114,7 @@ conwayTxInfoV3 timeRange tx utxo = do
       , PV3.txInfoReferenceInputs = refInputs
       , PV3.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
       , PV3.txInfoMint = Alonzo.transMultiAsset multiAsset
-      , PV3.txInfoDCert = toList $ fmap (unDCertV3 . Alonzo.transDCert) (txBody ^. certsTxBodyL)
+      , PV3.txInfoDCert = toList $ fmap (unTxCertV3 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
       , PV3.txInfoWdrl = PV3.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV3.txInfoValidRange = timeRange
       , PV3.txInfoSignatories =

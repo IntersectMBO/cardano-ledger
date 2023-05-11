@@ -98,7 +98,7 @@ genTxBody ::
   SlotNo ->
   Set.Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
+  StrictSeq (TxCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   StrictMaybe (Update era) ->

@@ -44,10 +44,6 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
-import Cardano.Ledger.Shelley.Delegation (
-  ShelleyDelegCert (..),
-  pattern ShelleyDCertDeleg,
- )
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState (..),
@@ -61,6 +57,10 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxOut (..),
+ )
+import Cardano.Ledger.Shelley.TxCert (
+  ShelleyDelegCert (..),
+  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
@@ -123,20 +123,20 @@ protocolVersion (Shelley _) = ProtVer (natVersion @2) 0
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
 depositsAndRefunds ::
-  (EraPParams era, ShelleyEraDCert era) =>
+  (EraPParams era, ShelleyEraTxCert era) =>
   PParams era ->
-  [DCert era] ->
+  [TxCert era] ->
   Map (Credential 'Staking (EraCrypto era)) Coin ->
   Coin
 depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) certificates
   where
-    accum ans (ShelleyDCertDeleg (RegKey _)) = pp ^. ppKeyDepositL <+> ans
-    accum ans (ShelleyDCertDeleg (DeRegKey hk)) =
+    accum ans (ShelleyTxCertDeleg (RegKey _)) = pp ^. ppKeyDepositL <+> ans
+    accum ans (ShelleyTxCertDeleg (DeRegKey hk)) =
       case Map.lookup hk keydeposits of
         Nothing -> ans
         Just c -> ans <-> c
-    accum ans (DCertPool (RegPool _)) = pp ^. ppPoolDepositL <+> ans
-    accum ans (DCertPool (RetirePool _ _)) = ans -- The pool reward is refunded at the end of the epoch
+    accum ans (TxCertPool (RegPool _)) = pp ^. ppPoolDepositL <+> ans
+    accum ans (TxCertPool (RetirePool _ _)) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
@@ -336,7 +336,7 @@ alwaysFalse p@(Allegra _) _ n = never n p
 alwaysFalse p@(Shelley _) _ n = never n p
 {-# NOINLINE alwaysFalse #-}
 
-certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [DCert era]
+certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [TxCert era]
 certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 
 -- | Create an old style RewardUpdate to be used in tests, in any Era.

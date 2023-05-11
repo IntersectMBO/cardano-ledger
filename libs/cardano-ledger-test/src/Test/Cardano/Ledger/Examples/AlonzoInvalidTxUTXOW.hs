@@ -54,12 +54,12 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
-import Cardano.Ledger.Shelley.Delegation (ShelleyDelegCert (..), pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt (..),
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
@@ -125,7 +125,7 @@ alonzoUTXOWTests ::
   , PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
   , Value era ~ MaryValue (EraCrypto era)
   , EraGovernance era
-  , ShelleyEraDCert era
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   TestTree
@@ -444,7 +444,7 @@ missing1phaseScriptWitnessTx ::
   , EraTxBody era
   , GoodCrypto (EraCrypto era)
   , Value era ~ MaryValue (EraCrypto era)
-  , ShelleyEraDCert era
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Tx era
@@ -476,7 +476,7 @@ missing2phaseScriptWitnessTx ::
   , EraTx era
   , GoodCrypto (EraCrypto era)
   , Value era ~ MaryValue (EraCrypto era)
-  , ShelleyEraDCert era
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Tx era
@@ -503,7 +503,7 @@ missing2phaseScriptWitnessTx pf =
 
 validatingManyScriptsBody ::
   forall era.
-  (HasTokens era, EraTxBody era, PostShelley era, Value era ~ MaryValue (EraCrypto era), ShelleyEraDCert era) =>
+  (HasTokens era, EraTxBody era, PostShelley era, Value era ~ MaryValue (EraCrypto era), ShelleyEraTxCert era) =>
   Proof era ->
   TxBody era
 validatingManyScriptsBody pf =
@@ -514,8 +514,8 @@ validatingManyScriptsBody pf =
     , Outputs' [txOut]
     , Txfee (Coin 5)
     , Certs'
-        [ ShelleyDCertDeleg (DeRegKey $ timelockStakeCred pf)
-        , ShelleyDCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
+        [ ShelleyTxCertDeleg (DeRegKey $ timelockStakeCred pf)
+        , ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
         ]
     , Withdrawals'
         ( Withdrawals $
@@ -616,7 +616,7 @@ phase1FailureTx ::
   , EraTx era
   , GoodCrypto (EraCrypto era)
   , Value era ~ MaryValue (EraCrypto era)
-  , ShelleyEraDCert era
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Tx era
@@ -862,7 +862,7 @@ multipleEqualCertsInvalidTx ::
   ( Scriptic era
   , EraTx era
   , GoodCrypto (EraCrypto era)
-  , ShelleyEraDCert era
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Tx era
@@ -884,8 +884,8 @@ multipleEqualCertsInvalidTx pf =
         , Collateral' [mkGenesisTxIn 13]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
         , Certs'
-            [ ShelleyDCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
-            , ShelleyDCertDeleg (DeRegKey $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
+            [ ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)
+            , ShelleyTxCertDeleg (DeRegKey $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
             ]
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)

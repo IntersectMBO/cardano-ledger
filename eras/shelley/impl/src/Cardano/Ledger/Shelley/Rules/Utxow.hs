@@ -67,12 +67,6 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTestOnSignal,
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Delegation (
-  delegCWitness,
-  isInstantaneousRewards,
-  requiresVKeyWitness,
-  pattern ShelleyDCertDeleg,
- )
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
@@ -95,6 +89,12 @@ import Cardano.Ledger.Shelley.TxBody (
   WitVKey (..),
   getRwdCred,
   unWithdrawals,
+ )
+import Cardano.Ledger.Shelley.TxCert (
+  delegCWitness,
+  isInstantaneousRewards,
+  requiresVKeyWitness,
+  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.UTxO (
@@ -342,7 +342,7 @@ transitionRulesUTXOW = do
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
-  {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
+  {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
@@ -507,14 +507,14 @@ witsVKeyNeeded utxo' tx genDelegs =
     owners :: Set (KeyHash 'Witness (EraCrypto era))
     owners = foldr accum Set.empty (txBody ^. certsTxBodyL)
       where
-        accum (DCertPool (RegPool pool)) ans =
+        accum (TxCertPool (RegPool pool)) ans =
           Set.union
             (Set.map asWitness (ppOwners pool))
             ans
         accum _cert ans = ans
-    cwitness (ShelleyDCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
-    cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
-    cwitness (DCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
+    cwitness (ShelleyTxCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
+    cwitness (TxCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
+    cwitness (TxCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
     cwitness c = error $ show c ++ " does not have a witness"
     -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
     -- before the call to `cwitness`, so this error should never be reached.
@@ -554,7 +554,7 @@ validateMetadata pp tx =
 -- | check genesis keys signatures for instantaneous rewards certificates
 --
 -- genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes
--- { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum
+-- { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum
 validateMIRInsufficientGenesisSigs ::
   ( EraTx era
   , ShelleyEraTxBody era

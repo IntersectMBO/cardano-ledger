@@ -7,10 +7,10 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Cardano.Ledger.Core.DCert (
-  EraDCert (..),
-  pattern DCertPool,
-  pattern DCertGenesis,
+module Cardano.Ledger.Core.TxCert (
+  EraTxCert (..),
+  pattern TxCertPool,
+  pattern TxCertGenesis,
   Delegation (..),
   PoolCert (..),
   poolCWitness,
@@ -37,39 +37,39 @@ import NoThunks.Class (NoThunks (..))
 
 class
   ( Era era
-  , DecCBOR (DCert era)
-  , EncCBOR (DCert era)
-  , ToCBOR (DCert era)
-  , FromCBOR (DCert era)
-  , NoThunks (DCert era)
-  , NFData (DCert era)
-  , Show (DCert era)
-  , Eq (DCert era)
+  , DecCBOR (TxCert era)
+  , EncCBOR (TxCert era)
+  , ToCBOR (TxCert era)
+  , FromCBOR (TxCert era)
+  , NoThunks (TxCert era)
+  , NFData (TxCert era)
+  , Show (TxCert era)
+  , Eq (TxCert era)
   ) =>
-  EraDCert era
+  EraTxCert era
   where
-  type DCert era = (r :: Type) | r -> era
+  type TxCert era = (r :: Type) | r -> era
 
-  mkDCertPool :: PoolCert (EraCrypto era) -> DCert era
+  mkTxCertPool :: PoolCert (EraCrypto era) -> TxCert era
 
-  getDCertPool :: DCert era -> Maybe (PoolCert (EraCrypto era))
+  getTxCertPool :: TxCert era -> Maybe (PoolCert (EraCrypto era))
 
-  mkDCertGenesis :: ConstitutionalDelegCert (EraCrypto era) -> DCert era
+  mkTxCertGenesis :: ConstitutionalDelegCert (EraCrypto era) -> TxCert era
 
-  getDCertGenesis :: DCert era -> Maybe (ConstitutionalDelegCert (EraCrypto era))
+  getTxCertGenesis :: TxCert era -> Maybe (ConstitutionalDelegCert (EraCrypto era))
 
-pattern DCertPool :: EraDCert era => PoolCert (EraCrypto era) -> DCert era
-pattern DCertPool d <- (getDCertPool -> Just d)
+pattern TxCertPool :: EraTxCert era => PoolCert (EraCrypto era) -> TxCert era
+pattern TxCertPool d <- (getTxCertPool -> Just d)
   where
-    DCertPool d = mkDCertPool d
+    TxCertPool d = mkTxCertPool d
 
-pattern DCertGenesis ::
-  EraDCert era =>
+pattern TxCertGenesis ::
+  EraTxCert era =>
   ConstitutionalDelegCert (EraCrypto era) ->
-  DCert era
-pattern DCertGenesis d <- (getDCertGenesis -> Just d)
+  TxCert era
+pattern TxCertGenesis d <- (getTxCertGenesis -> Just d)
   where
-    DCertGenesis d = mkDCertGenesis d
+    TxCertGenesis d = mkTxCertGenesis d
 
 -- | The delegation of one stake key to another.
 data Delegation c = Delegation

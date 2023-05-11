@@ -34,7 +34,7 @@ instance (EraScript era, Val (Value era)) => Twiddle (BabbageTxOut era) where
 instance
   ( Era era
   , Twiddle (TxOut era)
-  , Twiddle (DCert era)
+  , Twiddle (TxCert era)
   , BabbageEraTxBody era
   ) =>
   Twiddle (BabbageTxBody era)

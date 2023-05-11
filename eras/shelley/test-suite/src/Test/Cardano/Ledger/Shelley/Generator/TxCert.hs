@@ -11,8 +11,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Test.Cardano.Ledger.Shelley.Generator.Delegation (
-  genDCert,
+module Test.Cardano.Ledger.Shelley.Generator.TxCert (
+  genTxCert,
   CertCred (..),
 )
 where
@@ -47,9 +47,9 @@ import Cardano.Ledger.Shelley.API (
   VKey,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
+import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import qualified Cardano.Ledger.UMap as UM
 import Control.Monad (replicateM)
@@ -103,7 +103,7 @@ deriving instance (Era era, Show (Script era)) => Show (CertCred era)
 --
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
-genDCert ::
+genTxCert ::
   forall era.
   (EraGen era, ProtVerAtMost era 8) =>
   Constants ->
@@ -112,8 +112,8 @@ genDCert ::
   AccountState ->
   CertState era ->
   SlotNo ->
-  Gen (Maybe (DCert era, CertCred era))
-genDCert
+  Gen (Maybe (TxCert era, CertCred era))
+genTxCert
   c@( Constants
         { frequencyRegKeyCert
         , frequencyRegPoolCert
@@ -163,12 +163,12 @@ genDCert
 -- | Generate a RegKey certificate
 genRegKeyCert ::
   forall era.
-  (EraScript era, ShelleyEraDCert era) =>
+  (EraScript era, ShelleyEraTxCert era) =>
   Constants ->
   KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
   DState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genRegKeyCert
   Constants {frequencyKeyCredReg, frequencyScriptCredReg}
   keys
@@ -183,7 +183,7 @@ genRegKeyCert
               (_payKey, stakeKey) <- QC.elements availableKeys
               pure $
                 Just
-                  ( ShelleyDCertDeleg (RegKey (mkCred stakeKey))
+                  ( ShelleyTxCertDeleg (RegKey (mkCred stakeKey))
                   , NoCred
                   )
         )
@@ -195,7 +195,7 @@ genRegKeyCert
               (_, stakeScript) <- QC.elements availableScripts
               pure $
                 Just
-                  ( ShelleyDCertDeleg (RegKey (scriptToCred' stakeScript))
+                  ( ShelleyTxCertDeleg (RegKey (scriptToCred' stakeScript))
                   , NoCred
                   )
         )
@@ -210,12 +210,12 @@ genRegKeyCert
 -- needed to witness the certificate.
 genDeRegKeyCert ::
   forall era.
-  (EraScript era, ShelleyEraDCert era) =>
+  (EraScript era, ShelleyEraTxCert era) =>
   Constants ->
   KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
   DState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys scripts dState =
   QC.frequency
     [
@@ -224,7 +224,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
           [] -> pure Nothing
           _ -> do
             (_payKey, stakeKey) <- QC.elements availableKeys
-            pure $ Just (ShelleyDCertDeleg (DeRegKey (mkCred stakeKey)), StakeCred stakeKey)
+            pure $ Just (ShelleyTxCertDeleg (DeRegKey (mkCred stakeKey)), StakeCred stakeKey)
       )
     ,
       ( frequencyScriptCredDeReg
@@ -234,7 +234,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
             scriptPair@(_, stakeScript) <- QC.elements availableScripts
             pure $
               Just
-                ( ShelleyDCertDeleg (DeRegKey (scriptToCred' stakeScript))
+                ( ShelleyTxCertDeleg (DeRegKey (scriptToCred' stakeScript))
                 , ScriptCred scriptPair
                 )
       )
@@ -268,12 +268,12 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 -- registered pools.
 genDelegation ::
   forall era.
-  (EraScript era, ShelleyEraDCert era) =>
+  (EraScript era, ShelleyEraTxCert era) =>
   Constants ->
   KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
   CertState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genDelegation
   Constants {frequencyKeyCredDelegation, frequencyScriptCredDelegation}
   keys
@@ -306,12 +306,12 @@ genDelegation
       scriptToCred' = ScriptHashObj . hashScript @era
       mkCert (_, delegatorKey) poolKey = Just (cert, StakeCred delegatorKey)
         where
-          cert = ShelleyDCertDeleg (Delegate (Delegation (mkCred delegatorKey) poolKey))
+          cert = ShelleyTxCertDeleg (Delegate (Delegation (mkCred delegatorKey) poolKey))
       mkCertFromScript (s, delegatorScript) poolKey =
         Just (scriptCert, ScriptCred (s, delegatorScript))
         where
           scriptCert =
-            ShelleyDCertDeleg (Delegate (Delegation (scriptToCred' delegatorScript) poolKey))
+            ShelleyTxCertDeleg (Delegate (Delegation (scriptToCred' delegatorScript) poolKey))
       registeredDelegate k = UM.member k (rewards (certDState dpState))
       availableDelegates = filter (registeredDelegate . mkCred . snd) keys
       availableDelegatesScripts =
@@ -320,13 +320,13 @@ genDelegation
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
-  (Era era, EraDCert era, ProtVerAtMost era 8) =>
+  (Era era, EraTxCert era, ProtVerAtMost era 8) =>
   -- | Core nodes
   [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
   [AllIssuerKeys (EraCrypto era) 'GenesisDelegate] ->
   CertState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genGenesisDelegation coreNodes delegateKeys dpState =
   if null genesisDelegators || null availableDelegatees
     then pure Nothing
@@ -341,7 +341,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     hashVKey = hashKey . vKey
     mkCert gkey key vrf =
       Just
-        ( DCertGenesis
+        ( TxCertGenesis
             ( ConstitutionalDelegCert
                 (hashVKey gkey)
                 (hashVKey key)
@@ -403,14 +403,14 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
 
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
-  (Era era, EraDCert era) =>
+  (Era era, EraTxCert era) =>
   [AllIssuerKeys (EraCrypto era) 'StakePool] ->
   KeyPairs (EraCrypto era) ->
   Coin ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genRegPool poolKeys keyPairs minPoolCost = do
   (pps, poolKey) <- genStakePool poolKeys keyPairs minPoolCost
-  pure $ Just (DCertPool (RegPool pps), PoolCred poolKey)
+  pure $ Just (TxCertPool (RegPool pps), PoolCred poolKey)
 
 -- | Generate a RetirePool along with the keypair which registered it.
 --
@@ -420,19 +420,19 @@ genRegPool poolKeys keyPairs minPoolCost = do
 -- constructed value, return the keypair which corresponds to the selected
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool ::
-  (EraPParams era, EraDCert era) =>
+  (EraPParams era, EraTxCert era) =>
   PParams era ->
   [AllIssuerKeys (EraCrypto era) 'StakePool] ->
   PState era ->
   SlotNo ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genRetirePool _pp poolKeys pState slot =
   if null retireable
     then pure Nothing
     else
       ( \keyHash epoch ->
           Just
-            ( DCertPool (RetirePool keyHash epoch)
+            ( TxCertPool (RetirePool keyHash epoch)
             , PoolCred (aikCold $ lookupHash keyHash)
             )
       )
@@ -457,14 +457,14 @@ genRetirePool _pp poolKeys pState slot =
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewardsAccounts ::
-  (EraPParams era, ShelleyEraDCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState delegSt = do
   let (GenDelegs genDelegs_) = dsGenDelegs delegSt
       lookupGenDelegate' gk =
@@ -501,20 +501,20 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
       then Nothing
       else
         Just
-          ( DCertMir (MIRCert pot (StakeAddressesMIR credCoinMap))
+          ( TxCertMir (MIRCert pot (StakeAddressesMIR credCoinMap))
           , DelegateCred (aikCold <$> coreSigners)
           )
 
 -- | Generate an InstantaneousRewards Transfer
 genInstantaneousRewardsTransfer ::
-  (EraPParams era, ShelleyEraDCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState delegSt = do
   let (GenDelegs genDelegs_) = dsGenDelegs delegSt
       lookupGenDelegate' gk =
@@ -539,19 +539,19 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
       then Nothing
       else
         Just
-          ( DCertMir (MIRCert pot (SendToOppositePotMIR $ Coin amount))
+          ( TxCertMir (MIRCert pot (SendToOppositePotMIR $ Coin amount))
           , DelegateCred (aikCold <$> coreSigners)
           )
 
 genInstantaneousRewards ::
-  (EraPParams era, ShelleyEraDCert era, ProtVerAtMost era 8) =>
+  (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->
-  Gen (Maybe (DCert era, CertCred era))
+  Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewards slot genesisDelegatesByHash pparams accountState delegSt =
   if HardForks.allowMIRTransfer (pparams ^. ppProtocolVersionL)
     then

@@ -24,7 +24,7 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTx,
   Update,
  )
-import Cardano.Ledger.Shelley.Core (EraDCert (..), PParamsUpdate)
+import Cardano.Ledger.Shelley.Core (EraTxCert (..), PParamsUpdate)
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody,
@@ -57,7 +57,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlAnnotatorTest @(ShelleyTxBody Shelley) v n "transaction_body"
     , cddlTest @(ShelleyTxOut Shelley) v n "transaction_output"
     , cddlTest @StakePoolRelay v n "relay"
-    , cddlTest @(DCert Shelley) v n "certificate"
+    , cddlTest @(TxCert Shelley) v n "certificate"
     , cddlTest @(TxIn StandardCrypto) v n "transaction_input"
     , cddlAnnotatorTest @(ShelleyTxAuxData Shelley) v n "transaction_metadata"
     , cddlAnnotatorTest @(MultiSig Shelley) v n "multisig_script"

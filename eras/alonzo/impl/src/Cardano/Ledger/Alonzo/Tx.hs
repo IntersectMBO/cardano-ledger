@@ -372,25 +372,25 @@ data ScriptPurpose era
   = Minting !(PolicyID (EraCrypto era))
   | Spending !(TxIn (EraCrypto era))
   | Rewarding !(RewardAcnt (EraCrypto era))
-  | Certifying !(DCert era)
+  | Certifying !(TxCert era)
   deriving (Generic)
 
-deriving instance (Era era, Eq (DCert era)) => Eq (ScriptPurpose era)
-deriving instance (Era era, Show (DCert era)) => Show (ScriptPurpose era)
-deriving instance (Era era, NoThunks (DCert era)) => NoThunks (ScriptPurpose era)
+deriving instance (Era era, Eq (TxCert era)) => Eq (ScriptPurpose era)
+deriving instance (Era era, Show (TxCert era)) => Show (ScriptPurpose era)
+deriving instance (Era era, NoThunks (TxCert era)) => NoThunks (ScriptPurpose era)
 
-instance (Era era, NFData (DCert era)) => NFData (ScriptPurpose era) where
+instance (Era era, NFData (TxCert era)) => NFData (ScriptPurpose era) where
   rnf = \case
     Certifying c -> rnf c
     sp -> rwhnf sp
 
-instance (Era era, EncCBOR (DCert era)) => EncCBOR (ScriptPurpose era) where
+instance (Era era, EncCBOR (TxCert era)) => EncCBOR (ScriptPurpose era) where
   encCBOR (Minting x) = encode (Sum (Minting @era) 0 !> To x)
   encCBOR (Spending x) = encode (Sum (Spending @era) 1 !> To x)
   encCBOR (Rewarding x) = encode (Sum (Rewarding @era) 2 !> To x)
   encCBOR (Certifying x) = encode (Sum Certifying 3 !> To x)
 
-instance (Era era, DecCBOR (DCert era)) => DecCBOR (ScriptPurpose era) where
+instance (Era era, DecCBOR (TxCert era)) => DecCBOR (ScriptPurpose era) where
   decCBOR = decode (Summands "ScriptPurpose" dec)
     where
       dec 0 = SumD Minting <! From

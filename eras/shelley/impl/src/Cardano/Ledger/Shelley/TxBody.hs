@@ -16,7 +16,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxBody (
-  DCert,
   ShelleyDelegCert,
   Delegation (..),
   ConstitutionalDelegCert (..),
@@ -104,14 +103,14 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.TxCert (
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
   ShelleyDelegCert,
  )
-import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxOut (
   ShelleyTxOut (..),
   addrEitherShelleyTxOutL,
@@ -136,7 +135,7 @@ import NoThunks.Class (NoThunks (..))
 data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
   { stbrInputs :: !(Set (TxIn (EraCrypto era)))
   , stbrOutputs :: !(StrictSeq (TxOut era))
-  , stbrCerts :: !(StrictSeq (DCert era))
+  , stbrCerts :: !(StrictSeq (TxCert era))
   , stbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , stbrTxFee :: !Coin
   , stbrTTL :: !SlotNo
@@ -146,19 +145,19 @@ data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  (NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
+  (NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (ShelleyTxBodyRaw era)
 
 deriving instance
-  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (ShelleyTxBodyRaw era)
 
 deriving instance
-  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   Eq (ShelleyTxBodyRaw era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (ShelleyTxBodyRaw era)
 
 -- | Encodes memoized bytes created upon construction.
@@ -168,7 +167,7 @@ instance
   ( Era era
   , DecCBOR (PParamsUpdate era)
   , DecCBOR (TxOut era)
-  , DecCBOR (DCert era)
+  , DecCBOR (TxCert era)
   ) =>
   DecCBOR (ShelleyTxBodyRaw era)
   where
@@ -185,7 +184,7 @@ instance
   ( Era era
   , DecCBOR (PParamsUpdate era)
   , DecCBOR (TxOut era)
-  , DecCBOR (DCert era)
+  , DecCBOR (TxCert era)
   ) =>
   DecCBOR (Annotator (ShelleyTxBodyRaw era))
   where
@@ -203,7 +202,7 @@ boxBody ::
   ( Era era
   , DecCBOR (PParamsUpdate era)
   , DecCBOR (TxOut era)
-  , DecCBOR (DCert era)
+  , DecCBOR (TxCert era)
   ) =>
   Word ->
   Field (ShelleyTxBodyRaw era)
@@ -221,7 +220,7 @@ boxBody n = invalidField n
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (Era era, EncCBOR (TxOut era), EncCBOR (DCert era), EncCBOR (PParamsUpdate era)) =>
+  (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>
   ShelleyTxBodyRaw era ->
   Encode ('Closed 'Sparse) (ShelleyTxBodyRaw era)
 txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
@@ -251,7 +250,7 @@ basicShelleyTxBodyRaw =
     }
 
 instance
-  (Era era, EncCBOR (TxOut era), EncCBOR (DCert era), EncCBOR (PParamsUpdate era)) =>
+  (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>
   EncCBOR (ShelleyTxBodyRaw era)
   where
   encCBOR = encode . txSparse
@@ -312,7 +311,7 @@ instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# INLINEABLE updateTxBodyL #-}
 
 deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (ShelleyTxBody era)
 
 deriving newtype instance EraTxBody era => NFData (ShelleyTxBody era)
@@ -320,7 +319,7 @@ deriving newtype instance EraTxBody era => NFData (ShelleyTxBody era)
 deriving instance EraTxBody era => Show (ShelleyTxBody era)
 
 deriving instance
-  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   Eq (ShelleyTxBody era)
 
 deriving via
@@ -330,10 +329,10 @@ deriving via
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
-  (EraTxOut era, EncCBOR (DCert era)) =>
+  (EraTxOut era, EncCBOR (TxCert era)) =>
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
+  StrictSeq (TxCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   SlotNo ->

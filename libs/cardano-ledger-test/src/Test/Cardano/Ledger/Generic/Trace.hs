@@ -236,7 +236,7 @@ pcSmallUTxO proof u txs = ppMap pcTxIn (shortTxOut proof) m
 
 raiseMockError ::
   forall era.
-  (Reflect era, PrettyA (DCert era)) =>
+  (Reflect era, PrettyA (TxCert era)) =>
   Word64 ->
   SlotNo ->
   EpochState era ->
@@ -339,7 +339,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
         ) = set
     getw _ _ = Set.empty
 
-showBlock :: forall era. (Reflect era, PrettyA (DCert era)) => MUtxo era -> [Tx era] -> PDoc
+showBlock :: forall era. (Reflect era, PrettyA (TxCert era)) => MUtxo era -> [Tx era] -> PDoc
 showBlock u txs = ppList pppair (zip txs [0 ..])
   where
     pppair (tx, n) =
@@ -360,7 +360,7 @@ shortTxOut proof out = case txoutFields proof out of
     hsep ["Out", parens $ hsep ["Addr", pcCredential pay], pcCoin (out ^. coinTxOutL)]
   _ -> error "Bootstrap Address in shortTxOut"
 
-smartTxBody :: (Reflect era, PrettyA (DCert era)) => Proof era -> MUtxo era -> TxBody era -> PDoc
+smartTxBody :: (Reflect era, PrettyA (TxCert era)) => Proof era -> MUtxo era -> TxBody era -> PDoc
 smartTxBody proof u txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody
@@ -391,7 +391,7 @@ data Gen1 era = Gen1 (Vector (StrictSeq (Tx era), SlotNo)) (GenState era)
 
 instance
   ( STS (MOCKCHAIN era)
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   , Reflect era
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)

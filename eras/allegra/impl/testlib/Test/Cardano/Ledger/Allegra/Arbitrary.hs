@@ -103,10 +103,10 @@ instance
 
 instance
   ( EraTxOut era
-  , EraDCert era
+  , EraTxCert era
   , Arbitrary (TxOut era)
   , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (DCert era)
+  , Arbitrary (TxCert era)
   ) =>
   Arbitrary (AllegraTxBody era)
   where
