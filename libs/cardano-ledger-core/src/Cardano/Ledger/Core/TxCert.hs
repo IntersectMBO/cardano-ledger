@@ -16,9 +16,9 @@ module Cardano.Ledger.Core.TxCert (
   PoolCert (..),
   poolCWitness,
   poolCertKeyHashWitness,
-  ConstitutionalDelegCert (..),
-  genesisKeyHashWitness,
+  GenesisDelegCert (..),
   genesisCWitness,
+  genesisKeyHashWitness,
 )
 where
 
@@ -33,7 +33,7 @@ import Cardano.Ledger.Keys (
   VerKeyVRF,
   asWitness,
  )
-import Cardano.Ledger.PoolParams
+import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Kind (Type)
@@ -65,9 +65,9 @@ class
 
   getTxCertPool :: TxCert era -> Maybe (PoolCert (EraCrypto era))
 
-  mkTxCertGenesis :: ConstitutionalDelegCert (EraCrypto era) -> TxCert era
+  mkTxCertGenesis :: GenesisDelegCert (EraCrypto era) -> TxCert era
 
-  getTxCertGenesis :: TxCert era -> Maybe (ConstitutionalDelegCert (EraCrypto era))
+  getTxCertGenesis :: TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
 
 pattern TxCertPool :: EraTxCert era => PoolCert (EraCrypto era) -> TxCert era
 pattern TxCertPool d <- (getTxCertPool -> Just d)
@@ -76,7 +76,7 @@ pattern TxCertPool d <- (getTxCertPool -> Just d)
 
 pattern TxCertGenesis ::
   EraTxCert era =>
-  ConstitutionalDelegCert (EraCrypto era) ->
+  GenesisDelegCert (EraCrypto era) ->
   TxCert era
 pattern TxCertGenesis d <- (getTxCertGenesis -> Just d)
   where
@@ -108,16 +108,16 @@ instance NFData (PoolCert c) where
   rnf = rwhnf
 
 -- | Constitutional key delegation certificate
-data ConstitutionalDelegCert c
-  = ConstitutionalDelegCert
+data GenesisDelegCert c
+  = GenesisDelegCert
       !(KeyHash 'Genesis c)
       !(KeyHash 'GenesisDelegate c)
       !(Hash c (VerKeyVRF c))
   deriving (Show, Generic, Eq)
 
-instance NoThunks (ConstitutionalDelegCert c)
+instance NoThunks (GenesisDelegCert c)
 
-instance NFData (ConstitutionalDelegCert c) where
+instance NFData (GenesisDelegCert c) where
   rnf = rwhnf
 
 poolCertKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
@@ -129,8 +129,8 @@ poolCWitness :: PoolCert c -> Credential 'StakePool c
 poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
 
-genesisKeyHashWitness :: ConstitutionalDelegCert c -> KeyHash 'Witness c
-genesisKeyHashWitness (ConstitutionalDelegCert gk _ _) = asWitness gk
+genesisKeyHashWitness :: GenesisDelegCert c -> KeyHash 'Witness c
+genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
 
-genesisCWitness :: ConstitutionalDelegCert c -> KeyHash 'Genesis c
-genesisCWitness (ConstitutionalDelegCert gk _ _) = gk
+genesisCWitness :: GenesisDelegCert c -> KeyHash 'Genesis c
+genesisCWitness (GenesisDelegCert gk _ _) = gk

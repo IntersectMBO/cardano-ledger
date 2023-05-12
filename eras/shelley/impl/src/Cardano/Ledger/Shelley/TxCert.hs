@@ -59,7 +59,7 @@ module Cardano.Ledger.Shelley.TxCert (
   Delegation (..),
   PoolCert (..),
   poolCWitness,
-  ConstitutionalDelegCert (..),
+  GenesisDelegCert (..),
   genesisCWitness,
 )
 where
@@ -205,7 +205,7 @@ instance Crypto c => EncCBOR (MIRCert c) where
 data ShelleyTxCert era
   = ShelleyTxCertDelegCert !(ShelleyDelegCert (EraCrypto era))
   | ShelleyTxCertPool !(PoolCert (EraCrypto era))
-  | ShelleyTxCertGenesis !(ConstitutionalDelegCert (EraCrypto era))
+  | ShelleyTxCertGenesis !(GenesisDelegCert (EraCrypto era))
   | ShelleyTxCertMir !(MIRCert (EraCrypto era))
   deriving (Show, Generic, Eq, NFData)
 
@@ -242,8 +242,8 @@ encodePoolCert = \case
       <> encCBOR vk
       <> encCBOR epoch
 
-encodeConstitutionalCert :: Crypto c => ConstitutionalDelegCert c -> Encoding
-encodeConstitutionalCert (ConstitutionalDelegCert gk kh vrf) =
+encodeConstitutionalCert :: Crypto c => GenesisDelegCert c -> Encoding
+encodeConstitutionalCert (GenesisDelegCert gk kh vrf) =
   encodeListLen 4
     <> encodeWord8 5
     <> encCBOR gk
@@ -308,7 +308,7 @@ commonTxCertDecoder = \case
     a <- decCBOR
     b <- decCBOR
     c <- decCBOR
-    pure (4, TxCertGenesis $ ConstitutionalDelegCert a b c)
+    pure (4, TxCertGenesis $ GenesisDelegCert a b c)
   k -> invalidKey k
 {-# INLINE commonTxCertDecoder #-}
 

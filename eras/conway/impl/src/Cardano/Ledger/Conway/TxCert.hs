@@ -131,7 +131,7 @@ instance NoThunks (ConwayDelegCert c)
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
   | ConwayTxCertPool !(PoolCert (EraCrypto era))
-  | ConwayTxCertConstitutional !(ConstitutionalDelegCert (EraCrypto era))
+  | ConwayTxCertConstitutional !(GenesisDelegCert (EraCrypto era))
   deriving (Show, Generic, Eq)
 
 instance NFData (ConwayTxCert c)

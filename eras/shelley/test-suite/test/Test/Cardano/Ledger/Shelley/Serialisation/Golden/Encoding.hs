@@ -623,7 +623,7 @@ tests =
         shelleyProtVer
         "genesis_delegation"
         ( TxCertGenesis @C
-            ( ConstitutionalDelegCert @C_Crypto
+            ( GenesisDelegCert @C_Crypto
                 testGKeyHash
                 (hashKey . vKey $ testGenesisDelegateKey @C_Crypto)
                 (testVRFKH @C_Crypto)

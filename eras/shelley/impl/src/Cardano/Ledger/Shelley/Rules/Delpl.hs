@@ -179,7 +179,7 @@ delplTransition = do
       ps <-
         trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, c)
       pure $ d {certPState = ps}
-    ShelleyTxCertGenesis ConstitutionalDelegCert {} -> do
+    ShelleyTxCertGenesis GenesisDelegCert {} -> do
       ds <-
         trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}

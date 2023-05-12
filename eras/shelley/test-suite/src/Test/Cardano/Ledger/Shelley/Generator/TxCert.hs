@@ -342,7 +342,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     mkCert gkey key vrf =
       Just
         ( TxCertGenesis
-            ( ConstitutionalDelegCert
+            ( GenesisDelegCert
                 (hashVKey gkey)
                 (hashVKey key)
                 (hashVerKeyVRF vrf)

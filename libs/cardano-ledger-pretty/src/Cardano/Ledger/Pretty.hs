@@ -1111,8 +1111,8 @@ ppPoolCert :: PoolCert c -> PDoc
 ppPoolCert (RegPool x) = ppSexp "RegPool" [ppPoolParams x]
 ppPoolCert (RetirePool x y) = ppSexp "RetirePool" [ppKeyHash x, ppEpochNo y]
 
-ppConstitutionalDelegCert :: ConstitutionalDelegCert c -> PDoc
-ppConstitutionalDelegCert (ConstitutionalDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
+ppGenesisDelegCert :: GenesisDelegCert c -> PDoc
+ppGenesisDelegCert (GenesisDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
 
 ppMIRPot :: MIRPot -> PDoc
 ppMIRPot ReservesMIR = text "Reserves"
@@ -1128,7 +1128,7 @@ ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 ppShelleyTxCert :: ShelleyTxCert c -> PDoc
 ppShelleyTxCert (ShelleyTxCertDelegCert x) = ppSexp "ShelleyTxCertDeleg" [ppShelleyDelegCert x]
 ppShelleyTxCert (ShelleyTxCertPool x) = ppSexp "TxCertPool" [ppPoolCert x]
-ppShelleyTxCert (ShelleyTxCertGenesis x) = ppSexp "TxCertGenesis" [ppConstitutionalDelegCert x]
+ppShelleyTxCert (ShelleyTxCertGenesis x) = ppSexp "TxCertGenesis" [ppGenesisDelegCert x]
 ppShelleyTxCert (ShelleyTxCertMir x) = ppSexp "TxCertMir" [ppMIRCert x]
 
 ppTxBody ::
@@ -1190,8 +1190,8 @@ instance PrettyA (ShelleyDelegCert c) where
 instance PrettyA (PoolCert c) where
   prettyA = ppPoolCert
 
-instance PrettyA (ConstitutionalDelegCert c) where
-  prettyA = ppConstitutionalDelegCert
+instance PrettyA (GenesisDelegCert c) where
+  prettyA = ppGenesisDelegCert
 
 instance PrettyA MIRPot where
   prettyA = ppMIRPot

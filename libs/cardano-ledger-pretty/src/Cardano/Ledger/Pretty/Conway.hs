@@ -52,7 +52,7 @@ import Cardano.Ledger.Pretty (
   PrettyA (..),
   ppAuxiliaryDataHash,
   ppCoin,
-  ppConstitutionalDelegCert,
+  ppGenesisDelegCert,
   ppKeyHash,
   ppNetwork,
   ppPoolCert,
@@ -128,7 +128,7 @@ instance PrettyA (ConwayDelegCert c) where
 ppConwayTxCert :: ConwayTxCert c -> PDoc
 ppConwayTxCert (ConwayTxCertDeleg dc) = ppSexp "ConwayTxCertDeleg" [prettyA dc]
 ppConwayTxCert (ConwayTxCertPool pc) = ppSexp "ConwayTxCertPool" [ppPoolCert pc]
-ppConwayTxCert (ConwayTxCertConstitutional gdc) = ppSexp "ConwayTxCertConstitutional" [ppConstitutionalDelegCert gdc]
+ppConwayTxCert (ConwayTxCertConstitutional gdc) = ppSexp "ConwayTxCertConstitutional" [ppGenesisDelegCert gdc]
 
 ppConwayTxBody ::
   forall era.
