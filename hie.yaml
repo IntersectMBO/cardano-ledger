@@ -114,9 +114,6 @@ cradle:
     - path: "eras/shelley/test-suite/bench/Cardano/Ledger/Shelley/Bench/Rewards.hs"
       component: "cardano-ledger-shelley-test:bench:mainbench"
 
-    - path: "eras/shelley-ma/impl/src"
-      component: "lib:cardano-ledger-shelley-ma"
-
     - path: "eras/shelley-ma/test-suite/src"
       component: "lib:cardano-ledger-shelley-ma-test"
 

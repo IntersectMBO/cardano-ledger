@@ -32,7 +32,6 @@ packages:
   eras/mary/impl
   eras/shelley/impl
   eras/shelley/test-suite
-  eras/shelley-ma/impl
   eras/shelley-ma/test-suite
   libs/cardano-ledger-api
   libs/cardano-ledger-core
