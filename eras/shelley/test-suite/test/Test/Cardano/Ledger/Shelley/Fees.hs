@@ -238,7 +238,7 @@ txbRegisterStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [ShelleyTxCertDeleg (RegKey aliceSHK)]
+    , stbCerts = StrictSeq.fromList [ShelleyTxCertDeleg (ShelleyRegCert aliceSHK)]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
@@ -269,7 +269,7 @@ txbDelegateStake =
     , stbCerts =
         StrictSeq.fromList
           [ ShelleyTxCertDeleg
-              (Delegate $ Delegation bobSHK alicePoolKH)
+              (ShelleyDelegCert bobSHK alicePoolKH)
           ]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
@@ -301,7 +301,7 @@ txbDeregisterStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [ShelleyTxCertDeleg (DeRegKey aliceSHK)]
+    , stbCerts = StrictSeq.fromList [ShelleyTxCertDeleg (ShelleyUnRegCert aliceSHK)]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10

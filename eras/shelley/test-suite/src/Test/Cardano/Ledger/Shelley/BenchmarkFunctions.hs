@@ -234,7 +234,7 @@ firstStakeKeyCred = stakeKeyToCred stakeKeyOne
 stakeKeyRegistrations :: [KeyPair 'Staking B_Crypto] -> StrictSeq (TxCert B)
 stakeKeyRegistrations keys =
   StrictSeq.fromList $
-    fmap (ShelleyTxCertDeleg . RegKey . (KeyHashObj . hashKey . vKey)) keys
+    fmap (ShelleyTxCertDeleg . ShelleyRegCert . KeyHashObj . hashKey . vKey) keys
 
 -- Create a transaction body given a sequence of certificates.
 -- It spends the genesis coin given by the index ix.
@@ -311,7 +311,7 @@ txbDeRegStakeKey x y =
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.fromList [ShelleyTxOut aliceAddr (inject $ Coin 100)])
     ( StrictSeq.fromList $
-        fmap (ShelleyTxCertDeleg . DeRegKey . stakeKeyToCred) (stakeKeys x y)
+        fmap (ShelleyTxCertDeleg . ShelleyUnRegCert . stakeKeyToCred) (stakeKeys x y)
     )
     (Withdrawals Map.empty)
     (Coin 0)
@@ -515,7 +515,7 @@ txbDelegate n m =
     (StrictSeq.fromList [ShelleyTxOut aliceAddr (inject $ Coin 100)])
     ( StrictSeq.fromList $
         fmap
-          (\ks -> ShelleyTxCertDeleg $ Delegate (Delegation (stakeKeyToCred ks) firstStakePoolKeyHash))
+          (\ks -> ShelleyTxCertDeleg $ ShelleyDelegCert (stakeKeyToCred ks) firstStakePoolKeyHash)
           (stakeKeys n m)
     )
     (Withdrawals Map.empty)

@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -67,11 +68,13 @@ scriptStakeCred ::
   ShelleyEraTxCert era =>
   TxCert era ->
   Maybe (ScriptHash (EraCrypto era))
-scriptStakeCred (ShelleyTxCertDeleg (DeRegKey (KeyHashObj _))) = Nothing
-scriptStakeCred (ShelleyTxCertDeleg (DeRegKey (ScriptHashObj hs))) = Just hs
-scriptStakeCred (ShelleyTxCertDeleg (Delegate (Delegation (KeyHashObj _) _))) = Nothing
-scriptStakeCred (ShelleyTxCertDeleg (Delegate (Delegation (ScriptHashObj hs) _))) = Just hs
-scriptStakeCred _ = Nothing
+scriptStakeCred = \case
+  ShelleyTxCertDeleg delegCert ->
+    case delegCert of
+      ShelleyRegCert _ -> Nothing
+      ShelleyUnRegCert cred -> scriptCred cred
+      ShelleyDelegCert cred _ -> scriptCred cred
+  _ -> Nothing
 
 scriptCred :: Credential kr c -> Maybe (ScriptHash c)
 scriptCred (KeyHashObj _) = Nothing

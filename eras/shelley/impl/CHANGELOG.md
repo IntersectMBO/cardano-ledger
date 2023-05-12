@@ -7,7 +7,7 @@
   `Cardano.Ledger.Shelley.Delegation.PoolParams` modules
 * Added `Cardano.Ledger.Shelley.TxCert` module
 * Make `DCert` parameterized on `era` instead of `c`rypto and rename it as `ShelleyTxCert`:
-  * `DCertDelegCert` -> `ShelleyTxCertDelegCert`
+  * `DCertDelegCert` -> `ShelleyTxCertDeleg`
   * `DCertPool` -> `ShelleyTxCertPool`
   * `DCertGenesis` -> `ShelleyTxCertGenesis`
   * `DCertMir` -> `ShelleyTxCertMir`
@@ -18,6 +18,10 @@
 * Remove `certsTxBodyL` and `certsTxBodyG` from `ShelleyEraTxBody`. Former migrated to `EraTxBody`.
 * Add helper functions `shelleyTxCertDelegDecoder`, `commonTxCertDecoder`, `encodeShelleyDelegCert`,
   `encodePoolCert` and `encodeConstitutionalCert`
+* Deprecate:
+  * `RegKey` in favor of `ShelleyRegCert`
+  * `DeRegKey` in favor of `ShelleyUnRegCert`
+  * `Delegate` in favor of `ShelleyDelegCert`
 
 ## 1.2.0.0
 

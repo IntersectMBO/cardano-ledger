@@ -262,7 +262,7 @@ delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
   case c of
-    ShelleyTxCertDeleg (RegKey hk) -> do
+    ShelleyTxCertDeleg (ShelleyRegCert hk) -> do
       -- (hk ∉ dom (rewards ds))
       UM.notMember hk (rewards ds) ?! StakeKeyAlreadyRegisteredDELEG hk
       let u1 = dsUnified ds
@@ -270,7 +270,7 @@ delegationTransition = do
           u2 = RewardDeposits u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
           u3 = Ptrs u2 UM.∪ (ptr, hk)
       pure (ds {dsUnified = u3})
-    ShelleyTxCertDeleg (DeRegKey hk) -> do
+    ShelleyTxCertDeleg (ShelleyUnRegCert hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeKeyNotRegisteredDELEG hk
@@ -283,7 +283,7 @@ delegationTransition = do
           u3 = Ptrs u2 UM.⋫ Set.singleton hk
           u4 = ds {dsUnified = u3}
       pure u4
-    ShelleyTxCertDeleg (Delegate (Delegation hk dpool)) -> do
+    ShelleyTxCertDeleg (ShelleyDelegCert hk dpool) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeDelegationImpossibleDELEG hk

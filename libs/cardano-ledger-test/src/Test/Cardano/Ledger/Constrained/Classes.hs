@@ -50,7 +50,7 @@ import Test.Cardano.Ledger.Generic.Proof (
   ShelleyEra,
   unReflect,
  )
-import Test.Cardano.Ledger.Shelley.Generator.Constants (defaultConstants)
+import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Update (genShelleyPParamsUpdate)
 import Test.QuickCheck (
   Arbitrary (..),

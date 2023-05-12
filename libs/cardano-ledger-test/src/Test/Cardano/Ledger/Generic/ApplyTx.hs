@@ -85,7 +85,7 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls $ freeV1CostModels
+  [ Costmdls freeV1CostModels
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000
@@ -144,20 +144,20 @@ applyTxBody proof count model tx = List.foldl' (applyField proof count) model (a
 
 applyField :: Reflect era => Proof era -> Int -> Model era -> TxBodyField era -> Model era
 applyField proof count model field = case field of
-  (Inputs txins) -> model {mUTxO = Map.withoutKeys (mUTxO model) txins}
-  (Outputs seqo) -> case Map.lookup count (mIndex model) of
+  Inputs txins -> model {mUTxO = Map.withoutKeys (mUTxO model) txins}
+  Outputs seqo -> case Map.lookup count (mIndex model) of
     Nothing -> error ("Output not found phase1: " ++ show (mIndex model))
     Just (TxId hash) -> model {mUTxO = Map.union newstuff (mUTxO model)}
       where
         newstuff = additions hash minBound (toList seqo)
-  (Txfee coin) -> model {mFees = coin <+> (mFees model)}
-  (Certs seqc) -> List.foldl' applyCert model (toList seqc)
-  (Withdrawals' (Withdrawals m)) -> Map.foldlWithKey' (applyWithdrawals proof) model m
+  Txfee coin -> model {mFees = coin <+> mFees model}
+  Certs seqc -> List.foldl' applyCert model (toList seqc)
+  Withdrawals' (Withdrawals m) -> Map.foldlWithKey' (applyWithdrawals proof) model m
   _other -> model
 
 applyWithdrawals :: Proof era -> Model era -> RewardAcnt (EraCrypto era) -> Coin -> Model era
 applyWithdrawals _proof model (RewardAcnt _network cred) coin =
-  model {mRewards = Map.adjust (\c -> c <-> coin) cred (mRewards model)}
+  model {mRewards = Map.adjust (<-> coin) cred (mRewards model)}
 
 applyCert :: forall era. Reflect era => Model era -> TxCert era -> Model era
 applyCert = case reify @era of
@@ -170,7 +170,7 @@ applyCert = case reify @era of
 
 applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyTxCert era -> Model era
 applyShelleyCert model dcert = case dcert of
-  (ShelleyTxCertDelegCert (RegKey x)) ->
+  ShelleyTxCertDelegCert (ShelleyRegCert x) ->
     model
       { mRewards = Map.insert x (Coin 0) (mRewards model)
       , mKeyDeposits = Map.insert x (pp ^. ppKeyDepositL) (mKeyDeposits model)
@@ -178,7 +178,7 @@ applyShelleyCert model dcert = case dcert of
       }
     where
       pp = mPParams model
-  (ShelleyTxCertDelegCert (DeRegKey x)) -> case Map.lookup x (mRewards model) of
+  ShelleyTxCertDelegCert (ShelleyUnRegCert x) -> case Map.lookup x (mRewards model) of
     Nothing -> error ("DeRegKey not in rewards: " <> show (pcCredential x))
     Just (Coin 0) ->
       model
@@ -187,13 +187,11 @@ applyShelleyCert model dcert = case dcert of
         , mDeposited = mDeposited model <-> keyDeposit
         }
       where
-        keyDeposit = case Map.lookup x (mKeyDeposits model) of
-          Nothing -> mempty
-          Just c -> c
+        keyDeposit = Map.findWithDefault mempty x (mKeyDeposits model)
     Just (Coin _n) -> error "DeRegKey with non-zero balance"
-  (ShelleyTxCertDelegCert (Delegate (Delegation cred hash))) ->
+  ShelleyTxCertDelegCert (ShelleyDelegCert cred hash) ->
     model {mDelegations = Map.insert cred hash (mDelegations model)}
-  (ShelleyTxCertPool (RegPool poolparams)) ->
+  ShelleyTxCertPool (RegPool poolparams) ->
     model
       { mPoolParams = Map.insert hk poolparams (mPoolParams model)
       , mDeposited =
@@ -202,22 +200,22 @@ applyShelleyCert model dcert = case dcert of
             else mDeposited model <+> pp ^. ppPoolDepositL
       , mPoolDeposits -- Only add if it isn't already there
         =
-          case Map.lookup hk (mPoolDeposits model) of
-            Just _ -> mPoolDeposits model
-            Nothing -> Map.insert hk (pp ^. ppPoolDepositL) (mPoolDeposits model)
+          if Map.member hk (mPoolDeposits model)
+            then mPoolDeposits model
+            else Map.insert hk (pp ^. ppPoolDepositL) (mPoolDeposits model)
       }
     where
       hk = ppId poolparams
       pp = mPParams model
-  (ShelleyTxCertPool (RetirePool keyhash epoch)) ->
+  ShelleyTxCertPool (RetirePool keyhash epoch) ->
     model
       { mRetiring = Map.insert keyhash epoch (mRetiring model)
       , mDeposited = mDeposited model <-> pp ^. ppPoolDepositL
       }
     where
       pp = mPParams model
-  (ShelleyTxCertGenesis _) -> model
-  (ShelleyTxCertMir _) -> model
+  ShelleyTxCertGenesis _ -> model
+  ShelleyTxCertMir _ -> model
 
 -- =========================================================
 -- What to do if the second phase does not validatate.

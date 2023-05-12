@@ -520,7 +520,10 @@ refscriptForDelegCert pf =
           , RefInputs' [anotherTxIn]
           , Collateral' [yetAnotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]]
-          , Certs' [ShelleyTxCertDeleg (DeRegKey (ScriptHashObj (hashScript @era $ alwaysAlt 2 pf)))]
+          , Certs'
+              [ ShelleyTxCertDeleg $
+                  ShelleyUnRegCert (ScriptHashObj (hashScript @era $ alwaysAlt 2 pf))
+              ]
           , Txfee (Coin 5)
           , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] certRedeemers mempty)
           ]

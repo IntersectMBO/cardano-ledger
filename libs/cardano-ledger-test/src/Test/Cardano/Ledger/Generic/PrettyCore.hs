@@ -1384,9 +1384,9 @@ pcPoolParams x =
 instance PrettyC (PoolParams era) era where prettyC _ = pcPoolParams
 
 pcDelegCert :: ShelleyDelegCert c -> PDoc
-pcDelegCert (RegKey cred) = ppSexp "RegKey" [pcCredential cred]
-pcDelegCert (DeRegKey cred) = ppSexp "DeRegKey" [pcCredential cred]
-pcDelegCert (Delegate (Delegation x y)) = ppSexp "Delegate" [pcCredential x, pcKeyHash y]
+pcDelegCert (ShelleyRegCert cred) = ppSexp "ShelleyRegCert" [pcCredential cred]
+pcDelegCert (ShelleyUnRegCert cred) = ppSexp "ShelleyUnRegCert" [pcCredential cred]
+pcDelegCert (ShelleyDelegCert x y) = ppSexp "ShelleyDelegCert" [pcCredential x, pcKeyHash y]
 
 instance c ~ EraCrypto era => PrettyC (ShelleyDelegCert c) era where prettyC _ = pcDelegCert
 

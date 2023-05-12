@@ -230,9 +230,9 @@ scriptCredentialCertsRatio certs =
       length $
         filter
           ( \case
-              ShelleyTxCertDeleg (RegKey (ScriptHashObj _)) -> True
-              ShelleyTxCertDeleg (DeRegKey (ScriptHashObj _)) -> True
-              ShelleyTxCertDeleg (Delegate (Delegation (ScriptHashObj _) _)) -> True
+              ShelleyTxCertDeleg (ShelleyRegCert (ScriptHashObj _)) -> True
+              ShelleyTxCertDeleg (ShelleyUnRegCert (ScriptHashObj _)) -> True
+              ShelleyTxCertDeleg (ShelleyDelegCert (ScriptHashObj _) _) -> True
               _ -> False
           )
           certs

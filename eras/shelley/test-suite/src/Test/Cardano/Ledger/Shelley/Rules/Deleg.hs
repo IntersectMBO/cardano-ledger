@@ -79,7 +79,7 @@ tests =
   where
     delegProp :: DelegEnv era -> SourceSignalTarget (ShelleyDELEG era) -> Property
     delegProp denv delegSst =
-      conjoin $
+      conjoin
         [ keyRegistration delegSst
         , keyDeRegistration delegSst
         , keyDelegation delegSst
@@ -98,13 +98,13 @@ tests =
 keyRegistration :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyRegistration
   SourceSignalTarget
-    { signal = (ShelleyTxCertDeleg (RegKey hk))
+    { signal = (ShelleyTxCertDeleg (ShelleyRegCert hk))
     , target = targetSt
     } =
     conjoin
       [ counterexample
           "a newly registered key should have a reward account"
-          ((UM.member hk (rewards targetSt)) :: Bool)
+          (UM.member hk (rewards targetSt))
       , counterexample
           "a newly registered key should have a reward account with 0 balance"
           ((UM.rdReward <$> UM.lookup hk (rewards targetSt)) == Just mempty)
@@ -115,16 +115,16 @@ keyRegistration _ = property ()
 keyDeRegistration :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDeRegistration
   SourceSignalTarget
-    { signal = ShelleyTxCertDeleg (DeRegKey hk)
+    { signal = ShelleyTxCertDeleg (ShelleyUnRegCert hk)
     , target = targetSt
     } =
     conjoin
       [ counterexample
           "a deregistered stake key should no longer be in the rewards mapping"
-          ((UM.notMember hk (rewards targetSt)) :: Bool)
+          (UM.notMember hk (rewards targetSt))
       , counterexample
           "a deregistered stake key should no longer be in the delegations mapping"
-          ((UM.notMember hk (delegations targetSt)) :: Bool)
+          (UM.notMember hk (delegations targetSt))
       ]
 keyDeRegistration _ = property ()
 
@@ -132,17 +132,17 @@ keyDeRegistration _ = property ()
 keyDelegation :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDelegation
   SourceSignalTarget
-    { signal = ShelleyTxCertDeleg (Delegate (Delegation from to))
+    { signal = ShelleyTxCertDeleg (ShelleyDelegCert from to)
     , target = targetSt
     } =
     let fromImage = eval (rng (Set.singleton from `UM.domRestrictedView` delegations targetSt))
      in conjoin
           [ counterexample
               "a delegated key should have a reward account"
-              ((UM.member from (rewards targetSt)) :: Bool)
+              (UM.member from (rewards targetSt))
           , counterexample
               "a registered stake credential should be delegated"
-              ((eval (to ∈ fromImage)) :: Bool)
+              (eval (to ∈ fromImage) :: Bool)
           , counterexample
               "a registered stake credential should be uniquely delegated"
               (Set.size fromImage == 1)
@@ -185,19 +185,17 @@ checkInstantaneousRewards
               (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target))
           , counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
-              ( if (HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv)
+              ( if HardForks.allowMIRTransfer . view ppProtocolVersionL $ ppDE denv
                   then -- In the Alonzo era, repeated fields are added
 
-                    ( (fold $ iRReserves $ dsIRewards source)
-                        `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRReserves $ dsIRewards target))
-                    )
+                    fold (iRReserves $ dsIRewards source)
+                      `addDeltaCoin` fold irwd
+                      == fold (iRReserves $ dsIRewards target)
                   else -- Prior to the Alonzo era, repeated fields overridden
 
-                    ( (fold $ (iRReserves $ dsIRewards source) Map.\\ irwd)
-                        `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRReserves $ dsIRewards target))
-                    )
+                    fold (iRReserves (dsIRewards source) Map.\\ irwd)
+                      `addDeltaCoin` fold irwd
+                      == fold (iRReserves $ dsIRewards target)
               )
           ]
       TxCertMir (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
@@ -210,16 +208,14 @@ checkInstantaneousRewards
               ( if HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
                   then -- In the Alonzo era, repeated fields are added
 
-                    ( (fold $ iRTreasury $ dsIRewards source)
-                        `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRTreasury $ dsIRewards target))
-                    )
+                    fold (iRTreasury $ dsIRewards source)
+                      `addDeltaCoin` fold irwd
+                      == fold (iRTreasury $ dsIRewards target)
                   else -- Prior to the Alonzo era, repeated fields overridden
 
-                    ( (fold $ (iRTreasury $ dsIRewards source) Map.\\ irwd)
-                        `addDeltaCoin` (fold irwd)
-                        == (fold $ (iRTreasury $ dsIRewards target))
-                    )
+                    fold (iRTreasury (dsIRewards source) Map.\\ irwd)
+                      `addDeltaCoin` fold irwd
+                      == fold (iRTreasury $ dsIRewards target)
               )
           ]
       _ -> property ()

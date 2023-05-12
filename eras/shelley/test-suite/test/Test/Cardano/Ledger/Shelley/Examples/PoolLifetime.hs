@@ -176,7 +176,7 @@ initStPoolLifetime = initSt initUTxO
 aliceCoinEx1 :: Coin
 aliceCoinEx1 =
   aliceInitCoin
-    <-> (Coin 250)
+    <-> Coin 250
     <-> ((3 :: Integer) <×> Coin 7)
     <-> Coin 3
 
@@ -195,9 +195,9 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
-        ( [ ShelleyTxCertDeleg (RegKey Cast.aliceSHK)
-          , ShelleyTxCertDeleg (RegKey Cast.bobSHK)
-          , ShelleyTxCertDeleg (RegKey Cast.carlSHK)
+        ( [ ShelleyTxCertDeleg (ShelleyRegCert Cast.aliceSHK)
+          , ShelleyTxCertDeleg (ShelleyRegCert Cast.bobSHK)
+          , ShelleyTxCertDeleg (ShelleyRegCert Cast.carlSHK)
           , TxCertPool (RegPool Cast.alicePoolParams)
           ]
             ++ [ ShelleyTxCertMir
@@ -306,8 +306,8 @@ txbodyEx2 =
           ]
     , stbCerts =
         StrictSeq.fromList
-          [ ShelleyTxCertDeleg (Delegate $ Delegation Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
-          , ShelleyTxCertDeleg (Delegate $ Delegation Cast.bobSHK (aikColdKeyHash Cast.alicePoolKeys))
+          [ ShelleyTxCertDeleg (ShelleyDelegCert Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
+          , ShelleyTxCertDeleg (ShelleyDelegCert Cast.bobSHK (aikColdKeyHash Cast.alicePoolKeys))
           ]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = feeTx2
@@ -473,7 +473,7 @@ txbodyEx4 =
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)]
     , stbCerts =
         StrictSeq.fromList
-          [ShelleyTxCertDeleg (Delegate $ Delegation Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))]
+          [ShelleyTxCertDeleg (ShelleyDelegCert Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = feeTx4
     , stbTTL = SlotNo 500
@@ -865,7 +865,7 @@ txbodyEx10 =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.singleton $ ShelleyTxOut Cast.bobAddr (Val.inject bobAda10))
-    (StrictSeq.fromList [ShelleyTxCertDeleg (DeRegKey Cast.bobSHK)])
+    (StrictSeq.fromList [ShelleyTxCertDeleg (ShelleyUnRegCert Cast.bobSHK)])
     (Withdrawals $ Map.singleton (RewardAcnt Testnet Cast.bobSHK) bobRAcnt8)
     feeTx10
     (SlotNo 500)
