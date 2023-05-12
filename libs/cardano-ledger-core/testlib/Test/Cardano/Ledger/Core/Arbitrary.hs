@@ -629,3 +629,15 @@ instance Crypto c => Arbitrary (Stake c) where
         let pair = (,) <$> arbitrary <*> (CompactCoin <$> genWord64 n)
         list <- frequency [(1, pure []), (99, vectorOf n pair)]
         pure (Map.fromList list)
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.Core.TxCert ----------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+instance Crypto c => Arbitrary (PoolCert c) where
+  arbitrary =
+    oneof
+      [ RegPool <$> arbitrary
+      , RetirePool <$> arbitrary <*> arbitrary
+      ]
+  shrink = genericShrink

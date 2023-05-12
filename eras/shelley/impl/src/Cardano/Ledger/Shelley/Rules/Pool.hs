@@ -53,6 +53,7 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxCert (
   isInstantaneousRewards,
   pattern ShelleyTxCertDeleg,
+  pattern TxCertGenesisDeleg,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
@@ -236,7 +237,7 @@ poolDelegationTransition = do
     ShelleyTxCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps
-    TxCertGenesis _ -> do
+    TxCertGenesisDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 2
       pure ps
     _ | isInstantaneousRewards c -> do

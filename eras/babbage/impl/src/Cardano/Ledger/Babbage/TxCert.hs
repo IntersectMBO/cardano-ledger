@@ -21,11 +21,6 @@ instance Crypto c => EraTxCert (BabbageEra c) where
   getTxCertPool (ShelleyTxCertPool c) = Just c
   getTxCertPool _ = Nothing
 
-  mkTxCertGenesis = ShelleyTxCertGenesis
-
-  getTxCertGenesis (ShelleyTxCertGenesis c) = Just c
-  getTxCertGenesis _ = Nothing
-
 instance Crypto c => ShelleyEraTxCert (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (BabbageEra StandardCrypto) #-}
 
@@ -33,6 +28,11 @@ instance Crypto c => ShelleyEraTxCert (BabbageEra c) where
 
   getShelleyTxCertDeleg (ShelleyTxCertDelegCert c) = Just c
   getShelleyTxCertDeleg _ = Nothing
+
+  mkTxCertGenesisDeleg = ShelleyTxCertGenesisDeleg
+
+  getTxCertGenesisDeleg (ShelleyTxCertGenesisDeleg c) = Just c
+  getTxCertGenesisDeleg _ = Nothing
 
   mkTxCertMir = ShelleyTxCertMir
 

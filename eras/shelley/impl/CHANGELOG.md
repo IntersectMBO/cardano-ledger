@@ -31,6 +31,7 @@
   * `delegCWitness` - no longer used.
   * `propWits` - will become an internal function in the future version
 * `validateNeededWitnesses` no longer accepts `witsVKeyNeeded` as an argument.
+* Move `ConstitutionalDelegCert` from `cardano-ledger-core` as `GenesisDelegCert`.
 
 ## 1.2.0.0
 
