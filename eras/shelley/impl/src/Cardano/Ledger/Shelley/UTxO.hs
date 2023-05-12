@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.CertState (CertState (..), PState (..), lookupDepositDState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..), StakeCredential, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   ShelleyEraTxCert,
-  requiresVKeyWitness,
   pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -72,13 +71,15 @@ scriptStakeCred = \case
   ShelleyTxCertDeleg delegCert ->
     case delegCert of
       ShelleyRegCert _ -> Nothing
-      ShelleyUnRegCert cred -> scriptCred cred
-      ShelleyDelegCert cred _ -> scriptCred cred
+      ShelleyUnRegCert cred -> credScriptHash cred
+      ShelleyDelegCert cred _ -> credScriptHash cred
   _ -> Nothing
+{-# DEPRECATED scriptStakeCred "In favor of `getScriptWitnessTxCert`" #-}
 
 scriptCred :: Credential kr c -> Maybe (ScriptHash c)
-scriptCred (KeyHashObj _) = Nothing
-scriptCred (ScriptHashObj hs) = Just hs
+scriptCred = credScriptHash
+{-# DEPRECATED scriptCred "In favor of `credScriptHash`" #-}
+
 
 -- | Computes the set of script hashes required to unlock the transaction inputs
 -- and the withdrawals.
@@ -119,9 +120,9 @@ getShelleyScriptsNeeded u txBody =
   ShelleyScriptsNeeded
     ( scriptHashes
         `Set.union` Set.fromList
-          [sh | w <- withdrawals, Just sh <- [scriptCred (getRwdCred w)]]
+          [sh | w <- withdrawals, Just sh <- [credScriptHash (getRwdCred w)]]
         `Set.union` Set.fromList
-          [sh | c <- certificates, requiresVKeyWitness c, Just sh <- [scriptStakeCred c]]
+          [sh | c <- certificates, Just sh <- [getScriptWitnessTxCert c]]
     )
   where
     withdrawals = Map.keys (unWithdrawals (txBody ^. withdrawalsTxBodyL))

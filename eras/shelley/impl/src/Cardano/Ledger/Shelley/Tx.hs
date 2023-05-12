@@ -8,7 +8,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -62,9 +61,9 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness), asWitness)
+import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, mkMemoBytes, pattern Memo)
@@ -81,6 +80,7 @@ import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import Data.Map.Strict (Map)
+import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (
   StrictMaybe (..),
   maybeToStrictMaybe,
@@ -399,10 +399,8 @@ extractKeyHashWitnessSet ::
   forall (r :: KeyRole) c.
   [Credential r c] ->
   Set (KeyHash 'Witness c)
-extractKeyHashWitnessSet = foldr accum Set.empty
-  where
-    accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans
-    accum _other ans = ans
+extractKeyHashWitnessSet = Set.fromList . mapMaybe credKeyHashWitness
+{-# DEPRECATED extractKeyHashWitnessSet "In favor of `credKeyHashWitness`" #-}
 
 -- | Minimum fee calculation
 shelleyMinFeeTx :: EraTx era => PParams era -> Tx era -> Coin

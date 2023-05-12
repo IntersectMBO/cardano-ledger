@@ -5,12 +5,22 @@ module Cardano.Ledger.Mary.TxCert () where
 
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
-import Cardano.Ledger.Shelley.TxCert (EraTxCert (..), ShelleyEraTxCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxCert (
+  EraTxCert (..),
+  ShelleyEraTxCert (..),
+  ShelleyTxCert (..),
+  getScriptWitnessShelleyTxCert,
+  getVKeyWitnessShelleyTxCert,
+ )
 
 instance Crypto c => EraTxCert (MaryEra c) where
   {-# SPECIALIZE instance EraTxCert (MaryEra StandardCrypto) #-}
 
   type TxCert (MaryEra c) = ShelleyTxCert (MaryEra c)
+
+  getVKeyWitnessTxCert = getVKeyWitnessShelleyTxCert
+
+  getScriptWitnessTxCert = getScriptWitnessShelleyTxCert
 
   mkTxCertPool = ShelleyTxCertPool
 

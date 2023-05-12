@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -34,6 +35,7 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
 )
 where
 
+import Data.Foldable (foldr')
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (VerKeyDSIGN))
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
@@ -42,12 +44,11 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   invalidKey,
   quorum,
-  strictMaybeToMaybe,
   (==>),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness)
 import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Keys (
   DSignable,
@@ -80,7 +81,6 @@ import Cardano.Ledger.Shelley.Rules.Utxo (
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx,
-  extractKeyHashWitnessSet,
   witsFromTxWitnesses,
  )
 import Cardano.Ledger.Shelley.TxBody (
@@ -91,10 +91,7 @@ import Cardano.Ledger.Shelley.TxBody (
   unWithdrawals,
  )
 import Cardano.Ledger.Shelley.TxCert (
-  delegCWitness,
   isInstantaneousRewards,
-  requiresVKeyWitness,
-  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.UTxO (
@@ -503,33 +500,28 @@ witsVKeyNeeded utxo' tx genDelegs =
     wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
       where
-        accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
+        accum key _ !ans =
+          case credKeyHashWitness (getRwdCred key) of
+            Nothing -> ans
+            Just vkeyWit -> Set.insert vkeyWit ans
     owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr accum Set.empty (txBody ^. certsTxBodyL)
+    owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
-        accum (TxCertPool (RegPool pool)) ans =
+        accum (TxCertPool (RegPool pool)) !ans =
           Set.union
             (Set.map asWitness (ppOwners pool))
             ans
         accum _cert ans = ans
-    cwitness (ShelleyTxCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
-    cwitness (TxCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
-    cwitness (TxCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
-    cwitness c = error $ show c ++ " does not have a witness"
-    -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
-    -- before the call to `cwitness`, so this error should never be reached.
-
     certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyL)
+    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
-        accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
-        accum _cert ans = ans
+        accum cert !ans =
+          case getVKeyWitnessTxCert cert of
+            Nothing -> ans
+            Just vkeyWit -> Set.insert vkeyWit ans
     updateKeys :: Set (KeyHash 'Witness (EraCrypto era))
     updateKeys =
-      asWitness
-        `Set.map` propWits
-          (strictMaybeToMaybe $ txBody ^. updateTxBodyL)
-          genDelegs
+      asWitness `Set.map` propWits (txBody ^. updateTxBodyL) genDelegs
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
@@ -594,11 +586,11 @@ instance
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
-  Maybe (Update era) ->
+  StrictMaybe (Update era) ->
   GenDelegs (EraCrypto era) ->
   Set (KeyHash 'Witness (EraCrypto era))
-propWits Nothing _ = Set.empty
-propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
+propWits SNothing _ = Set.empty
+propWits (SJust (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys
   where
     updateKeys' = eval (Map.keysSet pup ◁ genDelegs)

@@ -22,6 +22,13 @@
   * `RegKey` in favor of `ShelleyRegCert`
   * `DeRegKey` in favor of `ShelleyUnRegCert`
   * `Delegate` in favor of `ShelleyDelegCert`
+* Addition of `getVKeyWitnessShelleyTxCert` and `getScriptWitnessShelleyTxCert`
+* Deprecate:
+  * `extractKeyHashWitnessSet` in favor of `credKeyHashWitness`
+  * `scriptCred` in favor of `credScriptHash`
+  * `scriptStakeCred` in favor of `getScriptWitnessTxCert`
+  * `requiresVKeyWitness` in favor of `getVKeyWitnessTxCert`
+  * `delegCWitness`
 
 ## 1.2.0.0
 
