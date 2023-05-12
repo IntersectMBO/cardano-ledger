@@ -71,14 +71,25 @@ instance Crypto c => EraTxCert (ConwayEra c) where
   getScriptWitnessTxCert = getScriptWitnessConwayTxCert
 
   mkTxCertPool = ConwayTxCertPool
-  getTxCertPool (ConwayTxCertPool x) = Just x
-  getTxCertPool _ = Nothing
+  getRegPoolTxCert (ConwayTxCertPool x) = Just x
+  getRegPoolTxCert _ = Nothing
 
 instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
-  mkShelleyTxCertDeleg = ConwayTxCertDeleg . fromShelleyDelegCert
+  mkRegDepositTxCert :: StakeCredential (EraCrypto era) -> Coin -> TxCert era
+  getRegDepositTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era), Coin)
 
-  getShelleyTxCertDeleg (ConwayTxCertDeleg conwayDelegCert) = toShelleyDelegCert conwayDelegCert
-  getShelleyTxCertDeleg _ = Nothing
+  mkUnRegDepositTxCert :: StakeCredential (EraCrypto era) -> Coin -> TxCert era
+  getUnRegDepositTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era), Coin)
+
+  mkDelegTxCert ::
+    StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> TxCert era
+  getDelegTxCert ::
+    TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era))
+
+  mkRegDepositDelegTxCert ::
+    StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> Coin -> TxCert era
+  getRegDepositDelegTxCert ::
+    TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era), Coin)
 
   mkTxCertGenesisDeleg = notSupportedInThisEra
   getTxCertGenesisDeleg _ = Nothing
@@ -86,12 +97,30 @@ instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   mkTxCertMir = notSupportedInThisEra
   getTxCertMir = const Nothing
 
-class ShelleyEraTxCert era => ConwayEraTxCert era where
-  mkConwayTxCertDeleg :: ConwayDelegCert (EraCrypto era) -> TxCert era
-  getConwayTxCertDeleg :: TxCert era -> Maybe (ConwayDelegCert (EraCrypto era))
+class EraTxCert era => ConwayEraTxCert era where
+  mkRegDepositTxCert :: StakeCredential (EraCrypto era) -> Coin -> TxCert era
+  getRegDepositTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era), Coin)
 
-  mkConwayTxCertCommittee :: ConwayCommitteeCert (EraCrypto era) -> TxCert era
-  getConwayTxCertCommittee :: TxCert era -> Maybe (ConwayCommitteeCert (EraCrypto era))
+  mkUnRegDepositTxCert :: StakeCredential (EraCrypto era) -> Coin -> TxCert era
+  getUnRegDepositTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era), Coin)
+
+  mkDelegTxCert ::
+    StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> TxCert era
+  getDelegTxCert ::
+    TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era))
+
+  mkRegDepositDelegTxCert ::
+    StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> Coin -> TxCert era
+  getRegDepositDelegTxCert ::
+    TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era), Coin)
+
+  mkRegCommitteeHotTxCert ::
+    KeyHash 'Committee (EraCrypto era) -> KeyHash 'CommitteeCold (EraCrypto era) -> TxCert era
+  getRegCommitteeHotTxCert ::
+    TxCert era -> Maybe (KeyHash 'Committee (EraCrypto era), KeyHash 'CommitteeCold (EraCrypto era))
+
+  mkUnRegCommitteeHotTxCert :: KeyHash 'Committee (EraCrypto era) -> TxCert era
+  getUnRegCommitteeHotTxCert :: TxCert era -> Maybe (KeyHash 'Committee (EraCrypto era))
 
 instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkConwayTxCertDeleg = ConwayTxCertDeleg
@@ -131,6 +160,21 @@ data ConwayDelegCert c
   | -- | De-Register the staking credential. Deposit, if present, must match the amount
     -- that was left as a deposit upon stake credential registration.
     ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
+  | -- | Redelegate to another delegatee. Staking credential must already be registered.
+    ConwayDelegCert !(StakeCredential c) !(Delegatee c)
+  | -- | This is a new type of certificate, which allows to register staking credential
+    -- and delegate within a single certificate. Deposit is required and must match the
+    -- expected deposit amount specified by `ppKeyDepositL` in the protocol parameters.
+    ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
+  deriving (Show, Generic, Eq)
+
+data ConwayDelegCert c
+  = -- | Register staking credential. Deposit, when present, must match the expected deposit
+    -- amount specified by `ppKeyDepositL` in the protocol parameters.
+    ConwayRegCert !(StakeCredential c) !Coin
+  | -- | De-Register the staking credential. Deposit, if present, must match the amount
+    -- that was left as a deposit upon stake credential registration.
+    ConwayUnRegCert !(StakeCredential c) !Coin
   | -- | Redelegate to another delegatee. Staking credential must already be registered.
     ConwayDelegCert !(StakeCredential c) !(Delegatee c)
   | -- | This is a new type of certificate, which allows to register staking credential

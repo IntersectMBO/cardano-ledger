@@ -18,7 +18,6 @@
 module Cardano.Ledger.Shelley.TxBody (
   ShelleyDelegCert,
   Delegation (..),
-  GenesisDelegCert (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),

@@ -10,7 +10,8 @@
 
 module Cardano.Ledger.Core.TxCert (
   EraTxCert (..),
-  pattern TxCertPool,
+  pattern RegPoolTxCert,
+  pattern RetirePoolTxCert,
   Delegation (..),
   PoolCert (..),
   poolCWitness,
@@ -51,14 +52,25 @@ class
   -- | Return a ScriptHash for certificate types that require a witness
   getScriptWitnessTxCert :: TxCert era -> Maybe (ScriptHash (EraCrypto era))
 
-  mkTxCertPool :: PoolCert (EraCrypto era) -> TxCert era
+  mkRegPoolTxCert :: PoolParams (EraCrypto era) -> TxCert era
+  getRegPoolTxCert :: TxCert era -> Maybe (PoolParams (EraCrypto era))
 
-  getTxCertPool :: TxCert era -> Maybe (PoolCert (EraCrypto era))
+  mkRetirePoolTxCert :: KeyHash 'StakePool (EraCrypto era) -> EpochNo -> TxCert era
+  getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash 'StakePool (EraCrypto era), EpochNo)
 
-pattern TxCertPool :: EraTxCert era => PoolCert (EraCrypto era) -> TxCert era
-pattern TxCertPool d <- (getTxCertPool -> Just d)
+pattern RegPoolTxCert :: EraTxCert era => PoolParams (EraCrypto era) -> TxCert era
+pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)
   where
-    TxCertPool d = mkTxCertPool d
+    RegPoolTxCert d = mkRegPoolTxCert d
+
+pattern RetirePoolTxCert ::
+  EraTxCert era =>
+  KeyHash 'StakePool (EraCrypto era) ->
+  EpochNo ->
+  TxCert era
+pattern RetirePoolTxCert poolId epochNo <- (getRetirePoolTxCert -> Just (poolId, epochNo))
+  where
+    RetirePoolTxCert poolId epochNo = mkRetirePoolTxCert poolId epochNo
 
 -- | The delegation of one stake key to another.
 data Delegation c = Delegation

@@ -18,8 +18,8 @@ instance Crypto c => EraTxCert (BabbageEra c) where
 
   mkTxCertPool = ShelleyTxCertPool
 
-  getTxCertPool (ShelleyTxCertPool c) = Just c
-  getTxCertPool _ = Nothing
+  getRegPoolTxCert (ShelleyTxCertPool c) = Just c
+  getRegPoolTxCert _ = Nothing
 
 instance Crypto c => ShelleyEraTxCert (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (BabbageEra StandardCrypto) #-}

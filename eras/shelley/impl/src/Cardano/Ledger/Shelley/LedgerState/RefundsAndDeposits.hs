@@ -61,7 +61,8 @@ totalCertsDeposits pp isRegPool certs =
     numKeys = getSum @Int $ foldMap' (\x -> if isRegKey x then 1 else 0) certs
     numNewRegPoolCerts = Set.size (foldl' addNewPoolIds Set.empty certs)
     addNewPoolIds regPoolIds = \case
-      TxCertPool (RegPool (PoolParams {ppId}))
+
+      RegPoolTxCert (PoolParams {ppId})
         -- We don't pay a deposit on a pool that is already registered or duplicated in the certs
         | not (isRegPool ppId || Set.member ppId regPoolIds) -> Set.insert ppId regPoolIds
       _ -> regPoolIds

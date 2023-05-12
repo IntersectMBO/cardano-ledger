@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   isInstantaneousRewards,
+  pattern GenesisDelegTxCert,
   pattern ShelleyTxCertDeleg,
   pattern TxCertGenesisDeleg,
  )
@@ -54,9 +55,9 @@ synopsisCert x = case x of
   ShelleyTxCertDeleg (ShelleyRegCert cred) -> "ShelleyRegCert " ++ take 10 (showCred cred)
   ShelleyTxCertDeleg (ShelleyUnRegCert cred) -> "ShelleyUnRegCert " ++ take 10 (showCred cred)
   ShelleyTxCertDeleg (ShelleyDelegCert cred _) -> "ShelleyDelegCert" ++ take 10 (showCred cred)
-  TxCertPool (RegPool pool) -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
-  TxCertPool (RetirePool khash e) -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
-  TxCertGenesisDeleg _ -> "GenesisCert"
+  RegPoolTxCert pool -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
+  RetirePoolTxCert khash e -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
+  GenesisDelegTxCert {} -> "GenesisDelegTxCert"
   _ | isInstantaneousRewards x -> "MirCert"
   _ -> error "Impossible"
 
