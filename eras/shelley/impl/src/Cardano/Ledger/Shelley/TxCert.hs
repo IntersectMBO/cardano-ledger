@@ -25,12 +25,18 @@
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
   pattern TxCertMir,
+  pattern TxCertGenesis,
   pattern ShelleyTxCertDeleg,
   ShelleyDelegCert (.., RegKey, DeRegKey, Delegate),
   getVKeyWitnessShelleyTxCert,
   getScriptWitnessShelleyTxCert,
   delegCWitness,
   ShelleyTxCert (..),
+  -- ** GenesisDelegCert
+  GenesisDelegCert (..),
+  genesisCWitness,
+  genesisKeyHashWitness,
+  -- ** MIRCert
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
@@ -109,17 +115,16 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
   getTxCertPool (ShelleyTxCertPool c) = Just c
   getTxCertPool _ = Nothing
 
-  mkTxCertGenesis = ShelleyTxCertGenesis
-
-  getTxCertGenesis (ShelleyTxCertGenesis c) = Just c
-  getTxCertGenesis _ = Nothing
-
 class EraTxCert era => ShelleyEraTxCert era where
-  mkTxCertMir :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
-  getTxCertMir :: TxCert era -> Maybe (MIRCert (EraCrypto era))
 
   mkShelleyTxCertDeleg :: ShelleyDelegCert (EraCrypto era) -> TxCert era
   getShelleyTxCertDeleg :: TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
+
+  mkTxCertGenesis :: GenesisDelegCert (EraCrypto era) -> TxCert era
+  getTxCertGenesis :: TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
+
+  mkTxCertMir :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
+  getTxCertMir :: TxCert era -> Maybe (MIRCert (EraCrypto era))
 
 instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (ShelleyEra StandardCrypto) #-}
@@ -128,6 +133,11 @@ instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
 
   getShelleyTxCertDeleg (ShelleyTxCertDelegCert c) = Just c
   getShelleyTxCertDeleg _ = Nothing
+
+  mkTxCertGenesis = ShelleyTxCertGenesis
+
+  getTxCertGenesis (ShelleyTxCertGenesis c) = Just c
+  getTxCertGenesis _ = Nothing
 
   mkTxCertMir = ShelleyTxCertMir
 
@@ -143,6 +153,33 @@ pattern TxCertMir :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (Era
 pattern TxCertMir d <- (getTxCertMir -> Just d)
   where
     TxCertMir d = mkTxCertMir d
+
+pattern TxCertGenesis ::
+  EraTxCert era =>
+  GenesisDelegCert (EraCrypto era) ->
+  TxCert era
+pattern TxCertGenesis d <- (getTxCertGenesis -> Just d)
+  where
+    TxCertGenesis d = mkTxCertGenesis d
+
+-- | Genesis key delegation certificate
+data GenesisDelegCert c
+  = GenesisDelegCert
+      !(KeyHash 'Genesis c)
+      !(KeyHash 'GenesisDelegate c)
+      !(Hash c (VerKeyVRF c))
+  deriving (Show, Generic, Eq)
+
+instance NoThunks (GenesisDelegCert c)
+
+instance NFData (GenesisDelegCert c) where
+  rnf = rwhnf
+
+genesisKeyHashWitness :: GenesisDelegCert c -> KeyHash 'Witness c
+genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
+
+genesisCWitness :: GenesisDelegCert c -> KeyHash 'Genesis c
+genesisCWitness (GenesisDelegCert gk _ _) = gk
 
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
