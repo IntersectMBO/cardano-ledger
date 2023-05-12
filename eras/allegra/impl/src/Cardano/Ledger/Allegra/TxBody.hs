@@ -36,9 +36,9 @@ module Cardano.Ledger.Allegra.TxBody (
 where
 
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
-import Cardano.Ledger.Allegra.Delegation ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.Allegra.TxCert ()
 import Cardano.Ledger.Allegra.TxOut ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
@@ -88,7 +88,7 @@ import NoThunks.Class (NoThunks (..))
 data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
   { atbrInputs :: !(Set (TxIn (EraCrypto era)))
   , atbrOutputs :: !(StrictSeq (TxOut era))
-  , atbrCerts :: !(StrictSeq (DCert era))
+  , atbrCerts :: !(StrictSeq (TxCert era))
   , atbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval -- imported from Timelocks
@@ -98,21 +98,21 @@ data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
   }
 
 deriving instance
-  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era), NFData ma) =>
+  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era), NFData ma) =>
   NFData (AllegraTxBodyRaw ma era)
 
 deriving instance
-  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (DCert era), Eq ma) =>
+  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era), Eq ma) =>
   Eq (AllegraTxBodyRaw ma era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era), Show ma) =>
+  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era), Show ma) =>
   Show (AllegraTxBodyRaw ma era)
 
 deriving instance Generic (AllegraTxBodyRaw ma era)
 
 deriving instance
-  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era), NoThunks ma) =>
+  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era), NoThunks ma) =>
   NoThunks (AllegraTxBodyRaw ma era)
 
 instance (DecCBOR ma, Monoid ma, AllegraEraTxBody era) => DecCBOR (AllegraTxBodyRaw ma era) where
@@ -132,7 +132,7 @@ instance AllegraEraTxBody era => DecCBOR (Annotator (AllegraTxBodyRaw () era)) w
 -- concerns as we want the ShelleyTxBody to deserialise as AllegraTxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 instance
-  (EraTxOut era, EraDCert era, Eq ma, EncCBOR ma, Monoid ma) =>
+  (EraTxOut era, EraTxCert era, Eq ma, EncCBOR ma, Monoid ma) =>
   EncCBOR (AllegraTxBodyRaw ma era)
   where
   encCBOR (AllegraTxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
@@ -152,7 +152,7 @@ instance
         !> encodeKeyedStrictMaybe 8 bot
         !> Omit (== mempty) (Key 9 (To frge))
 
-bodyFields :: (DecCBOR ma, EraTxOut era, EraDCert era) => Word -> Field (AllegraTxBodyRaw ma era)
+bodyFields :: (DecCBOR ma, EraTxOut era, EraTxCert era) => Word -> Field (AllegraTxBodyRaw ma era)
 bodyFields 0 = field (\x tx -> tx {atbrInputs = x}) From
 bodyFields 1 = field (\x tx -> tx {atbrOutputs = x}) From
 bodyFields 2 = field (\x tx -> tx {atbrTxFee = x}) From
@@ -204,22 +204,22 @@ instance Memoized AllegraTxBody where
   type RawType AllegraTxBody = AllegraTxBodyRaw ()
 
 deriving instance
-  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (DCert era)) =>
+  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
   Eq (AllegraTxBody era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (DCert era), Compactible (Value era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (TxCert era), Compactible (Value era), Show (PParamsUpdate era)) =>
   Show (AllegraTxBody era)
 
 deriving instance Generic (AllegraTxBody era)
 
 deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (AllegraTxBody era)
 
 deriving newtype instance
   ( NFData (TxOut era)
-  , NFData (DCert era)
+  , NFData (TxCert era)
   , NFData (PParamsUpdate era)
   , Era era
   ) =>
@@ -240,10 +240,10 @@ instance (c ~ EraCrypto era, Era era) => HashAnnotated (AllegraTxBody era) EraIn
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern AllegraTxBody ::
-  (EraTxOut era, EraDCert era) =>
+  (EraTxOut era, EraTxCert era) =>
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
+  StrictSeq (TxCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->

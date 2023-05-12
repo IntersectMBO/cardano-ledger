@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -174,7 +173,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , ProtVerAtMost era 8
   ) =>
   STS (ShelleyLEDGER era)
@@ -206,7 +205,7 @@ ledgerTransition ::
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
@@ -268,7 +267,7 @@ depositEqualsObligation ::
 depositEqualsObligation
   AssertionViolation {avSTS, avMsg, avCtx = (TRC (LedgerEnv slot _ pp _, _, tx)), avState} =
     let dpstate = lsCertState <$> avState
-        utxo = (utxosUtxo . lsUTxOState) <$> avState
+        utxo = utxosUtxo . lsUTxOState <$> avState
         txb = tx ^. bodyTxL
      in "\n\nAssertionViolation ("
           <> avSTS
@@ -279,11 +278,11 @@ depositEqualsObligation
           <> "\n(slot,keyDeposit,poolDeposit) "
           <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
           <> "\nutxosDeposited = "
-          <> show ((utxosDeposited . lsUTxOState) <$> avState)
+          <> show (utxosDeposited . lsUTxOState <$> avState)
           <> "\nKey Deposits summary = "
-          <> synopsisCoinMap ((depositView . dsUnified . certDState . lsCertState) <$> avState)
+          <> synopsisCoinMap (depositView . dsUnified . certDState . lsCertState <$> avState)
           <> "\nPool Deposits summary = "
-          <> synopsisCoinMap ((psDeposits . certPState . lsCertState) <$> avState)
+          <> synopsisCoinMap (psDeposits . certPState . lsCertState <$> avState)
           <> "\nConsumed = "
           <> show (consumedTxBody txb pp <$> dpstate <*> utxo)
           <> "\nProduced = "

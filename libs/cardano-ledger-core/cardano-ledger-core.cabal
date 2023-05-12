@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-core
-version:            1.2.0.0
+version:            1.3.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -64,7 +64,7 @@ library
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Core.Era
-        Cardano.Ledger.Core.DCert
+        Cardano.Ledger.Core.TxCert
         Cardano.Ledger.Core.PParams
         Cardano.Ledger.Core.Translation
 

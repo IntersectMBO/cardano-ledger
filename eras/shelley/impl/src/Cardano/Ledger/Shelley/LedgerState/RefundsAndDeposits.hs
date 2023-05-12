@@ -23,11 +23,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (StakeCredential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.Core (ShelleyEraDCert, ShelleyEraTxBody (..))
-import Cardano.Ledger.Shelley.Delegation (
+import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..), ShelleyEraTxCert)
+import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   isRegKey,
-  pattern ShelleyDCertDeleg,
+  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Data.Foldable (Foldable (..), foldMap', foldl')
@@ -48,11 +48,11 @@ import Lens.Micro ((^.))
 -- Note that this is not an issue for key registrations since subsequent
 -- registration certificates would be invalid.
 totalCertsDeposits ::
-  (EraPParams era, Foldable f, ShelleyEraDCert era) =>
+  (EraPParams era, Foldable f, ShelleyEraTxCert era) =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
-  f (DCert era) ->
+  f (TxCert era) ->
   Coin
 totalCertsDeposits pp isRegPool certs =
   numKeys <×> pp ^. ppKeyDepositL
@@ -61,16 +61,16 @@ totalCertsDeposits pp isRegPool certs =
     numKeys = getSum @Int $ foldMap' (\x -> if isRegKey x then 1 else 0) certs
     numNewRegPoolCerts = Set.size (foldl' addNewPoolIds Set.empty certs)
     addNewPoolIds regPoolIds = \case
-      DCertPool (RegPool (PoolParams {ppId}))
+      TxCertPool (RegPool (PoolParams {ppId}))
         -- We don't pay a deposit on a pool that is already registered or duplicated in the certs
         | not (isRegPool ppId || Set.member ppId regPoolIds) -> Set.insert ppId regPoolIds
       _ -> regPoolIds
 
 totalCertsDepositsCertState ::
-  (EraPParams era, Foldable f, ShelleyEraDCert era) =>
+  (EraPParams era, Foldable f, ShelleyEraTxCert era) =>
   PParams era ->
   CertState era ->
-  f (DCert era) ->
+  f (TxCert era) ->
   Coin
 totalCertsDepositsCertState pp dpstate =
   totalCertsDeposits pp (`Map.member` psStakePoolParams (certPState dpstate))
@@ -88,30 +88,30 @@ totalTxDeposits pp dpstate txb =
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefundsCertState ::
-  (EraPParams era, Foldable f, ShelleyEraDCert era) =>
+  (EraPParams era, Foldable f, ShelleyEraTxCert era) =>
   PParams era ->
   CertState era ->
-  f (DCert era) ->
+  f (TxCert era) ->
   Coin
 keyCertsRefundsCertState pp dpstate = keyCertsRefunds pp (lookupDepositDState (certDState dpstate))
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefunds ::
-  (EraPParams era, Foldable f, ShelleyEraDCert era) =>
+  (EraPParams era, Foldable f, ShelleyEraTxCert era) =>
   PParams era ->
   -- | Function that can lookup current deposit, in case when the stake key is registered.
   (StakeCredential (EraCrypto era) -> Maybe Coin) ->
-  f (DCert era) ->
+  f (TxCert era) ->
   Coin
 keyCertsRefunds pp lookupDeposit certs = snd (foldl' accum (mempty, Coin 0) certs)
   where
     keyDeposit = pp ^. ppKeyDepositL
     accum (!regKeys, !totalRefunds) = \case
-      ShelleyDCertDeleg (RegKey k) ->
+      ShelleyTxCertDeleg (RegKey k) ->
         -- Need to track new delegations in case that the same key is later deregistered in
         -- the same transaction.
         (Set.insert k regKeys, totalRefunds)
-      ShelleyDCertDeleg (DeRegKey k)
+      ShelleyTxCertDeleg (DeRegKey k)
         -- We first check if there was already a registration certificate in this
         -- transaction.
         | Set.member k regKeys -> (Set.delete k regKeys, totalRefunds <+> keyDeposit)

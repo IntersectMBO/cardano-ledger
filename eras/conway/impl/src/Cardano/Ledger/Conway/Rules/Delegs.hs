@@ -121,7 +121,7 @@ instance
   ( EraTx era
   , ShelleyEraTxBody era
   , State (EraRule "CERT" era) ~ CertState era
-  , Signal (EraRule "CERT" era) ~ DCert era
+  , Signal (EraRule "CERT" era) ~ TxCert era
   , Environment (EraRule "CERT" era) ~ DelplEnv era
   , EraRule "DELEGS" era ~ ConwayDELEGS era
   , Embed (EraRule "CERT" era) (ConwayDELEGS era)
@@ -129,7 +129,7 @@ instance
   STS (ConwayDELEGS era)
   where
   type State (ConwayDELEGS era) = CertState era
-  type Signal (ConwayDELEGS era) = Seq (DCert era)
+  type Signal (ConwayDELEGS era) = Seq (TxCert era)
   type Environment (ConwayDELEGS era) = DelegsEnv era
   type BaseM (ConwayDELEGS era) = ShelleyBase
   type
@@ -146,7 +146,7 @@ conwayDelegsTransition ::
   , State (EraRule "CERT" era) ~ CertState era
   , Embed (EraRule "CERT" era) (ConwayDELEGS era)
   , Environment (EraRule "CERT" era) ~ DelplEnv era
-  , Signal (EraRule "CERT" era) ~ DCert era
+  , Signal (EraRule "CERT" era) ~ TxCert era
   , EraRule "DELEGS" era ~ ConwayDELEGS era
   ) =>
   TransitionRule (ConwayDELEGS era)
@@ -184,8 +184,8 @@ instance
   , State (EraRule "DELEG" era) ~ DState era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , Signal (EraRule "POOL" era) ~ DCert era
-  , Signal (EraRule "DELEG" era) ~ DCert era
+  , Signal (EraRule "POOL" era) ~ TxCert era
+  , Signal (EraRule "DELEG" era) ~ TxCert era
   , PredicateFailure (EraRule "CERT" era) ~ ShelleyDelplPredFailure era
   , Event (EraRule "CERT" era) ~ ShelleyDelplEvent era
   ) =>

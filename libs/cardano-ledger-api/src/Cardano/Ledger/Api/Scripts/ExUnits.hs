@@ -104,9 +104,9 @@ data TransactionScriptFailure era
   | -- | There was no cost model for a given version of Plutus in the ledger state
     NoCostModelInLedgerState !Language
 
-deriving instance (Era era, Eq (DCert era)) => Eq (TransactionScriptFailure era)
+deriving instance (Era era, Eq (TxCert era)) => Eq (TransactionScriptFailure era)
 
-deriving instance (Era era, Show (DCert era)) => Show (TransactionScriptFailure era)
+deriving instance (Era era, Show (TxCert era)) => Show (TransactionScriptFailure era)
 
 data ValidationFailed where
   ValidationFailedV1 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV1 -> ValidationFailed

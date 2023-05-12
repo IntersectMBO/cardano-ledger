@@ -27,10 +27,6 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
-import Cardano.Ledger.Shelley.Delegation (
-  ShelleyDelegCert (..),
-  pattern ShelleyDCertDeleg,
- )
 import Cardano.Ledger.Shelley.PParams (
   Update,
   pattern ProposedPPUpdates,
@@ -41,6 +37,10 @@ import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt (..),
   ShelleyTxOut (..),
   Withdrawals (..),
+ )
+import Cardano.Ledger.Shelley.TxCert (
+  ShelleyDelegCert (..),
+  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -242,7 +242,7 @@ goldenEncodingTestsAllegra =
     , -- "full_txn_body"
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @Allegra testAddrE (Coin 2)
-          reg = ShelleyDCertDeleg (RegKey testStakeCred)
+          reg = ShelleyTxCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
           mdh = hashTxAuxData @Allegra $ AllegraTxAuxData Map.empty StrictSeq.empty
@@ -396,7 +396,7 @@ goldenEncodingTestsMary =
     , -- "full_txn_body"
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @Mary testAddrE (Val.inject $ Coin 2)
-          reg = ShelleyDCertDeleg (RegKey testStakeCred)
+          reg = ShelleyTxCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
           up = testUpdate
           mdh = hashTxAuxData @Allegra $ AllegraTxAuxData Map.empty StrictSeq.empty

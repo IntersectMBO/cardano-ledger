@@ -46,7 +46,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), ScriptSpace (..)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
-import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (CERTS)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -107,7 +107,7 @@ genTriple ::
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
-  , Signal (EraRule "DELPL" era) ~ DCert era
+  , Signal (EraRule "DELPL" era) ~ TxCert era
   , Tx era ~ ShelleyTx era
   , EraGovernance era
   , ProtVerAtMost era 4

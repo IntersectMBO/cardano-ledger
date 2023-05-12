@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-shelley
-version:            1.2.0.0
+version:            1.3.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -32,7 +32,6 @@ library
         Cardano.Ledger.Shelley.AdaPots
         Cardano.Ledger.Shelley.BlockChain
         Cardano.Ledger.Shelley.Core
-        Cardano.Ledger.Shelley.Delegation
         Cardano.Ledger.Shelley.Delegation.Certificates
         Cardano.Ledger.Shelley.Delegation.PoolParams
         Cardano.Ledger.Shelley.EpochBoundary
@@ -56,6 +55,7 @@ library
         Cardano.Ledger.Shelley.Tx
         Cardano.Ledger.Shelley.TxAuxData
         Cardano.Ledger.Shelley.TxBody
+        Cardano.Ledger.Shelley.TxCert
         Cardano.Ledger.Shelley.TxOut
         Cardano.Ledger.Shelley.TxWits
         Cardano.Ledger.Shelley.UTxO
@@ -105,7 +105,7 @@ library
         cardano-data >=1.0,
         cardano-ledger-binary >=1.0,
         cardano-ledger-byron,
-        cardano-ledger-core ^>=1.2,
+        cardano-ledger-core ^>=1.3,
         cardano-slotting,
         vector-map >=1.0,
         containers,

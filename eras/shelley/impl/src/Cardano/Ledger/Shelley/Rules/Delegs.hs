@@ -47,7 +47,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test)
-import Cardano.Ledger.Shelley.Delegation (ShelleyDelegCert (..), ShelleyEraDCert, pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
@@ -69,6 +68,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyEraTxCert, pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UMap (Trip (..), UMap (..), View (..), fromCompact)
 import qualified Cardano.Ledger.UMap as UM
@@ -141,13 +141,13 @@ instance
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
-  , Signal (EraRule "DELPL" era) ~ DCert era
+  , Signal (EraRule "DELPL" era) ~ TxCert era
   , EraRule "DELEGS" era ~ ShelleyDELEGS era
   ) =>
   STS (ShelleyDELEGS era)
   where
   type State (ShelleyDELEGS era) = CertState era
-  type Signal (ShelleyDELEGS era) = Seq (DCert era)
+  type Signal (ShelleyDELEGS era) = Seq (TxCert era)
   type Environment (ShelleyDELEGS era) = DelegsEnv era
   type BaseM (ShelleyDELEGS era) = ShelleyBase
   type
@@ -211,7 +211,7 @@ delegsTransition ::
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
-  , Signal (EraRule "DELPL" era) ~ DCert era
+  , Signal (EraRule "DELPL" era) ~ TxCert era
   , EraRule "DELEGS" era ~ ShelleyDELEGS era
   ) =>
   TransitionRule (ShelleyDELEGS era)
@@ -238,12 +238,12 @@ delegsTransition = do
         TRC (DelplEnv slot ptr pp acnt, certState', c)
 
 validateDelegationRegistered ::
-  ShelleyEraDCert era =>
+  ShelleyEraTxCert era =>
   CertState era ->
-  DCert era ->
+  TxCert era ->
   Test (KeyHash 'StakePool (EraCrypto era))
 validateDelegationRegistered certState = \case
-  ShelleyDCertDeleg (Delegate deleg) ->
+  ShelleyTxCertDeleg (Delegate deleg) ->
     let stPools = psStakePoolParams $ certPState certState
         targetPool = dDelegatee deleg
      in failureUnless (eval (targetPool ∈ dom stPools)) targetPool

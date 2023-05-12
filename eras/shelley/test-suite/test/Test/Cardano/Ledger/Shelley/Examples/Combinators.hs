@@ -188,10 +188,10 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
     utxoSt' =
       utxoSt
         { utxosDeposited =
-            (utxosDeposited utxoSt)
+            utxosDeposited utxoSt
               <+> (length stakes <×> ppEx ^. ppKeyDepositL)
               <+> (newcount <×> ppEx ^. ppPoolDepositL)
-        , utxosFees = (utxosFees utxoSt) <+> newFees
+        , utxosFees = utxosFees utxoSt <+> newFees
         }
     ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
     -- Count the number of new pools, because we don't take a deposit for existing pools
@@ -227,8 +227,8 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     utxoSt = lsUTxOState ls
     utxoSt' =
       utxoSt
-        { utxosDeposited = (utxosDeposited utxoSt) <-> refund
-        , utxosFees = (utxosFees utxoSt) <+> newFees
+        { utxosDeposited = utxosDeposited utxoSt <-> refund
+        , utxosFees = utxosFees utxoSt <+> newFees
         }
     ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
     es' = es {esLState = ls'}
@@ -315,9 +315,9 @@ deregStakeCred cred cs = cs {chainNes = nes'}
       ds
         { dsUnified =
             let um0 = dsUnified ds
-                um1 = (UM.delete cred (RewardDeposits um0))
-                um2 = (Ptrs um1 UM.⋫ Set.singleton cred)
-                um3 = (UM.delete cred (Delegations um2))
+                um1 = UM.delete cred (RewardDeposits um0)
+                um2 = Ptrs um1 UM.⋫ Set.singleton cred
+                um3 = UM.delete cred (Delegations um2)
              in um3
         }
     dps' = dps {certDState = ds'}
@@ -344,7 +344,7 @@ delegation cred pool cs = cs {chainNes = nes'}
     ds = certDState dps
     ds' =
       ds
-        { dsUnified = (UM.insert cred pool (delegations ds))
+        { dsUnified = UM.insert cred pool (delegations ds)
         }
     dps' = dps {certDState = ds'}
     ls' = ls {lsCertState = dps'}
@@ -480,12 +480,12 @@ reapPool pool cs = cs {chainNes = nes'}
           )
     -- FIXME shouldn't we look up the pooldeposit here?
     umap1 = unView rewards'
-    umap2 = (UM.Delegations umap1 UM.⋫ Set.singleton kh)
+    umap2 = UM.Delegations umap1 UM.⋫ Set.singleton kh
     ds' = ds {dsUnified = umap2}
     as = esAccountState es
-    as' = as {asTreasury = (asTreasury as) <+> unclaimed}
+    as' = as {asTreasury = asTreasury as <+> unclaimed}
     utxoSt = lsUTxOState ls
-    utxoSt' = utxoSt {utxosDeposited = (utxosDeposited utxoSt) <-> (pp ^. ppPoolDepositL)}
+    utxoSt' = utxoSt {utxosDeposited = utxosDeposited utxoSt <-> (pp ^. ppPoolDepositL)}
     dps' = dps {certPState = ps', certDState = ds'}
     ls' = ls {lsCertState = dps', lsUTxOState = utxoSt'}
     es' = es {esLState = ls', esAccountState = as'}
@@ -550,8 +550,8 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
     as = esAccountState es
     as' =
       if pot == ReservesMIR
-        then as {asReserves = (asReserves as) <-> tot}
-        else as {asTreasury = (asTreasury as) <-> tot}
+        then as {asReserves = asReserves as <-> tot}
+        else as {asTreasury = asTreasury as <-> tot}
     es' = es {esAccountState = as', esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -812,7 +812,7 @@ adoptFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
     ls = esLState es
     dps = lsCertState ls
     ds = certDState dps
-    gds = GenDelegs $ (Map.insert (fGenDelegGenKeyHash fg) gd (unGenDelegs (dsGenDelegs ds)))
+    gds = GenDelegs $ Map.insert (fGenDelegGenKeyHash fg) gd (unGenDelegs (dsGenDelegs ds))
     ds' =
       ds
         { dsFutureGenDelegs = Map.delete fg (dsFutureGenDelegs ds)

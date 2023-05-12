@@ -74,11 +74,11 @@ where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Delegation ()
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes (
   Network (..),
@@ -124,7 +124,7 @@ data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   { atbrInputs :: !(Set (TxIn (EraCrypto era)))
   , atbrCollateral :: !(Set (TxIn (EraCrypto era)))
   , atbrOutputs :: !(StrictSeq (TxOut era))
-  , atbrCerts :: !(StrictSeq (DCert era))
+  , atbrCerts :: !(StrictSeq (TxCert era))
   , atbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval
@@ -138,19 +138,19 @@ data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   Eq (AlonzoTxBodyRaw era)
 
 instance
-  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (AlonzoTxBodyRaw era)
 
 instance
-  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (AlonzoTxBodyRaw era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBodyRaw era)
 
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
@@ -248,33 +248,33 @@ instance Crypto c => AlonzoEraTxBody (AlonzoEra c) where
   {-# INLINEABLE networkIdTxBodyL #-}
 
 deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (DCert era), Eq (PParamsUpdate era)) =>
+  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   Eq (AlonzoTxBody era)
 
 deriving instance
-  (Era era, NoThunks (TxOut era), NoThunks (DCert era), NoThunks (PParamsUpdate era)) =>
+  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
   NoThunks (AlonzoTxBody era)
 
 deriving instance
-  (Era era, NFData (TxOut era), NFData (DCert era), NFData (PParamsUpdate era)) =>
+  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (AlonzoTxBody era)
 
 deriving instance
-  (Era era, Show (TxOut era), Show (DCert era), Show (PParamsUpdate era)) =>
+  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBody era)
 
 deriving via
   (Mem AlonzoTxBodyRaw era)
   instance
-    (Era era, DecCBOR (TxOut era), DecCBOR (DCert era), DecCBOR (PParamsUpdate era)) =>
+    (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
     DecCBOR (Annotator (AlonzoTxBody era))
 
 pattern AlonzoTxBody ::
-  (EraTxOut era, EraDCert era) =>
+  (EraTxOut era, EraTxCert era) =>
   Set (TxIn (EraCrypto era)) ->
   Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
-  StrictSeq (DCert era) ->
+  StrictSeq (TxCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
@@ -365,7 +365,7 @@ instance (c ~ EraCrypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentT
 inputs' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
 collateral' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
 outputs' :: AlonzoTxBody era -> StrictSeq (TxOut era)
-certs' :: AlonzoTxBody era -> StrictSeq (DCert era)
+certs' :: AlonzoTxBody era -> StrictSeq (TxCert era)
 txfee' :: AlonzoTxBody era -> Coin
 withdrawals' :: AlonzoTxBody era -> Withdrawals (EraCrypto era)
 vldt' :: AlonzoTxBody era -> ValidityInterval
@@ -409,7 +409,7 @@ txnetworkid' = atbrTxNetworkId . getMemoRawType
 instance Era era => EncCBOR (AlonzoTxBody era)
 
 instance
-  (Era era, EncCBOR (TxOut era), EncCBOR (DCert era), EncCBOR (PParamsUpdate era)) =>
+  (Era era, EncCBOR (TxOut era), EncCBOR (TxCert era), EncCBOR (PParamsUpdate era)) =>
   EncCBOR (AlonzoTxBodyRaw era)
   where
   encCBOR
@@ -449,7 +449,7 @@ instance
           !> encodeKeyedStrictMaybe 15 atbrTxNetworkId
 
 instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (DCert era), DecCBOR (PParamsUpdate era)) =>
+  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
   DecCBOR (AlonzoTxBodyRaw era)
   where
   decCBOR =
@@ -506,7 +506,7 @@ emptyAlonzoTxBodyRaw =
     SNothing
 
 instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (DCert era), DecCBOR (PParamsUpdate era)) =>
+  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
   DecCBOR (Annotator (AlonzoTxBodyRaw era))
   where
   decCBOR = pure <$> decCBOR

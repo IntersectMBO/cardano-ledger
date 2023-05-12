@@ -104,7 +104,7 @@ deriving instance
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , Show (Script era)
   , Show (TxOut era)
-  , Show (DCert era)
+  , Show (TxCert era)
   , Show (Value era)
   ) =>
   Show (BabbageUtxowPredFailure era)
@@ -115,7 +115,7 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXO" era))
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Eq (TxOut era)
-  , Eq (DCert era)
+  , Eq (TxCert era)
   , Eq (Script era)
   ) =>
   Eq (BabbageUtxowPredFailure era)
@@ -129,7 +129,7 @@ instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) wher
 instance
   ( Era era
   , EncCBOR (TxOut era)
-  , EncCBOR (DCert era)
+  , EncCBOR (TxCert era)
   , EncCBOR (Value era)
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
@@ -148,7 +148,7 @@ instance
 instance
   ( Era era
   , DecCBOR (TxOut era)
-  , DecCBOR (DCert era)
+  , DecCBOR (TxCert era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
@@ -327,7 +327,7 @@ babbageUtxowTransition = do
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
-  {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
+  {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx

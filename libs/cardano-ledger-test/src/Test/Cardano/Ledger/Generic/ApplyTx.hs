@@ -21,13 +21,13 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking))
-import Cardano.Ledger.Shelley.Delegation (ShelleyDCert (..), ShelleyDelegCert (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
 import Cardano.Ledger.Shelley.TxBody (
   PoolParams (..),
   RewardAcnt (..),
   Withdrawals (..),
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (inject), (<+>), (<->))
@@ -159,7 +159,7 @@ applyWithdrawals :: Proof era -> Model era -> RewardAcnt (EraCrypto era) -> Coin
 applyWithdrawals _proof model (RewardAcnt _network cred) coin =
   model {mRewards = Map.adjust (\c -> c <-> coin) cred (mRewards model)}
 
-applyCert :: forall era. Reflect era => Model era -> DCert era -> Model era
+applyCert :: forall era. Reflect era => Model era -> TxCert era -> Model era
 applyCert = case reify @era of
   Shelley _ -> applyShelleyCert
   Mary _ -> applyShelleyCert
@@ -168,9 +168,9 @@ applyCert = case reify @era of
   Babbage _ -> applyShelleyCert
   Conway _ -> undefined -- TODO once Conway era is done
 
-applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyDCert era -> Model era
+applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyTxCert era -> Model era
 applyShelleyCert model dcert = case dcert of
-  (ShelleyDCertDelegCert (RegKey x)) ->
+  (ShelleyTxCertDelegCert (RegKey x)) ->
     model
       { mRewards = Map.insert x (Coin 0) (mRewards model)
       , mKeyDeposits = Map.insert x (pp ^. ppKeyDepositL) (mKeyDeposits model)
@@ -178,7 +178,7 @@ applyShelleyCert model dcert = case dcert of
       }
     where
       pp = mPParams model
-  (ShelleyDCertDelegCert (DeRegKey x)) -> case Map.lookup x (mRewards model) of
+  (ShelleyTxCertDelegCert (DeRegKey x)) -> case Map.lookup x (mRewards model) of
     Nothing -> error ("DeRegKey not in rewards: " <> show (pcCredential x))
     Just (Coin 0) ->
       model
@@ -191,9 +191,9 @@ applyShelleyCert model dcert = case dcert of
           Nothing -> mempty
           Just c -> c
     Just (Coin _n) -> error "DeRegKey with non-zero balance"
-  (ShelleyDCertDelegCert (Delegate (Delegation cred hash))) ->
+  (ShelleyTxCertDelegCert (Delegate (Delegation cred hash))) ->
     model {mDelegations = Map.insert cred hash (mDelegations model)}
-  (ShelleyDCertPool (RegPool poolparams)) ->
+  (ShelleyTxCertPool (RegPool poolparams)) ->
     model
       { mPoolParams = Map.insert hk poolparams (mPoolParams model)
       , mDeposited =
@@ -209,15 +209,15 @@ applyShelleyCert model dcert = case dcert of
     where
       hk = ppId poolparams
       pp = mPParams model
-  (ShelleyDCertPool (RetirePool keyhash epoch)) ->
+  (ShelleyTxCertPool (RetirePool keyhash epoch)) ->
     model
       { mRetiring = Map.insert keyhash epoch (mRetiring model)
       , mDeposited = mDeposited model <-> pp ^. ppPoolDepositL
       }
     where
       pp = mPParams model
-  (ShelleyDCertGenesis _) -> model
-  (ShelleyDCertMir _) -> model
+  (ShelleyTxCertGenesis _) -> model
+  (ShelleyTxCertMir _) -> model
 
 -- =========================================================
 -- What to do if the second phase does not validatate.

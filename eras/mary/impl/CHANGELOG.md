@@ -1,5 +1,14 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.3.0.0
+
+* Introduction of `TxCert` and `EraTxCert`
+* Add `EraTxCert` and `ShelleyEraTxCert` instances to `MaryEra`
+
+## 1.2.0.0
+
+* Removed `genMintValues`
+
 ## 1.1.1.0
 
 * Add `TranslateEra` instances for:

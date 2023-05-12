@@ -16,13 +16,13 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.Delegation (
-  ShelleyEraDCert (..),
-  pattern DCertMir,
-  pattern ShelleyDCertDeleg,
+module Cardano.Ledger.Shelley.TxCert (
+  ShelleyEraTxCert (..),
+  pattern TxCertMir,
+  pattern ShelleyTxCertDeleg,
   ShelleyDelegCert (..),
   delegCWitness,
-  ShelleyDCert (..),
+  ShelleyTxCert (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
@@ -38,16 +38,16 @@ module Cardano.Ledger.Shelley.Delegation (
   requiresVKeyWitness,
 
   -- ** Serialization helpers
-  shelleyDCertDelegDecoder,
-  commonDCertDecoder,
+  shelleyTxCertDelegDecoder,
+  commonTxCertDecoder,
   encodeShelleyDelegCert,
   encodePoolCert,
   encodeConstitutionalCert,
 
   -- * Re-exports
-  EraDCert (..),
-  pattern DCertPool,
-  pattern DCertGenesis,
+  EraTxCert (..),
+  pattern TxCertPool,
+  pattern TxCertGenesis,
   Delegation (..),
   PoolCert (..),
   poolCWitness,
@@ -87,50 +87,50 @@ import Data.Maybe (isJust, isNothing)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-instance Crypto c => EraDCert (ShelleyEra c) where
-  {-# SPECIALIZE instance EraDCert (ShelleyEra StandardCrypto) #-}
+instance Crypto c => EraTxCert (ShelleyEra c) where
+  {-# SPECIALIZE instance EraTxCert (ShelleyEra StandardCrypto) #-}
 
-  type DCert (ShelleyEra c) = ShelleyDCert (ShelleyEra c)
+  type TxCert (ShelleyEra c) = ShelleyTxCert (ShelleyEra c)
 
-  mkDCertPool = ShelleyDCertPool
+  mkTxCertPool = ShelleyTxCertPool
 
-  getDCertPool (ShelleyDCertPool c) = Just c
-  getDCertPool _ = Nothing
+  getTxCertPool (ShelleyTxCertPool c) = Just c
+  getTxCertPool _ = Nothing
 
-  mkDCertGenesis = ShelleyDCertGenesis
+  mkTxCertGenesis = ShelleyTxCertGenesis
 
-  getDCertGenesis (ShelleyDCertGenesis c) = Just c
-  getDCertGenesis _ = Nothing
+  getTxCertGenesis (ShelleyTxCertGenesis c) = Just c
+  getTxCertGenesis _ = Nothing
 
-class EraDCert era => ShelleyEraDCert era where
-  mkDCertMir :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> DCert era
-  getDCertMir :: DCert era -> Maybe (MIRCert (EraCrypto era))
+class EraTxCert era => ShelleyEraTxCert era where
+  mkTxCertMir :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
+  getTxCertMir :: TxCert era -> Maybe (MIRCert (EraCrypto era))
 
-  mkShelleyDCertDeleg :: ShelleyDelegCert (EraCrypto era) -> DCert era
-  getShelleyDCertDeleg :: DCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
+  mkShelleyTxCertDeleg :: ShelleyDelegCert (EraCrypto era) -> TxCert era
+  getShelleyTxCertDeleg :: TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
 
-instance Crypto c => ShelleyEraDCert (ShelleyEra c) where
-  {-# SPECIALIZE instance ShelleyEraDCert (ShelleyEra StandardCrypto) #-}
+instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
+  {-# SPECIALIZE instance ShelleyEraTxCert (ShelleyEra StandardCrypto) #-}
 
-  mkShelleyDCertDeleg = ShelleyDCertDelegCert
+  mkShelleyTxCertDeleg = ShelleyTxCertDelegCert
 
-  getShelleyDCertDeleg (ShelleyDCertDelegCert c) = Just c
-  getShelleyDCertDeleg _ = Nothing
+  getShelleyTxCertDeleg (ShelleyTxCertDelegCert c) = Just c
+  getShelleyTxCertDeleg _ = Nothing
 
-  mkDCertMir = ShelleyDCertMir
+  mkTxCertMir = ShelleyTxCertMir
 
-  getDCertMir (ShelleyDCertMir c) = Just c
-  getDCertMir _ = Nothing
+  getTxCertMir (ShelleyTxCertMir c) = Just c
+  getTxCertMir _ = Nothing
 
-pattern ShelleyDCertDeleg :: ShelleyEraDCert era => ShelleyDelegCert (EraCrypto era) -> DCert era
-pattern ShelleyDCertDeleg d <- (getShelleyDCertDeleg -> Just d)
+pattern ShelleyTxCertDeleg :: ShelleyEraTxCert era => ShelleyDelegCert (EraCrypto era) -> TxCert era
+pattern ShelleyTxCertDeleg d <- (getShelleyTxCertDeleg -> Just d)
   where
-    ShelleyDCertDeleg d = mkShelleyDCertDeleg d
+    ShelleyTxCertDeleg d = mkShelleyTxCertDeleg d
 
-pattern DCertMir :: (ShelleyEraDCert era, ProtVerAtMost era 8) => MIRCert (EraCrypto era) -> DCert era
-pattern DCertMir d <- (getDCertMir -> Just d)
+pattern TxCertMir :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (EraCrypto era) -> TxCert era
+pattern TxCertMir d <- (getTxCertMir -> Just d)
   where
-    DCertMir d = mkDCertMir d
+    TxCertMir d = mkTxCertMir d
 
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
@@ -190,23 +190,23 @@ instance Crypto c => EncCBOR (MIRCert c) where
       <> encCBOR targets
 
 -- | A heavyweight certificate.
-data ShelleyDCert era
-  = ShelleyDCertDelegCert !(ShelleyDelegCert (EraCrypto era))
-  | ShelleyDCertPool !(PoolCert (EraCrypto era))
-  | ShelleyDCertGenesis !(ConstitutionalDelegCert (EraCrypto era))
-  | ShelleyDCertMir !(MIRCert (EraCrypto era))
+data ShelleyTxCert era
+  = ShelleyTxCertDelegCert !(ShelleyDelegCert (EraCrypto era))
+  | ShelleyTxCertPool !(PoolCert (EraCrypto era))
+  | ShelleyTxCertGenesis !(ConstitutionalDelegCert (EraCrypto era))
+  | ShelleyTxCertMir !(MIRCert (EraCrypto era))
   deriving (Show, Generic, Eq, NFData)
 
-instance NoThunks (ShelleyDCert era)
+instance NoThunks (ShelleyTxCert era)
 
 -- CBOR
 
-instance Era era => EncCBOR (ShelleyDCert era) where
+instance Era era => EncCBOR (ShelleyTxCert era) where
   encCBOR = \case
-    ShelleyDCertDelegCert delegCert -> encodeShelleyDelegCert delegCert
-    ShelleyDCertPool poolCert -> encodePoolCert poolCert
-    ShelleyDCertGenesis constCert -> encodeConstitutionalCert constCert
-    ShelleyDCertMir mir ->
+    ShelleyTxCertDelegCert delegCert -> encodeShelleyDelegCert delegCert
+    ShelleyTxCertPool poolCert -> encodePoolCert poolCert
+    ShelleyTxCertGenesis constCert -> encodeConstitutionalCert constCert
+    ShelleyTxCertMir mir ->
       encodeListLen 2 <> encodeWord8 6 <> encCBOR mir
 
 encodeShelleyDelegCert :: Crypto c => ShelleyDelegCert c -> Encoding
@@ -238,67 +238,67 @@ encodeConstitutionalCert (ConstitutionalDelegCert gk kh vrf) =
     <> encCBOR kh
     <> encCBOR vrf
 
-instance Era era => ToCBOR (ShelleyDCert era) where
+instance Era era => ToCBOR (ShelleyTxCert era) where
   toCBOR = toEraCBOR @era
 
 instance
-  ( ShelleyEraDCert era
-  , DCert era ~ ShelleyDCert era
+  ( ShelleyEraTxCert era
+  , TxCert era ~ ShelleyTxCert era
   ) =>
-  FromCBOR (ShelleyDCert era)
+  FromCBOR (ShelleyTxCert era)
   where
   fromCBOR = fromEraCBOR @era
 
 instance
-  ( ShelleyEraDCert era
-  , DCert era ~ ShelleyDCert era
+  ( ShelleyEraTxCert era
+  , TxCert era ~ ShelleyTxCert era
   ) =>
-  DecCBOR (ShelleyDCert era)
+  DecCBOR (ShelleyTxCert era)
   where
-  decCBOR = decodeRecordSum "ShelleyDCert" $ \case
+  decCBOR = decodeRecordSum "ShelleyTxCert" $ \case
     t
-      | 0 <= t && t < 3 -> shelleyDCertDelegDecoder t
-      | 3 <= t && t < 6 -> commonDCertDecoder t
+      | 0 <= t && t < 3 -> shelleyTxCertDelegDecoder t
+      | 3 <= t && t < 6 -> commonTxCertDecoder t
     6 -> do
       x <- decCBOR
-      pure (2, ShelleyDCertMir x)
+      pure (2, ShelleyTxCertMir x)
     x -> invalidKey x
   {-# INLINE decCBOR #-}
 
-shelleyDCertDelegDecoder ::
-  ShelleyEraDCert era =>
+shelleyTxCertDelegDecoder ::
+  ShelleyEraTxCert era =>
   Word ->
-  Decoder s (Int, DCert era)
-shelleyDCertDelegDecoder = \case
+  Decoder s (Int, TxCert era)
+shelleyTxCertDelegDecoder = \case
   0 -> do
     cred <- decCBOR
-    pure (2, ShelleyDCertDeleg $ RegKey cred)
+    pure (2, ShelleyTxCertDeleg $ RegKey cred)
   1 -> do
     cred <- decCBOR
-    pure (2, ShelleyDCertDeleg $ DeRegKey cred)
+    pure (2, ShelleyTxCertDeleg $ DeRegKey cred)
   2 -> do
     cred <- decCBOR
     stakePool <- decCBOR
-    pure (3, ShelleyDCertDeleg $ Delegate (Delegation cred stakePool))
+    pure (3, ShelleyTxCertDeleg $ Delegate (Delegation cred stakePool))
   k -> invalidKey k
-{-# INLINE shelleyDCertDelegDecoder #-}
+{-# INLINE shelleyTxCertDelegDecoder #-}
 
-commonDCertDecoder :: EraDCert era => Word -> Decoder s (Int, DCert era)
-commonDCertDecoder = \case
+commonTxCertDecoder :: EraTxCert era => Word -> Decoder s (Int, TxCert era)
+commonTxCertDecoder = \case
   3 -> do
     group <- decCBORGroup
-    pure (1 + listLenInt group, DCertPool (RegPool group))
+    pure (1 + listLenInt group, TxCertPool (RegPool group))
   4 -> do
     a <- decCBOR
     b <- decCBOR
-    pure (3, DCertPool $ RetirePool a b)
+    pure (3, TxCertPool $ RetirePool a b)
   5 -> do
     a <- decCBOR
     b <- decCBOR
     c <- decCBOR
-    pure (4, DCertGenesis $ ConstitutionalDelegCert a b c)
+    pure (4, TxCertGenesis $ ConstitutionalDelegCert a b c)
   k -> invalidKey k
-{-# INLINE commonDCertDecoder #-}
+{-# INLINE commonTxCertDecoder #-}
 
 data ShelleyDelegCert c
   = -- | A stake key registration certificate.
@@ -321,50 +321,50 @@ delegCWitness (DeRegKey hk) = hk
 delegCWitness (Delegate delegation) = dDelegator delegation
 
 -- | Check for 'RegKey' constructor
-isRegKey :: (ShelleyEraDCert era) => DCert era -> Bool
-isRegKey (ShelleyDCertDeleg (RegKey _)) = True
+isRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
+isRegKey (ShelleyTxCertDeleg (RegKey _)) = True
 isRegKey _ = False
 
 -- | Check for 'DeRegKey' constructor
-isDeRegKey :: (ShelleyEraDCert era) => DCert era -> Bool
-isDeRegKey (ShelleyDCertDeleg (DeRegKey _)) = True
+isDeRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
+isDeRegKey (ShelleyTxCertDeleg (DeRegKey _)) = True
 isDeRegKey _ = False
 
 -- | Check for 'Delegation' constructor
-isDelegation :: (ShelleyEraDCert era) => DCert era -> Bool
-isDelegation (ShelleyDCertDeleg (Delegate _)) = True
+isDelegation :: (ShelleyEraTxCert era) => TxCert era -> Bool
+isDelegation (ShelleyTxCertDeleg (Delegate _)) = True
 isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
-isGenesisDelegation :: EraDCert era => DCert era -> Bool
-isGenesisDelegation = isJust . getDCertGenesis
+isGenesisDelegation :: EraTxCert era => TxCert era -> Bool
+isGenesisDelegation = isJust . getTxCertGenesis
 
 -- | Check for 'RegPool' constructor
-isRegPool :: EraDCert era => DCert era -> Bool
-isRegPool (DCertPool (RegPool _)) = True
+isRegPool :: EraTxCert era => TxCert era -> Bool
+isRegPool (TxCertPool (RegPool _)) = True
 isRegPool _ = False
 
 -- | Check for 'RetirePool' constructor
-isRetirePool :: EraDCert era => DCert era -> Bool
-isRetirePool (DCertPool (RetirePool _ _)) = True
+isRetirePool :: EraTxCert era => TxCert era -> Bool
+isRetirePool (TxCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
-isInstantaneousRewards :: ShelleyEraDCert era => DCert era -> Bool
-isInstantaneousRewards = isJust . getDCertMir
+isInstantaneousRewards :: ShelleyEraTxCert era => TxCert era -> Bool
+isInstantaneousRewards = isJust . getTxCertMir
 
-isReservesMIRCert :: ShelleyEraDCert era => DCert era -> Bool
-isReservesMIRCert x = case getDCertMir x of
+isReservesMIRCert :: ShelleyEraTxCert era => TxCert era -> Bool
+isReservesMIRCert x = case getTxCertMir x of
   Just (MIRCert ReservesMIR _) -> True
   _ -> False
 
-isTreasuryMIRCert :: ShelleyEraDCert era => DCert era -> Bool
-isTreasuryMIRCert x = case getDCertMir x of
+isTreasuryMIRCert :: ShelleyEraTxCert era => TxCert era -> Bool
+isTreasuryMIRCert x = case getTxCertMir x of
   Just (MIRCert TreasuryMIR _) -> True
   _ -> False
 
 -- | Returns True for delegation certificates that require at least
 -- one witness, and False otherwise. It is mainly used to ensure
 -- that calling a variant of 'cwitness' is safe.
-requiresVKeyWitness :: ShelleyEraDCert era => DCert era -> Bool
-requiresVKeyWitness (ShelleyDCertDeleg (RegKey _)) = False
-requiresVKeyWitness x = isNothing $ getDCertMir x
+requiresVKeyWitness :: ShelleyEraTxCert era => TxCert era -> Bool
+requiresVKeyWitness (ShelleyTxCertDeleg (RegKey _)) = False
+requiresVKeyWitness x = isNothing $ getTxCertMir x

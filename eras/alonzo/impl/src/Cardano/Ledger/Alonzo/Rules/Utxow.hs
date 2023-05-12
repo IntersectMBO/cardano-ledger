@@ -70,7 +70,6 @@ import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.PoolParams (ppOwners)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.Delegation (delegCWitness, requiresVKeyWitness, pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   witsFromTxWitnesses,
@@ -84,6 +83,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn (..), extractKeyHashWitnessSet)
+import Cardano.Ledger.Shelley.TxCert (delegCWitness, requiresVKeyWitness, pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txinLookup)
 import Control.Monad.Trans.Reader (asks)
@@ -136,7 +136,7 @@ data AlonzoUtxowPredFailure era
 
 deriving instance
   ( Era era
-  , Show (DCert era)
+  , Show (TxCert era)
   , Show (Script era)
   , Show (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Show
   ) =>
@@ -144,7 +144,7 @@ deriving instance
 
 deriving instance
   ( Era era
-  , Eq (DCert era)
+  , Eq (TxCert era)
   , Eq (Script era)
   , Eq (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Eq
   ) =>
@@ -152,7 +152,7 @@ deriving instance
 
 instance
   ( Era era
-  , NoThunks (DCert era)
+  , NoThunks (TxCert era)
   , NoThunks (Script era)
   , NoThunks (PredicateFailure (EraRule "UTXO" era))
   ) =>
@@ -160,7 +160,7 @@ instance
 
 instance
   ( Era era
-  , EncCBOR (DCert era)
+  , EncCBOR (TxCert era)
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (TxAuxData era)
   , EncCBOR (Script era)
@@ -183,7 +183,7 @@ newtype AlonzoUtxowEvent era
 
 instance
   ( Era era
-  , DecCBOR (DCert era)
+  , DecCBOR (TxCert era)
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
@@ -194,7 +194,7 @@ instance
 
 decodePredFail ::
   ( Era era
-  , DecCBOR (DCert era)
+  , DecCBOR (TxCert era)
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (Script era)
   , Typeable (TxAuxData era)
@@ -383,7 +383,7 @@ alonzoStyleWitness = do
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
-  {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
+  {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
@@ -452,14 +452,14 @@ witsVKeyNeeded utxo' tx genDelegs =
     owners :: Set (KeyHash 'Witness (EraCrypto era))
     owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
-        accum (DCertPool (RegPool pool)) ans =
+        accum (TxCertPool (RegPool pool)) ans =
           Set.union
             (Set.map asWitness (ppOwners pool))
             ans
         accum _cert ans = ans
-    cwitness (ShelleyDCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
-    cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
-    cwitness (DCertGenesis c) = Set.singleton (asWitness $ genesisCWitness c)
+    cwitness (ShelleyTxCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
+    cwitness (TxCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
+    cwitness (TxCertGenesis c) = Set.singleton (asWitness $ genesisCWitness c)
     cwitness c = error $ show c ++ " does not have a witness"
     -- key reg requires no witness but this is already filtered out by requiresVKeyWitness
     -- before the call to `cwitness`, so this error should never be reached.

@@ -214,7 +214,7 @@ instance PrettyA (DataHash era) where prettyA = ppDataHash
 ppTxBody ::
   ( PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   BabbageTxBody era ->
   PDoc
@@ -243,7 +243,7 @@ instance
   ( EraTxOut era
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
-  , PrettyA (DCert era)
+  , PrettyA (TxCert era)
   ) =>
   PrettyA (BabbageTxBody era)
   where

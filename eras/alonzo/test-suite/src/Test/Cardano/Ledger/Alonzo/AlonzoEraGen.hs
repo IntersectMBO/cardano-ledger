@@ -250,7 +250,7 @@ genAlonzoTxBody ::
   SlotNo ->
   Set.Set (TxIn c) ->
   StrictSeq (TxOut (AlonzoEra c)) ->
-  StrictSeq (DCert (AlonzoEra c)) ->
+  StrictSeq (TxCert (AlonzoEra c)) ->
   Withdrawals c ->
   Coin ->
   StrictMaybe (Update (AlonzoEra c)) ->

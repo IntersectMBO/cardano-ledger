@@ -1,5 +1,12 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.3.0.0
+
+* Introduction of `TxCert` and `EraTxCert`
+* Add `EraTxCert` and `ShelleyEraTxCert` instances to `BabbageEra`
+* Add `EraPlutusContext 'PlutusV1` instance to `BabbageEra`
+* Add `EraPlutusContext 'PlutusV2` instance to `BabbageEra`
+
 ## 1.2.0.0
 
 * Replace `DPState c` with `CertState era`
@@ -10,9 +17,6 @@
 * Added support for Plutus V3 in the types and functions that use `Language`.
   (Note that the Alonzo and Babbage ledger era rules do not allow V3 scripts, however.).
   Addition of `babbageTxInfoV1` and `babbageTxInfoV2`
-* Add `EraDCert` and `ShelleyEraDCert` instances to `BabbageEra`
-* Add `EraPlutusContext 'PlutusV1` instance to `BabbageEra`
-* Add `EraPlutusContext 'PlutusV2` instance to `BabbageEra`
 
 ## 1.1.0.0
 

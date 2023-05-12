@@ -41,12 +41,6 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTxBody (ShelleyTxBody),
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (
-  MIRCert,
-  MIRPot,
-  MIRTarget (SendToOppositePotMIR, StakeAddressesMIR),
-  ShelleyDCert,
- )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.PoolRank
@@ -70,6 +64,12 @@ import Cardano.Ledger.Shelley.Rules (
   VotingPeriod,
  )
 import Cardano.Ledger.Shelley.TxAuxData
+import Cardano.Ledger.Shelley.TxCert (
+  MIRCert,
+  MIRPot,
+  MIRTarget (SendToOppositePotMIR, StakeAddressesMIR),
+  ShelleyTxCert,
+ )
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Control.Exception (assert)
@@ -439,7 +439,7 @@ vectorOfMetadatumSimple = do
 -- Era-independent generators ------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Era era => Arbitrary (ShelleyDCert era) where
+instance Era era => Arbitrary (ShelleyTxCert era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -519,8 +519,8 @@ instance
   ( EraTxOut era
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (TxOut era)
-  , Arbitrary (DCert era)
-  , EncCBOR (DCert era)
+  , Arbitrary (TxCert era)
+  , EncCBOR (TxCert era)
   ) =>
   Arbitrary (ShelleyTxBody era)
   where

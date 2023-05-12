@@ -113,7 +113,7 @@ data TxBodyField era
   | Outputs (StrictSeq (TxOut era))
   | CollateralReturn (StrictMaybe (TxOut era))
   | TotalCol (StrictMaybe Coin)
-  | Certs (StrictSeq (DCert era))
+  | Certs (StrictSeq (TxCert era))
   | Withdrawals' (Withdrawals (EraCrypto era))
   | Txfee Coin
   | Vldt ValidityInterval
@@ -134,7 +134,7 @@ pattern RefInputs' :: [TxIn (EraCrypto era)] -> TxBodyField era -- Set
 
 pattern Outputs' :: [TxOut era] -> TxBodyField era -- StrictSeq
 
-pattern Certs' :: [DCert era] -> TxBodyField era -- StrictSeq
+pattern Certs' :: [TxCert era] -> TxBodyField era -- StrictSeq
 
 pattern CollateralReturn' :: [TxOut era] -> TxBodyField era -- 0 or 1 element
 
@@ -466,7 +466,7 @@ pattern Update' x <-
   where
     Update' x = Update (toStrictMaybe x)
 
-certsview :: TxBodyField era -> Maybe [DCert era]
+certsview :: TxBodyField era -> Maybe [TxCert era]
 certsview (Certs x) = Just (fromStrictSeq x)
 certsview _ = Nothing
 

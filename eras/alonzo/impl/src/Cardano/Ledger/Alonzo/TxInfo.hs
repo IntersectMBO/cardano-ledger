@@ -59,11 +59,11 @@ module Cardano.Ledger.Alonzo.TxInfo (
   PlutusError (..),
   PlutusDebugInfo (..),
   EraPlutusContext (..),
-  transShelleyDCert,
-  PlutusDCert (..),
-  unDCertV1,
-  unDCertV2,
-  unDCertV3,
+  transShelleyTxCert,
+  PlutusTxCert (..),
+  unTxCertV1,
+  unTxCertV2,
+  unTxCertV3,
   debugPlutus,
   runPLCScript,
   explainPlutusFailure,
@@ -126,9 +126,9 @@ import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import Cardano.Ledger.Language (IsLanguage (..), Language (..), SLanguage (..), fromSLanguage)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Delegation
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), WitVKey (..), Withdrawals (..))
+import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
@@ -393,45 +393,45 @@ transValue (MaryValue n m) = justAda <> transMultiAsset m
     justAda = PV1.singleton PV1.adaSymbol PV1.adaToken n
 
 -- =============================================
--- translate fileds like DCert, Withdrawals, and similar
+-- translate fileds like TxCert, Withdrawals, and similar
 
-data PlutusDCert (l :: Language) where
-  DCertPlutusV1 :: PV1.DCert -> PlutusDCert 'PlutusV1
-  DCertPlutusV2 :: PV2.DCert -> PlutusDCert 'PlutusV2
-  DCertPlutusV3 :: PV3.DCert -> PlutusDCert 'PlutusV3
+data PlutusTxCert (l :: Language) where
+  TxCertPlutusV1 :: PV1.DCert -> PlutusTxCert 'PlutusV1
+  TxCertPlutusV2 :: PV2.DCert -> PlutusTxCert 'PlutusV2
+  TxCertPlutusV3 :: PV3.DCert -> PlutusTxCert 'PlutusV3
 
-unDCertV1 :: PlutusDCert 'PlutusV1 -> PV1.DCert
-unDCertV1 (DCertPlutusV1 x) = x
+unTxCertV1 :: PlutusTxCert 'PlutusV1 -> PV1.DCert
+unTxCertV1 (TxCertPlutusV1 x) = x
 
-unDCertV2 :: PlutusDCert 'PlutusV2 -> PV2.DCert
-unDCertV2 (DCertPlutusV2 x) = x
+unTxCertV2 :: PlutusTxCert 'PlutusV2 -> PV2.DCert
+unTxCertV2 (TxCertPlutusV2 x) = x
 
-unDCertV3 :: PlutusDCert 'PlutusV3 -> PV3.DCert
-unDCertV3 (DCertPlutusV3 x) = x
+unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.DCert
+unTxCertV3 (TxCertPlutusV3 x) = x
 
-class EraDCert era => EraPlutusContext (l :: Language) era where
-  transDCert :: DCert era -> PlutusDCert l
+class EraTxCert era => EraPlutusContext (l :: Language) era where
+  transTxCert :: TxCert era -> PlutusTxCert l
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
-  transDCert = DCertPlutusV1 . transShelleyDCert
+  transTxCert = TxCertPlutusV1 . transShelleyTxCert
 
-transShelleyDCert :: ShelleyDCert era -> PV1.DCert
-transShelleyDCert (ShelleyDCertDelegCert (RegKey stkcred)) =
+transShelleyTxCert :: ShelleyTxCert era -> PV1.DCert
+transShelleyTxCert (ShelleyTxCertDelegCert (RegKey stkcred)) =
   PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stkcred))
-transShelleyDCert (ShelleyDCertDelegCert (DeRegKey stkcred)) =
+transShelleyTxCert (ShelleyTxCertDelegCert (DeRegKey stkcred)) =
   PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stkcred))
-transShelleyDCert (ShelleyDCertDelegCert (Delegate (Delegation stkcred keyhash))) =
+transShelleyTxCert (ShelleyTxCertDelegCert (Delegate (Delegation stkcred keyhash))) =
   PV1.DCertDelegDelegate
     (PV1.StakingHash (transStakeCred stkcred))
     (transKeyHash keyhash)
-transShelleyDCert (ShelleyDCertPool (RegPool pp)) =
+transShelleyTxCert (ShelleyTxCertPool (RegPool pp)) =
   PV1.DCertPoolRegister
     (transKeyHash (ppId pp))
     (PV1.PubKeyHash (PV1.toBuiltin (transHash (ppVrf pp))))
-transShelleyDCert (ShelleyDCertPool (RetirePool keyhash (EpochNo i))) =
+transShelleyTxCert (ShelleyTxCertPool (RetirePool keyhash (EpochNo i))) =
   PV1.DCertPoolRetire (transKeyHash keyhash) (fromIntegral i)
-transShelleyDCert (ShelleyDCertGenesis _) = PV1.DCertGenesis
-transShelleyDCert (ShelleyDCertMir _) = PV1.DCertMir
+transShelleyTxCert (ShelleyTxCertGenesis _) = PV1.DCertGenesis
+transShelleyTxCert (ShelleyTxCertMir _) = PV1.DCertMir
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
@@ -478,7 +478,7 @@ transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
 transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
   PV1.Rewarding (PV1.StakingHash (transStakeCred cred))
 -- TODO Add support for PV3
-transScriptPurpose (Certifying dcert) = PV1.Certifying . unDCertV1 $ transDCert dcert
+transScriptPurpose (Certifying dcert) = PV1.Certifying . unTxCertV1 $ transTxCert dcert
 
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
@@ -524,7 +524,7 @@ alonzoTxInfo ::
   forall era.
   ( EraTx era
   , AlonzoEraTxBody era
-  , DCert era ~ ShelleyDCert era
+  , TxCert era ~ ShelleyTxCert era
   , Value era ~ MaryValue (EraCrypto era)
   , TxWits era ~ AlonzoTxWits era
   , EraPlutusContext 'PlutusV1 era
@@ -552,7 +552,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
           , PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee)
           , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
-          , PV1.txInfoDCert = toList $ fmap (unDCertV1 . transDCert) (txBody ^. certsTxBodyL)
+          , PV1.txInfoDCert = toList $ fmap (unTxCertV1 . transTxCert) (txBody ^. certsTxBodyL)
           , PV1.txInfoWdrl = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
           , PV1.txInfoValidRange = timeRange
           , PV1.txInfoSignatories = map transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))

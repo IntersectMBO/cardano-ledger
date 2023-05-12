@@ -16,13 +16,13 @@ import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), binaryDataToData, getPlut
 import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
 import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,
-  PlutusDCert (..),
+  PlutusTxCert (..),
   TranslationError (..),
   TxOutSource (..),
   VersionedTxInfo (..),
-  transShelleyDCert,
-  unDCertV1,
-  unDCertV2,
+  transShelleyTxCert,
+  unTxCertV1,
+  unTxCertV2,
  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (
@@ -176,10 +176,10 @@ transRedeemerPtr txb (ptr, (d, _)) =
     SJust sp -> Right (Alonzo.transScriptPurpose sp, transRedeemer d)
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (BabbageEra c) where
-  transDCert = DCertPlutusV1 . transShelleyDCert
+  transTxCert = TxCertPlutusV1 . transShelleyTxCert
 
 instance Crypto c => EraPlutusContext 'PlutusV2 (BabbageEra c) where
-  transDCert = DCertPlutusV2 . transShelleyDCert
+  transTxCert = TxCertPlutusV2 . transShelleyTxCert
 
 babbageTxInfo ::
   forall era.
@@ -233,7 +233,7 @@ babbageTxInfoV1 timeRange tx utxo = do
       , PV1.txInfoOutputs = outputs
       , PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
       , PV1.txInfoMint = Alonzo.transMultiAsset multiAsset
-      , PV1.txInfoDCert = toList $ fmap (unDCertV1 . Alonzo.transDCert) (txBody ^. certsTxBodyL)
+      , PV1.txInfoDCert = toList $ fmap (unTxCertV1 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
       , PV1.txInfoWdrl = Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV1.txInfoValidRange = timeRange
       , PV1.txInfoSignatories =
@@ -278,7 +278,7 @@ babbageTxInfoV2 timeRange tx utxo = do
       , PV2.txInfoReferenceInputs = refInputs
       , PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
       , PV2.txInfoMint = Alonzo.transMultiAsset multiAsset
-      , PV2.txInfoDCert = toList $ fmap (unDCertV2 . Alonzo.transDCert) (txBody ^. certsTxBodyL)
+      , PV2.txInfoDCert = toList $ fmap (unTxCertV2 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
       , PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV2.txInfoValidRange = timeRange
       , PV2.txInfoSignatories =

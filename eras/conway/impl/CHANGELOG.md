@@ -1,8 +1,18 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.3.0.0
+
+* Introduction of `TxCert` and `EraTxCert`
+* Add `ConwayEraTxCert`
+* Add `EraTxCert`, `ShelleyEraTxCert` and `ConwayEraTxCert` instances for `ConwayEra`
+* Add `EraPlutusContext 'PlutusV1` instance to `ConwayEra`
+* Add `EraPlutusContext 'PlutusV2` instance to `ConwayEra`
+* Add `EraPlutusContext 'PlutusV3` instance to `ConwayEra`
+* Added `toShelleyDelegCert` and `fromShelleyDelegCert`
+* Changed `ConwayDelegCert` structure #3408
+
 ## 1.2.0.0
 
-* Added `toShelleyDelegCert` and `fromShelleyDelegCert`
 * Added `ConwayDelegCert` and `Delegatee` #3372
 * Removed `toShelleyDCert` and `fromShelleyDCertMaybe` #3372
 * Replace `DPState c` with `CertState era`
@@ -23,11 +33,6 @@
   `NoThunks`, `EncCBOR`, `DecCBOR`, and `Arbitrary`
 * Added `GovernanceActionMetadata`
 * Added `RatifyEnv` and `RatifySignal`
-* Add `ConwayEraDCert`
-* Add `EraDCert`, `ShelleyEraDCert`, `ConwayEraDCert` instances to `ConwayEra`
-* Add `EraPlutusContext 'PlutusV1` instance to `ConwayEra`
-* Add `EraPlutusContext 'PlutusV2` instance to `ConwayEra`
-* Add `EraPlutusContext 'PlutusV3` instance to `ConwayEra`
 
 ## 1.1.0.0
 

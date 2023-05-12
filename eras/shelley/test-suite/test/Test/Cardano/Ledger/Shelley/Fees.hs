@@ -43,7 +43,6 @@ import Cardano.Ledger.Shelley.API (
   hashVerKeyVRF,
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
@@ -53,6 +52,7 @@ import Cardano.Ledger.Shelley.TxBody (
   StakePoolRelay (..),
   Withdrawals (..),
  )
+import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
   scriptWits,
@@ -238,7 +238,7 @@ txbRegisterStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [ShelleyDCertDeleg (RegKey aliceSHK)]
+    , stbCerts = StrictSeq.fromList [ShelleyTxCertDeleg (RegKey aliceSHK)]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
@@ -268,7 +268,7 @@ txbDelegateStake =
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
     , stbCerts =
         StrictSeq.fromList
-          [ ShelleyDCertDeleg
+          [ ShelleyTxCertDeleg
               (Delegate $ Delegation bobSHK alicePoolKH)
           ]
     , stbWithdrawals = Withdrawals Map.empty
@@ -301,7 +301,7 @@ txbDeregisterStake =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [ShelleyDCertDeleg (DeRegKey aliceSHK)]
+    , stbCerts = StrictSeq.fromList [ShelleyTxCertDeleg (DeRegKey aliceSHK)]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
@@ -332,7 +332,7 @@ txbRegisterPool =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)]
+    , stbCerts = StrictSeq.fromList [TxCertPool (RegPool alicePoolParams)]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
@@ -360,7 +360,7 @@ txbRetirePool =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))]
+    , stbCerts = StrictSeq.fromList [TxCertPool (RetirePool alicePoolKH (EpochNo 5))]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10

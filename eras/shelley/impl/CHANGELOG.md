@@ -1,5 +1,24 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.3.0.0
+
+* Deprecated `poolSpec` function
+* Deprecated `Cardano.Ledger.Shelley.Delegation.Certificates` and
+  `Cardano.Ledger.Shelley.Delegation.PoolParams` modules
+* Added `Cardano.Ledger.Shelley.TxCert` module
+* Make `DCert` parameterized on `era` instead of `c`rypto and rename it as `ShelleyTxCert`:
+  * `DCertDelegCert` -> `ShelleyTxCertDelegCert`
+  * `DCertPool` -> `ShelleyTxCertPool`
+  * `DCertGenesis` -> `ShelleyTxCertGenesis`
+  * `DCertMir` -> `ShelleyTxCertMir`
+* Introduce `TxCert` type family with pattern synonyms and rename the actual `DCert` type into
+  `ShelleyTxCert`
+* Introduce `ShelleyEraTxCert` type class.
+* Add `EraTxCert` and `ShelleyEraTxCert` instances to `ShelleyEra`
+* Remove `certsTxBodyL` and `certsTxBodyG` from `ShelleyEraTxBody`. Former migrated to `EraTxBody`.
+* Add helper functions `shelleyTxCertDelegDecoder`, `commonTxCertDecoder`, `encodeShelleyDelegCert`,
+  `encodePoolCert` and `encodeConstitutionalCert`
+
 ## 1.2.0.0
 
 * Replace `DPState c` with `CertState era`
@@ -11,17 +30,6 @@
   * `drainWithdrawals`
   * `validateZeroRewards`
   * `validateDelegationRegistered`
-* Deprecated `poolSpec` function
-* Deprecated `Cardano.Ledger.Shelley.Delegation.Certificates` and
-  `Cardano.Ledger.Shelley.Delegation.PoolParams` modules
-* Added `Cardano.Ledger.Shelley.Delegation` module
-* Make `DCert` parametrized on `era` instead of `c`rypto
-* Make `DCert` into a type family with pattern synonyms and rename the actual type into
-  `ShelleyDCert`
-* Remove `certsTxBodyL` and `certsTxBodyG` from `ShelleyEraTxBody`
-* Add helper functions `shelleyDCertDelegDecoder`, `commonDCertDecoder`, `encodeShelleyDelegCert`,
-  `encodePoolCert` and `encodeConstitutionalCert`
-* Rename `ShelleyDCertDeleg` to `ShelleyDCertDelegCert`
 
 ## 1.1.1.0
 

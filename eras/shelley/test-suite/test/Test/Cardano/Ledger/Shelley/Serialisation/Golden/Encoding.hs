@@ -78,10 +78,6 @@ import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
 import Cardano.Ledger.Shelley.API (MIRCert (..), MultiSig, ShelleyDelegCert (..))
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)
-import Cardano.Ledger.Shelley.Delegation (
-  pattern DCertMir,
-  pattern ShelleyDCertDeleg,
- )
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
   pattern ProposedPPUpdates,
@@ -113,6 +109,10 @@ import Cardano.Ledger.Shelley.TxBody (
   ppVrf,
   pattern PoolParams,
   pattern RewardAcnt,
+ )
+import Cardano.Ledger.Shelley.TxCert (
+  pattern ShelleyTxCertDeleg,
+  pattern TxCertMir,
  )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
@@ -218,7 +218,7 @@ testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 testVRFKH :: forall c. Crypto c => Hash c (VerKeyVRF c)
 testVRFKH = hashVerKeyVRF $ vrfVerKey (testVRF @c)
 
-testTxb :: (EraTxOut era, EraDCert era) => ShelleyTxBody era
+testTxb :: (EraTxOut era, EraTxCert era) => ShelleyTxBody era
 testTxb =
   ShelleyTxBody
     Set.empty
@@ -232,7 +232,7 @@ testTxb =
 
 testTxbHash ::
   forall era.
-  (EraTxOut era, EraDCert era) =>
+  (EraTxOut era, EraTxCert era) =>
   SafeHash (EraCrypto era) EraIndependentTxBody
 testTxbHash = hashAnnotated $ testTxb @era
 
@@ -271,7 +271,7 @@ testBlockIssuerKeyTokens = e
 
 testKey1SigToken ::
   forall era.
-  (EraTxOut era, Mock (EraCrypto era), EraDCert era) =>
+  (EraTxOut era, Mock (EraCrypto era), EraTxCert era) =>
   Tokens ->
   Tokens
 testKey1SigToken = e
@@ -521,7 +521,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "register_stake_reference"
-        (ShelleyDCertDeleg @C (RegKey (testStakeCred @C_Crypto)))
+        (ShelleyTxCertDeleg @C (RegKey (testStakeCred @C_Crypto)))
         ( T (TkListLen 2)
             <> T (TkWord 0) -- Reg cert
             <> S (testStakeCred @C_Crypto) -- keyhash
@@ -529,7 +529,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "deregister_stake_reference"
-        (ShelleyDCertDeleg @C (DeRegKey (testStakeCred @C_Crypto)))
+        (ShelleyTxCertDeleg @C (DeRegKey (testStakeCred @C_Crypto)))
         ( T (TkListLen 2)
             <> T (TkWord 1) -- DeReg cert
             <> S (testStakeCred @C_Crypto) -- keyhash
@@ -537,7 +537,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "stake_delegation"
-        (ShelleyDCertDeleg @C (Delegate (Delegation (testStakeCred @C_Crypto) (hashKey . vKey $ testStakePoolKey))))
+        (ShelleyTxCertDeleg @C (Delegate (Delegation (testStakeCred @C_Crypto) (hashKey . vKey $ testStakePoolKey))))
         ( T
             ( TkListLen 3
                 . TkWord 2 -- delegation cert with key
@@ -564,7 +564,7 @@ tests =
        in checkEncodingCBOR
             shelleyProtVer
             "register_pool"
-            ( DCertPool @C
+            ( TxCertPool @C
                 ( RegPool
                     ( PoolParams
                         { ppId = hashKey . vKey $ testStakePoolKey
@@ -606,7 +606,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "retire_pool"
-        ( DCertPool @C
+        ( TxCertPool @C
             ( RetirePool @C_Crypto
                 (hashKey . vKey $ testStakePoolKey @C_Crypto)
                 (EpochNo 1729)
@@ -622,7 +622,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "genesis_delegation"
-        ( DCertGenesis @C
+        ( TxCertGenesis @C
             ( ConstitutionalDelegCert @C_Crypto
                 testGKeyHash
                 (hashKey . vKey $ testGenesisDelegateKey @C_Crypto)
@@ -642,7 +642,7 @@ tests =
        in checkEncodingCBOR
             shelleyProtVer
             "mir"
-            (DCertMir @C (MIRCert ReservesMIR rws))
+            (TxCertMir @C (MIRCert ReservesMIR rws))
             ( T
                 ( TkListLen 2
                     . TkWord 6 -- make instantaneous rewards cert
@@ -817,7 +817,7 @@ tests =
             )
     , -- checkEncodingCBOR "full_txn_body"
       let tout = ShelleyTxOut @C testAddrE (Coin 2)
-          reg = ShelleyDCertDeleg (RegKey (testStakeCred @C_Crypto))
+          reg = ShelleyTxCertDeleg (RegKey (testStakeCred @C_Crypto))
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =

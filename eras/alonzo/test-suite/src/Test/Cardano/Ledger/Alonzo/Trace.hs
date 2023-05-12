@@ -36,8 +36,8 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genAccountState)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (CERTS)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 
 -- The AlonzoLEDGER STS combines utxo and delegation rules and allows for generating transactions
@@ -50,7 +50,7 @@ instance
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
-  , Signal (EraRule "DELPL" era) ~ DCert era
+  , Signal (EraRule "DELPL" era) ~ TxCert era
   , PredicateFailure (EraRule "DELPL" era) ~ ShelleyDelplPredFailure era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
@@ -59,7 +59,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Tx era ~ AlonzoTx era
   , ProtVerAtMost era 8
   ) =>

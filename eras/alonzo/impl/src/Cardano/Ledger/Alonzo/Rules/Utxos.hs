@@ -68,7 +68,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize')
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
-import Cardano.Ledger.Shelley.Delegation (ShelleyDCert)
 import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState), ShelleyPPUPState)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
@@ -86,6 +85,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   updateUTxOState,
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -117,7 +117,7 @@ instance
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
-  , DCert era ~ ShelleyDCert era
+  , TxCert era ~ ShelleyTxCert era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
@@ -163,7 +163,7 @@ utxosTransition ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
-  , DCert era ~ ShelleyDCert era
+  , TxCert era ~ ShelleyTxCert era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
@@ -379,7 +379,7 @@ instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) wher
   inject () = UpdateFailure ()
 
 instance
-  ( EraDCert era
+  ( EraTxCert era
   , EncCBOR (PPUPPredFailure era)
   ) =>
   EncCBOR (AlonzoUtxosPredFailure era)
@@ -391,7 +391,7 @@ instance
 
 instance
   ( Era era
-  , DecCBOR (DCert era)
+  , DecCBOR (TxCert era)
   , DecCBOR (PPUPPredFailure era)
   ) =>
   DecCBOR (AlonzoUtxosPredFailure era)
@@ -405,7 +405,7 @@ instance
 
 deriving stock instance
   ( Era era
-  , Show (DCert era)
+  , Show (TxCert era)
   , Show (Shelley.UTxOState era)
   , Show (PPUPPredFailure era)
   ) =>
@@ -413,7 +413,7 @@ deriving stock instance
 
 instance
   ( Era era
-  , Eq (DCert era)
+  , Eq (TxCert era)
   , Eq (Shelley.UTxOState era)
   , Eq (PPUPPredFailure era)
   ) =>
@@ -426,7 +426,7 @@ instance
 
 instance
   ( Era era
-  , NoThunks (DCert era)
+  , NoThunks (TxCert era)
   , NoThunks (Shelley.UTxOState era)
   , NoThunks (PPUPPredFailure era)
   ) =>

@@ -59,7 +59,7 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
-  , Signal (EraRule "DELEGS" era) ~ Seq (DCert era)
+  , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   ) =>
   STS (BabbageLEDGER era)
   where

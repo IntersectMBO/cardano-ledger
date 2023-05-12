@@ -47,7 +47,7 @@ allprops =
           (eraProtVerLow @Conway)
           (eraProtVerHigh @Conway)
     , testProperty "Conway Certificate" $
-        roundTripCborRangeExpectation @(DCert Conway)
+        roundTripCborRangeExpectation @(TxCert Conway)
           (eraProtVerLow @Conway)
           (eraProtVerHigh @Conway)
     ]

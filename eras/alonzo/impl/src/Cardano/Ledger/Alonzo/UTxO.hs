@@ -26,8 +26,12 @@ import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
-import Cardano.Ledger.Shelley.Delegation (ShelleyDelegCert (..), ShelleyEraDCert, pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), getRwdCred)
+import Cardano.Ledger.Shelley.TxCert (
+  ShelleyDelegCert (..),
+  ShelleyEraTxCert,
+  pattern ShelleyTxCertDeleg,
+ )
 import Cardano.Ledger.Shelley.UTxO (scriptCred)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
@@ -47,8 +51,8 @@ import Lens.Micro.Extras (view)
 newtype AlonzoScriptsNeeded era
   = AlonzoScriptsNeeded [(ScriptPurpose era, ScriptHash (EraCrypto era))]
 
-deriving instance (Era era, Eq (DCert era)) => Eq (AlonzoScriptsNeeded era)
-deriving instance (Era era, Show (DCert era)) => Show (AlonzoScriptsNeeded era)
+deriving instance (Era era, Eq (TxCert era)) => Eq (AlonzoScriptsNeeded era)
+deriving instance (Era era, Show (TxCert era)) => Show (AlonzoScriptsNeeded era)
 
 instance Crypto c => EraUTxO (AlonzoEra c) where
   type ScriptsNeeded (AlonzoEra c) = AlonzoScriptsNeeded (AlonzoEra c)
@@ -155,15 +159,15 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
 
     !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ txBody ^. mintedTxBodyF
 
--- | We only find certificate witnesses in Delegating and Deregistration DCerts that have
+-- | We only find certificate witnesses in Delegating and Deregistration TxCerts that have
 -- ScriptHashObj credentials.
 addOnlyCwitness ::
-  ShelleyEraDCert era =>
+  ShelleyEraTxCert era =>
   [(ScriptPurpose era, ScriptHash (EraCrypto era))] ->
-  DCert era ->
+  TxCert era ->
   [(ScriptPurpose era, ScriptHash (EraCrypto era))]
-addOnlyCwitness !ans (ShelleyDCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
-  (Certifying $ ShelleyDCertDeleg c, hk) : ans
-addOnlyCwitness !ans (ShelleyDCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
-  (Certifying $ ShelleyDCertDeleg c, hk) : ans
+addOnlyCwitness !ans (ShelleyTxCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
+  (Certifying $ ShelleyTxCertDeleg c, hk) : ans
+addOnlyCwitness !ans (ShelleyTxCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
+  (Certifying $ ShelleyTxCertDeleg c, hk) : ans
 addOnlyCwitness !ans _ = ans

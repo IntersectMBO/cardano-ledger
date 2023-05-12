@@ -41,7 +41,6 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.Shelley.Delegation (ShelleyDCert)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
@@ -57,6 +56,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   updateUTxOState,
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val ((<->))
 import Control.Monad.Trans.Reader (asks)
@@ -79,7 +79,7 @@ instance
   , EraPlutusContext 'PlutusV1 era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
-  , DCert era ~ ShelleyDCert era
+  , TxCert era ~ ShelleyTxCert era
   , Script era ~ AlonzoScript era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
@@ -120,7 +120,7 @@ utxosTransition ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Tx era ~ AlonzoTx era
-  , DCert era ~ ShelleyDCert era
+  , TxCert era ~ ShelleyTxCert era
   , Script era ~ AlonzoScript era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era

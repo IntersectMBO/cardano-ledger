@@ -20,7 +20,6 @@ module Cardano.Ledger.Alonzo (
 )
 where
 
-import Cardano.Ledger.Alonzo.Delegation ()
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams ()

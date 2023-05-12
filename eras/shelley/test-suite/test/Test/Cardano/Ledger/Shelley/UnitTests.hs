@@ -33,7 +33,6 @@ import Cardano.Ledger.Shelley.API (
   ShelleyLEDGER,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (ShelleyDCert (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState (..),
@@ -75,6 +74,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ppVrf,
   pattern RewardAcnt,
  )
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
   addrWits,
@@ -282,7 +282,7 @@ data AliceToBob = AliceToBob
   , fee :: Coin
   , deposits :: Coin
   , refunds :: Coin
-  , certs :: [DCert C]
+  , certs :: [TxCert C]
   , ttl :: SlotNo
   , signers :: [KeyPair 'Witness C_Crypto]
   }
@@ -646,7 +646,7 @@ testPoolCostTooSmall =
       , fee = Coin 997
       , deposits = Coin 250
       , refunds = Coin 0
-      , certs = [ShelleyDCertPool $ RegPool alicePoolParamsSmallCost]
+      , certs = [ShelleyTxCertPool $ RegPool alicePoolParamsSmallCost]
       , ttl = SlotNo 0
       , signers =
           ( [ asWitness alicePay

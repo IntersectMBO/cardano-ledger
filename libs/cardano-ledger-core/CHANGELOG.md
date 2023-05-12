@@ -1,9 +1,14 @@
 # Version history for `cardano-ledger-core`
 
+## 1.3.0.0
+
+* Add `certsTxBodyL` to `EraTxBody`
+* Introduce `TxCert` type family and `EraTxCert` type class.
+
 ## 1.2.0.0
 
-- Deprecate `Cardano.Ledger.UMapCompact` in favor of `Cardano.Ledger.UMap` and add tests for it. #3371
-  - Add `Cardano.Ledger.UMap.rdPairView` to view the reward-deposits pair from the `UMap`.
+* Deprecate `Cardano.Ledger.UMapCompact` in favor of `Cardano.Ledger.UMap` and add tests for it. #3371
+  * Add `Cardano.Ledger.UMap.rdPairView` to view the reward-deposits pair from the `UMap`.
 * Replace `DPState c` with `CertState era`
 * Add `VState`
 * Add `certVState`
@@ -15,7 +20,6 @@
   * `dpsDState` -> `certDState`
   * `obligationDPState` -> `obligationCertState`
 * Add support for `PlutusV3`
-* Add `certsTxBodyL` to `EraTxBody`
 
 ## 1.1.0.0
 

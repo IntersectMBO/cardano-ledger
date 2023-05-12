@@ -96,17 +96,17 @@ data CollectError era
   | BadTranslation !(TranslationError (EraCrypto era))
   deriving (Generic)
 
-deriving instance (Era era, Eq (DCert era)) => Eq (CollectError era)
-deriving instance (Era era, Show (DCert era)) => Show (CollectError era)
-deriving instance (Era era, NoThunks (DCert era)) => NoThunks (CollectError era)
+deriving instance (Era era, Eq (TxCert era)) => Eq (CollectError era)
+deriving instance (Era era, Show (TxCert era)) => Show (CollectError era)
+deriving instance (Era era, NoThunks (TxCert era)) => NoThunks (CollectError era)
 
-instance EraDCert era => EncCBOR (CollectError era) where
+instance EraTxCert era => EncCBOR (CollectError era) where
   encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
   encCBOR (NoWitness x) = encode $ Sum (NoWitness @era) 1 !> To x
   encCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
   encCBOR (BadTranslation x) = encode $ Sum (BadTranslation @era) 3 !> To x
 
-instance (Era era, DecCBOR (DCert era)) => DecCBOR (CollectError era) where
+instance (Era era, DecCBOR (TxCert era)) => DecCBOR (CollectError era) where
   decCBOR = decode (Summands "CollectError" dec)
     where
       dec 0 = SumD NoRedeemer <! From
@@ -235,7 +235,7 @@ evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
 
 -- Collect information (purpose and ScriptHash) about all the
 -- Credentials that refer to scripts, that might be run in a Tx.
--- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
+-- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (TxCert)
 -- See additional comments about 'scriptsNeededFromBody' below.
 scriptsNeeded ::
   ( EraTx era

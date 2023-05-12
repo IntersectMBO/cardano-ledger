@@ -41,10 +41,6 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (
-  isInstantaneousRewards,
-  pattern ShelleyDCertDeleg,
- )
 import Cardano.Ledger.Shelley.Era (ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
@@ -53,6 +49,10 @@ import Cardano.Ledger.Shelley.TxBody (
   PoolMetadata (..),
   PoolParams (..),
   getRwdNetwork,
+ )
+import Cardano.Ledger.Shelley.TxCert (
+  isInstantaneousRewards,
+  pattern ShelleyTxCertDeleg,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
@@ -107,10 +107,10 @@ instance NoThunks (ShelleyPoolPredFailure era)
 
 instance NFData (ShelleyPoolPredFailure era)
 
-instance (ShelleyEraDCert era, EraPParams era) => STS (ShelleyPOOL era) where
+instance (ShelleyEraTxCert era, EraPParams era) => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState era
 
-  type Signal (ShelleyPOOL era) = DCert era
+  type Signal (ShelleyPOOL era) = TxCert era
 
   type Environment (ShelleyPOOL era) = PoolEnv era
 
@@ -170,14 +170,14 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
 
 poolDelegationTransition ::
   forall era.
-  (ShelleyEraDCert era, EraPParams era) =>
+  (ShelleyEraTxCert era, EraPParams era) =>
   TransitionRule (ShelleyPOOL era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let stpools = psStakePoolParams ps
   let pv = pp ^. ppProtocolVersionL
   case c of
-    DCertPool (RegPool poolParam) -> do
+    TxCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
 
       when (HardForks.validatePoolRewardAccountNetID pv) $ do
@@ -222,7 +222,7 @@ poolDelegationTransition = do
               { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam)
               , psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
               }
-    DCertPool (RetirePool hk e) -> do
+    TxCertPool (RetirePool hk e) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom stpools) ?! StakePoolNotRegisteredOnKeyPOOL hk
       cepoch <- liftSTS $ do
@@ -233,10 +233,10 @@ poolDelegationTransition = do
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
       pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk e)}
-    ShelleyDCertDeleg _ -> do
+    ShelleyTxCertDeleg _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps
-    DCertGenesis _ -> do
+    TxCertGenesis _ -> do
       failBecause $ WrongCertificateTypePOOL 2
       pure ps
     _ | isInstantaneousRewards c -> do

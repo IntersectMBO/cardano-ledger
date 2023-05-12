@@ -26,10 +26,10 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API hiding (KeyPair, vKey)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
+import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Shelley.TxWits
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -467,12 +467,12 @@ exampleTxIns =
     [ TxIn (TxId (mkDummySafeHash Proxy 1)) minBound
     ]
 
-exampleCerts :: (ShelleyEraDCert era, ProtVerAtMost era 8) => StrictSeq (DCert era)
+exampleCerts :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => StrictSeq (TxCert era)
 exampleCerts =
   StrictSeq.fromList
-    [ ShelleyDCertDeleg (RegKey (keyToCredential exampleStakeKey))
-    , DCertPool (RegPool examplePoolParams)
-    , DCertMir $
+    [ ShelleyTxCertDeleg (RegKey (keyToCredential exampleStakeKey))
+    , TxCertPool (RegPool examplePoolParams)
+    , TxCertMir $
         MIRCert ReservesMIR $
           StakeAddressesMIR $
             Map.fromList

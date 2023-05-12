@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-mary
-version:            1.2.0.0
+version:            1.3.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -26,7 +26,6 @@ flag asserts
 library
     exposed-modules:
         Cardano.Ledger.Mary
-        Cardano.Ledger.Mary.Delegation
         Cardano.Ledger.Mary.Core
         Cardano.Ledger.Mary.Translation
         Cardano.Ledger.Mary.TxBody
@@ -41,6 +40,7 @@ library
         Cardano.Ledger.Mary.Scripts
         Cardano.Ledger.Mary.Tx
         Cardano.Ledger.Mary.TxAuxData
+        Cardano.Ledger.Mary.TxCert
         Cardano.Ledger.Mary.TxSeq
         Cardano.Ledger.Mary.TxWits
 
@@ -59,8 +59,8 @@ library
         cardano-data,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-binary >=1.0,
-        cardano-ledger-core ^>=1.2,
-        cardano-ledger-shelley ^>=1.2,
+        cardano-ledger-core ^>=1.3,
+        cardano-ledger-shelley ^>=1.3,
         containers,
         deepseq,
         groups,

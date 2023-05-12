@@ -171,10 +171,10 @@ instance
 
 instance
   ( EraTxOut era
-  , EraDCert era
+  , EraTxCert era
   , Arbitrary (TxOut era)
   , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (DCert era)
+  , Arbitrary (TxCert era)
   ) =>
   Arbitrary (AlonzoTxBody era)
   where
@@ -370,7 +370,7 @@ instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   , Arbitrary (ShelleyUtxowPredFailure era)
-  , Arbitrary (DCert era)
+  , Arbitrary (TxCert era)
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
   where
@@ -384,7 +384,7 @@ instance
 
 instance
   ( Era era
-  , Arbitrary (DCert era)
+  , Arbitrary (TxCert era)
   ) =>
   Arbitrary (ScriptPurpose era)
   where

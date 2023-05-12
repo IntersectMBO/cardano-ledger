@@ -59,11 +59,11 @@ instance Arbitrary AssetName where
 
 instance
   ( EraTxOut era
-  , EraDCert era
+  , EraTxCert era
   , Era era
   , Arbitrary (TxOut era)
   , Arbitrary (PParamsHKD StrictMaybe era)
-  , Arbitrary (DCert era)
+  , Arbitrary (TxCert era)
   ) =>
   Arbitrary (MaryTxBody era)
   where

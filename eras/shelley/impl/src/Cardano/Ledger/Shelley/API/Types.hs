@@ -73,10 +73,6 @@ import Cardano.Ledger.PoolDistr as X (
   individualPoolStake,
  )
 import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
-import Cardano.Ledger.Shelley.Delegation as X (
-  PoolCert (..),
-  ShelleyDelegCert (..),
- )
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (
   AccountState (..),
@@ -151,6 +147,10 @@ import Cardano.Ledger.Shelley.TxBody as X (
   StakePoolRelay (..),
   WitVKey (..),
   Withdrawals (..),
+ )
+import Cardano.Ledger.Shelley.TxCert as X (
+  PoolCert (..),
+  ShelleyDelegCert (..),
  )
 import Cardano.Ledger.Shelley.TxWits as X (
   ShelleyTxWits,

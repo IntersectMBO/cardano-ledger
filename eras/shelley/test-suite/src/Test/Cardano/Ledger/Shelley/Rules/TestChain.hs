@@ -78,7 +78,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 
-import Cardano.Ledger.Shelley.Delegation (pattern ShelleyDCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   runShelleyBase,
@@ -199,7 +199,7 @@ poolTraceFromBlock chainSt block =
        in PoolEnv s pp
     poolSt0 =
       certPState (lsCertState ledgerSt0)
-    poolCert (DCertPool _) = True
+    poolCert (TxCertPool _) = True
     poolCert _ = False
 
 -- | Reconstruct a DELEG trace from all the transaction certificates in a Block
@@ -229,8 +229,8 @@ delegTraceFromBlock chainSt block =
        in DelegEnv s ptr reserves pp
     delegSt0 =
       certDState (lsCertState ledgerSt0)
-    delegCert (ShelleyDCertDeleg _) = True
-    delegCert (DCertMir _) = True
+    delegCert (ShelleyTxCertDeleg _) = True
+    delegCert (TxCertMir _) = True
     delegCert _ = False
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
