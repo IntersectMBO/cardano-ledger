@@ -166,8 +166,8 @@ addOnlyCwitness ::
   [(ScriptPurpose era, ScriptHash (EraCrypto era))] ->
   TxCert era ->
   [(ScriptPurpose era, ScriptHash (EraCrypto era))]
-addOnlyCwitness !ans (ShelleyTxCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
+addOnlyCwitness !ans (ShelleyTxCertDeleg c@(ShelleyUnRegCert (ScriptHashObj hk))) =
   (Certifying $ ShelleyTxCertDeleg c, hk) : ans
-addOnlyCwitness !ans (ShelleyTxCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
+addOnlyCwitness !ans (ShelleyTxCertDeleg c@(ShelleyDelegCert (ScriptHashObj hk) _dpool)) =
   (Certifying $ ShelleyTxCertDeleg c, hk) : ans
 addOnlyCwitness !ans _ = ans
