@@ -8,7 +8,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -35,7 +34,6 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
 )
 where
 
-import Data.Foldable (foldr')
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (VerKeyDSIGN))
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
@@ -117,7 +115,7 @@ import Control.State.Transition (
   wrapEvent,
   wrapFailed,
  )
-import Data.Foldable (sequenceA_)
+import Data.Foldable (foldr', sequenceA_)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -305,7 +303,6 @@ transitionRulesUTXOW ::
   , PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era
   , STS (utxow era)
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , ProtVerAtMost era 8
   ) =>
   TransitionRule (utxow era)
 transitionRulesUTXOW = do
@@ -331,7 +328,7 @@ transitionRulesUTXOW = do
   runTestOnSignal $ validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses witsVKeyNeeded genDelegs utxo tx witsKeyHashes
+  runTest $ validateNeededWitnesses genDelegs utxo tx witsKeyHashes
 
   -- check metadata hash
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
@@ -371,7 +368,6 @@ instance
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , ProtVerAtMost era 8
   ) =>
   STS (ShelleyUTXOW era)
   where
@@ -451,14 +447,14 @@ validateVerifiedWits tx =
 -- from Era to Era, so we parameterise over that function in this test.
 -- That allows it to be used in many Eras.
 validateNeededWitnesses ::
-  (UTxO era -> Tx era -> GenDelegs (EraCrypto era) -> Set (KeyHash 'Witness (EraCrypto era))) ->
+  (EraTx era, ShelleyEraTxBody era) =>
   GenDelegs (EraCrypto era) ->
   UTxO era ->
   Tx era ->
   Set (KeyHash 'Witness (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
-validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
-  let needed = witsvkeyneeded utxo tx genDelegs
+validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
+  let needed = witsVKeyNeeded utxo tx genDelegs
       missingWitnesses = Set.difference needed witsKeyHashes
    in failureUnless (Set.null missingWitnesses) $
         MissingVKeyWitnessesUTXOW missingWitnesses
@@ -468,10 +464,7 @@ validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
   forall era.
-  ( EraTx era
-  , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
-  ) =>
+  (EraTx era, ShelleyEraTxBody era) =>
   UTxO era ->
   Tx era ->
   GenDelegs (EraCrypto era) ->
@@ -485,9 +478,9 @@ witsVKeyNeeded utxo' tx genDelegs =
   where
     txBody = tx ^. bodyTxL
     inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    inputAuthors = foldr accum Set.empty (txBody ^. inputsTxBodyL)
+    inputAuthors = foldr' accum Set.empty (txBody ^. allInputsTxBodyF)
       where
-        accum txin ans =
+        accum txin !ans =
           case txinLookup txin utxo' of
             Just txOut ->
               case txOut ^. addrTxOutL of
@@ -498,7 +491,7 @@ witsVKeyNeeded utxo' tx genDelegs =
             Nothing -> ans
 
     wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+    wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
       where
         accum key _ !ans =
           case credKeyHashWitness (getRwdCred key) of
@@ -521,7 +514,7 @@ witsVKeyNeeded utxo' tx genDelegs =
             Just vkeyWit -> Set.insert vkeyWit ans
     updateKeys :: Set (KeyHash 'Witness (EraCrypto era))
     updateKeys =
-      asWitness `Set.map` propWits (txBody ^. updateTxBodyL) genDelegs
+      asWitness `Set.map` propWits (txBody ^. updateTxBodyG) genDelegs
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)

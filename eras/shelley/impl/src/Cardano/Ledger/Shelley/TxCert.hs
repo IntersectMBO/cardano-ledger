@@ -406,7 +406,6 @@ requiresVKeyWitness (ShelleyTxCertDeleg (ShelleyRegCert _)) = False
 requiresVKeyWitness x = isNothing $ getTxCertMir x
 {-# DEPRECATED requiresVKeyWitness "In favor of `getVKeyWitnessTxCert`" #-}
 
-
 getScriptWitnessShelleyTxCert ::
   ShelleyTxCert era ->
   Maybe (ScriptHash (EraCrypto era))

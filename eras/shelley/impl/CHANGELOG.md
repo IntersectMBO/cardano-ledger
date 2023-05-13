@@ -29,6 +29,7 @@
   * `scriptStakeCred` in favor of `getScriptWitnessTxCert`
   * `requiresVKeyWitness` in favor of `getVKeyWitnessTxCert`
   * `delegCWitness`
+* `validateNeededWitnesses` no longer accepts `witsVKeyNeeded` as an argument.
 
 ## 1.2.0.0
 

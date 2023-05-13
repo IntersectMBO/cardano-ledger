@@ -28,7 +28,6 @@ import Cardano.Ledger.Alonzo.Rules (
   missingRequiredDatums,
   ppViewHashesMatch,
   requiredSignersAreWitnessed,
-  witsVKeyNeeded,
  )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
@@ -317,7 +316,7 @@ babbageUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses witsVKeyNeeded genDelegs utxo tx witsKeyHashes
+  runTest $ validateNeededWitnesses genDelegs utxo tx witsKeyHashes
   -- TODO can we add the required signers to witsVKeyNeeded so we dont need the check below?
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but

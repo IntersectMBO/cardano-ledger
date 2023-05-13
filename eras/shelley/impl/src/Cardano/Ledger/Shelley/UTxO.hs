@@ -80,7 +80,6 @@ scriptCred :: Credential kr c -> Maybe (ScriptHash c)
 scriptCred = credScriptHash
 {-# DEPRECATED scriptCred "In favor of `credScriptHash`" #-}
 
-
 -- | Computes the set of script hashes required to unlock the transaction inputs
 -- and the withdrawals.
 scriptsNeeded ::
