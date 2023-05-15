@@ -14,14 +14,21 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
--- Due to Delegation usage
-{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
+-- Due to Delegation usage.
+-- TODO: remove when Delegation is gone
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+-- Due to deprecated requiresVKeyWitness.
+-- TODO: remove when requiresVKeyWitness is gone:
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
   pattern TxCertMir,
   pattern ShelleyTxCertDeleg,
   ShelleyDelegCert (.., RegKey, DeRegKey, Delegate),
+  getVKeyWitnessShelleyTxCert,
+  getScriptWitnessShelleyTxCert,
   delegCWitness,
   ShelleyTxCert (..),
   MIRCert (..),
@@ -78,7 +85,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -92,6 +99,10 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
   {-# SPECIALIZE instance EraTxCert (ShelleyEra StandardCrypto) #-}
 
   type TxCert (ShelleyEra c) = ShelleyTxCert (ShelleyEra c)
+
+  getVKeyWitnessTxCert = getVKeyWitnessShelleyTxCert
+
+  getScriptWitnessTxCert = getScriptWitnessShelleyTxCert
 
   mkTxCertPool = ShelleyTxCertPool
 
@@ -340,6 +351,7 @@ delegCWitness :: ShelleyDelegCert c -> Credential 'Staking c
 delegCWitness (ShelleyRegCert _) = error "no witness in key registration certificate"
 delegCWitness (ShelleyUnRegCert cred) = cred
 delegCWitness (ShelleyDelegCert cred _) = cred
+{-# DEPRECATED delegCWitness "This was a partial function, logic rewritten in a safer way" #-}
 
 -- | Check for 'ShelleyRegCert' constructor
 isRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
@@ -386,6 +398,33 @@ isTreasuryMIRCert x = case getTxCertMir x of
 -- | Returns True for delegation certificates that require at least
 -- one witness, and False otherwise. It is mainly used to ensure
 -- that calling a variant of 'cwitness' is safe.
-requiresVKeyWitness :: ShelleyEraTxCert era => TxCert era -> Bool
+--
+-- Note: This will not compile for Conway, because it is incorrect for Conway, use
+-- `getVKeyWitnessTxCert` instead.
+requiresVKeyWitness :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
 requiresVKeyWitness (ShelleyTxCertDeleg (ShelleyRegCert _)) = False
 requiresVKeyWitness x = isNothing $ getTxCertMir x
+{-# DEPRECATED requiresVKeyWitness "In favor of `getVKeyWitnessTxCert`" #-}
+
+getScriptWitnessShelleyTxCert ::
+  ShelleyTxCert era ->
+  Maybe (ScriptHash (EraCrypto era))
+getScriptWitnessShelleyTxCert = \case
+  ShelleyTxCertDelegCert delegCert ->
+    case delegCert of
+      ShelleyRegCert _ -> Nothing
+      ShelleyUnRegCert cred -> credScriptHash cred
+      ShelleyDelegCert cred _ -> credScriptHash cred
+  _ -> Nothing
+
+getVKeyWitnessShelleyTxCert :: ShelleyTxCert era -> Maybe (KeyHash 'Witness (EraCrypto era))
+getVKeyWitnessShelleyTxCert = \case
+  ShelleyTxCertDelegCert delegCert ->
+    case delegCert of
+      -- Registration certificates do not require a witness
+      ShelleyRegCert _ -> Nothing
+      ShelleyUnRegCert cred -> credKeyHashWitness cred
+      ShelleyDelegCert cred _ -> credKeyHashWitness cred
+  ShelleyTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
+  ShelleyTxCertGenesis genesisCert -> Just $ genesisKeyHashWitness genesisCert
+  ShelleyTxCertMir {} -> Nothing

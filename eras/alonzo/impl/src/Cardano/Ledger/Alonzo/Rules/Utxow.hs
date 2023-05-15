@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -6,7 +7,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -22,13 +22,11 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
   missingRequiredDatums,
   ppViewHashesMatch,
   requiredSignersAreWitnessed,
-  witsVKeyNeeded,
 )
 where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred, unWithdrawals)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
@@ -46,7 +44,6 @@ import Cardano.Ledger.Alonzo.Tx (
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   ScriptIntegrityHash,
-  ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), languages)
 import Cardano.Ledger.Alonzo.TxWits (
@@ -60,15 +57,12 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   quorum,
-  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
-import Cardano.Ledger.PoolParams (ppOwners)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
@@ -78,18 +72,16 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure (..),
   UtxoEnv (..),
-  propWits,
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (TxIn (..), extractKeyHashWitnessSet)
-import Cardano.Ledger.Shelley.TxCert (delegCWitness, requiresVKeyWitness, pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txinLookup)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
-import Data.Foldable (foldr', sequenceA_)
+import Data.Foldable (sequenceA_)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -374,7 +366,7 @@ alonzoStyleWitness = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses witsVKeyNeeded genDelegs utxo tx witsKeyHashes
+  runTest $ validateNeededWitnesses genDelegs utxo tx witsKeyHashes
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded must include the reqSignerHashes in the union   -}
@@ -406,75 +398,6 @@ alonzoStyleWitness = do
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 -- ================================
-
--- | Collect the set of hashes of keys that needs to sign a given transaction.
---  This set consists of the txin owners, certificate authors, and withdrawal
---  reward accounts.
---
---  Compared to pre-Alonzo eras, we additionally gather the certificates
---  required to authenticate collateral witnesses.
-witsVKeyNeeded ::
-  forall era.
-  (EraTx era, AlonzoEraTxBody era) =>
-  UTxO era ->
-  Tx era ->
-  GenDelegs (EraCrypto era) ->
-  Set (KeyHash 'Witness (EraCrypto era))
-witsVKeyNeeded utxo' tx genDelegs =
-  certAuthors
-    `Set.union` inputAuthors
-    `Set.union` owners
-    `Set.union` wdrlAuthors
-    `Set.union` updateKeys
-  where
-    txBody = tx ^. bodyTxL
-    inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    inputAuthors =
-      foldr'
-        accum
-        Set.empty
-        ((txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL))
-      where
-        accum txin ans =
-          case txinLookup txin utxo' of
-            Just txOut ->
-              case txOut ^. addrTxOutL of
-                Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
-                AddrBootstrap bootAddr ->
-                  Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
-                _ -> ans
-            Nothing -> ans
-
-    wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
-      where
-        accum key _ = Set.union (extractKeyHashWitnessSet [getRwdCred key])
-    owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
-      where
-        accum (TxCertPool (RegPool pool)) ans =
-          Set.union
-            (Set.map asWitness (ppOwners pool))
-            ans
-        accum _cert ans = ans
-    cwitness (ShelleyTxCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
-    cwitness (TxCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
-    cwitness (TxCertGenesis c) = Set.singleton (asWitness $ genesisCWitness c)
-    cwitness c = error $ show c ++ " does not have a witness"
-    -- key reg requires no witness but this is already filtered out by requiresVKeyWitness
-    -- before the call to `cwitness`, so this error should never be reached.
-
-    certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
-      where
-        accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
-        accum _cert ans = ans
-    updateKeys :: Set (KeyHash 'Witness (EraCrypto era))
-    updateKeys =
-      asWitness
-        `Set.map` propWits
-          (strictMaybeToMaybe $ txBody ^. updateTxBodyG)
-          genDelegs
 
 extSymmetricDifference :: (Ord k) => [a] -> (a -> k) -> [b] -> (b -> k) -> ([a], [b])
 extSymmetricDifference as fa bs fb = (extraA, extraB)

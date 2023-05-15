@@ -15,6 +15,8 @@ module Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert (..),
   fromShelleyDelegCert,
   toShelleyDelegCert,
+  getScriptWitnessConwayTxCert,
+  getVKeyWitnessConwayTxCert,
 )
 where
 
@@ -35,7 +37,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential, StakeCredential)
+import Cardano.Ledger.Credential (Credential, StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.TxCert (
@@ -54,6 +56,10 @@ import NoThunks.Class (NoThunks)
 
 instance Crypto c => EraTxCert (ConwayEra c) where
   type TxCert (ConwayEra c) = ConwayTxCert (ConwayEra c)
+
+  getVKeyWitnessTxCert = getVKeyWitnessConwayTxCert
+
+  getScriptWitnessTxCert = getScriptWitnessConwayTxCert
 
   mkTxCertPool = ConwayTxCertPool
   getTxCertPool (ConwayTxCertPool x) = Just x
@@ -253,3 +259,34 @@ toShelleyDelegCert = \case
   ConwayUnRegCert cred SNothing -> Just $ ShelleyUnRegCert cred
   ConwayDelegCert cred (DelegStake poolId) -> Just $ ShelleyDelegCert cred poolId
   _ -> Nothing
+
+-- For both of the fucntions `getScriptWitnessConwayTxCert` and
+-- `getVKeyWitnessConwayTxCert` we preserve the old behavior of not requiring a witness,
+-- but only during the transitional period of Conway era and only for registration
+-- cdertificates without a deposit. Future eras will require a witness for registration
+-- certificates, because the one without a deposit will be removed.
+
+getScriptWitnessConwayTxCert ::
+  ConwayTxCert era ->
+  Maybe (ScriptHash (EraCrypto era))
+getScriptWitnessConwayTxCert = \case
+  ConwayTxCertDeleg delegCert ->
+    case delegCert of
+      ConwayRegCert _ SNothing -> Nothing
+      ConwayRegCert cred (SJust _) -> credScriptHash cred
+      ConwayUnRegCert cred _ -> credScriptHash cred
+      ConwayDelegCert cred _ -> credScriptHash cred
+      ConwayRegDelegCert cred _ _ -> credScriptHash cred
+  _ -> Nothing
+
+getVKeyWitnessConwayTxCert :: ConwayTxCert era -> Maybe (KeyHash 'Witness (EraCrypto era))
+getVKeyWitnessConwayTxCert = \case
+  ConwayTxCertDeleg delegCert ->
+    case delegCert of
+      ConwayRegCert _ SNothing -> Nothing
+      ConwayRegCert cred (SJust _) -> credKeyHashWitness cred
+      ConwayUnRegCert cred _ -> credKeyHashWitness cred
+      ConwayDelegCert cred _ -> credKeyHashWitness cred
+      ConwayRegDelegCert cred _ _ -> credKeyHashWitness cred
+  ConwayTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
+  ConwayTxCertConstitutional genesisCert -> Just $ genesisKeyHashWitness genesisCert

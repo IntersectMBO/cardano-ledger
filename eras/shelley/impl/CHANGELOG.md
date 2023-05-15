@@ -22,6 +22,15 @@
   * `RegKey` in favor of `ShelleyRegCert`
   * `DeRegKey` in favor of `ShelleyUnRegCert`
   * `Delegate` in favor of `ShelleyDelegCert`
+* Addition of `getVKeyWitnessShelleyTxCert` and `getScriptWitnessShelleyTxCert`
+* Deprecate:
+  * `extractKeyHashWitnessSet` in favor of `credKeyHashWitness`
+  * `scriptCred` in favor of `credScriptHash`
+  * `scriptStakeCred` in favor of `getScriptWitnessTxCert`
+  * `requiresVKeyWitness` in favor of `getVKeyWitnessTxCert`
+  * `delegCWitness` - no longer used.
+  * `propWits` - will become an internal function in the future version
+* `validateNeededWitnesses` no longer accepts `witsVKeyNeeded` as an argument.
 
 ## 1.2.0.0
 

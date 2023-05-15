@@ -10,6 +10,8 @@
 * Add `EraPlutusContext 'PlutusV3` instance to `ConwayEra`
 * Added `toShelleyDelegCert` and `fromShelleyDelegCert`
 * Changed `ConwayDelegCert` structure #3408
+* Addition of `getScriptWitnessConwayTxCert` and `getVKeyWitnessConwayTxCert`
+
 
 ## 1.2.0.0
 

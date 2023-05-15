@@ -12,6 +12,10 @@ instance Crypto c => EraTxCert (BabbageEra c) where
 
   type TxCert (BabbageEra c) = ShelleyTxCert (BabbageEra c)
 
+  getVKeyWitnessTxCert = getVKeyWitnessShelleyTxCert
+
+  getScriptWitnessTxCert = getScriptWitnessShelleyTxCert
+
   mkTxCertPool = ShelleyTxCertPool
 
   getTxCertPool (ShelleyTxCertPool c) = Just c

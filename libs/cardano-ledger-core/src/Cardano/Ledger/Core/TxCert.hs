@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -14,7 +15,9 @@ module Cardano.Ledger.Core.TxCert (
   Delegation (..),
   PoolCert (..),
   poolCWitness,
+  poolCertKeyHashWitness,
   ConstitutionalDelegCert (..),
+  genesisKeyHashWitness,
   genesisCWitness,
 )
 where
@@ -22,11 +25,13 @@ where
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Ledger.Core.Era (Era (EraCrypto))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
   KeyRole (..),
   VerKeyVRF,
+  asWitness,
  )
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -49,6 +54,12 @@ class
   EraTxCert era
   where
   type TxCert era = (r :: Type) | r -> era
+
+  -- | Return a witness key whenever a certificate requires one
+  getVKeyWitnessTxCert :: TxCert era -> Maybe (KeyHash 'Witness (EraCrypto era))
+
+  -- | Return a ScriptHash for certificate types that require a witness
+  getScriptWitnessTxCert :: TxCert era -> Maybe (ScriptHash (EraCrypto era))
 
   mkTxCertPool :: PoolCert (EraCrypto era) -> TxCert era
 
@@ -109,9 +120,17 @@ instance NoThunks (ConstitutionalDelegCert c)
 instance NFData (ConstitutionalDelegCert c) where
   rnf = rwhnf
 
+poolCertKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
+poolCertKeyHashWitness = \case
+  RegPool poolParams -> asWitness $ ppId poolParams
+  RetirePool poolId _ -> asWitness poolId
+
 poolCWitness :: PoolCert c -> Credential 'StakePool c
 poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
+
+genesisKeyHashWitness :: ConstitutionalDelegCert c -> KeyHash 'Witness c
+genesisKeyHashWitness (ConstitutionalDelegCert gk _ _) = asWitness gk
 
 genesisCWitness :: ConstitutionalDelegCert c -> KeyHash 'Genesis c
 genesisCWitness (ConstitutionalDelegCert gk _ _) = gk

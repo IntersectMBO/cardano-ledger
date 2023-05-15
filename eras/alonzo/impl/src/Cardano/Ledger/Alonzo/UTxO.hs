@@ -2,9 +2,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -22,17 +22,11 @@ import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), MaryEraTxBody (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (ScriptHashObj))
+import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), getRwdCred)
-import Cardano.Ledger.Shelley.TxCert (
-  ShelleyDelegCert (..),
-  ShelleyEraTxCert,
-  pattern ShelleyTxCertDeleg,
- )
-import Cardano.Ledger.Shelley.UTxO (scriptCred)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -40,7 +34,7 @@ import Cardano.Ledger.UTxO (
   getScriptHash,
  )
 import Control.SetAlgebra (eval, (◁))
-import Data.Foldable (foldl')
+import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
@@ -131,7 +125,7 @@ getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
 -- function 'validateMissingScripts' in the Utxow rule.
 getAlonzoScriptsNeeded ::
   forall era.
-  (MaryEraTxBody era) =>
+  MaryEraTxBody era =>
   UTxO era ->
   TxBody era ->
   AlonzoScriptsNeeded era
@@ -152,22 +146,11 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
       where
         withdrawals = unWithdrawals $ txBody ^. withdrawalsTxBodyL
         fromRwd accnt = do
-          hash <- scriptCred $ getRwdCred accnt
+          hash <- credScriptHash $ getRwdCred accnt
           return (Rewarding accnt, hash)
 
-    !cert = foldl' addOnlyCwitness [] (txBody ^. certsTxBodyL)
+    !cert =
+      mapMaybe (\cred -> (Certifying cred,) <$> getScriptWitnessTxCert cred) $
+        toList (txBody ^. certsTxBodyL)
 
     !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ txBody ^. mintedTxBodyF
-
--- | We only find certificate witnesses in Delegating and Deregistration TxCerts that have
--- ScriptHashObj credentials.
-addOnlyCwitness ::
-  ShelleyEraTxCert era =>
-  [(ScriptPurpose era, ScriptHash (EraCrypto era))] ->
-  TxCert era ->
-  [(ScriptPurpose era, ScriptHash (EraCrypto era))]
-addOnlyCwitness !ans (ShelleyTxCertDeleg c@(ShelleyUnRegCert (ScriptHashObj hk))) =
-  (Certifying $ ShelleyTxCertDeleg c, hk) : ans
-addOnlyCwitness !ans (ShelleyTxCertDeleg c@(ShelleyDelegCert (ScriptHashObj hk) _dpool)) =
-  (Certifying $ ShelleyTxCertDeleg c, hk) : ans
-addOnlyCwitness !ans _ = ans
