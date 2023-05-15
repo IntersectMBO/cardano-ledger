@@ -57,7 +57,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
 import Cardano.Ledger.UMap (
-  Trip,
+  UMElem,
   UMap (..),
   compactCoinOrError,
   member,
@@ -166,7 +166,7 @@ smartUTxOState pp utxo c1 c2 st =
 
 -- | This computes a Snapshot using IncrementalStake (which is an
 --   aggregate of the current UTxO) and UMap (which tracks Coin,
---   Delegations, and Ptrs simultaneously).  Note that logically:
+--   SPoolUView, and Ptrs simultaneously).  Note that logically:
 --   1) IncrementalStake = (credStake, ptrStake)
 --   2) UMap = (rewards, activeDelegs, ptrmap :: Map ptr cred)
 --
@@ -205,7 +205,7 @@ incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
   where
     UMap triplesMap ptrsMap = dsUnified ds
     PState {psStakePoolParams = poolParams} = ps
-    delegs_ = UM.viewToVMap (delegations ds)
+    delegs_ = UM.unUnifyToVMap (delegations ds)
     -- A credential is active, only if it is being delegated
     activeCreds = Map.filterWithKey (\k _ -> VMap.member k delegs_) credStake
     ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
@@ -225,18 +225,18 @@ incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
 
 -- | Aggregate active stake by merging two maps. The triple map from the
 --   UMap, and the IncrementalStake. Only keep the active stake. Active can
---   be determined if there is a (SJust deleg) in the Triple.  This is step2 =
+--   be determined if there is a (SJust deleg) in the Tuple.  This is step2 =
 --   aggregate (dom activeDelegs ◁ rewards) step1
-aggregateActiveStake :: Ord k => Map k (Trip c) -> Map k Coin -> Map k Coin
+aggregateActiveStake :: Ord k => Map k (UMElem c) -> Map k Coin -> Map k Coin
 aggregateActiveStake m1 m2 = assert (Map.valid m) m
   where
     m =
       Map.mergeWithKey
         -- How to merge the ranges of the two maps where they have a common key. Below
         -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
-        (\_k trip coin2 -> extractAndAdd coin2 <$> UM.tripRewardActiveDelegation trip)
+        (\_k trip coin2 -> extractAndAdd coin2 <$> UM.umElemRDActive trip)
         -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
-        (Map.mapMaybe (\trip -> fromCompact . UM.rdReward <$> UM.tripRewardActiveDelegation trip))
+        (Map.mapMaybe (\trip -> fromCompact . UM.rdReward <$> UM.umElemRDActive trip))
         -- what to do when a key is only in 'incremental', keep everything, because at
         -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
         -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.

@@ -36,7 +36,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.UMap (View (Delegations, RewardDeposits), compactCoinOrError)
+import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
@@ -153,8 +153,8 @@ poolReapTransition = do
       us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
       a {asTreasury = asTreasury a <+> unclaimed}
       ( let u0 = dsUnified ds
-            u1 = RewardDeposits u0 UM.∪+ Map.map compactCoinOrError refunds
-            u2 = (Delegations u1 UM.⋫ retired)
+            u1 = RewDepUView u0 UM.∪+ Map.map compactCoinOrError refunds
+            u2 = SPoolUView u1 UM.⋫ retired
          in ds {dsUnified = u2}
       )
       ps

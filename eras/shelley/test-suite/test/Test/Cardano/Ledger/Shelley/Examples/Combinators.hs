@@ -93,9 +93,9 @@ import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
-  View (Delegations, Ptrs, RewardDeposits),
+  UView (PtrUView, RewDepUView, SPoolUView),
   fromCompact,
-  unView,
+  unUView,
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
@@ -205,7 +205,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
       CertState
         vstate
         pstate {psDeposits = Map.unionWith (\old _new -> old) newPools (psDeposits pstate)}
-        dstate {dsUnified = UM.unionKeyDeposits (RewardDeposits (dsUnified dstate)) newDeposits}
+        dstate {dsUnified = UM.unionKeyDeposits (RewDepUView (dsUnified dstate)) newDeposits}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -221,7 +221,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     CertState _vstate pstate dstate = lsCertState ls
-    refund = case UM.lookup key (RewardDeposits (dsUnified dstate)) of
+    refund = case UM.lookup key (RewDepUView (dsUnified dstate)) of
       Nothing -> Coin 0
       Just (RDPair _ ccoin) -> fromCompact ccoin
     utxoSt = lsUTxOState ls
@@ -233,7 +233,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
-    dpstate' = CertState def pstate dstate {dsUnified = UM.adjust zeroD key (RewardDeposits (dsUnified dstate))}
+    dpstate' = CertState def pstate dstate {dsUnified = UM.adjust zeroD key (RewDepUView (dsUnified dstate))}
     zeroD (RDPair x _) = RDPair x (UM.CompactCoin 0)
 
 -- | = Update the UTxO
@@ -284,8 +284,8 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
       ds
         { dsUnified =
             let um0 = dsUnified ds
-                um1 = UM.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0)) (RewardDeposits um0)
-                um2 = (Ptrs um1 UM.∪ (ptr, cred))
+                um1 = UM.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0)) (RewDepUView um0)
+                um2 = (PtrUView um1 UM.∪ (ptr, cred))
              in um2
         }
     dps' = dps {certDState = ds'}
@@ -315,9 +315,9 @@ deregStakeCred cred cs = cs {chainNes = nes'}
       ds
         { dsUnified =
             let um0 = dsUnified ds
-                um1 = UM.delete cred (RewardDeposits um0)
-                um2 = Ptrs um1 UM.⋫ Set.singleton cred
-                um3 = UM.delete cred (Delegations um2)
+                um1 = UM.delete cred (RewDepUView um0)
+                um2 = PtrUView um1 UM.⋫ Set.singleton cred
+                um3 = UM.delete cred (SPoolUView um2)
              in um3
         }
     dps' = dps {certDState = ds'}
@@ -479,8 +479,8 @@ reapPool pool cs = cs {chainNes = nes'}
           , Coin 0
           )
     -- FIXME shouldn't we look up the pooldeposit here?
-    umap1 = unView rewards'
-    umap2 = UM.Delegations umap1 UM.⋫ Set.singleton kh
+    umap1 = unUView rewards'
+    umap2 = UM.SPoolUView umap1 UM.⋫ Set.singleton kh
     ds' = ds {dsUnified = umap2}
     as = esAccountState es
     as' = as {asTreasury = asTreasury as <+> unclaimed}

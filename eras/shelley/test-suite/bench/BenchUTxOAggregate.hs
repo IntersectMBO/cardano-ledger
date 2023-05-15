@@ -79,20 +79,23 @@ genTestCase numUTxO numAddr = do
 
   keyhash :: [KeyHash 'StakePool StandardCrypto] <- replicateM 400 arbitrary
   let delegs = Map.fromList (zip creds (cycle (take 200 keyhash)))
+  reps :: [Credential 'Voting StandardCrypto] <- replicateM (m `div` 10) arbitrary
+  let dreps = Map.fromList (zip (take (m `div` 5) creds) (cycle reps))
   let pp = alicePoolParams
   let poolParams = Map.fromList (zip keyhash (replicate 400 pp))
-  let (dstate, pstate) = makeStatePair rewards' delegs ptrs' poolParams
+  let (dstate, pstate) = makeStatePair rewards' ptrs' delegs dreps poolParams
   pure (dstate, pstate, UTxO utxo)
 
 makeStatePair ::
   Map (Credential 'Staking (EraCrypto era)) Coin ->
-  Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
   Map Ptr (Credential 'Staking (EraCrypto era)) ->
+  Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
+  Map (Credential 'Staking (EraCrypto era)) (Credential 'Voting (EraCrypto era)) ->
   Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
   (DState era, PState era)
-makeStatePair rewards' delegs ptrs' poolParams =
+makeStatePair rewards' ptrs' sPools dReps poolParams =
   ( DState
-      (UM.unify (Map.map rdPair rewards') delegs ptrs')
+      (UM.unify (Map.map rdPair rewards') ptrs' sPools dReps)
       Map.empty
       (GenDelegs Map.empty)
       (InstantaneousRewards Map.empty Map.empty mempty mempty)

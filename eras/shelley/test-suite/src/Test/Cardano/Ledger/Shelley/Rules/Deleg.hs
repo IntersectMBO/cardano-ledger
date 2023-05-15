@@ -135,7 +135,7 @@ keyDelegation
     { signal = ShelleyTxCertDeleg (ShelleyDelegCert from to)
     , target = targetSt
     } =
-    let fromImage = eval (rng (Set.singleton from `UM.domRestrictedView` delegations targetSt))
+    let fromImage = eval (rng (Set.singleton from `UM.domRestrictedMap` delegations targetSt))
      in conjoin
           [ counterexample
               "a delegated key should have a reward account"
@@ -154,8 +154,8 @@ keyDelegation _ = property ()
 rewardsSumInvariant :: SourceSignalTarget (ShelleyDELEG era) -> Property
 rewardsSumInvariant
   SourceSignalTarget {source, target} =
-    let sourceRewards = UM.compactRewView (dsUnified source)
-        targetRewards = UM.compactRewView (dsUnified target)
+    let sourceRewards = UM.compactRewardMap (dsUnified source)
+        targetRewards = UM.compactRewardMap (dsUnified target)
         rewardsSum = foldl' (<>) mempty
      in conjoin
           [ counterexample

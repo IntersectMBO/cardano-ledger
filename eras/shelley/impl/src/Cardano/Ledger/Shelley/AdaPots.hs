@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), unWithdrawals)
-import Cardano.Ledger.UMap (View (RewardDeposits), sumDepositView, sumRewardsView)
+import Cardano.Ledger.UMap (UView (RewDepUView), sumDepositUView, sumRewardsUView)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
@@ -74,10 +74,10 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
   where
     UTxOState u deposits fees_ _ _ = lsUTxOState ls
     CertState _ _ dstate = lsCertState ls
-    rewards_ = fromCompact $ sumRewardsView (rewards dstate)
+    rewards_ = fromCompact $ sumRewardsUView (rewards dstate)
     coins = coinBalance u
     keyDeposits_ =
-      fromCompact . sumDepositView . RewardDeposits . dsUnified . certDState $ lsCertState ls
+      fromCompact . sumDepositUView . RewDepUView . dsUnified . certDState $ lsCertState ls
     poolDeposits_ = fold (psDeposits . certPState $ lsCertState ls)
 
 -- | Calculate the total ada in the epoch state

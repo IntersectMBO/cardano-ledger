@@ -680,7 +680,7 @@ dstate ::
   DPS.InstantaneousRewards (EraCrypto era) ->
   DState era
 dstate rew dep deleg ptr fgen gen instR =
-  DState (unSplitUMap (Split rew dep deleg undefined ptr)) fgen (GenDelegs gen) instR
+  DState (unSplitUMap (Split rew dep deleg Map.empty undefined ptr)) fgen (GenDelegs gen) instR
 
 instantaneousRewardsT :: Target era (DPS.InstantaneousRewards (EraCrypto era))
 instantaneousRewardsT =

@@ -6,13 +6,13 @@ module Test.Cardano.Ledger.UMapSpec where
 
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking, Voting))
 import Cardano.Ledger.UMap (
   RDPair (RDPair, rdReward),
   UMap,
-  View (Delegations, Ptrs, RewardDeposits),
-  compactRewView,
-  delView,
+  UView (DRepUView, PtrUView, RewDepUView, SPoolUView),
+  compactRewardMap,
+  dRepMap,
   delete,
   delete',
   domRestrict,
@@ -20,16 +20,19 @@ import Cardano.Ledger.UMap (
   empty,
   insert,
   insert',
-  isNull,
   member,
-  ptrView,
+  nullUView,
+  ptrMap,
   range,
-  rdPairView,
+  rdPairMap,
+  sPoolMap,
   size,
   umInvariant,
+  unUView,
   unUnify,
-  unView,
   unify,
+  unionKeyRewards,
+  unionRewAgg,
   (∪),
   (∪+),
   (⋪),
@@ -41,68 +44,83 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (
-  genInsertDeleteRoundtripDelegation,
+  genInsertDeleteRoundtripDRep,
   genInsertDeleteRoundtripPtr,
   genInsertDeleteRoundtripRDPair,
+  genInsertDeleteRoundtripSPool,
   genInvariantNonEmpty,
   genRightPreferenceUMap,
-  genValidTriples,
+  genValidTuples,
  )
 
 data Action
   = InsertRDPair (Credential 'Staking StandardCrypto) RDPair
-  | InsertDelegation (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
   | InsertPtr Ptr (Credential 'Staking StandardCrypto)
+  | InsertSPool (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+  | InsertDRep (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
   | DeleteRDPair (Credential 'Staking StandardCrypto)
-  | DeleteDelegation (Credential 'Staking StandardCrypto)
   | DeletePtr Ptr
+  | DeleteSPool (Credential 'Staking StandardCrypto)
+  | DeleteDRep (Credential 'Staking StandardCrypto)
   deriving (Show)
 
 instance Arbitrary Action where
   arbitrary =
     oneof
       [ InsertRDPair <$> arbitrary <*> arbitrary
-      , InsertDelegation <$> arbitrary <*> arbitrary
       , InsertPtr <$> arbitrary <*> arbitrary
+      , InsertSPool <$> arbitrary <*> arbitrary
       , DeleteRDPair <$> arbitrary
-      , DeleteDelegation <$> arbitrary
       , DeletePtr <$> arbitrary
+      , DeleteSPool <$> arbitrary
+      , DeleteDRep <$> arbitrary
       ]
 
 genRDPair :: Gen Action
 genRDPair = InsertRDPair <$> arbitrary <*> arbitrary
 
-genDelegation :: Gen Action
-genDelegation = InsertDelegation <$> arbitrary <*> arbitrary
-
 genPtr :: Gen Action
 genPtr = InsertPtr <$> arbitrary <*> arbitrary
 
+genSPool :: Gen Action
+genSPool = InsertSPool <$> arbitrary <*> arbitrary
+
+genDRep :: Gen Action
+genDRep = InsertDRep <$> arbitrary <*> arbitrary
+
 reify :: Action -> UMap StandardCrypto -> UMap StandardCrypto
 reify = \case
-  InsertRDPair k v -> insert k v . RewardDeposits
-  InsertDelegation k v -> insert k v . Delegations
-  InsertPtr k v -> insert k v . Ptrs
-  DeleteRDPair k -> delete k . RewardDeposits
-  DeleteDelegation k -> delete k . Delegations
-  DeletePtr k -> delete k . Ptrs
+  InsertRDPair k v -> insert k v . RewDepUView
+  InsertPtr k v -> insert k v . PtrUView
+  InsertSPool k v -> insert k v . SPoolUView
+  InsertDRep k v -> insert k v . DRepUView
+  DeleteRDPair k -> delete k . RewDepUView
+  DeletePtr k -> delete k . PtrUView
+  DeleteSPool k -> delete k . SPoolUView
+  DeleteDRep k -> delete k . DRepUView
 
 reifyRDPair :: Action -> UMap StandardCrypto -> UMap StandardCrypto
 reifyRDPair = \case
-  InsertRDPair k v -> insert k v . RewardDeposits
-  DeleteRDPair k -> delete k . RewardDeposits
-  _ -> id
-
-reifyDelegation :: Action -> UMap StandardCrypto -> UMap StandardCrypto
-reifyDelegation = \case
-  InsertDelegation k v -> insert k v . Delegations
-  DeleteDelegation k -> delete k . Delegations
+  InsertRDPair k v -> insert k v . RewDepUView
+  DeleteRDPair k -> delete k . RewDepUView
   _ -> id
 
 reifyPtr :: Action -> UMap StandardCrypto -> UMap StandardCrypto
 reifyPtr = \case
-  InsertPtr k v -> insert k v . Ptrs
-  DeletePtr k -> delete k . Ptrs
+  InsertPtr k v -> insert k v . PtrUView
+  DeletePtr k -> delete k . PtrUView
+  _ -> id
+
+reifySPool :: Action -> UMap StandardCrypto -> UMap StandardCrypto
+reifySPool = \case
+  InsertSPool k v -> insert k v . SPoolUView
+  DeleteSPool k -> delete k . SPoolUView
+  _ -> id
+
+reifyDRep :: Action -> UMap StandardCrypto -> UMap StandardCrypto
+reifyDRep = \case
+  InsertDRep k v -> insert k v . DRepUView
+  DeleteDRep k -> delete k . DRepUView
   _ -> id
 
 runActions :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
@@ -111,49 +129,58 @@ runActions actions umap = foldr reify umap actions
 runRDPairs :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
 runRDPairs actions umap = foldr reifyRDPair umap actions
 
-runDelegations :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
-runDelegations actions umap = foldr reifyDelegation umap actions
-
 runPtrs :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
 runPtrs actions umap = foldr reifyPtr umap actions
 
+runSPools :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
+runSPools actions umap = foldr reifySPool umap actions
+
+runDReps :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
+runDReps actions umap = foldr reifyDRep umap actions
+
 sizeTest ::
   ( Map.Map (Credential 'Staking StandardCrypto) RDPair
-  , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
   , Map.Map Ptr (Credential 'Staking StandardCrypto)
+  , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+  , Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
   ) ->
   IO ()
-sizeTest (rdPairs, delegs, ptrs) = do
+sizeTest (rdPairs, ptrs, sPools, dReps) = do
   let
-    umap = unify rdPairs delegs ptrs
-    rdPairsSize = size (RewardDeposits umap)
-    delegsSize = size (Delegations umap)
-    ptrsSize = size (Ptrs umap)
+    umap = unify rdPairs ptrs sPools dReps
+    rdPairsSize = size (RewDepUView umap)
+    ptrsSize = size (PtrUView umap)
+    sPoolSize = size (SPoolUView umap)
+    dRepSize = size (DRepUView umap)
   Map.size rdPairs `shouldBe` rdPairsSize
-  Map.size delegs `shouldBe` delegsSize
   Map.size ptrs `shouldBe` ptrsSize
+  Map.size sPools `shouldBe` sPoolSize
+  Map.size dReps `shouldBe` dRepSize
 
 unifyRoundTripTo ::
   ( Map.Map (Credential 'Staking StandardCrypto) RDPair
-  , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
   , Map.Map Ptr (Credential 'Staking StandardCrypto)
+  , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+  , Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
   ) ->
   IO ()
-unifyRoundTripTo (rdPairs, delegs, ptrs) = do
-  let umap = unify rdPairs delegs ptrs
-  rdPairView umap `shouldBe` rdPairs
-  delView umap `shouldBe` delegs
-  ptrView umap `shouldBe` ptrs
+unifyRoundTripTo (rdPairs, ptrs, sPools, dReps) = do
+  let umap = unify rdPairs ptrs sPools dReps
+  rdPairMap umap `shouldBe` rdPairs
+  ptrMap umap `shouldBe` ptrs
+  sPoolMap umap `shouldBe` sPools
+  dRepMap umap `shouldBe` dReps
 
 unifyRoundTripFrom :: [Action] -> Property
 unifyRoundTripFrom actions =
   let
     umap = runActions actions empty
-    rdPairs = rdPairView umap
-    delegs = delView umap
-    ptrs = ptrView umap
+    rdPairs = rdPairMap umap
+    ptrs = ptrMap umap
+    sPools = sPoolMap umap
+    dReps = dRepMap umap
    in
-    umap === unify rdPairs delegs ptrs
+    umap === unify rdPairs ptrs sPools dReps
 
 spec :: Spec
 spec = do
@@ -169,235 +196,315 @@ spec = do
           ((,) <$> genInvariantNonEmpty <*> arbitrary)
           (\((cred, ptr, umap), actions) -> umInvariant cred ptr $ runActions actions umap)
     describe "Unify roundtrip" $ do
-      prop "To" $ forAll genValidTriples unifyRoundTripTo
+      prop "To" $ forAll genValidTuples unifyRoundTripTo
       prop "From" unifyRoundTripFrom
     describe "Insert-delete roundtrip" $ do
       prop "RDPair" $
         forAll
           genInsertDeleteRoundtripRDPair
-          (\(umap, k, v) -> umap === unView (delete' k (insert' k v (RewardDeposits umap))))
-      prop "Delegations" $
-        forAll
-          genInsertDeleteRoundtripDelegation
-          (\(umap, k, v) -> umap === unView (delete' k (insert' k v (Delegations umap))))
-      prop "Ptrs" $
+          (\(umap, k, v) -> umap === unUView (delete' k (insert' k v (RewDepUView umap))))
+      prop "PtrUView" $
         forAll
           genInsertDeleteRoundtripPtr
-          (\(umap, k, v) -> umap === unView (delete' k (insert' k v (Ptrs umap))))
-    prop "Size" $ forAll genValidTriples sizeTest
+          (\(umap, k, v) -> umap === unUView (delete' k (insert' k v (PtrUView umap))))
+      prop "SPoolUView" $
+        forAll
+          genInsertDeleteRoundtripSPool
+          (\(umap, k, v) -> umap === unUView (delete' k (insert' k v (SPoolUView umap))))
+      prop "DRepUView" $
+        forAll
+          genInsertDeleteRoundtripDRep
+          (\(umap, k, v) -> umap === unUView (delete' k (insert' k v (DRepUView umap))))
+    prop "Size" $ forAll genValidTuples sizeTest
     describe "Membership" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \(umap :: UMap StandardCrypto, cred) ->
-            member cred (RewardDeposits umap) === Map.member cred (rdPairView umap)
+            member cred (RewDepUView umap) === Map.member cred (rdPairMap umap)
         )
       prop
-        "Delegations"
-        ( \(umap :: UMap StandardCrypto, cred) ->
-            member cred (Delegations umap) === Map.member cred (delView umap)
-        )
-      prop
-        "Ptrs"
+        "PtrUViews"
         ( \(umap :: UMap StandardCrypto, ptr) ->
-            member ptr (Ptrs umap) === Map.member ptr (ptrView umap)
+            member ptr (PtrUView umap) === Map.member ptr (ptrMap umap)
+        )
+      prop
+        "SPoolUView"
+        ( \(umap :: UMap StandardCrypto, cred) ->
+            member cred (SPoolUView umap) === Map.member cred (sPoolMap umap)
+        )
+      prop
+        "DRepUView"
+        ( \(umap :: UMap StandardCrypto, cred) ->
+            member cred (DRepUView umap) === Map.member cred (dRepMap umap)
         )
     describe "Bisimulation" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions ->
-            unUnify (RewardDeposits (runRDPairs actions empty))
-              === unUnify (RewardDeposits (runActions actions empty))
+            rdPairMap (runRDPairs actions empty)
+              === rdPairMap (runActions actions empty)
         )
       prop
-        "Delegations"
+        "PtrUView"
         ( \actions ->
-            delView (runDelegations actions empty)
-              === delView (runActions actions empty)
+            ptrMap (runPtrs actions empty)
+              === ptrMap (runActions actions empty)
         )
       prop
-        "Ptrs"
+        "SPoolUView"
         ( \actions ->
-            ptrView (runPtrs actions empty)
-              === ptrView (runActions actions empty)
+            sPoolMap (runSPools actions empty)
+              === sPoolMap (runActions actions empty)
+        )
+      prop
+        "DRepUView"
+        ( \actions ->
+            dRepMap (runDReps actions empty)
+              === dRepMap (runActions actions empty)
         )
     describe "Null" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions ->
-            Map.null (rdPairView (runRDPairs actions empty))
-              === isNull (RewardDeposits $ runActions actions empty)
+            Map.null (rdPairMap (runRDPairs actions empty))
+              === nullUView (RewDepUView $ runActions actions empty)
         )
       prop
-        "Delegations"
+        "PtrUView"
         ( \actions ->
-            Map.null (delView (runDelegations actions empty))
-              === isNull (Delegations $ runActions actions empty)
+            Map.null (ptrMap (runPtrs actions empty))
+              === nullUView (PtrUView $ runActions actions empty)
         )
       prop
-        "Ptrs"
+        "SPoolUView"
         ( \actions ->
-            Map.null (ptrView (runPtrs actions empty))
-              === isNull (Ptrs $ runActions actions empty)
+            Map.null (sPoolMap (runSPools actions empty))
+              === nullUView (SPoolUView $ runActions actions empty)
+        )
+      prop
+        "DRepUView"
+        ( \actions ->
+            Map.null (dRepMap (runDReps actions empty))
+              === nullUView (DRepUView $ runActions actions empty)
         )
     describe "Lookup" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions cred ->
-            Map.lookup cred (rdPairView (runRDPairs actions empty))
-              === UMap.lookup cred (RewardDeposits $ runActions actions empty)
+            Map.lookup cred (rdPairMap (runRDPairs actions empty))
+              === UMap.lookup cred (RewDepUView $ runActions actions empty)
         )
       prop
-        "Delegations"
-        ( \actions cred ->
-            Map.lookup cred (delView (runDelegations actions empty))
-              === UMap.lookup cred (Delegations $ runActions actions empty)
-        )
-      prop
-        "Ptrs"
+        "PtruView"
         ( \actions ptr ->
-            Map.lookup ptr (ptrView (runPtrs actions empty))
-              === UMap.lookup ptr (Ptrs $ runActions actions empty)
+            Map.lookup ptr (ptrMap (runPtrs actions empty))
+              === UMap.lookup ptr (PtrUView $ runActions actions empty)
+        )
+      prop
+        "SPoolUView"
+        ( \actions cred ->
+            Map.lookup cred (sPoolMap (runSPools actions empty))
+              === UMap.lookup cred (SPoolUView $ runActions actions empty)
+        )
+      prop
+        "DRepUView"
+        ( \actions cred ->
+            Map.lookup cred (dRepMap (runDReps actions empty))
+              === UMap.lookup cred (DRepUView $ runActions actions empty)
         )
     describe "Domain" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions ->
-            Map.keysSet (rdPairView (runRDPairs actions empty))
-              === domain (RewardDeposits $ runActions actions empty)
+            Map.keysSet (rdPairMap (runRDPairs actions empty))
+              === domain (RewDepUView $ runActions actions empty)
         )
       prop
-        "Delegations"
+        "PtrUView"
         ( \actions ->
-            Map.keysSet (delView (runDelegations actions empty))
-              === domain (Delegations $ runActions actions empty)
+            Map.keysSet (ptrMap (runPtrs actions empty))
+              === domain (PtrUView $ runActions actions empty)
         )
       prop
-        "Ptrs"
+        "SPoolUView"
         ( \actions ->
-            Map.keysSet (ptrView (runPtrs actions empty))
-              === domain (Ptrs $ runActions actions empty)
+            Map.keysSet (sPoolMap (runSPools actions empty))
+              === domain (SPoolUView $ runActions actions empty)
+        )
+      prop
+        "DRepUView"
+        ( \actions ->
+            Map.keysSet (dRepMap (runDReps actions empty))
+              === domain (DRepUView $ runActions actions empty)
         )
     describe "Range" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions ->
-            Set.fromList (Map.elems (rdPairView (runRDPairs actions empty)))
-              === range (RewardDeposits $ runActions actions empty)
+            Set.fromList (Map.elems (rdPairMap (runRDPairs actions empty)))
+              === range (RewDepUView $ runActions actions empty)
         )
       prop
-        "Delegations"
+        "PtrUView"
         ( \actions ->
-            Set.fromList (Map.elems (delView (runDelegations actions empty)))
-              === range (Delegations $ runActions actions empty)
+            Set.fromList (Map.elems (ptrMap (runPtrs actions empty)))
+              === range (PtrUView $ runActions actions empty)
         )
       prop
-        "Ptrs"
+        "SPoolUView"
         ( \actions ->
-            Set.fromList (Map.elems (ptrView (runPtrs actions empty)))
-              === range (Ptrs $ runActions actions empty)
+            Set.fromList (Map.elems (sPoolMap (runSPools actions empty)))
+              === range (SPoolUView $ runActions actions empty)
+        )
+      prop
+        "DRepUView"
+        ( \actions ->
+            Set.fromList (Map.elems (dRepMap (runDReps actions empty)))
+              === range (DRepUView $ runActions actions empty)
         )
     describe "Union (left preference)" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions cred rdPair ->
-            Map.unionWith const (rdPairView (runRDPairs actions empty)) (Map.singleton cred rdPair)
-              === unUnify (RewardDeposits (RewardDeposits (runActions actions empty) ∪ (cred, rdPair)))
+            Map.unionWith const (rdPairMap (runRDPairs actions empty)) (Map.singleton cred rdPair)
+              === unUnify (RewDepUView (RewDepUView (runActions actions empty) ∪ (cred, rdPair)))
         )
       prop
-        "Delegations"
-        ( \actions cred pool ->
-            Map.unionWith const (delView (runDelegations actions empty)) (Map.singleton cred pool)
-              === unUnify (Delegations (Delegations (runActions actions empty) ∪ (cred, pool)))
-        )
-      prop
-        "Ptrs"
+        "PtrUView"
         ( \actions cred ptr ->
-            Map.unionWith const (ptrView (runPtrs actions empty)) (Map.singleton cred ptr)
-              === unUnify (Ptrs (Ptrs (runActions actions empty) ∪ (cred, ptr)))
+            Map.unionWith const (ptrMap (runPtrs actions empty)) (Map.singleton cred ptr)
+              === unUnify (PtrUView (PtrUView (runActions actions empty) ∪ (cred, ptr)))
+        )
+      prop
+        "SPoolUView"
+        ( \actions cred pool ->
+            Map.unionWith const (sPoolMap (runSPools actions empty)) (Map.singleton cred pool)
+              === unUnify (SPoolUView (SPoolUView (runActions actions empty) ∪ (cred, pool)))
+        )
+      prop
+        "DRepUView"
+        ( \actions cred pool ->
+            Map.unionWith const (dRepMap (runDReps actions empty)) (Map.singleton cred pool)
+              === unUnify (DRepUView (DRepUView (runActions actions empty) ∪ (cred, pool)))
         )
     describe "Union (right preference)" $ do
       prop
-        "RewardDeposits (domain of map on the right has to be subset of RewardDeposits View)"
+        "RewDepUView (domain of map on the right has to be subset of RewDepUView View)"
         $ forAll
           genRightPreferenceUMap
           ( \(umap, m) ->
-              Map.unionWith (\(RDPair _ leftDep) (RDPair rightRD _) -> RDPair rightRD leftDep) (rdPairView umap) m
-                === rdPairView (RewardDeposits umap ⨃ m)
+              Map.unionWith
+                (\(RDPair _ leftDep) (RDPair rightRD _) -> RDPair rightRD leftDep)
+                (rdPairMap umap)
+                m
+                === rdPairMap (RewDepUView umap ⨃ m)
           )
       prop
-        "Delegations"
+        "PtrUView"
         ( \actions m ->
-            Map.unionWith (\_ x -> x) (delView (runDelegations actions empty)) m
-              === unUnify (Delegations (Delegations (runActions actions empty) ⨃ m))
+            Map.unionWith (\_ x -> x) (ptrMap (runPtrs actions empty)) m
+              === unUnify (PtrUView (PtrUView (runActions actions empty) ⨃ m))
         )
       prop
-        "Ptrs"
+        "SPoolUView"
         ( \actions m ->
-            Map.unionWith (\_ x -> x) (ptrView (runPtrs actions empty)) m
-              === unUnify (Ptrs (Ptrs (runActions actions empty) ⨃ m))
+            Map.unionWith (\_ x -> x) (sPoolMap (runSPools actions empty)) m
+              === unUnify (SPoolUView (SPoolUView (runActions actions empty) ⨃ m))
+        )
+      prop
+        "DRepUView"
+        ( \actions m ->
+            Map.unionWith (\_ x -> x) (dRepMap (runDReps actions empty)) m
+              === unUnify (DRepUView (DRepUView (runActions actions empty) ⨃ m))
         )
     prop
-      "Monoidal Rewards (domain of map on the right has to be subset of RewardDeposits View)"
+      "Monoidal Rewards (domain of map on the right has to be subset of RewDepUView View)"
       $ forAll
         genRightPreferenceUMap
         ( \(umap, m) ->
-            Map.unionWith (<>) (compactRewView umap) (rdReward <$> m)
-              === compactRewView (RewardDeposits umap ∪+ (rdReward <$> m))
+            Map.unionWith (<>) (compactRewardMap umap) (rdReward <$> m)
+              === compactRewardMap (RewDepUView umap ∪+ (rdReward <$> m))
         )
     describe "Domain exclusion" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions dom ->
-            Map.withoutKeys (rdPairView (runRDPairs actions empty)) dom
-              === unUnify (RewardDeposits (dom ⋪ RewardDeposits (runActions actions empty)))
+            Map.withoutKeys (rdPairMap (runRDPairs actions empty)) dom
+              === unUnify (RewDepUView (dom ⋪ RewDepUView (runActions actions empty)))
         )
       prop
-        "Delegations"
+        "PtrUView"
         ( \actions dom ->
-            Map.withoutKeys (delView (runDelegations actions empty)) dom
-              === unUnify (Delegations (dom ⋪ Delegations (runActions actions empty)))
+            Map.withoutKeys (ptrMap (runPtrs actions empty)) dom
+              === unUnify (PtrUView (dom ⋪ PtrUView (runActions actions empty)))
         )
       prop
-        "Ptrs"
+        "SPoolUView"
         ( \actions dom ->
-            Map.withoutKeys (ptrView (runPtrs actions empty)) dom
-              === unUnify (Ptrs (dom ⋪ Ptrs (runActions actions empty)))
+            Map.withoutKeys (sPoolMap (runSPools actions empty)) dom
+              === unUnify (SPoolUView (dom ⋪ SPoolUView (runActions actions empty)))
+        )
+      prop
+        "DRepUView"
+        ( \actions dom ->
+            Map.withoutKeys (dRepMap (runDReps actions empty)) dom
+              === unUnify (DRepUView (dom ⋪ DRepUView (runActions actions empty)))
         )
     describe "Range exclusion" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions rng ->
-            Map.filter (not . flip Set.member rng) (rdPairView (runRDPairs actions empty))
-              === unUnify (RewardDeposits (RewardDeposits (runActions actions empty) ⋫ rng))
+            Map.filter (not . flip Set.member rng) (rdPairMap (runRDPairs actions empty))
+              === unUnify (RewDepUView (RewDepUView (runActions actions empty) ⋫ rng))
         )
       prop
-        "Delegations"
+        "PtrUView"
         ( \actions rng ->
-            Map.filter (not . flip Set.member rng) (delView (runDelegations actions empty))
-              === unUnify (Delegations (Delegations (runActions actions empty) ⋫ rng))
+            Map.filter (not . flip Set.member rng) (ptrMap (runPtrs actions empty))
+              === unUnify (PtrUView (PtrUView (runActions actions empty) ⋫ rng))
         )
       prop
-        "Ptrs"
+        "SPoolUView"
         ( \actions rng ->
-            Map.filter (not . flip Set.member rng) (ptrView (runPtrs actions empty))
-              === unUnify (Ptrs (Ptrs (runActions actions empty) ⋫ rng))
+            Map.filter (not . flip Set.member rng) (sPoolMap (runSPools actions empty))
+              === unUnify (SPoolUView (SPoolUView (runActions actions empty) ⋫ rng))
+        )
+      prop
+        "DRepUView"
+        ( \actions rng ->
+            Map.filter (not . flip Set.member rng) (dRepMap (runDReps actions empty))
+              === unUnify (DRepUView (DRepUView (runActions actions empty) ⋫ rng))
         )
     describe "Domain restriction" $ do
       prop
-        "RewardDeposits"
+        "RewDepUView"
         ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) RDPair) ->
-            Map.intersection m (rdPairView (runRDPairs actions empty))
-              === domRestrict (RewardDeposits (runActions actions empty)) m
+            Map.intersection m (rdPairMap (runRDPairs actions empty))
+              === domRestrict (RewDepUView (runActions actions empty)) m
         )
       prop
-        "Delegations"
-        ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)) ->
-            Map.intersection m (delView (runDelegations actions empty))
-              === domRestrict (Delegations (runActions actions empty)) m
-        )
-      prop
-        "Ptrs"
+        "PtrUView"
         ( \actions (m :: Map.Map Ptr (Credential 'Staking StandardCrypto)) ->
-            Map.intersection m (ptrView (runPtrs actions empty))
-              === domRestrict (Ptrs (runActions actions empty)) m
+            Map.intersection m (ptrMap (runPtrs actions empty))
+              === domRestrict (PtrUView (runActions actions empty)) m
         )
+      prop
+        "SPoolUView"
+        ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)) ->
+            Map.intersection m (sPoolMap (runSPools actions empty))
+              === domRestrict (SPoolUView (runActions actions empty)) m
+        )
+      prop
+        "DRepUView"
+        ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)) ->
+            Map.intersection m (dRepMap (runDReps actions empty))
+              === domRestrict (DRepUView (runActions actions empty)) m
+        )
+    describe "unionRewAgg === unionKeyRewards" $ do
+      prop
+        "unionRewAgg === unionKeyRewards"
+        $ forAll
+          genRightPreferenceUMap
+          ( \(umap, m) ->
+              unionKeyRewards (RewDepUView umap) (rdReward <$> m) === unionRewAgg (RewDepUView umap) (rdReward <$> m)
+          )

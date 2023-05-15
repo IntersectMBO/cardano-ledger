@@ -300,7 +300,7 @@ class Extract t era where
 instance Extract (DState era) era where
   extract x =
     DState
-      (UM.unify (makeRewards x) (mDelegations x) Map.empty)
+      (UM.unify (makeRewards x) Map.empty (mDelegations x) Map.empty)
       Map.empty
       genDelegsZero
       instantaneousRewardsZero
@@ -361,9 +361,9 @@ abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
     , mPoolDeposits = (psDeposits . certPState . lsCertState . esLState . nesEs) x
-    , mRewards = (UM.rewView . dsUnified . certDState . lsCertState . esLState . nesEs) x
-    , mDelegations = (UM.delView . dsUnified . certDState . lsCertState . esLState . nesEs) x
-    , mKeyDeposits = (UM.depositView . dsUnified . certDState . lsCertState . esLState . nesEs) x
+    , mRewards = (UM.rewardMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
+    , mDelegations = (UM.sPoolMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
+    , mKeyDeposits = (UM.depositMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
     , mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x
     , mMutFee = Map.empty
     , mAccountState = (esAccountState . nesEs) x

@@ -200,9 +200,9 @@ stakeDistr u ds ps =
     (VMap.fromMap poolParams)
   where
     rewards' :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
-    rewards' = UM.rewView (dsUnified ds)
+    rewards' = UM.rewardMap (dsUnified ds)
     delegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
-    delegs = UM.delView (dsUnified ds)
+    delegs = UM.sPoolMap (dsUnified ds)
     ptrs' = ptrsMap ds
     PState {psStakePoolParams = poolParams} = ps
     stakeRelation :: Map (Credential 'Staking (EraCrypto era)) Coin

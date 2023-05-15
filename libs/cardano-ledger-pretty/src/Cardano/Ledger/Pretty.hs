@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -158,7 +159,7 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMap (RDPair (..), Trip (Triple), UMap (..))
+import Cardano.Ledger.UMap (RDPair (..), UMElem (UMElem), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
@@ -418,21 +419,22 @@ ppRDPair (RDPair rew dep) =
     , ("deposit", ppCoin (fromCompact dep))
     ]
 
-ppTrip :: Trip c -> PDoc
-ppTrip (Triple mpair set mpool) =
+ppUMElem :: UMElem c -> PDoc
+ppUMElem (UMElem rd ptr spool drep) =
   ppSexp
-    "Triple"
-    [ ppStrictMaybe ppRDPair mpair
-    , ppSet ppPtr set
-    , ppStrictMaybe ppKeyHash mpool
+    "UMElem"
+    [ ppStrictMaybe ppRDPair rd
+    , ppSet ppPtr ptr
+    , ppStrictMaybe ppKeyHash spool
+    , ppStrictMaybe ppCredential drep
     ]
 
 ppUnifiedMap :: UMap c -> PDoc
-ppUnifiedMap (UMap tripmap ptrmap) =
+ppUnifiedMap UMap {..} =
   ppRecord
     "UMap"
-    [ ("combined", ppMap ppCredential ppTrip tripmap)
-    , ("ptrs", ppMap ppPtr ppCredential ptrmap)
+    [ ("combined", ppMap ppCredential ppUMElem umElems)
+    , ("ptrs", ppMap ppPtr ppCredential umPtrs)
     ]
 
 -- ======================================================

@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-core`
 
+## 1.4.0.0
+
+* Add delegated representatives to the `UMap` and make its interface more coherent #3426
+  * There are a number of 
+
 ## 1.3.0.0
 
 * Add `certsTxBodyL` to `EraTxBody`

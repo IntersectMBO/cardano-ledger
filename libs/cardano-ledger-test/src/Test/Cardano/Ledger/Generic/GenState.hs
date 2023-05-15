@@ -662,7 +662,7 @@ pcGenState proof gs =
     , ("Model", pcModelNewEpochState @era proof (gsModel gs))
     , ("Initial Utxo", ppMap pcTxIn (pcTxOut @era proof) (gsInitialUtxo gs))
     , ("Initial Rewards", ppMap pcCredential pcCoin (gsInitialRewards gs))
-    , ("Initial Delegations", ppMap pcCredential pcKeyHash (gsInitialDelegations gs))
+    , ("Initial SPoolUView", ppMap pcCredential pcKeyHash (gsInitialDelegations gs))
     , ("Initial PoolParams", ppMap pcKeyHash pcPoolParams (gsInitialPoolParams gs))
     , ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake (gsInitialPoolDistr gs))
     , ("Stable PoolParams", ppSet pcKeyHash (gsStablePools gs))
@@ -691,7 +691,7 @@ instance era ~ BabbageEra Mock => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
-    umap = UM.unify (Map.map rdpair (gsInitialRewards gstate)) (gsInitialDelegations gstate) Map.empty
+    umap = UM.unify (Map.map rdpair (gsInitialRewards gstate)) Map.empty (gsInitialDelegations gstate) Map.empty
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovernanceState
     dpstate = CertState def pstate dstate
     dstate =

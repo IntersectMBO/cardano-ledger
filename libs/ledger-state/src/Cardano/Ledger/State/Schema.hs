@@ -115,6 +115,11 @@ Delegation
   credentialId CredentialId
   stakePoolId KeyHashId
   UniqueDelegation dstateId credentialId
+DRep
+  dstateId DStateId
+  credentialId CredentialId
+  dRepCredentialId CredentialId
+  UniqueDRep dstateId credentialId
 Ptr
   dstateId DStateId
   credentialId CredentialId

@@ -17,16 +17,16 @@ import qualified Cardano.Ledger.Shelley.LedgerState as LS (deltaReserves, deltaT
 import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
-  Trip (Triple),
   UMap (..),
   compactCoinOrError,
-  delView,
-  depositView,
-  fromCompact,
-  ptrView,
-  rewView,
+  dRepMap,
+  depositMap,
+  revPtrMap,
+  rewardMap,
+  sPoolMap,
   unify,
  )
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
@@ -34,7 +34,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (fromList)
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.VMap (VB, VMap)
 import Lens.Micro
 import Numeric.Natural (Natural)
@@ -293,42 +292,19 @@ data Split c = Split
   { spRew :: Map (Credential 'Staking c) Coin
   , spDep :: Map (Credential 'Staking c) Coin
   , spDel :: Map (Credential 'Staking c) (KeyHash 'StakePool c)
+  , spDRep :: Map (Credential 'Staking c) (Credential 'Voting c)
   , spRevPtr :: Map (Credential 'Staking c) (Set Ptr)
   , spPtr :: Map Ptr (Credential 'Staking c)
   }
 
--- | Used to build the abstract view from the map of triples
-accumUM :: Split c -> Credential 'Staking c -> Trip c -> Split c
-accumUM sp key (Triple (SJust (RDPair r d)) ptrs (SJust p)) =
-  sp
-    { spRew = Map.insert key (fromCompact r) (spRew sp)
-    , spDep = Map.insert key (fromCompact d) (spDep sp)
-    , spDel = Map.insert key p (spDel sp)
-    , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
-    }
-accumUM sp key (Triple SNothing ptrs (SJust p)) =
-  sp
-    { spDel = Map.insert key p (spDel sp)
-    , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
-    }
-accumUM sp key (Triple (SJust (RDPair r d)) ptrs SNothing) =
-  sp
-    { spRew = Map.insert key (fromCompact r) (spRew sp)
-    , spDep = Map.insert key (fromCompact d) (spDep sp)
-    , spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)
-    }
-accumUM sp key (Triple SNothing ptrs SNothing) =
-  sp {spRevPtr = Map.insertWith (Set.union) key ptrs (spRevPtr sp)}
-
 -- | The abstraction function, from concrete (UMap) to abstract (Split)
 splitUMap :: UMap c -> Split c
-splitUMap (UMap trips ptr) = Map.foldlWithKey' accumUM empty trips
-  where
-    empty = Split Map.empty Map.empty Map.empty Map.empty ptr
+splitUMap um =
+  Split (rewardMap um) (depositMap um) (sPoolMap um) (dRepMap um) (revPtrMap um) (UM.ptrMap um)
 
 -- | The concretization function from abstract (Split) to concrete (UMap)
 unSplitUMap :: Split c -> UMap c
-unSplitUMap (Split rew dep deleg _revptr ptr) = unify (merge rew dep) deleg ptr
+unSplitUMap (Split rew dep deleg drep _revptr ptr) = unify (merge rew dep) ptr deleg drep
   where
     merge x y | Map.keysSet x /= Map.keysSet y = error "different domains"
     merge x y = Map.intersectionWith rdpair x y
@@ -337,24 +313,24 @@ unSplitUMap (Split rew dep deleg _revptr ptr) = unify (merge rew dep) deleg ptr
 -- Lenses that reach through the concrete  (UMap) using abstract inputs
 
 rewardsUMapL :: Lens' (UMap c) (Map (Credential 'Staking c) Coin)
-rewardsUMapL = lens rewView delta
+rewardsUMapL = lens rewardMap delta
   where
     delta um new = unSplitUMap (split {spRew = new})
       where
         split = splitUMap um
 
 stakeDepositsUMapL :: Lens' (UMap c) (Map (Credential 'Staking c) Coin)
-stakeDepositsUMapL = lens depositView delta
+stakeDepositsUMapL = lens depositMap delta
   where
     delta um new = unSplitUMap (split {spDep = new})
       where
         split = splitUMap um
 
 ptrsUMapL :: Lens' (UMap c) (Map Ptr (Credential 'Staking c))
-ptrsUMapL = lens ptrView (\(UMap x _) p -> UMap x p)
+ptrsUMapL = lens UM.ptrMap (\(UMap x _) p -> UMap x p)
 
 delegationsUMapL :: Lens' (UMap c) (Map (Credential 'Staking c) (KeyHash 'StakePool c))
-delegationsUMapL = lens delView delta
+delegationsUMapL = lens sPoolMap delta
   where
     delta um new = unSplitUMap (split {spDel = new})
       where
