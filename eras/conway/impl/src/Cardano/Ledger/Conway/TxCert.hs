@@ -260,13 +260,20 @@ toShelleyDelegCert = \case
   ConwayDelegCert cred (DelegStake poolId) -> Just $ ShelleyDelegCert cred poolId
   _ -> Nothing
 
+-- For both of the fucntions `getScriptWitnessConwayTxCert` and
+-- `getVKeyWitnessConwayTxCert` we preserve the old behavior of not requiring a witness,
+-- but only during the transitional period of Conway era and only for registration
+-- cdertificates without a deposit. Future eras will require a witness for registration
+-- certificates, because the one without a deposit will be removed.
+
 getScriptWitnessConwayTxCert ::
   ConwayTxCert era ->
   Maybe (ScriptHash (EraCrypto era))
 getScriptWitnessConwayTxCert = \case
   ConwayTxCertDeleg delegCert ->
     case delegCert of
-      ConwayRegCert _ _ -> Nothing
+      ConwayRegCert _ SNothing -> Nothing
+      ConwayRegCert cred (SJust _) -> credScriptHash cred
       ConwayUnRegCert cred _ -> credScriptHash cred
       ConwayDelegCert cred _ -> credScriptHash cred
       ConwayRegDelegCert cred _ _ -> credScriptHash cred
@@ -276,8 +283,8 @@ getVKeyWitnessConwayTxCert :: ConwayTxCert era -> Maybe (KeyHash 'Witness (EraCr
 getVKeyWitnessConwayTxCert = \case
   ConwayTxCertDeleg delegCert ->
     case delegCert of
-      -- Registration certificates do not require a witness
-      ConwayRegCert _ _ -> Nothing
+      ConwayRegCert _ SNothing -> Nothing
+      ConwayRegCert cred (SJust _) -> credKeyHashWitness cred
       ConwayUnRegCert cred _ -> credKeyHashWitness cred
       ConwayDelegCert cred _ -> credKeyHashWitness cred
       ConwayRegDelegCert cred _ _ -> credKeyHashWitness cred
