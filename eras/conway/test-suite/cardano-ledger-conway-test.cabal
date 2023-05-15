@@ -60,6 +60,7 @@ test-suite cardano-ledger-conway-test
     hs-source-dirs:   test
     other-modules:
         Test.Cardano.Ledger.Conway.Serialisation.CDDL
+        Test.Cardano.Ledger.Conway.Serialisation.Failure
         Test.Cardano.Ledger.Conway.TxInfo
         Paths_cardano_ledger_conway_test
 
@@ -74,11 +75,14 @@ test-suite cardano-ledger-conway-test
         base,
         bytestring,
         cardano-ledger-allegra,
-        cardano-ledger-alonzo,
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-babbage,
         cardano-ledger-babbage-test >=1.1.1 && <1.2,
+        cardano-ledger-binary,
         cardano-ledger-conway,
         cardano-ledger-conway-test,
         cardano-ledger-core,
         cardano-ledger-shelley-test,
-        tasty
+        QuickCheck,
+        tasty,
+        tasty-quickcheck

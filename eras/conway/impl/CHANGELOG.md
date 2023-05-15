@@ -11,7 +11,7 @@
 * Added `toShelleyDelegCert` and `fromShelleyDelegCert`
 * Changed `ConwayDelegCert` structure #3408
 * Addition of `getScriptWitnessConwayTxCert` and `getVKeyWitnessConwayTxCert`
-
+* Changed deprecated the legacy serialization format for transaction outputs
 
 ## 1.2.0.0
 

@@ -95,7 +95,9 @@ import Cardano.Ledger.Binary (
   encodeNestedCbor,
   getDecoderVersion,
   interns,
+  natVersion,
   peekTokenType,
+  whenDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
@@ -476,7 +478,7 @@ decodeBabbageTxOut decAddr = do
   peekTokenType >>= \case
     TypeMapLenIndef -> decodeTxOut decAddr
     TypeMapLen -> decodeTxOut decAddr
-    _ -> oldTxOut
+    _ -> whenDecoderVersionAtLeast (natVersion @9) (fail deprecationMsg) >> oldTxOut
   where
     oldTxOut = do
       lenOrIndef <- decodeListLenOrIndef
@@ -501,6 +503,7 @@ decodeBabbageTxOut decAddr = do
           dh <- decCBOR
           pure $ mkTxOut a ca v (DatumHash dh) SNothing
         Just _ -> cborError $ DecoderErrorCustom "TxOut" "Wrong number of terms in TxOut"
+    deprecationMsg = "legacy TxOut serialization was deprecated in version 9"
     {-# INLINE oldTxOut #-}
 {-# INLINEABLE decodeBabbageTxOut #-}
 
