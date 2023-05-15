@@ -22,13 +22,7 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Ledger.Core.Era (Era (EraCrypto))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.Keys (
-  Hash,
-  KeyHash (..),
-  KeyRole (..),
-  VerKeyVRF,
-  asWitness,
- )
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..), rwhnf)
@@ -90,7 +84,6 @@ instance NoThunks (PoolCert c)
 
 instance NFData (PoolCert c) where
   rnf = rwhnf
-
 
 poolCertKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
 poolCertKeyHashWitness = \case

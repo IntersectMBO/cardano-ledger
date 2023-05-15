@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -144,7 +145,7 @@ import Cardano.Ledger.Shelley.TxBody (
   WitVKey (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
   prettyWitnessSetParts,
@@ -1126,10 +1127,11 @@ ppMIRCert :: MIRCert c -> PDoc
 ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 
 ppShelleyTxCert :: ShelleyTxCert c -> PDoc
-ppShelleyTxCert (ShelleyTxCertDelegCert x) = ppSexp "ShelleyTxCertDeleg" [ppShelleyDelegCert x]
-ppShelleyTxCert (ShelleyTxCertPool x) = ppSexp "TxCertPool" [ppPoolCert x]
-ppShelleyTxCert (ShelleyTxCertGenesis x) = ppSexp "TxCertGenesis" [ppGenesisDelegCert x]
-ppShelleyTxCert (ShelleyTxCertMir x) = ppSexp "TxCertMir" [ppMIRCert x]
+ppShelleyTxCert = \case
+  ShelleyTxCertDelegCert x -> ppSexp "ShelleyTxCertDeleg" [ppShelleyDelegCert x]
+  ShelleyTxCertPool x -> ppSexp "TxCertPool" [ppPoolCert x]
+  ShelleyTxCertGenesisDeleg x -> ppSexp "ShelleyTxCertGenesisDeleg" [ppGenesisDelegCert x]
+  ShelleyTxCertMir x -> ppSexp "TxCertMir" [ppMIRCert x]
 
 ppTxBody ::
   ( EraTxOut era

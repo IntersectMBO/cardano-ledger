@@ -430,7 +430,7 @@ transShelleyTxCert = \case
     PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
   ShelleyTxCertPool (RetirePool keyHash (EpochNo i)) ->
     PV1.DCertPoolRetire (transKeyHash keyHash) (fromIntegral i)
-  ShelleyTxCertGenesis _ -> PV1.DCertGenesis
+  ShelleyTxCertGenesisDeleg _ -> PV1.DCertGenesis
   ShelleyTxCertMir _ -> PV1.DCertMir
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer

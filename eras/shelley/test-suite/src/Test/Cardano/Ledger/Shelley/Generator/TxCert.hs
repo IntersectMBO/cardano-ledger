@@ -49,7 +49,11 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
-import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (
+  GenesisDelegCert (..),
+  pattern ShelleyTxCertDeleg,
+  pattern TxCertGenesisDeleg,
+ )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import qualified Cardano.Ledger.UMap as UM
 import Control.Monad (replicateM)
@@ -320,7 +324,7 @@ genDelegation
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
-  (Era era, EraTxCert era, ProtVerAtMost era 8) =>
+  (Era era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   -- | Core nodes
   [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
@@ -341,7 +345,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     hashVKey = hashKey . vKey
     mkCert gkey key vrf =
       Just
-        ( TxCertGenesis
+        ( TxCertGenesisDeleg
             ( GenesisDelegCert
                 (hashVKey gkey)
                 (hashVKey key)
@@ -352,11 +356,12 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     GenDelegs genDelegs_ = dsGenDelegs $ certDState dpState
     genesisDelegator k = eval (k ∈ dom genDelegs_)
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
-    notActiveDelegatee k =
-      coerceKeyRole k `List.notElem` fmap genDelegKeyHash (Map.elems genDelegs_)
-    fGenDelegs = dsFutureGenDelegs $ certDState dpState
-    notFutureDelegatee k =
-      coerceKeyRole k `List.notElem` fmap genDelegKeyHash (Map.elems fGenDelegs)
+    activeGenDelegsKeyHashSet =
+      Set.fromList $ genDelegKeyHash <$> Map.elems genDelegs_
+    futureGenDelegsKeyHashSet =
+      Set.fromList $ genDelegKeyHash <$> Map.elems (dsFutureGenDelegs $ certDState dpState)
+    notActiveDelegatee k = coerceKeyRole k `Set.notMember` activeGenDelegsKeyHashSet
+    notFutureDelegatee k = coerceKeyRole k `Set.notMember` futureGenDelegsKeyHashSet
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . aikCold) allDelegateKeys
 

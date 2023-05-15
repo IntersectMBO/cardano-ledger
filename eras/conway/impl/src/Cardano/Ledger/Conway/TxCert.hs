@@ -41,12 +41,13 @@ import Cardano.Ledger.Credential (Credential, StakeCredential, credKeyHashWitnes
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.TxCert (
+  GenesisDelegCert (..),
   ShelleyDelegCert (..),
   ShelleyEraTxCert (..),
-  commonTxCertDecoder,
   encodeConstitutionalCert,
   encodePoolCert,
   encodeShelleyDelegCert,
+  poolTxCertDecoder,
   shelleyTxCertDelegDecoder,
  )
 import Cardano.Ledger.Val (Val (..))
@@ -65,15 +66,15 @@ instance Crypto c => EraTxCert (ConwayEra c) where
   getTxCertPool (ConwayTxCertPool x) = Just x
   getTxCertPool _ = Nothing
 
-  mkTxCertGenesis = ConwayTxCertConstitutional
-  getTxCertGenesis (ConwayTxCertConstitutional x) = Just x
-  getTxCertGenesis _ = Nothing
-
 instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   mkShelleyTxCertDeleg = ConwayTxCertDeleg . fromShelleyDelegCert
 
   getShelleyTxCertDeleg (ConwayTxCertDeleg conwayDelegCert) = toShelleyDelegCert conwayDelegCert
   getShelleyTxCertDeleg _ = Nothing
+
+  mkTxCertGenesisDeleg = ConwayTxCertConstitutional
+  getTxCertGenesisDeleg (ConwayTxCertConstitutional x) = Just x
+  getTxCertGenesisDeleg _ = Nothing
 
   mkTxCertMir = notSupportedInThisEra
   getTxCertMir = const Nothing
@@ -155,7 +156,8 @@ instance
   decCBOR = decodeRecordSum "ConwayTxCert" $ \case
     t
       | 0 <= t && t < 3 -> shelleyTxCertDelegDecoder t
-      | 3 <= t && t < 6 -> commonTxCertDecoder t
+      | 3 <= t && t < 5 -> poolTxCertDecoder t
+      | t == 5 -> fail "Genesis delegation certificates are no longer supported"
       | t == 6 -> fail "MIR certificates are no longer supported"
       | 7 <= t -> conwayTxCertDelegDecoder t
     t -> invalidKey t
@@ -289,4 +291,4 @@ getVKeyWitnessConwayTxCert = \case
       ConwayDelegCert cred _ -> credKeyHashWitness cred
       ConwayRegDelegCert cred _ _ -> credKeyHashWitness cred
   ConwayTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
-  ConwayTxCertConstitutional genesisCert -> Just $ genesisKeyHashWitness genesisCert
+  ConwayTxCertConstitutional _genesisCert -> Nothing -- TODO Fix, once CommiteeCert is implemented

@@ -111,7 +111,9 @@ import Cardano.Ledger.Shelley.TxBody (
   pattern RewardAcnt,
  )
 import Cardano.Ledger.Shelley.TxCert (
+  GenesisDelegCert (..),
   pattern ShelleyTxCertDeleg,
+  pattern TxCertGenesisDeleg,
   pattern TxCertMir,
  )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
@@ -622,7 +624,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "genesis_delegation"
-        ( TxCertGenesis @C
+        ( TxCertGenesisDeleg @C
             ( GenesisDelegCert @C_Crypto
                 testGKeyHash
                 (hashKey . vKey $ testGenesisDelegateKey @C_Crypto)

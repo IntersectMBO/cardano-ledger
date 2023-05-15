@@ -214,7 +214,7 @@ applyShelleyCert model dcert = case dcert of
       }
     where
       pp = mPParams model
-  ShelleyTxCertGenesis _ -> model
+  ShelleyTxCertGenesisDeleg _ -> model
   ShelleyTxCertMir _ -> model
 
 -- =========================================================

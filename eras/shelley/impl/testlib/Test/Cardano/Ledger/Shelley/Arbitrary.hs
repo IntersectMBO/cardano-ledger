@@ -66,6 +66,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
+  GenesisDelegCert (..),
   MIRCert,
   MIRPot,
   MIRTarget (SendToOppositePotMIR, StakeAddressesMIR),
@@ -445,10 +446,6 @@ instance Era era => Arbitrary (ShelleyTxCert era) where
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (ShelleyDelegCert c) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (PoolCert c) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 

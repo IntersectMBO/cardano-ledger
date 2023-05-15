@@ -1399,7 +1399,7 @@ instance c ~ EraCrypto era => PrettyC (PoolCert c) era where prettyC _ = pcPoolC
 pcShelleyTxCert :: ShelleyTxCert c -> PDoc
 pcShelleyTxCert (ShelleyTxCertDelegCert x) = pcDelegCert x
 pcShelleyTxCert (ShelleyTxCertPool x) = pcPoolCert x
-pcShelleyTxCert (ShelleyTxCertGenesis _) = ppString "GenesisCert"
+pcShelleyTxCert (ShelleyTxCertGenesisDeleg _) = ppString "GenesisCert"
 pcShelleyTxCert (ShelleyTxCertMir _) = ppString "MirCert"
 
 pcConwayTxCert :: ConwayTxCert c -> PDoc

@@ -814,7 +814,7 @@ getShelleyTxCertCredential = \case
     case pc of
       RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj ppId
       RetirePool kh _ -> Just . coerceKeyRole $ KeyHashObj kh
-  ShelleyTxCertGenesis _g -> Nothing
+  ShelleyTxCertGenesisDeleg _g -> Nothing
   ShelleyTxCertMir _m -> Nothing
 
 getConwayTxCertCredential :: ConwayTxCert era -> Maybe (Credential 'Staking (EraCrypto era))
