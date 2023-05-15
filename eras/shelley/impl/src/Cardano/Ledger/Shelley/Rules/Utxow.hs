@@ -41,6 +41,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   invalidKey,
+  maybeToStrictMaybe,
   quorum,
   (==>),
  )
@@ -514,7 +515,7 @@ witsVKeyNeeded utxo' tx genDelegs =
             Just vkeyWit -> Set.insert vkeyWit ans
     updateKeys :: Set (KeyHash 'Witness (EraCrypto era))
     updateKeys =
-      asWitness `Set.map` propWits (txBody ^. updateTxBodyG) genDelegs
+      asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyG) genDelegs
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
@@ -578,13 +579,26 @@ instance
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
-propWits ::
+proposedUpdatesWitnesses ::
   StrictMaybe (Update era) ->
   GenDelegs (EraCrypto era) ->
   Set (KeyHash 'Witness (EraCrypto era))
-propWits SNothing _ = Set.empty
-propWits (SJust (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
+proposedUpdatesWitnesses SNothing _ = Set.empty
+proposedUpdatesWitnesses (SJust (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys
   where
     updateKeys' = eval (Map.keysSet pup ◁ genDelegs)
     updateKeys = Map.map genDelegKeyHash updateKeys'
+
+-- | Calculate the set of hash keys of the required witnesses for update
+-- proposals.
+propWits ::
+  Maybe (Update era) ->
+  GenDelegs (EraCrypto era) ->
+  Set (KeyHash 'Witness (EraCrypto era))
+propWits mu = proposedUpdatesWitnesses (maybeToStrictMaybe mu)
+{-# DEPRECATED
+  propWits
+  "This is will become an internal function in the future. \
+  \ Submit an issue if you still need it. "
+  #-}
