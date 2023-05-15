@@ -125,6 +125,8 @@ data KeyRole
   | BlockIssuer
   | Witness
   | Voting
+  | Committee
+  | CommitteeCold
   deriving (Show)
 
 class HasKeyRole (a :: KeyRole -> Type -> Type) where

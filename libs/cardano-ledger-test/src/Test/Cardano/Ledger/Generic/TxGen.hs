@@ -824,7 +824,7 @@ getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegCert _ _)) = Nothing
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayUnRegCert cred _)) = Just cred
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayDelegCert cred _)) = Just cred
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegDelegCert cred _ _)) = Just cred
-getConwayTxCertCredential (ConwayTxCertConstitutional _) = Nothing
+getConwayTxCertCredential (ConwayTxCertCommittee _) = Nothing -- TODO Get the credential
 
 genWithdrawals :: Reflect era => SlotNo -> GenRS era (Withdrawals (EraCrypto era), RewardAccounts (EraCrypto era))
 genWithdrawals slot =

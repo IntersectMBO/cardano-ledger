@@ -50,7 +50,14 @@ instance Era era => Arbitrary (ConwayTxCert era) where
     oneof
       [ ConwayTxCertDeleg <$> arbitrary
       , ConwayTxCertPool <$> arbitrary
-      , ConwayTxCertConstitutional <$> arbitrary
+      , ConwayTxCertCommittee <$> arbitrary
+      ]
+
+instance Crypto c => Arbitrary (ConwayCommitteeCert c) where
+  arbitrary =
+    oneof
+      [ ConwayRegCommitteeHot <$> arbitrary <*> arbitrary
+      , ConwayUnRegCommitteeHot <$> arbitrary
       ]
 
 instance Crypto c => Arbitrary (AlonzoScript (ConwayEra c)) where

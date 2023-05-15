@@ -58,7 +58,7 @@ module Cardano.Ledger.Shelley.TxCert (
   poolTxCertDecoder,
   encodeShelleyDelegCert,
   encodePoolCert,
-  encodeConstitutionalCert,
+  encodeGenesisDelegCert,
 
   -- * Re-exports
   EraTxCert (..),
@@ -252,7 +252,7 @@ instance Era era => EncCBOR (ShelleyTxCert era) where
   encCBOR = \case
     ShelleyTxCertDelegCert delegCert -> encodeShelleyDelegCert delegCert
     ShelleyTxCertPool poolCert -> encodePoolCert poolCert
-    ShelleyTxCertGenesisDeleg constCert -> encodeConstitutionalCert constCert
+    ShelleyTxCertGenesisDeleg constCert -> encodeGenesisDelegCert constCert
     ShelleyTxCertMir mir ->
       encodeListLen 2 <> encodeWord8 6 <> encCBOR mir
 
@@ -277,8 +277,8 @@ encodePoolCert = \case
       <> encCBOR vk
       <> encCBOR epoch
 
-encodeConstitutionalCert :: Crypto c => GenesisDelegCert c -> Encoding
-encodeConstitutionalCert (GenesisDelegCert gk kh vrf) =
+encodeGenesisDelegCert :: Crypto c => GenesisDelegCert c -> Encoding
+encodeGenesisDelegCert (GenesisDelegCert gk kh vrf) =
   encodeListLen 4
     <> encodeWord8 5
     <> encCBOR gk

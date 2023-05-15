@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -42,6 +43,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
+  ConwayCommitteeCert (..),
   ConwayDelegCert (..),
   ConwayTxCert (..),
   Delegatee (..),
@@ -52,7 +54,6 @@ import Cardano.Ledger.Pretty (
   PrettyA (..),
   ppAuxiliaryDataHash,
   ppCoin,
-  ppGenesisDelegCert,
   ppKeyHash,
   ppNetwork,
   ppPoolCert,
@@ -125,10 +126,16 @@ instance PrettyA (ConwayDelegCert c) where
       , ("Deposit", prettyA deposit)
       ]
 
-ppConwayTxCert :: ConwayTxCert c -> PDoc
-ppConwayTxCert (ConwayTxCertDeleg dc) = ppSexp "ConwayTxCertDeleg" [prettyA dc]
-ppConwayTxCert (ConwayTxCertPool pc) = ppSexp "ConwayTxCertPool" [ppPoolCert pc]
-ppConwayTxCert (ConwayTxCertConstitutional gdc) = ppSexp "ConwayTxCertConstitutional" [ppGenesisDelegCert gdc]
+ppConwayTxCert :: ConwayTxCert era -> PDoc
+ppConwayTxCert = \case
+  ConwayTxCertDeleg dc -> ppSexp "ConwayTxCertDeleg" [prettyA dc]
+  ConwayTxCertPool pc -> ppSexp "ConwayTxCertPool" [ppPoolCert pc]
+  ConwayTxCertCommittee gdc -> ppSexp "ConwayTxCertCommittee" [ppConwayCommitteeCert gdc]
+
+ppConwayCommitteeCert :: ConwayCommitteeCert c -> PDoc
+ppConwayCommitteeCert = \case
+  ConwayRegCommitteeHot cred key -> ppSexp "ConwayRegCommitteeHot" [prettyA cred, prettyA key]
+  ConwayUnRegCommitteeHot cred -> ppSexp "ConwayUnRegCommitteeHot" [prettyA cred]
 
 ppConwayTxBody ::
   forall era.

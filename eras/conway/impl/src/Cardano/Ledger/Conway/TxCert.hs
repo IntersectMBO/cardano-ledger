@@ -11,6 +11,7 @@
 module Cardano.Ledger.Conway.TxCert (
   ConwayTxCert (..),
   ConwayDelegCert (..),
+  ConwayCommitteeCert (..),
   Delegatee (..),
   ConwayEraTxCert (..),
   fromShelleyDelegCert,
@@ -36,15 +37,22 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Core
+import Cardano.Ledger.Core (
+  Era (EraCrypto),
+  EraTxCert (..),
+  PoolCert,
+  ScriptHash,
+  Value,
+  eraProtVerLow,
+  notSupportedInThisEra,
+  poolCertKeyHashWitness,
+ )
 import Cardano.Ledger.Credential (Credential, StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.TxCert (
-  GenesisDelegCert (..),
   ShelleyDelegCert (..),
   ShelleyEraTxCert (..),
-  encodeConstitutionalCert,
   encodePoolCert,
   encodeShelleyDelegCert,
   poolTxCertDecoder,
@@ -72,8 +80,7 @@ instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   getShelleyTxCertDeleg (ConwayTxCertDeleg conwayDelegCert) = toShelleyDelegCert conwayDelegCert
   getShelleyTxCertDeleg _ = Nothing
 
-  mkTxCertGenesisDeleg = ConwayTxCertConstitutional
-  getTxCertGenesisDeleg (ConwayTxCertConstitutional x) = Just x
+  mkTxCertGenesisDeleg = notSupportedInThisEra
   getTxCertGenesisDeleg _ = Nothing
 
   mkTxCertMir = notSupportedInThisEra
@@ -83,10 +90,17 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
   mkConwayTxCertDeleg :: ConwayDelegCert (EraCrypto era) -> TxCert era
   getConwayTxCertDeleg :: TxCert era -> Maybe (ConwayDelegCert (EraCrypto era))
 
+  mkConwayTxCertCommittee :: ConwayCommitteeCert (EraCrypto era) -> TxCert era
+  getConwayTxCertCommittee :: TxCert era -> Maybe (ConwayCommitteeCert (EraCrypto era))
+
 instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkConwayTxCertDeleg = ConwayTxCertDeleg
   getConwayTxCertDeleg (ConwayTxCertDeleg x) = Just x
   getConwayTxCertDeleg _ = Nothing
+
+  mkConwayTxCertCommittee = ConwayTxCertCommittee
+  getConwayTxCertCommittee (ConwayTxCertCommittee x) = Just x
+  getConwayTxCertCommittee _ = Nothing
 
 -- | First type argument is the deposit
 data Delegatee c
@@ -129,10 +143,27 @@ instance NFData (ConwayDelegCert c)
 
 instance NoThunks (ConwayDelegCert c)
 
+data ConwayCommitteeCert c
+  = ConwayRegCommitteeHot !(Credential 'Committee c) !(KeyHash 'CommitteeCold c)
+  | ConwayUnRegCommitteeHot !(Credential 'Committee c)
+  deriving (Show, Generic, Eq)
+
+instance NFData (ConwayCommitteeCert c)
+
+instance NoThunks (ConwayCommitteeCert c)
+
+-- TODO: Implement
+committeeScriptHash :: ConwayCommitteeCert c -> Maybe (ScriptHash c)
+committeeScriptHash _ = error "Unimplemented"
+
+-- TODO: Implement
+committeeKeyHashWitness :: ConwayCommitteeCert c -> Maybe (KeyHash 'Witness c)
+committeeKeyHashWitness _ = error "Unimplemented"
+
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
   | ConwayTxCertPool !(PoolCert (EraCrypto era))
-  | ConwayTxCertConstitutional !(GenesisDelegCert (EraCrypto era))
+  | ConwayTxCertCommittee !(ConwayCommitteeCert (EraCrypto era))
   deriving (Show, Generic, Eq)
 
 instance NFData (ConwayTxCert c)
@@ -177,6 +208,13 @@ conwayTxCertDelegDecoder = \case
   11 -> regDelegCertDecoder 4 (DelegStake <$> decCBOR)
   12 -> regDelegCertDecoder 4 (DelegVote <$> decCBOR)
   13 -> regDelegCertDecoder 5 (DelegStakeVote <$> decCBOR <*> decCBOR)
+  14 -> do
+    cred <- decCBOR
+    key <- decCBOR
+    pure (3, mkConwayTxCertCommittee $ ConwayRegCommitteeHot cred key)
+  15 -> do
+    cred <- decCBOR
+    pure (2, mkConwayTxCertCommittee $ ConwayUnRegCommitteeHot cred)
   k -> invalidKey k
   where
     delegCertDecoder n decodeDelegatee = do
@@ -199,7 +237,7 @@ instance (Era era, Val (Value era)) => EncCBOR (ConwayTxCert era) where
   encCBOR = \case
     ConwayTxCertDeleg delegCert -> encodeConwayDelegCert delegCert
     ConwayTxCertPool poolCert -> encodePoolCert poolCert
-    ConwayTxCertConstitutional constCert -> encodeConstitutionalCert constCert
+    ConwayTxCertCommittee committeeCert -> encodeCommitteeCert committeeCert
 
 encodeConwayDelegCert :: Crypto c => ConwayDelegCert c -> Encoding
 encodeConwayDelegCert = \case
@@ -249,6 +287,18 @@ encodeConwayDelegCert = \case
       <> encCBOR dRep
       <> encCBOR deposit
 
+encodeCommitteeCert :: Crypto c => ConwayCommitteeCert c -> Encoding
+encodeCommitteeCert = \case
+  ConwayRegCommitteeHot cred key ->
+    encodeListLen 3
+      <> encodeWord8 14
+      <> encCBOR cred
+      <> encCBOR key
+  ConwayUnRegCommitteeHot cred ->
+    encodeListLen 2
+      <> encodeWord8 15
+      <> encCBOR cred
+
 fromShelleyDelegCert :: ShelleyDelegCert c -> ConwayDelegCert c
 fromShelleyDelegCert = \case
   ShelleyRegCert cred -> ConwayRegCert cred SNothing
@@ -279,6 +329,7 @@ getScriptWitnessConwayTxCert = \case
       ConwayUnRegCert cred _ -> credScriptHash cred
       ConwayDelegCert cred _ -> credScriptHash cred
       ConwayRegDelegCert cred _ _ -> credScriptHash cred
+  ConwayTxCertCommittee committeeCert -> committeeScriptHash committeeCert
   _ -> Nothing
 
 getVKeyWitnessConwayTxCert :: ConwayTxCert era -> Maybe (KeyHash 'Witness (EraCrypto era))
@@ -291,4 +342,4 @@ getVKeyWitnessConwayTxCert = \case
       ConwayDelegCert cred _ -> credKeyHashWitness cred
       ConwayRegDelegCert cred _ _ -> credKeyHashWitness cred
   ConwayTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
-  ConwayTxCertConstitutional _genesisCert -> Nothing -- TODO Fix, once CommiteeCert is implemented
+  ConwayTxCertCommittee committeeCert -> committeeKeyHashWitness committeeCert
