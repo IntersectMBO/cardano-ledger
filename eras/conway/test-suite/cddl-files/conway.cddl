@@ -258,7 +258,6 @@ certificate =
   // stake_delegation
   // pool_registration
   // pool_retirement
-  // constitutional_deleg_cert
   // reg_cert
   // unreg_cert
   // vote_deleg_cert
@@ -266,6 +265,8 @@ certificate =
   // stake_reg_deleg_cert
   // vote_reg_deleg_cert
   // stake_vote_reg_deleg_cert
+  // reg_committee_cert
+  // unreg_committee_cert
   ]
 
 stake_registration = (0, stake_credential)
@@ -273,8 +274,8 @@ stake_deregistration = (1, stake_credential)
 stake_delegation = (2, stake_credential, pool_keyhash)
 pool_registration = (3, pool_params)
 pool_retirement = (4, pool_keyhash, epoch)
-constitutional_deleg_cert = (5, genesishash, genesis_delegate_hash, vrf_keyhash)
-; number 6 used to be the MIR certificate, which is deprecated in Conway
+; numbers 5 and 6 used to be the Genesis and MIR certificates respectively,
+; which were deprecated in Conway
 reg_cert = (7, stake_credential, coin)
 unreg_cert = (8, stake_credential, coin)
 vote_deleg_cert = (9, stake_credential, voting_credential)
@@ -282,6 +283,9 @@ stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, voting_credential)
 stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
 vote_reg_deleg_cert = (12, stake_credential, voting_credential, coin)
 stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, voting_credential, coin)
+reg_committee_cert = (14, credential, addr_keyhash)
+unreg_committee_cert = (15, credential)
+
 
 delta_coin = int
 
