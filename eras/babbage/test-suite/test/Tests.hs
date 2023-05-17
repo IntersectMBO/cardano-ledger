@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Main where
@@ -7,6 +6,7 @@ module Main where
 import Cardano.Ledger.Babbage (Babbage)
 import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
+import qualified Test.Cardano.Ledger.Babbage.GoldenTranslation as Golden (tests)
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
 import Test.Cardano.Ledger.Babbage.TxInfo (txInfoTests, txInfoTestsBabbageOnly)
@@ -23,7 +23,8 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Babbage tests"
-    [ Tripping.tests
+    [ Golden.tests
+    , Tripping.tests
     , txInfoTests (Proxy @Babbage)
     , txInfoTestsBabbageOnly
     , CDDL.tests 5

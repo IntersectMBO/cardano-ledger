@@ -54,6 +54,18 @@ cradle:
     - path: "eras/babbage/test-suite/src"
       component: "lib:cardano-ledger-babbage-test"
 
+    - path: "eras/babbage/test-suite/src"
+      component: "cardano-ledger-babbage-test:exe:gen-golden"
+
+    - path: "eras/babbage/test-suite/src/Paths_cardano_ledger_babbage_test.hs"
+      component: "cardano-ledger-babbage-test:exe:gen-golden"
+
+    - path: "eras/babbage/test-suite/src/Test/Cardano/Ledger/Babbage/Serialisation/Generators.hs"
+      component: "cardano-ledger-babbage-test:exe:gen-golden"
+
+    - path: "eras/babbage/test-suite/src/Test/Cardano/Ledger/Babbage/Translation/TranslatableGen.hs"
+      component: "cardano-ledger-babbage-test:exe:gen-golden"
+
     - path: "eras/babbage/test-suite/test"
       component: "cardano-ledger-babbage-test:test:cardano-ledger-babbage-test"
 
