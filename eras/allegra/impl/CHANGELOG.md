@@ -4,6 +4,7 @@
 
 * Introduction of `TxCert` and `EraTxCert`
 * Add `EraTxCert` and `ShelleyEraTxCert` instances to `AllegraEra`
+* Fix an issue where `TotalDeposits` didn't appear on Allegra and Mary era
 
 ## 1.1.1.0
 

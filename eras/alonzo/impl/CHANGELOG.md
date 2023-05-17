@@ -10,6 +10,7 @@
 * Add `EraPlutusContext 'PlutusV1` instance to `AlonzoEra`
 * Rename `transTxCert` to `transShelleyTxCert`
 * Remove `witsVKeyNeeded`, in favor of the one from `cardano-ledger-shelley`
+* Fix an issue where `TotalDeposits` didn't appear on Alonzo era
 
 ## 1.2.0.0
 
