@@ -6,6 +6,7 @@
 * Add `EraTxCert` and `ShelleyEraTxCert` instances to `BabbageEra`
 * Add `EraPlutusContext 'PlutusV1` instance to `BabbageEra`
 * Add `EraPlutusContext 'PlutusV2` instance to `BabbageEra`
+* Fix an issue where `TotalDeposits` didn't appear on Babbage era
 
 ## 1.2.0.0
 
