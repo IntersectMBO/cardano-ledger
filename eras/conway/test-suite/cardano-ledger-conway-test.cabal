@@ -13,6 +13,7 @@ data-files:
     cddl-files/conway.cddl
     cddl-files/real/crypto.cddl
     cddl-files/mock/extras.cddl
+    golden/*.cbor
 
 source-repository head
     type:     git
@@ -53,6 +54,32 @@ library
         microlens,
         tasty,
         tasty-quickcheck
+
+executable gen-golden
+    main-is:
+        Test/Cardano/Ledger/Conway/Translation/GenerateGoldenFileMain.hs
+
+    hs-source-dirs:   src
+    other-modules:
+        Paths_cardano_ledger_conway_test
+        Test.Cardano.Ledger.Conway.Serialisation.Generators
+
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base,
+        cardano-ledger-conway:{cardano-ledger-conway, testlib},
+        cardano-ledger-core >=1.2,
+        cardano-ledger-alonzo-test,
+        cardano-ledger-babbage-test,
+        cardano-ledger-binary,
+        cardano-strict-containers,
+        containers,
+        QuickCheck
 
 test-suite cardano-ledger-conway-test
     type:             exitcode-stdio-1.0

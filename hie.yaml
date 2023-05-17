@@ -111,6 +111,15 @@ cradle:
     - path: "eras/conway/test-suite/src"
       component: "lib:cardano-ledger-conway-test"
 
+    - path: "eras/conway/test-suite/src"
+      component: "cardano-ledger-conway-test:exe:gen-golden"
+
+    - path: "eras/conway/test-suite/src/Paths_cardano_ledger_conway_test.hs"
+      component: "cardano-ledger-conway-test:exe:gen-golden"
+
+    - path: "eras/conway/test-suite/src/Test/Cardano/Ledger/Conway/Serialisation/Generators.hs"
+      component: "cardano-ledger-conway-test:exe:gen-golden"
+
     - path: "eras/conway/test-suite/test"
       component: "cardano-ledger-conway-test:test:cardano-ledger-conway-test"
 
