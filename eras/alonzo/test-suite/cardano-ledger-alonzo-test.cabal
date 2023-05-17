@@ -33,10 +33,13 @@ library
         Test.Cardano.Ledger.Alonzo.PlutusScripts
         Test.Cardano.Ledger.Alonzo.Serialisation.Generators
         Test.Cardano.Ledger.Alonzo.Scripts
-        Test.Cardano.Ledger.Alonzo.TranslationInstance
+        Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
+        Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen
+        Test.Cardano.Ledger.Alonzo.Translation.Golden
         Test.Cardano.Ledger.Alonzo.Trace
 
     hs-source-dirs:   src
+    other-modules:    Paths_cardano_ledger_alonzo_test
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -73,7 +76,9 @@ library
         transformers
 
 executable gen-golden
-    main-is:          Test/Cardano/Ledger/Alonzo/GenGoldenTranslationFile.hs
+    main-is:
+        Test/Cardano/Ledger/Alonzo/Translation/GenerateGoldenFileMain.hs
+
     hs-source-dirs:   src
     other-modules:
         Paths_cardano_ledger_alonzo_test
@@ -81,17 +86,24 @@ executable gen-golden
         Test.Cardano.Ledger.Alonzo.CostModel
         Test.Cardano.Ledger.Alonzo.PlutusScripts
         Test.Cardano.Ledger.Alonzo.Serialisation.Generators
-        Test.Cardano.Ledger.Alonzo.TranslationInstance
+        Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
+        Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen
+        Test.Cardano.Ledger.Alonzo.Translation.Golden
 
     default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
     build-depends:
         base,
         bytestring,
-        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.2,
+        cardano-ledger-core >=1.2,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        cardano-ledger-mary:{cardano-ledger-mary, testlib},
+        cardano-ledger-mary,
         cardano-ledger-pretty,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test >=1.1,

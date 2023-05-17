@@ -15,7 +15,7 @@ cradle:
     - path: "eras/alonzo/test-suite/src"
       component: "lib:cardano-ledger-alonzo-test"
 
-    - path: "eras/alonzo/test-suite/src/Test/Cardano/Ledger/Alonzo/GenGoldenTranslationFile.hs"
+    - path: "eras/alonzo/test-suite/src"
       component: "cardano-ledger-alonzo-test:exe:gen-golden"
 
     - path: "eras/alonzo/test-suite/src/Paths_cardano_ledger_alonzo_test.hs"
@@ -33,7 +33,13 @@ cradle:
     - path: "eras/alonzo/test-suite/src/Test/Cardano/Ledger/Alonzo/Serialisation/Generators.hs"
       component: "cardano-ledger-alonzo-test:exe:gen-golden"
 
-    - path: "eras/alonzo/test-suite/src/Test/Cardano/Ledger/Alonzo/TranslationInstance.hs"
+    - path: "eras/alonzo/test-suite/src/Test/Cardano/Ledger/Alonzo/Translation/TranslationInstance.hs"
+      component: "cardano-ledger-alonzo-test:exe:gen-golden"
+
+    - path: "eras/alonzo/test-suite/src/Test/Cardano/Ledger/Alonzo/Translation/TranslationInstanceGen.hs"
+      component: "cardano-ledger-alonzo-test:exe:gen-golden"
+
+    - path: "eras/alonzo/test-suite/src/Test/Cardano/Ledger/Alonzo/Translation/Golden.hs"
       component: "cardano-ledger-alonzo-test:exe:gen-golden"
 
     - path: "eras/alonzo/test-suite/test"
