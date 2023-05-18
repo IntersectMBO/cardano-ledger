@@ -30,9 +30,10 @@ import Test.QuickCheck (
   Gen,
   arbitrary,
   elements,
-  generate,
   vectorOf,
  )
+import Test.QuickCheck.Gen (Gen (MkGen))
+import Test.QuickCheck.Random (mkQCGen)
 
 class EraTx era => TranslatableGen era where
   tgTx :: Language -> Gen (Core.Tx era)
@@ -53,9 +54,13 @@ translationInstances ::
   ) =>
   [Language] ->
   Int ->
-  IO [TranslationInstance era]
-translationInstances ls size =
-  generate $ vectorOf size (genTranslationInstance ls)
+  Int ->
+  [TranslationInstance era]
+translationInstances ls size seed =
+  generateWithSeed seed $ vectorOf size (genTranslationInstance ls)
+
+generateWithSeed :: Int -> Gen a -> a
+generateWithSeed seed (MkGen g) = g (mkQCGen seed) 30
 
 genTranslationInstance ::
   forall era.
