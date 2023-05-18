@@ -1,49 +1,49 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen (
+module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
   translationInstances,
   epochInfo,
   systemStart,
 ) where
 
+import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo.TxInfo
+import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
-
+import Cardano.Slotting.Slot (EpochSize (..))
+import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Lens.Micro ((^.))
+import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (TranslationInstance (..))
 import Test.QuickCheck (
   Arbitrary,
   Gen,
   arbitrary,
+  elements,
   generate,
-  oneof,
   vectorOf,
- )
-
-import Cardano.Ledger.Core as Core
-import Cardano.Slotting.Slot (EpochSize (..))
-import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-
-import Cardano.Ledger.UTxO (UTxO (..))
-
-import Cardano.Ledger.Alonzo.TxInfo
-
-import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
-  TranslationInstance (TranslationInstance),
  )
 
 class EraTx era => TranslatableGen era where
   tgTx :: Language -> Gen (Core.Tx era)
   tgUtxo :: Language -> Core.Tx era -> Gen (UTxO era)
+
+instance TranslatableGen Alonzo where
+  tgTx _ = arbitrary :: Gen (Tx Alonzo)
+  tgUtxo _ tx = do
+    let ins = tx ^. bodyTxL ^. inputsTxBodyL
+    outs <- vectorOf (length ins) (arbitrary :: Gen (TxOut Alonzo))
+    pure $ UTxO (Map.fromList $ Set.toList ins `zip` outs)
 
 translationInstances ::
   forall era.
@@ -51,10 +51,10 @@ translationInstances ::
   , TranslatableGen era
   , Arbitrary (PParams era)
   ) =>
-  Int ->
   [Language] ->
+  Int ->
   IO [TranslationInstance era]
-translationInstances size ls =
+translationInstances ls size =
   generate $ vectorOf size (genTranslationInstance ls)
 
 genTranslationInstance ::
@@ -67,7 +67,7 @@ genTranslationInstance ::
   Gen (TranslationInstance era)
 genTranslationInstance ls = do
   pp <- arbitrary :: Gen (PParams era)
-  language <- oneof (pure <$> ls)
+  language <- elements ls
   tx <- tgTx @era language
   fullUtxo <- tgUtxo language tx
   let vtxInfoE = txInfo pp language epochInfo systemStart fullUtxo tx
@@ -78,4 +78,4 @@ epochInfo :: EpochInfo (Either a)
 epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
 systemStart :: SystemStart
-systemStart = SystemStart $ posixSecondsToUTCTime 0
+systemStart = SystemStart $ posixSecondsToUTCTime 1684445839000 -- 18/05/2023

@@ -34,10 +34,10 @@ tests :: TestTree
 tests =
   testGroup
     "Golden translation tests"
-    [testCase "golden/translations.cbor" $ check "golden/translations.cbor"]
+    [testCase "golden/translations.cbor" $ goldenAssertion "golden/translations.cbor"]
 
-check :: String -> Assertion
-check file = do
+goldenAssertion :: String -> Assertion
+goldenAssertion file = do
   comps <- compareGoldenTxInfoResults @Alonzo (getDataFileName file)
   mapM_
     ( \(TxInfoResultComparison expected actual err) ->

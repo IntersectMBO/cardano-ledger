@@ -1,11 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.Translation.TranslatableGen (
@@ -37,7 +35,7 @@ import Data.Maybe.Strict
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen (TranslatableGen (..))
+import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck (
   Arbitrary,
@@ -59,16 +57,13 @@ utxoWithTx ::
   ( EraTx era
   , Arbitrary (Value era)
   , Arbitrary (Script era)
-  , BabbageEraTxBody era
   , TxOut era ~ BabbageTxOut era
   ) =>
   Language ->
   Tx era ->
   Gen (UTxO era)
 utxoWithTx l tx = do
-  let ins = tx ^. bodyTxL ^. inputsTxBodyL
-  let refIns = tx ^. bodyTxL ^. referenceInputsTxBodyL
-  let allIns = ins `Set.union` refIns
+  let allIns = tx ^. bodyTxL ^. allInputsTxBodyF
   outs <- vectorOf (length allIns) (genTxOut @era l)
   pure $ UTxO (Map.fromList $ Set.toList allIns `zip` outs)
 
@@ -127,10 +122,10 @@ genTxWits = \case
         & rdmrsTxWitsL @era
           .~ Redeemers (Map.singleton (RdmrPtr Spend 0) (Data (PV1.I 42), ExUnits 5000 5000))
 
-genTxBody :: forall era. Crypto era => Language -> Gen (BabbageTxBody (BabbageEra era))
+genTxBody :: forall c. Crypto c => Language -> Gen (BabbageTxBody (BabbageEra c))
 genTxBody l = do
-  let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @Babbage) <$> genTxOut @(BabbageEra era) l)
-  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen (TxIn era))
+  let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @Babbage) <$> genTxOut @(BabbageEra c) l)
+  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen (TxIn c))
   BabbageTxBody
     <$> genTxIns
     <*> arbitrary
@@ -152,7 +147,7 @@ genTxBody l = do
     <*> arbitrary
     <*> arbitrary
 
-genNonByronAddr :: forall era. Crypto era => Gen (Addr era)
+genNonByronAddr :: forall c. Crypto c => Gen (Addr c)
 genNonByronAddr =
   Addr
     <$> arbitrary
