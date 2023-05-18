@@ -1,17 +1,9 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Main where
-
--- import Cardano.Ledger.Babbage.Core
+module Test.Cardano.Ledger.Conway.Translation.TranslatableGen where
 
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Conway (Conway, ConwayEra)
@@ -22,8 +14,7 @@ import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Alonzo.Translation.Golden (generateGoldenFile)
-import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstanceGen (TranslatableGen (..))
+import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..))
 import qualified Test.Cardano.Ledger.Babbage.Translation.TranslatableGen as BabbageTranslatableGen (
   genTx,
   genTxOut,
@@ -37,27 +28,23 @@ import Test.QuickCheck (
   scale,
  )
 
--- | Generates golden translation file for Conway era
-main :: IO ()
-main = generateGoldenFile @Conway [PlutusV1, PlutusV2, PlutusV3] "eras/conway/test-suite/golden/translations.cbor"
-
 instance TranslatableGen Conway where
   tgTx l = BabbageTranslatableGen.genTx @Conway l (genTxBody l)
   tgUtxo = BabbageTranslatableGen.utxoWithTx @Conway
 
-genTxBody :: forall era. Crypto era => Language -> Gen (ConwayTxBody (ConwayEra era))
+genTxBody :: forall c. Crypto c => Language -> Gen (ConwayTxBody (ConwayEra c))
 genTxBody l = do
   let genTxOuts =
         fromList
           <$> listOf1
             ( mkSized (eraProtVerLow @Conway)
-                <$> BabbageTranslatableGen.genTxOut @(ConwayEra era) l
+                <$> BabbageTranslatableGen.genTxOut @(ConwayEra c) l
             )
-  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen (TxIn era))
+  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen (TxIn c))
   ConwayTxBody
     <$> genTxIns
     <*> arbitrary
-    <*> ( case l of ----refinputs
+    <*> ( case l of -- refinputs
             PlutusV1 -> pure Set.empty
             _ -> arbitrary
         )
