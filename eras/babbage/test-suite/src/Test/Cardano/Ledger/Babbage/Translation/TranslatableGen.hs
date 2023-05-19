@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,7 +14,6 @@ module Test.Cardano.Ledger.Babbage.Translation.TranslatableGen (
 import Cardano.Ledger.Babbage (Babbage, BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Crypto
-import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 
@@ -34,13 +32,15 @@ import qualified Data.Map as Map
 import Data.Maybe.Strict
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
-import qualified PlutusLedgerApi.V1 as PV1
+import Lens.Micro ((^.))
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genScripts)
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck (
   Arbitrary,
   Gen,
   arbitrary,
+  elements,
   frequency,
   listOf1,
   oneof,
@@ -49,7 +49,7 @@ import Test.QuickCheck (
  )
 
 instance TranslatableGen Babbage where
-  tgTx l = genTx @Babbage l (genTxBody l)
+  tgTx l = genTx @Babbage (genTxBody l)
   tgUtxo = utxoWithTx @Babbage
 
 utxoWithTx ::
@@ -75,13 +75,12 @@ genTx ::
   , AlonzoScript era ~ Script era
   , AlonzoTxWits era ~ TxWits era
   ) =>
-  Language ->
   Gen (TxBody era) ->
   Gen (AlonzoTx era)
-genTx l txbGen =
+genTx txbGen =
   AlonzoTx
     <$> txbGen
-    <*> genTxWits @era l
+    <*> genTxWits @era
     <*> arbitrary
     <*> arbitrary
 
@@ -103,24 +102,6 @@ genTxOut l = do
     PlutusV1 -> oneof [pure NoDatum, DatumHash <$> (arbitrary :: Gen (DataHash (EraCrypto era)))]
     _ -> arbitrary
   pure $ BabbageTxOut addr value datum script
-
-genTxWits ::
-  forall era.
-  ( Arbitrary (Script era)
-  , AlonzoEraTxWits era
-  , AlonzoScript era ~ Script era
-  , AlonzoTxWits era ~ TxWits era
-  ) =>
-  Language ->
-  Gen (AlonzoTxWits era)
-genTxWits = \case
-  PlutusV1 -> arbitrary
-  _ -> do
-    arbWits <- arbitrary :: Gen (AlonzoTxWits era)
-    pure $
-      arbWits
-        & rdmrsTxWitsL @era
-          .~ Redeemers (Map.singleton (RdmrPtr Spend 0) (Data (PV1.I 42), ExUnits 5000 5000))
 
 genTxBody :: forall c. Crypto c => Language -> Gen (BabbageTxBody (BabbageEra c))
 genTxBody l = do
@@ -156,3 +137,26 @@ genNonByronAddr =
       [ (85, StakeRefBase <$> arbitrary)
       , (15, pure StakeRefNull)
       ]
+
+genTxWits ::
+  ( Arbitrary (Script era)
+  , AlonzoScript era ~ Script era
+  , EraScript era
+  ) =>
+  Gen (AlonzoTxWits era)
+genTxWits =
+  AlonzoTxWits
+    <$> arbitrary
+    <*> arbitrary
+    <*> genScripts
+    <*> arbitrary
+    <*> genRedeemers
+
+genRedeemers :: forall era. Era era => Gen (Redeemers era)
+genRedeemers = do
+  d <- arbitrary :: Gen (Data era)
+  eu <- arbitrary :: Gen ExUnits
+  -- We provide `RdrmPtr Spend 0` as the only valid reedemer, because
+  -- for any other redeemer type, we would have to modify the body of the transaction
+  -- in order for the translation to succeed
+  Redeemers <$> elements [Map.singleton (RdmrPtr Spend 0) (d, eu), Map.empty]

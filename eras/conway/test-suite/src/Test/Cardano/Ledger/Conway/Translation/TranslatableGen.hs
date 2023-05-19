@@ -29,7 +29,7 @@ import Test.QuickCheck (
  )
 
 instance TranslatableGen Conway where
-  tgTx l = BabbageTranslatableGen.genTx @Conway l (genTxBody l)
+  tgTx l = BabbageTranslatableGen.genTx @Conway (genTxBody l)
   tgUtxo = BabbageTranslatableGen.utxoWithTx @Conway
 
 genTxBody :: forall c. Crypto c => Language -> Gen (ConwayTxBody (ConwayEra c))

@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   costModelParamsCount,
   FlexibleCostModels (..),
   genAlonzoScript,
+  genScripts,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -143,7 +144,7 @@ instance
       <$> arbitrary
       <*> arbitrary
       <*> genScripts
-      <*> genData
+      <*> arbitrary
       <*> arbitrary
 
 genScripts ::
@@ -154,8 +155,8 @@ genScripts ::
   Gen (Map.Map (ScriptHash (EraCrypto era)) (Script era))
 genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Script era])
 
-genData :: Era era => Gen (TxDats era)
-genData = TxDats . keyBy hashData <$> arbitrary
+instance (Era era) => Arbitrary (TxDats era) where
+  arbitrary = TxDats . keyBy hashData <$> arbitrary
 
 instance
   ( EraTxOut era
@@ -405,7 +406,7 @@ instance
   arbitrary =
     ScriptIntegrity
       <$> arbitrary
-      <*> genData
+      <*> arbitrary
       -- FIXME: why singleton? We should generate empty as well as many value sets
       <*> (Set.singleton <$> (getLanguageView @era <$> arbitrary <*> arbitrary))
 
