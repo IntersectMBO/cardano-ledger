@@ -1,12 +1,46 @@
 # Version history for `cardano-ledger-core`
 
-## 1.4.0.0
-
-* Add delegated representatives to the `UMap` and make its interface more coherent #3426
-  * There are a number of 
-
 ## 1.3.0.0
 
+* Add delegated representatives to the `UMap` and make its interface more coherent #3426
+  * Additions
+    * Add `Credential 'Voting (EraCrypto era)` as the fourth element to the `UMap` n-tuple.
+    * `umElemPtrs :: UMElem c -> Maybe (Set Ptr)`
+    * `umElemDRep :: UMElem c -> Maybe (Credential 'Voting (EraCrypto era))`
+    * `UView (DRepUView)` constructor and `dRepUView`
+    * `revPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)`
+    * `dRepMap :: UMap c -> Map (Credential 'Staking c) (Credential 'Voting c)`
+    * synonym `unionL = (∪)`
+    * synonym `unionR = (⨃)`
+    * synonym `domDelete = (⋪)`
+    * synonym `rngDelete = (⋫)`
+  * Renames
+    * `Trip` to `UMElem`, pattern `Triple` to `UMElem`
+    * `viewTrip` to `umElemAsTuple`
+    * `tripRewardActiveDelegation` to `umElemRDActive`
+    * `tripReward` to `umElemRDPair`
+    * `tripDelegation` to `umElemSPool`
+    * `View (RewardDeposits, Delegations, Ptrs)` to `UView (RewDepUView, SPoolUView, PtrUView)`
+      * `rdPairs` to `rewDepUView`
+      * `delegations` to `sPoolUView`
+      * `ptrs` to `ptrUView`
+      * `unView` to `unUView`
+      * `viewtoVMap` to `unUnifyToVMap`
+      * `rewView` to `rewardMap`
+      * `compactRewView` to `compactRewardMap`
+      * `depositView` to `depositMap`
+      * `rdPairView` to `rdPairMap`
+      * `delView` to `sPoolMap`
+      * `ptrView` to `ptrMap`
+      * `domRestrictedView` to `domRestrictedMap`
+    * `zero` to `nullUMElem`
+    * `zeroMaybe` to `nullUMElemMaybe`
+    * `sumRewardsView` to `sumRewardsUView`
+    * `sumDepositView` to `sumDepositUView`
+  * Reimplementations
+    * `unionRewAgg` NOTE: It does not require `assert (Map.valid result) result` any more
+      and has been tested for equivalence with the older version with 
+      `--qc-max-success=10000 --qc-max-size=1000` in one of the commits.
 * Add `certsTxBodyL` to `EraTxBody`
 * Introduce `TxCert` type family and `EraTxCert` type class.
 * Deprecate `Delegation`
