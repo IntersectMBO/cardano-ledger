@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -144,7 +145,7 @@ import Cardano.Ledger.Shelley.TxBody (
   WitVKey (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
   prettyWitnessSetParts,
@@ -1111,8 +1112,8 @@ ppPoolCert :: PoolCert c -> PDoc
 ppPoolCert (RegPool x) = ppSexp "RegPool" [ppPoolParams x]
 ppPoolCert (RetirePool x y) = ppSexp "RetirePool" [ppKeyHash x, ppEpochNo y]
 
-ppConstitutionalDelegCert :: ConstitutionalDelegCert c -> PDoc
-ppConstitutionalDelegCert (ConstitutionalDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
+ppGenesisDelegCert :: GenesisDelegCert c -> PDoc
+ppGenesisDelegCert (GenesisDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
 
 ppMIRPot :: MIRPot -> PDoc
 ppMIRPot ReservesMIR = text "Reserves"
@@ -1126,10 +1127,11 @@ ppMIRCert :: MIRCert c -> PDoc
 ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 
 ppShelleyTxCert :: ShelleyTxCert c -> PDoc
-ppShelleyTxCert (ShelleyTxCertDelegCert x) = ppSexp "ShelleyTxCertDeleg" [ppShelleyDelegCert x]
-ppShelleyTxCert (ShelleyTxCertPool x) = ppSexp "TxCertPool" [ppPoolCert x]
-ppShelleyTxCert (ShelleyTxCertGenesis x) = ppSexp "TxCertGenesis" [ppConstitutionalDelegCert x]
-ppShelleyTxCert (ShelleyTxCertMir x) = ppSexp "TxCertMir" [ppMIRCert x]
+ppShelleyTxCert = \case
+  ShelleyTxCertDelegCert x -> ppSexp "ShelleyTxCertDeleg" [ppShelleyDelegCert x]
+  ShelleyTxCertPool x -> ppSexp "TxCertPool" [ppPoolCert x]
+  ShelleyTxCertGenesisDeleg x -> ppSexp "ShelleyTxCertGenesisDeleg" [ppGenesisDelegCert x]
+  ShelleyTxCertMir x -> ppSexp "TxCertMir" [ppMIRCert x]
 
 ppTxBody ::
   ( EraTxOut era
@@ -1190,8 +1192,8 @@ instance PrettyA (ShelleyDelegCert c) where
 instance PrettyA (PoolCert c) where
   prettyA = ppPoolCert
 
-instance PrettyA (ConstitutionalDelegCert c) where
-  prettyA = ppConstitutionalDelegCert
+instance PrettyA (GenesisDelegCert c) where
+  prettyA = ppGenesisDelegCert
 
 instance PrettyA MIRPot where
   prettyA = ppMIRPot

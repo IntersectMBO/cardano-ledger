@@ -11,7 +11,7 @@
 * Added `toShelleyDelegCert` and `fromShelleyDelegCert`
 * Changed `ConwayDelegCert` structure #3408
 * Addition of `getScriptWitnessConwayTxCert` and `getVKeyWitnessConwayTxCert`
-
+* Add `ConwayCommitteeCert`
 
 ## 1.2.0.0
 

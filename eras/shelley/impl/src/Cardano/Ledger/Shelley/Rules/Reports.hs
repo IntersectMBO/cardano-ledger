@@ -35,6 +35,7 @@ import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   isInstantaneousRewards,
   pattern ShelleyTxCertDeleg,
+  pattern TxCertGenesisDeleg,
  )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
@@ -55,7 +56,7 @@ synopsisCert x = case x of
   ShelleyTxCertDeleg (ShelleyDelegCert cred _) -> "ShelleyDelegCert" ++ take 10 (showCred cred)
   TxCertPool (RegPool pool) -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
   TxCertPool (RetirePool khash e) -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
-  TxCertGenesis _ -> "GenesisCert"
+  TxCertGenesisDeleg _ -> "GenesisCert"
   _ | isInstantaneousRewards x -> "MirCert"
   _ -> error "Impossible"
 

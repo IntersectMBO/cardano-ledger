@@ -27,11 +27,6 @@ instance Crypto c => EraTxCert (MaryEra c) where
   getTxCertPool (ShelleyTxCertPool c) = Just c
   getTxCertPool _ = Nothing
 
-  mkTxCertGenesis = ShelleyTxCertGenesis
-
-  getTxCertGenesis (ShelleyTxCertGenesis c) = Just c
-  getTxCertGenesis _ = Nothing
-
 instance Crypto c => ShelleyEraTxCert (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (MaryEra StandardCrypto) #-}
 
@@ -39,6 +34,11 @@ instance Crypto c => ShelleyEraTxCert (MaryEra c) where
 
   getShelleyTxCertDeleg (ShelleyTxCertDelegCert c) = Just c
   getShelleyTxCertDeleg _ = Nothing
+
+  mkTxCertGenesisDeleg = ShelleyTxCertGenesisDeleg
+
+  getTxCertGenesisDeleg (ShelleyTxCertGenesisDeleg c) = Just c
+  getTxCertGenesisDeleg _ = Nothing
 
   mkTxCertMir = ShelleyTxCertMir
 

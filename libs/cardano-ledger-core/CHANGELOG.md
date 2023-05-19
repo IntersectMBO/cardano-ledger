@@ -7,6 +7,9 @@
 * Deprecate `Delegation`
 * Add `toKeyHashWitness`
 * Addition of `getVKeyWitnessTxCert` and `getScriptWitnessTxCert` to `EraTxCert` type class
+* Add new key roles: `CommitteeColdKey` and `CommitteeHotKey`
+* Remove `ConstitutionalDelegCert`. Instead it now lives in `cardano-ledger-shelley` as
+  `GenesisDelegCert`
 
 ## 1.2.0.0
 

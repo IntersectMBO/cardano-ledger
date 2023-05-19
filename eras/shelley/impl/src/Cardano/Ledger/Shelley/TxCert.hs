@@ -25,12 +25,20 @@
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
   pattern TxCertMir,
+  pattern TxCertGenesisDeleg,
   pattern ShelleyTxCertDeleg,
   ShelleyDelegCert (.., RegKey, DeRegKey, Delegate),
   getVKeyWitnessShelleyTxCert,
   getScriptWitnessShelleyTxCert,
   delegCWitness,
   ShelleyTxCert (..),
+
+  -- ** GenesisDelegCert
+  GenesisDelegCert (..),
+  genesisCWitness,
+  genesisKeyHashWitness,
+
+  -- ** MIRCert
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
@@ -47,20 +55,17 @@ module Cardano.Ledger.Shelley.TxCert (
 
   -- ** Serialization helpers
   shelleyTxCertDelegDecoder,
-  commonTxCertDecoder,
+  poolTxCertDecoder,
   encodeShelleyDelegCert,
   encodePoolCert,
-  encodeConstitutionalCert,
+  encodeGenesisDelegCert,
 
   -- * Re-exports
   EraTxCert (..),
   pattern TxCertPool,
-  pattern TxCertGenesis,
   Delegation (..),
   PoolCert (..),
   poolCWitness,
-  ConstitutionalDelegCert (..),
-  genesisCWitness,
 )
 where
 
@@ -87,7 +92,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (Hash, KeyHash (..), KeyRole (..), VerKeyVRF, asWitness)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Map.Strict (Map)
@@ -109,17 +114,15 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
   getTxCertPool (ShelleyTxCertPool c) = Just c
   getTxCertPool _ = Nothing
 
-  mkTxCertGenesis = ShelleyTxCertGenesis
-
-  getTxCertGenesis (ShelleyTxCertGenesis c) = Just c
-  getTxCertGenesis _ = Nothing
-
 class EraTxCert era => ShelleyEraTxCert era where
-  mkTxCertMir :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
-  getTxCertMir :: TxCert era -> Maybe (MIRCert (EraCrypto era))
-
   mkShelleyTxCertDeleg :: ShelleyDelegCert (EraCrypto era) -> TxCert era
   getShelleyTxCertDeleg :: TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
+
+  mkTxCertGenesisDeleg :: GenesisDelegCert (EraCrypto era) -> TxCert era
+  getTxCertGenesisDeleg :: TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
+
+  mkTxCertMir :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
+  getTxCertMir :: TxCert era -> Maybe (MIRCert (EraCrypto era))
 
 instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (ShelleyEra StandardCrypto) #-}
@@ -128,6 +131,11 @@ instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
 
   getShelleyTxCertDeleg (ShelleyTxCertDelegCert c) = Just c
   getShelleyTxCertDeleg _ = Nothing
+
+  mkTxCertGenesisDeleg = ShelleyTxCertGenesisDeleg
+
+  getTxCertGenesisDeleg (ShelleyTxCertGenesisDeleg c) = Just c
+  getTxCertGenesisDeleg _ = Nothing
 
   mkTxCertMir = ShelleyTxCertMir
 
@@ -143,6 +151,33 @@ pattern TxCertMir :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (Era
 pattern TxCertMir d <- (getTxCertMir -> Just d)
   where
     TxCertMir d = mkTxCertMir d
+
+pattern TxCertGenesisDeleg ::
+  ShelleyEraTxCert era =>
+  GenesisDelegCert (EraCrypto era) ->
+  TxCert era
+pattern TxCertGenesisDeleg d <- (getTxCertGenesisDeleg -> Just d)
+  where
+    TxCertGenesisDeleg d = mkTxCertGenesisDeleg d
+
+-- | Genesis key delegation certificate
+data GenesisDelegCert c
+  = GenesisDelegCert
+      !(KeyHash 'Genesis c)
+      !(KeyHash 'GenesisDelegate c)
+      !(Hash c (VerKeyVRF c))
+  deriving (Show, Generic, Eq)
+
+instance NoThunks (GenesisDelegCert c)
+
+instance NFData (GenesisDelegCert c) where
+  rnf = rwhnf
+
+genesisKeyHashWitness :: GenesisDelegCert c -> KeyHash 'Witness c
+genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
+
+genesisCWitness :: GenesisDelegCert c -> KeyHash 'Genesis c
+genesisCWitness (GenesisDelegCert gk _ _) = gk
 
 data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
@@ -205,7 +240,7 @@ instance Crypto c => EncCBOR (MIRCert c) where
 data ShelleyTxCert era
   = ShelleyTxCertDelegCert !(ShelleyDelegCert (EraCrypto era))
   | ShelleyTxCertPool !(PoolCert (EraCrypto era))
-  | ShelleyTxCertGenesis !(ConstitutionalDelegCert (EraCrypto era))
+  | ShelleyTxCertGenesisDeleg !(GenesisDelegCert (EraCrypto era))
   | ShelleyTxCertMir !(MIRCert (EraCrypto era))
   deriving (Show, Generic, Eq, NFData)
 
@@ -217,7 +252,7 @@ instance Era era => EncCBOR (ShelleyTxCert era) where
   encCBOR = \case
     ShelleyTxCertDelegCert delegCert -> encodeShelleyDelegCert delegCert
     ShelleyTxCertPool poolCert -> encodePoolCert poolCert
-    ShelleyTxCertGenesis constCert -> encodeConstitutionalCert constCert
+    ShelleyTxCertGenesisDeleg constCert -> encodeGenesisDelegCert constCert
     ShelleyTxCertMir mir ->
       encodeListLen 2 <> encodeWord8 6 <> encCBOR mir
 
@@ -242,8 +277,8 @@ encodePoolCert = \case
       <> encCBOR vk
       <> encCBOR epoch
 
-encodeConstitutionalCert :: Crypto c => ConstitutionalDelegCert c -> Encoding
-encodeConstitutionalCert (ConstitutionalDelegCert gk kh vrf) =
+encodeGenesisDelegCert :: Crypto c => GenesisDelegCert c -> Encoding
+encodeGenesisDelegCert (GenesisDelegCert gk kh vrf) =
   encodeListLen 4
     <> encodeWord8 5
     <> encCBOR gk
@@ -270,7 +305,12 @@ instance
   decCBOR = decodeRecordSum "ShelleyTxCert" $ \case
     t
       | 0 <= t && t < 3 -> shelleyTxCertDelegDecoder t
-      | 3 <= t && t < 6 -> commonTxCertDecoder t
+      | 3 <= t && t < 5 -> poolTxCertDecoder t
+    5 -> do
+      a <- decCBOR
+      b <- decCBOR
+      c <- decCBOR
+      pure (4, TxCertGenesisDeleg $ GenesisDelegCert a b c)
     6 -> do
       x <- decCBOR
       pure (2, ShelleyTxCertMir x)
@@ -295,8 +335,8 @@ shelleyTxCertDelegDecoder = \case
   k -> invalidKey k
 {-# INLINE shelleyTxCertDelegDecoder #-}
 
-commonTxCertDecoder :: EraTxCert era => Word -> Decoder s (Int, TxCert era)
-commonTxCertDecoder = \case
+poolTxCertDecoder :: EraTxCert era => Word -> Decoder s (Int, TxCert era)
+poolTxCertDecoder = \case
   3 -> do
     group <- decCBORGroup
     pure (1 + listLenInt group, TxCertPool (RegPool group))
@@ -304,13 +344,8 @@ commonTxCertDecoder = \case
     a <- decCBOR
     b <- decCBOR
     pure (3, TxCertPool $ RetirePool a b)
-  5 -> do
-    a <- decCBOR
-    b <- decCBOR
-    c <- decCBOR
-    pure (4, TxCertGenesis $ ConstitutionalDelegCert a b c)
   k -> invalidKey k
-{-# INLINE commonTxCertDecoder #-}
+{-# INLINE poolTxCertDecoder #-}
 
 data ShelleyDelegCert c
   = -- | A stake credential registration certificate.
@@ -369,8 +404,8 @@ isDelegation (ShelleyTxCertDeleg (ShelleyDelegCert _ _)) = True
 isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
-isGenesisDelegation :: EraTxCert era => TxCert era -> Bool
-isGenesisDelegation = isJust . getTxCertGenesis
+isGenesisDelegation :: ShelleyEraTxCert era => TxCert era -> Bool
+isGenesisDelegation = isJust . getTxCertGenesisDeleg
 
 -- | Check for 'RegPool' constructor
 isRegPool :: EraTxCert era => TxCert era -> Bool
@@ -426,5 +461,5 @@ getVKeyWitnessShelleyTxCert = \case
       ShelleyUnRegCert cred -> credKeyHashWitness cred
       ShelleyDelegCert cred _ -> credKeyHashWitness cred
   ShelleyTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
-  ShelleyTxCertGenesis genesisCert -> Just $ genesisKeyHashWitness genesisCert
+  ShelleyTxCertGenesisDeleg genesisCert -> Just $ genesisKeyHashWitness genesisCert
   ShelleyTxCertMir {} -> Nothing

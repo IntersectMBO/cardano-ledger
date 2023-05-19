@@ -814,7 +814,7 @@ getShelleyTxCertCredential = \case
     case pc of
       RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj ppId
       RetirePool kh _ -> Just . coerceKeyRole $ KeyHashObj kh
-  ShelleyTxCertGenesis _g -> Nothing
+  ShelleyTxCertGenesisDeleg _g -> Nothing
   ShelleyTxCertMir _m -> Nothing
 
 getConwayTxCertCredential :: ConwayTxCert era -> Maybe (Credential 'Staking (EraCrypto era))
@@ -824,7 +824,7 @@ getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegCert _ _)) = Nothing
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayUnRegCert cred _)) = Just cred
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayDelegCert cred _)) = Just cred
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegDelegCert cred _ _)) = Just cred
-getConwayTxCertCredential (ConwayTxCertConstitutional _) = Nothing
+getConwayTxCertCredential (ConwayTxCertCommittee _) = Nothing
 
 genWithdrawals :: Reflect era => SlotNo -> GenRS era (Withdrawals (EraCrypto era), RewardAccounts (EraCrypto era))
 genWithdrawals slot =
