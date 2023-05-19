@@ -11,7 +11,7 @@ to the issue. -->
 - [ ] When applicable, versions are updated in `.cabal` and `CHANGELOG.md` files according to the
       [versioning process](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#versioning-process).
 - [ ] The version bounds in `.cabal` files for all affected packages are updated (See [RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#versioning-process))
-- [ ] Any changes are noted in the latest section of a `CHANGELOG.md` for the affected packages. **New section is never added with the code changes.** (See [RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd))
+- [ ] All visible changes are prepended to the latest section of a `CHANGELOG.md` for the affected packages. **New section is never added with the code changes.** (See [RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd))
 - [x] Code is formatted with [`fourmolu`](https://github.com/fourmolu/fourmolu) (use `scripts/fourmolize.sh`)
 - [x] Cabal files are formatted (use `scripts/cabal-format.sh`)
 - [x] [`hie.yaml`](https://github.com/input-output-hk/cardano-ledger/blob/master/hie.yaml) has been updated (use `scripts/gen-hie.sh`)

@@ -58,17 +58,43 @@ the patch, minor or the major versions bumped, but not all three, when compared 
 latest released version. Which one it will be depends on the recent changes that were
 added after the latest release was made. More on why this should always be true is in the
 [Release Process](#release-process) section. For instance, if the latest version of
-`cardano-ledger-core` that was released to CHaPs is `1.20.1.0`, then there will be a
-section like this which will have a version that is strictly higher than `1.20.1.0`, eg:
+`cardano-ledger-core` that was released to CHaPs is `1.2.3.0`, then there will be a
+section like this which will have a version that is strictly higher than `1.2.3.0`, eg:
 
 ```
 # Version history for `cardano-ledger-core`
 
-## 1.20.1.1
+## 1.2.3.1
 
 * Add ...
 ...
 ```
+
+In order to decide if the version needs to be bumped up it is necessary to know what was
+the latest released version of a package. Two simple ways are either look at the version
+on CHaP or look at the latest git tag for the version.
+
+However the easiest, while also reliable way to figure out whether you need to bump up the
+version is to simply look at the current version in the changelog. It will be easier to
+explain why this is the case with an example.
+
+Let's say you submit a PR which contains breaking changes to `cardano-ledger-core`. You
+then look into the changelog for current development version on `master`:
+
+* If the current version is set to `cardano-ledger-core-1.2.3.5`. We see that the patch
+  version is bumped (not zero), that means that the latest version released is
+  `cardano-ledger-core-1.2.3.4`, so you update it to `cardano-ledger-core-1.3.0.0`,
+  because your changes break stuff
+* If the current version is set to `cardano-ledger-core-1.2.4.0`. That means there was at
+  most a minor version bump and currently released version is
+  `cardano-ledger-core-1.2.3.x`. But your changes are breaking so you increase it even
+  further to `cardano-ledger-core-1.3.0.0`
+* If the current version is `cardano-ledger-core-1.3.0.0`. That means currently released
+  version to CHaPs is `cardano-ledger-core-1.2.x.x`. There is nothing to do, the version
+  on `master` already contains some other breaking changes since the last release to CHaPs
+* If the current version is `cardano-ledger-core-2.0.0.0`. There was a complete
+  overhaul. Definitely nothing needs to be bumped. :grin:
+
 
 It is quite common to experience conflicts in the changelog, since that will be the most
 common section of the codebase being updated at the same time. When it comes to conflicts
@@ -77,11 +103,7 @@ resolution, it is pretty easy:
 * on the package version, the highest value should usually win.
 * on the change log entries, all entries should usually survive.
 
-There is no enforced order in which changelog entries should be added to the file. It is
-irrelevant where entries are added to the top, to the bottom or in the middle of the
-section. In fact, randomized insertion reduces conflicts, so feel free to add entries
-anywhere in the section. Most important is that we can always infer the actual order from
-the linear git history, which provides us with a reliable source of order on changes.
+New entries should always be prepended to the **top** of the section.
 
 #### When to update
 
