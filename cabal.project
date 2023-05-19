@@ -12,6 +12,7 @@ repository cardano-haskell-packages
 
 -- See CONTRIBUTING for some Nix commands you will need to run if you
 -- update either of these.
+index-state: 2023-04-28T00:00:00Z
 index-state:
   , hackage.haskell.org 2023-04-28T00:00:00Z
 -- Bump this if you need newer packages from CHaP
