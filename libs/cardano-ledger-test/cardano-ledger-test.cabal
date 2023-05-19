@@ -99,7 +99,7 @@ library
         nothunks,
         plutus-core,
         hspec,
-        plutus-ledger-api ^>=1.5,
+        plutus-ledger-api ^>=1.6,
         prettyprinter,
         QuickCheck,
         small-steps,
