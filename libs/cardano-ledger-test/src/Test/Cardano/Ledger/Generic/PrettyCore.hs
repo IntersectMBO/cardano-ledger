@@ -104,13 +104,13 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
-  delView,
-  depositView,
+  depositMap,
   fromCompact,
-  ptrView,
-  rewView,
+  ptrMap,
+  rewardMap,
+  sPoolMap,
  )
-import qualified Cardano.Ledger.UMap as UM (UMap, View (..), size)
+import qualified Cardano.Ledger.UMap as UM (UMap, UView (..), size)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
@@ -1194,9 +1194,10 @@ uMapSummary :: UM.UMap c -> PDoc
 uMapSummary umap =
   ppRecord
     "UMap"
-    [ ("Reward Map", ppInt (UM.size (UM.RewardDeposits umap)))
-    , ("Delegations Map", ppInt (UM.size (UM.Delegations umap)))
-    , ("Ptrs Map", ppInt (UM.size (UM.Ptrs umap)))
+    [ ("Reward-Deposit Map", ppInt (UM.size (UM.RewDepUView umap)))
+    , ("Ptrs Map", ppInt (UM.size (UM.PtrUView umap)))
+    , ("SPoolUView Map", ppInt (UM.size (UM.SPoolUView umap)))
+    , ("DRepUView Map", ppInt (UM.size (UM.DRepUView umap)))
     ]
 
 pStateSummary :: PState c -> PDoc
@@ -1687,10 +1688,10 @@ pcDState :: DState c -> PDoc
 pcDState ds =
   ppRecord
     "DState"
-    [ ("rewards", ppMap pcCredential pcCoin (rewView (dsUnified ds)))
-    , ("deposits", ppMap pcCredential pcCoin (depositView (dsUnified ds)))
-    , ("delegate", ppMap pcCredential pcKeyHash (delView (dsUnified ds)))
-    , ("ptrs", ppMap ppPtr ppCredential (ptrView (dsUnified ds)))
+    [ ("rewards", ppMap pcCredential pcCoin (rewardMap (dsUnified ds)))
+    , ("deposits", ppMap pcCredential pcCoin (depositMap (dsUnified ds)))
+    , ("delegate", ppMap pcCredential pcKeyHash (sPoolMap (dsUnified ds)))
+    , ("ptrs", ppMap ppPtr ppCredential (ptrMap (dsUnified ds)))
     , ("fGenDel", ppMap pcFutureGenDeleg pcGenDelegPair (dsFutureGenDelegs ds))
     , ("GenDel", ppMap pcKeyHash pcGenDelegPair (unGenDelegs (dsGenDelegs ds)))
     , ("iRewards", pcIRewards (dsIRewards ds))

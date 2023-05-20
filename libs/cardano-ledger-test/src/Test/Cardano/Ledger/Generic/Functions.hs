@@ -407,8 +407,8 @@ instance Reflect era => TotalAda (UTxO era) where
 
 instance TotalAda (DState era) where
   totalAda dstate =
-    (UM.fromCompact $ UM.sumRewardsView (UM.RewardDeposits (dsUnified dstate)))
-      <> (UM.fromCompact $ UM.sumDepositView (UM.RewardDeposits (dsUnified dstate)))
+    (UM.fromCompact $ UM.sumRewardsUView (UM.RewDepUView (dsUnified dstate)))
+      <> (UM.fromCompact $ UM.sumDepositUView (UM.RewDepUView (dsUnified dstate)))
 
 instance TotalAda (PState era) where
   totalAda pstate = Fold.fold (psDeposits pstate)

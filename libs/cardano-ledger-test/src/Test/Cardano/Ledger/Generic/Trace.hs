@@ -248,7 +248,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (utxosUtxo . lsUTxOState . esLState) epochstate
       _ssPoolParams = (psStakePoolParams . certPState . lsCertState . esLState) epochstate
       _pooldeposits = (psDeposits . certPState . lsCertState . esLState) epochstate
-      _keydeposits = (UM.depositView . dsUnified . certDState . lsCertState . esLState) epochstate
+      _keydeposits = (UM.depositMap . dsUnified . certDState . lsCertState . esLState) epochstate
    in show $
         vsep
           [ ppString "==================================="

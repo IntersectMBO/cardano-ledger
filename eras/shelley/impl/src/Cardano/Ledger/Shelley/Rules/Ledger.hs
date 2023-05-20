@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts, synopsisCoinMap)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
-import Cardano.Ledger.UMap (depositView)
+import Cardano.Ledger.UMap (depositMap)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Reader (Reader)
 import Control.Monad.Trans.Reader (asks)
@@ -280,7 +280,7 @@ depositEqualsObligation
           <> "\nutxosDeposited = "
           <> show (utxosDeposited . lsUTxOState <$> avState)
           <> "\nKey Deposits summary = "
-          <> synopsisCoinMap (depositView . dsUnified . certDState . lsCertState <$> avState)
+          <> synopsisCoinMap (depositMap . dsUnified . certDState . lsCertState <$> avState)
           <> "\nPool Deposits summary = "
           <> synopsisCoinMap (psDeposits . certPState . lsCertState <$> avState)
           <> "\nConsumed = "

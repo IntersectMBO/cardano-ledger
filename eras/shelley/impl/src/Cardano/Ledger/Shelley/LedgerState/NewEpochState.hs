@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
-import Cardano.Ledger.UMap (RDPair (..), Trip (..), UMap (..))
+import Cardano.Ledger.UMap (RDPair (..), UMElem (..), UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Default.Class (def)
@@ -115,7 +115,7 @@ reapRewards ::
   UMap c
 reapRewards (UMap tmap ptrmap) withdrawals = UMap (Map.mapWithKey g tmap) ptrmap
   where
-    g k (Triple x y z) = Triple (fmap (removeRewards k) x) y z
+    g k (UMElem w x y z) = UMElem (fmap (removeRewards k) w) x y z
     removeRewards k v@(RDPair _ d) =
       if k `Map.member` withdrawals then RDPair (CompactCoin 0) d else v
 

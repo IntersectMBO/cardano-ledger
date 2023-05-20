@@ -239,8 +239,9 @@ registerGenesisStaking
           { dsUnified =
               UM.unify
                 (Map.map pairWithDepositsButNoRewards . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
+                (UM.ptrMap (dsUnified (certDState oldCertState)))
                 (Map.mapKeys KeyHashObj $ LM.toMap sgsStake)
-                (UM.ptrView (dsUnified (certDState oldCertState)))
+                Map.empty
           }
 
       -- We consider pools as having been registered in slot 0

@@ -27,7 +27,8 @@ import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
-import Cardano.Ledger.UMap (delView, ptrView, rewView)
+import Cardano.Ledger.UMap (rewardMap, sPoolMap)
+import qualified Cardano.Ledger.UMap as UM (ptrMap)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
@@ -417,7 +418,7 @@ instance Pretty DStateStats where
     prettyRecord
       "DStateStats"
       [ "CredentialStaking" <:> dssCredentialStaking
-      , "Delegations" <:> dssDelegations
+      , "SPoolUView" <:> dssDelegations
       , "KeyHashGenesis" <:> dssKeyHashGenesis
       , "KeyHashGenesisDelegate" <:> dssKeyHashGenesisDelegate
       , "HashVerKeyVRF" <:> dssHashVerKeyVRF
@@ -437,10 +438,10 @@ countDStateStats :: DState CurrentEra -> DStateStats
 countDStateStats DState {..} =
   DStateStats
     { dssCredentialStaking =
-        statMapKeys (rewView dsUnified)
-          <> statMapKeys (delView dsUnified)
-          <> statSet (range (ptrView dsUnified))
-    , dssDelegations = statFoldable (delView dsUnified)
+        statMapKeys (rewardMap dsUnified)
+          <> statMapKeys (sPoolMap dsUnified)
+          <> statSet (range (UM.ptrMap dsUnified))
+    , dssDelegations = statFoldable (sPoolMap dsUnified)
     , dssKeyHashGenesis =
         statFoldable (fGenDelegGenKeyHash <$> Map.keys dsFutureGenDelegs)
           <> statMapKeys (unGenDelegs dsGenDelegs)

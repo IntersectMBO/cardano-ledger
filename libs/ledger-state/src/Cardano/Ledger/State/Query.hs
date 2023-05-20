@@ -21,7 +21,7 @@ import Cardano.Ledger.State.Transform
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
-import Cardano.Ledger.UMap (delView, ptrView, rewView, unify)
+import Cardano.Ledger.UMap (ptrMap, rewardMap, sPoolMap, unify)
 import qualified Cardano.Ledger.UMap as UM
 import qualified Cardano.Ledger.UTxO as Shelley
 import Conduit
@@ -95,14 +95,14 @@ insertDState Shelley.DState {..} = do
   let irDeltaReserves = Shelley.deltaReserves dsIRewards
   let irDeltaTreasury = Shelley.deltaTreasury dsIRewards
   dstateId <- insert $ DState (Enc dsFutureGenDelegs) dsGenDelegs irDeltaReserves irDeltaTreasury
-  forM_ (Map.toList (rewView dsUnified)) $ \(cred, c) -> do
+  forM_ (Map.toList (rewardMap dsUnified)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (Reward dstateId credId c)
-  forM_ (Map.toList (delView dsUnified)) $ \(cred, spKeyHash) -> do
+  forM_ (Map.toList (sPoolMap dsUnified)) $ \(cred, spKeyHash) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
     insert_ (Delegation dstateId credId keyHashId)
-  forM_ (Map.toList (ptrView dsUnified)) $ \(ptr, cred) -> do
+  forM_ (Map.toList (ptrMap dsUnified)) $ \(ptr, cred) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (Ptr dstateId credId ptr)
   forM_ (Map.toList (Shelley.iRReserves dsIRewards)) $ \(cred, c) -> do
@@ -546,6 +546,13 @@ getDStateNoSharing dstateId = do
         Credential credential <- getJust delegationCredentialId
         KeyHash keyHash <- getJust delegationStakePoolId
         pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
+  dreps <-
+    Map.fromList <$> do
+      ds <- selectList [DRepDstateId ==. dstateId] []
+      forM ds $ \(Entity _ DRep {..}) -> do
+        Credential credential <- getJust dRepCredentialId
+        Credential dRepCredential <- getJust dRepDRepCredentialId
+        pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole dRepCredential)
   ptrs <-
     Map.fromList <$> do
       ps <- selectList [PtrDstateId ==. dstateId] []
@@ -566,7 +573,7 @@ getDStateNoSharing dstateId = do
         pure (Keys.coerceKeyRole credential, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards delegations ptrs
+      { dsUnified = unify rewards ptrs delegations dreps
       , dsFutureGenDelegs = unEnc dStateFGenDelegs
       , dsGenDelegs = dStateGenDelegs
       , dsIRewards =
@@ -597,6 +604,14 @@ getDStateWithSharing dstateId = do
         let !cred = intern (Keys.coerceKeyRole credential) rewards
         KeyHash keyHash <- getJust delegationStakePoolId
         pure (cred, Keys.coerceKeyRole keyHash)
+  dreps <-
+    Map.fromList <$> do
+      ds <- selectList [DRepDstateId ==. dstateId] []
+      forM ds $ \(Entity _ DRep {..}) -> do
+        Credential credential <- getJust dRepCredentialId
+        let !cred = intern (Keys.coerceKeyRole credential) rewards
+        Credential dRepCredential <- getJust dRepDRepCredentialId
+        pure (cred, Keys.coerceKeyRole dRepCredential)
   ptrs <-
     Map.fromList <$> do
       ps <- selectList [PtrDstateId ==. dstateId] []
@@ -620,7 +635,7 @@ getDStateWithSharing dstateId = do
         pure (cred, iRTreasuryCoin)
   pure
     Shelley.DState
-      { dsUnified = unify rewards delegations ptrs
+      { dsUnified = unify rewards ptrs delegations dreps
       , dsFutureGenDelegs = unEnc dStateFGenDelegs
       , dsGenDelegs = dStateGenDelegs
       , dsIRewards =

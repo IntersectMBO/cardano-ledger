@@ -75,7 +75,7 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UMap (View (RewardDeposits))
+import Cardano.Ledger.UMap (UView (RewDepUView))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (inject, (<+>), (<->))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -188,7 +188,7 @@ initialBBodyState pf utxo =
                   UM.insert
                     (scriptStakeCredSuceed pf)
                     (UM.RDPair (UM.CompactCoin 1000) successDeposit)
-                    (RewardDeposits UM.empty)
+                    (RewDepUView UM.empty)
               }
         }
 

@@ -65,7 +65,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   synopsisCert,
  )
 import Cardano.Ledger.TreeDiff (ediffEq)
-import Cardano.Ledger.UMap (sumRewardsView)
+import Cardano.Ledger.UMap (sumRewardsUView)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -302,8 +302,8 @@ checkWithdrawalBound SourceSignalTarget {source, signal, target} =
   where
     rewardDelta :: Coin
     rewardDelta =
-      fromCompact (sumRewardsView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ source))
-        <-> fromCompact (sumRewardsView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ target))
+      fromCompact (sumRewardsUView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ source))
+        <-> fromCompact (sumRewardsUView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ target))
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals minus Fees (for all transactions in a block)
@@ -402,8 +402,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)
-          === (UM.fromCompact (sumRewardsView (UM.RewardDeposits umap1)))
-          <-> (UM.fromCompact (sumRewardsView (UM.RewardDeposits umap2)))
+          === (UM.fromCompact (sumRewardsUView (UM.RewDepUView umap1)))
+          <-> (UM.fromCompact (sumRewardsUView (UM.RewDepUView umap2)))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWithdrawalsPerTx ::
@@ -420,7 +420,7 @@ potsRewardsDecreaseByWithdrawalsPerTx SourceSignalTarget {source = chainSt, sign
       map rewardsDecreaseByWithdrawals $
         sourceSignalTargets ledgerTr
   where
-    rewardsSum = UM.fromCompact . sumRewardsView . rewards . certDState
+    rewardsSum = UM.fromCompact . sumRewardsUView . rewards . certDState
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     rewardsDecreaseByWithdrawals
       SourceSignalTarget

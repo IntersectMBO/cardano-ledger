@@ -62,7 +62,7 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), View (Delegations, RewardDeposits))
+import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolUView))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
@@ -191,7 +191,7 @@ toDStatePair DState {..} =
 -- | Function that looks up the deposit for currently delegated staking credential
 lookupDepositDState :: DState era -> (StakeCredential (EraCrypto era) -> Maybe Coin)
 lookupDepositDState dstate =
-  let currentRewardDeposits = RewardDeposits $ dsUnified dstate
+  let currentRewardDeposits = RewDepUView $ dsUnified dstate
    in \k -> do
         RDPair _ deposit <- UM.lookup k currentRewardDeposits
         Just $! fromCompact deposit
@@ -199,7 +199,7 @@ lookupDepositDState dstate =
 -- | Function that looks up curret reward for the delegated staking credential.
 lookupRewardDState :: DState era -> (StakeCredential (EraCrypto era) -> Maybe Coin)
 lookupRewardDState dstate =
-  let currentRewardDeposits = RewardDeposits $ dsUnified dstate
+  let currentRewardDeposits = RewDepUView $ dsUnified dstate
    in \k -> do
         RDPair reward _ <- UM.lookup k currentRewardDeposits
         Just $! fromCompact reward
@@ -354,13 +354,13 @@ instance Default (PState c) where
   def =
     PState Map.empty Map.empty Map.empty Map.empty
 
-rewards :: DState era -> View (EraCrypto era) (Credential 'Staking (EraCrypto era)) RDPair
-rewards = RewardDeposits . dsUnified
+rewards :: DState era -> UView (EraCrypto era) (Credential 'Staking (EraCrypto era)) RDPair
+rewards = RewDepUView . dsUnified
 
 delegations ::
   DState era ->
-  View (EraCrypto era) (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
-delegations = Delegations . dsUnified
+  UView (EraCrypto era) (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+delegations = SPoolUView . dsUnified
 
 -- | get the actual ptrs map, we don't need a view
 ptrsMap :: DState era -> Map Ptr (Credential 'Staking (EraCrypto era))
@@ -398,7 +398,7 @@ refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
 --   this does not depend upon the current values of the Key and Pool deposits of the PParams.
 obligationCertState :: CertState era -> Coin
 obligationCertState (CertState VState {} PState {psDeposits = stakePools} DState {dsUnified = umap}) =
-  UM.fromCompact (UM.sumDepositView (RewardDeposits umap)) <> foldl' (<>) (Coin 0) stakePools
+  UM.fromCompact (UM.sumDepositUView (RewDepUView umap)) <> foldl' (<>) (Coin 0) stakePools
 
 -- =====================================================
 

@@ -70,7 +70,7 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyEraTxCert, pattern ShelleyTxCertDeleg)
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.UMap (Trip (..), UMap (..), View (..), fromCompact)
+import Cardano.Ledger.UMap (UMElem (..), UMap (..), UView (..), fromCompact)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
@@ -253,14 +253,14 @@ validateDelegationRegistered certState = \case
 isSubmapOfUM ::
   forall era.
   Map (RewardAcnt (EraCrypto era)) Coin ->
-  View (EraCrypto era) (Credential 'Staking (EraCrypto era)) UM.RDPair ->
+  UView (EraCrypto era) (Credential 'Staking (EraCrypto era)) UM.RDPair ->
   Bool
-isSubmapOfUM ws (RewardDeposits (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
+isSubmapOfUM ws (RewDepUView (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
   where
     withdrawalMap :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
     withdrawalMap = Map.mapKeys (\(RewardAcnt _ cred) -> cred) ws
-    f :: Coin -> Trip (EraCrypto era) -> Bool
-    f coin1 (Triple (SJust (UM.RDPair coin2 _)) _ _) = coin1 == fromCompact coin2
+    f :: Coin -> UMElem (EraCrypto era) -> Bool
+    f coin1 (UMElem (SJust (UM.RDPair coin2 _)) _ _ _) = coin1 == fromCompact coin2
     f _ _ = False
 
 drainWithdrawals :: DState era -> Withdrawals (EraCrypto era) -> DState era
@@ -287,7 +287,7 @@ validateZeroRewards dState (Withdrawals wdrls) network = do
     Map.differenceWith
       (\x y -> if x /= y then Just x else Nothing)
       wdrls
-      (Map.mapKeys (mkRwdAcnt network) (UM.rewView (dsUnified dState)))
+      (Map.mapKeys (mkRwdAcnt network) (UM.rewardMap (dsUnified dState)))
 
 instance
   ( Era era

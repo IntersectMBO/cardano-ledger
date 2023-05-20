@@ -71,7 +71,7 @@ import Cardano.Ledger.Slot (
   (*-),
   (+*),
  )
-import Cardano.Ledger.UMap (RDPair (..), View (..), compactCoinOrError, fromCompact)
+import Cardano.Ledger.UMap (RDPair (..), UView (..), compactCoinOrError, fromCompact)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
@@ -272,8 +272,8 @@ delegationTransition = do
       UM.notMember hk (rewards ds) ?! StakeKeyAlreadyRegisteredDELEG hk
       let u1 = dsUnified ds
           deposit = compactCoinOrError (pp ^. ppKeyDepositL)
-          u2 = RewardDeposits u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
-          u3 = Ptrs u2 UM.∪ (ptr, hk)
+          u2 = RewDepUView u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
+          u3 = PtrUView u2 UM.∪ (ptr, hk)
       pure (ds {dsUnified = u3})
     ShelleyTxCertDeleg (ShelleyUnRegCert hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
@@ -283,9 +283,9 @@ delegationTransition = do
       rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG (fromCompact <$> rewardCoin)
 
       let u0 = dsUnified ds
-          u1 = Set.singleton hk UM.⋪ RewardDeposits u0
-          u2 = Set.singleton hk UM.⋪ Delegations u1
-          u3 = Ptrs u2 UM.⋫ Set.singleton hk
+          u1 = Set.singleton hk UM.⋪ RewDepUView u0
+          u2 = Set.singleton hk UM.⋪ SPoolUView u1
+          u3 = PtrUView u2 UM.⋫ Set.singleton hk
           u4 = ds {dsUnified = u3}
       pure u4
     ShelleyTxCertDeleg (ShelleyDelegCert hk dpool) -> do

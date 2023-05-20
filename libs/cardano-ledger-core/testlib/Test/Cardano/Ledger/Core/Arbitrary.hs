@@ -18,13 +18,14 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genBadPtr,
   genValidUMap,
   genValidUMapNonEmpty,
-  genValidTriples,
-  genValidTriplesNonEmpty,
+  genValidTuples,
+  genValidTuplesNonEmpty,
   genInvariantNonEmpty,
   genRightPreferenceUMap,
   genInsertDeleteRoundtripRDPair,
-  genInsertDeleteRoundtripDelegation,
   genInsertDeleteRoundtripPtr,
+  genInsertDeleteRoundtripSPool,
+  genInsertDeleteRoundtripDRep,
 )
 where
 
@@ -71,7 +72,7 @@ import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
   KeyHash (..),
-  KeyRole (StakePool, Staking),
+  KeyRole (StakePool, Staking, Voting),
   VKey (..),
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
@@ -86,7 +87,7 @@ import Cardano.Ledger.PoolParams (
  )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMap (RDPair (..), Trip (Triple), UMap (UMap), View (RewardDeposits), unUnify, unify)
+import Cardano.Ledger.UMap (RDPair (..), UMElem (UMElem), UMap (UMap, umElems, umPtrs), UView (RewDepUView), unUnify, unify)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad.Identity (Identity)
 import Data.GenValidity
@@ -469,60 +470,66 @@ instance Arbitrary RDPair where
   arbitrary = RDPair <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (Trip c) where
-  arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
+instance Crypto c => Arbitrary (UMElem c) where
+  arbitrary = UMElem <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (UMap c) where
   arbitrary = UMap <$> arbitrary <*> arbitrary
 
 -- | Used for testing UMap operations
-genValidTriples ::
+genValidTuples ::
   Gen
     ( Map.Map (Credential 'Staking StandardCrypto) RDPair
-    , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
     , Map.Map Ptr (Credential 'Staking StandardCrypto)
+    , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+    , Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
     )
-genValidTriples = scale (* 2) $ do
+genValidTuples = scale (* 2) $ do
   creds :: [Credential 'Staking StandardCrypto] <- arbitrary
   let nCreds = length creds
   rdPairs :: [RDPair] <- vectorOf nCreds arbitrary
-  delegs :: [KeyHash 'StakePool StandardCrypto] <- vectorOf nCreds arbitrary
   ptrs :: [Ptr] <- arbitrary
+  sPools :: [KeyHash 'StakePool StandardCrypto] <- vectorOf nCreds arbitrary
+  dReps :: [Credential 'Voting StandardCrypto] <- vectorOf nCreds arbitrary
   pure
     ( Map.fromList $ zip creds rdPairs
-    , Map.fromList $ zip creds delegs
     , Map.fromList $ zip ptrs creds
+    , Map.fromList $ zip creds sPools
+    , Map.fromList $ zip creds dReps
     )
 
-genValidTriplesNonEmpty ::
+genValidTuplesNonEmpty ::
   Gen
     ( Map.Map (Credential 'Staking StandardCrypto) RDPair
-    , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
     , Map.Map Ptr (Credential 'Staking StandardCrypto)
+    , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+    , Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
     )
-genValidTriplesNonEmpty = scale (* 2) $ do
+genValidTuplesNonEmpty = scale (* 2) $ do
   Positive nCreds <- arbitrary
   nPtrs <- chooseInt (1, nCreds)
   creds :: [Credential 'Staking StandardCrypto] <- vectorOf nCreds arbitrary
   rdPairs :: [RDPair] <- vectorOf nCreds arbitrary
-  delegs :: [KeyHash 'StakePool StandardCrypto] <- vectorOf nCreds arbitrary
   ptrs :: [Ptr] <- vectorOf nPtrs arbitrary
+  sPools :: [KeyHash 'StakePool StandardCrypto] <- vectorOf nCreds arbitrary
+  dReps :: [Credential 'Voting StandardCrypto] <- vectorOf nCreds arbitrary
   pure
     ( Map.fromList $ zip creds rdPairs
-    , Map.fromList $ zip creds delegs
     , Map.fromList $ zip ptrs creds
+    , Map.fromList $ zip creds sPools
+    , Map.fromList $ zip creds dReps
     )
 
 genValidUMap :: Gen (UMap StandardCrypto)
 genValidUMap = do
-  (rdPairs, delegs, ptrs) <- genValidTriples
-  pure $ unify rdPairs delegs ptrs
+  (rdPairs, ptrs, sPools, dReps) <- genValidTuples
+  pure $ unify rdPairs ptrs sPools dReps
 
 genValidUMapNonEmpty :: Gen (UMap StandardCrypto)
 genValidUMapNonEmpty = do
-  (rdPairs, delegs, ptrs) <- genValidTriplesNonEmpty
-  pure $ unify rdPairs delegs ptrs
+  (rdPairs, ptrs, sPools, dReps) <- genValidTuplesNonEmpty
+  pure $ unify rdPairs ptrs sPools dReps
 
 genExcludingKey :: (Ord k, Arbitrary k) => Map.Map k a -> Gen k
 genExcludingKey ks = do
@@ -533,27 +540,39 @@ genExcludingKey ks = do
 
 genInsertDeleteRoundtripRDPair :: Gen (UMap StandardCrypto, Credential 'Staking StandardCrypto, RDPair)
 genInsertDeleteRoundtripRDPair = do
-  umap@(UMap tripmap _prtmap) <- genValidUMap
-  k <- genExcludingKey tripmap
-  v <- arbitrary
-  pure (umap, k, v)
-
-genInsertDeleteRoundtripDelegation ::
-  Gen
-    ( UMap StandardCrypto
-    , Credential 'Staking StandardCrypto
-    , KeyHash 'StakePool StandardCrypto
-    )
-genInsertDeleteRoundtripDelegation = do
-  umap@(UMap tripmap _prtmap) <- genValidUMap
-  k <- genExcludingKey tripmap
+  umap@UMap {umElems} <- genValidUMap
+  k <- genExcludingKey umElems
   v <- arbitrary
   pure (umap, k, v)
 
 genInsertDeleteRoundtripPtr :: Gen (UMap StandardCrypto, Ptr, Credential 'Staking StandardCrypto)
 genInsertDeleteRoundtripPtr = do
-  umap@(UMap _tripmap ptrmap) <- genValidUMap
-  k <- genExcludingKey ptrmap
+  umap@UMap {umPtrs} <- genValidUMap
+  k <- genExcludingKey umPtrs
+  v <- arbitrary
+  pure (umap, k, v)
+
+genInsertDeleteRoundtripSPool ::
+  Gen
+    ( UMap StandardCrypto
+    , Credential 'Staking StandardCrypto
+    , KeyHash 'StakePool StandardCrypto
+    )
+genInsertDeleteRoundtripSPool = do
+  umap@UMap {umElems} <- genValidUMap
+  k <- genExcludingKey umElems
+  v <- arbitrary
+  pure (umap, k, v)
+
+genInsertDeleteRoundtripDRep ::
+  Gen
+    ( UMap StandardCrypto
+    , Credential 'Staking StandardCrypto
+    , Credential 'Voting StandardCrypto
+    )
+genInsertDeleteRoundtripDRep = do
+  umap@UMap {umElems} <- genValidUMap
+  k <- genExcludingKey umElems
   v <- arbitrary
   pure (umap, k, v)
 
@@ -575,7 +594,7 @@ genInvariantNonEmpty = do
 genRightPreferenceUMap :: Gen (UMap StandardCrypto, Map.Map (Credential 'Staking StandardCrypto) RDPair)
 genRightPreferenceUMap = do
   umap <- genValidUMap
-  let rdMap = unUnify $ RewardDeposits umap
+  let rdMap = unUnify $ RewDepUView umap
   subdomain <- sublistOf $ Map.keys rdMap
   coins <- vectorOf (length subdomain) arbitrary
   pure (umap, Map.fromList $ zip subdomain coins)

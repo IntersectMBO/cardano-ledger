@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   synopsisCoinMap,
  )
 import Cardano.Ledger.TreeDiff (diffExpr)
-import Cardano.Ledger.UMap (depositView)
+import Cardano.Ledger.UMap (depositMap)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition.Trace (
@@ -85,13 +85,13 @@ depositInvariant SourceSignalTarget {source = chainSt} =
   let LedgerState {lsUTxOState = utxost, lsCertState = CertState _vstate pstate dstate} = (esLState . nesEs . chainNes) chainSt
       allDeposits = utxosDeposited utxost
       sumCoin = Map.foldl' (<+>) (Coin 0)
-      keyDeposits = (UM.fromCompact . UM.sumDepositView . UM.RewardDeposits . dsUnified) dstate
+      keyDeposits = (UM.fromCompact . UM.sumDepositUView . UM.RewDepUView . dsUnified) dstate
       poolDeposits = sumCoin (psDeposits pstate)
    in counterexample
         ( unlines
             [ "Deposit invariant fails"
             , "All deposits = " ++ show allDeposits
-            , "Key deposits = " ++ synopsisCoinMap (Just (depositView (dsUnified dstate)))
+            , "Key deposits = " ++ synopsisCoinMap (Just (depositMap (dsUnified dstate)))
             , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
             ]
         )
@@ -102,8 +102,8 @@ rewardDepositDomainInvariant ::
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
   let LedgerState {lsCertState = CertState {certDState = dstate}} = (esLState . nesEs . chainNes) chainSt
-      rewardDomain = UM.domain (UM.RewardDeposits (dsUnified dstate))
-      depositDomain = Map.keysSet (depositView (dsUnified dstate))
+      rewardDomain = UM.domain (UM.RewDepUView (dsUnified dstate))
+      depositDomain = Map.keysSet (depositMap (dsUnified dstate))
    in counterexample
         ( unlines
             [ "Reward-Deposit domain invariant fails"
