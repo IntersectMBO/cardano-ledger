@@ -1,16 +1,22 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.UMapSpec where
 
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking, Voting))
 import Cardano.Ledger.UMap (
   RDPair (RDPair, rdReward),
-  UMap,
+  UMElem (UMElem),
+  UMap (UMap, umElems, umPtrs),
   UView (DRepUView, PtrUView, RewDepUView, SPoolUView),
+  addCompact,
   compactRewardMap,
   dRepMap,
   delete,
@@ -31,8 +37,6 @@ import Cardano.Ledger.UMap (
   unUView,
   unUnify,
   unify,
-  unionKeyRewards,
-  unionRewAgg,
   (∪),
   (∪+),
   (⋪),
@@ -40,6 +44,8 @@ import Cardano.Ledger.UMap (
   (⨃),
  )
 import qualified Cardano.Ledger.UMap as UMap (lookup)
+import Control.Exception (assert)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Common
@@ -181,6 +187,24 @@ unifyRoundTripFrom actions =
     dReps = dRepMap umap
    in
     umap === unify rdPairs ptrs sPools dReps
+
+oldUnionRewAgg ::
+  UView c (Credential 'Staking c) RDPair ->
+  Map (Credential 'Staking c) (CompactForm Coin) ->
+  UMap c
+(RewDepUView UMap {umElems, umPtrs}) `oldUnionRewAgg` aggRewMap = UMap newUmElem umPtrs
+  where
+    newUmElem =
+      let
+        result = Map.mergeWithKey f id (const Map.empty) umElems aggRewMap
+        f _k (UMElem p1 s deposit drep) delta = Just (UMElem (addC delta p1) s deposit drep)
+       in
+        -- We use Map.empty below because aggRewMap is a subset of umElems, we never add anything here.
+        assert (Map.valid result) result
+    addC :: CompactForm Coin -> StrictMaybe RDPair -> StrictMaybe RDPair
+    addC newR = \case
+      SNothing -> SNothing
+      SJust (RDPair r d) -> SJust $ RDPair (addCompact r newR) d
 
 spec :: Spec
 spec = do
@@ -500,11 +524,11 @@ spec = do
             Map.intersection m (dRepMap (runDReps actions empty))
               === domRestrict (DRepUView (runActions actions empty)) m
         )
-    describe "unionRewAgg === unionKeyRewards" $ do
+    describe "Old and new implementation is equivalent" $ do
       prop
-        "unionRewAgg === unionKeyRewards"
+        "unionRewAgg or ∪+ === oldUnionRewAgg"
         $ forAll
           genRightPreferenceUMap
           ( \(umap, m) ->
-              unionKeyRewards (RewDepUView umap) (rdReward <$> m) === unionRewAgg (RewDepUView umap) (rdReward <$> m)
+              RewDepUView umap ∪+ (rdReward <$> m) === RewDepUView umap `oldUnionRewAgg` (rdReward <$> m)
           )

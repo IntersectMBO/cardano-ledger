@@ -40,7 +40,7 @@
   * Reimplementations
     * `unionRewAgg` NOTE: It does not require `assert (Map.valid result) result` any more
       and has been tested for equivalence with the older version with 
-      `--qc-max-success=10000 --qc-max-size=1000` in one of the commits.
+      `--qc-max-success=10000 --qc-max-size=1000`. The test is added to `UMapSpec`.
 * Add `certsTxBodyL` to `EraTxBody`
 * Introduce `TxCert` type family and `EraTxCert` type class.
 * Deprecate `Delegation`

@@ -87,7 +87,6 @@ module Cardano.Ledger.UMap (
   unionR,
   (∪+),
   unionRewAgg,
-  unionKeyRewards,
   unionKeyDeposits,
   (⋪),
   domDelete,
@@ -110,7 +109,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
-import Control.Exception (assert)
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
@@ -818,33 +816,17 @@ unionR = (⨃)
 -- evalUnified (rewards dState ∪+ registeredAggregated)
 -- evalUnified (rewards' ∪+ update)
 -- evalUnified (RewDepUView u0 ∪+ refunds)
-unionRewAgg, (∪+) :: UView c k RDPair -> Map k (CompactForm Coin) -> UMap c
-(RewDepUView UMap {umElems, umPtrs}) ∪+ aggRewMap = UMap newUmElem umPtrs
-  where
-    newUmElem =
-      let
-        result = Map.mergeWithKey f id (const Map.empty) umElems aggRewMap
-        f _k (UMElem p1 s deposit drep) delta = Just (UMElem (addC delta p1) s deposit drep)
-       in
-        -- We use Map.empty below because aggRewMap is a subset of umElems, we never add anything here.
-
-        assert (Map.valid result) result
-    addC :: CompactForm Coin -> StrictMaybe RDPair -> StrictMaybe RDPair
-    addC newR = \case
-      SNothing -> SNothing
-      SJust (RDPair r d) -> SJust $ RDPair (addCompact r newR) d
-unionRewAgg = (∪+)
-
--- | QUESTION: Why is this not the correct implementation for `unionRewAgg`?
-unionKeyRewards ::
-  UView c (Credential 'Staking c) RDPair ->
-  Map (Credential 'Staking c) (CompactForm Coin) ->
-  UMap c
-unionKeyRewards view m = Map.foldlWithKey' accum (unUView view) m
+unionRewAgg
+  , (∪+) ::
+    UView c (Credential 'Staking c) RDPair ->
+    Map (Credential 'Staking c) (CompactForm Coin) ->
+    UMap c
+unionRewAgg view m = Map.foldlWithKey' accum (unUView view) m
   where
     accum umap key ccoin = adjust combine key (RewDepUView umap)
       where
         combine (RDPair r d) = RDPair (addCompact r ccoin) d
+(∪+) = unionRewAgg
 
 -- | Add the deposit from the `Map` on the right side to the deposit in the `UView` on the left.
 -- This is only implemented and is applicable to `RewDepUView`s.
