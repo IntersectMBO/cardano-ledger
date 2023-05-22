@@ -23,8 +23,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyMIR,
-  ShelleyNEWPP,
   ShelleyRUPD,
   ShelleySNAP,
   ShelleyTICK,
@@ -102,10 +100,6 @@ type instance EraRule "DELEG" (ConwayEra c) = API.ShelleyDELEG (ConwayEra c)
 
 type instance EraRule "LEDGERS" (ConwayEra c) = API.ShelleyLEDGERS (ConwayEra c)
 
-type instance EraRule "MIR" (ConwayEra c) = ShelleyMIR (ConwayEra c)
-
-type instance EraRule "NEWPP" (ConwayEra c) = ShelleyNEWPP (ConwayEra c)
-
 type instance EraRule "POOL" (ConwayEra c) = API.ShelleyPOOL (ConwayEra c)
 
 type instance EraRule "POOLREAP" (ConwayEra c) = API.ShelleyPOOLREAP (ConwayEra c)
@@ -116,6 +110,5 @@ type instance EraRule "SNAP" (ConwayEra c) = ShelleySNAP (ConwayEra c)
 
 type instance EraRule "TICK" (ConwayEra c) = ShelleyTICK (ConwayEra c)
 
-type instance EraRule "TICKF" (ConwayEra c) = ConwayTICKF (ConwayEra c)
 
 -- =================================================
