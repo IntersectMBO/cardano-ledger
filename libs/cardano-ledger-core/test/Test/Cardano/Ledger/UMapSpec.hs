@@ -8,11 +8,13 @@ module Test.Cardano.Ledger.UMapSpec where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin, CompactForm)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking, Voting))
 import Cardano.Ledger.UMap (
   RDPair (RDPair, rdReward),
+  StakeCredentials (..),
   UMElem (UMElem),
   UMap (UMap, umElems, umPtrs),
   UView (DRepUView, PtrUView, RewDepUView, SPoolUView),
@@ -21,7 +23,10 @@ import Cardano.Ledger.UMap (
   dRepMap,
   delete,
   delete',
+  depositMap,
   domRestrict,
+  domRestrictedMap,
+  domRestrictedStakeCredentials,
   domain,
   empty,
   insert,
@@ -30,9 +35,13 @@ import Cardano.Ledger.UMap (
   nullUView,
   ptrMap,
   range,
+  rdDeposit,
   rdPairMap,
+  revPtrMap,
+  rewardMap,
   sPoolMap,
   size,
+  toStakeCredentials,
   umInvariant,
   unUView,
   unUnify,
@@ -45,6 +54,7 @@ import Cardano.Ledger.UMap (
  )
 import qualified Cardano.Ledger.UMap as UMap (lookup)
 import Control.Exception (assert)
+import Data.Foldable (Foldable (fold))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -57,6 +67,8 @@ import Test.Cardano.Ledger.Core.Arbitrary (
   genInvariantNonEmpty,
   genRightPreferenceUMap,
   genValidTuples,
+  genValidUMap,
+  genValidUMapWithCreds,
  )
 
 data Action
@@ -532,3 +544,32 @@ spec = do
           ( \(umap, m) ->
               RewDepUView umap ∪+ (rdReward <$> m) === RewDepUView umap `oldUnionRewAgg` (rdReward <$> m)
           )
+    describe "StakeCredentials" $ do
+      prop "toStakeCredentials as full domRestrictedStakeCredentials" $
+        forAll genValidUMap $ \umap ->
+          toStakeCredentials umap
+            `shouldBe` domRestrictedStakeCredentials (Map.keysSet (umElems umap)) umap
+
+      prop "domRestrictedStakeCredentials" $ forAll genValidUMapWithCreds $ \(umap, creds) ->
+        domRestrictedStakeCredentials creds umap
+          `shouldBe` StakeCredentials
+            { scRewards = rewardMap umap `Map.restrictKeys` creds
+            , scDeposits = depositMap umap `Map.restrictKeys` creds
+            , scSPools = sPoolMap umap `Map.restrictKeys` creds
+            , scDReps = dRepMap umap `Map.restrictKeys` creds
+            , scPtrs = Map.filter (`Set.member` creds) $ ptrMap umap
+            , scPtrsInverse = revPtrMap umap `Map.restrictKeys` creds
+            }
+      prop "domRestrictedStakeCredentials with domRestrictedMap" $
+        forAll genValidUMapWithCreds $ \(umap, creds) ->
+          let rdmap = domRestrictedMap creds (RewDepUView umap)
+              ptrs = revPtrMap umap `Map.restrictKeys` creds
+           in domRestrictedStakeCredentials creds umap
+                `shouldBe` StakeCredentials
+                  { scRewards = Map.map (fromCompact . rdReward) rdmap
+                  , scDeposits = Map.map (fromCompact . rdDeposit) rdmap
+                  , scSPools = domRestrictedMap creds (SPoolUView umap)
+                  , scDReps = domRestrictedMap creds (DRepUView umap)
+                  , scPtrs = domRestrictedMap (fold ptrs) (PtrUView umap)
+                  , scPtrsInverse = ptrs
+                  }
