@@ -26,9 +26,9 @@ import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Paths_cardano_ledger_alonzo_test (getDataFileName)
-import Test.Cardano.Ledger.Alonzo.Translation.Golden (TxInfoResultComparison (..), compareGoldenTxInfoResults)
+import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertEqual, testCase)
+import Test.Tasty.HUnit (Assertion, testCase)
 
 tests :: TestTree
 tests =
@@ -37,10 +37,4 @@ tests =
     [testCase "golden/translations.cbor" $ goldenAssertion "golden/translations.cbor"]
 
 goldenAssertion :: String -> Assertion
-goldenAssertion file = do
-  comps <- compareGoldenTxInfoResults @Alonzo (getDataFileName file)
-  mapM_
-    ( \(TxInfoResultComparison expected actual err) ->
-        assertEqual err expected actual
-    )
-    comps
+goldenAssertion file = assertTranslationResultsMatchGolden @Alonzo (getDataFileName file)

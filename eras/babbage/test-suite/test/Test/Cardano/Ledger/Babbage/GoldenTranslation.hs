@@ -26,9 +26,9 @@ import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 
 import Cardano.Ledger.Babbage (Babbage)
 import Paths_cardano_ledger_babbage_test (getDataFileName)
-import Test.Cardano.Ledger.Alonzo.Translation.Golden (TxInfoResultComparison (..), compareGoldenTxInfoResults)
+import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertEqual, testCase)
+import Test.Tasty.HUnit (Assertion, testCase)
 
 tests :: TestTree
 tests =
@@ -37,10 +37,4 @@ tests =
     [testCase "golden/translations.cbor" $ check "golden/translations.cbor"]
 
 check :: String -> Assertion
-check file = do
-  comps <- compareGoldenTxInfoResults @Babbage (getDataFileName file)
-  mapM_
-    ( \(TxInfoResultComparison expected actual err) ->
-        assertEqual err expected actual
-    )
-    comps
+check file = assertTranslationResultsMatchGolden @Babbage (getDataFileName file)
