@@ -72,6 +72,7 @@ library
         serialise,
         small-steps >=1.0,
         small-steps-test,
+        tasty-hunit,
         time,
         transformers
 
