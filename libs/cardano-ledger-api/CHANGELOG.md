@@ -3,6 +3,13 @@
 ## 1.2.0.0
 
 * Add support for Plutus V3
+* Start on `Cardano.Ledger.Api.State.Query` interface:
+  * Add `filterStakePoolDelegsAndRewards` and `queryStakePoolDelegsAndRewards`
+
+### `testlib`
+
+* Started `testlib` with first module `Test.Cardano.Ledger.Api.State.Query` that exposes
+  `getFilteredDelegationsAndRewardAccounts`
 
 ## 1.1.0.0
 
