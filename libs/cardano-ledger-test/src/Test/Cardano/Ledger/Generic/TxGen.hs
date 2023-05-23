@@ -582,11 +582,10 @@ genTxCert :: forall era. Reflect era => SlotNo -> GenRS era (TxCert era)
 genTxCert slot =
   elementsT
     [ genTxCertDeleg
-    , TxCertPool
-        <$> frequencyT
-          [ (75, RegPool <$> genFreshPool)
-          , (25, RetirePool <$> genRetirementHash <*> genEpoch)
-          ]
+    , frequencyT
+        [ (75, RegPoolTxCert <$> genFreshPool)
+        , (25, RetirePoolTxCert <$> genRetirementHash <*> genEpoch)
+        ]
     ]
   where
     genFreshPool = do
@@ -634,15 +633,14 @@ genTxCerts slot = do
         -- Generate registration and de-registration delegation certificates,
         -- while ensuring the proper registered/unregistered state in DState
         case dc of
-          TxCertPool d -> case d of
-            RegPool _ -> pure (dc : dcs, ss, regCreds)
-            RetirePool kh _ -> do
-              -- We need to make sure that the pool is registered before
-              -- we try to retire it
-              modelPools <- gets $ mPoolParams . gsModel
-              case Map.lookup kh modelPools of
-                Just _ -> pure (dc : dcs, ss, regCreds)
-                Nothing -> pure (dcs, ss, regCreds)
+          RegPoolTxCert _ -> pure (dc : dcs, ss, regCreds)
+          RetirePoolTxCert kh _ -> do
+            -- We need to make sure that the pool is registered before
+            -- we try to retire it
+            modelPools <- gets $ mPoolParams . gsModel
+            case Map.lookup kh modelPools of
+              Just _ -> pure (dc : dcs, ss, regCreds)
+              Nothing -> pure (dcs, ss, regCreds)
           _ | Just d <- getShelleyTxCertDelegG @era dc -> case d of
             ShelleyRegCert regCred ->
               if regCred `Map.member` regCreds -- Can't register if it is already registered

@@ -44,7 +44,7 @@ totalTxDeposits pp dpstate txb =
     certs = toList (txb ^. certsTxBodyL)
     numKeys = length $ filter isRegKey certs
     regpools = psStakePoolParams (certPState dpstate)
-    accum (!pools, !ans) (TxCertPool (RegPool poolparam)) =
+    accum (!pools, !ans) (RegPoolTxCert poolparam) =
       -- We don't pay a deposit on a pool that is already registered
       if Map.member (ppId poolparam) pools
         then (pools, ans)
@@ -110,7 +110,7 @@ genTxBodyFrom CertState {certDState, certPState} (UTxO u) = do
     shuffle $
       toList (txBody ^. certsTxBodyL)
         <> (ShelleyTxCertDeleg . ShelleyUnRegCert <$> unDelegCreds)
-        <> (TxCertPool . RegPool <$> deRegKeys)
+        <> (RegPoolTxCert <$> deRegKeys)
   pure
     ( txBody
         & inputsTxBodyL .~ Set.fromList inputs

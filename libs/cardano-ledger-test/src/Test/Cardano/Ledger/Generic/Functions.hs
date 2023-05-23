@@ -135,8 +135,8 @@ depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) cert
       case Map.lookup hk keydeposits of
         Nothing -> ans
         Just c -> ans <-> c
-    accum ans (TxCertPool (RegPool _)) = pp ^. ppPoolDepositL <+> ans
-    accum ans (TxCertPool (RetirePool _ _)) = ans -- The pool reward is refunded at the end of the epoch
+    accum ans (RegPoolTxCert _) = pp ^. ppPoolDepositL <+> ans
+    accum ans (RetirePoolTxCert _ _) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage

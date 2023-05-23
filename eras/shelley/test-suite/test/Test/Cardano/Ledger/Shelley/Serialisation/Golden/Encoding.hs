@@ -566,25 +566,23 @@ tests =
        in checkEncodingCBOR
             shelleyProtVer
             "register_pool"
-            ( TxCertPool @C
-                ( RegPool
-                    ( PoolParams
-                        { ppId = hashKey . vKey $ testStakePoolKey
-                        , ppVrf = testVRFKH @C_Crypto
-                        , ppPledge = poolPledge
-                        , ppCost = poolCost
-                        , ppMargin = poolMargin
-                        , ppRewardAcnt = poolRAcnt
-                        , ppOwners = Set.singleton poolOwner
-                        , ppRelays = poolRelays
-                        , ppMetadata =
-                            SJust $
-                              PoolMetadata
-                                { pmUrl = Maybe.fromJust $ textToUrl poolUrl
-                                , pmHash = poolMDHash
-                                }
-                        }
-                    )
+            ( RegPoolTxCert @C
+                ( PoolParams
+                    { ppId = hashKey . vKey $ testStakePoolKey
+                    , ppVrf = testVRFKH @C_Crypto
+                    , ppPledge = poolPledge
+                    , ppCost = poolCost
+                    , ppMargin = poolMargin
+                    , ppRewardAcnt = poolRAcnt
+                    , ppOwners = Set.singleton poolOwner
+                    , ppRelays = poolRelays
+                    , ppMetadata =
+                        SJust $
+                          PoolMetadata
+                            { pmUrl = Maybe.fromJust $ textToUrl poolUrl
+                            , pmHash = poolMDHash
+                            }
+                    }
                 )
             )
             ( T (TkListLen 10)
@@ -608,11 +606,9 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "retire_pool"
-        ( TxCertPool @C
-            ( RetirePool @C_Crypto
-                (hashKey . vKey $ testStakePoolKey @C_Crypto)
-                (EpochNo 1729)
-            )
+        ( RetirePoolTxCert @C
+            (hashKey . vKey $ testStakePoolKey @C_Crypto)
+            (EpochNo 1729)
         )
         ( T
             ( TkListLen 3

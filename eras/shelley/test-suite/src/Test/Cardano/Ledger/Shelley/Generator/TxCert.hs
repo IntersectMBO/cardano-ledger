@@ -415,7 +415,7 @@ genRegPool ::
   Gen (Maybe (TxCert era, CertCred era))
 genRegPool poolKeys keyPairs minPoolCost = do
   (pps, poolKey) <- genStakePool poolKeys keyPairs minPoolCost
-  pure $ Just (TxCertPool (RegPool pps), PoolCred poolKey)
+  pure $ Just (RegPoolTxCert pps, PoolCred poolKey)
 
 -- | Generate a RetirePool along with the keypair which registered it.
 --
@@ -437,7 +437,7 @@ genRetirePool _pp poolKeys pState slot =
     else
       ( \keyHash epoch ->
           Just
-            ( TxCertPool (RetirePool keyHash epoch)
+            ( RetirePoolTxCert keyHash epoch
             , PoolCred (aikCold $ lookupHash keyHash)
             )
       )
