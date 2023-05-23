@@ -565,7 +565,7 @@ poolMDHTooBigTx pf =
         pf
         [ Inputs' [mkGenesisTxIn 3]
         , Outputs' [newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995 <-> poolDeposit)]]
-        , Certs' [TxCertPool (RegPool poolParams)]
+        , Certs' [RegPoolTxCert poolParams]
         , Txfee (Coin 5)
         ]
       where

@@ -471,7 +471,7 @@ exampleCerts :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => StrictSeq (TxCert
 exampleCerts =
   StrictSeq.fromList
     [ ShelleyTxCertDeleg (ShelleyRegCert (keyToCredential exampleStakeKey))
-    , TxCertPool (RegPool examplePoolParams)
+    , RegPoolTxCert examplePoolParams
     , TxCertMir $
         MIRCert ReservesMIR $
           StakeAddressesMIR $

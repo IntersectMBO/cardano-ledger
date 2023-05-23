@@ -49,7 +49,7 @@ testPoolNetworkID pv poolParams e = do
             ( TRC
                 ( PoolEnv (SlotNo 0) $ emptyPParams & ppProtocolVersionL .~ pv
                 , def
-                , TxCertPool (RegPool poolParams)
+                , RegPoolTxCert poolParams
                 )
             )
   case (st, e) of

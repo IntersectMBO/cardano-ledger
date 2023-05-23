@@ -198,7 +198,7 @@ txbodyEx1 =
         ( [ ShelleyTxCertDeleg (ShelleyRegCert Cast.aliceSHK)
           , ShelleyTxCertDeleg (ShelleyRegCert Cast.bobSHK)
           , ShelleyTxCertDeleg (ShelleyRegCert Cast.carlSHK)
-          , TxCertPool (RegPool Cast.alicePoolParams)
+          , RegPoolTxCert Cast.alicePoolParams
           ]
             ++ [ ShelleyTxCertMir
                   ( MIRCert
@@ -931,7 +931,7 @@ txbodyEx11 =
   ShelleyTxBody
     (Set.fromList [TxIn (txid txbodyEx4) minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
-    (StrictSeq.fromList [TxCertPool (RetirePool (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch)])
+    (StrictSeq.fromList [RetirePoolTxCert (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch])
     (Withdrawals Map.empty)
     feeTx11
     (SlotNo 500)

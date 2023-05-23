@@ -178,7 +178,7 @@ poolDelegationTransition = do
   let stpools = psStakePoolParams ps
   let pv = pp ^. ppProtocolVersionL
   case c of
-    TxCertPool (RegPool poolParam) -> do
+    RegPoolTxCert poolParam -> do
       -- note that pattern match is used instead of cwitness, as in the spec
 
       when (HardForks.validatePoolRewardAccountNetID pv) $ do
@@ -223,7 +223,7 @@ poolDelegationTransition = do
               { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam)
               , psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
               }
-    TxCertPool (RetirePool hk e) -> do
+    RetirePoolTxCert hk e -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom stpools) ?! StakePoolNotRegisteredOnKeyPOOL hk
       cepoch <- liftSTS $ do

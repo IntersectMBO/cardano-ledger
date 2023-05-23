@@ -324,7 +324,7 @@ delegationTransition = do
           { dsFutureGenDelegs =
               eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
           }
-    TxCertPool _ -> do
+    RegPoolTxCert _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds
     _ | Just (MIRCert targetPot mirTarget) <- getTxCertMir c -> do

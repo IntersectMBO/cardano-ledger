@@ -411,7 +411,7 @@ mkPoolParameters keys =
 
 -- Create stake pool registration certs
 poolRegCerts :: [KeyPair 'StakePool B_Crypto] -> StrictSeq (TxCert B)
-poolRegCerts = StrictSeq.fromList . fmap (TxCertPool . RegPool . mkPoolParameters)
+poolRegCerts = StrictSeq.fromList . fmap (RegPoolTxCert . mkPoolParameters)
 
 -- Create a transaction that registers stake pools.
 txRegStakePools :: TxIx -> [KeyPair 'StakePool B_Crypto] -> ShelleyTx B
@@ -467,7 +467,7 @@ txbRetireStakePool x y =
     (StrictSeq.fromList [ShelleyTxOut aliceAddr (inject $ Coin 100)])
     ( StrictSeq.fromList $
         fmap
-          (\ks -> TxCertPool $ RetirePool (mkPoolKeyHash ks) (EpochNo 1))
+          (\ks -> RetirePoolTxCert (mkPoolKeyHash ks) (EpochNo 1))
           (poolColdKeys x y)
     )
     (Withdrawals Map.empty)

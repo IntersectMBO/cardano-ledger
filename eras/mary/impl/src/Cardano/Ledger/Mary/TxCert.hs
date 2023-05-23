@@ -7,6 +7,7 @@ import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Shelley.TxCert (
   EraTxCert (..),
+  PoolCert (..),
   ShelleyEraTxCert (..),
   ShelleyTxCert (..),
   getScriptWitnessShelleyTxCert,
@@ -22,10 +23,15 @@ instance Crypto c => EraTxCert (MaryEra c) where
 
   getScriptWitnessTxCert = getScriptWitnessShelleyTxCert
 
-  mkTxCertPool = ShelleyTxCertPool
+  mkRegPoolTxCert = ShelleyTxCertPool . RegPool
 
-  getTxCertPool (ShelleyTxCertPool c) = Just c
-  getTxCertPool _ = Nothing
+  getRegPoolTxCert (ShelleyTxCertPool (RegPool poolParams)) = Just poolParams
+  getRegPoolTxCert _ = Nothing
+
+  mkRetirePoolTxCert poolId epochNo = ShelleyTxCertPool $ RetirePool poolId epochNo
+
+  getRetirePoolTxCert (ShelleyTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
+  getRetirePoolTxCert _ = Nothing
 
 instance Crypto c => ShelleyEraTxCert (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (MaryEra StandardCrypto) #-}
