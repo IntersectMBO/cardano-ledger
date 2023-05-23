@@ -332,7 +332,7 @@ txbRegisterPool =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [TxCertPool (RegPool alicePoolParams)]
+    , stbCerts = StrictSeq.fromList [RegPoolTxCert alicePoolParams]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10
@@ -360,7 +360,7 @@ txbRetirePool =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn genesisId minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut aliceAddr (Val.inject $ Coin 10)]
-    , stbCerts = StrictSeq.fromList [TxCertPool (RetirePool alicePoolKH (EpochNo 5))]
+    , stbCerts = StrictSeq.fromList [RetirePoolTxCert alicePoolKH (EpochNo 5)]
     , stbWithdrawals = Withdrawals Map.empty
     , stbTxFee = Coin 94
     , stbTTL = SlotNo 10

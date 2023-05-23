@@ -193,8 +193,8 @@ txbodyEx1 =
         [ ShelleyTxCertDeleg (ShelleyRegCert Cast.aliceSHK)
         , ShelleyTxCertDeleg (ShelleyRegCert Cast.bobSHK)
         , ShelleyTxCertDeleg (ShelleyRegCert Cast.carlSHK)
-        , TxCertPool (RegPool alicePoolParams')
-        , TxCertPool (RegPool bobPoolParams')
+        , RegPoolTxCert alicePoolParams'
+        , RegPoolTxCert bobPoolParams'
         , ShelleyTxCertDeleg (ShelleyDelegCert Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
         , ShelleyTxCertDeleg (ShelleyDelegCert Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys))
         , ShelleyTxCertDeleg (ShelleyDelegCert Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))

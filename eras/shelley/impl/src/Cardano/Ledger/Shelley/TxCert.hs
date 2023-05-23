@@ -62,7 +62,8 @@ module Cardano.Ledger.Shelley.TxCert (
 
   -- * Re-exports
   EraTxCert (..),
-  pattern TxCertPool,
+  pattern RegPoolTxCert,
+  pattern RetirePoolTxCert,
   Delegation (..),
   PoolCert (..),
   poolCWitness,
@@ -109,10 +110,13 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
 
   getScriptWitnessTxCert = getScriptWitnessShelleyTxCert
 
-  mkTxCertPool = ShelleyTxCertPool
+  mkRegPoolTxCert = ShelleyTxCertPool . RegPool
+  getRegPoolTxCert (ShelleyTxCertPool (RegPool poolParams)) = Just poolParams
+  getRegPoolTxCert _ = Nothing
 
-  getTxCertPool (ShelleyTxCertPool c) = Just c
-  getTxCertPool _ = Nothing
+  mkRetirePoolTxCert poolId epochNo = ShelleyTxCertPool $ RetirePool poolId epochNo
+  getRetirePoolTxCert (ShelleyTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
+  getRetirePoolTxCert _ = Nothing
 
 class EraTxCert era => ShelleyEraTxCert era where
   mkShelleyTxCertDeleg :: ShelleyDelegCert (EraCrypto era) -> TxCert era
@@ -339,11 +343,11 @@ poolTxCertDecoder :: EraTxCert era => Word -> Decoder s (Int, TxCert era)
 poolTxCertDecoder = \case
   3 -> do
     group <- decCBORGroup
-    pure (1 + listLenInt group, TxCertPool (RegPool group))
+    pure (1 + listLenInt group, RegPoolTxCert group)
   4 -> do
     a <- decCBOR
     b <- decCBOR
-    pure (3, TxCertPool $ RetirePool a b)
+    pure (3, RetirePoolTxCert a b)
   k -> invalidKey k
 {-# INLINE poolTxCertDecoder #-}
 
@@ -409,12 +413,12 @@ isGenesisDelegation = isJust . getTxCertGenesisDeleg
 
 -- | Check for 'RegPool' constructor
 isRegPool :: EraTxCert era => TxCert era -> Bool
-isRegPool (TxCertPool (RegPool _)) = True
+isRegPool (RegPoolTxCert _) = True
 isRegPool _ = False
 
 -- | Check for 'RetirePool' constructor
 isRetirePool :: EraTxCert era => TxCert era -> Bool
-isRetirePool (TxCertPool (RetirePool _ _)) = True
+isRetirePool (RetirePoolTxCert _ _) = True
 isRetirePool _ = False
 
 isInstantaneousRewards :: ShelleyEraTxCert era => TxCert era -> Bool

@@ -199,7 +199,8 @@ poolTraceFromBlock chainSt block =
        in PoolEnv s pp
     poolSt0 =
       certPState (lsCertState ledgerSt0)
-    poolCert (TxCertPool _) = True
+    poolCert (RegPoolTxCert _) = True
+    poolCert (RetirePoolTxCert _ _) = True
     poolCert _ = False
 
 -- | Reconstruct a DELEG trace from all the transaction certificates in a Block

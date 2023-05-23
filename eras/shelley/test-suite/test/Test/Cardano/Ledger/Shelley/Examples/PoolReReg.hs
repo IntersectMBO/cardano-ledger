@@ -106,7 +106,7 @@ txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
-    (StrictSeq.fromList [TxCertPool (RegPool Cast.alicePoolParams)])
+    (StrictSeq.fromList [RegPoolTxCert Cast.alicePoolParams])
     (Withdrawals Map.empty)
     feeTx1
     (SlotNo 10)
@@ -183,7 +183,7 @@ txbodyEx2 =
     (Set.fromList [TxIn (txid txbodyEx1) minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
     ( StrictSeq.fromList
-        ( [ TxCertPool (RegPool newPoolParams)
+        ( [ RegPoolTxCert newPoolParams
           ]
         )
     )

@@ -135,7 +135,7 @@ poolStateIsInternallyConsistent (SourceSignalTarget {source = chainSt, signal = 
 poolRegistrationProp :: EraTxCert era => SourceSignalTarget (ShelleyPOOL era) -> Property
 poolRegistrationProp
   SourceSignalTarget
-    { signal = (TxCertPool (RegPool poolParams))
+    { signal = (RegPoolTxCert poolParams)
     , source = sourceSt
     , target = targetSt
     } =
@@ -173,7 +173,7 @@ poolRetirementProp :: EraTxCert era => EpochNo -> EpochNo -> SourceSignalTarget 
 poolRetirementProp
   currentEpoch@(EpochNo ce)
   (EpochNo maxEpoch)
-  SourceSignalTarget {source = sourceSt, target = targetSt, signal = (TxCertPool (RetirePool hk e))} =
+  SourceSignalTarget {source = sourceSt, target = targetSt, signal = (RetirePoolTxCert hk e)} =
     conjoin
       [ counterexample
           ("epoch must be well formed " <> show ce <> " " <> show e <> " " <> show maxEpoch)

@@ -501,7 +501,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     owners :: Set (KeyHash 'Witness (EraCrypto era))
     owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
-        accum (TxCertPool (RegPool pool)) !ans =
+        accum (RegPoolTxCert pool) !ans =
           Set.union
             (Set.map asWitness (ppOwners pool))
             ans

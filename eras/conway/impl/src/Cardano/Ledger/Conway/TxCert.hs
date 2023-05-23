@@ -51,6 +51,7 @@ import Cardano.Ledger.Credential (Credential, StakeCredential, credKeyHashWitnes
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Shelley.TxCert (
+  PoolCert (..),
   ShelleyDelegCert (..),
   ShelleyEraTxCert (..),
   encodePoolCert,
@@ -70,9 +71,15 @@ instance Crypto c => EraTxCert (ConwayEra c) where
 
   getScriptWitnessTxCert = getScriptWitnessConwayTxCert
 
-  mkTxCertPool = ConwayTxCertPool
-  getTxCertPool (ConwayTxCertPool x) = Just x
-  getTxCertPool _ = Nothing
+  mkRegPoolTxCert = ConwayTxCertPool . RegPool
+
+  getRegPoolTxCert (ConwayTxCertPool (RegPool poolParams)) = Just poolParams
+  getRegPoolTxCert _ = Nothing
+
+  mkRetirePoolTxCert poolId epochNo = ConwayTxCertPool $ RetirePool poolId epochNo
+
+  getRetirePoolTxCert (ConwayTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
+  getRetirePoolTxCert _ = Nothing
 
 instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   mkShelleyTxCertDeleg = ConwayTxCertDeleg . fromShelleyDelegCert
