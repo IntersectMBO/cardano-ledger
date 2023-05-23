@@ -59,7 +59,7 @@ import Cardano.Crypto (
   serializeCborHash,
  )
 import Cardano.Ledger.Binary (
-  Annotated (..),
+  Annotated (Annotated, unAnnotated),
   ByteSpan,
   DecCBOR (..),
   Decoded (..),

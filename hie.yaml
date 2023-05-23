@@ -150,6 +150,9 @@ cradle:
     - path: "libs/cardano-ledger-api/src"
       component: "lib:cardano-ledger-api"
 
+    - path: "libs/cardano-ledger-api/testlib"
+      component: "cardano-ledger-api:lib:testlib"
+
     - path: "libs/cardano-ledger-api/test"
       component: "cardano-ledger-api:test:cardano-ledger-api-test"
 

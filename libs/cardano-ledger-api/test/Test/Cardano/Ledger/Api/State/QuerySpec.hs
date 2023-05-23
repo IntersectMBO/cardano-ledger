@@ -1,4 +1,3 @@
-
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where

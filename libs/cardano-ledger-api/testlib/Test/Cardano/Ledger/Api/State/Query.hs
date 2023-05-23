@@ -2,6 +2,7 @@
 
 module Test.Cardano.Ledger.Api.State.Query (
   -- * Old versions of queries
+
   --
   -- These are useful for testing and benchmarking
   getFilteredDelegationsAndRewardAccounts,

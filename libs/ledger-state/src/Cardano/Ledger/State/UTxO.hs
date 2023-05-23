@@ -7,16 +7,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans -funbox-strict-fields #-}
 
 module Cardano.Ledger.State.UTxO where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Scripts.Data
 import Cardano.Ledger.Alonzo.TxBody
+import Cardano.Ledger.Babbage
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
@@ -47,7 +46,7 @@ import Text.Printf
 
 type C = StandardCrypto
 
-type CurrentEra = Alonzo
+type CurrentEra = Babbage
 
 --- Loading
 readNewEpochState ::
@@ -585,12 +584,14 @@ countTxOutStats :: [TxOut CurrentEra] -> TxOutStats
 countTxOutStats = foldMap countTxOutStat
   where
     countTxOutStat :: TxOut CurrentEra -> TxOutStats
-    countTxOutStat (AlonzoTxOut addr (MaryValue v (MultiAsset m)) mData) =
-      let !dataStat =
+    countTxOutStat txOut =
+      let addr = txOut ^. addrTxOutL
+          MaryValue v (MultiAsset m) = txOut ^. valueTxOutL
+          !dataStat =
             strictMaybe
               mempty
               (\d -> mempty {tosDataHash = statSingleton d})
-              mData
+              (txOut ^. dataHashTxOutL)
           !vmElems = Map.elems m
           !valueStat =
             dataStat
@@ -627,7 +628,7 @@ instance Pretty UTxOStats where
 instance AggregateStat UTxOStats where
   aggregateStat = aggregateStat . usTxOutStats
 
-countUTxOStats :: UTxO Alonzo -> UTxOStats
+countUTxOStats :: UTxO CurrentEra -> UTxOStats
 countUTxOStats (UTxO m) =
   UTxOStats
     { usTxInStats = countTxInStats (Map.keys m)

@@ -64,9 +64,7 @@ library
         text
 
 library testlib
-    exposed-modules:
-        Test.Cardano.Ledger.Api.State.Query
-
+    exposed-modules:  Test.Cardano.Ledger.Api.State.Query
     visibility:       public
     hs-source-dirs:   testlib
     default-language: Haskell2010
@@ -78,7 +76,7 @@ library testlib
     build-depends:
         base,
         containers,
-        cardano-ledger-core,
+        cardano-ledger-core
 
 test-suite cardano-ledger-api-test
     type:             exitcode-stdio-1.0
@@ -98,7 +96,8 @@ test-suite cardano-ledger-api-test
     build-depends:
         base,
         bytestring,
-        cardano-ledger-api:{cardano-ledger-api, testlib},
+        cardano-ledger-api,
+        testlib,
         cardano-ledger-binary,
         cardano-ledger-babbage:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},

@@ -32,6 +32,7 @@ module Cardano.Ledger.Alonzo.TxOut (
   viewTxOut,
   getAlonzoTxOutEitherAddr,
   utxoEntrySize,
+  internAlonzoTxOut,
 )
 where
 
@@ -373,14 +374,20 @@ instance (Era era, Val (Value era)) => DecCBOR (AlonzoTxOut era) where
 instance (Era era, Val (Value era)) => DecShareCBOR (AlonzoTxOut era) where
   type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   decShareCBOR credsInterns = do
-    let internTxOut = \case
-          TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
-            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
-          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
-            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
-          txOut -> txOut
-    internTxOut <$!> decCBOR
+    internAlonzoTxOut (interns credsInterns) <$!> decCBOR
   {-# INLINEABLE decShareCBOR #-}
+
+internAlonzoTxOut ::
+  (Credential 'Staking (EraCrypto era) -> Credential 'Staking (EraCrypto era)) ->
+  AlonzoTxOut era ->
+  AlonzoTxOut era
+internAlonzoTxOut internCred = \case
+  TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
+    TxOut_AddrHash28_AdaOnly (internCred cred) addr28Extra ada
+  TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
+    TxOut_AddrHash28_AdaOnly_DataHash32 (internCred cred) addr28Extra ada dataHash32
+  txOut -> txOut
+{-# INLINE internAlonzoTxOut #-}
 
 instance (Era era, Val (Value era)) => ToCBOR (AlonzoTxOut era) where
   toCBOR = toEraCBOR @era

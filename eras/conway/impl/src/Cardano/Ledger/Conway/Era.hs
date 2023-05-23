@@ -110,5 +110,4 @@ type instance EraRule "SNAP" (ConwayEra c) = ShelleySNAP (ConwayEra c)
 
 type instance EraRule "TICK" (ConwayEra c) = ShelleyTICK (ConwayEra c)
 
-
 -- =================================================

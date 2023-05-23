@@ -37,6 +37,7 @@ library
         bytestring,
         cardano-crypto-class,
         cardano-ledger-alonzo,
+        cardano-ledger-babbage,
         cardano-ledger-binary,
         cardano-ledger-core,
         cardano-ledger-mary,

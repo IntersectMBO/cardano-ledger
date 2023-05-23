@@ -7,6 +7,7 @@
 module Main where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.State.Query (queryStakePoolDelegsAndRewards)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
@@ -15,7 +16,7 @@ import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), fromNominalDiffTimeMicro, mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.State.UTxO (CurrentEra, readNewEpochState)
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
@@ -29,8 +30,10 @@ import Data.ByteString.Base16.Lazy as BSL16
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class (def)
 import Data.Foldable as F
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys, extractKeysSmallSet)
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import System.Environment (getEnv)
