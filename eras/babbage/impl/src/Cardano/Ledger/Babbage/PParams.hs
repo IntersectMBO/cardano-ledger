@@ -60,6 +60,11 @@ import Cardano.Ledger.Binary (
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
+  decCBORGroup,
+  decodeRecordNamed,
+  encCBORGroup,
+  encodeListLen,
+  listLen,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -71,7 +76,6 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   field,
   (!>),
-  (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto)
@@ -233,61 +237,59 @@ instance Crypto c => EraGovernance (BabbageEra c) where
 
 instance Era era => EncCBOR (BabbagePParams Identity era) where
   encCBOR BabbagePParams {..} =
-    encode
-      ( Rec (BabbagePParams @Identity)
-          !> To bppMinFeeA
-          !> To bppMinFeeB
-          !> To bppMaxBBSize
-          !> To bppMaxTxSize
-          !> To bppMaxBHSize
-          !> To bppKeyDeposit
-          !> To bppPoolDeposit
-          !> To bppEMax
-          !> To bppNOpt
-          !> To bppA0
-          !> To bppRho
-          !> To bppTau
-          !> To bppProtocolVersion
-          !> To bppMinPoolCost
-          !> To bppCoinsPerUTxOByte
-          !> To bppCostModels
-          !> To bppPrices
-          !> To bppMaxTxExUnits
-          !> To bppMaxBlockExUnits
-          !> To bppMaxValSize
-          !> To bppCollateralPercentage
-          !> To bppMaxCollateralInputs
-      )
+    encodeListLen (21 + listLen bppProtocolVersion)
+      <> encCBOR bppMinFeeA
+      <> encCBOR bppMinFeeB
+      <> encCBOR bppMaxBBSize
+      <> encCBOR bppMaxTxSize
+      <> encCBOR bppMaxBHSize
+      <> encCBOR bppKeyDeposit
+      <> encCBOR bppPoolDeposit
+      <> encCBOR bppEMax
+      <> encCBOR bppNOpt
+      <> encCBOR bppA0
+      <> encCBOR bppRho
+      <> encCBOR bppTau
+      <> encCBORGroup bppProtocolVersion
+      <> encCBOR bppMinPoolCost
+      <> encCBOR bppCoinsPerUTxOByte
+      <> encCBOR bppCostModels
+      <> encCBOR bppPrices
+      <> encCBOR bppMaxTxExUnits
+      <> encCBOR bppMaxBlockExUnits
+      <> encCBOR bppMaxValSize
+      <> encCBOR bppCollateralPercentage
+      <> encCBOR bppMaxCollateralInputs
 
 instance Era era => ToCBOR (BabbagePParams Identity era) where
   toCBOR = toEraCBOR @era
 
 instance Era era => DecCBOR (BabbagePParams Identity era) where
   decCBOR =
-    decode $
-      RecD BabbagePParams
-        <! From -- bppMinFeeA
-        <! From -- bppMinFeeB
-        <! From -- bppMaxBBSize
-        <! From -- bppMaxTxSize
-        <! From -- bppMaxBHSize
-        <! From -- bppKeyDeposit
-        <! From -- bppPoolDeposit
-        <! From -- bppEMax
-        <! From -- bppNOpt
-        <! From -- bppA0
-        <! From -- bppRho
-        <! From -- bppTau
-        <! From -- bppProtocolVersion
-        <! From -- bppMinPoolCost
-        <! From -- bppCoinsPerUTxOByte
-        <! From -- bppCostModels
-        <! From -- bppPrices
-        <! From -- bppMaxTxExUnits
-        <! From -- bppMaxBlockExUnits
-        <! From -- maxValSize
-        <! From -- collateralPercentage
-        <! From -- maxCollateralInputs
+    decodeRecordNamed "PParams" (\pp -> 21 + fromIntegral (listLen (bppProtocolVersion pp))) $ do
+      bppMinFeeA <- decCBOR
+      bppMinFeeB <- decCBOR
+      bppMaxBBSize <- decCBOR
+      bppMaxTxSize <- decCBOR
+      bppMaxBHSize <- decCBOR
+      bppKeyDeposit <- decCBOR
+      bppPoolDeposit <- decCBOR
+      bppEMax <- decCBOR
+      bppNOpt <- decCBOR
+      bppA0 <- decCBOR
+      bppRho <- decCBOR
+      bppTau <- decCBOR
+      bppProtocolVersion <- decCBORGroup
+      bppMinPoolCost <- decCBOR
+      bppCoinsPerUTxOByte <- decCBOR
+      bppCostModels <- decCBOR
+      bppPrices <- decCBOR
+      bppMaxTxExUnits <- decCBOR
+      bppMaxBlockExUnits <- decCBOR
+      bppMaxValSize <- decCBOR
+      bppCollateralPercentage <- decCBOR
+      bppMaxCollateralInputs <- decCBOR
+      pure BabbagePParams {..}
 
 instance Era era => FromCBOR (BabbagePParams Identity era) where
   fromCBOR = fromEraCBOR @era
