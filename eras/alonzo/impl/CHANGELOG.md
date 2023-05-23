@@ -1,6 +1,5 @@
 # Version history for `cardano-ledger-alonzo`
 
-
 ## 1.2.1.0
 
 * Fix `PParams AlonzoEra` serialization. [#3440](https://github.com/input-output-hk/cardano-ledger/pull/3440)
