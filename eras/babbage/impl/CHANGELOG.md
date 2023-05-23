@@ -8,6 +8,10 @@
 * Add `EraPlutusContext 'PlutusV2` instance to `BabbageEra`
 * Fix an issue where `TotalDeposits` didn't appear on Babbage era
 
+## 1.2.1.0
+
+* Fix `PParams BabbageEra` serialization. [#3440](https://github.com/input-output-hk/cardano-ledger/pull/3440)
+
 ## 1.2.0.0
 
 * Replace `DPState c` with `CertState era`
