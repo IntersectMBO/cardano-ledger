@@ -12,6 +12,10 @@
 * Remove `witsVKeyNeeded`, in favor of the one from `cardano-ledger-shelley`
 * Fix an issue where `TotalDeposits` didn't appear on Alonzo era
 
+## 1.2.1.0
+
+* Fix `PParams AlonzoEra` serialization. [#3440](https://github.com/input-output-hk/cardano-ledger/pull/3440)
+
 ## 1.2.0.0
 
 * Replace `DPState c` with `CertState era`

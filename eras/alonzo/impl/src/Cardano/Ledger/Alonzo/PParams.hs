@@ -84,11 +84,16 @@ import Cardano.Ledger.Binary (
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
+  decCBORGroup,
+  decodeRecordNamed,
+  encCBORGroup,
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
+  encodeListLen,
   encodeMapLen,
   encodeNull,
   encodePreEncoded,
+  listLen,
   serialize',
  )
 import Cardano.Ledger.Binary.Coders (
@@ -101,7 +106,6 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   field,
   (!>),
-  (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto)
@@ -278,90 +282,63 @@ instance Crypto c => EraGovernance (AlonzoEra c) where
   getProposedPPUpdates = Just . proposals
 
 instance Era era => EncCBOR (AlonzoPParams Identity era) where
-  encCBOR
-    AlonzoPParams
-      { appMinFeeA
-      , appMinFeeB
-      , appMaxBBSize
-      , appMaxTxSize
-      , appMaxBHSize
-      , appKeyDeposit
-      , appPoolDeposit
-      , appEMax
-      , appNOpt
-      , appA0
-      , appRho
-      , appTau
-      , appD
-      , appExtraEntropy
-      , appProtocolVersion
-      , appMinPoolCost
-      , appCoinsPerUTxOWord
-      , appCostModels
-      , appPrices
-      , appMaxTxExUnits
-      , appMaxBlockExUnits
-      , appMaxValSize
-      , appCollateralPercentage
-      , appMaxCollateralInputs
-      } =
-      encode $
-        Rec (AlonzoPParams @Identity)
-          !> To appMinFeeA
-          !> To appMinFeeB
-          !> To appMaxBBSize
-          !> To appMaxTxSize
-          !> To appMaxBHSize
-          !> To appKeyDeposit
-          !> To appPoolDeposit
-          !> To appEMax
-          !> To appNOpt
-          !> To appA0
-          !> To appRho
-          !> To appTau
-          !> To appD
-          !> To appExtraEntropy
-          !> To appProtocolVersion
-          !> To appMinPoolCost
-          -- new/updated for alonzo
-          !> To appCoinsPerUTxOWord
-          !> To appCostModels
-          !> To appPrices
-          !> To appMaxTxExUnits
-          !> To appMaxBlockExUnits
-          !> To appMaxValSize
-          !> To appCollateralPercentage
-          !> To appMaxCollateralInputs
+  encCBOR AlonzoPParams {..} =
+    encodeListLen (23 + listLen appProtocolVersion)
+      <> encCBOR appMinFeeA
+      <> encCBOR appMinFeeB
+      <> encCBOR appMaxBBSize
+      <> encCBOR appMaxTxSize
+      <> encCBOR appMaxBHSize
+      <> encCBOR appKeyDeposit
+      <> encCBOR appPoolDeposit
+      <> encCBOR appEMax
+      <> encCBOR appNOpt
+      <> encCBOR appA0
+      <> encCBOR appRho
+      <> encCBOR appTau
+      <> encCBOR appD
+      <> encCBOR appExtraEntropy
+      <> encCBORGroup appProtocolVersion
+      <> encCBOR appMinPoolCost
+      -- new/updated for alonzo
+      <> encCBOR appCoinsPerUTxOWord
+      <> encCBOR appCostModels
+      <> encCBOR appPrices
+      <> encCBOR appMaxTxExUnits
+      <> encCBOR appMaxBlockExUnits
+      <> encCBOR appMaxValSize
+      <> encCBOR appCollateralPercentage
+      <> encCBOR appMaxCollateralInputs
 
 instance Era era => DecCBOR (AlonzoPParams Identity era) where
   decCBOR =
-    decode $
-      RecD AlonzoPParams
-        <! From -- appMinFeeA
-        <! From -- appMinFeeB
-        <! From -- appMaxBBSize
-        <! From -- appMaxTxSize
-        <! From -- appMaxBHSize
-        <! From -- appKeyDeposit
-        <! From -- appPoolDeposit
-        <! From -- appEMax
-        <! From -- appNOpt
-        <! From -- appA0
-        <! From -- appRho
-        <! From -- appTau
-        <! From -- appD
-        <! From -- appExtraEntropy
-        <! From -- appProtocolVersion
-        <! From -- appMinPoolCost
-        -- new/updated for alonzo
-        <! From -- appCoinsPerUTxOWord
-        <! From -- appCostModels
-        <! From -- appPrices
-        <! From -- appMaxTxExUnits
-        <! From -- appMaxBlockExUnits
-        <! From -- appMaxValSize
-        <! From -- appCollateralPercentage
-        <! From -- appMaxCollateralInputs
+    decodeRecordNamed "PParams" (\pp -> 23 + fromIntegral (listLen (appProtocolVersion pp))) $ do
+      appMinFeeA <- decCBOR
+      appMinFeeB <- decCBOR
+      appMaxBBSize <- decCBOR
+      appMaxTxSize <- decCBOR
+      appMaxBHSize <- decCBOR
+      appKeyDeposit <- decCBOR
+      appPoolDeposit <- decCBOR
+      appEMax <- decCBOR
+      appNOpt <- decCBOR
+      appA0 <- decCBOR
+      appRho <- decCBOR
+      appTau <- decCBOR
+      appD <- decCBOR
+      appExtraEntropy <- decCBOR
+      appProtocolVersion <- decCBORGroup
+      appMinPoolCost <- decCBOR
+      -- new/updated for alonzo
+      appCoinsPerUTxOWord <- decCBOR
+      appCostModels <- decCBOR
+      appPrices <- decCBOR
+      appMaxTxExUnits <- decCBOR
+      appMaxBlockExUnits <- decCBOR
+      appMaxValSize <- decCBOR
+      appCollateralPercentage <- decCBOR
+      appMaxCollateralInputs <- decCBOR
+      pure AlonzoPParams {..}
 
 instance Era era => ToCBOR (AlonzoPParams Identity era) where
   toCBOR = toEraCBOR @era
