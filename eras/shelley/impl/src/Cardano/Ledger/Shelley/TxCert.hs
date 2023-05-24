@@ -25,7 +25,7 @@
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
   pattern TxCertMir,
-  pattern TxCertGenesisDeleg,
+  pattern GenesisDelegTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
   pattern DelegStakeTxCert,
@@ -123,7 +123,6 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
   getRetirePoolTxCert _ = Nothing
 
 class EraTxCert era => ShelleyEraTxCert era where
-
   mkRegTxCert :: StakeCredential (EraCrypto era) -> TxCert era
   getRegTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era))
 
@@ -135,8 +134,8 @@ class EraTxCert era => ShelleyEraTxCert era where
   getDelegStakeTxCert ::
     TxCert era -> Maybe (StakeCredential (EraCrypto era), KeyHash 'StakePool (EraCrypto era))
 
-  mkTxCertGenesisDeleg :: GenesisDelegCert (EraCrypto era) -> TxCert era
-  getTxCertGenesisDeleg :: TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
+  mkGenesisDelegTxCert :: GenesisDelegCert (EraCrypto era) -> TxCert era
+  getGenesisDelegTxCert :: TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
 
   mkTxCertMir :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
   getTxCertMir :: TxCert era -> Maybe (MIRCert (EraCrypto era))
@@ -159,10 +158,10 @@ instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
   getDelegStakeTxCert (ShelleyTxCertDelegCert (ShelleyDelegCert c kh)) = Just (c, kh)
   getDelegStakeTxCert _ = Nothing
 
-  mkTxCertGenesisDeleg = ShelleyTxCertGenesisDeleg
+  mkGenesisDelegTxCert = ShelleyTxCertGenesisDeleg
 
-  getTxCertGenesisDeleg (ShelleyTxCertGenesisDeleg c) = Just c
-  getTxCertGenesisDeleg _ = Nothing
+  getGenesisDelegTxCert (ShelleyTxCertGenesisDeleg c) = Just c
+  getGenesisDelegTxCert _ = Nothing
 
   mkTxCertMir = ShelleyTxCertMir
 
@@ -193,13 +192,17 @@ pattern TxCertMir d <- (getTxCertMir -> Just d)
   where
     TxCertMir d = mkTxCertMir d
 
-pattern TxCertGenesisDeleg ::
+pattern GenesisDelegTxCert ::
   ShelleyEraTxCert era =>
-  GenesisDelegCert (EraCrypto era) ->
+  KeyHash 'Genesis (EraCrypto era) ->
+  KeyHash 'GenesisDelegate (EraCrypto era) ->
+  Hash (EraCrypto era) (VerKeyVRF (EraCrypto era)) ->
   TxCert era
-pattern TxCertGenesisDeleg d <- (getTxCertGenesisDeleg -> Just d)
+pattern GenesisDelegTxCert genKey genDelegKey vrf <-
+  (getGenesisDelegTxCert -> Just (GenesisDelegCert genKey genDelegKey vrf))
   where
-    TxCertGenesisDeleg d = mkTxCertGenesisDeleg d
+    GenesisDelegTxCert genKey genDelegKey vrf =
+      mkGenesisDelegTxCert $ GenesisDelegCert genKey genDelegKey vrf
 
 -- | Genesis key delegation certificate
 data GenesisDelegCert c
@@ -348,10 +351,10 @@ instance
       | 0 <= t && t < 3 -> shelleyTxCertDelegDecoder t
       | 3 <= t && t < 5 -> poolTxCertDecoder t
     5 -> do
-      a <- decCBOR
-      b <- decCBOR
-      c <- decCBOR
-      pure (4, TxCertGenesisDeleg $ GenesisDelegCert a b c)
+      gen <- decCBOR
+      genDeleg <- decCBOR
+      vrf <- decCBOR
+      pure (4, GenesisDelegTxCert gen genDeleg vrf)
     6 -> do
       x <- decCBOR
       pure (2, ShelleyTxCertMir x)
@@ -446,7 +449,7 @@ isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
 isGenesisDelegation :: ShelleyEraTxCert era => TxCert era -> Bool
-isGenesisDelegation = isJust . getTxCertGenesisDeleg
+isGenesisDelegation = isJust . getGenesisDelegTxCert
 
 -- | Check for 'RegPool' constructor
 isRegPool :: EraTxCert era => TxCert era -> Bool

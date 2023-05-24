@@ -49,10 +49,9 @@ import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Shelley.TxCert (
-  GenesisDelegCert (..),
   pattern DelegStakeTxCert,
+  pattern GenesisDelegTxCert,
   pattern RegTxCert,
-  pattern TxCertGenesisDeleg,
   pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
@@ -346,12 +345,10 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     hashVKey = hashKey . vKey
     mkCert gkey key vrf =
       Just
-        ( TxCertGenesisDeleg
-            ( GenesisDelegCert
-                (hashVKey gkey)
-                (hashVKey key)
-                (hashVerKeyVRF vrf)
-            )
+        ( GenesisDelegTxCert
+            (hashVKey gkey)
+            (hashVKey key)
+            (hashVerKeyVRF vrf)
         , CoreKeyCred [gkey]
         )
     GenDelegs genDelegs_ = dsGenDelegs $ certDState dpState

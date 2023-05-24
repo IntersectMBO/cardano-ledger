@@ -97,8 +97,8 @@ instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   getDelegStakeTxCert (ConwayTxCertDeleg (ConwayDelegCert c (DelegStake kh))) = Just (c, kh)
   getDelegStakeTxCert _ = Nothing
 
-  mkTxCertGenesisDeleg = notSupportedInThisEra
-  getTxCertGenesisDeleg _ = Nothing
+  mkGenesisDelegTxCert = notSupportedInThisEra
+  getGenesisDelegTxCert _ = Nothing
 
   mkTxCertMir = notSupportedInThisEra
   getTxCertMir = const Nothing

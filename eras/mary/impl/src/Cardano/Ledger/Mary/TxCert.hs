@@ -52,10 +52,10 @@ instance Crypto c => ShelleyEraTxCert (MaryEra c) where
   getDelegStakeTxCert (ShelleyTxCertDelegCert (ShelleyDelegCert c kh)) = Just (c, kh)
   getDelegStakeTxCert _ = Nothing
 
-  mkTxCertGenesisDeleg = ShelleyTxCertGenesisDeleg
+  mkGenesisDelegTxCert = ShelleyTxCertGenesisDeleg
 
-  getTxCertGenesisDeleg (ShelleyTxCertGenesisDeleg c) = Just c
-  getTxCertGenesisDeleg _ = Nothing
+  getGenesisDelegTxCert (ShelleyTxCertGenesisDeleg c) = Just c
+  getGenesisDelegTxCert _ = Nothing
 
   mkTxCertMir = ShelleyTxCertMir
 
