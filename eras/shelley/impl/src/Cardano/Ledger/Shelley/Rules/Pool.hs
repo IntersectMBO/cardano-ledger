@@ -53,8 +53,8 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxCert (
   isInstantaneousRewards,
   pattern DelegStakeTxCert,
+  pattern GenesisDelegTxCert,
   pattern RegTxCert,
-  pattern TxCertGenesisDeleg,
   pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
@@ -245,7 +245,7 @@ poolDelegationTransition = do
     DelegStakeTxCert _ _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps
-    TxCertGenesisDeleg _ -> do
+    GenesisDelegTxCert _ _ _ -> do
       failBecause $ WrongCertificateTypePOOL 2
       pure ps
     _ | isInstantaneousRewards c -> do

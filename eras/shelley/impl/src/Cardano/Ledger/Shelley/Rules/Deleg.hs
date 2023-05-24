@@ -57,10 +57,9 @@ import Cardano.Ledger.Shelley.TxBody (
   Ptr,
  )
 import Cardano.Ledger.Shelley.TxCert (
-  GenesisDelegCert (..),
   pattern DelegStakeTxCert,
+  pattern GenesisDelegTxCert,
   pattern RegTxCert,
-  pattern TxCertGenesisDeleg,
   pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (
@@ -295,7 +294,7 @@ delegationTransition = do
       UM.member hk (rewards ds) ?! StakeDelegationImpossibleDELEG hk
 
       pure (ds {dsUnified = delegations ds UM.⨃ Map.singleton hk dpool})
-    TxCertGenesisDeleg (GenesisDelegCert gkh vkh vrf) -> do
+    GenesisDelegTxCert gkh vkh vrf -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp
