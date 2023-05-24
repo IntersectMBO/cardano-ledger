@@ -71,15 +71,10 @@ transaction_body =
   , ? 20 : [* proposal_procedure]   ; New; Proposal procedures
   }
 
-vote_info =
-  [ voter_role
-  , stake_credential
-  ]
-
 voting_procedure =
   [ governance_action_id
   , voter_role
-  , stake_credential
+  , voting_credential
   , vote
   , anchor / null
   ]
@@ -98,6 +93,7 @@ governance_action =
   // no_confidence
   // new_committee
   // new_constitution
+  // info_action
   ]
 
 parameter_change_action = (0, protocol_param_update)
@@ -111,6 +107,8 @@ no_confidence = 3
 new_committee = (4, [* $addr_keyhash], rational)
 
 new_constitution = (5, $hash32)
+
+info_action = 6
 
 ; constitutional committee - 0
 ; DRep - 1
@@ -283,8 +281,8 @@ stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, voting_credential)
 stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
 vote_reg_deleg_cert = (12, stake_credential, voting_credential, coin)
 stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, voting_credential, coin)
-reg_committee_hot_key_cert = (14, addr_keyhash, addr_keyhash)
-unreg_committee_hot_key_cert = (15, addr_keyhash)
+reg_committee_hot_key_cert = (14, committee_cold_keyhash, committee_hot_keyhash)
+unreg_committee_hot_key_cert = (15, committee_cold_keyhash)
 
 
 delta_coin = int
@@ -503,10 +501,12 @@ network_id = 0 / 1
 
 epoch = uint
 
-addr_keyhash          = $hash28
-genesis_delegate_hash = $hash28
-pool_keyhash          = $hash28
-genesishash           = $hash28
+addr_keyhash           = $hash28
+genesis_delegate_hash  = $hash28
+pool_keyhash           = $hash28
+genesishash            = $hash28
+committee_cold_keyhash = $hash28
+committee_hot_keyhash  = $hash28
 
 vrf_keyhash           = $hash32
 auxiliary_data_hash   = $hash32

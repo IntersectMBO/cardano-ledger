@@ -204,6 +204,8 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
     ppRecord
       "NewConstitution"
       [("hash", prettyA c)]
+  prettyA InfoAction =
+    ppRecord "InfoAction" []
 
 instance forall c. PrettyA (ConwayTxCert c) where
   prettyA = ppConwayTxCert

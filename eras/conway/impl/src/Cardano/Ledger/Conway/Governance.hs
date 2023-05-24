@@ -90,6 +90,7 @@ data GovernanceAction era
   | NoConfidence
   | NewCommittee !(Set (KeyHash 'Voting (EraCrypto era))) !Rational
   | NewConstitution !(SafeHash (EraCrypto era) ByteString)
+  | InfoAction
   deriving (Generic)
 
 deriving instance EraPParams era => Eq (GovernanceAction era)
@@ -113,6 +114,7 @@ instance EraPParams era => DecCBOR (GovernanceAction era) where
       dec 3 = SumD NoConfidence
       dec 4 = SumD NewCommittee <! From <! From
       dec 5 = SumD NewConstitution <! From
+      dec 6 = SumD InfoAction
       dec k = Invalid k
 
 instance EraPParams era => EncCBOR (GovernanceAction era) where
@@ -124,6 +126,7 @@ instance EraPParams era => EncCBOR (GovernanceAction era) where
       enc NoConfidence = Sum NoConfidence 3
       enc (NewCommittee mems quorum) = Sum NewCommittee 4 !> To mems !> To quorum
       enc (NewConstitution h) = Sum NewConstitution 5 !> To h
+      enc InfoAction = Sum InfoAction 6
 
 newtype GovernanceActionIx = GovernanceActionIx Word64
   deriving (Generic, Eq, Ord, Show, Num, Enum, NFData, NoThunks, EncCBOR, DecCBOR, ToJSON)
