@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -13,10 +14,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Delegs (
-  ConwayDELEGS,
-  ConwayDelegsPredFailure (..),
-  ConwayDelegsEvent (..),
+module Cardano.Ledger.Conway.Rules.Certs (
+  ConwayCERTS,
+  ConwayCertsPredFailure (..),
+  ConwayCertsEvent (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, mkCertIxPartial)
@@ -29,27 +30,21 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (PState)
-import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEGS)
+import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS)
+import Cardano.Ledger.Conway.Rules.Cert (ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   Coin,
-  DState (..),
-  DelegEnv,
-  DelegsEnv (..),
-  DelplEnv (..),
+  DelegsEnv (DelegsEnv),
+  DelplEnv (DelplEnv),
   KeyHash,
   KeyRole (..),
-  PoolEnv,
-  Ptr (..),
+  Ptr (Ptr),
   RewardAcnt,
-  ShelleyDELPL,
  )
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody)
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelplEvent,
-  ShelleyDelplPredFailure,
   drainWithdrawals,
   validateDelegationRegistered,
   validateZeroRewards,
@@ -71,51 +66,54 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-data ConwayDelegsPredFailure era
+data ConwayCertsPredFailure era
   = -- | Target pool which is not registered
     DelegateeNotRegisteredDELEG
       !(KeyHash 'StakePool (EraCrypto era))
   | -- | Withdrawals that are missing or do not withdrawal the entire amount
-    WithdrawalsNotInRewardsDELEGS
+    WithdrawalsNotInRewardsCERTS
       !(Map (RewardAcnt (EraCrypto era)) Coin)
   | -- | CERT rule subtransition Failures
     CertFailure !(PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
 
-instance NoThunks (PredicateFailure (EraRule "CERT" era)) => NoThunks (ConwayDelegsPredFailure era)
+deriving stock instance
+  Eq (PredicateFailure (EraRule "CERT" era)) =>
+  Eq (ConwayCertsPredFailure era)
+
+deriving stock instance
+  Show (PredicateFailure (EraRule "CERT" era)) =>
+  Show (ConwayCertsPredFailure era)
+
+instance
+  NoThunks (PredicateFailure (EraRule "CERT" era)) =>
+  NoThunks (ConwayCertsPredFailure era)
+
+newtype ConwayCertsEvent era = CertEvent (Event (EraRule "CERT" era))
 
 instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "CERT" era))
   ) =>
-  EncCBOR (ConwayDelegsPredFailure era)
+  EncCBOR (ConwayCertsPredFailure era)
   where
   encCBOR =
     encode . \case
       DelegateeNotRegisteredDELEG kh -> Sum (DelegateeNotRegisteredDELEG @era) 0 !> To kh
-      WithdrawalsNotInRewardsDELEGS rs -> Sum (WithdrawalsNotInRewardsDELEGS @era) 1 !> To rs
+      WithdrawalsNotInRewardsCERTS rs -> Sum (WithdrawalsNotInRewardsCERTS @era) 1 !> To rs
       CertFailure x -> Sum (CertFailure @era) 2 !> To x
 
 instance
   ( Era era
   , DecCBOR (PredicateFailure (EraRule "CERT" era))
   ) =>
-  DecCBOR (ConwayDelegsPredFailure era)
+  DecCBOR (ConwayCertsPredFailure era)
   where
   decCBOR = decode $ Summands "ConwayTallyPredFailure" $ \case
     0 -> SumD DelegateeNotRegisteredDELEG <! From
-    1 -> SumD WithdrawalsNotInRewardsDELEGS <! From
+    1 -> SumD WithdrawalsNotInRewardsCERTS <! From
     2 -> SumD CertFailure <! From
     k -> Invalid k
-
-deriving instance
-  Eq (PredicateFailure (EraRule "CERT" era)) =>
-  Eq (ConwayDelegsPredFailure era)
-deriving instance
-  Show (PredicateFailure (EraRule "CERT" era)) =>
-  Show (ConwayDelegsPredFailure era)
-
-newtype ConwayDelegsEvent era = CertEvent (Event (EraRule "CERT" era))
 
 instance
   ( EraTx era
@@ -123,34 +121,32 @@ instance
   , State (EraRule "CERT" era) ~ CertState era
   , Signal (EraRule "CERT" era) ~ TxCert era
   , Environment (EraRule "CERT" era) ~ DelplEnv era
-  , EraRule "DELEGS" era ~ ConwayDELEGS era
-  , Embed (EraRule "CERT" era) (ConwayDELEGS era)
+  , Embed (EraRule "CERT" era) (ConwayCERTS era)
   ) =>
-  STS (ConwayDELEGS era)
+  STS (ConwayCERTS era)
   where
-  type State (ConwayDELEGS era) = CertState era
-  type Signal (ConwayDELEGS era) = Seq (TxCert era)
-  type Environment (ConwayDELEGS era) = DelegsEnv era
-  type BaseM (ConwayDELEGS era) = ShelleyBase
+  type State (ConwayCERTS era) = CertState era
+  type Signal (ConwayCERTS era) = Seq (TxCert era)
+  type Environment (ConwayCERTS era) = DelegsEnv era
+  type BaseM (ConwayCERTS era) = ShelleyBase
   type
-    PredicateFailure (ConwayDELEGS era) =
-      ConwayDelegsPredFailure era
-  type Event (ConwayDELEGS era) = ConwayDelegsEvent era
+    PredicateFailure (ConwayCERTS era) =
+      ConwayCertsPredFailure era
+  type Event (ConwayCERTS era) = ConwayCertsEvent era
 
-  transitionRules = [conwayDelegsTransition @era]
+  transitionRules = [conwayCertsTransition @era]
 
-conwayDelegsTransition ::
+conwayCertsTransition ::
   forall era.
   ( EraTx era
   , ShelleyEraTxBody era
   , State (EraRule "CERT" era) ~ CertState era
-  , Embed (EraRule "CERT" era) (ConwayDELEGS era)
+  , Embed (EraRule "CERT" era) (ConwayCERTS era)
   , Environment (EraRule "CERT" era) ~ DelplEnv era
   , Signal (EraRule "CERT" era) ~ TxCert era
-  , EraRule "DELEGS" era ~ ConwayDELEGS era
   ) =>
-  TransitionRule (ConwayDELEGS era)
-conwayDelegsTransition = do
+  TransitionRule (ConwayCERTS era)
+conwayCertsTransition = do
   TRC (env@(DelegsEnv slot txIx pp tx acnt), certState, certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
 
@@ -158,12 +154,12 @@ conwayDelegsTransition = do
     Empty -> do
       let dState = certDState certState
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-      validateTrans WithdrawalsNotInRewardsDELEGS $
+      validateTrans WithdrawalsNotInRewardsCERTS $
         validateZeroRewards dState withdrawals network
       pure $ certState {certDState = drainWithdrawals dState withdrawals}
     gamma :|> c -> do
       certState' <-
-        trans @(ConwayDELEGS era) $ TRC (env, certState, gamma)
+        trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
       validateTrans DelegateeNotRegisteredDELEG $
         validateDelegationRegistered certState' c
       -- It is impossible to have 65535 number of certificates in a
@@ -175,21 +171,11 @@ conwayDelegsTransition = do
 instance
   ( Era era
   , STS (ConwayCERT era)
-  , BaseM (ConwayCERT era) ~ ShelleyBase
-  , PredicateFailure (ConwayCERT era) ~ ShelleyDelplPredFailure era
-  , Event (ConwayCERT era) ~ ShelleyDelplEvent era
-  , Embed (EraRule "POOL" era) (ShelleyDELPL era)
-  , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
-  , State (EraRule "POOL" era) ~ PState era
-  , State (EraRule "DELEG" era) ~ DState era
-  , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , Signal (EraRule "POOL" era) ~ TxCert era
-  , Signal (EraRule "DELEG" era) ~ TxCert era
-  , PredicateFailure (EraRule "CERT" era) ~ ShelleyDelplPredFailure era
-  , Event (EraRule "CERT" era) ~ ShelleyDelplEvent era
+  , BaseM (EraRule "CERT" era) ~ ShelleyBase
+  , Event (EraRule "CERT" era) ~ ConwayCertEvent era
+  , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
   ) =>
-  Embed (ConwayCERT era) (ConwayDELEGS era)
+  Embed (ConwayCERT era) (ConwayCERTS era)
   where
   wrapFailed = CertFailure
   wrapEvent = CertEvent

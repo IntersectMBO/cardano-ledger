@@ -236,7 +236,9 @@ pcSmallUTxO proof u txs = ppMap pcTxIn (shortTxOut proof) m
 
 raiseMockError ::
   forall era.
-  (Reflect era, PrettyA (TxCert era)) =>
+  ( Reflect era
+  , PrettyA (TxCert era)
+  ) =>
   Word64 ->
   SlotNo ->
   EpochState era ->
@@ -565,7 +567,8 @@ chainTest proof n gsize = testProperty message action
       -- Here is where we can add some properties for traces:
       pure (_traceInitState trace1 === initState)
 
-testTraces :: Int -> TestTree
+testTraces ::
+  Int -> TestTree
 testTraces n =
   testGroup
     "MockChainTrace"

@@ -1125,8 +1125,11 @@ instance
 -- in a way that is Era Agnostic
 
 applySTSByProof ::
-  forall era.
-  (Era era, GoodCrypto (EraCrypto era)) =>
+  forall era c.
+  ( Era era
+  , EraCrypto era ~ c
+  , GoodCrypto (EraCrypto era)
+  ) =>
   Proof era ->
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))

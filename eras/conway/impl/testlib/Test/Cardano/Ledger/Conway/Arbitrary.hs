@@ -204,7 +204,7 @@ instance Era era => Arbitrary (ConwayTallyPredFailure era) where
 
 instance
   ( Arbitrary (PredicateFailure (EraRule "UTXOW" era))
-  , Arbitrary (PredicateFailure (EraRule "DELEGS" era))
+  , Arbitrary (PredicateFailure (EraRule "CERTS" era))
   , Arbitrary (PredicateFailure (EraRule "TALLY" era))
   ) =>
   Arbitrary (ConwayLedgerPredFailure era)
@@ -212,7 +212,7 @@ instance
   arbitrary =
     oneof
       [ ConwayUtxowFailure <$> arbitrary
-      , ConwayDelegsFailure <$> arbitrary
+      , ConwayCertsFailure <$> arbitrary
       , ConwayTallyFailure <$> arbitrary
       ]
 
@@ -261,17 +261,17 @@ instance
   where
   arbitrary = undefined
 
--- DELEGS
+-- CERTS
 
 instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "CERT" era))
   ) =>
-  Arbitrary (ConwayDelegsPredFailure era)
+  Arbitrary (ConwayCertsPredFailure era)
   where
   arbitrary =
     oneof
       [ DelegateeNotRegisteredDELEG <$> arbitrary
-      , WithdrawalsNotInRewardsDELEGS <$> arbitrary
+      , WithdrawalsNotInRewardsCERTS <$> arbitrary
       , CertFailure <$> arbitrary
       ]

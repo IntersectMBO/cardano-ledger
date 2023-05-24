@@ -34,9 +34,13 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedure (..),
  )
 import Cardano.Ledger.Conway.Rules (
-  ConwayDelegsPredFailure (..),
+  ConwayCertPredFailure (..),
+  ConwayCertsPredFailure (..),
+  ConwayDelegPredFailure (..),
   ConwayLedgerPredFailure (..),
+  ConwayPoolPredFailure,
   ConwayTallyPredFailure,
+  ConwayVDelPredFailure,
   EnactState (..),
   PredicateFailure,
   RatifyState (..),
@@ -55,6 +59,7 @@ import Cardano.Ledger.Pretty (
   ppAuxiliaryDataHash,
   ppCoin,
   ppKeyHash,
+  ppMaybe,
   ppNetwork,
   ppPoolCert,
   ppRecord,
@@ -218,13 +223,13 @@ instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
 
 instance
   ( PrettyA (PredicateFailure (EraRule "UTXOW" era))
-  , PrettyA (PredicateFailure (EraRule "DELEGS" era))
+  , PrettyA (PredicateFailure (EraRule "CERTS" era))
   , PrettyA (PredicateFailure (EraRule "TALLY" era))
   ) =>
   PrettyA (ConwayLedgerPredFailure era)
   where
   prettyA (ConwayUtxowFailure x) = prettyA x
-  prettyA (ConwayDelegsFailure x) = prettyA x
+  prettyA (ConwayCertsFailure x) = prettyA x
   prettyA (ConwayTallyFailure x) = prettyA x
 
 instance PrettyA (ConwayTallyPredFailure era) where
@@ -307,14 +312,68 @@ instance
 
 instance
   PrettyA (PredicateFailure (EraRule "CERT" era)) =>
-  PrettyA (ConwayDelegsPredFailure era)
+  PrettyA (ConwayCertsPredFailure era)
   where
   prettyA (DelegateeNotRegisteredDELEG x) =
     ppRecord
       "DelegateeNotRegisteredDELEG"
       [("KeyHash", prettyA x)]
-  prettyA (WithdrawalsNotInRewardsDELEGS x) =
+  prettyA (WithdrawalsNotInRewardsCERTS x) =
     ppRecord
       "WithdrawalsNotInRewardsDELEGS"
       [("Missing Withdrawals", prettyA x)]
   prettyA (CertFailure x) = prettyA x
+
+instance
+  ( PrettyA (PredicateFailure (EraRule "DELEG" era))
+  , PrettyA (PredicateFailure (EraRule "POOL" era))
+  , PrettyA (PredicateFailure (EraRule "VDEL" era))
+  ) =>
+  PrettyA (ConwayCertPredFailure era)
+  where
+  prettyA = \case
+    DelegFailure x ->
+      ppRecord
+        "ConwayDelegFailure"
+        [("DELEG", prettyA x)]
+    PoolFailure x ->
+      ppRecord
+        "ConwayPoolFailure"
+        [("POOL", prettyA x)]
+    VDelFailure x ->
+      ppRecord
+        "ConwayVDelFailure"
+        [("VDEL", prettyA x)]
+
+instance PrettyA (ConwayDelegPredFailure era) where
+  prettyA = \case
+    IncorrectDepositDELEG x ->
+      ppRecord
+        "IncorrectDepositDELEG"
+        [("Coin", prettyA x)]
+    StakeKeyAlreadyRegisteredDELEG x ->
+      ppRecord
+        "StakeKeyAlreadyRegisteredDELEG"
+        [("Credential", prettyA x)]
+    StakeKeyNotRegisteredDELEG x ->
+      ppRecord
+        "StakeKeyNotRegisteredDELEG"
+        [("Credential", prettyA x)]
+    StakeKeyHasNonZeroAccountBalanceDELEG x ->
+      ppRecord
+        "StakeKeyHasNonZeroAccountBalanceDELEG"
+        [("Coin", ppMaybe ppCoin x)]
+    DRepAlreadyRegisteredForStakeKeyDELEG x ->
+      ppRecord
+        "DRepAlreadyRegisteredForStakeKeyDELEG"
+        [("Credential", prettyA x)]
+    WrongCertificateTypeDELEG ->
+      ppRecord
+        "WrongCertificateTypeDELEG"
+        []
+
+instance PrettyA (ConwayPoolPredFailure era) where
+  prettyA = const $ ppRecord "ConwayPoolPredFailure" []
+
+instance PrettyA (ConwayVDelPredFailure era) where
+  prettyA = const $ ppRecord "ConwayVDelPredFailure" []

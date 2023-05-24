@@ -4,7 +4,10 @@
 module Cardano.Ledger.Conway.Era (
   ConwayEra,
   ConwayCERT,
-  ConwayDELEGS,
+  ConwayDELEG,
+  ConwayPOOL,
+  ConwayVDEL,
+  ConwayCERTS,
   ConwayTALLY,
   ConwayNEWEPOCH,
   ConwayEPOCH,
@@ -76,13 +79,25 @@ data ConwayRATIFY era
 
 type instance EraRule "RATIFY" (ConwayEra c) = ConwayRATIFY (ConwayEra c)
 
-data ConwayDELEGS era
+data ConwayCERTS era
 
-type instance EraRule "DELEGS" (ConwayEra c) = ConwayDELEGS (ConwayEra c)
+type instance EraRule "CERTS" (ConwayEra c) = ConwayCERTS (ConwayEra c)
 
 data ConwayCERT era
 
 type instance EraRule "CERT" (ConwayEra c) = ConwayCERT (ConwayEra c)
+
+data ConwayDELEG era
+
+type instance EraRule "DELEG" (ConwayEra c) = ConwayDELEG (ConwayEra c)
+
+data ConwayPOOL era
+
+type instance EraRule "POOL" (ConwayEra c) = ConwayPOOL (ConwayEra c)
+
+data ConwayVDEL era
+
+type instance EraRule "VDEL" (ConwayEra c) = ConwayVDEL (ConwayEra c)
 
 -- Rules inherited from Babbage
 
@@ -96,11 +111,7 @@ type instance EraRule "BBODY" (ConwayEra c) = AlonzoBBODY (ConwayEra c)
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" (ConwayEra c) = API.ShelleyDELEG (ConwayEra c)
-
 type instance EraRule "LEDGERS" (ConwayEra c) = API.ShelleyLEDGERS (ConwayEra c)
-
-type instance EraRule "POOL" (ConwayEra c) = API.ShelleyPOOL (ConwayEra c)
 
 type instance EraRule "POOLREAP" (ConwayEra c) = API.ShelleyPOOLREAP (ConwayEra c)
 
