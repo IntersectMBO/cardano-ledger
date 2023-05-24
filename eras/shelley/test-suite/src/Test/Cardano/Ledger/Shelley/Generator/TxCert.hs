@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.API (
   PState (..),
   PoolParams (..),
   RewardAcnt (..),
-  ShelleyDelegCert (..),
   StrictMaybe (..),
   VKey,
  )
@@ -51,8 +50,10 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
-  pattern ShelleyTxCertDeleg,
+  pattern DelegStakeTxCert,
+  pattern RegTxCert,
   pattern TxCertGenesisDeleg,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import qualified Cardano.Ledger.UMap as UM
@@ -187,7 +188,7 @@ genRegKeyCert
               (_payKey, stakeKey) <- QC.elements availableKeys
               pure $
                 Just
-                  ( ShelleyTxCertDeleg (ShelleyRegCert (mkCred stakeKey))
+                  ( RegTxCert (mkCred stakeKey)
                   , NoCred
                   )
         )
@@ -199,7 +200,7 @@ genRegKeyCert
               (_, stakeScript) <- QC.elements availableScripts
               pure $
                 Just
-                  ( ShelleyTxCertDeleg (ShelleyRegCert (scriptToCred' stakeScript))
+                  ( RegTxCert (scriptToCred' stakeScript)
                   , NoCred
                   )
         )
@@ -228,7 +229,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
           [] -> pure Nothing
           _ -> do
             (_payKey, stakeKey) <- QC.elements availableKeys
-            pure $ Just (ShelleyTxCertDeleg (ShelleyUnRegCert (mkCred stakeKey)), StakeCred stakeKey)
+            pure $ Just (UnRegTxCert (mkCred stakeKey), StakeCred stakeKey)
       )
     ,
       ( frequencyScriptCredDeReg
@@ -238,7 +239,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
             scriptPair@(_, stakeScript) <- QC.elements availableScripts
             pure $
               Just
-                ( ShelleyTxCertDeleg (ShelleyUnRegCert (scriptToCred' stakeScript))
+                ( UnRegTxCert (scriptToCred' stakeScript)
                 , ScriptCred scriptPair
                 )
       )
@@ -310,12 +311,12 @@ genDelegation
       scriptToCred' = ScriptHashObj . hashScript @era
       mkCert (_, delegatorKey) poolKey = Just (cert, StakeCred delegatorKey)
         where
-          cert = ShelleyTxCertDeleg (ShelleyDelegCert (mkCred delegatorKey) poolKey)
+          cert = DelegStakeTxCert (mkCred delegatorKey) poolKey
       mkCertFromScript (s, delegatorScript) poolKey =
         Just (scriptCert, ScriptCred (s, delegatorScript))
         where
           scriptCert =
-            ShelleyTxCertDeleg (ShelleyDelegCert (scriptToCred' delegatorScript) poolKey)
+            DelegStakeTxCert (scriptToCred' delegatorScript) poolKey
       registeredDelegate k = UM.member k (rewards (certDState dpState))
       availableDelegates = filter (registeredDelegate . mkCred . snd) keys
       availableDelegatesScripts =

@@ -68,7 +68,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyEraTxCert, pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert, pattern DelegStakeTxCert)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.UMap (UMElem (..), UMap (..), UView (..), fromCompact)
 import qualified Cardano.Ledger.UMap as UM
@@ -243,7 +243,7 @@ validateDelegationRegistered ::
   TxCert era ->
   Test (KeyHash 'StakePool (EraCrypto era))
 validateDelegationRegistered certState = \case
-  ShelleyTxCertDeleg (ShelleyDelegCert _ targetPool) ->
+  DelegStakeTxCert _ targetPool ->
     let stPools = psStakePoolParams $ certPState certState
      in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
   _ -> pure ()

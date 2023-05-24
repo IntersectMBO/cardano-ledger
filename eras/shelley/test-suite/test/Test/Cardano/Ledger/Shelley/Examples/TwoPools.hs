@@ -82,7 +82,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (..),
   ShelleyTxOut (..),
  )
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert)
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
  )
@@ -190,14 +190,14 @@ txbodyEx1 =
     (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
-        [ ShelleyTxCertDeleg (ShelleyRegCert Cast.aliceSHK)
-        , ShelleyTxCertDeleg (ShelleyRegCert Cast.bobSHK)
-        , ShelleyTxCertDeleg (ShelleyRegCert Cast.carlSHK)
+        [ RegTxCert Cast.aliceSHK
+        , RegTxCert Cast.bobSHK
+        , RegTxCert Cast.carlSHK
         , RegPoolTxCert alicePoolParams'
         , RegPoolTxCert bobPoolParams'
-        , ShelleyTxCertDeleg (ShelleyDelegCert Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys))
-        , ShelleyTxCertDeleg (ShelleyDelegCert Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys))
-        , ShelleyTxCertDeleg (ShelleyDelegCert Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys))
+        , DelegStakeTxCert Cast.aliceSHK (aikColdKeyHash Cast.alicePoolKeys)
+        , DelegStakeTxCert Cast.bobSHK (aikColdKeyHash Cast.bobPoolKeys)
+        , DelegStakeTxCert Cast.carlSHK (aikColdKeyHash Cast.alicePoolKeys)
         ]
     )
     (Withdrawals Map.empty)

@@ -59,7 +59,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt (..),
  )
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (pattern UnRegTxCert)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
@@ -514,8 +514,8 @@ validatingManyScriptsBody pf =
     , Outputs' [txOut]
     , Txfee (Coin 5)
     , Certs'
-        [ ShelleyTxCertDeleg (ShelleyUnRegCert $ timelockStakeCred pf)
-        , ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)
+        [ UnRegTxCert (timelockStakeCred pf)
+        , UnRegTxCert (scriptStakeCredSuceed pf)
         ]
     , Withdrawals'
         ( Withdrawals $
@@ -884,8 +884,8 @@ multipleEqualCertsInvalidTx pf =
         , Collateral' [mkGenesisTxIn 13]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
         , Certs'
-            [ ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)
-            , ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
+            [ UnRegTxCert (scriptStakeCredSuceed pf)
+            , UnRegTxCert (scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
             ]
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)

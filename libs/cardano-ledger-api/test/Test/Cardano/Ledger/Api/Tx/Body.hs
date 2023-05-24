@@ -17,9 +17,9 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.TxCert (
-  ShelleyDelegCert (..),
   isRegKey,
-  pattern ShelleyTxCertDeleg,
+  pattern RegTxCert,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Shelley.UTxO hiding (consumed, produced)
 import qualified Cardano.Ledger.UMap as UM
@@ -62,10 +62,10 @@ keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
     certs = tx ^. certsTxBodyL
     initialKeys = UM.RewDepUView $ dsUnified $ certDState dpstate
     keyDeposit = UM.compactCoinOrError (pp ^. ppKeyDepositL)
-    accum (!keys, !ans) (ShelleyTxCertDeleg (ShelleyRegCert k)) =
+    accum (!keys, !ans) (RegTxCert k) =
       -- Deposit is added locally to the growing 'keys'
       (UM.RewDepUView $ UM.insert k (UM.RDPair mempty keyDeposit) keys, ans)
-    accum (!keys, !ans) (ShelleyTxCertDeleg (ShelleyUnRegCert k)) =
+    accum (!keys, !ans) (UnRegTxCert k) =
       -- If the key is registered, lookup the deposit in the locally growing 'keys'
       -- if it is not registered, then just return ans
       case UM.lookup k keys of
@@ -109,7 +109,7 @@ genTxBodyFrom CertState {certDState, certPState} (UTxO u) = do
   certs <-
     shuffle $
       toList (txBody ^. certsTxBodyL)
-        <> (ShelleyTxCertDeleg . ShelleyUnRegCert <$> unDelegCreds)
+        <> (UnRegTxCert <$> unDelegCreds)
         <> (RegPoolTxCert <$> deRegKeys)
   pure
     ( txBody

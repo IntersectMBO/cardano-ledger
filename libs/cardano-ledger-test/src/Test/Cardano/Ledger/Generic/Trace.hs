@@ -137,7 +137,7 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- | Generate a Tx and an internal Model of the state after the tx
 --   has been applied. That model can be used to generate the next Tx
-genRsTxAndModel :: Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Tx era)
+genRsTxAndModel :: forall era. (Reflect era, ShelleyEraTxCert era) => Proof era -> Int -> SlotNo -> GenRS era (Tx era)
 genRsTxAndModel proof n slot = do
   (_, tx) <- genAlonzoTx proof slot
   modifyModel (\model -> applyTx proof n slot model tx)
@@ -146,7 +146,7 @@ genRsTxAndModel proof n slot = do
 -- | Generate a Vector of (StrictSeq (Tx era))  representing a (Vector Block)
 genRsTxSeq ::
   forall era.
-  Reflect era =>
+  (Reflect era, ShelleyEraTxCert era) =>
   Proof era ->
   Int ->
   Int ->
@@ -168,7 +168,7 @@ genRsTxSeq proof this lastN ans slot = do
 -- | Generate a Vector of Blocks, and an initial LedgerState
 genTxSeq ::
   forall era.
-  Reflect era =>
+  (Reflect era, ShelleyEraTxCert era) =>
   Proof era -> -- Proof of the Era we want to generate the sequence in
   GenSize -> -- Size of things the generated code should adhere to
   Int -> -- The number of Tx in the sequence
@@ -460,6 +460,7 @@ genTrace ::
   forall era.
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Int ->
@@ -480,6 +481,7 @@ traceProp ::
   forall era prop.
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Int ->
@@ -545,6 +547,7 @@ chainTest ::
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   , Eq (StashedAVVMAddresses era)
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Int ->
@@ -581,6 +584,7 @@ testTraces n =
 multiEpochTest ::
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Int ->

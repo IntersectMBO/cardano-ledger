@@ -8,6 +8,7 @@ import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Shelley.TxCert (
   EraTxCert (..),
   PoolCert (..),
+  ShelleyDelegCert (..),
   ShelleyEraTxCert (..),
   ShelleyTxCert (..),
   getScriptWitnessShelleyTxCert,
@@ -36,10 +37,20 @@ instance Crypto c => EraTxCert (MaryEra c) where
 instance Crypto c => ShelleyEraTxCert (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (MaryEra StandardCrypto) #-}
 
-  mkShelleyTxCertDeleg = ShelleyTxCertDelegCert
+  mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 
-  getShelleyTxCertDeleg (ShelleyTxCertDelegCert c) = Just c
-  getShelleyTxCertDeleg _ = Nothing
+  getRegTxCert (ShelleyTxCertDelegCert (ShelleyRegCert c)) = Just c
+  getRegTxCert _ = Nothing
+
+  mkUnRegTxCert = ShelleyTxCertDelegCert . ShelleyUnRegCert
+
+  getUnRegTxCert (ShelleyTxCertDelegCert (ShelleyUnRegCert c)) = Just c
+  getUnRegTxCert _ = Nothing
+
+  mkDelegStakeTxCert c kh = ShelleyTxCertDelegCert $ ShelleyDelegCert c kh
+
+  getDelegStakeTxCert (ShelleyTxCertDelegCert (ShelleyDelegCert c kh)) = Just (c, kh)
+  getDelegStakeTxCert _ = Nothing
 
   mkTxCertGenesisDeleg = ShelleyTxCertGenesisDeleg
 

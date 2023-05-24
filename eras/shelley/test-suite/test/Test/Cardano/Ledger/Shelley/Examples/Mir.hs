@@ -55,9 +55,8 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.TxCert (
   MIRCert (..),
-  ShelleyDelegCert (..),
   ShelleyTxCert (..),
-  pattern ShelleyTxCertDeleg,
+  pattern RegTxCert,
  )
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
@@ -143,7 +142,7 @@ txbodyEx1 pot =
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
         [ ShelleyTxCertMir (MIRCert pot ir)
-        , ShelleyTxCertDeleg (ShelleyRegCert Cast.aliceSHK)
+        , RegTxCert Cast.aliceSHK
         ]
     )
     (Withdrawals Map.empty)
