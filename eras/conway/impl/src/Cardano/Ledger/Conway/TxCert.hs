@@ -82,10 +82,20 @@ instance Crypto c => EraTxCert (ConwayEra c) where
   getRetirePoolTxCert _ = Nothing
 
 instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
-  mkShelleyTxCertDeleg = ConwayTxCertDeleg . fromShelleyDelegCert
+  mkRegTxCert c = ConwayTxCertDeleg $ ConwayRegCert c SNothing
 
-  getShelleyTxCertDeleg (ConwayTxCertDeleg conwayDelegCert) = toShelleyDelegCert conwayDelegCert
-  getShelleyTxCertDeleg _ = Nothing
+  getRegTxCert (ConwayTxCertDeleg (ConwayRegCert c _)) = Just c
+  getRegTxCert _ = Nothing
+
+  mkUnRegTxCert c = ConwayTxCertDeleg $ ConwayUnRegCert c SNothing
+
+  getUnRegTxCert (ConwayTxCertDeleg (ConwayUnRegCert c _)) = Just c
+  getUnRegTxCert _ = Nothing
+
+  mkDelegStakeTxCert c kh = ConwayTxCertDeleg $ ConwayDelegCert c (DelegStake kh)
+
+  getDelegStakeTxCert (ConwayTxCertDeleg (ConwayDelegCert c (DelegStake kh))) = Just (c, kh)
+  getDelegStakeTxCert _ = Nothing
 
   mkTxCertGenesisDeleg = notSupportedInThisEra
   getTxCertGenesisDeleg _ = Nothing

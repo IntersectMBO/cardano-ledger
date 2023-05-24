@@ -23,7 +23,6 @@ import Cardano.Ledger.Block (Block (..), bheader)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
-  ShelleyDelegCert (..),
   ShelleyLEDGER,
  )
 import Cardano.Ledger.Shelley.Core
@@ -42,7 +41,9 @@ import Cardano.Ledger.Shelley.TxCert (
   isReservesMIRCert,
   isRetirePool,
   isTreasuryMIRCert,
-  pattern ShelleyTxCertDeleg,
+  pattern DelegStakeTxCert,
+  pattern RegTxCert,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Protocol.TPraos.BHeader (
@@ -230,9 +231,9 @@ scriptCredentialCertsRatio certs =
       length $
         filter
           ( \case
-              ShelleyTxCertDeleg (ShelleyRegCert (ScriptHashObj _)) -> True
-              ShelleyTxCertDeleg (ShelleyUnRegCert (ScriptHashObj _)) -> True
-              ShelleyTxCertDeleg (ShelleyDelegCert (ScriptHashObj _) _) -> True
+              RegTxCert (ScriptHashObj _) -> True
+              UnRegTxCert (ScriptHashObj _) -> True
+              DelegStakeTxCert (ScriptHashObj _) _ -> True
               _ -> False
           )
           certs
@@ -240,7 +241,9 @@ scriptCredentialCertsRatio certs =
       length $
         filter
           ( \case
-              ShelleyTxCertDeleg _ -> True
+              RegTxCert _ -> True
+              UnRegTxCert _ -> True
+              DelegStakeTxCert _ _ -> True
               _ -> False
           )
           certs

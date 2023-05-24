@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Deleg (
 where
 
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Shelley.API (ShelleyDELEG, ShelleyDelegCert (..))
+import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -45,7 +45,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.QuickCheck (Property, conjoin, counterexample)
 
-import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert, pattern UnRegTxCert)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   delegTraceFromBlock,
   forAllChainTrace,
@@ -98,7 +98,7 @@ tests =
 keyRegistration :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyRegistration
   SourceSignalTarget
-    { signal = (ShelleyTxCertDeleg (ShelleyRegCert hk))
+    { signal = RegTxCert hk
     , target = targetSt
     } =
     conjoin
@@ -115,7 +115,7 @@ keyRegistration _ = property ()
 keyDeRegistration :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDeRegistration
   SourceSignalTarget
-    { signal = ShelleyTxCertDeleg (ShelleyUnRegCert hk)
+    { signal = UnRegTxCert hk
     , target = targetSt
     } =
     conjoin
@@ -132,7 +132,7 @@ keyDeRegistration _ = property ()
 keyDelegation :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDelegation
   SourceSignalTarget
-    { signal = ShelleyTxCertDeleg (ShelleyDelegCert from to)
+    { signal = DelegStakeTxCert from to
     , target = targetSt
     } =
     let fromImage = eval (rng (Set.singleton from `UM.domRestrictedMap` delegations targetSt))

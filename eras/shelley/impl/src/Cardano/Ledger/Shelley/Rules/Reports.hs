@@ -32,10 +32,11 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxCert (
-  ShelleyDelegCert (..),
   isInstantaneousRewards,
-  pattern ShelleyTxCertDeleg,
+  pattern DelegStakeTxCert,
+  pattern RegTxCert,
   pattern TxCertGenesisDeleg,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
@@ -51,9 +52,9 @@ showCred (KeyHashObj (KeyHash x)) = show x
 
 synopsisCert :: ShelleyEraTxCert era => TxCert era -> String
 synopsisCert x = case x of
-  ShelleyTxCertDeleg (ShelleyRegCert cred) -> "ShelleyRegCert " ++ take 10 (showCred cred)
-  ShelleyTxCertDeleg (ShelleyUnRegCert cred) -> "ShelleyUnRegCert " ++ take 10 (showCred cred)
-  ShelleyTxCertDeleg (ShelleyDelegCert cred _) -> "ShelleyDelegCert" ++ take 10 (showCred cred)
+  RegTxCert cred -> "ShelleyRegCert " ++ take 10 (showCred cred)
+  UnRegTxCert cred -> "ShelleyUnRegCert " ++ take 10 (showCred cred)
+  DelegStakeTxCert cred _ -> "ShelleyDelegCert" ++ take 10 (showCred cred)
   RegPoolTxCert pool -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
   RetirePoolTxCert khash e -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
   TxCertGenesisDeleg _ -> "GenesisCert"
