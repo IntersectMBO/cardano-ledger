@@ -76,6 +76,7 @@ enactmentTransition = do
     NoConfidence -> pure $ st {ensCommittee = SNothing}
     NewCommittee mems q -> pure $ st {ensCommittee = SJust (mems, q)}
     NewConstitution c -> pure $ st {ensConstitution = c}
+    InfoAction -> pure st
 
 instance Inject (EnactPredFailure era) (EnactPredFailure era) where
   inject = id
