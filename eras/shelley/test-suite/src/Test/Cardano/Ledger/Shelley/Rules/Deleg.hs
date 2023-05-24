@@ -178,7 +178,7 @@ checkInstantaneousRewards
   denv
   SourceSignalTarget {source, signal, target} =
     case signal of
-      TxCertMir (MIRCert ReservesMIR (StakeAddressesMIR irwd)) ->
+      MirTxCert (MIRCert ReservesMIR (StakeAddressesMIR irwd)) ->
         conjoin
           [ counterexample
               "a ReservesMIR certificate should add all entries to the `irwd` mapping"
@@ -198,7 +198,7 @@ checkInstantaneousRewards
                       == fold (iRReserves $ dsIRewards target)
               )
           ]
-      TxCertMir (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
+      MirTxCert (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
         conjoin
           [ counterexample
               "a TreasuryMIR certificate should add all entries to the `irwd` mapping"

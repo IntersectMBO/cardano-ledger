@@ -113,8 +113,8 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxCert (
   pattern DelegStakeTxCert,
   pattern GenesisDelegTxCert,
+  pattern MirTxCert,
   pattern RegTxCert,
-  pattern TxCertMir,
   pattern UnRegTxCert,
  )
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
@@ -639,7 +639,7 @@ tests =
        in checkEncodingCBOR
             shelleyProtVer
             "mir"
-            (TxCertMir @C (MIRCert ReservesMIR rws))
+            (MirTxCert @C (MIRCert ReservesMIR rws))
             ( T
                 ( TkListLen 2
                     . TkWord 6 -- make instantaneous rewards cert

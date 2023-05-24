@@ -504,7 +504,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
       then Nothing
       else
         Just
-          ( TxCertMir (MIRCert pot (StakeAddressesMIR credCoinMap))
+          ( MirTxCert (MIRCert pot (StakeAddressesMIR credCoinMap))
           , DelegateCred (aikCold <$> coreSigners)
           )
 
@@ -542,7 +542,7 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
       then Nothing
       else
         Just
-          ( TxCertMir (MIRCert pot (SendToOppositePotMIR $ Coin amount))
+          ( MirTxCert (MIRCert pot (SendToOppositePotMIR $ Coin amount))
           , DelegateCred (aikCold <$> coreSigners)
           )
 

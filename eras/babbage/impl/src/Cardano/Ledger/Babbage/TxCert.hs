@@ -49,7 +49,7 @@ instance Crypto c => ShelleyEraTxCert (BabbageEra c) where
   getGenesisDelegTxCert (ShelleyTxCertGenesisDeleg c) = Just c
   getGenesisDelegTxCert _ = Nothing
 
-  mkTxCertMir = ShelleyTxCertMir
+  mkMirTxCert = ShelleyTxCertMir
 
-  getTxCertMir (ShelleyTxCertMir c) = Just c
-  getTxCertMir _ = Nothing
+  getMirTxCert (ShelleyTxCertMir c) = Just c
+  getMirTxCert _ = Nothing
