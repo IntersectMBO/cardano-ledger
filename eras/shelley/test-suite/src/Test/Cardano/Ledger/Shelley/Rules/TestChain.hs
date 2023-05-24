@@ -233,7 +233,7 @@ delegTraceFromBlock chainSt block =
     delegCert (RegTxCert _) = True
     delegCert (UnRegTxCert _) = True
     delegCert (DelegStakeTxCert _ _) = True
-    delegCert (TxCertMir _) = True
+    delegCert (MirTxCert _) = True
     delegCert _ = False
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState

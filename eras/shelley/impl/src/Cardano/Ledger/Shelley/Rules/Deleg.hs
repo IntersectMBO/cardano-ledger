@@ -327,7 +327,7 @@ delegationTransition = do
     RegPoolTxCert _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds
-    _ | Just (MIRCert targetPot mirTarget) <- getTxCertMir c -> do
+    _ | Just (MIRCert targetPot mirTarget) <- getMirTxCert c -> do
       checkSlotNotTooLate slot
       case mirTarget of
         StakeAddressesMIR credCoinMap -> do

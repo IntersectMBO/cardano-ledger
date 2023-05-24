@@ -8,7 +8,7 @@
 
 module Cardano.Ledger.Shelley.Core (
   ShelleyEraTxBody (..),
-  pattern TxCertMir,
+  pattern MirTxCert,
   ShelleyEraTxCert (..),
   Withdrawals (..),
   Wdrl,
