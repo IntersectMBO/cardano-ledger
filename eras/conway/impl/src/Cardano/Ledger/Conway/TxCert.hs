@@ -100,8 +100,8 @@ instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   mkGenesisDelegTxCert = notSupportedInThisEra
   getGenesisDelegTxCert _ = Nothing
 
-  mkTxCertMir = notSupportedInThisEra
-  getTxCertMir = const Nothing
+  mkMirTxCert = notSupportedInThisEra
+  getMirTxCert = const Nothing
 
 class ShelleyEraTxCert era => ConwayEraTxCert era where
   mkConwayTxCertDeleg :: ConwayDelegCert (EraCrypto era) -> TxCert era

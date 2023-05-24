@@ -472,7 +472,7 @@ exampleCerts =
   StrictSeq.fromList
     [ RegTxCert (keyToCredential exampleStakeKey)
     , RegPoolTxCert examplePoolParams
-    , TxCertMir $
+    , MirTxCert $
         MIRCert ReservesMIR $
           StakeAddressesMIR $
             Map.fromList

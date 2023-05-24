@@ -24,7 +24,7 @@
 
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
-  pattern TxCertMir,
+  pattern MirTxCert,
   pattern GenesisDelegTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
@@ -137,8 +137,8 @@ class EraTxCert era => ShelleyEraTxCert era where
   mkGenesisDelegTxCert :: GenesisDelegCert (EraCrypto era) -> TxCert era
   getGenesisDelegTxCert :: TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
 
-  mkTxCertMir :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
-  getTxCertMir :: TxCert era -> Maybe (MIRCert (EraCrypto era))
+  mkMirTxCert :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
+  getMirTxCert :: TxCert era -> Maybe (MIRCert (EraCrypto era))
 
 instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (ShelleyEra StandardCrypto) #-}
@@ -163,10 +163,10 @@ instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
   getGenesisDelegTxCert (ShelleyTxCertGenesisDeleg c) = Just c
   getGenesisDelegTxCert _ = Nothing
 
-  mkTxCertMir = ShelleyTxCertMir
+  mkMirTxCert = ShelleyTxCertMir
 
-  getTxCertMir (ShelleyTxCertMir c) = Just c
-  getTxCertMir _ = Nothing
+  getMirTxCert (ShelleyTxCertMir c) = Just c
+  getMirTxCert _ = Nothing
 
 pattern RegTxCert :: ShelleyEraTxCert era => StakeCredential (EraCrypto era) -> TxCert era
 pattern RegTxCert c <- (getRegTxCert -> Just c)
@@ -187,10 +187,10 @@ pattern DelegStakeTxCert c kh <- (getDelegStakeTxCert -> Just (c, kh))
   where
     DelegStakeTxCert c kh = mkDelegStakeTxCert c kh
 
-pattern TxCertMir :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (EraCrypto era) -> TxCert era
-pattern TxCertMir d <- (getTxCertMir -> Just d)
+pattern MirTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (EraCrypto era) -> TxCert era
+pattern MirTxCert d <- (getMirTxCert -> Just d)
   where
-    TxCertMir d = mkTxCertMir d
+    MirTxCert d = mkMirTxCert d
 
 pattern GenesisDelegTxCert ::
   ShelleyEraTxCert era =>
@@ -462,15 +462,15 @@ isRetirePool (RetirePoolTxCert _ _) = True
 isRetirePool _ = False
 
 isInstantaneousRewards :: ShelleyEraTxCert era => TxCert era -> Bool
-isInstantaneousRewards = isJust . getTxCertMir
+isInstantaneousRewards = isJust . getMirTxCert
 
 isReservesMIRCert :: ShelleyEraTxCert era => TxCert era -> Bool
-isReservesMIRCert x = case getTxCertMir x of
+isReservesMIRCert x = case getMirTxCert x of
   Just (MIRCert ReservesMIR _) -> True
   _ -> False
 
 isTreasuryMIRCert :: ShelleyEraTxCert era => TxCert era -> Bool
-isTreasuryMIRCert x = case getTxCertMir x of
+isTreasuryMIRCert x = case getMirTxCert x of
   Just (MIRCert TreasuryMIR _) -> True
   _ -> False
 
@@ -482,7 +482,7 @@ isTreasuryMIRCert x = case getTxCertMir x of
 -- `getVKeyWitnessTxCert` instead.
 requiresVKeyWitness :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
 requiresVKeyWitness (RegTxCert _) = False
-requiresVKeyWitness x = isNothing $ getTxCertMir x
+requiresVKeyWitness x = isNothing $ getMirTxCert x
 {-# DEPRECATED requiresVKeyWitness "In favor of `getVKeyWitnessTxCert`" #-}
 
 getScriptWitnessShelleyTxCert ::
