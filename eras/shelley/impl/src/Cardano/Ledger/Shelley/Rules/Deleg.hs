@@ -58,9 +58,10 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
-  ShelleyDelegCert (..),
-  pattern ShelleyTxCertDeleg,
+  pattern DelegStakeTxCert,
+  pattern RegTxCert,
   pattern TxCertGenesisDeleg,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (
   Duration (..),
@@ -267,7 +268,7 @@ delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
   case c of
-    ShelleyTxCertDeleg (ShelleyRegCert hk) -> do
+    RegTxCert hk -> do
       -- (hk ∉ dom (rewards ds))
       UM.notMember hk (rewards ds) ?! StakeKeyAlreadyRegisteredDELEG hk
       let u1 = dsUnified ds
@@ -275,7 +276,7 @@ delegationTransition = do
           u2 = RewDepUView u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
           u3 = PtrUView u2 UM.∪ (ptr, hk)
       pure (ds {dsUnified = u3})
-    ShelleyTxCertDeleg (ShelleyUnRegCert hk) -> do
+    UnRegTxCert hk -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeKeyNotRegisteredDELEG hk
@@ -288,7 +289,7 @@ delegationTransition = do
           u3 = PtrUView u2 UM.⋫ Set.singleton hk
           u4 = ds {dsUnified = u3}
       pure u4
-    ShelleyTxCertDeleg (ShelleyDelegCert hk dpool) -> do
+    DelegStakeTxCert hk dpool -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
       UM.member hk (rewards ds) ?! StakeDelegationImpossibleDELEG hk

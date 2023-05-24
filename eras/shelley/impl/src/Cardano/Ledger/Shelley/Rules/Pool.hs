@@ -52,8 +52,10 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.TxCert (
   isInstantaneousRewards,
-  pattern ShelleyTxCertDeleg,
+  pattern DelegStakeTxCert,
+  pattern RegTxCert,
   pattern TxCertGenesisDeleg,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
@@ -234,7 +236,13 @@ poolDelegationTransition = do
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
       pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk e)}
-    ShelleyTxCertDeleg _ -> do
+    RegTxCert _ -> do
+      failBecause $ WrongCertificateTypePOOL 0
+      pure ps
+    UnRegTxCert _ -> do
+      failBecause $ WrongCertificateTypePOOL 0
+      pure ps
+    DelegStakeTxCert _ _ -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps
     TxCertGenesisDeleg _ -> do

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
@@ -47,9 +48,10 @@ import Cardano.Ledger.Shelley.TxBody (
   getRwdCred,
  )
 import Cardano.Ledger.Shelley.TxCert (
-  ShelleyDelegCert (..),
   ShelleyEraTxCert,
-  pattern ShelleyTxCertDeleg,
+  pattern DelegStakeTxCert,
+  pattern RegTxCert,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO as UTxO
@@ -68,11 +70,9 @@ scriptStakeCred ::
   TxCert era ->
   Maybe (ScriptHash (EraCrypto era))
 scriptStakeCred = \case
-  ShelleyTxCertDeleg delegCert ->
-    case delegCert of
-      ShelleyRegCert _ -> Nothing
-      ShelleyUnRegCert cred -> credScriptHash cred
-      ShelleyDelegCert cred _ -> credScriptHash cred
+  RegTxCert _ -> Nothing
+  UnRegTxCert cred -> credScriptHash cred
+  DelegStakeTxCert cred _ -> credScriptHash cred
   _ -> Nothing
 {-# DEPRECATED scriptStakeCred "In favor of `getScriptWitnessTxCert`" #-}
 

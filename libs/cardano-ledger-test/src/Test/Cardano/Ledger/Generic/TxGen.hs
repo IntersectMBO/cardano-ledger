@@ -60,7 +60,13 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
-import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..), ShelleyTxCert (..), pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (
+  ShelleyEraTxCert (..),
+  ShelleyTxCert (..),
+  pattern DelegStakeTxCert,
+  pattern RegTxCert,
+  pattern UnRegTxCert,
+ )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -554,7 +560,7 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
-genShelleyDelegCert :: forall era. Reflect era => GenRS era (ShelleyDelegCert (EraCrypto era))
+genShelleyDelegCert :: forall era. (Reflect era, ShelleyEraTxCert era) => GenRS era (TxCert era)
 genShelleyDelegCert =
   frequencyT
     [ (75, genShelleyRegCert)
@@ -562,21 +568,21 @@ genShelleyDelegCert =
     , (50, genDelegation)
     ]
   where
-    genShelleyRegCert = ShelleyRegCert <$> genFreshRegCred @era Cert
-    genShelleyUnRegCert = ShelleyUnRegCert <$> genCredential Cert
+    genShelleyRegCert = RegTxCert <$> genFreshRegCred @era Cert
+    genShelleyUnRegCert = UnRegTxCert <$> genCredential Cert
     genDelegation = do
       rewardAccount <- genFreshRegCred Cert
       (poolId, _) <- genPool
-      pure $ ShelleyDelegCert rewardAccount poolId
+      pure $ DelegStakeTxCert rewardAccount poolId
 
 genTxCertDeleg :: forall era. Reflect era => GenRS era (TxCert era)
 genTxCertDeleg = case reify @era of
-  Shelley _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
-  Mary _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
-  Allegra _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
-  Alonzo _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
-  Babbage _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
-  Conway _ -> ShelleyTxCertDeleg <$> genShelleyDelegCert
+  Shelley _ -> genShelleyDelegCert
+  Mary _ -> genShelleyDelegCert
+  Allegra _ -> genShelleyDelegCert
+  Alonzo _ -> genShelleyDelegCert
+  Babbage _ -> genShelleyDelegCert
+  Conway _ -> genShelleyDelegCert
 
 genTxCert :: forall era. Reflect era => SlotNo -> GenRS era (TxCert era)
 genTxCert slot =
@@ -599,25 +605,25 @@ genTxCert slot =
       delta <- lift $ choose (nextEpoch, maxEpoch)
       return . EpochNo $ (curEpoch + delta)
 
-getShelleyTxCertDelegG :: forall era. Reflect era => TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
-getShelleyTxCertDelegG = case reify @era of
-  Shelley _ -> getShelleyTxCertDeleg
-  Mary _ -> getShelleyTxCertDeleg
-  Allegra _ -> getShelleyTxCertDeleg
-  Alonzo _ -> getShelleyTxCertDeleg
-  Babbage _ -> getShelleyTxCertDeleg
-  Conway _ -> getShelleyTxCertDeleg -- TODO write a generator for Conway certs
+-- getShelleyTxCertDelegG :: forall era. Reflect era => TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
+-- getShelleyTxCertDelegG = case reify @era of
+--   Shelley _ -> getShelleyTxCertDeleg
+--   Mary _ -> getShelleyTxCertDeleg
+--   Allegra _ -> getShelleyTxCertDeleg
+--   Alonzo _ -> getShelleyTxCertDeleg
+--   Babbage _ -> getShelleyTxCertDeleg
+--   Conway _ -> getShelleyTxCertDeleg -- TODO write a generator for Conway certs
 
-mkShelleyTxCertDelegG :: forall era. Reflect era => ShelleyDelegCert (EraCrypto era) -> TxCert era
-mkShelleyTxCertDelegG = case reify @era of
-  Shelley _ -> mkShelleyTxCertDeleg
-  Mary _ -> mkShelleyTxCertDeleg
-  Allegra _ -> mkShelleyTxCertDeleg
-  Alonzo _ -> mkShelleyTxCertDeleg
-  Babbage _ -> mkShelleyTxCertDeleg
-  Conway _ -> mkShelleyTxCertDeleg -- TODO write a generator for Conway certs
+-- mkShelleyTxCertDelegG :: forall era. Reflect era => ShelleyDelegCert (EraCrypto era) -> TxCert era
+-- mkShelleyTxCertDelegG = case reify @era of
+--   Shelley _ -> mkShelleyTxCertDeleg
+--   Mary _ -> mkShelleyTxCertDeleg
+--   Allegra _ -> mkShelleyTxCertDeleg
+--   Alonzo _ -> mkShelleyTxCertDeleg
+--   Babbage _ -> mkShelleyTxCertDeleg
+--   Conway _ -> mkShelleyTxCertDeleg -- TODO write a generator for Conway certs
 
-genTxCerts :: forall era. Reflect era => SlotNo -> GenRS era [TxCert era]
+genTxCerts :: forall era. (Reflect era, ShelleyEraTxCert era) => SlotNo -> GenRS era [TxCert era]
 genTxCerts slot = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
         honest <- gets gsStableDelegators
@@ -641,39 +647,38 @@ genTxCerts slot = do
             case Map.lookup kh modelPools of
               Just _ -> pure (dc : dcs, ss, regCreds)
               Nothing -> pure (dcs, ss, regCreds)
-          _ | Just d <- getShelleyTxCertDelegG @era dc -> case d of
-            ShelleyRegCert regCred ->
-              if regCred `Map.member` regCreds -- Can't register if it is already registered
-                then pure (dcs, ss, regCreds)
-                else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
-            ShelleyUnRegCert deregCred ->
-              -- We can't make ShelleyUnRegCert certificate if deregCred is not already registered
-              -- or if the Rewards balance for deregCred is not 0,
-              -- or if the credential is one of the StableDelegators (which are never de-registered)
-              case Map.lookup deregCred regCreds of
-                Nothing -> pure (dcs, ss, regCreds)
-                -- No credential, skip making certificate
-                Just (Coin 0) ->
-                  -- Ok to make certificate, rewards balance is 0
-                  if Set.member deregCred honest
-                    then pure (dcs, ss, regCreds)
-                    else
-                      insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
-                        <$> lookupPlutusScript deregCred Cert
-                Just (Coin _) -> pure (dcs, ss, regCreds)
-            ShelleyDelegCert delegCred delegKey ->
-              let (dcs', regCreds') =
-                    if delegCred `Map.member` regCreds
-                      then (dcs, regCreds)
-                      else -- In order to Delegate, the delegCred must exist in rewards.
-                      -- so if it is not there, we put it there, otherwise we may
-                      -- never generate a valid delegation.
+          RegTxCert regCred ->
+            if regCred `Map.member` regCreds -- Can't register if it is already registered
+              then pure (dcs, ss, regCreds)
+              else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
+          UnRegTxCert deregCred ->
+            -- We can't make ShelleyUnRegCert certificate if deregCred is not already registered
+            -- or if the Rewards balance for deregCred is not 0,
+            -- or if the credential is one of the StableDelegators (which are never de-registered)
+            case Map.lookup deregCred regCreds of
+              Nothing -> pure (dcs, ss, regCreds)
+              -- No credential, skip making certificate
+              Just (Coin 0) ->
+                -- Ok to make certificate, rewards balance is 0
+                if Set.member deregCred honest
+                  then pure (dcs, ss, regCreds)
+                  else
+                    insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
+                      <$> lookupPlutusScript deregCred Cert
+              Just (Coin _) -> pure (dcs, ss, regCreds)
+          DelegStakeTxCert delegCred delegKey ->
+            let (dcs', regCreds') =
+                  if delegCred `Map.member` regCreds
+                    then (dcs, regCreds)
+                    else -- In order to Delegate, the delegCred must exist in rewards.
+                    -- so if it is not there, we put it there, otherwise we may
+                    -- never generate a valid delegation.
 
-                        ( mkShelleyTxCertDelegG (ShelleyRegCert delegCred) : dcs
-                        , Map.insert delegCred (Coin 99) regCreds
-                        )
-               in insertIfNotPresent dcs' regCreds' (Just delegKey)
-                    <$> lookupPlutusScript delegCred Cert
+                      ( (RegTxCert delegCred) : dcs
+                      , Map.insert delegCred (Coin 99) regCreds
+                      )
+             in insertIfNotPresent dcs' regCreds' (Just delegKey)
+                  <$> lookupPlutusScript delegCred Cert
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
@@ -843,14 +848,14 @@ minus :: MUtxo era -> Maybe (UtxoEntry era) -> MUtxo era
 minus m Nothing = m
 minus m (Just (txin, _)) = Map.delete txin m
 
-genAlonzoTx :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (UTxO era, Tx era)
+genAlonzoTx :: forall era. (Reflect era, ShelleyEraTxCert era) => Proof era -> SlotNo -> GenRS era (UTxO era, Tx era)
 genAlonzoTx proof slot = do
   (utxo, tx, _fee, _old) <- genAlonzoTxAndInfo proof slot
   pure (utxo, tx)
 
 genAlonzoTxAndInfo ::
   forall era.
-  Reflect era =>
+  (Reflect era, ShelleyEraTxCert era) =>
   Proof era ->
   SlotNo ->
   GenRS

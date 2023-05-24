@@ -38,7 +38,6 @@ import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   ProtVer (..),
-  ShelleyDelegCert (..),
   UTxO (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
@@ -49,7 +48,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt (..),
  )
-import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (pattern UnRegTxCert)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -319,7 +318,7 @@ validatingWithCertBody pf =
     [ Inputs' [mkGenesisTxIn 3]
     , Collateral' [mkGenesisTxIn 13]
     , Outputs' [validatingWithCertTxOut pf]
-    , Certs' [ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)]
+    , Certs' [UnRegTxCert (scriptStakeCredSuceed pf)]
     , Txfee (Coin 5)
     , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingWithCertRedeemers mempty)
     ]
@@ -374,7 +373,7 @@ notValidatingWithCertTx pf =
         [ Inputs' [mkGenesisTxIn 4]
         , Collateral' [mkGenesisTxIn 14]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
-        , Certs' [ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredFail pf)]
+        , Certs' [UnRegTxCert (scriptStakeCredFail pf)]
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
         ]
@@ -651,8 +650,8 @@ validatingManyScriptsBody pf =
     , Outputs' [validatingManyScriptsTxOut pf]
     , Txfee (Coin 5)
     , Certs'
-        [ ShelleyTxCertDeleg (ShelleyUnRegCert $ timelockStakeCred pf)
-        , ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)
+        [ UnRegTxCert (timelockStakeCred pf)
+        , UnRegTxCert (scriptStakeCredSuceed pf)
         ]
     , Withdrawals'
         ( Withdrawals $
@@ -784,8 +783,8 @@ validatingMultipleEqualCertsBody pf =
     , Collateral' [mkGenesisTxIn 13]
     , Outputs' [validatingMultipleEqualCertsOut pf]
     , Certs'
-        [ ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)
-        , ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
+        [ UnRegTxCert (scriptStakeCredSuceed pf)
+        , UnRegTxCert (scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
         ]
     , Txfee (Coin 5)
     , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingMultipleEqualCertsRedeemers mempty)

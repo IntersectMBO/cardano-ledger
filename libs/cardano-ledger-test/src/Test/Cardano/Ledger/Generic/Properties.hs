@@ -26,6 +26,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
+import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
@@ -102,6 +103,7 @@ genTxAndLEDGERState ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   GenSize ->
@@ -235,6 +237,7 @@ txPreserveAda genSize =
 adaIsPreserved ::
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Int ->
@@ -271,6 +274,7 @@ stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
 incrementStakeInvariant ::
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
+  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   GenSize ->

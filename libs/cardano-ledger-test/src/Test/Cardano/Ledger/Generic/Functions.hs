@@ -59,8 +59,8 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxOut (..),
  )
 import Cardano.Ledger.Shelley.TxCert (
-  ShelleyDelegCert (..),
-  pattern ShelleyTxCertDeleg,
+  pattern RegTxCert,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
@@ -130,8 +130,8 @@ depositsAndRefunds ::
   Coin
 depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) certificates
   where
-    accum ans (ShelleyTxCertDeleg (ShelleyRegCert _)) = pp ^. ppKeyDepositL <+> ans
-    accum ans (ShelleyTxCertDeleg (ShelleyUnRegCert hk)) =
+    accum ans (RegTxCert _) = pp ^. ppKeyDepositL <+> ans
+    accum ans (UnRegTxCert hk) =
       case Map.lookup hk keydeposits of
         Nothing -> ans
         Just c -> ans <-> c

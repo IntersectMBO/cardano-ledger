@@ -53,7 +53,6 @@ import Cardano.Ledger.Shelley.API (
   LedgerState (..),
   PoolParams (..),
   ProtVer (..),
-  ShelleyDelegCert (..),
   UTxO (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
@@ -71,7 +70,7 @@ import Cardano.Ledger.Shelley.TxBody (
   PoolMetadata (..),
   RewardAcnt (..),
  )
-import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (pattern UnRegTxCert)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (UView (RewDepUView))
 import qualified Cardano.Ledger.UMap as UM
@@ -410,7 +409,7 @@ validatingBodyWithCert pf =
     [ Inputs' [mkGenesisTxIn 3]
     , Collateral' [mkGenesisTxIn 13]
     , Outputs' [validatingTxWithCertOut pf]
-    , Certs' [ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredSuceed pf)]
+    , Certs' [UnRegTxCert (scriptStakeCredSuceed pf)]
     , Txfee (Coin 5)
     , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemrsWithCert mempty)
     ]
@@ -454,7 +453,7 @@ notValidatingTxWithCert pf =
         [ Inputs' [mkGenesisTxIn 4]
         , Collateral' [mkGenesisTxIn 14]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
-        , Certs' [ShelleyTxCertDeleg (ShelleyUnRegCert $ scriptStakeCredFail pf)]
+        , Certs' [UnRegTxCert (scriptStakeCredFail pf)]
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersWithCert mempty)
         ]

@@ -26,7 +26,9 @@ module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
   pattern TxCertMir,
   pattern TxCertGenesisDeleg,
-  pattern ShelleyTxCertDeleg,
+  pattern RegTxCert,
+  pattern UnRegTxCert,
+  pattern DelegStakeTxCert,
   ShelleyDelegCert (.., RegKey, DeRegKey, Delegate),
   getVKeyWitnessShelleyTxCert,
   getScriptWitnessShelleyTxCert,
@@ -111,16 +113,27 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
   getScriptWitnessTxCert = getScriptWitnessShelleyTxCert
 
   mkRegPoolTxCert = ShelleyTxCertPool . RegPool
+
   getRegPoolTxCert (ShelleyTxCertPool (RegPool poolParams)) = Just poolParams
   getRegPoolTxCert _ = Nothing
 
   mkRetirePoolTxCert poolId epochNo = ShelleyTxCertPool $ RetirePool poolId epochNo
+
   getRetirePoolTxCert (ShelleyTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
   getRetirePoolTxCert _ = Nothing
 
 class EraTxCert era => ShelleyEraTxCert era where
-  mkShelleyTxCertDeleg :: ShelleyDelegCert (EraCrypto era) -> TxCert era
-  getShelleyTxCertDeleg :: TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
+
+  mkRegTxCert :: StakeCredential (EraCrypto era) -> TxCert era
+  getRegTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era))
+
+  mkUnRegTxCert :: StakeCredential (EraCrypto era) -> TxCert era
+  getUnRegTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era))
+
+  mkDelegStakeTxCert ::
+    StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> TxCert era
+  getDelegStakeTxCert ::
+    TxCert era -> Maybe (StakeCredential (EraCrypto era), KeyHash 'StakePool (EraCrypto era))
 
   mkTxCertGenesisDeleg :: GenesisDelegCert (EraCrypto era) -> TxCert era
   getTxCertGenesisDeleg :: TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
@@ -131,10 +144,20 @@ class EraTxCert era => ShelleyEraTxCert era where
 instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (ShelleyEra StandardCrypto) #-}
 
-  mkShelleyTxCertDeleg = ShelleyTxCertDelegCert
+  mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 
-  getShelleyTxCertDeleg (ShelleyTxCertDelegCert c) = Just c
-  getShelleyTxCertDeleg _ = Nothing
+  getRegTxCert (ShelleyTxCertDelegCert (ShelleyRegCert c)) = Just c
+  getRegTxCert _ = Nothing
+
+  mkUnRegTxCert = ShelleyTxCertDelegCert . ShelleyUnRegCert
+
+  getUnRegTxCert (ShelleyTxCertDelegCert (ShelleyUnRegCert c)) = Just c
+  getUnRegTxCert _ = Nothing
+
+  mkDelegStakeTxCert c kh = ShelleyTxCertDelegCert $ ShelleyDelegCert c kh
+
+  getDelegStakeTxCert (ShelleyTxCertDelegCert (ShelleyDelegCert c kh)) = Just (c, kh)
+  getDelegStakeTxCert _ = Nothing
 
   mkTxCertGenesisDeleg = ShelleyTxCertGenesisDeleg
 
@@ -146,10 +169,24 @@ instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
   getTxCertMir (ShelleyTxCertMir c) = Just c
   getTxCertMir _ = Nothing
 
-pattern ShelleyTxCertDeleg :: ShelleyEraTxCert era => ShelleyDelegCert (EraCrypto era) -> TxCert era
-pattern ShelleyTxCertDeleg d <- (getShelleyTxCertDeleg -> Just d)
+pattern RegTxCert :: ShelleyEraTxCert era => StakeCredential (EraCrypto era) -> TxCert era
+pattern RegTxCert c <- (getRegTxCert -> Just c)
   where
-    ShelleyTxCertDeleg d = mkShelleyTxCertDeleg d
+    RegTxCert c = mkRegTxCert c
+
+pattern UnRegTxCert :: ShelleyEraTxCert era => StakeCredential (EraCrypto era) -> TxCert era
+pattern UnRegTxCert c <- (getUnRegTxCert -> Just c)
+  where
+    UnRegTxCert c = mkUnRegTxCert c
+
+pattern DelegStakeTxCert ::
+  ShelleyEraTxCert era =>
+  StakeCredential (EraCrypto era) ->
+  KeyHash 'StakePool (EraCrypto era) ->
+  TxCert era
+pattern DelegStakeTxCert c kh <- (getDelegStakeTxCert -> Just (c, kh))
+  where
+    DelegStakeTxCert c kh = mkDelegStakeTxCert c kh
 
 pattern TxCertMir :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (EraCrypto era) -> TxCert era
 pattern TxCertMir d <- (getTxCertMir -> Just d)
@@ -328,14 +365,14 @@ shelleyTxCertDelegDecoder ::
 shelleyTxCertDelegDecoder = \case
   0 -> do
     cred <- decCBOR
-    pure (2, ShelleyTxCertDeleg $ RegKey cred)
+    pure (2, RegTxCert cred)
   1 -> do
     cred <- decCBOR
-    pure (2, ShelleyTxCertDeleg $ DeRegKey cred)
+    pure (2, UnRegTxCert cred)
   2 -> do
     cred <- decCBOR
     stakePool <- decCBOR
-    pure (3, ShelleyTxCertDeleg $ ShelleyDelegCert cred stakePool)
+    pure (3, DelegStakeTxCert cred stakePool)
   k -> invalidKey k
 {-# INLINE shelleyTxCertDelegDecoder #-}
 
@@ -394,17 +431,17 @@ delegCWitness (ShelleyDelegCert cred _) = cred
 
 -- | Check for 'ShelleyRegCert' constructor
 isRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
-isRegKey (ShelleyTxCertDeleg (ShelleyRegCert _)) = True
+isRegKey (RegTxCert _) = True
 isRegKey _ = False
 
 -- | Check for 'ShelleyUnRegCert' constructor
 isDeRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
-isDeRegKey (ShelleyTxCertDeleg (ShelleyUnRegCert _)) = True
+isDeRegKey (UnRegTxCert _) = True
 isDeRegKey _ = False
 
 -- | Check for 'ShelleyDelegCert' constructor
 isDelegation :: (ShelleyEraTxCert era) => TxCert era -> Bool
-isDelegation (ShelleyTxCertDeleg (ShelleyDelegCert _ _)) = True
+isDelegation (DelegStakeTxCert _ _) = True
 isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
@@ -441,7 +478,7 @@ isTreasuryMIRCert x = case getTxCertMir x of
 -- Note: This will not compile for Conway, because it is incorrect for Conway, use
 -- `getVKeyWitnessTxCert` instead.
 requiresVKeyWitness :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
-requiresVKeyWitness (ShelleyTxCertDeleg (ShelleyRegCert _)) = False
+requiresVKeyWitness (RegTxCert _) = False
 requiresVKeyWitness x = isNothing $ getTxCertMir x
 {-# DEPRECATED requiresVKeyWitness "In favor of `getVKeyWitnessTxCert`" #-}
 

@@ -78,7 +78,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 
-import Cardano.Ledger.Shelley.TxCert (pattern ShelleyTxCertDeleg)
+import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert, pattern UnRegTxCert)
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   runShelleyBase,
@@ -230,7 +230,9 @@ delegTraceFromBlock chainSt block =
        in DelegEnv s ptr reserves pp
     delegSt0 =
       certDState (lsCertState ledgerSt0)
-    delegCert (ShelleyTxCertDeleg _) = True
+    delegCert (RegTxCert _) = True
+    delegCert (UnRegTxCert _) = True
+    delegCert (DelegStakeTxCert _ _) = True
     delegCert (TxCertMir _) = True
     delegCert _ = False
 

@@ -29,10 +29,20 @@ instance Crypto c => EraTxCert (AlonzoEra c) where
 instance Crypto c => ShelleyEraTxCert (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (AlonzoEra StandardCrypto) #-}
 
-  mkShelleyTxCertDeleg = ShelleyTxCertDelegCert
+  mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 
-  getShelleyTxCertDeleg (ShelleyTxCertDelegCert c) = Just c
-  getShelleyTxCertDeleg _ = Nothing
+  getRegTxCert (ShelleyTxCertDelegCert (ShelleyRegCert c)) = Just c
+  getRegTxCert _ = Nothing
+
+  mkUnRegTxCert = ShelleyTxCertDelegCert . ShelleyUnRegCert
+
+  getUnRegTxCert (ShelleyTxCertDelegCert (ShelleyUnRegCert c)) = Just c
+  getUnRegTxCert _ = Nothing
+
+  mkDelegStakeTxCert c kh = ShelleyTxCertDelegCert $ ShelleyDelegCert c kh
+
+  getDelegStakeTxCert (ShelleyTxCertDelegCert (ShelleyDelegCert c kh)) = Just (c, kh)
+  getDelegStakeTxCert _ = Nothing
 
   mkTxCertGenesisDeleg = ShelleyTxCertGenesisDeleg
 
