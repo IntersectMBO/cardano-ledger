@@ -2,10 +2,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxCert (
@@ -18,6 +20,12 @@ module Cardano.Ledger.Conway.TxCert (
   toShelleyDelegCert,
   getScriptWitnessConwayTxCert,
   getVKeyWitnessConwayTxCert,
+  pattern RegDepositTxCert,
+  pattern UnRegDepositTxCert,
+  pattern DelegTxCert,
+  pattern RegDepositDelegTxCert,
+  pattern RegCommitteeHotTxCert,
+  pattern UnRegCommitteeHotTxCert,
 )
 where
 
@@ -104,20 +112,109 @@ instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   getMirTxCert = const Nothing
 
 class ShelleyEraTxCert era => ConwayEraTxCert era where
-  mkConwayTxCertDeleg :: ConwayDelegCert (EraCrypto era) -> TxCert era
-  getConwayTxCertDeleg :: TxCert era -> Maybe (ConwayDelegCert (EraCrypto era))
+  mkRegDepositTxCert :: StakeCredential (EraCrypto era) -> Coin -> TxCert era
+  getRegDepositTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era), Coin)
 
-  mkConwayTxCertCommittee :: ConwayCommitteeCert (EraCrypto era) -> TxCert era
-  getConwayTxCertCommittee :: TxCert era -> Maybe (ConwayCommitteeCert (EraCrypto era))
+  mkUnRegDepositTxCert :: StakeCredential (EraCrypto era) -> Coin -> TxCert era
+  getUnRegDepositTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era), Coin)
+
+  mkDelegTxCert ::
+    StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> TxCert era
+  getDelegTxCert ::
+    TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era))
+
+  mkRegDepositDelegTxCert ::
+    StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> Coin -> TxCert era
+  getRegDepositDelegTxCert ::
+    TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era), Coin)
+
+  mkRegCommitteeHotTxCert ::
+    KeyHash 'CommitteeColdKey (EraCrypto era) -> KeyHash 'CommitteeHotKey (EraCrypto era) -> TxCert era
+  getRegCommitteeHotTxCert ::
+    TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era), KeyHash 'CommitteeHotKey (EraCrypto era))
+
+  mkUnRegCommitteeHotTxCert :: KeyHash 'CommitteeColdKey (EraCrypto era) -> TxCert era
+  getUnRegCommitteeHotTxCert :: TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era))
 
 instance Crypto c => ConwayEraTxCert (ConwayEra c) where
-  mkConwayTxCertDeleg = ConwayTxCertDeleg
-  getConwayTxCertDeleg (ConwayTxCertDeleg x) = Just x
-  getConwayTxCertDeleg _ = Nothing
+  mkRegDepositTxCert cred c = ConwayTxCertDeleg $ ConwayRegCert cred $ SJust c
 
-  mkConwayTxCertCommittee = ConwayTxCertCommittee
-  getConwayTxCertCommittee (ConwayTxCertCommittee x) = Just x
-  getConwayTxCertCommittee _ = Nothing
+  getRegDepositTxCert (ConwayTxCertDeleg (ConwayRegCert cred (SJust c))) = Just (cred, c)
+  getRegDepositTxCert _ = Nothing
+
+  mkUnRegDepositTxCert cred c = ConwayTxCertDeleg $ ConwayUnRegCert cred (SJust c)
+  getUnRegDepositTxCert (ConwayTxCertDeleg (ConwayUnRegCert cred (SJust c))) = Just (cred, c)
+  getUnRegDepositTxCert _ = Nothing
+
+  mkDelegTxCert cred d = ConwayTxCertDeleg $ ConwayDelegCert cred d
+  getDelegTxCert (ConwayTxCertDeleg (ConwayDelegCert cred d)) = Just (cred, d)
+  getDelegTxCert _ = Nothing
+
+  mkRegDepositDelegTxCert cred d c = ConwayTxCertDeleg $ ConwayRegDelegCert cred d c
+  getRegDepositDelegTxCert (ConwayTxCertDeleg (ConwayRegDelegCert cred d c)) = Just (cred, d, c)
+  getRegDepositDelegTxCert _ = Nothing
+
+  mkRegCommitteeHotTxCert ck hk = ConwayTxCertCommittee $ ConwayRegCommitteeHotKey ck hk
+  getRegCommitteeHotTxCert (ConwayTxCertCommittee (ConwayRegCommitteeHotKey ck hk)) = Just (ck, hk)
+  getRegCommitteeHotTxCert _ = Nothing
+
+  mkUnRegCommitteeHotTxCert = ConwayTxCertCommittee . ConwayUnRegCommitteeHotKey
+  getUnRegCommitteeHotTxCert (ConwayTxCertCommittee (ConwayUnRegCommitteeHotKey ck)) = Just ck
+  getUnRegCommitteeHotTxCert _ = Nothing
+
+pattern RegDepositTxCert ::
+  ConwayEraTxCert era =>
+  StakeCredential (EraCrypto era) ->
+  Coin ->
+  TxCert era
+pattern RegDepositTxCert cred c <- (getRegDepositTxCert -> Just (cred, c))
+  where
+    RegDepositTxCert cred c = mkRegDepositTxCert cred c
+
+pattern UnRegDepositTxCert ::
+  ConwayEraTxCert era =>
+  StakeCredential (EraCrypto era) ->
+  Coin ->
+  TxCert era
+pattern UnRegDepositTxCert cred c <- (getUnRegDepositTxCert -> Just (cred, c))
+  where
+    UnRegDepositTxCert cred c = mkUnRegDepositTxCert cred c
+
+pattern DelegTxCert ::
+  ConwayEraTxCert era =>
+  StakeCredential (EraCrypto era) ->
+  Delegatee (EraCrypto era) ->
+  TxCert era
+pattern DelegTxCert cred d <- (getDelegTxCert -> Just (cred, d))
+  where
+    DelegTxCert cred d = mkDelegTxCert cred d
+
+pattern RegDepositDelegTxCert ::
+  ConwayEraTxCert era =>
+  StakeCredential (EraCrypto era) ->
+  Delegatee (EraCrypto era) ->
+  Coin ->
+  TxCert era
+pattern RegDepositDelegTxCert cred d c <- (getRegDepositDelegTxCert -> Just (cred, d, c))
+  where
+    RegDepositDelegTxCert cred d c = mkRegDepositDelegTxCert cred d c
+
+pattern RegCommitteeHotTxCert ::
+  ConwayEraTxCert era =>
+  KeyHash 'CommitteeColdKey (EraCrypto era) ->
+  KeyHash 'CommitteeHotKey (EraCrypto era) ->
+  TxCert era
+pattern RegCommitteeHotTxCert ck hk <- (getRegCommitteeHotTxCert -> Just (ck, hk))
+  where
+    RegCommitteeHotTxCert ck hk = mkRegCommitteeHotTxCert ck hk
+
+pattern UnRegCommitteeHotTxCert ::
+  ConwayEraTxCert era =>
+  KeyHash 'CommitteeColdKey (EraCrypto era) ->
+  TxCert era
+pattern UnRegCommitteeHotTxCert ck <- (getUnRegCommitteeHotTxCert -> Just ck)
+  where
+    UnRegCommitteeHotTxCert ck = mkUnRegCommitteeHotTxCert ck
 
 -- | First type argument is the deposit
 data Delegatee c
@@ -211,12 +308,12 @@ conwayTxCertDelegDecoder :: ConwayEraTxCert era => Word -> Decoder s (Int, TxCer
 conwayTxCertDelegDecoder = \case
   7 -> do
     cred <- decCBOR
-    deposit <- SJust <$> decCBOR
-    pure (3, mkConwayTxCertDeleg $ ConwayRegCert cred deposit)
+    deposit <- decCBOR
+    pure (3, RegDepositTxCert cred deposit)
   8 -> do
     cred <- decCBOR
-    deposit <- SJust <$> decCBOR
-    pure (3, mkConwayTxCertDeleg $ ConwayUnRegCert cred deposit)
+    deposit <- decCBOR
+    pure (3, UnRegDepositTxCert cred deposit)
   9 -> delegCertDecoder 3 (DelegVote <$> decCBOR)
   10 -> delegCertDecoder 4 (DelegStakeVote <$> decCBOR <*> decCBOR)
   11 -> regDelegCertDecoder 4 (DelegStake <$> decCBOR)
@@ -225,22 +322,22 @@ conwayTxCertDelegDecoder = \case
   14 -> do
     cred <- decCBOR
     key <- decCBOR
-    pure (3, mkConwayTxCertCommittee $ ConwayRegCommitteeHotKey cred key)
+    pure (3, RegCommitteeHotTxCert cred key)
   15 -> do
     cred <- decCBOR
-    pure (2, mkConwayTxCertCommittee $ ConwayUnRegCommitteeHotKey cred)
+    pure (2, UnRegCommitteeHotTxCert cred)
   k -> invalidKey k
   where
     delegCertDecoder n decodeDelegatee = do
       cred <- decCBOR
       delegatee <- decodeDelegatee
-      pure (n, mkConwayTxCertDeleg $ ConwayDelegCert cred delegatee)
+      pure (n, DelegTxCert cred delegatee)
     {-# INLINE delegCertDecoder #-}
     regDelegCertDecoder n decodeDelegatee = do
       cred <- decCBOR
       delegatee <- decodeDelegatee
       deposit <- decCBOR
-      pure (n, mkConwayTxCertDeleg $ ConwayRegDelegCert cred delegatee deposit)
+      pure (n, RegDepositDelegTxCert cred delegatee deposit)
     {-# INLINE regDelegCertDecoder #-}
 {-# INLINE conwayTxCertDelegDecoder #-}
 
@@ -326,7 +423,7 @@ toShelleyDelegCert = \case
   ConwayDelegCert cred (DelegStake poolId) -> Just $ ShelleyDelegCert cred poolId
   _ -> Nothing
 
--- For both of the fucntions `getScriptWitnessConwayTxCert` and
+-- For both of the functions `getScriptWitnessConwayTxCert` and
 -- `getVKeyWitnessConwayTxCert` we preserve the old behavior of not requiring a witness,
 -- but only during the transitional period of Conway era and only for registration
 -- cdertificates without a deposit. Future eras will require a witness for registration
