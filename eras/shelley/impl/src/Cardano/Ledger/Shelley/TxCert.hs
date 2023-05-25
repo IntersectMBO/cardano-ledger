@@ -204,6 +204,16 @@ pattern GenesisDelegTxCert genKey genDelegKey vrf <-
     GenesisDelegTxCert genKey genDelegKey vrf =
       mkGenesisDelegTxCert $ GenesisDelegCert genKey genDelegKey vrf
 
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , MirTxCert
+  , GenesisDelegTxCert
+  #-}
+
 -- | Genesis key delegation certificate
 data GenesisDelegCert c
   = GenesisDelegCert

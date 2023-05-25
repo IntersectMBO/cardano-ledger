@@ -66,6 +66,11 @@ import Cardano.Ledger.Shelley.TxCert (
   encodeShelleyDelegCert,
   poolTxCertDecoder,
   shelleyTxCertDelegDecoder,
+  pattern DelegStakeTxCert,
+  pattern RegPoolTxCert,
+  pattern RegTxCert,
+  pattern RetirePoolTxCert,
+  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
@@ -215,6 +220,20 @@ pattern UnRegCommitteeHotTxCert ::
 pattern UnRegCommitteeHotTxCert ck <- (getUnRegCommitteeHotTxCert -> Just ck)
   where
     UnRegCommitteeHotTxCert ck = mkUnRegCommitteeHotTxCert ck
+
+{-# COMPLETE
+  RegPoolTxCert
+  , RetirePoolTxCert
+  , RegTxCert
+  , UnRegTxCert
+  , DelegStakeTxCert
+  , RegDepositTxCert
+  , UnRegDepositTxCert
+  , DelegTxCert
+  , RegDepositDelegTxCert
+  , RegCommitteeHotTxCert
+  , UnRegCommitteeHotTxCert
+  #-}
 
 -- | First type argument is the deposit
 data Delegatee c
