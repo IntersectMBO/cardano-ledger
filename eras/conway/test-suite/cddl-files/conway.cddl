@@ -502,9 +502,7 @@ network_id = 0 / 1
 epoch = uint
 
 addr_keyhash           = $hash28
-genesis_delegate_hash  = $hash28
 pool_keyhash           = $hash28
-genesishash            = $hash28
 committee_cold_keyhash = $hash28
 committee_hot_keyhash  = $hash28
 
