@@ -3,6 +3,7 @@
 ## 1.1.1.0
 
 * Add `unlessDecoderVersionAtLeast` and `guardUntilAtLeast`
+* Set bound on cborg >=0.2.9
 
 ## 1.1.0.0
 
