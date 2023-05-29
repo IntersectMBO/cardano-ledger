@@ -315,11 +315,24 @@ ppupsL (Conway _) = error "Conway era does not have a PPUPState, in ppupsL"
 -- nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL . ???
 
 proposalsT :: Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
-proposalsT p = Var (V "proposals" (MapR GenHashR (PParamsUpdateR p)) No)
+proposalsT p = Var (V "proposals" (MapR GenHashR (PParamsUpdateR p)) (Yes NewEpochStateR $ proposalsL p))
 
-futureProposalsT ::
-  Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
-futureProposalsT p = Var (V "futureProposals" (MapR GenHashR (PParamsUpdateR p)) No)
+unProposedPPUpdates :: Proof era -> ProposedPPUpdates era -> Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era)
+unProposedPPUpdates prf (ProposedPPUpdates ppu) = Map.map (PParamsUpdateF prf) ppu
+
+mkProposedPPUpdates :: Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era) -> ProposedPPUpdates era
+mkProposedPPUpdates pp = ProposedPPUpdates $ Map.map unPParamsUpdate pp
+
+proposalsL :: Proof era -> NELens era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+proposalsL p = ppupsL p . lens (unProposedPPUpdates p . proposals)
+                               (\(ShelleyPPUPState _ fp) pp -> ShelleyPPUPState (mkProposedPPUpdates pp) fp)
+
+futureProposalsT :: Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+futureProposalsT p = Var (V "futureProposals" (MapR GenHashR (PParamsUpdateR p)) (Yes NewEpochStateR $ futureProposalsL p))
+
+futureProposalsL :: Proof era -> NELens era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+futureProposalsL p = ppupsL p . lens (unProposedPPUpdates p . futureProposals)
+                                     (\(ShelleyPPUPState pp _) fp -> ShelleyPPUPState pp (mkProposedPPUpdates fp))
 
 ppupStateT :: Proof era -> Target era (ShelleyPPUPState era)
 ppupStateT p = Constr "PPUPState" ppupfun ^$ proposalsT p ^$ futureProposalsT p
@@ -507,7 +520,10 @@ pooldistrHelpL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoo
 pooldistrHelpL = lens unPoolDistr (\_ u -> PoolDistr u)
 
 snapShotFee :: Term era Coin
-snapShotFee = Var (V "snapShotFee" CoinR No)
+snapShotFee = Var (V "snapShotFee" CoinR (Yes NewEpochStateR snapShotFeeL))
+
+snapShotFeeL :: NELens era Coin
+snapShotFeeL = nesEsL . esSnapshotsL . ssFeeL
 
 snapShotsT :: Target era (SnapShots (EraCrypto era))
 snapShotsT =
