@@ -16,13 +16,13 @@ This directory is organized as follows:
 To build the `LaTeX` document run:
 
 ```shell
-nix-shell --pure --run make
+nix develop --command make
 ```
 
 For a continuous compilation of the `LaTeX` file run:
 
 ```shell
-nix-shell --pure --run "make watch"
+nix develop --command make watch
 ```
 
 ## Building the executable specification
@@ -34,44 +34,32 @@ To build to go to the directory in which the executable specifications are
 (e.g. [`ledger/executable-spec`](ledger/executable-spec)) and then run:
 
 ```sh
-nix-build
+nix build
 ```
 
-To start a REPL first make sure to run the configure script:
-
+To build, or run, tests:
 ```sh
-nix-shell --pure --run "runhaskell Setup.hs configure"
-```
-
-then run:
-
-```sh
-nix-shell --pure --run "runhaskell Setup.hs repl"
-```
-
-To test run:
-
-```sh
-nix-shell --pure --run "runhaskell Setup.hs test"
+nix build .#tests
+nix run .#tests
 ```
 
 ### Development
 
-For running the tests you can use:
+For running the tests you can use, in a `nix develop` shell:
 
 ```sh
-nix-shell --pure --command "cabal new-test <target>"
+cabal new-test <target>
 ```
 
 Example, while in the `byron/ledger/executable-spec` directory one can run:
 
 ```sh
-nix-shell --pure --run "cabal new-test ledger-delegation-test"
+cabal new-test ledger-delegation-test
 ```
 
 To have the warnings not being treated as errors the `-Wwarn` ghc flag can be
 used to negate the effect of `-Werror`, e.g.:
 
 ```sh
-nix-shell --pure --run "cabal new-test ledger-delegation-test --ghc-options='-Wwarn'"
+cabal new-test ledger-delegation-test --ghc-options='-Wwarn'
 ```
