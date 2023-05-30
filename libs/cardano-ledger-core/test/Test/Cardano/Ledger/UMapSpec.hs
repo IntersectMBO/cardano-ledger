@@ -31,13 +31,13 @@ import Cardano.Ledger.UMap (
   empty,
   insert,
   insert',
+  invPtrMap,
   member,
   nullUView,
   ptrMap,
   range,
   rdDeposit,
   rdPairMap,
-  revPtrMap,
   rewardMap,
   sPoolMap,
   size,
@@ -558,12 +558,12 @@ spec = do
             , scSPools = sPoolMap umap `Map.restrictKeys` creds
             , scDReps = dRepMap umap `Map.restrictKeys` creds
             , scPtrs = Map.filter (`Set.member` creds) $ ptrMap umap
-            , scPtrsInverse = revPtrMap umap `Map.restrictKeys` creds
+            , scPtrsInverse = invPtrMap umap `Map.restrictKeys` creds
             }
       prop "domRestrictedStakeCredentials with domRestrictedMap" $
         forAll genValidUMapWithCreds $ \(umap, creds) ->
           let rdmap = domRestrictedMap creds (RewDepUView umap)
-              ptrs = revPtrMap umap `Map.restrictKeys` creds
+              ptrs = invPtrMap umap `Map.restrictKeys` creds
            in domRestrictedStakeCredentials creds umap
                 `shouldBe` StakeCredentials
                   { scRewards = Map.map (fromCompact . rdReward) rdmap

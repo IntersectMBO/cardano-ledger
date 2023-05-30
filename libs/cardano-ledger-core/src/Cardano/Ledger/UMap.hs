@@ -57,7 +57,7 @@ module Cardano.Ledger.UMap (
   compactRewardMap,
   depositMap,
   ptrMap,
-  revPtrMap,
+  invPtrMap,
   sPoolMap,
   dRepMap,
   domRestrictedMap,
@@ -549,8 +549,8 @@ ptrMap :: UMap c -> Map Ptr (Credential 'Staking c)
 ptrMap x = unUnify $ PtrUView x
 
 -- | Extract a pointers `Map` from a 'UMap'
-revPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)
-revPtrMap UMap {umElems} =
+invPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)
+invPtrMap UMap {umElems} =
   Map.foldlWithKey'
     (\ans k (UMElem _ ptrSet _ _) -> if Set.null ptrSet then ans else Map.insert k ptrSet ans)
     Map.empty
@@ -581,7 +581,7 @@ toStakeCredentials umap =
     , scSPools = sPoolMap umap
     , scDReps = dRepMap umap
     , scPtrs = ptrMap umap
-    , scPtrsInverse = revPtrMap umap
+    , scPtrsInverse = invPtrMap umap
     }
 
 domRestrictedStakeCredentials :: Set (Credential 'Staking c) -> UMap c -> StakeCredentials c

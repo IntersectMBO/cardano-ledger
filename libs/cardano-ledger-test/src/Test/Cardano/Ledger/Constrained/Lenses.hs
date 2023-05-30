@@ -21,7 +21,7 @@ import Cardano.Ledger.UMap (
   compactCoinOrError,
   dRepMap,
   depositMap,
-  revPtrMap,
+  invPtrMap,
   rewardMap,
   sPoolMap,
   unify,
@@ -300,7 +300,7 @@ data Split c = Split
 -- | The abstraction function, from concrete (UMap) to abstract (Split)
 splitUMap :: UMap c -> Split c
 splitUMap um =
-  Split (rewardMap um) (depositMap um) (sPoolMap um) (dRepMap um) (revPtrMap um) (UM.ptrMap um)
+  Split (rewardMap um) (depositMap um) (sPoolMap um) (dRepMap um) (invPtrMap um) (UM.ptrMap um)
 
 -- | The concretization function from abstract (Split) to concrete (UMap)
 unSplitUMap :: Split c -> UMap c

@@ -8,7 +8,7 @@
     * `umElemPtrs :: UMElem c -> Maybe (Set Ptr)`
     * `umElemDRep :: UMElem c -> Maybe (Credential 'Voting (EraCrypto era))`
     * `UView (DRepUView)` constructor and `dRepUView`
-    * `revPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)`
+    * `invPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)`
     * `dRepMap :: UMap c -> Map (Credential 'Staking c) (Credential 'Voting c)`
     * synonym `unionL = (∪)`
     * synonym `unionR = (⨃)`
