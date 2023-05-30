@@ -20,7 +20,7 @@ jobs:
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
             substituters = https://cache.iog.io https://cache.nixos.org/
       - name: Build specs
-        run: nix-build -A specs -o output/spec
+        run: nix build .#specs -o output/spec
       - name: Collect dereferenced docs
         run:  |
           mkdir -p deref
@@ -32,4 +32,3 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "deref/*"
-

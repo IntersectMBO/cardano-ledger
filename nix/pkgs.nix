@@ -1,12 +1,6 @@
-{ sources }:
 # our packages overlay
-pkgs: _:
-with pkgs; {
-  cardanoLedgerSpecsHaskellPackages = import ./haskell.nix {
-    inherit config lib stdenv pkgs haskell-nix buildPackages;
-    CHaP = sources.cardano-haskell-packages;
-  };
-
-  cbor-diag = pkgs.callPackage ./pkgs/cbor-diag { };
-  cddl = pkgs.callPackage ./pkgs/cddl { };
+prev: final:
+import ./latex.nix {inherit (final) stdenv lib texlive;}
+// {
+  cddl = final.callPackage ./pkgs/cddl {};
 }

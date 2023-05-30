@@ -4,7 +4,7 @@ The current binary format is specified in `byron.cddl`. You can use this
 to generate (pseudo-)valid blocks:
 
 ```shell
-nix-shell
+nix develop
 cddl byron.cddl generate | diag2pretty.rb > test.pretty
 ```
 
