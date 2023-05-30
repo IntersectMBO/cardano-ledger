@@ -106,17 +106,17 @@ When using `nix` the documents and Haskell code can be readily
 built by running:
 
 ```shell
-nix-build
+nix build .#specs
 ```
 
-The LaTeX documents will be placed inside directories named `result*`, e.g.:
+The LaTeX documents will be placed inside a directory named `result`, e.g.:
 
 ```shell
-result-2/byron-ledger.pdf
-result-3/shelley-delegation.pdf
-result-4/non-integer-calculations.pdf
-result-5/small-step-semantics.pdf
-result-6/shelley-ledger.pdf
+result/byron-ledger.pdf
+result/shelley-delegation.pdf
+result/non-integer-calculations.pdf
+result/small-step-semantics.pdf
+result/shelley-ledger.pdf
 result/byron-blockchain.pdf
 ```
 
@@ -131,14 +131,14 @@ the Byron release). Then, build the latex document by running:
 
 ```shell
 cd <myLaTexDir>
-nix-shell --pure --run make
+nix develop --command make
 ```
 
 For a continuous compilation of the `LaTeX` file run:
 
 ```shell
 cd <myLaTexDir>
-nix-shell --pure --run "make watch"
+nix develop --command make watch
 ```
 
 # Testing

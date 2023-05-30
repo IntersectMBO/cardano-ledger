@@ -1,7 +1,10 @@
-{ lib, bundlerApp, bundlerUpdateScript }:
-
+{
+  lib,
+  bundlerApp,
+  bundlerUpdateScript,
+}:
 bundlerApp {
   pname = "cddl";
   gemdir = ./.;
-  exes = [ "cddl" ];
+  exes = ["cddl"];
 }
