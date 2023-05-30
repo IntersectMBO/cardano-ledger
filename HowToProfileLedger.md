@@ -23,8 +23,8 @@ greater detail about each step
 
 1. Decide what you want to profile, and arrange the code so this is possible
 2. Choreograph the dance between nix, cabal, and ghc. This has two parts
-   a. Adding stuff to files like cabal.project, cabal.project.local, and nix/haskel.nix
-   b. Passing the right flags to nix-shell, cabal, and ghc
+   a. Adding stuff to files like cabal.project, cabal.project.local
+   b. Passing the right flags to cabal, and ghc, running the right `nix develop` shell,
 3. Recompiling everything so it can be profiled. This takes a very long time (greater than
    30 minutes when I did it)
 4. Start up the profiling. I used "cabal test" with just the right command line arguments.
@@ -103,53 +103,55 @@ package plutus-core
 ---------------------
 
 Supposedly this makes things work. But I could never get the nix-shell to complete with this approach.
-To get that to happen I had to add the following line to the modules section of the nix/haskell.nix  file
+To get that to happen I had to add the following line to the modules section of the flake.nix file
 -----------------------------
        packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
 -----------------------------
 There are probaly more that a dozen lines just like this, so it is easy to figure out where to put it.
 
-The final step is to pass the right flags to nix-shell, cabal, and ghc. Here is a summary.
+The final step is to pass the right flags to cabal, ghc, and running the right `nix develop` shell. Here is a summary.
 
 1) to start nix, we must use
-   nix-shell --arg config "{ haskellNix.profiling = true; }"
+   `nix develop .#profiling`
 2) to build with cabal, we must use
-   cabal build --enable-profiling
+   `cabal build --enable-profiling`
 3) to run the test, we must pass extra flags to ghc, so we must use
-   cabal test --test-options="+RTS  -i60 -p"
+   `cabal test --test-options="+RTS  -i60 -p"`
 
 How to build the system for profiling
 
 Be sure you have set up the files cabal.project.local and nix/haskell.nix as described above.
-Exit the nix-shell, if you are running it. Now change directories to the root of the Ledger repository.
+Exit the nix shell, if you are running it. Now change directories to the root of the Ledger repository.
 
 Now to start nix type
+```
+nix develop .#profiling
+```
+(or, eg. `nix develop .#ghc8107.profiling` for alternative compiler)
 
-nix-shell --arg config "{ haskellNix.profiling = true; }"
-
-When the nix-shell completes (this can take a long time, since it must make sure
+When the `nix develop` shell completes (this can take a long time, since it must make sure
 every file in the Ledger is compiled with profiling enabled). This might take a
 while. Be patient. Take the dogs for a walk.
 
 Now change directories to the root directory of the modlue that contains your
 modified Test file, and type
-
+```
 cabal build --enable-profiling
-
+```
 This might also take a while. Take the dogs for second walk.  When this completes
 you are ready to start profiing!
 
 How to run a profile.
 
 In the same directory where you did (cabal build --enable-profiling) type
-
+```
 cabal test --test-options="+RTS  -i60 -p"
-
+```
 This should take slightly longer than running the test without profiling.
 When it is done, there will be a file in this same directory with extension .prof
 When I did it, the file was called   cardano-ledger-test.prof  . It is a big file
 Here are the first few lines.
-
+```
 ----------------------------------------------------------------------------------------------------------
 Fri May  6 14:02 2022 Time and Allocation Profiling Report  (Final)
 
@@ -177,11 +179,10 @@ genKeyHash.\              Test.Cardano.Ledger.Generic.GenState  src/Test/Cardano
 serializeEncoding         Cardano.Binary.Serialize              src/Cardano/Binary/Serialize.hs:(61,1)-(67,49)                   0.8    2.1
 toLazyByteString          Codec.CBOR.Write                      src/Codec/CBOR/Write.hs:86:1-49                                  0.7    4.9
 ---------------------------------------------------------------------------------------------------------------------
+```
 
 The problem with my test, was that evalScripts was inadvertantly showing a large data structure
 using tellEvent. This was added when debugging and never removed. After fixing this, we had much better results.
 I hope you experience is just as rewarding.
 
 Don't forget to revert cabal.project.local, nix/haskell.nix  and your Test file to their original state.
-
-
