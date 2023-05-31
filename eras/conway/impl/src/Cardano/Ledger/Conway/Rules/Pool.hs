@@ -56,4 +56,4 @@ instance
   type PredicateFailure (ConwayPOOL era) = ConwayPoolPredFailure era
   type Event (ConwayPOOL era) = ConwayPoolEvent era
 
-  transitionRules = undefined
+  transitionRules = undefined -- TODO

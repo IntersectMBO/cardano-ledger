@@ -191,13 +191,10 @@ conwayDelegTransition = do
         DelegStake sPool -> delegStake stakeCred sPool dsUnified
         DelegVote dRep -> delegVote stakeCred dRep dsUnified
         DelegStakeVote sPool dRep -> delegVote stakeCred dRep $ delegStake stakeCred sPool dsUnified
-    checkDepositAgainstPParams pd sMayDeposit =
-      sMayDeposit
-        == SNothing
-        || sMayDeposit
-        == SJust pd
-        ?! IncorrectDepositDELEG sMayDeposit
-    checkDepositAgainstPayedDeposit stakeCred dsUnified sMayDeposit =
+    checkDepositAgainstPParams pd = \case
+      SNothing -> pure ()
+      SJust deposit -> deposit == pd ?! IncorrectDepositDELEG $ SJust deposit
+    checkDepositAgainstPaidDeposit stakeCred dsUnified sMayDeposit =
       sMayDeposit
         == fmap (UM.fromCompact . UM.rdDeposit) (maybeToStrictMaybe $ UM.lookup stakeCred $ RewDepUView dsUnified)
         ?! IncorrectDepositDELEG sMayDeposit

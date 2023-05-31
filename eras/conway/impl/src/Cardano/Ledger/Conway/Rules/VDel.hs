@@ -62,4 +62,4 @@ instance
   type PredicateFailure (ConwayVDEL era) = ConwayVDelPredFailure era
   type Event (ConwayVDEL era) = ConwayVDelEvent era
 
-  transitionRules = undefined
+  transitionRules = undefined -- TODO
