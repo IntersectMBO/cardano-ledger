@@ -43,7 +43,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import Cardano.Ledger.Shelley.Rules (DelegEnv (DelegEnv))
-import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView))
+import Cardano.Ledger.UMap (UView (RewDepUView))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -153,7 +153,7 @@ conwayDelegTransition = do
     ConwayUnRegCert stakeCred sMayDeposit -> do
       checkStakeKeyIsAlreadyRegistered stakeCred dsUnified
       checkStakeKeyHasZeroBalance stakeCred dsUnified
-      unless (sMayDeposit == SNothing) $ checkDepositAgainstPayedDeposit stakeCred dsUnified sMayDeposit
+      unless (sMayDeposit == SNothing) $ checkDepositAgainstPaidDeposit stakeCred dsUnified sMayDeposit
       let umRDRemoved = Set.singleton stakeCred UM.⋪ UM.RewDepUView dsUnified
           umSPoolRemoved = Set.singleton stakeCred UM.⋪ UM.SPoolUView umRDRemoved
           newUMap = UM.PtrUView umSPoolRemoved UM.⋫ Set.singleton stakeCred -- Although we don't care about Ptrs in Conway, we remove them when we can.
@@ -193,15 +193,13 @@ conwayDelegTransition = do
         DelegStakeVote sPool dRep -> delegVote stakeCred dRep $ delegStake stakeCred sPool dsUnified
     checkDepositAgainstPParams pd = \case
       SNothing -> pure ()
-      SJust deposit -> deposit == pd ?! IncorrectDepositDELEG $ SJust deposit
+      SJust deposit -> deposit == pd ?! IncorrectDepositDELEG (SJust deposit)
     checkDepositAgainstPaidDeposit stakeCred dsUnified sMayDeposit =
       sMayDeposit
         == fmap (UM.fromCompact . UM.rdDeposit) (maybeToStrictMaybe $ UM.lookup stakeCred $ RewDepUView dsUnified)
         ?! IncorrectDepositDELEG sMayDeposit
     checkStakeKeyNotAlreadyRegistered stakeCred dsUnified =
-      ( UM.notMember stakeCred (RewDepUView dsUnified)
-          && UM.notMember stakeCred (SPoolUView dsUnified)
-      )
+      UM.notMember stakeCred (RewDepUView dsUnified)
         ?! StakeKeyAlreadyRegisteredDELEG stakeCred
     checkStakeKeyIsAlreadyRegistered stakeCred dsUnified =
       UM.member stakeCred (RewDepUView dsUnified)
