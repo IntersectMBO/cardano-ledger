@@ -13,7 +13,7 @@
 
 module Cardano.Ledger.State.Schema where
 
-import Cardano.Ledger.Alonzo.TxBody as Alonzo (AlonzoTxOut)
+import Cardano.Ledger.Babbage.TxOut (BabbageTxOut)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (PParams)
@@ -93,12 +93,12 @@ KeyHash
 Tx
   inIx TxIx
   inId (TxIn.TxId C)
-  out (AlonzoTxOut CurrentEra)
+  out (BabbageTxOut CurrentEra)
   UniqueTx inIx inId
 Txs
   inIx TxIx
   inId (TxIn.TxId C)
-  out (AlonzoTxOut CurrentEra)
+  out (BabbageTxOut CurrentEra)
   stakeCredential CredentialId Maybe
   UniqueTxs inIx inId
 UtxoEntry

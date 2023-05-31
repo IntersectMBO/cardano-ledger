@@ -7,15 +7,17 @@
 module Main where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.Api.Era
+import Cardano.Ledger.Api.State.Query (queryStakePoolDelegsAndRewards)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), fromNominalDiffTimeMicro, mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.State.UTxO (CurrentEra, readNewEpochState)
+import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
@@ -28,12 +30,16 @@ import Data.ByteString.Base16.Lazy as BSL16
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class (def)
 import Data.Foldable as F
-import Data.Map.Strict as Map
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys, extractKeysSmallSet)
-import Data.Set as Set
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import System.Environment (getEnv)
 import System.Random.Stateful
+import Test.Cardano.Ledger.Api.State.Query (getFilteredDelegationsAndRewardAccounts)
+import Test.Cardano.Ledger.Core.Arbitrary (uniformSubset)
 
 main :: IO ()
 main = do
@@ -60,7 +66,8 @@ main = do
   es <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"
   let largeKeysNum = 100000
-  largeKeys <- selectRandomMapKeys 100000 (mkStdGen 2022) (unUTxO (getUTxO es))
+      stdGen = mkStdGen 2022
+  largeKeys <- selectRandomMapKeys 100000 stdGen (unUTxO (getUTxO es))
   defaultMain
     [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
@@ -108,6 +115,24 @@ main = do
                   bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState)
               , env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
+              ]
+    , env (pure es) $ \newEpochState ->
+        let umap = dsUnified . certDState . lsCertState . esLState $ nesEs newEpochState
+            elems = umElems umap
+            creds = runStateGen_ stdGen (uniformSubset (Just 10) (Map.keysSet elems))
+         in bgroup
+              ( "GetFilteredDelegationsAndRewardAccounts ("
+                  ++ show (Set.size creds)
+                  ++ "/"
+                  ++ show (Map.size elems)
+                  ++ ")"
+              )
+              [ env (pure creds) $
+                  bench "getFilteredDelegationsAndRewardAccounts"
+                    . nf (getFilteredDelegationsAndRewardAccounts umap)
+              , env (pure creds) $
+                  bench "queryStakePoolDelegsAndRewards"
+                    . nf (queryStakePoolDelegsAndRewards newEpochState)
               ]
     , bgroup
         "DeleteTxOuts"

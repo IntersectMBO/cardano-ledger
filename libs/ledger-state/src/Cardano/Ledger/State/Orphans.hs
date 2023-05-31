@@ -10,6 +10,7 @@ module Cardano.Ledger.State.Orphans where
 
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Alonzo.TxBody
+import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
@@ -120,6 +121,10 @@ deriving via Enc (ShelleyPPUPState CurrentEra) instance PersistFieldSql (Shelley
 deriving via Enc (AlonzoTxOut CurrentEra) instance PersistField (AlonzoTxOut CurrentEra)
 
 deriving via Enc (AlonzoTxOut CurrentEra) instance PersistFieldSql (AlonzoTxOut CurrentEra)
+
+deriving via Enc (BabbageTxOut CurrentEra) instance PersistField (BabbageTxOut CurrentEra)
+
+deriving via Enc (BabbageTxOut CurrentEra) instance PersistFieldSql (BabbageTxOut CurrentEra)
 
 instance DecCBOR (DState CurrentEra) where
   decCBOR = decNoShareCBOR

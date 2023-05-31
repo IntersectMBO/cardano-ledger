@@ -34,6 +34,7 @@ library
         Cardano.Ledger.Api.Tx.In
         Cardano.Ledger.Api.Tx.Out
         Cardano.Ledger.Api.Tx.Wits
+        Cardano.Ledger.Api.State.Query
         Cardano.Ledger.Api.UTxO
 
     hs-source-dirs:   src
@@ -62,6 +63,21 @@ library
         plutus-ledger-api,
         text
 
+library testlib
+    exposed-modules:  Test.Cardano.Ledger.Api.State.Query
+    visibility:       public
+    hs-source-dirs:   testlib
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages
+
+    build-depends:
+        base,
+        containers,
+        cardano-ledger-core
+
 test-suite cardano-ledger-api-test
     type:             exitcode-stdio-1.0
     main-is:          Tests.hs
@@ -69,6 +85,7 @@ test-suite cardano-ledger-api-test
     other-modules:
         Test.Cardano.Ledger.Api.Tx.Out
         Test.Cardano.Ledger.Api.Tx.Body
+        Test.Cardano.Ledger.Api.State.QuerySpec
 
     default-language: Haskell2010
     ghc-options:
@@ -80,6 +97,7 @@ test-suite cardano-ledger-api-test
         base,
         bytestring,
         cardano-ledger-api,
+        testlib,
         cardano-ledger-binary,
         cardano-ledger-babbage:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},

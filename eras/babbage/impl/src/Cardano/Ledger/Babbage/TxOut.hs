@@ -37,6 +37,7 @@ module Cardano.Ledger.Babbage.TxOut (
   txOutData,
   txOutDataHash,
   txOutScript,
+  internBabbageTxOut,
 ) where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
@@ -455,15 +456,20 @@ instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) whe
     -- Even in Babbage the ledger state still contains garbage pointers that we need to
     -- deal with. This will be taken care of upon entry to Conway era. After which this
     -- backwards compatibility shim can be removed.
-    internTxOut <$!> decodeBabbageTxOut fromCborBackwardsBothAddr
-    where
-      internTxOut = \case
-        TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
-          TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
-        TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
-          TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
-        txOut -> txOut
+    internBabbageTxOut (interns credsInterns) <$!> decodeBabbageTxOut fromCborBackwardsBothAddr
   {-# INLINEABLE decShareCBOR #-}
+
+internBabbageTxOut ::
+  (Credential 'Staking (EraCrypto era) -> Credential 'Staking (EraCrypto era)) ->
+  BabbageTxOut era ->
+  BabbageTxOut era
+internBabbageTxOut internCred = \case
+  TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
+    TxOut_AddrHash28_AdaOnly (internCred cred) addr28Extra ada
+  TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
+    TxOut_AddrHash28_AdaOnly_DataHash32 (internCred cred) addr28Extra ada dataHash32
+  txOut -> txOut
+{-# INLINE internBabbageTxOut #-}
 
 decodeBabbageTxOut ::
   (EraScript era, Val (Value era)) =>

@@ -39,6 +39,11 @@ module Cardano.Ledger.UMap (
   empty,
   umInvariant,
 
+  -- * StakeCredentials
+  StakeCredentials (..),
+  toStakeCredentials,
+  domRestrictedStakeCredentials,
+
   -- * `UView` and its components
   UView (..),
   rewDepUView,
@@ -52,7 +57,7 @@ module Cardano.Ledger.UMap (
   compactRewardMap,
   depositMap,
   ptrMap,
-  revPtrMap,
+  invPtrMap,
   sPoolMap,
   dRepMap,
   domRestrictedMap,
@@ -379,6 +384,20 @@ data UMap c = UMap
   }
   deriving (Show, Eq, Generic, NoThunks, NFData)
 
+-- | All maps unrolled. It is important to note that all fields are lazy, because
+-- conversion from UMap can be expensive, thus only fields that are forced will incur that
+-- conversion overhead.
+data StakeCredentials c = StakeCredentials
+  { scRewards :: Map (Credential 'Staking c) Coin
+  , scDeposits :: Map (Credential 'Staking c) Coin
+  , scSPools :: Map (Credential 'Staking c) (KeyHash 'StakePool c)
+  , scDReps :: Map (Credential 'Staking c) (Credential 'Voting c)
+  , scPtrs :: Map Ptr (Credential 'Staking c)
+  , scPtrsInverse :: Map (Credential 'Staking c) (Set Ptr)
+  -- ^ There will be no empty sets in the range
+  }
+  deriving (Show, Eq, Generic, NoThunks, NFData)
+
 instance ToExpr (UMap c)
 
 instance Crypto c => ToJSON (UMap c) where
@@ -510,49 +529,73 @@ unUnifyToVMap uview = case uview of
     toDRep (key, t) = (,) key <$> umElemDRep t
 
 -- | Extract a reward-deposit pairs `Map` from a 'UMap'
-rdPairMap :: UMap c -> Map.Map (Credential 'Staking c) RDPair
+rdPairMap :: UMap c -> Map (Credential 'Staking c) RDPair
 rdPairMap x = unUnify $ RewDepUView x
 
 -- | Extract a rewards `Map` from a 'UMap'
-rewardMap :: UMap c -> Map.Map (Credential 'Staking c) Coin
+rewardMap :: UMap c -> Map (Credential 'Staking c) Coin
 rewardMap x = Map.map (fromCompact . rdReward) $ unUnify $ RewDepUView x
 
 -- | Extract a compact rewards `Map` from a 'UMap'
-compactRewardMap :: UMap c -> Map.Map (Credential 'Staking c) (CompactForm Coin)
+compactRewardMap :: UMap c -> Map (Credential 'Staking c) (CompactForm Coin)
 compactRewardMap x = Map.map rdReward $ unUnify $ RewDepUView x
 
 -- | Extract a deposits `Map` from a 'UMap'
-depositMap :: UMap c -> Map.Map (Credential 'Staking c) Coin
+depositMap :: UMap c -> Map (Credential 'Staking c) Coin
 depositMap x = Map.map (fromCompact . rdDeposit) $ unUnify $ RewDepUView x
 
 -- | Extract a pointers `Map` from a 'UMap'
-ptrMap :: UMap c -> Map.Map Ptr (Credential 'Staking c)
+ptrMap :: UMap c -> Map Ptr (Credential 'Staking c)
 ptrMap x = unUnify $ PtrUView x
 
 -- | Extract a pointers `Map` from a 'UMap'
-revPtrMap :: UMap c -> Map.Map (Credential 'Staking c) (Set Ptr)
-revPtrMap UMap {umElems} =
+invPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)
+invPtrMap UMap {umElems} =
   Map.foldlWithKey'
     (\ans k (UMElem _ ptrSet _ _) -> if Set.null ptrSet then ans else Map.insert k ptrSet ans)
     Map.empty
     umElems
 
 -- | Extract a stake pool delegations `Map` from a 'UMap'
-sPoolMap :: UMap c -> Map.Map (Credential 'Staking c) (KeyHash 'StakePool c)
+sPoolMap :: UMap c -> Map (Credential 'Staking c) (KeyHash 'StakePool c)
 sPoolMap x = unUnify $ SPoolUView x
 
 -- | Extract a delegated-representatives `Map` from a 'UMap'
-dRepMap :: UMap c -> Map.Map (Credential 'Staking c) (Credential 'Voting c)
+dRepMap :: UMap c -> Map (Credential 'Staking c) (Credential 'Voting c)
 dRepMap x = unUnify $ DRepUView x
 
 -- | Extract a domain-restricted `Map` of a `UMap`.
 -- If `Set k` is small this should be efficient.
-domRestrictedMap :: Set k -> UView c k v -> Map.Map k v
+domRestrictedMap :: Set k -> UView c k v -> Map k v
 domRestrictedMap setk = \case
   RewDepUView UMap {umElems} -> Map.mapMaybe umElemRDPair (Map.restrictKeys umElems setk)
   PtrUView UMap {umPtrs} -> Map.restrictKeys umPtrs setk
   SPoolUView UMap {umElems} -> Map.mapMaybe umElemSPool (Map.restrictKeys umElems setk)
   DRepUView UMap {umElems} -> Map.mapMaybe umElemDRep (Map.restrictKeys umElems setk)
+
+toStakeCredentials :: UMap c -> StakeCredentials c
+toStakeCredentials umap =
+  StakeCredentials
+    { scRewards = rewardMap umap
+    , scDeposits = depositMap umap
+    , scSPools = sPoolMap umap
+    , scDReps = dRepMap umap
+    , scPtrs = ptrMap umap
+    , scPtrsInverse = invPtrMap umap
+    }
+
+domRestrictedStakeCredentials :: Set (Credential 'Staking c) -> UMap c -> StakeCredentials c
+domRestrictedStakeCredentials setk UMap {umElems, umPtrs} =
+  let umElems' = Map.restrictKeys umElems setk
+      ptrs = Map.mapMaybe umElemPtrs umElems'
+   in StakeCredentials
+        { scRewards = Map.mapMaybe (\e -> fromCompact . rdReward <$> umElemRDPair e) umElems'
+        , scDeposits = Map.mapMaybe (\e -> fromCompact . rdDeposit <$> umElemRDPair e) umElems'
+        , scSPools = Map.mapMaybe umElemSPool umElems'
+        , scDReps = Map.mapMaybe umElemDRep umElems'
+        , scPtrs = umPtrs `Map.restrictKeys` fold ptrs
+        , scPtrsInverse = ptrs
+        }
 
 -- | All `View`s are `Foldable`
 instance Foldable (UView c k) where

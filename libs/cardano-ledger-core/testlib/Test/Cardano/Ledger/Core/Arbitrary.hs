@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -18,6 +19,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genBadPtr,
   genValidUMap,
   genValidUMapNonEmpty,
+  genValidUMapWithCreds,
   genValidTuples,
   genValidTuplesNonEmpty,
   genInvariantNonEmpty,
@@ -26,6 +28,11 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genInsertDeleteRoundtripPtr,
   genInsertDeleteRoundtripSPool,
   genInsertDeleteRoundtripDRep,
+
+  -- * Utils
+
+  -- | Will need to find a better home in the future
+  uniformSubset,
 )
 where
 
@@ -91,16 +98,21 @@ import Cardano.Ledger.UMap (RDPair (..), UMElem (UMElem), UMap (UMap, umElems, u
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad.Identity (Identity)
 import Data.GenValidity
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import Data.Set (Set)
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Typeable
 import qualified Data.VMap as VMap
 import Data.Word (Word16, Word32, Word64)
 import GHC.Stack
 import Generic.Random (genericArbitraryU)
+import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
+import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
@@ -480,10 +492,10 @@ instance Crypto c => Arbitrary (UMap c) where
 -- | Used for testing UMap operations
 genValidTuples ::
   Gen
-    ( Map.Map (Credential 'Staking StandardCrypto) RDPair
-    , Map.Map Ptr (Credential 'Staking StandardCrypto)
-    , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-    , Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
+    ( Map (Credential 'Staking StandardCrypto) RDPair
+    , Map Ptr (Credential 'Staking StandardCrypto)
+    , Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+    , Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
     )
 genValidTuples = scale (* 2) $ do
   creds :: [Credential 'Staking StandardCrypto] <- arbitrary
@@ -501,10 +513,10 @@ genValidTuples = scale (* 2) $ do
 
 genValidTuplesNonEmpty ::
   Gen
-    ( Map.Map (Credential 'Staking StandardCrypto) RDPair
-    , Map.Map Ptr (Credential 'Staking StandardCrypto)
-    , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-    , Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
+    ( Map (Credential 'Staking StandardCrypto) RDPair
+    , Map Ptr (Credential 'Staking StandardCrypto)
+    , Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+    , Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
     )
 genValidTuplesNonEmpty = scale (* 2) $ do
   Positive nCreds <- arbitrary
@@ -531,7 +543,33 @@ genValidUMapNonEmpty = do
   (rdPairs, ptrs, sPools, dReps) <- genValidTuplesNonEmpty
   pure $ unify rdPairs ptrs sPools dReps
 
-genExcludingKey :: (Ord k, Arbitrary k) => Map.Map k a -> Gen k
+uniformSubset ::
+  (StatefulGen g m, Ord k) =>
+  -- | Size of the subset. If supplied will be clamped to @[0, Set.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Set k ->
+  g ->
+  m (Set k)
+uniformSubset mSubSetSize inputSet gen = do
+  subSetSize <- case mSubSetSize of
+    Nothing -> uniformRM (0, Set.size inputSet) gen
+    Just n -> pure $ max 0 $ min (Set.size inputSet) n
+  go inputSet Set.empty subSetSize
+  where
+    go !s !acc !i
+      | i <= 0 = pure acc
+      | otherwise = do
+          ix <- uniformRM (0, Set.size s - 1) gen
+          go (Set.insert (Set.elemAt ix s) acc) (Set.deleteAt ix s) (i - 1)
+
+genValidUMapWithCreds :: Gen (UMap StandardCrypto, Set (Credential 'Staking StandardCrypto))
+genValidUMapWithCreds = do
+  umap <- genValidUMap
+  creds <- uniformSubset Nothing (Map.keysSet $ umElems umap) QC
+  pure (umap, creds)
+
+genExcludingKey :: (Ord k, Arbitrary k) => Map k a -> Gen k
 genExcludingKey ks = do
   k <- arbitrary
   if k `Map.member` ks
@@ -591,7 +629,7 @@ genInvariantNonEmpty = do
       ]
   pure (cred, ptr, umap)
 
-genRightPreferenceUMap :: Gen (UMap StandardCrypto, Map.Map (Credential 'Staking StandardCrypto) RDPair)
+genRightPreferenceUMap :: Gen (UMap StandardCrypto, Map (Credential 'Staking StandardCrypto) RDPair)
 genRightPreferenceUMap = do
   umap <- genValidUMap
   let rdMap = unUnify $ RewDepUView umap
