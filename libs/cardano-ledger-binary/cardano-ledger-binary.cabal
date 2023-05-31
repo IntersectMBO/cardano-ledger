@@ -56,7 +56,7 @@ library
         cardano-crypto-praos >=2.1,
         cardano-slotting,
         cardano-strict-containers >=0.1.2,
-        cborg,
+        cborg >=0.2.9,
         containers,
         data-fix,
         deepseq,
