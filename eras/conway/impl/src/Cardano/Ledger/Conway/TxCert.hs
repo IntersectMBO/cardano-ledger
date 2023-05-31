@@ -159,12 +159,12 @@ instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   getRegDepositDelegTxCert (ConwayTxCertDeleg (ConwayRegDelegCert cred d c)) = Just (cred, d, c)
   getRegDepositDelegTxCert _ = Nothing
 
-  mkRegCommitteeHotTxCert ck hk = ConwayTxCertCommittee $ ConwayRegCommitteeHotKey ck hk
-  getRegCommitteeHotTxCert (ConwayTxCertCommittee (ConwayRegCommitteeHotKey ck hk)) = Just (ck, hk)
+  mkRegCommitteeHotTxCert ck hk = ConwayTxCertCommittee $ ConwayAuthCommitteeHotKey ck hk
+  getRegCommitteeHotTxCert (ConwayTxCertCommittee (ConwayAuthCommitteeHotKey ck hk)) = Just (ck, hk)
   getRegCommitteeHotTxCert _ = Nothing
 
-  mkUnRegCommitteeHotTxCert = ConwayTxCertCommittee . ConwayUnRegCommitteeHotKey
-  getUnRegCommitteeHotTxCert (ConwayTxCertCommittee (ConwayUnRegCommitteeHotKey ck)) = Just ck
+  mkUnRegCommitteeHotTxCert = ConwayTxCertCommittee . ConwayResignCommitteeColdKey
+  getUnRegCommitteeHotTxCert (ConwayTxCertCommittee (ConwayResignCommitteeColdKey ck)) = Just ck
   getUnRegCommitteeHotTxCert _ = Nothing
 
 pattern RegDepositTxCert ::
@@ -277,8 +277,8 @@ instance NFData (ConwayDelegCert c)
 instance NoThunks (ConwayDelegCert c)
 
 data ConwayCommitteeCert c
-  = ConwayRegCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(KeyHash 'CommitteeHotKey c)
-  | ConwayUnRegCommitteeHotKey !(KeyHash 'CommitteeColdKey c)
+  = ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(KeyHash 'CommitteeHotKey c)
+  | ConwayResignCommitteeColdKey !(KeyHash 'CommitteeColdKey c)
   deriving (Show, Generic, Eq)
 
 instance NFData (ConwayCommitteeCert c)
@@ -287,8 +287,8 @@ instance NoThunks (ConwayCommitteeCert c)
 
 committeeKeyHashWitness :: ConwayCommitteeCert c -> KeyHash 'Witness c
 committeeKeyHashWitness = \case
-  ConwayRegCommitteeHotKey coldKeyHash _ -> asWitness coldKeyHash
-  ConwayUnRegCommitteeHotKey coldKeyHash -> asWitness coldKeyHash
+  ConwayAuthCommitteeHotKey coldKeyHash _ -> asWitness coldKeyHash
+  ConwayResignCommitteeColdKey coldKeyHash -> asWitness coldKeyHash
 
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
@@ -419,12 +419,12 @@ encodeConwayDelegCert = \case
 
 encodeCommitteeHotKey :: Crypto c => ConwayCommitteeCert c -> Encoding
 encodeCommitteeHotKey = \case
-  ConwayRegCommitteeHotKey cred key ->
+  ConwayAuthCommitteeHotKey cred key ->
     encodeListLen 3
       <> encodeWord8 14
       <> encCBOR cred
       <> encCBOR key
-  ConwayUnRegCommitteeHotKey cred ->
+  ConwayResignCommitteeColdKey cred ->
     encodeListLen 2
       <> encodeWord8 15
       <> encCBOR cred
