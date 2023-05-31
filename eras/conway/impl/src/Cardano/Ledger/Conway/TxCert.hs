@@ -24,8 +24,8 @@ module Cardano.Ledger.Conway.TxCert (
   pattern UnRegDepositTxCert,
   pattern DelegTxCert,
   pattern RegDepositDelegTxCert,
-  pattern RegCommitteeHotTxCert,
-  pattern UnRegCommitteeHotTxCert,
+  pattern AuthCommitteeHotTxCert,
+  pattern ResignCommitteeColdTxCert,
 )
 where
 
@@ -133,13 +133,13 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
   getRegDepositDelegTxCert ::
     TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era), Coin)
 
-  mkRegCommitteeHotTxCert ::
+  mkAuthCommitteeHotTxCert ::
     KeyHash 'CommitteeColdKey (EraCrypto era) -> KeyHash 'CommitteeHotKey (EraCrypto era) -> TxCert era
-  getRegCommitteeHotTxCert ::
+  getAuthCommitteeHotTxCert ::
     TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era), KeyHash 'CommitteeHotKey (EraCrypto era))
 
-  mkUnRegCommitteeHotTxCert :: KeyHash 'CommitteeColdKey (EraCrypto era) -> TxCert era
-  getUnRegCommitteeHotTxCert :: TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era))
+  mkResignCommitteeColdTxCert :: KeyHash 'CommitteeColdKey (EraCrypto era) -> TxCert era
+  getResignCommitteeColdTxCert :: TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era))
 
 instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkRegDepositTxCert cred c = ConwayTxCertDeleg $ ConwayRegCert cred $ SJust c
@@ -159,13 +159,13 @@ instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   getRegDepositDelegTxCert (ConwayTxCertDeleg (ConwayRegDelegCert cred d c)) = Just (cred, d, c)
   getRegDepositDelegTxCert _ = Nothing
 
-  mkRegCommitteeHotTxCert ck hk = ConwayTxCertCommittee $ ConwayAuthCommitteeHotKey ck hk
-  getRegCommitteeHotTxCert (ConwayTxCertCommittee (ConwayAuthCommitteeHotKey ck hk)) = Just (ck, hk)
-  getRegCommitteeHotTxCert _ = Nothing
+  mkAuthCommitteeHotTxCert ck hk = ConwayTxCertCommittee $ ConwayAuthCommitteeHotKey ck hk
+  getAuthCommitteeHotTxCert (ConwayTxCertCommittee (ConwayAuthCommitteeHotKey ck hk)) = Just (ck, hk)
+  getAuthCommitteeHotTxCert _ = Nothing
 
-  mkUnRegCommitteeHotTxCert = ConwayTxCertCommittee . ConwayResignCommitteeColdKey
-  getUnRegCommitteeHotTxCert (ConwayTxCertCommittee (ConwayResignCommitteeColdKey ck)) = Just ck
-  getUnRegCommitteeHotTxCert _ = Nothing
+  mkResignCommitteeColdTxCert = ConwayTxCertCommittee . ConwayResignCommitteeColdKey
+  getResignCommitteeColdTxCert (ConwayTxCertCommittee (ConwayResignCommitteeColdKey ck)) = Just ck
+  getResignCommitteeColdTxCert _ = Nothing
 
 pattern RegDepositTxCert ::
   ConwayEraTxCert era =>
@@ -204,22 +204,22 @@ pattern RegDepositDelegTxCert cred d c <- (getRegDepositDelegTxCert -> Just (cre
   where
     RegDepositDelegTxCert cred d c = mkRegDepositDelegTxCert cred d c
 
-pattern RegCommitteeHotTxCert ::
+pattern AuthCommitteeHotTxCert ::
   ConwayEraTxCert era =>
   KeyHash 'CommitteeColdKey (EraCrypto era) ->
   KeyHash 'CommitteeHotKey (EraCrypto era) ->
   TxCert era
-pattern RegCommitteeHotTxCert ck hk <- (getRegCommitteeHotTxCert -> Just (ck, hk))
+pattern AuthCommitteeHotTxCert ck hk <- (getAuthCommitteeHotTxCert -> Just (ck, hk))
   where
-    RegCommitteeHotTxCert ck hk = mkRegCommitteeHotTxCert ck hk
+    AuthCommitteeHotTxCert ck hk = mkAuthCommitteeHotTxCert ck hk
 
-pattern UnRegCommitteeHotTxCert ::
+pattern ResignCommitteeColdTxCert ::
   ConwayEraTxCert era =>
   KeyHash 'CommitteeColdKey (EraCrypto era) ->
   TxCert era
-pattern UnRegCommitteeHotTxCert ck <- (getUnRegCommitteeHotTxCert -> Just ck)
+pattern ResignCommitteeColdTxCert ck <- (getResignCommitteeColdTxCert -> Just ck)
   where
-    UnRegCommitteeHotTxCert ck = mkUnRegCommitteeHotTxCert ck
+    ResignCommitteeColdTxCert ck = mkResignCommitteeColdTxCert ck
 
 {-# COMPLETE
   RegPoolTxCert
@@ -231,8 +231,8 @@ pattern UnRegCommitteeHotTxCert ck <- (getUnRegCommitteeHotTxCert -> Just ck)
   , UnRegDepositTxCert
   , DelegTxCert
   , RegDepositDelegTxCert
-  , RegCommitteeHotTxCert
-  , UnRegCommitteeHotTxCert
+  , AuthCommitteeHotTxCert
+  , ResignCommitteeColdTxCert
   #-}
 
 -- | First type argument is the deposit
@@ -341,10 +341,10 @@ conwayTxCertDelegDecoder = \case
   14 -> do
     cred <- decCBOR
     key <- decCBOR
-    pure (3, RegCommitteeHotTxCert cred key)
+    pure (3, AuthCommitteeHotTxCert cred key)
   15 -> do
     cred <- decCBOR
-    pure (2, UnRegCommitteeHotTxCert cred)
+    pure (2, ResignCommitteeColdTxCert cred)
   k -> invalidKey k
   where
     delegCertDecoder n decodeDelegatee = do
