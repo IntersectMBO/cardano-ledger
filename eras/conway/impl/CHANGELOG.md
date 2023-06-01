@@ -2,6 +2,8 @@
 
 ## 1.3.0.0
 
+* Add `CERT` and `DELEG` rules to Conway #3412
+  * Add `domDeleteAll` to `UMap`.
 * Introduction of `TxCert` and `EraTxCert`
 * Add `ConwayEraTxCert`
 * Add `EraTxCert`, `ShelleyEraTxCert` and `ConwayEraTxCert` instances for `ConwayEra`

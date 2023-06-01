@@ -30,7 +30,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Rules (ConwayDELEGS, ConwayDelegsPredFailure (..), ConwayLEDGER)
+import Cardano.Ledger.Conway.Rules (ConwayCERTS, ConwayCertsPredFailure (..), ConwayLEDGER)
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
@@ -70,7 +70,8 @@ import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 -- ==============================================================
 
 -- | ShelleyLedgerExamples for Conway era
-ledgerExamplesConway :: SLE.ShelleyLedgerExamples Conway
+ledgerExamplesConway ::
+  SLE.ShelleyLedgerExamples Conway
 ledgerExamplesConway =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock
@@ -79,7 +80,7 @@ ledgerExamplesConway =
     , SLE.sleApplyTxError =
         ApplyTxError $
           pure $
-            wrapFailed @(ConwayDELEGS Conway) @(ConwayLEDGER Conway) $
+            wrapFailed @(ConwayCERTS Conway) @(ConwayLEDGER Conway) $
               DelegateeNotRegisteredDELEG @Conway (SLE.mkKeyHash 1)
     , SLE.sleRewardsCredentials =
         Set.fromList

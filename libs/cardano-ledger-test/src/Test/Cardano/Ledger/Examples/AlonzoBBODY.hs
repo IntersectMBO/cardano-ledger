@@ -32,8 +32,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block (..), txid)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Rules (ConwayDelegsPredFailure (..), ConwayLedgerPredFailure (..))
-
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
@@ -674,9 +672,8 @@ makeTooBig proof@(Alonzo _) =
 makeTooBig proof@(Babbage _) =
   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
-makeTooBig proof@(Conway _) =
-  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayDelegsFailure . CertFailure . PoolFailure $
-    PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+-- makeTooBig proof@(Conway _) =
+--   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayCertsFailure . CertFailure . PoolFailure $ ConwayPoolPredFailure -- FIXME: @aniketd: This needs fixing after POOL rules are implemented for Conway
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 
 coldKeys :: CC.Crypto c => KeyPair 'BlockIssuer c
