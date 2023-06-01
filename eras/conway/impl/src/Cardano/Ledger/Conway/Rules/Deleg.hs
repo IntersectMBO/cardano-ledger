@@ -151,7 +151,6 @@ conwayDelegTransition = do
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
       checkStakeKeyNotAlreadyRegistered stakeCred dsUnified
-      -- checkDRepNotAlreadyRegistered stakeCred dsUnified -- TODO: @aniketd to confirm
       pure $
         dState
           { dsUnified =
@@ -178,9 +177,6 @@ conwayDelegTransition = do
       UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyAlreadyRegisteredDELEG stakeCred
     checkStakeKeyIsAlreadyRegistered stakeCred dsUnified =
       UM.member stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyNotRegisteredDELEG stakeCred
-    -- checkDRepNotAlreadyRegistered stakeCred dsUnified = -- TODO: @aniketd to confirm
-    --   UM.notMember stakeCred (DRepUView dsUnified)
-    --     ?! DRepAlreadyRegisteredForStakeKeyDELEG stakeCred
     checkStakeKeyHasZeroBalance stakeCred dsUnified =
       let mReward = UM.rdReward <$> UM.lookup stakeCred (UM.RewDepUView dsUnified)
        in forM_ mReward $ \r -> r == mempty ?! StakeKeyHasNonZeroAccountBalanceDELEG (UM.fromCompact r)
