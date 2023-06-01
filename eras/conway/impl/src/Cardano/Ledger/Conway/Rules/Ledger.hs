@@ -33,7 +33,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayLEDGER, ConwayTALLY)
+import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayLEDGER, ConwayTALLY, ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovernance (..),
   ConwayTallyState,
@@ -41,7 +41,6 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Tally (ConwayTallyPredFailure, TallyEnv (..))
-import Cardano.Ledger.Conway.Rules.Utxow (ConwayUTXOW)
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Shelley.LedgerState (

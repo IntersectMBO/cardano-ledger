@@ -92,6 +92,7 @@ instance
   , EncCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
+  , ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -134,6 +135,7 @@ utxosTransition ::
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext 'PlutusV1 era
+  , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -159,6 +161,7 @@ scriptsYes ::
   , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   , EraPlutusContext 'PlutusV1 era
+  , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsYes = do
@@ -180,7 +183,7 @@ scriptsYes = do
   ppup' <-
     trans @(EraRule "PPUP" era) $
       TRC
-        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyG)
+        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
 
   let !_ = traceEvent validBegin ()
 

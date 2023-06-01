@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -44,6 +45,7 @@ import Lens.Micro.Extras (view)
 -- | Alonzo era style scripts needed require also a `ScriptPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
   = AlonzoScriptsNeeded [(ScriptPurpose era, ScriptHash (EraCrypto era))]
+  deriving (Semigroup, Monoid)
 
 deriving instance (Era era, Eq (TxCert era)) => Eq (AlonzoScriptsNeeded era)
 deriving instance (Era era, Show (TxCert era)) => Show (AlonzoScriptsNeeded era)

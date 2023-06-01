@@ -2,6 +2,14 @@
 
 ## 1.4.0.0
 
+* Deprecated `updateTxBodyG`
+* Changed the argument types of `witsVKeyNeeded`
+* Changed the signature of `validateNeededWitnesses`
+* Added `witsVKeyNeededGovernance` and `witsVKeyNeededNoGovernance`
+* Added protocol version bound to
+  * `STS (ShelleyUTXOW era)` instance
+  * `transitionRulesUTXOW`
+  * `witsVKeyNeeded`
 * Prevent using `getMirTxCert` from being used in eras after Babbage. This also affects
   all functions that use it
 * Prevent using `mkGenesisDelegTxCert`, `getGenesisDelegTxCert` and `GenesisDelegTxCert`
