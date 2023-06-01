@@ -101,7 +101,7 @@ import Data.Time.Clock (
 import Data.Unit.Strict (forceElemsToWHNF)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..), AllowThunksIn(..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 -- | Genesis Shelley staking configuration.
 --
@@ -221,8 +221,10 @@ deriving instance Crypto c => Show (ShelleyGenesis c)
 
 deriving instance Crypto c => Eq (ShelleyGenesis c)
 
-deriving via AllowThunksIn '["sgInitialFunds", "sgStaking"] (ShelleyGenesis c)
-  instance Crypto c => NoThunks (ShelleyGenesis c)
+deriving via
+  AllowThunksIn '["sgInitialFunds", "sgStaking"] (ShelleyGenesis c)
+  instance
+    Crypto c => NoThunks (ShelleyGenesis c)
 
 sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
