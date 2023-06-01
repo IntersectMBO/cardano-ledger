@@ -103,6 +103,7 @@ module Cardano.Ledger.UMap (
   -- * Derived functions
   findWithDefault,
   size,
+  domDeleteAll,
 )
 where
 
@@ -889,6 +890,15 @@ unionKeyDeposits view m = unUView $ Map.foldlWithKey' accum view m
 domDelete, (⋪) :: Set k -> UView c k v -> UMap c
 set ⋪ view = unUView (Set.foldl' (flip delete') view set)
 domDelete = (⋪)
+
+-- | Delete the stake credentials in the domain and all associated ranges from the `UMap`
+-- This can be expensive when there are many pointers associated with the credential.
+domDeleteAll :: Set (Credential 'Staking c) -> UMap c -> UMap c
+domDeleteAll ks UMap {umElems, umPtrs} =
+  UMap
+    { umElems = Map.withoutKeys umElems ks
+    , umPtrs = Map.filter (`Set.notMember` ks) umPtrs
+    }
 
 -- | Delete all elements in the given `Set` from the range of the given map-like `UView`.
 -- This is slow for SPoolUView, RewDepUView, and DReps UViews, better hope the sets are small

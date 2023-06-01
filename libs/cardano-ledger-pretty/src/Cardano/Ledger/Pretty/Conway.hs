@@ -59,7 +59,6 @@ import Cardano.Ledger.Pretty (
   ppAuxiliaryDataHash,
   ppCoin,
   ppKeyHash,
-  ppMaybe,
   ppNetwork,
   ppPoolCert,
   ppRecord,
@@ -362,7 +361,7 @@ instance PrettyA (ConwayDelegPredFailure era) where
     StakeKeyHasNonZeroAccountBalanceDELEG x ->
       ppRecord
         "StakeKeyHasNonZeroAccountBalanceDELEG"
-        [("Coin", ppMaybe ppCoin x)]
+        [("Coin", prettyA x)]
     DRepAlreadyRegisteredForStakeKeyDELEG x ->
       ppRecord
         "DRepAlreadyRegisteredForStakeKeyDELEG"

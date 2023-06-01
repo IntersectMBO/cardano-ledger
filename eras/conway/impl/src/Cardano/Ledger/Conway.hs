@@ -54,7 +54,6 @@ instance
   reapplyTx = reapplyAlonzoTx
 
 instance
-  forall c.
   ( Crypto c
   , DSignable c (Hash c EraIndependentTxBody)
   , EraPlutusContext 'PlutusV2 (ConwayEra c)
