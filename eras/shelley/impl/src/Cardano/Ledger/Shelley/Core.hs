@@ -31,6 +31,7 @@ import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe)
 import Lens.Micro (Lens', SimpleGetter)
 
+{-# DEPRECATED updateTxBodyG "Use `updateTxBodyL` instead" #-}
 class (ShelleyEraTxCert era, EraTxBody era) => ShelleyEraTxBody era where
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo
 

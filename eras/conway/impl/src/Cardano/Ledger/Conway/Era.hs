@@ -13,10 +13,10 @@ module Cardano.Ledger.Conway.Era (
   ConwayEPOCH,
   ConwayENACT,
   ConwayUTXOS,
+  ConwayUTXOW,
   ConwayTICKF,
   ConwayLEDGER,
   ConwayRATIFY,
-  ConwayUTXOW,
 ) where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)

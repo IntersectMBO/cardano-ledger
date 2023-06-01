@@ -60,6 +60,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
+  shelleyWitsVKeyNeeded,
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -318,7 +319,8 @@ babbageUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses genDelegs utxo tx witsKeyHashes
+  let needed = shelleyWitsVKeyNeeded utxo (tx ^. bodyTxL) genDelegs
+  runTest $ validateNeededWitnesses @era witsKeyHashes needed
   -- TODO can we add the required signers to witsVKeyNeeded so we dont need the check below?
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
@@ -376,6 +378,7 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
+  , ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXOW era)
   where

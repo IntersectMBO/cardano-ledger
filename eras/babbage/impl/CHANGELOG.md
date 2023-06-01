@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.3.0.1
+## 1.4.0.0
 
-*
+* Added a protocol version constraint to:
+  * `STS (BabbageUTXOS era)` instance
+  * `STS (BabbageUTXOW era)` instance
+  * `utxosTransition`
+  * `babbageUtxowTransition`
 
 ## 1.3.0.0
 

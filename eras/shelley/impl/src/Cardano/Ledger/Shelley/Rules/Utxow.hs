@@ -23,6 +23,9 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
   ShelleyUtxowEvent (..),
   PredicateFailure,
   transitionRulesUTXOW,
+  shelleyWitsVKeyNeeded,
+  witsVKeyNeededGovernance,
+  witsVKeyNeededNoGovernance,
 
   -- * Individual validation steps
   validateFailedScripts,
@@ -331,7 +334,8 @@ transitionRulesUTXOW = do
   runTestOnSignal $ validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses genDelegs utxo tx witsKeyHashes
+  let needed = shelleyWitsVKeyNeeded utxo (tx ^. bodyTxL) genDelegs
+  runTest $ validateNeededWitnesses @era witsKeyHashes needed
 
   -- check metadata hash
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
@@ -372,6 +376,7 @@ instance
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , ProtVerAtMost era 8
   ) =>
   STS (ShelleyUTXOW era)
   where
@@ -451,36 +456,38 @@ validateVerifiedWits tx =
 -- from Era to Era, so we parameterise over that function in this test.
 -- That allows it to be used in many Eras.
 validateNeededWitnesses ::
-  (EraTx era, ShelleyEraTxBody era) =>
-  GenDelegs (EraCrypto era) ->
-  UTxO era ->
-  Tx era ->
+  Set (KeyHash 'Witness (EraCrypto era)) ->
   Set (KeyHash 'Witness (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
-validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
-  let needed = witsVKeyNeeded utxo tx genDelegs
-      missingWitnesses = Set.difference needed witsKeyHashes
+validateNeededWitnesses witsKeyHashes needed =
+  let missingWitnesses = Set.difference needed witsKeyHashes
    in failureUnless (Set.null missingWitnesses) $
         MissingVKeyWitnessesUTXOW missingWitnesses
 
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
-witsVKeyNeeded ::
+witsVKeyNeededGovernance ::
   forall era.
-  (EraTx era, ShelleyEraTxBody era) =>
-  UTxO era ->
-  Tx era ->
+  (ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  TxBody era ->
   GenDelegs (EraCrypto era) ->
   Set (KeyHash 'Witness (EraCrypto era))
-witsVKeyNeeded utxo' tx genDelegs =
+witsVKeyNeededGovernance txBody genDelegs =
+  asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyL) genDelegs
+
+witsVKeyNeededNoGovernance ::
+  forall era.
+  EraTx era =>
+  UTxO era ->
+  TxBody era ->
+  Set (KeyHash 'Witness (EraCrypto era))
+witsVKeyNeededNoGovernance utxo' txBody =
   certAuthors
     `Set.union` inputAuthors
     `Set.union` owners
     `Set.union` wdrlAuthors
-    `Set.union` updateKeys
   where
-    txBody = tx ^. bodyTxL
     inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     inputAuthors = foldr' accum Set.empty (txBody ^. allInputsTxBodyF)
       where
@@ -516,9 +523,17 @@ witsVKeyNeeded utxo' tx genDelegs =
           case getVKeyWitnessTxCert cert of
             Nothing -> ans
             Just vkeyWit -> Set.insert vkeyWit ans
-    updateKeys :: Set (KeyHash 'Witness (EraCrypto era))
-    updateKeys =
-      asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyG) genDelegs
+
+shelleyWitsVKeyNeeded ::
+  forall era.
+  (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  UTxO era ->
+  TxBody era ->
+  GenDelegs (EraCrypto era) ->
+  Set (KeyHash 'Witness (EraCrypto era))
+shelleyWitsVKeyNeeded utxo' txBody genDelegs =
+  witsVKeyNeededNoGovernance utxo' txBody
+    `Set.union` witsVKeyNeededGovernance txBody genDelegs
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
@@ -589,10 +604,10 @@ proposedUpdatesWitnesses ::
   Set (KeyHash 'Witness (EraCrypto era))
 proposedUpdatesWitnesses SNothing _ = Set.empty
 proposedUpdatesWitnesses (SJust (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
-  Set.map asWitness . Set.fromList $ Map.elems updateKeys
+  Set.map asWitness . Set.fromList $ Map.elems updateKeys''
   where
     updateKeys' = eval (Map.keysSet pup ◁ genDelegs)
-    updateKeys = Map.map genDelegKeyHash updateKeys'
+    updateKeys'' = Map.map genDelegKeyHash updateKeys'
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.

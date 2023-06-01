@@ -98,7 +98,7 @@ test-suite cardano-ledger-conway-test
         cardano-ledger-allegra,
         cardano-ledger-alonzo,
         cardano-ledger-babbage,
-        cardano-ledger-babbage-test >=1.1.1 && <1.2,
+        cardano-ledger-babbage-test ^>=1.1.1,
         cardano-ledger-conway,
         cardano-ledger-conway-test,
         cardano-ledger-core,

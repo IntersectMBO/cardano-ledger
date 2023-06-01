@@ -2,7 +2,7 @@
 
 ## 1.4.0.0
 
-* Add a placeholder for `ConwayUTXOW` rule and replace the previous `"UTXOW"` for `ConwayEra`
+* Added `ConwayUTXOW` rule
 
 ### `testlib`
 

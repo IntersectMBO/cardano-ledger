@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -73,6 +72,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure (..),
   UtxoEnv (..),
+  shelleyWitsVKeyNeeded,
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -367,7 +367,8 @@ alonzoStyleWitness = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses genDelegs utxo tx witsKeyHashes
+  let needed = shelleyWitsVKeyNeeded utxo (tx ^. bodyTxL) genDelegs
+  runTest $ validateNeededWitnesses @era witsKeyHashes needed
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded must include the reqSignerHashes in the union   -}
