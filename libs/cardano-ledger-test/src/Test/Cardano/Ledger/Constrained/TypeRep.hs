@@ -116,6 +116,8 @@ data Rep era t where
   GenHashR :: Rep era (KeyHash 'Genesis (EraCrypto era))
   GenDelegHashR :: Rep era (KeyHash 'GenesisDelegate (EraCrypto era))
   VHashR :: Rep era (KeyHash 'Voting (EraCrypto era))
+  CommColdHashR :: Rep era (KeyHash 'CommitteeColdKey (EraCrypto era))
+  CommHotHashR :: Rep era (KeyHash 'CommitteeHotKey (EraCrypto era))
   PoolParamsR :: Rep era (PoolParams (EraCrypto era))
   NewEpochStateR :: Rep era (NewEpochState era)
   IntR :: Rep era Int
@@ -258,6 +260,8 @@ instance Show (Rep era t) where
   show SizeR = "Size"
   show VCredR = "VCredR"
   show VHashR = "VHashR"
+  show CommColdHashR = "CommColdHashR"
+  show CommHotHashR = "CommHotHashR"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -312,6 +316,8 @@ synopsis SlotNoR x = show x
 synopsis SizeR x = show x
 synopsis VCredR x = show x
 synopsis VHashR x = show x
+synopsis CommColdHashR x = show x
+synopsis CommHotHashR x = show x
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -382,6 +388,8 @@ instance Shaped (Rep era) any where
   shape (PairR a b) = Nary 38 [shape a, shape b]
   shape VCredR = Nullary 39
   shape VHashR = Nullary 40
+  shape CommColdHashR = Nullary 41
+  shape CommHotHashR = Nullary 42
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -436,6 +444,8 @@ genSizedRep _ SlotNoR = arbitrary
 genSizedRep _ SizeR = do lo <- choose (1, 6); hi <- choose (6, 10); pure (SzRng lo hi)
 genSizedRep _ VCredR = arbitrary
 genSizedRep _ VHashR = arbitrary
+genSizedRep _ CommColdHashR = arbitrary
+genSizedRep _ CommHotHashR = arbitrary
 
 genRep ::
   Era era =>

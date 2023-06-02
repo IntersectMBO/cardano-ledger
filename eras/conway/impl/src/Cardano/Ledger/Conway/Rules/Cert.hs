@@ -26,7 +26,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEG, ConwayPOOL, ConwayVDEL)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
-import Cardano.Ledger.Conway.Rules.VDel (ConwayVDelPredFailure, VDelEnv (VDelEnv))
+import Cardano.Ledger.Conway.Rules.VDel (ConwayVDelPredFailure)
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert, ConwayDelegCert, ConwayTxCert (..))
 import Cardano.Ledger.Shelley.API (CertState (..), DState, DelegEnv (DelegEnv), DelplEnv (DelplEnv), PState, PoolEnv (PoolEnv), VState)
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
@@ -83,7 +83,7 @@ instance
   , State (EraRule "VDEL" era) ~ VState era
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Environment (EraRule "VDEL" era) ~ VDelEnv era
+  , Environment (EraRule "VDEL" era) ~ PParams era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
   , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , Signal (EraRule "VDEL" era) ~ ConwayCommitteeCert (EraCrypto era)
@@ -110,7 +110,7 @@ certTransition ::
   , State (EraRule "VDEL" era) ~ VState era
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Environment (EraRule "VDEL" era) ~ VDelEnv era
+  , Environment (EraRule "VDEL" era) ~ PParams era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
   , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , Signal (EraRule "VDEL" era) ~ ConwayCommitteeCert (EraCrypto era)
@@ -129,8 +129,8 @@ certTransition = do
     ConwayTxCertPool poolCert -> do
       newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, poolCert)
       pure $ cState {certPState = newPState}
-    ConwayTxCertCommittee committeeCert -> do
-      newVState <- trans @(EraRule "VDEL" era) $ TRC (VDelEnv, certVState, committeeCert)
+    ConwayTxCertCommittee vDelCert -> do
+      newVState <- trans @(EraRule "VDEL" era) $ TRC (pp, certVState, vDelCert)
       pure $ cState {certVState = newVState}
 
 instance

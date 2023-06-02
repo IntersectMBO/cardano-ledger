@@ -279,7 +279,9 @@ instance NFData (ConwayDelegCert c)
 instance NoThunks (ConwayDelegCert c)
 
 data ConwayCommitteeCert c
-  = ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(KeyHash 'CommitteeHotKey c)
+  = ConwayDRepReg !(Credential 'Voting c)
+  | ConwayDRepUnReg !(Credential 'Voting c)
+  | ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(KeyHash 'CommitteeHotKey c)
   | ConwayResignCommitteeColdKey !(KeyHash 'CommitteeColdKey c)
   deriving (Show, Generic, Eq)
 
@@ -291,6 +293,7 @@ committeeKeyHashWitness :: ConwayCommitteeCert c -> KeyHash 'Witness c
 committeeKeyHashWitness = \case
   ConwayAuthCommitteeHotKey coldKeyHash _ -> asWitness coldKeyHash
   ConwayResignCommitteeColdKey coldKeyHash -> asWitness coldKeyHash
+  _ -> undefined
 
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
@@ -429,6 +432,14 @@ encodeCommitteeHotKey = \case
   ConwayResignCommitteeColdKey cred ->
     encodeListLen 2
       <> encodeWord8 15
+      <> encCBOR cred
+  ConwayDRepReg cred ->
+    encodeListLen 2
+      <> encodeWord8 16
+      <> encCBOR cred
+  ConwayDRepUnReg cred ->
+    encodeListLen 2
+      <> encodeWord8 17
       <> encCBOR cred
 
 fromShelleyDelegCert :: ShelleyDelegCert c -> ConwayDelegCert c

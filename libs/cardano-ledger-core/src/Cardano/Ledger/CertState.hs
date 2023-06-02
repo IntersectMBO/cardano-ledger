@@ -257,8 +257,8 @@ data VState era = VState
   { vsDReps :: !(Set (Credential 'Voting (EraCrypto era)))
   , vsCCHotKeys ::
       !( Map
-          (KeyHash 'Voting (EraCrypto era))
-          (KeyHash 'Voting (EraCrypto era))
+          (KeyHash 'CommitteeColdKey (EraCrypto era))
+          (KeyHash 'CommitteeHotKey (EraCrypto era))
        )
   }
   deriving (Show, Eq, Generic)
