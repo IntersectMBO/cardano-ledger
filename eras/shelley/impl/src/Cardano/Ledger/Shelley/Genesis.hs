@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -100,7 +101,7 @@ import Data.Time.Clock (
 import Data.Unit.Strict (forceElemsToWHNF)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 -- | Genesis Shelley staking configuration.
 --
@@ -208,7 +209,11 @@ data ShelleyGenesis c = ShelleyGenesis
   , sgProtocolParams :: !(PParams (ShelleyEra c))
   , sgGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c))
   , sgInitialFunds :: LM.ListMap (Addr c) Coin
+  -- ^ 'sgInitialFunds' is intentionally kept lazy, as it can otherwise cause
+  --   out-of-memory problems in testing and benchmarking.
   , sgStaking :: ShelleyGenesisStaking c
+  -- ^ 'sgStaking' is intentionally kept lazy, as it can otherwise cause
+  --   out-of-memory problems in testing and benchmarking.
   }
   deriving stock (Generic)
 
@@ -216,7 +221,10 @@ deriving instance Crypto c => Show (ShelleyGenesis c)
 
 deriving instance Crypto c => Eq (ShelleyGenesis c)
 
-deriving instance Crypto c => NoThunks (ShelleyGenesis c)
+deriving via
+  AllowThunksIn '["sgInitialFunds", "sgStaking"] (ShelleyGenesis c)
+  instance
+    Crypto c => NoThunks (ShelleyGenesis c)
 
 sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
