@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Golden tests that check CBOR token encoding.
@@ -117,7 +119,7 @@ import Cardano.Ledger.Shelley.TxCert (
   pattern RegTxCert,
   pattern UnRegTxCert,
  )
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits, scriptWits)
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Protocol.TPraos.BHeader (
@@ -160,6 +162,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.String (fromString)
+import Data.Word (Word64)
 import Lens.Micro ((&), (.~))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
@@ -903,7 +906,7 @@ tests =
           w = mkWitnessVKey @C_Crypto txbh testKey1
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
           txwits :: ShelleyTxWits C
-          txwits = mempty {addrWits = Set.singleton w, scriptWits = s}
+          txwits = mkBasicTxWits @C & addrTxWitsL .~ Set.singleton w & scriptTxWitsL .~ s
           md = (TxAuxData.ShelleyTxAuxData @C) $ Map.singleton 17 (TxAuxData.I 42)
        in checkEncodingCBORAnnotated
             shelleyProtVer
@@ -1030,6 +1033,7 @@ tests =
           sig = signedKES () 0 (testBHB @C) (kesSignKey $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
           tout = StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2)
+          txb :: Word64 -> ShelleyTxBody C
           txb s =
             ShelleyTxBody @C
               (Set.fromList [genesisTxIn1])
@@ -1040,6 +1044,7 @@ tests =
               (SlotNo s)
               SNothing
               SNothing
+          txb1, txb2, txb3, txb4, txb5 :: ShelleyTxBody C
           txb1 = txb 500
           txb2 = txb 501
           txb3 = txb 502
@@ -1048,24 +1053,33 @@ tests =
           w1 = mkWitnessVKey (hashAnnotated txb1) testKey1
           w2 = mkWitnessVKey (hashAnnotated txb1) testKey2
           ws = Set.fromList [w1, w2]
-          tx1 = ShelleyTx @C txb1 mempty {addrWits = Set.singleton w1} SNothing
-          tx2 = ShelleyTx @C txb2 mempty {addrWits = ws} SNothing
+          tx1, tx2, tx3, tx4, tx5 :: ShelleyTx C
+          tx1 =
+            mkBasicTx txb1
+              & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ Set.singleton w1)
+          tx2 =
+            mkBasicTx txb2
+              & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ ws)
           tx3 =
-            ShelleyTx @C
-              txb3
-              mempty
-                { scriptWits =
-                    Map.singleton (hashScript @C testScript) testScript
-                }
-              SNothing
+            mkBasicTx txb3
+              & witsTxL @C
+                .~ ( mkBasicTxWits @C
+                      & scriptTxWitsL
+                        .~ Map.singleton (hashScript @C testScript) testScript
+                   )
           ss =
             Map.fromList
               [ (hashScript @C testScript, testScript)
               , (hashScript @C testScript2, testScript2)
               ]
-          tx4 = ShelleyTx txb4 mempty {scriptWits = ss} SNothing
+          tx4 =
+            mkBasicTx txb4
+              & witsTxL @C .~ (mkBasicTxWits @C & scriptTxWitsL .~ ss)
           tx5MD = TxAuxData.ShelleyTxAuxData @C $ Map.singleton 17 (TxAuxData.I 42)
-          tx5 = ShelleyTx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
+          tx5 =
+            mkBasicTx txb5
+              & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ ws & scriptTxWitsL .~ ss)
+              & auxDataTxL @C .~ SJust tx5MD
           txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
             shelleyProtVer
@@ -1123,19 +1137,21 @@ tests =
           expected = either error id $ B16.decode expectedHex
           actualHex = B16.encode actual
           expectedHex =
-            "8700a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b0825\
-            \410aa1581ca646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a2952\
-            \0a0386821927101903e882838280a084a0a0a0a08482a0a0a0a084a0a0000085\
-            \a1825820ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6e\
-            \bb8a3e250082583900cb9358529df4729c3246a2a033cb9821abbfd16de48880\
-            \05904abc410d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb\
-            \060a1903e80182a0a082a0a08483a0a0a083a0a0a083a0a0a000920000001908\
-            \00000000001864d81e820001d81e820001d81e820001d81e8200018100020000\
-            \0092000000190800000000001864d81e820001d81e820001d81e820001d81e82\
-            \000181000200010082a000818300880082020082a000000000a0a0840185a080\
-            \3903ba820200a0a082a0a0a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aa\
-            \d85006805b047b082541828201015820c5e21ab1c9f6022d81c3b25e3436cb7f\
-            \1df77f9652ae3e1310c28e621dd87b4ca0"
+            mconcat
+              [ "8700a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b0825"
+              , "410aa1581ca646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a2952"
+              , "0a0386821927101903e882838280a084a0a0a0a08482a0a0a0a084a0a0000085"
+              , "a1825820ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6e"
+              , "bb8a3e250082583900cb9358529df4729c3246a2a033cb9821abbfd16de48880"
+              , "05904abc410d6a577e9441ad8ed9663931906e4d43ece8f82c712b1d0235affb"
+              , "060a1903e80182a0a082a0a08483a0a0a083a0a0a083a0a0a000920000001908"
+              , "00000000001864d81e820001d81e820001d81e820001d81e8200018100020000"
+              , "0092000000190800000000001864d81e820001d81e820001d81e820001d81e82"
+              , "000181000200010082a000818300880082020082a000000000a0a0840185a080"
+              , "3903ba820200a0a082a0a0a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aa"
+              , "d85006805b047b082541828201015820c5e21ab1c9f6022d81c3b25e3436cb7f"
+              , "1df77f9652ae3e1310c28e621dd87b4ca0"
+              ]
        in testCase "ledger state golden test" $
             unless (actual == expected) $
               assertFailure $

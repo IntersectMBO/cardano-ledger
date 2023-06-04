@@ -73,7 +73,7 @@ library
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.17,
+        base >=4.14 && <4.19,
         QuickCheck >=2.13.2,
         base16-bytestring >=1,
         bytestring,

@@ -19,6 +19,7 @@ source-repository head
 
 library
     exposed-modules:
+        Cardano.Ledger.State
         Cardano.Ledger.State.UTxO
         Cardano.Ledger.State.Orphans
         Cardano.Ledger.State.Schema
@@ -33,7 +34,7 @@ library
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.17,
+        base >=4.14 && <4.19,
         bytestring,
         cardano-crypto-class,
         cardano-ledger-alonzo,
@@ -50,7 +51,7 @@ library
         foldl,
         vector,
         microlens,
-        persistent <2.14,
+        persistent <2.15,
         persistent-sqlite,
         prettyprinter,
         set-algebra,

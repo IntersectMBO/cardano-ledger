@@ -9,6 +9,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -84,6 +85,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
@@ -189,6 +191,7 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
+  forall era.
   ( EraTxOut era
   , EraGovernance era
   , Default (StashedAVVMAddresses era)
@@ -218,7 +221,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     (Coin 0)
                     emptyGovernanceState
                 )
-                (CertState def def (def {dsGenDelegs = GenDelegs genDelegs}))
+                (CertState def def dState)
             )
             pp
             pp
@@ -241,6 +244,15 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
             (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0))
             (Map.elems genDelegs)
         )
+
+    dState :: DState era
+    dState =
+      DState
+        { dsUnified = UM.empty
+        , dsFutureGenDelegs = Map.empty
+        , dsGenDelegs = GenDelegs genDelegs
+        , dsIRewards = def
+        }
 
 instance
   ( EraPParams era

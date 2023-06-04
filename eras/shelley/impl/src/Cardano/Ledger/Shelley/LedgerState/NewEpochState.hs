@@ -38,6 +38,7 @@ import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, tota
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import Cardano.Ledger.UMap (RDPair (..), UMElem (..), UMap (..))
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Default.Class (def)
@@ -87,7 +88,14 @@ genesisState genDelegs0 utxo0 =
     )
     (CertState def def dState)
   where
-    dState = def {dsGenDelegs = GenDelegs genDelegs0}
+    dState :: DState era
+    dState =
+      DState
+        { dsUnified = UM.empty
+        , dsFutureGenDelegs = Map.empty
+        , dsGenDelegs = GenDelegs genDelegs0 :: GenDelegs (EraCrypto era)
+        , dsIRewards = def
+        }
 
 -- Functions for stake delegation model
 

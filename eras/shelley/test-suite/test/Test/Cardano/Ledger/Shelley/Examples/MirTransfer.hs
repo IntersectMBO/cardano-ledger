@@ -9,6 +9,7 @@ where
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Keys (
+  GenDelegs (..),
   KeyRole (..),
   hashKey,
  )
@@ -28,9 +29,9 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
+import qualified Cardano.Ledger.UMap as UM
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
-import Data.Default.Class (def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -71,13 +72,22 @@ testMirTransfer ::
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
   checkTrace @(ShelleyDELEG ShelleyTest) runShelleyBase (env pv acnt) $
-    (pure (def {dsIRewards = ir})) .- (MirTxCert (MIRCert pot target)) .->> (def {dsIRewards = expected})
+    (pure (dStateWithRewards ir)) .- (MirTxCert (MIRCert pot target)) .->> (dStateWithRewards expected)
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyDELEG ShelleyTest)
-            (TRC (env pv acnt, def {dsIRewards = ir}, MirTxCert (MIRCert pot target)))
+            (TRC (env pv acnt, dStateWithRewards ir, MirTxCert (MIRCert pot target)))
   (ignoreAllButIRWD st) @?= predicateFailure
+
+dStateWithRewards :: InstantaneousRewards c -> DState (ShelleyEra c)
+dStateWithRewards ir =
+  DState
+    { dsUnified = UM.empty
+    , dsFutureGenDelegs = Map.empty
+    , dsGenDelegs = GenDelegs Map.empty
+    , dsIRewards = ir
+    }
 
 alice :: Credential 'Staking C_Crypto
 alice = (KeyHashObj . hashKey . snd) $ mkKeyPair (RawSeed 0 0 0 0 1)

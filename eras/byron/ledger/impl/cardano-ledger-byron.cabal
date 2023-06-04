@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-byron
-version:            1.0.0.0
+version:            1.0.0.1
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -227,7 +227,7 @@ library
         -Wno-safe -Wno-unsafe -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.17,
+        base >=4.14 && <4.19,
         aeson,
         base58-bytestring,
         bimap >=0.4 && <0.5,

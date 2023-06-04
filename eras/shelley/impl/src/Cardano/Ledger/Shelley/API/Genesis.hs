@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Shelley.API.Genesis where
 
@@ -15,7 +16,7 @@ import Cardano.Ledger.Shelley.API.Types (
   AccountState (AccountState),
   CertState (CertState),
   Coin (Coin),
-  DState (dsGenDelegs),
+  DState (..),
   EpochState (EpochState),
   GenDelegs (GenDelegs),
   LedgerState (LedgerState),
@@ -31,6 +32,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   smartUTxOState,
  )
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val (Val ((<->)))
 import Data.Default.Class (Default, def)
@@ -73,6 +75,7 @@ instance
 
 -- | Helper function for constructing the initial state for any era
 initialStateFromGenesis ::
+  forall era.
   CanStartFromGenesis era =>
   -- | Genesis type
   ShelleyGenesis (EraCrypto era) ->
@@ -88,7 +91,7 @@ initialStateFromGenesis sg ag =
         emptySnapShots
         ( LedgerState
             (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) def)
-            (CertState def def (def {dsGenDelegs = GenDelegs genDelegs}))
+            (CertState def def dState)
         )
         (fromShelleyPParams ag pp)
         (fromShelleyPParams ag pp)
@@ -103,3 +106,12 @@ initialStateFromGenesis sg ag =
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
     genDelegs = sgGenDelegs sg
     pp = sgProtocolParams sg
+
+    dState :: DState era
+    dState =
+      DState
+        { dsUnified = UM.empty
+        , dsFutureGenDelegs = Map.empty
+        , dsGenDelegs = GenDelegs genDelegs
+        , dsIRewards = def
+        }

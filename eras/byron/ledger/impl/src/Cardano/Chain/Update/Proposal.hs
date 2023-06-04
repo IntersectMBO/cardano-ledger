@@ -59,19 +59,14 @@ import Cardano.Crypto (
   serializeCborHash,
  )
 import Cardano.Ledger.Binary (
-  Annotated (Annotated, unAnnotated),
   ByteSpan,
   DecCBOR (..),
   Decoded (..),
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
-  annotatedDecoder,
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
  )
+import qualified Cardano.Ledger.Binary as Binary
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import qualified Data.Map.Strict as M
@@ -88,7 +83,7 @@ type UpId = Hash Proposal
 
 -- | Proposal for software update
 data AProposal a = AProposal
-  { aBody :: !(Annotated ProposalBody a)
+  { aBody :: !(Binary.Annotated ProposalBody a)
   , issuer :: !VerificationKey
   -- ^ Who proposed this UP.
   , signature :: !(Signature ProposalBody)
@@ -124,14 +119,14 @@ signatureForProposal protocolMagicId proposalBody safeSigner =
 
 -- | Create an update 'Proposal' using the provided signature.
 unsafeProposal :: ProposalBody -> VerificationKey -> Signature ProposalBody -> Proposal
-unsafeProposal b k s = AProposal (Annotated b ()) k s ()
+unsafeProposal b k s = AProposal (Binary.Annotated b ()) k s ()
 
 --------------------------------------------------------------------------------
 -- Proposal Accessors
 --------------------------------------------------------------------------------
 
 body :: AProposal a -> ProposalBody
-body = unAnnotated . aBody
+body = Binary.unAnnotated . aBody
 
 recoverUpId :: AProposal ByteString -> UpId
 recoverUpId = hashDecoded
@@ -141,14 +136,14 @@ recoverUpId = hashDecoded
 --------------------------------------------------------------------------------
 
 instance ToCBOR Proposal where
-  toCBOR = toByronCBOR
+  toCBOR = Binary.toByronCBOR
 
 instance FromCBOR Proposal where
-  fromCBOR = fromByronCBOR
+  fromCBOR = Binary.fromByronCBOR
 
 instance EncCBOR Proposal where
   encCBOR proposal =
-    encodeListLen 7
+    Binary.encodeListLen 7
       <> encCBOR (protocolVersion body')
       <> encCBOR (protocolParametersUpdate body')
       <> encCBOR (softwareVersion body')
@@ -163,14 +158,14 @@ instance DecCBOR Proposal where
   decCBOR = void <$> decCBOR @(AProposal ByteSpan)
 
 instance FromCBOR (AProposal ByteSpan) where
-  fromCBOR = fromByronCBOR
+  fromCBOR = Binary.fromByronCBOR
 
 instance DecCBOR (AProposal ByteSpan) where
   decCBOR = do
-    Annotated (pb, vk, sig) byteSpan <- annotatedDecoder $ do
-      enforceSize "Proposal" 7
+    Binary.Annotated (pb, vk, sig) byteSpan <- Binary.annotatedDecoder $ do
+      Binary.enforceSize "Proposal" 7
       pb <-
-        annotatedDecoder
+        Binary.annotatedDecoder
           ( ProposalBody
               <$> decCBOR
               <*> decCBOR
@@ -238,14 +233,14 @@ instance ToJSON ProposalBody
 --------------------------------------------------------------------------------
 
 instance ToCBOR ProposalBody where
-  toCBOR = toByronCBOR
+  toCBOR = Binary.toByronCBOR
 
 instance FromCBOR ProposalBody where
-  fromCBOR = fromByronCBOR
+  fromCBOR = Binary.fromByronCBOR
 
 instance EncCBOR ProposalBody where
   encCBOR pb =
-    encodeListLen 5
+    Binary.encodeListLen 5
       <> encCBOR (protocolVersion pb)
       <> encCBOR (protocolParametersUpdate pb)
       <> encCBOR (softwareVersion pb)
@@ -255,7 +250,7 @@ instance EncCBOR ProposalBody where
 
 instance DecCBOR ProposalBody where
   decCBOR = do
-    enforceSize "ProposalBody" 5
+    Binary.enforceSize "ProposalBody" 5
     ProposalBody
       <$> decCBOR
       <*> decCBOR
@@ -266,5 +261,5 @@ instance DecCBOR ProposalBody where
 -- | Prepend byte corresponding to `encodeListLen 5`, which was used during
 --   signing
 recoverProposalSignedBytes ::
-  Annotated ProposalBody ByteString -> Annotated ProposalBody ByteString
+  Binary.Annotated ProposalBody ByteString -> Binary.Annotated ProposalBody ByteString
 recoverProposalSignedBytes = fmap ("\133" <>)

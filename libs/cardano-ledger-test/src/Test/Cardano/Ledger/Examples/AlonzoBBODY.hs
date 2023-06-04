@@ -10,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
@@ -50,6 +51,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState (..),
+  GenDelegs (..),
   LedgerState (..),
   PoolParams (..),
   ProtVer (..),
@@ -180,12 +182,15 @@ initialBBodyState pf utxo =
     dpstate =
       def
         { certDState =
-            def
+            DState
               { dsUnified =
                   UM.insert
                     (scriptStakeCredSuceed pf)
                     (UM.RDPair (UM.CompactCoin 1000) successDeposit)
                     (RewDepUView UM.empty)
+              , dsFutureGenDelegs = Map.empty
+              , dsGenDelegs = GenDelegs Map.empty
+              , dsIRewards = def
               }
         }
 

@@ -2,6 +2,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Shelley.API.ByronTranslation (
@@ -29,6 +30,7 @@ import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
@@ -163,8 +165,17 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
               }
         , lsCertState =
             CertState
-              { certDState = def {dsGenDelegs = genDelegs}
+              { certDState = dState
               , certPState = def
               , certVState = def
               }
+        }
+
+    dState :: DState (ShelleyEra c)
+    dState =
+      DState
+        { dsUnified = UM.empty
+        , dsFutureGenDelegs = Map.empty
+        , dsGenDelegs = genDelegs
+        , dsIRewards = def
         }
