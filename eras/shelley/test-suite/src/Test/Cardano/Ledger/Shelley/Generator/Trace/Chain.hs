@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- Allow for an orphan HasTrace instance for CHAIN, since HasTrace only pertains to tests
 {-# OPTIONS_GHC -Wno-orphans #-}

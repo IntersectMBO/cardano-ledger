@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -64,7 +65,9 @@ import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Encoding.EncCBOR (EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Version (Version)
+#if ! MIN_VERSION_base(4,18,0)
 import Control.Applicative (liftA2)
+#endif
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set, insert, member)

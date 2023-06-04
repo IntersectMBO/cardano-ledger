@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Fees (
   sizeTests,
@@ -54,7 +55,6 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert, pattern UnRegTxCert)
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
-  scriptWits,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -440,13 +440,9 @@ txWithMultiSig =
   ShelleyTx
     { body = txbWithMultiSig
     , wits =
-        mempty
-          { addrWits =
-              mkWitnessesVKey
-                (hashAnnotated txbWithMultiSig)
-                [alicePay, bobPay]
-          , scriptWits = Map.singleton (hashScript @Shelley msig) msig
-          }
+        mkBasicTxWits
+          & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txbWithMultiSig) [alicePay, bobPay]
+          & scriptTxWitsL .~ Map.singleton (hashScript @Shelley msig) msig
     , auxiliaryData = SNothing
     }
 

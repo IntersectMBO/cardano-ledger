@@ -5,6 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Ledger.State.Query where
 
@@ -47,6 +48,7 @@ insertGetKey ::
   , PersistUniqueWrite backend
   , PersistRecordBackend record backend
   , AtLeastOneUniqueKey record
+  , SafeToInsert record
   ) =>
   record ->
   ReaderT backend m (Key record)

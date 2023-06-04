@@ -33,7 +33,7 @@ import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
+import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -166,13 +166,11 @@ txbodySimpleEx1 =
 
 txSimpleEx1 :: ShelleyTx Mary
 txSimpleEx1 =
-  ShelleyTx
-    txbodySimpleEx1
-    mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbodySimpleEx1) [asWitness Cast.alicePay]
-      , scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
-      }
-    SNothing
+  mkBasicTx txbodySimpleEx1
+    & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
+  where
+    atw = mkWitnessesVKey (hashAnnotated txbodySimpleEx1) [asWitness Cast.alicePay]
+    stw = Map.fromList [(policyID purplePolicyId, purplePolicy)]
 
 expectedUTxOSimpleEx1 :: UTxO Mary
 expectedUTxOSimpleEx1 =
@@ -217,10 +215,10 @@ txbodySimpleEx2 =
 
 txSimpleEx2 :: ShelleyTx Mary
 txSimpleEx2 =
-  ShelleyTx
-    txbodySimpleEx2
-    mempty {addrWits = mkWitnessesVKey (hashAnnotated txbodySimpleEx2) [asWitness Cast.alicePay]}
-    SNothing
+  mkBasicTx txbodySimpleEx2
+    & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw)
+  where
+    atw = mkWitnessesVKey (hashAnnotated txbodySimpleEx2) [asWitness Cast.alicePay]
 
 expectedUTxOSimpleEx2 :: UTxO Mary
 expectedUTxOSimpleEx2 =
@@ -294,13 +292,11 @@ txbodyTimeEx1Valid = txbodyTimeEx1 (SJust startInterval) (SJust stopInterval)
 
 txTimeEx1 :: TxBody Mary -> ShelleyTx Mary
 txTimeEx1 txbody =
-  ShelleyTx
-    txbody
-    mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay]
-      , scriptWits = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
-      }
-    SNothing
+  mkBasicTx txbody
+    & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
+  where
+    atw = mkWitnessesVKey (hashAnnotated txbody) [asWitness Cast.alicePay]
+    stw = Map.fromList [(policyID boundedTimePolicyId, boundedTimePolicy)]
 
 txTimeEx1Valid :: ShelleyTx Mary
 txTimeEx1Valid = txTimeEx1 txbodyTimeEx1Valid
@@ -413,14 +409,11 @@ txbodySingWitEx1 =
 
 txSingWitEx1Valid :: ShelleyTx Mary
 txSingWitEx1Valid =
-  ShelleyTx
-    txbodySingWitEx1
-    mempty
-      { addrWits =
-          mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay, asWitness Cast.alicePay]
-      , scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
-      }
-    SNothing
+  mkBasicTx txbodySingWitEx1
+    & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
+  where
+    atw = mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay, asWitness Cast.alicePay]
+    stw = Map.fromList [(policyID alicePolicyId, alicePolicy)]
 
 expectedUTxOSingWitEx1 :: UTxO Mary
 expectedUTxOSingWitEx1 =
@@ -432,13 +425,11 @@ expectedUTxOSingWitEx1 =
 
 txSingWitEx1Invalid :: ShelleyTx Mary
 txSingWitEx1Invalid =
-  ShelleyTx
-    txbodySingWitEx1
-    mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay]
-      , scriptWits = Map.fromList [(policyID alicePolicyId, alicePolicy)]
-      }
-    SNothing
+  mkBasicTx txbodySingWitEx1
+    & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
+  where
+    atw = mkWitnessesVKey (hashAnnotated txbodySingWitEx1) [asWitness Cast.bobPay]
+    stw = Map.fromList [(policyID alicePolicyId, alicePolicy)]
 
 ------------------------
 -- Mint Negative Values
@@ -472,13 +463,11 @@ txbodyNegEx1 =
 
 txNegEx1 :: ShelleyTx Mary
 txNegEx1 =
-  ShelleyTx
-    txbodyNegEx1
-    mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbodyNegEx1) [asWitness Cast.alicePay]
-      , scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
-      }
-    SNothing
+  mkBasicTx txbodyNegEx1
+    & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
+  where
+    atw = mkWitnessesVKey (hashAnnotated txbodyNegEx1) [asWitness Cast.alicePay]
+    stw = Map.fromList [(policyID purplePolicyId, purplePolicy)]
 
 initialUTxONegEx1 :: UTxO Mary
 initialUTxONegEx1 = expectedUTxOSimpleEx2
@@ -562,13 +551,11 @@ txbodyWithBigValue =
 
 txBigValue :: ShelleyTx Mary
 txBigValue =
-  ShelleyTx
-    txbodyWithBigValue
-    mempty
-      { addrWits = mkWitnessesVKey (hashAnnotated txbodyWithBigValue) [asWitness Cast.alicePay]
-      , scriptWits = Map.fromList [(policyID purplePolicyId, purplePolicy)]
-      }
-    SNothing
+  mkBasicTx txbodyWithBigValue
+    & witsTxL .~ (mkBasicTxWits & addrTxWitsL .~ atw & scriptTxWitsL .~ stw)
+  where
+    atw = mkWitnessesVKey (hashAnnotated txbodyWithBigValue) [asWitness Cast.alicePay]
+    stw = Map.fromList [(policyID purplePolicyId, purplePolicy)]
 
 --
 -- Multi-Assets Test Group
