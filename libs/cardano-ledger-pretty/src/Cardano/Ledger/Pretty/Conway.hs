@@ -39,7 +39,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayCertsPredFailure (..),
   ConwayDelegPredFailure (..),
   ConwayLedgerPredFailure (..),
-  ConwayPoolPredFailure,
   ConwayTallyPredFailure,
   ConwayVDelPredFailure,
   EnactState (..),
@@ -371,9 +370,6 @@ instance PrettyA (ConwayDelegPredFailure era) where
       ppRecord
         "WrongCertificateTypeDELEG"
         []
-
-instance PrettyA (ConwayPoolPredFailure era) where
-  prettyA = const $ ppRecord "ConwayPoolPredFailure" []
 
 instance PrettyA (ConwayVDelPredFailure era) where
   prettyA = const $ ppRecord "ConwayVDelPredFailure" []

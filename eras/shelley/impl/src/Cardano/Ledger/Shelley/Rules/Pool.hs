@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,6 +18,7 @@ module Cardano.Ledger.Shelley.Rules.Pool (
   PoolEnv (..),
   PredicateFailure,
   ShelleyPoolPredFailure (..),
+  poolDelegationTransition,
 )
 where
 
@@ -51,11 +51,11 @@ import Cardano.Ledger.Shelley.TxBody (
   getRwdNetwork,
  )
 import Cardano.Ledger.Shelley.TxCert (
+  isDeRegKey,
+  isDelegation,
+  isGenesisDelegation,
   isInstantaneousRewards,
-  pattern DelegStakeTxCert,
-  pattern GenesisDelegTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
+  isRegKey,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
@@ -73,6 +73,7 @@ import Control.State.Transition (
   (?!),
  )
 import qualified Data.ByteString as BS
+import Data.Kind (Type)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -172,15 +173,24 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
       k -> invalidKey k
 
 poolDelegationTransition ::
-  forall era.
-  (ShelleyEraTxCert era, EraPParams era) =>
-  TransitionRule (ShelleyPOOL era)
+  forall (ledger :: Type -> Type) era.
+  ( ShelleyEraTxCert era
+  , EraPParams era
+  , Signal (ledger era) ~ TxCert era
+  , Environment (ledger era) ~ PoolEnv era
+  , State (ledger era) ~ PState era
+  , STS (ledger era)
+  , Event (ledger era) ~ PoolEvent era
+  , BaseM (ledger era) ~ ShelleyBase
+  , PredicateFailure (ledger era) ~ ShelleyPoolPredFailure era
+  ) =>
+  TransitionRule (ledger era)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let stpools = psStakePoolParams ps
   let pv = pp ^. ppProtocolVersionL
-  case c of
-    RegPoolTxCert poolParam -> do
+  case (getRegPoolTxCert c, getRetirePoolTxCert c) of
+    (Just poolParam, Nothing) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
 
       when (HardForks.validatePoolRewardAccountNetID pv) $ do
@@ -225,7 +235,7 @@ poolDelegationTransition = do
               { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam)
               , psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
               }
-    RetirePoolTxCert hk e -> do
+    (Nothing, Just (hk, e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom stpools) ?! StakePoolNotRegisteredOnKeyPOOL hk
       cepoch <- liftSTS $ do
@@ -236,16 +246,10 @@ poolDelegationTransition = do
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
       pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk e)}
-    RegTxCert _ -> do
+    _ | isRegKey c || isDeRegKey c || isDelegation c -> do
       failBecause $ WrongCertificateTypePOOL 0
       pure ps
-    UnRegTxCert _ -> do
-      failBecause $ WrongCertificateTypePOOL 0
-      pure ps
-    DelegStakeTxCert _ _ -> do
-      failBecause $ WrongCertificateTypePOOL 0
-      pure ps
-    GenesisDelegTxCert _ _ _ -> do
+    _ | isGenesisDelegation c -> do
       failBecause $ WrongCertificateTypePOOL 2
       pure ps
     _ | isInstantaneousRewards c -> do
