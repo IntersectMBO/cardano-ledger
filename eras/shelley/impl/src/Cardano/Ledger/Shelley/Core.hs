@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Shelley.Core (
   ShelleyEraTxBody (..),

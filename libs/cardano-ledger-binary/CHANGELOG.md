@@ -3,6 +3,7 @@
 ## 1.1.1.1
 
 * Changed bounds on plutus-ledger-api
+* GHC-9.6 compatibility
 
 ## 1.1.1.0
 

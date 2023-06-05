@@ -12,7 +12,6 @@ import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
-import Cardano.Ledger.Shelley.TxWits (scriptWits)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)
@@ -21,6 +20,7 @@ import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
@@ -65,7 +65,7 @@ testScriptPostTranslation =
               (SlotNo 1)
               S.SNothing
               S.SNothing
-          wits = mempty {scriptWits = Map.singleton scriptHash script}
+          wits = mkBasicTxWits & scriptTxWitsL .~ Map.singleton scriptHash script
           txs = S.ShelleyTx txb wits S.SNothing
           txa = fromRight . runExcept $ translateEra @Allegra () txs
           result =

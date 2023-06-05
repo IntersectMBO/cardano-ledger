@@ -59,7 +59,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId)
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
-import Cardano.Ledger.Shelley.TxWits (addrWits, scriptWits)
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.Val as Val
@@ -179,11 +179,11 @@ makeTx ::
   ShelleyTx (ShelleyEra c)
 makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
   where
+    txWits :: ShelleyTxWits (ShelleyEra c)
     txWits =
-      mempty
-        { addrWits = mkWitnessesVKey (hashAnnotated txBody) keyPairs
-        , scriptWits = msigs
-        }
+      mkBasicTxWits
+        & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txBody) keyPairs
+        & scriptTxWitsL .~ msigs
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
