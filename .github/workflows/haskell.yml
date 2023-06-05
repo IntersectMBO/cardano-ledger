@@ -211,3 +211,31 @@ jobs:
             substituters = https://cache.iog.io https://cache.nixos.org/ https://cache.zw3rk.com
       - name: nix-build
         run: nix build .#hydraJobs.required
+
+  notify-nightly-failure:
+    name: Send a slack notification on \#ledger-internal if the nightly build failed
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - nix-build
+    if: always() && github.event_name == 'schedule' && (needs.build.result == 'failure' || needs.nix-build.result == 'failure')
+    steps:
+      - name: Send slack notification
+        id: slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Nightly Github Actions build failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
