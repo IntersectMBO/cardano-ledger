@@ -81,7 +81,7 @@ instance
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "VDEL" era) ~ VDelEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
-  , Signal (EraRule "POOL" era) ~ TxCert era
+  , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , Signal (EraRule "VDEL" era) ~ ConwayCommitteeCert (EraCrypto era)
   , Embed (EraRule "DELEG" era) (ConwayCERT era)
   , Embed (EraRule "POOL" era) (ConwayCERT era)
@@ -108,7 +108,7 @@ certTransition ::
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "VDEL" era) ~ VDelEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
-  , Signal (EraRule "POOL" era) ~ TxCert era
+  , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , Signal (EraRule "VDEL" era) ~ ConwayCommitteeCert (EraCrypto era)
   , Embed (EraRule "DELEG" era) (ConwayCERT era)
   , Embed (EraRule "POOL" era) (ConwayCERT era)
@@ -122,8 +122,8 @@ certTransition = do
     ConwayTxCertDeleg delegCert -> do
       newDState <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState, delegCert)
       pure $ cState {certDState = newDState}
-    ConwayTxCertPool _poolCert -> do
-      newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, c)
+    ConwayTxCertPool poolCert -> do
+      newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, poolCert)
       pure $ cState {certPState = newPState}
     ConwayTxCertCommittee committeeCert -> do
       newVState <- trans @(EraRule "VDEL" era) $ TRC (VDelEnv, certVState, committeeCert)
