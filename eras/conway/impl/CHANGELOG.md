@@ -2,6 +2,7 @@
 
 ## 1.3.0.0
 
+* Add `VDEL` rules to Conway #3467
 * Add `EncCBOR`/`DecCBOR` for `ConwayCertPredFailure`
 * Add `EncCBOR`/`DecCBOR` for `ConwayVDelPredFailure`
 * Add `POOL` rules to Conway #3464
