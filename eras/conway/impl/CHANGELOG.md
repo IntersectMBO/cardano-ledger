@@ -2,6 +2,8 @@
 
 ## 1.3.0.0
 
+* Add `POOL` rules to Conway #3464
+  * Make `ShelleyPOOL` rules reusable in Conway
 * Add `CERT` and `DELEG` rules to Conway #3412
   * Add `domDeleteAll` to `UMap`.
 * Introduction of `TxCert` and `EraTxCert`

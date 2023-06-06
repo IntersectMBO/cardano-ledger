@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -24,10 +23,10 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEG, ConwayPOOL, ConwayVDEL)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
-import Cardano.Ledger.Conway.Rules.Pool (ConwayPoolPredFailure)
 import Cardano.Ledger.Conway.Rules.VDel (ConwayVDelPredFailure, VDelEnv (VDelEnv))
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert, ConwayDelegCert, ConwayTxCert (..))
 import Cardano.Ledger.Shelley.API (CertState (..), DState, DelegEnv (DelegEnv), DelplEnv (DelplEnv), PState, PoolEnv (PoolEnv), VState)
+import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (Embed, STS (..), TRC (TRC), TransitionRule, judgmentContext, trans, wrapEvent, wrapFailed)
 import GHC.Generics (Generic)
@@ -143,7 +142,9 @@ instance
 instance
   ( Era era
   , STS (ConwayPOOL era)
-  , PredicateFailure (EraRule "POOL" era) ~ ConwayPoolPredFailure era
+  , PredicateFailure (EraRule "POOL" era) ~ ShelleyPoolPredFailure era
+  , PredicateFailure (ConwayPOOL era) ~ ShelleyPoolPredFailure era
+  , BaseM (ConwayPOOL era) ~ ShelleyBase
   ) =>
   Embed (ConwayPOOL era) (ConwayCERT era)
   where

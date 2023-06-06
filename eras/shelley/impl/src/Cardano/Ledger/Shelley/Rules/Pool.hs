@@ -3,13 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -19,6 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Pool (
   PoolEnv (..),
   PredicateFailure,
   ShelleyPoolPredFailure (..),
+  poolCertTransition,
 )
 where
 
@@ -51,11 +53,11 @@ import Cardano.Ledger.Shelley.TxBody (
   getRwdNetwork,
  )
 import Cardano.Ledger.Shelley.TxCert (
+  isDeRegKey,
+  isDelegation,
+  isGenesisDelegation,
   isInstantaneousRewards,
-  pattern DelegStakeTxCert,
-  pattern GenesisDelegTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
+  isRegKey,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
@@ -73,6 +75,7 @@ import Control.State.Transition (
   (?!),
  )
 import qualified Data.ByteString as BS
+import Data.Kind (Type)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -171,85 +174,98 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         pure (3, PoolMedataHashTooBig poolID s)
       k -> invalidKey k
 
+poolCertTransition ::
+  forall (ledger :: Type -> Type) era c.
+  ( EraCrypto era ~ c
+  , EraPParams era
+  , State (ledger era) ~ PState era
+  , STS (ledger era)
+  , Event (ledger era) ~ PoolEvent era
+  , BaseM (ledger era) ~ ShelleyBase
+  , PredicateFailure (ledger era) ~ ShelleyPoolPredFailure era
+  ) =>
+  PoolEnv era ->
+  PState era ->
+  PoolCert c ->
+  TransitionRule (ledger era)
+poolCertTransition (PoolEnv slot pp) ps@PState {psStakePoolParams, psFutureStakePoolParams, psRetiring} = \case
+  RegPool poolParams@PoolParams {ppId, ppRewardAcnt, ppMetadata, ppCost} -> do
+    let pv = pp ^. ppProtocolVersionL
+    when (HardForks.validatePoolRewardAccountNetID pv) $ do
+      actualNetID <- liftSTS $ asks networkId
+      let suppliedNetID = getRwdNetwork ppRewardAcnt
+      actualNetID == suppliedNetID ?! WrongNetworkPOOL actualNetID suppliedNetID ppId
+
+    when (SoftForks.restrictPoolMetadataHash pv) $
+      forM_ ppMetadata $ \pmd ->
+        let s = BS.length (pmHash pmd)
+         in s <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era)))) ?! PoolMedataHashTooBig ppId s
+
+    let minPoolCost = pp ^. ppMinPoolCostL
+    ppCost >= minPoolCost ?! StakePoolCostTooLowPOOL ppCost minPoolCost
+
+    if eval (ppId ∉ dom psStakePoolParams)
+      then do
+        -- register new, Pool-Reg
+        tellEvent $ RegisterPool ppId
+        pure $
+          payPoolDeposit ppId pp $
+            ps {psStakePoolParams = eval (psStakePoolParams ∪ singleton ppId poolParams)}
+      else do
+        tellEvent $ ReregisterPool ppId
+        -- hk is already registered, so we want to reregister it. That means adding it to the
+        -- Future pool params (if it is not there already), and overriding the range with the new 'poolParam',
+        -- if it is (using ⨃ ). We must also unretire it, if it has been scheduled for retirement.
+        -- The deposit does not change. One pays the deposit just once. Only if it is fully retired
+        -- (i.e. it's deposit has been refunded, and it has been removed from the registered pools).
+        -- does it need to pay a new deposit (at the current deposit amount). But of course,
+        -- if that has happened, we cannot be in this branch of the if statement.
+        pure $
+          ps
+            { psFutureStakePoolParams = eval (psFutureStakePoolParams ⨃ singleton ppId poolParams)
+            , psRetiring = eval (setSingleton ppId ⋪ psRetiring)
+            }
+  RetirePool hk e -> do
+    eval (hk ∈ dom psStakePoolParams) ?! StakePoolNotRegisteredOnKeyPOOL hk
+    cepoch <- liftSTS $ do
+      ei <- asks epochInfoPure
+      epochInfoEpoch ei slot
+    let maxEpoch = pp ^. ppEMaxL
+    (cepoch < e && e <= cepoch + maxEpoch)
+      ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
+    -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
+    pure $ ps {psRetiring = eval (psRetiring ⨃ singleton hk e)}
+
 poolDelegationTransition ::
-  forall era.
-  (ShelleyEraTxCert era, EraPParams era) =>
-  TransitionRule (ShelleyPOOL era)
+  forall (ledger :: Type -> Type) era.
+  ( ShelleyEraTxCert era
+  , EraPParams era
+  , Signal (ledger era) ~ TxCert era
+  , Environment (ledger era) ~ PoolEnv era
+  , State (ledger era) ~ PState era
+  , STS (ledger era)
+  , Event (ledger era) ~ PoolEvent era
+  , BaseM (ledger era) ~ ShelleyBase
+  , PredicateFailure (ledger era) ~ ShelleyPoolPredFailure era
+  ) =>
+  TransitionRule (ledger era)
 poolDelegationTransition = do
-  TRC (PoolEnv slot pp, ps, c) <- judgmentContext
-  let stpools = psStakePoolParams ps
-  let pv = pp ^. ppProtocolVersionL
+  TRC (penv, ps, c) <- judgmentContext
   case c of
-    RegPoolTxCert poolParam -> do
+    RegPoolTxCert poolParams -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-
-      when (HardForks.validatePoolRewardAccountNetID pv) $ do
-        actualNetID <- liftSTS $ asks networkId
-        let suppliedNetID = getRwdNetwork (ppRewardAcnt poolParam)
-        actualNetID
-          == suppliedNetID
-          ?! WrongNetworkPOOL actualNetID suppliedNetID (ppId poolParam)
-
-      when (SoftForks.restrictPoolMetadataHash pv) $
-        forM_ (ppMetadata poolParam) $ \pmd ->
-          let s = BS.length (pmHash pmd)
-           in s
-                <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era))))
-                ?! PoolMedataHashTooBig (ppId poolParam) s
-
-      let poolCost = ppCost poolParam
-          minPoolCost = pp ^. ppMinPoolCostL
-      poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
-
-      let hk = ppId poolParam
-      if eval (hk ∉ dom stpools)
-        then do
-          -- register new, Pool-Reg
-          tellEvent $ RegisterPool hk
-          pure $
-            payPoolDeposit hk pp $
-              ps
-                { psStakePoolParams = eval (psStakePoolParams ps ∪ singleton hk poolParam)
-                }
-        else do
-          tellEvent $ ReregisterPool hk
-          -- hk is already registered, so we want to reregister it. That means adding it to the
-          -- Future pool params (if it is not there already), and overriding the range with the new 'poolParam',
-          -- if it is (using ⨃ ). We must also unretire it, if it has been scheduled for retirement.
-          -- The deposit does not change. One pays the deposit just once. Only if it is fully retired
-          -- (i.e. it's deposit has been refunded, and it has been removed from the registered pools).
-          -- does it need to pay a new deposit (at the current deposit amount). But of course,
-          -- if that has happened, we cannot be in this branch of the if statement.
-          pure $
-            ps
-              { psFutureStakePoolParams = eval (psFutureStakePoolParams ps ⨃ singleton hk poolParam)
-              , psRetiring = eval (setSingleton hk ⋪ psRetiring ps)
-              }
-    RetirePoolTxCert hk e -> do
+      poolCertTransition penv ps (RegPool poolParams)
+    RetirePoolTxCert sPoolId epochN -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-      eval (hk ∈ dom stpools) ?! StakePoolNotRegisteredOnKeyPOOL hk
-      cepoch <- liftSTS $ do
-        ei <- asks epochInfoPure
-        epochInfoEpoch ei slot
-      let maxEpoch = pp ^. ppEMaxL
-      (cepoch < e && e <= cepoch + maxEpoch)
-        ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
-      -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
-      pure $ ps {psRetiring = eval (psRetiring ps ⨃ singleton hk e)}
-    RegTxCert _ -> do
+      poolCertTransition penv ps (RetirePool sPoolId epochN)
+    _ | isRegKey c || isDeRegKey c || isDelegation c -> do
       failBecause $ WrongCertificateTypePOOL 0
-      pure ps
-    UnRegTxCert _ -> do
-      failBecause $ WrongCertificateTypePOOL 0
-      pure ps
-    DelegStakeTxCert _ _ -> do
-      failBecause $ WrongCertificateTypePOOL 0
-      pure ps
-    GenesisDelegTxCert _ _ _ -> do
-      failBecause $ WrongCertificateTypePOOL 2
       pure ps
     _ | isInstantaneousRewards c -> do
       failBecause $ WrongCertificateTypePOOL 1
+      pure ps
+    _ | isGenesisDelegation c -> do
+      failBecause $ WrongCertificateTypePOOL 2
       pure ps
     _ -> do
       -- Impossible case
