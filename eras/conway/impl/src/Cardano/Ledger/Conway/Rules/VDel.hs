@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -115,7 +114,6 @@ conwayVDelTransition = do
           }
     ConwayAuthCommitteeHotKey coldK hotK -> do
       -- TODO: implement after the spec is to be updated w.r.t. checking if the coldK belongs to CC.
-      Map.notMember coldK vsCCHotKeys ?! ConwayCommitteeAlreadyRegisteredVDEL coldK
       pure $
         vState
           { vsCCHotKeys = Map.insert coldK hotK vsCCHotKeys
