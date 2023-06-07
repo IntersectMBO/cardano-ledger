@@ -7,7 +7,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {-
-nix-shell --arg config "{ haskellNix.profiling = true; }"
+nix develop .#profiling
 -}
 -- Second set up the cabal.project.local (in the root of the cardano-ledger directory) as follows.
 {-
@@ -32,7 +32,7 @@ package plutus-core
 
 -- | This benchmark file is for profiling Property tests. It appears as a benchmark
 --     but we do not use any of the criterion stuff. We just run main, which is profiled.
--- First be sure and start the nix-shell with profiling enabled
+-- First be sure and enter the `nix develop .#profiling` shell
 module Main where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)

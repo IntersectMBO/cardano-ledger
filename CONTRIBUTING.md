@@ -38,10 +38,11 @@ We are transitioning to use GHC 9.2 rather than GHC 8.10.
 We need to retain 8.10 compatibility until we are sure that the Cardano node can switch over to 9.2 without any problems.
 At that point we can drop it.
 
-The main `nix-shell` will now give you a GHC 9.2 compiler, but you can get a GHC 8.10 shell by calling
+The main `nix develop` shell will now give you a GHC 9.2 compiler, but you can get a GHC 8.10 shell by calling
 ```
-nix-shell --arg config '{ haskellNix.compiler = "ghc8107"; }'
+nix develop .#ghc8107
 ```
+(this pattern can also be used to test any supported GHC version)
 
 ## Updating dependencies
 
@@ -58,10 +59,10 @@ That typically just means that we need to fix the breakage (and add a lower-boun
 Note that `cabal` itself keeps track of what index states it knows about, so when you bump the pinned index state you may need call `cabal update` in order for `cabal` to be happy.
 
 The Nix code which builds our packages also cares about the index state.
-This is represented by inputs managed by `niv`:
+This is represented by inputs managed by `nix flake`:
 You can update these by running:
-- `niv update hackage.nix` for Hackage
-- `niv update cardano-haskell-packages` for CHaP
+- `nix flake lock --update-input haskellNix/hackage` for Hackage
+- `nix flake lock --update-input CHaP` for CHaP (Cardano Haskell Packages)
 
 If you fail to do this you may get an error like this from Nix:
 ```
@@ -189,15 +190,15 @@ NIGHTLY=true cabal test cardano-ledger-shelley-test
 
 We have support for running
 [ghcid](https://github.com/ndmitchell/ghcid)
-from inside of `nix-shell`.
-Enter `nix-shell` from the base directory of the repository,
+from inside of `nix develop`.
+Enter `nix develop` from the base directory of the repository,
 change directories to the cabal package that you wish to check,
 then run `ghcid`.
 
 For example:
 
 ```shell
-nix-shell
+nix develop
 cd eras/shelley/impl/
 ghcid
 ```
@@ -214,12 +215,12 @@ Error: cabal: Cannot open a repl for multiple components at once. The target '' 
 Specifying the component solves this problem:
 
 ```shell
-nix-shell
+nix develop
 cd libs/cardano-ledger-binary/
 ghcid testlib # or `ghcid cardano-ledger-binary`
 ```
 
-## nix-build Infrastructure
+## nix build Infrastructure
 
 The artifacts in this repository can be built and tested using nix. This is
 additionally used by the Hydra CI to test building, including cross-compilation
@@ -231,11 +232,11 @@ To add a new Haskell package, you should do the following:
 
 1. Create the project in the usual way. It should have an appropriate `.cabal` file.
 2. Test that you can build your new project by running the following: `nix build
-   -f default.nix libs.<project_name>`. If you have executables, then
-   you may also try building these using the `exes.<executable_name>`
-   attribute path. A good way to see what's available is to execute `:l
-   default.nix` in `nix repl`. This will allow you to explore the potential
-   attribute names by using tab completion on "libs.".
+   .#<project_name>:lib:<lib_name>`. If you have executables, then
+   you may also try building these using the `.#<project_name>:exe:<exe_name>`
+   attribute path. A good way to see what's available is to execute `:lf .`
+   in `nix repl`. This will allow you to explore the potential
+   attribute names by using tab completion on "packages.<your_system>".
 
 ### To add a new LaTeX specification
 
@@ -246,16 +247,11 @@ from [the Shelley ledger spec](./eras/shelley/formal-spec)).
 1. Copy these files into the root of your new LaTeX specification.
 2. Modify the `DOCNAME` in the `Makefile`.
 3. Update `default.nix` to:
-   1. Make sure that the relative path in the first line is pointing to
-      (default.nix)[./default.nix]. This is used to pin the
-      `nixpkgs` version used to build the LaTeX specifications.
-   2. Update the `buildInputs` to add in any LaTeX packages you need in your
+   1. Update the `buildInputs` to add in any LaTeX packages you need in your
       document, and remove any unneeded ones.
-   3. Alter the `meta` description field to reflect the nature of this document.
-4. Add a link to the package at the bottom of [default.nix](./default.nix),
+   2. Alter the `meta` description field to reflect the nature of this document.
+4. Add a link to the package near the bottom of [flake.nix](./flake.nix),
    following the existing examples.
-5. To require that your specification be built in CI, add it at the end of the
-   list in [default.nix](./default.nix) following the existing examples.
 
 ### Additional documentation
 
@@ -357,11 +353,9 @@ cabal configure --enable-profiling --profiling-detail=all-functions
 ```
 
 Now we need to run a node to build up the dataabase.
-This can be done in the cardano-node repository by
-opening a nix-shell and running:
+This can be done in the cardano-node repository by running:
 ```
-nix build -f default.nix scripts.mainnet.node
-./result/bin/cardano-node-mainnet
+nix run .#mainnet/node
 ```
 This will take a very long time.
 You can stop the node once it is past any slots that you care about.
