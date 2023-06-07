@@ -49,6 +49,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   initialLedgerState,
   modifyModel,
   runGenRS,
+  runGenRSWithPParams,
   ioGenRS,
   small,
   genDatumWithHash,
@@ -594,6 +595,18 @@ runGenRS ::
   Gen (a, GenState era)
 runGenRS proof gsize action = do
   genenv <- genGenEnv proof gsize
+  (ans, state, ()) <- runRWST action genenv (emptyGenState proof genenv)
+  pure (ans, state)
+
+runGenRSWithPParams ::
+  Reflect era =>
+  Proof era ->
+  PParams era ->
+  GenSize ->
+  GenRS era a ->
+  Gen (a, GenState era)
+runGenRSWithPParams proof pparams gsize action = do
+  let genenv = GenEnv pparams gsize
   (ans, state, ()) <- runRWST action genenv (emptyGenState proof genenv)
   pure (ans, state)
 
