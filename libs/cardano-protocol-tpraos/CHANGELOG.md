@@ -1,8 +1,21 @@
 # Version history for `cardano-protocol-tpraos`
 
-## 1.0.1.1
+## 1.0.3.2
 
 *
+
+## 1.0.3.1
+
+* upper bounds on cardano-ledger-core and cardano-ledger-shelley
+
+## 1.0.3.0
+
+* lower bound on cardano-crypto-class
+
+## 1.0.2.0
+
+* Add a `testlib` and move `Arbitrary` instances from
+  `Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators` over.
 
 ## 1.0.1.0
 

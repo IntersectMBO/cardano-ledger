@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.1.1.2
+
+*
+
 ## 1.1.1.1
 
 * Changed bounds on plutus-ledger-api

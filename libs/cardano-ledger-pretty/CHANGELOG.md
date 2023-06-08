@@ -1,5 +1,9 @@
 # Changelog for `cardano-ledger-pretty`
 
+## 1.2.0.1
+
+*
+
 ## 1.2.0.0
 
 * Rename:

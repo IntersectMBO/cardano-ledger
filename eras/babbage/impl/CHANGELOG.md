@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.3.0.1
+
+*
+
 ## 1.3.0.0
 
 * Introduction of `TxCert` and `EraTxCert`

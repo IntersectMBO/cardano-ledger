@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.3.0.1
+
+*
+
 ## 1.3.0.0
 
 * Deprecated `poolSpec` function
