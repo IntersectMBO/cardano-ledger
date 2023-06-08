@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -20,15 +21,18 @@ module Cardano.Ledger.Conway.Rules.Cert (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEG, ConwayPOOL, ConwayVDEL)
-import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
+import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.Rules.VDel (ConwayVDelPredFailure, VDelEnv (VDelEnv))
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert, ConwayDelegCert, ConwayTxCert (..))
 import Cardano.Ledger.Shelley.API (CertState (..), DState, DelegEnv (DelegEnv), DelplEnv (DelplEnv), PState, PoolEnv (PoolEnv), VState)
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (Embed, STS (..), TRC (TRC), TransitionRule, judgmentContext, trans, wrapEvent, wrapFailed)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -160,3 +164,32 @@ instance
   where
   wrapFailed = VDelFailure
   wrapEvent = VDelEvent
+
+instance
+  ( Typeable era
+  , EncCBOR (PredicateFailure (EraRule "DELEG" era))
+  , EncCBOR (PredicateFailure (EraRule "POOL" era))
+  , EncCBOR (PredicateFailure (EraRule "VDEL" era))
+  ) =>
+  EncCBOR (ConwayCertPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      DelegFailure x -> Sum (DelegFailure @era) 1 !> To x
+      PoolFailure x -> Sum (PoolFailure @era) 2 !> To x
+      VDelFailure x -> Sum (VDelFailure @era) 3 !> To x
+
+instance
+  ( Typeable era
+  , DecCBOR (PredicateFailure (EraRule "DELEG" era))
+  , DecCBOR (PredicateFailure (EraRule "POOL" era))
+  , DecCBOR (PredicateFailure (EraRule "VDEL" era))
+  ) =>
+  DecCBOR (ConwayCertPredFailure era)
+  where
+  decCBOR =
+    decode $ Summands "ConwayCertPredFailure" $ \case
+      1 -> SumD DelegFailure <! From
+      2 -> SumD PoolFailure <! From
+      3 -> SumD VDelFailure <! From
+      n -> Invalid n

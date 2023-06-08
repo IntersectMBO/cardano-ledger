@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -20,6 +21,8 @@ where
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (VState)
 import Cardano.Ledger.Conway.Era (ConwayVDEL)
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert)
@@ -35,11 +38,23 @@ import Control.State.Transition (
   State,
   transitionRules,
  )
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data ConwayVDelPredFailure era
+data ConwayVDelPredFailure era = ConwayVDelPredFailure
   deriving (Show, Eq, Generic, NoThunks, NFData)
+
+instance Typeable era => EncCBOR (ConwayVDelPredFailure era) where
+  encCBOR = \case
+    ConwayVDelPredFailure -> encodeListLen 1 <> encCBOR (0 :: Word8)
+
+instance Typeable era => DecCBOR (ConwayVDelPredFailure era) where
+  decCBOR = decodeRecordSum "ConwayVDelPredFailure" $
+    \case
+      0 -> pure (1, ConwayVDelPredFailure)
+      k -> invalidKey k
 
 data VDelEnv era = VDelEnv
 
