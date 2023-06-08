@@ -176,14 +176,14 @@ instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   getResignCommitteeColdTxCert (ConwayTxCertCommittee (ConwayResignCommitteeColdKey ck)) = Just ck
   getResignCommitteeColdTxCert _ = Nothing
 
-  mkRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayDRepReg cred deposit
+  mkRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayRegDRep cred deposit
   getRegDRepTxCert = \case
-    ConwayTxCertCommittee (ConwayDRepReg cred deposit) -> Just (cred, deposit)
+    ConwayTxCertCommittee (ConwayRegDRep cred deposit) -> Just (cred, deposit)
     _ -> Nothing
 
-  mkUnRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayDRepUnReg cred deposit
+  mkUnRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayUnRegDRep cred deposit
   getUnRegDRepTxCert = \case
-    ConwayTxCertCommittee (ConwayDRepUnReg cred deposit) -> Just (cred, deposit)
+    ConwayTxCertCommittee (ConwayUnRegDRep cred deposit) -> Just (cred, deposit)
     _ -> Nothing
 
 pattern RegDepositTxCert ::
@@ -316,8 +316,8 @@ instance NFData (ConwayDelegCert c)
 instance NoThunks (ConwayDelegCert c)
 
 data ConwayCommitteeCert c
-  = ConwayDRepReg !(Credential 'Voting c) !Coin
-  | ConwayDRepUnReg !(Credential 'Voting c) !Coin
+  = ConwayRegDRep !(Credential 'Voting c) !Coin
+  | ConwayUnRegDRep !(Credential 'Voting c) !Coin
   | ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(KeyHash 'CommitteeHotKey c)
   | ConwayResignCommitteeColdKey !(KeyHash 'CommitteeColdKey c)
   deriving (Show, Generic, Eq)
@@ -478,12 +478,12 @@ encodeCommitteeHotKey = \case
     encodeListLen 2
       <> encodeWord8 15
       <> encCBOR cred
-  ConwayDRepReg cred deposit ->
+  ConwayRegDRep cred deposit ->
     encodeListLen 3
       <> encodeWord8 16
       <> encCBOR cred
       <> encCBOR deposit
-  ConwayDRepUnReg cred deposit ->
+  ConwayUnRegDRep cred deposit ->
     encodeListLen 3
       <> encodeWord8 17
       <> encCBOR cred

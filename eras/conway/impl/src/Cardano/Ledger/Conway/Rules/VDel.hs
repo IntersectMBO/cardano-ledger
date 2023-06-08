@@ -104,11 +104,11 @@ conwayVDelTransition = do
       ) <-
     judgmentContext
   case c of
-    ConwayDRepReg cred _deposit -> do
+    ConwayRegDRep cred _deposit -> do
       Set.notMember cred vsDReps ?! ConwayDRepAlreadyRegisteredVDEL cred
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
       pure $ vState {vsDReps = Set.insert cred vsDReps}
-    ConwayDRepUnReg cred _deposit -> do
+    ConwayUnRegDRep cred _deposit -> do
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
       Set.member cred vsDReps ?! ConwayDRepNotRegisteredVDEL cred
       pure $ vState {vsDReps = Set.delete cred vsDReps}
