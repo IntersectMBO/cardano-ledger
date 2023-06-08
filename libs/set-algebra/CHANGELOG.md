@@ -1,5 +1,9 @@
 # Version history for `set-algebra`
 
+## 1.1.0.2
+
+*
+
 ## 1.1.0.1
 
 - Set upper bound ansi-wl-pprint < 1.0

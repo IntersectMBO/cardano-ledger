@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.2.0.1
+
+*
+
 ## 1.2.0.0
 
 * Introduction of `TxCert` and `EraTxCert`

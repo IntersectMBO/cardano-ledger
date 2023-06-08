@@ -277,7 +277,7 @@ Above list is likely to change in the future.
 ## Test packages
 
 Here are test suite packages that are still subject to the versioning and release process,
-but they are exempt from changelog updates:
+but the changelog _only_ needs to indicate if breaking changes have been made:
 
 * `cardano-ledger-shelley-test`
 * `cardano-ledger-shelley-ma-test`
@@ -287,5 +287,25 @@ but they are exempt from changelog updates:
 * `cardano-crypto-test`
 * `cardano-ledger-byron-test`
 
-They are mostly used internally and are planned to be deprecated and removed in the near
+A changelog which indicates that no changes have been made will have the form:
+
+```
+# Version history for `cardano-ledger-conway-test`
+
+## 1.2.0.1
+
+*
+```
+
+A changelog which indicates that changes have been made will have the form:
+
+```
+# Version history for `cardano-ledger-conway-test`
+
+## 1.3.0.0
+
+* breaking changes
+```
+
+These packages are mostly used internally and are planned to be deprecated and removed in the near
 future in favor of `testlib`s for each corresponding package.
