@@ -1669,11 +1669,11 @@ instance PrettyA (GenDelegs c) where
   prettyA = ppGenDelegs
 
 instance PrettyA (VState era) where
-  prettyA (VState vsDReps vsCCHotKeys) =
+  prettyA (VState vsDReps vsCommitteeHotKeys) =
     ppRecord
       "VState"
       [ ("DReps", prettyA vsDReps)
-      , ("CC Hot Keys", prettyA vsCCHotKeys)
+      , ("CC Hot Keys", prettyA vsCommitteeHotKeys)
       ]
 
 -- ======================================================

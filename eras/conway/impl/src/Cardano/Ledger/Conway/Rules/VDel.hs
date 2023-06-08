@@ -99,7 +99,7 @@ conwayVDelTransition :: TransitionRule (ConwayVDEL era)
 conwayVDelTransition = do
   TRC
     ( _pp
-      , vState@VState {vsDReps, vsCCHotKeys}
+      , vState@VState {vsDReps, vsCommitteeHotKeys}
       , c
       ) <-
     judgmentContext
@@ -113,9 +113,9 @@ conwayVDelTransition = do
       Set.member cred vsDReps ?! ConwayDRepNotRegisteredVDEL cred
       pure $ vState {vsDReps = Set.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldK hotK -> do
-      (isNothing <$> Map.lookup coldK vsCCHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
-      pure $ vState {vsCCHotKeys = Map.insert coldK (Just hotK) vsCCHotKeys}
+      (isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
+      pure $ vState {vsCommitteeHotKeys = Map.insert coldK (Just hotK) vsCommitteeHotKeys}
     ConwayResignCommitteeColdKey coldK -> do
-      Map.member coldK vsCCHotKeys ?! ConwayCommitteeNotRegisteredVDEL coldK
-      (isNothing <$> Map.lookup coldK vsCCHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
-      pure $ vState {vsCCHotKeys = Map.insert coldK Nothing vsCCHotKeys}
+      Map.member coldK vsCommitteeHotKeys ?! ConwayCommitteeNotRegisteredVDEL coldK
+      (isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
+      pure $ vState {vsCommitteeHotKeys = Map.insert coldK Nothing vsCommitteeHotKeys}

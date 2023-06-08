@@ -230,7 +230,7 @@ ccHotKeys :: Term era (Map (KeyHash 'CommitteeColdKey (EraCrypto era)) (Maybe (K
 ccHotKeys = Var $ V "dreps" (MapR CommColdHashR (MaybeR CommHotHashR)) (Yes NewEpochStateR ccHotKeysL)
 
 ccHotKeysL :: NELens era (Map (KeyHash 'CommitteeColdKey (EraCrypto era)) (Maybe (KeyHash 'CommitteeHotKey (EraCrypto era))))
-ccHotKeysL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCCHotKeysL
+ccHotKeysL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeHotKeysL
 
 -- UTxOState
 
