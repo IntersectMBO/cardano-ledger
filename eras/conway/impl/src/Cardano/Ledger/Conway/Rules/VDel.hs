@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (VState (..))
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayVDEL)
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraPParams, EraRule, PParams)
@@ -44,13 +45,17 @@ import Control.State.Transition.Extended (
   transitionRules,
   (?!),
  )
+import qualified Data.Map.Strict as Map
+import Data.Maybe (isNothing)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data ConwayVDelPredFailure era
   = ConwayDRepAlreadyRegisteredVDEL !(Credential 'Voting (EraCrypto era))
   | ConwayDRepNotRegisteredVDEL !(Credential 'Voting (EraCrypto era))
-  | ConwayCommitteeAlreadyRegisteredVDEL !(KeyHash 'CommitteeColdKey (EraCrypto era))
+  | ConwayDRepIncorrectDepositVDEL !Coin
+  | ConwayCommitteeHasResignedVDEL !(KeyHash 'CommitteeColdKey (EraCrypto era))
   | ConwayCommitteeNotRegisteredVDEL !(KeyHash 'CommitteeColdKey (EraCrypto era))
   deriving (Show, Eq, Generic)
 
@@ -99,28 +104,18 @@ conwayVDelTransition = do
       ) <-
     judgmentContext
   case c of
-    ConwayDRepReg cred -> do
+    ConwayDRepReg cred _deposit -> do
       Set.notMember cred vsDReps ?! ConwayDRepAlreadyRegisteredVDEL cred
-      -- TODO: check against a new PParam `drepDeposit`, once PParams are updated.
-      pure $
-        vState
-          { vsDReps = Set.insert cred vsDReps
-          }
-    ConwayDRepUnReg cred -> do
+      -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
+      pure $ vState {vsDReps = Set.insert cred vsDReps}
+    ConwayDRepUnReg cred _deposit -> do
+      -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
       Set.member cred vsDReps ?! ConwayDRepNotRegisteredVDEL cred
-      pure $
-        vState
-          { vsDReps = Set.delete cred vsDReps
-          }
+      pure $ vState {vsDReps = Set.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldK hotK -> do
-      -- TODO: implement after the spec is to be updated w.r.t. checking if the coldK belongs to CC.
-      pure $
-        vState
-          { vsCCHotKeys = Map.insert coldK hotK vsCCHotKeys
-          }
+      (isNothing <$> Map.lookup coldK vsCCHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
+      pure $ vState {vsCCHotKeys = Map.insert coldK (Just hotK) vsCCHotKeys}
     ConwayResignCommitteeColdKey coldK -> do
       Map.member coldK vsCCHotKeys ?! ConwayCommitteeNotRegisteredVDEL coldK
-      pure $
-        vState
-          { vsCCHotKeys = Map.delete coldK vsCCHotKeys
-          }
+      (isNothing <$> Map.lookup coldK vsCCHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
+      pure $ vState {vsCCHotKeys = Map.insert coldK Nothing vsCCHotKeys}

@@ -258,7 +258,7 @@ data VState era = VState
   , vsCCHotKeys ::
       !( Map
           (KeyHash 'CommitteeColdKey (EraCrypto era))
-          (KeyHash 'CommitteeHotKey (EraCrypto era))
+          (Maybe (KeyHash 'CommitteeHotKey (EraCrypto era))) -- `Nothing` to indicate "resigned".
        )
   }
   deriving (Show, Eq, Generic)

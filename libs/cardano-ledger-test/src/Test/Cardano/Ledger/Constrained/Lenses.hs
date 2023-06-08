@@ -113,7 +113,7 @@ vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 vsCCHotKeysL ::
   Lens'
     (VState era)
-    (Map (KeyHash 'CommitteeColdKey (EraCrypto era)) (KeyHash 'CommitteeHotKey (EraCrypto era)))
+    (Map (KeyHash 'CommitteeColdKey (EraCrypto era)) (Maybe (KeyHash 'CommitteeHotKey (EraCrypto era))))
 vsCCHotKeysL = lens vsCCHotKeys (\vs u -> vs {vsCCHotKeys = u})
 
 -- ========================================
