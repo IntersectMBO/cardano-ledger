@@ -113,9 +113,11 @@ conwayVDelTransition = do
       Set.member cred vsDReps ?! ConwayDRepNotRegisteredVDEL cred
       pure $ vState {vsDReps = Set.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldK hotK -> do
-      (isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
+      checkColdKeyHasNotResigned coldK vsCommitteeHotKeys
       pure $ vState {vsCommitteeHotKeys = Map.insert coldK (Just hotK) vsCommitteeHotKeys}
     ConwayResignCommitteeColdKey coldK -> do
-      Map.member coldK vsCommitteeHotKeys ?! ConwayCommitteeNotRegisteredVDEL coldK
-      (isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
+      checkColdKeyHasNotResigned coldK vsCommitteeHotKeys
       pure $ vState {vsCommitteeHotKeys = Map.insert coldK Nothing vsCommitteeHotKeys}
+  where
+    checkColdKeyHasNotResigned coldK vsCommitteeHotKeys =
+      (isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
