@@ -29,6 +29,7 @@ import Cardano.Ledger.Conway.Era (ConwayVDEL)
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraPParams, EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (CommitteeColdKey, Voting))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
@@ -48,6 +49,8 @@ import Control.State.Transition.Extended (
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -56,21 +59,52 @@ data ConwayVDelPredFailure era
   | ConwayDRepNotRegisteredVDEL !(Credential 'Voting (EraCrypto era))
   | ConwayDRepIncorrectDepositVDEL !Coin
   | ConwayCommitteeHasResignedVDEL !(KeyHash 'CommitteeColdKey (EraCrypto era))
-  | ConwayCommitteeNotRegisteredVDEL !(KeyHash 'CommitteeColdKey (EraCrypto era))
   deriving (Show, Eq, Generic)
 
 instance NoThunks (ConwayVDelPredFailure era)
 
 instance NFData (ConwayVDelPredFailure era)
 
-instance Typeable era => EncCBOR (ConwayVDelPredFailure era) where
+instance
+  (Typeable era, Crypto (EraCrypto era)) =>
+  EncCBOR (ConwayVDelPredFailure era)
+  where
   encCBOR = \case
-    ConwayVDelPredFailure -> encodeListLen 1 <> encCBOR (0 :: Word8)
+    ConwayDRepAlreadyRegisteredVDEL cred ->
+      encodeListLen 2
+        <> encCBOR (0 :: Word8)
+        <> encCBOR cred
+    ConwayDRepNotRegisteredVDEL cred ->
+      encodeListLen 2
+        <> encCBOR (1 :: Word8)
+        <> encCBOR cred
+    ConwayDRepIncorrectDepositVDEL deposit ->
+      encodeListLen 2
+        <> encCBOR (2 :: Word8)
+        <> encCBOR deposit
+    ConwayCommitteeHasResignedVDEL keyH ->
+      encodeListLen 2
+        <> encCBOR (3 :: Word8)
+        <> encCBOR keyH
 
-instance Typeable era => DecCBOR (ConwayVDelPredFailure era) where
+instance
+  (Typeable era, Crypto (EraCrypto era)) =>
+  DecCBOR (ConwayVDelPredFailure era)
+  where
   decCBOR = decodeRecordSum "ConwayVDelPredFailure" $
     \case
-      0 -> pure (1, ConwayVDelPredFailure)
+      0 -> do
+        cred <- decCBOR
+        pure (2, ConwayDRepAlreadyRegisteredVDEL cred)
+      1 -> do
+        cred <- decCBOR
+        pure (2, ConwayDRepNotRegisteredVDEL cred)
+      2 -> do
+        deposit <- decCBOR
+        pure (2, ConwayDRepIncorrectDepositVDEL deposit)
+      3 -> do
+        keyH <- decCBOR
+        pure (2, ConwayCommitteeHasResignedVDEL keyH)
       k -> invalidKey k
 
 newtype ConwayVDelEvent era = VDelEvent (Event (EraRule "VDEL" era))
@@ -120,4 +154,6 @@ conwayVDelTransition = do
       pure $ vState {vsCommitteeHotKeys = Map.insert coldK Nothing vsCommitteeHotKeys}
   where
     checkColdKeyHasNotResigned coldK vsCommitteeHotKeys =
-      (isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True ?! ConwayCommitteeHasResignedVDEL coldK
+      (isNothing <$> Map.lookup coldK vsCommitteeHotKeys)
+        /= Just True
+        ?! ConwayCommitteeHasResignedVDEL coldK

@@ -265,15 +265,22 @@ certificate =
   // stake_vote_reg_deleg_cert
   // reg_committee_hot_key_cert
   // unreg_committee_hot_key_cert
+  // reg_drep_cert
+  // unreg_drep_cert
   ]
 
 stake_registration = (0, stake_credential)
 stake_deregistration = (1, stake_credential)
 stake_delegation = (2, stake_credential, pool_keyhash)
+
+; POOL
 pool_registration = (3, pool_params)
 pool_retirement = (4, pool_keyhash, epoch)
+
 ; numbers 5 and 6 used to be the Genesis and MIR certificates respectively,
 ; which were deprecated in Conway
+
+; DELEG
 reg_cert = (7, stake_credential, coin)
 unreg_cert = (8, stake_credential, coin)
 vote_deleg_cert = (9, stake_credential, voting_credential)
@@ -281,8 +288,12 @@ stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, voting_credential)
 stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
 vote_reg_deleg_cert = (12, stake_credential, voting_credential, coin)
 stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, voting_credential, coin)
+
+; VDEL
 reg_committee_hot_key_cert = (14, committee_cold_keyhash, committee_hot_keyhash)
 unreg_committee_hot_key_cert = (15, committee_cold_keyhash)
+reg_drep_cert = (16, voting_credential, coin)
+unreg_drep_cert = (17, voting_credential, coin)
 
 
 delta_coin = int
@@ -341,7 +352,7 @@ protocol_param_update =
   , ? 3:  uint               ; max transaction size
   , ? 4:  uint               ; max block header size
   , ? 5:  coin               ; key deposit
-  , ? 6:  coin               ; pool deposit
+  , ? 6:  coin               ; pool deposit (TODO: drep deposit needs to be added)
   , ? 7: epoch               ; maximum epoch
   , ? 8: uint                ; n_opt: desired number of stake pools
   , ? 9: rational            ; pool pledge influence
