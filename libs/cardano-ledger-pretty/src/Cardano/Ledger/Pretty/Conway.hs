@@ -138,9 +138,14 @@ ppConwayTxCert = \case
 
 ppConwayCommitteeCert :: ConwayCommitteeCert c -> PDoc
 ppConwayCommitteeCert = \case
+  ConwayRegDRep cred deposit ->
+    ppSexp "ConwayRegDRep" [prettyA cred, prettyA deposit]
+  ConwayUnRegDRep cred deposit ->
+    ppSexp "ConwayUnRegDRep" [prettyA cred, prettyA deposit]
   ConwayAuthCommitteeHotKey coldKey hotKey ->
     ppSexp "ConwayAuthCommitteeHotKey" [prettyA coldKey, prettyA hotKey]
-  ConwayResignCommitteeColdKey coldKey -> ppSexp "ConwayResignCommitteeColdKey" [prettyA coldKey]
+  ConwayResignCommitteeColdKey coldKey ->
+    ppSexp "ConwayResignCommitteeColdKey" [prettyA coldKey]
 
 ppConwayTxBody ::
   forall era.

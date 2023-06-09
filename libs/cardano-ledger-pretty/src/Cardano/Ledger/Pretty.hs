@@ -1669,11 +1669,11 @@ instance PrettyA (GenDelegs c) where
   prettyA = ppGenDelegs
 
 instance PrettyA (VState era) where
-  prettyA st@(VState _ _) =
+  prettyA (VState vsDReps vsCommitteeHotKeys) =
     ppRecord
       "VState"
-      [ ("DReps", prettyA $ vsDReps st)
-      , ("CC Hot Keys", prettyA $ vsCCHotKeys st)
+      [ ("DReps", prettyA vsDReps)
+      , ("CC Hot Keys", prettyA vsCommitteeHotKeys)
       ]
 
 -- ======================================================
@@ -1752,6 +1752,9 @@ instance PrettyA a => PrettyA (StrictSeq a) where
 
 instance PrettyA a => PrettyA (StrictMaybe a) where
   prettyA = ppStrictMaybe prettyA
+
+instance PrettyA a => PrettyA (Maybe a) where
+  prettyA = ppMaybe prettyA
 
 ptrace :: PrettyA t => String -> t -> a -> a
 ptrace x y z = trace ("\n" ++ show (prettyA y) ++ "\n" ++ show x) z

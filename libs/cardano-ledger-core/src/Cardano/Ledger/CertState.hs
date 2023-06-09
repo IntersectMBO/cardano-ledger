@@ -255,10 +255,10 @@ toPStatePair PState {..} =
 
 data VState era = VState
   { vsDReps :: !(Set (Credential 'Voting (EraCrypto era)))
-  , vsCCHotKeys ::
+  , vsCommitteeHotKeys ::
       !( Map
-          (KeyHash 'Voting (EraCrypto era))
-          (KeyHash 'Voting (EraCrypto era))
+          (KeyHash 'CommitteeColdKey (EraCrypto era))
+          (Maybe (KeyHash 'CommitteeHotKey (EraCrypto era))) -- `Nothing` to indicate "resigned".
        )
   }
   deriving (Show, Eq, Generic)
@@ -282,7 +282,7 @@ instance Era era => EncCBOR (VState era) where
     encode $
       Rec (VState @era)
         !> To vsDReps
-        !> To vsCCHotKeys
+        !> To vsCommitteeHotKeys
 
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.

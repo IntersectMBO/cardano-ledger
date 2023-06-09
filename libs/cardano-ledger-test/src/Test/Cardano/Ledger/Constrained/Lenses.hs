@@ -110,11 +110,11 @@ psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
 vsDRepsL :: Lens' (VState era) (Set (Credential 'Voting (EraCrypto era)))
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 
-vsCCHotKeysL ::
+vsCommitteeHotKeysL ::
   Lens'
     (VState era)
-    (Map (KeyHash 'Voting (EraCrypto era)) (KeyHash 'Voting (EraCrypto era)))
-vsCCHotKeysL = lens vsCCHotKeys (\vs u -> vs {vsCCHotKeys = u})
+    (Map (KeyHash 'CommitteeColdKey (EraCrypto era)) (Maybe (KeyHash 'CommitteeHotKey (EraCrypto era))))
+vsCommitteeHotKeysL = lens vsCommitteeHotKeys (\vs u -> vs {vsCommitteeHotKeys = u})
 
 -- ========================================
 -- CertState

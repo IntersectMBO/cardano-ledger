@@ -141,6 +141,8 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help SizeR v = pure $ With v
     help VCredR v = pure $ With v
     help VHashR v = pure $ With v
+    help CommColdHashR v = pure $ With v
+    help CommHotHashR v = pure $ With v
 
 -- ===============================
 

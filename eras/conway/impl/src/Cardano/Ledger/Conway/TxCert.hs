@@ -28,6 +28,8 @@ module Cardano.Ledger.Conway.TxCert (
   pattern RegDepositDelegTxCert,
   pattern AuthCommitteeHotKeyTxCert,
   pattern ResignCommitteeColdTxCert,
+  pattern RegDRepTxCert,
+  pattern UnRegDRepTxCert,
 )
 where
 
@@ -50,7 +52,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core (
   Era (EraCrypto),
   EraTxCert (..),
-  PoolCert,
+  PoolCert (..),
   ScriptHash,
   Value,
   eraProtVerLow,
@@ -61,7 +63,6 @@ import Cardano.Ledger.Credential (Credential, StakeCredential, credKeyHashWitnes
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Shelley.TxCert (
-  PoolCert (..),
   ShelleyDelegCert (..),
   ShelleyEraTxCert (..),
   encodePoolCert,
@@ -143,6 +144,12 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
   mkResignCommitteeColdTxCert :: KeyHash 'CommitteeColdKey (EraCrypto era) -> TxCert era
   getResignCommitteeColdTxCert :: TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era))
 
+  mkRegDRepTxCert :: Credential 'Voting (EraCrypto era) -> Coin -> TxCert era
+  getRegDRepTxCert :: TxCert era -> Maybe (Credential 'Voting (EraCrypto era), Coin)
+
+  mkUnRegDRepTxCert :: Credential 'Voting (EraCrypto era) -> Coin -> TxCert era
+  getUnRegDRepTxCert :: TxCert era -> Maybe (Credential 'Voting (EraCrypto era), Coin)
+
 instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkRegDepositTxCert cred c = ConwayTxCertDeleg $ ConwayRegCert cred $ SJust c
 
@@ -168,6 +175,16 @@ instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkResignCommitteeColdTxCert = ConwayTxCertCommittee . ConwayResignCommitteeColdKey
   getResignCommitteeColdTxCert (ConwayTxCertCommittee (ConwayResignCommitteeColdKey ck)) = Just ck
   getResignCommitteeColdTxCert _ = Nothing
+
+  mkRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayRegDRep cred deposit
+  getRegDRepTxCert = \case
+    ConwayTxCertCommittee (ConwayRegDRep cred deposit) -> Just (cred, deposit)
+    _ -> Nothing
+
+  mkUnRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayUnRegDRep cred deposit
+  getUnRegDRepTxCert = \case
+    ConwayTxCertCommittee (ConwayUnRegDRep cred deposit) -> Just (cred, deposit)
+    _ -> Nothing
 
 pattern RegDepositTxCert ::
   ConwayEraTxCert era =>
@@ -223,6 +240,24 @@ pattern ResignCommitteeColdTxCert ck <- (getResignCommitteeColdTxCert -> Just ck
   where
     ResignCommitteeColdTxCert ck = mkResignCommitteeColdTxCert ck
 
+pattern RegDRepTxCert ::
+  ConwayEraTxCert era =>
+  Credential 'Voting (EraCrypto era) ->
+  Coin ->
+  TxCert era
+pattern RegDRepTxCert cred deposit <- (getRegDRepTxCert -> Just (cred, deposit))
+  where
+    RegDRepTxCert cred deposit = mkRegDRepTxCert cred deposit
+
+pattern UnRegDRepTxCert ::
+  ConwayEraTxCert era =>
+  Credential 'Voting (EraCrypto era) ->
+  Coin ->
+  TxCert era
+pattern UnRegDRepTxCert cred deposit <- (getUnRegDRepTxCert -> Just (cred, deposit))
+  where
+    UnRegDRepTxCert cred deposit = mkUnRegDRepTxCert cred deposit
+
 {-# COMPLETE
   RegPoolTxCert
   , RetirePoolTxCert
@@ -235,6 +270,8 @@ pattern ResignCommitteeColdTxCert ck <- (getResignCommitteeColdTxCert -> Just ck
   , RegDepositDelegTxCert
   , AuthCommitteeHotKeyTxCert
   , ResignCommitteeColdTxCert
+  , RegDRepTxCert
+  , UnRegDRepTxCert
   #-}
 
 -- | First type argument is the deposit
@@ -279,7 +316,9 @@ instance NFData (ConwayDelegCert c)
 instance NoThunks (ConwayDelegCert c)
 
 data ConwayCommitteeCert c
-  = ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(KeyHash 'CommitteeHotKey c)
+  = ConwayRegDRep !(Credential 'Voting c) !Coin
+  | ConwayUnRegDRep !(Credential 'Voting c) !Coin
+  | ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(KeyHash 'CommitteeHotKey c)
   | ConwayResignCommitteeColdKey !(KeyHash 'CommitteeColdKey c)
   deriving (Show, Generic, Eq)
 
@@ -287,10 +326,11 @@ instance NFData (ConwayCommitteeCert c)
 
 instance NoThunks (ConwayCommitteeCert c)
 
-committeeKeyHashWitness :: ConwayCommitteeCert c -> KeyHash 'Witness c
+committeeKeyHashWitness :: ConwayCommitteeCert c -> Maybe (KeyHash 'Witness c)
 committeeKeyHashWitness = \case
-  ConwayAuthCommitteeHotKey coldKeyHash _ -> asWitness coldKeyHash
-  ConwayResignCommitteeColdKey coldKeyHash -> asWitness coldKeyHash
+  ConwayAuthCommitteeHotKey coldKeyHash _ -> Just $ asWitness coldKeyHash
+  ConwayResignCommitteeColdKey coldKeyHash -> Just $ asWitness coldKeyHash
+  _ -> Nothing
 
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
@@ -347,6 +387,14 @@ conwayTxCertDelegDecoder = \case
   15 -> do
     cred <- decCBOR
     pure (2, ResignCommitteeColdTxCert cred)
+  16 -> do
+    cred <- decCBOR
+    deposit <- decCBOR
+    pure (3, RegDRepTxCert cred deposit)
+  17 -> do
+    cred <- decCBOR
+    deposit <- decCBOR
+    pure (3, UnRegDRepTxCert cred deposit)
   k -> invalidKey k
   where
     delegCertDecoder n decodeDelegatee = do
@@ -430,6 +478,16 @@ encodeCommitteeHotKey = \case
     encodeListLen 2
       <> encodeWord8 15
       <> encCBOR cred
+  ConwayRegDRep cred deposit ->
+    encodeListLen 3
+      <> encodeWord8 16
+      <> encCBOR cred
+      <> encCBOR deposit
+  ConwayUnRegDRep cred deposit ->
+    encodeListLen 3
+      <> encodeWord8 17
+      <> encCBOR cred
+      <> encCBOR deposit
 
 fromShelleyDelegCert :: ShelleyDelegCert c -> ConwayDelegCert c
 fromShelleyDelegCert = \case
@@ -473,4 +531,4 @@ getVKeyWitnessConwayTxCert = \case
       ConwayDelegCert cred _ -> credKeyHashWitness cred
       ConwayRegDelegCert cred _ _ -> credKeyHashWitness cred
   ConwayTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
-  ConwayTxCertCommittee committeeCert -> Just $ committeeKeyHashWitness committeeCert
+  ConwayTxCertCommittee committeeCert -> committeeKeyHashWitness committeeCert
