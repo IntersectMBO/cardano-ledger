@@ -374,6 +374,11 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
       (relSubset dom (Map.keysSet m))
       (PairSpec dom rng VarOnLeft m)
       (RngRel (relSubset rng (Set.fromList (Map.elems m))))
+  Rng (ProjM l prj (Var v2)) `Subset` expr | Name v1 == Name v2 -> do
+    let MapR _ rng' = termRep (Var v2)
+    Refl <- sameRep rng rng'
+    With may <- simplifySet prj expr
+    mapSpec SzAny RelAny PairAny (RngComponent prj l $ Set.toList may)
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
     msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
