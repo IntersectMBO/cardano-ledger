@@ -511,7 +511,7 @@ goSnapShotT = Constr "SnapShot" snapfun ^$ goStake ^$ goDelegs ^$ goPools
         (VMap.fromMap z)
 
 markPoolDistr :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
-markPoolDistr = Var (V "markPoolDistr" (MapR PoolHashR IPoolStakeR) No)
+markPoolDistr = Var (V "markPoolDistr" (MapR PoolHashR IPoolStakeR) (Yes NewEpochStateR markPoolDistrL))
 
 markPoolDistrL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
 markPoolDistrL = nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL . pooldistrHelpL

@@ -583,7 +583,7 @@ univPreds p keyspace =
   , Dom instanTreasury :⊆: credsUnivTm
   , Dom (proposalsT p) :⊆: genesisUnivTm
   , Dom (futureProposalsT p) :⊆: genesisUnivTm
-  , Dom genDelegs :⊆: genesisUnivTm
+  , Dom genDelegs :=: genesisUnivTm
   , Rng (ProjM (txOutL . addrTxOutL @era) AddrR (utxo p)) :⊆: addrUnivTm
   ]
   where
@@ -596,21 +596,43 @@ univPreds p keyspace =
                                                  | (payKey, stakeKey) <- ksKeyPairs keyspace ]
                                          -- and scripts
 
-pstatePreds :: Proof era -> [Pred era]
-pstatePreds _p =
+-- These constraints control generation but are not requirements on valid ledger states.
+sizePreds :: Proof era -> [Pred era]
+sizePreds proof =
   [ Sized (AtMost 3) (Dom futureRegPools) -- See comments in test8 why we need these Fixed predicates
   , Sized (Range 5 6) (Dom retiring) -- we need       retiring :⊆: regPools        :⊆: poolsUinv
   , Sized (AtLeast 9) (Dom regPools) -- AND we need                 futureRegPools  :⊆: poolHashUniv
-  , Dom regPools :=: Dom poolDistr
+  , Sized (AtLeast 9) (Dom regPools) -- AND we need                 futureRegPools  :⊆: poolsUniv
+  , Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
+  , Sized (AtLeast 100) (utxo proof)
+  , Sized (ExactSize 8) (Dom prevBlocksMade) -- Both prevBlocksMade and prevBlocksMadeDom will have size 8
+  , Sized (ExactSize 8) (Dom currBlocksMade)
+  , Sized (AtLeast 1) instanReserves
+  ]
+
+-- These constraints control generation but are not requirements on valid ledger states.
+generationPreds :: Proof era -> [Pred era]
+generationPreds proof =
+  [ -- Shelley/Alonzo protocol params
+    maxTxSize proof :=: Lit NaturalR 16384
+  , maxBHSize proof :=: Lit NaturalR 1100
+  , maxBBSize proof :=: Lit NaturalR 65536
+  , Disjoint (Dom futureRegPools) (Dom retiring)
+  ]
+
+pstatePreds :: Proof era -> [Pred era]
+pstatePreds _p =
+  [ Dom poolDistr :⊆: Dom regPools
   , Dom regPools :=: Dom poolDeposits
   , Dom retiring :⊆: Dom regPools
-  , -- , Dom futureRegPools :⊆: Dom poolDistr  -- Don't think we want this
-    Disjoint (Dom futureRegPools) (Dom retiring)
+   -- , Dom futureRegPools :⊆: Dom poolDistr  -- Don't think we want this
+  , Random dreps
+  , Random ccHotKeys
   ]
 
 dstatePreds :: Proof era -> [Pred era]
 dstatePreds _p =
-  [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
+  [ Sized (AtLeast 1) genDelegs
   , Dom rewards :=: Dom stakeDeposits
   , Dom delegations :⊆: Dom rewards
   , Random dreps
@@ -623,17 +645,19 @@ dstatePreds _p =
 
     Sized (AtLeast 1) treasury
   , Random instanTreasury
-  , Sized (AtLeast 1) instanReserves
   , Negate (deltaReserves) :=: deltaTreasury
   , SumsTo (Right (Coin 1)) instanReservesSum EQL [SumMap instanReserves]
   , SumsTo (Right (DeltaCoin 1)) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
   , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
   , SumsTo (Right (DeltaCoin 1)) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
-  , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
+  , futureGenKeyHashes :⊆: Dom genDelegs
+  , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: futureGenKeyHashes
   ]
   where
     -- Local variable since the solver can't solve ProjS l (Dom X) :⊆: Y
     futureGenKeyHashes = Var (V "futureGenKeyHashes" (SetR GenHashR) No)
+    instanReservesSum = Var (V "instanReservesSum" CoinR No)
+    instanTreasurySum = Var (V "instanTreasurySum" CoinR No)
 
 accountstatePreds :: Proof era -> [Pred era]
 accountstatePreds _p = [] -- Constraints on reserves and treasury appear in dstatePreds
@@ -643,7 +667,6 @@ utxostatePreds proof =
   [ SumsTo (Right (Coin 1)) utxoCoin EQL [ProjMap CoinR outputCoinL (utxo proof)]
   , SumsTo (Right (Coin 1)) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
   , SumsTo (Right (Coin 1)) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
-  , Sized (AtLeast 1) (utxo proof)
   , Random fees
   , Random (proposalsT proof)
   , Random (futureProposalsT proof)
@@ -664,10 +687,10 @@ epochstatePreds proof =
   , Random (prevpparams proof)
   , Random (pparams proof)
   , Sized (AtLeast 1) (maxBHSize proof)
-  , Sized (AtLeast 1) (maxTxSize proof)
-  , -- , Random (maxBBSize proof) -- This will cause underflow on Natural
-    SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL markPoolDistr]
-  , SumsTo (Right 1) (maxBBSize proof) LTE [One (maxBHSize proof), One (maxTxSize proof)]
+  , Random (maxTxSize proof)
+  , Random (maxBHSize proof)
+  , Random (maxBBSize proof)
+  , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL markPoolDistr]
   , Component
       (Right (pparams proof))
       [field pp (maxTxSize proof), field pp (maxBHSize proof), field pp (maxBBSize proof)]
@@ -678,14 +701,13 @@ epochstatePreds proof =
 newepochstatePreds :: Proof era -> [Pred era]
 newepochstatePreds _proof =
   [ Random currentEpoch
-  , Sized (ExactSize 8) (Dom prevBlocksMade) -- Both prevBlocksMade and prevBlocksMadeDom will have size 8
-  , Sized (ExactSize 8) (Dom currBlocksMade)
   , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL poolDistr]
   ]
 
 newepochConstraints :: Reflect era => Proof era -> KeySpace era -> [Pred era]
 newepochConstraints pr env =
   univPreds pr env
+    ++ sizePreds pr
     ++ pstatePreds pr
     ++ dstatePreds pr
     ++ utxostatePreds pr

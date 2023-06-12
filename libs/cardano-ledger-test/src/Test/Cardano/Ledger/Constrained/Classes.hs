@@ -722,8 +722,8 @@ genValue p = case p of
 
 genTxOut :: Proof era -> Gen (TxOutF era)
 genTxOut p = do
-  n <- frequency [(2, choose (1, 100)), (1, choose (101, 1000))]
-  unReflect genTxOutX p (Coin n)
+  n <- frequency [(2, choose (2, 100)), (1, choose (101, 1000))]
+  unReflect genTxOutX p (Coin $ 1000000 * n)
 
 genPParams :: Proof era -> Gen (PParamsF era)
 genPParams p = case p of
