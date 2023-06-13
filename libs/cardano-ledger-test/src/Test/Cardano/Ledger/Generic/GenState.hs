@@ -980,9 +980,11 @@ genPoolParams ::
   KeyHash 'StakePool (EraCrypto era) ->
   GenRS era (PoolParams (EraCrypto era))
 genPoolParams ppId = do
+  pp <- asks gePParams
   ppVrf <- lift arbitrary
   ppPledge <- lift genPositiveVal
-  ppCost <- lift genPositiveVal
+  let minCost = unCoin $ pp ^. ppMinPoolCostL
+  ppCost <- fmap Coin $ lift $ choose (minCost, 3 * minCost)
   ppMargin <- lift arbitrary
   ppRewardAcnt <- RewardAcnt Testnet <$> genFreshRegCred Rewrd
   let ppOwners = mempty

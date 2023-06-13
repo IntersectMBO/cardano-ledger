@@ -212,7 +212,8 @@ instance Crypto c => Arbitrary (MaryValue c) where
   arbitrary = do
     v <- toInteger <$> choose (0 :: Int, maxBound)
     ma <-
-      genMultiAsset $ toInteger <$> choose (1 :: Int, maxBound)
+      frequency [(9, pure mempty),
+                 (1, genMultiAsset $ toInteger <$> choose (1 :: Int, maxBound))]
     pure $ MaryValue v ma
 
 digitByteStrings :: IsString s => [s]

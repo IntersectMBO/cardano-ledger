@@ -786,10 +786,10 @@ genRecipientsFrom txOuts = do
       genWithChange s txout rs = do
         let !(!addr, !v, !ds) = txoutFields reify txout
             vCoin = unCoin (coin v)
-        if vCoin == 0 -- If the coin balance is 0, don't add any TxOuts to 'rs'
+        if vCoin < 4000000 -- If the coin balance is 0, don't add any TxOuts to 'rs'
           then pure rs
           else do
-            c <- Coin <$> lift (choose (1, vCoin))
+            c <- Coin <$> lift (choose (2000000, vCoin - 2000000))
             fields <- genTxOut reify (s <+> inject c)
             pure $
               if c < coin v
