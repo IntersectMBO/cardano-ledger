@@ -262,11 +262,12 @@ depositEqualsObligation ::
   , Environment t ~ LedgerEnv era
   , Signal t ~ Tx era
   , State t ~ LedgerState era
+  , ProtVerAtMost era 8
   ) =>
   AssertionViolation t ->
   String
 depositEqualsObligation
-  AssertionViolation {avSTS, avMsg, avCtx = (TRC (LedgerEnv slot _ pp _, _, tx)), avState} =
+  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ pp _, _, tx), avState} =
     let dpstate = lsCertState <$> avState
         utxo = utxosUtxo . lsUTxOState <$> avState
         txb = tx ^. bodyTxL

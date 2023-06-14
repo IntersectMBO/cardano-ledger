@@ -205,6 +205,7 @@ instance
 instance
   ( ShelleyEraTxCert era
   , EraPParams era
+  , ProtVerAtMost era 8
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
   ) =>
   Embed (ShelleyDELEG era) (ShelleyDELPL era)

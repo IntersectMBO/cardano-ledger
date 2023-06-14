@@ -112,6 +112,7 @@ tests ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , GovernanceState era ~ ShelleyPPUPState era
+  , ProtVerAtMost era 8
   ) =>
   Int ->
   TestTree
@@ -129,6 +130,7 @@ adaPreservationProps ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , GovernanceState era ~ ShelleyPPUPState era
+  , ProtVerAtMost era 8
   ) =>
   Property
 adaPreservationProps =
@@ -142,7 +144,7 @@ adaPreservationProps =
 
     conjoin . concat $
       [ -- preservation properties
-        map (checkPreservation @era) (zip justBoundarySsts [0 ..])
+        zipWith (checkPreservation @era) justBoundarySsts [0 ..]
       , map (potsSumIncreaseWithdrawalsPerTx @era @ledger) ssts
       , map (potsSumIncreaseByRewardsPerTx @era @ledger) ssts
       , map (preserveBalance @era @ledger) ssts
@@ -171,11 +173,13 @@ checkPreservation ::
   forall era.
   ( EraSegWits era
   , ShelleyEraTxBody era
+  , ProtVerAtMost era 8
   , GovernanceState era ~ ShelleyPPUPState era
   ) =>
-  (SourceSignalTarget (CHAIN era), Int) ->
+  SourceSignalTarget (CHAIN era) ->
+  Int ->
   Property
-checkPreservation (SourceSignalTarget {source, target, signal}, count) =
+checkPreservation SourceSignalTarget {source, target, signal} count =
   counterexample
     ( mconcat
         ( [ "\ncount = " ++ show count ++ "\n"
@@ -230,7 +234,7 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
     lsNew = esLState . nesEs . chainNes $ target
     oldRAs = rewards . certDState . lsCertState $ lsOld
     newRAs = rewards . certDState . lsCertState $ lsNew
-    oldCertState = lsCertState $ lsOld
+    oldCertState = lsCertState lsOld
     oldRetire = psRetiring . certPState . lsCertState $ lsOld
     newRetire = psRetiring . certPState . lsCertState $ lsNew
     oldPoolDeposit = psDeposits . certPState . lsCertState $ lsOld
@@ -275,9 +279,9 @@ checkPreservation (SourceSignalTarget {source, target, signal}, count) =
             ]
 
     txs' = toList $ (fromTxSeq @era . bbody) signal
-    txs = map dispTx (zip txs' [0 :: Int ..])
+    txs = zipWith dispTx txs' [0 :: Int ..]
 
-    dispTx (tx, ix) =
+    dispTx tx ix =
       "\n\n******** Transaction "
         ++ show ix
         ++ " "

@@ -136,7 +136,7 @@ class EraTxCert era => ShelleyEraTxCert era where
   getDelegStakeTxCert ::
     TxCert era -> Maybe (StakeCredential (EraCrypto era), KeyHash 'StakePool (EraCrypto era))
 
-  mkGenesisDelegTxCert :: GenesisDelegCert (EraCrypto era) -> TxCert era
+  mkGenesisDelegTxCert :: ProtVerAtMost era 8 => GenesisDelegCert (EraCrypto era) -> TxCert era
   getGenesisDelegTxCert :: TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
 
   mkMirTxCert :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
@@ -195,7 +195,7 @@ pattern MirTxCert d <- (getMirTxCert -> Just d)
     MirTxCert d = mkMirTxCert d
 
 pattern GenesisDelegTxCert ::
-  ShelleyEraTxCert era =>
+  (ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   KeyHash 'Genesis (EraCrypto era) ->
   KeyHash 'GenesisDelegate (EraCrypto era) ->
   Hash (EraCrypto era) (VerKeyVRF (EraCrypto era)) ->
@@ -366,7 +366,7 @@ instance
       gen <- decCBOR
       genDeleg <- decCBOR
       vrf <- decCBOR
-      pure (4, GenesisDelegTxCert gen genDeleg vrf)
+      pure (4, ShelleyTxCertGenesisDeleg $ GenesisDelegCert gen genDeleg vrf)
     6 -> do
       x <- decCBOR
       pure (2, ShelleyTxCertMir x)
