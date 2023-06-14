@@ -275,3 +275,48 @@ instance
       , WithdrawalsNotInRewardsCERTS <$> arbitrary
       , CertFailure <$> arbitrary
       ]
+
+-- CERT
+
+instance
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "DELEG" era))
+  , Arbitrary (PredicateFailure (EraRule "POOL" era))
+  , Arbitrary (PredicateFailure (EraRule "VDEL" era))
+  ) =>
+  Arbitrary (ConwayCertPredFailure era)
+  where
+  arbitrary =
+    oneof
+      [ DelegFailure <$> arbitrary
+      , PoolFailure <$> arbitrary
+      , VDelFailure <$> arbitrary
+      ]
+
+-- DELEG
+
+instance
+  ( Era era
+  ) =>
+  Arbitrary (ConwayDelegPredFailure era)
+  where
+  arbitrary =
+    oneof
+      [ IncorrectDepositDELEG <$> arbitrary
+      , StakeKeyAlreadyRegisteredDELEG <$> arbitrary
+      , StakeKeyNotRegisteredDELEG <$> arbitrary
+      , StakeKeyHasNonZeroAccountBalanceDELEG <$> arbitrary
+      , DRepAlreadyRegisteredForStakeKeyDELEG <$> arbitrary
+      , pure WrongCertificateTypeDELEG
+      ]
+
+-- VDEL
+
+instance (Era era, Crypto era) => Arbitrary (ConwayVDelPredFailure (ConwayEra era)) where
+  arbitrary =
+    oneof
+      [ ConwayDRepAlreadyRegisteredVDEL <$> arbitrary
+      , ConwayDRepNotRegisteredVDEL <$> arbitrary
+      , ConwayDRepIncorrectDepositVDEL <$> arbitrary
+      , ConwayCommitteeHasResignedVDEL <$> arbitrary
+      ]
