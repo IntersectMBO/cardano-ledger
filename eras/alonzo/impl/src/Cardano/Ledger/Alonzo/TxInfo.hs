@@ -93,7 +93,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   validScript,
  )
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum, getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
+import Cardano.Ledger.Alonzo.Tx (AlonzoScriptPurpose (..), CostModel, txdats')
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoEraTxOut (..),
@@ -473,7 +473,7 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
 
 transScriptPurpose ::
   EraPlutusContext 'PlutusV1 era =>
-  ScriptPurpose era ->
+  AlonzoScriptPurpose era ->
   PV1.ScriptPurpose
 transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
@@ -515,7 +515,7 @@ class ExtendedUTxO era where
   getDatum ::
     Tx era ->
     UTxO era ->
-    ScriptPurpose era ->
+    AlonzoScriptPurpose era ->
     Maybe (Data era)
 
 getTxOutDatum :: AlonzoEraTxOut era => TxOut era -> Datum era
@@ -578,7 +578,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
 valContext ::
   EraPlutusContext 'PlutusV1 era =>
   VersionedTxInfo ->
-  ScriptPurpose era ->
+  AlonzoScriptPurpose era ->
   Data era
 valContext (TxInfoPV1 txinfo) sp =
   Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))

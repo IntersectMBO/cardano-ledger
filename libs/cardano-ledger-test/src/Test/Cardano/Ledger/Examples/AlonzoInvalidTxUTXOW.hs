@@ -29,8 +29,8 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Tx (
+  AlonzoScriptPurpose (..),
   IsValid (..),
-  ScriptPurpose (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BaseTypes (

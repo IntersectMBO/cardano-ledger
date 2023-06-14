@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
-  ScriptPurpose,
+  AlonzoScriptPurpose,
   hashScriptIntegrity,
   rdptr,
  )
@@ -100,7 +100,7 @@ data AlonzoUtxowPredFailure era
   = ShelleyInAlonzoUtxowPredFailure !(ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
-      ![(ScriptPurpose era, ScriptHash (EraCrypto era))]
+      ![(AlonzoScriptPurpose era, ScriptHash (EraCrypto era))]
   | MissingRequiredDatums
       !(Set (DataHash (EraCrypto era)))
       -- ^ Set of missing data hashes

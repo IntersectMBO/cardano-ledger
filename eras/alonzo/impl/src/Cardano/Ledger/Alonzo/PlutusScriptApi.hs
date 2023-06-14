@@ -31,7 +31,7 @@ import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), indexedRdmrs)
+import Cardano.Ledger.Alonzo.Tx (AlonzoScriptPurpose (..), Data, indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,
   ExtendedUTxO (..),
@@ -66,7 +66,7 @@ import NoThunks.Class (NoThunks)
 -- ===============================================================
 
 -- | Only the Spending ScriptPurpose contains TxIn
-getSpendingTxIn :: ScriptPurpose era -> Maybe (TxIn (EraCrypto era))
+getSpendingTxIn :: AlonzoScriptPurpose era -> Maybe (TxIn (EraCrypto era))
 getSpendingTxIn = \case
   Spending txin -> Just txin
   Minting _policyid -> Nothing
@@ -79,7 +79,7 @@ getDatumAlonzo ::
   (AlonzoEraTxWits era, AlonzoEraTxOut era, EraTx era) =>
   Tx era ->
   UTxO era ->
-  ScriptPurpose era ->
+  AlonzoScriptPurpose era ->
   Maybe (Data era)
 getDatumAlonzo tx (UTxO m) sp = do
   txIn <- getSpendingTxIn sp
@@ -91,7 +91,7 @@ getDatumAlonzo tx (UTxO m) sp = do
 
 -- | When collecting inputs for two phase scripts, 3 things can go wrong.
 data CollectError era
-  = NoRedeemer !(ScriptPurpose era)
+  = NoRedeemer !(AlonzoScriptPurpose era)
   | NoWitness !(ScriptHash (EraCrypto era))
   | NoCostModel !Language
   | BadTranslation !(TranslationError (EraCrypto era))
@@ -126,8 +126,8 @@ instance (Era era, DecCBOR (TxCert era)) => DecCBOR (CollectError era) where
 -- by use of the (partial) language function, which is not defined on 1-phase scripts.
 knownToNotBe1Phase ::
   Map.Map (ScriptHash (EraCrypto era)) (AlonzoScript era) ->
-  (ScriptPurpose era, ScriptHash (EraCrypto era)) ->
-  Maybe (ScriptPurpose era, Language, ShortByteString)
+  (AlonzoScriptPurpose era, ScriptHash (EraCrypto era)) ->
+  Maybe (AlonzoScriptPurpose era, Language, ShortByteString)
 knownToNotBe1Phase scriptsAvailable (sp, sh) = do
   PlutusScript lang script <- sh `Map.lookup` scriptsAvailable
   Just (sp, lang, script)
@@ -241,21 +241,21 @@ evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
 scriptsNeeded ::
   ( EraTx era
   , EraUTxO era
-  , ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+  , ScriptsNeeded era ~ [(AlonzoScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
   ) =>
   UTxO era ->
   Tx era ->
-  [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+  [(AlonzoScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
 scriptsNeeded utxo tx = scriptsNeededFromBody utxo (tx ^. bodyTxL)
 {-# DEPRECATED scriptsNeeded "In favor of `getScritpsNeeded`" #-}
 
 scriptsNeededFromBody ::
   forall era.
   ( EraUTxO era
-  , ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+  , ScriptsNeeded era ~ [(AlonzoScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
   ) =>
   UTxO era ->
   TxBody era ->
-  [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
+  [(AlonzoScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
 scriptsNeededFromBody = getScriptsNeeded
 {-# DEPRECATED scriptsNeededFromBody "In favor of `getScritpsNeeded`" #-}

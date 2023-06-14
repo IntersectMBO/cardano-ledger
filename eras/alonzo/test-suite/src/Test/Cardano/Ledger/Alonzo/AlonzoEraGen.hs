@@ -32,9 +32,9 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx (..),
+  AlonzoScriptPurpose (..),
   AlonzoTx (..),
   IsValid (..),
-  ScriptPurpose (..),
   hashScriptIntegrity,
   rdptr,
   totExUnits,
@@ -492,7 +492,7 @@ addRedeemMap ::
   Crypto c =>
   TxBody (AlonzoEra c) ->
   (PV1.Data, Natural, Natural) ->
-  ScriptPurpose (AlonzoEra c) ->
+  AlonzoScriptPurpose (AlonzoEra c) ->
   Map RdmrPtr (Data (AlonzoEra c), ExUnits) ->
   Map RdmrPtr (Data (AlonzoEra c), ExUnits)
 addRedeemMap body1 (dat, space, steps) purpose ans =

@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..), binaryDataToData, hashData)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoScriptPurpose (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
@@ -736,13 +736,13 @@ ppWitHashes :: Set (KeyHash 'Witness c) -> PDoc
 ppWitHashes hs = ppSexp "WitHashes" [ppSet ppKeyHash hs]
 
 -- Defined in ‘Cardano.Ledger.Alonzo.Tx’
-ppScriptPurpose :: PrettyA (TxCert era) => ScriptPurpose era -> PDoc
+ppScriptPurpose :: PrettyA (TxCert era) => AlonzoScriptPurpose era -> PDoc
 ppScriptPurpose (Minting policy) = ppSexp "Minting" [prettyA policy] -- FIXME fill in the blanks
 ppScriptPurpose (Spending txin) = ppSexp "Spending" [ppTxIn txin]
 ppScriptPurpose (Rewarding acct) = ppSexp "Rewarding" [ppRewardAcnt' acct]
 ppScriptPurpose (Certifying dcert) = ppSexp "Certifying" [prettyA dcert]
 
-instance PrettyA (TxCert era) => PrettyA (ScriptPurpose era) where
+instance PrettyA (TxCert era) => PrettyA (AlonzoScriptPurpose era) where
   prettyA = ppScriptPurpose
 
 instance PrettyA x => PrettyA [x] where prettyA xs = ppList prettyA xs

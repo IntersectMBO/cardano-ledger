@@ -20,7 +20,7 @@ where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
+import Cardano.Ledger.Alonzo.Tx (AlonzoScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), MaryEraTxBody (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (credScriptHash)
@@ -44,7 +44,7 @@ import Lens.Micro.Extras (view)
 
 -- | Alonzo era style scripts needed require also a `ScriptPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
-  = AlonzoScriptsNeeded [(ScriptPurpose era, ScriptHash (EraCrypto era))]
+  = AlonzoScriptsNeeded [(AlonzoScriptPurpose era, ScriptHash (EraCrypto era))]
   deriving (Semigroup, Monoid)
 
 deriving instance (Era era, Eq (TxCert era)) => Eq (AlonzoScriptsNeeded era)
@@ -136,7 +136,7 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
   where
     collect ::
       TxIn (EraCrypto era) ->
-      Maybe (ScriptPurpose era, ScriptHash (EraCrypto era))
+      Maybe (AlonzoScriptPurpose era, ScriptHash (EraCrypto era))
     collect !i = do
       addr <- view addrTxOutL <$> Map.lookup i u
       hash <- getScriptHash addr

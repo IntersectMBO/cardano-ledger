@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.Scripts (
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
-  ScriptPurpose (..),
+  AlonzoScriptPurpose (..),
  )
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))

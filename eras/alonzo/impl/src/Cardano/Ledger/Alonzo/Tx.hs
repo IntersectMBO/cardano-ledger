@@ -61,7 +61,7 @@ module Cardano.Ledger.Alonzo.Tx (
   minfee,
   --  Figure 5
   Indexable (..), -- indexOf
-  ScriptPurpose (..),
+  AlonzoScriptPurpose (..),
   isTwoPhaseScriptAddressFromMap,
   Shelley.txouts,
   indexedRdmrs,
@@ -370,30 +370,30 @@ totExUnits tx =
 -- Figure 6:Indexing script and data objects
 -- ===============================================================
 
-data ScriptPurpose era
+data AlonzoScriptPurpose era
   = Minting !(PolicyID (EraCrypto era))
   | Spending !(TxIn (EraCrypto era))
   | Rewarding !(RewardAcnt (EraCrypto era))
   | Certifying !(TxCert era)
   deriving (Generic)
 
-deriving instance (Era era, Eq (TxCert era)) => Eq (ScriptPurpose era)
-deriving instance (Era era, Show (TxCert era)) => Show (ScriptPurpose era)
-deriving instance (Era era, NoThunks (TxCert era)) => NoThunks (ScriptPurpose era)
+deriving instance (Era era, Eq (TxCert era)) => Eq (AlonzoScriptPurpose era)
+deriving instance (Era era, Show (TxCert era)) => Show (AlonzoScriptPurpose era)
+deriving instance (Era era, NoThunks (TxCert era)) => NoThunks (AlonzoScriptPurpose era)
 
-instance (Era era, NFData (TxCert era)) => NFData (ScriptPurpose era) where
+instance (Era era, NFData (TxCert era)) => NFData (AlonzoScriptPurpose era) where
   rnf = \case
     Certifying c -> rnf c
     sp -> rwhnf sp
 
-instance (Era era, EncCBOR (TxCert era)) => EncCBOR (ScriptPurpose era) where
+instance (Era era, EncCBOR (TxCert era)) => EncCBOR (AlonzoScriptPurpose era) where
   encCBOR (Minting x) = encode (Sum (Minting @era) 0 !> To x)
   encCBOR (Spending x) = encode (Sum (Spending @era) 1 !> To x)
   encCBOR (Rewarding x) = encode (Sum (Rewarding @era) 2 !> To x)
   encCBOR (Certifying x) = encode (Sum Certifying 3 !> To x)
 
-instance (Era era, DecCBOR (TxCert era)) => DecCBOR (ScriptPurpose era) where
-  decCBOR = decode (Summands "ScriptPurpose" dec)
+instance (Era era, DecCBOR (TxCert era)) => DecCBOR (AlonzoScriptPurpose era) where
+  decCBOR = decode (Summands "AlonzoScriptPurpose" dec)
     where
       dec 0 = SumD Minting <! From
       dec 1 = SumD Spending <! From
@@ -436,7 +436,7 @@ rdptr ::
   forall era.
   MaryEraTxBody era =>
   TxBody era ->
-  ScriptPurpose era ->
+  AlonzoScriptPurpose era ->
   StrictMaybe RdmrPtr
 rdptr txBody = \case
   Minting (PolicyID hash) ->
@@ -453,7 +453,7 @@ rdptrInv ::
   MaryEraTxBody era =>
   TxBody era ->
   RdmrPtr ->
-  StrictMaybe (ScriptPurpose era)
+  StrictMaybe (AlonzoScriptPurpose era)
 rdptrInv txBody = \case
   RdmrPtr Mint idx ->
     Minting . PolicyID <$> fromIndex idx (txBody ^. mintedTxBodyF)
@@ -473,7 +473,7 @@ indexedRdmrs ::
   forall era.
   (MaryEraTxBody era, AlonzoEraTxWits era, EraTx era) =>
   Tx era ->
-  ScriptPurpose era ->
+  AlonzoScriptPurpose era ->
   Maybe (Data era, ExUnits)
 indexedRdmrs tx sp = case rdptr @era (tx ^. bodyTxL) sp of
   SNothing -> Nothing

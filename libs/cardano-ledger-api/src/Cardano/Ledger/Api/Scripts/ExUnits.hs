@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   getEvaluationContext,
  )
 import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum (..), binaryDataToData, getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,
@@ -87,7 +87,7 @@ data TransactionScriptFailure era
       !RdmrPtr
       !( Map
           RdmrPtr
-          (ScriptPurpose era, Maybe (ShortByteString, Language), ScriptHash (EraCrypto era))
+          (AlonzoScriptPurpose era, Maybe (ShortByteString, Language), ScriptHash (EraCrypto era))
        )
   | -- | Missing datum.
     MissingDatum !(DataHash (EraCrypto era))

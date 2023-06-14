@@ -51,7 +51,7 @@ import Cardano.Ledger.Alonzo.Scripts.Data (
   dataToBinaryData,
   hashData,
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (AlonzoTx), IsValid (IsValid), ScriptIntegrity (ScriptIntegrity), ScriptPurpose (..), getLanguageView)
+import Cardano.Ledger.Alonzo.Tx (AlonzoScriptPurpose (..), AlonzoTx (AlonzoTx), IsValid (IsValid), ScriptIntegrity (ScriptIntegrity), getLanguageView)
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   mkAlonzoTxAuxData,
@@ -388,7 +388,7 @@ instance
   ( Era era
   , Arbitrary (TxCert era)
   ) =>
-  Arbitrary (ScriptPurpose era)
+  Arbitrary (AlonzoScriptPurpose era)
   where
   arbitrary =
     oneof
