@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.TxInfo where
@@ -14,9 +15,11 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), binaryDataToData, getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
+import Cardano.Ledger.Alonzo.Tx (AlonzoScriptPurpose, Data, rdptrInv)
 import Cardano.Ledger.Alonzo.TxInfo (
+  AlonzoEraScript (..),
   EraPlutusContext,
+  PlutusScriptPurpose (..),
   PlutusTxCert (..),
   TranslationError (..),
   TxOutSource (..),
@@ -174,13 +177,18 @@ transRedeemerPtr ::
 transRedeemerPtr txb (ptr, (d, _)) =
   case rdptrInv txb ptr of
     SNothing -> Left (RdmrPtrPointsToNothing ptr)
-    SJust sp -> Right (Alonzo.transScriptPurpose sp, transRedeemer d)
+    SJust sp -> Right (Alonzo.transAlonzoScriptPurpose sp, transRedeemer d)
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (BabbageEra c) where
   transTxCert = TxCertPlutusV1 . transShelleyTxCert
+  transScriptPurpose = ScriptPurposePlutusV1 . Alonzo.transAlonzoScriptPurpose
 
 instance Crypto c => EraPlutusContext 'PlutusV2 (BabbageEra c) where
   transTxCert = TxCertPlutusV2 . transShelleyTxCert
+  transScriptPurpose = ScriptPurposePlutusV2 . Alonzo.transAlonzoScriptPurpose
+
+instance Crypto c => AlonzoEraScript (BabbageEra c) where
+  type ScriptPurpose (BabbageEra c) = AlonzoScriptPurpose (BabbageEra c)
 
 babbageTxInfo ::
   forall era.

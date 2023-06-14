@@ -13,11 +13,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Alonzo.TxInfo (
+  AlonzoEraScript (..),
   TxOutSource (..),
   TranslationError (..),
   transProtocolVersion,
@@ -47,7 +49,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
-  transScriptPurpose,
+  transAlonzoScriptPurpose,
   VersionedTxInfo (..),
   ExtendedUTxO (..),
   alonzoTxInfo,
@@ -64,6 +66,10 @@ module Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext (..),
   transShelleyTxCert,
   PlutusTxCert (..),
+  PlutusScriptPurpose (..),
+  unScriptPurposeV1,
+  unScriptPurposeV2,
+  unScriptPurposeV3,
   unTxCertV1,
   unTxCertV2,
   unTxCertV3,
@@ -147,6 +153,7 @@ import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import qualified Data.ByteString.UTF8 as BSU
 import Data.Foldable (Foldable (..))
 import qualified Data.Foldable as F (asum)
+import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -398,6 +405,20 @@ transValue (MaryValue n m) = justAda <> transMultiAsset m
 -- =============================================
 -- translate fileds like TxCert, Withdrawals, and similar
 
+unScriptPurposeV1 :: PlutusScriptPurpose 'PlutusV1 -> PV1.ScriptPurpose
+unScriptPurposeV1 (ScriptPurposePlutusV1 x) = x
+
+unScriptPurposeV2 :: PlutusScriptPurpose 'PlutusV2 -> PV2.ScriptPurpose
+unScriptPurposeV2 (ScriptPurposePlutusV2 x) = x
+
+unScriptPurposeV3 :: PlutusScriptPurpose 'PlutusV3 -> PV3.ScriptPurpose
+unScriptPurposeV3 (ScriptPurposePlutusV3 x) = x
+
+data PlutusScriptPurpose (l :: Language) where
+  ScriptPurposePlutusV1 :: PV1.ScriptPurpose -> PlutusScriptPurpose 'PlutusV1
+  ScriptPurposePlutusV2 :: PV2.ScriptPurpose -> PlutusScriptPurpose 'PlutusV2
+  ScriptPurposePlutusV3 :: PV3.ScriptPurpose -> PlutusScriptPurpose 'PlutusV3
+
 data PlutusTxCert (l :: Language) where
   TxCertPlutusV1 :: PV1.DCert -> PlutusTxCert 'PlutusV1
   TxCertPlutusV2 :: PV2.DCert -> PlutusTxCert 'PlutusV2
@@ -412,11 +433,30 @@ unTxCertV2 (TxCertPlutusV2 x) = x
 unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.DCert
 unTxCertV3 (TxCertPlutusV3 x) = x
 
-class EraTxCert era => EraPlutusContext (l :: Language) era where
+class EraScript era => AlonzoEraScript era where
+  type ScriptPurpose era = (r :: Type) | r -> era
+
+class (AlonzoEraScript era, EraTxCert era) => EraPlutusContext (l :: Language) era where
   transTxCert :: TxCert era -> PlutusTxCert l
+  transScriptPurpose :: ScriptPurpose era -> PlutusScriptPurpose l
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
   transTxCert = TxCertPlutusV1 . transShelleyTxCert
+  transScriptPurpose = ScriptPurposePlutusV1 . transAlonzoScriptPurpose
+
+instance Crypto c => AlonzoEraScript (AlonzoEra c) where
+  type ScriptPurpose (AlonzoEra c) = AlonzoScriptPurpose (AlonzoEra c)
+
+transAlonzoScriptPurpose ::
+  EraPlutusContext 'PlutusV1 era =>
+  AlonzoScriptPurpose era ->
+  PV1.ScriptPurpose
+transAlonzoScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
+transAlonzoScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
+transAlonzoScriptPurpose (Rewarding (RewardAcnt _network cred)) =
+  PV1.Rewarding (PV1.StakingHash (transStakeCred cred))
+-- TODO Add support for PV3
+transAlonzoScriptPurpose (Certifying dcert) = PV1.Certifying . unTxCertV1 $ transTxCert dcert
 
 transShelleyTxCert :: ShelleyTxCert era -> PV1.DCert
 transShelleyTxCert = \case
@@ -467,20 +507,6 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
     safeFromSatInt i
       | i >= 0 = Just . fromInteger $ fromSatInt i
       | otherwise = Nothing
-
--- ===================================
--- translate Script Purpose
-
-transScriptPurpose ::
-  EraPlutusContext 'PlutusV1 era =>
-  AlonzoScriptPurpose era ->
-  PV1.ScriptPurpose
-transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
-transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
-transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
-  PV1.Rewarding (PV1.StakingHash (transStakeCred cred))
--- TODO Add support for PV3
-transScriptPurpose (Certifying dcert) = PV1.Certifying . unTxCertV1 $ transTxCert dcert
 
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
@@ -581,11 +607,11 @@ valContext ::
   AlonzoScriptPurpose era ->
   Data era
 valContext (TxInfoPV1 txinfo) sp =
-  Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
+  Data (PV1.toData (PV1.ScriptContext txinfo (transAlonzoScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp =
-  Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
+  Data (PV2.toData (PV2.ScriptContext txinfo (transAlonzoScriptPurpose sp)))
 valContext (TxInfoPV3 txinfo) sp =
-  Data (PV3.toData (PV3.ScriptContext txinfo (transScriptPurpose sp)))
+  Data (PV3.toData (PV3.ScriptContext txinfo (transAlonzoScriptPurpose sp)))
 
 data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)

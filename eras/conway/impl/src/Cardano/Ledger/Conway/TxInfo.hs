@@ -1,20 +1,26 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxInfo (conwayTxInfo) where
 
+import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.TxInfo (
-  EraPlutusContext,
+  AlonzoEraScript (..),
+  EraPlutusContext (..),
+  PlutusScriptPurpose (..),
   TranslationError (..),
   VersionedTxInfo (..),
+  txInfoIn',
   unTxCertV3,
  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
@@ -32,10 +38,14 @@ import Cardano.Ledger.Babbage.TxBody (
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfoV1, babbageTxInfoV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as B
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Governance (VotingProcedure)
+import Cardano.Ledger.Conway.Scripts ()
+import Cardano.Ledger.Conway.TxCert ()
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -46,19 +56,44 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
+import GHC.Generics (Generic)
 import Lens.Micro
 import qualified PlutusLedgerApi.V3 as PV3
 
--- TODO implement this once Plutus releases an API with new certs
+data ConwayScriptPurpose era
+  = Minting !(PolicyID (EraCrypto era))
+  | Spending !(TxIn (EraCrypto era))
+  | Rewarding !(RewardAcnt (EraCrypto era))
+  | Certifying !(TxCert era)
+  | Voting !(VotingProcedure era)
+  deriving (Generic)
 
 instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV1 (ConwayEra c) where
+  -- TODO implement this once Plutus releases an API with new certs
   transTxCert = undefined
+  transScriptPurpose = ScriptPurposePlutusV1 . transConwayScriptPurpose
 
 instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV2 (ConwayEra c) where
   transTxCert = undefined
+  transScriptPurpose = ScriptPurposePlutusV2 . transConwayScriptPurpose
 
 instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV3 (ConwayEra c) where
   transTxCert = undefined
+  transScriptPurpose = ScriptPurposePlutusV3 . transConwayScriptPurpose
+
+instance Crypto c => AlonzoEraScript (ConwayEra c) where
+  type ScriptPurpose (ConwayEra c) = ConwayScriptPurpose (ConwayEra c)
+
+transConwayScriptPurpose ::
+  EraPlutusContext 'PlutusV3 era =>
+  ConwayScriptPurpose era ->
+  PV3.ScriptPurpose
+transConwayScriptPurpose (Minting policyid) = PV3.Minting (Alonzo.transPolicyID policyid)
+transConwayScriptPurpose (Spending txin) = PV3.Spending (txInfoIn' txin)
+transConwayScriptPurpose (Rewarding (RewardAcnt _network cred)) =
+  PV3.Rewarding (PV3.StakingHash (Alonzo.transStakeCred cred))
+transConwayScriptPurpose (Certifying dcert) = PV3.Certifying . unTxCertV3 $ transTxCert dcert
+transConwayScriptPurpose (Voting _) = undefined -- TODO: update when PV3.ScriptPurpose will include voting
 
 conwayTxInfo ::
   forall era.
