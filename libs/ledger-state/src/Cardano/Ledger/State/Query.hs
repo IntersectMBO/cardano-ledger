@@ -537,13 +537,13 @@ getDStateNoSharing dstateId = do
         Credential credential <- getJust delegationCredentialId
         KeyHash keyHash <- getJust delegationStakePoolId
         pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
-  dreps <-
-    Map.fromList <$> do
-      ds <- selectList [DRepDstateId ==. dstateId] []
-      forM ds $ \(Entity _ DRep {..}) -> do
-        Credential credential <- getJust dRepCredentialId
-        Credential dRepCredential <- getJust dRepDRepCredentialId
-        pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole dRepCredential)
+  dreps <- pure mempty
+  -- Map.fromList <$> do
+  --  ds <- selectList [DRepDstateId ==. dstateId] []
+  --  forM ds $ \(Entity _ DRep {..}) -> do
+  --    Credential credential <- getJust dRepCredentialId
+  --    Credential dRepCredential <- getJust dRepDRepCredentialId
+  --    pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole dRepCredential)
   ptrs <-
     Map.fromList <$> do
       ps <- selectList [PtrDstateId ==. dstateId] []
@@ -595,14 +595,14 @@ getDStateWithSharing dstateId = do
         let !cred = intern (Keys.coerceKeyRole credential) rewards
         KeyHash keyHash <- getJust delegationStakePoolId
         pure (cred, Keys.coerceKeyRole keyHash)
-  dreps <-
-    Map.fromList <$> do
-      ds <- selectList [DRepDstateId ==. dstateId] []
-      forM ds $ \(Entity _ DRep {..}) -> do
-        Credential credential <- getJust dRepCredentialId
-        let !cred = intern (Keys.coerceKeyRole credential) rewards
-        Credential dRepCredential <- getJust dRepDRepCredentialId
-        pure (cred, Keys.coerceKeyRole dRepCredential)
+  dreps <- pure mempty
+  -- Map.fromList <$> do
+  --  ds <- selectList [DRepDstateId ==. dstateId] []
+  --  forM ds $ \(Entity _ DRep {..}) -> do
+  --    Credential credential <- getJust dRepCredentialId
+  --    let !cred = intern (Keys.coerceKeyRole credential) rewards
+  --    Credential dRepCredential <- getJust dRepDRepCredentialId
+  --    pure (cred, Keys.coerceKeyRole dRepCredential)
   ptrs <-
     Map.fromList <$> do
       ps <- selectList [PtrDstateId ==. dstateId] []

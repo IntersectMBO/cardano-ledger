@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
@@ -18,17 +19,33 @@ module Cardano.Ledger.Core.TxCert (
   getPoolCertTxCert,
   poolCWitness,
   poolCertKeyHashWitness,
+  DRep (
+    DRepCredential,
+    DRepAlwaysAbstain,
+    DRepAlwaysNoConfidence
+  ),
 )
 where
 
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Core.Era (Era (EraCrypto))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Aeson (ToJSON)
 import Data.Kind (Type)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -113,3 +130,49 @@ poolCertKeyHashWitness = \case
 poolCWitness :: PoolCert c -> Credential 'StakePool c
 poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
+
+data DRep c
+  = DRepKeyHash !(KeyHash 'Voting c)
+  | DRepScriptHash !(ScriptHash c)
+  | DRepAlwaysAbstain
+  | DRepAlwaysNoConfidence
+  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, ToExpr, ToJSON)
+
+instance Crypto c => EncCBOR (DRep c) where
+  encCBOR (DRepKeyHash kh) =
+    encode $
+      Sum DRepKeyHash 0
+        !> To kh
+  encCBOR (DRepScriptHash sh) =
+    encode $
+      Sum DRepScriptHash 1
+        !> To sh
+  encCBOR DRepAlwaysAbstain =
+    encode $
+      Sum DRepAlwaysAbstain 2
+  encCBOR DRepAlwaysNoConfidence =
+    encode $
+      Sum DRepAlwaysNoConfidence 3
+
+instance Crypto c => DecCBOR (DRep c) where
+  decCBOR = decode $
+    Summands "DRep" $ \case
+      0 -> SumD DRepKeyHash <! From
+      1 -> SumD DRepScriptHash <! From
+      2 -> SumD DRepAlwaysAbstain
+      3 -> SumD DRepAlwaysNoConfidence
+      k -> Invalid k
+
+dRepToCred :: DRep c -> Maybe (Credential 'Voting c)
+dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
+dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
+dRepToCred _ = Nothing
+
+pattern DRepCredential :: Credential 'Voting c -> DRep c
+pattern DRepCredential c <- (dRepToCred -> Just c)
+  where
+    DRepCredential c = case c of
+      ScriptHashObj sh -> DRepScriptHash sh
+      KeyHashObj kh -> DRepKeyHash kh
+
+{-# COMPLETE DRepCredential, DRepAlwaysAbstain, DRepAlwaysNoConfidence :: DRep #-}

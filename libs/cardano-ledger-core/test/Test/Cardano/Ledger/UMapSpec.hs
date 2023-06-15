@@ -9,9 +9,10 @@ module Test.Cardano.Ledger.UMapSpec where
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Core (DRep)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking, Voting))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.UMap (
   RDPair (RDPair, rdReward),
   StakeCredentials (..),
@@ -75,7 +76,7 @@ data Action
   = InsertRDPair (Credential 'Staking StandardCrypto) RDPair
   | InsertPtr Ptr (Credential 'Staking StandardCrypto)
   | InsertSPool (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-  | InsertDRep (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
+  | InsertDRep (Credential 'Staking StandardCrypto) (DRep StandardCrypto)
   | DeleteRDPair (Credential 'Staking StandardCrypto)
   | DeletePtr Ptr
   | DeleteSPool (Credential 'Staking StandardCrypto)
@@ -160,7 +161,7 @@ sizeTest ::
   ( Map.Map (Credential 'Staking StandardCrypto) RDPair
   , Map.Map Ptr (Credential 'Staking StandardCrypto)
   , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-  , Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
+  , Map.Map (Credential 'Staking StandardCrypto) (DRep StandardCrypto)
   ) ->
   IO ()
 sizeTest (rdPairs, ptrs, sPools, dReps) = do
@@ -179,7 +180,7 @@ unifyRoundTripTo ::
   ( Map.Map (Credential 'Staking StandardCrypto) RDPair
   , Map.Map Ptr (Credential 'Staking StandardCrypto)
   , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-  , Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)
+  , Map.Map (Credential 'Staking StandardCrypto) (DRep StandardCrypto)
   ) ->
   IO ()
 unifyRoundTripTo (rdPairs, ptrs, sPools, dReps) = do
@@ -532,7 +533,7 @@ spec = do
         )
       prop
         "DRepUView"
-        ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) (Credential 'Voting StandardCrypto)) ->
+        ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) (DRep StandardCrypto)) ->
             Map.intersection m (dRepMap (runDReps actions empty))
               === domRestrict (DRepUView (runActions actions empty)) m
         )

@@ -1,8 +1,17 @@
 # Version history for `cardano-ledger-core`
 
-## 1.3.1.1
+## 1.4.0.0
 
-*
+* Added `DRep`, `DRepCredential`
+* Changed type `Credential 'Voting c` -> `DRep c` in:
+  * `UMElem`
+  * `umElemAsTuple`
+  * `umElemDRep`
+  * `UMap`
+  * `DRepUView`
+  * `dRepUView`
+  * `dRepMap`
+  * `unify`
 
 ## 1.3.1.0
 

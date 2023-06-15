@@ -22,6 +22,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
@@ -42,7 +43,9 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Tally (ConwayTallyPredFailure, TallyEnv (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -60,8 +63,11 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
  )
 import Cardano.Ledger.Slot (epochInfoEpoch)
+import Cardano.Ledger.UMap (UView (..), dRepMap)
+import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Assertion (..),
@@ -73,10 +79,14 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
+  (?!),
  )
 import Data.Kind (Type)
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic (..))
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -85,6 +95,7 @@ data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | ConwayTallyFailure (PredicateFailure (EraRule "TALLY" era)) -- Subtransition Failures
+  | ConwayWdrlNotDelegatedToDRep (Set (Credential 'Staking (EraCrypto era)))
   deriving (Generic)
 
 deriving instance
@@ -132,6 +143,8 @@ instance
       ConwayUtxowFailure x -> Sum (ConwayUtxowFailure @era) 1 !> To x
       ConwayCertsFailure x -> Sum (ConwayCertsFailure @era) 2 !> To x
       ConwayTallyFailure x -> Sum (ConwayTallyFailure @era) 3 !> To x
+      ConwayWdrlNotDelegatedToDRep x ->
+        Sum (ConwayWdrlNotDelegatedToDRep @era) 4 !> To x
 
 instance
   ( Era era
@@ -212,6 +225,7 @@ ledgerTransition ::
   , Signal (someLEDGER era) ~ Tx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
+  , PredicateFailure (someLEDGER era) ~ ConwayLedgerPredFailure era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "TALLY" era) (someLEDGER era)
   , Embed (EraRule "CERTS" era) (someLEDGER era)
@@ -242,6 +256,16 @@ ledgerTransition = do
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )
       else pure certState
+
+  let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
+  let wdrlCreds = Set.map getRwdCred wdrlAddrs
+  let dUnified = dsUnified $ certDState certState'
+      delegatedAddrs = DRepUView dUnified
+
+  -- TODO enable this check once delegation is fully implemented in cardano-api
+  when False $ do
+    all (`UMap.member` delegatedAddrs) wdrlCreds
+      ?! ConwayWdrlNotDelegatedToDRep (wdrlCreds Set.\\ Map.keysSet (dRepMap dUnified))
 
   let dstate = certDState certState
       genCerts = dsGenDelegs dstate

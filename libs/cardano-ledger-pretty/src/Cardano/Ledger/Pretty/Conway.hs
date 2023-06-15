@@ -235,6 +235,8 @@ instance
   prettyA (ConwayUtxowFailure x) = prettyA x
   prettyA (ConwayCertsFailure x) = prettyA x
   prettyA (ConwayTallyFailure x) = prettyA x
+  prettyA (ConwayWdrlNotDelegatedToDRep x) =
+    ppSexp "ConwayWdrlNotDelegatedToDRep" [prettyA x]
 
 instance PrettyA (ConwayTallyPredFailure era) where
   prettyA = viaShow

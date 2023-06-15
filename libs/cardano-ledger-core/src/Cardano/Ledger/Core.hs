@@ -66,6 +66,7 @@ module Cardano.Ledger.Core (
   -- * Deprecations
   hashAuxiliaryData,
   validateAuxiliaryData,
+  DRep (..),
 )
 where
 

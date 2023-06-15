@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.4.0.1
+## 1.5.0.0
 
-*
+* Added `ConwayWdrlNotDelegatedToDRep` to `ConwayLedgerPredFailure`
+* Changed the type of voting delegatee from `Credential` to `DRep`
 
 ## 1.4.0.0
 

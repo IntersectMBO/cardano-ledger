@@ -4,7 +4,7 @@ module Test.Cardano.Ledger.Constrained.Lenses where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, SlotNo)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
-import Cardano.Ledger.Core (PParams)
+import Cardano.Ledger.Core (DRep, PParams)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
@@ -292,7 +292,7 @@ data Split c = Split
   { spRew :: Map (Credential 'Staking c) Coin
   , spDep :: Map (Credential 'Staking c) Coin
   , spDel :: Map (Credential 'Staking c) (KeyHash 'StakePool c)
-  , spDRep :: Map (Credential 'Staking c) (Credential 'Voting c)
+  , spDRep :: Map (Credential 'Staking c) (DRep c)
   , spRevPtr :: Map (Credential 'Staking c) (Set Ptr)
   , spPtr :: Map Ptr (Credential 'Staking c)
   }

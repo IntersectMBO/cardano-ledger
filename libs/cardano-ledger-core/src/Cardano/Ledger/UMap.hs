@@ -10,7 +10,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -110,6 +109,7 @@ where
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Core.TxCert (DRep)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -160,7 +160,7 @@ instance DecCBOR RDPair where
 --   { rdPairT :: !(StrictMaybe RDPair),
 --     ptrT :: !(Set Ptr),
 --     sPoolT :: !(StrictMaybe (KeyHash 'StakePool c)), -- the stake pool identity
---     dRepT :: !(StrictMaybe (Credential 'Voting c)),
+--     dRepT :: !(StrictMaybe (DRep c)),
 --   }
 --   deriving (Show, Eq, Generic, NoThunks, NFData)
 -- @
@@ -174,7 +174,7 @@ instance DecCBOR RDPair where
 -- 1) the reward-deposit pair as an `RDPair` (CompactForm Coin) (CompactForm Coin) as a pair of Word64s, the first @x@,
 -- 2) the set of pointers, the second @x@,
 -- 3) the stake pool id (KeyHash 'StakePool c), the third @x@, and
--- 4) the voting delegatee id (Credential 'Voting c), the fourth @x@.
+-- 4) the voting delegatee id (DRep c), the fourth @x@.
 --
 -- So,
 -- TEEEE means none of the components are present,
@@ -186,21 +186,21 @@ instance DecCBOR RDPair where
 -- The pattern 'UMElem' will correctly use the optimal constructor.
 data UMElem c
   = TEEEE
-  | TEEEF !(Credential 'Voting c)
+  | TEEEF !(DRep c)
   | TEEFE !(KeyHash 'StakePool c)
-  | TEEFF !(KeyHash 'StakePool c) !(Credential 'Voting c)
+  | TEEFF !(KeyHash 'StakePool c) !(DRep c)
   | TEFEE !(Set Ptr)
-  | TEFEF !(Set Ptr) !(Credential 'Voting c)
+  | TEFEF !(Set Ptr) !(DRep c)
   | TEFFE !(Set Ptr) !(KeyHash 'StakePool c)
-  | TEFFF !(Set Ptr) !(KeyHash 'StakePool c) !(Credential 'Voting c)
+  | TEFFF !(Set Ptr) !(KeyHash 'StakePool c) !(DRep c)
   | TFEEE {-# UNPACK #-} !RDPair
-  | TFEEF {-# UNPACK #-} !RDPair !(Credential 'Voting c)
+  | TFEEF {-# UNPACK #-} !RDPair !(DRep c)
   | TFEFE {-# UNPACK #-} !RDPair !(KeyHash 'StakePool c)
-  | TFEFF {-# UNPACK #-} !RDPair !(KeyHash 'StakePool c) !(Credential 'Voting c)
+  | TFEFF {-# UNPACK #-} !RDPair !(KeyHash 'StakePool c) !(DRep c)
   | TFFEE {-# UNPACK #-} !RDPair !(Set Ptr)
-  | TFFEF {-# UNPACK #-} !RDPair !(Set Ptr) !(Credential 'Voting c)
+  | TFFEF {-# UNPACK #-} !RDPair !(Set Ptr) !(DRep c)
   | TFFFE {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c)
-  | TFFFF {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c) !(Credential 'Voting c)
+  | TFFFF {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c) !(DRep c)
   deriving (Eq, Ord, Generic, NoThunks, NFData)
 
 instance ToExpr (UMElem c)
@@ -236,7 +236,7 @@ instance Crypto c => DecShareCBOR (UMElem c) where
 -- We can view all of the constructors as an `UMElem`.
 umElemAsTuple ::
   UMElem c ->
-  (StrictMaybe RDPair, Set Ptr, StrictMaybe (KeyHash 'StakePool c), StrictMaybe (Credential 'Voting c))
+  (StrictMaybe RDPair, Set Ptr, StrictMaybe (KeyHash 'StakePool c), StrictMaybe (DRep c))
 umElemAsTuple = \case
   TEEEE -> (SNothing, Set.empty, SNothing, SNothing)
   TEEEF v -> (SNothing, Set.empty, SNothing, SJust v)
@@ -320,7 +320,7 @@ umElemSPool = \case
 -- We can tell that the delegatee is present when Txxxx has an F in the fourth position
 --
 -- This is equivalent to the pattern (ElemP _ _ _ (SJust v)) -> Just v
-umElemDRep :: UMElem c -> Maybe (Credential 'Voting c)
+umElemDRep :: UMElem c -> Maybe (DRep c)
 umElemDRep = \case
   TEEEF d -> Just d
   TEEFF _ d -> Just d
@@ -337,7 +337,7 @@ pattern UMElem ::
   StrictMaybe RDPair ->
   Set Ptr ->
   StrictMaybe (KeyHash 'StakePool c) ->
-  StrictMaybe (Credential 'Voting c) ->
+  StrictMaybe (DRep c) ->
   UMElem c
 pattern UMElem i j k l <- (umElemAsTuple -> (i, j, k, l))
   where
@@ -377,7 +377,7 @@ instance Show (UMElem c) where
 -- 1) Map (Credential 'Staking c) RDPair  -- (RDPair rewardCoin depositCoin)
 -- 2) Map (Credential 'Staking c) (Set Ptr)
 -- 3) Map (Credential 'Staking c) (StrictMaybe (KeyHash 'StakePool c))
--- 4) Map (Credential 'Staking c) (StrictMaybe (Credential 'Voting c))
+-- 4) Map (Credential 'Staking c) (StrictMaybe (DRep c))
 -- and one more map in the inverse direction with @Ptr@ for keys and @(Credential 'Staking c)@ for values.
 data UMap c = UMap
   { umElems :: !(Map (Credential 'Staking c) (UMElem c))
@@ -392,7 +392,7 @@ data StakeCredentials c = StakeCredentials
   { scRewards :: Map (Credential 'Staking c) Coin
   , scDeposits :: Map (Credential 'Staking c) Coin
   , scSPools :: Map (Credential 'Staking c) (KeyHash 'StakePool c)
-  , scDReps :: Map (Credential 'Staking c) (Credential 'Voting c)
+  , scDReps :: Map (Credential 'Staking c) (DRep c)
   , scPtrs :: Map Ptr (Credential 'Staking c)
   , scPtrsInverse :: Map (Credential 'Staking c) (Set Ptr)
   -- ^ There will be no empty sets in the range
@@ -465,7 +465,7 @@ data UView c k v where
     UView c (Credential 'Staking c) (KeyHash 'StakePool c)
   DRepUView ::
     !(UMap c) ->
-    UView c (Credential 'Staking c) (Credential 'Voting c)
+    UView c (Credential 'Staking c) (DRep c)
 
 -- | Construct a `RewDepUView` from the two maps that make up a `UMap`
 rewDepUView ::
@@ -492,7 +492,7 @@ sPoolUView a b = SPoolUView (UMap a b)
 dRepUView ::
   Map (Credential 'Staking c) (UMElem c) ->
   Map Ptr (Credential 'Staking c) ->
-  UView c (Credential 'Staking c) (Credential 'Voting c)
+  UView c (Credential 'Staking c) (DRep c)
 dRepUView a b = DRepUView (UMap a b)
 
 -- | Extract the underlying `UMap` from a `UView`
@@ -505,7 +505,7 @@ unUView = \case
 
 -- | Materialize a real `Map` from a `View`
 -- This is expensive, use it wisely (like maybe once per epoch boundary to make a `SnapShot`)
--- See also domRestrictedView, which domain-restricts before computing a view.
+-- See also domRestrictedMap, which domain-restricts before computing a view.
 unUnify :: UView c k v -> Map k v
 unUnify = \case
   RewDepUView UMap {umElems} -> Map.mapMaybe umElemRDPair umElems
@@ -562,7 +562,7 @@ sPoolMap :: UMap c -> Map (Credential 'Staking c) (KeyHash 'StakePool c)
 sPoolMap x = unUnify $ SPoolUView x
 
 -- | Extract a delegated-representatives `Map` from a 'UMap'
-dRepMap :: UMap c -> Map (Credential 'Staking c) (Credential 'Voting c)
+dRepMap :: UMap c -> Map (Credential 'Staking c) (DRep c)
 dRepMap x = unUnify $ DRepUView x
 
 -- | Extract a domain-restricted `Map` of a `UMap`.
@@ -998,7 +998,7 @@ unify ::
   Map (Credential 'Staking c) RDPair ->
   Map Ptr (Credential 'Staking c) ->
   Map (Credential 'Staking c) (KeyHash 'StakePool c) ->
-  Map (Credential 'Staking c) (Credential 'Voting c) ->
+  Map (Credential 'Staking c) (DRep c) ->
   UMap c
 unify rd ptr sPool dRep = um4
   where
