@@ -3,6 +3,7 @@
 ## 1.4.0.0
 
 * Add a placeholder for `ConwayUTXOW` rule and replace the previous `"UTXOW"` for `ConwayEra`
+* Add `Arbitrary` instances for `ConwayCertPredFailure`, `ConwayVDelPredFailure`, and `ConwayDelegPredFailure`
 
 ## 1.3.0.0
 
