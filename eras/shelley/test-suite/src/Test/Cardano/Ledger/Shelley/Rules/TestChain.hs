@@ -66,6 +66,7 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.Proxy
 import qualified Data.Set as Set
 import Data.Word (Word64)
