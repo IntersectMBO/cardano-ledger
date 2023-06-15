@@ -17,6 +17,13 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Alonzo.TxInfo (
   AlonzoEraScript (..),
@@ -424,6 +431,11 @@ data PlutusTxCert (l :: Language) where
   TxCertPlutusV2 :: PV2.DCert -> PlutusTxCert 'PlutusV2
   TxCertPlutusV3 :: PV3.DCert -> PlutusTxCert 'PlutusV3
 
+data PlutusValContextData (l :: Language) where
+  DataPlutusV1 :: Data era -> PlutusValContextData 'PlutusV1
+  DataPlutusV2 :: Data era -> PlutusValContextData 'PlutusV2
+  DataPlutusV3 :: Data era -> PlutusValContextData 'PlutusV3
+
 unTxCertV1 :: PlutusTxCert 'PlutusV1 -> PV1.DCert
 unTxCertV1 (TxCertPlutusV1 x) = x
 
@@ -433,16 +445,29 @@ unTxCertV2 (TxCertPlutusV2 x) = x
 unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.DCert
 unTxCertV3 (TxCertPlutusV3 x) = x
 
+xxx:: PlutusTxCert 'PlutusV3
+xxx = undefined
+
 class EraScript era => AlonzoEraScript era where
   type ScriptPurpose era = (r :: Type) | r -> era
 
 class (AlonzoEraScript era, EraTxCert era) => EraPlutusContext (l :: Language) era where
   transTxCert :: TxCert era -> PlutusTxCert l
   transScriptPurpose :: ScriptPurpose era -> PlutusScriptPurpose l
+  valContextX :: EraPlutusContext l era =>
+    VersionedTxInfo ->
+    ScriptPurpose era ->
+    Data era
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
   transTxCert = TxCertPlutusV1 . transShelleyTxCert
   transScriptPurpose = ScriptPurposePlutusV1 . transAlonzoScriptPurpose
+  valContextX (TxInfoPV1 txinfo) sp =
+    Data (PV1.toData (PV1.ScriptContext txinfo (unScriptPurposeV1 (transScriptPurpose sp))))
+  valContextX (TxInfoPV2 txinfo) sp =
+    Data (PV2.toData (PV2.ScriptContext txinfo (unScriptPurposeV1 (transScriptPurpose sp))))
+  valContextX (TxInfoPV3 txinfo) sp =
+    Data (PV3.toData (PV3.ScriptContext txinfo (unScriptPurposeV1 (transScriptPurpose sp))))
 
 instance Crypto c => AlonzoEraScript (AlonzoEra c) where
   type ScriptPurpose (AlonzoEra c) = AlonzoScriptPurpose (AlonzoEra c)
@@ -612,6 +637,7 @@ valContext (TxInfoPV2 txinfo) sp =
   Data (PV2.toData (PV2.ScriptContext txinfo (transAlonzoScriptPurpose sp)))
 valContext (TxInfoPV3 txinfo) sp =
   Data (PV3.toData (PV3.ScriptContext txinfo (transAlonzoScriptPurpose sp)))
+
 
 data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)
