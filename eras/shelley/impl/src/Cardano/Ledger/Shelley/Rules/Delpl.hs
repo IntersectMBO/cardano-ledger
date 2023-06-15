@@ -103,7 +103,7 @@ instance
   , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Signal (EraRule "POOL" era) ~ TxCert era
+  , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , TxCert era ~ ShelleyTxCert era
   ) =>
   STS (ShelleyDELPL era)
@@ -165,20 +165,16 @@ delplTransition ::
   , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Signal (EraRule "POOL" era) ~ TxCert era
+  , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , TxCert era ~ ShelleyTxCert era
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do
   TRC (DelplEnv slot ptr pp acnt, d, c) <- judgmentContext
   case c of
-    ShelleyTxCertPool (RegPool _) -> do
+    ShelleyTxCertPool poolCert -> do
       ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, c)
-      pure $ d {certPState = ps}
-    ShelleyTxCertPool (RetirePool _ _) -> do
-      ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, c)
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, poolCert)
       pure $ d {certPState = ps}
     ShelleyTxCertGenesisDeleg GenesisDelegCert {} -> do
       ds <-

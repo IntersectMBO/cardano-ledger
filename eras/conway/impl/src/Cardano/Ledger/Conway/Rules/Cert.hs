@@ -28,10 +28,27 @@ import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEG, ConwayPOOL, ConwayVDE
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.Rules.VDel (ConwayVDelPredFailure)
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert, ConwayDelegCert, ConwayTxCert (..))
-import Cardano.Ledger.Shelley.API (CertState (..), DState, DelegEnv (DelegEnv), DelplEnv (DelplEnv), PState, PoolEnv (PoolEnv), VState)
+import Cardano.Ledger.Shelley.API (
+  CertState (..),
+  DState,
+  DelegEnv (DelegEnv),
+  DelplEnv (DelplEnv),
+  PState,
+  PoolEnv (PoolEnv),
+  VState,
+ )
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (Embed, STS (..), TRC (TRC), TransitionRule, judgmentContext, trans, wrapEvent, wrapFailed)
+import Control.State.Transition.Extended (
+  Embed,
+  STS (..),
+  TRC (TRC),
+  TransitionRule,
+  judgmentContext,
+  trans,
+  wrapEvent,
+  wrapFailed,
+ )
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -121,7 +138,8 @@ certTransition ::
   ) =>
   TransitionRule (ConwayCERT era)
 certTransition = do
-  TRC (DelplEnv slot ptr pp acnt, cState@CertState {certDState, certPState, certVState}, c) <- judgmentContext
+  TRC (DelplEnv slot ptr pp acnt, cState, c) <- judgmentContext
+  let CertState {certDState, certPState, certVState} = cState
   case c of
     ConwayTxCertDeleg delegCert -> do
       newDState <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState, delegCert)

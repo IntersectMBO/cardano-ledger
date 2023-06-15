@@ -61,7 +61,6 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
-  failBecause,
   judgmentContext,
   liftSTS,
   tellEvent,
@@ -88,8 +87,6 @@ data ShelleyPoolPredFailure era
       !EpochNo -- Current Epoch
       !EpochNo -- The epoch listed in the Pool Retirement Certificate
       !EpochNo -- The first epoch that is too far out for retirement
-  | WrongCertificateTypePOOL
-      !(TxCert era) -- The disallowed certificate (this case should never happen)
   | StakePoolCostTooLowPOOL
       !Coin -- The stake pool cost listed in the Pool Registration Certificate
       !Coin -- The minimum stake pool cost listed in the protocol parameters
@@ -100,20 +97,16 @@ data ShelleyPoolPredFailure era
   | PoolMedataHashTooBig
       !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
       !Int -- Size of the metadata hash
-  deriving (Generic)
+  deriving (Eq, Show, Generic)
 
-deriving instance Show (TxCert era) => Show (ShelleyPoolPredFailure era)
+instance NoThunks (ShelleyPoolPredFailure era)
 
-deriving instance Eq (TxCert era) => Eq (ShelleyPoolPredFailure era)
-
-instance NoThunks (TxCert era) => NoThunks (ShelleyPoolPredFailure era)
-
-instance NFData (TxCert era) => NFData (ShelleyPoolPredFailure era)
+instance NFData (ShelleyPoolPredFailure era)
 
 instance (ShelleyEraTxCert era, EraPParams era) => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState era
 
-  type Signal (ShelleyPOOL era) = TxCert era
+  type Signal (ShelleyPOOL era) = PoolCert (EraCrypto era)
 
   type Environment (ShelleyPOOL era) = PoolEnv era
 
@@ -127,14 +120,12 @@ data PoolEvent era
   = RegisterPool (KeyHash 'StakePool (EraCrypto era))
   | ReregisterPool (KeyHash 'StakePool (EraCrypto era))
 
-instance (EncCBOR (TxCert era), Era era) => EncCBOR (ShelleyPoolPredFailure era) where
+instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
   encCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
     StakePoolRetirementWrongEpochPOOL ce e em ->
       encodeListLen 4 <> encCBOR (1 :: Word8) <> encCBOR ce <> encCBOR e <> encCBOR em
-    WrongCertificateTypePOOL ct ->
-      encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR ct
     StakePoolCostTooLowPOOL pc mc ->
       encodeListLen 3 <> encCBOR (3 :: Word8) <> encCBOR pc <> encCBOR mc
     WrongNetworkPOOL a b c ->
@@ -142,7 +133,7 @@ instance (EncCBOR (TxCert era), Era era) => EncCBOR (ShelleyPoolPredFailure era)
     PoolMedataHashTooBig a b ->
       encodeListLen 3 <> encCBOR (5 :: Word8) <> encCBOR a <> encCBOR b
 
-instance (DecCBOR (TxCert era), Era era) => DecCBOR (ShelleyPoolPredFailure era) where
+instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
   decCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case
       0 -> do
@@ -153,9 +144,7 @@ instance (DecCBOR (TxCert era), Era era) => DecCBOR (ShelleyPoolPredFailure era)
         e <- decCBOR
         em <- decCBOR
         pure (4, StakePoolRetirementWrongEpochPOOL ce e em)
-      2 -> do
-        ct <- decCBOR
-        pure (2, WrongCertificateTypePOOL ct)
+      2 -> fail "WrongCertificateTypePOOL has been removed as impossible case"
       3 -> do
         pc <- decCBOR
         mc <- decCBOR
@@ -235,9 +224,8 @@ poolCertTransition (PoolEnv slot pp) ps@PState {psStakePoolParams, psFutureStake
 
 poolDelegationTransition ::
   forall (ledger :: Type -> Type) era.
-  ( ShelleyEraTxCert era
-  , EraPParams era
-  , Signal (ledger era) ~ TxCert era
+  ( EraPParams era
+  , Signal (ledger era) ~ PoolCert (EraCrypto era)
   , Environment (ledger era) ~ PoolEnv era
   , State (ledger era) ~ PState era
   , STS (ledger era)
@@ -247,15 +235,5 @@ poolDelegationTransition ::
   ) =>
   TransitionRule (ledger era)
 poolDelegationTransition = do
-  TRC (penv, ps, txCert) <- judgmentContext
-  case txCert of
-    RegPoolTxCert poolParams -> do
-      -- note that pattern match is used instead of cwitness, as in the spec
-      poolCertTransition penv ps (RegPool poolParams)
-    RetirePoolTxCert sPoolId epochN -> do
-      -- note that pattern match is used instead of cwitness, as in the spec
-      poolCertTransition penv ps (RetirePool sPoolId epochN)
-    _ -> do
-      -- Impossible case
-      failBecause $ WrongCertificateTypePOOL txCert
-      pure ps
+  TRC (penv, ps, poolCert) <- judgmentContext
+  poolCertTransition penv ps poolCert

@@ -195,15 +195,12 @@ poolTraceFromBlock chainSt block =
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
     certs = concatMap (toList . view certsTxBodyL . view bodyTxL)
-    poolCerts = filter poolCert (certs txs)
+    poolCerts = mapMaybe getPoolCertTxCert (certs txs)
     poolEnv =
       let (LedgerEnv s _ pp _) = ledgerEnv
        in PoolEnv s pp
     poolSt0 =
       certPState (lsCertState ledgerSt0)
-    poolCert (RegPoolTxCert _) = True
-    poolCert (RetirePoolTxCert _ _) = True
-    poolCert _ = False
 
 -- | Reconstruct a DELEG trace from all the transaction certificates in a Block
 delegTraceFromBlock ::

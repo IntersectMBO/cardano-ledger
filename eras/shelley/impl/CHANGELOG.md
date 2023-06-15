@@ -7,9 +7,7 @@
 * Prevent using `mkGenesisDelegTxCert`, `getGenesisDelegTxCert` and `GenesisDelegTxCert`
   from being used in eras after Babbage. This also affects all functions that use those
   functions and patern synonym
-* Change `WrongCertificateTypePOOL`. Instead of accepting a number tag of a type, it now
-  contains the actual violating certificate. This was an impossible case, so it should not
-  really affect downstream users
+* Remove `WrongCertificateTypePOOL` as an impossible case.
 
 ## 1.3.0.0
 

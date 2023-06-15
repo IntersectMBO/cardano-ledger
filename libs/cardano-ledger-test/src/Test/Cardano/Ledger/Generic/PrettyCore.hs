@@ -470,7 +470,7 @@ instance
   prettyA (PoolFailure x) = prettyA x
   prettyA (DelegFailure x) = prettyA x
 
-instance PrettyA (TxCert era) => PrettyA (ShelleyPoolPredFailure era) where
+instance PrettyA (ShelleyPoolPredFailure era) where
   prettyA (StakePoolNotRegisteredOnKeyPOOL kh) =
     ppRecord
       "StakePoolNotRegisteredOnKeyPOOL"
@@ -488,10 +488,6 @@ instance PrettyA (TxCert era) => PrettyA (ShelleyPoolPredFailure era) where
         , ("Pool Retirement Epoch", prettyA poolRetEpoch)
         , ("First Epoch Too Far", prettyA firstTooFarEpoch)
         ]
-  prettyA (WrongCertificateTypePOOL disallowedCertificate) =
-    ppRecord
-      "WrongCertificateTypePOOL"
-      [("Disallowed Certificate", prettyA disallowedCertificate)]
   prettyA
     ( StakePoolCostTooLowPOOL
         prcStakePoolCost
