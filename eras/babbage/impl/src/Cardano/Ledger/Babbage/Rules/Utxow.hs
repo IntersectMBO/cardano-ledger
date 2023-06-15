@@ -265,6 +265,7 @@ babbageUtxowTransition ::
   ( AlonzoEraTx era
   , ExtendedUTxO era
   , EraUTxO era
+  , ProtVerAtMost era 8
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , STS (BabbageUTXOW era)
@@ -363,6 +364,7 @@ instance
   ( ExtendedUTxO era
   , AlonzoEraTx era
   , EraUTxO era
+  , ProtVerAtMost era 8
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)

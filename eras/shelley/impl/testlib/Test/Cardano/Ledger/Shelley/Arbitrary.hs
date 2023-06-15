@@ -652,9 +652,8 @@ instance Era era => Arbitrary (ShelleyPpupPredFailure era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Era era => Arbitrary (ShelleyPoolPredFailure era) where
+instance (Arbitrary (TxCert era), Era era) => Arbitrary (ShelleyPoolPredFailure era) where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
 
 instance
   ( Era era

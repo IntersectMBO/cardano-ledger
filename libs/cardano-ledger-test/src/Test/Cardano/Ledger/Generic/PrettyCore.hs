@@ -470,7 +470,7 @@ instance
   prettyA (PoolFailure x) = prettyA x
   prettyA (DelegFailure x) = prettyA x
 
-instance PrettyA (ShelleyPoolPredFailure era) where
+instance PrettyA (TxCert era) => PrettyA (ShelleyPoolPredFailure era) where
   prettyA (StakePoolNotRegisteredOnKeyPOOL kh) =
     ppRecord
       "StakePoolNotRegisteredOnKeyPOOL"

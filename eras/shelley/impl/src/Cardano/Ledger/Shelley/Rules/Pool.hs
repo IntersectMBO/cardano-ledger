@@ -52,13 +52,6 @@ import Cardano.Ledger.Shelley.TxBody (
   PoolParams (..),
   getRwdNetwork,
  )
-import Cardano.Ledger.Shelley.TxCert (
-  isDeRegKey,
-  isDelegation,
-  isGenesisDelegation,
-  isInstantaneousRewards,
-  isRegKey,
- )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
 import Control.Monad (forM_, when)
@@ -96,7 +89,7 @@ data ShelleyPoolPredFailure era
       !EpochNo -- The epoch listed in the Pool Retirement Certificate
       !EpochNo -- The first epoch that is too far out for retirement
   | WrongCertificateTypePOOL
-      !Word8 -- The disallowed certificate (this case should never happen)
+      !(TxCert era) -- The disallowed certificate (this case should never happen)
   | StakePoolCostTooLowPOOL
       !Coin -- The stake pool cost listed in the Pool Registration Certificate
       !Coin -- The minimum stake pool cost listed in the protocol parameters
@@ -107,11 +100,15 @@ data ShelleyPoolPredFailure era
   | PoolMedataHashTooBig
       !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
       !Int -- Size of the metadata hash
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
 
-instance NoThunks (ShelleyPoolPredFailure era)
+deriving instance Show (TxCert era) => Show (ShelleyPoolPredFailure era)
 
-instance NFData (ShelleyPoolPredFailure era)
+deriving instance Eq (TxCert era) => Eq (ShelleyPoolPredFailure era)
+
+instance NoThunks (TxCert era) => NoThunks (ShelleyPoolPredFailure era)
+
+instance NFData (TxCert era) => NFData (ShelleyPoolPredFailure era)
 
 instance (ShelleyEraTxCert era, EraPParams era) => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState era
@@ -130,7 +127,7 @@ data PoolEvent era
   = RegisterPool (KeyHash 'StakePool (EraCrypto era))
   | ReregisterPool (KeyHash 'StakePool (EraCrypto era))
 
-instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
+instance (EncCBOR (TxCert era), Era era) => EncCBOR (ShelleyPoolPredFailure era) where
   encCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
@@ -145,7 +142,7 @@ instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
     PoolMedataHashTooBig a b ->
       encodeListLen 3 <> encCBOR (5 :: Word8) <> encCBOR a <> encCBOR b
 
-instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
+instance (DecCBOR (TxCert era), Era era) => DecCBOR (ShelleyPoolPredFailure era) where
   decCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case
       0 -> do
@@ -250,24 +247,15 @@ poolDelegationTransition ::
   ) =>
   TransitionRule (ledger era)
 poolDelegationTransition = do
-  TRC (penv, ps, c) <- judgmentContext
-  case c of
+  TRC (penv, ps, txCert) <- judgmentContext
+  case txCert of
     RegPoolTxCert poolParams -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       poolCertTransition penv ps (RegPool poolParams)
     RetirePoolTxCert sPoolId epochN -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       poolCertTransition penv ps (RetirePool sPoolId epochN)
-    _ | isRegKey c || isDeRegKey c || isDelegation c -> do
-      failBecause $ WrongCertificateTypePOOL 0
-      pure ps
-    _ | isInstantaneousRewards c -> do
-      failBecause $ WrongCertificateTypePOOL 1
-      pure ps
-    _ | isGenesisDelegation c -> do
-      failBecause $ WrongCertificateTypePOOL 2
-      pure ps
     _ -> do
       -- Impossible case
-      failBecause $ WrongCertificateTypePOOL 3
+      failBecause $ WrongCertificateTypePOOL txCert
       pure ps

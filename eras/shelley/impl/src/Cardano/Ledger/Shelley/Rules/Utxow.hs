@@ -293,6 +293,7 @@ transitionRulesUTXOW ::
   ( EraTx era
   , EraUTxO era
   , ShelleyEraTxBody era
+  , ProtVerAtMost era 8
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , BaseM (utxow era) ~ ShelleyBase
   , Embed (EraRule "UTXO" era) (utxow era)
@@ -361,6 +362,7 @@ instance
   ( EraTx era
   , EraUTxO era
   , ShelleyEraTxBody era
+  , ProtVerAtMost era 8
   , Tx era ~ ShelleyTx era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
@@ -545,6 +547,7 @@ validateMetadata pp tx =
 validateMIRInsufficientGenesisSigs ::
   ( EraTx era
   , ShelleyEraTxBody era
+  , ProtVerAtMost era 8
   ) =>
   GenDelegs (EraCrypto era) ->
   Word64 ->

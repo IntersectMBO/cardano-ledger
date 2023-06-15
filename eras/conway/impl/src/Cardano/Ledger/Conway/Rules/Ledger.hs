@@ -25,7 +25,7 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUTXOW, BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
@@ -41,6 +41,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Tally (ConwayTallyPredFailure, TallyEnv (..))
+import Cardano.Ledger.Conway.Rules.Utxow (ConwayUTXOW)
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -272,11 +273,11 @@ ledgerTransition = do
 
 instance
   ( Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , BaseM (BabbageUTXOW era) ~ ShelleyBase
+  , BaseM (ConwayUTXOW era) ~ ShelleyBase
   , AlonzoEraTx era
   , EraUTxO era
   , BabbageEraTxBody era
-  , Embed (EraRule "UTXO" era) (BabbageUTXOW era)
+  , Embed (EraRule "UTXO" era) (ConwayUTXOW era)
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , Script era ~ AlonzoScript era
@@ -285,11 +286,11 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , PredicateFailure (EraRule "UTXOW" era) ~ BabbageUtxowPredFailure era
   , Event (EraRule "UTXOW" era) ~ AlonzoUtxowEvent era
-  , STS (BabbageUTXOW era)
-  , PredicateFailure (BabbageUTXOW era) ~ BabbageUtxowPredFailure era
-  , Event (BabbageUTXOW era) ~ AlonzoUtxowEvent era
+  , STS (ConwayUTXOW era)
+  , PredicateFailure (ConwayUTXOW era) ~ BabbageUtxowPredFailure era
+  , Event (ConwayUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
-  Embed (BabbageUTXOW era) (ConwayLEDGER era)
+  Embed (ConwayUTXOW era) (ConwayLEDGER era)
   where
   wrapFailed = ConwayUtxowFailure
   wrapEvent = UtxowEvent

@@ -12,6 +12,7 @@ module Cardano.Ledger.Conway.Rules (
   module Cardano.Ledger.Conway.Rules.Ratify,
   module Cardano.Ledger.Conway.Rules.Tally,
   module Cardano.Ledger.Conway.Rules.Utxos,
+  module Cardano.Ledger.Conway.Rules.Utxow,
 )
 where
 
@@ -27,4 +28,5 @@ import Cardano.Ledger.Conway.Rules.Ratify
 import Cardano.Ledger.Conway.Rules.Tally
 import Cardano.Ledger.Conway.Rules.Tickf
 import Cardano.Ledger.Conway.Rules.Utxos
+import Cardano.Ledger.Conway.Rules.Utxow
 import Cardano.Ledger.Conway.Rules.VDel
