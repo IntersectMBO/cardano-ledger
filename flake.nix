@@ -71,6 +71,15 @@
           inputMap = {
             "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
           };
+
+          # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
+          shell.shellHook = ''
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+          '' + lib.optionalString (nixpkgs.glibcLocales != null && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
+            export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
+          '';
+
           # tools we want in our shell, from hackage
           shell.tools =
             {
@@ -83,6 +92,7 @@
               hlint = "3.5";
               haskell-language-server = "2.0.0.0";
             };
+
           # and from nixpkgs or other inputs
           shell.nativeBuildInputs = with nixpkgs;
             [
