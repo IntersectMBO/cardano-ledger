@@ -488,10 +488,6 @@ instance PrettyA (ShelleyPoolPredFailure era) where
         , ("Pool Retirement Epoch", prettyA poolRetEpoch)
         , ("First Epoch Too Far", prettyA firstTooFarEpoch)
         ]
-  prettyA (WrongCertificateTypePOOL disallowedCertificate) =
-    ppRecord
-      "WrongCertificateTypePOOL"
-      [("Disallowed Certificate", prettyA disallowedCertificate)]
   prettyA
     ( StakePoolCostTooLowPOOL
         prcStakePoolCost

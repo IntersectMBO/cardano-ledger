@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.3.0.1
+## 1.4.0.0
 
-*
+* Add a placeholder for `ConwayUTXOW` rule and replace the previous `"UTXOW"` for `ConwayEra`
 
 ## 1.3.0.0
 

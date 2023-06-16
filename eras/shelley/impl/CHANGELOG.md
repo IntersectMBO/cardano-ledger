@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.3.0.1
+## 1.4.0.0
 
-*
+* Prevent using `getMirTxCert` from being used in eras after Babbage. This also affects
+  all functions that use it
+* Prevent using `mkGenesisDelegTxCert`, `getGenesisDelegTxCert` and `GenesisDelegTxCert`
+  from being used in eras after Babbage. This also affects all functions that use those
+  functions and patern synonym
+* Remove `WrongCertificateTypePOOL` as an impossible case.
 
 ## 1.3.0.0
 

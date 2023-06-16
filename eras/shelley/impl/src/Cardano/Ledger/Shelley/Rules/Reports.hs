@@ -32,7 +32,6 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxCert (
-  isInstantaneousRewards,
   pattern DelegStakeTxCert,
   pattern GenesisDelegTxCert,
   pattern RegTxCert,
@@ -50,24 +49,23 @@ showCred :: Credential x c -> String
 showCred (ScriptHashObj (ScriptHash x)) = show x
 showCred (KeyHashObj (KeyHash x)) = show x
 
-synopsisCert :: ShelleyEraTxCert era => TxCert era -> String
+synopsisCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> String
 synopsisCert x = case x of
   RegTxCert cred -> "ShelleyRegCert " ++ take 10 (showCred cred)
   UnRegTxCert cred -> "ShelleyUnRegCert " ++ take 10 (showCred cred)
   DelegStakeTxCert cred _ -> "ShelleyDelegCert" ++ take 10 (showCred cred)
   RegPoolTxCert pool -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
   RetirePoolTxCert khash e -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
-  GenesisDelegTxCert _ _ _ -> "GenesisCert"
-  _ | isInstantaneousRewards x -> "MirCert"
-  _ -> error "Impossible"
+  GenesisDelegTxCert {} -> "GenesisCert"
+  MirTxCert {} -> "MirCert"
 
 showKeyHash :: KeyHash c x -> String
 showKeyHash (KeyHash hash) = take 10 (show hash)
 
-showCerts :: (ShelleyEraTxCert era) => [TxCert era] -> String
+showCerts :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => [TxCert era] -> String
 showCerts certs = unlines (map (("  " ++) . synopsisCert) certs)
 
-showTxCerts :: (ShelleyEraTxBody era) => TxBody era -> String
+showTxCerts :: (ShelleyEraTxBody era, ProtVerAtMost era 8) => TxBody era -> String
 showTxCerts txb = showCerts (toList (txb ^. certsTxBodyL))
 
 -- | Display a synopsis of a map to Coin
@@ -79,7 +77,7 @@ synopsisCoinMap Nothing = "SYNOPSIS NOTHING"
 -- Printing Produced == Consumed
 
 produceEqualsConsumed ::
-  ShelleyEraTxBody era =>
+  (ShelleyEraTxBody era, ProtVerAtMost era 8) =>
   PParams era ->
   CertState era ->
   UTxO era ->

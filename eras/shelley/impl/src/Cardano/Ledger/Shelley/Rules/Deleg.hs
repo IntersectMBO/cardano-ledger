@@ -141,7 +141,7 @@ data ShelleyDelegPredFailure era
 
 newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
-instance (EraPParams era, ShelleyEraTxCert era) => STS (ShelleyDELEG era) where
+instance (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) => STS (ShelleyDELEG era) where
   type State (ShelleyDELEG era) = DState era
   type Signal (ShelleyDELEG era) = TxCert era
   type Environment (ShelleyDELEG era) = DelegEnv era
@@ -262,7 +262,9 @@ instance
         pure (3, MIRNegativeTransfer pot amt)
       k -> invalidKey k
 
-delegationTransition :: (ShelleyEraTxCert era, EraPParams era) => TransitionRule (ShelleyDELEG era)
+delegationTransition ::
+  (ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
+  TransitionRule (ShelleyDELEG era)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
@@ -384,7 +386,7 @@ delegationTransition = do
       pure ds
 
 checkSlotNotTooLate ::
-  (ShelleyEraTxCert era, EraPParams era) =>
+  (ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
   SlotNo ->
   Rule (ShelleyDELEG era) 'Transition ()
 checkSlotNotTooLate slot = do

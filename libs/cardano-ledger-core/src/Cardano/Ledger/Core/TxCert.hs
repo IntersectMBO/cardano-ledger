@@ -15,6 +15,7 @@ module Cardano.Ledger.Core.TxCert (
   pattern RetirePoolTxCert,
   Delegation (..),
   PoolCert (..),
+  getPoolCertTxCert,
   poolCWitness,
   poolCertKeyHashWitness,
 )
@@ -72,6 +73,12 @@ pattern RetirePoolTxCert ::
 pattern RetirePoolTxCert poolId epochNo <- (getRetirePoolTxCert -> Just (poolId, epochNo))
   where
     RetirePoolTxCert poolId epochNo = mkRetirePoolTxCert poolId epochNo
+
+getPoolCertTxCert :: EraTxCert era => TxCert era -> Maybe (PoolCert (EraCrypto era))
+getPoolCertTxCert = \case
+  RegPoolTxCert poolParams -> Just $ RegPool poolParams
+  RetirePoolTxCert poolId epochNo -> Just $ RetirePool poolId epochNo
+  _ -> Nothing
 
 -- | The delegation of one stake key to another.
 data Delegation c = Delegation

@@ -52,13 +52,6 @@ import Cardano.Ledger.Shelley.TxBody (
   PoolParams (..),
   getRwdNetwork,
  )
-import Cardano.Ledger.Shelley.TxCert (
-  isDeRegKey,
-  isDelegation,
-  isGenesisDelegation,
-  isInstantaneousRewards,
-  isRegKey,
- )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
 import Control.Monad (forM_, when)
@@ -68,7 +61,6 @@ import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
-  failBecause,
   judgmentContext,
   liftSTS,
   tellEvent,
@@ -95,8 +87,6 @@ data ShelleyPoolPredFailure era
       !EpochNo -- Current Epoch
       !EpochNo -- The epoch listed in the Pool Retirement Certificate
       !EpochNo -- The first epoch that is too far out for retirement
-  | WrongCertificateTypePOOL
-      !Word8 -- The disallowed certificate (this case should never happen)
   | StakePoolCostTooLowPOOL
       !Coin -- The stake pool cost listed in the Pool Registration Certificate
       !Coin -- The minimum stake pool cost listed in the protocol parameters
@@ -107,7 +97,7 @@ data ShelleyPoolPredFailure era
   | PoolMedataHashTooBig
       !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
       !Int -- Size of the metadata hash
-  deriving (Show, Eq, Generic)
+  deriving (Eq, Show, Generic)
 
 instance NoThunks (ShelleyPoolPredFailure era)
 
@@ -116,7 +106,7 @@ instance NFData (ShelleyPoolPredFailure era)
 instance (ShelleyEraTxCert era, EraPParams era) => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState era
 
-  type Signal (ShelleyPOOL era) = TxCert era
+  type Signal (ShelleyPOOL era) = PoolCert (EraCrypto era)
 
   type Environment (ShelleyPOOL era) = PoolEnv era
 
@@ -136,8 +126,6 @@ instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
     StakePoolRetirementWrongEpochPOOL ce e em ->
       encodeListLen 4 <> encCBOR (1 :: Word8) <> encCBOR ce <> encCBOR e <> encCBOR em
-    WrongCertificateTypePOOL ct ->
-      encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR ct
     StakePoolCostTooLowPOOL pc mc ->
       encodeListLen 3 <> encCBOR (3 :: Word8) <> encCBOR pc <> encCBOR mc
     WrongNetworkPOOL a b c ->
@@ -156,9 +144,7 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         e <- decCBOR
         em <- decCBOR
         pure (4, StakePoolRetirementWrongEpochPOOL ce e em)
-      2 -> do
-        ct <- decCBOR
-        pure (2, WrongCertificateTypePOOL ct)
+      2 -> fail "WrongCertificateTypePOOL has been removed as impossible case"
       3 -> do
         pc <- decCBOR
         mc <- decCBOR
@@ -238,9 +224,8 @@ poolCertTransition (PoolEnv slot pp) ps@PState {psStakePoolParams, psFutureStake
 
 poolDelegationTransition ::
   forall (ledger :: Type -> Type) era.
-  ( ShelleyEraTxCert era
-  , EraPParams era
-  , Signal (ledger era) ~ TxCert era
+  ( EraPParams era
+  , Signal (ledger era) ~ PoolCert (EraCrypto era)
   , Environment (ledger era) ~ PoolEnv era
   , State (ledger era) ~ PState era
   , STS (ledger era)
@@ -250,24 +235,5 @@ poolDelegationTransition ::
   ) =>
   TransitionRule (ledger era)
 poolDelegationTransition = do
-  TRC (penv, ps, c) <- judgmentContext
-  case c of
-    RegPoolTxCert poolParams -> do
-      -- note that pattern match is used instead of cwitness, as in the spec
-      poolCertTransition penv ps (RegPool poolParams)
-    RetirePoolTxCert sPoolId epochN -> do
-      -- note that pattern match is used instead of cwitness, as in the spec
-      poolCertTransition penv ps (RetirePool sPoolId epochN)
-    _ | isRegKey c || isDeRegKey c || isDelegation c -> do
-      failBecause $ WrongCertificateTypePOOL 0
-      pure ps
-    _ | isInstantaneousRewards c -> do
-      failBecause $ WrongCertificateTypePOOL 1
-      pure ps
-    _ | isGenesisDelegation c -> do
-      failBecause $ WrongCertificateTypePOOL 2
-      pure ps
-    _ -> do
-      -- Impossible case
-      failBecause $ WrongCertificateTypePOOL 3
-      pure ps
+  TRC (penv, ps, poolCert) <- judgmentContext
+  poolCertTransition penv ps poolCert

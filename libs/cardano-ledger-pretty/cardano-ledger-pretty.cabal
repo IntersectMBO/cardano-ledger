@@ -42,7 +42,7 @@ library
         cardano-ledger-conway >=1.3,
         cardano-ledger-core ^>=1.3,
         cardano-ledger-mary >=1.0,
-        cardano-ledger-shelley ^>=1.3,
+        cardano-ledger-shelley ^>=1.4,
         cardano-protocol-tpraos >=1.0,
         cardano-slotting,
         containers,
