@@ -7,7 +7,7 @@ author:             IOHK
 bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
 synopsis:           Cardano ledger with an updated on-chain governance system.
 description:
-    This package builds upon the Babbage ledger with an updtaed on-chain governance system.
+    This package builds upon the Babbage ledger with an updated on-chain governance system.
 
 category:           Network
 build-type:         Simple
