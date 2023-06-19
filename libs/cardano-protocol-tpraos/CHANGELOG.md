@@ -2,7 +2,7 @@
 
 ## 1.0.3.2
 
-*
+* Changed upper bound on cardano-ledger-shelley  and base
 
 ## 1.0.3.1
 
