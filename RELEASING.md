@@ -174,10 +174,10 @@ CHaP. (TODO: implement a script that lists all of the package that fit the above
 1. Follow the [CHaP release
    instructions](https://github.com/input-output-hk/cardano-haskell-packages#-from-github)
 
-   For example:
+   For example, to release commit with SHA `deadbeef`:
 
    ```shell
-   $ ./scripts/add-from-github.sh https://github.com/input-output-hk/cardano-ledger libs/cardano-ledger-core deadbeef...
+   $ ./scripts/add-from-github.sh https://github.com/input-output-hk/cardano-ledger deadbeef libs/cardano-ledger-core ...
    ```
    It is important to supply a commit SHA instead of a branch name.
 
