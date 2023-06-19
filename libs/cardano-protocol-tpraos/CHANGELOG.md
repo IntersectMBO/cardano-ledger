@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.0.3.3
+
+*
+
 ## 1.0.3.2
 
 * Changed upper bound on cardano-ledger-shelley  and base
