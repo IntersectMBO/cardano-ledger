@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.3.1.1
+
+*
+
 ## 1.3.1.0
 
 * Added `Semigroup` and `Monoid` instances to `AlonzoScriptsNeeded`
