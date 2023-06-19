@@ -314,7 +314,7 @@ instance
 
 -- VDEL
 
-instance (Era era, Crypto era) => Arbitrary (ConwayVDelPredFailure (ConwayEra era)) where
+instance Era era => Arbitrary (ConwayVDelPredFailure era) where
   arbitrary =
     oneof
       [ ConwayDRepAlreadyRegisteredVDEL <$> arbitrary
