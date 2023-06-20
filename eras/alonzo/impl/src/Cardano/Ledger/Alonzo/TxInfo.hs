@@ -454,20 +454,14 @@ class EraScript era => AlonzoEraScript era where
 class (AlonzoEraScript era, EraTxCert era) => EraPlutusContext (l :: Language) era where
   transTxCert :: TxCert era -> PlutusTxCert l
   transScriptPurpose :: ScriptPurpose era -> PlutusScriptPurpose l
-  valContextX ::
-    VersionedTxInfo ->
-    PlutusScriptPurpose l ->
-    Data era
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
   transTxCert = TxCertPlutusV1 . transShelleyTxCert
   transScriptPurpose = ScriptPurposePlutusV1 . transAlonzoScriptPurpose
-  valContextX (TxInfoPV1 txinfo) (ScriptPurposePlutusV1 sp) =
-    Data (PV1.toData (PV1.ScriptContext txinfo (unScriptPurposeV1 (transScriptPurpose sp))))
   -- valContextX (TxInfoPV2 txinfo) sp =
   --   Data (PV2.toData (PV2.ScriptContext txinfo (unScriptPurposeV1 (transScriptPurpose sp))))
   -- valContextX (TxInfoPV3 txinfo) sp =
-  --   Data (PV3.toData (PV3.ScriptContext txinfo (unScriptPurposeV1 (transScriptPurpose sp))))
+  --   Data (PV3.toData (PV3.ScriptContext txinfo (unScripPurposeV1 (transScriptPurpose sp))))
 
 instance Crypto c => AlonzoEraScript (AlonzoEra c) where
   type ScriptPurpose (AlonzoEra c) = AlonzoScriptPurpose (AlonzoEra c)
@@ -637,6 +631,18 @@ valContext (TxInfoPV2 txinfo) sp =
   Data (PV2.toData (PV2.ScriptContext txinfo (transAlonzoScriptPurpose sp)))
 valContext (TxInfoPV3 txinfo) sp =
   Data (PV3.toData (PV3.ScriptContext txinfo (transAlonzoScriptPurpose sp)))
+
+valContext2 ::
+  forall l era. EraPlutusContext l era =>
+  VersionedTxInfo ->
+  ScriptPurpose era ->
+  Data era
+valContext2 (TxInfoPV1 txinfo) sp =
+  Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
+valContext2 (TxInfoPV2 txinfo) sp =
+  Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
+valContext2 (TxInfoPV3 txinfo) sp =
+  Data (PV3.toData (PV3.ScriptContext txinfo (transScriptPurpose sp)))
 
 
 data ScriptFailure = PlutusSF Text PlutusDebug
