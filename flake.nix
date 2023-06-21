@@ -163,68 +163,7 @@
                 inherit compiler-nix-name;
               });
             }
-          )
-          # add cicero logic.
-          // (let
-            actionCiInputName = "GitHub event";
-          in
-            inputs.tullia.fromSimple system {
-              tasks = {
-                ci = {
-                  config,
-                  lib,
-                  ...
-                }: {
-                  preset = {
-                    nix.enable = true;
-                    github.ci = {
-                      # Tullia tasks can run locally or on Cicero.
-                      # When no facts are present we know that we are running locally and vice versa.
-                      # When running locally, the current directory is already bind-mounted into the container,
-                      # so we don't need to fetch the source from GitHub and we don't want to report a GitHub status.
-                      enable = config.actionRun.facts != {};
-                      repository = "input-output-hk/cardano-ledger";
-                      remote = config.preset.github.lib.readRepository actionCiInputName null;
-                      revision = config.preset.github.lib.readRevision actionCiInputName null;
-                    };
-                  };
-
-                  command.text = ''
-                    # filter out systems that we cannot build for:
-                    systems=$(nix eval .#packages --apply builtins.attrNames --json |
-                      nix-systems -i |
-                      jq -r 'with_entries(select(.value)) | keys | .[]')
-                    targets=$(for s in $systems; do echo .#hydraJobs."$s".required; done)
-                    # shellcheck disable=SC2086
-                    nix build --keep-going $targets || nix build --keep-going -L $targets
-                  '';
-
-                  memory = 1024 * 8;
-                  nomad.driver = "exec";
-                  nomad.resources.cpu = 10000;
-                };
-              };
-
-              actions = {
-                "cardano-ledger/ci" = {
-                  task = "ci";
-                  io = ''
-                    // This is a CUE expression that defines what events trigger a new run of this action.
-                    // There is no documentation for this yet. Ask SRE if you have trouble changing this.
-                    let github = {
-                      #input: "${actionCiInputName}"
-                      #repo: "input-output-hk/cardano-ledger"
-                    }
-
-                    #lib.merge
-                    #ios: [
-                      {#lib.io.github_push, github, #default_branch: true},
-                      {#lib.io.github_pr,   github},
-                    ]
-                  '';
-                };
-              };
-            });
+          );
       in
         lib.recursiveUpdate flake rec {
           # add a required job, that's basically all hydraJobs.
