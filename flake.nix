@@ -13,9 +13,6 @@
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror";
     cardano-mainnet-mirror.flake = false;
 
-    # cicero
-    tullia.url = "github:input-output-hk/tullia";
-
     # non-flake nix compatibility
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
@@ -98,11 +95,7 @@
             [
               (python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
               haskellPackages.implicit-hie
-            ]
-            ++ (with inputs.tullia.packages.${system}; [
-              tullia
-              nix-systems
-            ]);
+            ];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
