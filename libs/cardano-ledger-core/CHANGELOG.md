@@ -15,6 +15,15 @@
 * Changed `Phase2Script` constructor of the `PhaseScript` type. It now accepts new
   `Plutus` type instead of `Language` and `ShortByteString`
 * Remove default implementation for `spendableInputsTxBodyL`
+* Add lenses:
+  * `dsUnifiedL`
+  * `dsGenDelegsL`
+  * `dsIRewardsL`
+  * `dsFutureGenDelegsL`
+  * `certDStateL`
+  * `certPStateL`
+  * `certVStateL`
+* Add `getProducedValue` to `EraUTxO`
 
 ## 1.4.1.0
 

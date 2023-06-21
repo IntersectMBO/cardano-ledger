@@ -20,12 +20,12 @@ where
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoEvent,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
   hasExactSetOfRedeemers,
   missingRequiredDatums,
   ppViewHashesMatch,
  )
-import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))

@@ -28,6 +28,11 @@
    * `TALLY` -> `GOV`
    * `VDEL` -> `GOVCERT`
 * Make `Anchor` required in `ProposalProcedure`.
+* Add `ConwayUTXO`
+* Add `indexedGovProps`
+* Add `rsRemoved` to `RatifyState`
+* Add `conwayProducedValue`
+* Changed the superclasses of `STS (ConwayUTXOS era)`
 
 ## 1.6.3.0
 

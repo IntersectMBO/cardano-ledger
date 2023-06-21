@@ -20,7 +20,7 @@ module Cardano.Ledger.Shelley.UTxO (
   scriptCred,
   scriptStakeCred,
   getConsumedCoin,
-  getProducedValue,
+  shelleyProducedValue,
   consumed,
   produced,
   txup,
@@ -139,7 +139,7 @@ consumed pp dpstate = getConsumedValue pp (lookupDepositDState (certDState dpsta
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
-  ShelleyEraTxBody era =>
+  EraUTxO era =>
   PParams era ->
   CertState era ->
   TxBody era ->
@@ -147,14 +147,14 @@ produced ::
 produced pp dpstate =
   getProducedValue pp (`Map.member` psStakePoolParams (certPState dpstate))
 
-getProducedValue ::
+shelleyProducedValue ::
   ShelleyEraTxBody era =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   TxBody era ->
   Value era
-getProducedValue pp isRegPoolId txBody =
+shelleyProducedValue pp isRegPoolId txBody =
   sumAllValue (txBody ^. outputsTxBodyL)
     <+> Val.inject
       (txBody ^. feeTxBodyL <+> totalCertsDeposits pp isRegPoolId (txBody ^. certsTxBodyL))
@@ -183,6 +183,8 @@ instance Crypto c => EraUTxO (ShelleyEra c) where
   type ScriptsNeeded (ShelleyEra c) = ShelleyScriptsNeeded (ShelleyEra c)
 
   getConsumedValue = getConsumedCoin
+
+  getProducedValue = shelleyProducedValue
 
   getScriptsNeeded = getShelleyScriptsNeeded
 

@@ -1,8 +1,24 @@
 {-# LANGUAGE DataKinds #-}
 
-module Test.Cardano.Ledger.Constrained.Lenses where
+module Test.Cardano.Ledger.Constrained.Lenses (
+  module Test.Cardano.Ledger.Constrained.Lenses,
+  -- LedgerState
+  lsCertStateL,
+  lsUTxOStateL,
+  -- CertState
+  certVStateL,
+  certPStateL,
+  certDStateL,
+  -- DState
+  dsIRewardsL,
+  dsGenDelegsL,
+  dsFutureGenDelegsL,
+  dsUnifiedL,
+)
+where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, SlotNo)
+import Cardano.Ledger.CertState (certDStateL, certPStateL, certVStateL, dsFutureGenDelegsL, dsGenDelegsL, dsIRewardsL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (DRep, PParams)
 import Cardano.Ledger.Credential (Credential, Ptr)
@@ -67,20 +83,8 @@ deltaTreasuryL = lens LS.deltaTreasury (\ds u -> ds {LS.deltaTreasury = u})
 -- ===================================
 -- DState
 
-dsUnifiedL :: Lens' (DState era) (UMap (EraCrypto era))
-dsUnifiedL = lens dsUnified (\ds u -> ds {dsUnified = u})
-
-dsGenDelegsL :: Lens' (DState era) (GenDelegs (EraCrypto era))
-dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
-
 unGenDelegsL :: Lens' (GenDelegs c) (Map (KeyHash 'Genesis c) (GenDelegPair c))
 unGenDelegsL = lens unGenDelegs (\(GenDelegs _) new -> GenDelegs new)
-
-dsIRewardsL :: Lens' (DState era) (InstantaneousRewards (EraCrypto era))
-dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
-
-dsFutureGenDelegsL :: Lens' (DState era) (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
-dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
 
 -- Lenses for (FutureGenDeleg c)
 fGenDelegSlotL :: Lens' (FutureGenDeleg c) SlotNo
@@ -117,18 +121,6 @@ vsCommitteeHotKeysL ::
 vsCommitteeHotKeysL = lens vsCommitteeHotKeys (\vs u -> vs {vsCommitteeHotKeys = u})
 
 -- ========================================
--- CertState
-
-certDStateL :: Lens' (CertState era) (DState era)
-certDStateL = lens certDState (\ds u -> ds {certDState = u})
-
-certPStateL :: Lens' (CertState era) (PState era)
-certPStateL = lens certPState (\ds u -> ds {certPState = u})
-
-certVStateL :: Lens' (CertState era) (VState era)
-certVStateL = lens certVState (\ds u -> ds {certVState = u})
-
--- ========================================
 -- UTxOState
 
 utxosUtxoL :: Lens' (UTxOState era) (UTxO era)
@@ -154,15 +146,6 @@ isCredMapL = lens credMap (\ds u -> ds {credMap = u})
 
 isPtrMapL :: Lens' (IncrementalStake c) (Map Ptr Coin)
 isPtrMapL = lens ptrMap (\ds u -> ds {ptrMap = u})
-
--- =========================================
--- LedgerState
-
-lsUTxOStateL :: Lens' (LedgerState era) (UTxOState era)
-lsUTxOStateL = lens lsUTxOState (\ds u -> ds {lsUTxOState = u})
-
-lsCertStateL :: Lens' (LedgerState era) (CertState era)
-lsCertStateL = lens lsCertState (\ds u -> ds {lsCertState = u})
 
 -- ==========================================
 -- AccountState

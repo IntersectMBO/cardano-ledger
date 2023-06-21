@@ -35,6 +35,7 @@ import Cardano.Ledger.Conway.Governance (
   ProposalProcedure (..),
   Voter (..),
   VotingProcedure (..),
+  indexedGovProps,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -156,8 +157,8 @@ govTransition = do
   -- TODO Check the signatures
   TRC (GovEnv txid epoch, st, GovernanceProcedures {..}) <- judgmentContext
 
-  let applyProps _ st' Empty = pure st'
-      applyProps idx st' (ProposalProcedure {..} :<| ps) = do
+  let applyProps st' Empty = pure st'
+      applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
         let st'' =
               addAction
                 epoch
@@ -166,8 +167,8 @@ govTransition = do
                 pProcReturnAddr
                 pProcGovernanceAction
                 st'
-        applyProps (idx + 1) st'' ps
-  stProps <- applyProps 0 st gpProposalProcedures
+        applyProps st'' ps
+  stProps <- applyProps st $ indexedGovProps gpProposalProcedures
 
   let applyVotes st' Empty = pure st'
       applyVotes st' (vp@VotingProcedure {..} :<| vs) = do

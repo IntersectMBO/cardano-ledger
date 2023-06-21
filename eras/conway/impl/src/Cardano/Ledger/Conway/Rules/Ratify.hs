@@ -119,7 +119,7 @@ ratifyTransition ::
 ratifyTransition = do
   TRC
     ( env@RatifyEnv {reCurrentEpoch}
-      , st@RatifyState {rsEnactState, rsFuture}
+      , st@RatifyState {rsEnactState, rsFuture, rsRemoved}
       , RatifySignal rsig
       ) <-
     judgmentContext
@@ -131,13 +131,17 @@ ratifyTransition = do
         then do
           -- Update ENACT state with the governance action that was ratified
           es <- trans @(EraRule "ENACT" era) $ TRC ((), rsEnactState, gasAction)
-          let st' = st {rsEnactState = es}
+          let st' =
+                st
+                  { rsEnactState = es
+                  , rsRemoved = act :<| rsRemoved
+                  }
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
           st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
           if expired
             then -- Action expired, do not include it in the next epoch
-              pure st'
+              pure $ st' {rsRemoved = act :<| rsRemoved}
             else -- Include this action in the next epoch
               pure $ st' {rsFuture = act :<| rsFuture}
     Empty -> pure st

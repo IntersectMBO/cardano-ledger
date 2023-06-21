@@ -114,7 +114,7 @@ import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyEraTxBody, WitVKey (..))
+import Cardano.Ledger.Shelley.TxBody (PoolParams (..), WitVKey (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
@@ -498,9 +498,7 @@ evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
 -- a transaction and the number of lovelace being produced.
 -- This value will be zero for a valid transaction.
 evaluateTransactionBalance ::
-  ( EraUTxO era
-  , ShelleyEraTxBody era
-  ) =>
+  EraUTxO era =>
   -- | Current protocol parameters
   PParams era ->
   -- | Where the deposit info is stored

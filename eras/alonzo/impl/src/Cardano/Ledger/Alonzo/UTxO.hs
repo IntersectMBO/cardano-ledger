@@ -28,6 +28,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), getRwdCred)
+import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -54,6 +55,8 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
   type ScriptsNeeded (AlonzoEra c) = AlonzoScriptsNeeded (AlonzoEra c)
 
   getConsumedValue = getConsumedMaryValue
+
+  getProducedValue = shelleyProducedValue
 
   getScriptsNeeded = getAlonzoScriptsNeeded
 

@@ -35,12 +35,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (
-  ConwayGovState (..),
-  ConwayGovernance (..),
-  GovernanceActionState (..),
-  RatifyState (..),
- )
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
@@ -422,10 +416,6 @@ instance TotalAda (CertState era) where
 instance TotalAda (ShelleyPPUPState era) where
   totalAda _ = mempty
 
-instance TotalAda (ConwayGovState era) where
-  -- TODO Might need a review once the specification is done
-  totalAda (ConwayGovState x) = mconcat $ gasDeposit <$> Map.elems x
-
 governanceStateTotalAda :: forall era. Reflect era => GovernanceState era -> Coin
 governanceStateTotalAda = case reify @era of
   Shelley _ -> totalAda
@@ -433,13 +423,7 @@ governanceStateTotalAda = case reify @era of
   Allegra _ -> totalAda
   Alonzo _ -> totalAda
   Babbage _ -> totalAda
-  Conway _ -> totalAda
-
-instance TotalAda (RatifyState era) where
-  totalAda (RatifyState _ as) = foldMap (gasDeposit . snd) as
-
-instance TotalAda (ConwayGovernance era) where
-  totalAda (ConwayGovernance ts rs) = totalAda ts <+> totalAda rs
+  Conway _ -> mempty
 
 instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps

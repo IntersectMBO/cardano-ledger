@@ -43,7 +43,10 @@ module Cardano.Ledger.Conway.TxBody (
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Babbage.TxBody (babbageAllInputsTxBodyF, babbageSpendableInputsTxBodyF)
+import Cardano.Ledger.Babbage.TxBody (
+  babbageAllInputsTxBodyF,
+  babbageSpendableInputsTxBodyF,
+ )
 import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (
   Annotator,
