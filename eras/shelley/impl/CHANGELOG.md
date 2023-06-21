@@ -2,12 +2,11 @@
 
 ## 1.5.0.0
 
+* Rename `getProducedValue` to `shelleyProducedValue`
+* Change the constraints on `produced` and `evaluateTransactionBalance`
+* Add `lsCertStateL`
 * Make new `Constitution` datatype and `ConstitutionData` newtype #3556
   * Adopt some Default instances for example SafeHash
-
-## 1.4.2.1
-
-*
 
 ## 1.4.2.0
 

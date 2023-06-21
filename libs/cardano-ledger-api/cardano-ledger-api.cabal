@@ -57,7 +57,7 @@ library
         cardano-ledger-conway >=1.7,
         cardano-ledger-core >=1.5 && <1.6,
         cardano-ledger-mary >=1.1,
-        cardano-ledger-shelley >=1.4.1 && <1.6,
+        cardano-ledger-shelley ^>=1.5,
         cardano-slotting,
         containers,
         microlens,

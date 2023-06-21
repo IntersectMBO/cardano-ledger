@@ -272,7 +272,6 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionState era) wher
           [ ("CommitteVotes", prettyA gasCommitteeVotes)
           , ("DRepVotes", prettyA gasDRepVotes)
           , ("StakePoolVotes", prettyA gasStakePoolVotes)
-          , ("Deposit", prettyA gasDeposit)
           , ("Return Address", prettyA gasReturnAddr)
           , ("Action", prettyA gasAction)
           , ("Proposed In", prettyA gasProposedIn)
@@ -305,12 +304,13 @@ instance
   ) =>
   PrettyA (RatifyState era)
   where
-  prettyA rs@(RatifyState _ _) =
+  prettyA rs@(RatifyState _ _ _) =
     let RatifyState {..} = rs
      in ppRecord
           "RatifyState"
           [ ("EnactState", prettyA rsEnactState)
           , ("Future", prettyA rsFuture)
+          , ("Removed", prettyA rsRemoved)
           ]
 
 instance

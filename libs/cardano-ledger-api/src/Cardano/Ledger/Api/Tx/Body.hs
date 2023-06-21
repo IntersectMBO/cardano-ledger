@@ -90,7 +90,7 @@ import Cardano.Ledger.Val ((<->))
 -- > let isRegPoolId = (`Map.member` psStakePoolParams (certPState dpState))
 -- > evalBalanceTxBody pp lookupRefund isRegPoolId utxo txBody
 evalBalanceTxBody ::
-  (EraUTxO era, ShelleyEraTxBody era) =>
+  EraUTxO era =>
   -- | Current protocol parameters
   PParams era ->
   -- | Lookup current deposit amount for a registered stake credential delegation. This

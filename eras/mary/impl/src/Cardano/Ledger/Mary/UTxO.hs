@@ -18,6 +18,7 @@ import Cardano.Ledger.Shelley.LedgerState (keyCertsRefunds)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getShelleyScriptsNeeded,
+  shelleyProducedValue,
  )
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -34,6 +35,8 @@ instance Crypto c => EraUTxO (MaryEra c) where
   type ScriptsNeeded (MaryEra c) = ShelleyScriptsNeeded (MaryEra c)
 
   getConsumedValue = getConsumedMaryValue
+
+  getProducedValue = shelleyProducedValue
 
   getScriptsNeeded = getMaryScriptsNeeded
 

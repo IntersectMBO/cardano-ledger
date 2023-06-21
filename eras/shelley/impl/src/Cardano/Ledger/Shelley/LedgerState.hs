@@ -93,6 +93,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   esPpL,
   esLStateL,
   lsUTxOStateL,
+  lsCertStateL,
   utxosFeesL,
   utxosGovernanceL,
   nesEpochStateL,

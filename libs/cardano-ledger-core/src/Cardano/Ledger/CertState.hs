@@ -25,6 +25,14 @@ module Cardano.Ledger.CertState (
   payPoolDeposit,
   refundPoolDeposit,
   obligationCertState,
+  -- Lenses
+  dsUnifiedL,
+  dsGenDelegsL,
+  dsIRewardsL,
+  dsFutureGenDelegsL,
+  certDStateL,
+  certPStateL,
+  certVStateL,
 )
 where
 
@@ -73,7 +81,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.), _1, _2)
+import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================
@@ -151,6 +159,20 @@ data DState era = DState
   -- ^ Instantaneous Rewards
   }
   deriving (Show, Eq, Generic)
+
+-- Lenses
+
+dsUnifiedL :: Lens' (DState era) (UMap (EraCrypto era))
+dsUnifiedL = lens dsUnified (\ds u -> ds {dsUnified = u})
+
+dsGenDelegsL :: Lens' (DState era) (GenDelegs (EraCrypto era))
+dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
+
+dsIRewardsL :: Lens' (DState era) (InstantaneousRewards (EraCrypto era))
+dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
+
+dsFutureGenDelegsL :: Lens' (DState era) (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
 
 instance NoThunks (DState era)
 
@@ -292,6 +314,17 @@ data CertState era = CertState
   , certDState :: !(DState era)
   }
   deriving (Show, Eq, Generic)
+
+-- Lenses
+
+certDStateL :: Lens' (CertState era) (DState era)
+certDStateL = lens certDState (\ds u -> ds {certDState = u})
+
+certPStateL :: Lens' (CertState era) (PState era)
+certPStateL = lens certPState (\ds u -> ds {certPState = u})
+
+certVStateL :: Lens' (CertState era) (VState era)
+certVStateL = lens certVState (\ds u -> ds {certVState = u})
 
 instance NoThunks (CertState c)
 

@@ -16,7 +16,10 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.PParams (
+  ConwayPParams (..),
+  UpgradeConwayPParams (..),
+ )
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
@@ -100,6 +103,7 @@ instance
   arbitrary =
     RatifyState
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
 
 instance Crypto (EraCrypto era) => Arbitrary (Constitution era) where
@@ -211,7 +215,12 @@ instance Era era => Arbitrary (VotingProcedure era) where
   arbitrary = VotingProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedure era) where
-  arbitrary = ProposalProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary =
+    ProposalProcedure
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProcedures era) where
   arbitrary =
@@ -262,20 +271,6 @@ instance
       [ DeltaRewardEvent <$> arbitrary
       , RestrainedRewards <$> arbitrary <*> arbitrary <*> arbitrary
       ]
-
--- TICKF
-
-instance
-  Era era =>
-  Arbitrary (ConwayTickfPredFailure era)
-  where
-  arbitrary = undefined
-
-instance
-  Era era =>
-  Arbitrary (ConwayTickfEvent era)
-  where
-  arbitrary = undefined
 
 -- CERTS
 

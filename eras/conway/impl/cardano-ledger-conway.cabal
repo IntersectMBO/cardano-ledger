@@ -34,11 +34,11 @@ library
         Cardano.Ledger.Conway.Rules
         Cardano.Ledger.Conway.Core
         Cardano.Ledger.Conway.TxCert
+        Cardano.Ledger.Conway.UTxO
 
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Conway.Era
-        Cardano.Ledger.Conway.UTxO
         Cardano.Ledger.Conway.Governance.Procedures
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
@@ -72,7 +72,7 @@ library
         cardano-ledger-babbage >=1.4.1,
         cardano-ledger-core >=1.5 && <1.6,
         cardano-ledger-mary >=1.1,
-        cardano-ledger-shelley >=1.4.1 && <1.6,
+        cardano-ledger-shelley ^>=1.5,
         cardano-slotting,
         cardano-strict-containers,
         containers,

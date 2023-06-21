@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -22,22 +23,28 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   ConwayGovernance (..),
+  GovernanceActionId,
+  GovernanceActionState (..),
   RatifyState (..),
   cgGovL,
   cgRatifyL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   IncrementalStake (..),
+  LedgerState (..),
   PState (..),
   UTxOState (..),
   asReserves,
@@ -49,6 +56,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   esPrevPp,
   esSnapshots,
   lsCertState,
+  lsCertStateL,
   lsUTxOState,
   lsUTxOStateL,
   obligationCertState,
@@ -69,6 +77,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.UMap (UMap, UView (..), unionKeyDeposits)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Embed (..),
@@ -80,9 +89,11 @@ import Control.State.Transition (
  )
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as Seq
 import Data.Void (Void, absurd)
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((%~), (&), (.~))
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
@@ -136,6 +147,34 @@ instance
   type Event (ConwayEPOCH era) = ConwayEpochEvent era
   transitionRules = [epochTransition]
 
+returnProposalDepositsUMap ::
+  StrictSeq (GovernanceActionId (EraCrypto era), GovernanceActionState era) ->
+  UMap (EraCrypto era) ->
+  UMap (EraCrypto era)
+returnProposalDepositsUMap gaids m =
+  unionKeyDeposits (RewDepUView m) $ foldl' addRew mempty gaids
+  where
+    addRew m' (_, GovernanceActionState {..}) =
+      Map.insertWith
+        (<>)
+        (KeyHashObj gasReturnAddr)
+        (fromMaybe mempty $ toCompact gasDeposit)
+        m'
+
+returnProposalDeposits ::
+  forall era.
+  GovernanceState era ~ ConwayGovernance era =>
+  LedgerState era ->
+  LedgerState era
+returnProposalDeposits ls@LedgerState {..} =
+  ls
+    & lsCertStateL . certDStateL . dsUnifiedL %~ dstate
+  where
+    govSt = utxosGovernance lsUTxOState
+    ratifyState = cgRatify govSt
+    removedProposals = rsRemoved ratifyState
+    dstate = returnProposalDepositsUMap removedProposals
+
 epochTransition ::
   forall era.
   ( Embed (EraRule "SNAP" era) (ConwayEPOCH era)
@@ -183,18 +222,23 @@ epochTransition = do
     trans @(EraRule "POOLREAP" era) $
       TRC (pp, PoolreapState utxoSt acnt dstate pstate', eNo)
 
-  let adjustedDPstate = CertState vstate pstate'' dstate'
+  let adjustedCertState = CertState vstate pstate'' dstate'
+      adjustedLState =
+        ls
+          { lsUTxOState = utxoSt'
+          , lsCertState = adjustedCertState
+          }
       epochState' =
         EpochState
           acnt'
           ss'
-          (ls {lsUTxOState = utxoSt', lsCertState = adjustedDPstate})
+          (returnProposalDeposits adjustedLState)
           pr
           pp
           nm
 
   let
-    utxoSt''' = utxoSt' {utxosDeposited = obligationCertState adjustedDPstate}
+    utxoSt''' = utxoSt' {utxosDeposited = obligationCertState adjustedCertState}
     acnt'' = acnt' {asReserves = asReserves acnt'}
     govSt = utxosGovernance utxoSt'''
     stakeDistr = credMap $ utxosStakeDistr utxoSt'''
@@ -215,10 +259,12 @@ epochTransition = do
           , esPrevPp = pp
           , esPp = pp
           }
+      -- TODO can we be more efficient?
       newGov = ConwayGovState . Map.fromList . toList $ rsFuture
   pure $
-    (es'' & esLStateL . lsUTxOStateL . utxosGovernanceL . cgGovL .~ newGov)
-      & (esLStateL . lsUTxOStateL . utxosGovernanceL . cgRatifyL .~ rs)
+    es''
+      & esLStateL . lsUTxOStateL . utxosGovernanceL . cgGovL .~ newGov
+      & esLStateL . lsUTxOStateL . utxosGovernanceL . cgRatifyL .~ rs
 
 instance
   ( Era era

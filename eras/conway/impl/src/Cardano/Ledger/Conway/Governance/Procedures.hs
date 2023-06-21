@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -26,6 +27,9 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   GovernanceActionId (..),
   GovernanceActionIx (..),
   govActionIdToText,
+  indexedGovProps,
+  -- Lenses
+  pProcDepositL,
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
@@ -56,11 +60,12 @@ import Data.Aeson (KeyValue (..), ToJSON (..), ToJSONKey (..), object, pairs)
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence (Seq)
+import Data.Sequence (Seq (..))
 import Data.Set (Set)
 import qualified Data.Text as Text
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
 newtype GovernanceActionIx = GovernanceActionIx Word64
@@ -262,6 +267,16 @@ data GovernanceProcedures era = GovernanceProcedures
   }
   deriving (Eq, Generic)
 
+-- | Attaches indices to a sequence of proposal procedures. The indices grow
+-- from left to right.
+indexedGovProps ::
+  Seq (ProposalProcedure era) ->
+  Seq (GovernanceActionIx, ProposalProcedure era)
+indexedGovProps = enumerateProps 0
+  where
+    enumerateProps _ Empty = Empty
+    enumerateProps !n (x :<| xs) = (n, x) :<| enumerateProps (succ n) xs
+
 instance EraPParams era => NoThunks (GovernanceProcedures era)
 
 instance EraPParams era => NFData (GovernanceProcedures era)
@@ -275,6 +290,9 @@ data ProposalProcedure era = ProposalProcedure
   , pProcAnchor :: !(Anchor (EraCrypto era))
   }
   deriving (Generic, Eq, Show)
+
+pProcDepositL :: Lens' (ProposalProcedure era) Coin
+pProcDepositL = lens pProcDeposit (\p x -> p {pProcDeposit = x})
 
 instance EraPParams era => NoThunks (ProposalProcedure era)
 

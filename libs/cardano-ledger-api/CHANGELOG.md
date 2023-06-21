@@ -5,6 +5,7 @@
 * Update `queryConstitutionHash` return type to `SafeHash (EraCrypto era) (Constitution era)` #3556
 * Rename `cgTallyL` to `cgGovL`
 * Rename `ConwayTallyState` to `ConwayGovState`
+* Change constraints on `evalBalanceTxBody`
 
 ## 1.3.1.0
 
