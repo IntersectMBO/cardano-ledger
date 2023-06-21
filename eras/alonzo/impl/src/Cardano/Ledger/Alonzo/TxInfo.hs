@@ -180,6 +180,7 @@ import PlutusLedgerApi.V1.Contexts ()
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Prettyprinter (Pretty (..))
+import PlutusLedgerApi.V3 (ToData)
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -441,7 +442,7 @@ data PlutusScriptContext (l :: Language) where
   ScriptContextPlutusV2 :: PV2.ScriptContext -> PlutusScriptContext 'PlutusV2
   ScriptContextPlutusV3 :: PV3.ScriptContext -> PlutusScriptContext 'PlutusV3
 
-instance PV3.ToData (PlutusScriptContext l) where
+instance ToData (PlutusScriptContext l) where
   toBuiltinData (ScriptContextPlutusV1 x) = PV1.toBuiltinData x
   toBuiltinData (ScriptContextPlutusV2 x) = PV2.toBuiltinData x
   toBuiltinData (ScriptContextPlutusV3 x) = PV3.toBuiltinData x
@@ -459,14 +460,13 @@ class EraScript era => AlonzoEraScript era where
   type ScriptPurpose era = (r :: Type) | r -> era
 
 class (AlonzoEraScript era, EraTxCert era) => EraPlutusContext (l :: Language) era where
-
   transTxCert :: TxCert era -> PlutusTxCert l
   transScriptPurpose :: ScriptPurpose era -> PlutusScriptPurpose l
 
 mkScriptContext :: forall (l :: Language). PlutusTxInfo l -> PlutusScriptPurpose l -> PlutusScriptContext l
-mkScriptContext (TxInfoPlutusV1 txinfo) (ScriptContextPlutusV1 sp) = ScriptContextPlutusV1 $ PV1.ScriptContext txinfo sp
-mkScriptContext (TxInfoPlutusV2 txinfo) (ScriptContextPlutusV2 sp) = ScriptContextPlutusV2 $ PV2.ScriptContext txinfo sp
-mkScriptContext (TxInfoPlutusV3 txinfo) (ScriptContextPlutusV3 sp) = ScriptContextPlutusV3 $ PV3.ScriptContext txinfo sp
+mkScriptContext (TxInfoPlutusV1 txinfo) (ScriptPurposePlutusV1 sp) = ScriptContextPlutusV1 $ PV1.ScriptContext txinfo sp
+mkScriptContext (TxInfoPlutusV2 txinfo) (ScriptPurposePlutusV2 sp) = ScriptContextPlutusV2 $ PV2.ScriptContext txinfo sp
+mkScriptContext (TxInfoPlutusV3 txinfo) (ScriptPurposePlutusV3 sp) = ScriptContextPlutusV3 $ PV3.ScriptContext txinfo sp
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
   transTxCert = TxCertPlutusV1 . transShelleyTxCert
@@ -548,7 +548,7 @@ class ExtendedUTxO era where
   --    This is the major component of the valContext function.
   txInfo ::
     PParams era ->
-    Language ->
+    SLanguage l ->
     EpochInfo (Either Text) ->
     SystemStart ->
     UTxO era ->
@@ -576,7 +576,7 @@ getTxOutDatum txOut = txOut ^. datumTxOutF
 {-# DEPRECATED getTxOutDatum "In favor of `datumTxOutF`" #-}
 
 alonzoTxInfo ::
-  forall era (l :: Language).
+  forall era.
   ( EraTx era
   , AlonzoEraTxBody era
   , TxCert era ~ ShelleyTxCert era
@@ -590,7 +590,7 @@ alonzoTxInfo ::
   SystemStart ->
   UTxO era ->
   Tx era ->
-  Either (TranslationError (EraCrypto era)) (PlutusTxInfo l)
+  Either (TranslationError (EraCrypto era)) (PlutusTxInfo 'PlutusV1)
 alonzoTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
   -- We need to do this as a separate step
@@ -601,7 +601,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
   txIns <- mapM lookupTxOut (Set.toList (txBody ^. inputsTxBodyL))
   case lang of
     PlutusV1 ->
-      Right . TxInfoPV1 $
+      Right . TxInfoPlutusV1 $
         PV1.TxInfo
           { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns
           , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
@@ -633,7 +633,6 @@ valContext ::
   PlutusScriptPurpose l ->
   Data era
 valContext txinfo sp = Data (PV1.toData (mkScriptContext txinfo sp))
-
 
 data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)

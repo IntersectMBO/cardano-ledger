@@ -33,12 +33,12 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (
 import Cardano.Ledger.Alonzo.Scripts.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (AlonzoScriptPurpose (..), Data, indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxInfo (
-  EraPlutusContext,
+  EraPlutusContext (..),
   ExtendedUTxO (..),
   ScriptResult (..),
   TranslationError (..),
   runPLCScript,
-  valContext,
+  valContext, AlonzoEraScript (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
@@ -147,6 +147,7 @@ collectTwoPhaseScriptInputs ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   , AlonzoEraPParams era
   , EraPlutusContext 'PlutusV1 era
   ) =>
@@ -182,7 +183,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
     apply costs (lang, sp, d, eu) script =
       case txinfo lang of
         Right inf ->
-          let datums = maybe id (:) (getDatum tx utxo sp) [d, valContext inf sp]
+          let datums = maybe id (:) (getDatum tx utxo sp) [d, valContext inf $ transScriptPurpose sp]
            in Right (script, lang, datums, eu, costs Map.! lang)
         Left te -> Left $ BadTranslation te
 

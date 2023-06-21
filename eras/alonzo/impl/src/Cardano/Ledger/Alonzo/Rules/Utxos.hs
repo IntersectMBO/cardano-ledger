@@ -42,7 +42,7 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi (
   evalScripts,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), AlonzoScriptPurpose)
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   MaryEraTxBody (..),
@@ -53,7 +53,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
   ExtendedUTxO (..),
   PlutusDebug (..),
   ScriptFailure (..),
-  ScriptResult (..),
+  ScriptResult (..), AlonzoEraScript (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
@@ -132,6 +132,7 @@ instance
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext 'PlutusV1 era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -179,6 +180,7 @@ utxosTransition ::
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext 'PlutusV1 era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -203,6 +205,7 @@ scriptsTransition ::
   , PredicateFailure sts ~ AlonzoUtxosPredFailure era
   , AlonzoEraPParams era
   , EraPlutusContext 'PlutusV1 era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   SlotNo ->
   PParams era ->
@@ -242,6 +245,7 @@ scriptsValidateTransition ::
   , GovernanceState era ~ ShelleyPPUPState era
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
   , EraPlutusContext 'PlutusV1 era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsValidateTransition = do
@@ -280,6 +284,7 @@ scriptsNotValidateTransition ::
   , STS (AlonzoUTXOS era)
   , Script era ~ AlonzoScript era
   , EraPlutusContext 'PlutusV1 era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 scriptsNotValidateTransition = do
