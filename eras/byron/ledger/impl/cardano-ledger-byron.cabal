@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-byron
-version:            1.0.0.1
+version:            1.0.0.2
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -230,7 +230,7 @@ library
         base >=4.14 && <4.19,
         aeson,
         base58-bytestring,
-        bimap >=0.4 && <0.5,
+        bimap >=0.4 && <0.6,
         binary,
         bytestring,
         canonical-json,
