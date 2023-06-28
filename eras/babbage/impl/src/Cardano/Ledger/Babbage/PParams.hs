@@ -27,6 +27,7 @@ module Cardano.Ledger.Babbage.PParams (
   encodeLangViews,
   coinsPerUTxOWordToCoinsPerUTxOByte,
   coinsPerUTxOByteToCoinsPerUTxOWord,
+  babbagePParamsHKDPairs,
 )
 where
 
@@ -233,7 +234,6 @@ instance Crypto c => BabbageEraPParams (BabbageEra c) where
 instance Crypto c => EraGovernance (BabbageEra c) where
   type GovernanceState (BabbageEra c) = ShelleyPPUPState (BabbageEra c)
   emptyGovernanceState = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
-
   getProposedPPUpdates = Just . proposals
 
 instance Era era => EncCBOR (BabbagePParams Identity era) where
