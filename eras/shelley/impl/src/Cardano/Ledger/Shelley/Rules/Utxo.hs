@@ -591,14 +591,14 @@ validateMaxTxSizeUTxO pp tx =
     txSize = tx ^. sizeTxF
 
 updateUTxOState ::
-  (EraTxBody era, GovernanceState era ~ ShelleyPPUPState era) =>
+  EraTxBody era =>
   PParams era ->
   UTxOState era ->
   TxBody era ->
   Coin ->
-  ShelleyPPUPState era ->
+  GovernanceState era ->
   UTxOState era
-updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr} txb depositChange ppups =
+updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr} txb depositChange govState =
   let UTxO utxo = utxosUtxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
@@ -610,7 +610,7 @@ updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDi
         { utxosUtxo = UTxO newUTxO
         , utxosDeposited = utxosDeposited <> depositChange
         , utxosFees = utxosFees <> txb ^. feeTxBodyL
-        , utxosGovernance = ppups
+        , utxosGovernance = govState
         , utxosStakeDistr = newIncStakeDistro
         }
 
