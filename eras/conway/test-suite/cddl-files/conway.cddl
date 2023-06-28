@@ -360,29 +360,57 @@ url = tstr .size (0..64)
 withdrawals = { * reward_account => coin }
 
 protocol_param_update =
-  { ? 0:  uint               ; minfee A
-  , ? 1:  uint               ; minfee B
-  , ? 2:  uint               ; max block body size
-  , ? 3:  uint               ; max transaction size
-  , ? 4:  uint               ; max block header size
-  , ? 5:  coin               ; key deposit
-  , ? 6:  coin               ; pool deposit (TODO: drep deposit needs to be added)
-  , ? 7: epoch               ; maximum epoch
-  , ? 8: uint                ; n_opt: desired number of stake pools
-  , ? 9: rational            ; pool pledge influence
-  , ? 10: unit_interval      ; expansion rate
-  , ? 11: unit_interval      ; treasury growth rate
-  , ? 14: [protocol_version] ; protocol version
-  , ? 16: coin               ; min pool cost
-  , ? 17: coin               ; ada per utxo byte
-  , ? 18: costmdls           ; cost models for script languages
-  , ? 19: ex_unit_prices     ; execution costs
-  , ? 20: ex_units           ; max tx ex units
-  , ? 21: ex_units           ; max block ex units
-  , ? 22: uint               ; max value size
-  , ? 23: uint               ; collateral percentage
-  , ? 24: uint               ; max collateral inputs
+  { ? 0:  uint                   ; minfee A
+  , ? 1:  uint                   ; minfee B
+  , ? 2:  uint                   ; max block body size
+  , ? 3:  uint                   ; max transaction size
+  , ? 4:  uint                   ; max block header size
+  , ? 5:  coin                   ; key deposit
+  , ? 6:  coin                   ; pool deposit (TODO: drep deposit needs to be added)
+  , ? 7: epoch                   ; maximum epoch
+  , ? 8: uint                    ; n_opt: desired number of stake pools
+  , ? 9: rational                ; pool pledge influence
+  , ? 10: unit_interval          ; expansion rate
+  , ? 11: unit_interval          ; treasury growth rate
+  , ? 14: [protocol_version]     ; protocol version
+  , ? 16: coin                   ; min pool cost
+  , ? 17: coin                   ; ada per utxo byte
+  , ? 18: costmdls               ; cost models for script languages
+  , ? 19: ex_unit_prices         ; execution costs
+  , ? 20: ex_units               ; max tx ex units
+  , ? 21: ex_units               ; max block ex units
+  , ? 22: uint                   ; max value size
+  , ? 23: uint                   ; collateral percentage
+  , ? 24: uint                   ; max collateral inputs
+  , ? 25: pool_voting_thresholds ; pool voting thresholds
+  , ? 26: drep_voting_thresholds ; DRep voting thresholds
+  , ? 27: uint                   ; min committee size
+  , ? 28: uint                   ; committee term limit
+  , ? 29: uint                   ; governance action expiration
+  , ? 30: coin                   ; governance action deposit
+  , ? 31: coin                   ; DRep deposit
+  , ? 32: epoch                  ; DRep inactivity period
   }
+
+pool_voting_thresholds =
+  [ unit_interval ; motion no confidence
+  , unit_interval ; committee normal
+  , unit_interval ; committee no confidence
+  , unit_interval ; hard fork initiation
+  ]
+
+drep_voting_thresholds =
+  [ unit_interval ; motion no confidence
+  , unit_interval ; committee normal
+  , unit_interval ; committee no confidence
+  , unit_interval ; update constitution
+  , unit_interval ; hard fork initiation
+  , unit_interval ; PP network group
+  , unit_interval ; PP economic group
+  , unit_interval ; PP technical group
+  , unit_interval ; PP governance group
+  , unit_interval ; treasury withdrawal
+  ]
 
 transaction_witness_set =
   { ? 0: [* vkeywitness ]

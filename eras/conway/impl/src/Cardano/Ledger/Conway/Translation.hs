@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.API (
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Val (Val (coin, zero))
 import Data.Coerce
+import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 
@@ -99,7 +100,7 @@ instance Crypto c => TranslateEra (ConwayEra c) Tx where
 --------------------------------------------------------------------------------
 
 instance Crypto c => TranslateEra (ConwayEra c) PParams where
-  translateEra _ = pure . upgradePParams ()
+  translateEra _ = pure . upgradePParams def -- TODO: Pick UpgradeConwayPParams from ConwayGenesis instead
 
 instance Crypto c => TranslateEra (ConwayEra c) EpochState where
   translateEra ctxt es =
@@ -108,8 +109,8 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
-        , esPrevPp = upgradePParams () $ esPrevPp es
-        , esPp = upgradePParams () $ esPp es
+        , esPrevPp = upgradePParams def $ esPrevPp es -- TODO: Pick UpgradeConwayPParams from ConwayGenesis instead
+        , esPp = upgradePParams def $ esPp es -- TODO: Pick UpgradeConwayPParams from ConwayGenesis instead
         , esNonMyopic = esNonMyopic es
         }
 
@@ -160,7 +161,7 @@ instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
 
 instance Crypto c => TranslateEra (ConwayEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    pure $ API.ProposedPPUpdates $ fmap (upgradePParamsUpdate ()) ppup
+    pure $ API.ProposedPPUpdates $ fmap (upgradePParamsUpdate def) ppup -- TODO: Pick UpgradeConwayPParams from ConwayGenesis instead
 
 -- | Filter out TxOut's with zero Coins and normalize Pointers, while converting TxOuts to
 -- Conway era.

@@ -70,10 +70,8 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   VotingProcedure (..),
   govActionIdToText,
  )
-import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance
@@ -344,6 +342,6 @@ toConwayGovernancePairs cg@(ConwayGovernance _ _) =
       , "ratify" .= cgRatify
       ]
 
-instance Crypto c => EraGovernance (ConwayEra c) where
+instance EraPParams (ConwayEra c) => EraGovernance (ConwayEra c) where
   type GovernanceState (ConwayEra c) = ConwayGovernance (ConwayEra c)
   getConstitutionHash g = Just $ g ^. cgRatifyL . rsEnactStateL . ensConstitutionL
