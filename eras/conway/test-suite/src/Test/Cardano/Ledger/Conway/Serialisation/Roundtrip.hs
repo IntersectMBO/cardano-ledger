@@ -17,7 +17,6 @@ import Data.Data (Proxy (..), typeRep)
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (FlexibleCostModels)
-import Test.Cardano.Ledger.Binary.Plain.RoundTrip as Plain
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Tasty (TestTree, testGroup)
@@ -32,7 +31,9 @@ allprops =
           (natVersion @2)
           maxBound
     , testProperty "ConwayGenesis (Plain)" $
-        Plain.roundTripCborExpectation @(ConwayGenesis (EraCrypto e))
+        roundTripCborRangeExpectation @(ConwayGenesis (EraCrypto e))
+          (eraProtVerLow @Conway)
+          (eraProtVerHigh @Conway)
     , testProperty "v9 CostModels" $
         roundTripCborRangeExpectation @FlexibleCostModels
           (eraProtVerLow @Conway)

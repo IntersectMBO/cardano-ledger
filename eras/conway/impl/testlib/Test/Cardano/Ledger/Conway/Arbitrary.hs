@@ -31,6 +31,18 @@ import Test.Cardano.Ledger.Common
 instance Crypto c => Arbitrary (ConwayGenesis c) where
   arbitrary = ConwayGenesis <$> arbitrary
 
+instance Arbitrary (UpgradeConwayPParams Identity) where
+  arbitrary =
+    UpgradeConwayPParams
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
 instance Crypto c => Arbitrary (Delegatee c) where
   arbitrary =
     oneof

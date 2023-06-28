@@ -21,10 +21,10 @@
 
 * Removal of `GovernanceProcedure` in favor of `GovernanceProcedures`
 * Add `ConwayPParams` #3498
-* Add `UpgradeConwayPParams` #3498
-* Add `ConwayEraPParams` #3498
-* Add `PoolVotingThresholds` #3498
-* Add `DRepVotingThresholds` #3498
+  * Add `UpgradeConwayPParams`
+  * Add `ConwayEraPParams`
+  * Add `PoolVotingThresholds`
+  * Add `DRepVotingThresholds`
 
 ## 1.5.0.0
 

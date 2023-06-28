@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -40,7 +41,6 @@ import Cardano.Ledger.Shelley.API (
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Val (Val (coin, zero))
 import Data.Coerce
-import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 
@@ -100,17 +100,17 @@ instance Crypto c => TranslateEra (ConwayEra c) Tx where
 --------------------------------------------------------------------------------
 
 instance Crypto c => TranslateEra (ConwayEra c) PParams where
-  translateEra _ = pure . upgradePParams def -- TODO: Pick UpgradeConwayPParams from ConwayGenesis instead
+  translateEra ConwayGenesis {cgUpgradePParams} = pure . upgradePParams cgUpgradePParams
 
 instance Crypto c => TranslateEra (ConwayEra c) EpochState where
-  translateEra ctxt es =
+  translateEra ctxt@ConwayGenesis {cgUpgradePParams} es =
     pure
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
-        , esPrevPp = upgradePParams def $ esPrevPp es -- TODO: Pick UpgradeConwayPParams from ConwayGenesis instead
-        , esPp = upgradePParams def $ esPp es -- TODO: Pick UpgradeConwayPParams from ConwayGenesis instead
+        , esPrevPp = upgradePParams cgUpgradePParams $ esPrevPp es
+        , esPp = upgradePParams cgUpgradePParams $ esPp es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -137,12 +137,8 @@ instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
     pure
       API.LedgerState
         { API.lsUTxOState = translateEra' conwayGenesis $ API.lsUTxOState ls
-        , API.lsCertState = updateGenesisKeys . translateEra' conwayGenesis $ API.lsCertState ls
+        , API.lsCertState = translateEra' conwayGenesis $ API.lsCertState ls
         }
-    where
-      updateGenesisKeys (CertState vstate pstate dstate) = CertState vstate pstate dstate'
-        where
-          dstate' = dstate {dsGenDelegs = cgGenDelegs conwayGenesis}
 
 instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
   translateEra ctxt us =
@@ -159,12 +155,8 @@ instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
   translateEra _ctxt utxo =
     pure $ API.UTxO $ translateTxOut `Map.mapMaybe` API.unUTxO utxo
 
-instance Crypto c => TranslateEra (ConwayEra c) API.ProposedPPUpdates where
-  translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    pure $ API.ProposedPPUpdates $ fmap (upgradePParamsUpdate def) ppup -- TODO: Pick UpgradeConwayPParams from ConwayGenesis instead
-
--- | Filter out TxOut's with zero Coins and normalize Pointers, while converting TxOuts to
--- Conway era.
+-- | Filter out `TxOut`s with zero Coins and normalize Pointers,
+-- while converting `TxOut`s to Conway era.
 translateTxOut ::
   Crypto c =>
   TxOut (BabbageEra c) ->

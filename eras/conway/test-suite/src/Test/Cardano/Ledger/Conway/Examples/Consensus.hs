@@ -38,7 +38,7 @@ import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (GenDelegs (..), asWitness)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
@@ -199,6 +199,4 @@ exampleConwayNewEpochState =
 
 exampleConwayGenesis :: ConwayGenesis c
 exampleConwayGenesis =
-  ConwayGenesis
-    { cgGenDelegs = GenDelegs Map.empty
-    }
+  ConwayGenesis def
