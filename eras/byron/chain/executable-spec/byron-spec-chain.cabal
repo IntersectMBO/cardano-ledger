@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               byron-spec-chain
-version:            1.0.0.0
+version:            1.0.0.1
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -28,7 +28,7 @@ library
 
     build-depends:
         base >=4.14 && <4.19,
-        bimap >=0.4 && <0.5,
+        bimap >=0.4 && <0.6,
         bytestring,
         containers,
         byron-spec-ledger >=1.0,
