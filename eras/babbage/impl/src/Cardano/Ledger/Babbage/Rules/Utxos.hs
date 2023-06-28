@@ -14,6 +14,9 @@
 module Cardano.Ledger.Babbage.Rules.Utxos (
   BabbageUTXOS,
   utxosTransition,
+  expectScriptsToPass,
+  tellDepositChangeEvent,
+  scriptsNo,
 ) where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
@@ -42,8 +45,10 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
+  CertState,
   PPUPPredFailure,
   UTxOState (..),
   keyTxRefunds,
@@ -143,6 +148,59 @@ utxosTransition =
 
 -- ===================================================================
 
+tellDepositChangeEvent ::
+  forall era s.
+  ( AlonzoEraTx era
+  , Event (s era) ~ AlonzoUtxosEvent era
+  ) =>
+  PParams era ->
+  CertState era ->
+  TxBody era ->
+  Rule (s era) 'Transition Coin
+tellDepositChangeEvent pp dpstate txBody = do
+  {- refunded := keyRefunds pp txb -}
+  let refunded = keyTxRefunds pp dpstate txBody
+  {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
+  let depositChange = totalTxDeposits pp dpstate txBody <-> refunded
+  tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
+  pure depositChange
+
+expectScriptsToPass ::
+  forall era s.
+  ( AlonzoEraTx era
+  , EraPlutusContext 'PlutusV1 era
+  , EraUTxO era
+  , ExtendedUTxO era
+  , Script era ~ AlonzoScript era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Tx era ~ AlonzoTx era
+  , STS (s era)
+  , Event (s era) ~ AlonzoUtxosEvent era
+  , PredicateFailure (s era) ~ AlonzoUtxosPredFailure era
+  , BaseM (s era) ~ ShelleyBase
+  ) =>
+  PParams era ->
+  AlonzoTx era ->
+  UTxO era ->
+  Rule (s era) 'Transition ()
+expectScriptsToPass pp tx utxo = do
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+  {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
+  case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
+    Right sLst -> do
+      {- isValid tx = evalScripts tx sLst = True -}
+      let protVer = pp ^. ppProtocolVersionL
+      whenFailureFree $
+        when2Phase $ case evalScripts @era protVer tx sLst of
+          Fails _ fs ->
+            failBecause $
+              ValidationTagMismatch
+                (tx ^. isValidTxL)
+                (FailedUnexpectedly (scriptFailuresToPredicateFailure protVer fs))
+          Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
+    Left info -> failBecause (CollectErrors info)
+
 scriptsYes ::
   forall era.
   ( ExtendedUTxO era
@@ -165,14 +223,7 @@ scriptsYes = do
   TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
   let txBody = body tx
-      {- refunded := keyRefunds pp txb -}
-      refunded = keyTxRefunds pp dpstate txBody
-      {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
-      protVer = pp ^. ppProtocolVersionL
-      depositChange = totalTxDeposits pp dpstate txBody <-> refunded
-  tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
-  sysSt <- liftSTS $ asks systemStart
-  ei <- liftSTS $ asks epochInfo
+  depositChange <- tellDepositChangeEvent pp dpstate txBody
 
   -- We intentionally run the PPUP rule before evaluating any Plutus scripts.
   -- We do not want to waste computation running plutus scripts if the
@@ -183,39 +234,29 @@ scriptsYes = do
         (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
 
   let !_ = traceEvent validBegin ()
-
-  {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
-  case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
-    Right sLst ->
-      {- isValid tx = evalScripts tx sLst = True -}
-      whenFailureFree $
-        when2Phase $
-          case evalScripts @era protVer tx sLst of
-            Fails _ fs ->
-              failBecause $
-                ValidationTagMismatch
-                  (tx ^. isValidTxL)
-                  (FailedUnexpectedly (scriptFailuresToPredicateFailure protVer fs))
-            Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
-    Left info -> failBecause (CollectErrors info)
-
+  expectScriptsToPass pp tx utxo
   let !_ = traceEvent validEnd ()
-
   pure $! updateUTxOState pp u txBody depositChange ppup'
 
 scriptsNo ::
-  forall era.
+  forall s era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
-  , EraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (BabbageUTXOS era)
   , BabbageEraTxBody era
-  , Tx era ~ AlonzoTx era
-  , Script era ~ AlonzoScript era
   , EraPlutusContext 'PlutusV1 era
+  , EraUTxO era
+  , ExtendedUTxO era
+  , Script era ~ AlonzoScript era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , Tx era ~ AlonzoTx era
+  , STS (s era)
+  , Environment (s era) ~ UtxoEnv era
+  , Signal (s era) ~ AlonzoTx era
+  , Event (s era) ~ AlonzoUtxosEvent era
+  , PredicateFailure (s era) ~ AlonzoUtxosPredFailure era
+  , State (s era) ~ UTxOState era
+  , BaseM (s era) ~ ShelleyBase
   ) =>
-  TransitionRule (BabbageUTXOS era)
+  TransitionRule (s era)
 scriptsNo = do
   TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
