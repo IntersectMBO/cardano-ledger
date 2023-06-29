@@ -16,7 +16,7 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
   utxosTransition,
   expectScriptsToPass,
   tellDepositChangeEvent,
-  scriptsNo,
+  babbageEvalScriptsTxInvalid,
 ) where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
@@ -143,8 +143,8 @@ utxosTransition ::
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case tx ^. isValidTxL of
-      IsValid True -> scriptsYes
-      IsValid False -> scriptsNo
+      IsValid True -> babbageEvalScriptsTxValid
+      IsValid False -> babbageEvalScriptsTxInvalid
 
 -- ===================================================================
 
@@ -201,7 +201,7 @@ expectScriptsToPass pp tx utxo = do
           Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
     Left info -> failBecause (CollectErrors info)
 
-scriptsYes ::
+babbageEvalScriptsTxValid ::
   forall era.
   ( ExtendedUTxO era
   , AlonzoEraTx era
@@ -219,7 +219,7 @@ scriptsYes ::
   , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
-scriptsYes = do
+babbageEvalScriptsTxValid = do
   TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
   let txBody = body tx
@@ -238,7 +238,7 @@ scriptsYes = do
   let !_ = traceEvent validEnd ()
   pure $! updateUTxOState pp u txBody depositChange ppup'
 
-scriptsNo ::
+babbageEvalScriptsTxInvalid ::
   forall s era.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
@@ -257,7 +257,7 @@ scriptsNo ::
   , BaseM (s era) ~ ShelleyBase
   ) =>
   TransitionRule (s era)
-scriptsNo = do
+babbageEvalScriptsTxInvalid = do
   TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
   let txBody = tx ^. bodyTxL
