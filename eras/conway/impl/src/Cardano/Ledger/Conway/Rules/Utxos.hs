@@ -26,7 +26,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Rules (BabbageUTXO, BabbageUtxoPredFailure (..), expectScriptsToPass, scriptsNo, tellDepositChangeEvent)
+import Cardano.Ledger.Babbage.Rules (BabbageUTXO, BabbageUtxoPredFailure (..), babbageEvalScriptsTxInvalid, expectScriptsToPass, tellDepositChangeEvent)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
@@ -115,10 +115,10 @@ utxosTransition ::
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case tx ^. isValidTxL of
-      IsValid True -> scriptsYes
-      IsValid False -> scriptsNo
+      IsValid True -> conwayEvalScriptsTxValid
+      IsValid False -> babbageEvalScriptsTxInvalid
 
-scriptsYes ::
+conwayEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , EraUTxO era
@@ -130,7 +130,7 @@ scriptsYes ::
   , STS (ConwayUTXOS era)
   ) =>
   TransitionRule (ConwayUTXOS era)
-scriptsYes = do
+conwayEvalScriptsTxValid = do
   TRC (UtxoEnv _ pp dpstate _, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
   let txBody = body tx
