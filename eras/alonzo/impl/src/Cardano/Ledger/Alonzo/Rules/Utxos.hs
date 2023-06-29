@@ -184,8 +184,8 @@ utxosTransition ::
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case tx ^. isValidTxL of
-      IsValid True -> scriptsValidateTransition
-      IsValid False -> scriptsNotValidateTransition
+      IsValid True -> alonzoEvalScriptsTxValid
+      IsValid False -> alonzoEvalScriptsTxInvalid
 
 -- ===================================================================
 
@@ -227,7 +227,7 @@ scriptsTransition slot pp tx utxo action = do
       BadTranslation {} -> False
       _ -> True
 
-scriptsValidateTransition ::
+alonzoEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
@@ -244,7 +244,7 @@ scriptsValidateTransition ::
   , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (AlonzoUTXOS era)
-scriptsValidateTransition = do
+alonzoEvalScriptsTxValid = do
   TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
@@ -271,7 +271,7 @@ scriptsValidateTransition = do
 
   pure $! updateUTxOState pp u txBody depositChange ppup'
 
-scriptsNotValidateTransition ::
+alonzoEvalScriptsTxInvalid ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
@@ -282,7 +282,7 @@ scriptsNotValidateTransition ::
   , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (AlonzoUTXOS era)
-scriptsNotValidateTransition = do
+alonzoEvalScriptsTxInvalid = do
   TRC (UtxoEnv slot pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
