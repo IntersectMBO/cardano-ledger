@@ -30,6 +30,7 @@
 module Cardano.Ledger.Api.Tx (
   -- | Building and inspecting transaction bodies
   module Cardano.Ledger.Api.Tx.Body,
+  module Cardano.Ledger.Api.Tx.Cert,
   module Cardano.Ledger.Api.Tx.AuxData,
   module Cardano.Ledger.Api.Tx.Wits,
 
@@ -75,6 +76,7 @@ import Cardano.Ledger.Api.Scripts.ExUnits (
  )
 import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
+import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Wits
 import Cardano.Ledger.Core (EraTx (..), PParams)
 import Lens.Micro ((&), (.~), (^.))
@@ -84,7 +86,7 @@ import Lens.Micro ((&), (.~), (^.))
 setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
 setMinFeeTx pp tx =
   let curMinFee = getMinFeeTx pp tx
-      curFee = tx ^. bodyTxL ^. feeTxBodyL
+      curFee = tx ^. bodyTxL . feeTxBodyL
       modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
    in if curFee == curMinFee
         then tx

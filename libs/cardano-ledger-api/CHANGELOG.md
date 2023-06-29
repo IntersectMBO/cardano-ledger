@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.2.1.1
+## 1.2.2.0
 
-*
+* Addition of `Cardano.Ledger.Api.Tx.Cert`
 
 ## 1.2.1.0
 

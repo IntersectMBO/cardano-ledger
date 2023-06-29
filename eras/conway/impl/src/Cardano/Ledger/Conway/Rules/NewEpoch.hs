@@ -4,7 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -156,11 +156,11 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , src@(NewEpochState (EpochNo eL) _ bcur eps ru _pd _)
-      , eNo@(EpochNo e)
+      , src@(NewEpochState eL _ bcur eps ru _pd _)
+      , eNo
       ) <-
     judgmentContext
-  if e /= eL + 1
+  if eNo /= eL + 1
     then pure src
     else do
       es' <- case ru of
@@ -177,17 +177,16 @@ newEpochTransition = do
           ratEnv =
             RatifyEnv
               { reStakeDistr = stakeDistr
-              , reCurrentEpoch = EpochNo $ eL + 1
+              , reCurrentEpoch = eL + 1
               , reRoles = cgVoterRoles govSt
               }
           tallyStateToSeq = Seq.fromList . Map.toList
           ratSig = RatifySignal . tallyStateToSeq . unConwayTallyState $ cgTally govSt
-      ens' <- trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
-      let es''' =
-            let RatifyState {..} = ens'
-                newTally = ConwayTallyState . Map.fromList . toList $ rsFuture
-             in es''
-                  & esLStateL . lsUTxOStateL . utxosGovernanceL . cgTallyL .~ newTally
+      RatifyState {rsFuture} <-
+        trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
+      let newTally = ConwayTallyState . Map.fromList . toList $ rsFuture
+          es''' =
+            es'' & esLStateL . lsUTxOStateL . utxosGovernanceL . cgTallyL .~ newTally
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
       let ss = esSnapshots es'''

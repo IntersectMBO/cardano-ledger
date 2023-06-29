@@ -85,7 +85,7 @@ instance
 --- Constants
 
 ccThreshold :: Int
-ccThreshold = 3
+ccThreshold = 0
 
 spoThreshold :: Rational
 spoThreshold = 1 % 2

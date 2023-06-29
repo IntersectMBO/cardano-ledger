@@ -159,7 +159,7 @@ newEpochTransition = do
     then pure src
     else do
       es' <- case ru of
-        SNothing -> (pure es)
+        SNothing -> pure es
         SJust p@(Pulsing _ _) -> do
           (ans, event) <- liftSTS (completeRupd p)
           tellReward (DeltaRewardEvent (RupdEvent eNo event))
