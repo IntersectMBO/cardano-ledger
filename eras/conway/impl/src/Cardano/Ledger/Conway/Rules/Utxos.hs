@@ -58,7 +58,7 @@ instance
   , GovernanceState era ~ ConwayGovernance era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
+  , Signal (ConwayUTXOS era) ~ Tx era
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   ) =>
@@ -87,7 +87,7 @@ instance
   , PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
+  , Signal (ConwayUTXOS era) ~ Tx era
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   ) =>
@@ -107,7 +107,7 @@ utxosTransition ::
   , GovernanceState era ~ ConwayGovernance era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
+  , Signal (ConwayUTXOS era) ~ Tx era
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   ) =>
@@ -126,14 +126,14 @@ conwayEvalScriptsTxValid ::
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
+  , Signal (ConwayUTXOS era) ~ Tx era
   , STS (ConwayUTXOS era)
   ) =>
   TransitionRule (ConwayUTXOS era)
 conwayEvalScriptsTxValid = do
   TRC (UtxoEnv _ pp dpstate _, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
-  let txBody = body tx
+  let txBody = tx ^. bodyTxL
   depositChange <- tellDepositChangeEvent pp dpstate txBody
 
   let !_ = traceEvent validBegin ()
