@@ -1,8 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -28,24 +30,50 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (
   TagMismatchDescription (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..), binaryDataToData, hashData)
+import Cardano.Ledger.Alonzo.Scripts.Data (
+  Data (..),
+  Datum (..),
+  binaryDataToData,
+  hashData,
+ )
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), ProtVer (..), SlotNo (..), TxIx (..), txIxToInt)
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  Network (..),
+  ProtVer (..),
+  SlotNo (..),
+  TxIx (..),
+  txIxToInt,
+ )
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
-import Cardano.Ledger.Conway.Rules (ConwayNewEpochPredFailure)
+import Cardano.Ledger.Conway.Rules (
+  ConwayEpochPredFailure (..),
+  ConwayNewEpochPredFailure,
+  EnactPredFailure (..),
+ )
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (..))
+import Cardano.Ledger.Credential (
+  Credential (
+    KeyHashObj,
+    ScriptHashObj
+  ),
+  StakeReference (..),
+ )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
+import Cardano.Ledger.EpochBoundary (
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+ )
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -63,7 +91,11 @@ import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Conway (ppConwayTxBody)
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaES, totalAdaPotsES)
+import Cardano.Ledger.Shelley.AdaPots (
+  AdaPots (..),
+  totalAdaES,
+  totalAdaPotsES,
+ )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -91,7 +123,9 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyNewEpochPredFailure (..),
   ShelleyNewppPredFailure (..),
   ShelleyPoolPredFailure (..),
+  ShelleyPoolreapPredFailure,
   ShelleyPpupPredFailure (..),
+  ShelleySnapPredFailure,
   ShelleyTickPredFailure (..),
   ShelleyUpecPredFailure (..),
   ShelleyUtxoPredFailure (..),
@@ -874,11 +908,12 @@ ppNewEpochPredicateFailure x = case reify @era of
 ppShelleyNewEpochPredicateFailure ::
   forall era.
   ( PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
+  , PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era
   , Reflect era
   ) =>
   ShelleyNewEpochPredFailure era ->
   PDoc
-ppShelleyNewEpochPredicateFailure (EpochFailure x) = ppEpochPredicateFailure @era x
+ppShelleyNewEpochPredicateFailure (EpochFailure x) = prettyA x
 ppShelleyNewEpochPredicateFailure (CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
 ppShelleyNewEpochPredicateFailure (MirFailure _) =
@@ -886,16 +921,16 @@ ppShelleyNewEpochPredicateFailure (MirFailure _) =
 
 ppConwayNewEpochPredicateFailure ::
   forall era.
-  ( PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
-  , PredicateFailure (EraRule "RATIFY" era) ~ Conway.EnactPredFailure era
-  , Reflect era
+  ( PredicateFailure (EraRule "EPOCH" era) ~ ConwayEpochPredFailure era
+  , PrettyA (PredicateFailure (EraRule "EPOCH" era))
+  , PrettyA (PredicateFailure (EraRule "RATIFY" era))
   ) =>
   ConwayNewEpochPredFailure era ->
   PDoc
-ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = ppEpochPredicateFailure @era x
+ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = prettyA x
+ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = prettyA x
 ppConwayNewEpochPredicateFailure (Conway.CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
-ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = ppRatifyPredicateFailure @era x
 
 ppRatifyPredicateFailure :: Conway.EnactPredFailure era -> PDoc
 ppRatifyPredicateFailure (Conway.EnactTreasuryInsufficientFunds wdrl tr) =
@@ -907,8 +942,8 @@ ppRatifyPredicateFailure (Conway.EnactTreasuryInsufficientFunds wdrl tr) =
 
 instance
   ( Reflect era
-  , PredicateFailure (EraRule "EPOCH" era)
-      ~ ShelleyEpochPredFailure era
+  , PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
+  , PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era
   ) =>
   PrettyA (ShelleyNewEpochPredFailure era)
   where
@@ -940,6 +975,30 @@ instance
   PrettyA (ShelleyEpochPredFailure era)
   where
   prettyA = ppEpochPredicateFailure
+
+instance
+  ( PrettyA (PredicateFailure (EraRule "POOLREAP" era))
+  , PrettyA (PredicateFailure (EraRule "SNAP" era))
+  , PrettyA (PredicateFailure (EraRule "RATIFY" era))
+  ) =>
+  PrettyA (ConwayEpochPredFailure era)
+  where
+  prettyA (ConwayPoolReapFailure x) = prettyA x
+  prettyA (ConwaySnapFailure x) = prettyA x
+  prettyA (ConwayRatifyFailure x) = prettyA x
+
+instance PrettyA (ShelleyPoolreapPredFailure era) where
+  prettyA = \case {}
+
+instance PrettyA (ShelleySnapPredFailure era) where
+  prettyA = \case {}
+
+instance PrettyA (Conway.EnactPredFailure era) where
+  prettyA (EnactTreasuryInsufficientFunds x y) =
+    "Not enough funds in treasury. \nWitdrawals: "
+      <> prettyA x
+      <> "\nRemaining funds in treasury:"
+      <> prettyA y
 
 -- ===============
 ppUpecPredicateFailure :: ShelleyUpecPredFailure era -> PDoc

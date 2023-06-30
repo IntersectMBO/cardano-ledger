@@ -3,8 +3,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -15,33 +17,46 @@ module Cardano.Ledger.Conway.Rules.Epoch (
   ConwayEPOCH,
   PredicateFailure,
   ConwayEpochEvent (..),
+  ConwayEpochPredFailure (..),
 )
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEPOCH)
+import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
+import Cardano.Ledger.Conway.Governance (
+  ConwayGovernance (..),
+  ConwayTallyState (..),
+  RatifyState (..),
+  cgTallyL,
+ )
+import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
+import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
 import Cardano.Ledger.EpochBoundary (SnapShots)
+import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
+  IncrementalStake (..),
   PState (..),
   UTxOState (..),
   asReserves,
   esAccountState,
   esLState,
+  esLStateL,
   esNonMyopic,
   esPp,
   esPrevPp,
   esSnapshots,
   lsCertState,
   lsUTxOState,
+  lsUTxOStateL,
   obligationCertState,
+  utxosGovernanceL,
   pattern CertState,
   pattern EpochState,
  )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyEpochPredFailure (..),
   ShelleyPOOLREAP,
   ShelleyPoolreapEvent,
   ShelleyPoolreapPredFailure,
@@ -62,11 +77,34 @@ import Control.State.Transition (
   judgmentContext,
   trans,
  )
+import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as Seq
+import Data.Void (Void, absurd)
+import Lens.Micro ((&), (.~))
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
   | SnapEvent (Event (EraRule "SNAP" era))
+
+data ConwayEpochPredFailure era
+  = ConwayRatifyFailure !(PredicateFailure (EraRule "RATIFY" era))
+  | ConwayPoolReapFailure !(PredicateFailure (EraRule "POOLREAP" era))
+  | ConwaySnapFailure !(PredicateFailure (EraRule "SNAP" era))
+
+deriving instance
+  ( Eq (PredicateFailure (EraRule "RATIFY" era))
+  , Eq (PredicateFailure (EraRule "SNAP" era))
+  , Eq (PredicateFailure (EraRule "POOLREAP" era))
+  ) =>
+  Eq (ConwayEpochPredFailure era)
+
+deriving instance
+  ( Show (PredicateFailure (EraRule "RATIFY" era))
+  , Show (PredicateFailure (EraRule "SNAP" era))
+  , Show (PredicateFailure (EraRule "POOLREAP" era))
+  ) =>
+  Show (ConwayEpochPredFailure era)
 
 instance
   ( EraTxOut era
@@ -81,14 +119,19 @@ instance
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Eq (UpecPredFailure era)
   , Show (UpecPredFailure era)
+  , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
+  , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
+  , GovernanceState era ~ ConwayGovernance era
+  , State (EraRule "RATIFY" era) ~ RatifyState era
+  , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   ) =>
   STS (ConwayEPOCH era)
   where
   type State (ConwayEPOCH era) = EpochState era
   type Signal (ConwayEPOCH era) = EpochNo
-  type Environment (ConwayEPOCH era) = ()
+  type Environment (ConwayEPOCH era) = PoolDistr (EraCrypto era)
   type BaseM (ConwayEPOCH era) = ShelleyBase
-  type PredicateFailure (ConwayEPOCH era) = ShelleyEpochPredFailure era
+  type PredicateFailure (ConwayEPOCH era) = ConwayEpochPredFailure era
   type Event (ConwayEPOCH era) = ConwayEpochEvent era
   transitionRules = [epochTransition]
 
@@ -102,11 +145,16 @@ epochTransition ::
   , Environment (EraRule "POOLREAP" era) ~ PParams era
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
+  , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
+  , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
+  , State (EraRule "RATIFY" era) ~ RatifyState era
+  , GovernanceState era ~ ConwayGovernance era
+  , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
   TRC
-    ( _
+    ( stakePoolDistr
       , EpochState
           { esAccountState = acnt
           , esSnapshots = ss
@@ -115,7 +163,7 @@ epochTransition = do
           , esPp = pp
           , esNonMyopic = nm
           }
-      , e
+      , eNo
       ) <-
     judgmentContext
   let utxoSt = lsUTxOState ls
@@ -132,7 +180,7 @@ epochTransition = do
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
     trans @(EraRule "POOLREAP" era) $
-      TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
+      TRC (pp, PoolreapState utxoSt acnt dstate pstate', eNo)
 
   let adjustedDPstate = CertState vstate pstate'' dstate'
       epochState' =
@@ -147,13 +195,27 @@ epochTransition = do
   let
     utxoSt''' = utxoSt' {utxosDeposited = obligationCertState adjustedDPstate}
     acnt'' = acnt' {asReserves = asReserves acnt'}
-  pure $
-    epochState'
-      { esAccountState = acnt''
-      , esLState = (esLState epochState') {lsUTxOState = utxoSt'''}
-      , esPrevPp = pp
-      , esPp = pp
-      }
+    govSt = utxosGovernance utxoSt'''
+    stakeDistr = credMap $ utxosStakeDistr utxoSt'''
+    ratEnv =
+      RatifyEnv
+        { reStakeDistr = stakeDistr
+        , reStakePoolDistr = stakePoolDistr
+        , reCurrentEpoch = eNo
+        }
+    tallyStateToSeq = Seq.fromList . Map.toList
+    ratSig = RatifySignal . tallyStateToSeq . unConwayTallyState $ cgTally govSt
+  RatifyState {rsFuture} <-
+    trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
+  let es'' =
+        epochState'
+          { esAccountState = acnt''
+          , esLState = (esLState epochState') {lsUTxOState = utxoSt'''}
+          , esPrevPp = pp
+          , esPp = pp
+          }
+      newTally = ConwayTallyState . Map.fromList . toList $ rsFuture
+  pure $ es'' & esLStateL . lsUTxOStateL . utxosGovernanceL . cgTallyL .~ newTally
 
 instance
   ( Era era
@@ -163,7 +225,7 @@ instance
   ) =>
   Embed (ShelleyPOOLREAP era) (ConwayEPOCH era)
   where
-  wrapFailed = PoolReapFailure
+  wrapFailed = ConwayPoolReapFailure
   wrapEvent = PoolReapEvent
 
 instance
@@ -173,5 +235,17 @@ instance
   ) =>
   Embed (ShelleySNAP era) (ConwayEPOCH era)
   where
-  wrapFailed = SnapFailure
+  wrapFailed = ConwaySnapFailure
   wrapEvent = SnapEvent
+
+instance
+  ( EraGovernance era
+  , STS (ConwayRATIFY era)
+  , BaseM (ConwayRATIFY era) ~ ShelleyBase
+  , Event (ConwayRATIFY era) ~ Void
+  , PredicateFailure (EraRule "RATIFY" era) ~ EnactPredFailure era
+  ) =>
+  Embed (ConwayRATIFY era) (ConwayEPOCH era)
+  where
+  wrapFailed = ConwayRatifyFailure
+  wrapEvent = absurd
