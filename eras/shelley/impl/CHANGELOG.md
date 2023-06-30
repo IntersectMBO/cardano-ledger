@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.4.0.1
+## 1.4.1.0
 
-*
+* Add `getConstitutionHash` to `EraGovernance` #3506
+  * Also add `nesEpochStateL` to `LedgerState.Types`
 
 ## 1.4.0.0
 

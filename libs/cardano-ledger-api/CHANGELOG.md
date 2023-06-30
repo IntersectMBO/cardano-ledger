@@ -2,6 +2,7 @@
 
 ## 1.3.0.0
 
+* Add `queryConstitutionHash` to `Cardano.Ledger.Api.State.Query` #3506
 * Addition of `Cardano.Ledger.Api.Tx.Cert`
 * Removal of `VoterRole` in favor of `Voter`
 * Removal of `cgVoterRolesL` and `cgVoterRoles` as no longer needed.

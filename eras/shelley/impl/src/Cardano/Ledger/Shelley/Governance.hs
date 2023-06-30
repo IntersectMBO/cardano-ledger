@@ -24,11 +24,13 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.ByteString (ByteString)
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
 import GHC.Generics (Generic)
@@ -59,6 +61,10 @@ class
   -- pparams updates
   getProposedPPUpdates :: GovernanceState era -> Maybe (ProposedPPUpdates era)
   getProposedPPUpdates _ = Nothing
+
+  -- | Returns `Nothing` for all era preceding Conway, otherwise returns the hash of the constitution
+  getConstitutionHash :: GovernanceState era -> Maybe (SafeHash (EraCrypto era) ByteString)
+  getConstitutionHash = const Nothing
 
 instance ToExpr (PParamsUpdate era) => ToExpr (ShelleyPPUPState era)
 

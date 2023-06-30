@@ -411,6 +411,9 @@ data NewEpochState era = NewEpochState
   }
   deriving (Generic)
 
+nesEpochStateL :: Lens' (NewEpochState era) (EpochState era)
+nesEpochStateL = lens nesEs $ \x y -> x {nesEs = y}
+
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses (ShelleyEra c) = UTxO (ShelleyEra c)
   StashedAVVMAddresses _ = ()

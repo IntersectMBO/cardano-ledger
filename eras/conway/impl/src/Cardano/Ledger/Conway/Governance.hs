@@ -38,6 +38,8 @@ module Cardano.Ledger.Conway.Governance (
   GovernanceProcedure (..),
   Anchor (..),
   AnchorDataHash,
+  ensConstitutionL,
+  rsEnactStateL,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
@@ -85,7 +87,7 @@ import Data.Set (Set)
 import qualified Data.Text as Text
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
 
 data GovernanceAction era
@@ -452,6 +454,9 @@ data EnactState era = EnactState
   }
   deriving (Generic)
 
+ensConstitutionL :: Lens' (EnactState era) (SafeHash (EraCrypto era) ByteString)
+ensConstitutionL = lens ensConstitution (\x y -> x {ensConstitution = y})
+
 instance EraPParams era => ToJSON (EnactState era) where
   toJSON = object . toEnactStatePairs
   toEncoding = pairs . mconcat . toEnactStatePairs
@@ -518,6 +523,9 @@ data RatifyState era = RatifyState
   , rsFuture :: !(StrictSeq (GovernanceActionId (EraCrypto era), GovernanceActionState era))
   }
   deriving (Generic, Eq, Show)
+
+rsEnactStateL :: Lens' (RatifyState era) (EnactState era)
+rsEnactStateL = lens rsEnactState (\x y -> x {rsEnactState = y})
 
 instance EraPParams era => Default (RatifyState era)
 
@@ -607,3 +615,4 @@ toConwayGovernancePairs cg@(ConwayGovernance _ _) =
 
 instance Crypto c => EraGovernance (ConwayEra c) where
   type GovernanceState (ConwayEra c) = ConwayGovernance (ConwayEra c)
+  getConstitutionHash g = Just $ g ^. cgRatifyL . rsEnactStateL . ensConstitutionL
