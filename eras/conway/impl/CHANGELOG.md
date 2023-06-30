@@ -12,6 +12,10 @@
 * Removal of `reRoles` from `RatifyEnv` as no longer needed
 * Addtion of `reStakePoolDistr` to `RatifyEnv`
 * Remove `VoterDoesNotHaveRole` as no longer needed from `ConwayTallyPredFailure`
+* Added `ConwayEpochPredFailure`
+* Added instance for `Embed (ConwayRATIFY era) (ConwayEPOCH era)`
+* Removed instance for `Embed (ConwayRATIFY era) (ConwayNEWEPOCH era)`
+* Changed superclasses of `STS (ConwayEPOCH era)` and `STS (ConwayNEWEPOCH era)`
 
 ## 1.4.0.0
 
