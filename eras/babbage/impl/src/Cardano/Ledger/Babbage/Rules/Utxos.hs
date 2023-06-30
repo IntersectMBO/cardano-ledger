@@ -84,7 +84,6 @@ instance
   , EraUTxO era
   , EraPlutusContext 'PlutusV1 era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
   , Script era ~ AlonzoScript era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
@@ -92,6 +91,7 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , Signal (BabbageUTXOS era) ~ Tx era
   , EncCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
@@ -125,7 +125,6 @@ utxosTransition ::
   , BabbageEraTxBody era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
   , Script era ~ AlonzoScript era
   , EraGovernance era
   , GovernanceState era ~ ShelleyPPUPState era
@@ -133,6 +132,7 @@ utxosTransition ::
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , Signal (BabbageUTXOS era) ~ Tx era
   , EncCBOR (PPUPPredFailure era)
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
@@ -173,14 +173,13 @@ expectScriptsToPass ::
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
   , STS (s era)
   , Event (s era) ~ AlonzoUtxosEvent era
   , PredicateFailure (s era) ~ AlonzoUtxosPredFailure era
   , BaseM (s era) ~ ShelleyBase
   ) =>
   PParams era ->
-  AlonzoTx era ->
+  Tx era ->
   UTxO era ->
   Rule (s era) 'Transition ()
 expectScriptsToPass pp tx utxo = do
@@ -207,9 +206,9 @@ babbageEvalScriptsTxValid ::
   , AlonzoEraTx era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
   , Script era ~ AlonzoScript era
   , STS (BabbageUTXOS era)
+  , Signal (BabbageUTXOS era) ~ Tx era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
@@ -222,7 +221,7 @@ babbageEvalScriptsTxValid ::
 babbageEvalScriptsTxValid = do
   TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
-  let txBody = body tx
+  let txBody = tx ^. bodyTxL
   depositChange <- tellDepositChangeEvent pp dpstate txBody
 
   -- We intentionally run the PPUP rule before evaluating any Plutus scripts.
@@ -247,10 +246,9 @@ babbageEvalScriptsTxInvalid ::
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Tx era ~ AlonzoTx era
   , STS (s era)
   , Environment (s era) ~ UtxoEnv era
-  , Signal (s era) ~ AlonzoTx era
+  , Signal (s era) ~ Tx era
   , Event (s era) ~ AlonzoUtxosEvent era
   , PredicateFailure (s era) ~ AlonzoUtxosPredFailure era
   , State (s era) ~ UTxOState era
