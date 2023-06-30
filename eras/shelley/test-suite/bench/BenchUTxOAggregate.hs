@@ -9,7 +9,7 @@ import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (toCompact)
-import Cardano.Ledger.Core (Era (..))
+import Cardano.Ledger.Core (DRep, Era (..))
 import Cardano.Ledger.Credential (
   Credential (..),
   Ptr (..),
@@ -79,7 +79,7 @@ genTestCase numUTxO numAddr = do
 
   keyhash :: [KeyHash 'StakePool StandardCrypto] <- replicateM 400 arbitrary
   let delegs = Map.fromList (zip creds (cycle (take 200 keyhash)))
-  reps :: [Credential 'Voting StandardCrypto] <- replicateM (m `div` 10) arbitrary
+  reps :: [DRep StandardCrypto] <- replicateM (m `div` 10) arbitrary
   let dreps = Map.fromList (zip (take (m `div` 5) creds) (cycle reps))
   let pp = alicePoolParams
   let poolParams = Map.fromList (zip keyhash (replicate 400 pp))
@@ -90,7 +90,7 @@ makeStatePair ::
   Map (Credential 'Staking (EraCrypto era)) Coin ->
   Map Ptr (Credential 'Staking (EraCrypto era)) ->
   Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
-  Map (Credential 'Staking (EraCrypto era)) (Credential 'Voting (EraCrypto era)) ->
+  Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)) ->
   Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
   (DState era, PState era)
 makeStatePair rewards' ptrs' sPools dReps poolParams =

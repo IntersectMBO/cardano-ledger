@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -147,7 +148,11 @@ import Cardano.Ledger.Shelley.TxBody (
   WitVKey (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxCert (
+  GenesisDelegCert (..),
+  ShelleyDelegCert (..),
+  ShelleyTxCert (..),
+ )
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
   prettyWitnessSetParts,
@@ -160,7 +165,11 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMap (RDPair (..), UMElem (UMElem), UMap (..))
+import Cardano.Ledger.UMap (
+  RDPair (..),
+  UMElem (UMElem),
+  UMap (..),
+ )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
@@ -427,7 +436,7 @@ ppUMElem (UMElem rd ptr spool drep) =
     [ ppStrictMaybe ppRDPair rd
     , ppSet ppPtr ptr
     , ppStrictMaybe ppKeyHash spool
-    , ppStrictMaybe ppCredential drep
+    , ppStrictMaybe prettyA drep
     ]
 
 ppUnifiedMap :: UMap c -> PDoc
@@ -1765,3 +1774,8 @@ instance (PrettyA x, PrettyA y) => PrettyA (Map.Map x y) where
 -- | turn on trace appromimately 1 in 'n' times it is called.
 occaisionally :: Hashable.Hashable a => a -> Int -> String -> String
 occaisionally x n s = if mod (Hashable.hash x) n == 0 then trace s s else s
+
+instance PrettyA (DRep c) where
+  prettyA (DRepCredential c) = ppSexp "DRepCredential" [prettyA c]
+  prettyA DRepAlwaysAbstain = "DRepAlwaysAbstain"
+  prettyA DRepAlwaysNoConfidence = "DRepAlwaysNoConfidence"

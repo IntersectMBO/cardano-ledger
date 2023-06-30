@@ -50,6 +50,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core (
+  DRep,
   Era (EraCrypto),
   EraTxCert (..),
   PoolCert (..),
@@ -277,8 +278,8 @@ pattern UnRegDRepTxCert cred deposit <- (getUnRegDRepTxCert -> Just (cred, depos
 -- | First type argument is the deposit
 data Delegatee c
   = DelegStake !(KeyHash 'StakePool c)
-  | DelegVote !(Credential 'Voting c)
-  | DelegStakeVote !(KeyHash 'StakePool c) !(Credential 'Voting c)
+  | DelegVote !(DRep c)
+  | DelegStakeVote !(KeyHash 'StakePool c) !(DRep c)
   deriving (Show, Generic, Eq)
 
 instance NFData (Delegatee c)

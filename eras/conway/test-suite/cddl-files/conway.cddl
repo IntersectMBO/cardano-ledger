@@ -283,11 +283,11 @@ pool_retirement = (4, pool_keyhash, epoch)
 ; DELEG
 reg_cert = (7, stake_credential, coin)
 unreg_cert = (8, stake_credential, coin)
-vote_deleg_cert = (9, stake_credential, voting_credential)
-stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, voting_credential)
+vote_deleg_cert = (9, stake_credential, drep)
+stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
 stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
-vote_reg_deleg_cert = (12, stake_credential, voting_credential, coin)
-stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, voting_credential, coin)
+vote_reg_deleg_cert = (12, stake_credential, drep, coin)
+stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
 
 ; VDEL
 reg_committee_hot_key_cert = (14, committee_cold_keyhash, committee_hot_keyhash)
@@ -301,6 +301,13 @@ delta_coin = int
 credential =
   [  0, addr_keyhash
   // 1, scripthash
+  ]
+
+drep =
+  [ 0, addr_keyhash
+  // 1, scripthash
+  // 2  ; always abstain
+  // 3  ; always no confidence
   ]
 
 stake_credential = credential
