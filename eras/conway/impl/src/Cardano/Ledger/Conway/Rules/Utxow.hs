@@ -42,10 +42,10 @@ import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOW)
-import Cardano.Ledger.Conway.Governance (VotingProcedure (..))
+import Cardano.Ledger.Conway.Governance (Voter (..), VotingProcedure (..))
 import Cardano.Ledger.Credential (credKeyHashWitness)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.Rules (
@@ -158,15 +158,18 @@ conwayUtxowTransition = do
   trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
-voteWitnesses ::
+voterWitnesses ::
   ConwayEraTxBody era =>
   TxBody era ->
   Set (KeyHash 'Witness (EraCrypto era))
-voteWitnesses txb = foldr' accum mempty (txb ^. votingProceduresTxBodyL)
+voterWitnesses txb = foldr' accum mempty (txb ^. votingProceduresTxBodyL)
   where
-    accum v khs = case credKeyHashWitness (vProcRoleKeyHash v) of
-      Just x -> Set.insert x khs
-      Nothing -> khs
+    accum v khs =
+      maybe khs (`Set.insert` khs) $
+        case vProcVoter v of
+          CommitteeVoter cred -> credKeyHashWitness cred
+          DRepVoter cred -> credKeyHashWitness cred
+          StakePoolVoter poolId -> Just $ asWitness poolId
 
 conwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
@@ -176,7 +179,7 @@ conwayWitsVKeyNeeded ::
 conwayWitsVKeyNeeded utxo txBody =
   Shelley.witsVKeyNeededNoGovernance utxo txBody
     `Set.union` (txBody ^. reqSignerHashesTxBodyL)
-    `Set.union` voteWitnesses txBody
+    `Set.union` voterWitnesses txBody
 
 -- ================================
 

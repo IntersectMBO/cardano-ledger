@@ -439,7 +439,7 @@ instance TotalAda (RatifyState era) where
   totalAda (RatifyState _ as) = foldMap (gasDeposit . snd) as
 
 instance TotalAda (ConwayGovernance era) where
-  totalAda (ConwayGovernance ts rs _) = totalAda ts <+> totalAda rs
+  totalAda (ConwayGovernance ts rs) = totalAda ts <+> totalAda rs
 
 instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps

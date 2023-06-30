@@ -27,13 +27,14 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceActionState (..),
   RatifyState (..),
   Vote (..),
-  VoterRole (..),
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (..))
+import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Slot (EpochNo (..))
+import Control.Monad (guard)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -42,18 +43,18 @@ import Control.State.Transition.Extended (
   judgmentContext,
   trans,
  )
-import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
+import Data.Monoid (Sum (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
-import qualified Data.Set as Set
 import Data.Void (absurd)
 
 data RatifyEnv era = RatifyEnv
   { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
+  , reStakePoolDistr :: !(PoolDistr (EraCrypto era))
   , reCurrentEpoch :: !EpochNo
-  , reRoles :: !(Map (Credential 'Voting (EraCrypto era)) VoterRole)
   }
 
 newtype RatifySignal era
@@ -84,32 +85,27 @@ instance
 
 --- Constants
 
-ccThreshold :: Int
-ccThreshold = 0
+-- ccThreshold :: Int
+-- ccThreshold = 0
 
+-- Temporary threshold of 1 lovelace
 spoThreshold :: Rational
-spoThreshold = 1 % 2
+spoThreshold = 1 % 45000000000000000
 
 epochsToExpire :: EpochNo
 epochsToExpire = 10
 
 accepted :: RatifyEnv era -> GovernanceActionState era -> Bool
-accepted RatifyEnv {reRoles, reStakeDistr} GovernanceActionState {gasVotes} =
-  length (votedYesHashes ConstitutionalCommittee) > ccThreshold
-    && acceptedBySPOs
+accepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
+  totalAcceptedStakePoolsRatio > spoThreshold
   where
-    votedYesHashes role = Set.map snd . Map.keysSet $ Map.filterWithKey fil gasVotes
-      where
-        fil (role', _) VoteYes | role == role' = True
-        fil _ _ = False
-    allSPOKeyHashes = Map.keysSet $ Map.filter isSPO reRoles
-    isSPO SPO = True
-    isSPO _ = False
-    spoStakeMap = Map.restrictKeys (Map.mapKeys coerceKeyRole reStakeDistr) allSPOKeyHashes
-    Coin totalStakeHeldBySPOs = fold spoStakeMap
-    Coin acceptedStake = fold . Map.restrictKeys spoStakeMap $ votedYesHashes SPO
-    acceptedBySPOs =
-      totalStakeHeldBySPOs > 0 && acceptedStake % totalStakeHeldBySPOs > spoThreshold
+    GovernanceActionState {gasStakePoolVotes} = gas
+    totalAcceptedStakePoolsRatio =
+      getSum $ Map.foldMapWithKey lookupStakeDistrForYesVotes gasStakePoolVotes
+
+    lookupStakeDistrForYesVotes poolId vote = fromMaybe mempty $ do
+      guard (vote == VoteYes)
+      Sum . individualPoolStake <$> Map.lookup poolId poolDistr
 
 ratifyTransition ::
   forall era.

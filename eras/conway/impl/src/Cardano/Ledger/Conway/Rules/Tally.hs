@@ -12,7 +12,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -34,12 +33,10 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceActionState (..),
   GovernanceProcedure (..),
   ProposalProcedure (..),
-  Vote,
-  VoterRole,
+  Voter (..),
   VotingProcedure (..),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
@@ -50,7 +47,6 @@ import Control.State.Transition.Extended (
   TransitionRule,
   judgmentContext,
  )
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
@@ -61,12 +57,10 @@ import Validation (failureUnless)
 data TallyEnv era = TallyEnv
   { teTxId :: !(TxId (EraCrypto era))
   , teEpoch :: !EpochNo
-  , teRoles :: !(Map (Credential 'Voting (EraCrypto era)) VoterRole)
   }
 
-data ConwayTallyPredFailure era
-  = VoterDoesNotHaveRole !(Credential 'Voting (EraCrypto era)) !VoterRole
-  | GovernanceActionDoesNotExist !(GovernanceActionId (EraCrypto era))
+newtype ConwayTallyPredFailure era
+  = GovernanceActionDoesNotExist (GovernanceActionId (EraCrypto era))
   deriving (Eq, Show, Generic)
 
 instance Era era => NFData (ConwayTallyPredFailure era)
@@ -75,15 +69,13 @@ instance Era era => NoThunks (ConwayTallyPredFailure era)
 
 instance EraPParams era => DecCBOR (ConwayTallyPredFailure era) where
   decCBOR = decode $ Summands "ConwayTallyPredFailure" $ \case
-    0 -> SumD VoterDoesNotHaveRole <! From <! From
-    1 -> SumD GovernanceActionDoesNotExist <! From
+    0 -> SumD GovernanceActionDoesNotExist <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayTallyPredFailure era) where
   encCBOR =
     encode . \case
-      VoterDoesNotHaveRole cred vr -> Sum (VoterDoesNotHaveRole @era) 0 !> To cred !> To vr
-      GovernanceActionDoesNotExist gid -> Sum (GovernanceActionDoesNotExist @era) 1 !> To gid
+      GovernanceActionDoesNotExist gid -> Sum (GovernanceActionDoesNotExist @era) 0 !> To gid
 
 instance EraPParams era => ToCBOR (ConwayTallyPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -104,21 +96,30 @@ instance Era era => STS (ConwayTALLY era) where
   transitionRules = [tallyTransition]
 
 addVote ::
-  GovernanceActionId (EraCrypto era) ->
-  VoterRole ->
-  Credential 'Voting (EraCrypto era) ->
-  Vote ->
+  VotingProcedure era ->
   ConwayTallyState era ->
   ConwayTallyState era
-addVote gaid role kh decision (ConwayTallyState st) =
+addVote VotingProcedure {vProcGovActionId, vProcVoter, vProcVote} (ConwayTallyState st) =
   ConwayTallyState $
-    Map.update (pure . updateVote) gaid st
+    Map.update (Just . updateVote) vProcGovActionId st
   where
     updateVote GovernanceActionState {..} =
-      GovernanceActionState
-        { gasVotes = Map.insert (role, kh) decision gasVotes
-        , ..
-        }
+      case vProcVoter of
+        CommitteeVoter cred ->
+          GovernanceActionState
+            { gasCommitteeVotes = Map.insert cred vProcVote gasCommitteeVotes
+            , ..
+            }
+        DRepVoter cred ->
+          GovernanceActionState
+            { gasDRepVotes = Map.insert cred vProcVote gasDRepVotes
+            , ..
+            }
+        StakePoolVoter poolId ->
+          GovernanceActionState
+            { gasStakePoolVotes = Map.insert poolId vProcVote gasStakePoolVotes
+            , ..
+            }
 
 addAction ::
   EpochNo ->
@@ -134,21 +135,14 @@ addAction epoch gaid c addr act (ConwayTallyState st) =
   where
     gai' =
       GovernanceActionState
-        { gasVotes = mempty
+        { gasCommitteeVotes = mempty
+        , gasDRepVotes = mempty
+        , gasStakePoolVotes = mempty
         , gasDeposit = c
         , gasProposedIn = epoch
         , gasAction = act
         , gasReturnAddr = addr
         }
-
-voterHasRole ::
-  Credential 'Voting (EraCrypto era) ->
-  VoterRole ->
-  Map (Credential 'Voting (EraCrypto era)) VoterRole ->
-  Test (ConwayTallyPredFailure era)
-voterHasRole cred role vRoles = failureUnless cond $ VoterDoesNotHaveRole cred role
-  where
-    cond = Map.lookup cred vRoles == Just role
 
 noSuchGovernanceAction ::
   ConwayTallyState era ->
@@ -161,16 +155,15 @@ noSuchGovernanceAction (ConwayTallyState st) gaid =
 tallyTransition :: forall era. TransitionRule (ConwayTALLY era)
 tallyTransition = do
   -- TODO Check the signatures
-  TRC (TallyEnv txid epoch vRoles, st, govProcedures) <- judgmentContext
+  TRC (TallyEnv txid epoch, st, govProcedures) <- judgmentContext
 
   let updateState st' Empty = pure st'
       updateState !st' ((x, idx) :<| xs) = do
         st'' <- case x of
           GovernanceVotingProcedure
-            VotingProcedure {vProcGovActionId, vProcRole, vProcRoleKeyHash, vProcVote} -> do
+            vp@VotingProcedure {vProcGovActionId} -> do
               runTest $ noSuchGovernanceAction st vProcGovActionId
-              runTest $ voterHasRole @era vProcRoleKeyHash vProcRole vRoles
-              pure $ addVote vProcGovActionId vProcRole vProcRoleKeyHash vProcVote st'
+              pure $! addVote vp st'
           GovernanceProposalProcedure
             ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovernanceAction} ->
               pure $

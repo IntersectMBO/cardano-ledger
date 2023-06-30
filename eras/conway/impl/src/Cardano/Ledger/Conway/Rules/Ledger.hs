@@ -280,7 +280,7 @@ ledgerTransition = do
   tallySt' <-
     trans @(EraRule "TALLY" era) $
       TRC
-        ( TallyEnv (txid txBody) epoch $ cgVoterRoles govSt
+        ( TallyEnv (txid txBody) epoch
         , cgTally govSt
         , StrictSeq.fromStrict govProcedures
         )

@@ -3,10 +3,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,13 +26,12 @@ module Cardano.Ledger.Conway.Governance (
   -- Lenses
   cgTallyL,
   cgRatifyL,
-  cgVoterRolesL,
   GovernanceAction (..),
   GovernanceActionState (..),
   GovernanceActionIx (..),
   GovernanceActionId (..),
   govActionIdToText,
-  VoterRole (..),
+  Voter (..),
   Vote (..),
   VotingProcedure (..),
   ProposalProcedure (..),
@@ -48,8 +49,12 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   decodeEnumBounded,
   decodeNullStrictMaybe,
+  decodeRecordSum,
   encodeEnum,
+  encodeListLen,
   encodeNullStrictMaybe,
+  encodeWord8,
+  invalidKey,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -63,7 +68,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
@@ -215,8 +220,7 @@ toAnchorPairs vote@(Anchor _ _) =
 
 data VotingProcedure era = VotingProcedure
   { vProcGovActionId :: !(GovernanceActionId (EraCrypto era))
-  , vProcRole :: !VoterRole
-  , vProcRoleKeyHash :: !(Credential 'Voting (EraCrypto era))
+  , vProcVoter :: !(Voter (EraCrypto era))
   , vProcVote :: !Vote
   , vProcAnchor :: !(StrictMaybe (Anchor (EraCrypto era)))
   }
@@ -233,7 +237,6 @@ instance Era era => DecCBOR (VotingProcedure era) where
         <! From
         <! From
         <! From
-        <! From
         <! D (decodeNullStrictMaybe decCBOR)
 
 instance Era era => EncCBOR (VotingProcedure era) where
@@ -241,8 +244,7 @@ instance Era era => EncCBOR (VotingProcedure era) where
     encode $
       Rec (VotingProcedure @era)
         !> To vProcGovActionId
-        !> To vProcRole
-        !> To vProcRoleKeyHash
+        !> To vProcVoter
         !> To vProcVote
         !> E (encodeNullStrictMaybe encCBOR) vProcAnchor
 
@@ -251,11 +253,10 @@ instance EraPParams era => ToJSON (VotingProcedure era) where
   toEncoding = pairs . mconcat . toVotingProcedurePairs
 
 toVotingProcedurePairs :: (KeyValue a, EraPParams era) => VotingProcedure era -> [a]
-toVotingProcedurePairs vProc@(VotingProcedure _ _ _ _ _) =
+toVotingProcedurePairs vProc@(VotingProcedure _ _ _ _) =
   let VotingProcedure {..} = vProc
    in [ "govActionId" .= vProcGovActionId
-      , "role" .= vProcRole
-      , "roleKeyHash" .= vProcRoleKeyHash
+      , "voter" .= vProcVoter
       , "anchor" .= vProcAnchor
       , "decision" .= vProcVote
       ]
@@ -301,23 +302,40 @@ instance EraPParams era => NFData (GovernanceProcedure era)
 
 deriving instance EraPParams era => Show (GovernanceProcedure era)
 
-data VoterRole
-  = ConstitutionalCommittee
-  | DRep
-  | SPO
-  deriving (Generic, Eq, Ord, Show, Enum, Bounded)
+data Voter c
+  = CommitteeVoter !(Credential 'CommitteeHotKey c)
+  | DRepVoter !(Credential 'Voting c)
+  | StakePoolVoter !(KeyHash 'StakePool c)
+  deriving (Generic, Eq, Ord, Show)
 
-instance ToJSON VoterRole
+instance Crypto c => ToJSON (Voter c)
 
-instance DecCBOR VoterRole where
-  decCBOR = decodeEnumBounded
+instance Crypto c => DecCBOR (Voter c) where
+  decCBOR = decodeRecordSum "Voter" $ \case
+    0 -> (2,) . CommitteeVoter . KeyHashObj <$> decCBOR
+    1 -> (2,) . CommitteeVoter . ScriptHashObj <$> decCBOR
+    2 -> (2,) . DRepVoter . KeyHashObj <$> decCBOR
+    3 -> (2,) . DRepVoter . ScriptHashObj <$> decCBOR
+    4 -> (2,) . StakePoolVoter <$> decCBOR
+    5 -> fail "Script objects are not allowed for StakePool votes"
+    t -> invalidKey t
 
-instance EncCBOR VoterRole where
-  encCBOR = encodeEnum
+instance Crypto c => EncCBOR (Voter c) where
+  encCBOR = \case
+    CommitteeVoter (KeyHashObj keyHash) ->
+      encodeListLen 2 <> encodeWord8 0 <> encCBOR keyHash
+    CommitteeVoter (ScriptHashObj scriptHash) ->
+      encodeListLen 2 <> encodeWord8 1 <> encCBOR scriptHash
+    DRepVoter (KeyHashObj keyHash) ->
+      encodeListLen 2 <> encodeWord8 2 <> encCBOR keyHash
+    DRepVoter (ScriptHashObj scriptHash) ->
+      encodeListLen 2 <> encodeWord8 3 <> encCBOR scriptHash
+    StakePoolVoter keyHash ->
+      encodeListLen 2 <> encodeWord8 4 <> encCBOR keyHash
 
-instance NoThunks VoterRole
+instance NoThunks (Voter c)
 
-instance NFData VoterRole
+instance NFData (Voter c)
 
 data Vote
   = VoteNo
@@ -338,7 +356,9 @@ instance EncCBOR Vote where
   encCBOR = encodeEnum
 
 data GovernanceActionState era = GovernanceActionState
-  { gasVotes :: !(Map (VoterRole, Credential 'Voting (EraCrypto era)) Vote)
+  { gasCommitteeVotes :: !(Map (Credential 'CommitteeHotKey (EraCrypto era)) Vote)
+  , gasDRepVotes :: !(Map (Credential 'Voting (EraCrypto era)) Vote)
+  , gasStakePoolVotes :: !(Map (KeyHash 'StakePool (EraCrypto era)) Vote)
   , gasDeposit :: !Coin
   , gasReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
   , gasAction :: !(GovernanceAction era)
@@ -351,9 +371,11 @@ instance EraPParams era => ToJSON (GovernanceActionState era) where
   toEncoding = pairs . mconcat . toGovernanceActionStatePairs
 
 toGovernanceActionStatePairs :: (KeyValue a, EraPParams era) => GovernanceActionState era -> [a]
-toGovernanceActionStatePairs gas@(GovernanceActionState _ _ _ _ _) =
+toGovernanceActionStatePairs gas@(GovernanceActionState _ _ _ _ _ _ _) =
   let GovernanceActionState {..} = gas
-   in [ "votes" .= gasVotes
+   in [ "committeeVotes" .= gasCommitteeVotes
+      , "dRepVotes" .= gasDRepVotes
+      , "stakePoolVotes" .= gasStakePoolVotes
       , "deposit" .= gasDeposit
       , "returnAddr" .= gasReturnAddr
       , "action" .= gasAction
@@ -368,7 +390,7 @@ instance EraPParams era => NoThunks (GovernanceActionState era)
 
 instance EraPParams era => NFData (GovernanceActionState era)
 
-instance (Era era, EraPParams era) => DecCBOR (GovernanceActionState era) where
+instance EraPParams era => DecCBOR (GovernanceActionState era) where
   decCBOR =
     decode $
       RecD GovernanceActionState
@@ -377,12 +399,16 @@ instance (Era era, EraPParams era) => DecCBOR (GovernanceActionState era) where
         <! From
         <! From
         <! From
+        <! From
+        <! From
 
-instance (Era era, EraPParams era) => EncCBOR (GovernanceActionState era) where
+instance EraPParams era => EncCBOR (GovernanceActionState era) where
   encCBOR GovernanceActionState {..} =
     encode $
       Rec GovernanceActionState
-        !> To gasVotes
+        !> To gasCommitteeVotes
+        !> To gasDRepVotes
+        !> To gasStakePoolVotes
         !> To gasDeposit
         !> To gasReturnAddr
         !> To gasAction
@@ -533,7 +559,6 @@ toRatifyStatePairs cg@(RatifyState _ _) =
 data ConwayGovernance era = ConwayGovernance
   { cgTally :: !(ConwayTallyState era)
   , cgRatify :: !(RatifyState era)
-  , cgVoterRoles :: !(Map (Credential 'Voting (EraCrypto era)) VoterRole)
   }
   deriving (Generic, Eq, Show)
 
@@ -543,14 +568,10 @@ cgTallyL = lens cgTally (\x y -> x {cgTally = y})
 cgRatifyL :: Lens' (ConwayGovernance era) (RatifyState era)
 cgRatifyL = lens cgRatify (\x y -> x {cgRatify = y})
 
-cgVoterRolesL :: Lens' (ConwayGovernance era) (Map (Credential 'Voting (EraCrypto era)) VoterRole)
-cgVoterRolesL = lens cgVoterRoles (\x y -> x {cgVoterRoles = y})
-
 instance EraPParams era => DecCBOR (ConwayGovernance era) where
   decCBOR =
     decode $
       RecD ConwayGovernance
-        <! From
         <! From
         <! From
 
@@ -560,7 +581,6 @@ instance EraPParams era => EncCBOR (ConwayGovernance era) where
       Rec ConwayGovernance
         !> To cgTally
         !> To cgRatify
-        !> To cgVoterRoles
 
 instance EraPParams era => ToCBOR (ConwayGovernance era) where
   toCBOR = toEraCBOR @era
@@ -579,11 +599,10 @@ instance EraPParams era => ToJSON (ConwayGovernance era) where
   toEncoding = pairs . mconcat . toConwayGovernancePairs
 
 toConwayGovernancePairs :: (KeyValue a, EraPParams era) => ConwayGovernance era -> [a]
-toConwayGovernancePairs cg@(ConwayGovernance _ _ _) =
+toConwayGovernancePairs cg@(ConwayGovernance _ _) =
   let ConwayGovernance {..} = cg
    in [ "tally" .= cgTally
       , "ratify" .= cgRatify
-      , "voterRoles" .= cgVoterRoles
       ]
 
 instance Crypto c => EraGovernance (ConwayEra c) where

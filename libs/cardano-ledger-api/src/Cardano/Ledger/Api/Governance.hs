@@ -19,20 +19,17 @@ module Cardano.Ledger.Api.Governance (
   ConwayGovernance (..),
   cgRatifyL,
   cgTallyL,
-  cgVoterRolesL,
   ConwayTallyState (..),
   RatifyState (..),
   EnactState (..),
-  VoterRole (..),
+  Voter (..),
+  Vote (..),
 
   -- ** Governance Action
   GovernanceAction (..),
   GovernanceActionId (..),
   GovernanceActionIx (..),
   GovernanceActionState (..),
-
-  -- ** Vote
-  Vote (..),
 
   -- *** Anchor
   Anchor (..),
@@ -54,12 +51,11 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceActionState (..),
   RatifyState (..),
   Vote (..),
-  VoterRole (..),
+  Voter (..),
   -- Lenses
 
   cgRatifyL,
   cgTallyL,
-  cgVoterRolesL,
  )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, SafeToHash, hashAnnotated)

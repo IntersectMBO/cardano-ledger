@@ -4,6 +4,14 @@
 
 * Added `ConwayWdrlNotDelegatedToDRep` to `ConwayLedgerPredFailure`
 * Changed the type of voting delegatee from `Credential` to `DRep`
+* Removal of `VoterRole` in favor of `Voter`
+* Removal of `vProcRole` and `vProcRoleKeyHash` in favor of `vProcVoter` in `VotingProcedure`
+* Removal of `cgVoterRolesL` and `cgVoterRoles` for `ConwayGovernance` as no longer needed.
+* Removal of `gasVotes` in favor of `gasCommitteeVotes`, `gasDRepVotes` and
+  `gasStakePoolVotes` in `GovernanceActionState`
+* Removal of `reRoles` from `RatifyEnv` as no longer needed
+* Addtion of `reStakePoolDistr` to `RatifyEnv`
+* Remove `VoterDoesNotHaveRole` as no longer needed from `ConwayTallyPredFailure`
 
 ## 1.4.0.0
 
