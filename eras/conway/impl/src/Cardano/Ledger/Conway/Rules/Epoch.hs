@@ -28,6 +28,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovernance (..),
   ConwayTallyState (..),
   RatifyState (..),
+  cgRatifyL,
   cgTallyL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
@@ -205,7 +206,7 @@ epochTransition = do
         }
     tallyStateToSeq = Seq.fromList . Map.toList
     ratSig = RatifySignal . tallyStateToSeq . unConwayTallyState $ cgTally govSt
-  RatifyState {rsFuture} <-
+  rs@RatifyState {rsFuture} <-
     trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
   let es'' =
         epochState'
@@ -215,7 +216,9 @@ epochTransition = do
           , esPp = pp
           }
       newTally = ConwayTallyState . Map.fromList . toList $ rsFuture
-  pure $ es'' & esLStateL . lsUTxOStateL . utxosGovernanceL . cgTallyL .~ newTally
+  pure $
+    (es'' & esLStateL . lsUTxOStateL . utxosGovernanceL . cgTallyL .~ newTally)
+      & (esLStateL . lsUTxOStateL . utxosGovernanceL . cgRatifyL .~ rs)
 
 instance
   ( Era era
