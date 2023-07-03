@@ -36,7 +36,9 @@ library
         Cardano.Ledger.Conway.TxCert
 
     hs-source-dirs:   src
-    other-modules:
+    -- TODO: this is temporarily exposed so that we can write tests for this code in the cardano-ledger-test library
+    -- for convenience
+    exposed-modules:
         Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.UTxO
         Cardano.Ledger.Conway.Governance.Procedures

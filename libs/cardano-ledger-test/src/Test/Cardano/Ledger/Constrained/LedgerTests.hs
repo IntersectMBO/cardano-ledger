@@ -45,7 +45,8 @@ import Test.Cardano.Ledger.Constrained.Tests (checkPredicates)
 
 import Test.Cardano.Ledger.Constrained.Shrink
 
-import Test.Cardano.Ledger.Constrained.Examples hiding (newepochConstraints)
+import Test.Cardano.Ledger.Constrained.Examples hiding (pstatePreds, newepochConstraints)
+
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
@@ -53,6 +54,12 @@ import Test.Cardano.Ledger.Generic.Proof (Reflect (..), AlonzoEra)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
+
+-- New constraints
+import Test.Cardano.Ledger.Constrained.Preds.CertState
+import Test.Cardano.Ledger.Constrained.Preds.PParams
+import Test.Cardano.Ledger.Constrained.Preds.Certs
+import Test.Cardano.Ledger.Constrained.Preds.LedgerState
 
 -- import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 -- import Cardano.Ledger.Shelley.API.Mempool (applyTxs, ApplyTxError(..))
@@ -191,7 +198,13 @@ randoms p =
 newepochConstraints :: Reflect era => Proof era -> [Pred era]
 newepochConstraints pr =
   randoms pr
+  ++ pParamsPreds pr
+  ++ vstatePreds pr
   ++ pstatePreds pr
+  -- ++ certStatePreds pr
+  -- ++ certsPreds pr
+  -- ++ ledgerStatePreds pr
+
   ++ dstatePreds pr
   ++ utxostatePreds pr
   ++ accountstatePreds pr
