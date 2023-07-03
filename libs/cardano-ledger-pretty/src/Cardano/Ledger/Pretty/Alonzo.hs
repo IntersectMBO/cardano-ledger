@@ -13,7 +13,7 @@ module Cardano.Ledger.Pretty.Alonzo where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Language (Language (..), Plutus (..))
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   CostModel,
@@ -86,7 +86,8 @@ ppScript ::
   (EraScript era, Script era ~ AlonzoScript era) =>
   AlonzoScript era ->
   PDoc
-ppScript s@(PlutusScript v _) = ppString ("PlutusScript " <> show v <> " ") PP.<+> ppScriptHash (hashScript @era s)
+ppScript s@(PlutusScript (Plutus v _)) =
+  ppString ("PlutusScript " <> show v <> " ") PP.<+> ppScriptHash (hashScript @era s)
 ppScript (TimelockScript x) = ppTimelock x
 
 instance (EraScript era, Script era ~ AlonzoScript era) => PrettyA (AlonzoScript era) where

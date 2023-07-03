@@ -56,7 +56,6 @@ where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Language (Language (..), guardPlutus, nonNativeLanguages)
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
   NonNegativeInterval,
@@ -92,7 +91,14 @@ import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Language (mkLanguageEnum)
+import Cardano.Ledger.Language (
+  BinaryPlutus (..),
+  Language (..),
+  Plutus (..),
+  guardPlutus,
+  mkLanguageEnum,
+  nonNativeLanguages,
+ )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)
@@ -113,7 +119,7 @@ import Data.Aeson (
 import qualified Data.Aeson as Aeson (Value)
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
-import Data.ByteString.Short (ShortByteString, fromShort)
+import Data.ByteString.Short (ShortByteString)
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Either (isRight)
 import Data.Int (Int64)
@@ -161,50 +167,43 @@ instance NFData Tag where
 
 -- =======================================================
 
--- | Binary representation of a Plutus script.
-newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}
-  deriving stock (Eq, Show)
-  deriving newtype (EncCBOR, DecCBOR, NFData)
-
-instance DecCBOR (Annotator BinaryPlutus) where
-  decCBOR = pure <$> decCBOR
-
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
   = TimelockScript !(Timelock era)
-  | PlutusScript !Language !ShortByteString
+  | PlutusScript !Plutus
   deriving (Eq, Generic, NoThunks)
 
 instance (EraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
-  show s@(PlutusScript v _) = "PlutusScript " ++ show v ++ " " ++ show (hashScript @era s)
+  show s@(PlutusScript plutus) =
+    "PlutusScript " ++ show (plutusLanguage plutus) ++ " " ++ show (hashScript @era s)
 
 instance NFData (AlonzoScript era)
 
 -- | Both constructors know their original bytes
 instance SafeToHash (AlonzoScript era) where
   originalBytes (TimelockScript t) = originalBytes t
-  originalBytes (PlutusScript _ bs) = fromShort bs
+  originalBytes (PlutusScript (Plutus _ binaryPlutus)) = originalBytes binaryPlutus
 
 type instance SomeScript 'PhaseOne (AlonzoEra c) = Timelock (AlonzoEra c)
 
 type instance SomeScript 'PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
 
 isPlutusScript :: AlonzoScript era -> Bool
-isPlutusScript (PlutusScript _ _) = True
+isPlutusScript (PlutusScript _) = True
 isPlutusScript (TimelockScript _) = False
 
 instance Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
-  phaseScript PhaseTwoRep (PlutusScript lang bytes) = Just (Phase2Script lang bytes)
+  phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
   phaseScript _ _ = Nothing
   scriptPrefixTag script =
     case script of
       TimelockScript _ -> nativeMultiSigTag -- "\x00"
-      PlutusScript PlutusV1 _ -> "\x01"
-      PlutusScript PlutusV2 _ -> "\x02"
-      PlutusScript PlutusV3 _ -> "\x03"
+      PlutusScript (Plutus PlutusV1 _) -> "\x01"
+      PlutusScript (Plutus PlutusV2 _) -> "\x02"
+      PlutusScript (Plutus PlutusV3 _) -> "\x03"
 
 instance Era era => ToJSON (AlonzoScript era) where
   toJSON = String . serializeAsHexText
@@ -545,7 +544,7 @@ addRawCostModel langW8 cmIds (CostModels validCMs errs invalidCMs) =
     Nothing -> CostModels validCMs errs updatedInvalidCMs
   where
     updatedInvalidCMs = Map.insert langW8 cmIds invalidCMs
-    addError l e es = Map.insert l (CostModelError e) es
+    addError l e = Map.insert l (CostModelError e)
 
 mkCostModelsLenient :: Map Word8 [Integer] -> CostModels
 mkCostModelsLenient = Map.foldrWithKey addRawCostModel (CostModels mempty mempty mempty)
@@ -696,21 +695,25 @@ instance Era era => ToCBOR (AlonzoScript era) where
   toCBOR = toEraCBOR @era . encode . encodeScript
 
 encodeScript :: Era era => AlonzoScript era -> Encode 'Open (AlonzoScript era)
-encodeScript (TimelockScript i) = Sum TimelockScript 0 !> To i
--- Use the EncCBOR instance of ShortByteString:
-encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s
-encodeScript (PlutusScript PlutusV2 s) = Sum (PlutusScript PlutusV2) 2 !> To s
-encodeScript (PlutusScript PlutusV3 s) = Sum (PlutusScript PlutusV3) 3 !> To s
+encodeScript = \case
+  TimelockScript i -> Sum TimelockScript 0 !> To i
+  PlutusScript (Plutus PlutusV1 s) -> Sum (PlutusScript . Plutus PlutusV1) 1 !> To s
+  PlutusScript (Plutus PlutusV2 s) -> Sum (PlutusScript . Plutus PlutusV2) 2 !> To s
+  PlutusScript (Plutus PlutusV3 s) -> Sum (PlutusScript . Plutus PlutusV3) 3 !> To s
 
 instance Era era => DecCBOR (Annotator (AlonzoScript era)) where
   decCBOR = decode (Summands "Alonzo Script" decodeScript)
     where
+      decodeAnnPlutus lang =
+        Ann (SumD $ PlutusScript . Plutus lang) <*! Ann (D (guardPlutus lang >> decCBOR))
+      {-# INLINE decodeAnnPlutus #-}
       decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
-      decodeScript 0 = Ann (SumD TimelockScript) <*! From
-      decodeScript 1 = Ann (SumD $ PlutusScript PlutusV1) <*! Ann (D (guardPlutus PlutusV1 >> decCBOR))
-      decodeScript 2 = Ann (SumD $ PlutusScript PlutusV2) <*! Ann (D (guardPlutus PlutusV2 >> decCBOR))
-      decodeScript 3 = Ann (SumD $ PlutusScript PlutusV3) <*! Ann (D (guardPlutus PlutusV3 >> decCBOR))
-      decodeScript n = Invalid n
+      decodeScript = \case
+        0 -> Ann (SumD TimelockScript) <*! From
+        1 -> decodeAnnPlutus PlutusV1
+        2 -> decodeAnnPlutus PlutusV2
+        3 -> decodeAnnPlutus PlutusV3
+        n -> Invalid n
       {-# INLINE decodeScript #-}
   {-# INLINE decCBOR #-}
 
@@ -721,7 +724,7 @@ validScript :: ProtVer -> AlonzoScript era -> Bool
 validScript pv script =
   case script of
     TimelockScript sc -> deepseq sc True
-    PlutusScript lang bytes ->
+    PlutusScript (Plutus lang (BinaryPlutus bytes)) ->
       let assertScriptWellFormed =
             case lang of
               PlutusV1 -> PV1.assertScriptWellFormed
@@ -739,7 +742,7 @@ transProtocolVersion (ProtVer major minor) =
 -- representation, which `Eq` instance normally does. This is used for testing.
 eqAlonzoScriptRaw :: AlonzoScript era -> AlonzoScript era -> Bool
 eqAlonzoScriptRaw (TimelockScript t1) (TimelockScript t2) = eqTimelockRaw t1 t2
-eqAlonzoScriptRaw (PlutusScript l1 s1) (PlutusScript l2 s2) = l1 == l2 && s1 == s2
+eqAlonzoScriptRaw (PlutusScript ps1) (PlutusScript ps2) = ps1 == ps2
 eqAlonzoScriptRaw _ _ = False
 
 instance ToExpr CostModel where

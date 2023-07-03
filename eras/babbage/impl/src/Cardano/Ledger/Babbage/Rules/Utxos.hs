@@ -21,8 +21,8 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
-  collectTwoPhaseScriptInputs,
-  evalScripts,
+  collectPlutusScriptsWithContext,
+  evalPlutusScripts,
  )
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosEvent (..),
@@ -186,12 +186,12 @@ expectScriptsToPass pp tx utxo = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
-  case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
+  case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
     Right sLst -> do
       {- isValid tx = evalScripts tx sLst = True -}
       let protVer = pp ^. ppProtocolVersionL
       whenFailureFree $
-        when2Phase $ case evalScripts @era protVer tx sLst of
+        when2Phase $ case evalPlutusScripts @era protVer tx sLst of
           Fails _ fs ->
             failBecause $
               ValidationTagMismatch
@@ -264,12 +264,12 @@ babbageEvalScriptsTxInvalid = do
 
   () <- pure $! traceEvent invalidBegin ()
 
-  case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
+  case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
     Right sLst ->
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
       whenFailureFree $
-        when2Phase $ case evalScripts @era (pp ^. ppProtocolVersionL) tx sLst of
+        when2Phase $ case evalPlutusScripts @era (pp ^. ppProtocolVersionL) tx sLst of
           Passes _ -> failBecause $ ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
           Fails ps fs -> do
             mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)

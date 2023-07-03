@@ -83,6 +83,7 @@ import Cardano.Ledger.Keys (
   VKey (..),
   hashKey,
  )
+import Cardano.Ledger.Language (Plutus (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
@@ -469,7 +470,7 @@ ppUtxoPredicateFailure (TooManyCollateralInputs x y) =
     [ ("Max allowed collateral inputs", ppNatural x)
     , ("Number of collateral inputs", ppNatural y)
     ]
-ppUtxoPredicateFailure (NoCollateralInputs) =
+ppUtxoPredicateFailure NoCollateralInputs =
   ppSexp "NoCollateralInputs" []
 
 instance
@@ -593,7 +594,7 @@ instance PrettyA (TxCert c) => PrettyA (CollectError c) where
   prettyA = ppCollectError
 
 ppTagMismatchDescription :: TagMismatchDescription -> PDoc
-ppTagMismatchDescription (PassedUnexpectedly) = ppSexp "PassedUnexpectedly" []
+ppTagMismatchDescription PassedUnexpectedly = ppSexp "PassedUnexpectedly" []
 ppTagMismatchDescription (FailedUnexpectedly xs) =
   ppSexp "FailedUnexpectedly" [ppList ppFailureDescription (toList xs)]
 
@@ -779,7 +780,8 @@ ppScriptPurpose (Certifying dcert) = ppSexp "Certifying" [prettyA dcert]
 instance PrettyA (TxCert era) => PrettyA (ScriptPurpose era) where
   prettyA = ppScriptPurpose
 
-instance PrettyA x => PrettyA [x] where prettyA xs = ppList prettyA xs
+instance PrettyA x => PrettyA [x] where
+  prettyA = ppList prettyA
 
 -- =====================================================
 
@@ -790,7 +792,7 @@ dotsF :: (a -> PDoc) -> (a -> PDoc)
 dotsF _f _x = ppString "..."
 
 ppMyWay :: (Typeable keyrole, CC.Crypto c) => WitVKey keyrole c -> PDoc
-ppMyWay (wvk@(WitVKey vkey _)) = ppSexp "MyWay" [ppKeyHash (hashKey vkey), ppWitVKey wvk]
+ppMyWay wvk@(WitVKey vkey _) = ppSexp "MyWay" [ppKeyHash (hashKey vkey), ppWitVKey wvk]
 
 ppCoreWitnesses :: Proof era -> TxWits era -> PDoc
 ppCoreWitnesses (Conway _) x = ppTxWitness x
@@ -801,11 +803,11 @@ ppCoreWitnesses (Allegra _) x = ppWitnessSetHKD x
 ppCoreWitnesses (Shelley _) x = ppWitnessSetHKD x
 
 ppCoreScript :: Proof era -> Script era -> PDoc
-ppCoreScript (Conway _) (PlutusScript _ x) = ppString (show x)
+ppCoreScript (Conway _) (PlutusScript (Plutus _ x)) = ppString (show x)
 ppCoreScript (Conway _) (TimelockScript x) = ppTimelock x
-ppCoreScript (Babbage _) (PlutusScript _ x) = ppString (show x)
+ppCoreScript (Babbage _) (PlutusScript (Plutus _ x)) = ppString (show x)
 ppCoreScript (Babbage _) (TimelockScript x) = ppTimelock x
-ppCoreScript (Alonzo _) (PlutusScript _ x) = ppString (show x)
+ppCoreScript (Alonzo _) (PlutusScript (Plutus _ x)) = ppString (show x)
 ppCoreScript (Alonzo _) (TimelockScript x) = ppTimelock x
 ppCoreScript (Mary _) x = ppTimelock x
 ppCoreScript (Allegra _) x = ppTimelock x
@@ -1190,10 +1192,10 @@ dataHashSummary dh = trim (ppSafeHash dh)
 
 keyPairSummary :: CC.Crypto c => KeyPair r c -> PDoc
 keyPairSummary (KeyPair x y) =
-  ppRecord "KeyPair" [("vKey", vKeySummary x), ("sKey", (viaShow y))]
+  ppRecord "KeyPair" [("vKey", vKeySummary x), ("sKey", viaShow y)]
 
 vKeySummary :: CC.Crypto c => VKey r c -> PDoc
-vKeySummary vk@(VKey x) = (viaShow x) <> " (hash " <> keyHashSummary (hashKey vk) <> ")"
+vKeySummary vk@(VKey x) = viaShow x <> " (hash " <> keyHashSummary (hashKey vk) <> ")"
 
 timelockSummary :: Era era => Timelock era -> PDoc
 timelockSummary (RequireSignature akh) =
@@ -1216,13 +1218,13 @@ multiSigSummary (SS.RequireAnyOf ps) = ppSexp "AnyOf" (map multiSigSummary ps)
 multiSigSummary (SS.RequireMOf m ps) = ppSexp "MOf" (ppInt m : map multiSigSummary ps)
 
 plutusSummary :: forall era. Proof era -> AlonzoScript era -> PDoc
-plutusSummary (Conway _) s@(PlutusScript lang _) =
+plutusSummary (Conway _) s@(PlutusScript (Plutus lang _)) =
   ppString (show lang ++ " ") <> scriptHashSummary (hashScript @era s)
 plutusSummary (Conway _) (TimelockScript x) = timelockSummary x
-plutusSummary (Babbage _) s@(PlutusScript lang _) =
+plutusSummary (Babbage _) s@(PlutusScript (Plutus lang _)) =
   ppString (show lang ++ " ") <> scriptHashSummary (hashScript @era s)
 plutusSummary (Babbage _) (TimelockScript x) = timelockSummary x
-plutusSummary (Alonzo _) s@(PlutusScript lang _) =
+plutusSummary (Alonzo _) s@(PlutusScript (Plutus lang _)) =
   ppString (show lang ++ " ") <> scriptHashSummary (hashScript @era s)
 plutusSummary (Alonzo _) (TimelockScript x) = timelockSummary x
 plutusSummary other _ = ppString ("Plutus script in era " ++ show other ++ "???")
@@ -1397,13 +1399,13 @@ pcHashScript (Shelley _) s = ppString "Hash " <> pcScriptHash (hashScript @era s
 
 pcScript :: forall era. Reflect era => Proof era -> Script era -> PDoc
 pcScript p@(Conway _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
-pcScript p@(Conway _) s@(PlutusScript v _) =
+pcScript p@(Conway _) s@(PlutusScript (Plutus v _)) =
   parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
 pcScript p@(Babbage _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
-pcScript p@(Babbage _) s@(PlutusScript v _) =
+pcScript p@(Babbage _) s@(PlutusScript (Plutus v _)) =
   parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
 pcScript p@(Alonzo _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
-pcScript p@(Alonzo _) s@(PlutusScript v _) =
+pcScript p@(Alonzo _) s@(PlutusScript (Plutus v _)) =
   parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
 pcScript p@(Mary _) s = pcTimelock @era (pcHashScript @era p s) s
 pcScript p@(Allegra _) s = pcTimelock @era (pcHashScript @era p s) s

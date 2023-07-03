@@ -11,11 +11,11 @@
 module Test.Cardano.Ledger.Generic.Scriptic where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -48,7 +48,7 @@ class Scriptic era => PostShelley era where
 class HasTokens era where
   forge :: Integer -> Script era -> MultiAsset (EraCrypto era)
 
-instance CC.Crypto c => Scriptic (ShelleyEra c) where
+instance Crypto c => Scriptic (ShelleyEra c) where
   never _ (Shelley _) = Multi.RequireAnyOf mempty -- always False
   always _ (Shelley _) = Multi.RequireAllOf mempty -- always True
   alwaysAlt _ (Shelley _) = Multi.RequireAllOf mempty -- always True
@@ -59,7 +59,7 @@ instance CC.Crypto c => Scriptic (ShelleyEra c) where
 
 -- Make Scripts in AllegraEra
 
-instance CC.Crypto c => Scriptic (AllegraEra c) where
+instance Crypto c => Scriptic (AllegraEra c) where
   never _ (Allegra _) = RequireAnyOf mempty -- always False
   always _ (Allegra _) = RequireAllOf mempty -- always True
   alwaysAlt _ (Allegra _) = RequireAllOf mempty -- always True
@@ -68,13 +68,13 @@ instance CC.Crypto c => Scriptic (AllegraEra c) where
   anyOf xs (Allegra c) = RequireAnyOf (Seq.fromList (map ($ Allegra c) xs))
   mOf n xs (Allegra c) = RequireMOf n (Seq.fromList (map ($ Allegra c) xs))
 
-instance CC.Crypto c => PostShelley (AllegraEra c) where
+instance Crypto c => PostShelley (AllegraEra c) where
   before n (Allegra _) = RequireTimeStart (theSlot n)
   after n (Allegra _) = RequireTimeExpire (theSlot n)
 
 -- Make Scripts in Mary era
 
-instance CC.Crypto c => Scriptic (MaryEra c) where
+instance Crypto c => Scriptic (MaryEra c) where
   never _ (Mary _) = RequireAnyOf mempty -- always False
   always _ (Mary _) = RequireAllOf mempty -- always True
   alwaysAlt _ (Mary _) = RequireAllOf mempty -- always True
@@ -83,29 +83,29 @@ instance CC.Crypto c => Scriptic (MaryEra c) where
   anyOf xs (Mary c) = RequireAnyOf (Seq.fromList (map ($ Mary c) xs))
   mOf n xs (Mary c) = RequireMOf n (Seq.fromList (map ($ Mary c) xs))
 
-instance CC.Crypto c => PostShelley (MaryEra c) where
+instance Crypto c => PostShelley (MaryEra c) where
   before n (Mary _) = RequireTimeStart (theSlot n)
   after n (Mary _) = RequireTimeExpire (theSlot n)
 
-instance forall c. CC.Crypto c => HasTokens (MaryEra c) where
+instance forall c. Crypto c => HasTokens (MaryEra c) where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
       pid = PolicyID (hashScript @(MaryEra c) s)
       an = AssetName "an"
 
-instance forall c. CC.Crypto c => HasTokens (AlonzoEra c) where
+instance forall c. Crypto c => HasTokens (AlonzoEra c) where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
       pid = PolicyID (hashScript @(AlonzoEra c) s)
       an = AssetName "an"
 
-instance forall c. CC.Crypto c => HasTokens (BabbageEra c) where
+instance forall c. Crypto c => HasTokens (BabbageEra c) where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
       pid = PolicyID (hashScript @(BabbageEra c) s)
       an = AssetName "an"
 
-instance forall c. CC.Crypto c => HasTokens (ConwayEra c) where
+instance forall c. Crypto c => HasTokens (ConwayEra c) where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
       pid = PolicyID (hashScript @(ConwayEra c) s)
@@ -117,12 +117,12 @@ instance forall c. CC.Crypto c => HasTokens (ConwayEra c) where
 -- | Not every Alonzo Script can be used in a Timelock context.
 unTime :: Era era => Proof era -> (Proof era -> AlonzoScript era) -> Timelock era
 unTime wit f = case f wit of
-  (TimelockScript x) -> x
-  (PlutusScript _ "\SOH\NUL\NUL \ACK\SOH") -> RequireAnyOf mempty
-  (PlutusScript _ "\SOH\NUL\NUL \STX\NUL\NUL\DC1") -> RequireAllOf mempty
-  (PlutusScript _ _) -> error "Plutus script in Timelock context"
+  TimelockScript x -> x
+  PlutusScript (Plutus _ (BinaryPlutus "\SOH\NUL\NUL \ACK\SOH")) -> RequireAnyOf mempty
+  PlutusScript (Plutus _ (BinaryPlutus "\SOH\NUL\NUL \STX\NUL\NUL\DC1")) -> RequireAllOf mempty
+  PlutusScript _ -> error "Plutus script in Timelock context"
 
-instance CC.Crypto c => Scriptic (AlonzoEra c) where
+instance Crypto c => Scriptic (AlonzoEra c) where
   never n (Alonzo _) = alwaysFails PlutusV1 n -- always False
   always n (Alonzo _) = alwaysSucceeds PlutusV1 n -- always True
   alwaysAlt n (Alonzo _) = alwaysSucceeds PlutusV2 n -- always True
@@ -131,13 +131,13 @@ instance CC.Crypto c => Scriptic (AlonzoEra c) where
   anyOf xs (Alonzo c) = TimelockScript (RequireAnyOf (Seq.fromList (map (unTime (Alonzo c)) xs)))
   mOf n xs (Alonzo c) = TimelockScript (RequireMOf n (Seq.fromList (map (unTime (Alonzo c)) xs)))
 
-instance CC.Crypto c => PostShelley (AlonzoEra c) where
+instance Crypto c => PostShelley (AlonzoEra c) where
   before n (Alonzo _) = TimelockScript $ RequireTimeStart (theSlot n)
   after n (Alonzo _) = TimelockScript $ RequireTimeExpire (theSlot n)
 
 -- =================================
 
-instance CC.Crypto c => Scriptic (BabbageEra c) where
+instance Crypto c => Scriptic (BabbageEra c) where
   never n (Babbage _) = alwaysFails PlutusV1 n -- always False
   always n (Babbage _) = alwaysSucceeds PlutusV1 n -- always True
   alwaysAlt n (Babbage _) = alwaysSucceeds PlutusV2 n -- always True
@@ -146,13 +146,13 @@ instance CC.Crypto c => Scriptic (BabbageEra c) where
   anyOf xs (Babbage c) = TimelockScript (RequireAnyOf (Seq.fromList (map (unTime (Babbage c)) xs)))
   mOf n xs (Babbage c) = TimelockScript (RequireMOf n (Seq.fromList (map (unTime (Babbage c)) xs)))
 
-instance CC.Crypto c => PostShelley (BabbageEra c) where
+instance Crypto c => PostShelley (BabbageEra c) where
   before n (Babbage _) = TimelockScript $ RequireTimeStart (theSlot n)
   after n (Babbage _) = TimelockScript $ RequireTimeExpire (theSlot n)
 
 -- =================================
 
-instance CC.Crypto c => Scriptic (ConwayEra c) where
+instance Crypto c => Scriptic (ConwayEra c) where
   never n (Conway _) = alwaysFails PlutusV1 n -- always False
   always n (Conway _) = alwaysSucceeds PlutusV1 n -- always True
   alwaysAlt n (Conway _) = alwaysSucceeds PlutusV2 n -- always True
@@ -161,7 +161,7 @@ instance CC.Crypto c => Scriptic (ConwayEra c) where
   anyOf xs (Conway c) = TimelockScript (RequireAnyOf (Seq.fromList (map (unTime (Conway c)) xs)))
   mOf n xs (Conway c) = TimelockScript (RequireMOf n (Seq.fromList (map (unTime (Conway c)) xs)))
 
-instance CC.Crypto c => PostShelley (ConwayEra c) where
+instance Crypto c => PostShelley (ConwayEra c) where
   before n (Conway _) = TimelockScript $ RequireTimeStart (theSlot n)
   after n (Conway _) = TimelockScript $ RequireTimeExpire (theSlot n)
 

@@ -551,9 +551,9 @@ validTxOut ::
 validTxOut proof m _txin txout = case txoutFields proof txout of
   (Addr _ (KeyHashObj _) _, _, _) -> True
   (Addr _ (ScriptHashObj h) _, _, _) -> case (proof, Map.lookup h m) of
-    (Conway _, Just (PlutusScript _ _)) -> True
-    (Babbage _, Just (PlutusScript _ _)) -> True
-    (Alonzo _, Just (PlutusScript _ _)) -> True
+    (Conway _, Just (PlutusScript _)) -> True
+    (Babbage _, Just (PlutusScript _)) -> True
+    (Alonzo _, Just (PlutusScript _)) -> True
     (Shelley _, Just _msig) -> True
     _ -> False
   _bootstrap -> False
@@ -572,7 +572,7 @@ getUtxoElem = do
 getUtxoTest :: GenRS era (TxIn (EraCrypto era) -> Bool)
 getUtxoTest = do
   x <- gets (mUTxO . gsModel)
-  pure (\k -> maybe False (const True) (Map.lookup k x))
+  pure (`Map.member` x)
 
 -- | To compute deposits we need a function that tells if the KeyHash is a new Pool
 --   Compute this function before we do any generation, since such generation

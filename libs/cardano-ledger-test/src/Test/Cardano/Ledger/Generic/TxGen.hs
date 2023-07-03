@@ -222,13 +222,13 @@ genGenericScriptWitness proof mTag script =
     Mary _ -> mkTimelockWit proof mTag script
     Alonzo _ -> case script of
       TimelockScript timelock -> mkTimelockWit proof mTag timelock
-      PlutusScript _ _ -> pure (const [])
+      PlutusScript _ -> pure (const [])
     Babbage _ -> case script of
       TimelockScript timelock -> mkTimelockWit proof mTag timelock
-      PlutusScript _ _ -> pure (const [])
+      PlutusScript _ -> pure (const [])
     Conway _ -> case script of
       TimelockScript timelock -> mkTimelockWit proof mTag timelock
-      PlutusScript _ _ -> pure (const [])
+      PlutusScript _ -> pure (const [])
 
 -- | Generate a TxWits producing function. We handle TxWits come from Keys and Scripts
 --   Because scripts vary be Era, we need some Era specific code here: genGenericScriptWitness
@@ -403,8 +403,8 @@ genDatum = snd <$> genDatumWithHash
 genBabbageDatum :: forall era. Era era => GenRS era (Datum era)
 genBabbageDatum =
   frequencyT
-    [ (1, (DatumHash . fst) <$> genDatumWithHash)
-    , (4, (Datum . dataToBinaryData . snd) <$> genDatumWithHash)
+    [ (1, DatumHash . fst <$> genDatumWithHash)
+    , (4, Datum . dataToBinaryData . snd <$> genDatumWithHash)
     ]
 
 genRefScript :: Reflect era => Proof era -> GenRS era (StrictMaybe (Script era))
@@ -420,19 +420,19 @@ genDataHashField :: Reflect era => Proof era -> Maybe (Script era) -> GenRS era 
 genDataHashField proof maybeCoreScript =
   case proof of
     Conway _ -> case maybeCoreScript of
-      Just (PlutusScript _ _) -> do
+      Just (PlutusScript _) -> do
         datum <- genBabbageDatum
         script <- genRefScript proof
         pure [FDatum datum, RefScript script]
       _ -> pure []
     Babbage _ -> case maybeCoreScript of
-      Just (PlutusScript _ _) -> do
+      Just (PlutusScript _) -> do
         datum <- genBabbageDatum
         script <- genRefScript proof
         pure [FDatum datum, RefScript script]
       _ -> pure []
     Alonzo _ -> case maybeCoreScript of
-      Just (PlutusScript _ _) -> do
+      Just (PlutusScript _) -> do
         (datahash, _data) <- genDatumWithHash
         pure [DHash (SJust datahash)]
       _ -> pure []

@@ -21,7 +21,6 @@ module Cardano.Ledger.Api.Scripts.ExUnits (
 )
 where
 
-import Cardano.Ledger.Alonzo.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
 import Cardano.Ledger.Alonzo.Scripts (
@@ -56,12 +55,12 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Array (Array, bounds, (!))
-import Data.ByteString.Short as SBS (ShortByteString)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -85,10 +84,7 @@ data TransactionScriptFailure era
     -- and the second parameter is the map of pointers which can be resolved.
     MissingScript
       !RdmrPtr
-      !( Map
-          RdmrPtr
-          (ScriptPurpose era, Maybe (ShortByteString, Language), ScriptHash (EraCrypto era))
-       )
+      !(Map RdmrPtr (ScriptPurpose era, Maybe Plutus, ScriptHash (EraCrypto era)))
   | -- | Missing datum.
     MissingDatum !(DataHash (EraCrypto era))
   | -- | Plutus evaluation error, for any version
@@ -310,14 +306,14 @@ evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
     scriptsAvailable = txscripts utxo tx
     AlonzoScriptsNeeded needed = getScriptsNeeded utxo txBody
     neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed
-    languagesUsed = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
+    languagesUsed = Set.fromList [lang | (_, Plutus lang _) <- neededAndConfirmedToBePlutus]
 
     ptrToPlutusScript = Map.fromList $ do
       (sp, sh) <- needed
       msb <- case Map.lookup sh scriptsAvailable of
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
-        Just (PlutusScript lang bytes) -> pure $ Just (bytes, lang)
+        Just (PlutusScript plutus) -> pure $ Just plutus
       pointer <- case rdptr txBody sp of
         SNothing -> []
         -- Since scriptsNeeded used the transaction to create script purposes,
@@ -334,7 +330,7 @@ evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
       (sp, mscript, sh) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
           Map.lookup pointer ptrToPlutusScript
-      (script, lang) <- note (MissingScript pointer ptrToPlutusScript) mscript
+      Plutus lang script <- note (MissingScript pointer ptrToPlutusScript) mscript
       inf <- note (RedeemerNotNeeded pointer sh) $ Map.lookup lang info
       cm <- note (NoCostModelInLedgerState lang) (lookupCostModel lang)
       args <- case sp of
@@ -348,7 +344,7 @@ evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
         _ -> pure [rdmr, valContext inf sp]
       let pArgs = map getPlutusData args
 
-      case interpreter lang (getEvaluationContext cm) maxBudget script pArgs of
+      case interpreter lang (getEvaluationContext cm) maxBudget (unBinaryPlutus script) pArgs of
         (logs, Left e) -> case lang of
           PlutusV1 ->
             let debug = PlutusDebugLang SPlutusV1 cm exunits script (PlutusData pArgs) protVer

@@ -39,7 +39,6 @@ where
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Language (Language (..), guardPlutus)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), BinaryPlutus (..), validScript)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
@@ -55,6 +54,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH))
+import Cardano.Ledger.Language (Language (..), Plutus (..), guardPlutus)
 import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes (..),
@@ -142,9 +142,9 @@ mkAlonzoTxAuxData atadrMetadata allScripts =
     partitionScripts (tss, pss1, pss2, pss3) =
       \case
         TimelockScript ts -> (ts :<| tss, pss1, pss2, pss3)
-        PlutusScript PlutusV1 ps1 -> (tss, BinaryPlutus ps1 : pss1, pss2, pss3)
-        PlutusScript PlutusV2 ps2 -> (tss, pss1, BinaryPlutus ps2 : pss2, pss3)
-        PlutusScript PlutusV3 ps3 -> (tss, pss1, pss2, BinaryPlutus ps3 : pss3)
+        PlutusScript (Plutus PlutusV1 ps1) -> (tss, ps1 : pss1, pss2, pss3)
+        PlutusScript (Plutus PlutusV2 ps2) -> (tss, pss1, ps2 : pss2, pss3)
+        PlutusScript (Plutus PlutusV3 ps3) -> (tss, pss1, pss2, ps3 : pss3)
     (atadrTimelock, plutusV1Scripts, plutusV2Scripts, plutusV3Scripts) =
       foldr (flip partitionScripts) (mempty, mempty, mempty, mempty) allScripts
     atadrPlutus =
@@ -161,7 +161,7 @@ getAlonzoTxAuxDataScripts :: Era era => AlonzoTxAuxData era -> StrictSeq (Alonzo
 getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadTimelock = timelocks, atadPlutus = plutus} =
   mconcat $
     (TimelockScript <$> timelocks)
-      : [ PlutusScript lang . unBinaryPlutus <$> StrictSeq.fromList (NE.toList plutusScripts)
+      : [ PlutusScript . Plutus lang <$> StrictSeq.fromList (NE.toList plutusScripts)
         | lang <- [PlutusV1 ..]
         , Just plutusScripts <- [Map.lookup lang plutus]
         ]

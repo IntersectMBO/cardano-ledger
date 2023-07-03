@@ -38,8 +38,8 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
   CollectError (..),
-  collectTwoPhaseScriptInputs,
-  evalScripts,
+  collectPlutusScriptsWithContext,
+  evalPlutusScripts,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
@@ -213,9 +213,9 @@ scriptsTransition ::
 scriptsTransition slot pp tx utxo action = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
-  case collectTwoPhaseScriptInputs (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
+  case collectPlutusScriptsWithContext (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
     Right sLst ->
-      when2Phase $ action $ evalScripts (pp ^. ppProtocolVersionL) tx sLst
+      when2Phase $ action $ evalPlutusScripts (pp ^. ppProtocolVersionL) tx sLst
     Left info
       | alonzoFailures <- filter isNotBadTranslation info
       , not (null alonzoFailures) ->

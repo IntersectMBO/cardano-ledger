@@ -34,7 +34,7 @@ instance CC.Crypto c => EraScript (ConwayEra c) where
   type Script (ConwayEra c) = AlonzoScript (ConwayEra c)
   scriptPrefixTag = babbageScriptPrefixTag
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
-  phaseScript PhaseTwoRep (PlutusScript lang bytes) = Just (Phase2Script lang bytes)
+  phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
   phaseScript _ _ = Nothing
 
 instance CC.Crypto c => EraTxAuxData (ConwayEra c) where

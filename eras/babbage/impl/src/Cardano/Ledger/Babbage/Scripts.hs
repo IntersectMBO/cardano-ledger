@@ -38,9 +38,9 @@ babbageScriptPrefixTag ::
 babbageScriptPrefixTag script =
   case script of
     TimelockScript _ -> nativeMultiSigTag -- "\x00"
-    PlutusScript PlutusV1 _ -> "\x01"
-    PlutusScript PlutusV2 _ -> "\x02"
-    PlutusScript PlutusV3 _ -> "\x03"
+    PlutusScript (Plutus PlutusV1 _) -> "\x01"
+    PlutusScript (Plutus PlutusV2 _) -> "\x02"
+    PlutusScript (Plutus PlutusV3 _) -> "\x03"
 
 type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock (BabbageEra c)
 
@@ -50,7 +50,7 @@ instance CC.Crypto c => EraScript (BabbageEra c) where
   type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
   scriptPrefixTag = babbageScriptPrefixTag
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
-  phaseScript PhaseTwoRep (PlutusScript lang bytes) = Just (Phase2Script lang bytes)
+  phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
   phaseScript _ _ = Nothing
 
 isPlutusScript :: forall era. EraScript era => Script era -> Bool

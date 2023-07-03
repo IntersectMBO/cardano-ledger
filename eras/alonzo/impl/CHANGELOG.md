@@ -1,8 +1,18 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.3.1.2
+## 1.4.0.0
 
-*
+* Change type of `Plutus` to use `BinaryPlutus` instead of `ShortByteString`
+* Deprecate `runPLCScript` in favor of `runPlutusScript`
+* Addition of `PlutusWithContext`
+* Deprecation of `collectTwoPhaseScriptInputs` in favor of `collectPlutusScriptsWithContext`
+* Deprecation of `evalScripts` in favor of `evalPlutusScripts`
+* Deprecation of `runPLCScript` in favor of `runPlutusScript`
+* Deprecation of `explainPlutusFailure` in favor of `explainPlutusEvaluationError`
+* Move `BinaryPlutus` into `cardano-ledger-core` package in `Cardano.Ledger.Language` module
+* Change `PlutusScript` constructor of the `AlonzoScript` type. It now accepts the new
+  `Plutus` type instead of a `Language` and `ShortByteString`
+* Rename `pdSBS` field to `pdPlutusScript` in the `PlutusDebugLang` data type
 
 ## 1.3.1.1
 

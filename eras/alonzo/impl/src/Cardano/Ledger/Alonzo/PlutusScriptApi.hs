@@ -17,27 +17,29 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi (
   getSpendingTxIn,
   getDatumAlonzo,
   evalScripts,
+  evalPlutusScripts,
   -- Figure 12
   scriptsNeeded,
   scriptsNeededFromBody,
   language,
   CollectError (..),
   collectTwoPhaseScriptInputs,
+  collectPlutusScriptsWithContext,
   knownToNotBe1Phase,
 )
 where
 
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), indexedRdmrs)
+import Cardano.Ledger.Alonzo.Scripts.Data (Data)
+import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,
   ExtendedUTxO (..),
+  PlutusWithContext (..),
   ScriptResult (..),
   TranslationError (..),
-  runPLCScript,
+  runPlutusScript,
   valContext,
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDats)
@@ -45,6 +47,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -53,7 +56,6 @@ import Data.ByteString.Short (ShortByteString)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Debug.Trace (traceEvent)
@@ -127,10 +129,10 @@ instance (Era era, DecCBOR (TxCert era)) => DecCBOR (CollectError era) where
 knownToNotBe1Phase ::
   Map.Map (ScriptHash (EraCrypto era)) (AlonzoScript era) ->
   (ScriptPurpose era, ScriptHash (EraCrypto era)) ->
-  Maybe (ScriptPurpose era, Language, ShortByteString)
+  Maybe (ScriptPurpose era, Plutus)
 knownToNotBe1Phase scriptsAvailable (sp, sh) = do
-  PlutusScript lang script <- sh `Map.lookup` scriptsAvailable
-  Just (sp, lang, script)
+  PlutusScript plutus <- sh `Map.lookup` scriptsAvailable
+  Just (sp, plutus)
 
 -- | Collect the inputs for twophase scripts. If any script can't find ist data return
 --     a list of CollectError, if all goes well return a list of quadruples with the inputs.
@@ -157,54 +159,81 @@ collectTwoPhaseScriptInputs ::
   UTxO era ->
   Either [CollectError era] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
-  let usedLanguages = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
-      costModels = costModelsValid $ pp ^. ppCostModelsL
+  map unwrap <$> collectPlutusScriptsWithContext ei sysS pp tx utxo
+  where
+    unwrap (PlutusWithContext (Plutus lang (BinaryPlutus scriptBytes)) args exUnits costModel) =
+      (scriptBytes, lang, args, exUnits, costModel)
+{-# DEPRECATED collectTwoPhaseScriptInputs "In favor of `collectPlutusScriptsWithContext`" #-}
+
+collectPlutusScriptsWithContext ::
+  forall era.
+  ( EraTx era
+  , MaryEraTxBody era
+  , AlonzoEraTxWits era
+  , EraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , ExtendedUTxO era
+  , Script era ~ AlonzoScript era
+  , AlonzoEraPParams era
+  , EraPlutusContext 'PlutusV1 era
+  ) =>
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  PParams era ->
+  Tx era ->
+  UTxO era ->
+  Either [CollectError era] [PlutusWithContext era]
+collectPlutusScriptsWithContext ei sysS pp tx utxo =
+  let usedLanguages = Set.fromList [lang | (_, Plutus lang _) <- neededAndConfirmedToBePlutus]
       missingCMs = Set.filter (`Map.notMember` costModels) usedLanguages
    in case Set.lookupMin missingCMs of
         Just l -> Left [NoCostModel l]
         Nothing ->
           merge
-            (apply costModels)
-            (map redeemer neededAndConfirmedToBePlutus)
-            (map getscript neededAndConfirmedToBePlutus)
+            apply
+            (map getScriptWithRedeemer neededAndConfirmedToBePlutus)
             (Right [])
   where
+    costModels = costModelsValid $ pp ^. ppCostModelsL
     scriptsAvailable = txscripts utxo tx
     txinfo lang = txInfo pp lang ei sysS utxo tx
     AlonzoScriptsNeeded scriptsNeeded' = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededAndConfirmedToBePlutus =
       mapMaybe (knownToNotBe1Phase scriptsAvailable) scriptsNeeded'
-    redeemer (sp, lang, _) =
+    getScriptWithRedeemer (sp, script) =
       case indexedRdmrs tx sp of
-        Just (d, eu) -> Right (lang, sp, d, eu)
+        Just (d, eu) -> Right (script, sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
-    getscript (_, _, script) = script
-    apply costs (lang, sp, d, eu) script =
+    apply (script@(Plutus lang _), sp, d, eu) =
       case txinfo lang of
         Right inf ->
           let datums = maybe id (:) (getDatum tx utxo sp) [d, valContext inf sp]
-           in Right (script, lang, datums, eu, costs Map.! lang)
+           in Right $
+                PlutusWithContext
+                  { pwcScript = script
+                  , pwcDatums = datums
+                  , pwcExUnits = eu
+                  , pwcCostModel = costModels Map.! lang
+                  }
         Left te -> Left $ BadTranslation te
 
 -- | Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.
-merge :: forall t1 t2 a1 a2. (t1 -> t2 -> Either a2 a1) -> [Either a2 t1] -> [t2] -> Either [a2] [a1] -> Either [a2] [a1]
-merge _f [] [] answer = answer
-merge _f [] (_ : _) answer = answer
-merge _f (_ : _) [] answer = answer
-merge f (x : xs) (y : ys) zs = merge f xs ys (gg x y zs)
+merge :: forall t b a. (t -> Either a b) -> [Either a t] -> Either [a] [b] -> Either [a] [b]
+merge _f [] answer = answer
+merge f (x : xs) zs = merge f xs (gg x zs)
   where
-    gg :: Either a2 t1 -> t2 -> Either [a2] [a1] -> Either [a2] [a1]
-    gg (Right a) b (Right cs) =
-      case f a b of
+    gg :: Either a t -> Either [a] [b] -> Either [a] [b]
+    gg (Right t) (Right cs) =
+      case f t of
         Right c -> Right $ c : cs
         Left e -> Left [e]
-    gg (Left a) _ (Right _) = Left [a]
-    gg (Right _) _ (Left cs) = Left cs
-    gg (Left a) _ (Left cs) = Left (a : cs)
+    gg (Left a) (Right _) = Left [a]
+    gg (Right _) (Left cs) = Left cs
+    gg (Left a) (Left cs) = Left (a : cs)
 
 language :: AlonzoScript era -> Maybe Language
-language (PlutusScript lang _) = Just lang
+language (PlutusScript (Plutus lang _)) = Just lang
 language (TimelockScript _) = Nothing
 
 -- | evaluate a list of scripts, All scripts in the list must be True.
@@ -217,22 +246,38 @@ evalScripts ::
   Tx era ->
   [(ShortByteString, Language, [Data era], ExUnits, CostModel)] ->
   ScriptResult
-evalScripts _pv _tx [] = mempty
-evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
+evalScripts pv tx scripts =
+  evalPlutusScripts pv tx scripts'
+  where
+    scripts' =
+      [ PlutusWithContext (Plutus lang (BinaryPlutus pscript)) ds units cost
+      | (pscript, lang, ds, units, cost) <- scripts
+      ]
+{-# DEPRECATED evalScripts "In favor of `evalPlutusScripts`" #-}
+
+-- | Evaluate a list of Plutus scripts. All scripts in the list must evaluate to `True`.
+evalPlutusScripts ::
+  (EraTx era, Script era ~ AlonzoScript era) =>
+  ProtVer ->
+  Tx era ->
+  [PlutusWithContext era] ->
+  ScriptResult
+evalPlutusScripts _pv _tx [] = mempty
+evalPlutusScripts pv tx (plutusWithContext : rest) =
   let beginMsg =
         intercalate
           ","
           [ "[LEDGER][PLUTUS_SCRIPT]"
           , "BEGIN"
           ]
-      !res = traceEvent beginMsg $ runPLCScript (Proxy @era) pv lang cost pscript units (map getPlutusData ds)
+      !res = traceEvent beginMsg $ runPlutusScript pv plutusWithContext
       endMsg =
         intercalate
           ","
           [ "[LEDGER][PLUTUS_SCRIPT]"
           , "END"
           ]
-   in traceEvent endMsg res <> evalScripts pv tx rest
+   in traceEvent endMsg res <> evalPlutusScripts pv tx rest
 
 -- Collect information (purpose and ScriptHash) about all the
 -- Credentials that refer to scripts, that might be run in a Tx.

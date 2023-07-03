@@ -14,11 +14,14 @@ module Test.Cardano.Ledger.Alonzo.ChainTrace (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (
+  collectPlutusScriptsWithContext,
+  evalPlutusScripts,
+ )
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
-import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..))
+import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..), pwcScript)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
 import Cardano.Ledger.Slot (EpochSize (..))
@@ -103,7 +106,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
             collected =
               -- Note that none of our plutus scripts use validity intervals,
               -- so it is safe to use anything for the epech info and the system start.
-              case collectTwoPhaseScriptInputs
+              case collectPlutusScriptsWithContext
                 (fixedEpochInfo (EpochSize 100) (mkSlotLength 1)) -- arbitrary
                 (SystemStart $ posixSecondsToUTCTime 0) -- arbitrary
                 pp
@@ -111,10 +114,10 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
                 (UTxO u) of
                 Left e -> error $ "Plutus script collection error: " <> show e
                 Right c -> c
-            collectedScripts = Set.fromList $ map (\(s, v, _, _, _) -> (v, s)) collected
-            suppliedPScrpts = Set.fromList [(v, s) | PlutusScript v s <- Map.elems allScripts]
+            collectedScripts = Set.fromList $ map pwcScript collected
+            suppliedPScrpts = Set.fromList [plutus | PlutusScript plutus <- Map.elems allScripts]
             expectedPScripts = collectedScripts == suppliedPScrpts
-            allPlutusTrue = case evalScripts (pp ^. ppProtocolVersionL) tx collected of
+            allPlutusTrue = case evalPlutusScripts (pp ^. ppProtocolVersionL) tx collected of
               Fails _ _ -> False
               Passes _ -> True
          in counterexample

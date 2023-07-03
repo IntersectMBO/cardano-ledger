@@ -4,7 +4,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -14,15 +13,16 @@ module Test.Cardano.Ledger.Alonzo.PlutusScriptExamples (
 where
 
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.TxInfo (
+  PlutusWithContext (..),
   ScriptResult (Fails, Passes),
-  runPLCScript,
+  runPlutusScript,
  )
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
+import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Data.ByteString.Short (ShortByteString)
-import Data.Proxy (Proxy (..))
 import PlutusLedgerApi.Test.EvaluationContext
 import PlutusLedgerApi.Test.Examples (
   alwaysFailingNAryFunction,
@@ -73,7 +73,7 @@ directPlutusTest expectation script ds =
 getRawPlutusScript :: String -> AlonzoScript () -> ShortByteString
 getRawPlutusScript name =
   \case
-    PlutusScript _ sbs -> sbs
+    PlutusScript (Plutus _ (BinaryPlutus sbs)) -> sbs
     _ -> error $ "Should not happen '" ++ name ++ "' is a plutus script"
 
 -- | Expects 3 args (data, redeemer, context)
@@ -181,25 +181,20 @@ tests =
 
 -- =========================================
 
-alonzo :: Proxy Alonzo
-alonzo = Proxy
-
 explainTest :: AlonzoScript Alonzo -> ShouldSucceed -> [PV1.Data] -> Assertion
-explainTest script@(PlutusScript _ bytes) mode ds =
-  case ( mode
-       , runPLCScript
-          alonzo
-          (ProtVer (natVersion @6) 0)
-          PlutusV1
-          testingCostModelV1
-          bytes
-          (ExUnits 100000000 10000000)
-          ds
-       ) of
-    (ShouldSucceed, Passes _) -> assertBool "" True
-    (ShouldSucceed, Fails _ xs) -> assertBool (show xs) False
-    (ShouldFail, Passes _) -> assertBool ("Test that should fail, passes: " ++ show script) False
-    (ShouldFail, Fails _ _) -> assertBool "" True
+explainTest script@(PlutusScript plutus) mode ds =
+  let pwc =
+        PlutusWithContext
+          { pwcScript = plutus {plutusLanguage = PlutusV1}
+          , pwcDatums = map (Data @Alonzo) ds
+          , pwcExUnits = ExUnits 100000000 10000000
+          , pwcCostModel = testingCostModelV1
+          }
+   in case (mode, runPlutusScript (ProtVer (natVersion @6) 0) pwc) of
+        (ShouldSucceed, Passes _) -> assertBool "" True
+        (ShouldSucceed, Fails _ xs) -> assertBool (show xs) False
+        (ShouldFail, Passes _) -> assertBool ("Test that should fail, passes: " ++ show script) False
+        (ShouldFail, Fails _ _) -> assertBool "" True
 explainTest _other _mode _ds = assertBool "BAD Script" False
 
 explainTestTree :: TestTree
