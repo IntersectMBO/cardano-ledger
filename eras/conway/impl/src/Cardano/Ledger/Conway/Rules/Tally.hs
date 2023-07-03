@@ -7,7 +7,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -184,7 +183,10 @@ tallyTransition = do
                   st'
         updateState st'' xs
 
-  updateState st $ Seq.zip govProcedures [0 ..]
+  updateState st $
+    Seq.zip
+      govProcedures
+      (Seq.fromList [0 .. fromIntegral (Seq.length govProcedures - 1)])
 
 instance Inject (ConwayTallyPredFailure era) (ConwayTallyPredFailure era) where
   inject = id
