@@ -22,8 +22,8 @@
     supportedSystems = [
       "x86_64-linux"
       "x86_64-darwin"
-      "aarch64-linux"
-      "aarch64-darwin"
+      # "aarch64-linux" - disable these temporarily because the build is broken
+      # "aarch64-darwin" - disable these temporarily because the build is broken
     ];
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
@@ -68,6 +68,12 @@
           inputMap = {
             "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
           };
+          cabalProjectLocal = ''
+            repository cardano-haskell-packages-local
+              url: file:${inputs.CHaP}
+              secure: True
+            active-repositories: hackage.haskell.org, cardano-haskell-packages-local
+          '';
 
           # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
           shell.shellHook = ''
@@ -159,6 +165,7 @@
           );
       in
         lib.recursiveUpdate flake rec {
+          project = cabalProject;
           # add a required job, that's basically all hydraJobs.
           hydraJobs =
             nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
