@@ -2,6 +2,8 @@
 
 ## 1.5.0.0
 
+* Add `ensConstitutionL` and `rsEnactStateL` to `Governance` #3506
+  * Override `getConsitutionHash` for Conway to return just the hash of the constitution
 * Added `ConwayWdrlNotDelegatedToDRep` to `ConwayLedgerPredFailure`
 * Changed the type of voting delegatee from `Credential` to `DRep`
 * Removal of `VoterRole` in favor of `Voter`

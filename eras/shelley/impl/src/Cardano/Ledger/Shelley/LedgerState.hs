@@ -95,6 +95,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
   utxosFeesL,
   utxosGovernanceL,
+  nesEpochStateL,
 ) where
 
 import Cardano.Ledger.CertState
