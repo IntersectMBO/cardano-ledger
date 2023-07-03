@@ -1,8 +1,7 @@
 # code owners are automatically assigned to review PRs
 
-# Devops
-.buildkite @input-output-hk/devops
-.github    @input-output-hk/devops
-nix        @input-output-hk/devops
-*.nix      @input-output-hk/devops
-bors.toml  @input-output-hk/devops
+# DevX
+*.nix       @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
+nix         @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
+flake.lock  @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
+.github     @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
