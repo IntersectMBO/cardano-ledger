@@ -31,7 +31,7 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceProcedure,
   ProposalProcedure (..),
   Vote (..),
-  VoterRole (..),
+  Voter (..),
   VotingProcedure (..),
  )
 import Cardano.Ledger.Conway.Rules (
@@ -256,18 +256,20 @@ instance PrettyA (GovernanceActionId era) where
 instance PrettyA GovernanceActionIx where
   prettyA (GovernanceActionIx x) = prettyA x
 
-instance PrettyA VoterRole where
+instance PrettyA (Voter c) where
   prettyA = ppString . show
 
 instance PrettyA (Anchor era) where
   prettyA = viaShow
 
 instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionState era) where
-  prettyA gas@(GovernanceActionState _ _ _ _ _) =
+  prettyA gas@(GovernanceActionState _ _ _ _ _ _ _) =
     let GovernanceActionState {..} = gas
      in ppRecord
           "GovernanceActionState"
-          [ ("Votes", prettyA gasVotes)
+          [ ("CommitteVotes", prettyA gasCommitteeVotes)
+          , ("DRepVotes", prettyA gasDRepVotes)
+          , ("StakePoolVotes", prettyA gasStakePoolVotes)
           , ("Deposit", prettyA gasDeposit)
           , ("Return Address", prettyA gasReturnAddr)
           , ("Action", prettyA gasAction)
@@ -307,13 +309,12 @@ instance
   ) =>
   PrettyA (ConwayGovernance era)
   where
-  prettyA cg@(ConwayGovernance _ _ _) =
+  prettyA cg@(ConwayGovernance _ _) =
     let ConwayGovernance {..} = cg
      in ppRecord
           "ConwayGovernance"
           [ ("Tally", prettyA cgTally)
           , ("Ratify", prettyA cgRatify)
-          , ("VoterRoles", prettyA cgVoterRoles)
           ]
 
 instance

@@ -156,12 +156,12 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , src@(NewEpochState eL _ bcur eps ru _pd _)
+      , nes@(NewEpochState eL _ bcur eps ru _pd _)
       , eNo
       ) <-
     judgmentContext
   if eNo /= eL + 1
-    then pure src
+    then pure nes
     else do
       es' <- case ru of
         SNothing -> pure eps
@@ -177,8 +177,8 @@ newEpochTransition = do
           ratEnv =
             RatifyEnv
               { reStakeDistr = stakeDistr
+              , reStakePoolDistr = nesPd nes
               , reCurrentEpoch = eL + 1
-              , reRoles = cgVoterRoles govSt
               }
           tallyStateToSeq = Seq.fromList . Map.toList
           ratSig = RatifySignal . tallyStateToSeq . unConwayTallyState $ cgTally govSt
@@ -192,7 +192,7 @@ newEpochTransition = do
       let ss = esSnapshots es'''
           pd' = calculatePoolDistr (ssStakeSet ss)
       pure $
-        src
+        nes
           { nesEL = eNo
           , nesBprev = bcur
           , nesBcur = BlocksMade mempty

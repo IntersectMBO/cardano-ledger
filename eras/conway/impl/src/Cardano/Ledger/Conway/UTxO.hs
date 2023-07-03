@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -13,9 +13,9 @@ import Cardano.Ledger.Alonzo.UTxO (
  )
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..), EraTxBody (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Governance (VotingProcedure (..))
+import Cardano.Ledger.Conway.Governance (Voter (..), VotingProcedure (..))
 import Cardano.Ledger.Conway.TxBody ()
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
@@ -28,14 +28,17 @@ getConwayScriptsNeeded ::
   UTxO era ->
   TxBody era ->
   AlonzoScriptsNeeded era
-getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voteScripts
+getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voterScripts
   where
-    getMaybeScript VotingProcedure {..} = case vProcRoleKeyHash of
-      ScriptHashObj sh -> Just (error "TODO Add the voting script purpose here once that gets added", sh)
-      _ -> Nothing
+    getMaybeScriptHash VotingProcedure {vProcVoter} =
+      (,) (error "TODO: Implement VoterScriptPurpose")
+        <$> case vProcVoter of
+          CommitteeVoter cred -> credScriptHash cred
+          DRepVoter cred -> credScriptHash cred
+          StakePoolVoter _ -> Nothing
 
-    voteScripts =
-      AlonzoScriptsNeeded . mapMaybe getMaybeScript . toList $
+    voterScripts =
+      AlonzoScriptsNeeded . mapMaybe getMaybeScriptHash . toList $
         txb ^. votingProceduresTxBodyL
 
 instance Crypto c => EraUTxO (ConwayEra c) where

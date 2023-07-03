@@ -77,7 +77,6 @@ instance
     ConwayGovernance
       <$> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
@@ -111,6 +110,8 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceAction
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceAction era) where
   arbitrary =
@@ -128,8 +129,13 @@ instance Crypto c => Arbitrary (GovernanceActionId c) where
 
 deriving instance Arbitrary GovernanceActionIx
 
-instance Arbitrary VoterRole where
-  arbitrary = arbitraryBoundedEnum
+instance Crypto c => Arbitrary (Voter c) where
+  arbitrary =
+    oneof
+      [ CommitteeVoter <$> arbitrary
+      , DRepVoter <$> arbitrary
+      , StakePoolVoter <$> arbitrary
+      ]
 
 instance Arbitrary Vote where
   arbitrary = arbitraryBoundedEnum
@@ -176,7 +182,6 @@ instance Era era => Arbitrary (TallyEnv era) where
     TallyEnv
       <$> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 instance Crypto c => Arbitrary (Anchor c) where
   arbitrary =
@@ -185,7 +190,7 @@ instance Crypto c => Arbitrary (Anchor c) where
       <*> arbitrary
 
 instance Era era => Arbitrary (VotingProcedure era) where
-  arbitrary = VotingProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = VotingProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedure era) where
   arbitrary = ProposalProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
@@ -198,11 +203,7 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProced
       ]
 
 instance Era era => Arbitrary (ConwayTallyPredFailure era) where
-  arbitrary =
-    oneof
-      [ VoterDoesNotHaveRole <$> arbitrary <*> arbitrary
-      , GovernanceActionDoesNotExist <$> arbitrary
-      ]
+  arbitrary = GovernanceActionDoesNotExist <$> arbitrary
 
 instance
   ( Arbitrary (PredicateFailure (EraRule "UTXOW" era))

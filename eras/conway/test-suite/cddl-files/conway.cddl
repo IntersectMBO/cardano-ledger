@@ -73,8 +73,7 @@ transaction_body =
 
 voting_procedure =
   [ governance_action_id
-  , voter_role
-  , voting_credential
+  , voter
   , vote
   , anchor / null
   ]
@@ -110,10 +109,18 @@ new_constitution = (5, $hash32)
 
 info_action = 6
 
-; constitutional committee - 0
-; DRep - 1
-; SPO - 2
-voter_role = 0 .. 2
+; Constitutional Committee Hot KeyHash: 0
+; Constitutional Committee Hot ScriptHash: 1
+; DRep KeyHash: 2
+; DRep ScriptHash: 3
+; StakingPool KeyHash: 4
+voter =
+  [ 0, addr_keyhash
+  // 1, scripthash
+  // 2, addr_keyhash
+  // 3, scripthash
+  // 4, addr_keyhash
+  ]
 
 anchor =
   [ anchor_url       : url
