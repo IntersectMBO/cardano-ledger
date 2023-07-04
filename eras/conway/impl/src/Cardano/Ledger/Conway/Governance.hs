@@ -17,12 +17,12 @@
 
 module Cardano.Ledger.Conway.Governance (
   EraGovernance (..),
-  ConwayTallyState (..),
+  ConwayGovState (..),
   EnactState (..),
   RatifyState (..),
   ConwayGovernance (..),
   -- Lenses
-  cgTallyL,
+  cgGovL,
   cgRatifyL,
   GovernanceAction (..),
   GovernanceActionState (..),
@@ -147,30 +147,30 @@ instance EraPParams era => EncCBOR (GovernanceActionState era) where
         !> To gasAction
         !> To gasProposedIn
 
-newtype ConwayTallyState era = ConwayTallyState
-  { unConwayTallyState :: Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era)
+newtype ConwayGovState era = ConwayGovState
+  { unConwayGovState :: Map (GovernanceActionId (EraCrypto era)) (GovernanceActionState era)
   }
   deriving (Generic, NFData)
 
-deriving instance EraPParams era => Eq (ConwayTallyState era)
+deriving instance EraPParams era => Eq (ConwayGovState era)
 
-deriving instance EraPParams era => Show (ConwayTallyState era)
+deriving instance EraPParams era => Show (ConwayGovState era)
 
-deriving instance EraPParams era => ToJSON (ConwayTallyState era)
+deriving instance EraPParams era => ToJSON (ConwayGovState era)
 
-instance EraPParams era => NoThunks (ConwayTallyState era)
+instance EraPParams era => NoThunks (ConwayGovState era)
 
-instance Default (ConwayTallyState era) where
-  def = ConwayTallyState mempty
+instance Default (ConwayGovState era) where
+  def = ConwayGovState mempty
 
-deriving instance EraPParams era => EncCBOR (ConwayTallyState era)
+deriving instance EraPParams era => EncCBOR (ConwayGovState era)
 
-deriving instance EraPParams era => DecCBOR (ConwayTallyState era)
+deriving instance EraPParams era => DecCBOR (ConwayGovState era)
 
-instance EraPParams era => ToCBOR (ConwayTallyState era) where
+instance EraPParams era => ToCBOR (ConwayGovState era) where
   toCBOR = toEraCBOR @era
 
-instance EraPParams era => FromCBOR (ConwayTallyState era) where
+instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
 data EnactState era = EnactState
@@ -296,13 +296,13 @@ toRatifyStatePairs cg@(RatifyState _ _) =
       ]
 
 data ConwayGovernance era = ConwayGovernance
-  { cgTally :: !(ConwayTallyState era)
+  { cgGov :: !(ConwayGovState era)
   , cgRatify :: !(RatifyState era)
   }
   deriving (Generic, Eq, Show)
 
-cgTallyL :: Lens' (ConwayGovernance era) (ConwayTallyState era)
-cgTallyL = lens cgTally (\x y -> x {cgTally = y})
+cgGovL :: Lens' (ConwayGovernance era) (ConwayGovState era)
+cgGovL = lens cgGov (\x y -> x {cgGov = y})
 
 cgRatifyL :: Lens' (ConwayGovernance era) (RatifyState era)
 cgRatifyL = lens cgRatify (\x y -> x {cgRatify = y})
@@ -318,7 +318,7 @@ instance EraPParams era => EncCBOR (ConwayGovernance era) where
   encCBOR ConwayGovernance {..} =
     encode $
       Rec ConwayGovernance
-        !> To cgTally
+        !> To cgGov
         !> To cgRatify
 
 instance EraPParams era => ToCBOR (ConwayGovernance era) where
@@ -340,7 +340,7 @@ instance EraPParams era => ToJSON (ConwayGovernance era) where
 toConwayGovernancePairs :: (KeyValue a, EraPParams era) => ConwayGovernance era -> [a]
 toConwayGovernancePairs cg@(ConwayGovernance _ _) =
   let ConwayGovernance {..} = cg
-   in [ "tally" .= cgTally
+   in [ "tally" .= cgGov
       , "ratify" .= cgRatify
       ]
 

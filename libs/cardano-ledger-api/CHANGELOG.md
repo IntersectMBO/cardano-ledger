@@ -6,6 +6,8 @@
 * Addition of `Cardano.Ledger.Api.Tx.Cert`
 * Removal of `VoterRole` in favor of `Voter`
 * Removal of `cgVoterRolesL` and `cgVoterRoles` as no longer needed.
+* Rename `cgTallyL` to `cgGovL`
+* Rename `ConwayTallyState` to `ConwayGovState`
 
 ## 1.2.1.0
 

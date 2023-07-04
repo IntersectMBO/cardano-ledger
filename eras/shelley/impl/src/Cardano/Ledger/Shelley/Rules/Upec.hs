@@ -124,10 +124,10 @@ votedValue ::
   Int ->
   Maybe (PParams era)
 votedValue (ProposedPPUpdates pup) pps quorumN =
-  let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
+  let incrGov vote tally = 1 + Map.findWithDefault 0 vote tally
       votes =
         Map.foldr
-          (\vote tally -> Map.insert vote (incrTally vote tally) tally)
+          (\vote tally -> Map.insert vote (incrGov vote tally) tally)
           (Map.empty :: Map (PParamsUpdate era) Int)
           pup
       consensus = Map.filter (>= quorumN) votes

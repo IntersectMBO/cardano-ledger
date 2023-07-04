@@ -26,16 +26,16 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEG, ConwayPOOL, ConwayVDEL)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
-import Cardano.Ledger.Conway.Rules.VDel (ConwayVDelPredFailure)
+import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert, ConwayDelegCert, ConwayTxCert (..))
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState,
   DelegEnv (DelegEnv),
   DelplEnv (DelplEnv),
+  VState,
   PState,
   PoolEnv (PoolEnv),
-  VState,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
@@ -56,7 +56,7 @@ import NoThunks.Class (NoThunks)
 data ConwayCertPredFailure era
   = DelegFailure (PredicateFailure (EraRule "DELEG" era))
   | PoolFailure (PredicateFailure (EraRule "POOL" era))
-  | VDelFailure (PredicateFailure (EraRule "VDEL" era))
+  | GovCertFailure (PredicateFailure (EraRule "VDEL" era))
   deriving (Generic)
 
 deriving stock instance
@@ -90,7 +90,7 @@ instance
 data ConwayCertEvent era
   = DelegEvent (Event (ConwayDELEG era))
   | PoolEvent (Event (ConwayPOOL era))
-  | VDelEvent (Event (ConwayVDEL era))
+  | GovCertEvent (Event (ConwayVDEL era))
 
 instance
   forall era.
@@ -176,12 +176,12 @@ instance
 instance
   ( Era era
   , STS (ConwayVDEL era)
-  , PredicateFailure (EraRule "VDEL" era) ~ ConwayVDelPredFailure era
+  , PredicateFailure (EraRule "VDEL" era) ~ ConwayGovCertPredFailure era
   ) =>
   Embed (ConwayVDEL era) (ConwayCERT era)
   where
-  wrapFailed = VDelFailure
-  wrapEvent = VDelEvent
+  wrapFailed = GovCertFailure
+  wrapEvent = GovCertEvent
 
 instance
   ( Typeable era
@@ -195,7 +195,7 @@ instance
     encode . \case
       DelegFailure x -> Sum (DelegFailure @era) 1 !> To x
       PoolFailure x -> Sum (PoolFailure @era) 2 !> To x
-      VDelFailure x -> Sum (VDelFailure @era) 3 !> To x
+      GovCertFailure x -> Sum (GovCertFailure @era) 3 !> To x
 
 instance
   ( Typeable era
@@ -209,5 +209,5 @@ instance
     decode $ Summands "ConwayCertPredFailure" $ \case
       1 -> SumD DelegFailure <! From
       2 -> SumD PoolFailure <! From
-      3 -> SumD VDelFailure <! From
+      3 -> SumD GovCertFailure <! From
       n -> Invalid n

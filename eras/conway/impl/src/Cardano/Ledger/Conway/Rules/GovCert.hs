@@ -11,10 +11,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.VDel (
+module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayVDEL,
-  ConwayVDelEvent (..),
-  ConwayVDelPredFailure (..),
+  ConwayGovCertEvent (..),
+  ConwayGovCertPredFailure (..),
 )
 where
 
@@ -54,20 +54,20 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data ConwayVDelPredFailure era
+data ConwayGovCertPredFailure era
   = ConwayDRepAlreadyRegisteredVDEL !(Credential 'Voting (EraCrypto era))
   | ConwayDRepNotRegisteredVDEL !(Credential 'Voting (EraCrypto era))
   | ConwayDRepIncorrectDepositVDEL !Coin
   | ConwayCommitteeHasResignedVDEL !(KeyHash 'CommitteeColdKey (EraCrypto era))
   deriving (Show, Eq, Generic)
 
-instance NoThunks (ConwayVDelPredFailure era)
+instance NoThunks (ConwayGovCertPredFailure era)
 
-instance NFData (ConwayVDelPredFailure era)
+instance NFData (ConwayGovCertPredFailure era)
 
 instance
   (Typeable era, Crypto (EraCrypto era)) =>
-  EncCBOR (ConwayVDelPredFailure era)
+  EncCBOR (ConwayGovCertPredFailure era)
   where
   encCBOR = \case
     ConwayDRepAlreadyRegisteredVDEL cred ->
@@ -89,9 +89,9 @@ instance
 
 instance
   (Typeable era, Crypto (EraCrypto era)) =>
-  DecCBOR (ConwayVDelPredFailure era)
+  DecCBOR (ConwayGovCertPredFailure era)
   where
-  decCBOR = decodeRecordSum "ConwayVDelPredFailure" $
+  decCBOR = decodeRecordSum "ConwayGovCertPredFailure" $
     \case
       0 -> do
         cred <- decCBOR
@@ -107,7 +107,7 @@ instance
         pure (2, ConwayCommitteeHasResignedVDEL keyH)
       k -> invalidKey k
 
-newtype ConwayVDelEvent era = VDelEvent (Event (EraRule "VDEL" era))
+newtype ConwayGovCertEvent era = GovCertEvent (Event (EraRule "VDEL" era))
 
 instance
   ( EraPParams era
@@ -124,13 +124,13 @@ instance
   type Signal (ConwayVDEL era) = ConwayCommitteeCert (EraCrypto era)
   type Environment (ConwayVDEL era) = PParams era
   type BaseM (ConwayVDEL era) = ShelleyBase
-  type PredicateFailure (ConwayVDEL era) = ConwayVDelPredFailure era
-  type Event (ConwayVDEL era) = ConwayVDelEvent era
+  type PredicateFailure (ConwayVDEL era) = ConwayGovCertPredFailure era
+  type Event (ConwayVDEL era) = ConwayGovCertEvent era
 
-  transitionRules = [conwayVDelTransition @era]
+  transitionRules = [conwayGovCertTransition @era]
 
-conwayVDelTransition :: TransitionRule (ConwayVDEL era)
-conwayVDelTransition = do
+conwayGovCertTransition :: TransitionRule (ConwayVDEL era)
+conwayGovCertTransition = do
   TRC
     ( _pp
       , vState@VState {vsDReps, vsCommitteeHotKeys}

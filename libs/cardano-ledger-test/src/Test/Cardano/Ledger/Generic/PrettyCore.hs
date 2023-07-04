@@ -51,7 +51,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
+import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochPredFailure (..),
   ConwayNewEpochPredFailure,
@@ -103,13 +103,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
+  VState (..),
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
   PPUPPredFailure,
   PState (..),
   UTxOState (..),
-  VState (..),
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyBbodyPredFailure (..),
@@ -1563,8 +1563,8 @@ pcTxBody proof txbody = ppRecord "TxBody" pairs
     fields = abstractTxBody proof txbody
     pairs = concatMap (pcTxBodyField proof) fields
 
-instance PrettyC (ConwayTallyState era) era where
-  prettyC proof (ConwayTallyState x) = case proof of
+instance PrettyC (ConwayGovState era) era where
+  prettyC proof (ConwayGovState x) = case proof of
     Shelley _ -> ppMap prettyA prettyA x
     Mary _ -> ppMap prettyA prettyA x
     Allegra _ -> ppMap prettyA prettyA x

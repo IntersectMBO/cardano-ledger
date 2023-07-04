@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.4.0.1
+## 1.5.0.0
 
-*
+* Replaced `TranslateEra (BabbageEra c) VState` with `TranslateEra (BabbageEra c) GState`
 
 ## 1.4.0.0
 

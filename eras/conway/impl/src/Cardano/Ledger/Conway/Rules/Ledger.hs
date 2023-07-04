@@ -36,12 +36,12 @@ import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayLEDGER, ConwayTALLY, ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (
+  ConwayGovState,
   ConwayGovernance (..),
-  ConwayTallyState,
   GovernanceProcedures (..),
  )
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
-import Cardano.Ledger.Conway.Rules.Tally (ConwayTallyPredFailure, TallyEnv (..))
+import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -95,7 +95,7 @@ import NoThunks.Class (NoThunks (..))
 data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
-  | ConwayTallyFailure (PredicateFailure (EraRule "TALLY" era)) -- Subtransition Failures
+  | ConwayGovFailure (PredicateFailure (EraRule "TALLY" era)) -- Subtransition Failures
   | ConwayWdrlNotDelegatedToDRep (Set (Credential 'Staking (EraCrypto era)))
   deriving (Generic)
 
@@ -143,7 +143,7 @@ instance
     encode . \case
       ConwayUtxowFailure x -> Sum (ConwayUtxowFailure @era) 1 !> To x
       ConwayCertsFailure x -> Sum (ConwayCertsFailure @era) 2 !> To x
-      ConwayTallyFailure x -> Sum (ConwayTallyFailure @era) 3 !> To x
+      ConwayGovFailure x -> Sum (ConwayGovFailure @era) 3 !> To x
       ConwayWdrlNotDelegatedToDRep x ->
         Sum (ConwayWdrlNotDelegatedToDRep @era) 4 !> To x
 
@@ -159,13 +159,13 @@ instance
     decode $ Summands "ConwayLedgerPredFailure" $ \case
       1 -> SumD ConwayUtxowFailure <! From
       2 -> SumD ConwayCertsFailure <! From
-      3 -> SumD ConwayTallyFailure <! From
+      3 -> SumD ConwayGovFailure <! From
       n -> Invalid n
 
 data ConwayLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
   | CertsEvent (Event (EraRule "CERTS" era))
-  | TallyEvent (Event (EraRule "TALLY" era))
+  | GovEvent (Event (EraRule "TALLY" era))
 
 instance
   ( AlonzoEraTx era
@@ -176,10 +176,10 @@ instance
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "TALLY" era) ~ ConwayTallyState era
+  , State (EraRule "TALLY" era) ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ DelegsEnv era
-  , Environment (EraRule "TALLY" era) ~ TallyEnv era
+  , Environment (EraRule "TALLY" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "TALLY" era) ~ GovernanceProcedures era
@@ -232,9 +232,9 @@ ledgerTransition ::
   , Embed (EraRule "CERTS" era) (someLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "TALLY" era) ~ ConwayTallyState era
+  , State (EraRule "TALLY" era) ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Environment (EraRule "TALLY" era) ~ TallyEnv era
+  , Environment (EraRule "TALLY" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ DelegsEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
@@ -283,8 +283,8 @@ ledgerTransition = do
   tallySt' <-
     trans @(EraRule "TALLY" era) $
       TRC
-        ( TallyEnv (txid txBody) epoch
-        , cgTally govSt
+        ( GovEnv (txid txBody) epoch
+        , cgGov govSt
         , govProcedures
         )
 
@@ -292,7 +292,7 @@ ledgerTransition = do
     trans @(EraRule "UTXOW" era) $
       TRC
         ( UtxoEnv @era slot pp certState genCerts
-        , utxoSt {utxosGovernance = govSt {cgTally = tallySt'}}
+        , utxoSt {utxosGovernance = govSt {cgGov = tallySt'}}
         , tx
         )
   pure $ LedgerState utxoSt' certState'
@@ -346,13 +346,13 @@ instance
   , GovernanceState era ~ ConwayGovernance era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ DelegsEnv era
-  , Environment (EraRule "TALLY" era) ~ TallyEnv era
+  , Environment (EraRule "TALLY" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "TALLY" era) ~ GovernanceProcedures era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "TALLY" era) ~ ConwayTallyState era
+  , State (EraRule "TALLY" era) ~ ConwayGovState era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   ) =>
@@ -364,10 +364,10 @@ instance
 instance
   ( Era era
   , BaseM (ConwayLEDGER era) ~ ShelleyBase
-  , PredicateFailure (EraRule "TALLY" era) ~ ConwayTallyPredFailure era
+  , PredicateFailure (EraRule "TALLY" era) ~ ConwayGovPredFailure era
   , Event (EraRule "TALLY" era) ~ ()
   ) =>
   Embed (ConwayTALLY era) (ConwayLEDGER era)
   where
-  wrapFailed = ConwayTallyFailure
-  wrapEvent = TallyEvent
+  wrapFailed = ConwayGovFailure
+  wrapEvent = GovEvent

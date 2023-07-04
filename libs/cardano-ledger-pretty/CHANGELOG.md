@@ -3,6 +3,7 @@
 ## 1.2.1.0
 
 * Added `PrettyA` instance for `DRep`
+* Replaced `VState` with `GState`
 
 ## 1.2.0.1
 

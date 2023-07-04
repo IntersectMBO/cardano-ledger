@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.3.1.2
+## 1.4.0.0
 
-*
+* Replaced `TranslateEra (AlonzoEra c) VState` with `TranslateEra (AlonzoEra c) GState`
 
 ## 1.3.1.1
 

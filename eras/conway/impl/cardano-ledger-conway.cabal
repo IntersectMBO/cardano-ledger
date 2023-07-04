@@ -43,14 +43,14 @@ library
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
         Cardano.Ledger.Conway.Rules.Pool
-        Cardano.Ledger.Conway.Rules.VDel
+        Cardano.Ledger.Conway.Rules.GovCert
         Cardano.Ledger.Conway.Rules.Certs
         Cardano.Ledger.Conway.Rules.Enact
         Cardano.Ledger.Conway.Rules.Epoch
         Cardano.Ledger.Conway.Rules.Ledger
         Cardano.Ledger.Conway.Rules.NewEpoch
         Cardano.Ledger.Conway.Rules.Ratify
-        Cardano.Ledger.Conway.Rules.Tally
+        Cardano.Ledger.Conway.Rules.Gov
         Cardano.Ledger.Conway.Rules.Tickf
         Cardano.Ledger.Conway.Rules.Utxos
         Cardano.Ledger.Conway.Rules.Utxow

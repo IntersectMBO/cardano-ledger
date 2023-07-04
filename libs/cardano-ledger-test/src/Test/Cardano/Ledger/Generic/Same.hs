@@ -41,12 +41,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
   EpochState (..),
+  VState (..),
   LedgerState (..),
   NewEpochState (..),
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
-  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Translation ()

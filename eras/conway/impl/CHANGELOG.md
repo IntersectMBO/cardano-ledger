@@ -17,11 +17,22 @@
   `gasStakePoolVotes` in `GovernanceActionState`
 * Removal of `reRoles` from `RatifyEnv` as no longer needed
 * Addtion of `reStakePoolDistr` to `RatifyEnv`
-* Remove `VoterDoesNotHaveRole` as no longer needed from `ConwayTallyPredFailure`
+* Remove `VoterDoesNotHaveRole` as no longer needed from `ConwayGovPredFailure`
 * Added `ConwayEpochPredFailure`
 * Added instance for `Embed (ConwayRATIFY era) (ConwayEPOCH era)`
 * Removed instance for `Embed (ConwayRATIFY era) (ConwayNEWEPOCH era)`
 * Changed superclasses of `STS (ConwayEPOCH era)` and `STS (ConwayNEWEPOCH era)`
+* Replace `VState` with `GState` in constraints
+* Rename:
+    `cgTally` -> `cgGov`
+    `cgTallyL` -> `cgGovL`
+    `VDelFailure` -> `GovCertFailure`
+    `VDelEvent` -> `GovCertEvent`
+    `certVState` -> `certGState`
+    `ConwayVDelPredFailure` -> `ConwayGovCertPredFailure`
+    `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
+    `TallyEnv` -> `GovEnv`
+    `ConwayTallyState` -> `ConwayGovState`
 
 ## 1.4.0.0
 

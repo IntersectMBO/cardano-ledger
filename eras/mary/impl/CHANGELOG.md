@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.3.0.2
+## 1.4.0.0
 
-*
+* Replaced `TranslateEra (MaryEra c) VState` with `TranslateEra (MaryEra c) GState`
 
 ## 1.3.0.1
 

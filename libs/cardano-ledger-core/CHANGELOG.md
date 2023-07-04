@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Rename `VState` to `GState`
 * Added `DRep`, `DRepCredential`
 * Changed type `Credential 'Voting c` -> `DRep c` in:
   * `UMElem`

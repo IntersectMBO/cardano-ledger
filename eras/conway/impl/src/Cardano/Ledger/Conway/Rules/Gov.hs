@@ -15,10 +15,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Tally (
+module Cardano.Ledger.Conway.Rules.Gov (
   ConwayTALLY,
-  TallyEnv (..),
-  ConwayTallyPredFailure (..),
+  GovEnv (..),
+  ConwayGovPredFailure (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
@@ -27,7 +27,7 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayTALLY)
 import Cardano.Ledger.Conway.Governance (
-  ConwayTallyState (..),
+  ConwayGovState (..),
   GovernanceAction,
   GovernanceActionId (..),
   GovernanceActionState (..),
@@ -49,45 +49,46 @@ import Control.State.Transition.Extended (
  )
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
-data TallyEnv era = TallyEnv
+data GovEnv era = GovEnv
   { teTxId :: !(TxId (EraCrypto era))
   , teEpoch :: !EpochNo
   }
 
-newtype ConwayTallyPredFailure era
+newtype ConwayGovPredFailure era
   = GovernanceActionDoesNotExist (GovernanceActionId (EraCrypto era))
   deriving (Eq, Show, Generic)
 
-instance Era era => NFData (ConwayTallyPredFailure era)
+instance Era era => NFData (ConwayGovPredFailure era)
 
-instance Era era => NoThunks (ConwayTallyPredFailure era)
+instance Era era => NoThunks (ConwayGovPredFailure era)
 
-instance EraPParams era => DecCBOR (ConwayTallyPredFailure era) where
-  decCBOR = decode $ Summands "ConwayTallyPredFailure" $ \case
+instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
+  decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
     0 -> SumD GovernanceActionDoesNotExist <! From
     k -> Invalid k
 
-instance EraPParams era => EncCBOR (ConwayTallyPredFailure era) where
+instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
   encCBOR =
     encode . \case
       GovernanceActionDoesNotExist gid -> Sum (GovernanceActionDoesNotExist @era) 0 !> To gid
 
-instance EraPParams era => ToCBOR (ConwayTallyPredFailure era) where
+instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
 
-instance EraPParams era => FromCBOR (ConwayTallyPredFailure era) where
+instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
 instance Era era => STS (ConwayTALLY era) where
-  type State (ConwayTALLY era) = ConwayTallyState era
-  type Signal (ConwayTALLY era) = GovernanceProcedures era
-  type Environment (ConwayTALLY era) = TallyEnv era
+  type State (ConwayTALLY era) = ConwayGovState era
+  type Signal (ConwayTALLY era) = Seq (GovernanceProcedure era)
+  type Environment (ConwayTALLY era) = GovEnv era
   type BaseM (ConwayTALLY era) = ShelleyBase
-  type PredicateFailure (ConwayTALLY era) = ConwayTallyPredFailure era
+  type PredicateFailure (ConwayTALLY era) = ConwayGovPredFailure era
   type Event (ConwayTALLY era) = ()
 
   initialRules = []
@@ -96,10 +97,10 @@ instance Era era => STS (ConwayTALLY era) where
 
 addVote ::
   VotingProcedure era ->
-  ConwayTallyState era ->
-  ConwayTallyState era
-addVote VotingProcedure {vProcGovActionId, vProcVoter, vProcVote} (ConwayTallyState st) =
-  ConwayTallyState $
+  ConwayGovState era ->
+  ConwayGovState era
+addVote VotingProcedure {vProcGovActionId, vProcVoter, vProcVote} (ConwayGovState st) =
+  ConwayGovState $
     Map.update (Just . updateVote) vProcGovActionId st
   where
     updateVote GovernanceActionState {..} =
@@ -126,10 +127,10 @@ addAction ::
   Coin ->
   KeyHash 'Staking (EraCrypto era) ->
   GovernanceAction era ->
-  ConwayTallyState era ->
-  ConwayTallyState era
-addAction epoch gaid c addr act (ConwayTallyState st) =
-  ConwayTallyState $
+  ConwayGovState era ->
+  ConwayGovState era
+addAction epoch gaid c addr act (ConwayGovState st) =
+  ConwayGovState $
     Map.insert gaid gai' st
   where
     gai' =
@@ -144,17 +145,17 @@ addAction epoch gaid c addr act (ConwayTallyState st) =
         }
 
 noSuchGovernanceAction ::
-  ConwayTallyState era ->
+  ConwayGovState era ->
   GovernanceActionId (EraCrypto era) ->
-  Test (ConwayTallyPredFailure era)
-noSuchGovernanceAction (ConwayTallyState st) gaid =
+  Test (ConwayGovPredFailure era)
+noSuchGovernanceAction (ConwayGovState st) gaid =
   failureUnless (Map.member gaid st) $
     GovernanceActionDoesNotExist gaid
 
 tallyTransition :: forall era. TransitionRule (ConwayTALLY era)
 tallyTransition = do
   -- TODO Check the signatures
-  TRC (TallyEnv txid epoch, st, GovernanceProcedures {..}) <- judgmentContext
+  TRC (GovEnv txid epoch, st, GovernanceProcedures {..}) <- judgmentContext
 
   let applyProps _ st' Empty = pure st'
       applyProps idx st' (ProposalProcedure {..} :<| ps) = do
@@ -176,5 +177,5 @@ tallyTransition = do
         applyVotes st'' vs
   applyVotes stProps gpVotingProcedures
 
-instance Inject (ConwayTallyPredFailure era) (ConwayTallyPredFailure era) where
+instance Inject (ConwayGovPredFailure era) (ConwayGovPredFailure era) where
   inject = id

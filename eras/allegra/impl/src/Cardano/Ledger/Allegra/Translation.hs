@@ -21,6 +21,7 @@ import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState (..),
   EpochState (..),
+  VState (..),
   LedgerState (..),
   NewEpochState (..),
   PState (..),
@@ -31,7 +32,6 @@ import Cardano.Ledger.Shelley.API (
   UTxO (..),
   UTxOState (..),
   Update,
-  VState (..),
  )
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (
   returnRedeemAddrsToReserves,

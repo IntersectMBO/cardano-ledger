@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.2.0.3
+## 1.3.0.0
 
-*
+* Replaced `TranslateEra (AllegraEra c) VState` with `TranslateEra (AllegraEra c) GState`
 
 ## 1.2.0.2
 
