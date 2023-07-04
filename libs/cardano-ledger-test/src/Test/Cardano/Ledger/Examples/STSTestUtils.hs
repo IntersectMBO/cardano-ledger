@@ -22,6 +22,8 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   someKeys,
   someScriptAddr,
   testBBODY,
+  runEPOCH,
+  runLEDGER,
   testUTXOW,
   testUTXOWsubset,
   testUTXOspecialCase,
@@ -58,6 +60,7 @@ import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
   Network (..),
   mkTxIxPartial,
  )
@@ -77,6 +80,10 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.API (
   Block (..),
+  EpochState (..),
+  LedgerEnv (..),
+  LedgerState (..),
+  PoolDistr,
   UTxO (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
@@ -373,10 +380,6 @@ testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
         -- Conway _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         other -> error ("Cannot use specialCase in era " ++ show other)
 
--- ======================================================================
--- =========================  Internal helper functions  ================
--- ======================================================================
-
 -- | This type is what you get when you use runSTS in the UTXOW rule. It is also
 --   the type one uses for expected answers, to compare the 'computed' against 'expected'
 type Result era = Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era))
@@ -404,6 +407,50 @@ testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
         Mary _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Allegra _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Shelley _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
+
+runLEDGER ::
+  forall era.
+  ( GoodCrypto (EraCrypto era)
+  , EraTx era
+  , EraGovernance era
+  ) =>
+  WitRule "LEDGER" era ->
+  LedgerState era ->
+  PParams era ->
+  Tx era ->
+  Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
+runLEDGER wit@(LEDGER proof) state pparams tx =
+  let env = LedgerEnv (SlotNo 0) minBound pparams def
+   in case proof of
+        Conway _ -> runSTS' wit (TRC (env, state, tx))
+        Babbage _ -> runSTS' wit (TRC (env, state, tx))
+        Alonzo _ -> runSTS' wit (TRC (env, state, tx))
+        Mary _ -> runSTS' wit (TRC (env, state, tx))
+        Allegra _ -> runSTS' wit (TRC (env, state, tx))
+        Shelley _ -> runSTS' wit (TRC (env, state, tx))
+
+runEPOCH ::
+  forall era.
+  ( GoodCrypto (EraCrypto era)
+  , EraTx era
+  , EraGovernance era
+  ) =>
+  WitRule "EPOCH" era ->
+  EpochState era ->
+  EpochNo ->
+  PoolDistr (EraCrypto era) ->
+  Either [PredicateFailure (EraRule "EPOCH" era)] (State (EraRule "EPOCH" era))
+runEPOCH wit@(EPOCH proof) state epochNo poolDistr =
+  case proof of
+    Conway _ -> runSTS' wit (TRC (poolDistr, state, epochNo))
+    Babbage _ -> runSTS' wit (TRC ((), state, epochNo))
+    Alonzo _ -> runSTS' wit (TRC ((), state, epochNo))
+    Mary _ -> runSTS' wit (TRC ((), state, epochNo))
+    Allegra _ -> runSTS' wit (TRC ((), state, epochNo))
+    Shelley _ -> runSTS' wit (TRC ((), state, epochNo))
+-- ======================================================================
+-- =========================  Internal helper functions  ================
+-- ======================================================================
 
 -- | A small example of what a continuation for 'runSTS' might look like
 genericCont ::

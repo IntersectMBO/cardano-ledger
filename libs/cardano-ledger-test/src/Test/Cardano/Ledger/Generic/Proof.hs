@@ -50,6 +50,7 @@ module Test.Cardano.Ledger.Generic.Proof (
   C_Crypto,
   specialize,
   unReflect,
+  runSTS',
   ValueWit (..),
   TxOutWit (..),
   TxCertWit (..),
@@ -242,6 +243,10 @@ data WitRule (s :: Symbol) (e :: Type) where
   BBODY :: Proof era -> WitRule "BBODY" era
   LEDGERS :: Proof era -> WitRule "LEDGERS" era
   MOCKCHAIN :: Proof era -> WitRule "MOCKCHAIN" era
+  RATIFY :: Proof era -> WitRule "RATIFY" era
+  ENACT :: Proof era -> WitRule "ENACT" era
+  TALLY :: Proof era -> WitRule "TALLY" era
+  EPOCH :: Proof era -> WitRule "EPOCH" era
 
 ruleProof :: WitRule s e -> Proof e
 ruleProof (UTXOW p) = p
@@ -249,6 +254,10 @@ ruleProof (LEDGER p) = p
 ruleProof (BBODY p) = p
 ruleProof (LEDGERS p) = p
 ruleProof (MOCKCHAIN p) = p
+ruleProof (RATIFY p) = p
+ruleProof (ENACT p) = p
+ruleProof (TALLY p) = p
+ruleProof (EPOCH p) = p
 
 runSTS ::
   forall s e ans.
@@ -264,6 +273,28 @@ runSTS (LEDGER _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (BBODY _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (LEDGERS _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (MOCKCHAIN _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (RATIFY _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (ENACT _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (TALLY _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (_proof) x cont = cont (runShelleyBase (applySTSTest x))
+
+runSTS' ::
+  forall s e.
+  ( BaseM (EraRule s e) ~ ShelleyBase
+  , STS (EraRule s e)
+  ) =>
+  WitRule s e ->
+  TRC (EraRule s e) ->
+  Either [PredicateFailure (EraRule s e)] (State (EraRule s e))
+runSTS' (UTXOW _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (LEDGER _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (BBODY _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (LEDGERS _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (MOCKCHAIN _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (RATIFY _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (ENACT _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (TALLY _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (EPOCH _proof) x = runShelleyBase (applySTSTest x)
 
 -- | Like runSTS, but makes the components of the TRC triple explicit.
 --   in case you can't remember, in ghci type
@@ -303,6 +334,14 @@ goSTS (BBODY _proof) env state sig cont =
 goSTS (LEDGERS _proof) env state sig cont =
   cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 goSTS (MOCKCHAIN _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (RATIFY _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (ENACT _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (TALLY _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (EPOCH _proof) env state sig cont =
   cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 
 -- ================================================================
