@@ -1,5 +1,11 @@
 # Changelog for `cardano-ledger-pretty`
 
+## 1.3.0.0
+
+* Replace `ConwayTallyPredFailure era` with `ConwayGovPredFailure era`
+* Replace `ConwayTallyState era` with `ConwayGovState era`
+* Replace `ConwayVDelPredFailure era` with `ConwayGovCertPredFailure era`
+
 ## 1.2.1.0
 
 * Added `PrettyA` instance for `DRep`

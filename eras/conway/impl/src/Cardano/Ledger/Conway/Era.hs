@@ -6,9 +6,9 @@ module Cardano.Ledger.Conway.Era (
   ConwayCERT,
   ConwayDELEG,
   ConwayPOOL,
-  ConwayVDEL,
+  ConwayGOVCERT,
   ConwayCERTS,
-  ConwayTALLY,
+  ConwayGOV,
   ConwayNEWEPOCH,
   ConwayEPOCH,
   ConwayENACT,
@@ -48,9 +48,9 @@ type instance Value (ConwayEra c) = MaryValue c
 -- Era Mapping
 -------------------------------------------------------------------------------
 
-data ConwayTALLY era
+data ConwayGOV era
 
-type instance EraRule "TALLY" (ConwayEra c) = ConwayTALLY (ConwayEra c)
+type instance EraRule "GOV" (ConwayEra c) = ConwayGOV (ConwayEra c)
 
 data ConwayNEWEPOCH era
 
@@ -96,9 +96,9 @@ data ConwayPOOL era
 
 type instance EraRule "POOL" (ConwayEra c) = ConwayPOOL (ConwayEra c)
 
-data ConwayVDEL era
+data ConwayGOVCERT era
 
-type instance EraRule "VDEL" (ConwayEra c) = ConwayVDEL (ConwayEra c)
+type instance EraRule "GOVCERT" (ConwayEra c) = ConwayGOVCERT (ConwayEra c)
 
 data ConwayUTXOW era
 
