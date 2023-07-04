@@ -31,7 +31,7 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceAction,
   GovernanceActionId (..),
   GovernanceActionState (..),
-  GovernanceProcedure (..),
+  GovernanceProcedures (..),
   ProposalProcedure (..),
   Voter (..),
   VotingProcedure (..),
@@ -49,7 +49,6 @@ import Control.State.Transition.Extended (
  )
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
-import qualified Data.Sequence as Seq
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
@@ -85,7 +84,7 @@ instance EraPParams era => FromCBOR (ConwayTallyPredFailure era) where
 
 instance Era era => STS (ConwayTALLY era) where
   type State (ConwayTALLY era) = ConwayTallyState era
-  type Signal (ConwayTALLY era) = Seq (GovernanceProcedure era)
+  type Signal (ConwayTALLY era) = GovernanceProcedures era
   type Environment (ConwayTALLY era) = TallyEnv era
   type BaseM (ConwayTALLY era) = ShelleyBase
   type PredicateFailure (ConwayTALLY era) = ConwayTallyPredFailure era
@@ -155,31 +154,27 @@ noSuchGovernanceAction (ConwayTallyState st) gaid =
 tallyTransition :: forall era. TransitionRule (ConwayTALLY era)
 tallyTransition = do
   -- TODO Check the signatures
-  TRC (TallyEnv txid epoch, st, govProcedures) <- judgmentContext
+  TRC (TallyEnv txid epoch, st, GovernanceProcedures {..}) <- judgmentContext
 
-  let updateState st' Empty = pure st'
-      updateState !st' ((x, idx) :<| xs) = do
-        st'' <- case x of
-          GovernanceVotingProcedure
-            vp@VotingProcedure {vProcGovActionId} -> do
-              runTest $ noSuchGovernanceAction st vProcGovActionId
-              pure $! addVote vp st'
-          GovernanceProposalProcedure
-            ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovernanceAction} ->
-              pure $
-                addAction
-                  epoch
-                  (GovernanceActionId txid idx)
-                  pProcDeposit
-                  pProcReturnAddr
-                  pProcGovernanceAction
-                  st'
-        updateState st'' xs
+  let applyProps _ st' Empty = pure st'
+      applyProps idx st' (ProposalProcedure {..} :<| ps) = do
+        let st'' =
+              addAction
+                epoch
+                (GovernanceActionId txid idx)
+                pProcDeposit
+                pProcReturnAddr
+                pProcGovernanceAction
+                st'
+        applyProps (idx + 1) st'' ps
+  stProps <- applyProps 0 st gpProposalProcedures
 
-  updateState st $
-    Seq.zip
-      govProcedures
-      (Seq.fromList [0 .. fromIntegral (Seq.length govProcedures - 1)])
+  let applyVotes st' Empty = pure st'
+      applyVotes st' (vp@VotingProcedure {..} :<| vs) = do
+        runTest $ noSuchGovernanceAction st vProcGovActionId
+        let !st'' = addVote vp st'
+        applyVotes st'' vs
+  applyVotes stProps gpVotingProcedures
 
 instance Inject (ConwayTallyPredFailure era) (ConwayTallyPredFailure era) where
   inject = id
