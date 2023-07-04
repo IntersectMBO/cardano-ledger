@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-conway-test
-version:       1.2.0.1
+version:       1.2.0.2
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
