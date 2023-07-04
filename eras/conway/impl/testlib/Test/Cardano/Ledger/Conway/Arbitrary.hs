@@ -195,12 +195,9 @@ instance Era era => Arbitrary (VotingProcedure era) where
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedure era) where
   arbitrary = ProposalProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProcedure era) where
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProcedures era) where
   arbitrary =
-    oneof
-      [ GovernanceVotingProcedure <$> arbitrary
-      , GovernanceProposalProcedure <$> arbitrary
-      ]
+    GovernanceProcedures <$> arbitrary <*> arbitrary
 
 instance Era era => Arbitrary (ConwayTallyPredFailure era) where
   arbitrary = GovernanceActionDoesNotExist <$> arbitrary

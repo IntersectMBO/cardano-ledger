@@ -28,7 +28,7 @@ import Cardano.Ledger.Conway.Governance (
   GovernanceActionId (..),
   GovernanceActionIx (..),
   GovernanceActionState (..),
-  GovernanceProcedure,
+  GovernanceProcedures,
   ProposalProcedure (..),
   Vote (..),
   Voter (..),
@@ -185,7 +185,7 @@ instance EraPParams era => PrettyA (VotingProcedure era) where
 instance EraPParams era => PrettyA (ProposalProcedure era) where
   prettyA = viaShow
 
-instance EraPParams era => PrettyA (GovernanceProcedure era) where
+instance EraPParams era => PrettyA (GovernanceProcedures era) where
   prettyA = viaShow
 
 instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where

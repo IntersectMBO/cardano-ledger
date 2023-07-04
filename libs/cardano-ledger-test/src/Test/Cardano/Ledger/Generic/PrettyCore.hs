@@ -1507,7 +1507,7 @@ pcTxBodyField proof x = case x of
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> []
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
-  GovernanceProcs ga -> [("governance procedures", ppStrictSeq prettyA ga)]
+  GovernanceProcs ga -> [("governance procedures", prettyA ga)]
 
 pcTxField ::
   forall era.

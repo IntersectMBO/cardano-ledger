@@ -38,7 +38,7 @@ import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayLEDGER, ConwayTALLY, Conway
 import Cardano.Ledger.Conway.Governance (
   ConwayGovernance (..),
   ConwayTallyState,
-  GovernanceProcedure (..),
+  GovernanceProcedures (..),
  )
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Tally (ConwayTallyPredFailure, TallyEnv (..))
@@ -84,6 +84,7 @@ import Control.State.Transition.Extended (
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
+import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -181,7 +182,7 @@ instance
   , Environment (EraRule "TALLY" era) ~ TallyEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
+  , Signal (EraRule "TALLY" era) ~ GovernanceProcedures era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -237,7 +238,7 @@ ledgerTransition ::
   , Environment (EraRule "CERTS" era) ~ DelegsEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
+  , Signal (EraRule "TALLY" era) ~ GovernanceProcedures era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
   ) =>
@@ -271,8 +272,10 @@ ledgerTransition = do
       genCerts = dsGenDelegs dstate
 
   let govProcedures =
-        (GovernanceVotingProcedure <$> txBody ^. votingProceduresTxBodyL)
-          <> (GovernanceProposalProcedure <$> txBody ^. proposalProceduresTxBodyL)
+        GovernanceProcedures
+          { gpVotingProcedures = fromStrict $ txBody ^. votingProceduresTxBodyL
+          , gpProposalProcedures = fromStrict $ txBody ^. proposalProceduresTxBodyL
+          }
   let govSt = utxosGovernance utxoSt
   epoch <- liftSTS $ do
     ei <- asks epochInfoPure
@@ -282,7 +285,7 @@ ledgerTransition = do
       TRC
         ( TallyEnv (txid txBody) epoch
         , cgTally govSt
-        , StrictSeq.fromStrict govProcedures
+        , govProcedures
         )
 
   utxoSt' <-
@@ -346,7 +349,7 @@ instance
   , Environment (EraRule "TALLY" era) ~ TallyEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "TALLY" era) ~ Seq (GovernanceProcedure era)
+  , Signal (EraRule "TALLY" era) ~ GovernanceProcedures era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "TALLY" era) ~ ConwayTallyState era

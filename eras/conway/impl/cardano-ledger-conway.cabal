@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-conway
-version:            1.5.0.0
+version:            1.6.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -39,6 +39,7 @@ library
     other-modules:
         Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.UTxO
+        Cardano.Ledger.Conway.Governance.Procedures
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
         Cardano.Ledger.Conway.Rules.Pool

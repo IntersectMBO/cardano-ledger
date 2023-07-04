@@ -60,7 +60,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (GovernanceProcedure (..))
+import Cardano.Ledger.Conway.Governance (GovernanceProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), hashKey)
@@ -75,7 +75,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -124,7 +124,7 @@ data TxBodyField era
   | WppHash (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
   | AdHash (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   | Txnetworkid (StrictMaybe Network)
-  | GovernanceProcs (StrictSeq (GovernanceProcedure era))
+  | GovernanceProcs (GovernanceProcedures era)
 
 pattern Inputs' :: [TxIn (EraCrypto era)] -> TxBodyField era -- Set
 
@@ -327,7 +327,7 @@ abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl 
   , WppHash sih
   , AdHash adh
   , Txnetworkid net
-  , GovernanceProcs $ (GovernanceVotingProcedure <$> vp) <> (GovernanceProposalProcedure <$> pp)
+  , GovernanceProcs $ GovernanceProcedures (fromStrict vp) (fromStrict pp)
   ]
 abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdrl fee vldt up req mnt sih adh net) =
   [ Inputs inp

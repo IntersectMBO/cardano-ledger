@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.6.0.0
+
+* Removal of `GovernanceProcedure` in favor of `GovernanceProcedures`
+
 ## 1.5.0.0
 
 * Add `ensConstitutionL` and `rsEnactStateL` to `Governance` #3506
