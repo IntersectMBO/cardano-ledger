@@ -70,7 +70,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
   EpochState (..),
-  VState (..),
   IncrementalStake (..),
   InstantaneousRewards (..),
   LedgerState (..),
@@ -78,6 +77,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
+  VState (..),
   completeRupd,
   smartUTxOState,
  )

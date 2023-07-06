@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Gov (
-  ConwayTALLY,
+  ConwayGOV,
   GovEnv (..),
   ConwayGovPredFailure (..),
 ) where
@@ -25,7 +25,7 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Era (ConwayTALLY)
+import Cardano.Ledger.Conway.Era (ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovernanceAction,
@@ -49,7 +49,6 @@ import Control.State.Transition.Extended (
  )
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
-import qualified Data.Sequence as Seq
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
@@ -83,17 +82,17 @@ instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
 instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
-instance Era era => STS (ConwayTALLY era) where
-  type State (ConwayTALLY era) = ConwayGovState era
-  type Signal (ConwayTALLY era) = Seq (GovernanceProcedure era)
-  type Environment (ConwayTALLY era) = GovEnv era
-  type BaseM (ConwayTALLY era) = ShelleyBase
-  type PredicateFailure (ConwayTALLY era) = ConwayGovPredFailure era
-  type Event (ConwayTALLY era) = ()
+instance Era era => STS (ConwayGOV era) where
+  type State (ConwayGOV era) = ConwayGovState era
+  type Signal (ConwayGOV era) = GovernanceProcedures era
+  type Environment (ConwayGOV era) = GovEnv era
+  type BaseM (ConwayGOV era) = ShelleyBase
+  type PredicateFailure (ConwayGOV era) = ConwayGovPredFailure era
+  type Event (ConwayGOV era) = ()
 
   initialRules = []
 
-  transitionRules = [tallyTransition]
+  transitionRules = [govTransition]
 
 addVote ::
   VotingProcedure era ->
@@ -152,8 +151,8 @@ noSuchGovernanceAction (ConwayGovState st) gaid =
   failureUnless (Map.member gaid st) $
     GovernanceActionDoesNotExist gaid
 
-tallyTransition :: forall era. TransitionRule (ConwayTALLY era)
-tallyTransition = do
+govTransition :: forall era. TransitionRule (ConwayGOV era)
+govTransition = do
   -- TODO Check the signatures
   TRC (GovEnv txid epoch, st, GovernanceProcedures {..}) <- judgmentContext
 

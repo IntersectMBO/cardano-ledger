@@ -228,7 +228,7 @@ instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
 instance
   ( PrettyA (PredicateFailure (EraRule "UTXOW" era))
   , PrettyA (PredicateFailure (EraRule "CERTS" era))
-  , PrettyA (PredicateFailure (EraRule "TALLY" era))
+  , PrettyA (PredicateFailure (EraRule "GOV" era))
   ) =>
   PrettyA (ConwayLedgerPredFailure era)
   where
@@ -334,7 +334,7 @@ instance
 instance
   ( PrettyA (PredicateFailure (EraRule "DELEG" era))
   , PrettyA (PredicateFailure (EraRule "POOL" era))
-  , PrettyA (PredicateFailure (EraRule "VDEL" era))
+  , PrettyA (PredicateFailure (EraRule "GOVCERT" era))
   ) =>
   PrettyA (ConwayCertPredFailure era)
   where
@@ -350,7 +350,7 @@ instance
     GovCertFailure x ->
       ppRecord
         "ConwayGovCertFailure"
-        [("VDEL", prettyA x)]
+        [("GOVCERT", prettyA x)]
 
 instance PrettyA (ConwayDelegPredFailure era) where
   prettyA = \case

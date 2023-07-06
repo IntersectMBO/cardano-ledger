@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.GovCert (
-  ConwayVDEL,
+  ConwayGOVCERT,
   ConwayGovCertEvent (..),
   ConwayGovCertPredFailure (..),
 )
@@ -25,7 +25,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (VState (..))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Era (ConwayVDEL)
+import Cardano.Ledger.Conway.Era (ConwayGOVCERT)
 import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraPParams, EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
@@ -55,10 +55,10 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data ConwayGovCertPredFailure era
-  = ConwayDRepAlreadyRegisteredVDEL !(Credential 'Voting (EraCrypto era))
-  | ConwayDRepNotRegisteredVDEL !(Credential 'Voting (EraCrypto era))
-  | ConwayDRepIncorrectDepositVDEL !Coin
-  | ConwayCommitteeHasResignedVDEL !(KeyHash 'CommitteeColdKey (EraCrypto era))
+  = ConwayDRepAlreadyRegisteredGOVCERT !(Credential 'Voting (EraCrypto era))
+  | ConwayDRepNotRegisteredGOVCERT !(Credential 'Voting (EraCrypto era))
+  | ConwayDRepIncorrectDepositGOVCERT !Coin
+  | ConwayCommitteeHasResignedGOVCERT !(KeyHash 'CommitteeColdKey (EraCrypto era))
   deriving (Show, Eq, Generic)
 
 instance NoThunks (ConwayGovCertPredFailure era)
@@ -70,19 +70,19 @@ instance
   EncCBOR (ConwayGovCertPredFailure era)
   where
   encCBOR = \case
-    ConwayDRepAlreadyRegisteredVDEL cred ->
+    ConwayDRepAlreadyRegisteredGOVCERT cred ->
       encodeListLen 2
         <> encCBOR (0 :: Word8)
         <> encCBOR cred
-    ConwayDRepNotRegisteredVDEL cred ->
+    ConwayDRepNotRegisteredGOVCERT cred ->
       encodeListLen 2
         <> encCBOR (1 :: Word8)
         <> encCBOR cred
-    ConwayDRepIncorrectDepositVDEL deposit ->
+    ConwayDRepIncorrectDepositGOVCERT deposit ->
       encodeListLen 2
         <> encCBOR (2 :: Word8)
         <> encCBOR deposit
-    ConwayCommitteeHasResignedVDEL keyH ->
+    ConwayCommitteeHasResignedGOVCERT keyH ->
       encodeListLen 2
         <> encCBOR (3 :: Word8)
         <> encCBOR keyH
@@ -95,41 +95,41 @@ instance
     \case
       0 -> do
         cred <- decCBOR
-        pure (2, ConwayDRepAlreadyRegisteredVDEL cred)
+        pure (2, ConwayDRepAlreadyRegisteredGOVCERT cred)
       1 -> do
         cred <- decCBOR
-        pure (2, ConwayDRepNotRegisteredVDEL cred)
+        pure (2, ConwayDRepNotRegisteredGOVCERT cred)
       2 -> do
         deposit <- decCBOR
-        pure (2, ConwayDRepIncorrectDepositVDEL deposit)
+        pure (2, ConwayDRepIncorrectDepositGOVCERT deposit)
       3 -> do
         keyH <- decCBOR
-        pure (2, ConwayCommitteeHasResignedVDEL keyH)
+        pure (2, ConwayCommitteeHasResignedGOVCERT keyH)
       k -> invalidKey k
 
-newtype ConwayGovCertEvent era = GovCertEvent (Event (EraRule "VDEL" era))
+newtype ConwayGovCertEvent era = GovCertEvent (Event (EraRule "GOVCERT" era))
 
 instance
   ( EraPParams era
-  , State (EraRule "VDEL" era) ~ VState era
-  , Signal (EraRule "VDEL" era) ~ ConwayCommitteeCert (EraCrypto era)
-  , Environment (EraRule "VDEL" era) ~ PParams era
-  , EraRule "VDEL" era ~ ConwayVDEL era
-  , Eq (PredicateFailure (EraRule "VDEL" era))
-  , Show (PredicateFailure (EraRule "VDEL" era))
+  , State (EraRule "GOVCERT" era) ~ VState era
+  , Signal (EraRule "GOVCERT" era) ~ ConwayCommitteeCert (EraCrypto era)
+  , Environment (EraRule "GOVCERT" era) ~ PParams era
+  , EraRule "GOVCERT" era ~ ConwayGOVCERT era
+  , Eq (PredicateFailure (EraRule "GOVCERT" era))
+  , Show (PredicateFailure (EraRule "GOVCERT" era))
   ) =>
-  STS (ConwayVDEL era)
+  STS (ConwayGOVCERT era)
   where
-  type State (ConwayVDEL era) = VState era
-  type Signal (ConwayVDEL era) = ConwayCommitteeCert (EraCrypto era)
-  type Environment (ConwayVDEL era) = PParams era
-  type BaseM (ConwayVDEL era) = ShelleyBase
-  type PredicateFailure (ConwayVDEL era) = ConwayGovCertPredFailure era
-  type Event (ConwayVDEL era) = ConwayGovCertEvent era
+  type State (ConwayGOVCERT era) = VState era
+  type Signal (ConwayGOVCERT era) = ConwayCommitteeCert (EraCrypto era)
+  type Environment (ConwayGOVCERT era) = PParams era
+  type BaseM (ConwayGOVCERT era) = ShelleyBase
+  type PredicateFailure (ConwayGOVCERT era) = ConwayGovCertPredFailure era
+  type Event (ConwayGOVCERT era) = ConwayGovCertEvent era
 
   transitionRules = [conwayGovCertTransition @era]
 
-conwayGovCertTransition :: TransitionRule (ConwayVDEL era)
+conwayGovCertTransition :: TransitionRule (ConwayGOVCERT era)
 conwayGovCertTransition = do
   TRC
     ( _pp
@@ -139,12 +139,12 @@ conwayGovCertTransition = do
     judgmentContext
   case c of
     ConwayRegDRep cred _deposit -> do
-      Set.notMember cred vsDReps ?! ConwayDRepAlreadyRegisteredVDEL cred
+      Set.notMember cred vsDReps ?! ConwayDRepAlreadyRegisteredGOVCERT cred
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
       pure $ vState {vsDReps = Set.insert cred vsDReps}
     ConwayUnRegDRep cred _deposit -> do
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
-      Set.member cred vsDReps ?! ConwayDRepNotRegisteredVDEL cred
+      Set.member cred vsDReps ?! ConwayDRepNotRegisteredGOVCERT cred
       pure $ vState {vsDReps = Set.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldK hotK -> do
       checkColdKeyHasNotResigned coldK vsCommitteeHotKeys
@@ -156,4 +156,4 @@ conwayGovCertTransition = do
     checkColdKeyHasNotResigned coldK vsCommitteeHotKeys =
       (isNothing <$> Map.lookup coldK vsCommitteeHotKeys)
         /= Just True
-        ?! ConwayCommitteeHasResignedVDEL coldK
+        ?! ConwayCommitteeHasResignedGOVCERT coldK

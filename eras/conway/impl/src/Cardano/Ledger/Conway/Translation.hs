@@ -31,11 +31,11 @@ import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState (..),
   EpochState (..),
-  VState (..),
   NewEpochState (..),
   PState (..),
   StrictMaybe (..),
   UTxOState (..),
+  VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import Data.Coerce

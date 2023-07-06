@@ -27,10 +27,10 @@ import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState (..),
   EpochState (..),
-  VState (..),
   NewEpochState (..),
   PState (..),
   StrictMaybe (..),
+  VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import qualified Data.Map.Strict as Map

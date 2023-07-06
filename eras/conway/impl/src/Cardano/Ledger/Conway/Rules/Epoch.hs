@@ -204,8 +204,8 @@ epochTransition = do
         , reStakePoolDistr = stakePoolDistr
         , reCurrentEpoch = eNo
         }
-    tallyStateToSeq = Seq.fromList . Map.toList
-    ratSig = RatifySignal . tallyStateToSeq . unConwayGovState $ cgGov govSt
+    govStateToSeq = Seq.fromList . Map.toList
+    ratSig = RatifySignal . govStateToSeq . unConwayGovState $ cgGov govSt
   rs@RatifyState {rsFuture} <-
     trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
   let es'' =

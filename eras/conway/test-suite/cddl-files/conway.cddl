@@ -296,7 +296,7 @@ stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
 vote_reg_deleg_cert = (12, stake_credential, drep, coin)
 stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
 
-; VDEL
+; GOVCERT
 reg_committee_hot_key_cert = (14, committee_cold_keyhash, committee_hot_keyhash)
 unreg_committee_hot_key_cert = (15, committee_cold_keyhash)
 reg_drep_cert = (16, voting_credential, coin)

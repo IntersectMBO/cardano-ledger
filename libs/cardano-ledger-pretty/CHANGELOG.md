@@ -3,7 +3,9 @@
 ## 1.2.1.0
 
 * Added `PrettyA` instance for `DRep`
-* Replaced `VState` with `GState`
+* Replace `ConwayTallyPredFailure era` with `ConwayGovPredFailure era`
+* Replace `ConwayTallyState era` with `ConwayGovState era`
+* Replace `ConwayVDelPredFailure era` with `ConwayGovCertPredFailure era`
 
 ## 1.2.0.1
 

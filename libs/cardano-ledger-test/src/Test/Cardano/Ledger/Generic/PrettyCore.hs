@@ -103,13 +103,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
-  VState (..),
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
   PPUPPredFailure,
   PState (..),
   UTxOState (..),
+  VState (..),
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyBbodyPredFailure (..),

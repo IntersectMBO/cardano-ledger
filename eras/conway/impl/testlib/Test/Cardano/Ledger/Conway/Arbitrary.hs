@@ -175,7 +175,7 @@ instance
 -- Cardano.Ledger.Conway.Rules -----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
--- TALLY
+-- GOV
 
 instance Era era => Arbitrary (GovEnv era) where
   arbitrary =
@@ -205,7 +205,7 @@ instance Era era => Arbitrary (ConwayGovPredFailure era) where
 instance
   ( Arbitrary (PredicateFailure (EraRule "UTXOW" era))
   , Arbitrary (PredicateFailure (EraRule "CERTS" era))
-  , Arbitrary (PredicateFailure (EraRule "TALLY" era))
+  , Arbitrary (PredicateFailure (EraRule "GOV" era))
   ) =>
   Arbitrary (ConwayLedgerPredFailure era)
   where
@@ -282,7 +282,7 @@ instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "DELEG" era))
   , Arbitrary (PredicateFailure (EraRule "POOL" era))
-  , Arbitrary (PredicateFailure (EraRule "VDEL" era))
+  , Arbitrary (PredicateFailure (EraRule "GOVCERT" era))
   ) =>
   Arbitrary (ConwayCertPredFailure era)
   where
@@ -310,13 +310,13 @@ instance
       , pure WrongCertificateTypeDELEG
       ]
 
--- VDEL
+-- GOVCERT
 
 instance Era era => Arbitrary (ConwayGovCertPredFailure era) where
   arbitrary =
     oneof
-      [ ConwayDRepAlreadyRegisteredVDEL <$> arbitrary
-      , ConwayDRepNotRegisteredVDEL <$> arbitrary
-      , ConwayDRepIncorrectDepositVDEL <$> arbitrary
-      , ConwayCommitteeHasResignedVDEL <$> arbitrary
+      [ ConwayDRepAlreadyRegisteredGOVCERT <$> arbitrary
+      , ConwayDRepNotRegisteredGOVCERT <$> arbitrary
+      , ConwayDRepIncorrectDepositGOVCERT <$> arbitrary
+      , ConwayCommitteeHasResignedGOVCERT <$> arbitrary
       ]

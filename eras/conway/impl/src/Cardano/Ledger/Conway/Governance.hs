@@ -340,7 +340,7 @@ instance EraPParams era => ToJSON (ConwayGovernance era) where
 toConwayGovernancePairs :: (KeyValue a, EraPParams era) => ConwayGovernance era -> [a]
 toConwayGovernancePairs cg@(ConwayGovernance _ _) =
   let ConwayGovernance {..} = cg
-   in [ "tally" .= cgGov
+   in [ "gov" .= cgGov
       , "ratify" .= cgRatify
       ]
 

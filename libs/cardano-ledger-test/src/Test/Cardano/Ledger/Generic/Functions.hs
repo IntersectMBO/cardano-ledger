@@ -49,11 +49,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
   EpochState (..),
-  VState (..),
   LedgerState (..),
   NewEpochState (..),
   PState (..),
   UTxOState (..),
+  VState (..),
  )
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxOut (..),

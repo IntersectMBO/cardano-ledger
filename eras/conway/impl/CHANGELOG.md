@@ -22,7 +22,6 @@
 * Added instance for `Embed (ConwayRATIFY era) (ConwayEPOCH era)`
 * Removed instance for `Embed (ConwayRATIFY era) (ConwayNEWEPOCH era)`
 * Changed superclasses of `STS (ConwayEPOCH era)` and `STS (ConwayNEWEPOCH era)`
-* Replace `VState` with `GState` in constraints
 * Rename:
     `cgTally` -> `cgGov`
     `cgTallyL` -> `cgGovL`
@@ -33,6 +32,8 @@
     `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
     `TallyEnv` -> `GovEnv`
     `ConwayTallyState` -> `ConwayGovState`
+    `TALLY` -> `GOV`
+    `VDEL` -> `GOVCERT`
 
 ## 1.4.0.0
 

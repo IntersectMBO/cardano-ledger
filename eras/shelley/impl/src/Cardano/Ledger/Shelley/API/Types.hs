@@ -79,7 +79,6 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   CertState (..),
   DState (..),
   EpochState (..),
-  VState (..),
   IncrementalStake (..),
   InstantaneousRewards (..),
   KeyPairs, -- deprecated
@@ -89,6 +88,7 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   RewardUpdate (..),
   ShelleyPPUPState (..),
   UTxOState (..),
+  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams as X (
   ProposedPPUpdates (..),

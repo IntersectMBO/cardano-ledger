@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (VState (..), PState (..))
+import Cardano.Ledger.CertState (PState (..), VState (..))
 import Cardano.Ledger.Core (upgradePParams, upgradePParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
