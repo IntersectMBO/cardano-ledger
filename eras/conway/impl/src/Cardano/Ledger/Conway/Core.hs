@@ -17,5 +17,11 @@ import Data.Sequence.Strict (StrictSeq)
 import Lens.Micro (Lens')
 
 class BabbageEraTxBody era => ConwayEraTxBody era where
-  votingProceduresTxBodyL :: Lens' (TxBody era) (StrictSeq (VotingProcedure era))
-  proposalProceduresTxBodyL :: Lens' (TxBody era) (StrictSeq (ProposalProcedure era))
+
+  -- | Lens for getting and setting `VotingProcedure`s.
+  votingProceduresTxBodyL ::
+    Lens' (TxBody era) (StrictSeq (VotingProcedure era))
+
+  -- | Lens for getting and setting `ProposalProcedure`s.
+  proposalProceduresTxBodyL ::
+    Lens' (TxBody era) (StrictSeq (ProposalProcedure era))
