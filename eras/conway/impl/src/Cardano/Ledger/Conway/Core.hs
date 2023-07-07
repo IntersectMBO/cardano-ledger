@@ -56,7 +56,11 @@ import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 
 class BabbageEraTxBody era => ConwayEraTxBody era where
+
+  -- | Lens for getting and setting `VotingProcedures`.
   votingProceduresTxBodyL :: Lens' (TxBody era) (VotingProcedures era)
+
+  -- | Lens for getting and setting `ProposalProcedures`.
   proposalProceduresTxBodyL :: Lens' (TxBody era) (StrictSeq (ProposalProcedure era))
 
 class BabbageEraPParams era => ConwayEraPParams era where
