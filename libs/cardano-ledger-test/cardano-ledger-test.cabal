@@ -23,6 +23,7 @@ library
         Test.Cardano.Ledger.Constrained.Combinators
         Test.Cardano.Ledger.Constrained.Env
         Test.Cardano.Ledger.Constrained.Examples
+        Test.Cardano.Ledger.Constrained.LedgerTests
         Test.Cardano.Ledger.Constrained.Lenses
         Test.Cardano.Ledger.Constrained.Monad
         Test.Cardano.Ledger.Constrained.Pairing

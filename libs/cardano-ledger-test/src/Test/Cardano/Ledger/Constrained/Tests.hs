@@ -680,6 +680,7 @@ constraintProperty timeout strict whitelist info prop =
 checkPredicates :: Era era => [Pred era] -> Env era -> Property
 checkPredicates preds env =
   counterexample ("-- Solution --\n" ++ showEnv env) $
+  counterexample ("-- Failed --\n" ++ unlines [ showPred pr | pr <- preds, not $ either (const False) id $ runTyped $ runPred env pr ]) $
     conjoin $
       map checkPred preds
   where

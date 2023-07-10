@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.Shelley.Rules.AdaPreservation (
   adaPreservationProps,
+  adaPreservationTraceProps,
   tests,
 ) where
 
@@ -134,7 +135,19 @@ adaPreservationProps ::
   ) =>
   Property
 adaPreservationProps =
-  forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
+  forAllChainTrace @era longTraceLen defaultConstants (adaPreservationTraceProps @era @ledger)
+
+adaPreservationTraceProps ::
+  forall era ledger.
+  ( EraGen era
+  , TestingLedger era ledger
+  , ChainProperty era
+  , GovernanceState era ~ ShelleyPPUPState era
+  , ProtVerAtMost era 8
+  ) =>
+  Trace (CHAIN era) ->
+  Property
+adaPreservationTraceProps tr = do
     let ssts :: [SourceSignalTarget (CHAIN era)]
         -- In this test, the STS Signal has this definition
         -- Signal(CHAIN era) = Block (BHeader (EraCrypto era)) era

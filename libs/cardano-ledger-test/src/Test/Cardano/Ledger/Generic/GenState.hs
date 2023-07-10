@@ -67,6 +67,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   initStableFields,
   modifyGenStateInitialUtxo,
   modifyGenStateInitialRewards,
+  modifyGenStateKeys,
   modifyModelCount,
   modifyModelIndex,
   modifyModelUTxO,
