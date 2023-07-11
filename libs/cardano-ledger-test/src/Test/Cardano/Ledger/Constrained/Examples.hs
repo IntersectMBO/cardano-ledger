@@ -212,7 +212,6 @@ test3 = testn (Mary Standard) "Test 3. PState example" False stoi cs (Assemble p
       , Dom retiring :⊆: Dom regPools
       , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [SumMap mockPoolDistr]
       ]
-    poolsUniv = Var $ V "poolsUniv" (SetR PoolHashR) No
 
 -- ==============================
 
@@ -272,9 +271,6 @@ constraints proof =
   , Random utxoCoin
   , Random $ pparams proof
   ]
-  where
-    credsUniv = Var $ V "credsUniv" (SetR CredR) No
-    poolsUniv = Var $ V "poolsUniv" (SetR PoolHashR) No
 
 
 -- | Test that we can find a viable variable ordering
@@ -333,8 +329,6 @@ pstateConstraints =
   , Disjoint (Dom futureRegPools) (Dom retiring)
   -- , (Dom futureRegPools) :⊆: (Dom regPools)  I am pretty sure we don't want this
   ]
-  where
-    poolsUniv = Var $ V "poolsUniv" (SetR PoolHashR) No
 
 {-
 retiring: (Map (KeyHash 'StakePool c) EpochNo)
@@ -501,8 +495,6 @@ test14 =
     , Dom rewards :=: credsUniv
     ]
     Skip
-  where
-    credsUniv = Var $ V "credsUniv" (SetR CredR) No
 
 -- ==============================================
 
@@ -541,7 +533,6 @@ preds16 _proof =
   ]
   where
     foox = Var (V "foo" (MapR PoolHashR RationalR) No)
-    poolsUniv = Var $ V "poolsUniv" (SetR PoolHashR) No
 
 test16 :: Gen Property
 test16 =
@@ -656,8 +647,6 @@ dstatePreds _p =
   where
     -- Local variable since the solver can't solve ProjS l (Dom X) :⊆: Y
     futureGenKeyHashes = Var (V "futureGenKeyHashes" (SetR GenHashR) No)
-    instanReservesSum = Var (V "instanReservesSum" CoinR No)
-    instanTreasurySum = Var (V "instanTreasurySum" CoinR No)
 
 accountstatePreds :: Proof era -> [Pred era]
 accountstatePreds _p = [] -- Constraints on reserves and treasury appear in dstatePreds
@@ -755,7 +744,6 @@ projPreds2 _proof =
   ]
   where
     futGDUniv = (Var (V "futGDUniv" (SetR FutureGenDelegR) No))
-    genesisUniv = Var $ V "genesisUniv" (SetR GenHashR) No
 
 test18a :: Gen Property
 test18a = testn proof "Test 18a. Projection test" False stoi (projPreds1 proof) Skip
