@@ -383,7 +383,7 @@ data UMap c = UMap
   { umElems :: !(Map (Credential 'Staking c) (UMElem c))
   , umPtrs :: !(Map Ptr (Credential 'Staking c))
   }
-  deriving (Show, Eq, Generic, NoThunks, NFData)
+  deriving (Show, Eq, Ord, Generic, NoThunks, NFData)
 
 -- | All maps unrolled. It is important to note that all fields are lazy, because
 -- conversion from UMap can be expensive, thus only fields that are forced will incur that

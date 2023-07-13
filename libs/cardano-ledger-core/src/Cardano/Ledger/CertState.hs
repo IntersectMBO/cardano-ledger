@@ -118,7 +118,7 @@ data InstantaneousRewards c = InstantaneousRewards
   , deltaReserves :: !DeltaCoin
   , deltaTreasury :: !DeltaCoin
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoThunks (InstantaneousRewards c)
 
@@ -150,7 +150,7 @@ data DState era = DState
   , dsIRewards :: !(InstantaneousRewards (EraCrypto era))
   -- ^ Instantaneous Rewards
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoThunks (DState era)
 
@@ -219,7 +219,7 @@ data PState era = PState
   , psDeposits :: !(Map (KeyHash 'StakePool (EraCrypto era)) Coin)
   -- ^ A map of the deposits for each pool
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoThunks (PState era)
 
@@ -261,7 +261,7 @@ data VState era = VState
           (Maybe (KeyHash 'CommitteeHotKey (EraCrypto era))) -- `Nothing` to indicate "resigned".
        )
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance Default (VState era) where
   def = VState def def
@@ -291,7 +291,7 @@ data CertState era = CertState
   , certPState :: !(PState era)
   , certDState :: !(DState era)
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoThunks (CertState c)
 
