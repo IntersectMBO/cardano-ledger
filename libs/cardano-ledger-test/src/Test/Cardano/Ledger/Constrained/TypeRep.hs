@@ -272,6 +272,7 @@ data Rep era t where
   StakeHashR :: Rep era (KeyHash 'Staking (EraCrypto era))
   BoolR :: Rep era Bool
   DRepR :: Rep era (Core.DRep (EraCrypto era))
+  CertStateR :: Rep era (CertState era)
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -281,6 +282,7 @@ stringR = ListR CharR
 
 repTypeable :: Era era => Rep era t -> IsTypeable t
 repTypeable r = case r of
+  CertStateR{} -> IsTypeable
   StakeHashR{} -> IsTypeable
   BoolR{} -> IsTypeable
   DRepR{} -> IsTypeable
@@ -377,6 +379,7 @@ instance Era era => Singleton (Rep era) where
 -- Show instances
 
 instance Show (Rep era t) where
+  show CertStateR = "CertState"
   show CoinR = "Coin"
   show (a :-> b) = "(" ++ show a ++ " -> " ++ show b ++ ")"
   show (MapR a b) = "(Map " ++ show a ++ " " ++ show b ++ ")"
@@ -465,6 +468,7 @@ instance Show (Rep era t) where
   show DRepR = "(DRep c)"
 
 synopsis :: forall e t. Rep e t -> t -> String
+synopsis CertStateR c = show c
 synopsis RationalR r = show r
 synopsis CoinR c = show (pcCoin c)
 synopsis EpochR e = show e
@@ -678,6 +682,7 @@ instance Shaped (Rep era) any where
   shape StakeHashR = Nullary 83
   shape BoolR = Nullary 84
   shape DRepR = Nullary 85
+  shape CertStateR = Nullary 86
 
 compareRep :: forall era t s. Era era => Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -823,6 +828,7 @@ genSizedRep _ (LedgerStateR p) = case p of
 genSizedRep _ StakeHashR = arbitrary
 genSizedRep _ BoolR = arbitrary
 genSizedRep _ DRepR = arbitrary
+genSizedRep _ CertStateR = arbitrary
 
 genRep ::
   Era era =>
@@ -958,6 +964,7 @@ shrinkRep (LedgerStateR _) _ = []
 shrinkRep StakeHashR x = shrink x
 shrinkRep BoolR x = shrink x
 shrinkRep DRepR x = shrink x
+shrinkRep CertStateR x = shrink x
 
 -- ===========================
 
@@ -974,6 +981,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
   where
     err t c = error ("hasOrd function 'help' evaluates its second arg at type " ++ show t ++ ", in " ++ c ++ " case.")
     help :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
+    help CertStateR t = pure $ With t
     help CoinR t = pure $ With t
     help r@(_ :-> _) _ = failT [show r ++ " does not have an Ord instance."]
     help r@(MapR _ b) m = do
