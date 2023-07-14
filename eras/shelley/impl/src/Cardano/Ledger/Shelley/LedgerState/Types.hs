@@ -84,7 +84,7 @@ data AccountState = AccountState
   { asTreasury :: !Coin
   , asReserves :: !Coin
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance EncCBOR AccountState where
   encCBOR (AccountState t r) =
