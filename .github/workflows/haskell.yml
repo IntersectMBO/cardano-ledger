@@ -62,13 +62,10 @@ jobs:
         gem install cddl -v 0.8.15
         gem install cbor-diag
 
-    - name: Install libsodium
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install libsodium23 libsodium-dev
-        sudo apt-get -y remove --purge software-properties-common
-        sudo apt-get -y autoremove
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
 
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
@@ -76,12 +73,6 @@ jobs:
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: latest
-
-    - name: Install secp256k1
-      uses: input-output-hk/setup-secp256k1@v1
-      with:
-        git-ref: ${{ env.SECP256K1_REF }}
-        cache-version: ${{ env.SECP_CACHE_VERSION }}
 
     - name: Configure to use libsodium
       run: |
