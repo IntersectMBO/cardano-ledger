@@ -62,17 +62,17 @@ jobs:
         gem install cddl -v 0.8.15
         gem install cbor-diag
 
-    - name: Install system dependencies
-      uses: input-output-hk/actions/base@latest
-      with:
-        use-sodium-vrf: false # default is true
-
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: latest
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
 
     - name: Configure to use libsodium
       run: |
