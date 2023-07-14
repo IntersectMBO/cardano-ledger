@@ -273,6 +273,7 @@ data Rep era t where
   BoolR :: Rep era Bool
   DRepR :: Rep era (Core.DRep (EraCrypto era))
   CertStateR :: Rep era (CertState era)
+  AccountStateR :: Rep era AccountState
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -282,6 +283,7 @@ stringR = ListR CharR
 
 repTypeable :: Era era => Rep era t -> IsTypeable t
 repTypeable r = case r of
+  AccountStateR{} -> IsTypeable
   CertStateR{} -> IsTypeable
   StakeHashR{} -> IsTypeable
   BoolR{} -> IsTypeable
@@ -379,6 +381,7 @@ instance Era era => Singleton (Rep era) where
 -- Show instances
 
 instance Show (Rep era t) where
+  show AccountStateR = "AccountState"
   show CertStateR = "CertState"
   show CoinR = "Coin"
   show (a :-> b) = "(" ++ show a ++ " -> " ++ show b ++ ")"
@@ -468,6 +471,7 @@ instance Show (Rep era t) where
   show DRepR = "(DRep c)"
 
 synopsis :: forall e t. Rep e t -> t -> String
+synopsis AccountStateR a = show a
 synopsis CertStateR c = show c
 synopsis RationalR r = show r
 synopsis CoinR c = show (pcCoin c)
@@ -683,6 +687,7 @@ instance Shaped (Rep era) any where
   shape BoolR = Nullary 84
   shape DRepR = Nullary 85
   shape CertStateR = Nullary 86
+  shape AccountStateR = Nullary 87
 
 compareRep :: forall era t s. Era era => Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -695,6 +700,7 @@ genSizedRep ::
   Int ->
   Rep era t ->
   Gen t
+genSizedRep _ AccountStateR = arbitrary
 genSizedRep n CoinR =
   if n == 0
     then do Positive m <- arbitrary; pure (Coin m)
@@ -873,6 +879,7 @@ genpup (PPUPStateR (Conway _)) = arbitrary -- FIXME when Conway is fully defined
 -- Not all types in the universe have Arbitrary instances and thus don't shrink (the `[]` cases).
 -- TODO: add instances for these types.
 shrinkRep :: Era era => Rep era t -> t -> [t]
+shrinkRep AccountStateR t = shrink t
 shrinkRep CoinR t = shrink t
 shrinkRep (_ :-> _) _ = []
 shrinkRep (MapR a b) t = shrinkMapBy Map.fromList Map.toList (shrinkRep $ ListR (PairR a b)) t
@@ -981,6 +988,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
   where
     err t c = error ("hasOrd function 'help' evaluates its second arg at type " ++ show t ++ ", in " ++ c ++ " case.")
     help :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
+    help AccountStateR t = pure $ With t
     help CertStateR t = pure $ With t
     help CoinR t = pure $ With t
     help r@(_ :-> _) _ = failT [show r ++ " does not have an Ord instance."]
