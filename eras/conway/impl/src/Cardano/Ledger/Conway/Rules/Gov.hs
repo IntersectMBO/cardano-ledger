@@ -153,7 +153,6 @@ noSuchGovernanceAction (ConwayGovState st) gaid =
 
 govTransition :: forall era. TransitionRule (ConwayGOV era)
 govTransition = do
-  -- TODO Check the signatures
   TRC (GovEnv txid epoch, st, GovernanceProcedures {..}) <- judgmentContext
 
   let applyProps _ st' Empty = pure st'
