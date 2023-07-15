@@ -147,6 +147,4 @@ instance ToExpr (CompactForm Coin) where
 decodePositiveCoin :: Decoder s Coin
 decodePositiveCoin = do
   n <- decodeWord64
-  if n == 0
-    then fail "Expected a positive Coin. Got 0 (zero)."
-    else pure $ Coin (toInteger n)
+  pure $ Coin (toInteger n)
