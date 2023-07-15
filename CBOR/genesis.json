@@ -1,0 +1,116 @@
+{
+  "systemStart": "2023-07-07T17:50:24.776130934Z",
+  "networkMagic": 42,
+  "networkId": "Testnet",
+  "activeSlotsCoeff": 0.1,
+  "securityParam": 10,
+  "epochLength": 500,
+  "slotsPerKESPeriod": 129600,
+  "maxKESEvolutions": 60,
+  "slotLength": 0.1,
+  "updateQuorum": 2,
+  "maxLovelaceSupply": 1000000000000,
+  "protocolParams": {
+    "minFeeA": 44,
+    "minFeeB": 155381,
+    "maxBlockBodySize": 65536,
+    "maxTxSize": 16384,
+    "maxBlockHeaderSize": 1100,
+    "keyDeposit": 0,
+    "poolDeposit": 0,
+    "eMax": 18,
+    "nOpt": 100,
+    "a0": 0,
+    "rho": 0.1,
+    "tau": 0.1,
+    "protocolVersion": {
+      "major": 7,
+      "minor": 0
+    },
+    "minPoolCost": 0,
+    "decentralisationParam": 0.7,
+    "extraEntropy": {
+      "tag": "NeutralNonce"
+    },
+    "minUTxOValue": 1000000
+  },
+  "genDelegs": {
+    "2403a6646efc93fd91c70fb3345c3b03d9775070fff5a746ff20c702": {
+      "delegate": "63c94f91f730d0eda849457b319e1e83ebca70833b849abd9c3536ab",
+      "vrf": "f1e76d57c415da55c890245e8a7adc7ffef3c83b837626f8815cbdf5eb2d09c5"
+    },
+    "7fe5d09c7934fe90a9d0bed6657f2a915f0a98e8d2e7e54a5a4ae02c": {
+      "delegate": "9625c26f76e004b83a535a7942ae70c6cde16b9f01cb2ff8edda33d8",
+      "vrf": "a9586403e234dfd14c6306f44e6195abff2b5036636fe4809d9530149b103d5d"
+    },
+    "9e8d58006433008ff59a2f465aedcb1e257a17c407a365ab3df0f9c3": {
+      "delegate": "2269db3f59545fa175203210894292183bc2bbbe7810107a0b2e088d",
+      "vrf": "77446494a3bd7c0ec5772457749bf601a2159ee01496ae5d59deed9610e5bb67"
+    }
+  },
+  "initialFunds": {
+    "60942741966136e81bb676fa387bf3156d69e11f1bbe02bd1bedae99e3": 300000000000,
+    "609a5f1853ae7e3ebe22944f4f51a8fc225dd63dc7cada505c2ebbceb7": 300000000000,
+    "60ed0998e484ef9c9088c43ee7169cf0811cea2e52c07a3bf7b5b0cb63": 300000000000,
+    "007fbba50c4d1294488c88699f46e2fe2a7b9846d6c222c2ccb9f1ac35322d0c975bdd795b01301c608369f76c70316bbc3e4a49be2de090e2": 300000000000,
+    "006cc6915dd7e186638d528c9adb3483ed7881301b5c98638b9ac01eeb40bde9ee0a6cef31485662aadfb7c5e901097e8258e9205d19bf592f": 300000000000,
+    "0068d2c78c3931d554c2121fbfaef4fa32e9b5b169aa18c61265af43bff52c1c7fe1fc68068b23b599b93394aaba39fd615925d528a8955288": 300000000000
+  },
+  "staking": {
+    "pools": {
+      "7003e28deb0b154f61e656809a4c960f44fb83587602eb149edc2ca1": {
+        "cost": 0,
+        "margin": 0,
+        "metadata": null,
+        "owners": [],
+        "pledge": 0,
+        "publicKey": "7003e28deb0b154f61e656809a4c960f44fb83587602eb149edc2ca1",
+        "relays": [],
+        "rewardAccount": {
+          "credential": {
+            "key hash": "9e9578d7bc4b2e87ee1338c8948453ec5e52b607d4e903147076102e"
+          },
+          "network": "Testnet"
+        },
+        "vrf": "8c25dce48038509f542235052d994803159f4591a3e5a9140664f89bc002d306"
+      },
+      "4514bdc05b5e307ac918ebe2c603a00f08a9e368b9323762eb097e01": {
+        "cost": 0,
+        "margin": 0,
+        "metadata": null,
+        "owners": [],
+        "pledge": 0,
+        "publicKey": "4514bdc05b5e307ac918ebe2c603a00f08a9e368b9323762eb097e01",
+        "relays": [],
+        "rewardAccount": {
+          "credential": {
+            "key hash": "eb8485cb985462d7914eb8a4bcd83a9721e2c85d9537f077d886ab42"
+          },
+          "network": "Testnet"
+        },
+        "vrf": "ce076f7c14f732fe0a1880a9289062bc09dd3591b2e9d431a47e49e49a758d6f"
+      },
+      "403273882ce1dac6e27e5a945fb1636655d15138515303daec9a29b2": {
+        "cost": 0,
+        "margin": 0,
+        "metadata": null,
+        "owners": [],
+        "pledge": 0,
+        "publicKey": "403273882ce1dac6e27e5a945fb1636655d15138515303daec9a29b2",
+        "relays": [],
+        "rewardAccount": {
+          "credential": {
+            "key hash": "d72effa0837444518bbf905debd5298bd1bf45b7dde0c3b47cca5fd5"
+          },
+          "network": "Testnet"
+        },
+        "vrf": "72152095bf507b52c5843660ac070d2a0802aa9256fad6d8149f1b05bce6f0ed"
+      }
+    },
+    "stake": {
+      "322d0c975bdd795b01301c608369f76c70316bbc3e4a49be2de090e2": "7003e28deb0b154f61e656809a4c960f44fb83587602eb149edc2ca1",
+      "40bde9ee0a6cef31485662aadfb7c5e901097e8258e9205d19bf592f": "4514bdc05b5e307ac918ebe2c603a00f08a9e368b9323762eb097e01",
+      "f52c1c7fe1fc68068b23b599b93394aaba39fd615925d528a8955288": "403273882ce1dac6e27e5a945fb1636655d15138515303daec9a29b2"
+    }
+  }
+}

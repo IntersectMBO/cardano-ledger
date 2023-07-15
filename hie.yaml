@@ -138,6 +138,9 @@ cradle:
     - path: "eras/shelley-ma/test-suite/test"
       component: "cardano-ledger-shelley-ma-test:test:cardano-ledger-shelley-ma-test"
 
+    - path: "libs/agda-ledger-executable-spec/."
+      component: "lib:agda-ledger-executable-spec"
+
     - path: "libs/cardano-data/src"
       component: "lib:cardano-data"
 

@@ -18,6 +18,7 @@ source-repository head
 library
     exposed-modules:
         Test.Cardano.Ledger.Alonzo.Tools
+        Test.Cardano.Ledger.AgdaSpec
         Test.Cardano.Ledger.Constrained.Ast
         Test.Cardano.Ledger.Constrained.Classes
         Test.Cardano.Ledger.Constrained.Combinators
@@ -112,7 +113,9 @@ library
         text,
         time,
         transformers,
-        vector
+        vector,
+        agda-ledger-executable-spec,
+        base16-bytestring,
 
 test-suite cardano-ledger-test
     type:             exitcode-stdio-1.0
@@ -128,7 +131,7 @@ test-suite cardano-ledger-test
         base,
         cardano-ledger-test,
         tasty,
-        data-default-class
+        data-default-class,
 
 benchmark bench
     type:             exitcode-stdio-1.0

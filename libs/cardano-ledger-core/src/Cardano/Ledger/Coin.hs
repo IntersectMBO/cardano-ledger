@@ -70,11 +70,11 @@ instance FromCBOR Coin where
   fromCBOR = Coin . toInteger <$> Plain.decodeWord64
 
 instance DecCBOR Coin where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      (Coin . fromIntegral <$> decodeWord64)
-      (Coin <$> decodeInteger)
+  decCBOR = Coin <$> decodeInteger
+    -- ifDecoderVersionAtLeast
+    --   (natVersion @9)
+    --   (Coin . fromIntegral <$> decodeWord64)
+    --   (Coin <$> decodeInteger)
 
 newtype DeltaCoin = DeltaCoin Integer
   deriving (Eq, Ord, Generic, Enum, NoThunks, HeapWords)

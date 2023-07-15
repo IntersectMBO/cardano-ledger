@@ -1,0 +1,5 @@
+{
+    "type": "Unwitnessed Tx BabbageEra",
+    "description": "Ledger Cddl Format",
+    "cborHex": "84a300818258207c7e5fc419c2fd1a33d8f4761dd6e4cb6c43554c55378c7fccdf65f22c1c946b000181a200581d60ed0998e484ef9c9088c43ee7169cf0811cea2e52c07a3bf7b5b0cb63011b00000045d962375b021a000280a5a0f5f6"
+}
