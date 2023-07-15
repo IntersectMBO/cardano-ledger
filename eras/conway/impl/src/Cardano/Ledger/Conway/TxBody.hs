@@ -123,6 +123,11 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
   , ctbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   , ctbrTxNetworkId :: !(StrictMaybe Network)
+  -- TODO Make sure that duplicate votes are not possible:
+  -- , ctbrVotingProcedures ::
+  --     !(Map
+  --        (GovernanceActionId (EraCrypto era), Voter (EraCrypto era))
+  --        (VotingProcedure era))
   , ctbrVotingProcedures :: !(StrictSeq (VotingProcedure era))
   , ctbrProposalProcedures :: !(StrictSeq (ProposalProcedure era))
   }

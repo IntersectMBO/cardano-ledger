@@ -157,6 +157,8 @@ govTransition = do
 
   let applyProps _ st' Empty = pure st'
       applyProps idx st' (ProposalProcedure {..} :<| ps) = do
+        -- TODO: Verify wellformedness of PParamsUpdates
+        -- named `proposalWellFormed` in the spec
         let st'' =
               addAction
                 epoch

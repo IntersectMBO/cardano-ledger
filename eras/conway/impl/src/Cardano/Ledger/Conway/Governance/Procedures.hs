@@ -270,7 +270,7 @@ data ProposalProcedure era = ProposalProcedure
   { pProcDeposit :: !Coin
   , pProcReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
   , pProcGovernanceAction :: !(GovernanceAction era)
-  , pProcAnchor :: !(StrictMaybe (Anchor (EraCrypto era)))
+  , pProcAnchor :: !(StrictMaybe (Anchor (EraCrypto era))) -- TODO: Remove StrictMaybe
   }
   deriving (Generic, Eq, Show)
 
@@ -296,12 +296,23 @@ instance EraPParams era => EncCBOR (ProposalProcedure era) where
         !> To pProcGovernanceAction
         !> E (encodeNullStrictMaybe encCBOR) pProcAnchor
 
+
+  -- = ParameterChange -- i
+  -- | HardForkInitiation -- ni
+  -- | TreasuryWithdrawals  -- i
+  -- | NoConfidence -- i
+  -- | NewCommittee -- i
+  -- | NewConstitution -- i
+  -- | InfoAction -- i
+
 data GovernanceAction era
   = ParameterChange !(PParamsUpdate era)
   | HardForkInitiation !ProtVer
   | TreasuryWithdrawals !(Map (Credential 'Staking (EraCrypto era)) Coin)
   | NoConfidence
   | NewCommittee !(Set (KeyHash 'Voting (EraCrypto era))) !Rational
+  -- TODO: Change to (expriation and previous committe:
+  --       | NewCommittee !(Map (Credential (EraCrypto era)) EpochNo) !(Set (Credential 'Voting (EraCrypto era))) !Rational
   | NewConstitution !(SafeHash (EraCrypto era) ByteString)
   | InfoAction
   deriving (Generic)

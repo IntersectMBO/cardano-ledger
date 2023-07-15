@@ -375,6 +375,8 @@ data ScriptPurpose era
   | Spending !(TxIn (EraCrypto era))
   | Rewarding !(RewardAcnt (EraCrypto era))
   | Certifying !(TxCert era)
+  | Voting !(GovernanceActionId (EraCrypto era), Voter (EraCrypto era))
+  | Proposing 
   deriving (Generic)
 
 deriving instance (Era era, Eq (TxCert era)) => Eq (ScriptPurpose era)

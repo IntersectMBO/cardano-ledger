@@ -358,7 +358,7 @@ validateTrans ::
   (e -> PredicateFailure sts) ->
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-validateTrans t v = liftF $ Predicate v t ()
+validateTrans t v = v `par` (liftF $ Predicate v t ())
 
 -- | Same as `validation`, except with ability to translate opaque failures
 -- into `PredicateFailure`s with a help of supplied function.
