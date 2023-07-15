@@ -734,7 +734,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     let m2 = Map.filter (== v) m
     let msgs = ("Solving for variable " ++ nam) : map show preds
     if Map.null m2
-      then failT (("The value: " ++ show v ++ " is not in the range of the map.") : msgs)
+      then failT (("The value: " ++ synopsis (termRep exprVal) v ++ " is not in the range of the map.") : msgs)
       else pure (fst <$> itemFromSet msgs (Map.keysSet m2))
   [MapMember exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
@@ -743,7 +743,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     let msgs = ("Solving for variable " ++ nam) : map show preds
     case Map.lookup k m of
       Just v -> pure (pure v)
-      Nothing -> failT (("The key: " ++ show k ++ " is not in the map.") : msgs)
+      Nothing -> failT (("The key: " ++ synopsis (termRep exprKey) k ++ " is not in the map.") : msgs)
   [List (Var v2@(V _ (MaybeR r2) _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 (MaybeR r2)
     xs <- mapM simplify expr
