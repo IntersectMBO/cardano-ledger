@@ -69,6 +69,12 @@ repro = do
       st = esLState (nesEs nes)
   either (error . show) (pure . fst) $ applyTx globals env st tx
 
+readEraType :: (Era era, NFData (t era), DecCBOR (t era), MonadIO m) => FilePath -> m (t era)
+readEraType filePath = liftIO $ do
+  bls <- BSL.readFile filePath
+  either (error . show) (evaluate . force) $ decodeFull (eraProtVerLow @era) bls
+
+
 readNewEpochState :: IO (NewEpochState Conway)
 readNewEpochState = do
   ls <- BSL.readFile "/home/lehins/Downloads/ledger-state.42.cbor"
