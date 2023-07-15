@@ -26,7 +26,7 @@ import Test.Tasty (TestTree, testGroup, withResource)
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest @(Value Conway) (eraProtVerHigh @Conway) n "positive_coin"
+    [ cddlTest @(Value Conway) (eraProtVerHigh @Conway) n "coin"
     , cddlTest @(Value Conway) (eraProtVerHigh @Conway) n "value"
     , cddlAnnotatorTest @(TxBody Conway) (eraProtVerHigh @Conway) n "transaction_body"
     , cddlAnnotatorTest @(TxAuxData Conway) (eraProtVerHigh @Conway) n "auxiliary_data"

@@ -513,9 +513,9 @@ negInt64 = -9223372036854775808 .. -1
 posInt64 = 1 .. 9223372036854775807
 nonZeroInt64 = negInt64 / posInt64 ; this is the same as the current int64 definition but without zero
 
-positive_coin = 1 .. 18446744073709551615
+positive_amount = 1 .. 18446744073709551615
 
-value = positive_coin / [positive_coin,multiasset<positive_coin>]
+value = coin / [coin,multiasset<positive_amount>]
 
 mint = multiasset<nonZeroInt64>
 

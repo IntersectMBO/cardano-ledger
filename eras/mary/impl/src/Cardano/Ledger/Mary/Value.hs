@@ -285,10 +285,6 @@ roundupBytesToWords b = quot (b + wordLength - 1) wordLength
 -- ==============================================================
 -- CBOR
 
--- TODO filter out 0s at deserialization
--- TODO Probably the actual serialization will be of the formal Coin OR Value type
--- Maybe better to make this distinction in the TxOut de/serialization
-
 decodeValue ::
   forall c s.
   Crypto c =>
@@ -296,33 +292,30 @@ decodeValue ::
 decodeValue =
   ifDecoderVersionAtLeast
     (natVersion @9)
-    (decode' conwayCoin)
-    (decode' preConwayCoin)
+    (decode' (unCoin <$> decodePositiveCoin))
+    (decode' (unCoin <$> decodeCoin))
   where
-    conwayCoin :: forall t. Decoder t Coin
-    conwayCoin = decodePositiveCoin
-    preConwayCoin :: forall t. Decoder t Coin
-    preConwayCoin = word64ToCoin <$> decodeWord64
-    decode' :: (forall t. Decoder t Coin) -> Decoder s (MaryValue c)
-    decode' decodeCoin = do
+    decodeCoin :: forall t. Decoder t Coin
+    decodeCoin = word64ToCoin <$> decodeWord64
+    decode' :: (forall t. Decoder t Integer) -> Decoder s (MaryValue c)
+    decode' decodeMultiAssetValue = do
       tt <- peekTokenType
       case tt of
         TypeUInt -> inject <$> decodeCoin
         TypeUInt64 -> inject <$> decodeCoin
-        TypeListLen -> decodeValuePair (unCoin <$> decodeCoin)
-        TypeListLen64 -> decodeValuePair (unCoin <$> decodeCoin)
-        TypeListLenIndef -> decodeValuePair (unCoin <$> decodeCoin)
+        TypeListLen -> decodeValuePair decodeMultiAssetValue
+        TypeListLen64 -> decodeValuePair decodeMultiAssetValue
+        TypeListLenIndef -> decodeValuePair decodeMultiAssetValue
         _ -> fail $ "Value: expected array or int, got " ++ show tt
 
-decodeValuePair ::
-  Crypto c =>
-  (forall t. Decoder t Integer) ->
-  Decoder s (MaryValue c)
-decodeValuePair decodeAmount =
-  decode $
-    RecD MaryValue
-      <! D decodeAmount
-      <! D (decodeMultiAssetMaps decodeAmount)
+    decodeValuePair ::
+      (forall t. Decoder t Integer) ->
+      Decoder s (MaryValue c)
+    decodeValuePair decodeMultiAssetValue =
+      decode $
+        RecD MaryValue
+          <! D (unCoin <$> decodeCoin)
+          <! D (decodeMultiAssetMaps decodeMultiAssetValue)
 
 encodeMultiAssetMaps ::
   Crypto c =>

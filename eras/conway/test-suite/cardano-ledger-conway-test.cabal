@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-conway-test
-version:       1.2.0.3
+version:       1.2.0.4
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -45,7 +45,7 @@ library
         cardano-ledger-conway:{cardano-ledger-conway, testlib} ^>=1.6,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.3 && <1.5,
         cardano-ledger-allegra ^>=1.2,
-        cardano-ledger-mary ^>=1.3,
+        cardano-ledger-mary ^>=1.3.1,
         cardano-ledger-shelley-ma-test >=1.1,
         cardano-ledger-shelley-test >=1.1,
         cardano-ledger-shelley >=1.3 && <1.5,

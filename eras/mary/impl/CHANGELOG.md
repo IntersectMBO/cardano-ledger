@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.3.1.0
+
+* Allow decoding zero `Coin` for `Value`
+
 ## 1.3.0.2
 
 *
