@@ -44,7 +44,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), StrictMaybe (..), natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
@@ -52,6 +52,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
+import Control.Monad (guard)
 import Data.ByteString.Short (ShortByteString)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
@@ -183,10 +184,17 @@ collectPlutusScriptsWithContext ::
   Tx era ->
   UTxO era ->
   Either [CollectError era] [PlutusWithContext era]
-collectPlutusScriptsWithContext ei sysS pp tx utxo =
+collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
+  -- TODO: remove this whole complicated check when we get into Conway. It is much simpler
+  -- to fail on a CostModel lookup in the `apply` function (already implemented).
   let usedLanguages = Set.fromList [lang | (_, Plutus lang _) <- neededAndConfirmedToBePlutus]
-      missingCMs = Set.filter (`Map.notMember` costModels) usedLanguages
-   in case Set.lookupMin missingCMs of
+      missingCostModels = Set.filter (`Map.notMember` costModels) usedLanguages
+      -- Check on a protcol version is to preserve failure mode (a single NoCostModel
+      -- failure for languages with missing cost models) until we are in Conway era. After
+      -- we hard fork into Conway it will be safe to remove this check together with the
+      -- `missingCostModels` lookup
+      protVerMajor = pvMajor (pp ^. ppProtocolVersionL)
+   in case guard (protVerMajor < natVersion @9) >> Set.lookupMin missingCostModels of
         Just l -> Left [NoCostModel l]
         Nothing ->
           merge
@@ -196,7 +204,6 @@ collectPlutusScriptsWithContext ei sysS pp tx utxo =
   where
     costModels = costModelsValid $ pp ^. ppCostModelsL
     scriptsAvailable = txscripts utxo tx
-    txinfo lang = txInfo pp lang ei sysS utxo tx
     AlonzoScriptsNeeded scriptsNeeded' = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededAndConfirmedToBePlutus =
       mapMaybe (knownToNotBe1Phase scriptsAvailable) scriptsNeeded'
@@ -204,8 +211,9 @@ collectPlutusScriptsWithContext ei sysS pp tx utxo =
       case indexedRdmrs tx sp of
         Just (d, eu) -> Right (script, sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
-    apply (script@(Plutus lang _), sp, d, eu) =
-      case txinfo lang of
+    apply (script@(Plutus lang _), sp, d, eu) = do
+      cm <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
+      case txInfo pp lang epochInfo sysStart utxo tx of
         Right inf ->
           let datums = maybe id (:) (getDatum tx utxo sp) [d, valContext inf sp]
            in Right $
@@ -213,7 +221,7 @@ collectPlutusScriptsWithContext ei sysS pp tx utxo =
                   { pwcScript = script
                   , pwcDatums = datums
                   , pwcExUnits = eu
-                  , pwcCostModel = costModels Map.! lang
+                  , pwcCostModel = cm
                   }
         Left te -> Left $ BadTranslation te
 
