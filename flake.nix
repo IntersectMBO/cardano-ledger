@@ -103,7 +103,7 @@
               # tools that work only with default compiler
               fourmolu = "0.10.1.0";
               hlint = "3.5";
-              haskell-language-server = "2.0.0.0";
+              haskell-language-server = { src = nixpkgs.haskell-nix.sources."hls-2.0"; };
             };
 
           # and from nixpkgs or other inputs
