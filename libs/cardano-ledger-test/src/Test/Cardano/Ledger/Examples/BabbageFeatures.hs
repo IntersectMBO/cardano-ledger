@@ -18,7 +18,6 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures where
 
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
@@ -54,6 +53,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   hashKey,
  )
+import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))
@@ -132,7 +132,7 @@ evenData3ArgsScript proof =
   where
     unsupported = "Plutus scripts are not supported in:" ++ show proof
     evenData3ArgsLang lang =
-      PlutusScript lang . SBS.pack $
+      PlutusScript . Plutus lang . BinaryPlutus . SBS.pack $
         concat
           [ [88, 65, 1, 0, 0, 51, 50, 34, 51, 34, 34, 37, 51, 83, 0]
           , [99, 50, 35, 51, 87, 52, 102, 225, 192, 8, 0, 64, 40, 2, 76]
@@ -793,7 +793,7 @@ malformedScript pf s = case pf of
   x@Allegra {} -> er x
   where
     ms :: AlonzoScript era
-    ms = PlutusScript PlutusV2 $ "nonsense " <> s
+    ms = PlutusScript (Plutus PlutusV2 (BinaryPlutus ("nonsense " <> s)))
     er x = error $ "no malformedScript for " <> show x
 
 malformedPlutusRefScript :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era

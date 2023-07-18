@@ -25,7 +25,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Language (Language)
+import Cardano.Ledger.Alonzo.Language (BinaryPlutus (..), Language, Plutus (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
@@ -437,10 +437,12 @@ instance Arbitrary AlonzoGenesis where
       <*> arbitrary
 
 alwaysSucceeds :: Language -> Natural -> AlonzoScript era
-alwaysSucceeds lang n = PlutusScript lang (Plutus.alwaysSucceedingNAryFunction n)
+alwaysSucceeds lang n =
+  PlutusScript (Plutus lang (BinaryPlutus (Plutus.alwaysSucceedingNAryFunction n)))
 
 alwaysFails :: Language -> Natural -> AlonzoScript era
-alwaysFails lang n = PlutusScript lang (Plutus.alwaysFailingNAryFunction n)
+alwaysFails lang n =
+  PlutusScript (Plutus lang (BinaryPlutus (Plutus.alwaysFailingNAryFunction n)))
 
 -- | This Arbitrary instance assumes the flexible deserialization
 -- scheme of 'CostModels' starting at version 9.

@@ -54,7 +54,6 @@ where
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Language (Language (..), guardPlutus)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData)
 import Cardano.Ledger.Binary (
@@ -74,6 +73,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (DSIGN, HASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.Language (Language (..), Plutus (..), guardPlutus)
 import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
@@ -469,39 +469,39 @@ instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw er
           ( Key 3 $
               E
                 (encCBOR . mapMaybe unwrapPS1 . Map.elems)
-                (Map.filter (isPlutus PlutusV1) scripts)
+                (Map.filter (isPlutusLanguage PlutusV1) scripts)
           )
         !> Omit
           null
           ( Key 6 $
               E
                 (encCBOR . mapMaybe unwrapPS2 . Map.elems)
-                (Map.filter (isPlutus PlutusV2) scripts)
+                (Map.filter (isPlutusLanguage PlutusV2) scripts)
           )
         !> Omit
           null
           ( Key 7 $
               E
                 (encCBOR . mapMaybe unwrapPS3 . Map.elems)
-                (Map.filter (isPlutus PlutusV3) scripts)
+                (Map.filter (isPlutusLanguage PlutusV3) scripts)
           )
         !> Omit nullDats (Key 4 $ To dats)
         !> Omit nullRedeemers (Key 5 $ To rdmrs)
     where
       unwrapTS (TimelockScript x) = Just x
       unwrapTS _ = Nothing
-      unwrapPS1 (PlutusScript PlutusV1 x) = Just x
+      unwrapPS1 (PlutusScript (Plutus PlutusV1 x)) = Just x
       unwrapPS1 _ = Nothing
-      unwrapPS2 (PlutusScript PlutusV2 x) = Just x
+      unwrapPS2 (PlutusScript (Plutus PlutusV2 x)) = Just x
       unwrapPS2 _ = Nothing
-      unwrapPS3 (PlutusScript PlutusV3 x) = Just x
+      unwrapPS3 (PlutusScript (Plutus PlutusV3 x)) = Just x
       unwrapPS3 _ = Nothing
 
       isTimelock (TimelockScript _) = True
-      isTimelock (PlutusScript _ _) = False
+      isTimelock (PlutusScript _) = False
 
-      isPlutus _ (TimelockScript _) = False
-      isPlutus lang (PlutusScript l _) = lang == l
+      isPlutusLanguage _ (TimelockScript _) = False
+      isPlutusLanguage lang (PlutusScript ps) = lang == plutusLanguage ps
 
 instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
   decCBOR = do
@@ -583,7 +583,7 @@ instance
       txWitnessField n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
 
-      decodePlutus lang = fmap (PlutusScript lang) <$> D (guardPlutus lang >> decCBOR)
+      decodePlutus lang = fmap (PlutusScript . Plutus lang) <$> D (guardPlutus lang >> decCBOR)
 
       addScripts :: [AlonzoScript era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
       addScripts x wits = wits {atwrScriptTxWits = getKeys ([] :: [era]) x <> atwrScriptTxWits wits}

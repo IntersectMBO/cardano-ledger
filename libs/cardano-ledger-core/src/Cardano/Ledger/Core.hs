@@ -108,7 +108,7 @@ import Cardano.Ledger.Hashes
 import Cardano.Ledger.Keys (KeyRole (Staking, Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
-import Cardano.Ledger.Language (Language)
+import Cardano.Ledger.Language (Plutus)
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -116,7 +116,6 @@ import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
-import Data.ByteString.Short (ShortByteString)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -534,8 +533,8 @@ type family SomeScript (phase :: Phase) (era :: Type) :: Type
 type instance SomeScript PhaseOne (BabbageEra c) = Timelock c
 type instance SomeScript PhaseOne (AlonzoEra c) = Timelock c
 --  We need the Language for Phase2 scripts because Plutus comes in several variants
-type instance SomeScript PhaseTwo (BabbageEra c) = (Language, ShortByteString)
-type instance SomeScript PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
+type instance SomeScript PhaseTwo (BabbageEra c) = Plutus
+type instance SomeScript PhaseTwo (AlonzoEra c) = Plutus
 type instance SomeScript PhaseOne (ShelleyMAEra ma c) = Timelock c
 type instance SomeScript PhaseOne (ShelleyEra c) = MultiSig c
 -}
@@ -543,7 +542,7 @@ type instance SomeScript PhaseOne (ShelleyEra c) = MultiSig c
 -- | A concrete type that witnesses the Phase of SomeScript
 data PhasedScript phase era where
   Phase1Script :: SomeScript 'PhaseOne era -> PhasedScript 'PhaseOne era
-  Phase2Script :: Language -> ShortByteString -> PhasedScript 'PhaseTwo era
+  Phase2Script :: Plutus -> PhasedScript 'PhaseTwo era
 
 getPhase1 :: EraScript era => Map k (Script era) -> Map k (Script era, PhasedScript 'PhaseOne era)
 getPhase1 = Map.mapMaybe phase1

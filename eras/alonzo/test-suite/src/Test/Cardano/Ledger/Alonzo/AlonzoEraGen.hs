@@ -225,18 +225,18 @@ genAux constants = do
       maybeAux
 
 instance Crypto c => ScriptClass (AlonzoEra c) where
-  basescript proxy key = someLeaf proxy key
+  basescript = someLeaf
   isKey _ (TimelockScript x) = isKey (Proxy @(MaryEra c)) $ translateTimelock x
-  isKey _ (PlutusScript _ _) = Nothing
+  isKey _ (PlutusScript _) = Nothing
   isOnePhase _ (TimelockScript _) = True
-  isOnePhase _ (PlutusScript _ _) = False
+  isOnePhase _ (PlutusScript _) = False
   quantify _ (TimelockScript x) = fmap (TimelockScript . translateTimelock) (quantify (Proxy @(MaryEra c)) (translateTimelock x))
   quantify _ x = Leaf x
   unQuantify _ quant = TimelockScript . translateTimelock $ unQuantify (Proxy @(MaryEra c)) (fmap (translateTimelock . unTime) quant)
 
 unTime :: AlonzoScript era -> Timelock era
 unTime (TimelockScript x) = x
-unTime (PlutusScript _ _) = error "Plutus in Timelock"
+unTime (PlutusScript _) = error "Plutus in Timelock"
 
 okAsCollateral :: forall c. Mock c => UTxO (AlonzoEra c) -> TxIn c -> Bool
 okAsCollateral utxo inputx =

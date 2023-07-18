@@ -201,4 +201,4 @@ translateDatum = \case
 translateScript :: Crypto c => Script (BabbageEra c) -> Script (ConwayEra c)
 translateScript = \case
   TimelockScript ts -> TimelockScript $ translateTimelock ts
-  PlutusScript l sbs -> PlutusScript l sbs
+  PlutusScript plutus -> PlutusScript plutus

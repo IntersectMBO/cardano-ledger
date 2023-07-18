@@ -13,34 +13,32 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
-import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoScript (..),
-  CostModel,
-  ExUnits (..),
- )
+import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectPlutusScriptsWithContext)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   ScriptPurpose (..),
  )
-import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
+import Cardano.Ledger.Alonzo.TxInfo (
+  PlutusWithContext (..),
+  TranslationError,
+  VersionedTxInfo,
+  txInfo,
+  valContext,
+ )
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
-import Cardano.Ledger.BaseTypes (natVersion)
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (
-  Coin (..),
-  ProtVer (..),
-  UTxO (..),
- )
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Data.ByteString.Short (ShortByteString)
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
@@ -84,19 +82,18 @@ collectTwoPhaseScriptInputsOutputOrdering ::
 collectTwoPhaseScriptInputsOutputOrdering =
   collectInputs apf testEpochInfo testSystemStart (pp apf) (validatingTx apf) (initUTxO apf)
     @?= Right
-      [
-        ( sbs
-        , lang
-        , [datum, redeemer, context]
-        , ExUnits 5000 5000
-        , freeCostModelV1
-        )
+      [ PlutusWithContext
+          { pwcScript = plutus
+          , pwcDatums = [datum, redeemer, context]
+          , pwcExUnits = ExUnits 5000 5000
+          , pwcCostModel = freeCostModelV1
+          }
       ]
   where
     apf = Alonzo Mock
-    (lang, sbs) = case always 3 apf of
+    plutus = case always 3 apf of
       TimelockScript _ -> error "always was not a Plutus script"
-      PlutusScript l s -> (l, s)
+      PlutusScript ps -> ps
     context =
       valContext
         ( fromRight (error "translation error") $
@@ -167,12 +164,10 @@ collectInputs ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Either
-    [CollectError era]
-    [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
-collectInputs (Alonzo _) = collectTwoPhaseScriptInputs
-collectInputs (Babbage _) = collectTwoPhaseScriptInputs
-collectInputs (Conway _) = collectTwoPhaseScriptInputs
+  Either [CollectError era] [PlutusWithContext era]
+collectInputs (Alonzo _) = collectPlutusScriptsWithContext
+collectInputs (Babbage _) = collectPlutusScriptsWithContext
+collectInputs (Conway _) = collectPlutusScriptsWithContext
 collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 
 getTxInfo ::
