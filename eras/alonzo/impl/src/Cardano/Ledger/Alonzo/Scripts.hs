@@ -453,7 +453,7 @@ decodeCostModels =
 legacyCostModelLength :: Language -> Int
 legacyCostModelLength PlutusV1 = 166
 legacyCostModelLength PlutusV2 = 175
-legacyCostModelLength PlutusV3 = 179
+legacyCostModelLength PlutusV3 = 217
 
 -- | See the note for 'legacyCostModelLength'.
 legacyDecodeCostModel :: Language -> Decoder s CostModel
