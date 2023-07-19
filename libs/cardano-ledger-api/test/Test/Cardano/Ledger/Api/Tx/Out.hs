@@ -49,9 +49,8 @@ propSetAlonzoMinTxOut =
           valSize = Val.size (txOut' ^. valueTxOutL)
           dataHashSize = maybe 0 (const 10) $ strictMaybeToMaybe (txOut' ^. dataHashTxOutL)
           sz = 27 + valSize + dataHashSize
-       in txOut'
-            ^. coinTxOutL
-              `shouldBe` Coin (sz * unCoin (unCoinPerWord (pp ^. ppCoinsPerUTxOWordL)))
+       in (txOut' ^. coinTxOutL)
+            `shouldBe` Coin (sz * unCoin (unCoinPerWord (pp ^. ppCoinsPerUTxOWordL)))
 
 propSetBabbageMinTxOut ::
   forall era.
@@ -66,9 +65,8 @@ propSetBabbageMinTxOut =
     within 1000000 $ -- just in case if there is a problem with termination
       let txOut' = setMinCoinTxOut pp txOut
           sz = toInteger (BSL.length (serialize (pvMajor (pp ^. ppProtocolVersionL)) txOut'))
-       in txOut'
-            ^. coinTxOutL
-              `shouldBe` Coin ((160 + sz) * unCoin (unCoinPerByte (pp ^. ppCoinsPerUTxOByteL)))
+       in (txOut' ^. coinTxOutL)
+            `shouldBe` Coin ((160 + sz) * unCoin (unCoinPerByte (pp ^. ppCoinsPerUTxOByteL)))
 
 propSetEnsureMinTxOut ::
   forall era.
@@ -81,16 +79,14 @@ propSetEnsureMinTxOut =
   prop "setEnsureMinTxOut" $ \(pp :: PParams era) (txOut :: TxOut era) -> do
     ensureMinCoinTxOut pp (txOut & coinTxOutL .~ mempty)
       `shouldBe` setMinCoinTxOut pp (txOut & coinTxOutL .~ mempty)
-    ensureMinCoinTxOut pp txOut
-      ^. coinTxOutL
-        `shouldSatisfy` (>= (setMinCoinTxOut pp txOut ^. coinTxOutL))
+    (ensureMinCoinTxOut pp txOut ^. coinTxOutL)
+      `shouldSatisfy` (>= (setMinCoinTxOut pp txOut ^. coinTxOutL))
     let v = eraProtVerHigh @era
         txOutSz = mkSized v txOut
     ensureMinCoinSizedTxOut pp (mkSized v (txOut & coinTxOutL .~ mempty))
       `shouldBe` setMinCoinSizedTxOut pp (mkSized v (txOut & coinTxOutL .~ mempty))
-    sizedValue (ensureMinCoinSizedTxOut pp txOutSz)
-      ^. coinTxOutL
-        `shouldSatisfy` (>= (sizedValue (setMinCoinSizedTxOut pp txOutSz) ^. coinTxOutL))
+    (sizedValue (ensureMinCoinSizedTxOut pp txOutSz) ^. coinTxOutL)
+      `shouldSatisfy` (>= (sizedValue (setMinCoinSizedTxOut pp txOutSz) ^. coinTxOutL))
 
 spec :: Spec
 spec =

@@ -407,8 +407,8 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)
-          === (UM.fromCompact (sumRewardsUView (UM.RewDepUView umap1)))
-            <-> (UM.fromCompact (sumRewardsUView (UM.RewDepUView umap2)))
+          === UM.fromCompact (sumRewardsUView (UM.RewDepUView umap1))
+            <-> UM.fromCompact (sumRewardsUView (UM.RewDepUView umap2))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWithdrawalsPerTx ::
@@ -478,9 +478,8 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         txb = tx ^. bodyTxL
         created =
           coinBalance u'
-            <+> txb
-            ^. feeTxBodyL
-              <+> totalTxDeposits pp_ dpstate txb
+            <+> (txb ^. feeTxBodyL)
+            <+> totalTxDeposits pp_ dpstate txb
         consumed_ =
           coinBalance u
             <+> keyTxRefunds pp_ dpstate txb
