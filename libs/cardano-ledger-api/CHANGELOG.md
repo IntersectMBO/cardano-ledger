@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-api`
 
+## 1.4.0.0
+
+* Rename `cgTallyL` to `cgGovL`
+* Rename `ConwayTallyState` to `ConwayGovState`
+
 ## 1.3.0.0
 
 * Add `queryConstitutionHash` to `Cardano.Ledger.Api.State.Query` #3506

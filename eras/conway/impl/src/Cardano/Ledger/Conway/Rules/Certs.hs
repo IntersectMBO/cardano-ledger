@@ -110,7 +110,7 @@ instance
   ) =>
   DecCBOR (ConwayCertsPredFailure era)
   where
-  decCBOR = decode $ Summands "ConwayTallyPredFailure" $ \case
+  decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
     0 -> SumD DelegateeNotRegisteredDELEG <! From
     1 -> SumD WithdrawalsNotInRewardsCERTS <! From
     2 -> SumD CertFailure <! From

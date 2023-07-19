@@ -1,8 +1,20 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.6.1.0
+## 1.7.0.0
 
 * Removal of TxOuts with zero `Coin` from UTxO on translation
+* Rename:
+    `cgTally` -> `cgGov`
+    `cgTallyL` -> `cgGovL`
+    `VDelFailure` -> `GovCertFailure`
+    `VDelEvent` -> `GovCertEvent`
+    `certVState` -> `certGState`
+    `ConwayVDelPredFailure` -> `ConwayGovCertPredFailure`
+    `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
+    `TallyEnv` -> `GovEnv`
+    `ConwayTallyState` -> `ConwayGovState`
+    `TALLY` -> `GOV`
+    `VDEL` -> `GOVCERT`
 
 ## 1.6.0.0
 
@@ -20,8 +32,8 @@
 * Removal of `gasVotes` in favor of `gasCommitteeVotes`, `gasDRepVotes` and
   `gasStakePoolVotes` in `GovernanceActionState`
 * Removal of `reRoles` from `RatifyEnv` as no longer needed
-* Addtion of `reStakePoolDistr` to `RatifyEnv`
-* Remove `VoterDoesNotHaveRole` as no longer needed from `ConwayTallyPredFailure`
+* Addition of `reStakePoolDistr` to `RatifyEnv`
+* Remove `VoterDoesNotHaveRole` as no longer needed from `ConwayGovPredFailure`
 * Added `ConwayEpochPredFailure`
 * Added instance for `Embed (ConwayRATIFY era) (ConwayEPOCH era)`
 * Removed instance for `Embed (ConwayRATIFY era) (ConwayNEWEPOCH era)`

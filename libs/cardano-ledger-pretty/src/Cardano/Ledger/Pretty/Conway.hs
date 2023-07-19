@@ -22,8 +22,8 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Anchor,
+  ConwayGovState (..),
   ConwayGovernance (..),
-  ConwayTallyState (..),
   GovernanceAction (..),
   GovernanceActionId (..),
   GovernanceActionIx (..),
@@ -38,9 +38,9 @@ import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure (..),
   ConwayCertsPredFailure (..),
   ConwayDelegPredFailure (..),
+  ConwayGovCertPredFailure,
+  ConwayGovPredFailure,
   ConwayLedgerPredFailure (..),
-  ConwayTallyPredFailure,
-  ConwayVDelPredFailure,
   EnactState (..),
   PredicateFailure,
   RatifyState (..),
@@ -228,21 +228,21 @@ instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
 instance
   ( PrettyA (PredicateFailure (EraRule "UTXOW" era))
   , PrettyA (PredicateFailure (EraRule "CERTS" era))
-  , PrettyA (PredicateFailure (EraRule "TALLY" era))
+  , PrettyA (PredicateFailure (EraRule "GOV" era))
   ) =>
   PrettyA (ConwayLedgerPredFailure era)
   where
   prettyA (ConwayUtxowFailure x) = prettyA x
   prettyA (ConwayCertsFailure x) = prettyA x
-  prettyA (ConwayTallyFailure x) = prettyA x
+  prettyA (ConwayGovFailure x) = prettyA x
   prettyA (ConwayWdrlNotDelegatedToDRep x) =
     ppSexp "ConwayWdrlNotDelegatedToDRep" [prettyA x]
 
-instance PrettyA (ConwayTallyPredFailure era) where
+instance PrettyA (ConwayGovPredFailure era) where
   prettyA = viaShow
 
-instance PrettyA (PParamsUpdate era) => PrettyA (ConwayTallyState era) where
-  prettyA (ConwayTallyState x) = prettyA x
+instance PrettyA (PParamsUpdate era) => PrettyA (ConwayGovState era) where
+  prettyA (ConwayGovState x) = prettyA x
 
 instance PrettyA (GovernanceActionId era) where
   prettyA gaid@(GovernanceActionId _ _) =
@@ -313,7 +313,7 @@ instance
     let ConwayGovernance {..} = cg
      in ppRecord
           "ConwayGovernance"
-          [ ("Tally", prettyA cgTally)
+          [ ("Gov", prettyA cgGov)
           , ("Ratify", prettyA cgRatify)
           ]
 
@@ -334,7 +334,7 @@ instance
 instance
   ( PrettyA (PredicateFailure (EraRule "DELEG" era))
   , PrettyA (PredicateFailure (EraRule "POOL" era))
-  , PrettyA (PredicateFailure (EraRule "VDEL" era))
+  , PrettyA (PredicateFailure (EraRule "GOVCERT" era))
   ) =>
   PrettyA (ConwayCertPredFailure era)
   where
@@ -347,10 +347,10 @@ instance
       ppRecord
         "ConwayPoolFailure"
         [("POOL", prettyA x)]
-    VDelFailure x ->
+    GovCertFailure x ->
       ppRecord
-        "ConwayVDelFailure"
-        [("VDEL", prettyA x)]
+        "ConwayGovCertFailure"
+        [("GOVCERT", prettyA x)]
 
 instance PrettyA (ConwayDelegPredFailure era) where
   prettyA = \case
@@ -379,5 +379,5 @@ instance PrettyA (ConwayDelegPredFailure era) where
         "WrongCertificateTypeDELEG"
         []
 
-instance PrettyA (ConwayVDelPredFailure era) where
-  prettyA = const $ ppRecord "ConwayVDelPredFailure" []
+instance PrettyA (ConwayGovCertPredFailure era) where
+  prettyA = const $ ppRecord "ConwayGovCertPredFailure" []

@@ -25,11 +25,11 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
+  ConwayGovState (..),
   ConwayGovernance (..),
-  ConwayTallyState (..),
   RatifyState (..),
+  cgGovL,
   cgRatifyL,
-  cgTallyL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
@@ -204,8 +204,8 @@ epochTransition = do
         , reStakePoolDistr = stakePoolDistr
         , reCurrentEpoch = eNo
         }
-    tallyStateToSeq = Seq.fromList . Map.toList
-    ratSig = RatifySignal . tallyStateToSeq . unConwayTallyState $ cgTally govSt
+    govStateToSeq = Seq.fromList . Map.toList
+    ratSig = RatifySignal . govStateToSeq . unConwayGovState $ cgGov govSt
   rs@RatifyState {rsFuture} <-
     trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
   let es'' =
@@ -215,9 +215,9 @@ epochTransition = do
           , esPrevPp = pp
           , esPp = pp
           }
-      newTally = ConwayTallyState . Map.fromList . toList $ rsFuture
+      newGov = ConwayGovState . Map.fromList . toList $ rsFuture
   pure $
-    (es'' & esLStateL . lsUTxOStateL . utxosGovernanceL . cgTallyL .~ newTally)
+    (es'' & esLStateL . lsUTxOStateL . utxosGovernanceL . cgGovL .~ newGov)
       & (esLStateL . lsUTxOStateL . utxosGovernanceL . cgRatifyL .~ rs)
 
 instance

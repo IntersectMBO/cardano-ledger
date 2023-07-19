@@ -100,7 +100,7 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayTallyState era)
+deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayGovState era)
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceActionState era) where
   arbitrary =
@@ -175,11 +175,11 @@ instance
 -- Cardano.Ledger.Conway.Rules -----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
--- TALLY
+-- GOV
 
-instance Era era => Arbitrary (TallyEnv era) where
+instance Era era => Arbitrary (GovEnv era) where
   arbitrary =
-    TallyEnv
+    GovEnv
       <$> arbitrary
       <*> arbitrary
 
@@ -199,13 +199,13 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProced
   arbitrary =
     GovernanceProcedures <$> arbitrary <*> arbitrary
 
-instance Era era => Arbitrary (ConwayTallyPredFailure era) where
+instance Era era => Arbitrary (ConwayGovPredFailure era) where
   arbitrary = GovernanceActionDoesNotExist <$> arbitrary
 
 instance
   ( Arbitrary (PredicateFailure (EraRule "UTXOW" era))
   , Arbitrary (PredicateFailure (EraRule "CERTS" era))
-  , Arbitrary (PredicateFailure (EraRule "TALLY" era))
+  , Arbitrary (PredicateFailure (EraRule "GOV" era))
   ) =>
   Arbitrary (ConwayLedgerPredFailure era)
   where
@@ -213,7 +213,7 @@ instance
     oneof
       [ ConwayUtxowFailure <$> arbitrary
       , ConwayCertsFailure <$> arbitrary
-      , ConwayTallyFailure <$> arbitrary
+      , ConwayGovFailure <$> arbitrary
       ]
 
 -- EPOCH
@@ -282,7 +282,7 @@ instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "DELEG" era))
   , Arbitrary (PredicateFailure (EraRule "POOL" era))
-  , Arbitrary (PredicateFailure (EraRule "VDEL" era))
+  , Arbitrary (PredicateFailure (EraRule "GOVCERT" era))
   ) =>
   Arbitrary (ConwayCertPredFailure era)
   where
@@ -290,7 +290,7 @@ instance
     oneof
       [ DelegFailure <$> arbitrary
       , PoolFailure <$> arbitrary
-      , VDelFailure <$> arbitrary
+      , GovCertFailure <$> arbitrary
       ]
 
 -- DELEG
@@ -310,13 +310,13 @@ instance
       , pure WrongCertificateTypeDELEG
       ]
 
--- VDEL
+-- GOVCERT
 
-instance Era era => Arbitrary (ConwayVDelPredFailure era) where
+instance Era era => Arbitrary (ConwayGovCertPredFailure era) where
   arbitrary =
     oneof
-      [ ConwayDRepAlreadyRegisteredVDEL <$> arbitrary
-      , ConwayDRepNotRegisteredVDEL <$> arbitrary
-      , ConwayDRepIncorrectDepositVDEL <$> arbitrary
-      , ConwayCommitteeHasResignedVDEL <$> arbitrary
+      [ ConwayDRepAlreadyRegistered <$> arbitrary
+      , ConwayDRepNotRegistered <$> arbitrary
+      , ConwayDRepIncorrectDeposit <$> arbitrary
+      , ConwayCommitteeHasResigned <$> arbitrary
       ]

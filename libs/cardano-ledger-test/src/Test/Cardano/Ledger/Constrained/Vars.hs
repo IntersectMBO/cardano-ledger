@@ -69,7 +69,7 @@ import Test.Cardano.Ledger.Constrained.Lenses
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), testEql, (:~:) (Refl))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..))
 
-import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
+import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..))
 import qualified Cardano.Ledger.Shelley.PParams as Core (ProposedPPUpdates (..))
