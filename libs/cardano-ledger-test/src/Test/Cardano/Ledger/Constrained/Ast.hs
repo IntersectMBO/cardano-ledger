@@ -521,7 +521,7 @@ envToSubst (Env env) = Subst (Map.map f env)
   where
     f (Payload rep t access) = SubstElem rep (Lit rep t) access
 
-findV :: Subst era -> V era t -> Term era t
+findV :: Era era => Subst era -> V era t -> Term era t
 findV (Subst m) v@(V n1 rep1 _) = case Map.lookup n1 m of
   Nothing -> Var v -- If its not in the Subst, return the Var
   Just (SubstElem rep2 term _) -> case testEql rep1 rep2 of
@@ -535,12 +535,6 @@ findV (Subst m) v@(V n1 rep1 _) = case Map.lookup n1 m of
             ++ " =/= "
             ++ show rep2
         )
-
-{-
-composeSubst :: Subst era -> Subst era -> Subst era
-composeSubst sub1 (Subst sub2) = Subst(Map.map f sub2)
-  where f (SubstElem rep term access) = SubstElem rep (substTerm sub1 term) access
--}
 
 composeSubst :: Subst era -> Subst era -> Subst era
 composeSubst (Subst sub1) (Subst sub2) = Subst (Map.foldrWithKey' accum sub2 sub1)
