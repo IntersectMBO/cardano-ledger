@@ -135,7 +135,7 @@ jobs:
     - name: Install fourmolu
       run: |
         mkdir -p "$HOME/.local/bin"
-        curl -sL https://github.com/fourmolu/fourmolu/releases/download/v0.10.1.0/fourmolu-0.10.1.0-linux-x86_64 -o "$HOME/.local/bin/fourmolu"
+        curl -sL https://github.com/fourmolu/fourmolu/releases/download/v0.13.1.0/fourmolu-0.13.1.0-linux-x86_64 -o "$HOME/.local/bin/fourmolu"
         chmod a+x "$HOME/.local/bin/fourmolu"
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
