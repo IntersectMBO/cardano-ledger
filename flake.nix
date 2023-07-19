@@ -102,7 +102,7 @@
             // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
               # tools that work only with default compiler
               fourmolu = "0.10.1.0";
-              hlint = "3.5";
+              hlint = "3.6.1";
               haskell-language-server = { src = nixpkgs.haskell-nix.sources."hls-2.0"; };
             };
 
