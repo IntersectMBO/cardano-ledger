@@ -173,8 +173,8 @@ generateGenesisData ::
 generateGenesisData startTime genesisSpec =
   -- Use a sensible choice of random entropy for key generation, which then
   -- requires that the whole thing is actually in IO.
-  mapExceptT Crypto.runSecureRandom $
-    generateGenesisDataWithEntropy startTime genesisSpec
+  mapExceptT Crypto.runSecureRandom
+    $ generateGenesisDataWithEntropy startTime genesisSpec
 
 -- | A version of 'generateGenesisData' parametrised over 'Crypto.MonadRandom'.
 -- For testing purposes this allows using a completely pure deterministic
@@ -206,8 +206,8 @@ generateGenesisDataWithEntropy startTime genesisSpec = do
         GenesisKeyHashes
           . Set.fromList
           $ hashKey
-            . toVerification
-            <$> genesisSecrets
+          . toVerification
+          <$> genesisSecrets
 
   -- Heavyweight delegation.
   -- genesisDlgList is empty if giUseHeavyDlg = False
@@ -248,8 +248,9 @@ generateGenesisDataWithEntropy startTime genesisSpec = do
           (toCompactRedeemVerificationKey . redeemToVerification)
           (gsFakeAvvmSecrets generatedSecrets)
       fakeAvvmDistr =
-        GenesisAvvmBalances . M.fromList $
-          map
+        GenesisAvvmBalances
+          . M.fromList
+          $ map
             (,faoOneBalance fao)
             fakeAvvmVerificationKeys
 
@@ -285,8 +286,8 @@ generateGenesisDataWithEntropy startTime genesisSpec = do
       safeZip s a b =
         if length a /= length b
           then
-            throwError $
-              GenesisDataAddressBalanceMismatch s (length a) (length b)
+            throwError
+              $ GenesisDataAddressBalanceMismatch s (length a) (length b)
           else pure $ zip a b
 
   nonAvvmBalance <-
@@ -335,8 +336,8 @@ generateSecrets gi = do
 
   poorSecrets <- replicateM (fromIntegral $ tboPoors tbo) genPoorSecret
 
-  pure $
-    GeneratedSecrets
+  pure
+    $ GeneratedSecrets
       { gsDlgIssuersSecrets = dlgIssuersSecrets
       , gsRichSecrets = richSecrets
       , gsPoorSecrets = poorSecrets
@@ -365,8 +366,8 @@ generateGenesisConfig ::
 generateGenesisConfig startTime genesisSpec =
   -- Use a sensible choice of random entropy for key generation, which then
   -- requires that the whole thing is actually in IO.
-  mapExceptT Crypto.runSecureRandom $
-    generateGenesisConfigWithEntropy startTime genesisSpec
+  mapExceptT Crypto.runSecureRandom
+    $ generateGenesisConfigWithEntropy startTime genesisSpec
 
 -- | A version of 'generateGenesisConfig' parametrised over 'Crypto.MonadRandom'.
 -- For testing purposes this allows using a completely pure deterministic
@@ -445,8 +446,8 @@ genTestnetDistribution tbo testBalance = do
   if totalBalance <= testBalance
     then pure (richBalances, poorBalances)
     else
-      throwError $
-        GenesisDataGenerationDistributionMismatch testBalance totalBalance
+      throwError
+        $ GenesisDataGenerationDistributionMismatch testBalance totalBalance
   where
     TestnetBalanceOptions {tboPoors, tboRichmen} = tbo
 

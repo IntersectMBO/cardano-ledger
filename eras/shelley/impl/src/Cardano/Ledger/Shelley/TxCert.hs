@@ -447,17 +447,17 @@ delegCWitness (ShelleyDelegCert cred _) = cred
 {-# DEPRECATED delegCWitness "This was a partial function, logic rewritten in a safer way" #-}
 
 -- | Check for 'ShelleyRegCert' constructor
-isRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
+isRegKey :: ShelleyEraTxCert era => TxCert era -> Bool
 isRegKey (RegTxCert _) = True
 isRegKey _ = False
 
 -- | Check for 'ShelleyUnRegCert' constructor
-isDeRegKey :: (ShelleyEraTxCert era) => TxCert era -> Bool
+isDeRegKey :: ShelleyEraTxCert era => TxCert era -> Bool
 isDeRegKey (UnRegTxCert _) = True
 isDeRegKey _ = False
 
 -- | Check for 'ShelleyDelegCert' constructor
-isDelegation :: (ShelleyEraTxCert era) => TxCert era -> Bool
+isDelegation :: ShelleyEraTxCert era => TxCert era -> Bool
 isDelegation (DelegStakeTxCert _ _) = True
 isDelegation _ = False
 

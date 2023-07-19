@@ -39,8 +39,8 @@ ts_prop_addLovelace = withTestsTS 1000 . property $ do
 
 prop_addLovelaceOverflow :: Property
 prop_addLovelaceOverflow =
-  property $
-    assertIsLeftConstr
+  property
+    $ assertIsLeftConstr
       dummyLovelaceOverflow
       (addLovelace (mkKnownLovelace @1) maxBound)
 
@@ -53,15 +53,15 @@ ts_prop_integerToLovelace = withTestsTS 1000 . property $ do
 
 prop_integerToLovelaceTooLarge :: Property
 prop_integerToLovelaceTooLarge =
-  property $
-    assertIsLeftConstr
+  property
+    $ assertIsLeftConstr
       dummyLovelaceTooLarge
       (integerToLovelace (fromIntegral (maxLovelaceVal + 1) :: Integer))
 
 prop_integerToLovelaceTooSmall :: Property
 prop_integerToLovelaceTooSmall =
-  property $
-    assertIsLeftConstr dummyLovelaceTooSmall (integerToLovelace (negate 1))
+  property
+    $ assertIsLeftConstr dummyLovelaceTooSmall (integerToLovelace (negate 1))
 
 prop_maxLovelaceUnchanged :: Property
 prop_maxLovelaceUnchanged =
@@ -74,13 +74,13 @@ ts_prop_mkLovelace = withTestsTS 1000 . property $ do
 
 prop_mkLovelaceTooLarge :: Property
 prop_mkLovelaceTooLarge =
-  property $
-    assertIsLeftConstr dummyLovelaceTooLarge (mkLovelace (maxLovelaceVal + 1))
+  property
+    $ assertIsLeftConstr dummyLovelaceTooLarge (mkLovelace (maxLovelaceVal + 1))
 
 prop_scaleLovelaceTooLarge :: Property
 prop_scaleLovelaceTooLarge =
-  property $
-    assertIsLeftConstr
+  property
+    $ assertIsLeftConstr
       dummyLovelaceTooLarge
       (scaleLovelace maxBound (2 :: Integer))
 
@@ -102,8 +102,8 @@ ts_prop_subLovelaceUnderflow =
         Right added ->
           assertIsLeftConstr dummyLovelaceUnderflow (subLovelace a added)
         Left err ->
-          panic $
-            sformat
+          panic
+            $ sformat
               ("The impossible happened in subLovelaceUnderflow: " . build)
               err
 

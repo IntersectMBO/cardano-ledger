@@ -189,9 +189,9 @@ applyTxAux ::
   CC.ChainValidationState ->
   m CC.ChainValidationState
 applyTxAux validationMode cfg txs cvs =
-  flip runReaderT validationMode $
-    (`setUTxO` cvs)
-      <$> Utxo.updateUTxO utxoEnv utxo txs
+  flip runReaderT validationMode
+    $ (`setUTxO` cvs)
+    <$> Utxo.updateUTxO utxoEnv utxo txs
   where
     utxoEnv = mkUtxoEnvironment cfg cvs
     utxo = CC.cvsUtxo cvs

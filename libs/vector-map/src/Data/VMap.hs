@@ -107,7 +107,7 @@ instance
 empty :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v
 empty = VMap VG.empty
 
-size :: (VG.Vector kv k) => VMap kv vv k v -> Int
+size :: VG.Vector kv k => VMap kv vv k v -> Int
 size = VG.length . KV.keysVector . unVMap
 {-# INLINE size #-}
 

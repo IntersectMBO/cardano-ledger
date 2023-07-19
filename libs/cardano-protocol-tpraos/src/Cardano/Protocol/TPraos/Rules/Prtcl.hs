@@ -73,12 +73,12 @@ data PRTCL c
 
 data PrtclState c
   = PrtclState
+      -- | Operation Certificate counters
       !(Map (KeyHash 'BlockIssuer c) Word64)
-      -- ^ Operation Certificate counters
+      -- | Evolving nonce
       !Nonce
-      -- ^ Evolving nonce
+      -- | Candidate nonce
       !Nonce
-      -- ^ Candidate nonce
   deriving (Generic, Show, Eq)
 
 instance Crypto c => EncCBOR (PrtclState c)
@@ -127,11 +127,11 @@ data PrtclEvent c
   | NoEvent Void
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF c)) =>
+  VRF.VRFAlgorithm (VRF c) =>
   Show (PrtclPredicateFailure c)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF c)) =>
+  VRF.VRFAlgorithm (VRF c) =>
   Eq (PrtclPredicateFailure c)
 
 instance
@@ -198,7 +198,7 @@ prtclTransition = do
       etaV'
       etaC'
 
-instance (Crypto c) => NoThunks (PrtclPredicateFailure c)
+instance Crypto c => NoThunks (PrtclPredicateFailure c)
 
 instance
   ( Crypto c
@@ -224,20 +224,20 @@ instance
 
 data PrtlSeqFailure c
   = WrongSlotIntervalPrtclSeq
+      -- | Last slot number.
       SlotNo
-      -- ^ Last slot number.
+      -- | Current slot number.
       SlotNo
-      -- ^ Current slot number.
   | WrongBlockNoPrtclSeq
+      -- | Last applied block.
       (WithOrigin (LastAppliedBlock c))
-      -- ^ Last applied block.
+      -- | Current block number.
       BlockNo
-      -- ^ Current block number.
   | WrongBlockSequencePrtclSeq
+      -- | Last applied hash
       (PrevHash c)
-      -- ^ Last applied hash
+      -- | Current block's previous hash
       (PrevHash c)
-      -- ^ Current block's previous hash
   deriving (Show, Eq, Generic)
 
 instance Crypto c => NoThunks (PrtlSeqFailure c)

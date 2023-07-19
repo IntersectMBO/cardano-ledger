@@ -129,9 +129,9 @@ foldChainValidationState shouldAssertNF config cvs blocks =
                 isNF <- liftIO $ isNormalForm $! c
                 unless
                   isNF
-                  ( panic $
-                      "ChainValidationState not in normal form at slot: "
-                        <> show (cvsLastSlot c)
+                  ( panic
+                      $ "ChainValidationState not in normal form at slot: "
+                      <> show (cvsLastSlot c)
                   )
               NoAssertNF -> pure ()
             updateChainBoundary c bvd

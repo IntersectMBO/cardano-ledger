@@ -400,8 +400,8 @@ registerProposalComponents env rs proposal = do
     SoftwareVersion appName appVersion = softwareVersion
 
     softwareVersionChanged =
-      maybe True ((/= appVersion) . avNumSoftwareVersion) $
-        M.lookup appName appVersions
+      maybe True ((/= appVersion) . avNumSoftwareVersion)
+        $ M.lookup appName appVersions
 
     protocolVersionChanged =
       not $ protocolVersion == adoptedPV && PPU.apply ppu adoptedPP == adoptedPP
@@ -440,9 +440,12 @@ registerProposalComponents env rs proposal = do
     -- this non-public testing network.
     --
     nullUpdateExemptions =
-      unAnnotated protocolMagic == ProtocolMagicId 633343913 -- staging
-        && ( currentSlot == SlotNumber 969188 -- in epoch 44
-              || currentSlot == SlotNumber 1915231 -- in epoch 88
+      unAnnotated protocolMagic
+        == ProtocolMagicId 633343913 -- staging
+        && ( currentSlot
+              == SlotNumber 969188 -- in epoch 44
+              || currentSlot
+              == SlotNumber 1915231 -- in epoch 88
            )
 
 -- | Validate a protocol update
@@ -472,8 +475,8 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
   canUpdate adoptedPP newPP proposal
 
-  pure $
-    M.insert
+  pure
+    $ M.insert
       (recoverUpId proposal)
       (ProtocolUpdateProposal newPV newPP)
       registeredPUPs
@@ -573,8 +576,8 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
     `orThrowError` InvalidSoftwareVersion appVersions softwareVersion
 
   -- Add to the list of registered software update proposals
-  pure $
-    M.insert
+  pure
+    $ M.insert
       (recoverUpId proposal)
       (SoftwareUpdateProposal softwareVersion metadata)
       registeredSUPs

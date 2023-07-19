@@ -30,7 +30,7 @@ fromByteStringToBytes = BA.convert
 fromByteStringToScrubbedBytes :: ByteString -> BA.ScrubbedBytes
 fromByteStringToScrubbedBytes = BA.convert
 
-toByteString :: (BA.ByteArrayAccess bin) => bin -> ByteString
+toByteString :: BA.ByteArrayAccess bin => bin -> ByteString
 toByteString = BA.convert
 
 fromCryptoFailable :: T.Text -> CryptoFailable a -> Either T.Text a
@@ -87,8 +87,8 @@ instance DecCBOR Ed25519.PublicKey where
 instance EncCBOR Ed25519.SecretKey where
   encodedSizeExpr _ _ = bsSize 64
   encCBOR sk =
-    encodeBytes $
-      BS.append (toByteString sk) (toByteString $ Ed25519.toPublic sk)
+    encodeBytes
+      $ BS.append (toByteString sk) (toByteString $ Ed25519.toPublic sk)
 
 instance DecCBOR Ed25519.SecretKey where
   decCBOR = do

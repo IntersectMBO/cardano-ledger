@@ -323,8 +323,7 @@ epochPreserveAda genSize =
 
 adaIsPreservedInEachEpoch ::
   forall era.
-  ( Reflect era
-  ) =>
+  Reflect era =>
   Proof era ->
   GenSize ->
   TestTree

@@ -210,7 +210,7 @@ lookupScript scriptHash mTag = do
 -- =====================================
 
 genGenericScriptWitness ::
-  (Reflect era) =>
+  Reflect era =>
   Proof era ->
   Maybe Tag ->
   Script era ->
@@ -234,7 +234,7 @@ genGenericScriptWitness proof mTag script =
 --   Because scripts vary be Era, we need some Era specific code here: genGenericScriptWitness
 mkWitVKey ::
   forall era kr.
-  (Reflect era) =>
+  Reflect era =>
   Proof era ->
   Maybe Tag ->
   Credential kr (EraCrypto era) ->
@@ -259,7 +259,7 @@ mkWitVKey era mTag (ScriptHashObj scriptHash) =
 -- | Used in Shelley Eras
 mkMultiSigWit ::
   forall era.
-  (Reflect era) =>
+  Reflect era =>
   Proof era ->
   Maybe Tag ->
   Shelley.MultiSig era ->
@@ -276,7 +276,7 @@ mkMultiSigWit era mTag (Shelley.RequireMOf m timelocks) = do
 -- | Timeock scripts are used in Mary and subsequent Eras.
 mkTimelockWit ::
   forall era.
-  (Reflect era) =>
+  Reflect era =>
   Proof era ->
   Maybe Tag ->
   Timelock era ->
@@ -316,7 +316,7 @@ genTxOutKeyWitness era mTag txOut =
 
 genCredKeyWit ::
   forall era k.
-  (Reflect era) =>
+  Reflect era =>
   Proof era ->
   Maybe Tag ->
   Credential k (EraCrypto era) ->

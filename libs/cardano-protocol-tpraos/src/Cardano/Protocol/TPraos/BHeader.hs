@@ -390,7 +390,7 @@ assertBoundedNatural maxVal val =
 -- being slot leader.
 checkLeaderValue ::
   forall v.
-  (VRF.VRFAlgorithm v) =>
+  VRF.VRFAlgorithm v =>
   VRF.OutputVRF v ->
   Rational ->
   ActiveSlotCoeff ->

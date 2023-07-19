@@ -72,10 +72,10 @@ genEpochSlotCount epochSlots =
 genConsistentEpochAndSlotCountEpochSlots :: Gen (EpochAndSlotCount, EpochSlots)
 genConsistentEpochAndSlotCountEpochSlots = do
   epochSlots <- genEpochSlots
-  fmap (,epochSlots) $
-    EpochAndSlotCount
-      <$> genRestrictedEpochNumber (maxBound `div` unEpochSlots epochSlots)
-      <*> genEpochSlotCount epochSlots
+  fmap (,epochSlots)
+    $ EpochAndSlotCount
+    <$> genRestrictedEpochNumber (maxBound `div` unEpochSlots epochSlots)
+    <*> genEpochSlotCount epochSlots
   where
     genRestrictedEpochNumber :: Word64 -> Gen EpochNumber
     genRestrictedEpochNumber bound =

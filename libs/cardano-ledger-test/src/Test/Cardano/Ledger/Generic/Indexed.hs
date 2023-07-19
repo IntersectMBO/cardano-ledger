@@ -158,7 +158,7 @@ theSKey n = SKey (sKey (theKeyPair @c n))
 theKeyHash :: CC.Crypto c => Int -> KeyHash kr c
 theKeyHash n = hashKey (theVKey n)
 
-theWitVKey :: (GoodCrypto c) => Int -> SafeHash c EraIndependentTxBody -> WitVKey 'Witness c
+theWitVKey :: GoodCrypto c => Int -> SafeHash c EraIndependentTxBody -> WitVKey 'Witness c
 theWitVKey n hash = mkWitnessVKey hash (theKeyPair n)
 
 theKeyHashObj :: CC.Crypto c => Int -> Credential kr c
@@ -334,7 +334,7 @@ instance Crypto c => PrettyA (KeyPair r c) where
   prettyA (KeyPair x y) =
     ppRecord "KeyPair" [("vKey", ppVKey x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
 
-instance (CC.Crypto c) => PrettyA (PublicSecret kr kr' c) where
+instance CC.Crypto c => PrettyA (PublicSecret kr kr' c) where
   prettyA (PublicSecret x y) = ppPair prettyA prettyA (x, y)
 
 instance PrettyA (SKey kr c) where

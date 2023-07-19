@@ -42,8 +42,8 @@ mkEpochEnvironment ::
 mkEpochEnvironment cfg cvs =
   CC.EpochEnvironment
     { CC.protocolMagic =
-        reAnnotateMagicId $
-          Gen.configProtocolMagicId cfg
+        reAnnotateMagicId
+          $ Gen.configProtocolMagicId cfg
     , CC.k = Gen.configK cfg
     , CC.allowedDelegators = allowedDelegators cfg
     , CC.delegationMap = delegationMap
@@ -137,8 +137,8 @@ validateHeader ::
   CC.AHeader ByteString ->
   m ()
 validateHeader validationMode updState hdr =
-  flip runReaderT validationMode $
-    CC.headerIsValid updState hdr
+  flip runReaderT validationMode
+    $ CC.headerIsValid updState hdr
 
 validateBody ::
   MonadError CC.ChainValidationError m =>
@@ -148,8 +148,8 @@ validateBody ::
   CC.BodyState ->
   m CC.BodyState
 validateBody validationMode block bodyEnv bodyState =
-  flip runReaderT validationMode $
-    CC.updateBody bodyEnv bodyState block
+  flip runReaderT validationMode
+    $ CC.updateBody bodyEnv bodyState block
 
 validateBlock ::
   MonadError CC.ChainValidationError m =>

@@ -110,8 +110,8 @@ setupChainValidationState sampleTrace =
       initialStateNoUTxO = either (panic . show) identity $ initialChainValidationState config
       initialState = initialStateNoUTxO {cvsUtxo = initialUTxO}
       (cvs, abstractToConcreteIdMaps) =
-        either (panic . show) identity $
-          foldM
+        either (panic . show) identity
+          $ foldM
             (elaborateAndUpdate config)
             (initialState, initialAbstractToConcreteIdMaps)
             (STS.preStatesAndSignals STS.OldestFirst sampleTrace)
@@ -192,7 +192,7 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
               vote' = elaborateVote pm upIdMap' <$> vote
            in addAnnotation
                 <$> [MempoolUpdateProposal up']
-                  <> (MempoolUpdateVote <$> vote')
+                <> (MempoolUpdateVote <$> vote')
 
   let mempoolPayloads =
         [mempoolTx]

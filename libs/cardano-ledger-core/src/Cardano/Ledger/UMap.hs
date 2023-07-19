@@ -205,7 +205,7 @@ data UMElem c
 
 instance ToExpr (UMElem c)
 
-instance (Crypto c) => ToJSON (UMElem c) where
+instance Crypto c => ToJSON (UMElem c) where
   toJSON = object . toUMElemair
   toEncoding = Aeson.pairs . mconcat . toUMElemair
 

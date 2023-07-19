@@ -151,7 +151,9 @@ instance Pretty (Stat k) where
     pretty n
       <+> "/"
       <+> pretty statCount
-      <+> "(" <> pretty (intPercent n statCount) <> " unique)"
+      <+> "("
+      <> pretty (intPercent n statCount)
+      <> " unique)"
     where
       n = Set.size statUnique
 

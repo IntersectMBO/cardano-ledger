@@ -145,7 +145,7 @@ txbodyEx1 =
     (SJust (Update ppVotes1 (EpochNo 0)))
     SNothing
 
-txEx1 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
+txEx1 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ShelleyTx (ShelleyEra c)
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -162,7 +162,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
+blockEx1 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Block (BHeader c) (ShelleyEra c)
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -177,7 +177,7 @@ blockEx1 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx1 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ChainState (ShelleyEra c)
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
     . C.newLab blockEx1
@@ -189,7 +189,7 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block, three genesis keys vote on the same new parameters.
-updates1 :: (ExMock (EraCrypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
+updates1 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
 updates1 = CHAINExample initStUpdates blockEx1 (Right expectedStEx1)
 
 --
@@ -220,7 +220,7 @@ txbodyEx2 =
     (SJust updateEx3B)
     SNothing
 
-txEx2 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
+txEx2 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ShelleyTx (ShelleyEra c)
 txEx2 =
   ShelleyTx
     txbodyEx2
@@ -251,7 +251,7 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 20) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx2 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ChainState (ShelleyEra c)
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
     . C.newLab blockEx2
@@ -263,7 +263,7 @@ expectedStEx2 =
 -- === Block 2, Slot 20, Epoch 0
 --
 -- In the second block, two more genesis keys vote for the same new parameters.
-updates2 :: (ExMock (EraCrypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
+updates2 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
 updates2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
@@ -323,10 +323,10 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 80) 0 (KESPeriod 0))
 
-pulserEx3 :: forall c. (ExMock c) => PulsingRewUpdate c
+pulserEx3 :: forall c. ExMock c => PulsingRewUpdate c
 pulserEx3 = makeCompletedPulser (BlocksMade mempty) expectedStEx2
 
-expectedStEx3 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx3 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ChainState (ShelleyEra c)
 expectedStEx3 =
   C.evolveNonceFrozen (getBlockNonce (blockEx3 @c))
     . C.newLab blockEx3
@@ -339,14 +339,14 @@ expectedStEx3 =
 -- === Block 3, Slot 80, Epoch 0
 --
 -- In the third block, one genesis keys votes for the next epoch
-updates3 :: (ExMock (EraCrypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
+updates3 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
 updates3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
 -- Block 4, Slot 110, Epoch 1
 --
 
-epoch1Nonce :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => Nonce
+epoch1Nonce :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Nonce
 epoch1Nonce = chainCandidateNonce (expectedStEx3 @c) ⭒ mkNonceFromNumber 123
 
 blockEx4 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Block (BHeader c) (ShelleyEra c)
@@ -370,7 +370,7 @@ ppExUpdated =
     & ppPoolDepositL .~ Coin 200
     & ppExtraEntropyL .~ mkNonceFromNumber 123
 
-expectedStEx4 :: forall c. (ExMock (EraCrypto (ShelleyEra c))) => ChainState (ShelleyEra c)
+expectedStEx4 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ChainState (ShelleyEra c)
 expectedStEx4 =
   C.newEpoch blockEx4
     . C.newSnapshot EB.emptySnapShot (feeTx1 <+> feeTx2 <+> feeTx3)
@@ -386,7 +386,7 @@ expectedStEx4 =
 -- and the future vote becomes a current vote.
 -- Since the extra entropy was voted on, notice that it is a part
 -- of the new epoch nonce.
-updates4 :: (ExMock (EraCrypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
+updates4 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
 updates4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 --

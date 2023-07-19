@@ -326,11 +326,11 @@ newtype FutureLedgerViewError era
   = FutureLedgerViewError [PredicateFailure (EraRule "TICKF" era)]
 
 deriving stock instance
-  (Eq (PredicateFailure (EraRule "TICKF" era))) =>
+  Eq (PredicateFailure (EraRule "TICKF" era)) =>
   Eq (FutureLedgerViewError era)
 
 deriving stock instance
-  (Show (PredicateFailure (EraRule "TICKF" era))) =>
+  Show (PredicateFailure (EraRule "TICKF" era)) =>
   Show (FutureLedgerViewError era)
 
 -- | Anachronistic ledger view
@@ -441,11 +441,11 @@ newtype ChainTransitionError c
   = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL c)]
   deriving (Generic)
 
-instance (Crypto c) => NoThunks (ChainTransitionError c)
+instance Crypto c => NoThunks (ChainTransitionError c)
 
-deriving instance (Crypto c) => Eq (ChainTransitionError c)
+deriving instance Crypto c => Eq (ChainTransitionError c)
 
-deriving instance (Crypto c) => Show (ChainTransitionError c)
+deriving instance Crypto c => Show (ChainTransitionError c)
 
 -- | Tick the chain state to a new epoch.
 tickChainDepState ::

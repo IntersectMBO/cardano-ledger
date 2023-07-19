@@ -141,14 +141,15 @@ tests = $$discoverPropArg
 -- after being elaborated must be validated by the concrete block validator.
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
-  withTestsTS 300 $
-    property $ do
+  withTestsTS 300
+    $ property
+    $ do
       let (traceLength, step) = (200 :: Word64, 10 :: Word64)
       tr <- forAll $ trace @CHAIN () traceLength
       classifyTraceLength tr traceLength step
-      classifyBlockStats $
-        Abstract.chainBlockStats $
-          map Abstract.blockStats (traceSignals OldestFirst tr)
+      classifyBlockStats
+        $ Abstract.chainBlockStats
+        $ map Abstract.blockStats (traceSignals OldestFirst tr)
       printAdditionalInfoOnFailure tr
       passConcreteValidation tr
   where
@@ -242,9 +243,9 @@ elaborateBlock
               abstractState
             where
               stableAfter =
-                AbstractCore.BlockCount $
-                  unBlockCount $
-                    Genesis.configK config
+                AbstractCore.BlockCount
+                  $ unBlockCount
+                  $ Genesis.configK config
 
 classifyTransactions :: Trace CHAIN -> PropertyT IO ()
 classifyTransactions =
@@ -275,8 +276,9 @@ invalidChainTracesAreRejected ::
   ([PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()) ->
   TSProperty
 invalidChainTracesAreRejected numberOfTests failureProfile onFailureAgreement =
-  withTestsTS numberOfTests $
-    property $ do
+  withTestsTS numberOfTests
+    $ property
+    $ do
       let traceLength = 100 :: Word64
       tr <- forAll $ invalidTrace @CHAIN () traceLength failureProfile
       let ValidationOutput {elaboratedConfig, result} =
@@ -327,10 +329,10 @@ mkUpiEnv block env st = (blockSlot, _dIStateDelegationMap delegSt, k, ngk)
     numberOfDelegators = Set.size allowedDelegators
     ngk
       | fromIntegral (maxBound :: Word8) < numberOfDelegators =
-          panic $
-            "ts_prop_invalidDelegationSignalsAreRejected: "
-              <> "too many genesis keys: "
-              <> show numberOfDelegators
+          panic
+            $ "ts_prop_invalidDelegationSignalsAreRejected: "
+            <> "too many genesis keys: "
+            <> show numberOfDelegators
       | otherwise = fromIntegral numberOfDelegators
 
 -- | Extract the update state from the given chain state.
@@ -362,8 +364,8 @@ applyTrace tr =
   ValidationOutput
     { elaboratedConfig = config
     , result =
-        foldM (elaborateAndUpdate config) (initialState, initialAbstractToConcreteIdMaps) $
-          preStatesAndSignals OldestFirst tr
+        foldM (elaborateAndUpdate config) (initialState, initialAbstractToConcreteIdMaps)
+          $ preStatesAndSignals OldestFirst tr
     }
   where
     initialState = initialStateNoUTxO {cvsUtxo = initialUTxO}
@@ -398,11 +400,11 @@ ts_prop_invalidHeaderSizesAreRejected =
       ChainValidationError ->
       PropertyT IO ()
     checkMaxSizeFailure abstractPfs ChainValidationHeaderTooLarge {} = do
-      assert $
-        any isHeaderSizeTooBigFailure abstractPfs
-      footnote $
-        "HeaderSizeTooBig not found in the abstract predicate failures: "
-          ++ show abstractPfs
+      assert
+        $ any isHeaderSizeTooBigFailure abstractPfs
+      footnote
+        $ "HeaderSizeTooBig not found in the abstract predicate failures: "
+        ++ show abstractPfs
     checkMaxSizeFailure _ concretePF = do
       footnote $ "Expected 'ChainValidationHeaderTooLarge' error, got " ++ show concretePF
       failure
@@ -428,8 +430,9 @@ invalidSizesAreRejected
   setConcreteParamTo
   concreteBlockComponentSize
   checkFailures =
-    withTestsTS 300 $
-      property $ do
+    withTestsTS 300
+      $ property
+      $ do
         tr <- forAll $ trace @CHAIN () 100 `ofLengthAtLeast` 1
         let ValidationOutput {elaboratedConfig, result} =
               applyTrace initTr
@@ -509,17 +512,17 @@ invalidSizesAreRejected
         where
           genAlteredUpdateState ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = do
             newMaxSize <- Gen.integral (Range.constant 0 maxSize)
-            pure $!
-              ( (pv, pps `setAbstractParamTo` newMaxSize)
-              , fads
-              , avs
-              , rpus
-              , raus
-              , cps
-              , vts
-              , bvs
-              , pws
-              )
+            pure
+              $! ( (pv, pps `setAbstractParamTo` newMaxSize)
+                 , fads
+                 , avs
+                 , rpus
+                 , raus
+                 , cps
+                 , vts
+                 , bvs
+                 , pws
+                 )
 
       genConcreteAlteredState ::
         ChainValidationState -> Natural -> Gen ChainValidationState
@@ -549,12 +552,12 @@ ts_prop_invalidBlockSizesAreRejected =
       ChainValidationError ->
       PropertyT IO ()
     checkMaxSizeFailure abstractPfs ChainValidationBlockTooLarge {} = do
-      assert $
-        any (== InvalidBlockSize) $
-          extractValues abstractPfs
-      footnote $
-        "InvalidBlockSize not found in the abstract predicate failures: "
-          ++ show abstractPfs
+      assert
+        $ any (== InvalidBlockSize)
+        $ extractValues abstractPfs
+      footnote
+        $ "InvalidBlockSize not found in the abstract predicate failures: "
+        ++ show abstractPfs
     checkMaxSizeFailure _ concretePF = do
       footnote $ "Expected 'ChainValidationBlockTooLarge' error, got " ++ show concretePF
       failure

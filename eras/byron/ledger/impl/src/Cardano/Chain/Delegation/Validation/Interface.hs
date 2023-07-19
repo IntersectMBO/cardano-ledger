@@ -115,12 +115,12 @@ initialState env genesisDelegation = updateDelegation env' is certificates
         , activationState =
             Activation.State
               { Activation.delegationMap =
-                  Delegation.fromList $
-                    zip (toList allowedDelegators) (toList allowedDelegators)
+                  Delegation.fromList
+                    $ zip (toList allowedDelegators) (toList allowedDelegators)
               , Activation.delegationSlots =
-                  M.fromList $
-                    (,SlotNumber 0)
-                      <$> toList allowedDelegators
+                  M.fromList
+                    $ (,SlotNumber 0)
+                    <$> toList allowedDelegators
               }
         }
 
@@ -160,8 +160,8 @@ updateDelegation env is certificates = do
       (schedulingState is)
       certificates
 
-  pure $
-    tickDelegation
+  pure
+    $ tickDelegation
       currentEpoch
       currentSlot
       is {schedulingState = ss'}

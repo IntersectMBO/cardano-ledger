@@ -219,8 +219,10 @@ genRegistrationError =
                 version <- genWord32
                 slotNo <- SlotNumber <$> Gen.word64 Range.constantBounded
                 meta <-
-                  Gen.map (Range.linear 1 10) $
-                    (,) <$> genSystemTag <*> genInstallerHash
+                  Gen.map (Range.linear 1 10)
+                    $ (,)
+                    <$> genSystemTag
+                    <*> genInstallerHash
                 pure (name, (Registration.ApplicationVersion version slotNo meta))
             )
         <*> genSoftwareVersion

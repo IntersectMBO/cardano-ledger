@@ -32,13 +32,11 @@ data ConwayTickfPredFailure era
   deriving (Generic)
 
 deriving instance
-  ( Era era
-  ) =>
+  Era era =>
   Show (ConwayTickfPredFailure era)
 
 deriving instance
-  ( Era era
-  ) =>
+  Era era =>
   Eq (ConwayTickfPredFailure era)
 
 instance NoThunks (ConwayTickfPredFailure era)
@@ -46,8 +44,7 @@ instance NoThunks (ConwayTickfPredFailure era)
 data ConwayTickfEvent era
 
 instance
-  ( Era era
-  ) =>
+  Era era =>
   STS (ConwayTICKF era)
   where
   type State (ConwayTICKF era) = NewEpochState era

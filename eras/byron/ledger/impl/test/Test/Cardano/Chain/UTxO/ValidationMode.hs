@@ -78,8 +78,9 @@ ts_prop_updateUTxO_Valid =
           env = Environment pm pparams UTxO.defaultUTxOConfiguration
       vMode <- forAll $ ValidationMode BlockValidation <$> genValidationMode
       updateRes <-
-        (`runReaderT` vMode) . runExceptT $
-          UTxO.updateUTxO env utxo [tx]
+        (`runReaderT` vMode)
+          . runExceptT
+          $ UTxO.updateUTxO env utxo [tx]
       void $ evalEither updateRes
 
 -- | Property: When calling 'updateUTxO' given a valid transaction with an
@@ -110,26 +111,28 @@ ts_prop_updateUTxO_InvalidWit =
       -- transaction generated above.
       let pm = Dummy.aProtocolMagic
       invalidWitness <-
-        forAll $
-          Annotated
-            <$> ( V.fromList
-                    <$> Gen.list
-                      (Range.linear 1 10)
-                      (genVKWitness (getProtocolMagicId pm))
-                )
-            <*> genBytes 32
+        forAll
+          $ Annotated
+          <$> ( V.fromList
+                  <$> Gen.list
+                    (Range.linear 1 10)
+                    (genVKWitness (getProtocolMagicId pm))
+              )
+          <*> genBytes 32
       let txInvalidWit = tx {aTaWitness = invalidWitness}
 
       -- Validate the generated concrete transaction
       let env = Environment pm pparams UTxO.defaultUTxOConfiguration
       vMode <- forAll $ ValidationMode BlockValidation <$> genValidationMode
       updateRes <-
-        (`runReaderT` vMode) . runExceptT $
-          UTxO.updateUTxO env utxo [txInvalidWit]
+        (`runReaderT` vMode)
+          . runExceptT
+          $ UTxO.updateUTxO env utxo [txInvalidWit]
       case updateRes of
         Left err ->
           if isInvalidWitnessError err
-            && (txValidationMode vMode) == TxValidation
+            && (txValidationMode vMode)
+            == TxValidation
             then success
             else failure
         Right _ ->

@@ -164,7 +164,7 @@ instance (TwiddleL (l x), TwiddleL (r x)) => TwiddleL ((l :+: r) x) where
 instance Twiddle c => TwiddleL (K1 i c p) where
   twiddleL v (K1 c) = pure <$> twiddle v c
 
-instance (TwiddleL (f p)) => TwiddleL (M1 i c f p) where
+instance TwiddleL (f p) => TwiddleL (M1 i c f p) where
   twiddleL v (M1 fp) = twiddleL v fp
 
 instance Twiddle Integer where

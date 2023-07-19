@@ -648,7 +648,7 @@ data RngSpec era rng where
     RngSpec era rng
   -- | The range must sum upto 'c' through the projection witnessed by the (Sums t c) class
   RngProj ::
-    (Sums x c) =>
+    Sums x c =>
     c -> -- the smallest element in the partition (usually 0 or 1)
     Rep era c ->
     Size -> -- the sum of all the elements must fall in the range denoted by the Size
@@ -967,10 +967,10 @@ data MapSpec era dom rng where
 instance Ord d => Show (MapSpec w d r) where
   show = showMapSpec
 
-instance (Ord dom) => Semigroup (MapSpec era dom rng) where
+instance Ord dom => Semigroup (MapSpec era dom rng) where
   (<>) = mergeMapSpec
 
-instance (Ord dom) => Monoid (MapSpec era dom rng) where
+instance Ord dom => Monoid (MapSpec era dom rng) where
   mempty = MapSpec SzAny RelAny RngAny
 
 instance LiftT (MapSpec era a b) where
@@ -1144,7 +1144,7 @@ reportManyMergeMapSpec = do
 -- ===================================================================================
 
 data SetSpec era a where
-  SetSpec :: (Ord a) => Size -> RelSpec era a -> SetSpec era a
+  SetSpec :: Ord a => Size -> RelSpec era a -> SetSpec era a
   SetNever :: [String] -> SetSpec era a
 
 instance Show (SetSpec era a) where show = showSetSpec
@@ -1152,7 +1152,7 @@ instance Show (SetSpec era a) where show = showSetSpec
 instance Ord a => Semigroup (SetSpec era a) where
   (<>) = mergeSetSpec
 
-instance (Ord a) => Monoid (SetSpec era a) where
+instance Ord a => Monoid (SetSpec era a) where
   mempty = SetSpec SzAny RelAny
 
 instance LiftT (SetSpec era t) where

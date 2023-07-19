@@ -123,8 +123,8 @@ reAnnotateUsing encoder decoder =
 
     roundtripFailure :: forall x. T.Text -> x
     roundtripFailure err =
-      panic $
-        T.intercalate
+      panic
+        $ T.intercalate
           ": "
           [ "annotateBoundary"
           , "serialization roundtrip failure"
@@ -156,5 +156,5 @@ abobMatchesBody hdr blk =
   where
     matchesBody :: CC.AHeader ByteString -> CC.ABlock ByteString -> Bool
     matchesBody hdr' blk' =
-      isRight $
-        CC.validateHeaderMatchesBody hdr' (CC.blockBody blk')
+      isRight
+        $ CC.validateHeaderMatchesBody hdr' (CC.blockBody blk')

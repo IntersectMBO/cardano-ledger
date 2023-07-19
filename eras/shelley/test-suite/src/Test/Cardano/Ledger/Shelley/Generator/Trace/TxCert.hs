@@ -88,13 +88,11 @@ newtype CertsEvent era
   = CertsEvent (Event (Core.EraRule "DELPL" era))
 
 deriving stock instance
-  ( Eq (PredicateFailure (Core.EraRule "DELPL" era))
-  ) =>
+  Eq (PredicateFailure (Core.EraRule "DELPL" era)) =>
   Eq (CertsPredicateFailure era)
 
 deriving stock instance
-  ( Show (PredicateFailure (Core.EraRule "DELPL" era))
-  ) =>
+  Show (PredicateFailure (Core.EraRule "DELPL" era)) =>
   Show (CertsPredicateFailure era)
 
 instance

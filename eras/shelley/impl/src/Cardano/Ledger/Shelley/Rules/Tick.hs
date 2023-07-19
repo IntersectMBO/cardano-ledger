@@ -314,8 +314,7 @@ deriving stock instance
   Eq (ShelleyTickfPredFailure era)
 
 instance
-  ( NoThunks (PredicateFailure (EraRule "UPEC" era))
-  ) =>
+  NoThunks (PredicateFailure (EraRule "UPEC" era)) =>
   NoThunks (ShelleyTickfPredFailure era)
 
 newtype ShelleyTickfEvent era

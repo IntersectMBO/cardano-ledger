@@ -95,7 +95,7 @@ tests =
        in conjoin (map (delegProp delegEnv) delegSsts)
 
 -- | Check stake key registration
-keyRegistration :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyRegistration :: ShelleyEraTxCert era => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyRegistration
   SourceSignalTarget
     { signal = RegTxCert hk
@@ -112,7 +112,7 @@ keyRegistration
 keyRegistration _ = property ()
 
 -- | Check stake key de-registration
-keyDeRegistration :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyDeRegistration :: ShelleyEraTxCert era => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDeRegistration
   SourceSignalTarget
     { signal = UnRegTxCert hk
@@ -129,7 +129,7 @@ keyDeRegistration
 keyDeRegistration _ = property ()
 
 -- | Check stake key delegation
-keyDelegation :: (ShelleyEraTxCert era) => SourceSignalTarget (ShelleyDELEG era) -> Property
+keyDelegation :: ShelleyEraTxCert era => SourceSignalTarget (ShelleyDELEG era) -> Property
 keyDelegation
   SourceSignalTarget
     { signal = DelegStakeTxCert from to

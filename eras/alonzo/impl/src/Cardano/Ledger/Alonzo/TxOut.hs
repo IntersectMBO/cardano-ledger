@@ -244,7 +244,7 @@ encodeAddress28 network paymentCred = do
 
 encodeDataHash32 ::
   forall c.
-  (HashAlgorithm (HASH c)) =>
+  HashAlgorithm (HASH c) =>
   DataHash c ->
   Maybe (SizeHash (HASH c) :~: 32, DataHash32)
 encodeDataHash32 dataHash = do

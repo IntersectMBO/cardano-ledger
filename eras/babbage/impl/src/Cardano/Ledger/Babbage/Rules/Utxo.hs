@@ -104,10 +104,10 @@ data BabbageUtxoPredFailure era
   = AlonzoInBabbageUtxoPredFailure !(AlonzoUtxoPredFailure era) -- Inherited from Alonzo
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
+      -- | collateral provided
       !Coin
-      -- ^ collateral provided
+      -- | collateral amount declared in transaction body
       !Coin
-      -- ^ collateral amount declared in transaction body
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO

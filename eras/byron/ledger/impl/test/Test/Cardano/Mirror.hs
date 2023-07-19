@@ -27,8 +27,8 @@ mainnetEpochFiles =
             . filter ("epoch" `isExtensionOf`)
             <$> getDirectoryContents fpath
         else do
-          putStrLn $
-            "mainnetEpochFiles: directory '"
-              ++ fpath
-              ++ "' does not exist."
+          putStrLn
+            $ "mainnetEpochFiles: directory '"
+            ++ fpath
+            ++ "' does not exist."
           exitFailure

@@ -64,12 +64,12 @@ instance DecCBOR PassPhrase where
     let bl = BS.length bs
     -- Currently passphrase may be either 32-byte long or empty (for
     -- unencrypted keys).
-    toCborError $
-      if bl == 0 || bl == passphraseLength
+    toCborError
+      $ if bl == 0 || bl == passphraseLength
         then Right $ ByteArray.convert bs
         else
-          Left $
-            sformat
+          Left
+            $ sformat
               ("put@PassPhrase: expected length 0 or " . int . ", not " . int)
               passphraseLength
               bl

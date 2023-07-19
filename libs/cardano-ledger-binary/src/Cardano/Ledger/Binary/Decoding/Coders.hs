@@ -140,13 +140,13 @@ invalidField n = field (flip $ const @t @Void) (Invalid n)
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 -- A special case of 'field'
-fieldA :: (Applicative ann) => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
+fieldA :: Applicative ann => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
 fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
 {-# INLINE fieldA #-}
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 fieldAA ::
-  (Applicative ann) =>
+  Applicative ann =>
   (x -> t -> t) ->
   Decode ('Closed d) (ann x) ->
   Field (ann t)

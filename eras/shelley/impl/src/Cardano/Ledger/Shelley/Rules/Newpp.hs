@@ -97,7 +97,7 @@ newPpTransition = do
       let Coin oblgCurr = obligationCertState (CertState def pstate dstate)
       Coin oblgCurr
         == utxosDeposited utxoSt
-        ?! UnexpectedDepositPot (Coin oblgCurr) (utxosDeposited utxoSt)
+          ?! UnexpectedDepositPot (Coin oblgCurr) (utxosDeposited utxoSt)
 
       if (ppNew' ^. ppMaxTxSizeL + ppNew' ^. ppMaxBHSizeL) < (ppNew' ^. ppMaxBBSizeL)
         then pure $ NewppState ppNew' (updatePpup ppupSt ppNew')

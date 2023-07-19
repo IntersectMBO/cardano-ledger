@@ -67,11 +67,11 @@ data CRSt hashAlgo hashToDataMap commitData = CRSt
   }
 
 deriving instance
-  (Eq (hashToDataMap (Hash hashAlgo Data) commitData)) =>
+  Eq (hashToDataMap (Hash hashAlgo Data) commitData) =>
   Eq (CRSt hashAlgo hashToDataMap commitData)
 
 deriving instance
-  (Show (hashToDataMap (Hash hashAlgo Data) commitData)) =>
+  Show (hashToDataMap (Hash hashAlgo Data) commitData) =>
   Show (CRSt hashAlgo hashToDataMap commitData)
 
 class MapLike m k v where

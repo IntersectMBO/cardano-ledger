@@ -376,8 +376,8 @@ decCBORAHeader epochSlots = do
             <*> decCBORAnnotated
             <*> decCBOR
         <*> annotatedDecoder decCBORBlockVersions
-  pure $
-    AHeader
+  pure
+    $ AHeader
       pm
       prevHash
       slot
@@ -579,14 +579,16 @@ encCBORABoundaryHeaderSize pm hdr =
   1
     + szGreedy pm
     + szCases
-      [ Case "GenesisHash" $
-          szGreedy $
-            pFromLeft $
-              boundaryPrevHash <$> hdr
-      , Case "HeaderHash" $
-          szGreedy $
-            pFromRight $
-              boundaryPrevHash <$> hdr
+      [ Case "GenesisHash"
+          $ szGreedy
+          $ pFromLeft
+          $ boundaryPrevHash
+          <$> hdr
+      , Case "HeaderHash"
+          $ szGreedy
+          $ pFromRight
+          $ boundaryPrevHash
+          <$> hdr
       ]
     -- Body proof
     + szGreedy (Proxy :: Proxy (Hash LByteString))

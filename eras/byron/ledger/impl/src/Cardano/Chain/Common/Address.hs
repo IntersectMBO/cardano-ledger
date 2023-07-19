@@ -164,17 +164,17 @@ instance EncCBOR Address where
     encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)
 
   encodedSizeExpr size pxy =
-    encodedCrcProtectedSizeExpr size $
-      (,,)
-        <$> (addrRoot <$> pxy)
-        <*> (addrAttributes <$> pxy)
-        <*> (addrType <$> pxy)
+    encodedCrcProtectedSizeExpr size
+      $ (,,)
+      <$> (addrRoot <$> pxy)
+      <*> (addrAttributes <$> pxy)
+      <*> (addrType <$> pxy)
 
 instance DecCBOR Address where
   decCBOR = do
     (root, attributes, addrType') <- decodeCrcProtected
-    pure $
-      Address
+    pure
+      $ Address
         { addrRoot = root
         , addrAttributes = attributes
         , addrType = addrType'
@@ -314,7 +314,7 @@ checkAddrSpendingData asd addr =
   addrRoot addr
     == addressHash address'
     && addrType addr
-      == addrSpendingDataToType asd
+    == addrSpendingDataToType asd
   where
     address' = Address' (addrType addr, asd, addrAttributes addr)
 

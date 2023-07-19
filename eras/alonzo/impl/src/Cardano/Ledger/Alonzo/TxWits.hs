@@ -273,7 +273,7 @@ unTxDats (TxDats' m) = m
 nullDats :: TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
 
-instance (Era era) => DecCBOR (Annotator (TxDatsRaw era)) where
+instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
   {-# INLINE decCBOR #-}
 
@@ -301,7 +301,7 @@ instance Era era => EncCBOR (TxDats era)
 deriving via
   (Mem TxDatsRaw era)
   instance
-    (Era era) => DecCBOR (Annotator (TxDats era))
+    Era era => DecCBOR (Annotator (TxDats era))
 
 -- =====================================================
 -- AlonzoTxWits instances
@@ -529,7 +529,7 @@ instance Era era => EncCBOR (Redeemers era)
 deriving via
   (Mem RedeemersRaw era)
   instance
-    (Era era) => DecCBOR (Annotator (Redeemers era))
+    Era era => DecCBOR (Annotator (Redeemers era))
 
 instance
   ( EraScript era

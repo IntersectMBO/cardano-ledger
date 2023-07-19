@@ -253,14 +253,14 @@ validateAlonzoTxAuxData pv auxData@AlonzoTxAuxData {atadMetadata = metadata} =
   all validMetadatum metadata
     && all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
 
-instance (EraCrypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentTxAuxData c where
+instance EraCrypto era ~ c => HashAnnotated (AuxiliaryData era) EraIndependentTxAuxData c where
   hashAnnotated = getMemoSafeHash
 
 deriving newtype instance NFData (AuxiliaryData era)
 
 deriving instance Eq (AuxiliaryData era)
 
-deriving instance (HashAlgorithm (HASH (EraCrypto era))) => Show (AuxiliaryData era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (AuxiliaryData era)
 
 type instance MemoHashIndex AlonzoTxAuxDataRaw = EraIndependentTxAuxData
 

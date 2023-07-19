@@ -1319,7 +1319,7 @@ ppsUpdateFrom pps = do
         --
         -- For now we choose an arbitrary constant.
         Gen.integral (Range.exponentialFrom currUpTtl minTtl (2 * currUpTtl))
-        `increasingProbabilityAt` (minTtl, 2 * currUpTtl)
+          `increasingProbabilityAt` (minTtl, 2 * currUpTtl)
       where
         SlotCount currUpTtl = _upTtl
         minTtl = 2
@@ -1332,7 +1332,7 @@ ppsUpdateFrom pps = do
     nextUpAdptThd =
       UpAdptThd
         <$> Gen.double (Range.exponentialFloatFrom uat 0 1)
-        `increasingProbabilityAt` (0, 1)
+          `increasingProbabilityAt` (0, 1)
 
     nextFactorA :: Gen FactorA
     nextFactorA =
@@ -1340,7 +1340,7 @@ ppsUpdateFrom pps = do
         <$>
         -- TODO: we choose arbitrary numbers here for now.
         Gen.integral (Range.exponentialFrom fA 0 10)
-        `increasingProbabilityAt` (0, 10)
+          `increasingProbabilityAt` (0, 10)
 
     -- The next value of the factor B shouldn't drop below 'GP.c' since when
     -- elaborating this factor we divide it by 'GP.c' (see 'initialPParams').
@@ -1348,7 +1348,7 @@ ppsUpdateFrom pps = do
     nextFactorB =
       FactorB
         <$> Gen.integral (Range.exponentialFrom fB minFactorB maxFactorB)
-        `increasingProbabilityAt` (minFactorB, maxFactorB)
+          `increasingProbabilityAt` (minFactorB, maxFactorB)
       where
         minFactorB = 5 * fromIntegral GP.c
         maxFactorB = 15 * fromIntegral GP.c

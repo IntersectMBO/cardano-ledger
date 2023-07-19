@@ -303,14 +303,14 @@ class Relation m where
   -- | Restrict range to values less or equal than the given value
   --
   -- Unicode: 25b7
-  (▷<=) :: (Ord (Range m)) => m -> Range m -> m
+  (▷<=) :: Ord (Range m) => m -> Range m -> m
 
   infixl 5 ▷<=
 
   -- | Restrict range to values greater or equal than the given value
   --
   -- Unicode: 25b7
-  (▷>=) :: (Ord (Range m)) => m -> Range m -> m
+  (▷>=) :: Ord (Range m) => m -> Range m -> m
 
   infixl 5 ▷>=
 

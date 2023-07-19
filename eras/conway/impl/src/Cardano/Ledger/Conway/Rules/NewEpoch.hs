@@ -172,7 +172,7 @@ newEpochTransition = do
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
 tellReward ::
-  (Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)) =>
+  Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era) =>
   ConwayNewEpochEvent era ->
   Rule (ConwayNEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()

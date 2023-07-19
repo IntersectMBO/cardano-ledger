@@ -204,13 +204,13 @@ genUpdateInputs utxoSize = do
     )
 
 updateChain ::
-  (Mock c) =>
+  Mock c =>
   UpdateInputs c ->
   Either (ChainTransitionError c) (ChainDepState c)
 updateChain (UpdateInputs gl lv bh st) = updateChainDepState gl lv bh st
 
 updateAndTickChain ::
-  (Mock c) =>
+  Mock c =>
   UpdateInputs c ->
   Either (ChainTransitionError c) (ChainDepState c)
 updateAndTickChain (UpdateInputs gl lv bh st) =

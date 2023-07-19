@@ -224,7 +224,7 @@ relevantCasesAreCoveredForTrace tr = do
 
 -- | Ratio of certificates with script credentials to the number of certificates
 -- that could have script credentials.
-scriptCredentialCertsRatio :: (ShelleyEraTxCert c) => [TxCert c] -> Double
+scriptCredentialCertsRatio :: ShelleyEraTxCert c => [TxCert c] -> Double
 scriptCredentialCertsRatio certs =
   ratioInt haveScriptCerts couldhaveScriptCerts
   where

@@ -875,8 +875,7 @@ instance
 -- ===============
 ppTickPredicateFailure ::
   forall era.
-  ( Reflect era
-  ) =>
+  Reflect era =>
   ShelleyTickPredFailure era ->
   PDoc
 ppTickPredicateFailure (NewEpochFailure x) = ppNewEpochPredicateFailure @era x
@@ -895,8 +894,7 @@ instance
 -- ===============
 ppNewEpochPredicateFailure ::
   forall era.
-  ( Reflect era
-  ) =>
+  Reflect era =>
   PredicateFailure (EraRule "NEWEPOCH" era) ->
   PDoc
 ppNewEpochPredicateFailure x = case reify @era of
@@ -1007,7 +1005,7 @@ ppUpecPredicateFailure :: ShelleyUpecPredFailure era -> PDoc
 ppUpecPredicateFailure (NewPpFailure x) = ppNewppPredicateFailure x
 
 instance
-  (ShelleyUpecPredFailure era ~ PredicateFailure (EraRule "UPEC" era)) =>
+  ShelleyUpecPredFailure era ~ PredicateFailure (EraRule "UPEC" era) =>
   PrettyA (ShelleyUpecPredFailure era)
   where
   prettyA = ppUpecPredicateFailure

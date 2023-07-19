@@ -397,7 +397,7 @@ compareRep x y = cmpIndex @(Rep era) x y
 -- ================================================
 
 genSizedRep ::
-  (Era era) =>
+  Era era =>
   Int ->
   Rep era t ->
   Gen t

@@ -95,9 +95,9 @@ data DelegEnv era = DelegEnv
   , ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
   }
 
-deriving instance (Show (PParams era)) => Show (DelegEnv era)
+deriving instance Show (PParams era) => Show (DelegEnv era)
 
-deriving instance (Eq (PParams era)) => Eq (DelegEnv era)
+deriving instance Eq (PParams era) => Eq (DelegEnv era)
 
 data ShelleyDelegPredFailure era
   = StakeKeyAlreadyRegisteredDELEG
@@ -409,7 +409,7 @@ updateReservesAndTreasury targetPot combinedMap available ds = do
   let requiredForRewards = fold combinedMap
   requiredForRewards
     <= available
-    ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
+      ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
   pure $
     case targetPot of
       ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}

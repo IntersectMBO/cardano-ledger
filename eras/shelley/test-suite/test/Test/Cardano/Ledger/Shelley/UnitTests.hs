@@ -177,7 +177,7 @@ testsPParams =
 -- | Test @checkLeaderVal@ in 'Cardano.Ledger.Shelley.BlockChain'
 testCheckLeaderVal ::
   forall v.
-  (v ~ VRF StandardCrypto) =>
+  v ~ VRF StandardCrypto =>
   TestTree
 testCheckLeaderVal =
   testGroup

@@ -171,8 +171,8 @@ register env st endorsement =
                       }
                   cpus' =
                     updateCandidateProtocolUpdates candidateProtocolVersions cpu
-              pure $
-                State
+              pure
+                $ State
                   { candidateProtocolVersions = cpus'
                   , registeredEndorsements = registeredEndorsements'
                   }
@@ -199,8 +199,8 @@ register env st endorsement =
 
     numberOfEndorsements :: Int
     numberOfEndorsements =
-      length $
-        Set.filter
+      length
+        $ Set.filter
           ((== pv) . endorsementProtocolVersion)
           registeredEndorsements'
 

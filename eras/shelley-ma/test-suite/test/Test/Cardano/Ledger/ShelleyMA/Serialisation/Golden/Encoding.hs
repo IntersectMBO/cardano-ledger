@@ -122,7 +122,7 @@ testUpdate =
 -- == Golden Tests Common to Allegra and Mary ==
 -- =============================================
 
-scriptGoldenTest :: forall era. (Era era) => TestTree
+scriptGoldenTest :: forall era. Era era => TestTree
 scriptGoldenTest =
   let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness (EraCrypto era)
       kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness (EraCrypto era)

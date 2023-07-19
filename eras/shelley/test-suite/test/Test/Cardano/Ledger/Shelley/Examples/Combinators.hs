@@ -151,7 +151,7 @@ evolveNonceUnfrozen n cs =
 -- instead use 'newEpoch'.
 newLab ::
   forall era.
-  (Era era) =>
+  Era era =>
   Block (BHeader (EraCrypto era)) era ->
   ChainState era ->
   ChainState era

@@ -111,7 +111,7 @@ deriving via Mem PlutusData era instance Era era => DecCBOR (Annotator (Data era
 
 type instance MemoHashIndex PlutusData = EraIndependentData
 
-instance (EraCrypto era ~ c) => HashAnnotated (Data era) EraIndependentData c where
+instance EraCrypto era ~ c => HashAnnotated (Data era) EraIndependentData c where
   hashAnnotated = getMemoSafeHash
 
 instance Typeable era => NoThunks (Data era)
@@ -134,7 +134,7 @@ newtype BinaryData era = BinaryData ShortByteString
   deriving newtype (Eq, NoThunks, Ord, Show, SafeToHash)
   deriving (Generic)
 
-instance (EraCrypto era ~ c) => HashAnnotated (BinaryData era) EraIndependentData c
+instance EraCrypto era ~ c => HashAnnotated (BinaryData era) EraIndependentData c
 
 instance Typeable era => EncCBOR (BinaryData era) where
   encCBOR (BinaryData sbs) = encodeTag 24 <> encCBOR sbs
@@ -185,7 +185,7 @@ dataHashSize :: StrictMaybe (DataHash c) -> Integer
 dataHashSize SNothing = 0
 dataHashSize (SJust _) = 10
 
-instance (Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
+instance Crypto c => HeapWords (StrictMaybe (DataHash c)) where
   heapWords SNothing = heapWords0
   heapWords (SJust a) = heapWords1 a
 

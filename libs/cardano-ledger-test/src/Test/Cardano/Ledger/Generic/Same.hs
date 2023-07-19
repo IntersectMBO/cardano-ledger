@@ -107,7 +107,7 @@ eqByShow :: (Eq t, Show t) => t -> t -> Maybe PDoc
 eqByShow x y = if x == y then Nothing else Just (notEq (ppString (show x)) (ppString (show y)))
 
 -- | Compare for equality, and display differences using 'pcf'
-eqVia :: (Eq t) => (t -> PDoc) -> t -> t -> Maybe PDoc
+eqVia :: Eq t => (t -> PDoc) -> t -> t -> Maybe PDoc
 eqVia pcf x y = if x == y then Nothing else Just (notEq (pcf x) (pcf y))
 
 -- ==========================================
@@ -352,7 +352,7 @@ sameTransCtx (Conway _) x y = eqByShow x y
 
 sameShelleyTxWits ::
   forall era.
-  (Reflect era) =>
+  Reflect era =>
   Proof era ->
   ShelleyTxWits era ->
   ShelleyTxWits era ->

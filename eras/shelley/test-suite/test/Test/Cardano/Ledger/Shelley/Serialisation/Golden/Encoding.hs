@@ -291,7 +291,7 @@ testKey1SigToken = e
 
 testOpCertSigTokens ::
   forall c.
-  (Mock c) =>
+  Mock c =>
   Tokens ->
   Tokens
 testOpCertSigTokens = e

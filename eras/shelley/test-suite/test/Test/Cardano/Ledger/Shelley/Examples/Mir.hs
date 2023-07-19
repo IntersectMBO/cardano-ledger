@@ -165,7 +165,7 @@ insufficientMIRWits = mirWits [0 .. 3]
 
 txEx1 ::
   forall c.
-  (Mock c) =>
+  Mock c =>
   [KeyPair 'Witness c] ->
   MIRPot ->
   ShelleyTx (ShelleyEra c)
@@ -182,7 +182,7 @@ txEx1 txwits pot =
 
 blockEx1' ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   [KeyPair 'Witness (EraCrypto (ShelleyEra c))] ->
   MIRPot ->
   Block (BHeader c) (ShelleyEra c)
@@ -202,14 +202,14 @@ blockEx1' txwits pot =
 
 blockEx1 ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   Block (BHeader c) (ShelleyEra c)
 blockEx1 = blockEx1' sufficientMIRWits
 
 expectedStEx1' ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   [KeyPair 'Witness (EraCrypto (ShelleyEra c))] ->
   MIRPot ->
   ChainState (ShelleyEra c)
@@ -224,7 +224,7 @@ expectedStEx1' txwits pot =
 
 expectedStEx1 ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   ChainState (ShelleyEra c)
 expectedStEx1 = expectedStEx1' sufficientMIRWits
@@ -232,7 +232,7 @@ expectedStEx1 = expectedStEx1' sufficientMIRWits
 -- === Block 1, Slot 10, Epoch 0, Successful MIR Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mir1 :: (ExMock (EraCrypto (ShelleyEra c))) => MIRPot -> CHAINExample (BHeader c) (ShelleyEra c)
+mir1 :: ExMock (EraCrypto (ShelleyEra c)) => MIRPot -> CHAINExample (BHeader c) (ShelleyEra c)
 mir1 pot =
   CHAINExample
     (initStMIR (Coin 1000))
@@ -244,8 +244,7 @@ mir1 pot =
 -- In the first block, submit a MIR cert drawing from the reserves.
 mirFailWits ::
   forall c.
-  ( ExMock (EraCrypto (ShelleyEra c))
-  ) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   CHAINExample (BHeader c) (ShelleyEra c)
 mirFailWits pot =
@@ -270,7 +269,7 @@ mirFailWits pot =
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
 mirFailFunds ::
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   Coin ->
   Coin ->
@@ -305,7 +304,7 @@ mirFailFunds pot treasury llNeeded llReceived =
 
 blockEx2 ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   Block (BHeader c) (ShelleyEra c)
 blockEx2 pot =
@@ -324,14 +323,14 @@ blockEx2 pot =
 
 pulserEx2 ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   PulsingRewUpdate c
 pulserEx2 pot = makePulser' (expectedStEx1 pot)
 
 expectedStEx2 ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   ChainState (ShelleyEra c)
 expectedStEx2 pot =
@@ -344,7 +343,7 @@ expectedStEx2 pot =
 --
 -- Submit an empty block to create an empty reward update.
 mir2 ::
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   CHAINExample (BHeader c) (ShelleyEra c)
 mir2 pot =
@@ -359,14 +358,14 @@ mir2 pot =
 
 epoch1Nonce ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   Nonce
 epoch1Nonce pot = chainCandidateNonce (expectedStEx2 @c pot)
 
 blockEx3 ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   Block (BHeader c) (ShelleyEra c)
 blockEx3 pot =
@@ -385,7 +384,7 @@ blockEx3 pot =
 
 expectedStEx3 ::
   forall c.
-  (ExMock (EraCrypto (ShelleyEra c))) =>
+  ExMock (EraCrypto (ShelleyEra c)) =>
   MIRPot ->
   ChainState (ShelleyEra c)
 expectedStEx3 pot =
@@ -398,7 +397,7 @@ expectedStEx3 pot =
 -- === Block 3, Slot 110, Epoch 1
 --
 -- Submit an empty block in the next epoch to apply the MIR rewards.
-mir3 :: (ExMock (EraCrypto (ShelleyEra c))) => MIRPot -> CHAINExample (BHeader c) (ShelleyEra c)
+mir3 :: ExMock (EraCrypto (ShelleyEra c)) => MIRPot -> CHAINExample (BHeader c) (ShelleyEra c)
 mir3 pot = CHAINExample (expectedStEx2 pot) (blockEx3 pot) (Right $ expectedStEx3 pot)
 
 --

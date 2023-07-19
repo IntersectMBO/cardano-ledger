@@ -133,12 +133,12 @@ scriptKeyCombinations prox script = case quantify prox script of
 
 -- | Make a simple (non-combined, ie NO quantifer like All, Any, MofN, etc.) script.
 --   'basescript' is a method of ScriptClass, and is different for every Era.
-mkScriptFromKey :: forall era. (ScriptClass era) => KeyPair 'Witness (EraCrypto era) -> Core.Script era
+mkScriptFromKey :: forall era. ScriptClass era => KeyPair 'Witness (EraCrypto era) -> Core.Script era
 mkScriptFromKey = (basescript (Proxy :: Proxy era) . hashKey . vKey)
 
 mkScriptsFromKeyPair ::
   forall era.
-  (ScriptClass era) =>
+  ScriptClass era =>
   (KeyPair 'Payment (EraCrypto era), KeyPair 'Staking (EraCrypto era)) ->
   (Core.Script era, Core.Script era)
 mkScriptsFromKeyPair (k0, k1) =
@@ -147,14 +147,14 @@ mkScriptsFromKeyPair (k0, k1) =
 -- | make Scripts based on the given key pairs
 mkScripts ::
   forall era.
-  (ScriptClass era) =>
+  ScriptClass era =>
   KeyPairs (EraCrypto era) ->
   [(Core.Script era, Core.Script era)]
 mkScripts = map (mkScriptsFromKeyPair @era)
 
 mkPayScriptHashMap ::
   forall era.
-  (ScriptClass era) =>
+  ScriptClass era =>
   [(Core.Script era, Core.Script era)] ->
   Map.Map (ScriptHash (EraCrypto era)) (Core.Script era, Core.Script era)
 mkPayScriptHashMap scripts =
@@ -165,7 +165,7 @@ mkPayScriptHashMap scripts =
 -- | Generate a mapping from stake script hash to script pair.
 mkStakeScriptHashMap ::
   forall era.
-  (ScriptClass era) =>
+  ScriptClass era =>
   [(Core.Script era, Core.Script era)] ->
   Map.Map (ScriptHash (EraCrypto era)) (Core.Script era, Core.Script era)
 mkStakeScriptHashMap scripts =
@@ -178,7 +178,7 @@ mkStakeScriptHashMap scripts =
 -- many pairs in order not to create too many of the possible combinations.
 mkScriptCombinations ::
   forall era.
-  (ScriptClass era) =>
+  ScriptClass era =>
   [(Core.Script era, Core.Script era)] ->
   [(Core.Script era, Core.Script era)]
 mkScriptCombinations msigs =
@@ -237,7 +237,7 @@ keyPairs :: CC.Crypto c => Constants -> KeyPairs c
 keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 mkKeyPairs ::
-  (DSIGNAlgorithm (DSIGN c)) =>
+  DSIGNAlgorithm (DSIGN c) =>
   Word64 ->
   (KeyPair kr c, KeyPair kr' c)
 mkKeyPairs n =

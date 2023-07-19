@@ -161,9 +161,9 @@ instance
     -- Better instance: know the hash algorithm up front, read exactly that
     -- many bytes, fail otherwise. Then convert to a digest.
     bs <- decCBOR @SBS.ShortByteString
-    when (SBS.length bs /= expectedSize) $
-      cborError $
-        DecoderErrorCustom "AbstractHash" "Bytes not expected length"
+    when (SBS.length bs /= expectedSize)
+      $ cborError
+      $ DecoderErrorCustom "AbstractHash" "Bytes not expected length"
     return (AbstractHash bs)
     where
       expectedSize = hashDigestSize (Prelude.undefined :: algo)
@@ -273,7 +273,7 @@ serializeCborHash :: EncCBOR a => a -> Hash a
 serializeCborHash = abstractHash
 
 -- | The hash of a value's annotation
-hashDecoded :: (Decoded t) => t -> Hash (BaseType t)
+hashDecoded :: Decoded t => t -> Hash (BaseType t)
 hashDecoded = unsafeAbstractHash . LBS.fromStrict . recoverBytes
 
 -- | Hash a bytestring

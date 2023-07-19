@@ -84,7 +84,7 @@ calculateTxSizeLinear ::
 calculateTxSizeLinear (TxSizeLinear a b) sz =
   addLovelace a
     =<< flip scaleLovelaceRationalUp b
-      <$> integerToLovelace (fromIntegral sz)
+    <$> integerToLovelace (fromIntegral sz)
 
 txSizeLinearMinValue :: TxSizeLinear -> Lovelace
 txSizeLinearMinValue (TxSizeLinear a _) = a

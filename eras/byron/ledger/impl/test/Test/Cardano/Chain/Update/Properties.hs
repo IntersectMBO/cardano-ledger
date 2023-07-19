@@ -43,8 +43,8 @@ ts_prop_checkApplicationName = withTestsTS 100 . property $ do
 ts_prop_checkApplicationNameTooLong :: TSProperty
 ts_prop_checkApplicationNameTooLong = withTestsTS 100 . property $ do
   (ApplicationName aName) <-
-    forAll $
-      Gen.filter
+    forAll
+      $ Gen.filter
         (\name -> T.length (unApplicationName name) >= applicationNameMaxLength)
         genApplicationName
   moreText <- forAll $ Gen.text (Range.linear 1 20) Gen.ascii
@@ -56,8 +56,8 @@ ts_prop_checkApplicationNameTooLong = withTestsTS 100 . property $ do
 ts_prop_checkApplicationNameNotAscii :: TSProperty
 ts_prop_checkApplicationNameNotAscii = withTestsTS 100 . property $ do
   nonAscii <-
-    forAll $
-      Gen.filter
+    forAll
+      $ Gen.filter
         (all (== True) . map (not . isAscii))
         (Gen.string (Range.linear 1 applicationNameMaxLength) Gen.unicodeAll)
   assertIsLeftConstr
@@ -74,8 +74,8 @@ ts_prop_checkSoftwareVersion = withTestsTS 100 . property $ do
 ts_prop_checkSoftwareVersionTooLong :: TSProperty
 ts_prop_checkSoftwareVersionTooLong = withTestsTS 100 . property $ do
   (ApplicationName aName) <-
-    forAll $
-      Gen.filter
+    forAll
+      $ Gen.filter
         (\name -> T.length (unApplicationName name) >= applicationNameMaxLength)
         genApplicationName
   moreText <- forAll $ Gen.text (Range.linear 1 20) Gen.ascii
@@ -88,8 +88,8 @@ ts_prop_checkSoftwareVersionTooLong = withTestsTS 100 . property $ do
 ts_prop_checkSoftwareVersionNotAscii :: TSProperty
 ts_prop_checkSoftwareVersionNotAscii = withTestsTS 100 . property $ do
   nonAscii <-
-    forAll $
-      Gen.filter
+    forAll
+      $ Gen.filter
         (all (== True) . map (not . isAscii))
         (Gen.string (Range.linear 1 applicationNameMaxLength) Gen.unicodeAll)
   let appNameNonascii = ApplicationName $ T.pack nonAscii
@@ -107,8 +107,8 @@ ts_prop_checkSystemTag = withTestsTS 100 . property $ do
 ts_prop_checkSystemTagTooLong :: TSProperty
 ts_prop_checkSystemTagTooLong = withTestsTS 100 . property $ do
   (SystemTag tag) <-
-    forAll $
-      Gen.filter
+    forAll
+      $ Gen.filter
         (\sysTag -> T.length (getSystemTag sysTag) >= systemTagMaxLength)
         genSystemTag
   moreText <- forAll $ Gen.text (Range.linear 1 20) Gen.ascii
@@ -119,8 +119,8 @@ ts_prop_checkSystemTagTooLong = withTestsTS 100 . property $ do
 ts_prop_checkSystemTagNotAscii :: TSProperty
 ts_prop_checkSystemTagNotAscii = withTestsTS 100 . property $ do
   nonAscii <-
-    forAll $
-      Gen.filter
+    forAll
+      $ Gen.filter
         (all (== True) . map (not . isAscii))
         (Gen.string (Range.linear 1 systemTagMaxLength) Gen.unicodeAll)
   let sysTagNonascii = SystemTag $ T.pack nonAscii
@@ -141,14 +141,16 @@ dummyAppNameTooLong = toConstr $ ApplicationNameTooLong "dummyValue"
 
 dummySoftVerNotAscii :: Constr
 dummySoftVerNotAscii =
-  toConstr . SoftwareVersionApplicationNameError $
-    ApplicationNameNotAscii
+  toConstr
+    . SoftwareVersionApplicationNameError
+    $ ApplicationNameNotAscii
       "dummyValue"
 
 dummySoftVerTooLong :: Constr
 dummySoftVerTooLong =
-  toConstr . SoftwareVersionApplicationNameError $
-    ApplicationNameTooLong
+  toConstr
+    . SoftwareVersionApplicationNameError
+    $ ApplicationNameTooLong
       "dummyValue"
 
 dummySysTagNotAscii :: Constr

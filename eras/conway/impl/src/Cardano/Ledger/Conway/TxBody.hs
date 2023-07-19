@@ -212,7 +212,7 @@ deriving instance
 
 type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
 
-instance (c ~ EraCrypto era) => HashAnnotated (ConwayTxBody era) EraIndependentTxBody c where
+instance c ~ EraCrypto era => HashAnnotated (ConwayTxBody era) EraIndependentTxBody c where
   hashAnnotated = getMemoSafeHash
 
 instance

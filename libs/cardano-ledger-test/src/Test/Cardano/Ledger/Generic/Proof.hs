@@ -134,7 +134,7 @@ type GoodCrypto c =
   , PraosCrypto c
   )
 
-class (GoodCrypto c) => ReflectC c where
+class GoodCrypto c => ReflectC c where
   evidence :: Evidence c
   liftC :: forall a. (Evidence c -> a) -> a
   liftC f = f (evidence @c)

@@ -193,8 +193,8 @@ version would be able to parse it).
 encCBORAttributes ::
   forall t. [(Word8, t -> LBS.ByteString)] -> Attributes t -> Encoding
 encCBORAttributes encs attr =
-  encCBOR $
-    foldr go (fromUnparsedFields $ attrRemain attr) encs
+  encCBOR
+    $ foldr go (fromUnparsedFields $ attrRemain attr) encs
   where
     go ::
       (Word8, t -> LBS.ByteString) ->
@@ -205,11 +205,11 @@ encCBORAttributes encs attr =
         insertCheck :: a -> Maybe LByteString -> Maybe a
         insertCheck v Nothing = Just v
         insertCheck _ (Just v') =
-          panic $
-            "encCBORAttributes: impossible: field no. "
-              <> show k
-              <> " is already encoded as unparsed field: "
-              <> show v'
+          panic
+            $ "encCBORAttributes: impossible: field no. "
+            <> show k
+            <> " is already encoded as unparsed field: "
+            <> show v'
 
 decCBORAttributes ::
   forall t s.

@@ -47,7 +47,7 @@ class Iter f where
   isnull f = isempty (nxt f)
   lookup :: Ord key => key -> f key rng -> Maybe rng
   lookup k x = case hasLub k x of Nothing -> Nothing; Just (key, v, _) -> if k == key then Just v else Nothing
-  element :: (Ord k) => k -> f k v -> Collect ()
+  element :: Ord k => k -> f k v -> Collect ()
   element k f = when (haskey k f)
 
 -- ==================================================================================================
@@ -58,14 +58,14 @@ class Iter f where
 -- Instances of this algebra are functional in that every key has exactly one value associated with it.
 class Basic f where
   -- | in addpair the new value always prevails, to make a choice use 'addkv' which has a combining function that allows choice.
-  addpair :: (Ord k) => k -> v -> f k v -> f k v
+  addpair :: Ord k => k -> v -> f k v -> f k v
   addpair k v f = addkv (k, v) f (\_old new -> new)
 
   -- | use (\ old new -> old) if you want the v in (f k v) to prevail, and use (\ old new -> new) if you want the v in (k,v) to prevail
   addkv :: Ord k => (k, v) -> f k v -> (v -> v -> v) -> f k v
 
   -- | remove the pair with key 'k', if it is there.
-  removekey :: (Ord k) => k -> f k v -> f k v
+  removekey :: Ord k => k -> f k v -> f k v
 
   -- | the set of keys
   domain :: Ord k => f k v -> Set k

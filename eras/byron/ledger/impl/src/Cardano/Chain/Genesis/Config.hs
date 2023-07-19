@@ -151,8 +151,8 @@ mkConfigFromFile rnm fp expectedHash = do
   (unGenesisHash genesisHash == expectedHash)
     `orThrowError` GenesisHashMismatch genesisHash expectedHash
 
-  pure $
-    Config
+  pure
+    $ Config
       { configGenesisData = genesisData
       , configGenesisHash = genesisHash
       , configReqNetMagic = rnm

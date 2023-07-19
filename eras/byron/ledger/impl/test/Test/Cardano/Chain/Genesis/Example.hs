@@ -72,16 +72,16 @@ exampleGenesisSpec =
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
 exampleGenesisAvvmBalances =
-  GenesisAvvmBalances $
-    M.fromList
+  GenesisAvvmBalances
+    $ M.fromList
       [ (exampleCompactRVK' (0, 32), mkKnownLovelace @36524597913081152)
       , (exampleCompactRVK' (32, 32), mkKnownLovelace @37343863242999412)
       ]
   where
     exampleCompactRVK' :: (Int, Int) -> CompactRedeemVerificationKey
     exampleCompactRVK' (m, n) =
-      toCompactRedeemVerificationKey $
-        fromJust (fst <$> redeemDeterministicKeyGen (getBytes m n))
+      toCompactRedeemVerificationKey
+        $ fromJust (fst <$> redeemDeterministicKeyGen (getBytes m n))
 
 exampleGenesisData0 :: GenesisData
 exampleGenesisData0 =
@@ -122,14 +122,14 @@ exampleGenesisDelegation =
         (CC.XPub {CC.xpubPublicKey = pskVerKey, CC.xpubChaincode = pskChainCode})
     sig :: Signature EpochNumber
     sig =
-      Signature $
-        fromRight (panic "Something went wrong") $
-          CC.xsignature
-            ( hexToBS
-                "bae5422af5405e3803154a4ad986da5d14cf624d670\
-                \1c5c78a79ec73777f74e13973af83752114d9f18166\
-                \085997fc81e432cab7fee99a275d8bf138ad04e103"
-            )
+      Signature
+        $ fromRight (panic "Something went wrong")
+        $ CC.xsignature
+          ( hexToBS
+              "bae5422af5405e3803154a4ad986da5d14cf624d670\
+              \1c5c78a79ec73777f74e13973af83752114d9f18166\
+              \085997fc81e432cab7fee99a275d8bf138ad04e103"
+          )
     pskVerKey =
       hexToBS
         "e2a1773a2a82d10c30890cbf84eccbdc1aaaee920496424d36e8\
@@ -172,8 +172,8 @@ exampleGenesisInitializer =
 
 exampleGenesisNonAvvmBalances0 :: GenesisNonAvvmBalances
 exampleGenesisNonAvvmBalances0 =
-  GenesisNonAvvmBalances $
-    M.fromList [(exampleAddress, coin), (exampleAddress1, coin1)]
+  GenesisNonAvvmBalances
+    $ M.fromList [(exampleAddress, coin), (exampleAddress1, coin1)]
   where
     coin = mkKnownLovelace @36524597913081152
     coin1 = mkKnownLovelace @37343863242999412
@@ -188,8 +188,8 @@ hexToBS :: ByteString -> ByteString
 hexToBS ts = case B16.decode ts of
   Right fullyDecoded -> fullyDecoded
   Left msg ->
-    panic $
-      "fail to decode: "
-        <> show ts
-        <> " with error: "
-        <> show msg
+    panic
+      $ "fail to decode: "
+      <> show ts
+      <> " with error: "
+      <> show msg

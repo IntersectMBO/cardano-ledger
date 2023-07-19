@@ -19,7 +19,7 @@ safeCreateKeypairFromSeed seed (PassPhrase pp) =
 -- NB. It's recommended to run it with 'runSecureRandom' from
 -- "Cardano.Crypto.Random" because the OpenSSL generator is probably safer than
 -- the default IO generator.
-safeKeyGen :: (MonadRandom m) => PassPhrase -> m (VerificationKey, SigningKey)
+safeKeyGen :: MonadRandom m => PassPhrase -> m (VerificationKey, SigningKey)
 safeKeyGen pp = do
   seed <- getRandomBytes 32
   pure $ safeDeterministicKeyGen seed pp

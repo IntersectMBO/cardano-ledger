@@ -366,22 +366,22 @@ instance STS SDELEG where
         env
           ^. epoch
           <= cert
-          ^. to depoch
-          ?! EpochInThePast
-            EpochDiff
-              { currentEpoch = env ^. epoch
-              , certEpoch = cert ^. to depoch
-              }
+            ^. to depoch
+              ?! EpochInThePast
+                EpochDiff
+                  { currentEpoch = env ^. epoch
+                  , certEpoch = cert ^. to depoch
+                  }
         cert
           ^. to depoch
           <= env
-          ^. epoch
-          + 1
-          ?! EpochPastNextEpoch
-            EpochDiff
-              { currentEpoch = env ^. epoch
-              , certEpoch = cert ^. to depoch
-              }
+            ^. epoch
+            + 1
+              ?! EpochPastNextEpoch
+                EpochDiff
+                  { currentEpoch = env ^. epoch
+                  , certEpoch = cert ^. to depoch
+                  }
         return $
           st
             & scheduledDelegations

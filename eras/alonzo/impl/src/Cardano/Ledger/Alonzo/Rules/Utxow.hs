@@ -102,20 +102,20 @@ data AlonzoUtxowPredFailure era
     MissingRedeemers
       ![(ScriptPurpose era, ScriptHash (EraCrypto era))]
   | MissingRequiredDatums
+      -- | Set of missing data hashes
       !(Set (DataHash (EraCrypto era)))
-      -- ^ Set of missing data hashes
+      -- | Set of received data hashes
       !(Set (DataHash (EraCrypto era)))
-      -- ^ Set of received data hashes
   | NonOutputSupplimentaryDatums
+      -- | Set of unallowed data hashes
       !(Set (DataHash (EraCrypto era)))
-      -- ^ Set of unallowed data hashes
+      -- | Set of acceptable supplimental data hashes
       !(Set (DataHash (EraCrypto era)))
-      -- ^ Set of acceptable supplimental data hashes
   | PPViewHashesDontMatch
+      -- | The PPHash in the TxBody
       !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-      -- ^ The PPHash in the TxBody
+      -- | Computed from the current Protocol Parameters
       !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-      -- ^ Computed from the current Protocol Parameters
   | -- | Set of witnesses which were needed and not supplied
     MissingRequiredSigners
       (Set (KeyHash 'Witness (EraCrypto era)))
@@ -401,7 +401,7 @@ alonzoStyleWitness = do
 
 -- ================================
 
-extSymmetricDifference :: (Ord k) => [a] -> (a -> k) -> [b] -> (b -> k) -> ([a], [b])
+extSymmetricDifference :: Ord k => [a] -> (a -> k) -> [b] -> (b -> k) -> ([a], [b])
 extSymmetricDifference as fa bs fb = (extraA, extraB)
   where
     intersection = Set.fromList (map fa as) `Set.intersection` Set.fromList (map fb bs)

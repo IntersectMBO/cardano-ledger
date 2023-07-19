@@ -50,8 +50,9 @@ tests = $$discoverPropArg
 --   UTxO validator.
 ts_prop_generatedUTxOChainsAreValidated :: TSProperty
 ts_prop_generatedUTxOChainsAreValidated =
-  withTestsTS 300 $
-    property $ do
+  withTestsTS 300
+    $ property
+    $ do
       tr <- forAll $ trace @UTXOW () 500
       classifyTraceLength tr 200 50
       passConcreteValidation tr
@@ -60,8 +61,8 @@ passConcreteValidation :: MonadTest m => Trace UTXOW -> m ()
 passConcreteValidation !tr = void $ evalEither res
   where
     res =
-      foldM (elaborateAndUpdate abstractEnv) initSt $
-        traceSignals OldestFirst tr
+      foldM (elaborateAndUpdate abstractEnv) initSt
+        $ traceSignals OldestFirst tr
 
     abstractEnv = tr ^. traceEnv
 

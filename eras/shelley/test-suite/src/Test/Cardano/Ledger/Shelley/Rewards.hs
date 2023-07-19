@@ -615,8 +615,7 @@ overrideProtocolVersionUsedInRewardCalc pv es =
 
 oldEqualsNew ::
   forall era.
-  ( era ~ C
-  ) =>
+  era ~ C =>
   ProtVer ->
   NewEpochState era ->
   Property
@@ -644,8 +643,7 @@ oldEqualsNew pv newepochstate =
 
 oldEqualsNewOn ::
   forall era.
-  ( era ~ C
-  ) =>
+  era ~ C =>
   ProtVer ->
   NewEpochState era ->
   Property

@@ -275,28 +275,28 @@ sizeEstimates =
         [ ("VerificationKey", testPrecise genVerificationKey)
         ,
           ( "AbstractHash Blake2b_224 VerificationKey"
-          , testPrecise @(AbstractHash Blake2b_224 VerificationKey) $
-              genAbstractHash genVerificationKey
+          , testPrecise @(AbstractHash Blake2b_224 VerificationKey)
+              $ genAbstractHash genVerificationKey
           )
         ,
           ( "AbstractHash Blake2b_256 VerificationKey"
-          , testPrecise @(AbstractHash Blake2b_256 VerificationKey) $
-              genAbstractHash genVerificationKey
+          , testPrecise @(AbstractHash Blake2b_256 VerificationKey)
+              $ genAbstractHash genVerificationKey
           )
         ,
           ( "AbstractHash Blake2b_384 VerificationKey"
-          , testPrecise @(AbstractHash Blake2b_384 VerificationKey) $
-              genAbstractHash genVerificationKey
+          , testPrecise @(AbstractHash Blake2b_384 VerificationKey)
+              $ genAbstractHash genVerificationKey
           )
         ,
           ( "AbstractHash Blake2b_512 VerificationKey"
-          , testPrecise @(AbstractHash Blake2b_512 VerificationKey) $
-              genAbstractHash genVerificationKey
+          , testPrecise @(AbstractHash Blake2b_512 VerificationKey)
+              $ genAbstractHash genVerificationKey
           )
         ,
           ( "AbstractHash SHA1 VerificationKey"
-          , testPrecise @(AbstractHash SHA1 VerificationKey) $
-              genAbstractHash genVerificationKey
+          , testPrecise @(AbstractHash SHA1 VerificationKey)
+              $ genAbstractHash genVerificationKey
           )
         , ("RedeemVerificationKey", testPrecise genRedeemVerificationKey)
         , ("RedeemSigningKey", testPrecise genRedeemSigningKey)
