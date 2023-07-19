@@ -217,6 +217,7 @@ data Rep era t where
   PParamsR :: Proof era -> Rep era (PParamsF era)
   PParamsUpdateR :: Proof era -> Rep era (PParamsUpdateF era)
   --
+  VStateR :: Rep era (VState era)
   DeltaCoinR :: Rep era DeltaCoin
   GenDelegPairR :: Rep era (GenDelegPair (EraCrypto era))
   FutureGenDelegR :: Rep era (FutureGenDeleg (EraCrypto era))
@@ -353,6 +354,7 @@ repTypeable r = case r of
   TxOutR{}             -> IsTypeable
   PParamsR{}           -> IsTypeable
   PParamsUpdateR{}     -> IsTypeable
+  VStateR{}            -> IsTypeable
   DeltaCoinR{}         -> IsTypeable
   GenDelegPairR{}      -> IsTypeable
   FutureGenDelegR{}    -> IsTypeable
@@ -407,6 +409,7 @@ instance Show (Rep era t) where
   show (UTxOR x) = "(UTxO " ++ short x ++ ")"
   show (PParamsR x) = "(PParams " ++ short x ++ ")"
   show (PParamsUpdateR x) = "(PParamsUpdate " ++ short x ++ ")"
+  show VStateR = "VState"
   show CharR = "Char"
   show DeltaCoinR = "DeltaCoin"
   show GenDelegPairR = "(GenDelegPair c)"
@@ -508,6 +511,7 @@ synopsis (TxOutR p) (TxOutF _ x) = show ((unReflect pcTxOut p x) :: PDoc)
 synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
 synopsis (PParamsR _) (PParamsF p x) = show $ pcPParamsSynopsis p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
+synopsis VStateR v = show v
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
 synopsis FutureGenDelegR x = show (pcFutureGenDeleg x)
@@ -688,6 +692,7 @@ instance Shaped (Rep era) any where
   shape DRepR = Nullary 85
   shape CertStateR = Nullary 86
   shape AccountStateR = Nullary 87
+  shape VStateR = Nullary 88
 
 compareRep :: forall era t s. Era era => Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -700,6 +705,7 @@ genSizedRep ::
   Int ->
   Rep era t ->
   Gen t
+genSizedRep _ VStateR = arbitrary
 genSizedRep _ AccountStateR = arbitrary
 genSizedRep n CoinR =
   if n == 0
@@ -879,6 +885,7 @@ genpup (PPUPStateR (Conway _)) = arbitrary -- FIXME when Conway is fully defined
 -- Not all types in the universe have Arbitrary instances and thus don't shrink (the `[]` cases).
 -- TODO: add instances for these types.
 shrinkRep :: Era era => Rep era t -> t -> [t]
+shrinkRep VStateR t = shrink t
 shrinkRep AccountStateR t = shrink t
 shrinkRep CoinR t = shrink t
 shrinkRep (_ :-> _) _ = []
@@ -988,6 +995,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
   where
     err t c = error ("hasOrd function 'help' evaluates its second arg at type " ++ show t ++ ", in " ++ c ++ " case.")
     help :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
+    help VStateR t = pure $ With t
     help AccountStateR t = pure $ With t
     help CertStateR t = pure $ With t
     help CoinR t = pure $ With t
