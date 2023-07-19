@@ -7,6 +7,7 @@
   <a href="https://github.com/input-output-hk/cardano-ledger/actions/workflows/haskell.yml">
     <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/input-output-hk/cardano-ledger/haskell.yml?branch=master&style=for-the-badge" />
   </a>
+  [![docs](https://img.shields.io/badge/documentation-Haddock-yellow?style=for-the-badge)](https://input-output-hk.github.io/cardano-ledger/)
 </p>
 
 This repository contains the formal specifications, executable models,

@@ -173,7 +173,7 @@ toTxOutPair (ShelleyTxOut !addr !amount) =
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords
-packedADDRHASH :: forall proxy era. (Crypto (EraCrypto era)) => proxy era -> ShortByteString
+packedADDRHASH :: forall proxy era. Crypto (EraCrypto era) => proxy era -> ShortByteString
 packedADDRHASH _ =
   pack $
     replicate

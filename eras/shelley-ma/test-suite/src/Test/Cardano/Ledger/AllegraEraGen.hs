@@ -71,7 +71,7 @@ import Test.QuickCheck (Arbitrary, Gen, arbitrary, frequency)
  `instance ValidateScript (ShelleyMAEra ma c) where ...`
 ------------------------------------------------------------------------------}
 
-instance (CryptoClass.Crypto c) => ScriptClass (AllegraEra c) where
+instance CryptoClass.Crypto c => ScriptClass (AllegraEra c) where
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
   basescript _proxy = someLeaf @(AllegraEra c)

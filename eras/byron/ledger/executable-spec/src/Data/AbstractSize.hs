@@ -143,11 +143,11 @@ instance (GHasTypeReps a, GHasTypeReps b) => GHasTypeReps (a :+: b) where
   gTypeReps (R1 b) = gTypeReps b
 
 -- | We do need to do anything for the metadata.
-instance (GHasTypeReps a) => GHasTypeReps (M1 i c a) where
+instance GHasTypeReps a => GHasTypeReps (M1 i c a) where
   gTypeReps (M1 x) = gTypeReps x
 
 -- | And the only interesting case, get the type of a type constructor
-instance (HasTypeReps a) => GHasTypeReps (K1 i a) where
+instance HasTypeReps a => GHasTypeReps (K1 i a) where
   gTypeReps (K1 x) = typeReps x
 
 --------------------------------------------------------------------------------

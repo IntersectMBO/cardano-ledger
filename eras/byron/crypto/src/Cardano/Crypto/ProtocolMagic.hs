@@ -84,8 +84,10 @@ instance A.ToJSON ProtocolMagic where
 instance A.FromJSON ProtocolMagic where
   parseJSON = A.withObject "ProtocolMagic" $ \o ->
     AProtocolMagic
-      <$> o .: "pm"
-      <*> o .: "requiresNetworkMagic"
+      <$> o
+      .: "pm"
+      <*> o
+      .: "requiresNetworkMagic"
 
 -- Canonical JSON instances
 instance Monad m => ToJSON m ProtocolMagicId where
@@ -134,8 +136,9 @@ instance A.ToJSON RequiresNetworkMagic where
 
 instance A.FromJSON RequiresNetworkMagic where
   parseJSON =
-    A.withText "requiresNetworkMagic" $
-      toAesonError . \case
+    A.withText "requiresNetworkMagic"
+      $ toAesonError
+      . \case
         "RequiresNoMagic" -> Right RequiresNoMagic
         "RequiresMagic" -> Right RequiresMagic
         "NMMustBeNothing" -> Right RequiresNoMagic

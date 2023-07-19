@@ -24,8 +24,9 @@ ts_roundTripCompactAddress =
   eachOfTS 1000 genAddress (trippingCompact toCompactAddress fromCompactAddress)
 
 ts_prop_heapWordsSavingsCompactAddress :: TSProperty
-ts_prop_heapWordsSavingsCompactAddress = withTestsTS 1000 $
-  property $ do
+ts_prop_heapWordsSavingsCompactAddress = withTestsTS 1000
+  $ property
+  $ do
     addr <- forAll genAddress
     let compactAddr = toCompactAddress addr
     assert $ heapWords compactAddr < heapWords addr

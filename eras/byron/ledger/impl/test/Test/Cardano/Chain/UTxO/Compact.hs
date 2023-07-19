@@ -30,8 +30,9 @@ ts_roundTripCompactTxIn =
   eachOfTS 1000 genTxIn (trippingCompact toCompactTxIn fromCompactTxIn)
 
 ts_prop_heapWordsSavingsCompactTxIn :: TSProperty
-ts_prop_heapWordsSavingsCompactTxIn = withTestsTS 1000 $
-  property $ do
+ts_prop_heapWordsSavingsCompactTxIn = withTestsTS 1000
+  $ property
+  $ do
     txIn <- forAll genTxIn
     let compactTxIn = toCompactTxIn txIn
     assert $ heapWords compactTxIn < heapWords txIn
@@ -45,8 +46,9 @@ ts_roundTripCompactTxId =
   eachOfTS 1000 genTxId (trippingCompact toCompactTxId fromCompactTxId)
 
 ts_prop_heapWordsSavingsCompactTxId :: TSProperty
-ts_prop_heapWordsSavingsCompactTxId = withTestsTS 1000 $
-  property $ do
+ts_prop_heapWordsSavingsCompactTxId = withTestsTS 1000
+  $ property
+  $ do
     txId <- forAll genTxId
     let compactTxId = toCompactTxId txId
     assert $ heapWords compactTxId < heapWords txId
@@ -60,8 +62,9 @@ ts_roundTripCompactTxOut =
   eachOfTS 1000 genTxOut (trippingCompact toCompactTxOut fromCompactTxOut)
 
 ts_prop_heapWordsSavingsCompactTxOut :: TSProperty
-ts_prop_heapWordsSavingsCompactTxOut = withTestsTS 1000 $
-  property $ do
+ts_prop_heapWordsSavingsCompactTxOut = withTestsTS 1000
+  $ property
+  $ do
     txOut <- forAll genTxOut
     let compactTxOut = toCompactTxOut txOut
     assert $ heapWords compactTxOut < heapWords txOut

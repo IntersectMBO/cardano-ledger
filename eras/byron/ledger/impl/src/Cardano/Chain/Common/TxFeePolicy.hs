@@ -111,7 +111,9 @@ instance MonadError SchemaError m => FromJSON m TxFeePolicy where
   -- We div by 1e9 to keep compatibility with 'Nano' coefficients
   fromJSON obj = do
     summand <-
-      wrapLovelaceError . mkLovelace . (`div` 1e9)
+      wrapLovelaceError
+        . mkLovelace
+        . (`div` 1e9)
         =<< fromJSField
           obj
           "summand"

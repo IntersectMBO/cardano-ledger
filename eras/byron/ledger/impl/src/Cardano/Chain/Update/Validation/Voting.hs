@@ -142,8 +142,8 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
           else confirmedProposals
 
   -- Return the new state with additional vote and maybe confirmation
-  pure $
-    State
+  pure
+    $ State
       { vsVotes = votes'
       , vsConfirmedProposals = confirmedProposals'
       }

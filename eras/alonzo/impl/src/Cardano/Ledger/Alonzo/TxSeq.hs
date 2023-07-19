@@ -150,7 +150,7 @@ deriving stock instance Eq (Tx era) => Eq (TxSeq era)
 
 instance
   forall era.
-  (Era era) =>
+  Era era =>
   EncCBORGroup (TxSeq era)
   where
   encCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes invalidBytes) =
@@ -167,7 +167,7 @@ instance
 
 hashTxSeq ::
   forall era.
-  (Era era) =>
+  Era era =>
   AlonzoTxSeq era ->
   Hash (EraCrypto era) EraIndependentBlockBody
 hashTxSeq = hashAlonzoTxSeq
@@ -176,7 +176,7 @@ hashTxSeq = hashAlonzoTxSeq
 -- | Hash a given block body
 hashAlonzoTxSeq ::
   forall era.
-  (Era era) =>
+  Era era =>
   AlonzoTxSeq era ->
   Hash (EraCrypto era) EraIndependentBlockBody
 hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =

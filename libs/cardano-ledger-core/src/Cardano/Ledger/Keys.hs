@@ -149,7 +149,7 @@ class HasKeyRole (a :: KeyRole -> Type -> Type) where
 --   be used as witnesses to some types of transaction. As such, we provide an
 --   explicit coercion for it.
 asWitness ::
-  (HasKeyRole a) =>
+  HasKeyRole a =>
   a r c ->
   a 'Witness c
 asWitness = coerceKeyRole
@@ -216,7 +216,7 @@ verifySignedDSIGN (VKey vk) vd sigDSIGN =
 
 -- | Hash a given signature
 hashSignature ::
-  (Crypto c) =>
+  Crypto c =>
   SignedDSIGN c (Hash c h) ->
   Hash c (SignedDSIGN c (Hash c h))
 hashSignature = Hash.hashWith (DSIGN.rawSerialiseSigDSIGN . coerce)
@@ -268,8 +268,7 @@ instance HasKeyRole KeyHash
 
 -- | Hash a given public key
 hashKey ::
-  ( Crypto c
-  ) =>
+  Crypto c =>
   VKey kd c ->
   KeyHash kd c
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk

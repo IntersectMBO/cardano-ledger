@@ -117,7 +117,7 @@ keysForMultisigWitnessKeyRole pf = KeyPairWitness (keysForMultisig pf)
 keyHashForMultisig :: forall era. Era era => Proof era -> KeyHash 'Witness (EraCrypto era)
 keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
 
-simpleScript :: forall era. (Scriptic era) => Proof era -> Script era
+simpleScript :: forall era. Scriptic era => Proof era -> Script era
 simpleScript pf = allOf [require @era (keyHashForMultisig pf)] pf
 
 evenData3ArgsScript :: HasCallStack => Proof era -> Script era
@@ -148,7 +148,7 @@ plainAddr pf = Addr Testnet pCred sCred
     pCred = KeyHashObj . hashKey . vKey $ someKeys pf
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-scriptAddr :: forall era. (Scriptic era) => Proof era -> Script era -> Addr (EraCrypto era)
+scriptAddr :: forall era. Scriptic era => Proof era -> Script era -> Addr (EraCrypto era)
 scriptAddr _pf s = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
@@ -162,7 +162,7 @@ malformedScriptAddr pf = Addr Testnet pCred sCred
     (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-simpleScriptAddr :: forall era. (Scriptic era) => Proof era -> Addr (EraCrypto era)
+simpleScriptAddr :: forall era. Scriptic era => Proof era -> Addr (EraCrypto era)
 simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
 
 datumExampleEven :: Era era => Data era
@@ -898,7 +898,7 @@ simpleScriptOutWithRefScriptUTxOState pf =
 largeDatum :: Era era => Data era
 largeDatum = Data (PV1.B . BS.pack $ replicate 1500 0)
 
-largeOutput' :: forall era. (EraTxOut era) => Proof era -> TxOut era
+largeOutput' :: forall era. EraTxOut era => Proof era -> TxOut era
 largeOutput' pf =
   newTxOut
     pf

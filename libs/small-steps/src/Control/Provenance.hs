@@ -115,7 +115,7 @@ runWithProvM s (ProvM m) = do
 {-# INLINE runWithProvM #-}
 
 -- | Run the computation with SNothing. Expend no resources to compute provenance.
-runProvM :: (Monad m) => ProvM s m b -> m b
+runProvM :: Monad m => ProvM s m b -> m b
 runProvM (ProvM m) = do
   pair <- runStateT m SNothing
   case pair of
@@ -304,7 +304,7 @@ instance Show PObject where
 --   does not have the right type, returns SNothing. If the type context
 --   of the call does not fix the type, one can use a type application like
 --   extract @[Int] pobject
-extract :: forall t. (Typeable t) => PObject -> StrictMaybe t
+extract :: forall t. Typeable t => PObject -> StrictMaybe t
 extract (PObject ty n) = case testEquality ty (typeRep @t) of Just Refl -> SJust n; Nothing -> SNothing
 
 -- | inject a type into the PObject type.

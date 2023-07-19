@@ -132,7 +132,8 @@ genGenesisInitializer =
 
 genGenesisNonAvvmBalances :: Gen GenesisNonAvvmBalances
 genGenesisNonAvvmBalances =
-  GenesisNonAvvmBalances . M.fromList
+  GenesisNonAvvmBalances
+    . M.fromList
     <$> Gen.list
       (Range.linear 1 10)
       ((,) <$> genAddress <*> genLovelace)

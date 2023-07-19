@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-binary
-version:       1.1.1.1
+version:       1.1.1.2
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK

@@ -67,8 +67,7 @@ class
   initialState = initialStateFromGenesis
 
 instance
-  ( Crypto c
-  ) =>
+  Crypto c =>
   CanStartFromGenesis (ShelleyEra c)
   where
   fromShelleyPParams _ = id

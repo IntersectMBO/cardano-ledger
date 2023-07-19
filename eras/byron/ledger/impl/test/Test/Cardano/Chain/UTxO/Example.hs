@@ -120,8 +120,8 @@ exampleTxProof :: TxProof
 exampleTxProof = TxProof 32 mroot hashWit
   where
     mroot =
-      mtRoot $
-        mkMerkleTree
+      mtRoot
+        $ mkMerkleTree
           [(UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ()))]
     hashWit = serializeCborHash $ [(V.fromList [(VKWitness exampleVerificationKey exampleTxSig)])]
 

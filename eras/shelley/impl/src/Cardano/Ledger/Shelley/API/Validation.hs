@@ -220,15 +220,15 @@ newtype TickTransitionError era
   deriving (Generic)
 
 instance
-  (NoThunks (STS.PredicateFailure (EraRule "TICK" era))) =>
+  NoThunks (STS.PredicateFailure (EraRule "TICK" era)) =>
   NoThunks (TickTransitionError era)
 
 deriving stock instance
-  (Eq (STS.PredicateFailure (EraRule "TICK" era))) =>
+  Eq (STS.PredicateFailure (EraRule "TICK" era)) =>
   Eq (TickTransitionError era)
 
 deriving stock instance
-  (Show (STS.PredicateFailure (EraRule "TICK" era))) =>
+  Show (STS.PredicateFailure (EraRule "TICK" era)) =>
   Show (TickTransitionError era)
 
 newtype BlockTransitionError era
@@ -236,13 +236,13 @@ newtype BlockTransitionError era
   deriving (Generic)
 
 deriving stock instance
-  (Eq (STS.PredicateFailure (EraRule "BBODY" era))) =>
+  Eq (STS.PredicateFailure (EraRule "BBODY" era)) =>
   Eq (BlockTransitionError era)
 
 deriving stock instance
-  (Show (STS.PredicateFailure (EraRule "BBODY" era))) =>
+  Show (STS.PredicateFailure (EraRule "BBODY" era)) =>
   Show (BlockTransitionError era)
 
 instance
-  (NoThunks (STS.PredicateFailure (EraRule "BBODY" era))) =>
+  NoThunks (STS.PredicateFailure (EraRule "BBODY" era)) =>
   NoThunks (BlockTransitionError era)

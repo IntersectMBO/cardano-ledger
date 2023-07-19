@@ -38,12 +38,12 @@ class Relation m where
   -- | Domain restriction
   --
   -- Unicode: 25c1
-  (◁) :: (Ord (Domain m)) => Set (Domain m) -> m -> m
+  (◁) :: Ord (Domain m) => Set (Domain m) -> m -> m
 
   -- | Domain exclusion
   --
   -- Unicode: 22ea
-  (⋪) :: (Ord (Domain m)) => Set (Domain m) -> m -> m
+  (⋪) :: Ord (Domain m) => Set (Domain m) -> m -> m
 
   -- | Range restriction
   --

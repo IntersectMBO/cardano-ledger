@@ -155,8 +155,8 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
             )
 
     (txPayload, txIdMap') =
-      first (fmap void) $
-        elaborateTxWitnesses
+      first (fmap void)
+        $ elaborateTxWitnesses
           txIdMap
           (abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
 
@@ -164,16 +164,16 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
     updatePayload =
       Update.APayload
         (fmap snd maybeProposals)
-        ( fmap (elaborateVote pm proposalsIdMap') $
-            Abstract._bUpdVotes $
-              Abstract._bBody abstractBlock
+        ( fmap (elaborateVote pm proposalsIdMap')
+            $ Abstract._bUpdVotes
+            $ Abstract._bBody abstractBlock
         )
         () -- Update payload annotation
     maybeProposals :: Maybe (Abstract.Update.UProp, Update.Proposal)
     maybeProposals =
-      fmap (identity &&& elaborateUpdateProposal pm) $
-        Abstract._bUpdProp $
-          Abstract._bBody abstractBlock
+      fmap (identity &&& elaborateUpdateProposal pm)
+        $ Abstract._bUpdProp
+        $ Abstract._bBody abstractBlock
 
     proposalsIdMap' :: Map Abstract.Update.UpId Update.UpId
     proposalsIdMap' = maybe proposalsIdMap addUpdateProposalId maybeProposals
@@ -234,8 +234,8 @@ elaborateBS ::
   Abstract.Block ->
   (Concrete.ABlock ByteString, AbstractToConcreteIdMaps)
 elaborateBS txIdMap config dCert st ab =
-  first (annotateBlock (Genesis.configEpochSlots config)) $
-    elaborate txIdMap config dCert st ab
+  first (annotateBlock (Genesis.configEpochSlots config))
+    $ elaborate txIdMap config dCert st ab
 
 annotateBlock :: Slotting.EpochSlots -> Concrete.Block -> Concrete.ABlock ByteString
 annotateBlock epochSlots block =
@@ -246,10 +246,10 @@ annotateBlock epochSlots block =
           (Concrete.decCBORABlockOrBoundary epochSlots)
           bytes of
           Left err ->
-            panic $
-              "This function should be able to decode the block it encoded"
-                <> ". Instead I got: "
-                <> show err
+            panic
+              $ "This function should be able to decode the block it encoded"
+              <> ". Instead I got: "
+              <> show err
           Right abobb -> map (LBS.toStrict . Binary.slice bytes) abobb
    in case decodedABlockOrBoundary of
         Concrete.ABOBBlock bk -> bk

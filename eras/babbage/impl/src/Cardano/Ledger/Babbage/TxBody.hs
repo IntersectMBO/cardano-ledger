@@ -583,7 +583,7 @@ pattern BabbageTxBody
 mkBabbageTxBody :: BabbageEraTxBody era => BabbageTxBody era
 mkBabbageTxBody = mkMemoized basicBabbageTxBodyRaw
 
-instance (c ~ EraCrypto era) => HashAnnotated (BabbageTxBody era) EraIndependentTxBody c where
+instance c ~ EraCrypto era => HashAnnotated (BabbageTxBody era) EraIndependentTxBody c where
   hashAnnotated = getMemoSafeHash
 
 -- ==============================================================================

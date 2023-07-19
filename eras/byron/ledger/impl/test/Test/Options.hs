@@ -133,9 +133,9 @@ scenarioScaled count ts =
   if scaledCount > 0
     then scaledCount
     else
-      panic $
-        "scenarioScaled: produced a non-positive TestLimit: "
-          <> show scaledCount
+      panic
+        $ "scenarioScaled: produced a non-positive TestLimit: "
+        <> show scaledCount
   where
     scaledCount :: TestLimit
     scaledCount = round . ((count % 1) *) $ scenarioScaleDefault ts

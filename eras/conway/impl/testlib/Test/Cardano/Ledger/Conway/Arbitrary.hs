@@ -248,15 +248,13 @@ instance
 -- TICKF
 
 instance
-  ( Era era
-  ) =>
+  Era era =>
   Arbitrary (ConwayTickfPredFailure era)
   where
   arbitrary = undefined
 
 instance
-  ( Era era
-  ) =>
+  Era era =>
   Arbitrary (ConwayTickfEvent era)
   where
   arbitrary = undefined
@@ -296,8 +294,7 @@ instance
 -- DELEG
 
 instance
-  ( Era era
-  ) =>
+  Era era =>
   Arbitrary (ConwayDelegPredFailure era)
   where
   arbitrary =

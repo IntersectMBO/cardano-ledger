@@ -353,7 +353,7 @@ pattern AlonzoTxBody
 
 type instance MemoHashIndex AlonzoTxBodyRaw = EraIndependentTxBody
 
-instance (c ~ EraCrypto era) => HashAnnotated (AlonzoTxBody era) EraIndependentTxBody c where
+instance c ~ EraCrypto era => HashAnnotated (AlonzoTxBody era) EraIndependentTxBody c where
   hashAnnotated = getMemoSafeHash
 
 -- ==============================================================================

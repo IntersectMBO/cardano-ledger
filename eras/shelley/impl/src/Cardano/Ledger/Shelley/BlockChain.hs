@@ -162,7 +162,7 @@ txSeqTxns (TxSeq' ts _ _ _) = ts
 
 instance
   forall era.
-  (Era era) =>
+  Era era =>
   EncCBORGroup (ShelleyTxSeq era)
   where
   encCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
@@ -179,7 +179,7 @@ instance
 -- | Hash a given block body
 bbHash ::
   forall era.
-  (Era era) =>
+  Era era =>
   ShelleyTxSeq era ->
   Hash (EraCrypto era) EraIndependentBlockBody
 bbHash (TxSeq' _ bodies wits md) =

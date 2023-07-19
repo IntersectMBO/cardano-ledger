@@ -181,8 +181,8 @@ initialChainValidationState ::
   m ChainValidationState
 initialChainValidationState config = do
   delegationState <- DI.initialState delegationEnv genesisDelegation
-  pure $
-    ChainValidationState
+  pure
+    $ ChainValidationState
       { cvsLastSlot = 0
       , -- Ensure that we don't allow the internal value of this 'Left' to be
         -- lazy as we want to ensure that the 'ChainValidationState' is always
@@ -292,8 +292,8 @@ updateChainBoundary cvs bvd = do
     `orThrowError` ChainValidationBoundaryTooLarge
 
   -- Update the previous hash
-  pure $
-    cvs
+  pure
+    $ cvs
       { cvsPreviousHash = Right $! previousHash
       }
   where
@@ -391,8 +391,8 @@ updateBody env bs b = do
     UPI.registerUpdate updateEnv updateState updateSignal
       `wrapError` ChainValidationUpdateError currentSlot
 
-  pure $
-    BodyState
+  pure
+    $ BodyState
       { utxo = utxo'
       , updateState = updateState'
       , delegationState = delegationState'
@@ -553,8 +553,8 @@ updateBlock config cvs b = do
 
   BodyState {utxo, updateState, delegationState} <- updateBody bodyEnv bs b
 
-  pure $
-    cvs
+  pure
+    $ cvs
       { cvsLastSlot = blockSlot b
       , cvsPreviousHash = Right $! blockHashAnnotated b
       , cvsUtxo = utxo
@@ -606,8 +606,9 @@ foldUTxOBlock ::
   ExceptT Error (ReaderT ValidationMode ResIO) UTxO
 foldUTxOBlock env utxo block =
   withExceptT
-    ( ErrorUTxOValidationError . fromSlotNumber mainnetEpochSlots $
-        blockSlot
+    ( ErrorUTxOValidationError
+        . fromSlotNumber mainnetEpochSlots
+        $ blockSlot
           block
     )
     $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)

@@ -39,15 +39,15 @@ encodedSizeTest encode encodedSize gen = eachOfTS
       let size :: Natural
           size = fromIntegral $ BS.length (serialize' byronProtVer (encode a))
        in if
-              | size < lo -> do
-                  footnote $ "actual size not greater or equal the minimal size: " ++ show size ++ " ≱ " ++ show lo
-                  failure
-              | size > hi -> do
-                  footnote $ "actual size not smaller or equal the maximal size: " ++ show size ++ " ≰ " ++ show hi
-                  failure
-              | otherwise -> do
-                  label (classifySize rng size)
-                  success
+            | size < lo -> do
+                footnote $ "actual size not greater or equal the minimal size: " ++ show size ++ " ≱ " ++ show lo
+                failure
+            | size > hi -> do
+                footnote $ "actual size not smaller or equal the maximal size: " ++ show size ++ " ≰ " ++ show hi
+                failure
+            | otherwise -> do
+                label (classifySize rng size)
+                success
     Left _ -> do
       footnote "a thunk in size expression"
       failure

@@ -106,7 +106,7 @@ propDomainExclusionAndUnion s r1 r2 =
   (dom r1 `union` s)
     ⋪ (r1 ∪ r2)
     === (dom r1 `union` s)
-    ⋪ r2
+      ⋪ r2
 
 --------------------------------------------------------------------------------
 -- Property helpers

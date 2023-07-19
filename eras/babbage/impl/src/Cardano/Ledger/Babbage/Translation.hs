@@ -54,7 +54,7 @@ import Lens.Micro
 type instance TranslationContext (BabbageEra c) = ()
 
 instance
-  (Crypto c) =>
+  Crypto c =>
   TranslateEra (BabbageEra c) NewEpochState
   where
   translateEra ctxt nes =

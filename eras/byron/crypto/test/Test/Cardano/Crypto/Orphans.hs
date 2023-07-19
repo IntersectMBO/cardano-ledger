@@ -27,5 +27,5 @@ instance Ord Ed25519.SecretKey where
 instance Ord Ed25519.Signature where
   compare x1 x2 = compare (toByteString x1) (toByteString x2)
 
-toByteString :: (BA.ByteArrayAccess bin) => bin -> ByteString
+toByteString :: BA.ByteArrayAccess bin => bin -> ByteString
 toByteString = BA.convert

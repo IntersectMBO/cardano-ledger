@@ -62,7 +62,7 @@ class STS sts => HasTrace sts traceGenEnv where
   -- initial environment. This obviously places some contraints on the nature of
   -- the base monad for a trace to be completed.
   interpretSTS :: forall a. HasCallStack => (BaseEnv sts -> STS.BaseM sts a -> a)
-  default interpretSTS :: (STS.BaseM sts ~ Identity) => forall a. BaseEnv sts -> STS.BaseM sts a -> a
+  default interpretSTS :: STS.BaseM sts ~ Identity => forall a. BaseEnv sts -> STS.BaseM sts a -> a
   interpretSTS _ (Identity x) = x
 
   envGen :: HasCallStack => traceGenEnv -> QuickCheck.Gen (Environment sts)
@@ -79,8 +79,7 @@ class STS sts => HasTrace sts traceGenEnv where
 -- | Generate a random trace starting in the given environment and initial state.
 traceFrom ::
   forall sts traceGenEnv.
-  ( HasTrace sts traceGenEnv
-  ) =>
+  HasTrace sts traceGenEnv =>
   BaseEnv sts ->
   -- | Maximum trace length.
   Word64 ->
@@ -205,8 +204,7 @@ forAllTrace baseEnv maxTraceLength traceGenEnv =
 -- in the shrunk traces.
 shrinkTrace ::
   forall sts traceGenEnv.
-  ( HasTrace sts traceGenEnv
-  ) =>
+  HasTrace sts traceGenEnv =>
   BaseEnv sts ->
   Trace sts ->
   [Trace sts]

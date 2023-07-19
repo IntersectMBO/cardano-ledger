@@ -176,8 +176,8 @@ balance = sumLovelace . fmap compactTxOutValue . M.elems . unUTxO
 
 txOutputUTxO :: Tx -> UTxO
 txOutputUTxO tx =
-  UTxO $
-    M.fromList
+  UTxO
+    $ M.fromList
       [ (toCompactTxIn (TxInUtxo (txId tx) ix), (toCompactTxOut txOut))
       | (ix, txOut) <- indexedOutputs
       ]

@@ -109,7 +109,7 @@ instance (ToJSON v, ToJSONKey k) => ToJSON (ListMap k v) where
 
   toEncoding = J.liftToEncoding J.toEncoding J.toEncodingList
 
-instance (FromJSONKey k) => FromJSON1 (ListMap k) where
+instance FromJSONKey k => FromJSON1 (ListMap k) where
   liftParseJSON parser _ = J.withObject "ListMap" $ \obj -> do
     let kv = KM.toList obj
     res <- forM kv $ \(k, v) -> do

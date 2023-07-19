@@ -113,7 +113,7 @@ compileSubterm _whole sub = fst (compile sub)
 -- convert it.
 -- ===========================================================================
 
-run :: (Ord k) => (Query k v, BaseRep f k v) -> f k v
+run :: Ord k => (Query k v, BaseRep f k v) -> f k v
 run (BaseD SetR x, SetR) = x -- If it is already data (BaseD)
 run (BaseD MapR x, MapR) = x -- and in the right form (the BaseRep's match)
 run (BaseD SingleR x, SingleR) = x -- just return the data
@@ -373,7 +373,7 @@ fromList SingleR combine xs = foldr (addp combine) Fail xs
 -- the witness describes how to turn them into the chosen datatype. Note that materialize is meant
 -- to be applied to a collection built by iterating over a Query. This produces the keys in
 -- ascending order, with no duplicate keys. So we do not need to specify how to merge duplicate values.
-materialize :: (Ord k) => BaseRep f k v -> Collect (k, v) -> f k v
+materialize :: Ord k => BaseRep f k v -> Collect (k, v) -> f k v
 materialize ListR x = fromPairs (\l _r -> l) (runCollect x [] (:))
 materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
 materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))

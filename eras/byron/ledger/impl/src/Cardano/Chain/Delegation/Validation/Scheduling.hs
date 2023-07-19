@@ -207,8 +207,8 @@ scheduleCertificate env st cert = do
   Certificate.isValid protocolMagic cert `orThrowError` InvalidCertificate
 
   -- Schedule the new delegation and register the epoch/delegator pair
-  pure $
-    State
+  pure
+    $ State
       { scheduledDelegations = scheduledDelegations |> delegation
       , keyEpochDelegations =
           Set.insert

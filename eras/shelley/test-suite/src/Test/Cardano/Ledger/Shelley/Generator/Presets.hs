@@ -54,7 +54,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
 -- corresponding keyspace.
 genEnv ::
   forall era.
-  (EraGen era) =>
+  EraGen era =>
   Proxy era ->
   Constants ->
   GenEnv era
@@ -125,7 +125,7 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
-  (Crypto c) =>
+  Crypto c =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.

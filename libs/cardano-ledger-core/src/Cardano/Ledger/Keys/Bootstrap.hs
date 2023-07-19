@@ -182,7 +182,7 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) attributes) =
 
 unpackByronVKey ::
   forall c.
-  (DSIGN c ~ DSIGN.Ed25519DSIGN) =>
+  DSIGN c ~ DSIGN.Ed25519DSIGN =>
   Byron.VerificationKey ->
   (VKey 'Witness c, ChainCode)
 unpackByronVKey

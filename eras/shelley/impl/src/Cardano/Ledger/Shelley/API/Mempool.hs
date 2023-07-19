@@ -98,7 +98,7 @@ unsafeMakeValidated = Validated
 -- era-parametrised.
 translateValidated ::
   forall era f.
-  (TranslateEra era f) =>
+  TranslateEra era f =>
   TranslationContext era ->
   Validated (f (PreviousEra era)) ->
   Except (TranslationError era f) (Validated (f era))
@@ -217,11 +217,11 @@ mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} = LedgerState.esLSt
 newtype ApplyTxError era = ApplyTxError [PredicateFailure (EraRule "LEDGER" era)]
 
 deriving stock instance
-  (Eq (PredicateFailure (EraRule "LEDGER" era))) =>
+  Eq (PredicateFailure (EraRule "LEDGER" era)) =>
   Eq (ApplyTxError era)
 
 deriving stock instance
-  (Show (PredicateFailure (EraRule "LEDGER" era))) =>
+  Show (PredicateFailure (EraRule "LEDGER" era)) =>
   Show (ApplyTxError era)
 
 -- TODO: This instance can be switched back to a derived version, once we are officially

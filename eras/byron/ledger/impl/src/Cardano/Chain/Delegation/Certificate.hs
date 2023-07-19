@@ -129,8 +129,8 @@ signCertificate protocolMagicId delegateVK epochNumber safeSigner =
     }
   where
     sig =
-      safeSign protocolMagicId SignCertificate safeSigner $
-        mconcat
+      safeSign protocolMagicId SignCertificate safeSigner
+        $ mconcat
           [ "00"
           , CC.unXPub (unVerificationKey delegateVK)
           , serialize' byronProtVer epochNumber

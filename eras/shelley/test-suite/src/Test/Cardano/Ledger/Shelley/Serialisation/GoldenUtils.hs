@@ -80,7 +80,7 @@ checkEncoding ::
 checkEncoding v encode decode name x t = checkEncodingWithRoundtrip v encode decode roundTripSuccess name x t
 
 checkEncodingWithRoundtrip ::
-  (HasCallStack) =>
+  HasCallStack =>
   Version ->
   (a -> Encoding) ->
   (BSL.ByteString -> Either DecoderError a) ->

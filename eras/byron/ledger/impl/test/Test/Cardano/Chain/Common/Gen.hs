@@ -113,8 +113,8 @@ genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genMultiplier
         >>= \case
           Right lovelace -> pure lovelace
           Left err ->
-            panic $
-              sformat
+            panic
+              $ sformat
                 ("The impossible happened in genLovelace: " . build)
                 err
 

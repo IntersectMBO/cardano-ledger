@@ -106,7 +106,7 @@ instance Memoized AllegraTxAuxData where
 
 type instance MemoHashIndex AllegraTxAuxDataRaw = EraIndependentTxAuxData
 
-instance (c ~ EraCrypto era) => HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData c where
+instance c ~ EraCrypto era => HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData c where
   hashAnnotated = getMemoSafeHash
 
 deriving newtype instance

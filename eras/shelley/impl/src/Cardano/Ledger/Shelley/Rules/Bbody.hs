@@ -146,11 +146,11 @@ bbodyTransition =
 
         actualBodySize
           == fromIntegral (bhviewBSize bhview)
-          ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bhview)
+            ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bhview)
 
         actualBodyHash
           == bhviewBHash bhview
-          ?! InvalidBodyHashBBODY actualBodyHash (bhviewBHash bhview)
+            ?! InvalidBodyHashBBODY actualBodyHash (bhviewBHash bhview)
 
         ls' <-
           trans @(EraRule "LEDGERS" era) $

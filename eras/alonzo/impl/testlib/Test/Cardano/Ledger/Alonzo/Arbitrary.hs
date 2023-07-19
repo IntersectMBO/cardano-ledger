@@ -156,7 +156,7 @@ genScripts ::
   Gen (Map.Map (ScriptHash (EraCrypto era)) (Script era))
 genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Script era])
 
-instance (Era era) => Arbitrary (TxDats era) where
+instance Era era => Arbitrary (TxDats era) where
   arbitrary = TxDats . keyBy hashData <$> arbitrary
 
 instance
@@ -214,8 +214,7 @@ instance
 
 genAlonzoScript ::
   forall era.
-  ( Era era
-  ) =>
+  Era era =>
   [Language] ->
   Gen (AlonzoScript era)
 genAlonzoScript langs = do

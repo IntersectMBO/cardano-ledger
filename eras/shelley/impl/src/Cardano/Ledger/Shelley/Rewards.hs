@@ -304,8 +304,7 @@ rewardOnePoolMember
 -- the ranking information out of the ledger code and into a separate service,
 -- and at that point we can simplify this function to not care about ranking.
 mkPoolRewardInfo ::
-  ( EraPParams era
-  ) =>
+  EraPParams era =>
   PParams era ->
   Coin ->
   BlocksMade (EraCrypto era) ->

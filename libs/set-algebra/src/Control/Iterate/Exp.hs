@@ -65,8 +65,8 @@ data Exp t where
   UnionPlus :: (Ord k, Monoid n) => Exp (f k n) -> Exp (g k n) -> Exp (f k n)
   UnionOverrideRight :: Ord k => Exp (f k v) -> Exp (g k v) -> Exp (f k v)
   -- If 'k' appears in both, then choose the 'v' from the right 'g'
-  Singleton :: (Ord k) => k -> v -> Exp (Single k v)
-  SetSingleton :: (Ord k) => k -> Exp (Single k ())
+  Singleton :: Ord k => k -> v -> Exp (Single k v)
+  SetSingleton :: Ord k => k -> Exp (Single k ())
   KeyEqual :: (Ord k, Iter f, Iter g) => Exp (f k v) -> Exp (g k u) -> Exp Bool
 
 instance Show (Exp t) where
@@ -107,16 +107,16 @@ class HasExp s t | s -> t where
 instance HasExp (Exp t) t where
   toExp x = x
 
-instance (Ord k) => HasExp (Map k v) (Map k v) where
+instance Ord k => HasExp (Map k v) (Map k v) where
   toExp x = Base MapR x
 
-instance (Ord k) => HasExp (Set.Set k) (Sett k ()) where
+instance Ord k => HasExp (Set.Set k) (Sett k ()) where
   toExp x = Base SetR (Sett x)
 
-instance (Ord k) => HasExp [(k, v)] (List k v) where
+instance Ord k => HasExp [(k, v)] (List k v) where
   toExp l = Base ListR (UnSafeList (sortBy (\x y -> compare (fst x) (fst y)) l))
 
-instance (Ord k) => HasExp (Single k v) (Single k v) where
+instance Ord k => HasExp (Single k v) (Single k v) where
   toExp x = Base SingleR x
 
 type OrdAll coin cred pool ptr k = (Ord k, Ord coin, Ord cred, Ord ptr, Ord pool)
@@ -204,11 +204,11 @@ unionright = (⨃)
 unionplus = (∪+)
 
 -- | create a singleton map.
-singleton :: (Ord k) => k -> v -> Exp (Single k v)
+singleton :: Ord k => k -> v -> Exp (Single k v)
 singleton k v = Singleton k v
 
 -- | create a singleton set.
-setSingleton :: (Ord k) => k -> Exp (Single k ())
+setSingleton :: Ord k => k -> Exp (Single k ())
 setSingleton k = SetSingleton k
 
 -- | intersect two sets, or the intersection of the domain of two maps.

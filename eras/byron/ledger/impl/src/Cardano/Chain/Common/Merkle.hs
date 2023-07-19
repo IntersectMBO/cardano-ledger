@@ -94,8 +94,10 @@ merkleRootToBuilder (MerkleRoot h) = byteString (hashToBytes h)
 
 mkRoot :: MerkleRoot a -> MerkleRoot a -> MerkleRoot a
 mkRoot a b =
-  MerkleRoot . hashRaw . toLazyByteString $
-    mconcat
+  MerkleRoot
+    . hashRaw
+    . toLazyByteString
+    $ mconcat
       [word8 1, merkleRootToBuilder a, merkleRootToBuilder b]
 
 emptyHash :: MerkleRoot a
@@ -219,8 +221,8 @@ mkLeaf a = MerkleLeaf mRoot a
   where
     mRoot :: MerkleRoot a
     mRoot =
-      MerkleRoot $
-        hashRaw
+      MerkleRoot
+        $ hashRaw
           (toLazyByteString (word8 0 <> serializeBuilder byronProtVer a))
 
 mkLeafDecoded :: Annotated a ByteString -> MerkleNode a

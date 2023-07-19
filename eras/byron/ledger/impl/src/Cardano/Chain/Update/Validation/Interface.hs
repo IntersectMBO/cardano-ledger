@@ -268,8 +268,8 @@ registerProposal env st proposal = do
   Registration.State registeredProtocolUpdateProposals' registeredSoftwareUpdateProposals' <-
     Registration.registerProposal subEnv subSt proposal
       `wrapError` Registration
-  pure $!
-    st
+  pure
+    $! st
       { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
       , registeredSoftwareUpdateProposals = registeredSoftwareUpdateProposals'
       , proposalRegistrationSlot =
@@ -336,15 +336,15 @@ registerVotes env st votes = do
           registeredSoftwareUpdateProposals
           (M.keysSet confirmedProposals)
       appVersions' =
-        M.fromList $
-          [ (svAppName sv, av)
-          | (pid, sup) <- M.toList registeredSoftwareUpdateProposals
-          , pid `elem` M.keys confirmedApplicationUpdates
-          , let Registration.SoftwareUpdateProposal sv metadata = sup
-                av = Registration.ApplicationVersion (svNumber sv) currentSlot metadata
-          ]
-  pure $
-    st' -- Note that it's important that the new application versions are passed
+        M.fromList
+          $ [ (svAppName sv, av)
+            | (pid, sup) <- M.toList registeredSoftwareUpdateProposals
+            , pid `elem` M.keys confirmedApplicationUpdates
+            , let Registration.SoftwareUpdateProposal sv metadata = sup
+                  av = Registration.ApplicationVersion (svNumber sv) currentSlot metadata
+            ]
+  pure
+    $ st' -- Note that it's important that the new application versions are passed
     -- as the first argument of @M.union@, since the values in this first
     -- argument overwrite the values in the second.
       { appVersions = M.union appVersions' appVersions
@@ -368,8 +368,8 @@ registerVote env st vote = do
   Voting.State proposalVotes' confirmedProposals' <-
     Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
       `wrapError` Voting
-  pure $!
-    st
+  pure
+    $! st
       { confirmedProposals = confirmedProposals'
       , proposalVotes = proposalVotes'
       }
@@ -427,12 +427,12 @@ registerEndorsement env st endorsement = do
         M.restrictKeys registeredProtocolUpdateProposals pidsKeep
 
       vsKeep =
-        S.fromList $
-          Registration.pupProtocolVersion
-            <$> M.elems registeredProtocolUpdateProposals'
+        S.fromList
+          $ Registration.pupProtocolVersion
+          <$> M.elems registeredProtocolUpdateProposals'
 
-  pure $!
-    st
+  pure
+    $! st
       { candidateProtocolUpdates = forceElemsToWHNF candidateProtocolUpdates'
       , registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
       , registeredSoftwareUpdateProposals =

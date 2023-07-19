@@ -132,6 +132,6 @@ decodeCrcProtected = do
           . shown
           . " was not the computed one, which was "
           . shown
-  when (actualCrc /= expectedCrc) $
-    cborError (sformat crcErrorFmt expectedCrc actualCrc)
+  when (actualCrc /= expectedCrc)
+    $ cborError (sformat crcErrorFmt expectedCrc actualCrc)
   toCborError $ decodeFull' byronProtVer body

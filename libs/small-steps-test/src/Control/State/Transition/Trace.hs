@@ -485,7 +485,7 @@ extractValues d =
   catMaybes (gmapQ extractValue d)
     ++ concat (gmapQ extractValues d)
   where
-    extractValue :: forall d1. (Data d1) => d1 -> Maybe a
+    extractValue :: forall d1. Data d1 => d1 -> Maybe a
     extractValue d1 = cast d1
 
 data SourceSignalTarget a = SourceSignalTarget

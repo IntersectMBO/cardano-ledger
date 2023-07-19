@@ -111,9 +111,9 @@ tellRupd _message x = tellEvent x
 data RewardTiming = RewardsTooEarly | RewardsJustRight | RewardsTooLate
 
 determineRewardTiming :: SlotNo -> SlotNo -> SlotNo -> RewardTiming
-determineRewardTiming currentSlot startAftterSlot endSlot
+determineRewardTiming currentSlot startAfterSlot endSlot
   | currentSlot > endSlot = RewardsTooLate
-  | currentSlot <= startAftterSlot = RewardsTooEarly
+  | currentSlot <= startAfterSlot = RewardsTooEarly
   | otherwise = RewardsJustRight
 
 rupdTransition :: EraPParams era => TransitionRule (ShelleyRUPD era)

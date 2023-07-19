@@ -87,8 +87,8 @@ ts_prop_updateBlock_Valid =
                     , stableAfter
                     ) = Trace._traceEnv sampleTrace
       abstractBlock <-
-        forAll $
-          Abstract.sigGenChain
+        forAll
+          $ Abstract.sigGenChain
             Abstract.NoGenDelegation
             Abstract.NoGenUTxO
             Abstract.NoGenUpdate
@@ -112,8 +112,9 @@ ts_prop_updateBlock_Valid =
               abstractBlock
       annotateShow concreteBlock
       updateRes <-
-        (`runReaderT` vMode) . runExceptT $
-          updateBlock config cvs concreteBlock
+        (`runReaderT` vMode)
+          . runExceptT
+          $ updateBlock config cvs concreteBlock
       case updateRes of
         Left _ -> failure
         Right _ -> success
@@ -131,8 +132,8 @@ ts_prop_updateBlock_InvalidProof =
       let chainEnv@(_, abstractInitialUTxO, _, _, stableAfter) = Trace._traceEnv sampleTrace
           lastState = Trace.lastState sampleTrace
       abstractBlock <-
-        forAll $
-          Abstract.sigGenChain
+        forAll
+          $ Abstract.sigGenChain
             Abstract.NoGenDelegation
             Abstract.NoGenUTxO
             Abstract.NoGenUpdate
@@ -154,8 +155,9 @@ ts_prop_updateBlock_InvalidProof =
       annotateShow concreteBlock
       invalidBlock <- forAll $ invalidateABlockProof concreteBlock
       updateRes <-
-        (`runReaderT` vMode) . runExceptT $
-          updateBlock config cvs invalidBlock
+        (`runReaderT` vMode)
+          . runExceptT
+          $ updateBlock config cvs invalidBlock
       case updateRes of
         Left _ ->
           if (blockValidationMode vMode) == BlockValidation
@@ -196,8 +198,8 @@ createInitialDState ::
 createInitialDState env =
   DState
     { _dStateDelegationMap =
-        BM.fromList $
-          map
+        BM.fromList
+          $ map
             (\vkg@(Abstract.VKeyGenesis key) -> (vkg, key))
             (S.toList env)
     , _dStateLastDelegation = M.fromSet (const (Abstract.Slot 0)) env
@@ -278,8 +280,8 @@ invalidateABlockProof ab =
         [ pure $ proofUpdate (blockProof ab)
         , feedPM Update.genProof
         ]
-    pure $
-      modifyAProof
+    pure
+      $ modifyAProof
         ( \(Annotated p bs) ->
             Annotated
               ( p

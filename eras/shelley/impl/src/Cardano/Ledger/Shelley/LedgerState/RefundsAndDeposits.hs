@@ -55,8 +55,10 @@ totalCertsDeposits ::
   f (TxCert era) ->
   Coin
 totalCertsDeposits pp isRegPool certs =
-  numKeys <×> pp ^. ppKeyDepositL
-    <+> numNewRegPoolCerts <×> pp ^. ppPoolDepositL
+  numKeys
+    <×> (pp ^. ppKeyDepositL)
+    <+> numNewRegPoolCerts
+    <×> (pp ^. ppPoolDepositL)
   where
     numKeys = getSum @Int $ foldMap' (\x -> if isRegKey x then 1 else 0) certs
     numNewRegPoolCerts = Set.size (foldl' addNewPoolIds Set.empty certs)

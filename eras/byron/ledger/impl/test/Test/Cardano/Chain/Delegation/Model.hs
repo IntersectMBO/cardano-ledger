@@ -39,8 +39,8 @@ prop_commandSDELEG = withTests 25 . property $ do
   abstractEnv <- forAll $ STS.envGen @DELEG traceLength
 
   actions <-
-    forAll $
-      Gen.sequential
+    forAll
+      $ Gen.sequential
         (Range.linear 1 (fromIntegral traceLength))
         initialState
         [commandSDELEG concreteRef abstractEnv]
@@ -95,8 +95,9 @@ commandSDELEG concreteRef abstractEnv = Command gen execute callbacks
   where
     gen :: StateSDELEG v -> Maybe (Gen (SignalSDELEG v))
     gen st =
-      Just $
-        SignalSDELEG <$> do
+      Just
+        $ SignalSDELEG
+        <$> do
           mDCert <- Abstract.dcertGen abstractEnv keyEpochDelegations
           case mDCert of
             Nothing -> mzero

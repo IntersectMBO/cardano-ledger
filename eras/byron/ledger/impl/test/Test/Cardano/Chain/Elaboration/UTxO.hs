@@ -40,8 +40,8 @@ elaborateUTxOEnv _abstractEnv =
     , Concrete.UTxO.protocolParameters =
         dummyProtocolParameters
           { Concrete.ppTxFeePolicy =
-              Concrete.TxFeePolicyTxSizeLinear $
-                Concrete.TxSizeLinear
+              Concrete.TxFeePolicyTxSizeLinear
+                $ Concrete.TxSizeLinear
                   (Concrete.mkKnownLovelace @0)
                   0
           }

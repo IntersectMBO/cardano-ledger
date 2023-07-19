@@ -154,6 +154,5 @@ conwayGovCertTransition = do
       pure $ vState {vsCommitteeHotKeys = Map.insert coldK Nothing vsCommitteeHotKeys}
   where
     checkColdKeyHasNotResigned coldK vsCommitteeHotKeys =
-      (isNothing <$> Map.lookup coldK vsCommitteeHotKeys)
-        /= Just True
+      ((isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True)
         ?! ConwayCommitteeHasResigned coldK

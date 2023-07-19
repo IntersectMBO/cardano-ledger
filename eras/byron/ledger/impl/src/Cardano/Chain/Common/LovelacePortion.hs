@@ -79,8 +79,8 @@ instance EncCBOR LovelacePortion where
 instance DecCBOR LovelacePortion where
   decCBOR = do
     nominator <- decCBOR
-    when (nominator > lovelacePortionDenominator) $
-      fail "LovelacePortion: value out of bounds [0..1e15]"
+    when (nominator > lovelacePortionDenominator)
+      $ fail "LovelacePortion: value out of bounds [0..1e15]"
     return (LovelacePortion nominator)
 
 -- The canonical JSON instance for LovelacePortion uses only the nominator in
@@ -92,8 +92,8 @@ instance Monad m => ToJSON m LovelacePortion where
 instance MonadError SchemaError m => FromJSON m LovelacePortion where
   fromJSON val = do
     nominator <- fromJSON val
-    when (nominator > lovelacePortionDenominator) $
-      throwError
+    when (nominator > lovelacePortionDenominator)
+      $ throwError
         SchemaError
           { seExpected = "LovelacePortion integer in bounds [0..1e15]"
           , seActual = Just (sformat build nominator)

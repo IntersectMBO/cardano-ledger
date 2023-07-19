@@ -1056,7 +1056,7 @@ instance PrettyA (SafeHash c i) where
 -- ============================
 --  Cardano.Ledger.Compactible
 
-ppCompactForm :: (Compactible a) => (a -> PDoc) -> CompactForm a -> PDoc
+ppCompactForm :: Compactible a => (a -> PDoc) -> CompactForm a -> PDoc
 ppCompactForm cf x = cf (fromCompact x)
 
 instance (Compactible a, PrettyA a) => PrettyA (CompactForm a) where

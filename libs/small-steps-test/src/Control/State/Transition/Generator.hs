@@ -131,7 +131,7 @@ class STS s => HasTrace s where
   -- initial environment. This obviously places some contraints on the nature of
   -- the base monad for a trace to be completed.
   interpretSTS :: forall a. (BaseEnv s -> BaseM s a -> a)
-  default interpretSTS :: (BaseM s ~ Identity) => forall a. BaseEnv s -> BaseM s a -> a
+  default interpretSTS :: BaseM s ~ Identity => forall a. BaseEnv s -> BaseM s a -> a
   interpretSTS _ (Identity x) = x
 
   -- | Generate an initial environment that is based on the given trace length.
@@ -280,7 +280,7 @@ genTraceOfMaxOrDesiredLength baseEnv aTraceLength profile env st0 gen =
 -- signal generator.
 genTrace ::
   forall s.
-  (HasTrace s) =>
+  HasTrace s =>
   BaseEnv s ->
   -- | Trace upper bound. This will be linearly scaled as a function of the
   -- generator size.
@@ -298,7 +298,7 @@ genTrace baseEnv ub = genTraceWithProfile baseEnv ub allValid
 -- | Return a trace generator given an initial state, environment, and signal generator.
 genTraceWithProfile ::
   forall s.
-  (HasTrace s) =>
+  HasTrace s =>
   BaseEnv s ->
   -- | Trace upper bound. This will be linearly scaled as a function of the
   -- generator size.
@@ -337,7 +337,7 @@ genTraceWithProfile baseEnv ub profile env st0 aSigGen =
 -- generator can generate invalid signals, then the size of resulting trace is not guaranteed.
 genTraceOfLength ::
   forall s.
-  (HasTrace s) =>
+  HasTrace s =>
   BaseEnv s ->
   -- | Desired trace length.
   Word64 ->

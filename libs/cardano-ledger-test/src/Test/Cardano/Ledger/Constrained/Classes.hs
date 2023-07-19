@@ -219,7 +219,7 @@ instance GoodCrypto c => Sums (IndividualPoolStake c) Rational where
   getSum (IndividualPoolStake r _) = r
   genT _ r = IndividualPoolStake r <$> arbitrary
 
-instance (Reflect era) => Sums (TxOutF era) Coin where
+instance Reflect era => Sums (TxOutF era) Coin where
   getSum (TxOutF _ txout) = coin (txout ^. valueTxOutL)
   genT _ cn = genTxOutX reify cn
 

@@ -19,8 +19,9 @@ tests :: Group
 tests = $$discover
 
 prop_deserializeEpochs :: Property
-prop_deserializeEpochs = H.withTests 1 $
-  H.property $ do
+prop_deserializeEpochs = H.withTests 1
+  $ H.property
+  $ do
     menv <- liftIO $ lookupEnv "CARDANO_MAINNET_MIRROR"
     H.assert $ isJust menv
 

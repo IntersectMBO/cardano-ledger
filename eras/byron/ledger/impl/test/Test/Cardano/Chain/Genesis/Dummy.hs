@@ -56,10 +56,10 @@ import qualified Test.Cardano.Crypto.Dummy as Dummy
 dummyConfig :: Config
 dummyGeneratedSecrets :: GeneratedSecrets
 (dummyConfig, dummyGeneratedSecrets) =
-  either (panic . show) identity $
-    Crypto.deterministic seed $ -- supply fake entropy to make this pure
-      runExceptT $
-        generateGenesisConfigWithEntropy startTime dummyGenesisSpec
+  either (panic . show) identity
+    $ Crypto.deterministic seed
+    $ runExceptT -- supply fake entropy to make this pure
+    $ generateGenesisConfigWithEntropy startTime dummyGenesisSpec
   where
     seed :: ByteString
     seed = "\0"

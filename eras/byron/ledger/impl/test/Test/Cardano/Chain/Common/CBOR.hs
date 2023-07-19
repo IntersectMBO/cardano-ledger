@@ -325,32 +325,32 @@ sizeEstimates =
         , ("BlockCount", check genBlockCount)
         ,
           ( "Attributes ()"
-          , sizeTest $
-              scfg
+          , sizeTest
+              $ scfg
                 { gen = genAttributes (pure ())
                 , addlCtx = M.fromList [attrUnitSize]
                 }
           )
         ,
           ( "Attributes AddrAttributes"
-          , sizeTest $
-              scfg
+          , sizeTest
+              $ scfg
                 { gen = genAttributes genAddrAttributes
                 , addlCtx = M.fromList [attrAddrSize]
                 }
           )
         ,
           ( "Address"
-          , sizeTest $
-              scfg
+          , sizeTest
+              $ scfg
                 { gen = genAddress
                 , addlCtx = M.fromList [attrAddrSize]
                 }
           )
         ,
           ( "AddrSpendingData"
-          , sizeTest $
-              scfg
+          , sizeTest
+              $ scfg
                 { gen = genAddrSpendingData
                 , addlCtx =
                     M.fromList

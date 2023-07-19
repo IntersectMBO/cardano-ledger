@@ -69,8 +69,8 @@ ts_prop_elaboratedCertsValid =
           -- large portion of 'Nothing'.
         Just cert ->
           let concreteCert = elaborateDCertAnnotated pm cert
-           in assert $
-                Concrete.Certificate.isValid (Annotated pm (serialize' byronProtVer pm)) concreteCert
+           in assert
+                $ Concrete.Certificate.isValid (Annotated pm (serialize' byronProtVer pm)) concreteCert
   where
     env =
       DSEnv
@@ -118,10 +118,10 @@ elaborateDSEnv abstractEnv =
   Scheduling.Environment
     { Scheduling.protocolMagic = Dummy.annotatedProtocolMagicId
     , Scheduling.allowedDelegators =
-        Set.fromList $
-          hashKey
-            . elaborateVKeyGenesis
-            <$> Set.toList genesisKeys
+        Set.fromList
+          $ hashKey
+          . elaborateVKeyGenesis
+          <$> Set.toList genesisKeys
     , Scheduling.currentEpoch = fromIntegral e
     , Scheduling.currentSlot = Concrete.SlotNumber s
     , Scheduling.k = Concrete.BlockCount k

@@ -19,7 +19,7 @@ slotsPerEpoch (BlockCount bc) = fromIntegral $ bc * 10
 
 -- | The inverse of 'slotsPerEpoch': given a number of slots per-epoch, return
 -- the chain stability parameter @k@.
-slotsPerEpochToK :: (Integral n) => n -> BlockCount
+slotsPerEpochToK :: Integral n => n -> BlockCount
 slotsPerEpochToK n = BlockCount $ floor $ (fromIntegral n :: Double) / 10
 
 -- | Given the chain stability parameter, calculate the first slot in a given

@@ -46,7 +46,7 @@ data EpochError
 -- tracing is orthogonal to throwing errors; it does not change the program flow.
 validateEpochFile ::
   forall m.
-  (MonadIO m) =>
+  MonadIO m =>
   Tracer m EpochError ->
   ValidationMode ->
   Genesis.Config ->
@@ -55,11 +55,11 @@ validateEpochFile ::
   m ChainValidationState
 validateEpochFile tr vMode config cvs fp = do
   res <-
-    liftIO $
-      runResourceT $
-        (`runReaderT` vMode) $
-          runExceptT $
-            foldChainValidationState config cvs stream
+    liftIO
+      $ runResourceT
+      $ (`runReaderT` vMode)
+      $ runExceptT
+      $ foldChainValidationState config cvs stream
 
   case res of
     Left e -> traceWith tr e >> pure cvs
@@ -75,10 +75,10 @@ validateEpochFiles ::
   [FilePath] ->
   IO (Either EpochError ChainValidationState)
 validateEpochFiles vMode config cvs fps =
-  runResourceT $
-    (`runReaderT` vMode) $
-      runExceptT
-        (foldChainValidationState config cvs stream)
+  runResourceT
+    $ (`runReaderT` vMode)
+    $ runExceptT
+      (foldChainValidationState config cvs stream)
   where
     stream = parseEpochFilesWithBoundary mainnetEpochSlots fps
 
@@ -91,8 +91,8 @@ foldChainValidationState ::
 foldChainValidationState config chainValState blocks =
   S.foldM_
     ( \cvs block ->
-        withExceptT (EpochChainValidationError (blockOrBoundarySlot block)) $
-          updateChainBlockOrBoundary config cvs block
+        withExceptT (EpochChainValidationError (blockOrBoundarySlot block))
+          $ updateChainBlockOrBoundary config cvs block
     )
     (pure chainValState)
     pure

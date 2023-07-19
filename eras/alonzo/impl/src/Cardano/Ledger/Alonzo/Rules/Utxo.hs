@@ -121,37 +121,37 @@ data AlonzoUtxoPredFailure era
     BadInputsUTxO
       !(Set (TxIn (EraCrypto era)))
   | OutsideValidityIntervalUTxO
+      -- | transaction's validity interval
       !ValidityInterval
-      -- ^ transaction's validity interval
+      -- | current slot
       !SlotNo
-      -- ^ current slot
   | MaxTxSizeUTxO
+      -- | the actual transaction size
       !Integer
-      -- ^ the actual transaction size
+      -- | the max transaction size
       !Integer
-      -- ^ the max transaction size
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
+      -- | the minimum fee for this transaction
       !Coin
-      -- ^ the minimum fee for this transaction
+      -- | the fee supplied in this transaction
       !Coin
-      -- ^ the fee supplied in this transaction
   | ValueNotConservedUTxO
+      -- | the Coin consumed by this transaction
       !(Value era)
-      -- ^ the Coin consumed by this transaction
+      -- | the Coin produced by this transaction
       !(Value era)
-      -- ^ the Coin produced by this transaction
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
+      -- | the expected network id
       !Network
-      -- ^ the expected network id
+      -- | the set of addresses with incorrect network IDs
       !(Set (Addr (EraCrypto era)))
-      -- ^ the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
+      -- | the expected network id
       !Network
-      -- ^ the expected network id
+      -- | the set of reward addresses with incorrect network IDs
       !(Set (RewardAcnt (EraCrypto era)))
-      -- ^ the set of reward addresses with incorrect network IDs
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
       ![TxOut era]
@@ -166,35 +166,35 @@ data AlonzoUtxoPredFailure era
     OutputTooBigUTxO
       ![(Integer, Integer, TxOut era)]
   | InsufficientCollateral
+      -- | balance computed
       !Coin
-      -- ^ balance computed
+      -- | the required collateral for the given fee
       !Coin
-      -- ^ the required collateral for the given fee
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
       !(UTxO era)
   | ExUnitsTooBigUTxO
+      -- | Max EXUnits from the protocol parameters
       !ExUnits
-      -- ^ Max EXUnits from the protocol parameters
+      -- | EXUnits supplied
       !ExUnits
-      -- ^ EXUnits supplied
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA !(Value era)
   | -- | Wrong Network ID in body
     WrongNetworkInTxBody
+      -- | Actual Network ID
       !Network
-      -- ^ Actual Network ID
+      -- | Network ID in transaction body
       !Network
-      -- ^ Network ID in transaction body
   | -- | slot number outside consensus forecast range
     OutsideForecast
       !SlotNo
   | -- | There are too many collateral inputs
     TooManyCollateralInputs
+      -- | Max allowed collateral inputs
       !Natural
-      -- ^ Max allowed collateral inputs
+      -- | Number of collateral inputs
       !Natural
-      -- ^ Number of collateral inputs
   | NoCollateralInputs
   deriving (Generic)
 

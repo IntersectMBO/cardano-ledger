@@ -310,8 +310,8 @@ sizeEstimates =
         [ ("TxId", sizeTestGen genTxId)
         ,
           ( "Tx"
-          , sizeTest $
-              scfg
+          , sizeTest
+              $ scfg
                 { gen = genTx
                 , addlCtx = M.fromList [attrUnitSize, attrAddrSize]
                 , computedCtx = \tx ->
@@ -330,13 +330,13 @@ sizeEstimates =
         , ("TxIn", sizeTestGen genTxIn)
         ,
           ( "TxOut"
-          , sizeTest $
-              scfg {gen = genTxOut, addlCtx = M.fromList [attrAddrSize]}
+          , sizeTest
+              $ scfg {gen = genTxOut, addlCtx = M.fromList [attrAddrSize]}
           )
         ,
           ( "TxAux"
-          , sizeTest $
-              scfg
+          , sizeTest
+              $ scfg
                 { gen = genTxAux pm
                 , addlCtx = M.fromList [attrUnitSize, attrAddrSize, txSigSize]
                 , computedCtx = \ta ->
@@ -358,14 +358,14 @@ sizeEstimates =
           )
         ,
           ( "TxInWitness"
-          , sizeTest $
-              scfg {gen = genTxInWitness pm, addlCtx = M.fromList [txSigSize]}
+          , sizeTest
+              $ scfg {gen = genTxInWitness pm, addlCtx = M.fromList [txSigSize]}
           )
         , ("TxSigData", sizeTestGen genTxSigData)
         ,
           ( "Signature TxSigData"
-          , sizeTest $
-              scfg {gen = genTxSig pm, addlCtx = M.fromList [txSigSize]}
+          , sizeTest
+              $ scfg {gen = genTxSig pm, addlCtx = M.fromList [txSigSize]}
           )
         ]
 

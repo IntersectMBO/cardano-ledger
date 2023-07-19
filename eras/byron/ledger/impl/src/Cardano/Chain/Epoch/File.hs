@@ -78,8 +78,8 @@ parseEpochFileWithBoundary ::
     ()
 parseEpochFileWithBoundary epochSlots file = do
   s <-
-    S.mapM liftDecoderError $
-      decodedWith (getSlotData epochSlots) (boundaryBytes <> bytes)
+    S.mapM liftDecoderError
+      $ decodedWith (getSlotData epochSlots) (boundaryBytes <> bytes)
   liftBinaryError s
   where
     boundaryBytes :: SBS.ByteStream (ExceptT ParseError ResIO) ()
@@ -128,8 +128,9 @@ getSlotData epochSlots = runExceptT $ do
   block <- do
     blockBytes <- lift $ B.getLazyByteString (fromIntegral blockSize)
     bb <-
-      ExceptT . pure $
-        decodeFullDecoder
+      ExceptT
+        . pure
+        $ decodeFullDecoder
           byronProtVer
           "ABlockOrBoundary"
           (decCBORABlockOrBoundary epochSlots)

@@ -490,8 +490,8 @@ decCBORABoundaryBlock = do
     -- 2 items (body and extra body data)
     bod <- decCBORABoundaryBody
     pure (hdr, bod)
-  pure $
-    ABoundaryBlock
+  pure
+    $ ABoundaryBlock
       { boundaryBlockLength = end - start
       , boundaryHeader = hdr
       , boundaryBody = bod

@@ -69,10 +69,10 @@ import NoThunks.Class (NoThunks (..))
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (ShelleyBbodyPredFailure era)
   | TooManyExUnits
+      -- | Computed Sum of ExUnits for all plutus scripts
       !ExUnits
-      -- ^ Computed Sum of ExUnits for all plutus scripts
+      -- | Maximum allowed by protocal parameters
       !ExUnits
-      -- ^ Maximum allowed by protocal parameters
   deriving (Generic)
 
 newtype AlonzoBbodyEvent era
@@ -147,15 +147,15 @@ bbodyTransition =
 
         actualBodySize
           == fromIntegral (bhviewBSize bh)
-          ?! ShelleyInAlonzoBbodyPredFailure
-            ( WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh)
-            )
+            ?! ShelleyInAlonzoBbodyPredFailure
+              ( WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh)
+              )
 
         actualBodyHash
           == bhviewBHash bh
-          ?! ShelleyInAlonzoBbodyPredFailure
-            ( InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh)
-            )
+            ?! ShelleyInAlonzoBbodyPredFailure
+              ( InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh)
+              )
 
         ls' <-
           trans @(EraRule "LEDGERS" era) $

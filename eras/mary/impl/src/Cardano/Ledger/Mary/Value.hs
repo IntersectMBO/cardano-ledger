@@ -559,7 +559,7 @@ The decoding strategy is
 
 to ::
   forall c.
-  (Crypto c) =>
+  Crypto c =>
   MaryValue c ->
   -- The Nothing case of the return value corresponds to a quantity that is outside
   -- the bounds of a Word64. x < 0 or x > (2^64 - 1)
@@ -712,7 +712,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
     anameBlockSize =
       Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetName) assetNames
 
-from :: forall c. (Crypto c) => CompactValue c -> MaryValue c
+from :: forall c. Crypto c => CompactValue c -> MaryValue c
 from (CompactValueAdaOnly (CompactCoin c)) = MaryValue (fromIntegral c) (MultiAsset Map.empty)
 from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
   let mv@(MaryValue _ ma) = valueFromList (fromIntegral c) triples

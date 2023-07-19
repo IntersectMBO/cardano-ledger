@@ -189,7 +189,7 @@ headerIsValid us bh = do
   let sMax = snd (us ^. _1) ^. maxHdrSz
   bHeaderSize bh
     <= sMax
-    ?! HeaderSizeTooBig bh (bHeaderSize bh) (Threshold sMax)
+      ?! HeaderSizeTooBig bh (bHeaderSize bh) (Threshold sMax)
 
 -- | Lens for the delegation interface state contained in the chain state.
 disL :: Lens' (State CHAIN) DIState

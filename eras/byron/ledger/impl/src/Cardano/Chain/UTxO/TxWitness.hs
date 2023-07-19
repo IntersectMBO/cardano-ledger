@@ -111,9 +111,9 @@ instance EncCBOR TxInWitness where
         ( map
             (fmap knownCborDataItemSizeExpr)
             [ Case "VKWitness" $ size $ Proxy @(VerificationKey, TxSig)
-            , Case "RedeemWitness" $
-                size $
-                  Proxy @(RedeemVerificationKey, RedeemSignature TxSigData)
+            , Case "RedeemWitness"
+                $ size
+                $ Proxy @(RedeemVerificationKey, RedeemSignature TxSigData)
             ]
         )
 

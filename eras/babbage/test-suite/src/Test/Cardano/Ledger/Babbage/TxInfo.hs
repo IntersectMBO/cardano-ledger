@@ -205,7 +205,7 @@ errorTranslate exampleName =
 
 translatedInputEx1 ::
   forall era.
-  (BabbageTxInfoTests era) =>
+  BabbageTxInfoTests era =>
   Proxy era ->
   PV2.TxInInfo
 translatedInputEx1 _ =
@@ -213,7 +213,7 @@ translatedInputEx1 _ =
 
 translatedInputEx2 ::
   forall era.
-  (BabbageTxInfoTests era) =>
+  BabbageTxInfoTests era =>
   Proxy era ->
   PV2.TxInInfo
 translatedInputEx2 _ =
@@ -225,7 +225,7 @@ translatedOutputEx1 _ =
 
 translatedOutputEx2 ::
   forall era.
-  (BabbageTxInfoTests era) =>
+  BabbageTxInfoTests era =>
   Proxy era ->
   PV2.TxOut
 translatedOutputEx2 _ =

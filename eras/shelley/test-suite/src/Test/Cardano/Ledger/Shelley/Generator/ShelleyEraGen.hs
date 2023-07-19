@@ -139,7 +139,7 @@ genTimeToLive currentSlot = do
   ttl <- genNatural 50 100
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
-instance (Mock c) => MinGenTxout (ShelleyEra c) where
+instance Mock c => MinGenTxout (ShelleyEra c) where
   calcEraMinUTxO _txout = view ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do

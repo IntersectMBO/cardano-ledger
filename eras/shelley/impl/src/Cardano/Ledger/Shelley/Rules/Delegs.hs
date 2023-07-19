@@ -159,8 +159,7 @@ instance
   transitionRules = [delegsTransition]
 
 instance
-  ( NoThunks (PredicateFailure (EraRule "DELPL" era))
-  ) =>
+  NoThunks (PredicateFailure (EraRule "DELPL" era)) =>
   NoThunks (ShelleyDelegsPredFailure era)
 
 instance

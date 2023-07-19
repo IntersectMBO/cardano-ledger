@@ -43,17 +43,17 @@ elaboratePParams pps =
     , Concrete.ppUpdateVoteThd = Concrete.rationalToLovelacePortion 0
     , Concrete.ppUpdateProposalThd = Concrete.rationalToLovelacePortion 0
     , Concrete.ppUpdateProposalTTL =
-        Concrete.SlotNumber $
-          unSlotCount $
-            Abstract._upTtl pps
+        Concrete.SlotNumber
+          $ unSlotCount
+          $ Abstract._upTtl pps
     , Concrete.ppSoftforkRule =
         Concrete.SoftforkRule
           { Concrete.srInitThd = Concrete.rationalToLovelacePortion 0
           , -- See 'upAdptThd' in 'module Cardano.Chain.Update.ProtocolParameters'
             Concrete.srMinThd =
-              Concrete.rationalToLovelacePortion $
-                realToFrac $
-                  Abstract._upAdptThd pps
+              Concrete.rationalToLovelacePortion
+                $ realToFrac
+                $ Abstract._upAdptThd pps
           , Concrete.srThdDecrement = Concrete.rationalToLovelacePortion 0
           }
     , Concrete.ppTxFeePolicy =
@@ -116,9 +116,9 @@ elaborateUpdateProposal protocolMagicId abstractProposal =
     issuer = elaborateVKey $ Abstract._upIssuer abstractProposal
     signer = signatureVKey $ Abstract._upSig abstractProposal
     signedProposalBody =
-      elaborateUpSD $
-        signatureData $
-          Abstract._upSig abstractProposal
+      elaborateUpSD
+        $ signatureData
+        $ Abstract._upSig abstractProposal
     -- To elaborate the signature, we extract the signer and the (abstract)
     -- data that was signed from the signature of the abstract proposal. We
     -- cannot simply sign the concrete proposal data, since the abstract signed
@@ -209,9 +209,9 @@ elaborateVote protocolMagicId proposalsIdMap abstractVote =
         True -- We assume the decision to be always constant
         safeSigner
     signedUpId =
-      elaborateProposalId proposalsIdMap $
-        signatureData $
-          Abstract._vSig abstractVote
+      elaborateProposalId proposalsIdMap
+        $ signatureData
+        $ Abstract._vSig abstractVote
     safeSigner =
       vKeyToSafeSigner $ signatureVKey $ Abstract._vSig abstractVote
 

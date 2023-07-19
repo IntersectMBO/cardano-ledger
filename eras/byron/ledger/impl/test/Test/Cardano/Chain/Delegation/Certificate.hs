@@ -36,11 +36,11 @@ tests = $$discover
 prop_certificateCorrect :: Property
 prop_certificateCorrect = property $ do
   cert <-
-    forAll $
-      signCertificate Dummy.protocolMagicId
-        <$> genVerificationKey
-        <*> genEpochNumber
-        <*> genSafeSigner
+    forAll
+      $ signCertificate Dummy.protocolMagicId
+      <$> genVerificationKey
+      <*> genEpochNumber
+      <*> genSafeSigner
 
   let aCert = annotateCert cert
 
@@ -50,11 +50,11 @@ prop_certificateCorrect = property $ do
 prop_certificateIncorrect :: Property
 prop_certificateIncorrect = property $ do
   cert <-
-    forAll $
-      signCertificate Dummy.protocolMagicId
-        <$> genVerificationKey
-        <*> genEpochNumber
-        <*> genSafeSigner
+    forAll
+      $ signCertificate Dummy.protocolMagicId
+      <$> genVerificationKey
+      <*> genEpochNumber
+      <*> genSafeSigner
   badDelegateVK <- forAll $ Gen.filter (/= delegateVK cert) genVerificationKey
 
   let badCert = cert {delegateVK = badDelegateVK}

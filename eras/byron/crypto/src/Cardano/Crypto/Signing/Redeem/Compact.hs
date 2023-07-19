@@ -123,9 +123,9 @@ fromCompactRedeemVerificationKey compactRvk =
   where
     bs :: ByteString
     bs =
-      BSL.toStrict $
-        runPut $
-          putCompactRedeemVerificationKey compactRvk
+      BSL.toStrict
+        $ runPut
+        $ putCompactRedeemVerificationKey compactRvk
 
 instance Ord CompactRedeemVerificationKey where
   compare = compare `on` fromCompactRedeemVerificationKey

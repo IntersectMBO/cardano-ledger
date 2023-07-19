@@ -318,9 +318,9 @@ instance (Ord b, Num b) => Num (Range b) where
   negate x = Range {lo = negate (hi x), hi = negate (lo x)}
   abs x =
     if
-        | lo x <= 0 && hi x >= 0 -> Range {lo = 0, hi = max (hi x) (negate $ lo x)}
-        | lo x <= 0 && hi x <= 0 -> Range {lo = negate (hi x), hi = negate (lo x)}
-        | otherwise -> x
+      | lo x <= 0 && hi x >= 0 -> Range {lo = 0, hi = max (hi x) (negate $ lo x)}
+      | lo x <= 0 && hi x <= 0 -> Range {lo = negate (hi x), hi = negate (lo x)}
+      | otherwise -> x
   signum x = Range {lo = signum (lo x), hi = signum (hi x)}
   fromInteger n = Range {lo = fromInteger n, hi = fromInteger n}
 
@@ -394,7 +394,7 @@ apMono n f = \case
 
 -- | Greedily compute the size bounds for a type, using the given context to
 --   override sizes for specific types.
-szWithCtx :: (EncCBOR a) => Map.Map TypeRep SizeOverride -> Proxy a -> Size
+szWithCtx :: EncCBOR a => Map.Map TypeRep SizeOverride -> Proxy a -> Size
 szWithCtx ctx pxy = case Map.lookup (typeRep pxy) ctx of
   Nothing -> normal
   Just override -> case override of
@@ -496,11 +496,11 @@ withWordSize :: (Integral s, Integral a) => s -> a
 withWordSize x =
   let s = fromIntegral x :: Integer
    in if
-          | s <= 0x17 && s >= (-0x18) -> 1
-          | s <= 0xff && s >= (-0x100) -> 2
-          | s <= 0xffff && s >= (-0x10000) -> 3
-          | s <= 0xffffffff && s >= (-0x100000000) -> 5
-          | otherwise -> 9
+        | s <= 0x17 && s >= (-0x18) -> 1
+        | s <= 0xff && s >= (-0x100) -> 2
+        | s <= 0xffff && s >= (-0x10000) -> 3
+        | s <= 0xffffffff && s >= (-0x100000000) -> 5
+        | otherwise -> 9
 
 --------------------------------------------------------------------------------
 -- Primitive types

@@ -161,11 +161,11 @@ instance
   transitionRules = [overlayTransition]
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF c)) =>
+  VRF.VRFAlgorithm (VRF c) =>
   Show (OverlayPredicateFailure c)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF c)) =>
+  VRF.VRFAlgorithm (VRF c) =>
   Eq (OverlayPredicateFailure c)
 
 vrfChecks ::
@@ -291,7 +291,7 @@ overlayTransition =
         trans @(OCERT c) $ TRC (oce, cs, bh)
 
 instance
-  (VRF.VRFAlgorithm (VRF c)) =>
+  VRF.VRFAlgorithm (VRF c) =>
   NoThunks (OverlayPredicateFailure c)
 
 instance

@@ -38,7 +38,7 @@ instance NoThunks (UpdnPredicateFailure c)
 newtype UpdnEvent c = NewEpoch EpochNo
 
 instance
-  (Crypto c) =>
+  Crypto c =>
   STS (UPDN c)
   where
   type State (UPDN c) = UpdnState

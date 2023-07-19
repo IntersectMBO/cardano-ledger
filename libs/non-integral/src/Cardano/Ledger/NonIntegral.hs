@@ -16,7 +16,7 @@ data CompareResult a
   | MaxReached Int
   deriving (Show, Eq)
 
-scaleExp :: (RealFrac a) => a -> (Integer, a)
+scaleExp :: RealFrac a => a -> (Integer, a)
 scaleExp x = (x', x / fromIntegral x')
   where
     x' = ceiling x
@@ -42,7 +42,7 @@ ipow x n
   | n < 0 = 1 / ipow' x (-n)
   | otherwise = ipow' x n
 
-logAs :: (Num a) => a -> [a]
+logAs :: Num a => a -> [a]
 logAs a = a' : a' : logAs (a + 1)
   where
     a' = a * a
@@ -57,7 +57,7 @@ lncf maxN x
   where
     as = x : map (* x) (logAs 1)
 
-eps :: (Fractional a) => a
+eps :: Fractional a => a
 eps = 1 / 10 ^ (24 :: Int)
 
 -- | Compute continued fraction using max steps or bounded list of a/b factors.
@@ -153,7 +153,7 @@ exp1 :: (RealFrac a, Show a) => a
 exp1 = exp' 1
 
 -- | find n with `e^n<=x<e^(n+1)`
-findE :: (RealFrac a) => a -> a -> Integer
+findE :: RealFrac a => a -> a -> Integer
 findE e x = contract e x lower upper
   where
     (lower, upper) = bound e x (1 / e) e (-1) 1
@@ -194,7 +194,7 @@ taylorExp maxN n x lastX acc divisor
 -- exponential function to a threshold value. Using error estimation one can
 -- stop early, once it's known the result will certainly be above or below the
 -- target value.
-taylorExpCmp :: (RealFrac a) => a -> a -> a -> CompareResult a
+taylorExpCmp :: RealFrac a => a -> a -> a -> CompareResult a
 taylorExpCmp boundX cmp x = go 1000 0 x 1 1
   where
     go maxN n err acc divisor

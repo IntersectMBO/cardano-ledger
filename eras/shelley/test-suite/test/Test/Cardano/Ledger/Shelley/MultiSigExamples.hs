@@ -171,7 +171,7 @@ makeTxBody inp addrCs wdrl =
 
 makeTx ::
   forall c.
-  (Mock c) =>
+  Mock c =>
   TxBody (ShelleyEra c) ->
   [KeyPair 'Witness c] ->
   Map (ScriptHash c) (MultiSig (ShelleyEra c)) ->
@@ -218,7 +218,7 @@ initPParams =
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
   forall c.
-  (Mock c) =>
+  Mock c =>
   Coin ->
   [(MultiSig (ShelleyEra c), Coin)] ->
   ( TxId c
@@ -269,7 +269,7 @@ initialUTxOState aliceKeep msigs =
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
   forall c.
-  (Mock c) =>
+  Mock c =>
   [(MultiSig (ShelleyEra c), Coin)] ->
   [MultiSig (ShelleyEra c)] ->
   Withdrawals c ->
