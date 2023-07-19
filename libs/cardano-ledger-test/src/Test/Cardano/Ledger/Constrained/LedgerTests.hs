@@ -81,7 +81,7 @@ import Test.QuickCheck hiding (getSize, total)
 
 genFromConstraints :: Era era => Proof era -> OrderInfo -> [Pred era] -> Target era t -> Gen t
 genFromConstraints proof order cs target = do
-  graph  <- monadTyped $ compile order $ rewrite cs
+  (_, graph)  <- compileGen order cs
   result <- genDependGraph False proof graph
   case result of
     Left errs   -> error $ unlines errs
