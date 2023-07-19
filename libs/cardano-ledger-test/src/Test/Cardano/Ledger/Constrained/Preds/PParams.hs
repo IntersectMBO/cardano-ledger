@@ -89,9 +89,9 @@ pParamsPreds p =
   , extract (keyDepAmt p) (pparams p)
   , extract (poolDepAmt p) (pparams p)
   , extract (maxEpoch p) (pparams p)
-  , Sized (AtLeast 100) (maxBHSize p)
-  , Sized (AtLeast 20000) (maxTxSize p)
-  , SumsTo (Right 1) (maxBBSize p) LTE [One (maxBHSize p), One (maxTxSize p)]
+  , maxTxSize p :=: Lit NaturalR 16384
+  , maxBHSize p :=: Lit NaturalR 1100
+  , maxBBSize p :=: Lit NaturalR 65536
   , (protVer p) `CanFollow` (prevProtVer p)
   ]
     ++ ( case whichPParams p of
