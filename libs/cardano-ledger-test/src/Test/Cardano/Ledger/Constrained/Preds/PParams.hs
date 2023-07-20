@@ -18,9 +18,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import GHC.Num (Natural)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Constrained.Ast
+import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env (Access (..), V (..))
 import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
@@ -89,7 +89,7 @@ pParamsPreds p =
   , extract (poolDepAmt p) (pparams p)
   , extract (maxEpoch p) (pparams p)
   , Sized (AtLeast 100) (maxBHSize p)
-  , Sized (AtLeast 20000) (maxTxSize p)
+  , Sized (AtLeast 40000) (maxTxSize p)
   , SumsTo (Right 1) (maxBBSize p) LTE [One (maxBHSize p), One (maxTxSize p)]
   , (protVer p) `CanFollow` (prevProtVer p)
   ]

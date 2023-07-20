@@ -13,13 +13,14 @@ import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
 import GHC.Real ((%))
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
+import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad (generateWithSeed, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Universes
 import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), genFromSize)
+import Test.Cardano.Ledger.Constrained.Size (Size (..), genFromSize)
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
@@ -266,34 +267,3 @@ mainC = do
   certState <- monadTyped $ runTarget env certstateT
   putStrLn (show (prettyC proof certState))
   goRepl proof env ""
-
--- putStrLn "\n"
--- putStrLn (unlines (otherFromEnv [] env))
-
--- ===============================
-{-
-testPreds :: [Pred era]
-testPreds =
-     [ ProjS gdkeyL WitHashR gdKeyHashSet `Subset` (Dom keymapUniv)
-     , Sized (Range 10 10) gdKeyHashSet
-     , gdKeyHashList :<-: setToListTarget gdKeyHashSet
-     , Sized (Range 10 10) genDelegs
-     , gdKeyHashList :=: Elems genDelegs
-     , Dom genDelegs :⊆: Dom genesisHashUniv
-     ]
-   where gdKeyHashSet = var " gdKeyHashSet" (SetR GenDelegPairR)
-         gdKeyHashList = var " gdKeyHashList" (ListR GenDelegPairR)
-
-mainT :: IO ()
-mainT = do
-  let proof = Babbage Standard
-  env <-
-    generate
-      ( pure emptySubst
-          >>= universeStage proof
-          >>= toolChainSub proof standardOrderInfo testPreds
-          >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
-      )
-  goRepl proof env ""
-
--}

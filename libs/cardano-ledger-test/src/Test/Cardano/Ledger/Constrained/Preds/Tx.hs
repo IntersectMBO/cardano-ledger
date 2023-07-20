@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,6 +14,7 @@ module Test.Cardano.Ledger.Constrained.Preds.Tx where
 
 import Cardano.Crypto.Signing (SigningKey)
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress, RewardAcnt (..))
+import qualified Cardano.Ledger.Allegra.Scripts as Time (Timelock (..))
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
@@ -25,9 +27,12 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.Alonzo.UTxO (getInputDataHashesTxBody)
 import Cardano.Ledger.Api (setMinFeeTx)
+import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
+import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
-import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxBody (..), EraTxOut (..), ProtVerAtMost, TxCert, Value, bodyTxL, coinTxOutL, feeTxBodyL)
+import Cardano.Ledger.Core (EraRule, EraScript (..), EraTx (..), EraTxBody (..), EraTxOut (..), ProtVerAtMost, TxCert, Value, bodyTxL, coinTxOutL, feeTxBodyL)
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), Hash, KeyHash, KeyRole (..), asWitness)
@@ -39,11 +44,19 @@ import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..), LedgerState, keyCertsRefunds, totalCertsDeposits)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded, witsVKeyNeededNoGovernance)
-import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
+import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
+import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMetadataHash, validMetadata)
+import Cardano.Ledger.Shelley.TxBody (
+  PoolMetadata (..),
+  PoolParams (..),
+  WitVKey (..),
+  getRwdNetwork,
+ )
+import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
-import Control.State.Transition.Extended (TRC (..))
+import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Coerce (coerce)
 import Data.Foldable (fold, foldl', toList)
 import qualified Data.List as List
@@ -52,7 +65,10 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (Text, pack)
 import Data.Word (Word64)
+import Debug.Trace
+import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
@@ -68,11 +84,12 @@ import Test.Cardano.Ledger.Constrained.Preds.TxOut (txOutPreds)
 import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (main)
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Scripts (sufficientScript)
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..))
+import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars hiding (totalAda)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
+import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid', protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   pcGenDelegPair,
@@ -91,21 +108,6 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.TxGen (applySTSByProof)
 import Test.Cardano.Ledger.Generic.Updaters (newScriptIntegrityHash)
 import Test.QuickCheck
-
--- import Debug.Trace(trace)
-import Cardano.Ledger.Babbage.Tx (refScripts)
-
-import qualified Cardano.Ledger.Allegra.Scripts as Time (Timelock (..))
-import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
-import Cardano.Ledger.Binary.Encoding (EncCBOR)
-import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
-import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
-import Data.Text (Text, pack)
-import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
-
-import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (validMetadata)
-
--- SoftForks.validMetadata $ protocolVersion (Babbage Standard)
 
 -- ===========================================================
 
@@ -410,7 +412,7 @@ getUtxoCoinT feeinput spending = Constr "getUtxoCoin" getUtxoCoin ^$ feeinput ^$
       Just (TxOutF _ txout) -> txout ^. coinTxOutL
       Nothing -> error "feeinput not in spending"
 
-getNTxOut :: Reflect era => Size -> TxOutF era -> [TxOutF era] -> [TxOutF era]
+getNTxOut :: (HasCallStack, Reflect era) => Size -> TxOutF era -> [TxOutF era] -> [TxOutF era]
 getNTxOut (SzExact n) feeoutput outputuniv =
   (feeoutput & outputCoinL .~ (Coin 1000000)) : take (n - 1) outputuniv
 getNTxOut x _ _ =
@@ -435,7 +437,7 @@ minusMultiValue p v1 v2 = case whichValue p of
 -- Using constraints to generate a TxBody
 -- ==============================================================
 
-txBodyPreds :: forall era. Reflect era => Proof era -> [Pred era]
+txBodyPreds :: forall era. (HasCallStack, Reflect era) => Proof era -> [Pred era]
 txBodyPreds p =
   (txOutPreds p balanceCoin (outputs p))
     ++ [ mint :<-: (Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend)) ^$ (outputs p) ^$ spending)
@@ -522,7 +524,10 @@ txBodyPreds p =
         , Elems (ProjM fstL IsValidR (Restrict neededHashSet plutusUniv)) :=: valids
         , rdmrPtrs :<-: (rdmrPtrsT ^$ tempTxBody ^$ acNeeded ^$ plutusUniv)
         , rdmrPtrs :=: Dom redeemers
-        , SumsTo (Left (ExUnits 1 1)) (maxTxExUnits p) EQL [ProjMap ExUnitsR sndL redeemers]
+        , If
+            (Constr "null" Set.null ^$ rdmrPtrs)
+            (Before (maxTxExUnits p) redeemers)
+            (SumsTo (Left (ExUnits 1 1)) (maxTxExUnits p) GTE [ProjMap ExUnitsR sndL redeemers])
         , -- Unfortunately SumsTo at ExUnits does not work except at EQL OrdCond.
           -- the problem is that (toI x + toI y) /= toI(x + y)
           plutusDataHashes
@@ -661,7 +666,7 @@ balanceMap pairs m0 l = List.foldl' accum m0 pairs
     accum m (k, thecoin) = Map.adjust (\t -> t & l .~ (thecoin <> t ^. l)) k m
 
 -- | Adjust the Coin part of the TxOut in the 'utxo' map for the TxIn 'feeTxIn' by adding 'txfee'
-adjustFeeInput :: Reflect era => Env era -> Typed (Env era)
+adjustFeeInput :: (HasCallStack, Reflect era) => Env era -> Typed (Env era)
 adjustFeeInput env = case utxo reify of
   u@(Var utxoV) -> do
     feeinput <- runTerm env feeTxIn
@@ -673,7 +678,7 @@ adjustFeeInput env = case utxo reify of
 -- | Adjust UTxO image of 'collateral' to pay for the collateral fees. Do this by
 --   adding 'extraCol' to the TxOut associated with 'colInput'
 adjustColInput ::
-  Reflect era =>
+  (HasCallStack, Reflect era) =>
   -- Term era (TxIn (EraCrypto era)) ->
   -- Term era Coin ->
   -- Term era Coin ->
@@ -683,16 +688,34 @@ adjustColInput {- colInputt sumColt extraColt -} env = do
   let utxoterm = utxo reify
       utxoV = unVar utxoterm
   colinput <- runTerm env colInput
-  extracoin <- runTerm env extraCol
+  extracoin@(Coin extra) <- runTerm env extraCol
   utxomap <- runTerm env utxoterm
-  let env2 = storeVar utxoV (balanceMap [(colinput, extracoin)] utxomap outputCoinL) env
-  -- adjust (Just x) y = Just (x <> y)
-  -- adjust Nothing _ = Nothing
-  -- env3 <- updateVal (<>) sumCol extracoin env2
-  -- env4 <- updateVal (<+>) totalCol extracoin env3
+  col <- runTerm env collateral
+  let newutxo = adjustC (Set.toList col) utxomap extracoin outputCoinL
+      env2 = storeVar utxoV newutxo env
   (env5, body) <- updateTarget override txbodyterm (txbodyTarget txfee wppHash totalCol) env2
   (env6, _) <- updateTarget override txterm (txTarget (Lit (TxBodyR reify) body) bootWits keyWits) env5
   pure env6
+
+-- | Adjust the part of the UTxO that maps the 'collateral' inputs, to pay the collateral fee.
+--   This will adjust 1 or more of the TxOuts assoicated with the collateral , to make up the difference.
+adjustC :: (Ord k, Show k) => [k] -> Map k v -> Coin -> Lens' v Coin -> Map k v
+adjustC [] _ extra _ | extra < (Coin 0) = error ("Extra is too negative to adjust Utxo: " ++ show extra)
+adjustC [] m _ _ = m
+adjustC (i : is) m extra@(Coin n) coinL = case compare n 0 of
+  EQ -> m
+  GT -> Map.adjust addextra i m
+    where
+      addextra outf = outf & coinL .~ ((outf ^. coinL) <+> extra)
+  LT ->
+    if ex >= 0
+      then Map.adjust subextra i m
+      else adjustC is (Map.adjust subextra i m) amount coinL
+    where
+      amount@(Coin ex) = case Map.lookup i m of
+        Just outf -> (outf ^. coinL) <+> extra <-> (Coin 1)
+        Nothing -> error ("Collateral input: " ++ show i ++ " is not found in UTxO in 'adjust'")
+      subextra outf = outf & coinL .~ (Coin (max 1 (unCoin ((outf ^. coinL) <+> extra))))
 
 updateVal :: (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
 updateVal adjust term@(Var v) delta env = do
@@ -769,31 +792,9 @@ test Nothing = do
   x
 
 bad :: [Int]
-bad = [3, 8, 13, 41, 50, 60, 65, 82, 99, 100, 109, 112]
+bad = [] -- [3, 8, 13, 41, 50, 60, 65, 82, 99, 100, 109, 112]
 go :: Int -> IO ()
 go n = sequence_ [print i >> test (Just i) | i <- [n .. 113], not (elem i bad)]
-
-{-
-go 0, run July 8
-113
-SUCCESS
-(181.05 secs, 205,829,567,992 bytes)
-commit 623719e94f721f6a6b9f4575333eccbb5a2fb769 (HEAD -> ts-constraints-for-tx, origin/ts-constraints-for-tx)
-Author: TimSheard <sheard@pdx.edu>
-Date:   Wed May 3 18:08:26 2023 -0700
-
-SUCCESS
-(191.26 secs, 205,862,524,928 bytes)
-In scotland, no changes Jul 10, 2023
-
-113
-SUCCESS
-180.10 secs, 201,554,084,144 bytes) Juky 11, 2023 Subst as Map
-113
-SUCCESS
-(180.35 secs, 201,520,992,896 bytes) July 11, run 2
-
--}
 
 -- ========================================
 
@@ -858,3 +859,50 @@ pgenTx proof ut tx = ppRecord (pack "Tx") pairs
   where
     fields = abstractTx proof tx
     pairs = concatMap (pgenTxField proof ut) fields
+
+-- ==============================================
+
+oneTest ::
+  ( Reflect era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Show (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  Proof era ->
+  Gen Property
+oneTest proof = do
+  subst <-
+    ( pure emptySubst
+        >>= pParamsStage proof
+        >>= universeStage proof
+        >>= vstateStage proof
+        >>= pstateStage proof
+        >>= dstateStage proof
+        >>= certsStage proof
+        >>= ledgerStateStage proof
+        >>= txBodyStage proof
+      )
+  env0 <- monadTyped $ substToEnv subst emptyEnv
+  env1 <- monadTyped $ adjustFeeInput env0
+  env2 <- monadTyped $ adjustColInput env1
+  ledgerstate <- monadTyped $ runTarget env2 (ledgerStateT proof)
+  (TxF _ tx) <- monadTyped (runTerm env2 txterm)
+
+  slot <- monadTyped (runTerm env2 currentSlot)
+  (PParamsF _ pp) <- monadTyped (runTerm env2 (pparams proof))
+  accntState <- monadTyped (runTarget env2 accountStateT)
+  utxo1 <- monadTyped (runTerm env2 (utxo proof))
+  txIx <- arbitrary
+  let lenv = LedgerEnv slot txIx pp accntState
+  case applySTSByProof proof (TRC (lenv, ledgerstate, tx)) of
+    Right ledgerState' -> pure (totalAda ledgerState' === totalAda ledgerstate)
+    Left errs ->
+      pure
+        ( whenFail
+            (putStrLn ("\napplySTS fails\n" ++ unlines (map show errs)) >> (goRepl proof env2 ""))
+            (counterexample ("\napplySTS fails\n" ++ unlines (map show errs)) (True === False))
+        )
+
+main1 :: IO ()
+main1 = quickCheck (withMaxSuccess 500 (oneTest (Babbage Standard)))

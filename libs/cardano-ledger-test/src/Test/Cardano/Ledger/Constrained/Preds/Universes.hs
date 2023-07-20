@@ -9,23 +9,10 @@
 module Test.Cardano.Ledger.Constrained.Preds.Universes
 where
 
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), bootstrapKeyHash)
-import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Classes hiding (genTxOut)
-import Test.Cardano.Ledger.Constrained.Env
-import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
-import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
-import Test.Cardano.Ledger.Constrained.Solver
-import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
-import Test.Tasty.QuickCheck
-
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Signing as Byron
+import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Scripts (Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..), dataToBinaryData, hashData)
@@ -69,10 +56,22 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.String (IsString (..))
+import Test.Cardano.Ledger.Constrained.Ast
+import Test.Cardano.Ledger.Constrained.Classes hiding (genTxOut)
 import Test.Cardano.Ledger.Constrained.Combinators (genFromMap, itemFromSet, setSized)
+import Test.Cardano.Ledger.Constrained.Env
+import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
+import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Scripts (allPlutusScripts, genCoreScript, spendPlutusScripts)
+import Test.Cardano.Ledger.Constrained.Solver
+import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 import qualified Test.Cardano.Ledger.Shelley.Utils as Utils
+import Test.Tasty.QuickCheck
 
 -- ============================================================
 -- Coins

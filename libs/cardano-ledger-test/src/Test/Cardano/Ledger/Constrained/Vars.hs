@@ -8,6 +8,7 @@
 
 module Test.Cardano.Ledger.Constrained.Vars where
 
+import Cardano.Crypto.Signing (SigningKey (..))
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Core (AlonzoEraPParams (..), ppCollateralPercentageL, ppMaxTxExUnitsL, ppPricesL)
@@ -15,18 +16,45 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..), Tag (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrity (..), ScriptIntegrityHash, ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, Network (..), ProtVer (..), SlotNo (..))
+import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
 import Cardano.Ledger.CertState (CertState (..), DState (..), FutureGenDeleg (..), PState (..), VState (..))
 import qualified Cardano.Ledger.CertState as DPS (InstantaneousRewards (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
-import Cardano.Ledger.Core (EraPParams, EraTxOut (mkBasicTxOut), PParams, PParamsHKD, TxAuxData, TxBody, TxOut, TxWits, Value, addrTxOutL, coinTxOutL, ppEMaxL, ppKeyDepositL, ppMaxBBSizeL, ppMaxBHSizeL, ppMaxTxSizeL, ppMinFeeAL, ppMinFeeBL, ppPoolDepositL, ppProtocolVersionL, valueTxOutL)
+import Cardano.Ledger.Core (
+  EraPParams,
+  EraTxOut (mkBasicTxOut),
+  PParams,
+  PParamsHKD,
+  TxAuxData,
+  TxBody,
+  TxOut,
+  TxWits,
+  Value,
+  addrTxOutL,
+  coinTxOutL,
+  ppEMaxL,
+  ppKeyDepositL,
+  ppMaxBBSizeL,
+  ppMaxBHSizeL,
+  ppMaxTxSizeL,
+  ppMinFeeAL,
+  ppMinFeeBL,
+  ppPoolDepositL,
+  ppProtocolVersionL,
+  valueTxOutL,
+ )
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
 import Cardano.Ledger.Keys (GenDelegPair, GenDelegs (..), KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -36,8 +64,10 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
+import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Core (GovernanceState (..))
+import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -54,6 +84,7 @@ import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (Complete))
 import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.Shelley.TxCert (TxCert)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -65,6 +96,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
+import Debug.Trace
+import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -99,19 +132,9 @@ import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), testEql, (:~:) (Refl))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), WitnessesField (..))
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
+import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (Policy, merge, newTx, newTxBody, newWitnesses)
-
-import Cardano.Crypto.Signing (SigningKey (..))
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
-import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
-import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
-import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import qualified Test.Cardano.Ledger.Shelley.Utils as Utils
 
 -- ================================================================
@@ -1151,20 +1174,27 @@ valueFL = lens (ValueF reify) (\_ (ValueF _ u) -> u)
 lensVC :: Val t => Lens' t Coin
 lensVC = lens coin $ \t c -> modifyCoin (const c) t
 
-valueFCoinL :: Reflect era => Lens' (ValueF era) Coin
-valueFCoinL = lens (coin . unValue) (\(ValueF p v) c -> ValueF p (modifyCoin (const c) v))
+valueFCoinL :: (HasCallStack, Reflect era) => Lens' (ValueF era) Coin
+valueFCoinL =
+  lens
+    (coin . unValue)
+    ( \(ValueF p v) c@(Coin i) ->
+        if i < 0
+          then error ("Coin is less than 0 " ++ show i ++ " in valueFCoinL")
+          else (ValueF p (modifyCoin (const c) v))
+    )
 
-outputCoinL :: Reflect era => Lens' (TxOutF era) Coin
+outputCoinL :: (HasCallStack, Reflect era) => Lens' (TxOutF era) Coin
 outputCoinL =
   lens
     (\(TxOutF _ out) -> out ^. coinTxOutL)
     (\(TxOutF p out) c -> TxOutF p (out & coinTxOutL .~ c))
 
 -- | a Field from (ValueF era) to Coin
-valCoinF :: Reflect era => Field era (ValueF era) Coin
+valCoinF :: (HasCallStack, Reflect era) => Field era (ValueF era) Coin
 valCoinF = Field "valCoin" CoinR (ValueR reify) valueFCoinL
 
-valCoin :: Reflect era => Term era Coin
+valCoin :: (HasCallStack, Reflect era) => Term era Coin
 valCoin = fieldToTerm valCoinF
 
 maryValueMultiAssetL :: Lens' (MaryValue c) (MultiAsset c)
@@ -1201,10 +1231,10 @@ txoutAddress :: Reflect era => Term era (Addr (EraCrypto era))
 txoutAddress = fieldToTerm txoutAddressF
 
 -- | a Field from (TxOutF era) to Coin
-txoutCoinF :: Reflect era => Field era (TxOutF era) Coin
+txoutCoinF :: (HasCallStack, Reflect era) => Field era (TxOutF era) Coin
 txoutCoinF = Field "txoutCoin" CoinR (TxOutR reify) outputCoinL
 
-txoutCoin :: Reflect era => Term era Coin
+txoutCoin :: (HasCallStack, Reflect era) => Term era Coin
 txoutCoin = fieldToTerm txoutCoinF
 
 -- | a Field from (TxOutF era) to (ValueF era)

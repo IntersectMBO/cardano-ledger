@@ -18,7 +18,6 @@ import Cardano.Ledger.CertState (FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
-import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Control.Exception (ErrorCall (..))
 import Control.Monad (when)
 import qualified Data.List as List
@@ -28,19 +27,18 @@ import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Classes (Adds (..), Sums (genT))
+import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Spec (TT)
 import Test.Cardano.Ledger.Constrained.Tests (prop_shrinking, prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..))
-import Test.Cardano.Ledger.Generic.Proof (Reflect (..), Standard)
+import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
 import Test.Hspec (shouldThrow)
 import Test.QuickCheck hiding (Fixed, total)
 
@@ -389,19 +387,20 @@ test11 =
     False
     (stoi {sumBeforeParts = False})
     [ -- Before treasury instanTreasury
-      Sized (AtLeast 1) treasury
+      Random instanTreasury
+    , Sized (AtLeast 2) treasury
     , SumsTo (Left (DeltaCoin 1)) (Delta treasury) GTH [One deltaTreasury]
     , SumsTo (Left (DeltaCoin 1)) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
     , SumsTo (Left (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
     -- , SumsTo (Left (Coin 1)) treasury GTE [One instanTreasurySum ]
- -- 
-  --  , Random instanTreasury
-   -- , Sized (AtLeast 1) instanReserves
-  --  , Negate (deltaReserves) :=: deltaTreasury
-  --  , SumsTo (Right (Coin 1)) instanReservesSum EQL [SumMap instanReserves]
-    , SumsTo (Right (DeltaCoin 1)) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
-    , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
-    , SumsTo (Right (DeltaCoin 1)) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
+    --
+
+    -- , Sized (AtLeast 1) instanReserves
+    --  , Negate (deltaReserves) :=: deltaTreasury
+    --  , SumsTo (Right (Coin 1)) instanReservesSum EQL [SumMap instanReserves]
+    --  , SumsTo (Right (DeltaCoin 1)) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
+    --  , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
+    --  , SumsTo (Right (DeltaCoin 1)) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
     ]
     Skip
   where

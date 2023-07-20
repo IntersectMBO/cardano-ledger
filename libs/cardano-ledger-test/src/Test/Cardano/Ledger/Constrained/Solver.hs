@@ -21,6 +21,7 @@ import Data.Pulse (foldlM')
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Debug.Trace (trace)
+import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', (^.))
 import qualified Lens.Micro as Lens
 import Numeric.Natural (Natural)
@@ -186,6 +187,7 @@ atLeast rep c = add c <$> genRep rep
 -- Solver for variables of type (Map dom rng)
 solveMap :: forall dom rng era. Era era => V era (Map dom rng) -> Pred era -> Typed (MapSpec era dom rng)
 solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
+  (Before (Lit _ _) (Var v2)) | Name v1 == Name v2 -> pure mempty
   (Sized (Lit SizeR sz) (Var v2))
     | Name v1 == Name v2 -> mapSpec sz RelAny PairAny RngAny
   (Sized (Lit SizeR sz) (Dom (Var v2)))
@@ -536,16 +538,14 @@ solveSum v1@(V nam r _) predx =
     (Random (Var v2)) | Name v1 == Name v2 -> pure AddsSpecAny
     xx@(SumsTo x (Delta (Lit _ n)) cond xs@(_ : _)) -> do
       (rhsTotal, needsNeg) <- intSumWithUniqueV v1 xs
-      case trace ("\nHERE "++show xx++"\nrhsTotal "++show rhsTotal++"\n NEEDSNEG "++show needsNeg) r of
+      case trace ("\nHERE " ++ show xx ++ "\nrhsTotal " ++ show rhsTotal ++ "\n NEEDSNEG " ++ show needsNeg) r of
         CoinR ->
           if needsNeg
             then pure (varOnRightNeg n cond (fromI ["solveSum-SumsTo 1"] rhsTotal) nam)
             else
               if rhsTotal < 0
-                then 
-                  pure (varOnRight (add n (Coin $ fromIntegral $ negate rhsTotal)) cond (Coin 0) nam)
-                else
-                  pure (varOnRight n cond (fromI ["solveSum-SumsTo 2", show n, show rhsTotal, show x, show v1] rhsTotal) nam)
+                then pure (varOnRight (add n (Coin $ fromIntegral $ negate rhsTotal)) cond (Coin 0) nam)
+                else pure (varOnRight n cond (fromI ["solveSum-SumsTo 2", show n, show rhsTotal, show x, show v1] rhsTotal) nam)
         DeltaCoinR ->
           if needsNeg
             then pure (varOnRightNeg n cond (fromI ["solveSum-SumsTo 3"] rhsTotal) nam)
@@ -569,7 +569,7 @@ solveSum v1@(V nam r _) predx =
         other -> failT [show predx, show other ++ " should be either Coin or DeltaCoin"]
     (Var v2@(V nm r2 _) :<-: tar) | Name v1 == Name v2 -> do
       Refl <- sameRep r r2
-      x <- simplifyTarget @era @t tar
+      x <- simplifyTarget tar
       pure (AddsSpecSize nm (SzExact (toI x)))
     other -> failT ["Can't solveSum " ++ show (Name v1) ++ " = " ++ show other]
 
@@ -732,7 +732,7 @@ isIf _ = False
 -- Given a variable ('v1' :: 't') and [Pred] that constrain it. Produce a (Gen t)
 
 -- | Dispatch on the type of the variable 'v1' being solved.
-dispatch :: forall t era. Era era => V era t -> [Pred era] -> Typed (Gen t)
+dispatch :: forall t era. (HasCallStack, Era era) => V era t -> [Pred era] -> Typed (Gen t)
 dispatch v1 preds | Just (If tar x y) <- List.find isIf preds = do
   b <- simplifyTarget tar
   let others = filter (not . isIf) preds
@@ -942,4 +942,3 @@ toolChain _proof order cs subst0 = do
   (_count, DependGraph pairs) <- compileGen order (map (substPredWithVarTest subst0) cs)
   subst <- foldlM' solveOneVar subst0 pairs
   monadTyped $ substToEnv subst emptyEnv
-

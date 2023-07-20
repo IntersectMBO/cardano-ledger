@@ -106,31 +106,9 @@ isBootstrapAddr :: Addr c -> Bool
 isBootstrapAddr (AddrBootstrap _) = True
 isBootstrapAddr (Addr _ _ _) = False
 
-{-
--- ==============================================
-
-outNames :: [String]
-outNames =
-  [ "address"
-  , "amount"
-  , "dhash"
-  , "fdatum"
-  , "refscript"
-  ]
-
-lookupTxOut :: Env era -> String -> [TxOutField era]
-lookupTxOut (Env m) name = case (name, Map.lookup name m) of
-  ("address", Just (Payload AddrR t _)) -> [Address t]
-  ("amount", Just (Payload (ValueR _) (ValueF _ v) _)) -> [Amount v]
-  _ -> []
-
-txOutFromEnv :: Proof era -> Env era -> TxOut era
-txOutFromEnv proof env = unReflect newTxOut proof (concat (map (lookupTxOut env) outNames))
--}
-
 -- ================================================================================
 
-txOutPreds :: (Reflect era) => Proof era -> Term era Coin -> Term era [TxOutF era] -> [Pred era]
+txOutPreds :: Reflect era => Proof era -> Term era Coin -> Term era [TxOutF era] -> [Pred era]
 txOutPreds p balanceCoin outputS =
   [ Choose
       (Range 6 6)

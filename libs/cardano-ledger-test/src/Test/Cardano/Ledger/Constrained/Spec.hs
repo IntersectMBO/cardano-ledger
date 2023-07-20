@@ -59,8 +59,6 @@ import Test.Cardano.Ledger.Constrained.Combinators (
 import Test.Cardano.Ledger.Constrained.Env (Access (No), V (..), emptyEnv, storeVar)
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Size (
-  AddsSpec (..),
-  OrdCond (..),
   Size (..),
   atLeastDelta,
   atMostAny,
@@ -70,16 +68,12 @@ import Test.Cardano.Ledger.Constrained.Size (
   runSize,
   seps,
   sepsP,
-  vLeft,
-  vRight,
  )
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
   format,
   genRep,
   synopsis,
-  testEql,
-  (:~:) (Refl),
  )
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Standard)
@@ -1519,13 +1513,15 @@ mergeElemSpec a@(ElemSum sm1 sz1) b@(ElemSum sm2 sz2) =
   case sz1 <> sz2 of
     SzNever xs -> ElemNever (sepsP ["The ElemSpec's are inconsistent.", show a, show b] : xs)
     sz3 -> ElemSum (smallerOf sm1 sm2) sz3
-mergeElemSpec a@(ElemProj sm1 r1 sz1) b@(ElemProj sm2 r2 sz2) =
+{-
+mergeElemSpec a@(ElemProj sm1 r1 _l1 sz1) b@(ElemProj sm2 r2 _l2 sz2) = -- TODO FIXME ElemProj cannot be merged
   case testEql r1 r2 of
     Just Refl ->
       case sz1 <> sz2 of
         SzNever xs -> ElemNever ((sepsP ["The ElemSpec's are inconsistent.", show a, show b]) : xs)
         sz3 -> ElemProj (smallerOf sm1 sm2) r1 sz3
     Nothing -> ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
+-}
 mergeElemSpec a b = ElemNever ["The ElemSpec's are inconsistent.", "  " ++ show a, "  " ++ show b]
 
 sizeForElemSpec :: forall a era. ElemSpec era a -> Size
@@ -1863,7 +1859,7 @@ testm = do
   monadTyped (liftT (a <> b))
 
 aList :: Era era => Gen (ListSpec era Word64)
-aList = genSize >>= genListSpec Word64R CoinR
+aList = genSize >>= genListSpec Word64R (SomeLens word64CoinL)
 
 testl :: Gen (ListSpec TT Word64)
 testl = do

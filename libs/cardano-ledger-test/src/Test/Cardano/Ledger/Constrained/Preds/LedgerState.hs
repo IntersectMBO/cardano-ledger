@@ -13,6 +13,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Data.Map.Strict (Map)
 import Data.Map.Strict as Map
 import Test.Cardano.Ledger.Constrained.Ast
+import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Examples (checkForSoundness)
 import Test.Cardano.Ledger.Constrained.Monad (Typed, failT, monadTyped)
@@ -21,7 +22,7 @@ import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Universes (universeStage)
 import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..))
+import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars

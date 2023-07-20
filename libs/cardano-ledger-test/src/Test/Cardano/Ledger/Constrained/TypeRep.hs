@@ -46,6 +46,7 @@ import Cardano.Ledger.Language (Language (..))
 
 -- import Cardano.Ledger.Alonzo.Core (ScriptIntegrityHash)
 
+import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Crypto.Signing (SigningKey (..), shortVerificationKeyHexF, toVerification)
 import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag)
@@ -62,6 +63,7 @@ import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
@@ -69,7 +71,7 @@ import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.PoolParams (PoolParams (ppId))
+import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (ppId))
 import Cardano.Ledger.Pretty (
   PDoc,
   ppHash,
@@ -87,6 +89,7 @@ import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
+import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMetadataHash)
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
@@ -94,6 +97,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val ((<+>)))
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -140,6 +144,7 @@ import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
+import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
@@ -176,6 +181,16 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck hiding (Fixed, total)
+
+-- =======================================================================
+-- Special functions for dealing with SoftForks properties that
+-- depend upon the ProtVer. Whiach can be computed from a (Proof era)
+
+restrictHash :: Proof era -> Bool
+restrictHash p = SoftForks.restrictPoolMetadataHash $ protocolVersion p
+
+hashsize :: forall era. CC.Crypto (EraCrypto era) => Proof era -> Int
+hashsize _p = fromIntegral $ sizeHash ([] @(CC.HASH (EraCrypto era)))
 
 -- =======================================================================
 infixr 0 :->
@@ -269,6 +284,7 @@ data Rep era t where
   StakeHashR :: Rep era (KeyHash 'Staking (EraCrypto era))
   BoolR :: Rep era Bool
   DRepR :: Rep era (Core.DRep (EraCrypto era))
+  PoolMetadataR :: Proof era -> Rep era PoolMetadata
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -394,6 +410,8 @@ instance Singleton (Rep e) where
   testEql StakeHashR StakeHashR = Just Refl
   testEql BoolR BoolR = Just Refl
   testEql DRepR DRepR = Just Refl
+  testEql (PoolMetadataR c) (PoolMetadataR d) =
+    do Refl <- testEql c d; pure Refl
   testEql _ _ = Nothing
 
   cmpIndex x y = compare (shape x) (shape y)
@@ -488,6 +506,7 @@ instance Show (Rep era t) where
   show StakeHashR = "(KeyHash 'Staking c)"
   show BoolR = "Bool"
   show DRepR = "(DRep c)"
+  show (PoolMetadataR _) = "PoolMetadata"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -587,6 +606,7 @@ synopsis (LedgerStateR p) x = show ((unReflect pcLedgerState p x) :: PDoc)
 synopsis StakeHashR k = "(KeyHash 'Staking " ++ show (keyHashSummary k) ++ ")"
 synopsis BoolR x = show x
 synopsis DRepR x = show (pcDRep x)
+synopsis (PoolMetadataR _) x = show x
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -703,6 +723,7 @@ instance Shaped (Rep era) any where
   shape StakeHashR = Nullary 83
   shape BoolR = Nullary 84
   shape DRepR = Nullary 85
+  shape (PoolMetadataR p) = Nary 86 [shape p]
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -847,6 +868,10 @@ genSizedRep _ (LedgerStateR p) = case p of
 genSizedRep _ StakeHashR = arbitrary
 genSizedRep _ BoolR = arbitrary
 genSizedRep _ DRepR = arbitrary
+genSizedRep _ (PoolMetadataR p) =
+  if restrictHash p
+    then PoolMetadata <$> arbitrary <*> (BS.take (hashsize p) <$> arbitrary)
+    else PoolMetadata <$> arbitrary <*> arbitrary
 
 genRep ::
   Era era =>
@@ -982,6 +1007,7 @@ shrinkRep (LedgerStateR _) _ = []
 shrinkRep StakeHashR x = shrink x
 shrinkRep BoolR x = shrink x
 shrinkRep DRepR x = shrink x
+shrinkRep (PoolMetadataR _) _ = []
 
 -- ===========================
 
@@ -1099,6 +1125,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help StakeHashR p = pure $ With p
     help BoolR v = pure $ With v
     help DRepR v = pure $ With v
+    help (PoolMetadataR _) v = pure $ With v
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)

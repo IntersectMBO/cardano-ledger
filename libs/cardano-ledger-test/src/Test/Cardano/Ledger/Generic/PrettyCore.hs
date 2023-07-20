@@ -55,7 +55,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (ConwayTallyState (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochPredFailure (..),
-  ConwayNewEpochPredFailure,
+  -- FIXME TODO ConwayNewEpochPredFailure,
   EnactPredFailure (..),
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -903,13 +903,13 @@ ppNewEpochPredicateFailure x = case reify @era of
   Mary _ -> ppShelleyNewEpochPredicateFailure x
   Alonzo _ -> ppShelleyNewEpochPredicateFailure x
   Babbage _ -> ppShelleyNewEpochPredicateFailure x
-  Conway _ -> ppConwayNewEpochPredicateFailure x
+  Conway _ -> ppString "FIXME" -- ppConwayNewEpochPredicateFailure x
 
 ppShelleyNewEpochPredicateFailure ::
   forall era.
   ( PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
-  , PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era
-  , Reflect era
+  , -- , PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era
+    Reflect era
   ) =>
   ShelleyNewEpochPredFailure era ->
   PDoc
@@ -919,6 +919,7 @@ ppShelleyNewEpochPredicateFailure (CorruptRewardUpdate x) =
 ppShelleyNewEpochPredicateFailure (MirFailure _) =
   ppString "MirPredicateFailure has no constructors"
 
+{-
 ppConwayNewEpochPredicateFailure ::
   forall era.
   ( PredicateFailure (EraRule "EPOCH" era) ~ ConwayEpochPredFailure era
@@ -927,10 +928,12 @@ ppConwayNewEpochPredicateFailure ::
   ) =>
   ConwayNewEpochPredFailure era ->
   PDoc
-ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = ppEpochPredicateFailure @era x
+-- TODO FIX ME
+-- ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = ppEpochPredicateFailure @era x
 ppConwayNewEpochPredicateFailure (Conway.CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
 ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = ppRatifyPredicateFailure @era x
+-}
 
 ppRatifyPredicateFailure :: Conway.EnactPredFailure era -> PDoc
 ppRatifyPredicateFailure (Conway.EnactTreasuryInsufficientFunds wdrl tr) =

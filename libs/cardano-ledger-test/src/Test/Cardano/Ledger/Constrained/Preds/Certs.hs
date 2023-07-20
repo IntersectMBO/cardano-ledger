@@ -21,7 +21,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (HASH, VRF)
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.PoolParams (PoolMetadata, PoolParams (..))
 import Cardano.Ledger.Pretty (ppList)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, InstantaneousRewards, availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (
@@ -35,7 +35,8 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Lens.Micro (lens)
+import Data.Maybe.Strict (StrictMaybe (..))
+import Lens.Micro (Lens', lens)
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
@@ -44,7 +45,6 @@ import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
 import Test.Cardano.Ledger.Constrained.Preds.Universes (universeStage)
 import Test.Cardano.Ledger.Constrained.Rewrite
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
@@ -142,21 +142,9 @@ partBfromPartA mp = Map.fromList (fixer (Map.toList mp))
     fixer [(k, Coin n)] = [(k, DeltaCoin (-(n - 1)))]
     fixer ((k, Coin n) : (j, Coin _) : _) = [(k, DeltaCoin (-(n - 1))), (j, DeltaCoin 8)]
 
-{-
-cGovern ::
-  Target
-    era
-    ( KeyHash 'Genesis (EraCrypto era) ->
-      KeyHash 'GenesisDelegate (EraCrypto era) ->
-      Hash (HASH (EraCrypto era)) (VerKeyVRF (VRF (EraCrypto era))) ->
-      ConwayTxCert era
-    )
-cGovern = Constr "cGovernT" (\a b c -> ConwayTxCertConstitutional (ConstitutionalDelegCert a b c))
--}
-
--- | A Predicate that Binds 'drep' to a random DRep
+-- | A user defined Predicate that Binds 'drep' to a random DRep
 --   The parameter 'vote' should be existentially bound
---   in the surrounding context (inside a Choose Target perhaps)x
+--   in the surrounding context (inside a Choose Target perhaps)
 makeDRepPred ::
   Term era (DRep (EraCrypto era)) ->
   Term era (Credential 'Voting (EraCrypto era)) ->
@@ -209,14 +197,23 @@ certsPreds p = case whichTxCert p of
     [ certs :<-: (Constr "TxCertF" (fmap (TxCertF p)) ^$ shelleycerts)
     , Sized (Range 1 6) epochDelta -- Note that last Epoch is stored in 'maxEpoch' which was 100 on 7/7/23 see PParams.hs
     , Choose
-        (Range 0 5)
+        (Range 4 4) -- (Range 0 5)
         shelleycerts
-        [ (1, sRegKey ^$ stakeCred, [NotMember stakeCred (Dom rewards)])
-        , (1, sUnRegKey ^$ deregkey, [MapMember deregkey (Lit CoinR (Coin 0)) (Left rewards)])
-        ,
-          ( 1
-          , sDelegStake ^$ stakeCred ^$ poolHash
-          , [Member (Left stakeCred) (Dom rewards), Member (Left poolHash) (Dom regPools)]
+        [
+          ( 2
+          , (Constr "RegUnRegOrDelegate" (\x -> x) ^$ shelleycert)
+          ,
+            [ Oneof
+                shelleycert -- Can only have one of these at a time
+                [ (1, sRegKey ^$ stakeCred, [NotMember stakeCred (Dom rewards)])
+                , (1, sUnRegKey ^$ deregkey, [MapMember deregkey (Lit CoinR (Coin 0)) (Left rewards)])
+                ,
+                  ( 1
+                  , sDelegStake ^$ stakeCred ^$ poolHash
+                  , [Member (Left stakeCred) (Dom rewards), Member (Left poolHash) (Dom regPools)]
+                  )
+                ]
+            ]
           )
         ,
           ( 1
@@ -227,14 +224,22 @@ certsPreds p = case whichTxCert p of
           ( 1
           , sRegPool ^$ poolParams
           ,
-            [ -- Pick a random PoolParams, except constrain the poolId and the poolRewAcnt, by the additional Preds
+            [ -- Pick a random PoolParams, except constrain the fields poolId, poolRewAcnt, poolOwners, and pooMetadaa
+              -- by the additional Preds. Note that the (genRep (PoolMetadataR p)) function knows how to handle the
+              -- 'SoftForks.restrictPoolMetadataHash' issue on '(poolMetadata p)'. So using 'Random' which uses genRep
+              -- should produce the right PoolMetadata format, by obseriving the Proof 'p'.
               Component
                 (Right poolParams)
-                [field PoolParamsR poolId, field PoolParamsR poolRewAcnt, field PoolParamsR poolOwners]
+                [ field PoolParamsR poolId
+                , field PoolParamsR poolRewAcnt
+                , field PoolParamsR poolOwners
+                , field PoolParamsR (poolMetadata p)
+                ]
             , Member (Left poolId) poolHashUniv
             , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAcnt ^$ network ^$ rewCred)
             , Member (Right rewCred) credsUniv
             , Subset poolOwners stakeHashUniv
+            , Maybe (poolMetadata p) (Simple localpool) [Random localpool]
             ]
           )
         ,
@@ -368,6 +373,7 @@ certsPreds p = case whichTxCert p of
     poolHash = var "poolHash" PoolHashR
     epoch = var "epoch" EpochR
     shelleycerts = var "shelleycerts" (ListR ShelleyTxCertR)
+    shelleycert = var "shelleycert" ShelleyTxCertR
     conwaycerts = var "conwaycerts" (ListR ConwayTxCertR)
     poolParams = var "poolParams" PoolParamsR
     pot = var "pot" MIRPotR
@@ -382,6 +388,7 @@ certsPreds p = case whichTxCert p of
     poolId = Var (V "poolId" PoolHashR (Yes PoolParamsR (lens ppId (\x i -> x {ppId = i}))))
     poolOwners = Var (V "poolOwners" (SetR StakeHashR) (Yes PoolParamsR (lens ppOwners (\x i -> x {ppOwners = i}))))
     poolRewAcnt = Var (V "poolRewAcnt" RewardAcntR (Yes PoolParamsR (lens ppRewardAcnt (\x r -> x {ppRewardAcnt = r}))))
+    localpool = (Var (V "localpool" (PoolMetadataR p) No))
     rewCred = Var (V "rewCred" CredR No)
     available = Var (V "available" CoinR No)
     sumB = var "sumB" DeltaCoinR
@@ -421,3 +428,25 @@ main seed = do
   certsv <- monadTyped (findVar (unVar certs) env)
   putStrLn (show (ppList (\(TxCertF _ x) -> pcTxCert proof x) certsv))
   pure ()
+
+sMaybeL :: Lens' (StrictMaybe a) (Maybe a)
+sMaybeL = lens foo bar
+  where
+    foo (SJust x) = Just x
+    foo SNothing = Nothing
+    bar _ Nothing = SNothing
+    bar _ (Just x) = SJust x
+
+maybeSL :: Lens' (Maybe a) (StrictMaybe a)
+maybeSL = lens foo bar
+  where
+    foo (Just x) = SJust x
+    foo Nothing = SNothing
+    bar _ SNothing = Nothing
+    bar _ (SJust x) = Just x
+
+poolMetaL :: Lens' (PoolParams era) (StrictMaybe PoolMetadata)
+poolMetaL = lens ppMetadata (\x r -> x {ppMetadata = r})
+
+poolMetadata :: Proof era -> Term era (Maybe PoolMetadata)
+poolMetadata p = Var (V "poolMetadata" (MaybeR (PoolMetadataR p)) (Yes PoolParamsR (poolMetaL . sMaybeL)))

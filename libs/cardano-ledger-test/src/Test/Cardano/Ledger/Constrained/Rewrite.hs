@@ -26,6 +26,12 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
   rename,
 ) where
 
+import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (EraTxOut (..), TxOut, coinTxOutL)
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Era (Era (EraCrypto))
+import Cardano.Ledger.Val (Val (coin, modifyCoin))
 import qualified Data.Array as A
 import Data.Foldable (toList)
 import Data.Graph (Graph, SCC (AcyclicSCC, CyclicSCC), Vertex, graphFromEdges, stronglyConnComp)
@@ -34,48 +40,20 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import Test.Cardano.Ledger.Constrained.Ast hiding (Subst)
 import Test.Cardano.Ledger.Constrained.Combinators (setSized)
 import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), V (..), sameName)
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
+import Test.Cardano.Ledger.Constrained.Size
 import Test.Cardano.Ledger.Constrained.Size (genFromSize)
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.QuickCheck
-
--- =====================================================================
-
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraTxOut (..), TxOut, coinTxOutL)
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Era (Era (EraCrypto))
-import Cardano.Ledger.Val (Val (coin, modifyCoin))
-import Lens.Micro (Lens', lens, (&), (.~), (^.))
-import Test.Cardano.Ledger.Constrained.Size
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxOut)
+import Test.QuickCheck
 
--- ======================================================================
-{-
--- | Compute the names of all variables of type (Map a b) that appear on the
---   rhs of a (SumsTo test lhs rhs) that appear in a [Pred]
-rhsMapNames :: Set (Name era) -> Pred era -> Set (Name era)
-rhsMapNames ans (SumsTo _ _ _ rhs) = List.foldl' rhsSumNames ans rhs
-rhsMapNames ans _ = ans
-
-rhsSumNames :: Set (Name era) -> Sum era c -> Set (Name era)
-rhsSumNames ans (SumMap (Var v)) = Set.insert (Name v) ans
-rhsSumNames ans (ProjMap _ _ (Var v)) = Set.insert (Name v) ans
-rhsSumNames ans _ = ans
-
-rhsMapNamesList :: Set (Name era) -> [Pred era] -> Set (Name era)
-rhsMapNamesList ans ps = List.foldl' rhsMapNames ans ps
-
-strategyRhsMap :: [Pred era] -> Set (Name era)
-strategyRhsMap ps = rhsMapNamesList Set.empty ps
--}
 -- ============================================================
 -- Conservative (approximate) Equality
 
@@ -503,13 +481,6 @@ mkDependGraph count prev choices badchoices specs
         ]
 mkDependGraph count prev [] badchoices cs = mkDependGraph (count - 1) prev (reverse badchoices) [] cs
 mkDependGraph count prev (n : more) badchoices cs =
-  {-
-     if null possible
-        then mkDependGraph count prev more (n : badchoices) cs
-        else mkDependGraph count (([n], List.nubBy cpeq possible) : prev)
-                               (reverse badchoices ++ more)
-                               [] notPossible
-  -}
   case partitionE okE cs of
     ([], _) -> mkDependGraph count prev more (n : badchoices) cs
     (possible, notPossible) -> case splitMultiName n possible ([], Nothing, []) of
@@ -527,8 +498,6 @@ mkDependGraph count prev (n : more) badchoices cs =
   where
     prevNames = Set.fromList (concat (map fst prev))
     defined = Set.insert n prevNames
-    -- ok constraint = Set.isSubsetOf (varsOfPred Set.empty constraint) defined
-    -- (possible, notPossible) = List.partition ok cs
 
     (poss, notposs) = partitionE okE cs
     okE :: Pred era -> Either ([Name era], Pred era) (Pred era)
@@ -539,7 +508,6 @@ mkDependGraph count prev (n : more) badchoices cs =
             && Set.member n rhsNames
             then Left (Set.toList rhsNames, p)
             else Right p
-    -- okE cc@(If _t _x _y) = error ("STOP\n"++show cc++"\ndefined="++show defined)
     okE constraint =
       if Set.isSubsetOf (varsOfPred Set.empty constraint) defined
         then Left ([n], constraint)

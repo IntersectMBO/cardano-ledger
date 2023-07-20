@@ -29,6 +29,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (..),
   Count (..),
+  OrdCond (..),
   ScriptF (..),
   Sizeable (..),
  )
@@ -44,7 +45,7 @@ import Test.Cardano.Ledger.Constrained.Env (
   storeVar,
  )
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (..), runSize, seps)
+import Test.Cardano.Ledger.Constrained.Size (Size (..), runSize, seps)
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), format, hasEq, synopsis, testEql, (:~:) (Refl))
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.QuickCheck (Gen, oneof)
@@ -535,12 +536,8 @@ findV (Subst m) v@(V n1 rep1 _) = case Map.lookup n1 m of
             ++ show rep2
         )
 
-{-
-composeSubst :: Subst era -> Subst era -> Subst era
-composeSubst sub1 (Subst sub2) = Subst(Map.map f sub2)
-  where f (SubstElem rep term access) = SubstElem rep (substTerm sub1 term) access
--}
-
+--  | Not really a composition, just adding 'sub1' to 'sub2', but if any thing
+--    is in both 'sub1' and 'sub2', the 'sub1' binding overrides the 'sub2' binding
 composeSubst :: Subst era -> Subst era -> Subst era
 composeSubst (Subst sub1) (Subst sub2) = Subst (Map.foldrWithKey' accum sub2 sub1)
   where
@@ -564,56 +561,6 @@ itemsToSubst :: [SubItem era] -> Subst era
 itemsToSubst ss = Subst (List.foldr accum Map.empty ss)
   where
     accum (SubItem (V nm rep access) term) !ans = Map.insert nm (SubstElem rep term access) ans
-
-{-
-substFromNames :: Set (Name era) -> Subst era
-substFromNames names = map f (Set.toList names)
-  where f (Name v) = SubItem v (Var v)
-
-extend :: V era t -> Term era t -> Subst era -> Subst era
-extend v t ss = (SubItem v t):ss
-
-type Subst era = [SubItem era]
-
-substToEnv :: Subst era -> Env era -> Typed (Env era)
-substToEnv [] ans = pure ans
-substToEnv ((SubItem v (Lit _ t)) : more) ans =
-  substToEnv more (storeVar v t ans)
-substToEnv ((SubItem _ e) : _) _ = failT ["Not Literal expr in substToEnv: " ++ show e]
-
-envToSubst :: Env era -> Subst era
-envToSubst (Env env) =
-  [ SubItem (V x rep acc) (Lit rep t)
-  | (x, Payload rep t acc) <- Map.toList env
-  ]
-
-singleSubst :: V era t-> Term era t -> Subst era
-singleSubst v expr = [SubItem v expr]
-
-instance Show (SubItem era) where
-  show (SubItem (V nm _rep _) expr) = pad 14 nm ++ " = " ++ show expr
-  showList xs ans = unlines (ans : (map show xs))
-
-findV :: Subst era -> V era t -> Term era t
-findV [] v@(V _ _ _) = Var v -- If its not in the Subst, return the Var
-findV (SubItem (V n2 rep2 _) kn : more) v@(V n1 rep1 _) =
-  if n1 /= n2
-    then findV more v
-    else case testEql rep1 rep2 of
-      Just Refl -> kn
-      Nothing ->
-        error
-          ( "In findV, we found: "
-              ++ n1
-              ++ ", but the types did not match. "
-              ++ show rep1
-              ++ " =/= "
-              ++ show rep2
-          )
-
-composeSubst :: Subst era -> Subst era -> Subst era
-composeSubst sub1 sub0 = sub1 ++ sub0
--}
 
 -- =====================================================
 -- Subtitution of (V era t) inside of (Spec era t)
