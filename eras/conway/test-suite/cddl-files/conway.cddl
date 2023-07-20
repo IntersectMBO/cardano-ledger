@@ -75,14 +75,14 @@ voting_procedure =
   [ governance_action_id
   , voter
   , vote
-  , anchor / null
+  , anchor
   ]
 
 proposal_procedure =
   [ deposit : coin
   , $hash28
   , governance_action
-  , anchor / null
+  , anchor
   ]
 
 governance_action =

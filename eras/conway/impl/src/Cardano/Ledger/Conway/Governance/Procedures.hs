@@ -270,7 +270,7 @@ data ProposalProcedure era = ProposalProcedure
   { pProcDeposit :: !Coin
   , pProcReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
   , pProcGovernanceAction :: !(GovernanceAction era)
-  , pProcAnchor :: !(StrictMaybe (Anchor (EraCrypto era)))
+  , pProcAnchor :: !(Anchor (EraCrypto era))
   }
   deriving (Generic, Eq, Show)
 
@@ -285,7 +285,7 @@ instance EraPParams era => DecCBOR (ProposalProcedure era) where
         <! From
         <! From
         <! From
-        <! D (decodeNullStrictMaybe decCBOR)
+        <! From
 
 instance EraPParams era => EncCBOR (ProposalProcedure era) where
   encCBOR ProposalProcedure {..} =
@@ -294,7 +294,7 @@ instance EraPParams era => EncCBOR (ProposalProcedure era) where
         !> To pProcDeposit
         !> To pProcReturnAddr
         !> To pProcGovernanceAction
-        !> E (encodeNullStrictMaybe encCBOR) pProcAnchor
+        !> To pProcAnchor
 
 data GovernanceAction era
   = ParameterChange !(PParamsUpdate era)
