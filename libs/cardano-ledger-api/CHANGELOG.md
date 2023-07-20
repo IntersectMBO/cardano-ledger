@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.3.1.0
+
+* Add `spendableInputsTxBodyL`
+
 ## 1.3.0.0
 
 * Add `queryConstitutionHash` to `Cardano.Ledger.Api.State.Query` #3506

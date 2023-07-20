@@ -17,6 +17,7 @@ module Cardano.Ledger.Api.Tx.Body (
   Withdrawals (..),
   auxDataHashTxBodyL,
   AuxiliaryDataHash,
+  spendableInputsTxBodyF,
   allInputsTxBodyF,
   evalBalanceTxBody,
 

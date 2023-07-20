@@ -191,6 +191,14 @@ class
 
   auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
 
+  -- | This getter will produce all inputs from the UTxO map that this transaction might
+  -- spend, which ones will depend on the validity of the transaction itself. Starting in
+  -- Alonzo this will include collateral inputs.
+  spendableInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
+
+  -- | This getter will produce all inputs from the UTxO map that this transaction is
+  -- referencing, even if some of them cannot be spent by the transaction. For example
+  -- starting with Babbage era it will also include reference inputs.
   allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
 
   certsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxCert era))

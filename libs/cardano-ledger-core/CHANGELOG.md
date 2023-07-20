@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.4.1.0
+
+* Add `spendableInputsTxBodyL`
+
 ## 1.4.0.0
 
 * Added `DRep`, `DRepCredential`

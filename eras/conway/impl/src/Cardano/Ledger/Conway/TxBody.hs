@@ -43,6 +43,7 @@ module Cardano.Ledger.Conway.TxBody (
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Babbage.TxBody (babbageAllInputsTxBodyF, babbageSpendableInputsTxBodyF)
 import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (
   Annotator,
@@ -281,13 +282,10 @@ instance Crypto c => EraTxBody (ConwayEra c) where
   auxDataHashTxBodyL = lensMemoRawType ctbrAuxDataHash (\txb x -> txb {ctbrAuxDataHash = x})
   {-# INLINE auxDataHashTxBodyL #-}
 
-  allInputsTxBodyF =
-    to $ \txBody ->
-      Set.unions
-        [ txBody ^. inputsTxBodyL
-        , txBody ^. collateralInputsTxBodyL
-        , txBody ^. referenceInputsTxBodyL
-        ]
+  spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
+  {-# INLINE spendableInputsTxBodyF #-}
+
+  allInputsTxBodyF = babbageAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL = lensMemoRawType ctbrWithdrawals (\txb x -> txb {ctbrWithdrawals = x})
