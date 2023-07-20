@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Make `Anchor` required in `ProposalProcedure`.
 * Removal of TxOuts with zero `Coin` from UTxO on translation
 * Rename:
     `cgTally` -> `cgGov`
