@@ -58,6 +58,7 @@ import Data.Aeson (
   (.=),
  )
 import qualified Data.Aeson as Aeson
+import Data.Default.Class (Default (..))
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)
 import Data.Word
@@ -75,6 +76,9 @@ data Credential (kr :: KeyRole) c
   = ScriptHashObj !(ScriptHash c)
   | KeyHashObj !(KeyHash kr c)
   deriving (Show, Eq, Generic, NFData, Ord)
+
+instance Crypto e => Default (Credential r e) where
+  def = KeyHashObj def
 
 instance HasKeyRole Credential where
   coerceKeyRole (ScriptHashObj x) = ScriptHashObj x

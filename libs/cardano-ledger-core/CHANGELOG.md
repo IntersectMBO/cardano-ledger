@@ -2,6 +2,8 @@
 
 ## 1.5.0.0
 
+* Adopt `Default` instances #3556
+  * Moved instances for `SafeHash`, `RewardAcnt` and `Credential` from Shelley.RewardProvenance
 * Change `VState` to allow committee hot keys to be script-hashes #3552
   * `vsCommitteeHotKeys :: Map (KeyHash 'CommitteeColdKey eracrypto) (Maybe (Credential 'CommitteeHotKey eracrypto))`
 * Added `withSLanguage`

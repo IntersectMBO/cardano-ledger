@@ -63,11 +63,13 @@ import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
+import Data.Default.Class (Default (..))
 import Data.Foldable (fold)
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))
@@ -105,6 +107,9 @@ deriving instance (Typeable index, Crypto c) => DecCBOR (SafeHash c index)
 deriving instance Crypto c => ToJSON (SafeHash c index)
 
 deriving instance Crypto c => FromJSON (SafeHash c index)
+
+instance Crypto c => Default (SafeHash c i) where
+  def = unsafeMakeSafeHash def
 
 {-# DEPRECATED HasAlgorithm "Use `Hash.HashAlgorithm (HASH c)` instead" #-}
 

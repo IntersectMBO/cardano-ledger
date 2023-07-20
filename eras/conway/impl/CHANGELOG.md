@@ -2,6 +2,10 @@
 
 ## 1.7.0.0
 
+* Change EnactState.ensConstitution #3556
+  * from `SafeHash (EraCrypto era) ByteString`
+  * to `Constitution era`
+  * Use this datatype for GovernanceAction.NewConstitution
 * Change `ConwayCommitteeCert` to allow committee hot keys to be script-hashes #3552
   * from `ConwayAuthCommitteeHotKey (KeyHash 'CommitteeColdKey c) (KeyHash 'CommitteeHotKey c)`
   * to `ConwayAuthCommitteeHotKey (KeyHash 'CommitteeColdKey c) (Credential 'CommitteeHotKey c)`

@@ -12,6 +12,10 @@
 module Cardano.Ledger.Shelley.Governance (
   EraGovernance (..),
   ShelleyPPUPState (..),
+  constitutionHashL,
+  constitutionScriptL,
+  Constitution (..),
+  ConstitutionData (..),
 ) where
 
 import Cardano.Ledger.Binary (
@@ -19,9 +23,11 @@ import Cardano.Ledger.Binary (
   EncCBOR (encCBOR),
   FromCBOR (..),
   ToCBOR (..),
+  decodeNullStrictMaybe,
   encodeListLen,
+  encodeNullStrictMaybe,
  )
-import Cardano.Ledger.Binary.Coders (Decode (..), decode, (<!))
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -33,8 +39,12 @@ import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.ByteString (ByteString)
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
+import Data.Maybe.Strict (StrictMaybe (..))
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
+
+newtype ConstitutionData = ConstitutionData ByteString
 
 class
   ( EraPParams era
@@ -63,7 +73,7 @@ class
   getProposedPPUpdates _ = Nothing
 
   -- | Returns `Nothing` for all era preceding Conway, otherwise returns the hash of the constitution
-  getConstitutionHash :: GovernanceState era -> Maybe (SafeHash (EraCrypto era) ByteString)
+  getConstitutionHash :: GovernanceState era -> Maybe (SafeHash (EraCrypto era) ConstitutionData)
   getConstitutionHash = const Nothing
 
 instance ToExpr (PParamsUpdate era) => ToExpr (ShelleyPPUPState era)
@@ -119,3 +129,56 @@ toPPUPStatePairs ShelleyPPUPState {..} =
 
 instance Default (ShelleyPPUPState era) where
   def = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
+
+data Constitution era = Constitution
+  { constitutionHash :: !(SafeHash (EraCrypto era) ConstitutionData)
+  , constitutionScript :: !(StrictMaybe (ScriptHash (EraCrypto era)))
+  }
+  deriving (Generic)
+
+constitutionHashL :: Lens' (Constitution era) (SafeHash (EraCrypto era) ConstitutionData)
+constitutionHashL = lens constitutionHash (\x y -> x {constitutionHash = y})
+
+constitutionScriptL :: Lens' (Constitution era) (StrictMaybe (ScriptHash (EraCrypto era)))
+constitutionScriptL = lens constitutionScript (\x y -> x {constitutionScript = y})
+
+instance Era era => ToJSON (Constitution era) where
+  toJSON = object . toConstitutionPairs
+  toEncoding = pairs . mconcat . toConstitutionPairs
+
+toConstitutionPairs :: (KeyValue a, Era era) => Constitution era -> [a]
+toConstitutionPairs c@(Constitution _ _) =
+  let Constitution {..} = c
+   in ["constitutionHash" .= constitutionHash]
+        <> ["constitutionScript" .= cScript | SJust cScript <- [constitutionScript]]
+
+deriving instance Eq (Constitution era)
+
+deriving instance Show (Constitution era)
+
+instance Era era => Default (Constitution era) where
+  def = Constitution def def
+
+instance Era era => DecCBOR (Constitution era) where
+  decCBOR =
+    decode $
+      RecD Constitution
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
+
+instance Era era => EncCBOR (Constitution era) where
+  encCBOR Constitution {..} =
+    encode $
+      Rec (Constitution @era)
+        !> To constitutionHash
+        !> E (encodeNullStrictMaybe encCBOR) constitutionScript
+
+instance Era era => ToCBOR (Constitution era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (Constitution era) where
+  fromCBOR = fromEraCBOR @era
+
+instance Era era => NFData (Constitution era)
+
+instance Era era => NoThunks (Constitution era)

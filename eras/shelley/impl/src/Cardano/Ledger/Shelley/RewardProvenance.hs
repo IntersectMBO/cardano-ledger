@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.RewardProvenance (
   RewardProvenance (..),
@@ -17,12 +16,10 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
+import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default.Class (Default (..))
@@ -180,18 +177,6 @@ instance Default (RewardProvenance c) where
       (Coin 0)
       def
       def
-
-instance Crypto c => Default (PoolParams c) where
-  def = PoolParams def def (Coin 0) (Coin 0) def def def def def
-
-instance Crypto e => Default (Credential r e) where
-  def = KeyHashObj def
-
-instance Crypto c => Default (RewardAcnt c) where
-  def = RewardAcnt def def
-
-instance Crypto c => Default (SafeHash c i) where
-  def = unsafeMakeSafeHash def
 
 -- =======================================================
 -- Show instances

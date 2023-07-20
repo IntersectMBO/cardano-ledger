@@ -59,6 +59,7 @@ import Data.Aeson.Types (Parser, explicitParseField)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as Char8
+import Data.Default.Class (Default (..))
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
 import Data.Proxy (Proxy (..))
@@ -212,6 +213,9 @@ data PoolParams c = PoolParams
   deriving (Show, Generic, Eq, Ord)
   deriving (EncCBOR) via CBORGroup (PoolParams c)
   deriving (DecCBOR) via CBORGroup (PoolParams c)
+
+instance CC.Crypto c => Default (PoolParams c) where
+  def = PoolParams def def (Coin 0) (Coin 0) def def def def def
 
 instance NoThunks (PoolParams c)
 

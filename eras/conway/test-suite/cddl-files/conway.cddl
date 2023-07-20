@@ -105,7 +105,12 @@ no_confidence = 3
 
 new_committee = (4, [* $addr_keyhash], rational)
 
-new_constitution = (5, $hash32)
+new_constitution = (5, constitution)
+
+constitution =
+  [ $hash32
+  , scripthash / null
+  ]
 
 info_action = 6
 

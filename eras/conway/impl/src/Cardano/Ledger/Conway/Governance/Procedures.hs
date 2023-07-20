@@ -28,7 +28,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   govActionIdToText,
 ) where
 
-import Cardano.Crypto.Hash (ByteString, hashToTextAsHex)
+import Cardano.Crypto.Hash (hashToTextAsHex)
 import Cardano.Ledger.BaseTypes (ProtVer, Url)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -48,12 +48,14 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.Shelley.Governance (Constitution)
+import Cardano.Ledger.Shelley.RewardProvenance ()
 import Cardano.Ledger.TxIn (TxId (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (KeyValue (..), ToJSON (..), ToJSONKey (..), object, pairs)
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Map.Strict (Map)
-import Data.Maybe.Strict (StrictMaybe)
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq)
 import Data.Set (Set)
 import qualified Data.Text as Text
@@ -302,7 +304,7 @@ data GovernanceAction era
   | TreasuryWithdrawals !(Map (Credential 'Staking (EraCrypto era)) Coin)
   | NoConfidence
   | NewCommittee !(Set (KeyHash 'Voting (EraCrypto era))) !Rational
-  | NewConstitution !(SafeHash (EraCrypto era) ByteString)
+  | NewConstitution !(Constitution era)
   | InfoAction
   deriving (Generic)
 
@@ -338,5 +340,5 @@ instance EraPParams era => EncCBOR (GovernanceAction era) where
       enc (TreasuryWithdrawals ws) = Sum TreasuryWithdrawals 2 !> To ws
       enc NoConfidence = Sum NoConfidence 3
       enc (NewCommittee mems quorum) = Sum NewCommittee 4 !> To mems !> To quorum
-      enc (NewConstitution h) = Sum NewConstitution 5 !> To h
+      enc (NewConstitution c) = Sum NewConstitution 5 !> To c
       enc InfoAction = Sum InfoAction 6
