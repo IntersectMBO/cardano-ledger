@@ -194,7 +194,6 @@ class
   -- spend, which ones will depend on the validity of the transaction itself. Starting in
   -- Alonzo this will include collateral inputs.
   spendableInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
-  spendableInputsTxBodyF = allInputsTxBodyF
 
   -- | This getter will produce all inputs from the UTxO map that this transaction is
   -- referencing, even if some of them cannot be spent by the transaction. For example

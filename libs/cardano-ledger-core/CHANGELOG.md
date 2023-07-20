@@ -8,6 +8,7 @@
 * Added `Plutus`
 * Changed `Phase2Script` constructor of the `PhaseScript` type. It now accepts new
   `Plutus` type instead of `Language` and `ShortByteString`
+* Remove default implementation for `spendableInputsTxBodyL`
 
 ## 1.4.1.0
 
