@@ -61,7 +61,8 @@ module Cardano.Ledger.Babbage.TxBody (
   outputsBabbageTxBodyL,
   feeBabbageTxBodyL,
   auxDataHashBabbageTxBodyL,
-  allInputsBabbageTxBodyF,
+  babbageSpendableInputsTxBodyF,
+  babbageAllInputsTxBodyF,
   mintedBabbageTxBodyF,
   mintValueBabbageTxBodyF,
   withdrawalsBabbbageTxBodyL,
@@ -241,14 +242,22 @@ auxDataHashBabbageTxBodyL =
     \txBodyRaw auxDataHash -> txBodyRaw {btbrAuxDataHash = auxDataHash}
 {-# INLINEABLE auxDataHashBabbageTxBodyL #-}
 
-allInputsBabbageTxBodyF ::
-  BabbageEraTxBody era => SimpleGetter (BabbageTxBody era) (Set (TxIn (EraCrypto era)))
-allInputsBabbageTxBodyF =
+babbageSpendableInputsTxBodyF ::
+  BabbageEraTxBody era => SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
+babbageSpendableInputsTxBodyF =
   to $ \txBody ->
-    (txBody ^. inputsBabbageTxBodyL)
-      `Set.union` (txBody ^. collateralInputsBabbageTxBodyL)
-      `Set.union` (txBody ^. referenceInputsBabbageTxBodyL)
-{-# INLINEABLE allInputsBabbageTxBodyF #-}
+    (txBody ^. inputsTxBodyL)
+      `Set.union` (txBody ^. collateralInputsTxBodyL)
+{-# INLINEABLE babbageSpendableInputsTxBodyF #-}
+
+babbageAllInputsTxBodyF ::
+  BabbageEraTxBody era => SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
+babbageAllInputsTxBodyF =
+  to $ \txBody ->
+    (txBody ^. inputsTxBodyL)
+      `Set.union` (txBody ^. collateralInputsTxBodyL)
+      `Set.union` (txBody ^. referenceInputsTxBodyL)
+{-# INLINEABLE babbageAllInputsTxBodyF #-}
 
 mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (ScriptHash (EraCrypto era)))
 mintedBabbageTxBodyF = to (Set.map policyID . policies . btbrMint . getMemoRawType)
@@ -387,7 +396,10 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   auxDataHashTxBodyL = auxDataHashBabbageTxBodyL
   {-# INLINE auxDataHashTxBodyL #-}
 
-  allInputsTxBodyF = allInputsBabbageTxBodyF
+  spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
+  {-# INLINE spendableInputsTxBodyF #-}
+
+  allInputsTxBodyF = babbageAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL = withdrawalsBabbbageTxBodyL

@@ -236,6 +236,9 @@ instance Crypto c => EraTxBody (MaryEra c) where
       \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
+  spendableInputsTxBodyF = inputsTxBodyL
+  {-# INLINE spendableInputsTxBodyF #-}
+
   allInputsTxBodyF = inputsTxBodyL
   {-# INLINEABLE allInputsTxBodyF #-}
 
