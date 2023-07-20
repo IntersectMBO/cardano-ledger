@@ -138,9 +138,9 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
     TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era), Coin)
 
   mkAuthCommitteeHotKeyTxCert ::
-    KeyHash 'CommitteeColdKey (EraCrypto era) -> KeyHash 'CommitteeHotKey (EraCrypto era) -> TxCert era
+    KeyHash 'CommitteeColdKey (EraCrypto era) -> Credential 'CommitteeHotKey (EraCrypto era) -> TxCert era
   getAuthCommitteeHotKeyTxCert ::
-    TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era), KeyHash 'CommitteeHotKey (EraCrypto era))
+    TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era), Credential 'CommitteeHotKey (EraCrypto era))
 
   mkResignCommitteeColdTxCert :: KeyHash 'CommitteeColdKey (EraCrypto era) -> TxCert era
   getResignCommitteeColdTxCert :: TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era))
@@ -227,7 +227,7 @@ pattern RegDepositDelegTxCert cred d c <- (getRegDepositDelegTxCert -> Just (cre
 pattern AuthCommitteeHotKeyTxCert ::
   ConwayEraTxCert era =>
   KeyHash 'CommitteeColdKey (EraCrypto era) ->
-  KeyHash 'CommitteeHotKey (EraCrypto era) ->
+  Credential 'CommitteeHotKey (EraCrypto era) ->
   TxCert era
 pattern AuthCommitteeHotKeyTxCert ck hk <- (getAuthCommitteeHotKeyTxCert -> Just (ck, hk))
   where
@@ -319,7 +319,7 @@ instance NoThunks (ConwayDelegCert c)
 data ConwayCommitteeCert c
   = ConwayRegDRep !(Credential 'Voting c) !Coin
   | ConwayUnRegDRep !(Credential 'Voting c) !Coin
-  | ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(KeyHash 'CommitteeHotKey c)
+  | ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(Credential 'CommitteeHotKey c)
   | ConwayResignCommitteeColdKey !(KeyHash 'CommitteeColdKey c)
   deriving (Show, Generic, Eq)
 
