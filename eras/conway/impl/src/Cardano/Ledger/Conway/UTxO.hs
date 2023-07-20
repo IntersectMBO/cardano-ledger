@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -22,8 +21,11 @@ import Cardano.Ledger.Conway.Core (
   Value,
  )
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Governance (Voter (..), VotingProcedure (..))
-import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure (..))
+import Cardano.Ledger.Conway.Governance.Procedures (
+  ProposalProcedure (..),
+  Voter (..),
+  VotingProcedures (..),
+ )
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
@@ -32,7 +34,7 @@ import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Cardano.Ledger.Val (Val (..))
-import Data.Foldable (Foldable (..))
+import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Lens.Micro ((^.))
 
@@ -43,15 +45,15 @@ getConwayScriptsNeeded ::
   AlonzoScriptsNeeded era
 getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voterScripts
   where
-    getMaybeScriptHash VotingProcedure {vProcVoter} =
+    getMaybeScriptHash voter =
       (,) (error "TODO: Implement VoterScriptPurpose")
-        <$> case vProcVoter of
+        <$> case voter of
           CommitteeVoter cred -> credScriptHash cred
           DRepVoter cred -> credScriptHash cred
           StakePoolVoter _ -> Nothing
 
     voterScripts =
-      AlonzoScriptsNeeded . mapMaybe getMaybeScriptHash . toList $
+      AlonzoScriptsNeeded . mapMaybe getMaybeScriptHash . Map.keys . unVotingProcedures $
         txb ^. votingProceduresTxBodyL
 
 conwayProducedValue ::

@@ -5,7 +5,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -28,6 +27,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
@@ -527,7 +527,7 @@ sameConwayTxBody
     , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
     , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
     , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
-    , ("VotingProcedures", eqVia (ppStrictSeq prettyA) vp1 vp2)
+    , ("VotingProcedures", eqVia prettyA (unVotingProcedures vp1) (unVotingProcedures vp2))
     , ("ProposalProcedures", eqVia (ppStrictSeq prettyA) pp1 pp2)
     ]
 

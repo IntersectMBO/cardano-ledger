@@ -27,6 +27,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Language (Language (..))
 import Control.State.Transition.Extended (STS (Event))
 import Data.Functor.Identity (Identity)
+import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoScript)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -212,7 +213,10 @@ instance Crypto c => Arbitrary (Anchor c) where
       <*> arbitrary
 
 instance Era era => Arbitrary (VotingProcedure era) where
-  arbitrary = VotingProcedure <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = VotingProcedure <$> arbitrary <*> arbitrary
+
+instance Era era => Arbitrary (VotingProcedures era) where
+  arbitrary = VotingProcedures <$> liftArbitrary (genNonEmptyMap arbitrary arbitrary)
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedure era) where
   arbitrary =
@@ -227,7 +231,7 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProced
     GovernanceProcedures <$> arbitrary <*> arbitrary
 
 instance Era era => Arbitrary (ConwayGovPredFailure era) where
-  arbitrary = GovernanceActionDoesNotExist <$> arbitrary
+  arbitrary = GovernanceActionsDoNotExist <$> arbitrary
 
 instance
   ( Arbitrary (PredicateFailure (EraRule "UTXOW" era))

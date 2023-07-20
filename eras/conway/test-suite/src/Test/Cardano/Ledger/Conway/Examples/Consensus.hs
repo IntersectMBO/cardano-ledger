@@ -30,6 +30,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayCERTS, ConwayCertsPredFailure (..), ConwayLEDGER)
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
@@ -152,7 +153,7 @@ exampleTxBodyConway =
     (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
     (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
     (SJust Mainnet) -- txnetworkid
-    mempty
+    (VotingProcedures mempty)
     mempty
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3

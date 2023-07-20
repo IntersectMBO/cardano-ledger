@@ -42,7 +42,7 @@ import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOW)
-import Cardano.Ledger.Conway.Governance (Voter (..), VotingProcedure (..))
+import Cardano.Ledger.Conway.Governance (Voter (..), VotingProcedures (..))
 import Cardano.Ledger.Credential (credKeyHashWitness)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
@@ -63,7 +63,6 @@ import Control.State.Transition.Extended (
   judgmentContext,
   trans,
  )
-import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -162,11 +161,12 @@ voterWitnesses ::
   ConwayEraTxBody era =>
   TxBody era ->
   Set (KeyHash 'Witness (EraCrypto era))
-voterWitnesses txb = foldr' accum mempty (txb ^. votingProceduresTxBodyL)
+voterWitnesses txb =
+  Map.foldrWithKey' accum mempty (unVotingProcedures (txb ^. votingProceduresTxBodyL))
   where
-    accum v khs =
+    accum voter _ khs =
       maybe khs (`Set.insert` khs) $
-        case vProcVoter v of
+        case voter of
           CommitteeVoter cred -> credKeyHashWitness cred
           DRepVoter cred -> credKeyHashWitness cred
           StakePoolVoter poolId -> Just $ asWitness poolId

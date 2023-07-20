@@ -1,5 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -35,6 +33,7 @@ import Cardano.Ledger.Conway.Governance (
   ProposalProcedure (..),
   Voter (..),
   VotingProcedure (..),
+  VotingProcedures (..),
   indexedGovProps,
  )
 import Cardano.Ledger.Core
@@ -50,6 +49,7 @@ import Control.State.Transition.Extended (
  )
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
@@ -60,7 +60,7 @@ data GovEnv era = GovEnv
   }
 
 newtype ConwayGovPredFailure era
-  = GovernanceActionDoesNotExist (GovernanceActionId (EraCrypto era))
+  = GovernanceActionsDoNotExist (Set.Set (GovernanceActionId (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 instance Era era => NFData (ConwayGovPredFailure era)
@@ -69,13 +69,13 @@ instance Era era => NoThunks (ConwayGovPredFailure era)
 
 instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
   decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
-    0 -> SumD GovernanceActionDoesNotExist <! From
+    0 -> SumD GovernanceActionsDoNotExist <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
   encCBOR =
     encode . \case
-      GovernanceActionDoesNotExist gid -> Sum (GovernanceActionDoesNotExist @era) 0 !> To gid
+      GovernanceActionsDoNotExist gid -> Sum (GovernanceActionsDoNotExist @era) 0 !> To gid
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -95,16 +95,17 @@ instance Era era => STS (ConwayGOV era) where
 
   transitionRules = [govTransition]
 
-addVote ::
-  VotingProcedure era ->
+addVoterVote ::
+  Voter (EraCrypto era) ->
   ConwayGovState era ->
+  GovernanceActionId (EraCrypto era) ->
+  VotingProcedure era ->
   ConwayGovState era
-addVote VotingProcedure {vProcGovActionId, vProcVoter, vProcVote} (ConwayGovState st) =
-  ConwayGovState $
-    Map.update (Just . updateVote) vProcGovActionId st
+addVoterVote voter (ConwayGovState st) govActionId VotingProcedure {vProcVote} =
+  ConwayGovState $ Map.update (Just . updateVote) govActionId st
   where
     updateVote GovernanceActionState {..} =
-      case vProcVoter of
+      case voter of
         CommitteeVoter cred ->
           GovernanceActionState
             { gasCommitteeVotes = Map.insert cred vProcVote gasCommitteeVotes
@@ -144,18 +145,19 @@ addAction epoch gaid c addr act (ConwayGovState st) =
         , gasReturnAddr = addr
         }
 
-noSuchGovernanceAction ::
+noSuchGovernanceActions ::
   ConwayGovState era ->
-  GovernanceActionId (EraCrypto era) ->
+  Set.Set (GovernanceActionId (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
-noSuchGovernanceAction (ConwayGovState st) gaid =
-  failureUnless (Map.member gaid st) $
-    GovernanceActionDoesNotExist gaid
+noSuchGovernanceActions (ConwayGovState st) gaIds =
+  let unknownGovActionIds = Set.filter (`Map.notMember` st) gaIds
+   in failureUnless (Set.null unknownGovActionIds) $
+        GovernanceActionsDoNotExist unknownGovActionIds
 
 govTransition :: forall era. TransitionRule (ConwayGOV era)
 govTransition = do
   -- TODO Check the signatures
-  TRC (GovEnv txid epoch, st, GovernanceProcedures {..}) <- judgmentContext
+  TRC (GovEnv txid epoch, st, gp) <- judgmentContext
 
   let applyProps st' Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
@@ -168,14 +170,15 @@ govTransition = do
                 pProcGovernanceAction
                 st'
         applyProps st'' ps
-  stProps <- applyProps st $ indexedGovProps gpProposalProcedures
+  stProps <- applyProps st $ indexedGovProps $ gpProposalProcedures gp
 
-  let applyVotes st' Empty = pure st'
-      applyVotes st' (vp@VotingProcedure {..} :<| vs) = do
-        runTest $ noSuchGovernanceAction st vProcGovActionId
-        let !st'' = addVote vp st'
-        applyVotes st'' vs
-  applyVotes stProps gpVotingProcedures
+  let VotingProcedures votingProcedures = gpVotingProcedures gp
+
+  runTest $ noSuchGovernanceActions st $ foldMap Map.keysSet votingProcedures
+
+  let applyVoterVotes curState voter =
+        Map.foldlWithKey' (addVoterVote voter) curState
+  pure $ Map.foldlWithKey' applyVoterVotes stProps votingProcedures
 
 instance Inject (ConwayGovPredFailure era) (ConwayGovPredFailure era) where
   inject = id
