@@ -183,6 +183,9 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
     lensMemoRawType atbrAuxDataHash (\txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash})
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
+  spendableInputsTxBodyF = allInputsTxBodyF
+  {-# INLINE spendableInputsTxBodyF #-}
+
   allInputsTxBodyF =
     to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
   {-# INLINEABLE allInputsTxBodyF #-}
