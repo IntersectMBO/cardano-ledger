@@ -4,6 +4,7 @@
 
 * Rename `cgTallyL` to `cgGovL`
 * Rename `ConwayTallyState` to `ConwayGovState`
+* Add `spendableInputsTxBodyL`
 
 ## 1.3.0.0
 

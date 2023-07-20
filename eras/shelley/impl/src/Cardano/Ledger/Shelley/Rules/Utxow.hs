@@ -489,7 +489,7 @@ witsVKeyNeededNoGovernance utxo' txBody =
     `Set.union` wdrlAuthors
   where
     inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    inputAuthors = foldr' accum Set.empty (txBody ^. allInputsTxBodyF)
+    inputAuthors = foldr' accum Set.empty (txBody ^. spendableInputsTxBodyF)
       where
         accum txin !ans =
           case txinLookup txin utxo' of

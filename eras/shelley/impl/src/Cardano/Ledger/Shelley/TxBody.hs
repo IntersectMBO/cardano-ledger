@@ -274,6 +274,9 @@ instance Crypto c => EraTxBody (ShelleyEra c) where
 
   mkBasicTxBody = mkMemoized basicShelleyTxBodyRaw
 
+  spendableInputsTxBodyF = inputsTxBodyL
+  {-# INLINE spendableInputsTxBodyF #-}
+
   allInputsTxBodyF = inputsTxBodyL
   {-# INLINE allInputsTxBodyF #-}
 
