@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.2.1.0
+
+* Add implementation for `spendableInputsTxBodyL`
+
 ## 1.2.0.3
 
 *

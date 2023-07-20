@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.6.2.0
+
+* Add implementation for `spendableInputsTxBodyL`
+
 ## 1.6.1.0
 
 * Removal of TxOuts with zero `Coin` from UTxO on translation

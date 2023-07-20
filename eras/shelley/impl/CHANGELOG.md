@@ -1,5 +1,11 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.4.2.0
+
+* Add implementation for `spendableInputsTxBodyL`
+* Fix an issue with where `witsVKeyNeededNoGovernance` and `witsVKeyNeeded` required
+  witnesses for `allInputsTxL`, which affected reference inputs in Babbage.
+
 ## 1.4.1.0
 
 * Add `getConstitutionHash` to `EraGovernance` #3506

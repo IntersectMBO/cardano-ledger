@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.3.1.0
+
+* Add implementation for `spendableInputsTxBodyL`
+
 ## 1.3.0.2
 
 *

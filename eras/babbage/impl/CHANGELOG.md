@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.4.1.0
+
+* Add implementation for `spendableInputsTxBodyL`
+
 ## 1.4.0.1
 
 *

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.3.2.0
+
+* Add implementation for `spendableInputsTxBodyL`
+
 ## 1.3.1.2
 
 *
