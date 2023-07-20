@@ -67,7 +67,7 @@ library
         cardano-ledger-allegra >=1.1,
         cardano-crypto-class,
         cardano-ledger-binary >=1.0.1,
-        cardano-ledger-core >=1.4 && <1.6,
+        cardano-ledger-core >=1.4.1 && <1.6,
         cardano-ledger-mary >=1.1,
         cardano-ledger-shelley ^>=1.4,
         cardano-slotting,
