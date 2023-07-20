@@ -21,6 +21,7 @@ module Cardano.Ledger.Conway.Governance (
   EnactState (..),
   RatifyState (..),
   ConwayGovernance (..),
+  Committee (..),
   GovernanceAction (..),
   GovernanceActionState (..),
   GovernanceActionIx (..),
@@ -66,6 +67,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
   Anchor (..),
   AnchorDataHash,
+  Committee (..),
   GovernanceAction (..),
   GovernanceActionId (..),
   GovernanceActionIx (..),
@@ -87,7 +89,6 @@ import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
 import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
@@ -178,7 +179,7 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
 data EnactState era = EnactState
-  { ensCommittee :: !(StrictMaybe (Set (KeyHash 'DRepRole (EraCrypto era)), Rational))
+  { ensCommittee :: !(StrictMaybe (Committee era))
   -- ^ Constitutional Committee
   , ensConstitution :: !(Constitution era)
   -- ^ Hash of the Constitution

@@ -22,6 +22,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Anchor,
+  Committee (..),
   ConwayGovState (..),
   ConwayGovernance (..),
   GovernanceAction (..),
@@ -204,11 +205,11 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
       [("withdrawals map", prettyA ws)]
   prettyA NoConfidence =
     ppRecord "NoConfidence" []
-  prettyA (NewCommittee ms q) =
+  prettyA (NewCommittee old committee) =
     ppRecord
       "NewCommittee"
-      [ ("members", prettyA ms)
-      , ("quorum", prettyA q)
+      [ ("oldMembers", prettyA old)
+      , ("committee", prettyA committee)
       ]
   prettyA (NewConstitution Constitution {..}) =
     ppRecord
@@ -218,6 +219,14 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
       ]
   prettyA InfoAction =
     ppRecord "InfoAction" []
+
+instance PrettyA (Committee era) where
+  prettyA Committee {..} =
+    ppRecord
+      "Committee"
+      [ ("members", prettyA committeeMembers)
+      , ("quorum", prettyA committeeQuorum)
+      ]
 
 instance forall c. PrettyA (ConwayTxCert c) where
   prettyA = ppConwayTxCert

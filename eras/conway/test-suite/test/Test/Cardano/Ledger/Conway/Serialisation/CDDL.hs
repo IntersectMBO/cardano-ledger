@@ -12,7 +12,7 @@ import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage.TxBody (Datum)
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedure)
+import Cardano.Ledger.Conway.Governance (GovernanceAction, ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Core
 import qualified Data.ByteString.Lazy as BSL
@@ -42,6 +42,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlAnnotatorTest @(Tx Conway) (eraProtVerHigh @Conway) n "transaction"
     , cddlTest @(VotingProcedure Conway) (eraProtVerHigh @Conway) n "voting_procedure"
     , cddlTest @(ProposalProcedure Conway) (eraProtVerHigh @Conway) n "proposal_procedure"
+    , cddlTest @(GovernanceAction Conway) (eraProtVerHigh @Conway) n "governance_action"
     , cddlTest @(ConwayTxCert Conway) (eraProtVerHigh @Conway) n "certificate"
     ]
       <*> pure cddl
