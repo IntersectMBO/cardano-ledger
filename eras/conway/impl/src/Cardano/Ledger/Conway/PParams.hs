@@ -47,6 +47,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson hiding (Encoding, decode, encode)
+import qualified Data.Aeson as Aeson
 import Data.Default.Class (Default (def))
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe (..), isSNothing)
@@ -210,6 +211,32 @@ instance Default (UpgradeConwayPParams StrictMaybe) where
       , ucppDRepDeposit = SNothing
       , ucppDRepActivity = SNothing
       }
+
+instance EncCBOR (UpgradeConwayPParams Identity) where
+  encCBOR UpgradeConwayPParams {..} =
+    encode $
+      Rec (UpgradeConwayPParams @Identity)
+        !> To ucppPoolVotingThresholds
+        !> To ucppDRepVotingThresholds
+        !> To ucppMinCommitteeSize
+        !> To ucppCommitteeTermLimit
+        !> To ucppGovActionExpiration
+        !> To ucppGovActionDeposit
+        !> To ucppDRepDeposit
+        !> To ucppDRepActivity
+
+instance DecCBOR (UpgradeConwayPParams Identity) where
+  decCBOR =
+    decode $
+      RecD UpgradeConwayPParams
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
 
 instance Crypto c => EraPParams (ConwayEra c) where
   type PParamsHKD f (ConwayEra c) = ConwayPParams f (ConwayEra c)
@@ -571,6 +598,43 @@ conwayUpgradePParamsHKDPairs px pp =
   , ("dRepDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdDRepDepositL @era @f))
   , ("dRepActivity", hkdMap px (toJSON @EpochNo) (pp ^. hkdDRepActivityL @era @f))
   ]
+
+instance ToJSON (UpgradeConwayPParams Identity) where
+  toJSON = object . upgradeConwayPParamsUpdatePairs
+  toEncoding = pairs . mconcat . upgradeConwayPParamsUpdatePairs
+
+upgradeConwayPParamsUpdatePairs :: KeyValue a => UpgradeConwayPParams Identity -> [a]
+upgradeConwayPParamsUpdatePairs upp =
+  uncurry (.=) <$> upgradeConwayPParamsHKDPairs upp
+
+upgradeConwayPParamsHKDPairs :: UpgradeConwayPParams Identity -> [(Key, Aeson.Value)]
+upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
+  [ ("poolVotingThresholds", (toJSON @PoolVotingThresholds) ucppPoolVotingThresholds)
+  , ("dRepVotingThresholds", (toJSON @DRepVotingThresholds) ucppDRepVotingThresholds)
+  , ("minCommitteeSize", (toJSON @Natural) ucppMinCommitteeSize)
+  , ("committeeTermLimit", (toJSON @Natural) ucppCommitteeTermLimit)
+  , ("govActionExpiration", (toJSON @Natural) ucppGovActionExpiration)
+  , ("govActionDeposit", (toJSON @Coin) ucppGovActionDeposit)
+  , ("dRepDeposit", (toJSON @Coin) ucppDRepDeposit)
+  , ("dRepActivity", (toJSON @EpochNo) ucppDRepActivity)
+  ]
+
+instance FromJSON PoolVotingThresholds
+
+instance FromJSON DRepVotingThresholds
+
+instance FromJSON (UpgradeConwayPParams Identity) where
+  parseJSON =
+    withObject "UpgradeConwayPParams" $ \o ->
+      UpgradeConwayPParams
+        <$> o .: "poolVotingThresholds"
+        <*> o .: "dRepVotingThresholds"
+        <*> o .: "minCommitteeSize"
+        <*> o .: "committeeTermLimit"
+        <*> o .: "govActionExpiration"
+        <*> o .: "govActionDeposit"
+        <*> o .: "dRepDeposit"
+        <*> o .: "dRepActivity"
 
 upgradeConwayPParams ::
   forall f c.
