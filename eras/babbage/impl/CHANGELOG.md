@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.4.2.0
+
+* Fix `mint` field Plutus translation bug.
+
 ## 1.4.1.0
 
 * Add implementation for `spendableInputsTxBodyL`

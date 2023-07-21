@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.3.3.0
+
+* Export `transMintValue`
+
 ## 1.3.2.0
 
 * Add implementation for `spendableInputsTxBodyL`
