@@ -14,6 +14,10 @@
   `Plutus` type instead of a `Language` and `ShortByteString`
 * Rename `pdSBS` field to `pdPlutusScript` in the `PlutusDebugLang` data type
 
+## 1.3.2.0
+
+* Add implementation for `spendableInputsTxBodyL`
+
 ## 1.3.1.1
 
 *

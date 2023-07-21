@@ -2,29 +2,36 @@
 
 ## 1.7.0.0
 
-* Make `Anchor` required in `ProposalProcedure`.
-* Removal of TxOuts with zero `Coin` from UTxO on translation
+* Add `ConwayPParams` #3498
+* Add `UpgradeConwayPParams` #3498
+* Add `ConwayEraPParams` #3498
+* Add `PoolVotingThresholds` #3498
+* Add `DRepVotingThresholds` #3498
 * Rename:
-    `cgTally` -> `cgGov`
-    `cgTallyL` -> `cgGovL`
-    `VDelFailure` -> `GovCertFailure`
-    `VDelEvent` -> `GovCertEvent`
-    `certVState` -> `certGState`
-    `ConwayVDelPredFailure` -> `ConwayGovCertPredFailure`
-    `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
-    `TallyEnv` -> `GovEnv`
-    `ConwayTallyState` -> `ConwayGovState`
-    `TALLY` -> `GOV`
-    `VDEL` -> `GOVCERT`
+   * `cgTally` -> `cgGov`
+   * `cgTallyL` -> `cgGovL`
+   * `VDelFailure` -> `GovCertFailure`
+   * `VDelEvent` -> `GovCertEvent`
+   * `certVState` -> `certGState`
+   * `ConwayVDelPredFailure` -> `ConwayGovCertPredFailure`
+   * `ConwayTallyPredFailure` -> `ConwayGovPredFailure`
+   * `TallyEnv` -> `GovEnv`
+   * `ConwayTallyState` -> `ConwayGovState`
+   * `TALLY` -> `GOV`
+   * `VDEL` -> `GOVCERT`
+* Make `Anchor` required in `ProposalProcedure`.
+
+## 1.6.2.0
+
+* Add implementation for `spendableInputsTxBodyL`
+
+## 1.6.1.0
+
+* Removal of TxOuts with zero `Coin` from UTxO on translation
 
 ## 1.6.0.0
 
 * Removal of `GovernanceProcedure` in favor of `GovernanceProcedures`
-* Add `ConwayPParams` #3498
-  * Add `UpgradeConwayPParams`
-  * Add `ConwayEraPParams`
-  * Add `PoolVotingThresholds`
-  * Add `DRepVotingThresholds`
 
 ## 1.5.0.0
 
@@ -39,7 +46,7 @@
   `gasStakePoolVotes` in `GovernanceActionState`
 * Removal of `reRoles` from `RatifyEnv` as no longer needed
 * Addition of `reStakePoolDistr` to `RatifyEnv`
-* Remove `VoterDoesNotHaveRole` as no longer needed from `ConwayGovPredFailure`
+* Remove `VoterDoesNotHaveRole` as no longer needed from `ConwayTallyPredFailure`
 * Added `ConwayEpochPredFailure`
 * Added instance for `Embed (ConwayRATIFY era) (ConwayEPOCH era)`
 * Removed instance for `Embed (ConwayRATIFY era) (ConwayNEWEPOCH era)`
