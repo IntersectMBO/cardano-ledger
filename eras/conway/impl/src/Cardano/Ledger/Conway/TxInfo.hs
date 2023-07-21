@@ -114,7 +114,9 @@ conwayTxInfoV3 timeRange tx utxo = do
       , PV3.txInfoOutputs = outputs
       , PV3.txInfoReferenceInputs = refInputs
       , PV3.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
-      , PV3.txInfoMint = Alonzo.transMultiAsset multiAsset
+      , -- Note that this translation is different from previous Plutus versions, sine we no
+        -- longer add a zero ADA value to the mint field during translation:
+        PV3.txInfoMint = Alonzo.transMultiAsset (txBody ^. mintTxBodyL)
       , PV3.txInfoDCert = toList $ fmap (unTxCertV3 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
       , PV3.txInfoWdrl = PV3.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV3.txInfoValidRange = timeRange
@@ -129,6 +131,5 @@ conwayTxInfoV3 timeRange tx utxo = do
     witnesses = tx ^. witsTxL
     outs = txBody ^. outputsTxBodyL
     fee = txBody ^. feeTxBodyL
-    multiAsset = txBody ^. mintTxBodyL
     datpairs = Map.toList (unTxDats $ witnesses ^. datsTxWitsL)
     rdmrs = Map.toList (unRedeemers $ witnesses ^. rdmrsTxWitsL)
