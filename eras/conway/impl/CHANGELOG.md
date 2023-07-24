@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.6.3.0
+
+* Implement stake distribution handling in the `TICKF` rule.
+
 ## 1.6.2.0
 
 * Add implementation for `spendableInputsTxBodyL`
