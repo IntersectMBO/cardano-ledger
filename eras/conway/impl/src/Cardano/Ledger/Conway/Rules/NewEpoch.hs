@@ -141,7 +141,7 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , nes@(NewEpochState eL _ bcur eps ru pd _)
+      , nes@(NewEpochState eL _ bcur es ru pd _)
       , eNo
       ) <-
     judgmentContext
@@ -149,17 +149,17 @@ newEpochTransition = do
     then pure nes
     else do
       es' <- case ru of
-        SNothing -> pure eps
+        SNothing -> pure es
         SJust p@(Pulsing _ _) -> do
           (ans, event) <- liftSTS (completeRupd p)
           tellReward (DeltaRewardEvent (RupdEvent eNo event))
-          updateRewards eps eNo ans
-        SJust (Complete ru') -> updateRewards eps eNo ru'
+          updateRewards es eNo ans
+        SJust (Complete ru') -> updateRewards es eNo ru'
       es'' <- trans @(EraRule "EPOCH" era) $ TRC (pd, es', eNo)
       let adaPots = totalAdaPotsES es''
       tellEvent $ TotalAdaPotsEvent adaPots
-      let ss = esSnapshots es''
-          pd' = calculatePoolDistr (ssStakeSet ss)
+      let pd' = ssStakeMarkPoolDistr (esSnapshots es)
+      -- See `ShelleyNEWEPOCH` for details on the implementation
       pure $
         nes
           { nesEL = eNo
