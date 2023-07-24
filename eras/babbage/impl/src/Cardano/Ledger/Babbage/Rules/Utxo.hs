@@ -233,58 +233,32 @@ validateCollateralContainsNonADA ::
   Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateralContainsNonADA txBody utxoCollateral =
-    -- When we do not have any non-ada TxOuts we can short-circuit the more
-    -- expensive validation, which has to compute the full balance on the Values
-    -- not just the Coin. So the (True,True) case, is cheap, and the computations
-    -- of colInputsBal and totalBal in the where clause are not computed at all
-    case (areAllAdaOnly utxoCollateral , areAllAdaOnly (txBody ^. collateralReturnTxBodyL)) of
-       (True,True) -> pure ()
-       (False,False) ->
-           if (Val.isAdaOnly totalBal) 
-              then pure () -- Both have MultiSssets, and they cancel out.
-              else failureIf True $ CollateralContainsNonADA colInputBal
-       (True,False) -> case txBody ^. collateralReturnTxBodyL of
-           SNothing -> pure ()
-                       -- This should be impossible since the collateralReturn has some NonAda
-                       -- So it can't be Nothing. If by some miracle it ever happens then
-                       -- the (pure ()) is the right answer, since in this branch the
-                       -- collateral inputs, have no Ada too.
-           SJust retTxOut -> failureIf True $ CollateralContainsNonADA  (retTxOut ^. valueTxOutL)
-       (False,True) -> failureIf True $ CollateralContainsNonADA colInputBal
-   where
+  -- When we do not have any non-ada TxOuts we can short-circuit the more expensive
+  -- validation, which has to compute the full balance on the Values, not just the Coin.
+  -- By using 'areAllAdaOnly', the (True,True) case, this approach is both cheap and common,
+  -- and the computations of colInputsBal and totalBal, in the where clause, are not computed at all.
+  case (areAllAdaOnly utxoCollateral, areAllAdaOnly (txBody ^. collateralReturnTxBodyL)) of
+    (True, True) -> pure ()
+    (False, False) ->
+      if (Val.isAdaOnly totalBal)
+        then pure () -- Both have MultiSssets, and they cancel out.
+        else failureIf True $ CollateralContainsNonADA colInputBal
+    (False, True) -> failureIf True $ CollateralContainsNonADA colInputBal
+    (True, False) -> case txBody ^. collateralReturnTxBodyL of
+      SJust retTxOut -> failureIf True $ CollateralContainsNonADA (retTxOut ^. valueTxOutL)
+      SNothing -> pure ()
+  where
+    -- The SNothing should be impossible since the collateralReturn has some
+    -- NonAda, so it can't be SNothing. If by some crack in the universe, that ever
+    -- happens then the (pure ()) is the right answer, since in this branch the
+    -- collateral inputs, have no Ada too.
+
     colInputBal = balance $ UTxO utxoCollateral
     -- This is where we account for the fact that we can remove Non-Ada assets
     -- from collateral inputs, by directing them to the return TxOut
     totalBal = case txBody ^. collateralReturnTxBodyL of
-       SNothing -> colInputBal
-       SJust retTxOut -> colInputBal <-> (retTxOut ^. valueTxOutL @era)
-{-
-validateCollateralContainsNonADA ::
-  forall era.
-  BabbageEraTxBody era =>
-  TxBody era ->
-  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
-  Test (AlonzoUtxoPredFailure era)
-validateCollateralContainsNonADA txBody utxoCollateral =
-  -- When we do not have any non-ada TxOuts we can short-circuit the more
-  -- expensive validation, which has to compute the full balance on the Value,
-  -- not just the Coin.
-  if areAllAdaOnly utxoCollateral && areAllAdaOnly (txBody ^. collateralReturnTxBodyL)
-    then pure ()
-    else failureUnless (Val.isAdaOnly bal) $
-      case txBody ^. collateralReturnTxBodyL of
-        SJust retTxOut
-          | not (Val.isAdaOnly colbal) ->
-              CollateralContainsNonADA (retTxOut ^. valueTxOutL)
-        _ -> CollateralContainsNonADA colbal
-  where
-    colbal = balance $ UTxO utxoCollateral
-    -- This is where we account for the fact that we can remove Non-Ada assets
-    -- from collateral inputs, by directing them to the return TxOut
-    bal = case txBody ^. collateralReturnTxBodyL of
-      SNothing -> colbal
-      SJust retTxOut -> colbal <-> (retTxOut ^. valueTxOutL @era)
--}
+      SNothing -> colInputBal
+      SJust retTxOut -> colInputBal <-> (retTxOut ^. valueTxOutL @era)
 
 -- > (txcoll tx ≠ ◇) => balance == txcoll tx
 validateCollateralEqBalance ::
