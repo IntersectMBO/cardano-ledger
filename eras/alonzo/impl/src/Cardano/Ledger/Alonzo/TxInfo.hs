@@ -41,6 +41,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   transPolicyID,
   transAssetName,
   transMultiAsset,
+  transMintValue,
   transValue,
   transWithdrawals,
   getWitVKeyHash,
