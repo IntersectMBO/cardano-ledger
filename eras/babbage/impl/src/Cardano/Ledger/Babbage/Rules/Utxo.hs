@@ -218,7 +218,7 @@ validateTotalCollateral pp txBody utxoCollateral =
     ]
   where
     bal = collAdaBalance txBody utxoCollateral
-    fromAlonzoValidation x = first (fmap inject) x
+    fromAlonzoValidation = first (fmap inject)
 
 -- | This validation produces the same failure as in Alonzo, but is slightly
 -- different then the corresponding one in Alonzo, since it is possible to add
@@ -233,24 +233,39 @@ validateCollateralContainsNonADA ::
   Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateralContainsNonADA txBody utxoCollateral =
-  -- When we do not have any non-ada TxOuts we can short-circuit the more
-  -- expensive validation, which has to compute the full balance on the Value,
-  -- not just the Coin.
-  if areAllAdaOnly utxoCollateral && areAllAdaOnly (txBody ^. collateralReturnTxBodyL)
-    then pure ()
-    else failureUnless (Val.isAdaOnly bal) $
-      case txBody ^. collateralReturnTxBodyL of
-        SJust retTxOut
-          | not (Val.isAdaOnly colbal) ->
-              CollateralContainsNonADA (retTxOut ^. valueTxOutL)
-        _ -> CollateralContainsNonADA colbal
+  failureUnless onlyAdaInCollateral $ CollateralContainsNonADA valueWithNonAda
   where
-    colbal = balance $ UTxO utxoCollateral
-    -- This is where we account for the fact that we can remove Non-Ada assets
-    -- from collateral inputs, by directing them to the return TxOut
-    bal = case txBody ^. collateralReturnTxBodyL of
-      SNothing -> colbal
-      SJust retTxOut -> colbal <-> (retTxOut ^. valueTxOutL @era)
+    onlyAdaInCollateral =
+      utxoCollateralAndReturnHaveOnlyAda || allNonAdaIsConsumedByReturn
+    -- When we do not have any non-ada TxOuts we can short-circuit the more expensive
+    -- validation of NonAda being fully consumed by the return output, which requires
+    -- computation of the full balance on the Value, not just the Coin.
+    utxoCollateralAndReturnHaveOnlyAda =
+      utxoCollateralHasOnlyAda && areAllAdaOnly (txBody ^. collateralReturnTxBodyL)
+    utxoCollateralHasOnlyAda = areAllAdaOnly utxoCollateral
+    -- Whenever return TxOut consumes all of the NonAda value then the total collateral
+    -- balance is considered valid.
+    allNonAdaIsConsumedByReturn = Val.isAdaOnly totalCollateralBalance
+    -- When reporting failure the NonAda value can be present in either:
+    -- - Only in collateral inputs.
+    -- - Only in return output, thus we report the return output value, rather than utxo.
+    -- - Both inputs and return address, but does not balance out. In which case
+    --   we report utxo balance
+    valueWithNonAda =
+      case txBody ^. collateralReturnTxBodyL of
+        SNothing -> collateralBalance
+        SJust retTxOut ->
+          if utxoCollateralHasOnlyAda
+            then retTxOut ^. valueTxOutL
+            else collateralBalance
+    -- This is the balance that is provided by the collateral inputs
+    collateralBalance = balance $ UTxO utxoCollateral
+    -- This is the total amount that will be spent as collateral. This is where we account
+    -- for the fact that we can remove Non-Ada assets from collateral inputs, by directing
+    -- them to the return TxOut.
+    totalCollateralBalance = case txBody ^. collateralReturnTxBodyL of
+      SNothing -> collateralBalance
+      SJust retTxOut -> collateralBalance <-> (retTxOut ^. valueTxOutL @era)
 
 -- > (txcoll tx ≠ ◇) => balance == txcoll tx
 validateCollateralEqBalance ::
