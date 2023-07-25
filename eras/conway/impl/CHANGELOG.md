@@ -2,11 +2,14 @@
 
 ## 1.7.0.0
 
+* Change `ConwayCommitteeCert` to allow committee hot keys to be script-hashes #3552
+  * from `ConwayAuthCommitteeHotKey (KeyHash 'CommitteeColdKey c) (KeyHash 'CommitteeHotKey c)`
+  * to `ConwayAuthCommitteeHotKey (KeyHash 'CommitteeColdKey c) (Credential 'CommitteeHotKey c)`
 * Add `ConwayPParams` #3498
-* Add `UpgradeConwayPParams` #3498
-* Add `ConwayEraPParams` #3498
-* Add `PoolVotingThresholds` #3498
-* Add `DRepVotingThresholds` #3498
+  * Add `UpgradeConwayPParams`
+  * Add `ConwayEraPParams`
+  * Add `PoolVotingThresholds`
+  * Add `DRepVotingThresholds`
 * Rename:
    * `cgTally` -> `cgGov`
    * `cgTallyL` -> `cgGovL`

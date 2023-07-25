@@ -2,6 +2,8 @@
 
 ## 1.5.0.0
 
+* Change `VState` to allow committee hot keys to be script-hashes #3552
+  * `vsCommitteeHotKeys :: Map (KeyHash 'CommitteeColdKey eracrypto) (Maybe (Credential 'CommitteeHotKey eracrypto))`
 * Added `withSLanguage`
 * Move `BinaryPlutus` from `cardano-ledger-alonzo` and changed its `Show` instance to
   display as base64 encoding.
