@@ -11,10 +11,13 @@ module Cardano.Ledger.Conway.Rules.Tickf (
 )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo)
+import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo, epochInfoPure)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
+import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMarkPoolDistr))
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Slot (epochInfoEpoch)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -56,5 +59,36 @@ instance
 
   initialRules = []
   transitionRules = pure $ do
-    TRC ((), nes, _) <- judgmentContext
-    pure nes
+    TRC ((), nes, slot) <- judgmentContext
+    -- This whole function is a specialization of an inlined 'NEWEPOCH'.
+    --
+    -- The ledger view, 'LedgerView', is built entirely from the 'nesPd' and 'esPp' and
+    -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST' only
+    -- depends on getting these three fields correct.
+
+    epoch <- liftSTS $ do
+      ei <- asks epochInfoPure
+      epochInfoEpoch ei slot
+
+    let es = nesEs nes
+        ss = esSnapshots es
+
+    -- the relevant 'NEWEPOCH' logic
+    let pd' = ssStakeMarkPoolDistr ss
+
+    -- note that the genesis delegates are updated not only on the epoch boundary.
+    if epoch /= nesEL nes + 1
+      then pure $ nes
+      else do
+        -- We can skip 'SNAP'; we already have the equivalent pd'.
+
+        -- We can skip 'POOLREAP';
+        -- we don't need to do the checks:
+        -- if the checks would fail, then the node will fail in the 'TICK' rule
+        -- if it ever then node tries to validate blocks for which the
+        -- return value here was used to validate their headers.
+
+        pure $!
+          nes
+            { nesPd = pd'
+            }
