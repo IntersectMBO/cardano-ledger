@@ -209,10 +209,12 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
       [ ("members", prettyA ms)
       , ("quorum", prettyA q)
       ]
-  prettyA (NewConstitution c) =
+  prettyA (NewConstitution Constitution {..}) =
     ppRecord
       "NewConstitution"
-      [("hash", prettyA c)]
+      [ ("hash", prettyA constitutionHash)
+      , ("script", prettyA constitutionScript)
+      ]
   prettyA InfoAction =
     ppRecord "InfoAction" []
 
@@ -275,6 +277,14 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionState era) wher
           , ("Action", prettyA gasAction)
           , ("Proposed In", prettyA gasProposedIn)
           ]
+
+instance PrettyA (Constitution era) where
+  prettyA Constitution {..} =
+    ppRecord
+      "Constitution"
+      [ ("hash", prettyA constitutionHash)
+      , ("script", prettyA constitutionScript)
+      ]
 
 instance PrettyA (PParams era) => PrettyA (EnactState era) where
   prettyA ens@(EnactState _ _ _ _ _ _) =

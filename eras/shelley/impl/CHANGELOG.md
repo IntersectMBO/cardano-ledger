@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.5.0.0
+
+* Make new `Constitution` datatype and `ConstitutionData` newtype #3556
+  * Adopt some Default instances for example SafeHash
+
 ## 1.4.2.1
 
 *

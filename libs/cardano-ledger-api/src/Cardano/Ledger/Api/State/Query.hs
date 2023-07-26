@@ -11,7 +11,7 @@ module Cardano.Ledger.Api.State.Query (
 ) where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Governance (EraGovernance (getConstitutionHash))
+import Cardano.Ledger.Conway.Governance (ConstitutionData, EraGovernance (getConstitutionHash))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
@@ -22,7 +22,6 @@ import Cardano.Ledger.UMap (
   UMap,
   domRestrictedStakeCredentials,
  )
-import Data.ByteString (ByteString)
 import Data.Map (Map)
 import Data.Set (Set)
 import Lens.Micro
@@ -52,6 +51,6 @@ getDState :: NewEpochState era -> DState era
 getDState = certDState . lsCertState . esLState . nesEs
 
 queryConstitutionHash ::
-  EraGovernance era => NewEpochState era -> Maybe (SafeHash (EraCrypto era) ByteString)
+  EraGovernance era => NewEpochState era -> Maybe (SafeHash (EraCrypto era) ConstitutionData)
 queryConstitutionHash nes =
   getConstitutionHash $ nes ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovernanceL

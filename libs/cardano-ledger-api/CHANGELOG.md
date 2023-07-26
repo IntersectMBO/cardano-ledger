@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Update `queryConstitutionHash` return type to `SafeHash (EraCrypto era) (Constitution era)` #3556
 * Rename `cgTallyL` to `cgGovL`
 * Rename `ConwayTallyState` to `ConwayGovState`
 

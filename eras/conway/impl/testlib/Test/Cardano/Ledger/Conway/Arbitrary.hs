@@ -102,6 +102,9 @@ instance
       <$> arbitrary
       <*> arbitrary
 
+instance Crypto (EraCrypto era) => Arbitrary (Constitution era) where
+  arbitrary = Constitution <$> arbitrary <*> arbitrary
+
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (EnactState era)
