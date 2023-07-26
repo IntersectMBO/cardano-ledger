@@ -560,7 +560,7 @@ epoch = uint
 
 addr_keyhash           = $hash28
 pool_keyhash           = $hash28
-committee_cold_keyhash = $hash28
+committee_cold_keyhash = credential
 committee_hot_keyhash  = credential
 
 vrf_keyhash           = $hash32

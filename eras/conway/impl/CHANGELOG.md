@@ -3,13 +3,13 @@
 ## 1.7.0.0
 
 * Add an optional Anchor to the Conway DRep registration certificate #3576
+* Change `ConwayCommitteeCert` to allow:
+  * committee cold keys to be script-hashes #3581
+  * committee hot keys to be script-hashes #3552
 * Change EnactState.ensConstitution #3556
   * from `SafeHash (EraCrypto era) ByteString`
   * to `Constitution era`
   * Use this datatype for GovernanceAction.NewConstitution
-* Change `ConwayCommitteeCert` to allow committee hot keys to be script-hashes #3552
-  * from `ConwayAuthCommitteeHotKey (KeyHash 'CommitteeColdKey c) (KeyHash 'CommitteeHotKey c)`
-  * to `ConwayAuthCommitteeHotKey (KeyHash 'CommitteeColdKey c) (Credential 'CommitteeHotKey c)`
 * Add `ConwayPParams` #3498
   * Add `UpgradeConwayPParams`
   * Add `ConwayEraPParams`
