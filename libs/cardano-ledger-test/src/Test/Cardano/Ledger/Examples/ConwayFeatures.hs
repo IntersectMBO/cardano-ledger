@@ -333,7 +333,10 @@ testGovernance pf = do
   assertEqual "govState after vote" govState1 expectedGovernance1
 
   let
-    epochState0 = (def :: EpochState era) & esPpL .~ pp pf & esLStateL .~ ledgerState1
+    epochState0 =
+      (def :: EpochState era)
+        & curPParamsEpochStateL .~ pp pf
+        & esLStateL .~ ledgerState1
     poolDistr =
       PoolDistr
         ( Map.fromList

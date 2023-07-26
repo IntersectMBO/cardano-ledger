@@ -79,6 +79,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   VState (..),
   completeRupd,
+  curPParamsEpochStateL,
+  prevPParamsEpochStateL,
   smartUTxOState,
  )
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
@@ -96,6 +98,8 @@ import qualified Data.Maybe as Maybe
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (Text)
 import GHC.Natural (Natural)
+import Lens.Micro ((&), (.~))
+import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PrettyC (..),
   credSummary,
@@ -239,7 +243,14 @@ ledgerStateZero :: forall era. Reflect era => LedgerState era
 ledgerStateZero = LedgerState uTxOStateZero dPStateZero
 
 epochStateZero :: Reflect era => EpochState era
-epochStateZero = EpochState accountStateZero emptySnapShots ledgerStateZero pParamsZero pParamsZero nonMyopicZero
+epochStateZero =
+  EpochState
+    accountStateZero
+    emptySnapShots
+    ledgerStateZero
+    nonMyopicZero
+    & curPParamsEpochStateL .~ pParamsZero
+    & prevPParamsEpochStateL .~ pParamsZero
 
 newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
@@ -342,9 +353,9 @@ instance Reflect era => Extract (EpochState era) era where
       (mAccountState x)
       (mSnapshots x)
       (extract x)
-      (mPParams x)
-      (mPParams x)
       nonMyopicZero
+      & curPParamsEpochStateL .~ mPParams x
+      & prevPParamsEpochStateL .~ mPParams x
 
 instance forall era. Reflect era => Extract (NewEpochState era) era where
   extract x =
@@ -353,11 +364,11 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (BlocksMade (mBprev x))
       (BlocksMade (mBcur x))
       (extract x)
-      (Complete <$> (mRu x))
+      (Complete <$> mRu x)
       (PoolDistr (mPoolDistr x))
       (stashedAVVMAddressesZero (reify :: Proof era))
 
-abstract :: NewEpochState era -> ModelNewEpochState era
+abstract :: EraGovernance era => NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
@@ -369,7 +380,7 @@ abstract x =
     , mMutFee = Map.empty
     , mAccountState = (esAccountState . nesEs) x
     , mPoolDistr = (unPoolDistr . nesPd) x
-    , mPParams = (esPp . nesEs) x
+    , mPParams = (view curPParamsEpochStateL . nesEs) x
     , mDeposited = (utxosDeposited . lsUTxOState . esLState . nesEs) x
     , mFees = (utxosFees . lsUTxOState . esLState . nesEs) x
     , mCount = 0

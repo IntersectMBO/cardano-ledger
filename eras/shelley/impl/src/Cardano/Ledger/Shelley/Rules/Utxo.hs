@@ -300,14 +300,14 @@ instance
   , EraUTxO era
   , ShelleyEraTxBody era
   , EraGovernance era
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   , ExactEra ShelleyEra era
   , Tx era ~ ShelleyTx era
   , Show (ShelleyTx era)
   , Embed (EraRule "PPUP" era) (ShelleyUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
@@ -379,10 +379,10 @@ utxoInductive ::
   , PredicateFailure (utxo era) ~ ShelleyUtxoPredFailure era
   , Event (utxo era) ~ UtxoEvent era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do

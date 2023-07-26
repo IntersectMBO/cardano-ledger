@@ -48,8 +48,8 @@ maryTranslationTests =
     [ testProperty "Tx compatibility" $
         translateEraEncoding @Mary @S.ShelleyTx () toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
-    , testProperty "ShelleyPPUPState compatibility" $
-        translateEraEncoding @Mary @S.ShelleyPPUPState () toCBOR toCBOR
+    , testProperty "ShelleyGovState compatibility" $
+        translateEraEncoding @Mary @S.ShelleyGovState () toCBOR toCBOR
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
     , testProperty "UTxO compatibility" $
         translateEraEncoding @Mary @S.UTxO () toCBOR toCBOR

@@ -22,21 +22,22 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
+import Cardano.Ledger.Shelley.Governance (EraGovernance)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState,
   InstantaneousRewards (..),
   RewardAccounts,
   certDState,
+  curPParamsEpochStateL,
   dsIRewards,
   dsUnified,
   esAccountState,
   esLState,
   esNonMyopic,
-  esPp,
-  esPrevPp,
   esSnapshots,
   lsCertState,
+  prevPParamsEpochStateL,
   rewards,
   pattern EpochState,
  )
@@ -55,8 +56,8 @@ import Control.State.Transition (
 import Data.Default.Class (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyMirPredFailure era
@@ -71,7 +72,12 @@ data ShelleyMirEvent era
 
 instance NoThunks (ShelleyMirPredFailure era)
 
-instance (Typeable era, Default (EpochState era)) => STS (ShelleyMIR era) where
+instance
+  ( Default (EpochState era)
+  , EraGovernance era
+  ) =>
+  STS (ShelleyMIR era)
+  where
   type State (ShelleyMIR era) = EpochState era
   type Signal (ShelleyMIR era) = ()
   type Environment (ShelleyMIR era) = ()
@@ -90,22 +96,25 @@ instance (Typeable era, Default (EpochState era)) => STS (ShelleyMIR era) where
         )
     ]
 
-mirTransition :: forall era. TransitionRule (ShelleyMIR era)
+mirTransition ::
+  forall era.
+  EraGovernance era =>
+  TransitionRule (ShelleyMIR era)
 mirTransition = do
   TRC
     ( _
-      , EpochState
+      , es@EpochState
           { esAccountState = acnt
           , esSnapshots = ss
           , esLState = ls
-          , esPrevPp = pr
-          , esPp = pp
           , esNonMyopic = nm
           }
       , ()
       ) <-
     judgmentContext
-  let dpState = lsCertState ls
+  let pr = es ^. prevPParamsEpochStateL
+      pp = es ^. curPParamsEpochStateL
+      dpState = lsCertState ls
       ds = certDState dpState
       rewards' = rewards ds
       reserves = asReserves acnt
@@ -138,8 +147,6 @@ mirTransition = do
                         }
                   }
             }
-          pr
-          pp
           nm
     else do
       tellEvent $
@@ -158,9 +165,9 @@ mirTransition = do
                       ds {dsIRewards = emptyInstantaneousRewards}
                   }
             }
-          pr
-          pp
           nm
+          & prevPParamsEpochStateL .~ pr
+          & curPParamsEpochStateL .~ pp
 
 emptyInstantaneousRewards :: InstantaneousRewards c
 emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty mempty mempty

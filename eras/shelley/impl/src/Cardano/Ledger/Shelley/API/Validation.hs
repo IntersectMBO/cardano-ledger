@@ -33,7 +33,8 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState)
+import Cardano.Ledger.Shelley.Core (EraGovernance)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Rules ()
@@ -44,6 +45,7 @@ import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 {-------------------------------------------------------------------------------
@@ -63,6 +65,7 @@ class
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , EncCBORGroup (TxSeq era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , EraGovernance era
   ) =>
   ApplyBlock era
   where
@@ -196,6 +199,7 @@ chainChecks = STS.chainChecks
 -------------------------------------------------------------------------------}
 
 mkBbodyEnv ::
+  EraGovernance era =>
   NewEpochState era ->
   STS.BbodyEnv era
 mkBbodyEnv
@@ -203,12 +207,12 @@ mkBbodyEnv
     { LedgerState.nesEs
     } =
     STS.BbodyEnv
-      { STS.bbodyPp = LedgerState.esPp nesEs
+      { STS.bbodyPp = nesEs ^. curPParamsEpochStateL
       , STS.bbodyAccount = LedgerState.esAccountState nesEs
       }
 
 updateNewEpochState ::
-  LedgerState era ~ State (EraRule "LEDGERS" era) =>
+  (LedgerState era ~ State (EraRule "LEDGERS" era), EraGovernance era) =>
   NewEpochState era ->
   STS.ShelleyBbodyState era ->
   NewEpochState era

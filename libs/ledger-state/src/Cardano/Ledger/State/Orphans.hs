@@ -114,9 +114,9 @@ deriving via Enc Ptr instance PersistField Ptr
 
 deriving via Enc Ptr instance PersistFieldSql Ptr
 
-deriving via Enc (ShelleyPPUPState CurrentEra) instance PersistField (ShelleyPPUPState CurrentEra)
+deriving via Enc (ShelleyGovState CurrentEra) instance PersistField (ShelleyGovState CurrentEra)
 
-deriving via Enc (ShelleyPPUPState CurrentEra) instance PersistFieldSql (ShelleyPPUPState CurrentEra)
+deriving via Enc (ShelleyGovState CurrentEra) instance PersistFieldSql (ShelleyGovState CurrentEra)
 
 deriving via Enc (AlonzoTxOut CurrentEra) instance PersistField (AlonzoTxOut CurrentEra)
 

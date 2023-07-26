@@ -86,7 +86,7 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   NewEpochState (..),
   PState (..),
   RewardUpdate (..),
-  ShelleyPPUPState (..),
+  ShelleyGovState (..),
   UTxOState (..),
   VState (..),
  )

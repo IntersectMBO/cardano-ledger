@@ -18,9 +18,9 @@ import Cardano.Ledger.Block (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  EpochState (..),
   NewEpochState (..),
   PState (..),
+  curPParamsEpochStateL,
   psFutureStakePoolParams,
   psStakePoolParams,
  )
@@ -69,7 +69,6 @@ import Test.Tasty.QuickCheck (testProperty)
 tests ::
   forall era.
   ( EraGen era
-  , EraGovernance era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
@@ -100,7 +99,7 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
     (chainSt', poolTr) = poolTraceFromBlock chainSt block
     bhb = bhbody $ bheader block
     currentEpoch = (epochFromSlotNo . bheaderSlotNo) bhb
-    maxEpoch = (view ppEMaxL . esPp . nesEs . chainNes) chainSt'
+    maxEpoch = (view ppEMaxL . view curPParamsEpochStateL . nesEs . chainNes) chainSt'
 
 -- | Check that a newly registered pool key is registered and not
 -- in the retiring map.

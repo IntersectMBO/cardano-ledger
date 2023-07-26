@@ -44,7 +44,7 @@ import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.Shelley.Rules (ShelleyPPUPState (..), ShelleyUTXOW, ShelleyUtxowPredFailure (..), UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (ShelleyGovState (..), ShelleyUTXOW, ShelleyUtxowPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
@@ -133,7 +133,12 @@ utxoState0 =
     { utxosUtxo = utxo0
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
-    , utxosGovernance = ShelleyPPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
+    , utxosGovernance =
+        ShelleyGovState
+          (ProposedPPUpdates mempty)
+          (ProposedPPUpdates mempty)
+          def
+          def
     , utxosStakeDistr = mempty
     }
 
@@ -149,7 +154,12 @@ utxoState1 =
     { utxosUtxo = UTxO $ Map.fromList [bobResult, aliceResult]
     , utxosDeposited = Coin 0
     , utxosFees = Coin 10
-    , utxosGovernance = ShelleyPPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
+    , utxosGovernance =
+        ShelleyGovState
+          (ProposedPPUpdates mempty)
+          (ProposedPPUpdates mempty)
+          def
+          def
     , utxosStakeDistr = IStake mempty mempty
     }
   where

@@ -60,7 +60,7 @@ totalAdaPotsES ::
   EraTxOut era =>
   EpochState era ->
   AdaPots
-totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
+totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _) =
   AdaPots
     { treasuryAdaPot = treasury_
     , reservesAdaPot = reserves_

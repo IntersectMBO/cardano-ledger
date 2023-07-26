@@ -1762,14 +1762,12 @@ showProtver :: ProtVer -> String
 showProtver (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 
 pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
-pcEpochState proof es@(EpochState (AccountState tre res) sss ls ppp pp _) =
+pcEpochState proof es@(EpochState (AccountState tre res) sss ls _) =
   ppRecord
     "EpochState"
     [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
     , ("SnapShots", pcSnapShots sss)
     , ("LedgerState", pcLedgerState proof ls)
-    , ("prevparams", pcPParamsSynopsis proof ppp)
-    , ("params", pcPParamsSynopsis proof pp)
     , ("AdaPots", pcAdaPot es)
     ]
 

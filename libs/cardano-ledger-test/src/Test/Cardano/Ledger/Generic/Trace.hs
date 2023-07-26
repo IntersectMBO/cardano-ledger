@@ -51,6 +51,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
+  curPParamsEpochStateL,
+  prevPParamsEpochStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerPredFailure (..),
@@ -81,7 +83,7 @@ import Data.Vector (Vector, (!))
 import qualified Data.Vector as Vector
 import Debug.Trace
 import GHC.Word (Word64)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Prettyprinter (hsep, parens, vsep)
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
@@ -212,10 +214,10 @@ makeEpochState gstate ledgerstate =
     { esAccountState = AccountState (getTreasury gstate) (getReserves gstate)
     , esSnapshots = snaps ledgerstate
     , esLState = ledgerstate
-    , esPrevPp = gePParams (gsGenEnv gstate)
-    , esPp = gePParams (gsGenEnv gstate)
     , esNonMyopic = def
     }
+    & prevPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
+    & curPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
 
 snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (CertState _ pstate dstate)) =
@@ -288,7 +290,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
           , -- ppString "===================================",
             -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams,
             ppString "====================================="
-          , ppString ("Protocol Parameters\n" ++ show (esPp epochstate))
+          , ppString ("Protocol Parameters\n" ++ show (epochstate ^. curPParamsEpochStateL))
           ]
 
 badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (EraCrypto era))

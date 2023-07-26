@@ -45,6 +45,7 @@ import Cardano.Ledger.EpochBoundary (
   sumStakePerPool,
  )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
+import Cardano.Ledger.Shelley.Governance (EraGovernance)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.PoolRank (
@@ -99,7 +100,7 @@ import Lens.Micro ((^.))
 
 startStep ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
   EpochState era ->
@@ -107,7 +108,7 @@ startStep ::
   ActiveSlotCoeff ->
   Word64 ->
   PulsingRewUpdate (EraCrypto era)
-startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
+startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls nm) maxSupply asc secparam =
   let SnapShot stake delegs poolParams = ssStakeGo ss
       numStakeCreds, k :: Rational
       numStakeCreds = fromIntegral (VMap.size $ unStake stake)
@@ -129,6 +130,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       Coin reserves = asReserves acnt
       ds = certDState $ lsCertState ls
       -- reserves and rewards change
+      pr = es ^. curPParamsEpochStateL
       deltaR1 =
         rationalToCoinViaFloor $
           min 1 eta
@@ -301,7 +303,7 @@ completeRupd
 --   This function is not used in the rules, so it ignores RewardEvents
 createRUpd ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
   EpochState era ->
@@ -320,7 +322,7 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
 --
 -- This is used in the rewards calculation, and for API endpoints for pool ranking.
 circulation :: EpochState era -> Coin -> Coin
-circulation (EpochState acnt _ _ _ _ _) supply =
+circulation (EpochState acnt _ _ _) supply =
   supply <-> asReserves acnt
 
 decayFactor :: Float

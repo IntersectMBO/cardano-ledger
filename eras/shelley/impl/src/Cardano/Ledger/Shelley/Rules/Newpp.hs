@@ -42,11 +42,11 @@ import Control.State.Transition (
  )
 import Data.Default.Class (Default, def)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewppState era
-  = NewppState (PParams era) (ShelleyPPUPState era)
+  = NewppState (PParams era) (ShelleyGovState era)
 
 data NewppEnv era
   = NewppEnv
@@ -64,7 +64,7 @@ instance NoThunks (ShelleyNewppPredFailure era)
 
 instance
   ( EraPParams era
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyNEWPP era)
   where
@@ -75,13 +75,13 @@ instance
   type PredicateFailure (ShelleyNEWPP era) = ShelleyNewppPredFailure era
   transitionRules = [newPpTransition]
 
-instance Default (PParams era) => Default (ShelleyNewppState era) where
+instance EraPParams era => Default (ShelleyNewppState era) where
   def = NewppState def def
 
 newPpTransition ::
   forall era.
   ( EraPParams era
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
@@ -109,12 +109,15 @@ newPpTransition = do
 -- provided the new proposals can follow (otherwise reset them).
 updatePpup ::
   ( EraPParams era
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   GovernanceState era ->
   PParams era ->
-  ShelleyPPUPState era
-updatePpup ppupSt pp = ShelleyPPUPState ps emptyPPPUpdates
+  ShelleyGovState era
+updatePpup ppupSt pp =
+  ppupSt
+    & proposalsL .~ ps
+    & futureProposalsL .~ emptyPPPUpdates
   where
     ProposedPPUpdates newProposals = futureProposals ppupSt
     goodPV ppu =

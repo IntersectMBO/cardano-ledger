@@ -35,6 +35,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
@@ -87,7 +88,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
       sourceSignalTargets ledgerTr
   where
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock chainSt block
-    pp = (esPp . nesEs . chainNes) tickedChainSt
+    pp = (view curPParamsEpochStateL . nesEs . chainNes) tickedChainSt
     alonzoSpecificPropsLEDGER :: SourceSignalTarget (AlonzoLEDGER A) -> Property
     alonzoSpecificPropsLEDGER
       SourceSignalTarget

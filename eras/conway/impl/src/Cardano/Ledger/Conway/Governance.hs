@@ -43,6 +43,8 @@ module Cardano.Ledger.Conway.Governance (
   cgRatifyL,
   ensConstitutionL,
   rsEnactStateL,
+  curPParamsConwayGovStateL,
+  prevPParamsConwayGovStateL,
   constitutionHashL,
   constitutionScriptL,
 ) where
@@ -186,6 +188,7 @@ data EnactState era = EnactState
   -- ^ Hash of the Constitution
   , ensProtVer :: !ProtVer
   , ensPParams :: !(PParams era)
+  , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
   , ensWithdrawals :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
   }
@@ -194,17 +197,24 @@ data EnactState era = EnactState
 ensConstitutionL :: Lens' (EnactState era) (Constitution era)
 ensConstitutionL = lens ensConstitution (\x y -> x {ensConstitution = y})
 
+ensPParamsL :: Lens' (EnactState era) (PParams era)
+ensPParamsL = lens ensPParams (\es x -> es {ensPParams = x})
+
+ensPrevPParamsL :: Lens' (EnactState era) (PParams era)
+ensPrevPParamsL = lens ensPrevPParams (\es x -> es {ensPrevPParams = x})
+
 instance EraPParams era => ToJSON (EnactState era) where
   toJSON = object . toEnactStatePairs
   toEncoding = pairs . mconcat . toEnactStatePairs
 
 toEnactStatePairs :: (KeyValue a, EraPParams era) => EnactState era -> [a]
-toEnactStatePairs cg@(EnactState _ _ _ _ _ _) =
+toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
   let EnactState {..} = cg
    in [ "committee" .= ensCommittee
       , "constitution" .= ensConstitution
       , "protVer" .= ensProtVer
       , "pparams" .= ensPParams
+      , "prevPParams" .= ensPParams
       , "treasury" .= ensTreasury
       , "withdrawals" .= ensWithdrawals
       ]
@@ -220,6 +230,7 @@ instance EraPParams era => Default (EnactState era) where
       def
       (ProtVer (eraProtVerLow @era) 0)
       def
+      def
       (Coin 0)
       def
 
@@ -227,6 +238,7 @@ instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR =
     decode $
       RecD EnactState
+        <! From
         <! From
         <! From
         <! From
@@ -242,6 +254,7 @@ instance EraPParams era => EncCBOR (EnactState era) where
         !> To ensConstitution
         !> To ensProtVer
         !> To ensPParams
+        !> To ensPrevPParams
         !> To ensTreasury
         !> To ensWithdrawals
 
@@ -323,6 +336,12 @@ cgGovL = lens cgGov (\x y -> x {cgGov = y})
 cgRatifyL :: Lens' (ConwayGovernance era) (RatifyState era)
 cgRatifyL = lens cgRatify (\x y -> x {cgRatify = y})
 
+curPParamsConwayGovStateL :: Lens' (ConwayGovernance era) (PParams era)
+curPParamsConwayGovStateL = cgRatifyL . rsEnactStateL . ensPParamsL
+
+prevPParamsConwayGovStateL :: Lens' (ConwayGovernance era) (PParams era)
+prevPParamsConwayGovStateL = cgRatifyL . rsEnactStateL . ensPrevPParamsL
+
 instance EraPParams era => DecCBOR (ConwayGovernance era) where
   decCBOR =
     decode $
@@ -363,3 +382,7 @@ toConwayGovernancePairs cg@(ConwayGovernance _ _) =
 instance EraPParams (ConwayEra c) => EraGovernance (ConwayEra c) where
   type GovernanceState (ConwayEra c) = ConwayGovernance (ConwayEra c)
   getConstitutionHash g = Just $ g ^. cgRatifyL . rsEnactStateL . ensConstitutionL . constitutionHashL
+
+  curPParamsGovStateL = curPParamsConwayGovStateL
+
+  prevPParamsGovStateL = prevPParamsConwayGovStateL

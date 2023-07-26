@@ -30,18 +30,20 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (utxosDeposited, utxosGovernance),
   asReserves,
+  curPParamsEpochStateL,
   esAccountState,
   esLState,
+  esLStateL,
   esNonMyopic,
-  esPp,
-  esPrevPp,
   esSnapshots,
   lsCertState,
   lsUTxOState,
+  lsUTxOStateL,
   obligationCertState,
   pattern CertState,
   pattern EpochState,
  )
+import Cardano.Ledger.Shelley.LedgerState.Types (esAccountStateL, prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
@@ -65,6 +67,7 @@ import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 type UpecPredFailure era = UpecPredFailurePV (ProtVerLow era) era
@@ -107,7 +110,7 @@ data ShelleyEpochEvent era
 instance
   ( EraTxOut era
   , EraGovernance era
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   , Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
@@ -155,23 +158,24 @@ epochTransition ::
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
+  , EraGovernance era
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do
   TRC
     ( _
-      , EpochState
+      , es@EpochState
           { esAccountState = acnt
           , esSnapshots = ss
           , esLState = ls
-          , esPrevPp = pr
-          , esPp = pp
           , esNonMyopic = nm
           }
       , e
       ) <-
     judgmentContext
+  let pp = es ^. curPParamsEpochStateL
+  let pr = es ^. prevPParamsEpochStateL
   let utxoSt = lsUTxOState ls
   let CertState vstate pstate dstate = lsCertState ls
   ss' <-
@@ -194,9 +198,9 @@ epochTransition = do
           acnt'
           ss'
           (ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState})
-          pr
-          pp
           nm
+          & prevPParamsEpochStateL .~ pr
+          & curPParamsEpochStateL .~ pp
 
   UpecState pp' ppupSt' <-
     trans @(EraRule "UPEC" era) $
@@ -215,11 +219,10 @@ epochTransition = do
     acnt'' = acnt' {asReserves = reserves}
   pure $
     epochState'
-      { esAccountState = acnt''
-      , esLState = (esLState epochState') {lsUTxOState = utxoSt'''}
-      , esPrevPp = pp
-      , esPp = pp'
-      }
+      & esAccountStateL .~ acnt''
+      & esLStateL . lsUTxOStateL .~ utxoSt'''
+      & prevPParamsEpochStateL .~ pp
+      & curPParamsEpochStateL .~ pp'
 
 instance
   ( EraTxOut era

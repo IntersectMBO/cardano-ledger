@@ -61,8 +61,6 @@ goldenNewEpochStateExpectation
                 , snapShotEnc ssStakeGo
                 , E ssFee
                 ]
-            , E esPrevPp
-            , E esPp
             , Ev ver esNonMyopic
             ]
         , Ev ver nesRu

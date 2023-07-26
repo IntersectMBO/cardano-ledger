@@ -49,7 +49,8 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
+import Cardano.Ledger.Shelley.Core (EraGovernance)
+import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
@@ -74,6 +75,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 
 -- | A newtype which indicates that a transaction has been validated against
@@ -191,6 +193,7 @@ type MempoolState era = LedgerState.LedgerState era
 --   included until a certain number of slots before the end of the epoch. A
 --   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
+  EraGovernance era =>
   NewEpochState era ->
   SlotNo ->
   MempoolEnv era
@@ -202,7 +205,7 @@ mkMempoolEnv
     Ledger.LedgerEnv
       { Ledger.ledgerSlotNo = slot
       , Ledger.ledgerIx = minBound
-      , Ledger.ledgerPp = LedgerState.esPp nesEs
+      , Ledger.ledgerPp = nesEs ^. curPParamsEpochStateL
       , Ledger.ledgerAccount = LedgerState.esAccountState nesEs
       }
 
@@ -269,7 +272,7 @@ instance
 
 -- | Old 'applyTxs'
 applyTxs ::
-  (ApplyTx era, MonadError (ApplyTxError era) m) =>
+  (ApplyTx era, MonadError (ApplyTxError era) m, EraGovernance era) =>
   Globals ->
   SlotNo ->
   Seq (Tx era) ->

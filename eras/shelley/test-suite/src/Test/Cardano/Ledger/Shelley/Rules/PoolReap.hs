@@ -69,7 +69,6 @@ tests ::
   forall era.
   ( ChainProperty era
   , EraGen era
-  , EraGovernance era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   ) =>
   TestTree

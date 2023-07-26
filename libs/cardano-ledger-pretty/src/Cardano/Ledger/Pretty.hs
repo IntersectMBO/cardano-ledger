@@ -682,12 +682,19 @@ ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
     , ("deltaTreasury", ppDeltaCoin dT)
     ]
 
-ppShelleyPPUPState :: PrettyA (PParamsUpdate era) => ShelleyPPUPState era -> PDoc
-ppShelleyPPUPState (ShelleyPPUPState p fp) =
+ppShelleyGovState ::
+  ( PrettyA (PParamsUpdate era)
+  , PrettyA (PParams era)
+  ) =>
+  ShelleyGovState era ->
+  PDoc
+ppShelleyGovState (ShelleyGovState p fp pp prev) =
   ppRecord
-    "Proposed ShelleyPPUPState"
+    "Proposed ShelleyGovState"
     [ ("proposals", ppProposedPPUpdates p)
     , ("futureProposals", ppProposedPPUpdates fp)
+    , ("prevPParams", prettyA prev)
+    , ("currentPParams", prettyA pp)
     ]
 
 ppPState :: PState c -> PDoc
@@ -754,14 +761,12 @@ ppEpochState ::
   ) =>
   EpochState era ->
   PDoc
-ppEpochState (EpochState acnt snap ls prev pp non) =
+ppEpochState (EpochState acnt snap ls non) =
   ppRecord
     "EpochState"
     [ ("accountState", ppAccountState acnt)
     , ("snapShots", ppSnapShots snap)
     , ("ledgerState", ppLedgerState ls)
-    , ("prevPParams", prettyA prev)
-    , ("currentPParams", prettyA pp)
     , ("nonMyopic", ppNonMyopic non)
     ]
 
@@ -838,10 +843,12 @@ instance
   prettyA = ppLedgerState
 
 instance
-  PrettyA (PParamsUpdate era) =>
-  PrettyA (ShelleyPPUPState era)
+  ( PrettyA (PParamsUpdate era)
+  , PrettyA (PParams era)
+  ) =>
+  PrettyA (ShelleyGovState era)
   where
-  prettyA = ppShelleyPPUPState
+  prettyA = ppShelleyGovState
 
 instance PrettyA (PState c) where
   prettyA = ppPState

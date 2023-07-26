@@ -14,7 +14,6 @@ module Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (
 import Cardano.Ledger.Block (bbody)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
@@ -63,7 +62,6 @@ import Test.Tasty.QuickCheck (testProperty)
 tests ::
   forall era ledger.
   ( EraGen era
-  , EraGovernance era
   , ChainProperty era
   , TestingLedger era ledger
   , QC.HasTrace (CHAIN era) (GenEnv era)

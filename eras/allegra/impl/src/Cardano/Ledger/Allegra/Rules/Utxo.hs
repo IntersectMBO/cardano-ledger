@@ -148,10 +148,10 @@ utxoTransition ::
   , Tx era ~ ShelleyTx era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
@@ -272,12 +272,12 @@ instance
   , Tx era ~ ShelleyTx era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   STS (AllegraUTXO era)
   where

@@ -4,11 +4,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -17,7 +14,7 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
   ShelleyPPUP,
   PpupEnv (..),
   ShelleyPpupPredFailure (..),
-  ShelleyPPUPState (..),
+  ShelleyGovState (..),
   PpupEvent (..),
   PredicateFailure,
   VotingPeriod (..),
@@ -121,7 +118,7 @@ instance NFData (ShelleyPpupPredFailure era)
 newtype PpupEvent era = NewEpoch EpochNo
 
 instance EraPParams era => STS (ShelleyPPUP era) where
-  type State (ShelleyPPUP era) = ShelleyPPUPState era
+  type State (ShelleyPPUP era) = ShelleyGovState era
   type Signal (ShelleyPPUP era) = Maybe (Update era)
   type Environment (ShelleyPPUP era) = PpupEnv era
   type BaseM (ShelleyPPUP era) = ShelleyBase
@@ -164,13 +161,23 @@ ppupTransitionNonEmpty :: EraPParams era => TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs _genDelegs)
-      , ShelleyPPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS)
+      , pps@( ShelleyGovState
+                (ProposedPPUpdates pupS)
+                (ProposedPPUpdates fpupS)
+                _
+                _
+              )
       , up
       ) <-
     judgmentContext
 
   case up of
-    Nothing -> pure $ ShelleyPPUPState (ProposedPPUpdates pupS) (ProposedPPUpdates fpupS)
+    Nothing ->
+      pure $
+        pps
+          { proposals = ProposedPPUpdates pupS
+          , futureProposals = ProposedPPUpdates fpupS
+          }
     Just (Update (ProposedPPUpdates pup) te) -> do
       eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
 
@@ -199,15 +206,17 @@ ppupTransitionNonEmpty = do
         then do
           currentEpoch == te ?! PPUpdateWrongEpoch currentEpoch te VoteForThisEpoch
           pure $
-            ShelleyPPUPState
-              (ProposedPPUpdates (eval (pupS ⨃ pup)))
-              (ProposedPPUpdates fpupS)
+            pps
+              { proposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+              , futureProposals = ProposedPPUpdates fpupS
+              }
         else do
           currentEpoch + 1 == te ?! PPUpdateWrongEpoch currentEpoch te VoteForNextEpoch
           pure $
-            ShelleyPPUPState
-              (ProposedPPUpdates pupS)
-              (ProposedPPUpdates (eval (fpupS ⨃ pup)))
+            pps
+              { proposals = ProposedPPUpdates pupS
+              , futureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
+              }
 
 type PPUPPredFailure era = PPUPPredFailurePV (ProtVerLow era) era
 

@@ -86,11 +86,11 @@ instance
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , EraGovernance era
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ Tx era
   , EncCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
   , Eq (PPUPPredFailure era)
@@ -127,11 +127,11 @@ utxosTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , EraGovernance era
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ Tx era
   , EncCBOR (PPUPPredFailure era)
   , Eq (PPUPPredFailure era)
@@ -212,8 +212,8 @@ babbageEvalScriptsTxValid ::
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
-  , GovernanceState era ~ ShelleyPPUPState era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext 'PlutusV1 era
   , ProtVerAtMost era 8
   ) =>

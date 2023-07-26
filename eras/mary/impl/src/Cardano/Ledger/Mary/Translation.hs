@@ -74,8 +74,6 @@ instance Crypto c => TranslateEra (MaryEra c) EpochState where
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
-        , esPrevPp = translateEra' ctxt $ esPrevPp es
-        , esPp = translateEra' ctxt $ esPp es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -109,12 +107,14 @@ instance Crypto c => TranslateEra (MaryEra c) ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =
     return $ ProposedPPUpdates $ Map.map (translateEra' ctxt) ppup
 
-instance Crypto c => TranslateEra (MaryEra c) ShelleyPPUPState where
+instance Crypto c => TranslateEra (MaryEra c) ShelleyGovState where
   translateEra ctxt ps =
     return
-      ShelleyPPUPState
+      ShelleyGovState
         { proposals = translateEra' ctxt $ proposals ps
         , futureProposals = translateEra' ctxt $ futureProposals ps
+        , sgovPrevPp = translateEra' ctxt $ sgovPrevPp ps
+        , sgovPp = translateEra' ctxt $ sgovPp ps
         }
 
 instance Crypto c => TranslateEra (MaryEra c) UTxOState where

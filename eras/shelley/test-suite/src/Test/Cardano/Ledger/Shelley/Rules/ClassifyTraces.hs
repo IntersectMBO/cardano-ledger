@@ -100,7 +100,6 @@ import qualified Test.Tasty.QuickCheck as TQC
 relevantCasesAreCovered ::
   forall era.
   ( EraGen era
-  , EraGovernance era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ProtVerAtMost era 8

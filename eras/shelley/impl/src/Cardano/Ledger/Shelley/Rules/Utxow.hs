@@ -72,6 +72,7 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
+import Cardano.Ledger.Shelley.Governance (EraGovernance (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
@@ -377,6 +378,7 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , ProtVerAtMost era 8
+  , EraGovernance era
   ) =>
   STS (ShelleyUTXOW era)
   where

@@ -42,8 +42,8 @@ allegraTranslationTests =
     [ testProperty "Tx compatibility" $
         translateEraEncoding @Allegra @S.ShelleyTx () toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
-    , testProperty "ShelleyPPUPState compatibility" $
-        translateEraEncoding @Allegra @S.ShelleyPPUPState () toCBOR toCBOR
+    , testProperty "ShelleyGovState compatibility" $
+        translateEraEncoding @Allegra @S.ShelleyGovState () toCBOR toCBOR
     , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)
     , testProperty "UTxO compatibility" $
         translateEraEncoding @Allegra @S.UTxO () toCBOR toCBOR

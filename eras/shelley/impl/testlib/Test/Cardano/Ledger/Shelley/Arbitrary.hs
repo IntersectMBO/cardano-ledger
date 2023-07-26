@@ -140,7 +140,6 @@ instance
 instance
   ( EraTxOut era
   , Arbitrary (TxOut era)
-  , Arbitrary (PParams era)
   , Arbitrary (GovernanceState era)
   ) =>
   Arbitrary (EpochState era)
@@ -148,8 +147,6 @@ instance
   arbitrary =
     EpochState
       <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -322,8 +319,14 @@ instance Crypto c => Arbitrary (FreeVars c) where
 -- Cardano.Ledger.Shelley.Rules ----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ShelleyPPUPState era) where
-  arbitrary = ShelleyPPUPState <$> arbitrary <*> arbitrary
+instance
+  ( Era era
+  , Arbitrary (PParamsUpdate era)
+  , Arbitrary (PParams era)
+  ) =>
+  Arbitrary (ShelleyGovState era)
+  where
+  arbitrary = ShelleyGovState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------

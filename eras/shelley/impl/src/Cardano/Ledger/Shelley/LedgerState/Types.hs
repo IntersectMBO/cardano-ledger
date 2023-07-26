@@ -113,8 +113,6 @@ data EpochState era = EpochState
   { esAccountState :: !AccountState
   , esSnapshots :: !(SnapShots (EraCrypto era))
   , esLState :: !(LedgerState era)
-  , esPrevPp :: !(PParams era)
-  , esPp :: !(PParams era)
   , esNonMyopic :: !(NonMyopic (EraCrypto era))
   -- ^ This field, esNonMyopic, does not appear in the formal spec
   -- and is not a part of the protocol. It is only used for providing
@@ -132,14 +130,14 @@ esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
 esLStateL :: Lens' (EpochState era) (LedgerState era)
 esLStateL = lens esLState (\x y -> x {esLState = y})
 
-esPrevPpL :: Lens' (EpochState era) (PParams era)
-esPrevPpL = lens esPrevPp (\x y -> x {esPrevPp = y})
-
-esPpL :: Lens' (EpochState era) (PParams era)
-esPpL = lens esPp (\x y -> x {esPp = y})
-
 esNonMyopicL :: Lens' (EpochState era) (NonMyopic (EraCrypto era))
 esNonMyopicL = lens esNonMyopic (\x y -> x {esNonMyopic = y})
+
+curPParamsEpochStateL :: EraGovernance era => Lens' (EpochState era) (PParams era)
+curPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovernanceL . curPParamsGovStateL
+
+prevPParamsEpochStateL :: EraGovernance era => Lens' (EpochState era) (PParams era)
+prevPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovernanceL . prevPParamsGovStateL
 
 deriving stock instance
   ( EraTxOut era
@@ -171,13 +169,11 @@ instance
   ) =>
   EncCBOR (EpochState era)
   where
-  encCBOR EpochState {esAccountState, esLState, esSnapshots, esPrevPp, esPp, esNonMyopic} =
+  encCBOR EpochState {esAccountState, esLState, esSnapshots, esNonMyopic} =
     encodeListLen 6
       <> encCBOR esAccountState
       <> encCBOR esLState -- We get better sharing when encoding ledger state before snaphots
       <> encCBOR esSnapshots
-      <> encCBOR esPrevPp
-      <> encCBOR esPp
       <> encCBOR esNonMyopic
 
 instance
@@ -192,10 +188,8 @@ instance
         esAccountState <- lift decCBOR
         esLState <- decSharePlusCBOR
         esSnapshots <- decSharePlusCBOR
-        esPrevPp <- lift decCBOR
-        esPp <- lift decCBOR
         esNonMyopic <- decShareLensCBOR _2
-        pure EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
+        pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
 
 instance (EraTxOut era, EraGovernance era) => ToCBOR (EpochState era) where
   toCBOR = toEraCBOR @era
@@ -214,13 +208,11 @@ toEpochStatePairs ::
   ) =>
   EpochState era ->
   [a]
-toEpochStatePairs es@(EpochState _ _ _ _ _ _) =
+toEpochStatePairs es@(EpochState _ _ _ _) =
   let EpochState {..} = es
    in [ "esAccountState" .= esAccountState
       , "esSnapshots" .= esSnapshots
       , "esLState" .= esLState
-      , "esPrevPp" .= esPrevPp
-      , "esPp" .= esPp
       , "esNonMyopic" .= esNonMyopic
       ]
 
@@ -587,10 +579,10 @@ instance EraGovernance era => Default (UTxOState era) where
   def = UTxOState mempty mempty mempty def mempty
 
 instance
-  (Default (LedgerState era), Default (PParams era)) =>
+  Default (LedgerState era) =>
   Default (EpochState era)
   where
-  def = EpochState def def def def def def
+  def = EpochState def def def def
 
 instance Default (UTxOState era) => Default (LedgerState era) where
   def = LedgerState def def

@@ -9,7 +9,7 @@ module Cardano.Ledger.Api.Governance (
   getProposedPPUpdates,
 
   -- * Shelley
-  ShelleyPPUPState (..),
+  ShelleyGovState (..),
   ProposedPPUpdates (..),
   emptyPPPUpdates,
 
@@ -61,7 +61,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Governance (
   EraGovernance (GovernanceState),
-  ShelleyPPUPState (..),
+  ShelleyGovState (..),
   emptyGovernanceState,
   getProposedPPUpdates,
  )

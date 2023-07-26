@@ -6,7 +6,7 @@ module Cardano.Ledger.Mary.PParams () where
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Era (MaryEra)
-import Cardano.Ledger.Shelley.Governance (EraGovernance (..), ShelleyPPUPState (..))
+import Cardano.Ledger.Shelley.Governance (EraGovernance (..), ShelleyGovState (..), curPParamsShelleyGovStateL, prevPParamsShelleyGovStateL)
 import Cardano.Ledger.Shelley.PParams
 import Data.Coerce
 import Lens.Micro
@@ -42,7 +42,16 @@ instance Crypto c => EraPParams (MaryEra c) where
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
 instance Crypto c => EraGovernance (MaryEra c) where
-  type GovernanceState (MaryEra c) = ShelleyPPUPState (MaryEra c)
-  emptyGovernanceState = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
+  type GovernanceState (MaryEra c) = ShelleyGovState (MaryEra c)
+  emptyGovernanceState =
+    ShelleyGovState
+      emptyPPPUpdates
+      emptyPPPUpdates
+      emptyPParams
+      emptyPParams
 
   getProposedPPUpdates = Just . proposals
+
+  curPParamsGovStateL = curPParamsShelleyGovStateL
+
+  prevPParamsGovStateL = prevPParamsShelleyGovStateL

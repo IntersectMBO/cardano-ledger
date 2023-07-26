@@ -85,7 +85,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   RewardUpdate (..),
   UTxOState (..),
   applyRUpd,
+  curPParamsEpochStateL,
   delegations,
+  prevPParamsEpochStateL,
   rewards,
   updateStakeDistribution,
  )
@@ -117,7 +119,8 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)
 
@@ -242,7 +245,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall era.
-  EraTx era =>
+  (EraTx era, EraGovernance era) =>
   TxBody era ->
   ChainState era ->
   ChainState era
@@ -258,7 +261,7 @@ newUTxO txb cs = cs {chainNes = nes'}
     utxoWithout = Map.withoutKeys utxo (txins @era txb)
     utxoDel = UTxO utxoToDel
     utxo' = UTxO (utxoWithout `Map.union` unUTxO utxoAdd)
-    sd' = updateStakeDistribution @era (esPp es) (utxosStakeDistr utxoSt) utxoDel utxoAdd
+    sd' = updateStakeDistribution @era (es ^. curPParamsEpochStateL) (utxosStakeDistr utxoSt) utxoDel utxoAdd
     utxoSt' = utxoSt {utxosUtxo = utxo', utxosStakeDistr = sd'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
@@ -448,7 +451,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 -- Remove a stake pool.
 reapPool ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   PoolParams (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -466,7 +469,7 @@ reapPool pool cs = cs {chainNes = nes'}
         , psStakePoolParams = Map.delete kh (psStakePoolParams ps)
         , psDeposits = Map.delete kh (psDeposits ps)
         }
-    pp = esPp es
+    pp = es ^. curPParamsEpochStateL
     ds = certDState dps
     RewardAcnt _ rewardAddr = ppRewardAcnt pool
     (rewards', unclaimed) =
@@ -585,7 +588,7 @@ pulserUpdate p cs = cs {chainNes = nes'}
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   RewardUpdate (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -672,7 +675,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall era.
-  (EraPParams era, ProtVerAtMost era 6) =>
+  (ProtVerAtMost era 6, EraGovernance era) =>
   Block (BHeader (EraCrypto era)) era ->
   ChainState era ->
   ChainState era
@@ -688,7 +691,7 @@ newEpoch b cs = cs'
     bh = bheader b
     bn = bheaderBlockNo . bhbody $ bh
     sn = bheaderSlotNo . bhbody $ bh
-    pp = esPp . nesEs $ nes
+    pp = view curPParamsEpochStateL . nesEs $ nes
     e = epochFromSlotNo . bheaderSlotNo . bhbody . bheader $ b
     nes' =
       nes
@@ -712,7 +715,7 @@ newEpoch b cs = cs'
 -- Set the current protocol parameter proposals.
 setCurrentProposals ::
   forall era.
-  GovernanceState era ~ ShelleyPPUPState era =>
+  GovernanceState era ~ ShelleyGovState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -734,7 +737,7 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
 -- Set the future protocol parameter proposals.
 setFutureProposals ::
   forall era.
-  GovernanceState era ~ ShelleyPPUPState era =>
+  GovernanceState era ~ ShelleyGovState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -756,6 +759,7 @@ setFutureProposals ps cs = cs {chainNes = nes'}
 -- Set the protocol parameters.
 setPParams ::
   forall era.
+  EraGovernance era =>
   PParams era ->
   ChainState era ->
   ChainState era
@@ -763,7 +767,7 @@ setPParams pp cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
     es = nesEs nes
-    es' = es {esPp = pp}
+    es' = es & curPParamsEpochStateL .~ pp
     nes' = nes {nesEs = es'}
 
 -- | = Set the Previous Protocol Proposals
@@ -771,6 +775,7 @@ setPParams pp cs = cs {chainNes = nes'}
 -- Set the previous protocol parameters.
 setPrevPParams ::
   forall era.
+  EraGovernance era =>
   PParams era ->
   ChainState era ->
   ChainState era
@@ -778,7 +783,7 @@ setPrevPParams pp cs = cs {chainNes = nes'}
   where
     nes = chainNes cs
     es = nesEs nes
-    es' = es {esPrevPp = pp}
+    es' = es & prevPParamsEpochStateL .~ pp
     nes' = nes {nesEs = es'}
 
 -- | = Set a future genesis delegation.

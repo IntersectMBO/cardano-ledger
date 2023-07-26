@@ -216,7 +216,7 @@ instance
   wrapEvent = EpochEvent
 
 instance
-  ( Era era
+  ( EraGovernance era
   , Default (EpochState era)
   , PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era
   , Event (EraRule "MIR" era) ~ ShelleyMirEvent era
@@ -229,13 +229,13 @@ instance
 -- ===========================================
 
 updateRewards ::
-  EraPParams era =>
+  EraGovernance era =>
   EpochState era ->
   EpochNo ->
   RewardUpdate (EraCrypto era) ->
   Rule (ShelleyNEWEPOCH era) 'Transition (EpochState era)
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
-  let totRs = sumRewards (esPrevPp es ^. ppProtocolVersionL) rs_
+  let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
   Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
   let !(!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)

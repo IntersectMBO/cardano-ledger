@@ -82,7 +82,6 @@ validateInput ::
   , API.ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era
-  , EraGovernance era
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -96,7 +95,6 @@ genValidateInput ::
   , API.ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era
-  , EraGovernance era
   ) =>
   Int ->
   IO (ValidateInput era)
@@ -108,9 +106,7 @@ genValidateInput n = do
 
 benchValidate ::
   forall era.
-  ( Era era
-  , API.ApplyBlock era
-  ) =>
+  API.ApplyBlock era =>
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
@@ -123,7 +119,7 @@ applyBlock ::
   ( EraTxOut era
   , API.ApplyBlock era
   , NFData (StashedAVVMAddresses era)
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   ValidateInput era ->
   Int ->
@@ -134,9 +130,7 @@ applyBlock (ValidateInput globals state (Block bh txs)) n =
     Left x -> error (show x)
 
 benchreValidate ::
-  ( Era era
-  , API.ApplyBlock era
-  ) =>
+  API.ApplyBlock era =>
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
@@ -180,7 +174,6 @@ genUpdateInputs ::
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
   , API.ApplyBlock era
-  , EraGovernance era
   ) =>
   Int ->
   IO (UpdateInputs (EraCrypto era))

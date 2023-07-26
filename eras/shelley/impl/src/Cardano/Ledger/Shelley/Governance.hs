@@ -11,11 +11,16 @@
 
 module Cardano.Ledger.Shelley.Governance (
   EraGovernance (..),
-  ShelleyPPUPState (..),
-  constitutionHashL,
-  constitutionScriptL,
+  ShelleyGovState (..),
   Constitution (..),
   ConstitutionData (..),
+  -- Lens
+  proposalsL,
+  futureProposalsL,
+  curPParamsShelleyGovStateL,
+  prevPParamsShelleyGovStateL,
+  constitutionHashL,
+  constitutionScriptL,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -24,7 +29,6 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   decodeNullStrictMaybe,
-  encodeListLen,
   encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -76,59 +80,136 @@ class
   getConstitutionHash :: GovernanceState era -> Maybe (SafeHash (EraCrypto era) ConstitutionData)
   getConstitutionHash = const Nothing
 
-instance ToExpr (PParamsUpdate era) => ToExpr (ShelleyPPUPState era)
+  -- | Lens for accessing protocol parameters
+  curPParamsGovStateL :: Lens' (GovernanceState era) (PParams era)
+
+  -- | Lens for accessing the future protocol parameters
+  prevPParamsGovStateL :: Lens' (GovernanceState era) (PParams era)
+
+instance
+  ( ToExpr (PParamsUpdate era)
+  , ToExpr (PParams era)
+  ) =>
+  ToExpr (ShelleyGovState era)
 
 instance Crypto c => EraGovernance (ShelleyEra c) where
-  type GovernanceState (ShelleyEra c) = ShelleyPPUPState (ShelleyEra c)
+  type GovernanceState (ShelleyEra c) = ShelleyGovState (ShelleyEra c)
 
   getProposedPPUpdates = Just . proposals
 
-data ShelleyPPUPState era = ShelleyPPUPState
+  curPParamsGovStateL = curPParamsShelleyGovStateL
+
+  prevPParamsGovStateL = prevPParamsShelleyGovStateL
+
+data ShelleyGovState era = ShelleyGovState
   { proposals :: !(ProposedPPUpdates era)
   , futureProposals :: !(ProposedPPUpdates era)
+  , sgovPp :: !(PParams era)
+  , sgovPrevPp :: !(PParams era)
   }
   deriving (Generic)
 
-deriving instance Show (PParamsUpdate era) => Show (ShelleyPPUPState era)
+proposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
+proposalsL = lens proposals (\sgov x -> sgov {proposals = x})
 
-deriving instance Eq (PParamsUpdate era) => Eq (ShelleyPPUPState era)
+futureProposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
+futureProposalsL = lens futureProposals (\sgov x -> sgov {futureProposals = x})
 
-instance NFData (PParamsUpdate era) => NFData (ShelleyPPUPState era)
+curPParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (PParams era)
+curPParamsShelleyGovStateL = lens sgovPp (\sps x -> sps {sgovPp = x})
 
-instance NoThunks (PParamsUpdate era) => NoThunks (ShelleyPPUPState era)
+prevPParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (PParams era)
+prevPParamsShelleyGovStateL = lens sgovPrevPp (\sps x -> sps {sgovPrevPp = x})
 
-instance (Era era, EncCBOR (PParamsUpdate era)) => EncCBOR (ShelleyPPUPState era) where
-  encCBOR (ShelleyPPUPState ppup fppup) =
-    encodeListLen 2 <> encCBOR ppup <> encCBOR fppup
+deriving instance
+  ( Show (PParamsUpdate era)
+  , Show (PParams era)
+  ) =>
+  Show (ShelleyGovState era)
+
+deriving instance
+  ( Eq (PParamsUpdate era)
+  , Eq (PParams era)
+  ) =>
+  Eq (ShelleyGovState era)
 
 instance
-  (Era era, DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (ShelleyPPUPState era)
+  ( NFData (PParamsUpdate era)
+  , NFData (PParams era)
+  ) =>
+  NFData (ShelleyGovState era)
+
+instance
+  ( NoThunks (PParamsUpdate era)
+  , NoThunks (PParams era)
+  ) =>
+  NoThunks (ShelleyGovState era)
+
+instance
+  ( Era era
+  , EncCBOR (PParamsUpdate era)
+  , EncCBOR (PParams era)
+  ) =>
+  EncCBOR (ShelleyGovState era)
+  where
+  encCBOR (ShelleyGovState ppup fppup pp fpp) =
+    encode $
+      Rec ShelleyGovState
+        !> To ppup
+        !> To fppup
+        !> To pp
+        !> To fpp
+
+instance
+  ( Era era
+  , DecCBOR (PParamsUpdate era)
+  , DecCBOR (PParams era)
+  ) =>
+  DecCBOR (ShelleyGovState era)
   where
   decCBOR =
     decode $
-      RecD ShelleyPPUPState
+      RecD ShelleyGovState
+        <! From
+        <! From
         <! From
         <! From
 
-instance (Era era, EncCBOR (PParamsUpdate era)) => ToCBOR (ShelleyPPUPState era) where
+instance
+  ( Era era
+  , EncCBOR (PParamsUpdate era)
+  , EncCBOR (PParams era)
+  ) =>
+  ToCBOR (ShelleyGovState era)
+  where
   toCBOR = toEraCBOR @era
 
-instance (Era era, DecCBOR (PParamsUpdate era)) => FromCBOR (ShelleyPPUPState era) where
+instance
+  ( Era era
+  , DecCBOR (PParamsUpdate era)
+  , DecCBOR (PParams era)
+  ) =>
+  FromCBOR (ShelleyGovState era)
+  where
   fromCBOR = fromEraCBOR @era
 
-instance EraPParams era => ToJSON (ShelleyPPUPState era) where
+instance EraPParams era => ToJSON (ShelleyGovState era) where
   toJSON = object . toPPUPStatePairs
   toEncoding = pairs . mconcat . toPPUPStatePairs
 
-toPPUPStatePairs :: (KeyValue a, EraPParams era) => ShelleyPPUPState era -> [a]
-toPPUPStatePairs ShelleyPPUPState {..} =
+toPPUPStatePairs :: (KeyValue a, EraPParams era) => ShelleyGovState era -> [a]
+toPPUPStatePairs ShelleyGovState {..} =
   [ "proposals" .= proposals
   , "futureProposals" .= futureProposals
   ]
 
-instance Default (ShelleyPPUPState era) where
-  def = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
+instance EraPParams era => Default (ShelleyGovState era) where
+  def =
+    ShelleyGovState
+      emptyPPPUpdates
+      emptyPPPUpdates
+      emptyPParams
+      emptyPParams
 
 data Constitution era = Constitution
   { constitutionHash :: !(SafeHash (EraCrypto era) ConstitutionData)

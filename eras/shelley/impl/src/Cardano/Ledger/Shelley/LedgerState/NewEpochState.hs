@@ -34,7 +34,10 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (keyTxRefunds, totalTxDeposits)
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
+  keyTxRefunds,
+  totalTxDeposits,
+ )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import Cardano.Ledger.UMap (RDPair (..), UMElem (..), UMap (..))
@@ -46,6 +49,7 @@ import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
 
 -- | This function returns the coin balance of a given pot, either the
@@ -66,7 +70,7 @@ getGKeys ::
 getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
-    EpochState _ _ ls _ _ _ = es
+    EpochState _ _ ls _ = es
     LedgerState _ (CertState _ _ DState {dsGenDelegs = (GenDelegs genDelegs)}) = ls
 
 -- | Creates the ledger state for an empty ledger which
@@ -136,6 +140,7 @@ reapRewards (UMap tmap ptrmap) withdrawals = UMap (Map.mapWithKey g tmap) ptrmap
 
 -- | Update new epoch state
 updateNES ::
+  EraGovernance era =>
   NewEpochState era ->
   BlocksMade (EraCrypto era) ->
   LedgerState era ->
@@ -145,17 +150,24 @@ updateNES
             _eL
             _bprev
             _
-            (EpochState acnt ss _ pr pp nm)
+            es@(EpochState acnt ss _ nm)
             _ru
             _pd
             _avvm
           )
   bcur
   ls =
-    oldNes
-      { nesBcur = bcur
-      , nesEs = EpochState acnt ss ls pr pp nm
-      }
+    let
+      pr = es ^. curPParamsEpochStateL
+      pp = es ^. prevPParamsEpochStateL
+     in
+      oldNes
+        { nesBcur = bcur
+        , nesEs =
+            EpochState acnt ss ls nm
+              & curPParamsEpochStateL .~ pr
+              & prevPParamsEpochStateL .~ pp
+        }
 
 returnRedeemAddrsToReserves ::
   forall era.

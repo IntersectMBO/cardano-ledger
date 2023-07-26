@@ -122,6 +122,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayGovState era)
 

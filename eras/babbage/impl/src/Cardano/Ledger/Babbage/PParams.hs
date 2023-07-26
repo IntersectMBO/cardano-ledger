@@ -232,9 +232,19 @@ instance Crypto c => BabbageEraPParams (BabbageEra c) where
   hkdCoinsPerUTxOByteL = lens bppCoinsPerUTxOByte (\pp x -> pp {bppCoinsPerUTxOByte = x})
 
 instance Crypto c => EraGovernance (BabbageEra c) where
-  type GovernanceState (BabbageEra c) = ShelleyPPUPState (BabbageEra c)
-  emptyGovernanceState = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
+  type GovernanceState (BabbageEra c) = ShelleyGovState (BabbageEra c)
+  emptyGovernanceState =
+    ShelleyGovState
+      emptyPPPUpdates
+      emptyPPPUpdates
+      emptyPParams
+      emptyPParams
+
   getProposedPPUpdates = Just . proposals
+
+  curPParamsGovStateL = curPParamsShelleyGovStateL
+
+  prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
 instance Era era => EncCBOR (BabbagePParams Identity era) where
   encCBOR BabbagePParams {..} =

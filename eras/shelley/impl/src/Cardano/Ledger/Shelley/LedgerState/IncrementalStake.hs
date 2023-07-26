@@ -55,7 +55,11 @@ import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
-import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, aggregateRewards, filterRewards)
+import Cardano.Ledger.Shelley.Rewards (
+  aggregateCompactRewards,
+  aggregateRewards,
+  filterRewards,
+ )
 import Cardano.Ledger.UMap (
   UMElem,
   UMap (..),
@@ -256,7 +260,7 @@ aggregateActiveStake m1 m2 = assert (Map.valid m) m
 --   2) Adds to the Treasury of the AccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
 applyRUpd ::
-  EraPParams era =>
+  EraGovernance era =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   EpochState era
@@ -266,19 +270,19 @@ applyRUpd ru es =
 
 -- TO IncrementalStake
 applyRUpdFiltered ::
-  EraPParams era =>
+  EraGovernance era =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   (EpochState era, FilteredRewards era)
 applyRUpdFiltered
   ru
-  es@(EpochState as ss ls pr pp _nm) = (epochStateAns, filteredRewards)
+  es@(EpochState as ss ls _nm) = (epochStateAns, filteredRewards)
     where
-      !epochStateAns = EpochState as' ss ls' pr pp nm'
+      !epochStateAns = EpochState as' ss ls' nm'
       utxoState_ = lsUTxOState ls
       dpState = lsCertState ls
       dState = certDState dpState
-      prevPParams = esPrevPp es
+      prevPParams = es ^. curPParamsEpochStateL
       prevProVer = prevPParams ^. ppProtocolVersionL
       filteredRewards@FilteredRewards
         { frRegistered
@@ -346,11 +350,11 @@ filterAllRewards' rs protVer dState =
     (registered, shelleyIgnored) = filterRewards protVer regRU
 
 filterAllRewards ::
-  EraPParams era =>
+  EraGovernance era =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   EpochState era ->
   FilteredRewards era
 filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState
   where
-    prevPP = esPrevPp epochstate ^. ppProtocolVersionL
+    prevPP = epochstate ^. prevPParamsEpochStateL . ppProtocolVersionL
     dState = (certDState . lsCertState . esLState) epochstate
