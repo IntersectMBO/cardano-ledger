@@ -25,7 +25,7 @@ import Test.Tasty.HUnit (Assertion, assertFailure)
 translateEraPartial ::
   forall era f.
   (TranslateEra era f, Show (TranslationError era f), HasCallStack) =>
-  TranslationContext era ->
+  TranslationContextF era f ->
   f (PreviousEra era) ->
   f era
 translateEraPartial tc fe =
@@ -46,7 +46,7 @@ translateEraEncoding ::
   , TranslateEra era f
   , Show (TranslationError era f)
   ) =>
-  TranslationContext era ->
+  TranslationContextF era f ->
   (f era -> Plain.Encoding) ->
   (f (PreviousEra era) -> Plain.Encoding) ->
   f (PreviousEra era) ->
@@ -71,7 +71,7 @@ translateEraEncCBOR ::
   , Show (TranslationError era f)
   ) =>
   proxy era ->
-  TranslationContext era ->
+  TranslationContextF era f ->
   f (PreviousEra era) ->
   Assertion
 translateEraEncCBOR _ tc =

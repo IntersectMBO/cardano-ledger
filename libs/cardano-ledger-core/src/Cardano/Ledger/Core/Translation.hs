@@ -8,6 +8,7 @@
 module Cardano.Ledger.Core.Translation (
   PreviousEra,
   TranslationContext,
+  TranslationContextF,
   TranslationError,
   TranslateEra,
   translateEra,
@@ -75,16 +76,27 @@ class (Era era, Era (PreviousEra era)) => TranslateEra era f where
 
   type TranslationError era f = Void
 
+  -- | Per-era context that depends on @f@. Defaults to 'TranslationContext'.
+  --
+  -- Not every translation requires the full 'TranslationContext' associated
+  -- with @era@. If this is the case, this associated type can be instantiated
+  -- with a different type. Note however that composition of translations then
+  -- depends on whether a 'TranslationContextF' can be derived from other
+  -- 'TranslationContextF's.
+  type TranslationContextF era f :: Type
+
+  type TranslationContextF era f = TranslationContext era
+
   -- | Translate a type @f@ parameterised by the era from an era to the era
   -- after it.
   --
   -- The translation is a given the translation context of @era@.
   --
   -- A default instance is provided for when the two types are 'Coercible'.
-  translateEra :: TranslationContext era -> f (PreviousEra era) -> Except (TranslationError era f) (f era)
+  translateEra :: TranslationContextF era f -> f (PreviousEra era) -> Except (TranslationError era f) (f era)
   default translateEra ::
-    (Coercible (f (PreviousEra era)) (f era), TranslationContext era ~ ()) =>
-    TranslationContext era ->
+    (Coercible (f (PreviousEra era)) (f era), TranslationContextF era f ~ ()) =>
+    TranslationContextF era f ->
     f (PreviousEra era) ->
     Except (TranslationError era f) (f era)
   translateEra () = return . coerce
@@ -93,7 +105,7 @@ class (Era era, Era (PreviousEra era)) => TranslateEra era f where
 -- translation thus cannot fail.
 translateEra' ::
   (TranslateEra era f, TranslationError era f ~ Void) =>
-  TranslationContext era ->
+  TranslationContextF era f ->
   f (PreviousEra era) ->
   f era
 translateEra' ctxt = either absurd id . runExcept . translateEra ctxt
@@ -102,7 +114,7 @@ translateEra' ctxt = either absurd id . runExcept . translateEra ctxt
 -- the result to a 'Maybe'.
 translateEraMaybe ::
   (TranslateEra era f, TranslationError era f ~ ()) =>
-  TranslationContext era ->
+  TranslationContextF era f ->
   f (PreviousEra era) ->
   Maybe (f era)
 translateEraMaybe ctxt =
