@@ -99,7 +99,7 @@ unsafeMakeValidated = Validated
 translateValidated ::
   forall era f.
   TranslateEra era f =>
-  TranslationContext era ->
+  TranslationContextF era f ->
   Validated (f (PreviousEra era)) ->
   Except (TranslationError era f) (Validated (f era))
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
