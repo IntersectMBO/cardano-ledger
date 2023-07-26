@@ -41,14 +41,17 @@ import Cardano.Ledger.Binary (
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
+  decodeNullStrictMaybe,
   decodeRecordSum,
   encodeListLen,
+  encodeNullStrictMaybe,
   encodeWord8,
   toPlainDecoder,
   toPlainEncoding,
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Governance (Anchor)
 import Cardano.Ledger.Core (
   DRep,
   Era (EraCrypto),
@@ -145,8 +148,8 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
   mkResignCommitteeColdTxCert :: KeyHash 'CommitteeColdKey (EraCrypto era) -> TxCert era
   getResignCommitteeColdTxCert :: TxCert era -> Maybe (KeyHash 'CommitteeColdKey (EraCrypto era))
 
-  mkRegDRepTxCert :: Credential 'Voting (EraCrypto era) -> Coin -> TxCert era
-  getRegDRepTxCert :: TxCert era -> Maybe (Credential 'Voting (EraCrypto era), Coin)
+  mkRegDRepTxCert :: Credential 'Voting (EraCrypto era) -> Coin -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
+  getRegDRepTxCert :: TxCert era -> Maybe (Credential 'Voting (EraCrypto era), Coin, StrictMaybe (Anchor (EraCrypto era)))
 
   mkUnRegDRepTxCert :: Credential 'Voting (EraCrypto era) -> Coin -> TxCert era
   getUnRegDRepTxCert :: TxCert era -> Maybe (Credential 'Voting (EraCrypto era), Coin)
@@ -177,9 +180,9 @@ instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   getResignCommitteeColdTxCert (ConwayTxCertCommittee (ConwayResignCommitteeColdKey ck)) = Just ck
   getResignCommitteeColdTxCert _ = Nothing
 
-  mkRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayRegDRep cred deposit
+  mkRegDRepTxCert cred deposit mAnchor = ConwayTxCertCommittee $ ConwayRegDRep cred deposit mAnchor
   getRegDRepTxCert = \case
-    ConwayTxCertCommittee (ConwayRegDRep cred deposit) -> Just (cred, deposit)
+    ConwayTxCertCommittee (ConwayRegDRep cred deposit mAnchor) -> Just (cred, deposit, mAnchor)
     _ -> Nothing
 
   mkUnRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayUnRegDRep cred deposit
@@ -245,10 +248,11 @@ pattern RegDRepTxCert ::
   ConwayEraTxCert era =>
   Credential 'Voting (EraCrypto era) ->
   Coin ->
+  StrictMaybe (Anchor (EraCrypto era)) ->
   TxCert era
-pattern RegDRepTxCert cred deposit <- (getRegDRepTxCert -> Just (cred, deposit))
+pattern RegDRepTxCert cred deposit mAnchor <- (getRegDRepTxCert -> Just (cred, deposit, mAnchor))
   where
-    RegDRepTxCert cred deposit = mkRegDRepTxCert cred deposit
+    RegDRepTxCert cred deposit mAnchor = mkRegDRepTxCert cred deposit mAnchor
 
 pattern UnRegDRepTxCert ::
   ConwayEraTxCert era =>
@@ -317,13 +321,13 @@ instance NFData (ConwayDelegCert c)
 instance NoThunks (ConwayDelegCert c)
 
 data ConwayCommitteeCert c
-  = ConwayRegDRep !(Credential 'Voting c) !Coin
+  = ConwayRegDRep !(Credential 'Voting c) !Coin !(StrictMaybe (Anchor c))
   | ConwayUnRegDRep !(Credential 'Voting c) !Coin
   | ConwayAuthCommitteeHotKey !(KeyHash 'CommitteeColdKey c) !(Credential 'CommitteeHotKey c)
   | ConwayResignCommitteeColdKey !(KeyHash 'CommitteeColdKey c)
   deriving (Show, Generic, Eq)
 
-instance NFData (ConwayCommitteeCert c)
+instance Crypto c => NFData (ConwayCommitteeCert c)
 
 instance NoThunks (ConwayCommitteeCert c)
 
@@ -339,9 +343,9 @@ data ConwayTxCert era
   | ConwayTxCertCommittee !(ConwayCommitteeCert (EraCrypto era))
   deriving (Show, Generic, Eq)
 
-instance NFData (ConwayTxCert c)
+instance Crypto (EraCrypto era) => NFData (ConwayTxCert era)
 
-instance NoThunks (ConwayTxCert c)
+instance NoThunks (ConwayTxCert era)
 
 instance
   ( ShelleyEraTxCert era
@@ -391,7 +395,8 @@ conwayTxCertDelegDecoder = \case
   16 -> do
     cred <- decCBOR
     deposit <- decCBOR
-    pure (3, RegDRepTxCert cred deposit)
+    mAnchor <- decodeNullStrictMaybe decCBOR
+    pure (4, RegDRepTxCert cred deposit mAnchor)
   17 -> do
     cred <- decCBOR
     deposit <- decCBOR
@@ -479,11 +484,12 @@ encodeCommitteeHotKey = \case
     encodeListLen 2
       <> encodeWord8 15
       <> encCBOR cred
-  ConwayRegDRep cred deposit ->
-    encodeListLen 3
+  ConwayRegDRep cred deposit mAnchor ->
+    encodeListLen 4
       <> encodeWord8 16
       <> encCBOR cred
       <> encCBOR deposit
+      <> (encodeNullStrictMaybe encCBOR) mAnchor
   ConwayUnRegDRep cred deposit ->
     encodeListLen 3
       <> encodeWord8 17

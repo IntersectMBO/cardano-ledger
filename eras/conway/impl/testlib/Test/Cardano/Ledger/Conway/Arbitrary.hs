@@ -71,7 +71,7 @@ instance Era era => Arbitrary (ConwayTxCert era) where
 instance Crypto c => Arbitrary (ConwayCommitteeCert c) where
   arbitrary =
     oneof
-      [ ConwayRegDRep <$> arbitrary <*> arbitrary
+      [ ConwayRegDRep <$> arbitrary <*> arbitrary <*> arbitrary
       , ConwayUnRegDRep <$> arbitrary <*> arbitrary
       , ConwayAuthCommitteeHotKey <$> arbitrary <*> arbitrary
       , ConwayResignCommitteeColdKey <$> arbitrary

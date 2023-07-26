@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add an optional Anchor to the Conway DRep registration certificate #3576
 * Change EnactState.ensConstitution #3556
   * from `SafeHash (EraCrypto era) ByteString`
   * to `Constitution era`

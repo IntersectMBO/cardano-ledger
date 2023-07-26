@@ -138,7 +138,7 @@ conwayGovCertTransition = do
       ) <-
     judgmentContext
   case c of
-    ConwayRegDRep cred _deposit -> do
+    ConwayRegDRep cred _deposit _mAnchor -> do
       Set.notMember cred vsDReps ?! ConwayDRepAlreadyRegistered cred
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
       pure $ vState {vsDReps = Set.insert cred vsDReps}
