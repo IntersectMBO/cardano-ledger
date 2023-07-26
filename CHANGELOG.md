@@ -1,11 +1,52 @@
 # Changelog
 
-**THIS CHANGELOG HAS BEEN DEPRECATED**
+This changelog contains notable changes that made into each [`cardano-node` release](https://github.com/input-output-hk/cardano-node/releases),
+starting with version `8.0`. We also provide per-Haskell-package changelogs. Please see
+the `CHANGELOG.md` for each individual package for any changes relevant for developers.
 
-We have adopted per-Haskell-package changelogs. Please see the `CHANGELOG.md` for each
-individual package for any notable changes.
+If you are looking for the Ledger Releasing and Versioning Process then you can find it in
+[RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
-See the [REALEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd) for an up-to-date information about Releasing and Versioning Process.
+## 8.2.0
+
+- Restructure certificate interface
+- Conway related changes:
+  - Introduction of a `DRep` with the defaults that vote No and Abstain.
+  - Change `DCert` type to a `TxCert` type family and introduce new certificates
+  - Implement voting on `NewConstitution` by StakePools as the most basic example of voting.
+  - Implement query for getting `Constitution` hash from the ledger state.
+  - Change structure of Governance Procedures in the TxBody
+  - Fix `TICKF` rule, avoiding VRF verification and syncing issues
+  - Clear out TxOuts with zero value from the UTxO upon translation into Conway
+
+## 8.1.0
+
+- Plutus V3 support, only available in the conway ledger era.
+- `PState` is now parametric in era, not crypto.
+- Adjust for new conway era certificates.
+- Ledger `UMapCompact` is now `UMap`
+- Ledger types with names involving `DState` are renamed to `CertState`.
+
+## 8.0.0
+
+- The provenance for the reward calculation has been removed. The type signature to the API function `getRewardProvenance` has not changed, it just returns an empty provenance value.
+- We have created a Ledger API, with the aim of providing a user-friendly interface to the ledger libraries. See [here](https://github.com/input-output-hk/cardano-ledger/tree/b00e28698d9c7fbbeda1c9cfdd1238d3bc4569cf/libs/cardano-ledger-api).
+- The initial funds and staking in the Shelley genesis type (used only for testing) now use `ListMap` instead of `Map`.
+- There is a new `calculatePoolDistr'` function which is similar to `calculatePoolDistr` but has a new filter argument to only include the stake pool ids (stake pool key hashes) that are needed.
+- The ledger events are not guaranteed to appear in any given order within a block. For this reason, motivated by the use case in db-sync, the `TotalDeposits` event now includes a transaction ID and emits the change in deposits instead of the value.
+- We changed the way deposits are tracked. See [here](https://github.com/input-output-hk/cardano-ledger/blob/b00e28698d9c7fbbeda1c9cfdd1238d3bc4569cf/docs/adr/2022-12-05_003-track-individual-deposits.md) for the details.
+- We changed the API function Cardano.Ledger.Shelley.API.Wallet(`evaluateTransactionBalance`) to take `DPState` as input. This can no longer be computed without the `DPState`
+- Some noticeable changes have been made which will only become apparent starting at major protocol version 9:
+  - There is a new ledger era, namely `conway`.
+  - We now have the ability to more easily change serializations when the major protocol version changes. Though this change is not immediately visible to the node, it enables visible changes in the future. See [CIP-80](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0080) For the deprecation cycle.
+  - Pointer addresses will no longer accrue rewards starting with version 9.
+  - We fixed the incorrect conversion of the validity interval's upper bound in `transVITime`.
+  - Starting in version 9, duplicate keys in CBOR maps and sets are no longer allowed.
+  - Starting in version 9, `CostModel`s can now be deserialized from any map of Word8 values to lists of integers. Only valid cost models are actually converted to evaluation contexts that can be used. Errors and unrecognized language versions are stored in the `CostModel` type so that:
+      - They can accept cost models that they do not yet understand.
+      - Upon deserializing after a software update, new cost models are available from the prior serialization.
+
+# Deprecated changlog
 
 Below was the last `cardano-ledger` repository branch based release and we now have fully
 switched to [CHaPs](https://github.com/input-output-hk/cardano-haskell-packages).
