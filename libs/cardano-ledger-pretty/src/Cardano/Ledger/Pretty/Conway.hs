@@ -138,8 +138,8 @@ ppConwayTxCert = \case
 
 ppConwayCommitteeCert :: ConwayCommitteeCert c -> PDoc
 ppConwayCommitteeCert = \case
-  ConwayRegDRep cred deposit ->
-    ppSexp "ConwayRegDRep" [prettyA cred, prettyA deposit]
+  ConwayRegDRep cred deposit mAnchor ->
+    ppSexp "ConwayRegDRep" [prettyA cred, prettyA deposit, prettyA mAnchor]
   ConwayUnRegDRep cred deposit ->
     ppSexp "ConwayUnRegDRep" [prettyA cred, prettyA deposit]
   ConwayAuthCommitteeHotKey coldKey hotKey ->

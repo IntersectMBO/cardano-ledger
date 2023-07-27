@@ -304,7 +304,7 @@ stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
 ; GOVCERT
 reg_committee_hot_key_cert = (14, committee_cold_keyhash, committee_hot_keyhash)
 unreg_committee_hot_key_cert = (15, committee_cold_keyhash)
-reg_drep_cert = (16, voting_credential, coin)
+reg_drep_cert = (16, voting_credential, coin, anchor / null)
 unreg_drep_cert = (17, voting_credential, coin)
 
 
