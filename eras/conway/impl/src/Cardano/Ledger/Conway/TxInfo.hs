@@ -84,8 +84,16 @@ conwayTxInfo pp lang ei sysS utxo tx = do
     PlutusV2 -> babbageTxInfoV2 timeRange tx utxo
     PlutusV3 -> conwayTxInfoV3 timeRange tx utxo
   where
-    interval = tx ^. bodyTxL ^. vldtTxBodyL
+    interval = tx ^. bodyTxL . vldtTxBodyL
 
+
+-- | Changes from PlutusV2 TxInfo:
+--
+-- * `txInfoFee` no longer gets a zero ADA inserted into the field, sicne minting ADA is
+--   not possible.
+--
+-- * `txInfoDCert` is renamed to `txInfoCert`. Those certificates are no longer just
+--   delegation certificates, so @D@ prefix does not make sense.
 conwayTxInfoV3 ::
   forall era.
   ( EraTx era
@@ -114,10 +122,10 @@ conwayTxInfoV3 timeRange tx utxo = do
       , PV3.txInfoOutputs = outputs
       , PV3.txInfoReferenceInputs = refInputs
       , PV3.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
-      , -- Note that this translation is different from previous Plutus versions, sine we no
+      , -- Note that this translation is different from previous Plutus versions, since we no
         -- longer add a zero ADA value to the mint field during translation:
         PV3.txInfoMint = Alonzo.transMultiAsset (txBody ^. mintTxBodyL)
-      , PV3.txInfoDCert = toList $ fmap (unTxCertV3 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
+      , PV3.txInfoDCert = toList $ fmap (unTxCertV3 . conwayTransTxCert) (txBody ^. certsTxBodyL)
       , PV3.txInfoWdrl = PV3.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV3.txInfoValidRange = timeRange
       , PV3.txInfoSignatories =
@@ -133,3 +141,19 @@ conwayTxInfoV3 timeRange tx utxo = do
     fee = txBody ^. feeTxBodyL
     datpairs = Map.toList (unTxDats $ witnesses ^. datsTxWitsL)
     rdmrs = Map.toList (unRedeemers $ witnesses ^. rdmrsTxWitsL)
+
+
+-- conwayTransTxCert :: TxCert era -> V3.TxCert
+-- conwayTransTxCert = \case
+--   ShelleyTxCertDelegCert delegCert ->
+--     case delegCert of
+--       ShelleyRegCert stakeCred ->
+--         PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stakeCred))
+--       ShelleyUnRegCert stakeCred ->
+--         PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stakeCred))
+--       ShelleyDelegCert stakeCred keyHash ->
+--         PV1.DCertDelegDelegate (PV1.StakingHash (transStakeCred stakeCred)) (transKeyHash keyHash)
+--   ShelleyTxCertPool (RegPool PoolParams {ppId, ppVrf}) ->
+--     PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
+--   ShelleyTxCertPool (RetirePool keyHash (EpochNo i)) ->
+--     PV1.DCertPoolRetire (transKeyHash keyHash) (fromIntegral i)

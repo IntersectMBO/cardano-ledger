@@ -64,7 +64,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   PlutusDebugInfo (..),
   EraPlutusContext (..),
   PlutusWithContext (..),
-  transShelleyTxCert,
+  alonzoTransTxCert,
   PlutusTxCert (..),
   unTxCertV1,
   unTxCertV2,
@@ -78,6 +78,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   explainPlutusFailure,
   validPlutusdata,
   getTxOutDatum,
+  transShelleyTxCert,
 )
 where
 
@@ -438,24 +439,29 @@ class EraTxCert era => EraPlutusContext (l :: Language) era where
   transTxCert :: TxCert era -> PlutusTxCert l
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
-  transTxCert = TxCertPlutusV1 . transShelleyTxCert
+  transTxCert = TxCertPlutusV1 . alonzoTransTxCert
 
-transShelleyTxCert :: ShelleyTxCert era -> PV1.DCert
-transShelleyTxCert = \case
-  ShelleyTxCertDelegCert delegCert ->
-    case delegCert of
-      ShelleyRegCert stakeCred ->
-        PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stakeCred))
-      ShelleyUnRegCert stakeCred ->
-        PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stakeCred))
-      ShelleyDelegCert stakeCred keyHash ->
-        PV1.DCertDelegDelegate (PV1.StakingHash (transStakeCred stakeCred)) (transKeyHash keyHash)
-  ShelleyTxCertPool (RegPool PoolParams {ppId, ppVrf}) ->
+alonzoTransTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
+alonzoTransTxCert = \case
+  RegTxCert stakeCred ->
+    PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stakeCred))
+  UnRegTxCert stakeCred ->
+    PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stakeCred))
+  DelegStakeTxCert stakeCred keyHash ->
+    PV1.DCertDelegDelegate (PV1.StakingHash (transStakeCred stakeCred)) (transKeyHash keyHash)
+  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
     PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
-  ShelleyTxCertPool (RetirePool keyHash (EpochNo i)) ->
-    PV1.DCertPoolRetire (transKeyHash keyHash) (fromIntegral i)
-  ShelleyTxCertGenesisDeleg _ -> PV1.DCertGenesis
-  ShelleyTxCertMir _ -> PV1.DCertMir
+  RetirePoolTxCert poolId (EpochNo i) ->
+    PV1.DCertPoolRetire (transKeyHash poolId) (fromIntegral i)
+  GenesisDelegTxCert {} -> PV1.DCertGenesis
+  MirTxCert {} -> PV1.DCertMir
+
+transShelleyTxCert ::
+  (ShelleyEraTxCert era, ProtVerAtMost era 8, TxCert era ~ ShelleyTxCert era) =>
+  ShelleyTxCert era ->
+  PV1.DCert
+transShelleyTxCert = alonzoTransTxCert
+{-# DEPRECATED transShelleyTxCert "In favor of `alonzoTransTxCert`" #-}
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
@@ -548,7 +554,6 @@ alonzoTxInfo ::
   forall era.
   ( EraTx era
   , AlonzoEraTxBody era
-  , TxCert era ~ ShelleyTxCert era
   , Value era ~ MaryValue (EraCrypto era)
   , TxWits era ~ AlonzoTxWits era
   , EraPlutusContext 'PlutusV1 era
