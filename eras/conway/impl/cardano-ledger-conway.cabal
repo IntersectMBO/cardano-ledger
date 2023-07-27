@@ -99,10 +99,10 @@ library testlib
 
     build-depends:
         base,
+        cardano-data:testlib,
         cardano-ledger-binary,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-babbage:testlib,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-conway,
-        cardano-ledger-core,
         small-steps

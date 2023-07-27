@@ -327,7 +327,7 @@ abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl 
   , WppHash sih
   , AdHash adh
   , Txnetworkid net
-  , GovernanceProcs $ GovernanceProcedures (fromStrict vp) (fromStrict pp)
+  , GovernanceProcs $ GovernanceProcedures vp (fromStrict pp)
   ]
 abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdrl fee vldt up req mnt sih adh net) =
   [ Inputs inp

@@ -29,6 +29,7 @@ module Cardano.Ledger.Conway.Governance (
   Voter (..),
   Vote (..),
   VotingProcedure (..),
+  VotingProcedures (..),
   ProposalProcedure (..),
   GovernanceProcedures (..),
   Anchor (..),
@@ -73,6 +74,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   Vote (..),
   Voter (..),
   VotingProcedure (..),
+  VotingProcedures (..),
   govActionIdToText,
   indexedGovProps,
  )

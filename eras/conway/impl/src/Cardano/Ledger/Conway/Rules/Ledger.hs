@@ -273,7 +273,7 @@ ledgerTransition = do
 
   let govProcedures =
         GovernanceProcedures
-          { gpVotingProcedures = fromStrict $ txBody ^. votingProceduresTxBodyL
+          { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
           , gpProposalProcedures = fromStrict $ txBody ^. proposalProceduresTxBodyL
           }
   let govSt = utxosGovernance utxoSt

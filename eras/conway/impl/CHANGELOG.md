@@ -33,6 +33,13 @@
 * Add `rsRemoved` to `RatifyState`
 * Add `conwayProducedValue`
 * Changed the superclasses of `STS (ConwayUTXOS era)`
+* Add `VotingProcedures` type
+* Remove `vProcGovActionId` and `vProcVoter` from `VotingProcedure`
+* Change the type of `votingProceduresL` to return `VotingProcedures`, which is a nested Map
+  instead of a sequence, as before.
+* Change `GovernanceActionDoesNotExist` to `GovernanceActionsDoNotExist`, which now
+  reports all actions as a set, rather than one action per each individual failure.
+* Type of `gpVotingProcedures` in `GovernanceProcedures` was aslo changed to `GovernanceProcedures`
 
 ## 1.6.3.0
 

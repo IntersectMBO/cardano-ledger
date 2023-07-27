@@ -43,7 +43,7 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR, decodeRecordNamed, encodeListLen
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Encoding (EncCBOR (encCBOR))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedure)
+import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures)
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
@@ -56,7 +56,7 @@ import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 
 class BabbageEraTxBody era => ConwayEraTxBody era where
-  votingProceduresTxBodyL :: Lens' (TxBody era) (StrictSeq (VotingProcedure era))
+  votingProceduresTxBodyL :: Lens' (TxBody era) (VotingProcedures era)
   proposalProceduresTxBodyL :: Lens' (TxBody era) (StrictSeq (ProposalProcedure era))
 
 class BabbageEraPParams era => ConwayEraPParams era where

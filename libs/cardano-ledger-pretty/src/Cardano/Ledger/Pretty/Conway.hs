@@ -33,6 +33,7 @@ import Cardano.Ledger.Conway.Governance (
   Vote (..),
   Voter (..),
   VotingProcedure (..),
+  VotingProcedures (..),
  )
 import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure (..),
@@ -172,7 +173,7 @@ ppConwayTxBody txb =
     , ("script integrity hash", ppStrictMaybe ppSafeHash $ txb ^. scriptIntegrityHashTxBodyL)
     , ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash $ txb ^. auxDataHashTxBodyL)
     , ("network id", ppStrictMaybe ppNetwork $ txb ^. networkIdTxBodyL)
-    , ("voting procedures", ppStrictSeq prettyA $ txb ^. votingProceduresTxBodyL)
+    , ("voting procedures", prettyA $ unVotingProcedures (txb ^. votingProceduresTxBodyL))
     , ("proposal procedures", ppStrictSeq prettyA $ txb ^. proposalProceduresTxBodyL)
     ]
 
