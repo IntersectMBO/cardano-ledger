@@ -15,7 +15,7 @@
 module Cardano.Ledger.Conway.TxCert (
   ConwayTxCert (..),
   ConwayDelegCert (..),
-  ConwayCommitteeCert (..),
+  ConwayGovCert (..),
   Delegatee (..),
   ConwayEraTxCert (..),
   fromShelleyDelegCert,
@@ -172,22 +172,22 @@ instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   getRegDepositDelegTxCert (ConwayTxCertDeleg (ConwayRegDelegCert cred d c)) = Just (cred, d, c)
   getRegDepositDelegTxCert _ = Nothing
 
-  mkAuthCommitteeHotKeyTxCert ck hk = ConwayTxCertCommittee $ ConwayAuthCommitteeHotKey ck hk
-  getAuthCommitteeHotKeyTxCert (ConwayTxCertCommittee (ConwayAuthCommitteeHotKey ck hk)) = Just (ck, hk)
+  mkAuthCommitteeHotKeyTxCert ck hk = ConwayTxCertGov $ ConwayAuthCommitteeHotKey ck hk
+  getAuthCommitteeHotKeyTxCert (ConwayTxCertGov (ConwayAuthCommitteeHotKey ck hk)) = Just (ck, hk)
   getAuthCommitteeHotKeyTxCert _ = Nothing
 
-  mkResignCommitteeColdTxCert = ConwayTxCertCommittee . ConwayResignCommitteeColdKey
-  getResignCommitteeColdTxCert (ConwayTxCertCommittee (ConwayResignCommitteeColdKey ck)) = Just ck
+  mkResignCommitteeColdTxCert = ConwayTxCertGov . ConwayResignCommitteeColdKey
+  getResignCommitteeColdTxCert (ConwayTxCertGov (ConwayResignCommitteeColdKey ck)) = Just ck
   getResignCommitteeColdTxCert _ = Nothing
 
-  mkRegDRepTxCert cred deposit mAnchor = ConwayTxCertCommittee $ ConwayRegDRep cred deposit mAnchor
+  mkRegDRepTxCert cred deposit mAnchor = ConwayTxCertGov $ ConwayRegDRep cred deposit mAnchor
   getRegDRepTxCert = \case
-    ConwayTxCertCommittee (ConwayRegDRep cred deposit mAnchor) -> Just (cred, deposit, mAnchor)
+    ConwayTxCertGov (ConwayRegDRep cred deposit mAnchor) -> Just (cred, deposit, mAnchor)
     _ -> Nothing
 
-  mkUnRegDRepTxCert cred deposit = ConwayTxCertCommittee $ ConwayUnRegDRep cred deposit
+  mkUnRegDRepTxCert cred deposit = ConwayTxCertGov $ ConwayUnRegDRep cred deposit
   getUnRegDRepTxCert = \case
-    ConwayTxCertCommittee (ConwayUnRegDRep cred deposit) -> Just (cred, deposit)
+    ConwayTxCertGov (ConwayUnRegDRep cred deposit) -> Just (cred, deposit)
     _ -> Nothing
 
 pattern RegDepositTxCert ::
@@ -320,21 +320,21 @@ instance NFData (ConwayDelegCert c)
 
 instance NoThunks (ConwayDelegCert c)
 
-data ConwayCommitteeCert c
+data ConwayGovCert c
   = ConwayRegDRep !(Credential 'Voting c) !Coin !(StrictMaybe (Anchor c))
   | ConwayUnRegDRep !(Credential 'Voting c) !Coin
   | ConwayAuthCommitteeHotKey !(Credential 'CommitteeColdKey c) !(Credential 'CommitteeHotKey c)
   | ConwayResignCommitteeColdKey !(Credential 'CommitteeColdKey c)
   deriving (Show, Generic, Eq)
 
-instance Crypto c => NFData (ConwayCommitteeCert c)
+instance Crypto c => NFData (ConwayGovCert c)
 
-instance NoThunks (ConwayCommitteeCert c)
+instance NoThunks (ConwayGovCert c)
 
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
   | ConwayTxCertPool !(PoolCert (EraCrypto era))
-  | ConwayTxCertCommittee !(ConwayCommitteeCert (EraCrypto era))
+  | ConwayTxCertGov !(ConwayGovCert (EraCrypto era))
   deriving (Show, Generic, Eq)
 
 instance Crypto (EraCrypto era) => NFData (ConwayTxCert era)
@@ -417,7 +417,7 @@ instance (Era era, Val (Value era)) => EncCBOR (ConwayTxCert era) where
   encCBOR = \case
     ConwayTxCertDeleg delegCert -> encodeConwayDelegCert delegCert
     ConwayTxCertPool poolCert -> encodePoolCert poolCert
-    ConwayTxCertCommittee committeeCert -> encodeCommitteeHotKey committeeCert
+    ConwayTxCertGov committeeCert -> encodeCommitteeHotKey committeeCert
 
 encodeConwayDelegCert :: Crypto c => ConwayDelegCert c -> Encoding
 encodeConwayDelegCert = \case
@@ -467,7 +467,7 @@ encodeConwayDelegCert = \case
       <> encCBOR dRep
       <> encCBOR deposit
 
-encodeCommitteeHotKey :: Crypto c => ConwayCommitteeCert c -> Encoding
+encodeCommitteeHotKey :: Crypto c => ConwayGovCert c -> Encoding
 encodeCommitteeHotKey = \case
   ConwayAuthCommitteeHotKey cred key ->
     encodeListLen 3
@@ -483,7 +483,7 @@ encodeCommitteeHotKey = \case
       <> encodeWord8 16
       <> encCBOR cred
       <> encCBOR deposit
-      <> (encodeNullStrictMaybe encCBOR) mAnchor
+      <> encodeNullStrictMaybe encCBOR mAnchor
   ConwayUnRegDRep cred deposit ->
     encodeListLen 3
       <> encodeWord8 17
@@ -520,14 +520,17 @@ getScriptWitnessConwayTxCert = \case
       ConwayUnRegCert cred _ -> credScriptHash cred
       ConwayDelegCert cred _ -> credScriptHash cred
       ConwayRegDelegCert cred _ _ -> credScriptHash cred
-  ConwayTxCertCommittee committeeCert -> committeeWitness committeeCert
-  _ -> Nothing
+  -- PoolIds can't be Scripts
+  ConwayTxCertPool {} -> Nothing
+  ConwayTxCertGov govCert -> govWitness govCert
   where
-    committeeWitness :: ConwayCommitteeCert c -> Maybe (ScriptHash c)
-    committeeWitness = \case
+    govWitness :: ConwayGovCert c -> Maybe (ScriptHash c)
+    govWitness = \case
       ConwayAuthCommitteeHotKey coldCred _hotCred -> credScriptHash coldCred
       ConwayResignCommitteeColdKey coldCred -> credScriptHash coldCred
-      _ -> Nothing
+      -- Registration of a DRep does not require a witness
+      ConwayRegDRep {} -> Nothing
+      ConwayUnRegDRep cred _ -> credScriptHash cred
 
 getVKeyWitnessConwayTxCert :: ConwayTxCert era -> Maybe (KeyHash 'Witness (EraCrypto era))
 getVKeyWitnessConwayTxCert = \case
@@ -539,10 +542,12 @@ getVKeyWitnessConwayTxCert = \case
       ConwayDelegCert cred _ -> credKeyHashWitness cred
       ConwayRegDelegCert cred _ _ -> credKeyHashWitness cred
   ConwayTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
-  ConwayTxCertCommittee committeeCert -> committeeWitness committeeCert
+  ConwayTxCertGov govCert -> govWitness govCert
   where
-    committeeWitness :: ConwayCommitteeCert c -> Maybe (KeyHash 'Witness c)
-    committeeWitness = \case
+    govWitness :: ConwayGovCert c -> Maybe (KeyHash 'Witness c)
+    govWitness = \case
       ConwayAuthCommitteeHotKey coldCred _hotCred -> credKeyHashWitness coldCred
       ConwayResignCommitteeColdKey coldCred -> credKeyHashWitness coldCred
-      _ -> Nothing
+      -- Registration of a DRep does not require a witness
+      ConwayRegDRep {} -> Nothing
+      ConwayUnRegDRep cred _ -> credKeyHashWitness cred

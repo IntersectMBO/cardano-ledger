@@ -48,8 +48,8 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
-  ConwayCommitteeCert (..),
   ConwayDelegCert (..),
+  ConwayGovCert (..),
   ConwayTxCert (..),
   Delegatee (..),
  )
@@ -135,10 +135,10 @@ ppConwayTxCert :: ConwayTxCert era -> PDoc
 ppConwayTxCert = \case
   ConwayTxCertDeleg dc -> ppSexp "ConwayTxCertDeleg" [prettyA dc]
   ConwayTxCertPool pc -> ppSexp "ConwayTxCertPool" [ppPoolCert pc]
-  ConwayTxCertCommittee gdc -> ppSexp "ConwayTxCertCommittee" [ppConwayCommitteeCert gdc]
+  ConwayTxCertGov gdc -> ppSexp "ConwayTxCertGov" [ppConwayGovCert gdc]
 
-ppConwayCommitteeCert :: ConwayCommitteeCert c -> PDoc
-ppConwayCommitteeCert = \case
+ppConwayGovCert :: ConwayGovCert c -> PDoc
+ppConwayGovCert = \case
   ConwayRegDRep cred deposit mAnchor ->
     ppSexp "ConwayRegDRep" [prettyA cred, prettyA deposit, prettyA mAnchor]
   ConwayUnRegDRep cred deposit ->
