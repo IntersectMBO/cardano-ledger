@@ -257,7 +257,7 @@ data VState era = VState
   { vsDReps :: !(Set (Credential 'Voting (EraCrypto era)))
   , vsCommitteeHotKeys ::
       !( Map
-          (KeyHash 'CommitteeColdKey (EraCrypto era))
+          (Credential 'CommitteeColdKey (EraCrypto era))
           (Maybe (Credential 'CommitteeHotKey (EraCrypto era))) -- `Nothing` to indicate "resigned".
        )
   }
