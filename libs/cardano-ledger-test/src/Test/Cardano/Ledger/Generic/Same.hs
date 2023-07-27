@@ -29,6 +29,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.DRepDistr (extractDRepDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Pretty
@@ -143,8 +144,9 @@ instance Same era (DState era) where
     ]
 
 instance Same era (VState era) where
-  same _proof (VState dr1 cchk1) (VState dr2 cchk2) =
+  same _proof (VState dr1 dist1 cchk1) (VState dr2 dist2 cchk2) =
     [ ("DReps", eqByShow dr1 dr2)
+    , ("DRepDistr", eqByShow (extractDRepDistr dist1) (extractDRepDistr dist2))
     , ("CC Hot Keys", eqByShow cchk1 cchk2)
     ]
 

@@ -21,6 +21,7 @@ module Cardano.Ledger.Conway.Rules.NewEpoch (
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
+  Globals (securityParameter),
   ShelleyBase,
   StrictMaybe (SJust, SNothing),
  )
@@ -45,11 +46,15 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
+import Data.Ratio (Ratio)
 import Data.Set (Set)
-import Lens.Micro ((^.))
+import qualified Data.VMap as VMap
+import Data.Word (Word64)
+import Lens.Micro ((&), (.~), (^.))
 
 data ConwayNewEpochPredFailure era
   = EpochFailure !(PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
@@ -140,31 +145,39 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , nes@(NewEpochState eL _ bcur es ru pd _)
+      , nes@(NewEpochState eL _ bcur es0 ru pd _)
       , eNo
       ) <-
     judgmentContext
   if eNo /= eL + 1
     then pure nes
     else do
-      es' <- case ru of
-        SNothing -> pure es
+      es1 <- case ru of
+        SNothing -> pure es0
         SJust p@(Pulsing _ _) -> do
           (ans, event) <- liftSTS (completeRupd p)
           tellReward (DeltaRewardEvent (RupdEvent eNo event))
-          updateRewards es eNo ans
-        SJust (Complete ru') -> updateRewards es eNo ru'
-      es'' <- trans @(EraRule "EPOCH" era) $ TRC (pd, es', eNo)
-      let adaPots = totalAdaPotsES es''
+          updateRewards es0 eNo ans
+        SJust (Complete ru') -> updateRewards es0 eNo ru'
+      es2 <- trans @(EraRule "EPOCH" era) $ TRC (pd, es1, eNo)
+
+      -- Initiaize DRep pulser. We expect approximately 10*k-many blocks to be produced each epoch.
+      -- Therefore to safely and evenly space out the DRep calculation, we divide
+      -- the number of stake credentials by 8*k (8, rather than 10, to be sure we finish a bit early)
+      k <- liftSTS $ asks securityParameter -- Maximum number of blocks we are allowed to roll back
+      let stakeSize = VMap.size (es2 ^. epochStateStakeDistrL)
+      let pulseSize = max 1 (ceiling (((fromIntegral stakeSize) :: Ratio Word64) / (8 * ((fromIntegral k) :: Ratio Word64))))
+      let es3 = es2 & epochStateDRepDistrL .~ freshDRepPulser pulseSize es2 -- Install a new (as yet unpulsed) DRepDistr pulser
+      let adaPots = totalAdaPotsES es2
       tellEvent $ TotalAdaPotsEvent adaPots
-      let pd' = ssStakeMarkPoolDistr (esSnapshots es)
+      let pd' = ssStakeMarkPoolDistr (esSnapshots es0)
       -- See `ShelleyNEWEPOCH` for details on the implementation
       pure $
         nes
           { nesEL = eNo
           , nesBprev = bcur
           , nesBcur = BlocksMade mempty
-          , nesEs = es''
+          , nesEs = es3
           , nesRu = SNothing
           , nesPd = pd'
           }

@@ -68,6 +68,7 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
  )
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.DRepDistr (extractDRepDistr)
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   SnapShots (..),
@@ -1688,10 +1689,11 @@ instance PrettyA (DRepState c) where
   prettyA = viaShow
 
 instance PrettyA (VState era) where
-  prettyA (VState vsDReps vsCommitteeHotKeys) =
+  prettyA (VState vsDReps vsDRepDistr vsCommitteeHotKeys) =
     ppRecord
       "VState"
       [ ("DReps", prettyA vsDReps)
+      , ("DResDistr", ppMap prettyA (ppCoin . fromCompact) (extractDRepDistr vsDRepDistr))
       , ("CC Hot Keys", prettyA vsCommitteeHotKeys)
       ]
 

@@ -39,6 +39,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
+import Cardano.Ledger.DRepDistr (extractDRepDistr)
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -49,6 +50,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   asReserves,
   curPParamsEpochStateL,
+  epochStateDRepDistrL,
   esAccountState,
   esLState,
   esLStateL,
@@ -240,10 +242,12 @@ epochTransition = do
     acnt'' = acnt' {asReserves = asReserves acnt'}
     govSt = utxosGovState utxoSt'''
     stakeDistr = credMap $ utxosStakeDistr utxoSt'''
+    drepDistr = extractDRepDistr (epochState' ^. epochStateDRepDistrL)
     ratEnv =
       RatifyEnv
         { reStakeDistr = stakeDistr
         , reStakePoolDistr = stakePoolDistr
+        , reDRepDistr = drepDistr
         , reCurrentEpoch = eNo
         }
     govStateToSeq = Seq.fromList . Map.toList

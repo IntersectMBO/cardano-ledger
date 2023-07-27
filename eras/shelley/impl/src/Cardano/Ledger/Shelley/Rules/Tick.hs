@@ -30,6 +30,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
+import Cardano.Ledger.DRepDistr (pulseDRepDistr)
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
@@ -44,6 +45,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate,
   UTxOState (..),
   curPParamsEpochStateL,
+  newEpochStateDRepDistrL,
+  updateWithLens,
  )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (
   ShelleyNEWEPOCH,
@@ -253,25 +256,26 @@ bheadTransition ::
   ) =>
   TransitionRule (ShelleyTICK era)
 bheadTransition = do
-  TRC ((), nes@(NewEpochState _ bprev _ es _ _ _), slot) <-
+  TRC ((), nes0@(NewEpochState _ bprev _ es _ _ _), slot) <-
     judgmentContext
 
-  nes' <- validatingTickTransition @ShelleyTICK nes slot
+  nes1 <- validatingTickTransition @ShelleyTICK nes0 slot
 
   -- Here we force the evaluation of the mark snapshot
   -- and the per-pool stake distribution.
   -- We do NOT force it in the TICKF and TICKN rule
   -- so that it can remain a thunk when the consensus
   -- layer computes the ledger view across the epoch boundary.
-  let !_ = ssStakeMark . esSnapshots . nesEs $ nes'
-      !_ = ssStakeMarkPoolDistr . esSnapshots . nesEs $ nes'
+  let !_ = ssStakeMark . esSnapshots . nesEs $ nes1
+      !_ = ssStakeMarkPoolDistr . esSnapshots . nesEs $ nes1
 
   ru'' <-
     trans @(EraRule "RUPD" era) $
-      TRC (RupdEnv bprev es, nesRu nes', slot)
+      TRC (RupdEnv bprev es, nesRu nes1, slot)
 
-  let nes'' = nes' {nesRu = ru''}
-  pure nes''
+  let nes2 = nes1 {nesRu = ru''}
+  let nes3 = updateWithLens nes2 newEpochStateDRepDistrL pulseDRepDistr
+  pure nes3
 
 instance
   ( STS (ShelleyNEWEPOCH era)

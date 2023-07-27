@@ -10,6 +10,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -40,16 +41,24 @@ import Cardano.Ledger.Binary (
   toPlainDecoder,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.CertState (CertState)
+import Cardano.Ledger.CertState (
+  CertState,
+  DRepState,
+  certDStateL,
+  certVStateL,
+  dsUnifiedL,
+  vsDRepDistrL,
+  vsDRepsL,
+ )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.EpochBoundary (
-  SnapShots (..),
- )
+import Cardano.Ledger.DRepDistr (DRepDistr (..), startDRepDistr)
+import Cardano.Ledger.EpochBoundary (SnapShots (..), ssStakeDistrL, ssStakeMarkL)
 import Cardano.Ledger.Keys (
   KeyHash (..),
-  KeyPair, -- deprecated
+  KeyPair,
   KeyRole (..),
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
@@ -58,6 +67,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.UMap (UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
@@ -67,9 +77,11 @@ import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, _1, _2)
+import Lens.Micro (Lens', lens, (&), (.~), (^.), _1, _2)
 import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
 
 -- ==================================
 
@@ -120,24 +132,6 @@ data EpochState era = EpochState
   -- See https://github.com/input-output-hk/cardano-ledger/releases/latest/download/pool-ranking.pdf
   }
   deriving (Generic)
-
-esAccountStateL :: Lens' (EpochState era) AccountState
-esAccountStateL = lens esAccountState (\x y -> x {esAccountState = y})
-
-esSnapshotsL :: Lens' (EpochState era) (SnapShots (EraCrypto era))
-esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
-
-esLStateL :: Lens' (EpochState era) (LedgerState era)
-esLStateL = lens esLState (\x y -> x {esLState = y})
-
-esNonMyopicL :: Lens' (EpochState era) (NonMyopic (EraCrypto era))
-esNonMyopicL = lens esNonMyopic (\x y -> x {esNonMyopic = y})
-
-curPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
-curPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
-
-prevPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
-prevPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . prevPParamsGovStateL
 
 deriving stock instance
   ( EraTxOut era
@@ -287,21 +281,6 @@ data UTxOState era = UTxOState
   }
   deriving (Generic)
 
-utxosUtxoL :: Lens' (UTxOState era) (UTxO era)
-utxosUtxoL = lens utxosUtxo (\x y -> x {utxosUtxo = y})
-
-utxosDepositedL :: Lens' (UTxOState era) Coin
-utxosDepositedL = lens utxosDeposited (\x y -> x {utxosDeposited = y})
-
-utxosFeesL :: Lens' (UTxOState era) Coin
-utxosFeesL = lens utxosFees (\x y -> x {utxosFees = y})
-
-utxosGovStateL :: Lens' (UTxOState era) (GovState era)
-utxosGovStateL = lens utxosGovState (\x y -> x {utxosGovState = y})
-
-utxosStakeDistrL :: Lens' (UTxOState era) (IncrementalStake (EraCrypto era))
-utxosStakeDistrL = lens utxosStakeDistr (\x y -> x {utxosStakeDistr = y})
-
 instance
   ( EraTxOut era
   , NFData (GovState era)
@@ -404,9 +383,6 @@ data NewEpochState era = NewEpochState
   }
   deriving (Generic)
 
-nesEpochStateL :: Lens' (NewEpochState era) (EpochState era)
-nesEpochStateL = lens nesEs $ \x y -> x {nesEs = y}
-
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses (ShelleyEra c) = UTxO (ShelleyEra c)
   StashedAVVMAddresses _ = ()
@@ -495,12 +471,6 @@ data LedgerState era = LedgerState
   , lsCertState :: !(CertState era)
   }
   deriving (Generic)
-
-lsUTxOStateL :: Lens' (LedgerState era) (UTxOState era)
-lsUTxOStateL = lens lsUTxOState (\x y -> x {lsUTxOState = y})
-
-lsCertStateL :: Lens' (LedgerState era) (CertState era)
-lsCertStateL = lens lsCertState (\x y -> x {lsCertState = y})
 
 deriving stock instance
   ( EraTxOut era
@@ -624,3 +594,131 @@ instance
   ToExpr (UTxOState era)
 
 instance ToExpr (IncrementalStake c)
+
+-- =============================================================
+-- Lenses for types found inside NewEpochState and its fields
+
+-- ==========================================
+-- NewEpochState
+
+nesPdL :: Lens' (NewEpochState era) (PoolDistr (EraCrypto era))
+nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
+
+{- Callled nesEpochStateL elsewhere -}
+nesEsL :: Lens' (NewEpochState era) (EpochState era)
+nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
+
+unifiedL :: Lens' (NewEpochState era) (UMap (EraCrypto era))
+unifiedL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
+
+nesELL :: Lens' (NewEpochState era) EpochNo
+nesELL = lens nesEL (\ds u -> ds {nesEL = u})
+
+nesBprevL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
+nesBprevL = lens (unBlocksMade . nesBprev) (\ds u -> ds {nesBprev = BlocksMade u})
+
+nesBcurL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
+nesBcurL = lens (unBlocksMade . nesBcur) (\ds u -> ds {nesBcur = BlocksMade u})
+
+nesRuL :: Lens' (NewEpochState era) (StrictMaybe (PulsingRewUpdate (EraCrypto era)))
+nesRuL = lens nesRu (\ds u -> ds {nesRu = u})
+
+nesStashedAVVMAddressesL :: Lens' (NewEpochState era) (StashedAVVMAddresses era)
+nesStashedAVVMAddressesL = lens stashedAVVMAddresses (\ds u -> ds {stashedAVVMAddresses = u})
+
+-- For backward compatibility
+nesEpochStateL :: Lens' (NewEpochState era) (EpochState era)
+nesEpochStateL = lens nesEs $ \x y -> x {nesEs = y}
+
+-- ===================================================
+-- EpochState
+
+esAccountStateL :: Lens' (EpochState era) AccountState
+esAccountStateL = lens esAccountState (\x y -> x {esAccountState = y})
+
+esSnapshotsL :: Lens' (EpochState era) (SnapShots (EraCrypto era))
+esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
+
+esLStateL :: Lens' (EpochState era) (LedgerState era)
+esLStateL = lens esLState (\x y -> x {esLState = y})
+
+esNonMyopicL :: Lens' (EpochState era) (NonMyopic (EraCrypto era))
+esNonMyopicL = lens esNonMyopic (\x y -> x {esNonMyopic = y})
+
+curPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
+curPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
+
+prevPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
+prevPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . prevPParamsGovStateL
+
+-- ==========================================
+-- AccountState
+
+asTreasuryL :: Lens' AccountState Coin
+asTreasuryL = lens asTreasury (\ds u -> ds {asTreasury = u})
+
+asReservesL :: Lens' AccountState Coin
+asReservesL = lens asReserves (\ds u -> ds {asReserves = u})
+
+-- ====================================================
+-- LedgerState
+
+lsUTxOStateL :: Lens' (LedgerState era) (UTxOState era)
+lsUTxOStateL = lens lsUTxOState (\x y -> x {lsUTxOState = y})
+
+lsCertStateL :: Lens' (LedgerState era) (CertState era)
+lsCertStateL = lens lsCertState (\x y -> x {lsCertState = y})
+
+-- ================ UTxOState ===========================
+
+utxosUtxoL :: Lens' (UTxOState era) (UTxO era)
+utxosUtxoL = lens utxosUtxo (\x y -> x {utxosUtxo = y})
+
+utxosDepositedL :: Lens' (UTxOState era) Coin
+utxosDepositedL = lens utxosDeposited (\x y -> x {utxosDeposited = y})
+
+utxosFeesL :: Lens' (UTxOState era) Coin
+utxosFeesL = lens utxosFees (\x y -> x {utxosFees = y})
+
+utxosGovStateL :: Lens' (UTxOState era) (GovState era)
+utxosGovStateL = lens utxosGovState (\x y -> x {utxosGovState = y})
+
+utxosStakeDistrL :: Lens' (UTxOState era) (IncrementalStake (EraCrypto era))
+utxosStakeDistrL = lens utxosStakeDistr (\x y -> x {utxosStakeDistr = y})
+
+-- ===================================================================
+-- Lenses for access to
+-- 1. (DRepDistr (EraCrypto era))
+-- 2. The 3 inputs we need to initialize one
+--    a. (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin)). Part of the Mark SnapShot
+--    b. (Set (Credential 'DRepRole (EraCrypto era))). Registered DReps in the CertState
+--    c. (UMap (EraCrypto era)). The unified map in the DState.
+--                               We will use the to DRepUView to obtain  (Map (Credential 'Staking c) (DRep c))
+--                               to see what stake credentials delegate to which DReps
+-- 3. and its completion:  (Map (DRep c) (CompactForm Coin)).  The aggregated voting power of each DRep
+
+newEpochStateDRepDistrL :: Lens' (NewEpochState era) (DRepDistr (EraCrypto era))
+newEpochStateDRepDistrL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepDistrL
+
+epochStateDRepDistrL :: Lens' (EpochState era) (DRepDistr (EraCrypto era))
+epochStateDRepDistrL = esLStateL . lsCertStateL . certVStateL . vsDRepDistrL
+
+epochStateStakeDistrL :: Lens' (EpochState era) (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
+
+epochStateRegDrepL :: Lens' (EpochState era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
+
+epochStateUMapL :: Lens' (EpochState era) (UMap (EraCrypto era))
+epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL
+
+-- | update a field of 'x' accessed by the given lens 'l' with the adjusting function 'update'
+updateWithLens :: a -> (Lens' a b) -> (b -> b) -> a
+updateWithLens x l update = x & l .~ (update (x ^. l))
+
+-- | Construct a new (as yet unpulsed) DRepDistr from 3 pieces of the EpochState.
+--   1) The unified map (storing the map from staking credentials to DReps).
+--   2) The set of registered DReps
+--   3) The map aggregating all the stake (coin) for each credential, from the Mark SnapShot.
+freshDRepPulser :: Int -> EpochState era -> DRepDistr (EraCrypto era)
+freshDRepPulser n es = startDRepDistr n (es ^. epochStateUMapL) (es ^. epochStateRegDrepL) (es ^. epochStateStakeDistrL)

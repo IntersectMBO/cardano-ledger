@@ -1,35 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 
-module Test.Cardano.Ledger.Constrained.Lenses (
-  module Test.Cardano.Ledger.Constrained.Lenses,
-  -- LedgerState
-  lsCertStateL,
-  lsUTxOStateL,
-  -- CertState
-  certVStateL,
-  certPStateL,
-  certDStateL,
-  -- DState
-  dsIRewardsL,
-  dsGenDelegsL,
-  dsFutureGenDelegsL,
-  dsUnifiedL,
-)
-where
+-- | Define Lenses that facilitate accessing the types in the Var Model
+--   Many other (more standard) Lenses are defined in Cardano.Ledger.Shelley.LedgerState
+module Test.Cardano.Ledger.Constrained.Lenses where
 
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, SlotNo)
-import Cardano.Ledger.CertState (DRepState, certDStateL, certPStateL, certVStateL, dsFutureGenDelegsL, dsGenDelegsL, dsIRewardsL, dsUnifiedL)
+import Cardano.Ledger.BaseTypes (SlotNo)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (DRep)
 import Cardano.Ledger.Credential (Credential, Ptr)
-import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
-import Cardano.Ledger.Era (Era (EraCrypto))
-import Cardano.Ledger.Keys (GenDelegPair, GenDelegs (..), KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Shelley.Governance (GovState (..))
-import Cardano.Ledger.Shelley.LedgerState (esLStateL)
-import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, esLStateL, rewards)
+import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..))
+import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, rewards)
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (deltaReserves, deltaTreasury)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
 import Cardano.Ledger.UMap (
@@ -44,16 +24,14 @@ import Cardano.Ledger.UMap (
   unify,
  )
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (fromList)
 import Data.Set (Set)
-import Data.VMap (VB, VMap)
 import Lens.Micro
-import Numeric.Natural (Natural)
+
+-- import Numeric.Natural (Natural)
 
 -- ====================================================
 -- Lenses
@@ -81,9 +59,6 @@ deltaReservesL = lens LS.deltaReserves (\ds u -> ds {LS.deltaReserves = u})
 deltaTreasuryL :: Lens' (InstantaneousRewards c) DeltaCoin
 deltaTreasuryL = lens LS.deltaTreasury (\ds u -> ds {LS.deltaTreasury = u})
 
--- ===================================
--- DState
-
 unGenDelegsL :: Lens' (GenDelegs c) (Map (KeyHash 'Genesis c) (GenDelegPair c))
 unGenDelegsL = lens unGenDelegs (\(GenDelegs _) new -> GenDelegs new)
 
@@ -94,55 +69,6 @@ fGenDelegSlotL = lens fGenDelegSlot (\ds u -> ds {fGenDelegSlot = u})
 fGenDelegGenKeyHashL :: Lens' (FutureGenDeleg c) (KeyHash 'Genesis c)
 fGenDelegGenKeyHashL = lens fGenDelegGenKeyHash (\ds u -> ds {fGenDelegGenKeyHash = u})
 
--- ===================================
--- PState
-
-psStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
-psStakePoolParamsL = lens psStakePoolParams (\ds u -> ds {psStakePoolParams = u})
-
-psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
-psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ds u -> ds {psFutureStakePoolParams = u})
-
-psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
-psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})
-
-psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
-psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
-
--- ===================================
--- VState
-
-vsDRepsL ::
-  Lens'
-    (VState era)
-    (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
-
-vsCommitteeHotKeysL ::
-  Lens'
-    (VState era)
-    (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
-vsCommitteeHotKeysL = lens vsCommitteeHotKeys (\vs u -> vs {vsCommitteeHotKeys = u})
-
--- ========================================
--- UTxOState
-
-utxosUtxoL :: Lens' (UTxOState era) (UTxO era)
-utxosUtxoL = lens utxosUtxo (\ds u -> ds {utxosUtxo = u})
-
-utxosDepositedL :: Lens' (UTxOState era) Coin
-utxosDepositedL = lens utxosDeposited (\ds u -> ds {utxosDeposited = u})
-
-utxosFeesL :: Lens' (UTxOState era) Coin
-utxosFeesL = lens utxosFees (\ds u -> ds {utxosFees = u})
-
-utxosGovStateL :: Lens' (UTxOState era) (GovState era)
-utxosGovStateL = lens utxosGovState (\ds u -> ds {utxosGovState = u})
-
-utxosStakeDistrL :: Lens' (UTxOState era) (IncrementalStake (EraCrypto era))
-utxosStakeDistrL = lens utxosStakeDistr (\ds u -> ds {utxosStakeDistr = u})
-
--- =========================================
 -- IncrementalStake
 
 isCredMapL :: Lens' (IncrementalStake c) (Map (Credential 'Staking c) Coin)
@@ -150,15 +76,6 @@ isCredMapL = lens credMap (\ds u -> ds {credMap = u})
 
 isPtrMapL :: Lens' (IncrementalStake c) (Map Ptr Coin)
 isPtrMapL = lens ptrMap (\ds u -> ds {ptrMap = u})
-
--- ==========================================
--- AccountState
-
-asTreasuryL :: Lens' AccountState Coin
-asTreasuryL = lens asTreasury (\ds u -> ds {asTreasury = u})
-
-asReservesL :: Lens' AccountState Coin
-asReservesL = lens asReserves (\ds u -> ds {asReserves = u})
 
 -- ===============================================
 -- NonMyopic
@@ -174,63 +91,6 @@ nmLikelihoodsL =
 
 nmRewardPotL :: Lens' (NonMyopic c) Coin
 nmRewardPotL = lens rewardPotNM (\ds u -> ds {rewardPotNM = u})
-
--- ===============================================
--- SnapShots
-
-ssStakeMarkL :: Lens' (SnapShots c) (SnapShot c)
-ssStakeMarkL = lens ssStakeMark (\ds u -> ds {ssStakeMark = u})
-
-ssStakeMarkPoolDistrL :: Lens' (SnapShots c) (PoolDistr c)
-ssStakeMarkPoolDistrL = lens ssStakeMarkPoolDistr (\ds u -> ds {ssStakeMarkPoolDistr = u})
-
-ssStakeSetL :: Lens' (SnapShots c) (SnapShot c)
-ssStakeSetL = lens ssStakeSet (\ds u -> ds {ssStakeSet = u})
-
-ssStakeGoL :: Lens' (SnapShots c) (SnapShot c)
-ssStakeGoL = lens ssStakeGo (\ds u -> ds {ssStakeGo = u})
-
-ssFeeL :: Lens' (SnapShots c) Coin
-ssFeeL = lens ssFee (\ds u -> ds {ssFee = u})
-
--- =====================================
--- SnapShot
-
-ssStakeL :: Lens' (SnapShot c) (Stake c)
-ssStakeL = lens ssStake (\ds u -> ds {ssStake = u})
-
-ssDelegationsL :: Lens' (SnapShot c) (VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
-ssDelegationsL = lens ssDelegations (\ds u -> ds {ssDelegations = u})
-
-ssPoolParamsL :: Lens' (SnapShot c) (VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
-ssPoolParamsL = lens ssPoolParams (\ds u -> ds {ssPoolParams = u})
-
--- ==========================================
--- NewEpochState
-
-nesPdL :: Lens' (NewEpochState era) (PoolDistr (EraCrypto era))
-nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
-
-nesEsL :: Lens' (NewEpochState era) (EpochState era)
-nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
-
-unifiedL :: Lens' (NewEpochState era) (UMap (EraCrypto era))
-unifiedL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-
-nesELL :: Lens' (NewEpochState era) EpochNo
-nesELL = lens nesEL (\ds u -> ds {nesEL = u})
-
-nesBprevL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
-nesBprevL = lens (unBlocksMade . nesBprev) (\ds u -> ds {nesBprev = BlocksMade u})
-
-nesBcurL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
-nesBcurL = lens (unBlocksMade . nesBcur) (\ds u -> ds {nesBcur = BlocksMade u})
-
-nesRuL :: Lens' (NewEpochState era) (StrictMaybe (PulsingRewUpdate (EraCrypto era)))
-nesRuL = lens nesRu (\ds u -> ds {nesRu = u})
-
-nesStashedAVVMAddressesL :: Lens' (NewEpochState era) (StashedAVVMAddresses era)
-nesStashedAVVMAddressesL = lens stashedAVVMAddresses (\ds u -> ds {stashedAVVMAddresses = u})
 
 -- ======================================================
 -- (Virtual) UMap
