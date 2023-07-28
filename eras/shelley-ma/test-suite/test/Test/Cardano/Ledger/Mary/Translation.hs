@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Mary.Translation (
   maryTranslationTests,
@@ -70,6 +71,7 @@ test ::
   , EncCBOR (f Mary)
   , TranslateEra Mary f
   , Show (TranslationError Mary f)
+  , TranslationContextF Mary f ~ ()
   ) =>
   f Allegra ->
   Assertion

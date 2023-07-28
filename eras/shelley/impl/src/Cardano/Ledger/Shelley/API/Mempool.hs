@@ -85,7 +85,7 @@ newtype Validated tx = Validated tx
 extractTx :: Validated tx -> tx
 extractTx (Validated tx) = tx
 
-coerceValidated :: Coercible a b => Validated a -> Validated b
+coerceValidated :: (Coercible a b) => Validated a -> Validated b
 coerceValidated (Validated a) = Validated $ coerce a
 
 -- Don't use this except in Testing to make Arbitrary instances, etc.
@@ -99,7 +99,7 @@ unsafeMakeValidated = Validated
 translateValidated ::
   forall era f.
   (TranslateEra era f) =>
-  TranslationContext era ->
+  TranslationContextF era f ->
   Validated (f (PreviousEra era)) ->
   Except (TranslationError era f) (Validated (f era))
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
@@ -124,7 +124,7 @@ class
   -- 'TxInBlock' has had all checks run, and can now only fail due to checks
   -- which depend on the state; most notably, that UTxO inputs disappear.
   applyTx ::
-    MonadError (ApplyTxError era) m =>
+    (MonadError (ApplyTxError era) m) =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
@@ -152,7 +152,7 @@ class
   --   this function will be called each time the mempool revalidates
   --   transactions against a new mempool state.
   reapplyTx ::
-    MonadError (ApplyTxError era) m =>
+    (MonadError (ApplyTxError era) m) =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
@@ -303,7 +303,7 @@ applyTxsTransition globals env txs state =
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.
 overNewEpochState ::
-  Functor f =>
+  (Functor f) =>
   (MempoolState era -> f (MempoolState era)) ->
   NewEpochState era ->
   f (NewEpochState era)

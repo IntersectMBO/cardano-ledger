@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Allegra.Translation (
   allegraTranslationTests,
@@ -64,6 +65,7 @@ testTranslation ::
   , EncCBOR (f Shelley)
   , TranslateEra Allegra f
   , Show (TranslationError Allegra f)
+  , TranslationContextF Allegra f ~ ()
   ) =>
   f Shelley ->
   Assertion
