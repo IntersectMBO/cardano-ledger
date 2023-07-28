@@ -73,7 +73,6 @@ import Cardano.Ledger.Shelley.TxCert (
   encodeShelleyDelegCert,
   poolTxCertDecoder,
   shelleyTxCertDelegDecoder,
-  pattern DelegStakeTxCert,
   pattern RegPoolTxCert,
   pattern RegTxCert,
   pattern RetirePoolTxCert,
@@ -268,7 +267,6 @@ pattern UnRegDRepTxCert cred deposit <- (getUnRegDRepTxCert -> Just (cred, depos
   , RetirePoolTxCert
   , RegTxCert
   , UnRegTxCert
-  , DelegStakeTxCert
   , RegDepositTxCert
   , UnRegDepositTxCert
   , DelegTxCert

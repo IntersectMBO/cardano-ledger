@@ -43,6 +43,7 @@
 * Rename:
   * `ConwayCommitteeCert` -> `ConwayGovCert`
   * `ConwayTxCertCommittee` -> `ConwayTxCertGov`
+* Remove `DelegStakeTxCert` from the `COMPLETE` pragma for `TxCert`
 
 ## 1.6.3.0
 
