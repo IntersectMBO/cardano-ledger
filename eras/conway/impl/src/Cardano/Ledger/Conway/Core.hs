@@ -56,10 +56,9 @@ import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 
 class BabbageEraTxBody era => ConwayEraTxBody era where
-
   -- | Lens for getting and setting number of `Coin` that is expected to be in the
   -- Treasury at the current Epoch
-  treasuryAmountTxBodyL :: Lens' (TxBody era) (StrictMaybe Coin)
+  currentTreasuryValueTxBodyL :: Lens' (TxBody era) (StrictMaybe Coin)
 
   -- | Lens for getting and setting `VotingProcedures`.
   votingProceduresTxBodyL :: Lens' (TxBody era) (VotingProcedures era)
