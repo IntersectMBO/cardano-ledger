@@ -37,7 +37,8 @@ module Cardano.Ledger.Conway.TxBody (
     ctbAdHash,
     ctbTxNetworkId,
     ctbVotingProcedures,
-    ctbProposalProcedures
+    ctbProposalProcedures,
+    ctbCurrentTreasuryValue
   ),
 ) where
 
@@ -129,6 +130,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrTxNetworkId :: !(StrictMaybe Network)
   , ctbrVotingProcedures :: !(VotingProcedures era)
   , ctbrProposalProcedures :: !(StrictSeq (ProposalProcedure era))
+  , ctbrCurrentTreasuryValue :: !(StrictMaybe Coin)
   }
   deriving (Generic, Typeable)
 
@@ -187,6 +189,7 @@ instance
       bodyFields 18 = field (\x tx -> tx {ctbrReferenceInputs = x}) From
       bodyFields 19 = field (\x tx -> tx {ctbrVotingProcedures = x}) From
       bodyFields 20 = field (\x tx -> tx {ctbrProposalProcedures = x}) From
+      bodyFields 21 = ofield (\x tx -> tx {ctbrCurrentTreasuryValue = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields :: [(Word, String)]
       requiredFields =
@@ -262,6 +265,7 @@ basicConwayTxBodyRaw =
     SNothing
     (VotingProcedures mempty)
     mempty
+    SNothing
 
 instance Crypto c => EraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance EraTxBody (ConwayEra StandardCrypto) #-}
@@ -376,8 +380,13 @@ instance Crypto c => BabbageEraTxBody (ConwayEra c) where
 instance Crypto c => ConwayEraTxBody (ConwayEra c) where
   votingProceduresTxBodyL =
     lensMemoRawType ctbrVotingProcedures (\txb x -> txb {ctbrVotingProcedures = x})
+  {-# INLINE votingProceduresTxBodyL #-}
   proposalProceduresTxBodyL =
     lensMemoRawType ctbrProposalProcedures (\txb x -> txb {ctbrProposalProcedures = x})
+  {-# INLINE proposalProceduresTxBodyL #-}
+  currentTreasuryValueTxBodyL =
+    lensMemoRawType ctbrCurrentTreasuryValue (\txb x -> txb {ctbrCurrentTreasuryValue = x})
+  {-# INLINE currentTreasuryValueTxBodyL #-}
 
 pattern ConwayTxBody ::
   ConwayEraTxBody era =>
@@ -398,6 +407,7 @@ pattern ConwayTxBody ::
   StrictMaybe Network ->
   VotingProcedures era ->
   StrictSeq (ProposalProcedure era) ->
+  StrictMaybe Coin ->
   ConwayTxBody era
 pattern ConwayTxBody
   { ctbSpendInputs
@@ -417,6 +427,7 @@ pattern ConwayTxBody
   , ctbTxNetworkId
   , ctbVotingProcedures
   , ctbProposalProcedures
+  , ctbCurrentTreasuryValue
   } <-
   ( getMemoRawType ->
       ConwayTxBodyRaw
@@ -437,6 +448,7 @@ pattern ConwayTxBody
         , ctbrTxNetworkId = ctbTxNetworkId
         , ctbrVotingProcedures = ctbVotingProcedures
         , ctbrProposalProcedures = ctbProposalProcedures
+        , ctbrCurrentTreasuryValue = ctbCurrentTreasuryValue
         }
     )
   where
@@ -457,7 +469,8 @@ pattern ConwayTxBody
       adHashX
       txnetworkidX
       votingProcedures
-      proposalProcedures =
+      proposalProcedures
+      currentTreasuryValue =
         mkMemoized $
           ConwayTxBodyRaw
             inputsX
@@ -477,6 +490,7 @@ pattern ConwayTxBody
             txnetworkidX
             votingProcedures
             proposalProcedures
+            currentTreasuryValue
 
 {-# COMPLETE ConwayTxBody #-}
 
@@ -491,8 +505,8 @@ encodeTxBodyRaw ::
 encodeTxBodyRaw ConwayTxBodyRaw {..} =
   let ValidityInterval bot top = ctbrVldt
    in Keyed
-        ( \i ifee ri o cr tc f t c w b rsh mi sh ah ni ga ->
-            ConwayTxBodyRaw i ifee ri o cr tc c w f (ValidityInterval b t) rsh mi sh ah ni ga
+        ( \i ci ri o cr tc f t c w b ->
+            ConwayTxBodyRaw i ci ri o cr tc c w f (ValidityInterval b t)
         )
         !> Key 0 (To ctbrSpendInputs)
         !> Omit null (Key 13 (To ctbrCollateralInputs))
@@ -512,6 +526,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> encodeKeyedStrictMaybe 15 ctbrTxNetworkId
         !> Omit (null . unVotingProcedures) (Key 19 (To ctbrVotingProcedures))
         !> Omit null (Key 20 (To ctbrProposalProcedures))
+        !> encodeKeyedStrictMaybe 21 ctbrCurrentTreasuryValue
 
 instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
   encCBOR = encode . encodeTxBodyRaw

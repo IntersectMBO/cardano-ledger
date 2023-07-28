@@ -155,6 +155,7 @@ exampleTxBodyConway =
     (SJust Mainnet) -- txnetworkid
     (VotingProcedures mempty)
     mempty
+    (SJust $ Coin 867530900000) -- current treasury value
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 

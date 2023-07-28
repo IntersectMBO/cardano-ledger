@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add `currentTreasuryValue :: !(StrictMaybe Coin)` as a new field to Conway TxBody #3586
 * Add an optional Anchor to the Conway DRep registration certificate #3576
 * Change `ConwayCommitteeCert` to allow:
   * committee cold keys to be script-hashes #3581

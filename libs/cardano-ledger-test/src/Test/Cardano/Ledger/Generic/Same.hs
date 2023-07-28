@@ -510,8 +510,8 @@ sameConwayTxBody ::
   [(String, Maybe PDoc)]
 sameConwayTxBody
   proof
-  (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Withdrawals w1) f1 v1 r1 m1 s1 d1 n1 vp1 pp1)
-  (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Withdrawals w2) f2 v2 r2 m2 s2 d2 n2 vp2 pp2) =
+  (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Withdrawals w1) f1 v1 r1 m1 s1 d1 n1 vp1 pp1 ctv1)
+  (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Withdrawals w2) f2 v2 r2 m2 s2 d2 n2 vp2 pp2 ctv2) =
     [ ("SpendInputs", eqVia (ppSet pcTxIn) i1 i2)
     , ("ColInputs", eqVia (ppSet pcTxIn) cl1 cl2)
     , ("RefInputs", eqVia (ppSet pcTxIn) ri1 ri2)
@@ -529,6 +529,7 @@ sameConwayTxBody
     , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     , ("VotingProcedures", eqVia prettyA (unVotingProcedures vp1) (unVotingProcedures vp2))
     , ("ProposalProcedures", eqVia (ppStrictSeq prettyA) pp1 pp2)
+    , ("CurrentTreasuryValue", eqVia (ppStrictMaybe prettyA) ctv1 ctv2)
     ]
 
 sameTxBody :: Reflect era => Proof era -> TxBody era -> TxBody era -> [(String, Maybe PDoc)]
