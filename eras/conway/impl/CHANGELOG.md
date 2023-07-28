@@ -40,6 +40,9 @@
 * Change `GovernanceActionDoesNotExist` to `GovernanceActionsDoNotExist`, which now
   reports all actions as a set, rather than one action per each individual failure.
 * Type of `gpVotingProcedures` in `GovernanceProcedures` was aslo changed to `GovernanceProcedures`
+* Rename:
+  * `ConwayCommitteeCert` -> `ConwayGovCert`
+  * `ConwayTxCertCommittee` -> `ConwayTxCertGov`
 
 ## 1.6.3.0
 

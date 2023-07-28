@@ -1463,7 +1463,7 @@ pcShelleyTxCert (ShelleyTxCertMir _) = ppString "MirCert"
 pcConwayTxCert :: ConwayTxCert c -> PDoc
 pcConwayTxCert (ConwayTxCertDeleg dc) = prettyA dc
 pcConwayTxCert (ConwayTxCertPool poolc) = pcPoolCert poolc
-pcConwayTxCert (ConwayTxCertCommittee _) = ppString "ConwayTxCertCommittee" -- TODO: @aniketd add pretty instance for the certs
+pcConwayTxCert (ConwayTxCertGov _) = ppString "ConwayTxCertGov" -- TODO: @aniketd add pretty instance for the certs
 
 instance c ~ EraCrypto era => PrettyC (ShelleyTxCert c) era where prettyC _ = pcShelleyTxCert
 

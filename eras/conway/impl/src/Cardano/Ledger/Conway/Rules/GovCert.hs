@@ -26,7 +26,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (VState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayGOVCERT)
-import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert (..))
+import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraPParams, EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
@@ -112,7 +112,7 @@ newtype ConwayGovCertEvent era = GovCertEvent (Event (EraRule "GOVCERT" era))
 instance
   ( EraPParams era
   , State (EraRule "GOVCERT" era) ~ VState era
-  , Signal (EraRule "GOVCERT" era) ~ ConwayCommitteeCert (EraCrypto era)
+  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
   , Environment (EraRule "GOVCERT" era) ~ PParams era
   , EraRule "GOVCERT" era ~ ConwayGOVCERT era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
@@ -121,7 +121,7 @@ instance
   STS (ConwayGOVCERT era)
   where
   type State (ConwayGOVCERT era) = VState era
-  type Signal (ConwayGOVCERT era) = ConwayCommitteeCert (EraCrypto era)
+  type Signal (ConwayGOVCERT era) = ConwayGovCert (EraCrypto era)
   type Environment (ConwayGOVCERT era) = PParams era
   type BaseM (ConwayGOVCERT era) = ShelleyBase
   type PredicateFailure (ConwayGOVCERT era) = ConwayGovCertPredFailure era

@@ -69,10 +69,10 @@ instance Era era => Arbitrary (ConwayTxCert era) where
     oneof
       [ ConwayTxCertDeleg <$> arbitrary
       , ConwayTxCertPool <$> arbitrary
-      , ConwayTxCertCommittee <$> arbitrary
+      , ConwayTxCertGov <$> arbitrary
       ]
 
-instance Crypto c => Arbitrary (ConwayCommitteeCert c) where
+instance Crypto c => Arbitrary (ConwayGovCert c) where
   arbitrary =
     oneof
       [ ConwayRegDRep <$> arbitrary <*> arbitrary <*> arbitrary

@@ -27,7 +27,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEG, ConwayGOVCERT, ConwayPOOL)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
-import Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert, ConwayDelegCert, ConwayTxCert (..))
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert, ConwayGovCert, ConwayTxCert (..))
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState,
@@ -103,7 +103,7 @@ instance
   , Environment (EraRule "GOVCERT" era) ~ PParams era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
   , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
-  , Signal (EraRule "GOVCERT" era) ~ ConwayCommitteeCert (EraCrypto era)
+  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
   , Embed (EraRule "DELEG" era) (ConwayCERT era)
   , Embed (EraRule "POOL" era) (ConwayCERT era)
   , Embed (EraRule "GOVCERT" era) (ConwayCERT era)
@@ -130,7 +130,7 @@ certTransition ::
   , Environment (EraRule "GOVCERT" era) ~ PParams era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
   , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
-  , Signal (EraRule "GOVCERT" era) ~ ConwayCommitteeCert (EraCrypto era)
+  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
   , Embed (EraRule "DELEG" era) (ConwayCERT era)
   , Embed (EraRule "POOL" era) (ConwayCERT era)
   , Embed (EraRule "GOVCERT" era) (ConwayCERT era)
@@ -147,7 +147,7 @@ certTransition = do
     ConwayTxCertPool poolCert -> do
       newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, poolCert)
       pure $ cState {certPState = newPState}
-    ConwayTxCertCommittee govCert -> do
+    ConwayTxCertGov govCert -> do
       newVState <- trans @(EraRule "GOVCERT" era) $ TRC (pp, certVState, govCert)
       pure $ cState {certVState = newVState}
 
