@@ -78,7 +78,7 @@ instance
 
     -- note that the genesis delegates are updated not only on the epoch boundary.
     if epoch /= nesEL nes + 1
-      then pure $ nes
+      then pure nes
       else do
         -- We can skip 'SNAP'; we already have the equivalent pd'.
 

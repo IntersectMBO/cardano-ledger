@@ -39,7 +39,6 @@ module Cardano.Ledger.Api.Tx.Cert (
   --   `RetirePoolTxCert`
   --   `RegTxCert`
   --   `UnRegTxCert`
-  --   `DelegStakeTxCert`
   --   `RegDepositTxCert`
   --   `UnRegDepositTxCert`
   --   `DelegTxCert`
