@@ -117,7 +117,7 @@ data Rep era t where
   GenDelegHashR :: Rep era (KeyHash 'GenesisDelegate (EraCrypto era))
   VHashR :: Rep era (KeyHash 'DRepRole (EraCrypto era))
   CommColdHashR :: Rep era (Credential 'CommitteeColdKey (EraCrypto era))
-  CommHotHashR :: Rep era (Credential 'CommitteeHotKey (EraCrypto era))
+  CommHotHashR :: Rep era (Credential 'HotCommitteeRole (EraCrypto era))
   PoolParamsR :: Rep era (PoolParams (EraCrypto era))
   NewEpochStateR :: Rep era (NewEpochState era)
   IntR :: Rep era Int

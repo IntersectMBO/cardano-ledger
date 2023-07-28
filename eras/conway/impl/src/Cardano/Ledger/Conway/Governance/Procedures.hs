@@ -140,7 +140,7 @@ govActionIdToText (GovernanceActionId (TxId txidHash) (GovernanceActionIx ix)) =
     <> Text.pack (show ix)
 
 data Voter c
-  = CommitteeVoter !(Credential 'CommitteeHotKey c)
+  = CommitteeVoter !(Credential 'HotCommitteeRole c)
   | DRepVoter !(Credential 'DRepRole c)
   | StakePoolVoter !(KeyHash 'StakePool c)
   deriving (Generic, Eq, Ord, Show)

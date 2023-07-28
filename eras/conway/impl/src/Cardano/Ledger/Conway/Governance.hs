@@ -93,7 +93,7 @@ import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
 
 data GovernanceActionState era = GovernanceActionState
-  { gasCommitteeVotes :: !(Map (Credential 'CommitteeHotKey (EraCrypto era)) Vote)
+  { gasCommitteeVotes :: !(Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
   , gasDRepVotes :: !(Map (Credential 'DRepRole (EraCrypto era)) Vote)
   , gasStakePoolVotes :: !(Map (KeyHash 'StakePool (EraCrypto era)) Vote)
   , gasDeposit :: !Coin

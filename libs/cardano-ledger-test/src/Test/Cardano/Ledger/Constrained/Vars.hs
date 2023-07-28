@@ -226,10 +226,10 @@ dreps = Var $ V "dreps" (SetR VCredR) (Yes NewEpochStateR drepsL)
 drepsL :: NELens era (Set (Credential 'DRepRole (EraCrypto era)))
 drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
-ccHotKeys :: Term era (Map (Credential 'CommitteeColdKey (EraCrypto era)) (Maybe (Credential 'CommitteeHotKey (EraCrypto era))))
+ccHotKeys :: Term era (Map (Credential 'CommitteeColdKey (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 ccHotKeys = Var $ V "dreps" (MapR CommColdHashR (MaybeR CommHotHashR)) (Yes NewEpochStateR ccHotKeysL)
 
-ccHotKeysL :: NELens era (Map (Credential 'CommitteeColdKey (EraCrypto era)) (Maybe (Credential 'CommitteeHotKey (EraCrypto era))))
+ccHotKeysL :: NELens era (Map (Credential 'CommitteeColdKey (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 ccHotKeysL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeHotKeysL
 
 -- UTxOState

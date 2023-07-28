@@ -125,7 +125,7 @@ data KeyRole
   | BlockIssuer
   | Witness
   | DRepRole
-  | CommitteeHotKey
+  | HotCommitteeRole
   | CommitteeColdKey
   deriving (Show)
 

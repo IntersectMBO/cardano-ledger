@@ -280,7 +280,7 @@ data VState era = VState
   , vsCommitteeHotKeys ::
       !( Map
           (Credential 'CommitteeColdKey (EraCrypto era))
-          (Maybe (Credential 'CommitteeHotKey (EraCrypto era))) -- `Nothing` to indicate "resigned".
+          (Maybe (Credential 'HotCommitteeRole (EraCrypto era))) -- `Nothing` to indicate "resigned".
        )
   }
   deriving (Show, Eq, Generic)
