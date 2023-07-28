@@ -156,6 +156,7 @@ library testlib
         generic-random,
         containers,
         vector-map,
+        microlens,
         mtl,
         text,
         hedgehog-quickcheck

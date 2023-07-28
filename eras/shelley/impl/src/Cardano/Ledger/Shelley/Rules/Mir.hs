@@ -148,6 +148,8 @@ mirTransition = do
                   }
             }
           nm
+          & prevPParamsEpochStateL .~ pr
+          & curPParamsEpochStateL .~ pp
     else do
       tellEvent $
         NoMirTransfer

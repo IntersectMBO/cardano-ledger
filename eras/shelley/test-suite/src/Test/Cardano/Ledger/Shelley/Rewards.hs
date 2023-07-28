@@ -81,7 +81,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   circulation,
   completeRupd,
   createRUpd,
-  curPParamsEpochStateL,
   filterAllRewards,
   lsCertState,
   prevPParamsEpochStateL,
@@ -547,7 +546,7 @@ createRUpdOld slotsPerEpoch b es@(EpochState acnt ss ls nm) maxSupply =
     rs = UM.domain $ rewards ds
     reserves = asReserves acnt
     totalStake = circulation es maxSupply
-    pr = es ^. curPParamsEpochStateL
+    pr = es ^. prevPParamsEpochStateL
 
 createRUpdOld_ ::
   forall era.

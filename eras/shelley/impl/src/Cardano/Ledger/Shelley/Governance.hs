@@ -201,6 +201,8 @@ toPPUPStatePairs :: (KeyValue a, EraPParams era) => ShelleyGovState era -> [a]
 toPPUPStatePairs ShelleyGovState {..} =
   [ "proposals" .= proposals
   , "futureProposals" .= futureProposals
+  , "curPParams" .= sgovPp
+  , "prevPParams" .= sgovPrevPp
   ]
 
 instance EraPParams era => Default (ShelleyGovState era) where

@@ -39,7 +39,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   toPlainDecoder,
  )
-import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
+import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!), encode, Encode (..), (!>))
 import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
@@ -170,11 +170,12 @@ instance
   EncCBOR (EpochState era)
   where
   encCBOR EpochState {esAccountState, esLState, esSnapshots, esNonMyopic} =
-    encodeListLen 6
-      <> encCBOR esAccountState
-      <> encCBOR esLState -- We get better sharing when encoding ledger state before snaphots
-      <> encCBOR esSnapshots
-      <> encCBOR esNonMyopic
+    encode $
+      Rec EpochState
+        !> To esAccountState
+        !> To esSnapshots
+        !> To esLState -- We get better sharing when encoding ledger state before snaphots
+        !> To esNonMyopic
 
 instance
   ( EraTxOut era
@@ -183,7 +184,7 @@ instance
   DecCBOR (EpochState era)
   where
   decCBOR =
-    decodeRecordNamed "EpochState" (const 6) $
+    decodeRecordNamed "EpochState" (const 4) $
       flip evalStateT mempty $ do
         esAccountState <- lift decCBOR
         esLState <- decSharePlusCBOR

@@ -19,6 +19,7 @@ import qualified Data.VMap as VMap
 import Test.Cardano.Ledger.Binary.Plain.Golden
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Lens.Micro ((^.))
 
 goldenNewEpochStateExpectation ::
   forall era.
@@ -33,7 +34,7 @@ goldenNewEpochStateExpectation ::
 goldenNewEpochStateExpectation
   nes@NewEpochState
     { nesEs =
-      EpochState
+      es@EpochState
         { esAccountState = AccountState {..}
         , esSnapshots = SnapShots {..}
         , ..
@@ -61,6 +62,8 @@ goldenNewEpochStateExpectation
                 , snapShotEnc ssStakeGo
                 , E ssFee
                 ]
+            , E (es ^. prevPParamsEpochStateL)
+            , E (es ^. curPParamsEpochStateL)
             , Ev ver esNonMyopic
             ]
         , Ev ver nesRu
