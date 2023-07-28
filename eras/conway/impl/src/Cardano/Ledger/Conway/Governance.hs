@@ -94,7 +94,7 @@ import NoThunks.Class (NoThunks)
 
 data GovernanceActionState era = GovernanceActionState
   { gasCommitteeVotes :: !(Map (Credential 'CommitteeHotKey (EraCrypto era)) Vote)
-  , gasDRepVotes :: !(Map (Credential 'Voting (EraCrypto era)) Vote)
+  , gasDRepVotes :: !(Map (Credential 'DRepRole (EraCrypto era)) Vote)
   , gasStakePoolVotes :: !(Map (KeyHash 'StakePool (EraCrypto era)) Vote)
   , gasDeposit :: !Coin
   , gasReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
@@ -178,7 +178,7 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
 data EnactState era = EnactState
-  { ensCommittee :: !(StrictMaybe (Set (KeyHash 'Voting (EraCrypto era)), Rational))
+  { ensCommittee :: !(StrictMaybe (Set (KeyHash 'DRepRole (EraCrypto era)), Rational))
   -- ^ Constitutional Committee
   , ensConstitution :: !(Constitution era)
   -- ^ Hash of the Constitution

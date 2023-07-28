@@ -124,7 +124,7 @@ data KeyRole
   | StakePool
   | BlockIssuer
   | Witness
-  | Voting
+  | DRepRole
   | CommitteeHotKey
   | CommitteeColdKey
   deriving (Show)

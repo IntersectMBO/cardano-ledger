@@ -220,10 +220,10 @@ poolDeposits = Var $ V "poolDeposits" (MapR PoolHashR CoinR) (Yes NewEpochStateR
 poolDepositsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 poolDepositsL = nesEsL . esLStateL . lsCertStateL . certPStateL . psDepositsL
 
-dreps :: Term era (Set (Credential 'Voting (EraCrypto era)))
+dreps :: Term era (Set (Credential 'DRepRole (EraCrypto era)))
 dreps = Var $ V "dreps" (SetR VCredR) (Yes NewEpochStateR drepsL)
 
-drepsL :: NELens era (Set (Credential 'Voting (EraCrypto era)))
+drepsL :: NELens era (Set (Credential 'DRepRole (EraCrypto era)))
 drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 ccHotKeys :: Term era (Map (Credential 'CommitteeColdKey (EraCrypto era)) (Maybe (Credential 'CommitteeHotKey (EraCrypto era))))

@@ -30,7 +30,7 @@ import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraPParams, EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (KeyRole (CommitteeColdKey, Voting))
+import Cardano.Ledger.Keys (KeyRole (CommitteeColdKey, DRepRole))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -55,8 +55,8 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data ConwayGovCertPredFailure era
-  = ConwayDRepAlreadyRegistered !(Credential 'Voting (EraCrypto era))
-  | ConwayDRepNotRegistered !(Credential 'Voting (EraCrypto era))
+  = ConwayDRepAlreadyRegistered !(Credential 'DRepRole (EraCrypto era))
+  | ConwayDRepNotRegistered !(Credential 'DRepRole (EraCrypto era))
   | ConwayDRepIncorrectDeposit !Coin
   | ConwayCommitteeHasResigned !(Credential 'CommitteeColdKey (EraCrypto era))
   deriving (Show, Eq, Generic)

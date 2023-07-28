@@ -147,11 +147,11 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
   mkResignCommitteeColdTxCert :: Credential 'CommitteeColdKey (EraCrypto era) -> TxCert era
   getResignCommitteeColdTxCert :: TxCert era -> Maybe (Credential 'CommitteeColdKey (EraCrypto era))
 
-  mkRegDRepTxCert :: Credential 'Voting (EraCrypto era) -> Coin -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
-  getRegDRepTxCert :: TxCert era -> Maybe (Credential 'Voting (EraCrypto era), Coin, StrictMaybe (Anchor (EraCrypto era)))
+  mkRegDRepTxCert :: Credential 'DRepRole (EraCrypto era) -> Coin -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
+  getRegDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), Coin, StrictMaybe (Anchor (EraCrypto era)))
 
-  mkUnRegDRepTxCert :: Credential 'Voting (EraCrypto era) -> Coin -> TxCert era
-  getUnRegDRepTxCert :: TxCert era -> Maybe (Credential 'Voting (EraCrypto era), Coin)
+  mkUnRegDRepTxCert :: Credential 'DRepRole (EraCrypto era) -> Coin -> TxCert era
+  getUnRegDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), Coin)
 
 instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkRegDepositTxCert cred c = ConwayTxCertDeleg $ ConwayRegCert cred $ SJust c
@@ -245,7 +245,7 @@ pattern ResignCommitteeColdTxCert ck <- (getResignCommitteeColdTxCert -> Just ck
 
 pattern RegDRepTxCert ::
   ConwayEraTxCert era =>
-  Credential 'Voting (EraCrypto era) ->
+  Credential 'DRepRole (EraCrypto era) ->
   Coin ->
   StrictMaybe (Anchor (EraCrypto era)) ->
   TxCert era
@@ -255,7 +255,7 @@ pattern RegDRepTxCert cred deposit mAnchor <- (getRegDRepTxCert -> Just (cred, d
 
 pattern UnRegDRepTxCert ::
   ConwayEraTxCert era =>
-  Credential 'Voting (EraCrypto era) ->
+  Credential 'DRepRole (EraCrypto era) ->
   Coin ->
   TxCert era
 pattern UnRegDRepTxCert cred deposit <- (getUnRegDRepTxCert -> Just (cred, deposit))
@@ -319,8 +319,8 @@ instance NFData (ConwayDelegCert c)
 instance NoThunks (ConwayDelegCert c)
 
 data ConwayGovCert c
-  = ConwayRegDRep !(Credential 'Voting c) !Coin !(StrictMaybe (Anchor c))
-  | ConwayUnRegDRep !(Credential 'Voting c) !Coin
+  = ConwayRegDRep !(Credential 'DRepRole c) !Coin !(StrictMaybe (Anchor c))
+  | ConwayUnRegDRep !(Credential 'DRepRole c) !Coin
   | ConwayAuthCommitteeHotKey !(Credential 'CommitteeColdKey c) !(Credential 'CommitteeHotKey c)
   | ConwayResignCommitteeColdKey !(Credential 'CommitteeColdKey c)
   deriving (Show, Generic, Eq)

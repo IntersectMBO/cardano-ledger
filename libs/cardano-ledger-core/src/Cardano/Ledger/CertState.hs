@@ -276,7 +276,7 @@ toPStatePair PState {..} =
   ]
 
 data VState era = VState
-  { vsDReps :: !(Set (Credential 'Voting (EraCrypto era)))
+  { vsDReps :: !(Set (Credential 'DRepRole (EraCrypto era)))
   , vsCommitteeHotKeys ::
       !( Map
           (Credential 'CommitteeColdKey (EraCrypto era))
