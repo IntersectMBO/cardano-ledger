@@ -111,13 +111,13 @@ psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
 -- ===================================
 -- VState
 
-vsDRepsL :: Lens' (VState era) (Set (Credential 'Voting (EraCrypto era)))
+vsDRepsL :: Lens' (VState era) (Set (Credential 'DRepRole (EraCrypto era)))
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 
 vsCommitteeHotKeysL ::
   Lens'
     (VState era)
-    (Map (Credential 'CommitteeColdKey (EraCrypto era)) (Maybe (Credential 'CommitteeHotKey (EraCrypto era))))
+    (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 vsCommitteeHotKeysL = lens vsCommitteeHotKeys (\vs u -> vs {vsCommitteeHotKeys = u})
 
 -- ========================================

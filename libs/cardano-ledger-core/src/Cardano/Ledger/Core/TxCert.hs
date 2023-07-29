@@ -132,7 +132,7 @@ poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
 
 data DRep c
-  = DRepKeyHash !(KeyHash 'Voting c)
+  = DRepKeyHash !(KeyHash 'DRepRole c)
   | DRepScriptHash !(ScriptHash c)
   | DRepAlwaysAbstain
   | DRepAlwaysNoConfidence
@@ -163,12 +163,12 @@ instance Crypto c => DecCBOR (DRep c) where
       3 -> SumD DRepAlwaysNoConfidence
       k -> Invalid k
 
-dRepToCred :: DRep c -> Maybe (Credential 'Voting c)
+dRepToCred :: DRep c -> Maybe (Credential 'DRepRole c)
 dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
 dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
 
-pattern DRepCredential :: Credential 'Voting c -> DRep c
+pattern DRepCredential :: Credential 'DRepRole c -> DRep c
 pattern DRepCredential c <- (dRepToCred -> Just c)
   where
     DRepCredential c = case c of

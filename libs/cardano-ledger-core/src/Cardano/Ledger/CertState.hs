@@ -276,11 +276,11 @@ toPStatePair PState {..} =
   ]
 
 data VState era = VState
-  { vsDReps :: !(Set (Credential 'Voting (EraCrypto era)))
+  { vsDReps :: !(Set (Credential 'DRepRole (EraCrypto era)))
   , vsCommitteeHotKeys ::
       !( Map
-          (Credential 'CommitteeColdKey (EraCrypto era))
-          (Maybe (Credential 'CommitteeHotKey (EraCrypto era))) -- `Nothing` to indicate "resigned".
+          (Credential 'ColdCommitteeRole (EraCrypto era))
+          (Maybe (Credential 'HotCommitteeRole (EraCrypto era))) -- `Nothing` to indicate "resigned".
        )
   }
   deriving (Show, Eq, Generic)

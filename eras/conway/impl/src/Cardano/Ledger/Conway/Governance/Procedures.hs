@@ -140,8 +140,8 @@ govActionIdToText (GovernanceActionId (TxId txidHash) (GovernanceActionIx ix)) =
     <> Text.pack (show ix)
 
 data Voter c
-  = CommitteeVoter !(Credential 'CommitteeHotKey c)
-  | DRepVoter !(Credential 'Voting c)
+  = CommitteeVoter !(Credential 'HotCommitteeRole c)
+  | DRepVoter !(Credential 'DRepRole c)
   | StakePoolVoter !(KeyHash 'StakePool c)
   deriving (Generic, Eq, Ord, Show)
 
@@ -348,7 +348,7 @@ data GovernanceAction era
   | HardForkInitiation !ProtVer
   | TreasuryWithdrawals !(Map (Credential 'Staking (EraCrypto era)) Coin)
   | NoConfidence
-  | NewCommittee !(Set (KeyHash 'Voting (EraCrypto era))) !Rational
+  | NewCommittee !(Set (KeyHash 'DRepRole (EraCrypto era))) !Rational
   | NewConstitution !(Constitution era)
   | InfoAction
   deriving (Generic)

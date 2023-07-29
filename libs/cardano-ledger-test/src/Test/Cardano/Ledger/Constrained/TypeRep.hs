@@ -110,14 +110,14 @@ data Rep era t where
   SetR :: Ord a => Rep era a -> Rep era (Set a)
   ListR :: Rep era a -> Rep era [a]
   CredR :: Rep era (Credential 'Staking (EraCrypto era))
-  VCredR :: Rep era (Credential 'Voting (EraCrypto era))
+  VCredR :: Rep era (Credential 'DRepRole (EraCrypto era))
   PoolHashR :: Rep era (KeyHash 'StakePool (EraCrypto era))
   WitHashR :: Rep era (KeyHash 'Witness (EraCrypto era))
   GenHashR :: Rep era (KeyHash 'Genesis (EraCrypto era))
   GenDelegHashR :: Rep era (KeyHash 'GenesisDelegate (EraCrypto era))
-  VHashR :: Rep era (KeyHash 'Voting (EraCrypto era))
-  CommColdHashR :: Rep era (Credential 'CommitteeColdKey (EraCrypto era))
-  CommHotHashR :: Rep era (Credential 'CommitteeHotKey (EraCrypto era))
+  VHashR :: Rep era (KeyHash 'DRepRole (EraCrypto era))
+  CommColdHashR :: Rep era (Credential 'ColdCommitteeRole (EraCrypto era))
+  CommHotHashR :: Rep era (Credential 'HotCommitteeRole (EraCrypto era))
   PoolParamsR :: Rep era (PoolParams (EraCrypto era))
   NewEpochStateR :: Rep era (NewEpochState era)
   IntR :: Rep era Int

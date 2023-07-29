@@ -124,9 +124,9 @@ data KeyRole
   | StakePool
   | BlockIssuer
   | Witness
-  | Voting
-  | CommitteeHotKey
-  | CommitteeColdKey
+  | DRepRole
+  | HotCommitteeRole
+  | ColdCommitteeRole
   deriving (Show)
 
 class HasKeyRole (a :: KeyRole -> Type -> Type) where
