@@ -142,7 +142,14 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceAction
       [ ParameterChange <$> arbitrary
       , HardForkInitiation <$> arbitrary
       , TreasuryWithdrawals <$> arbitrary
+      , pure NoConfidence
+      , NewCommittee <$> arbitrary <*> arbitrary
+      , NewConstitution <$> arbitrary
+      , pure InfoAction
       ]
+
+instance Era era => Arbitrary (Committee era) where
+  arbitrary = Committee <$> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (GovernanceActionId c) where
   arbitrary =

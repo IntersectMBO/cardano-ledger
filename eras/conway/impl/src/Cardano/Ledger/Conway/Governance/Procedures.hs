@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,9 +13,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use record patterns" #-}
 
 module Cardano.Ledger.Conway.Governance.Procedures (
   GovernanceProcedures (..),
@@ -25,6 +23,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   AnchorDataHash,
   Vote (..),
   Voter (..),
+  Committee (..),
   GovernanceAction (..),
   GovernanceActionId (..),
   GovernanceActionIx (..),
@@ -35,7 +34,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
-import Cardano.Ledger.BaseTypes (ProtVer, Url)
+import Cardano.Ledger.BaseTypes (ProtVer, UnitInterval, Url)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -66,6 +65,7 @@ import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Governance (Constitution)
 import Cardano.Ledger.Shelley.RewardProvenance ()
 import Cardano.Ledger.TxIn (TxId (..))
+import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (when)
 import Data.Aeson (KeyValue (..), ToJSON (..), ToJSONKey (..), object, pairs)
@@ -343,12 +343,53 @@ instance EraPParams era => EncCBOR (ProposalProcedure era) where
         !> To pProcGovernanceAction
         !> To pProcAnchor
 
+data Committee era = Committee
+  { committeeMembers :: !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+  -- ^ Committee members with epoch number when each of them expires
+  , committeeQuorum :: !UnitInterval
+  -- ^ Quorum of the committee that is necessary for a successful vote
+  }
+  deriving (Eq, Show, Generic)
+
+instance Era era => NoThunks (Committee era)
+
+instance Era era => NFData (Committee era)
+
+instance Era era => DecCBOR (Committee era) where
+  decCBOR =
+    decode $
+      RecD Committee
+        <! From
+        <! From
+
+instance Era era => EncCBOR (Committee era) where
+  encCBOR Committee {committeeMembers, committeeQuorum} =
+    encode $
+      Rec (Committee @era)
+        !> To committeeMembers
+        !> To committeeQuorum
+
+instance EraPParams era => ToJSON (Committee era) where
+  toJSON = object . toCommitteePairs
+  toEncoding = pairs . mconcat . toCommitteePairs
+
+toCommitteePairs :: (KeyValue a, EraPParams era) => Committee era -> [a]
+toCommitteePairs committee@(Committee _ _) =
+  let Committee {..} = committee
+   in [ "members" .= committeeMembers
+      , "quorum" .= committeeQuorum
+      ]
+
 data GovernanceAction era
   = ParameterChange !(PParamsUpdate era)
   | HardForkInitiation !ProtVer
   | TreasuryWithdrawals !(Map (Credential 'Staking (EraCrypto era)) Coin)
   | NoConfidence
-  | NewCommittee !(Set (KeyHash 'DRepRole (EraCrypto era))) !Rational
+  | NewCommittee
+      -- | Old committee
+      !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+      -- | New Committee
+      !(Committee era)
   | NewConstitution !(Constitution era)
   | InfoAction
   deriving (Generic)
@@ -384,6 +425,6 @@ instance EraPParams era => EncCBOR (GovernanceAction era) where
       enc (HardForkInitiation pv) = Sum HardForkInitiation 1 !> To pv
       enc (TreasuryWithdrawals ws) = Sum TreasuryWithdrawals 2 !> To ws
       enc NoConfidence = Sum NoConfidence 3
-      enc (NewCommittee mems quorum) = Sum NewCommittee 4 !> To mems !> To quorum
+      enc (NewCommittee old new) = Sum NewCommittee 4 !> To old !> To new
       enc (NewConstitution c) = Sum NewConstitution 5 !> To c
       enc InfoAction = Sum InfoAction 6

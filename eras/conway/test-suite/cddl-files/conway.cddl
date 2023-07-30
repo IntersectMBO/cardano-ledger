@@ -104,9 +104,11 @@ treasury_withdrawals_action = (2, { $addr_keyhash => coin })
 
 no_confidence = 3
 
-new_committee = (4, [* $addr_keyhash], rational)
+new_committee = (4, set<$committee_coldkey_credential>, committee)
 
 new_constitution = (5, constitution)
+
+committee = [{ $committee_coldkey_credential => epoch }, unit_interval]
 
 constitution =
   [ $hash32
@@ -226,7 +228,7 @@ script_data_hash = $hash32
 ; include the redeemers field, the script data format becomes (in hex):
 ; [ 80 | datums | A0 ]
 ; corresponding to a CBOR empty list and an empty map.
-; Note that a transaction might include the redeemers field and set it to the
+; Note that a transaction might include the redeemers field and  it to the
 ; empty map, in which case the user supplied encoding of the empty map is used.
 
 ; address = bytes
@@ -325,6 +327,7 @@ drep =
 
 stake_credential = credential
 voting_credential = credential
+committee_coldkey_credential = credential
 
 pool_params = ( operator:       pool_keyhash
               , vrf_keyhash:    vrf_keyhash

@@ -75,7 +75,7 @@ enactmentTransition = do
           , ensTreasury = ensTreasury st <-> newWdrls
           }
     NoConfidence -> pure $ st {ensCommittee = SNothing}
-    NewCommittee mems q -> pure $ st {ensCommittee = SJust (mems, q)}
+    NewCommittee _ committee -> pure $ st {ensCommittee = SJust committee} -- TODO: check old members
     NewConstitution c -> pure $ st {ensConstitution = c}
     InfoAction -> pure st
 
