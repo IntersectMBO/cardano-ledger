@@ -2,6 +2,8 @@
 
 ## 1.7.0.0
 
+* Switch GovernanceActionIx to `Word32` fro `Word64` and remove `Num` and `Enum`
+  instances, which are dangerous due to potential overflows.
 * Add `currentTreasuryValue :: !(StrictMaybe Coin)` as a new field to Conway TxBody #3586
 * Add an optional Anchor to the Conway DRep registration certificate #3576
 * Change `ConwayCommitteeCert` to allow:

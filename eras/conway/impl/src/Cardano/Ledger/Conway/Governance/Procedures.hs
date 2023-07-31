@@ -75,19 +75,17 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq (..))
 import Data.Set (Set)
 import qualified Data.Text as Text
-import Data.Word (Word64)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
-newtype GovernanceActionIx = GovernanceActionIx Word64
+newtype GovernanceActionIx = GovernanceActionIx Word32
   deriving
     ( Generic
     , Eq
     , Ord
     , Show
-    , Num
-    , Enum
     , NFData
     , NoThunks
     , EncCBOR
@@ -302,7 +300,7 @@ indexedGovProps ::
 indexedGovProps = enumerateProps 0
   where
     enumerateProps _ Empty = Empty
-    enumerateProps !n (x :<| xs) = (n, x) :<| enumerateProps (succ n) xs
+    enumerateProps !n (x :<| xs) = (GovernanceActionIx n, x) :<| enumerateProps (succ n) xs
 
 instance EraPParams era => NoThunks (GovernanceProcedures era)
 
