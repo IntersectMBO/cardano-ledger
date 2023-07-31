@@ -331,6 +331,7 @@ utxoState =
     (Coin 0)
     def
     (IStake mempty mempty)
+    mempty
 
 dpState :: CertState C
 dpState = CertState def def def

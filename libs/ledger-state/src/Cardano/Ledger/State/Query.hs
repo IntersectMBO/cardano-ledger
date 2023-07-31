@@ -66,6 +66,7 @@ insertUTxOState Shelley.UTxOState {..} = do
       { utxoStateDeposited = utxosDeposited
       , utxoStateFees = utxosFees
       , utxoStatePpups = utxosGovState
+      , utxoStateDonation = utxosDonation
       }
 
 insertUTxO ::
@@ -509,7 +510,13 @@ getLedgerState utxo LedgerState {..} dstate = do
   pure
     Shelley.LedgerState
       { Shelley.lsUTxOState =
-          Shelley.smartUTxOState emptyPParams utxo utxoStateDeposited utxoStateFees utxoStatePpups -- Maintain invariant
+          Shelley.smartUTxOState
+            emptyPParams
+            utxo
+            utxoStateDeposited
+            utxoStateFees
+            utxoStatePpups -- Maintain invariant
+            utxoStateDonation
       , Shelley.lsCertState =
           Shelley.CertState
             { Shelley.certDState = dstate

@@ -235,7 +235,14 @@ pParamsZeroByProof (Allegra _) = def
 pParamsZeroByProof (Shelley _) = def
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
-uTxOStateZero = smartUTxOState pParamsZero utxoZero mempty mempty emptyGovState
+uTxOStateZero =
+  smartUTxOState
+    pParamsZero
+    utxoZero
+    mempty
+    mempty
+    emptyGovState
+    mempty
 
 pParamsZero :: Reflect era => PParams era
 pParamsZero = lift pParamsZeroByProof
@@ -344,6 +351,7 @@ instance Reflect era => Extract (UTxOState era) era where
       (mDeposited x)
       (mFees x)
       emptyGovState
+      mempty
 
 instance Reflect era => Extract (LedgerState era) era where
   extract x = LedgerState (extract x) (extract x)

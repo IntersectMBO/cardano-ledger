@@ -252,6 +252,7 @@ ustate pf =
     , utxosFees = Coin 0
     , utxosGovState = def
     , utxosStakeDistr = IStake mempty mempty
+    , utxosDonation = mempty
     }
 
 updateTxExUnits ::

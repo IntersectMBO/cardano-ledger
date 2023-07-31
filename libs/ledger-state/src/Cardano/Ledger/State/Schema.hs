@@ -79,6 +79,7 @@ UtxoState
   deposited Coin
   fees Coin
   ppups (Shelley.ShelleyGovState CurrentEra)
+  donation Coin
 DState
   fGenDelegs FGenDelegs
   genDelegs (Keys.GenDelegs C)

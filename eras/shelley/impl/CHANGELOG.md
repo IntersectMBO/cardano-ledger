@@ -34,6 +34,15 @@
 * Rename `esPrevPpL` to `prevPParamsEpochStateL`
 * Rename `esPpL` to `curPParamsEpochStateL`
 * Swap the order of `esSnapshots` and `esLState` in `EpochState`
+* Add lenses:
+  * `lsCertStateL`
+  * `utxosStakeDistrL`
+  * `utxosDonationL`
+  * `utxosUtxoL`
+  * `utxosDepositedL`
+  * `esAccountStateL`
+  * `asTreasuryL`
+  * `asReservesL`
 
 ## 1.4.2.0
 

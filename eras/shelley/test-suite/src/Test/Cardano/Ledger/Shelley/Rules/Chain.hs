@@ -222,6 +222,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     (Coin 0)
                     (Coin 0)
                     emptyGovState
+                    mempty
                 )
                 (CertState def def dState)
             )

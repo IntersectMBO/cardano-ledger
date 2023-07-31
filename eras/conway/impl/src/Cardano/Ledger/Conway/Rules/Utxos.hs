@@ -33,6 +33,7 @@ import Cardano.Ledger.Babbage.Rules (
  )
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (
@@ -41,6 +42,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
+  utxosDonationL,
  )
 import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
@@ -126,6 +128,18 @@ utxosTransition =
       IsValid True -> conwayEvalScriptsTxValid
       IsValid False -> babbageEvalScriptsTxInvalid
 
+updateConwayUTxOState ::
+  ConwayEraTxBody era =>
+  PParams era ->
+  UTxOState era ->
+  TxBody era ->
+  Coin ->
+  GovState era ->
+  UTxOState era
+updateConwayUTxOState pp u txb depositChange gov =
+  updateUTxOState pp u txb depositChange gov
+    & utxosDonationL <>~ txb ^. treasuryDonationTxBodyL
+
 conwayEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
@@ -136,10 +150,11 @@ conwayEvalScriptsTxValid ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
   , STS (ConwayUTXOS era)
+  , ConwayEraTxBody era
   ) =>
   TransitionRule (ConwayUTXOS era)
 conwayEvalScriptsTxValid = do
-  TRC (UtxoEnv _ pp dpstate _, u@(UTxOState utxo _ _ gov _), tx) <-
+  TRC (UtxoEnv _ pp dpstate _, u@(UTxOState utxo _ _ gov _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
   depositChange <- tellDepositChangeEvent pp dpstate txBody
@@ -148,4 +163,4 @@ conwayEvalScriptsTxValid = do
   expectScriptsToPass pp tx utxo
   let !_ = traceEvent validEnd ()
   -- TODO Check that the deposit amounts on governance actions are correct
-  pure $! updateUTxOState pp u txBody depositChange gov
+  pure $! updateConwayUTxOState pp u txBody depositChange gov

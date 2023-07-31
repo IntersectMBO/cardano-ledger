@@ -156,6 +156,7 @@ exampleTxBodyConway =
     (VotingProcedures mempty)
     mempty
     (SJust $ Coin 867530900000) -- current treasury value
+    mempty
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 

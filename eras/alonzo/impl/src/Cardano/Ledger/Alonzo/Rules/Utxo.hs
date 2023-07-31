@@ -471,7 +471,7 @@ utxoTransition ::
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
   TRC (UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo _deposits _fees _ppup _ = u
+  let UTxOState utxo _deposits _fees _ppup _ _ = u
 
   {-   txb := txbody tx   -}
   let txBody = tx ^. bodyTxL

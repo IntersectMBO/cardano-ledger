@@ -64,6 +64,7 @@ conwayProducedValue ::
   Value era
 conwayProducedValue pp f txb =
   inject propDeposits
+    <> inject (txb ^. treasuryDonationTxBodyL)
     <> shelleyProducedValue pp f txb
   where
     propDeposits = foldMap pProcDeposit $ txb ^. proposalProceduresTxBodyL

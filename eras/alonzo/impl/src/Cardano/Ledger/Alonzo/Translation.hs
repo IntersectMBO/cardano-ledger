@@ -137,6 +137,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
         , API.utxosFees = API.utxosFees us
         , API.utxosGovState = translateEra' ctxt $ API.utxosGovState us
         , API.utxosStakeDistr = API.utxosStakeDistr us
+        , API.utxosDonation = API.utxosDonation us
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where

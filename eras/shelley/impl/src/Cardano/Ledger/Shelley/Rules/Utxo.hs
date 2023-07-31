@@ -387,7 +387,7 @@ utxoInductive ::
   TransitionRule (utxo era)
 utxoInductive = do
   TRC (UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo _ _ ppup _ = u
+  let UTxOState utxo _ _ ppup _ _ = u
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
 
@@ -598,7 +598,7 @@ updateUTxOState ::
   Coin ->
   GovState era ->
   UTxOState era
-updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr} txb depositChange govState =
+updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr, utxosDonation} txb depositChange govState =
   let UTxO utxo = utxosUtxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
@@ -612,6 +612,7 @@ updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDi
         , utxosFees = utxosFees <> txb ^. feeTxBodyL
         , utxosGovState = govState
         , utxosStakeDistr = newIncStakeDistro
+        , utxosDonation = utxosDonation
         }
 
 instance

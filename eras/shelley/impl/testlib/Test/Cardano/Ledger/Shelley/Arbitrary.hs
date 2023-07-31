@@ -205,6 +205,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
   -- The 'genericShrink' function returns first the immediate subterms of a
   -- value (in case it is a recursive data-type), and then shrinks the value

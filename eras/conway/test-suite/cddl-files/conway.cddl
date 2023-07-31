@@ -70,6 +70,7 @@ transaction_body =
   , ? 19 : voting_procedures        ; New; Voting procedures
   , ? 20 : [* proposal_procedure]   ; New; Proposal procedures
   , ? 21 : coin                     ; New; current treasury value
+  , ? 22 : positive_coin            ; New; donation
   }
 
 voting_procedures = { + voter => { + gov_action_id => voting_procedure } }
