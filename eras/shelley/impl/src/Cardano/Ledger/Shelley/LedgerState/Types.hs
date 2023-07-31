@@ -39,7 +39,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   toPlainDecoder,
  )
-import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!), encode, Encode (..), (!>))
+import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
@@ -187,8 +187,8 @@ instance
     decodeRecordNamed "EpochState" (const 4) $
       flip evalStateT mempty $ do
         esAccountState <- lift decCBOR
-        esLState <- decSharePlusCBOR
         esSnapshots <- decSharePlusCBOR
+        esLState <- decSharePlusCBOR
         esNonMyopic <- decShareLensCBOR _2
         pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
 

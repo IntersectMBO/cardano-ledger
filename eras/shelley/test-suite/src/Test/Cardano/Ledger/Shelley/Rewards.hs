@@ -128,6 +128,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.TreeDiff (ansiWlEditExprCompact, ediff)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Stack
@@ -156,13 +157,12 @@ import Test.Tasty.QuickCheck (
   choose,
   counterexample,
   elements,
+  noShrinking,
   property,
   testProperty,
   withMaxSuccess,
-  noShrinking,
   (===),
  )
-import Data.TreeDiff (ediff, ansiWlEditExprCompact)
 
 -- ========================================================================
 -- Bounds and Constants --
@@ -814,11 +814,11 @@ tests =
     "Reward Tests"
     [ testProperty "Sum of rewards is bounded by reward pot" $
         withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))
-    , testProperty "compare with reference impl, no provenance, v3" $
+    , testProperty "compare with reference impl, no provenance, v3" . noShrinking $
         newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @3) 0))
     , testProperty "compare with reference impl, no provenance, v7" . noShrinking $
         newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @7) 0))
-    , testProperty "compare with reference impl, with provenance" $
+    , testProperty "compare with reference impl, with provenance" . noShrinking $
         newEpochProp chainlen (oldEqualsNewOn @C (ProtVer (natVersion @3) 0))
     , testProperty "delta events mirror reward updates" $
         newEpochEventsProp chainlen eventsMirrorRewards

@@ -100,7 +100,7 @@ import Test.QuickCheck (
   counterexample,
   (.&&.),
   (.||.),
-  (===),
+  (===), noShrinking,
  )
 import Test.QuickCheck.Property (withMaxSuccess)
 import Test.Tasty (TestTree)
@@ -120,7 +120,7 @@ tests ::
 tests n =
   TQC.testProperty
     "total amount of Ada is preserved (Chain)"
-    (withMaxSuccess n (adaPreservationProps @era @ledger))
+    (noShrinking $ withMaxSuccess n (adaPreservationProps @era @ledger))
 
 -- | Various preservation properties
 adaPreservationProps ::

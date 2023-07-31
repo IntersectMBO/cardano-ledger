@@ -130,7 +130,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls nm) maxSuppl
       Coin reserves = asReserves acnt
       ds = certDState $ lsCertState ls
       -- reserves and rewards change
-      pr = es ^. curPParamsEpochStateL
+      pr = es ^. prevPParamsEpochStateL
       deltaR1 =
         rationalToCoinViaFloor $
           min 1 eta

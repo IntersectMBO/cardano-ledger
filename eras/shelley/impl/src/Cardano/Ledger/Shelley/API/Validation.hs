@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DefaultSignatures #-}
 
 -- | Interface to the block validation and chain extension logic in the Shelley
 -- API.
@@ -65,7 +66,6 @@ class
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , EncCBORGroup (TxSeq era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , EraGovernance era
   ) =>
   ApplyBlock era
   where
@@ -97,6 +97,14 @@ class
     NewEpochState era ->
     Block (BHeaderView (EraCrypto era)) era ->
     m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
+  default applyBlockOpts ::
+    forall ep m.
+    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m, EraGovernance era) =>
+    ApplySTSOpts ep ->
+    Globals ->
+    NewEpochState era ->
+    Block (BHeaderView (EraCrypto era)) era ->
+    m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
       . left BlockTransitionError
@@ -122,6 +130,12 @@ class
   -- the caller implicitly guarantees that they have previously called
   -- 'applyBlockTransition' on the same block and that this was successful.
   reapplyBlock ::
+    Globals ->
+    NewEpochState era ->
+    Block (BHeaderView (EraCrypto era)) era ->
+    NewEpochState era
+  default reapplyBlock ::
+    EraGovernance era =>
     Globals ->
     NewEpochState era ->
     Block (BHeaderView (EraCrypto era)) era ->
