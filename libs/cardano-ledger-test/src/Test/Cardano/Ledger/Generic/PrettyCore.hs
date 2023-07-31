@@ -1566,6 +1566,7 @@ pcTxBodyField proof x = case x of
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
   GovProcs ga -> [("gov procedures", prettyA ga)]
   CurrentTreasuryValue ctv -> [("current treasury value", prettyA ctv)]
+  TreasuryDonation td -> [("treasury donation", prettyA td)]
 
 pcTxField ::
   forall era.
@@ -1797,7 +1798,7 @@ pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
 instance Reflect era => PrettyC (NewEpochState era) era where prettyC = pcNewEpochState
 
 pcUTxOState :: Reflect era => Proof era -> UTxOState era -> PDoc
-pcUTxOState proof (UTxOState u dep fs _pups _stakedistro) =
+pcUTxOState proof (UTxOState u dep fs _pups _stakedistro don) =
   ppRecord
     "UTxOState"
     [ ("utxo", pcUTxO proof u)
@@ -1805,6 +1806,7 @@ pcUTxOState proof (UTxOState u dep fs _pups _stakedistro) =
     , ("fees", pcCoin fs)
     , ("ppups", ppString "PPUP")
     , ("stake distr", ppString "Stake Distr") -- This is not part of the model
+    , ("donation", prettyA don)
     ]
 
 instance Reflect era => PrettyC (UTxOState era) era where prettyC = pcUTxOState

@@ -140,6 +140,7 @@ utxoState0 =
           def
           def
     , utxosStakeDistr = mempty
+    , utxosDonation = mempty
     }
 
 tx :: ShelleyTx C
@@ -161,6 +162,7 @@ utxoState1 =
           def
           def
     , utxosStakeDistr = IStake mempty mempty
+    , utxosDonation = mempty
     }
   where
     txid = TxId $ hashAnnotated txBody

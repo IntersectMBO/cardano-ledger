@@ -265,7 +265,7 @@ adaIsPreservedBabbage numTx gensize = adaIsPreserved (Babbage Mock) numTx gensiz
 stakeInvariant :: EraTxOut era => MockChainState era -> MockChainState era -> Property
 stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
   case (lsUTxOState . esLState . nesEs) nes of
-    (UTxOState utxo _ _ _ istake) -> istake === updateStakeDistribution def mempty mempty utxo
+    (UTxOState utxo _ _ _ istake _) -> istake === updateStakeDistribution def mempty mempty utxo
 
 incrementStakeInvariant ::
   ( Reflect era

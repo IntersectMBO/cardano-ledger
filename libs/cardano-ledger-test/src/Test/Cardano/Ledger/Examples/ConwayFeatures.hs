@@ -4,8 +4,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -51,7 +53,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val (inject)
+import Cardano.Ledger.Val (Val (..), inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
 import Data.Foldable (toList)
@@ -96,6 +98,8 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Tasty
 import Test.Tasty.HUnit
+
+import Test.Cardano.Ledger.Generic.PrettyCore ()
 
 stakeKeyHash :: forall era. Era era => Proof era -> KeyHash 'Staking (EraCrypto era)
 stakeKeyHash _pf = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
@@ -315,8 +319,8 @@ testGov ::
 testGov pf = do
   let
     (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
-    initialGov = def :: ConwayGovState era
-    initialLedgerState = LedgerState (smartUTxOState (pp pf) utxo0 (Coin 0) (Coin 0) initialGov) def
+    initialGov = def
+    initialLedgerState = LedgerState (smartUTxOState (pp pf) utxo0 (Coin 0) (Coin 0) initialGov zero) def
 
     proposalTx = txFromTestCaseData pf (proposal pf)
 
@@ -325,7 +329,7 @@ testGov pf = do
     expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgRatifyL)
 
     eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState (pp pf) (trustMeP pf True proposalTx)
-    ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _) _) =
+    ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) =
       expectRight "Error running LEDGER when proposing: " eitherLedgerState0
 
   assertEqual "govState after proposal" govState0 expectedGov0
@@ -336,7 +340,7 @@ testGov pf = do
     expectedGovState1 = GovActionsState $ Map.fromList [(govActionId, gas)]
     expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgRatifyL)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 (pp pf) (trustMeP pf True voteTx)
-    ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _) _) =
+    ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) =
       expectRight "Error running LEDGER when voting: " eitherLedgerState1
 
   assertEqual "govState after vote" govState1 expectedGov1
@@ -374,7 +378,7 @@ testGov pf = do
         expectedGovActionsState2
         (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgRatifyL)
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 (pp pf) (trustMeP pf True secondProposalTx)
-    ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _) _) =
+    ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) =
       expectRight "Error running LEDGER when proposing:" eitherLedgerState3
 
   assertEqual "govState after second proposal" govState2 expectedGovState2

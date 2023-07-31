@@ -66,6 +66,8 @@ class BabbageEraTxBody era => ConwayEraTxBody era where
   -- | Lens for getting and setting `ProposalProcedures`.
   proposalProceduresTxBodyL :: Lens' (TxBody era) (StrictSeq (ProposalProcedure era))
 
+  treasuryDonationTxBodyL :: Lens' (TxBody era) Coin
+
 class BabbageEraPParams era => ConwayEraPParams era where
   ppuWellFormed :: PParamsUpdate era -> Bool
 

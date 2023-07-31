@@ -219,7 +219,7 @@ babbageEvalScriptsTxValid ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
-  TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
+  TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
   depositChange <- tellDepositChangeEvent pp dpstate txBody
@@ -256,7 +256,7 @@ babbageEvalScriptsTxInvalid ::
   ) =>
   TransitionRule (s era)
 babbageEvalScriptsTxInvalid = do
-  TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
+  TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
   let txBody = tx ^. bodyTxL
   sysSt <- liftSTS $ asks systemStart

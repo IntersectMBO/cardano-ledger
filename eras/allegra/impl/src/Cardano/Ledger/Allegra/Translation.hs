@@ -122,6 +122,7 @@ instance Crypto c => TranslateEra (AllegraEra c) UTxOState where
         , utxosFees = utxosFees us
         , utxosGovState = translateEra' ctxt $ utxosGovState us
         , utxosStakeDistr = utxosStakeDistr us
+        , utxosDonation = utxosDonation us
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) DState where

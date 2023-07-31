@@ -38,7 +38,8 @@ module Cardano.Ledger.Conway.TxBody (
     ctbTxNetworkId,
     ctbVotingProcedures,
     ctbProposalProcedures,
-    ctbCurrentTreasuryValue
+    ctbCurrentTreasuryValue,
+    ctbTreasuryDonation
   ),
 ) where
 
@@ -48,7 +49,7 @@ import Cardano.Ledger.Babbage.TxBody (
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (Network)
+import Cardano.Ledger.BaseTypes (Network, fromSMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -70,7 +71,7 @@ import Cardano.Ledger.Binary.Coders (
   ofield,
   (!>),
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), decodePositiveCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
@@ -98,6 +99,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq, (|>))
@@ -131,6 +133,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrVotingProcedures :: !(VotingProcedures era)
   , ctbrProposalProcedures :: !(StrictSeq (ProposalProcedure era))
   , ctbrCurrentTreasuryValue :: !(StrictMaybe Coin)
+  , ctbrTreasuryDonation :: !Coin
   }
   deriving (Generic, Typeable)
 
@@ -190,6 +193,10 @@ instance
       bodyFields 19 = field (\x tx -> tx {ctbrVotingProcedures = x}) From
       bodyFields 20 = field (\x tx -> tx {ctbrProposalProcedures = x}) From
       bodyFields 21 = ofield (\x tx -> tx {ctbrCurrentTreasuryValue = x}) From
+      bodyFields 22 =
+        ofield
+          (\x tx -> tx {ctbrTreasuryDonation = fromSMaybe zero x})
+          (D decodePositiveCoin)
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields :: [(Word, String)]
       requiredFields =
@@ -266,6 +273,7 @@ basicConwayTxBodyRaw =
     (VotingProcedures mempty)
     mempty
     SNothing
+    mempty
 
 instance Crypto c => EraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance EraTxBody (ConwayEra StandardCrypto) #-}
@@ -387,6 +395,9 @@ instance Crypto c => ConwayEraTxBody (ConwayEra c) where
   currentTreasuryValueTxBodyL =
     lensMemoRawType ctbrCurrentTreasuryValue (\txb x -> txb {ctbrCurrentTreasuryValue = x})
   {-# INLINE currentTreasuryValueTxBodyL #-}
+  treasuryDonationTxBodyL =
+    lensMemoRawType ctbrTreasuryDonation (\txb x -> txb {ctbrTreasuryDonation = x})
+  {-# INLINE treasuryDonationTxBodyL #-}
 
 pattern ConwayTxBody ::
   ConwayEraTxBody era =>
@@ -408,6 +419,7 @@ pattern ConwayTxBody ::
   VotingProcedures era ->
   StrictSeq (ProposalProcedure era) ->
   StrictMaybe Coin ->
+  Coin ->
   ConwayTxBody era
 pattern ConwayTxBody
   { ctbSpendInputs
@@ -428,6 +440,7 @@ pattern ConwayTxBody
   , ctbVotingProcedures
   , ctbProposalProcedures
   , ctbCurrentTreasuryValue
+  , ctbTreasuryDonation
   } <-
   ( getMemoRawType ->
       ConwayTxBodyRaw
@@ -449,6 +462,7 @@ pattern ConwayTxBody
         , ctbrVotingProcedures = ctbVotingProcedures
         , ctbrProposalProcedures = ctbProposalProcedures
         , ctbrCurrentTreasuryValue = ctbCurrentTreasuryValue
+        , ctbrTreasuryDonation = ctbTreasuryDonation
         }
     )
   where
@@ -470,7 +484,8 @@ pattern ConwayTxBody
       txnetworkidX
       votingProcedures
       proposalProcedures
-      currentTreasuryValue =
+      currentTreasuryValue
+      treasuryDonation =
         mkMemoized $
           ConwayTxBodyRaw
             inputsX
@@ -491,6 +506,7 @@ pattern ConwayTxBody
             votingProcedures
             proposalProcedures
             currentTreasuryValue
+            treasuryDonation
 
 {-# COMPLETE ConwayTxBody #-}
 
@@ -527,6 +543,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> Omit (null . unVotingProcedures) (Key 19 (To ctbrVotingProcedures))
         !> Omit null (Key 20 (To ctbrProposalProcedures))
         !> encodeKeyedStrictMaybe 21 ctbrCurrentTreasuryValue
+        !> Omit (== mempty) (Key 22 $ To ctbrTreasuryDonation)
 
 instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
   encCBOR = encode . encodeTxBodyRaw

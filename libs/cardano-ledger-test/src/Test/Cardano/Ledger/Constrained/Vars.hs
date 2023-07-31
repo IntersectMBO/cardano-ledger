@@ -296,6 +296,12 @@ fees = Var $ V "fees" CoinR (Yes NewEpochStateR feesL)
 feesL :: NELens era Coin
 feesL = nesEsL . esLStateL . lsUTxOStateL . utxosFeesL
 
+donationT :: Term era Coin
+donationT = Var $ V "donation" CoinR (Yes NewEpochStateR donationL)
+
+donationL :: NELens era Coin
+donationL = nesEsL . esLStateL . lsUTxOStateL . utxosDonationL
+
 ppup :: Proof era -> Term era (ShelleyGovState era)
 ppup p = Var $ (V "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p)))
 
@@ -824,7 +830,14 @@ ledgerState = Var $ V "ledgerState" (LedgerStateR reify) No
 
 -- | Target for UTxOState
 utxoStateT :: Gov.EraGov era => Proof era -> Target era (UTxOState era)
-utxoStateT p = Constr "UTxOState" (utxofun p) ^$ (pparams p) ^$ utxo p ^$ deposits ^$ fees :$ govStateT p
+utxoStateT p =
+  Constr "UTxOState" (utxofun p)
+    ^$ pparams p
+    ^$ utxo p
+    ^$ deposits
+    ^$ fees
+    :$ govStateT p
+    ^$ donationT
   where
     utxofun ::
       Proof era ->
@@ -833,6 +846,7 @@ utxoStateT p = Constr "UTxOState" (utxofun p) ^$ (pparams p) ^$ utxo p ^$ deposi
       Coin ->
       Coin ->
       GovState era ->
+      Coin ->
       UTxOState era
     utxofun (Shelley _) (PParamsF _ pp) u c1 c2 (GovState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
     utxofun (Mary _) (PParamsF _ pp) u c1 c2 (GovState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x

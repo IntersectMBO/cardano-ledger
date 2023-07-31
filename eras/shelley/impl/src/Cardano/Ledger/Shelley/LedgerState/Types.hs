@@ -50,8 +50,7 @@ import Cardano.Ledger.CertState (
   vsDRepDistrL,
   vsDRepsL,
  )
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Compactible (CompactForm)
+import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRepDistr (DRepDistr (..), startDRepDistr)
@@ -278,6 +277,7 @@ data UTxOState era = UTxOState
   , utxosFees :: !Coin
   , utxosGovState :: !(GovState era)
   , utxosStakeDistr :: !(IncrementalStake (EraCrypto era))
+  , utxosDonation :: !Coin
   }
   deriving (Generic)
 
@@ -312,8 +312,15 @@ instance
   ) =>
   EncCBOR (UTxOState era)
   where
-  encCBOR (UTxOState ut dp fs us sd) =
-    encodeListLen 5 <> encCBOR ut <> encCBOR dp <> encCBOR fs <> encCBOR us <> encCBOR sd
+  encCBOR (UTxOState ut dp fs us sd don) =
+    encode $
+      Rec UTxOState
+        !> To ut
+        !> To dp
+        !> To fs
+        !> To us
+        !> To sd
+        !> To don
 
 instance
   ( EraTxOut era
@@ -325,12 +332,13 @@ instance
     Share (UTxOState era) =
       Interns (Credential 'Staking (EraCrypto era))
   decShareCBOR credInterns =
-    decodeRecordNamed "UTxOState" (const 5) $ do
+    decodeRecordNamed "UTxOState" (const 6) $ do
       utxosUtxo <- decShareCBOR credInterns
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
       utxosGovState <- decCBOR
       utxosStakeDistr <- decShareCBOR credInterns
+      utxosDonation <- decCBOR
       pure UTxOState {..}
 
 instance (EraTxOut era, EraGov era) => ToCBOR (UTxOState era) where
@@ -345,7 +353,7 @@ instance (EraTxOut era, EraGov era) => ToJSON (UTxOState era) where
 
 toUTxOStatePairs ::
   (EraTxOut era, EraGov era, KeyValue a) => UTxOState era -> [a]
-toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _) =
+toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
   let UTxOState {..} = utxoState
    in [ "utxo" .= utxosUtxo
       , "deposited" .= utxosDeposited
@@ -515,7 +523,9 @@ instance
   where
   type
     Share (LedgerState era) =
-      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
+      ( Interns (Credential 'Staking (EraCrypto era))
+      , Interns (KeyHash 'StakePool (EraCrypto era))
+      )
   decSharePlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
       lsCertState <- decSharePlusCBOR
@@ -547,7 +557,7 @@ toLedgerStatePairs ls@(LedgerState _ _) =
 --------------------------------------------------------------------------------
 
 instance EraGov era => Default (UTxOState era) where
-  def = UTxOState mempty mempty mempty def mempty
+  def = UTxOState mempty mempty mempty def mempty mempty
 
 instance
   Default (LedgerState era) =>
@@ -686,6 +696,9 @@ utxosGovStateL = lens utxosGovState (\x y -> x {utxosGovState = y})
 utxosStakeDistrL :: Lens' (UTxOState era) (IncrementalStake (EraCrypto era))
 utxosStakeDistrL = lens utxosStakeDistr (\x y -> x {utxosStakeDistr = y})
 
+utxosDonationL :: Lens' (UTxOState era) Coin
+utxosDonationL = lens utxosDonation (\x y -> x {utxosDonation = y})
+
 -- ===================================================================
 -- Lenses for access to
 -- 1. (DRepDistr (EraCrypto era))
@@ -703,22 +716,33 @@ newEpochStateDRepDistrL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDR
 epochStateDRepDistrL :: Lens' (EpochState era) (DRepDistr (EraCrypto era))
 epochStateDRepDistrL = esLStateL . lsCertStateL . certVStateL . vsDRepDistrL
 
-epochStateStakeDistrL :: Lens' (EpochState era) (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+epochStateStakeDistrL ::
+  Lens'
+    (EpochState era)
+    (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
 epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
 
-epochStateRegDrepL :: Lens' (EpochState era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+epochStateRegDrepL ::
+  Lens'
+    (EpochState era)
+    (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 epochStateUMapL :: Lens' (EpochState era) (UMap (EraCrypto era))
 epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 -- | update a field of 'x' accessed by the given lens 'l' with the adjusting function 'update'
-updateWithLens :: a -> (Lens' a b) -> (b -> b) -> a
-updateWithLens x l update = x & l .~ (update (x ^. l))
+updateWithLens :: a -> Lens' a b -> (b -> b) -> a
+updateWithLens x l update = x & l .~ update (x ^. l)
 
 -- | Construct a new (as yet unpulsed) DRepDistr from 3 pieces of the EpochState.
 --   1) The unified map (storing the map from staking credentials to DReps).
 --   2) The set of registered DReps
 --   3) The map aggregating all the stake (coin) for each credential, from the Mark SnapShot.
 freshDRepPulser :: Int -> EpochState era -> DRepDistr (EraCrypto era)
-freshDRepPulser n es = startDRepDistr n (es ^. epochStateUMapL) (es ^. epochStateRegDrepL) (es ^. epochStateStakeDistrL)
+freshDRepPulser n es =
+  startDRepDistr
+    n
+    (es ^. epochStateUMapL)
+    (es ^. epochStateRegDrepL)
+    (es ^. epochStateStakeDistrL)

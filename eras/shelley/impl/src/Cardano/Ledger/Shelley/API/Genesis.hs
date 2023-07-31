@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (coinBalance)
-import Cardano.Ledger.Val (Val ((<->)))
+import Cardano.Ledger.Val (Val (..))
 import Data.Default.Class (Default, def)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
@@ -89,7 +89,7 @@ initialStateFromGenesis sg ag =
     ( EpochState
         (AccountState (Coin 0) reserves)
         ( LedgerState
-            (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) govSt)
+            (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) govSt zero)
             (CertState def def dState)
         )
         emptySnapShots

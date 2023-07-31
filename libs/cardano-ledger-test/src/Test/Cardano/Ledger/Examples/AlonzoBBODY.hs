@@ -178,7 +178,8 @@ initialBBodyState ::
 initialBBodyState pf utxo =
   BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
   where
-    initialUtxoSt = smartUTxOState (pp pf) utxo (UM.fromCompact successDeposit) (Coin 0) def
+    initialUtxoSt =
+      smartUTxOState (pp pf) utxo (UM.fromCompact successDeposit) (Coin 0) def mempty
     dpstate =
       def
         { certDState =
@@ -660,7 +661,8 @@ testBBodyState pf =
           , DHash' [hashData $ someDatum @era]
           ]
       poolID = hashKey . vKey . coerceKeyRole $ coldKeys
-      example1UtxoSt = smartUTxOState (pp pf) utxo totalDeposits (Coin 40) def
+      example1UtxoSt =
+        smartUTxOState (pp pf) utxo totalDeposits (Coin 40) def mempty
       -- the default CertState 'def' means that the 'totalDeposits' must be 0
       totalDeposits = Coin 0
    in BbodyState

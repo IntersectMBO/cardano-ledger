@@ -64,6 +64,7 @@
   * `ConwayTxCertCommittee` -> `ConwayTxCertGov`
 * Remove `DelegStakeTxCert` from the `COMPLETE` pragma for `TxCert`
 * Add `Committee` and adjust `NewCommittee` governance action
+* Add `treasuryDonationTxBodyL` to `ConwayEraTxBody`
 * Add `ConwayUpdateDRep` constructor to `ConwayGovCert` type and corresponding pattern `UnRegDRepTxCert`
 * Update `ProposalProcedure` return address to be a `RewardAcnt`
 * Add `ensPrevPParams` field to `EnactState`

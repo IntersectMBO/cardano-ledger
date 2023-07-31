@@ -746,7 +746,7 @@ ppUTxOState ::
   ) =>
   UTxOState era ->
   PDoc
-ppUTxOState (UTxOState u dep fee ppup sd) =
+ppUTxOState (UTxOState u dep fee ppup sd don) =
   ppRecord
     "UTxOState"
     [ ("utxo", ppUTxO u)
@@ -754,6 +754,7 @@ ppUTxOState (UTxOState u dep fee ppup sd) =
     , ("fees", ppCoin fee)
     , ("ppups", prettyA ppup)
     , ("stakeDistro", ppIncrementalStake sd)
+    , ("donations", prettyA don)
     ]
 
 ppEpochState ::

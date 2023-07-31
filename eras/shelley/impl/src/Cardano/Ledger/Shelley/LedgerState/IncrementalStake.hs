@@ -155,6 +155,7 @@ smartUTxOState ::
   Coin ->
   Coin ->
   GovState era ->
+  Coin ->
   UTxOState era
 smartUTxOState pp utxo c1 c2 st =
   UTxOState

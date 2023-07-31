@@ -25,6 +25,7 @@ where
 import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
@@ -49,9 +50,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
   asReserves,
+  asTreasuryL,
   curPParamsEpochStateL,
   epochStateDRepDistrL,
   esAccountState,
+  esAccountStateL,
   esLState,
   esLStateL,
   esNonMyopic,
@@ -62,6 +65,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
   obligationCertState,
   prevPParamsEpochStateL,
+  utxosDonationL,
   utxosGovStateL,
   pattern CertState,
   pattern EpochState,
@@ -95,7 +99,7 @@ import Data.Maybe (fromMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as Seq
 import Data.Void (Void, absurd)
-import Lens.Micro ((%~), (&), (.~), (^.))
+import Lens.Micro (Lens', (%~), (&), (.~), (<>~), (^.))
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
@@ -263,10 +267,18 @@ epochTransition = do
           & curPParamsEpochStateL .~ pp
       -- TODO can we be more efficient?
       newGov = GovActionsState . Map.fromList . toList $ rsFuture
+      esGovernanceL = esLStateL . lsUTxOStateL . utxosGovStateL
+      esDonationL :: Lens' (EpochState era) Coin
+      esDonationL = esLStateL . lsUTxOStateL . utxosDonationL
+      donations = es'' ^. esDonationL
   pure $
     es''
-      & esLStateL . lsUTxOStateL . utxosGovStateL . cgGovL .~ newGov
-      & esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyL .~ rs
+      & esGovernanceL . cgGovL .~ newGov
+      & esGovernanceL . cgRatifyL .~ rs
+      -- Move donations to treasury
+      & esAccountStateL . asTreasuryL <>~ donations
+      -- Clear the donations field
+      & esDonationL .~ mempty
 
 instance
   ( Era era

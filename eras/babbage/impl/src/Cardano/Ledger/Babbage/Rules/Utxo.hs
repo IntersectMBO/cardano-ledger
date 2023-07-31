@@ -317,7 +317,7 @@ utxoTransition ::
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
+  let Shelley.UTxOState utxo _deposits _fees _ppup _ _ = u
 
   {-   txb := txbody tx   -}
   let txBody = body tx

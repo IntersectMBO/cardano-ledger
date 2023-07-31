@@ -156,7 +156,7 @@ utxoTransition ::
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _ _ ppup _ = u
+  let Shelley.UTxOState utxo _ _ ppup _ _ = u
   let txb = tx ^. bodyTxL
 
   {- ininterval slot (txvld tx) -}
