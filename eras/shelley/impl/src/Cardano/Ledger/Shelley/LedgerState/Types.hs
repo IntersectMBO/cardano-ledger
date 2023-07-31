@@ -111,8 +111,8 @@ instance NFData AccountState
 
 data EpochState era = EpochState
   { esAccountState :: !AccountState
-  , esSnapshots :: !(SnapShots (EraCrypto era))
   , esLState :: !(LedgerState era)
+  , esSnapshots :: !(SnapShots (EraCrypto era))
   , esNonMyopic :: !(NonMyopic (EraCrypto era))
   -- ^ This field, esNonMyopic, does not appear in the formal spec
   -- and is not a part of the protocol. It is only used for providing

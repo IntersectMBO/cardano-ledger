@@ -152,13 +152,13 @@ instance
   ) =>
   EncCBOR (ShelleyGovState era)
   where
-  encCBOR (ShelleyGovState ppup fppup pp fpp) =
+  encCBOR (ShelleyGovState ppup fppup pp ppp) =
     encode $
       Rec ShelleyGovState
         !> To ppup
         !> To fppup
         !> To pp
-        !> To fpp
+        !> To ppp
 
 instance
   ( Era era

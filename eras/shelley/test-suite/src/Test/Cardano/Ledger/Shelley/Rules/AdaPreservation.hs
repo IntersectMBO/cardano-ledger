@@ -98,9 +98,10 @@ import Test.QuickCheck (
   Testable (..),
   conjoin,
   counterexample,
+  noShrinking,
   (.&&.),
   (.||.),
-  (===), noShrinking,
+  (===),
  )
 import Test.QuickCheck.Property (withMaxSuccess)
 import Test.Tasty (TestTree)

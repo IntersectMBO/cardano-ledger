@@ -693,8 +693,8 @@ ppShelleyGovState (ShelleyGovState p fp pp prev) =
     "Proposed ShelleyGovState"
     [ ("proposals", ppProposedPPUpdates p)
     , ("futureProposals", ppProposedPPUpdates fp)
+    , ("curPParams", prettyA pp)
     , ("prevPParams", prettyA prev)
-    , ("currentPParams", prettyA pp)
     ]
 
 ppPState :: PState c -> PDoc

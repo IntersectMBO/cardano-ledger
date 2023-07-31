@@ -285,7 +285,7 @@ applyRUpdFiltered
       utxoState_ = lsUTxOState ls
       dpState = lsCertState ls
       dState = certDState dpState
-      prevPParams = es ^. curPParamsEpochStateL
+      prevPParams = es ^. prevPParamsEpochStateL
       prevProVer = prevPParams ^. ppProtocolVersionL
       filteredRewards@FilteredRewards
         { frRegistered

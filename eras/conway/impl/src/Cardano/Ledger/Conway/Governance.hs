@@ -197,8 +197,8 @@ data EnactState era = EnactState
 ensConstitutionL :: Lens' (EnactState era) (Constitution era)
 ensConstitutionL = lens ensConstitution (\x y -> x {ensConstitution = y})
 
-ensPParamsL :: Lens' (EnactState era) (PParams era)
-ensPParamsL = lens ensPParams (\es x -> es {ensPParams = x})
+ensCurPParamsL :: Lens' (EnactState era) (PParams era)
+ensCurPParamsL = lens ensPParams (\es x -> es {ensPParams = x})
 
 ensPrevPParamsL :: Lens' (EnactState era) (PParams era)
 ensPrevPParamsL = lens ensPrevPParams (\es x -> es {ensPrevPParams = x})
@@ -337,7 +337,7 @@ cgRatifyL :: Lens' (ConwayGovernance era) (RatifyState era)
 cgRatifyL = lens cgRatify (\x y -> x {cgRatify = y})
 
 curPParamsConwayGovStateL :: Lens' (ConwayGovernance era) (PParams era)
-curPParamsConwayGovStateL = cgRatifyL . rsEnactStateL . ensPParamsL
+curPParamsConwayGovStateL = cgRatifyL . rsEnactStateL . ensCurPParamsL
 
 prevPParamsConwayGovStateL :: Lens' (ConwayGovernance era) (PParams era)
 prevPParamsConwayGovStateL = cgRatifyL . rsEnactStateL . ensPrevPParamsL

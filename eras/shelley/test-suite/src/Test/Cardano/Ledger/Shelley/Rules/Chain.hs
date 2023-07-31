@@ -72,6 +72,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   curPParamsEpochStateL,
   dsGenDelegs,
+  nesEpochStateL,
   prevPParamsEpochStateL,
   smartUTxOState,
   updateNES,
@@ -335,8 +336,7 @@ chainTransition =
           Right () -> pure ()
           Left e -> failBecause $ PrtclSeqFailure e
 
-        let NewEpochState _ _ _ es' _ _ _ = nes
-            pp = es' ^. curPParamsEpochStateL
+        let pp = nes ^. nesEpochStateL . curPParamsEpochStateL
             chainChecksData = pparamsToChainChecksPParams pp
             bhView = makeHeaderView bh
 
