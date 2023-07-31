@@ -17,6 +17,7 @@ import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoColle
 import qualified Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW as AlonzoInvalidTxUTXOW (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW as AlonzoValidTxUTXOW (tests)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
+import Test.Cardano.Ledger.Examples.ConwayFeatures (conwayFeatures)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests, depositTests)
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
@@ -39,6 +40,7 @@ defaultTests =
   , testGroup
       "STS Tests"
       [ babbageFeatures
+      , conwayFeatures
       , AlonzoValidTxUTXOW.tests
       , AlonzoInvalidTxUTXOW.tests
       , AlonzoBBODY.tests

@@ -448,6 +448,7 @@ runEPOCH wit@(EPOCH proof) state epochNo poolDistr =
     Mary _ -> runSTS' wit (TRC ((), state, epochNo))
     Allegra _ -> runSTS' wit (TRC ((), state, epochNo))
     Shelley _ -> runSTS' wit (TRC ((), state, epochNo))
+
 -- ======================================================================
 -- =========================  Internal helper functions  ================
 -- ======================================================================
