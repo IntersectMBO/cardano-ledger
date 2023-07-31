@@ -280,9 +280,10 @@ transStakeCred (ScriptHashObj (ScriptHash sh)) =
   PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 transStakeCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
+{-# DEPRECATED transStakeCred "Infavor of identical `transCred`" #-}
 
 transStakeReference :: StakeReference c -> Maybe PV1.StakingCredential
-transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transStakeCred cred))
+transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transCred cred))
 transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
   let !txIxInteger = toInteger (txIxToInt txIx)
       !certIxInteger = toInteger (certIxToInt certIx)
@@ -444,11 +445,11 @@ instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
 alonzoTransTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
 alonzoTransTxCert = \case
   RegTxCert stakeCred ->
-    PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stakeCred))
+    PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
   UnRegTxCert stakeCred ->
-    PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stakeCred))
+    PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
   DelegStakeTxCert stakeCred keyHash ->
-    PV1.DCertDelegDelegate (PV1.StakingHash (transStakeCred stakeCred)) (transKeyHash keyHash)
+    PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
   RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
     PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
   RetirePoolTxCert poolId (EpochNo i) ->
@@ -467,7 +468,7 @@ transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
   where
     accum ans (RewardAcnt _network cred) (Coin n) =
-      Map.insert (PV1.StakingHash (transStakeCred cred)) n ans
+      Map.insert (PV1.StakingHash (transCred cred)) n ans
 
 getWitVKeyHash :: (Crypto c, Typeable kr) => WitVKey kr c -> PV1.PubKeyHash
 getWitVKeyHash =
@@ -506,7 +507,7 @@ transScriptPurpose ::
 transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
 transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
-  PV1.Rewarding (PV1.StakingHash (transStakeCred cred))
+  PV1.Rewarding (PV1.StakingHash (transCred cred))
 -- TODO Add support for PV3
 transScriptPurpose (Certifying dcert) = PV1.Certifying . unTxCertV1 $ transTxCert dcert
 

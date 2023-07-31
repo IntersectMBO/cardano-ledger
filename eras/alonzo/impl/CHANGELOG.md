@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Deprecated `transStakeCred` in favor of `transCred`
 * Rename `transShelleyTxCert` to `alonzoTransTxCert`
 * Change type of `Plutus` to use `BinaryPlutus` instead of `ShortByteString`
 * Deprecate `runPLCScript` in favor of `runPlutusScript`
