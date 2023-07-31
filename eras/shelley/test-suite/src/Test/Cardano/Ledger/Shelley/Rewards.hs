@@ -159,8 +159,10 @@ import Test.Tasty.QuickCheck (
   property,
   testProperty,
   withMaxSuccess,
+  noShrinking,
   (===),
  )
+import Data.TreeDiff (ediff, ansiWlEditExprCompact)
 
 -- ========================================================================
 -- Bounds and Constants --
@@ -620,7 +622,7 @@ oldEqualsNew ::
   Property
 oldEqualsNew pv newepochstate =
   counterexample
-    (show (prettyA newepochstate) ++ "\n new = " ++ show new ++ "\n old = " ++ show old)
+    (show (prettyA newepochstate) ++ show (ansiWlEditExprCompact $ ediff old new))
     (old === new)
   where
     globals = testGlobals
@@ -814,7 +816,7 @@ tests =
         withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))
     , testProperty "compare with reference impl, no provenance, v3" $
         newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @3) 0))
-    , testProperty "compare with reference impl, no provenance, v7" $
+    , testProperty "compare with reference impl, no provenance, v7" . noShrinking $
         newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @7) 0))
     , testProperty "compare with reference impl, with provenance" $
         newEpochProp chainlen (oldEqualsNewOn @C (ProtVer (natVersion @3) 0))
