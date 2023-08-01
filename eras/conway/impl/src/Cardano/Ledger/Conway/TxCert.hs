@@ -30,6 +30,7 @@ module Cardano.Ledger.Conway.TxCert (
   pattern ResignCommitteeColdTxCert,
   pattern RegDRepTxCert,
   pattern UnRegDRepTxCert,
+  pattern UpdateDRepTxCert,
 )
 where
 
@@ -153,6 +154,9 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
   mkUnRegDRepTxCert :: Credential 'DRepRole (EraCrypto era) -> Coin -> TxCert era
   getUnRegDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), Coin)
 
+  mkUpdateDRepTxCert :: Credential 'DRepRole (EraCrypto era) -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
+  getUpdateDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), StrictMaybe (Anchor (EraCrypto era)))
+
 instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkRegDepositTxCert cred c = ConwayTxCertDeleg $ ConwayRegCert cred $ SJust c
 
@@ -187,6 +191,11 @@ instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkUnRegDRepTxCert cred deposit = ConwayTxCertGov $ ConwayUnRegDRep cred deposit
   getUnRegDRepTxCert = \case
     ConwayTxCertGov (ConwayUnRegDRep cred deposit) -> Just (cred, deposit)
+    _ -> Nothing
+
+  mkUpdateDRepTxCert cred mAnchor = ConwayTxCertGov $ ConwayUpdateDRep cred mAnchor
+  getUpdateDRepTxCert = \case
+    ConwayTxCertGov (ConwayUpdateDRep cred mAnchor) -> Just (cred, mAnchor)
     _ -> Nothing
 
 pattern RegDepositTxCert ::
@@ -262,6 +271,15 @@ pattern UnRegDRepTxCert cred deposit <- (getUnRegDRepTxCert -> Just (cred, depos
   where
     UnRegDRepTxCert cred deposit = mkUnRegDRepTxCert cred deposit
 
+pattern UpdateDRepTxCert ::
+  ConwayEraTxCert era =>
+  Credential 'DRepRole (EraCrypto era) ->
+  StrictMaybe (Anchor (EraCrypto era)) ->
+  TxCert era
+pattern UpdateDRepTxCert cred mAnchor <- (getUpdateDRepTxCert -> Just (cred, mAnchor))
+  where
+    UpdateDRepTxCert cred mAnchor = mkUpdateDRepTxCert cred mAnchor
+
 {-# COMPLETE
   RegPoolTxCert
   , RetirePoolTxCert
@@ -275,6 +293,7 @@ pattern UnRegDRepTxCert cred deposit <- (getUnRegDRepTxCert -> Just (cred, depos
   , ResignCommitteeColdTxCert
   , RegDRepTxCert
   , UnRegDRepTxCert
+  , UpdateDRepTxCert
   #-}
 
 -- | First type argument is the deposit
@@ -321,6 +340,7 @@ instance NoThunks (ConwayDelegCert c)
 data ConwayGovCert c
   = ConwayRegDRep !(Credential 'DRepRole c) !Coin !(StrictMaybe (Anchor c))
   | ConwayUnRegDRep !(Credential 'DRepRole c) !Coin
+  | ConwayUpdateDRep !(Credential 'DRepRole c) !(StrictMaybe (Anchor c))
   | ConwayAuthCommitteeHotKey !(Credential 'ColdCommitteeRole c) !(Credential 'HotCommitteeRole c)
   | ConwayResignCommitteeColdKey !(Credential 'ColdCommitteeRole c)
   deriving (Show, Generic, Eq)
@@ -393,6 +413,10 @@ conwayTxCertDelegDecoder = \case
     cred <- decCBOR
     deposit <- decCBOR
     pure (3, UnRegDRepTxCert cred deposit)
+  18 -> do
+    cred <- decCBOR
+    mAnchor <- decodeNullStrictMaybe decCBOR
+    pure (3, UpdateDRepTxCert cred mAnchor)
   k -> invalidKey k
   where
     delegCertDecoder n decodeDelegatee = do
@@ -415,7 +439,7 @@ instance (Era era, Val (Value era)) => EncCBOR (ConwayTxCert era) where
   encCBOR = \case
     ConwayTxCertDeleg delegCert -> encodeConwayDelegCert delegCert
     ConwayTxCertPool poolCert -> encodePoolCert poolCert
-    ConwayTxCertGov committeeCert -> encodeCommitteeHotKey committeeCert
+    ConwayTxCertGov govCert -> encodeGovCert govCert
 
 encodeConwayDelegCert :: Crypto c => ConwayDelegCert c -> Encoding
 encodeConwayDelegCert = \case
@@ -465,8 +489,8 @@ encodeConwayDelegCert = \case
       <> encCBOR dRep
       <> encCBOR deposit
 
-encodeCommitteeHotKey :: Crypto c => ConwayGovCert c -> Encoding
-encodeCommitteeHotKey = \case
+encodeGovCert :: Crypto c => ConwayGovCert c -> Encoding
+encodeGovCert = \case
   ConwayAuthCommitteeHotKey cred key ->
     encodeListLen 3
       <> encodeWord8 14
@@ -487,6 +511,11 @@ encodeCommitteeHotKey = \case
       <> encodeWord8 17
       <> encCBOR cred
       <> encCBOR deposit
+  ConwayUpdateDRep cred mAnchor ->
+    encodeListLen 3
+      <> encodeWord8 18
+      <> encCBOR cred
+      <> encodeNullStrictMaybe encCBOR mAnchor
 
 fromShelleyDelegCert :: ShelleyDelegCert c -> ConwayDelegCert c
 fromShelleyDelegCert = \case
@@ -529,6 +558,7 @@ getScriptWitnessConwayTxCert = \case
       -- Registration of a DRep does not require a witness
       ConwayRegDRep {} -> Nothing
       ConwayUnRegDRep cred _ -> credScriptHash cred
+      ConwayUpdateDRep cred _ -> credScriptHash cred
 
 getVKeyWitnessConwayTxCert :: ConwayTxCert era -> Maybe (KeyHash 'Witness (EraCrypto era))
 getVKeyWitnessConwayTxCert = \case
@@ -549,3 +579,4 @@ getVKeyWitnessConwayTxCert = \case
       -- Registration of a DRep does not require a witness
       ConwayRegDRep {} -> Nothing
       ConwayUnRegDRep cred _ -> credKeyHashWitness cred
+      ConwayUpdateDRep cred _ -> credKeyHashWitness cred

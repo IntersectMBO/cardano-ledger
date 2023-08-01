@@ -48,6 +48,7 @@
   * `ConwayTxCertCommittee` -> `ConwayTxCertGov`
 * Remove `DelegStakeTxCert` from the `COMPLETE` pragma for `TxCert`
 * Add `Committee` and adjust `NewCommittee` governance action
+* Add `ConwayUpdateDRep` constructor to `ConwayGovCert` type and corresponding pattern `UnRegDRepTxCert`
 
 ## 1.6.3.0
 
