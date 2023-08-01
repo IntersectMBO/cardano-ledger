@@ -85,7 +85,7 @@ where
 -- =============================================
 
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
@@ -131,6 +131,7 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
+import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Language (
   BinaryPlutus (..),
   IsLanguage (..),
@@ -141,9 +142,9 @@ import Cardano.Ledger.Language (
   withSLanguage,
  )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..), WitVKey (..), Withdrawals (..))
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -420,7 +421,7 @@ transValue (MaryValue n m) = justAda <> transMultiAsset m
     justAda = PV1.singleton PV1.adaSymbol PV1.adaToken n
 
 -- =============================================
--- translate fileds like TxCert, Withdrawals, and similar
+-- translate fields like TxCert, Withdrawals, and similar
 
 data PlutusTxCert (l :: Language) where
   TxCertPlutusV1 :: PV1.DCert -> PlutusTxCert 'PlutusV1
@@ -436,7 +437,7 @@ unTxCertV2 (TxCertPlutusV2 x) = x
 unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.DCert
 unTxCertV3 (TxCertPlutusV3 x) = x
 
-class EraTxCert era => EraPlutusContext (l :: Language) era where
+class Era era => EraPlutusContext (l :: Language) era where
   transTxCert :: TxCert era -> PlutusTxCert l
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where

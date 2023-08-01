@@ -1,7 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -23,19 +25,17 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemers,
   unTxDats,
  )
-import Cardano.Ledger.Babbage.TxBody (
-  AllegraEraTxBody (..),
-  AlonzoEraTxBody (..),
-  BabbageEraTxBody (..),
-  MaryEraTxBody (..),
- )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfoV1, babbageTxInfoV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as B
+import Cardano.Ledger.BaseTypes (EpochNo (..))
+import Cardano.Ledger.Conway.Core hiding (TranslationError)
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Conway.TxCert ()
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -47,18 +47,17 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Lens.Micro
+import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V3 as PV3
 
--- TODO implement this once Plutus releases an API with new certs
+instance Crypto c => EraPlutusContext 'PlutusV1 (ConwayEra c) where
+  transTxCert = Alonzo.TxCertPlutusV1 . conwayTransTxCert
 
-instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV1 (ConwayEra c) where
-  transTxCert = undefined
+instance Crypto c => EraPlutusContext 'PlutusV2 (ConwayEra c) where
+  transTxCert = Alonzo.TxCertPlutusV2 . conwayTransTxCert
 
-instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV2 (ConwayEra c) where
-  transTxCert = undefined
-
-instance (Crypto c, EraTxCert (ConwayEra c)) => EraPlutusContext 'PlutusV3 (ConwayEra c) where
-  transTxCert = undefined
+instance Crypto c => EraPlutusContext 'PlutusV3 (ConwayEra c) where
+  transTxCert = Alonzo.TxCertPlutusV3 . conwayTransTxCert
 
 conwayTxInfo ::
   forall era.
@@ -86,14 +85,13 @@ conwayTxInfo pp lang ei sysS utxo tx = do
   where
     interval = tx ^. bodyTxL . vldtTxBodyL
 
-
 -- | Changes from PlutusV2 TxInfo:
 --
--- * `txInfoFee` no longer gets a zero ADA inserted into the field, sicne minting ADA is
+-- * `txInfoFee` no longer gets a zero ADA inserted into the field, since minting ADA is
 --   not possible.
 --
--- * `txInfoDCert` is renamed to `txInfoCert`. Those certificates are no longer just
---   delegation certificates, so @D@ prefix does not make sense.
+-- * `txInfoDCert` is renamed to `txInfoCert`. Certificates are no longer just
+--   about delegation, so @D@ prefix no longer make sense.
 conwayTxInfoV3 ::
   forall era.
   ( EraTx era
@@ -125,7 +123,7 @@ conwayTxInfoV3 timeRange tx utxo = do
       , -- Note that this translation is different from previous Plutus versions, since we no
         -- longer add a zero ADA value to the mint field during translation:
         PV3.txInfoMint = Alonzo.transMultiAsset (txBody ^. mintTxBodyL)
-      , PV3.txInfoDCert = toList $ fmap (unTxCertV3 . conwayTransTxCert) (txBody ^. certsTxBodyL)
+      , PV3.txInfoDCert = toList $ fmap (unTxCertV3 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
       , PV3.txInfoWdrl = PV3.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
       , PV3.txInfoValidRange = timeRange
       , PV3.txInfoSignatories =
@@ -142,18 +140,22 @@ conwayTxInfoV3 timeRange tx utxo = do
     datpairs = Map.toList (unTxDats $ witnesses ^. datsTxWitsL)
     rdmrs = Map.toList (unRedeemers $ witnesses ^. rdmrsTxWitsL)
 
-
--- conwayTransTxCert :: TxCert era -> V3.TxCert
--- conwayTransTxCert = \case
---   ShelleyTxCertDelegCert delegCert ->
---     case delegCert of
---       ShelleyRegCert stakeCred ->
---         PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stakeCred))
---       ShelleyUnRegCert stakeCred ->
---         PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stakeCred))
---       ShelleyDelegCert stakeCred keyHash ->
---         PV1.DCertDelegDelegate (PV1.StakingHash (transStakeCred stakeCred)) (transKeyHash keyHash)
---   ShelleyTxCertPool (RegPool PoolParams {ppId, ppVrf}) ->
---     PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
---   ShelleyTxCertPool (RetirePool keyHash (EpochNo i)) ->
---     PV1.DCertPoolRetire (transKeyHash keyHash) (fromIntegral i)
+-- | This is a temporary version that only translates certificates from previous eras,
+-- none of them are Conway specific.
+conwayTransTxCert :: ShelleyEraTxCert era => TxCert era -> PV1.DCert
+conwayTransTxCert = \case
+  RegTxCert stakeCred ->
+    PV1.DCertDelegRegKey (PV1.StakingHash (Alonzo.transCred stakeCred))
+  UnRegTxCert stakeCred ->
+    PV1.DCertDelegDeRegKey (PV1.StakingHash (Alonzo.transCred stakeCred))
+  DelegStakeTxCert stakeCred keyHash ->
+    PV1.DCertDelegDelegate
+      (PV1.StakingHash (Alonzo.transCred stakeCred))
+      (Alonzo.transKeyHash keyHash)
+  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+    PV1.DCertPoolRegister
+      (Alonzo.transKeyHash ppId)
+      (PV1.PubKeyHash (PV1.toBuiltin (Alonzo.transHash ppVrf)))
+  RetirePoolTxCert poolId (EpochNo i) ->
+    PV1.DCertPoolRetire (Alonzo.transKeyHash poolId) (fromIntegral i)
+  _ -> error "Translation of Conway Certificate is not implemented yet"
