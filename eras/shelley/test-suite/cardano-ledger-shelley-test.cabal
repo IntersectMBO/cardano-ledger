@@ -1,18 +1,20 @@
-cabal-version: 3.0
-name:          cardano-ledger-shelley-test
-version:       1.2.0.2
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
+cabal-version:      3.0
+name:               cardano-ledger-shelley-test
+version:            1.2.0.2
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
 synopsis:
     Test helpers from cardano-ledger-shelley exposed to other packages
 
-build-type:    Simple
+build-type:         Simple
 data-files:
     cddl-files/shelley.cddl
     cddl-files/real/crypto.cddl
     cddl-files/mock/extras.cddl
     test/Golden/ShelleyGenesis
+
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
