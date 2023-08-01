@@ -1,8 +1,8 @@
 module Main where
 
 import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Mary.ValueSpec as ValueSpec
 import qualified Test.Cardano.Ledger.Mary.BinarySpec as BinarySpec
+import qualified Test.Cardano.Ledger.Mary.ValueSpec as ValueSpec
 
 main :: IO ()
 main =

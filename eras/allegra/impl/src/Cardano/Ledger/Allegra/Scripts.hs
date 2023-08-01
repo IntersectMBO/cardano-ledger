@@ -40,7 +40,6 @@ module Cardano.Ledger.Allegra.Scripts (
 )
 where
 
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
@@ -75,6 +74,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict)

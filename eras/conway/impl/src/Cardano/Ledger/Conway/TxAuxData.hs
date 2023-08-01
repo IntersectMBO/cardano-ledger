@@ -1,12 +1,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Ledger.Conway.TxAuxData () where
 
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData,
   hashAlonzoTxAuxData,
+  translateAlonzoTxAuxData,
   validateAlonzoTxAuxData,
-  translateAlonzoTxAuxData
  )
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
