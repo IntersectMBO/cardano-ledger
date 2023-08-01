@@ -53,6 +53,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..), validMetadatum)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Codec.CBOR.Decoding (
   TokenType (
     TypeListLen,
@@ -84,6 +85,8 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   -- - Pool reward account registrations
   }
   deriving (Generic, Eq)
+
+instance ToExpr (AllegraTxAuxDataRaw era)
 
 instance Crypto c => EraTxAuxData (AllegraEra c) where
   type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)

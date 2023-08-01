@@ -62,6 +62,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core (Era (EraCrypto), eraProtVerLow)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as BSL
@@ -87,6 +88,7 @@ data MemoBytes t era = Memo'
   , mbBytes :: ShortByteString
   , mbHash :: SafeHash (EraCrypto era) (MemoHashIndex t)
   }
+  deriving (Generic)
   deriving (NoThunks) via AllowThunksIn '["mbBytes", "mbHash"] (MemoBytes t era)
 
 pattern Memo :: Era era => t era -> ShortByteString -> MemoBytes t era
@@ -101,7 +103,7 @@ type family MemoHashIndex (t :: Type -> Type) :: Type
 
 deriving instance NFData (t era) => NFData (MemoBytes t era)
 
-deriving instance Generic (MemoBytes t era)
+instance ToExpr (t era) => ToExpr (MemoBytes t era)
 
 instance (Typeable t, Typeable era) => Plain.ToCBOR (MemoBytes t era) where
   toCBOR (Memo' _ bytes _hash) = Plain.encodePreEncoded (fromShort bytes)

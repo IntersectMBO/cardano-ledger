@@ -40,6 +40,7 @@ module Cardano.Ledger.Allegra.Scripts (
 )
 where
 
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
@@ -91,6 +92,8 @@ data ValidityInterval = ValidityInterval
   }
   deriving (Ord, Eq, Generic, Show, NoThunks, NFData)
 
+instance ToExpr ValidityInterval
+
 encodeVI :: ValidityInterval -> Encode ('Closed 'Dense) ValidityInterval
 encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t
 
@@ -118,6 +121,8 @@ data TimelockRaw era
 deriving instance Era era => NoThunks (TimelockRaw era)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TimelockRaw era)
+
+instance ToExpr (TimelockRaw era)
 
 -- | This function deconstructs and then reconstructs the timelock script
 -- to prove the compiler that we can arbirarily switch out the eras as long
@@ -179,6 +184,8 @@ newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
   deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
 
 instance Era era => EncCBOR (Timelock era)
+
+instance ToExpr (Timelock era)
 
 instance Memoized Timelock where
   type RawType Timelock = TimelockRaw
