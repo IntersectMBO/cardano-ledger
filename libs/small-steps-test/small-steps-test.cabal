@@ -1,13 +1,14 @@
-cabal-version: 3.0
-name:          small-steps-test
-version:       1.0.0.1
-license:       Apache-2.0
-maintainer:    operations@iohk.io
-author:        IOHK
-homepage:      https://github.com/input-output-hk/cardano-ledger
-synopsis:      Small step semantics testing library
-category:      Control
-build-type:    Simple
+cabal-version:      3.0
+name:               small-steps-test
+version:            1.0.0.1
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+homepage:           https://github.com/input-output-hk/cardano-ledger
+synopsis:           Small step semantics testing library
+category:           Control
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git

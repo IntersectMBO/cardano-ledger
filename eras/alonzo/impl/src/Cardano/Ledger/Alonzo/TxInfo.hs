@@ -64,7 +64,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   PlutusDebugInfo (..),
   EraPlutusContext (..),
   PlutusWithContext (..),
-  transShelleyTxCert,
+  alonzoTransTxCert,
   PlutusTxCert (..),
   unTxCertV1,
   unTxCertV2,
@@ -78,13 +78,14 @@ module Cardano.Ledger.Alonzo.TxInfo (
   explainPlutusFailure,
   validPlutusdata,
   getTxOutDatum,
+  transShelleyTxCert,
 )
 where
 
 -- =============================================
 
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
@@ -130,6 +131,7 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
+import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Language (
   BinaryPlutus (..),
   IsLanguage (..),
@@ -140,9 +142,9 @@ import Cardano.Ledger.Language (
   withSLanguage,
  )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..), WitVKey (..), Withdrawals (..))
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -279,9 +281,10 @@ transStakeCred (ScriptHashObj (ScriptHash sh)) =
   PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 transStakeCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
+{-# DEPRECATED transStakeCred "Infavor of identical `transCred`" #-}
 
 transStakeReference :: StakeReference c -> Maybe PV1.StakingCredential
-transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transStakeCred cred))
+transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transCred cred))
 transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
   let !txIxInteger = toInteger (txIxToInt txIx)
       !certIxInteger = toInteger (certIxToInt certIx)
@@ -418,7 +421,7 @@ transValue (MaryValue n m) = justAda <> transMultiAsset m
     justAda = PV1.singleton PV1.adaSymbol PV1.adaToken n
 
 -- =============================================
--- translate fileds like TxCert, Withdrawals, and similar
+-- translate fields like TxCert, Withdrawals, and similar
 
 data PlutusTxCert (l :: Language) where
   TxCertPlutusV1 :: PV1.DCert -> PlutusTxCert 'PlutusV1
@@ -434,34 +437,39 @@ unTxCertV2 (TxCertPlutusV2 x) = x
 unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.DCert
 unTxCertV3 (TxCertPlutusV3 x) = x
 
-class EraTxCert era => EraPlutusContext (l :: Language) era where
+class Era era => EraPlutusContext (l :: Language) era where
   transTxCert :: TxCert era -> PlutusTxCert l
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
-  transTxCert = TxCertPlutusV1 . transShelleyTxCert
+  transTxCert = TxCertPlutusV1 . alonzoTransTxCert
 
-transShelleyTxCert :: ShelleyTxCert era -> PV1.DCert
-transShelleyTxCert = \case
-  ShelleyTxCertDelegCert delegCert ->
-    case delegCert of
-      ShelleyRegCert stakeCred ->
-        PV1.DCertDelegRegKey (PV1.StakingHash (transStakeCred stakeCred))
-      ShelleyUnRegCert stakeCred ->
-        PV1.DCertDelegDeRegKey (PV1.StakingHash (transStakeCred stakeCred))
-      ShelleyDelegCert stakeCred keyHash ->
-        PV1.DCertDelegDelegate (PV1.StakingHash (transStakeCred stakeCred)) (transKeyHash keyHash)
-  ShelleyTxCertPool (RegPool PoolParams {ppId, ppVrf}) ->
+alonzoTransTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
+alonzoTransTxCert = \case
+  RegTxCert stakeCred ->
+    PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
+  UnRegTxCert stakeCred ->
+    PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+  DelegStakeTxCert stakeCred keyHash ->
+    PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
+  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
     PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
-  ShelleyTxCertPool (RetirePool keyHash (EpochNo i)) ->
-    PV1.DCertPoolRetire (transKeyHash keyHash) (fromIntegral i)
-  ShelleyTxCertGenesisDeleg _ -> PV1.DCertGenesis
-  ShelleyTxCertMir _ -> PV1.DCertMir
+  RetirePoolTxCert poolId (EpochNo i) ->
+    PV1.DCertPoolRetire (transKeyHash poolId) (fromIntegral i)
+  GenesisDelegTxCert {} -> PV1.DCertGenesis
+  MirTxCert {} -> PV1.DCertMir
+
+transShelleyTxCert ::
+  (ShelleyEraTxCert era, ProtVerAtMost era 8, TxCert era ~ ShelleyTxCert era) =>
+  ShelleyTxCert era ->
+  PV1.DCert
+transShelleyTxCert = alonzoTransTxCert
+{-# DEPRECATED transShelleyTxCert "In favor of `alonzoTransTxCert`" #-}
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
   where
     accum ans (RewardAcnt _network cred) (Coin n) =
-      Map.insert (PV1.StakingHash (transStakeCred cred)) n ans
+      Map.insert (PV1.StakingHash (transCred cred)) n ans
 
 getWitVKeyHash :: (Crypto c, Typeable kr) => WitVKey kr c -> PV1.PubKeyHash
 getWitVKeyHash =
@@ -500,7 +508,7 @@ transScriptPurpose ::
 transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
 transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
-  PV1.Rewarding (PV1.StakingHash (transStakeCred cred))
+  PV1.Rewarding (PV1.StakingHash (transCred cred))
 -- TODO Add support for PV3
 transScriptPurpose (Certifying dcert) = PV1.Certifying . unTxCertV1 $ transTxCert dcert
 
@@ -548,7 +556,6 @@ alonzoTxInfo ::
   forall era.
   ( EraTx era
   , AlonzoEraTxBody era
-  , TxCert era ~ ShelleyTxCert era
   , Value era ~ MaryValue (EraCrypto era)
   , TxWits era ~ AlonzoTxWits era
   , EraPlutusContext 'PlutusV1 era

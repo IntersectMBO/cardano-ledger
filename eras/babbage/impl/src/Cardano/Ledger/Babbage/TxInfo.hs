@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
   TranslationError (..),
   TxOutSource (..),
   VersionedTxInfo (..),
-  transShelleyTxCert,
+  alonzoTransTxCert,
   unTxCertV1,
   unTxCertV2,
  )
@@ -177,10 +177,10 @@ transRedeemerPtr txb (ptr, (d, _)) =
     SJust sp -> Right (Alonzo.transScriptPurpose sp, transRedeemer d)
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (BabbageEra c) where
-  transTxCert = TxCertPlutusV1 . transShelleyTxCert
+  transTxCert = TxCertPlutusV1 . alonzoTransTxCert
 
 instance Crypto c => EraPlutusContext 'PlutusV2 (BabbageEra c) where
-  transTxCert = TxCertPlutusV2 . transShelleyTxCert
+  transTxCert = TxCertPlutusV2 . alonzoTransTxCert
 
 babbageTxInfo ::
   forall era.
@@ -205,7 +205,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
     PlutusV2 -> babbageTxInfoV2 timeRange tx utxo
     _ -> Left $ LanguageNotSupported lang
   where
-    interval = tx ^. bodyTxL ^. vldtTxBodyL
+    interval = tx ^. bodyTxL . vldtTxBodyL
 
 babbageTxInfoV1 ::
   forall era.
