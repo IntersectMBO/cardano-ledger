@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unTxDats,
  )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxBody (..),
   BabbageEraTxOut (..),
@@ -33,7 +34,7 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Applicative ((<|>))
@@ -44,8 +45,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
 
-instance CC.Crypto c => EraTx (BabbageEra c) where
-  {-# SPECIALIZE instance EraTx (BabbageEra CC.StandardCrypto) #-}
+instance Crypto c => EraTx (BabbageEra c) where
+  {-# SPECIALIZE instance EraTx (BabbageEra StandardCrypto) #-}
 
   type Tx (BabbageEra c) = AlonzoTx (BabbageEra c)
 
@@ -68,13 +69,13 @@ instance CC.Crypto c => EraTx (BabbageEra c) where
 
   getMinFeeTx = alonzoMinFeeTx
 
-instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraTx (BabbageEra CC.StandardCrypto) #-}
+instance Crypto c => AlonzoEraTx (BabbageEra c) where
+  {-# SPECIALIZE instance AlonzoEraTx (BabbageEra StandardCrypto) #-}
 
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance CC.Crypto c => EraSegWits (BabbageEra c) where
+instance Crypto c => EraSegWits (BabbageEra c) where
   type TxSeq (BabbageEra c) = AlonzoTxSeq (BabbageEra c)
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq

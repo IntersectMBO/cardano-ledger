@@ -233,7 +233,7 @@ datumDataHash = \case
   Datum bd -> SJust (hashBinaryData bd)
 
 translateDatum ::
-  (EraCrypto era1 ~ EraCrypto era2) =>
+  EraCrypto era1 ~ EraCrypto era2 =>
   Datum era1 ->
   Datum era2
 translateDatum = \case

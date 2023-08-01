@@ -15,11 +15,6 @@ where
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), isPlutusScript, translateAlonzoScript)
-import Cardano.Ledger.Alonzo.TxAuxData (
-  AlonzoTxAuxData,
-  hashAlonzoTxAuxData,
-  validateAlonzoTxAuxData,
- )
 import Cardano.Ledger.Babbage.Scripts (babbageScriptPrefixTag)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
@@ -40,8 +35,3 @@ instance Crypto c => EraScript (ConwayEra c) where
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
   phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
   phaseScript _ _ = Nothing
-
-instance Crypto c => EraTxAuxData (ConwayEra c) where
-  type TxAuxData (ConwayEra c) = AlonzoTxAuxData (ConwayEra c)
-  hashTxAuxData = hashAlonzoTxAuxData
-  validateTxAuxData = validateAlonzoTxAuxData

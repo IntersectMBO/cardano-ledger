@@ -2,7 +2,7 @@
 
 ## 1.4.0.0
 
-* Add `translateAlonzoScript` and `translateDatum`
+* Add `translateAlonzoTxAuxData`, `translateAlonzoScript` and `translateDatum`
 * Deprecated `translateTxOut` in favor of `upgradeTxOut`
 * Deprecated `transStakeCred` in favor of `transCred`
 * Rename `transShelleyTxCert` to `alonzoTransTxCert`

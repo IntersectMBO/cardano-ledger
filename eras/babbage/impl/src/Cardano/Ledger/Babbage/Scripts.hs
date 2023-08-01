@@ -21,11 +21,6 @@ where
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), translateAlonzoScript)
-import Cardano.Ledger.Alonzo.TxAuxData (
-  AlonzoTxAuxData,
-  hashAlonzoTxAuxData,
-  validateAlonzoTxAuxData,
- )
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
@@ -62,8 +57,3 @@ isPlutusScript x =
   case phaseScript @era PhaseTwoRep x of
     Just _ -> True
     Nothing -> False
-
-instance Crypto c => EraTxAuxData (BabbageEra c) where
-  type TxAuxData (BabbageEra c) = AlonzoTxAuxData (BabbageEra c)
-  hashTxAuxData = hashAlonzoTxAuxData
-  validateTxAuxData = validateAlonzoTxAuxData

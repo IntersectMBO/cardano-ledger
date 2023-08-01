@@ -54,6 +54,7 @@ library
         Cardano.Ledger.Conway.Rules.Tickf
         Cardano.Ledger.Conway.Rules.Utxos
         Cardano.Ledger.Conway.Rules.Utxow
+        Cardano.Ledger.Conway.TxAuxData
 
     default-language: Haskell2010
     ghc-options:
