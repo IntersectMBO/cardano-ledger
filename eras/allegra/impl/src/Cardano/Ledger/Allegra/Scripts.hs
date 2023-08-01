@@ -73,11 +73,12 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
+import qualified Cardano.Ledger.Shelley.Scripts as Shelley
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (fromShort)
-import Data.Sequence.Strict (StrictSeq (Empty, (:<|)))
+import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)), fromList)
 import Data.Set (Set, member)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -191,7 +192,15 @@ type instance SomeScript 'PhaseOne (AllegraEra c) = Timelock (AllegraEra c)
 -- for the ValidateScript instance in MultiSig
 instance Crypto c => EraScript (AllegraEra c) where
   type Script (AllegraEra c) = Timelock (AllegraEra c)
+
+  upgradeScript = \case
+    Shelley.RequireSignature keyHash -> RequireSignature keyHash
+    Shelley.RequireAllOf sigs -> RequireAllOf $ Seq.fromList $ map upgradeScript sigs
+    Shelley.RequireAnyOf sigs -> RequireAnyOf $ Seq.fromList $ map upgradeScript sigs
+    Shelley.RequireMOf n sigs -> RequireMOf n $ Seq.fromList $ map upgradeScript sigs
+
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
+
   phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
   phaseScript PhaseTwoRep _ = Nothing
 

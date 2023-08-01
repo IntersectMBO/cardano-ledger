@@ -78,6 +78,7 @@ import Cardano.Ledger.SafeHash (
   extractHash,
   unsafeMakeSafeHash,
  )
+import qualified Cardano.Ledger.Shelley.TxOut as Shelley
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (guard, (<$!>))
@@ -299,6 +300,8 @@ instance Crypto c => EraTxOut (AlonzoEra c) where
   type TxOut (AlonzoEra c) = AlonzoTxOut (AlonzoEra c)
 
   mkBasicTxOut addr vl = AlonzoTxOut addr vl SNothing
+
+  upgradeTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
 
   addrEitherTxOutL =
     lens

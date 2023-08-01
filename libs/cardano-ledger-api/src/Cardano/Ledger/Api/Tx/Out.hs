@@ -34,6 +34,7 @@ module Cardano.Ledger.Api.Tx.Out (
   module Cardano.Ledger.Api.Tx.Address,
   EraTxOut (TxOut),
   mkBasicTxOut,
+  upgradeTxOut,
 
   -- ** Value
   valueTxOutL,

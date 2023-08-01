@@ -33,6 +33,7 @@ module Cardano.Ledger.Alonzo.Scripts.Data (
   dataToBinaryData,
   Datum (..),
   datumDataHash,
+  translateDatum,
 )
 where
 
@@ -75,6 +76,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
+import Data.Coerce
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -229,3 +231,12 @@ datumDataHash = \case
   NoDatum -> SNothing
   DatumHash dh -> SJust dh
   Datum bd -> SJust (hashBinaryData bd)
+
+translateDatum ::
+  (EraCrypto era1 ~ EraCrypto era2) =>
+  Datum era1 ->
+  Datum era2
+translateDatum = \case
+  NoDatum -> NoDatum
+  DatumHash dh -> DatumHash dh
+  Datum bd -> Datum (coerce bd)

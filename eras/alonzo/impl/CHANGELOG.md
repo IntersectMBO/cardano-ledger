@@ -2,6 +2,8 @@
 
 ## 1.4.0.0
 
+* Add `translateAlonzoScript` and `translateDatum`
+* Deprecated `translateTxOut` in favor of `upgradeTxOut`
 * Deprecated `transStakeCred` in favor of `transCred`
 * Rename `transShelleyTxCert` to `alonzoTransTxCert`
 * Change type of `Plutus` to use `BinaryPlutus` instead of `ShortByteString`

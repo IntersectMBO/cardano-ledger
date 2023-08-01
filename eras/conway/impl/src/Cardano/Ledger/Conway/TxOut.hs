@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -14,8 +15,11 @@ module Cardano.Ledger.Conway.TxOut (
 )
 where
 
-import Cardano.Ledger.Alonzo.Scripts.Data (Datum (NoDatum))
+import Cardano.Ledger.Address (addrPtrNormalize)
+import Cardano.Ledger.Alonzo.Scripts.Data (translateDatum)
 import Cardano.Ledger.Babbage.TxBody (
+  BabbageTxOut (..),
+  Datum (..),
   addrEitherBabbageTxOutL,
   babbageMinUTxOValue,
   dataBabbageTxOutL,
@@ -34,16 +38,19 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Data.Maybe.Strict (StrictMaybe (..))
 import Lens.Micro
 
-instance CC.Crypto c => EraTxOut (ConwayEra c) where
-  {-# SPECIALIZE instance EraTxOut (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => EraTxOut (ConwayEra c) where
+  {-# SPECIALIZE instance EraTxOut (ConwayEra StandardCrypto) #-}
 
   type TxOut (ConwayEra c) = BabbageTxOut (ConwayEra c)
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
+
+  upgradeTxOut (BabbageTxOut addr value d s) =
+    BabbageTxOut (addrPtrNormalize addr) value (translateDatum d) (upgradeScript <$> s)
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
   {-# INLINE addrEitherTxOutL #-}
@@ -53,8 +60,8 @@ instance CC.Crypto c => EraTxOut (ConwayEra c) where
 
   getMinCoinSizedTxOut = babbageMinUTxOValue
 
-instance CC.Crypto c => AlonzoEraTxOut (ConwayEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxOut (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => AlonzoEraTxOut (ConwayEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxOut (ConwayEra StandardCrypto) #-}
 
   dataHashTxOutL = dataHashBabbageTxOutL
   {-# INLINE dataHashTxOutL #-}
@@ -62,8 +69,8 @@ instance CC.Crypto c => AlonzoEraTxOut (ConwayEra c) where
   datumTxOutF = to getDatumBabbageTxOut
   {-# INLINE datumTxOutF #-}
 
-instance CC.Crypto c => BabbageEraTxOut (ConwayEra c) where
-  {-# SPECIALIZE instance BabbageEraTxOut (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => BabbageEraTxOut (ConwayEra c) where
+  {-# SPECIALIZE instance BabbageEraTxOut (ConwayEra StandardCrypto) #-}
 
   dataTxOutL = dataBabbageTxOutL
   {-# INLINE dataTxOutL #-}

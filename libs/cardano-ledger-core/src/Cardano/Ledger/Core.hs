@@ -229,12 +229,16 @@ class
 
   {-# MINIMAL
     mkBasicTxOut
+    , upgradeTxOut
     , valueEitherTxOutL
     , addrEitherTxOutL
     , (getMinCoinSizedTxOut | getMinCoinTxOut)
     #-}
 
   mkBasicTxOut :: Addr (EraCrypto era) -> Value era -> TxOut era
+
+  -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
+  upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
 
   valueTxOutL :: Lens' (TxOut era) (Value era)
   valueTxOutL =
@@ -454,6 +458,9 @@ class
   where
   -- | Scripts which may lock transaction outputs in this era
   type Script era = (r :: Type) | r -> era
+
+  -- | Every era, except Shelley, must be able to upgrade a `Script` from a previous era.
+  upgradeScript :: EraScript (PreviousEra era) => Script (PreviousEra era) -> Script era
 
   scriptPrefixTag :: Script era -> BS.ByteString
   hashScript :: Script era -> ScriptHash (EraCrypto era)

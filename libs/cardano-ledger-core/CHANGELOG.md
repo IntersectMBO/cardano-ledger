@@ -2,6 +2,9 @@
 
 ## 1.5.0.0
 
+* Add `addrPtrNormalize`
+* Add `upgradeTxOut` function to `EraTxOut`
+* Add `upgradeScript` function to `EraScript`
 * Add `Anchor` and `AnchorDataHash`
 * Add `DRepState`
 * Change `vsDReps` to a map

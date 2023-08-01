@@ -2,6 +2,7 @@
 
 ## 1.4.3.0
 
+* Deprecate `translateTxOut`
 * Added `babbagePParamsHKDPairs`
 
 ## 1.4.2.0

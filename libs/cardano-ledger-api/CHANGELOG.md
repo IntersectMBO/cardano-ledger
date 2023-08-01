@@ -2,6 +2,8 @@
 
 ## 1.4.0.0
 
+* Add `upgradeTxOut` function to `EraTxOut`
+* Add `upgradeScript` function to `EraScript`
 * Export:
   * Procedures: `VotingProcedure`, `VotingProcedures` and `ProposalProcedure`
   * Constitution: `Constitution`, `constitutionHashL` and `constitutionScriptL`

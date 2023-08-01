@@ -107,8 +107,7 @@ instance Crypto c => TranslateEra (AllegraEra c) ShelleyGovState where
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxOut where
-  translateEra () (TxOutCompact addr cfval) =
-    pure $ TxOutCompact (coerce addr) cfval
+  translateEra () = pure . upgradeTxOut
 
 instance Crypto c => TranslateEra (AllegraEra c) UTxO where
   translateEra ctxt utxo =

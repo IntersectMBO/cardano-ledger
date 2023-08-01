@@ -69,6 +69,10 @@ instance Crypto crypto => EraTxOut (ShelleyEra crypto) where
 
   mkBasicTxOut = ShelleyTxOut
 
+  -- Calling this partial function will result in compilation error, since ByronEra has
+  -- no instance for EraTxOut type class.
+  upgradeTxOut = error "It is not possible to translate Byron TxOut with 'upgradeTxOut'"
+
   addrEitherTxOutL = addrEitherShelleyTxOutL
   {-# INLINE addrEitherTxOutL #-}
 
