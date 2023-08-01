@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Add `eraName`
 * Add `upgradeTxAucData` function to `EraTxAuxData`
 * Add `upgradeTxOut` function to `EraTxOut`
 * Add `upgradeScript` function to `EraScript`

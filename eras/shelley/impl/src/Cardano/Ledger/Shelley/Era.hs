@@ -37,6 +37,8 @@ instance Crypto c => Era (ShelleyEra c) where
   type EraCrypto (ShelleyEra c) = c
   type ProtVerLow (ShelleyEra c) = 2
 
+  eraName = "Shelley"
+
 type instance Value (ShelleyEra _c) = Coin
 
 data ShelleyBBODY era

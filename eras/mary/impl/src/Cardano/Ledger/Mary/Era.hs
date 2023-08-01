@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Mary.Era (MaryEra) where
@@ -21,6 +20,8 @@ instance Crypto c => Era (MaryEra c) where
   type PreviousEra (MaryEra c) = AllegraEra c
   type EraCrypto (MaryEra c) = c
   type ProtVerLow (MaryEra c) = 4
+
+  eraName = "Mary"
 
 --------------------------------------------------------------------------------
 -- Core instances

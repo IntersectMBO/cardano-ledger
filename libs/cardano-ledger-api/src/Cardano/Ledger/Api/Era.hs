@@ -1,6 +1,11 @@
 module Cardano.Ledger.Api.Era (
   -- * Eras
-  Era (..),
+  Era (
+    PreviousEra,
+    ProtVerLow,
+    ProtVerHigh
+  ),
+  eraName,
 
   -- ** Byron
   ByronEra,
