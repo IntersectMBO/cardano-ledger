@@ -152,6 +152,9 @@ conwayGovCertTransition = do
     ConwayResignCommitteeColdKey coldK -> do
       checkColdKeyHasNotResigned coldK vsCommitteeHotKeys
       pure $ vState {vsCommitteeHotKeys = Map.insert coldK Nothing vsCommitteeHotKeys}
+    ConwayUpdateDRep cred _mAnchor -> do
+      Set.notMember cred vsDReps ?! ConwayDRepNotRegistered cred
+      pure vState -- TODO: update anchor
   where
     checkColdKeyHasNotResigned coldK vsCommitteeHotKeys =
       ((isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True)

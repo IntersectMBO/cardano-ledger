@@ -282,6 +282,7 @@ certificate =
   // unreg_committee_hot_key_cert
   // reg_drep_cert
   // unreg_drep_cert
+  // update_drep_cert
   ]
 
 stake_registration = (0, stake_credential)
@@ -309,6 +310,7 @@ reg_committee_hot_key_cert = (14, committee_cold_keyhash, committee_hot_keyhash)
 unreg_committee_hot_key_cert = (15, committee_cold_keyhash)
 reg_drep_cert = (16, voting_credential, coin, anchor / null)
 unreg_drep_cert = (17, voting_credential, coin)
+update_drep_cert = (18, voting_credential, anchor / null)
 
 
 delta_coin = int

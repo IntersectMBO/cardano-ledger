@@ -144,6 +144,8 @@ ppConwayGovCert = \case
     ppSexp "ConwayRegDRep" [prettyA cred, prettyA deposit, prettyA mAnchor]
   ConwayUnRegDRep cred deposit ->
     ppSexp "ConwayUnRegDRep" [prettyA cred, prettyA deposit]
+  ConwayUpdateDRep cred mAnchor ->
+    ppSexp "ConwayUpdateDRep" [prettyA cred, prettyA mAnchor]
   ConwayAuthCommitteeHotKey coldKey hotKey ->
     ppSexp "ConwayAuthCommitteeHotKey" [prettyA coldKey, prettyA hotKey]
   ConwayResignCommitteeColdKey coldKey ->
