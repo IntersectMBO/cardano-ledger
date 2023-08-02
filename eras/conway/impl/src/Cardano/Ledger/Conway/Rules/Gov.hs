@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Era (ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
@@ -37,6 +38,7 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   indexedGovProps,
  )
+import Cardano.Ledger.Conway.Governance.Procedures (GovernanceAction (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
@@ -59,23 +61,26 @@ data GovEnv era = GovEnv
   , teEpoch :: !EpochNo
   }
 
-newtype ConwayGovPredFailure era
+data ConwayGovPredFailure era
   = GovernanceActionsDoNotExist (Set.Set (GovernanceActionId (EraCrypto era)))
+  | MalformedProposal (GovernanceAction era)
   deriving (Eq, Show, Generic)
 
-instance Era era => NFData (ConwayGovPredFailure era)
+instance EraPParams era => NFData (ConwayGovPredFailure era)
 
-instance Era era => NoThunks (ConwayGovPredFailure era)
+instance EraPParams era => NoThunks (ConwayGovPredFailure era)
 
 instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
   decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
     0 -> SumD GovernanceActionsDoNotExist <! From
+    1 -> SumD MalformedProposal <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
   encCBOR =
     encode . \case
-      GovernanceActionsDoNotExist gid -> Sum (GovernanceActionsDoNotExist @era) 0 !> To gid
+      GovernanceActionsDoNotExist gid -> Sum GovernanceActionsDoNotExist 0 !> To gid
+      MalformedProposal ga -> Sum MalformedProposal 1 !> To ga
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -83,7 +88,7 @@ instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
 instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
-instance Era era => STS (ConwayGOV era) where
+instance ConwayEraPParams era => STS (ConwayGOV era) where
   type State (ConwayGOV era) = ConwayGovState era
   type Signal (ConwayGOV era) = GovernanceProcedures era
   type Environment (ConwayGOV era) = GovEnv era
@@ -154,13 +159,21 @@ noSuchGovernanceActions (ConwayGovState st) gaIds =
    in failureUnless (Set.null unknownGovActionIds) $
         GovernanceActionsDoNotExist unknownGovActionIds
 
-govTransition :: forall era. TransitionRule (ConwayGOV era)
+actionWellFormed :: ConwayEraPParams era => GovernanceAction era -> Test (ConwayGovPredFailure era)
+actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
+  where
+    isWellFormed = case ga of
+      ParameterChange ppd -> ppuWellFormed ppd
+      _ -> True
+
+govTransition :: forall era. ConwayEraPParams era => TransitionRule (ConwayGOV era)
 govTransition = do
   -- TODO Check the signatures
   TRC (GovEnv txid epoch, st, gp) <- judgmentContext
 
   let applyProps st' Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
+        runTest $ actionWellFormed pProcGovernanceAction
         let st'' =
               addAction
                 epoch

@@ -67,6 +67,8 @@ class BabbageEraTxBody era => ConwayEraTxBody era where
   proposalProceduresTxBodyL :: Lens' (TxBody era) (StrictSeq (ProposalProcedure era))
 
 class BabbageEraPParams era => ConwayEraPParams era where
+  ppuWellFormed :: PParamsUpdate era -> Bool
+
   hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
   hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
   hkdMinCommitteeSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
