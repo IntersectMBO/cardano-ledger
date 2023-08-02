@@ -35,7 +35,12 @@ module Cardano.Ledger.Conway.Gov.Procedures (
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
 import Cardano.Ledger.Address (RewardAcnt)
-import Cardano.Ledger.BaseTypes (ProtVer, UnitInterval, Url)
+import Cardano.Ledger.BaseTypes (
+  Anchor (..),
+  AnchorDataHash,
+  ProtVer,
+  UnitInterval,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -62,12 +67,12 @@ import Cardano.Ledger.Core (Era (..), EraPParams, PParamsUpdate)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.Gov (Constitution)
 import Cardano.Ledger.Shelley.RewardProvenance ()
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
-import Control.DeepSeq (NFData (..), rwhnf)
+import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
 import Data.Aeson (KeyValue (..), ToJSON (..), ToJSONKey (..), object, pairs)
 import Data.Aeson.Types (toJSONKeyText)

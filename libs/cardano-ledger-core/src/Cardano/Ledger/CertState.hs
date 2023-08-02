@@ -39,7 +39,7 @@ module Cardano.Ledger.CertState (
 )
 where
 
-import Cardano.Ledger.BaseTypes (Url, StrictMaybe)
+import Cardano.Ledger.BaseTypes (Anchor (..), AnchorDataHash, StrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -69,7 +69,6 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
@@ -77,7 +76,7 @@ import Cardano.Ledger.Slot (
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolUView))
 import qualified Cardano.Ledger.UMap as UM
-import Control.DeepSeq (NFData (..), rwhnf)
+import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (def))
@@ -278,46 +277,6 @@ toPStatePair PState {..} =
   , "retiring" .= psRetiring
   , "deposits" .= psDeposits
   ]
-
-data AnchorDataHash
-
-data Anchor c = Anchor
-  { anchorUrl :: !Url
-  , anchorDataHash :: !(SafeHash c AnchorDataHash)
-  }
-  deriving (Eq, Show, Generic)
-
-instance NoThunks (Anchor c)
-
-instance Crypto c => NFData (Anchor c) where
-  rnf = rwhnf
-
-instance Crypto c => DecCBOR (Anchor c) where
-  decCBOR =
-    decode $
-      RecD Anchor
-        <! From
-        <! From
-
-instance Crypto c => EncCBOR (Anchor c) where
-  encCBOR Anchor {..} =
-    encode $
-      Rec Anchor
-        !> To anchorUrl
-        !> To anchorDataHash
-
-instance Crypto c => ToJSON (Anchor c) where
-  toJSON = object . toAnchorPairs
-  toEncoding = pairs . mconcat . toAnchorPairs
-
-instance ToExpr (Anchor c)
-
-toAnchorPairs :: (KeyValue a, Crypto c) => Anchor c -> [a]
-toAnchorPairs vote@(Anchor _ _) =
-  let Anchor {..} = vote
-   in [ "url" .= anchorUrl
-      , "dataHash" .= anchorDataHash
-      ]
 
 data DRepState c = DRepState
   { drepExpiry :: !EpochNo

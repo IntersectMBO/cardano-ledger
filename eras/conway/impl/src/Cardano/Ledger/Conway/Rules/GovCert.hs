@@ -23,8 +23,9 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (VState (..), DRepState (..))
+import Cardano.Ledger.CertState (DRepState (..), VState (..))
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.Core (ConwayEraPParams, ppDRepActivityL)
 import Cardano.Ledger.Conway.Era (ConwayGOVCERT)
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraRule, PParams)
@@ -51,9 +52,8 @@ import Data.Maybe (isNothing)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 import Lens.Micro ((^.))
-import Cardano.Ledger.Conway.Core (ppDRepActivityL, ConwayEraPParams)
+import NoThunks.Class (NoThunks (..))
 
 data ConwayGovCertPredFailure era
   = ConwayDRepAlreadyRegistered !(Credential 'DRepRole (EraCrypto era))
@@ -143,10 +143,11 @@ conwayGovCertTransition = do
     ConwayRegDRep cred _deposit mAnchor -> do
       Map.notMember cred vsDReps ?! ConwayDRepAlreadyRegistered cred
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
-      let drepState = DRepState
-            { drepExpiry = pp ^. ppDRepActivityL
-            , drepAnchor = mAnchor
-            }
+      let drepState =
+            DRepState
+              { drepExpiry = pp ^. ppDRepActivityL
+              , drepAnchor = mAnchor
+              }
       pure $ vState {vsDReps = Map.insert cred drepState vsDReps}
     ConwayUnRegDRep cred _deposit -> do
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
