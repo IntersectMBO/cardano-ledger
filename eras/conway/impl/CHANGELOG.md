@@ -2,6 +2,8 @@
 
 ## 1.7.0.0
 
+* Add `MalformedProposal` to `ConwayGovPredFailure`
+* Add `ppuWellFormed` to `ConwayEraPParams`
 * Filter out zero valued `TxOut`'s on Byron/Shelley boundary instead of on Babbage/Conway.
 * Switch GovernanceActionIx to `Word32` fro `Word64` and remove `Num` and `Enum`
   instances, which are dangerous due to potential overflows.

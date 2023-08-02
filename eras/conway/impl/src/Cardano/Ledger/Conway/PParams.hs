@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -45,6 +46,7 @@ import Cardano.Ledger.Conway.Core hiding (Value)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson hiding (Encoding, decode, encode)
 import qualified Data.Aeson as Aeson
@@ -291,6 +293,30 @@ instance Crypto c => BabbageEraPParams (ConwayEra c) where
   hkdCoinsPerUTxOByteL = lens cppCoinsPerUTxOByte (\pp x -> pp {cppCoinsPerUTxOByte = x})
 
 instance Crypto c => ConwayEraPParams (ConwayEra c) where
+  ppuWellFormed ppu =
+    and
+      [ -- Numbers
+        isValid (/= 0) ppuMaxBBSizeL
+      , isValid (/= 0) ppuMaxTxSizeL
+      , isValid (/= 0) ppuMaxBHSizeL
+      , isValid (/= 0) ppuMaxValSizeL
+      , isValid (/= 0) ppuCollateralPercentageL
+      , isValid (/= 0) ppuCommitteeTermLimitL
+      , isValid (/= 0) ppuGovActionExpirationL
+      , -- Coins
+        isValid (/= zero) ppuPoolDepositL
+      , isValid (/= zero) ppuGovActionDepositL
+      , isValid (/= zero) ppuDRepDepositL
+      ]
+    where
+      isValid ::
+        (t -> Bool) ->
+        Lens' (PParamsUpdate (ConwayEra c)) (StrictMaybe t) ->
+        Bool
+      isValid p l = case ppu ^. l of
+        SJust x -> p x
+        SNothing -> True
+
   hkdPoolVotingThresholdsL = lens cppPoolVotingThresholds (\pp x -> pp {cppPoolVotingThresholds = x})
   hkdDRepVotingThresholdsL = lens cppDRepVotingThresholds (\pp x -> pp {cppDRepVotingThresholds = x})
   hkdMinCommitteeSizeL = lens cppMinCommitteeSize (\pp x -> pp {cppMinCommitteeSize = x})

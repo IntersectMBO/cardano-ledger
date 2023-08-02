@@ -252,7 +252,7 @@ instance
   prettyA (ConwayWdrlNotDelegatedToDRep x) =
     ppSexp "ConwayWdrlNotDelegatedToDRep" [prettyA x]
 
-instance PrettyA (ConwayGovPredFailure era) where
+instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
   prettyA = viaShow
 
 instance PrettyA (PParamsUpdate era) => PrettyA (ConwayGovState era) where
