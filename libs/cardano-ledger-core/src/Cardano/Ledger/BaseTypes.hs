@@ -61,6 +61,8 @@ module Cardano.Ledger.BaseTypes (
   certIxFromIntegral,
   mkCertIx,
   mkCertIxPartial,
+  Anchor (..),
+  AnchorDataHash,
 
   -- * STS Base
   Globals (..),
@@ -87,6 +89,14 @@ import Cardano.Ledger.Binary (
   encodeRatioWithTag,
   encodedSizeExpr,
  )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Binary.Plain (
   FromCBOR (..),
   ToCBOR (..),
@@ -95,18 +105,33 @@ import Cardano.Ledger.Binary.Plain (
   invalidKey,
  )
 import Cardano.Ledger.Binary.Version
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
-import Cardano.Ledger.TreeDiff (Expr (..), ToExpr (toExpr), trimExprViaShow)
+import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr), trimExprViaShow)
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
-import Cardano.Slotting.Slot as Slotting (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
+import Cardano.Slotting.Slot as Slotting (
+  EpochNo (..),
+  EpochSize (..),
+  SlotNo (..),
+  WithOrigin (..),
+ )
 import Cardano.Slotting.Time (SystemStart)
-import Control.DeepSeq (NFData (rnf))
+import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Exception (throw)
 import Control.Monad (when, (<=<))
 import Control.Monad.Trans.Reader (ReaderT)
-import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import Data.Aeson (
+  FromJSON (..),
+  KeyValue,
+  ToJSON (..),
+  object,
+  pairs,
+  (.:),
+  (.=),
+ )
 import qualified Data.Aeson as Aeson
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
@@ -118,7 +143,13 @@ import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
 import Data.Ratio (Ratio, denominator, numerator, (%))
-import Data.Scientific (Scientific, base10Exponent, coefficient, normalize, scientific)
+import Data.Scientific (
+  Scientific,
+  base10Exponent,
+  coefficient,
+  normalize,
+  scientific,
+ )
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
@@ -747,3 +778,46 @@ instance ToExpr NonNegativeInterval
 instance ToExpr (BlocksMade c)
 
 instance ToExpr ProtVer
+
+data AnchorDataHash
+
+data Anchor c = Anchor
+  { anchorUrl :: !Url
+  , anchorDataHash :: !(SafeHash c AnchorDataHash)
+  }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks (Anchor c)
+
+instance Crypto c => NFData (Anchor c) where
+  rnf = rwhnf
+
+instance Crypto c => DecCBOR (Anchor c) where
+  decCBOR =
+    decode $
+      RecD Anchor
+        <! From
+        <! From
+
+instance Crypto c => EncCBOR (Anchor c) where
+  encCBOR Anchor {..} =
+    encode $
+      Rec Anchor
+        !> To anchorUrl
+        !> To anchorDataHash
+
+instance Crypto c => ToJSON (Anchor c) where
+  toJSON = object . toAnchorPairs
+  toEncoding = pairs . mconcat . toAnchorPairs
+
+instance ToExpr (Anchor c)
+
+toAnchorPairs :: (KeyValue a, Crypto c) => Anchor c -> [a]
+toAnchorPairs vote@(Anchor _ _) =
+  let Anchor {..} = vote
+   in [ "url" .= anchorUrl
+      , "dataHash" .= anchorDataHash
+      ]
+
+instance Default Network where
+  def = Mainnet
