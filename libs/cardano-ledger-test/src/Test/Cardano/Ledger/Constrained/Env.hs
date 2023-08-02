@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Provides variables (V era t), and mappings of them to objects of type 't'
 module Test.Cardano.Ledger.Constrained.Env (
@@ -16,10 +17,15 @@ module Test.Cardano.Ledger.Constrained.Env (
   emptyEnv,
   findVar,
   storeVar,
+  findName,
+  storeName,
+  restrictEnv,
   P (..),
   bulkStore,
   Name (..),
   Access (..),
+  otherFromEnv,
+  sameName,
 ) where
 
 import Data.List (intercalate)
@@ -67,40 +73,47 @@ instance Ord (Name era) where
       then EQ
       else compare n1 n2 <> compareRep rep1 rep2
 
+sameName :: V era t -> V era s -> Maybe (t :~: s)
+sameName (V x r1 _) (V y r2 _) | x == y = testEql r1 r2
+sameName _ _ = Nothing
+
 -- ================================================================
 -- Field
 
 -- | Fields are like V, except they expose the type of the Lens
 data Field era s t where
-  Field :: Eq t => String -> Rep era t -> Access era s t -> Field era s t
-  FConst :: Eq t => Rep era t -> t -> Access era s t -> Field era s t
+  Field :: String -> Rep era t -> Rep era s -> Lens' s t -> Field era s t
+  FConst :: Rep era t -> t -> Rep era s -> Lens' s t -> Field era s t
+
+-- SubField :: String -> Rep era t -> Access era s t -> Field era t r -> Field era s t
 
 instance Show (Field era s t) where
-  show (Field n r _) = intercalate " " ["Field", show n, show r]
-  show (FConst r t _) = "FConst " ++ synopsis r t
+  show (Field n t s _) = intercalate " " ["Field", show n, show s, show t]
+  show (FConst r t _ _) = "FConst " ++ synopsis r t
 
 -- | Hide the type of 't' in a Field.
 data AnyF era s where
-  AnyF :: (Show t, Eq t) => Field era s t -> AnyF era s
+  AnyF :: -- Eq t =>
+    Field era s t -> AnyF era s
 
 instance Show (AnyF era s) where
-  show (AnyF (Field n r _)) = "Field " ++ n ++ " " ++ show r
-  show (AnyF (FConst r t _)) = "FConst " ++ synopsis r t
+  show (AnyF (Field n r t _)) = "Field " ++ n ++ " " ++ show t ++ " " ++ show r
+  show (AnyF (FConst r t _ _)) = "FConst " ++ synopsis r t
 
-vToField :: Eq t => Rep era s -> V era t -> Typed (Field era s t)
-vToField reps (V name rept access@(Yes reps' _)) = case testEql reps reps' of
-  Just Refl -> pure $ Field name rept access
+vToField :: Rep era s -> V era t -> Typed (Field era s t)
+vToField reps (V name rept (Yes reps' l)) = case testEql reps reps' of
+  Just Refl -> pure $ Field name rept reps l
   Nothing ->
     failT
       [ "Given rep and lens target do not match: "
       , "rep: " ++ show reps
       , "lens target: " ++ show reps'
       ]
-vToField _ (V name rep No) = pure $ Field name rep No
+vToField _ v@(V _ _ No) = failT ["Cannot convert a V with a No access to a Field", show v]
 
 fieldToV :: Field era s t -> Typed (V era t)
-fieldToV (Field name rep access) = pure $ V name rep access
-fieldToV (FConst _ _ _) = failT ["Cannot convert a FieldConst to a V"]
+fieldToV (Field name rep repx l) = pure $ V name rep (Yes repx l)
+fieldToV (FConst _ _ _ _) = failT ["Cannot convert a FieldConst to a V"]
 
 -- ===================================================
 -- Env
@@ -109,7 +122,7 @@ data Payload era where
   Payload :: Rep era t -> t -> Access era s t -> Payload era
 
 instance Shaped (V era) (Rep era) where
-  shape (V n1 rep _) = Nary 0 [Esc StringR n1, shape rep]
+  shape (V n1 rep _) = Nary 0 [Esc (ListR CharR) n1, shape rep]
 
 -- We are ignoring the Accessfield on purpose
 
@@ -134,6 +147,23 @@ findVar (V name rep1 _) (Env m) =
 
 storeVar :: V era t -> t -> Env era -> Env era
 storeVar (V name rep access) t (Env m) = Env (Map.insert name (Payload rep t access) m)
+
+-- | Untyped version of 'findVar'.
+findName :: Name era -> Env era -> Maybe (Payload era)
+findName (Name (V name _ _)) (Env env) = Map.lookup name env
+
+-- | Untyped version of 'storeVar'.
+storeName :: Name era -> Payload era -> Env era -> Env era
+storeName (Name (V name _ _)) p (Env env) = Env $ Map.insert name p env
+
+-- | Drop any names that are not in the given list from an environment.
+restrictEnv :: [Name era] -> Env era -> Env era
+restrictEnv names (Env env) = Env $ Map.filterWithKey (\x _ -> elem x xs) env
+  where
+    xs = [x | Name (V x _ _) <- names]
+
+otherFromEnv :: [String] -> Env era -> [String]
+otherFromEnv known (Env m) = [n ++ " = " ++ synopsis r t | (n, Payload r t _) <- Map.toList m, not (elem n known)]
 
 -- ============================================
 -- Group a bunch of bindings into a list

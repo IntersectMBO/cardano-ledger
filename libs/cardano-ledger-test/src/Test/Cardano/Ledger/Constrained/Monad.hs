@@ -14,12 +14,25 @@ module Test.Cardano.Ledger.Constrained.Monad (
   errorTyped,
   monadTyped,
   requireAll,
+  generateWithSeed,
 ) where
+
+import Test.QuickCheck.Gen
+import Test.QuickCheck.Random
+
+generateWithSeed :: Int -> Gen a -> IO a
+generateWithSeed n (MkGen g) =
+  do
+    let r = mkQCGen n
+    return (g r 30)
 
 -- =================================================
 
 newtype Typed x = Typed {runTyped :: Either [String] x}
   deriving (Functor, Applicative, Monad)
+
+instance MonadFail Typed where
+  fail err = failT [err]
 
 failT :: [String] -> Typed a
 failT ss = Typed (Left ss)

@@ -19,7 +19,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
-import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert)
 import Cardano.Ledger.TreeDiff (diffExpr)
 import Cardano.Ledger.UMap (UView (RewDepUView), depositMap, domain, fromCompact, sumDepositUView)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -86,7 +85,6 @@ aggUTxO ::
   forall era.
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , Reflect era
-  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Gen Property

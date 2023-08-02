@@ -39,6 +39,7 @@ import Cardano.Ledger.Alonzo.Scripts.Data (
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
@@ -54,11 +55,11 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochPredFailure (..),
-  ConwayNewEpochPredFailure,
+  -- FIXME TODO ConwayNewEpochPredFailure,
   EnactPredFailure (..),
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..), Delegatee (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (
@@ -83,8 +84,9 @@ import Cardano.Ledger.Keys (
   VKey (..),
   hashKey,
  )
+import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Language (Plutus (..))
-import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..), flattenMultiAsset)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
@@ -138,7 +140,8 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxOut (..),
   WitVKey (..),
  )
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxCert (MIRCert (..), MIRTarget (..), ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   depositMap,
@@ -148,7 +151,7 @@ import Cardano.Ledger.UMap (
   sPoolMap,
  )
 import qualified Cardano.Ledger.UMap as UM (UMap, UView (..), size)
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (ScriptsNeeded, UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
 import Data.Foldable (toList)
@@ -231,7 +234,7 @@ instance CC.Crypto c => PrettyCore (BabbageEra c) where
   prettyScript = ppScript
   prettyTxBody = Babbage.ppTxBody
   prettyWitnesses = ppTxWitness
-  prettyValue = ppValue
+  prettyValue = pcValue
   prettyTxOut = Babbage.ppTxOut
 
 instance CC.Crypto c => PrettyCore (ConwayEra c) where
@@ -903,22 +906,23 @@ ppNewEpochPredicateFailure x = case reify @era of
   Mary _ -> ppShelleyNewEpochPredicateFailure x
   Alonzo _ -> ppShelleyNewEpochPredicateFailure x
   Babbage _ -> ppShelleyNewEpochPredicateFailure x
-  Conway _ -> ppConwayNewEpochPredicateFailure x
+  Conway _ -> ppString "FIXME" -- ppConwayNewEpochPredicateFailure x
 
 ppShelleyNewEpochPredicateFailure ::
   forall era.
   ( PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
-  , PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era
-  , Reflect era
+  , -- , PredicateFailure (EraRule "UPEC" era) ~ ShelleyUpecPredFailure era
+    Reflect era
   ) =>
   ShelleyNewEpochPredFailure era ->
   PDoc
-ppShelleyNewEpochPredicateFailure (EpochFailure x) = prettyA x
+ppShelleyNewEpochPredicateFailure (EpochFailure x) = ppEpochPredicateFailure @era x
 ppShelleyNewEpochPredicateFailure (CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
 ppShelleyNewEpochPredicateFailure (MirFailure _) =
   ppString "MirPredicateFailure has no constructors"
 
+{-
 ppConwayNewEpochPredicateFailure ::
   forall era.
   ( PredicateFailure (EraRule "EPOCH" era) ~ ConwayEpochPredFailure era
@@ -927,10 +931,12 @@ ppConwayNewEpochPredicateFailure ::
   ) =>
   ConwayNewEpochPredFailure era ->
   PDoc
-ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = prettyA x
-ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = prettyA x
+-- TODO FIX ME
+-- ppConwayNewEpochPredicateFailure (Conway.EpochFailure x) = ppEpochPredicateFailure @era x
 ppConwayNewEpochPredicateFailure (Conway.CorruptRewardUpdate x) =
   ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
+ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = ppRatifyPredicateFailure @era x
+-}
 
 ppRatifyPredicateFailure :: Conway.EnactPredFailure era -> PDoc
 ppRatifyPredicateFailure (Conway.EnactTreasuryInsufficientFunds wdrl tr) =
@@ -1297,8 +1303,8 @@ pcKeyHash (KeyHash h) = trim (ppHash h)
 instance c ~ EraCrypto era => PrettyC (KeyHash d c) era where prettyC _ = pcKeyHash
 
 pcCredential :: Credential keyrole c -> PDoc
-pcCredential (ScriptHashObj (ScriptHash h)) = hsep [ppString "Script", trim (ppHash h)]
-pcCredential (KeyHashObj (KeyHash h)) = hsep [ppString "Key", trim (ppHash h)]
+pcCredential (ScriptHashObj (ScriptHash h)) = hsep [ppString "(Script", trim (ppHash h) <> ppString ")"]
+pcCredential (KeyHashObj (KeyHash h)) = hsep [ppString "(Key", trim (ppHash h) <> ppString ")"]
 
 instance c ~ EraCrypto era => PrettyC (Credential keyrole c) era where prettyC _ = pcCredential
 
@@ -1336,7 +1342,13 @@ pcCoin (Coin n) = hsep [ppString "₳", ppInteger n]
 instance PrettyC Coin era where prettyC _ = pcCoin
 
 pcValue :: MaryValue c -> PDoc
-pcValue (MaryValue n (MultiAsset m)) = ppSexp "Value" [ppInteger n, ppString ("num tokens = " ++ show (Map.size m))]
+pcValue (MaryValue n (MultiAsset m)) =
+  ppSexp
+    "Value"
+    [ ppInteger n
+    , -- , ppString ("num tokens = " ++ show (Map.size m))
+      ppSet pcPolicyID (Map.keysSet m)
+    ]
 
 instance c ~ EraCrypto era => PrettyC (MaryValue c) era where
   prettyC _ = pcValue
@@ -1370,13 +1382,13 @@ pcData d@(Data (PV1.B bytes)) =
 
 instance Era era => PrettyC (Data era) era where prettyC _ = pcData
 
-pcTimelock :: forall era. Reflect era => PDoc -> Timelock era -> PDoc
-pcTimelock hash (RequireSignature akh) = ppSexp "Signature" [keyHashSummary akh, hash]
-pcTimelock hash (RequireAllOf _ts) = ppSexp "AllOf" [hash]
-pcTimelock hash (RequireAnyOf _) = ppSexp "AnyOf" [hash]
-pcTimelock hash (RequireMOf m _) = ppSexp "MOfN" [ppInteger (fromIntegral m), hash]
-pcTimelock hash (RequireTimeExpire mslot) = ppSexp "Expires" [ppSlotNo mslot, hash]
-pcTimelock hash (RequireTimeStart mslot) = ppSexp "Starts" [ppSlotNo mslot, hash]
+pcTimelock :: forall era. Reflect era => Timelock era -> PDoc
+pcTimelock (RequireSignature akh) = ppSexp "Sign" [pcKeyHash akh]
+pcTimelock (RequireAllOf ts) = ppSexp "AllOf" [ppList pcTimelock (toList ts)]
+pcTimelock (RequireAnyOf ts) = ppSexp "AnyOf" [ppList pcTimelock (toList ts)]
+pcTimelock (RequireMOf m ts) = ppSexp "MOfN" (ppInteger (fromIntegral m) : [ppList pcTimelock (toList ts)])
+pcTimelock (RequireTimeExpire mslot) = ppSexp "Expires" [ppSlotNo mslot]
+pcTimelock (RequireTimeStart mslot) = ppSexp "Starts" [ppSlotNo mslot]
 
 pcMultiSig :: Reflect era => PDoc -> SS.MultiSig era -> PDoc
 pcMultiSig h (SS.RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk, h]
@@ -1396,6 +1408,7 @@ pcHashScript (Allegra _) s = ppString "Hash " <> pcScriptHash (hashScript @era s
 pcHashScript (Shelley _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
 
 pcScript :: forall era. Reflect era => Proof era -> Script era -> PDoc
+{- Old style with hash
 pcScript p@(Conway _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
 pcScript p@(Conway _) s@(PlutusScript (Plutus v _)) =
   parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
@@ -1404,9 +1417,19 @@ pcScript p@(Babbage _) s@(PlutusScript (Plutus v _)) =
   parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
 pcScript p@(Alonzo _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
 pcScript p@(Alonzo _) s@(PlutusScript (Plutus v _)) =
-  parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
-pcScript p@(Mary _) s = pcTimelock @era (pcHashScript @era p s) s
-pcScript p@(Allegra _) s = pcTimelock @era (pcHashScript @era p s) s
+-}
+
+pcScript (Conway _) (TimelockScript t) = pcTimelock @era t
+pcScript p@(Conway _) s@(PlutusScript v) =
+  parens (hsep [ppString ("PlutusScript " <> show (plutusLanguage v) <> " "), pcHashScript p s])
+pcScript (Babbage _) (TimelockScript t) = pcTimelock @era t
+pcScript p@(Babbage _) s@(PlutusScript v) =
+  parens (hsep [ppString ("PlutusScript " <> show (plutusLanguage v) <> " "), pcHashScript p s])
+pcScript (Alonzo _) (TimelockScript t) = pcTimelock @era t
+pcScript p@(Alonzo _) s@(PlutusScript v) =
+  parens (hsep [ppString ("PlutusScript " <> show (plutusLanguage v) <> " "), pcHashScript p s])
+pcScript (Mary _) s = pcTimelock @era s
+pcScript (Allegra _) s = pcTimelock @era s
 pcScript p@(Shelley _) s = pcMultiSig @era (pcHashScript @era p s) s
 
 pcDataHash :: DataHash era -> PDoc
@@ -1458,12 +1481,51 @@ pcShelleyTxCert :: ShelleyTxCert c -> PDoc
 pcShelleyTxCert (ShelleyTxCertDelegCert x) = pcDelegCert x
 pcShelleyTxCert (ShelleyTxCertPool x) = pcPoolCert x
 pcShelleyTxCert (ShelleyTxCertGenesisDeleg _) = ppString "GenesisCert"
-pcShelleyTxCert (ShelleyTxCertMir _) = ppString "MirCert"
+pcShelleyTxCert (ShelleyTxCertMir (MIRCert x (StakeAddressesMIR m))) =
+  ppRecord
+    "MIRStakeAdresses"
+    [ ("pot", ppString (show x))
+    , ("Addresses", ppMap pcCredential pcDeltaCoin m)
+    ]
+pcShelleyTxCert (ShelleyTxCertMir (MIRCert x (SendToOppositePotMIR c))) =
+  ppRecord
+    "MIROppositePot"
+    [ ("pot", ppString (show x))
+    , ("Amount", pcCoin c)
+    ]
 
 pcConwayTxCert :: ConwayTxCert c -> PDoc
 pcConwayTxCert (ConwayTxCertDeleg dc) = prettyA dc
 pcConwayTxCert (ConwayTxCertPool poolc) = pcPoolCert poolc
 pcConwayTxCert (ConwayTxCertGov _) = ppString "ConwayTxCertGov" -- TODO: @aniketd add pretty instance for the certs
+
+pcConwayDelegCert :: ConwayDelegCert c -> PDoc
+pcConwayDelegCert (ConwayRegCert cred mcoin) =
+  ppSexp "RegCert" [pcCredential cred, ppStrictMaybe pcCoin mcoin]
+pcConwayDelegCert (ConwayUnRegCert cred mcoin) =
+  ppSexp "UnRegCert" [pcCredential cred, ppStrictMaybe pcCoin mcoin]
+pcConwayDelegCert (ConwayDelegCert cred d) =
+  ppSexp "DelegCert" [pcCredential cred, pcDelegatee d]
+pcConwayDelegCert (ConwayRegDelegCert cred d c) =
+  ppSexp "RegDelegCert" [pcCredential cred, pcDelegatee d, pcCoin c]
+
+pcDelegatee :: Delegatee c -> PDoc
+pcDelegatee (DelegStake kh) = ppSexp "DelegStake" [pcKeyHash kh]
+pcDelegatee (DelegVote cred) = ppSexp "DelegVote" [pcDRep cred]
+pcDelegatee (DelegStakeVote kh cred) = ppSexp "DelegStakeVote" [pcKeyHash kh, pcDRep cred]
+
+pcDRep :: DRep c -> PDoc
+pcDRep (DRepCredential cred) = ppSexp "DRepCred" [pcCredential cred]
+pcDRep DRepAlwaysAbstain = ppSexp "DRep" [ppString "Abstain"]
+pcDRep DRepAlwaysNoConfidence = ppSexp "DRep" [ppString "NoConfidence"]
+
+pcTxCert :: Proof era -> TxCert era -> PDoc
+pcTxCert (Shelley _) x = pcShelleyTxCert x
+pcTxCert (Allegra _) x = pcShelleyTxCert x
+pcTxCert (Mary _) x = pcShelleyTxCert x
+pcTxCert (Alonzo _) x = pcShelleyTxCert x
+pcTxCert (Babbage _) x = pcShelleyTxCert x
+pcTxCert (Conway _) x = pcConwayTxCert x
 
 instance c ~ EraCrypto era => PrettyC (ShelleyTxCert c) era where prettyC _ = pcShelleyTxCert
 
@@ -1477,9 +1539,7 @@ pcExUnits (ExUnits mem step) =
   ppSexp "ExUnits" [ppNatural mem, ppNatural step]
 
 pcTxBodyField ::
-  ( Reflect era
-  , PrettyA (TxCert era)
-  ) =>
+  Reflect era =>
   Proof era ->
   TxBodyField era ->
   [(Text, PDoc)]
@@ -1492,7 +1552,7 @@ pcTxBodyField proof x = case x of
   CollateralReturn (SJust txout) -> [("coll return", pcTxOut proof txout)]
   TotalCol SNothing -> []
   TotalCol (SJust c) -> [("total coll", pcCoin c)]
-  Certs xs -> [("certs", ppList prettyA (toList xs))]
+  Certs xs -> [("certs", ppList (pcTxCert proof) (toList xs))]
   Withdrawals' (Withdrawals m) -> [("withdrawal", ppMap pcRewardAcnt pcCoin m)]
   Txfee c -> [("fee", pcCoin c)]
   Vldt v -> [("validity interval", ppValidityInterval v)]
@@ -1500,21 +1560,20 @@ pcTxBodyField proof x = case x of
   Update SNothing -> []
   Update (SJust _) -> [("update", ppString "UPDATE")]
   ReqSignerHashes s -> [("required hashes", ppSet pcKeyHash s)]
-  Mint v -> [("minted", multiAssetSummary v)]
+  -- Mint v -> [("minted", multiAssetSummary v)]
+  Mint (MultiAsset m) -> [("minted", ppSet pcPolicyID (Map.keysSet m))]
   WppHash SNothing -> []
   WppHash (SJust h) -> [("integrity hash", trim (ppSafeHash h))]
   AdHash SNothing -> []
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
-  Txnetworkid SNothing -> []
+  Txnetworkid SNothing -> [("network id", ppString "Nothing")]
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
   GovernanceProcs ga -> [("governance procedures", prettyA ga)]
   CurrentTreasuryValue ctv -> [("current treasury value", prettyA ctv)]
 
 pcTxField ::
   forall era.
-  ( Reflect era
-  , PrettyA (TxCert era)
-  ) =>
+  Reflect era =>
   Proof era ->
   TxField era ->
   [(Text, PDoc)]
@@ -1529,8 +1588,8 @@ pcTxField proof x = case x of
 
 pcWitnessesField :: forall era. Reflect era => Proof era -> WitnessesField era -> [(Text, PDoc)]
 pcWitnessesField proof x = case x of
-  AddrWits set -> [("key wits", ppSet (pcWitVKey @era) set)]
-  BootWits _ -> [("boot wits", ppString "BOOTWITS")]
+  AddrWits set -> [("key wits", ppSet (pcWitVKey proof) set)]
+  BootWits bwits -> [("boot wits", ppSet (\z -> ppVKey (bwKey z)) bwits)]
   ScriptWits mp -> [("script wits", ppMap pcScriptHash (pcScript proof) mp)]
   DataWits (TxDats m) -> [("data wits", ppMap pcDataHash pcData m)]
   RdmrWits (Redeemers m) ->
@@ -1539,8 +1598,14 @@ pcWitnessesField proof x = case x of
 pcPair :: (t1 -> PDoc) -> (t2 -> PDoc) -> (t1, t2) -> PDoc
 pcPair pp1 pp2 (x, y) = parens (hsep [pp1 x, ppString ",", pp2 y])
 
-pcWitVKey :: (Reflect era, Typeable discriminator) => WitVKey discriminator (EraCrypto era) -> PDoc
-pcWitVKey (WitVKey vk@(VKey x) sig) = ppSexp "WitVKey" [ppString keystring, ppString (drop 12 sigstring), hash]
+pcWitVKey :: (Reflect era, Typeable keyrole) => Proof era -> WitVKey keyrole (EraCrypto era) -> PDoc
+pcWitVKey _p (WitVKey vk@(VKey x) sig) =
+  ppSexp
+    "WitVKey"
+    [ ppString (" VerKey=" ++ (take 10 (drop 19 keystring)))
+    , ppString (" SignKey=" ++ (take 10 (drop 29 sigstring)))
+    , " VerKeyHash=" <> hash
+    ]
   where
     keystring = show x
     hash = pcKeyHash (hashKey vk)
@@ -1552,14 +1617,14 @@ pcWitnesses proof wits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)
 
-pcTx :: (Reflect era, PrettyA (TxCert era)) => Proof era -> Tx era -> PDoc
+pcTx :: Reflect era => Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where
     fields = abstractTx proof tx
     pairs = concatMap (pcTxField proof) fields
 
-pcTxBody :: (Reflect era, PrettyA (TxCert era)) => Proof era -> TxBody era -> PDoc
-pcTxBody proof txbody = ppRecord "TxBody" pairs
+pcTxBody :: Reflect era => Proof era -> TxBody era -> PDoc
+pcTxBody proof txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
   where
     fields = abstractTxBody proof txbody
     pairs = concatMap (pcTxBodyField proof) fields
@@ -1614,7 +1679,7 @@ instance PrettyC (PState era) era where
   prettyC _ x = pcPState x
 
 instance PrettyC (VState era) era where
-  prettyC _ st = prettyA st
+  prettyC _ st = pcVState st
 
 instance PrettyC (CertState era) era where
   prettyC proof (CertState vst pst dst) =
@@ -1624,6 +1689,14 @@ instance PrettyC (CertState era) era where
       , ("vstate", prettyC proof vst)
       , ("dstate", pcDState dst)
       ]
+
+pcVState :: VState era -> PDoc
+pcVState (VState dreps hotkeys) =
+  ppRecord
+    "VState"
+    [ ("dReps", ppSet pcCredential dreps)
+    , ("hotKeys", ppMap pcCredential (ppMaybe pcCredential) hotkeys)
+    ]
 
 instance Reflect era => PrettyC (LedgerState era) era where prettyC = pcLedgerState
 
@@ -1680,6 +1753,8 @@ pcPParamsSynopsis p x = withEraPParams p help
         [ ("maxBBSize", ppNatural (x ^. Core.ppMaxBBSizeL))
         , ("maxBHSize", ppNatural (x ^. Core.ppMaxBHSizeL))
         , ("maxTxSize", ppNatural (x ^. Core.ppMaxTxSizeL))
+        , ("poolDeposit", pcCoin (x ^. Core.ppPoolDepositL))
+        , ("keyDeposit", pcCoin (x ^. Core.ppKeyDepositL))
         , ("protVer", ppString (showProtver (x ^. Core.ppProtocolVersionL)))
         ]
 
@@ -1792,3 +1867,36 @@ pcAdaPot es =
         , ("fees", pcCoin (feesAdaPot x))
         , ("totalAda", pcCoin (totalAdaES es))
         ]
+
+-- ========================
+
+pcPolicyID :: PolicyID c -> PDoc
+pcPolicyID (PolicyID sh) = pcScriptHash sh
+
+pcAssetName :: AssetName -> PDoc
+pcAssetName x = trim (viaShow x)
+
+pcMultiAsset :: MultiAsset c -> PDoc
+pcMultiAsset m = ppList pptriple (flattenMultiAsset m)
+  where
+    pptriple (i, asset, num) = hsep ["(", pcPolicyID i, pcAssetName asset, ppInteger num, ")"]
+
+pcScriptPurpose :: Proof era -> ScriptPurpose era -> PDoc
+pcScriptPurpose _ (Minting policy) = ppSexp "Minting" [pcPolicyID policy]
+pcScriptPurpose _ (Spending txin) = ppSexp "Spending" [pcTxIn txin]
+pcScriptPurpose _ (Rewarding acct) = ppSexp "Rewarding" [pcRewardAcnt acct]
+pcScriptPurpose p (Certifying dcert) = ppSexp "Certifying" [pcTxCert p dcert]
+
+instance PrettyC (ScriptPurpose era) era where
+  prettyC = pcScriptPurpose
+
+pcScriptsNeeded :: Proof era -> ScriptsNeeded era -> PDoc
+pcScriptsNeeded (Shelley _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
+pcScriptsNeeded (Allegra _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
+pcScriptsNeeded (Mary _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
+pcScriptsNeeded p@(Alonzo _) (AlonzoScriptsNeeded pl) =
+  ppSexp "ScriptsNeeded" [ppList (ppPair (pcScriptPurpose p) pcScriptHash) pl]
+pcScriptsNeeded p@(Babbage _) (AlonzoScriptsNeeded pl) =
+  ppSexp "ScriptsNeeded" [ppList (ppPair (pcScriptPurpose p) pcScriptHash) pl]
+pcScriptsNeeded p@(Conway _) (AlonzoScriptsNeeded pl) =
+  ppSexp "ScriptsNeeded" [ppList (ppPair (pcScriptPurpose p) pcScriptHash) pl]

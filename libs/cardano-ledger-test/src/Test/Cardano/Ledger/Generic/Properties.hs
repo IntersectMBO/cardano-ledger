@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
-import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
@@ -69,7 +68,6 @@ import Test.Cardano.Ledger.Generic.TxGen (
   genAlonzoTx,
   genUTxO,
  )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -104,7 +102,6 @@ genTxAndLEDGERState ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   GenSize ->
@@ -132,7 +129,6 @@ testTxValidForLEDGER ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , PrettyA (PredicateFailure (EraRule "LEDGER" era))
-  , PrettyA (TxCert era)
   ) =>
   Proof era ->
   Box era ->
@@ -238,7 +234,6 @@ txPreserveAda genSize =
 adaIsPreserved ::
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
-  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   Int ->
@@ -275,7 +270,6 @@ stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
 incrementStakeInvariant ::
   ( Reflect era
   , HasTrace (MOCKCHAIN era) (Gen1 era)
-  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   GenSize ->

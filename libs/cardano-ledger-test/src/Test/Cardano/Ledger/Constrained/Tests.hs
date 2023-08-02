@@ -39,7 +39,8 @@ import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Rewrite
-import Test.Cardano.Ledger.Constrained.Size (OrdCond (..), Size (SzRng), runOrdCond)
+import Test.Cardano.Ledger.Constrained.Shrink
+import Test.Cardano.Ledger.Constrained.Size (Size (SzRng))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Generic.Proof (Standard)
@@ -103,7 +104,7 @@ instance Arbitrary OrderInfo where
   shrink info = [standardOrderInfo | info /= standardOrderInfo]
 
 addVar :: V era t -> t -> GenEnv era -> GenEnv era
-addVar var val env = env {gEnv = storeVar var val $ gEnv env}
+addVar vvar val env = env {gEnv = storeVar vvar val $ gEnv env}
 
 markSolved :: Set (Name era) -> Depth -> GenEnv era -> GenEnv era
 markSolved solved d env = env {gSolved = Map.unionWith max new (gSolved env)}
@@ -111,7 +112,7 @@ markSolved solved d env = env {gSolved = Map.unionWith max new (gSolved env)}
     new = Map.fromSet (const d) solved
 
 addSolvedVar :: V era t -> t -> Depth -> GenEnv era -> GenEnv era
-addSolvedVar var val d = markSolved (Set.singleton $ Name var) d . addVar var val
+addSolvedVar vvar val d = markSolved (Set.singleton $ Name vvar) d . addVar vvar val
 
 depthOfName :: GenEnv era -> Name era -> Depth
 depthOfName env x = Map.findWithDefault 0 x (gSolved env)
@@ -124,7 +125,8 @@ depthOfSum env = \case
   SumMap t -> depthOf env t
   SumList t -> depthOf env t
   One t -> depthOf env t
-  Project _ t -> depthOf env t
+  ProjOne _ _ t -> depthOf env t
+  ProjMap _ _ t -> depthOf env t
 
 genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen t
 genLiteral env rep =
@@ -194,8 +196,8 @@ genTerm' env rep valid genLit vspec =
     genFreshVar = do
       name <- genFreshVarName env
       val <- genLit
-      let var = V name rep No
-      pure (Var var, addVar var val env)
+      let vvar = V name rep No
+      pure (Var vvar, addVar vvar val env)
 
     genDom :: forall k. (t ~ Set k, Ord k) => Rep era k -> Gen (Term era (Set k), GenEnv era)
     genDom krep = do
@@ -259,7 +261,7 @@ genType =
 
 -- | Unsatisfiable constraint returned if we fail during constraint generation.
 errPred :: [String] -> Pred era
-errPred errs = Lit (ListR StringR) ["Errors:"] :=: Lit (ListR StringR) errs
+errPred errs = Lit (ListR stringR) ["Errors:"] :=: Lit (ListR stringR) errs
 
 -- This is very ad hoc
 setWithSum :: Int -> Gen (Set Int)
@@ -295,13 +297,13 @@ genFromOrdCond cond canBeNegative n =
   suchThatErr
     ["genFromOrdCond " ++ show cond ++ " " ++ show n]
     ( frequency $
-        [(1, pure $ minus ["genFromOrdCond"] n (fromI [] 1)) | n > zero || canBeNegative]
+        [(1, pure $ minus ["genFromOrdCond"] n (fromI [] 1)) | runOrdCondition GTH n zero || canBeNegative]
           ++ [ (1, pure n)
              , (1, pure $ add n (fromI [] 1))
              , (10, arbitrary)
              ]
     )
-    (flip (runOrdCond cond) n)
+    (flip (runOrdCondition cond) n)
 
 genPredicate :: forall era. Era era => GenEnv era -> Gen (Pred era, GenEnv era)
 genPredicate env =
@@ -340,9 +342,9 @@ genPredicate env =
       TypeInEra rep <- genValType
       withValue (genTerm env (SetR rep) KnownTerm) $ \set val env' -> do
         name <- genFreshVarName env'
-        let var = V name SizeR No
+        let vvar = V name SizeR No
             intn = getSize val
-        pure (Sized (Var var) set, addSolvedVar var (SzRng intn intn) (1 + depthOf env' set) env')
+        pure (Sized (Var vvar) set, addSolvedVar vvar (SzRng intn intn) (1 + depthOf env' set) env')
 
     eqC = do
       TypeInEra rep <- genType
@@ -419,7 +421,8 @@ genPredicate env =
             partSums <- partition (fromI [] small) ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
-            pure (SumsTo (fromI [] small) sumTm EQL parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+            pure (SumsTo (Left (fromI [] small)) sumTm EQL parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+      -- FIXME Left means that sumTm is known. Not sure if that is what is needed here.
       | otherwise =
           oneof
             [ sumCKnownSets CoinR False
@@ -457,11 +460,12 @@ genPredicate env =
           genTerm'
             env'
             rep
-            (flip (runOrdCond cmp) tot)
+            (flip (runOrdCondition cmp) tot)
             (genFromOrdCond cmp canBeNegative tot)
             (VarTerm d)
         small <- genSmall @c
-        pure (SumsTo (fromI [] small) sumTm cmp parts, markSolved (vars sumTm) d env'')
+        pure (SumsTo (Right (fromI [] small)) sumTm cmp parts, markSolved (vars sumTm) d env'')
+    -- FIXME Right means that the parts are all known. Not sure if that is what is needed here.
 
     hasDomC =
       oneof
@@ -617,42 +621,44 @@ showEnv (Env vmap) = unlines $ map pr (Map.toList vmap)
     pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
 
 predConstr :: Pred era -> String
+predConstr MetaSize {} = "MetaSize"
 predConstr Sized {} = "Sized"
 predConstr (_ :=: _) = ":=:"
 predConstr (_ `Subset` _) = "Subset"
 predConstr Disjoint {} = "Disjoint"
 predConstr SumsTo {} = "SumsTo"
+predConstr SumSplit {} = "SumSplit"
 predConstr Random {} = "Random"
 predConstr Component {} = "Component"
 predConstr CanFollow {} = "CanFollow"
+predConstr Member {} = "Member"
+predConstr NotMember {} = "NotMember"
+predConstr MapMember {} = "MapMember"
+predConstr (:<-:) {} = ":<-:"
+predConstr List {} = "List"
+predConstr Choose {} = "Choose"
+predConstr Maybe {} = "Maybe"
+predConstr GenFrom {} = "GenFrom"
+predConstr ForEach {} = "ForEach"
+predConstr SubMap {} = "SubMap"
+predConstr If {} = "If"
+predConstr Before {} = "Before"
+predConstr Oneof {} = "Oneof"
 
--- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
---   actually satisfies the constraints.
-prop_soundness :: OrderInfo -> Property
-prop_soundness = prop_soundness' False []
-
-defaultWhitelist :: [String]
-defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "The MapSpec's are inconsistent"]
-
--- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
---   constraints.
-prop_soundness' :: Bool -> [String] -> OrderInfo -> Property
-prop_soundness' strict whitelist info =
+constraintProperty :: Maybe Int -> Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
+constraintProperty timeout strict whitelist info prop =
   forAllShrink (genPreds $ initEnv info) shrinkPreds $ \(preds, genenv) ->
     counterexample ("\n-- Order --\n" ++ show info) $
       counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
-          within 100000 $
+          maybe id within timeout $
             checkTyped (compile info preds) $ \graph ->
               forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
                 let env = errorTyped $ substToEnv subst emptyEnv
-                    checkPred pr = counterexample ("Failed: " ++ showPred pr) $ ensureTyped (runPred env pr) id
                     n = let Env e = gEnv genenv in Map.size e
                  in tabulate "Var count" [show n] $
                       tabulate "Constraint types" (map predConstr preds) $
-                        counterexample ("-- Solution --\n" ++ showEnv env) $
-                          conjoin $
-                            map checkPred preds
+                        prop preds graph env
   where
     checkTyped
       | strict = checkWhitelist . runTyped
@@ -671,9 +677,45 @@ prop_soundness' strict whitelist info =
         ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
 
+checkPredicates :: [Pred TestEra] -> Env TestEra -> Property
+checkPredicates preds env =
+  counterexample ("-- Solution --\n" ++ showEnv env) $
+    conjoin $
+      map checkPred preds
+  where
+    checkPred pr = counterexample ("Failed: " ++ showPred pr) $ ensureTyped (runPred env pr) id
+
 runPreds :: [Pred TestEra] -> IO ()
 runPreds ps = do
   let info = standardOrderInfo
   Right g <- pure $ runTyped $ compile info ps
   subst <- generate $ genDependGraph True testProof g
   print subst
+
+-- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
+--   actually satisfies the constraints.
+prop_soundness :: OrderInfo -> Property
+prop_soundness = prop_soundness' False []
+
+defaultWhitelist :: [String]
+defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "The MapSpec's are inconsistent"]
+
+-- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
+--   constraints.
+prop_soundness' :: Bool -> [String] -> OrderInfo -> Property
+prop_soundness' strict whitelist info =
+  constraintProperty (Just 100000) strict whitelist info $ \preds _graph env ->
+    checkPredicates preds env
+
+-- | Check that shrinking is sound, i.e. that all shrink steps preserves constraint satisfaction.
+prop_shrinking :: OrderInfo -> Property
+prop_shrinking = prop_shrinking' False []
+
+prop_shrinking' :: Bool -> [String] -> OrderInfo -> Property
+prop_shrinking' strict whitelist info =
+  constraintProperty Nothing strict whitelist info $ \preds graph env ->
+    counterexample ("-- Original solution --\n" ++ showEnv env) $
+      let envs = shrinkEnv graph env
+       in tabulate "Shrinkings" [show $ length envs] $
+            conjoin $
+              map (checkPredicates preds) envs

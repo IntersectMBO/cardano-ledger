@@ -124,6 +124,7 @@ import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Word (Word64)
+import GHC.Stack (HasCallStack)
 import GHC.TypeLits (Symbol)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -245,7 +246,7 @@ class
       (\txOut value -> txOut & valueEitherTxOutL .~ Left value)
   {-# INLINE valueTxOutL #-}
 
-  compactValueTxOutL :: Lens' (TxOut era) (CompactForm (Value era))
+  compactValueTxOutL :: HasCallStack => Lens' (TxOut era) (CompactForm (Value era))
   compactValueTxOutL =
     lens
       ( \txOut -> case txOut ^. valueEitherTxOutL of
@@ -316,7 +317,7 @@ bootAddrTxOutF = to $ \txOut ->
     _ -> Nothing
 {-# INLINE bootAddrTxOutF #-}
 
-coinTxOutL :: EraTxOut era => Lens' (TxOut era) Coin
+coinTxOutL :: (HasCallStack, EraTxOut era) => Lens' (TxOut era) Coin
 coinTxOutL =
   lens
     ( \txOut ->
@@ -332,7 +333,7 @@ coinTxOutL =
     )
 {-# INLINE coinTxOutL #-}
 
-compactCoinTxOutL :: EraTxOut era => Lens' (TxOut era) (CompactForm Coin)
+compactCoinTxOutL :: (HasCallStack, EraTxOut era) => Lens' (TxOut era) (CompactForm Coin)
 compactCoinTxOutL =
   lens
     ( \txOut ->
@@ -356,7 +357,7 @@ isAdaOnlyTxOutF = to $ \txOut ->
     Left val -> isAdaOnly val
     Right cVal -> isAdaOnlyCompact cVal
 
-toCompactPartial :: (Val a, Show a) => a -> CompactForm a
+toCompactPartial :: (HasCallStack, Val a, Show a) => a -> CompactForm a
 toCompactPartial v =
   fromMaybe (error $ "Illegal value in TxOut: " <> show v) $ toCompact v
 

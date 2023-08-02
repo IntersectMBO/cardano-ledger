@@ -8,6 +8,7 @@
 module Test.Cardano.Ledger.Constrained.Combinators where
 
 import Cardano.Ledger.Coin (Coin (..))
+import Data.Foldable (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -218,3 +219,20 @@ superItemFromSet genA set =
     [ (3, fst <$> itemFromSet ["Not possible since set is not empty"] set)
     , (1, suchThat genA (`Set.notMember` set))
     ]
+
+-- | Pick a random (key,value) pair from a Map
+genFromMap :: [String] -> Map k a -> Gen (k, a)
+genFromMap msgs m
+  | n == 0 = errorMess "The map is empty in genFromMap" msgs
+  | otherwise = do
+      i <- choose (0, n - 1)
+      pure $ Map.elemAt i m
+  where
+    n = Map.size m
+
+subMapFromMapWithSize :: Ord k => Int -> Map k a -> Gen (Map k a)
+subMapFromMapWithSize n m = do
+  let indexes = [0 .. Map.size m - 1]
+      accum ans i = let (k, v) = Map.elemAt i m in Map.insert k v ans
+  shuffled <- shuffle indexes
+  pure (foldl' accum Map.empty (take n shuffled))

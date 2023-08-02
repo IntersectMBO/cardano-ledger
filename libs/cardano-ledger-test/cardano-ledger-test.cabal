@@ -25,11 +25,23 @@ library
         Test.Cardano.Ledger.Constrained.Examples
         Test.Cardano.Ledger.Constrained.Lenses
         Test.Cardano.Ledger.Constrained.Monad
+        Test.Cardano.Ledger.Constrained.Pairing
+        Test.Cardano.Ledger.Constrained.Preds.PParams
+        Test.Cardano.Ledger.Constrained.Preds.Universes
+        Test.Cardano.Ledger.Constrained.Preds.TxOut
+        Test.Cardano.Ledger.Constrained.Preds.Tx
+        Test.Cardano.Ledger.Constrained.Preds.CertState
+        Test.Cardano.Ledger.Constrained.Preds.Repl
+        Test.Cardano.Ledger.Constrained.Preds.Certs
+        Test.Cardano.Ledger.Constrained.Preds.LedgerState
         Test.Cardano.Ledger.Constrained.Spec
+        Test.Cardano.Ledger.Constrained.SpecClass
         Test.Cardano.Ledger.Constrained.Tests
         Test.Cardano.Ledger.Constrained.TypeRep
         Test.Cardano.Ledger.Constrained.Vars
         Test.Cardano.Ledger.Constrained.Rewrite
+        Test.Cardano.Ledger.Constrained.Shrink
+        Test.Cardano.Ledger.Constrained.Scripts
         Test.Cardano.Ledger.Constrained.Size
         Test.Cardano.Ledger.Constrained.Solver
         Test.Cardano.Ledger.Examples.BabbageFeatures
@@ -74,12 +86,15 @@ library
         bytestring,
         cardano-data,
         cardano-crypto-class,
+        cardano-crypto-wrapper,
+        cardano-crypto,
         cardano-ledger-allegra,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-alonzo-test,
         cardano-ledger-api,
         cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
         cardano-ledger-babbage-test,
+        cardano-ledger-byron,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
@@ -91,7 +106,9 @@ library
         cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.0,
         cardano-slotting,
         containers,
+        formatting,
         groups,
+        haskeline,
         vector-map,
         data-default-class,
         microlens,
