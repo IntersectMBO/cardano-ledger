@@ -17,6 +17,9 @@ module Cardano.Ledger.CertState (
   VState (..),
   InstantaneousRewards (..),
   FutureGenDeleg (..),
+  Anchor (..),
+  DRepState (..),
+  AnchorDataHash,
   lookupDepositDState,
   lookupRewardDState,
   rewards,
@@ -36,6 +39,7 @@ module Cardano.Ledger.CertState (
 )
 where
 
+import Cardano.Ledger.BaseTypes (Url, StrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -65,6 +69,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.PoolParams (PoolParams)
+import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
@@ -72,14 +77,13 @@ import Cardano.Ledger.Slot (
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolUView))
 import qualified Cardano.Ledger.UMap as UM
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (NoThunks (..))
@@ -275,8 +279,78 @@ toPStatePair PState {..} =
   , "deposits" .= psDeposits
   ]
 
+data AnchorDataHash
+
+data Anchor c = Anchor
+  { anchorUrl :: !Url
+  , anchorDataHash :: !(SafeHash c AnchorDataHash)
+  }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks (Anchor c)
+
+instance Crypto c => NFData (Anchor c) where
+  rnf = rwhnf
+
+instance Crypto c => DecCBOR (Anchor c) where
+  decCBOR =
+    decode $
+      RecD Anchor
+        <! From
+        <! From
+
+instance Crypto c => EncCBOR (Anchor c) where
+  encCBOR Anchor {..} =
+    encode $
+      Rec Anchor
+        !> To anchorUrl
+        !> To anchorDataHash
+
+instance Crypto c => ToJSON (Anchor c) where
+  toJSON = object . toAnchorPairs
+  toEncoding = pairs . mconcat . toAnchorPairs
+
+instance ToExpr (Anchor c)
+
+toAnchorPairs :: (KeyValue a, Crypto c) => Anchor c -> [a]
+toAnchorPairs vote@(Anchor _ _) =
+  let Anchor {..} = vote
+   in [ "url" .= anchorUrl
+      , "dataHash" .= anchorDataHash
+      ]
+
+data DRepState c = DRepState
+  { drepExpiry :: !EpochNo
+  , drepAnchor :: !(StrictMaybe (Anchor c))
+  }
+  deriving (Show, Eq, Generic)
+
+instance NoThunks (DRepState era)
+
+instance Crypto c => NFData (DRepState c)
+
+instance Crypto c => DecCBOR (DRepState c) where
+  decCBOR =
+    decode $
+      RecD DRepState
+        <! From
+        <! From
+
+instance Crypto c => EncCBOR (DRepState c) where
+  encCBOR DRepState {..} =
+    encode $
+      Rec DRepState
+        !> To drepExpiry
+        !> To drepAnchor
+
+instance ToExpr (DRepState era)
+
 data VState era = VState
-  { vsDReps :: !(Set (Credential 'DRepRole (EraCrypto era)))
+  { vsDReps ::
+      !( Map
+          (Credential 'DRepRole (EraCrypto era))
+          (DRepState (EraCrypto era))
+       )
   , vsCommitteeHotKeys ::
       !( Map
           (Credential 'ColdCommitteeRole (EraCrypto era))
@@ -290,7 +364,7 @@ instance Default (VState era) where
 
 instance NoThunks (VState era)
 
-instance NFData (VState era)
+instance Era era => NFData (VState era)
 
 instance Era era => DecCBOR (VState era) where
   decCBOR =
@@ -326,9 +400,9 @@ certPStateL = lens certPState (\ds u -> ds {certPState = u})
 certVStateL :: Lens' (CertState era) (VState era)
 certVStateL = lens certVState (\ds u -> ds {certVState = u})
 
-instance NoThunks (CertState c)
+instance NoThunks (CertState era)
 
-instance NFData (CertState c)
+instance Era era => NFData (CertState era)
 
 instance Crypto c => EncCBOR (InstantaneousRewards c) where
   encCBOR (InstantaneousRewards irR irT dR dT) =

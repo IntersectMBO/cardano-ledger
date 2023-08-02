@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Constrained.Lenses (
 where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, SlotNo)
-import Cardano.Ledger.CertState (certDStateL, certPStateL, certVStateL, dsFutureGenDelegsL, dsGenDelegsL, dsIRewardsL, dsUnifiedL)
+import Cardano.Ledger.CertState (DRepState, certDStateL, certPStateL, certVStateL, dsFutureGenDelegsL, dsGenDelegsL, dsIRewardsL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (DRep)
 import Cardano.Ledger.Credential (Credential, Ptr)
@@ -112,7 +112,10 @@ psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
 -- ===================================
 -- VState
 
-vsDRepsL :: Lens' (VState era) (Set (Credential 'DRepRole (EraCrypto era)))
+vsDRepsL ::
+  Lens'
+    (VState era)
+    (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 
 vsCommitteeHotKeysL ::
