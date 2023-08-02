@@ -2,6 +2,9 @@
 
 ## 1.5.0.0
 
+* Add `Anchor` and `AnchorDataHash`
+* Add `DRepState`
+* Change `vsDReps` to a map
 * Rename key roles #3588
   * `Voting` to `DRepRole`
   * `CommitteeHotKey` to `HotCommitteeRole`

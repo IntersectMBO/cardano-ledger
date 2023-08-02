@@ -55,7 +55,7 @@ vstatePreds :: Proof era -> [Pred era]
 vstatePreds _p =
   [ Sized (Range 3 8) dreps
   , Sized (Range 5 7) (Dom ccHotKeys)
-  , Subset dreps voteUniv
+  , Subset (Dom dreps) voteUniv
   , Subset (Dom ccHotKeys) voteCredUniv
   ]
 

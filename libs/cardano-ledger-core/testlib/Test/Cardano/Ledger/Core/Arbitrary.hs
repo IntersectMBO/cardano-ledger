@@ -69,7 +69,16 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
-import Cardano.Ledger.CertState
+import Cardano.Ledger.CertState (
+  Anchor (..),
+  CertState (..),
+  DRepState (..),
+  DState (..),
+  FutureGenDeleg (..),
+  InstantaneousRewards (..),
+  PState (..),
+  VState (..),
+ )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
@@ -665,6 +674,15 @@ instance Era era => Arbitrary (DState era) where
 
 instance Era era => Arbitrary (PState era) where
   arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Crypto c => Arbitrary (Anchor c) where
+  arbitrary =
+    Anchor
+      <$> arbitrary
+      <*> arbitrary
+
+instance Crypto c => Arbitrary (DRepState c) where
+  arbitrary = DRepState <$> arbitrary <*> arbitrary
 
 instance Era era => Arbitrary (VState era) where
   arbitrary = VState <$> arbitrary <*> arbitrary

@@ -23,11 +23,11 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (VState (..))
+import Cardano.Ledger.CertState (VState (..), DRepState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayGOVCERT)
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
-import Cardano.Ledger.Core (Era (EraCrypto), EraPParams, EraRule, PParams)
+import Cardano.Ledger.Core (Era (EraCrypto), EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
@@ -48,11 +48,12 @@ import Control.State.Transition.Extended (
  )
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Lens.Micro ((^.))
+import Cardano.Ledger.Conway.Core (ppDRepActivityL, ConwayEraPParams)
 
 data ConwayGovCertPredFailure era
   = ConwayDRepAlreadyRegistered !(Credential 'DRepRole (EraCrypto era))
@@ -110,7 +111,7 @@ instance
 newtype ConwayGovCertEvent era = GovCertEvent (Event (EraRule "GOVCERT" era))
 
 instance
-  ( EraPParams era
+  ( ConwayEraPParams era
   , State (EraRule "GOVCERT" era) ~ VState era
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
   , Environment (EraRule "GOVCERT" era) ~ PParams era
@@ -129,23 +130,28 @@ instance
 
   transitionRules = [conwayGovCertTransition @era]
 
-conwayGovCertTransition :: TransitionRule (ConwayGOVCERT era)
+conwayGovCertTransition ::
+  ConwayEraPParams era => TransitionRule (ConwayGOVCERT era)
 conwayGovCertTransition = do
   TRC
-    ( _pp
+    ( pp
       , vState@VState {vsDReps, vsCommitteeHotKeys}
       , c
       ) <-
     judgmentContext
   case c of
-    ConwayRegDRep cred _deposit _mAnchor -> do
-      Set.notMember cred vsDReps ?! ConwayDRepAlreadyRegistered cred
+    ConwayRegDRep cred _deposit mAnchor -> do
+      Map.notMember cred vsDReps ?! ConwayDRepAlreadyRegistered cred
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
-      pure $ vState {vsDReps = Set.insert cred vsDReps}
+      let drepState = DRepState
+            { drepExpiry = pp ^. ppDRepActivityL
+            , drepAnchor = mAnchor
+            }
+      pure $ vState {vsDReps = Map.insert cred drepState vsDReps}
     ConwayUnRegDRep cred _deposit -> do
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
-      Set.member cred vsDReps ?! ConwayDRepNotRegistered cred
-      pure $ vState {vsDReps = Set.delete cred vsDReps}
+      Map.member cred vsDReps ?! ConwayDRepNotRegistered cred
+      pure $ vState {vsDReps = Map.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldK hotK -> do
       checkColdKeyHasNotResigned coldK vsCommitteeHotKeys
       pure $ vState {vsCommitteeHotKeys = Map.insert coldK (Just hotK) vsCommitteeHotKeys}
@@ -153,7 +159,7 @@ conwayGovCertTransition = do
       checkColdKeyHasNotResigned coldK vsCommitteeHotKeys
       pure $ vState {vsCommitteeHotKeys = Map.insert coldK Nothing vsCommitteeHotKeys}
     ConwayUpdateDRep cred _mAnchor -> do
-      Set.notMember cred vsDReps ?! ConwayDRepNotRegistered cred
+      Map.notMember cred vsDReps ?! ConwayDRepNotRegistered cred
       pure vState -- TODO: update anchor
   where
     checkColdKeyHasNotResigned coldK vsCommitteeHotKeys =

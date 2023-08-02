@@ -195,44 +195,6 @@ instance DecCBOR Vote where
 instance EncCBOR Vote where
   encCBOR = encodeEnum
 
-data AnchorDataHash
-
-data Anchor c = Anchor
-  { anchorUrl :: !Url
-  , anchorDataHash :: !(SafeHash c AnchorDataHash)
-  }
-  deriving (Eq, Show, Generic)
-
-instance NoThunks (Anchor c)
-
-instance Crypto c => NFData (Anchor c) where
-  rnf = rwhnf
-
-instance Crypto c => DecCBOR (Anchor c) where
-  decCBOR =
-    decode $
-      RecD Anchor
-        <! From
-        <! From
-
-instance Crypto c => EncCBOR (Anchor c) where
-  encCBOR Anchor {..} =
-    encode $
-      Rec Anchor
-        !> To anchorUrl
-        !> To anchorDataHash
-
-instance Crypto c => ToJSON (Anchor c) where
-  toJSON = object . toAnchorPairs
-  toEncoding = pairs . mconcat . toAnchorPairs
-
-toAnchorPairs :: (KeyValue a, Crypto c) => Anchor c -> [a]
-toAnchorPairs vote@(Anchor _ _) =
-  let Anchor {..} = vote
-   in [ "url" .= anchorUrl
-      , "dataHash" .= anchorDataHash
-      ]
-
 newtype VotingProcedures era = VotingProcedures
   { unVotingProcedures ::
       Map (Voter (EraCrypto era)) (Map (GovActionId (EraCrypto era)) (VotingProcedure era))

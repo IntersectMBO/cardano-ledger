@@ -215,12 +215,6 @@ instance Era era => Arbitrary (GovEnv era) where
       <$> arbitrary
       <*> arbitrary
 
-instance Crypto c => Arbitrary (Anchor c) where
-  arbitrary =
-    Anchor
-      <$> arbitrary
-      <*> arbitrary
-
 instance Era era => Arbitrary (VotingProcedure era) where
   arbitrary = VotingProcedure <$> arbitrary <*> arbitrary
 

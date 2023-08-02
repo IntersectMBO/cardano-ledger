@@ -57,6 +57,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..), mkTxIxPartial)
 import Cardano.Ledger.Binary.Version (Version)
+import Cardano.Ledger.CertState (DRepState)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Gov (GovAction (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
@@ -287,6 +288,7 @@ data Rep era t where
   BoolR :: Rep era Bool
   DRepR :: Rep era (Core.DRep (EraCrypto era))
   PoolMetadataR :: Proof era -> Rep era PoolMetadata
+  DRepStateR :: Rep era (DRepState (EraCrypto era))
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -509,6 +511,7 @@ instance Show (Rep era t) where
   show BoolR = "Bool"
   show DRepR = "(DRep c)"
   show (PoolMetadataR _) = "PoolMetadata"
+  show DRepStateR = "DRepState"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -609,6 +612,7 @@ synopsis StakeHashR k = "(KeyHash 'Staking " ++ show (keyHashSummary k) ++ ")"
 synopsis BoolR x = show x
 synopsis DRepR x = show (pcDRep x)
 synopsis (PoolMetadataR _) x = show x
+synopsis DRepStateR x = show x
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -728,6 +732,7 @@ instance Shaped (Rep era) any where
   shape (PoolMetadataR p) = Nary 84 [shape p]
   shape CommColdCredR = Nullary 85
   shape CommHotCredR = Nullary 86
+  shape DRepStateR = Nullary 87
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep x y = cmpIndex @(Rep era) x y
@@ -876,6 +881,7 @@ genSizedRep _ (PoolMetadataR p) =
   if restrictHash p
     then PoolMetadata <$> arbitrary <*> (BS.take (hashsize p) <$> arbitrary)
     else PoolMetadata <$> arbitrary <*> arbitrary
+genSizedRep _ DRepStateR = arbitrary
 
 genRep ::
   Era era =>
@@ -1005,6 +1011,7 @@ shrinkRep StakeHashR x = shrink x
 shrinkRep BoolR x = shrink x
 shrinkRep DRepR x = shrink x
 shrinkRep (PoolMetadataR _) _ = []
+shrinkRep DRepStateR _ = []
 
 -- ===========================
 
@@ -1123,6 +1130,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help BoolR v = pure $ With v
     help DRepR v = pure $ With v
     help (PoolMetadataR _) v = pure $ With v
+    help DRepStateR _ = failT ["DRepState does not have Ord instance"]
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)

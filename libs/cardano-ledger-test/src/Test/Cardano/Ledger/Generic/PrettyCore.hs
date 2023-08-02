@@ -1694,7 +1694,7 @@ pcVState :: VState era -> PDoc
 pcVState (VState dreps hotkeys) =
   ppRecord
     "VState"
-    [ ("dReps", ppSet pcCredential dreps)
+    [ ("dReps", prettyA dreps)
     , ("hotKeys", ppMap pcCredential (ppMaybe pcCredential) hotkeys)
     ]
 
