@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Filter out zero valued `TxOut`'s on Byron/Shelley boundary instead of on Babbage/Conway.
 * Switch GovernanceActionIx to `Word32` fro `Word64` and remove `Num` and `Enum`
   instances, which are dangerous due to potential overflows.
 * Add `currentTreasuryValue :: !(StrictMaybe Coin)` as a new field to Conway TxBody #3586

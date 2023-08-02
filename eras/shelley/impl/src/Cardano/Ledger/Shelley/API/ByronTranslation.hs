@@ -32,12 +32,13 @@ import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (coinBalance)
-import Cardano.Ledger.Val ((<->))
+import Cardano.Ledger.Val (zero, (<->))
 import qualified Data.ByteString.Short as SBS
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Data.Word
 import GHC.Stack (HasCallStack)
+import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
@@ -88,6 +89,10 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
       | (txInByron, txOutByron) <- Map.toList utxoByron
       , let txInShelley = translateCompactTxInByronToShelley txInByron
             txOutShelley = translateCompactTxOutByronToShelley txOutByron
+      , -- In some testnets there are a few TxOuts with zero values injected at
+      -- initialization of Byron. We do not allow zero values in TxOuts in Shelley
+      -- onwards.
+      txOutShelley ^. coinTxOutL /= zero
       ]
 
 translateToShelleyLedgerState ::
