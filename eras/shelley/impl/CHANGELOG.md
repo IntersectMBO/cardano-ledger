@@ -24,6 +24,7 @@
 * Remove `esPrevPp` and `esPp` from `EpochState`
 * Rename `esPrevPpL` to `prevPParamsEpochStateL`
 * Rename `esPpL` to `curPParamsEpochStateL`
+* Swap the order of `esSnapshots` and `esLState` in `EpochState`
 
 ## 1.4.2.0
 

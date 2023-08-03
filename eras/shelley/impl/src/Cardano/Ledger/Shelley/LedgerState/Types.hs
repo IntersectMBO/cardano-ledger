@@ -173,8 +173,8 @@ instance
     encode $
       Rec EpochState
         !> To esAccountState
-        !> To esSnapshots
         !> To esLState -- We get better sharing when encoding ledger state before snaphots
+        !> To esSnapshots
         !> To esNonMyopic
 
 instance
@@ -187,8 +187,8 @@ instance
     decodeRecordNamed "EpochState" (const 4) $
       flip evalStateT mempty $ do
         esAccountState <- lift decCBOR
-        esSnapshots <- decSharePlusCBOR
         esLState <- decSharePlusCBOR
+        esSnapshots <- decSharePlusCBOR
         esNonMyopic <- decShareLensCBOR _2
         pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
 

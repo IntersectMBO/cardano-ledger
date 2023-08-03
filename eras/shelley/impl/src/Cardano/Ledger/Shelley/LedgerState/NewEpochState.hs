@@ -70,7 +70,7 @@ getGKeys ::
 getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
-    EpochState _ _ ls _ = es
+    EpochState _ ls _ _ = es
     LedgerState _ (CertState _ _ DState {dsGenDelegs = (GenDelegs genDelegs)}) = ls
 
 -- | Creates the ledger state for an empty ledger which
@@ -150,7 +150,7 @@ updateNES
             _eL
             _bprev
             _
-            es@(EpochState acnt ss _ nm)
+            es@(EpochState acnt _ ss nm)
             _ru
             _pd
             _avvm
@@ -164,7 +164,7 @@ updateNES
       oldNes
         { nesBcur = bcur
         , nesEs =
-            EpochState acnt ss ls nm
+            EpochState acnt ls ss nm
               & curPParamsEpochStateL .~ pp
               & prevPParamsEpochStateL .~ pr
         }

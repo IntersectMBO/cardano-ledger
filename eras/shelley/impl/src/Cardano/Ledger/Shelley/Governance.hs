@@ -80,10 +80,10 @@ class
   getConstitutionHash :: GovernanceState era -> Maybe (SafeHash (EraCrypto era) ConstitutionData)
   getConstitutionHash = const Nothing
 
-  -- | Lens for accessing protocol parameters
+  -- | Lens for accessing current protocol parameters
   curPParamsGovStateL :: Lens' (GovernanceState era) (PParams era)
 
-  -- | Lens for accessing the future protocol parameters
+  -- | Lens for accessing the previous protocol parameters
   prevPParamsGovStateL :: Lens' (GovernanceState era) (PParams era)
 
 instance

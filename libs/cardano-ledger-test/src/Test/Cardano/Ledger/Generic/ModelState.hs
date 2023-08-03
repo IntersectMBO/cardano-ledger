@@ -246,8 +246,8 @@ epochStateZero :: Reflect era => EpochState era
 epochStateZero =
   EpochState
     accountStateZero
-    emptySnapShots
     ledgerStateZero
+    emptySnapShots
     nonMyopicZero
     & curPParamsEpochStateL .~ pParamsZero
     & prevPParamsEpochStateL .~ pParamsZero
@@ -351,8 +351,8 @@ instance Reflect era => Extract (EpochState era) era where
   extract x =
     EpochState
       (mAccountState x)
-      (mSnapshots x)
       (extract x)
+      (mSnapshots x)
       nonMyopicZero
       & curPParamsEpochStateL .~ mPParams x
       & prevPParamsEpochStateL .~ mPParams x

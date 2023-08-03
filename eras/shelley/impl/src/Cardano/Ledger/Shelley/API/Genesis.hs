@@ -88,11 +88,11 @@ initialStateFromGenesis sg ag =
     (BlocksMade Map.empty)
     ( EpochState
         (AccountState (Coin 0) reserves)
-        emptySnapShots
         ( LedgerState
             (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) govSt)
             (CertState def def dState)
         )
+        emptySnapShots
         def
     )
     SNothing

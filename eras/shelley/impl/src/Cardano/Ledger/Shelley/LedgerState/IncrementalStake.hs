@@ -276,10 +276,10 @@ applyRUpdFiltered ::
   (EpochState era, FilteredRewards era)
 applyRUpdFiltered
   ru
-  es@(EpochState as ss ls _nm) = (epochStateAns, filteredRewards)
+  es@(EpochState as ls ss _nm) = (epochStateAns, filteredRewards)
     where
       !epochStateAns =
-        EpochState as' ss ls' nm'
+        EpochState as' ls' ss nm'
           & curPParamsEpochStateL .~ es ^. curPParamsEpochStateL
           & prevPParamsEpochStateL .~ es ^. prevPParamsEpochStateL
       utxoState_ = lsUTxOState ls

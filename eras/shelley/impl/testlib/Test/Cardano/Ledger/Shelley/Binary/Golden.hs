@@ -53,6 +53,7 @@ goldenNewEpochStateExpectation
                 , E asTreasury
                 , E asReserves
                 ]
+            , E esLState
             , Em
                 [ E (TkListLen 4)
                 , snapShotEnc ssStakeMark
@@ -60,7 +61,6 @@ goldenNewEpochStateExpectation
                 , snapShotEnc ssStakeGo
                 , E ssFee
                 ]
-            , E esLState
             , Ev ver esNonMyopic
             ]
         , Ev ver nesRu

@@ -215,7 +215,6 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         (BlocksMade Map.empty)
         ( EpochState
             (AccountState (Coin 0) reserves)
-            emptySnapShots
             ( LedgerState
                 ( smartUTxOState
                     pp
@@ -226,6 +225,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                 )
                 (CertState def def dState)
             )
+            emptySnapShots
             def
             & curPParamsEpochStateL .~ pp
             & prevPParamsEpochStateL .~ pp
@@ -351,7 +351,7 @@ chainTransition =
 
         let NewEpochState e1 _ _ _ _ _ _ = nes
             NewEpochState e2 _ bcur es _ _pd _ = nes'
-        let EpochState account _ ls _ = es
+        let EpochState account ls _ _ = es
             pp' = es ^. curPParamsEpochStateL
         let LedgerState _ (CertState VState {} PState {} DState {dsGenDelegs = genDelegs}) = ls
         let ph = lastAppliedHash lab

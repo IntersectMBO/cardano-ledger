@@ -136,7 +136,6 @@ mirTransition = do
             { asReserves = availableReserves <-> totR
             , asTreasury = availableTreasury <-> totT
             }
-          ss
           ls
             { lsCertState =
                 dpState
@@ -147,6 +146,7 @@ mirTransition = do
                         }
                   }
             }
+          ss
           nm
           & prevPParamsEpochStateL .~ pr
           & curPParamsEpochStateL .~ pp
@@ -159,7 +159,6 @@ mirTransition = do
       pure $
         EpochState
           acnt
-          ss
           ls
             { lsCertState =
                 dpState
@@ -167,6 +166,7 @@ mirTransition = do
                       ds {dsIRewards = emptyInstantaneousRewards}
                   }
             }
+          ss
           nm
           & prevPParamsEpochStateL .~ pr
           & curPParamsEpochStateL .~ pp

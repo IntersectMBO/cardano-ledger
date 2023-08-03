@@ -108,7 +108,7 @@ startStep ::
   ActiveSlotCoeff ->
   Word64 ->
   PulsingRewUpdate (EraCrypto era)
-startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls nm) maxSupply asc secparam =
+startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSupply asc secparam =
   let SnapShot stake delegs poolParams = ssStakeGo ss
       numStakeCreds, k :: Rational
       numStakeCreds = fromIntegral (VMap.size $ unStake stake)

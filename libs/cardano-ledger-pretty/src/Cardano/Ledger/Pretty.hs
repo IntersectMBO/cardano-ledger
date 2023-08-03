@@ -761,12 +761,12 @@ ppEpochState ::
   ) =>
   EpochState era ->
   PDoc
-ppEpochState (EpochState acnt snap ls non) =
+ppEpochState (EpochState acnt ls snap non) =
   ppRecord
     "EpochState"
     [ ("accountState", ppAccountState acnt)
-    , ("snapShots", ppSnapShots snap)
     , ("ledgerState", ppLedgerState ls)
+    , ("snapShots", ppSnapShots snap)
     , ("nonMyopic", ppNonMyopic non)
     ]
 

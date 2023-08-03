@@ -819,8 +819,8 @@ epochStateT :: Core.EraGovernance era => Proof era -> Target era (EpochState era
 epochStateT proof =
   Constr "EpochState" epochStateFun
     :$ accountStateT
-    :$ snapShotsT
     :$ ledgerStateT proof
+    :$ snapShotsT
   where
     epochStateFun a s l = EpochState a s l (NonMyopic Map.empty (Coin 0))
 

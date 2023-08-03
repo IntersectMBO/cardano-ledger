@@ -164,7 +164,7 @@ chainTransition = do
   nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, slot)
 
   let NewEpochState _ _ (BlocksMade current) epochState _ _ _ = nes'
-      EpochState account _ ledgerState _ = epochState
+      EpochState account ledgerState _ _ = epochState
       pparams = epochState ^. curPParamsEpochStateL
 
   let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))

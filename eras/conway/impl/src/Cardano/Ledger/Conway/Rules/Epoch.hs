@@ -231,8 +231,8 @@ epochTransition = do
       epochState' =
         EpochState
           acnt'
-          ss'
           (returnProposalDeposits adjustedLState)
+          ss'
           nm
 
   let

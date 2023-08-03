@@ -196,8 +196,8 @@ epochTransition = do
       epochState' =
         EpochState
           acnt'
-          ss'
           (ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState})
+          ss'
           nm
           & prevPParamsEpochStateL .~ pr
           & curPParamsEpochStateL .~ pp
