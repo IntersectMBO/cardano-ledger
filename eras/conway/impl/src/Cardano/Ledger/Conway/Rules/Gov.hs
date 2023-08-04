@@ -19,6 +19,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovPredFailure (..),
 ) where
 
+import Cardano.Ledger.Address (RewardAcnt)
 import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -37,7 +38,6 @@ import Cardano.Ledger.Conway.Governance (
   indexedGovProps,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
 import Control.DeepSeq (NFData)
@@ -126,7 +126,7 @@ addAction ::
   EpochNo ->
   GovernanceActionId (EraCrypto era) ->
   Coin ->
-  KeyHash 'Staking (EraCrypto era) ->
+  RewardAcnt (EraCrypto era) ->
   GovernanceAction era ->
   ConwayGovState era ->
   ConwayGovState era

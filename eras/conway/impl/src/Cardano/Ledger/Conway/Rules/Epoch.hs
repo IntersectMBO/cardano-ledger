@@ -22,6 +22,7 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 )
 where
 
+import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -38,7 +39,6 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
-import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -157,7 +157,7 @@ returnProposalDepositsUMap gaids m =
     addRew m' (_, GovernanceActionState {..}) =
       Map.insertWith
         (<>)
-        (KeyHashObj gasReturnAddr)
+        (getRwdCred gasReturnAddr)
         (fromMaybe mempty $ toCompact gasDeposit)
         m'
 
