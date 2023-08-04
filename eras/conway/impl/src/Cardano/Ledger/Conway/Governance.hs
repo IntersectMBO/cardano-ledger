@@ -47,6 +47,7 @@ module Cardano.Ledger.Conway.Governance (
   constitutionScriptL,
 ) where
 
+import Cardano.Ledger.Address (RewardAcnt)
 import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), StrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -98,7 +99,7 @@ data GovernanceActionState era = GovernanceActionState
   , gasDRepVotes :: !(Map (Credential 'DRepRole (EraCrypto era)) Vote)
   , gasStakePoolVotes :: !(Map (KeyHash 'StakePool (EraCrypto era)) Vote)
   , gasDeposit :: !Coin
-  , gasReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
+  , gasReturnAddr :: !(RewardAcnt (EraCrypto era))
   , gasAction :: !(GovernanceAction era)
   , gasProposedIn :: !EpochNo
   }

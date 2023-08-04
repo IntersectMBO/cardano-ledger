@@ -34,6 +34,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
+import Cardano.Ledger.Address (RewardAcnt)
 import Cardano.Ledger.BaseTypes (ProtVer, UnitInterval, Url)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -310,7 +311,7 @@ deriving instance EraPParams era => Show (GovernanceProcedures era)
 
 data ProposalProcedure era = ProposalProcedure
   { pProcDeposit :: !Coin
-  , pProcReturnAddr :: !(KeyHash 'Staking (EraCrypto era))
+  , pProcReturnAddr :: !(RewardAcnt (EraCrypto era))
   , pProcGovernanceAction :: !(GovernanceAction era)
   , pProcAnchor :: !(Anchor (EraCrypto era))
   }
