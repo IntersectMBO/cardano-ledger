@@ -231,9 +231,9 @@ instance Crypto c => AlonzoEraPParams (BabbageEra c) where
 instance Crypto c => BabbageEraPParams (BabbageEra c) where
   hkdCoinsPerUTxOByteL = lens bppCoinsPerUTxOByte (\pp x -> pp {bppCoinsPerUTxOByte = x})
 
-instance Crypto c => EraGovernance (BabbageEra c) where
-  type GovernanceState (BabbageEra c) = ShelleyGovState (BabbageEra c)
-  emptyGovernanceState =
+instance Crypto c => EraGov (BabbageEra c) where
+  type GovState (BabbageEra c) = ShelleyGovState (BabbageEra c)
+  emptyGovState =
     ShelleyGovState
       emptyPPPUpdates
       emptyPPPUpdates

@@ -96,7 +96,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
   lsCertStateL,
   utxosFeesL,
-  utxosGovernanceL,
+  utxosGovStateL,
   nesEpochStateL,
   esAccountStateL,
   esSnapshotsL,

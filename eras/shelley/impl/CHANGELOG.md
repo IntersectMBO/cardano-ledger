@@ -2,6 +2,13 @@
 
 ## 1.5.0.0
 
+* Rename `*governance*` to `*gov*` #3607
+  * `EraGovernance` to `EraGov`
+  * `GovernanceState` to `GovState`
+  * `witsVKeyNeededNoGovernance` to `witsVKeyNeededNoGov`
+  * `witsVKeyNeededGovernance` to `witsVKeyNeededGov`
+  * `utxosGovernance` to `utxosGovState`  
+  * module `Cardano.Ledger.Shelley.Governance` to `Cardano.Ledger.Shelley.Gov`
 * Filter out zero valued `TxOut`'s on Byron/Shelley boundary.
 * Rename `getProducedValue` to `shelleyProducedValue`
 * Change the constraints on `produced` and `evaluateTransactionBalance`

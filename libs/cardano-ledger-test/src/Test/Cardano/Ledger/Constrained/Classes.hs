@@ -26,8 +26,8 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc, ppString)
-import Cardano.Ledger.Shelley.Governance (ShelleyGovState (..))
-import qualified Cardano.Ledger.Shelley.Governance as Gov (GovernanceState (..))
+import Cardano.Ledger.Shelley.Gov (ShelleyGovState (..))
+import qualified Cardano.Ledger.Shelley.Gov as Gov (GovState (..))
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import qualified Cardano.Ledger.Shelley.PParams as PP (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -675,18 +675,18 @@ proposedMapL =
 
 -- ====================
 
-data GovernanceState era = GovernanceState (Proof era) (Gov.GovernanceState era)
+data GovState era = GovState (Proof era) (Gov.GovState era)
 
-unGovernanceState :: GovernanceState era -> Gov.GovernanceState era
-unGovernanceState (GovernanceState _ x) = x
+unGovState :: GovState era -> Gov.GovState era
+unGovState (GovState _ x) = x
 
-governanceProposedL :: Lens' (GovernanceState era) (ShelleyGovState era)
-governanceProposedL =
+govProposedL :: Lens' (GovState era) (ShelleyGovState era)
+govProposedL =
   lens
-    (\(GovernanceState p x) -> getPPUP p x)
-    (\(GovernanceState p _) y -> GovernanceState p (putPPUP p y))
+    (\(GovState p x) -> getPPUP p x)
+    (\(GovState p _) y -> GovState p (putPPUP p y))
 
-getPPUP :: forall era. Proof era -> Gov.GovernanceState era -> ShelleyGovState era
+getPPUP :: forall era. Proof era -> Gov.GovState era -> ShelleyGovState era
 getPPUP (Shelley _) x = x
 getPPUP (Allegra _) x = x
 getPPUP (Mary _) x = x
@@ -694,13 +694,13 @@ getPPUP (Alonzo _) x = x
 getPPUP (Babbage _) x = x
 getPPUP (Conway _) _ = def @(ShelleyGovState era)
 
-putPPUP :: forall era. Proof era -> ShelleyGovState era -> Gov.GovernanceState era
+putPPUP :: forall era. Proof era -> ShelleyGovState era -> Gov.GovState era
 putPPUP (Shelley _) x = x
 putPPUP (Allegra _) x = x
 putPPUP (Mary _) x = x
 putPPUP (Alonzo _) x = x
 putPPUP (Babbage _) x = x
-putPPUP (Conway _) _ = Gov.emptyGovernanceState @era
+putPPUP (Conway _) _ = Gov.emptyGovState @era
 
 -- ================
 liftUTxO :: Map (TxIn (EraCrypto era)) (TxOutF era) -> UTxO era
@@ -762,14 +762,14 @@ genProposedPPUpdates p = case p of
   (Babbage _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
   (Conway _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
 
-genGovernanceState :: Proof era -> Gen (GovernanceState era)
-genGovernanceState p = case p of
-  (Shelley _) -> GovernanceState p <$> arbitrary
-  (Allegra _) -> GovernanceState p <$> arbitrary
-  (Mary _) -> GovernanceState p <$> arbitrary
-  (Alonzo _) -> GovernanceState p <$> arbitrary
-  (Babbage _) -> GovernanceState p <$> arbitrary
-  (Conway _) -> pure $ GovernanceState p Gov.emptyGovernanceState
+genGovState :: Proof era -> Gen (GovState era)
+genGovState p = case p of
+  (Shelley _) -> GovState p <$> arbitrary
+  (Allegra _) -> GovState p <$> arbitrary
+  (Mary _) -> GovState p <$> arbitrary
+  (Alonzo _) -> GovState p <$> arbitrary
+  (Babbage _) -> GovState p <$> arbitrary
+  (Conway _) -> pure $ GovState p Gov.emptyGovState
 
 genUTxO :: Proof era -> Gen (UTxO era)
 genUTxO p = case p of

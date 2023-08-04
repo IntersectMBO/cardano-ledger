@@ -21,11 +21,11 @@ module Cardano.Ledger.Conway.Rules.Ratify (
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
-import Cardano.Ledger.Conway.Governance (
-  EraGovernance,
-  GovernanceAction (..),
-  GovernanceActionId,
-  GovernanceActionState (..),
+import Cardano.Ledger.Conway.Gov (
+  EraGov,
+  GovAction (..),
+  GovActionId,
+  GovActionState (..),
   RatifyState (..),
   Vote (..),
  )
@@ -60,8 +60,8 @@ data RatifyEnv era = RatifyEnv
 newtype RatifySignal era
   = RatifySignal
       ( StrictSeq
-          ( GovernanceActionId (EraCrypto era)
-          , GovernanceActionState era
+          ( GovActionId (EraCrypto era)
+          , GovActionState era
           )
       )
 
@@ -70,7 +70,7 @@ instance
   , Embed (EraRule "ENACT" era) (ConwayRATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
-  , Signal (EraRule "ENACT" era) ~ GovernanceAction era
+  , Signal (EraRule "ENACT" era) ~ GovAction era
   ) =>
   STS (ConwayRATIFY era)
   where
@@ -95,11 +95,11 @@ spoThreshold = 51 % 100
 epochsToExpire :: EpochNo
 epochsToExpire = 30
 
-accepted :: RatifyEnv era -> GovernanceActionState era -> Bool
+accepted :: RatifyEnv era -> GovActionState era -> Bool
 accepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
   totalAcceptedStakePoolsRatio > getStakePoolThreshold gasAction
   where
-    GovernanceActionState {gasStakePoolVotes, gasAction} = gas
+    GovActionState {gasStakePoolVotes, gasAction} = gas
     -- Final ratio for `totalAcceptedStakePoolsRatio` we want is: t = y / (s - a)
     -- Where:
     --  * `y` - total delegated stake that voted Yes
@@ -139,7 +139,7 @@ ratifyTransition ::
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
-  , Signal (EraRule "ENACT" era) ~ GovernanceAction era
+  , Signal (EraRule "ENACT" era) ~ GovAction era
   , Era era
   ) =>
   TransitionRule (ConwayRATIFY era)
@@ -152,7 +152,7 @@ ratifyTransition = do
     judgmentContext
 
   case rsig of
-    act@(_, ast@GovernanceActionState {gasAction, gasProposedIn}) :<| sigs -> do
+    act@(_, ast@GovActionState {gasAction, gasProposedIn}) :<| sigs -> do
       let expired = gasProposedIn + epochsToExpire < reCurrentEpoch
       if accepted env ast
         then do
@@ -173,6 +173,6 @@ ratifyTransition = do
               pure $ st' {rsFuture = act :<| rsFuture}
     Empty -> pure st
 
-instance EraGovernance era => Embed (ConwayENACT era) (ConwayRATIFY era) where
+instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = id
   wrapEvent = absurd

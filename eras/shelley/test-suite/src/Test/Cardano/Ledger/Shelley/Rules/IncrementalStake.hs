@@ -147,7 +147,7 @@ incrStakeComparisonTest ::
   forall era.
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proxy era ->
   TestTree
@@ -163,7 +163,7 @@ incrStakeComparisonTest Proxy =
 
 checkIncrementalStake ::
   forall era.
-  (EraTxOut era, EraGovernance era) =>
+  (EraTxOut era, EraGov era) =>
   EpochState era ->
   Property
 checkIncrementalStake es =

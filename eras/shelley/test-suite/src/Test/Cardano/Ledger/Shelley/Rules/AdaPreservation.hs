@@ -113,7 +113,7 @@ tests ::
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   , ProtVerAtMost era 8
   ) =>
   Int ->
@@ -130,7 +130,7 @@ adaPreservationProps ::
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   , ProtVerAtMost era 8
   ) =>
   Property
@@ -175,8 +175,8 @@ checkPreservation ::
   ( EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyGovState era
-  , EraGovernance era
+  , GovState era ~ ShelleyGovState era
+  , EraGov era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Int ->
@@ -242,7 +242,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
     oldPoolDeposit = psDeposits . certPState . lsCertState $ lsOld
     newPoolDeposit = psDeposits . certPState . lsCertState $ lsNew
 
-    proposal = votedValue (proposals . utxosGovernance . lsUTxOState $ lsOld) currPP 5
+    proposal = votedValue (proposals . utxosGovState . lsUTxOState $ lsOld) currPP 5
     obligationMsgs = case proposal of
       Nothing -> []
       Just proposal' ->

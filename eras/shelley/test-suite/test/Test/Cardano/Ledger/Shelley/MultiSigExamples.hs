@@ -194,7 +194,7 @@ bobInitCoin = Coin 1000
 genesis ::
   forall era.
   ( EraTxOut era
-  , EraGovernance era
+  , EraGov era
   ) =>
   LedgerState era
 genesis = genesisState genDelegs0 utxo0

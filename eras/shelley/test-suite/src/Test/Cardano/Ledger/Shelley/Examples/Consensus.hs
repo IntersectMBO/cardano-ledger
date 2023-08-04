@@ -96,7 +96,7 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
 
 deriving instance
   ( EraTx era
-  , EraGovernance era
+  , EraGov era
   , Eq (TxSeq era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Eq (StashedAVVMAddresses era)
@@ -116,7 +116,7 @@ defaultShelleyLedgerExamples ::
   forall era.
   ( ShelleyBasedEra' era
   , EraSegWits era
-  , EraGovernance era
+  , EraGov era
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
   , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
@@ -299,7 +299,7 @@ testShelleyGenesis =
 exampleNewEpochState ::
   forall era.
   ( EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , ShelleyBasedEra' era
   , Default (StashedAVVMAddresses era)
   ) =>
@@ -341,7 +341,7 @@ exampleNewEpochState value ppp pp =
                             ]
                     , utxosDeposited = Coin 1000
                     , utxosFees = Coin 1
-                    , utxosGovernance = emptyGovernanceState
+                    , utxosGovState = emptyGovState
                     , utxosStakeDistr = mempty
                     }
               , lsCertState = def

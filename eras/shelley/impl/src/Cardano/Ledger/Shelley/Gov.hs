@@ -9,8 +9,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Cardano.Ledger.Shelley.Governance (
-  EraGovernance (..),
+module Cardano.Ledger.Shelley.Gov (
+  EraGov (..),
   ShelleyGovState (..),
   Constitution (..),
   ConstitutionData (..),
@@ -52,39 +52,39 @@ newtype ConstitutionData = ConstitutionData ByteString
 
 class
   ( EraPParams era
-  , Eq (GovernanceState era)
-  , Show (GovernanceState era)
-  , NoThunks (GovernanceState era)
-  , NFData (GovernanceState era)
-  , EncCBOR (GovernanceState era)
-  , DecCBOR (GovernanceState era)
-  , ToCBOR (GovernanceState era)
-  , FromCBOR (GovernanceState era)
-  , Default (GovernanceState era)
-  , ToJSON (GovernanceState era)
+  , Eq (GovState era)
+  , Show (GovState era)
+  , NoThunks (GovState era)
+  , NFData (GovState era)
+  , EncCBOR (GovState era)
+  , DecCBOR (GovState era)
+  , ToCBOR (GovState era)
+  , FromCBOR (GovState era)
+  , Default (GovState era)
+  , ToJSON (GovState era)
   ) =>
-  EraGovernance era
+  EraGov era
   where
-  type GovernanceState era = (r :: Type) | r -> era
+  type GovState era = (r :: Type) | r -> era
 
   -- | Construct empty governance state
-  emptyGovernanceState :: GovernanceState era
-  emptyGovernanceState = def
+  emptyGovState :: GovState era
+  emptyGovState = def
 
   -- | Returns `Nothing` for all eras starting with Conway, otherwise returns proposed
   -- pparams updates
-  getProposedPPUpdates :: GovernanceState era -> Maybe (ProposedPPUpdates era)
+  getProposedPPUpdates :: GovState era -> Maybe (ProposedPPUpdates era)
   getProposedPPUpdates _ = Nothing
 
   -- | Returns `Nothing` for all era preceding Conway, otherwise returns the hash of the constitution
-  getConstitutionHash :: GovernanceState era -> Maybe (SafeHash (EraCrypto era) ConstitutionData)
+  getConstitutionHash :: GovState era -> Maybe (SafeHash (EraCrypto era) ConstitutionData)
   getConstitutionHash = const Nothing
 
   -- | Lens for accessing current protocol parameters
-  curPParamsGovStateL :: Lens' (GovernanceState era) (PParams era)
+  curPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
   -- | Lens for accessing the previous protocol parameters
-  prevPParamsGovStateL :: Lens' (GovernanceState era) (PParams era)
+  prevPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
 instance
   ( ToExpr (PParamsUpdate era)
@@ -92,8 +92,8 @@ instance
   ) =>
   ToExpr (ShelleyGovState era)
 
-instance Crypto c => EraGovernance (ShelleyEra c) where
-  type GovernanceState (ShelleyEra c) = ShelleyGovState (ShelleyEra c)
+instance Crypto c => EraGov (ShelleyEra c) where
+  type GovState (ShelleyEra c) = ShelleyGovState (ShelleyEra c)
 
   getProposedPPUpdates = Just . proposals
 

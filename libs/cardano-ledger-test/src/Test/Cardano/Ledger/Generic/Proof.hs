@@ -106,7 +106,7 @@ import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraGovernance, EraIndependentTxBody, ShelleyEraTxBody, ShelleyEraTxCert)
+import Cardano.Ledger.Shelley.Core (EraGov, EraIndependentTxBody, ShelleyEraTxBody, ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -191,7 +191,7 @@ instance ReflectC C_Crypto where
   evidence = Mock
 
 class
-  ( EraGovernance era
+  ( EraGov era
   , EraTx era
   , EraUTxO era
   , EraTxAuxData era

@@ -53,7 +53,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
-import qualified Cardano.Ledger.Shelley.Governance as Core
+import qualified Cardano.Ledger.Shelley.Gov as Core
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -92,7 +92,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Ast (Target (..), Term (Lit, Var), constTarget, fieldToTerm, ppTarget, (^$))
 import Test.Cardano.Ledger.Constrained.Classes (
-  GovernanceState (..),
+  GovState (..),
   PParamsF (..),
   PParamsUpdateF (..),
   ScriptF (..),
@@ -314,14 +314,14 @@ ppup :: Proof era -> Term era (ShelleyGovState era)
 ppup p = Var $ (V "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p)))
 
 ppupsL :: Proof era -> NELens era (ShelleyGovState era)
-ppupsL (Shelley _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
-ppupsL (Allegra _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
-ppupsL (Mary _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
-ppupsL (Alonzo _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
-ppupsL (Babbage _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
+ppupsL (Shelley _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL (Allegra _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL (Mary _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL (Alonzo _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL (Babbage _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
 ppupsL (Conway _) = error "Conway era does not have a PPUPState, in ppupsL"
 
--- nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL . ???
+-- nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . ???
 
 proposalsT :: Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 proposalsT p = Var (V "proposals" (MapR GenHashR (PParamsUpdateR p)) No)
@@ -351,15 +351,15 @@ ppupStateT p =
         pp
         prev
 
-governanceStateT :: forall era. Proof era -> Target era (GovernanceState era)
-governanceStateT p@(Shelley _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
-governanceStateT p@(Allegra _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
-governanceStateT p@(Mary _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
-governanceStateT p@(Alonzo _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
-governanceStateT p@(Babbage _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
-governanceStateT p@(Conway _) =
-  Constr "GovernanceState" (GovernanceState p)
-    :$ constTarget (Core.emptyGovernanceState @era)
+govStateT :: forall era. Proof era -> Target era (GovState era)
+govStateT p@(Shelley _) = Constr "GovState" (GovState p) :$ (ppupStateT p)
+govStateT p@(Allegra _) = Constr "GovState" (GovState p) :$ (ppupStateT p)
+govStateT p@(Mary _) = Constr "GovState" (GovState p) :$ (ppupStateT p)
+govStateT p@(Alonzo _) = Constr "GovState" (GovState p) :$ (ppupStateT p)
+govStateT p@(Babbage _) = Constr "GovState" (GovState p) :$ (ppupStateT p)
+govStateT p@(Conway _) =
+  Constr "GovState" (GovState p)
+    :$ constTarget (Core.emptyGovState @era)
 individualPoolStakeL :: Lens' (IndividualPoolStake c) Rational
 individualPoolStakeL = lens individualPoolStake (\ds u -> ds {individualPoolStake = u})
 
@@ -413,10 +413,10 @@ snapshotsL = nesEsL . esSnapshotsL
 ppFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 ppFL p = lens (\pp -> PParamsF p pp) (\_ (PParamsF _ qq) -> qq)
 
-prevpparams :: Core.EraGovernance era => Proof era -> Term era (PParamsF era)
+prevpparams :: Core.EraGov era => Proof era -> Term era (PParamsF era)
 prevpparams p = Var (V "prevpparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . prevPParamsEpochStateL . ppFL p)))
 
-pparams :: Core.EraGovernance era => Proof era -> Term era (PParamsF era)
+pparams :: Core.EraGov era => Proof era -> Term era (PParamsF era)
 pparams p = Var (V "pparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . curPParamsEpochStateL . ppFL p)))
 
 nmLikelihoodsT :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) [Float])
@@ -805,7 +805,7 @@ newEpochStateConstr
       )
 
 -- | Target for NewEpochState
-newEpochStateT :: Core.EraGovernance era => Proof era -> Target era (NewEpochState era)
+newEpochStateT :: Core.EraGov era => Proof era -> Target era (NewEpochState era)
 newEpochStateT proof =
   Constr "NewEpochState" (newEpochStateConstr proof)
     ^$ currentEpoch
@@ -815,7 +815,7 @@ newEpochStateT proof =
     ^$ poolDistr
 
 -- | Target for EpochState
-epochStateT :: Core.EraGovernance era => Proof era -> Target era (EpochState era)
+epochStateT :: Core.EraGov era => Proof era -> Target era (EpochState era)
 epochStateT proof =
   Constr "EpochState" epochStateFun
     :$ accountStateT
@@ -829,15 +829,15 @@ accountStateT :: Target era AccountState
 accountStateT = Constr "AccountState" AccountState ^$ treasury ^$ reserves
 
 -- | Target for LedgerState
-ledgerStateT :: Core.EraGovernance era => Proof era -> Target era (LedgerState era)
+ledgerStateT :: Core.EraGov era => Proof era -> Target era (LedgerState era)
 ledgerStateT proof = Constr "LedgerState" LedgerState :$ utxoStateT proof :$ certstateT
 
 ledgerState :: Reflect era => Term era (LedgerState era)
 ledgerState = Var $ V "ledgerState" (LedgerStateR reify) No
 
 -- | Target for UTxOState
-utxoStateT :: Core.EraGovernance era => Proof era -> Target era (UTxOState era)
-utxoStateT p = Constr "UTxOState" (utxofun p) ^$ (pparams p) ^$ utxo p ^$ deposits ^$ fees :$ governanceStateT p
+utxoStateT :: Core.EraGov era => Proof era -> Target era (UTxOState era)
+utxoStateT p = Constr "UTxOState" (utxofun p) ^$ (pparams p) ^$ utxo p ^$ deposits ^$ fees :$ govStateT p
   where
     utxofun ::
       Proof era ->
@@ -845,14 +845,14 @@ utxoStateT p = Constr "UTxOState" (utxofun p) ^$ (pparams p) ^$ utxo p ^$ deposi
       Map (TxIn (EraCrypto era)) (TxOutF era) ->
       Coin ->
       Coin ->
-      GovernanceState era ->
+      GovState era ->
       UTxOState era
-    utxofun (Shelley _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Mary _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Allegra _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Alonzo _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Babbage _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
-    utxofun (Conway _) (PParamsF _ pp) u c1 c2 (GovernanceState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Shelley _) (PParamsF _ pp) u c1 c2 (GovState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Mary _) (PParamsF _ pp) u c1 c2 (GovState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Allegra _) (PParamsF _ pp) u c1 c2 (GovState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Alonzo _) (PParamsF _ pp) u c1 c2 (GovState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Babbage _) (PParamsF _ pp) u c1 c2 (GovState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
+    utxofun (Conway _) (PParamsF _ pp) u c1 c2 (GovState _ x) = smartUTxOState pp (liftUTxO u) c1 c2 x
 
 -- | Target for CertState
 certstateT :: Target era (CertState era)

@@ -26,19 +26,19 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Era (ConwayGOV)
-import Cardano.Ledger.Conway.Governance (
-  ConwayGovState (..),
-  GovernanceAction,
-  GovernanceActionId (..),
-  GovernanceActionState (..),
-  GovernanceProcedures (..),
+import Cardano.Ledger.Conway.Gov (
+  GovAction,
+  GovActionId (..),
+  GovActionState (..),
+  GovActionsState (..),
+  GovProcedures (..),
   ProposalProcedure (..),
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
   indexedGovProps,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (GovernanceAction (..))
+import Cardano.Ledger.Conway.Gov.Procedures (GovAction (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
@@ -62,8 +62,8 @@ data GovEnv era = GovEnv
   }
 
 data ConwayGovPredFailure era
-  = GovernanceActionsDoNotExist (Set.Set (GovernanceActionId (EraCrypto era)))
-  | MalformedProposal (GovernanceAction era)
+  = GovActionsDoNotExist (Set.Set (GovActionId (EraCrypto era)))
+  | MalformedProposal (GovAction era)
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -72,14 +72,14 @@ instance EraPParams era => NoThunks (ConwayGovPredFailure era)
 
 instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
   decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
-    0 -> SumD GovernanceActionsDoNotExist <! From
+    0 -> SumD GovActionsDoNotExist <! From
     1 -> SumD MalformedProposal <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
   encCBOR =
     encode . \case
-      GovernanceActionsDoNotExist gid -> Sum GovernanceActionsDoNotExist 0 !> To gid
+      GovActionsDoNotExist gid -> Sum GovActionsDoNotExist 0 !> To gid
       MalformedProposal ga -> Sum MalformedProposal 1 !> To ga
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
@@ -89,8 +89,8 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
 instance ConwayEraPParams era => STS (ConwayGOV era) where
-  type State (ConwayGOV era) = ConwayGovState era
-  type Signal (ConwayGOV era) = GovernanceProcedures era
+  type State (ConwayGOV era) = GovActionsState era
+  type Signal (ConwayGOV era) = GovProcedures era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
   type PredicateFailure (ConwayGOV era) = ConwayGovPredFailure era
@@ -102,45 +102,45 @@ instance ConwayEraPParams era => STS (ConwayGOV era) where
 
 addVoterVote ::
   Voter (EraCrypto era) ->
-  ConwayGovState era ->
-  GovernanceActionId (EraCrypto era) ->
+  GovActionsState era ->
+  GovActionId (EraCrypto era) ->
   VotingProcedure era ->
-  ConwayGovState era
-addVoterVote voter (ConwayGovState st) govActionId VotingProcedure {vProcVote} =
-  ConwayGovState $ Map.update (Just . updateVote) govActionId st
+  GovActionsState era
+addVoterVote voter (GovActionsState st) govActionId VotingProcedure {vProcVote} =
+  GovActionsState $ Map.update (Just . updateVote) govActionId st
   where
-    updateVote GovernanceActionState {..} =
+    updateVote GovActionState {..} =
       case voter of
         CommitteeVoter cred ->
-          GovernanceActionState
+          GovActionState
             { gasCommitteeVotes = Map.insert cred vProcVote gasCommitteeVotes
             , ..
             }
         DRepVoter cred ->
-          GovernanceActionState
+          GovActionState
             { gasDRepVotes = Map.insert cred vProcVote gasDRepVotes
             , ..
             }
         StakePoolVoter poolId ->
-          GovernanceActionState
+          GovActionState
             { gasStakePoolVotes = Map.insert poolId vProcVote gasStakePoolVotes
             , ..
             }
 
 addAction ::
   EpochNo ->
-  GovernanceActionId (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
   Coin ->
   RewardAcnt (EraCrypto era) ->
-  GovernanceAction era ->
-  ConwayGovState era ->
-  ConwayGovState era
-addAction epoch gaid c addr act (ConwayGovState st) =
-  ConwayGovState $
+  GovAction era ->
+  GovActionsState era ->
+  GovActionsState era
+addAction epoch gaid c addr act (GovActionsState st) =
+  GovActionsState $
     Map.insert gaid gai' st
   where
     gai' =
-      GovernanceActionState
+      GovActionState
         { gasCommitteeVotes = mempty
         , gasDRepVotes = mempty
         , gasStakePoolVotes = mempty
@@ -150,16 +150,16 @@ addAction epoch gaid c addr act (ConwayGovState st) =
         , gasReturnAddr = addr
         }
 
-noSuchGovernanceActions ::
-  ConwayGovState era ->
-  Set.Set (GovernanceActionId (EraCrypto era)) ->
+noSuchGovActions ::
+  GovActionsState era ->
+  Set.Set (GovActionId (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
-noSuchGovernanceActions (ConwayGovState st) gaIds =
+noSuchGovActions (GovActionsState st) gaIds =
   let unknownGovActionIds = Set.filter (`Map.notMember` st) gaIds
    in failureUnless (Set.null unknownGovActionIds) $
-        GovernanceActionsDoNotExist unknownGovActionIds
+        GovActionsDoNotExist unknownGovActionIds
 
-actionWellFormed :: ConwayEraPParams era => GovernanceAction era -> Test (ConwayGovPredFailure era)
+actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
   where
     isWellFormed = case ga of
@@ -173,21 +173,21 @@ govTransition = do
 
   let applyProps st' Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
-        runTest $ actionWellFormed pProcGovernanceAction
+        runTest $ actionWellFormed pProcGovAction
         let st'' =
               addAction
                 epoch
-                (GovernanceActionId txid idx)
+                (GovActionId txid idx)
                 pProcDeposit
                 pProcReturnAddr
-                pProcGovernanceAction
+                pProcGovAction
                 st'
         applyProps st'' ps
   stProps <- applyProps st $ indexedGovProps $ gpProposalProcedures gp
 
   let VotingProcedures votingProcedures = gpVotingProcedures gp
 
-  runTest $ noSuchGovernanceActions st $ foldMap Map.keysSet votingProcedures
+  runTest $ noSuchGovActions st $ foldMap Map.keysSet votingProcedures
 
   let applyVoterVotes curState voter =
         Map.foldlWithKey' (addVoterVote voter) curState

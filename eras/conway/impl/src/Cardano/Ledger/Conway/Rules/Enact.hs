@@ -19,9 +19,9 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT)
-import Cardano.Ledger.Conway.Governance (
+import Cardano.Ledger.Conway.Gov (
   EnactState (..),
-  GovernanceAction (..),
+  GovAction (..),
  )
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), runTest)
 import Cardano.Ledger.Val (Val (..))
@@ -42,13 +42,13 @@ data EnactPredFailure era
 
 instance
   ( EraPParams era
-  , EraGovernance era
+  , EraGov era
   ) =>
   STS (ConwayENACT era)
   where
   type Environment (ConwayENACT era) = ()
   type PredicateFailure (ConwayENACT era) = EnactPredFailure era
-  type Signal (ConwayENACT era) = GovernanceAction era
+  type Signal (ConwayENACT era) = GovAction era
   type State (ConwayENACT era) = EnactState era
   type BaseM (ConwayENACT era) = ShelleyBase
 

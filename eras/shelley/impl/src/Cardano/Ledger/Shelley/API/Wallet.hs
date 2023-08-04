@@ -89,7 +89,7 @@ import Cardano.Ledger.Shelley.AdaPots (
   totalAdaES,
   totalAdaPotsES,
  )
-import Cardano.Ledger.Shelley.Core (EraGovernance)
+import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   EpochState (..),
@@ -210,7 +210,7 @@ getPoolParameters = Map.restrictKeys . f
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   Globals ->
   NewEpochState era ->
   PoolDistr (EraCrypto era)
@@ -243,7 +243,7 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  EraGovernance era =>
+  EraGov era =>
   Globals ->
   NewEpochState era ->
   Set (Either Coin (Credential 'Staking (EraCrypto era))) ->
@@ -303,7 +303,7 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: forall era. EraGovernance era => NewEpochState era -> EB.SnapShot (EraCrypto era)
+currentSnapshot :: forall era. EraGov era => NewEpochState era -> EB.SnapShot (EraCrypto era)
 currentSnapshot ss =
   incrementalStakeDistr pp incrementalStake dstate pstate
   where
@@ -371,7 +371,7 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  EraGovernance era =>
+  EraGov era =>
   Globals ->
   NewEpochState era ->
   (RewardParams, Map (KeyHash 'StakePool (EraCrypto era)) RewardInfoPool)
@@ -421,7 +421,7 @@ getRewardInfoPools globals ss =
 -- on stake pool rewards.
 getRewardProvenance ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   Globals ->
   NewEpochState era ->
   (RewardUpdate (EraCrypto era), RewardProvenance (EraCrypto era))

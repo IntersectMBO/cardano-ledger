@@ -52,7 +52,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
+import Cardano.Ledger.Conway.Gov (GovActionsState (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochPredFailure (..),
   -- FIXME TODO ConwayNewEpochPredFailure,
@@ -1032,7 +1032,7 @@ instance PrettyA (ShelleyNewppPredFailure era) where prettyA = ppNewppPredicateF
 ppBbodyState ::
   ( PrettyA (TxOut era)
   , PrettyA (PParams era)
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   ShelleyBbodyState era ->
@@ -1047,7 +1047,7 @@ ppBbodyState (BbodyState ls (BlocksMade mp)) =
 instance
   ( PrettyA (TxOut era)
   , PrettyA (PParams era)
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   PrettyA (ShelleyBbodyState era)
@@ -1568,7 +1568,7 @@ pcTxBodyField proof x = case x of
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> [("network id", ppString "Nothing")]
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
-  GovernanceProcs ga -> [("governance procedures", prettyA ga)]
+  GovProcs ga -> [("gov procedures", prettyA ga)]
   CurrentTreasuryValue ctv -> [("current treasury value", prettyA ctv)]
 
 pcTxField ::
@@ -1629,8 +1629,8 @@ pcTxBody proof txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
     fields = abstractTxBody proof txbody
     pairs = concatMap (pcTxBodyField proof) fields
 
-instance PrettyC (ConwayGovState era) era where
-  prettyC proof (ConwayGovState x) = case proof of
+instance PrettyC (GovActionsState era) era where
+  prettyC proof (GovActionsState x) = case proof of
     Shelley _ -> ppMap prettyA prettyA x
     Mary _ -> ppMap prettyA prettyA x
     Allegra _ -> ppMap prettyA prettyA x

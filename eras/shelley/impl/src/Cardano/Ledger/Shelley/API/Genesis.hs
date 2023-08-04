@@ -44,7 +44,7 @@ import Lens.Micro ((&), (.~))
 class
   ( EraTxOut era
   , Default (StashedAVVMAddresses era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   CanStartFromGenesis era
   where

@@ -123,7 +123,7 @@ instance
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
   , Arbitrary (StashedAVVMAddresses era)
-  , Arbitrary (GovernanceState era)
+  , Arbitrary (GovState era)
   ) =>
   Arbitrary (NewEpochState era)
   where
@@ -140,7 +140,7 @@ instance
 instance
   ( EraTxOut era
   , Arbitrary (TxOut era)
-  , Arbitrary (GovernanceState era)
+  , Arbitrary (GovState era)
   ) =>
   Arbitrary (EpochState era)
   where
@@ -173,7 +173,7 @@ instance Crypto c => Arbitrary (SnapShots c) where
 instance
   ( EraTxOut era
   , Arbitrary (TxOut era)
-  , Arbitrary (GovernanceState era)
+  , Arbitrary (GovState era)
   ) =>
   Arbitrary (LedgerState era)
   where
@@ -194,7 +194,7 @@ instance
 instance
   ( EraTxOut era
   , Arbitrary (TxOut era)
-  , Arbitrary (GovernanceState era)
+  , Arbitrary (GovState era)
   ) =>
   Arbitrary (UTxOState era)
   where

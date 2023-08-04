@@ -94,7 +94,7 @@ initSt ::
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   UTxO era ->
   ChainState era

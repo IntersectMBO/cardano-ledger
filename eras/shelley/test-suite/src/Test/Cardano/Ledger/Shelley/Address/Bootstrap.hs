@@ -133,7 +133,7 @@ utxoState0 =
     { utxosUtxo = utxo0
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
-    , utxosGovernance =
+    , utxosGovState =
         ShelleyGovState
           (ProposedPPUpdates mempty)
           (ProposedPPUpdates mempty)
@@ -154,7 +154,7 @@ utxoState1 =
     { utxosUtxo = UTxO $ Map.fromList [bobResult, aliceResult]
     , utxosDeposited = Coin 0
     , utxosFees = Coin 10
-    , utxosGovernance =
+    , utxosGovState =
         ShelleyGovState
           (ProposedPPUpdates mempty)
           (ProposedPPUpdates mempty)

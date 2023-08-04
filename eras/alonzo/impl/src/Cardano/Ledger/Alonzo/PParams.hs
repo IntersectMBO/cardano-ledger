@@ -275,9 +275,9 @@ instance Crypto c => AlonzoEraPParams (AlonzoEra c) where
   hkdMaxCollateralInputsL =
     lens appMaxCollateralInputs $ \pp x -> pp {appMaxCollateralInputs = x}
 
-instance Crypto c => EraGovernance (AlonzoEra c) where
-  type GovernanceState (AlonzoEra c) = ShelleyGovState (AlonzoEra c)
-  emptyGovernanceState =
+instance Crypto c => EraGov (AlonzoEra c) where
+  type GovState (AlonzoEra c) = ShelleyGovState (AlonzoEra c)
+  emptyGovState =
     ShelleyGovState
       emptyPPPUpdates
       emptyPPPUpdates

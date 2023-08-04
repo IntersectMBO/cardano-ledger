@@ -388,7 +388,7 @@ instance TotalAda AccountState where
 
 instance Reflect era => TotalAda (UTxOState era) where
   totalAda (UTxOState utxo _deposits fees gs _) =
-    totalAda utxo <+> fees <+> governanceStateTotalAda gs
+    totalAda utxo <+> fees <+> govStateTotalAda gs
 
 -- we don't add in the _deposits, because it is invariant that this
 -- is equal to the sum of the key deposit map and the pool deposit map
@@ -416,8 +416,8 @@ instance TotalAda (CertState era) where
 instance TotalAda (ShelleyGovState era) where
   totalAda _ = mempty
 
-governanceStateTotalAda :: forall era. Reflect era => GovernanceState era -> Coin
-governanceStateTotalAda = case reify @era of
+govStateTotalAda :: forall era. Reflect era => GovState era -> Coin
+govStateTotalAda = case reify @era of
   Shelley _ -> totalAda
   Mary _ -> totalAda
   Allegra _ -> totalAda

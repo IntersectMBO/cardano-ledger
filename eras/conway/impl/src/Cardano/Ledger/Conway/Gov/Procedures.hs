@@ -14,8 +14,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Conway.Governance.Procedures (
-  GovernanceProcedures (..),
+module Cardano.Ledger.Conway.Gov.Procedures (
+  GovProcedures (..),
   VotingProcedures (..),
   VotingProcedure (..),
   ProposalProcedure (..),
@@ -24,9 +24,9 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   Vote (..),
   Voter (..),
   Committee (..),
-  GovernanceAction (..),
-  GovernanceActionId (..),
-  GovernanceActionIx (..),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
   govActionIdToText,
   indexedGovProps,
   -- Lenses
@@ -63,7 +63,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.Governance (Constitution)
+import Cardano.Ledger.Shelley.Gov (Constitution)
 import Cardano.Ledger.Shelley.RewardProvenance ()
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
@@ -81,7 +81,7 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
-newtype GovernanceActionIx = GovernanceActionIx Word32
+newtype GovActionIx = GovActionIx Word32
   deriving
     ( Generic
     , Eq
@@ -94,46 +94,46 @@ newtype GovernanceActionIx = GovernanceActionIx Word32
     , ToJSON
     )
 
-data GovernanceActionId c = GovernanceActionId
+data GovActionId c = GovActionId
   { gaidTxId :: !(TxId c)
-  , gaidGovActionIx :: !GovernanceActionIx
+  , gaidGovActionIx :: !GovActionIx
   }
   deriving (Generic, Eq, Ord, Show)
 
-instance Crypto c => DecCBOR (GovernanceActionId c) where
+instance Crypto c => DecCBOR (GovActionId c) where
   decCBOR =
     decode $
-      RecD GovernanceActionId
+      RecD GovActionId
         <! From
         <! From
 
-instance Crypto c => EncCBOR (GovernanceActionId c) where
-  encCBOR GovernanceActionId {..} =
+instance Crypto c => EncCBOR (GovActionId c) where
+  encCBOR GovActionId {..} =
     encode $
-      Rec GovernanceActionId
+      Rec GovActionId
         !> To gaidTxId
         !> To gaidGovActionIx
 
-instance NoThunks (GovernanceActionId c)
+instance NoThunks (GovActionId c)
 
-instance Crypto c => NFData (GovernanceActionId c)
+instance Crypto c => NFData (GovActionId c)
 
-instance Crypto c => ToJSON (GovernanceActionId c) where
-  toJSON = object . toGovernanceActionIdPairs
-  toEncoding = pairs . mconcat . toGovernanceActionIdPairs
+instance Crypto c => ToJSON (GovActionId c) where
+  toJSON = object . toGovActionIdPairs
+  toEncoding = pairs . mconcat . toGovActionIdPairs
 
-toGovernanceActionIdPairs :: (KeyValue a, Crypto c) => GovernanceActionId c -> [a]
-toGovernanceActionIdPairs gaid@(GovernanceActionId _ _) =
-  let GovernanceActionId {..} = gaid
+toGovActionIdPairs :: (KeyValue a, Crypto c) => GovActionId c -> [a]
+toGovActionIdPairs gaid@(GovActionId _ _) =
+  let GovActionId {..} = gaid
    in [ "txId" .= gaidTxId
       , "govActionIx" .= gaidGovActionIx
       ]
 
-instance Crypto c => ToJSONKey (GovernanceActionId c) where
+instance Crypto c => ToJSONKey (GovActionId c) where
   toJSONKey = toJSONKeyText govActionIdToText
 
-govActionIdToText :: GovernanceActionId c -> Text.Text
-govActionIdToText (GovernanceActionId (TxId txidHash) (GovernanceActionIx ix)) =
+govActionIdToText :: GovActionId c -> Text.Text
+govActionIdToText (GovActionId (TxId txidHash) (GovActionIx ix)) =
   hashToTextAsHex (extractHash txidHash)
     <> Text.pack "#"
     <> Text.pack (show ix)
@@ -235,7 +235,7 @@ toAnchorPairs vote@(Anchor _ _) =
 
 newtype VotingProcedures era = VotingProcedures
   { unVotingProcedures ::
-      Map (Voter (EraCrypto era)) (Map (GovernanceActionId (EraCrypto era)) (VotingProcedure era))
+      Map (Voter (EraCrypto era)) (Map (GovActionId (EraCrypto era)) (VotingProcedure era))
   }
   deriving stock (Generic, Eq, Show)
   deriving newtype (NoThunks, EncCBOR, ToJSON)
@@ -287,7 +287,7 @@ toVotingProcedurePairs vProc@(VotingProcedure _ _) =
       , "decision" .= vProcVote
       ]
 
-data GovernanceProcedures era = GovernanceProcedures
+data GovProcedures era = GovProcedures
   { gpVotingProcedures :: !(VotingProcedures era)
   , gpProposalProcedures :: !(Seq (ProposalProcedure era))
   }
@@ -297,22 +297,22 @@ data GovernanceProcedures era = GovernanceProcedures
 -- from left to right.
 indexedGovProps ::
   Seq (ProposalProcedure era) ->
-  Seq (GovernanceActionIx, ProposalProcedure era)
+  Seq (GovActionIx, ProposalProcedure era)
 indexedGovProps = enumerateProps 0
   where
     enumerateProps _ Empty = Empty
-    enumerateProps !n (x :<| xs) = (GovernanceActionIx n, x) :<| enumerateProps (succ n) xs
+    enumerateProps !n (x :<| xs) = (GovActionIx n, x) :<| enumerateProps (succ n) xs
 
-instance EraPParams era => NoThunks (GovernanceProcedures era)
+instance EraPParams era => NoThunks (GovProcedures era)
 
-instance EraPParams era => NFData (GovernanceProcedures era)
+instance EraPParams era => NFData (GovProcedures era)
 
-deriving instance EraPParams era => Show (GovernanceProcedures era)
+deriving instance EraPParams era => Show (GovProcedures era)
 
 data ProposalProcedure era = ProposalProcedure
   { pProcDeposit :: !Coin
   , pProcReturnAddr :: !(RewardAcnt (EraCrypto era))
-  , pProcGovernanceAction :: !(GovernanceAction era)
+  , pProcGovAction :: !(GovAction era)
   , pProcAnchor :: !(Anchor (EraCrypto era))
   }
   deriving (Generic, Eq, Show)
@@ -339,7 +339,7 @@ instance EraPParams era => EncCBOR (ProposalProcedure era) where
       Rec (ProposalProcedure @era)
         !> To pProcDeposit
         !> To pProcReturnAddr
-        !> To pProcGovernanceAction
+        !> To pProcGovAction
         !> To pProcAnchor
 
 data Committee era = Committee
@@ -379,7 +379,7 @@ toCommitteePairs committee@(Committee _ _) =
       , "quorum" .= committeeQuorum
       ]
 
-data GovernanceAction era
+data GovAction era
   = ParameterChange !(PParamsUpdate era)
   | HardForkInitiation !ProtVer
   | TreasuryWithdrawals !(Map (RewardAcnt (EraCrypto era)) Coin)
@@ -393,20 +393,20 @@ data GovernanceAction era
   | InfoAction
   deriving (Generic)
 
-deriving instance EraPParams era => Eq (GovernanceAction era)
+deriving instance EraPParams era => Eq (GovAction era)
 
-deriving instance EraPParams era => Show (GovernanceAction era)
+deriving instance EraPParams era => Show (GovAction era)
 
-instance EraPParams era => NoThunks (GovernanceAction era)
+instance EraPParams era => NoThunks (GovAction era)
 
-instance EraPParams era => NFData (GovernanceAction era)
+instance EraPParams era => NFData (GovAction era)
 
-instance EraPParams era => ToJSON (GovernanceAction era)
+instance EraPParams era => ToJSON (GovAction era)
 
-instance EraPParams era => DecCBOR (GovernanceAction era) where
+instance EraPParams era => DecCBOR (GovAction era) where
   decCBOR =
     decode $
-      Summands "GovernanceAction" dec
+      Summands "GovAction" dec
     where
       dec 0 = SumD ParameterChange <! From
       dec 1 = SumD HardForkInitiation <! From
@@ -417,7 +417,7 @@ instance EraPParams era => DecCBOR (GovernanceAction era) where
       dec 6 = SumD InfoAction
       dec k = Invalid k
 
-instance EraPParams era => EncCBOR (GovernanceAction era) where
+instance EraPParams era => EncCBOR (GovAction era) where
   encCBOR x = encode (enc x)
     where
       enc (ParameterChange ppup) = Sum ParameterChange 0 !> To ppup

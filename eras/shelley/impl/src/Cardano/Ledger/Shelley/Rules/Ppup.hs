@@ -40,7 +40,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Shelley.Era (ShelleyPPUP)
-import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.Gov
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
   Update (..),

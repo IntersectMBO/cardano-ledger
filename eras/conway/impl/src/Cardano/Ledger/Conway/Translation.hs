@@ -23,7 +23,7 @@ import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Governance ()
+import Cardano.Ledger.Conway.Gov ()
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
@@ -141,13 +141,13 @@ instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
         , API.lsCertState = translateEra' conwayGenesis $ API.lsCertState ls
         }
 
-translateGovernanceState ::
+translateGovState ::
   Crypto c =>
   TranslationContext (ConwayEra c) ->
-  GovernanceState (BabbageEra c) ->
-  GovernanceState (ConwayEra c)
-translateGovernanceState ctxt sgov =
-  emptyGovernanceState
+  GovState (BabbageEra c) ->
+  GovState (ConwayEra c)
+translateGovState ctxt sgov =
+  emptyGovState
     & curPParamsGovStateL .~ translateEra' ctxt (sgov ^. curPParamsGovStateL)
     & prevPParamsGovStateL .~ translateEra' ctxt (sgov ^. prevPParamsGovStateL)
 
@@ -158,9 +158,9 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
-        , API.utxosGovernance =
-            translateGovernanceState ctxt $
-              API.utxosGovernance us
+        , API.utxosGovState =
+            translateGovState ctxt $
+              API.utxosGovState us
         , API.utxosStakeDistr = API.utxosStakeDistr us
         }
 

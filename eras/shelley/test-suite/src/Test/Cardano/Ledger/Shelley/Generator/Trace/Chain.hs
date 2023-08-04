@@ -131,7 +131,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 mkGenesisChainState ::
   forall era a.
   ( EraGen era
-  , EraGovernance era
+  , EraGov era
   ) =>
   GenEnv era ->
   IRC (CHAIN era) ->
@@ -185,7 +185,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   ShelleyGenesisStaking (EraCrypto era) ->
   ChainState era ->
   ChainState era

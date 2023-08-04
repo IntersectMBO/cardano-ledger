@@ -20,7 +20,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
-import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.Gov
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -64,7 +64,7 @@ instance NoThunks (ShelleyNewppPredFailure era)
 
 instance
   ( EraPParams era
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyNEWPP era)
   where
@@ -81,7 +81,7 @@ instance EraPParams era => Default (ShelleyNewppState era) where
 newPpTransition ::
   forall era.
   ( EraPParams era
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   ) =>
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
@@ -109,9 +109,9 @@ newPpTransition = do
 -- provided the new proposals can follow (otherwise reset them).
 updatePpup ::
   ( EraPParams era
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   ) =>
-  GovernanceState era ->
+  GovState era ->
   PParams era ->
   ShelleyGovState era
 updatePpup ppupSt pp =

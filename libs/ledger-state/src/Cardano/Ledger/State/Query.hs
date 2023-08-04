@@ -65,7 +65,7 @@ insertUTxOState Shelley.UTxOState {..} = do
     UtxoState
       { utxoStateDeposited = utxosDeposited
       , utxoStateFees = utxosFees
-      , utxoStatePpups = utxosGovernance
+      , utxoStatePpups = utxosGovState
       }
 
 insertUTxO ::

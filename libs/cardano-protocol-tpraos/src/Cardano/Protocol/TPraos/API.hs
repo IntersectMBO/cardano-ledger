@@ -74,7 +74,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraGovernance)
+import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
@@ -144,7 +144,7 @@ class
   , Environment (EraRule "TICKF" era) ~ ()
   , State (EraRule "TICKF" era) ~ NewEpochState era
   , Signal (EraRule "TICKF" era) ~ SlotNo
-  , EraGovernance era
+  , EraGov era
   ) =>
   GetLedgerView era
   where
@@ -275,7 +275,7 @@ mkPrtclEnv
       lvGenDelegs
 
 view ::
-  (ProtVerAtMost era 6, EraGovernance era) =>
+  (ProtVerAtMost era 6, EraGov era) =>
   NewEpochState era ->
   LedgerView (EraCrypto era)
 view
@@ -349,7 +349,7 @@ futureView ::
   , State (EraRule "TICKF" era) ~ NewEpochState era
   , Signal (EraRule "TICKF" era) ~ SlotNo
   , ProtVerAtMost era 6
-  , EraGovernance era
+  , EraGov era
   ) =>
   Globals ->
   NewEpochState era ->

@@ -6,7 +6,7 @@ module Cardano.Ledger.Allegra.PParams () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.Gov
 import Cardano.Ledger.Shelley.PParams
 import Data.Coerce
 import Lens.Micro
@@ -41,9 +41,9 @@ instance Crypto c => EraPParams (AllegraEra c) where
   hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
-instance Crypto c => EraGovernance (AllegraEra c) where
-  type GovernanceState (AllegraEra c) = ShelleyGovState (AllegraEra c)
-  emptyGovernanceState =
+instance Crypto c => EraGov (AllegraEra c) where
+  type GovState (AllegraEra c) = ShelleyGovState (AllegraEra c)
+  emptyGovState =
     ShelleyGovState
       emptyPPPUpdates
       emptyPPPUpdates

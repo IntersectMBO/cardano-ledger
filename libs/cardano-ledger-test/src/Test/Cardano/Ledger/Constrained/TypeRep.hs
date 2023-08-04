@@ -58,7 +58,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..), mkTxIxPartial)
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Governance (GovernanceAction (..))
+import Cardano.Ledger.Conway.Gov (GovAction (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
@@ -278,7 +278,7 @@ data Rep era t where
   TxR :: Proof era -> Rep era (TxF era)
   ScriptIntegrityHashR :: Rep era (SafeHash (EraCrypto era) EraIndependentScriptIntegrity)
   AuxiliaryDataHashR :: Rep era (AuxiliaryDataHash (EraCrypto era))
-  GovernanceActionR :: Rep era (GovernanceAction era)
+  GovActionR :: Rep era (GovAction era)
   WitVKeyR :: Proof era -> Rep era (WitVKey 'Witness (EraCrypto era))
   TxAuxDataR :: Proof era -> Rep era (TxAuxDataF era)
   LanguageR :: Rep era Language
@@ -399,7 +399,7 @@ instance Singleton (Rep e) where
     do Refl <- testEql c d; pure Refl
   testEql ScriptIntegrityHashR ScriptIntegrityHashR = Just Refl
   testEql AuxiliaryDataHashR AuxiliaryDataHashR = Just Refl
-  testEql GovernanceActionR GovernanceActionR = Just Refl
+  testEql GovActionR GovActionR = Just Refl
   testEql (WitVKeyR c) (WitVKeyR d) =
     do Refl <- testEql c d; pure Refl
   testEql (TxAuxDataR c) (TxAuxDataR d) =
@@ -498,7 +498,7 @@ instance Show (Rep era t) where
   show (TxR p) = "(Tx " ++ short p ++ ")"
   show ScriptIntegrityHashR = "ScriptIntegrityHash"
   show AuxiliaryDataHashR = "AuxiliaryDataHash"
-  show GovernanceActionR = "GovernanceAction"
+  show GovActionR = "GovAction"
   show (WitVKeyR _) = "(WitVKey 'Witness c)"
   show (TxAuxDataR p) = "(TxAuxData " ++ short p ++ ")"
   show CommColdCredR = "CommColdCred"
@@ -598,7 +598,7 @@ synopsis PayHashR k = "(KeyHash 'Payment " ++ show (keyHashSummary k) ++ ")"
 synopsis (TxR _) x = show x
 synopsis ScriptIntegrityHashR x = show (trim (ppHash (extractHash x)))
 synopsis AuxiliaryDataHashR (AuxiliaryDataHash x) = show (trim (ppHash (extractHash x)))
-synopsis GovernanceActionR _x = "GovernanceAction ..." -- show(prettyA x)
+synopsis GovActionR _x = "GovAction ..." -- show(prettyA x)
 synopsis (WitVKeyR p) x = show ((unReflect pcWitVKey p x) :: PDoc)
 synopsis (TxAuxDataR _) x = show x
 synopsis CommColdCredR x = show x
@@ -717,7 +717,7 @@ instance Shaped (Rep era) any where
   shape (TxR p) = Nary 73 [shape p]
   shape ScriptIntegrityHashR = Nullary 74
   shape AuxiliaryDataHashR = Nullary 75
-  shape GovernanceActionR = Nullary 76
+  shape GovActionR = Nullary 76
   shape (WitVKeyR p) = Nary 77 [shape p]
   shape (TxAuxDataR p) = Nary 78 [shape p]
   shape LanguageR = Nullary 79
@@ -856,7 +856,7 @@ genSizedRep _ (TxR p) =
     Conway _ -> TxF p <$> arbitrary
 genSizedRep _ ScriptIntegrityHashR = arbitrary
 genSizedRep _ AuxiliaryDataHashR = arbitrary
-genSizedRep _ GovernanceActionR = pure NoConfidence
+genSizedRep _ GovActionR = pure NoConfidence
 genSizedRep _ (WitVKeyR _) = arbitrary
 genSizedRep _ (TxAuxDataR p) = genTxAuxDataF p
 genSizedRep _ CommColdCredR = arbitrary
@@ -994,7 +994,7 @@ shrinkRep PayHashR t = shrink t
 shrinkRep (TxR _) _ = []
 shrinkRep ScriptIntegrityHashR x = shrink x
 shrinkRep AuxiliaryDataHashR x = shrink x
-shrinkRep GovernanceActionR _ = []
+shrinkRep GovActionR _ = []
 shrinkRep (WitVKeyR _) x = shrink x
 shrinkRep (TxAuxDataR _) _ = []
 shrinkRep CommColdCredR x = shrink x
@@ -1106,7 +1106,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help (TxR _) _ = failT ["Tx does not have Ord instance"]
     help ScriptIntegrityHashR x = pure $ With x
     help AuxiliaryDataHashR x = pure $ With x
-    help GovernanceActionR _ = failT ["GovernanceAction does not have Ord instance"]
+    help GovActionR _ = failT ["GovAction does not have Ord instance"]
     help (WitVKeyR p) x = case p of
       Shelley _ -> pure $ With x
       Allegra _ -> pure $ With x
@@ -1136,7 +1136,7 @@ hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help (TxR _) v = pure $ With v
     help (TxAuxDataR _) v = pure $ With v
     help IsValidR v = pure $ With v
-    help GovernanceActionR _ = failT ["GovernanceAction does have an Eq instance, but it requires (Core.EraPParams era)"]
+    help GovActionR _ = failT ["GovAction does have an Eq instance, but it requires (Core.EraPParams era)"]
     help (ScriptPurposeR p) v = case whichTxCert p of
       TxCertShelleyToBabbage -> pure $ With v
       TxCertConwayToConway -> pure $ With v

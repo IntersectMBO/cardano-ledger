@@ -2,6 +2,15 @@
 
 ## 1.7.0.0
 
+* Rename `*governance*` to `*gov*` #3607
+  * `GovernanceAction` to `GovAction`
+  * `GovernanceActionId` to `GovActionId`
+  * `GovernanceActionIx` to `GovActionIx`
+  * `GovernanceActionState` to `GovActionState`
+  * `ConwayGovState` to `GovActionsState`
+  * `ConwayGovernance` to `ConwayGovState`
+  * module `Cardano.Ledger.Conway.Governance` to `Cardano.Ledger.Conway.Gov`
+  * module `Cardano.Ledger.Conway.Governance.Procedures` to `Cardano.Ledger.Conway.Gov.Procedures`
 * Add `MalformedProposal` to `ConwayGovPredFailure`
 * Add `ppuWellFormed` to `ConwayEraPParams`
 * Filter out zero valued `TxOut`'s on Byron/Shelley boundary instead of on Babbage/Conway.

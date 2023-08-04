@@ -245,7 +245,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall era.
-  (EraTx era, EraGovernance era) =>
+  (EraTx era, EraGov era) =>
   TxBody era ->
   ChainState era ->
   ChainState era
@@ -451,7 +451,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 -- Remove a stake pool.
 reapPool ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   PoolParams (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -588,7 +588,7 @@ pulserUpdate p cs = cs {chainNes = nes'}
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   RewardUpdate (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -675,7 +675,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall era.
-  (ProtVerAtMost era 6, EraGovernance era) =>
+  (ProtVerAtMost era 6, EraGov era) =>
   Block (BHeader (EraCrypto era)) era ->
   ChainState era ->
   ChainState era
@@ -715,7 +715,7 @@ newEpoch b cs = cs'
 -- Set the current protocol parameter proposals.
 setCurrentProposals ::
   forall era.
-  GovernanceState era ~ ShelleyGovState era =>
+  GovState era ~ ShelleyGovState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -725,9 +725,9 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    ppupSt = utxosGovernance utxoSt
+    ppupSt = utxosGovState utxoSt
     ppupSt' = ppupSt {proposals = ps}
-    utxoSt' = utxoSt {utxosGovernance = ppupSt'}
+    utxoSt' = utxoSt {utxosGovState = ppupSt'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -737,7 +737,7 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
 -- Set the future protocol parameter proposals.
 setFutureProposals ::
   forall era.
-  GovernanceState era ~ ShelleyGovState era =>
+  GovState era ~ ShelleyGovState era =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -747,9 +747,9 @@ setFutureProposals ps cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    ppupSt = utxosGovernance utxoSt
+    ppupSt = utxosGovState utxoSt
     ppupSt' = ppupSt {futureProposals = ps}
-    utxoSt' = utxoSt {utxosGovernance = ppupSt'}
+    utxoSt' = utxoSt {utxosGovState = ppupSt'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -759,7 +759,7 @@ setFutureProposals ps cs = cs {chainNes = nes'}
 -- Set the protocol parameters.
 setPParams ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   PParams era ->
   ChainState era ->
   ChainState era
@@ -775,7 +775,7 @@ setPParams pp cs = cs {chainNes = nes'}
 -- Set the previous protocol parameters.
 setPrevPParams ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   PParams era ->
   ChainState era ->
   ChainState era

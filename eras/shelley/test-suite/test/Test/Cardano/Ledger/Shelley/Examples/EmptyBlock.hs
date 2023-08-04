@@ -48,7 +48,7 @@ initStEx1 ::
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   ChainState era
 initStEx1 = initSt (UTxO mempty)
@@ -93,7 +93,7 @@ expectedStEx1 ::
   , ExMock (EraCrypto era)
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , EraGovernance era
+  , EraGov era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
@@ -112,7 +112,7 @@ exEmptyBlock ::
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   CHAINExample (BHeader (EraCrypto era)) era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

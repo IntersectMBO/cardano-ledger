@@ -535,7 +535,7 @@ data RewardUpdateOld c = RewardUpdateOld
 
 createRUpdOld ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
   EpochState era ->
@@ -607,7 +607,7 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       }
 
 overrideProtocolVersionUsedInRewardCalc ::
-  EraGovernance era =>
+  EraGov era =>
   ProtVer ->
   EpochState era ->
   EpochState era

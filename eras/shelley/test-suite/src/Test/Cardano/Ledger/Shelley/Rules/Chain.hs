@@ -196,7 +196,7 @@ instance
 initialShelleyState ::
   forall era.
   ( EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , Default (StashedAVVMAddresses era)
   ) =>
   WithOrigin (LastAppliedBlock (EraCrypto era)) ->
@@ -221,7 +221,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     utxo
                     (Coin 0)
                     (Coin 0)
-                    emptyGovernanceState
+                    emptyGovState
                 )
                 (CertState def def dState)
             )
@@ -258,7 +258,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         }
 
 instance
-  ( EraGovernance era
+  ( EraGov era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
@@ -314,7 +314,7 @@ chainTransition ::
   , EncCBORGroup (TxSeq era)
   , ProtVerAtMost era 6
   , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
-  , EraGovernance era
+  , EraGov era
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =
@@ -448,7 +448,7 @@ totalAda = totalAdaES . nesEs . chainNes
 
 ppChainState ::
   ( PP.CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   ChainState era ->
   PP.PDoc
@@ -466,7 +466,7 @@ ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce la
 
 instance
   ( PP.CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   PP.PrettyA (ChainState era)
   where
@@ -476,7 +476,7 @@ instance
   ( ToExpr (PParams era)
   , ToExpr (TxOut era)
   , ToExpr (StashedAVVMAddresses era)
-  , ToExpr (GovernanceState era)
+  , ToExpr (GovState era)
   ) =>
   ToExpr (ChainState era)
 

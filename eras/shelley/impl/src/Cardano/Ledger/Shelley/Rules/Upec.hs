@@ -26,7 +26,7 @@ module Cardano.Ledger.Shelley.Rules.Upec (
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
-import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.Gov
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   UTxOState (..),
@@ -77,7 +77,7 @@ instance NoThunks (ShelleyUpecPredFailure era)
 instance
   ( EraPParams era
   , Default (PParams era)
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyUPEC era)
   where
@@ -102,7 +102,7 @@ instance
 
         let utxoSt = lsUTxOState ls
             CertState _ pstate dstate = lsCertState ls
-            pup = proposals . utxosGovernance $ utxoSt
+            pup = proposals . utxosGovState $ utxoSt
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupSt' <-
           trans @(ShelleyNEWPP era) $

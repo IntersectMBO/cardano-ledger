@@ -35,8 +35,8 @@ import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOS)
-import Cardano.Ledger.Conway.Governance (
-  ConwayGovernance (..),
+import Cardano.Ledger.Conway.Gov (
+  ConwayGovState (..),
  )
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
@@ -56,12 +56,12 @@ instance
   , ConwayEraPParams era
   , ConwayEraTxBody era
   , EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , EraTxCert era
   , EraUTxO era
   , ExtendedUTxO era
   , EraPlutusContext 'PlutusV1 era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
@@ -83,14 +83,14 @@ instance
   ( AlonzoEraTx era
   , ConwayEraTxBody era
   , ConwayEraPParams era
-  , EraGovernance era
+  , EraGov era
   , EraPlutusContext 'PlutusV1 era
   , EraTxOut era
   , EraTxCert era
   , EraUTxO era
   , ExtendedUTxO era
   , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -106,11 +106,11 @@ instance
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
-  , EraGovernance era
+  , EraGov era
   , EraPlutusContext 'PlutusV1 era
   , EraUTxO era
   , ExtendedUTxO era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era

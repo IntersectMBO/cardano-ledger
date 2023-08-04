@@ -33,7 +33,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
-import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.Gov
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -187,8 +187,8 @@ validatingTickTransitionFORECAST ::
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , Embed (EraRule "UPEC" era) (tick era)
   , STS (tick era)
-  , GovernanceState era ~ ShelleyGovState era
-  , EraGovernance era
+  , GovState era ~ ShelleyGovState era
+  , EraGov era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -223,7 +223,7 @@ validatingTickTransitionFORECAST nes slot = do
       -- return value here was used to validate their headers.
 
       let pp = es ^. curPParamsEpochStateL
-          updates = utxosGovernance . lsUTxOState . esLState $ es
+          updates = utxosGovState . lsUTxOState . esLState $ es
       UpecState pp' _ <-
         trans @(EraRule "UPEC" era) $
           TRC (es, UpecState pp updates, ())
@@ -326,13 +326,13 @@ newtype ShelleyTickfEvent era
 
 instance
   ( Era era
-  , EraGovernance era
+  , EraGov era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "UPEC" era) ~ ()
   , State (EraRule "UPEC" era) ~ UpecState era
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyTICKF era)
   where

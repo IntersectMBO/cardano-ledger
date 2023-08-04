@@ -72,7 +72,7 @@ transaction_body =
   , ? 21 : coin                     ; New; current treasury value
   }
 
-voting_procedures = { + voter => { + governance_action_id => voting_procedure } }
+voting_procedures = { + voter => { + gov_action_id => voting_procedure } }
 
 voting_procedure =
   [ vote
@@ -82,11 +82,11 @@ voting_procedure =
 proposal_procedure =
   [ deposit : coin
   , reward_account
-  , governance_action
+  , gov_action
   , anchor
   ]
 
-governance_action =
+gov_action =
   [ parameter_change_action
   // hard_fork_initiation_action
   // treasury_withdrawals_action
@@ -140,9 +140,9 @@ anchor =
 ; abstain - 2
 vote = 0 .. 2
 
-governance_action_id =
-  [ transaction_id          : $hash32
-  , governance_action_index : uint
+gov_action_id =
+  [ transaction_id   : $hash32
+  , gov_action_index : uint
   ]
 
 required_signers = set<$addr_keyhash>

@@ -26,7 +26,7 @@ import Cardano.Ledger.Babbage.TxBody as Babbage (
   Datum (..),
  )
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (GovernanceProcedures (..))
+import Cardano.Ledger.Conway.Gov (GovProcedures (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
   ShelleyTx (..),
  )
@@ -219,7 +219,7 @@ updateTxBody pf txBody dt =
       RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
-      GovernanceProcs (GovernanceProcedures vp pp) -> txBody & votingProceduresTxBodyL .~ vp & proposalProceduresTxBodyL .~ Seq.forceToStrict pp
+      GovProcs (GovProcedures vp pp) -> txBody & votingProceduresTxBodyL .~ vp & proposalProceduresTxBodyL .~ Seq.forceToStrict pp
       _ -> txBody
 {-# NOINLINE updateTxBody #-}
 

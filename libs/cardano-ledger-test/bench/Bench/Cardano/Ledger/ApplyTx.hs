@@ -74,7 +74,7 @@ benchWithGenState ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proxy era ->
   (ApplyTxEnv era -> IO a) ->
@@ -89,7 +89,7 @@ benchApplyTx ::
   , ApplyTx era
   , HasTrace (EraRule "LEDGER" era) (GenEnv era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proxy era ->
   Benchmark
@@ -117,7 +117,7 @@ deserialiseTxEra ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , NFData (Tx era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proxy era ->
   Benchmark

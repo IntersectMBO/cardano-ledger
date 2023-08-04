@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   PState (..),
-  UTxOState (utxosDeposited, utxosGovernance),
+  UTxOState (utxosDeposited, utxosGovState),
   asReserves,
   curPParamsEpochStateL,
   esAccountState,
@@ -109,8 +109,8 @@ data ShelleyEpochEvent era
 
 instance
   ( EraTxOut era
-  , EraGovernance era
-  , GovernanceState era ~ ShelleyGovState era
+  , EraGov era
+  , GovState era ~ ShelleyGovState era
   , Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
@@ -158,8 +158,8 @@ epochTransition ::
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
-  , GovernanceState era ~ ShelleyGovState era
-  , EraGovernance era
+  , GovState era ~ ShelleyGovState era
+  , EraGov era
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do
@@ -204,8 +204,8 @@ epochTransition = do
 
   UpecState pp' ppupSt' <-
     trans @(EraRule "UPEC" era) $
-      TRC (epochState', UpecState pp (utxosGovernance utxoSt'), ())
-  let utxoSt'' = utxoSt' {utxosGovernance = ppupSt'}
+      TRC (epochState', UpecState pp (utxosGovState utxoSt'), ())
+  let utxoSt'' = utxoSt' {utxosGovState = ppupSt'}
 
   let
     -- At the epoch boundary refunds are made, so we need to change what

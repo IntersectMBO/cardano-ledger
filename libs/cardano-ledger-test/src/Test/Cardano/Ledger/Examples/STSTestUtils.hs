@@ -353,7 +353,7 @@ testUTXOWsubset
     ( GoodCrypto (EraCrypto era)
     , PostShelley era
     , EraTx era
-    , EraGovernance era
+    , EraGov era
     , HasCallStack
     ) =>
     WitRule "UTXOW" era ->
@@ -388,7 +388,7 @@ testUTXOWwith ::
   forall era.
   ( GoodCrypto (EraCrypto era)
   , EraTx era
-  , EraGovernance era
+  , EraGov era
   ) =>
   WitRule "UTXOW" era ->
   (Result era -> Result era -> Assertion) ->
@@ -412,7 +412,7 @@ runLEDGER ::
   forall era.
   ( GoodCrypto (EraCrypto era)
   , EraTx era
-  , EraGovernance era
+  , EraGov era
   ) =>
   WitRule "LEDGER" era ->
   LedgerState era ->
@@ -433,7 +433,7 @@ runEPOCH ::
   forall era.
   ( GoodCrypto (EraCrypto era)
   , EraTx era
-  , EraGovernance era
+  , EraGov era
   ) =>
   WitRule "EPOCH" era ->
   EpochState era ->

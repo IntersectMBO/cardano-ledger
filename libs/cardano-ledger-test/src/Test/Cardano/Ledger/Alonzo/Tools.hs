@@ -143,7 +143,7 @@ exampleExUnitCalc ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
-  , EraGovernance era
+  , EraGov era
   , EraPlutusContext 'PlutusV1 era
   ) =>
   Proof era ->
@@ -241,7 +241,7 @@ uenv = UtxoEnv (SlotNo 0) testPParams def (GenDelegs mempty)
 ustate ::
   ( EraTxOut era
   , PostShelley era
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proof era ->
   UTxOState era
@@ -250,7 +250,7 @@ ustate pf =
     { utxosUtxo = initUTxO pf
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
-    , utxosGovernance = def
+    , utxosGovState = def
     , utxosStakeDistr = IStake mempty mempty
     }
 

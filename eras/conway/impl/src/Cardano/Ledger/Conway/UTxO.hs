@@ -21,7 +21,7 @@ import Cardano.Ledger.Conway.Core (
   Value,
  )
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Governance.Procedures (
+import Cardano.Ledger.Conway.Gov.Procedures (
   ProposalProcedure (..),
   Voter (..),
   VotingProcedures (..),
