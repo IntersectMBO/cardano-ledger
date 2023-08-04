@@ -40,7 +40,6 @@ import Cardano.Ledger.Shelley.API (
   VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Val (Val (coin, zero))
 import Data.Coerce
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -154,18 +153,16 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
 
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ translateTxOut `Map.mapMaybe` API.unUTxO utxo
+    pure $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
 
 -- | Filter out `TxOut`s with zero Coins and normalize Pointers,
 -- while converting `TxOut`s to Conway era.
 translateTxOut ::
   Crypto c =>
   TxOut (BabbageEra c) ->
-  Maybe (TxOut (ConwayEra c))
-translateTxOut (BabbageTxOut addr value d s)
-  | coin value == zero = Nothing
-  | otherwise =
-      Just $ BabbageTxOut (addrPtrNormalize addr) value (translateDatum d) (translateScript <$> s)
+  TxOut (ConwayEra c)
+translateTxOut (BabbageTxOut addr value d s) =
+  BabbageTxOut (addrPtrNormalize addr) value (translateDatum d) (translateScript <$> s)
 
 -- | This function is implemented solely for the purpose of translating garbage pointers
 -- into knowingly invalid ones. Any pointer that contains a SlotNo, TxIx or CertIx that

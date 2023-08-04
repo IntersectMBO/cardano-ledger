@@ -2,6 +2,7 @@
 
 ## 1.5.0.0
 
+* Filter out zero valued `TxOut`'s on Byron/Shelley boundary.
 * Rename `getProducedValue` to `shelleyProducedValue`
 * Change the constraints on `produced` and `evaluateTransactionBalance`
 * Add `lsCertStateL`
