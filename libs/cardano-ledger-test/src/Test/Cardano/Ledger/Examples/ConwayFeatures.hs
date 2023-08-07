@@ -182,8 +182,9 @@ govActionStateWithVote ProposalProcedure {..} kh v =
     pProcGovernanceAction
     (EpochNo 0)
 
+-- | Value for the actual threshold, plus a small epsilon for GT (>) relation
 spoThreshold :: Rational
-spoThreshold = 1 % 45000000000000000
+spoThreshold = 51 % 100 + 1 % 100000000000
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
@@ -343,7 +344,7 @@ testGovernance pf = do
             [
               ( stakePoolKeyHash pf
               , IndividualPoolStake
-                  (spoThreshold * 2)
+                  spoThreshold
                   (vrfKeyHash @(EraCrypto era))
               )
             ]

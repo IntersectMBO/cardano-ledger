@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -22,7 +23,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   EraGovernance,
-  GovernanceAction,
+  GovernanceAction (..),
   GovernanceActionId,
   GovernanceActionState (..),
   RatifyState (..),
@@ -34,7 +35,6 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Slot (EpochNo (..))
-import Control.Monad (guard)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -90,22 +90,49 @@ instance
 
 -- Temporary threshold of 1 lovelace
 spoThreshold :: Rational
-spoThreshold = 1 % 45000000000000000
+spoThreshold = 51 % 100
 
 epochsToExpire :: EpochNo
-epochsToExpire = 10
+epochsToExpire = 30
 
 accepted :: RatifyEnv era -> GovernanceActionState era -> Bool
 accepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
-  totalAcceptedStakePoolsRatio > spoThreshold
+  totalAcceptedStakePoolsRatio > getStakePoolThreshold gasAction
   where
-    GovernanceActionState {gasStakePoolVotes} = gas
-    totalAcceptedStakePoolsRatio =
-      getSum $ Map.foldMapWithKey lookupStakeDistrForYesVotes gasStakePoolVotes
+    GovernanceActionState {gasStakePoolVotes, gasAction} = gas
+    -- Final ratio for `totalAcceptedStakePoolsRatio` we want is: t = y / (s - a)
+    -- Where:
+    --  * `y` - total delegated stake that voted Yes
+    --  * `a` - total delegated stake that voted Abstain
+    --  * `s` - total delegated stake
+    --
+    -- However, computing the total stake again would be wasteful, since we already have
+    -- distributions per pool computed. So, values that we have available are not exactly
+    -- what we need, because we have:
+    --  * `y/s` - stake that votes yes over the total stake
+    --  * `a/s` - stake that voted abstain over the total stake
+    --
+    -- We divide both numerator and denominator by `s` and we'll get a formula that we can
+    -- use:
+    --
+    -- t = y / (s - a) = (y / s) / (1 - a / s)
+    totalAcceptedStakePoolsRatio
+      | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
+      | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
+      where
+        (Sum yesVotesRatio, Sum abstainVotesRatio) =
+          Map.foldMapWithKey lookupStakePoolDistrForVotes gasStakePoolVotes
 
-    lookupStakeDistrForYesVotes poolId vote = fromMaybe mempty $ do
-      guard (vote == VoteYes)
-      Sum . individualPoolStake <$> Map.lookup poolId poolDistr
+        lookupStakePoolDistrForVotes poolId vote = fromMaybe (mempty, mempty) $ do
+          distr <- Sum . individualPoolStake <$> Map.lookup poolId poolDistr
+          case vote of
+            VoteNo -> Nothing
+            VoteYes -> Just (distr, mempty)
+            Abstain -> Just (mempty, distr)
+    getStakePoolThreshold = \case
+      -- Disable HardForks for now, in order to prevent SanchoNet from dying
+      HardForkInitiation {} -> 101 % 100
+      _ -> spoThreshold
 
 ratifyTransition ::
   forall era.
