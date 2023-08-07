@@ -140,12 +140,12 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState e
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovAction era) where
   arbitrary =
     oneof
-      [ ParameterChange <$> arbitrary
-      , HardForkInitiation <$> arbitrary
+      [ ParameterChange <$> arbitrary <*> arbitrary
+      , HardForkInitiation <$> arbitrary <*> arbitrary
       , TreasuryWithdrawals <$> arbitrary
-      , pure NoConfidence
-      , NewCommittee <$> arbitrary <*> arbitrary
-      , NewConstitution <$> arbitrary
+      , NoConfidence <$> arbitrary
+      , NewCommittee <$> arbitrary <*> arbitrary <*> arbitrary
+      , NewConstitution <$> arbitrary <*> arbitrary
       , pure InfoAction
       ]
 
@@ -160,6 +160,8 @@ instance Crypto c => Arbitrary (GovActionId c) where
 
 deriving instance Arbitrary GovActionIx
 
+deriving instance Crypto c => Arbitrary (PrevGovActionId r c)
+
 instance Crypto c => Arbitrary (Voter c) where
   arbitrary =
     oneof
@@ -172,8 +174,7 @@ instance Arbitrary Vote where
   arbitrary = arbitraryBoundedEnum
 
 instance
-  ( Era era
-  , ConwayEraTxBody era
+  ( ConwayEraTxBody era
   , Arbitrary (Sized (TxOut era))
   , Arbitrary (TxOut era)
   , Arbitrary (Value era)

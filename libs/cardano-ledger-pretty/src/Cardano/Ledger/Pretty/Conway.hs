@@ -30,6 +30,7 @@ import Cardano.Ledger.Conway.Gov (
   GovActionState (..),
   GovActionsState (..),
   GovProcedures,
+  PrevGovActionId (..),
   ProposalProcedure (..),
   Vote (..),
   Voter (..),
@@ -192,31 +193,40 @@ instance EraPParams era => PrettyA (ProposalProcedure era) where
 instance EraPParams era => PrettyA (GovProcedures era) where
   prettyA = viaShow
 
+instance PrettyA (PrevGovActionId p c) where
+  prettyA = viaShow
+
 instance PrettyA (PParamsUpdate era) => PrettyA (GovAction era) where
-  prettyA (ParameterChange ppup) =
+  prettyA (ParameterChange pgaid ppup) =
     ppRecord
       "ParameterChange"
-      [("protocol parameters update", prettyA ppup)]
-  prettyA (HardForkInitiation pv) =
+      [ ("previous governance action id", prettyA pgaid)
+      , ("protocol parameters update", prettyA ppup)
+      ]
+  prettyA (HardForkInitiation pgaid pv) =
     ppRecord
       "HardForkInitiation"
-      [("protocol version", prettyA pv)]
+      [ ("previous governance action id", prettyA pgaid)
+      , ("protocol version", prettyA pv)
+      ]
   prettyA (TreasuryWithdrawals ws) =
     ppRecord
       "TreasuryWithdrawals"
       [("withdrawals map", prettyA ws)]
-  prettyA NoConfidence =
-    ppRecord "NoConfidence" []
-  prettyA (NewCommittee old committee) =
+  prettyA (NoConfidence pgaid) =
+    ppRecord "NoConfidence" [("previous governance action id", prettyA pgaid)]
+  prettyA (NewCommittee pgaid old committee) =
     ppRecord
       "NewCommittee"
-      [ ("oldMembers", prettyA old)
+      [ ("previous governance action id", prettyA pgaid)
+      , ("oldMembers", prettyA old)
       , ("committee", prettyA committee)
       ]
-  prettyA (NewConstitution Constitution {..}) =
+  prettyA (NewConstitution pgaid Constitution {..}) =
     ppRecord
       "NewConstitution"
-      [ ("hash", prettyA constitutionHash)
+      [ ("previous governance action id", prettyA pgaid)
+      , ("hash", prettyA constitutionHash)
       , ("script", prettyA constitutionScript)
       ]
   prettyA InfoAction =

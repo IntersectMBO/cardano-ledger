@@ -138,15 +138,23 @@ newConstitutionProposal pf =
   ProposalProcedure
     (Coin proposalDeposit)
     (RewardAcnt Mainnet (KeyHashObj (stakeKeyHash pf)))
-    (NewConstitution (proposedConstitution @era))
+    (NewConstitution SNothing (proposedConstitution @era))
     (Anchor (fromJust $ textToUrl "new.constitution.com") (SLE.mkDummySafeHash Proxy 1))
 
-anotherConstitutionProposal :: forall era. Scriptic era => Proof era -> ProposalProcedure era
-anotherConstitutionProposal pf =
+anotherConstitutionProposal ::
+  forall era.
+  Scriptic era =>
+  Proof era ->
+  GovActionId (EraCrypto era) ->
+  ProposalProcedure era
+anotherConstitutionProposal pf prevGovActionId =
   ProposalProcedure
     (Coin proposalDeposit)
     (RewardAcnt Mainnet (KeyHashObj (stakeKeyHash pf)))
-    (NewConstitution (Constitution (SLE.mkDummySafeHash Proxy 2) SNothing))
+    ( NewConstitution
+        (SJust (PrevGovActionId prevGovActionId))
+        (Constitution (SLE.mkDummySafeHash Proxy 2) SNothing)
+    )
     (Anchor (fromJust $ textToUrl "another.constitution.com") (SLE.mkDummySafeHash Proxy 2))
 
 voteYes :: forall era. Scriptic era => Proof era -> GovActionId (EraCrypto era) -> VotingProcedures era
@@ -249,7 +257,11 @@ secondProposal pf govActionId =
               , newTxOut pf [Address (addrKeys1 pf), Amount (inject $ Coin 7000)]
               ]
           , Txfee (Coin fee)
-          , GovProcs (GovProcedures (VotingProcedures mempty) (Seq.fromList [anotherConstitutionProposal pf]))
+          , GovProcs
+              ( GovProcedures
+                  (VotingProcedures mempty)
+                  (Seq.fromList [anotherConstitutionProposal pf govActionId])
+              )
           ]
     , initOutputs =
         InitOutputs
@@ -354,13 +366,18 @@ testGov pf = do
   let
     secondProposalTx = txFromTestCaseData pf (secondProposal pf govActionId)
     secondGovActionId = GovActionId (txid (secondProposalTx ^. bodyTxL)) (GovActionIx 0)
-    expectedGovState2 = GovActionsState $ Map.fromList [(secondGovActionId, govActionState (anotherConstitutionProposal pf))]
-    expectedGov2 = ConwayGovState expectedGovState2 (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgRatifyL)
+    expectedGovActionsState2 =
+      GovActionsState $
+        Map.fromList [(secondGovActionId, govActionState (anotherConstitutionProposal pf govActionId))]
+    expectedGovState2 =
+      ConwayGovState
+        expectedGovActionsState2
+        (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgRatifyL)
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 (pp pf) (trustMeP pf True secondProposalTx)
     ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _) _) =
       expectRight "Error running LEDGER when proposing:" eitherLedgerState3
 
-  assertEqual "govState after second proposal" govState2 expectedGov2
+  assertEqual "govState after second proposal" govState2 expectedGovState2
 
   let
     epochState2 = epochState1 & esLStateL .~ ledgerState3
@@ -374,7 +391,7 @@ testGov pf = do
       assertEqual
         "un-enacted govAction is recorded in rsFuture"
         (gId, gas')
-        (secondGovActionId, govActionState (anotherConstitutionProposal pf))
+        (secondGovActionId, govActionState (anotherConstitutionProposal pf govActionId))
     x -> error $ "Unexpected `rsFuture` after runEPOCH: " ++ show x
 
 conwayFeatures :: TestTree
