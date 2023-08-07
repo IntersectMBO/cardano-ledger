@@ -5,20 +5,23 @@
 module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Era (EraCrypto)
+import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Pretty (ppMap)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
+import Control.Monad (when)
+import Data.Default.Class (Default (def))
 import GHC.Real ((%))
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
+import Test.Cardano.Ledger.Constrained.Examples (testIO)
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad (generateWithSeed, monadTyped)
-import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
-import Test.Cardano.Ledger.Constrained.Preds.Universes
+import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
+import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (demo, demoTest, main)
 import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Size (Size (..), genFromSize)
 import Test.Cardano.Ledger.Constrained.Solver
@@ -34,6 +37,9 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
  )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
+import Test.Tasty (TestTree, defaultMain, testGroup)
+
+-- =========================================================
 
 -- | A good spread of Coins with at least one (Coin 0)
 manyCoin :: Size -> Gen [Coin]
@@ -43,12 +49,12 @@ manyCoin size = do
 
 -- ======================================
 
-vstatePreds :: Proof era -> [Pred era]
+vstatePreds :: Era era => Proof era -> [Pred era]
 vstatePreds _p =
   [ Sized (Range 3 8) dreps
-  , Sized (Range 5 7) (Dom ccHotKeys)
+  , Sized (Range 5 7) (Dom committeeState)
   , Subset (Dom dreps) voteUniv
-  , Subset (Dom ccHotKeys) voteCredUniv
+  , Subset (Dom committeeState) voteCredUniv
   ]
 
 vstateStage ::
@@ -58,20 +64,25 @@ vstateStage ::
   Gen (Subst era)
 vstateStage proof = toolChainSub proof standardOrderInfo (vstatePreds proof)
 
-mainV :: IO ()
-mainV = do
+demoV :: ReplMode -> IO ()
+demoV mode = do
   let proof = Babbage Standard
   env <-
     generate
       ( pure emptySubst
-          >>= universeStage proof
+          >>= universeStage def proof
           >>= vstateStage proof
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   vstate <- monadTyped $ runTarget env vstateT
-  putStrLn (show (pcVState vstate))
-  putStrLn "\n"
-  putStrLn (unlines (otherFromEnv [] env))
+  when (mode == Interactive) $ putStrLn (show (pcVState vstate))
+  modeRepl mode proof env ""
+
+demoTestV :: TestTree
+demoTestV = testIO "Testing VState Stage" (demoV CI)
+
+mainV :: IO ()
+mainV = defaultMain $ testIO "Testing VState Stage" (demoV Interactive)
 
 -- ==========================================
 
@@ -83,7 +94,7 @@ pstateNames =
   , "poolDeposits"
   ]
 
-pstatePreds :: Proof era -> [Pred era]
+pstatePreds :: Era era => Proof era -> [Pred era]
 pstatePreds _p =
   [ -- These Sized constraints are needd to be ensure that regPools is bigger than retiring
     Sized (ExactSize 3) retiring
@@ -122,23 +133,28 @@ pstateStage ::
   Gen (Subst era)
 pstateStage proof = toolChainSub proof standardOrderInfo (pstatePreds proof)
 
-mainP :: IO ()
-mainP = do
+demoP :: ReplMode -> IO ()
+demoP mode = do
   let proof = Babbage Standard
   env <-
     generate
       ( pure emptySubst
-          >>= universeStage proof
+          >>= universeStage def proof
           >>= pstateStage proof
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   pstate <- monadTyped $ runTarget env pstateT
   pDistr <- monadTyped (findVar (unVar poolDistr) env)
-  putStrLn (show (pcPState pstate))
-  putStrLn "\n"
-  putStrLn (show (ppMap pcKeyHash pcIndividualPoolStake pDistr))
-  putStrLn "\n"
-  putStrLn (unlines (otherFromEnv [] env))
+  when (mode == Interactive) $ do
+    putStrLn (show (pcPState pstate))
+    putStrLn (show (ppMap pcKeyHash pcIndividualPoolStake pDistr))
+  modeRepl mode proof env ""
+
+demoTestP :: TestTree
+demoTestP = testIO "Testing PState Stage" (demoP CI)
+
+mainP :: IO ()
+mainP = defaultMain $ testIO "Testing PState Stage" (demoP Interactive)
 
 -- =================================================
 -- A Field used to compute 'genDelegs'
@@ -146,6 +162,7 @@ mainP = do
 -- | A field that selects the 'genDelegKeyHash' field from a 'GenDelegPair'
 --   It also silently casts the 'KeyRole. from 'Genesis to 'Witness
 gdKeyHashField ::
+  Era era =>
   Field
     era
     (GenDelegPair (EraCrypto era))
@@ -161,7 +178,7 @@ gdKeyHashField =
     )
 
 -- | A Var Term that pairs the Field 'gdKeyHashField'
-gdKeyHash :: Term era (KeyHash 'Witness (EraCrypto era))
+gdKeyHash :: Era era => Term era (KeyHash 'Witness (EraCrypto era))
 gdKeyHash = fieldToTerm gdKeyHashField
 
 gdkeyL :: Lens' (GenDelegPair c) (KeyHash 'Witness c)
@@ -173,7 +190,7 @@ gdkeyL =
 
 -- ============================================================================
 
-certStatePreds :: Proof era -> [Pred era]
+certStatePreds :: Era era => Proof era -> [Pred era]
 certStatePreds _p =
   [ MetaSize (SzExact (fromIntegral (quorumConstant + 2))) genDelegSize
   , --  , GenFrom quorum (constTarget (pure (fromIntegral quorumConstant)))
@@ -218,8 +235,8 @@ certStatePreds _p =
   , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
   , SumsTo (Right (DeltaCoin 1)) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
-  , mirAvailTreasury :<-: (Constr "computeAvailTreasury" (availableAfterMIR TreasuryMIR) :$ accountStateT :$ instantaneousRewardsT)
-  , mirAvailReserves :<-: (Constr "computeAvailReserves" (availableAfterMIR ReservesMIR) :$ accountStateT :$ instantaneousRewardsT)
+  , mirAvailTreasury :<-: (Constr "computeAvailTreasury" (availableAfterMIR TreasuryMIR) :$ Mask accountStateT :$ Mask instantaneousRewardsT)
+  , mirAvailReserves :<-: (Constr "computeAvailReserves" (availableAfterMIR ReservesMIR) :$ Mask accountStateT :$ Mask instantaneousRewardsT)
   ]
   where
     rewardSize = var "rewardSize" SizeR
@@ -235,35 +252,53 @@ dstateStage ::
   Gen (Subst era)
 dstateStage proof = toolChainSub proof standardOrderInfo (certStatePreds proof)
 
-mainD :: Int -> IO ()
-mainD seed = do
+demoD :: ReplMode -> Int -> IO ()
+demoD mode seed = do
   let proof = Babbage Standard
   env <-
     generateWithSeed
       seed
       ( pure emptySubst
-          >>= universeStage proof
+          >>= universeStage def proof
           >>= dstateStage proof
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   dState <- monadTyped $ runTarget env dstateT
-  putStrLn (show (pcDState dState))
-  goRepl proof env ""
+  when (mode == Interactive) $ putStrLn (show (pcDState dState))
+  modeRepl mode proof env ""
+
+demoTestD :: TestTree
+demoTestD = testIO "Testing DState Stage" (demoD CI 99)
+
+mainD :: Int -> IO ()
+mainD seed = defaultMain $ testIO "Testing DState Stage" (demoD Interactive seed)
 
 -- ===============================================
 
-mainC :: IO ()
-mainC = do
+demoC :: ReplMode -> IO ()
+demoC mode = do
   let proof = Babbage Standard
   env <-
     generate
       ( pure emptySubst
-          >>= universeStage proof
+          >>= universeStage def proof
           >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   certState <- monadTyped $ runTarget env certstateT
-  putStrLn (show (pcCertState certState))
-  goRepl proof env ""
+  when (mode == Interactive) $ putStrLn (show (pcCertState certState))
+  modeRepl mode proof env ""
+
+demoTestC :: TestTree
+demoTestC = testIO "Testing CertState Stage" (demoC CI)
+
+mainC :: IO ()
+mainC = defaultMain $ testIO "Testing CertState Stage" (demoC Interactive)
+
+demoTest :: TestTree
+demoTest =
+  testGroup
+    "CertState tests"
+    [demoTestV, demoTestP, demoTestD, demoTestC]

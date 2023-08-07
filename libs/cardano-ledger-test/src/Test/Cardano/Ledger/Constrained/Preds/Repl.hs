@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.Constrained.Preds.Repl where
+module Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl, repl, ReplMode (..), modeRepl) where
 
 import Data.Char (toLower)
 import qualified Data.List as List
@@ -59,3 +59,14 @@ helpRepl proof env@(Env emap) more = do
   outputStrLn (seps matches)
   outputStrLn ""
   loop proof env
+
+-- ========================================
+
+data ReplMode = Interactive | CI
+  deriving (Eq)
+
+modeRepl :: ReplMode -> Proof era -> Env era -> String -> IO ()
+modeRepl Interactive p e s = goRepl p e s
+modeRepl CI _ (Env emap) _ = do
+  let keys = Set.toList (Map.keysSet emap)
+  putStrLn (seps keys)

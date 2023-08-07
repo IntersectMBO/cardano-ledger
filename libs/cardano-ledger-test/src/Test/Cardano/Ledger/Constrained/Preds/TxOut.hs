@@ -34,6 +34,8 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Pretty (ppList, ppMap)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+import Control.Monad (when)
+import Data.Default.Class (Default (def))
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe, strictMaybeToMaybe)
@@ -45,9 +47,11 @@ import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Combinators (genFromMap, itemFromSet)
 import Test.Cardano.Ledger.Constrained.Env
+import Test.Cardano.Ledger.Constrained.Examples (testIO)
 import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.Repl
-import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (main)
+import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
+import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (demo, demoTest, main)
 import Test.Cardano.Ledger.Constrained.Rewrite (rewriteGen, standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Size
 import Test.Cardano.Ledger.Constrained.Solver (toolChain, toolChainSub)
@@ -58,6 +62,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (pcData, pcDataHash, pcScript, pcS
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody, newTxOut)
 import Test.QuickCheck
+import Test.Tasty (TestTree, defaultMain)
 
 -- =========================================================================
 
@@ -108,8 +113,8 @@ isBootstrapAddr (Addr _ _ _) = False
 
 -- ================================================================================
 
-txOutPreds :: Reflect era => Proof era -> Term era Coin -> Term era [TxOutF era] -> [Pred era]
-txOutPreds p balanceCoin outputS =
+txOutPreds :: Reflect era => UnivSize -> Proof era -> Term era Coin -> Term era [TxOutF era] -> [Pred era]
+txOutPreds size p balanceCoin outputS =
   [ Choose
       (Range 6 6)
       datums
@@ -133,7 +138,7 @@ txOutPreds p balanceCoin outputS =
           , Component (Right txoutAmount) [field (ValueR p) valCoin, field (ValueR p) valueFMultiAsset]
           , -- , SumsTo (Left (Coin 1)) balanceCoin EQL [One valCoin]
             SumSplit (Coin 1) balanceCoin EQL [One valCoin]
-          , GenFrom valueFMultiAsset (Constr "multiAsset" multiAsset ^$ (nonSpendScriptUniv p))
+          , GenFrom valueFMultiAsset (Constr "multiAsset" (multiAsset size) ^$ (nonSpendScriptUniv p))
           ]
       TxOutAlonzoToAlonzo ->
         ForEach
@@ -150,7 +155,7 @@ txOutPreds p balanceCoin outputS =
           , Component (Right txoutAmount) [field (ValueR p) valCoin]
           , Maybe txoutDataHash (Simple hash) [Member (Left hash) (Dom dataUniv)]
           , SumSplit (Coin 2) balanceCoin EQL [One valCoin]
-          , GenFrom valueFMultiAsset (Constr "multiAsset" multiAsset ^$ (nonSpendScriptUniv p))
+          , GenFrom valueFMultiAsset (Constr "multiAsset" (multiAsset size) ^$ (nonSpendScriptUniv p))
           ]
       TxOutBabbageToConway ->
         ForEach
@@ -169,7 +174,7 @@ txOutPreds p balanceCoin outputS =
           , Maybe txoutScript (Simple script) [Member (Left (HashS script)) (Dom (spendscriptUniv p))]
           , Member (Left txoutDatum) datumsSet
           , SumSplit (Coin 2) balanceCoin EQL [One valCoin]
-          , GenFrom valueFMultiAsset (Constr "multiAsset" multiAsset ^$ (nonSpendScriptUniv p))
+          , GenFrom valueFMultiAsset (Constr "multiAsset" (multiAsset size) ^$ (nonSpendScriptUniv p))
           ]
   ]
   where
@@ -181,16 +186,20 @@ txOutPreds p balanceCoin outputS =
     hash = var "hash" DataHashR
     dat = var "dat" DataR
 
-main :: IO ()
-main = do
+demo :: ReplMode -> IO ()
+demo mode = do
   let proof = Conway Standard
-  -- rewritten <- snd <$> generate (rewriteGen (1,(txOutPreds proof (Lit CoinR (Coin 100)) (outputs proof))))
-  -- putStrLn (show rewritten)
   env <-
     generate
       ( pure emptySubst
-          >>= universeStage proof
-          >>= toolChain proof standardOrderInfo (txOutPreds proof (Lit CoinR (Coin 100)) (outputs proof))
+          >>= universeStage def proof
+          >>= toolChain proof standardOrderInfo (txOutPreds def proof (Lit CoinR (Coin 100)) (outputs proof))
       )
-  displayTerm env (outputs proof)
-  goRepl proof env ""
+  when (mode == Interactive) (displayTerm env (outputs proof))
+  modeRepl mode proof env ""
+
+demoTest :: TestTree
+demoTest = testIO "Testing TxOut Stage" (demo CI)
+
+main :: IO ()
+main = defaultMain $ testIO "Testing TxOut Stage" (demo Interactive)

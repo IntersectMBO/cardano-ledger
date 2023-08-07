@@ -68,8 +68,8 @@ fixupVar :: Era era => Name era -> [Pred era] -> Payload era -> Maybe (Payload e
 fixupVar v cs p = listToMaybe [p' | p' <- [p | validAssignment v p cs] ++ reverse (shrinkVar v cs p)]
 
 -- | Assumes the variable is the only free variable in the constraints.
-validAssignment :: Era era => Name era -> Payload era -> [Pred era] -> Bool
+validAssignment :: Name era -> Payload era -> [Pred era] -> Bool
 validAssignment v p cs = all (runPred_ $ storeName v p emptyEnv) cs
 
-runPred_ :: Era era => Env era -> Pred era -> Bool
+runPred_ :: Env era -> Pred era -> Bool
 runPred_ env p = either (const False) id $ runTyped $ runPred env p

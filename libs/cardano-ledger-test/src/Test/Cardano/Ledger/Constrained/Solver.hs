@@ -41,7 +41,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess, genFromMap, itemFromSet, suchThatErr)
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
-import Test.Cardano.Ledger.Constrained.Rewrite (DependGraph (..), OrderInfo, compileGen, cpeq)
+import Test.Cardano.Ledger.Constrained.Rewrite (DependGraph (..), OrderInfo, compileGenWithSubst, cpeq)
 import Test.Cardano.Ledger.Constrained.Size (
   Size (..),
   genFromIntRange,
@@ -155,7 +155,7 @@ simplifyList r1 term = do
   hasEq r1 x
 
 -- | Is the Sum a variable (of a map). Only SumMap and Project store maps.
-isMapVar :: Era era => Name era -> Sum era c -> Bool
+isMapVar :: Name era -> Sum era c -> Bool
 isMapVar n1 (SumMap (Var v2)) = n1 == Name v2
 isMapVar n1 (ProjMap _ _ (Var v2)) = n1 == Name v2
 isMapVar _ _ = False
@@ -390,21 +390,21 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
 --   That can only happen in a (RngSum cond c) or a (RngProj cond rep c) constructor of 'Sum'
 --   Because we don't know if 'c' can have negative values, we do the summation as an Integer
 solveMapSummands ::
-  (Adds c, Era era) =>
-  c ->
-  c ->
-  [String] ->
-  OrdCond ->
-  V era (Map dom rng) ->
-  c ->
+  (Era era, Adds c) =>
+  c -> -- The smallest allowed
+  c -> -- the evaluated lhs
+  [String] -> -- path to here
+  OrdCond -> -- The condtion in the SumsTo
+  V era (Map dom rng) -> -- The name of the unique Var on the rhs
+  c -> -- The sum of the other expressions on the rhs
   [Sum era c] ->
   Typed (RngSpec era rng)
-solveMapSummands small lhsC _ cond (V _ (MapR _ r) _) c [ProjMap _crep l (Var (V name (MapR _ r1) _))] = do
+solveMapSummands small lhsC msgs cond (V _ (MapR _ r) _) c [ProjMap _crep l (Var (V name (MapR _ r1) _))] = do
   Refl <- sameRep r r1
-  pure (RngProj small r l (varOnRightSize lhsC cond c name))
-solveMapSummands small lhsC _ cond (V _ (MapR _ r) _) c [SumMap (Var (V name (MapR _ r1) _))] = do
+  pure (RngProj small r l (varOnRightSize msgs lhsC cond c name))
+solveMapSummands small lhsC msgs cond (V _ (MapR _ r) _) c [SumMap (Var (V name (MapR _ r1) _))] = do
   Refl <- sameRep r r1
-  pure (RngSum small (varOnRightSize lhsC cond c name))
+  pure (RngSum small (varOnRightSize msgs lhsC cond c name))
 solveMapSummands small lhsC msg cond v c (s : ss)
   | isMapVar (Name v) s =
       solveMapSummands small lhsC msg cond v c (ss ++ [s])
@@ -543,27 +543,27 @@ solveSum v1@(V nam r _) predx =
       DeltaCoin n <- simplifyAtType DeltaCoinR expr
       pure $ varOnLeft nam EQL (DeltaCoin (-n))
     (Random (Var v2)) | Name v1 == Name v2 -> pure AddsSpecAny
-    xx@(SumsTo x (Delta (Lit _ n)) cond xs@(_ : _)) -> do
+    (SumsTo x (Delta (Lit _ n@(Coin i))) cond xs@(_ : _)) -> do
       (rhsTotal, needsNeg) <- intSumWithUniqueV v1 xs
-      case trace ("\nHERE " ++ show xx ++ "\nrhsTotal " ++ show rhsTotal ++ "\n NEEDSNEG " ++ show needsNeg) r of
+      case r of
         CoinR ->
           if needsNeg
             then pure (varOnRightNeg n cond (fromI ["solveSum-SumsTo 1"] rhsTotal) nam)
             else
               if rhsTotal < 0
-                then pure (varOnRight (add n (Coin $ fromIntegral $ negate rhsTotal)) cond (Coin 0) nam)
-                else pure (varOnRight n cond (fromI ["solveSum-SumsTo 2", show n, show rhsTotal, show x, show v1] rhsTotal) nam)
+                then pure (varOnRight ["CASE1", show predx] (add n (Coin $ fromIntegral $ negate rhsTotal)) cond (Coin 0) nam)
+                else pure (varOnRight ["CASE2", show predx] n cond (fromI ["solveSum-SumsTo 2", show n, show rhsTotal, show x, show v1] rhsTotal) nam)
         DeltaCoinR ->
           if needsNeg
-            then pure (varOnRightNeg n cond (fromI ["solveSum-SumsTo 3"] rhsTotal) nam)
-            else pure (varOnRight n cond (fromI ["solveSum-SumsTo 4"] rhsTotal) nam)
+            then pure (varOnRightNeg (DeltaCoin i) cond (fromI ["solveSum-SumsTo 3"] rhsTotal) nam)
+            else pure (varOnRight ["CASE3", show predx] (DeltaCoin i) cond (fromI ["solveSum-SumsTo 4"] rhsTotal) nam)
         other -> failT [show predx, show other ++ " should be either Coin or DeltaCoin"]
     (SumsTo _ (Lit r2 n) cond xs@(_ : _)) -> do
       (rhsTotal, needsNeg) <- intSumWithUniqueV v1 xs
       Refl <- sameRep r r2
       if needsNeg
         then pure (varOnRightNeg n cond (fromI ["solveSum-SumsTo 5"] rhsTotal) nam)
-        else pure (varOnRight n cond (fromI ["solveSum-SumsTo 6"] rhsTotal) nam)
+        else pure (varOnRight ["CASE4", show predx] n cond (fromI ["solveSum-SumsTo 6"] rhsTotal) nam)
     (SumsTo _ (Var v2@(V _ r2 _)) cond xs@(_ : _)) | Name v1 == Name v2 -> do
       rhsTotal <- summandsAsInt xs
       Refl <- sameRep r r2
@@ -582,8 +582,17 @@ solveSum v1@(V nam r _) predx =
 
 solveSums :: (Adds t, Era era) => V era t -> [Pred era] -> Typed (AddsSpec t)
 solveSums v@(V nm r _) cs =
-  explain ("\nGiven (Add " ++ show r ++ "), Solving for " ++ nm ++ " :: " ++ show r ++ ",  with Predicates \n" ++ unlines (map (("  " ++) . show) cs)) $
-    foldlM' accum mempty cs
+  explain
+    ( "\nGiven (Add "
+        ++ show r
+        ++ "), Solving for "
+        ++ nm
+        ++ " :: "
+        ++ show r
+        ++ ",  with Predicates \n"
+        ++ unlines (map (("  " ++) . show) cs)
+    )
+    $ foldlM' accum mempty cs
   where
     accum spec cond = do
       sumVspec <- solveSum v cond
@@ -591,7 +600,7 @@ solveSums v@(V nm r _) cs =
         ("Solving Sum constraint (" ++ show cond ++ ") for variable " ++ show nm)
         (liftT (spec <> sumVspec))
 
-summandAsInt :: (Era era, Adds c) => Sum era c -> Typed Int
+summandAsInt :: Adds c => Sum era c -> Typed Int
 summandAsInt (One (Lit _ x)) = pure (toI x)
 summandAsInt (One (Delta (Lit CoinR (Coin n)))) = pure (toI (DeltaCoin n))
 summandAsInt (One (Negate (Lit DeltaCoinR (DeltaCoin n)))) = pure (toI ((DeltaCoin (-n))))
@@ -601,7 +610,7 @@ summandAsInt (SumList (Lit _ m)) = pure (toI (List.foldl' add zero m))
 summandAsInt (ProjMap _ l (Lit _ m)) = pure (toI (List.foldl' (\ans x -> add ans (x ^. l)) zero m))
 summandAsInt x = failT ["Can't compute summandAsInt: " ++ show x ++ ", to an Int."]
 
-genSum :: (Era era, Adds x) => Sum era x -> Rep era x -> x -> Subst era -> Gen (Subst era)
+genSum :: Adds x => Sum era x -> Rep era x -> x -> Subst era -> Gen (Subst era)
 genSum (One (Var v)) rep x sub = pure $ extend v (Lit rep x) sub
 genSum (One (Delta (Var v))) DeltaCoinR d sub = pure $ extend v (Lit CoinR (fromI [] (toI d))) sub
 genSum (One (Negate (Var v))) DeltaCoinR (DeltaCoin n) sub = pure $ extend v (Lit DeltaCoinR (DeltaCoin (-n))) sub
@@ -617,7 +626,7 @@ summandsAsInt (x : xs) = do
 sameV :: Era era => V era s -> V era t -> Typed (s :~: t)
 sameV (V _ r1 _) (V _ r2 _) = sameRep r1 r2
 
-unique2 :: (Adds c, Era era) => V era t -> (Int, Bool, [Name era]) -> Sum era c -> Typed (Int, Bool, [Name era])
+unique2 :: Adds c => V era t -> (Int, Bool, [Name era]) -> Sum era c -> Typed (Int, Bool, [Name era])
 unique2 v1 (c, b, ns) (One (Var v2)) =
   if Name v1 == Name v2
     then pure (c, b, Name v2 : ns)
@@ -639,7 +648,7 @@ unique2 _ (c1, b, ns) sumexpr = do c2 <- summandAsInt sumexpr; pure (c1 + c2, b,
 -- | Check that there is exactly 1 occurence of 'v',
 --   and return the sum of the other terms in 'ss'
 --   which should all be constants.
-intSumWithUniqueV :: (Adds c, Era era) => V era t -> [Sum era c] -> Typed (Int, Bool)
+intSumWithUniqueV :: Adds c => V era t -> [Sum era c] -> Typed (Int, Bool)
 intSumWithUniqueV v@(V nam _ _) ss = do
   (c, b, ns) <- foldlM' (unique2 v) (0, False, []) ss
   case ns of
@@ -939,13 +948,13 @@ solveOneVar subst0 (names, preds) = case (names, map (substPred subst0) preds) o
 
 toolChainSub :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Subst era)
 toolChainSub _proof order cs subst0 = do
-  (_count, DependGraph pairs) <- compileGen order (map (substPredWithVarTest subst0) cs)
+  (_count, DependGraph pairs) <- compileGenWithSubst order subst0 cs
   Subst subst <- foldlM' solveOneVar subst0 pairs
   let isTempV k = not (elem '.' k)
   pure $ (Subst (Map.filterWithKey (\k _ -> isTempV k) subst))
 
 toolChain :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> Gen (Env era)
 toolChain _proof order cs subst0 = do
-  (_count, DependGraph pairs) <- compileGen order (map (substPredWithVarTest subst0) cs)
+  (_count, DependGraph pairs) <- compileGenWithSubst order subst0 cs
   subst <- foldlM' solveOneVar subst0 pairs
   monadTyped $ substToEnv subst emptyEnv

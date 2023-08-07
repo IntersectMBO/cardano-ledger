@@ -34,6 +34,8 @@ import Test.Cardano.Ledger.Constrained.Ast
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley
+import Data.HashSet (HashSet)
+import qualified Data.HashSet as HashSet
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Combinators
 import Test.Cardano.Ledger.Constrained.Env
@@ -106,21 +108,21 @@ instance Arbitrary OrderInfo where
 addVar :: V era t -> t -> GenEnv era -> GenEnv era
 addVar vvar val env = env {gEnv = storeVar vvar val $ gEnv env}
 
-markSolved :: Era era => Set (Name era) -> Depth -> GenEnv era -> GenEnv era
+markSolved :: HashSet (Name era) -> Depth -> GenEnv era -> GenEnv era
 markSolved solved d env = env {gSolved = Map.unionWith max new (gSolved env)}
   where
-    new = Map.fromSet (const d) solved
+    new = Map.fromSet (const d) (hashSetToSet solved)
 
-addSolvedVar :: Era era => V era t -> t -> Depth -> GenEnv era -> GenEnv era
-addSolvedVar vvar val d = markSolved (Set.singleton $ Name vvar) d . addVar vvar val
+addSolvedVar :: V era t -> t -> Depth -> GenEnv era -> GenEnv era
+addSolvedVar vvar@(V _ _ _) val d = markSolved (HashSet.singleton $ Name vvar) d . addVar vvar val
 
-depthOfName :: Era era => GenEnv era -> Name era -> Depth
+depthOfName :: GenEnv era -> Name era -> Depth
 depthOfName env x = Map.findWithDefault 0 x (gSolved env)
 
-depthOf :: Era era => GenEnv era -> Term era t -> Depth
-depthOf env t = maximum $ 0 : map (depthOfName env) (Set.toList $ vars t)
+depthOf :: GenEnv era -> Term era t -> Depth
+depthOf env t = maximum $ 0 : map (depthOfName env) (HashSet.toList $ vars t)
 
-depthOfSum :: Era era => GenEnv era -> Sum era c -> Depth
+depthOfSum :: GenEnv era -> Sum era c -> Depth
 depthOfSum env = \case
   SumMap t -> depthOf env t
   SumList t -> depthOf env t
@@ -433,7 +435,7 @@ genPredicate env =
     -- these when the variable is unknown.
     uniqueVars (SumsTo _ _ _ parts) =
       and
-        [ Set.disjoint us vs
+        [ hashSetDisjoint us vs
         | us : vss <- List.tails $ map (varsOfSum mempty) parts
         , vs <- vss
         ]
@@ -518,7 +520,7 @@ withEq _ _ = Nothing
 
 -- We can't drop constraints due to dependency limitations. There needs to be at least one
 -- constraint to solve each variable. We can replace constraints by Random though!
-shrinkPreds :: Era era => ([Pred era], GenEnv era) -> [([Pred era], GenEnv era)]
+shrinkPreds :: forall era. Era era => ([Pred era], GenEnv era) -> [([Pred era], GenEnv era)]
 shrinkPreds (preds, env) =
   [ (preds', env')
   | preds' <- shrinkList shrinkPred preds
@@ -537,7 +539,7 @@ shrinkPreds (preds, env) =
     shrinkToValue (Lit {} :=: Var {}) = []
     shrinkToValue c =
       [ c'
-      | Name x@(V _ r _) <- Set.toList $ def c
+      | Name x@(V _ r _) <- HashSet.toList $ def c
       , Right v <- [runTyped $ runTerm (gEnv env) (Var x)]
       , Just c' <- [withEq r $ Lit r v :=: Var x]
       ]
@@ -550,20 +552,21 @@ shrinkPreds (preds, env) =
     randoms (Disjoint s t) = [Random s, Random t]
     randoms _ = []
 
-    pruneEnv defs (Env vmap) = Env $ Map.filterWithKey (\name _ -> Set.member name defNames) vmap
+    pruneEnv defs (Env vmap) = Env $ Map.filterWithKey (\name _ -> HashSet.member name defNames) vmap
       where
-        defNames = Set.map (\(Name (V name _ _)) -> name) defs
+        defNames = HashSet.map (\(Name (V name _ _)) -> name) defs
 
+    depCheck :: HashSet (Name era) -> [Pred era] -> Bool
     depCheck _ [] = True
     depCheck solved preds'
       | null rdy = False
       | otherwise = depCheck (foldMap def rdy <> solved) rest
       where
         (rdy, rest) = List.partition canSolve preds'
-        canSolve c = Set.isSubsetOf (use c) solved
+        canSolve c = HashSet.isSubsetOf (use c) solved
 
     deps c = accumdep (gOrder env) mempty c
-    def = Map.keysSet . deps
+    def x = (HashSet.fromList . Set.toList . Map.keysSet . deps) x
     use = fold . deps
 
 -- Tests ---
@@ -609,7 +612,7 @@ showTerm (Dom t) = "(Dom " ++ showTerm t ++ ")"
 showTerm (Rng t) = "(Rng " ++ showTerm t ++ ")"
 showTerm t = show t
 
-showPred :: Era era => Pred era -> String
+showPred :: Pred era -> String
 showPred (sub `Subset` sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
 showPred (sub :=: sup) = showTerm sub ++ " == " ++ showTerm sup
 showPred (Disjoint s t) = "Disjoint " ++ showTerm s ++ " " ++ showTerm t
@@ -677,7 +680,7 @@ constraintProperty timeout strict whitelist info prop =
         ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
 
-checkPredicates :: Era era => [Pred era] -> Env era -> Property
+checkPredicates :: [Pred era] -> Env era -> Property
 checkPredicates preds env =
   counterexample ("-- Solution --\n" ++ showEnv env) $
     conjoin $

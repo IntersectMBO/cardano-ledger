@@ -48,7 +48,7 @@ import Test.Cardano.Ledger.Generic.Functions (
 import Test.Cardano.Ledger.Generic.GenState (GenSize (..), initStableFields)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), Reflect (..), Some (..), preBabbage, unReflect)
-import Test.Cardano.Ledger.Generic.Trace (Gen1, genTrace)
+import Test.Cardano.Ledger.Generic.Trace (Gen1, genTrace, testPropMax)
 import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
@@ -96,9 +96,9 @@ aggTests :: TestTree
 aggTests =
   testGroup
     "tests, aggregating Tx's over a Trace."
-    [ testProperty "UTxO size in Babbage" (aggUTxO (Babbage Mock))
-    , testProperty "UTxO size in Alonzo" (aggUTxO (Alonzo Mock))
-    , testProperty "UTxO size in Mary" (aggUTxO (Mary Mock))
+    [ testPropMax 30 "UTxO size in Babbage" (aggUTxO (Babbage Mock))
+    , testPropMax 30 "UTxO size in Alonzo" (aggUTxO (Alonzo Mock))
+    , testPropMax 30 "UTxO size in Mary" (aggUTxO (Mary Mock))
     ]
 
 -- ===============================================================

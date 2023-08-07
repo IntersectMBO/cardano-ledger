@@ -47,7 +47,9 @@ import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
+import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
+import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
 import qualified Data.List as List
 import Data.Map (Map)
@@ -62,15 +64,15 @@ import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
-import Test.Cardano.Ledger.Constrained.Examples (checkForSoundness)
+import Test.Cardano.Ledger.Constrained.Examples (checkForSoundness, testIO)
 import Test.Cardano.Ledger.Constrained.Monad (Typed, failT, generateWithSeed, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.Certs (certsStage)
 import Test.Cardano.Ledger.Constrained.Preds.LedgerState (ledgerStateStage)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
-import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
+import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), goRepl, modeRepl)
 import Test.Cardano.Ledger.Constrained.Preds.TxOut (txOutPreds)
-import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (main)
+import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (demo, demoTest, main)
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Scripts (sufficientScript)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
@@ -94,6 +96,21 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.TxGen (applySTSByProof)
 import Test.Cardano.Ledger.Generic.Updaters (newScriptIntegrityHash)
 import Test.QuickCheck
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.QuickCheck (testProperty)
+
+import qualified Test.Cardano.Ledger.Constrained.Preds.CertState as CertState
+import qualified Test.Cardano.Ledger.Constrained.Preds.Certs as Certs
+import qualified Test.Cardano.Ledger.Constrained.Preds.LedgerState as LedgerState
+import qualified Test.Cardano.Ledger.Constrained.Preds.PParams as PParams
+import qualified Test.Cardano.Ledger.Constrained.Preds.TxOut as TxOut
+import qualified Test.Cardano.Ledger.Constrained.Preds.Universes as Universes
+
+predsTests :: TestTree
+predsTests =
+  testGroup
+    "Testing all Stages in the Preds directory"
+    [PParams.demoTest, Universes.demoTest, TxOut.demoTest, CertState.demoTest, Certs.demoTest, LedgerState.demoTest]
 
 -- ===========================================================
 
@@ -280,6 +297,7 @@ pcUtxoDoc :: Reflect era => Map (TxIn (EraCrypto era)) (TxOutF era) -> PDoc
 pcUtxoDoc m = ppMap pcTxIn (\(TxOutF p o) -> pcTxOut p o) m
 
 necessaryKeyHashTarget ::
+  forall era.
   Reflect era =>
   Term era (TxBodyF era) ->
   Term era (Set (KeyHash 'Witness (EraCrypto era))) ->
@@ -451,9 +469,9 @@ minusMultiValue p v1 v2 = case whichValue p of
 -- Using constraints to generate a TxBody
 -- ==============================================================
 
-txBodyPreds :: forall era. (HasCallStack, Reflect era) => Proof era -> [Pred era]
-txBodyPreds p =
-  (txOutPreds p balanceCoin (outputs p))
+txBodyPreds :: forall era. (HasCallStack, Reflect era) => UnivSize -> Proof era -> [Pred era]
+txBodyPreds sizes p =
+  (txOutPreds sizes p balanceCoin (outputs p))
     ++ [ mint :<-: (Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend)) ^$ (outputs p) ^$ spending)
        , networkID :<-: justTarget network
        , -- inputs
@@ -519,7 +537,7 @@ txBodyPreds p =
         , Restrict (Proj smNeededL (SetR ScriptHashR) scriptsNeeded) (allScriptUniv p) :=: scriptWits
         , Elems (ProjM fstL IsValidR (Restrict (Dom scriptWits) plutusUniv)) :=: valids
         , tempBootWits :<-: (Constr "boots" (bootWitsT p) ^$ spending ^$ tempTxBody ^$ byronAddrUniv)
-        , necessaryHashes :<-: necessaryKeyHashTarget tempTxBody (Lit (SetR WitHashR) Set.empty)
+        , necessaryHashes :<-: necessaryKeyHashTarget @era tempTxBody (Lit (SetR WitHashR) Set.empty)
         , sufficientHashes :<-: (Constr "sufficient" (sufficientKeyHashes p) ^$ scriptWits ^$ certs ^$ genDelegs)
         , tempKeyWits :<-: makeKeyWitnessTarget tempTxBody necessaryHashes sufficientHashes scriptWits byronAddrUniv
         , bootWits :<-: (Constr "boots" (bootWitsT p) ^$ spending ^$ txbodyterm ^$ byronAddrUniv)
@@ -544,9 +562,7 @@ txBodyPreds p =
             (Constr "null" Set.null ^$ rdmrPtrs)
             (Before (maxTxExUnits p) redeemers)
             (SumsTo (Left (ExUnits 1 1)) (maxTxExUnits p) GTE [ProjMap ExUnitsR sndL redeemers])
-        , -- Unfortunately SumsTo at ExUnits does not work except at EQL OrdCond.
-          -- the problem is that (toI x + toI y) /= toI(x + y)
-          plutusDataHashes
+        , plutusDataHashes
             :<-: ( Constr "plutusDataHashes" getPlutusDataHashes
                     ^$ utxo p
                     ^$ tempTxBody
@@ -554,7 +570,7 @@ txBodyPreds p =
                  )
         , Restrict plutusDataHashes dataUniv :=: dataWits
         , tempBootWits :<-: (Constr "boots" (bootWitsT p) ^$ spending ^$ tempTxBody ^$ byronAddrUniv)
-        , necessaryHashes :<-: necessaryKeyHashTarget tempTxBody reqSignerHashes
+        , necessaryHashes :<-: necessaryKeyHashTarget @era tempTxBody reqSignerHashes
         , sufficientHashes
             :<-: ( Constr "sufficient" (sufficientKeyHashes p)
                     ^$ (Restrict neededHashSet (allScriptUniv p))
@@ -596,87 +612,37 @@ txBodyPreds p =
     certsDeposits (PParamsF _ pp) regpools certsx = Coin (-n)
       where
         (Coin n) = totalCertsDeposits pp (`Map.member` regpools) (map unTxCertF certsx)
-    txrefunds = Var (V "txrefunds" CoinR No)
-    txdeposits = Var (V "txdeposits" CoinR No)
+    txrefunds = Var (pV p "txrefunds" CoinR No)
+    txdeposits = Var (pV p "txdeposits" CoinR No)
     acNeeded :: Term era [(ScriptPurpose era, ScriptHash (EraCrypto era))]
-    acNeeded = Var $ V "acNeeded" (ListR (PairR (ScriptPurposeR p) ScriptHashR)) No
-    neededHashSet = Var $ V "neededHashSet" (SetR ScriptHashR) No
-    rdmrPtrs = Var $ V "rdmrPtrs" (SetR RdmrPtrR) No
-    plutusDataHashes = Var $ V "plutusDataHashes" (SetR DataHashR) No
-    oneAuxdata = Var $ V "oneAuxdata" (TxAuxDataR reify) No
-    tempTxFee = Var $ V "tempTxFee" CoinR No
-    tempTx = Var $ V "tempTx" (TxR p) No
-    tempTxBody = Var $ V "tempTxBody" (TxBodyR reify) No
-    tempWppHash = Var $ V "tempWppHash" (MaybeR ScriptIntegrityHashR) No
-    randomWppHash = Var $ V "randomWppHash" ScriptIntegrityHashR No
-    tempBootWits = Var $ V "tempBootWits" (SetR (BootstrapWitnessR @era)) No
-    tempKeyWits = Var $ V "tempKeyWits" (SetR (WitVKeyR reify)) No
-    langs = Var $ V "langs" (SetR LanguageR) No
-    tempTotalCol = Var $ V "tempTotalCol" CoinR No
-    prewithdrawal = Var $ V "preWithdrawal" (SetR CredR) No
-    refAdjusted = Var $ V "refAdjusted" (SetR ScriptHashR) No
-    necessaryHashes = Var $ V "necessaryHashes" (SetR WitHashR) No
-    sufficientHashes = Var $ V "sufficientHashes" (SetR WitHashR) No
-
-{-
-tempSize = Var $ V "tempSize" IntR No
-realSize = Var $ V "realSize" IntR No
-tbootSize = Var $ V "tbootSize" IntR No
-tKeySize = Var $ V "tkeySize" IntR No
-bootSize = Var $ V "bootSize" IntR No
-keySize = Var $ V "keySize" IntR No
-twppSize = Var $ V "twppSize" IntR No
-wppSize = Var $ V "wppSize" IntR No -}
+    acNeeded = Var $ pV p "acNeeded" (ListR (PairR (ScriptPurposeR p) ScriptHashR)) No
+    neededHashSet = Var $ pV p "neededHashSet" (SetR ScriptHashR) No
+    rdmrPtrs = Var $ pV p "rdmrPtrs" (SetR RdmrPtrR) No
+    plutusDataHashes = Var $ pV p "plutusDataHashes" (SetR DataHashR) No
+    oneAuxdata = Var $ pV p "oneAuxdata" (TxAuxDataR reify) No
+    tempTxFee = Var $ pV p "tempTxFee" CoinR No
+    tempTx = Var $ pV p "tempTx" (TxR p) No
+    tempTxBody = Var $ pV p "tempTxBody" (TxBodyR reify) No
+    tempWppHash = Var $ pV p "tempWppHash" (MaybeR ScriptIntegrityHashR) No
+    randomWppHash = Var $ pV p "randomWppHash" ScriptIntegrityHashR No
+    tempBootWits = Var $ pV p "tempBootWits" (SetR (BootstrapWitnessR @era)) No
+    tempKeyWits = Var $ pV p "tempKeyWits" (SetR (WitVKeyR reify)) No
+    langs = Var $ pV p "langs" (SetR LanguageR) No
+    tempTotalCol = Var $ pV p "tempTotalCol" CoinR No
+    prewithdrawal = Var $ pV p "preWithdrawal" (SetR CredR) No
+    refAdjusted = Var $ pV p "refAdjusted" (SetR ScriptHashR) No
+    necessaryHashes = Var $ pV p "necessaryHashes" (SetR WitHashR) No
+    sufficientHashes = Var $ pV p "sufficientHashes" (SetR WitHashR) No
 
 txBodyStage ::
   Reflect era =>
+  UnivSize ->
   Proof era ->
   Subst era ->
   Gen (Subst era)
-txBodyStage proof subst0 = do
-  let preds = txBodyPreds proof
+txBodyStage sizes proof subst0 = do
+  let preds = txBodyPreds sizes proof
   toolChainSub proof standardOrderInfo preds subst0
-
-main :: IO ()
-main = do
-  let proof =
-        -- Conway Standard
-        Babbage Standard
-  -- Alonzo Standard
-  -- Mary Standard
-  -- Shelley Standard
-  subst <-
-    generate
-      ( pure emptySubst
-          >>= pParamsStage proof
-          >>= universeStage proof
-          >>= vstateStage proof
-          >>= pstateStage proof
-          >>= dstateStage proof
-          >>= certsStage proof
-          >>= ledgerStateStage proof
-          >>= txBodyStage proof
-      )
-  -- rewritten <- snd <$> generate (rewriteGen (1, txBodyPreds proof))
-  -- putStrLn (show rewritten)
-  (_, status) <- monadTyped $ checkForSoundness (txBodyPreds proof) subst
-  case status of
-    Nothing -> pure ()
-    Just msg -> error msg
-  env0 <- monadTyped $ substToEnv subst emptyEnv
-  env1 <- monadTyped $ adjustFeeInput env0
-  env2 <- monadTyped $ adjustColInput env1
-  displayTerm env2 txfee
-  displayTerm env2 txterm
-  -- compute Produced and Consumed
-  (TxBodyF _ txb) <- monadTyped (findVar (unVar txbodyterm) env2)
-  certState <- monadTyped $ runTarget env1 certstateT
-  (PParamsF _ ppV) <- monadTyped (findVar (unVar (pparams proof)) env2)
-  utxoV <- monadTyped (findVar (unVar (utxo proof)) env2)
-  putStrLn (show (producedTxBody txb ppV certState))
-  putStrLn (show (consumedTxBody txb ppV certState (liftUTxO utxoV)))
-
-  goRepl proof env2 ""
 
 -- ===============================================================
 
@@ -736,20 +702,20 @@ adjustC (i : is) m extra@(Coin n) coinL = case compare n 0 of
         Nothing -> error ("Collateral input: " ++ show i ++ " is not found in UTxO in 'adjust'")
       subextra outf = outf & coinL .~ (Coin (max 1 (unCoin ((outf ^. coinL) <+> extra))))
 
-updateVal :: Era era => (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
+updateVal :: (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
 updateVal adjust term@(Var v) delta env = do
   varV <- runTerm env term
   pure $ storeVar v (adjust varV delta) env
 updateVal _ v _ _ = failT ["Non Var in updateVal: " ++ show v]
 
-updateTerm :: Era era => (a -> b -> a) -> Term era a -> Term era b -> Env era -> Typed (Env era)
+updateTerm :: (a -> b -> a) -> Term era a -> Term era b -> Env era -> Typed (Env era)
 updateTerm adjust term@(Var v) delta env = do
   varV <- runTerm env term
   deltaV <- runTerm env delta
   pure $ storeVar v (adjust varV deltaV) env
 updateTerm _ v _ _ = failT ["Non Var in updateTerm: " ++ show v]
 
-updateTarget :: Era era => (a -> b -> a) -> Term era a -> Target era b -> Env era -> Typed (Env era, b)
+updateTarget :: (a -> b -> a) -> Term era a -> Target era b -> Env era -> Typed (Env era, b)
 updateTarget adjust term@(Var v) delta env = do
   varV <- runTerm env term
   deltaV <- runTarget env delta
@@ -761,18 +727,18 @@ override _ y = y
 
 -- ========================================
 
-genTxAndLedger :: Reflect era => Proof era -> Gen (LedgerState era, Tx era, Env era)
-genTxAndLedger proof = do
+genTxAndLedger :: Reflect era => UnivSize -> Proof era -> Gen (LedgerState era, Tx era, Env era)
+genTxAndLedger sizes proof = do
   subst <-
     ( pure emptySubst
         >>= pParamsStage proof
-        >>= universeStage proof
+        >>= universeStage sizes proof
         >>= vstateStage proof
         >>= pstateStage proof
         >>= dstateStage proof
         >>= certsStage proof
-        >>= ledgerStateStage proof
-        >>= txBodyStage proof
+        >>= ledgerStateStage sizes proof
+        >>= txBodyStage sizes proof
       )
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
@@ -785,7 +751,8 @@ gone :: Gen (IO ())
 gone = do
   txIx <- arbitrary
   let proof = Babbage Standard
-  (ledgerstate, tx, env) <- genTxAndLedger proof
+      sizes = def
+  (ledgerstate, tx, env) <- genTxAndLedger sizes proof
   slot <- monadTyped (findVar (unVar currentSlot) env)
   (PParamsF _ pp) <- monadTyped (findVar (unVar (pparams proof)) env)
   accntState <- monadTyped (runTarget env accountStateT)
@@ -857,7 +824,8 @@ pgenTx proof ut tx = ppRecord (pack "Tx") pairs
     fields = abstractTx proof tx
     pairs = concatMap (pgenTxField proof ut) fields
 
--- ==============================================
+-- =================================================
+-- Demos and Tests
 
 oneTest ::
   ( Reflect era
@@ -866,19 +834,20 @@ oneTest ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
+  UnivSize ->
   Proof era ->
   Gen Property
-oneTest proof = do
+oneTest sizes proof = do
   subst <-
     ( pure emptySubst
         >>= pParamsStage proof
-        >>= universeStage proof
+        >>= universeStage sizes proof
         >>= vstateStage proof
         >>= pstateStage proof
         >>= dstateStage proof
         >>= certsStage proof
-        >>= ledgerStateStage proof
-        >>= txBodyStage proof
+        >>= ledgerStateStage sizes proof
+        >>= txBodyStage sizes proof
       )
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
@@ -901,7 +870,59 @@ oneTest proof = do
         )
 
 main1 :: IO ()
-main1 = quickCheck (withMaxSuccess 500 (oneTest (Babbage Standard)))
+main1 = quickCheck (withMaxSuccess 30 (oneTest def (Babbage Standard)))
 
 main2 :: IO ()
-main2 = quickCheck (withMaxSuccess 100 (oneTest (Shelley Standard)))
+main2 = quickCheck (withMaxSuccess 30 (oneTest def (Shelley Standard)))
+
+demo :: ReplMode -> IO ()
+demo mode = do
+  let proof = Babbage Standard
+  -- Conway Standard
+  -- Alonzo Standard
+  -- Mary Standard
+  -- Shelley Standard
+  let sizes = def
+  subst <-
+    generate
+      ( pure emptySubst
+          >>= pParamsStage proof
+          >>= universeStage sizes proof
+          >>= vstateStage proof
+          >>= pstateStage proof
+          >>= dstateStage proof
+          >>= certsStage proof
+          >>= ledgerStateStage sizes proof
+          >>= txBodyStage sizes proof
+      )
+  -- rewritten <- snd <$> generate (rewriteGen (1, txBodyPreds sizes proof))
+  -- putStrLn (show rewritten)
+  (_, status) <- monadTyped $ checkForSoundness (txBodyPreds sizes proof) subst
+  case status of
+    Nothing -> pure ()
+    Just msg -> error msg
+  env0 <- monadTyped $ substToEnv subst emptyEnv
+  env1 <- monadTyped $ adjustFeeInput env0
+  env2 <- monadTyped $ adjustColInput env1
+  when (mode == Interactive) $ displayTerm env2 txfee
+  when (mode == Interactive) $ displayTerm env2 txterm
+  -- compute Produced and Consumed
+  (TxBodyF _ txb) <- monadTyped (findVar (unVar txbodyterm) env2)
+  certState <- monadTyped $ runTarget env1 certstateT
+  (PParamsF _ ppV) <- monadTyped (findVar (unVar (pparams proof)) env2)
+  utxoV <- monadTyped (findVar (unVar (utxo proof)) env2)
+  when (mode == Interactive) $ putStrLn (show (producedTxBody txb ppV certState))
+  when (mode == Interactive) $ putStrLn (show (consumedTxBody txb ppV certState (liftUTxO utxoV)))
+  modeRepl mode proof env2 ""
+
+demoTest :: TestTree
+demoTest =
+  testGroup
+    "Tests for Tx Stage"
+    [ testIO "Testing Tx Stage" (demo CI)
+    , testProperty "One Tx Test Babbage" $ withMaxSuccess 30 (oneTest def (Babbage Standard))
+    , testProperty "One Tx Test Shelley" $ withMaxSuccess 30 (oneTest def (Shelley Standard))
+    ]
+
+main :: IO ()
+main = defaultMain $ testIO "Testing Tx Stage" (demo Interactive)

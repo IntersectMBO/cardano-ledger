@@ -41,6 +41,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import Data.Word (Word64)
 import GHC.Real (denominator, numerator, (%))
 import Lens.Micro
@@ -111,7 +112,7 @@ gauss mean stdev x = (1 / (stdev * sqrt (2 * pi))) * exp (negate ((1 / 2) * ((x 
 -- it can raise an appropriate error. The function
 -- Test.Cardano.Ledger.Constrained.Combinators(errorMess) is used to raise an error
 -- and properly report the stack trace.
-class (Eq x, Show x) => Adds x where
+class (Eq x, Show x, Typeable x) => Adds x where
   -- | Additive identity
   zero :: x
 
@@ -130,7 +131,7 @@ class (Eq x, Show x) => Adds x where
 
   -- | Decrease by unit of increment
   decreaseBy1 :: Int -> Int
-  decreaseBy1 n = minus ["Minus"] n one
+  decreaseBy1 n = minus ["decreaseBy1"] n one
 
   -- | Generate a list of values
   -- @ partition 7 trace 4 235 @ generate a list of length 4 that
@@ -971,11 +972,15 @@ varOnLeftSize :: Adds a => String -> OrdCond -> a -> Size
 varOnLeftSize x cond n = ordCondToSize (x, cond, n)
 
 -- Translate some thing like [SumsTo c 8 < 2 + x + 3] where the variable 'x' is on the right
-varOnRight :: Adds a => a -> OrdCond -> a -> String -> AddsSpec c
-varOnRight n cond m s = AddsSpecSize s (varOnRightSize n cond m s)
+varOnRight :: Adds a => [String] -> a -> OrdCond -> a -> String -> AddsSpec c
+varOnRight _ lhs LTH rhs s
+  | toI rhs > toI lhs -- When this holds the only constraint on the var 's' is that its is (>= 0)
+    =
+      AddsSpecSize s (SzLeast 0)
+varOnRight msgs lhs cond rhs s = AddsSpecSize s (varOnRightSize (("varOnRight @" ++ show (typeOf lhs) ++ " " ++ show lhs ++ " " ++ show cond ++ " " ++ s ++ " + " ++ show rhs) : msgs) lhs cond rhs s)
 
-varOnRightSize :: Adds a => a -> OrdCond -> a -> String -> Size
-varOnRightSize n cond m s = ordCondToSize (s, reverseOrdCond cond, minus [s] n m)
+varOnRightSize :: Adds a => [String] -> a -> OrdCond -> a -> String -> Size
+varOnRightSize msgs n cond m s = ordCondToSize (s, reverseOrdCond cond, minus (("varOnRightSize " ++ show n ++ " " ++ show cond ++ " " ++ show m ++ " " ++ show s) : msgs) n m)
 
 -- Translate some thing like [SumsTo (Negate x) <= 4 + 6 + 9] where the variable 'x'
 -- is on the left, and we want to produce its negation.
@@ -985,7 +990,7 @@ varOnLeftNeg s cond n = AddsSpecSize s (negateSize (ordCondToSize (s, cond, n)))
 -- Translate some thing like [SumsTo 8 < 2 + (Negate x) + 3] where the
 -- variable 'x' is on the right, and we want to produce its negation.
 varOnRightNeg :: Adds a => a -> OrdCond -> a -> String -> AddsSpec c
-varOnRightNeg n cond m s = AddsSpecSize s (negateSize (ordCondToSize (s, reverseOrdCond cond, minus [s] n m)))
+varOnRightNeg n cond m s = AddsSpecSize s (negateSize (ordCondToSize (s, reverseOrdCond cond, minus ["varOnRightNeg", s, show m] n m)))
 
 -- | This function `reverseOrdCond` has been defined to handle the Pred SumsTo when the
 --   variable is on the right-hand-side (rhs) of the OrdCond operator. In order to do that

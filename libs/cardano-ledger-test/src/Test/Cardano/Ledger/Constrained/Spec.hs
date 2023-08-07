@@ -226,10 +226,6 @@ testMergeSize2 = do
           )
           (runSize ans spec && runSize ans spec1 && runSize ans spec2)
 
-main2 :: IO ()
-main2 =
-  defaultMain $ testProperty "Size2" testMergeSize2
-
 -- =====================================================
 -- RelSpec
 
@@ -1871,12 +1867,12 @@ testl = do
   monadTyped (liftT (a <> b))
 
 -- =======================================================================
--- Operations on AddsSpec (defined in Types.hs)
+-- Operations on AddsSpec (defined in Classes.hs)
 
-testV :: V era DeltaCoin
+testV :: Era era => V era DeltaCoin
 testV = (V "x" DeltaCoinR No)
 
-genSumsTo :: Gen (Pred era)
+genSumsTo :: Era era => Gen (Pred era)
 genSumsTo = do
   c <- genOrdCond
   let v = Var testV
@@ -1884,9 +1880,9 @@ genSumsTo = do
   lhs <- (Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
   elements [SumsTo (Left (DeltaCoin 1)) v c [One rhs], SumsTo (Left (DeltaCoin 1)) lhs c [One rhs, One v]]
 
-solveSumsTo :: Era era => Pred era -> AddsSpec c
+solveSumsTo :: Pred era -> AddsSpec DeltaCoin
 solveSumsTo (SumsTo _ (Lit DeltaCoinR n) cond [One (Lit DeltaCoinR m), One (Var (V nam _ _))]) =
-  varOnRight n cond m nam
+  varOnRight @DeltaCoin ["solveSumsTo"] n cond m nam
 solveSumsTo (SumsTo _ (Var (V nam DeltaCoinR _)) cond [One (Lit DeltaCoinR m)]) =
   varOnLeft nam cond m
 solveSumsTo x = AddsSpecNever ["solveSumsTo " ++ show x]
@@ -1908,7 +1904,7 @@ genAddsSpec = do
   c <- genOrdCond
   rhs <- fromI @c ["genAddsSpec"] <$> choose @Int (-25, 25)
   lhs <- fromI @c ["genAddsSpec"] <$> choose @Int (-25, 25)
-  elements [varOnLeft v c rhs, varOnRight lhs c rhs v]
+  elements [varOnLeft v c rhs, varOnRight ["genAddsSpec"] lhs c rhs v]
 
 genNonNegAddsSpec :: forall c. Adds c => Gen (AddsSpec c)
 genNonNegAddsSpec = do
@@ -1920,7 +1916,7 @@ genNonNegAddsSpec = do
         LTH -> lhs + 1
         _ -> lhs
       fromX x = fromI @c ["genNonNegAddsSpec"] x
-  elements [varOnLeft v c $ fromX rhs, varOnRight (fromX lhs') c (fromX rhs) v]
+  elements [varOnLeft v c $ fromX rhs, varOnRight ["genNonNegAddsSpec"] (fromX lhs') c (fromX rhs) v]
 
 genOrdCond :: Gen OrdCond
 genOrdCond = elements [EQL, LTH, LTE, GTH, GTE]
@@ -1993,64 +1989,67 @@ testSoundAddsSpec = do
 
 -- ========================================================
 
+allSpecTests :: TestTree
+allSpecTests =
+  testGroup
+    "Spec tests"
+    [ testProperty "reversing OrdCond" condReverse
+    , testGroup
+        "Size test"
+        [ testProperty "test Size sound" testSoundSize
+        , testProperty "test genFromSize is non-negative" testNonNegSize
+        , testProperty "test merging Size" testMergeSize
+        , testProperty "test alternate merge Size" testMergeSize2
+        ]
+    , testGroup
+        "RelSpec tests"
+        [ testProperty "we generate consistent RelSpecs" testConsistentRel
+        , testProperty "test RelSpec sound" testSoundRelSpec
+        , testProperty "test mergeRelSpec" testMergeRelSpec
+        , testProperty "test More consistent RelSpec" reportManyMergeRelSpec
+        ]
+    , testGroup
+        "RngSpec tests"
+        [ testProperty "we generate consistent RngSpec" testConsistentRng
+        , testProperty "test RngSpec sound" testSoundRngSpec
+        , testProperty "test mergeRngSpec" testMergeRngSpec
+        , testProperty "test More consistent RngSpec" reportManyMergeRngSpec
+        ]
+    , testGroup
+        "MapSpec tests"
+        [ testProperty "test MapSpec sound" genMapSpecIsSound
+        , testProperty "test More consistent MapSpec" reportManyMergeMapSpec
+        ]
+    , testGroup
+        "SetSpec tests"
+        [ testProperty "test SetSpec sound" genSetSpecIsSound
+        , testProperty "test More consistent SetSpec" reportManyMergeSetSpec
+        ]
+    , testGroup
+        "ListSpec tests"
+        [ testProperty "test ElemSpec sound" testSoundElemSpec
+        , testProperty "test consistent ElemSpec" reportManyMergeElemSpec
+        , testProperty "test ListSpec sound" testSoundListSpec
+        , testProperty "test consistent ListSpec" reportManyMergeListSpec
+        ]
+    , testGroup
+        "AddsSpec tests"
+        [ testProperty "test Sound MergeAddsSpec" reportManyAddsSpec
+        , testProperty "test Sound non-negative MergeAddsSpec" reportManyNonNegAddsSpec
+        , testProperty "test Sound non-negative AddsSpec" testSoundNonNegAddsSpec
+        , testProperty "test Sound any AddsSpec" testSoundAddsSpec
+        ]
+    , testGroup
+        "PairSpec test"
+        [ testProperty "test sound PairSpec" testSoundPairSpec
+        , testProperty "test ConsistentPair" testConsistentPair
+        , testProperty "test merge PairSpec" testMergePairSpec
+        , testProperty "test More consistent PairSpec" reportManyMergePairSpec
+        ]
+    ]
+
 main :: IO ()
-main =
-  defaultMain $
-    testGroup
-      "Spec tests"
-      [ testProperty "reversing OrdCond" condReverse
-      , testGroup
-          "Size test"
-          [ testProperty "test Size sound" testSoundSize
-          , testProperty "test genFromSize is non-negative" testNonNegSize
-          , testProperty "test merging Size" testMergeSize
-          ]
-      , testGroup
-          "RelSpec tests"
-          [ testProperty "we generate consistent RelSpecs" testConsistentRel
-          , testProperty "test RelSpec sound" testSoundRelSpec
-          , testProperty "test mergeRelSpec" testMergeRelSpec
-          , testProperty "test More consistent RelSpec" reportManyMergeRelSpec
-          ]
-      , testGroup
-          "RngSpec tests"
-          [ testProperty "we generate consistent RngSpec" testConsistentRng
-          , testProperty "test RngSpec sound" testSoundRngSpec
-          , testProperty "test mergeRngSpec" testMergeRngSpec
-          , testProperty "test More consistent RngSpec" reportManyMergeRngSpec
-          ]
-      , testGroup
-          "MapSpec tests"
-          [ testProperty "test MapSpec sound" genMapSpecIsSound
-          , testProperty "test More consistent MapSpec" reportManyMergeMapSpec
-          ]
-      , testGroup
-          "SetSpec tests"
-          [ testProperty "test SetSpec sound" genSetSpecIsSound
-          , testProperty "test More consistent SetSpec" reportManyMergeSetSpec
-          ]
-      , testGroup
-          "ListSpec tests"
-          [ testProperty "test ElemSpec sound" testSoundElemSpec
-          , testProperty "test consistent ElemSpec" reportManyMergeElemSpec
-          , testProperty "test ListSpec sound" testSoundListSpec
-          , testProperty "test consistent ListSpec" reportManyMergeListSpec
-          ]
-      , testGroup
-          "AddsSpec tests"
-          [ testProperty "test Sound MergeAddsSpec" reportManyAddsSpec
-          , testProperty "test Sound non-negative MergeAddsSpec" reportManyNonNegAddsSpec
-          , testProperty "test Sound non-negative AddsSpec" testSoundNonNegAddsSpec
-          , testProperty "test Sound any AddsSpec" testSoundAddsSpec
-          ]
-      , testGroup
-          "PairSpec test"
-          [ testProperty "test sound PairSpec" testSoundPairSpec
-          , testProperty "test ConsistentPair" testConsistentPair
-          , testProperty "test merge PairSpec" testMergePairSpec
-          , testProperty "test More consistent PairSpec" reportManyMergePairSpec
-          ]
-      ]
+main = defaultMain $ allSpecTests
 
 -- :main --quickcheck-replay=740521
 

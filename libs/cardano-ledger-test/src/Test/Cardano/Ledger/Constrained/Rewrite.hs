@@ -1,5 +1,8 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unused-binds #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -7,7 +10,7 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
   rewrite,
   rewriteGen,
   compile,
-  compileGen,
+  compileGenWithSubst,
   removeSameVar,
   removeEqual,
   DependGraph (..),
@@ -17,6 +20,8 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
   initialOrder,
   showGraph,
   listEq,
+  mkDependGraph,
+  notBefore,
   cpeq,
   cteq,
   mkNewVar,
@@ -35,13 +40,16 @@ import Cardano.Ledger.Val (Val (coin, modifyCoin))
 import qualified Data.Array as A
 import Data.Foldable (toList)
 import Data.Graph (Graph, SCC (AcyclicSCC, CyclicSCC), Vertex, graphFromEdges, stronglyConnComp)
+import Data.HashSet (HashSet)
+import qualified Data.HashSet as HashSet
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Void (Void)
 import Lens.Micro (Lens', lens, (&), (.~), (^.))
-import Test.Cardano.Ledger.Constrained.Ast hiding (Subst)
+import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Combinators (setSized)
 import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), V (..), sameName)
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
@@ -53,6 +61,7 @@ import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxOut)
 import Test.QuickCheck
+import Type.Reflection (typeRep)
 
 -- ============================================================
 -- Conservative (approximate) Equality
@@ -83,9 +92,10 @@ csumeq (SumMap x) (SumMap y) =
 csumeq (SumList x) (SumList y) = cteq x y
 csumeq _ _ = False
 
--- | Conservative (and unsound for Constr) Target equality
-ctareq :: Era era => Target era t -> Target era t -> Bool
+-- | Conservative (and unsound for Constr and Invert) Target equality
+ctareq :: Era era => RootTarget era r t -> RootTarget era r t -> Bool
 ctareq (Constr x _) (Constr y _) = x == y
+ctareq (Invert x _ _) (Invert y _ _) = x == y
 ctareq (Simple x) (Simple y) = cteq x y
 ctareq (x :$ (Simple xs)) (y :$ (Simple ys)) =
   case testEql (termRep xs) (termRep ys) of
@@ -129,9 +139,11 @@ cpeq (Member (Right x) xs) (Member (Right y) ys) = typedEq x y && typedEq xs ys
 cpeq (Member (Left x) xs) (Member (Left y) ys) = typedEq x y && typedEq xs ys
 cpeq (SubMap x xs) (SubMap y ys) = typedEq x y && typedEq xs ys
 cpeq (NotMember x xs) (NotMember y ys) = typedEq x y && typedEq xs ys
+{- TODO FIX ME
 cpeq (x :<-: xs) (y :<-: ys) = case testEql (termRep x) (termRep y) of
   Just Refl -> typedEq x y && ctareq xs ys
   Nothing -> False
+-}
 cpeq x y = sumsEq x y
 
 -- |  Conservative SumsTo equality
@@ -175,9 +187,9 @@ mkNewVar other = error ("mkNewVar should only be applied to variables: " ++ show
 addP :: Era era => Pred era -> [Pred era] -> [Pred era]
 addP p ps = List.nubBy cpeq (p : ps)
 
-addPred :: Era era => Set (Name era) -> Pred era -> [Name era] -> [Pred era] -> [Pred era] -> [Pred era]
+addPred :: Era era => HashSet (Name era) -> Pred era -> [Name era] -> [Pred era] -> [Pred era] -> [Pred era]
 addPred bad orig names ans newps =
-  if any (\x -> Set.member x bad) names
+  if any (\x -> HashSet.member x bad) names
     then addP orig ans
     else foldr addP ans newps
 
@@ -217,10 +229,19 @@ rewrite cs = removeTrivial $ removeSameVar (removeEqual cs []) []
 
 type SubItems era = [SubItem era]
 
-fresh :: Era era => (Int, SubItems era) -> Target era t -> (Int, SubItems era)
+fresh :: (Int, SubItems era) -> RootTarget era r t -> (Int, SubItems era)
 fresh (n, sub) (Constr _ _) = (n, sub)
+fresh (n, sub) (Invert _ _ _) = (n, sub)
+fresh (n, sub) (Shift x _) = fresh (n, sub) x
+fresh (n, sub) (Mask x) = fresh (n, sub) x
 fresh (n, sub) (Simple (Var v@(V nm rep acc))) = (n + 1, SubItem v (Var (V (index nm n) rep acc)) : sub)
-fresh (n, sub) (Simple expr) = mksub n (Set.toList (varsOfTerm Set.empty expr))
+fresh (n, sub) (Simple expr) = mksub n (HashSet.toList (vars expr))
+  where
+    mksub m names = (n + length names, sub2 ++ sub)
+      where
+        sub2 = zipWith (\(Name v@(V nm r _)) m1 -> SubItem v (Var (V (index nm m1) r No))) names [m ..]
+fresh (n, sub) (Lensed (Var v@(V nm rep acc)) _) = (n + 1, SubItem v (Var (V (index nm n) rep acc)) : sub)
+fresh (n, sub) (Lensed expr _) = mksub n (HashSet.toList (vars expr))
   where
     mksub m names = (n + length names, sub2 ++ sub)
       where
@@ -249,7 +270,10 @@ freshVars2 m count (V nm lrep _) =
   let arep = tsRep lrep
    in ([Var (V (index nm c) arep No) | c <- [m .. m + (count - 1)]], m + count)
 
-freshPairs :: Era era => ((Int, SubItems era), [(Target era t, [Pred era])]) -> (Target era t, [Pred era]) -> ((Int, SubItems era), [(Target era t, [Pred era])])
+freshPairs ::
+  ((Int, SubItems era), [(RootTarget era r t, [Pred era])]) ->
+  (RootTarget era r t, [Pred era]) ->
+  ((Int, SubItems era), [(RootTarget era r t, [Pred era])])
 freshPairs (xx, ans) (tar, ps) = (yy, (target2, ps2) : ans)
   where
     yy@(_, subitems) = fresh xx tar
@@ -258,7 +282,6 @@ freshPairs (xx, ans) (tar, ps) = (yy, (target2, ps2) : ans)
     ps2 = map (substPred subst) ps
 
 freshPats ::
-  Era era =>
   ((Int, SubItems era), [(Pat era t, [Pred era])]) ->
   (Pat era t, [Pred era]) ->
   ((Int, SubItems era), [(Pat era t, [Pred era])])
@@ -274,7 +297,7 @@ freshPats (xx, ans) (pat, ps) = (yy, (pat2, ps2) : ans)
 -- | Or something like (SumSplit x total EQL [One x]) which expands to
 --   something like: (SumSplitx total EQL [One x.1, One x.2, One x.3])
 --   So we find all the bindings for 'x' in the SubItems, and cons them together.
-extendSum :: Era era => SubItems era -> Sum era c -> [Sum era c]
+extendSum :: SubItems era -> Sum era c -> [Sum era c]
 extendSum sub (ProjOne l r (Var v2)) = foldr accum [] sub
   where
     accum (SubItem v1 term) ans | Just Refl <- sameName v1 v2 = ProjOne l r term : ans
@@ -339,7 +362,7 @@ rewritePred m0 (ForEach (Lit SizeR sz) (Var v) tar ps) = do
     )
 rewritePred _ (ForEach sz t tar ps) =
   error ("Not a valid ForEach predicate " ++ show (ForEach sz t tar ps))
-rewritePred m0 (Maybe (Var v) target preds) = do
+rewritePred m0 (Maybe (Var v) (target :: (RootTarget era r t)) preds) = do
   count <- chooseInt (0, 1) -- 0 is Nothing, 1 is Just
   if count == 0
     then pure ([Var v :<-: (Constr "(const Nothing)" (const Nothing) ^$ (Lit UnitR ()))], m0)
@@ -349,7 +372,7 @@ rewritePred m0 (Maybe (Var v) target preds) = do
           target2 = substTarget subst target
           renamedPred = map (substPred subst) preds
       (expandedPred, m2) <- removeExpandablePred ([], m1) renamedPred
-      pure (expandedPred ++ [Var v :<-: (Constr "Just" Just :$ target2)], m2)
+      pure (expandedPred ++ [Var v :<-: (Invert "Just" (typeRep @r) Just :$ target2)], m2)
 rewritePred m0 p = pure ([p], m0)
 
 removeExpandablePred :: Era era => ([Pred era], Int) -> [Pred era] -> Gen ([Pred era], Int)
@@ -377,12 +400,13 @@ notBefore (Before _ _) = False
 notBefore _ = True
 
 -- | Construct the DependGraph
-compileGen :: Era era => OrderInfo -> [Pred era] -> Gen (Int, DependGraph era)
-compileGen info cs = do
+compileGenWithSubst :: Era era => OrderInfo -> Subst era -> [Pred era] -> Gen (Int, DependGraph era)
+compileGenWithSubst info subst0 cs = do
   (m, simple) <- rewriteGen (0, cs)
+  let instanSimple = fmap (substPredWithVarTest subst0) simple
   graph <- monadTyped $ do
-    orderedNames <- initialOrder info simple
-    mkDependGraph (length orderedNames) [] orderedNames [] (filter notBefore simple)
+    orderedNames <- initialOrder info instanSimple
+    mkDependGraph (length orderedNames) [] HashSet.empty orderedNames [] (filter notBefore instanSimple)
   pure (m, graph)
 
 -- ==============================================================
@@ -399,6 +423,7 @@ instance Era era => Show (DependGraph era) where
     where
       f (nm, cs) = pad n (showL shName " " nm) ++ " | " ++ showL show ", " cs
       n = maximum (map (length . (showL shName " ") . fst) xs) + 2
+      shName :: Name era -> String
       shName (Name (V v _ _)) = v
 
 -- =========================================================
@@ -465,12 +490,13 @@ mkDependGraph ::
   Era era =>
   Int ->
   [([Name era], [Pred era])] ->
+  HashSet (Name era) ->
   [Name era] ->
   [Name era] ->
   [Pred era] ->
   Typed (DependGraph era)
-mkDependGraph _ prev _ _ [] = pure (DependGraph (reverse prev))
-mkDependGraph count prev choices badchoices specs
+mkDependGraph _ prev _ _ _ [] = pure (DependGraph (reverse prev))
+mkDependGraph count prev _ choices badchoices specs
   | count <= 0 =
       failT
         [ "\nFailed to find an Ordering of variables to solve for.\nHandled Constraints\n"
@@ -482,13 +508,20 @@ mkDependGraph count prev choices badchoices specs
         , "\n  Still to be processed\n"
         , unlines (map show specs)
         ]
-mkDependGraph count prev [] badchoices cs = mkDependGraph (count - 1) prev (reverse badchoices) [] cs
-mkDependGraph count prev (n : more) badchoices cs =
+mkDependGraph count prev prevNames [] badchoices cs = mkDependGraph (count - 1) prev prevNames (reverse badchoices) [] cs
+mkDependGraph count prev prevNames (n : more) badchoices cs =
   case partitionE okE cs of
-    ([], _) -> mkDependGraph count prev more (n : badchoices) cs
+    ([], _) -> mkDependGraph count prev prevNames more (n : badchoices) cs
     (possible, notPossible) -> case splitMultiName n possible ([], Nothing, []) of
-      (ps, Nothing, []) -> mkDependGraph count (([n], ps) : prev) (reverse badchoices ++ more) [] notPossible
-      ([], Just (ns, p), []) -> mkDependGraph count ((ns, [p]) : prev) (reverse badchoices ++ more) [] notPossible
+      (ps, Nothing, []) -> mkDependGraph count (([n], ps) : prev) (HashSet.insert n prevNames) (reverse badchoices ++ more) [] notPossible
+      ([], Just (ns, p), []) ->
+        mkDependGraph
+          count
+          ((ns, [p]) : prev)
+          (HashSet.union (HashSet.fromList ns) prevNames)
+          (reverse badchoices ++ more)
+          []
+          notPossible
       (unary, binary, bad) ->
         error
           ( "SOMETHING IS WRONG in partionE \nunary = "
@@ -499,20 +532,18 @@ mkDependGraph count prev (n : more) badchoices cs =
               ++ unlines bad
           )
   where
-    prevNames = Set.fromList (concat (map fst prev))
-    defined = Set.insert n prevNames
-
+    !defined = HashSet.insert n prevNames
     (poss, notposs) = partitionE okE cs
     okE :: Pred era -> Either ([Name era], Pred era) (Pred era)
     okE p@(SumSplit _ t _ ns) =
-      let rhsNames = List.foldl' varsOfSum Set.empty ns
-       in if Set.isSubsetOf (varsOfTerm Set.empty t) prevNames
-            && Set.disjoint prevNames rhsNames
-            && Set.member n rhsNames
-            then Left (Set.toList rhsNames, p)
+      let rhsNames = List.foldl' varsOfSum HashSet.empty ns
+       in if HashSet.isSubsetOf (varsOfTerm HashSet.empty t) prevNames
+            && hashSetDisjoint prevNames rhsNames
+            && HashSet.member n rhsNames
+            then Left (HashSet.toList rhsNames, p)
             else Right p
     okE constraint =
-      if Set.isSubsetOf (varsOfPred Set.empty constraint) defined
+      if HashSet.isSubsetOf (varsOfPred HashSet.empty constraint) defined
         then Left ([n], constraint)
         else Right constraint
 
@@ -535,10 +566,10 @@ firstE f (x : xs) = case f x of
 
 -- | Add to the dependency map 'answer' constraints such that every Name in 'before'
 --   preceeds every Name in 'after' in the order in which Names are solved for.
-mkDeps :: Era era => Set (Name era) -> Set (Name era) -> Map (Name era) (Set (Name era)) -> Map (Name era) (Set (Name era))
-mkDeps before after answer = Set.foldl' accum answer after
+mkDeps :: Era era => HashSet (Name era) -> HashSet (Name era) -> Map (Name era) (HashSet (Name era)) -> Map (Name era) (HashSet (Name era))
+mkDeps before after answer = HashSet.foldl' accum answer after
   where
-    accum ans left = Map.insertWith (Set.union) left before ans
+    accum ans left = Map.insertWith (HashSet.union) left before ans
 
 data OrderInfo = OrderInfo
   { sumBeforeParts :: Bool
@@ -555,7 +586,7 @@ standardOrderInfo =
     , setBeforeSubset = True
     }
 
-accumdep :: Era era => OrderInfo -> Map (Name era) (Set (Name era)) -> Pred era -> Map (Name era) (Set (Name era))
+accumdep :: Era era => OrderInfo -> Map (Name era) (HashSet (Name era)) -> Pred era -> Map (Name era) (HashSet (Name era))
 accumdep info answer c = case c of
   sub :⊆: set ->
     if setBeforeSubset info
@@ -567,9 +598,9 @@ accumdep info answer c = case c of
     if sizeBeforeArg info
       then mkDeps (vars size) (vars argx) answer
       else mkDeps (vars argx) (vars size) answer
-  SumsTo (Left _) sm _ parts -> mkDeps (vars sm) (List.foldl' varsOfSum Set.empty parts) answer
-  SumsTo (Right _) sm _ parts -> mkDeps (List.foldl' varsOfSum Set.empty parts) (vars sm) answer
-  SumSplit _ sm _ parts -> mkDeps (vars sm) (List.foldl' varsOfSum Set.empty parts) answer
+  SumsTo (Left _) sm _ parts -> mkDeps (vars sm) (List.foldl' varsOfSum HashSet.empty parts) answer
+  SumsTo (Right _) sm _ parts -> mkDeps (List.foldl' varsOfSum HashSet.empty parts) (vars sm) answer
+  SumSplit _ sm _ parts -> mkDeps (vars sm) (List.foldl' varsOfSum HashSet.empty parts) answer
   Component (Right t) cs -> mkDeps (componentVars cs) (vars t) answer
   Component (Left t) cs -> mkDeps (vars t) (componentVars cs) answer
   Member (Left t) cs -> mkDeps (vars t) (vars cs) answer
@@ -577,32 +608,32 @@ accumdep info answer c = case c of
   NotMember t cs -> mkDeps (vars t) (vars cs) answer
   MapMember k v (Left m) -> mkDeps (vars v) (vars k) (mkDeps (vars k) (vars m) answer)
   MapMember k v (Right m) -> mkDeps (vars m) (vars k) (mkDeps (vars k) (vars v) answer)
-  t :<-: ts -> mkDeps (varsOfTarget Set.empty ts) (vars t) answer
-  GenFrom t ts -> mkDeps (varsOfTarget Set.empty ts) (vars t) answer
-  List t cs -> mkDeps (List.foldl' varsOfTerm Set.empty cs) (vars t) answer
-  Maybe t target ps -> mkDeps (vars t) (varsOfPairs Set.empty [(target, ps)]) answer
+  t :<-: ts -> mkDeps (varsOfTarget HashSet.empty ts) (vars t) answer
+  GenFrom t ts -> mkDeps (varsOfTarget HashSet.empty ts) (vars t) answer
+  List t cs -> mkDeps (List.foldl' varsOfTerm HashSet.empty cs) (vars t) answer
+  Maybe t target ps -> mkDeps (vars t) (varsOfPairs HashSet.empty [(target, ps)]) answer
   ForEach sz x pat ps ->
     mkDeps
       (vars sz)
       (vars x)
-      (mkDeps (vars x) (varsOfPats Set.empty [(pat, ps)]) answer)
+      (mkDeps (vars x) (varsOfPats HashSet.empty [(pat, ps)]) answer)
   Choose sz x xs ->
-    mkDeps (vars sz) (vars x) (mkDeps (vars x) (varsOfTrips Set.empty xs) answer)
+    mkDeps (vars sz) (vars x) (mkDeps (vars x) (varsOfTrips HashSet.empty xs) answer)
   SubMap left right -> mkDeps (vars left) (vars right) answer
   If t x y ->
     ( mkDeps
-        (varsOfTarget Set.empty t)
-        (varsOfPred Set.empty x)
-        (mkDeps (varsOfTarget Set.empty t) (varsOfPred Set.empty y) answer)
+        (varsOfTarget HashSet.empty t)
+        (varsOfPred HashSet.empty x)
+        (mkDeps (varsOfTarget HashSet.empty t) (varsOfPred HashSet.empty y) answer)
     )
   Before x y -> mkDeps (vars x) (vars y) answer
-  other -> Set.foldl' accum answer (varsOfPred Set.empty other)
+  other -> HashSet.foldl' accum answer (varsOfPred HashSet.empty other)
     where
-      accum ans v = Map.insertWith (Set.union) v Set.empty ans
+      accum ans v = Map.insertWith (HashSet.union) v HashSet.empty ans
 
-componentVars :: Era era => [AnyF era s] -> Set (Name era)
-componentVars [] = Set.empty
-componentVars (AnyF (Field n r a l) : cs) = Set.insert (Name $ V n r (Yes a l)) $ componentVars cs
+componentVars :: [AnyF era s] -> HashSet (Name era)
+componentVars [] = HashSet.empty
+componentVars (AnyF (Field n r a l) : cs) = HashSet.insert (Name $ V n r (Yes a l)) $ componentVars cs
 componentVars (AnyF (FConst _ _ _ _) : cs) = componentVars cs
 
 -- =========================================================================
@@ -614,10 +645,10 @@ initialOrder info cs0 = do
   -- pure $ trace ("\nGraph\n"++showGraph (show.getname) _graph1) (map getname mmm)
   pure $ map getname mmm
   where
-    allvs = List.foldl' varsOfPred Set.empty cs0
-    noDepMap = Set.foldl' (\ans n -> Map.insert n Set.empty ans) Map.empty allvs
+    allvs = List.foldl' varsOfPred HashSet.empty cs0
+    noDepMap = HashSet.foldl' (\ans n -> Map.insert n HashSet.empty ans) Map.empty allvs
     mapDep = List.foldl' (accumdep info) noDepMap cs0
-    listDep = zipWith (\(x, m) n -> (n, x, Set.toList m)) (Map.toList mapDep) [0 ..]
+    listDep = zipWith (\(x, m) n -> (n, x, HashSet.toList m)) (Map.toList mapDep) [0 ..]
     (_graph1, nodeFun, _keyf) = graphFromEdges listDep
     getname :: Vertex -> Name era
     getname x = n where (_node, n, _children) = nodeFun x
@@ -628,7 +659,7 @@ initialOrder info cs0 = do
         names = map getname xs
         namesSet = Set.fromList names
         usesNames =
-          [pr | pr <- cs0, any (`Set.member` namesSet) (varsOfPred Set.empty pr)]
+          [pr | pr <- cs0, any (`Set.member` namesSet) (varsOfPred HashSet.empty pr)]
         theCycle = case names of
           [] -> map show names
           (x : _) -> map show (names ++ [x])
@@ -639,7 +670,7 @@ compile :: Era era => OrderInfo -> [Pred era] -> Typed (DependGraph era)
 compile info cs = do
   let simple = rewrite cs
   orderedNames <- initialOrder info simple
-  mkDependGraph (length orderedNames) [] orderedNames [] (filter notBefore simple)
+  mkDependGraph (length orderedNames) [] HashSet.empty orderedNames [] (filter notBefore simple)
 
 showGraph :: (Vertex -> String) -> Graph -> String
 showGraph nameof g = unlines (map show (zip names (toList zs)))

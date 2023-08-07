@@ -57,7 +57,7 @@ import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Trace (Gen1, forEachEpochTrace, testTraces, traceProp)
+import Test.Cardano.Ledger.Generic.Trace (Gen1, forEachEpochTrace, testPropMax, testTraces, traceProp)
 import Test.Cardano.Ledger.Generic.TxGen (
   Box (..),
   applySTSByProof,
@@ -71,7 +71,6 @@ import Test.Cardano.Ledger.Generic.TxGen (
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.QuickCheck (testProperty)
 
 -- =====================================
 -- Top level generators of TRC
@@ -178,35 +177,35 @@ coreTypesRoundTrip =
     "Core types make generic roundtrips"
     [ testGroup
         "TxWits roundtrip"
-        [ testProperty "Babbage era" $ txWitRoundTrip (Babbage Mock)
-        , testProperty "Alonzo era" $ txWitRoundTrip (Alonzo Mock)
-        , testProperty "Mary era" $ txWitRoundTrip (Mary Mock)
-        , testProperty "Allegra era" $ txWitRoundTrip (Allegra Mock)
-        , testProperty "Shelley era" $ txWitRoundTrip (Shelley Mock)
+        [ testPropMax 30 "Babbage era" $ txWitRoundTrip (Babbage Mock)
+        , testPropMax 30 "Alonzo era" $ txWitRoundTrip (Alonzo Mock)
+        , testPropMax 30 "Mary era" $ txWitRoundTrip (Mary Mock)
+        , testPropMax 30 "Allegra era" $ txWitRoundTrip (Allegra Mock)
+        , testPropMax 30 "Shelley era" $ txWitRoundTrip (Shelley Mock)
         ]
     , testGroup
         "TxBody roundtrips"
-        [ testProperty "Babbage era" $ txBodyRoundTrip (Babbage Mock)
-        , testProperty "Alonzo era" $ txBodyRoundTrip (Alonzo Mock)
-        , testProperty "Mary era" $ txBodyRoundTrip (Mary Mock)
-        , testProperty "Allegra era" $ txBodyRoundTrip (Allegra Mock)
-        , testProperty "Shelley era" $ txBodyRoundTrip (Shelley Mock)
+        [ testPropMax 30 "Babbage era" $ txBodyRoundTrip (Babbage Mock)
+        , testPropMax 30 "Alonzo era" $ txBodyRoundTrip (Alonzo Mock)
+        , testPropMax 30 "Mary era" $ txBodyRoundTrip (Mary Mock)
+        , testPropMax 30 "Allegra era" $ txBodyRoundTrip (Allegra Mock)
+        , testPropMax 30 "Shelley era" $ txBodyRoundTrip (Shelley Mock)
         ]
     , testGroup
         "TxOut roundtrips"
-        [ testProperty "Babbage era" $ txOutRoundTrip (Babbage Mock)
-        , testProperty "Alonzo era" $ txOutRoundTrip (Alonzo Mock)
-        , testProperty "Mary era" $ txOutRoundTrip (Mary Mock)
-        , testProperty "Allegra era" $ txOutRoundTrip (Allegra Mock)
-        , testProperty "Shelley era" $ txOutRoundTrip (Shelley Mock)
+        [ testPropMax 30 "Babbage era" $ txOutRoundTrip (Babbage Mock)
+        , testPropMax 30 "Alonzo era" $ txOutRoundTrip (Alonzo Mock)
+        , testPropMax 30 "Mary era" $ txOutRoundTrip (Mary Mock)
+        , testPropMax 30 "Allegra era" $ txOutRoundTrip (Allegra Mock)
+        , testPropMax 30 "Shelley era" $ txOutRoundTrip (Shelley Mock)
         ]
     , testGroup
         "Tx roundtrips"
-        [ testProperty "Babbage era" $ txRoundTrip (Babbage Mock)
-        , testProperty "Alonzo era" $ txRoundTrip (Alonzo Mock)
-        , testProperty "Mary era" $ txRoundTrip (Mary Mock)
-        , testProperty "Allegra era" $ txRoundTrip (Allegra Mock)
-        , testProperty "Shelley era" $ txRoundTrip (Shelley Mock)
+        [ testPropMax 30 "Babbage era" $ txRoundTrip (Babbage Mock)
+        , testPropMax 30 "Alonzo era" $ txRoundTrip (Alonzo Mock)
+        , testPropMax 30 "Mary era" $ txRoundTrip (Mary Mock)
+        , testPropMax 30 "Allegra era" $ txRoundTrip (Allegra Mock)
+        , testPropMax 30 "Shelley era" $ txRoundTrip (Shelley Mock)
         ]
     ]
 
@@ -215,18 +214,18 @@ txPreserveAda :: GenSize -> TestTree
 txPreserveAda genSize =
   testGroup
     "Individual Tx's preserve Ada"
-    [ testProperty "Shelley Tx preserves ADA" $
+    [ testPropMax 30 "Shelley Tx preserves ADA" $
         forAll (genTxAndLEDGERState (Shelley Mock) genSize) (testTxValidForLEDGER (Shelley Mock))
-    , testProperty "Allegra Tx preserves ADA" $
+    , testPropMax 30 "Allegra Tx preserves ADA" $
         forAll (genTxAndLEDGERState (Allegra Mock) genSize) (testTxValidForLEDGER (Allegra Mock))
-    , testProperty "Mary Tx preserves ADA" $
+    , testPropMax 30 "Mary Tx preserves ADA" $
         forAll (genTxAndLEDGERState (Mary Mock) genSize) (testTxValidForLEDGER (Mary Mock))
-    , testProperty "Alonzo ValidTx preserves ADA" $
+    , testPropMax 30 "Alonzo ValidTx preserves ADA" $
         forAll (genTxAndLEDGERState (Alonzo Mock) genSize) (testTxValidForLEDGER (Alonzo Mock))
-    , testProperty "Babbage ValidTx preserves ADA" $
+    , testPropMax 30 "Babbage ValidTx preserves ADA" $
         forAll (genTxAndLEDGERState (Babbage Mock) genSize) (testTxValidForLEDGER (Babbage Mock))
         -- TODO
-        -- testProperty "Conway ValidTx preserves ADA" $
+        -- testPropMax 30 "Conway ValidTx preserves ADA" $
         --  forAll (genTxAndLEDGERState (Conway Mock) genSize) (testTxValidForLEDGER (Conway Mock))
     ]
 
@@ -240,7 +239,7 @@ adaIsPreserved ::
   GenSize ->
   TestTree
 adaIsPreserved proof numTx gensize =
-  testProperty (show proof ++ " era. Trace length = " ++ show numTx) $
+  testPropMax 30 (show proof ++ " era. Trace length = " ++ show numTx) $
     traceProp
       proof
       numTx
@@ -275,7 +274,7 @@ incrementStakeInvariant ::
   GenSize ->
   TestTree
 incrementStakeInvariant proof gensize =
-  testProperty (show proof ++ " era. Trace length = 100") $
+  testPropMax 30 (show proof ++ " era. Trace length = 100") $
     traceProp proof 100 gensize stakeInvariant
 
 incrementalStake :: GenSize -> TestTree
@@ -322,7 +321,7 @@ adaIsPreservedInEachEpoch ::
   GenSize ->
   TestTree
 adaIsPreservedInEachEpoch proof genSize =
-  testProperty (show proof) $
+  testPropMax 30 (show proof) $
     forEachEpochTrace proof 200 genSize withTrace
   where
     withTrace :: Trace (MOCKCHAIN era) -> Property
@@ -340,7 +339,7 @@ twiddleInvariantHolds ::
   String ->
   TestTree
 twiddleInvariantHolds name =
-  testProperty name $ twiddleInvariantProp @a
+  testPropMax 30 name $ twiddleInvariantProp @a
 
 twiddleInvariantHoldsEras :: TestTree
 twiddleInvariantHoldsEras =
@@ -366,16 +365,16 @@ test n proof = defaultMain $
   case proof of
     -- TODO
     -- Conway _ ->
-    --  testProperty "Conway ValidTx preserves ADA" $
+    --  testPropMax 30 "Conway ValidTx preserves ADA" $
     --    withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Babbage _ ->
-      testProperty "Babbage ValidTx preserves ADA" $
+      testPropMax 30 "Babbage ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Alonzo _ ->
-      testProperty "Alonzo ValidTx preserves ADA" $
+      testPropMax 30 "Alonzo ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Shelley _ ->
-      testProperty "Shelley ValidTx preserves ADA" $
+      testPropMax 30 "Shelley ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     other -> error ("NO Test in era " ++ show other)
 

@@ -26,6 +26,7 @@ library
         Test.Cardano.Ledger.Constrained.Lenses
         Test.Cardano.Ledger.Constrained.Monad
         Test.Cardano.Ledger.Constrained.Pairing
+        Test.Cardano.Ledger.Constrained.Stage
         Test.Cardano.Ledger.Constrained.Preds.PParams
         Test.Cardano.Ledger.Constrained.Preds.Universes
         Test.Cardano.Ledger.Constrained.Preds.TxOut
@@ -34,6 +35,11 @@ library
         Test.Cardano.Ledger.Constrained.Preds.Repl
         Test.Cardano.Ledger.Constrained.Preds.Certs
         Test.Cardano.Ledger.Constrained.Preds.LedgerState
+        Test.Cardano.Ledger.Constrained.Trace.TraceMonad
+        Test.Cardano.Ledger.Constrained.Trace.SimpleTx
+        Test.Cardano.Ledger.Constrained.Trace.Actions
+        Test.Cardano.Ledger.Constrained.Trace.Pipeline
+        Test.Cardano.Ledger.Constrained.Trace.Tests
         Test.Cardano.Ledger.Constrained.Spec
         Test.Cardano.Ledger.Constrained.SpecClass
         Test.Cardano.Ledger.Constrained.Tests
@@ -110,6 +116,7 @@ library
         formatting,
         groups,
         haskeline,
+        hashable,
         vector-map,
         data-default-class,
         microlens,
@@ -130,6 +137,7 @@ library
         text,
         time,
         transformers,
+        unordered-containers,
         vector
 
 test-suite cardano-ledger-test
