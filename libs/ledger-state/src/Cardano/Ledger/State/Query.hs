@@ -15,6 +15,7 @@ import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.Schema
@@ -40,6 +41,7 @@ import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
+import Lens.Micro ((&), (.~), (^.))
 
 -- Populate database
 
@@ -163,14 +165,14 @@ insertSnapShots epochStateKey EpochBoundary.SnapShots {..} = do
 
 insertEpochState ::
   MonadIO m => Shelley.EpochState CurrentEra -> ReaderT SqlBackend m ()
-insertEpochState Shelley.EpochState {..} = do
+insertEpochState es@Shelley.EpochState {..} = do
   epochStateKey <-
     insert
       EpochState
         { epochStateTreasury = Shelley.asTreasury esAccountState
         , epochStateReserves = Shelley.asReserves esAccountState
-        , epochStatePrevPp = esPrevPp
-        , epochStatePp = esPp
+        , epochStatePrevPp = es ^. prevPParamsEpochStateL
+        , epochStatePp = es ^. curPParamsEpochStateL
         , epochStateNonMyopic = esNonMyopic
         , epochStateSnapShotsFee = EpochBoundary.ssFee esSnapshots
         }
@@ -723,7 +725,7 @@ loadEpochState fp = runSqlite fp $ do
   ese@(Entity _ EpochState {..}) <- getJustEntity esId
   snapshots <- getSnapShotsNoSharing ese
   ledgerState <- getLedgerStateNoSharing ese
-  pure
+  pure $
     Shelley.EpochState
       { esAccountState =
           Shelley.AccountState
@@ -732,17 +734,17 @@ loadEpochState fp = runSqlite fp $ do
             }
       , esLState = ledgerState
       , esSnapshots = snapshots
-      , esPrevPp = epochStatePrevPp
-      , esPp = epochStatePp
       , esNonMyopic = epochStateNonMyopic
       }
+      & curPParamsEpochStateL .~ epochStatePp
+      & prevPParamsEpochStateL .~ epochStatePrevPp
 
 loadEpochStateWithSharing :: MonadUnliftIO m => T.Text -> m (Shelley.EpochState CurrentEra)
 loadEpochStateWithSharing fp = runSqlite fp $ do
   ese@(Entity _ EpochState {..}) <- getJustEntity esId
   snapshots <- getSnapShotsWithSharing ese
   ledgerState <- getLedgerStateWithSharing ese
-  pure
+  pure $
     Shelley.EpochState
       { esAccountState =
           Shelley.AccountState
@@ -751,10 +753,10 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
             }
       , esLState = ledgerState
       , esSnapshots = snapshots
-      , esPrevPp = epochStatePrevPp
-      , esPp = epochStatePp
       , esNonMyopic = epochStateNonMyopic
       }
+      & prevPParamsEpochStateL .~ epochStatePrevPp
+      & curPParamsEpochStateL .~ epochStatePp
 
 loadSnapShotsNoSharing ::
   MonadUnliftIO m => T.Text -> Entity EpochState -> m (EpochBoundary.SnapShots C)

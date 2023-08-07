@@ -60,7 +60,7 @@ import NoThunks.Class (NoThunks (..))
 data UpecState era = UpecState
   { currentPp :: !(PParams era)
   -- ^ Current protocol parameters.
-  , ppupState :: !(ShelleyPPUPState era)
+  , ppupState :: !(ShelleyGovState era)
   -- ^ State of the protocol update transition system.
   }
 
@@ -77,7 +77,7 @@ instance NoThunks (ShelleyUpecPredFailure era)
 instance
   ( EraPParams era
   , Default (PParams era)
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyUPEC era)
   where

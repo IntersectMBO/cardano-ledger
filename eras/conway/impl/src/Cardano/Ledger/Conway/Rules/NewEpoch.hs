@@ -127,7 +127,6 @@ newEpochTransition ::
   , Environment (EraRule "EPOCH" era) ~ PoolDistr (EraCrypto era)
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
-  , Default (PParams era)
   , Default (StashedAVVMAddresses era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
@@ -179,13 +178,13 @@ tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
 updateRewards ::
-  EraPParams era =>
+  EraGovernance era =>
   EpochState era ->
   EpochNo ->
   RewardUpdate (EraCrypto era) ->
   Rule (ConwayNEWEPOCH era) 'Transition (EpochState era)
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
-  let totRs = sumRewards (esPrevPp es ^. ppProtocolVersionL) rs_
+  let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_
   Val.isZero (dt <> dr <> toDeltaCoin totRs <> df) ?! CorruptRewardUpdate ru'
   let !(!es', filtered) = applyRUpdFiltered ru' es
   tellEvent $ RestrainedRewards e (frShelleyIgnored filtered) (frUnregistered filtered)

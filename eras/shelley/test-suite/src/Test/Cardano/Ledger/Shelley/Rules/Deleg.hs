@@ -65,7 +65,6 @@ import Test.Tasty.QuickCheck (testProperty)
 tests ::
   forall era.
   ( EraGen era
-  , EraGovernance era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ChainProperty era
   , ProtVerAtMost era 8

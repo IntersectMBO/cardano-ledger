@@ -47,6 +47,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   UTxOState (..),
   VState (..),
+  curPParamsEpochStateL,
+  prevPParamsEpochStateL,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Translation ()
@@ -55,6 +57,7 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (toList)
+import Lens.Micro ((^.))
 import Prettyprinter (Doc, indent, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Generic.Proof
@@ -154,7 +157,7 @@ sameUTxO (Babbage _) x y = eqByShow x y
 sameUTxO (Conway _) x y = eqByShow x y
 {-# NOINLINE sameUTxO #-}
 
-samePPUP :: Proof era -> ShelleyPPUPState era -> ShelleyPPUPState era -> Maybe PDoc
+samePPUP :: Proof era -> ShelleyGovState era -> ShelleyGovState era -> Maybe PDoc
 samePPUP (Shelley _) x y = eqByShow x y
 samePPUP (Allegra _) x y = eqByShow x y
 samePPUP (Mary _) x y = eqByShow x y
@@ -172,8 +175,8 @@ instance Reflect era => Same era (UTxOState era) where
       ++ ppu
       ++ [("StakeDistr", eqByShow (utxosStakeDistr u1) (utxosStakeDistr u2))]
     where
-      ppuPretty :: GovernanceState era ~ ShelleyPPUPState era => [(String, Maybe PDoc)]
-      ppuPretty = [("ShelleyPPUPState", samePPUP proof (utxosGovernance u1) (utxosGovernance u2))]
+      ppuPretty :: GovernanceState era ~ ShelleyGovState era => [(String, Maybe PDoc)]
+      ppuPretty = [("ShelleyGovState", samePPUP proof (utxosGovernance u1) (utxosGovernance u2))]
       ppu = case reify @era of
         Shelley _ -> ppuPretty
         Mary _ -> ppuPretty
@@ -191,8 +194,8 @@ instance Reflect era => Same era (EpochState era) where
   same proof e1 e2 =
     [ ("AccountState", eqByShow (esAccountState e1) (esAccountState e2))
     , ("SnapShots", eqByShow (esSnapshots e1) (esSnapshots e2))
-    , ("PrevPP", samePParams proof (esPrevPp e1) (esPrevPp e2))
-    , ("CurPP", samePParams proof (esPp e1) (esPp e2))
+    , ("PrevPP", samePParams proof (e1 ^. prevPParamsEpochStateL) (e2 ^. prevPParamsEpochStateL))
+    , ("CurPP", samePParams proof (e1 ^. curPParamsEpochStateL) (e2 ^. curPParamsEpochStateL))
     , ("NonMyopic", eqByShow (esNonMyopic e1) (esNonMyopic e2))
     ]
       ++ extendLabel "LedgerState " (same proof (esLState e1) (esLState e2))

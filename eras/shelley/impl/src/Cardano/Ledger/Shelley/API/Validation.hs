@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -33,7 +34,8 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState)
+import Cardano.Ledger.Shelley.Core (EraGovernance)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Rules ()
@@ -44,6 +46,7 @@ import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 {-------------------------------------------------------------------------------
@@ -94,6 +97,14 @@ class
     NewEpochState era ->
     Block (BHeaderView (EraCrypto era)) era ->
     m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
+  default applyBlockOpts ::
+    forall ep m.
+    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m, EraGovernance era) =>
+    ApplySTSOpts ep ->
+    Globals ->
+    NewEpochState era ->
+    Block (BHeaderView (EraCrypto era)) era ->
+    m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
       . left BlockTransitionError
@@ -119,6 +130,12 @@ class
   -- the caller implicitly guarantees that they have previously called
   -- 'applyBlockTransition' on the same block and that this was successful.
   reapplyBlock ::
+    Globals ->
+    NewEpochState era ->
+    Block (BHeaderView (EraCrypto era)) era ->
+    NewEpochState era
+  default reapplyBlock ::
+    EraGovernance era =>
     Globals ->
     NewEpochState era ->
     Block (BHeaderView (EraCrypto era)) era ->
@@ -196,6 +213,7 @@ chainChecks = STS.chainChecks
 -------------------------------------------------------------------------------}
 
 mkBbodyEnv ::
+  EraGovernance era =>
   NewEpochState era ->
   STS.BbodyEnv era
 mkBbodyEnv
@@ -203,12 +221,12 @@ mkBbodyEnv
     { LedgerState.nesEs
     } =
     STS.BbodyEnv
-      { STS.bbodyPp = LedgerState.esPp nesEs
+      { STS.bbodyPp = nesEs ^. curPParamsEpochStateL
       , STS.bbodyAccount = LedgerState.esAccountState nesEs
       }
 
 updateNewEpochState ::
-  LedgerState era ~ State (EraRule "LEDGERS" era) =>
+  (LedgerState era ~ State (EraRule "LEDGERS" era), EraGovernance era) =>
   NewEpochState era ->
   STS.ShelleyBbodyState era ->
   NewEpochState era

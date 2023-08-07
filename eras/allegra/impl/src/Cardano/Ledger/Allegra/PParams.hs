@@ -42,7 +42,16 @@ instance Crypto c => EraPParams (AllegraEra c) where
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
 instance Crypto c => EraGovernance (AllegraEra c) where
-  type GovernanceState (AllegraEra c) = ShelleyPPUPState (AllegraEra c)
-  emptyGovernanceState = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
+  type GovernanceState (AllegraEra c) = ShelleyGovState (AllegraEra c)
+  emptyGovernanceState =
+    ShelleyGovState
+      emptyPPPUpdates
+      emptyPPPUpdates
+      emptyPParams
+      emptyPParams
 
   getProposedPPUpdates = Just . proposals
+
+  curPParamsGovStateL = curPParamsShelleyGovStateL
+
+  prevPParamsGovStateL = prevPParamsShelleyGovStateL

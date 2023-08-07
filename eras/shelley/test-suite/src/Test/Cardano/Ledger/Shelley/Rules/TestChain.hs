@@ -37,6 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
+  curPParamsEpochStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegEnv (..),
@@ -81,6 +82,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 
 import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert, pattern UnRegTxCert)
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   runShelleyBase,
@@ -260,7 +262,7 @@ ledgerTraceBase chainSt block =
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
-    pp_ = esPp nes
+    pp_ = nes ^. curPParamsEpochStateL
     -- Oldest to Newest first
     txs = (reverse . toList . fromTxSeq) txSeq -- HERE WE USE SOME SegWit function
 

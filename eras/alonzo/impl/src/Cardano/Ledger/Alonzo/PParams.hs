@@ -276,10 +276,19 @@ instance Crypto c => AlonzoEraPParams (AlonzoEra c) where
     lens appMaxCollateralInputs $ \pp x -> pp {appMaxCollateralInputs = x}
 
 instance Crypto c => EraGovernance (AlonzoEra c) where
-  type GovernanceState (AlonzoEra c) = ShelleyPPUPState (AlonzoEra c)
-  emptyGovernanceState = ShelleyPPUPState emptyPPPUpdates emptyPPPUpdates
+  type GovernanceState (AlonzoEra c) = ShelleyGovState (AlonzoEra c)
+  emptyGovernanceState =
+    ShelleyGovState
+      emptyPPPUpdates
+      emptyPPPUpdates
+      emptyPParams
+      emptyPParams
 
   getProposedPPUpdates = Just . proposals
+
+  curPParamsGovStateL = curPParamsShelleyGovStateL
+
+  prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
 instance Era era => EncCBOR (AlonzoPParams Identity era) where
   encCBOR AlonzoPParams {..} =

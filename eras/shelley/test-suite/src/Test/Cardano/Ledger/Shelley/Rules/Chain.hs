@@ -70,7 +70,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PState (..),
   StashedAVVMAddresses,
+  curPParamsEpochStateL,
   dsGenDelegs,
+  nesEpochStateL,
+  prevPParamsEpochStateL,
   smartUTxOState,
   updateNES,
  )
@@ -126,7 +129,7 @@ import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 type instance EraRule "TICKN" (ShelleyEra c) = TICKN
@@ -212,7 +215,6 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         (BlocksMade Map.empty)
         ( EpochState
             (AccountState (Coin 0) reserves)
-            emptySnapShots
             ( LedgerState
                 ( smartUTxOState
                     pp
@@ -223,9 +225,10 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                 )
                 (CertState def def dState)
             )
-            pp
-            pp
+            emptySnapShots
             def
+            & curPParamsEpochStateL .~ pp
+            & prevPParamsEpochStateL .~ pp
         )
         SNothing
         (PoolDistr Map.empty)
@@ -255,7 +258,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         }
 
 instance
-  ( EraPParams era
+  ( EraGovernance era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
@@ -309,9 +312,9 @@ chainTransition ::
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL (EraCrypto era)) (CHAIN era)
   , EncCBORGroup (TxSeq era)
-  , EraPParams era
   , ProtVerAtMost era 6
   , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
+  , EraGovernance era
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =
@@ -333,7 +336,7 @@ chainTransition =
           Right () -> pure ()
           Left e -> failBecause $ PrtclSeqFailure e
 
-        let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
+        let pp = nes ^. nesEpochStateL . curPParamsEpochStateL
             chainChecksData = pparamsToChainChecksPParams pp
             bhView = makeHeaderView bh
 
@@ -348,7 +351,8 @@ chainTransition =
 
         let NewEpochState e1 _ _ _ _ _ _ = nes
             NewEpochState e2 _ bcur es _ _pd _ = nes'
-        let EpochState account _ ls _ pp' _ = es
+        let EpochState account ls _ _ = es
+            pp' = es ^. curPParamsEpochStateL
         let LedgerState _ (CertState VState {} PState {} DState {dsGenDelegs = genDelegs}) = ls
         let ph = lastAppliedHash lab
             etaPH = prevHashToNonce ph

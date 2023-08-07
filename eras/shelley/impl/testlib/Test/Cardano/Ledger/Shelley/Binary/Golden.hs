@@ -47,7 +47,7 @@ goldenNewEpochStateExpectation
         , mapEnc (unBlocksMade nesBprev)
         , mapEnc (unBlocksMade nesBcur)
         , Em
-            [ E (TkListLen 6)
+            [ E (TkListLen 4)
             , Em
                 [ E (TkListLen 2)
                 , E asTreasury
@@ -61,8 +61,6 @@ goldenNewEpochStateExpectation
                 , snapShotEnc ssStakeGo
                 , E ssFee
                 ]
-            , E esPrevPp
-            , E esPp
             , Ev ver esNonMyopic
             ]
         , Ev ver nesRu

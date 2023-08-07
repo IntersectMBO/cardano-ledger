@@ -115,6 +115,7 @@ library
         text,
         time,
         transformers,
+        tree-diff,
         unliftio,
         vector,
         vector-map

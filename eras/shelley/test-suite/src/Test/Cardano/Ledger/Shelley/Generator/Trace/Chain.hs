@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, incrementalStakeDistr)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
   ShelleyBbodyState,
@@ -58,6 +58,7 @@ import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
+import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
@@ -184,7 +185,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   ShelleyGenesisStaking (EraCrypto era) ->
   ChainState era ->
   ChainState era
@@ -196,7 +197,7 @@ registerGenesisStaking
       }
     where
       keyDeposit :: UM.CompactForm Coin
-      keyDeposit = (UM.compactCoinOrError . view ppKeyDepositL . esPp . nesEs) oldChainNes
+      keyDeposit = (UM.compactCoinOrError . view ppKeyDepositL . view curPParamsEpochStateL . nesEs) oldChainNes
       oldEpochState = nesEs oldChainNes
       oldLedgerState = esLState oldEpochState
       oldCertState = lsCertState oldLedgerState
@@ -258,7 +259,7 @@ registerGenesisStaking
       -- establish an initial stake distribution.
       initSnapShot =
         incrementalStakeDistr
-          (esPp newEpochState)
+          (newEpochState ^. curPParamsEpochStateL)
           (utxosStakeDistr . lsUTxOState . esLState $ oldEpochState)
           newDState
           newPState

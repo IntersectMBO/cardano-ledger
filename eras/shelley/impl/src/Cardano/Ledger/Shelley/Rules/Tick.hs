@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -44,6 +43,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PulsingRewUpdate,
   UTxOState (..),
+  curPParamsEpochStateL,
  )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (
   ShelleyNEWEPOCH,
@@ -64,6 +64,7 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 -- ==================================================
@@ -186,7 +187,8 @@ validatingTickTransitionFORECAST ::
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , Embed (EraRule "UPEC" era) (tick era)
   , STS (tick era)
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
+  , EraGovernance era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -220,12 +222,14 @@ validatingTickTransitionFORECAST nes slot = do
       -- if it ever then node tries to validate blocks for which the
       -- return value here was used to validate their headers.
 
-      let pp = esPp es
+      let pp = es ^. curPParamsEpochStateL
           updates = utxosGovernance . lsUTxOState . esLState $ es
       UpecState pp' _ <-
         trans @(EraRule "UPEC" era) $
           TRC (es, UpecState pp updates, ())
-      let es' = (adoptGenesisDelegs es slot) {esPp = pp'}
+      let es' =
+            adoptGenesisDelegs es slot
+              & curPParamsEpochStateL .~ pp'
 
       pure $!
         nes
@@ -322,13 +326,13 @@ newtype ShelleyTickfEvent era
 
 instance
   ( Era era
-  , EraPParams era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , EraGovernance era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "UPEC" era) ~ ()
   , State (EraRule "UPEC" era) ~ UpecState era
   , Environment (EraRule "UPEC" era) ~ EpochState era
   , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyTICKF era)
   where

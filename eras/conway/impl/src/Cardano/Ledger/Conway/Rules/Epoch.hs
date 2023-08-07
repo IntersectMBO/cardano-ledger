@@ -48,18 +48,18 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
   asReserves,
+  curPParamsEpochStateL,
   esAccountState,
   esLState,
   esLStateL,
   esNonMyopic,
-  esPp,
-  esPrevPp,
   esSnapshots,
   lsCertState,
   lsCertStateL,
   lsUTxOState,
   lsUTxOStateL,
   obligationCertState,
+  prevPParamsEpochStateL,
   utxosGovernanceL,
   pattern CertState,
   pattern EpochState,
@@ -93,7 +93,7 @@ import Data.Maybe (fromMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as Seq
 import Data.Void (Void, absurd)
-import Lens.Micro ((%~), (&), (.~))
+import Lens.Micro ((%~), (&), (.~), (^.))
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
@@ -190,22 +190,22 @@ epochTransition ::
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , GovernanceState era ~ ConwayGovernance era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
+  , EraGovernance era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
   TRC
     ( stakePoolDistr
-      , EpochState
+      , es@EpochState
           { esAccountState = acnt
           , esSnapshots = ss
           , esLState = ls
-          , esPrevPp = pr
-          , esPp = pp
           , esNonMyopic = nm
           }
       , eNo
       ) <-
     judgmentContext
+  let pp = es ^. curPParamsEpochStateL
   let utxoSt = lsUTxOState ls
   let CertState vstate pstate dstate = lsCertState ls
   ss' <-
@@ -231,10 +231,8 @@ epochTransition = do
       epochState' =
         EpochState
           acnt'
-          ss'
           (returnProposalDeposits adjustedLState)
-          pr
-          pp
+          ss'
           nm
 
   let
@@ -256,9 +254,9 @@ epochTransition = do
         epochState'
           { esAccountState = acnt''
           , esLState = (esLState epochState') {lsUTxOState = utxoSt'''}
-          , esPrevPp = pp
-          , esPp = pp
           }
+          & prevPParamsEpochStateL .~ pp
+          & curPParamsEpochStateL .~ pp
       -- TODO can we be more efficient?
       newGov = ConwayGovState . Map.fromList . toList $ rsFuture
   pure $

@@ -346,10 +346,10 @@ exampleNewEpochState value ppp pp =
                     }
               , lsCertState = def
               }
-        , esPrevPp = ppp
-        , esPp = pp
         , esNonMyopic = def
         }
+        & prevPParamsEpochStateL .~ ppp
+        & curPParamsEpochStateL .~ pp
       where
         addr :: Addr (EraCrypto era)
         addr =

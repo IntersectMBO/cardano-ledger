@@ -28,6 +28,7 @@ import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState.Types (curPParamsEpochStateL, prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import qualified Cardano.Ledger.UMap as UM
@@ -38,7 +39,7 @@ import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Data.Word
 import GHC.Stack (HasCallStack)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
@@ -146,10 +147,10 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
         { esAccountState = AccountState (Coin 0) reserves
         , esSnapshots = emptySnapShots
         , esLState = ledgerState
-        , esPrevPp = pparams
-        , esPp = pparams
         , esNonMyopic = def
         }
+        & prevPParamsEpochStateL .~ pparams
+        & curPParamsEpochStateL .~ pparams
 
     utxoByron :: Byron.UTxO
     utxoByron = Byron.cvsUtxo cvs

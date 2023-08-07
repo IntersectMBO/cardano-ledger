@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   RewardUpdate (..),
   applyRUpdFiltered,
   certDState,
+  curPParamsEpochStateL,
   filterAllRewards,
   lsCertState,
   rewards,
@@ -198,7 +199,7 @@ tickfRuleBench :: Benchmark
 tickfRuleBench =
   env readGlobals $ \globals ->
     env readNewEpochState $ \nes ->
-      let pv = esPp (nesEs nes) ^. ppProtocolVersionL
+      let pv = nesEs nes ^. curPParamsEpochStateL . ppProtocolVersionL
        in bgroup
             "Tickf Benchmarks"
             [ bench "validatingTickTransitionfunction" $ whnf (tickfR2 globals (SlotNo 156953303)) nes

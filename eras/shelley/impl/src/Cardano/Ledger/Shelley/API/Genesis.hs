@@ -38,6 +38,7 @@ import Cardano.Ledger.Val (Val ((<->)))
 import Data.Default.Class (Default, def)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
+import Lens.Micro ((&), (.~))
 
 -- | Indicates that this era may be bootstrapped from 'ShelleyGenesis'.
 class
@@ -87,13 +88,11 @@ initialStateFromGenesis sg ag =
     (BlocksMade Map.empty)
     ( EpochState
         (AccountState (Coin 0) reserves)
-        emptySnapShots
         ( LedgerState
-            (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) def)
+            (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) govSt)
             (CertState def def dState)
         )
-        (fromShelleyPParams ag pp)
-        (fromShelleyPParams ag pp)
+        emptySnapShots
         def
     )
     SNothing
@@ -105,6 +104,10 @@ initialStateFromGenesis sg ag =
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
     genDelegs = sgGenDelegs sg
     pp = sgProtocolParams sg
+    govSt =
+      def
+        & curPParamsGovStateL .~ fromShelleyPParams ag pp
+        & prevPParamsGovStateL .~ fromShelleyPParams ag pp
 
     dState :: DState era
     dState =

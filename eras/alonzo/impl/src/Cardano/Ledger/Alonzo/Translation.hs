@@ -31,6 +31,7 @@ import Cardano.Ledger.Shelley.API (
   DState (..),
   EpochState (..),
   NewEpochState (..),
+  ShelleyGovState (..),
   StrictMaybe (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
@@ -94,14 +95,12 @@ instance Crypto c => TranslateEra (AlonzoEra c) Tx where
 --------------------------------------------------------------------------------
 
 instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
-  translateEra ctxt@(AlonzoGenesisWrapper upgradeArgs) es =
+  translateEra ctxt es =
     return
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
-        , esPrevPp = upgradePParams upgradeArgs $ esPrevPp es
-        , esPp = upgradePParams upgradeArgs $ esPp es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -146,12 +145,14 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
   translateEra _ctxt utxo =
     return $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.ShelleyPPUPState where
-  translateEra ctxt ps =
+instance Crypto c => TranslateEra (AlonzoEra c) API.ShelleyGovState where
+  translateEra ctxt@(AlonzoGenesisWrapper upgradeArgs) ps =
     return
-      API.ShelleyPPUPState
+      API.ShelleyGovState
         { API.proposals = translateEra' ctxt $ API.proposals ps
         , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
+        , API.sgovPrevPp = upgradePParams upgradeArgs $ sgovPrevPp ps
+        , API.sgovPp = upgradePParams upgradeArgs $ sgovPp ps
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where

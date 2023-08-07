@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
+  curPParamsEpochStateL,
  )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate)
 import Cardano.Ledger.Shelley.Rules (
@@ -57,6 +58,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq (..), fromStrict)
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks, ThunkInfo, noThunks)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (
@@ -151,6 +153,7 @@ chainTransition ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
+  , EraGovernance era
   ) =>
   TransitionRule (MOCKCHAIN era)
 chainTransition = do
@@ -161,7 +164,8 @@ chainTransition = do
   nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, slot)
 
   let NewEpochState _ _ (BlocksMade current) epochState _ _ _ = nes'
-      EpochState account _ ledgerState _ pparams _ = epochState
+      EpochState account ledgerState _ _ = epochState
+      pparams = epochState ^. curPParamsEpochStateL
 
   let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
 

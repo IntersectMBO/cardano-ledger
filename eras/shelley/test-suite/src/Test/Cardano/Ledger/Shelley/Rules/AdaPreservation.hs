@@ -42,12 +42,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
   completeRupd,
+  curPParamsEpochStateL,
   deltaF,
   deltaR,
   deltaT,
   iRReserves,
   iRTreasury,
   keyTxRefunds,
+  prevPParamsEpochStateL,
   rewards,
   rs,
   totalTxDeposits,
@@ -96,6 +98,7 @@ import Test.QuickCheck (
   Testable (..),
   conjoin,
   counterexample,
+  noShrinking,
   (.&&.),
   (.||.),
   (===),
@@ -107,11 +110,10 @@ import qualified Test.Tasty.QuickCheck as TQC
 tests ::
   forall era ledger.
   ( EraGen era
-  , EraGovernance era
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   , ProtVerAtMost era 8
   ) =>
   Int ->
@@ -119,17 +121,16 @@ tests ::
 tests n =
   TQC.testProperty
     "total amount of Ada is preserved (Chain)"
-    (withMaxSuccess n (adaPreservationProps @era @ledger))
+    (noShrinking $ withMaxSuccess n (adaPreservationProps @era @ledger))
 
 -- | Various preservation properties
 adaPreservationProps ::
   forall era ledger.
   ( EraGen era
-  , EraGovernance era
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   , ProtVerAtMost era 8
   ) =>
   Property
@@ -174,7 +175,8 @@ checkPreservation ::
   ( EraSegWits era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
+  , EraGovernance era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Int ->
@@ -226,8 +228,8 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
     sourceTotal = totalAda source
     targetTotal = totalAda target
 
-    currPP = esPp . nesEs . chainNes $ source
-    prevPP = view ppProtocolVersionL . esPrevPp . nesEs . chainNes $ source
+    currPP = view curPParamsEpochStateL . nesEs . chainNes $ source
+    prevPP = view ppProtocolVersionL . view prevPParamsEpochStateL . nesEs . chainNes $ source
 
     ru' = nesRu . chainNes $ source
     lsOld = esLState . nesEs . chainNes $ source
@@ -465,7 +467,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         sourceSignalTargets ledgerTr
   where
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    pp_ = (esPp . nesEs . chainNes) tickedChainSt
+    pp_ = (view curPParamsEpochStateL . nesEs . chainNes) tickedChainSt
 
     createdIsConsumed SourceSignalTarget {source = ledgerSt, signal = tx, target = ledgerSt'} =
       counterexample
@@ -502,7 +504,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
         sourceSignalTargets ledgerTr
   where
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    pp_ = (esPp . nesEs . chainNes) tickedChainSt
+    pp_ = (view curPParamsEpochStateL . nesEs . chainNes) tickedChainSt
 
     createdIsConsumed
       SourceSignalTarget

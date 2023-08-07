@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.API (
   VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
 import Data.Coerce
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -104,15 +105,15 @@ instance Crypto c => TranslateEra (ConwayEra c) PParams where
 
 instance Crypto c => TranslateEra (ConwayEra c) EpochState where
   translateEra ctxt@ConwayGenesis {cgUpgradePParams} es =
-    pure
+    pure $
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
-        , esPrevPp = upgradePParams cgUpgradePParams $ esPrevPp es
-        , esPp = upgradePParams cgUpgradePParams $ esPp es
         , esNonMyopic = esNonMyopic es
         }
+        & prevPParamsEpochStateL .~ upgradePParams cgUpgradePParams (es ^. prevPParamsEpochStateL)
+        & curPParamsEpochStateL .~ upgradePParams cgUpgradePParams (es ^. curPParamsEpochStateL)
 
 instance Crypto c => TranslateEra (ConwayEra c) DState where
   translateEra _ DState {..} = pure DState {..}
@@ -140,6 +141,16 @@ instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
         , API.lsCertState = translateEra' conwayGenesis $ API.lsCertState ls
         }
 
+translateGovernanceState ::
+  Crypto c =>
+  TranslationContext (ConwayEra c) ->
+  GovernanceState (BabbageEra c) ->
+  GovernanceState (ConwayEra c)
+translateGovernanceState ctxt sgov =
+  emptyGovernanceState
+    & curPParamsGovStateL .~ translateEra' ctxt (sgov ^. curPParamsGovStateL)
+    & prevPParamsGovStateL .~ translateEra' ctxt (sgov ^. prevPParamsGovStateL)
+
 instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
   translateEra ctxt us =
     pure
@@ -147,7 +158,9 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
-        , API.utxosGovernance = emptyGovernanceState
+        , API.utxosGovernance =
+            translateGovernanceState ctxt $
+              API.utxosGovernance us
         , API.utxosStakeDistr = API.utxosStakeDistr us
         }
 

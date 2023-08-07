@@ -89,6 +89,7 @@ import Cardano.Ledger.Shelley.AdaPots (
   totalAdaES,
   totalAdaPotsES,
  )
+import Cardano.Ledger.Shelley.Core (EraGovernance)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   EpochState (..),
@@ -100,6 +101,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   circulation,
   consumed,
   createRUpd,
+  curPParamsEpochStateL,
   incrementalStakeDistr,
   produced,
  )
@@ -208,7 +210,7 @@ getPoolParameters = Map.restrictKeys . f
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   Globals ->
   NewEpochState era ->
   PoolDistr (EraCrypto era)
@@ -241,7 +243,7 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  EraPParams era =>
+  EraGovernance era =>
   Globals ->
   NewEpochState era ->
   Set (Either Coin (Credential 'Staking (EraCrypto era))) ->
@@ -258,7 +260,7 @@ getNonMyopicMemberRewards globals ss =
       toShare $ maybe mempty fromCompact $ VMap.lookup cred (EB.unStake stake)
     memShare (Left coin) = toShare coin
     es = nesEs ss
-    pp = esPp es
+    pp = es ^. curPParamsEpochStateL
     NonMyopic {likelihoodsNM = ls, rewardPotNM = rPot} = esNonMyopic es
     EB.SnapShot stake delegs poolParams = currentSnapshot ss
     poolData =
@@ -301,11 +303,11 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: forall era. EraPParams era => NewEpochState era -> EB.SnapShot (EraCrypto era)
+currentSnapshot :: forall era. EraGovernance era => NewEpochState era -> EB.SnapShot (EraCrypto era)
 currentSnapshot ss =
   incrementalStakeDistr pp incrementalStake dstate pstate
   where
-    pp = esPp $ nesEs ss
+    pp = nesEs ss ^. curPParamsEpochStateL
     ledgerState = esLState $ nesEs ss
     incrementalStake = utxosStakeDistr $ lsUTxOState ledgerState
     dstate = certDState $ lsCertState ledgerState
@@ -369,7 +371,7 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  EraPParams era =>
+  EraGovernance era =>
   Globals ->
   NewEpochState era ->
   (RewardParams, Map (KeyHash 'StakePool (EraCrypto era)) RewardInfoPool)
@@ -377,7 +379,7 @@ getRewardInfoPools globals ss =
   (mkRewardParams, VMap.toMap (VMap.mapWithKey mkRewardInfoPool poolParams))
   where
     es = nesEs ss
-    pp = esPp es
+    pp = es ^. curPParamsEpochStateL
     NonMyopic
       { likelihoodsNM = ls
       , rewardPotNM = rPot
@@ -419,7 +421,7 @@ getRewardInfoPools globals ss =
 -- on stake pool rewards.
 getRewardProvenance ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   Globals ->
   NewEpochState era ->
   (RewardUpdate (EraCrypto era), RewardProvenance (EraCrypto era))

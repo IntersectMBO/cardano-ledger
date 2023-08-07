@@ -37,7 +37,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   pvCanFollow,
   reapRewards,
   availableAfterMIR,
-  ShelleyPPUPState (..),
+  ShelleyGovState (..),
 
   -- * Genesis State
   genesisState,
@@ -90,13 +90,17 @@ module Cardano.Ledger.Shelley.LedgerState (
   updateNonMyopic,
 
   -- * Lenses
-  esPpL,
+  curPParamsEpochStateL,
+  prevPParamsEpochStateL,
   esLStateL,
   lsUTxOStateL,
   lsCertStateL,
   utxosFeesL,
   utxosGovernanceL,
   nesEpochStateL,
+  esAccountStateL,
+  esSnapshotsL,
+  esNonMyopicL,
 ) where
 
 import Cardano.Ledger.CertState
@@ -111,7 +115,7 @@ import Cardano.Ledger.Shelley.PParams (
   pvCanFollow,
  )
 import Cardano.Ledger.Shelley.RewardUpdate
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUPPredFailure, ShelleyPPUPState (..))
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUPPredFailure, ShelleyGovState (..))
 import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Data.Default.Class (def)

@@ -83,6 +83,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   createRUpd,
   filterAllRewards,
   lsCertState,
+  prevPParamsEpochStateL,
   rewards,
   updateNonMyopic,
  )
@@ -127,6 +128,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.TreeDiff (ansiWlEditExprCompact, ediff)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Stack
@@ -155,6 +157,7 @@ import Test.Tasty.QuickCheck (
   choose,
   counterexample,
   elements,
+  noShrinking,
   property,
   testProperty,
   withMaxSuccess,
@@ -532,19 +535,20 @@ data RewardUpdateOld c = RewardUpdateOld
 
 createRUpdOld ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   EpochSize ->
   BlocksMade (EraCrypto era) ->
   EpochState era ->
   Coin ->
   ShelleyBase (RewardUpdateOld (EraCrypto era))
-createRUpdOld slotsPerEpoch b es@(EpochState acnt ss ls pr _ nm) maxSupply =
+createRUpdOld slotsPerEpoch b es@(EpochState acnt ls ss nm) maxSupply =
   createRUpdOld_ @era slotsPerEpoch b ss reserves pr totalStake rs nm
   where
     ds = certDState $ lsCertState ls
     rs = UM.domain $ rewards ds
     reserves = asReserves acnt
     totalStake = circulation es maxSupply
+    pr = es ^. prevPParamsEpochStateL
 
 createRUpdOld_ ::
   forall era.
@@ -603,15 +607,12 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       }
 
 overrideProtocolVersionUsedInRewardCalc ::
-  EraPParams era =>
+  EraGovernance era =>
   ProtVer ->
   EpochState era ->
   EpochState era
 overrideProtocolVersionUsedInRewardCalc pv es =
-  es {esPrevPp = pp'}
-  where
-    pp = esPrevPp es
-    pp' = pp & ppProtocolVersionL .~ pv
+  es & prevPParamsEpochStateL . ppProtocolVersionL .~ pv
 
 oldEqualsNew ::
   forall era.
@@ -621,7 +622,7 @@ oldEqualsNew ::
   Property
 oldEqualsNew pv newepochstate =
   counterexample
-    (show (prettyA newepochstate) ++ "\n new = " ++ show new ++ "\n old = " ++ show old)
+    (show (prettyA newepochstate) ++ show (ansiWlEditExprCompact $ ediff old new))
     (old === new)
   where
     globals = testGlobals
@@ -813,11 +814,11 @@ tests =
     "Reward Tests"
     [ testProperty "Sum of rewards is bounded by reward pot" $
         withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))
-    , testProperty "compare with reference impl, no provenance, v3" $
+    , testProperty "compare with reference impl, no provenance, v3" . noShrinking $
         newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @3) 0))
-    , testProperty "compare with reference impl, no provenance, v7" $
+    , testProperty "compare with reference impl, no provenance, v7" . noShrinking $
         newEpochProp chainlen (oldEqualsNew @C (ProtVer (natVersion @7) 0))
-    , testProperty "compare with reference impl, with provenance" $
+    , testProperty "compare with reference impl, with provenance" . noShrinking $
         newEpochProp chainlen (oldEqualsNewOn @C (ProtVer (natVersion @3) 0))
     , testProperty "delta events mirror reward updates" $
         newEpochEventsProp chainlen eventsMirrorRewards

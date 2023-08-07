@@ -8,6 +8,23 @@
 * Add `lsCertStateL`
 * Make new `Constitution` datatype and `ConstitutionData` newtype #3556
   * Adopt some Default instances for example SafeHash
+* Add new methods to `EraGovernance`:
+  * `curPParamsGovStateL`
+  * `prevPParamsGovStateL`
+* Rename `ShelleyPPUPState` to `ShelleyGovState`
+* Add new fields to `ShelleyGovState`:
+  * `sgovPp`
+  * `sgovPrevPp`
+* Add lenses:
+  * `proposalsL`
+  * `futureProposalsL`
+  * `esAccountStateL`
+  * `esSnapshotsL`
+  * `esNonMyopicL`
+* Remove `esPrevPp` and `esPp` from `EpochState`
+* Rename `esPrevPpL` to `prevPParamsEpochStateL`
+* Rename `esPpL` to `curPParamsEpochStateL`
+* Swap the order of `esSnapshots` and `esLState` in `EpochState`
 
 ## 1.4.2.0
 

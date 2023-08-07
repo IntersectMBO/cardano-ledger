@@ -26,7 +26,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc, ppString)
-import Cardano.Ledger.Shelley.Governance (ShelleyPPUPState (..))
+import Cardano.Ledger.Shelley.Governance (ShelleyGovState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov (GovernanceState (..))
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import qualified Cardano.Ledger.Shelley.PParams as PP (ProposedPPUpdates (..))
@@ -680,21 +680,21 @@ data GovernanceState era = GovernanceState (Proof era) (Gov.GovernanceState era)
 unGovernanceState :: GovernanceState era -> Gov.GovernanceState era
 unGovernanceState (GovernanceState _ x) = x
 
-governanceProposedL :: Lens' (GovernanceState era) (ShelleyPPUPState era)
+governanceProposedL :: Lens' (GovernanceState era) (ShelleyGovState era)
 governanceProposedL =
   lens
     (\(GovernanceState p x) -> getPPUP p x)
     (\(GovernanceState p _) y -> GovernanceState p (putPPUP p y))
 
-getPPUP :: forall era. Proof era -> Gov.GovernanceState era -> ShelleyPPUPState era
+getPPUP :: forall era. Proof era -> Gov.GovernanceState era -> ShelleyGovState era
 getPPUP (Shelley _) x = x
 getPPUP (Allegra _) x = x
 getPPUP (Mary _) x = x
 getPPUP (Alonzo _) x = x
 getPPUP (Babbage _) x = x
-getPPUP (Conway _) _ = def @(ShelleyPPUPState era)
+getPPUP (Conway _) _ = def @(ShelleyGovState era)
 
-putPPUP :: forall era. Proof era -> ShelleyPPUPState era -> Gov.GovernanceState era
+putPPUP :: forall era. Proof era -> ShelleyGovState era -> Gov.GovernanceState era
 putPPUP (Shelley _) x = x
 putPPUP (Allegra _) x = x
 putPPUP (Mary _) x = x

@@ -19,6 +19,7 @@ import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Shelley.API hiding (vKey)
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader (
@@ -45,6 +46,7 @@ import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
+import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
   Mock,
@@ -128,7 +130,8 @@ genBlockWithTxGen
 
     -- Now we need to compute the KES period and get the set of hot keys.
     let NewEpochState _ _ _ es _ _ _ = chainNes chainSt
-        EpochState acnt _ ls _ pp _ = es
+        EpochState acnt ls _ _ = es
+        pp = es ^. curPParamsEpochStateL
         kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
         cs = chainOCertIssue chainSt
         m = getKESPeriodRenewalNo issuerKeys kp
@@ -245,7 +248,7 @@ selectNextSlotWithLeader
           f = activeSlotCoeff testGlobals
           getUnitInterval :: PParams era -> UnitInterval
           getUnitInterval pp = pp ^. ppDG
-          d = (getUnitInterval . esPp . nesEs . chainNes) chainSt
+          d = (getUnitInterval . view curPParamsEpochStateL . nesEs . chainNes) chainSt
 
           isLeader poolHash vrfKey =
             let y = VRF.evalCertified @(VRF (EraCrypto era)) () (mkSeed seedL slotNo epochNonce) vrfKey

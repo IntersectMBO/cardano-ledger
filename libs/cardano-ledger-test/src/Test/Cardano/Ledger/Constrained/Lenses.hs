@@ -20,7 +20,7 @@ where
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, SlotNo)
 import Cardano.Ledger.CertState (certDStateL, certPStateL, certVStateL, dsFutureGenDelegsL, dsGenDelegsL, dsIRewardsL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
-import Cardano.Ledger.Core (DRep, PParams)
+import Cardano.Ledger.Core (DRep)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
@@ -28,6 +28,7 @@ import Cardano.Ledger.Keys (GenDelegPair, GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Shelley.Governance (GovernanceState (..))
+import Cardano.Ledger.Shelley.LedgerState (esLStateL)
 import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, esLStateL, rewards)
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (deltaReserves, deltaTreasury)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
@@ -155,27 +156,6 @@ asTreasuryL = lens asTreasury (\ds u -> ds {asTreasury = u})
 
 asReservesL :: Lens' AccountState Coin
 asReservesL = lens asReserves (\ds u -> ds {asReserves = u})
-
--- ===========================================
--- EpochState
-
-esAccountStateL :: Lens' (EpochState era) AccountState
-esAccountStateL = lens esAccountState (\ds u -> ds {esAccountState = u})
-
-esSnapshotsL :: Lens' (EpochState era) (SnapShots (EraCrypto era))
-esSnapshotsL = lens esSnapshots (\ds u -> ds {esSnapshots = u})
-
-esLStateL :: Lens' (EpochState era) (LedgerState era)
-esLStateL = lens esLState (\ds u -> ds {esLState = u})
-
-esPrevPpL :: Lens' (EpochState era) (PParams era)
-esPrevPpL = lens esPrevPp (\ds u -> ds {esPrevPp = u})
-
-esPpL :: Lens' (EpochState era) (PParams era)
-esPpL = lens esPp (\ds u -> ds {esPp = u})
-
-esNonMyopicL :: Lens' (EpochState era) (NonMyopic (EraCrypto era))
-esNonMyopicL = lens esNonMyopic (\ds u -> ds {esNonMyopic = u})
 
 -- ===============================================
 -- NonMyopic

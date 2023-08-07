@@ -200,7 +200,7 @@ getTxOutRefScript (Babbage _) (BabbageTxOut _ _ _ ms) = ms
 getTxOutRefScript _ _ = SNothing
 {-# NOINLINE getTxOutRefScript #-}
 
-emptyPPUPstate :: forall era. Proof era -> ShelleyPPUPState era
+emptyPPUPstate :: forall era. Proof era -> ShelleyGovState era
 emptyPPUPstate (Conway _) = def
 emptyPPUPstate (Babbage _) = def
 emptyPPUPstate (Alonzo _) = def
@@ -413,7 +413,7 @@ instance TotalAda (VState era) where
 instance TotalAda (CertState era) where
   totalAda (CertState ds ps vs) = totalAda ds <> totalAda ps <> totalAda vs
 
-instance TotalAda (ShelleyPPUPState era) where
+instance TotalAda (ShelleyGovState era) where
   totalAda _ = mempty
 
 governanceStateTotalAda :: forall era. Reflect era => GovernanceState era -> Coin

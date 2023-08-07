@@ -235,7 +235,7 @@ data Rep era t where
   DeltaCoinR :: Rep era DeltaCoin
   GenDelegPairR :: Rep era (GenDelegPair (EraCrypto era))
   FutureGenDelegR :: Rep era (FutureGenDeleg (EraCrypto era))
-  PPUPStateR :: Proof era -> Rep era (ShelleyPPUPState era)
+  PPUPStateR :: Proof era -> Rep era (ShelleyGovState era)
   PtrR :: Rep era Ptr
   IPoolStakeR :: Rep era (IndividualPoolStake (EraCrypto era))
   SnapShotsR :: Rep era (SnapShots (EraCrypto era))
@@ -449,7 +449,7 @@ instance Show (Rep era t) where
   show DeltaCoinR = "DeltaCoin"
   show GenDelegPairR = "(GenDelegPair c)"
   show FutureGenDelegR = "(FutureGenDeleg c)"
-  show (PPUPStateR p) = "(ShelleyPPUPState " ++ short p ++ ")"
+  show (PPUPStateR p) = "(ShelleyGovState " ++ short p ++ ")"
   show PtrR = "Ptr"
   show IPoolStakeR = "(IndividualPoolStake c)"
   show SnapShotsR = "(SnapShots c)"
@@ -899,7 +899,7 @@ genProtVer proof = frequency (zipWith pair [count, count - 1 .. 1] versions)
 protVerRange :: forall era. Era era => Proof era -> [Version]
 protVerRange _ = [Core.eraProtVerLow @era .. Core.eraProtVerHigh @era]
 
-genpup :: Rep era (ShelleyPPUPState era) -> Gen (ShelleyPPUPState era)
+genpup :: Rep era (ShelleyGovState era) -> Gen (ShelleyGovState era)
 genpup (PPUPStateR (Shelley _)) = arbitrary
 genpup (PPUPStateR (Allegra _)) = arbitrary
 genpup (PPUPStateR (Mary _)) = arbitrary

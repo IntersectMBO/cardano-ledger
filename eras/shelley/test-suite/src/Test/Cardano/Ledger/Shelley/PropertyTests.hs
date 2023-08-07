@@ -48,7 +48,6 @@ import qualified Test.Tasty.QuickCheck as TQC
 commonTests ::
   forall era ledger.
   ( EraGen era
-  , EraGovernance era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , QC.HasTrace ledger (GenEnv era)
@@ -60,7 +59,7 @@ commonTests ::
   , State ledger ~ LedgerState era
   , Signal ledger ~ Tx era
   , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
   ) =>
   [TestTree]
 commonTests =

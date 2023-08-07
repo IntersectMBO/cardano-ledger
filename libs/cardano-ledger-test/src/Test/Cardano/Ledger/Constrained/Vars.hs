@@ -60,8 +60,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  ShelleyPPUPState (..),
+  ShelleyGovState (..),
   UTxOState (..),
+  curPParamsEpochStateL,
+  esAccountStateL,
+  esLStateL,
+  esNonMyopicL,
+  esSnapshotsL,
+  prevPParamsEpochStateL,
   smartUTxOState,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
@@ -100,7 +106,6 @@ import Test.Cardano.Ledger.Constrained.Classes (
   ValueF (..),
   liftUTxO,
   pparamsWrapperL,
-  unPParams,
   unPParamsUpdate,
   unScriptF,
   unTxCertF,
@@ -305,10 +310,10 @@ fees = Var $ V "fees" CoinR (Yes NewEpochStateR feesL)
 feesL :: NELens era Coin
 feesL = nesEsL . esLStateL . lsUTxOStateL . utxosFeesL
 
-ppup :: Proof era -> Term era (ShelleyPPUPState era)
+ppup :: Proof era -> Term era (ShelleyGovState era)
 ppup p = Var $ (V "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p)))
 
-ppupsL :: Proof era -> NELens era (ShelleyPPUPState era)
+ppupsL :: Proof era -> NELens era (ShelleyGovState era)
 ppupsL (Shelley _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
 ppupsL (Allegra _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
 ppupsL (Mary _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovernanceL
@@ -325,13 +330,26 @@ futureProposalsT ::
   Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 futureProposalsT p = Var (V "futureProposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
-ppupStateT :: Proof era -> Target era (ShelleyPPUPState era)
-ppupStateT p = Constr "PPUPState" ppupfun ^$ proposalsT p ^$ futureProposalsT p
+curPParamsT :: Proof era -> Term era (PParamsF era)
+curPParamsT p = Var (V "curPParams" (PParamsR p) No)
+
+prevPParamsT :: Proof era -> Term era (PParamsF era)
+prevPParamsT p = Var (V "prevPParams" (PParamsR p) No)
+
+ppupStateT :: Proof era -> Target era (ShelleyGovState era)
+ppupStateT p =
+  Constr "PPUPState" ppupfun
+    ^$ proposalsT p
+    ^$ futureProposalsT p
+    ^$ curPParamsT p
+    ^$ prevPParamsT p
   where
-    ppupfun x y =
-      ShelleyPPUPState
+    ppupfun x y (PParamsF _ pp) (PParamsF _ prev) =
+      ShelleyGovState
         (ProposedPPUpdates (Map.map unPParamsUpdate x))
         (ProposedPPUpdates (Map.map unPParamsUpdate y))
+        pp
+        prev
 
 governanceStateT :: forall era. Proof era -> Target era (GovernanceState era)
 governanceStateT p@(Shelley _) = Constr "GovernanceState" (GovernanceState p) :$ (ppupStateT p)
@@ -395,11 +413,11 @@ snapshotsL = nesEsL . esSnapshotsL
 ppFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 ppFL p = lens (\pp -> PParamsF p pp) (\_ (PParamsF _ qq) -> qq)
 
-prevpparams :: Proof era -> Term era (PParamsF era)
-prevpparams p = Var (V "prevpparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . esPrevPpL . ppFL p)))
+prevpparams :: Core.EraGovernance era => Proof era -> Term era (PParamsF era)
+prevpparams p = Var (V "prevpparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . prevPParamsEpochStateL . ppFL p)))
 
-pparams :: Proof era -> Term era (PParamsF era)
-pparams p = Var (V "pparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . esPpL . ppFL p)))
+pparams :: Core.EraGovernance era => Proof era -> Term era (PParamsF era)
+pparams p = Var (V "pparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . curPParamsEpochStateL . ppFL p)))
 
 nmLikelihoodsT :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) [Float])
 nmLikelihoodsT = Var (V "likelihoodsNM" (MapR PoolHashR (ListR FloatR)) (Yes NewEpochStateR (nesEsL . esNonMyopicL . nmLikelihoodsL)))
@@ -787,7 +805,7 @@ newEpochStateConstr
       )
 
 -- | Target for NewEpochState
-newEpochStateT :: Proof era -> Target era (NewEpochState era)
+newEpochStateT :: Core.EraGovernance era => Proof era -> Target era (NewEpochState era)
 newEpochStateT proof =
   Constr "NewEpochState" (newEpochStateConstr proof)
     ^$ currentEpoch
@@ -797,30 +815,28 @@ newEpochStateT proof =
     ^$ poolDistr
 
 -- | Target for EpochState
-epochStateT :: Proof era -> Target era (EpochState era)
+epochStateT :: Core.EraGovernance era => Proof era -> Target era (EpochState era)
 epochStateT proof =
   Constr "EpochState" epochStateFun
     :$ accountStateT
-    :$ snapShotsT
     :$ ledgerStateT proof
-    ^$ prevpparams proof
-    ^$ pparams proof
+    :$ snapShotsT
   where
-    epochStateFun a s l pp p = EpochState a s l (unPParams pp) (unPParams p) (NonMyopic Map.empty (Coin 0))
+    epochStateFun a s l = EpochState a s l (NonMyopic Map.empty (Coin 0))
 
 -- | Target for AccountState
 accountStateT :: Target era AccountState
 accountStateT = Constr "AccountState" AccountState ^$ treasury ^$ reserves
 
 -- | Target for LedgerState
-ledgerStateT :: Proof era -> Target era (LedgerState era)
+ledgerStateT :: Core.EraGovernance era => Proof era -> Target era (LedgerState era)
 ledgerStateT proof = Constr "LedgerState" LedgerState :$ utxoStateT proof :$ certstateT
 
 ledgerState :: Reflect era => Term era (LedgerState era)
 ledgerState = Var $ V "ledgerState" (LedgerStateR reify) No
 
 -- | Target for UTxOState
-utxoStateT :: Proof era -> Target era (UTxOState era)
+utxoStateT :: Core.EraGovernance era => Proof era -> Target era (UTxOState era)
 utxoStateT p = Constr "UTxOState" (utxofun p) ^$ (pparams p) ^$ utxo p ^$ deposits ^$ fees :$ governanceStateT p
   where
     utxofun ::

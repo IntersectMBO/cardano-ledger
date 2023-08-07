@@ -71,7 +71,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState), ShelleyPPUPState)
+import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState), ShelleyGovState)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
@@ -122,8 +122,8 @@ instance
   , Script era ~ AlonzoScript era
   , TxCert era ~ ShelleyTxCert era
   , EraGovernance era
-  , GovernanceState era ~ ShelleyPPUPState era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
@@ -169,8 +169,8 @@ utxosTransition ::
   , Script era ~ AlonzoScript era
   , TxCert era ~ ShelleyTxCert era
   , EraGovernance era
-  , GovernanceState era ~ ShelleyPPUPState era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
@@ -239,8 +239,8 @@ alonzoEvalScriptsTxValid ::
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyPPUPState era
-  , State (EraRule "PPUP" era) ~ ShelleyPPUPState era
+  , GovernanceState era ~ ShelleyGovState era
+  , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext 'PlutusV1 era
   ) =>
   TransitionRule (AlonzoUTXOS era)

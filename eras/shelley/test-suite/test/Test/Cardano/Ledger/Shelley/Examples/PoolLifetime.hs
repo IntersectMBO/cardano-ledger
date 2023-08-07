@@ -46,6 +46,7 @@ import Cardano.Ledger.PoolDistr (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Core (EraGovernance)
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PulsingRewUpdate (..),
@@ -349,7 +350,7 @@ blockEx2 =
 
 makePulser ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   BlocksMade (EraCrypto era) ->
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
@@ -366,14 +367,14 @@ makePulser bs cs = p
 
 makePulser' ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
 makePulser' = makePulser (BlocksMade mempty)
 
 makeCompletedPulser ::
   forall era.
-  EraPParams era =>
+  EraGovernance era =>
   BlocksMade (EraCrypto era) ->
   ChainState era ->
   PulsingRewUpdate (EraCrypto era)
