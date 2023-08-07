@@ -100,7 +100,7 @@ parameter_change_action = (0, protocol_param_update)
 
 hard_fork_initiation_action = (1, [protocol_version])
 
-treasury_withdrawals_action = (2, { $addr_keyhash => coin })
+treasury_withdrawals_action = (2, { $reward_account => coin })
 
 no_confidence = 3
 
