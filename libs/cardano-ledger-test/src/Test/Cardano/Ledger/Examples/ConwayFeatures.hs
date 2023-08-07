@@ -182,7 +182,7 @@ govActionStateWithVote ProposalProcedure {..} kh v =
     pProcGovernanceAction
     (EpochNo 0)
 
--- | Value for the actual threshold, plus a small epsilon for GT (>) reation
+-- | Value for the actual threshold, plus a small epsilon for GT (>) relation
 spoThreshold :: Rational
 spoThreshold = 51 % 100 + 1 % 100000000000
 

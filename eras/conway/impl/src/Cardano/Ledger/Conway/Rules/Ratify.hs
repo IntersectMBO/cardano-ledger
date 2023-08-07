@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -22,7 +23,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   EraGovernance,
-  GovernanceAction,
+  GovernanceAction (..),
   GovernanceActionId,
   GovernanceActionState (..),
   RatifyState (..),
@@ -92,13 +93,13 @@ spoThreshold :: Rational
 spoThreshold = 51 % 100
 
 epochsToExpire :: EpochNo
-epochsToExpire = 10
+epochsToExpire = 30
 
 accepted :: RatifyEnv era -> GovernanceActionState era -> Bool
 accepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
-  totalAcceptedStakePoolsRatio > spoThreshold
+  totalAcceptedStakePoolsRatio > getStakePoolThreshold gasAction
   where
-    GovernanceActionState {gasStakePoolVotes} = gas
+    GovernanceActionState {gasStakePoolVotes, gasAction} = gas
     -- Final ratio for `totalAcceptedStakePoolsRatio` we want is: t = y / (s - a)
     -- Where:
     --  * `y` - total delegated stake that voted Yes
@@ -128,6 +129,10 @@ accepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
             VoteNo -> Nothing
             VoteYes -> Just (distr, mempty)
             Abstain -> Just (mempty, distr)
+    getStakePoolThreshold = \case
+      -- Disable HardForks for now, in order to prevent SanchoNet from dying
+      HardForkInitiation {} -> 101 % 100
+      _ -> spoThreshold
 
 ratifyTransition ::
   forall era.
