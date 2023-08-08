@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -15,6 +14,7 @@ module Cardano.Ledger.Conway.Rules.Enact (
   EnactPredFailure (..),
 ) where
 
+import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
@@ -23,8 +23,6 @@ import Cardano.Ledger.Conway.Governance (
   EnactState (..),
   GovernanceAction (..),
  )
-import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), runTest)
 import Cardano.Ledger.Val (Val (..))
 import Control.State.Transition.Extended (
@@ -33,12 +31,13 @@ import Control.State.Transition.Extended (
   TransitionRule,
   judgmentContext,
  )
-import Data.Map.Strict (Map, foldr')
+import Data.Foldable (fold)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Validation (failureUnless)
 
 data EnactPredFailure era
-  = EnactTreasuryInsufficientFunds !(Map (Credential 'Staking (EraCrypto era)) Coin) !Coin
+  = EnactTreasuryInsufficientFunds !(Map (RewardAcnt (EraCrypto era)) Coin) !Coin
   deriving (Show, Eq)
 
 instance
@@ -64,15 +63,18 @@ enactmentTransition = do
       where
         newPP = ensPParams st `applyPPUpdates` ppup
     HardForkInitiation pv -> pure $ st {ensProtVer = pv}
-    TreasuryWithdrawals wdrl -> do
-      let newWdrls = foldr' (<>) (Coin 0) $ ensWithdrawals st
+    TreasuryWithdrawals wdrls -> do
+      let wdrlsAmount = fold wdrls
+          -- TODO: validate NetworkId in all
+          -- We can drop NetworkIds after their validation
+          wdrlsNoNetworkId = Map.mapKeys getRwdCred wdrls
       runTest
-        . failureUnless (newWdrls <= ensTreasury st)
-        $ EnactTreasuryInsufficientFunds @era wdrl (ensTreasury st)
+        . failureUnless (wdrlsAmount <= ensTreasury st)
+        $ EnactTreasuryInsufficientFunds @era wdrls (ensTreasury st)
       pure
         st
-          { ensWithdrawals = Map.unionWith (<>) wdrl $ ensWithdrawals st
-          , ensTreasury = ensTreasury st <-> newWdrls
+          { ensWithdrawals = Map.unionWith (<>) wdrlsNoNetworkId $ ensWithdrawals st
+          , ensTreasury = ensTreasury st <-> wdrlsAmount
           }
     NoConfidence -> pure $ st {ensCommittee = SNothing}
     NewCommittee _ committee -> pure $ st {ensCommittee = SJust committee} -- TODO: check old members

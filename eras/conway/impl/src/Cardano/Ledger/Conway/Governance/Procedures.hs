@@ -382,7 +382,7 @@ toCommitteePairs committee@(Committee _ _) =
 data GovernanceAction era
   = ParameterChange !(PParamsUpdate era)
   | HardForkInitiation !ProtVer
-  | TreasuryWithdrawals !(Map (Credential 'Staking (EraCrypto era)) Coin)
+  | TreasuryWithdrawals !(Map (RewardAcnt (EraCrypto era)) Coin)
   | NoConfidence
   | NewCommittee
       -- | Old committee
