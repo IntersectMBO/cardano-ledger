@@ -387,7 +387,7 @@ class
   -- era.
   --
   -- /Warning/ - Important to note that any memoized binary representation will not be
-  -- preserved, you need to retain underlying bytes you can use `translateEraThroughCBOR`
+  -- preserved. If you need to retain underlying bytes you can use `translateEraThroughCBOR`
   upgradeTxAuxData :: EraTxAuxData (PreviousEra era) => TxAuxData (PreviousEra era) -> TxAuxData era
 
   hashTxAuxData :: TxAuxData era -> AuxiliaryDataHash (EraCrypto era)

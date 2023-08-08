@@ -36,6 +36,7 @@ module Cardano.Ledger.Shelley.TxCert (
   getScriptWitnessShelleyTxCert,
   delegCWitness,
   ShelleyTxCert (..),
+  upgradeShelleyTxCert,
 
   -- ** GenesisDelegCert
   GenesisDelegCert (..),
@@ -109,6 +110,10 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
   {-# SPECIALIZE instance EraTxCert (ShelleyEra StandardCrypto) #-}
 
   type TxCert (ShelleyEra c) = ShelleyTxCert (ShelleyEra c)
+
+  -- Calling this partial function will result in compilation error, since ByronEra has
+  -- no instance for EraTxOut type class.
+  upgradeTxCert = error "Byron does not have any TxCerts to upgrade with 'upgradeTxCert'"
 
   getVKeyWitnessTxCert = getVKeyWitnessShelleyTxCert
 
@@ -303,6 +308,16 @@ data ShelleyTxCert era
   deriving (Show, Generic, Eq, NFData)
 
 instance NoThunks (ShelleyTxCert era)
+
+upgradeShelleyTxCert ::
+  EraCrypto era1 ~ EraCrypto era2 =>
+  ShelleyTxCert era1 ->
+  ShelleyTxCert era2
+upgradeShelleyTxCert = \case
+  ShelleyTxCertDelegCert cert -> ShelleyTxCertDelegCert cert
+  ShelleyTxCertPool cert -> ShelleyTxCertPool cert
+  ShelleyTxCertGenesisDeleg cert -> ShelleyTxCertGenesisDeleg cert
+  ShelleyTxCertMir cert -> ShelleyTxCertMir cert
 
 -- CBOR
 

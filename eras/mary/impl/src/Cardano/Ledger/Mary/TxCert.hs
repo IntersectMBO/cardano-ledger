@@ -13,12 +13,15 @@ import Cardano.Ledger.Shelley.TxCert (
   ShelleyTxCert (..),
   getScriptWitnessShelleyTxCert,
   getVKeyWitnessShelleyTxCert,
+  upgradeShelleyTxCert,
  )
 
 instance Crypto c => EraTxCert (MaryEra c) where
   {-# SPECIALIZE instance EraTxCert (MaryEra StandardCrypto) #-}
 
   type TxCert (MaryEra c) = ShelleyTxCert (MaryEra c)
+
+  upgradeTxCert = Right . upgradeShelleyTxCert
 
   getVKeyWitnessTxCert = getVKeyWitnessShelleyTxCert
 

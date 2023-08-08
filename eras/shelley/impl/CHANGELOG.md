@@ -2,6 +2,7 @@
 
 ## 1.5.0.0
 
+* Add `upgradeShelleyTxCert`
 * Rename `*governance*` to `*gov*` #3607
   * `EraGovernance` to `EraGov`
   * `GovernanceState` to `GovState`
