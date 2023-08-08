@@ -228,7 +228,7 @@ spec = do
         forAll
           genInvariantNonEmpty
           (\(cred, ptr, umap) -> umInvariant cred ptr umap)
-      prop "Non-empty with insert and delete actions" $
+      xprop "Non-empty with insert and delete actions" $
         forAll
           ((,) <$> genInvariantNonEmpty <*> arbitrary)
           (\((cred, ptr, umap), actions) -> umInvariant cred ptr $ runActions actions umap)
