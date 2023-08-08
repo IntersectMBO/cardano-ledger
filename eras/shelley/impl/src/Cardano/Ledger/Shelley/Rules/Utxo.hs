@@ -61,7 +61,7 @@ import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
-import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.Gov
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   PPUPPredFailure,
@@ -299,8 +299,8 @@ instance
   ( EraTx era
   , EraUTxO era
   , ShelleyEraTxBody era
-  , EraGovernance era
-  , GovernanceState era ~ ShelleyGovState era
+  , EraGov era
+  , GovState era ~ ShelleyGovState era
   , ExactEra ShelleyEra era
   , Tx era ~ ShelleyTx era
   , Show (ShelleyTx era)
@@ -382,7 +382,7 @@ utxoInductive ::
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
@@ -596,7 +596,7 @@ updateUTxOState ::
   UTxOState era ->
   TxBody era ->
   Coin ->
-  GovernanceState era ->
+  GovState era ->
   UTxOState era
 updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr} txb depositChange govState =
   let UTxO utxo = utxosUtxo
@@ -610,7 +610,7 @@ updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDi
         { utxosUtxo = UTxO newUTxO
         , utxosDeposited = utxosDeposited <> depositChange
         , utxosFees = utxosFees <> txb ^. feeTxBodyL
-        , utxosGovernance = govState
+        , utxosGovState = govState
         , utxosStakeDistr = newIncStakeDistro
         }
 

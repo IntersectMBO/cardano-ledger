@@ -1136,7 +1136,7 @@ testExpectSuccessValid ::
   , PostShelley era
   , EraTx era
   , BabbageEraTxBody era
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proof era ->
   TestCaseData era ->
@@ -1181,7 +1181,7 @@ testExpectSuccessInvalid ::
   , PostShelley era
   , EraTx era
   , BabbageEraTxBody era
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proof era ->
   TestCaseData era ->
@@ -1230,7 +1230,7 @@ genericBabbageFeatures ::
   , BabbageEraTxBody era
   , PostShelley era
   , EraTx era
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proof era ->
   TestTree

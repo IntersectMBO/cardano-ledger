@@ -125,7 +125,7 @@ alonzoUTXOWTests ::
   , EraTx era
   , PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
   , Value era ~ MaryValue (EraCrypto era)
-  , EraGovernance era
+  , EraGov era
   , ShelleyEraTxCert era
   ) =>
   Proof era ->

@@ -24,7 +24,7 @@ goldenNewEpochStateExpectation ::
   forall era.
   ( HasCallStack
   , EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , ToCBOR (StashedAVVMAddresses era)
   , EncCBOR (StashedAVVMAddresses era)
   ) =>

@@ -126,9 +126,9 @@ data ConwayPParams f era = ConwayPParams
   , cppCommitteeTermLimit :: !(HKD f Natural)
   -- ^ The Constitutional Committee Term limit in number of Slots
   , cppGovActionExpiration :: !(HKD f Natural)
-  -- ^ Governance action expiration in number of Slots
+  -- ^ Gov action expiration in number of Slots
   , cppGovActionDeposit :: !(HKD f Coin)
-  -- ^ The amount of the Governance Action deposit
+  -- ^ The amount of the Gov Action deposit
   , cppDRepDeposit :: !(HKD f Coin)
   -- ^ The amount of a DRep registration deposit
   , cppDRepActivity :: !(HKD f EpochNo)

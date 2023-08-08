@@ -51,7 +51,7 @@ import Cardano.Ledger.EpochBoundary (
 import Cardano.Ledger.Keys (
   KeyRole (..),
  )
-import Cardano.Ledger.Shelley.Governance (EraGovernance (GovernanceState))
+import Cardano.Ledger.Shelley.Gov (EraGov (GovState))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
@@ -154,7 +154,7 @@ smartUTxOState ::
   UTxO era ->
   Coin ->
   Coin ->
-  GovernanceState era ->
+  GovState era ->
   UTxOState era
 smartUTxOState pp utxo c1 c2 st =
   UTxOState
@@ -260,7 +260,7 @@ aggregateActiveStake m1 m2 = assert (Map.valid m) m
 --   2) Adds to the Treasury of the AccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
 applyRUpd ::
-  EraGovernance era =>
+  EraGov era =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   EpochState era
@@ -270,7 +270,7 @@ applyRUpd ru es =
 
 -- TO IncrementalStake
 applyRUpdFiltered ::
-  EraGovernance era =>
+  EraGov era =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   (EpochState era, FilteredRewards era)
@@ -353,7 +353,7 @@ filterAllRewards' rs protVer dState =
     (registered, shelleyIgnored) = filterRewards protVer regRU
 
 filterAllRewards ::
-  EraGovernance era =>
+  EraGov era =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   EpochState era ->
   FilteredRewards era

@@ -89,7 +89,7 @@ data ShelleyNewEpochEvent era
 
 instance
   ( EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
   , Environment (EraRule "MIR" era) ~ ()
@@ -133,7 +133,7 @@ instance
 newEpochTransition ::
   forall era.
   ( EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
   , Environment (EraRule "MIR" era) ~ ()
@@ -216,7 +216,7 @@ instance
   wrapEvent = EpochEvent
 
 instance
-  ( EraGovernance era
+  ( EraGov era
   , Default (EpochState era)
   , PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era
   , Event (EraRule "MIR" era) ~ ShelleyMirEvent era
@@ -229,7 +229,7 @@ instance
 -- ===========================================
 
 updateRewards ::
-  EraGovernance era =>
+  EraGov era =>
   EpochState era ->
   EpochNo ->
   RewardUpdate (EraCrypto era) ->

@@ -90,7 +90,7 @@ import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.Gov
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState (..),
@@ -741,7 +741,7 @@ ppIncrementalStake (IStake st dangle) =
 
 ppUTxOState ::
   ( CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   UTxOState era ->
   PDoc
@@ -757,7 +757,7 @@ ppUTxOState (UTxOState u dep fee ppup sd) =
 
 ppEpochState ::
   ( CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   EpochState era ->
   PDoc
@@ -772,7 +772,7 @@ ppEpochState (EpochState acnt ls snap non) =
 
 ppNewEpochState ::
   ( CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   NewEpochState era ->
   PDoc
@@ -789,7 +789,7 @@ ppNewEpochState (NewEpochState enum prevB curB es rewup pool _) =
 
 ppLedgerState ::
   ( CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   LedgerState era ->
   PDoc
@@ -812,7 +812,7 @@ instance PrettyA (DState c) where
 instance
   ( Era era
   , CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   PrettyA (EpochState era)
   where
@@ -821,7 +821,7 @@ instance
 instance
   ( Era era
   , CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   PrettyA (NewEpochState era)
   where
@@ -836,7 +836,7 @@ instance PrettyA (InstantaneousRewards c) where
 instance
   ( Era era
   , CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   PrettyA (LedgerState era)
   where
@@ -856,7 +856,7 @@ instance PrettyA (PState c) where
 instance
   ( Era era
   , CanPrettyPrintLedgerState era
-  , PrettyA (GovernanceState era)
+  , PrettyA (GovState era)
   ) =>
   PrettyA (UTxOState era)
   where

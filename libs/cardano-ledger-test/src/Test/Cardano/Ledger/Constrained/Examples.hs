@@ -18,7 +18,7 @@ import Cardano.Ledger.CertState (FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
-import Cardano.Ledger.Shelley.Core (EraGovernance)
+import Cardano.Ledger.Shelley.Core (EraGov)
 import Control.Exception (ErrorCall (..))
 import Control.Monad (when)
 import qualified Data.List as List
@@ -210,7 +210,7 @@ test5 = failn (Mary Standard) "Test 5. Bad Sum, impossible partition." False sto
 -- ===========================================================
 -- Example list of Constraints for test4 and test5
 
-constraints :: EraGovernance era => Proof era -> [Pred era]
+constraints :: EraGov era => Proof era -> [Pred era]
 constraints proof =
   [ Sized (ExactSize 10) credsUniv
   , Sized (ExactSize 10) poolHashUniv
@@ -430,7 +430,7 @@ test12 =
 -- ==============================================================
 -- Test the Component Predicate
 
-componentPreds :: EraGovernance era => Proof era -> [Pred era]
+componentPreds :: EraGov era => Proof era -> [Pred era]
 componentPreds proof =
   [ Random (minFeeA proof)
   , Random size
@@ -613,7 +613,7 @@ utxostatePreds proof =
   , Random (futureProposalsT proof)
   ]
 
-epochstatePreds :: EraGovernance era => Proof era -> [Pred era]
+epochstatePreds :: EraGov era => Proof era -> [Pred era]
 epochstatePreds proof =
   [ Random markStake
   , Random markDelegs

@@ -77,7 +77,7 @@ getGKeys nes = Map.keysSet genDelegs
 --  contains the specified transaction outputs.
 genesisState ::
   forall era.
-  EraGovernance era =>
+  EraGov era =>
   Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   UTxO era ->
   LedgerState era
@@ -87,7 +87,7 @@ genesisState genDelegs0 utxo0 =
         utxo0
         (Coin 0)
         (Coin 0)
-        emptyGovernanceState
+        emptyGovState
         (IStake mempty Map.empty)
     )
     (CertState def def dState)
@@ -140,7 +140,7 @@ reapRewards (UMap tmap ptrmap) withdrawals = UMap (Map.mapWithKey g tmap) ptrmap
 
 -- | Update new epoch state
 updateNES ::
-  EraGovernance era =>
+  EraGov era =>
   NewEpochState era ->
   BlocksMade (EraCrypto era) ->
   LedgerState era ->

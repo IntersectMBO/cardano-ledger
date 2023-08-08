@@ -694,7 +694,7 @@ initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
     umap = UM.unify (Map.map rdpair (gsInitialRewards gstate)) Map.empty (gsInitialDelegations gstate) Map.empty
-    utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovernanceState
+    utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState
     dpstate = CertState def pstate dstate
     dstate =
       DState

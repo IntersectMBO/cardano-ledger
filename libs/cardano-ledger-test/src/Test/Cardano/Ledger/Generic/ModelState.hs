@@ -234,7 +234,7 @@ pParamsZeroByProof (Allegra _) = def
 pParamsZeroByProof (Shelley _) = def
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
-uTxOStateZero = smartUTxOState pParamsZero utxoZero mempty mempty emptyGovernanceState
+uTxOStateZero = smartUTxOState pParamsZero utxoZero mempty mempty emptyGovState
 
 pParamsZero :: Reflect era => PParams era
 pParamsZero = lift pParamsZeroByProof
@@ -342,7 +342,7 @@ instance Reflect era => Extract (UTxOState era) era where
       (UTxO (mUTxO x))
       (mDeposited x)
       (mFees x)
-      emptyGovernanceState
+      emptyGovState
 
 instance Reflect era => Extract (LedgerState era) era where
   extract x = LedgerState (extract x) (extract x)
@@ -368,7 +368,7 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (PoolDistr (mPoolDistr x))
       (stashedAVVMAddressesZero (reify :: Proof era))
 
-abstract :: EraGovernance era => NewEpochState era -> ModelNewEpochState era
+abstract :: EraGov era => NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x

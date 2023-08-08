@@ -41,7 +41,7 @@ import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppList, ppMap, ppRecord, ppSaf
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, keyCertsRefunds, totalCertsDeposits)
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded, witsVKeyNeededNoGovernance)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded, witsVKeyNeededNoGov)
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -323,7 +323,7 @@ necessaryKeyHashes (TxBodyF _ txb) u gd reqsigners =
     Mary _ -> Set.union (shelleyWitsVKeyNeeded (liftUTxO u) txb (GenDelegs gd)) reqsigners
     Alonzo _ -> Set.union (shelleyWitsVKeyNeeded (liftUTxO u) txb (GenDelegs gd)) reqsigners
     Babbage _ -> Set.union (shelleyWitsVKeyNeeded (liftUTxO u) txb (GenDelegs gd)) reqsigners
-    Conway _ -> Set.union (witsVKeyNeededNoGovernance (liftUTxO u) txb) reqsigners
+    Conway _ -> Set.union (witsVKeyNeededNoGov (liftUTxO u) txb) reqsigners
 
 -- ========================================================
 

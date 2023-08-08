@@ -34,7 +34,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraGovernance)
+import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
@@ -99,7 +99,7 @@ class
     m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
   default applyBlockOpts ::
     forall ep m.
-    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m, EraGovernance era) =>
+    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m, EraGov era) =>
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
@@ -135,7 +135,7 @@ class
     Block (BHeaderView (EraCrypto era)) era ->
     NewEpochState era
   default reapplyBlock ::
-    EraGovernance era =>
+    EraGov era =>
     Globals ->
     NewEpochState era ->
     Block (BHeaderView (EraCrypto era)) era ->
@@ -213,7 +213,7 @@ chainChecks = STS.chainChecks
 -------------------------------------------------------------------------------}
 
 mkBbodyEnv ::
-  EraGovernance era =>
+  EraGov era =>
   NewEpochState era ->
   STS.BbodyEnv era
 mkBbodyEnv
@@ -226,7 +226,7 @@ mkBbodyEnv
       }
 
 updateNewEpochState ::
-  (LedgerState era ~ State (EraRule "LEDGERS" era), EraGovernance era) =>
+  (LedgerState era ~ State (EraRule "LEDGERS" era), EraGov era) =>
   NewEpochState era ->
   STS.ShelleyBbodyState era ->
   NewEpochState era

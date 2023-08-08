@@ -15,7 +15,7 @@ import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Gov
 import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
   UpgradeConwayPParams (..),
@@ -85,15 +85,15 @@ instance Crypto c => Arbitrary (AlonzoScript (ConwayEra c)) where
   arbitrary = genAlonzoScript [PlutusV1, PlutusV2, PlutusV3]
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.Conway.Governance ------------------------------------------------------
+-- Cardano.Ledger.Conway.Gov ------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
-  Arbitrary (ConwayGovernance era)
+  Arbitrary (ConwayGovState era)
   where
   arbitrary =
-    ConwayGovernance
+    ConwayGovState
       <$> arbitrary
       <*> arbitrary
 
@@ -124,11 +124,11 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ConwayGovState era)
+deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionsState era)
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceActionState era) where
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState era) where
   arbitrary =
-    GovernanceActionState
+    GovActionState
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -137,7 +137,7 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceAction
       <*> arbitrary
       <*> arbitrary
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceAction era) where
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovAction era) where
   arbitrary =
     oneof
       [ ParameterChange <$> arbitrary
@@ -152,13 +152,13 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceAction
 instance Era era => Arbitrary (Committee era) where
   arbitrary = Committee <$> arbitrary <*> arbitrary
 
-instance Crypto c => Arbitrary (GovernanceActionId c) where
+instance Crypto c => Arbitrary (GovActionId c) where
   arbitrary =
-    GovernanceActionId
+    GovActionId
       <$> arbitrary
       <*> arbitrary
 
-deriving instance Arbitrary GovernanceActionIx
+deriving instance Arbitrary GovActionIx
 
 instance Crypto c => Arbitrary (Voter c) where
   arbitrary =
@@ -235,12 +235,12 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedur
       <*> arbitrary
       <*> arbitrary
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovernanceProcedures era) where
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovProcedures era) where
   arbitrary =
-    GovernanceProcedures <$> arbitrary <*> arbitrary
+    GovProcedures <$> arbitrary <*> arbitrary
 
 instance Era era => Arbitrary (ConwayGovPredFailure era) where
-  arbitrary = GovernanceActionsDoNotExist <$> arbitrary
+  arbitrary = GovActionsDoNotExist <$> arbitrary
 
 instance
   ( Arbitrary (PredicateFailure (EraRule "UTXOW" era))

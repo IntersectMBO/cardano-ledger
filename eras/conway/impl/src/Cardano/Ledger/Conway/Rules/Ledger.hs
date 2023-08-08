@@ -35,10 +35,10 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
-import Cardano.Ledger.Conway.Governance (
-  ConwayGovState,
-  ConwayGovernance (..),
-  GovernanceProcedures (..),
+import Cardano.Ledger.Conway.Gov (
+  ConwayGovState (..),
+  GovActionsState,
+  GovProcedures (..),
  )
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..))
@@ -170,19 +170,19 @@ data ConwayLedgerEvent era
 instance
   ( AlonzoEraTx era
   , ConwayEraTxBody era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ ConwayGovState era
+  , State (EraRule "GOV" era) ~ GovActionsState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ DelegsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "GOV" era) ~ GovernanceProcedures era
+  , Signal (EraRule "GOV" era) ~ GovProcedures era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -222,7 +222,7 @@ ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( AlonzoEraTx era
   , ConwayEraTxBody era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , Signal (someLEDGER era) ~ Tx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
@@ -232,13 +232,13 @@ ledgerTransition ::
   , Embed (EraRule "CERTS" era) (someLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ ConwayGovState era
+  , State (EraRule "GOV" era) ~ GovActionsState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ DelegsEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "GOV" era) ~ GovernanceProcedures era
+  , Signal (EraRule "GOV" era) ~ GovProcedures era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
   ) =>
@@ -272,11 +272,11 @@ ledgerTransition = do
       genCerts = dsGenDelegs dstate
 
   let govProcedures =
-        GovernanceProcedures
+        GovProcedures
           { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
           , gpProposalProcedures = fromStrict $ txBody ^. proposalProceduresTxBodyL
           }
-  let govSt = utxosGovernance utxoSt
+  let govSt = utxosGovState utxoSt
   epoch <- liftSTS $ do
     ei <- asks epochInfoPure
     epochInfoEpoch ei slot
@@ -292,7 +292,7 @@ ledgerTransition = do
     trans @(EraRule "UTXOW" era) $
       TRC
         ( UtxoEnv @era slot pp certState genCerts
-        , utxoSt {utxosGovernance = govSt {cgGov = govSt'}}
+        , utxoSt {utxosGovState = govSt {cgGov = govSt'}}
         , tx
         )
   pure $ LedgerState utxoSt' certState'
@@ -343,16 +343,16 @@ instance
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
   , AlonzoEraTx era
   , ConwayEraTxBody era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ DelegsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "GOV" era) ~ GovernanceProcedures era
+  , Signal (EraRule "GOV" era) ~ GovProcedures era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ ConwayGovState era
+  , State (EraRule "GOV" era) ~ GovActionsState era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   ) =>

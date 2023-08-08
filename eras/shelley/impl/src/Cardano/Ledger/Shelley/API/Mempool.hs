@@ -49,7 +49,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraGovernance)
+import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.Rules ()
@@ -193,7 +193,7 @@ type MempoolState era = LedgerState.LedgerState era
 --   included until a certain number of slots before the end of the epoch. A
 --   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
-  EraGovernance era =>
+  EraGov era =>
   NewEpochState era ->
   SlotNo ->
   MempoolEnv era
@@ -272,7 +272,7 @@ instance
 
 -- | Old 'applyTxs'
 applyTxs ::
-  (ApplyTx era, MonadError (ApplyTxError era) m, EraGovernance era) =>
+  (ApplyTx era, MonadError (ApplyTxError era) m, EraGov era) =>
   Globals ->
   SlotNo ->
   Seq (Tx era) ->

@@ -119,7 +119,7 @@ applyBlock ::
   ( EraTxOut era
   , API.ApplyBlock era
   , NFData (StashedAVVMAddresses era)
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   ) =>
   ValidateInput era ->
   Int ->

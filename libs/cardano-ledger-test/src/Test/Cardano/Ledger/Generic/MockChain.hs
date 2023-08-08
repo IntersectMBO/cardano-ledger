@@ -100,7 +100,7 @@ data MockChainState era = MockChainState
 deriving instance
   ( EraTxOut era
   , Eq (StashedAVVMAddresses era)
-  , Eq (GovernanceState era)
+  , Eq (GovState era)
   ) =>
   Eq (MockChainState era)
 
@@ -153,7 +153,7 @@ chainTransition ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   TransitionRule (MOCKCHAIN era)
 chainTransition = do

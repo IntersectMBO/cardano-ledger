@@ -125,7 +125,7 @@ shortChainTrace ::
   forall era.
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   Constants ->
   (SourceSignalTarget (CHAIN era) -> Property) ->
@@ -299,7 +299,7 @@ forAllChainTrace ::
   ( Testable prop
   , EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   Word64 -> -- trace length
   Constants ->
@@ -323,7 +323,7 @@ forEachEpochTrace ::
   ( EraGen era
   , Testable prop
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   Int ->
   Word64 ->

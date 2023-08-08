@@ -108,7 +108,7 @@ instance
 instance
   forall era.
   ( EraGen era
-  , EraGovernance era
+  , EraGov era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
@@ -171,7 +171,7 @@ instance
 mkGenesisLedgerState ::
   forall a era ledger.
   ( EraGen era
-  , EraGovernance era
+  , EraGov era
   ) =>
   GenEnv era ->
   IRC ledger ->

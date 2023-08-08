@@ -28,11 +28,11 @@ import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
-import Cardano.Ledger.Conway.Governance (
+import Cardano.Ledger.Conway.Gov (
   ConwayGovState (..),
-  ConwayGovernance (..),
-  GovernanceActionId,
-  GovernanceActionState (..),
+  GovActionId,
+  GovActionState (..),
+  GovActionsState (..),
   RatifyState (..),
   cgGovL,
   cgRatifyL,
@@ -60,7 +60,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
   obligationCertState,
   prevPParamsEpochStateL,
-  utxosGovernanceL,
+  utxosGovStateL,
   pattern CertState,
   pattern EpochState,
  )
@@ -120,7 +120,7 @@ deriving instance
 
 instance
   ( EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
@@ -133,7 +133,7 @@ instance
   , Show (UpecPredFailure era)
   , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   ) =>
@@ -148,13 +148,13 @@ instance
   transitionRules = [epochTransition]
 
 returnProposalDepositsUMap ::
-  StrictSeq (GovernanceActionId (EraCrypto era), GovernanceActionState era) ->
+  StrictSeq (GovActionId (EraCrypto era), GovActionState era) ->
   UMap (EraCrypto era) ->
   UMap (EraCrypto era)
 returnProposalDepositsUMap gaids m =
   unionKeyDeposits (RewDepUView m) $ foldl' addRew mempty gaids
   where
-    addRew m' (_, GovernanceActionState {..}) =
+    addRew m' (_, GovActionState {..}) =
       Map.insertWith
         (<>)
         (getRwdCred gasReturnAddr)
@@ -163,14 +163,14 @@ returnProposalDepositsUMap gaids m =
 
 returnProposalDeposits ::
   forall era.
-  GovernanceState era ~ ConwayGovernance era =>
+  GovState era ~ ConwayGovState era =>
   LedgerState era ->
   LedgerState era
 returnProposalDeposits ls@LedgerState {..} =
   ls
     & lsCertStateL . certDStateL . dsUnifiedL %~ dstate
   where
-    govSt = utxosGovernance lsUTxOState
+    govSt = utxosGovState lsUTxOState
     ratifyState = cgRatify govSt
     removedProposals = rsRemoved ratifyState
     dstate = returnProposalDepositsUMap removedProposals
@@ -188,9 +188,9 @@ epochTransition ::
   , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
   , State (EraRule "RATIFY" era) ~ RatifyState era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
-  , EraGovernance era
+  , EraGov era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
@@ -238,7 +238,7 @@ epochTransition = do
   let
     utxoSt''' = utxoSt' {utxosDeposited = obligationCertState adjustedCertState}
     acnt'' = acnt' {asReserves = asReserves acnt'}
-    govSt = utxosGovernance utxoSt'''
+    govSt = utxosGovState utxoSt'''
     stakeDistr = credMap $ utxosStakeDistr utxoSt'''
     ratEnv =
       RatifyEnv
@@ -247,7 +247,7 @@ epochTransition = do
         , reCurrentEpoch = eNo
         }
     govStateToSeq = Seq.fromList . Map.toList
-    ratSig = RatifySignal . govStateToSeq . unConwayGovState $ cgGov govSt
+    ratSig = RatifySignal . govStateToSeq . unGovActionsState $ cgGov govSt
   rs@RatifyState {rsFuture} <-
     trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
   let es'' =
@@ -258,11 +258,11 @@ epochTransition = do
           & prevPParamsEpochStateL .~ pp
           & curPParamsEpochStateL .~ pp
       -- TODO can we be more efficient?
-      newGov = ConwayGovState . Map.fromList . toList $ rsFuture
+      newGov = GovActionsState . Map.fromList . toList $ rsFuture
   pure $
     es''
-      & esLStateL . lsUTxOStateL . utxosGovernanceL . cgGovL .~ newGov
-      & esLStateL . lsUTxOStateL . utxosGovernanceL . cgRatifyL .~ rs
+      & esLStateL . lsUTxOStateL . utxosGovStateL . cgGovL .~ newGov
+      & esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyL .~ rs
 
 instance
   ( Era era
@@ -286,7 +286,7 @@ instance
   wrapEvent = SnapEvent
 
 instance
-  ( EraGovernance era
+  ( EraGov era
   , STS (ConwayRATIFY era)
   , BaseM (ConwayRATIFY era) ~ ShelleyBase
   , Event (ConwayRATIFY era) ~ Void

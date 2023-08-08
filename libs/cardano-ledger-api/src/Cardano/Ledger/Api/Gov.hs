@@ -3,9 +3,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Cardano.Ledger.Api.Governance (
-  EraGovernance (GovernanceState),
-  emptyGovernanceState,
+module Cardano.Ledger.Api.Gov (
+  EraGov (GovState),
+  emptyGovState,
   getProposedPPUpdates,
 
   -- * Shelley
@@ -16,20 +16,20 @@ module Cardano.Ledger.Api.Governance (
   -- * Conway
 
   -- ** Conway Governance
-  ConwayGovernance (..),
+  ConwayGovState (..),
   cgRatifyL,
   cgGovL,
-  ConwayGovState (..),
+  GovActionsState (..),
   RatifyState (..),
   EnactState (..),
   Voter (..),
   Vote (..),
 
   -- ** Governance Action
-  GovernanceAction (..),
-  GovernanceActionId (..),
-  GovernanceActionIx (..),
-  GovernanceActionState (..),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionState (..),
 
   -- *** Anchor
   Anchor (..),
@@ -39,16 +39,16 @@ module Cardano.Ledger.Api.Governance (
 ) where
 
 import Cardano.Ledger.Api.Era ()
-import Cardano.Ledger.Conway.Governance (
+import Cardano.Ledger.Conway.Gov (
   Anchor (..),
   AnchorDataHash,
   ConwayGovState (..),
-  ConwayGovernance (..),
   EnactState (..),
-  GovernanceAction (..),
-  GovernanceActionId (..),
-  GovernanceActionIx (..),
-  GovernanceActionState (..),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionState (..),
+  GovActionsState (..),
   RatifyState (..),
   Vote (..),
   Voter (..),
@@ -59,10 +59,10 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, SafeToHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Governance (
-  EraGovernance (GovernanceState),
+import Cardano.Ledger.Shelley.Gov (
+  EraGov (GovState),
   ShelleyGovState (..),
-  emptyGovernanceState,
+  emptyGovState,
   getProposedPPUpdates,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), emptyPPPUpdates)

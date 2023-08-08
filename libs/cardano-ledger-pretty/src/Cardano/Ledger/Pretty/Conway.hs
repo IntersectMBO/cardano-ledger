@@ -20,16 +20,16 @@ module Cardano.Ledger.Pretty.Conway (
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (
+import Cardano.Ledger.Conway.Gov (
   Anchor,
   Committee (..),
   ConwayGovState (..),
-  ConwayGovernance (..),
-  GovernanceAction (..),
-  GovernanceActionId (..),
-  GovernanceActionIx (..),
-  GovernanceActionState (..),
-  GovernanceProcedures,
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionState (..),
+  GovActionsState (..),
+  GovProcedures,
   ProposalProcedure (..),
   Vote (..),
   Voter (..),
@@ -189,10 +189,10 @@ instance EraPParams era => PrettyA (VotingProcedure era) where
 instance EraPParams era => PrettyA (ProposalProcedure era) where
   prettyA = viaShow
 
-instance EraPParams era => PrettyA (GovernanceProcedures era) where
+instance EraPParams era => PrettyA (GovProcedures era) where
   prettyA = viaShow
 
-instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceAction era) where
+instance PrettyA (PParamsUpdate era) => PrettyA (GovAction era) where
   prettyA (ParameterChange ppup) =
     ppRecord
       "ParameterChange"
@@ -255,20 +255,20 @@ instance
 instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
   prettyA = viaShow
 
-instance PrettyA (PParamsUpdate era) => PrettyA (ConwayGovState era) where
-  prettyA (ConwayGovState x) = prettyA x
+instance PrettyA (PParamsUpdate era) => PrettyA (GovActionsState era) where
+  prettyA (GovActionsState x) = prettyA x
 
-instance PrettyA (GovernanceActionId era) where
-  prettyA gaid@(GovernanceActionId _ _) =
-    let GovernanceActionId {..} = gaid
+instance PrettyA (GovActionId era) where
+  prettyA gaid@(GovActionId _ _) =
+    let GovActionId {..} = gaid
      in ppRecord
-          "GovernanceActionId"
+          "GovActionId"
           [ ("Transaction ID", prettyA gaidTxId)
-          , ("Governance Action Index", prettyA gaidGovActionIx)
+          , ("Gov Action Index", prettyA gaidGovActionIx)
           ]
 
-instance PrettyA GovernanceActionIx where
-  prettyA (GovernanceActionIx x) = prettyA x
+instance PrettyA GovActionIx where
+  prettyA (GovActionIx x) = prettyA x
 
 instance PrettyA (Voter c) where
   prettyA = ppString . show
@@ -276,11 +276,11 @@ instance PrettyA (Voter c) where
 instance PrettyA (Anchor era) where
   prettyA = viaShow
 
-instance PrettyA (PParamsUpdate era) => PrettyA (GovernanceActionState era) where
-  prettyA gas@(GovernanceActionState _ _ _ _ _ _ _) =
-    let GovernanceActionState {..} = gas
+instance PrettyA (PParamsUpdate era) => PrettyA (GovActionState era) where
+  prettyA gas@(GovActionState _ _ _ _ _ _ _) =
+    let GovActionState {..} = gas
      in ppRecord
-          "GovernanceActionState"
+          "GovActionState"
           [ ("CommitteVotes", prettyA gasCommitteeVotes)
           , ("DRepVotes", prettyA gasDRepVotes)
           , ("StakePoolVotes", prettyA gasStakePoolVotes)
@@ -330,12 +330,12 @@ instance
   ( PrettyA (PParamsUpdate era)
   , PrettyA (PParams era)
   ) =>
-  PrettyA (ConwayGovernance era)
+  PrettyA (ConwayGovState era)
   where
-  prettyA cg@(ConwayGovernance _ _) =
-    let ConwayGovernance {..} = cg
+  prettyA cg@(ConwayGovState _ _) =
+    let ConwayGovState {..} = cg
      in ppRecord
-          "ConwayGovernance"
+          "ConwayGovState"
           [ ("Gov", prettyA cgGov)
           , ("Ratify", prettyA cgRatify)
           ]

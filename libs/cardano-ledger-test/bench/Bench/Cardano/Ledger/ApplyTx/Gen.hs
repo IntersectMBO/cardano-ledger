@@ -71,7 +71,7 @@ generateApplyTxEnvForEra ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , EraGovernance era
+  , EraGov era
   ) =>
   Proxy era ->
   Int ->

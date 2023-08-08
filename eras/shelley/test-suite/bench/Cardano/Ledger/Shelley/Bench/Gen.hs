@@ -58,7 +58,7 @@ import Test.QuickCheck (generate)
 -- | Generate a genesis chain state given a UTxO size
 genChainState ::
   ( EraGen era
-  , EraGovernance era
+  , EraGov era
   ) =>
   Int ->
   GenEnv era ->
@@ -110,7 +110,7 @@ genTriple ::
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
   , Tx era ~ ShelleyTx era
-  , EraGovernance era
+  , EraGov era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , ProtVerAtMost era 8

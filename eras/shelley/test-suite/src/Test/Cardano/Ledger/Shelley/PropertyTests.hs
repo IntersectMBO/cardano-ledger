@@ -59,7 +59,7 @@ commonTests ::
   , State ledger ~ LedgerState era
   , Signal ledger ~ Tx era
   , ProtVerAtMost era 8
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   ) =>
   [TestTree]
 commonTests =

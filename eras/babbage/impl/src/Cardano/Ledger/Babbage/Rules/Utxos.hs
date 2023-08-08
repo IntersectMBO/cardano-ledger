@@ -85,8 +85,8 @@ instance
   , EraPlutusContext 'PlutusV1 era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
-  , EraGovernance era
-  , GovernanceState era ~ ShelleyGovState era
+  , EraGov era
+  , GovState era ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
@@ -126,8 +126,8 @@ utxosTransition ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
-  , EraGovernance era
-  , GovernanceState era ~ ShelleyGovState era
+  , EraGov era
+  , GovState era ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
@@ -212,7 +212,7 @@ babbageEvalScriptsTxValid ::
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
-  , GovernanceState era ~ ShelleyGovState era
+  , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext 'PlutusV1 era
   , ProtVerAtMost era 8

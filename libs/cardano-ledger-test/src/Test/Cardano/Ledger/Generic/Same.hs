@@ -27,7 +27,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
+import Cardano.Ledger.Conway.Gov (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
@@ -175,8 +175,8 @@ instance Reflect era => Same era (UTxOState era) where
       ++ ppu
       ++ [("StakeDistr", eqByShow (utxosStakeDistr u1) (utxosStakeDistr u2))]
     where
-      ppuPretty :: GovernanceState era ~ ShelleyGovState era => [(String, Maybe PDoc)]
-      ppuPretty = [("ShelleyGovState", samePPUP proof (utxosGovernance u1) (utxosGovernance u2))]
+      ppuPretty :: GovState era ~ ShelleyGovState era => [(String, Maybe PDoc)]
+      ppuPretty = [("ShelleyGovState", samePPUP proof (utxosGovState u1) (utxosGovState u2))]
       ppu = case reify @era of
         Shelley _ -> ppuPretty
         Mary _ -> ppuPretty

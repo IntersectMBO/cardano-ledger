@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayNEWEPOCH)
-import Cardano.Ledger.Conway.Governance (ConwayGovernance (..))
+import Cardano.Ledger.Conway.Gov (ConwayGovState (..))
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent, ConwayEpochPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..), RatifyState (..))
 import Cardano.Ledger.Credential (Credential)
@@ -81,7 +81,7 @@ data ConwayNewEpochEvent era
 
 instance
   ( EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
   , Environment (EraRule "EPOCH" era) ~ PoolDistr (EraCrypto era)
@@ -92,7 +92,7 @@ instance
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
   ) =>
@@ -122,7 +122,7 @@ instance
 newEpochTransition ::
   forall era.
   ( EraTxOut era
-  , EraGovernance era
+  , EraGov era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Environment (EraRule "EPOCH" era) ~ PoolDistr (EraCrypto era)
   , State (EraRule "EPOCH" era) ~ EpochState era
@@ -132,7 +132,7 @@ newEpochTransition ::
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
-  , GovernanceState era ~ ConwayGovernance era
+  , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
   ) =>
@@ -178,7 +178,7 @@ tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
 updateRewards ::
-  EraGovernance era =>
+  EraGov era =>
   EpochState era ->
   EpochNo ->
   RewardUpdate (EraCrypto era) ->

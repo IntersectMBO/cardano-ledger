@@ -24,8 +24,8 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
   PredicateFailure,
   transitionRulesUTXOW,
   shelleyWitsVKeyNeeded,
-  witsVKeyNeededGovernance,
-  witsVKeyNeededNoGovernance,
+  witsVKeyNeededGov,
+  witsVKeyNeededNoGov,
 
   -- * Individual validation steps
   validateFailedScripts,
@@ -72,7 +72,7 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
-import Cardano.Ledger.Shelley.Governance (EraGovernance (..))
+import Cardano.Ledger.Shelley.Gov (EraGov (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
@@ -378,7 +378,7 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , ProtVerAtMost era 8
-  , EraGovernance era
+  , EraGov era
   ) =>
   STS (ShelleyUTXOW era)
   where
@@ -469,22 +469,22 @@ validateNeededWitnesses witsKeyHashes needed =
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
-witsVKeyNeededGovernance ::
+witsVKeyNeededGov ::
   forall era.
   (ShelleyEraTxBody era, ProtVerAtMost era 8) =>
   TxBody era ->
   GenDelegs (EraCrypto era) ->
   Set (KeyHash 'Witness (EraCrypto era))
-witsVKeyNeededGovernance txBody genDelegs =
+witsVKeyNeededGov txBody genDelegs =
   asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyL) genDelegs
 
-witsVKeyNeededNoGovernance ::
+witsVKeyNeededNoGov ::
   forall era.
   EraTx era =>
   UTxO era ->
   TxBody era ->
   Set (KeyHash 'Witness (EraCrypto era))
-witsVKeyNeededNoGovernance utxo' txBody =
+witsVKeyNeededNoGov utxo' txBody =
   certAuthors
     `Set.union` inputAuthors
     `Set.union` owners
@@ -534,8 +534,8 @@ shelleyWitsVKeyNeeded ::
   GenDelegs (EraCrypto era) ->
   Set (KeyHash 'Witness (EraCrypto era))
 shelleyWitsVKeyNeeded utxo' txBody genDelegs =
-  witsVKeyNeededNoGovernance utxo' txBody
-    `Set.union` witsVKeyNeededGovernance txBody genDelegs
+  witsVKeyNeededNoGov utxo' txBody
+    `Set.union` witsVKeyNeededGov txBody genDelegs
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)

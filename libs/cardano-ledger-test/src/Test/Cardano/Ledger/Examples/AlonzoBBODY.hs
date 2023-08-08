@@ -141,7 +141,7 @@ alonzoBBODYexamplesP ::
   , PostShelley era
   , Value era ~ MaryValue (EraCrypto era)
   , EraSegWits era
-  , EraGovernance era
+  , EraGov era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , ShelleyEraTxCert era
   ) =>
@@ -169,7 +169,7 @@ alonzoBBODYexamplesP proof =
 initialBBodyState ::
   ( EraTxOut era
   , PostShelley era
-  , EraGovernance era
+  , EraGov era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   Proof era ->
@@ -596,7 +596,7 @@ testBBodyState ::
   , PostShelley era
   , EraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
-  , EraGovernance era
+  , EraGov era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , ShelleyEraTxCert era
   ) =>

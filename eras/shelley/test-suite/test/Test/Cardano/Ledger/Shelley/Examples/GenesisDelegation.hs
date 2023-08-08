@@ -104,7 +104,7 @@ initStGenesisDeleg ::
   ( EraTxOut era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , EraGovernance era
+  , EraGov era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era

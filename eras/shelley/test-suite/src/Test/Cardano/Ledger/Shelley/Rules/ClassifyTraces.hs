@@ -305,7 +305,7 @@ onlyValidLedgerSignalsAreGenerated ::
   , State ledger ~ LedgerState era
   , Show (Environment ledger)
   , Show (Signal ledger)
-  , EraGovernance era
+  , EraGov era
   ) =>
   TestTree
 onlyValidLedgerSignalsAreGenerated =
@@ -330,7 +330,7 @@ propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era
   , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
@@ -356,7 +356,7 @@ propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era
   , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -387,7 +387,7 @@ onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , EraGovernance era
+  , EraGov era
   ) =>
   TestTree
 onlyValidChainSignalsAreGenerated =

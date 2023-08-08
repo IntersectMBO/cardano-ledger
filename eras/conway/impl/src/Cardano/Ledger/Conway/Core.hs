@@ -43,7 +43,7 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR, decodeRecordNamed, encodeListLen
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Encoding (EncCBOR (encCBOR))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures)
+import Cardano.Ledger.Conway.Gov.Procedures (ProposalProcedure, VotingProcedures)
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
@@ -160,7 +160,7 @@ data DRepVotingThresholds = DRepVotingThresholds
   , dvtPPNetworkGroup :: !UnitInterval
   , dvtPPEconomicGroup :: !UnitInterval
   , dvtPPTechnicalGroup :: !UnitInterval
-  , dvtPPGovernanceGroup :: !UnitInterval
+  , dvtPPGovGroup :: !UnitInterval
   , dvtTreasuryWithdrawal :: !UnitInterval
   }
   deriving (Eq, Ord, Show, Generic, Default, ToJSON, NFData, NoThunks)
@@ -176,7 +176,7 @@ instance EncCBOR DRepVotingThresholds where
       <> encCBOR dvtPPNetworkGroup
       <> encCBOR dvtPPEconomicGroup
       <> encCBOR dvtPPTechnicalGroup
-      <> encCBOR dvtPPGovernanceGroup
+      <> encCBOR dvtPPGovGroup
       <> encCBOR dvtTreasuryWithdrawal
 
 instance DecCBOR DRepVotingThresholds where
@@ -190,6 +190,6 @@ instance DecCBOR DRepVotingThresholds where
       dvtPPNetworkGroup <- decCBOR
       dvtPPEconomicGroup <- decCBOR
       dvtPPTechnicalGroup <- decCBOR
-      dvtPPGovernanceGroup <- decCBOR
+      dvtPPGovGroup <- decCBOR
       dvtTreasuryWithdrawal <- decCBOR
       pure $ DRepVotingThresholds {..}
