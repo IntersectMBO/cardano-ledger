@@ -20,7 +20,7 @@ module Cardano.Ledger.Pretty.Conway (
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Gov (
+import Cardano.Ledger.Conway.Governance (
   Anchor,
   Committee (..),
   ConwayGovState (..),

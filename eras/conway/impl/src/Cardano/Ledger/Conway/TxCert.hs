@@ -52,7 +52,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Gov (Anchor)
+import Cardano.Ledger.Conway.Governance (Anchor)
 import Cardano.Ledger.Core (
   DRep,
   Era (EraCrypto),

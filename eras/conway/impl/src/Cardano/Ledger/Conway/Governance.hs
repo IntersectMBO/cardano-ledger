@@ -15,7 +15,7 @@
 
 {-# HLINT ignore "Use record patterns" #-}
 
-module Cardano.Ledger.Conway.Gov (
+module Cardano.Ledger.Conway.Governance (
   EraGov (..),
   GovActionsState (..),
   EnactState (..),
@@ -69,7 +69,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Gov.Procedures (
+import Cardano.Ledger.Conway.Governance.Procedures (
   Anchor (..),
   AnchorDataHash,
   Committee (..),
@@ -90,7 +90,7 @@ import Cardano.Ledger.Conway.Gov.Procedures (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Shelley.Gov
+import Cardano.Ledger.Shelley.Governance
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))

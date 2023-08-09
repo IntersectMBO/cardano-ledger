@@ -26,8 +26,7 @@ import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Era (ConwayGOV)
-import Cardano.Ledger.Conway.Gov (
-  GovAction,
+import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionState (..),
   GovActionsState (..),
@@ -38,7 +37,7 @@ import Cardano.Ledger.Conway.Gov (
   VotingProcedures (..),
   indexedGovProps,
  )
-import Cardano.Ledger.Conway.Gov.Procedures (GovAction (..))
+import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))

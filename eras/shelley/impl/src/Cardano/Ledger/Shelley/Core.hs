@@ -15,7 +15,7 @@ module Cardano.Ledger.Shelley.Core (
   Wdrl,
   module Cardano.Ledger.Core,
   pattern Wdrl,
-  module Cardano.Ledger.Shelley.Gov,
+  module Cardano.Ledger.Shelley.Governance,
 )
 where
 
@@ -23,7 +23,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Gov
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Slot (SlotNo (..))

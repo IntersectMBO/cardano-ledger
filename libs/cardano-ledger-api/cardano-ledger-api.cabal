@@ -23,7 +23,7 @@ library
     exposed-modules:
         Cardano.Ledger.Api
         Cardano.Ledger.Api.Era
-        Cardano.Ledger.Api.Gov
+        Cardano.Ledger.Api.Governance
         Cardano.Ledger.Api.PParams
         Cardano.Ledger.Api.Scripts
         Cardano.Ledger.Api.Scripts.Data

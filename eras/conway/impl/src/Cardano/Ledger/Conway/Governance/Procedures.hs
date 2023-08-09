@@ -16,7 +16,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Conway.Gov.Procedures (
+module Cardano.Ledger.Conway.Governance.Procedures (
   GovProcedures (..),
   VotingProcedures (..),
   VotingProcedure (..),
@@ -72,7 +72,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (extractHash)
-import Cardano.Ledger.Shelley.Gov (Constitution)
+import Cardano.Ledger.Shelley.Governance (Constitution)
 import Cardano.Ledger.Shelley.RewardProvenance ()
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)

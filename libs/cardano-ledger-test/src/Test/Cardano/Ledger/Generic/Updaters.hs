@@ -26,7 +26,7 @@ import Cardano.Ledger.Babbage.TxBody as Babbage (
   Datum (..),
  )
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Gov (GovProcedures (..))
+import Cardano.Ledger.Conway.Governance (GovProcedures (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
   ShelleyTx (..),
  )

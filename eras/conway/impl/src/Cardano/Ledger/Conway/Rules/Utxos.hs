@@ -35,7 +35,7 @@ import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOS)
-import Cardano.Ledger.Conway.Gov (
+import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
  )
 import Cardano.Ledger.Shelley.LedgerState (

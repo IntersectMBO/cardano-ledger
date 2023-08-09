@@ -61,7 +61,7 @@ import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
-import Cardano.Ledger.Shelley.Gov
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   PPUPPredFailure,

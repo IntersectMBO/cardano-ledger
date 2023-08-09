@@ -71,7 +71,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Gov (EraGov (GovState), ShelleyGovState)
+import Cardano.Ledger.Shelley.Governance (EraGov (GovState), ShelleyGovState)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),

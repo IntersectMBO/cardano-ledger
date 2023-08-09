@@ -43,7 +43,7 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR, decodeRecordNamed, encodeListLen
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Encoding (EncCBOR (encCBOR))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Gov.Procedures (ProposalProcedure, VotingProcedures)
+import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures)
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)

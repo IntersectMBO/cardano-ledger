@@ -53,7 +53,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
-import qualified Cardano.Ledger.Shelley.Gov as Core
+import qualified Cardano.Ledger.Shelley.Governance as Core
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),

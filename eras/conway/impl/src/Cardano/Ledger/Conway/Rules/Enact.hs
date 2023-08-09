@@ -19,7 +19,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT)
-import Cardano.Ledger.Conway.Gov (
+import Cardano.Ledger.Conway.Governance (
   EnactState (..),
   GovAction (..),
  )

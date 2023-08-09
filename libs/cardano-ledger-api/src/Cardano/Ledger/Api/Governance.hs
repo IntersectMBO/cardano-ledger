@@ -3,7 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Cardano.Ledger.Api.Gov (
+module Cardano.Ledger.Api.Governance (
   EraGov (GovState),
   emptyGovState,
   getProposedPPUpdates,
@@ -55,7 +55,7 @@ module Cardano.Ledger.Api.Gov (
 
 import Cardano.Ledger.Allegra.Core (Constitution (..))
 import Cardano.Ledger.Api.Era ()
-import Cardano.Ledger.Conway.Gov (
+import Cardano.Ledger.Conway.Governance (
   Anchor (..),
   AnchorDataHash,
   ConwayGovState (..),
@@ -81,7 +81,7 @@ import Cardano.Ledger.Conway.Gov (
  )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, SafeToHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Gov (
+import Cardano.Ledger.Shelley.Governance (
   EraGov (GovState),
   ShelleyGovState (..),
   emptyGovState,
