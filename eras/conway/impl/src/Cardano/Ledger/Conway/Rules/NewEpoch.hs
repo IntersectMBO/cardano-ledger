@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayNEWEPOCH)
-import Cardano.Ledger.Conway.Gov (ConwayGovState (..))
+import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent, ConwayEpochPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..), RatifyState (..))
 import Cardano.Ledger.Credential (Credential)

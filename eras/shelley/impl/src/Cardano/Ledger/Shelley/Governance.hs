@@ -9,7 +9,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Cardano.Ledger.Shelley.Gov (
+module Cardano.Ledger.Shelley.Governance (
   EraGov (..),
   ShelleyGovState (..),
   Constitution (..),

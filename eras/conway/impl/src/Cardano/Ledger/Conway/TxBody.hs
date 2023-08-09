@@ -73,7 +73,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Gov.Procedures (ProposalProcedure, VotingProcedures (..))
+import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)

@@ -53,7 +53,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
  )
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Gov
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, keyTxRefunds, totalTxDeposits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)

@@ -35,7 +35,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
-import Cardano.Ledger.Conway.Gov (
+import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovActionsState,
   GovProcedures (..),

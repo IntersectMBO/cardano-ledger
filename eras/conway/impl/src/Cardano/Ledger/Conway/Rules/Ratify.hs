@@ -21,7 +21,7 @@ module Cardano.Ledger.Conway.Rules.Ratify (
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
-import Cardano.Ledger.Conway.Gov (
+import Cardano.Ledger.Conway.Governance (
   EraGov,
   GovAction (..),
   GovActionId,

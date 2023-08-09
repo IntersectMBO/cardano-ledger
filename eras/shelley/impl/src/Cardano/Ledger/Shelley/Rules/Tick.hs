@@ -33,7 +33,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
-import Cardano.Ledger.Shelley.Gov
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),

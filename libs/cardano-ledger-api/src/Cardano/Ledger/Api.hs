@@ -18,12 +18,12 @@ module Cardano.Ledger.Api (
   -- | Scripts
   module Cardano.Ledger.Api.Scripts,
   -- | Governance
-  module Cardano.Ledger.Api.Gov,
+  module Cardano.Ledger.Api.Governance,
 )
 where
 
 import Cardano.Ledger.Api.Era
-import Cardano.Ledger.Api.Gov
+import Cardano.Ledger.Api.Governance
 import Cardano.Ledger.Api.PParams
 import Cardano.Ledger.Api.Scripts
 import Cardano.Ledger.Api.Tx

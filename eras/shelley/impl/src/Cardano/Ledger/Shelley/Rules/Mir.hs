@@ -22,7 +22,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
-import Cardano.Ledger.Shelley.Gov (EraGov)
+import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState,

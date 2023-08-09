@@ -59,7 +59,7 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotN
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.CertState (DRepState)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Gov (GovAction (..))
+import Cardano.Ledger.Conway.Governance (GovAction (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)

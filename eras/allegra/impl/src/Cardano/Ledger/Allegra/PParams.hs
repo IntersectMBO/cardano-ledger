@@ -6,7 +6,7 @@ module Cardano.Ledger.Allegra.PParams () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Shelley.Gov
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams
 import Data.Coerce
 import Lens.Micro

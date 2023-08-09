@@ -28,7 +28,7 @@ import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
-import Cardano.Ledger.Conway.Gov (
+import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovActionId,
   GovActionState (..),

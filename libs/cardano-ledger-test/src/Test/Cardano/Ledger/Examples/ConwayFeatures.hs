@@ -31,7 +31,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody)
-import Cardano.Ledger.Conway.Gov
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (

@@ -51,7 +51,7 @@ import Cardano.Ledger.EpochBoundary (
 import Cardano.Ledger.Keys (
   KeyRole (..),
  )
-import Cardano.Ledger.Shelley.Gov (EraGov (GovState))
+import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))

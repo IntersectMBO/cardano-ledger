@@ -15,7 +15,7 @@ import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Gov
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
   UpgradeConwayPParams (..),

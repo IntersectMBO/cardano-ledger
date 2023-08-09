@@ -21,7 +21,7 @@ source-repository head
 library
     exposed-modules:
         Cardano.Ledger.Conway.Genesis
-        Cardano.Ledger.Conway.Gov
+        Cardano.Ledger.Conway.Governance
         Cardano.Ledger.Conway.PParams
         Cardano.Ledger.Conway.Tx
         Cardano.Ledger.Conway.TxBody
@@ -39,7 +39,7 @@ library
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Conway.Era
-        Cardano.Ledger.Conway.Gov.Procedures
+        Cardano.Ledger.Conway.Governance.Procedures
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
         Cardano.Ledger.Conway.Rules.Pool

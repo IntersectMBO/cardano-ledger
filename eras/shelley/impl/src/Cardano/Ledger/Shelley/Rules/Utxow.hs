@@ -72,7 +72,7 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
-import Cardano.Ledger.Shelley.Gov (EraGov (..))
+import Cardano.Ledger.Shelley.Governance (EraGov (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))

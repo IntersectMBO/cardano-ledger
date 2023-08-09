@@ -26,7 +26,7 @@ module Cardano.Ledger.Shelley.Rules.Upec (
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
-import Cardano.Ledger.Shelley.Gov
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   UTxOState (..),

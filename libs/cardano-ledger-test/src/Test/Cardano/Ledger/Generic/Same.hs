@@ -27,7 +27,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Gov (VotingProcedures (..))
+import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))

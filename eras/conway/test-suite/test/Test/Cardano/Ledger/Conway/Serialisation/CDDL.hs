@@ -12,7 +12,7 @@ import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage.TxBody (Datum)
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Gov (GovAction, ProposalProcedure, VotingProcedure)
+import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Core
 import qualified Data.ByteString.Lazy as BSL

@@ -52,7 +52,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Gov (GovActionsState (..))
+import Cardano.Ledger.Conway.Governance (GovActionsState (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochPredFailure (..),
   -- FIXME TODO ConwayNewEpochPredFailure,
