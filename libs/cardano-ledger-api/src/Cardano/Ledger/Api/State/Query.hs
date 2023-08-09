@@ -10,8 +10,9 @@ module Cardano.Ledger.Api.State.Query (
   queryConstitutionHash,
 ) where
 
+import Cardano.Ledger.Allegra.Core (Constitution (constitutionAnchor))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Governance (ConstitutionData, EraGov (getConstitutionHash))
+import Cardano.Ledger.Conway.Governance (Anchor (..), AnchorData, EraGov (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
@@ -50,7 +51,13 @@ queryStakePoolDelegsAndRewards nes = filterStakePoolDelegsAndRewards (dsUnified 
 getDState :: NewEpochState era -> DState era
 getDState = certDState . lsCertState . esLState . nesEs
 
+queryConstitution :: EraGov era => NewEpochState era -> Maybe (Constitution era)
+queryConstitution nes =
+  getConstitution (nes ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovStateL)
+
 queryConstitutionHash ::
-  EraGov era => NewEpochState era -> Maybe (SafeHash (EraCrypto era) ConstitutionData)
+  EraGov era =>
+  NewEpochState era ->
+  Maybe (SafeHash (EraCrypto era) (AnchorData (EraCrypto era)))
 queryConstitutionHash nes =
-  getConstitutionHash $ nes ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovStateL
+  anchorDataHash . constitutionAnchor <$> queryConstitution nes

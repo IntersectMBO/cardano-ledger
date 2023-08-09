@@ -226,7 +226,7 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovAction era) where
     ppRecord
       "NewConstitution"
       [ ("previous governance action id", prettyA pgaid)
-      , ("hash", prettyA constitutionHash)
+      , ("anchor", prettyA constitutionAnchor)
       , ("script", prettyA constitutionScript)
       ]
   prettyA InfoAction =
@@ -303,7 +303,7 @@ instance PrettyA (Constitution era) where
   prettyA Constitution {..} =
     ppRecord
       "Constitution"
-      [ ("hash", prettyA constitutionHash)
+      [ ("anchor", prettyA constitutionAnchor)
       , ("script", prettyA constitutionScript)
       ]
 

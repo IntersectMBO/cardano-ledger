@@ -6,11 +6,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -62,7 +62,8 @@ module Cardano.Ledger.BaseTypes (
   mkCertIx,
   mkCertIxPartial,
   Anchor (..),
-  AnchorDataHash,
+  AnchorData (..),
+  hashAnchorData,
 
   -- * STS Base
   Globals (..),
@@ -108,7 +109,7 @@ import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
-import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, SafeToHash)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr), trimExprViaShow)
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
@@ -779,11 +780,19 @@ instance ToExpr (BlocksMade c)
 
 instance ToExpr ProtVer
 
-data AnchorDataHash
+newtype AnchorData c = AnchorData ByteString
+  deriving (Eq)
+  deriving newtype (SafeToHash)
+
+instance HashAnnotated (AnchorData c) (AnchorData c) c
+
+-- | Hash `AnchorData`
+hashAnchorData :: Crypto c => AnchorData c -> SafeHash c (AnchorData c)
+hashAnchorData = hashAnnotated
 
 data Anchor c = Anchor
   { anchorUrl :: !Url
-  , anchorDataHash :: !(SafeHash c AnchorDataHash)
+  , anchorDataHash :: !(SafeHash c (AnchorData c))
   }
   deriving (Eq, Show, Generic)
 
@@ -811,6 +820,9 @@ instance Crypto c => ToJSON (Anchor c) where
   toEncoding = pairs . mconcat . toAnchorPairs
 
 instance ToExpr (Anchor c)
+
+instance Crypto c => Default (Anchor c) where
+  def = Anchor (Url "") def
 
 toAnchorPairs :: (KeyValue a, Crypto c) => Anchor c -> [a]
 toAnchorPairs vote@(Anchor _ _) =

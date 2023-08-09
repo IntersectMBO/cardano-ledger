@@ -10,10 +10,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use record patterns" #-}
 
 module Cardano.Ledger.Conway.Governance (
   EraGov (..),
@@ -36,10 +34,10 @@ module Cardano.Ledger.Conway.Governance (
   ProposalProcedure (..),
   GovProcedures (..),
   Anchor (..),
-  AnchorDataHash,
+  AnchorData (..),
   indexedGovProps,
   Constitution (..),
-  ConstitutionData (..),
+  ConwayEraGov (..),
   -- Lenses
   cgGovL,
   cgRatifyL,
@@ -47,8 +45,8 @@ module Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
   curPParamsConwayGovStateL,
   prevPParamsConwayGovStateL,
-  constitutionHashL,
   constitutionScriptL,
+  constitutionAnchorL,
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt)
@@ -71,7 +69,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
   Anchor (..),
-  AnchorDataHash,
+  AnchorData (..),
   Committee (..),
   GovAction (..),
   GovActionId (..),
@@ -87,8 +85,10 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   govActionIdToText,
   indexedGovProps,
  )
+import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Governance
 import Control.DeepSeq (NFData (..))
@@ -97,7 +97,7 @@ import Data.Default.Class (Default (..))
 import Data.Map.Strict (Map)
 import Data.Sequence.Strict (StrictSeq)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 data GovActionState era = GovActionState
@@ -385,8 +385,15 @@ toConwayGovPairs cg@(ConwayGovState _ _) =
 
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   type GovState (ConwayEra c) = ConwayGovState (ConwayEra c)
-  getConstitutionHash g = Just $ g ^. cgRatifyL . rsEnactStateL . ensConstitutionL . constitutionHashL
+
+  getConstitution g = Just $ g ^. cgRatifyL . rsEnactStateL . ensConstitutionL
 
   curPParamsGovStateL = curPParamsConwayGovStateL
 
   prevPParamsGovStateL = prevPParamsConwayGovStateL
+
+class EraGov era => ConwayEraGov era where
+  constitutionGovStateL :: Lens' (GovState era) (Constitution era)
+
+instance Crypto c => ConwayEraGov (ConwayEra c) where
+  constitutionGovStateL = cgRatifyL . rsEnactStateL . ensConstitutionL

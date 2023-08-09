@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   VotingProcedure (..),
   ProposalProcedure (..),
   Anchor (..),
-  AnchorDataHash,
+  AnchorData (..),
   Vote (..),
   Voter (..),
   Committee (..),
@@ -41,7 +41,7 @@ import Cardano.Crypto.Hash (hashToTextAsHex)
 import Cardano.Ledger.Address (RewardAcnt)
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
-  AnchorDataHash,
+  AnchorData (..),
   ProtVer,
   UnitInterval,
  )

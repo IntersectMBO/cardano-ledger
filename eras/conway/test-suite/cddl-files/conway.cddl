@@ -111,7 +111,7 @@ new_constitution = (5, gov_action_id / null, constitution)
 committee = [{ $committee_coldkey_credential => epoch }, unit_interval]
 
 constitution =
-  [ $hash32
+  [ anchor
   , scripthash / null
   ]
 
