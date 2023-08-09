@@ -24,10 +24,22 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayDELEG, ConwayGOVCERT, ConwayPOOL)
+import Cardano.Ledger.Conway.Era (
+  ConwayCERT,
+  ConwayDELEG,
+  ConwayGOVCERT,
+  ConwayPOOL,
+ )
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
-import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
-import Cardano.Ledger.Conway.TxCert (ConwayDelegCert, ConwayGovCert, ConwayTxCert (..))
+import Cardano.Ledger.Conway.Rules.GovCert (
+  ConwayGovCertEnv (..),
+  ConwayGovCertPredFailure,
+ )
+import Cardano.Ledger.Conway.TxCert (
+  ConwayDelegCert,
+  ConwayGovCert,
+  ConwayTxCert (..),
+ )
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState,
@@ -100,7 +112,7 @@ instance
   , State (EraRule "GOVCERT" era) ~ VState era
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Environment (EraRule "GOVCERT" era) ~ PParams era
+  , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
   , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
@@ -127,7 +139,7 @@ certTransition ::
   , State (EraRule "GOVCERT" era) ~ VState era
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Environment (EraRule "GOVCERT" era) ~ PParams era
+  , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
   , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
@@ -148,7 +160,7 @@ certTransition = do
       newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, poolCert)
       pure $ cState {certPState = newPState}
     ConwayTxCertGov govCert -> do
-      newVState <- trans @(EraRule "GOVCERT" era) $ TRC (pp, certVState, govCert)
+      newVState <- trans @(EraRule "GOVCERT" era) $ TRC (ConwayGovCertEnv pp slot, certVState, govCert)
       pure $ cState {certVState = newVState}
 
 instance

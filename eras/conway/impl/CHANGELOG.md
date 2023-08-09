@@ -2,6 +2,8 @@
 
 ## 1.7.0.0
 
+* Add `ConwayGovCertEnv`
+* Change the environment of `GOVCERT` to `ConwayGovCertEnv`
 * Add `ConwayEraGov` with `constitutionGovStateL`
 * Add `PrevGovActionId` and `GovActionPurpose`
 * Add optional `PrevGovActionId` to `ParameterChange`, `HardForkInitiation`,

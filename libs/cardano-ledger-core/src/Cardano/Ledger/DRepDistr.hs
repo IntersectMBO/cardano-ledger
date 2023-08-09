@@ -42,6 +42,7 @@ import Data.Typeable
 import Data.VMap (VB, VMap (..), VP, foldlWithKey)
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..), allNoThunks)
 
 -- =================================================================
@@ -71,6 +72,12 @@ instance Crypto c => EncCBOR (DRepState c) where
         !> To drepAnchor
 
 instance ToExpr (DRepState era)
+
+drepExpiryL :: Lens' (DRepState c) EpochNo
+drepExpiryL = lens drepExpiry (\x y -> x {drepExpiry = y})
+
+drepAnchorL :: Lens' (DRepState c) (StrictMaybe (Anchor c))
+drepAnchorL = lens drepAnchor (\x y -> x {drepAnchor = y})
 
 -- =================================================================
 -- Algorithm for computing the DRep stake distrubution
