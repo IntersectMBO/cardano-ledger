@@ -1,0 +1,70 @@
+# NOTE
+# smallcased names that are without underscores or era prefixes
+# are kept so as to indicate an uncertainty of their existence in conway
+# they should be either removed completely or assigned an era and a place in the transitions
+
+digraph conway_transitions {
+    label="NOTE 
+    A straight arrow form one node to another represents a sub-rule relationship.
+    A dotted arrow from one node to another represents a dependency:
+      that the output of the target rule in an input to the source rule,
+      either as part of the source state, the evironment or the signal.
+    In most cases these dependencies are between sub-rules of a rule.
+    In the case of a recursive rule, the sub-rule can also have a dependency on the super rule.
+    Those recursively call themselves while traversing the input signal sequence,
+      until reaching the base case with an empty input sequence.";
+
+    CHAIN -> shelley_TICK;
+    CHAIN -> alonzo_BBODY;
+    CHAIN -> conway_TICKF;
+
+    alonzo_BBODY -> shelley_LEDGERS;
+    alonzo_BBODY -> shelley_TICK[style=dotted];
+    alonzo_BBODY -> prtcl[style=dotted];
+
+    prtcl -> shelley_TICK[style=dotted];
+    prtcl -> overlay;
+    prtcl -> updn;
+
+    shelley_TICK -> shelley_RUPD;
+    shelley_TICK -> conway_NEWEPOCH;
+
+    overlay -> ocert;
+
+    shelley_RUPD -> conway_NEWEPOCH[style=dotted];
+
+    conway_NEWEPOCH -> mir;
+    conway_NEWEPOCH -> conway_EPOCH;
+
+    mir -> conway_EPOCH[style=dotted];
+
+    conway_EPOCH -> shelley_SNAP;
+    conway_EPOCH -> conway_RATIFY;
+    conway_EPOCH -> shelley_POOLREAP;
+
+    conway_RATIFY -> shelley_SNAP[style=dotted];
+    conway_RATIFY -> shelley_POOLREAP[style=dotted];
+    conway_RATIFY -> conway_ENACT;
+
+    shelley_LEDGERS -> shelley_LEDGERS;
+    shelley_LEDGERS -> conway_LEDGER;
+
+    conway_LEDGER -> shelley_LEDGERS[style=dotted];
+    conway_LEDGER -> conway_UTXOW;
+    conway_LEDGER -> conway_CERTS;
+    conway_LEDGER -> conway_GOV;
+
+    conway_UTXOW -> babbage_UTXO;
+    conway_UTXOW -> conway_CERTS[style=dotted];
+
+    babbage_UTXO -> conway_UTXOS;
+
+    conway_CERTS -> conway_CERTS;
+    conway_CERTS -> conway_CERT;
+
+    conway_CERT -> conway_CERTS[style=dotted];
+    conway_CERT -> conway_DELEG;
+    conway_CERT -> conway_POOL;
+    conway_CERT -> conway_GOVCERT;
+}
+
