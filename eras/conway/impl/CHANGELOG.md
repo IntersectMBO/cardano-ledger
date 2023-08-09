@@ -2,6 +2,9 @@
 
 ## 1.7.0.0
 
+* Add `PrevGovActionId` and `GovActionPurpose`
+* Add optional `PrevGovActionId` to `ParameterChange`, `HardForkInitiation`,
+  `NoConfidence`, `NewCommittee` and `NewConstitution` governance actions.
 * Rename `*governance*` to `*gov*` #3607
   * `GovernanceAction` to `GovAction`
   * `GovernanceActionId` to `GovActionId`

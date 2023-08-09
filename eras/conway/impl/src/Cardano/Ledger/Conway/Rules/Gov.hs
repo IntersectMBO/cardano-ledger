@@ -163,7 +163,7 @@ actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPred
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
   where
     isWellFormed = case ga of
-      ParameterChange ppd -> ppuWellFormed ppd
+      ParameterChange _ ppd -> ppuWellFormed ppd
       _ -> True
 
 govTransition :: forall era. ConwayEraPParams era => TransitionRule (ConwayGOV era)

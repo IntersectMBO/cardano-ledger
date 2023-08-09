@@ -40,12 +40,7 @@ data EnactPredFailure era
   = EnactTreasuryInsufficientFunds !(Map (RewardAcnt (EraCrypto era)) Coin) !Coin
   deriving (Show, Eq)
 
-instance
-  ( EraPParams era
-  , EraGov era
-  ) =>
-  STS (ConwayENACT era)
-  where
+instance EraGov era => STS (ConwayENACT era) where
   type Environment (ConwayENACT era) = ()
   type PredicateFailure (ConwayENACT era) = EnactPredFailure era
   type Signal (ConwayENACT era) = GovAction era
@@ -59,10 +54,10 @@ enactmentTransition :: forall era. EraPParams era => TransitionRule (ConwayENACT
 enactmentTransition = do
   TRC ((), st, act) <- judgmentContext
   case act of
-    ParameterChange ppup -> pure $ st {ensPParams = newPP}
+    ParameterChange _prevGovActionId ppup -> pure $ st {ensPParams = newPP}
       where
         newPP = ensPParams st `applyPPUpdates` ppup
-    HardForkInitiation pv -> pure $ st {ensProtVer = pv}
+    HardForkInitiation _prevGovActionId pv -> pure $ st {ensProtVer = pv}
     TreasuryWithdrawals wdrls -> do
       let wdrlsAmount = fold wdrls
           -- TODO: validate NetworkId in all
@@ -76,9 +71,9 @@ enactmentTransition = do
           { ensWithdrawals = Map.unionWith (<>) wdrlsNoNetworkId $ ensWithdrawals st
           , ensTreasury = ensTreasury st <-> wdrlsAmount
           }
-    NoConfidence -> pure $ st {ensCommittee = SNothing}
-    NewCommittee _ committee -> pure $ st {ensCommittee = SJust committee} -- TODO: check old members
-    NewConstitution c -> pure $ st {ensConstitution = c}
+    NoConfidence _prevGovActionId -> pure $ st {ensCommittee = SNothing}
+    NewCommittee _prevGovActionId _ committee -> pure $ st {ensCommittee = SJust committee} -- TODO: check old members
+    NewConstitution _prevGovActionId c -> pure $ st {ensConstitution = c}
     InfoAction -> pure st
 
 instance Inject (EnactPredFailure era) (EnactPredFailure era) where

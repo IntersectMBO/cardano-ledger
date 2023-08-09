@@ -15,7 +15,17 @@ module Cardano.Ledger.Api.Gov (
 
   -- * Conway
 
-  -- ** Conway Governance
+  -- ** Governance Procedures
+  VotingProcedure (..),
+  VotingProcedures (..),
+  ProposalProcedure (..),
+
+  -- ** Constitution
+  Constitution (..),
+  constitutionHashL,
+  constitutionScriptL,
+
+  -- ** Governance State
   ConwayGovState (..),
   cgRatifyL,
   cgGovL,
@@ -30,6 +40,9 @@ module Cardano.Ledger.Api.Gov (
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
+  GovActionPurpose (..),
+  PrevGovActionId (..),
+  govActionIdToText,
 
   -- *** Anchor
   Anchor (..),
@@ -38,6 +51,9 @@ module Cardano.Ledger.Api.Gov (
   hashAnchorData,
 ) where
 
+-- Lenses
+
+import Cardano.Ledger.Allegra.Core (Constitution (..))
 import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Conway.Gov (
   Anchor (..),
@@ -47,15 +63,21 @@ import Cardano.Ledger.Conway.Gov (
   GovAction (..),
   GovActionId (..),
   GovActionIx (..),
+  GovActionPurpose (..),
   GovActionState (..),
   GovActionsState (..),
+  PrevGovActionId (..),
+  ProposalProcedure (..),
   RatifyState (..),
   Vote (..),
   Voter (..),
-  -- Lenses
-
+  VotingProcedure (..),
+  VotingProcedures (..),
   cgGovL,
   cgRatifyL,
+  constitutionHashL,
+  constitutionScriptL,
+  govActionIdToText,
  )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, SafeToHash, hashAnnotated)

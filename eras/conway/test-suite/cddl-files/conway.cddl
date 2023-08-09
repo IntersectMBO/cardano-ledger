@@ -96,17 +96,17 @@ gov_action =
   // info_action
   ]
 
-parameter_change_action = (0, protocol_param_update)
+parameter_change_action = (0, gov_action_id / null, protocol_param_update)
 
-hard_fork_initiation_action = (1, [protocol_version])
+hard_fork_initiation_action = (1, gov_action_id / null, [protocol_version])
 
 treasury_withdrawals_action = (2, { $reward_account => coin })
 
-no_confidence = 3
+no_confidence = (3, gov_action_id / null)
 
-new_committee = (4, set<$committee_coldkey_credential>, committee)
+new_committee = (4, gov_action_id / null, set<$committee_coldkey_credential>, committee)
 
-new_constitution = (5, constitution)
+new_constitution = (5, gov_action_id / null, constitution)
 
 committee = [{ $committee_coldkey_credential => epoch }, unit_interval]
 

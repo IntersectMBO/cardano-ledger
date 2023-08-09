@@ -4,10 +4,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -27,6 +29,8 @@ module Cardano.Ledger.Conway.Gov.Procedures (
   GovAction (..),
   GovActionId (..),
   GovActionIx (..),
+  PrevGovActionId (..),
+  GovActionPurpose (..),
   govActionIdToText,
   indexedGovProps,
   -- Lenses
@@ -235,6 +239,7 @@ instance Era era => DecCBOR (VotingProcedure era) where
       RecD VotingProcedure
         <! From
         <! D (decodeNullStrictMaybe decCBOR)
+  {-# INLINE decCBOR #-}
 
 instance Era era => EncCBOR (VotingProcedure era) where
   encCBOR VotingProcedure {..} =
@@ -299,6 +304,7 @@ instance EraPParams era => DecCBOR (ProposalProcedure era) where
         <! From
         <! From
         <! From
+  {-# INLINE decCBOR #-}
 
 instance EraPParams era => EncCBOR (ProposalProcedure era) where
   encCBOR ProposalProcedure {..} =
@@ -327,6 +333,7 @@ instance Era era => DecCBOR (Committee era) where
       RecD Committee
         <! From
         <! From
+  {-# INLINE decCBOR #-}
 
 instance Era era => EncCBOR (Committee era) where
   encCBOR Committee {committeeMembers, committeeQuorum} =
@@ -346,17 +353,53 @@ toCommitteePairs committee@(Committee _ _) =
       , "quorum" .= committeeQuorum
       ]
 
+data GovActionPurpose
+  = PParamUpdatePurpose
+  | HardForkPurpose
+  | CommitteePurpose
+  | ConstitutionPurpose
+  deriving (Eq, Show)
+
+newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId (GovActionId c)
+  deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON)
+
+type role PrevGovActionId nominal nominal
+
+-- | Note that the previous governance action id is only optional for the very first
+-- governance action of the same purpose.
 data GovAction era
-  = ParameterChange !(PParamsUpdate era)
-  | HardForkInitiation !ProtVer
-  | TreasuryWithdrawals !(Map (RewardAcnt (EraCrypto era)) Coin)
+  = ParameterChange
+      -- | Previous governance action id of `ParameterChange` type, which corresponds to
+      -- `PParamUpdatePurpose`.
+      !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
+      -- | Proposed changes to PParams
+      !(PParamsUpdate era)
+  | HardForkInitiation
+      -- | Previous governance action id of `HardForkInitiation` type, which corresponds
+      -- to `HardForkPurpose`
+      !(StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
+      -- | Proposed new protocol version
+      !ProtVer
+  | TreasuryWithdrawals
+      -- | Proposed treasury withdrawals
+      !(Map (RewardAcnt (EraCrypto era)) Coin)
   | NoConfidence
+      -- | Previous governance action id of `NoConfidence` or `NewCommittee` type, which
+      -- corresponds to `CommitteePurpose`
+      !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
   | NewCommittee
+      -- | Previous governance action id of `NewCommittee` or `NoConfidence` type, which
+      -- corresponds to `CommitteePurpose`
+      !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
       -- | Old committee
       !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
       -- | New Committee
       !(Committee era)
-  | NewConstitution !(Constitution era)
+  | NewConstitution
+      -- | Previous governance action id of `NewConstitution` type, which corresponds to
+      -- `ConstitutionPurpose`
+      !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
+      !(Constitution era)
   | InfoAction
   deriving (Generic)
 
@@ -372,25 +415,31 @@ instance EraPParams era => ToJSON (GovAction era)
 
 instance EraPParams era => DecCBOR (GovAction era) where
   decCBOR =
-    decode $
-      Summands "GovAction" dec
-    where
-      dec 0 = SumD ParameterChange <! From
-      dec 1 = SumD HardForkInitiation <! From
-      dec 2 = SumD TreasuryWithdrawals <! From
-      dec 3 = SumD NoConfidence
-      dec 4 = SumD NewCommittee <! From <! From
-      dec 5 = SumD NewConstitution <! From
-      dec 6 = SumD InfoAction
-      dec k = Invalid k
+    decode $ Summands "GovAction" $ \case
+      0 -> SumD ParameterChange <! D (decodeNullStrictMaybe decCBOR) <! From
+      1 -> SumD HardForkInitiation <! D (decodeNullStrictMaybe decCBOR) <! From
+      2 -> SumD TreasuryWithdrawals <! From
+      3 -> SumD NoConfidence <! D (decodeNullStrictMaybe decCBOR)
+      4 -> SumD NewCommittee <! D (decodeNullStrictMaybe decCBOR) <! From <! From
+      5 -> SumD NewConstitution <! D (decodeNullStrictMaybe decCBOR) <! From
+      6 -> SumD InfoAction
+      k -> Invalid k
+  {-# INLINE decCBOR #-}
 
 instance EraPParams era => EncCBOR (GovAction era) where
-  encCBOR x = encode (enc x)
-    where
-      enc (ParameterChange ppup) = Sum ParameterChange 0 !> To ppup
-      enc (HardForkInitiation pv) = Sum HardForkInitiation 1 !> To pv
-      enc (TreasuryWithdrawals ws) = Sum TreasuryWithdrawals 2 !> To ws
-      enc NoConfidence = Sum NoConfidence 3
-      enc (NewCommittee old new) = Sum NewCommittee 4 !> To old !> To new
-      enc (NewConstitution c) = Sum NewConstitution 5 !> To c
-      enc InfoAction = Sum InfoAction 6
+  encCBOR =
+    encode . \case
+      ParameterChange gid ppup ->
+        Sum ParameterChange 0 !> E (encodeNullStrictMaybe encCBOR) gid !> To ppup
+      HardForkInitiation gid pv ->
+        Sum HardForkInitiation 1 !> E (encodeNullStrictMaybe encCBOR) gid !> To pv
+      TreasuryWithdrawals ws ->
+        Sum TreasuryWithdrawals 2 !> To ws
+      NoConfidence gid ->
+        Sum NoConfidence 3 !> E (encodeNullStrictMaybe encCBOR) gid
+      NewCommittee gid old new ->
+        Sum NewCommittee 4 !> E (encodeNullStrictMaybe encCBOR) gid !> To old !> To new
+      NewConstitution gid c ->
+        Sum NewConstitution 5 !> E (encodeNullStrictMaybe encCBOR) gid !> To c
+      InfoAction ->
+        Sum InfoAction 6

@@ -861,7 +861,7 @@ genSizedRep _ (TxR p) =
     Conway _ -> TxF p <$> arbitrary
 genSizedRep _ ScriptIntegrityHashR = arbitrary
 genSizedRep _ AuxiliaryDataHashR = arbitrary
-genSizedRep _ GovActionR = pure NoConfidence
+genSizedRep _ GovActionR = NoConfidence <$> arbitrary
 genSizedRep _ (WitVKeyR _) = arbitrary
 genSizedRep _ (TxAuxDataR p) = genTxAuxDataF p
 genSizedRep _ CommColdCredR = arbitrary

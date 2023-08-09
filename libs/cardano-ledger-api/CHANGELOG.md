@@ -2,6 +2,13 @@
 
 ## 1.4.0.0
 
+* Export:
+  * Procedures: `VotingProcedure`, `VotingProcedures` and `ProposalProcedure`
+  * Constitution: `Constitution`, `constitutionHashL` and `constitutionScriptL`
+  * GovActions: `GovActionPurpose`, `PrevGovActionId`, `govActionIdToText`,
+    `PrevGovActionId` and `GovActionPurpose`
+* Add optional `PrevGovActionId` to `ParameterChange`, `HardForkInitiation`,
+  `NoConfidence`, `NewCommittee` and `NewConstitution` governance actions.
 * Rename `*governance*` to `*gov*` #3607
   * module `Cardano.Ledger.Api.Governance` to `Cardano.Ledger.Api.Gov`
 * Update `queryConstitutionHash` return type to `SafeHash (EraCrypto era) (Constitution era)` #3556
