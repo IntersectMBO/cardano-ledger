@@ -229,12 +229,16 @@ class
 
   {-# MINIMAL
     mkBasicTxOut
+    , upgradeTxOut
     , valueEitherTxOutL
     , addrEitherTxOutL
     , (getMinCoinSizedTxOut | getMinCoinTxOut)
     #-}
 
   mkBasicTxOut :: Addr (EraCrypto era) -> Value era -> TxOut era
+
+  -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
+  upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
 
   valueTxOutL :: Lens' (TxOut era) (Value era)
   valueTxOutL =
@@ -378,7 +382,16 @@ class
   EraTxAuxData era
   where
   type TxAuxData era = (r :: Type) | r -> era
+
+  -- | Every era, except Shelley, must be able to upgrade a `TxAuxData` from a previous
+  -- era.
+  --
+  -- /Warning/ - Important to note that any memoized binary representation will not be
+  -- preserved. If you need to retain underlying bytes you can use `translateEraThroughCBOR`
+  upgradeTxAuxData :: EraTxAuxData (PreviousEra era) => TxAuxData (PreviousEra era) -> TxAuxData era
+
   hashTxAuxData :: TxAuxData era -> AuxiliaryDataHash (EraCrypto era)
+
   validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
 
 type AuxiliaryData era = TxAuxData era
@@ -454,6 +467,12 @@ class
   where
   -- | Scripts which may lock transaction outputs in this era
   type Script era = (r :: Type) | r -> era
+
+  -- | Every era, except Shelley, must be able to upgrade a `Script` from a previous era.
+  --
+  -- /Warning/ - Important to note that any memoized binary representation will not be
+  -- preserved, you need to retain underlying bytes you can use `translateEraThroughCBOR`
+  upgradeScript :: EraScript (PreviousEra era) => Script (PreviousEra era) -> Script era
 
   scriptPrefixTag :: Script era -> BS.ByteString
   hashScript :: Script era -> ScriptHash (EraCrypto era)

@@ -20,15 +20,10 @@ where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Language
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
-import Cardano.Ledger.Alonzo.TxAuxData (
-  AlonzoTxAuxData,
-  hashAlonzoTxAuxData,
-  validateAlonzoTxAuxData,
- )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), translateAlonzoScript)
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString)
@@ -46,9 +41,13 @@ type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock (BabbageEra c)
 
 type instance SomeScript 'PhaseTwo (BabbageEra c) = (Language, ShortByteString)
 
-instance CC.Crypto c => EraScript (BabbageEra c) where
+instance Crypto c => EraScript (BabbageEra c) where
   type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
+
+  upgradeScript = translateAlonzoScript
+
   scriptPrefixTag = babbageScriptPrefixTag
+
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
   phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
   phaseScript _ _ = Nothing
@@ -58,8 +57,3 @@ isPlutusScript x =
   case phaseScript @era PhaseTwoRep x of
     Just _ -> True
     Nothing -> False
-
-instance CC.Crypto c => EraTxAuxData (BabbageEra c) where
-  type TxAuxData (BabbageEra c) = AlonzoTxAuxData (BabbageEra c)
-  hashTxAuxData = hashAlonzoTxAuxData
-  validateTxAuxData = validateAlonzoTxAuxData

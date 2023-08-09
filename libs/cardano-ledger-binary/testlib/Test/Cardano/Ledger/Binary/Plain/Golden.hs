@@ -18,7 +18,6 @@ import Cardano.Ledger.Binary.Plain
 import qualified Data.ByteString as BS
 import Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Lazy as BSL
-import Data.TreeDiff (ToExpr)
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Hspec
 

@@ -124,6 +124,7 @@ library testlib
         Test.Cardano.Ledger.Common
         Test.Cardano.Ledger.Core.Address
         Test.Cardano.Ledger.Core.Arbitrary
+        Test.Cardano.Ledger.Core.Binary
         Test.Cardano.Ledger.Core.KeyPair
         Test.Cardano.Ledger.Core.Utils
 

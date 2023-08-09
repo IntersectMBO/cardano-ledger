@@ -14,12 +14,10 @@ module Cardano.Ledger.Babbage.Translation where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.Core hiding (Tx)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Binary (DecoderError)
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Crypto (Crypto)
@@ -161,8 +159,5 @@ translateTxOut ::
   Crypto c =>
   TxOut (AlonzoEra c) ->
   TxOut (BabbageEra c)
-translateTxOut (AlonzoTxOut addr value dh) = BabbageTxOut addr value d SNothing
-  where
-    d = case dh of
-      SNothing -> NoDatum
-      SJust d' -> DatumHash d'
+translateTxOut = upgradeTxOut
+{-# DEPRECATED translateTxOut "Use `upgradeTxOut` instead" #-}

@@ -58,7 +58,7 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (toCBOR), encodePreEncoded)
 import Cardano.Ledger.Core (Era (..), EraTxAuxData (..), eraProtVerLow)
-import Cardano.Ledger.Crypto
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.SafeHash (
   HashAnnotated,
@@ -66,7 +66,8 @@ import Cardano.Ledger.SafeHash (
   SafeToHash (..),
   hashAnnotated,
  )
-import Cardano.Ledger.Shelley.Era
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -88,6 +89,8 @@ data Metadatum
   | S !T.Text
   deriving stock (Show, Eq, Ord, Generic)
 
+instance ToExpr Metadatum
+
 instance NoThunks Metadatum
 
 instance NFData Metadatum where
@@ -105,6 +108,8 @@ data ShelleyTxAuxData era = ShelleyTxAuxData'
   deriving (Eq, Show, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] (ShelleyTxAuxData era)
 
+instance ToExpr (ShelleyTxAuxData era)
+
 type Metadata era = ShelleyTxAuxData era
 
 {-# DEPRECATED Metadata "Use `ShelleyTxAuxData` instead" #-}
@@ -112,7 +117,12 @@ type Metadata era = ShelleyTxAuxData era
 instance Crypto c => EraTxAuxData (ShelleyEra c) where
   type TxAuxData (ShelleyEra c) = ShelleyTxAuxData (ShelleyEra c)
 
+  -- Calling this partial function will result in compilation error, since ByronEra has
+  -- no instance for EraTxOut type class.
+  upgradeTxAuxData = error "It is not possible to translate Byron TxOut with 'upgradeTxOut'"
+
   validateTxAuxData _ (ShelleyTxAuxData m) = all validMetadatum m
+
   hashTxAuxData metadata =
     AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
     where

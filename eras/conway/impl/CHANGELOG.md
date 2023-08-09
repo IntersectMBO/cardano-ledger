@@ -15,6 +15,8 @@
 * Add `MalformedProposal` to `ConwayGovPredFailure`
 * Add `ppuWellFormed` to `ConwayEraPParams`
 * Filter out zero valued `TxOut`'s on Byron/Shelley boundary instead of on Babbage/Conway.
+* Deprecate `translateTxOut` in favor of `upgradeTxOut`
+* Deprecate `translateScript` in favor of `upgradeScript`
 * Switch GovernanceActionIx to `Word32` fro `Word64` and remove `Num` and `Enum`
   instances, which are dangerous due to potential overflows.
 * Add `currentTreasuryValue :: !(StrictMaybe Coin)` as a new field to Conway TxBody #3586

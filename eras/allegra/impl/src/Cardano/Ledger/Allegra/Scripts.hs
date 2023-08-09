@@ -73,11 +73,13 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
+import qualified Cardano.Ledger.Shelley.Scripts as Shelley
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (fromShort)
-import Data.Sequence.Strict (StrictSeq (Empty, (:<|)))
+import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)), fromList)
 import Data.Set (Set, member)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -89,6 +91,8 @@ data ValidityInterval = ValidityInterval
   , invalidHereafter :: !(StrictMaybe SlotNo)
   }
   deriving (Ord, Eq, Generic, Show, NoThunks, NFData)
+
+instance ToExpr ValidityInterval
 
 encodeVI :: ValidityInterval -> Encode ('Closed 'Dense) ValidityInterval
 encodeVI (ValidityInterval f t) = Rec ValidityInterval !> To f !> To t
@@ -117,6 +121,8 @@ data TimelockRaw era
 deriving instance Era era => NoThunks (TimelockRaw era)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TimelockRaw era)
+
+instance ToExpr (TimelockRaw era)
 
 -- | This function deconstructs and then reconstructs the timelock script
 -- to prove the compiler that we can arbirarily switch out the eras as long
@@ -179,6 +185,8 @@ newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
 
 instance Era era => EncCBOR (Timelock era)
 
+instance ToExpr (Timelock era)
+
 instance Memoized Timelock where
   type RawType Timelock = TimelockRaw
 
@@ -191,7 +199,15 @@ type instance SomeScript 'PhaseOne (AllegraEra c) = Timelock (AllegraEra c)
 -- for the ValidateScript instance in MultiSig
 instance Crypto c => EraScript (AllegraEra c) where
   type Script (AllegraEra c) = Timelock (AllegraEra c)
+
+  upgradeScript = \case
+    Shelley.RequireSignature keyHash -> RequireSignature keyHash
+    Shelley.RequireAllOf sigs -> RequireAllOf $ Seq.fromList $ map upgradeScript sigs
+    Shelley.RequireAnyOf sigs -> RequireAnyOf $ Seq.fromList $ map upgradeScript sigs
+    Shelley.RequireMOf n sigs -> RequireMOf n $ Seq.fromList $ map upgradeScript sigs
+
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
+
   phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
   phaseScript PhaseTwoRep _ = Nothing
 

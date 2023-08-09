@@ -82,6 +82,14 @@ class
 
   type ProtVerHigh era = ProtVerLow era
 
+  -- | Textual name of the current era.
+  --
+  -- Designed to be used with @TypeApplications@:
+  --
+  -- >>> eraName @(ByronEra StandardCrypto)
+  -- Byron
+  eraName :: String
+
 -- | This is the era that preceded Shelley era. It cannot have any other class instances,
 -- except for `Era` type class.
 data ByronEra c
@@ -94,6 +102,8 @@ instance Crypto c => Era (ByronEra c) where
   type PreviousEra (ByronEra c) = VoidEra c
   type ProtVerLow (ByronEra c) = 0
   type ProtVerHigh (ByronEra c) = 1
+
+  eraName = "Byron"
 
 -----------------------------
 -- Protocol version bounds --

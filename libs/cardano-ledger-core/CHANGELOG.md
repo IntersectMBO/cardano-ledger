@@ -2,6 +2,12 @@
 
 ## 1.5.0.0
 
+* Add `eraName`
+* Add `addrPtrNormalize`
+* Add `upgradeTxOut` function to `EraTxOut`
+* Add `upgradeScript` function to `EraScript`
+* Add `upgradeTxAuxData` function to `EraTxAuxData`
+* Add `upgradeTxCert` function and `TxCertUpgradeError` family to `EraTxCert`
 * Add `Anchor` and `AnchorDataHash`
 * Add `DRepState`
 * Change `vsDReps` to a map

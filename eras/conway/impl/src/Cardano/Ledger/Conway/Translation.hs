@@ -11,14 +11,20 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Translation where
+module Cardano.Ledger.Conway.Translation (
+  Tx (..),
+  addrPtrNormalize,
+  translateDatum,
+  translateScript,
+  translateTxOut,
+) where
 
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Allegra.Scripts (translateTimelock)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Address (addrPtrNormalize)
+import Cardano.Ledger.Alonzo.Scripts.Data (translateDatum)
+
+import Cardano.Ledger.Alonzo.Scripts (translateAlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -27,7 +33,6 @@ import Cardano.Ledger.Conway.Governance ()
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
-import Cardano.Ledger.Credential (StakeReference (..), normalizePtr)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
@@ -41,7 +46,6 @@ import Cardano.Ledger.Shelley.API (
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
-import Data.Coerce
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 
@@ -166,7 +170,7 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
 
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
+    pure $ API.UTxO $ upgradeTxOut `Map.map` API.unUTxO utxo
 
 -- | Filter out `TxOut`s with zero Coins and normalize Pointers,
 -- while converting `TxOut`s to Conway era.
@@ -174,35 +178,9 @@ translateTxOut ::
   Crypto c =>
   TxOut (BabbageEra c) ->
   TxOut (ConwayEra c)
-translateTxOut (BabbageTxOut addr value d s) =
-  BabbageTxOut (addrPtrNormalize addr) value (translateDatum d) (translateScript <$> s)
-
--- | This function is implemented solely for the purpose of translating garbage pointers
--- into knowingly invalid ones. Any pointer that contains a SlotNo, TxIx or CertIx that
--- is too large to fit into Word32, Word16 and Word16 respectively, will have all of its
--- values set to 0 using `normalizePtr`.
---
--- There are two reasons why we can safely do that at the Babbage/Conway era boundary:
---
--- * Invalid pointers are no longer allowed in transactions starting with Babbage era
---
--- * There are only a handful of `Ptr`s on mainnet that are invalid.
---
--- Once the transition is complete and we are officially in Conway era, this translation
--- logic can be removed in favor of a fixed deserializer that does the same thing for all
--- eras prior to Babbage.
-addrPtrNormalize :: Addr c -> Addr c
-addrPtrNormalize = \case
-  Addr n cred (StakeRefPtr ptr) -> Addr n cred (StakeRefPtr (normalizePtr ptr))
-  addr -> addr
-
-translateDatum :: Datum (BabbageEra c) -> Datum (ConwayEra c)
-translateDatum = \case
-  NoDatum -> NoDatum
-  DatumHash dh -> DatumHash dh
-  Datum bd -> Datum (coerce bd)
+translateTxOut = upgradeTxOut
+{-# DEPRECATED translateTxOut "In favor of `upgradeTxOut`" #-}
 
 translateScript :: Crypto c => Script (BabbageEra c) -> Script (ConwayEra c)
-translateScript = \case
-  TimelockScript ts -> TimelockScript $ translateTimelock ts
-  PlutusScript plutus -> PlutusScript plutus
+translateScript = translateAlonzoScript
+{-# DEPRECATED translateScript "In favor of `upgradeScript`" #-}

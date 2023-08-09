@@ -100,6 +100,10 @@ type instance SomeScript 'PhaseOne (ShelleyEra c) = MultiSig (ShelleyEra c)
 instance Crypto c => EraScript (ShelleyEra c) where
   type Script (ShelleyEra c) = MultiSig (ShelleyEra c)
 
+  -- Calling this partial function will result in compilation error, since ByronEra has
+  -- no instance for EraScript type class.
+  upgradeScript = error "It is not possible to translate a script with 'upgradeScript' from Byron era"
+
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   scriptPrefixTag _script = nativeMultiSigTag
   phaseScript PhaseOneRep multisig = Just (Phase1Script multisig)

@@ -67,7 +67,7 @@ library
         cardano-ledger-allegra >=1.1,
         cardano-crypto-class,
         cardano-ledger-binary >=1.0.1,
-        cardano-ledger-core >=1.4.1 && <1.6,
+        cardano-ledger-core >=1.5 && <1.6,
         cardano-ledger-mary >=1.1,
         cardano-ledger-shelley ^>=1.5,
         cardano-slotting,
@@ -119,3 +119,20 @@ library testlib
         plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
         plutus-core,
         text
+
+test-suite tests
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:    Test.Cardano.Ledger.Alonzo.BinarySpec
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        base,
+        cardano-ledger-core:testlib,
+        cardano-ledger-alonzo,
+        testlib

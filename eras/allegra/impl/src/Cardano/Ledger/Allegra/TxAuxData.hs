@@ -38,9 +38,8 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core (
   Era (..),
-  EraTxAuxData (hashTxAuxData, validateTxAuxData),
+  EraTxAuxData (..),
  )
-import qualified Cardano.Ledger.Core as Core (TxAuxData)
 import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes (
@@ -53,7 +52,8 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
-import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..), validMetadatum)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Codec.CBOR.Decoding (
   TokenType (
     TypeListLen,
@@ -86,9 +86,15 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   }
   deriving (Generic, Eq)
 
+instance ToExpr (AllegraTxAuxDataRaw era)
+
 instance Crypto c => EraTxAuxData (AllegraEra c) where
   type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)
+
+  upgradeTxAuxData (ShelleyTxAuxData md) = AllegraTxAuxData md mempty
+
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
+
   hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (AllegraTxAuxDataRaw era)

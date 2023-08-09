@@ -58,6 +58,7 @@ import Cardano.Ledger.Alonzo.Scripts.Data (
  )
 import Cardano.Ledger.Alonzo.TxBody (
   Addr28Extra,
+  AlonzoTxOut (AlonzoTxOut),
   DataHash32,
   decodeAddress28,
   decodeDataHash32,
@@ -152,6 +153,12 @@ instance Crypto c => EraTxOut (BabbageEra c) where
   type TxOut (BabbageEra c) = BabbageTxOut (BabbageEra c)
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
+
+  upgradeTxOut (AlonzoTxOut addr value mDatumHash) = BabbageTxOut addr value datum SNothing
+    where
+      datum = case mDatumHash of
+        SNothing -> NoDatum
+        SJust datumHash -> DatumHash datumHash
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
   {-# INLINE addrEitherTxOutL #-}

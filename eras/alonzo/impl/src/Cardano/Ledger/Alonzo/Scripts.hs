@@ -31,6 +31,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   validScript,
   transProtocolVersion,
   eqAlonzoScriptRaw,
+  translateAlonzoScript,
 
   -- * Cost Model
   CostModel,
@@ -54,7 +55,7 @@ module Cardano.Ledger.Alonzo.Scripts (
 )
 where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw)
+import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw, translateTimelock)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
@@ -165,6 +166,8 @@ instance NoThunks Tag
 instance NFData Tag where
   rnf = rwhnf
 
+instance ToExpr Tag
+
 -- =======================================================
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
@@ -172,6 +175,16 @@ data AlonzoScript era
   = TimelockScript !(Timelock era)
   | PlutusScript !Plutus
   deriving (Eq, Generic, NoThunks)
+
+instance ToExpr (AlonzoScript era)
+
+translateAlonzoScript ::
+  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
+  AlonzoScript era1 ->
+  AlonzoScript era2
+translateAlonzoScript = \case
+  TimelockScript ts -> TimelockScript $ translateTimelock ts
+  PlutusScript ps -> PlutusScript ps
 
 instance (EraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
@@ -195,9 +208,13 @@ isPlutusScript (TimelockScript _) = False
 
 instance Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
+
+  upgradeScript = TimelockScript . translateTimelock
+
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
   phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
   phaseScript _ _ = Nothing
+
   scriptPrefixTag script =
     case script of
       TimelockScript _ -> nativeMultiSigTag -- "\x00"

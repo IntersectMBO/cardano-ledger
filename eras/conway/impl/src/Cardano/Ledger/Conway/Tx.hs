@@ -27,13 +27,14 @@ import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoTx (..),
  )
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.TxAuxData ()
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 
-instance CC.Crypto c => EraTx (ConwayEra c) where
-  {-# SPECIALIZE instance EraTx (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => EraTx (ConwayEra c) where
+  {-# SPECIALIZE instance EraTx (ConwayEra StandardCrypto) #-}
 
   type Tx (ConwayEra c) = AlonzoTx (ConwayEra c)
 
@@ -51,18 +52,18 @@ instance CC.Crypto c => EraTx (ConwayEra c) where
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) tx = validateTimelock @(ConwayEra c) script tx
+  validateScript (Phase1Script script) = validateTimelock @(ConwayEra c) script
   {-# INLINE validateScript #-}
 
   getMinFeeTx = alonzoMinFeeTx
 
-instance CC.Crypto c => AlonzoEraTx (ConwayEra c) where
-  {-# SPECIALIZE instance AlonzoEraTx (ConwayEra CC.StandardCrypto) #-}
+instance Crypto c => AlonzoEraTx (ConwayEra c) where
+  {-# SPECIALIZE instance AlonzoEraTx (ConwayEra StandardCrypto) #-}
 
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance CC.Crypto c => EraSegWits (ConwayEra c) where
+instance Crypto c => EraSegWits (ConwayEra c) where
   type TxSeq (ConwayEra c) = AlonzoTxSeq (ConwayEra c)
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq

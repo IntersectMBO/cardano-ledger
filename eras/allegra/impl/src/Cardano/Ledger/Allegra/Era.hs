@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Allegra.Era (
@@ -25,6 +24,8 @@ instance Crypto c => Era (AllegraEra c) where
   type PreviousEra (AllegraEra c) = ShelleyEra c
   type EraCrypto (AllegraEra c) = c
   type ProtVerLow (AllegraEra c) = 3
+
+  eraName = "Allegra"
 
 --------------------------------------------------------------------------------
 -- Core instances

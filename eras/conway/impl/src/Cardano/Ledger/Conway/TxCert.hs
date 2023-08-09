@@ -74,6 +74,8 @@ import Cardano.Ledger.Shelley.TxCert (
   encodeShelleyDelegCert,
   poolTxCertDecoder,
   shelleyTxCertDelegDecoder,
+  pattern DelegStakeTxCert,
+  pattern MirTxCert,
   pattern RegPoolTxCert,
   pattern RegTxCert,
   pattern RetirePoolTxCert,
@@ -84,8 +86,26 @@ import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
+data ConwayTxCertUpgradeError
+  = MirTxCertExpunged
+  | GenesisDelegTxCertExpunged
+  deriving (Eq, Show)
+
 instance Crypto c => EraTxCert (ConwayEra c) where
   type TxCert (ConwayEra c) = ConwayTxCert (ConwayEra c)
+
+  type TxCertUpgradeError (ConwayEra c) = ConwayTxCertUpgradeError
+
+  upgradeTxCert = \case
+    RegPoolTxCert poolParams -> Right $ RegPoolTxCert poolParams
+    RetirePoolTxCert poolId epochNo -> Right $ RetirePoolTxCert poolId epochNo
+    RegTxCert cred -> Right $ RegTxCert cred
+    UnRegTxCert cred -> Right $ UnRegTxCert cred
+    DelegStakeTxCert cred poolId -> Right $ DelegStakeTxCert cred poolId
+    MirTxCert {} -> Left MirTxCertExpunged
+    -- Using wildcard here instead of a pattern match on GenesisDelegTxCert in order to
+    -- workaround ghc-8.10 disrespecting the completeness pragma.
+    _ -> Left GenesisDelegTxCertExpunged
 
   getVKeyWitnessTxCert = getVKeyWitnessConwayTxCert
 

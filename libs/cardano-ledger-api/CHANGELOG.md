@@ -2,6 +2,12 @@
 
 ## 1.4.0.0
 
+* Add `eraName`
+* Add `upgradeTxAucData` function to `EraTxAuxData`
+* Add `upgradeTxOut` function to `EraTxOut`
+* Add `upgradeScript` function to `EraScript`
+* Add `upgradeTxAuxData` function to `EraTxAuxData`
+* Add `upgradeTxCert` function and `TxCertUpgradeError` family to `EraTxCert`
 * Export:
   * Procedures: `VotingProcedure`, `VotingProcedures` and `ProposalProcedure`
   * Constitution: `Constitution`, `constitutionHashL` and `constitutionScriptL`

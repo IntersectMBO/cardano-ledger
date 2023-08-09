@@ -12,6 +12,8 @@ instance Crypto c => EraTxCert (AllegraEra c) where
 
   type TxCert (AllegraEra c) = ShelleyTxCert (AllegraEra c)
 
+  upgradeTxCert = Right . upgradeShelleyTxCert
+
   getVKeyWitnessTxCert = getVKeyWitnessShelleyTxCert
 
   getScriptWitnessTxCert = getScriptWitnessShelleyTxCert

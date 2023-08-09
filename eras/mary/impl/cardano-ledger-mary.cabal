@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-mary
-version:            1.3.1.1
+version:            1.3.2.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -99,7 +99,10 @@ test-suite tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-    other-modules:    Test.Cardano.Ledger.Mary.ValueSpec
+    other-modules:
+        Test.Cardano.Ledger.Mary.BinarySpec
+        Test.Cardano.Ledger.Mary.ValueSpec
+
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -113,5 +116,6 @@ test-suite tests
         cardano-data:{cardano-data, testlib},
         cardano-ledger-binary:testlib >=1.1,
         cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-allegra,
         cardano-ledger-mary,
         testlib

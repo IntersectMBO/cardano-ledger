@@ -14,7 +14,8 @@ import Cardano.Ledger.Shelley.TxBody (
   addrEitherShelleyTxOutL,
   valueEitherShelleyTxOutL,
  )
-import Cardano.Ledger.Val (Val (isAdaOnly, size))
+import Cardano.Ledger.Val (Val (isAdaOnly, size), injectCompact)
+import Data.Coerce (coerce)
 import Lens.Micro ((^.))
 
 instance Crypto c => EraTxOut (MaryEra c) where
@@ -23,6 +24,8 @@ instance Crypto c => EraTxOut (MaryEra c) where
   type TxOut (MaryEra c) = ShelleyTxOut (MaryEra c)
 
   mkBasicTxOut = ShelleyTxOut
+
+  upgradeTxOut (TxOutCompact addr cfval) = TxOutCompact (coerce addr) (injectCompact cfval)
 
   addrEitherTxOutL = addrEitherShelleyTxOutL
   {-# INLINE addrEitherTxOutL #-}

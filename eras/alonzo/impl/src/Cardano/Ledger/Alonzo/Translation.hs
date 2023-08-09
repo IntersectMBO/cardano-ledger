@@ -14,10 +14,9 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (PState (..), VState (..))
-import Cardano.Ledger.Core (upgradePParams, upgradePParamsUpdate)
+import Cardano.Ledger.Core (upgradePParams, upgradePParamsUpdate, upgradeTxOut)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (
@@ -36,7 +35,6 @@ import Cardano.Ledger.Shelley.API (
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.Tx as LTX
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 
@@ -163,4 +161,5 @@ translateTxOut ::
   Crypto c =>
   Core.TxOut (MaryEra c) ->
   Core.TxOut (AlonzoEra c)
-translateTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
+translateTxOut = upgradeTxOut
+{-# DEPRECATED translateTxOut "Use `upgradeTxOut` instead" #-}

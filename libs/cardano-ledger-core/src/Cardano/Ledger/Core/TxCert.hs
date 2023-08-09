@@ -37,6 +37,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Core.Era (Era (EraCrypto))
+import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
@@ -47,6 +48,7 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -64,6 +66,18 @@ class
   EraTxCert era
   where
   type TxCert era = (r :: Type) | r -> era
+
+  type TxCertUpgradeError era :: Type
+  type TxCertUpgradeError era = Void
+
+  -- | Every era, except Shelley, must be able to upgrade a `TxCert` from a previous
+  -- era. However, not all certificates can be upgraded, because some eras lose some of
+  -- the certificates, thus return type is an `Either`. Eg. from Babbage to Conway: MIR
+  -- and Genesis certificates were removed.
+  upgradeTxCert ::
+    EraTxCert (PreviousEra era) =>
+    TxCert (PreviousEra era) ->
+    Either (TxCertUpgradeError era) (TxCert era)
 
   -- | Return a witness key whenever a certificate requires one
   getVKeyWitnessTxCert :: TxCert era -> Maybe (KeyHash 'Witness (EraCrypto era))

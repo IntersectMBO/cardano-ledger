@@ -25,7 +25,6 @@ import Cardano.Ledger.Shelley.API hiding (Metadata)
 import qualified Cardano.Ledger.Val as Val
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 
 --------------------------------------------------------------------------------
 -- Translation from Allegra to Mary
@@ -129,8 +128,7 @@ instance Crypto c => TranslateEra (MaryEra c) UTxOState where
         }
 
 instance Crypto c => TranslateEra (MaryEra c) ShelleyTxOut where
-  translateEra () (TxOutCompact addr cfval) =
-    pure $ TxOutCompact (coerce addr) (translateCompactValue cfval)
+  translateEra () = pure . upgradeTxOut
 
 instance Crypto c => TranslateEra (MaryEra c) UTxO where
   translateEra ctxt utxo =
@@ -152,9 +150,8 @@ instance Crypto c => TranslateEra (MaryEra c) AllegraTxAuxData where
 
 translateValue :: Crypto c => Coin -> MaryValue c
 translateValue = Val.inject
+{-# DEPRECATED translateValue "Use `Val.inject` instead" #-}
 
 translateCompactValue :: Crypto c => CompactForm Coin -> CompactForm (MaryValue c)
-translateCompactValue =
-  fromMaybe (error msg) . toCompact . translateValue . fromCompact
-  where
-    msg = "impossible error: compact coin is out of range"
+translateCompactValue = Val.injectCompact
+{-# DEPRECATED translateCompactValue "Use `Val.injectCompact` instead" #-}

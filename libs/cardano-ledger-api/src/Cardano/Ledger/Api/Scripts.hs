@@ -1,6 +1,11 @@
 module Cardano.Ledger.Api.Scripts (
   module Cardano.Ledger.Api.Scripts.Data,
-  EraScript (..),
+  EraScript (Script),
+  scriptPrefixTag,
+  upgradeScript,
+  hashScript,
+  phaseScript,
+  isNativeScript,
   ScriptHash,
   CostModels (..),
   ValidityInterval (..),

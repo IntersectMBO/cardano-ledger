@@ -32,6 +32,7 @@ import Cardano.Ledger.Babbage.Tx (
   babbageTxScripts,
   getDatumBabbage,
  )
+import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody,
   BabbageTxOut,

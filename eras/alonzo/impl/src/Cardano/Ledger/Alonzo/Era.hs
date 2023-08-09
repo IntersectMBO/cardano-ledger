@@ -27,6 +27,8 @@ instance Crypto c => Era (AlonzoEra c) where
   type ProtVerLow (AlonzoEra c) = 5
   type ProtVerHigh (AlonzoEra c) = 6
 
+  eraName = "Alonzo"
+
 type instance Value (AlonzoEra c) = MaryValue c
 
 -------------------------------------------------------------------------------

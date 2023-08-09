@@ -76,6 +76,8 @@ data Plutus = Plutus
   }
   deriving stock (Eq, Ord, Show, Generic)
 
+instance ToExpr Plutus
+
 -- | Already in Normal Form
 instance NFData Plutus where
   rnf = rwhnf
@@ -86,6 +88,8 @@ instance NoThunks Plutus
 newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}
   deriving stock (Eq, Ord, Generic)
   deriving newtype (ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData, NoThunks)
+
+instance ToExpr BinaryPlutus
 
 instance Show BinaryPlutus where
   show = show . B64.encode . fromShort . unBinaryPlutus

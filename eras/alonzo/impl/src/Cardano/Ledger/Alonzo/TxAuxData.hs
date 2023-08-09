@@ -30,6 +30,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   hashAlonzoTxAuxData,
   validateAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
+  translateAlonzoTxAuxData,
 
   -- * Deprecated
   AuxiliaryData,
@@ -37,7 +38,8 @@ module Cardano.Ledger.Alonzo.TxAuxData (
 where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
-import Cardano.Ledger.Allegra.Scripts
+import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
+import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), BinaryPlutus (..), validScript)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
@@ -70,6 +72,7 @@ import Cardano.Ledger.SafeHash (
   hashAnnotated,
  )
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData, deepseq)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
@@ -101,6 +104,8 @@ deriving via
   InspectHeapNamed "AlonzoTxAuxDataRaw" (AlonzoTxAuxDataRaw era)
   instance
     NoThunks (AlonzoTxAuxDataRaw era)
+
+instance ToExpr (AlonzoTxAuxDataRaw era)
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AlonzoTxAuxData era)
@@ -224,10 +229,13 @@ emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
 -- Version with serialized bytes.
 
 newtype AlonzoTxAuxData era = AuxiliaryDataConstr (MemoBytes AlonzoTxAuxDataRaw era)
+  deriving (Generic)
   deriving newtype (ToCBOR, SafeToHash)
 
 instance Memoized AlonzoTxAuxData where
   type RawType AlonzoTxAuxData = AlonzoTxAuxDataRaw
+
+instance ToExpr (AlonzoTxAuxData era)
 
 type AuxiliaryData era = AlonzoTxAuxData era
 
@@ -235,7 +243,17 @@ type AuxiliaryData era = AlonzoTxAuxData era
 
 instance Crypto c => EraTxAuxData (AlonzoEra c) where
   type TxAuxData (AlonzoEra c) = AlonzoTxAuxData (AlonzoEra c)
+
+  upgradeTxAuxData (AllegraTxAuxData md scripts) =
+    mkMemoized $
+      AlonzoTxAuxDataRaw
+        { atadrMetadata = md
+        , atadrTimelock = translateTimelock <$> scripts
+        , atadrPlutus = mempty
+        }
+
   hashTxAuxData = hashAlonzoTxAuxData
+
   validateTxAuxData = validateAlonzoTxAuxData
 
 hashAlonzoTxAuxData ::
@@ -279,7 +297,7 @@ pattern AlonzoTxAuxData ::
   Map Word64 Metadatum ->
   StrictSeq (Timelock era) ->
   Map Language (NE.NonEmpty BinaryPlutus) ->
-  AuxiliaryData era
+  AlonzoTxAuxData era
 pattern AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} <-
   (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata atadTimelock atadPlutus)
   where
@@ -287,3 +305,14 @@ pattern AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} <-
       mkMemoized $ AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus}
 
 {-# COMPLETE AlonzoTxAuxData #-}
+
+translateAlonzoTxAuxData ::
+  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
+  AlonzoTxAuxData era1 ->
+  AlonzoTxAuxData era2
+translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =
+  AlonzoTxAuxData
+    { atadMetadata = atadMetadata
+    , atadTimelock = translateTimelock <$> atadTimelock
+    , atadPlutus = atadPlutus
+    }

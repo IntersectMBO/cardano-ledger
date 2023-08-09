@@ -1,8 +1,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Ledger.Api.Tx.Cert (
-  EraTxCert,
-  TxCert,
+  EraTxCert (TxCert, TxCertUpgradeError),
+  upgradeTxCert,
   getVKeyWitnessTxCert,
   getScriptWitnessTxCert,
   pattern RegPoolTxCert,
@@ -74,10 +74,13 @@ import Cardano.Ledger.Conway.TxCert (
   pattern UnRegDepositTxCert,
  )
 import Cardano.Ledger.Core (
-  EraTxCert,
-  TxCert,
-  getScriptWitnessTxCert,
-  getVKeyWitnessTxCert,
+  EraTxCert (
+    TxCert,
+    TxCertUpgradeError,
+    getScriptWitnessTxCert,
+    getVKeyWitnessTxCert,
+    upgradeTxCert
+  ),
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
  )

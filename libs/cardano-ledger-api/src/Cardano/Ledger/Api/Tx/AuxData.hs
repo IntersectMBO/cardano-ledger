@@ -1,5 +1,8 @@
 module Cardano.Ledger.Api.Tx.AuxData (
-  EraTxAuxData (..),
+  EraTxAuxData (TxAuxData),
+  upgradeTxAuxData,
+  hashTxAuxData,
+  validateTxAuxData,
 
   -- * Shelley
   ShelleyTxAuxData (..),

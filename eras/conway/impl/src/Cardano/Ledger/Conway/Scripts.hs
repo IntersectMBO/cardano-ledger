@@ -14,30 +14,24 @@ where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Language (Language)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), isPlutusScript)
-import Cardano.Ledger.Alonzo.TxAuxData (
-  AlonzoTxAuxData,
-  hashAlonzoTxAuxData,
-  validateAlonzoTxAuxData,
- )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), isPlutusScript, translateAlonzoScript)
 import Cardano.Ledger.Babbage.Scripts (babbageScriptPrefixTag)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Data.ByteString.Short (ShortByteString)
 
 type instance SomeScript 'PhaseOne (ConwayEra c) = Timelock (ConwayEra c)
 
 type instance SomeScript 'PhaseTwo (ConwayEra c) = (Language, ShortByteString)
 
-instance CC.Crypto c => EraScript (ConwayEra c) where
+instance Crypto c => EraScript (ConwayEra c) where
   type Script (ConwayEra c) = AlonzoScript (ConwayEra c)
+
+  upgradeScript = translateAlonzoScript
+
   scriptPrefixTag = babbageScriptPrefixTag
+
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
   phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
   phaseScript _ _ = Nothing
-
-instance CC.Crypto c => EraTxAuxData (ConwayEra c) where
-  type TxAuxData (ConwayEra c) = AlonzoTxAuxData (ConwayEra c)
-  hashTxAuxData = hashAlonzoTxAuxData
-  validateTxAuxData = validateAlonzoTxAuxData

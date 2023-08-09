@@ -4,6 +4,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.TreeDiff (
+  ToExpr,
   CBORBytes (..),
   HexBytes (..),
   showExpr,
@@ -127,7 +128,7 @@ showHexBytesGrouped bs =
 -- | Check that two values are equal and if they are not raise an exception with the
 -- `ToExpr` diff
 expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
-expectExprEqual x y = expectExprEqualWithMessage "Expected two values to be equal:" x y
+expectExprEqual = expectExprEqualWithMessage "Expected two values to be equal:"
 
 -- | Use this with HSpec, but with Tasty use 'assertExprEqualWithMessage' below
 expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Expectation

@@ -6,11 +6,17 @@ cradle:
     - path: "eras/allegra/impl/testlib"
       component: "cardano-ledger-allegra:lib:testlib"
 
+    - path: "eras/allegra/impl/test"
+      component: "cardano-ledger-allegra:test:tests"
+
     - path: "eras/alonzo/impl/src"
       component: "lib:cardano-ledger-alonzo"
 
     - path: "eras/alonzo/impl/testlib"
       component: "cardano-ledger-alonzo:lib:testlib"
+
+    - path: "eras/alonzo/impl/test"
+      component: "cardano-ledger-alonzo:test:tests"
 
     - path: "eras/alonzo/test-suite/src"
       component: "lib:cardano-ledger-alonzo-test"
@@ -29,6 +35,9 @@ cradle:
 
     - path: "eras/babbage/impl/testlib"
       component: "cardano-ledger-babbage:lib:testlib"
+
+    - path: "eras/babbage/impl/test"
+      component: "cardano-ledger-babbage:test:tests"
 
     - path: "eras/babbage/test-suite/src"
       component: "lib:cardano-ledger-babbage-test"
@@ -80,6 +89,9 @@ cradle:
 
     - path: "eras/conway/impl/testlib"
       component: "cardano-ledger-conway:lib:testlib"
+
+    - path: "eras/conway/impl/test"
+      component: "cardano-ledger-conway:test:tests"
 
     - path: "eras/conway/test-suite/src"
       component: "lib:cardano-ledger-conway-test"
