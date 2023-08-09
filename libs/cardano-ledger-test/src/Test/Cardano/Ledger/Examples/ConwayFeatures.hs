@@ -131,7 +131,7 @@ someTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
 someTxIn = mkGenesisTxIn 1
 
 proposedConstitution :: forall era. Scriptic era => Constitution era
-proposedConstitution = Constitution (SLE.mkDummySafeHash Proxy 1) SNothing
+proposedConstitution = Constitution (SLE.mkDummyAnchor 1) SNothing
 
 newConstitutionProposal :: forall era. Scriptic era => Proof era -> ProposalProcedure era
 newConstitutionProposal pf =
@@ -153,7 +153,7 @@ anotherConstitutionProposal pf prevGovActionId =
     (RewardAcnt Mainnet (KeyHashObj (stakeKeyHash pf)))
     ( NewConstitution
         (SJust (PrevGovActionId prevGovActionId))
-        (Constitution (SLE.mkDummySafeHash Proxy 2) SNothing)
+        (Constitution (SLE.mkDummyAnchor 2) SNothing)
     )
     (Anchor (fromJust $ textToUrl "another.constitution.com") (SLE.mkDummySafeHash Proxy 2))
 

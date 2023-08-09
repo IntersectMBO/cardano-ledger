@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add `ConwayEraGov` with `constitutionGovStateL`
 * Add `PrevGovActionId` and `GovActionPurpose`
 * Add optional `PrevGovActionId` to `ParameterChange`, `HardForkInitiation`,
   `NoConfidence`, `NewCommittee` and `NewConstitution` governance actions.

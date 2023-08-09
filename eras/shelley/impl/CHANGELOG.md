@@ -2,6 +2,8 @@
 
 ## 1.5.0.0
 
+* Change `getConstituitionHash` to `getConstitution`
+* Replace `constitutionHash` with `constitutionAnchor`
 * Add `upgradeShelleyTxCert`
 * Rename `*governance*` to `*gov*` #3607
   * `EraGovernance` to `EraGov`
@@ -13,7 +15,7 @@
 * Rename `getProducedValue` to `shelleyProducedValue`
 * Change the constraints on `produced` and `evaluateTransactionBalance`
 * Add `lsCertStateL`
-* Make new `Constitution` datatype and `ConstitutionData` newtype #3556
+* Make new `Constitution` datatype #3556
   * Adopt some Default instances for example SafeHash
 * Add new methods to `EraGovernance`:
   * `curPParamsGovStateL`
