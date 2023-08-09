@@ -50,6 +50,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (pack)
 import Data.Time
 import Data.Word (Word64, Word8)
 import Lens.Micro ((&), (.~))
@@ -395,6 +396,13 @@ mkDummySafeHash :: forall c a. Crypto c => Proxy c -> Int -> SafeHash c a
 mkDummySafeHash _ =
   unsafeMakeSafeHash
     . mkDummyHash @(HASH c)
+
+mkDummyAnchor :: Crypto c => Int -> Anchor c
+mkDummyAnchor n =
+  Anchor
+    { anchorUrl = fromJust . textToUrl $ "dummy@" <> pack (show n)
+    , anchorDataHash = mkDummySafeHash Proxy n
+    }
 
 {-------------------------------------------------------------------------------
   Shelley era specific functions

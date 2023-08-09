@@ -19,7 +19,7 @@ module Cardano.Ledger.CertState (
   FutureGenDeleg (..),
   Anchor (..),
   DRepState (..),
-  AnchorDataHash,
+  AnchorData,
   lookupDepositDState,
   lookupRewardDState,
   rewards,
@@ -46,7 +46,7 @@ module Cardano.Ledger.CertState (
 )
 where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), AnchorDataHash)
+import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),

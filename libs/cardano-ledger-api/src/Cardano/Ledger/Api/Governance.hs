@@ -1,8 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 module Cardano.Ledger.Api.Governance (
   EraGov (GovState),
   emptyGovState,
@@ -22,7 +17,7 @@ module Cardano.Ledger.Api.Governance (
 
   -- ** Constitution
   Constitution (..),
-  constitutionHashL,
+  constitutionAnchorL,
   constitutionScriptL,
 
   -- ** Governance State
@@ -47,7 +42,6 @@ module Cardano.Ledger.Api.Governance (
   -- *** Anchor
   Anchor (..),
   AnchorData (..),
-  AnchorDataHash,
   hashAnchorData,
 ) where
 
@@ -55,9 +49,10 @@ module Cardano.Ledger.Api.Governance (
 
 import Cardano.Ledger.Allegra.Core (Constitution (..))
 import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.BaseTypes (hashAnchorData)
 import Cardano.Ledger.Conway.Governance (
   Anchor (..),
-  AnchorDataHash,
+  AnchorData (..),
   ConwayGovState (..),
   EnactState (..),
   GovAction (..),
@@ -75,12 +70,10 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   cgGovL,
   cgRatifyL,
-  constitutionHashL,
+  constitutionAnchorL,
   constitutionScriptL,
   govActionIdToText,
  )
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Governance (
   EraGov (GovState),
   ShelleyGovState (..),
@@ -88,13 +81,3 @@ import Cardano.Ledger.Shelley.Governance (
   getProposedPPUpdates,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), emptyPPPUpdates)
-import Data.ByteString (ByteString)
-
-newtype AnchorData c = AnchorData ByteString
-  deriving (Eq, SafeToHash)
-
-instance HashAnnotated (AnchorData c) AnchorDataHash c
-
--- | Hash `AnchorData`
-hashAnchorData :: Crypto c => AnchorData c -> SafeHash c AnchorDataHash
-hashAnchorData = hashAnnotated

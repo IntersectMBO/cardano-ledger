@@ -49,7 +49,6 @@ library
     build-depends:
         base >=4.14 && <4.19,
         array,
-        bytestring,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo >=1.4,
         cardano-ledger-babbage >=1.1,
