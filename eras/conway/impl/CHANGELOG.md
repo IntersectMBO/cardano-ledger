@@ -2,6 +2,35 @@
 
 ## 1.8.0.0
 
+* Remove `rsFuture` from `RatifyState`
+* Add to `GovActionsState`:
+  * `curGovActionsState`
+  * `prevGovActionsState`
+  * `prevDRepState`
+  * `prevCommitteeState`
+* Add `ToExpr` instances to:
+  * `PoolVotingThresholds`
+  * `DRepVotingThresholds`
+  * `GovActionState`
+  * `GovActionsState`
+  * `EnactState`
+  * `RatifyState`
+  * `ConwayGovState`
+  * `GovActionIx`
+  * `GovActionId`
+  * `Vote`
+  * `Committee`
+  * `PrevGovActionId`
+  * `GovAction`
+  * `ConwayPParams` with `Identity` and `StrictMaybe`
+* Add lenses:
+  * `cgEnactStateL`
+  * `curGovActionsStateL`
+  * `prevGovActionsStateL`
+  * `prevDRepStateL`
+  * `prevCommitteeStateL`
+* Replace `cgRatifyState` with `cgEnactState`
+* Deprecate `cgRatifyStateL`
 * Add `ProposalDepositIncorrect` predicate failure, that is produced when `ProposalProcedure` deposit does not match `"govActionDeposit"` from `PParams` #3669
 * Add "minCommitteeSize" `PParam` validation for `NewCommittee` `GovAction` #3668
   * Add `committeeMembersL` and `committeeQuorumL` lenses for `Committee`

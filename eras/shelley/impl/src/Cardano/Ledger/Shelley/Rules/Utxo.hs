@@ -67,7 +67,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
   keyTxRefunds,
-  totalTxDeposits,
  )
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -427,7 +426,7 @@ utxoInductive = do
   runTest $ validateMaxTxSizeUTxO pp tx
 
   let refunded = keyTxRefunds pp dpstate txBody
-  let totalDeposits' = totalTxDeposits pp dpstate txBody
+  let totalDeposits' = getTotalDepositsTxBody pp dpstate txBody
   let depositChange = totalDeposits' Val.<-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
   pure $! updateUTxOState pp u txBody depositChange ppup'

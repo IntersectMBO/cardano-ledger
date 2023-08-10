@@ -54,7 +54,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
   UTxOState (..),
-  obligationCertState,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -63,6 +62,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
   UtxoEnv (..),
+  shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch)
 import Cardano.Ledger.UMap (UView (..), dRepMap)
@@ -72,7 +72,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
-  Assertion (..),
   AssertionViolation (..),
   Embed (..),
   STS (..),
@@ -172,7 +171,7 @@ data ConwayLedgerEvent era
 instance
   ( AlonzoEraTx era
   , ConwayEraTxBody era
-  , ConwayEraPParams era
+  , EraGov era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
@@ -209,15 +208,7 @@ instance
       <> "\n"
       <> show avState
 
-  assertions =
-    [ PostCondition
-        "Deposit pot must equal obligation"
-        ( \(TRC (_, _, _))
-           (LedgerState utxoSt certState) ->
-              obligationCertState certState
-                == utxosDeposited utxoSt
-        )
-    ]
+  assertions = shelleyLedgerAssertions
 
 -- =======================================
 
@@ -265,7 +256,6 @@ ledgerTransition = do
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
-
         let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
             wdrlCreds = Set.map getRwdCred wdrlAddrs
             dUnified = dsUnified $ certDState certStateAfterCERTS
@@ -288,7 +278,6 @@ ledgerTransition = do
               , utxoState ^. utxosGovStateL . cgGovActionsStateL
               , govProcedures
               )
-
         let utxoState' = utxoState & utxosGovStateL . cgGovActionsStateL .~ govActionsState'
         pure (utxoState', certStateAfterCERTS)
       else pure (utxoState, certState)
@@ -365,6 +354,7 @@ instance
   , State (EraRule "GOV" era) ~ GovActionsState era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
+  , EraGov era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where

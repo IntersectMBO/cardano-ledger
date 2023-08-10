@@ -51,7 +51,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   payPoolDeposit,
   refundPoolDeposit,
   totalTxDeposits,
-  obligationCertState,
+  totalObligation,
   keyCertsRefunds,
   keyCertsRefundsCertState,
   totalCertsDeposits,

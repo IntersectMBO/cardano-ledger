@@ -8,6 +8,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Val (Val (..))
 import Data.Coerce
 import Lens.Micro
 
@@ -55,3 +56,5 @@ instance Crypto c => EraGov (AllegraEra c) where
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
+
+  obligationGovState = const zero

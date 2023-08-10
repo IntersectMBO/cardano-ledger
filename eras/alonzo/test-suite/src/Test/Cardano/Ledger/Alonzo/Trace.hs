@@ -45,6 +45,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 -- with meaningful delegation certificates.
 instance
   ( EraGen era
+  , EraGov era
   , AlonzoEraTx era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era

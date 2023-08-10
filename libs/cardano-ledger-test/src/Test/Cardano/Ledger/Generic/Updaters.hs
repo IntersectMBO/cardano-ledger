@@ -390,6 +390,7 @@ updatePParams proof pp' ppf =
             MaxValSize maxValSize -> pp & ppMaxValSizeL .~ maxValSize
             CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
             MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
+            GovActionDeposit c -> pp & ppGovActionDepositL .~ c
             _ -> pp
 
 newPParams :: EraPParams era => Proof era -> [PParamsField era] -> PParams era

@@ -119,6 +119,7 @@ import Cardano.Ledger.Shelley.PParams (
   shelleyCommonPParamsHKDPairsV6,
  )
 import Cardano.Ledger.TreeDiff (ToExpr (..))
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
@@ -289,6 +290,8 @@ instance Crypto c => EraGov (AlonzoEra c) where
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
+
+  obligationGovState = const zero
 
 instance Era era => EncCBOR (AlonzoPParams Identity era) where
   encCBOR AlonzoPParams {..} =

@@ -23,6 +23,7 @@ module Cardano.Ledger.Api.Governance (
   -- ** Governance State
   ConwayGovState (..),
   cgRatifyStateL,
+  cgEnactStateL,
   cgGovActionsStateL,
   GovActionsState (..),
   RatifyState (..),
@@ -68,6 +69,7 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  cgEnactStateL,
   cgGovActionsStateL,
   cgRatifyStateL,
   constitutionAnchorL,

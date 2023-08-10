@@ -27,15 +27,16 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleyPOOLREAP)
+import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState (..),
   DState (..),
   PState (..),
   UTxOState (..),
-  obligationCertState,
   rewards,
  )
+import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError)
@@ -90,7 +91,13 @@ instance NoThunks (ShelleyPoolreapPredFailure era)
 instance Default (UTxOState era) => Default (ShelleyPoolreapState era) where
   def = PoolreapState def def def def
 
-instance (Default (ShelleyPoolreapState era), EraPParams era) => STS (ShelleyPOOLREAP era) where
+instance
+  ( Default (ShelleyPoolreapState era)
+  , EraPParams era
+  , EraGov era
+  ) =>
+  STS (ShelleyPOOLREAP era)
+  where
   type State (ShelleyPOOLREAP era) = ShelleyPoolreapState era
   type Signal (ShelleyPOOLREAP era) = EpochNo
   type Environment (ShelleyPOOLREAP era) = ShelleyPoolreapEnv era
@@ -101,9 +108,10 @@ instance (Default (ShelleyPoolreapState era), EraPParams era) => STS (ShelleyPOO
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation (PoolReap)"
-        ( \(TRC (e, _, _)) st ->
-            obligationCertState (CertState (speVState e) (prPState st) (prDState st))
-              == utxosDeposited (prUTxOSt st)
+        ( \(TRC (_, _, _)) st ->
+            potEqualsObligation
+              (CertState def (prPState st) (prDState st))
+              (prUTxOSt st)
         )
     , PostCondition
         "PoolReap may not create or remove reward accounts"

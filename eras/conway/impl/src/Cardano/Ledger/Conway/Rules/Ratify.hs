@@ -196,7 +196,7 @@ ratifyTransition ::
 ratifyTransition = do
   TRC
     ( env@RatifyEnv {reCurrentEpoch}
-      , st@RatifyState {rsEnactState, rsFuture, rsRemoved}
+      , st@RatifyState {rsEnactState, rsRemoved}
       , RatifySignal rsig
       ) <-
     judgmentContext
@@ -220,7 +220,7 @@ ratifyTransition = do
           -- Finally, filter out actions that are not processed.
           if gasExpiresAfter < reCurrentEpoch
             then pure st' {rsRemoved = ast :<| rsRemoved} -- Action expires after current Epoch. Remove it.
-            else pure st' {rsFuture = ast :<| rsFuture}
+            else pure st'
     Empty -> pure st
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where

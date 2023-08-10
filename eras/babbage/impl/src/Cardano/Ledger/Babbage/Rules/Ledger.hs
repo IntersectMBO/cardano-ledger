@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -23,7 +22,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   LedgerState (..),
   UTxOState (..),
-  obligationCertState,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
@@ -35,6 +33,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerEvent (..),
   ShelleyLedgerPredFailure (..),
   UtxoEnv (..),
+  shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersEvent (LedgerEvent),
@@ -42,10 +41,8 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   depositEqualsObligation,
  )
 import Control.State.Transition (
-  Assertion (..),
   Embed (..),
   STS (..),
-  TRC (..),
  )
 import Data.Sequence (Seq)
 
@@ -53,6 +50,7 @@ import Data.Sequence (Seq)
 
 instance
   ( AlonzoEraTx era
+  , EraGov era
   , Embed (EraRule "DELEGS" era) (BabbageLEDGER era)
   , Embed (EraRule "UTXOW" era) (BabbageLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
@@ -77,15 +75,7 @@ instance
 
   renderAssertionViolation = Shelley.depositEqualsObligation
 
-  assertions =
-    [ PostCondition
-        "Deposit pot must equal obligation (BabbageLEDGER)"
-        ( \(TRC (_, _, _))
-           (LedgerState utxoSt dpstate) ->
-              obligationCertState dpstate
-                == utxosDeposited utxoSt
-        )
-    ]
+  assertions = shelleyLedgerAssertions
 
 instance
   ( Era era

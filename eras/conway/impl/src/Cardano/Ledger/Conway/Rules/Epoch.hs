@@ -24,7 +24,7 @@ where
 
 import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (certDStateL, dsUnifiedL, vsDRepsL)
+import Cardano.Ledger.CertState (certDStateL, certVStateL, dsUnifiedL, vsCommitteeStateL, vsDRepsL)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
@@ -34,9 +34,9 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovActionsState (..),
   RatifyState (..),
+  cgEnactStateL,
   cgGovActionsStateL,
-  cgRatifyStateL,
-  insertGovActionsState,
+  curGovActionsStateL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   PState (..),
   UTxOState (..),
-  asReserves,
   asTreasuryL,
   curPParamsEpochStateL,
   epochStateDRepDistrL,
@@ -63,8 +62,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   lsUTxOState,
   lsUTxOStateL,
-  obligationCertState,
   prevPParamsEpochStateL,
+  totalObligation,
   utxosDonationL,
   utxosGovStateL,
   pattern CertState,
@@ -170,17 +169,13 @@ returnProposalDepositsUMap gaids m =
 
 returnProposalDeposits ::
   forall era.
-  GovState era ~ ConwayGovState era =>
+  StrictSeq (GovActionState era) ->
   LedgerState era ->
   LedgerState era
-returnProposalDeposits ls@LedgerState {..} =
-  ls
-    & lsCertStateL . certDStateL . dsUnifiedL %~ dstate
+returnProposalDeposits removedProposals =
+  lsCertStateL . certDStateL . dsUnifiedL %~ updateUMap
   where
-    govSt = utxosGovState lsUTxOState
-    ratifyState = cgRatifyState govSt
-    removedProposals = rsRemoved ratifyState
-    dstate = returnProposalDepositsUMap removedProposals
+    updateUMap = returnProposalDepositsUMap removedProposals
 
 epochTransition ::
   forall era.
@@ -235,49 +230,85 @@ epochTransition = do
           { lsUTxOState = utxoSt'
           , lsCertState = adjustedCertState
           }
-      epochState' =
+      es' =
         EpochState
           acnt'
-          (returnProposalDeposits adjustedLState)
+          adjustedLState
           ss'
           nm
 
   let
-    utxoSt''' = utxoSt' {utxosDeposited = obligationCertState adjustedCertState}
-    acnt'' = acnt' {asReserves = asReserves acnt'}
-    govSt = utxosGovState utxoSt'''
-    stakeDistr = credMap $ utxosStakeDistr utxoSt'''
-    drepDistr = extractDRepDistr (epochState' ^. epochStateDRepDistrL)
+    utxoSt'' =
+      utxoSt'
+        { utxosDeposited =
+            totalObligation
+              adjustedCertState
+              (utxoSt' ^. utxosGovStateL)
+        }
+    govSt = utxosGovState utxoSt''
+    stakeDistr = credMap $ utxosStakeDistr utxoSt''
+    drepDistr = extractDRepDistr (es' ^. epochStateDRepDistrL)
     ratEnv =
       RatifyEnv
         { reStakeDistr = stakeDistr
         , reStakePoolDistr = stakePoolDistr
         , reDRepDistr = drepDistr
-        , reCurrentEpoch = eNo
+        , reCurrentEpoch = eNo - 1
         , reDRepState = vstate ^. vsDRepsL
         }
-    ratSig =
-      RatifySignal . Seq.fromList . Map.elems . unGovActionsState $
-        cgGovActionsState govSt
-  rs@RatifyState {rsFuture} <-
-    trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatifyState govSt, ratSig)
-  let es'' =
-        epochState'
-          { esAccountState = acnt''
-          , esLState = (esLState epochState') {lsUTxOState = utxoSt'''}
-          }
-          & prevPParamsEpochStateL .~ pp
-          & curPParamsEpochStateL .~ pp
-      -- TODO can we be more efficient?
-      newGov = foldr' insertGovActionsState mempty rsFuture
-      esGovernanceL = esLStateL . lsUTxOStateL . utxosGovStateL
-      esDonationL :: Lens' (EpochState era) Coin
-      esDonationL = esLStateL . lsUTxOStateL . utxosDonationL
-      donations = es'' ^. esDonationL
+    govStateToSeq = Seq.fromList . Map.elems
+    -- TODO the order of governance actions is probably messed up here. Investigate
+    ratSig = RatifySignal . govStateToSeq . prevGovActionsState $ cgGovActionsState govSt
+  RatifyState {rsRemoved, rsEnactState} <-
+    trans @(EraRule "RATIFY" era) $
+      TRC
+        ( ratEnv
+        , RatifyState
+            { rsRemoved = mempty
+            , rsEnactState = govSt ^. cgEnactStateL
+            }
+        , ratSig
+        )
+  let
+    lState = returnProposalDeposits rsRemoved $ esLState es'
+    es'' =
+      es'
+        { esAccountState = acnt'
+        , esLState = lState {lsUTxOState = utxoSt''}
+        }
+        & prevPParamsEpochStateL .~ pp
+        & curPParamsEpochStateL .~ pp
+    esGovernanceL :: Lens' (EpochState era) (GovState era)
+    esGovernanceL = esLStateL . lsUTxOStateL . utxosGovStateL
+    oldGovActionsState =
+      es ^. esGovernanceL . cgGovActionsStateL . curGovActionsStateL
+    newGovActionsState =
+      foldr'
+        (Map.delete . gasId)
+        oldGovActionsState
+        rsRemoved
+    newGov =
+      GovActionsState
+        { -- We set both curGovActionsState and prevGovActionsState to the same
+          -- value at the epoch boundary. We only change curGovActionsState
+          -- during the next epoch while prevGovActionsState stays unchanged
+          -- so we can tally the votes from the previous epoch.
+          curGovActionsState = newGovActionsState
+        , prevGovActionsState = newGovActionsState
+        , prevDRepsState =
+            es'
+              ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL
+        , prevCommitteeState =
+            es'
+              ^. esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+        }
+    esDonationL :: Lens' (EpochState era) Coin
+    esDonationL = esLStateL . lsUTxOStateL . utxosDonationL
+    donations = es'' ^. esDonationL
   pure $
     es''
+      & esGovernanceL . cgEnactStateL .~ rsEnactState
       & esGovernanceL . cgGovActionsStateL .~ newGov
-      & esGovernanceL . cgRatifyStateL .~ rs
       -- Move donations to treasury
       & esAccountStateL . asTreasuryL <>~ donations
       -- Clear the donations field

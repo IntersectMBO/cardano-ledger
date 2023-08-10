@@ -74,6 +74,7 @@ genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
 -- with meaningful delegation certificates.
 instance
   ( EraGen era
+  , EraGov era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)

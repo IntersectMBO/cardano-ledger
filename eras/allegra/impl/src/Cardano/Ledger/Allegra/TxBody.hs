@@ -76,6 +76,7 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
+  totalTxDepositsShelley,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
@@ -347,6 +348,8 @@ instance Crypto c => ShelleyEraTxBody (AllegraEra c) where
   updateTxBodyL =
     lensMemoRawType atbrUpdate $ \txBodyRaw update -> txBodyRaw {atbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
+
+  getTotalDepositsTxBody = totalTxDepositsShelley
 
 instance Crypto c => AllegraEraTxBody (AllegraEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (AllegraEra StandardCrypto) #-}

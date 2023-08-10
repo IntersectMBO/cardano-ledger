@@ -291,6 +291,8 @@ deriving instance Era era => EncCBOR (CommitteeState era)
 
 deriving instance Era era => DecCBOR (CommitteeState era)
 
+deriving instance Era era => ToJSON (CommitteeState era)
+
 instance Era era => ToCBOR (CommitteeState era) where
   toCBOR = toEraCBOR @era
 

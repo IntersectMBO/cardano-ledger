@@ -26,7 +26,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   PState (..),
   UTxOState (utxosDeposited),
-  obligationCertState,
+  totalObligation,
+  utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
@@ -63,7 +64,7 @@ data ShelleyNewppPredFailure era
 instance NoThunks (ShelleyNewppPredFailure era)
 
 instance
-  ( EraPParams era
+  ( EraGov era
   , GovState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyNEWPP era)
@@ -80,8 +81,8 @@ instance EraPParams era => Default (ShelleyNewppState era) where
 
 newPpTransition ::
   forall era.
-  ( EraPParams era
-  , GovState era ~ ShelleyGovState era
+  ( GovState era ~ ShelleyGovState era
+  , EraGov era
   ) =>
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
@@ -94,7 +95,10 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligationCertState (CertState def pstate dstate)
+      let Coin oblgCurr =
+            totalObligation
+              (CertState def pstate dstate)
+              (utxoSt ^. utxosGovStateL)
       Coin oblgCurr
         == utxosDeposited utxoSt
           ?! UnexpectedDepositPot (Coin oblgCurr) (utxosDeposited utxoSt)

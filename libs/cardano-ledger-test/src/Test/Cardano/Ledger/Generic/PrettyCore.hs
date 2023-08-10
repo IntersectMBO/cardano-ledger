@@ -1627,13 +1627,13 @@ pcTxBody proof txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
     pairs = concatMap (pcTxBodyField proof) fields
 
 instance PrettyC (GovActionsState era) era where
-  prettyC proof (GovActionsState x) = case proof of
-    Shelley _ -> ppMap prettyA prettyA x
-    Mary _ -> ppMap prettyA prettyA x
-    Allegra _ -> ppMap prettyA prettyA x
-    Alonzo _ -> ppMap prettyA prettyA x
-    Babbage _ -> ppMap prettyA prettyA x
-    Conway _ -> ppMap prettyA prettyA x
+  prettyC proof x = case proof of
+    Shelley _ -> prettyA x
+    Mary _ -> prettyA x
+    Allegra _ -> prettyA x
+    Alonzo _ -> prettyA x
+    Babbage _ -> prettyA x
+    Conway _ -> prettyA x
 
 pc :: PrettyC t era => Proof era -> t -> IO ()
 pc proof x = putStrLn (show (prettyC proof x))
