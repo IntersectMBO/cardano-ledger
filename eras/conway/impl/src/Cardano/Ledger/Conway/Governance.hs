@@ -39,7 +39,7 @@ module Cardano.Ledger.Conway.Governance (
   Constitution (..),
   ConwayEraGov (..),
   -- Lenses
-  cgGovL,
+  cgGovActionsStateL,
   cgRatifyL,
   ensConstitutionL,
   rsEnactStateL,
@@ -329,13 +329,13 @@ toRatifyStatePairs cg@(RatifyState _ _ _) =
       ]
 
 data ConwayGovState era = ConwayGovState
-  { cgGov :: !(GovActionsState era)
+  { cgGovActionsState :: !(GovActionsState era)
   , cgRatify :: !(RatifyState era)
   }
   deriving (Generic, Eq, Show)
 
-cgGovL :: Lens' (ConwayGovState era) (GovActionsState era)
-cgGovL = lens cgGov (\x y -> x {cgGov = y})
+cgGovActionsStateL :: Lens' (ConwayGovState era) (GovActionsState era)
+cgGovActionsStateL = lens cgGovActionsState (\x y -> x {cgGovActionsState = y})
 
 cgRatifyL :: Lens' (ConwayGovState era) (RatifyState era)
 cgRatifyL = lens cgRatify (\x y -> x {cgRatify = y})
@@ -357,7 +357,7 @@ instance EraPParams era => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =
     encode $
       Rec ConwayGovState
-        !> To cgGov
+        !> To cgGovActionsState
         !> To cgRatify
 
 instance EraPParams era => ToCBOR (ConwayGovState era) where
@@ -379,7 +379,7 @@ instance EraPParams era => ToJSON (ConwayGovState era) where
 toConwayGovPairs :: (KeyValue a, EraPParams era) => ConwayGovState era -> [a]
 toConwayGovPairs cg@(ConwayGovState _ _) =
   let ConwayGovState {..} = cg
-   in [ "gov" .= cgGov
+   in [ "gov" .= cgGovActionsState
       , "ratify" .= cgRatify
       ]
 

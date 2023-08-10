@@ -35,7 +35,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovActionsState (..),
   RatifyState (..),
-  cgGovL,
+  cgGovActionsStateL,
   cgRatifyL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
@@ -255,7 +255,7 @@ epochTransition = do
         , reCurrentEpoch = eNo
         }
     govStateToSeq = Seq.fromList . Map.toList
-    ratSig = RatifySignal . govStateToSeq . unGovActionsState $ cgGov govSt
+    ratSig = RatifySignal . govStateToSeq . unGovActionsState $ cgGovActionsState govSt
   rs@RatifyState {rsFuture} <-
     trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
   let es'' =
@@ -273,7 +273,7 @@ epochTransition = do
       donations = es'' ^. esDonationL
   pure $
     es''
-      & esGovernanceL . cgGovL .~ newGov
+      & esGovernanceL . cgGovActionsStateL .~ newGov
       & esGovernanceL . cgRatifyL .~ rs
       -- Move donations to treasury
       & esAccountStateL . asTreasuryL <>~ donations

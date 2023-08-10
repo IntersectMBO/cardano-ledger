@@ -39,7 +39,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovActionsState,
   GovProcedures (..),
-  cgGovL,
+  cgGovActionsStateL,
  )
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..))
@@ -283,10 +283,10 @@ ledgerTransition = do
           trans @(EraRule "GOV" era) $
             TRC
               ( GovEnv (txid txBody) epoch
-              , utxoState ^. utxosGovStateL . cgGovL
+              , utxoState ^. utxosGovStateL . cgGovActionsStateL
               , govProcedures
               )
-        let utxoState' = utxoState & utxosGovStateL . cgGovL .~ govActionsState'
+        let utxoState' = utxoState & utxosGovStateL . cgGovActionsStateL .~ govActionsState'
         pure (utxoState', certState')
       else pure (utxoState, certState)
 
