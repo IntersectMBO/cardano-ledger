@@ -506,7 +506,7 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 9 (cppA0 ppup) encCBOR
     !> omitStrictMaybe 10 (cppRho ppup) encCBOR
     !> omitStrictMaybe 11 (cppTau ppup) encCBOR
-    !> omitStrictMaybe 14 (cppProtocolVersion ppup) encCBOR
+    !> omitStrictMaybe 14 SNothing encCBOR
     !> omitStrictMaybe 16 (cppMinPoolCost ppup) encCBOR
     !> omitStrictMaybe 17 (cppCoinsPerUTxOByte ppup) encCBOR
     !> omitStrictMaybe 18 (cppCostModels ppup) encCBOR
@@ -551,7 +551,6 @@ updateField = \case
   9 -> field (\x up -> up {cppA0 = SJust x}) From
   10 -> field (\x up -> up {cppRho = SJust x}) From
   11 -> field (\x up -> up {cppTau = SJust x}) From
-  14 -> field (\x up -> up {cppProtocolVersion = SJust x}) From
   16 -> field (\x up -> up {cppMinPoolCost = SJust x}) From
   17 -> field (\x up -> up {cppCoinsPerUTxOByte = SJust x}) From
   18 -> field (\x up -> up {cppCostModels = SJust x}) From

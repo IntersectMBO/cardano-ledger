@@ -10,7 +10,7 @@
 module Test.Cardano.Ledger.Conway.Arbitrary () where
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
@@ -389,7 +389,7 @@ instance Era era => Arbitrary (ConwayPParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> pure SNothing
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

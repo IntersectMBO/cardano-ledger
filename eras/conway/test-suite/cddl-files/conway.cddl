@@ -384,7 +384,6 @@ protocol_param_update =
   , ? 9: rational                ; pool pledge influence
   , ? 10: unit_interval          ; expansion rate
   , ? 11: unit_interval          ; treasury growth rate
-  , ? 14: [protocol_version]     ; protocol version
   , ? 16: coin                   ; min pool cost
   , ? 17: coin                   ; ada per utxo byte
   , ? 18: costmdls               ; cost models for script languages
