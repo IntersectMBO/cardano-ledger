@@ -39,6 +39,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovActionsState,
   GovProcedures (..),
+  cgGovActionsStateL,
  )
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..))
@@ -52,6 +53,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
   obligationCertState,
+  utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (DelegsEnv),
@@ -89,7 +91,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic (..))
-import Lens.Micro ((^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data ConwayLedgerPredFailure era
@@ -244,58 +246,58 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt certState, tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, LedgerState utxoState certState, tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
-
-  certState' <-
-    if tx ^. isValidTxL == IsValid True
-      then
-        trans @(EraRule "CERTS" era) $
-          TRC
-            ( DelegsEnv slot txIx pp tx account
-            , certState
-            , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
-            )
-      else pure certState
-
-  let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
-  let wdrlCreds = Set.map getRwdCred wdrlAddrs
-  let dUnified = dsUnified $ certDState certState'
-      delegatedAddrs = DRepUView dUnified
-
-  -- TODO enable this check once delegation is fully implemented in cardano-api
-  when False $ do
-    all (`UMap.member` delegatedAddrs) wdrlCreds
-      ?! ConwayWdrlNotDelegatedToDRep (wdrlCreds Set.\\ Map.keysSet (dRepMap dUnified))
-
-  let dstate = certDState certState
+      dstate = certDState certState
       genCerts = dsGenDelegs dstate
 
-  let govProcedures =
-        GovProcedures
-          { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
-          , gpProposalProcedures = fromStrict $ txBody ^. proposalProceduresTxBodyL
-          }
-  let govSt = utxosGovState utxoSt
-  epoch <- liftSTS $ do
-    ei <- asks epochInfoPure
-    epochInfoEpoch ei slot
-  govSt' <-
-    trans @(EraRule "GOV" era) $
-      TRC
-        ( GovEnv (txid txBody) epoch
-        , cgGov govSt
-        , govProcedures
-        )
+  (utxoState', certState') <-
+    if tx ^. isValidTxL == IsValid True
+      then do
+        certState' <-
+          trans @(EraRule "CERTS" era) $
+            TRC
+              ( DelegsEnv slot txIx pp tx account
+              , certState
+              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              )
+        let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
+        let wdrlCreds = Set.map getRwdCred wdrlAddrs
+        let dUnified = dsUnified $ certDState certState'
+            delegatedAddrs = DRepUView dUnified
 
-  utxoSt' <-
+        -- TODO enable this check once delegation is fully implemented in cardano-api
+        when False $ do
+          all (`UMap.member` delegatedAddrs) wdrlCreds
+            ?! ConwayWdrlNotDelegatedToDRep (wdrlCreds Set.\\ Map.keysSet (dRepMap dUnified))
+
+        let govProcedures =
+              GovProcedures
+                { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
+                , gpProposalProcedures = fromStrict $ txBody ^. proposalProceduresTxBodyL
+                }
+        epoch <- liftSTS $ do
+          ei <- asks epochInfoPure
+          epochInfoEpoch ei slot
+        govActionsState' <-
+          trans @(EraRule "GOV" era) $
+            TRC
+              ( GovEnv (txid txBody) epoch
+              , utxoState ^. utxosGovStateL . cgGovActionsStateL
+              , govProcedures
+              )
+        let utxoState' = utxoState & utxosGovStateL . cgGovActionsStateL .~ govActionsState'
+        pure (utxoState', certState')
+      else pure (utxoState, certState)
+
+  utxoState'' <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp certState genCerts
-        , utxoSt {utxosGovState = govSt {cgGov = govSt'}}
+        ( UtxoEnv @era slot pp certState' genCerts
+        , utxoState'
         , tx
         )
-  pure $ LedgerState utxoSt' certState'
+  pure $ LedgerState utxoState'' certState'
 
 instance
   ( Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)

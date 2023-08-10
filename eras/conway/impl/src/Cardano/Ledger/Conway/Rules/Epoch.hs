@@ -35,8 +35,8 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovActionsState (..),
   RatifyState (..),
-  cgGovL,
-  cgRatifyL,
+  cgGovActionsStateL,
+  cgRatifyStateL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
@@ -177,7 +177,7 @@ returnProposalDeposits ls@LedgerState {..} =
     & lsCertStateL . certDStateL . dsUnifiedL %~ dstate
   where
     govSt = utxosGovState lsUTxOState
-    ratifyState = cgRatify govSt
+    ratifyState = cgRatifyState govSt
     removedProposals = rsRemoved ratifyState
     dstate = returnProposalDepositsUMap removedProposals
 
@@ -255,9 +255,9 @@ epochTransition = do
         , reCurrentEpoch = eNo
         }
     govStateToSeq = Seq.fromList . Map.toList
-    ratSig = RatifySignal . govStateToSeq . unGovActionsState $ cgGov govSt
+    ratSig = RatifySignal . govStateToSeq . unGovActionsState $ cgGovActionsState govSt
   rs@RatifyState {rsFuture} <-
-    trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatify govSt, ratSig)
+    trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatifyState govSt, ratSig)
   let es'' =
         epochState'
           { esAccountState = acnt''
@@ -273,8 +273,8 @@ epochTransition = do
       donations = es'' ^. esDonationL
   pure $
     es''
-      & esGovernanceL . cgGovL .~ newGov
-      & esGovernanceL . cgRatifyL .~ rs
+      & esGovernanceL . cgGovActionsStateL .~ newGov
+      & esGovernanceL . cgRatifyStateL .~ rs
       -- Move donations to treasury
       & esAccountStateL . asTreasuryL <>~ donations
       -- Clear the donations field

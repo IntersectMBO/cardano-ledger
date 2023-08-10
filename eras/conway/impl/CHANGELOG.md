@@ -35,8 +35,8 @@
   * Add `PoolVotingThresholds`
   * Add `DRepVotingThresholds`
 * Rename:
-   * `cgTally` -> `cgGov`
-   * `cgTallyL` -> `cgGovL`
+   * `cgTally` -> `cgGovActionsState`
+   * `cgTallyL` -> `cgGovActionsStateL`
    * `VDelFailure` -> `GovCertFailure`
    * `VDelEvent` -> `GovCertEvent`
    * `certVState` -> `certGState`

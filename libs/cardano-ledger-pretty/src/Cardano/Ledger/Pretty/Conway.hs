@@ -346,8 +346,8 @@ instance
     let ConwayGovState {..} = cg
      in ppRecord
           "ConwayGovState"
-          [ ("Gov", prettyA cgGov)
-          , ("Ratify", prettyA cgRatify)
+          [ ("GovActionsState", prettyA cgGovActionsState)
+          , ("RatifyState", prettyA cgRatifyState)
           ]
 
 instance
