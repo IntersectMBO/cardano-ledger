@@ -35,6 +35,7 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  curGovActionsStateL,
   indexedGovProps,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..), committeeMembersL)
@@ -55,7 +56,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((%~), (&), (^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Validation (failureUnless)
@@ -135,8 +136,8 @@ addVoterVote ::
   GovActionId (EraCrypto era) ->
   VotingProcedure era ->
   GovActionsState era
-addVoterVote voter (GovActionsState st) govActionId VotingProcedure {vProcVote} =
-  GovActionsState $ Map.update (Just . updateVote) govActionId st
+addVoterVote voter as govActionId VotingProcedure {vProcVote} =
+  as & curGovActionsStateL %~ Map.update (Just . updateVote) govActionId
   where
     updateVote GovActionState {..} =
       case voter of
@@ -165,9 +166,8 @@ addAction ::
   GovAction era ->
   GovActionsState era ->
   GovActionsState era
-addAction epoch gaExpiry gaid c addr act (GovActionsState st) =
-  GovActionsState $
-    Map.insert gaid gai' st
+addAction epoch gaExpiry gaid c addr act as =
+  as & curGovActionsStateL %~ Map.insert gaid gai'
   where
     gai' =
       GovActionState
@@ -186,8 +186,8 @@ noSuchGovActions ::
   GovActionsState era ->
   Set.Set (GovActionId (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
-noSuchGovActions (GovActionsState st) gaIds =
-  let unknownGovActionIds = Set.filter (`Map.notMember` st) gaIds
+noSuchGovActions gas gaIds =
+  let unknownGovActionIds = Set.filter (`Map.notMember` curGovActionsState gas) gaIds
    in failureUnless (Set.null unknownGovActionIds) $
         GovActionsDoNotExist unknownGovActionIds
 

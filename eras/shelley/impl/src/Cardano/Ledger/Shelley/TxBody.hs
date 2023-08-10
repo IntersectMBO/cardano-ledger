@@ -61,6 +61,7 @@ module Cardano.Ledger.Shelley.TxBody (
   -- * Helpers
   addrEitherShelleyTxOutL,
   valueEitherShelleyTxOutL,
+  totalTxDepositsShelley,
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
@@ -106,6 +107,7 @@ import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (totalTxDepositsShelley)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -319,6 +321,8 @@ instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   updateTxBodyL =
     lensMemoRawType stbrUpdate $ \txBodyRaw update -> txBodyRaw {stbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
+
+  getTotalDepositsTxBody = totalTxDepositsShelley
 
 deriving newtype instance
   (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>

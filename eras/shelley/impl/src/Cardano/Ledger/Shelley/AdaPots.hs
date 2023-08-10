@@ -28,7 +28,6 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   keyTxRefunds,
-  totalTxDeposits,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (
   AccountState (..),
@@ -166,5 +165,5 @@ producedTxBody txBody pp dpstate =
   Produced
     { proOutputs = coinBalance (txouts txBody)
     , proFees = txBody ^. feeTxBodyL
-    , proDeposits = totalTxDeposits pp dpstate txBody
+    , proDeposits = getTotalDepositsTxBody pp dpstate txBody
     }

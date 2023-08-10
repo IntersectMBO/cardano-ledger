@@ -266,7 +266,15 @@ instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
   prettyA = viaShow
 
 instance PrettyA (PParamsUpdate era) => PrettyA (GovActionsState era) where
-  prettyA (GovActionsState x) = prettyA x
+  prettyA x@(GovActionsState _ _ _ _) =
+    let GovActionsState {..} = x
+     in ppRecord
+          "GovActionsState"
+          [ ("curGovActionsState", prettyA curGovActionsState)
+          , ("prevGovActionsState", prettyA prevGovActionsState)
+          , ("prevDRepsState", prettyA prevDRepsState)
+          , ("prevCommitteeState", prettyA prevCommitteeState)
+          ]
 
 instance PrettyA (GovActionId era) where
   prettyA gaid@(GovActionId _ _) =
@@ -330,12 +338,11 @@ instance
   ) =>
   PrettyA (RatifyState era)
   where
-  prettyA rs@(RatifyState _ _ _) =
+  prettyA rs@(RatifyState _ _) =
     let RatifyState {..} = rs
      in ppRecord
           "RatifyState"
           [ ("EnactState", prettyA rsEnactState)
-          , ("Future", prettyA rsFuture)
           , ("Removed", prettyA rsRemoved)
           ]
 
@@ -350,7 +357,7 @@ instance
      in ppRecord
           "ConwayGovState"
           [ ("GovActionsState", prettyA cgGovActionsState)
-          , ("RatifyState", prettyA cgRatifyState)
+          , ("EnactState", prettyA cgEnactState)
           ]
 
 instance

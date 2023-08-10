@@ -46,6 +46,7 @@ import Cardano.Ledger.Conway.Core hiding (Value)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson hiding (Encoding, decode, encode)
@@ -137,6 +138,8 @@ data ConwayPParams f era = ConwayPParams
   }
   deriving (Generic)
 
+instance ToExpr (ConwayPParams Identity era)
+
 deriving instance Eq (ConwayPParams Identity era)
 
 deriving instance Ord (ConwayPParams Identity era)
@@ -178,6 +181,8 @@ deriving instance Show (UpgradeConwayPParams Identity)
 instance NoThunks (UpgradeConwayPParams Identity)
 
 instance NFData (UpgradeConwayPParams Identity)
+
+instance ToExpr (ConwayPParams StrictMaybe era)
 
 deriving instance Eq (UpgradeConwayPParams StrictMaybe)
 

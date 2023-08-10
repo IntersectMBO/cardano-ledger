@@ -20,6 +20,7 @@ module Cardano.Ledger.Shelley.Core (
 where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -40,6 +41,8 @@ class (ShelleyEraTxCert era, EraTxBody era) => ShelleyEraTxBody era where
   updateTxBodyG :: SimpleGetter (TxBody era) (StrictMaybe (Update era))
   default updateTxBodyG :: ProtVerAtMost era 8 => SimpleGetter (TxBody era) (StrictMaybe (Update era))
   updateTxBodyG = updateTxBodyL
+
+  getTotalDepositsTxBody :: PParams era -> CertState era -> TxBody era -> Coin
 
 type Wdrl c = Withdrawals c
 {-# DEPRECATED Wdrl "In favor of `Cardano.Ledger.Address.Withdrawals`" #-}

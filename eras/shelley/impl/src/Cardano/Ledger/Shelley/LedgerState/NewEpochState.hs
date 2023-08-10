@@ -36,7 +36,6 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   keyTxRefunds,
-  totalTxDeposits,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
@@ -118,7 +117,7 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     -- to emphasize this point.
 
     currentPool = (utxosDeposited . lsUTxOState) ls
-    txDeposits = totalTxDeposits pp (lsCertState ls) txBody
+    txDeposits = getTotalDepositsTxBody pp (lsCertState ls) txBody
     txRefunds = keyTxRefunds pp (lsCertState ls) txBody
 
 -- Remove the rewards from the UMap, but leave the deposits alone

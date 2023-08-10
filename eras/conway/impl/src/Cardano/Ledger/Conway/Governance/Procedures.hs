@@ -69,13 +69,14 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (Era (..), EraPParams, PParamsUpdate)
+import Cardano.Ledger.Core (Era (..), EraPParams (..), PParamsUpdate)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.Governance (Constitution)
 import Cardano.Ledger.Shelley.RewardProvenance ()
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..))
@@ -105,11 +106,15 @@ newtype GovActionIx = GovActionIx Word32
     , ToJSON
     )
 
+instance ToExpr GovActionIx
+
 data GovActionId c = GovActionId
   { gaidTxId :: !(TxId c)
   , gaidGovActionIx :: !GovActionIx
   }
   deriving (Generic, Eq, Ord, Show)
+
+instance ToExpr (GovActionId c)
 
 instance Crypto c => DecCBOR (GovActionId c) where
   decCBOR =
@@ -193,6 +198,8 @@ data Vote
   | VoteYes
   | Abstain
   deriving (Generic, Eq, Show, Enum, Bounded)
+
+instance ToExpr Vote
 
 instance ToJSON Vote
 
@@ -325,6 +332,8 @@ data Committee era = Committee
   }
   deriving (Eq, Show, Generic)
 
+instance ToExpr (Committee era)
+
 instance Era era => NoThunks (Committee era)
 
 instance Era era => NFData (Committee era)
@@ -369,7 +378,7 @@ data GovActionPurpose
   deriving (Eq, Show)
 
 newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId (GovActionId c)
-  deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON)
+  deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON, ToExpr)
 
 type role PrevGovActionId nominal nominal
 
@@ -410,6 +419,8 @@ data GovAction era
       !(Constitution era)
   | InfoAction
   deriving (Generic)
+
+instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (GovAction era)
 
 deriving instance EraPParams era => Eq (GovAction era)
 

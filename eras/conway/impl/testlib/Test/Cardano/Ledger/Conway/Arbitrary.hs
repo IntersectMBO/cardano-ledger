@@ -105,7 +105,6 @@ instance
     RatifyState
       <$> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
@@ -136,7 +135,13 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-deriving instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionsState era)
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionsState era) where
+  arbitrary =
+    GovActionsState
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState era) where
   arbitrary =

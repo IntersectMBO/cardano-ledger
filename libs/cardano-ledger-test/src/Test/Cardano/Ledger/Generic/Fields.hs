@@ -231,6 +231,8 @@ data PParamsField era
     CollateralPercentage Natural
   | -- | Maximum number of collateral inputs allowed in a transaction
     MaxCollateralInputs Natural
+  | -- | Proposal deposit
+    GovActionDeposit Coin
 
 -- =========================================================================
 -- Era parametric "empty" or initial values.

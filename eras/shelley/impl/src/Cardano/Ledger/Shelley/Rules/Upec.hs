@@ -75,7 +75,7 @@ newtype ShelleyUpecPredFailure era
 instance NoThunks (ShelleyUpecPredFailure era)
 
 instance
-  ( EraPParams era
+  ( EraGov era
   , Default (PParams era)
   , GovState era ~ ShelleyGovState era
   ) =>

@@ -34,6 +34,7 @@ import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Identity (Identity (..))
+import Data.Aeson (ToJSON)
 import Data.Kind
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -74,7 +75,9 @@ instance Crypto c => EncCBOR (DRepState c) where
         !> To drepAnchor
         !> To drepDeposit
 
-instance ToExpr (DRepState era)
+instance ToExpr (DRepState c)
+
+instance Crypto c => ToJSON (DRepState c)
 
 drepExpiryL :: Lens' (DRepState c) EpochNo
 drepExpiryL = lens drepExpiry (\x y -> x {drepExpiry = y})

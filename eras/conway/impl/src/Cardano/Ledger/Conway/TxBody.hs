@@ -71,6 +71,7 @@ import Cardano.Ledger.Binary.Coders (
   ofield,
   (!>),
  )
+import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin (..), decodePositiveCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -99,6 +100,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
+import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
@@ -325,6 +327,28 @@ instance
   {-# INLINE updateTxBodyL #-}
 
   updateTxBodyG = to (const SNothing)
+
+  getTotalDepositsTxBody = totalTxDepositsConway
+
+totalProposalDeposits ::
+  (ConwayEraTxBody era, ConwayEraPParams era) =>
+  PParams era ->
+  TxBody era ->
+  Coin
+totalProposalDeposits pp txb = nProposals <×> depositPerProposal
+  where
+    nProposals = length (txb ^. proposalProceduresTxBodyL)
+    depositPerProposal = pp ^. ppGovActionDepositL
+
+totalTxDepositsConway ::
+  Crypto c =>
+  PParams (ConwayEra c) ->
+  CertState (ConwayEra c) ->
+  TxBody (ConwayEra c) ->
+  Coin
+totalTxDepositsConway pp cs txb =
+  totalTxDepositsShelley pp cs txb
+    <> totalProposalDeposits pp txb
 
 instance Crypto c => AllegraEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra StandardCrypto) #-}

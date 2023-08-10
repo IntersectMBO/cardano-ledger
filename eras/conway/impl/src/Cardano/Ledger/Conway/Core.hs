@@ -45,6 +45,7 @@ import Cardano.Ledger.Binary.Encoding (EncCBOR (encCBOR))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures)
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import Data.Default.Class (Default)
@@ -136,6 +137,8 @@ data PoolVotingThresholds = PoolVotingThresholds
   }
   deriving (Eq, Ord, Show, Generic, Default, ToJSON, NFData, NoThunks)
 
+instance ToExpr PoolVotingThresholds
+
 instance EncCBOR PoolVotingThresholds where
   encCBOR PoolVotingThresholds {..} =
     encodeListLen 4
@@ -166,6 +169,8 @@ data DRepVotingThresholds = DRepVotingThresholds
   , dvtTreasuryWithdrawal :: !UnitInterval
   }
   deriving (Eq, Ord, Show, Generic, Default, ToJSON, NFData, NoThunks)
+
+instance ToExpr DRepVotingThresholds
 
 instance EncCBOR DRepVotingThresholds where
   encCBOR DRepVotingThresholds {..} =

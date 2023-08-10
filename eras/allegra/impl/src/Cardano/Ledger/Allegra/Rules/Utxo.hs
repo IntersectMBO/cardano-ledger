@@ -54,12 +54,13 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Governance
-import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, keyTxRefunds, totalTxDeposits)
+import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, keyTxRefunds)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (txup)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
 import qualified Cardano.Ledger.Val as Val
@@ -205,7 +206,7 @@ utxoTransition = do
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx
 
   let refunded = keyTxRefunds pp dpstate txb
-  let depositChange = totalTxDeposits pp dpstate txb Val.<-> refunded
+  let depositChange = getTotalDepositsTxBody pp dpstate txb Val.<-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txb) depositChange
   pure $! Shelley.updateUTxOState pp u txb depositChange ppup'
 

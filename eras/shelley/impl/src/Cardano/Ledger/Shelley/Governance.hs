@@ -32,11 +32,13 @@ import Cardano.Ledger.Binary (
   encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
@@ -82,6 +84,8 @@ class
   -- | Lens for accessing the previous protocol parameters
   prevPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
+  obligationGovState :: GovState era -> Coin
+
 instance
   ( ToExpr (PParamsUpdate era)
   , ToExpr (PParams era)
@@ -96,6 +100,8 @@ instance Crypto c => EraGov (ShelleyEra c) where
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
+
+  obligationGovState = const zero
 
 data ShelleyGovState era = ShelleyGovState
   { proposals :: !(ProposedPPUpdates era)
@@ -214,6 +220,8 @@ data Constitution era = Constitution
   , constitutionScript :: !(StrictMaybe (ScriptHash (EraCrypto era)))
   }
   deriving (Generic)
+
+instance ToExpr (Constitution era)
 
 constitutionAnchorL :: Lens' (Constitution era) (Anchor (EraCrypto era))
 constitutionAnchorL = lens constitutionAnchor (\x y -> x {constitutionAnchor = y})

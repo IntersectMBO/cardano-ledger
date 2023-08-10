@@ -52,7 +52,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   prevPParamsEpochStateL,
   rewards,
   rs,
-  totalTxDeposits,
  )
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules (
@@ -295,7 +294,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
         ++ "\ncerts:"
         ++ showListy (("   " ++) . synopsisCert) (toList $ tx ^. bodyTxL . certsTxBodyL)
         ++ "total deposits "
-        ++ show (totalTxDeposits currPP oldCertState (tx ^. bodyTxL))
+        ++ show (getTotalDepositsTxBody currPP oldCertState (tx ^. bodyTxL))
         ++ "\ntotal refunds "
         ++ show (keyTxRefunds currPP oldCertState (tx ^. bodyTxL))
 
@@ -481,7 +480,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         created =
           coinBalance u'
             <+> (txb ^. feeTxBodyL)
-            <+> totalTxDeposits pp_ dpstate txb
+            <+> getTotalDepositsTxBody pp_ dpstate txb
         consumed_ =
           coinBalance u
             <+> keyTxRefunds pp_ dpstate txb
@@ -522,7 +521,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
             coinBalance (txouts @era txb)
               <> txb
                 ^. feeTxBodyL
-              <> totalTxDeposits pp_ dpstate txb
+              <> getTotalDepositsTxBody pp_ dpstate txb
 
 preserveOutputsTx ::
   forall era ledger.

@@ -47,6 +47,7 @@ import Cardano.Ledger.CertState (
   certDStateL,
   certVStateL,
   dsUnifiedL,
+  obligationCertState,
   vsDRepDistrL,
   vsDRepsL,
  )
@@ -274,7 +275,8 @@ toIncrementalStakePairs iStake@(IStake _ _) =
 --   this invariant. This happens in the UTxO rule.
 data UTxOState era = UTxOState
   { utxosUtxo :: !(UTxO era)
-  , utxosDeposited :: !Coin
+  , utxosDeposited :: Coin
+  -- ^ This field is left lazy, because we only use it for assertions
   , utxosFees :: !Coin
   , utxosGovState :: !(GovState era)
   , utxosStakeDistr :: !(IncrementalStake (EraCrypto era))
@@ -757,3 +759,18 @@ freshDRepPulser n es =
     (es ^. epochStateUMapL)
     (es ^. epochStateRegDrepL)
     (VMap.fromMap (compactCoinOrError <$> (es ^. epochStateIncrStakeDistrL)))
+
+potEqualsObligation ::
+  EraGov era =>
+  CertState era ->
+  UTxOState era ->
+  Bool
+potEqualsObligation certState utxoSt = obligation == pot
+  where
+    obligation = totalObligation certState (utxoSt ^. utxosGovStateL)
+    pot = utxoSt ^. utxosDepositedL
+
+totalObligation :: EraGov era => CertState era -> GovState era -> Coin
+totalObligation certState govState =
+  obligationCertState certState
+    <> obligationGovState govState

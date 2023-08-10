@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
   UTxOState (..),
-  obligationCertState,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
@@ -36,6 +35,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegsPredFailure,
   ShelleyLEDGERS,
   UtxoEnv (..),
+  shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   LedgerEnv (..),
@@ -46,7 +46,6 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   depositEqualsObligation,
  )
 import Control.State.Transition (
-  Assertion (..),
   Embed (..),
   STS (..),
   TRC (..),
@@ -109,6 +108,7 @@ ledgerTransition = do
 instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , AlonzoEraTx era
+  , EraGov era
   , Tx era ~ AlonzoTx era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
@@ -134,13 +134,7 @@ instance
 
   renderAssertionViolation = Shelley.depositEqualsObligation
 
-  assertions =
-    [ PostCondition
-        "Deposit pot must equal obligation (AlonzoLEDGER)"
-        ( \(TRC (_, _, _))
-           (LedgerState utxoSt dpstate) -> obligationCertState dpstate == utxosDeposited utxoSt
-        )
-    ]
+  assertions = shelleyLedgerAssertions
 
 instance
   ( Era era

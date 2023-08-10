@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -28,7 +29,13 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ConwayEraTxBody, ppDRepActivityL, ppGovActionDepositL, ppGovActionExpirationL)
+import Cardano.Ledger.Conway.Core (
+  ConwayEraPParams (..),
+  ConwayEraTxBody,
+  ppDRepActivityL,
+  ppGovActionDepositL,
+  ppGovActionExpirationL,
+ )
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -53,7 +60,6 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
-import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
@@ -92,6 +98,10 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Tasty
 import Test.Tasty.HUnit
+
+import Control.Exception (evaluate)
+import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
+import Test.Cardano.Ledger.Generic.PrettyCore ()
 
 stakeKeyHash :: forall era. Era era => Proof era -> KeyHash 'Staking (EraCrypto era)
 stakeKeyHash _pf = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
@@ -138,7 +148,7 @@ proposedConstitution = Constitution (SLE.mkDummyAnchor 1) SNothing
 newConstitutionProposal :: forall era. Scriptic era => Proof era -> ProposalProcedure era
 newConstitutionProposal pf =
   ProposalProcedure
-    (Coin proposalDeposit)
+    proposalDeposit
     (RewardAcnt Testnet (KeyHashObj (stakeKeyHash pf)))
     (NewConstitution SNothing (proposedConstitution @era))
     (Anchor (fromJust $ textToUrl "new.constitution.com") (SLE.mkDummySafeHash Proxy 1))
@@ -151,7 +161,7 @@ anotherConstitutionProposal ::
   ProposalProcedure era
 anotherConstitutionProposal pf prevGovActionId =
   ProposalProcedure
-    (Coin proposalDeposit)
+    proposalDeposit
     (RewardAcnt Testnet (KeyHashObj (stakeKeyHash pf)))
     ( NewConstitution
         (SJust (PrevGovActionId prevGovActionId))
@@ -206,16 +216,17 @@ pp =
     & ppMaxValSizeL .~ 1000000000
     & ppDRepActivityL .~ 100
     & ppGovActionExpirationL .~ 30
-    & ppGovActionDepositL .~ Coin proposalDeposit
+    & ppGovActionDepositL .~ proposalDeposit
 
 fee :: Integer
 fee = 5
 
-proposalDeposit :: Integer
-proposalDeposit = 10
+proposalDeposit :: Coin
+proposalDeposit = Coin 10
 
-expectRight :: Show a => String -> Either a b -> b
-expectRight msg = either (\x -> error (msg <> show x)) id
+-- | Evaluates an `Either` value and fails immediately if the result is `Left`
+expectRight :: (HasCallStack, Show a) => String -> Either a b -> IO b
+expectRight msg = either (\x -> error (msg <> show x)) evaluate
 
 proposal :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 proposal pf =
@@ -226,7 +237,7 @@ proposal pf =
           [ Inputs' [someTxIn]
           , Collateral' []
           , Outputs'
-              [ newTxOut pf [Address (addrKeys2 pf), Amount (inject $ Coin (15000 - 10000 - fee - proposalDeposit))] -- 4985
+              [ newTxOut pf [Address (addrKeys2 pf), Amount (inject $ Coin (15000 - 10000 - fee) <-> proposalDeposit)] -- 4985
               , newTxOut pf [Address (addrKeys1 pf), Amount (inject $ Coin 10000)]
               ]
           , Txfee (Coin fee)
@@ -257,7 +268,7 @@ secondProposal pf govActionId =
           [ Inputs' [TxIn (gaidTxId govActionId) (mkTxIx 1)]
           , Collateral' []
           , Outputs'
-              [ newTxOut pf [Address (addrKeys2 pf), Amount (inject $ Coin (10000 - 7000 - fee - proposalDeposit))]
+              [ newTxOut pf [Address (addrKeys2 pf), Amount (inject $ Coin (10000 - 7000 - fee) <-> proposalDeposit)]
               , newTxOut pf [Address (addrKeys1 pf), Amount (inject $ Coin 7000)]
               ]
           , Txfee (Coin fee)
@@ -337,28 +348,35 @@ testGov pf = do
 
     govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
     expectedGovState0 =
-      GovActionsState $
-        Map.fromList
-          [ (govActionId, govActionState govActionId (newConstitutionProposal pf))
-          ]
-    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgRatifyStateL)
+      GovActionsState
+        (Map.fromList [(govActionId, govActionState govActionId (newConstitutionProposal pf))])
+        mempty
+        mempty
+        def
+    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL)
 
     eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState pp (trustMeP pf True proposalTx)
-    ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) =
-      expectRight "Error running LEDGER when proposing: " eitherLedgerState0
+  ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) <-
+    expectRight "Error running LEDGER when proposing: " eitherLedgerState0
 
-  assertEqual "govState after proposal" govState0 expectedGov0
+  assertExprEqualWithMessage "govState after proposal" govState0 expectedGov0
 
+  -- Propose first constitution
   let
     voteTx = txFromTestCaseData pf (vote pf govActionId)
     gas = govActionStateWithYesVotes govActionId pf (newConstitutionProposal pf)
-    expectedGovState1 = GovActionsState $ Map.fromList [(govActionId, gas)]
-    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgRatifyStateL)
+    expectedGovState1 =
+      GovActionsState
+        (Map.fromList [(govActionId, gas)])
+        mempty
+        mempty
+        def
+    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 pp (trustMeP pf True voteTx)
-    ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) =
-      expectRight "Error running LEDGER when voting: " eitherLedgerState1
+  ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) <-
+    expectRight "Error running LEDGER when voting: " eitherLedgerState1
 
-  assertEqual "govState after vote" govState1 expectedGov1
+  assertExprEqualWithMessage "govState after vote" govState1 expectedGov1
 
   let
     drepDistr = DRComplete $ Map.fromList [(DRepCredential (drepCredential pf), CompactCoin 1000)]
@@ -378,47 +396,66 @@ testGov pf = do
               )
             ]
         )
+    -- Wait two epochs
     eitherEpochState1 = runEPOCH (EPOCH pf) epochState0 (EpochNo 2) poolDistr
-    epochState1 = expectRight "Error running runEPOCH: " eitherEpochState1
-    ledgerState2 = epochState1 ^. esLStateL
-    constitution = (ensConstitution . rsEnactState) (epochState1 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyStateL)
-  assertEqual "constitution after enactment" constitution (proposedConstitution @era)
-
+  epochState1 <- expectRight "Error running runEPOCH: " eitherEpochState1
   let
+    constitution = epochState1 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+  assertExprEqualWithMessage "constitution after one epoch" constitution def
+  let
+    epochState1' = case runEPOCH (EPOCH pf) epochState1 (EpochNo 3) poolDistr of
+      Left e -> error $ "Error running runEPOCH the second time: " <> show e
+      Right x -> x
+    ledgerState2 = epochState1' ^. esLStateL
+    constitution1 = epochState1' ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+    prevDRepsState1 = epochState1 ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL
+  assertExprEqualWithMessage "constitution after enactment" constitution1 (proposedConstitution @era)
+  let
+    -- Propose another constitution
     secondProposalTx = txFromTestCaseData pf (secondProposal pf govActionId)
     secondGovActionId = GovActionId (txid (secondProposalTx ^. bodyTxL)) (GovActionIx 0)
+    curGAState = Map.fromList [(secondGovActionId, govActionState secondGovActionId (anotherConstitutionProposal pf govActionId))]
     expectedGovActionsState2 =
-      GovActionsState $
-        Map.fromList
-          [
-            ( secondGovActionId
-            , govActionState
-                secondGovActionId
-                (anotherConstitutionProposal pf govActionId)
-            )
-          ]
+      GovActionsState
+        curGAState
+        mempty
+        prevDRepsState1
+        def
     expectedGovState2 =
       ConwayGovState
         expectedGovActionsState2
-        (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgRatifyStateL)
+        (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL)
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 pp (trustMeP pf True secondProposalTx)
-    ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) =
-      expectRight "Error running LEDGER when proposing:" eitherLedgerState3
+  ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) <-
+    expectRight "Error running LEDGER when proposing:" eitherLedgerState3
 
-  assertEqual "govState after second proposal" govState2 expectedGovState2
+  assertExprEqualWithMessage "govState after second proposal" govState2 expectedGovState2
 
+  -- Wait two epochs
   let
-    epochState2 = epochState1 & esLStateL .~ ledgerState3
-    eitherEpochState2 = runEPOCH (EPOCH pf) epochState2 (EpochNo 2) poolDistr
-    epochState3 = expectRight "Error running runEPOCH: " eitherEpochState2
-    constitution1 = (ensConstitution . rsEnactState) (epochState3 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyStateL)
-  assertEqual "constitution after enactment after no votes" constitution1 (proposedConstitution @era)
+    epochState2 = epochState1' & esLStateL .~ ledgerState3
+    epochState3 = case runEPOCH (EPOCH pf) epochState2 (EpochNo 4) poolDistr of
+      Right x -> x
+      Left e -> error $ "Error running runEPOCH: " <> show e
+    epochState4 = case runEPOCH (EPOCH pf) epochState3 (EpochNo 5) poolDistr of
+      Right x -> x
+      Left e -> error $ "Error running runEPOCH: " <> show e
+    constitution2 = epochState4 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+  assertEqual "constitution after enactment after no votes" constitution2 (proposedConstitution @era)
+  let
+    currentGovActions =
+      epochState4
+        ^. esLStateL
+          . lsUTxOStateL
+          . utxosGovStateL
+          . cgGovActionsStateL
+          . curGovActionsStateL
 
-  case toList $ rsFuture (epochState3 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyStateL) of
-    [gas'] ->
-      assertEqual
+  case Map.toList currentGovActions of
+    [(gId, gas')] ->
+      assertExprEqualWithMessage
         "un-enacted govAction is recorded in rsFuture"
-        (gasId gas', gas')
+        (gId, gas')
         ( secondGovActionId
         , govActionState
             secondGovActionId

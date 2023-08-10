@@ -8,12 +8,13 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
-  totalTxDeposits,
   totalCertsDeposits,
   totalCertsDepositsCertState,
   keyTxRefunds,
   keyCertsRefunds,
   keyCertsRefundsCertState,
+  totalTxDeposits,
+  totalTxDepositsShelley,
 )
 where
 
@@ -79,14 +80,23 @@ totalCertsDepositsCertState pp dpstate =
 
 -- | Calculates the total amount of deposits needed for all pool registration and
 -- stake delegation certificates to be valid.
+totalTxDepositsShelley ::
+  ShelleyEraTxBody era =>
+  PParams era ->
+  CertState era ->
+  TxBody era ->
+  Coin
+totalTxDepositsShelley pp dpstate txb =
+  totalCertsDepositsCertState pp dpstate (txb ^. certsTxBodyL)
+
+{-# DEPRECATED totalTxDeposits "Use totalTxDepositsShelley or getTotalDepositsTxBody instead" #-}
 totalTxDeposits ::
   ShelleyEraTxBody era =>
   PParams era ->
   CertState era ->
   TxBody era ->
   Coin
-totalTxDeposits pp dpstate txb =
-  totalCertsDepositsCertState pp dpstate (txb ^. certsTxBodyL)
+totalTxDeposits = totalTxDepositsShelley
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefundsCertState ::

@@ -220,6 +220,7 @@ class
   , FromCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , ToJSON (PParamsHKD Identity era)
+  , ToExpr (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
@@ -230,6 +231,7 @@ class
   , FromCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
   , ToJSON (PParamsHKD StrictMaybe era)
+  , ToExpr (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era
   where

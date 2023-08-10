@@ -108,6 +108,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import Data.Sequence.Strict (StrictSeq)
@@ -207,6 +208,8 @@ instance Crypto c => ShelleyEraTxBody (AlonzoEra c) where
   updateTxBodyL =
     lensMemoRawType atbrUpdate (\txBodyRaw update_ -> txBodyRaw {atbrUpdate = update_})
   {-# INLINEABLE updateTxBodyL #-}
+
+  getTotalDepositsTxBody = totalTxDepositsShelley
 
 instance Crypto c => AllegraEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (AlonzoEra StandardCrypto) #-}

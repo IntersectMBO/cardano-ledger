@@ -24,6 +24,7 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   PredicateFailure,
   epochFromSlot,
   depositEqualsObligation,
+  shelleyLedgerAssertions,
 )
 where
 
@@ -45,8 +46,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   PState (..),
   UTxOState (..),
-  obligationCertState,
  )
+import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
 import Cardano.Ledger.Shelley.Rules.Delegs (
   DelegsEnv (..),
   ShelleyDELEGS,
@@ -163,9 +164,23 @@ epochFromSlot slot = do
   ei <- asks epochInfoPure
   epochInfoEpoch ei slot
 
+shelleyLedgerAssertions ::
+  ( EraGov era
+  , State (rule era) ~ LedgerState era
+  ) =>
+  [Assertion (rule era)]
+shelleyLedgerAssertions =
+  [ PostCondition
+      "Deposit pot must equal obligation (LEDGER)"
+      ( \(TRC (_, _, _))
+         (LedgerState utxoSt dpstate) -> potEqualsObligation dpstate utxoSt
+      )
+  ]
+
 instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , EraTx era
+  , EraGov era
   , ShelleyEraTxBody era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
@@ -191,14 +206,7 @@ instance
 
   renderAssertionViolation = depositEqualsObligation
 
-  assertions =
-    [ PostCondition
-        "Deposit pot must equal obligation (ShelleyLedger)"
-        ( \(TRC (_, _, _))
-           (LedgerState utxoSt dpstate) ->
-              obligationCertState dpstate == utxosDeposited utxoSt
-        )
-    ]
+  assertions = shelleyLedgerAssertions
 
 ledgerTransition ::
   forall era.
