@@ -29,17 +29,24 @@ module Cardano.Ledger.CertState (
   refundPoolDeposit,
   obligationCertState,
   -- Lenses
+  certDStateL,
+  certPStateL,
+  certVStateL,
   dsUnifiedL,
   dsGenDelegsL,
   dsIRewardsL,
   dsFutureGenDelegsL,
-  certDStateL,
-  certPStateL,
-  certVStateL,
+  psStakePoolParamsL,
+  psFutureStakePoolParamsL,
+  psRetiringL,
+  psDepositsL,
+  vsDRepsL,
+  vsDRepDistrL,
+  vsCommitteeHotKeysL,
 )
 where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe)
+import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -62,6 +69,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (Era, EraCrypto, EraPParams, PParams, ppPoolDepositL)
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState (..))
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -83,6 +91,7 @@ import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (NoThunks (..))
@@ -162,20 +171,6 @@ data DState era = DState
   -- ^ Instantaneous Rewards
   }
   deriving (Show, Eq, Generic)
-
--- Lenses
-
-dsUnifiedL :: Lens' (DState era) (UMap (EraCrypto era))
-dsUnifiedL = lens dsUnified (\ds u -> ds {dsUnified = u})
-
-dsGenDelegsL :: Lens' (DState era) (GenDelegs (EraCrypto era))
-dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
-
-dsIRewardsL :: Lens' (DState era) (InstantaneousRewards (EraCrypto era))
-dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
-
-dsFutureGenDelegsL :: Lens' (DState era) (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
-dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
 
 instance NoThunks (DState era)
 
@@ -278,38 +273,17 @@ toPStatePair PState {..} =
   , "deposits" .= psDeposits
   ]
 
-data DRepState c = DRepState
-  { drepExpiry :: !EpochNo
-  , drepAnchor :: !(StrictMaybe (Anchor c))
-  }
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (DRepState era)
-
-instance Crypto c => NFData (DRepState c)
-
-instance Crypto c => DecCBOR (DRepState c) where
-  decCBOR =
-    decode $
-      RecD DRepState
-        <! From
-        <! From
-
-instance Crypto c => EncCBOR (DRepState c) where
-  encCBOR DRepState {..} =
-    encode $
-      Rec DRepState
-        !> To drepExpiry
-        !> To drepAnchor
-
-instance ToExpr (DRepState era)
-
+-- | The state that tracks the voting entities (DReps and Constituional Committe members)
+--   The 'vsDRepDistr' field is a pulser that incrementally computes the stake distribution of the DReps
+--   over the Epoch following the close of voting at end of the previous Epoch. The pulser is created
+--   at the Epoch boundary, but does no work until it is pulsed in the 'Tick' rule.
 data VState era = VState
   { vsDReps ::
       !( Map
           (Credential 'DRepRole (EraCrypto era))
           (DRepState (EraCrypto era))
        )
+  , vsDRepDistr :: !(DRepDistr (EraCrypto era))
   , vsCommitteeHotKeys ::
       !( Map
           (Credential 'ColdCommitteeRole (EraCrypto era))
@@ -319,9 +293,9 @@ data VState era = VState
   deriving (Show, Eq, Generic)
 
 instance Default (VState era) where
-  def = VState def def
+  def = VState def (DRComplete Map.empty) def
 
-instance NoThunks (VState era)
+instance Typeable (EraCrypto era) => NoThunks (VState era)
 
 instance Era era => NFData (VState era)
 
@@ -331,12 +305,14 @@ instance Era era => DecCBOR (VState era) where
       RecD VState
         <! From
         <! From
+        <! From
 
 instance Era era => EncCBOR (VState era) where
   encCBOR VState {..} =
     encode $
       Rec (VState @era)
         !> To vsDReps
+        !> To vsDRepDistr
         !> To vsCommitteeHotKeys
 
 -- | The state associated with the DELPL rule, which combines the DELEG rule
@@ -348,18 +324,7 @@ data CertState era = CertState
   }
   deriving (Show, Eq, Generic)
 
--- Lenses
-
-certDStateL :: Lens' (CertState era) (DState era)
-certDStateL = lens certDState (\ds u -> ds {certDState = u})
-
-certPStateL :: Lens' (CertState era) (PState era)
-certPStateL = lens certPState (\ds u -> ds {certPState = u})
-
-certVStateL :: Lens' (CertState era) (VState era)
-certVStateL = lens certVState (\ds u -> ds {certVState = u})
-
-instance NoThunks (CertState era)
+instance Typeable (EraCrypto era) => NoThunks (CertState era)
 
 instance Era era => NFData (CertState era)
 
@@ -479,3 +444,66 @@ instance ToExpr (VState era)
 instance ToExpr (FutureGenDeleg c)
 
 instance ToExpr (InstantaneousRewards c)
+
+-- =======================================================
+-- Lenses for CertState and its subsidiary types
+
+-- ========================================
+-- CertState
+
+certDStateL :: Lens' (CertState era) (DState era)
+certDStateL = lens certDState (\ds u -> ds {certDState = u})
+
+certPStateL :: Lens' (CertState era) (PState era)
+certPStateL = lens certPState (\ds u -> ds {certPState = u})
+
+certVStateL :: Lens' (CertState era) (VState era)
+certVStateL = lens certVState (\ds u -> ds {certVState = u})
+
+-- ===================================
+-- DState
+
+dsUnifiedL :: Lens' (DState era) (UMap (EraCrypto era))
+dsUnifiedL = lens dsUnified (\ds u -> ds {dsUnified = u})
+
+dsGenDelegsL :: Lens' (DState era) (GenDelegs (EraCrypto era))
+dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
+
+dsIRewardsL :: Lens' (DState era) (InstantaneousRewards (EraCrypto era))
+dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
+
+dsFutureGenDelegsL :: Lens' (DState era) (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
+
+-- ===================================
+-- PState
+
+psStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+psStakePoolParamsL = lens psStakePoolParams (\ds u -> ds {psStakePoolParams = u})
+
+psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ds u -> ds {psFutureStakePoolParams = u})
+
+psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
+psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})
+
+psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
+
+-- ===================================
+-- VState
+
+vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
+
+vsDRepDistrL :: Lens' (VState era) (DRepDistr (EraCrypto era))
+vsDRepDistrL = lens vsDRepDistr (\vs u -> vs {vsDRepDistr = u})
+
+vsCommitteeHotKeysL ::
+  Lens'
+    (VState era)
+    ( Map
+        (Credential 'ColdCommitteeRole (EraCrypto era))
+        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
+    )
+vsCommitteeHotKeysL = lens vsCommitteeHotKeys (\vs u -> vs {vsCommitteeHotKeys = u})

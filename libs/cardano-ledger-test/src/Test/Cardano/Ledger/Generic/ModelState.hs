@@ -43,6 +43,7 @@ module Test.Cardano.Ledger.Generic.ModelState where
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DRepDistr (DRepDistr (..))
 import Cardano.Ledger.EpochBoundary (SnapShots, emptySnapShots)
 import Cardano.Ledger.Keys (
   GenDelegs (..),
@@ -330,7 +331,7 @@ instance Extract (PState era) era where
   extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x) Map.empty
 
 instance Extract (VState era) era where
-  extract _ = VState def def
+  extract _ = VState def (DRComplete Map.empty) def
 
 instance Extract (CertState era) era where
   extract x = CertState (extract x) (extract x) (extract x)

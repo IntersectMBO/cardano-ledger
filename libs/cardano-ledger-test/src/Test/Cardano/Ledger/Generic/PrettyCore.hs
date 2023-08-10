@@ -70,6 +70,7 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
  )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.DRepDistr (DRepState (..), extractDRepDistr)
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   SnapShots (..),
@@ -1514,11 +1515,6 @@ pcDelegatee (DelegStake kh) = ppSexp "DelegStake" [pcKeyHash kh]
 pcDelegatee (DelegVote cred) = ppSexp "DelegVote" [pcDRep cred]
 pcDelegatee (DelegStakeVote kh cred) = ppSexp "DelegStakeVote" [pcKeyHash kh, pcDRep cred]
 
-pcDRep :: DRep c -> PDoc
-pcDRep (DRepCredential cred) = ppSexp "DRepCred" [pcCredential cred]
-pcDRep DRepAlwaysAbstain = ppSexp "DRep" [ppString "Abstain"]
-pcDRep DRepAlwaysNoConfidence = ppSexp "DRep" [ppString "NoConfidence"]
-
 pcTxCert :: Proof era -> TxCert era -> PDoc
 pcTxCert (Shelley _) x = pcShelleyTxCert x
 pcTxCert (Allegra _) x = pcShelleyTxCert x
@@ -1681,22 +1677,38 @@ instance PrettyC (PState era) era where
 instance PrettyC (VState era) era where
   prettyC _ st = pcVState st
 
-instance PrettyC (CertState era) era where
-  prettyC proof (CertState vst pst dst) =
-    ppRecord
-      "CertState"
-      [ ("pstate", pcPState pst)
-      , ("vstate", prettyC proof vst)
-      , ("dstate", pcDState dst)
-      ]
+pcCertState :: CertState era -> PDoc
+pcCertState (CertState vst pst dst) =
+  ppRecord
+    "CertState"
+    [ ("pstate", pcPState pst)
+    , ("vstate", pcVState vst)
+    , ("dstate", pcDState dst)
+    ]
 
 pcVState :: VState era -> PDoc
-pcVState (VState dreps hotkeys) =
+pcVState (VState dreps drepDistr committeeHotKeys) =
   ppRecord
     "VState"
-    [ ("dReps", prettyA dreps)
-    , ("hotKeys", ppMap pcCredential (ppMaybe pcCredential) hotkeys)
+    [ ("DReps", ppMap pcCredential pcDRepState dreps)
+    , ("DResDistr", ppMap pcDRep (pcCoin . fromCompact) (extractDRepDistr drepDistr))
+    , ("CC Hot Keys", ppMap pcCredential (ppMaybe pcCredential) committeeHotKeys)
     ]
+
+pcDRepState :: DRepState c -> PDoc
+pcDRepState (DRepState expire anchor) =
+  ppRecord
+    "DRepState"
+    [ ("expire", ppEpochNo expire)
+    , ("anchor", ppStrictMaybe (ppString . show) anchor)
+    ]
+
+pcDRep :: DRep c -> PDoc
+pcDRep (DRepCredential cred) = ppSexp "DRepCred" [pcCredential cred]
+pcDRep DRepAlwaysAbstain = ppSexp "DRep" [ppString "Abstain"]
+pcDRep DRepAlwaysNoConfidence = ppSexp "DRep" [ppString "NoConfidence"]
+
+instance c ~ EraCrypto era => PrettyC (DRep c) era where prettyC = (\_ x -> pcDRep x)
 
 instance Reflect era => PrettyC (LedgerState era) era where prettyC = pcLedgerState
 
@@ -1802,7 +1814,7 @@ pcLedgerState proof ls =
   ppRecord
     "LedgerState"
     [ ("utxoState", pcUTxOState proof (lsUTxOState ls))
-    , ("dpState", prettyC proof (lsCertState ls))
+    , ("certState", pcCertState (lsCertState ls))
     ]
 
 pcPState :: PState era -> PDoc

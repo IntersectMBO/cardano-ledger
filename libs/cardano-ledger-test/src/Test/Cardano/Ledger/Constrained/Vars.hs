@@ -8,19 +8,18 @@
 
 module Test.Cardano.Ledger.Constrained.Vars where
 
-import Cardano.Crypto.Signing (SigningKey (..))
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), Withdrawals (..))
+import Cardano.Crypto.Signing (SigningKey)
+import Cardano.Ledger.Address (Addr (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Core (AlonzoEraPParams (..), ppCollateralPercentageL, ppMaxTxExUnitsL)
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppCollateralPercentageL, ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash, ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, Network (..), ProtVer (..), SlotNo (..))
-import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
-import Cardano.Ledger.CertState (CertState (..), DRepState, DState (..), FutureGenDeleg (..), PState (..), VState (..))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, Network (..), ProtVer (..), SlotNo (..), StrictMaybe (..))
+import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
 import qualified Cardano.Ledger.CertState as DPS (InstantaneousRewards (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (
@@ -43,6 +42,7 @@ import Cardano.Ledger.Core (
   valueTxOutL,
  )
 import Cardano.Ledger.Credential (Credential, Ptr)
+import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
@@ -53,28 +53,14 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
-import qualified Cardano.Ledger.Shelley.Governance as Core
+import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  EpochState (..),
-  LedgerState (..),
-  NewEpochState (..),
-  ShelleyGovState (..),
-  UTxOState (..),
-  curPParamsEpochStateL,
-  esAccountStateL,
-  esLStateL,
-  esNonMyopicL,
-  esSnapshotsL,
-  prevPParamsEpochStateL,
-  smartUTxOState,
- )
+import Cardano.Ledger.Shelley.LedgerState hiding (delegations, deltaReserves, deltaTreasury, rewards)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
-import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (Complete))
 import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact)
@@ -82,7 +68,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
+import Data.Maybe.Strict (maybeToStrictMaybe)
 import Data.Set (Set)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
@@ -121,7 +107,7 @@ import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (merge, newTx, newTxBody, newWitnesses)
-import qualified Test.Cardano.Ledger.Shelley.Utils as Utils
+import qualified Test.Cardano.Ledger.Shelley.Utils as Utils (testGlobals)
 
 -- ================================================================
 
@@ -359,7 +345,8 @@ govStateT p@(Alonzo _) = Constr "GovState" (GovState p) :$ (ppupStateT p)
 govStateT p@(Babbage _) = Constr "GovState" (GovState p) :$ (ppupStateT p)
 govStateT p@(Conway _) =
   Constr "GovState" (GovState p)
-    :$ constTarget (Core.emptyGovState @era)
+    :$ constTarget (Gov.emptyGovState @era)
+
 individualPoolStakeL :: Lens' (IndividualPoolStake c) Rational
 individualPoolStakeL = lens individualPoolStake (\ds u -> ds {individualPoolStake = u})
 
@@ -413,10 +400,10 @@ snapshotsL = nesEsL . esSnapshotsL
 ppFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 ppFL p = lens (\pp -> PParamsF p pp) (\_ (PParamsF _ qq) -> qq)
 
-prevpparams :: Core.EraGov era => Proof era -> Term era (PParamsF era)
+prevpparams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
 prevpparams p = Var (V "prevpparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . prevPParamsEpochStateL . ppFL p)))
 
-pparams :: Core.EraGov era => Proof era -> Term era (PParamsF era)
+pparams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
 pparams p = Var (V "pparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . curPParamsEpochStateL . ppFL p)))
 
 nmLikelihoodsT :: Term era (Map (KeyHash 'StakePool (EraCrypto era)) [Float])
@@ -732,7 +719,7 @@ network = Var (V "network" NetworkR No)
 -- | This not really a variable, But a constant that is set by the 'testGlobals'
 --   we reflect this into a Term, so we can refer to it in the Preds.
 quorumConstant :: Word64
-quorumConstant = Utils.quorum Utils.testGlobals
+quorumConstant = Base.quorum Utils.testGlobals
 
 -- | From Globals. Reflected here at type Int, This is set to 'quorumConstant' in CertState.
 --   because is is used to compare the Size of things, which are computed as Int
@@ -805,7 +792,7 @@ newEpochStateConstr
       )
 
 -- | Target for NewEpochState
-newEpochStateT :: Core.EraGov era => Proof era -> Target era (NewEpochState era)
+newEpochStateT :: Gov.EraGov era => Proof era -> Target era (NewEpochState era)
 newEpochStateT proof =
   Constr "NewEpochState" (newEpochStateConstr proof)
     ^$ currentEpoch
@@ -815,7 +802,7 @@ newEpochStateT proof =
     ^$ poolDistr
 
 -- | Target for EpochState
-epochStateT :: Core.EraGov era => Proof era -> Target era (EpochState era)
+epochStateT :: Gov.EraGov era => Proof era -> Target era (EpochState era)
 epochStateT proof =
   Constr "EpochState" epochStateFun
     :$ accountStateT
@@ -829,14 +816,14 @@ accountStateT :: Target era AccountState
 accountStateT = Constr "AccountState" AccountState ^$ treasury ^$ reserves
 
 -- | Target for LedgerState
-ledgerStateT :: Core.EraGov era => Proof era -> Target era (LedgerState era)
+ledgerStateT :: Gov.EraGov era => Proof era -> Target era (LedgerState era)
 ledgerStateT proof = Constr "LedgerState" LedgerState :$ utxoStateT proof :$ certstateT
 
 ledgerState :: Reflect era => Term era (LedgerState era)
 ledgerState = Var $ V "ledgerState" (LedgerStateR reify) No
 
 -- | Target for UTxOState
-utxoStateT :: Core.EraGov era => Proof era -> Target era (UTxOState era)
+utxoStateT :: Gov.EraGov era => Proof era -> Target era (UTxOState era)
 utxoStateT p = Constr "UTxOState" (utxofun p) ^$ (pparams p) ^$ utxo p ^$ deposits ^$ fees :$ govStateT p
   where
     utxofun ::
@@ -860,7 +847,7 @@ certstateT = Constr "CertState" CertState :$ vstateT :$ pstateT :$ dstateT
 
 -- | Target for VState
 vstateT :: Target era (VState era)
-vstateT = Constr "VState" VState ^$ dreps ^$ ccHotKeys
+vstateT = Constr "VState" VState ^$ dreps :$ (constTarget (DRComplete Map.empty)) ^$ ccHotKeys
 
 -- | Target for PState
 pstateT :: Target era (PState era)

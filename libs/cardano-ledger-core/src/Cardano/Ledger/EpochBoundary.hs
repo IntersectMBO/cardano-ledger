@@ -33,6 +33,15 @@ module Cardano.Ledger.EpochBoundary (
   calculatePoolDistr,
   calculatePoolDistr',
   calculatePoolStake,
+  ssStakeMarkL,
+  ssStakeMarkPoolDistrL,
+  ssStakeSetL,
+  ssStakeGoL,
+  ssFeeL,
+  ssStakeL,
+  ssStakeDistrL,
+  ssDelegationsL,
+  ssPoolParamsL,
 )
 where
 
@@ -74,7 +83,7 @@ import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Word (Word64)
-import Lens.Micro ((^.), _1, _2)
+import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -305,3 +314,38 @@ calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
           (\word64 poolparam -> IndividualPoolStake (toInteger word64 % nonZeroTotal) (ppVrf poolparam))
           poolStakeMap
           (VMap.toMap poolParams)
+
+-- ======================================================
+-- Lenses
+-- ===============================================
+
+-- SnapShots
+
+ssStakeMarkL :: Lens' (SnapShots c) (SnapShot c)
+ssStakeMarkL = lens ssStakeMark (\ds u -> ds {ssStakeMark = u})
+
+ssStakeMarkPoolDistrL :: Lens' (SnapShots c) (PoolDistr c)
+ssStakeMarkPoolDistrL = lens ssStakeMarkPoolDistr (\ds u -> ds {ssStakeMarkPoolDistr = u})
+
+ssStakeSetL :: Lens' (SnapShots c) (SnapShot c)
+ssStakeSetL = lens ssStakeSet (\ds u -> ds {ssStakeSet = u})
+
+ssStakeGoL :: Lens' (SnapShots c) (SnapShot c)
+ssStakeGoL = lens ssStakeGo (\ds u -> ds {ssStakeGo = u})
+
+ssFeeL :: Lens' (SnapShots c) Coin
+ssFeeL = lens ssFee (\ds u -> ds {ssFee = u})
+
+-- SnapShot
+
+ssStakeL :: Lens' (SnapShot c) (Stake c)
+ssStakeL = lens ssStake (\ds u -> ds {ssStake = u})
+
+ssStakeDistrL :: Lens' (SnapShot c) (VMap VB VP (Credential 'Staking c) (CompactForm Coin))
+ssStakeDistrL = lens (unStake . ssStake) (\ds u -> ds {ssStake = Stake u})
+
+ssDelegationsL :: Lens' (SnapShot c) (VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
+ssDelegationsL = lens ssDelegations (\ds u -> ds {ssDelegations = u})
+
+ssPoolParamsL :: Lens' (SnapShot c) (VMap VB VB (KeyHash 'StakePool c) (PoolParams c))
+ssPoolParamsL = lens ssPoolParams (\ds u -> ds {ssPoolParams = u})

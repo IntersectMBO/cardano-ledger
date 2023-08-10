@@ -52,6 +52,8 @@ import Data.Set (Set)
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
 
+-- import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
+
 -- | This function returns the coin balance of a given pot, either the
 -- reserves or the treasury, after the instantaneous rewards and pot
 -- transfers are accounted for.

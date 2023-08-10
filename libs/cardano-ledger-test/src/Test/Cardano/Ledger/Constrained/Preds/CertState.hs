@@ -25,7 +25,7 @@ import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (
-  PrettyC (..),
+  pcCertState,
   pcDState,
   pcIndividualPoolStake,
   pcKeyHash,
@@ -273,5 +273,5 @@ mainC = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   certState <- monadTyped $ runTarget env certstateT
-  putStrLn (show (prettyC proof certState))
+  putStrLn (show (pcCertState certState))
   goRepl proof env ""

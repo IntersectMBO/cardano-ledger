@@ -86,7 +86,8 @@ library
         small-steps,
         text,
         transformers,
-        validation-selective
+        validation-selective,
+        vector-map
 
 library testlib
     exposed-modules:  Test.Cardano.Ledger.Conway.Arbitrary
