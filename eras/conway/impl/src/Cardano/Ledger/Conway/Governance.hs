@@ -40,7 +40,7 @@ module Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   -- Lenses
   cgGovActionsStateL,
-  cgRatifyL,
+  cgRatifyStateL,
   ensConstitutionL,
   rsEnactStateL,
   curPParamsConwayGovStateL,
@@ -330,21 +330,21 @@ toRatifyStatePairs cg@(RatifyState _ _ _) =
 
 data ConwayGovState era = ConwayGovState
   { cgGovActionsState :: !(GovActionsState era)
-  , cgRatify :: !(RatifyState era)
+  , cgRatifyState :: !(RatifyState era)
   }
   deriving (Generic, Eq, Show)
 
 cgGovActionsStateL :: Lens' (ConwayGovState era) (GovActionsState era)
 cgGovActionsStateL = lens cgGovActionsState (\x y -> x {cgGovActionsState = y})
 
-cgRatifyL :: Lens' (ConwayGovState era) (RatifyState era)
-cgRatifyL = lens cgRatify (\x y -> x {cgRatify = y})
+cgRatifyStateL :: Lens' (ConwayGovState era) (RatifyState era)
+cgRatifyStateL = lens cgRatifyState (\x y -> x {cgRatifyState = y})
 
 curPParamsConwayGovStateL :: Lens' (ConwayGovState era) (PParams era)
-curPParamsConwayGovStateL = cgRatifyL . rsEnactStateL . ensCurPParamsL
+curPParamsConwayGovStateL = cgRatifyStateL . rsEnactStateL . ensCurPParamsL
 
 prevPParamsConwayGovStateL :: Lens' (ConwayGovState era) (PParams era)
-prevPParamsConwayGovStateL = cgRatifyL . rsEnactStateL . ensPrevPParamsL
+prevPParamsConwayGovStateL = cgRatifyStateL . rsEnactStateL . ensPrevPParamsL
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
   decCBOR =
@@ -358,7 +358,7 @@ instance EraPParams era => EncCBOR (ConwayGovState era) where
     encode $
       Rec ConwayGovState
         !> To cgGovActionsState
-        !> To cgRatify
+        !> To cgRatifyState
 
 instance EraPParams era => ToCBOR (ConwayGovState era) where
   toCBOR = toEraCBOR @era
@@ -380,13 +380,13 @@ toConwayGovPairs :: (KeyValue a, EraPParams era) => ConwayGovState era -> [a]
 toConwayGovPairs cg@(ConwayGovState _ _) =
   let ConwayGovState {..} = cg
    in [ "gov" .= cgGovActionsState
-      , "ratify" .= cgRatify
+      , "ratify" .= cgRatifyState
       ]
 
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   type GovState (ConwayEra c) = ConwayGovState (ConwayEra c)
 
-  getConstitution g = Just $ g ^. cgRatifyL . rsEnactStateL . ensConstitutionL
+  getConstitution g = Just $ g ^. cgRatifyStateL . rsEnactStateL . ensConstitutionL
 
   curPParamsGovStateL = curPParamsConwayGovStateL
 
@@ -396,4 +396,4 @@ class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)
 
 instance Crypto c => ConwayEraGov (ConwayEra c) where
-  constitutionGovStateL = cgRatifyL . rsEnactStateL . ensConstitutionL
+  constitutionGovStateL = cgRatifyStateL . rsEnactStateL . ensConstitutionL

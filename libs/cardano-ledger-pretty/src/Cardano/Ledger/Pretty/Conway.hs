@@ -347,7 +347,7 @@ instance
      in ppRecord
           "ConwayGovState"
           [ ("GovActionsState", prettyA cgGovActionsState)
-          , ("Ratify", prettyA cgRatify)
+          , ("RatifyState", prettyA cgRatifyState)
           ]
 
 instance

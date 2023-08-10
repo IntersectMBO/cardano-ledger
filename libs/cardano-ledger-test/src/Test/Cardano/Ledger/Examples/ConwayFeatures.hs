@@ -326,7 +326,7 @@ testGov pf = do
 
     govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
     expectedGovState0 = GovActionsState $ Map.fromList [(govActionId, govActionState (newConstitutionProposal pf))]
-    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgRatifyL)
+    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgRatifyStateL)
 
     eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState (pp pf) (trustMeP pf True proposalTx)
     ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) =
@@ -338,7 +338,7 @@ testGov pf = do
     voteTx = txFromTestCaseData pf (vote pf govActionId)
     gas = govActionStateWithVote (newConstitutionProposal pf) (stakePoolKeyHash pf) VoteYes
     expectedGovState1 = GovActionsState $ Map.fromList [(govActionId, gas)]
-    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgRatifyL)
+    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgRatifyStateL)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 (pp pf) (trustMeP pf True voteTx)
     ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) =
       expectRight "Error running LEDGER when voting: " eitherLedgerState1
@@ -364,7 +364,7 @@ testGov pf = do
     eitherEpochState1 = runEPOCH (EPOCH pf) epochState0 (EpochNo 2) poolDistr
     epochState1 = expectRight "Error running runEPOCH: " eitherEpochState1
     ledgerState2 = epochState1 ^. esLStateL
-    constitution = (ensConstitution . rsEnactState) (epochState1 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyL)
+    constitution = (ensConstitution . rsEnactState) (epochState1 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyStateL)
   assertEqual "constitution after enactment" constitution (proposedConstitution @era)
 
   let
@@ -376,7 +376,7 @@ testGov pf = do
     expectedGovState2 =
       ConwayGovState
         expectedGovActionsState2
-        (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgRatifyL)
+        (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgRatifyStateL)
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 (pp pf) (trustMeP pf True secondProposalTx)
     ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) =
       expectRight "Error running LEDGER when proposing:" eitherLedgerState3
@@ -387,10 +387,10 @@ testGov pf = do
     epochState2 = epochState1 & esLStateL .~ ledgerState3
     eitherEpochState2 = runEPOCH (EPOCH pf) epochState2 (EpochNo 2) poolDistr
     epochState3 = expectRight "Error running runEPOCH: " eitherEpochState2
-    constitution1 = (ensConstitution . rsEnactState) (epochState3 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyL)
+    constitution1 = (ensConstitution . rsEnactState) (epochState3 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyStateL)
   assertEqual "constitution after enactment after no votes" constitution1 (proposedConstitution @era)
 
-  case toList $ rsFuture (epochState3 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyL) of
+  case toList $ rsFuture (epochState3 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyStateL) of
     [(gId, gas')] ->
       assertEqual
         "un-enacted govAction is recorded in rsFuture"
