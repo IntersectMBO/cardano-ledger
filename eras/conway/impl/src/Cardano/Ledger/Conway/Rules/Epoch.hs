@@ -31,12 +31,12 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
-  GovActionId,
   GovActionState (..),
   GovActionsState (..),
   RatifyState (..),
   cgGovActionsStateL,
   cgRatifyStateL,
+  insertGovActionEntry,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
@@ -155,13 +155,13 @@ instance
   transitionRules = [epochTransition]
 
 returnProposalDepositsUMap ::
-  StrictSeq (GovActionId (EraCrypto era), GovActionState era) ->
+  StrictSeq (GovActionState era) ->
   UMap (EraCrypto era) ->
   UMap (EraCrypto era)
 returnProposalDepositsUMap gaids m =
   unionKeyDeposits (RewDepUView m) $ foldl' addRew mempty gaids
   where
-    addRew m' (_, GovActionState {..}) =
+    addRew m' GovActionState {..} =
       Map.insertWith
         (<>)
         (getRwdCred gasReturnAddr)
@@ -255,8 +255,9 @@ epochTransition = do
         , reDRepDistr = drepDistr
         , reCurrentEpoch = eNo
         }
-    govStateToSeq = Seq.fromList . Map.toList
-    ratSig = RatifySignal . govStateToSeq . unGovActionsState $ cgGovActionsState govSt
+    ratSig =
+      RatifySignal . Seq.fromList . Map.elems . unGovActionsState $
+        cgGovActionsState govSt
   rs@RatifyState {rsFuture} <-
     trans @(EraRule "RATIFY" era) $ TRC (ratEnv, cgRatifyState govSt, ratSig)
   let es'' =
@@ -267,7 +268,7 @@ epochTransition = do
           & prevPParamsEpochStateL .~ pp
           & curPParamsEpochStateL .~ pp
       -- TODO can we be more efficient?
-      newGov = GovActionsState . Map.fromList . toList $ rsFuture
+      newGov = foldr' insertGovActionEntry mempty rsFuture
       esGovernanceL = esLStateL . lsUTxOStateL . utxosGovStateL
       esDonationL :: Lens' (EpochState era) Coin
       esDonationL = esLStateL . lsUTxOStateL . utxosDonationL

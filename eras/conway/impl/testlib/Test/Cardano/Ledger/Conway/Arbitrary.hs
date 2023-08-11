@@ -147,6 +147,7 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState e
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovAction era) where
   arbitrary =
