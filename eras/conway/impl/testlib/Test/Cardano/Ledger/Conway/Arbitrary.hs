@@ -85,7 +85,7 @@ instance Crypto c => Arbitrary (AlonzoScript (ConwayEra c)) where
   arbitrary = genAlonzoScript [PlutusV1, PlutusV2, PlutusV3]
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.Conway.Gov ------------------------------------------------------
+-- Cardano.Ledger.Conway.Goverance  ------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 instance
@@ -104,6 +104,17 @@ instance
   arbitrary =
     RatifyState
       <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance
+  (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
+  Arbitrary (RatifyEnv era)
+  where
+  arbitrary =
+    RatifyEnv
+      <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
 
