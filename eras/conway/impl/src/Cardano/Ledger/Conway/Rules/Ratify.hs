@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -16,6 +17,8 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   RatifyState (..),
   RatifyEnv (..),
   RatifySignal (..),
+  dRepAccepted,
+  dRepAcceptedRatio,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -31,7 +34,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactState (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -50,6 +53,7 @@ import Data.Monoid (Sum (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Void (absurd)
+import Data.Word (Word64)
 
 data RatifyEnv era = RatifyEnv
   { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
@@ -57,6 +61,7 @@ data RatifyEnv era = RatifyEnv
   , reDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
   , reCurrentEpoch :: !EpochNo
   }
+  deriving (Show)
 
 newtype RatifySignal era
   = RatifySignal
@@ -93,11 +98,14 @@ instance
 spoThreshold :: Rational
 spoThreshold = 51 % 100
 
+dRepThreshold :: Rational
+dRepThreshold = 0
+
 epochsToExpire :: EpochNo
 epochsToExpire = 30
 
-accepted :: RatifyEnv era -> GovActionState era -> Bool
-accepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
+spoAccepted :: RatifyEnv era -> GovActionState era -> Bool
+spoAccepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
   totalAcceptedStakePoolsRatio > getStakePoolThreshold gasAction
   where
     GovActionState {gasStakePoolVotes, gasAction} = gas
@@ -135,6 +143,49 @@ accepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
       HardForkInitiation {} -> 101 % 100
       _ -> spoThreshold
 
+dRepAccepted :: forall era. RatifyEnv era -> GovActionState era -> Rational -> Bool
+dRepAccepted RatifyEnv {reDRepDistr} GovActionState {gasDRepVotes, gasAction} threshold =
+  dRepAcceptedRatio reDRepDistr gasDRepVotes gasAction >= threshold
+
+-- Compute the dRep ratio yes/(yes + no), where
+-- yes: is the total stake of
+--    - registered dReps that voted 'yes', plus
+--    - the AlwaysNoConfidence dRep, in case the action is NoConfidence
+-- no: is the total stake of
+--    - registered dReps that voted 'no', plus
+--    - registered dReps that did not vote for this action, plus
+--    - the AlwaysNoConfidence dRep
+-- In other words, the denominator `yes + no` is the total stake of all registered dReps, minus the abstain votes stake
+-- (both credential DReps and AlwaysAbstain)
+--
+-- We iterate over the dRep distribution, and incrementally construct the numerator and denominator.
+dRepAcceptedRatio ::
+  forall era.
+  Map (DRep (EraCrypto era)) (CompactForm Coin) ->
+  Map (Credential 'DRepRole (EraCrypto era)) Vote ->
+  GovAction era ->
+  Rational
+dRepAcceptedRatio reDRepDistr gasDRepVotes gasAction
+  | totalExcludingAbstainStake == 0 = 0
+  | otherwise = toInteger yesStake % toInteger totalExcludingAbstainStake
+  where
+    accumStake :: (Word64, Word64) -> DRep (EraCrypto era) -> CompactForm Coin -> (Word64, Word64)
+    accumStake (!yes, !tot) drep (CompactCoin stake) =
+      case drep of
+        DRepCredential cred ->
+          case Map.lookup cred gasDRepVotes of
+            Nothing -> (yes, tot + stake)
+            Just VoteYes -> (yes + stake, tot + stake)
+            Just Abstain -> (yes, tot)
+            Just VoteNo -> (yes, tot + stake)
+        DRepAlwaysNoConfidence ->
+          case gasAction of
+            NoConfidence _ -> (yes + stake, tot + stake)
+            _ -> (yes, tot + stake)
+        DRepAlwaysAbstain -> (yes, tot)
+
+    (yesStake, totalExcludingAbstainStake) = Map.foldlWithKey' accumStake (0, 0) reDRepDistr
+
 ratifyTransition ::
   forall era.
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
@@ -155,7 +206,7 @@ ratifyTransition = do
   case rsig of
     act@(_, ast@GovActionState {gasAction, gasProposedIn}) :<| sigs -> do
       let expired = gasProposedIn + epochsToExpire < reCurrentEpoch
-      if accepted env ast
+      if spoAccepted env ast && dRepAccepted env ast dRepThreshold
         then do
           -- Update ENACT state with the governance action that was ratified
           es <- trans @(EraRule "ENACT" era) $ TRC ((), rsEnactState, gasAction)
