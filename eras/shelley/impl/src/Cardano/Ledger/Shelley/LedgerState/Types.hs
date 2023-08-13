@@ -78,7 +78,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (&), (.~), (^.), _1, _2)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -730,10 +730,6 @@ epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 epochStateUMapL :: Lens' (EpochState era) (UMap (EraCrypto era))
 epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-
--- | update a field of 'x' accessed by the given lens 'l' with the adjusting function 'update'
-updateWithLens :: a -> Lens' a b -> (b -> b) -> a
-updateWithLens x l update = x & l .~ update (x ^. l)
 
 -- | Construct a new (as yet unpulsed) DRepDistr from 3 pieces of the EpochState.
 --   1) The unified map (storing the map from staking credentials to DReps).

@@ -120,7 +120,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   epochStateStakeDistrL,
   epochStateRegDrepL,
   epochStateUMapL,
-  updateWithLens,
   freshDRepPulser,
 
   -- * Lenses from CertState
