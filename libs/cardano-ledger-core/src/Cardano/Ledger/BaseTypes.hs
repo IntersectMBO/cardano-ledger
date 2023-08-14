@@ -11,6 +11,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -109,7 +110,7 @@ import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, SafeToHash)
+import Cardano.Ledger.SafeHash (HashWithCrypto (..), SafeHash, SafeToHash)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr), trimExprViaShow)
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
@@ -143,6 +144,7 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
+import Data.Proxy
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (
   Scientific,
@@ -780,19 +782,19 @@ instance ToExpr (BlocksMade c)
 
 instance ToExpr ProtVer
 
-newtype AnchorData c = AnchorData ByteString
+newtype AnchorData = AnchorData ByteString
   deriving (Eq)
   deriving newtype (SafeToHash)
 
-instance HashAnnotated (AnchorData c) (AnchorData c) c
+instance HashWithCrypto AnchorData AnchorData
 
 -- | Hash `AnchorData`
-hashAnchorData :: Crypto c => AnchorData c -> SafeHash c (AnchorData c)
-hashAnchorData = hashAnnotated
+hashAnchorData :: forall c. Crypto c => AnchorData -> SafeHash c AnchorData
+hashAnchorData = hashWithCrypto (Proxy @c)
 
 data Anchor c = Anchor
   { anchorUrl :: !Url
-  , anchorDataHash :: !(SafeHash c (AnchorData c))
+  , anchorDataHash :: !(SafeHash c AnchorData)
   }
   deriving (Eq, Show, Generic)
 

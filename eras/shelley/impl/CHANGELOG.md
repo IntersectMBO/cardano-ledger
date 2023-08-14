@@ -2,6 +2,7 @@
 
 ## 1.5.0.0
 
+* Remove redundant reimplementation of lens function `%~`: `updateWithLens`.
 * Change `getConstituitionHash` to `getConstitution`
 * Replace `constitutionHash` with `constitutionAnchor`
 * Add `upgradeShelleyTxCert`

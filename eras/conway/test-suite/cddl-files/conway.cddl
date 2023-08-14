@@ -105,11 +105,11 @@ treasury_withdrawals_action = (2, { $reward_account => coin })
 
 no_confidence = (3, gov_action_id / null)
 
-new_committee = (4, gov_action_id / null, set<$committee_coldkey_credential>, committee)
+new_committee = (4, gov_action_id / null, set<$committee_cold_credential>, committee)
 
 new_constitution = (5, gov_action_id / null, constitution)
 
-committee = [{ $committee_coldkey_credential => epoch }, unit_interval]
+committee = [{ $committee_cold_credential => epoch }, unit_interval]
 
 constitution =
   [ anchor
@@ -307,11 +307,11 @@ vote_reg_deleg_cert = (12, stake_credential, drep, coin)
 stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
 
 ; GOVCERT
-reg_committee_hot_key_cert = (14, committee_cold_keyhash, committee_hot_keyhash)
-unreg_committee_hot_key_cert = (15, committee_cold_keyhash)
-reg_drep_cert = (16, voting_credential, coin, anchor / null)
-unreg_drep_cert = (17, voting_credential, coin)
-update_drep_cert = (18, voting_credential, anchor / null)
+reg_committee_hot_key_cert = (14, committee_cold_credential, committee_hot_credential)
+unreg_committee_hot_key_cert = (15, committee_cold_credential)
+reg_drep_cert = (16, drep_credential, coin, anchor / null)
+unreg_drep_cert = (17, drep_credential, coin)
+update_drep_cert = (18, drep_credential, anchor / null)
 
 
 delta_coin = int
@@ -329,8 +329,9 @@ drep =
   ]
 
 stake_credential = credential
-voting_credential = credential
-committee_coldkey_credential = credential
+drep_credential = credential
+committee_cold_credential = credential
+committee_hot_credential = credential
 
 pool_params = ( operator:       pool_keyhash
               , vrf_keyhash:    vrf_keyhash
@@ -566,8 +567,6 @@ epoch = uint
 
 addr_keyhash           = $hash28
 pool_keyhash           = $hash28
-committee_cold_keyhash = credential
-committee_hot_keyhash  = credential
 
 vrf_keyhash           = $hash32
 auxiliary_data_hash   = $hash32
