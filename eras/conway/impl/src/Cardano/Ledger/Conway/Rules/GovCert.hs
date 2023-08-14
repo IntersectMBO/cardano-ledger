@@ -28,7 +28,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (DRepState (..), VState (..), vsDRepsL)
+import Cardano.Ledger.CertState (CommitteeState (..), DRepState (..), VState (..), vsDRepsL)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (ConwayEraPParams, ppDRepActivityL)
 import Cardano.Ledger.Conway.Era (ConwayGOVCERT)
@@ -165,7 +165,7 @@ conwayGovCertTransition ::
 conwayGovCertTransition = do
   TRC
     ( ConwayGovCertEnv {..}
-      , vState@VState {vsDReps, vsCommitteeHotKeys}
+      , vState@VState {vsDReps}
       , c
       ) <-
     judgmentContext
@@ -188,12 +188,10 @@ conwayGovCertTransition = do
       -- TODO: check against a new PParam `drepDeposit`, once PParams are updated. -- someCheck ?! ConwayDRepIncorrectDeposit deposit
       Map.member cred vsDReps ?! ConwayDRepNotRegistered cred
       pure $ vState {vsDReps = Map.delete cred vsDReps}
-    ConwayAuthCommitteeHotKey coldK hotK -> do
-      checkColdKeyHasNotResigned coldK vsCommitteeHotKeys
-      pure $ vState {vsCommitteeHotKeys = Map.insert coldK (Just hotK) vsCommitteeHotKeys}
-    ConwayResignCommitteeColdKey coldK -> do
-      checkColdKeyHasNotResigned coldK vsCommitteeHotKeys
-      pure $ vState {vsCommitteeHotKeys = Map.insert coldK Nothing vsCommitteeHotKeys}
+    ConwayAuthCommitteeHotKey coldCred hotCred ->
+      overwriteCommitteeHotCred vState coldCred (Just hotCred)
+    ConwayResignCommitteeColdKey coldCred ->
+      overwriteCommitteeHotCred vState coldCred Nothing
     ConwayUpdateDRep cred mAnchor -> do
       Map.notMember cred vsDReps ?! ConwayDRepNotRegistered cred
       expiryEpoch <-
@@ -206,6 +204,14 @@ conwayGovCertTransition = do
               & drepAnchorL .~ mAnchor
       pure $ vState & vsDRepsL %~ Map.update (Just . updateDRepState) cred
   where
-    checkColdKeyHasNotResigned coldK vsCommitteeHotKeys =
-      ((isNothing <$> Map.lookup coldK vsCommitteeHotKeys) /= Just True)
-        ?! ConwayCommitteeHasResigned coldK
+    overwriteCommitteeHotCred vState coldCred hotCred = do
+      let hotCredMap = csCommitteeCreds $ vsCommitteeState vState
+      ((isNothing <$> Map.lookup coldCred hotCredMap) /= Just True)
+        ?! ConwayCommitteeHasResigned coldCred
+      pure $
+        vState
+          { vsCommitteeState =
+              CommitteeState
+                { csCommitteeCreds = Map.insert coldCred hotCred hotCredMap
+                }
+          }

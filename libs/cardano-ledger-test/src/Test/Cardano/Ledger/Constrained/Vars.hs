@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,7 +19,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, Network (..), ProtVer (..), SlotNo (..), StrictMaybe (..))
 import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
-import qualified Cardano.Ledger.CertState as DPS (InstantaneousRewards (..))
+import Cardano.Ledger.CertState (CommitteeState, csCommitteeCredsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core (
   EraPParams,
@@ -76,7 +75,14 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Constrained.Ast (Target (..), Term (Lit, Var), constTarget, fieldToTerm, ppTarget, (^$))
+import Test.Cardano.Ledger.Constrained.Ast (
+  Target (..),
+  Term (Lit, Proj, Var),
+  constTarget,
+  fieldToTerm,
+  ppTarget,
+  (^$),
+ )
 import Test.Cardano.Ledger.Constrained.Classes (
   GovState (..),
   PParamsF (..),
@@ -267,11 +273,14 @@ dreps = Var $ V "dreps" (MapR VCredR DRepStateR) (Yes NewEpochStateR drepsL)
 drepsL :: NELens era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
-ccHotKeys :: Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
-ccHotKeys = Var $ V "ccHotKeys" (MapR CommColdCredR (MaybeR CommHotCredR)) (Yes NewEpochStateR ccHotKeysL)
+committeeState :: Term era (CommitteeState era)
+committeeState = Var $ V "committeState" CommitteeStateR (Yes NewEpochStateR committeeStateL)
 
-ccHotKeysL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
-ccHotKeysL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeHotKeysL
+committeeStateL :: NELens era (CommitteeState era)
+committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+
+ccHotKeys :: Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+ccHotKeys = Proj csCommitteeCredsL (MapR CommColdCredR (MaybeR CommHotCredR)) committeeState
 
 -- UTxOState
 
@@ -282,7 +291,7 @@ utxoL :: Proof era -> NELens era (Map (TxIn (EraCrypto era)) (TxOutF era))
 utxoL proof = nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL . unUtxoL proof
 
 unUtxoL :: Proof era -> Lens' (UTxO era) (Map (TxIn (EraCrypto era)) (TxOutF era))
-unUtxoL p = lens (Map.map (TxOutF p) . unUTxO) (\(UTxO _) new -> (liftUTxO new))
+unUtxoL p = lens (Map.map (TxOutF p) . unUTxO) (\(UTxO _) new -> liftUTxO new)
 
 deposits :: Term era Coin
 deposits = Var $ V "deposits" CoinR (Yes NewEpochStateR depositsL)
@@ -303,7 +312,7 @@ donationL :: NELens era Coin
 donationL = nesEsL . esLStateL . lsUTxOStateL . utxosDonationL
 
 ppup :: Proof era -> Term era (ShelleyGovState era)
-ppup p = Var $ (V "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p)))
+ppup p = Var $ V "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p))
 
 ppupsL :: Proof era -> NELens era (ShelleyGovState era)
 ppupsL (Shelley _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
@@ -528,12 +537,12 @@ snapShotsT :: Target era (SnapShots (EraCrypto era))
 snapShotsT =
   Constr "SnapShots" shotsfun
     :$ markSnapShotT
-    :$ (Simple markPoolDistr)
+    :$ Simple markPoolDistr
     :$ setSnapShotT
     :$ goSnapShotT
-    :$ (Simple snapShotFee)
+    :$ Simple snapShotFee
   where
-    shotsfun w x y z f = SnapShots w (PoolDistr x) y z f
+    shotsfun w x = SnapShots w (PoolDistr x)
 
 -- ==================================================================
 -- RewardUpdate
@@ -861,7 +870,7 @@ certstateT = Constr "CertState" CertState :$ vstateT :$ pstateT :$ dstateT
 
 -- | Target for VState
 vstateT :: Target era (VState era)
-vstateT = Constr "VState" VState ^$ dreps :$ (constTarget (DRComplete Map.empty)) ^$ ccHotKeys
+vstateT = Constr "VState" VState ^$ dreps :$ constTarget (DRComplete Map.empty) ^$ committeeState
 
 -- | Target for PState
 pstateT :: Target era (PState era)
@@ -887,14 +896,14 @@ dstate ::
   Map Ptr (Credential 'Staking (EraCrypto era)) ->
   Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
-  DPS.InstantaneousRewards (EraCrypto era) ->
+  InstantaneousRewards (EraCrypto era) ->
   DState era
-dstate rew dep deleg ptr fgen gen instR =
-  DState (unSplitUMap (Split rew dep deleg Map.empty undefined ptr)) fgen (GenDelegs gen) instR
+dstate rew dep deleg ptr fgen gen =
+  DState (unSplitUMap (Split rew dep deleg Map.empty (error "Not implemented") ptr)) fgen (GenDelegs gen)
 
-instantaneousRewardsT :: Target era (DPS.InstantaneousRewards (EraCrypto era))
+instantaneousRewardsT :: Target era (InstantaneousRewards (EraCrypto era))
 instantaneousRewardsT =
-  Constr "InstantaneousRewards" DPS.InstantaneousRewards
+  Constr "InstantaneousRewards" InstantaneousRewards
     ^$ instanReserves
     ^$ instanTreasury
     ^$ deltaReserves

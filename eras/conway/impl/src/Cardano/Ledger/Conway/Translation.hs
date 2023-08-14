@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -20,12 +19,12 @@ module Cardano.Ledger.Conway.Translation (
 ) where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
-import Cardano.Ledger.Alonzo.Scripts.Data (translateDatum)
-
 import Cardano.Ledger.Alonzo.Scripts (translateAlonzoScript)
+import Cardano.Ledger.Alonzo.Scripts.Data (translateDatum)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -122,8 +121,13 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
 instance Crypto c => TranslateEra (ConwayEra c) DState where
   translateEra _ DState {..} = pure DState {..}
 
+instance Crypto c => TranslateEra (ConwayEra c) CommitteeState where
+  translateEra _ CommitteeState {..} = pure CommitteeState {..}
+
 instance Crypto c => TranslateEra (ConwayEra c) VState where
-  translateEra _ VState {..} = pure VState {..}
+  translateEra ctx VState {..} = do
+    committeeState <- translateEra ctx vsCommitteeState
+    pure VState {vsCommitteeState = committeeState, ..}
 
 instance Crypto c => TranslateEra (ConwayEra c) PState where
   translateEra _ PState {..} = pure PState {..}

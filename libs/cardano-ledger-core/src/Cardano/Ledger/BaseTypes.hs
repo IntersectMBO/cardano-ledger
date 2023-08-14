@@ -796,7 +796,7 @@ data Anchor c = Anchor
   { anchorUrl :: !Url
   , anchorDataHash :: !(SafeHash c AnchorData)
   }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 instance NoThunks (Anchor c)
 

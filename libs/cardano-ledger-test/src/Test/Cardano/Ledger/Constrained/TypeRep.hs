@@ -40,15 +40,11 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
 )
 where
 
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Language (Language (..))
-
--- import Cardano.Ledger.Alonzo.Core (ScriptIntegrityHash)
-
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Crypto.Signing (SigningKey (..), shortVerificationKeyHexF, toVerification)
 import qualified Cardano.Crypto.Wallet as Byron
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
@@ -57,7 +53,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..), mkTxIxPartial)
 import Cardano.Ledger.Binary.Version (Version)
-import Cardano.Ledger.CertState (DRepState)
+import Cardano.Ledger.CertState (CommitteeState, DRepState)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (GovAction (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
@@ -70,6 +66,7 @@ import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
+import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (ppId))
@@ -289,6 +286,7 @@ data Rep era t where
   DRepR :: Rep era (Core.DRep (EraCrypto era))
   PoolMetadataR :: Proof era -> Rep era PoolMetadata
   DRepStateR :: Rep era (DRepState (EraCrypto era))
+  CommitteeStateR :: Rep era (CommitteeState era)
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -512,6 +510,7 @@ instance Show (Rep era t) where
   show DRepR = "(DRep c)"
   show (PoolMetadataR _) = "PoolMetadata"
   show DRepStateR = "DRepState"
+  show CommitteeStateR = "CommitteeState"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -613,6 +612,7 @@ synopsis BoolR x = show x
 synopsis DRepR x = show (pcDRep x)
 synopsis (PoolMetadataR _) x = show x
 synopsis DRepStateR x = show x
+synopsis CommitteeStateR x = show x
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -733,9 +733,10 @@ instance Shaped (Rep era) any where
   shape CommColdCredR = Nullary 85
   shape CommHotCredR = Nullary 86
   shape DRepStateR = Nullary 87
+  shape CommitteeStateR = Nullary 87
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
-compareRep x y = cmpIndex @(Rep era) x y
+compareRep = cmpIndex @(Rep era)
 
 -- ================================================
 
@@ -882,6 +883,7 @@ genSizedRep _ (PoolMetadataR p) =
     then PoolMetadata <$> arbitrary <*> (BS.take (hashsize p) <$> arbitrary)
     else PoolMetadata <$> arbitrary <*> arbitrary
 genSizedRep _ DRepStateR = arbitrary
+genSizedRep _ CommitteeStateR = arbitrary
 
 genRep ::
   Era era =>
@@ -1012,6 +1014,7 @@ shrinkRep BoolR x = shrink x
 shrinkRep DRepR x = shrink x
 shrinkRep (PoolMetadataR _) _ = []
 shrinkRep DRepStateR _ = []
+shrinkRep CommitteeStateR _ = []
 
 -- ===========================
 
@@ -1130,7 +1133,8 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help BoolR v = pure $ With v
     help DRepR v = pure $ With v
     help (PoolMetadataR _) v = pure $ With v
-    help DRepStateR _ = failT ["DRepState does not have Ord instance"]
+    help DRepStateR v = pure $ With v
+    help CommitteeStateR v = pure $ With v
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)

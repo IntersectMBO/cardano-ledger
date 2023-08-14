@@ -15,7 +15,7 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (PState (..), VState (..))
+import Cardano.Ledger.CertState (CommitteeState (..), PState (..), VState (..))
 import Cardano.Ledger.Core (upgradePParams, upgradePParamsUpdate, upgradeTxOut)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -105,8 +105,13 @@ instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
 instance Crypto c => TranslateEra (AlonzoEra c) DState where
   translateEra _ DState {..} = pure DState {..}
 
+instance Crypto c => TranslateEra (AlonzoEra c) CommitteeState where
+  translateEra _ CommitteeState {..} = pure CommitteeState {..}
+
 instance Crypto c => TranslateEra (AlonzoEra c) VState where
-  translateEra _ VState {..} = pure VState {..}
+  translateEra ctx VState {..} = do
+    committeeState <- translateEra ctx vsCommitteeState
+    pure VState {vsCommitteeState = committeeState, ..}
 
 instance Crypto c => TranslateEra (AlonzoEra c) PState where
   translateEra _ PState {..} = pure PState {..}

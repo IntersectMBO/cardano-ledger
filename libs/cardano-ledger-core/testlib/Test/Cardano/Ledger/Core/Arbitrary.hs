@@ -72,6 +72,7 @@ import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.CertState (
   Anchor (..),
   CertState (..),
+  CommitteeState (..),
   DRepState (..),
   DState (..),
   FutureGenDeleg (..),
@@ -684,6 +685,8 @@ instance Crypto c => Arbitrary (Anchor c) where
 
 instance Crypto c => Arbitrary (DRepState c) where
   arbitrary = DRepState <$> arbitrary <*> arbitrary
+
+deriving instance Era era => Arbitrary (CommitteeState era)
 
 instance Era era => Arbitrary (VState era) where
   arbitrary = VState <$> arbitrary <*> (DRComplete <$> arbitrary) <*> arbitrary

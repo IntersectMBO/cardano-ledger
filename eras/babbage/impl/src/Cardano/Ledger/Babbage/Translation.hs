@@ -19,6 +19,7 @@ import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.API (
@@ -103,8 +104,13 @@ instance Crypto c => TranslateEra (BabbageEra c) EpochState where
 instance Crypto c => TranslateEra (BabbageEra c) DState where
   translateEra _ DState {..} = pure DState {..}
 
+instance Crypto c => TranslateEra (BabbageEra c) CommitteeState where
+  translateEra _ CommitteeState {..} = pure CommitteeState {..}
+
 instance Crypto c => TranslateEra (BabbageEra c) VState where
-  translateEra _ VState {..} = pure VState {..}
+  translateEra ctx VState {..} = do
+    committeeState <- translateEra ctx vsCommitteeState
+    pure VState {vsCommitteeState = committeeState, ..}
 
 instance Crypto c => TranslateEra (BabbageEra c) PState where
   translateEra _ PState {..} = pure PState {..}

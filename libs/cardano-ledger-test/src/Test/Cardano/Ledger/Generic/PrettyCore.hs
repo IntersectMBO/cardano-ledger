@@ -50,12 +50,12 @@ import Cardano.Ledger.BaseTypes (
   TxIx (..),
   txIxToInt,
  )
+import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (GovActionsState (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochPredFailure (..),
-  -- FIXME TODO ConwayNewEpochPredFailure,
   EnactPredFailure (..),
  )
 import qualified Cardano.Ledger.Conway.Rules as Conway
@@ -1688,12 +1688,12 @@ pcCertState (CertState vst pst dst) =
     ]
 
 pcVState :: VState era -> PDoc
-pcVState (VState dreps drepDistr committeeHotKeys) =
+pcVState (VState dreps drepDistr (CommitteeState committeeHotCreds)) =
   ppRecord
     "VState"
     [ ("DReps", ppMap pcCredential pcDRepState dreps)
     , ("DResDistr", ppMap pcDRep (pcCoin . fromCompact) (extractDRepDistr drepDistr))
-    , ("CC Hot Keys", ppMap pcCredential (ppMaybe pcCredential) committeeHotKeys)
+    , ("CC Hot Keys", ppMap pcCredential (ppMaybe pcCredential) committeeHotCreds)
     ]
 
 pcDRepState :: DRepState c -> PDoc

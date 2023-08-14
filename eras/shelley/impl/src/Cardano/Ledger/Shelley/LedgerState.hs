@@ -136,7 +136,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   psDepositsL,
   vsDRepsL,
   vsDRepDistrL,
-  vsCommitteeHotKeysL,
+  vsCommitteeStateL,
 
   -- * Lenses from SnapShot(s)
   ssStakeMarkL,

@@ -3,11 +3,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -57,7 +59,7 @@ import Cardano.Ledger.BaseTypes (
   txIxToInt,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (DRepState, VState (..))
+import Cardano.Ledger.CertState (CommitteeState (..), DRepState, VState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -1688,6 +1690,8 @@ instance PrettyA (GenDelegs c) where
 
 instance PrettyA (DRepState c) where
   prettyA = viaShow
+
+deriving instance PrettyA (CommitteeState era)
 
 instance PrettyA (VState era) where
   prettyA (VState vsDReps vsDRepDistr vsCommitteeHotKeys) =
