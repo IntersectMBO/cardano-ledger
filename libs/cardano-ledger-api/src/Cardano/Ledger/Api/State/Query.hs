@@ -58,6 +58,6 @@ queryConstitution nes =
 queryConstitutionHash ::
   EraGov era =>
   NewEpochState era ->
-  Maybe (SafeHash (EraCrypto era) (AnchorData (EraCrypto era)))
+  Maybe (SafeHash (EraCrypto era) AnchorData)
 queryConstitutionHash nes =
   anchorDataHash . constitutionAnchor <$> queryConstitution nes
