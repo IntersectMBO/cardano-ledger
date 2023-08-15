@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `reDRepState` to `RatifyEnv`
 * Add field `gasId` to `GovActionState`
 * Add `insertGovActionsState`
 * Change type of `rsRemoved` in `RatifyState` to use  `GovActionState` instead of a tuple
@@ -9,6 +10,7 @@
 
 ## 1.7.0.0
 
+* Add `Network` validation for `ProposalProcedure` and `TreasuryWithdrawals` in GOV #3659
 * Make `DELEG`, `POOL` and `GOVCERT` conform to spec-v0.8 #3628
   * Add `CertEnv` and `CertsEnv` to pass `EpochNo` down from `LEDGER` to sub-rules
   * Add `drepDeposit` to `DRepState` to track deposits paid by `DRep`s
