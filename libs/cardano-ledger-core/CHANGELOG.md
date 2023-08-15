@@ -2,6 +2,9 @@
 
 ## 1.5.0.0
 
+* Introduce `CommitteeState` and `csCommitteeCredsL`.
+* Change then name and the type of `vsCommitteeHotKeys` to `vsCommitteeState` and
+  `vsCommitteeHotKeysL` to `vsCommitteeStateL`
 * Add `drepExpiryL` and `drepAnchorL`
 * Add `eraName`
 * Add `addrPtrNormalize`

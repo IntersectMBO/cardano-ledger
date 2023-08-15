@@ -43,14 +43,6 @@ manyCoin size = do
 
 -- ======================================
 
-{- For reference. THis keeps changing
-data VState era
-  = VState {vsDReps :: !(Set (Credential 'Voting (EraCrypto era))),
-            vsCommitteeHotKeys :: !(Map
-                                      (Credential 'CommitteeColdKey (EraCrypto era))
-                                      (Maybe (Credential 'CommitteeHotKey (EraCrypto era))))}
--}
-
 vstatePreds :: Proof era -> [Pred era]
 vstatePreds _p =
   [ Sized (Range 3 8) dreps

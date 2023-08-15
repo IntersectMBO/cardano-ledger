@@ -72,14 +72,14 @@ instance Eq a => FromList (Maybe a) a where
   tsRep (MaybeR z) = z
 
 instance (Ord k, Eq a) => FromList (Map k a) (k, a) where
-  makeFromList xs = Map.fromList xs
-  getList xs = Map.toList xs
+  makeFromList = Map.fromList
+  getList = Map.toList
   tsRep (MapR k v) = PairR k v
 
 -- | CAREFULL HERE, this instance may NOT be size preserving.
 instance Ord a => FromList (Set a) a where
-  makeFromList xs = Set.fromList xs
-  getList xs = Set.toList xs
+  makeFromList = Set.fromList
+  getList = Set.toList
   tsRep (SetR x) = x
 
 -- ================================================
@@ -219,10 +219,10 @@ infixl 0 ^$
 (^$) f x = f :$ Simple x
 
 constTarget :: t -> Target era t
-constTarget t = Constr "constTarget" (const t) ^$ (Lit UnitR ())
+constTarget t = Constr "constTarget" (const t) ^$ Lit UnitR ()
 
 emptyTarget :: Target era ()
-emptyTarget = (Simple (Lit UnitR ()))
+emptyTarget = Simple (Lit UnitR ())
 
 justTarget :: Term era t -> Target era (Maybe t)
 justTarget x = Constr "Just" Just ^$ x
@@ -247,22 +247,22 @@ setToListTarget x = Constr "toList" Set.toList ^$ x
 -- variables but puts no global constraints on them and does not use them to
 -- compute anything. The 'bindN' Target constructors each bind N such variables.
 bind2 :: Term era a1 -> Term era a2 -> Target era ()
-bind2 a b = (Constr "bind2" (\_ _ -> ()) ^$ a ^$ b)
+bind2 a b = Constr "bind2" (\_ _ -> ()) ^$ a ^$ b
 
 bind3 :: Term era a1 -> Term era a2 -> Term era a3 -> Target era ()
-bind3 a b c = (Constr "bind3" (\_ _ _ -> ()) ^$ a ^$ b ^$ c)
+bind3 a b c = Constr "bind3" (\_ _ _ -> ()) ^$ a ^$ b ^$ c
 
 bind4 :: Term era a1 -> Term era a2 -> Term era a3 -> Term era a4 -> Target era ()
-bind4 a b c d = (Constr "bind4" (\_ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d)
+bind4 a b c d = Constr "bind4" (\_ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d
 
 bind5 :: Term era a1 -> Term era a2 -> Term era a3 -> Term era a4 -> Term era a5 -> Target era ()
-bind5 a b c d e = (Constr "bind5" (\_ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e)
+bind5 a b c d e = Constr "bind5" (\_ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e
 
 bind6 :: Term era a1 -> Term era a2 -> Term era a3 -> Term era a4 -> Term era a5 -> Term era a6 -> Target era ()
-bind6 a b c d e f = (Constr "bind5" (\_ _ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e ^$ f)
+bind6 a b c d e f = Constr "bind5" (\_ _ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e ^$ f
 
 bind7 :: Term era a1 -> Term era a2 -> Term era a3 -> Term era a4 -> Term era a5 -> Term era a6 -> Term era a7 -> Target era ()
-bind7 a b c d e f g = (Constr "bind5" (\_ _ _ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e ^$ f ^$ g)
+bind7 a b c d e f g = Constr "bind5" (\_ _ _ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e ^$ f ^$ g
 
 -- ===================================
 
@@ -539,9 +539,7 @@ findV (Subst m) v@(V n1 rep1 _) = case Map.lookup n1 m of
 --  | Not really a composition, just adding 'sub1' to 'sub2', but if any thing
 --    is in both 'sub1' and 'sub2', the 'sub1' binding overrides the 'sub2' binding
 composeSubst :: Subst era -> Subst era -> Subst era
-composeSubst (Subst sub1) (Subst sub2) = Subst (Map.foldrWithKey' accum sub2 sub1)
-  where
-    accum nm x ans = Map.insert nm x ans
+composeSubst (Subst sub1) (Subst sub2) = Subst (Map.foldrWithKey' Map.insert sub2 sub1)
 
 singleSubst :: V era t -> Term era t -> Subst era
 singleSubst (V n r access) expr = Subst (Map.insert n (SubstElem r expr access) Map.empty)

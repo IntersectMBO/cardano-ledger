@@ -51,7 +51,7 @@ data DRepState c = DRepState
   { drepExpiry :: !EpochNo
   , drepAnchor :: !(StrictMaybe (Anchor c))
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoThunks (DRepState era)
 
@@ -105,7 +105,7 @@ accumDRepDistr ::
   Map (Credential 'DRepRole c) (DRepState c) ->
   Map (DRep c) (CompactForm Coin) ->
   Credential 'Staking c ->
-  (CompactForm Coin) ->
+  CompactForm Coin ->
   Map (DRep c) (CompactForm Coin)
 accumDRepDistr um regDreps ans stakecred c =
   case UMap.lookup stakecred (DRepUView um) of
@@ -160,7 +160,7 @@ instance Crypto c => NFData (DRepPulser c Identity (Map (DRep c) (CompactForm Co
 instance Pulsable (DRepPulser c) where
   done (DRepPulser _ _ _ m _) = VMap.null m
   current (DRepPulser _ _ _ _ ans) = ans
-  pulseM (ll@(DRepPulser _ _ _ balance _)) | VMap.null balance = pure ll
+  pulseM ll@(DRepPulser _ _ _ balance _) | VMap.null balance = pure ll
   pulseM (DRepPulser n um regDreps balance ans) =
     let !(!steps, !balance') = VMap.splitAt n balance -- Athough it is initialized as a thunk. We want to force it with each pulse.
         ans' = foldlWithKey (accumDRepDistr um regDreps) ans steps

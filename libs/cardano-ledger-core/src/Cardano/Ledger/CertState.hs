@@ -1,11 +1,12 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -19,6 +20,7 @@ module Cardano.Ledger.CertState (
   FutureGenDeleg (..),
   Anchor (..),
   DRepState (..),
+  CommitteeState (..),
   AnchorData,
   lookupDepositDState,
   lookupRewardDState,
@@ -42,7 +44,8 @@ module Cardano.Ledger.CertState (
   psDepositsL,
   vsDRepsL,
   vsDRepDistrL,
-  vsCommitteeHotKeysL,
+  vsCommitteeStateL,
+  csCommitteeCredsL,
 )
 where
 
@@ -51,7 +54,9 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
+  FromCBOR (..),
   Interns,
+  ToCBOR (..),
   decNoShareCBOR,
   decSharePlusCBOR,
   decSharePlusLensCBOR,
@@ -66,7 +71,7 @@ import Cardano.Ledger.Coin (
   DeltaCoin (..),
  )
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core (Era, EraCrypto, EraPParams, PParams, ppPoolDepositL)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState (..))
@@ -273,7 +278,26 @@ toPStatePair PState {..} =
   , "deposits" .= psDeposits
   ]
 
--- | The state that tracks the voting entities (DReps and Constituional Committe members)
+newtype CommitteeState era = CommitteeState
+  { csCommitteeCreds ::
+      Map
+        (Credential 'ColdCommitteeRole (EraCrypto era))
+        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
+  -- ^ `Nothing` to indicate "resigned".
+  }
+  deriving (Eq, Ord, Show, Generic, NoThunks, NFData, ToExpr, Default)
+
+deriving instance Era era => EncCBOR (CommitteeState era)
+
+deriving instance Era era => DecCBOR (CommitteeState era)
+
+instance Era era => ToCBOR (CommitteeState era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (CommitteeState era) where
+  fromCBOR = fromEraCBOR @era
+
+-- | The state that tracks the voting entities (DReps and Constitutional Committee members)
 --   The 'vsDRepDistr' field is a pulser that incrementally computes the stake distribution of the DReps
 --   over the Epoch following the close of voting at end of the previous Epoch. The pulser is created
 --   at the Epoch boundary, but does no work until it is pulsed in the 'Tick' rule.
@@ -284,11 +308,7 @@ data VState era = VState
           (DRepState (EraCrypto era))
        )
   , vsDRepDistr :: !(DRepDistr (EraCrypto era))
-  , vsCommitteeHotKeys ::
-      !( Map
-          (Credential 'ColdCommitteeRole (EraCrypto era))
-          (Maybe (Credential 'HotCommitteeRole (EraCrypto era))) -- `Nothing` to indicate "resigned".
-       )
+  , vsCommitteeState :: !(CommitteeState era)
   }
   deriving (Show, Eq, Generic)
 
@@ -313,7 +333,7 @@ instance Era era => EncCBOR (VState era) where
       Rec (VState @era)
         !> To vsDReps
         !> To vsDRepDistr
-        !> To vsCommitteeHotKeys
+        !> To vsCommitteeState
 
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
@@ -499,11 +519,14 @@ vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 vsDRepDistrL :: Lens' (VState era) (DRepDistr (EraCrypto era))
 vsDRepDistrL = lens vsDRepDistr (\vs u -> vs {vsDRepDistr = u})
 
-vsCommitteeHotKeysL ::
+vsCommitteeStateL :: Lens' (VState era) (CommitteeState era)
+vsCommitteeStateL = lens vsCommitteeState (\vs u -> vs {vsCommitteeState = u})
+
+csCommitteeCredsL ::
   Lens'
-    (VState era)
+    (CommitteeState era)
     ( Map
         (Credential 'ColdCommitteeRole (EraCrypto era))
         (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
     )
-vsCommitteeHotKeysL = lens vsCommitteeHotKeys (\vs u -> vs {vsCommitteeHotKeys = u})
+csCommitteeCredsL = lens csCommitteeCreds (\cs u -> cs {csCommitteeCreds = u})

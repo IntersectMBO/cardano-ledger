@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Add `queryGovState`, `queryDRepState`, `queryDRepStakeDistr` and `queryCommitteeState`
 * Add `queryConstitution`.
 * Replace `constitutionHash` with `constitutionAnchor`
 * Add `eraName`
