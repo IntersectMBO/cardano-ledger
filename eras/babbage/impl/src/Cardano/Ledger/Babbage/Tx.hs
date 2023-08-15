@@ -69,6 +69,13 @@ instance Crypto c => EraTx (BabbageEra c) where
 
   getMinFeeTx = alonzoMinFeeTx
 
+  upgradeTx (AlonzoTx b w valid aux) =
+    AlonzoTx
+      <$> upgradeTxBody b
+      <*> pure (upgradeTxWits w)
+      <*> pure valid
+      <*> pure (fmap upgradeTxAuxData aux)
+
 instance Crypto c => AlonzoEraTx (BabbageEra c) where
   {-# SPECIALIZE instance AlonzoEraTx (BabbageEra StandardCrypto) #-}
 

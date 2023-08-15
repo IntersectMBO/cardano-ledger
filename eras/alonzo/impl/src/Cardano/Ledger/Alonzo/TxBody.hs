@@ -94,6 +94,8 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
@@ -107,10 +109,11 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update)
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
+import Data.Default.Class (def)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -199,6 +202,50 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
   certsTxBodyL =
     lensMemoRawType atbrCerts (\txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_})
   {-# INLINEABLE certsTxBodyL #-}
+
+  upgradeTxBody
+    MaryTxBody
+      { mtbInputs
+      , mtbOutputs
+      , mtbCerts
+      , mtbWithdrawals
+      , mtbTxFee
+      , mtbValidityInterval
+      , mtbUpdate
+      , mtbAuxDataHash
+      , mtbMint
+      } = do
+      certs <- traverse upgradeTxCert mtbCerts
+      pure $
+        AlonzoTxBody
+          { atbInputs = mtbInputs
+          , atbOutputs = upgradeTxOut <$> mtbOutputs
+          , atbCerts = certs
+          , atbWithdrawals = mtbWithdrawals
+          , atbTxFee = mtbTxFee
+          , atbValidityInterval = mtbValidityInterval
+          , atbUpdate = upgradeUpdate <$> mtbUpdate
+          , atbAuxDataHash = mtbAuxDataHash
+          , atbMint = mtbMint
+          , atbCollateral = mempty
+          , atbReqSignerHashes = mempty
+          , atbScriptIntegrityHash = SNothing
+          , atbTxNetworkId = SNothing
+          }
+      where
+        upgradeUpdate :: Update (MaryEra c) -> Update (AlonzoEra c)
+        upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
+
+        upgradeProposedPPUpdates ::
+          ProposedPPUpdates (MaryEra c) ->
+          ProposedPPUpdates (AlonzoEra c)
+        upgradeProposedPPUpdates (ProposedPPUpdates m) =
+          ProposedPPUpdates $
+            fmap
+              ( \(PParamsUpdate pphkd) ->
+                  PParamsUpdate $ upgradePParamsHKD def pphkd
+              )
+              m
 
 instance Crypto c => ShelleyEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra StandardCrypto) #-}

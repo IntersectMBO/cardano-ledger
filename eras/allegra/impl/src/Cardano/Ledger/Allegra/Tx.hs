@@ -19,11 +19,11 @@ import Cardano.Ledger.Allegra.Scripts (Timelock, evalTimelock)
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
-import Cardano.Ledger.Core (EraTx (..), EraTxWits (..), PhasedScript (..))
+import Cardano.Ledger.Core (EraTx (..), EraTxAuxData (upgradeTxAuxData), EraTxWits (..), PhasedScript (..), upgradeTxBody)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.Tx (
-  ShelleyTx,
+  ShelleyTx (..),
   auxDataShelleyTxL,
   bodyShelleyTxL,
   mkBasicShelleyTx,
@@ -59,6 +59,12 @@ instance Crypto c => EraTx (AllegraEra c) where
   {-# INLINE validateScript #-}
 
   getMinFeeTx = shelleyMinFeeTx
+
+  upgradeTx (ShelleyTx txb txwits txAux) =
+    ShelleyTx
+      <$> upgradeTxBody txb
+      <*> pure (upgradeTxWits txwits)
+      <*> pure (fmap upgradeTxAuxData txAux)
 
 -- =======================================================
 -- Validating timelock scripts

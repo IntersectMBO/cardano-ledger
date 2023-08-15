@@ -14,6 +14,7 @@
 
 module Cardano.Ledger.Conway.TxCert (
   ConwayTxCert (..),
+  ConwayTxCertUpgradeError (..),
   ConwayDelegCert (..),
   ConwayGovCert (..),
   Delegatee (..),
