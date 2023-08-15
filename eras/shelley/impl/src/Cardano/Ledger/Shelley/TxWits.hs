@@ -186,6 +186,8 @@ instance Crypto c => EraTxWits (ShelleyEra c) where
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
+  upgradeTxWits = error "Calling this function will cause a compilation error, since there is no TxWits instance for ByronEra"
+
 instance Era era => Plain.ToCBOR (ShelleyTxWits era) where
   toCBOR (ShelleyTxWitsConstr w) = Plain.encodePreEncoded $ BSL.toStrict $ txWitsBytes w
 

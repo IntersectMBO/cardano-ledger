@@ -123,6 +123,7 @@ import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits (Symbol)
@@ -147,6 +148,9 @@ class
   where
   type Tx era = (r :: Type) | r -> era
 
+  type TxUpgradeError era :: Type
+  type TxUpgradeError era = Void
+
   mkBasicTx :: TxBody era -> Tx era
 
   bodyTxL :: Lens' (Tx era) (TxBody era)
@@ -160,6 +164,11 @@ class
   validateScript :: PhasedScript 'PhaseOne era -> Tx era -> Bool
 
   getMinFeeTx :: PParams era -> Tx era -> Coin
+
+  upgradeTx ::
+    EraTx (PreviousEra era) =>
+    Tx (PreviousEra era) ->
+    Either (TxUpgradeError era) (Tx era)
 
 class
   ( EraTxOut era
@@ -178,6 +187,9 @@ class
   where
   -- | The body of a transaction.
   type TxBody era = (r :: Type) | r -> era
+
+  type TxBodyUpgradeError era :: Type
+  type TxBodyUpgradeError era = Void
 
   mkBasicTxBody :: TxBody era
 
@@ -202,6 +214,22 @@ class
   allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
 
   certsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxCert era))
+
+  -- | Upgrade the transaction body from the previous era.
+  --
+  -- This can fail where elements of the transaction body are deprecated.
+  -- Compare this to `translateEraThroughCBOR`:
+  -- - `upgradeTxBody` will use the Haskell representation, but will not
+  --   preserve the serialised form. However, it will be suitable for iterated
+  --   translation through eras.
+  -- - `translateEraThroughCBOR` will preserve the binary representation, but is
+  --   not guaranteed to work through multiple eras - that is, the serialised
+  --   representation from era n is guaranteed valid in era n + 1, but not
+  --   necessarily in era n + 2.
+  upgradeTxBody ::
+    EraTxBody (PreviousEra era) =>
+    TxBody (PreviousEra era) ->
+    Either (TxBodyUpgradeError era) (TxBody era)
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
@@ -429,6 +457,8 @@ class
   bootAddrTxWitsL :: Lens' (TxWits era) (Set (BootstrapWitness (EraCrypto era)))
 
   scriptTxWitsL :: Lens' (TxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
+
+  upgradeTxWits :: EraTxWits (PreviousEra era) => TxWits (PreviousEra era) -> TxWits era
 
 -- | This is a helper lens that will hash the scripts when adding as witnesses.
 hashScriptTxWitsL ::

@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -24,7 +25,9 @@ module Cardano.Ledger.Alonzo.TxWits (
   Redeemers (Redeemers),
   unRedeemers,
   nullRedeemers,
+  upgradeRedeemers,
   TxDats (TxDats, TxDats'),
+  upgradeTxDats,
   AlonzoTxWits (
     AlonzoTxWits,
     txwitsVKey,
@@ -55,7 +58,7 @@ import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
-import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData)
+import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData, upgradeData)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -84,8 +87,9 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
-import Cardano.Ledger.Shelley.TxWits (keyBy)
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy)
 import Control.DeepSeq (NFData)
+import Data.Bifunctor (Bifunctor (first))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -175,6 +179,18 @@ unRedeemers (Redeemers rs) = rs
 
 nullRedeemers :: Era era => Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
+
+emptyRedeemers :: Era era => Redeemers era
+emptyRedeemers = Redeemers mempty
+
+-- | Upgrade redeemers from one era to another. The underlying data structure
+-- will remain identical, but the memoised serialisation may change to reflect
+-- the versioned serialisation of the new era.
+upgradeRedeemers :: (Era era1, Era era2) => Redeemers era1 -> Redeemers era2
+upgradeRedeemers (Redeemers m) =
+  Redeemers m'
+  where
+    m' = fmap (first upgradeData) m
 
 -- ====================================================================
 -- In the Spec, AlonzoTxWits has 4 logical fields. Here in the implementation
@@ -303,6 +319,15 @@ deriving via
   instance
     Era era => DecCBOR (Annotator (TxDats era))
 
+-- | Upgrade 'TxDats' from one era to another. The underlying data structure
+-- will remain identical, but the memoised serialisation may change to reflect
+-- the versioned serialisation of the new era.
+upgradeTxDats ::
+  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
+  TxDats era1 ->
+  TxDats era2
+upgradeTxDats (TxDats datMap) = TxDats $ fmap upgradeData datMap
+
 -- =====================================================
 -- AlonzoTxWits instances
 
@@ -419,6 +444,9 @@ instance (EraScript (AlonzoEra c), Crypto c) => EraTxWits (AlonzoEra c) where
 
   scriptTxWitsL = scriptAlonzoTxWitsL
   {-# INLINE scriptTxWitsL #-}
+
+  upgradeTxWits (ShelleyTxWits {addrWits, scriptWits, bootWits}) =
+    AlonzoTxWits addrWits bootWits (upgradeScript <$> scriptWits) mempty emptyRedeemers
 
 class EraTxWits era => AlonzoEraTxWits era where
   datsTxWitsL :: Lens' (TxWits era) (TxDats era)
@@ -548,7 +576,6 @@ instance
         []
     where
       emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
-      emptyRedeemers = Redeemers mempty
 
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =

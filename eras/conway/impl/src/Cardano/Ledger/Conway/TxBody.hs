@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -46,10 +47,11 @@ module Cardano.Ledger.Conway.TxBody (
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (
+  BabbageTxBody (..),
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (Network, fromSMaybe)
+import Cardano.Ledger.BaseTypes (Network, fromSMaybe, isSJust)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -77,7 +79,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
+import Cardano.Ledger.Conway.TxCert (ConwayTxCert, ConwayTxCertUpgradeError)
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -100,7 +102,9 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
+import Control.Arrow (left)
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -275,10 +279,18 @@ basicConwayTxBodyRaw =
     SNothing
     mempty
 
+data ConwayTxBodyUpgradeError
+  = CTBUETxCert ConwayTxCertUpgradeError
+  | -- | The TxBody contains an update proposal from a pre-Conway era. Since
+    --   this can only have come from the genesis delegates, we just discard it.
+    CTBUEContainsUpdate
+  deriving (Eq, Show)
+
 instance Crypto c => EraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance EraTxBody (ConwayEra StandardCrypto) #-}
 
   type TxBody (ConwayEra c) = ConwayTxBody (ConwayEra c)
+  type TxBodyUpgradeError (ConwayEra c) = ConwayTxBodyUpgradeError
 
   mkBasicTxBody = mkConwayTxBody
 
@@ -308,6 +320,58 @@ instance Crypto c => EraTxBody (ConwayEra c) where
 
   certsTxBodyL = lensMemoRawType ctbrCerts (\txb x -> txb {ctbrCerts = x})
   {-# INLINE certsTxBodyL #-}
+
+  upgradeTxBody
+    BabbageTxBody
+      { btbInputs
+      , btbOutputs
+      , btbCerts
+      , btbWithdrawals
+      , btbTxFee
+      , btbValidityInterval
+      , btbUpdate
+      , btbAuxDataHash
+      , btbMint
+      , btbCollateral
+      , btbReqSignerHashes
+      , btbScriptIntegrityHash
+      , btbTxNetworkId
+      , btbReferenceInputs
+      , btbCollateralReturn
+      , btbTotalCollateral
+      } = do
+      when (isSJust btbUpdate) $
+        Left CTBUEContainsUpdate
+      certs <- traverse (left CTBUETxCert . upgradeTxCert) btbCerts
+      pure $
+        ConwayTxBody
+          { ctbSpendInputs = btbInputs
+          , ctbOutputs =
+              mkSized (eraProtVerLow @(ConwayEra c))
+                . upgradeTxOut
+                . sizedValue
+                <$> btbOutputs
+          , ctbCerts = certs
+          , ctbWithdrawals = btbWithdrawals
+          , ctbTxfee = btbTxFee
+          , ctbVldt = btbValidityInterval
+          , ctbAdHash = btbAuxDataHash
+          , ctbMint = btbMint
+          , ctbCollateralInputs = btbCollateral
+          , ctbReqSignerHashes = btbReqSignerHashes
+          , ctbScriptIntegrityHash = btbScriptIntegrityHash
+          , ctbTxNetworkId = btbTxNetworkId
+          , ctbReferenceInputs = btbReferenceInputs
+          , ctbCollateralReturn =
+              mkSized (eraProtVerLow @(ConwayEra c))
+                . upgradeTxOut
+                . sizedValue
+                <$> btbCollateralReturn
+          , ctbTotalCollateral = btbTotalCollateral
+          , ctbCurrentTreasuryValue = SNothing
+          , ctbProposalProcedures = mempty
+          , ctbVotingProcedures = VotingProcedures mempty
+          }
 
 instance
   ( Crypto c

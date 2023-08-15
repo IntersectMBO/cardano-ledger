@@ -23,6 +23,7 @@
 module Cardano.Ledger.Alonzo.Scripts.Data (
   Data (Data),
   DataHash,
+  upgradeData,
   hashData,
   getPlutusData,
   dataHashSize,
@@ -76,7 +77,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
-import Data.Coerce
+import Data.Coerce (coerce)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -124,6 +125,12 @@ pattern Data p <- (getMemoRawType -> PlutusData p)
     Data p = mkMemoized $ PlutusData p
 
 {-# COMPLETE Data #-}
+
+-- | Upgrade 'Data' from one era to another. While the underlying data will
+-- remain the same, the memoised serialisation may change to reflect the
+-- versioned serialisation of the new era.
+upgradeData :: (Era era1, Era era2) => Data era1 -> Data era2
+upgradeData (Data d) = Data d
 
 getPlutusData :: Data era -> PV1.Data
 getPlutusData (getMemoRawType -> PlutusData d) = d

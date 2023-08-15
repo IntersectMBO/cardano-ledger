@@ -304,6 +304,8 @@ instance Crypto c => EraTxBody (ShelleyEra c) where
     lensMemoRawType stbrCerts $ \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
+  upgradeTxBody = error "Calling this function will cause a compilation error, since there is no TxBody instance for ByronEra"
+
 instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra StandardCrypto) #-}
 

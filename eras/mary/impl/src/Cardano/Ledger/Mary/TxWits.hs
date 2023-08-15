@@ -2,20 +2,20 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary.TxWits () where
 
-import Cardano.Ledger.Core (EraTxWits (..))
+import Cardano.Ledger.Core (EraTxWits (..), upgradeScript)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Shelley.TxWits (
-  ShelleyTxWits,
+  ShelleyTxWits (..),
   addrShelleyTxWitsL,
   bootAddrShelleyTxWitsL,
   scriptShelleyTxWitsL,
@@ -36,3 +36,6 @@ instance Crypto c => EraTxWits (MaryEra c) where
 
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
+
+  upgradeTxWits (ShelleyTxWits {addrWits, scriptWits, bootWits}) =
+    ShelleyTxWits addrWits (fmap upgradeScript scriptWits) bootWits

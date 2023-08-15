@@ -79,7 +79,6 @@ where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Allegra.Core ()
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraPParams, ppPricesL)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -131,6 +130,7 @@ import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
 import Cardano.Ledger.Language (nonNativeLanguages)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx))
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), unWithdrawals)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UTxO as Shelley
@@ -193,6 +193,13 @@ instance Crypto c => EraTx (AlonzoEra c) where
 
   getMinFeeTx = alonzoMinFeeTx
   {-# INLINE getMinFeeTx #-}
+
+  upgradeTx (ShelleyTx body wits aux) =
+    AlonzoTx
+      <$> upgradeTxBody body
+      <*> pure (upgradeTxWits wits)
+      <*> pure (IsValid True)
+      <*> pure (fmap upgradeTxAuxData aux)
 
 class (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era) => AlonzoEraTx era where
   isValidTxL :: Lens' (Tx era) IsValid
