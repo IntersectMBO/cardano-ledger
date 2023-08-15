@@ -1,6 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -21,6 +20,8 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.TxWits as BabbageTxWitsReExport (
   AlonzoEraTxWits (..),
   AlonzoTxWits (..),
+  upgradeRedeemers,
+  upgradeTxDats,
  )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxBody ()
@@ -42,6 +43,15 @@ instance Crypto c => EraTxWits (BabbageEra c) where
 
   scriptTxWitsL = scriptAlonzoTxWitsL
   {-# INLINE scriptTxWitsL #-}
+
+  upgradeTxWits (AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs}) =
+    AlonzoTxWits
+      { txwitsVKey
+      , txwitsBoot
+      , txscripts = upgradeScript <$> txscripts
+      , txdats = upgradeTxDats txdats
+      , txrdmrs = upgradeRedeemers txrdmrs
+      }
 
 instance Crypto c => AlonzoEraTxWits (BabbageEra c) where
   {-# SPECIALIZE instance AlonzoEraTxWits (BabbageEra StandardCrypto) #-}

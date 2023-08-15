@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -42,7 +43,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxCert ()
 import Cardano.Ledger.Allegra.TxOut ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -72,9 +73,11 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
+  ShelleyTxBody (..),
   Withdrawals (..),
   totalTxDepositsShelley,
  )
@@ -338,6 +341,47 @@ instance Crypto c => EraTxBody (AllegraEra c) where
   certsTxBodyL =
     lensMemoRawType atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
+
+  upgradeTxBody
+    ShelleyTxBody
+      { stbInputs
+      , stbOutputs
+      , stbCerts
+      , stbWithdrawals
+      , stbTxFee
+      , stbTTL
+      , stbUpdate
+      , stbMDHash
+      } = do
+      certs <- traverse upgradeTxCert stbCerts
+      pure $
+        AllegraTxBody
+          { atbInputs = stbInputs
+          , atbOutputs = upgradeTxOut <$> stbOutputs
+          , atbCerts = certs
+          , atbWithdrawals = stbWithdrawals
+          , atbTxFee = stbTxFee
+          , atbValidityInterval = ttlToValidityInterval stbTTL
+          , atbUpdate = fmap upgradeUpdate stbUpdate
+          , atbAuxDataHash = stbMDHash
+          }
+      where
+        ttlToValidityInterval :: SlotNo -> ValidityInterval
+        ttlToValidityInterval ttl = ValidityInterval SNothing (SJust ttl)
+
+        upgradeUpdate :: Update (ShelleyEra c) -> Update (AllegraEra c)
+        upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
+
+        upgradeProposedPPUpdates ::
+          ProposedPPUpdates (ShelleyEra c) ->
+          ProposedPPUpdates (AllegraEra c)
+        upgradeProposedPPUpdates (ProposedPPUpdates m) =
+          ProposedPPUpdates $
+            fmap
+              ( \(PParamsUpdate pphkd) ->
+                  PParamsUpdate $ upgradePParamsHKD () pphkd
+              )
+              m
 
 instance Crypto c => ShelleyEraTxBody (AllegraEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AllegraEra StandardCrypto) #-}

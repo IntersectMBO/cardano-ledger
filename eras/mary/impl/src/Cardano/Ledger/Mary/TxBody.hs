@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -34,6 +35,7 @@ module Cardano.Ledger.Mary.TxBody (
 )
 where
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
@@ -56,7 +58,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (Update))
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
@@ -255,6 +257,45 @@ instance Crypto c => EraTxBody (MaryEra c) where
   certsTxBodyL =
     lensMaryTxBodyRaw atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
+
+  upgradeTxBody
+    AllegraTxBody
+      { atbInputs
+      , atbOutputs
+      , atbCerts
+      , atbWithdrawals
+      , atbTxFee
+      , atbValidityInterval
+      , atbUpdate
+      , atbAuxDataHash
+      } = do
+      certs <- traverse upgradeTxCert atbCerts
+      pure $
+        MaryTxBody
+          { mtbInputs = atbInputs
+          , mtbOutputs = upgradeTxOut <$> atbOutputs
+          , mtbCerts = certs
+          , mtbWithdrawals = atbWithdrawals
+          , mtbTxFee = atbTxFee
+          , mtbValidityInterval = atbValidityInterval
+          , mtbUpdate = fmap upgradeUpdate atbUpdate
+          , mtbAuxDataHash = atbAuxDataHash
+          , mtbMint = mempty
+          }
+      where
+        upgradeUpdate :: Update (AllegraEra c) -> Update (MaryEra c)
+        upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
+
+        upgradeProposedPPUpdates ::
+          ProposedPPUpdates (AllegraEra c) ->
+          ProposedPPUpdates (MaryEra c)
+        upgradeProposedPPUpdates (ProposedPPUpdates m) =
+          ProposedPPUpdates $
+            fmap
+              ( \(PParamsUpdate pphkd) ->
+                  PParamsUpdate $ upgradePParamsHKD () pphkd
+              )
+              m
 
 instance Crypto c => ShelleyEraTxBody (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (MaryEra StandardCrypto) #-}

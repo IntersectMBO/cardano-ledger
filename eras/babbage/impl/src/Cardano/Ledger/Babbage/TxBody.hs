@@ -108,11 +108,13 @@ module Cardano.Ledger.Babbage.TxBody (
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
   AllegraEraTxBody (..),
   AlonzoEraTxBody (..),
+  AlonzoTxBody (..),
   MaryEraTxBody (..),
   ShelleyEraTxBody (..),
  )
@@ -151,7 +153,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
@@ -409,6 +411,57 @@ instance Crypto c => EraTxBody (BabbageEra c) where
 
   certsTxBodyL = certsBabbageTxBodyL
   {-# INLINE certsTxBodyL #-}
+
+  upgradeTxBody
+    AlonzoTxBody
+      { atbInputs
+      , atbOutputs
+      , atbCerts
+      , atbWithdrawals
+      , atbTxFee
+      , atbValidityInterval
+      , atbUpdate
+      , atbAuxDataHash
+      , atbMint
+      , atbCollateral
+      , atbReqSignerHashes
+      , atbScriptIntegrityHash
+      , atbTxNetworkId
+      } = do
+      certs <- traverse upgradeTxCert atbCerts
+      pure $
+        BabbageTxBody
+          { btbInputs = atbInputs
+          , btbOutputs = mkSized (eraProtVerLow @(BabbageEra c)) . upgradeTxOut <$> atbOutputs
+          , btbCerts = certs
+          , btbWithdrawals = atbWithdrawals
+          , btbTxFee = atbTxFee
+          , btbValidityInterval = atbValidityInterval
+          , btbUpdate = upgradeUpdate <$> atbUpdate
+          , btbAuxDataHash = atbAuxDataHash
+          , btbMint = atbMint
+          , btbCollateral = atbCollateral
+          , btbReqSignerHashes = atbReqSignerHashes
+          , btbScriptIntegrityHash = atbScriptIntegrityHash
+          , btbTxNetworkId = atbTxNetworkId
+          , btbReferenceInputs = mempty
+          , btbCollateralReturn = SNothing
+          , btbTotalCollateral = SNothing
+          }
+      where
+        upgradeUpdate :: Update (AlonzoEra c) -> Update (BabbageEra c)
+        upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
+
+        upgradeProposedPPUpdates ::
+          ProposedPPUpdates (AlonzoEra c) ->
+          ProposedPPUpdates (BabbageEra c)
+        upgradeProposedPPUpdates (ProposedPPUpdates m) =
+          ProposedPPUpdates $
+            fmap
+              ( \(PParamsUpdate pphkd) ->
+                  PParamsUpdate $ upgradePParamsHKD () pphkd
+              )
+              m
 
 instance Crypto c => ShelleyEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (BabbageEra StandardCrypto) #-}

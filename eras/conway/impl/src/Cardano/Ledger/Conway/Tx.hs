@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Tx (
@@ -37,6 +38,7 @@ instance Crypto c => EraTx (ConwayEra c) where
   {-# SPECIALIZE instance EraTx (ConwayEra StandardCrypto) #-}
 
   type Tx (ConwayEra c) = AlonzoTx (ConwayEra c)
+  type TxUpgradeError (ConwayEra c) = TxBodyUpgradeError (ConwayEra c)
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -56,6 +58,13 @@ instance Crypto c => EraTx (ConwayEra c) where
   {-# INLINE validateScript #-}
 
   getMinFeeTx = alonzoMinFeeTx
+
+  upgradeTx (AlonzoTx b w valid aux) =
+    AlonzoTx
+      <$> upgradeTxBody b
+      <*> pure (upgradeTxWits w)
+      <*> pure valid
+      <*> pure (fmap upgradeTxAuxData aux)
 
 instance Crypto c => AlonzoEraTx (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTx (ConwayEra StandardCrypto) #-}
