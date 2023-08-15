@@ -24,7 +24,7 @@ where
 
 import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
+import Cardano.Ledger.CertState (certDStateL, dsUnifiedL, vsDRepsL)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
@@ -254,6 +254,7 @@ epochTransition = do
         , reStakePoolDistr = stakePoolDistr
         , reDRepDistr = drepDistr
         , reCurrentEpoch = eNo
+        , reDRepState = vstate ^. vsDRepsL
         }
     ratSig =
       RatifySignal . Seq.fromList . Map.elems . unGovActionsState $

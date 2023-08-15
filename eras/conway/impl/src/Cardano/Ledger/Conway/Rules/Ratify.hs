@@ -22,6 +22,7 @@ module Cardano.Ledger.Conway.Rules.Ratify (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (DRepState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
@@ -58,6 +59,7 @@ data RatifyEnv era = RatifyEnv
   { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
   , reStakePoolDistr :: !(PoolDistr (EraCrypto era))
   , reDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
+  , reDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
   , reCurrentEpoch :: !EpochNo
   }
   deriving (Show)

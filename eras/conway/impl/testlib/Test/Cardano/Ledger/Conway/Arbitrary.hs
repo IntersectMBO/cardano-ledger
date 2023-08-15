@@ -117,6 +117,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Crypto (EraCrypto era) => Arbitrary (Constitution era) where
   arbitrary = Constitution <$> arbitrary <*> arbitrary
