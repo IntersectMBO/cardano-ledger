@@ -14,12 +14,14 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
   ShelleyPoolreapEvent (..),
   ShelleyPoolreapState (..),
+  ShelleyPoolreapEnv (..),
   PredicateFailure,
   ShelleyPoolreapPredFailure,
 )
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (VState)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -63,6 +65,15 @@ data ShelleyPoolreapState era = PoolreapState
   , prPState :: PState era
   }
 
+newtype ShelleyPoolreapEnv era = ShelleyPoolreapEnv
+  { speVState :: VState era
+  -- ^ This enviroment field is only needed for assertions.
+  }
+
+deriving stock instance Eq (PParams era) => Eq (ShelleyPoolreapEnv era)
+
+deriving stock instance Show (PParams era) => Show (ShelleyPoolreapEnv era)
+
 deriving stock instance Show (UTxOState era) => Show (ShelleyPoolreapState era)
 
 data ShelleyPoolreapPredFailure era -- No predicate failures
@@ -82,7 +93,7 @@ instance Default (UTxOState era) => Default (ShelleyPoolreapState era) where
 instance (Default (ShelleyPoolreapState era), EraPParams era) => STS (ShelleyPOOLREAP era) where
   type State (ShelleyPOOLREAP era) = ShelleyPoolreapState era
   type Signal (ShelleyPOOLREAP era) = EpochNo
-  type Environment (ShelleyPOOLREAP era) = PParams era
+  type Environment (ShelleyPOOLREAP era) = ShelleyPoolreapEnv era
   type BaseM (ShelleyPOOLREAP era) = ShelleyBase
   type PredicateFailure (ShelleyPOOLREAP era) = ShelleyPoolreapPredFailure era
   type Event (ShelleyPOOLREAP era) = ShelleyPoolreapEvent era
@@ -90,8 +101,9 @@ instance (Default (ShelleyPoolreapState era), EraPParams era) => STS (ShelleyPOO
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation (PoolReap)"
-        ( \(TRC (_, _, _)) st ->
-            obligationCertState (CertState def (prPState st) (prDState st)) == utxosDeposited (prUTxOSt st)
+        ( \(TRC (e, _, _)) st ->
+            obligationCertState (CertState (speVState e) (prPState st) (prDState st))
+              == utxosDeposited (prUTxOSt st)
         )
     , PostCondition
         "PoolReap may not create or remove reward accounts"
@@ -103,7 +115,7 @@ instance (Default (ShelleyPoolreapState era), EraPParams era) => STS (ShelleyPOO
 
 poolReapTransition :: forall era. TransitionRule (ShelleyPOOLREAP era)
 poolReapTransition = do
-  TRC (_pp, PoolreapState us a ds ps, e) <- judgmentContext
+  TRC (_, PoolreapState us a ds ps, e) <- judgmentContext
 
   let
     -- The set of pools retiring this epoch

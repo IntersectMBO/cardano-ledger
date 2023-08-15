@@ -47,6 +47,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types (esAccountStateL, prevPParamsEpo
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
+  ShelleyPoolreapEnv (..),
   ShelleyPoolreapEvent,
   ShelleyPoolreapPredFailure,
   ShelleyPoolreapState (..),
@@ -116,7 +117,7 @@ instance
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ PParams era
+  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
@@ -151,7 +152,7 @@ epochTransition ::
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ PParams era
+  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
@@ -190,7 +191,7 @@ epochTransition = do
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
     trans @(EraRule "POOLREAP" era) $
-      TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
+      TRC (ShelleyPoolreapEnv vstate, PoolreapState utxoSt acnt dstate pstate', e)
 
   let adjustedCertState = CertState vstate pstate'' dstate'
       epochState' =
