@@ -101,24 +101,115 @@ specScriptUpgrade =
       Right (curScript :: Script era) ->
         curScript `shouldBe` upgradeScript prevScript
 
+specTxWitsUpgrade ::
+  forall era t.
+  ( EraTxWits (PreviousEra era)
+  , EraTxWits era
+  , t era ~ TxWits era
+  , Memoized t
+  , Eq (RawType t era)
+  , ToExpr (RawType t era)
+  , Arbitrary (TxWits (PreviousEra era))
+  , HasCallStack
+  ) =>
+  Spec
+specTxWitsUpgrade =
+  prop "upgradeTxWits is preserved through serialization" $ \prevTxWits -> do
+    case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTxWits of
+      Left err ->
+        expectationFailure $
+          "Expected to deserialize: =======================================================\n"
+            ++ show err
+      Right (curTxWits :: TxWits era) ->
+        -- We need to do all this MemoBytes trickery because underlying bytes and thus the
+        -- equality of the same type will no longer be the same, despite that the value will
+        zipMemoRawType @t @t expectExprEqual curTxWits (upgradeTxWits prevTxWits)
+
+specTxBodyUpgrade ::
+  forall era t.
+  ( EraTxBody (PreviousEra era)
+  , EraTxBody era
+  , t era ~ TxBody era
+  , Memoized t
+  , Eq (RawType t era)
+  , ToExpr (RawType t era)
+  , Arbitrary (TxBody (PreviousEra era))
+  , HasCallStack
+  ) =>
+  Spec
+specTxBodyUpgrade =
+  prop "upgradeTxBody is preserved through serialization" $ \prevTxBody -> do
+    case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTxBody of
+      Left err
+        | Right _ <- upgradeTxBody prevTxBody ->
+            -- We expect deserialization to succeed, when upgrade is possible
+            expectationFailure $
+              "Expected to deserialize: =======================================================\n"
+                ++ show err
+        | otherwise -> pure () -- Both upgrade and deserializer fail successfully
+      Right (curTxBody :: TxBody era)
+        | Right upgradedTxBody <- upgradeTxBody prevTxBody ->
+            -- We need to do all this MemoBytes trickery because underlying bytes and thus the
+            -- equality of the same type will no longer be the same, despite that the value will
+            zipMemoRawType @t @t expectExprEqual curTxBody upgradedTxBody
+        | otherwise -> expectationFailure "Expected upgradeTxBody to succeed"
+
+specTxUpgrade ::
+  forall era t.
+  ( EraTx (PreviousEra era)
+  , EraTx era
+  , t era ~ Tx era
+  , Memoized t
+  , Eq (RawType t era)
+  , ToExpr (RawType t era)
+  , Arbitrary (Tx (PreviousEra era))
+  , HasCallStack
+  ) =>
+  Spec
+specTxUpgrade =
+  prop "upgradeTx is preserved through serialization" $ \prevTx -> do
+    case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTx of
+      Left err
+        | Right _ <- upgradeTx prevTx ->
+            -- We expect deserialization to succeed, when upgrade is possible
+            expectationFailure $
+              "Expected to deserialize: =======================================================\n"
+                ++ show err
+        | otherwise -> pure () -- Both upgrade and deserializer fail successfully
+      Right (curTx :: Tx era)
+        | Right upgradedTx <- upgradeTx prevTx ->
+            -- We need to do all this MemoBytes trickery because underlying bytes and thus the
+            -- equality of the same type will no longer be the same, despite that the value will
+            zipMemoRawType @t @t expectExprEqual curTx upgradedTx
+        | otherwise -> expectationFailure "Expected upgradeTx to succeed"
+
 specUpgrade ::
-  forall era txAuxData.
-  ( EraTxOut (PreviousEra era)
-  , EraTxOut era
-  , Arbitrary (TxOut (PreviousEra era))
-  , EraTxCert (PreviousEra era)
-  , EraTxCert era
+  forall era txAuxData txWits txBody tx.
+  ( Arbitrary (TxOut (PreviousEra era))
   , Arbitrary (TxCert (PreviousEra era))
-  , EraTxAuxData (PreviousEra era)
-  , EraTxAuxData era
   , txAuxData era ~ TxAuxData era -- See specTxAuxDataUpgrade for `txAuxData` explanation.
   , Memoized txAuxData
   , Eq (RawType txAuxData era)
   , ToExpr (RawType txAuxData era)
   , Arbitrary (TxAuxData (PreviousEra era))
-  , EraScript (PreviousEra era)
-  , EraScript era
   , Arbitrary (Script (PreviousEra era))
+  , Arbitrary (TxWits (PreviousEra era))
+  , txWits era ~ TxWits era
+  , Memoized txWits
+  , Eq (RawType txWits era)
+  , ToExpr (RawType txWits era)
+  , Arbitrary (TxBody (PreviousEra era))
+  , txBody era ~ TxBody era
+  , Memoized txBody
+  , Eq (RawType txBody era)
+  , ToExpr (RawType txBody era)
+  , EraTx (PreviousEra era)
+  , EraTx era
+  , Arbitrary (Tx (PreviousEra era))
+  , tx era ~ Tx era
+  , Memoized tx
+  , Eq (RawType tx era)
+  , ToExpr (RawType tx era)
   , HasCallStack
   ) =>
   Bool ->
@@ -128,5 +219,8 @@ specUpgrade isScriptUpgradeable =
     specTxOutUpgrade @era
     specTxCertUpgrade @era
     specTxAuxDataUpgrade @era @txAuxData
+    specTxWitsUpgrade @era @txWits
+    specTxBodyUpgrade @era @txBody
+    specTxUpgrade @era
     when isScriptUpgradeable $
       specScriptUpgrade @era

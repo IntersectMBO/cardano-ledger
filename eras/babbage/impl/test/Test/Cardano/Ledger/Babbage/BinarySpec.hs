@@ -8,4 +8,9 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary as UpgradeSpec
 
 spec :: Spec
-spec = specUpgrade @Babbage @AlonzoTxAuxData True
+spec =
+  specUpgrade @Babbage @AlonzoTxAuxData
+    @BabbageTxWits
+    @BabbageTxbody
+    @AlonzoTx
+    True
