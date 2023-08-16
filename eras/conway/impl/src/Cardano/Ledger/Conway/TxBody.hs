@@ -106,6 +106,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (left)
@@ -120,7 +121,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
-import Cardano.Ledger.TreeDiff (ToExpr)
 
 instance Memoized ConwayTxBody where
   type RawType ConwayTxBody = ConwayTxBodyRaw
