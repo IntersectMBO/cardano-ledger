@@ -99,7 +99,7 @@ spoThreshold :: Rational
 spoThreshold = 51 % 100
 
 dRepThreshold :: Rational
-dRepThreshold = 0
+dRepThreshold = 51 % 100
 
 epochsToExpire :: EpochNo
 epochsToExpire = 30

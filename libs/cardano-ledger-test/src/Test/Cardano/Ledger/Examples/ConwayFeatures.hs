@@ -4,10 +4,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -31,7 +29,7 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Block (txid)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -84,7 +82,6 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxBodyField (..),
   TxOutField (..),
  )
-import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
@@ -99,6 +96,7 @@ import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import Cardano.Ledger.DRepDistr (DRepDistr (..))
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 
 stakeKeyHash :: forall era. Era era => Proof era -> KeyHash 'Staking (EraCrypto era)
@@ -106,6 +104,12 @@ stakeKeyHash _pf = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
 
 stakePoolKeys :: forall era. Era era => Proof era -> KeyPair 'StakePool (EraCrypto era)
 stakePoolKeys _pf = mkKeyPair' @(EraCrypto era) (RawSeed 0 0 0 0 20)
+
+drepKeys :: forall era. Era era => Proof era -> KeyPair 'DRepRole (EraCrypto era)
+drepKeys _pf = mkKeyPair' @(EraCrypto era) (RawSeed 0 0 0 0 30)
+
+drepCredential :: forall era. Era era => Proof era -> Credential 'DRepRole (EraCrypto era)
+drepCredential pf = KeyHashObj . hashKey . vKey $ drepKeys pf
 
 stakePoolKeyHash :: forall era. Era era => Proof era -> KeyHash 'StakePool (EraCrypto era)
 stakePoolKeyHash pf = hashKey . vKey $ stakePoolKeys pf
@@ -166,6 +170,7 @@ voteYes pf govActionId =
   VotingProcedures $
     Map.fromList
       [ (StakePoolVoter (stakePoolKeyHash pf), Map.fromList [(govActionId, VotingProcedure VoteYes SNothing)])
+      , (DRepVoter (drepCredential pf), Map.fromList [(govActionId, VotingProcedure VoteYes SNothing)])
       ]
 
 govActionState :: ProposalProcedure era -> GovActionState era
@@ -179,12 +184,12 @@ govActionState ProposalProcedure {..} =
     pProcGovAction
     (EpochNo 0)
 
-govActionStateWithVote :: ProposalProcedure era -> KeyHash 'StakePool (EraCrypto era) -> Vote -> GovActionState era
-govActionStateWithVote ProposalProcedure {..} kh v =
+govActionStateWithYesVotes :: Scriptic era => Proof era -> ProposalProcedure era -> GovActionState era
+govActionStateWithYesVotes pf ProposalProcedure {..} =
   GovActionState
     mempty
-    mempty
-    (Map.fromList [(kh, v)])
+    (Map.fromList [(drepCredential pf, VoteYes)])
+    (Map.fromList [(stakePoolKeyHash pf, VoteYes)])
     pProcDeposit
     pProcReturnAddr
     pProcGovAction
@@ -215,7 +220,7 @@ proposalDeposit :: Integer
 proposalDeposit = 10
 
 expectRight :: Show a => String -> Either a b -> b
-expectRight msg = either (error msg . show) id
+expectRight msg = either (\x -> error (msg <> show x)) id
 
 proposal :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 proposal pf =
@@ -297,7 +302,7 @@ vote pf govActionId =
           , ofRefInputs = []
           , ofCollateral = []
           }
-    , keysForAddrWits = [KeyPairPayment (keys2 pf), KeyPairStakePool (stakePoolKeys pf)]
+    , keysForAddrWits = [KeyPairPayment (keys2 pf), KeyPairStakePool (stakePoolKeys pf), KeyPairDRep (drepKeys pf)]
     , otherWitsFields = []
     }
 
@@ -336,7 +341,7 @@ testGov pf = do
 
   let
     voteTx = txFromTestCaseData pf (vote pf govActionId)
-    gas = govActionStateWithVote (newConstitutionProposal pf) (stakePoolKeyHash pf) VoteYes
+    gas = govActionStateWithYesVotes pf (newConstitutionProposal pf)
     expectedGovState1 = GovActionsState $ Map.fromList [(govActionId, gas)]
     expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgRatifyStateL)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 (pp pf) (trustMeP pf True voteTx)
@@ -346,10 +351,12 @@ testGov pf = do
   assertEqual "govState after vote" govState1 expectedGov1
 
   let
+    drepDistr = DRComplete $ Map.fromList [(DRepCredential (drepCredential pf), CompactCoin 1000)]
     epochState0 =
       (def :: EpochState era)
         & curPParamsEpochStateL .~ pp pf
         & esLStateL .~ ledgerState1
+        & epochStateDRepDistrL .~ drepDistr
     poolDistr =
       PoolDistr
         ( Map.fromList
