@@ -1,5 +1,9 @@
 # Changelog for `cardano-ledger-pretty`
 
+## 1.3.0.1
+
+*
+
 ## 1.3.0.0
 
 * Add `PrettyA` instance for `DRepState`

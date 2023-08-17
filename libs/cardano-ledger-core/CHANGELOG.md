@@ -1,7 +1,12 @@
 # Version history for `cardano-ledger-core`
 
+## 1.6.0.0
+
+*
+
 ## 1.5.0.0
 
+* Add `drepDeposit` to the `DRepState` #3628
 * Introduce `CommitteeState` and `csCommitteeCredsL`.
 * Change then name and the type of `vsCommitteeHotKeys` to `vsCommitteeState` and
   `vsCommitteeHotKeysL` to `vsCommitteeStateL`

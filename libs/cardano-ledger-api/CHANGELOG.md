@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.4.0.1
+
+*
+
 ## 1.4.0.0
 
 * Add `queryGovState`, `queryDRepState`, `queryDRepStakeDistr` and `queryCommitteeState`
