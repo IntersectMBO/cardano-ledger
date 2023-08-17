@@ -18,22 +18,22 @@ where
 
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Network (..),
   StrictMaybe (..),
   mkTxIx,
-  natVersion,
   textToUrl,
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Conway.Core (ConwayEraTxBody)
+import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ConwayEraTxBody, ppDRepActivityL)
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.DRepDistr (DRepDistr (..))
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
@@ -45,7 +45,6 @@ import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.API (
   Hash,
   PoolDistr (..),
-  ProtVer (..),
   VerKeyVRF,
   hashVerKeyVRF,
  )
@@ -62,7 +61,6 @@ import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import GHC.Stack
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1V2CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Examples.BabbageFeatures (
   InitOutputs (..),
@@ -78,7 +76,6 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   trustMeP,
  )
 import Test.Cardano.Ledger.Generic.Fields (
-  PParamsField (..),
   TxBodyField (..),
   TxOutField (..),
  )
@@ -95,9 +92,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Tasty
 import Test.Tasty.HUnit
-
-import Cardano.Ledger.DRepDistr (DRepDistr (..))
-import Test.Cardano.Ledger.Generic.PrettyCore ()
 
 stakeKeyHash :: forall era. Era era => Proof era -> KeyHash 'Staking (EraCrypto era)
 stakeKeyHash _pf = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
@@ -204,19 +198,8 @@ govActionStateWithYesVotes gaid pf ProposalProcedure {..} =
 spoThreshold :: Rational
 spoThreshold = 51 % 100 + 1 % 100000000000
 
-defaultPPs :: [PParamsField era]
-defaultPPs =
-  [ Costmdls freeV1V2CostModels
-  , MaxValSize 1000000000
-  , MaxTxExUnits $ ExUnits 1000000 1000000
-  , MaxBlockExUnits $ ExUnits 1000000 1000000
-  , ProtocolVersion $ ProtVer (natVersion @7) 0
-  , CollateralPercentage 1
-  , AdaPerUTxOByte (CoinPerByte (Coin 5))
-  ]
-
-pp :: EraPParams era => Proof era -> PParams era
-pp pf = newPParams pf defaultPPs
+pp :: ConwayEraPParams era => PParams era
+pp = emptyPParams & ppMaxValSizeL .~ 1000000000 & ppDRepActivityL .~ 100
 
 fee :: Integer
 fee = 5
@@ -287,7 +270,15 @@ secondProposal pf govActionId =
     , otherWitsFields = []
     }
 
-vote :: forall era. (Scriptic era, EraTxBody era) => Proof era -> GovActionId (EraCrypto era) -> TestCaseData era
+vote ::
+  forall era.
+  ( Scriptic era
+  , EraTxBody era
+  , TxCert era ~ ConwayTxCert era
+  ) =>
+  Proof era ->
+  GovActionId (EraCrypto era) ->
+  TestCaseData era
 vote pf govActionId =
   TestCaseData
     { txBody =
@@ -300,6 +291,7 @@ vote pf govActionId =
               ]
           , Txfee (Coin fee)
           , GovProcs (GovProcedures (voteYes pf govActionId) Seq.empty)
+          , Certs' [ConwayTxCertGov (ConwayRegDRep (drepCredential pf) (Coin 0) SNothing)]
           ]
     , initOutputs =
         InitOutputs
@@ -323,6 +315,8 @@ testGov ::
   , ConwayEraTxBody era
   , EraGov era
   , GovState era ~ ConwayGovState era
+  , TxCert era ~ ConwayTxCert era
+  , ConwayEraPParams era
   ) =>
   Proof era ->
   Assertion
@@ -330,7 +324,7 @@ testGov pf = do
   let
     (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
     initialGov = def
-    initialLedgerState = LedgerState (smartUTxOState (pp pf) utxo0 (Coin 0) (Coin 0) initialGov zero) def
+    initialLedgerState = LedgerState (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero) def
 
     proposalTx = txFromTestCaseData pf (proposal pf)
 
@@ -342,7 +336,7 @@ testGov pf = do
           ]
     expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgRatifyStateL)
 
-    eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState (pp pf) (trustMeP pf True proposalTx)
+    eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState pp (trustMeP pf True proposalTx)
     ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) =
       expectRight "Error running LEDGER when proposing: " eitherLedgerState0
 
@@ -353,7 +347,7 @@ testGov pf = do
     gas = govActionStateWithYesVotes govActionId pf (newConstitutionProposal pf)
     expectedGovState1 = GovActionsState $ Map.fromList [(govActionId, gas)]
     expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgRatifyStateL)
-    eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 (pp pf) (trustMeP pf True voteTx)
+    eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 pp (trustMeP pf True voteTx)
     ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) =
       expectRight "Error running LEDGER when voting: " eitherLedgerState1
 
@@ -363,7 +357,7 @@ testGov pf = do
     drepDistr = DRComplete $ Map.fromList [(DRepCredential (drepCredential pf), CompactCoin 1000)]
     epochState0 =
       (def :: EpochState era)
-        & curPParamsEpochStateL .~ pp pf
+        & curPParamsEpochStateL .~ pp
         & esLStateL .~ ledgerState1
         & epochStateDRepDistrL .~ drepDistr
     poolDistr =
@@ -400,7 +394,7 @@ testGov pf = do
       ConwayGovState
         expectedGovActionsState2
         (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgRatifyStateL)
-    eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 (pp pf) (trustMeP pf True secondProposalTx)
+    eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 pp (trustMeP pf True secondProposalTx)
     ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) =
       expectRight "Error running LEDGER when proposing:" eitherLedgerState3
 

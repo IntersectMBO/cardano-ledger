@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Conway.RatifySpec (spec) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Governance (
@@ -18,6 +18,8 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules (RatifyEnv (..), dRepAccepted, dRepAcceptedRatio)
 import Cardano.Ledger.Core
+import Cardano.Ledger.DRepDistr (DRepState (..))
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
@@ -68,8 +70,18 @@ drepsProp =
               votes = Map.union votesYes $ Map.union votesNo votesAbstain
 
               CompactCoin totalStake = fold dRepDistr
+              ratifyEnv =
+                RatifyEnv
+                  { reStakeDistr = Map.empty
+                  , reStakePoolDistr = PoolDistr Map.empty
+                  , reDRepDistr = dRepDistr
+                  , reDRepState =
+                      Map.fromList
+                        [(cred, DRepState (EpochNo 100) SNothing mempty) | DRepCredential cred <- Map.keys dRepDistr]
+                  , reCurrentEpoch = EpochNo 0
+                  }
 
-              actual = dRepAcceptedRatio @era dRepDistr votes InfoAction
+              actual = dRepAcceptedRatio @era ratifyEnv votes InfoAction
               expected
                 | totalStake == stakeAbstain + stakeAlwaysAbstain = 0
                 | otherwise = toInteger stakeYes % toInteger (totalStake - stakeAbstain - stakeAlwaysAbstain)
@@ -81,7 +93,7 @@ drepsProp =
                 | otherwise = toInteger stakeYes % toInteger (stakeYes + stakeNo + notVotedStake + stakeAlwaysNoConfidence)
           actual `shouldBe` expectedRephrased
 
-          let actualNoConfidence = dRepAcceptedRatio @era dRepDistr votes (NoConfidence SNothing)
+          let actualNoConfidence = dRepAcceptedRatio @era ratifyEnv votes (NoConfidence SNothing)
               expectedNoConfidence
                 | totalStake == stakeAbstain + stakeAlwaysAbstain = 0
                 | otherwise = toInteger (stakeYes + stakeAlwaysNoConfidence) % toInteger (totalStake - stakeAbstain - stakeAlwaysAbstain)
