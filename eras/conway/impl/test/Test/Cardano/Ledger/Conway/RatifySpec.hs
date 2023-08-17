@@ -53,9 +53,10 @@ drepsProp =
       forAll (drepsTestData @era ratios) $
         \(DRepTestData {..}) -> do
           let drepState =
+                -- non-expired (active) dReps
                 Map.fromList
                   [(cred, DRepState (EpochNo 100) SNothing mempty) | DRepCredential cred <- Map.keys distr]
-              ratifyEnv = emptyRatifyEnv {reDRepDistr = distr, reDRepState = drepState}
+              ratifyEnv = (emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = drepState}
               actual = dRepAcceptedRatio @era ratifyEnv votes InfoAction
               -- Check the accepted min ratio is : yes/(total - abstain), or zero if everyone abstained
               expected
@@ -76,26 +77,58 @@ drepsProp =
                 | otherwise = unCoin (stakeYes <+> stakeNoConfidence) % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
           actualNoConfidence `shouldBe` expectedNoConfidence
 
+          let allExpiredDreps =
+                Map.fromList
+                  [(cred, DRepState (EpochNo 9) SNothing mempty) | DRepCredential cred <- Map.keys distr]
+              actualAllExpired =
+                dRepAcceptedRatio @era
+                  ((emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = allExpiredDreps, reCurrentEpoch = EpochNo 10})
+                  votes
+                  InfoAction
+          actualAllExpired `shouldBe` 0
+
+          -- Expire half of the DReps and check that the ratio is the same as if only the active DReps exist
+          let (activeDreps, expiredDreps) = splitAt (length distr `div` 2) (Map.keys distr)
+              activeDrepsState =
+                Map.fromList
+                  [(cred, DRepState (EpochNo 10) SNothing mempty) | DRepCredential cred <- activeDreps]
+              expiredDrepsState =
+                Map.fromList
+                  [(cred, DRepState (EpochNo 3) SNothing mempty) | DRepCredential cred <- expiredDreps]
+              someExpiredDrepsState = activeDrepsState `Map.union` expiredDrepsState
+
+              actualSomeExpired =
+                dRepAcceptedRatio @era
+                  ((emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = someExpiredDrepsState, reCurrentEpoch = EpochNo 5})
+                  (votes `Map.union` Map.fromList [(cred, VoteYes) | DRepCredential cred <- expiredDreps])
+                  InfoAction
+
+          actualSomeExpired
+            `shouldBe` dRepAcceptedRatio @era
+              ((emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = activeDrepsState, reCurrentEpoch = EpochNo 5})
+              votes
+              InfoAction
+
 drepsPropAllAbstain :: forall era. Era era => Spec
 drepsPropAllAbstain =
   prop "If all votes are abstain, accepted ratio is zero" $
     forAll (drepsTestData @era (Ratios {yes = 0, no = 0, abstain = 50 % 100, alwaysAbstain = 50 % 100, noConfidence = 0})) $
       \drepTestData ->
-        acceptedRatio drepTestData `shouldBe` 0
+        activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
 drepsPropAllNoConfidence :: forall era. Era era => Spec
 drepsPropAllNoConfidence =
   prop "If all votes are no confidence, accepted ratio is zero" $
     forAll (drepsTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 100 % 100})) $
       \drepTestData ->
-        acceptedRatio drepTestData `shouldBe` 0
+        activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
 drepsPropNoVotes :: forall era. Era era => Spec
 drepsPropNoVotes =
   prop "If there are no votes, accepted ratio is zero" $
     forAll (drepsTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})) $
       \drepTestData ->
-        acceptedRatio drepTestData `shouldBe` 0
+        activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
 drepsPropAllYes :: forall era. Era era => Spec
 drepsPropAllYes =
@@ -103,8 +136,8 @@ drepsPropAllYes =
     forAll (drepsTestData @era (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})) $
       \drepTestData ->
         if totalStake drepTestData == Coin 0
-          then acceptedRatio drepTestData `shouldBe` 0
-          else acceptedRatio drepTestData `shouldBe` 1
+          then activeDRepAcceptedRatio drepTestData `shouldBe` 0
+          else activeDRepAcceptedRatio drepTestData `shouldBe` 1
 
 drepsPropNoStake ::
   forall era.
@@ -124,12 +157,13 @@ drepsPropNoStake =
             `shouldBe` False
       )
 
-acceptedRatio :: forall era. DRepTestData era -> Rational
-acceptedRatio (DRepTestData {..}) =
-  let drepState =
+activeDRepAcceptedRatio :: forall era. DRepTestData era -> Rational
+activeDRepAcceptedRatio (DRepTestData {..}) =
+  let activeDrepState =
+        -- non-expired dReps
         Map.fromList
           [(cred, DRepState (EpochNo 100) SNothing mempty) | DRepCredential cred <- Map.keys distr]
-      ratifyEnv = emptyRatifyEnv {reDRepDistr = distr, reDRepState = drepState}
+      ratifyEnv = (emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = activeDrepState}
    in dRepAcceptedRatio @era ratifyEnv votes InfoAction
 
 data DRepTestData era = DRepTestData
@@ -224,5 +258,5 @@ genPctsOf100 = do
   let s = a + b + c + d + e + f
   pure (a % s, b % s, c % s, d % s, e % s, f % s)
 
-emptyRatifyEnv :: RatifyEnv era
+emptyRatifyEnv :: forall era. RatifyEnv era
 emptyRatifyEnv = RatifyEnv Map.empty (PoolDistr Map.empty) Map.empty Map.empty (EpochNo 0)
