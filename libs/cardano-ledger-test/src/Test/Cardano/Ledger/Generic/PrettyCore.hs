@@ -1697,11 +1697,12 @@ pcVState (VState dreps drepDistr (CommitteeState committeeHotCreds)) =
     ]
 
 pcDRepState :: DRepState c -> PDoc
-pcDRepState (DRepState expire anchor) =
+pcDRepState (DRepState expire anchor deposit) =
   ppRecord
     "DRepState"
     [ ("expire", ppEpochNo expire)
     , ("anchor", ppStrictMaybe (ppString . show) anchor)
+    , ("deposit", ppCoin deposit)
     ]
 
 pcDRep :: DRep c -> PDoc

@@ -50,6 +50,7 @@ import NoThunks.Class (NoThunks (..), allNoThunks)
 data DRepState c = DRepState
   { drepExpiry :: !EpochNo
   , drepAnchor :: !(StrictMaybe (Anchor c))
+  , drepDeposit :: !Coin
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -63,6 +64,7 @@ instance Crypto c => DecCBOR (DRepState c) where
       RecD DRepState
         <! From
         <! From
+        <! From
 
 instance Crypto c => EncCBOR (DRepState c) where
   encCBOR DRepState {..} =
@@ -70,6 +72,7 @@ instance Crypto c => EncCBOR (DRepState c) where
       Rec DRepState
         !> To drepExpiry
         !> To drepAnchor
+        !> To drepDeposit
 
 instance ToExpr (DRepState era)
 
@@ -78,6 +81,9 @@ drepExpiryL = lens drepExpiry (\x y -> x {drepExpiry = y})
 
 drepAnchorL :: Lens' (DRepState c) (StrictMaybe (Anchor c))
 drepAnchorL = lens drepAnchor (\x y -> x {drepAnchor = y})
+
+drepDepositL :: Lens' (DRepState c) Coin
+drepDepositL = lens drepDeposit (\x y -> x {drepDeposit = y})
 
 -- =================================================================
 -- Algorithm for computing the DRep stake distrubution

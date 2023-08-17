@@ -333,9 +333,9 @@ instance
   arbitrary =
     oneof
       [ IncorrectDepositDELEG <$> arbitrary
-      , StakeKeyAlreadyRegisteredDELEG <$> arbitrary
+      , StakeKeyRegisteredDELEG <$> arbitrary
       , StakeKeyNotRegisteredDELEG <$> arbitrary
-      , StakeKeyHasNonZeroAccountBalanceDELEG <$> arbitrary
+      , StakeKeyHasNonZeroRewardAccountBalanceDELEG <$> arbitrary
       , DRepAlreadyRegisteredForStakeKeyDELEG <$> arbitrary
       , pure WrongCertificateTypeDELEG
       ]
@@ -347,8 +347,8 @@ instance Era era => Arbitrary (ConwayGovCertPredFailure era) where
     oneof
       [ ConwayDRepAlreadyRegistered <$> arbitrary
       , ConwayDRepNotRegistered <$> arbitrary
-      , ConwayDRepIncorrectDeposit <$> arbitrary
-      , ConwayCommitteeHasResigned <$> arbitrary
+      , ConwayDRepIncorrectDeposit <$> arbitrary <*> arbitrary
+      , ConwayCommitteeHasPreviouslyResigned <$> arbitrary
       ]
 
 instance Era era => Arbitrary (ConwayPParams Identity era) where

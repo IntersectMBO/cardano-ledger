@@ -391,17 +391,17 @@ instance PrettyA (ConwayDelegPredFailure era) where
       ppRecord
         "IncorrectDepositDELEG"
         [("Coin", prettyA x)]
-    StakeKeyAlreadyRegisteredDELEG x ->
+    StakeKeyRegisteredDELEG x ->
       ppRecord
-        "StakeKeyAlreadyRegisteredDELEG"
+        "StakeKeyRegisteredDELEG"
         [("Credential", prettyA x)]
     StakeKeyNotRegisteredDELEG x ->
       ppRecord
         "StakeKeyNotRegisteredDELEG"
         [("Credential", prettyA x)]
-    StakeKeyHasNonZeroAccountBalanceDELEG x ->
+    StakeKeyHasNonZeroRewardAccountBalanceDELEG x ->
       ppRecord
-        "StakeKeyHasNonZeroAccountBalanceDELEG"
+        "StakeKeyHasNonZeroRewardAccountBalanceDELEG"
         [("Coin", prettyA x)]
     DRepAlreadyRegisteredForStakeKeyDELEG x ->
       ppRecord
