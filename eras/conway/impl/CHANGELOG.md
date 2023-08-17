@@ -2,6 +2,10 @@
 
 ## 1.7.0.0
 
+* Make `DELEG`, `POOL` and `GOVCERT` conform to spec-v0.8 #3628
+  * Add `CertEnv` and `CertsEnv` to pass `EpochNo` down from `LEDGER` to sub-rules
+  * Add `drepDeposit` to `DRepState` to track deposits paid by `DRep`s
+  * Update `DRep` expiry in `LEDGER` for all `DRep`s who are voting in current `Tx`
 * Add `ConwayGovCertEnv`
 * Change the environment of `GOVCERT` to `ConwayGovCertEnv`
 * Add `ConwayEraGov` with `constitutionGovStateL`

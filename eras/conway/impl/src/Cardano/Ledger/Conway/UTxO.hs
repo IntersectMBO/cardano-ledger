@@ -72,10 +72,10 @@ conwayProducedValue pp f txb =
 instance Crypto c => EraUTxO (ConwayEra c) where
   type ScriptsNeeded (ConwayEra c) = AlonzoScriptsNeeded (ConwayEra c)
 
-  getConsumedValue = getConsumedMaryValue
+  getConsumedValue = getConsumedMaryValue -- TODO: This definitely needs to be updated for Conway
 
   getProducedValue = conwayProducedValue
 
   getScriptsNeeded = getConwayScriptsNeeded
 
-  getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
+  getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded -- TODO: This also changes for Conway

@@ -684,7 +684,7 @@ instance Crypto c => Arbitrary (Anchor c) where
       <*> arbitrary
 
 instance Crypto c => Arbitrary (DRepState c) where
-  arbitrary = DRepState <$> arbitrary <*> arbitrary
+  arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary
 
 deriving instance Era era => Arbitrary (CommitteeState era)
 

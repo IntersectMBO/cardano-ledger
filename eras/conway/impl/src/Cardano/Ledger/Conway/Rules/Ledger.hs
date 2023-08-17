@@ -33,6 +33,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
+import Cardano.Ledger.CertState (certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (
@@ -41,7 +42,8 @@ import Cardano.Ledger.Conway.Governance (
   GovProcedures (..),
   cgGovActionsStateL,
  )
-import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsEvent, ConwayCertsPredFailure)
+import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
+import Cardano.Ledger.Conway.Rules.Certs (CertsEnv (CertsEnv), ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Credential (Credential)
@@ -56,8 +58,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
-  DelegsEnv (DelegsEnv),
-  DelplEnv,
   LedgerEnv (..),
   ShelleyLEDGERS,
   ShelleyLedgersEvent (..),
@@ -172,6 +172,7 @@ data ConwayLedgerEvent era
 instance
   ( AlonzoEraTx era
   , ConwayEraTxBody era
+  , ConwayEraPParams era
   , GovState era ~ ConwayGovState era
   , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
@@ -180,7 +181,7 @@ instance
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ GovActionsState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Environment (EraRule "CERTS" era) ~ DelegsEnv era
+  , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
@@ -237,7 +238,7 @@ ledgerTransition ::
   , State (EraRule "GOV" era) ~ GovActionsState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
-  , Environment (EraRule "CERTS" era) ~ DelegsEnv era
+  , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovProcedures era
@@ -246,24 +247,28 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoState certState, tx) <- judgmentContext
-  let txBody = tx ^. bodyTxL
-      dstate = certDState certState
-      genCerts = dsGenDelegs dstate
+  TRC (LedgerEnv slot _txIx pp _account, LedgerState utxoState certState, tx) <- judgmentContext
 
-  (utxoState', certState') <-
+  currentEpoch <- liftSTS $ do
+    ei <- asks epochInfoPure
+    epochInfoEpoch ei slot
+
+  let txBody = tx ^. bodyTxL
+
+  (utxoState', certStateAfterCERTS) <-
     if tx ^. isValidTxL == IsValid True
       then do
-        certState' <-
+        certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $
             TRC
-              ( DelegsEnv slot txIx pp tx account
+              ( CertsEnv tx pp slot currentEpoch
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
+
         let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
-        let wdrlCreds = Set.map getRwdCred wdrlAddrs
-        let dUnified = dsUnified $ certDState certState'
+            wdrlCreds = Set.map getRwdCred wdrlAddrs
+            dUnified = dsUnified $ certDState certStateAfterCERTS
             delegatedAddrs = DRepUView dUnified
 
         -- TODO enable this check once delegation is fully implemented in cardano-api
@@ -276,28 +281,29 @@ ledgerTransition = do
                 { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
                 , gpProposalProcedures = fromStrict $ txBody ^. proposalProceduresTxBodyL
                 }
-        epoch <- liftSTS $ do
-          ei <- asks epochInfoPure
-          epochInfoEpoch ei slot
         govActionsState' <-
           trans @(EraRule "GOV" era) $
             TRC
-              ( GovEnv (txid txBody) epoch
+              ( GovEnv (txid txBody) currentEpoch
               , utxoState ^. utxosGovStateL . cgGovActionsStateL
               , govProcedures
               )
+
         let utxoState' = utxoState & utxosGovStateL . cgGovActionsStateL .~ govActionsState'
-        pure (utxoState', certState')
+        pure (utxoState', certStateAfterCERTS)
       else pure (utxoState, certState)
 
   utxoState'' <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp certState' genCerts
+        -- Pass to UTXOW the unmodified CertState in its Environment, so it can process
+        -- refunds of deposits for deregistering stake credentials and DReps.
+        -- The modified CertState (certStateAfterCERTS) has these already removed from its UMap.
+        ( UtxoEnv @era slot pp certState (certState ^. certDStateL . dsGenDelegsL)
         , utxoState'
         , tx
         )
-  pure $ LedgerState utxoState'' certState'
+  pure $ LedgerState utxoState'' certStateAfterCERTS
 
 instance
   ( Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -325,10 +331,11 @@ instance
 
 instance
   ( EraTx era
-  , ShelleyEraTxBody era
+  , ConwayEraTxBody era
+  , ConwayEraPParams era
   , Embed (EraRule "CERT" era) (ConwayCERTS era)
   , State (EraRule "CERT" era) ~ CertState era
-  , Environment (EraRule "CERT" era) ~ DelplEnv era
+  , Environment (EraRule "CERT" era) ~ CertEnv era
   , Signal (EraRule "CERT" era) ~ TxCert era
   , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
@@ -345,9 +352,10 @@ instance
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
   , AlonzoEraTx era
   , ConwayEraTxBody era
+  , ConwayEraPParams era
   , GovState era ~ ConwayGovState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Environment (EraRule "CERTS" era) ~ DelegsEnv era
+  , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)

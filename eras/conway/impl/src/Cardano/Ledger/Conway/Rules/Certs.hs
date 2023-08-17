@@ -19,9 +19,10 @@ module Cardano.Ledger.Conway.Rules.Certs (
   ConwayCERTS,
   ConwayCertsPredFailure (..),
   ConwayCertsEvent (..),
+  CertsEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, mkCertIxPartial)
+import Cardano.Ledger.BaseTypes (EpochNo, Globals (..), ShelleyBase, SlotNo)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -31,20 +32,29 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.CertState (certDStateL, certVStateL, vsDRepsL)
+import Cardano.Ledger.Conway.Core (
+  ConwayEraPParams,
+  ConwayEraTxBody (votingProceduresTxBodyL),
+  Era (EraCrypto),
+  EraRule,
+  EraTx (Tx, bodyTxL),
+  EraTxBody (withdrawalsTxBodyL),
+  EraTxCert (TxCert),
+  PParams,
+  ppDRepActivityL,
+ )
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS)
-import Cardano.Ledger.Conway.Rules.Cert (ConwayCertEvent, ConwayCertPredFailure)
-import Cardano.Ledger.Core
+import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (unVotingProcedures))
+import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
+import Cardano.Ledger.DRepDistr (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   Coin,
-  DelegsEnv (DelegsEnv),
-  DelplEnv (DelplEnv),
   KeyHash,
   KeyRole (..),
-  Ptr (Ptr),
   RewardAcnt,
  )
-import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody)
 import Cardano.Ledger.Shelley.Rules (
   drainWithdrawals,
   validateDelegationRegistered,
@@ -61,11 +71,18 @@ import Control.State.Transition.Extended (
   trans,
   validateTrans,
  )
-import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+
+data CertsEnv era = CertsEnv
+  { certsTx :: !(Tx era)
+  , certsPParams :: !(PParams era)
+  , certsSlotNo :: !SlotNo
+  , certsCurrentEpoch :: !EpochNo
+  }
 
 data ConwayCertsPredFailure era
   = -- | Target pool which is not registered
@@ -73,7 +90,7 @@ data ConwayCertsPredFailure era
       !(KeyHash 'StakePool (EraCrypto era))
   | -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsCERTS
-      !(Map (RewardAcnt (EraCrypto era)) Coin)
+      !(Map.Map (RewardAcnt (EraCrypto era)) Coin)
   | -- | CERT rule subtransition Failures
     CertFailure !(PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
@@ -118,17 +135,18 @@ instance
 
 instance
   ( EraTx era
-  , ShelleyEraTxBody era
+  , ConwayEraTxBody era
+  , ConwayEraPParams era
   , State (EraRule "CERT" era) ~ CertState era
   , Signal (EraRule "CERT" era) ~ TxCert era
-  , Environment (EraRule "CERT" era) ~ DelplEnv era
+  , Environment (EraRule "CERT" era) ~ CertEnv era
   , Embed (EraRule "CERT" era) (ConwayCERTS era)
   ) =>
   STS (ConwayCERTS era)
   where
   type State (ConwayCERTS era) = CertState era
   type Signal (ConwayCERTS era) = Seq (TxCert era)
-  type Environment (ConwayCERTS era) = DelegsEnv era
+  type Environment (ConwayCERTS era) = CertsEnv era
   type BaseM (ConwayCERTS era) = ShelleyBase
   type
     PredicateFailure (ConwayCERTS era) =
@@ -140,34 +158,49 @@ instance
 conwayCertsTransition ::
   forall era.
   ( EraTx era
-  , ShelleyEraTxBody era
+  , ConwayEraTxBody era
+  , ConwayEraPParams era
   , State (EraRule "CERT" era) ~ CertState era
   , Embed (EraRule "CERT" era) (ConwayCERTS era)
-  , Environment (EraRule "CERT" era) ~ DelplEnv era
+  , Environment (EraRule "CERT" era) ~ CertEnv era
   , Signal (EraRule "CERT" era) ~ TxCert era
   ) =>
   TransitionRule (ConwayCERTS era)
 conwayCertsTransition = do
-  TRC (env@(DelegsEnv slot txIx pp tx acnt), certState, certificates) <- judgmentContext
+  TRC
+    ( env@(CertsEnv tx pp slot currentEpoch)
+      , certState
+      , certificates
+      ) <-
+    judgmentContext
   network <- liftSTS $ asks networkId
 
   case certificates of
     Empty -> do
-      let dState = certDState certState
+      -- Update DRep expiry for all DReps that are voting in this transaction
+      let drepActivity = pp ^. ppDRepActivityL
+          updatedVSDReps =
+            Map.foldlWithKey'
+              ( \dreps voter _ -> case voter of
+                  DRepVoter cred -> Map.adjust (drepExpiryL .~ currentEpoch + drepActivity) cred dreps
+                  _ -> dreps
+              )
+              (certState ^. certVStateL . vsDRepsL)
+              (unVotingProcedures $ tx ^. bodyTxL . votingProceduresTxBodyL)
+          certStateWithDRepExpiryUpdated = certState & certVStateL . vsDRepsL .~ updatedVSDReps
+          dState = certStateWithDRepExpiryUpdated ^. certDStateL
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+      -- Validate withdrawals and rewards and drain withdrawals
       validateTrans WithdrawalsNotInRewardsCERTS $
         validateZeroRewards dState withdrawals network
-      pure $ certState {certDState = drainWithdrawals dState withdrawals}
+      pure $ certStateWithDRepExpiryUpdated & certDStateL .~ drainWithdrawals dState withdrawals
     gamma :|> c -> do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
       validateTrans DelegateeNotRegisteredDELEG $
         validateDelegationRegistered certState' c
-      -- It is impossible to have 65535 number of certificates in a
-      -- transaction, therefore partial function is justified.
-      let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(EraRule "CERT" era) $
-        TRC (DelplEnv slot ptr pp acnt, certState', c)
+        TRC (CertEnv slot pp currentEpoch, certState', c)
 
 instance
   ( Era era

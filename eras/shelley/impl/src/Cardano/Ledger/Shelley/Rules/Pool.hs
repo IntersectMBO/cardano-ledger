@@ -56,7 +56,7 @@ import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
+import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (⋪), (⨃))
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -196,7 +196,7 @@ poolCertTransition (PoolEnv slot pp) ps@PState {psStakePoolParams, psFutureStake
         tellEvent $ RegisterPool ppId
         pure $
           payPoolDeposit ppId pp $
-            ps {psStakePoolParams = eval (psStakePoolParams ∪ singleton ppId poolParams)}
+            ps {psStakePoolParams = eval (psStakePoolParams ⨃ singleton ppId poolParams)}
       else do
         tellEvent $ ReregisterPool ppId
         -- hk is already registered, so we want to reregister it. That means adding it to the

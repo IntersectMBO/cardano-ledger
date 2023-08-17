@@ -379,7 +379,7 @@ protocol_param_update =
   , ? 3:  uint                   ; max transaction size
   , ? 4:  uint                   ; max block header size
   , ? 5:  coin                   ; key deposit
-  , ? 6:  coin                   ; pool deposit (TODO: drep deposit needs to be added)
+  , ? 6:  coin                   ; pool deposit
   , ? 7: epoch                   ; maximum epoch
   , ? 8: uint                    ; n_opt: desired number of stake pools
   , ? 9: rational                ; pool pledge influence
