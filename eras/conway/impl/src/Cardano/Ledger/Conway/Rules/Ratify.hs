@@ -139,8 +139,8 @@ spoAccepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
       _ -> spoThreshold
 
 dRepAccepted :: forall era. RatifyEnv era -> GovActionState era -> Rational -> Bool
-dRepAccepted RatifyEnv {reDRepDistr} GovActionState {gasDRepVotes, gasAction} threshold =
-  dRepAcceptedRatio reDRepDistr gasDRepVotes gasAction >= threshold
+dRepAccepted ratifyEnv GovActionState {gasDRepVotes, gasAction} threshold =
+  dRepAcceptedRatio ratifyEnv gasDRepVotes gasAction >= threshold
 
 -- Compute the dRep ratio yes/(yes + no), where
 -- yes: is the total stake of
@@ -156,11 +156,11 @@ dRepAccepted RatifyEnv {reDRepDistr} GovActionState {gasDRepVotes, gasAction} th
 -- We iterate over the dRep distribution, and incrementally construct the numerator and denominator.
 dRepAcceptedRatio ::
   forall era.
-  Map (DRep (EraCrypto era)) (CompactForm Coin) ->
+  RatifyEnv era ->
   Map (Credential 'DRepRole (EraCrypto era)) Vote ->
   GovAction era ->
   Rational
-dRepAcceptedRatio reDRepDistr gasDRepVotes gasAction
+dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVotes gasAction
   | totalExcludingAbstainStake == 0 = 0
   | otherwise = toInteger yesStake % toInteger totalExcludingAbstainStake
   where
@@ -168,11 +168,17 @@ dRepAcceptedRatio reDRepDistr gasDRepVotes gasAction
     accumStake (!yes, !tot) drep (CompactCoin stake) =
       case drep of
         DRepCredential cred ->
-          case Map.lookup cred gasDRepVotes of
-            Nothing -> (yes, tot + stake)
-            Just VoteYes -> (yes + stake, tot + stake)
-            Just Abstain -> (yes, tot)
-            Just VoteNo -> (yes, tot + stake)
+          case Map.lookup cred reDRepState of
+            Nothing -> (yes, tot) -- drep is not registered, so we don't consider it
+            Just (DRepState expiry _ _)
+              | reCurrentEpoch > expiry -> (yes, tot) -- drep is expired, so we don't consider it
+              | otherwise ->
+                  case Map.lookup cred gasDRepVotes of
+                    Nothing -> (yes, tot + stake) -- drep hasn't voted for this action, so we don't count
+                    -- the vote but we consider it in the denominator
+                    Just VoteYes -> (yes + stake, tot + stake)
+                    Just Abstain -> (yes, tot)
+                    Just VoteNo -> (yes, tot + stake)
         DRepAlwaysNoConfidence ->
           case gasAction of
             NoConfidence _ -> (yes + stake, tot + stake)
