@@ -87,7 +87,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr), defaultExprViaShow)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -173,6 +173,9 @@ deriving instance
   NFData (VKey kd c)
 
 deriving instance Crypto c => NoThunks (VKey kd c)
+
+instance Crypto c => ToExpr (VKey kd c) where
+  toExpr = defaultExprViaShow
 
 instance HasKeyRole VKey
 

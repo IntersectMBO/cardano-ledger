@@ -73,6 +73,13 @@ import NoThunks.Class (NoThunks (..))
 
 newtype MaryTxBodyRaw era = MaryTxBodyRaw (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era)
 
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (TxCert era)
+  , ToExpr (Update era)
+  ) =>
+  ToExpr (MaryTxBodyRaw era)
+
 deriving newtype instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (MaryTxBodyRaw era)
@@ -102,6 +109,13 @@ instance Era era => EncCBOR (MaryTxBody era)
 instance
   (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
   EqRaw (MaryTxBody era)
+
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (TxCert era)
+  , ToExpr (Update era)
+  ) =>
+  ToExpr (MaryTxBody era)
 
 instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
   decCBOR = pure <$> decCBOR

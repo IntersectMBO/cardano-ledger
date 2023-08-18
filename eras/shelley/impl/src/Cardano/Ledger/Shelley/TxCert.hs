@@ -242,11 +242,10 @@ data GenesisDelegCert c
   deriving (Show, Generic, Eq)
 
 instance NoThunks (GenesisDelegCert c)
+instance ToExpr (GenesisDelegCert c)
 
 instance NFData (GenesisDelegCert c) where
   rnf = rwhnf
-
-instance ToExpr (GenesisDelegCert c)
 
 genesisKeyHashWitness :: GenesisDelegCert c -> KeyHash 'Witness c
 genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
@@ -258,6 +257,7 @@ data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
 
 deriving instance NoThunks MIRPot
+instance ToExpr MIRPot
 
 instance EncCBOR MIRPot where
   encCBOR ReservesMIR = encodeWord8 0
@@ -270,8 +270,6 @@ instance DecCBOR MIRPot where
       1 -> pure TreasuryMIR
       k -> invalidKey k
 
-instance ToExpr MIRPot
-
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
 -- reward accounts or instead transfered to the opposite pot.
@@ -281,6 +279,7 @@ data MIRTarget c
   deriving (Show, Generic, Eq, NFData)
 
 deriving instance NoThunks (MIRTarget c)
+instance ToExpr (MIRTarget c)
 
 instance Crypto c => DecCBOR (MIRTarget c) where
   decCBOR = do
@@ -294,8 +293,6 @@ instance Crypto c => EncCBOR (MIRTarget c) where
   encCBOR (StakeAddressesMIR m) = encCBOR m
   encCBOR (SendToOppositePotMIR c) = encCBOR c
 
-instance ToExpr (MIRTarget c)
-
 -- | Move instantaneous rewards certificate
 data MIRCert c = MIRCert
   { mirPot :: !MIRPot
@@ -304,6 +301,7 @@ data MIRCert c = MIRCert
   deriving (Show, Generic, Eq, NFData)
 
 instance NoThunks (MIRCert c)
+instance ToExpr (MIRCert c)
 
 instance Crypto c => DecCBOR (MIRCert c) where
   decCBOR =
@@ -314,8 +312,6 @@ instance Crypto c => EncCBOR (MIRCert c) where
     encodeListLen 2
       <> encCBOR pot
       <> encCBOR targets
-
-instance ToExpr (MIRCert c)
 
 -- | A heavyweight certificate.
 data ShelleyTxCert era

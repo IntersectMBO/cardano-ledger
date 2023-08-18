@@ -16,6 +16,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder (Decoder)
 import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Binary.Encoding.EncCBOR (EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Version (Version)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Int (Int64)
@@ -39,6 +40,8 @@ instance NoThunks a => NoThunks (Sized a)
 
 instance NFData a => NFData (Sized a) where
   rnf (Sized val sz) = val `deepseq` sz `seq` ()
+
+instance ToExpr a => ToExpr (Sized a)
 
 -- | Construct a `Sized` value by serializing it first and recording the amount
 -- of bytes it requires. Note, however, CBOR serialization is not canonical,

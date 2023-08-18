@@ -155,6 +155,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Data.Sequence.Strict (StrictSeq, (|>))
@@ -207,12 +208,16 @@ instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (BabbageTxBodyRaw era)
 
+instance
+  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
+  ToExpr (BabbageTxBodyRaw era)
+
 deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (BabbageTxBodyRaw era)
 
 newtype BabbageTxBody era = TxBodyConstr (MemoBytes BabbageTxBodyRaw era)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (Generic, SafeToHash, ToCBOR)
 
 instance Memoized BabbageTxBody where
   type RawType BabbageTxBody = BabbageTxBodyRaw
@@ -220,6 +225,10 @@ instance Memoized BabbageTxBody where
 deriving newtype instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (BabbageTxBody era)
+
+instance
+  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
+  ToExpr (BabbageTxBody era)
 
 inputsBabbageTxBodyL ::
   BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (TxIn (EraCrypto era)))

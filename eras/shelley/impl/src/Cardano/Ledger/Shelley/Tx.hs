@@ -72,6 +72,7 @@ import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
   MemoBytes,
+  Memoized (..),
   memoBytes,
   mkMemoBytes,
   pattern Memo,
@@ -83,6 +84,7 @@ import Cardano.Ledger.Shelley.Scripts (MultiSig (..), nativeMultiSigTag)
 import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits ()
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
@@ -143,8 +145,26 @@ instance
   ) =>
   NoThunks (ShelleyTxRaw era)
 
+instance
+  ( ToExpr (TxAuxData era)
+  , ToExpr (TxBody era)
+  , ToExpr (TxWits era)
+  ) =>
+  ToExpr (ShelleyTxRaw era)
+
 newtype ShelleyTx era = TxConstr (MemoBytes ShelleyTxRaw era)
   deriving newtype (SafeToHash, ToCBOR)
+  deriving (Generic)
+
+instance Memoized ShelleyTx where
+  type RawType ShelleyTx = ShelleyTxRaw
+
+instance
+  ( ToExpr (TxAuxData era)
+  , ToExpr (TxBody era)
+  , ToExpr (TxWits era)
+  ) =>
+  ToExpr (ShelleyTx era)
 
 -- | `TxBody` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.

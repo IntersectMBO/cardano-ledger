@@ -43,6 +43,7 @@ import Cardano.Ledger.Keys (
   hashSignature,
  )
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq
 import qualified Data.ByteString.Lazy as BSL
 import Data.Ord (comparing)
@@ -60,6 +61,8 @@ data WitVKey kr c = WitVKeyInternal
   , wvkBytes :: BSL.ByteString
   }
   deriving (Generic)
+
+instance Crypto c => ToExpr (WitVKey kr c)
 
 deriving instance Crypto c => Show (WitVKey kr c)
 

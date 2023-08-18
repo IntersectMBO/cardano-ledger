@@ -405,7 +405,7 @@ instance ToExpr (BootstrapAddress c) where
 
 newtype CompactAddr c = UnsafeCompactAddr ShortByteString
   deriving stock (Eq, Generic, Ord)
-  deriving newtype (NoThunks, NFData)
+  deriving newtype (NoThunks, NFData, ToExpr)
 
 instance Crypto c => Show (CompactAddr c) where
   show c = show (decompactAddr c)
@@ -945,3 +945,5 @@ fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 newtype Withdrawals c = Withdrawals {unWithdrawals :: Map (RewardAcnt c) Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+
+instance ToExpr (Withdrawals c)
