@@ -15,6 +15,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | MemoBytes is an abstraction for a data type that encodes its own serialization.
@@ -43,9 +44,13 @@ module Cardano.Ledger.MemoBytes (
   getMemoSafeHash,
   getMemoRawType,
   zipMemoRawType,
+  eqRawType,
   getMemoRawBytes,
   lensMemoRawType,
   getterMemoRawType,
+
+  -- * Raw equality
+  EqRaw (..),
 )
 where
 
@@ -59,7 +64,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Core (Era (EraCrypto), eraProtVerLow)
+import Cardano.Ledger.Core.Era (Era (EraCrypto), eraProtVerLow)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
@@ -227,6 +232,14 @@ zipMemoRawType ::
   a
 zipMemoRawType f x y = f (getMemoRawType x) (getMemoRawType y)
 
+eqRawType ::
+  forall t era.
+  (Memoized t, Eq (RawType t era)) =>
+  t era ->
+  t era ->
+  Bool
+eqRawType = zipMemoRawType @t (==)
+
 -- | This is a helper Lens creator for any Memoized type.
 lensMemoRawType ::
   (Era era, EncCBOR (RawType t era), Memoized t) =>
@@ -245,3 +258,10 @@ getterMemoRawType ::
 getterMemoRawType getter =
   to (getter . getMemoRawType)
 {-# INLINEABLE getterMemoRawType #-}
+
+-- | Type class that implements equality on the Haskell type, ignoring any of the
+-- potentially memoized binary representation of the type.
+class EqRaw a where
+  eqRaw :: a -> a -> Bool
+  default eqRaw :: (a ~ t era, Memoized t, Eq (RawType t era)) => a -> a -> Bool
+  eqRaw = eqRawType

@@ -74,6 +74,7 @@ module Cardano.Ledger.Alonzo.Tx (
   -- Other
   toCBORForSizeComputation,
   toCBORForMempoolSubmission,
+  alonzoEqTxRaw,
 )
 where
 
@@ -130,7 +131,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
 import Cardano.Ledger.Language (nonNativeLanguages)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
+import Cardano.Ledger.Shelley.Tx (shelleyEqTxRaw)
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), unWithdrawals)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UTxO as Shelley
@@ -193,6 +196,9 @@ instance Crypto c => EraTx (AlonzoEra c) where
 
   getMinFeeTx = alonzoMinFeeTx
   {-# INLINE getMinFeeTx #-}
+
+instance (Tx era ~ AlonzoTx era, AlonzoEraTx era) => EqRaw (AlonzoTx era) where
+  eqRaw = alonzoEqTxRaw
 
 class (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era) => AlonzoEraTx era where
   isValidTxL :: Lens' (Tx era) IsValid
@@ -599,3 +605,7 @@ isTwoPhaseScriptAddressFromMap hashScriptMap addr =
     Just hash -> any ok hashScriptMap
       where
         ok script = hashScript @era script == hash && not (isNativeScript @era script)
+
+alonzoEqTxRaw :: AlonzoEraTx era => Tx era -> Tx era -> Bool
+alonzoEqTxRaw tx1 tx2 =
+  shelleyEqTxRaw tx1 tx2 && (tx1 ^. isValidTxL == tx2 ^. isValidTxL)

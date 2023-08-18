@@ -62,6 +62,7 @@ class
   , NFData (TxCert era)
   , Show (TxCert era)
   , Eq (TxCert era)
+  , ToExpr (TxCert era)
   ) =>
   EraTxCert era
   where
@@ -135,6 +136,8 @@ instance NoThunks (PoolCert c)
 
 instance NFData (PoolCert c) where
   rnf = rwhnf
+
+instance ToExpr (PoolCert c)
 
 poolCertKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
 poolCertKeyHashWitness = \case

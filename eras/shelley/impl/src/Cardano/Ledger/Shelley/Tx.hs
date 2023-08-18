@@ -41,6 +41,7 @@ module Cardano.Ledger.Shelley.Tx (
   minfee,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
+  shelleyEqTxRaw,
 
   -- * Re-exports
   ShelleyTxBody (..),
@@ -67,7 +68,14 @@ import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, mkMemoBytes, pattern Memo)
+import Cardano.Ledger.MemoBytes (
+  EqRaw (..),
+  Mem,
+  MemoBytes,
+  memoBytes,
+  mkMemoBytes,
+  pattern Memo,
+ )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -80,6 +88,7 @@ import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
+import Data.Functor.Classes (Eq1 (liftEq))
 import Data.Map.Strict (Map)
 import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (
@@ -205,6 +214,18 @@ instance Crypto c => EraTx (ShelleyEra c) where
   {-# INLINE validateScript #-}
 
   getMinFeeTx = shelleyMinFeeTx
+
+instance (Tx era ~ ShelleyTx era, EraTx era) => EqRaw (ShelleyTx era) where
+  eqRaw = shelleyEqTxRaw
+
+shelleyEqTxRaw :: EraTx era => Tx era -> Tx era -> Bool
+shelleyEqTxRaw tx1 tx2 =
+  eqRaw (tx1 ^. bodyTxL) (tx2 ^. bodyTxL)
+    && eqRaw (tx1 ^. witsTxL) (tx2 ^. witsTxL)
+    && liftEq -- TODO: Implement Eq1 instance for StrictMaybe
+      eqRaw
+      (strictMaybeToMaybe (tx1 ^. auxDataTxL))
+      (strictMaybeToMaybe (tx2 ^. auxDataTxL))
 
 deriving newtype instance
   ( NFData (TxBody era)

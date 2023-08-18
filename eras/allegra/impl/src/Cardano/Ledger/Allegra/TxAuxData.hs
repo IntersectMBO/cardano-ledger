@@ -43,6 +43,7 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes (
+  EqRaw,
   Mem,
   MemoBytes,
   MemoHashIndex,
@@ -107,6 +108,8 @@ newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes AllegraTxAuxDat
   deriving (Generic)
   deriving newtype (Eq, ToCBOR, SafeToHash)
 
+instance ToExpr (AllegraTxAuxData era)
+
 instance Memoized AllegraTxAuxData where
   type RawType AllegraTxAuxData = AllegraTxAuxDataRaw
 
@@ -122,6 +125,8 @@ deriving newtype instance
 deriving newtype instance Era era => NoThunks (AllegraTxAuxData era)
 
 deriving newtype instance NFData (AllegraTxAuxData era)
+
+instance EqRaw (AllegraTxAuxData era)
 
 pattern AllegraTxAuxData ::
   Era era =>

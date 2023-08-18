@@ -88,6 +88,7 @@ import Cardano.Ledger.Mary.Value (
   policies,
  )
 import Cardano.Ledger.MemoBytes (
+  EqRaw,
   Mem,
   MemoBytes (..),
   MemoHashIndex,
@@ -398,6 +399,10 @@ instance Crypto c => ConwayEraTxBody (ConwayEra c) where
   treasuryDonationTxBodyL =
     lensMemoRawType ctbrTreasuryDonation (\txb x -> txb {ctbrTreasuryDonation = x})
   {-# INLINE treasuryDonationTxBodyL #-}
+
+instance
+  (EraPParams era, Eq (TxOut era), Eq (TxCert era)) =>
+  EqRaw (ConwayTxBody era)
 
 pattern ConwayTxBody ::
   ConwayEraTxBody era =>

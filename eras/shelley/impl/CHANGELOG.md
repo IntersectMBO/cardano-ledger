@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.5.0.1
+## 1.5.1.0
 
-*
+* Add `eqMultiSigRaw`, `shelleyEqTxRaw` and `shelleyEqTxWitsRaw`
+* Add `EqRaw` instance for `MultiSig`, `ShelleyTxWits`, `ShelleyTxAuxData`, `TxBody` and `Tx`
+* Add `ToExpr` instance for `GenesisDelegCert`, `MIRPot`, `MirTarget`, `MIRCert`,
+  `ShelleyTxCert`, `ShelleyDelegCert`, `MultiSig` and `MultiSigRaw`
 
 ## 1.5.0.0
 

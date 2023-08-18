@@ -45,6 +45,7 @@ import Cardano.Ledger.Mary.TxCert ()
 import Cardano.Ledger.Mary.TxOut ()
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.MemoBytes (
+  EqRaw,
   Mem,
   MemoBytes (Memo),
   MemoHashIndex,
@@ -94,6 +95,10 @@ newtype MaryTxBody era = TxBodyConstr (MemoBytes MaryTxBodyRaw era)
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (MaryTxBody era)
+
+instance
+  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
+  EqRaw (MaryTxBody era)
 
 instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
   decCBOR = pure <$> decCBOR

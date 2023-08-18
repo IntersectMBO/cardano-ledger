@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.4.0.1
+## 1.4.1.0
 
-*
+* Made `isPlutusScript` more general.
+* Add `alonzoEqTxRaw` and `alonzoEqTxWitsRaw`
+* Add `EqRaw` instance for `AlonzoScript`, `AlonzoTxWits`, `AlonzoTxAuxData`,
+  `AlonzoTxBody` and `AlonzoTx`
 
 ## 1.4.0.0
 

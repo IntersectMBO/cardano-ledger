@@ -81,6 +81,7 @@ import Cardano.Ledger.Shelley.TxCert (
   pattern RetirePoolTxCert,
   pattern UnRegTxCert,
  )
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
@@ -327,6 +328,8 @@ instance NFData (Delegatee c)
 
 instance NoThunks (Delegatee c)
 
+instance ToExpr (Delegatee c)
+
 -- | Certificates for registration and delegation of stake to Pools and DReps. Comparing
 -- to previous eras, there is now ability to:
 --
@@ -357,6 +360,8 @@ instance NFData (ConwayDelegCert c)
 
 instance NoThunks (ConwayDelegCert c)
 
+instance ToExpr (ConwayDelegCert c)
+
 data ConwayGovCert c
   = ConwayRegDRep !(Credential 'DRepRole c) !Coin !(StrictMaybe (Anchor c))
   | ConwayUnRegDRep !(Credential 'DRepRole c) !Coin
@@ -369,6 +374,8 @@ instance Crypto c => NFData (ConwayGovCert c)
 
 instance NoThunks (ConwayGovCert c)
 
+instance ToExpr (ConwayGovCert c)
+
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
   | ConwayTxCertPool !(PoolCert (EraCrypto era))
@@ -378,6 +385,8 @@ data ConwayTxCert era
 instance Crypto (EraCrypto era) => NFData (ConwayTxCert era)
 
 instance NoThunks (ConwayTxCert era)
+
+instance ToExpr (ConwayTxCert c)
 
 instance
   ( ShelleyEraTxCert era

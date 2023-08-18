@@ -52,7 +52,7 @@ instance Crypto c => EraTx (MaryEra c) where
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) tx = validateTimelock @(MaryEra c) script tx
+  validateScript (Phase1Script script) = validateTimelock @(MaryEra c) script
   {-# INLINE validateScript #-}
 
   getMinFeeTx = shelleyMinFeeTx

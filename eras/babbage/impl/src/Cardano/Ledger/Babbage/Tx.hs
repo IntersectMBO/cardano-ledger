@@ -64,7 +64,7 @@ instance Crypto c => EraTx (BabbageEra c) where
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) tx = validateTimelock @(BabbageEra c) script tx
+  validateScript (Phase1Script script) = validateTimelock @(BabbageEra c) script
   {-# INLINE validateScript #-}
 
   getMinFeeTx = alonzoMinFeeTx

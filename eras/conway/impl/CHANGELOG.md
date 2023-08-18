@@ -6,6 +6,9 @@
 * Add "minCommitteeSize" `PParam` validation for `NewCommittee` `GovAction` #3668
   * Add `committeeMembersL` and `committeeQuorumL` lenses for `Committee`
   * Add `NewCommitteeSizeTooSmall` `PredicateFailure` in `GOV`
+* Add `EqRaw` instance for `ConwayTxBody`
+* Add `ToExpr` instance for `Delegatee`, `ConwayDelegCert`, `ConwayGovCert` and
+  `ConwayTxCert`
 * Implement expiry for governance proposals #3664
   * Update `ppGovActionExpiration` to be an `EpochNo`
   * Add `gasExpiresAfter :: !EpochNo` to `GovActionState`

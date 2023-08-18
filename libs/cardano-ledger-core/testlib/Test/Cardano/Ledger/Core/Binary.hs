@@ -4,14 +4,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Core.Binary where
 
 import Cardano.Ledger.Core
-import Cardano.Ledger.MemoBytes (Memoized (RawType), zipMemoRawType)
+import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Test.Cardano.Ledger.Binary.RoundTrip
-import Test.Cardano.Ledger.Binary.TreeDiff (ToExpr, expectExprEqual)
+import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
 import Test.Cardano.Ledger.Common
 
 specTxOutUpgrade ::
@@ -60,13 +59,9 @@ specTxCertUpgrade =
 -- can be used with MemoBytes, which requires `t` to be of such kind, because it is later
 -- applied to `era`.
 specTxAuxDataUpgrade ::
-  forall era t.
+  forall era.
   ( EraTxAuxData (PreviousEra era)
   , EraTxAuxData era
-  , t era ~ TxAuxData era
-  , Memoized t
-  , Eq (RawType t era)
-  , ToExpr (RawType t era)
   , Arbitrary (TxAuxData (PreviousEra era))
   , HasCallStack
   ) =>
@@ -78,10 +73,12 @@ specTxAuxDataUpgrade =
         expectationFailure $
           "Expected to deserialize: =======================================================\n"
             ++ show err
-      Right (curTxAuxData :: t era) ->
-        -- We need to do all this MemoBytes trickery because underlying bytes and thus the
-        -- equality of the same type will no longer be the same, despite that the value will
-        zipMemoRawType @t @t expectExprEqual curTxAuxData (upgradeTxAuxData prevTxAuxData)
+      Right (curTxAuxData :: TxAuxData era) -> do
+        let upgradedTxAuxData = upgradeTxAuxData prevTxAuxData
+        unless (eqRaw curTxAuxData upgradedTxAuxData) $
+          expectationFailure $
+            "Expected raw representation of TxAuxData to be equal: \n"
+              <> diffExpr curTxAuxData upgradedTxAuxData
 
 specScriptUpgrade ::
   forall era.
@@ -102,7 +99,7 @@ specScriptUpgrade =
         curScript `shouldBe` upgradeScript prevScript
 
 specUpgrade ::
-  forall era txAuxData.
+  forall era.
   ( EraTxOut (PreviousEra era)
   , EraTxOut era
   , Arbitrary (TxOut (PreviousEra era))
@@ -111,10 +108,6 @@ specUpgrade ::
   , Arbitrary (TxCert (PreviousEra era))
   , EraTxAuxData (PreviousEra era)
   , EraTxAuxData era
-  , txAuxData era ~ TxAuxData era -- See specTxAuxDataUpgrade for `txAuxData` explanation.
-  , Memoized txAuxData
-  , Eq (RawType txAuxData era)
-  , ToExpr (RawType txAuxData era)
   , Arbitrary (TxAuxData (PreviousEra era))
   , EraScript (PreviousEra era)
   , EraScript era
@@ -127,6 +120,6 @@ specUpgrade isScriptUpgradeable =
   describe ("Upgrade from " ++ eraName @(PreviousEra era) ++ " to " ++ eraName @era) $ do
     specTxOutUpgrade @era
     specTxCertUpgrade @era
-    specTxAuxDataUpgrade @era @txAuxData
+    specTxAuxDataUpgrade @era
     when isScriptUpgradeable $
       specScriptUpgrade @era

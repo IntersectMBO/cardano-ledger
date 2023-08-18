@@ -14,6 +14,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -34,6 +35,7 @@ module Cardano.Ledger.Shelley.TxWits (
   bootAddrShelleyTxWitsL,
   addrWits',
   prettyWitnessSetParts,
+  shelleyEqTxWitsRaw,
 
   -- * Re-exports
   WitVKey (..),
@@ -67,6 +69,7 @@ import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts ()
@@ -74,6 +77,7 @@ import Cardano.Ledger.Shelley.TxAuxData ()
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
+import Data.Functor.Classes (Eq1 (liftEq))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -83,7 +87,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records ()
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data WitnessSetHKD f era = WitnessSet'
@@ -186,6 +190,9 @@ instance Crypto c => EraTxWits (ShelleyEra c) where
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
+instance (TxWits era ~ ShelleyTxWits era, EraTxWits era) => EqRaw (ShelleyTxWits era) where
+  eqRaw = shelleyEqTxWitsRaw
+
 instance Era era => Plain.ToCBOR (ShelleyTxWits era) where
   toCBOR (ShelleyTxWitsConstr w) = Plain.encodePreEncoded $ BSL.toStrict $ txWitsBytes w
 
@@ -231,6 +238,12 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
             )
 
 {-# COMPLETE ShelleyTxWits #-}
+
+shelleyEqTxWitsRaw :: EraTxWits era => TxWits era -> TxWits era -> Bool
+shelleyEqTxWitsRaw txWits1 txWits2 =
+  liftEq eqRaw (txWits1 ^. addrTxWitsL) (txWits2 ^. addrTxWitsL)
+    && liftEq eqRaw (txWits1 ^. scriptTxWitsL) (txWits2 ^. scriptTxWitsL)
+    && liftEq eqRaw (txWits1 ^. bootAddrTxWitsL) (txWits2 ^. bootAddrTxWitsL)
 
 instance SafeToHash (ShelleyTxWits era) where
   originalBytes (ShelleyTxWitsConstr w) = BSL.toStrict $ txWitsBytes w

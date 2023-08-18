@@ -58,6 +58,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Language (Language (..), Plutus (..), guardPlutus)
 import Cardano.Ledger.MemoBytes (
+  EqRaw,
   Mem,
   MemoBytes (..),
   MemoHashIndex,
@@ -236,6 +237,8 @@ instance Memoized AlonzoTxAuxData where
   type RawType AlonzoTxAuxData = AlonzoTxAuxDataRaw
 
 instance ToExpr (AlonzoTxAuxData era)
+
+instance EqRaw (AlonzoTxAuxData era)
 
 type AuxiliaryData era = AlonzoTxAuxData era
 

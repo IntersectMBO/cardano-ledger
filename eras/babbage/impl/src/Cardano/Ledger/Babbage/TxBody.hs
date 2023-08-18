@@ -140,6 +140,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
 import Cardano.Ledger.MemoBytes (
+  EqRaw,
   Mem,
   MemoBytes,
   MemoHashIndex,
@@ -470,6 +471,10 @@ instance Crypto c => BabbageEraTxBody (BabbageEra c) where
 
   allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
   {-# INLINE allSizedOutputsTxBodyF #-}
+
+instance
+  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
+  EqRaw (BabbageTxBody era)
 
 deriving newtype instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>

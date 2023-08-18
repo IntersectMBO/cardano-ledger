@@ -60,6 +60,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (toCBOR), encodePr
 import Cardano.Ledger.Core (Era (..), EraTxAuxData (..), eraProtVerLow)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.SafeHash (
   HashAnnotated,
   SafeHash,
@@ -127,6 +128,9 @@ instance Crypto c => EraTxAuxData (ShelleyEra c) where
     AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
     where
       index = Proxy @EraIndependentTxAuxData
+
+instance EqRaw (ShelleyTxAuxData era) where
+  eqRaw txAuxData1 txAuxData2 = mdMap txAuxData1 == mdMap txAuxData2
 
 instance NFData (ShelleyTxAuxData era) where
   rnf m = mdMap m `deepseq` rnf (mdBytes m)

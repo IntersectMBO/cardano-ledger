@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.2.1.2
+## 1.2.2.0
 
-*
+* Add `EqRaw` instance for `Timelock`, `AllegraTxAuxData` and `AllegraTxBody`
+* Add `ToExpr` instance for `AllegraTxAuxData`
 
 ## 1.2.1.1
 

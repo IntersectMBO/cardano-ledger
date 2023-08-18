@@ -20,7 +20,11 @@ where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Language
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), translateAlonzoScript)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoScript (..),
+  isPlutusScript,
+  translateAlonzoScript,
+ )
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
@@ -51,9 +55,3 @@ instance Crypto c => EraScript (BabbageEra c) where
   phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
   phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
   phaseScript _ _ = Nothing
-
-isPlutusScript :: forall era. EraScript era => Script era -> Bool
-isPlutusScript x =
-  case phaseScript @era PhaseTwoRep x of
-    Just _ -> True
-    Nothing -> False

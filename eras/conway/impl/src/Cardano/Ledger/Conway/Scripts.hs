@@ -14,7 +14,11 @@ where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Language (Language)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), isPlutusScript, translateAlonzoScript)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoScript (..),
+  isPlutusScript,
+  translateAlonzoScript,
+ )
 import Cardano.Ledger.Babbage.Scripts (babbageScriptPrefixTag)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
