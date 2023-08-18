@@ -146,6 +146,7 @@ class
   , Show (Tx era)
   , Eq (Tx era)
   , EqRaw (Tx era)
+  , ToExpr (Tx era)
   ) =>
   EraTx era
   where
@@ -186,6 +187,7 @@ class
   , Show (TxBody era)
   , Eq (TxBody era)
   , EqRaw (TxBody era)
+  , ToExpr (TxBody era)
   ) =>
   EraTxBody era
   where
@@ -451,6 +453,7 @@ class
   , ToCBOR (TxWits era)
   , EncCBOR (TxWits era)
   , DecCBOR (Annotator (TxWits era))
+  , ToExpr (TxWits era)
   ) =>
   EraTxWits era
   where

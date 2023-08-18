@@ -54,10 +54,6 @@ specTxCertUpgrade =
             curTxCert `shouldBe` upgradedTxCert
         | otherwise -> expectationFailure "Expected upgradeTxCert to succeed"
 
--- The reason why we need to pass `t` as a type argument here is because `TxAuxData` is a
--- type family, so we don't know if the final type will be of the kind `Type -> Type` and
--- can be used with MemoBytes, which requires `t` to be of such kind, because it is later
--- applied to `era`.
 specTxAuxDataUpgrade ::
   forall era.
   ( EraTxAuxData (PreviousEra era)
@@ -98,28 +94,101 @@ specScriptUpgrade =
       Right (curScript :: Script era) ->
         curScript `shouldBe` upgradeScript prevScript
 
-specUpgrade ::
+specTxWitsUpgrade ::
   forall era.
-  ( EraTxOut (PreviousEra era)
-  , EraTxOut era
-  , Arbitrary (TxOut (PreviousEra era))
-  , EraTxCert (PreviousEra era)
-  , EraTxCert era
-  , Arbitrary (TxCert (PreviousEra era))
-  , EraTxAuxData (PreviousEra era)
-  , EraTxAuxData era
-  , Arbitrary (TxAuxData (PreviousEra era))
-  , EraScript (PreviousEra era)
-  , EraScript era
-  , Arbitrary (Script (PreviousEra era))
+  ( EraTxWits (PreviousEra era)
+  , EraTxWits era
+  , Arbitrary (TxWits (PreviousEra era))
   , HasCallStack
   ) =>
-  Bool ->
+  Spec
+specTxWitsUpgrade =
+  prop "upgradeTxWits is preserved through serialization" $ \prevTxWits -> do
+    case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTxWits of
+      Left err ->
+        expectationFailure $
+          "Expected to deserialize: =======================================================\n"
+            ++ show err
+      Right (curTxWits :: TxWits era) -> do
+        let upgradedTxWits = upgradeTxWits prevTxWits
+        unless (eqRaw curTxWits upgradedTxWits) $
+          expectationFailure $
+            "Expected raw representation of TxWits to be equal: \n"
+              <> diffExpr curTxWits upgradedTxWits
+
+specTxBodyUpgrade ::
+  forall era.
+  ( EraTxBody (PreviousEra era)
+  , EraTxBody era
+  , Arbitrary (TxBody (PreviousEra era))
+  , HasCallStack
+  ) =>
+  Spec
+specTxBodyUpgrade =
+  prop "upgradeTxBody is preserved through serialization" $ \prevTxBody -> do
+    case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTxBody of
+      Left err
+        | Right _ <- upgradeTxBody prevTxBody ->
+            -- We expect deserialization to succeed, when upgrade is possible
+            expectationFailure $
+              "Expected to deserialize: =======================================================\n"
+                ++ show err
+        | otherwise -> pure () -- Both upgrade and deserializer fail successfully
+      Right (curTxBody :: TxBody era)
+        | Right upgradedTxBody <- upgradeTxBody prevTxBody ->
+          unless (eqRaw curTxBody upgradedTxBody) $
+            expectationFailure $
+              "Expected raw representation of TxBody to be equal: \n"
+                <> diffExpr curTxBody upgradedTxBody
+        | otherwise -> expectationFailure "Expected upgradeTxBody to succeed"
+
+specTxUpgrade ::
+  forall era.
+  ( EraTx (PreviousEra era)
+  , EraTx era
+  , Arbitrary (Tx (PreviousEra era))
+  , HasCallStack
+  ) =>
+  Spec
+specTxUpgrade =
+  prop "upgradeTx is preserved through serialization" $ \prevTx -> do
+    case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTx of
+      Left err
+        | Right _ <- upgradeTx prevTx ->
+            -- We expect deserialization to succeed, when upgrade is possible
+            expectationFailure $
+              "Expected to deserialize: =======================================================\n"
+                ++ show err
+        | otherwise -> pure () -- Both upgrade and deserializer fail successfully
+      Right (curTx :: Tx era)
+        | Right upgradedTx <- upgradeTx prevTx ->
+          unless (eqRaw curTx upgradedTx) $
+            expectationFailure $
+              "Expected raw representation of Tx to be equal: \n"
+                <> diffExpr curTx upgradedTx
+        | otherwise -> expectationFailure "Expected upgradeTx to succeed"
+
+specUpgrade ::
+  forall era.
+  ( Arbitrary (TxOut (PreviousEra era))
+  , Arbitrary (TxCert (PreviousEra era))
+  , Arbitrary (TxAuxData (PreviousEra era))
+  , Arbitrary (TxWits (PreviousEra era))
+  , Arbitrary (TxBody (PreviousEra era))
+  , EraTx (PreviousEra era)
+  , EraTx era
+  , Arbitrary (Tx (PreviousEra era))
+  , Arbitrary (Script (PreviousEra era))
+  , HasCallStack
+  ) =>Bool ->
   Spec
 specUpgrade isScriptUpgradeable =
   describe ("Upgrade from " ++ eraName @(PreviousEra era) ++ " to " ++ eraName @era) $ do
     specTxOutUpgrade @era
     specTxCertUpgrade @era
     specTxAuxDataUpgrade @era
+    specTxWitsUpgrade @era
+    specTxBodyUpgrade @era
+    specTxUpgrade @era
     when isScriptUpgradeable $
       specScriptUpgrade @era

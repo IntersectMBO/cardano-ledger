@@ -82,6 +82,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1 -- NOTE PV1.Data === PV2.Data
+import Cardano.Ledger.TreeDiff (ToExpr, toExpr, trimExprViaShow)
 
 -- ============================================================================
 -- the newtype Data is a wrapper around the type that Plutus expects as data.
@@ -92,6 +93,9 @@ import qualified PlutusLedgerApi.V1 as PV1 -- NOTE PV1.Data === PV2.Data
 newtype PlutusData era = PlutusData PV1.Data
   deriving newtype (Eq, Generic, Show, NFData, NoThunks, Cborg.Serialise)
 
+instance ToExpr (PlutusData era) where
+  toExpr = trimExprViaShow 30
+
 instance Typeable era => EncCBOR (PlutusData era) where
   encCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
 
@@ -100,7 +104,7 @@ instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
 
 newtype Data era = DataConstr (MemoBytes PlutusData era)
   deriving (Eq, Generic)
-  deriving newtype (SafeToHash, ToCBOR, NFData)
+  deriving newtype (SafeToHash, ToCBOR, NFData, ToExpr)
 
 -- | Encodes memoized bytes created upon construction.
 instance Typeable era => EncCBOR (Data era)
@@ -144,6 +148,8 @@ newtype BinaryData era = BinaryData ShortByteString
   deriving (Generic)
 
 instance EraCrypto era ~ c => HashAnnotated (BinaryData era) EraIndependentData c
+
+instance ToExpr (BinaryData era)
 
 instance Typeable era => EncCBOR (BinaryData era) where
   encCBOR (BinaryData sbs) = encodeTag 24 <> encCBOR sbs
@@ -208,6 +214,8 @@ data Datum era
   | DatumHash !(DataHash (EraCrypto era))
   | Datum !(BinaryData era)
   deriving (Eq, Generic, NoThunks, Ord, Show)
+
+instance ToExpr (Datum era)
 
 instance Era era => EncCBOR (Datum era) where
   encCBOR d = encode $ case d of

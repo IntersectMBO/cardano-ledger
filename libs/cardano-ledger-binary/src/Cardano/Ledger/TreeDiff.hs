@@ -16,6 +16,7 @@ module Cardano.Ledger.TreeDiff (
 )
 where
 
+import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Hash.Class ()
 import Cardano.Slotting.Block (BlockNo)
@@ -59,7 +60,10 @@ instance ToExpr EpochSize
 instance ToExpr x => ToExpr (WithOrigin x)
 
 instance ToExpr (Hash.Hash c index) where
-  toExpr x = trimExprViaShow 10 x
+  toExpr = trimExprViaShow 10
+
+instance DSIGN.DSIGNAlgorithm c => ToExpr (DSIGN.SignedDSIGN c index) where
+  toExpr = trimExprViaShow 10
 
 instance ToExpr a => ToExpr (StrictSeq a) where
   toExpr x = App "StrictSeqFromList" [listToExpr (toList x)]

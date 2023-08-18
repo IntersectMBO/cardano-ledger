@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -91,6 +92,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Bifunctor (Bifunctor (first))
 import Data.Map.Strict (Map)
@@ -117,6 +119,8 @@ instance NoThunks RdmrPtr
 
 instance NFData RdmrPtr
 
+instance ToExpr RdmrPtr
+
 -- EncCBOR and DecCBOR for RdmrPtr is used in UTXOW for error reporting
 instance DecCBOR RdmrPtr where
   decCBOR = RdmrPtr <$> decCBOR <*> decCBOR
@@ -141,6 +145,8 @@ newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (RedeemersRaw era)
 
+instance ToExpr (RedeemersRaw era)
+
 instance Typeable era => EncCBOR (RedeemersRaw era) where
   encCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
     where
@@ -158,9 +164,11 @@ instance Memoized Redeemers where
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
-  deriving newtype (Eq, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
+  deriving newtype (Eq, Generic, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Redeemers era)
+
+instance ToExpr (Redeemers era)
 
 -- =====================================================
 -- Pattern for Redeemers
@@ -232,11 +240,28 @@ instance
   ) =>
   NFData (AlonzoTxWitsRaw era)
 
+instance
+  ( Era era
+  , ToExpr (TxDats era)
+  , ToExpr (Redeemers era)
+  , ToExpr (Script era)
+  ) =>
+  ToExpr (AlonzoTxWitsRaw era)
+
 newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes AlonzoTxWitsRaw era)
   deriving newtype (SafeToHash, ToCBOR)
+  deriving (Generic)
 
 instance Memoized AlonzoTxWits where
   type RawType AlonzoTxWits = AlonzoTxWitsRaw
+
+instance
+  ( Era era
+  , ToExpr (TxDats era)
+  , ToExpr (Redeemers era)
+  , ToExpr (Script era)
+  ) =>
+  ToExpr (AlonzoTxWits era)
 
 instance (Era era, Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era) where
   (<>) x y | isEmptyTxWitness x = y
@@ -271,6 +296,8 @@ newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (EraCrypto era)) (Data era))
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDatsRaw era)
 
+instance ToExpr (Data era) => ToExpr (TxDatsRaw era)
+
 instance (Typeable era, EncCBOR (Data era)) => EncCBOR (TxDatsRaw era) where
   encCBOR (TxDatsRaw m) = encCBOR $ Map.elems m
 
@@ -293,6 +320,7 @@ nullDats :: TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
 
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
+  decCBOR :: Decoder s (Annotator (TxDatsRaw era))
   decCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
   {-# INLINE decCBOR #-}
 
@@ -302,9 +330,12 @@ instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
 -- this is how we ensure that they are not manipulated.
 newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
   deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
+  deriving (Generic)
 
 instance Memoized TxDats where
   type RawType TxDats = TxDatsRaw
+
+instance ToExpr (Data era) => ToExpr (TxDats era)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDats era)
 

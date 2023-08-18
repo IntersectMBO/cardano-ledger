@@ -81,6 +81,7 @@ import Cardano.Ledger.Shelley.TxBody (
   Withdrawals (..),
   totalTxDepositsShelley,
  )
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import qualified Data.Map.Strict as Map
@@ -120,6 +121,14 @@ deriving instance Generic (AllegraTxBodyRaw ma era)
 deriving instance
   (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era), NoThunks ma) =>
   NoThunks (AllegraTxBodyRaw ma era)
+
+instance
+  ( ToExpr ma
+  , ToExpr (TxOut era)
+  , ToExpr (TxCert era)
+  , ToExpr (Update era)
+  ) =>
+  ToExpr (AllegraTxBodyRaw ma era)
 
 instance (DecCBOR ma, Monoid ma, AllegraEraTxBody era) => DecCBOR (AllegraTxBodyRaw ma era) where
   decCBOR =
@@ -230,6 +239,13 @@ deriving newtype instance
   , Era era
   ) =>
   NFData (AllegraTxBody era)
+
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (TxCert era)
+  , ToExpr (Update era)
+  ) =>
+  ToExpr (AllegraTxBody era)
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AllegraTxBody era)

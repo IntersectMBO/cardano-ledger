@@ -120,6 +120,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
+import Cardano.Ledger.TreeDiff (ToExpr)
 
 instance Memoized ConwayTxBody where
   type RawType ConwayTxBody = ConwayTxBodyRaw
@@ -148,6 +149,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance (EraPParams era, Eq (TxOut era)) => Eq (ConwayTxBodyRaw era)
+instance (EraPParams era, ToExpr (TxOut era)) => ToExpr (ConwayTxBodyRaw era)
 
 instance
   (EraPParams era, NoThunks (TxOut era)) =>
@@ -275,6 +277,10 @@ deriving newtype instance
 deriving instance
   (EraPParams era, Show (TxOut era)) =>
   Show (ConwayTxBody era)
+
+deriving instance
+  (EraPParams era, ToExpr (TxOut era)) =>
+  ToExpr (ConwayTxBody era)
 
 type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
 
@@ -419,6 +425,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
           , ctbCurrentTreasuryValue = SNothing
           , ctbProposalProcedures = mempty
           , ctbVotingProcedures = VotingProcedures mempty
+          , ctbTreasuryDonation = Coin 0
           }
 
 instance

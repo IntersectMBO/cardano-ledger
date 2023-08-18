@@ -109,7 +109,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
@@ -122,6 +122,8 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.Mary.Value ()
 
 -- ======================================
 
@@ -158,12 +160,20 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBodyRaw era)
 
+instance
+  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
+  ToExpr (AlonzoTxBodyRaw era)
+
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
-  deriving (ToCBOR)
+  deriving (ToCBOR, Generic)
   deriving newtype (SafeToHash)
 
 instance Memoized AlonzoTxBody where
   type RawType AlonzoTxBody = AlonzoTxBodyRaw
+
+instance
+  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
+  ToExpr (AlonzoTxBody era)
 
 instance Crypto c => EraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance EraTxBody (AlonzoEra StandardCrypto) #-}

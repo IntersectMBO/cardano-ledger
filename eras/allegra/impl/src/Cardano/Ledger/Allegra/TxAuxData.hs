@@ -54,7 +54,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..), validMetadatum)
-import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Codec.CBOR.Decoding (
   TokenType (
     TypeListLen,

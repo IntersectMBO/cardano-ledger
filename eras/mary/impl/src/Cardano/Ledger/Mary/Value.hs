@@ -417,7 +417,7 @@ instance ToJSONKey AssetName where
 
 instance Crypto c => Compactible (MaryValue c) where
   newtype CompactForm (MaryValue c) = CompactValue (CompactValue c)
-    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData)
+    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData, ToExpr)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -439,13 +439,15 @@ data CompactValue c
       {-# UNPACK #-} !(CompactForm Coin) -- ada
       {-# UNPACK #-} !Word32 -- number of ma's
       {-# UNPACK #-} !ShortByteString -- rep
-  deriving (Show, Typeable)
+  deriving (Generic, Show, Typeable)
 
 instance NFData (CompactValue c) where
   rnf = rwhnf
 
 instance Crypto c => Eq (CompactValue c) where
   a == b = from a == from b
+
+instance ToExpr (CompactValue c)
 
 deriving via
   OnlyCheckWhnfNamed "CompactValue" (CompactValue c)

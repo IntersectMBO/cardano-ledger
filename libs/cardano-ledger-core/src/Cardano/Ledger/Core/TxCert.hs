@@ -143,10 +143,10 @@ data PoolCert c
 
 instance NoThunks (PoolCert c)
 
+instance ToExpr (PoolCert c)
+
 instance NFData (PoolCert c) where
   rnf = rwhnf
-
-instance ToExpr (PoolCert c)
 
 poolCertKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
 poolCertKeyHashWitness = \case

@@ -154,6 +154,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro hiding (set)
 import NoThunks.Class (NoThunks)
+import Cardano.Ledger.TreeDiff (ToExpr)
 
 -- ===================================================
 
@@ -161,7 +162,7 @@ import NoThunks.Class (NoThunks)
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR)
+  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToExpr)
 
 data AlonzoTx era = AlonzoTx
   { body :: !(TxBody era)
@@ -170,6 +171,9 @@ data AlonzoTx era = AlonzoTx
   , auxiliaryData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic)
+
+instance (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
+  ToExpr (AlonzoTx era)
 
 instance Crypto c => EraTx (AlonzoEra c) where
   {-# SPECIALIZE instance EraTx (AlonzoEra StandardCrypto) #-}

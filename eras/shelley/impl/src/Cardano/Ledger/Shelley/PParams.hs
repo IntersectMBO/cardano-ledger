@@ -522,3 +522,5 @@ instance ToExpr (PParamsUpdate era) => ToExpr (ProposedPPUpdates era)
 instance ToExpr (ShelleyPParams StrictMaybe era)
 
 instance ToExpr (ShelleyPParams Identity era)
+
+instance ToExpr (PParamsUpdate era) => ToExpr (Update era)

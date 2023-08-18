@@ -63,6 +63,7 @@ import Cardano.Ledger.Keys (
  )
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -77,7 +78,7 @@ import Quiet
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)
   deriving (Show) via Quiet ChainCode
-  deriving newtype (NoThunks, EncCBOR, DecCBOR, NFData)
+  deriving newtype (NoThunks, EncCBOR, DecCBOR, NFData, ToExpr)
 
 data BootstrapWitness c = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness c)
@@ -92,6 +93,7 @@ data BootstrapWitness c = BootstrapWitness'
   }
   deriving (Generic)
 
+instance Crypto c => ToExpr (BootstrapWitness c)
 deriving instance Crypto c => Show (BootstrapWitness c)
 
 deriving instance Crypto c => Eq (BootstrapWitness c)
