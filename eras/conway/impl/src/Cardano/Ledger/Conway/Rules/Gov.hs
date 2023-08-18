@@ -181,7 +181,6 @@ govTransition ::
   ConwayEraPParams era =>
   TransitionRule (ConwayGOV era)
 govTransition = do
-  -- TODO Check the signatures
   TRC (GovEnv txid epoch, st, gp) <- judgmentContext
 
   let applyProps st' Empty = pure st'
