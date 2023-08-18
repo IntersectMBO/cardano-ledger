@@ -71,6 +71,7 @@ import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Ledger.Shelley.TxAuxData ()
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
@@ -123,6 +124,8 @@ deriving newtype instance EraScript era => Eq (ShelleyTxWits era)
 deriving newtype instance EraScript era => Show (ShelleyTxWits era)
 
 deriving newtype instance Era era => Generic (ShelleyTxWits era)
+
+instance (Era era, ToExpr (Script era)) => ToExpr (ShelleyTxWits era)
 
 instance
   ( Era era

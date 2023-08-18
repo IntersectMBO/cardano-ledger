@@ -67,7 +67,7 @@ import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
-import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, mkMemoBytes, pattern Memo)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes, Memoized (..), memoBytes, mkMemoBytes, pattern Memo)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -75,6 +75,7 @@ import Cardano.Ledger.Shelley.Scripts (MultiSig (..), nativeMultiSigTag)
 import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits ()
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
@@ -110,6 +111,13 @@ instance
   ) =>
   NFData (ShelleyTxRaw era)
 
+instance
+  ( ToExpr (TxBody era)
+  , ToExpr (TxWits era)
+  , ToExpr (TxAuxData era)
+  ) =>
+  ToExpr (ShelleyTxRaw era)
+
 deriving instance
   ( Era era
   , Eq (TxBody era)
@@ -136,6 +144,9 @@ instance
 
 newtype ShelleyTx era = TxConstr (MemoBytes ShelleyTxRaw era)
   deriving newtype (SafeToHash, ToCBOR)
+
+instance Memoized ShelleyTx where
+  type RawType ShelleyTx = ShelleyTxRaw
 
 -- | `TxBody` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.

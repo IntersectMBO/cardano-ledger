@@ -945,3 +945,5 @@ fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 newtype Withdrawals c = Withdrawals {unWithdrawals :: Map (RewardAcnt c) Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
+
+instance ToExpr (Withdrawals c)

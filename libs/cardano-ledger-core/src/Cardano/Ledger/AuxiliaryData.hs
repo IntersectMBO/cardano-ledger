@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -18,14 +19,18 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON)
+import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 newtype AuxiliaryDataHash c = AuxiliaryDataHash
   { unsafeAuxiliaryDataHash :: SafeHash c EraIndependentTxAuxData
   }
-  deriving (Show, Eq, Ord, NoThunks, NFData)
+  deriving (Show, Eq, Ord, Generic, NoThunks, NFData)
+
+instance ToExpr (AuxiliaryDataHash c)
 
 deriving instance Crypto c => EncCBOR (AuxiliaryDataHash c)
 

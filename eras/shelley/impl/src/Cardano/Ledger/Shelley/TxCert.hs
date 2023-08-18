@@ -100,6 +100,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashW
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash (..), KeyRole (..), VerKeyVRF, asWitness)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust, isNothing)
@@ -232,6 +233,7 @@ data GenesisDelegCert c
   deriving (Show, Generic, Eq)
 
 instance NoThunks (GenesisDelegCert c)
+instance ToExpr (GenesisDelegCert c)
 
 instance NFData (GenesisDelegCert c) where
   rnf = rwhnf
@@ -246,6 +248,7 @@ data MIRPot = ReservesMIR | TreasuryMIR
   deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
 
 deriving instance NoThunks MIRPot
+instance ToExpr MIRPot
 
 instance EncCBOR MIRPot where
   encCBOR ReservesMIR = encodeWord8 0
@@ -267,6 +270,7 @@ data MIRTarget c
   deriving (Show, Generic, Eq, NFData)
 
 deriving instance NoThunks (MIRTarget c)
+instance ToExpr (MIRTarget c)
 
 instance Crypto c => DecCBOR (MIRTarget c) where
   decCBOR = do
@@ -288,6 +292,7 @@ data MIRCert c = MIRCert
   deriving (Show, Generic, Eq, NFData)
 
 instance NoThunks (MIRCert c)
+instance ToExpr (MIRCert c)
 
 instance Crypto c => DecCBOR (MIRCert c) where
   decCBOR =
@@ -308,6 +313,8 @@ data ShelleyTxCert era
   deriving (Show, Generic, Eq, NFData)
 
 instance NoThunks (ShelleyTxCert era)
+
+instance ToExpr (ShelleyTxCert era)
 
 upgradeShelleyTxCert ::
   EraCrypto era1 ~ EraCrypto era2 =>
@@ -428,6 +435,8 @@ data ShelleyDelegCert c
   | -- | A stake delegation certificate.
     ShelleyDelegCert !(StakeCredential c) !(KeyHash 'StakePool c)
   deriving (Show, Generic, Eq)
+
+instance ToExpr (ShelleyDelegCert c)
 
 pattern RegKey :: StakeCredential c -> ShelleyDelegCert c
 pattern RegKey cred = ShelleyRegCert cred

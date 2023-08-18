@@ -132,6 +132,7 @@ data PoolCert c
   deriving (Show, Generic, Eq)
 
 instance NoThunks (PoolCert c)
+instance ToExpr (PoolCert c)
 
 instance NFData (PoolCert c) where
   rnf = rwhnf

@@ -53,7 +53,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..), validMetadatum)
-import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Codec.CBOR.Decoding (
   TokenType (
     TypeListLen,
@@ -106,6 +106,8 @@ instance NFData (AllegraTxAuxDataRaw era)
 newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes AllegraTxAuxDataRaw era)
   deriving (Generic)
   deriving newtype (Eq, ToCBOR, SafeToHash)
+
+instance ToExpr (AllegraTxAuxData era)
 
 instance Memoized AllegraTxAuxData where
   type RawType AllegraTxAuxData = AllegraTxAuxDataRaw
