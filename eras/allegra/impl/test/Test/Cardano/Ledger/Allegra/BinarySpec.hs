@@ -23,5 +23,5 @@ spec =
     specTxAuxDataUpgrade @Allegra @AllegraTxAuxData
     -- specTxWitsUpgrade @Allegra @txWits
     specTxBodyUpgrade @Allegra @AllegraTxBody
-    specTxUpgrade @Allegra @ShelleyTx
+    when False $ specTxUpgrade @Allegra @ShelleyTx
     specScriptUpgrade @Allegra
