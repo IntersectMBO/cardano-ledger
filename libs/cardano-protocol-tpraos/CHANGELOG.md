@@ -1,5 +1,13 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.0.3.5
+
+*
+
+## 1.0.3.4
+
+* Compatibility patch for `cardano-ledger-shelley-1.5.0.0`
+
 ## 1.0.3.3
 
 *

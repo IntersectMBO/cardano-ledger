@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.3.2.1
+
+*
+
 ## 1.3.2.0
 
 * Deprecate `translateValue` and `translateCompactValue`

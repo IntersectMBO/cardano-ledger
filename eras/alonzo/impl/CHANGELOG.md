@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.4.0.1
+
+*
+
 ## 1.4.0.0
 
 * Add `translateAlonzoTxAuxData`, `translateAlonzoScript` and `translateDatum`

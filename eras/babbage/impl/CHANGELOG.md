@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.4.3.1
+
+*
+
 ## 1.4.3.0
 
 * Deprecate `translateTxOut`
