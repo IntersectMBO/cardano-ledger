@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.7.0.1
+## 1.8.0.0
 
-*
+* Add field `gasId` to `GovActionState`
+* Add `insertGovActionsState`
+* Change type of `rsRemoved` in `RatifyState` to use  `GovActionState` instead of a tuple
+* Change `RatifySignal` to use `GovActionsState` instead of a tuple
 
 ## 1.7.0.0
 
