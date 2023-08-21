@@ -123,10 +123,11 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Thresholds for DRep votes
   , cppMinCommitteeSize :: !(HKD f Natural)
   -- ^ Minimum size of the Constitutional Committee
-  , cppCommitteeTermLimit :: !(HKD f Natural)
+  , cppCommitteeTermLimit :: !(HKD f Natural) -- TODO: @aniketd: This too should be EpochNo
+
   -- ^ The Constitutional Committee Term limit in number of Slots
-  , cppGovActionExpiration :: !(HKD f Natural)
-  -- ^ Gov action expiration in number of Slots
+  , cppGovActionExpiration :: !(HKD f EpochNo)
+  -- ^ Gov action expiration in number of Epochs
   , cppGovActionDeposit :: !(HKD f Coin)
   -- ^ The amount of the Gov Action deposit
   , cppDRepDeposit :: !(HKD f Coin)
@@ -161,7 +162,7 @@ data UpgradeConwayPParams f = UpgradeConwayPParams
   , ucppDRepVotingThresholds :: !(HKD f DRepVotingThresholds)
   , ucppMinCommitteeSize :: !(HKD f Natural)
   , ucppCommitteeTermLimit :: !(HKD f Natural)
-  , ucppGovActionExpiration :: !(HKD f Natural)
+  , ucppGovActionExpiration :: !(HKD f EpochNo)
   , ucppGovActionDeposit :: !(HKD f Coin)
   , ucppDRepDeposit :: !(HKD f Coin)
   , ucppDRepActivity :: !(HKD f EpochNo)
@@ -195,7 +196,7 @@ instance Default (UpgradeConwayPParams Identity) where
       , ucppDRepVotingThresholds = def
       , ucppMinCommitteeSize = 0
       , ucppCommitteeTermLimit = 0
-      , ucppGovActionExpiration = 0
+      , ucppGovActionExpiration = EpochNo 0
       , ucppGovActionDeposit = Coin 0
       , ucppDRepDeposit = Coin 0
       , ucppDRepActivity = EpochNo 0
@@ -302,7 +303,7 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
       , isValid (/= 0) ppuMaxValSizeL
       , isValid (/= 0) ppuCollateralPercentageL
       , isValid (/= 0) ppuCommitteeTermLimitL
-      , isValid (/= 0) ppuGovActionExpirationL
+      , isValid (/= EpochNo 0) ppuGovActionExpirationL
       , -- Coins
         isValid (/= zero) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
@@ -447,7 +448,7 @@ emptyConwayPParams =
     , cppDRepVotingThresholds = def
     , cppMinCommitteeSize = 0
     , cppCommitteeTermLimit = 0
-    , cppGovActionExpiration = 0
+    , cppGovActionExpiration = EpochNo 0
     , cppGovActionDeposit = Coin 0
     , cppDRepDeposit = Coin 0
     , cppDRepActivity = EpochNo 0
@@ -618,7 +619,7 @@ conwayUpgradePParamsHKDPairs px pp =
   , ("dRepVotingThresholds", hkdMap px (toJSON @DRepVotingThresholds) (pp ^. hkdDRepVotingThresholdsL @era @f))
   , ("minCommitteeSize", hkdMap px (toJSON @Natural) (pp ^. hkdMinCommitteeSizeL @era @f))
   , ("committeeTermLimit", hkdMap px (toJSON @Natural) (pp ^. hkdCommitteeTermLimitL @era @f))
-  , ("govActionExpiration", hkdMap px (toJSON @Natural) (pp ^. hkdGovActionExpirationL @era @f))
+  , ("govActionExpiration", hkdMap px (toJSON @EpochNo) (pp ^. hkdGovActionExpirationL @era @f))
   , ("govActionDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdGovActionDepositL @era @f))
   , ("dRepDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdDRepDepositL @era @f))
   , ("dRepActivity", hkdMap px (toJSON @EpochNo) (pp ^. hkdDRepActivityL @era @f))
@@ -638,7 +639,7 @@ upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
   , ("dRepVotingThresholds", (toJSON @DRepVotingThresholds) ucppDRepVotingThresholds)
   , ("minCommitteeSize", (toJSON @Natural) ucppMinCommitteeSize)
   , ("committeeTermLimit", (toJSON @Natural) ucppCommitteeTermLimit)
-  , ("govActionExpiration", (toJSON @Natural) ucppGovActionExpiration)
+  , ("govActionExpiration", (toJSON @EpochNo) ucppGovActionExpiration)
   , ("govActionDeposit", (toJSON @Coin) ucppGovActionDeposit)
   , ("dRepDeposit", (toJSON @Coin) ucppDRepDeposit)
   , ("dRepActivity", (toJSON @EpochNo) ucppDRepActivity)

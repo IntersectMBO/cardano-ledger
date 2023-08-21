@@ -75,7 +75,7 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
   hkdMinCommitteeSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
   hkdCommitteeTermLimitL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
-  hkdGovActionExpirationL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdGovActionExpirationL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
   hkdGovActionDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
   hkdDRepDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
   hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
@@ -92,7 +92,7 @@ ppMinCommitteeSizeL = ppLens . hkdMinCommitteeSizeL @era @Identity
 ppCommitteeTermLimitL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
 ppCommitteeTermLimitL = ppLens . hkdCommitteeTermLimitL @era @Identity
 
-ppGovActionExpirationL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
+ppGovActionExpirationL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochNo
 ppGovActionExpirationL = ppLens . hkdGovActionExpirationL @era @Identity
 
 ppGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
@@ -116,7 +116,7 @@ ppuMinCommitteeSizeL = ppuLens . hkdMinCommitteeSizeL @era @StrictMaybe
 ppuCommitteeTermLimitL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
 ppuCommitteeTermLimitL = ppuLens . hkdCommitteeTermLimitL @era @StrictMaybe
 
-ppuGovActionExpirationL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuGovActionExpirationL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
 ppuGovActionExpirationL = ppuLens . hkdGovActionExpirationL @era @StrictMaybe
 
 ppuGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)

@@ -2,6 +2,10 @@
 
 ## 1.8.0.0
 
+* Implement expiry for governance proposals #3664
+  * Update `ppGovActionExpiration` to be an `EpochNo`
+  * Add `gasExpiresAfter :: !EpochNo` to `GovActionState`
+  * Add `gePParams` to `GovEnv`
 * Add `reDRepState` to `RatifyEnv`
 * Add field `gasId` to `GovActionState`
 * Add `insertGovActionsState`

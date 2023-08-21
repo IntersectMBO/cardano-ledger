@@ -284,7 +284,7 @@ ledgerTransition = do
         govActionsState' <-
           trans @(EraRule "GOV" era) $
             TRC
-              ( GovEnv (txid txBody) currentEpoch
+              ( GovEnv (txid txBody) currentEpoch pp
               , utxoState ^. utxosGovStateL . cgGovActionsStateL
               , govProcedures
               )
