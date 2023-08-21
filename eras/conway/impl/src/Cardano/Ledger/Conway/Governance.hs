@@ -17,7 +17,7 @@
 module Cardano.Ledger.Conway.Governance (
   EraGov (..),
   GovActionsState (..),
-  insertGovActionEntry,
+  insertGovActionsState,
   EnactState (..),
   RatifyState (..),
   ConwayGovState (..),

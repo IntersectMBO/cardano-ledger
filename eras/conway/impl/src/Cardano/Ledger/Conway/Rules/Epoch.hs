@@ -36,7 +36,7 @@ import Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   cgGovActionsStateL,
   cgRatifyStateL,
-  insertGovActionEntry,
+  insertGovActionsState,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
@@ -268,7 +268,7 @@ epochTransition = do
           & prevPParamsEpochStateL .~ pp
           & curPParamsEpochStateL .~ pp
       -- TODO can we be more efficient?
-      newGov = foldr' insertGovActionEntry mempty rsFuture
+      newGov = foldr' insertGovActionsState mempty rsFuture
       esGovernanceL = esLStateL . lsUTxOStateL . utxosGovStateL
       esDonationL :: Lens' (EpochState era) Coin
       esDonationL = esLStateL . lsUTxOStateL . utxosDonationL
