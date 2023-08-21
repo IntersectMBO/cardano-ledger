@@ -50,7 +50,7 @@ instance EraGov era => STS (ConwayENACT era) where
   initialRules = []
   transitionRules = [enactmentTransition]
 
-enactmentTransition :: forall era. EraGov era => TransitionRule (ConwayENACT era)
+enactmentTransition :: forall era. EraPParams era => TransitionRule (ConwayENACT era)
 enactmentTransition = do
   TRC ((), st, act) <- judgmentContext
 
