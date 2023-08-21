@@ -27,7 +27,6 @@ import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   EraGov,
   GovAction (..),
-  GovActionId,
   GovActionState (..),
   RatifyState (..),
   Vote (..),
@@ -63,13 +62,7 @@ data RatifyEnv era = RatifyEnv
   }
   deriving (Show)
 
-newtype RatifySignal era
-  = RatifySignal
-      ( StrictSeq
-          ( GovActionId (EraCrypto era)
-          , GovActionState era
-          )
-      )
+newtype RatifySignal era = RatifySignal (StrictSeq (GovActionState era))
 
 instance
   ( Era era
@@ -204,8 +197,9 @@ ratifyTransition = do
     judgmentContext
 
   case rsig of
-    act@(_, ast@GovActionState {gasAction, gasProposedIn}) :<| sigs -> do
-      let expired = gasProposedIn + epochsToExpire < reCurrentEpoch
+    ast :<| sigs -> do
+      let GovActionState {gasAction, gasProposedIn} = ast
+          expired = gasProposedIn + epochsToExpire < reCurrentEpoch
       if spoAccepted env ast && dRepAccepted env ast dRepThreshold
         then do
           -- Update ENACT state with the governance action that was ratified
@@ -213,16 +207,16 @@ ratifyTransition = do
           let st' =
                 st
                   { rsEnactState = es
-                  , rsRemoved = act :<| rsRemoved
+                  , rsRemoved = ast :<| rsRemoved
                   }
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
           st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
           if expired
             then -- Action expired, do not include it in the next epoch
-              pure $ st' {rsRemoved = act :<| rsRemoved}
+              pure $ st' {rsRemoved = ast :<| rsRemoved}
             else -- Include this action in the next epoch
-              pure $ st' {rsFuture = act :<| rsFuture}
+              pure $ st' {rsFuture = ast :<| rsFuture}
     Empty -> pure st
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where

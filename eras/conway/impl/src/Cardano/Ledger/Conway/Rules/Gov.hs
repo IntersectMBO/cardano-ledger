@@ -151,7 +151,8 @@ addAction epoch gaid c addr act (GovActionsState st) =
   where
     gai' =
       GovActionState
-        { gasCommitteeVotes = mempty
+        { gasId = gaid
+        , gasCommitteeVotes = mempty
         , gasDRepVotes = mempty
         , gasStakePoolVotes = mempty
         , gasDeposit = c

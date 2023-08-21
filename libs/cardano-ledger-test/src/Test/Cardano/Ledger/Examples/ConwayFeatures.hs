@@ -173,9 +173,13 @@ voteYes pf govActionId =
       , (DRepVoter (drepCredential pf), Map.fromList [(govActionId, VotingProcedure VoteYes SNothing)])
       ]
 
-govActionState :: ProposalProcedure era -> GovActionState era
-govActionState ProposalProcedure {..} =
+govActionState ::
+  GovActionId (EraCrypto era) ->
+  ProposalProcedure era ->
+  GovActionState era
+govActionState gaid ProposalProcedure {..} =
   GovActionState
+    gaid
     mempty
     mempty
     mempty
@@ -184,9 +188,10 @@ govActionState ProposalProcedure {..} =
     pProcGovAction
     (EpochNo 0)
 
-govActionStateWithYesVotes :: Scriptic era => Proof era -> ProposalProcedure era -> GovActionState era
-govActionStateWithYesVotes pf ProposalProcedure {..} =
+govActionStateWithYesVotes :: Scriptic era => GovActionId (EraCrypto era) -> Proof era -> ProposalProcedure era -> GovActionState era
+govActionStateWithYesVotes gaid pf ProposalProcedure {..} =
   GovActionState
+    gaid
     mempty
     (Map.fromList [(drepCredential pf, VoteYes)])
     (Map.fromList [(stakePoolKeyHash pf, VoteYes)])
@@ -330,7 +335,11 @@ testGov pf = do
     proposalTx = txFromTestCaseData pf (proposal pf)
 
     govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
-    expectedGovState0 = GovActionsState $ Map.fromList [(govActionId, govActionState (newConstitutionProposal pf))]
+    expectedGovState0 =
+      GovActionsState $
+        Map.fromList
+          [ (govActionId, govActionState govActionId (newConstitutionProposal pf))
+          ]
     expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgRatifyStateL)
 
     eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState (pp pf) (trustMeP pf True proposalTx)
@@ -341,7 +350,7 @@ testGov pf = do
 
   let
     voteTx = txFromTestCaseData pf (vote pf govActionId)
-    gas = govActionStateWithYesVotes pf (newConstitutionProposal pf)
+    gas = govActionStateWithYesVotes govActionId pf (newConstitutionProposal pf)
     expectedGovState1 = GovActionsState $ Map.fromList [(govActionId, gas)]
     expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgRatifyStateL)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 (pp pf) (trustMeP pf True voteTx)
@@ -379,7 +388,14 @@ testGov pf = do
     secondGovActionId = GovActionId (txid (secondProposalTx ^. bodyTxL)) (GovActionIx 0)
     expectedGovActionsState2 =
       GovActionsState $
-        Map.fromList [(secondGovActionId, govActionState (anotherConstitutionProposal pf govActionId))]
+        Map.fromList
+          [
+            ( secondGovActionId
+            , govActionState
+                secondGovActionId
+                (anotherConstitutionProposal pf govActionId)
+            )
+          ]
     expectedGovState2 =
       ConwayGovState
         expectedGovActionsState2
@@ -398,11 +414,15 @@ testGov pf = do
   assertEqual "constitution after enactment after no votes" constitution1 (proposedConstitution @era)
 
   case toList $ rsFuture (epochState3 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgRatifyStateL) of
-    [(gId, gas')] ->
+    [gas'] ->
       assertEqual
         "un-enacted govAction is recorded in rsFuture"
-        (gId, gas')
-        (secondGovActionId, govActionState (anotherConstitutionProposal pf govActionId))
+        (gasId gas', gas')
+        ( secondGovActionId
+        , govActionState
+            secondGovActionId
+            (anotherConstitutionProposal pf govActionId)
+        )
     x -> error $ "Unexpected `rsFuture` after runEPOCH: " ++ show x
 
 conwayFeatures :: TestTree
