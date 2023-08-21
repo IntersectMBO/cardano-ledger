@@ -191,3 +191,21 @@ test-suite tests
         genvalidity,
         genvalidity-scientific,
         scientific
+
+benchmark umap
+    type:             exitcode-stdio-1.0
+    main-is:          UMap.hs
+    hs-source-dirs:   bench
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -threaded -rtsopts -O2
+
+    build-depends:
+        base,
+        cardano-ledger-core,
+        testlib,
+        containers,
+        criterion,
+        QuickCheck
