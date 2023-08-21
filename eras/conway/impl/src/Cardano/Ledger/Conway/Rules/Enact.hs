@@ -53,6 +53,7 @@ instance EraGov era => STS (ConwayENACT era) where
 enactmentTransition :: forall era. EraPParams era => TransitionRule (ConwayENACT era)
 enactmentTransition = do
   TRC ((), st, act) <- judgmentContext
+
   case act of
     ParameterChange _prevGovActionId ppup -> pure $ st {ensPParams = newPP}
       where
@@ -60,8 +61,6 @@ enactmentTransition = do
     HardForkInitiation _prevGovActionId pv -> pure $ st {ensProtVer = pv}
     TreasuryWithdrawals wdrls -> do
       let wdrlsAmount = fold wdrls
-          -- TODO: validate NetworkId in all
-          -- We can drop NetworkIds after their validation
           wdrlsNoNetworkId = Map.mapKeys getRwdCred wdrls
       runTest
         . failureUnless (wdrlsAmount <= ensTreasury st)

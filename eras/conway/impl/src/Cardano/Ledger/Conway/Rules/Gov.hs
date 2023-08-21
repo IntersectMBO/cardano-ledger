@@ -19,8 +19,8 @@ module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovPredFailure (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt)
-import Cardano.Ledger.BaseTypes (EpochNo (..), ShelleyBase)
+import Cardano.Ledger.Address (RewardAcnt, getRwdNetwork)
+import Cardano.Ledger.BaseTypes (EpochNo (..), Network, ShelleyBase, networkId)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
@@ -42,11 +42,14 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
   judgmentContext,
+  liftSTS,
+  (?!),
  )
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
@@ -63,6 +66,8 @@ data GovEnv era = GovEnv
 data ConwayGovPredFailure era
   = GovActionsDoNotExist (Set.Set (GovActionId (EraCrypto era)))
   | MalformedProposal (GovAction era)
+  | ProposalProcedureNetworkIdMismatch (RewardAcnt (EraCrypto era)) Network
+  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAcnt (EraCrypto era))) Network
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -73,6 +78,8 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
   decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
     0 -> SumD GovActionsDoNotExist <! From
     1 -> SumD MalformedProposal <! From
+    2 -> SumD ProposalProcedureNetworkIdMismatch <! From <! From
+    3 -> SumD TreasuryWithdrawalsNetworkIdMismatch <! From <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -80,6 +87,10 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
     encode . \case
       GovActionsDoNotExist gid -> Sum GovActionsDoNotExist 0 !> To gid
       MalformedProposal ga -> Sum MalformedProposal 1 !> To ga
+      ProposalProcedureNetworkIdMismatch acnt nid ->
+        Sum ProposalProcedureNetworkIdMismatch 2 !> To acnt !> To nid
+      TreasuryWithdrawalsNetworkIdMismatch acnts nid ->
+        Sum TreasuryWithdrawalsNetworkIdMismatch 3 !> To acnts !> To nid
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -165,14 +176,30 @@ actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
       ParameterChange _ ppd -> ppuWellFormed ppd
       _ -> True
 
-govTransition :: forall era. ConwayEraPParams era => TransitionRule (ConwayGOV era)
+govTransition ::
+  forall era.
+  ConwayEraPParams era =>
+  TransitionRule (ConwayGOV era)
 govTransition = do
-  -- TODO Check the signatures
   TRC (GovEnv txid epoch, st, gp) <- judgmentContext
 
   let applyProps st' Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
         runTest $ actionWellFormed pProcGovAction
+
+        -- Check Network for RewardAcnts in ProposalProcedure and its TreasuryWithdrawals
+        expectedNetworkId <- liftSTS $ asks networkId
+        getRwdNetwork pProcReturnAddr
+          == expectedNetworkId
+            ?! ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId
+        case pProcGovAction of
+          TreasuryWithdrawals wdrls ->
+            let mismatchedAccounts =
+                  Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
+             in Set.null mismatchedAccounts
+                  ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
+          _ -> pure ()
+
         let st'' =
               addAction
                 epoch

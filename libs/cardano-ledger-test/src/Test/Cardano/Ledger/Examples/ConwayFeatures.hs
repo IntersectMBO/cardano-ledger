@@ -145,7 +145,7 @@ newConstitutionProposal :: forall era. Scriptic era => Proof era -> ProposalProc
 newConstitutionProposal pf =
   ProposalProcedure
     (Coin proposalDeposit)
-    (RewardAcnt Mainnet (KeyHashObj (stakeKeyHash pf)))
+    (RewardAcnt Testnet (KeyHashObj (stakeKeyHash pf)))
     (NewConstitution SNothing (proposedConstitution @era))
     (Anchor (fromJust $ textToUrl "new.constitution.com") (SLE.mkDummySafeHash Proxy 1))
 
@@ -158,7 +158,7 @@ anotherConstitutionProposal ::
 anotherConstitutionProposal pf prevGovActionId =
   ProposalProcedure
     (Coin proposalDeposit)
-    (RewardAcnt Mainnet (KeyHashObj (stakeKeyHash pf)))
+    (RewardAcnt Testnet (KeyHashObj (stakeKeyHash pf)))
     ( NewConstitution
         (SJust (PrevGovActionId prevGovActionId))
         (Constitution (SLE.mkDummyAnchor 2) SNothing)
