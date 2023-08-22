@@ -149,6 +149,7 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState e
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovAction era) where
   arbitrary =
@@ -224,10 +225,11 @@ instance
 
 -- GOV
 
-instance Era era => Arbitrary (GovEnv era) where
+instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (GovEnv era) where
   arbitrary =
     GovEnv
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
 
 instance Era era => Arbitrary (VotingProcedure era) where

@@ -112,6 +112,7 @@ data GovActionState era = GovActionState
   , gasReturnAddr :: !(RewardAcnt (EraCrypto era))
   , gasAction :: !(GovAction era)
   , gasProposedIn :: !EpochNo
+  , gasExpiresAfter :: !EpochNo
   }
   deriving (Generic)
 
@@ -120,7 +121,7 @@ instance EraPParams era => ToJSON (GovActionState era) where
   toEncoding = pairs . mconcat . toGovActionStatePairs
 
 toGovActionStatePairs :: (KeyValue a, EraPParams era) => GovActionState era -> [a]
-toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _) =
+toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _) =
   let GovActionState {..} = gas
    in [ "actionId" .= gasId
       , "committeeVotes" .= gasCommitteeVotes
@@ -130,6 +131,7 @@ toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _) =
       , "returnAddr" .= gasReturnAddr
       , "action" .= gasAction
       , "proposedIn" .= gasProposedIn
+      , "expiresAfter" .= gasExpiresAfter
       ]
 
 deriving instance EraPParams era => Eq (GovActionState era)
@@ -152,6 +154,7 @@ instance EraPParams era => DecCBOR (GovActionState era) where
         <! From
         <! From
         <! From
+        <! From
 
 instance EraPParams era => EncCBOR (GovActionState era) where
   encCBOR GovActionState {..} =
@@ -165,6 +168,7 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasReturnAddr
         !> To gasAction
         !> To gasProposedIn
+        !> To gasExpiresAfter
 
 newtype GovActionsState era = GovActionsState
   { unGovActionsState :: Map (GovActionId (EraCrypto era)) (GovActionState era)

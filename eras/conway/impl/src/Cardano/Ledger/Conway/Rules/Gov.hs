@@ -24,7 +24,7 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), Network, ShelleyBase, networkId)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (ConwayEraPParams (..))
+import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ppGovActionExpirationL)
 import Cardano.Ledger.Conway.Era (ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
@@ -55,12 +55,14 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
 data GovEnv era = GovEnv
-  { teTxId :: !(TxId (EraCrypto era))
-  , teEpoch :: !EpochNo
+  { geTxId :: !(TxId (EraCrypto era))
+  , geEpoch :: !EpochNo
+  , gePParams :: !(PParams era)
   }
 
 data ConwayGovPredFailure era
@@ -139,13 +141,14 @@ addVoterVote voter (GovActionsState st) govActionId VotingProcedure {vProcVote} 
 
 addAction ::
   EpochNo ->
+  EpochNo ->
   GovActionId (EraCrypto era) ->
   Coin ->
   RewardAcnt (EraCrypto era) ->
   GovAction era ->
   GovActionsState era ->
   GovActionsState era
-addAction epoch gaid c addr act (GovActionsState st) =
+addAction epoch gaExpiry gaid c addr act (GovActionsState st) =
   GovActionsState $
     Map.insert gaid gai' st
   where
@@ -156,9 +159,10 @@ addAction epoch gaid c addr act (GovActionsState st) =
         , gasDRepVotes = mempty
         , gasStakePoolVotes = mempty
         , gasDeposit = c
-        , gasProposedIn = epoch
-        , gasAction = act
         , gasReturnAddr = addr
+        , gasAction = act
+        , gasProposedIn = epoch
+        , gasExpiresAfter = epoch + gaExpiry
         }
 
 noSuchGovActions ::
@@ -182,7 +186,7 @@ govTransition ::
   ConwayEraPParams era =>
   TransitionRule (ConwayGOV era)
 govTransition = do
-  TRC (GovEnv txid epoch, st, gp) <- judgmentContext
+  TRC (GovEnv txid epoch pp, st, gp) <- judgmentContext
 
   let applyProps st' Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
@@ -204,6 +208,7 @@ govTransition = do
         let st'' =
               addAction
                 epoch
+                (pp ^. ppGovActionExpirationL)
                 (GovActionId txid idx)
                 pProcDeposit
                 pProcReturnAddr

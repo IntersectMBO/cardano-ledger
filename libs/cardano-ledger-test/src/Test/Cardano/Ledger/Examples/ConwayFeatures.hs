@@ -28,7 +28,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ConwayEraTxBody, ppDRepActivityL)
+import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ConwayEraTxBody, ppDRepActivityL, ppGovActionExpirationL)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -181,6 +181,7 @@ govActionState gaid ProposalProcedure {..} =
     pProcReturnAddr
     pProcGovAction
     (EpochNo 0)
+    (EpochNo 30)
 
 govActionStateWithYesVotes :: Scriptic era => GovActionId (EraCrypto era) -> Proof era -> ProposalProcedure era -> GovActionState era
 govActionStateWithYesVotes gaid pf ProposalProcedure {..} =
@@ -193,13 +194,14 @@ govActionStateWithYesVotes gaid pf ProposalProcedure {..} =
     pProcReturnAddr
     pProcGovAction
     (EpochNo 0)
+    (EpochNo 30)
 
 -- | Value for the actual threshold, plus a small epsilon for GT (>) relation
 spoThreshold :: Rational
 spoThreshold = 51 % 100 + 1 % 100000000000
 
 pp :: ConwayEraPParams era => PParams era
-pp = emptyPParams & ppMaxValSizeL .~ 1000000000 & ppDRepActivityL .~ 100
+pp = emptyPParams & ppMaxValSizeL .~ 1000000000 & ppDRepActivityL .~ 100 & ppGovActionExpirationL .~ 30
 
 fee :: Integer
 fee = 5

@@ -287,7 +287,7 @@ instance PrettyA (Anchor era) where
   prettyA = viaShow
 
 instance PrettyA (PParamsUpdate era) => PrettyA (GovActionState era) where
-  prettyA gas@(GovActionState _ _ _ _ _ _ _ _) =
+  prettyA gas@(GovActionState _ _ _ _ _ _ _ _ _) =
     let GovActionState {..} = gas
      in ppRecord
           "GovActionState"
@@ -295,9 +295,11 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovActionState era) where
           , ("CommitteVotes", prettyA gasCommitteeVotes)
           , ("DRepVotes", prettyA gasDRepVotes)
           , ("StakePoolVotes", prettyA gasStakePoolVotes)
+          , ("Deposit", prettyA gasDeposit)
           , ("Return Address", prettyA gasReturnAddr)
           , ("Action", prettyA gasAction)
           , ("Proposed In", prettyA gasProposedIn)
+          , ("Expires After", prettyA gasExpiresAfter)
           ]
 
 instance PrettyA (Constitution era) where

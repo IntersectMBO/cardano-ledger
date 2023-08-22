@@ -96,9 +96,6 @@ spoThreshold = 51 % 100
 dRepThreshold :: Rational
 dRepThreshold = 51 % 100
 
-epochsToExpire :: EpochNo
-epochsToExpire = 30
-
 spoAccepted :: RatifyEnv era -> GovActionState era -> Bool
 spoAccepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
   totalAcceptedStakePoolsRatio > getStakePoolThreshold gasAction
@@ -206,8 +203,7 @@ ratifyTransition = do
 
   case rsig of
     ast :<| sigs -> do
-      let GovActionState {gasAction, gasProposedIn} = ast
-          expired = gasProposedIn + epochsToExpire < reCurrentEpoch
+      let GovActionState {gasAction, gasExpiresAfter} = ast
       if spoAccepted env ast && dRepAccepted env ast dRepThreshold
         then do
           -- Update ENACT state with the governance action that was ratified
@@ -219,12 +215,12 @@ ratifyTransition = do
                   }
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
+          -- This action hasn't been ratified yet. Process the remaining actions.
           st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
-          if expired
-            then -- Action expired, do not include it in the next epoch
-              pure $ st' {rsRemoved = ast :<| rsRemoved}
-            else -- Include this action in the next epoch
-              pure $ st' {rsFuture = ast :<| rsFuture}
+          -- Finally, filter out actions that are not processed.
+          if gasExpiresAfter < reCurrentEpoch
+            then pure st' {rsRemoved = ast :<| rsRemoved} -- Action expires after current Epoch. Remove it.
+            else pure st' {rsFuture = ast :<| rsFuture}
     Empty -> pure st
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where

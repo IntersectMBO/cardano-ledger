@@ -398,7 +398,7 @@ protocol_param_update =
   , ? 26: drep_voting_thresholds ; DRep voting thresholds
   , ? 27: uint                   ; min committee size
   , ? 28: uint                   ; committee term limit
-  , ? 29: uint                   ; governance action expiration
+  , ? 29: epoch                  ; governance action validity period
   , ? 30: coin                   ; governance action deposit
   , ? 31: coin                   ; DRep deposit
   , ? 32: epoch                  ; DRep inactivity period
