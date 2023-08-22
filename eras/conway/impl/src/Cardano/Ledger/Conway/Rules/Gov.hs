@@ -24,7 +24,7 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), Network, ShelleyBase, networkId)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ppGovActionExpirationL)
+import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ppGovActionExpirationL, ppMinCommitteeSizeL)
 import Cardano.Ledger.Conway.Era (ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
@@ -37,7 +37,7 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   indexedGovProps,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..))
+import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..), committeeMembersL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
@@ -57,6 +57,7 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
 import Validation (failureUnless)
 
 data GovEnv era = GovEnv
@@ -70,6 +71,11 @@ data ConwayGovPredFailure era
   | MalformedProposal (GovAction era)
   | ProposalProcedureNetworkIdMismatch (RewardAcnt (EraCrypto era)) Network
   | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAcnt (EraCrypto era))) Network
+  | NewCommitteeSizeTooSmall
+      -- | Size of `Committee` in `ProposalProcedure`
+      Natural
+      -- | `ppMinCommitteeSize` from `PParams`
+      Natural
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -82,6 +88,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     1 -> SumD MalformedProposal <! From
     2 -> SumD ProposalProcedureNetworkIdMismatch <! From <! From
     3 -> SumD TreasuryWithdrawalsNetworkIdMismatch <! From <! From
+    4 -> SumD NewCommitteeSizeTooSmall <! From <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -93,6 +100,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum ProposalProcedureNetworkIdMismatch 2 !> To acnt !> To nid
       TreasuryWithdrawalsNetworkIdMismatch acnts nid ->
         Sum TreasuryWithdrawalsNetworkIdMismatch 3 !> To acnts !> To nid
+      NewCommitteeSizeTooSmall given expected ->
+        Sum NewCommitteeSizeTooSmall 4 !> To given !> To expected
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -192,17 +201,24 @@ govTransition = do
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
         runTest $ actionWellFormed pProcGovAction
 
-        -- Check Network for RewardAcnts in ProposalProcedure and its TreasuryWithdrawals
+        -- Check Network for RewardAcnts in ProposalProcedure
         expectedNetworkId <- liftSTS $ asks networkId
         getRwdNetwork pProcReturnAddr
           == expectedNetworkId
             ?! ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId
         case pProcGovAction of
+          -- Check Network for RewardAcnts in TreasuryWithdrawals
           TreasuryWithdrawals wdrls ->
             let mismatchedAccounts =
                   Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
              in Set.null mismatchedAccounts
                   ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
+          NewCommittee _mPrevGovActionId _oldColdCreds newCommittee ->
+            let minCommitteeSize = pp ^. ppMinCommitteeSizeL
+                newCommitteeSize = fromIntegral . Map.size $ newCommittee ^. committeeMembersL
+             in newCommitteeSize
+                  >= minCommitteeSize
+                    ?! NewCommitteeSizeTooSmall newCommitteeSize minCommitteeSize
           _ -> pure ()
 
         let st'' =

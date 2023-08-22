@@ -35,6 +35,8 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   indexedGovProps,
   -- Lenses
   pProcDepositL,
+  committeeMembersL,
+  committeeQuorumL,
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
@@ -326,6 +328,12 @@ data Committee era = Committee
 instance Era era => NoThunks (Committee era)
 
 instance Era era => NFData (Committee era)
+
+committeeMembersL :: Lens' (Committee era) (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+committeeMembersL = lens committeeMembers (\c m -> c {committeeMembers = m})
+
+committeeQuorumL :: Lens' (Committee era) UnitInterval
+committeeQuorumL = lens committeeQuorum (\c q -> c {committeeQuorum = q})
 
 instance Era era => DecCBOR (Committee era) where
   decCBOR =
