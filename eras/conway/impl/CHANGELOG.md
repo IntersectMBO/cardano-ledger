@@ -2,10 +2,14 @@
 
 ## 1.8.0.0
 
+* Add "minCommitteeSize" `PParam` validation for `NewCommittee` `GovAction` #3668
+  * Add `committeeMembersL` and `committeeQuorumL` lenses for `Committee`
+  * Add `NewCommitteeSizeTooSmall` `PredicateFailure` in `GOV`
 * Implement expiry for governance proposals #3664
   * Update `ppGovActionExpiration` to be an `EpochNo`
   * Add `gasExpiresAfter :: !EpochNo` to `GovActionState`
   * Add `gePParams` to `GovEnv`
+  * Rename `teTxId` to `geTxId` and `teEpoch` to `geEpoch`
 * Add `reDRepState` to `RatifyEnv`
 * Add field `gasId` to `GovActionState`
 * Add `insertGovActionsState`
