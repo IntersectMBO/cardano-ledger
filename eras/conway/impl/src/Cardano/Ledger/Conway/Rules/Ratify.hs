@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -29,6 +30,7 @@ import Cardano.Ledger.Conway.Governance (
   EraGov,
   GovAction (..),
   GovActionState (..),
+  PrevGovActionIds (..),
   RatifyState (..),
   Vote (..),
  )
@@ -204,7 +206,9 @@ ratifyTransition = do
   case rsig of
     ast :<| sigs -> do
       let GovActionState {gasAction, gasExpiresAfter} = ast
-      if spoAccepted env ast && dRepAccepted env ast dRepThreshold
+      if spoAccepted env ast
+        && dRepAccepted env ast dRepThreshold
+        && prevActionAsExpected gasAction (ensPrevGovActionIds rsEnactState)
         then do
           -- Update ENACT state with the governance action that was ratified
           es <- trans @(EraRule "ENACT" era) $ TRC ((), rsEnactState, gasAction)
@@ -222,6 +226,21 @@ ratifyTransition = do
             then pure st' {rsRemoved = ast :<| rsRemoved} -- Action expires after current Epoch. Remove it.
             else pure st'
     Empty -> pure st
+
+-- | Check that the previous governance action id specified in the proposal
+--   does match the last one of the same purpose that was enacted.
+prevActionAsExpected :: forall era. GovAction era -> PrevGovActionIds era -> Bool
+prevActionAsExpected (ParameterChange prev _) (PrevGovActionIds {pgaPParamUpdate}) =
+  prev == pgaPParamUpdate
+prevActionAsExpected (HardForkInitiation prev _) (PrevGovActionIds {pgaHardFork}) =
+  prev == pgaHardFork
+prevActionAsExpected (NoConfidence prev) (PrevGovActionIds {pgaCommittee}) =
+  prev == pgaCommittee
+prevActionAsExpected (NewCommittee prev _ _) (PrevGovActionIds {pgaCommittee}) =
+  prev == pgaCommittee
+prevActionAsExpected (NewConstitution prev _) (PrevGovActionIds {pgaConstitution}) =
+  prev == pgaConstitution
+prevActionAsExpected _ _ = True -- for the other actions, the last action is not relevant
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = id
