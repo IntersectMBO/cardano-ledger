@@ -28,7 +28,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ConwayEraTxBody, ppDRepActivityL, ppGovActionExpirationL)
+import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ConwayEraTxBody, ppDRepActivityL, ppGovActionDepositL, ppGovActionExpirationL)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -201,7 +201,12 @@ spoThreshold :: Rational
 spoThreshold = 51 % 100 + 1 % 100000000000
 
 pp :: ConwayEraPParams era => PParams era
-pp = emptyPParams & ppMaxValSizeL .~ 1000000000 & ppDRepActivityL .~ 100 & ppGovActionExpirationL .~ 30
+pp =
+  emptyPParams
+    & ppMaxValSizeL .~ 1000000000
+    & ppDRepActivityL .~ 100
+    & ppGovActionExpirationL .~ 30
+    & ppGovActionDepositL .~ Coin proposalDeposit
 
 fee :: Integer
 fee = 5
