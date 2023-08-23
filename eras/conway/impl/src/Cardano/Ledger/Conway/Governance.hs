@@ -45,12 +45,15 @@ module Cardano.Ledger.Conway.Governance (
   cgGovActionsStateL,
   cgEnactStateL,
   cgRatifyStateL,
+  ensCommitteeL,
   ensConstitutionL,
+  ensCurPParamsL,
   ensPrevGovActionIdsL,
   ensPrevPParamUpdateL,
   ensPrevHardForkL,
   ensPrevCommitteeL,
   ensPrevConstitutionL,
+  ensProtVerL,
   rsEnactStateL,
   curPParamsConwayGovStateL,
   prevPParamsConwayGovStateL,
@@ -340,8 +343,14 @@ data EnactState era = EnactState
   }
   deriving (Generic)
 
+ensCommitteeL :: Lens' (EnactState era) (StrictMaybe (Committee era))
+ensCommitteeL = lens ensCommittee (\x y -> x {ensCommittee = y})
+
 ensConstitutionL :: Lens' (EnactState era) (Constitution era)
 ensConstitutionL = lens ensConstitution (\x y -> x {ensConstitution = y})
+
+ensProtVerL :: Lens' (EnactState era) ProtVer
+ensProtVerL = lens ensProtVer (\x y -> x {ensProtVer = y})
 
 ensCurPParamsL :: Lens' (EnactState era) (PParams era)
 ensCurPParamsL = lens ensPParams (\es x -> es {ensPParams = x})

@@ -24,6 +24,15 @@ import Cardano.Ledger.Conway.Governance (
   EnactState (..),
   GovAction (..),
   GovActionId (..),
+  PrevGovActionId (..),
+  ensCommitteeL,
+  ensConstitutionL,
+  ensCurPParamsL,
+  ensPrevCommitteeL,
+  ensPrevConstitutionL,
+  ensPrevHardForkL,
+  ensPrevPParamUpdateL,
+  ensProtVerL,
  )
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), runTest)
 import Cardano.Ledger.Val (Val (..))
@@ -36,6 +45,7 @@ import Control.State.Transition.Extended (
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Lens.Micro
 import Validation (failureUnless)
 
 data EnactPredFailure era
@@ -59,13 +69,19 @@ instance EraGov era => STS (ConwayENACT era) where
 
 enactmentTransition :: forall era. EraPParams era => TransitionRule (ConwayENACT era)
 enactmentTransition = do
-  TRC ((), st, EnactSignal _ act) <- judgmentContext
+  TRC ((), st, EnactSignal govActionId act) <- judgmentContext
 
   case act of
-    ParameterChange _prevGovActionId ppup -> pure $ st {ensPParams = newPP}
-      where
-        newPP = ensPParams st `applyPPUpdates` ppup
-    HardForkInitiation _prevGovActionId pv -> pure $ st {ensProtVer = pv}
+    ParameterChange _ ppup ->
+      pure $
+        st
+          & ensCurPParamsL %~ (`applyPPUpdates` ppup)
+          & ensPrevPParamUpdateL .~ SJust (PrevGovActionId govActionId)
+    HardForkInitiation _ pv ->
+      pure $
+        st
+          & ensProtVerL .~ pv
+          & ensPrevHardForkL .~ SJust (PrevGovActionId govActionId)
     TreasuryWithdrawals wdrls -> do
       let wdrlsAmount = fold wdrls
           wdrlsNoNetworkId = Map.mapKeys getRwdCred wdrls
@@ -77,9 +93,21 @@ enactmentTransition = do
           { ensWithdrawals = Map.unionWith (<>) wdrlsNoNetworkId $ ensWithdrawals st
           , ensTreasury = ensTreasury st <-> wdrlsAmount
           }
-    NoConfidence _prevGovActionId -> pure $ st {ensCommittee = SNothing}
-    NewCommittee _prevGovActionId _ committee -> pure $ st {ensCommittee = SJust committee} -- TODO: check old members
-    NewConstitution _prevGovActionId c -> pure $ st {ensConstitution = c}
+    NoConfidence _ ->
+      pure $
+        st
+          & ensCommitteeL .~ SNothing
+          & ensPrevCommitteeL .~ SJust (PrevGovActionId govActionId)
+    NewCommittee _ _ committee ->
+      pure $
+        st
+          & ensCommitteeL .~ SJust committee -- TODO: check old members
+          & ensPrevCommitteeL .~ SJust (PrevGovActionId govActionId)
+    NewConstitution _ c ->
+      pure $
+        st
+          & ensConstitutionL .~ c
+          & ensPrevConstitutionL .~ SJust (PrevGovActionId govActionId)
     InfoAction -> pure st
 
 instance Inject (EnactPredFailure era) (EnactPredFailure era) where
