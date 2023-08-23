@@ -2,6 +2,10 @@
 
 ## 1.8.0.0
 
+* Add `PrevGovActionIds`
+* Change `EnactState` to add `ensPrevGovActionIds`
+* Add  `ensPrevGovActionIdsL`, `ensPrevPParamUpdateL`, `ensPrevHardForkL` `ensPrevCommitteeL`, `ensPrevConstitutionL`
+* Add `EnactSignal` and the signal of `Enact` to it
 * Remove `rsFuture` from `RatifyState`
 * Add to `GovActionsState`:
   * `curGovActionsState`
