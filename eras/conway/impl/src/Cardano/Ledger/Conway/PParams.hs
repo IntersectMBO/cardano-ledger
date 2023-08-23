@@ -123,7 +123,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Thresholds for DRep votes
   , cppMinCommitteeSize :: !(HKD f Natural)
   -- ^ Minimum size of the Constitutional Committee
-  , cppCommitteeTermLimit :: !(HKD f Natural) -- TODO: @aniketd: This too should be EpochNo
+  , cppCommitteeTermLimit :: !(HKD f Natural) -- TODO: This too should be EpochNo
 
   -- ^ The Constitutional Committee Term limit in number of Slots
   , cppGovActionExpiration :: !(HKD f EpochNo)
