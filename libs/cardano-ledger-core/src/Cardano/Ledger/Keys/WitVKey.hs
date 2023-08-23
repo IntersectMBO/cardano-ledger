@@ -13,6 +13,7 @@ module Cardano.Ledger.Keys.WitVKey (
   WitVKey (WitVKey),
   witVKeyBytes,
   witVKeyHash,
+  eqWitVKeyRaw,
 )
 where
 
@@ -41,6 +42,7 @@ import Cardano.Ledger.Keys (
   hashKey,
   hashSignature,
  )
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq
 import qualified Data.ByteString.Lazy as BSL
 import Data.Ord (comparing)
@@ -101,6 +103,9 @@ instance (Typeable kr, Crypto c) => DecCBOR (Annotator (WitVKey kr c)) where
       {-# INLINE mkWitVKey #-}
   {-# INLINE decCBOR #-}
 
+instance (Crypto c, Typeable kr) => EqRaw (WitVKey kr c) where
+  eqRaw = eqWitVKeyRaw
+
 pattern WitVKey ::
   (Typeable kr, Crypto c) =>
   VKey kr c ->
@@ -127,3 +132,6 @@ witVKeyHash = wvkKeyHash
 -- | Access CBOR encoded representation of the witness. Evaluated lazily
 witVKeyBytes :: WitVKey kr c -> BSL.ByteString
 witVKeyBytes = wvkBytes
+
+eqWitVKeyRaw :: (Crypto c, Typeable kr) => WitVKey kr c -> WitVKey kr c -> Bool
+eqWitVKeyRaw (WitVKey k1 s1) (WitVKey k2 s2) = k1 == k2 && s1 == s2

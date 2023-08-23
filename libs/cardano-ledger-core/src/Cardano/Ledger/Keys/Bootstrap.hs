@@ -27,6 +27,7 @@ module Cardano.Ledger.Keys.Bootstrap (
   unpackByronVKey,
   makeBootstrapWitness,
   verifyBootstrapWit,
+  eqBootstrapWitnessRaw,
 )
 where
 
@@ -61,6 +62,7 @@ import Cardano.Ledger.Keys (
   verifySignedDSIGN,
  )
 import qualified Cardano.Ledger.Keys as Keys
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -233,3 +235,13 @@ makeBootstrapWitness txBodyHash byronSigningKey addrAttributes =
           (mempty :: ByteString)
           (Byron.unSigningKey byronSigningKey)
           (Hash.hashToBytes txBodyHash)
+
+eqBootstrapWitnessRaw :: Crypto c => BootstrapWitness c -> BootstrapWitness c -> Bool
+eqBootstrapWitnessRaw bw1 bw2 =
+  bwKey bw1 == bwKey bw2
+    && bwSig bw1 == bwSig bw2
+    && bwChainCode bw1 == bwChainCode bw2
+    && bwAttributes bw1 == bwAttributes bw2
+
+instance Crypto c => EqRaw (BootstrapWitness c) where
+  eqRaw = eqBootstrapWitnessRaw

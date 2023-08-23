@@ -61,6 +61,7 @@ import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.MemoBytes (
+  EqRaw,
   Mem,
   MemoBytes,
   MemoHashIndex,
@@ -354,3 +355,7 @@ instance Crypto c => AllegraEraTxBody (AllegraEra c) where
     lensMemoRawType atbrValidityInterval $
       \txBodyRaw vldt -> txBodyRaw {atbrValidityInterval = vldt}
   {-# INLINEABLE vldtTxBodyL #-}
+
+instance
+  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
+  EqRaw (AllegraTxBody era)

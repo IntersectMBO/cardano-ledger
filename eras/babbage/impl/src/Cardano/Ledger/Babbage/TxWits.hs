@@ -25,10 +25,10 @@ import Cardano.Ledger.Alonzo.TxWits as BabbageTxWitsReExport (
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 
-instance CC.Crypto c => EraTxWits (BabbageEra c) where
-  {-# SPECIALIZE instance EraTxWits (BabbageEra CC.StandardCrypto) #-}
+instance Crypto c => EraTxWits (BabbageEra c) where
+  {-# SPECIALIZE instance EraTxWits (BabbageEra StandardCrypto) #-}
 
   type TxWits (BabbageEra c) = AlonzoTxWits (BabbageEra c)
 
@@ -43,8 +43,8 @@ instance CC.Crypto c => EraTxWits (BabbageEra c) where
   scriptTxWitsL = scriptAlonzoTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
-instance CC.Crypto c => AlonzoEraTxWits (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxWits (BabbageEra CC.StandardCrypto) #-}
+instance Crypto c => AlonzoEraTxWits (BabbageEra c) where
+  {-# SPECIALIZE instance AlonzoEraTxWits (BabbageEra StandardCrypto) #-}
 
   datsTxWitsL = datsAlonzoTxWitsL
   {-# INLINE datsTxWitsL #-}

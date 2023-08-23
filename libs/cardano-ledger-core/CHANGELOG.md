@@ -2,7 +2,13 @@
 
 ## 1.6.0.0
 
-*
+* Add `eqBootstrapWitnessRaw` and `eqWitVKeyRaw`
+* Add `eqRawType`
+* Add `EqRaw` type class with `eqRaw`.
+* Add `EqRaw` instance for `WitVKey` and `BootstrapWitness`
+* Require `EqRaw` instance for `Script`, `TxWits`, `TxAuxData`, `TxBody` and `Tx`
+* Add `ToExpr` instance for `PoolCert`
+* Require `ToExpr` instance for `Script`, `TxAuxData` and `TxCert`
 
 ## 1.5.0.0
 

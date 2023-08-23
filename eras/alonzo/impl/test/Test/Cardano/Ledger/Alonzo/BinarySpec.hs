@@ -11,4 +11,4 @@ spec :: Spec
 spec =
   -- Scripts are not upgradeable from Mary through their CBOR instances, since Mary had no
   -- concept of a prefix.
-  specUpgrade @Alonzo @AlonzoTxAuxData False
+  specUpgrade @Alonzo False

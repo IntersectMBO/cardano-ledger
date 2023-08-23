@@ -92,6 +92,7 @@ import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.MemoBytes (
+  EqRaw (..),
   Mem,
   MemoBytes,
   MemoHashIndex,
@@ -266,6 +267,10 @@ newtype ShelleyTxBody era = TxBodyConstr (MemoBytes ShelleyTxBodyRaw era)
 
 instance Memoized ShelleyTxBody where
   type RawType ShelleyTxBody = ShelleyTxBodyRaw
+
+instance
+  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
+  EqRaw (ShelleyTxBody era)
 
 instance Crypto c => EraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance EraTxBody (ShelleyEra StandardCrypto) #-}

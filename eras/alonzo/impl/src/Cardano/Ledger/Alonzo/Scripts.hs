@@ -100,6 +100,7 @@ import Cardano.Ledger.Language (
   mkLanguageEnum,
   nonNativeLanguages,
  )
+import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)
@@ -202,9 +203,11 @@ type instance SomeScript 'PhaseOne (AlonzoEra c) = Timelock (AlonzoEra c)
 
 type instance SomeScript 'PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
 
-isPlutusScript :: AlonzoScript era -> Bool
-isPlutusScript (PlutusScript _) = True
-isPlutusScript (TimelockScript _) = False
+isPlutusScript :: forall era. EraScript era => Script era -> Bool
+isPlutusScript x =
+  case phaseScript @era PhaseTwoRep x of
+    Just _ -> True
+    Nothing -> False
 
 instance Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
@@ -221,6 +224,9 @@ instance Crypto c => EraScript (AlonzoEra c) where
       PlutusScript (Plutus PlutusV1 _) -> "\x01"
       PlutusScript (Plutus PlutusV2 _) -> "\x02"
       PlutusScript (Plutus PlutusV3 _) -> "\x03"
+
+instance EqRaw (AlonzoScript era) where
+  eqRaw = eqAlonzoScriptRaw
 
 instance Era era => ToJSON (AlonzoScript era) where
   toJSON = String . serializeAsHexText

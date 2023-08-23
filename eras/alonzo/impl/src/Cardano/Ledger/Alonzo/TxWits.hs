@@ -48,6 +48,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   hashDataTxWitsL,
   unTxDats,
   nullDats,
+  alonzoEqTxWitsRaw,
 )
 where
 
@@ -75,16 +76,18 @@ import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Language (Language (..), Plutus (..), guardPlutus)
 import Cardano.Ledger.MemoBytes (
+  EqRaw (..),
   Mem,
   MemoBytes,
   Memoized (..),
+  eqRawType,
   getMemoRawType,
   lensMemoRawType,
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
-import Cardano.Ledger.Shelley.TxWits (keyBy)
+import Cardano.Ledger.Shelley.TxWits (keyBy, shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -434,6 +437,9 @@ instance (EraScript (AlonzoEra c), Crypto c) => AlonzoEraTxWits (AlonzoEra c) wh
   rdmrsTxWitsL = rdmrsAlonzoTxWitsL
   {-# INLINE rdmrsTxWitsL #-}
 
+instance (TxWits era ~ AlonzoTxWits era, AlonzoEraTxWits era) => EqRaw (AlonzoTxWits era) where
+  eqRaw = alonzoEqTxWitsRaw
+
 -- | This is a convenience Lens that will hash the `Data` when it is being added to the
 -- `TxWits`. See `datsTxWitsL` for a version that aloows setting `TxDats` instead.
 hashDataTxWitsL :: AlonzoEraTxWits era => Lens (TxWits era) (TxWits era) (TxDats era) [Data era]
@@ -603,3 +609,9 @@ deriving via
   instance
     (EraScript era, Script era ~ AlonzoScript era) =>
     DecCBOR (Annotator (AlonzoTxWits era))
+
+alonzoEqTxWitsRaw :: AlonzoEraTxWits era => TxWits era -> TxWits era -> Bool
+alonzoEqTxWitsRaw txWits1 txWits2 =
+  shelleyEqTxWitsRaw txWits1 txWits2
+    && eqRawType (txWits1 ^. datsTxWitsL) (txWits2 ^. datsTxWitsL)
+    && eqRawType (txWits1 ^. rdmrsTxWitsL) (txWits2 ^. rdmrsTxWitsL)

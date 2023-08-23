@@ -24,6 +24,7 @@ module Cardano.Ledger.Shelley.Scripts (
   ),
   ScriptHash (..),
   nativeMultiSigTag,
+  eqMultiSigRaw,
 )
 where
 
@@ -41,15 +42,20 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.MemoBytes (
+  EqRaw (..),
   Mem,
   MemoBytes,
+  Memoized (..),
+  getMemoRawType,
   memoBytes,
   pattern Memo,
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
+import Data.Functor.Classes (Eq1 (liftEq))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -84,9 +90,14 @@ deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSigRaw era)
 
 instance NFData (MultiSigRaw era)
 
+instance ToExpr (MultiSigRaw era)
+
 newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
   deriving (Eq, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
+
+instance Memoized MultiSig where
+  type RawType MultiSig = MultiSigRaw
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSig era)
 
@@ -115,6 +126,11 @@ deriving via
   Mem MultiSigRaw era
   instance
     Era era => DecCBOR (Annotator (MultiSig era))
+
+instance ToExpr (MultiSig era)
+
+instance EqRaw (MultiSig era) where
+  eqRaw = eqMultiSigRaw
 
 pattern RequireSignature :: Era era => KeyHash 'Witness (EraCrypto era) -> MultiSig era
 pattern RequireSignature akh <-
@@ -164,3 +180,14 @@ instance Era era => DecCBOR (Annotator (MultiSigRaw era)) where
         multiSigs <- sequence <$> decCBOR
         pure (3, RequireMOf' m <$> multiSigs)
       k -> invalidKey k
+
+-- | Check the equality of two underlying types, while ignoring their binary
+-- representation, which `Eq` instance normally does. This is used for testing.
+eqMultiSigRaw :: MultiSig era -> MultiSig era -> Bool
+eqMultiSigRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
+  where
+    go (RequireSignature' kh1) (RequireSignature' kh2) = kh1 == kh2
+    go (RequireAllOf' ts1) (RequireAllOf' ts2) = liftEq eqMultiSigRaw ts1 ts2
+    go (RequireAnyOf' ts1) (RequireAnyOf' ts2) = liftEq eqMultiSigRaw ts1 ts2
+    go (RequireMOf' n1 ts1) (RequireMOf' n2 ts2) = n1 == n2 && liftEq eqMultiSigRaw ts1 ts2
+    go _ _ = False

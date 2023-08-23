@@ -100,6 +100,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashW
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash (..), KeyRole (..), VerKeyVRF, asWitness)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust, isNothing)
@@ -236,6 +237,8 @@ instance NoThunks (GenesisDelegCert c)
 instance NFData (GenesisDelegCert c) where
   rnf = rwhnf
 
+instance ToExpr (GenesisDelegCert c)
+
 genesisKeyHashWitness :: GenesisDelegCert c -> KeyHash 'Witness c
 genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
 
@@ -257,6 +260,8 @@ instance DecCBOR MIRPot where
       0 -> pure ReservesMIR
       1 -> pure TreasuryMIR
       k -> invalidKey k
+
+instance ToExpr MIRPot
 
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
@@ -280,6 +285,8 @@ instance Crypto c => EncCBOR (MIRTarget c) where
   encCBOR (StakeAddressesMIR m) = encCBOR m
   encCBOR (SendToOppositePotMIR c) = encCBOR c
 
+instance ToExpr (MIRTarget c)
+
 -- | Move instantaneous rewards certificate
 data MIRCert c = MIRCert
   { mirPot :: !MIRPot
@@ -299,6 +306,8 @@ instance Crypto c => EncCBOR (MIRCert c) where
       <> encCBOR pot
       <> encCBOR targets
 
+instance ToExpr (MIRCert c)
+
 -- | A heavyweight certificate.
 data ShelleyTxCert era
   = ShelleyTxCertDelegCert !(ShelleyDelegCert (EraCrypto era))
@@ -308,6 +317,8 @@ data ShelleyTxCert era
   deriving (Show, Generic, Eq, NFData)
 
 instance NoThunks (ShelleyTxCert era)
+
+instance ToExpr (ShelleyTxCert era)
 
 upgradeShelleyTxCert ::
   EraCrypto era1 ~ EraCrypto era2 =>
@@ -428,6 +439,8 @@ data ShelleyDelegCert c
   | -- | A stake delegation certificate.
     ShelleyDelegCert !(StakeCredential c) !(KeyHash 'StakePool c)
   deriving (Show, Generic, Eq)
+
+instance ToExpr (ShelleyDelegCert c)
 
 pattern RegKey :: StakeCredential c -> ShelleyDelegCert c
 pattern RegKey cred = ShelleyRegCert cred

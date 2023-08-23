@@ -64,6 +64,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, HASH)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.MemoBytes (
+  EqRaw (..),
   Mem,
   MemoBytes (Memo),
   Memoized (..),
@@ -210,6 +211,9 @@ instance Crypto c => EraScript (AllegraEra c) where
 
   phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
   phaseScript PhaseTwoRep _ = Nothing
+
+instance EqRaw (Timelock era) where
+  eqRaw = eqTimelockRaw
 
 deriving via
   Mem TimelockRaw era

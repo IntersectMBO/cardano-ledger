@@ -109,8 +109,10 @@ import Cardano.Ledger.Keys (KeyRole (Staking, Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.Language (Plutus)
+import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
@@ -142,6 +144,7 @@ class
   , ToCBOR (Tx era)
   , Show (Tx era)
   , Eq (Tx era)
+  , EqRaw (Tx era)
   ) =>
   EraTx era
   where
@@ -173,6 +176,7 @@ class
   , NFData (TxBody era)
   , Show (TxBody era)
   , Eq (TxBody era)
+  , EqRaw (TxBody era)
   ) =>
   EraTxBody era
   where
@@ -372,11 +376,13 @@ type family Value era :: Type
 class
   ( Era era
   , Eq (TxAuxData era)
+  , EqRaw (TxAuxData era)
   , Show (TxAuxData era)
   , NoThunks (TxAuxData era)
   , ToCBOR (TxAuxData era)
   , EncCBOR (TxAuxData era)
   , DecCBOR (Annotator (TxAuxData era))
+  , ToExpr (TxAuxData era)
   , HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
   ) =>
   EraTxAuxData era
@@ -410,6 +416,7 @@ validateAuxiliaryData = validateTxAuxData
 class
   ( EraScript era
   , Eq (TxWits era)
+  , EqRaw (TxWits era)
   , Show (TxWits era)
   , Monoid (TxWits era)
   , NoThunks (TxWits era)
@@ -457,11 +464,13 @@ class
   ( Era era
   , Show (Script era)
   , Eq (Script era)
+  , EqRaw (Script era)
   , ToCBOR (Script era)
   , EncCBOR (Script era)
   , DecCBOR (Annotator (Script era))
   , NoThunks (Script era)
   , SafeToHash (Script era)
+  , ToExpr (Script era)
   ) =>
   EraScript era
   where

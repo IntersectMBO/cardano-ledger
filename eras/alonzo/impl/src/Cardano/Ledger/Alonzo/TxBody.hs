@@ -96,6 +96,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
 import Cardano.Ledger.MemoBytes (
+  EqRaw,
   Mem,
   MemoBytes,
   MemoHashIndex,
@@ -403,6 +404,10 @@ mint' = atbrMint . getMemoRawType
 scriptIntegrityHash' = atbrScriptIntegrityHash . getMemoRawType
 
 txnetworkid' = atbrTxNetworkId . getMemoRawType
+
+instance
+  (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
+  EqRaw (AlonzoTxBody era)
 
 --------------------------------------------------------------------------------
 -- Serialisation
