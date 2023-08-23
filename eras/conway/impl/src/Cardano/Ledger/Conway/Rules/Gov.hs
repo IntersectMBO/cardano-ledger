@@ -24,7 +24,7 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), Network, ShelleyBase, networkId)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ppGovActionExpirationL, ppMinCommitteeSizeL)
+import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ppGovActionDepositL, ppGovActionExpirationL, ppMinCommitteeSizeL)
 import Cardano.Ledger.Conway.Era (ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
@@ -76,6 +76,11 @@ data ConwayGovPredFailure era
       Natural
       -- | `ppMinCommitteeSize` from `PParams`
       Natural
+  | ProposalDepositIncorrect
+      -- | Submitted deposit
+      Coin
+      -- | Expected deposit taken from `PParams`
+      Coin
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -89,6 +94,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     2 -> SumD ProposalProcedureNetworkIdMismatch <! From <! From
     3 -> SumD TreasuryWithdrawalsNetworkIdMismatch <! From <! From
     4 -> SumD NewCommitteeSizeTooSmall <! From <! From
+    5 -> SumD ProposalDepositIncorrect <! From <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -100,8 +106,10 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum ProposalProcedureNetworkIdMismatch 2 !> To acnt !> To nid
       TreasuryWithdrawalsNetworkIdMismatch acnts nid ->
         Sum TreasuryWithdrawalsNetworkIdMismatch 3 !> To acnts !> To nid
-      NewCommitteeSizeTooSmall given expected ->
-        Sum NewCommitteeSizeTooSmall 4 !> To given !> To expected
+      NewCommitteeSizeTooSmall submitted expected ->
+        Sum NewCommitteeSizeTooSmall 4 !> To submitted !> To expected
+      ProposalDepositIncorrect submitted expected ->
+        Sum ProposalDepositIncorrect 5 !> To submitted !> To expected
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -199,15 +207,19 @@ govTransition = do
 
   let applyProps st' Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
+        let expectedDeposit = pp ^. ppGovActionDepositL
+         in pProcDeposit
+              == expectedDeposit
+                ?! ProposalDepositIncorrect pProcDeposit expectedDeposit
+
         runTest $ actionWellFormed pProcGovAction
 
-        -- Check Network for RewardAcnts in ProposalProcedure
         expectedNetworkId <- liftSTS $ asks networkId
         getRwdNetwork pProcReturnAddr
           == expectedNetworkId
             ?! ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId
+
         case pProcGovAction of
-          -- Check Network for RewardAcnts in TreasuryWithdrawals
           TreasuryWithdrawals wdrls ->
             let mismatchedAccounts =
                   Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
