@@ -121,6 +121,14 @@ instance
 instance Crypto (EraCrypto era) => Arbitrary (Constitution era) where
   arbitrary = Constitution <$> arbitrary <*> arbitrary
 
+instance Era era => Arbitrary (PrevGovActionIds era) where
+  arbitrary =
+    PrevGovActionIds
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (EnactState era)
@@ -128,6 +136,7 @@ instance
   arbitrary =
     EnactState
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
