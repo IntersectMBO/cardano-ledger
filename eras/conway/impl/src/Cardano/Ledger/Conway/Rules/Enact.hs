@@ -10,6 +10,7 @@
 
 module Cardano.Ledger.Conway.Rules.Enact (
   ConwayENACT,
+  EnactSignal (..),
   EnactState (..),
   EnactPredFailure (..),
 ) where
@@ -22,6 +23,7 @@ import Cardano.Ledger.Conway.Era (ConwayENACT)
 import Cardano.Ledger.Conway.Governance (
   EnactState (..),
   GovAction (..),
+  GovActionId (..),
  )
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), runTest)
 import Cardano.Ledger.Val (Val (..))
@@ -40,10 +42,15 @@ data EnactPredFailure era
   = EnactTreasuryInsufficientFunds !(Map (RewardAcnt (EraCrypto era)) Coin) !Coin
   deriving (Show, Eq)
 
+data EnactSignal era = EnactSignal
+  { esGovActionId :: !(GovActionId (EraCrypto era))
+  , esGovAction :: !(GovAction era)
+  }
+
 instance EraGov era => STS (ConwayENACT era) where
   type Environment (ConwayENACT era) = ()
   type PredicateFailure (ConwayENACT era) = EnactPredFailure era
-  type Signal (ConwayENACT era) = GovAction era
+  type Signal (ConwayENACT era) = EnactSignal era
   type State (ConwayENACT era) = EnactState era
   type BaseM (ConwayENACT era) = ShelleyBase
 
@@ -52,7 +59,7 @@ instance EraGov era => STS (ConwayENACT era) where
 
 enactmentTransition :: forall era. EraPParams era => TransitionRule (ConwayENACT era)
 enactmentTransition = do
-  TRC ((), st, act) <- judgmentContext
+  TRC ((), st, EnactSignal _ act) <- judgmentContext
 
   case act of
     ParameterChange _prevGovActionId ppup -> pure $ st {ensPParams = newPP}

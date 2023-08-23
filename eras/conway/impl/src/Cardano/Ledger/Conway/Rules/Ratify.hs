@@ -34,7 +34,7 @@ import Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   Vote (..),
  )
-import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactState (..))
+import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -73,7 +73,7 @@ instance
   , Embed (EraRule "ENACT" era) (ConwayRATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
-  , Signal (EraRule "ENACT" era) ~ GovAction era
+  , Signal (EraRule "ENACT" era) ~ EnactSignal era
   ) =>
   STS (ConwayRATIFY era)
   where
@@ -191,7 +191,7 @@ ratifyTransition ::
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
-  , Signal (EraRule "ENACT" era) ~ GovAction era
+  , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Era era
   ) =>
   TransitionRule (ConwayRATIFY era)
@@ -205,13 +205,15 @@ ratifyTransition = do
 
   case rsig of
     ast :<| sigs -> do
-      let GovActionState {gasAction, gasExpiresAfter} = ast
+      let GovActionState {gasId, gasAction, gasExpiresAfter} = ast
       if spoAccepted env ast
         && dRepAccepted env ast dRepThreshold
         && prevActionAsExpected gasAction (ensPrevGovActionIds rsEnactState)
         then do
           -- Update ENACT state with the governance action that was ratified
-          es <- trans @(EraRule "ENACT" era) $ TRC ((), rsEnactState, gasAction)
+          es <-
+            trans @(EraRule "ENACT" era) $
+              TRC ((), rsEnactState, EnactSignal gasId gasAction)
           let st' =
                 st
                   { rsEnactState = es
