@@ -1498,7 +1498,7 @@ pcShelleyTxCert (ShelleyTxCertMir (MIRCert x (SendToOppositePotMIR c))) =
 pcConwayTxCert :: ConwayTxCert c -> PDoc
 pcConwayTxCert (ConwayTxCertDeleg dc) = prettyA dc
 pcConwayTxCert (ConwayTxCertPool poolc) = pcPoolCert poolc
-pcConwayTxCert (ConwayTxCertGov _) = ppString "ConwayTxCertGov" -- TODO: @aniketd add pretty instance for the certs
+pcConwayTxCert (ConwayTxCertGov _) = ppString "ConwayTxCertGov" -- TODO: add pretty instance for the certs
 
 pcConwayDelegCert :: ConwayDelegCert c -> PDoc
 pcConwayDelegCert (ConwayRegCert cred mcoin) =

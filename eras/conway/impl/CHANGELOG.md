@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `ProposalProcedure` deposit check against "govActionDeposit" `PParams` #3669
 * Add "minCommitteeSize" `PParam` validation for `NewCommittee` `GovAction` #3668
   * Add `committeeMembersL` and `committeeQuorumL` lenses for `Committee`
   * Add `NewCommitteeSizeTooSmall` `PredicateFailure` in `GOV`
