@@ -1,400 +1,404 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="966pt" height="851pt" viewBox="0.00 0.00 965.93 851.20">
-<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 847.2)">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1895pt" height="947pt" viewBox="0.00 0.00 1895.24 947.20">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 943.2)">
 <title>conway_transitions</title>
-<polygon fill="#ffffff" stroke="transparent" points="-4,4 -4,-847.2 961.9318,-847.2 961.9318,4 -4,4"/>
-<text text-anchor="middle" x="478.9659" y="-142.6" font-family="Times,serif" font-size="14.00" fill="#000000">NOTE </text>
-<text text-anchor="middle" x="478.9659" y="-125.8" font-family="Times,serif" font-size="14.00" fill="#000000">    A straight arrow form one node to another represents a sub-rule relationship.</text>
-<text text-anchor="middle" x="478.9659" y="-109" font-family="Times,serif" font-size="14.00" fill="#000000">    A dotted arrow from one node to another represents a dependency:</text>
-<text text-anchor="middle" x="478.9659" y="-92.2" font-family="Times,serif" font-size="14.00" fill="#000000">      that the output of the target rule in an input to the source rule,</text>
-<text text-anchor="middle" x="478.9659" y="-75.4" font-family="Times,serif" font-size="14.00" fill="#000000">      either as part of the source state, the evironment or the signal.</text>
-<text text-anchor="middle" x="478.9659" y="-58.6" font-family="Times,serif" font-size="14.00" fill="#000000">    In most cases these dependencies are between sub-rules of a rule.</text>
-<text text-anchor="middle" x="478.9659" y="-41.8" font-family="Times,serif" font-size="14.00" fill="#000000">    In the case of a recursive rule, the sub-rule can also have a dependency on the super rule.</text>
-<text text-anchor="middle" x="478.9659" y="-25" font-family="Times,serif" font-size="14.00" fill="#000000">    Those recursively call themselves while traversing the input signal sequence,</text>
-<text text-anchor="middle" x="478.9659" y="-8.2" font-family="Times,serif" font-size="14.00" fill="#000000">      until reaching the base case with an empty input sequence.</text>
-<!-- CHAIN -->
+<polygon fill="#ffffff" stroke="transparent" points="-4,4 -4,-943.2 1891.2372,-943.2 1891.2372,4 -4,4"/>
+<text text-anchor="middle" x="943.6186" y="-343.4" font-family="Times,serif" font-size="14.00" fill="#000000">NOTE </text>
+<text text-anchor="middle" x="943.6186" y="-326.6" font-family="Times,serif" font-size="14.00" fill="#000000">    A straight arrow form one node to another represents a sub-rule relationship.</text>
+<text text-anchor="middle" x="943.6186" y="-309.8" font-family="Times,serif" font-size="14.00" fill="#000000">    A dotted arrow from one node to another represents a dependency:</text>
+<text text-anchor="middle" x="943.6186" y="-293" font-family="Times,serif" font-size="14.00" fill="#000000">      that the output of the target rule in an input to the source rule,</text>
+<text text-anchor="middle" x="943.6186" y="-276.2" font-family="Times,serif" font-size="14.00" fill="#000000">      either as part of the source state, the evironment or the signal.</text>
+<text text-anchor="middle" x="943.6186" y="-259.4" font-family="Times,serif" font-size="14.00" fill="#000000">    In most cases these dependencies are between sub-rules of a rule.</text>
+<text text-anchor="middle" x="943.6186" y="-242.6" font-family="Times,serif" font-size="14.00" fill="#000000">    In the case of a recursive rule, the sub-rule can also have a dependency on the super rule.</text>
+<text text-anchor="middle" x="943.6186" y="-225.8" font-family="Times,serif" font-size="14.00" fill="#000000">    Those recursively call themselves while traversing the input signal sequence,</text>
+<text text-anchor="middle" x="943.6186" y="-209" font-family="Times,serif" font-size="14.00" fill="#000000">      until reaching the base case with an empty input sequence.</text>
+<text text-anchor="middle" x="943.6186" y="-192.2" font-family="Times,serif" font-size="14.00" fill="#000000">    A blue colored box indicates a trigger in consensus that triggers the rule in ledger.</text>
+<text text-anchor="middle" x="943.6186" y="-159.4" font-family="Times,serif" font-size="14.00" fill="#000000">    NOTE</text>
+<text text-anchor="middle" x="943.6186" y="-142.6" font-family="Times,serif" font-size="14.00" fill="#000000">    In the Shelley ledger, the @CHAIN@ rule is used to apply a whole block.</text>
+<text text-anchor="middle" x="943.6186" y="-125.8" font-family="Times,serif" font-size="14.00" fill="#000000">    In consensus, we split up the application of a block to the ledger into </text>
+<text text-anchor="middle" x="943.6186" y="-109" font-family="Times,serif" font-size="14.00" fill="#000000">    separate steps that are performed together by 'applyExtLedgerState':</text>
+<text text-anchor="middle" x="943.6186" y="-92.2" font-family="Times,serif" font-size="14.00" fill="#000000">    </text>
+<text text-anchor="middle" x="943.6186" y="-75.4" font-family="Times,serif" font-size="14.00" fill="#000000">    1. 'applyChainTickLedgerResult': executes the @TICK@ transition</text>
+<text text-anchor="middle" x="943.6186" y="-58.6" font-family="Times,serif" font-size="14.00" fill="#000000">    2. 'validateHeader':</text>
+<text text-anchor="middle" x="943.6186" y="-41.8" font-family="Times,serif" font-size="14.00" fill="#000000">       2.1. 'validateEnvelope': executes the @chainChecks@</text>
+<text text-anchor="middle" x="943.6186" y="-25" font-family="Times,serif" font-size="14.00" fill="#000000">       2.2. 'updateChainDepState': executes the @PRTCL@ transition</text>
+<text text-anchor="middle" x="943.6186" y="-8.2" font-family="Times,serif" font-size="14.00" fill="#000000">    3. 'applyBlockLedgerResult': executes the @BBODY@ transition</text>
+<!-- applyTickOpts -->
 <g id="node1" class="node">
-<title>CHAIN</title>
-<ellipse fill="none" stroke="#000000" cx="596.8238" cy="-825.2" rx="41.7114" ry="18"/>
-<text text-anchor="middle" x="596.8238" y="-821" font-family="Times,serif" font-size="14.00" fill="#000000">CHAIN</text>
+<title>applyTickOpts</title>
+<polygon fill="none" stroke="#0000ff" points="754.8196,-939.2 485.5936,-939.2 485.5936,-903.2 754.8196,-903.2 754.8196,-939.2"/>
+<text text-anchor="middle" x="620.2066" y="-917" font-family="Times,serif" font-size="14.00" fill="#000000">ApplyBlock.applyTickOpts (API.Validation)</text>
 </g>
-<!-- shelley_TICK -->
-<g id="node2" class="node">
-<title>shelley_TICK</title>
-<ellipse fill="none" stroke="#000000" cx="598.8238" cy="-609.2" rx="65.989" ry="18"/>
-<text text-anchor="middle" x="598.8238" y="-605" font-family="Times,serif" font-size="14.00" fill="#000000">shelley_TICK</text>
-</g>
-<!-- CHAIN&#45;&gt;shelley_TICK -->
-<g id="edge1" class="edge">
-<title>CHAIN-&gt;shelley_TICK</title>
-<path fill="none" stroke="#000000" d="M596.9909,-807.1555C597.3387,-769.5938 598.1428,-682.7541 598.5608,-637.6103"/>
-<polygon fill="#000000" stroke="#000000" points="602.063,-637.3771 598.6558,-627.3451 595.0633,-637.3122 602.063,-637.3771"/>
-</g>
-<!-- alonzo_BBODY -->
-<g id="node3" class="node">
-<title>alonzo_BBODY</title>
-<ellipse fill="none" stroke="#000000" cx="490.8238" cy="-753.2" rx="75.3041" ry="18"/>
-<text text-anchor="middle" x="490.8238" y="-749" font-family="Times,serif" font-size="14.00" fill="#000000">alonzo_BBODY</text>
-</g>
-<!-- CHAIN&#45;&gt;alonzo_BBODY -->
-<g id="edge2" class="edge">
-<title>CHAIN-&gt;alonzo_BBODY</title>
-<path fill="none" stroke="#000000" d="M574.344,-809.9307C559.884,-800.1088 540.8262,-787.1639 524.5669,-776.1198"/>
-<polygon fill="#000000" stroke="#000000" points="526.1076,-772.9353 515.8688,-770.2117 522.1744,-778.7258 526.1076,-772.9353"/>
-</g>
-<!-- conway_TICKF -->
-<g id="node4" class="node">
-<title>conway_TICKF</title>
-<ellipse fill="none" stroke="#000000" cx="698.8238" cy="-753.2" rx="73.5791" ry="18"/>
-<text text-anchor="middle" x="698.8238" y="-749" font-family="Times,serif" font-size="14.00" fill="#000000">conway_TICKF</text>
-</g>
-<!-- CHAIN&#45;&gt;conway_TICKF -->
-<g id="edge3" class="edge">
-<title>CHAIN-&gt;conway_TICKF</title>
-<path fill="none" stroke="#000000" d="M618.7054,-809.7542C632.5348,-799.9923 650.66,-787.198 666.1722,-776.2482"/>
-<polygon fill="#000000" stroke="#000000" points="668.3261,-779.012 674.4774,-770.3857 664.2893,-773.2932 668.3261,-779.012"/>
-</g>
-<!-- shelley_RUPD -->
-<g id="node9" class="node">
-<title>shelley_RUPD</title>
-<ellipse fill="none" stroke="#000000" cx="588.8238" cy="-537.2" rx="68.939" ry="18"/>
-<text text-anchor="middle" x="588.8238" y="-533" font-family="Times,serif" font-size="14.00" fill="#000000">shelley_RUPD</text>
-</g>
-<!-- shelley_TICK&#45;&gt;shelley_RUPD -->
-<g id="edge10" class="edge">
-<title>shelley_TICK-&gt;shelley_RUPD</title>
-<path fill="none" stroke="#000000" d="M596.3004,-591.0314C595.2309,-583.331 593.9592,-574.1743 592.7706,-565.6166"/>
-<polygon fill="#000000" stroke="#000000" points="596.2237,-565.0367 591.3812,-555.6133 589.2903,-565.9997 596.2237,-565.0367"/>
-</g>
-<!-- conway_NEWEPOCH -->
-<g id="node10" class="node">
-<title>conway_NEWEPOCH</title>
-<ellipse fill="none" stroke="#000000" cx="666.8238" cy="-465.2" rx="99.5636" ry="18"/>
-<text text-anchor="middle" x="666.8238" y="-461" font-family="Times,serif" font-size="14.00" fill="#000000">conway_NEWEPOCH</text>
-</g>
-<!-- shelley_TICK&#45;&gt;conway_NEWEPOCH -->
-<g id="edge11" class="edge">
-<title>shelley_TICK-&gt;conway_NEWEPOCH</title>
-<path fill="none" stroke="#000000" d="M629.7021,-593.237C643.7817,-584.1591 659.0236,-571.3549 666.8238,-555.2 676.0673,-536.0562 675.4856,-511.84 672.9114,-493.3503"/>
-<polygon fill="#000000" stroke="#000000" points="676.3623,-492.7659 671.2756,-483.4721 669.4564,-493.9096 676.3623,-492.7659"/>
-</g>
-<!-- alonzo_BBODY&#45;&gt;shelley_TICK -->
-<g id="edge5" class="edge">
-<title>alonzo_BBODY-&gt;shelley_TICK</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M504.2838,-735.2535C523.223,-710.0012 557.841,-663.8438 579.5195,-634.9391"/>
-<polygon fill="#000000" stroke="#000000" points="582.3335,-637.0204 585.5336,-626.9204 576.7335,-632.8204 582.3335,-637.0204"/>
-</g>
-<!-- shelley_LEDGERS -->
+<!-- TICK -->
 <g id="node5" class="node">
-<title>shelley_LEDGERS</title>
-<ellipse fill="none" stroke="#000000" cx="251.8238" cy="-681.2" rx="86.8359" ry="18"/>
-<text text-anchor="middle" x="251.8238" y="-677" font-family="Times,serif" font-size="14.00" fill="#000000">shelley_LEDGERS</text>
+<title>TICK</title>
+<polygon fill="none" stroke="#000000" points="748.3682,-867.0019 492.045,-867.0019 492.045,-825.7981 748.3682,-825.7981 748.3682,-867.0019"/>
+<text text-anchor="middle" x="620.2066" y="-850.6" font-family="Times,serif" font-size="14.00" fill="#000000">TICK (shelley)     </text>
+<text text-anchor="middle" x="620.2066" y="-833.8" font-family="Times,serif" font-size="14.00" fill="#000000">env:(),state:NewEpochState,signal:SlotNo.</text>
 </g>
-<!-- alonzo_BBODY&#45;&gt;shelley_LEDGERS -->
-<g id="edge4" class="edge">
-<title>alonzo_BBODY-&gt;shelley_LEDGERS</title>
-<path fill="none" stroke="#000000" d="M443.8903,-739.061C405.7565,-727.573 351.7559,-711.305 310.721,-698.9431"/>
-<polygon fill="#000000" stroke="#000000" points="311.7012,-695.5831 301.1167,-696.0497 309.682,-702.2855 311.7012,-695.5831"/>
+<!-- applyTickOpts&#45;&gt;TICK -->
+<g id="edge1" class="edge">
+<title>applyTickOpts-&gt;TICK</title>
+<path fill="none" stroke="#000000" d="M620.2066,-903.093C620.2066,-895.4083 620.2066,-886.2272 620.2066,-877.5145"/>
+<polygon fill="#000000" stroke="#000000" points="623.7067,-877.2515 620.2066,-867.2515 616.7067,-877.2515 623.7067,-877.2515"/>
 </g>
-<!-- prtcl -->
+<!-- applyBlockOpts -->
+<g id="node2" class="node">
+<title>applyBlockOpts</title>
+<polygon fill="none" stroke="#0000ff" points="1323.6036,-939.2 1046.8096,-939.2 1046.8096,-903.2 1323.6036,-903.2 1323.6036,-939.2"/>
+<text text-anchor="middle" x="1185.2066" y="-917" font-family="Times,serif" font-size="14.00" fill="#000000">ApplyBlock.applyBlockOpts (API.Validation)</text>
+</g>
+<!-- BBODY -->
 <g id="node6" class="node">
-<title>prtcl</title>
-<ellipse fill="none" stroke="#000000" cx="485.8238" cy="-681.2" rx="28.9696" ry="18"/>
-<text text-anchor="middle" x="485.8238" y="-677" font-family="Times,serif" font-size="14.00" fill="#000000">prtcl</text>
+<title>BBODY</title>
+<polygon fill="none" stroke="#000000" points="1388.7295,-867.0019 981.6837,-867.0019 981.6837,-825.7981 1388.7295,-825.7981 1388.7295,-867.0019"/>
+<text text-anchor="middle" x="1185.2066" y="-850.6" font-family="Times,serif" font-size="14.00" fill="#000000">BBODY (alonzo)     </text>
+<text text-anchor="middle" x="1185.2066" y="-833.8" font-family="Times,serif" font-size="14.00" fill="#000000">env:BbodyEnv,state:ShelleyBbodyState,signal:Block(BHeaderView).</text>
 </g>
-<!-- alonzo_BBODY&#45;&gt;prtcl -->
-<g id="edge6" class="edge">
-<title>alonzo_BBODY-&gt;prtcl</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M489.5621,-735.0314C489.0274,-727.331 488.3915,-718.1743 487.7972,-709.6166"/>
-<polygon fill="#000000" stroke="#000000" points="491.287,-709.3467 487.1025,-699.6133 484.3038,-709.8317 491.287,-709.3467"/>
+<!-- applyBlockOpts&#45;&gt;BBODY -->
+<g id="edge2" class="edge">
+<title>applyBlockOpts-&gt;BBODY</title>
+<path fill="none" stroke="#000000" d="M1185.2066,-903.093C1185.2066,-895.4083 1185.2066,-886.2272 1185.2066,-877.5145"/>
+<polygon fill="#000000" stroke="#000000" points="1188.7067,-877.2515 1185.2066,-867.2515 1181.7067,-877.2515 1188.7067,-877.2515"/>
 </g>
-<!-- shelley_LEDGERS&#45;&gt;shelley_LEDGERS -->
-<g id="edge23" class="edge">
-<title>shelley_LEDGERS-&gt;shelley_LEDGERS</title>
-<path fill="none" stroke="#000000" d="M310.2115,-694.5498C335.1732,-695.5992 356.4916,-691.1492 356.4916,-681.2 356.4916,-672.6499 340.7474,-668.1611 320.4769,-667.7337"/>
-<polygon fill="#000000" stroke="#000000" points="320.1712,-664.2369 310.2115,-667.8502 320.2506,-671.2364 320.1712,-664.2369"/>
+<!-- applyTx -->
+<g id="node3" class="node">
+<title>applyTx</title>
+<polygon fill="none" stroke="#0000ff" points="1551.0679,-786.8 1391.3453,-786.8 1391.3453,-750.8 1551.0679,-750.8 1551.0679,-786.8"/>
+<text text-anchor="middle" x="1471.2066" y="-764.6" font-family="Times,serif" font-size="14.00" fill="#000000">ApplyTx (API.Mempool)</text>
 </g>
-<!-- conway_LEDGER -->
-<g id="node18" class="node">
-<title>conway_LEDGER</title>
-<ellipse fill="none" stroke="#000000" cx="251.8238" cy="-609.2" rx="83.9528" ry="18"/>
-<text text-anchor="middle" x="251.8238" y="-605" font-family="Times,serif" font-size="14.00" fill="#000000">conway_LEDGER</text>
-</g>
-<!-- shelley_LEDGERS&#45;&gt;conway_LEDGER -->
-<g id="edge24" class="edge">
-<title>shelley_LEDGERS-&gt;conway_LEDGER</title>
-<path fill="none" stroke="#000000" d="M245.8715,-663.0314C245.121,-655.331 244.9001,-646.1743 245.2088,-637.6166"/>
-<polygon fill="#000000" stroke="#000000" points="248.7031,-637.8161 245.8478,-627.6133 241.7173,-637.3697 248.7031,-637.8161"/>
-</g>
-<!-- prtcl&#45;&gt;shelley_TICK -->
-<g id="edge7" class="edge">
-<title>prtcl-&gt;shelley_TICK</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M506.026,-668.3278C522.2109,-658.0153 545.2872,-643.3118 564.3785,-631.1475"/>
-<polygon fill="#000000" stroke="#000000" points="566.2779,-634.0874 572.8307,-625.762 562.5163,-628.1839 566.2779,-634.0874"/>
-</g>
-<!-- overlay -->
+<!-- LEDGER -->
 <g id="node7" class="node">
-<title>overlay</title>
-<ellipse fill="none" stroke="#000000" cx="396.8238" cy="-609.2" rx="39.9876" ry="18"/>
-<text text-anchor="middle" x="396.8238" y="-605" font-family="Times,serif" font-size="14.00" fill="#000000">overlay</text>
+<title>LEDGER</title>
+<polygon fill="none" stroke="#000000" points="1316.5714,-711.8019 1053.8418,-711.8019 1053.8418,-670.5981 1316.5714,-670.5981 1316.5714,-711.8019"/>
+<text text-anchor="middle" x="1185.2066" y="-695.4" font-family="Times,serif" font-size="14.00" fill="#000000">LEDGER (conway)    </text>
+<text text-anchor="middle" x="1185.2066" y="-678.6" font-family="Times,serif" font-size="14.00" fill="#000000">env:LedgerEnv,state:LedgerState,signal:Tx.</text>
 </g>
-<!-- prtcl&#45;&gt;overlay -->
-<g id="edge8" class="edge">
-<title>prtcl-&gt;overlay</title>
-<path fill="none" stroke="#000000" d="M467.8134,-666.6297C455.3302,-656.531 438.4744,-642.8948 424.32,-631.4441"/>
-<polygon fill="#000000" stroke="#000000" points="426.3277,-628.5664 416.3518,-624.9979 421.925,-634.0085 426.3277,-628.5664"/>
+<!-- applyTx&#45;&gt;LEDGER -->
+<g id="edge3" class="edge">
+<title>applyTx-&gt;LEDGER</title>
+<path fill="none" stroke="#000000" d="M1404.5133,-750.7042C1364.7755,-739.9222 1313.9199,-726.1236 1271.1878,-714.5292"/>
+<polygon fill="#000000" stroke="#000000" points="1271.9265,-711.1031 1261.3589,-711.8623 1270.0934,-717.8589 1271.9265,-711.1031"/>
 </g>
-<!-- updn -->
+<!-- futureLedger -->
+<g id="node4" class="node">
+<title>futureLedger</title>
+<polygon fill="none" stroke="#0000ff" points="1754.2168,-939.2 1632.1964,-939.2 1632.1964,-903.2 1754.2168,-903.2 1754.2168,-939.2"/>
+<text text-anchor="middle" x="1693.2066" y="-917" font-family="Times,serif" font-size="14.00" fill="#000000">FutureLedgerView</text>
+</g>
+<!-- TICKF -->
 <g id="node8" class="node">
-<title>updn</title>
-<ellipse fill="none" stroke="#000000" cx="484.8238" cy="-609.2" rx="30.2015" ry="18"/>
-<text text-anchor="middle" x="484.8238" y="-605" font-family="Times,serif" font-size="14.00" fill="#000000">updn</text>
+<title>TICKF</title>
+<polygon fill="none" stroke="#000000" points="1821.3682,-867.0019 1565.045,-867.0019 1565.045,-825.7981 1821.3682,-825.7981 1821.3682,-867.0019"/>
+<text text-anchor="middle" x="1693.2066" y="-850.6" font-family="Times,serif" font-size="14.00" fill="#000000">TICKF (conway)     </text>
+<text text-anchor="middle" x="1693.2066" y="-833.8" font-family="Times,serif" font-size="14.00" fill="#000000">env:(),state:NewEpochState,signal:SlotNo.</text>
 </g>
-<!-- prtcl&#45;&gt;updn -->
-<g id="edge9" class="edge">
-<title>prtcl-&gt;updn</title>
-<path fill="none" stroke="#000000" d="M485.5715,-663.0314C485.4646,-655.331 485.3374,-646.1743 485.2185,-637.6166"/>
-<polygon fill="#000000" stroke="#000000" points="488.7182,-637.5637 485.0796,-627.6133 481.7189,-637.6609 488.7182,-637.5637"/>
+<!-- futureLedger&#45;&gt;TICKF -->
+<g id="edge4" class="edge">
+<title>futureLedger-&gt;TICKF</title>
+<path fill="none" stroke="#000000" d="M1693.2066,-903.093C1693.2066,-895.4083 1693.2066,-886.2272 1693.2066,-877.5145"/>
+<polygon fill="#000000" stroke="#000000" points="1696.7067,-877.2515 1693.2066,-867.2515 1689.7067,-877.2515 1696.7067,-877.2515"/>
 </g>
-<!-- ocert -->
-<g id="node11" class="node">
-<title>ocert</title>
-<ellipse fill="none" stroke="#000000" cx="401.8238" cy="-537.2" rx="30.1746" ry="18"/>
-<text text-anchor="middle" x="401.8238" y="-533" font-family="Times,serif" font-size="14.00" fill="#000000">ocert</text>
-</g>
-<!-- overlay&#45;&gt;ocert -->
-<g id="edge12" class="edge">
-<title>overlay-&gt;ocert</title>
-<path fill="none" stroke="#000000" d="M398.0856,-591.0314C398.6203,-583.331 399.2562,-574.1743 399.8505,-565.6166"/>
-<polygon fill="#000000" stroke="#000000" points="403.3439,-565.8317 400.5451,-555.6133 396.3607,-565.3467 403.3439,-565.8317"/>
-</g>
-<!-- shelley_RUPD&#45;&gt;conway_NEWEPOCH -->
-<g id="edge13" class="edge">
-<title>shelley_RUPD-&gt;conway_NEWEPOCH</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M607.7055,-519.7708C617.4287,-510.7955 629.4493,-499.6996 640.107,-489.8617"/>
-<polygon fill="#000000" stroke="#000000" points="642.6002,-492.3235 647.5742,-482.9689 637.8522,-487.1799 642.6002,-492.3235"/>
-</g>
-<!-- mir -->
-<g id="node12" class="node">
-<title>mir</title>
-<ellipse fill="none" stroke="#000000" cx="638.8238" cy="-393.2" rx="27" ry="18"/>
-<text text-anchor="middle" x="638.8238" y="-389" font-family="Times,serif" font-size="14.00" fill="#000000">mir</text>
-</g>
-<!-- conway_NEWEPOCH&#45;&gt;mir -->
-<g id="edge14" class="edge">
-<title>conway_NEWEPOCH-&gt;mir</title>
-<path fill="none" stroke="#000000" d="M659.7583,-447.0314C656.6508,-439.0406 652.9335,-429.4819 649.4994,-420.6514"/>
-<polygon fill="#000000" stroke="#000000" points="652.6767,-419.1649 645.7902,-411.1134 646.1527,-421.702 652.6767,-419.1649"/>
-</g>
-<!-- conway_EPOCH -->
-<g id="node13" class="node">
-<title>conway_EPOCH</title>
-<ellipse fill="none" stroke="#000000" cx="675.8238" cy="-321.2" rx="77.5917" ry="18"/>
-<text text-anchor="middle" x="675.8238" y="-317" font-family="Times,serif" font-size="14.00" fill="#000000">conway_EPOCH</text>
-</g>
-<!-- conway_NEWEPOCH&#45;&gt;conway_EPOCH -->
-<g id="edge15" class="edge">
-<title>conway_NEWEPOCH-&gt;conway_EPOCH</title>
-<path fill="none" stroke="#000000" d="M670.1877,-446.7765C671.9276,-436.3715 673.8803,-423.1041 674.8238,-411.2 676.4495,-390.6893 676.6674,-367.4683 676.4957,-349.7511"/>
-<polygon fill="#000000" stroke="#000000" points="679.9918,-349.4526 676.3474,-339.5043 672.9925,-349.5539 679.9918,-349.4526"/>
-</g>
-<!-- mir&#45;&gt;conway_EPOCH -->
-<g id="edge16" class="edge">
-<title>mir-&gt;conway_EPOCH</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M647.5923,-376.137C651.8877,-367.7785 657.1615,-357.5159 661.9835,-348.1325"/>
-<polygon fill="#000000" stroke="#000000" points="665.1442,-349.6393 666.602,-339.1453 658.9182,-346.4398 665.1442,-349.6393"/>
-</g>
-<!-- shelley_SNAP -->
-<g id="node14" class="node">
-<title>shelley_SNAP</title>
-<ellipse fill="none" stroke="#000000" cx="511.8238" cy="-177.2" rx="67.7953" ry="18"/>
-<text text-anchor="middle" x="511.8238" y="-173" font-family="Times,serif" font-size="14.00" fill="#000000">shelley_SNAP</text>
-</g>
-<!-- conway_EPOCH&#45;&gt;shelley_SNAP -->
-<g id="edge17" class="edge">
-<title>conway_EPOCH-&gt;shelley_SNAP</title>
-<path fill="none" stroke="#000000" d="M642.3642,-304.703C624.5868,-295.0849 602.9363,-281.9544 585.8238,-267.2 563.9027,-248.2996 543.3686,-222.411 529.5191,-203.2505"/>
-<polygon fill="#000000" stroke="#000000" points="532.2857,-201.1012 523.6453,-194.9698 526.5762,-205.1512 532.2857,-201.1012"/>
-</g>
-<!-- conway_RATIFY -->
-<g id="node15" class="node">
-<title>conway_RATIFY</title>
-<ellipse fill="none" stroke="#000000" cx="675.8238" cy="-249.2" rx="80.5219" ry="18"/>
-<text text-anchor="middle" x="675.8238" y="-245" font-family="Times,serif" font-size="14.00" fill="#000000">conway_RATIFY</text>
-</g>
-<!-- conway_EPOCH&#45;&gt;conway_RATIFY -->
-<g id="edge18" class="edge">
-<title>conway_EPOCH-&gt;conway_RATIFY</title>
-<path fill="none" stroke="#000000" d="M675.8238,-303.0314C675.8238,-295.331 675.8238,-286.1743 675.8238,-277.6166"/>
-<polygon fill="#000000" stroke="#000000" points="679.3239,-277.6132 675.8238,-267.6133 672.3239,-277.6133 679.3239,-277.6132"/>
-</g>
-<!-- shelley_POOLREAP -->
-<g id="node16" class="node">
-<title>shelley_POOLREAP</title>
-<ellipse fill="none" stroke="#000000" cx="864.8238" cy="-177.2" rx="93.2161" ry="18"/>
-<text text-anchor="middle" x="864.8238" y="-173" font-family="Times,serif" font-size="14.00" fill="#000000">shelley_POOLREAP</text>
-</g>
-<!-- conway_EPOCH&#45;&gt;shelley_POOLREAP -->
-<g id="edge19" class="edge">
-<title>conway_EPOCH-&gt;shelley_POOLREAP</title>
-<path fill="none" stroke="#000000" d="M706.7837,-304.6343C724.6036,-294.6124 747.1036,-281.1124 765.8238,-267.2 792.8161,-247.1401 820.9424,-220.9836 840.2865,-202.0426"/>
-<polygon fill="#000000" stroke="#000000" points="842.8494,-204.4306 847.5025,-194.9122 837.9292,-199.4514 842.8494,-204.4306"/>
-</g>
-<!-- conway_RATIFY&#45;&gt;shelley_SNAP -->
-<g id="edge20" class="edge">
-<title>conway_RATIFY-&gt;shelley_SNAP</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M639.019,-233.0418C614.5432,-222.2963 582.2548,-208.1209 556.3347,-196.7413"/>
-<polygon fill="#000000" stroke="#000000" points="557.663,-193.5021 547.0996,-192.6869 554.8491,-199.9116 557.663,-193.5021"/>
-</g>
-<!-- conway_RATIFY&#45;&gt;shelley_POOLREAP -->
-<g id="edge21" class="edge">
-<title>conway_RATIFY-&gt;shelley_POOLREAP</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M716.834,-233.5771C745.0479,-222.8289 782.7468,-208.4674 813.0335,-196.9296"/>
-<polygon fill="#000000" stroke="#000000" points="814.4861,-200.1217 822.585,-193.291 811.9941,-193.5803 814.4861,-200.1217"/>
-</g>
-<!-- conway_ENACT -->
+<!-- NEWEPOCH -->
 <g id="node17" class="node">
-<title>conway_ENACT</title>
-<ellipse fill="none" stroke="#000000" cx="675.8238" cy="-177.2" rx="78.154" ry="18"/>
-<text text-anchor="middle" x="675.8238" y="-173" font-family="Times,serif" font-size="14.00" fill="#000000">conway_ENACT</text>
+<title>NEWEPOCH</title>
+<polygon fill="none" stroke="#000000" points="682.0714,-711.8019 412.3418,-711.8019 412.3418,-670.5981 682.0714,-670.5981 682.0714,-711.8019"/>
+<text text-anchor="middle" x="547.2066" y="-695.4" font-family="Times,serif" font-size="14.00" fill="#000000">NEWEPOCH (conway)  </text>
+<text text-anchor="middle" x="547.2066" y="-678.6" font-family="Times,serif" font-size="14.00" fill="#000000">env:(),state:NewEpochState,signal:EpochNo.</text>
 </g>
-<!-- conway_RATIFY&#45;&gt;conway_ENACT -->
-<g id="edge22" class="edge">
-<title>conway_RATIFY-&gt;conway_ENACT</title>
-<path fill="none" stroke="#000000" d="M675.8238,-231.0314C675.8238,-223.331 675.8238,-214.1743 675.8238,-205.6166"/>
-<polygon fill="#000000" stroke="#000000" points="679.3239,-205.6132 675.8238,-195.6133 672.3239,-205.6133 679.3239,-205.6132"/>
+<!-- TICK&#45;&gt;NEWEPOCH -->
+<g id="edge9" class="edge">
+<title>TICK-&gt;NEWEPOCH</title>
+<path fill="none" stroke="#000000" d="M565.5001,-825.7045C550.026,-817.0154 535.0131,-805.2107 526.2066,-789.6 514.3517,-768.5855 521.4029,-741.6021 530.4097,-721.2084"/>
+<polygon fill="#000000" stroke="#000000" points="533.6247,-722.5977 534.7687,-712.0649 527.306,-719.5854 533.6247,-722.5977"/>
 </g>
-<!-- conway_LEDGER&#45;&gt;shelley_LEDGERS -->
-<g id="edge25" class="edge">
-<title>conway_LEDGER-&gt;shelley_LEDGERS</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M257.7999,-627.6133C258.531,-635.2593 258.7441,-644.3084 258.4393,-652.7726"/>
-<polygon fill="#000000" stroke="#000000" points="254.9286,-652.8264 257.7762,-663.0314 261.9141,-653.278 254.9286,-652.8264"/>
-</g>
-<!-- conway_UTXOW -->
-<g id="node19" class="node">
-<title>conway_UTXOW</title>
-<ellipse fill="none" stroke="#000000" cx="81.8238" cy="-537.2" rx="81.6481" ry="18"/>
-<text text-anchor="middle" x="81.8238" y="-533" font-family="Times,serif" font-size="14.00" fill="#000000">conway_UTXOW</text>
-</g>
-<!-- conway_LEDGER&#45;&gt;conway_UTXOW -->
-<g id="edge26" class="edge">
-<title>conway_LEDGER-&gt;conway_UTXOW</title>
-<path fill="none" stroke="#000000" d="M213.6725,-593.0418C188.6499,-582.444 155.7501,-568.5099 129.0748,-557.2122"/>
-<polygon fill="#000000" stroke="#000000" points="130.128,-553.8573 119.5548,-553.1802 127.398,-560.303 130.128,-553.8573"/>
-</g>
-<!-- conway_CERTS -->
-<g id="node20" class="node">
-<title>conway_CERTS</title>
-<ellipse fill="none" stroke="#000000" cx="288.8238" cy="-465.2" rx="75.8856" ry="18"/>
-<text text-anchor="middle" x="288.8238" y="-461" font-family="Times,serif" font-size="14.00" fill="#000000">conway_CERTS</text>
-</g>
-<!-- conway_LEDGER&#45;&gt;conway_CERTS -->
-<g id="edge27" class="edge">
-<title>conway_LEDGER-&gt;conway_CERTS</title>
-<path fill="none" stroke="#000000" d="M280.1462,-592.0552C298.4897,-580.2797 319.8563,-565.0536 324.8238,-555.2 335.3706,-534.2795 323.7995,-509.4962 311.0477,-491.2385"/>
-<polygon fill="#000000" stroke="#000000" points="313.5704,-488.7668 304.7847,-482.8454 307.9602,-492.9532 313.5704,-488.7668"/>
-</g>
-<!-- conway_GOV -->
-<g id="node21" class="node">
-<title>conway_GOV</title>
-<ellipse fill="none" stroke="#000000" cx="248.8238" cy="-537.2" rx="66.619" ry="18"/>
-<text text-anchor="middle" x="248.8238" y="-533" font-family="Times,serif" font-size="14.00" fill="#000000">conway_GOV</text>
-</g>
-<!-- conway_LEDGER&#45;&gt;conway_GOV -->
-<g id="edge28" class="edge">
-<title>conway_LEDGER-&gt;conway_GOV</title>
-<path fill="none" stroke="#000000" d="M251.0668,-591.0314C250.746,-583.331 250.3644,-574.1743 250.0079,-565.6166"/>
-<polygon fill="#000000" stroke="#000000" points="253.5044,-565.4589 249.5911,-555.6133 246.5105,-565.7503 253.5044,-565.4589"/>
-</g>
-<!-- conway_UTXOW&#45;&gt;conway_CERTS -->
-<g id="edge30" class="edge">
-<title>conway_UTXOW-&gt;conway_CERTS</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M125.7232,-521.9307C158.0198,-510.6971 202.0616,-495.3782 236.239,-483.4904"/>
-<polygon fill="#000000" stroke="#000000" points="237.7559,-486.6685 246.051,-480.0775 235.4562,-480.057 237.7559,-486.6685"/>
-</g>
-<!-- babbage_UTXO -->
-<g id="node22" class="node">
-<title>babbage_UTXO</title>
-<ellipse fill="none" stroke="#000000" cx="81.8238" cy="-465.2" rx="74.7053" ry="18"/>
-<text text-anchor="middle" x="81.8238" y="-461" font-family="Times,serif" font-size="14.00" fill="#000000">babbage_UTXO</text>
-</g>
-<!-- conway_UTXOW&#45;&gt;babbage_UTXO -->
-<g id="edge29" class="edge">
-<title>conway_UTXOW-&gt;babbage_UTXO</title>
-<path fill="none" stroke="#000000" d="M81.8238,-519.0314C81.8238,-511.331 81.8238,-502.1743 81.8238,-493.6166"/>
-<polygon fill="#000000" stroke="#000000" points="85.3239,-493.6132 81.8238,-483.6133 78.3239,-493.6133 85.3239,-493.6132"/>
-</g>
-<!-- conway_CERTS&#45;&gt;conway_CERTS -->
-<g id="edge32" class="edge">
-<title>conway_CERTS-&gt;conway_CERTS</title>
-<path fill="none" stroke="#000000" d="M340.5151,-478.5146C363.2248,-479.6929 382.7666,-475.2547 382.7666,-465.2 382.7666,-456.6771 368.7254,-452.1897 350.6157,-451.7379"/>
-<polygon fill="#000000" stroke="#000000" points="350.4629,-448.2397 340.5151,-451.8854 350.5652,-455.2389 350.4629,-448.2397"/>
-</g>
-<!-- conway_CERT -->
+<!-- RUPD -->
 <g id="node24" class="node">
-<title>conway_CERT</title>
-<ellipse fill="none" stroke="#000000" cx="288.8238" cy="-393.2" rx="70.649" ry="18"/>
-<text text-anchor="middle" x="288.8238" y="-389" font-family="Times,serif" font-size="14.00" fill="#000000">conway_CERT</text>
+<title>RUPD</title>
+<polygon fill="none" stroke="#000000" points="931.3653,-789.4019 535.0479,-789.4019 535.0479,-748.1981 931.3653,-748.1981 931.3653,-789.4019"/>
+<text text-anchor="middle" x="733.2066" y="-773" font-family="Times,serif" font-size="14.00" fill="#000000">RUPD (shelley)     </text>
+<text text-anchor="middle" x="733.2066" y="-756.2" font-family="Times,serif" font-size="14.00" fill="#000000">env:RupdEnv,state:StrictMaybe(PulsingRewUpdate),signal:SlotNo.</text>
 </g>
-<!-- conway_CERTS&#45;&gt;conway_CERT -->
-<g id="edge33" class="edge">
-<title>conway_CERTS-&gt;conway_CERT</title>
-<path fill="none" stroke="#000000" d="M282.8715,-447.0314C282.121,-439.331 281.9001,-430.1743 282.2088,-421.6166"/>
-<polygon fill="#000000" stroke="#000000" points="285.7031,-421.8161 282.8478,-411.6133 278.7173,-421.3697 285.7031,-421.8161"/>
+<!-- TICK&#45;&gt;RUPD -->
+<g id="edge8" class="edge">
+<title>TICK-&gt;RUPD</title>
+<path fill="none" stroke="#000000" d="M650.4885,-825.6046C664.0416,-816.2974 680.1808,-805.2142 694.5898,-795.3191"/>
+<polygon fill="#000000" stroke="#000000" points="696.579,-798.199 702.8411,-789.6528 692.6163,-792.4286 696.579,-798.199"/>
 </g>
-<!-- conway_UTXOS -->
-<g id="node23" class="node">
-<title>conway_UTXOS</title>
-<ellipse fill="none" stroke="#000000" cx="81.8238" cy="-393.2" rx="78.154" ry="18"/>
-<text text-anchor="middle" x="81.8238" y="-389" font-family="Times,serif" font-size="14.00" fill="#000000">conway_UTXOS</text>
+<!-- LEDGERS -->
+<g id="node22" class="node">
+<title>LEDGERS</title>
+<polygon fill="none" stroke="#000000" points="1355.3276,-789.4019 1015.0856,-789.4019 1015.0856,-748.1981 1355.3276,-748.1981 1355.3276,-789.4019"/>
+<text text-anchor="middle" x="1185.2066" y="-773" font-family="Times,serif" font-size="14.00" fill="#000000">LEDGERS (shelley)  </text>
+<text text-anchor="middle" x="1185.2066" y="-756.2" font-family="Times,serif" font-size="14.00" fill="#000000">env:ShelleyLedgersEnv,state:LedgerState,signal:Seq(Tx).</text>
 </g>
-<!-- babbage_UTXO&#45;&gt;conway_UTXOS -->
-<g id="edge31" class="edge">
-<title>babbage_UTXO-&gt;conway_UTXOS</title>
-<path fill="none" stroke="#000000" d="M81.8238,-447.0314C81.8238,-439.331 81.8238,-430.1743 81.8238,-421.6166"/>
-<polygon fill="#000000" stroke="#000000" points="85.3239,-421.6132 81.8238,-411.6133 78.3239,-421.6133 85.3239,-421.6132"/>
+<!-- BBODY&#45;&gt;LEDGERS -->
+<g id="edge7" class="edge">
+<title>BBODY-&gt;LEDGERS</title>
+<path fill="none" stroke="#000000" d="M1185.2066,-825.6046C1185.2066,-817.6891 1185.2066,-808.4891 1185.2066,-799.8278"/>
+<polygon fill="#000000" stroke="#000000" points="1188.7067,-799.6527 1185.2066,-789.6528 1181.7067,-799.6528 1188.7067,-799.6527"/>
 </g>
-<!-- conway_CERT&#45;&gt;conway_CERTS -->
-<g id="edge34" class="edge">
-<title>conway_CERT-&gt;conway_CERTS</title>
-<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M294.7999,-411.6133C295.531,-419.2593 295.7441,-428.3084 295.4393,-436.7726"/>
-<polygon fill="#000000" stroke="#000000" points="291.9286,-436.8264 294.7762,-447.0314 298.9141,-437.278 291.9286,-436.8264"/>
+<!-- CERTS -->
+<g id="node11" class="node">
+<title>CERTS</title>
+<polygon fill="none" stroke="#000000" points="1297.857,-556.6019 1006.5562,-556.6019 1006.5562,-515.3981 1297.857,-515.3981 1297.857,-556.6019"/>
+<text text-anchor="middle" x="1152.2066" y="-540.2" font-family="Times,serif" font-size="14.00" fill="#000000">CERTS (conway)     </text>
+<text text-anchor="middle" x="1152.2066" y="-523.4" font-family="Times,serif" font-size="14.00" fill="#000000">env:CertsEnv,state:CertState,signal:Seq(TxCert).</text>
 </g>
-<!-- conway_DELEG -->
-<g id="node25" class="node">
-<title>conway_DELEG</title>
-<ellipse fill="none" stroke="#000000" cx="121.8238" cy="-321.2" rx="77.5723" ry="18"/>
-<text text-anchor="middle" x="121.8238" y="-317" font-family="Times,serif" font-size="14.00" fill="#000000">conway_DELEG</text>
+<!-- LEDGER&#45;&gt;CERTS -->
+<g id="edge22" class="edge">
+<title>LEDGER-&gt;CERTS</title>
+<path fill="none" stroke="#000000" d="M1085.8157,-670.5756C1050.3974,-661.0509 1016.6522,-648.6735 1006.2066,-634.4 995.2876,-619.4797 995.7687,-608.0607 1006.2066,-592.8 1014.173,-581.1528 1039.6685,-569.6156 1067.1739,-560.0128"/>
+<polygon fill="#000000" stroke="#000000" points="1068.6114,-563.2214 1076.9613,-556.6999 1066.367,-556.5909 1068.6114,-563.2214"/>
 </g>
-<!-- conway_CERT&#45;&gt;conway_DELEG -->
-<g id="edge35" class="edge">
-<title>conway_CERT-&gt;conway_DELEG</title>
-<path fill="none" stroke="#000000" d="M252.5873,-377.5771C227.8959,-366.9317 194.983,-352.7417 168.3549,-341.2613"/>
-<polygon fill="#000000" stroke="#000000" points="169.4244,-337.911 158.8558,-337.1659 166.653,-344.339 169.4244,-337.911"/>
+<!-- GOV -->
+<g id="node15" class="node">
+<title>GOV</title>
+<polygon fill="none" stroke="#000000" points="1355.3486,-634.2019 1015.0646,-634.2019 1015.0646,-592.9981 1355.3486,-592.9981 1355.3486,-634.2019"/>
+<text text-anchor="middle" x="1185.2066" y="-617.8" font-family="Times,serif" font-size="14.00" fill="#000000">GOV (conway)       </text>
+<text text-anchor="middle" x="1185.2066" y="-601" font-family="Times,serif" font-size="14.00" fill="#000000">env:GovEnv,state:GovActionState,signal:GovProcedures.</text>
 </g>
-<!-- conway_POOL -->
+<!-- LEDGER&#45;&gt;GOV -->
+<g id="edge23" class="edge">
+<title>LEDGER-&gt;GOV</title>
+<path fill="none" stroke="#000000" d="M1185.2066,-670.4046C1185.2066,-662.4891 1185.2066,-653.2891 1185.2066,-644.6278"/>
+<polygon fill="#000000" stroke="#000000" points="1188.7067,-644.4527 1185.2066,-634.4528 1181.7067,-644.4528 1188.7067,-644.4527"/>
+</g>
+<!-- UTXOW -->
+<g id="node21" class="node">
+<title>UTXOW</title>
+<polygon fill="none" stroke="#000000" points="1621.0498,-634.2019 1373.3634,-634.2019 1373.3634,-592.9981 1621.0498,-592.9981 1621.0498,-634.2019"/>
+<text text-anchor="middle" x="1497.2066" y="-617.8" font-family="Times,serif" font-size="14.00" fill="#000000">UTXOW (conway)     </text>
+<text text-anchor="middle" x="1497.2066" y="-601" font-family="Times,serif" font-size="14.00" fill="#000000">env:UtxoEnv,state:UTxOState,signal:Tx.</text>
+</g>
+<!-- LEDGER&#45;&gt;UTXOW -->
+<g id="edge21" class="edge">
+<title>LEDGER-&gt;UTXOW</title>
+<path fill="none" stroke="#000000" d="M1268.407,-670.5066C1310.2753,-660.0932 1361.1621,-647.4367 1404.3051,-636.7063"/>
+<polygon fill="#000000" stroke="#000000" points="1405.3785,-640.046 1414.2381,-634.2358 1403.6889,-633.253 1405.3785,-640.046"/>
+</g>
+<!-- LEDGER&#45;&gt;LEDGERS -->
+<g id="edge20" class="edge">
+<title>LEDGER-&gt;LEDGERS</title>
+<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M1191.2688,-712.0528C1191.9219,-719.9745 1192.1099,-729.1763 1191.8328,-737.8349"/>
+<polygon fill="#000000" stroke="#000000" points="1188.328,-737.8248 1191.264,-748.0046 1195.317,-738.2157 1188.328,-737.8248"/>
+</g>
+<!-- UPEC -->
 <g id="node26" class="node">
-<title>conway_POOL</title>
-<ellipse fill="none" stroke="#000000" cx="288.8238" cy="-321.2" rx="71.2114" ry="18"/>
-<text text-anchor="middle" x="288.8238" y="-317" font-family="Times,serif" font-size="14.00" fill="#000000">conway_POOL</text>
+<title>UPEC</title>
+<polygon fill="none" stroke="#000000" points="1817.2986,-789.4019 1569.1146,-789.4019 1569.1146,-748.1981 1817.2986,-748.1981 1817.2986,-789.4019"/>
+<text text-anchor="middle" x="1693.2066" y="-773" font-family="Times,serif" font-size="14.00" fill="#000000">UPEC (shelley)     </text>
+<text text-anchor="middle" x="1693.2066" y="-756.2" font-family="Times,serif" font-size="14.00" fill="#000000">env:EpochState,state:UpecState,signal:().</text>
 </g>
-<!-- conway_CERT&#45;&gt;conway_POOL -->
-<g id="edge36" class="edge">
-<title>conway_CERT-&gt;conway_POOL</title>
-<path fill="none" stroke="#000000" d="M288.8238,-375.0314C288.8238,-367.331 288.8238,-358.1743 288.8238,-349.6166"/>
-<polygon fill="#000000" stroke="#000000" points="292.3239,-349.6132 288.8238,-339.6133 285.3239,-349.6133 292.3239,-349.6132"/>
+<!-- TICKF&#45;&gt;UPEC -->
+<g id="edge5" class="edge">
+<title>TICKF-&gt;UPEC</title>
+<path fill="none" stroke="#000000" d="M1693.2066,-825.6046C1693.2066,-817.6891 1693.2066,-808.4891 1693.2066,-799.8278"/>
+<polygon fill="#000000" stroke="#000000" points="1696.7067,-799.6527 1693.2066,-789.6528 1689.7067,-799.6528 1696.7067,-799.6527"/>
 </g>
-<!-- conway_GOVCERT -->
+<!-- UTXO -->
+<g id="node9" class="node">
+<title>UTXO</title>
+<polygon fill="none" stroke="#000000" points="1621.0498,-556.6019 1373.3634,-556.6019 1373.3634,-515.3981 1621.0498,-515.3981 1621.0498,-556.6019"/>
+<text text-anchor="middle" x="1497.2066" y="-540.2" font-family="Times,serif" font-size="14.00" fill="#000000">UTXO (babbage)     </text>
+<text text-anchor="middle" x="1497.2066" y="-523.4" font-family="Times,serif" font-size="14.00" fill="#000000">env:UtxoEnv,state:UTxOState,signal:Tx.</text>
+</g>
+<!-- UTXOS -->
+<g id="node20" class="node">
+<title>UTXOS</title>
+<polygon fill="none" stroke="#000000" points="1641.2617,-479.0019 1353.1515,-479.0019 1353.1515,-437.7981 1641.2617,-437.7981 1641.2617,-479.0019"/>
+<text text-anchor="middle" x="1497.2066" y="-462.6" font-family="Times,serif" font-size="14.00" fill="#000000">UTXOS (conway)     </text>
+<text text-anchor="middle" x="1497.2066" y="-445.8" font-family="Times,serif" font-size="14.00" fill="#000000">env:UtxoEnv,state:UTxOState,signal:AlonzoTx.</text>
+</g>
+<!-- UTXO&#45;&gt;UTXOS -->
+<g id="edge26" class="edge">
+<title>UTXO-&gt;UTXOS</title>
+<path fill="none" stroke="#000000" d="M1497.2066,-515.2046C1497.2066,-507.2891 1497.2066,-498.0891 1497.2066,-489.4278"/>
+<polygon fill="#000000" stroke="#000000" points="1500.7067,-489.2527 1497.2066,-479.2528 1493.7067,-489.2528 1500.7067,-489.2527"/>
+</g>
+<!-- CERT -->
+<g id="node10" class="node">
+<title>CERT</title>
+<polygon fill="none" stroke="#000000" points="1280.0938,-479.0019 1024.3194,-479.0019 1024.3194,-437.7981 1280.0938,-437.7981 1280.0938,-479.0019"/>
+<text text-anchor="middle" x="1152.2066" y="-462.6" font-family="Times,serif" font-size="14.00" fill="#000000">CERT (conway)      </text>
+<text text-anchor="middle" x="1152.2066" y="-445.8" font-family="Times,serif" font-size="14.00" fill="#000000">env:CertEnv,state:CertState,signal:TxCert.</text>
+</g>
+<!-- CERT&#45;&gt;CERTS -->
+<g id="edge29" class="edge">
+<title>CERT-&gt;CERTS</title>
+<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M1158.2688,-479.2528C1158.9219,-487.1745 1159.1099,-496.3763 1158.8328,-505.0349"/>
+<polygon fill="#000000" stroke="#000000" points="1155.328,-505.0248 1158.264,-515.2046 1162.317,-505.4157 1155.328,-505.0248"/>
+</g>
+<!-- DELEG -->
+<g id="node12" class="node">
+<title>DELEG</title>
+<polygon fill="none" stroke="#000000" points="950.4649,-401.4019 641.9483,-401.4019 641.9483,-360.1981 950.4649,-360.1981 950.4649,-401.4019"/>
+<text text-anchor="middle" x="796.2066" y="-385" font-family="Times,serif" font-size="14.00" fill="#000000">DELEG (conway)     </text>
+<text text-anchor="middle" x="796.2066" y="-368.2" font-family="Times,serif" font-size="14.00" fill="#000000">env:PParams,state:DState,signal:ConwayDelegCert.</text>
+</g>
+<!-- CERT&#45;&gt;DELEG -->
+<g id="edge30" class="edge">
+<title>CERT-&gt;DELEG</title>
+<path fill="none" stroke="#000000" d="M1057.2728,-437.7066C1008.9971,-427.1836 950.2134,-414.37 900.658,-403.5681"/>
+<polygon fill="#000000" stroke="#000000" points="901.3918,-400.1459 890.8758,-401.4358 899.901,-406.9853 901.3918,-400.1459"/>
+</g>
+<!-- GOVCERT -->
+<g id="node16" class="node">
+<title>GOVCERT</title>
+<polygon fill="none" stroke="#000000" points="1336.0742,-401.4019 968.339,-401.4019 968.339,-360.1981 1336.0742,-360.1981 1336.0742,-401.4019"/>
+<text text-anchor="middle" x="1152.2066" y="-385" font-family="Times,serif" font-size="14.00" fill="#000000">GOVCERT (conway)   </text>
+<text text-anchor="middle" x="1152.2066" y="-368.2" font-family="Times,serif" font-size="14.00" fill="#000000">env:ConwayGovCertEnv,state:VState,signal:ConwayGovCert.</text>
+</g>
+<!-- CERT&#45;&gt;GOVCERT -->
+<g id="edge32" class="edge">
+<title>CERT-&gt;GOVCERT</title>
+<path fill="none" stroke="#000000" d="M1152.2066,-437.6046C1152.2066,-429.6891 1152.2066,-420.4891 1152.2066,-411.8278"/>
+<polygon fill="#000000" stroke="#000000" points="1155.7067,-411.6527 1152.2066,-401.6528 1148.7067,-411.6528 1155.7067,-411.6527"/>
+</g>
+<!-- POOL -->
+<g id="node18" class="node">
+<title>POOL</title>
+<polygon fill="none" stroke="#000000" points="1605.9655,-401.4019 1354.4477,-401.4019 1354.4477,-360.1981 1605.9655,-360.1981 1605.9655,-401.4019"/>
+<text text-anchor="middle" x="1480.2066" y="-385" font-family="Times,serif" font-size="14.00" fill="#000000">POOL (conway)      </text>
+<text text-anchor="middle" x="1480.2066" y="-368.2" font-family="Times,serif" font-size="14.00" fill="#000000">env:PoolEnv,state:PState,signal:PoolCert.</text>
+</g>
+<!-- CERT&#45;&gt;POOL -->
+<g id="edge31" class="edge">
+<title>CERT-&gt;POOL</title>
+<path fill="none" stroke="#000000" d="M1239.6737,-437.7066C1283.8744,-427.2493 1337.6361,-414.5301 1383.1134,-403.7708"/>
+<polygon fill="#000000" stroke="#000000" points="1384.0577,-407.1441 1392.9833,-401.4358 1382.4461,-400.3322 1384.0577,-407.1441"/>
+</g>
+<!-- CERTS&#45;&gt;CERT -->
+<g id="edge28" class="edge">
+<title>CERTS-&gt;CERT</title>
+<path fill="none" stroke="#000000" d="M1146.1492,-515.2046C1145.4938,-507.2891 1145.3036,-498.0891 1145.5784,-489.4278"/>
+<polygon fill="#000000" stroke="#000000" points="1149.0835,-489.4318 1146.1444,-479.2528 1142.0943,-489.0429 1149.0835,-489.4318"/>
+</g>
+<!-- CERTS&#45;&gt;CERTS -->
+<g id="edge27" class="edge">
+<title>CERTS-&gt;CERTS</title>
+<path fill="none" stroke="#000000" d="M1298.1133,-546.6875C1309.2057,-544.3125 1316.0317,-540.75 1316.0317,-536 1316.0317,-532.8828 1313.092,-530.277 1307.936,-528.1827"/>
+<polygon fill="#000000" stroke="#000000" points="1308.6936,-524.7578 1298.1133,-525.3125 1306.7303,-531.4768 1308.6936,-524.7578"/>
+</g>
+<!-- ENACT -->
+<g id="node13" class="node">
+<title>ENACT</title>
+<polygon fill="none" stroke="#000000" points="671.584,-479.0019 422.8292,-479.0019 422.8292,-437.7981 671.584,-437.7981 671.584,-479.0019"/>
+<text text-anchor="middle" x="547.2066" y="-462.6" font-family="Times,serif" font-size="14.00" fill="#000000">ENACT (conway)     </text>
+<text text-anchor="middle" x="547.2066" y="-445.8" font-family="Times,serif" font-size="14.00" fill="#000000">env:(),state:EnactState,signal:GovAction.</text>
+</g>
+<!-- EPOCH -->
+<g id="node14" class="node">
+<title>EPOCH</title>
+<polygon fill="none" stroke="#000000" points="690.9887,-634.2019 403.4245,-634.2019 403.4245,-592.9981 690.9887,-592.9981 690.9887,-634.2019"/>
+<text text-anchor="middle" x="547.2066" y="-617.8" font-family="Times,serif" font-size="14.00" fill="#000000">EPOCH (conway)     </text>
+<text text-anchor="middle" x="547.2066" y="-601" font-family="Times,serif" font-size="14.00" fill="#000000">env:PoolDistr,state:EpochState,signal:EpochNo.</text>
+</g>
+<!-- RATIFY -->
+<g id="node19" class="node">
+<title>RATIFY</title>
+<polygon fill="none" stroke="#000000" points="701.4915,-556.6019 392.9217,-556.6019 392.9217,-515.3981 701.4915,-515.3981 701.4915,-556.6019"/>
+<text text-anchor="middle" x="547.2066" y="-540.2" font-family="Times,serif" font-size="14.00" fill="#000000">RATIFY (conway)    </text>
+<text text-anchor="middle" x="547.2066" y="-523.4" font-family="Times,serif" font-size="14.00" fill="#000000">env:RatifyEnv,state:RatifyState,signal:RatifySignal.</text>
+</g>
+<!-- EPOCH&#45;&gt;RATIFY -->
+<g id="edge13" class="edge">
+<title>EPOCH-&gt;RATIFY</title>
+<path fill="none" stroke="#000000" d="M547.2066,-592.8046C547.2066,-584.8891 547.2066,-575.6891 547.2066,-567.0278"/>
+<polygon fill="#000000" stroke="#000000" points="550.7067,-566.8527 547.2066,-556.8528 543.7067,-566.8528 550.7067,-566.8527"/>
+</g>
+<!-- POOLREAP -->
+<g id="node23" class="node">
+<title>POOLREAP</title>
+<polygon fill="none" stroke="#000000" points="404.62,-479.0019 -.2068,-479.0019 -.2068,-437.7981 404.62,-437.7981 404.62,-479.0019"/>
+<text text-anchor="middle" x="202.2066" y="-462.6" font-family="Times,serif" font-size="14.00" fill="#000000">POOLREAP (shelley) </text>
+<text text-anchor="middle" x="202.2066" y="-445.8" font-family="Times,serif" font-size="14.00" fill="#000000">env:ShelleyPoolreapEnv,state:ShelleyPoolreapState,signal:EpochNo.</text>
+</g>
+<!-- EPOCH&#45;&gt;POOLREAP -->
+<g id="edge14" class="edge">
+<title>EPOCH-&gt;POOLREAP</title>
+<path fill="none" stroke="#000000" d="M480.0512,-592.8937C450.2655,-583.0246 415.0519,-570.4076 384.2066,-556.8 335.278,-535.2148 281.7031,-505.4548 245.4353,-484.3291"/>
+<polygon fill="#000000" stroke="#000000" points="246.9986,-481.1887 236.6009,-479.1545 243.4606,-487.2288 246.9986,-481.1887"/>
+</g>
+<!-- SNAP -->
+<g id="node25" class="node">
+<title>SNAP</title>
+<polygon fill="none" stroke="#000000" points="926.6749,-479.0019 689.7383,-479.0019 689.7383,-437.7981 926.6749,-437.7981 926.6749,-479.0019"/>
+<text text-anchor="middle" x="808.2066" y="-462.6" font-family="Times,serif" font-size="14.00" fill="#000000">SNAP (shelley)     </text>
+<text text-anchor="middle" x="808.2066" y="-445.8" font-family="Times,serif" font-size="14.00" fill="#000000">env:SnapEnv,state:SnapShots,signal:().</text>
+</g>
+<!-- EPOCH&#45;&gt;SNAP -->
+<g id="edge12" class="edge">
+<title>EPOCH-&gt;SNAP</title>
+<path fill="none" stroke="#000000" d="M629.2579,-592.9928C656.2379,-584.1771 685.5994,-572.2745 710.2066,-556.8 739.8874,-538.1349 767.4707,-508.9231 785.762,-487.1698"/>
+<polygon fill="#000000" stroke="#000000" points="788.6425,-489.178 792.3024,-479.2353 783.241,-484.7255 788.6425,-489.178"/>
+</g>
+<!-- NEWEPOCH&#45;&gt;EPOCH -->
+<g id="edge11" class="edge">
+<title>NEWEPOCH-&gt;EPOCH</title>
+<path fill="none" stroke="#000000" d="M547.2066,-670.4046C547.2066,-662.4891 547.2066,-653.2891 547.2066,-644.6278"/>
+<polygon fill="#000000" stroke="#000000" points="550.7067,-644.4527 547.2066,-634.4528 543.7067,-644.4528 550.7067,-644.4527"/>
+</g>
+<!-- RATIFY&#45;&gt;ENACT -->
+<g id="edge17" class="edge">
+<title>RATIFY-&gt;ENACT</title>
+<path fill="none" stroke="#000000" d="M547.2066,-515.2046C547.2066,-507.2891 547.2066,-498.0891 547.2066,-489.4278"/>
+<polygon fill="#000000" stroke="#000000" points="550.7067,-489.2527 547.2066,-479.2528 543.7067,-489.2528 550.7067,-489.2527"/>
+</g>
+<!-- RATIFY&#45;&gt;POOLREAP -->
+<g id="edge16" class="edge">
+<title>RATIFY-&gt;POOLREAP</title>
+<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M455.2061,-515.3066C408.5196,-504.8055 351.692,-492.0234 303.7308,-481.2356"/>
+<polygon fill="#000000" stroke="#000000" points="304.475,-477.8156 293.9507,-479.0358 302.9388,-484.645 304.475,-477.8156"/>
+</g>
+<!-- RATIFY&#45;&gt;SNAP -->
+<g id="edge15" class="edge">
+<title>RATIFY-&gt;SNAP</title>
+<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M616.807,-515.3066C651.3152,-505.0466 693.1471,-492.6093 728.8912,-481.9819"/>
+<polygon fill="#000000" stroke="#000000" points="730.2124,-485.2406 738.8002,-479.0358 728.2174,-478.5309 730.2124,-485.2406"/>
+</g>
+<!-- UTXOW&#45;&gt;UTXO -->
+<g id="edge24" class="edge">
+<title>UTXOW-&gt;UTXO</title>
+<path fill="none" stroke="#000000" d="M1497.2066,-592.8046C1497.2066,-584.8891 1497.2066,-575.6891 1497.2066,-567.0278"/>
+<polygon fill="#000000" stroke="#000000" points="1500.7067,-566.8527 1497.2066,-556.8528 1493.7067,-566.8528 1500.7067,-566.8527"/>
+</g>
+<!-- UTXOW&#45;&gt;CERTS -->
+<g id="edge25" class="edge">
+<title>UTXOW-&gt;CERTS</title>
+<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M1405.2061,-592.9066C1358.5196,-582.4055 1301.692,-569.6234 1253.7308,-558.8356"/>
+<polygon fill="#000000" stroke="#000000" points="1254.475,-555.4156 1243.9507,-556.6358 1252.9388,-562.245 1254.475,-555.4156"/>
+</g>
+<!-- LEDGERS&#45;&gt;LEDGER -->
+<g id="edge19" class="edge">
+<title>LEDGERS-&gt;LEDGER</title>
+<path fill="none" stroke="#000000" d="M1179.1492,-748.0046C1178.4938,-740.0891 1178.3036,-730.8891 1178.5784,-722.2278"/>
+<polygon fill="#000000" stroke="#000000" points="1182.0835,-722.2318 1179.1444,-712.0528 1175.0943,-721.8429 1182.0835,-722.2318"/>
+</g>
+<!-- LEDGERS&#45;&gt;LEDGERS -->
+<g id="edge18" class="edge">
+<title>LEDGERS-&gt;LEDGERS</title>
+<path fill="none" stroke="#000000" d="M1355.5363,-778.9689C1366.7353,-776.6057 1373.517,-773.216 1373.517,-768.8 1373.517,-765.902 1370.5964,-763.446 1365.4233,-761.432"/>
+<polygon fill="#000000" stroke="#000000" points="1366.1117,-757.9894 1355.5363,-758.6311 1364.2036,-764.7243 1366.1117,-757.9894"/>
+</g>
+<!-- RUPD&#45;&gt;NEWEPOCH -->
+<g id="edge10" class="edge">
+<title>RUPD-&gt;NEWEPOCH</title>
+<path fill="none" stroke="#000000" stroke-dasharray="1,5" d="M683.362,-748.0046C659.6029,-738.0922 631.0152,-726.1653 606.1819,-715.8047"/>
+<polygon fill="#000000" stroke="#000000" points="607.4427,-712.5384 596.866,-711.9181 604.7474,-718.9987 607.4427,-712.5384"/>
+</g>
+<!-- NEWPP -->
 <g id="node27" class="node">
-<title>conway_GOVCERT</title>
-<ellipse fill="none" stroke="#000000" cx="469.8238" cy="-321.2" rx="91.477" ry="18"/>
-<text text-anchor="middle" x="469.8238" y="-317" font-family="Times,serif" font-size="14.00" fill="#000000">conway_GOVCERT</text>
+<title>NEWPP</title>
+<polygon fill="none" stroke="#000000" points="1887.2678,-711.8019 1499.1454,-711.8019 1499.1454,-670.5981 1887.2678,-670.5981 1887.2678,-711.8019"/>
+<text text-anchor="middle" x="1693.2066" y="-695.4" font-family="Times,serif" font-size="14.00" fill="#000000">NEWPP (shelley)    </text>
+<text text-anchor="middle" x="1693.2066" y="-678.6" font-family="Times,serif" font-size="14.00" fill="#000000">env:NewppEnv,state:ShelleyNewppState,signal:Maybe(PParams).</text>
 </g>
-<!-- conway_CERT&#45;&gt;conway_GOVCERT -->
-<g id="edge37" class="edge">
-<title>conway_CERT-&gt;conway_GOVCERT</title>
-<path fill="none" stroke="#000000" d="M327.2093,-377.9307C354.0601,-367.2497 390.1954,-352.8754 419.3733,-341.2687"/>
-<polygon fill="#000000" stroke="#000000" points="420.9801,-344.3964 428.9782,-337.448 418.3927,-337.8921 420.9801,-344.3964"/>
+<!-- UPEC&#45;&gt;NEWPP -->
+<g id="edge6" class="edge">
+<title>UPEC-&gt;NEWPP</title>
+<path fill="none" stroke="#000000" d="M1693.2066,-748.0046C1693.2066,-740.0891 1693.2066,-730.8891 1693.2066,-722.2278"/>
+<polygon fill="#000000" stroke="#000000" points="1696.7067,-722.0527 1693.2066,-712.0528 1689.7067,-722.0528 1696.7067,-722.0527"/>
 </g>
 </g>
 </svg>

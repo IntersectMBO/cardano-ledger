@@ -1,8 +1,3 @@
-# NOTE
-# smallcased names that are without underscores or era prefixes
-# are kept so as to indicate an uncertainty of their existence in conway
-# they should be either removed completely or assigned an era and a place in the transitions
-
 digraph conway_transitions {
     label="NOTE 
     A straight arrow form one node to another represents a sub-rule relationship.
@@ -12,59 +7,99 @@ digraph conway_transitions {
     In most cases these dependencies are between sub-rules of a rule.
     In the case of a recursive rule, the sub-rule can also have a dependency on the super rule.
     Those recursively call themselves while traversing the input signal sequence,
-      until reaching the base case with an empty input sequence.";
+      until reaching the base case with an empty input sequence.
+    A blue colored box indicates a trigger in consensus that triggers the rule in ledger.
 
-    CHAIN -> shelley_TICK;
-    CHAIN -> alonzo_BBODY;
-    CHAIN -> conway_TICKF;
+    NOTE
+    In the Shelley ledger, the @CHAIN@ rule is used to apply a whole block.
+    In consensus, we split up the application of a block to the ledger into 
+    separate steps that are performed together by 'applyExtLedgerState':
+    
+    1. 'applyChainTickLedgerResult': executes the @TICK@ transition
+    2. 'validateHeader':
+       2.1. 'validateEnvelope': executes the @chainChecks@
+       2.2. 'updateChainDepState': executes the @PRTCL@ transition
+    3. 'applyBlockLedgerResult': executes the @BBODY@ transition";
 
-    alonzo_BBODY -> shelley_LEDGERS;
-    alonzo_BBODY -> shelley_TICK[style=dotted];
-    alonzo_BBODY -> prtcl[style=dotted];
+    # Externals
+    
+    applyTickOpts  [shape=box, label="ApplyBlock.applyTickOpts (API.Validation)" , color=blue];
+    applyBlockOpts [shape=box, label="ApplyBlock.applyBlockOpts (API.Validation)", color=blue];
+    applyTx        [shape=box, label="ApplyTx (API.Mempool)"                     , color=blue];
+    futureLedger   [shape=box, label="FutureLedgerView"                          , color=blue];
 
-    prtcl -> shelley_TICK[style=dotted];
-    prtcl -> overlay;
-    prtcl -> updn;
+    # Internals
 
-    shelley_TICK -> shelley_RUPD;
-    shelley_TICK -> conway_NEWEPOCH;
+    BBODY    [shape=box, label="BBODY (alonzo)     \nenv:BbodyEnv,state:ShelleyBbodyState,signal:Block(BHeaderView)."];
+    UTXO     [shape=box, label="UTXO (babbage)     \nenv:UtxoEnv,state:UTxOState,signal:Tx."];
+    CERT     [shape=box, label="CERT (conway)      \nenv:CertEnv,state:CertState,signal:TxCert."];
+    CERTS    [shape=box, label="CERTS (conway)     \nenv:CertsEnv,state:CertState,signal:Seq(TxCert)."];
+    DELEG    [shape=box, label="DELEG (conway)     \nenv:PParams,state:DState,signal:ConwayDelegCert."];
+    ENACT    [shape=box, label="ENACT (conway)     \nenv:(),state:EnactState,signal:GovAction."];
+    EPOCH    [shape=box, label="EPOCH (conway)     \nenv:PoolDistr,state:EpochState,signal:EpochNo."];
+    GOV      [shape=box, label="GOV (conway)       \nenv:GovEnv,state:GovActionState,signal:GovProcedures."];
+    GOVCERT  [shape=box, label="GOVCERT (conway)   \nenv:ConwayGovCertEnv,state:VState,signal:ConwayGovCert."];
+    LEDGER   [shape=box, label="LEDGER (conway)    \nenv:LedgerEnv,state:LedgerState,signal:Tx."];
+    NEWEPOCH [shape=box, label="NEWEPOCH (conway)  \nenv:(),state:NewEpochState,signal:EpochNo."];
+    POOL     [shape=box, label="POOL (conway)      \nenv:PoolEnv,state:PState,signal:PoolCert."];
+    RATIFY   [shape=box, label="RATIFY (conway)    \nenv:RatifyEnv,state:RatifyState,signal:RatifySignal."];
+    TICKF    [shape=box, label="TICKF (conway)     \nenv:(),state:NewEpochState,signal:SlotNo."];
+    UTXOS    [shape=box, label="UTXOS (conway)     \nenv:UtxoEnv,state:UTxOState,signal:AlonzoTx."];
+    UTXOW    [shape=box, label="UTXOW (conway)     \nenv:UtxoEnv,state:UTxOState,signal:Tx."];
+    LEDGERS  [shape=box, label="LEDGERS (shelley)  \nenv:ShelleyLedgersEnv,state:LedgerState,signal:Seq(Tx)."];
+    POOLREAP [shape=box, label="POOLREAP (shelley) \nenv:ShelleyPoolreapEnv,state:ShelleyPoolreapState,signal:EpochNo."];
+    RUPD     [shape=box, label="RUPD (shelley)     \nenv:RupdEnv,state:StrictMaybe(PulsingRewUpdate),signal:SlotNo."];
+    SNAP     [shape=box, label="SNAP (shelley)     \nenv:SnapEnv,state:SnapShots,signal:()."];
+    TICK     [shape=box, label="TICK (shelley)     \nenv:(),state:NewEpochState,signal:SlotNo."];
+    UPEC     [shape=box, label="UPEC (shelley)     \nenv:EpochState,state:UpecState,signal:()."];
+    NEWPP    [shape=box, label="NEWPP (shelley)    \nenv:NewppEnv,state:ShelleyNewppState,signal:Maybe(PParams)."];
 
-    overlay -> ocert;
+    # Graph
 
-    shelley_RUPD -> conway_NEWEPOCH[style=dotted];
+    applyTickOpts -> TICK;
+    applyBlockOpts -> BBODY;
+    applyTx -> LEDGER;
+    futureLedger -> TICKF;
 
-    conway_NEWEPOCH -> mir;
-    conway_NEWEPOCH -> conway_EPOCH;
+    TICKF -> UPEC;
 
-    mir -> conway_EPOCH[style=dotted];
+    UPEC -> NEWPP;
 
-    conway_EPOCH -> shelley_SNAP;
-    conway_EPOCH -> conway_RATIFY;
-    conway_EPOCH -> shelley_POOLREAP;
+    BBODY -> LEDGERS;
 
-    conway_RATIFY -> shelley_SNAP[style=dotted];
-    conway_RATIFY -> shelley_POOLREAP[style=dotted];
-    conway_RATIFY -> conway_ENACT;
+    TICK -> RUPD;
+    TICK -> NEWEPOCH;
 
-    shelley_LEDGERS -> shelley_LEDGERS;
-    shelley_LEDGERS -> conway_LEDGER;
+    RUPD -> NEWEPOCH[style=dotted];
 
-    conway_LEDGER -> shelley_LEDGERS[style=dotted];
-    conway_LEDGER -> conway_UTXOW;
-    conway_LEDGER -> conway_CERTS;
-    conway_LEDGER -> conway_GOV;
+    NEWEPOCH -> EPOCH;
 
-    conway_UTXOW -> babbage_UTXO;
-    conway_UTXOW -> conway_CERTS[style=dotted];
+    EPOCH -> SNAP;
+    EPOCH -> RATIFY;
+    EPOCH -> POOLREAP;
 
-    babbage_UTXO -> conway_UTXOS;
+    RATIFY -> SNAP[style=dotted];
+    RATIFY -> POOLREAP[style=dotted];
+    RATIFY -> ENACT;
 
-    conway_CERTS -> conway_CERTS;
-    conway_CERTS -> conway_CERT;
+    LEDGERS -> LEDGERS;
+    LEDGERS -> LEDGER;
 
-    conway_CERT -> conway_CERTS[style=dotted];
-    conway_CERT -> conway_DELEG;
-    conway_CERT -> conway_POOL;
-    conway_CERT -> conway_GOVCERT;
+    LEDGER -> LEDGERS[style=dotted];
+    LEDGER -> UTXOW;
+    LEDGER -> CERTS;
+    LEDGER -> GOV;
+
+    UTXOW -> UTXO;
+    UTXOW -> CERTS[style=dotted];
+
+    UTXO -> UTXOS;
+
+    CERTS -> CERTS;
+    CERTS -> CERT;
+
+    CERT -> CERTS[style=dotted];
+    CERT -> DELEG;
+    CERT -> POOL;
+    CERT -> GOVCERT;
 }
-
