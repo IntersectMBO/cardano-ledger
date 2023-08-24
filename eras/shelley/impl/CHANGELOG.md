@@ -5,7 +5,8 @@
 * Add `eqMultiSigRaw`, `shelleyEqTxRaw` and `shelleyEqTxWitsRaw`
 * Add `EqRaw` instance for `MultiSig`, `ShelleyTxWits`, `ShelleyTxAuxData`, `TxBody` and `Tx`
 * Add `ToExpr` instance for `GenesisDelegCert`, `MIRPot`, `MirTarget`, `MIRCert`,
-  `ShelleyTxCert`, `ShelleyDelegCert`, `MultiSig` and `MultiSigRaw`
+	`ShelleyTxCert`, `ShelleyDelegCert`, `MultiSig` and `MultiSigRaw`
+* Add new lens 'epochStateIncrStakeDistrL',  that points to the 'credmap' field of 'IncrementalStake' from 'EpochState'
 
 ## 1.5.0.0
 

@@ -73,7 +73,7 @@ library
         cardano-ledger-babbage >=1.4.1,
         cardano-ledger-core ^>=1.6,
         cardano-ledger-mary >=1.1,
-        cardano-ledger-shelley ^>=1.5,
+        cardano-ledger-shelley ^>=1.5.1,
         cardano-slotting,
         cardano-strict-containers,
         containers,

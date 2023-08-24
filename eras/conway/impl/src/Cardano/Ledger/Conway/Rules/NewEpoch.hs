@@ -164,7 +164,7 @@ newEpochTransition = do
       -- Therefore to safely and evenly space out the DRep calculation, we divide
       -- the number of stake credentials by 8*k (8, rather than 10, to be sure we finish a bit early)
       k <- liftSTS $ asks securityParameter -- Maximum number of blocks we are allowed to roll back
-      let stakeSize = Map.size (es2 ^. epochStateStakeDistrL)
+      let stakeSize = Map.size (es2 ^. epochStateIncrStakeDistrL)
       let pulseSize = max 1 (ceiling ((fromIntegral stakeSize :: Ratio Word64) / (8 * (fromIntegral k :: Ratio Word64))))
       let es3 = es2 & epochStateDRepDistrL .~ freshDRepPulser pulseSize es2 -- Install a new (as yet unpulsed) DRepDistr pulser
       let adaPots = totalAdaPotsES es2

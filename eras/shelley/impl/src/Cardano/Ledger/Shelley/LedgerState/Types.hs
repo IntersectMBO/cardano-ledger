@@ -50,11 +50,11 @@ import Cardano.Ledger.CertState (
   vsDRepDistrL,
   vsDRepsL,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRepDistr (DRepDistr (..), startDRepDistr)
-import Cardano.Ledger.EpochBoundary (SnapShots (..))
+import Cardano.Ledger.EpochBoundary (SnapShots (..), ssStakeDistrL, ssStakeMarkL)
 import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyPair,
@@ -76,6 +76,7 @@ import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -727,8 +728,14 @@ epochStateDRepDistrL = esLStateL . lsCertStateL . certVStateL . vsDRepDistrL
 epochStateStakeDistrL ::
   Lens'
     (EpochState era)
+    (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
+
+epochStateIncrStakeDistrL ::
+  Lens'
+    (EpochState era)
     (Map (Credential 'Staking (EraCrypto era)) Coin)
-epochStateStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
+epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
 
 epochStateRegDrepL ::
   Lens'
@@ -749,4 +756,4 @@ freshDRepPulser n es =
     n
     (es ^. epochStateUMapL)
     (es ^. epochStateRegDrepL)
-    (VMap.fromMap (compactCoinOrError <$> (es ^. epochStateStakeDistrL)))
+    (VMap.fromMap (compactCoinOrError <$> (es ^. epochStateIncrStakeDistrL)))
