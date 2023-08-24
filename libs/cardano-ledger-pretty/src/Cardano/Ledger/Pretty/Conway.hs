@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,17 +8,18 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use record patterns" #-}
 
 module Cardano.Ledger.Pretty.Conway (
   ppConwayTxBody,
 ) where
 
+import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Prices)
+import Cardano.Ledger.BaseTypes (EpochNo, NonNegativeInterval, ProtVer, UnitInterval)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -57,6 +59,7 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
  )
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.HKD (HKD, HKDFunctor)
 import Cardano.Ledger.Pretty (
   PDoc,
   PrettyA (..),
@@ -75,9 +78,10 @@ import Cardano.Ledger.Pretty (
   ppTxIn,
   ppWithdrawals,
  )
-import Cardano.Ledger.Pretty.Babbage (ppBabbagePParams, ppBabbagePParamsUpdate)
-import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppValidityInterval)
+import Cardano.Ledger.Pretty.Babbage ()
+import Data.Text (Text)
 import Lens.Micro ((^.))
+import Numeric.Natural (Natural)
 import Prettyprinter (viaShow)
 
 instance
@@ -172,9 +176,9 @@ ppConwayTxBody txb =
     , ("total collateral", ppStrictMaybe ppCoin $ txb ^. totalCollateralTxBodyL)
     , ("withdrawals", ppWithdrawals $ txb ^. withdrawalsTxBodyL)
     , ("transaction fee", ppCoin $ txb ^. feeTxBodyL)
-    , ("validity interval", ppValidityInterval $ txb ^. vldtTxBodyL)
+    , ("validity interval", prettyA $ txb ^. vldtTxBodyL)
     , ("required signer hashes", ppSet ppKeyHash $ txb ^. reqSignerHashesTxBodyL)
-    , ("mint", ppMultiAsset $ txb ^. mintTxBodyL)
+    , ("mint", prettyA $ txb ^. mintTxBodyL)
     , ("script integrity hash", ppStrictMaybe ppSafeHash $ txb ^. scriptIntegrityHashTxBodyL)
     , ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash $ txb ^. auxDataHashTxBodyL)
     , ("network id", ppStrictMaybe ppNetwork $ txb ^. networkIdTxBodyL)
@@ -244,11 +248,94 @@ instance PrettyA (Committee era) where
 instance forall c. PrettyA (ConwayTxCert c) where
   prettyA = ppConwayTxCert
 
+ppConwayPParams ::
+  forall era f.
+  ( PrettyA (HKD f UnitInterval)
+  , PrettyA (HKD f ProtVer)
+  , PrettyA (HKD f Prices)
+  , PrettyA (HKD f PoolVotingThresholds)
+  , PrettyA (HKD f Coin)
+  , PrettyA (HKD f Natural)
+  , PrettyA (HKD f ExUnits)
+  , PrettyA (HKD f EpochNo)
+  , PrettyA (HKD f DRepVotingThresholds)
+  , PrettyA (HKD f CostModels)
+  , PrettyA (HKD f CoinPerByte)
+  , PrettyA (HKD f NonNegativeInterval)
+  , ConwayEraPParams era
+  , HKDFunctor f
+  ) =>
+  Text ->
+  PParamsHKD f era ->
+  PDoc
+ppConwayPParams n pp =
+  ppRecord
+    n
+    [ ("Tau", prettyA $ pp ^. hkdTauL @era @f)
+    , ("Rho", prettyA $ pp ^. hkdRhoL @era @f)
+    , ("ProtocolVersion", prettyA $ pp ^. hkdProtocolVersionL @era @f)
+    , ("Prices", prettyA $ pp ^. hkdPricesL @era @f)
+    , ("PoolVotingThresholds", prettyA $ pp ^. hkdPoolVotingThresholdsL @era @f)
+    , ("PoolDeposit", prettyA $ pp ^. hkdPoolDepositL @era @f)
+    , ("NOpt", prettyA $ pp ^. hkdNOptL @era @f)
+    , ("MinPoolCost", prettyA $ pp ^. hkdMinPoolCostL @era @f)
+    , ("MinFeeB", prettyA $ pp ^. hkdMinFeeBL @era @f)
+    , ("MinFeeA", prettyA $ pp ^. hkdMinFeeAL @era @f)
+    , ("MinCommitteeSize", prettyA $ pp ^. hkdMinCommitteeSizeL @era @f)
+    , ("MaxValSize", prettyA $ pp ^. hkdMaxValSizeL @era @f)
+    , ("MaxTxSize", prettyA $ pp ^. hkdMaxTxSizeL @era @f)
+    , ("MaxTxExUnits", prettyA $ pp ^. hkdMaxTxExUnitsL @era @f)
+    , ("MaxCollateralInputs", prettyA $ pp ^. hkdMaxCollateralInputsL @era @f)
+    , ("MaxBlockExUnits", prettyA $ pp ^. hkdMaxBlockExUnitsL @era @f)
+    , ("MaxBHSize", prettyA $ pp ^. hkdMaxBHSizeL @era @f)
+    , ("MaxBBSize", prettyA $ pp ^. hkdMaxBBSizeL @era @f)
+    , ("KeyDeposit", prettyA $ pp ^. hkdKeyDepositL @era @f)
+    , ("GovActionExpiration", prettyA $ pp ^. hkdGovActionExpirationL @era @f)
+    , ("GovActionDeposit", prettyA $ pp ^. hkdGovActionDepositL @era @f)
+    , ("EMax", prettyA $ pp ^. hkdEMaxL @era @f)
+    , ("DRepVotingThresholds", prettyA $ pp ^. hkdDRepVotingThresholdsL @era @f)
+    , ("DRepDeposit", prettyA $ pp ^. hkdDRepDepositL @era @f)
+    , ("DRepActivity", prettyA $ pp ^. hkdDRepActivityL @era @f)
+    , ("CostModels", prettyA $ pp ^. hkdCostModelsL @era @f)
+    , ("CommitteeTermLimit", prettyA $ pp ^. hkdCommitteeTermLimitL @era @f)
+    , ("CollateralPercentage", prettyA $ pp ^. hkdCollateralPercentageL @era @f)
+    , ("CoinsPerUTxOByte", prettyA $ pp ^. hkdCoinsPerUTxOByteL @era @f)
+    , ("A0", prettyA $ pp ^. hkdA0L @era @f)
+    ]
+
 instance Crypto c => PrettyA (PParams (ConwayEra c)) where
-  prettyA = ppBabbagePParams
+  prettyA (PParams x) = ppConwayPParams "PParams" x
 
 instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
-  prettyA = ppBabbagePParamsUpdate
+  prettyA (PParamsUpdate x) = ppConwayPParams "PParamsUpdate" x
+
+instance PrettyA PoolVotingThresholds where
+  prettyA x@(PoolVotingThresholds _ _ _ _) =
+    let PoolVotingThresholds {..} = x
+     in ppRecord
+          "PoolVotingThresholds"
+          [ ("MotionNoConfidence", prettyA pvtMotionNoConfidence)
+          , ("HardForkInitiation", prettyA pvtHardForkInitiation)
+          , ("CommitteeNormal", prettyA pvtCommitteeNormal)
+          , ("CommitteeNoConfidence", prettyA pvtCommitteeNoConfidence)
+          ]
+
+instance PrettyA DRepVotingThresholds where
+  prettyA x@(DRepVotingThresholds _ _ _ _ _ _ _ _ _ _) =
+    let DRepVotingThresholds {..} = x
+     in ppRecord
+          "DRepVotingThresholds"
+          [ ("UpdateToConstitution", prettyA dvtUpdateToConstitution)
+          , ("TreasuryWithdrawal", prettyA dvtTreasuryWithdrawal)
+          , ("PPTechnicalGroup", prettyA dvtPPTechnicalGroup)
+          , ("PPNetworkGroup", prettyA dvtPPNetworkGroup)
+          , ("PPGovGroup", prettyA dvtPPGovGroup)
+          , ("PPEconomicGroup", prettyA dvtPPEconomicGroup)
+          , ("MotionNoConfidence", prettyA dvtMotionNoConfidence)
+          , ("HardForkInitiation", prettyA dvtHardForkInitiation)
+          , ("CommitteeNormal", prettyA dvtCommitteeNormal)
+          , ("CommitteeNoConfidence", prettyA dvtCommitteeNoConfidence)
+          ]
 
 instance
   ( PrettyA (PredicateFailure (EraRule "UTXOW" era))

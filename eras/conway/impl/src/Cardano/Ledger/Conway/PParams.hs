@@ -36,7 +36,6 @@ where
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (Prices), emptyCostModels)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Core hiding (Value)
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), NonNegativeInterval, ProtVer (ProtVer), UnitInterval)
 import Cardano.Ledger.Binary
@@ -299,6 +298,39 @@ instance Crypto c => BabbageEraPParams (ConwayEra c) where
   hkdCoinsPerUTxOByteL = lens cppCoinsPerUTxOByte (\pp x -> pp {cppCoinsPerUTxOByte = x})
 
 instance Crypto c => ConwayEraPParams (ConwayEra c) where
+  pparamsGroups (PParamsUpdate ConwayPParams {..}) =
+    ConwayPParams
+      <$> pGroup EconomicGroup cppMinFeeA
+      <*> pGroup EconomicGroup cppMinFeeB
+      <*> pGroup NetworkGroup cppMaxBBSize
+      <*> pGroup NetworkGroup cppMaxTxSize
+      <*> pGroup NetworkGroup cppMaxBHSize
+      <*> pGroup EconomicGroup cppKeyDeposit
+      <*> pGroup EconomicGroup cppPoolDeposit
+      <*> pGroup TechnicalGroup cppEMax
+      <*> pGroup TechnicalGroup cppNOpt
+      <*> pGroup TechnicalGroup cppA0
+      <*> pGroup EconomicGroup cppRho
+      <*> pGroup EconomicGroup cppTau
+      <*> pUngrouped
+      <*> pGroup EconomicGroup cppMinPoolCost
+      <*> pGroup EconomicGroup cppCoinsPerUTxOByte
+      <*> pGroup TechnicalGroup cppCostModels
+      <*> pGroup EconomicGroup cppPrices
+      <*> pGroup NetworkGroup cppMaxTxExUnits
+      <*> pGroup NetworkGroup cppMaxBlockExUnits
+      <*> pGroup NetworkGroup cppMaxValSize
+      <*> pGroup TechnicalGroup cppCollateralPercentage
+      <*> pGroup NetworkGroup cppMaxCollateralInputs
+      <*> pGroup GovernanceGroup cppPoolVotingThresholds
+      <*> pGroup GovernanceGroup cppDRepVotingThresholds
+      <*> pGroup GovernanceGroup cppMinCommitteeSize
+      <*> pGroup GovernanceGroup cppCommitteeTermLimit
+      <*> pGroup GovernanceGroup cppGovActionExpiration
+      <*> pGroup GovernanceGroup cppGovActionDeposit
+      <*> pGroup GovernanceGroup cppDRepDeposit
+      <*> pGroup GovernanceGroup cppDRepActivity
+
   ppuWellFormed ppu =
     and
       [ -- Numbers

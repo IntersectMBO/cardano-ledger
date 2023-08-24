@@ -14,12 +14,19 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway
+import Cardano.Ledger.Conway.Core (ConwayEraPParams)
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
+  RatifyState,
   Vote (..),
+  thresholdDRep,
  )
-import Cardano.Ledger.Conway.Rules (RatifyEnv (..), dRepAccepted, dRepAcceptedRatio)
+import Cardano.Ledger.Conway.Rules (
+  RatifyEnv (..),
+  dRepAccepted,
+  dRepAcceptedRatio,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRepDistr (DRepState (..))
@@ -141,21 +148,23 @@ drepsPropAllYes =
 
 drepsPropNoStake ::
   forall era.
-  ( EraPParams era
-  , Arbitrary (PParamsHKD StrictMaybe era)
+  ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
+  , ConwayEraPParams era
   ) =>
   Spec
 drepsPropNoStake =
-  prop "If there is no stake, accept only if the threshold is zero" $
-    forAll
-      ((,) <$> arbitrary @(RatifyEnv era) <*> arbitrary @(GovActionState era))
-      ( \(env, gas) -> do
-          dRepAccepted @era env {reDRepDistr = Map.empty} gas 0
-            `shouldBe` True
-          dRepAccepted @era env {reDRepDistr = Map.empty} gas (1 % 2)
-            `shouldBe` False
-      )
+  prop @((RatifyEnv era, RatifyState era, GovActionState era) -> IO ())
+    "If there is no stake, accept iff threshold is zero"
+    ( \(env, st, gas) ->
+        dRepAccepted
+          @era
+          env {reDRepDistr = Map.empty}
+          st
+          gas
+          `shouldBe` thresholdDRep @era st (gasAction gas)
+          == SJust minBound
+    )
 
 activeDRepAcceptedRatio :: forall era. DRepTestData era -> Rational
 activeDRepAcceptedRatio (DRepTestData {..}) =

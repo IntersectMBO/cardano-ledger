@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -41,6 +41,9 @@ module Cardano.Ledger.Conway.Governance (
   indexedGovProps,
   Constitution (..),
   ConwayEraGov (..),
+  thresholdSPO,
+  thresholdDRep,
+  thresholdCC,
   -- Lenses
   cgGovActionsStateL,
   cgEnactStateL,
@@ -48,6 +51,7 @@ module Cardano.Ledger.Conway.Governance (
   ensCommitteeL,
   ensConstitutionL,
   ensCurPParamsL,
+  ensPrevPParamsL,
   ensPrevGovActionIdsL,
   ensPrevPParamUpdateL,
   ensPrevHardForkL,
@@ -66,7 +70,12 @@ module Cardano.Ledger.Conway.Governance (
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt)
-import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), StrictMaybe)
+import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
+  ProtVer (..),
+  StrictMaybe (..),
+  UnitInterval,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -83,6 +92,17 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.CertState (CommitteeState, DRepState)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core (
+  ConwayEraPParams,
+  PParamGroup (..),
+  dvtPPEconomicGroupL,
+  dvtPPGovGroupL,
+  dvtPPNetworkGroupL,
+  dvtPPTechnicalGroupL,
+  modifiedGroups,
+  ppDRepVotingThresholdsL,
+  ppPoolVotingThresholdsL,
+ )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
   Anchor (..),
@@ -102,7 +122,10 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   govActionIdToText,
   indexedGovProps,
  )
-import Cardano.Ledger.Conway.PParams ()
+import Cardano.Ledger.Conway.PParams (
+  DRepVotingThresholds (..),
+  PoolVotingThresholds (..),
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
@@ -117,6 +140,7 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -593,3 +617,88 @@ class EraGov era => ConwayEraGov era where
 
 instance Crypto c => ConwayEraGov (ConwayEra c) where
   constitutionGovStateL = cgEnactStateL . ensConstitutionL
+
+pparamsUpdateThreshold ::
+  forall era.
+  ConwayEraPParams era =>
+  PParams era ->
+  PParamsUpdate era ->
+  UnitInterval
+pparamsUpdateThreshold pp ppu =
+  let thresholdLens = \case
+        NetworkGroup -> dvtPPNetworkGroupL
+        GovernanceGroup -> dvtPPGovGroupL
+        TechnicalGroup -> dvtPPTechnicalGroupL
+        EconomicGroup -> dvtPPEconomicGroupL
+      lookupGroupThreshold grp =
+        pp ^. ppDRepVotingThresholdsL . thresholdLens grp
+   in Set.foldr' max minBound $
+        Set.map lookupGroupThreshold $
+          modifiedGroups @era ppu
+
+thresholdSPO ::
+  ConwayEraPParams era =>
+  RatifyState era ->
+  GovAction era ->
+  StrictMaybe UnitInterval
+thresholdSPO rSt action =
+  let pp = rSt ^. rsEnactStateL . ensCurPParamsL
+      PoolVotingThresholds
+        { pvtCommitteeNoConfidence
+        , pvtCommitteeNormal
+        , pvtHardForkInitiation
+        } = pp ^. ppPoolVotingThresholdsL
+      committee = rSt ^. rsEnactStateL . ensCommitteeL
+   in case action of
+        NoConfidence {} -> SJust pvtCommitteeNoConfidence
+        NewCommittee {} -> SJust $
+          case committee of
+            SJust _ -> pvtCommitteeNormal
+            SNothing -> pvtCommitteeNoConfidence
+        NewConstitution {} -> SJust minBound
+        HardForkInitiation {} -> SJust pvtHardForkInitiation
+        ParameterChange {} -> SJust minBound
+        TreasuryWithdrawals {} -> SJust minBound
+        InfoAction {} -> SNothing
+
+thresholdCC ::
+  StrictMaybe (Committee era) ->
+  GovAction era ->
+  StrictMaybe UnitInterval
+thresholdCC committee action =
+  let ccThreshold = committeeQuorum <$> committee
+   in case action of
+        NoConfidence {} -> SJust minBound
+        NewCommittee {} -> SJust minBound
+        NewConstitution {} -> ccThreshold
+        HardForkInitiation {} -> ccThreshold
+        ParameterChange {} -> ccThreshold
+        TreasuryWithdrawals {} -> ccThreshold
+        InfoAction {} -> SNothing
+
+thresholdDRep ::
+  ConwayEraPParams era =>
+  RatifyState era ->
+  GovAction era ->
+  StrictMaybe UnitInterval
+thresholdDRep rSt action =
+  let pp = rSt ^. rsEnactStateL . ensCurPParamsL
+      DRepVotingThresholds
+        { dvtCommitteeNoConfidence
+        , dvtCommitteeNormal
+        , dvtUpdateToConstitution
+        , dvtHardForkInitiation
+        , dvtTreasuryWithdrawal
+        } = pp ^. ppDRepVotingThresholdsL
+      committee = rSt ^. rsEnactStateL . ensCommitteeL
+   in case action of
+        NoConfidence {} -> SJust dvtCommitteeNoConfidence
+        NewCommittee {} -> SJust $
+          case committee of
+            SJust _ -> dvtCommitteeNormal
+            SNothing -> dvtCommitteeNoConfidence
+        NewConstitution {} -> SJust dvtUpdateToConstitution
+        HardForkInitiation {} -> SJust dvtHardForkInitiation
+        ParameterChange _ ppu -> SJust $ pparamsUpdateThreshold pp ppu
+        TreasuryWithdrawals {} -> SJust dvtTreasuryWithdrawal
+        InfoAction {} -> SNothing

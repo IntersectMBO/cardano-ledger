@@ -44,6 +44,7 @@ import Cardano.Ledger.BaseTypes (
   FixedPoint,
   Globals (..),
   Network (..),
+  NonNegativeInterval,
   Nonce (..),
   Port (..),
   ProtVer (..),
@@ -1644,6 +1645,9 @@ instance PrettyA Nonce where
 
 instance PrettyA UnitInterval where
   prettyA = ppUnitInterval
+
+instance PrettyA NonNegativeInterval where
+  prettyA = viaShow
 
 instance PrettyA Port where
   prettyA = ppPort

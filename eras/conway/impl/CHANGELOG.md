@@ -2,6 +2,19 @@
 
 ## 1.8.0.0
 
+* Add:
+  * `PParamGroup`
+  * `ParamGrouper`
+  * `pGroup`
+  * `pUngrouped`
+  * `modifiedGroups`
+  * `dvtPPNetworkGroupL`
+  * `dvtPPGovGroupL`
+  * `dvtPPTechnicalGroupL`
+  * `dvtPPEconomicGroupL`
+  * `threshold`
+  * `ensCommitteeL`
+* Add `pparamsGroups` to `ConwayEraPParams`
 * Add `PrevGovActionIds`
 * Change `EnactState` to add `ensPrevGovActionIds`
 * Add  `ensPrevGovActionIdsL`, `ensPrevPParamUpdateL`, `ensPrevHardForkL` `ensPrevCommitteeL`, `ensPrevConstitutionL`

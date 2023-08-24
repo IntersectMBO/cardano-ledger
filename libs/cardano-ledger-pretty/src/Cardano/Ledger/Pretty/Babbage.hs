@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -78,7 +79,7 @@ ppBabbagePParams pp =
     , ("tau", ppUnitInterval $ pp ^. ppTauL)
     , ("protocolVersion", ppProtVer $ pp ^. ppProtocolVersionL)
     , ("minPoolCost", ppCoin $ pp ^. ppMinPoolCostL)
-    , ("coinPerByte", (ppCoin . unCoinPerByte) $ pp ^. ppCoinsPerUTxOByteL)
+    , ("coinPerByte", prettyA $ pp ^. ppCoinsPerUTxOByteL)
     , ("costmdls", ppCostModels $ pp ^. ppCostModelsL)
     , ("prices", ppPrices $ pp ^. ppPricesL)
     , ("maxTxExUnits", ppExUnits $ pp ^. ppMaxTxExUnitsL)
@@ -87,6 +88,9 @@ ppBabbagePParams pp =
     , ("collateral%", ppNatural $ pp ^. ppCollateralPercentageL)
     , ("maxCollateralInputs", ppNatural $ pp ^. ppMaxCollateralInputsL)
     ]
+
+instance PrettyA CoinPerByte where
+  prettyA = prettyA . unCoinPerByte
 
 ppBabbagePParamsUpdate :: BabbageEraPParams era => PParamsUpdate era -> PDoc
 ppBabbagePParamsUpdate pp =
