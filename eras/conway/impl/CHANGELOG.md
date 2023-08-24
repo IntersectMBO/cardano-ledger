@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.7.1.0
+
+* Fix DRep distribution computation.
+
 ## 1.7.0.0
 
 * Make `DELEG`, `POOL` and `GOVCERT` conform to spec-v0.8 #3628
