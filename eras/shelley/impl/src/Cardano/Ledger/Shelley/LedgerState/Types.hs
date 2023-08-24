@@ -66,7 +66,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.UMap (UMap (..))
+import Cardano.Ledger.UMap (UMap (..), compactCoinOrError)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
@@ -77,6 +77,7 @@ import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.VMap (VB, VMap, VP)
+import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -699,11 +700,19 @@ utxosStakeDistrL = lens utxosStakeDistr (\x y -> x {utxosStakeDistr = y})
 utxosDonationL :: Lens' (UTxOState era) Coin
 utxosDonationL = lens utxosDonation (\x y -> x {utxosDonation = y})
 
+-- ================ IncremetalStake ===========================
+
+credMapL :: Lens' (IncrementalStake c) (Map (Credential 'Staking c) Coin)
+credMapL = lens credMap (\x y -> x {credMap = y})
+
+ptrMapL :: Lens' (IncrementalStake c) (Map Ptr Coin)
+ptrMapL = lens ptrMap (\x y -> x {ptrMap = y})
+
 -- ===================================================================
 -- Lenses for access to
 -- 1. (DRepDistr (EraCrypto era))
 -- 2. The 3 inputs we need to initialize one
---    a. (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin)). Part of the Mark SnapShot
+--    a. (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin)). Extracted from Incremental
 --    b. (Set (Credential 'DRepRole (EraCrypto era))). Registered DReps in the CertState
 --    c. (UMap (EraCrypto era)). The unified map in the DState.
 --                               We will use the to DRepUView to obtain  (Map (Credential 'Staking c) (DRep c))
@@ -721,6 +730,12 @@ epochStateStakeDistrL ::
     (EpochState era)
     (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
 epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
+
+epochStateIncrStakeDistrL ::
+  Lens'
+    (EpochState era)
+    (Map (Credential 'Staking (EraCrypto era)) Coin)
+epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
 
 epochStateRegDrepL ::
   Lens'
@@ -741,4 +756,4 @@ freshDRepPulser n es =
     n
     (es ^. epochStateUMapL)
     (es ^. epochStateRegDrepL)
-    (es ^. epochStateStakeDistrL)
+    (VMap.fromMap (compactCoinOrError <$> (es ^. epochStateIncrStakeDistrL)))

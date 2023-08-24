@@ -118,6 +118,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   newEpochStateDRepDistrL,
   epochStateDRepDistrL,
   epochStateStakeDistrL,
+  epochStateIncrStakeDistrL,
   epochStateRegDrepL,
   epochStateUMapL,
   freshDRepPulser,

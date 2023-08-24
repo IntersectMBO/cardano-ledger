@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.5.1.0
+
+* Add new lens 'epochStateIncrStakeDistrL',  that points to the 'credmap' field of 'IncrementalStake' from 'EpochState'
+
 ## 1.5.0.0
 
 * Introduce `ShelleyPoolreapEnv` and replace `Environment` for `ShelleyPOOLREAP`
