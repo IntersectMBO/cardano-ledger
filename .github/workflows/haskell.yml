@@ -46,6 +46,25 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
+
+      # Update the local package list in order to ensure that the action freeing up space will succeed
+    - name: "Update package list"
+      if: ${{ github.event_name == 'schedule' }}
+      run: |
+        sudo apt-get update
+      # there is not enough disk space to build nix derivations in the nightly build,
+      # so we're removing some unneccesary software from the ubuntu image
+    - name: Free disk space
+      if: ${{ github.event_name == 'schedule' }}
+      uses: jlumbroso/free-disk-space@main
+      with:
+        android: true
+        dotnet: true
+        haskell: false
+        large-packages: false # takes a long time to free not so much space, so it's disabled at the moment
+        docker-images: true
+        swap-storage: false # disabled, otherwise running out of memory during tests
+
     - uses: actions/checkout@v3
     - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
       if: ${{ github.event_name == 'schedule' }}
