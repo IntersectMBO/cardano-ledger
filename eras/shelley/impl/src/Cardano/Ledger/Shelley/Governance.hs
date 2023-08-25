@@ -40,10 +40,21 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Aeson (
+  FromJSON,
+  KeyValue,
+  ToJSON (..),
+  object,
+  pairs,
+  withObject,
+  (.:),
+  (.:?),
+  (.=),
+ )
+import Data.Aeson.Types (FromJSON (..))
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
-import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
@@ -233,11 +244,17 @@ instance Era era => ToJSON (Constitution era) where
   toJSON = object . toConstitutionPairs
   toEncoding = pairs . mconcat . toConstitutionPairs
 
+instance Era era => FromJSON (Constitution era) where
+  parseJSON = withObject "Constitution" $ \o ->
+    Constitution
+      <$> o .: "anchor"
+      <*> (maybeToStrictMaybe <$> (o .:? "script"))
+
 toConstitutionPairs :: (KeyValue a, Era era) => Constitution era -> [a]
 toConstitutionPairs c@(Constitution _ _) =
   let Constitution {..} = c
-   in ["constitutionAnchor" .= constitutionAnchor]
-        <> ["constitutionScript" .= cScript | SJust cScript <- [constitutionScript]]
+   in ["anchor" .= constitutionAnchor]
+        <> ["script" .= cScript | SJust cScript <- [constitutionScript]]
 
 deriving instance Eq (Constitution era)
 

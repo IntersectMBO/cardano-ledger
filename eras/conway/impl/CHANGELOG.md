@@ -75,6 +75,7 @@
 * Add `insertGovActionsState`
 * Change type of `rsRemoved` in `RatifyState` to use  `GovActionState` instead of a tuple
 * Change `RatifySignal` to use `GovActionsState` instead of a tuple
+* Add `FromJSON` instance for `Committee`
 
 ## 1.7.1.0
 
