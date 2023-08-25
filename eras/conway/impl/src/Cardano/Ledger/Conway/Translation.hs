@@ -63,7 +63,7 @@ import Lens.Micro
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance TranslationContext (ConwayEra c) = ConwayGenesis c
+type instance TranslationContext (ConwayEra c) = ConwayGenesis (ConwayEra c)
 
 instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
   translateEra ctxt nes =

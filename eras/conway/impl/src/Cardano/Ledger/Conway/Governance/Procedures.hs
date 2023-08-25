@@ -92,6 +92,7 @@ import Data.Aeson (
   (.:),
  )
 import Data.Aeson.Types (toJSONKeyText)
+import Data.Default.Class
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq (..))
@@ -352,6 +353,9 @@ instance ToExpr (Committee era)
 instance Era era => NoThunks (Committee era)
 
 instance Era era => NFData (Committee era)
+
+instance Default (Committee era) where
+  def = Committee mempty minBound
 
 committeeMembersL :: Lens' (Committee era) (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
 committeeMembersL = lens committeeMembers (\c m -> c {committeeMembers = m})

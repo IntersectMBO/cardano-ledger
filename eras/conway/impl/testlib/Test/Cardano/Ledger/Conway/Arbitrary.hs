@@ -33,7 +33,7 @@ import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
 instance Crypto c => Arbitrary (ConwayGenesis c) where
-  arbitrary = ConwayGenesis <$> arbitrary
+  arbitrary = ConwayGenesis <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary (UpgradeConwayPParams Identity) where
   arbitrary =
