@@ -11,6 +11,7 @@ description:
 
 category:           Network
 build-type:         Simple
+data-files:         data/*.json
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -115,6 +116,8 @@ test-suite tests
     other-modules:
         Test.Cardano.Ledger.Conway.BinarySpec
         Test.Cardano.Ledger.Conway.RatifySpec
+        Test.Cardano.Ledger.Conway.GenesisSpec
+        Paths_cardano_ledger_conway
 
     default-language: Haskell2010
     ghc-options:
@@ -123,9 +126,11 @@ test-suite tests
         -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
 
     build-depends:
+        aeson,
         base,
         cardano-ledger-core:testlib,
         cardano-ledger-conway,
         cardano-ledger-core,
         containers,
+        data-default-class,
         testlib

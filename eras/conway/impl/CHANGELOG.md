@@ -76,6 +76,7 @@
 * Change type of `rsRemoved` in `RatifyState` to use  `GovActionState` instead of a tuple
 * Change `RatifySignal` to use `GovActionsState` instead of a tuple
 * Add `FromJSON` instance for `Committee`
+* Add `constitution` and `committee` fields to `ConwayGenesis`
 
 ## 1.7.1.0
 
