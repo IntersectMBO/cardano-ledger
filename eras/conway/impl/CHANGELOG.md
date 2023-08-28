@@ -49,6 +49,10 @@
 * Change type of `rsRemoved` in `RatifyState` to use  `GovActionState` instead of a tuple
 * Change `RatifySignal` to use `GovActionsState` instead of a tuple
 
+## 1.7.1.0
+
+* Fix DRep distribution computation.
+
 ## 1.7.0.0
 
 * Add `Network` validation for `ProposalProcedure` and `TreasuryWithdrawals` in GOV #3659
