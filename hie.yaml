@@ -186,6 +186,12 @@ cradle:
     - path: "libs/cardano-ledger-core/test"
       component: "cardano-ledger-core:test:tests"
 
+    - path: "libs/cardano-ledger-core/bench/UMap.hs"
+      component: "cardano-ledger-core:bench:umap"
+
+    - path: "libs/cardano-ledger-core/bench/Addr.hs"
+      component: "cardano-ledger-core:bench:addr"
+
     - path: "libs/cardano-ledger-pretty/src"
       component: "lib:cardano-ledger-pretty"
 
