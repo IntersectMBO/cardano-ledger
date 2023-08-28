@@ -1,13 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -18,7 +19,6 @@ module Cardano.Ledger.Conway.Rules.Epoch (
   ConwayEPOCH,
   PredicateFailure,
   ConwayEpochEvent (..),
-  ConwayEpochPredFailure (..),
 )
 where
 
@@ -38,7 +38,6 @@ import Cardano.Ledger.Conway.Governance (
   cgGovActionsStateL,
   curGovActionsStateL,
  )
-import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
 import Cardano.Ledger.DRepDistr (extractDRepDistr)
 import Cardano.Ledger.EpochBoundary (SnapShots)
@@ -105,25 +104,6 @@ data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
   | SnapEvent (Event (EraRule "SNAP" era))
 
-data ConwayEpochPredFailure era
-  = ConwayRatifyFailure !(PredicateFailure (EraRule "RATIFY" era))
-  | ConwayPoolReapFailure !(PredicateFailure (EraRule "POOLREAP" era))
-  | ConwaySnapFailure !(PredicateFailure (EraRule "SNAP" era))
-
-deriving instance
-  ( Eq (PredicateFailure (EraRule "RATIFY" era))
-  , Eq (PredicateFailure (EraRule "SNAP" era))
-  , Eq (PredicateFailure (EraRule "POOLREAP" era))
-  ) =>
-  Eq (ConwayEpochPredFailure era)
-
-deriving instance
-  ( Show (PredicateFailure (EraRule "RATIFY" era))
-  , Show (PredicateFailure (EraRule "SNAP" era))
-  , Show (PredicateFailure (EraRule "POOLREAP" era))
-  ) =>
-  Show (ConwayEpochPredFailure era)
-
 instance
   ( EraTxOut era
   , EraGov era
@@ -149,7 +129,9 @@ instance
   type Signal (ConwayEPOCH era) = EpochNo
   type Environment (ConwayEPOCH era) = PoolDistr (EraCrypto era)
   type BaseM (ConwayEPOCH era) = ShelleyBase
-  type PredicateFailure (ConwayEPOCH era) = ConwayEpochPredFailure era
+
+  -- \| EPOCH should never fail
+  type PredicateFailure (ConwayEPOCH era) = Void
   type Event (ConwayEPOCH era) = ConwayEpochEvent era
   transitionRules = [epochTransition]
 
@@ -266,6 +248,7 @@ epochTransition = do
         , RatifyState
             { rsRemoved = mempty
             , rsEnactState = govSt ^. cgEnactStateL
+            , rsDelayed = False
             }
         , ratSig
         )
@@ -322,7 +305,7 @@ instance
   ) =>
   Embed (ShelleyPOOLREAP era) (ConwayEPOCH era)
   where
-  wrapFailed = ConwayPoolReapFailure
+  wrapFailed = \case {}
   wrapEvent = PoolReapEvent
 
 instance
@@ -332,7 +315,7 @@ instance
   ) =>
   Embed (ShelleySNAP era) (ConwayEPOCH era)
   where
-  wrapFailed = ConwaySnapFailure
+  wrapFailed = \case {}
   wrapEvent = SnapEvent
 
 instance
@@ -340,9 +323,8 @@ instance
   , STS (ConwayRATIFY era)
   , BaseM (ConwayRATIFY era) ~ ShelleyBase
   , Event (ConwayRATIFY era) ~ Void
-  , PredicateFailure (EraRule "RATIFY" era) ~ EnactPredFailure era
   ) =>
   Embed (ConwayRATIFY era) (ConwayEPOCH era)
   where
-  wrapFailed = ConwayRatifyFailure
+  wrapFailed = absurd
   wrapEvent = absurd

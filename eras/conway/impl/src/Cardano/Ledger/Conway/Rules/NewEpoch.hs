@@ -1,10 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -29,8 +30,12 @@ import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayNEWEPOCH)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
-import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent, ConwayEpochPredFailure)
-import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..), RatifyState (..))
+import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
+import Cardano.Ledger.Conway.Rules.Ratify (
+  RatifyEnv (..),
+  RatifySignal (..),
+  RatifyState (..),
+ )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -55,17 +60,11 @@ import Data.Set (Set)
 import Data.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
 
-data ConwayNewEpochPredFailure era
-  = EpochFailure !(PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
-  | CorruptRewardUpdate
-      !(RewardUpdate (EraCrypto era)) -- The reward update which violates an invariant
-  | RatifyFailure !(PredicateFailure (EraRule "RATIFY" era))
+newtype ConwayNewEpochPredFailure era
+  = CorruptRewardUpdate
+      (RewardUpdate (EraCrypto era)) -- The reward update which violates an invariant
 
-deriving instance
-  ( Eq (PredicateFailure (EraRule "EPOCH" era))
-  , Eq (PredicateFailure (EraRule "RATIFY" era))
-  ) =>
-  Eq (ConwayNewEpochPredFailure era)
+deriving instance Eq (ConwayNewEpochPredFailure era)
 
 deriving instance
   ( Show (PredicateFailure (EraRule "EPOCH" era))
@@ -217,10 +216,9 @@ instance
 
 instance
   ( STS (ConwayEPOCH era)
-  , PredicateFailure (EraRule "EPOCH" era) ~ ConwayEpochPredFailure era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
   Embed (ConwayEPOCH era) (ConwayNEWEPOCH era)
   where
-  wrapFailed = EpochFailure
+  wrapFailed = \case {}
   wrapEvent = EpochEvent

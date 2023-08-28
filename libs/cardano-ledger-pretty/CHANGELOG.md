@@ -1,7 +1,10 @@
 # Changelog for `cardano-ledger-pretty`
 
-## 1.3.1.0
+## 1.4.0.0
 
+* Remove `ppRatifyPredicateFailure`
+* Remove `PrettyA (ConwayEpochPredFailure era)`
+* Remove `PrettyA (EnactPredFailure era)`
 * Add `PrettyA` instances for:
   * `NonNegativeInterval`
   * `CostModels`
