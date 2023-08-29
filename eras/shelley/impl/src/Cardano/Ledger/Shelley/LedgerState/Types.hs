@@ -73,6 +73,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import Data.Data (Typeable)
 import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
@@ -81,7 +82,7 @@ import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- ==================================
@@ -302,12 +303,12 @@ deriving stock instance
   ) =>
   Eq (UTxOState era)
 
-instance
-  ( NoThunks (UTxO era)
-  , NoThunks (Value era)
-  , NoThunks (GovState era)
-  ) =>
-  NoThunks (UTxOState era)
+deriving via
+  AllowThunksIn
+    '["utxosDeposited"]
+    (UTxOState era)
+  instance
+    (Typeable era, NoThunks (UTxO era), NoThunks (GovState era)) => NoThunks (UTxOState era)
 
 instance
   ( EraTxOut era

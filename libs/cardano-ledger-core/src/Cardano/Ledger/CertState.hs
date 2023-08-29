@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -99,7 +100,7 @@ import qualified Data.Map.Strict as Map
 import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 -- ======================================
 
@@ -246,8 +247,10 @@ data PState era = PState
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (PState era)
-
+deriving via
+  AllowThunksIn '["psDeposits"] (PState era)
+  instance
+    Typeable era => NoThunks (PState era)
 instance NFData (PState era)
 
 instance Era era => EncCBOR (PState era) where
@@ -346,7 +349,7 @@ data CertState era = CertState
   }
   deriving (Show, Eq, Generic)
 
-instance Typeable (EraCrypto era) => NoThunks (CertState era)
+instance (Typeable era, Typeable (EraCrypto era)) => NoThunks (CertState era)
 
 instance Era era => NFData (CertState era)
 
