@@ -441,6 +441,10 @@ testGov pf = do
       Right x -> x
       Left e -> error $ "Error running runEPOCH: " <> show e
     constitution2 = epochState4 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+  assertExprEqualWithMessage
+    "prevGovAction set correctly"
+    (SJust (PrevGovActionId govActionId))
+    (epochState4 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL)
   assertEqual "constitution after enactment after no votes" constitution2 (proposedConstitution @era)
   let
     currentGovActions =

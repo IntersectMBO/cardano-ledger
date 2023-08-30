@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -29,10 +30,11 @@ import Cardano.Ledger.Conway.Governance (
   EraGov,
   GovAction (..),
   GovActionState (..),
+  PrevGovActionIds (..),
   RatifyState (..),
   Vote (..),
  )
-import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactState (..))
+import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -71,7 +73,7 @@ instance
   , Embed (EraRule "ENACT" era) (ConwayRATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
-  , Signal (EraRule "ENACT" era) ~ GovAction era
+  , Signal (EraRule "ENACT" era) ~ EnactSignal era
   ) =>
   STS (ConwayRATIFY era)
   where
@@ -189,7 +191,7 @@ ratifyTransition ::
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
-  , Signal (EraRule "ENACT" era) ~ GovAction era
+  , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Era era
   ) =>
   TransitionRule (ConwayRATIFY era)
@@ -203,11 +205,15 @@ ratifyTransition = do
 
   case rsig of
     ast :<| sigs -> do
-      let GovActionState {gasAction, gasExpiresAfter} = ast
-      if spoAccepted env ast && dRepAccepted env ast dRepThreshold
+      let GovActionState {gasId, gasAction, gasExpiresAfter} = ast
+      if prevActionAsExpected gasAction (ensPrevGovActionIds rsEnactState)
+        && spoAccepted env ast
+        && dRepAccepted env ast dRepThreshold
         then do
           -- Update ENACT state with the governance action that was ratified
-          es <- trans @(EraRule "ENACT" era) $ TRC ((), rsEnactState, gasAction)
+          es <-
+            trans @(EraRule "ENACT" era) $
+              TRC ((), rsEnactState, EnactSignal gasId gasAction)
           let st' =
                 st
                   { rsEnactState = es
@@ -222,6 +228,21 @@ ratifyTransition = do
             then pure st' {rsRemoved = ast :<| rsRemoved} -- Action expires after current Epoch. Remove it.
             else pure st'
     Empty -> pure st
+
+-- | Check that the previous governance action id specified in the proposal
+--   does match the last one of the same purpose that was enacted.
+prevActionAsExpected :: forall era. GovAction era -> PrevGovActionIds era -> Bool
+prevActionAsExpected (ParameterChange prev _) (PrevGovActionIds {pgaPParamUpdate}) =
+  prev == pgaPParamUpdate
+prevActionAsExpected (HardForkInitiation prev _) (PrevGovActionIds {pgaHardFork}) =
+  prev == pgaHardFork
+prevActionAsExpected (NoConfidence prev) (PrevGovActionIds {pgaCommittee}) =
+  prev == pgaCommittee
+prevActionAsExpected (NewCommittee prev _ _) (PrevGovActionIds {pgaCommittee}) =
+  prev == pgaCommittee
+prevActionAsExpected (NewConstitution prev _) (PrevGovActionIds {pgaConstitution}) =
+  prev == pgaConstitution
+prevActionAsExpected _ _ = True -- for the other actions, the last action is not relevant
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = id

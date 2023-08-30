@@ -27,6 +27,7 @@ module Cardano.Ledger.Conway.Governance (
   GovActionIx (..),
   GovActionId (..),
   GovActionPurpose (..),
+  PrevGovActionIds (..),
   PrevGovActionId (..),
   govActionIdToText,
   Voter (..),
@@ -44,7 +45,15 @@ module Cardano.Ledger.Conway.Governance (
   cgGovActionsStateL,
   cgEnactStateL,
   cgRatifyStateL,
+  ensCommitteeL,
   ensConstitutionL,
+  ensCurPParamsL,
+  ensPrevGovActionIdsL,
+  ensPrevPParamUpdateL,
+  ensPrevHardForkL,
+  ensPrevCommitteeL,
+  ensPrevConstitutionL,
+  ensProtVerL,
   rsEnactStateL,
   curPParamsConwayGovStateL,
   prevPParamsConwayGovStateL,
@@ -270,27 +279,115 @@ instance EraPParams era => ToCBOR (GovActionsState era) where
 instance EraPParams era => FromCBOR (GovActionsState era) where
   fromCBOR = fromEraCBOR @era
 
+data PrevGovActionIds era = PrevGovActionIds
+  { pgaPParamUpdate :: !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
+  -- ^ The last enacted GovActionId for a protocol parameter update
+  , pgaHardFork :: !(StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
+  -- ^ The last enacted GovActionId for a hard fork
+  , pgaCommittee :: !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+  -- ^ The last enacted GovActionId for a committee change or no confidence vote
+  , pgaConstitution :: !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
+  -- ^ The last enacted GovActionId for a new constitution
+  }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks (PrevGovActionIds era)
+instance Era era => NFData (PrevGovActionIds era)
+instance Default (PrevGovActionIds era)
+
+instance Era era => DecCBOR (PrevGovActionIds era) where
+  decCBOR =
+    decode $
+      RecD PrevGovActionIds
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance Era era => EncCBOR (PrevGovActionIds era) where
+  encCBOR PrevGovActionIds {..} =
+    encode $
+      Rec (PrevGovActionIds @era)
+        !> To pgaPParamUpdate
+        !> To pgaHardFork
+        !> To pgaCommittee
+        !> To pgaConstitution
+
+toPrevGovActionIdsParis :: (KeyValue a, Era era) => PrevGovActionIds era -> [a]
+toPrevGovActionIdsParis pga@(PrevGovActionIds _ _ _ _) =
+  let PrevGovActionIds {..} = pga
+   in [ "pgaPParamUpdate" .= pgaPParamUpdate
+      , "pgaHardFork" .= pgaHardFork
+      , "pgaCommittee" .= pgaCommittee
+      , "pgaConstitution" .= pgaConstitution
+      ]
+
+instance Era era => ToJSON (PrevGovActionIds era) where
+  toJSON = object . toPrevGovActionIdsParis
+  toEncoding = pairs . mconcat . toPrevGovActionIdsParis
+
+instance ToExpr (PrevGovActionIds era)
+
 data EnactState era = EnactState
   { ensCommittee :: !(StrictMaybe (Committee era))
   -- ^ Constitutional Committee
   , ensConstitution :: !(Constitution era)
-  -- ^ Hash of the Constitution
+  -- ^ Constitution
   , ensProtVer :: !ProtVer
   , ensPParams :: !(PParams era)
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
   , ensWithdrawals :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
+  , ensPrevGovActionIds :: !(PrevGovActionIds era)
+  -- ^ Last enacted GovAction Ids
   }
   deriving (Generic)
 
+ensCommitteeL :: Lens' (EnactState era) (StrictMaybe (Committee era))
+ensCommitteeL = lens ensCommittee (\x y -> x {ensCommittee = y})
+
 ensConstitutionL :: Lens' (EnactState era) (Constitution era)
 ensConstitutionL = lens ensConstitution (\x y -> x {ensConstitution = y})
+
+ensProtVerL :: Lens' (EnactState era) ProtVer
+ensProtVerL = lens ensProtVer (\x y -> x {ensProtVer = y})
 
 ensCurPParamsL :: Lens' (EnactState era) (PParams era)
 ensCurPParamsL = lens ensPParams (\es x -> es {ensPParams = x})
 
 ensPrevPParamsL :: Lens' (EnactState era) (PParams era)
 ensPrevPParamsL = lens ensPrevPParams (\es x -> es {ensPrevPParams = x})
+
+ensPrevGovActionIdsL :: Lens' (EnactState era) (PrevGovActionIds era)
+ensPrevGovActionIdsL = lens ensPrevGovActionIds (\es x -> es {ensPrevGovActionIds = x})
+
+ensPrevPParamUpdateL ::
+  Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
+ensPrevPParamUpdateL =
+  lens
+    (pgaPParamUpdate . ensPrevGovActionIds)
+    (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaPParamUpdate = x}})
+
+ensPrevHardForkL ::
+  Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
+ensPrevHardForkL =
+  lens
+    (pgaHardFork . ensPrevGovActionIds)
+    (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaHardFork = x}})
+
+ensPrevCommitteeL ::
+  Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+ensPrevCommitteeL =
+  lens
+    (pgaCommittee . ensPrevGovActionIds)
+    (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaCommittee = x}})
+
+ensPrevConstitutionL ::
+  Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
+ensPrevConstitutionL =
+  lens
+    (pgaConstitution . ensPrevGovActionIds)
+    (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaConstitution = x}})
 
 instance ToExpr (PParamsHKD Identity era) => ToExpr (EnactState era)
 
@@ -299,7 +396,7 @@ instance EraPParams era => ToJSON (EnactState era) where
   toEncoding = pairs . mconcat . toEnactStatePairs
 
 toEnactStatePairs :: (KeyValue a, EraPParams era) => EnactState era -> [a]
-toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
+toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _ _) =
   let EnactState {..} = cg
    in [ "committee" .= ensCommittee
       , "constitution" .= ensConstitution
@@ -308,6 +405,7 @@ toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
       , "prevPParams" .= ensPParams
       , "treasury" .= ensTreasury
       , "withdrawals" .= ensWithdrawals
+      , "prevGovActionIds" .= ensPrevGovActionIds
       ]
 
 deriving instance Eq (PParams era) => Eq (EnactState era)
@@ -324,11 +422,13 @@ instance EraPParams era => Default (EnactState era) where
       def
       (Coin 0)
       def
+      def
 
 instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR =
     decode $
       RecD EnactState
+        <! From
         <! From
         <! From
         <! From
@@ -348,6 +448,7 @@ instance EraPParams era => EncCBOR (EnactState era) where
         !> To ensPrevPParams
         !> To ensTreasury
         !> To ensWithdrawals
+        !> To ensPrevGovActionIds
 
 instance EraPParams era => ToCBOR (EnactState era) where
   toCBOR = toEraCBOR @era

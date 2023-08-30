@@ -31,6 +31,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionsState (..),
   GovProcedures,
   PrevGovActionId (..),
+  PrevGovActionIds (..),
   ProposalProcedure (..),
   Vote (..),
   Voter (..),
@@ -319,7 +320,7 @@ instance PrettyA (Constitution era) where
       ]
 
 instance PrettyA (PParams era) => PrettyA (EnactState era) where
-  prettyA ens@(EnactState _ _ _ _ _ _ _) =
+  prettyA ens@(EnactState _ _ _ _ _ _ _ _) =
     let EnactState {..} = ens
      in ppRecord
           "EnactState"
@@ -330,7 +331,18 @@ instance PrettyA (PParams era) => PrettyA (EnactState era) where
           , ("Constitution", prettyA ensConstitution)
           , ("Treasury", prettyA ensTreasury)
           , ("Withdrawals", prettyA ensWithdrawals)
+          , ("PrevGovActionIds", prettyA ensPrevGovActionIds)
           ]
+
+instance PrettyA (PrevGovActionIds era) where
+  prettyA PrevGovActionIds {..} =
+    ppRecord
+      "PrevGovActionIds"
+      [ ("LastPParamUpdate", prettyA pgaPParamUpdate)
+      , ("LastHardFork", prettyA pgaHardFork)
+      , ("LastCommittee", prettyA pgaCommittee)
+      , ("LastConstitution", prettyA pgaConstitution)
+      ]
 
 instance
   ( PrettyA (PParamsUpdate era)
