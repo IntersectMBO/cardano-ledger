@@ -405,7 +405,7 @@ toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _ _) =
       , "prevPParams" .= ensPParams
       , "treasury" .= ensTreasury
       , "withdrawals" .= ensWithdrawals
-      , "PrevGovActionIds" .= ensPrevGovActionIds
+      , "prevGovActionIds" .= ensPrevGovActionIds
       ]
 
 deriving instance Eq (PParams era) => Eq (EnactState era)
