@@ -1,7 +1,9 @@
 # Version history for `cardano-ledger-api`
 
-## 1.4.1.0
+## 1.5.0.0
 
+* Add one more parameter to `evalBalanceTxBody` #3688
+  * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
 * Add `cgEnactStateL`
 
 ## 1.4.0.0

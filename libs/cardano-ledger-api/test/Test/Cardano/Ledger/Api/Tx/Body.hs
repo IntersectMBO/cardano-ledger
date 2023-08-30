@@ -123,15 +123,19 @@ propEvalBalanceTxBody ::
   CertState era ->
   UTxO era ->
   Property
-propEvalBalanceTxBody pp dpState utxo =
+propEvalBalanceTxBody pp certState utxo =
   property $
-    forAll (genTxBodyFrom dpState utxo) $ \txBody ->
-      evalBalanceTxBody pp lookupRefund isRegPoolId utxo txBody
-        `shouldBe` evaluateTransactionBalance pp dpState utxo txBody
+    forAll (genTxBodyFrom certState utxo) $ \txBody ->
+      evalBalanceTxBody pp lookupKeyDeposit lookupDRepDeposit isRegPoolId utxo txBody
+        `shouldBe` evaluateTransactionBalance pp certState utxo txBody
   where
-    lookupRefund = lookupDepositDState (certDState dpState)
-    isRegPoolId = (`Map.member` psStakePoolParams (certPState dpState))
+    lookupKeyDeposit = lookupDepositDState (certDState certState)
+    lookupDRepDeposit = lookupDepositVState (certVState certState)
+    isRegPoolId = (`Map.member` psStakePoolParams (certPState certState))
 
+-- | NOTE: We cannot have this property pass for Conway and beyond because Conway changes this calculation.
+-- This property test only exists to confirm that the old and new implementations for the evalBalanceTxBody` API matched,
+-- and this can be ascertained only until Babbage.
 spec :: Spec
 spec =
   describe "TxBody" $ do
@@ -141,7 +145,3 @@ spec =
       prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Alonzo
     describe "BabbageEra" $ do
       prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Babbage
-
--- TODO: bring back when TxCerts become a type family
--- describe "ConwayEra" $ do
---   prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Conway

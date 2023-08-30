@@ -73,7 +73,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (ConwayEraTxBody (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraTxBody (..), PParams, Value)
-import Cardano.Ledger.Credential (StakeCredential)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
@@ -98,7 +98,13 @@ evalBalanceTxBody ::
   -- the `DeRegKey` delegation certificates in the supplied `TxBody`. In other words,
   -- there is no requirement to know about all of the delegation certificates in the
   -- ledger state, just the ones this transaction cares about.
-  (StakeCredential (EraCrypto era) -> Maybe Coin) ->
+  (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+  -- | Lookup current deposit amount for a registered DRep credential. This
+  -- function must produce valid answer for all of the DRep credentials present in any of
+  -- the `UnRegDRep` certificates in the supplied `TxBody`. In other words,
+  -- there is no requirement to know about all of the DRep registrations in the
+  -- ledger state, just the ones this transaction cares about.
+  (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered. There is no
   -- requirement to answer this question for all stake pool credentials, just for the ones
   -- that have the registration certificates included in the supplied `TxBody`
@@ -109,5 +115,5 @@ evalBalanceTxBody ::
   TxBody era ->
   -- | The difference between what the transaction consumes and what it produces.
   Value era
-evalBalanceTxBody pp lookupRefund isRegPoolId utxo txBody =
-  getConsumedValue pp lookupRefund utxo txBody <-> getProducedValue pp isRegPoolId txBody
+evalBalanceTxBody pp lookupKeyRefund lookupDRepRefund isRegPoolId utxo txBody =
+  getConsumedValue pp lookupKeyRefund lookupDRepRefund utxo txBody <-> getProducedValue pp isRegPoolId txBody
