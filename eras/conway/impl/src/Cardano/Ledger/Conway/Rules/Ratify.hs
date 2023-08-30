@@ -206,9 +206,9 @@ ratifyTransition = do
   case rsig of
     ast :<| sigs -> do
       let GovActionState {gasId, gasAction, gasExpiresAfter} = ast
-      if spoAccepted env ast
+      if prevActionAsExpected gasAction (ensPrevGovActionIds rsEnactState)
+        && spoAccepted env ast
         && dRepAccepted env ast dRepThreshold
-        && prevActionAsExpected gasAction (ensPrevGovActionIds rsEnactState)
         then do
           -- Update ENACT state with the governance action that was ratified
           es <-
