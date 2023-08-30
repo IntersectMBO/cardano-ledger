@@ -11,6 +11,25 @@
 * Remove `ConwayEpochPredFailure`
 * Remove `EpochFailure` and `RatifyFailure` from `ConwayNewEpochPredFailure`
 * Change `PredicateFailure (ConwayRATIFY era)` to `Void`
+* Move `ConwayEraTxBody` to `Cardano.Ledger.Conway.TxBody`
+* Move `ConwayEraPParams` to `Cardano.Ledger.Conway.PParams`
+* Rename:
+  * `GovActionsState` to `GovSnapshots`
+  * `cgGovActionsStateL` to `cgGovSnapshotsL`
+  * `curGovActionsStateL` to `curGovSnapshotsL`
+  * `prevGovActionsStateL` to `prevGovSnapshotsL`
+* Add:
+  * `ProposalsSnapshot`
+  * `snapshotIds`
+  * `snapshotAddVote`
+  * `snapshotInsertGovAction`
+  * `snapshotActions`
+  * `snapshotRemoveIds`
+  * `fromGovActionStateSeq`
+Add lenses:
+  * `gasCommitteeVotesL`
+  * `gasDRepVotesL`
+  * `gasStakePoolVotesL`
 * Add:
   * `rsDelayed`
   * `PParamGroup`

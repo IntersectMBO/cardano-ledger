@@ -53,7 +53,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Governance (GovActionsState (..))
+import Cardano.Ledger.Conway.Governance (GovSnapshots (..))
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..), Delegatee (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
@@ -1595,7 +1595,7 @@ pcTxBody proof txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
     fields = abstractTxBody proof txbody
     pairs = concatMap (pcTxBodyField proof) fields
 
-instance PrettyC (GovActionsState era) era where
+instance PrettyC (GovSnapshots era) era where
   prettyC proof x = case proof of
     Shelley _ -> prettyA x
     Mary _ -> prettyA x

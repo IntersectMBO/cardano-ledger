@@ -41,6 +41,7 @@ library
     other-modules:
         Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.Governance.Procedures
+        Cardano.Ledger.Conway.Governance.Snapshots
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
         Cardano.Ledger.Conway.Rules.Pool
@@ -107,6 +108,7 @@ library testlib
         cardano-ledger-babbage:testlib,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-conway,
+        cardano-strict-containers,
         small-steps
 
 test-suite tests

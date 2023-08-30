@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -16,8 +17,8 @@
 
 module Cardano.Ledger.Conway.Governance (
   EraGov (..),
-  GovActionsState (..),
-  insertGovActionsState,
+  GovSnapshots (..),
+  insertGovSnapshots,
   EnactState (..),
   RatifyState (..),
   ConwayGovState (..),
@@ -44,8 +45,16 @@ module Cardano.Ledger.Conway.Governance (
   thresholdSPO,
   thresholdDRep,
   thresholdCC,
+  ProposalsSnapshot,
+  snapshotInsertGovAction,
+  snapshotActions,
+  snapshotAddVote,
+  snapshotIds,
+  snapshotRemoveIds,
+  fromGovActionStateSeq,
+  isConsistent_,
   -- Lenses
-  cgGovActionsStateL,
+  cgGovSnapshotsL,
   cgEnactStateL,
   cgRatifyStateL,
   ensCommitteeL,
@@ -63,15 +72,16 @@ module Cardano.Ledger.Conway.Governance (
   prevPParamsConwayGovStateL,
   constitutionScriptL,
   constitutionAnchorL,
-  curGovActionsStateL,
-  prevGovActionsStateL,
+  curGovSnapshotsL,
+  prevGovSnapshotsL,
   prevDRepsStateL,
   prevCommitteeStateL,
+  gasCommitteeVotesL,
+  gasDRepVotesL,
+  gasStakePoolVotesL,
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt)
 import Cardano.Ledger.BaseTypes (
-  EpochNo (..),
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
@@ -93,15 +103,10 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.CertState (CommitteeState, DRepState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
-  ConwayEraPParams,
-  PParamGroup (..),
   dvtPPEconomicGroupL,
   dvtPPGovGroupL,
   dvtPPNetworkGroupL,
   dvtPPTechnicalGroupL,
-  modifiedGroups,
-  ppDRepVotingThresholdsL,
-  ppPoolVotingThresholdsL,
  )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
@@ -112,6 +117,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   GovActionId (..),
   GovActionIx (..),
   GovActionPurpose (..),
+  GovActionState (..),
   GovProcedures (..),
   PrevGovActionId (..),
   ProposalProcedure (..),
@@ -119,17 +125,35 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  gasCommitteeVotesL,
+  gasDRepVotesL,
+  gasStakePoolVotesL,
   govActionIdToText,
   indexedGovProps,
  )
+import Cardano.Ledger.Conway.Governance.Snapshots (
+  ProposalsSnapshot,
+  fromGovActionStateSeq,
+  isConsistent_,
+  snapshotActions,
+  snapshotAddVote,
+  snapshotIds,
+  snapshotInsertGovAction,
+  snapshotRemoveIds,
+ )
 import Cardano.Ledger.Conway.PParams (
+  ConwayEraPParams,
   DRepVotingThresholds (..),
+  PParamGroup (..),
   PoolVotingThresholds (..),
+  modifiedGroups,
+  ppDRepVotingThresholdsL,
+  ppPoolVotingThresholdsL,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
@@ -138,169 +162,103 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
-data GovActionState era = GovActionState
-  { gasId :: !(GovActionId (EraCrypto era))
-  , gasCommitteeVotes :: !(Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
-  , gasDRepVotes :: !(Map (Credential 'DRepRole (EraCrypto era)) Vote)
-  , gasStakePoolVotes :: !(Map (KeyHash 'StakePool (EraCrypto era)) Vote)
-  , gasDeposit :: !Coin
-  , gasReturnAddr :: !(RewardAcnt (EraCrypto era))
-  , gasAction :: !(GovAction era)
-  , gasProposedIn :: !EpochNo
-  , gasExpiresAfter :: !EpochNo
-  }
-  deriving (Generic)
-
-instance EraPParams era => ToExpr (GovActionState era)
-
-instance EraPParams era => ToJSON (GovActionState era) where
-  toJSON = object . toGovActionStatePairs
-  toEncoding = pairs . mconcat . toGovActionStatePairs
-
-toGovActionStatePairs :: (KeyValue a, EraPParams era) => GovActionState era -> [a]
-toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _) =
-  let GovActionState {..} = gas
-   in [ "actionId" .= gasId
-      , "committeeVotes" .= gasCommitteeVotes
-      , "dRepVotes" .= gasDRepVotes
-      , "stakePoolVotes" .= gasStakePoolVotes
-      , "deposit" .= gasDeposit
-      , "returnAddr" .= gasReturnAddr
-      , "action" .= gasAction
-      , "proposedIn" .= gasProposedIn
-      , "expiresAfter" .= gasExpiresAfter
-      ]
-
-deriving instance EraPParams era => Eq (GovActionState era)
-
-deriving instance EraPParams era => Show (GovActionState era)
-
-instance EraPParams era => NoThunks (GovActionState era)
-
-instance EraPParams era => NFData (GovActionState era)
-
-instance EraPParams era => DecCBOR (GovActionState era) where
-  decCBOR =
-    decode $
-      RecD GovActionState
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-
-instance EraPParams era => EncCBOR (GovActionState era) where
-  encCBOR GovActionState {..} =
-    encode $
-      Rec GovActionState
-        !> To gasId
-        !> To gasCommitteeVotes
-        !> To gasDRepVotes
-        !> To gasStakePoolVotes
-        !> To gasDeposit
-        !> To gasReturnAddr
-        !> To gasAction
-        !> To gasProposedIn
-        !> To gasExpiresAfter
-
-data GovActionsState era = GovActionsState
-  { curGovActionsState :: !(Map (GovActionId (EraCrypto era)) (GovActionState era))
-  , prevGovActionsState :: !(Map (GovActionId (EraCrypto era)) (GovActionState era))
-  , prevDRepsState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+data GovSnapshots era = GovSnapshots
+  { curGovSnapshots :: !(ProposalsSnapshot era)
+  , prevGovSnapshots :: !(ProposalsSnapshot era)
+  , prevDRepsState ::
+      !( Map
+          (Credential 'DRepRole (EraCrypto era))
+          (DRepState (EraCrypto era))
+       )
   , prevCommitteeState :: !(CommitteeState era)
   }
   deriving (Generic)
 
-instance EraPParams era => ToExpr (GovActionsState era)
+instance EraPParams era => ToExpr (GovSnapshots era)
 
-insertGovActionsState ::
+insertGovSnapshots ::
   GovActionState era ->
-  GovActionsState era ->
-  GovActionsState era
-insertGovActionsState v@GovActionState {gasId} =
-  curGovActionsStateL %~ Map.insert gasId v
+  GovSnapshots era ->
+  GovSnapshots era
+insertGovSnapshots v =
+  curGovSnapshotsL %~ snapshotInsertGovAction v
 
-curGovActionsStateL ::
+curGovSnapshotsL ::
   Lens'
-    (GovActionsState era)
-    (Map (GovActionId (EraCrypto era)) (GovActionState era))
-curGovActionsStateL = lens curGovActionsState (\x y -> x {curGovActionsState = y})
+    (GovSnapshots era)
+    (ProposalsSnapshot era)
+curGovSnapshotsL = lens curGovSnapshots (\x y -> x {curGovSnapshots = y})
 
-prevGovActionsStateL ::
+prevGovSnapshotsL ::
   Lens'
-    (GovActionsState era)
-    (Map (GovActionId (EraCrypto era)) (GovActionState era))
-prevGovActionsStateL = lens prevGovActionsState (\x y -> x {prevGovActionsState = y})
+    (GovSnapshots era)
+    (ProposalsSnapshot era)
+prevGovSnapshotsL = lens prevGovSnapshots (\x y -> x {prevGovSnapshots = y})
 
 prevDRepsStateL ::
   Lens'
-    (GovActionsState era)
+    (GovSnapshots era)
     (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 prevDRepsStateL = lens prevDRepsState (\x y -> x {prevDRepsState = y})
 
 prevCommitteeStateL ::
   Lens'
-    (GovActionsState era)
+    (GovSnapshots era)
     (CommitteeState era)
 prevCommitteeStateL = lens prevCommitteeState (\x y -> x {prevCommitteeState = y})
 
-deriving instance EraPParams era => Eq (GovActionsState era)
+deriving instance EraPParams era => Eq (GovSnapshots era)
 
-deriving instance EraPParams era => Show (GovActionsState era)
+deriving instance EraPParams era => Show (GovSnapshots era)
 
-toGovActionsStatePairs :: (KeyValue a, EraPParams era) => GovActionsState era -> [a]
-toGovActionsStatePairs gas@(GovActionsState _ _ _ _) =
-  let GovActionsState {..} = gas
-   in [ "curGovActionsState" .= curGovActionsState
-      , "prevGovActionsState" .= prevGovActionsState
+toGovSnapshotsPairs :: (KeyValue a, EraPParams era) => GovSnapshots era -> [a]
+toGovSnapshotsPairs gas@(GovSnapshots _ _ _ _) =
+  let GovSnapshots {..} = gas
+   in [ "curGovSnapshots" .= curGovSnapshots
+      , "prevGovSnapshots" .= prevGovSnapshots
       , "prevDRepsState" .= prevDRepsState
       , "prevCommitteeState" .= prevCommitteeState
       ]
 
-instance EraPParams era => ToJSON (GovActionsState era) where
-  toJSON = object . toGovActionsStatePairs
-  toEncoding = pairs . mconcat . toGovActionsStatePairs
+instance EraPParams era => ToJSON (GovSnapshots era) where
+  toJSON = object . toGovSnapshotsPairs
+  toEncoding = pairs . mconcat . toGovSnapshotsPairs
 
-instance EraPParams era => NFData (GovActionsState era)
+instance EraPParams era => NFData (GovSnapshots era)
 
-instance EraPParams era => NoThunks (GovActionsState era)
+instance EraPParams era => NoThunks (GovSnapshots era)
 
-instance Default (GovActionsState era) where
-  def = GovActionsState mempty mempty mempty def
+instance Default (GovSnapshots era) where
+  def = GovSnapshots def def def def
 
-instance EraPParams era => EncCBOR (GovActionsState era) where
-  encCBOR GovActionsState {..} =
+instance EraPParams era => EncCBOR (GovSnapshots era) where
+  encCBOR GovSnapshots {..} =
     encode $
-      Rec GovActionsState
-        !> To curGovActionsState
-        !> To prevGovActionsState
+      Rec GovSnapshots
+        !> To curGovSnapshots
+        !> To prevGovSnapshots
         !> To prevDRepsState
         !> To prevCommitteeState
 
-instance EraPParams era => DecCBOR (GovActionsState era) where
+instance EraPParams era => DecCBOR (GovSnapshots era) where
   decCBOR =
     decode $
-      RecD GovActionsState
+      RecD GovSnapshots
         <! From
         <! From
         <! From
         <! From
 
-instance EraPParams era => ToCBOR (GovActionsState era) where
+instance EraPParams era => ToCBOR (GovSnapshots era) where
   toCBOR = toEraCBOR @era
 
-instance EraPParams era => FromCBOR (GovActionsState era) where
+instance EraPParams era => FromCBOR (GovSnapshots era) where
   fromCBOR = fromEraCBOR @era
 
 data PrevGovActionIds era = PrevGovActionIds
@@ -486,7 +444,7 @@ instance EraPParams era => NoThunks (EnactState era)
 
 data RatifyState era = RatifyState
   { rsEnactState :: !(EnactState era)
-  , rsRemoved :: !(StrictSeq (GovActionState era))
+  , rsRemoved :: !(Set (GovActionId (EraCrypto era)))
   , rsDelayed :: !Bool
   }
   deriving (Generic)
@@ -541,13 +499,13 @@ toRatifyStatePairs cg@(RatifyState _ _ _) =
       ]
 
 data ConwayGovState era = ConwayGovState
-  { cgGovActionsState :: !(GovActionsState era)
+  { cgGovSnapshots :: !(GovSnapshots era)
   , cgEnactState :: !(EnactState era)
   }
   deriving (Generic, Eq, Show)
 
-cgGovActionsStateL :: Lens' (ConwayGovState era) (GovActionsState era)
-cgGovActionsStateL = lens cgGovActionsState (\x y -> x {cgGovActionsState = y})
+cgGovSnapshotsL :: Lens' (ConwayGovState era) (GovSnapshots era)
+cgGovSnapshotsL = lens cgGovSnapshots (\x y -> x {cgGovSnapshots = y})
 
 cgEnactStateL :: Lens' (ConwayGovState era) (EnactState era)
 cgEnactStateL = lens cgEnactState (\x y -> x {cgEnactState = y})
@@ -576,7 +534,7 @@ instance EraPParams era => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =
     encode $
       Rec ConwayGovState
-        !> To cgGovActionsState
+        !> To cgGovSnapshots
         !> To cgEnactState
 
 instance EraPParams era => ToCBOR (ConwayGovState era) where
@@ -600,7 +558,7 @@ instance EraPParams era => ToExpr (ConwayGovState era)
 toConwayGovPairs :: (KeyValue a, EraPParams era) => ConwayGovState era -> [a]
 toConwayGovPairs cg@(ConwayGovState _ _) =
   let ConwayGovState {..} = cg
-   in [ "gov" .= cgGovActionsState
+   in [ "gov" .= cgGovSnapshots
       , "ratify" .= cgEnactState
       ]
 
@@ -614,7 +572,7 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   prevPParamsGovStateL = prevPParamsConwayGovStateL
 
   obligationGovState st =
-    foldMap' gasDeposit (st ^. cgGovActionsStateL . curGovActionsStateL)
+    foldMap' gasDeposit $ snapshotActions (st ^. cgGovSnapshotsL . curGovSnapshotsL)
 
 class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)

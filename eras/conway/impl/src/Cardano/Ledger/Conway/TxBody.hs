@@ -15,10 +15,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxBody (
+  ConwayEraTxBody (..),
   ConwayTxBody (
     ConwayTxBody,
     ctbSpendInputs,
@@ -76,7 +78,7 @@ import Cardano.Ledger.Coin (Coin (..), decodePositiveCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
-import Cardano.Ledger.Conway.PParams ()
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.TxOut ()
@@ -111,7 +113,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro (to, (^.))
+import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
 
 instance Memoized ConwayTxBody where
@@ -579,3 +581,16 @@ instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (ConwayTxBody era)
+
+class BabbageEraTxBody era => ConwayEraTxBody era where
+  -- | Lens for getting and setting number of `Coin` that is expected to be in the
+  -- Treasury at the current Epoch
+  currentTreasuryValueTxBodyL :: Lens' (TxBody era) (StrictMaybe Coin)
+
+  -- | Lens for getting and setting `VotingProcedures`.
+  votingProceduresTxBodyL :: Lens' (TxBody era) (VotingProcedures era)
+
+  -- | Lens for getting and setting `ProposalProcedures`.
+  proposalProceduresTxBodyL :: Lens' (TxBody era) (StrictSeq (ProposalProcedure era))
+
+  treasuryDonationTxBodyL :: Lens' (TxBody era) Coin

@@ -41,29 +41,27 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (
-  ConwayEraPParams (..),
-  ppGovActionDepositL,
-  ppGovActionExpirationL,
-  ppMinCommitteeSizeL,
- )
 import Cardano.Ledger.Conway.Era (ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionState (..),
-  GovActionsState (..),
   GovProcedures (..),
+  GovSnapshots (..),
   ProposalProcedure (..),
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
-  curGovActionsStateL,
+  curGovSnapshotsL,
   indexedGovProps,
+  snapshotAddVote,
+  snapshotInsertGovAction,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovAction (..),
   committeeMembersL,
  )
+import Cardano.Ledger.Conway.Governance.Snapshots (snapshotGovActionStates)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ppGovActionDepositL, ppGovActionExpirationL, ppMinCommitteeSizeL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
@@ -144,7 +142,7 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
 instance ConwayEraPParams era => STS (ConwayGOV era) where
-  type State (ConwayGOV era) = GovActionsState era
+  type State (ConwayGOV era) = GovSnapshots era
   type Signal (ConwayGOV era) = GovProcedures era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
@@ -156,31 +154,14 @@ instance ConwayEraPParams era => STS (ConwayGOV era) where
   transitionRules = [govTransition]
 
 addVoterVote ::
+  forall era.
   Voter (EraCrypto era) ->
-  GovActionsState era ->
+  GovSnapshots era ->
   GovActionId (EraCrypto era) ->
   VotingProcedure era ->
-  GovActionsState era
+  GovSnapshots era
 addVoterVote voter as govActionId VotingProcedure {vProcVote} =
-  as & curGovActionsStateL %~ Map.update (Just . updateVote) govActionId
-  where
-    updateVote GovActionState {..} =
-      case voter of
-        CommitteeVoter cred ->
-          GovActionState
-            { gasCommitteeVotes = Map.insert cred vProcVote gasCommitteeVotes
-            , ..
-            }
-        DRepVoter cred ->
-          GovActionState
-            { gasDRepVotes = Map.insert cred vProcVote gasDRepVotes
-            , ..
-            }
-        StakePoolVoter poolId ->
-          GovActionState
-            { gasStakePoolVotes = Map.insert poolId vProcVote gasStakePoolVotes
-            , ..
-            }
+  as & curGovSnapshotsL %~ snapshotAddVote voter vProcVote govActionId
 
 addAction ::
   EpochNo ->
@@ -189,10 +170,10 @@ addAction ::
   Coin ->
   RewardAcnt (EraCrypto era) ->
   GovAction era ->
-  GovActionsState era ->
-  GovActionsState era
+  GovSnapshots era ->
+  GovSnapshots era
 addAction epoch gaExpiry gaid c addr act as =
-  as & curGovActionsStateL %~ Map.insert gaid gai'
+  as & curGovSnapshotsL %~ snapshotInsertGovAction gai'
   where
     gai' =
       GovActionState
@@ -208,11 +189,12 @@ addAction epoch gaExpiry gaid c addr act as =
         }
 
 noSuchGovActions ::
-  GovActionsState era ->
+  GovSnapshots era ->
   Set.Set (GovActionId (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
 noSuchGovActions gas gaIds =
-  let unknownGovActionIds = Set.filter (`Map.notMember` curGovActionsState gas) gaIds
+  let curGovActionIds = snapshotGovActionStates $ curGovSnapshots gas
+      unknownGovActionIds = Set.filter (`Map.notMember` curGovActionIds) gaIds
    in failureUnless (Set.null unknownGovActionIds) $
         GovActionsDoNotExist unknownGovActionIds
 

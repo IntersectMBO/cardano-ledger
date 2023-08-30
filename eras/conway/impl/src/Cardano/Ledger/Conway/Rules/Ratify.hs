@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -26,10 +25,9 @@ module Cardano.Ledger.Conway.Rules.Ratify (
 import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.CertState (DRepState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Conway.Core (ConwayEraPParams)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
-  EraGov,
   GovAction (..),
   GovActionState (..),
   PrevGovActionIds (..),
@@ -38,8 +36,8 @@ import Cardano.Ledger.Conway.Governance (
   thresholdDRep,
   thresholdSPO,
  )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
@@ -59,6 +57,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Sum (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Data.Word (Word64)
 
@@ -241,7 +240,7 @@ ratifyTransition = do
           let st' =
                 st
                   { rsEnactState = es
-                  , rsRemoved = ast :<| rsRemoved
+                  , rsRemoved = Set.insert gasId rsRemoved
                   , rsDelayed = delayingAction gasAction
                   }
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
@@ -250,7 +249,7 @@ ratifyTransition = do
           st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
           -- Finally, filter out actions that are not processed.
           if gasExpiresAfter < reCurrentEpoch
-            then pure st' {rsRemoved = ast :<| rsRemoved} -- Action expires after current Epoch. Remove it.
+            then pure st' {rsRemoved = Set.insert gasId rsRemoved} -- Action expires after current Epoch. Remove it.
             else pure st'
     Empty -> pure st
 
