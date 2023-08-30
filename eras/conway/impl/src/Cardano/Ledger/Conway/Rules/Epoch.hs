@@ -32,12 +32,14 @@ import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovActionState (..),
-  GovActionsState (..),
+  GovSnapshots (..),
   RatifyState (..),
   cgEnactStateL,
-  cgGovActionsStateL,
-  curGovActionsStateL,
+  cgGovSnapshotsL,
+  curGovSnapshotsL,
+  snapshotActions,
  )
+import Cardano.Ledger.Conway.Governance.Snapshots (snapshotLookupId, snapshotRemoveIds)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
 import Cardano.Ledger.DRepDistr (extractDRepDistr)
 import Cardano.Ledger.EpochBoundary (SnapShots)
@@ -95,8 +97,9 @@ import Control.State.Transition (
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as Seq
+import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Lens.Micro (Lens', (%~), (&), (.~), (<>~), (^.))
 
@@ -238,9 +241,7 @@ epochTransition = do
         , reCurrentEpoch = eNo - 1
         , reDRepState = vstate ^. vsDRepsL
         }
-    govStateToSeq = Seq.fromList . Map.elems
-    -- TODO the order of governance actions is probably messed up here. Investigate
-    ratSig = RatifySignal . govStateToSeq . prevGovActionsState $ cgGovActionsState govSt
+    ratSig = RatifySignal . snapshotActions . prevGovSnapshots $ cgGovSnapshots govSt
   RatifyState {rsRemoved, rsEnactState} <-
     trans @(EraRule "RATIFY" era) $
       TRC
@@ -253,7 +254,15 @@ epochTransition = do
         , ratSig
         )
   let
-    lState = returnProposalDeposits rsRemoved $ esLState es'
+    curSnaps = curGovSnapshots $ cgGovSnapshots govSt
+    lookupAction m gId =
+      case snapshotLookupId gId curSnaps of
+        Just x -> x :<| m
+        Nothing -> m
+    removedProps =
+      foldl' lookupAction mempty $
+        Seq.fromList (Set.toList rsRemoved)
+    lState = returnProposalDeposits removedProps $ esLState es'
     es'' =
       es'
         { esAccountState = acnt'
@@ -263,21 +272,20 @@ epochTransition = do
         & curPParamsEpochStateL .~ pp
     esGovernanceL :: Lens' (EpochState era) (GovState era)
     esGovernanceL = esLStateL . lsUTxOStateL . utxosGovStateL
-    oldGovActionsState =
-      es ^. esGovernanceL . cgGovActionsStateL . curGovActionsStateL
-    newGovActionsState =
-      foldr'
-        (Map.delete . gasId)
-        oldGovActionsState
+    oldGovSnapshots =
+      es ^. esGovernanceL . cgGovSnapshotsL . curGovSnapshotsL
+    newGovSnapshots =
+      snapshotRemoveIds
         rsRemoved
+        oldGovSnapshots
     newGov =
-      GovActionsState
-        { -- We set both curGovActionsState and prevGovActionsState to the same
-          -- value at the epoch boundary. We only change curGovActionsState
-          -- during the next epoch while prevGovActionsState stays unchanged
+      GovSnapshots
+        { -- We set both curGovSnapshots and prevGovSnapshots to the same
+          -- value at the epoch boundary. We only change curGovSnapshots
+          -- during the next epoch while prevGovSnapshots stays unchanged
           -- so we can tally the votes from the previous epoch.
-          curGovActionsState = newGovActionsState
-        , prevGovActionsState = newGovActionsState
+          curGovSnapshots = newGovSnapshots
+        , prevGovSnapshots = newGovSnapshots
         , prevDRepsState =
             es'
               ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL
@@ -291,7 +299,7 @@ epochTransition = do
   pure $
     es''
       & esGovernanceL . cgEnactStateL .~ rsEnactState
-      & esGovernanceL . cgGovActionsStateL .~ newGov
+      & esGovernanceL . cgGovSnapshotsL .~ newGov
       -- Move donations to treasury
       & esAccountStateL . asTreasuryL <>~ donations
       -- Clear the donations field

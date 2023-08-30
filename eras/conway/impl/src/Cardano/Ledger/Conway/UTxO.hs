@@ -20,14 +20,11 @@ import Cardano.Ledger.Alonzo.UTxO (
  )
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core (
-  ConwayEraPParams,
-  ConwayEraTxBody (..),
   Era (..),
   EraTxBody (..),
   MaryEraTxBody,
   PParams,
   Value,
-  ppDRepDepositL,
  )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
@@ -35,7 +32,8 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   Voter (..),
   VotingProcedures (..),
  )
-import Cardano.Ledger.Conway.TxBody ()
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,
   pattern RegDRepTxCert,

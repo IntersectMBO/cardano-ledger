@@ -39,6 +39,8 @@ import Cardano.Ledger.Conway.Era (ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
  )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),

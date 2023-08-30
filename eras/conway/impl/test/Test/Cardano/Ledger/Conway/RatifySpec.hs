@@ -14,7 +14,7 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.Core (ConwayEraPParams)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
@@ -22,12 +22,12 @@ import Cardano.Ledger.Conway.Governance (
   Vote (..),
   thresholdDRep,
  )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules (
   RatifyEnv (..),
   dRepAccepted,
   dRepAcceptedRatio,
  )
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRepDistr (DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))

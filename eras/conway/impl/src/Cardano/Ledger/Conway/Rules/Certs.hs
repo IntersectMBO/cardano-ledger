@@ -34,19 +34,18 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.CertState (certDStateL, certVStateL, vsDRepsL)
 import Cardano.Ledger.Conway.Core (
-  ConwayEraPParams,
-  ConwayEraTxBody (votingProceduresTxBodyL),
   Era (EraCrypto),
   EraRule,
   EraTx (Tx, bodyTxL),
   EraTxBody (withdrawalsTxBodyL),
   EraTxCert (TxCert),
   PParams,
-  ppDRepActivityL,
  )
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS)
 import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (unVotingProcedures))
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.DRepDistr (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),

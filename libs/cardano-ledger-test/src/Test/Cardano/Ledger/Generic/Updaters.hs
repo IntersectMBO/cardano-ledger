@@ -25,8 +25,9 @@ import Cardano.Ledger.Babbage.TxBody as Babbage (
   BabbageTxOut (..),
   Datum (..),
  )
-import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
+import Cardano.Ledger.Conway.PParams (ppGovActionDepositL)
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
   ShelleyTx (..),
  )

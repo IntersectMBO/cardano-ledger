@@ -83,6 +83,7 @@ test-suite cardano-ledger-conway-test
     other-modules:
         Test.Cardano.Ledger.Conway.Serialisation.CDDL
         Test.Cardano.Ledger.Conway.TxInfo
+        Test.Cardano.Ledger.Conway.GovSnapshot
         Paths_cardano_ledger_conway_test
 
     default-language: Haskell2010
@@ -95,12 +96,16 @@ test-suite cardano-ledger-conway-test
     build-depends:
         base,
         bytestring,
+        containers,
         cardano-ledger-allegra,
         cardano-ledger-alonzo,
         cardano-ledger-babbage,
         cardano-ledger-babbage-test ^>=1.1.1,
-        cardano-ledger-conway,
+        cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-conway-test,
         cardano-ledger-core,
         cardano-ledger-shelley-test,
-        tasty
+        tasty,
+        cardano-strict-containers,
+        data-default-class,
+        tasty-quickcheck

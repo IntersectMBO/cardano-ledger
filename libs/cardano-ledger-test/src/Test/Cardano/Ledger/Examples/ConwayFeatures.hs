@@ -30,13 +30,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core (
-  ConwayEraPParams (..),
-  ConwayEraTxBody,
   dvtUpdateToConstitutionL,
-  ppDRepActivityL,
-  ppDRepVotingThresholdsL,
-  ppGovActionDepositL,
-  ppGovActionExpirationL,
  )
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.TxCert
@@ -66,7 +60,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
-import qualified Data.Sequence as Seq
 import GHC.Stack
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
@@ -101,7 +94,11 @@ import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepVotingThresholdsL, ppGovActionDepositL, ppGovActionExpirationL)
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody)
 import Control.Exception (evaluate)
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as SSeq
 import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 
@@ -354,9 +351,9 @@ testGov pf = do
 
     govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
     expectedGovState0 =
-      GovActionsState
-        (Map.fromList [(govActionId, govActionState govActionId (newConstitutionProposal pf))])
-        mempty
+      GovSnapshots
+        (fromGovActionStateSeq (SSeq.singleton $ govActionState govActionId (newConstitutionProposal pf)))
+        def
         mempty
         def
     expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL)
@@ -372,9 +369,9 @@ testGov pf = do
     voteTx = txFromTestCaseData pf (vote pf govActionId)
     gas = govActionStateWithYesVotes govActionId pf (newConstitutionProposal pf)
     expectedGovState1 =
-      GovActionsState
-        (Map.fromList [(govActionId, gas)])
-        mempty
+      GovSnapshots
+        (fromGovActionStateSeq $ SSeq.singleton gas)
+        def
         mempty
         def
     expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL)
@@ -420,16 +417,18 @@ testGov pf = do
     -- Propose another constitution
     secondProposalTx = txFromTestCaseData pf (secondProposal pf govActionId)
     secondGovActionId = GovActionId (txid (secondProposalTx ^. bodyTxL)) (GovActionIx 0)
-    curGAState = Map.fromList [(secondGovActionId, govActionState secondGovActionId (anotherConstitutionProposal pf govActionId))]
-    expectedGovActionsState2 =
-      GovActionsState
+    curGAState =
+      fromGovActionStateSeq . SSeq.singleton $
+        govActionState secondGovActionId (anotherConstitutionProposal pf govActionId)
+    expectedGovSnapshots2 =
+      GovSnapshots
         curGAState
-        mempty
+        def
         prevDRepsState1
         def
     expectedGovState2 =
       ConwayGovState
-        expectedGovActionsState2
+        expectedGovSnapshots2
         (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL)
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 pp (trustMeP pf True secondProposalTx)
   ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) <-
@@ -458,16 +457,15 @@ testGov pf = do
         ^. esLStateL
           . lsUTxOStateL
           . utxosGovStateL
-          . cgGovActionsStateL
-          . curGovActionsStateL
+          . cgGovSnapshotsL
+          . curGovSnapshotsL
 
-  case Map.toList currentGovActions of
-    [(gId, gas')] ->
+  case snapshotActions currentGovActions of
+    gas' SSeq.:<| SSeq.Empty ->
       assertExprEqualWithMessage
         "un-enacted govAction is recorded in rsFuture"
-        (gId, gas')
-        ( secondGovActionId
-        , govActionState
+        gas'
+        ( govActionState
             secondGovActionId
             (anotherConstitutionProposal pf govActionId)
         )

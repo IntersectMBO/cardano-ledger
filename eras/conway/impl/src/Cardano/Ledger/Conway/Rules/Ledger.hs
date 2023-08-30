@@ -38,14 +38,16 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
-  GovActionsState,
   GovProcedures (..),
-  cgGovActionsStateL,
+  GovSnapshots,
+  cgGovSnapshotsL,
  )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
 import Cardano.Ledger.Conway.Rules.Certs (CertsEnv (CertsEnv), ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -178,7 +180,7 @@ instance
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ GovActionsState era
+  , State (EraRule "GOV" era) ~ GovSnapshots era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
@@ -226,7 +228,7 @@ ledgerTransition ::
   , Embed (EraRule "CERTS" era) (someLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ GovActionsState era
+  , State (EraRule "GOV" era) ~ GovSnapshots era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
@@ -275,10 +277,10 @@ ledgerTransition = do
           trans @(EraRule "GOV" era) $
             TRC
               ( GovEnv (txid txBody) currentEpoch pp
-              , utxoState ^. utxosGovStateL . cgGovActionsStateL
+              , utxoState ^. utxosGovStateL . cgGovSnapshotsL
               , govProcedures
               )
-        let utxoState' = utxoState & utxosGovStateL . cgGovActionsStateL .~ govActionsState'
+        let utxoState' = utxoState & utxosGovStateL . cgGovSnapshotsL .~ govActionsState'
         pure (utxoState', certStateAfterCERTS)
       else pure (utxoState, certState)
 
@@ -351,7 +353,7 @@ instance
   , Signal (EraRule "GOV" era) ~ GovProcedures era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ GovActionsState era
+  , State (EraRule "GOV" era) ~ GovSnapshots era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
