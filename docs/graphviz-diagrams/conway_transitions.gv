@@ -51,8 +51,6 @@ digraph conway_transitions {
     RUPD     [shape=box, label="RUPD (shelley)     \nenv:RupdEnv,state:StrictMaybe(PulsingRewUpdate),signal:SlotNo."];
     SNAP     [shape=box, label="SNAP (shelley)     \nenv:SnapEnv,state:SnapShots,signal:()."];
     TICK     [shape=box, label="TICK (shelley)     \nenv:(),state:NewEpochState,signal:SlotNo."];
-    UPEC     [shape=box, label="UPEC (shelley)     \nenv:EpochState,state:UpecState,signal:()."];
-    NEWPP    [shape=box, label="NEWPP (shelley)    \nenv:NewppEnv,state:ShelleyNewppState,signal:Maybe(PParams)."];
 
     # Graph
 
@@ -60,10 +58,6 @@ digraph conway_transitions {
     applyBlockOpts -> BBODY;
     applyTx -> LEDGER;
     futureLedger -> TICKF;
-
-    TICKF -> UPEC;
-
-    UPEC -> NEWPP;
 
     BBODY -> LEDGERS;
 
