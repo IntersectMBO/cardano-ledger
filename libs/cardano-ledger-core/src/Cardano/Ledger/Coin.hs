@@ -144,9 +144,9 @@ instance ToExpr DeltaCoin
 instance ToExpr (CompactForm Coin) where
   toExpr x = toExpr (fromCompact x)
 
-decodePositiveCoin :: Decoder s Coin
-decodePositiveCoin = do
+decodePositiveCoin :: String -> Decoder s Coin
+decodePositiveCoin errorMessage = do
   n <- decodeWord64
   if n == 0
-    then fail "Expected a positive Coin. Got 0 (zero)."
+    then fail $ errorMessage ++ ": Expected a positive Coin. Got 0 (zero)."
     else pure $ Coin (toInteger n)

@@ -9,6 +9,7 @@
 * Require `EqRaw` instance for `Script`, `TxWits`, `TxAuxData`, `TxBody` and `Tx`
 * Add `ToExpr` instance for `PoolCert`
 * Require `ToExpr` instance for `Script`, `TxAuxData` and `TxCert`
+* Require an extra argument for `decodePositiveCoin` in order to improve error reporting #3694
 
 ## 1.5.0.0
 
