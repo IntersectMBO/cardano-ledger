@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Add `Ap`, `hoistAp`, `runAp`, `runAp_`
 * Add `eqBootstrapWitnessRaw` and `eqWitVKeyRaw`
 * Add `eqRawType`
 * Add `EqRaw` type class with `eqRaw`.

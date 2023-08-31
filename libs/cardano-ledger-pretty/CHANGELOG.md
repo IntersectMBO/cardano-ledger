@@ -1,8 +1,14 @@
 # Changelog for `cardano-ledger-pretty`
 
-## 1.3.0.1
+## 1.3.1.0
 
-*
+* Add `PrettyA` instances for:
+  * `NonNegativeInterval`
+  * `CostModels`
+  * `CoinPerByte`
+  * `PoolVotingThresholds`
+  * `DRepVotingThresholds`
+* Add `ppConwayPParams`
 
 ## 1.3.0.0
 

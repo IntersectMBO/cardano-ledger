@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,6 +17,11 @@ module Cardano.Ledger.Conway.Core (
   module X,
   ConwayEraTxBody (..),
   ConwayEraPParams (..),
+  PParamGroup (..),
+  ParamGrouper,
+  pGroup,
+  pUngrouped,
+  modifiedGroups,
   ppPoolVotingThresholdsL,
   ppDRepVotingThresholdsL,
   ppMinCommitteeSizeL,
@@ -34,11 +40,17 @@ module Cardano.Ledger.Conway.Core (
   ppuDRepActivityL,
   PoolVotingThresholds (..),
   DRepVotingThresholds (..),
+  dvtPPNetworkGroupL,
+  dvtPPGovGroupL,
+  dvtPPTechnicalGroupL,
+  dvtPPEconomicGroupL,
+  dvtUpdateToConstitutionL,
 )
 where
 
+import Cardano.Ledger.Ap (Ap, runAp_)
 import Cardano.Ledger.Babbage.Core as X
-import Cardano.Ledger.BaseTypes (EpochNo, StrictMaybe, UnitInterval)
+import Cardano.Ledger.BaseTypes (EpochNo, StrictMaybe (..), UnitInterval)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Encoding (EncCBOR (encCBOR))
@@ -51,8 +63,10 @@ import Data.Aeson (ToJSON)
 import Data.Default.Class (Default)
 import Data.Functor.Identity (Identity)
 import Data.Sequence.Strict (StrictSeq (..))
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro (Lens')
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 
@@ -69,7 +83,33 @@ class BabbageEraTxBody era => ConwayEraTxBody era where
 
   treasuryDonationTxBodyL :: Lens' (TxBody era) Coin
 
+data PParamGroup
+  = EconomicGroup
+  | NetworkGroup
+  | TechnicalGroup
+  | GovernanceGroup
+  deriving (Eq, Ord)
+
+newtype ParamGrouper a = ParamGrouper {unParamGrouper :: Set PParamGroup}
+  deriving (Functor)
+
+pGroup :: PParamGroup -> StrictMaybe a -> Ap f (ParamGrouper a)
+pGroup pg (SJust _) = pure . ParamGrouper $ Set.singleton pg
+pGroup _ SNothing = pure $ ParamGrouper mempty
+
+pUngrouped :: Ap f (ParamGrouper a)
+pUngrouped = pure $ ParamGrouper mempty
+
+modifiedGroups ::
+  forall era.
+  ConwayEraPParams era =>
+  PParamsUpdate era ->
+  Set PParamGroup
+modifiedGroups = runAp_ unParamGrouper . (pparamsGroups @era)
+
 class BabbageEraPParams era => ConwayEraPParams era where
+  pparamsGroups ::
+    Functor f => PParamsUpdate era -> Ap f (PParamsHKD ParamGrouper era)
   ppuWellFormed :: PParamsUpdate era -> Bool
 
   hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
@@ -171,6 +211,21 @@ data DRepVotingThresholds = DRepVotingThresholds
   deriving (Eq, Ord, Show, Generic, Default, ToJSON, NFData, NoThunks)
 
 instance ToExpr DRepVotingThresholds
+
+dvtPPNetworkGroupL :: Lens' DRepVotingThresholds UnitInterval
+dvtPPNetworkGroupL = lens dvtPPNetworkGroup (\x y -> x {dvtPPNetworkGroup = y})
+
+dvtPPEconomicGroupL :: Lens' DRepVotingThresholds UnitInterval
+dvtPPEconomicGroupL = lens dvtPPEconomicGroup (\x y -> x {dvtPPEconomicGroup = y})
+
+dvtPPTechnicalGroupL :: Lens' DRepVotingThresholds UnitInterval
+dvtPPTechnicalGroupL = lens dvtPPTechnicalGroup (\x y -> x {dvtPPTechnicalGroup = y})
+
+dvtPPGovGroupL :: Lens' DRepVotingThresholds UnitInterval
+dvtPPGovGroupL = lens dvtPPGovGroup (\x y -> x {dvtPPGovGroup = y})
+
+dvtUpdateToConstitutionL :: Lens' DRepVotingThresholds UnitInterval
+dvtUpdateToConstitutionL = lens dvtUpdateToConstitution (\x y -> x {dvtUpdateToConstitution = y})
 
 instance EncCBOR DRepVotingThresholds where
   encCBOR DRepVotingThresholds {..} =

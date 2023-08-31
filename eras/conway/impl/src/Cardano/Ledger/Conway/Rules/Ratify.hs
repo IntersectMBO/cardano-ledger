@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -22,9 +23,10 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   dRepAcceptedRatio,
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.CertState (DRepState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Conway.Core (ConwayEraPParams)
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   EraGov,
@@ -33,6 +35,8 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionIds (..),
   RatifyState (..),
   Vote (..),
+  thresholdDRep,
+  thresholdSPO,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Core
@@ -64,12 +68,13 @@ data RatifyEnv era = RatifyEnv
   , reDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
   , reCurrentEpoch :: !EpochNo
   }
-  deriving (Show)
+
+deriving instance Show (RatifyEnv era)
 
 newtype RatifySignal era = RatifySignal (StrictSeq (GovActionState era))
 
 instance
-  ( Era era
+  ( ConwayEraPParams era
   , Embed (EraRule "ENACT" era) (ConwayRATIFY era)
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
@@ -91,16 +96,17 @@ instance
 -- ccThreshold :: Int
 -- ccThreshold = 0
 
--- Temporary threshold of 1 lovelace
-spoThreshold :: Rational
-spoThreshold = 51 % 100
-
-dRepThreshold :: Rational
-dRepThreshold = 51 % 100
-
-spoAccepted :: RatifyEnv era -> GovActionState era -> Bool
-spoAccepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
-  totalAcceptedStakePoolsRatio > getStakePoolThreshold gasAction
+spoAccepted ::
+  ConwayEraPParams era =>
+  RatifyState era ->
+  RatifyEnv era ->
+  GovActionState era ->
+  Bool
+spoAccepted rs RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
+  case thresholdSPO rs gasAction of
+    -- Short circuit on zero threshold in order to avoid redundant computation.
+    SJust r -> r == minBound || totalAcceptedStakePoolsRatio >= unboundRational r
+    SNothing -> False
   where
     GovActionState {gasStakePoolVotes, gasAction} = gas
     -- Final ratio for `totalAcceptedStakePoolsRatio` we want is: t = y / (s - a)
@@ -132,14 +138,15 @@ spoAccepted RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
             VoteNo -> Nothing
             VoteYes -> Just (distr, mempty)
             Abstain -> Just (mempty, distr)
-    getStakePoolThreshold = \case
-      -- Disable HardForks for now, in order to prevent SanchoNet from dying
-      HardForkInitiation {} -> 101 % 100
-      _ -> spoThreshold
 
-dRepAccepted :: forall era. RatifyEnv era -> GovActionState era -> Rational -> Bool
-dRepAccepted ratifyEnv GovActionState {gasDRepVotes, gasAction} threshold =
-  dRepAcceptedRatio ratifyEnv gasDRepVotes gasAction >= threshold
+dRepAccepted :: forall era. ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
+dRepAccepted re rs GovActionState {gasDRepVotes, gasAction} =
+  case thresholdDRep rs gasAction of
+    SJust r ->
+      -- Short circuit on zero threshold in order to avoid redundant computation.
+      r == minBound
+        || dRepAcceptedRatio re gasDRepVotes gasAction >= unboundRational r
+    SNothing -> False
 
 -- Compute the dRep ratio yes/(yes + no), where
 -- yes: is the total stake of
@@ -192,7 +199,7 @@ ratifyTransition ::
   , State (EraRule "ENACT" era) ~ EnactState era
   , Environment (EraRule "ENACT" era) ~ ()
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
-  , Era era
+  , ConwayEraPParams era
   ) =>
   TransitionRule (ConwayRATIFY era)
 ratifyTransition = do
@@ -202,13 +209,12 @@ ratifyTransition = do
       , RatifySignal rsig
       ) <-
     judgmentContext
-
   case rsig of
     ast :<| sigs -> do
-      let GovActionState {gasId, gasAction, gasExpiresAfter} = ast
+      let gas@GovActionState {gasId, gasAction, gasExpiresAfter} = ast
       if prevActionAsExpected gasAction (ensPrevGovActionIds rsEnactState)
-        && spoAccepted env ast
-        && dRepAccepted env ast dRepThreshold
+        && spoAccepted st env ast
+        && dRepAccepted env st gas
         then do
           -- Update ENACT state with the governance action that was ratified
           es <-

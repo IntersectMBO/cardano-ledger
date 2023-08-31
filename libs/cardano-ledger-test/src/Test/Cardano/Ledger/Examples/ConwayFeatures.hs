@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -21,6 +20,7 @@ import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (
+  BoundedRational (..),
   EpochNo (..),
   Network (..),
   StrictMaybe (..),
@@ -32,7 +32,9 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core (
   ConwayEraPParams (..),
   ConwayEraTxBody,
+  dvtUpdateToConstitutionL,
   ppDRepActivityL,
+  ppDRepVotingThresholdsL,
   ppGovActionDepositL,
   ppGovActionExpirationL,
  )
@@ -217,6 +219,8 @@ pp =
     & ppDRepActivityL .~ 100
     & ppGovActionExpirationL .~ 30
     & ppGovActionDepositL .~ proposalDeposit
+    & ppDRepVotingThresholdsL . dvtUpdateToConstitutionL
+      .~ fromJust (boundRational (1 % 2))
 
 fee :: Integer
 fee = 5
@@ -341,7 +345,9 @@ testGov ::
 testGov pf = do
   let
     (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
-    initialGov = def
+    initialGov =
+      def
+        & cgEnactStateL . ensCurPParamsL .~ pp
     initialLedgerState = LedgerState (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero) def
 
     proposalTx = txFromTestCaseData pf (proposal pf)
@@ -445,7 +451,7 @@ testGov pf = do
     "prevGovAction set correctly"
     (SJust (PrevGovActionId govActionId))
     (epochState4 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL)
-  assertEqual "constitution after enactment after no votes" constitution2 (proposedConstitution @era)
+  assertExprEqualWithMessage "constitution after enactment after no votes" constitution2 (proposedConstitution @era)
   let
     currentGovActions =
       epochState4

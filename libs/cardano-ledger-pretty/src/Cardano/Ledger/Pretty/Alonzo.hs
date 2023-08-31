@@ -110,6 +110,9 @@ instance PrettyA CostModel where
 ppCostModels :: CostModels -> PDoc
 ppCostModels cms = ppMap ppLanguage ppCostModel (costModelsValid cms)
 
+instance PrettyA CostModels where
+  prettyA = ppCostModels
+
 ppPrices :: Prices -> PDoc
 ppPrices Prices {prMem, prSteps} =
   ppRecord
