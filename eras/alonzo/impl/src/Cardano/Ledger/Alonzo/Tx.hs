@@ -98,6 +98,7 @@ import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoTxBody (..),
+  AlonzoTxBodyUpgradeError,
   MaryEraTxBody (..),
   ScriptIntegrityHash,
  )
@@ -134,9 +135,11 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), shelleyEqTxRaw)
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), unWithdrawals)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
+import Control.Arrow (left)
 import Control.DeepSeq (NFData (..), rwhnf)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
@@ -154,7 +157,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro hiding (set)
 import NoThunks.Class (NoThunks)
-import Cardano.Ledger.TreeDiff (ToExpr)
 
 -- ===================================================
 
@@ -172,13 +174,18 @@ data AlonzoTx era = AlonzoTx
   }
   deriving (Generic)
 
-instance (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
+instance
+  (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
   ToExpr (AlonzoTx era)
+
+newtype AlonzoTxUpgradeError = ATUEBodyUpgradeError AlonzoTxBodyUpgradeError
+  deriving (Show)
 
 instance Crypto c => EraTx (AlonzoEra c) where
   {-# SPECIALIZE instance EraTx (AlonzoEra StandardCrypto) #-}
 
   type Tx (AlonzoEra c) = AlonzoTx (AlonzoEra c)
+  type TxUpgradeError (AlonzoEra c) = AlonzoTxUpgradeError
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -202,7 +209,7 @@ instance Crypto c => EraTx (AlonzoEra c) where
 
   upgradeTx (ShelleyTx body wits aux) =
     AlonzoTx
-      <$> upgradeTxBody body
+      <$> left ATUEBodyUpgradeError (upgradeTxBody body)
       <*> pure (upgradeTxWits wits)
       <*> pure (IsValid True)
       <*> pure (fmap upgradeTxAuxData aux)
