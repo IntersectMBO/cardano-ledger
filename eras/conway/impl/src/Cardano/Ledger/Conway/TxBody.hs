@@ -199,7 +199,7 @@ instance
       bodyFields 22 =
         ofield
           (\x tx -> tx {ctbrTreasuryDonation = fromSMaybe zero x})
-          (D decodePositiveCoin)
+          (D (decodePositiveCoin "'treasuryWithdrawal' must be non-zero when supplied"))
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields :: [(Word, String)]
       requiredFields =

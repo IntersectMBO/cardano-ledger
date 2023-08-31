@@ -299,30 +299,30 @@ decodeValue =
     (decode' conwayCoin)
     (decode' preConwayCoin)
   where
-    conwayCoin :: forall t. Decoder t Coin
+    conwayCoin :: forall t. String -> Decoder t Coin
     conwayCoin = decodePositiveCoin
-    preConwayCoin :: forall t. Decoder t Coin
-    preConwayCoin = word64ToCoin <$> decodeWord64
-    decode' :: (forall t. Decoder t Coin) -> Decoder s (MaryValue c)
+    preConwayCoin :: forall t. String -> Decoder t Coin
+    preConwayCoin _ = word64ToCoin <$> decodeWord64
+    decode' :: (forall t. String -> Decoder t Coin) -> Decoder s (MaryValue c)
     decode' decodeCoin = do
       tt <- peekTokenType
       case tt of
-        TypeUInt -> inject <$> decodeCoin
-        TypeUInt64 -> inject <$> decodeCoin
-        TypeListLen -> decodeValuePair (unCoin <$> decodeCoin)
-        TypeListLen64 -> decodeValuePair (unCoin <$> decodeCoin)
-        TypeListLenIndef -> decodeValuePair (unCoin <$> decodeCoin)
+        TypeUInt -> inject <$> decodeCoin "Coin in Value"
+        TypeUInt64 -> inject <$> decodeCoin "Coin in Value"
+        TypeListLen -> decodeValuePair (fmap unCoin . decodeCoin)
+        TypeListLen64 -> decodeValuePair (fmap unCoin . decodeCoin)
+        TypeListLenIndef -> decodeValuePair (fmap unCoin . decodeCoin)
         _ -> fail $ "Value: expected array or int, got " ++ show tt
 
 decodeValuePair ::
   Crypto c =>
-  (forall t. Decoder t Integer) ->
+  (forall t. String -> Decoder t Integer) ->
   Decoder s (MaryValue c)
 decodeValuePair decodeAmount =
   decode $
     RecD MaryValue
-      <! D decodeAmount
-      <! D (decodeMultiAssetMaps decodeAmount)
+      <! D (decodeAmount "Coin in Value")
+      <! D (decodeMultiAssetMaps (decodeAmount "MultiAsset in Value"))
 
 encodeMultiAssetMaps ::
   Crypto c =>
