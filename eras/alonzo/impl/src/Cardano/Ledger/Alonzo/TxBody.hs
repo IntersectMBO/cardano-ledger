@@ -41,6 +41,7 @@ module Cardano.Ledger.Alonzo.TxBody (
     atbAuxDataHash,
     atbTxNetworkId
   ),
+  AlonzoTxBodyUpgradeError (..),
   AlonzoEraTxBody (..),
   ShelleyEraTxBody (..),
   AllegraEraTxBody (..),
@@ -109,11 +110,15 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParams (sppMinUTxOValue), Update (..))
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Control.Arrow (left)
 import Control.DeepSeq (NFData (..))
+import Control.Monad (when)
 import Data.Default.Class (def)
+import Data.Maybe.Strict (isSJust)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -122,8 +127,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.Mary.Value ()
 
 -- ======================================
 
@@ -175,10 +178,18 @@ instance
   (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
   ToExpr (AlonzoTxBody era)
 
+data AlonzoTxBodyUpgradeError
+  = -- | The TxBody contains a protocol parameter update that attempts to update
+    -- the min UTxO. Since this doesn't exist in Alonzo, we fail if an attempt is
+    -- made to update it.
+    ATBUEMinUTxOUpdated
+  deriving (Show)
+
 instance Crypto c => EraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance EraTxBody (AlonzoEra StandardCrypto) #-}
 
   type TxBody (AlonzoEra c) = AlonzoTxBody (AlonzoEra c)
+  type TxBodyUpgradeError (AlonzoEra c) = AlonzoTxBodyUpgradeError
 
   mkBasicTxBody = mkMemoized emptyAlonzoTxBodyRaw
 
@@ -225,7 +236,16 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
       , mtbAuxDataHash
       , mtbMint
       } = do
-      certs <- traverse upgradeTxCert mtbCerts
+      certs <-
+        traverse
+          ( left
+              ( error "upgradeTxCert has a Void error type, so this error cannot occur"
+              )
+              . upgradeTxCert
+          )
+          mtbCerts
+
+      updates <- traverse upgradeUpdate mtbUpdate
       pure $
         AlonzoTxBody
           { atbInputs = mtbInputs
@@ -234,7 +254,7 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
           , atbWithdrawals = mtbWithdrawals
           , atbTxFee = mtbTxFee
           , atbValidityInterval = mtbValidityInterval
-          , atbUpdate = upgradeUpdate <$> mtbUpdate
+          , atbUpdate = updates
           , atbAuxDataHash = mtbAuxDataHash
           , atbMint = mtbMint
           , atbCollateral = mempty
@@ -243,17 +263,22 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
           , atbTxNetworkId = SNothing
           }
       where
-        upgradeUpdate :: Update (MaryEra c) -> Update (AlonzoEra c)
-        upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
+        upgradeUpdate ::
+          Update (MaryEra c) ->
+          Either AlonzoTxBodyUpgradeError (Update (AlonzoEra c))
+        upgradeUpdate (Update pp epoch) =
+          Update <$> upgradeProposedPPUpdates pp <*> pure epoch
 
         upgradeProposedPPUpdates ::
           ProposedPPUpdates (MaryEra c) ->
-          ProposedPPUpdates (AlonzoEra c)
+          Either AlonzoTxBodyUpgradeError (ProposedPPUpdates (AlonzoEra c))
         upgradeProposedPPUpdates (ProposedPPUpdates m) =
-          ProposedPPUpdates $
-            fmap
-              ( \(PParamsUpdate pphkd) ->
-                  PParamsUpdate $ upgradePParamsHKD def pphkd
+          ProposedPPUpdates
+            <$> traverse
+              ( \(PParamsUpdate pphkd) -> do
+                  when (isSJust $ sppMinUTxOValue pphkd) $
+                    Left ATBUEMinUTxOUpdated
+                  pure . PParamsUpdate $ upgradePParamsHKD def pphkd
               )
               m
 
