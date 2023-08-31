@@ -54,11 +54,6 @@ import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (GovActionsState (..))
-import Cardano.Ledger.Conway.Rules (
-  ConwayEpochPredFailure (..),
-  EnactPredFailure (..),
- )
-import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..), Delegatee (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
@@ -939,14 +934,6 @@ ppConwayNewEpochPredicateFailure (Conway.CorruptRewardUpdate x) =
 ppConwayNewEpochPredicateFailure (Conway.RatifyFailure x) = ppRatifyPredicateFailure @era x
 -}
 
-ppRatifyPredicateFailure :: Conway.EnactPredFailure era -> PDoc
-ppRatifyPredicateFailure (Conway.EnactTreasuryInsufficientFunds wdrl tr) =
-  ppRecord
-    "EnactTreasuryInsufficientFunds"
-    [ ("Withdrawals", prettyA wdrl)
-    , ("Treasury", prettyA tr)
-    ]
-
 instance
   ( Reflect era
   , PredicateFailure (EraRule "EPOCH" era) ~ ShelleyEpochPredFailure era
@@ -983,29 +970,11 @@ instance
   where
   prettyA = ppEpochPredicateFailure
 
-instance
-  ( PrettyA (PredicateFailure (EraRule "POOLREAP" era))
-  , PrettyA (PredicateFailure (EraRule "SNAP" era))
-  , PrettyA (PredicateFailure (EraRule "RATIFY" era))
-  ) =>
-  PrettyA (ConwayEpochPredFailure era)
-  where
-  prettyA (ConwayPoolReapFailure x) = prettyA x
-  prettyA (ConwaySnapFailure x) = prettyA x
-  prettyA (ConwayRatifyFailure x) = prettyA x
-
 instance PrettyA (ShelleyPoolreapPredFailure era) where
   prettyA = \case {}
 
 instance PrettyA (ShelleySnapPredFailure era) where
   prettyA = \case {}
-
-instance PrettyA (Conway.EnactPredFailure era) where
-  prettyA (EnactTreasuryInsufficientFunds x y) =
-    "Not enough funds in treasury. \nWitdrawals: "
-      <> prettyA x
-      <> "\nRemaining funds in treasury:"
-      <> prettyA y
 
 -- ===============
 ppUpecPredicateFailure :: ShelleyUpecPredFailure era -> PDoc

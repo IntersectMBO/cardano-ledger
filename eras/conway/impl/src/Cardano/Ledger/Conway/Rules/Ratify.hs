@@ -38,12 +38,13 @@ import Cardano.Ledger.Conway.Governance (
   thresholdDRep,
   thresholdSPO,
  )
-import Cardano.Ledger.Conway.Rules.Enact (EnactPredFailure, EnactSignal (..), EnactState (..))
+import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.Val (Val (..), (<+>))
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -58,7 +59,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Sum (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
-import Data.Void (absurd)
+import Data.Void (Void, absurd)
 import Data.Word (Word64)
 
 data RatifyEnv era = RatifyEnv
@@ -83,7 +84,7 @@ instance
   STS (ConwayRATIFY era)
   where
   type Environment (ConwayRATIFY era) = RatifyEnv era
-  type PredicateFailure (ConwayRATIFY era) = EnactPredFailure era
+  type PredicateFailure (ConwayRATIFY era) = Void
   type Signal (ConwayRATIFY era) = RatifySignal era
   type State (ConwayRATIFY era) = RatifyState era
   type BaseM (ConwayRATIFY era) = ShelleyBase
@@ -193,6 +194,15 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
 
     (yesStake, totalExcludingAbstainStake) = Map.foldlWithKey' accumStake (0, 0) reDRepDistr
 
+delayingAction :: GovAction era -> Bool
+delayingAction NoConfidence {} = True
+delayingAction HardForkInitiation {} = True
+delayingAction NewCommittee {} = True
+delayingAction NewConstitution {} = True
+delayingAction TreasuryWithdrawals {} = False
+delayingAction ParameterChange {} = False
+delayingAction InfoAction {} = False
+
 ratifyTransition ::
   forall era.
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
@@ -205,14 +215,22 @@ ratifyTransition ::
 ratifyTransition = do
   TRC
     ( env@RatifyEnv {reCurrentEpoch}
-      , st@RatifyState {rsEnactState, rsRemoved}
+      , st@RatifyState {..}
       , RatifySignal rsig
       ) <-
     judgmentContext
   case rsig of
     ast :<| sigs -> do
       let gas@GovActionState {gasId, gasAction, gasExpiresAfter} = ast
-      if prevActionAsExpected gasAction (ensPrevGovActionIds rsEnactState)
+          withdrawalCanWithdraw (TreasuryWithdrawals m) =
+            Map.foldr' (<+>) zero m <= ensTreasury rsEnactState
+          withdrawalCanWithdraw _ = True
+          notDelayed = not rsDelayed
+      if prevActionAsExpected
+        gasAction
+        (ensPrevGovActionIds rsEnactState)
+        && notDelayed
+        && withdrawalCanWithdraw gasAction
         && spoAccepted st env ast
         && dRepAccepted env st gas
         then do
@@ -224,6 +242,7 @@ ratifyTransition = do
                 st
                   { rsEnactState = es
                   , rsRemoved = ast :<| rsRemoved
+                  , rsDelayed = delayingAction gasAction
                   }
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
@@ -251,5 +270,5 @@ prevActionAsExpected (NewConstitution prev _) (PrevGovActionIds {pgaConstitution
 prevActionAsExpected _ _ = True -- for the other actions, the last action is not relevant
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
-  wrapFailed = id
+  wrapFailed = absurd
   wrapEvent = absurd

@@ -105,6 +105,7 @@ instance
     RatifyState
       <$> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>

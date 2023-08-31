@@ -20,11 +20,33 @@ module Cardano.Ledger.Conway.Rules.Gov (
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt, getRwdNetwork)
-import Cardano.Ledger.BaseTypes (EpochNo (..), Network, ShelleyBase, networkId)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
+  Network,
+  ShelleyBase,
+  networkId,
+ )
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (ConwayEraPParams (..), ppGovActionDepositL, ppGovActionExpirationL, ppMinCommitteeSizeL)
+import Cardano.Ledger.Conway.Core (
+  ConwayEraPParams (..),
+  ppGovActionDepositL,
+  ppGovActionExpirationL,
+  ppMinCommitteeSizeL,
+ )
 import Cardano.Ledger.Conway.Era (ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
@@ -38,7 +60,10 @@ import Cardano.Ledger.Conway.Governance (
   curGovActionsStateL,
   indexedGovProps,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..), committeeMembersL)
+import Cardano.Ledger.Conway.Governance.Procedures (
+  GovAction (..),
+  committeeMembersL,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))

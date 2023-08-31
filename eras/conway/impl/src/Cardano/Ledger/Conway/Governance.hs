@@ -487,6 +487,7 @@ instance EraPParams era => NoThunks (EnactState era)
 data RatifyState era = RatifyState
   { rsEnactState :: !(EnactState era)
   , rsRemoved :: !(StrictSeq (GovActionState era))
+  , rsDelayed :: !Bool
   }
   deriving (Generic)
 
@@ -507,6 +508,7 @@ instance EraPParams era => DecCBOR (RatifyState era) where
       RecD RatifyState
         <! From
         <! From
+        <! From
 
 instance EraPParams era => EncCBOR (RatifyState era) where
   encCBOR RatifyState {..} =
@@ -514,6 +516,7 @@ instance EraPParams era => EncCBOR (RatifyState era) where
       Rec RatifyState
         !> To rsEnactState
         !> To rsRemoved
+        !> To rsDelayed
 
 instance EraPParams era => ToCBOR (RatifyState era) where
   toCBOR = toEraCBOR @era
@@ -530,10 +533,11 @@ instance EraPParams era => ToJSON (RatifyState era) where
   toEncoding = pairs . mconcat . toRatifyStatePairs
 
 toRatifyStatePairs :: (KeyValue a, EraPParams era) => RatifyState era -> [a]
-toRatifyStatePairs cg@(RatifyState _ _) =
+toRatifyStatePairs cg@(RatifyState _ _ _) =
   let RatifyState {..} = cg
    in [ "enactState" .= rsEnactState
       , "removed" .= rsRemoved
+      , "delayed" .= rsDelayed
       ]
 
 data ConwayGovState era = ConwayGovState
@@ -552,7 +556,7 @@ cgEnactStateL = lens cgEnactState (\x y -> x {cgEnactState = y})
 cgRatifyStateL :: Lens' (ConwayGovState era) (RatifyState era)
 cgRatifyStateL =
   lens
-    (\ConwayGovState {..} -> RatifyState cgEnactState mempty)
+    (\ConwayGovState {..} -> RatifyState cgEnactState mempty False)
     (\x RatifyState {..} -> x & cgEnactStateL .~ rsEnactState)
 
 curPParamsConwayGovStateL :: Lens' (ConwayGovState era) (PParams era)

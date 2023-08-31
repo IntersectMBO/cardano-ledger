@@ -437,12 +437,13 @@ instance
   ) =>
   PrettyA (RatifyState era)
   where
-  prettyA rs@(RatifyState _ _) =
+  prettyA rs@(RatifyState _ _ _) =
     let RatifyState {..} = rs
      in ppRecord
           "RatifyState"
           [ ("EnactState", prettyA rsEnactState)
           , ("Removed", prettyA rsRemoved)
+          , ("Delayed", prettyA rsDelayed)
           ]
 
 instance

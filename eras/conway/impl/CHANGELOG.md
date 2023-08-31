@@ -2,7 +2,14 @@
 
 ## 1.8.0.0
 
+* Change `PredicateFailure (ConwayENACT era)` to `Void`
+* Remove `EnactPredFailure`
+* Change `PredicateFailure (ConwayEPOCH era)` to `Void`
+* Remove `ConwayEpochPredFailure`
+* Remove `EpochFailure` and `RatifyFailure` from `ConwayNewEpochPredFailure`
+* Change `PredicateFailure (ConwayRATIFY era)` to `Void`
 * Add:
+  * `rsDelayed`
   * `PParamGroup`
   * `ParamGrouper`
   * `pGroup`
