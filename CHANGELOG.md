@@ -7,7 +7,21 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
-## 8.2.0
+## 8.3
+
+- `DRep` functionality progress:
+  - Implement `DRep` voting and use actual `DRep` stake distribution for ratification
+  - Implement `DRep` expiry for stale DRep's
+  - Add `DRep` deposit tracking.
+  - Add `Anchor`s for `DRep`s
+- Fix `ProposalProcedure` deposit tracking.
+- Add ability to upgrade core types from one era to the next.
+- Add `Script` capability to Constitutional Committee Hot and Cold credentials.
+- Add `NetworkId` validation for `ProposalProcedure` and `TreasuryWithdrawals`
+- Add `currentTreasuryValue` as a new field to Conway `TxBody`
+- Voting thresholds have been added to `PParams`
+
+## 8.2
 
 - Restructure certificate interface
 - Conway related changes:
@@ -19,7 +33,7 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
   - Fix `TICKF` rule, avoiding VRF verification and syncing issues
   - Clear out TxOuts with zero value from the UTxO upon translation into Conway
 
-## 8.1.0
+## 8.1
 
 - Plutus V3 support, only available in the conway ledger era.
 - `PState` is now parametric in era, not crypto.
@@ -27,7 +41,7 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
 - Ledger `UMapCompact` is now `UMap`
 - Ledger types with names involving `DState` are renamed to `CertState`.
 
-## 8.0.0
+## 8.0
 
 - The provenance for the reward calculation has been removed. The type signature to the API function `getRewardProvenance` has not changed, it just returns an empty provenance value.
 - We have created a Ledger API, with the aim of providing a user-friendly interface to the ledger libraries. See [here](https://github.com/input-output-hk/cardano-ledger/tree/b00e28698d9c7fbbeda1c9cfdd1238d3bc4569cf/libs/cardano-ledger-api).
