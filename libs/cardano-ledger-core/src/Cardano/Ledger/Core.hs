@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# OPTIONS_GHC -Wno-orphans -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-redundant-constraints -flate-specialise -fspecialise-aggressively #-}
 
 -- | This module defines core type families which we know to vary from era to
 -- era.
@@ -282,7 +282,7 @@ class
           Right cValue -> fromCompact cValue
       )
       (\txOut value -> txOut & valueEitherTxOutL .~ Left value)
-  {-# INLINE valueTxOutL #-}
+  {-# INLINEABLE valueTxOutL #-}
 
   compactValueTxOutL :: HasCallStack => Lens' (TxOut era) (CompactForm (Value era))
   compactValueTxOutL =
@@ -292,7 +292,7 @@ class
           Right cValue -> cValue
       )
       (\txOut cValue -> txOut & valueEitherTxOutL .~ Right cValue)
-  {-# INLINE compactValueTxOutL #-}
+  {-# INLINEABLE compactValueTxOutL #-}
 
   -- | Lens for getting and setting in TxOut either an address or its compact
   -- version by doing the least amount of work.
@@ -306,7 +306,7 @@ class
           Right cAddr -> decompactAddr cAddr
       )
       (\txOut addr -> txOut & addrEitherTxOutL .~ Left addr)
-  {-# INLINE addrTxOutL #-}
+  {-# INLINEABLE addrTxOutL #-}
 
   compactAddrTxOutL :: Lens' (TxOut era) (CompactAddr (EraCrypto era))
   compactAddrTxOutL =
@@ -316,7 +316,7 @@ class
           Right cAddr -> cAddr
       )
       (\txOut cAddr -> txOut & addrEitherTxOutL .~ Right cAddr)
-  {-# INLINE compactAddrTxOutL #-}
+  {-# INLINEABLE compactAddrTxOutL #-}
 
   -- | Lens for getting and setting in TxOut either an address or its compact
   -- version by doing the least amount of work.
@@ -353,7 +353,7 @@ bootAddrTxOutF = to $ \txOut ->
           AddrBootstrap bootstrapAddr <- Just (decompactAddr cAddr)
           Just bootstrapAddr
     _ -> Nothing
-{-# INLINE bootAddrTxOutF #-}
+{-# INLINEABLE bootAddrTxOutF #-}
 
 coinTxOutL :: (HasCallStack, EraTxOut era) => Lens' (TxOut era) Coin
 coinTxOutL =
@@ -369,7 +369,7 @@ coinTxOutL =
           Right cVal ->
             txOut & compactValueTxOutL .~ modifyCompactCoin (const (toCompactPartial c)) cVal
     )
-{-# INLINE coinTxOutL #-}
+{-# INLINEABLE coinTxOutL #-}
 
 compactCoinTxOutL :: (HasCallStack, EraTxOut era) => Lens' (TxOut era) (CompactForm Coin)
 compactCoinTxOutL =
@@ -385,7 +385,7 @@ compactCoinTxOutL =
           Right cVal ->
             txOut & compactValueTxOutL .~ modifyCompactCoin (const cCoin) cVal
     )
-{-# INLINE compactCoinTxOutL #-}
+{-# INLINEABLE compactCoinTxOutL #-}
 
 -- | This is a getter that implements an efficient way to check whether 'TxOut'
 -- contains ADA only.

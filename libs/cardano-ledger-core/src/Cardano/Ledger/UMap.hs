@@ -253,6 +253,7 @@ umElemAsTuple = \case
   TFFEF r p v -> (SJust r, p, SNothing, SJust v)
   TFFFE r p s -> (SJust r, p, SJust s, SNothing)
   TFFFF r p s v -> (SJust r, p, SJust s, SJust v)
+{-# INLINE umElemAsTuple #-}
 
 -- | Extract a delegated reward-deposit pair if it is present.
 -- We can tell that the pair is present and active when Txxxx has
@@ -266,6 +267,7 @@ umElemRDActive = \case
   TFFFE rdA _ _ -> Just rdA
   TFFFF rdA _ _ _ -> Just rdA
   _ -> Nothing
+{-# INLINE umElemRDActive #-}
 
 -- | Extract the reward-deposit pair if it is present.
 -- We can tell that the reward is present when Txxxx has an F in the first position
@@ -282,6 +284,7 @@ umElemRDPair = \case
   TFFFE r _ _ -> Just r
   TFFFF r _ _ _ -> Just r
   _ -> Nothing
+{-# INLINE umElemRDPair #-}
 
 -- | Extract the set of pointers if it is non-empty.
 -- We can tell that the reward is present when Txxxx has an F in the second position
@@ -298,6 +301,7 @@ umElemPtrs = \case
   TFFFE _ p _ | not (Set.null p) -> Just p
   TFFFF _ p _ _ | not (Set.null p) -> Just p
   _ -> Nothing
+{-# INLINE umElemPtrs #-}
 
 -- | Extract the stake delegatee pool id, if present.
 -- We can tell that the pool id is present when Txxxx has an F in the third position
@@ -314,6 +318,7 @@ umElemSPool = \case
   TFFFE _ _ s -> Just s
   TFFFF _ _ s _ -> Just s
   _ -> Nothing
+{-# INLINE umElemSPool #-}
 
 -- | Extract the voting delegatee id, if present.
 -- We can tell that the delegatee is present when Txxxx has an F in the fourth position
@@ -330,6 +335,7 @@ umElemDRep = \case
   TFFEF _ _ d -> Just d
   TFFFF _ _ _ d -> Just d
   _ -> Nothing
+{-# INLINE umElemDRep #-}
 
 -- | A `UMElem` can be extracted and injected into the `TEEEE` ... `TFFFF` constructors.
 pattern UMElem ::
