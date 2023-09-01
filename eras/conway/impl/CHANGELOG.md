@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Change `ToJSONKey` implementation of `Voter` to flat text
 * Add DRep refund calculation #3688
   * Add `conwayConsumedValue` as `getConsumedValue` for Conway
 * Change `PredicateFailure (ConwayENACT era)` to `Void`
