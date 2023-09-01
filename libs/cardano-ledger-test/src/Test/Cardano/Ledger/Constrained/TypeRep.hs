@@ -53,13 +53,14 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..), UnitInterval, mkTxIxPartial)
 import Cardano.Ledger.Binary.Version (Version)
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (Committee (..), Constitution, GovAction (..), GovActionId (..), GovActionIx (..), GovActionPurpose (..), GovActionState (..), PrevGovActionId (..), PrevGovActionIds (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
-import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState, extractDRepDistr)
+import Cardano.Ledger.DRepDistr (DRepDistr (..), extractDRepDistr)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
@@ -307,6 +308,9 @@ data Rep era t where
   PrevCommitteeR :: Era era => Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
   PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
   DRepDistrR :: Era era => Rep era (DRepDistr (EraCrypto era))
+  NumDormantEpochsR :: Era era => Rep era EpochNo
+  CommitteeStateR :: Era era => Rep era (CommitteeState era)
+  VStateR :: Era era => Rep era (VState era)
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -319,6 +323,8 @@ data IsTypeable a where
 
 repTypeable :: Rep era t -> IsTypeable t
 repTypeable r = case r of
+  NumDormantEpochsR -> IsTypeable
+  VStateR -> IsTypeable
   DRepStateR -> IsTypeable
   CommColdCredR -> IsTypeable
   CommHotCredR -> IsTypeable
@@ -424,6 +430,7 @@ repTypeable r = case r of
   PrevCommitteeR {} -> IsTypeable
   PrevConstitutionR {} -> IsTypeable
   DRepDistrR {} -> IsTypeable
+  CommitteeStateR {} -> IsTypeable
 
 instance Singleton (Rep era) where
   testEql
@@ -550,6 +557,9 @@ synopsis PrevHardForkR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevCommitteeR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevConstitutionR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis DRepDistrR dr = show (ppMap pcDRep (pcCoin . UM.fromCompact) (extractDRepDistr dr))
+synopsis NumDormantEpochsR x = show x
+synopsis CommitteeStateR x = show x
+synopsis VStateR x = show x
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -683,6 +693,9 @@ instance Shaped (Rep era) any where
   shape PrevCommitteeR = Nullary 98
   shape PrevConstitutionR = Nullary 99
   shape DRepDistrR = Nullary 100
+  shape CommitteeStateR = Nullary 101
+  shape NumDormantEpochsR = Nullary 102
+  shape VStateR = Nullary 103
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep = cmpIndex @(Rep era)
@@ -861,6 +874,9 @@ genSizedRep _ PrevHardForkR = arbitrary
 genSizedRep _ PrevCommitteeR = arbitrary
 genSizedRep _ PrevConstitutionR = arbitrary
 genSizedRep _ DRepDistrR = DRComplete <$> arbitrary
+genSizedRep _ NumDormantEpochsR = arbitrary
+genSizedRep _ CommitteeStateR = arbitrary
+genSizedRep _ VStateR = arbitrary
 
 genRep ::
   forall era b.
@@ -1005,6 +1021,9 @@ shrinkRep PrevHardForkR x = shrink x
 shrinkRep PrevCommitteeR x = shrink x
 shrinkRep PrevConstitutionR x = shrink x
 shrinkRep DRepDistrR x = shrink x
+shrinkRep NumDormantEpochsR _ = []
+shrinkRep CommitteeStateR _ = []
+shrinkRep VStateR x = shrink x
 
 -- ===========================
 
@@ -1129,6 +1148,9 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help PrevCommitteeR _ = failT ["PrevGovActionId 'Committee, does not have an Ord instance"]
     help PrevConstitutionR _ = failT ["PrevGovActionId 'Constitution, does not have an Ord instance"]
     help DRepDistrR _ = failT ["DRepDistr, does not have an Ord instance"]
+    help NumDormantEpochsR v = pure $ With v
+    help CommitteeStateR v = pure $ With v
+    help VStateR _ = failT ["No Ord instance for VState"]
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
