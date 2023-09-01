@@ -70,7 +70,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (Era (..), EraPParams (..), PParamsUpdate)
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (extractHash)
@@ -81,7 +81,13 @@ import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
-import Data.Aeson (KeyValue (..), ToJSON (..), ToJSONKey (..), object, pairs)
+import Data.Aeson (
+  KeyValue (..),
+  ToJSON (..),
+  ToJSONKey (..),
+  object,
+  pairs,
+ )
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -162,9 +168,14 @@ data Voter c
 
 instance Crypto c => ToJSON (Voter c)
 
--- TODO: Make it nicer, eg. "DRep-ScriptHash<0xdeadbeef>..."
--- Will also need a ToJSONKey instance for Credential.
-instance Crypto c => ToJSONKey (Voter c)
+instance Crypto c => ToJSONKey (Voter c) where
+  toJSONKey = toJSONKeyText $ \case
+    CommitteeVoter cred ->
+      "committee-" <> credToText cred
+    DRepVoter cred ->
+      "drep-" <> credToText cred
+    StakePoolVoter kh ->
+      "stakepool-" <> credToText (KeyHashObj kh)
 
 instance Crypto c => DecCBOR (Voter c) where
   decCBOR = decodeRecordSum "Voter" $ \case
