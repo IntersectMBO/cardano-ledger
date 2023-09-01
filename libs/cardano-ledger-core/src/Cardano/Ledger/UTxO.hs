@@ -48,7 +48,7 @@ import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   DSignable,
@@ -209,7 +209,9 @@ class EraTxBody era => EraUTxO era where
   getConsumedValue ::
     PParams era ->
     -- | Function that can lookup current delegation deposits
-    (StakeCredential (EraCrypto era) -> Maybe Coin) ->
+    (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+    -- | Function that can lookup current drep deposits
+    (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
     UTxO era ->
     TxBody era ->
     Value era

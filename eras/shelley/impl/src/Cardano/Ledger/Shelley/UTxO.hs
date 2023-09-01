@@ -30,10 +30,10 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
-import Cardano.Ledger.CertState (CertState (..), PState (..), lookupDepositDState)
+import Cardano.Ledger.CertState (CertState (..), certDStateL, certPStateL, certVStateL, lookupDepositDState, lookupDepositVState, psStakePoolParamsL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeCredential, credScriptHash)
+import Cardano.Ledger.Credential (Credential (..), credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -128,6 +128,7 @@ getShelleyScriptsNeeded u txBody =
     scriptHashes = txinsScriptHashes (txBody ^. inputsTxBodyL) u
     certificates = toList (txBody ^. certsTxBodyL)
 
+-- | For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
 consumed ::
   EraUTxO era =>
   PParams era ->
@@ -135,17 +136,19 @@ consumed ::
   UTxO era ->
   TxBody era ->
   Value era
-consumed pp dpstate = getConsumedValue pp (lookupDepositDState (certDState dpstate))
+consumed pp certState =
+  getConsumedValue pp (lookupDepositDState $ certState ^. certDStateL) (lookupDepositVState $ certState ^. certVStateL)
 
 -- | Compute the lovelace which are created by the transaction
+-- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
 produced ::
   EraUTxO era =>
   PParams era ->
   CertState era ->
   TxBody era ->
   Value era
-produced pp dpstate =
-  getProducedValue pp (`Map.member` psStakePoolParams (certPState dpstate))
+produced pp certState =
+  getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolParamsL)
 
 shelleyProducedValue ::
   ShelleyEraTxBody era =>
@@ -163,7 +166,7 @@ shelleyProducedValue pp isRegPoolId txBody =
 getConsumedCoin ::
   ShelleyEraTxBody era =>
   PParams era ->
-  (StakeCredential (EraCrypto era) -> Maybe Coin) ->
+  (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
   UTxO era ->
   TxBody era ->
   Coin
@@ -182,7 +185,7 @@ newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set.Set (ScriptHash (Er
 instance Crypto c => EraUTxO (ShelleyEra c) where
   type ScriptsNeeded (ShelleyEra c) = ShelleyScriptsNeeded (ShelleyEra c)
 
-  getConsumedValue = getConsumedCoin
+  getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
   getProducedValue = shelleyProducedValue
 

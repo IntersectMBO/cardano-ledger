@@ -46,6 +46,7 @@ module Cardano.Ledger.CertState (
   vsDRepDistrL,
   vsCommitteeStateL,
   csCommitteeCredsL,
+  lookupDepositVState,
 )
 where
 
@@ -313,6 +314,10 @@ data VState era = VState
   , vsCommitteeState :: !(CommitteeState era)
   }
   deriving (Show, Eq, Generic)
+
+-- | Function that looks up the deposit for currently registered DRep
+lookupDepositVState :: VState era -> Credential 'DRepRole (EraCrypto era) -> Maybe Coin
+lookupDepositVState vstate = fmap drepDeposit . flip Map.lookup (vstate ^. vsDRepsL)
 
 instance Default (VState era) where
   def = VState def (DRComplete Map.empty) def

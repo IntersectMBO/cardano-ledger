@@ -33,6 +33,10 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   validateOutputBootAddrAttrsTooBig,
   validateMaxTxSizeUTxO,
   validateValueNotConservedUTxO,
+  utxoEnvSlotL,
+  utxoEnvPParamsL,
+  utxoEnvCertStateL,
+  utxoEnvGenDelegsL,
 )
 where
 
@@ -120,12 +124,24 @@ import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
-data UtxoEnv era
-  = UtxoEnv
-      SlotNo
-      (PParams era)
-      (CertState era)
-      (GenDelegs (EraCrypto era))
+data UtxoEnv era = UtxoEnv
+  { ueSlot :: SlotNo
+  , uePParams :: PParams era
+  , ueCertState :: CertState era
+  , ueGenDelegs :: GenDelegs (EraCrypto era)
+  }
+
+utxoEnvSlotL :: Lens' (UtxoEnv era) SlotNo
+utxoEnvSlotL = lens ueSlot $ \x y -> x {ueSlot = y}
+
+utxoEnvPParamsL :: Lens' (UtxoEnv era) (PParams era)
+utxoEnvPParamsL = lens uePParams $ \x y -> x {uePParams = y}
+
+utxoEnvCertStateL :: Lens' (UtxoEnv era) (CertState era)
+utxoEnvCertStateL = lens ueCertState $ \x y -> x {ueCertState = y}
+
+utxoEnvGenDelegsL :: Lens' (UtxoEnv era) (GenDelegs (EraCrypto era))
+utxoEnvGenDelegsL = lens ueGenDelegs $ \x y -> x {ueGenDelegs = y}
 
 deriving instance Show (PParams era) => Show (UtxoEnv era)
 

@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Add one more parameter to `getConsumedValue` to lookup DRep deposits #3688
+  * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
 * Add `Ap`, `hoistAp`, `runAp`, `runAp_`
 * Add `eqBootstrapWitnessRaw` and `eqWitVKeyRaw`
 * Add `eqRawType`

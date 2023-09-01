@@ -8,8 +8,9 @@
 module Cardano.Ledger.Mary.UTxO (getConsumedMaryValue) where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Credential (StakeCredential)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxBody ()
@@ -34,7 +35,7 @@ import Lens.Micro
 instance Crypto c => EraUTxO (MaryEra c) where
   type ScriptsNeeded (MaryEra c) = ShelleyScriptsNeeded (MaryEra c)
 
-  getConsumedValue = getConsumedMaryValue
+  getConsumedValue pp lookupKeyDeposit _ = getConsumedMaryValue pp lookupKeyDeposit
 
   getProducedValue = shelleyProducedValue
 
@@ -54,7 +55,7 @@ instance Crypto c => EraUTxO (MaryEra c) where
 getConsumedMaryValue ::
   (MaryEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
   PParams era ->
-  (StakeCredential (EraCrypto era) -> Maybe Coin) ->
+  (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
   UTxO era ->
   TxBody era ->
   MaryValue (EraCrypto era)

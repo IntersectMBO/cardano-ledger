@@ -20,7 +20,7 @@ import Cardano.Ledger.UTxO (EraUTxO (..))
 instance Crypto c => EraUTxO (AllegraEra c) where
   type ScriptsNeeded (AllegraEra c) = ShelleyScriptsNeeded (AllegraEra c)
 
-  getConsumedValue = getConsumedCoin
+  getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
   getProducedValue = shelleyProducedValue
 

@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Add DRep refund calculation #3688
+  * Add `conwayConsumedValue` as `getConsumedValue` for Conway
 * Change `PredicateFailure (ConwayENACT era)` to `Void`
 * Remove `EnactPredFailure`
 * Change `PredicateFailure (ConwayEPOCH era)` to `Void`

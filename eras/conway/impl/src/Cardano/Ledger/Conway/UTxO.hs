@@ -1,7 +1,12 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.UTxO (
@@ -13,12 +18,16 @@ import Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsHashesNeeded,
   getAlonzoScriptsNeeded,
  )
+import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core (
+  ConwayEraPParams,
   ConwayEraTxBody (..),
   Era (..),
   EraTxBody (..),
+  MaryEraTxBody,
   PParams,
   Value,
+  ppDRepDepositL,
  )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
@@ -27,15 +36,24 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   VotingProcedures (..),
  )
 import Cardano.Ledger.Conway.TxBody ()
-import Cardano.Ledger.Credential (credScriptHash)
+import Cardano.Ledger.Conway.TxCert (
+  ConwayEraTxCert,
+  pattern RegDRepTxCert,
+  pattern UnRegDRepTxCert,
+ )
+import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Cardano.Ledger.Val (Val (..))
+import Data.Foldable (foldMap', foldl')
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import Data.Semigroup (getSum)
+import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
 getConwayScriptsNeeded ::
@@ -57,22 +75,55 @@ getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voterScript
         txb ^. votingProceduresTxBodyL
 
 conwayProducedValue ::
-  ConwayEraTxBody era =>
+  ( ConwayEraTxBody era
+  , ConwayEraTxCert era
+  , ConwayEraPParams era
+  ) =>
   PParams era ->
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   TxBody era ->
   Value era
-conwayProducedValue pp f txb =
+conwayProducedValue pp isStakePool txBody =
   inject propDeposits
-    <> inject (txb ^. treasuryDonationTxBodyL)
-    <> shelleyProducedValue pp f txb
+    <+> inject (txBody ^. treasuryDonationTxBodyL)
+    <+> shelleyProducedValue pp isStakePool txBody
+    <+> inject drepDeposits
   where
-    propDeposits = foldMap pProcDeposit $ txb ^. proposalProceduresTxBodyL
+    propDeposits = foldMap pProcDeposit $ txBody ^. proposalProceduresTxBodyL
+    drepDeposits = getSum @Int (foldMap' (\case RegDRepTxCert {} -> 1; _ -> 0) (txBody ^. certsTxBodyL)) <×> pp ^. ppDRepDepositL
+
+conwayConsumedValue ::
+  ( ConwayEraTxCert era
+  , ConwayEraPParams era
+  , MaryEraTxBody era
+  , Value era ~ MaryValue (EraCrypto era)
+  ) =>
+  PParams era ->
+  (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+  (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+  UTxO era ->
+  TxBody era ->
+  Value era
+conwayConsumedValue pp lookupKeyDeposit lookupDRepDeposit utxo txBody =
+  let maryRefunds = getConsumedMaryValue pp lookupKeyDeposit utxo txBody
+      drepRefunds =
+        let go accum@(!drepRegsInTx, !totalRefund) = \case
+              RegDRepTxCert c _ _ ->
+                -- Track registrations
+                (Set.insert c drepRegsInTx, totalRefund)
+              UnRegDRepTxCert c _
+                -- DRep previously registered in the same tx.
+                | Set.member c drepRegsInTx -> (Set.delete c drepRegsInTx, totalRefund <+> pp ^. ppDRepDepositL)
+                -- DRep previously registered in some other tx.
+                | Just deposit <- lookupDRepDeposit c -> (drepRegsInTx, totalRefund <+> deposit)
+              _ -> accum
+         in inject $ snd $ foldl' go (Set.empty, Coin 0) $ txBody ^. certsTxBodyL
+   in maryRefunds <+> drepRefunds
 
 instance Crypto c => EraUTxO (ConwayEra c) where
   type ScriptsNeeded (ConwayEra c) = AlonzoScriptsNeeded (ConwayEra c)
 
-  getConsumedValue = getConsumedMaryValue -- TODO: This definitely needs to be updated for Conway
+  getConsumedValue = conwayConsumedValue
 
   getProducedValue = conwayProducedValue
 
