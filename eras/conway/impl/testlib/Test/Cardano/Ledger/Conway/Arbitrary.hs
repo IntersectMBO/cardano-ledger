@@ -7,7 +7,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conway.Arbitrary (uniqueIdGovActions) where
+module Test.Cardano.Ledger.Conway.Arbitrary (
+  genNewCommittee,
+  genNoConfidence,
+  genTreasuryWithdrawals,
+  genHardForkInitiation,
+  genParameterChange,
+  genNewConstitution,
+  genGovActionStateFromAction,
+  govActionGenerators,
+  uniqueIdGovActions,
+) where
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -192,30 +202,57 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+genGovActionStateFromAction :: Era era => GovAction era -> Gen (GovActionState era)
+genGovActionStateFromAction act =
+  GovActionState
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> pure act
+    <*> arbitrary
+    <*> arbitrary
+
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState era) where
-  arbitrary =
-    GovActionState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+  arbitrary = genGovActionStateFromAction =<< arbitrary
+
+genParameterChange :: (Era era, Arbitrary (PParamsUpdate era)) => Gen (GovAction era)
+genParameterChange = ParameterChange <$> arbitrary <*> arbitrary
+
+genHardForkInitiation :: Era era => Gen (GovAction era)
+genHardForkInitiation = HardForkInitiation <$> arbitrary <*> arbitrary
+
+genTreasuryWithdrawals :: Era era => Gen (GovAction era)
+genTreasuryWithdrawals = TreasuryWithdrawals <$> arbitrary
+
+genNoConfidence :: Era era => Gen (GovAction era)
+genNoConfidence = NoConfidence <$> arbitrary
+
+genNewCommittee :: Era era => Gen (GovAction era)
+genNewCommittee = NewCommittee <$> arbitrary <*> arbitrary <*> arbitrary
+
+genNewConstitution :: Era era => Gen (GovAction era)
+genNewConstitution = NewConstitution <$> arbitrary <*> arbitrary
+
+govActionGenerators ::
+  ( Era era
+  , Arbitrary (PParamsUpdate era)
+  ) =>
+  [Gen (GovAction era)]
+govActionGenerators =
+  [ genParameterChange
+  , genHardForkInitiation
+  , genTreasuryWithdrawals
+  , genNoConfidence
+  , genNewCommittee
+  , genNewConstitution
+  , pure InfoAction
+  ]
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovAction era) where
-  arbitrary =
-    oneof
-      [ ParameterChange <$> arbitrary <*> arbitrary
-      , HardForkInitiation <$> arbitrary <*> arbitrary
-      , TreasuryWithdrawals <$> arbitrary
-      , NoConfidence <$> arbitrary
-      , NewCommittee <$> arbitrary <*> arbitrary <*> arbitrary
-      , NewConstitution <$> arbitrary <*> arbitrary
-      , pure InfoAction
-      ]
+  arbitrary = oneof govActionGenerators
 
 instance Era era => Arbitrary (Committee era) where
   arbitrary = Committee <$> arbitrary <*> arbitrary

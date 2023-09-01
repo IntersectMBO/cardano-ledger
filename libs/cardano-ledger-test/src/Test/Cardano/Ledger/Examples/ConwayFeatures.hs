@@ -475,4 +475,5 @@ conwayFeatures :: TestTree
 conwayFeatures =
   testGroup
     "Gov examples"
-    [testCase "gov" $ testGov (Conway Mock)]
+    [ testCase "gov" $ testGov (Conway Mock)
+    ]

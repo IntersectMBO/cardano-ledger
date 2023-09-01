@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `reorderActions`, `actionPriority`
 * Remove `ensProtVer` field from `EnactState`: #3705
 * Move `ConwayEraTxBody` to `Cardano.Ledger.Conway.TxBody`
 * Move `ConwayEraPParams` to `Cardano.Ledger.Conway.PParams`
@@ -24,6 +25,17 @@
   * `gasStakePoolVotesL`
 * Add `FromJSON` instance for `Committee`
 * Add `constitution` and `committee` fields to `ConwayGenesis`
+
+### testlib
+
+* Add `genNewCommittee`
+* Add `genNoConfidence`
+* Add `genTreasuryWithdrawals`
+* Add `genHardForkInitiation`
+* Add `genParameterChange`
+* Add `genNewConstitution`
+* Add `genGovActionStateFromAction`
+* Add `govActionGenerators`
 
 ## 1.8.0.0
 
