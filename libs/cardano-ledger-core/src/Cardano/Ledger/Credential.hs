@@ -15,6 +15,7 @@ module Cardano.Ledger.Credential (
   PaymentCredential,
   credKeyHashWitness,
   credScriptHash,
+  credToText,
   Ptr (Ptr),
   ptrSlotNo,
   ptrTxIx,
@@ -25,6 +26,7 @@ module Cardano.Ledger.Credential (
 )
 where
 
+import Cardano.Crypto.Hash (hashFromTextAsHex, hashToTextAsHex)
 import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..))
 import Cardano.Ledger.Binary (
   CBORGroup (..),
@@ -37,10 +39,10 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Hashes (ScriptHash)
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
-  KeyHash,
+  KeyHash (..),
   KeyRole (..),
   asWitness,
  )
@@ -48,18 +50,23 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON (..),
-  FromJSONKey,
+  FromJSONKey (..),
+  FromJSONKeyFunction (..),
   KeyValue,
   ToJSON,
-  ToJSONKey,
+  ToJSONKey (..),
   object,
   pairs,
   (.:),
   (.=),
  )
 import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (
+  toJSONKeyText,
+ )
 import Data.Default.Class (Default (..))
 import Data.Foldable (asum)
+import Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Generics (Generic)
@@ -104,9 +111,29 @@ instance Crypto c => FromJSON (Credential kr c) where
       parser1 obj = ScriptHashObj <$> obj .: "script hash"
       parser2 obj = KeyHashObj <$> obj .: "key hash"
 
-instance Crypto c => ToJSONKey (Credential kr c)
+instance Crypto c => ToJSONKey (Credential kr c) where
+  toJSONKey = toJSONKeyText credToText
 
-instance Crypto c => FromJSONKey (Credential kr c)
+instance Crypto c => FromJSONKey (Credential kr c) where
+  fromJSONKey = FromJSONKeyTextParser parseCredential
+    where
+      parseCredential t = case T.splitOn "-" t of
+        ["scripthash", hash] ->
+          maybe
+            (badHex hash)
+            (pure . ScriptHashObj . ScriptHash)
+            (hashFromTextAsHex hash)
+        ["keyhash", hash] ->
+          maybe
+            (badHex hash)
+            (pure . KeyHashObj . KeyHash)
+            (hashFromTextAsHex hash)
+        _ -> fail $ "Invalid credential: " <> show t
+      badHex h = fail $ "Invalid hex: " <> show h
+
+credToText :: Credential kr c -> Text
+credToText (ScriptHashObj (ScriptHash hash)) = "scripthash-" <> hashToTextAsHex hash
+credToText (KeyHashObj (KeyHash has)) = "keyhash-" <> hashToTextAsHex has
 
 type PaymentCredential c = Credential 'Payment c
 

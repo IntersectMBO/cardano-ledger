@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Change `ToJSONKey`/`FromJSONKey` implementation of `Credential` to flat text
 * Add one more parameter to `getConsumedValue` to lookup DRep deposits #3688
   * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
 * Add `Ap`, `hoistAp`, `runAp`, `runAp_`
