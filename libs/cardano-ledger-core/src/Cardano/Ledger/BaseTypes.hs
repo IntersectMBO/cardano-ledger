@@ -131,6 +131,7 @@ import Data.Aeson (
   ToJSON (..),
   object,
   pairs,
+  withObject,
   (.:),
   (.=),
  )
@@ -820,6 +821,12 @@ instance Crypto c => EncCBOR (Anchor c) where
 instance Crypto c => ToJSON (Anchor c) where
   toJSON = object . toAnchorPairs
   toEncoding = pairs . mconcat . toAnchorPairs
+
+instance Crypto c => FromJSON (Anchor c) where
+  parseJSON = withObject "Anchor" $ \o -> do
+    anchorUrl <- o .: "url"
+    anchorDataHash <- o .: "dataHash"
+    pure $ Anchor {..}
 
 instance ToExpr (Anchor c)
 

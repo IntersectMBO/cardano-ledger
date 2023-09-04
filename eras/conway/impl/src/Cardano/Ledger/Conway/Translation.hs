@@ -28,7 +28,11 @@ import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Governance ()
+import Cardano.Ledger.Conway.Governance (
+  cgEnactStateL,
+  ensCommitteeL,
+  ensConstitutionL,
+ )
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
@@ -45,6 +49,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
+import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 
@@ -154,10 +159,15 @@ translateGovState ::
   TranslationContext (ConwayEra c) ->
   GovState (BabbageEra c) ->
   GovState (ConwayEra c)
-translateGovState ctxt sgov =
+translateGovState ctxt@(ConwayGenesis _ constitution committee) sgov =
   emptyGovState
     & curPParamsGovStateL .~ translateEra' ctxt (sgov ^. curPParamsGovStateL)
     & prevPParamsGovStateL .~ translateEra' ctxt (sgov ^. prevPParamsGovStateL)
+    & cgEnactStateL
+      .~ ( def
+            & ensConstitutionL .~ constitution
+            & ensCommitteeL .~ SJust committee
+         )
 
 instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
   translateEra ctxt us =

@@ -14,6 +14,7 @@
 * Add `ToExpr` instance for `PoolCert`
 * Require `ToExpr` instance for `Script`, `TxAuxData` and `TxCert`
 * Require an extra argument for `decodePositiveCoin` in order to improve error reporting #3694
+* Add `FromJSON` instance to `Anchor`
 
 ## 1.5.0.0
 

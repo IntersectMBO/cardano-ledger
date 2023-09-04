@@ -38,7 +38,7 @@ import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -200,6 +200,5 @@ exampleConwayNewEpochState =
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
 
-exampleConwayGenesis :: ConwayGenesis c
-exampleConwayGenesis =
-  ConwayGenesis def
+exampleConwayGenesis :: Crypto c => ConwayGenesis c
+exampleConwayGenesis = def

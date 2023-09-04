@@ -82,18 +82,23 @@ import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
 import Data.Aeson (
+  FromJSON (..),
   KeyValue (..),
   ToJSON (..),
   ToJSONKey (..),
   object,
   pairs,
+  withObject,
+  (.:),
  )
 import Data.Aeson.Types (toJSONKeyText)
+import Data.Default.Class
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq (..))
 import Data.Set (Set)
 import qualified Data.Text as Text
+import Data.Unit.Strict (forceElemsToWHNF)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
@@ -349,6 +354,9 @@ instance Era era => NoThunks (Committee era)
 
 instance Era era => NFData (Committee era)
 
+instance Default (Committee era) where
+  def = Committee mempty minBound
+
 committeeMembersL :: Lens' (Committee era) (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
 committeeMembersL = lens committeeMembers (\c m -> c {committeeMembers = m})
 
@@ -373,6 +381,14 @@ instance Era era => EncCBOR (Committee era) where
 instance EraPParams era => ToJSON (Committee era) where
   toJSON = object . toCommitteePairs
   toEncoding = pairs . mconcat . toCommitteePairs
+
+instance Era era => FromJSON (Committee era) where
+  parseJSON = withObject "Committee" parseCommittee
+    where
+      parseCommittee o =
+        Committee
+          <$> (forceElemsToWHNF <$> o .: "members")
+          <*> o .: "quorum"
 
 toCommitteePairs :: (KeyValue a, EraPParams era) => Committee era -> [a]
 toCommitteePairs committee@(Committee _ _) =

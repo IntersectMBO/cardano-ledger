@@ -3,6 +3,7 @@
 ## 1.6.0.0
 
 * Add lenses for `UTxOEnv` #3688
+* Add `FromJSON` instance for `Constitution`
 * Add `getTotalTxDepositsBody` to `ShelleyEraTxBody`
 * Add `obligationGovState` to `EraGov`
 * Add `ToExpr` instance to `Constitution`
