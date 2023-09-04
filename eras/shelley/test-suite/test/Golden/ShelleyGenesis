@@ -41,7 +41,7 @@
                 "rewardAccount": {
                     "network": "Testnet",
                     "credential": {
-                        "key hash": "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a"
+                        "keyHash": "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a"
                     }
                 },
                 "relays": [

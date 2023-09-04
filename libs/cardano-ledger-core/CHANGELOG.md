@@ -3,6 +3,10 @@
 ## 1.6.1.0
 
 * Add `FromJSON` instance to `Anchor`
+* Change `ToJSON/FromJSON` implementation of `Credential` to use `keyHash` vs `key hash`
+  and `scriptHash` vs `script hash` JSON keys.
+* Change `ToJSONKey/FromJSONKey` implementation of `Credential` to use `keyHash-` vs `keyhash-`
+  and `scriptHash-` vs `scripthash-` prefixes.
 
 ## 1.6.0.0
 
