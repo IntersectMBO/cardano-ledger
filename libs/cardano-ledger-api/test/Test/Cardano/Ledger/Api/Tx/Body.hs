@@ -17,7 +17,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.TxCert (
-  isRegKey,
+  isRegStakeTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
  )
@@ -42,7 +42,7 @@ totalTxDeposits pp dpstate txb =
   numKeys <×> pp ^. ppKeyDepositL <+> snd (foldl' accum (regpools, Coin 0) certs)
   where
     certs = toList (txb ^. certsTxBodyL)
-    numKeys = length $ filter isRegKey certs
+    numKeys = length $ filter isRegStakeTxCert certs
     regpools = psStakePoolParams (certPState dpstate)
     accum (!pools, !ans) (RegPoolTxCert poolparam) =
       -- We don't pay a deposit on a pool that is already registered

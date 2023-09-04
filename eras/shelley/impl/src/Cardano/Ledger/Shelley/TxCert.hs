@@ -72,6 +72,8 @@ module Cardano.Ledger.Shelley.TxCert (
   Delegation (..),
   PoolCert (..),
   poolCWitness,
+  isRegStakeTxCert,
+  isUnRegStakeTxCert,
 )
 where
 
@@ -129,6 +131,13 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
 
   getRetirePoolTxCert (ShelleyTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
   getRetirePoolTxCert _ = Nothing
+
+  lookupRegStakeTxCert = \case
+    RegTxCert c -> Just c
+    _ -> Nothing
+  lookupUnRegStakeTxCert = \case
+    UnRegTxCert c -> Just c
+    _ -> Nothing
 
 class EraTxCert era => ShelleyEraTxCert era where
   mkRegTxCert :: StakeCredential (EraCrypto era) -> TxCert era
@@ -478,11 +487,21 @@ delegCWitness (ShelleyDelegCert cred _) = cred
 isRegKey :: ShelleyEraTxCert era => TxCert era -> Bool
 isRegKey (RegTxCert _) = True
 isRegKey _ = False
+{-# DEPRECATED isRegKey "Use `isRegStakeTxCert` instead" #-}
+
+-- | Check for registering stake TxCert constructor
+isRegStakeTxCert :: ShelleyEraTxCert era => TxCert era -> Bool
+isRegStakeTxCert = isJust . lookupRegStakeTxCert
 
 -- | Check for 'ShelleyUnRegCert' constructor
 isDeRegKey :: ShelleyEraTxCert era => TxCert era -> Bool
 isDeRegKey (UnRegTxCert _) = True
 isDeRegKey _ = False
+{-# DEPRECATED isDeRegKey "Use `isUnRegStakeTxCert` instead" #-}
+
+-- | Check for de-registering stake TxCert constructor
+isUnRegStakeTxCert :: ShelleyEraTxCert era => TxCert era -> Bool
+isUnRegStakeTxCert = isJust . lookupUnRegStakeTxCert
 
 -- | Check for 'ShelleyDelegCert' constructor
 isDelegation :: ShelleyEraTxCert era => TxCert era -> Bool

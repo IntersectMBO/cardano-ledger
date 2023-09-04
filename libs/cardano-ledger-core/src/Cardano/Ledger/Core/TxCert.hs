@@ -92,6 +92,9 @@ class
   mkRetirePoolTxCert :: KeyHash 'StakePool (EraCrypto era) -> EpochNo -> TxCert era
   getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash 'StakePool (EraCrypto era), EpochNo)
 
+  lookupRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
+  lookupUnRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
+
 pattern RegPoolTxCert :: EraTxCert era => PoolParams (EraCrypto era) -> TxCert era
 pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)
   where

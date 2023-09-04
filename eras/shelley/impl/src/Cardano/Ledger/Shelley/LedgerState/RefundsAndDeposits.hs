@@ -25,11 +25,7 @@ import Cardano.Ledger.Credential (StakeCredential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..), ShelleyEraTxCert)
-import Cardano.Ledger.Shelley.TxCert (
-  isRegKey,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
+import Cardano.Ledger.Shelley.TxCert (isRegStakeTxCert)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Data.Foldable (Foldable (..), foldMap', foldl')
 import qualified Data.Map.Strict as Map
@@ -61,7 +57,7 @@ totalCertsDeposits pp isRegPool certs =
     <+> numNewRegPoolCerts
     <×> (pp ^. ppPoolDepositL)
   where
-    numKeys = getSum @Int $ foldMap' (\x -> if isRegKey x then 1 else 0) certs
+    numKeys = getSum @Int $ foldMap' (\x -> if isRegStakeTxCert x then 1 else 0) certs
     numNewRegPoolCerts = Set.size (foldl' addNewPoolIds Set.empty certs)
     addNewPoolIds regPoolIds = \case
       RegPoolTxCert (PoolParams {ppId})
@@ -118,21 +114,24 @@ keyCertsRefunds ::
 keyCertsRefunds pp lookupDeposit certs = snd (foldl' accum (mempty, Coin 0) certs)
   where
     keyDeposit = pp ^. ppKeyDepositL
-    accum (!regKeys, !totalRefunds) = \case
-      RegTxCert k ->
-        -- Need to track new delegations in case that the same key is later deregistered in
-        -- the same transaction.
-        (Set.insert k regKeys, totalRefunds)
-      UnRegTxCert k
-        -- We first check if there was already a registration certificate in this
-        -- transaction.
-        | Set.member k regKeys -> (Set.delete k regKeys, totalRefunds <+> keyDeposit)
-        -- Check for the deposit left during registration in some previous
-        -- transaction. This de-registration check will be matched first, despite being
-        -- the last case to match, because registration is not possible without
-        -- de-registration.
-        | Just deposit <- lookupDeposit k -> (regKeys, totalRefunds <+> deposit)
-      _ -> (regKeys, totalRefunds)
+    accum (!regKeys, !totalRefunds) cert =
+      case lookupRegStakeTxCert cert of
+        Just k ->
+          -- Need to track new delegations in case that the same key is later deregistered in
+          -- the same transaction.
+          (Set.insert k regKeys, totalRefunds)
+        Nothing ->
+          case lookupUnRegStakeTxCert cert of
+            Just k
+              -- We first check if there was already a registration certificate in this
+              -- transaction.
+              | Set.member k regKeys -> (Set.delete k regKeys, totalRefunds <+> keyDeposit)
+              -- Check for the deposit left during registration in some previous
+              -- transaction. This de-registration check will be matched first, despite being
+              -- the last case to match, because registration is not possible without
+              -- de-registration.
+              | Just deposit <- lookupDeposit k -> (regKeys, totalRefunds <+> deposit)
+            _ -> (regKeys, totalRefunds)
 
 keyTxRefunds ::
   ShelleyEraTxBody era =>
