@@ -44,9 +44,14 @@ import qualified Codec.Serialise as Cborg (Serialise (..))
 import qualified Data.ByteString.Lazy as BSL
 import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
+-- FIXME: remove following line after plutus patch
+
 import Cardano.Ledger.Alonzo.TxInfo (VersionedTxInfo)
+import qualified PlutusLedgerApi.V3.Contexts as PV3
+import PlutusTx.Ratio as PlutusTx
 
 import Data.Typeable (Typeable)
 
@@ -63,32 +68,59 @@ data TranslationInstance era = TranslationInstance
 deriving instance (Era era, Eq (PParams era), Eq (UTxO era), Eq (Core.Tx era)) => Eq (TranslationInstance era)
 deriving instance (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx era)) => Show (TranslationInstance era)
 
-instance Cborg.Serialise PV1.TxInfo
+instance Cborg.Serialise PV1.DCert
 instance Cborg.Serialise PV1.TxInInfo
+instance Cborg.Serialise PV1.TxInfo
 instance Cborg.Serialise PV1.TxOut
-instance Cborg.Serialise PV3.POSIXTime
-instance Cborg.Serialise a => Cborg.Serialise (PV3.Extended a)
-instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
-instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
-instance Cborg.Serialise a => Cborg.Serialise (PV3.Interval a)
+instance Cborg.Serialise PV2.ScriptPurpose
+instance Cborg.Serialise PV2.TxInfo
 instance Cborg.Serialise PV3.Address
+instance Cborg.Serialise PV3.BuiltinData
+instance Cborg.Serialise PV3.ChangedParameters
+instance Cborg.Serialise PV3.ColdCommitteeCredential
+instance Cborg.Serialise PV3.Committee
+instance Cborg.Serialise PV3.Constitution
 instance Cborg.Serialise PV3.Credential
 instance Cborg.Serialise PV3.CurrencySymbol
-instance Cborg.Serialise PV3.DCert
-instance Cborg.Serialise PV3.TxOutRef
-instance Cborg.Serialise PV3.TxId
-instance Cborg.Serialise PV3.Value
-instance Cborg.Serialise PV3.PubKeyHash
-instance (Cborg.Serialise k, Cborg.Serialise v) => Cborg.Serialise (PV3.Map k v)
-instance Cborg.Serialise PV3.TokenName
-instance Cborg.Serialise PV3.TxInInfo
+instance Cborg.Serialise PV3.DRep
+instance Cborg.Serialise PV3.DRepCredential
 instance Cborg.Serialise PV3.DatumHash
-instance Cborg.Serialise PV3.StakingCredential
-instance Cborg.Serialise PV3.ScriptHash
-instance Cborg.Serialise PV3.TxOut
+instance Cborg.Serialise PV3.Delegatee
+instance Cborg.Serialise PV3.GovernanceAction
+instance Cborg.Serialise PV3.GovernanceActionId
+instance Cborg.Serialise PV3.HotCommitteeCredential
 instance Cborg.Serialise PV3.OutputDatum
+instance Cborg.Serialise PV3.POSIXTime
+instance Cborg.Serialise PV3.ProposalProcedure
+instance Cborg.Serialise PV3.ProtocolVersion
+instance Cborg.Serialise PV3.PubKeyHash
+instance Cborg.Serialise PV3.ScriptHash
 instance Cborg.Serialise PV3.ScriptPurpose
+instance Cborg.Serialise PV3.StakingCredential
+instance Cborg.Serialise PV3.TokenName
+instance Cborg.Serialise PV3.TxCert
+instance Cborg.Serialise PV3.TxId
+instance Cborg.Serialise PV3.TxInInfo
 instance Cborg.Serialise PV3.TxInfo
+instance Cborg.Serialise PV3.TxOut
+instance Cborg.Serialise PV3.TxOutRef
+instance Cborg.Serialise PV3.Value
+instance Cborg.Serialise PV3.Vote
+instance Cborg.Serialise PV3.Voter
+instance (Cborg.Serialise k, Cborg.Serialise v) => Cborg.Serialise (PV3.Map k v)
+instance Cborg.Serialise a => Cborg.Serialise (PV3.Extended a)
+instance Cborg.Serialise a => Cborg.Serialise (PV3.Interval a)
+instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
+instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
+
+-- FIXME: remove following line after plutus patch
+deriving instance Generic PV3.BuiltinData
+
+-- FIXME: fix following after plutus patch
+instance Cborg.Serialise PlutusTx.Rational where
+  encode = error "fixme rational"
+  decode = error "fixme rational"
+
 instance Cborg.Serialise VersionedTxInfo
 
 instance EncCBOR VersionedTxInfo where
