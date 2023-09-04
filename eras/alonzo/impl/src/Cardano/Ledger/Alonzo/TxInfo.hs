@@ -426,7 +426,7 @@ transValue (MaryValue n m) = justAda <> transMultiAsset m
 data PlutusTxCert (l :: Language) where
   TxCertPlutusV1 :: PV1.DCert -> PlutusTxCert 'PlutusV1
   TxCertPlutusV2 :: PV2.DCert -> PlutusTxCert 'PlutusV2
-  TxCertPlutusV3 :: PV3.DCert -> PlutusTxCert 'PlutusV3
+  TxCertPlutusV3 :: PV3.TxCert -> PlutusTxCert 'PlutusV3
 
 unTxCertV1 :: PlutusTxCert 'PlutusV1 -> PV1.DCert
 unTxCertV1 (TxCertPlutusV1 x) = x
@@ -434,7 +434,7 @@ unTxCertV1 (TxCertPlutusV1 x) = x
 unTxCertV2 :: PlutusTxCert 'PlutusV2 -> PV2.DCert
 unTxCertV2 (TxCertPlutusV2 x) = x
 
-unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.DCert
+unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.TxCert
 unTxCertV3 (TxCertPlutusV3 x) = x
 
 class Era era => EraPlutusContext (l :: Language) era where
@@ -613,8 +613,9 @@ valContext (TxInfoPV1 txinfo) sp =
   Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp =
   Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
-valContext (TxInfoPV3 txinfo) sp =
-  Data (PV3.toData (PV3.ScriptContext txinfo (transScriptPurpose sp)))
+valContext (TxInfoPV3 txinfo) _sp =
+  -- FIXME: add support for PlutusV3
+  Data (PV3.toData (PV3.ScriptContext txinfo (error "Unimplemented")))
 
 data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)
