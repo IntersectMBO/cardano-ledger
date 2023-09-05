@@ -143,7 +143,6 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionsState era) where
   arbitrary =

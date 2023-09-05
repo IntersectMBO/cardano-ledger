@@ -357,7 +357,6 @@ data EnactState era = EnactState
   -- ^ Constitutional Committee
   , ensConstitution :: !(Constitution era)
   -- ^ Constitution
-  , ensProtVer :: !ProtVer
   , ensPParams :: !(PParams era)
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
@@ -373,8 +372,8 @@ ensCommitteeL = lens ensCommittee (\x y -> x {ensCommittee = y})
 ensConstitutionL :: Lens' (EnactState era) (Constitution era)
 ensConstitutionL = lens ensConstitution (\x y -> x {ensConstitution = y})
 
-ensProtVerL :: Lens' (EnactState era) ProtVer
-ensProtVerL = lens ensProtVer (\x y -> x {ensProtVer = y})
+ensProtVerL :: EraPParams era => Lens' (EnactState era) ProtVer
+ensProtVerL = ensCurPParamsL . ppProtocolVersionL
 
 ensCurPParamsL :: Lens' (EnactState era) (PParams era)
 ensCurPParamsL = lens ensPParams (\es x -> es {ensPParams = x})
@@ -420,11 +419,10 @@ instance EraPParams era => ToJSON (EnactState era) where
   toEncoding = pairs . mconcat . toEnactStatePairs
 
 toEnactStatePairs :: (KeyValue a, EraPParams era) => EnactState era -> [a]
-toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _ _) =
+toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
   let EnactState {..} = cg
    in [ "committee" .= ensCommittee
       , "constitution" .= ensConstitution
-      , "protVer" .= ensProtVer
       , "pparams" .= ensPParams
       , "prevPParams" .= ensPParams
       , "treasury" .= ensTreasury
@@ -441,7 +439,6 @@ instance EraPParams era => Default (EnactState era) where
     EnactState
       def
       def
-      (ProtVer (eraProtVerLow @era) 0)
       def
       def
       (Coin 0)
@@ -459,7 +456,6 @@ instance EraPParams era => DecCBOR (EnactState era) where
         <! From
         <! From
         <! From
-        <! From
 
 instance EraPParams era => EncCBOR (EnactState era) where
   encCBOR EnactState {..} =
@@ -467,7 +463,6 @@ instance EraPParams era => EncCBOR (EnactState era) where
       Rec EnactState
         !> To ensCommittee
         !> To ensConstitution
-        !> To ensProtVer
         !> To ensPParams
         !> To ensPrevPParams
         !> To ensTreasury
