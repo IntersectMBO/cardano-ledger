@@ -41,6 +41,7 @@ module Cardano.Ledger.Conway.TxBody (
     ctbCurrentTreasuryValue,
     ctbTreasuryDonation
   ),
+  decodeNonEmptyTxBodyVotingProcedures,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -53,9 +54,11 @@ import Cardano.Ledger.BaseTypes (Network, fromSMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
+  Decoder,
   EncCBOR (..),
   Sized (..),
   ToCBOR (..),
+  decodeMapByKey,
   mkSized,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -104,6 +107,8 @@ import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -193,7 +198,9 @@ instance
       bodyFields 16 = ofield (\x tx -> tx {ctbrCollateralReturn = x}) From
       bodyFields 17 = ofield (\x tx -> tx {ctbrTotalCollateral = x}) From
       bodyFields 18 = field (\x tx -> tx {ctbrReferenceInputs = x}) From
-      bodyFields 19 = field (\x tx -> tx {ctbrVotingProcedures = x}) From
+      -- For the `VotingProcedures era` field, an empty map is unexpected because we omit this field entirely during
+      -- serialization if it is empty.
+      bodyFields 19 = Field (\x tx -> tx {ctbrVotingProcedures = x}) decodeNonEmptyTxBodyVotingProcedures
       bodyFields 20 = field (\x tx -> tx {ctbrProposalProcedures = x}) From
       bodyFields 21 = ofield (\x tx -> tx {ctbrCurrentTreasuryValue = x}) From
       bodyFields 22 =
@@ -207,6 +214,20 @@ instance
         , (1, "outputs")
         , (2, "fee")
         ]
+
+-- | Same as the `DecCBOR` instance but `fail`s when the final map is empty.
+decodeNonEmptyTxBodyVotingProcedures :: Era era => Decoder s (VotingProcedures era)
+decodeNonEmptyTxBodyVotingProcedures = do
+  vpMap <-
+    decodeMapByKey decCBOR $ \voter -> do
+      subMap <- decCBOR
+      when (Map.null subMap) $
+        fail $
+          "TxBody: VotingProcedures require votes, but Voter: " <> show voter <> " didn't have any."
+      pure subMap
+  when (Map.null vpMap) $ fail "TxBody: VotingProcedures requires voters, but none found. The map is empty."
+  pure $ VotingProcedures vpMap
+{-# INLINE decodeNonEmptyTxBodyVotingProcedures #-}
 
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
   deriving (Generic, SafeToHash, ToCBOR)

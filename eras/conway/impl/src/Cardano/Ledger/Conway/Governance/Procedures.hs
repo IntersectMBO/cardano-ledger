@@ -37,6 +37,11 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   pProcDepositL,
   committeeMembersL,
   committeeQuorumL,
+  insertVote,
+  unionLVotingProcedures,
+  emptyVotingProcedures,
+  unionLVotingProceduresEither,
+  singletonVotingProcedures,
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
@@ -94,6 +99,7 @@ import Data.Aeson (
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Default.Class
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq (..))
 import Data.Set (Set)
@@ -247,6 +253,51 @@ instance Era era => DecCBOR (VotingProcedures era) where
           "VotingProcedures require votes, but Voter: " <> show voter <> " didn't have any"
       pure subMap
   {-# INLINE decCBOR #-}
+
+-- | Construct an empty `VotingProcedures`
+emptyVotingProcedures :: VotingProcedures era
+emptyVotingProcedures = VotingProcedures Map.empty
+
+-- | Construct a singleton `VotingProcedures`
+singletonVotingProcedures ::
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  VotingProcedure era ->
+  VotingProcedures era
+singletonVotingProcedures v g p = VotingProcedures $ Map.singleton v $ Map.singleton g p
+
+-- | Insert a vote into `VotingProcedures`. If a `GovActionId` entry is already present in the existing VotingProcedures
+-- for the given voter, the associated `VotingProcedure` is overwritten, as expected from an insert operation.
+-- A safer version is `unionLVotingProceduresEither` with a `singletonVotingProcedures`.
+insertVote ::
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  VotingProcedure era ->
+  VotingProcedures era ->
+  VotingProcedures era
+insertVote voter gai vp (VotingProcedures vps) =
+  VotingProcedures $
+    Map.insertWith
+      (\_newGaiVp oldGaiVp -> Map.insert gai vp oldGaiVp)
+      voter
+      (Map.singleton gai vp)
+      vps
+
+-- | Left-biased union of `VotingProcedures`, similar to `Map.union`
+unionLVotingProcedures :: VotingProcedures era -> VotingProcedures era -> VotingProcedures era
+unionLVotingProcedures (VotingProcedures l) (VotingProcedures r) = VotingProcedures $ Map.unionWith Map.union l r
+
+-- | Same as `unionLVotingProcedures`, but returns an `Either (VotingProcedures era) (VotingProcedures era)`
+-- where a `Left` returns all the conflicts.
+unionLVotingProceduresEither ::
+  VotingProcedures era ->
+  VotingProcedures era ->
+  Either (VotingProcedures era) (VotingProcedures era)
+unionLVotingProceduresEither l@(VotingProcedures l') r@(VotingProcedures r') =
+  let intersection = Map.intersectionWith Map.intersection l' r'
+   in if Map.null intersection
+        then Right $ unionLVotingProcedures l r
+        else Left $ VotingProcedures intersection
 
 data VotingProcedure era = VotingProcedure
   { vProcVote :: !Vote

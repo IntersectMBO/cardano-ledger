@@ -13,6 +13,11 @@ module Cardano.Ledger.Api.Governance (
   -- ** Governance Procedures
   VotingProcedure (..),
   VotingProcedures (..),
+  emptyVotingProcedures,
+  singletonVotingProcedures,
+  insertVote,
+  unionLVotingProcedures,
+  unionLVotingProceduresEither,
   ProposalProcedure (..),
 
   -- ** Constitution
@@ -74,7 +79,12 @@ import Cardano.Ledger.Conway.Governance (
   cgRatifyStateL,
   constitutionAnchorL,
   constitutionScriptL,
+  emptyVotingProcedures,
   govActionIdToText,
+  insertVote,
+  singletonVotingProcedures,
+  unionLVotingProcedures,
+  unionLVotingProceduresEither,
  )
 import Cardano.Ledger.Shelley.Governance (
   EraGov (GovState),

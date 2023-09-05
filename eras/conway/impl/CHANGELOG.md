@@ -2,6 +2,13 @@
 
 ## 1.8.0.0
 
+* Export convenience functions to work with `VotingProcedures`. #3706
+  * `emptyVotingProcedures`
+  * `singletonVotingProcedures`
+  * `unionLVotingProcedures`
+  * `unionLVotingProceduresEither`
+  * `insertVote`
+* Fix `ConwayTxBodyRaw` CBOR decoder to fail to decode when `VotingProcedures` field is empty. #3706
 * Change `ToJSONKey` implementation of `Voter` to flat text
 * Add DRep refund calculation #3688
   * Add `conwayConsumedValue` as `getConsumedValue` for Conway

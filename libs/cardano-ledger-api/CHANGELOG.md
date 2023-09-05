@@ -2,6 +2,12 @@
 
 ## 1.5.0.0
 
+* Export convenience functions to work with `VotingProcedures`. #3706
+  * `emptyVotingProcedures`
+  * `singletonVotingProcedures`
+  * `unionLVotingProcedures`
+  * `unionLVotingProceduresEither`
+  * `insertVote`
 * Add one more parameter to `evalBalanceTxBody` #3688
   * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
 * Add `cgEnactStateL`
