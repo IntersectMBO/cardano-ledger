@@ -163,7 +163,6 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 uniqueIdGovActions ::
   ( Era era
