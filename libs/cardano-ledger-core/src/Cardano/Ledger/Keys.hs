@@ -14,8 +14,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Ledger.Keys (
   KeyRole (..),
@@ -330,10 +328,8 @@ instance Crypto c => FromJSON (GenDelegPair c) where
 newtype GenDelegs c = GenDelegs
   { unGenDelegs :: Map (KeyHash 'Genesis c) (GenDelegPair c)
   }
-  deriving (Eq, DecCBOR, NoThunks, NFData, Generic, FromJSON)
+  deriving (Eq, EncCBOR, DecCBOR, NoThunks, NFData, Generic, FromJSON)
   deriving (Show) via Quiet (GenDelegs c)
-
-deriving instance Crypto c => EncCBOR (GenDelegs c)
 
 deriving instance Crypto c => ToJSON (GenDelegs c)
 

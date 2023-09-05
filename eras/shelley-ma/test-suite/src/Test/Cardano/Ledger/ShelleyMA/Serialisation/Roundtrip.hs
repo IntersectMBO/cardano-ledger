@@ -17,7 +17,6 @@ import Control.State.Transition.Extended (PredicateFailure)
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Binary.RoundTrip (
-  roundTripAnnRangeExpectation,
   roundTripCborExpectation,
  )
 import Test.Cardano.Ledger.Mary.Arbitrary ()
@@ -31,10 +30,6 @@ import Test.Tasty.QuickCheck (testProperty)
 eraRoundTripProps ::
   forall e.
   ( ApplyTx e
-  , Arbitrary (TxBody e)
-  , Arbitrary (TxAuxData e)
-  , Arbitrary (Value e)
-  , Arbitrary (Script e)
   , Arbitrary (ApplyTxError e)
   , EncCBOR (PredicateFailure (EraRule "LEDGER" e))
   , DecCBOR (PredicateFailure (EraRule "LEDGER" e))
@@ -43,20 +38,7 @@ eraRoundTripProps ::
 eraRoundTripProps =
   testGroup
     (show $ typeRep (Proxy @e))
-    [ testProperty "TxBody" $
-        roundTripAnnRangeExpectation @(TxBody e)
-          (eraProtVerLow @e)
-          (eraProtVerHigh @e)
-    , testProperty "Metadata" $
-        roundTripAnnRangeExpectation @(TxAuxData e)
-          (eraProtVerLow @e)
-          (eraProtVerHigh @e)
-    , testProperty "Value" $ roundTripCborExpectation @(Value e)
-    , testProperty "Script" $
-        roundTripAnnRangeExpectation @(Script e)
-          (eraProtVerLow @e)
-          (eraProtVerHigh @e)
-    , testProperty "ApplyTxError" $ roundTripCborExpectation @(ApplyTxError e)
+    [ testProperty "ApplyTxError" $ roundTripCborExpectation @(ApplyTxError e)
     ]
 
 allEraRoundtripTests :: TestTree

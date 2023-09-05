@@ -257,7 +257,7 @@ instance Crypto c => ToJSON (IncrementalStake c) where
   toEncoding = pairs . mconcat . toIncrementalStakePairs
 
 toIncrementalStakePairs ::
-  (KeyValue a, Crypto crypto) => IncrementalStake crypto -> [a]
+  (KeyValue a, Crypto c) => IncrementalStake c -> [a]
 toIncrementalStakePairs iStake@(IStake _ _) =
   let IStake {..} = iStake -- guard against addition or removal of fields
    in [ "credentials" .= credMap
@@ -339,7 +339,8 @@ instance
       utxosUtxo <- decShareCBOR credInterns
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
-      utxosGovState <- decCBOR
+      -- TODO: implement proper sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+      utxosGovState <- decNoShareCBOR
       utxosStakeDistr <- decShareCBOR credInterns
       utxosDonation <- decCBOR
       pure UTxOState {..}

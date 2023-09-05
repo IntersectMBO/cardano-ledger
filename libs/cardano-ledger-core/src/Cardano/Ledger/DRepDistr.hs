@@ -213,9 +213,15 @@ instance ToExpr (DRepDistr era) where
 -- ==============================================
 -- Functions for pulsing DRepDistr
 
-startDRepDistr :: Int -> UMap c -> Map (Credential 'DRepRole c) (DRepState c) -> VMap VB VP (Credential 'Staking c) (CompactForm Coin) -> DRepDistr c
-startDRepDistr _ _ regDreps _ | Map.null regDreps = DRComplete Map.empty
-startDRepDistr stepSize um regDreps stakeDistr = DRPulsing $ DRepPulser stepSize um regDreps stakeDistr Map.empty
+startDRepDistr ::
+  Int ->
+  UMap c ->
+  Map (Credential 'DRepRole c) (DRepState c) ->
+  VMap VB VP (Credential 'Staking c) (CompactForm Coin) ->
+  DRepDistr c
+startDRepDistr stepSize um regDreps stakeDistr
+  | stepSize <= 0 || Map.null regDreps = DRComplete Map.empty
+  | otherwise = DRPulsing $ DRepPulser stepSize um regDreps stakeDistr Map.empty
 
 pulseDRepDistr :: DRepDistr c -> DRepDistr c
 pulseDRepDistr x@(DRComplete _) = x

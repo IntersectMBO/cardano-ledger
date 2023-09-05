@@ -17,7 +17,7 @@ module Cardano.Ledger.Conway.Governance.Snapshots (
   snapshotGovActionStates,
 ) where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), DecShareCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams)
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovActionId,
@@ -65,8 +65,9 @@ instance Default (ProposalsSnapshot era) where
 instance EraPParams era => EncCBOR (ProposalsSnapshot era) where
   encCBOR = encCBOR . snapshotActions
 
-instance EraPParams era => DecCBOR (ProposalsSnapshot era) where
-  decCBOR = fromGovActionStateSeq <$> decCBOR
+-- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance EraPParams era => DecShareCBOR (ProposalsSnapshot era) where
+  decShareCBOR _ = fromGovActionStateSeq <$> decCBOR
 
 snapshotInsertGovAction ::
   GovActionState era ->

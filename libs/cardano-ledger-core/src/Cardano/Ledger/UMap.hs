@@ -107,7 +107,7 @@ module Cardano.Ledger.UMap (
 where
 
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core.TxCert (DRep)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
@@ -129,7 +129,6 @@ import qualified Data.Set as Set
 import qualified Data.Set.Internal as SI (Set (Tip))
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (lookup, null)
 
@@ -1006,12 +1005,6 @@ unify rd ptr sPool dRep = um4
     um2 = unUView $ Map.foldlWithKey' (\um k v -> insert' k v um) (SPoolUView um1) sPool
     um3 = unUView $ Map.foldlWithKey' (\um k v -> insert' k v um) (DRepUView um2) dRep
     um4 = unUView $ Map.foldlWithKey' (\um k v -> insert' k v um) (PtrUView um3) ptr
-
-compactCoinOrError :: HasCallStack => Coin -> CompactForm Coin
-compactCoinOrError c =
-  case toCompact c of
-    Nothing -> error $ "Invalid ADA value in staking: " <> show c
-    Just compactCoin -> compactCoin
 
 addCompact :: CompactForm Coin -> CompactForm Coin -> CompactForm Coin
 addCompact (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)

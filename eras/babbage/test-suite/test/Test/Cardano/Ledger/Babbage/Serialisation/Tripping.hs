@@ -6,10 +6,8 @@
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 
-import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
-import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Protocol.TPraos.BHeader (BHeader)
@@ -25,47 +23,7 @@ tests :: TestTree
 tests =
   testGroup
     "Babbage CBOR round-trip"
-    [ testProperty "babbage/Script" $
-        roundTripAnnRangeExpectation @(Script Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "babbage/Metadata" $
-        roundTripAnnRangeExpectation @(TxAuxData Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "babbage/TxOut" $
-        roundTripCborRangeExpectation @(TxOut Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "babbage/TxBody" $
-        roundTripAnnRangeExpectation @(TxBody Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "babbage/CostModel" $
-        roundTripCborRangeExpectation @CostModels
-          (natVersion @2)
-          maxBound
-    , testProperty "babbage/PParams" $
-        roundTripCborRangeExpectation @(PParams Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "babbage/PParamsUpdate" $
-        roundTripCborRangeExpectation @(PParamsUpdate Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "babbage/AuxiliaryData" $
-        roundTripAnnRangeExpectation @(TxAuxData Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "Script" $
-        roundTripAnnRangeExpectation @(Script Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "babbage/Tx" $
-        roundTripAnnRangeExpectation @(Tx Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
-    , testProperty "babbage/BabbageUtxoPredFailure" $
+    [ testProperty "babbage/BabbageUtxoPredFailure" $
         roundTripCborRangeExpectation @(BabbageUtxoPredFailure Babbage)
           (eraProtVerLow @Babbage)
           (eraProtVerHigh @Babbage)

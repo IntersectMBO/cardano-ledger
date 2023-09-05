@@ -1,7 +1,7 @@
 module Main where
 
-import qualified Test.Cardano.Ledger.AddressSpec as AddressSpec
 import qualified Test.Cardano.Ledger.BaseTypesSpec as BaseTypesSpec
+import qualified Test.Cardano.Ledger.BinarySpec as BinarySpec
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.UMapSpec as UMapSpec
 
@@ -10,5 +10,5 @@ main =
   ledgerTestMain $
     describe "Core" $ do
       BaseTypesSpec.spec
-      AddressSpec.spec
+      BinarySpec.spec
       UMapSpec.spec

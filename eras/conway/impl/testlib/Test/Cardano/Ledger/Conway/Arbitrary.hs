@@ -58,7 +58,7 @@ import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
 import qualified Data.Sequence.Strict as Seq
 import Test.Cardano.Data (genNonEmptyMap)
-import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoScript)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoScript, unFlexibleCostModels)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
@@ -149,9 +149,6 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance Crypto (EraCrypto era) => Arbitrary (Constitution era) where
-  arbitrary = Constitution <$> arbitrary <*> arbitrary
-
 instance Era era => Arbitrary (PrevGovActionIds era) where
   arbitrary =
     PrevGovActionIds
@@ -176,14 +173,14 @@ instance
 
 uniqueIdGovActions ::
   ( Era era
-  , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (PParamsUpdate era)
   ) =>
   Gen (Seq.StrictSeq (GovActionState era))
 uniqueIdGovActions = Seq.fromList . nubBy (\x y -> gasId x == gasId y) <$> arbitrary
 
 instance
   ( Era era
-  , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (PParamsUpdate era)
   ) =>
   Arbitrary (ProposalsSnapshot era)
   where
@@ -191,7 +188,7 @@ instance
 
 instance
   ( Era era
-  , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (PParamsUpdate era)
   ) =>
   Arbitrary (GovSnapshots era)
   where
@@ -464,7 +461,7 @@ instance Era era => Arbitrary (ConwayPParams Identity era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> (unFlexibleCostModels <$> arbitrary)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -498,7 +495,7 @@ instance Era era => Arbitrary (ConwayPParams StrictMaybe era) where
       <*> pure SNothing
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> (fmap unFlexibleCostModels <$> arbitrary)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

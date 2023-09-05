@@ -7,6 +7,7 @@
 module Cardano.Ledger.Binary.Plain (
   module Cardano.Binary,
   module Codec.CBOR.Term,
+  showDecoderError,
   invalidKey,
   decodeRecordNamed,
   decodeRecordNamedT,
@@ -56,6 +57,11 @@ import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.ByteString.Base16 as B16
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import Formatting (build, formatToString)
+import qualified Formatting.Buildable as B (Buildable (..))
+
+showDecoderError :: B.Buildable e => e -> String
+showDecoderError = formatToString build
 
 -- | Encode a type as CBOR and encode it as base16
 serializeAsHexText :: ToCBOR a => a -> Text.Text

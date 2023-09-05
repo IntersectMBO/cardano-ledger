@@ -25,9 +25,11 @@ module Cardano.Ledger.Shelley.Governance (
 import Cardano.Ledger.BaseTypes (Anchor)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
+  DecShareCBOR (..),
   EncCBOR (encCBOR),
   FromCBOR (..),
   ToCBOR (..),
+  decNoShareCBOR,
   decodeNullStrictMaybe,
   encodeNullStrictMaybe,
  )
@@ -67,6 +69,7 @@ class
   , NFData (GovState era)
   , EncCBOR (GovState era)
   , DecCBOR (GovState era)
+  , DecShareCBOR (GovState era)
   , ToCBOR (GovState era)
   , FromCBOR (GovState era)
   , Default (GovState era)
@@ -178,15 +181,24 @@ instance
   , DecCBOR (PParamsUpdate era)
   , DecCBOR (PParams era)
   ) =>
-  DecCBOR (ShelleyGovState era)
+  DecShareCBOR (ShelleyGovState era)
   where
-  decCBOR =
+  decShareCBOR _ =
     decode $
       RecD ShelleyGovState
         <! From
         <! From
         <! From
         <! From
+
+instance
+  ( Era era
+  , DecCBOR (PParamsUpdate era)
+  , DecCBOR (PParams era)
+  ) =>
+  DecCBOR (ShelleyGovState era)
+  where
+  decCBOR = decNoShareCBOR
 
 instance
   ( Era era

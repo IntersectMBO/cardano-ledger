@@ -33,8 +33,8 @@
   },
   "committee" :{
     "members" : {
-       "keyhash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 1 ,
-       "scripthash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 2
+       "keyHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 1 ,
+       "scriptHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 2
      },
     "quorum": 0.5
   }

@@ -127,6 +127,7 @@ library testlib
         Test.Cardano.Ledger.Core.Address
         Test.Cardano.Ledger.Core.Arbitrary
         Test.Cardano.Ledger.Core.Binary
+        Test.Cardano.Ledger.Core.Binary.RoundTrip
         Test.Cardano.Ledger.Core.KeyPair
         Test.Cardano.Ledger.Core.Utils
 
@@ -170,6 +171,7 @@ test-suite tests
     other-modules:
         Test.Cardano.Ledger.AddressSpec
         Test.Cardano.Ledger.BaseTypesSpec
+        Test.Cardano.Ledger.BinarySpec
         Test.Cardano.Ledger.UMapSpec
 
     default-language: Haskell2010

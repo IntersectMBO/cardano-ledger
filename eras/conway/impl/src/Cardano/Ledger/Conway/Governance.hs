@@ -92,9 +92,11 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
+  DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  decNoShareCBOR,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -250,20 +252,21 @@ instance EraPParams era => EncCBOR (GovSnapshots era) where
         !> To prevDRepsState
         !> To prevCommitteeState
 
-instance EraPParams era => DecCBOR (GovSnapshots era) where
-  decCBOR =
+-- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance EraPParams era => DecShareCBOR (GovSnapshots era) where
+  decShareCBOR _ =
     decode $
       RecD GovSnapshots
+        <! (D decNoShareCBOR)
+        <! (D decNoShareCBOR)
         <! From
-        <! From
-        <! From
-        <! From
+        <! (D decNoShareCBOR)
 
 instance EraPParams era => ToCBOR (GovSnapshots era) where
   toCBOR = toEraCBOR @era
 
 instance EraPParams era => FromCBOR (GovSnapshots era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraShareCBOR @era
 
 data PrevGovActionIds era = PrevGovActionIds
   { pgaPParamUpdate :: !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
@@ -408,7 +411,11 @@ instance EraPParams era => Default (EnactState era) where
       def
 
 instance EraPParams era => DecCBOR (EnactState era) where
-  decCBOR =
+  decCBOR = decNoShareCBOR
+
+-- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance EraPParams era => DecShareCBOR (EnactState era) where
+  decShareCBOR _ =
     decode $
       RecD EnactState
         <! From
@@ -459,43 +466,9 @@ instance EraPParams era => ToExpr (RatifyState era)
 
 instance EraPParams era => Default (RatifyState era)
 
-instance EraPParams era => DecCBOR (RatifyState era) where
-  decCBOR =
-    decode $
-      RecD RatifyState
-        <! From
-        <! From
-        <! From
-
-instance EraPParams era => EncCBOR (RatifyState era) where
-  encCBOR RatifyState {..} =
-    encode $
-      Rec RatifyState
-        !> To rsEnactState
-        !> To rsRemoved
-        !> To rsDelayed
-
-instance EraPParams era => ToCBOR (RatifyState era) where
-  toCBOR = toEraCBOR @era
-
-instance EraPParams era => FromCBOR (RatifyState era) where
-  fromCBOR = fromEraCBOR @era
-
 instance EraPParams era => NFData (RatifyState era)
 
 instance EraPParams era => NoThunks (RatifyState era)
-
-instance EraPParams era => ToJSON (RatifyState era) where
-  toJSON = object . toRatifyStatePairs
-  toEncoding = pairs . mconcat . toRatifyStatePairs
-
-toRatifyStatePairs :: (KeyValue a, EraPParams era) => RatifyState era -> [a]
-toRatifyStatePairs cg@(RatifyState _ _ _) =
-  let RatifyState {..} = cg
-   in [ "enactState" .= rsEnactState
-      , "removed" .= rsRemoved
-      , "delayed" .= rsDelayed
-      ]
 
 data ConwayGovState era = ConwayGovState
   { cgGovSnapshots :: !(GovSnapshots era)
@@ -522,12 +495,16 @@ curPParamsConwayGovStateL = cgEnactStateL . ensCurPParamsL
 prevPParamsConwayGovStateL :: Lens' (ConwayGovState era) (PParams era)
 prevPParamsConwayGovStateL = cgEnactStateL . ensPrevPParamsL
 
-instance EraPParams era => DecCBOR (ConwayGovState era) where
-  decCBOR =
+-- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance EraPParams era => DecShareCBOR (ConwayGovState era) where
+  decShareCBOR _ =
     decode $
       RecD ConwayGovState
+        <! (D decNoShareCBOR)
         <! From
-        <! From
+
+instance EraPParams era => DecCBOR (ConwayGovState era) where
+  decCBOR = decNoShareCBOR
 
 instance EraPParams era => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =

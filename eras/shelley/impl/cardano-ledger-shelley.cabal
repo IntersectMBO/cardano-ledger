@@ -132,6 +132,7 @@ library testlib
     exposed-modules:
         Test.Cardano.Ledger.Shelley.Arbitrary
         Test.Cardano.Ledger.Shelley.Binary.Golden
+        Test.Cardano.Ledger.Shelley.Binary.RoundTrip
         Test.Cardano.Ledger.Shelley.Constants
 
     visibility:       public
@@ -164,7 +165,11 @@ test-suite tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-    other-modules:    Test.Cardano.Ledger.Shelley.Binary.GoldenSpec
+    other-modules:
+        Test.Cardano.Ledger.Shelley.BinarySpec
+        Test.Cardano.Ledger.Shelley.Binary.GoldenSpec
+        Test.Cardano.Ledger.Shelley.Binary.RoundTripSpec
+
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -173,6 +178,7 @@ test-suite tests
 
     build-depends:
         base,
-        cardano-ledger-core:testlib,
+        cardano-ledger-binary:testlib,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley,
         testlib

@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.AddressSpec (spec) where
+module Test.Cardano.Ledger.AddressSpec (roundTripAddressSpec) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
@@ -26,16 +26,17 @@ import Data.Proxy
 import Data.Word
 import Test.Cardano.Ledger.Binary.RoundTrip (
   cborTrip,
-  roundTripExpectation,
+  roundTripCborSpec,
   roundTripRangeExpectation,
  )
 import Test.Cardano.Ledger.Common hiding ((.&.))
 import Test.Cardano.Ledger.Core.Address
 import Test.Cardano.Ledger.Core.Arbitrary (genAddrBadPtr, genCompactAddrBadPtr)
 
-spec :: Spec
-spec = describe "Address" $ do
+roundTripAddressSpec :: Spec
+roundTripAddressSpec = describe "Address" $ do
   describe "CompactAddr" $ do
+    roundTripCborSpec @(CompactAddr StandardCrypto)
     prop "compactAddr/decompactAddr round trip" $
       forAll genAddrBadPtr $
         propCompactAddrRoundTrip @StandardCrypto
@@ -46,8 +47,6 @@ spec = describe "Address" $ do
       propDecompactErrors @StandardCrypto
     prop "Ensure RewardAcnt failures on incorrect binary data" $
       propDeserializeRewardAcntErrors @StandardCrypto
-    prop "RoundTrip-valid" $
-      roundTripExpectation @(CompactAddr StandardCrypto) cborTrip
     prop "RoundTrip-invalid" $
       forAll genCompactAddrBadPtr $
         roundTripRangeExpectation @(CompactAddr StandardCrypto)
@@ -58,16 +57,14 @@ spec = describe "Address" $ do
       propDecompactAddrWithJunk @StandardCrypto
     prop "Same as old decompactor" $ propSameAsOldDecompactAddr @StandardCrypto
   describe "Addr" $ do
-    prop "RoundTrip-valid" $
-      roundTripExpectation @(Addr StandardCrypto) cborTrip
+    roundTripCborSpec @(Addr StandardCrypto)
     prop "RoundTrip-invalid" $
       forAll genAddrBadPtr $
         roundTripRangeExpectation @(Addr StandardCrypto) cborTrip (natVersion @2) (natVersion @6)
     prop "Deserializing an address matches old implementation" $
       propValidateNewDeserialize @StandardCrypto
   describe "RewardAcnt" $ do
-    prop "RewardAcnt" $
-      roundTripExpectation @(RewardAcnt StandardCrypto) cborTrip
+    roundTripCborSpec @(RewardAcnt StandardCrypto)
 
 propSameAsOldDecompactAddr :: forall c. Crypto c => CompactAddr c -> Expectation
 propSameAsOldDecompactAddr cAddr = do

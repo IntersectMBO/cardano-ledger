@@ -3,6 +3,14 @@
 ## 1.1.3.0
 
 * Add `fieldGuarded` to be able to conditionally construct a `Field` #3712
+  * Expose `showDecoderError` from `Cardano.Ledger.Binary.Plain`
+
+### `testlib`
+
+* Add `roundTripCborSpec` and `roundTripAnnCborSpec`
+* Adjust output of `showHexBytesGrouped`
+* Add helper functions: `showMaybeDecoderError` and `showFailedTermsWithReSerialization`
+* Improve failure reporting when re-serialization does not match for RoundTrip tests.
 
 ## 1.1.2.0
 

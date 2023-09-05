@@ -208,7 +208,7 @@ fromEraCBOR :: forall era t s. (Era era, DecCBOR t) => Plain.Decoder s t
 fromEraCBOR = eraDecoder @era decCBOR
 {-# INLINE fromEraCBOR #-}
 
--- | Convert a type that implements `DecCBOR` to plain `Plain.Decoder` using the lowest
+-- | Convert a type that implements `DecShareCBOR` to plain `Plain.Decoder` using the lowest
 -- protocol version for the supplied @era@
 fromEraShareCBOR :: forall era t s. (Era era, DecShareCBOR t) => Plain.Decoder s t
 fromEraShareCBOR = eraDecoder @era decNoShareCBOR

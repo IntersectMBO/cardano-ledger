@@ -12,6 +12,8 @@
 module Test.Cardano.Ledger.Binary.RoundTrip (
   -- * Spec
   roundTripSpec,
+  roundTripCborSpec,
+  roundTripAnnCborSpec,
   roundTripRangeSpec,
 
   -- * Expectations
@@ -68,7 +70,11 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
 import qualified Data.Text as T
 import Data.Typeable
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), showExpr, showHexBytesGrouped)
+import Test.Cardano.Ledger.Binary.Plain.RoundTrip (
+  showFailedTermsWithReSerialization,
+  showMaybeDecoderError,
+ )
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), showExpr)
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -85,6 +91,22 @@ roundTripSpec ::
   Spec
 roundTripSpec trip =
   prop (show (typeRep $ Proxy @t)) $ roundTripExpectation trip
+
+-- | Tests the roundtrip property using QuickCheck generators for all possible versions
+-- starting with `shelleyProtVer`.
+roundTripCborSpec ::
+  forall t.
+  (Show t, Eq t, Arbitrary t, EncCBOR t, DecCBOR t) =>
+  Spec
+roundTripCborSpec = roundTripSpec (cborTrip @t)
+
+-- | Tests the roundtrip property using QuickCheck generators for all possible versions
+-- starting with `shelleyProtVer`.
+roundTripAnnCborSpec ::
+  forall t.
+  (Show t, Eq t, Arbitrary t, ToCBOR t, DecCBOR (Annotator t)) =>
+  Spec
+roundTripAnnCborSpec = prop (show (typeRep $ Proxy @t)) (roundTripAnnExpectation @t)
 
 -- | Tests the roundtrip property using QuickCheck generators for specific range of versions
 roundTripRangeSpec ::
@@ -363,18 +385,11 @@ instance Show RoundTripFailure where
       , "Decoder Version: " ++ show rtfDecoderVersion
       , showMaybeDecoderError "Decoder" rtfDecoderError
       , showMaybeDecoderError "Dropper" rtfDropperError
-      , prettyTerm
       ]
-        ++ showHexBytesGrouped bytes
-    where
-      showMaybeDecoderError name = \case
-        Nothing -> "No " ++ name ++ " error"
-        Just err -> name ++ " error: " ++ showDecoderError err
-      bytes = BSL.toStrict rtfEncodedBytes
-      prettyTerm =
-        case decodeFullDecoder' rtfDecoderVersion "Term" decodeTerm bytes of
-          Left err -> "Could not decode as Term: " ++ show err
-          Right term -> showExpr term
+        ++ [ "Original did not match the reserialization (see below)."
+           | Just _ <- pure rtfReEncodedBytes
+           ]
+        ++ showFailedTermsWithReSerialization rtfEncodedBytes rtfReEncodedBytes
 
 -- | A definition of a CBOR trip through binary representation of one type to
 -- another. In this module this is called an embed. When a source and target type is the
@@ -393,7 +408,7 @@ cborTrip = Trip encCBOR decCBOR (dropCBOR (Proxy @b))
 mkTrip :: forall a b. (a -> Encoding) -> (forall s. Decoder s b) -> Trip a b
 mkTrip encoder decoder = Trip encoder decoder (() <$ decoder)
 
--- | Check that serialization forllowed by deserialization of the value produces the same
+-- | Check that serialization followed by deserialization of the value produces the same
 -- value back. We also check that re-serialization is idempotent. In other words, we
 -- ensure that deserialization does not modify the decoded value in a way that its binary
 -- representation has changed. Dropper is checked as well.

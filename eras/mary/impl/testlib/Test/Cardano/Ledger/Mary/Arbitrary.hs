@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,6 +16,7 @@ module Test.Cardano.Ledger.Mary.Arbitrary (
 ) where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
@@ -28,6 +30,7 @@ import Cardano.Ledger.Mary.Value (
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map (empty)
+import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.String (IsString (fromString))
 import Test.Cardano.Data (genNonEmptyMap)
@@ -209,11 +212,14 @@ genMaryValue genMA = do
   pure $ MaryValue i ma
 
 instance Crypto c => Arbitrary (MaryValue c) where
-  arbitrary = do
-    v <- toInteger <$> choose (0 :: Int, maxBound)
-    ma <-
-      genMultiAsset $ toInteger <$> choose (1 :: Int, maxBound)
-    pure $ MaryValue v ma
+  arbitrary =
+    genMaryValue $ genMultiAsset $ toInteger <$> choose (1 :: Int, maxBound)
+
+instance Crypto c => Arbitrary (CompactForm (MaryValue c)) where
+  arbitrary = toCompactMaryValue <$> arbitrary
+    where
+      toCompactMaryValue v =
+        fromMaybe (error $ "Could not compact the value: " ++ show v) $ toCompact v
 
 digitByteStrings :: IsString s => [s]
 digitByteStrings = [fromString [x] | x <- ['0' .. '9']]
