@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.3.3.1
+
+*
+
 ## 1.3.3.0
 
 * Add `EqRaw` instance for `MaryTxBody`

@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.0.3.6
+
+*
+
 ## 1.0.3.5
 
 *
