@@ -30,16 +30,19 @@ import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
-  GovActionsState (..),
   GovProcedures,
+  GovSnapshots (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
+  ProposalsSnapshot,
   Vote (..),
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  snapshotActions,
  )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure (..),
   ConwayCertsPredFailure (..),
@@ -51,7 +54,7 @@ import Cardano.Ledger.Conway.Rules (
   PredicateFailure,
   RatifyState (..),
  )
-import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
@@ -353,13 +356,16 @@ instance
 instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
   prettyA = viaShow
 
-instance PrettyA (PParamsUpdate era) => PrettyA (GovActionsState era) where
-  prettyA x@(GovActionsState _ _ _ _) =
-    let GovActionsState {..} = x
+instance PrettyA (PParamsUpdate era) => PrettyA (ProposalsSnapshot era) where
+  prettyA = prettyA . snapshotActions
+
+instance PrettyA (PParamsUpdate era) => PrettyA (GovSnapshots era) where
+  prettyA x@(GovSnapshots _ _ _ _) =
+    let GovSnapshots {..} = x
      in ppRecord
-          "GovActionsState"
-          [ ("curGovActionsState", prettyA curGovActionsState)
-          , ("prevGovActionsState", prettyA prevGovActionsState)
+          "GovSnapshots"
+          [ ("curGovSnapshots", prettyA curGovSnapshots)
+          , ("prevGovSnapshots", prettyA prevGovSnapshots)
           , ("prevDRepsState", prettyA prevDRepsState)
           , ("prevCommitteeState", prettyA prevCommitteeState)
           ]
@@ -431,9 +437,7 @@ instance PrettyA (PrevGovActionIds era) where
       ]
 
 instance
-  ( PrettyA (PParamsUpdate era)
-  , PrettyA (PParams era)
-  ) =>
+  PrettyA (PParams era) =>
   PrettyA (RatifyState era)
   where
   prettyA rs@(RatifyState _ _ _) =
@@ -455,7 +459,7 @@ instance
     let ConwayGovState {..} = cg
      in ppRecord
           "ConwayGovState"
-          [ ("GovActionsState", prettyA cgGovActionsState)
+          [ ("GovSnapshots", prettyA cgGovSnapshots)
           , ("EnactState", prettyA cgEnactState)
           ]
 

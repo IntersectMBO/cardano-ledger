@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Add `PrettyA` instance for `ProposalsSnapshot`
 * Remove `ppRatifyPredicateFailure`
 * Remove `PrettyA (ConwayEpochPredFailure era)`
 * Remove `PrettyA (EnactPredFailure era)`

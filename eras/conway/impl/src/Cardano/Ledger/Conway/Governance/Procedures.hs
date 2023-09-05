@@ -31,12 +31,16 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   GovActionIx (..),
   PrevGovActionId (..),
   GovActionPurpose (..),
+  GovActionState (..),
   govActionIdToText,
   indexedGovProps,
   -- Lenses
   pProcDepositL,
   committeeMembersL,
   committeeQuorumL,
+  gasDRepVotesL,
+  gasStakePoolVotesL,
+  gasCommitteeVotesL,
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
@@ -164,6 +168,84 @@ govActionIdToText (GovActionId (TxId txidHash) (GovActionIx ix)) =
   hashToTextAsHex (extractHash txidHash)
     <> Text.pack "#"
     <> Text.pack (show ix)
+
+data GovActionState era = GovActionState
+  { gasId :: !(GovActionId (EraCrypto era))
+  , gasCommitteeVotes :: !(Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
+  , gasDRepVotes :: !(Map (Credential 'DRepRole (EraCrypto era)) Vote)
+  , gasStakePoolVotes :: !(Map (KeyHash 'StakePool (EraCrypto era)) Vote)
+  , gasDeposit :: !Coin
+  , gasReturnAddr :: !(RewardAcnt (EraCrypto era))
+  , gasAction :: !(GovAction era)
+  , gasProposedIn :: !EpochNo
+  , gasExpiresAfter :: !EpochNo
+  }
+  deriving (Generic)
+
+gasCommitteeVotesL :: Lens' (GovActionState era) (Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
+gasCommitteeVotesL = lens gasCommitteeVotes (\x y -> x {gasCommitteeVotes = y})
+
+gasDRepVotesL :: Lens' (GovActionState era) (Map (Credential 'DRepRole (EraCrypto era)) Vote)
+gasDRepVotesL = lens gasDRepVotes (\x y -> x {gasDRepVotes = y})
+
+gasStakePoolVotesL :: Lens' (GovActionState era) (Map (KeyHash 'StakePool (EraCrypto era)) Vote)
+gasStakePoolVotesL = lens gasStakePoolVotes (\x y -> x {gasStakePoolVotes = y})
+
+instance EraPParams era => ToExpr (GovActionState era)
+
+instance EraPParams era => ToJSON (GovActionState era) where
+  toJSON = object . toGovActionStatePairs
+  toEncoding = pairs . mconcat . toGovActionStatePairs
+
+toGovActionStatePairs :: (KeyValue a, EraPParams era) => GovActionState era -> [a]
+toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _) =
+  let GovActionState {..} = gas
+   in [ "actionId" .= gasId
+      , "committeeVotes" .= gasCommitteeVotes
+      , "dRepVotes" .= gasDRepVotes
+      , "stakePoolVotes" .= gasStakePoolVotes
+      , "deposit" .= gasDeposit
+      , "returnAddr" .= gasReturnAddr
+      , "action" .= gasAction
+      , "proposedIn" .= gasProposedIn
+      , "expiresAfter" .= gasExpiresAfter
+      ]
+
+deriving instance EraPParams era => Eq (GovActionState era)
+
+deriving instance EraPParams era => Show (GovActionState era)
+
+instance EraPParams era => NoThunks (GovActionState era)
+
+instance EraPParams era => NFData (GovActionState era)
+
+instance EraPParams era => DecCBOR (GovActionState era) where
+  decCBOR =
+    decode $
+      RecD GovActionState
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance EraPParams era => EncCBOR (GovActionState era) where
+  encCBOR GovActionState {..} =
+    encode $
+      Rec GovActionState
+        !> To gasId
+        !> To gasCommitteeVotes
+        !> To gasDRepVotes
+        !> To gasStakePoolVotes
+        !> To gasDeposit
+        !> To gasReturnAddr
+        !> To gasAction
+        !> To gasProposedIn
+        !> To gasExpiresAfter
 
 data Voter c
   = CommitteeVoter !(Credential 'HotCommitteeRole c)

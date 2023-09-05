@@ -7,7 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conway.Arbitrary () where
+module Test.Cardano.Ledger.Conway.Arbitrary (uniqueIdGovActions) where
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -15,7 +15,25 @@ import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Governance (
+  Committee (..),
+  ConwayGovState (..),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionState (..),
+  GovProcedures (..),
+  GovSnapshots (..),
+  PrevGovActionId (..),
+  PrevGovActionIds (..),
+  ProposalProcedure (..),
+  ProposalsSnapshot,
+  Vote,
+  Voter (..),
+  VotingProcedure (..),
+  VotingProcedures (..),
+  fromGovActionStateSeq,
+ )
 import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
   UpgradeConwayPParams (..),
@@ -27,6 +45,8 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Language (Language (..))
 import Control.State.Transition.Extended (STS (Event))
 import Data.Functor.Identity (Identity)
+import Data.List (nubBy)
+import qualified Data.Sequence.Strict as Seq
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoScript)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
@@ -89,7 +109,7 @@ instance Crypto c => Arbitrary (AlonzoScript (ConwayEra c)) where
 ------------------------------------------------------------------------------------------
 
 instance
-  (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
+  (Era era, Arbitrary (PParams era), Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (ConwayGovState era)
   where
   arbitrary =
@@ -144,9 +164,29 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionsState era) where
+uniqueIdGovActions ::
+  ( Era era
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Gen (Seq.StrictSeq (GovActionState era))
+uniqueIdGovActions = Seq.fromList . nubBy (\x y -> gasId x == gasId y) <$> arbitrary
+
+instance
+  ( Era era
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (ProposalsSnapshot era)
+  where
+  arbitrary = fromGovActionStateSeq <$> uniqueIdGovActions
+
+instance
+  ( Era era
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (GovSnapshots era)
+  where
   arbitrary =
-    GovActionsState
+    GovSnapshots
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary

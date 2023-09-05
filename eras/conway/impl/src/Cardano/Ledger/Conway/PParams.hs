@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -17,6 +18,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains the type of protocol parameters and EraPParams instance
@@ -30,11 +32,31 @@ module Cardano.Ledger.Conway.PParams (
   UpgradeConwayPParams (..),
   PoolVotingThresholds (..),
   DRepVotingThresholds (..),
+  ConwayEraPParams (..),
+  ppPoolVotingThresholdsL,
+  ppDRepVotingThresholdsL,
+  ppMinCommitteeSizeL,
+  ppCommitteeTermLimitL,
+  ppGovActionExpirationL,
+  ppGovActionDepositL,
+  ppDRepDepositL,
+  ppDRepActivityL,
+  ppuPoolVotingThresholdsL,
+  ppuDRepVotingThresholdsL,
+  ppuMinCommitteeSizeL,
+  ppuCommitteeTermLimitL,
+  ppuGovActionExpirationL,
+  ppuGovActionDepositL,
+  ppuDRepDepositL,
+  ppuDRepActivityL,
+  PParamGroup (..),
+  modifiedGroups,
 )
 where
 
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (Prices), emptyCostModels)
+import Cardano.Ledger.Ap (Ap, runAp_)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), NonNegativeInterval, ProtVer (ProtVer), UnitInterval)
@@ -54,6 +76,8 @@ import Data.Default.Class (Default (def))
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe (..), isSNothing)
 import Data.Proxy
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -768,3 +792,89 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppCollateralPercentage = cppCollateralPercentage
     , bppMaxCollateralInputs = cppMaxCollateralInputs
     }
+
+data PParamGroup
+  = EconomicGroup
+  | NetworkGroup
+  | TechnicalGroup
+  | GovernanceGroup
+  deriving (Eq, Ord)
+
+newtype ParamGrouper a = ParamGrouper {unParamGrouper :: Set PParamGroup}
+  deriving (Functor)
+
+pGroup :: PParamGroup -> StrictMaybe a -> Ap f (ParamGrouper a)
+pGroup pg (SJust _) = pure . ParamGrouper $ Set.singleton pg
+pGroup _ SNothing = pure $ ParamGrouper mempty
+
+pUngrouped :: Ap f (ParamGrouper a)
+pUngrouped = pure $ ParamGrouper mempty
+
+modifiedGroups ::
+  forall era.
+  ConwayEraPParams era =>
+  PParamsUpdate era ->
+  Set PParamGroup
+modifiedGroups = runAp_ unParamGrouper . (pparamsGroups @era)
+
+class BabbageEraPParams era => ConwayEraPParams era where
+  pparamsGroups ::
+    Functor f => PParamsUpdate era -> Ap f (PParamsHKD ParamGrouper era)
+  ppuWellFormed :: PParamsUpdate era -> Bool
+
+  hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
+  hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
+  hkdMinCommitteeSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdCommitteeTermLimitL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdGovActionExpirationL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
+  hkdGovActionDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdDRepDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
+
+ppPoolVotingThresholdsL :: forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
+ppPoolVotingThresholdsL = ppLens . hkdPoolVotingThresholdsL @era @Identity
+
+ppDRepVotingThresholdsL :: forall era. ConwayEraPParams era => Lens' (PParams era) DRepVotingThresholds
+ppDRepVotingThresholdsL = ppLens . hkdDRepVotingThresholdsL @era @Identity
+
+ppMinCommitteeSizeL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
+ppMinCommitteeSizeL = ppLens . hkdMinCommitteeSizeL @era @Identity
+
+ppCommitteeTermLimitL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
+ppCommitteeTermLimitL = ppLens . hkdCommitteeTermLimitL @era @Identity
+
+ppGovActionExpirationL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochNo
+ppGovActionExpirationL = ppLens . hkdGovActionExpirationL @era @Identity
+
+ppGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
+ppGovActionDepositL = ppLens . hkdGovActionDepositL @era @Identity
+
+ppDRepDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
+ppDRepDepositL = ppLens . hkdDRepDepositL @era @Identity
+
+ppDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochNo
+ppDRepActivityL = ppLens . hkdDRepActivityL @era @Identity
+
+ppuPoolVotingThresholdsL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe PoolVotingThresholds)
+ppuPoolVotingThresholdsL = ppuLens . hkdPoolVotingThresholdsL @era @StrictMaybe
+
+ppuDRepVotingThresholdsL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe DRepVotingThresholds)
+ppuDRepVotingThresholdsL = ppuLens . hkdDRepVotingThresholdsL @era @StrictMaybe
+
+ppuMinCommitteeSizeL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuMinCommitteeSizeL = ppuLens . hkdMinCommitteeSizeL @era @StrictMaybe
+
+ppuCommitteeTermLimitL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuCommitteeTermLimitL = ppuLens . hkdCommitteeTermLimitL @era @StrictMaybe
+
+ppuGovActionExpirationL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
+ppuGovActionExpirationL = ppuLens . hkdGovActionExpirationL @era @StrictMaybe
+
+ppuGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuGovActionDepositL = ppuLens . hkdGovActionDepositL @era @StrictMaybe
+
+ppuDRepDepositL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuDRepDepositL = ppuLens . hkdDRepDepositL @era @StrictMaybe
+
+ppuDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
+ppuDRepActivityL = ppuLens . hkdDRepActivityL @era @StrictMaybe
