@@ -11,7 +11,7 @@ description:
 
 category:           Network
 build-type:         Simple
-data-files:         data/*.json
+data-files:         test/data/*.json
 extra-source-files: CHANGELOG.md
 
 source-repository head
