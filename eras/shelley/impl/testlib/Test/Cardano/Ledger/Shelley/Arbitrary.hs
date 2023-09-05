@@ -104,7 +104,8 @@ instance Era era => Arbitrary (ShelleyPParams StrictMaybe era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-deriving newtype instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposedPPUpdates era)
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposedPPUpdates era) where
+  arbitrary = ProposedPPUpdates <$> scale (`div` 15) arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Shelley.TxOut ----------------------------------------------------------
