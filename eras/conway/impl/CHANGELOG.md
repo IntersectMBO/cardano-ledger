@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Remove `ensProtVer` field from `EnactState`: #3705
 * Move `ConwayEraTxBody` to `Cardano.Ledger.Conway.TxBody`
 * Move `ConwayEraPParams` to `Cardano.Ledger.Conway.PParams`
 * Rename:
