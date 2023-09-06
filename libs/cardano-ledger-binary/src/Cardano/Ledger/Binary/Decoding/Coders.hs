@@ -35,6 +35,7 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   ofield,
   invalidField,
   field,
+  fieldGuarded,
   fieldA,
   fieldAA,
 
@@ -68,6 +69,7 @@ import Cardano.Ledger.Binary.Version (Version)
 #if ! MIN_VERSION_base(4,18,0)
 import Control.Applicative (liftA2)
 #endif
+import Control.Monad (when)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set, insert, member)
@@ -129,6 +131,22 @@ data Field t where
 {-# INLINE field #-}
 field :: (x -> t -> t) -> Decode ('Closed d) x -> Field t
 field update dec = Field update (decode dec)
+
+{-# INLINE fieldGuarded #-}
+fieldGuarded ::
+  -- | The message to use if the condition fails
+  String ->
+  -- | The condition to guard against
+  (x -> Bool) ->
+  (x -> t -> t) ->
+  Decode ('Closed d) x ->
+  Field t
+fieldGuarded failMsg check update dec =
+  Field
+    update
+    ( decode dec >>= \x ->
+        x <$ when (check x) (fail failMsg)
+    )
 
 {-# INLINE ofield #-}
 ofield :: (StrictMaybe x -> t -> t) -> Decode ('Closed d) x -> Field t

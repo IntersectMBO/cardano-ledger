@@ -2,6 +2,15 @@
 
 ## 1.9.0.0
 
+* Fix `ConwayTxBodyRaw` decoder to disallow empty `Field`s #3712
+  * `certsTxBodyL`
+  * `withdrawalsTxBodyL`
+  * `mintTxBodyL`
+  * `collateralInputsTxBodyL`
+  * `reqSignerHashesTxBodyL`
+  * `referenceInputsTxBodyL`
+  * `votingProceduresTxBodyL`
+  * `proposalProceduresTxBodyL`
 * Add `reorderActions`, `actionPriority`
 * Remove `ensProtVer` field from `EnactState`: #3705
 * Move `ConwayEraTxBody` to `Cardano.Ledger.Conway.TxBody`

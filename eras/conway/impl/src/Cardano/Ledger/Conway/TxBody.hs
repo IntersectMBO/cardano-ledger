@@ -70,6 +70,7 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   encodeKeyedStrictMaybe,
   field,
+  fieldGuarded,
   ofield,
   (!>),
  )
@@ -180,28 +181,68 @@ instance
         ofield
           (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidHereafter = x}})
           From
-      bodyFields 4 = field (\x tx -> tx {ctbrCerts = x}) From
-      bodyFields 5 = field (\x tx -> tx {ctbrWithdrawals = x}) From
+      bodyFields 4 =
+        fieldGuarded
+          (emptyFailure "Certificates" "non-empty")
+          null
+          (\x tx -> tx {ctbrCerts = x})
+          From
+      bodyFields 5 =
+        fieldGuarded
+          (emptyFailure "Withdrawals" "non-empty")
+          (null . unWithdrawals)
+          (\x tx -> tx {ctbrWithdrawals = x})
+          From
       bodyFields 7 = ofield (\x tx -> tx {ctbrAuxDataHash = x}) From
       bodyFields 8 =
         ofield
           (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidBefore = x}})
           From
-      bodyFields 9 = field (\x tx -> tx {ctbrMint = x}) From
+      bodyFields 9 =
+        fieldGuarded
+          (emptyFailure "Mint" "non-empty")
+          (== mempty)
+          (\x tx -> tx {ctbrMint = x})
+          From
       bodyFields 11 = ofield (\x tx -> tx {ctbrScriptIntegrityHash = x}) From
-      bodyFields 13 = field (\x tx -> tx {ctbrCollateralInputs = x}) From
-      bodyFields 14 = field (\x tx -> tx {ctbrReqSignerHashes = x}) From
+      bodyFields 13 =
+        fieldGuarded
+          (emptyFailure "Collateral Inputs" "non-empty")
+          null
+          (\x tx -> tx {ctbrCollateralInputs = x})
+          From
+      bodyFields 14 =
+        fieldGuarded
+          (emptyFailure "Required Signer Hashes" "non-empty")
+          null
+          (\x tx -> tx {ctbrReqSignerHashes = x})
+          From
       bodyFields 15 = ofield (\x tx -> tx {ctbrTxNetworkId = x}) From
       bodyFields 16 = ofield (\x tx -> tx {ctbrCollateralReturn = x}) From
       bodyFields 17 = ofield (\x tx -> tx {ctbrTotalCollateral = x}) From
-      bodyFields 18 = field (\x tx -> tx {ctbrReferenceInputs = x}) From
-      bodyFields 19 = field (\x tx -> tx {ctbrVotingProcedures = x}) From
-      bodyFields 20 = field (\x tx -> tx {ctbrProposalProcedures = x}) From
+      bodyFields 18 =
+        fieldGuarded
+          (emptyFailure "Reference Inputs" "non-empty")
+          null
+          (\x tx -> tx {ctbrReferenceInputs = x})
+          From
+      bodyFields 19 =
+        fieldGuarded
+          (emptyFailure "VotingProcedures" "non-empty")
+          (null . unVotingProcedures)
+          (\x tx -> tx {ctbrVotingProcedures = x})
+          From
+      bodyFields 20 =
+        fieldGuarded
+          (emptyFailure "ProposalProcedures" "non-empty")
+          null
+          (\x tx -> tx {ctbrProposalProcedures = x})
+          From
       bodyFields 21 = ofield (\x tx -> tx {ctbrCurrentTreasuryValue = x}) From
       bodyFields 22 =
         ofield
           (\x tx -> tx {ctbrTreasuryDonation = fromSMaybe zero x})
-          (D (decodePositiveCoin "'treasuryWithdrawal' must be non-zero when supplied"))
+          (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-empty"))
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields :: [(Word, String)]
       requiredFields =
@@ -209,6 +250,8 @@ instance
         , (1, "outputs")
         , (2, "fee")
         ]
+      emptyFailure fieldName requirement =
+        "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
   deriving (Generic, SafeToHash, ToCBOR)

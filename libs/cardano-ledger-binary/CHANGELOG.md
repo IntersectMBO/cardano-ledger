@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.1.2.1
+## 1.1.3.0
 
-*
+* Add `fieldGuarded` to be able to conditionally construct a `Field` #3712
 
 ## 1.1.2.0
 

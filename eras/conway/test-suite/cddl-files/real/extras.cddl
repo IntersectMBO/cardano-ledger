@@ -1,4 +1,6 @@
-finite_set<a> = [* a ]
+finite_set<a> = [* a]
+
+nonempty_finite_set<a> = [+ a]
 
 unit_interval = #6.30([uint, uint])
 
