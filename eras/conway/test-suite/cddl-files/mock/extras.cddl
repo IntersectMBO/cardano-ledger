@@ -1,6 +1,8 @@
 set<a> = [a]
   ; real set is [* a]
 
+nonempty_set<a> = [+ a]
+
 unit_interval = #6.30([1, 2])
   ; real unit_interval is: #6.30([uint, uint])
   ; but this produces numbers outside the unit interval

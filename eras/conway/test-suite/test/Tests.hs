@@ -19,7 +19,7 @@ defaultTests =
   testGroup
     "Conway tests"
     [ Roundtrip.allprops @Conway
-    , CDDL.tests 5
+    , CDDL.tests 10
     , Babbage.txInfoTests (Proxy @Conway)
     , Conway.txInfoTests (Proxy @Conway)
     , govSnapshotProps

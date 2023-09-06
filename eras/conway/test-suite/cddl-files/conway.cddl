@@ -51,26 +51,26 @@ major_protocol_version = 1..next_major_protocol_version
 protocol_version = (major_protocol_version, uint)
 
 transaction_body =
-  { 0 : set<transaction_input>      ; inputs
+  { 0 : set<transaction_input>             ; inputs
   , 1 : [* transaction_output]
-  , 2 : coin                        ; fee
-  , ? 3 : uint                      ; time to live
-  , ? 4 : [* certificate]
+  , 2 : coin                               ; fee
+  , ? 3 : uint                             ; time to live
+  , ? 4 : [+ certificate]
   , ? 5 : withdrawals
   , ? 7 : auxiliary_data_hash
-  , ? 8 : uint                      ; validity interval start
+  , ? 8 : uint                             ; validity interval start
   , ? 9 : mint
   , ? 11 : script_data_hash
-  , ? 13 : set<transaction_input>   ; collateral inputs
+  , ? 13 : nonempty_set<transaction_input> ; collateral inputs
   , ? 14 : required_signers
   , ? 15 : network_id
-  , ? 16 : transaction_output       ; collateral return
-  , ? 17 : coin                     ; total collateral
-  , ? 18 : set<transaction_input>   ; reference inputs
-  , ? 19 : voting_procedures        ; New; Voting procedures
-  , ? 20 : [* proposal_procedure]   ; New; Proposal procedures
-  , ? 21 : coin                     ; New; current treasury value
-  , ? 22 : positive_coin            ; New; donation
+  , ? 16 : transaction_output              ; collateral return
+  , ? 17 : coin                            ; total collateral
+  , ? 18 : nonempty_set<transaction_input> ; reference inputs
+  , ? 19 : voting_procedures               ; New; Voting procedures
+  , ? 20 : [+ proposal_procedure]          ; New; Proposal procedures
+  , ? 21 : coin                            ; New; current treasury value
+  , ? 22 : positive_coin                   ; New; donation
   }
 
 voting_procedures = { + voter => { + gov_action_id => voting_procedure } }
@@ -146,7 +146,7 @@ gov_action_id =
   , gov_action_index : uint
   ]
 
-required_signers = set<$addr_keyhash>
+required_signers = nonempty_set<$addr_keyhash>
 
 transaction_input = [ transaction_id : $hash32
                     , index : uint
@@ -370,7 +370,7 @@ relay =
 pool_metadata = [url, pool_metadata_hash]
 url = tstr .size (0..64)
 
-withdrawals = { * reward_account => coin }
+withdrawals = { + reward_account => coin }
 
 protocol_param_update =
   { ? 0:  uint                   ; minfee A
