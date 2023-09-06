@@ -148,6 +148,7 @@ library testlib
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-byron-test,
         containers,
+        data-default-class,
         deepseq,
         generic-random,
         genvalidity,

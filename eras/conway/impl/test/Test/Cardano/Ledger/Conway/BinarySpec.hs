@@ -7,6 +7,7 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Genesis
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Crypto
+import Data.Default.Class (def)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -16,7 +17,7 @@ import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
 
 spec :: Spec
 spec = do
-  specUpgrade @Conway True
+  specUpgrade @Conway def
   describe "RoundTrip" $ do
     roundTripCborSpec @(GovActionId StandardCrypto)
     roundTripCborSpec @(PrevGovActionId 'PParamUpdatePurpose StandardCrypto)
