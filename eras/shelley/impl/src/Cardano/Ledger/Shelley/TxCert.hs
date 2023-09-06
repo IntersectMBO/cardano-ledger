@@ -489,19 +489,11 @@ isRegKey (RegTxCert _) = True
 isRegKey _ = False
 {-# DEPRECATED isRegKey "Use `isRegStakeTxCert` instead" #-}
 
--- | Check for registering stake TxCert constructor
-isRegStakeTxCert :: ShelleyEraTxCert era => TxCert era -> Bool
-isRegStakeTxCert = isJust . lookupRegStakeTxCert
-
 -- | Check for 'ShelleyUnRegCert' constructor
 isDeRegKey :: ShelleyEraTxCert era => TxCert era -> Bool
 isDeRegKey (UnRegTxCert _) = True
 isDeRegKey _ = False
 {-# DEPRECATED isDeRegKey "Use `isUnRegStakeTxCert` instead" #-}
-
--- | Check for de-registering stake TxCert constructor
-isUnRegStakeTxCert :: ShelleyEraTxCert era => TxCert era -> Bool
-isUnRegStakeTxCert = isJust . lookupUnRegStakeTxCert
 
 -- | Check for 'ShelleyDelegCert' constructor
 isDelegation :: ShelleyEraTxCert era => TxCert era -> Bool

@@ -17,7 +17,6 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.TxCert (
-  isRegStakeTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
  )

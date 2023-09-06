@@ -7,6 +7,10 @@ module Cardano.Ledger.Api.Tx.Cert (
   getScriptWitnessTxCert,
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
+  lookupRegStakeTxCert,
+  lookupUnRegStakeTxCert,
+  isRegStakeTxCert,
+  isUnRegStakeTxCert,
 
   -- * Shelley Era
 
@@ -79,8 +83,12 @@ import Cardano.Ledger.Core (
     TxCertUpgradeError,
     getScriptWitnessTxCert,
     getVKeyWitnessTxCert,
+    lookupRegStakeTxCert,
+    lookupUnRegStakeTxCert,
     upgradeTxCert
   ),
+  isRegStakeTxCert,
+  isUnRegStakeTxCert,
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
  )

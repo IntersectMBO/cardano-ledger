@@ -25,7 +25,6 @@ import Cardano.Ledger.Credential (StakeCredential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..), ShelleyEraTxCert)
-import Cardano.Ledger.Shelley.TxCert (isRegStakeTxCert)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Data.Foldable (Foldable (..), foldMap', foldl')
 import qualified Data.Map.Strict as Map
