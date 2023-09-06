@@ -122,6 +122,16 @@ instance Crypto c => EraTxCert (ConwayEra c) where
   getRetirePoolTxCert (ConwayTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
   getRetirePoolTxCert _ = Nothing
 
+  lookupRegStakeTxCert = \case
+    RegTxCert c -> Just c
+    RegDepositTxCert c _ -> Just c
+    RegDepositDelegTxCert c _ _ -> Just c
+    _ -> Nothing
+  lookupUnRegStakeTxCert = \case
+    UnRegTxCert c -> Just c
+    UnRegDepositTxCert c _ -> Just c
+    _ -> Nothing
+
 instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   mkRegTxCert c = ConwayTxCertDeleg $ ConwayRegCert c SNothing
 

@@ -6,6 +6,7 @@
 
 ## 1.6.0.0
 
+* Add `lookupRegStakeTxCert` and `lookupUnRegStakeTxCert` to `EraTxCert` typeclass #3700
 * Change `ToJSONKey`/`FromJSONKey` implementation of `Credential` to flat text
 * Add one more parameter to `getConsumedValue` to lookup DRep deposits #3688
   * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`

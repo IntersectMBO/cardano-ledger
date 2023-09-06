@@ -27,6 +27,7 @@
 
 ## 1.8.0.0
 
+* Add all Conway `TxCert` to consumed/produced calculations in the `UTXO` rule. #3700
 * Change `ToJSONKey` implementation of `Voter` to flat text
 * Add DRep refund calculation #3688
   * Add `conwayConsumedValue` as `getConsumedValue` for Conway

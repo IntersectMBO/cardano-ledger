@@ -34,10 +34,8 @@ import Cardano.Ledger.Shelley.PParams (
   pattern Update,
  )
 import Cardano.Ledger.Shelley.TxCert (
-  isDeRegKey,
   isDelegation,
   isGenesisDelegation,
-  isRegKey,
   isRegPool,
   isReservesMIRCert,
   isRetirePool,
@@ -146,12 +144,12 @@ relevantCasesAreCoveredForTrace tr = do
           )
         ,
           ( "there is at least 1 RegKey certificate for every 10 transactions"
-          , length txs < 10 * length (filter isRegKey certs_)
+          , length txs < 10 * length (filter isRegStakeTxCert certs_)
           , 60
           )
         ,
           ( "there is at least 1 DeRegKey certificate for every 20 transactions"
-          , length txs < 20 * length (filter isDeRegKey certs_)
+          , length txs < 20 * length (filter isUnRegStakeTxCert certs_)
           , 60
           )
         ,

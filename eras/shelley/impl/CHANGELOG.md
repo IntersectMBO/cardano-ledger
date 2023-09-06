@@ -6,6 +6,7 @@
 
 ## 1.6.0.0
 
+* Deprecate `isRegKey` and `isDeRegKey` in favor of `isRegStakeTxCert` and `isUnRegStakeTxCert` #3700
 * Add lenses for `UTxOEnv` #3688
 * Add `getTotalTxDepositsBody` to `ShelleyEraTxBody`
 * Add `obligationGovState` to `EraGov`

@@ -24,6 +24,8 @@ module Cardano.Ledger.Core.TxCert (
     DRepAlwaysAbstain,
     DRepAlwaysNoConfidence
   ),
+  isRegStakeTxCert,
+  isUnRegStakeTxCert,
 )
 where
 
@@ -48,6 +50,7 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
+import Data.Maybe (isJust)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -91,6 +94,12 @@ class
 
   mkRetirePoolTxCert :: KeyHash 'StakePool (EraCrypto era) -> EpochNo -> TxCert era
   getRetirePoolTxCert :: TxCert era -> Maybe (KeyHash 'StakePool (EraCrypto era), EpochNo)
+
+  -- | Extract staking credential from any certificate that can register such credential
+  lookupRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
+
+  -- | Extract staking credential from any certificate that can unregister such credential
+  lookupUnRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
 
 pattern RegPoolTxCert :: EraTxCert era => PoolParams (EraCrypto era) -> TxCert era
 pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)
@@ -193,3 +202,11 @@ pattern DRepCredential c <- (dRepToCred -> Just c)
       KeyHashObj kh -> DRepKeyHash kh
 
 {-# COMPLETE DRepCredential, DRepAlwaysAbstain, DRepAlwaysNoConfidence :: DRep #-}
+
+-- | Check if supplied TxCert is a stake registering certificate
+isRegStakeTxCert :: EraTxCert era => TxCert era -> Bool
+isRegStakeTxCert = isJust . lookupRegStakeTxCert
+
+-- | Check if supplied TxCert is a stake un-registering certificate
+isUnRegStakeTxCert :: EraTxCert era => TxCert era -> Bool
+isUnRegStakeTxCert = isJust . lookupUnRegStakeTxCert

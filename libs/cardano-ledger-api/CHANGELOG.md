@@ -5,6 +5,8 @@
 * Rename:
   * `GovActionsState` to `GovSnapshots`
   * `cgGovActionsStateL` to `cgGovSnapshotsL`
+* Add `lookupRegStakeTxCert` and `lookupUnRegStakeTxCert`
+* Add `isRegStakeTxCert` and `isUnRegStakeTxCert`
 
 ## 1.5.0.0
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -14,6 +16,8 @@ import Cardano.Ledger.Shelley.TxCert (
   getScriptWitnessShelleyTxCert,
   getVKeyWitnessShelleyTxCert,
   upgradeShelleyTxCert,
+  pattern RegTxCert,
+  pattern UnRegTxCert,
  )
 
 instance Crypto c => EraTxCert (MaryEra c) where
@@ -36,6 +40,13 @@ instance Crypto c => EraTxCert (MaryEra c) where
 
   getRetirePoolTxCert (ShelleyTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
   getRetirePoolTxCert _ = Nothing
+
+  lookupRegStakeTxCert = \case
+    RegTxCert c -> Just c
+    _ -> Nothing
+  lookupUnRegStakeTxCert = \case
+    UnRegTxCert c -> Just c
+    _ -> Nothing
 
 instance Crypto c => ShelleyEraTxCert (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (MaryEra StandardCrypto) #-}

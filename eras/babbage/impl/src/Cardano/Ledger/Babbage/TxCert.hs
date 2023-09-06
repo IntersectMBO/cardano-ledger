@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -27,6 +28,13 @@ instance Crypto c => EraTxCert (BabbageEra c) where
 
   getRetirePoolTxCert (ShelleyTxCertPool (RetirePool poolId epochNo)) = Just (poolId, epochNo)
   getRetirePoolTxCert _ = Nothing
+
+  lookupRegStakeTxCert = \case
+    RegTxCert c -> Just c
+    _ -> Nothing
+  lookupUnRegStakeTxCert = \case
+    UnRegTxCert c -> Just c
+    _ -> Nothing
 
 instance Crypto c => ShelleyEraTxCert (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (BabbageEra StandardCrypto) #-}
