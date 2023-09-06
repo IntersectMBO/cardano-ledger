@@ -103,4 +103,5 @@ test-suite tests
         cardano-ledger-core:testlib,
         cardano-ledger-allegra,
         cardano-ledger-shelley:testlib,
+        data-default-class,
         testlib

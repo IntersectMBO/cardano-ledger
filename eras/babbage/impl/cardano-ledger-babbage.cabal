@@ -115,4 +115,5 @@ test-suite tests
         cardano-ledger-babbage,
         cardano-ledger-core:testlib,
         cardano-ledger-alonzo:testlib,
+        data-default-class,
         testlib

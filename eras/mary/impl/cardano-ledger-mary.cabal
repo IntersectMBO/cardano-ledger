@@ -119,4 +119,5 @@ test-suite tests
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-mary,
         cardano-ledger-shelley:testlib,
+        data-default-class,
         testlib
