@@ -30,7 +30,7 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxBody (..),
   BabbageEraTxOut (..),
   BabbageTxBody (..),
-  dataHashTxOutL,
+  dataHashTxOutL, BabbageTxBodyUpgradeError,
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
@@ -44,11 +44,17 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing), strictMaybeToMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
+import Control.Arrow (left)
+
+newtype  BabbageTxUpgradeError =
+  BTUEBodyUpgradeError BabbageTxBodyUpgradeError
+  deriving (Eq, Show)
 
 instance Crypto c => EraTx (BabbageEra c) where
   {-# SPECIALIZE instance EraTx (BabbageEra StandardCrypto) #-}
 
   type Tx (BabbageEra c) = AlonzoTx (BabbageEra c)
+  type TxUpgradeError (BabbageEra c) = BabbageTxUpgradeError
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -71,7 +77,7 @@ instance Crypto c => EraTx (BabbageEra c) where
 
   upgradeTx (AlonzoTx b w valid aux) =
     AlonzoTx
-      <$> upgradeTxBody b
+      <$> left BTUEBodyUpgradeError (upgradeTxBody b)
       <*> pure (upgradeTxWits w)
       <*> pure valid
       <*> pure (fmap upgradeTxAuxData aux)

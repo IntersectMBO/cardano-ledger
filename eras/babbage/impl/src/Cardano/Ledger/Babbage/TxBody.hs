@@ -56,6 +56,7 @@ module Cardano.Ledger.Babbage.TxBody (
     btbAuxDataHash,
     btbTxNetworkId
   ),
+  BabbageTxBodyUpgradeError (..),
   mkBabbageTxBody,
   inputsBabbageTxBodyL,
   outputsBabbageTxBodyL,
@@ -120,13 +121,13 @@ import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
  )
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams ()
+import Cardano.Ledger.Babbage.PParams (upgradeBabbagePParams)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Babbage.TxOut hiding (TxOut)
 import Cardano.Ledger.BaseTypes (
   Network (..),
-  StrictMaybe (..),
+  StrictMaybe (..), isSJust,
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -147,10 +148,12 @@ import Cardano.Ledger.MemoBytes (
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
+  eqRaw,
   getMemoRawType,
   getMemoSafeHash,
   lensMemoRawType,
   mkMemoized,
+  zipMemoRawType,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
@@ -167,6 +170,9 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Prelude hiding (lookup)
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams(appExtraEntropy), appD)
+import Control.Monad (when)
+import Control.Arrow (left)
 
 -- ======================================
 
@@ -193,6 +199,38 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
   , btbrTxNetworkId :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
+
+-- We override this instance because the 'Sized' types also reference their
+-- serialisation and as such cannot be compared directly. An alternative would
+-- be to derive `EqRaw` for `Sized`.
+instance
+  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
+  EqRaw (BabbageTxBodyRaw era)
+  where
+  eqRaw a b =
+    btbrSpendInputs a == btbrSpendInputs b
+      && btbrCollateralInputs a == btbrCollateralInputs b
+      && btbrReferenceInputs a == btbrReferenceInputs b
+      && btbrOutputs a `eqSeqUnsized` btbrOutputs b
+      && btbrCollateralReturn a `eqMbUnsized` btbrCollateralReturn b
+      && btbrTotalCollateral a == btbrTotalCollateral b
+      && btbrCerts a == btbrCerts b
+      && btbrWithdrawals a == btbrWithdrawals b
+      && btbrTxFee a == btbrTxFee b
+      && btbrValidityInterval a == btbrValidityInterval b
+      && btbrUpdate a == btbrUpdate b
+      && btbrReqSignerHashes a == btbrReqSignerHashes b
+      && btbrMint a == btbrMint b
+      && btbrScriptIntegrityHash a == btbrScriptIntegrityHash b
+      && btbrAuxDataHash a == btbrAuxDataHash b
+      && btbrTxNetworkId a == btbrTxNetworkId b
+    where
+      eqMbUnsized x y = case (x, y) of
+        (SJust a', SJust b') -> a' `eqUnsized` b'
+        (SNothing, SNothing) -> True
+        _ -> False
+      eqSeqUnsized x y = foldl (\acc (x', y') -> acc && x' `eqUnsized` y') True $ StrictSeq.zip x y
+      eqUnsized x y = sizedValue x == sizedValue y
 
 type instance MemoHashIndex BabbageTxBodyRaw = EraIndependentTxBody
 
@@ -390,10 +428,20 @@ allSizedOutputsBabbageTxBodyF =
           SJust collTxOut -> txOuts |> collTxOut
 {-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
 
+data BabbageTxBodyUpgradeError =
+    -- | The update attempts to update the decentralistion parameter, which is
+    -- dropped in Babbage.
+    BTBUEUpdatesD
+  | -- | The update attempts to update the extra entropy, which is dropped in
+    --   Babbage.
+    BTBUEUpdatesExtraEntropy
+  deriving (Eq, Show)
+
 instance Crypto c => EraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance EraTxBody (BabbageEra StandardCrypto) #-}
 
   type TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)
+  type TxBodyUpgradeError (BabbageEra c) = BabbageTxBodyUpgradeError
 
   mkBasicTxBody = mkBabbageTxBody
 
@@ -437,7 +485,14 @@ instance Crypto c => EraTxBody (BabbageEra c) where
       , atbScriptIntegrityHash
       , atbTxNetworkId
       } = do
-      certs <- traverse upgradeTxCert atbCerts
+      certs <-
+        traverse
+          ( left
+              ( error "upgradeTxCert has a Void error type, so this error cannot occur"
+              )
+              . upgradeTxCert
+          ) atbCerts
+      updates <-  traverse upgradeUpdate atbUpdate
       pure $
         BabbageTxBody
           { btbInputs = atbInputs
@@ -446,7 +501,7 @@ instance Crypto c => EraTxBody (BabbageEra c) where
           , btbWithdrawals = atbWithdrawals
           , btbTxFee = atbTxFee
           , btbValidityInterval = atbValidityInterval
-          , btbUpdate = upgradeUpdate <$> atbUpdate
+          , btbUpdate = updates
           , btbAuxDataHash = atbAuxDataHash
           , btbMint = atbMint
           , btbCollateral = atbCollateral
@@ -458,17 +513,28 @@ instance Crypto c => EraTxBody (BabbageEra c) where
           , btbTotalCollateral = SNothing
           }
       where
-        upgradeUpdate :: Update (AlonzoEra c) -> Update (BabbageEra c)
-        upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
+        upgradeUpdate ::
+          Update (AlonzoEra c) ->
+          Either BabbageTxBodyUpgradeError (Update (BabbageEra c))
+        upgradeUpdate (Update pp epoch) =
+          Update <$> upgradeProposedPPUpdates pp <*> pure epoch
 
+        -- Note that here we use 'upgradeBabbagePParams False' in order to
+        -- preserve 'CoinsPerUTxOWord', in spite of the value now being
+        -- semantically incorrect. Anything else will result in an invalid
+        -- transaction.
         upgradeProposedPPUpdates ::
           ProposedPPUpdates (AlonzoEra c) ->
-          ProposedPPUpdates (BabbageEra c)
+          Either BabbageTxBodyUpgradeError (ProposedPPUpdates (BabbageEra c))
         upgradeProposedPPUpdates (ProposedPPUpdates m) =
-          ProposedPPUpdates $
-            fmap
-              ( \(PParamsUpdate pphkd) ->
-                  PParamsUpdate $ upgradePParamsHKD () pphkd
+          ProposedPPUpdates <$>
+            traverse
+              ( \(PParamsUpdate pphkd) -> do
+                  when (isSJust $ appD pphkd) $
+                    Left BTBUEUpdatesD
+                  when (isSJust $ appExtraEntropy pphkd) $
+                    Left BTBUEUpdatesExtraEntropy
+                  pure . PParamsUpdate $ upgradeBabbagePParams False pphkd
               )
               m
 
@@ -540,6 +606,8 @@ instance Crypto c => BabbageEraTxBody (BabbageEra c) where
 instance
   (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
   EqRaw (BabbageTxBody era)
+  where
+  eqRaw = zipMemoRawType eqRaw
 
 deriving newtype instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
