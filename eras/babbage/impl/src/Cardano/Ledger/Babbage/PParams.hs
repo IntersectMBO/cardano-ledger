@@ -22,6 +22,7 @@ module Cardano.Ledger.Babbage.PParams (
   emptyBabbagePParams,
   emptyBabbagePParamsUpdate,
   DowngradeBabbagePParams (..),
+  upgradeBabbagePParams,
   getLanguageView,
   LangDepView (..),
   encodeLangViews,
@@ -189,7 +190,7 @@ instance Crypto c => EraPParams (BabbageEra c) where
   emptyPParamsIdentity = emptyBabbagePParams
   emptyPParamsStrictMaybe = emptyBabbagePParamsUpdate
 
-  upgradePParamsHKD () = upgradeBabbagePParams
+  upgradePParamsHKD () = upgradeBabbagePParams True
   downgradePParamsHKD = downgradeBabbagePParams
 
   hkdMinFeeAL = lens bppMinFeeA $ \pp x -> pp {bppMinFeeA = x}
@@ -491,9 +492,11 @@ babbagePParamsHKDPairs px pp =
 upgradeBabbagePParams ::
   forall f c.
   HKDFunctor f =>
+  -- | Should we update the
+  Bool ->
   PParamsHKD f (AlonzoEra c) ->
   BabbagePParams f (BabbageEra c)
-upgradeBabbagePParams AlonzoPParams {..} =
+upgradeBabbagePParams updateCoinsPerUTxOWord AlonzoPParams {..} =
   BabbagePParams
     { bppMinFeeA = appMinFeeA
     , bppMinFeeB = appMinFeeB
@@ -509,7 +512,11 @@ upgradeBabbagePParams AlonzoPParams {..} =
     , bppTau = appTau
     , bppProtocolVersion = appProtocolVersion
     , bppMinPoolCost = appMinPoolCost
-    , bppCoinsPerUTxOByte = hkdMap (Proxy @f) coinsPerUTxOWordToCoinsPerUTxOByte appCoinsPerUTxOWord
+    , bppCoinsPerUTxOByte = hkdMap (Proxy @f)
+        (if updateCoinsPerUTxOWord then
+          coinsPerUTxOWordToCoinsPerUTxOByte else
+          coinsPerUTxOWordToCoinsPerUTxOByteInTx)
+        appCoinsPerUTxOWord
     , bppCostModels = appCostModels
     , bppPrices = appPrices
     , bppMaxTxExUnits = appMaxTxExUnits
@@ -560,6 +567,14 @@ coinsPerUTxOWordToCoinsPerUTxOByte (CoinPerWord (Coin c)) = CoinPerByte $ Coin $
 -- | A word is 8 bytes, so convert from coinsPerUTxOByte to coinsPerUTxOWord.
 coinsPerUTxOByteToCoinsPerUTxOWord :: CoinPerByte -> CoinPerWord
 coinsPerUTxOByteToCoinsPerUTxOWord (CoinPerByte (Coin c)) = CoinPerWord $ Coin $ c * 8
+
+-- | Naively convert coins per UTxO word to coins per byte. This function only
+-- exists to support the very unusual case of translating a transaction
+-- containing an update to the 'coinsPerUTxOWord' field, in which case we must
+-- not do the translation above, since this would render the transaction
+-- invalid.
+coinsPerUTxOWordToCoinsPerUTxOByteInTx :: CoinPerWord -> CoinPerByte
+coinsPerUTxOWordToCoinsPerUTxOByteInTx (CoinPerWord (Coin c)) = CoinPerByte $ Coin c
 
 -- ======================================
 
