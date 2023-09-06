@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.4.4.1
+
+*
+
 ## 1.4.4.0
 
 * Add `EqRaw` instance for `BabbageTxBody`

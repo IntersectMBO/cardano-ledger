@@ -1,16 +1,8 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.8.0.0
+## 1.9.0.0
 
-* Change `ToJSONKey` implementation of `Voter` to flat text
-* Add DRep refund calculation #3688
-  * Add `conwayConsumedValue` as `getConsumedValue` for Conway
-* Change `PredicateFailure (ConwayENACT era)` to `Void`
-* Remove `EnactPredFailure`
-* Change `PredicateFailure (ConwayEPOCH era)` to `Void`
-* Remove `ConwayEpochPredFailure`
-* Remove `EpochFailure` and `RatifyFailure` from `ConwayNewEpochPredFailure`
-* Change `PredicateFailure (ConwayRATIFY era)` to `Void`
+* Remove `ensProtVer` field from `EnactState`: #3705
 * Move `ConwayEraTxBody` to `Cardano.Ledger.Conway.TxBody`
 * Move `ConwayEraPParams` to `Cardano.Ledger.Conway.PParams`
 * Rename:
@@ -26,10 +18,24 @@
   * `snapshotActions`
   * `snapshotRemoveIds`
   * `fromGovActionStateSeq`
-Add lenses:
+* Add lenses:
   * `gasCommitteeVotesL`
   * `gasDRepVotesL`
   * `gasStakePoolVotesL`
+* Add `FromJSON` instance for `Committee`
+* Add `constitution` and `committee` fields to `ConwayGenesis`
+
+## 1.8.0.0
+
+* Change `ToJSONKey` implementation of `Voter` to flat text
+* Add DRep refund calculation #3688
+  * Add `conwayConsumedValue` as `getConsumedValue` for Conway
+* Change `PredicateFailure (ConwayENACT era)` to `Void`
+* Remove `EnactPredFailure`
+* Change `PredicateFailure (ConwayEPOCH era)` to `Void`
+* Remove `ConwayEpochPredFailure`
+* Remove `EpochFailure` and `RatifyFailure` from `ConwayNewEpochPredFailure`
+* Change `PredicateFailure (ConwayRATIFY era)` to `Void`
 * Add:
   * `rsDelayed`
   * `PParamGroup`
@@ -94,8 +100,6 @@ Add lenses:
 * Add `insertGovActionsState`
 * Change type of `rsRemoved` in `RatifyState` to use  `GovActionState` instead of a tuple
 * Change `RatifySignal` to use `GovActionsState` instead of a tuple
-* Add `FromJSON` instance for `Committee`
-* Add `constitution` and `committee` fields to `ConwayGenesis`
 
 ## 1.7.1.0
 

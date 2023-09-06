@@ -1,5 +1,11 @@
 # Version history for `cardano-ledger-api`
 
+## 1.6.0.0
+
+* Rename:
+  * `GovActionsState` to `GovSnapshots`
+  * `cgGovActionsStateL` to `cgGovSnapshotsL`
+
 ## 1.5.0.0
 
 * Add one more parameter to `evalBalanceTxBody` #3688
