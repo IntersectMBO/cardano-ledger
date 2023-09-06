@@ -286,8 +286,8 @@ certificate =
   // update_drep_cert
   ]
 
-stake_registration = (0, stake_credential)
-stake_deregistration = (1, stake_credential)
+stake_registration = (0, stake_credential) ; to be deprecated in era after Conway
+stake_deregistration = (1, stake_credential) ; to be deprecated in era after Conway
 stake_delegation = (2, stake_credential, pool_keyhash)
 
 ; POOL
