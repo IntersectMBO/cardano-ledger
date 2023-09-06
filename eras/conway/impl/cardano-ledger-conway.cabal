@@ -119,6 +119,7 @@ test-suite tests
         Test.Cardano.Ledger.Conway.BinarySpec
         Test.Cardano.Ledger.Conway.RatifySpec
         Test.Cardano.Ledger.Conway.GenesisSpec
+        Test.Cardano.Ledger.Conway.GovActionReorderSpec
         Paths_cardano_ledger_conway
 
     default-language: Haskell2010
@@ -135,4 +136,6 @@ test-suite tests
         cardano-ledger-core,
         containers,
         data-default-class,
-        testlib
+        testlib,
+        cardano-strict-containers,
+        cardano-ledger-binary:testlib

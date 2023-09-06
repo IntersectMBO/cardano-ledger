@@ -20,6 +20,8 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   RatifySignal (..),
   dRepAccepted,
   dRepAcceptedRatio,
+  reorderActions,
+  actionPriority,
 ) where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..))
@@ -51,12 +53,15 @@ import Control.State.Transition.Extended (
   judgmentContext,
   trans,
  )
+import Data.Foldable (Foldable (..))
+import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Sum (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Data.Word (Word64)
@@ -202,6 +207,18 @@ delayingAction TreasuryWithdrawals {} = False
 delayingAction ParameterChange {} = False
 delayingAction InfoAction {} = False
 
+actionPriority :: GovAction era -> Int
+actionPriority NoConfidence {} = 0
+actionPriority NewCommittee {} = 1
+actionPriority NewConstitution {} = 2
+actionPriority HardForkInitiation {} = 3
+actionPriority ParameterChange {} = 4
+actionPriority TreasuryWithdrawals {} = 5
+actionPriority InfoAction {} = 6
+
+reorderActions :: StrictSeq (GovActionState era) -> StrictSeq (GovActionState era)
+reorderActions = Seq.fromList . sortOn (actionPriority . gasAction) . toList
+
 ratifyTransition ::
   forall era.
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
@@ -218,7 +235,8 @@ ratifyTransition = do
       , RatifySignal rsig
       ) <-
     judgmentContext
-  case rsig of
+  let reorderedActions = reorderActions rsig
+  case reorderedActions of
     ast :<| sigs -> do
       let gas@GovActionState {gasId, gasAction, gasExpiresAfter} = ast
           withdrawalCanWithdraw (TreasuryWithdrawals m) =
