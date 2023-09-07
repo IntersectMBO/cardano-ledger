@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Constrained.Preds.PParams (
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Script (Prices (..))
+import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   boundRational,
@@ -30,7 +31,7 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Tasty.QuickCheck
 
-extract :: Term era t -> Term era s -> Pred era
+extract :: Era era => Term era t -> Term era s -> Pred era
 extract term@(Var (V _ _ (Yes r1 lens))) record =
   case testEql r1 (termRep record) of
     Just Refl -> term :<-: (Constr "lookup" (\x -> x ^. lens) ^$ record)
