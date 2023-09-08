@@ -2,6 +2,7 @@
 
 ## 1.3.2.0
 
+* Add `PrettyA` instance for `RatifyStrategy`
 * Add `PrettyA` instance for `ProposalsSnapshot`
 
 ## 1.3.1.0

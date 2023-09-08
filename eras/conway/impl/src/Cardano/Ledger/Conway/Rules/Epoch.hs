@@ -34,6 +34,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovSnapshots (..),
   RatifyState (..),
+  RatifyStrategy (..),
   cgEnactStateL,
   cgGovSnapshotsL,
   curGovSnapshotsL,
@@ -249,7 +250,7 @@ epochTransition = do
         , RatifyState
             { rsRemoved = mempty
             , rsEnactState = govSt ^. cgEnactStateL
-            , rsDelayed = False
+            , rsStrategy = Continue
             }
         , ratSig
         )

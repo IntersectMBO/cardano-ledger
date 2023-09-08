@@ -38,6 +38,7 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionIds (..),
   ProposalProcedure (..),
   ProposalsSnapshot,
+  RatifyStrategy (..),
   Vote,
   Voter (..),
   VotingProcedure (..),
@@ -126,6 +127,10 @@ instance
     ConwayGovState
       <$> arbitrary
       <*> arbitrary
+
+instance Arbitrary RatifyStrategy where
+  arbitrary = arbitraryBoundedEnum
+  shrink = shrinkBoundedEnum
 
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>

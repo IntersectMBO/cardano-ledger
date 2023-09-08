@@ -36,6 +36,7 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionIds (..),
   ProposalProcedure (..),
   ProposalsSnapshot,
+  RatifyStrategy,
   Vote (..),
   Voter (..),
   VotingProcedure (..),
@@ -436,6 +437,9 @@ instance PrettyA (PrevGovActionIds era) where
       , ("LastConstitution", prettyA pgaConstitution)
       ]
 
+instance PrettyA RatifyStrategy where
+  prettyA = viaShow
+
 instance
   PrettyA (PParams era) =>
   PrettyA (RatifyState era)
@@ -446,7 +450,7 @@ instance
           "RatifyState"
           [ ("EnactState", prettyA rsEnactState)
           , ("Removed", prettyA rsRemoved)
-          , ("Delayed", prettyA rsDelayed)
+          , ("Strategy", prettyA rsStrategy)
           ]
 
 instance

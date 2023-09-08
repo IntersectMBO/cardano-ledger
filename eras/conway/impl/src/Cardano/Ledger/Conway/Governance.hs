@@ -18,6 +18,7 @@
 module Cardano.Ledger.Conway.Governance (
   EraGov (..),
   GovSnapshots (..),
+  RatifyStrategy (..),
   insertGovSnapshots,
   EnactState (..),
   RatifyState (..),
@@ -448,10 +449,40 @@ instance EraPParams era => NFData (EnactState era)
 
 instance EraPParams era => NoThunks (EnactState era)
 
+data RatifyStrategy
+  = Continue
+  | Delay
+  | Drop
+  deriving (Eq, Show, Generic, Ord, Enum, Bounded)
+
+instance ToExpr RatifyStrategy
+
+instance NFData RatifyStrategy
+
+instance NoThunks RatifyStrategy
+
+instance ToJSON RatifyStrategy
+
+instance DecCBOR RatifyStrategy where
+  decCBOR = decode . Summands "RatifyStrategy" $ \case
+    0 -> SumD Continue
+    1 -> SumD Delay
+    2 -> SumD Drop
+    k -> Invalid k
+
+instance EncCBOR RatifyStrategy where
+  encCBOR rs = encode $ case rs of
+    Continue -> Sum Continue 0
+    Delay -> Sum Delay 1
+    Drop -> Sum Drop 2
+
+instance Default RatifyStrategy where
+  def = Continue
+
 data RatifyState era = RatifyState
   { rsEnactState :: !(EnactState era)
   , rsRemoved :: !(Set (GovActionId (EraCrypto era)))
-  , rsDelayed :: !Bool
+  , rsStrategy :: !RatifyStrategy
   }
   deriving (Generic)
 
@@ -486,7 +517,7 @@ cgEnactStateL = lens cgEnactState (\x y -> x {cgEnactState = y})
 cgRatifyStateL :: Lens' (ConwayGovState era) (RatifyState era)
 cgRatifyStateL =
   lens
-    (\ConwayGovState {..} -> RatifyState cgEnactState mempty False)
+    (\ConwayGovState {..} -> RatifyState cgEnactState mempty Continue)
     (\x RatifyState {..} -> x & cgEnactStateL .~ rsEnactState)
 
 curPParamsConwayGovStateL :: Lens' (ConwayGovState era) (PParams era)

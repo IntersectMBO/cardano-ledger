@@ -34,6 +34,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   PrevGovActionIds (..),
   RatifyState (..),
+  RatifyStrategy (..),
   Vote (..),
   votingDRepThreshold,
   votingStakePoolThreshold,
@@ -198,14 +199,14 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
 
     (yesStake, totalExcludingAbstainStake) = Map.foldlWithKey' accumStake (0, 0) reDRepDistr
 
-delayingAction :: GovAction era -> Bool
-delayingAction NoConfidence {} = True
-delayingAction HardForkInitiation {} = True
-delayingAction NewCommittee {} = True
-delayingAction NewConstitution {} = True
-delayingAction TreasuryWithdrawals {} = False
-delayingAction ParameterChange {} = False
-delayingAction InfoAction {} = False
+actionFutureStrategy :: GovAction era -> RatifyStrategy
+actionFutureStrategy NoConfidence {} = Delay
+actionFutureStrategy NewCommittee {} = Delay
+actionFutureStrategy NewConstitution {} = Delay
+actionFutureStrategy TreasuryWithdrawals {} = Continue
+actionFutureStrategy ParameterChange {} = Continue
+actionFutureStrategy InfoAction {} = Continue
+actionFutureStrategy HardForkInitiation {} = Drop
 
 actionPriority :: GovAction era -> Int
 actionPriority NoConfidence {} = 0
@@ -242,33 +243,34 @@ ratifyTransition = do
           withdrawalCanWithdraw (TreasuryWithdrawals m) =
             Map.foldr' (<+>) zero m <= ensTreasury rsEnactState
           withdrawalCanWithdraw _ = True
-          notDelayed = not rsDelayed
-      if prevActionAsExpected
-        gasAction
-        (ensPrevGovActionIds rsEnactState)
-        && notDelayed
-        && withdrawalCanWithdraw gasAction
-        && spoAccepted st env ast
-        && dRepAccepted env st gas
-        then do
-          -- Update ENACT state with the governance action that was ratified
-          es <-
-            trans @(EraRule "ENACT" era) $
-              TRC ((), rsEnactState, EnactSignal gasId gasAction)
-          let st' =
-                st
-                  { rsEnactState = es
-                  , rsRemoved = Set.insert gasId rsRemoved
-                  , rsDelayed = delayingAction gasAction
-                  }
-          trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
-        else do
-          -- This action hasn't been ratified yet. Process the remaining actions.
-          st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
-          -- Finally, filter out actions that are not processed.
-          if gasExpiresAfter < reCurrentEpoch
-            then pure st' {rsRemoved = Set.insert gasId rsRemoved} -- Action expires after current Epoch. Remove it.
-            else pure st'
+          canEnact =
+            prevActionAsExpected gasAction (ensPrevGovActionIds rsEnactState)
+              && withdrawalCanWithdraw gasAction
+              && spoAccepted st env ast
+              && dRepAccepted env st gas
+      case rsStrategy of
+        Continue
+          | canEnact -> do
+              -- Update ENACT state with the governance action that was ratified
+              es <-
+                trans @(EraRule "ENACT" era) $
+                  TRC ((), rsEnactState, EnactSignal gasId gasAction)
+              let st' =
+                    st
+                      { rsEnactState = es
+                      , rsRemoved = Set.insert gasId rsRemoved
+                      , rsStrategy = actionFutureStrategy gasAction
+                      }
+              trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
+          | otherwise -> do
+              -- This action hasn't been ratified yet. Process the remaining actions.
+              st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
+              -- Finally, filter out actions that are not processed.
+              if gasExpiresAfter < reCurrentEpoch
+                then pure st' {rsRemoved = Set.insert gasId rsRemoved} -- Action expires after current Epoch. Remove it.
+                else pure st'
+        Delay -> pure st
+        Drop -> pure st {rsRemoved = Set.insert gasId rsRemoved}
     Empty -> pure st
 
 -- | Check that the previous governance action id specified in the proposal

@@ -2,6 +2,9 @@
 
 ## 1.9.0.0
 
+* Add `RatifyStrategy`
+* Remove `rsDelayed`
+* Add `rsStrategy` to `RatifyState`
 * Fix invalid order in `fromGovActionStateSeq`, thus also `DecCBOR` for `ProposalsSnapshot`
 * Remove `DecCBOR`/`EncCBOR` and `FromCBOR`/`ToCBOR` for `RatifyState`, since that state
   is ephemeral and is never serialized.
