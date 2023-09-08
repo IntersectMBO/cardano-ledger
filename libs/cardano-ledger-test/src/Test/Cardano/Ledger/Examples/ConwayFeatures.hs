@@ -172,8 +172,7 @@ voteYes :: forall era. Scriptic era => Proof era -> GovActionId (EraCrypto era) 
 voteYes pf govActionId =
   VotingProcedures $
     Map.fromList
-      [ (StakePoolVoter (stakePoolKeyHash pf), Map.fromList [(govActionId, VotingProcedure VoteYes SNothing)])
-      , (DRepVoter (drepCredential pf), Map.fromList [(govActionId, VotingProcedure VoteYes SNothing)])
+      [ (DRepVoter (drepCredential pf), Map.fromList [(govActionId, VotingProcedure VoteYes SNothing)])
       ]
 
 govActionState ::
@@ -198,7 +197,7 @@ govActionStateWithYesVotes gaid pf ProposalProcedure {..} =
     gaid
     mempty
     (Map.fromList [(drepCredential pf, VoteYes)])
-    (Map.fromList [(stakePoolKeyHash pf, VoteYes)])
+    mempty
     pProcDeposit
     pProcReturnAddr
     pProcGovAction
