@@ -53,6 +53,9 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   curGovSnapshotsL,
   indexedGovProps,
+  isCommitteeVotingAllowed,
+  isDRepVotingAllowed,
+  isStakePoolVotingAllowed,
   snapshotAddVote,
   snapshotInsertGovAction,
  )
@@ -61,11 +64,17 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   committeeMembersL,
  )
 import Cardano.Ledger.Conway.Governance.Snapshots (snapshotGovActionStates)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ppGovActionDepositL, ppGovActionExpirationL, ppMinCommitteeSizeL)
+import Cardano.Ledger.Conway.PParams (
+  ConwayEraPParams (..),
+  ppGovActionDepositL,
+  ppGovActionExpirationL,
+  ppMinCommitteeSizeL,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   STS (..),
@@ -75,6 +84,7 @@ import Control.State.Transition.Extended (
   liftSTS,
   (?!),
  )
+import qualified Data.Map.Merge.Strict as Map (dropMissing, merge, zipWithMaybeMatched)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
 import qualified Data.Set as Set
@@ -105,6 +115,10 @@ data ConwayGovPredFailure era
       Coin
       -- | Expected deposit taken from `PParams`
       Coin
+  | -- | Some governance actions are not allowed to be voted on by certain types of
+    -- Voters. This failure lists all governance action ids with their respective voters
+    -- that are not allowed to vote on those governance actions.
+    DisallowedVoters !(Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -119,6 +133,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     3 -> SumD TreasuryWithdrawalsNetworkIdMismatch <! From <! From
     4 -> SumD NewCommitteeSizeTooSmall <! From <! From
     5 -> SumD ProposalDepositIncorrect <! From <! From
+    6 -> SumD DisallowedVoters <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -134,6 +149,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum NewCommitteeSizeTooSmall 4 !> To submitted !> To expected
       ProposalDepositIncorrect submitted expected ->
         Sum ProposalDepositIncorrect 5 !> To submitted !> To expected
+      DisallowedVoters votes ->
+        Sum DisallowedVoters 6 !> To votes
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -190,13 +207,31 @@ addAction epoch gaExpiry gaid c addr act as =
 
 noSuchGovActions ::
   GovSnapshots era ->
-  Set.Set (GovActionId (EraCrypto era)) ->
+  Map.Map (GovActionId (EraCrypto era)) v ->
   Test (ConwayGovPredFailure era)
-noSuchGovActions gas gaIds =
-  let curGovActionIds = snapshotGovActionStates $ curGovSnapshots gas
-      unknownGovActionIds = Set.filter (`Map.notMember` curGovActionIds) gaIds
-   in failureUnless (Set.null unknownGovActionIds) $
-        GovActionsDoNotExist unknownGovActionIds
+noSuchGovActions govSnapshots gaIds =
+  let curGovActionIds = snapshotGovActionStates $ curGovSnapshots govSnapshots
+      unknownGovActionIds = gaIds `Map.difference` curGovActionIds
+   in failureUnless (Map.null unknownGovActionIds) $
+        GovActionsDoNotExist (Map.keysSet unknownGovActionIds)
+
+checkVotesAreValid ::
+  forall era.
+  ConwayEraPParams era =>
+  GovSnapshots era ->
+  Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
+  Test (ConwayGovPredFailure era)
+checkVotesAreValid govSnapshots voters =
+  let curGovActionIds = snapshotGovActionStates $ curGovSnapshots govSnapshots
+      disallowedVoters =
+        Map.merge Map.dropMissing Map.dropMissing keepDisallowedVoters curGovActionIds voters
+      keepDisallowedVoters = Map.zipWithMaybeMatched $ \_ GovActionState {gasAction} voter -> do
+        guard $ not $ case voter of
+          CommitteeVoter {} -> isCommitteeVotingAllowed gasAction
+          DRepVoter {} -> isDRepVotingAllowed gasAction
+          StakePoolVoter {} -> isStakePoolVotingAllowed gasAction
+        Just voter
+   in failureUnless (Map.null disallowedVoters) $ DisallowedVoters disallowedVoters
 
 actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
@@ -253,8 +288,15 @@ govTransition = do
   stProps <- applyProps st $ indexedGovProps $ gpProposalProcedures gp
 
   let VotingProcedures votingProcedures = gpVotingProcedures gp
-
-  runTest $ noSuchGovActions st $ foldMap Map.keysSet votingProcedures
+      -- Inversion of the keys in VotingProcedures, where we can find the voter for every
+      -- govActionId
+      govActionIdVotes =
+        Map.foldlWithKey'
+          (\acc voter gaIds -> Map.union (voter <$ gaIds) acc)
+          Map.empty
+          votingProcedures
+  runTest $ noSuchGovActions st govActionIdVotes
+  runTest $ checkVotesAreValid st govActionIdVotes
 
   let applyVoterVotes curState voter =
         Map.foldlWithKey' (addVoterVote voter) curState

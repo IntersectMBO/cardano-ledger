@@ -299,8 +299,8 @@ instance Era era => EncCBOR (PrevGovActionIds era) where
         !> To pgaCommittee
         !> To pgaConstitution
 
-toPrevGovActionIdsParis :: (KeyValue a, Era era) => PrevGovActionIds era -> [a]
-toPrevGovActionIdsParis pga@(PrevGovActionIds _ _ _ _) =
+toPrevGovActionIdsPairs :: (KeyValue a, Era era) => PrevGovActionIds era -> [a]
+toPrevGovActionIdsPairs pga@(PrevGovActionIds _ _ _ _) =
   let PrevGovActionIds {..} = pga
    in [ "pgaPParamUpdate" .= pgaPParamUpdate
       , "pgaHardFork" .= pgaHardFork
@@ -309,8 +309,8 @@ toPrevGovActionIdsParis pga@(PrevGovActionIds _ _ _ _) =
       ]
 
 instance Era era => ToJSON (PrevGovActionIds era) where
-  toJSON = object . toPrevGovActionIdsParis
-  toEncoding = pairs . mconcat . toPrevGovActionIdsParis
+  toJSON = object . toPrevGovActionIdsPairs
+  toEncoding = pairs . mconcat . toPrevGovActionIdsPairs
 
 instance ToExpr (PrevGovActionIds era)
 

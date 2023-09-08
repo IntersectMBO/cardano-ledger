@@ -2,6 +2,9 @@
 
 ## 1.9.0.0
 
+* Add `PredicateFailure` for `Voter` - `GovAction` mismatches, with `checkVotesAreValid`. #3718
+  * Add `DisallowedVoters (Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))` inhabitant to the `ConwayGovPredFailure` data type.
+  * Fix naming for `toPrevGovActionIdsParis` to `toPrevGovActionIdsPairs`
 * Rename:
   * `thresholdSPO` -> `votingStakePoolThreshold`
   * `thresholdDRep` -> `votingDRepThreshold`
