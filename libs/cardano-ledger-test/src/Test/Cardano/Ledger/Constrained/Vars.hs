@@ -1497,6 +1497,7 @@ conwayGovStateT _p =
   Invert "ConwayGovState" (typeRep @(ConwayGovState era)) ConwayGovState
     :$ Shift govSnapshotsT cgGovSnapshotsL
     :$ Shift enactStateT cgEnactStateL
+    :$ Shift enactStateT cgFutureEnactStateL
 
 govSnapshotsT :: forall era. Era era => RootTarget era (GovSnapshots era) (GovSnapshots era)
 govSnapshotsT =

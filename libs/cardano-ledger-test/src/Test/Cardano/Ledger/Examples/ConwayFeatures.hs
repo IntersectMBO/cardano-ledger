@@ -341,9 +341,13 @@ testGov ::
 testGov pf = do
   let
     (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
+    initialEnactState =
+      def
+        & ensCurPParamsL .~ pp
     initialGov =
       def
-        & cgEnactStateL . ensCurPParamsL .~ pp
+        & cgEnactStateL .~ initialEnactState
+        & cgFutureEnactStateL .~ initialEnactState
     initialLedgerState = LedgerState (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero) def
 
     proposalTx = txFromTestCaseData pf (proposal pf)
@@ -355,7 +359,7 @@ testGov pf = do
         def
         mempty
         def
-    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL)
+    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL) (initialGov ^. cgFutureEnactStateL)
 
     eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState pp (trustMeP pf True proposalTx)
   ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) <-
@@ -373,7 +377,7 @@ testGov pf = do
         def
         mempty
         def
-    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL)
+    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgFutureEnactStateL) (initialGov ^. cgFutureEnactStateL)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 pp (trustMeP pf True voteTx)
   ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) <-
     expectRight "Error running LEDGER when voting: " eitherLedgerState1
@@ -398,19 +402,25 @@ testGov pf = do
               )
             ]
         )
-    -- Wait two epochs
+    -- Wait three epochs
     eitherEpochState1 = runEPOCH (EPOCH pf) epochState0 (EpochNo 2) poolDistr
   epochState1 <- expectRight "Error running runEPOCH: " eitherEpochState1
   let
     constitution = epochState1 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
   assertExprEqualWithMessage "constitution after one epoch" constitution def
+  epochState2 <-
+    expectRight "Error running runEPOCH: " $
+      runEPOCH (EPOCH pf) epochState1 (EpochNo 3) poolDistr
   let
-    epochState1' = case runEPOCH (EPOCH pf) epochState1 (EpochNo 3) poolDistr of
-      Left e -> error $ "Error running runEPOCH the second time: " <> show e
-      Right x -> x
-    ledgerState2 = epochState1' ^. esLStateL
-    constitution1 = epochState1' ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
-    prevDRepsState1 = epochState1 ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL
+    constitution' = epochState2 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+  assertExprEqualWithMessage "constitution two epochs" constitution' def
+  epochState3 <-
+    expectRight "Error running runEPOCH: " $
+      runEPOCH (EPOCH pf) epochState2 (EpochNo 4) poolDistr
+  let
+    ledgerState2 = epochState3 ^. esLStateL
+    constitution1 = epochState3 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+    prevDRepsState1 = epochState3 ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL
   assertExprEqualWithMessage "constitution after enactment" constitution1 (proposedConstitution @era)
   let
     -- Propose another constitution
@@ -425,34 +435,34 @@ testGov pf = do
         def
         prevDRepsState1
         def
+    expectedEpochState = ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL
     expectedGovState2 =
       ConwayGovState
         expectedGovSnapshots2
-        (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL)
+        expectedEpochState
+        expectedEpochState
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 pp (trustMeP pf True secondProposalTx)
   ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) <-
     expectRight "Error running LEDGER when proposing:" eitherLedgerState3
 
   assertExprEqualWithMessage "govState after second proposal" govState2 expectedGovState2
 
-  -- Wait two epochs
+  -- Wait three epochs
   let
-    epochState2 = epochState1' & esLStateL .~ ledgerState3
-    epochState3 = case runEPOCH (EPOCH pf) epochState2 (EpochNo 4) poolDistr of
-      Right x -> x
-      Left e -> error $ "Error running runEPOCH: " <> show e
-    epochState4 = case runEPOCH (EPOCH pf) epochState3 (EpochNo 5) poolDistr of
-      Right x -> x
-      Left e -> error $ "Error running runEPOCH: " <> show e
+    epochState4 = epochState3 & esLStateL .~ ledgerState3
+  epochState5 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState4 (EpochNo 5) poolDistr
+  epochState6 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState5 (EpochNo 6) poolDistr
+  epochState7 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState6 (EpochNo 7) poolDistr
+  let
     constitution2 = epochState4 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
   assertExprEqualWithMessage
     "prevGovAction set correctly"
     (SJust (PrevGovActionId govActionId))
-    (epochState4 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL)
+    (epochState7 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL)
   assertExprEqualWithMessage "constitution after enactment after no votes" constitution2 (proposedConstitution @era)
   let
     currentGovActions =
-      epochState4
+      epochState7
         ^. esLStateL
           . lsUTxOStateL
           . utxosGovStateL

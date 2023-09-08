@@ -59,6 +59,7 @@ module Cardano.Ledger.Conway.Governance (
   -- Lenses
   cgGovSnapshotsL,
   cgEnactStateL,
+  cgFutureEnactStateL,
   cgRatifyStateL,
   ensCommitteeL,
   ensConstitutionL,
@@ -473,6 +474,7 @@ instance EraPParams era => NoThunks (RatifyState era)
 data ConwayGovState era = ConwayGovState
   { cgGovSnapshots :: !(GovSnapshots era)
   , cgEnactState :: !(EnactState era)
+  , cgFutureEnactState :: !(EnactState era)
   }
   deriving (Generic, Eq, Show)
 
@@ -481,6 +483,9 @@ cgGovSnapshotsL = lens cgGovSnapshots (\x y -> x {cgGovSnapshots = y})
 
 cgEnactStateL :: Lens' (ConwayGovState era) (EnactState era)
 cgEnactStateL = lens cgEnactState (\x y -> x {cgEnactState = y})
+
+cgFutureEnactStateL :: Lens' (ConwayGovState era) (EnactState era)
+cgFutureEnactStateL = lens cgFutureEnactState (\x y -> x {cgFutureEnactState = y})
 
 {-# DEPRECATED cgRatifyStateL "Use cgEnactStateL instead" #-}
 cgRatifyStateL :: Lens' (ConwayGovState era) (RatifyState era)
@@ -500,7 +505,8 @@ instance EraPParams era => DecShareCBOR (ConwayGovState era) where
   decShareCBOR _ =
     decode $
       RecD ConwayGovState
-        <! (D decNoShareCBOR)
+        <! D decNoShareCBOR
+        <! From
         <! From
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
@@ -512,6 +518,7 @@ instance EraPParams era => EncCBOR (ConwayGovState era) where
       Rec ConwayGovState
         !> To cgGovSnapshots
         !> To cgEnactState
+        !> To cgFutureEnactState
 
 instance EraPParams era => ToCBOR (ConwayGovState era) where
   toCBOR = toEraCBOR @era
@@ -532,10 +539,11 @@ instance EraPParams era => ToJSON (ConwayGovState era) where
 instance EraPParams era => ToExpr (ConwayGovState era)
 
 toConwayGovPairs :: (KeyValue a, EraPParams era) => ConwayGovState era -> [a]
-toConwayGovPairs cg@(ConwayGovState _ _) =
+toConwayGovPairs cg@(ConwayGovState _ _ _) =
   let ConwayGovState {..} = cg
    in [ "gov" .= cgGovSnapshots
-      , "ratify" .= cgEnactState
+      , "curEnactState" .= cgEnactState
+      , "futureEnactState" .= cgEnactState
       ]
 
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where

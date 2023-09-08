@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `cgFutureEnactState`, `cgFutureEnactStateL`
 * Add `ExpirationEpochTooSmall` data constructor to `ConwayGovPredFailure`
 * Add `ConflictingCommitteeUpdate` data constructor to `ConwayGovPredFailure`
 * Rename `NewCommitte` to `UpdateCommittee`

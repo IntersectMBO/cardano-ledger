@@ -1672,11 +1672,12 @@ pcPrevGovActionIds PrevGovActionIds {..} =
     ]
 
 pcConwayGovState :: Proof era -> ConwayGovState era -> PDoc
-pcConwayGovState p (ConwayGovState ss es) =
+pcConwayGovState p (ConwayGovState ss es fes) =
   ppRecord
     "ConwayGovState"
     [ ("govSnapshots", pcGovSnapshots ss)
     , ("enactState", pcEnactState p es)
+    , ("futureEnactState", pcEnactState p fes)
     ]
 
 pcProposalsSnapshot :: ProposalsSnapshot era -> PDoc

@@ -43,6 +43,7 @@ import Cardano.Ledger.Conway.Governance (
   GovSnapshots (..),
   RatifyState (..),
   cgEnactStateL,
+  cgFutureEnactStateL,
   cgGovSnapshotsL,
   curGovSnapshotsL,
   ensCommitteeL,
@@ -253,13 +254,14 @@ epochTransition = do
         , reDRepState = vstate ^. vsDRepsL
         }
     ratSig = RatifySignal . snapshotActions . prevGovSnapshots $ cgGovSnapshots govSt
+    enactState = govSt ^. cgFutureEnactStateL
   RatifyState {rsRemoved, rsEnactState} <-
     trans @(EraRule "RATIFY" era) $
       TRC
         ( ratEnv
         , RatifyState
             { rsRemoved = mempty
-            , rsEnactState = govSt ^. cgEnactStateL
+            , rsEnactState = enactState
             , rsDelayed = False
             }
         , ratSig
@@ -313,7 +315,8 @@ epochTransition = do
     donations = es'' ^. esDonationL
   pure $
     es''
-      & esGovernanceL . cgEnactStateL .~ rsEnactState
+      & esGovernanceL . cgFutureEnactStateL .~ rsEnactState
+      & esGovernanceL . cgEnactStateL .~ enactState
       & esGovernanceL . cgGovSnapshotsL .~ newGov
       -- Move donations to treasury
       & esAccountStateL . asTreasuryL <>~ donations
