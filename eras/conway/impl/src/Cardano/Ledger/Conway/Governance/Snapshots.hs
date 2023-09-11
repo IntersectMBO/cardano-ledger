@@ -36,6 +36,7 @@ import Data.Foldable (Foldable (..))
 import Data.List (sort)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
+import Data.Maybe (fromMaybe)
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -83,16 +84,12 @@ snapshotInsertGovAction gas@GovActionState {gasId} ps@ProposalsSnapshot {..}
 snapshotActions ::
   ProposalsSnapshot era ->
   StrictSeq (GovActionState era)
-snapshotActions ProposalsSnapshot {..} = go psProposalOrder
+snapshotActions ProposalsSnapshot {..} = toGovAction <$> psProposalOrder
   where
-    go (gaId :<| gaIds) =
-      case Map.lookup gaId psGovActionStates of
-        Just v -> v :<| go gaIds
-        Nothing ->
-          error $
-            "Impossible: ProposalsSnapshot invariant is not maintained: "
-              <> show gaId
-    go Empty = Empty
+    toGovAction gaId =
+      fromMaybe
+        (error $ "Impossible: ProposalsSnapshot invariant is not maintained: " <> show gaId)
+        (Map.lookup gaId psGovActionStates)
 
 snapshotIds ::
   ProposalsSnapshot era ->
@@ -152,9 +149,7 @@ snapshotLookupId gId ProposalsSnapshot {psGovActionStates} =
 fromGovActionStateSeq ::
   StrictSeq (GovActionState era) ->
   ProposalsSnapshot era
-fromGovActionStateSeq (x :<| xs) =
-  snapshotInsertGovAction x (fromGovActionStateSeq xs)
-fromGovActionStateSeq Empty = def
+fromGovActionStateSeq = foldl' (flip snapshotInsertGovAction) def
 
 -- | Internal function for checking if the invariants are maintained
 isConsistent_ :: ProposalsSnapshot era -> Bool
