@@ -2,6 +2,14 @@
 
 ## 1.9.0.0
 
+* Rename:
+  * `thresholdSPO` -> `votingStakePoolThreshold`
+  * `thresholdDRep` -> `votingDRepThreshold`
+  * `thresholdCC` -> `votingCommitteeThreshold`
+* Add:
+  * `isStakePoolVotingAllowed`
+  * `isDRepVotingAllowed`
+  * `isCommitteeVotingAllowed`
 * Fix `ConwayTxBodyRaw` decoder to disallow empty `Field`s #3712
   * `certsTxBodyL`
   * `withdrawalsTxBodyL`

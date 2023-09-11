@@ -35,8 +35,8 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionIds (..),
   RatifyState (..),
   Vote (..),
-  thresholdDRep,
-  thresholdSPO,
+  votingDRepThreshold,
+  votingStakePoolThreshold,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
@@ -108,7 +108,7 @@ spoAccepted ::
   GovActionState era ->
   Bool
 spoAccepted rs RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
-  case thresholdSPO rs gasAction of
+  case votingStakePoolThreshold rs gasAction of
     -- Short circuit on zero threshold in order to avoid redundant computation.
     SJust r -> r == minBound || totalAcceptedStakePoolsRatio >= unboundRational r
     SNothing -> False
@@ -146,7 +146,7 @@ spoAccepted rs RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
 
 dRepAccepted :: forall era. ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
 dRepAccepted re rs GovActionState {gasDRepVotes, gasAction} =
-  case thresholdDRep rs gasAction of
+  case votingDRepThreshold rs gasAction of
     SJust r ->
       -- Short circuit on zero threshold in order to avoid redundant computation.
       r == minBound

@@ -20,7 +20,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   RatifyState,
   Vote (..),
-  thresholdDRep,
+  votingDRepThreshold,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules (
@@ -162,7 +162,7 @@ drepsPropNoStake =
           env {reDRepDistr = Map.empty}
           st
           gas
-          `shouldBe` thresholdDRep @era st (gasAction gas)
+          `shouldBe` votingDRepThreshold @era st (gasAction gas)
           == SJust minBound
     )
 

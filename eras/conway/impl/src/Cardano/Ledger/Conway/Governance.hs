@@ -42,9 +42,12 @@ module Cardano.Ledger.Conway.Governance (
   indexedGovProps,
   Constitution (..),
   ConwayEraGov (..),
-  thresholdSPO,
-  thresholdDRep,
-  thresholdCC,
+  votingStakePoolThreshold,
+  votingDRepThreshold,
+  votingCommitteeThreshold,
+  isStakePoolVotingAllowed,
+  isDRepVotingAllowed,
+  isCommitteeVotingAllowed,
   ProposalsSnapshot,
   snapshotInsertGovAction,
   snapshotActions,
@@ -85,6 +88,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
+  isSJust,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -593,69 +597,156 @@ pparamsUpdateThreshold pp ppu =
         Set.map lookupGroupThreshold $
           modifiedGroups @era ppu
 
-thresholdSPO ::
+data VotingThreshold
+  = -- | This is the actual threshold. It is lazy, because upon proposal we only care if
+    -- the voting is allowed or not, instead of getting the actual threshold value.
+    VotingThreshold UnitInterval -- <- lazy on purpose
+  | -- | Does not have a threshold, therefore an action can not be ratified
+    NoVotingThreshold
+  | -- | Some GovActions are not allowed to be voted by some entities
+    NoVotingAllowed
+
+toRatifyVotingThreshold :: VotingThreshold -> StrictMaybe UnitInterval
+toRatifyVotingThreshold = \case
+  VotingThreshold t -> SJust t -- concrete threshold
+  NoVotingThreshold -> SNothing -- no voting threshold prevents ratification
+  NoVotingAllowed -> SJust minBound -- votes should not count, set threshold to zero
+
+isVotingAllowed :: VotingThreshold -> Bool
+isVotingAllowed = \case
+  VotingThreshold {} -> True
+  NoVotingThreshold -> True
+  NoVotingAllowed -> False
+
+isStakePoolVotingAllowed ::
+  ConwayEraPParams era =>
+  GovAction era ->
+  Bool
+isStakePoolVotingAllowed =
+  isVotingAllowed . votingStakePoolThresholdInternal pp isElectedCommittee
+  where
+    -- Information about presence of committe or values in PParams are irrelevant for
+    -- knowing if voting is allowed or not:
+    pp = emptyPParams
+    isElectedCommittee = False
+
+votingStakePoolThreshold ::
   ConwayEraPParams era =>
   RatifyState era ->
   GovAction era ->
   StrictMaybe UnitInterval
-thresholdSPO rSt action =
-  let pp = rSt ^. rsEnactStateL . ensCurPParamsL
-      PoolVotingThresholds
+votingStakePoolThreshold ratifyState =
+  toRatifyVotingThreshold . votingStakePoolThresholdInternal pp isElectedCommittee
+  where
+    pp = ratifyState ^. rsEnactStateL . ensCurPParamsL
+    isElectedCommittee = isSJust $ ratifyState ^. rsEnactStateL . ensCommitteeL
+
+votingStakePoolThresholdInternal ::
+  ConwayEraPParams era =>
+  PParams era ->
+  Bool ->
+  GovAction era ->
+  VotingThreshold
+votingStakePoolThresholdInternal pp isElectedCommittee action =
+  let PoolVotingThresholds
         { pvtCommitteeNoConfidence
         , pvtCommitteeNormal
         , pvtHardForkInitiation
         } = pp ^. ppPoolVotingThresholdsL
-      committee = rSt ^. rsEnactStateL . ensCommitteeL
    in case action of
-        NoConfidence {} -> SJust pvtCommitteeNoConfidence
-        NewCommittee {} -> SJust $
-          case committee of
-            SJust _ -> pvtCommitteeNormal
-            SNothing -> pvtCommitteeNoConfidence
-        NewConstitution {} -> SJust minBound
-        HardForkInitiation {} -> SJust pvtHardForkInitiation
-        ParameterChange {} -> SJust minBound
-        TreasuryWithdrawals {} -> SJust minBound
-        InfoAction {} -> SNothing
+        NoConfidence {} -> VotingThreshold pvtCommitteeNoConfidence
+        NewCommittee {} ->
+          VotingThreshold $
+            if isElectedCommittee
+              then pvtCommitteeNormal
+              else pvtCommitteeNoConfidence
+        NewConstitution {} -> NoVotingAllowed
+        HardForkInitiation {} -> VotingThreshold pvtHardForkInitiation
+        ParameterChange {} -> NoVotingAllowed
+        TreasuryWithdrawals {} -> NoVotingAllowed
+        InfoAction {} -> NoVotingThreshold
 
-thresholdCC ::
-  StrictMaybe (Committee era) ->
+isCommitteeVotingAllowed :: GovAction era -> Bool
+isCommitteeVotingAllowed =
+  isVotingAllowed . votingCommitteeThresholdInternal committee
+  where
+    -- Information about presence of committe is irrelevant for knowing if voting is
+    -- allowed or not
+    committee = SNothing
+
+votingCommitteeThreshold ::
+  RatifyState era ->
   GovAction era ->
   StrictMaybe UnitInterval
-thresholdCC committee action =
-  let ccThreshold = committeeQuorum <$> committee
-   in case action of
-        NoConfidence {} -> SJust minBound
-        NewCommittee {} -> SJust minBound
-        NewConstitution {} -> ccThreshold
-        HardForkInitiation {} -> ccThreshold
-        ParameterChange {} -> ccThreshold
-        TreasuryWithdrawals {} -> ccThreshold
-        InfoAction {} -> SNothing
+votingCommitteeThreshold ratifyState =
+  toRatifyVotingThreshold . votingCommitteeThresholdInternal committee
+  where
+    committee = ratifyState ^. rsEnactStateL . ensCommitteeL
 
-thresholdDRep ::
+votingCommitteeThresholdInternal ::
+  StrictMaybe (Committee era) ->
+  GovAction era ->
+  VotingThreshold
+votingCommitteeThresholdInternal committee = \case
+  NoConfidence {} -> NoVotingAllowed
+  NewCommittee {} -> NoVotingAllowed
+  NewConstitution {} -> threshold
+  HardForkInitiation {} -> threshold
+  ParameterChange {} -> threshold
+  TreasuryWithdrawals {} -> threshold
+  InfoAction {} -> NoVotingThreshold
+  where
+    threshold =
+      case committeeQuorum <$> committee of
+        SJust t -> VotingThreshold t
+        SNothing -> NoVotingThreshold
+
+isDRepVotingAllowed ::
+  ConwayEraPParams era =>
+  GovAction era ->
+  Bool
+isDRepVotingAllowed =
+  isVotingAllowed . votingDRepThresholdInternal pp isElectedCommittee
+  where
+    -- Information about presence of committe or values in PParams are irrelevant for
+    -- knowing if voting is allowed or not:
+    pp = emptyPParams
+    isElectedCommittee = False
+
+votingDRepThreshold ::
   ConwayEraPParams era =>
   RatifyState era ->
   GovAction era ->
   StrictMaybe UnitInterval
-thresholdDRep rSt action =
-  let pp = rSt ^. rsEnactStateL . ensCurPParamsL
-      DRepVotingThresholds
+votingDRepThreshold ratifyState =
+  toRatifyVotingThreshold . votingDRepThresholdInternal pp isElectedCommittee
+  where
+    pp = ratifyState ^. rsEnactStateL . ensCurPParamsL
+    isElectedCommittee = isSJust $ ratifyState ^. rsEnactStateL . ensCommitteeL
+
+votingDRepThresholdInternal ::
+  ConwayEraPParams era =>
+  PParams era ->
+  Bool ->
+  GovAction era ->
+  VotingThreshold
+votingDRepThresholdInternal pp isElectedCommittee action =
+  let DRepVotingThresholds
         { dvtCommitteeNoConfidence
         , dvtCommitteeNormal
         , dvtUpdateToConstitution
         , dvtHardForkInitiation
         , dvtTreasuryWithdrawal
         } = pp ^. ppDRepVotingThresholdsL
-      committee = rSt ^. rsEnactStateL . ensCommitteeL
    in case action of
-        NoConfidence {} -> SJust dvtCommitteeNoConfidence
-        NewCommittee {} -> SJust $
-          case committee of
-            SJust _ -> dvtCommitteeNormal
-            SNothing -> dvtCommitteeNoConfidence
-        NewConstitution {} -> SJust dvtUpdateToConstitution
-        HardForkInitiation {} -> SJust dvtHardForkInitiation
-        ParameterChange _ ppu -> SJust $ pparamsUpdateThreshold pp ppu
-        TreasuryWithdrawals {} -> SJust dvtTreasuryWithdrawal
-        InfoAction {} -> SNothing
+        NoConfidence {} -> VotingThreshold dvtCommitteeNoConfidence
+        NewCommittee {} ->
+          VotingThreshold $
+            if isElectedCommittee
+              then dvtCommitteeNormal
+              else dvtCommitteeNoConfidence
+        NewConstitution {} -> VotingThreshold dvtUpdateToConstitution
+        HardForkInitiation {} -> VotingThreshold dvtHardForkInitiation
+        ParameterChange _ ppu -> VotingThreshold $ pparamsUpdateThreshold pp ppu
+        TreasuryWithdrawals {} -> VotingThreshold dvtTreasuryWithdrawal
+        InfoAction {} -> NoVotingThreshold
