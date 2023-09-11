@@ -632,7 +632,7 @@ votingStakePoolThresholdInternal pp isElectedCommittee action =
         } = pp ^. ppPoolVotingThresholdsL
    in case action of
         NoConfidence {} -> VotingThreshold pvtCommitteeNoConfidence
-        NewCommittee {} ->
+        UpdateCommittee {} ->
           VotingThreshold $
             if isElectedCommittee
               then pvtCommitteeNormal
@@ -666,7 +666,7 @@ votingCommitteeThresholdInternal ::
   VotingThreshold
 votingCommitteeThresholdInternal committee = \case
   NoConfidence {} -> NoVotingAllowed
-  NewCommittee {} -> NoVotingAllowed
+  UpdateCommittee {} -> NoVotingAllowed
   NewConstitution {} -> threshold
   HardForkInitiation {} -> threshold
   ParameterChange {} -> threshold
@@ -717,7 +717,7 @@ votingDRepThresholdInternal pp isElectedCommittee action =
         } = pp ^. ppDRepVotingThresholdsL
    in case action of
         NoConfidence {} -> VotingThreshold dvtCommitteeNoConfidence
-        NewCommittee {} ->
+        UpdateCommittee {} ->
           VotingThreshold $
             if isElectedCommittee
               then dvtCommitteeNormal

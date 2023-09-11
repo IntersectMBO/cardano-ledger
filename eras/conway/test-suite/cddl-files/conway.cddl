@@ -92,7 +92,7 @@ gov_action =
   // hard_fork_initiation_action
   // treasury_withdrawals_action
   // no_confidence
-  // new_committee
+  // update_committee
   // new_constitution
   // info_action
   ]
@@ -105,7 +105,7 @@ treasury_withdrawals_action = (2, { reward_account => coin })
 
 no_confidence = (3, gov_action_id / null)
 
-new_committee = (4, gov_action_id / null, set<committee_cold_credential>, committee)
+update_committee = (4, gov_action_id / null, set<committee_cold_credential>, { committee_cold_credential => epoch }, unit_interval)
 
 new_constitution = (5, gov_action_id / null, constitution)
 

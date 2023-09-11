@@ -61,7 +61,6 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovAction (..),
-  committeeMembersL,
  )
 import Cardano.Ledger.Conway.Governance.Snapshots (snapshotGovActionStates)
 import Cardano.Ledger.Conway.PParams (
@@ -267,9 +266,9 @@ govTransition = do
                   Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
              in Set.null mismatchedAccounts
                   ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
-          NewCommittee _mPrevGovActionId _oldColdCreds newCommittee ->
+          UpdateCommittee _mPrevGovActionId _membersToRemove membersToAdd _qrm -> do
             let minCommitteeSize = pp ^. ppMinCommitteeSizeL
-                newCommitteeSize = fromIntegral . Map.size $ newCommittee ^. committeeMembersL
+                newCommitteeSize = fromIntegral . Map.size $ membersToAdd
              in newCommitteeSize
                   >= minCommitteeSize
                     ?! NewCommitteeSizeTooSmall newCommitteeSize minCommitteeSize

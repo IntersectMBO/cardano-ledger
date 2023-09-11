@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Rename `NewCommitte` to `UpdateCommittee`
 * Fix invalid order in `fromGovActionStateSeq`, thus also `DecCBOR` for `ProposalsSnapshot`
 * Remove `DecCBOR`/`EncCBOR` and `FromCBOR`/`ToCBOR` for `RatifyState`, since that state
   is ephemeral and is never serialized.
@@ -51,6 +52,7 @@
 
 ### testlib
 
+* Rename `genNewCommittee` to `genUpdateCommitteee`
 * Add `genNewCommittee`
 * Add `genNoConfidence`
 * Add `genTreasuryWithdrawals`

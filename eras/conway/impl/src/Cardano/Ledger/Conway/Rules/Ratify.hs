@@ -201,7 +201,7 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
 delayingAction :: GovAction era -> Bool
 delayingAction NoConfidence {} = True
 delayingAction HardForkInitiation {} = True
-delayingAction NewCommittee {} = True
+delayingAction UpdateCommittee {} = True
 delayingAction NewConstitution {} = True
 delayingAction TreasuryWithdrawals {} = False
 delayingAction ParameterChange {} = False
@@ -209,7 +209,7 @@ delayingAction InfoAction {} = False
 
 actionPriority :: GovAction era -> Int
 actionPriority NoConfidence {} = 0
-actionPriority NewCommittee {} = 1
+actionPriority UpdateCommittee {} = 1
 actionPriority NewConstitution {} = 2
 actionPriority HardForkInitiation {} = 3
 actionPriority ParameterChange {} = 4
@@ -280,11 +280,11 @@ prevActionAsExpected (HardForkInitiation prev _) (PrevGovActionIds {pgaHardFork}
   prev == pgaHardFork
 prevActionAsExpected (NoConfidence prev) (PrevGovActionIds {pgaCommittee}) =
   prev == pgaCommittee
-prevActionAsExpected (NewCommittee prev _ _) (PrevGovActionIds {pgaCommittee}) =
+prevActionAsExpected (UpdateCommittee prev _ _ _) (PrevGovActionIds {pgaCommittee}) =
   prev == pgaCommittee
 prevActionAsExpected (NewConstitution prev _) (PrevGovActionIds {pgaConstitution}) =
   prev == pgaConstitution
-prevActionAsExpected _ _ = True -- for the other actions, the last action is not relevant
+prevActionAsExpected _ _ = True -- for the other actions, the previous action is not relevant
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = absurd
