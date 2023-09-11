@@ -116,6 +116,9 @@ data ConwayGovPredFailure era
   | ConflictingCommitteeUpdate
       -- | Credentials that are mentioned as members to be both removed and added
       (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+  | ExpirationEpochTooSmall
+      -- | Members for which the expiration epoch has already been reached
+      (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -131,6 +134,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     4 -> SumD ProposalDepositIncorrect <! From <! From
     5 -> SumD DisallowedVoters <! From
     6 -> SumD ConflictingCommitteeUpdate <! From
+    7 -> SumD ExpirationEpochTooSmall <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -148,6 +152,9 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum DisallowedVoters 5 !> To votes
       ConflictingCommitteeUpdate members ->
         Sum ConflictingCommitteeUpdate 6 !> To members
+      ExpirationEpochTooSmall members ->
+        Sum ExpirationEpochTooSmall 7 !> To members
+
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
 
@@ -241,7 +248,7 @@ govTransition ::
   ConwayEraPParams era =>
   TransitionRule (ConwayGOV era)
 govTransition = do
-  TRC (GovEnv txid epoch pp, st, gp) <- judgmentContext
+  TRC (GovEnv txid currentEpoch pp, st, gp) <- judgmentContext
 
   let applyProps st' Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
@@ -265,6 +272,7 @@ govTransition = do
                   ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
             checkConflictingUpdate
+            checkExpirationEpoch
             where
               checkConflictingUpdate =
                 let conflicting =
@@ -272,11 +280,14 @@ govTransition = do
                         (Map.keysSet membersToAdd)
                         membersToRemove
                  in Set.null conflicting ?! ConflictingCommitteeUpdate conflicting
+              checkExpirationEpoch =
+                let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
+                 in Map.null invalidMembers ?! ExpirationEpochTooSmall invalidMembers
           _ -> pure ()
 
         let st'' =
               addAction
-                epoch
+                currentEpoch
                 (pp ^. ppGovActionExpirationL)
                 (GovActionId txid idx)
                 pProcDeposit
