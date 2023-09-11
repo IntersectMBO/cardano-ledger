@@ -70,7 +70,7 @@ transaction_body =
   , ? 18 : set<transaction_input> ; reference inputs; New
   }
 
-required_signers = set<$addr_keyhash>
+required_signers = set<addr_keyhash>
 
 transaction_input = [ transaction_id : $hash32
                     , index : uint

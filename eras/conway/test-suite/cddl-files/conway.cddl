@@ -101,15 +101,15 @@ parameter_change_action = (0, gov_action_id / null, protocol_param_update)
 
 hard_fork_initiation_action = (1, gov_action_id / null, [protocol_version])
 
-treasury_withdrawals_action = (2, { $reward_account => coin })
+treasury_withdrawals_action = (2, { reward_account => coin })
 
 no_confidence = (3, gov_action_id / null)
 
-new_committee = (4, gov_action_id / null, set<$committee_cold_credential>, committee)
+new_committee = (4, gov_action_id / null, set<committee_cold_credential>, committee)
 
 new_constitution = (5, gov_action_id / null, constitution)
 
-committee = [{ $committee_cold_credential => epoch }, unit_interval]
+committee = [{ committee_cold_credential => epoch }, unit_interval]
 
 constitution =
   [ anchor
@@ -146,7 +146,7 @@ gov_action_id =
   , gov_action_index : uint
   ]
 
-required_signers = nonempty_set<$addr_keyhash>
+required_signers = nonempty_set<addr_keyhash>
 
 transaction_input = [ transaction_id : $hash32
                     , index : uint
