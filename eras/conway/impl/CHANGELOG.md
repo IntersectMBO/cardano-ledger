@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `ConflictingCommitteeUpdate` data constructor to `ConwayGovPredFailure`
 * Rename `NewCommitte` to `UpdateCommittee`
 * Remove `NewCommitteeSizeTooSmall` data constructor from `ConwayGovPredFailure`
 * Fix invalid order in `fromGovActionStateSeq`, thus also `DecCBOR` for `ProposalsSnapshot`

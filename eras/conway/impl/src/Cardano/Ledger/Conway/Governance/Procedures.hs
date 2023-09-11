@@ -523,7 +523,7 @@ data GovAction era
       -- | Previous governance action id of `UpdateCommittee` or `NoConfidence` type, which
       -- corresponds to `CommitteePurpose`
       !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-      -- | Old committee
+      -- | Constitutional Committe members to be removed
       !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
       -- | Constitutional committee members to be added
       !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)

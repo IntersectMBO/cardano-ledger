@@ -69,6 +69,8 @@ import Cardano.Ledger.Conway.PParams (
   ppGovActionExpirationL,
  )
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
 import Control.DeepSeq (NFData)
@@ -111,6 +113,9 @@ data ConwayGovPredFailure era
     -- Voters. This failure lists all governance action ids with their respective voters
     -- that are not allowed to vote on those governance actions.
     DisallowedVoters !(Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
+  | ConflictingCommitteeUpdate
+      -- | Credentials that are mentioned as members to be both removed and added
+      (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -125,6 +130,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     3 -> SumD TreasuryWithdrawalsNetworkIdMismatch <! From <! From
     4 -> SumD ProposalDepositIncorrect <! From <! From
     5 -> SumD DisallowedVoters <! From
+    6 -> SumD ConflictingCommitteeUpdate <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -140,7 +146,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum ProposalDepositIncorrect 4 !> To submitted !> To expected
       DisallowedVoters votes ->
         Sum DisallowedVoters 5 !> To votes
-
+      ConflictingCommitteeUpdate members ->
+        Sum ConflictingCommitteeUpdate 6 !> To members
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
 
@@ -256,6 +263,15 @@ govTransition = do
                   Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
              in Set.null mismatchedAccounts
                   ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
+          UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
+            checkConflictingUpdate
+            where
+              checkConflictingUpdate =
+                let conflicting =
+                      Set.intersection
+                        (Map.keysSet membersToAdd)
+                        membersToRemove
+                 in Set.null conflicting ?! ConflictingCommitteeUpdate conflicting
           _ -> pure ()
 
         let st'' =
