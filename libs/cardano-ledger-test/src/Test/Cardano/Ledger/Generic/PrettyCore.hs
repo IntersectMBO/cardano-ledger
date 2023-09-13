@@ -2022,6 +2022,7 @@ psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
     , ("EpochNo", ppEpochNo en)
     ]
 
+
 pcUTxOState :: Proof era -> UTxOState era -> PDoc
 pcUTxOState proof (UTxOState u dep fs gs (IStake m _) don) =
   ppRecord
