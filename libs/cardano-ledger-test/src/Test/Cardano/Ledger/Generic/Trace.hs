@@ -541,6 +541,13 @@ forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 =
 -- =========================================================================
 -- Test for just making a trace
 
+-- | We are making 'smoke' tests, testing for smoke rather than fire.
+--   Under the assumption that shorter tests have advantages
+--   like not getting turned off because the tests take too long. A glaring failure is
+--   likely to be caught in 'n' tests, rather than the standard '100'
+testPropMax :: Testable prop => Int -> String -> prop -> TestTree
+testPropMax n name x = testProperty name (withMaxSuccess n x)
+
 chainTest ::
   forall era.
   ( Reflect era
@@ -551,7 +558,7 @@ chainTest ::
   Int ->
   GenSize ->
   TestTree
-chainTest proof n gsize = testProperty message action
+chainTest proof n gsize = testPropMax 30 message action
   where
     message = show proof ++ " era."
     action = do
@@ -592,7 +599,8 @@ multiEpochTest proof numTx gsize =
       getEpoch mockchainstate = nesEL (mcsNes mockchainstate)
       propf firstSt lastSt =
         collect (getEpoch lastSt) (totalAda firstSt === totalAda lastSt)
-   in testProperty
+   in testPropMax
+        30
         ("Multi epoch. Ada is preserved. " ++ show proof ++ " era. Trace length = " ++ show numTx)
         (traceProp proof numTx gensize propf)
 

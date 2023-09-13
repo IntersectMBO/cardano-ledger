@@ -36,6 +36,8 @@ import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   ShelleyTxCert (..),
  )
+import Control.Monad (when)
+import Data.Default.Class (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -43,9 +45,11 @@ import Lens.Micro (Lens', lens)
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
+import Test.Cardano.Ledger.Constrained.Examples (testIO)
 import Test.Cardano.Ledger.Constrained.Monad (generateWithSeed, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
+import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Universes (universeStage)
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
@@ -54,6 +58,7 @@ import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
+import Test.Tasty (TestTree, defaultMain)
 
 -- =============================================
 -- Shelley Cert Targets
@@ -156,6 +161,7 @@ partBfromPartA p mp = Map.fromList (fixer (Map.toList mp))
 --   The parameter 'vote' should be existentially bound
 --   in the surrounding context (inside a Choose Target perhaps)
 makeDRepPred ::
+  Era era =>
   Term era (DRep (EraCrypto era)) ->
   Term era (Credential 'DRepRole (EraCrypto era)) ->
   Pred era
@@ -265,7 +271,7 @@ certsPreds p = case whichTxCert p of
                     [ Random pot -- choose Treasury or Reserves
                     , If
                         (Constr "hardfork" HardForks.allowMIRTransfer ^$ (protVer p))
-                        (available :<-: (Constr "available" availableAfterMIR ^$ pot :$ accountStateT :$ instantaneousRewardsT))
+                        (available :<-: (Constr "available" availableAfterMIR ^$ pot :$ Mask accountStateT :$ Mask instantaneousRewardsT))
                         ( If
                             (Constr "potIsTreasury" (== TreasuryMIR) ^$ pot)
                             (treasury :=: available)
@@ -301,7 +307,7 @@ certsPreds p = case whichTxCert p of
                   , sMirShift ^$ available ^$ pot ^$ mircoin
                   ,
                     [ Random pot
-                    , available :<-: (Constr "available" availableAfterMIR ^$ pot :$ accountStateT :$ instantaneousRewardsT)
+                    , available :<-: (Constr "available" availableAfterMIR ^$ pot :$ Mask accountStateT :$ Mask instantaneousRewardsT)
                     , SumsTo (Left (Coin 1)) available GTE [One mircoin]
                     ]
                   )
@@ -388,34 +394,34 @@ certsPreds p = case whichTxCert p of
         ]
     ]
   where
-    stakeCred = var "stakeCred" CredR
-    deregkey = var "destakeCred" CredR
-    poolHash = var "poolHash" PoolHashR
-    epoch = var "epoch" EpochR
-    shelleycerts = var "shelleycerts" (ListR ShelleyTxCertR)
-    shelleycert = var "shelleycert" ShelleyTxCertR
-    conwaycerts = var "conwaycerts" (ListR ConwayTxCertR)
-    poolParams = var "poolParams" PoolParamsR
-    pot = var "pot" MIRPotR
-    mirdistrA = var "mirdistrA" (MapR CredR CoinR)
-    mirdistrB = var "mirdistrB" (MapR CredR DeltaCoinR)
-    mirdistrC = var "mirdistrC" (MapR CredR DeltaCoinR)
-    mirdistr = var "mirdistr" (MapR CredR DeltaCoinR)
-    mkeydeposit = var "mkeyDeposit" (MaybeR CoinR)
-    kd = var "kd" CoinR
-    vote = var "vote" VCredR
-    epochDelta = var "epochDelta" EpochR
-    poolId = Var (V "poolId" PoolHashR (Yes PoolParamsR (lens ppId (\x i -> x {ppId = i}))))
-    poolOwners = Var (V "poolOwners" (SetR StakeHashR) (Yes PoolParamsR (lens ppOwners (\x i -> x {ppOwners = i}))))
-    poolRewAcnt = Var (V "poolRewAcnt" RewardAcntR (Yes PoolParamsR (lens ppRewardAcnt (\x r -> x {ppRewardAcnt = r}))))
-    localpool = (Var (V "localpool" (PoolMetadataR p) No))
-    rewCred = Var (V "rewCred" CredR No)
-    available = Var (V "available" CoinR No)
-    sumB = var "sumB" DeltaCoinR
-    instanSum = Var (V "instanSum" CoinR No)
-    mircoin = var "mircoin" CoinR
-    mircert = Var (V "mircert" ShelleyTxCertR No)
-    drep = Var (V "drep" DRepR No)
+    stakeCred = Var $ pV p "stakeCred" CredR No
+    deregkey = Var $ pV p "destakeCred" CredR No
+    poolHash = Var $ pV p "poolHash" PoolHashR No
+    epoch = Var $ pV p "epoch" EpochR No
+    shelleycerts = Var $ pV p "shelleycerts" (ListR ShelleyTxCertR) No
+    shelleycert = Var $ pV p "shelleycert" ShelleyTxCertR No
+    conwaycerts = Var $ pV p "conwaycerts" (ListR ConwayTxCertR) No
+    poolParams = Var $ pV p "poolParams" PoolParamsR No
+    pot = Var $ pV p "pot" MIRPotR No
+    mirdistrA = Var $ pV p "mirdistrA" (MapR CredR CoinR) No
+    mirdistrB = Var $ pV p "mirdistrB" (MapR CredR DeltaCoinR) No
+    mirdistrC = Var $ pV p "mirdistrC" (MapR CredR DeltaCoinR) No
+    mirdistr = Var $ pV p "mirdistr" (MapR CredR DeltaCoinR) No
+    mkeydeposit = Var $ pV p "mkeyDeposit" (MaybeR CoinR) No
+    kd = Var $ pV p "kd" CoinR No
+    vote = Var $ pV p "vote" VCredR No
+    epochDelta = Var $ pV p "epochDelta" EpochR No
+    poolId = Var (pV p "poolId" PoolHashR (Yes PoolParamsR (lens ppId (\x i -> x {ppId = i}))))
+    poolOwners = Var (pV p "poolOwners" (SetR StakeHashR) (Yes PoolParamsR (lens ppOwners (\x i -> x {ppOwners = i}))))
+    poolRewAcnt = Var (pV p "poolRewAcnt" RewardAcntR (Yes PoolParamsR (lens ppRewardAcnt (\x r -> x {ppRewardAcnt = r}))))
+    localpool = Var (pV p "localpool" (PoolMetadataR p) No)
+    rewCred = Var (pV p "rewCred" CredR No)
+    available = Var (pV p "available" CoinR No)
+    sumB = Var $ pV p "sumB" DeltaCoinR No
+    instanSum = Var (pV p "instanSum" CoinR No)
+    mircoin = Var $ pV p "mircoin" CoinR No
+    mircert = Var (pV p "mircert" ShelleyTxCertR No)
+    drep = Var (pV p "drep" DRepR No)
 
 certsStage ::
   Reflect era =>
@@ -426,8 +432,8 @@ certsStage proof subst0 = do
   let preds = certsPreds proof
   toolChainSub proof standardOrderInfo preds subst0
 
-main :: Int -> IO ()
-main seed = do
+demo :: ReplMode -> Int -> IO ()
+demo mode seed = do
   let proof =
         -- Conway Standard
         Babbage Standard
@@ -436,18 +442,24 @@ main seed = do
       seed
       ( pure emptySubst
           >>= pParamsStage proof
-          >>= universeStage proof
+          >>= universeStage def proof
           >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof
           >>= certsStage proof
           >>= (\subst -> monadTyped (substToEnv subst emptyEnv))
       )
-  -- rewritten <- snd <$> generate (rewriteGen (1,  certsPreds proof))
-  -- putStrLn (show rewritten)
   certsv <- monadTyped (findVar (unVar certs) env)
-  putStrLn (show (ppList (\(TxCertF _ x) -> pcTxCert proof x) certsv))
-  pure ()
+  when (mode == Interactive) $ putStrLn (show (ppList (\(TxCertF _ x) -> pcTxCert proof x) certsv))
+  modeRepl mode proof env ""
+
+demoTest :: TestTree
+demoTest = testIO "Testing Certs Stage" (demo CI 99)
+
+main :: Int -> IO ()
+main n = defaultMain $ testIO "Testing Certs Stage" (demo Interactive n)
+
+-- ========================================
 
 sMaybeL :: Lens' (StrictMaybe a) (Maybe a)
 sMaybeL = lens foo bar
@@ -469,4 +481,4 @@ poolMetaL :: Lens' (PoolParams era) (StrictMaybe PoolMetadata)
 poolMetaL = lens ppMetadata (\x r -> x {ppMetadata = r})
 
 poolMetadata :: Proof era -> Term era (Maybe PoolMetadata)
-poolMetadata p = Var (V "poolMetadata" (MaybeR (PoolMetadataR p)) (Yes PoolParamsR (poolMetaL . sMaybeL)))
+poolMetadata p = Var (pV p "poolMetadata" (MaybeR (PoolMetadataR p)) (Yes PoolParamsR (poolMetaL . sMaybeL)))

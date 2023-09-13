@@ -20,12 +20,13 @@ import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Control.Exception (ErrorCall (..))
+import qualified Control.Exception as Exc
 import Control.Monad (when)
+import qualified Data.HashSet as HashSet
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Ratio ((%))
-import qualified Data.Set as Set
 import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
@@ -39,9 +40,23 @@ import Test.Cardano.Ledger.Constrained.Tests (prop_shrinking, prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..))
-import Test.Cardano.Ledger.Generic.Proof (Reflect (..), ShelleyEra, Standard)
+import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Reflect (..), StandardCrypto)
+import Test.Cardano.Ledger.Generic.Trace (testPropMax)
 import Test.Hspec (shouldThrow)
 import Test.QuickCheck hiding (Fixed, total)
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+
+type Babbage = BabbageEra StandardCrypto
+
+-- =======================================================
+
+testIO :: String -> IO a -> TestTree
+testIO msg x = testCase msg (Exc.catch (x >> pure ()) handler)
+  where
+    -- handler :: Exc.ErrorCall -> IO ()
+    handler (Exc.SomeException zs) = assertFailure (unlines [msg, show zs])
 
 -- ===========================================
 
@@ -51,7 +66,7 @@ runCompile cs = case runTyped (compile standardOrderInfo cs) of
   Left xs -> putStrLn (unlines xs)
 
 data Assembler era where
-  Assemble :: PrettyC t era => Target era t -> Assembler era
+  Assemble :: PrettyC t era => RootTarget era x t -> Assembler era
   Skip :: Assembler era
 
 stoi :: OrderInfo
@@ -113,9 +128,9 @@ checkForSoundness preds subst = do
 explainBad :: Era era => [(String, Bool, Pred era)] -> Subst era -> String
 explainBad cs (Subst subst) = unlines (map getString cs) ++ "\n" ++ show restricted
   where
-    names = List.foldl' varsOfPred Set.empty (map getPred cs)
+    names = List.foldl' varsOfPred HashSet.empty (map getPred cs)
     restricted = Map.filterWithKey ok subst
-    ok key (SubstElem rep _term access) = Set.member (Name (V key rep access)) names
+    ok key (SubstElem rep _term access) = HashSet.member (Name (V key rep access)) names
     getString (s, _, _) = s
     getPred (_, _, pr) = pr
 
@@ -130,7 +145,6 @@ testn proof testname loud order cs target = do
 -- | Test that 'cs' :: [Pred] does NOT have a solution. We expect a failure
 failn :: Era era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
 failn proof message loud order cs target = do
-  putStrLn ("testing shouldFail test: " ++ message)
   shouldThrow
     ( do
         result <- generate (genMaybeCounterExample proof message loud order cs target)
@@ -160,18 +174,25 @@ testSpec name p = do
 -- ======================================================
 
 -- | Used to test cyclic dependencies
-cyclicPred :: [Pred era]
-cyclicPred = [a :⊆: b, b :⊆: c, Random d, c :⊆: a]
+aCyclicPred :: Era era => [Pred era]
+aCyclicPred = [a :⊆: b, b :⊆: c, Random c]
   where
     a = Var (V "a" (SetR IntR) No)
     b = Var (V "b" (SetR IntR) No)
     c = Var (V "c" (SetR IntR) No)
-    d = Var (V "d" IntR No)
+
+cyclicPred :: Era era => [Pred era]
+cyclicPred = [a :⊆: b, b :⊆: c, c :⊆: d, d :⊆: a, Random d]
+  where
+    a = Var (V "a" (SetR IntR) No)
+    b = Var (V "b" (SetR IntR) No)
+    c = Var (V "c" (SetR IntR) No)
+    d = Var (V "d" (SetR IntR) No)
 
 test1 :: IO ()
 test1 = do
   putStrLn "testing: Detect cycles"
-  runCompile @(ShelleyEra Standard) cyclicPred
+  runCompile @Babbage cyclicPred
   putStrLn "+++ OK, passed 1 test."
 
 -- ===================================
@@ -283,7 +304,7 @@ test7 loud = do
 
 -- ================================================
 
-pstateConstraints :: [Pred era]
+pstateConstraints :: Era era => [Pred era]
 pstateConstraints =
   [ Sized (ExactSize 20) poolHashUniv
   , -- we have , retiring :⊆: regPools        :⊆: poolsUinv AND
@@ -302,25 +323,7 @@ pstateConstraints =
   , (Dom retiring) :⊆: (Dom regPools)
   , (Dom futureRegPools) :⊆: poolHashUniv
   , Disjoint (Dom futureRegPools) (Dom retiring)
-  -- , (Dom futureRegPools) :⊆: (Dom regPools)  I am pretty sure we don't want this
   ]
-
-{-
-retiring: (Map (KeyHash 'StakePool c) EpochNo)
-   Sized (Range 5 7) (Dom retiring),
-   (Dom retiring) :⊆:  (Dom regPools),
-   Disjoint (Dom futureRegPools) (Dom retiring)
-
-retiring
-   Sized (Range 5 7) (Dom retiring),
-   (Dom retiring) :⊆:  (Dom Map{(KeyHash 'PoolStake #"1bc4542f) -> (PoolParams (KeyHash 'PoolStake #"d8131092)) | size = 9}),
-   Disjoint (Dom Map{(KeyHash 'PoolStake #"1bc4542f) -> (PoolParams (KeyHash 'PoolStake #"1ce6a5a0)) | size = 3}) (Dom retiring)
-Note that retiring provides 9, but if futureRegPools is 3, then 9-3 means we can get atmost 6, but we need 7
-
-\*** Failed! (after 86 tests):
-Exception:
-
--}
 
 test8 :: Gen Property
 test8 =
@@ -386,22 +389,16 @@ test11 =
     proof
     "Test 11. Instanaeous Sum Tests"
     False
-    (stoi {sumBeforeParts = False})
-    [ -- Before treasury instanTreasury
-      Random instanTreasury
-    , Sized (AtLeast 2) treasury
-    , SumsTo (Left (DeltaCoin 1)) (Delta treasury) GTH [One deltaTreasury]
-    , SumsTo (Left (DeltaCoin 1)) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
-    , SumsTo (Left (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
-    -- , SumsTo (Left (Coin 1)) treasury GTE [One instanTreasurySum ]
-    --
-
-    -- , Sized (AtLeast 1) instanReserves
-    --  , Negate (deltaReserves) :=: deltaTreasury
-    --  , SumsTo (Right (Coin 1)) instanReservesSum EQL [SumMap instanReserves]
-    --  , SumsTo (Right (DeltaCoin 1)) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
-    --  , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
-    --  , SumsTo (Right (DeltaCoin 1)) (Delta treasury) GTE [One (Delta instanTreasurySum), One (Negate (deltaTreasury))]
+    stoi
+    [ Sized (AtLeast 1) treasury
+    , Random instanTreasury
+    , Sized (AtLeast 1) instanReserves
+    , Negate (deltaReserves) :=: deltaTreasury
+    , SumsTo (Right (Coin 1)) instanReservesSum EQL [SumMap instanReserves]
+    , SumsTo (Right (DeltaCoin 1)) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
+    , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
+    , SumsTo (Right (DeltaCoin 1)) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
+    , Before reserves deltaReserves
     ]
     Skip
   where
@@ -420,7 +417,7 @@ test12 =
     , Random (prevProtVer p)
     , (protVer p) `CanFollow` (prevProtVer p)
     , Component (Right (pparams p)) [field pp (protVer p)]
-    , Component (Right (prevpparams p)) [field pp (prevProtVer p)]
+    , Component (Right (prevPParams p)) [field pp (prevProtVer p)]
     ]
     Skip
   where
@@ -503,7 +500,7 @@ test15 =
 
 -- ============================================================
 
-preds16 :: Proof era -> [Pred era]
+preds16 :: Era era => Proof era -> [Pred era]
 preds16 _proof =
   [ Sized (ExactSize 6) poolHashUniv
   , Sized (Range 1 3) (Dom poolDistr) -- At least 1 but smaller than the poolHashUniv
@@ -530,7 +527,7 @@ test16 =
 
 -- ==============================================
 
-univPreds :: Proof era -> [Pred era]
+univPreds :: Era era => Proof era -> [Pred era]
 univPreds p =
   [ Sized (ExactSize 15) credsUniv
   , Sized (ExactSize 20) poolHashUniv
@@ -564,7 +561,7 @@ univPreds p =
   , Dom (utxo p) :⊆: txinUniv
   ]
 
-pstatePreds :: Proof era -> [Pred era]
+pstatePreds :: Era era => Proof era -> [Pred era]
 pstatePreds _p =
   [ Sized (AtMost 3) (Dom futureRegPools) -- See comments in test8 why we need these Fixed predicates
   , Sized (Range 5 6) (Dom retiring) -- we need       retiring :⊆: regPools        :⊆: poolsUinv
@@ -576,13 +573,13 @@ pstatePreds _p =
     Disjoint (Dom futureRegPools) (Dom retiring)
   ]
 
-dstatePreds :: Proof era -> [Pred era]
+dstatePreds :: Era era => Proof era -> [Pred era]
 dstatePreds _p =
   [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
   , Dom rewards :=: Dom stakeDeposits
   , Dom delegations :⊆: Dom rewards
   , Random dreps
-  , Random ccHotKeys
+  , Random committeeState
   , Dom rewards :=: Rng ptrs
   , -- This implies (Fixed (ExactSize 3) instanReserves)
     -- But it also implies that the new introduced variable instanReservesDom also has size 3
@@ -597,7 +594,9 @@ dstatePreds _p =
   , SumsTo (Right (DeltaCoin 1)) (Delta instanReservesSum) LTH [One (Delta reserves), One deltaReserves]
   , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
   , SumsTo (Right (DeltaCoin 1)) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
-  , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
+  , -- , Before reserves deltaReserves -- XXX
+    -- , Before treasury deltaTreasury -- XXX
+    ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   ]
 
 accountstatePreds :: Proof era -> [Pred era]
@@ -625,8 +624,9 @@ epochstatePreds proof =
   , Random goDelegs
   , Random goPools
   , Random snapShotFee
-  , Random (prevpparams proof)
-  , Random (pparams proof)
+  , Random (prevPParams proof)
+  , Random (currPParams proof)
+  , Random donation
   , Sized (AtLeast 1) (maxBHSize proof)
   , Sized (AtLeast 1) (maxTxSize proof)
   , -- , Random (maxBBSize proof) -- This will cause underflow on Natural
@@ -639,7 +639,7 @@ epochstatePreds proof =
   where
     pp = PParamsR proof
 
-newepochstatePreds :: Proof era -> [Pred era]
+newepochstatePreds :: Era era => Proof era -> [Pred era]
 newepochstatePreds _proof =
   [ Random currentEpoch
   , Sized (ExactSize 8) (Dom prevBlocksMade) -- Both prevBlocksMade and prevBlocksMadeDom will have size 8
@@ -669,26 +669,16 @@ test17 =
   where
     proof = Alonzo Standard
 
-{-
- Exception: Solving for variable reserves
-(Delta ₳ 16) < ∑ (Delta reserves) + ▵₳ 27
-
-Given (Add s), Solving for reserves::c. Predicates
-  (Delta ₳ 16) < ∑ (Delta reserves) + ▵₳ 27
-
-DeltaCoin is negative: DeltaCoin (-11). Can't convert to Coin
--}
-
 -- ==========================================================
 -- Tests of the Term projection function ProjS
 
-projPreds1 :: Proof era -> [Pred era]
+projPreds1 :: Era era => Proof era -> [Pred era]
 projPreds1 _proof =
   [ Sized (ExactSize 4) futureGenDelegs
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   ]
 
-projPreds2 :: Proof era -> [Pred era]
+projPreds2 :: Era era => Proof era -> [Pred era]
 projPreds2 _proof =
   [ Dom genDelegs :⊆: Dom genesisHashUniv
   , Sized (ExactSize 12) futGDUniv
@@ -738,16 +728,16 @@ test19 = do
 -- ===================================================
 
 preds20 :: Proof era -> [Pred era]
-preds20 _proof =
+preds20 proof =
   [ Sized (ExactSize 10) intUniv
   , Sized (AtMost 6) rewardsx
   , Dom rewardsx :⊆: intUniv
   , Dom rewardsx :=: Rng ptrsx
   ]
   where
-    rewardsx = Var (V "rewards" (MapR IntR Word64R) No)
-    ptrsx = Var (V "ptrs" (MapR PtrR IntR) No)
-    intUniv = Var (V "intUniv" (SetR IntR) No)
+    rewardsx = Var (pV proof "rewards" (MapR IntR Word64R) No)
+    ptrsx = Var (pV proof "ptrs" (MapR PtrR IntR) No)
+    intUniv = Var (pV proof "intUniv" (SetR IntR) No)
 
 test20 :: Gen Property
 test20 =
@@ -789,27 +779,41 @@ test21 seed = do
 -- run all the tests
 
 testAll :: IO ()
-testAll = do
-  test1
-  test19
-  test4
-  test5
-  (test6 False)
-  (test7 False)
-  test14
-  testSpec "Test 3. PState example" test3
-  testSpec "Test 8. Pstate constraints" test8
-  testSpec "Test 9. Test of summing" test9
-  testSpec "Test 10. Test conditions EQL LTH LTE GTH GTE" test10
-  testSpec "Test 11. Instanaeous Sum Tests" test11
-  testSpec "Test 12. CanFollow tests" test12
-  testSpec "Test 13. Component tests" test13
-  testSpec "Test 15. Summation on Natural" test15
-  testSpec "Test 16. Test NonEmpty subset" test16
-  testSpec "Test 17. Full NewEpochState" test17 -- This fails sometimes, see note about test11
-  testSpec "Test 18a. Projection test" test18a
-  testSpec "Test 18b. Projection test" test18b
-  test19
-  testSpec "Test 20. ptr & rewards are inverses" test20
-  testSpec "Constraint soundness" $ pure $ property prop_soundness
-  testSpec "Shrinking soundness" $ pure $ withMaxSuccess 20 $ property prop_shrinking
+testAll = defaultMain allExampleTests
+
+allExampleTests :: TestTree
+allExampleTests =
+  testGroup
+    "Example tests"
+    [ testCase "test 1A. Cyclic preds detected" $
+        case runTyped (compile @Babbage standardOrderInfo cyclicPred) of
+          Right _ -> assertFailure ("Cyclic preds Not detected.")
+          Left _ -> pure ()
+    , testCase "test 1B. ACyclic preds solved" $
+        case runTyped (compile @Babbage standardOrderInfo aCyclicPred) of
+          Right _ -> pure ()
+          Left xs -> assertFailure (unlines xs)
+    , testIO
+        "test 19 Test of projOnDom function"
+        (generate (help19 (Mary Standard)))
+    , testIO "Test 4. Inconsistent Size" test4
+    , testIO "Test 5. Bad Sum, impossible partition." test5
+    , testIO "Test6. Find a viable order of variables" (test6 False)
+    , testIO "Test7. Compute a solution" (test7 False)
+    , testIO "Test 14 Catch unsolveable use of Sized" test14
+    , testPropMax 30 "Test 3. PState example" test3
+    , testPropMax 30 "Test 8. Pstate constraints" test8
+    , testPropMax 30 "Test 9. Test of summing" test9
+    , testPropMax 30 "Test 10. Test conditions EQL LTH LTE GTH GTE" test10
+    , testPropMax 100 "Test 11. Instanaeous Sum Tests" test11
+    , testPropMax 30 "Test 12. CanFollow tests" test12
+    , testPropMax 30 "Test 13. Component tests" test13
+    , testPropMax 30 "Test 15. Summation on Natural" test15
+    , testPropMax 30 "Test 16. Test NonEmpty subset" test16
+    , testPropMax 30 "Test 17. Full NewEpochState" (fmap (withMaxSuccess 30) test17)
+    , testPropMax 30 "Test 18a. Projection test" test18a
+    , testPropMax 30 "Test 18b. Projection test" test18b
+    , testPropMax 30 "Test 20. ptr & rewards are inverses" test20
+    , testPropMax 30 "Constraint soundness" $ prop_soundness
+    , testProperty "Shrinking soundness" $ withMaxSuccess 30 $ prop_shrinking
+    ]

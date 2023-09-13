@@ -57,12 +57,14 @@ module Test.Cardano.Ledger.Generic.Proof (
   PParamsWit (..),
   UTxOWit (..),
   ScriptWit (..),
+  GovStateWit (..),
   whichValue,
   whichTxOut,
   whichTxCert,
   whichPParams,
   whichUTxO,
   whichScript,
+  whichGovState,
 ) where
 
 import Cardano.Crypto.DSIGN as DSIGN
@@ -85,6 +87,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.BaseTypes as Base (Seed)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..))
 import Cardano.Ledger.Core (
   Era (EraCrypto),
@@ -107,6 +110,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov, EraIndependentTxBody, ShelleyEraTxBody, ShelleyEraTxCert)
+import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -543,3 +547,15 @@ whichScript (Mary _) = ScriptAllegraToMary
 whichScript (Alonzo _) = ScriptAlonzoToConway
 whichScript (Babbage _) = ScriptAlonzoToConway
 whichScript (Conway _) = ScriptAlonzoToConway
+
+data GovStateWit era where
+  GovStateShelleyToBabbage :: (EraGov era, GovState era ~ ShelleyGovState era) => GovStateWit era
+  GovStateConwayToConway :: (EraGov era, GovState era ~ ConwayGovState era) => GovStateWit era
+
+whichGovState :: Proof era -> GovStateWit era
+whichGovState (Shelley _) = GovStateShelleyToBabbage
+whichGovState (Allegra _) = GovStateShelleyToBabbage
+whichGovState (Mary _) = GovStateShelleyToBabbage
+whichGovState (Alonzo _) = GovStateShelleyToBabbage
+whichGovState (Babbage _) = GovStateShelleyToBabbage
+whichGovState (Conway _) = GovStateConwayToConway

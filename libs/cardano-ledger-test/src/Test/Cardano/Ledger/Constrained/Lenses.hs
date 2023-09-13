@@ -1,6 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 
--- | Define Lenses that facilitate accessing the types in the Var Model
+-- | Define Lenses that facilitate accessing the types in the Var Model.
+--   Note the types in the Model, are often wrapped in a newtype in the real state,
+--   or they are embedded in something like UMap to save space. So we need interesting
+--   Lenses to make this possible.
 --   Many other (more standard) Lenses are defined in Cardano.Ledger.Shelley.LedgerState
 module Test.Cardano.Ledger.Constrained.Lenses where
 
@@ -30,8 +33,6 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (fromList)
 import Data.Set (Set)
 import Lens.Micro
-
--- import Numeric.Natural (Natural)
 
 -- ====================================================
 -- Lenses

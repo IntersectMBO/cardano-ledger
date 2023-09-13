@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
@@ -17,6 +18,9 @@ import Cardano.Ledger.Core (Era (EraCrypto), EraScript (..), hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
 import Cardano.Ledger.Pretty
 import Data.Char (toLower)
+import Data.HashSet (HashSet)
+import qualified Data.HashSet as HashSet
+import Data.Hashable (Hashable)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -24,6 +28,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import qualified Data.Universe as Univ (Any (..))
+import Data.Void (Void)
 import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Classes (
@@ -49,6 +54,7 @@ import Test.Cardano.Ledger.Constrained.Size (Size (..), runSize, seps)
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), format, hasEq, synopsis, testEql, (:~:) (Refl))
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.QuickCheck (Gen, oneof)
+import Type.Reflection (TypeRep, Typeable)
 
 -- =========================================================
 -- class FromList cannot be defined in Classes.hs because
@@ -115,29 +121,29 @@ data Pred era where
   (:=:) :: Eq a => Term era a -> Term era a -> Pred era
   Subset :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
   Disjoint :: Ord a => Term era (Set a) -> Term era (Set a) -> Pred era
-  SumsTo :: Adds c => (Direct c) -> Term era c -> OrdCond -> [Sum era c] -> Pred era
-  SumSplit :: Adds c => c -> Term era c -> OrdCond -> [Sum era c] -> Pred era
+  SumsTo :: (Era era, Adds c) => (Direct c) -> Term era c -> OrdCond -> [Sum era c] -> Pred era
+  SumSplit :: (Era era, Adds c) => c -> Term era c -> OrdCond -> [Sum era c] -> Pred era
   Random :: Term era t -> Pred era
   Component :: Direct (Term era t) -> [AnyF era t] -> Pred era
   CanFollow :: Count n => Term era n -> Term era n -> Pred era
   Member :: Ord a => Direct (Term era a) -> Term era (Set a) -> Pred era
   NotMember :: Ord a => Term era a -> Term era (Set a) -> Pred era
   MapMember :: (Ord k, Eq v, Ord v) => Term era k -> Term era v -> (Direct (Term era (Map k v))) -> Pred era
-  (:<-:) :: Term era t -> Target era t -> Pred era
-  GenFrom :: Term era t -> Target era (Gen t) -> Pred era
+  (:<-:) :: Term era t -> RootTarget era r t -> Pred era
+  GenFrom :: Term era t -> RootTarget era r (Gen t) -> Pred era
   List :: FromList fs t => Term era fs -> [Term era t] -> Pred era
-  Choose :: Eq t => Term era Size -> Term era [t] -> [(Int, Target era t, [Pred era])] -> Pred era
+  Choose :: (Era era, Eq t) => Term era Size -> Term era [t] -> [(Int, Target era t, [Pred era])] -> Pred era
   ForEach ::
-    (FromList fs t, Eq t) =>
+    (Era era, FromList fs t, Eq t) =>
     Term era Size ->
     Term era fs ->
     Pat era t ->
     [Pred era] ->
     Pred era
-  Maybe :: Term era (Maybe t) -> Target era t -> [Pred era] -> Pred era
-  Oneof :: Term era t -> [(Int, Target era t, [Pred era])] -> Pred era
+  Maybe :: forall r era t. (Era era, Typeable r) => Term era (Maybe t) -> RootTarget era r t -> [Pred era] -> Pred era
+  Oneof :: Era era => Term era t -> [(Int, RootTarget era r t, [Pred era])] -> Pred era
   SubMap :: (Ord k, Eq v, Ord v) => Term era (Map k v) -> Term era (Map k v) -> Pred era
-  If :: Target era Bool -> Pred era -> Pred era -> Pred era
+  If :: RootTarget era r Bool -> Pred era -> Pred era -> Pred era
   Before :: Term era a -> Term era b -> Pred era
 
 data Sum era c where
@@ -192,7 +198,7 @@ sameRng _ = Nothing
 pattern Word64 :: Word64 -> Term era Word64
 pattern Word64 x = Lit Word64R x
 
-var :: String -> Rep era t -> Term era t
+var :: Era era => String -> Rep era t -> Term era t
 var s r = Var (V s r No)
 
 unVar :: Term era t -> V era t
@@ -207,10 +213,18 @@ fieldToTerm (FConst rep t _ _) = Lit rep t
 
 infixl 0 :$
 
-data Target era t where
-  Simple :: Term era t -> Target era t
-  (:$) :: Target era (a -> b) -> Target era a -> Target era b
-  Constr :: String -> (a -> b) -> Target era (a -> b)
+data RootTarget era root t where
+  Simple :: Term era t -> RootTarget era Void t
+  (:$) :: RootTarget era r (a -> b) -> RootTarget era r a -> RootTarget era r b
+  Constr :: String -> (a -> b) -> RootTarget era Void (a -> b)
+  Invert :: String -> TypeRep root -> (a -> b) -> RootTarget era root (a -> b)
+  Lensed :: Term era t -> Lens' root t -> RootTarget era root t
+  Shift :: RootTarget era root2 a -> Lens' root1 root2 -> RootTarget era root1 a
+  Mask :: RootTarget era r a -> RootTarget era Void a
+
+-- Treat a Target as if it's (RootTarget era Void t)
+
+type Target era t = RootTarget era Void t
 
 infixl 0 ^$
 
@@ -288,14 +302,14 @@ instance Show (Term era t) where
   show (Pair r t) = "(Pair " ++ show r ++ " " ++ show t ++ ")"
   showList xs ans = unlines (ans : map show xs)
 
-instance Era era => Show (Sum era c) where
+instance Show (Sum era c) where
   show (SumMap t) = "sum " ++ show t
   show (SumList t) = "sum " ++ show t
   show (One t) = show t
   show (ProjOne _ c t) = seps ["ProjOne", show c, show t]
   show (ProjMap crep _lens t) = "ProjMap " ++ show crep ++ " " ++ show t
 
-instance Era era => Show (Pred era) where
+instance Show (Pred era) where
   show (MetaSize n t) = "MetaSize " ++ show n ++ " " ++ show t
   show (Sized n t) = "Sized " ++ show n ++ " " ++ show t
   show (x :=: y) = show x ++ " :=: " ++ show y
@@ -329,61 +343,79 @@ instance Era era => Show (Pred era) where
   show (Before x y) = "Before " ++ show x ++ " " ++ show y
   showList xs ans = unlines (ans : (map show xs))
 
-showAllTarget :: Era era => Target era t -> [Char]
-showAllTarget tar = "   forall " ++ showL show " " (Set.toList (varsOfTarget Set.empty tar)) ++ ". "
+showAllTarget :: RootTarget era r t -> [Char]
+showAllTarget tar = "   forall " ++ showL show " " (HashSet.toList (varsOfTarget HashSet.empty tar)) ++ ". "
 
-instance Show (Target era t) where
+instance Show (RootTarget era r t) where
   show (Constr nm _f) = nm
   show (Simple x) = show x
+  show (Lensed x _) = show x
   show (f :$ x) = "(" ++ show f ++ " :$ " ++ showL pp " :$ " (args x) ++ ")"
     where
-      pp :: Univ.Any (Target era) -> String
+      pp :: Univ.Any (RootTarget era r) -> String
       pp (Univ.Any spec) = show spec
+  show (Invert nm _ _) = nm
+  show (Shift x _) = "(Shift " ++ show x ++ " lens)"
+  show (Mask x) = show x
 
 -- | "Print a Target as nested applications"
-showT :: forall era t. Target era t -> String
+showT :: forall era t r. RootTarget era r t -> String
 showT (Constr nm _f) = nm
 showT (Simple x) = show x
+showT (Lensed x _) = show x
 showT (f :$ x) = "(" ++ showT f ++ " " ++ showL pp " " (args x) ++ ")"
   where
-    pp :: Univ.Any (Target era) -> String
+    pp :: Univ.Any (RootTarget era r) -> String
     pp (Univ.Any spec) = showT spec
+showT (Invert nm _ _) = nm
+showT (Shift x _) = "(Shift " ++ showT x ++ ")"
+showT (Mask x) = showT x
 
-args :: Target era t -> [Univ.Any (Target era)]
+args :: RootTarget era r t -> [Univ.Any (RootTarget era r)]
 args (x :$ xs) = Univ.Any x : args xs
 args other = [Univ.Any other]
 
 -- | Print a Target as a record showing the struture and names of all
 --   the variables involved. This documents what is in scope where
 --   the Target value was defined.
-ppTarget :: Target era t -> PDoc
+ppTarget :: RootTarget era r t -> PDoc
 ppTarget x = targetRecord x []
 
-targetRecord :: Target era t -> [(Text, PDoc)] -> PDoc
+targetRecord :: RootTarget era r t -> [(Text, PDoc)] -> PDoc
 targetRecord (Constr n _) xs = ppRecord (pack n) xs
 targetRecord (ts :$ t) xs = targetRecord ts (targetPair t : xs)
 targetRecord (Simple e) [] = ppString (show e)
+targetRecord (Lensed e _) [] = ppString (show e)
+targetRecord (Invert n _ _) xs = ppRecord (pack n) xs
+targetRecord (Shift x _) xs = targetRecord x xs
+targetRecord (Mask x) xs = targetRecord x xs
 targetRecord other xs = ppRecord (nameOf other) xs
 
-nameOf :: Target era t -> Text
+nameOf :: RootTarget era r t -> Text
 nameOf (Constr cs _) = pack (map toLower cs ++ "T")
 nameOf (Simple (Var (V n _ _))) = pack n
+nameOf (Lensed (Var (V n _ _)) _) = pack n
 nameOf (Simple term) = pack (show term)
+nameOf (Lensed term _) = pack (show term)
 nameOf (x :$ _) = nameOf x
+nameOf (Invert cs _ _) = pack (map toLower cs ++ "T")
+nameOf (Shift x _) = nameOf x
+nameOf (Mask x) = nameOf x
 
-targetPair :: Target era t -> (Text, PDoc)
+targetPair :: RootTarget era r t -> (Text, PDoc)
 targetPair (Simple (Var (V n rep _))) = (pack n, ppString (show rep))
+targetPair (Lensed (Var (V n rep _)) _) = (pack n, ppString (show rep))
 targetPair x = (nameOf x, targetRecord x [])
 
 -- ===================================================
--- Computing the variables (V era t) in a Term, Pred, Target
+-- Computing the variables (V era t) in a Term, Pred, RootTarget
 -- Their are no binders in any of these, so this is not so difficult
 -- But (V era t) may have different 't', so we hide 't' in 'Name'
 
-varsOfTerm :: Era era => Set (Name era) -> Term era t -> Set (Name era)
+varsOfTerm :: HashSet (Name era) -> Term era t -> HashSet (Name era)
 varsOfTerm ans s = case s of
   Lit _ _ -> ans
-  Var v@(V _ _ _) -> Set.insert (Name v) ans
+  Var v@(V _ _ _) -> HashSet.insert (Name v) ans
   Dom x -> varsOfTerm ans x
   Rng x -> varsOfTerm ans x
   Elems x -> varsOfTerm ans x
@@ -397,21 +429,20 @@ varsOfTerm ans s = case s of
   HashD st -> varsOfTerm ans st
   Pair a b -> varsOfTerm (varsOfTerm ans a) b
 
-vars :: Era era => Term era t -> Set (Name era)
-vars x = varsOfTerm Set.empty x
+vars :: Term era t -> HashSet (Name era)
+vars x = varsOfTerm HashSet.empty x
 
-varsOfTarget :: Era era => Set (Name era) -> Target era t -> Set (Name era)
+varsOfTarget :: HashSet (Name era) -> RootTarget era r t -> HashSet (Name era)
 varsOfTarget ans s = case s of
   (a :$ b) -> varsOfTarget (varsOfTarget ans a) b
   (Simple x) -> varsOfTerm ans x
+  (Lensed x _) -> varsOfTerm ans x
   (Constr _ _) -> ans
+  (Invert _ _ _) -> ans
+  (Shift x _) -> varsOfTarget ans x
+  (Mask x) -> varsOfTarget ans x
 
-expandSum :: Era era => Sum era c -> [Int] -> [Sum era c]
-expandSum (One (Var (V n r a))) ns = map (\i -> One (Var (V (n ++ "." ++ show i) r a))) ns
-expandSum (ProjOne l rep (Var (V n r a))) ns = map (\i -> ProjOne l rep (Var (V (n ++ "." ++ show i) r a))) ns
-expandSum x _ = error ("Bad Sum in expandSum: " ++ show x)
-
-varsOfPred :: Era era => Set (Name era) -> Pred era -> Set (Name era)
+varsOfPred :: forall era. HashSet (Name era) -> Pred era -> HashSet (Name era)
 varsOfPred ans s = case s of
   MetaSize _ term -> varsOfTerm ans term
   Sized a b -> varsOfTerm (varsOfTerm ans a) b
@@ -423,7 +454,8 @@ varsOfPred ans s = case s of
   Random x -> varsOfTerm ans x
   Component t cs -> varsOfTerm (List.foldl' varsOfComponent ans cs) (direct t)
     where
-      varsOfComponent l (AnyF (Field n r rx l2)) = Set.insert (Name $ V n r (Yes rx l2)) l
+      varsOfComponent :: forall z. HashSet (Name era) -> AnyF era z -> HashSet (Name era)
+      varsOfComponent l (AnyF (Field n r rx l2)) = HashSet.insert (Name $ V n r (Yes rx l2)) l
       varsOfComponent l (AnyF (FConst _ _ _ _)) = l
   CanFollow a b -> varsOfTerm (varsOfTerm ans a) b
   Member a b -> varsOfTerm (varsOfTerm ans (direct a)) b
@@ -440,48 +472,55 @@ varsOfPred ans s = case s of
   If t x y -> varsOfTarget (varsOfPred (varsOfPred ans x) y) t
   Before a b -> varsOfTerm (varsOfTerm ans a) b
 
-varsOfTrips :: Era era => Set (Name era) -> [(Int, Target era t2, [Pred era])] -> Set (Name era)
+varsOfTrips :: Era era => HashSet (Name era) -> [(Int, RootTarget era r t2, [Pred era])] -> HashSet (Name era)
 varsOfTrips ans1 [] = ans1
 varsOfTrips ans1 ((_, t, ps) : more) = varsOfTrips (act ans1 t ps) more
   where
     act ans2 tar preds =
-      Set.union
-        ( Set.difference
-            (List.foldl' varsOfPred Set.empty preds)
-            (varsOfTarget Set.empty tar)
+      HashSet.union
+        ( HashSet.difference
+            (List.foldl' varsOfPred HashSet.empty preds)
+            (varsOfTarget HashSet.empty tar)
         )
         ans2
 
-varsOfPairs :: Era era => Set (Name era) -> [(Target era t2, [Pred era])] -> Set (Name era)
+varsOfPairs :: Era era => HashSet (Name era) -> [(RootTarget era r t2, [Pred era])] -> HashSet (Name era)
 varsOfPairs ans1 [] = ans1
 varsOfPairs ans1 ((t, ps) : more) = varsOfPairs (act ans1 t ps) more
   where
     act ans2 tar preds =
-      Set.union
-        ( Set.difference
-            (List.foldl' varsOfPred Set.empty preds)
-            (varsOfTarget Set.empty tar)
+      HashSet.union
+        ( HashSet.difference
+            (List.foldl' varsOfPred HashSet.empty preds)
+            (varsOfTarget HashSet.empty tar)
         )
         ans2
 
-varsOfPats :: Era era => Set (Name era) -> [(Pat era t2, [Pred era])] -> Set (Name era)
+varsOfPats :: Era era => HashSet (Name era) -> [(Pat era t2, [Pred era])] -> HashSet (Name era)
 varsOfPats ans1 [] = ans1
 varsOfPats ans1 ((pat0, ps) : more) = varsOfPats (act ans1 pat0 ps) more
   where
     act ans2 pat preds =
-      Set.union
-        ( Set.difference
-            (List.foldl' varsOfPred Set.empty preds)
-            (varsOfPat Set.empty pat)
+      HashSet.union
+        ( HashSet.difference
+            (List.foldl' varsOfPred HashSet.empty preds)
+            (varsOfPat HashSet.empty pat)
         )
         ans2
 
-varsOfSum :: Era era => Set (Name era) -> Sum era r -> Set (Name era)
+varsOfSum :: HashSet (Name era) -> Sum era r -> HashSet (Name era)
 varsOfSum ans (SumMap y) = varsOfTerm ans y
 varsOfSum ans (SumList y) = varsOfTerm ans y
 varsOfSum ans (One y) = varsOfTerm ans y
 varsOfSum ans (ProjOne _ _ y) = varsOfTerm ans y
 varsOfSum ans (ProjMap _ _ x) = varsOfTerm ans x
+
+-- =====================================================================
+
+expandSum :: Sum era c -> [Int] -> [Sum era c]
+expandSum (One (Var (V n r a))) ns = map (\i -> One (Var (V (n ++ "." ++ show i) r a))) ns
+expandSum (ProjOne l rep (Var (V n r a))) ns = map (\i -> ProjOne l rep (Var (V (n ++ "." ++ show i) r a))) ns
+expandSum x _ = error ("Bad Sum in expandSum: " ++ show x)
 
 -- =====================================================================
 -- Subst, the type of Substitutions
@@ -521,7 +560,7 @@ envToSubst (Env env) = Subst (Map.map f env)
   where
     f (Payload rep t access) = SubstElem rep (Lit rep t) access
 
-findV :: Era era => Subst era -> V era t -> Term era t
+findV :: Subst era -> V era t -> Term era t
 findV (Subst m) v@(V n1 rep1 _) = case Map.lookup n1 m of
   Nothing -> Var v -- If its not in the Subst, return the Var
   Just (SubstElem rep2 term _) -> case testEql rep1 rep2 of
@@ -544,9 +583,10 @@ composeSubst (Subst sub1) (Subst sub2) = Subst (Map.foldrWithKey' Map.insert sub
 singleSubst :: V era t -> Term era t -> Subst era
 singleSubst (V n r access) expr = Subst (Map.insert n (SubstElem r expr access) Map.empty)
 
-substFromNames :: Set (Name era) -> Subst era
-substFromNames names = Subst (Set.foldl' accum Map.empty names)
+substFromNames :: forall era. HashSet (Name era) -> Subst era
+substFromNames names = Subst (HashSet.foldl' accum Map.empty names)
   where
+    accum :: Map String (SubstElem era) -> Name era -> Map String (SubstElem era)
     accum ans (Name v@(V n r access)) = Map.insert n (SubstElem r (Var v) access) ans
 
 data SubItem era where
@@ -558,12 +598,13 @@ instance Show (SubItem era) where
 itemsToSubst :: [SubItem era] -> Subst era
 itemsToSubst ss = Subst (List.foldr accum Map.empty ss)
   where
+    accum :: SubItem era -> Map String (SubstElem era) -> Map String (SubstElem era)
     accum (SubItem (V nm rep access) term) !ans = Map.insert nm (SubstElem rep term access) ans
 
 -- =====================================================
 -- Subtitution of (V era t) inside of (Spec era t)
 
-substTerm :: Era era => Subst era -> Term era t -> Term era t
+substTerm :: Subst era -> Term era t -> Term era t
 substTerm sub (Var v) = findV sub v
 substTerm _ (Lit r k) = Lit r k
 substTerm sub (Dom x) = Dom (substTerm sub x)
@@ -579,7 +620,7 @@ substTerm sub (HashS s) = HashS (substTerm sub s)
 substTerm sub (HashD s) = HashD (substTerm sub s)
 substTerm sub (Pair a b) = Pair (substTerm sub a) (substTerm sub b)
 
-substPred :: Era era => Subst era -> Pred era -> Pred era
+substPred :: Subst era -> Pred era -> Pred era
 substPred sub (MetaSize a b) = MetaSize a (substTerm sub b)
 substPred sub (Sized a b) = Sized (substTerm sub a) (substTerm sub b)
 substPred sub (a :=: b) = substTerm sub a :=: substTerm sub b
@@ -630,11 +671,11 @@ substPred sub (If t x y) = If (substTarget sub t) (substPred sub x) (substPred s
 substPred sub (Before a b) = Before (substTerm sub a) (substTerm sub b)
 
 -- | Apply the Subst, and test if all variables are removed.
-substPredWithVarTest :: Era era => Subst era -> Pred era -> Pred era
+substPredWithVarTest :: Subst era -> Pred era -> Pred era
 substPredWithVarTest sub oldpred =
   let newpred = substPred sub oldpred
-      freevars = varsOfPred Set.empty newpred
-   in case Set.null freevars of
+      freevars = varsOfPred HashSet.empty newpred
+   in case HashSet.null freevars of
         False -> newpred
         True ->
           error
@@ -648,23 +689,27 @@ substPredWithVarTest sub oldpred =
             )
   where
 
-substFromTarget :: Era era => Target era t -> Subst era
-substFromTarget tar = substFromNames (varsOfTarget Set.empty tar)
+substFromTarget :: RootTarget era r t -> Subst era
+substFromTarget tar = substFromNames (varsOfTarget HashSet.empty tar)
 
-substFromPat :: Era era => Pat era t -> Subst era
-substFromPat pat = substFromNames (varsOfPat Set.empty pat)
+substFromPat :: Pat era t -> Subst era
+substFromPat pat = substFromNames (varsOfPat HashSet.empty pat)
 
-substSum :: Era era => Subst era -> Sum era t -> Sum era t
+substSum :: Subst era -> Sum era t -> Sum era t
 substSum sub (SumMap x) = SumMap (substTerm sub x)
 substSum sub (SumList x) = SumList (substTerm sub x)
 substSum sub (One x) = One (substTerm sub x)
 substSum sub (ProjOne l r x) = ProjOne l r (substTerm sub x)
 substSum sub (ProjMap crep l x) = ProjMap crep l (substTerm sub x)
 
-substTarget :: Era era => Subst era -> Target era t -> Target era t
+substTarget :: Subst era -> RootTarget era r t -> RootTarget era r t
 substTarget sub (Simple e) = Simple (substTerm sub e)
+substTarget sub (Lensed e l) = Lensed (substTerm sub e) l
 substTarget sub (a :$ b) = substTarget sub a :$ substTarget sub b
 substTarget _ (Constr n f) = Constr n f
+substTarget _ (Invert x l f) = Invert x l f
+substTarget sub (Shift x l) = Shift (substTarget sub x) l
+substTarget sub (Mask x) = Mask (substTarget sub x)
 
 -- ======================================================
 -- Symbolic evaluators
@@ -718,7 +763,7 @@ simplify (Pair s m) = do
 simplify x = failT ["Can't simplify term: " ++ show x ++ ", to a value."]
 
 -- | Simplify constant Sum's
-simplifySum :: Era era => Sum era c -> Typed c
+simplifySum :: Sum era c -> Typed c
 simplifySum (One (Lit _ x)) = pure x
 simplifySum (One (Delta (Lit CoinR (Coin n)))) = pure (DeltaCoin n)
 simplifySum (One (Negate (Lit DeltaCoinR (DeltaCoin n)))) = pure (DeltaCoin (-n))
@@ -728,8 +773,12 @@ simplifySum (SumList (Lit _ m)) = pure (List.foldl' add zero m)
 simplifySum (ProjMap _ l (Lit _ m)) = pure (List.foldl' (\ans x -> add ans (x ^. l)) zero m)
 simplifySum x = failT ["Can't simplify Sum: " ++ show x ++ ", to a value."]
 
-simplifyTarget :: Target era t -> Typed t
+simplifyTarget :: forall era t root. RootTarget era root t -> Typed t
+simplifyTarget (Invert _ _ f) = pure f
+simplifyTarget (Shift x _) = simplifyTarget x
+simplifyTarget (Mask x) = simplifyTarget x
 simplifyTarget (Simple t) = simplify t
+simplifyTarget (Lensed t _) = simplify t
 simplifyTarget (Constr _ f) = pure f
 simplifyTarget (x :$ y) = do
   f <- simplifyTarget x
@@ -737,7 +786,7 @@ simplifyTarget (x :$ y) = do
   pure (f z)
 
 -- | Fully evaluate a `Term`, looking up the variables in the `Env`.
-runTerm :: Era era => Env era -> Term era t -> Typed t
+runTerm :: Env era -> Term era t -> Typed t
 runTerm _ (Lit _ x) = pure x
 runTerm env (Dom x) = Map.keysSet <$> runTerm env x
 runTerm env (Rng x) = Set.fromList . Map.elems <$> runTerm env x
@@ -774,15 +823,45 @@ runTerm env (Pair s m) =
     mv <- runTerm env m
     pure (sv, mv)
 
-runTarget :: Era era => Env era -> Target era t -> Typed t
+runTarget :: Env era -> RootTarget era x t -> Typed t
+runTarget _ (Invert _ _ f) = pure f
 runTarget env (Simple t) = runTerm env t
+runTarget env (Lensed t _) = runTerm env t
+runTarget env (Shift x _) = runTarget env x
+runTarget env (Mask x) = runTarget env x
 runTarget _ (Constr _ f) = pure f
 runTarget env (x :$ y) = do
   f <- runTarget env x
   z <- runTarget env y
   pure (f z)
 
-runPred :: Era era => Env era -> Pred era -> Typed Bool
+-- | Overwrite the Vars a RootTarget, by updating the Env with the values picked from the root
+--   When the target has type (RootTarget era Void x), the function is the identity on the Env.
+getTarget :: root -> RootTarget era root t -> Env era -> Env era
+getTarget root (Lensed (Var v) l) env = storeVar v (root ^. l) env
+getTarget _ (Lensed _ _) env = env
+getTarget root (x :$ y) env = getTarget root x (getTarget root y env)
+getTarget root (Shift x l) env = getTarget (root ^. l) x env
+getTarget _ (Invert _ _ _) env = env
+getTarget _ (Constr _ _) env = env
+getTarget _ (Simple _) env = env
+getTarget _ (Mask _) env = env
+
+-- | Update the root, by using the Lense to overwrite locations, using values from the Env.
+--   When the target has type (RootTarget era Void x), the function is the identity on the root
+setTarget :: root -> RootTarget era root t -> Env era -> root
+setTarget root (Lensed term l) env =
+  case runTyped (runTerm env term) of
+    Left _ -> root
+    Right t -> root & l .~ t
+setTarget root (x :$ y) env = setTarget (setTarget root y env) x env
+setTarget root (Shift x l) env = root & l .~ (setTarget (root ^. l) x env)
+setTarget root (Invert _ _ _) _ = root
+setTarget root (Constr _ _) _ = root
+setTarget root (Simple _) _ = root
+setTarget root (Mask _) _ = root
+
+runPred :: Env era -> Pred era -> Typed Bool
 runPred env (MetaSize w x) = do
   sz <- runTerm env x
   case sz of
@@ -878,6 +957,12 @@ runPred env (Oneof _ preds) = do
   qs <- sequence (map try preds)
   pure (or qs)
 
+hashSetToSet :: Ord a => HashSet a -> Set a
+hashSetToSet x = Set.fromList (HashSet.toList x)
+
+hashSetDisjoint :: Hashable a => HashSet a -> HashSet a -> Bool
+hashSetDisjoint x y = HashSet.null (HashSet.intersection x y)
+
 -- | One type of Pred in ForEach is handled differently from others
 --   if valCoin is amongst the free variables of `pat` and
 --   'balanceCoin' is not amongst the free variables of `pat` then
@@ -889,32 +974,33 @@ runPred env (Oneof _ preds) = do
 
 --   other predicates P(x) would exapnd to 3 copies like P(x.1) P(x.2) P(x.3)
 --   This is called Sum extension, is implemented by `extendSum`
-extendableSumsTo :: Era era => Pat era t -> Pred era -> Bool
+extendableSumsTo :: Pat era t -> Pred era -> Bool
 extendableSumsTo pat (SumsTo _ t _ [One s]) =
-  Set.size boundS == 1 && Set.isSubsetOf boundS free && Set.disjoint boundT free
+  HashSet.size boundS == 1 && HashSet.isSubsetOf boundS free && hashSetDisjoint boundT free
   where
-    free = varsOfPat Set.empty pat
-    boundS = varsOfTerm Set.empty s
-    boundT = varsOfTerm Set.empty t
+    free = varsOfPat HashSet.empty pat
+    boundS = varsOfTerm HashSet.empty s
+    boundT = varsOfTerm HashSet.empty t
 extendableSumsTo pat (SumSplit _ t _ [One s]) =
-  Set.size boundS == 1 && Set.isSubsetOf boundS free && Set.disjoint boundT free
+  HashSet.size boundS == 1 && HashSet.isSubsetOf boundS free && hashSetDisjoint boundT free
   where
-    free = varsOfPat Set.empty pat
-    boundS = varsOfTerm Set.empty s
-    boundT = varsOfTerm Set.empty t
+    free = varsOfPat HashSet.empty pat
+    boundS = varsOfTerm HashSet.empty s
+    boundT = varsOfTerm HashSet.empty t
 extendableSumsTo _ _ = False
 
 -- | run a bunch of Preds, and and together the results
-runPreds :: Era era => Env era -> [Pred era] -> Typed Bool
+runPreds :: Env era -> [Pred era] -> Typed Bool
 runPreds env ps = do
   bs <- mapM (runPred env) ps
   pure (and bs)
 
-bind :: Target era t -> t -> Env era -> Env era
+bind :: RootTarget era r t -> t -> Env era -> Env era
 bind (Simple (Var v)) x env = storeVar v x env
+bind (Lensed (Var v) _) x env = storeVar v x env
 bind t _ _ = error ("Non simple Target in bind: " ++ show t)
 
-runComp :: Era era => Env era -> s -> AnyF era s -> Typed Bool
+runComp :: Env era -> s -> AnyF era s -> Typed Bool
 runComp env t (AnyF (Field n rt rx l)) = do
   t' <- runTerm env $ Var (V n rt (Yes rx l))
   With _ <- hasEq rt rt
@@ -939,7 +1025,7 @@ termRep (HashD _) = DataHashR
 termRep (HashS _) = ScriptHashR
 termRep (Pair a b) = PairR (termRep a) (termRep b)
 
-runSum :: Era era => Env era -> Sum era c -> Typed c
+runSum :: Env era -> Sum era c -> Typed c
 runSum env (SumMap t) = Map.foldl' add zero <$> runTerm env t
 runSum env (SumList t) = List.foldl' add zero <$> runTerm env t
 runSum env (One t) = runTerm env t
@@ -950,12 +1036,12 @@ runSum env (ProjMap _ l t) = Map.foldl' accum zero <$> runTerm env t
   where
     accum ans x = add ans (x ^. l)
 
-makeTest :: Era era => Env era -> Pred era -> Typed (String, Bool, Pred era)
+makeTest :: Env era -> Pred era -> Typed (String, Bool, Pred era)
 makeTest env c = do
   b <- runPred env c
   pure (show c ++ " => " ++ show b, b, c)
 
-displayTerm :: Era era => Env era -> Term era a -> IO ()
+displayTerm :: Env era -> Term era a -> IO ()
 displayTerm env (Var v@(V nm rep _)) = do
   x <- monadTyped (findVar v env)
   putStrLn (nm ++ "\n" ++ format rep x)
@@ -986,7 +1072,7 @@ data Arg era t where
   Arg :: !(Field era t s) -> Arg era t
 
 -- | Succeds if 'term' is a variable with an embedded (Lens' t2 t1)
-patt :: Era era => Rep era t1 -> Term era t2 -> Pat era t1
+patt :: Rep era t1 -> Term era t2 -> Pat era t1
 patt rep term = Pat rep [arg rep term]
 
 instance Show (Pat era t) where
@@ -997,28 +1083,28 @@ instance Show (Arg era t) where
   show (ArgPs (Field nm _ _ _) qs) = nm ++ " [" ++ showL show ", " qs ++ "]"
   show (ArgPs f@(FConst _ _ _ _) qs) = show f ++ " [" ++ showL show ", " qs ++ "]"
 
-varsOfField :: Era era => Set.Set (Name era) -> Field era s t -> Set.Set (Name era)
-varsOfField l (Field n r rx l2) = Set.insert (Name $ V n r (Yes rx l2)) l
+varsOfField :: HashSet (Name era) -> Field era s t -> HashSet (Name era)
+varsOfField l (Field n r rx l2) = HashSet.insert (Name $ V n r (Yes rx l2)) l
 varsOfField l (FConst _ _ _ _) = l
 
-varsOfPat :: Era era => Set.Set (Name era) -> Pat era t -> Set.Set (Name era)
+varsOfPat :: HashSet (Name era) -> Pat era t -> HashSet (Name era)
 varsOfPat ans (Pat _ qs) = List.foldl' varsOfArg ans qs
 
-varsOfArg :: Era era => Set.Set (Name era) -> Arg era t -> Set.Set (Name era)
+varsOfArg :: HashSet (Name era) -> Arg era t -> HashSet (Name era)
 varsOfArg ans (ArgPs f qs) = List.foldl' varsOfPat (varsOfField ans f) qs
 varsOfArg ans (Arg f) = varsOfField ans f
 
-substField :: Era era => Subst era -> Field era rec fld -> Field era rec fld
+substField :: Subst era -> Field era rec fld -> Field era rec fld
 substField _ w@(FConst _ _ _ _) = w
 substField sub w@(Field n r rx l) = case findV sub (V n r (Yes rx l)) of
   (Lit rep x) -> FConst rep x rx l
   (Var (V n2 r2 _a2)) -> Field n2 r2 rx l
   _ -> w
 
-substPat :: Era era => Subst era -> Pat era t -> Pat era t
+substPat :: Subst era -> Pat era t -> Pat era t
 substPat sub (Pat r as) = Pat r (map (substArg sub) as)
 
-substArg :: Era era => Subst era -> Arg era t -> Arg era t
+substArg :: Subst era -> Arg era t -> Arg era t
 substArg sub (ArgPs r as) = ArgPs (substField sub r) (map (substPat sub) as)
 substArg sub (Arg r) = Arg (substField sub r)
 
@@ -1038,7 +1124,7 @@ bindArg t env (ArgPs (Field n r rx l) qs) =
 --   3) A list of sub-patterns.
 --   Check that all the embedded Access have the right Lens'.
 --   If not throw an error.
-argP :: Era era => Rep era s -> Term era t -> [Pat era t] -> Arg era s
+argP :: Rep era s -> Term era t -> [Pat era t] -> Arg era s
 argP repS1 (Var (V name rept (Yes repS2 ll))) qs = case testEql repS1 repS2 of
   Just Refl -> ArgPs (Field name rept repS2 ll) qs
   Nothing ->
@@ -1054,7 +1140,7 @@ argP _ term _ = error ("argP can only be applied to variable terms: " ++ show te
 
 -- | Construct an Arg from a variable (Term era s) with a Yes Access.
 --   Check that the Access has the right Lens'. If not throw an error.
-arg :: Era era => Rep era s -> Term era t -> Arg era s
+arg :: Rep era s -> Term era t -> Arg era s
 arg repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
   Just Refl -> Arg (Field name rept repS2 l)
   Nothing ->

@@ -8,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -43,6 +44,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
+  Anchor (..),
   BlocksMade (..),
   Network (..),
   ProtVer (..),
@@ -53,7 +55,21 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Governance (GovSnapshots (..))
+import Cardano.Ledger.Conway.Governance (
+  Committee (..),
+  ConwayGovState (..),
+  EnactState (..),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionState (..),
+  GovSnapshots (..),
+  PrevGovActionId (..),
+  PrevGovActionIds (..),
+  ProposalsSnapshot,
+  Vote (..),
+  snapshotActions,
+ )
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..), Delegatee (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
@@ -177,10 +193,12 @@ import Test.Cardano.Ledger.Generic.Proof (
   AlonzoEra,
   BabbageEra,
   ConwayEra,
+  GovStateWit (..),
   MaryEra,
   Proof (..),
   Reflect (..),
   ShelleyEra,
+  whichGovState,
  )
 
 -- =====================================================
@@ -1595,17 +1613,142 @@ pcTxBody proof txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
     fields = abstractTxBody proof txbody
     pairs = concatMap (pcTxBodyField proof) fields
 
-instance PrettyC (GovSnapshots era) era where
-  prettyC proof x = case proof of
-    Shelley _ -> prettyA x
-    Mary _ -> prettyA x
-    Allegra _ -> prettyA x
-    Alonzo _ -> prettyA x
-    Babbage _ -> prettyA x
-    Conway _ -> prettyA x
+-- ======================================
+-- Governance Actions etc
 
-pc :: PrettyC t era => Proof era -> t -> IO ()
-pc proof x = putStrLn (show (prettyC proof x))
+pcGovState :: Proof era -> GovState era -> PDoc
+pcGovState p x = case whichGovState p of
+  (GovStateShelleyToBabbage) -> pcShelleyGovState p x
+  (GovStateConwayToConway) -> pcConwayGovState p x
+
+pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
+pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp) =
+  ppRecord
+    "ShelleyGovState"
+    [ ("proposals", ppString "(Proposals ...)")
+    , ("futureProposals", ppString "(Proposals ...)")
+    , ("pparams", pcPParamsSynopsis p pp)
+    , ("prevParams", pcPParamsSynopsis p prevpp)
+    ]
+
+pcGovSnapshots :: GovSnapshots era -> PDoc
+pcGovSnapshots (GovSnapshots cur prev drep (CommitteeState m)) =
+  ppRecord
+    "GovSnapshots"
+    [ ("currGovSnapshots", pcProposalsSnapshot cur)
+    , ("prevGovSnapshots", pcProposalsSnapshot prev)
+    , ("precDRepState", ppMap pcCredential pcDRepState drep)
+    , ("prevCommittee", ppMap pcCredential (ppMaybe pcCredential) m)
+    ]
+
+pcEnactState :: Proof era -> EnactState era -> PDoc
+pcEnactState p ens@(EnactState _ _ _ _ _ _ _) =
+  let EnactState {..} = ens
+   in ppRecord
+        "EnactState"
+        [ ("Constitutional Committee", ppStrictMaybe pcCommittee ensCommittee)
+        , ("Constitution", pcConstitution ensConstitution)
+        , ("PParams", pcPParamsSynopsis p ensPParams)
+        , ("PrevPParams", pcPParamsSynopsis p ensPrevPParams)
+        , ("Treasury", pcCoin ensTreasury)
+        , ("Withdrawals", ppMap pcCredential pcCoin ensWithdrawals)
+        , ("PrevGovActionIds", pcPrevGovActionIds ensPrevGovActionIds)
+        ]
+
+pcGovActionId :: GovActionId c -> PDoc
+pcGovActionId (GovActionId txid (GovActionIx a)) = ppSexp "GovActId" [pcTxId txid, ppWord32 a]
+
+pcPrevGovActionId :: PrevGovActionId a era -> PDoc
+pcPrevGovActionId (PrevGovActionId x) = pcGovActionId x
+
+pcPrevGovActionIds :: PrevGovActionIds era -> PDoc
+pcPrevGovActionIds PrevGovActionIds {..} =
+  ppRecord
+    "PrevGovActionIds"
+    [ ("LastPParamUpdate", ppStrictMaybe pcPrevGovActionId pgaPParamUpdate)
+    , ("LastHardFork", ppStrictMaybe pcPrevGovActionId pgaHardFork)
+    , ("LastCommittee", ppStrictMaybe pcPrevGovActionId pgaCommittee)
+    , ("LastConstitution", ppStrictMaybe pcPrevGovActionId pgaConstitution)
+    ]
+
+pcConwayGovState :: Proof era -> ConwayGovState era -> PDoc
+pcConwayGovState p (ConwayGovState ss es) =
+  ppRecord
+    "ConwayGovState"
+    [ ("govSnapshots", pcGovSnapshots ss)
+    , ("enactState", pcEnactState p es)
+    ]
+
+pcProposalsSnapshot :: ProposalsSnapshot era -> PDoc
+pcProposalsSnapshot x = ppSexp "ProposalsSnapShot" (map pcGovActionState (toList (snapshotActions x)))
+
+pcGovActionState :: GovActionState era -> PDoc
+pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =
+  let GovActionState {..} = gas
+   in ppRecord
+        "GovActionState"
+        [ ("Id", pcGovActionId gasId)
+        , ("CommitteVotes", ppMap pcCredential pcVote gasCommitteeVotes)
+        , ("DRepVotes", ppMap pcCredential pcVote gasDRepVotes)
+        , ("StakePoolVotes", ppMap pcKeyHash pcVote gasStakePoolVotes)
+        , ("Deposit", pcCoin gasDeposit)
+        , ("Return Address", pcRewardAcnt gasReturnAddr)
+        , ("Action", pcGovAction gasAction)
+        , ("Proposed In", ppEpochNo gasProposedIn)
+        , ("Expires After", ppEpochNo gasExpiresAfter)
+        ]
+
+pcVote :: Vote -> PDoc
+pcVote x = ppString (show x)
+
+pcCommittee :: Committee era -> PDoc
+pcCommittee (Committee mem quor) =
+  ppRecord
+    "Committee"
+    [ ("members", ppMap pcCredential ppEpochNo mem)
+    , ("quorum", ppUnitInterval quor)
+    ]
+
+pcGovAction :: GovAction era -> PDoc
+pcGovAction x = case x of
+  (ParameterChange pgaid _ppup) ->
+    ppRecord
+      "ParameterChange"
+      [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
+      , ("PPUpdate", ppString "(PParamsUpdate ...)")
+      ]
+  (HardForkInitiation pgaid pv) ->
+    ppRecord
+      "HardForkInitiation"
+      [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
+      , ("ProtVer", ppString (showProtver pv))
+      ]
+  (TreasuryWithdrawals ws) ->
+    ppSexp
+      "TreasuryWithdrawals"
+      [ppMap pcRewardAcnt pcCoin ws]
+  (NoConfidence pgaid) ->
+    ppRecord "NoConfidence" [("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)]
+  (NewCommittee pgaid old committee) ->
+    ppRecord
+      "NewCommittee"
+      [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
+      , ("oldMembers", ppSet pcCredential old)
+      , ("committee", pcCommittee committee)
+      ]
+  (NewConstitution pgaid c) ->
+    ppRecord
+      "NewConstitution"
+      [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
+      , ("Constitution", pcConstitution c)
+      ]
+  InfoAction -> ppString "InfoAction"
+
+pcConstitution :: Constitution c -> PDoc
+pcConstitution (Constitution x y) =
+  ppRecord
+    "Constitution"
+    [("anchor", pcAnchor x), ("scripthash", ppStrictMaybe pcScriptHash y)]
 
 -- ===================================================
 
@@ -1665,12 +1808,20 @@ pcVState (VState dreps drepDistr (CommitteeState committeeHotCreds)) =
     , ("CC Hot Keys", ppMap pcCredential (ppMaybe pcCredential) committeeHotCreds)
     ]
 
+pcAnchor :: Anchor c -> PDoc
+pcAnchor (Anchor u h) =
+  ppRecord
+    "Anchor"
+    [ ("url", ppString (show u))
+    , ("datahash", trim $ ppSafeHash h)
+    ]
+
 pcDRepState :: DRepState c -> PDoc
 pcDRepState (DRepState expire anchor deposit) =
   ppRecord
     "DRepState"
     [ ("expire", ppEpochNo expire)
-    , ("anchor", ppStrictMaybe (ppString . show) anchor)
+    , ("anchor", ppStrictMaybe pcAnchor anchor)
     , ("deposit", ppCoin deposit)
     ]
 
@@ -1732,7 +1883,7 @@ pcPParamsSynopsis p x = withEraPParams p help
     help :: Core.EraPParams era => PDoc
     help =
       ppRecord
-        "PParams"
+        "PParams (synopsis)"
         [ ("maxBBSize", ppNatural (x ^. Core.ppMaxBBSizeL))
         , ("maxBHSize", ppNatural (x ^. Core.ppMaxBHSizeL))
         , ("maxTxSize", ppNatural (x ^. Core.ppMaxTxSizeL))

@@ -51,20 +51,20 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..), mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..), UnitInterval, mkTxIxPartial)
 import Cardano.Ledger.Binary.Version (Version)
-import Cardano.Ledger.CertState (CommitteeState, DRepState)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Governance (GovAction (..))
+import Cardano.Ledger.Conway.Governance (Committee (..), Constitution, GovAction (..), GovActionId (..), GovActionIx (..), GovActionPurpose (..), GovActionState (..), PrevGovActionId (..), PrevGovActionIds (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
+import Cardano.Ledger.DRepDistr (DRepState)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
-import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
@@ -81,6 +81,7 @@ import Cardano.Ledger.Pretty (
   ppSet,
   ppString,
   ppVKey,
+  ppWord32,
  )
 import Cardano.Ledger.Pretty.Alonzo (ppRdmrPtr)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
@@ -92,6 +93,7 @@ import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val ((<+>)))
 import Data.ByteString (ByteString)
@@ -150,17 +152,24 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
   pcCoin,
+  pcCommittee,
+  pcConstitution,
   pcConwayTxCert,
   pcDRep,
+  pcDRepState,
+  pcDState,
   pcData,
   pcDataHash,
   pcDatum,
   pcFutureGenDeleg,
   pcGenDelegPair,
+  pcGovActionId,
+  pcGovActionState,
   pcIndividualPoolStake,
   pcLedgerState,
   pcMultiAsset,
   pcPParamsSynopsis,
+  pcPrevGovActionIds,
   pcReward,
   pcRewardAcnt,
   pcScriptHash,
@@ -181,9 +190,6 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck hiding (Fixed, total)
-
-data IsTypeable a where
-  IsTypeable :: Typeable a => IsTypeable a
 
 -- =======================================================================
 -- Special functions for dealing with SoftForks properties that
@@ -289,7 +295,18 @@ data Rep era t where
   DRepR :: Rep era (Core.DRep (EraCrypto era))
   PoolMetadataR :: Proof era -> Rep era PoolMetadata
   DRepStateR :: Rep era (DRepState (EraCrypto era))
-  CommitteeStateR :: Rep era (CommitteeState era)
+  DStateR :: Rep era (DState era)
+  GovActionIdR :: Rep era (GovActionId (EraCrypto era))
+  GovActionIxR :: Rep era GovActionIx
+  GovActionStateR :: Rep era (GovActionState era)
+  UnitIntervalR :: Rep era UnitInterval
+  CommitteeR :: Rep era (Committee era)
+  ConstitutionR :: Rep era (Constitution era)
+  PrevGovActionIdsR :: Rep era (PrevGovActionIds era)
+  PrevPParamUpdateR :: Rep era (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era))
+  PrevHardForkR :: Rep era (PrevGovActionId 'HardForkPurpose (EraCrypto era))
+  PrevCommitteeR :: Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
+  PrevConstitutionR :: Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -297,10 +314,12 @@ stringR = ListR CharR
 -- ===========================================================
 -- Proof of Rep equality
 
+data IsTypeable a where
+  IsTypeable :: Typeable a => IsTypeable a
+
 repTypeable :: Era era => Rep era t -> IsTypeable t
 repTypeable r = case r of
   DRepStateR -> IsTypeable
-  CommitteeStateR -> IsTypeable
   CommColdCredR -> IsTypeable
   CommHotCredR -> IsTypeable
   GovActionR -> IsTypeable
@@ -392,6 +411,18 @@ repTypeable r = case r of
     (repTypeable -> IsTypeable) -> IsTypeable
   MaybeR (repTypeable -> IsTypeable) -> IsTypeable
   GenR (repTypeable -> IsTypeable) -> IsTypeable
+  DStateR {} -> IsTypeable
+  GovActionIdR {} -> IsTypeable
+  GovActionIxR {} -> IsTypeable
+  GovActionStateR {} -> IsTypeable
+  UnitIntervalR {} -> IsTypeable
+  CommitteeR {} -> IsTypeable
+  ConstitutionR {} -> IsTypeable
+  PrevGovActionIdsR {} -> IsTypeable
+  PrevPParamUpdateR {} -> IsTypeable
+  PrevHardForkR {} -> IsTypeable
+  PrevCommitteeR {} -> IsTypeable
+  PrevConstitutionR {} -> IsTypeable
 
 instance Era era => Singleton (Rep era) where
   testEql
@@ -491,7 +522,18 @@ instance Show (Rep era t) where
   show DRepR = "(DRep c)"
   show (PoolMetadataR _) = "PoolMetadata"
   show DRepStateR = "DRepState"
-  show CommitteeStateR = "CommitteeState"
+  show DStateR = "(DState c)"
+  show GovActionIdR = "(GovActionId c)"
+  show GovActionIxR = "GovActionIx"
+  show GovActionStateR = "GovActionState"
+  show UnitIntervalR = "UnitInterval"
+  show CommitteeR = "Committee"
+  show ConstitutionR = "Constitution"
+  show PrevGovActionIdsR = "PrevGovActionIds"
+  show PrevPParamUpdateR = "(PrevGovActionId 'PParamUpdate c)"
+  show PrevHardForkR = "(PrevGovActionId 'HardFork c)"
+  show PrevCommitteeR = "(PrevGovActionId 'Committee c)"
+  show PrevConstitutionR = "(PrevGovActionId 'Constitution c)"
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -592,8 +634,19 @@ synopsis StakeHashR k = "(KeyHash 'Staking " ++ show (keyHashSummary k) ++ ")"
 synopsis BoolR x = show x
 synopsis DRepR x = show (pcDRep x)
 synopsis (PoolMetadataR _) x = show x
-synopsis DRepStateR x = show x
-synopsis CommitteeStateR x = show x
+synopsis DRepStateR x = show (pcDRepState x)
+synopsis DStateR x = show (pcDState x)
+synopsis GovActionIdR x = show (pcGovActionId x)
+synopsis GovActionIxR (GovActionIx a) = show (ppWord32 a)
+synopsis GovActionStateR x = show (pcGovActionState x)
+synopsis UnitIntervalR x = show x
+synopsis CommitteeR x = show (pcCommittee x)
+synopsis ConstitutionR x = show $ pcConstitution x
+synopsis PrevGovActionIdsR x = show (pcPrevGovActionIds x)
+synopsis PrevPParamUpdateR (PrevGovActionId x) = synopsis @e GovActionIdR x
+synopsis PrevHardForkR (PrevGovActionId x) = synopsis @e GovActionIdR x
+synopsis PrevCommitteeR (PrevGovActionId x) = synopsis @e GovActionIdR x
+synopsis PrevConstitutionR (PrevGovActionId x) = synopsis @e GovActionIdR x
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -714,7 +767,18 @@ instance Shaped (Rep era) any where
   shape CommColdCredR = Nullary 85
   shape CommHotCredR = Nullary 86
   shape DRepStateR = Nullary 87
-  shape CommitteeStateR = Nullary 87
+  shape DStateR = Nullary 88
+  shape GovActionIdR = Nullary 89
+  shape GovActionIxR = Nullary 90
+  shape GovActionStateR = Nullary 91
+  shape UnitIntervalR = Nullary 92
+  shape CommitteeR = Nullary 93
+  shape ConstitutionR = Nullary 94
+  shape PrevGovActionIdsR = Nullary 95
+  shape PrevPParamUpdateR = Nullary 96
+  shape PrevHardForkR = Nullary 97
+  shape PrevCommitteeR = Nullary 98
+  shape PrevConstitutionR = Nullary 99
 
 compareRep :: forall era t s. Era era => Rep era t -> Rep era s -> Ordering
 compareRep = cmpIndex @(Rep era)
@@ -735,7 +799,7 @@ genSizedRep n (_a :-> b) = const <$> genSizedRep n b
 genSizedRep n r@(MapR a b) = do
   mapSized ["From genSizedRep " ++ show r] n (genRep a) (genRep b)
 genSizedRep n r@(SetR a) = do
-  setSized ["From genSizedRep " ++ show r] n (genSizedRep n a)
+  setSized ["From genSizedRep " ++ show r] n (genRep a)
 genSizedRep n (ListR a) = vectorOf n (genSizedRep n a)
 genSizedRep _ AddrR = arbitrary
 genSizedRep _ CredR = arbitrary
@@ -864,12 +928,42 @@ genSizedRep _ (PoolMetadataR p) =
     then PoolMetadata <$> arbitrary <*> (BS.take (hashsize p) <$> arbitrary)
     else PoolMetadata <$> arbitrary <*> arbitrary
 genSizedRep _ DRepStateR = arbitrary
-genSizedRep _ CommitteeStateR = arbitrary
+genSizedRep _ DStateR =
+  pure
+    ( DState
+        UM.empty
+        Map.empty
+        (GenDelegs Map.empty)
+        (InstantaneousRewards Map.empty Map.empty mempty mempty)
+    )
+genSizedRep _ GovActionIdR = arbitrary
+genSizedRep _ GovActionIxR = GovActionIx <$> choose (0, 100)
+genSizedRep _ GovActionStateR =
+  GovActionState
+    <$> arbitrary
+    <*> pure Map.empty
+    <*> pure Map.empty
+    <*> pure Map.empty
+    <*> genRep @era CoinR
+    <*> arbitrary
+    <*> genRep @era GovActionR
+    <*> arbitrary
+    <*> arbitrary
+genSizedRep _ UnitIntervalR = arbitrary
+genSizedRep _ CommitteeR = arbitrary
+genSizedRep _ ConstitutionR = arbitrary
+genSizedRep _ PrevGovActionIdsR = arbitrary
+genSizedRep _ PrevPParamUpdateR = arbitrary
+genSizedRep _ PrevHardForkR = arbitrary
+genSizedRep _ PrevCommitteeR = arbitrary
+genSizedRep _ PrevConstitutionR = arbitrary
 
 genRep ::
+  forall era b.
   Era era =>
   Rep era b ->
   Gen b
+genRep IntR = choose (0, 10000)
 genRep x = do (NonNegative n) <- arbitrary; genSizedRep n x
 
 -- | Turn a random bytestring into a SigningKey
@@ -994,8 +1088,19 @@ shrinkRep StakeHashR x = shrink x
 shrinkRep BoolR x = shrink x
 shrinkRep DRepR x = shrink x
 shrinkRep (PoolMetadataR _) _ = []
-shrinkRep DRepStateR _ = []
-shrinkRep CommitteeStateR _ = []
+shrinkRep DRepStateR x = shrink x
+shrinkRep DStateR _ = []
+shrinkRep GovActionIdR x = shrink x
+shrinkRep GovActionIxR (GovActionIx n) = map GovActionIx (shrink n)
+shrinkRep GovActionStateR _ = []
+shrinkRep UnitIntervalR x = shrink x
+shrinkRep CommitteeR x = shrink x
+shrinkRep ConstitutionR x = shrink x
+shrinkRep PrevGovActionIdsR x = shrink x
+shrinkRep PrevPParamUpdateR x = shrink x
+shrinkRep PrevHardForkR x = shrink x
+shrinkRep PrevCommitteeR x = shrink x
+shrinkRep PrevConstitutionR x = shrink x
 
 -- ===========================
 
@@ -1115,7 +1220,18 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help DRepR v = pure $ With v
     help (PoolMetadataR _) v = pure $ With v
     help DRepStateR v = pure $ With v
-    help CommitteeStateR v = pure $ With v
+    help DStateR _ = failT ["DState does not have Ord instance"]
+    help GovActionIdR v = pure $ With v
+    help GovActionIxR v = pure $ With v
+    help GovActionStateR _ = failT ["GovActionState does not have Ord instance"]
+    help UnitIntervalR v = pure $ With v
+    help CommitteeR _ = failT ["Committee does not have Ord instance"]
+    help ConstitutionR _ = failT ["Constitution does not have Ord instance"]
+    help PrevGovActionIdsR _ = failT ["PrevGovActionIds does not have an Ord instance"]
+    help PrevPParamUpdateR _ = failT ["PrevGovActionId 'ParamUpdate, does not have an Ord instance"]
+    help PrevHardForkR _ = failT ["PrevGovActionId 'HardFork, does not have an Ord instance"]
+    help PrevCommitteeR _ = failT ["PrevGovActionId 'Committee, does not have an Ord instance"]
+    help PrevConstitutionR _ = failT ["PrevGovActionId 'Constitution, does not have an Ord instance"]
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
@@ -1137,14 +1253,22 @@ hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
       With _ <- hasEq a undefined
       With _ <- hasEq b undefined
       pure (With v)
+    help GovActionStateR _ = failT ["GovActionState does have an Eq instance, but it requires (Core.EraPParams era)"]
+    help CommitteeR v = pure $ With v
+    help ConstitutionR v = pure $ With v
+    help PrevGovActionIdsR v = pure $ With v
+    help PrevPParamUpdateR v = pure $ With v
+    help PrevHardForkR v = pure $ With v
+    help PrevCommitteeR v = pure $ With v
+    help PrevConstitutionR v = pure $ With v
     help x v = do
       With y <- hasOrd x v
       pure (With y)
 
 format :: Rep era t -> t -> String
-format rep@(MapR d r) x = show (ppMap (syn d) (syn r) x) ++ synSum rep x
-format rep@(ListR d) x = show (ppList (syn d) x) ++ synSum rep x
-format rep@(SetR d) x = show (ppSet (syn d) x) ++ synSum rep x
+format rep@(MapR d r) x = show (ppMap (syn d) (syn r) x) ++ synSum rep x ++ "\nsize=" ++ show (Map.size x)
+format rep@(ListR d) x = show (ppList (syn d) x) ++ synSum rep x ++ synSum rep x ++ "\nsize=" ++ show (length x)
+format rep@(SetR d) x = show (ppSet (syn d) x) ++ synSum rep x ++ synSum rep x ++ "\nsize=" ++ show (Set.size x)
 format (MaybeR d) x = show (ppMaybe (syn d) x)
 format r x = synopsis r x
 

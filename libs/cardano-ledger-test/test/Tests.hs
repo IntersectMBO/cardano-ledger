@@ -11,6 +11,10 @@ import Data.Default.Class (Default (def))
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
+import Test.Cardano.Ledger.Constrained.Examples (allExampleTests)
+import Test.Cardano.Ledger.Constrained.Preds.Tx (predsTests)
+import Test.Cardano.Ledger.Constrained.Spec (allSpecTests)
+import Test.Cardano.Ledger.Constrained.Trace.Tests (conwayTrace)
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
@@ -34,7 +38,11 @@ main = do
 
 defaultTests :: [TestTree]
 defaultTests =
-  [ depositTests
+  [ allSpecTests
+  , allExampleTests
+  , conwayTrace
+  , predsTests
+  , depositTests
   , calcPoolDistOldEqualsNew
   , Tools.tests
   , testGroup

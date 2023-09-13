@@ -9,6 +9,8 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | Code which defines a class that encapsulates what it means to be a Spec
+--   Eventually this will repace the most of the tests in Spec.hs
 module Test.Cardano.Ledger.Constrained.SpecClass where
 
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
@@ -70,6 +72,8 @@ import Test.Tasty.QuickCheck (testProperty)
 -- import Lens.Micro (Lens')
 
 {-
+-- NOtes about current functions and their types for each Spec. This helps
+-- design what the SpecClass should provide.
 class (Monoid spec, LiftT spec) => Specification spec t | spec -> t where
   type Count :: Type -> Type
   -- type Count Size = ()
