@@ -51,14 +51,25 @@ import Cardano.Ledger.Alonzo.Scripts.Data (
   dataToBinaryData,
   hashData,
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (AlonzoTx), IsValid (IsValid), ScriptIntegrity (ScriptIntegrity), ScriptPurpose (..), getLanguageView)
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoTx (AlonzoTx),
+  IsValid (IsValid),
+  ScriptIntegrity (ScriptIntegrity),
+  ScriptPurpose (..),
+  getLanguageView,
+ )
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   mkAlonzoTxAuxData,
  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (AlonzoTxOut))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (AlonzoTxWits), RdmrPtr (RdmrPtr), Redeemers (Redeemers), TxDats (TxDats))
+import Cardano.Ledger.Alonzo.TxWits (
+  AlonzoTxWits (AlonzoTxWits),
+  RdmrPtr (RdmrPtr),
+  Redeemers (Redeemers),
+  TxDats (TxDats),
+ )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Crypto (Crypto)
@@ -67,7 +78,6 @@ import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Shelley.TxWits (keyBy)
 import Control.Monad (replicateM)
-import Data.Either (fromRight)
 import Data.Functor.Identity (Identity)
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -248,8 +258,9 @@ instance Arbitrary CostModel where
 
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do
-  newParamValues <- (vectorOf (costModelParamsCount lang) (arbitrary :: Gen Integer))
-  pure $ fromRight (error "Corrupt cost model") (mkCostModel lang newParamValues)
+  newParamValues <- vectorOf (costModelParamsCount lang) (arbitrary :: Gen Integer)
+  either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
+    mkCostModel lang newParamValues
 
 genValidCostModelPair :: Language -> Gen (Language, CostModel)
 genValidCostModelPair lang = (,) lang <$> genValidCostModel lang
@@ -445,7 +456,7 @@ alwaysFails lang n =
 
 -- | This Arbitrary instance assumes the flexible deserialization
 -- scheme of 'CostModels' starting at version 9.
-newtype FlexibleCostModels = FlexibleCostModels CostModels
+newtype FlexibleCostModels = FlexibleCostModels {unFlexibleCostModels :: CostModels}
   deriving (Show, Eq, Ord)
   deriving newtype (EncCBOR, DecCBOR)
 
@@ -474,17 +485,18 @@ genUnknownCostModelValues = do
     firstInvalid = fromEnum (maxBound :: Language) + 1
 
 genCostModelValues :: Language -> Gen (Word8, [Integer])
-genCostModelValues lang =
+genCostModelValues lang = do
+  Positive sub <- arbitrary
   (lang',)
     <$> oneof
       [ listAtLeast (costModelParamsCount lang) -- Valid Cost Model for known language
-      , take tooFew <$> arbitrary -- Invalid Cost Model for known language
+      , take (tooFew sub) <$> arbitrary -- Invalid Cost Model for known language
       ]
   where
     lang' = fromIntegral (fromEnum lang)
-    tooFew = costModelParamsCount lang - 1
+    tooFew sub = costModelParamsCount lang - sub
 
 listAtLeast :: Int -> Gen [Integer]
 listAtLeast x = do
-  y <- getNonNegative <$> arbitrary
+  NonNegative y <- arbitrary
   replicateM (x + y) arbitrary

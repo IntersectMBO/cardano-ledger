@@ -118,10 +118,13 @@ hexByteStringExpr bs =
 -- | Show a ByteString as hex groups of 8bytes each. This is a slightly more
 -- useful form for debugging, rather than bunch of escaped characters.
 showHexBytesGrouped :: BS.ByteString -> [String]
-showHexBytesGrouped bs =
-  [ "0x" <> BS8.unpack (BS.take 128 $ BS.drop i bs16)
-  | i <- [0, 128 .. BS.length bs16 - 1]
-  ]
+showHexBytesGrouped bs
+  | BS.null bs = []
+  | otherwise =
+      ("0x" <> BS8.unpack (BS.take 128 bs16))
+        : [ "  " <> BS8.unpack (BS.take 128 $ BS.drop i bs16)
+          | i <- [128, 256 .. BS.length bs16 - 1]
+          ]
   where
     bs16 = Base16.encode bs
 

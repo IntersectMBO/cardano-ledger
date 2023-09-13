@@ -2,7 +2,32 @@
 
 ## 1.6.1.0
 
+* Add `fromEraShareCBOR`
+* Remove redundant `DecCBOR` constraint in `eraDecoder`
 * Add `FromJSON` instance to `Anchor`
+* Change `ToJSON/FromJSON` implementation of `Credential` to use `keyHash` vs `key hash`
+  and `scriptHash` vs `script hash` JSON keys.
+* Change `ToJSONKey/FromJSONKey` implementation of `Credential` to use `keyHash-` vs `keyhash-`
+  and `scriptHash-` vs `scripthash-` prefixes.
+
+### `testlib`
+
+* Add `Arbitrary` instance for `DRepDistr`
+* Move `Arbitrary` instance for `SnapShot` and `SnapShots` from `cardano-ledger-shelley:testlib`
+* Add `Test.Cardano.Ledger.Core.Binary.RoundTrip` with:
+  * `roundTripEraSpec`
+  * `roundTripAnnEraSpec`
+  * `roundTripEraTypeSpec`
+  * `roundTripAnnEraTypeSpec`
+  * `roundTripShareEraSpec`
+  * `roundTripShareEraTypeSpec`
+  * `roundTripEraExpectation`
+  * `roundTripEraTypeExpectation`
+  * `roundTripAnnEraExpectation`
+  * `roundTripAnnEraTypeExpectation`
+  * `roundTripShareEraExpectation`
+  * `roundTripShareEraTypeExpectation`
+  * `roundTripCoreEraTypesSpec`
 
 ## 1.6.0.0
 

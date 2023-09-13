@@ -47,6 +47,7 @@ import Cardano.Ledger.Keys (
   asWitness,
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON (..),
@@ -96,11 +97,11 @@ instance NoThunks (Credential kr c)
 instance Crypto c => ToJSON (Credential kr c) where
   toJSON (ScriptHashObj hash) =
     Aeson.object
-      [ "script hash" .= hash
+      [ "scriptHash" .= hash
       ]
   toJSON (KeyHashObj hash) =
     Aeson.object
-      [ "key hash" .= hash
+      [ "keyHash" .= hash
       ]
 
 instance Crypto c => FromJSON (Credential kr c) where
@@ -108,8 +109,8 @@ instance Crypto c => FromJSON (Credential kr c) where
     Aeson.withObject "Credential" $ \obj ->
       asum [parser1 obj, parser2 obj]
     where
-      parser1 obj = ScriptHashObj <$> obj .: "script hash"
-      parser2 obj = KeyHashObj <$> obj .: "key hash"
+      parser1 obj = ScriptHashObj <$> (obj .: "scriptHash" <|> obj .: "script hash")
+      parser2 obj = KeyHashObj <$> (obj .: "keyHash" <|> obj .: "key hash")
 
 instance Crypto c => ToJSONKey (Credential kr c) where
   toJSONKey = toJSONKeyText credToText
@@ -118,22 +119,22 @@ instance Crypto c => FromJSONKey (Credential kr c) where
   fromJSONKey = FromJSONKeyTextParser parseCredential
     where
       parseCredential t = case T.splitOn "-" t of
-        ["scripthash", hash] ->
+        ["scriptHash", hash] ->
           maybe
-            (badHex hash)
+            (badHash hash)
             (pure . ScriptHashObj . ScriptHash)
             (hashFromTextAsHex hash)
-        ["keyhash", hash] ->
+        ["keyHash", hash] ->
           maybe
-            (badHex hash)
+            (badHash hash)
             (pure . KeyHashObj . KeyHash)
             (hashFromTextAsHex hash)
         _ -> fail $ "Invalid credential: " <> show t
-      badHex h = fail $ "Invalid hex: " <> show h
+      badHash h = fail $ "Invalid hash: " <> show h
 
 credToText :: Credential kr c -> Text
-credToText (ScriptHashObj (ScriptHash hash)) = "scripthash-" <> hashToTextAsHex hash
-credToText (KeyHashObj (KeyHash has)) = "keyhash-" <> hashToTextAsHex has
+credToText (ScriptHashObj (ScriptHash hash)) = "scriptHash-" <> hashToTextAsHex hash
+credToText (KeyHashObj (KeyHash has)) = "keyHash-" <> hashToTextAsHex has
 
 type PaymentCredential c = Credential 'Payment c
 

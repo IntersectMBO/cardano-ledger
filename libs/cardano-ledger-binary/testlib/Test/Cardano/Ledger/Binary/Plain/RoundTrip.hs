@@ -18,6 +18,8 @@ module Test.Cardano.Ledger.Binary.Plain.RoundTrip (
   embedTripSpec,
   embedTripExpectation,
   RoundTripFailure (..),
+  showMaybeDecoderError,
+  showFailedTermsWithReSerialization,
   Trip (..),
   mkTrip,
   cborTrip,
@@ -32,7 +34,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
 import qualified Data.Text as Text
 import Data.Typeable
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), showExpr, showHexBytesGrouped)
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), diffExpr, showExpr, showHexBytesGrouped)
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck hiding (label)
@@ -107,7 +109,7 @@ data RoundTripFailure = RoundTripFailure
   -- ^ Produced plain encoding
   , rtfEncodedBytes :: BSL.ByteString
   -- ^ Serialized encoding
-  , rtfReEncodedBytes :: Maybe (BSL.ByteString)
+  , rtfReEncodedBytes :: Maybe BSL.ByteString
   -- ^ Re-serialized bytes, if there was a mismatch between the binary form and the
   -- reserialization of the data type.
   , rtfDecoderError :: Maybe DecoderError
@@ -118,18 +120,43 @@ instance Show RoundTripFailure where
   show RoundTripFailure {..} =
     unlines $
       [ showMaybeDecoderError "Decoder" rtfDecoderError
-      , prettyTerm
       ]
-        ++ showHexBytesGrouped bytes
-    where
-      showMaybeDecoderError name = \case
-        Nothing -> "No " ++ name ++ " error"
-        Just err -> name ++ " error: " ++ show err
-      bytes = BSL.toStrict rtfEncodedBytes
-      prettyTerm =
-        case decodeFullDecoder' "Term" decodeTerm bytes of
-          Left err -> "Could not decode as Term: " ++ show err
-          Right term -> showExpr term
+        ++ [ "Original did not match the reserialization (see below)."
+           | Just _ <- pure rtfReEncodedBytes
+           ]
+        ++ showFailedTermsWithReSerialization rtfEncodedBytes rtfReEncodedBytes
+
+showMaybeDecoderError :: String -> Maybe DecoderError -> String
+showMaybeDecoderError name = \case
+  Nothing -> "No " ++ name ++ " error"
+  Just err -> name ++ " error: " ++ showDecoderError err
+
+showFailedTermsWithReSerialization ::
+  BSL.ByteString ->
+  Maybe BSL.ByteString ->
+  [String]
+showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
+  case mReEncodedBytes of
+    Nothing ->
+      -- This is the usual case where re-serialization is successful
+      let (_, origHex, origStr) = termWithHex "Original" encodedBytes
+       in origStr ++ origHex
+    Just reBytes ->
+      -- On a rare occasion when re-serialization does not match we try to show the
+      -- diff of Hex as well as Terms
+      case (termWithHex "Original" encodedBytes, termWithHex "Reserialization" reBytes) of
+        ((Right origTerm, origHex, _), (Right reTerm, reHex, _)) ->
+          [diffExpr (origTerm, origHex) (reTerm, reHex)]
+        ((_, origHex, origStr), (_, reHex, reStr)) ->
+          diffExpr origHex reHex : origStr ++ reStr
+  where
+    termWithHex name lazyBytes =
+      let bytes = BSL.toStrict lazyBytes
+          decTerm = case decodeFullDecoder' "Term" decodeTerm bytes of
+            Left err -> Left $ "Could not decode as Term: " ++ show err
+            Right term -> Right term
+          hexLines = showHexBytesGrouped bytes
+       in (decTerm, hexLines, [name ++ ":", either id showExpr decTerm])
 
 -- | A definition of a CBOR trip through binary representation of one type to
 -- another. In this module this is called an embed. When a source and target type is the

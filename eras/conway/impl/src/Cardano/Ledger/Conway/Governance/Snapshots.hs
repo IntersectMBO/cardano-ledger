@@ -17,7 +17,7 @@ module Cardano.Ledger.Conway.Governance.Snapshots (
   snapshotGovActionStates,
 ) where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), DecShareCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams)
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovActionId,
@@ -36,6 +36,7 @@ import Data.Foldable (Foldable (..))
 import Data.List (sort)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
+import Data.Maybe (fromMaybe)
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -64,8 +65,9 @@ instance Default (ProposalsSnapshot era) where
 instance EraPParams era => EncCBOR (ProposalsSnapshot era) where
   encCBOR = encCBOR . snapshotActions
 
-instance EraPParams era => DecCBOR (ProposalsSnapshot era) where
-  decCBOR = fromGovActionStateSeq <$> decCBOR
+-- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance EraPParams era => DecShareCBOR (ProposalsSnapshot era) where
+  decShareCBOR _ = fromGovActionStateSeq <$> decCBOR
 
 snapshotInsertGovAction ::
   GovActionState era ->
@@ -83,16 +85,12 @@ snapshotInsertGovAction gas@GovActionState {gasId} ps@ProposalsSnapshot {..}
 snapshotActions ::
   ProposalsSnapshot era ->
   StrictSeq (GovActionState era)
-snapshotActions ProposalsSnapshot {..} = go psProposalOrder
+snapshotActions ProposalsSnapshot {..} = toGovAction <$> psProposalOrder
   where
-    go (gaId :<| gaIds) =
-      case Map.lookup gaId psGovActionStates of
-        Just v -> v :<| go gaIds
-        Nothing ->
-          error $
-            "Impossible: ProposalsSnapshot invariant is not maintained: "
-              <> show gaId
-    go Empty = Empty
+    toGovAction gaId =
+      fromMaybe
+        (error $ "Impossible: ProposalsSnapshot invariant is not maintained: " <> show gaId)
+        (Map.lookup gaId psGovActionStates)
 
 snapshotIds ::
   ProposalsSnapshot era ->
@@ -152,9 +150,7 @@ snapshotLookupId gId ProposalsSnapshot {psGovActionStates} =
 fromGovActionStateSeq ::
   StrictSeq (GovActionState era) ->
   ProposalsSnapshot era
-fromGovActionStateSeq (x :<| xs) =
-  snapshotInsertGovAction x (fromGovActionStateSeq xs)
-fromGovActionStateSeq Empty = def
+fromGovActionStateSeq = foldl' (flip snapshotInsertGovAction) def
 
 -- | Internal function for checking if the invariants are maintained
 isConsistent_ :: ProposalsSnapshot era -> Bool

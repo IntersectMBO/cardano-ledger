@@ -55,7 +55,6 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
   Interns,
   ToCBOR (..),
   decNoShareCBOR,
@@ -290,15 +289,17 @@ newtype CommitteeState era = CommitteeState
 
 deriving instance Era era => EncCBOR (CommitteeState era)
 
-deriving instance Era era => DecCBOR (CommitteeState era)
+-- TODO: Implement sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance Era era => DecShareCBOR (CommitteeState era) where
+  decShareCBOR _ = CommitteeState <$> decCBOR
+
+instance Era era => DecCBOR (CommitteeState era) where
+  decCBOR = decNoShareCBOR
 
 deriving instance Era era => ToJSON (CommitteeState era)
 
 instance Era era => ToCBOR (CommitteeState era) where
   toCBOR = toEraCBOR @era
-
-instance Era era => FromCBOR (CommitteeState era) where
-  fromCBOR = fromEraCBOR @era
 
 -- | The state that tracks the voting entities (DReps and Constitutional Committee members)
 --   The 'vsDRepDistr' field is a pulser that incrementally computes the stake distribution of the DReps
@@ -326,13 +327,17 @@ instance Typeable (EraCrypto era) => NoThunks (VState era)
 
 instance Era era => NFData (VState era)
 
-instance Era era => DecCBOR (VState era) where
-  decCBOR =
+-- TODO: Implement sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance Era era => DecShareCBOR (VState era) where
+  decShareCBOR _ =
     decode $
       RecD VState
         <! From
         <! From
-        <! From
+        <! (D decNoShareCBOR)
+
+instance Era era => DecCBOR (VState era) where
+  decCBOR = decNoShareCBOR
 
 instance Era era => EncCBOR (VState era) where
   encCBOR VState {..} =
@@ -379,7 +384,7 @@ instance Era era => EncCBOR (CertState era) where
 instance Era era => DecShareCBOR (CertState era) where
   type Share (CertState era) = (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
   decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
-    certVState <- lift decCBOR -- TODO: add sharing of DRep credentials
+    certVState <- lift decNoShareCBOR -- TODO: add sharing of DRep credentials
     certPState <- decSharePlusLensCBOR _2
     certDState <- decSharePlusCBOR
     pure CertState {certPState, certDState, certVState}

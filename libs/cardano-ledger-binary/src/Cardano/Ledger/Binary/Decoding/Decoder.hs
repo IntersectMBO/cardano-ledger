@@ -151,7 +151,13 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 )
 where
 
-import Cardano.Ledger.Binary.Plain (DecoderError (..), cborError, invalidKey, toCborError)
+import Cardano.Ledger.Binary.Plain (
+  DecoderError (..),
+  cborError,
+  invalidKey,
+  showDecoderError,
+  toCborError,
+ )
 import Cardano.Ledger.Binary.Version (Version, mkVersion64, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray)
@@ -252,8 +258,6 @@ import Data.Typeable (Proxy (Proxy), Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
-import Formatting (build, formatToString)
-import qualified Formatting.Buildable as B (Buildable (..))
 import GHC.Exts as Exts (IsList (..))
 import Network.Socket (HostAddress6)
 import Numeric.Natural (Natural)
@@ -376,9 +380,6 @@ unlessDecoderVersionAtLeast atLeast decoder = do
 --------------------------------------------------------------------------------
 -- Error reporting
 --------------------------------------------------------------------------------
-
-showDecoderError :: B.Buildable e => e -> String
-showDecoderError = formatToString build
 
 decodeVersion :: Decoder s Version
 decodeVersion = decodeWord64 >>= mkVersion64

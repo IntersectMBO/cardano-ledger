@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -73,7 +74,6 @@ import Cardano.Ledger.CertState (
   Anchor (..),
   CertState (..),
   CommitteeState (..),
-  DRepState (..),
   DState (..),
   FutureGenDeleg (..),
   InstantaneousRewards (..),
@@ -84,7 +84,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
-import Cardano.Ledger.DRepDistr (DRepDistr (DRComplete))
+import Cardano.Ledger.DRepDistr (DRepDistr (DRComplete), DRepState (..), startDRepDistr)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -479,6 +479,16 @@ instance Crypto c => Arbitrary (IndividualPoolStake c) where
   arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
+-- Cardano.Ledger.DRepDistr --------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+instance Crypto c => Arbitrary (DRepState c) where
+  arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance Crypto c => Arbitrary (DRepDistr c) where
+  arbitrary = startDRepDistr <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+------------------------------------------------------------------------------------------
 -- Cardano.Ledger.UTxO -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
@@ -683,9 +693,6 @@ instance Crypto c => Arbitrary (Anchor c) where
       <$> arbitrary
       <*> arbitrary
 
-instance Crypto c => Arbitrary (DRepState c) where
-  arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary
-
 deriving instance Era era => Arbitrary (CommitteeState era)
 
 instance Era era => Arbitrary (VState era) where
@@ -702,6 +709,22 @@ instance Crypto c => Arbitrary (FutureGenDeleg c) where
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.EpochBoundary ----------------------------------------------------------
 ------------------------------------------------------------------------------------------
+
+instance Crypto c => Arbitrary (SnapShot c) where
+  arbitrary =
+    SnapShot
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Crypto c => Arbitrary (SnapShots c) where
+  arbitrary = do
+    ssStakeMark <- arbitrary
+    ssStakeSet <- arbitrary
+    ssStakeGo <- arbitrary
+    ssFee <- arbitrary
+    let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
+    pure $ SnapShots {..}
 
 -- | In the system, Stake never contains more than the sum of all Ada (which is constant).
 -- This makes it safe to store individual Coins (in CompactForm) as Word64. But we must

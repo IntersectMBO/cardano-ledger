@@ -30,7 +30,6 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
@@ -104,7 +103,8 @@ instance Era era => Arbitrary (ShelleyPParams StrictMaybe era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-deriving newtype instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposedPPUpdates era)
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposedPPUpdates era) where
+  arbitrary = ProposedPPUpdates <$> scale (`div` 15) arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Shelley.TxOut ----------------------------------------------------------
@@ -150,24 +150,6 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (SnapShot c) where
-  arbitrary =
-    SnapShot
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-  shrink = genericShrink
-
-instance Crypto c => Arbitrary (SnapShots c) where
-  arbitrary = do
-    ssStakeMark <- arbitrary
-    ssStakeSet <- arbitrary
-    ssStakeGo <- arbitrary
-    ssFee <- arbitrary
-    let ssStakeMarkPoolDistr = calculatePoolDistr ssStakeMark
-    pure $ SnapShots {..}
   shrink = genericShrink
 
 instance
@@ -317,7 +299,7 @@ instance Crypto c => Arbitrary (FreeVars c) where
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.Shelley.Rules ----------------------------------------------------------
+-- Cardano.Ledger.Shelley.Governance -----------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 instance
@@ -330,8 +312,11 @@ instance
   arbitrary = ShelleyGovState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
+instance Era era => Arbitrary (Constitution era) where
+  arbitrary = Constitution <$> arbitrary <*> arbitrary
+
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.Shelley.TxAuxData ----------------------------------------------------------
+-- Cardano.Ledger.Shelley.TxAuxData ------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 -- | Max size of generated Metadatum List and Map

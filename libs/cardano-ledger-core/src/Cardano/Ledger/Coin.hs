@@ -20,6 +20,7 @@ module Cardano.Ledger.Coin (
   toDeltaCoin,
   integerToWord64,
   decodePositiveCoin,
+  compactCoinOrError,
 )
 where
 
@@ -47,6 +48,7 @@ import Data.Primitive.Types
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.Stack
 import NoThunks.Class (NoThunks (..))
 import Quiet
 
@@ -122,6 +124,12 @@ integerToWord64 c
   | c > fromIntegral (maxBound :: Word64) = Nothing
   | otherwise = Just $ fromIntegral c
 {-# INLINE integerToWord64 #-}
+
+compactCoinOrError :: HasCallStack => Coin -> CompactForm Coin
+compactCoinOrError c =
+  case toCompact c of
+    Nothing -> error $ "Invalid ADA value: " <> show c
+    Just compactCoin -> compactCoin
 
 instance EncCBOR (CompactForm Coin) where
   encCBOR (CompactCoin c) = encCBOR c

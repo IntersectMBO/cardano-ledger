@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.4.1.1
+## 1.4.2.0
 
-*
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Alonzo.Binary.RoundTrip` module with:
+  * `roundTripAlonzoCommonSpec`
+  * `roundTripAlonzoEraTypesSpec`
 
 ## 1.4.1.0
 

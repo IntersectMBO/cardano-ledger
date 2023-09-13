@@ -4,6 +4,13 @@
 
 * Add `FromJSON` instance for `Constitution`
 
+### `testlib`
+
+* Add `Arbitrary` instance for `Constitution`
+* `Test.Cardano.Ledger.Shelley.Binary.RoundTrip` module with:
+  * `roundTripShelleyCommonSpec`
+  * `roundTripStateEraTypesSpec`
+
 ## 1.6.0.0
 
 * Deprecate `isRegKey` and `isDeRegKey` in favor of `isRegStakeTxCert` and `isUnRegStakeTxCert` #3700

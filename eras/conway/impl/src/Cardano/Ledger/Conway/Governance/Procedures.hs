@@ -53,7 +53,9 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
+  DecShareCBOR (..),
   EncCBOR (..),
+  decNoShareCBOR,
   decodeEnumBounded,
   decodeMapByKey,
   decodeNullStrictMaybe,
@@ -219,8 +221,9 @@ instance EraPParams era => NoThunks (GovActionState era)
 
 instance EraPParams era => NFData (GovActionState era)
 
-instance EraPParams era => DecCBOR (GovActionState era) where
-  decCBOR =
+-- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance EraPParams era => DecShareCBOR (GovActionState era) where
+  decShareCBOR _ =
     decode $
       RecD GovActionState
         <! From
@@ -232,6 +235,9 @@ instance EraPParams era => DecCBOR (GovActionState era) where
         <! From
         <! From
         <! From
+
+instance EraPParams era => DecCBOR (GovActionState era) where
+  decCBOR = decNoShareCBOR
 
 instance EraPParams era => EncCBOR (GovActionState era) where
   encCBOR GovActionState {..} =

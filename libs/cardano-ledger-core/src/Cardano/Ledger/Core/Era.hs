@@ -30,6 +30,7 @@ module Cardano.Ledger.Core.Era (
   eraProtVerHigh,
   toEraCBOR,
   fromEraCBOR,
+  fromEraShareCBOR,
   eraDecoder,
 )
 where
@@ -207,8 +208,14 @@ fromEraCBOR :: forall era t s. (Era era, DecCBOR t) => Plain.Decoder s t
 fromEraCBOR = eraDecoder @era decCBOR
 {-# INLINE fromEraCBOR #-}
 
+-- | Convert a type that implements `DecShareCBOR` to plain `Plain.Decoder` using the lowest
+-- protocol version for the supplied @era@
+fromEraShareCBOR :: forall era t s. (Era era, DecShareCBOR t) => Plain.Decoder s t
+fromEraShareCBOR = eraDecoder @era decNoShareCBOR
+{-# INLINE fromEraShareCBOR #-}
+
 -- | Convert a versioned `Decoder` to plain a `Plain.Decoder` using the lowest protocol
 -- version for the supplied @era@
-eraDecoder :: forall era t s. (Era era, DecCBOR t) => Decoder s t -> Plain.Decoder s t
+eraDecoder :: forall era t s. Era era => Decoder s t -> Plain.Decoder s t
 eraDecoder = toPlainDecoder (eraProtVerLow @era)
 {-# INLINE eraDecoder #-}
