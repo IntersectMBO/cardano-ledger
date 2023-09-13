@@ -144,10 +144,11 @@ instance Same era (DState era) where
     ]
 
 instance Same era (VState era) where
-  same _proof (VState dr1 dist1 cchk1) (VState dr2 dist2 cchk2) =
+  same _proof (VState dr1 dist1 cchk1 numDE1) (VState dr2 dist2 cchk2 numDE2) =
     [ ("DReps", eqByShow dr1 dr2)
     , ("DRepDistr", eqByShow (extractDRepDistr dist1) (extractDRepDistr dist2))
     , ("CC Hot Keys", eqByShow cchk1 cchk2)
+    , ("Num Dormant Epochs", eqByShow numDE1 numDE2)
     ]
 
 sameUTxO :: Proof era -> UTxO era -> UTxO era -> Maybe PDoc

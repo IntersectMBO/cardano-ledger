@@ -1801,12 +1801,13 @@ pcCertState (CertState vst pst dst) =
     ]
 
 pcVState :: VState era -> PDoc
-pcVState (VState dreps drepDistr (CommitteeState committeeHotCreds)) =
+pcVState (VState dreps drepDistr (CommitteeState committeeHotCreds) numDormantEpochs) =
   ppRecord
     "VState"
     [ ("DReps", ppMap pcCredential pcDRepState dreps)
     , ("DResDistr", ppMap pcDRep (pcCoin . fromCompact) (extractDRepDistr drepDistr))
     , ("CC Hot Keys", ppMap pcCredential (ppMaybe pcCredential) committeeHotCreds)
+    , ("Number of dormant epochs", ppEpochNo numDormantEpochs)
     ]
 
 pcAnchor :: Anchor c -> PDoc

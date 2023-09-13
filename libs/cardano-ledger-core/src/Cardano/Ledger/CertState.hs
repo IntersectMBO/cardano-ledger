@@ -45,6 +45,7 @@ module Cardano.Ledger.CertState (
   vsDRepsL,
   vsDRepDistrL,
   vsCommitteeStateL,
+  vsNumDormantEpochsL,
   csCommitteeCredsL,
   lookupDepositVState,
 )
@@ -313,6 +314,14 @@ data VState era = VState
        )
   , vsDRepDistr :: !(DRepDistr (EraCrypto era))
   , vsCommitteeState :: !(CommitteeState era)
+  , vsNumDormantEpochs :: EpochNo
+  -- ^ Number of contiguous epochs in which there are exactly zero
+  -- active governance proposals to vote on. It is incremented in every
+  -- EPOCH rule if the number of active governance proposals to vote on
+  -- continues to be zero. It is reset to zero when a new governance
+  -- action is successfully proposed. We need this counter in order to
+  -- bump DRep expiries through dormant periods when DReps do not have
+  -- an opportunity to vote on anything.
   }
   deriving (Show, Eq, Generic)
 
@@ -321,7 +330,7 @@ lookupDepositVState :: VState era -> Credential 'DRepRole (EraCrypto era) -> May
 lookupDepositVState vstate = fmap drepDeposit . flip Map.lookup (vstate ^. vsDRepsL)
 
 instance Default (VState era) where
-  def = VState def (DRComplete Map.empty) def
+  def = VState def (DRComplete Map.empty) def (EpochNo 0)
 
 instance Typeable (EraCrypto era) => NoThunks (VState era)
 
@@ -334,7 +343,8 @@ instance Era era => DecShareCBOR (VState era) where
       RecD VState
         <! From
         <! From
-        <! (D decNoShareCBOR)
+        <! D decNoShareCBOR
+        <! From
 
 instance Era era => DecCBOR (VState era) where
   decCBOR = decNoShareCBOR
@@ -346,6 +356,7 @@ instance Era era => EncCBOR (VState era) where
         !> To vsDReps
         !> To vsDRepDistr
         !> To vsCommitteeState
+        !> To vsNumDormantEpochs
 
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
@@ -533,6 +544,9 @@ vsDRepDistrL = lens vsDRepDistr (\vs u -> vs {vsDRepDistr = u})
 
 vsCommitteeStateL :: Lens' (VState era) (CommitteeState era)
 vsCommitteeStateL = lens vsCommitteeState (\vs u -> vs {vsCommitteeState = u})
+
+vsNumDormantEpochsL :: Lens' (VState era) EpochNo
+vsNumDormantEpochsL = lens vsNumDormantEpochs (\vs u -> vs {vsNumDormantEpochs = u})
 
 csCommitteeCredsL ::
   Lens'

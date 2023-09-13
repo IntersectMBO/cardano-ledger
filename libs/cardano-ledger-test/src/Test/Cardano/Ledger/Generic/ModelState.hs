@@ -338,7 +338,7 @@ instance Extract (PState era) era where
   extract x = PState (mPoolParams x) (mFPoolParams x) (mRetiring x) Map.empty
 
 instance Extract (VState era) era where
-  extract _ = VState def (DRComplete Map.empty) def
+  extract _ = VState def (DRComplete Map.empty) def (EpochNo 0)
 
 instance Extract (CertState era) era where
   extract x = CertState (extract x) (extract x) (extract x)
