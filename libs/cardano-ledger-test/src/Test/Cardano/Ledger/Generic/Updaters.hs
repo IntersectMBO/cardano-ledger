@@ -25,7 +25,16 @@ import Cardano.Ledger.Babbage.TxBody as Babbage (
   Datum (..),
  )
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
-import Cardano.Ledger.Conway.PParams (ppGovActionDepositL)
+import Cardano.Ledger.Conway.PParams (
+  ppCommitteeMaxTermLengthL,
+  ppCommitteeMinSizeL,
+  ppDRepActivityL,
+  ppDRepDepositL,
+  ppDRepVotingThresholdsL,
+  ppGovActionDepositL,
+  ppGovActionLifetimeL,
+  ppPoolVotingThresholdsL,
+ )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
@@ -360,7 +369,7 @@ updatePParams proof pp' ppf =
           case ppf of
             D d -> pp & ppDL .~ d
             ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
-            AdaPerUTxOWord coinPerWord -> pp & ppCoinsPerUTxOWordL .~ coinPerWord
+            CoinPerUTxOWord coinPerWord -> pp & ppCoinsPerUTxOWordL .~ coinPerWord
             Costmdls costModels -> pp & ppCostModelsL .~ costModels
             Prices prices -> pp & ppPricesL .~ prices
             MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
@@ -371,7 +380,7 @@ updatePParams proof pp' ppf =
             _ -> pp
         Babbage _ ->
           case ppf of
-            AdaPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
+            CoinPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
             Costmdls costModels -> pp & ppCostModelsL .~ costModels
             Prices prices -> pp & ppPricesL .~ prices
             MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
@@ -382,7 +391,7 @@ updatePParams proof pp' ppf =
             _ -> pp
         Conway _ ->
           case ppf of
-            AdaPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
+            CoinPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
             Costmdls costModels -> pp & ppCostModelsL .~ costModels
             Prices prices -> pp & ppPricesL .~ prices
             MaxTxExUnits maxTxExUnits -> pp & ppMaxTxExUnitsL .~ maxTxExUnits
@@ -391,6 +400,13 @@ updatePParams proof pp' ppf =
             CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
             MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
             GovActionDeposit c -> pp & ppGovActionDepositL .~ c
+            DRepDeposit c -> pp & ppDRepDepositL .~ c
+            DRepActivity c -> pp & ppDRepActivityL .~ c
+            PoolVotingThreshold c -> pp & ppPoolVotingThresholdsL .~ c
+            DRepVotingThreshold c -> pp & ppDRepVotingThresholdsL .~ c
+            MinCommitteeSize c -> pp & ppCommitteeMinSizeL .~ c
+            CommitteeTermLimit c -> pp & ppCommitteeMaxTermLengthL .~ c
+            GovActionExpiration c -> pp & ppGovActionLifetimeL .~ c
             _ -> pp
 
 newPParams :: EraPParams era => Proof era -> [PParamsField era] -> PParams era

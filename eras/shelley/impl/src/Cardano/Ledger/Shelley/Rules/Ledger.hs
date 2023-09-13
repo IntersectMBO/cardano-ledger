@@ -45,6 +45,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
   UTxOState (..),
+  utxosDepositedL,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (allObligations, potEqualsObligation)
 import Cardano.Ledger.Shelley.Rules.Delegs (
@@ -281,21 +282,26 @@ renderDepositEqualsObligationViolation ::
   String
 renderDepositEqualsObligationViolation
   AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ pp _, _, tx), avState} =
-    let dpstate = lsCertState <$> avState
-        utxo = utxosUtxo . lsUTxOState <$> avState
-        txb = tx ^. bodyTxL
-     in "\n\nAssertionViolation ("
-          <> avSTS
-          <> ")\n   "
-          <> avMsg
-          <> "\nCERTS\n"
-          <> showTxCerts txb
-          <> "\n(slot,keyDeposit,poolDeposit) "
-          <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
-          <> "\npot (utxosDeposited) = "
-          <> show (utxosDeposited . lsUTxOState <$> avState)
-          <> show (allObligations <$> (lsCertState <$> avState) <*> (utxosGovState . lsUTxOState <$> avState))
-          <> "\nConsumed = "
-          <> show (consumedTxBody txb pp <$> dpstate <*> utxo)
-          <> "\nProduced = "
-          <> show (producedTxBody txb pp <$> dpstate)
+    case avState of
+      Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
+      Just lstate ->
+        let certstate = lsCertState lstate
+            utxoSt = lsUTxOState lstate
+            utxo = utxosUtxo utxoSt
+            txb = tx ^. bodyTxL
+            pot = utxoSt ^. utxosDepositedL
+         in "\n\nAssertionViolation ("
+              <> avSTS
+              <> ")\n   "
+              <> avMsg
+              <> "\nCERTS\n"
+              <> showTxCerts txb
+              <> "\n(slot,keyDeposit,poolDeposit) "
+              <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
+              <> "\npot (utxosDeposited) = "
+              ++ show pot
+                <> show (allObligations certstate (utxosGovState utxoSt))
+                <> "\nConsumed = "
+                <> show (consumedTxBody txb pp certstate utxo)
+                <> "\nProduced = "
+                <> show (producedTxBody txb pp certstate)

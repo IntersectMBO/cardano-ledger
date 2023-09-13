@@ -35,11 +35,13 @@ library
         Test.Cardano.Ledger.Constrained.Preds.Repl
         Test.Cardano.Ledger.Constrained.Preds.Certs
         Test.Cardano.Ledger.Constrained.Preds.LedgerState
+        Test.Cardano.Ledger.Constrained.Preds.NewEpochState
         Test.Cardano.Ledger.Constrained.Trace.TraceMonad
         Test.Cardano.Ledger.Constrained.Trace.SimpleTx
         Test.Cardano.Ledger.Constrained.Trace.Actions
         Test.Cardano.Ledger.Constrained.Trace.Pipeline
         Test.Cardano.Ledger.Constrained.Trace.Tests
+        Test.Cardano.Ledger.Constrained.Trace.DrepCertTx
         Test.Cardano.Ledger.Constrained.Spec
         Test.Cardano.Ledger.Constrained.SpecClass
         Test.Cardano.Ledger.Constrained.Tests

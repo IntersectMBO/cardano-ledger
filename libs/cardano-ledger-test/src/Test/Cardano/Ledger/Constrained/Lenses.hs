@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | Define Lenses that facilitate accessing the types in the Var Model.
 --   Note the types in the Model, are often wrapped in a newtype in the real state,
@@ -12,10 +13,12 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin)
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.DRep (DRep)
+import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, rewards)
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (deltaReserves, deltaTreasury)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
   UMap (..),
@@ -28,6 +31,7 @@ import Cardano.Ledger.UMap (
   unify,
  )
 import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -35,6 +39,8 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set)
 import Lens.Micro
+import Test.Cardano.Ledger.Constrained.Classes (TxOutF (..), liftUTxO)
+import Test.Cardano.Ledger.Generic.Proof (Proof)
 
 -- ====================================================
 -- Lenses
@@ -113,6 +119,9 @@ spRevPtrL = lens spRevPtr (\ds u -> ds {spRevPtr = u})
 spPtrL :: Lens' (Split c) (Map Ptr (Credential 'Staking c))
 spPtrL = lens spPtr (\ds u -> ds {spPtr = u})
 
+spDRepL :: Lens' (Split c) (Map (Credential 'Staking c) (DRep c))
+spDRepL = lens spDRep (\ds u -> ds {spDRep = u})
+
 -- ========================================================================================
 -- Mapping the abstract names: rewards, delegations, ptrs, credDeposits through the UMap
 
@@ -165,6 +174,11 @@ delegationsUMapL = lens sPoolMap delta
       where
         split = splitUMap um
 
+drepUMapL :: Lens' (UMap c) (Map (Credential 'Staking c) (DRep c))
+drepUMapL = lens dRepMap delta
+  where
+    delta um new = unSplitUMap ((splitUMap um) {spDRep = new})
+
 -- Conversion Lenses
 
 strictMaybeToMaybeL :: Lens' (StrictMaybe x) (Maybe x)
@@ -183,3 +197,16 @@ strictSeqListL = lens toList (\_ y -> fromList y)
 
 mapCompactFormCoinL :: Lens' (Map a (CompactForm Coin)) (Map a Coin)
 mapCompactFormCoinL = lens (Map.map fromCompact) (\_ y -> Map.map compactCoinOrError y)
+
+pairL :: Lens' x y -> Lens' a b -> Lens' (x, a) (y, b)
+pairL xy ab = lens getter setter
+  where
+    getter (x, a) = (x ^. xy, a ^. ab)
+    setter (x, a) (y, b) = (x & xy .~ y, a & ab .~ b)
+
+-- | Lens to convert from the abstract type UtxO type of the Model, to the concrete UTxO type.
+--   The mode uses the type family abstraction TxOutF, and does not wrap the map
+--   with the UtxO constructor. Note the getter is 'liftUTxO' from Test.Cardano.Ledger.Constrained.Classes
+--   liftUTxO :: Map (TxIn (EraCrypto era)) (TxOutF era) -> UTxO era
+utxoFL :: Proof era -> Lens' (Map (TxIn (EraCrypto era)) (TxOutF era)) (UTxO era)
+utxoFL p = lens liftUTxO (\_ (UTxO new) -> (Map.map (TxOutF p) new))

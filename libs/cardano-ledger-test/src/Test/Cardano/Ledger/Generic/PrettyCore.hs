@@ -21,6 +21,7 @@ module Test.Cardano.Ledger.Generic.PrettyCore where
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoBbodyPredFailure (..),
@@ -36,6 +37,7 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
@@ -48,26 +50,31 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.CertState as DP
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayGovState (..),
+  DRepPulser (..),
   DRepPulsingState (..),
   EnactState (..),
   GovAction (..),
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
+  GovProcedures (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
+  ProposalProcedure (..),
   Proposals,
   PulsingSnapshot (..),
   RatifyState (..),
   Vote (..),
-  finishDRepPulser,
+  Voter (..),
+  VotingProcedure (..),
+  VotingProcedures (..),
   proposalsActions,
  )
-import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..), Delegatee (..))
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayGovCert (..), ConwayTxCert (..), Delegatee (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (
@@ -160,6 +167,7 @@ import Cardano.Ledger.Shelley.TxCert (MIRCert (..), MIRTarget (..), ShelleyDeleg
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
+  dRepMap,
   depositMap,
   fromCompact,
   ptrMap,
@@ -169,6 +177,7 @@ import Cardano.Ledger.UMap (
 import qualified Cardano.Ledger.UMap as UM (UMap, UView (..), size)
 import Cardano.Ledger.UTxO (ScriptsNeeded, UTxO (..))
 import qualified Cardano.Ledger.Val as Val
+import Control.Monad.Identity (Identity)
 import Control.State.Transition.Extended (STS (..))
 import Data.Foldable (toList)
 import Data.Map (Map)
@@ -185,9 +194,11 @@ import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (
+  PParamsField (..),
   TxBodyField (..),
   TxField (..),
   WitnessesField (..),
+  abstractPParams,
   abstractTx,
   abstractTxBody,
   abstractWitnesses,
@@ -202,6 +213,7 @@ import Test.Cardano.Ledger.Generic.Proof (
   Proof (..),
   Reflect (..),
   ShelleyEra,
+  unReflect,
   whichGovState,
  )
 
@@ -1441,8 +1453,8 @@ pcTxOut p@(Allegra _) (ShelleyTxOut addr v) =
 pcTxOut p@(Shelley _) (ShelleyTxOut addr v) =
   ppSexp "TxOut" [pcAddr addr, pcCoreValue p v]
 
-pcUTxO :: Reflect era => Proof era -> UTxO era -> PDoc
-pcUTxO proof = ppMap pcTxIn (pcTxOut proof) . unUTxO
+pcUTxO :: Proof era -> UTxO era -> PDoc
+pcUTxO proof = ppMap pcTxIn (unReflect pcTxOut proof) . unUTxO
 
 instance Reflect era => PrettyC (UTxO era) era where prettyC = pcUTxO
 
@@ -1487,9 +1499,23 @@ pcShelleyTxCert (ShelleyTxCertMir (MIRCert x (SendToOppositePotMIR c))) =
     ]
 
 pcConwayTxCert :: ConwayTxCert c -> PDoc
-pcConwayTxCert (ConwayTxCertDeleg dc) = prettyA dc
+pcConwayTxCert (ConwayTxCertDeleg dc) = pcConwayDelegCert dc
 pcConwayTxCert (ConwayTxCertPool poolc) = pcPoolCert poolc
-pcConwayTxCert (ConwayTxCertGov _) = ppString "ConwayTxCertGov" -- TODO: add pretty instance for the certs
+pcConwayTxCert (ConwayTxCertGov x) = pcConwayGovCert x
+
+pcConwayGovCert :: ConwayGovCert c -> PDoc
+pcConwayGovCert (ConwayRegDRep cred c smA) =
+  ppSexp "ConwayRegDRep" [pcCredential cred, pcCoin c, ppStrictMaybe pcAnchor smA]
+pcConwayGovCert (ConwayUnRegDRep cred c) =
+  ppSexp "ConwayUnRegDRep" [pcCredential cred, pcCoin c]
+pcConwayGovCert (ConwayUpdateDRep cred smA) =
+  ppSexp "ConwayUpdateDRep" [pcCredential cred, ppStrictMaybe pcAnchor smA]
+pcConwayGovCert (ConwayAuthCommitteeHotKey cred1 cred2) =
+  ppSexp "ConwayAuthCommitteeHotKey" [pcCredential cred1, pcCredential cred2]
+pcConwayGovCert (ConwayResignCommitteeColdKey cred anch) =
+  ppRecord
+    "ConwayResignCommitteeColdKey"
+    [("cred", pcCredential cred), ("anchor", ppStrictMaybe pcAnchor anch)]
 
 pcConwayDelegCert :: ConwayDelegCert c -> PDoc
 pcConwayDelegCert (ConwayRegCert cred mcoin) =
@@ -1514,6 +1540,39 @@ pcTxCert (Alonzo _) x = pcShelleyTxCert x
 pcTxCert (Babbage _) x = pcShelleyTxCert x
 pcTxCert (Conway _) x = pcConwayTxCert x
 
+pcGovProcedures :: forall era. GovProcedures era -> PDoc
+pcGovProcedures (GovProcedures vote proposal) =
+  ppRecord
+    "GovProcedure"
+    [ ("voting", pcVotingProcedures vote)
+    , ("proposal", ppList (pcProposalProcedure @era) (toList proposal))
+    ]
+
+pcVotingProcedures :: VotingProcedures era -> PDoc
+pcVotingProcedures (VotingProcedures m) =
+  ppSexp "VotingProcedures" [ppMap pcVoter (ppMap pcGovActionId pcVotingProcedure) m]
+
+pcProposalProcedure :: ProposalProcedure era -> PDoc
+pcProposalProcedure (ProposalProcedure c rewacnt govact anch) =
+  ppRecord
+    "ProposalProcedure"
+    [ ("Deposit", pcCoin c)
+    , ("ReturnAddr", pcRewardAcnt rewacnt)
+    , ("GovAction", pcGovAction govact)
+    , ("Anchor", pcAnchor anch)
+    ]
+
+pcVoter :: (Voter c) -> PDoc
+pcVoter (CommitteeVoter cred) = ppSexp "CommitteeVoter" [pcCredential cred]
+pcVoter (DRepVoter cred) = ppSexp "DRepVoter" [pcCredential cred]
+pcVoter (StakePoolVoter keyhash) = ppSexp "StakePoolVoter" [pcKeyHash keyhash]
+
+pcVotingProcedure :: VotingProcedure era -> PDoc
+pcVotingProcedure (VotingProcedure v smA) =
+  ppRecord "VotingProcedure" [("vote", pcVote v), ("anchor", ppStrictMaybe pcAnchor smA)]
+
+-- ============================================================
+
 instance c ~ EraCrypto era => PrettyC (ShelleyTxCert c) era where prettyC _ = pcShelleyTxCert
 
 pcRewardAcnt :: RewardAcnt c -> PDoc
@@ -1526,7 +1585,6 @@ pcExUnits (ExUnits mem step) =
   ppSexp "ExUnits" [ppNatural mem, ppNatural step]
 
 pcTxBodyField ::
-  Reflect era =>
   Proof era ->
   TxBodyField era ->
   [(Text, PDoc)]
@@ -1534,9 +1592,9 @@ pcTxBodyField proof x = case x of
   Inputs s -> [("spend inputs", ppSet pcTxIn s)]
   Collateral s -> [("coll inputs", ppSet pcTxIn s)]
   RefInputs s -> [("ref inputs", ppSet pcTxIn s)]
-  Outputs s -> [("outputs", ppList (pcTxOut proof) (toList s))]
+  Outputs s -> [("outputs", ppList (unReflect pcTxOut proof) (toList s))]
   CollateralReturn SNothing -> []
-  CollateralReturn (SJust txout) -> [("coll return", pcTxOut proof txout)]
+  CollateralReturn (SJust txout) -> [("coll return", unReflect pcTxOut proof txout)]
   TotalCol SNothing -> []
   TotalCol (SJust c) -> [("total coll", pcCoin c)]
   Certs xs -> [("certs", ppList (pcTxCert proof) (toList xs))]
@@ -1555,7 +1613,7 @@ pcTxBodyField proof x = case x of
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> [("network id", ppString "Nothing")]
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
-  GovProcs ga -> [("gov procedures", prettyA ga)]
+  GovProcs ga -> [("gov procedures", pcGovProcedures ga)]
   CurrentTreasuryValue ctv -> [("current treasury value", prettyA ctv)]
   TreasuryDonation td -> [("treasury donation", prettyA td)]
 
@@ -1605,19 +1663,19 @@ pcWitnesses proof wits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)
 
-pcTx :: Reflect era => Proof era -> Tx era -> PDoc
+pcTx :: Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where
     fields = abstractTx proof tx
-    pairs = concatMap (pcTxField proof) fields
+    pairs = concatMap (unReflect pcTxField proof) fields
 
-pcTxBody :: Reflect era => Proof era -> TxBody era -> PDoc
+pcTxBody :: Proof era -> TxBody era -> PDoc
 pcTxBody proof txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
   where
     fields = abstractTxBody proof txbody
     pairs = concatMap (pcTxBodyField proof) fields
 
--- ======================================
+-- =====================================
 -- Governance Actions etc
 
 pcGovState :: Proof era -> GovState era -> PDoc
@@ -1690,14 +1748,7 @@ pcDRepPulsingState p (DRComplete x y) =
     [ ("pulsingSnapshot", pcPulsingSnapshot x)
     , ("ratifyState", pcRatifyState p y)
     ]
-pcDRepPulsingState p pst =
-  ppRecord
-    "DRComplete"
-    [ ("pulsingSnapshot", pcPulsingSnapshot x)
-    , ("ratifyState", pcRatifyState p y)
-    ]
-  where
-    (x, y) = finishDRepPulser pst
+pcDRepPulsingState _ (DRPulsing x) = ppSexp "DRPulsing" [pcDRepPulser x]
 
 pcRatifyState :: Proof era -> RatifyState era -> PDoc
 pcRatifyState p (RatifyState enact remov del) =
@@ -1935,20 +1986,43 @@ pcEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
     , ("AdaPots", pcAdaPot es)
     ]
 
+-- | Like pcEpochState.but it only prints a summary of the UTxO
+psEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
+psEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
+  ppRecord
+    "EpochState"
+    [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
+    , ("LedgerState", psLedgerState proof ls)
+    , ("SnapShots", pcSnapShots sss)
+    , ("AdaPots", pcAdaPot es)
+    ]
+
 pcNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
 pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd) _) =
   ppRecord
     "NewEpochState"
-    [ ("EpochNo", ppEpochNo en)
-    , ("EpochState", pcEpochState proof es)
+    [ ("EpochState", pcEpochState proof es)
     , ("PoolDistr", ppMap pcKeyHash pcIndividualPoolStake pd)
     , ("Prev Blocks", ppMap pcKeyHash ppNatural pbm)
     , ("Current Blocks", ppMap pcKeyHash ppNatural cbm)
+    , ("EpochNo", ppEpochNo en)
     ]
 
 instance Reflect era => PrettyC (NewEpochState era) era where prettyC = pcNewEpochState
 
-pcUTxOState :: Reflect era => Proof era -> UTxOState era -> PDoc
+-- | Like pcEpochState.but it only prints a summary of the UTxO
+psNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
+psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd) _) =
+  ppRecord
+    "NewEpochState"
+    [ ("EpochState", psEpochState proof es)
+    , ("PoolDistr", ppMap pcKeyHash pcIndividualPoolStake pd)
+    , ("Prev Blocks", ppMap pcKeyHash ppNatural pbm)
+    , ("Current Blocks", ppMap pcKeyHash ppNatural cbm)
+    , ("EpochNo", ppEpochNo en)
+    ]
+
+pcUTxOState :: Proof era -> UTxOState era -> PDoc
 pcUTxOState proof (UTxOState u dep fs gs (IStake m _) don) =
   ppRecord
     "UTxOState"
@@ -1960,13 +2034,35 @@ pcUTxOState proof (UTxOState u dep fs gs (IStake m _) don) =
     , ("donation", prettyA don)
     ]
 
+-- | Like pcUTxOState, except it prints only a summary of the UTxO
+psUTxOState :: forall era. Reflect era => Proof era -> UTxOState era -> PDoc
+psUTxOState proof (UTxOState (UTxO u) dep fs gs (IStake m _) don) =
+  ppRecord
+    "UTxOState"
+    [ ("utxo", summaryMapCompact (Map.map (\x -> x ^. compactCoinTxOutL) u))
+    , ("deposited", pcCoin dep)
+    , ("fees", pcCoin fs)
+    , ("govState", pcGovState proof gs)
+    , ("incremental stake distr", ppString ("size = " ++ show (Map.size m))) -- This is not part of the model
+    , ("donation", prettyA don)
+    ]
+
 instance Reflect era => PrettyC (UTxOState era) era where prettyC = pcUTxOState
 
-pcLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
+pcLedgerState :: Proof era -> LedgerState era -> PDoc
 pcLedgerState proof ls =
   ppRecord
     "LedgerState"
     [ ("utxoState", pcUTxOState proof (lsUTxOState ls))
+    , ("certState", pcCertState (lsCertState ls))
+    ]
+
+-- | Like pcLedgerState, except it prints only a summary of the UTxO
+psLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
+psLedgerState proof ls =
+  ppRecord
+    "LedgerState"
+    [ ("utxoState", psUTxOState proof (lsUTxOState ls))
     , ("certState", pcCertState (lsCertState ls))
     ]
 
@@ -1987,6 +2083,7 @@ pcDState ds =
     [ ("rewards", ppMap pcCredential pcCoin (rewardMap (dsUnified ds)))
     , ("deposits", ppMap pcCredential pcCoin (depositMap (dsUnified ds)))
     , ("delegate", ppMap pcCredential pcKeyHash (sPoolMap (dsUnified ds)))
+    , ("drepDeleg", ppMap pcCredential pcDRep (dRepMap (dsUnified ds)))
     , ("ptrs", ppMap ppPtr ppCredential (ptrMap (dsUnified ds)))
     , ("fGenDel", ppMap pcFutureGenDeleg pcGenDelegPair (dsFutureGenDelegs ds))
     , ("GenDel", ppMap pcKeyHash pcGenDelegPair (unGenDelegs (dsGenDelegs ds)))
@@ -2063,3 +2160,68 @@ pcScriptsNeeded p@(Babbage _) (AlonzoScriptsNeeded pl) =
   ppSexp "ScriptsNeeded" [ppList (ppPair (pcScriptPurpose p) pcScriptHash) pl]
 pcScriptsNeeded p@(Conway _) (AlonzoScriptsNeeded pl) =
   ppSexp "ScriptsNeeded" [ppList (ppPair (pcScriptPurpose p) pcScriptHash) pl]
+
+pcPParamsField ::
+  PParamsField era ->
+  [(Text, PDoc)]
+pcPParamsField x = case x of
+  MinfeeA coin -> [("minfeeA", pcCoin coin)]
+  MinfeeB coin -> [("minfeeB", pcCoin coin)]
+  MaxBBSize natural -> [("maxBBsize", ppNatural natural)]
+  MaxTxSize natural -> [("maxTxsize", ppNatural natural)]
+  MaxBHSize natural -> [("maxBHsize", ppNatural natural)]
+  KeyDeposit coin -> [("keydeposit", pcCoin coin)]
+  PoolDeposit coin -> [("pooldeposit", pcCoin coin)]
+  EMax n -> [("emax", ppEpochNo n)]
+  NOpt natural -> [("NOpt", ppNatural natural)]
+  A0 i -> [("A0", viaShow i)]
+  Rho u -> [("Rho", ppUnitInterval u)]
+  Tau u -> [("Tau", ppUnitInterval u)]
+  D u -> [("D", ppUnitInterval u)]
+  ExtraEntropy n -> [("extraEntropy", ppNonce n)]
+  ProtocolVersion protVer -> [("ProtocolVersion", ppProtVer protVer)]
+  MinPoolCost coin -> [("minPoolCost", pcCoin coin)]
+  MinUTxOValue coin -> [("minUTxOValue", pcCoin coin)]
+  CoinPerUTxOWord (CoinPerWord c) -> [("coinPerUTxOWord", pcCoin c)]
+  CoinPerUTxOByte (CoinPerByte c) -> [("coinPerUTxOByte", pcCoin c)]
+  Costmdls _ -> [("costmodels", ppString "?")]
+  Prices prices -> [("prices", ppPrices prices)]
+  MaxTxExUnits e -> [("maxTxExUnits", pcExUnits e)]
+  MaxBlockExUnits e -> [("maxBlockExUnits", pcExUnits e)]
+  MaxValSize n -> [("maxValSize", ppNatural n)]
+  CollateralPercentage n -> [("Collateral%", ppNatural n)]
+  MaxCollateralInputs n -> [("maxCollateralInputs", ppNatural n)]
+  PoolVotingThreshold _ -> [("PoolVotingThresholds", ppString "?")]
+  DRepVotingThreshold _ -> [("DRepVotingThresholds", ppString "?")]
+  MinCommitteeSize n -> [("minCommitteeSize", ppNatural n)]
+  CommitteeTermLimit n -> [("committeeTermLimit", ppEpochNo n)]
+  GovActionExpiration epochNo -> [("govActionExpire", ppEpochNo epochNo)]
+  GovActionDeposit coin -> [("govActiondDeposit", pcCoin coin)]
+  DRepDeposit coin -> [("drepdeposit", pcCoin coin)]
+  DRepActivity epochNo -> [("drepActivity", ppEpochNo epochNo)]
+
+pcPParams :: Proof era -> PParams era -> PDoc
+pcPParams proof pp = ppRecord ("TxBody " <> pack (show proof)) pairs
+  where
+    fields = abstractPParams proof pp
+    pairs = concatMap pcPParamsField fields
+
+pcDRepPulser :: DRepPulser era Identity (RatifyState era) -> PDoc
+pcDRepPulser x =
+  ppRecord
+    "DRepPulser"
+    [ ("pulseSize", ppInt (dpPulseSize x))
+    , ("umap", uMapSummary (dpUMap x))
+    , ("balance", summaryMapCompact (dpBalance x))
+    , ("stakeDistr", summaryMapCompact (dpStakeDistr x))
+    , ("poolDistr", pcPoolDistr (dpStakePoolDistr x))
+    , ("partialDrepDistr", summaryMapCompact (dpDRepDistr x))
+    , ("drepState", ppMap pcCredential pcDRepState (dpDRepState x))
+    , ("epoch", ppEpochNo (dpCurrentEpoch x))
+    , ("committeeState", ppMap pcCredential (ppMaybe pcCredential) (csCommitteeCreds (dpCommitteeState x)))
+    , ("proposals", ppStrictSeq pcGovActionState (dpProposals x))
+    , ("globals", ppString "...")
+    ]
+
+summaryMapCompact :: Map a (CompactForm Coin) -> PDoc
+summaryMapCompact x = ppString ("Count " ++ show (Map.size x) ++ ", Total " ++ show (Map.foldl' (<>) mempty x))

@@ -60,7 +60,7 @@ import Cardano.Ledger.Plutus.Language (Language (..), plutusLanguage)
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppList, ppMap, ppRecord, ppSafeHash)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded, witsVKeyNeededNoGov)
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
@@ -89,6 +89,7 @@ import Test.Cardano.Ledger.Constrained.Monad (Typed, failT, generateWithSeed, mo
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.Certs (certsStage)
 import Test.Cardano.Ledger.Constrained.Preds.LedgerState (ledgerStateStage)
+import Test.Cardano.Ledger.Constrained.Preds.NewEpochState (epochStateStage, newEpochStateStage)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), goRepl, modeRepl)
 import Test.Cardano.Ledger.Constrained.Preds.TxOut (txOutPreds)
@@ -107,10 +108,12 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcKeyHash,
   pcScript,
   pcScriptHash,
+  pcTxBody,
   pcTxBodyField,
   pcTxField,
   pcTxIn,
   pcTxOut,
+  psNewEpochState,
  )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.TxGen (applySTSByProof)
@@ -387,7 +390,7 @@ makeKeyWitness ::
   Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   Map (KeyHash 'Payment (EraCrypto era)) ((Addr (EraCrypto era)), SigningKey) ->
   Set (WitVKey 'Witness (EraCrypto era))
-makeKeyWitness (TxBodyF _ txb) necessary sufficient keyUniv scripts gendel byronAdUniv = keywits
+makeKeyWitness (TxBodyF proof txb) necessary sufficient keyUniv scripts gendel byronAdUniv = keywits
   where
     bodyhash :: SafeHash (EraCrypto era) EraIndependentTxBody
     bodyhash = hashAnnotated txb
@@ -411,6 +414,8 @@ makeKeyWitness (TxBodyF _ txb) necessary sufficient keyUniv scripts gendel byron
                     ++ show (ppMap pcKeyHash pcGenDelegPair gendel)
                     ++ "\nbyronAddrUniv\n"
                     ++ format @era (MapR PayHashR (PairR AddrR SigningKeyR)) byronAdUniv
+                    ++ "\nTxBody =\n"
+                    ++ show (pcTxBody proof txb)
                 )
 
 -- ===============================================
@@ -779,6 +784,37 @@ genTxAndLedger sizes proof = do
   (TxF _ tx) <- monadTyped (findVar (unVar txterm) env2)
   pure (ledger, tx, env2)
 
+genTxAndNewEpoch :: Reflect era => UnivSize -> Proof era -> Gen (NewEpochState era, Tx era, Env era)
+genTxAndNewEpoch sizes proof = do
+  subst <-
+    ( pure emptySubst
+        >>= pParamsStage proof
+        >>= universeStage sizes proof
+        >>= vstateStage proof
+        >>= pstateStage proof
+        >>= dstateStage proof
+        >>= certsStage proof
+        >>= ledgerStateStage sizes proof
+        >>= txBodyStage sizes proof
+        >>= epochStateStage proof
+        >>= newEpochStateStage proof
+      )
+  env0 <- monadTyped $ substToEnv subst emptyEnv
+  env1 <- monadTyped $ adjustFeeInput env0
+  env2 <- monadTyped $ adjustColInput env1
+  newepochst <- monadTyped $ runTarget env2 (newEpochStateT proof)
+  TxF _ tx <- monadTyped (findVar (unVar txterm) env2)
+  pure (newepochst, tx, env2)
+
+demoTxNes :: IO ()
+demoTxNes = do
+  let proof = Conway Standard
+  (nes, _tx, env) <- generate $ genTxAndNewEpoch def proof
+  putStrLn (show (psNewEpochState proof nes))
+  goRepl proof env ""
+
+-- ================================================================
+
 gone :: Gen (IO ())
 gone = do
   txIx <- arbitrary
@@ -871,16 +907,15 @@ oneTest ::
   Gen Property
 oneTest sizes proof = do
   subst <-
-    ( pure emptySubst
-        >>= pParamsStage proof
-        >>= universeStage sizes proof
-        >>= vstateStage proof
-        >>= pstateStage proof
-        >>= dstateStage proof
-        >>= certsStage proof
-        >>= ledgerStateStage sizes proof
-        >>= txBodyStage sizes proof
-      )
+    pure emptySubst
+      >>= pParamsStage proof
+      >>= universeStage sizes proof
+      >>= vstateStage proof
+      >>= pstateStage proof
+      >>= dstateStage proof
+      >>= certsStage proof
+      >>= ledgerStateStage sizes proof
+      >>= txBodyStage sizes proof
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
   env2 <- monadTyped $ adjustColInput env1
