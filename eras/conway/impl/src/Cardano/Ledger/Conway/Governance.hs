@@ -37,6 +37,7 @@ module Cardano.Ledger.Conway.Governance (
   PrevGovActionIds (..),
   PrevGovActionId (..),
   DRepPulsingState (..),
+  DRepPulser (..),
   govActionIdToText,
   Voter (..),
   Vote (..),
@@ -86,6 +87,7 @@ module Cardano.Ledger.Conway.Governance (
   prevPParamsConwayGovStateL,
   constitutionScriptL,
   constitutionAnchorL,
+  gasDepositL,
   gasCommitteeVotesL,
   gasDRepVotesL,
   gasExpiresAfterL,
@@ -170,6 +172,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   VotingProcedures (..),
   gasCommitteeVotesL,
   gasDRepVotesL,
+  gasDepositL,
   gasExpiresAfterL,
   gasStakePoolVotesL,
   govActionIdToText,
@@ -949,6 +952,9 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpGlobals :: !Globals
     } ->
     DRepPulser era m ans
+
+instance EraPParams era => Eq (DRepPulser era Identity (RatifyState era)) where
+  x == y = finishDRepPulser (DRPulsing x) == finishDRepPulser (DRPulsing y)
 
 instance Pulsable (DRepPulser era) where
   done DRepPulser {dpBalance} = Map.null dpBalance

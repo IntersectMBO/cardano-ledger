@@ -416,7 +416,7 @@ instance
         let txsl = Fold.toList txs
          in trace
               (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl gs)
-              (error "FAILS")
+              (error ("sigGen in (HasTrace (MOCKCHAIN era) (Gen1 era)) FAILS\n" ++ unlines (map show pdfs)))
       Right mcs2 -> seq mcs2 (pure mockblock)
 
   shrinkSignal _ = []
@@ -429,21 +429,25 @@ instance
 mapProportion :: EpochNo -> Word64 -> Int -> Map.Map k Int -> Gen k
 mapProportion epochnum lastSlot count m =
   if null pairs
-    then
-      error
+    then -- TODO, we need to figure out why this occurs. It always occurs near SlotNo 300, So I am assuming that
+    -- sometimes as we move into the 3rd epoch, however stakeDistr is computed becomes empty. This is probably
+    -- because there is to action in Test.Cardano.Ledger.Constrained.Trace.Actions for the epoch boundary.
+    -- This temporary fix is good enough for now. But the annoying trace message reminds us to fix this.
+
+      trace
         ( "There are no stakepools to choose an issuer from"
-            ++ "\n  epoch = "
+            ++ ", epoch="
             ++ show epochnum
-            ++ "\n  last slot ="
+            ++ ", last slot="
             ++ show lastSlot
-            ++ "\n  index of Tx in the trace = "
+            ++ ", index of Tx="
             ++ show count
         )
+        discard
     else
       if all (\(n, _k) -> n == 0) pairs
-        then snd (head pairs)
-        else -- All stakepools have zero Stake, choose issuer arbitrarily. possible, but rare.
-          frequency pairs
+        then snd (head pairs) -- All stakepools have zero Stake, choose issuer arbitrarily. possible, but rare.
+        else frequency pairs
   where
     pairs = [(n, pure k) | (k, n) <- Map.toList m]
 

@@ -223,7 +223,7 @@ instance
 
   renderAssertionViolation = renderDepositEqualsObligationViolation
 
-  assertions = shelleyLedgerAssertions
+  assertions = shelleyLedgerAssertions @era @ConwayLEDGER
 
 -- =======================================
 

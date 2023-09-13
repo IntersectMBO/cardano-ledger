@@ -49,13 +49,13 @@ import Control.State.Transition (
   Embed (..),
   STS (..),
   TRC (..),
-  TransitionRule,
   judgmentContext,
   trans,
   (?!),
  )
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe)
+import Data.Sequence.Internal (Seq)
 import Data.Sequence.Strict (StrictSeq (..), fromStrict)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -121,16 +121,21 @@ instance (Era era, NoThunks (NewEpochState era)) => NoThunks (MockChainState era
 -- ======================================================================
 
 instance
-  ( Reflect era
-  , STS (ShelleyLEDGERS era)
+  ( EraGov era
   , STS (ShelleyTICK era)
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Environment (EraRule "TICK" era) ~ ()
+  , Embed (EraRule "TICK" era) (MOCKCHAIN era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Embed (EraRule "TICK" era) (MOCKCHAIN era)
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   STS (MOCKCHAIN era)
   where
@@ -142,40 +147,25 @@ instance
   type Event (MOCKCHAIN era) = MockChainEvent era
   initialRules = [error "INITIAL RULE CALLED IN MOCKCHAIN"]
   transitionRules = [chainTransition]
+    where
+      chainTransition = do
+        TRC (_, MockChainState nes lastSlot count, MockBlock issuer slot txs) <- judgmentContext
+        lastSlot < slot ?! BlocksOutOfOrder lastSlot slot
 
-chainTransition ::
-  forall era.
-  ( STS (ShelleyLEDGERS era)
-  , State (EraRule "TICK" era) ~ NewEpochState era
-  , Signal (EraRule "TICK" era) ~ SlotNo
-  , Environment (EraRule "TICK" era) ~ ()
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Embed (EraRule "TICK" era) (MOCKCHAIN era)
-  , EraGov era
-  ) =>
-  TransitionRule (MOCKCHAIN era)
-chainTransition = do
-  TRC (_, MockChainState nes lastSlot count, MockBlock issuer slot txs) <- judgmentContext
+        nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, slot)
 
-  lastSlot < slot ?! BlocksOutOfOrder lastSlot slot
+        let NewEpochState _ _ (BlocksMade current) epochState _ _ _ = nes'
+            EpochState account ledgerState _ _ = epochState
+            pparams = epochState ^. curPParamsEpochStateL
 
-  nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, slot)
+        let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
 
-  let NewEpochState _ _ (BlocksMade current) epochState _ _ _ = nes'
-      EpochState account ledgerState _ _ = epochState
-      pparams = epochState ^. curPParamsEpochStateL
+        newledgerState <- trans @(EraRule "LEDGERS" era) $ TRC (LedgersEnv slot pparams account, ledgerState, fromStrict txs)
 
-  let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
+        let newEpochstate = epochState {esLState = newledgerState}
+            newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}
 
-  newledgerState <-
-    trans @(ShelleyLEDGERS era) $ TRC (LedgersEnv slot pparams account, ledgerState, fromStrict txs)
-
-  let newEpochstate = epochState {esLState = newledgerState}
-      newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}
-
-  pure (MockChainState newNewEpochState slot (count + 1))
+        pure (MockChainState newNewEpochState slot (count + 1))
 
 -- ===========================
 -- Embed instances

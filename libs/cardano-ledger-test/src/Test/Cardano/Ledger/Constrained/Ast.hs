@@ -209,6 +209,17 @@ fieldToTerm :: Field era rec field -> Term era field
 fieldToTerm (Field nm rep repx l) = Var (V nm rep (Yes repx l))
 fieldToTerm (FConst rep t _ _) = Lit rep t
 
+-- | (select small big lens), 'big' is evaluated to a value, 'small' is a Var, constrain 'small'
+--   such that it is bound to the 'lens' component of 'big'. Computes a (:=:) Pred
+select :: (Eq t, Era era) => Term era t -> Term era big -> Lens' big t -> Pred era
+select small big lenz = Proj lenz (termRep small) big :=: small
+
+-- | (select small big lens), 'big' is evaluated to a value, 'small' is a Var, constrain 'small'
+--   such that it is bound to the 'lens' component of 'big'. Computes a 'Component' Pred
+select2 :: Era era => Term era t -> Term era big -> Lens' big t -> Pred era
+select2 (Var (V nm t _)) big lenz = Component (Left big) [AnyF (Field nm t (termRep big) lenz)]
+select2 t1 t2 _ = error ("In (select " ++ show t1 ++ " " ++ show t2 ++ " lens)  " ++ show t1 ++ " is not a Var term.")
+
 -- ====================================================================
 
 infixl 0 :$
@@ -221,6 +232,12 @@ data RootTarget era root t where
   Lensed :: Term era t -> Lens' root t -> RootTarget era root t
   Shift :: RootTarget era root2 a -> Lens' root1 root2 -> RootTarget era root1 a
   Mask :: RootTarget era r a -> RootTarget era Void a
+  Virtual ::
+    Term era t ->
+    PDoc ->
+    Lens' root t ->
+    -- | Just like Lensed but uses the String to name the field (instead of the Term)
+    RootTarget era root t
 
 -- Treat a Target as if it's (RootTarget era Void t)
 
@@ -357,6 +374,7 @@ instance Show (RootTarget era r t) where
   show (Invert nm _ _) = nm
   show (Shift x _) = "(Shift " ++ show x ++ " lens)"
   show (Mask x) = show x
+  show (Virtual x y _) = "(Virtual " ++ show x ++ " " ++ show y ++ ")"
 
 -- | "Print a Target as nested applications"
 showT :: forall era t r. RootTarget era r t -> String
@@ -370,6 +388,7 @@ showT (f :$ x) = "(" ++ showT f ++ " " ++ showL pp " " (args x) ++ ")"
 showT (Invert nm _ _) = nm
 showT (Shift x _) = "(Shift " ++ showT x ++ ")"
 showT (Mask x) = showT x
+showT (Virtual _ y _) = show y
 
 args :: RootTarget era r t -> [Univ.Any (RootTarget era r)]
 args (x :$ xs) = Univ.Any x : args xs
@@ -389,6 +408,7 @@ targetRecord (Lensed e _) [] = ppString (show e)
 targetRecord (Invert n _ _) xs = ppRecord (pack n) xs
 targetRecord (Shift x _) xs = targetRecord x xs
 targetRecord (Mask x) xs = targetRecord x xs
+targetRecord (Virtual _ e _) [] = e
 targetRecord other xs = ppRecord (nameOf other) xs
 
 nameOf :: RootTarget era r t -> Text
@@ -401,10 +421,12 @@ nameOf (x :$ _) = nameOf x
 nameOf (Invert cs _ _) = pack (map toLower cs ++ "T")
 nameOf (Shift x _) = nameOf x
 nameOf (Mask x) = nameOf x
+nameOf (Virtual _ x _) = pack (show x)
 
 targetPair :: RootTarget era r t -> (Text, PDoc)
 targetPair (Simple (Var (V n rep _))) = (pack n, ppString (show rep))
 targetPair (Lensed (Var (V n rep _)) _) = (pack n, ppString (show rep))
+targetPair (Virtual (Var (V _ rep _)) newname _) = (pack (show newname), ppString (show rep))
 targetPair x = (nameOf x, targetRecord x [])
 
 -- ===================================================
@@ -441,6 +463,7 @@ varsOfTarget ans s = case s of
   (Invert _ _ _) -> ans
   (Shift x _) -> varsOfTarget ans x
   (Mask x) -> varsOfTarget ans x
+  (Virtual x _ _) -> varsOfTerm ans x
 
 varsOfPred :: forall era. HashSet (Name era) -> Pred era -> HashSet (Name era)
 varsOfPred ans s = case s of
@@ -710,6 +733,7 @@ substTarget _ (Constr n f) = Constr n f
 substTarget _ (Invert x l f) = Invert x l f
 substTarget sub (Shift x l) = Shift (substTarget sub x) l
 substTarget sub (Mask x) = Mask (substTarget sub x)
+substTarget sub (Virtual x y l) = Virtual (substTerm sub x) y l
 
 -- ======================================================
 -- Symbolic evaluators
@@ -777,6 +801,7 @@ simplifyTarget :: forall era t root. RootTarget era root t -> Typed t
 simplifyTarget (Invert _ _ f) = pure f
 simplifyTarget (Shift x _) = simplifyTarget x
 simplifyTarget (Mask x) = simplifyTarget x
+simplifyTarget (Virtual x _ _) = simplify x
 simplifyTarget (Simple t) = simplify t
 simplifyTarget (Lensed t _) = simplify t
 simplifyTarget (Constr _ f) = pure f
@@ -829,15 +854,16 @@ runTarget env (Simple t) = runTerm env t
 runTarget env (Lensed t _) = runTerm env t
 runTarget env (Shift x _) = runTarget env x
 runTarget env (Mask x) = runTarget env x
+runTarget env (Virtual x _ _) = runTerm env x
 runTarget _ (Constr _ f) = pure f
 runTarget env (x :$ y) = do
   f <- runTarget env x
   z <- runTarget env y
   pure (f z)
 
--- | Overwrite the Vars a RootTarget, by updating the Env with the values picked from the root
+-- | Overwrite the bindings for the Vars in the Env that appear in the RootTarget, by updating the Env with the values picked from the root
 --   When the target has type (RootTarget era Void x), the function is the identity on the Env.
-getTarget :: root -> RootTarget era root t -> Env era -> Env era
+getTarget :: forall era root t. root -> RootTarget era root t -> Env era -> Env era
 getTarget root (Lensed (Var v) l) env = storeVar v (root ^. l) env
 getTarget _ (Lensed _ _) env = env
 getTarget root (x :$ y) env = getTarget root x (getTarget root y env)
@@ -846,6 +872,8 @@ getTarget _ (Invert _ _ _) env = env
 getTarget _ (Constr _ _) env = env
 getTarget _ (Simple _) env = env
 getTarget _ (Mask _) env = env
+getTarget root (Virtual (Var v) _ l) env = storeVar v (root ^. l) env
+getTarget _ (Virtual {}) env = env
 
 -- | Update the root, by using the Lense to overwrite locations, using values from the Env.
 --   When the target has type (RootTarget era Void x), the function is the identity on the root
@@ -860,6 +888,10 @@ setTarget root (Invert _ _ _) _ = root
 setTarget root (Constr _ _) _ = root
 setTarget root (Simple _) _ = root
 setTarget root (Mask _) _ = root
+setTarget root (Virtual term _ l) env =
+  case runTyped (runTerm env term) of
+    Left _ -> root
+    Right t -> root & l .~ t
 
 runPred :: Env era -> Pred era -> Typed Bool
 runPred env (MetaSize w x) = do
