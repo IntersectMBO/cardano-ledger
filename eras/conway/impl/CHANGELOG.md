@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Replace `ppuWellFormed` with `ppWellFormed`
 * Add `PredicateFailure` for `Voter` - `GovAction` mismatches, with `checkVotesAreValid`. #3718
   * Add `DisallowedVoters (Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))` inhabitant to the `ConwayGovPredFailure` data type.
   * Fix naming for `toPrevGovActionIdsParis` to `toPrevGovActionIdsPairs`

@@ -355,29 +355,23 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
       <*> pGroup GovernanceGroup cppDRepDeposit
       <*> pGroup GovernanceGroup cppDRepActivity
 
-  ppuWellFormed ppu =
+  ppWellFormed pp =
     and
       [ -- Numbers
-        isValid (/= 0) ppuMaxBBSizeL
-      , isValid (/= 0) ppuMaxTxSizeL
-      , isValid (/= 0) ppuMaxBHSizeL
-      , isValid (/= 0) ppuMaxValSizeL
-      , isValid (/= 0) ppuCollateralPercentageL
-      , isValid (/= 0) ppuCommitteeTermLimitL
-      , isValid (/= EpochNo 0) ppuGovActionExpirationL
+        pp ^. ppMaxBBSizeL /= 0
+      , pp ^. ppMaxTxSizeL /= 0
+      , pp ^. ppMaxBHSizeL /= 0
+      , pp ^. ppMaxValSizeL /= 0
+      , pp ^. ppCollateralPercentageL /= 0
+      , pp ^. ppCommitteeTermLimitL /= 0
+      , -- Epochs
+        pp ^. ppGovActionExpirationL /= EpochNo 0
       , -- Coins
-        isValid (/= zero) ppuPoolDepositL
-      , isValid (/= zero) ppuGovActionDepositL
-      , isValid (/= zero) ppuDRepDepositL
+        pp ^. ppPoolDepositL /= zero
+      , pp ^. ppGovActionDepositL /= zero
+      , pp ^. ppDRepDepositL /= zero
+      , pp ^. ppDRepActivityL >= pp ^. ppGovActionExpirationL
       ]
-    where
-      isValid ::
-        (t -> Bool) ->
-        Lens' (PParamsUpdate (ConwayEra c)) (StrictMaybe t) ->
-        Bool
-      isValid p l = case ppu ^. l of
-        SJust x -> p x
-        SNothing -> True
 
   hkdPoolVotingThresholdsL = lens cppPoolVotingThresholds (\pp x -> pp {cppPoolVotingThresholds = x})
   hkdDRepVotingThresholdsL = lens cppDRepVotingThresholds (\pp x -> pp {cppDRepVotingThresholds = x})
@@ -820,7 +814,7 @@ modifiedGroups = runAp_ unParamGrouper . (pparamsGroups @era)
 class BabbageEraPParams era => ConwayEraPParams era where
   pparamsGroups ::
     Functor f => PParamsUpdate era -> Ap f (PParamsHKD ParamGrouper era)
-  ppuWellFormed :: PParamsUpdate era -> Bool
+  ppWellFormed :: PParams era -> Bool
 
   hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
   hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)

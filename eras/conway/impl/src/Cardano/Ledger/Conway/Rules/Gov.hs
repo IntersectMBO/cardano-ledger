@@ -233,11 +233,11 @@ checkVotesAreValid govSnapshots voters =
         Just voter
    in failureUnless (Map.null disallowedVoters) $ DisallowedVoters disallowedVoters
 
-actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
-actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
+actionWellFormed :: ConwayEraPParams era => PParams era -> GovAction era -> Test (ConwayGovPredFailure era)
+actionWellFormed pp ga = failureUnless isWellFormed $ MalformedProposal ga
   where
     isWellFormed = case ga of
-      ParameterChange _ ppd -> ppuWellFormed ppd
+      ParameterChange _ ppd -> ppWellFormed $ applyPPUpdates pp ppd
       _ -> True
 
 govTransition ::
@@ -254,7 +254,7 @@ govTransition = do
               == expectedDeposit
                 ?! ProposalDepositIncorrect pProcDeposit expectedDeposit
 
-        runTest $ actionWellFormed pProcGovAction
+        runTest $ actionWellFormed pp pProcGovAction
 
         expectedNetworkId <- liftSTS $ asks networkId
         getRwdNetwork pProcReturnAddr
