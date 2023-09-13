@@ -36,17 +36,20 @@ module Test.Cardano.Ledger.Generic.Fields (
   abstractTxBody,
   abstractTxOut,
   abstractWitnesses,
+  abstractPParams,
 )
 where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..), unOrdExUnits)
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),
@@ -60,6 +63,17 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
+import Cardano.Ledger.Conway.PParams (
+  ConwayPParams (..),
+  ppCommitteeMaxTermLengthL,
+  ppCommitteeMinSizeL,
+  ppDRepActivityL,
+  ppDRepDepositL,
+  ppDRepVotingThresholdsL,
+  ppGovActionDepositL,
+  ppGovActionLifetimeL,
+  ppPoolVotingThresholdsL,
+ )
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), hashKey)
@@ -67,6 +81,7 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), WitVKey (..))
@@ -79,6 +94,7 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
@@ -178,7 +194,9 @@ pattern DHash' :: [DataHash (EraCrypto era)] -> TxOutField era -- 0 or 1 element
 
 pattern RefScript' :: [Script era] -> TxOutField era -- 0 or 1 element
 
--- ==================
+-- ================================================================
+-- PParam Fields
+
 data PParamsField era
   = MinfeeA Coin
   | -- | The constant factor for the minimum fee calculation
@@ -214,9 +232,9 @@ data PParamsField era
   | -- | Minimum Lovelace in a UTxO deprecated by AdaPerUTxOWord
     MinUTxOValue Coin
   | -- | Cost in ada per 8 bytes of UTxO storage instead of _minUTxOValue
-    AdaPerUTxOWord CoinPerWord -- Dropped in Babbage
+    CoinPerUTxOWord CoinPerWord -- Dropped in Babbage
   | -- | Cost in ada per 1 byte of UTxO storage instead of _coinsPerUTxOWord
-    AdaPerUTxOByte CoinPerByte -- New in Babbage
+    CoinPerUTxOByte CoinPerByte -- New in Babbage
   | -- | Cost models for non-native script languages
     Costmdls CostModels
   | -- | Prices of execution units for non-native script languages
@@ -231,8 +249,119 @@ data PParamsField era
     CollateralPercentage Natural
   | -- | Maximum number of collateral inputs allowed in a transaction
     MaxCollateralInputs Natural
-  | -- | Proposal deposit
-    GovActionDeposit Coin
+  | -- | These are new to Conway
+    PoolVotingThreshold PoolVotingThresholds
+  | DRepVotingThreshold DRepVotingThresholds
+  | MinCommitteeSize Natural
+  | CommitteeTermLimit EpochNo
+  | GovActionExpiration EpochNo
+  | GovActionDeposit Coin
+  | DRepDeposit Coin
+  | DRepActivity EpochNo
+
+abstractPParams :: Proof era -> PParams era -> [PParamsField era]
+abstractPParams proof ppp = case (whichPParams proof, ppp) of
+  (PParamsShelleyToMary, PParams pp@(ShelleyPParams {})) ->
+    [ MinfeeA (sppMinFeeA pp)
+    , MinfeeB (sppMinFeeB pp)
+    , MaxBBSize (sppMaxBBSize pp)
+    , MaxTxSize (sppMaxTxSize pp)
+    , MaxBHSize (sppMaxBHSize pp)
+    , KeyDeposit (sppKeyDeposit pp)
+    , PoolDeposit (sppPoolDeposit pp)
+    , EMax (sppEMax pp)
+    , NOpt (sppNOpt pp)
+    , A0 (sppA0 pp)
+    , Rho (sppRho pp)
+    , Tau (sppTau pp)
+    , D (sppD pp)
+    , ExtraEntropy (sppExtraEntropy pp)
+    , ProtocolVersion (sppProtocolVersion pp)
+    , MinUTxOValue (sppMinUTxOValue pp)
+    , MinPoolCost (sppMinPoolCost pp)
+    ]
+  (PParamsAlonzoToAlonzo, PParams pp@(AlonzoPParams {})) ->
+    [ MinfeeA (appMinFeeA pp)
+    , MinfeeB (appMinFeeB pp)
+    , MaxBBSize (appMaxBBSize pp)
+    , MaxTxSize (appMaxTxSize pp)
+    , MaxBHSize (appMaxBHSize pp)
+    , KeyDeposit (appKeyDeposit pp)
+    , PoolDeposit (appPoolDeposit pp)
+    , EMax (appEMax pp)
+    , NOpt (appNOpt pp)
+    , A0 (appA0 pp)
+    , Rho (appRho pp)
+    , Tau (appTau pp)
+    , D (appD pp)
+    , ExtraEntropy (appExtraEntropy pp)
+    , ProtocolVersion (appProtocolVersion pp)
+    , MinPoolCost (appMinPoolCost pp)
+    , CoinPerUTxOWord (appCoinsPerUTxOWord pp)
+    , Costmdls (appCostModels pp)
+    , Prices (appPrices pp)
+    , MaxTxExUnits (unOrdExUnits (appMaxTxExUnits pp))
+    , MaxBlockExUnits (unOrdExUnits (appMaxBlockExUnits pp))
+    , MaxValSize (appMaxValSize pp)
+    , CollateralPercentage (appCollateralPercentage pp)
+    , MaxCollateralInputs (appMaxCollateralInputs pp)
+    ]
+  (PParamsBabbageToBabbage, PParams pp@(BabbagePParams {})) ->
+    [ MinfeeA (bppMinFeeA pp)
+    , MinfeeB (bppMinFeeB pp)
+    , MaxBBSize (bppMaxBBSize pp)
+    , MaxTxSize (bppMaxTxSize pp)
+    , MaxBHSize (bppMaxBHSize pp)
+    , KeyDeposit (bppKeyDeposit pp)
+    , PoolDeposit (bppPoolDeposit pp)
+    , EMax (bppEMax pp)
+    , NOpt (bppNOpt pp)
+    , A0 (bppA0 pp)
+    , Rho (bppRho pp)
+    , Tau (bppTau pp)
+    , ProtocolVersion (bppProtocolVersion pp)
+    , MinPoolCost (bppMinPoolCost pp)
+    , CoinPerUTxOByte (bppCoinsPerUTxOByte pp)
+    , Costmdls (bppCostModels pp)
+    , Prices (bppPrices pp)
+    , MaxTxExUnits (unOrdExUnits (bppMaxTxExUnits pp))
+    , MaxBlockExUnits (unOrdExUnits (bppMaxBlockExUnits pp))
+    , MaxValSize (bppMaxValSize pp)
+    , CollateralPercentage (bppCollateralPercentage pp)
+    , MaxCollateralInputs (bppMaxCollateralInputs pp)
+    ]
+  (PParamsConwayToConway, pp@(PParams (ConwayPParams {}))) ->
+    [ MinfeeA (pp ^. ppMinFeeAL)
+    , MinfeeB (pp ^. ppMinFeeBL)
+    , MaxBBSize (pp ^. ppMaxBBSizeL)
+    , MaxTxSize (pp ^. ppMaxTxSizeL)
+    , MaxBHSize (pp ^. ppMaxBHSizeL)
+    , KeyDeposit (pp ^. ppKeyDepositL)
+    , PoolDeposit (pp ^. ppPoolDepositL)
+    , EMax (pp ^. ppEMaxL)
+    , NOpt (pp ^. ppNOptL)
+    , A0 (pp ^. ppA0L)
+    , Rho (pp ^. ppRhoL)
+    , Tau (pp ^. ppTauL)
+    , ProtocolVersion (pp ^. ppProtocolVersionL)
+    , MinPoolCost (pp ^. ppMinPoolCostL)
+    , CoinPerUTxOByte (pp ^. ppCoinsPerUTxOByteL)
+    , Costmdls (pp ^. ppCostModelsL)
+    , Prices (pp ^. ppPricesL)
+    , MaxTxExUnits (pp ^. ppMaxTxExUnitsL)
+    , MaxBlockExUnits (pp ^. ppMaxBlockExUnitsL)
+    , MaxValSize (pp ^. ppMaxValSizeL)
+    , CollateralPercentage (pp ^. ppCollateralPercentageL)
+    , MaxCollateralInputs (pp ^. ppMaxCollateralInputsL)
+    , PoolVotingThreshold (pp ^. ppPoolVotingThresholdsL)
+    , DRepVotingThreshold (pp ^. ppDRepVotingThresholdsL)
+    , MinCommitteeSize (pp ^. ppCommitteeMinSizeL)
+    , CommitteeTermLimit (pp ^. ppCommitteeMaxTermLengthL)
+    , GovActionExpiration (pp ^. ppGovActionLifetimeL)
+    , GovActionDeposit (pp ^. ppGovActionDepositL)
+    , DRepDeposit (pp ^. ppDRepDepositL)
+    , DRepActivity (pp ^. ppDRepActivityL)
+    ]
 
 -- =========================================================================
 -- Era parametric "empty" or initial values.

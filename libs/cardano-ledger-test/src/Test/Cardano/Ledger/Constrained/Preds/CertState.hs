@@ -1,23 +1,30 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
+import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
+import qualified Data.Map as Map
+import Data.Ratio ((%))
+import Debug.Trace
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Examples (testIO)
-import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
+import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL, strictMaybeToMaybeL)
 import Test.Cardano.Ledger.Constrained.Monad (generateWithSeed, monadTyped)
+import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (demo, demoTest, main)
 import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
@@ -46,14 +53,39 @@ manyCoin size = do
 
 -- ======================================
 
-vstatePreds :: Era era => Proof era -> [Pred era]
-vstatePreds _p =
-  [ Sized (Range 3 8) dreps
-  , Sized (Range 5 7) (Dom committeeState)
-  , Subset (Dom dreps) voteUniv
-  , Subset (Dom committeeState) voteCredUniv
-  , Random numDormantEpochs
-  ]
+-- | Predicates for Voting State, only work in Conway or later Eras.
+vstatePreds :: forall era. Era era => Proof era -> [Pred era]
+vstatePreds p = case whichPParams p of
+  PParamsConwayToConway ->
+    [ Sized (Range 10 20) currentDRepState
+    , Sized (Range 5 7) (Dom committeeState)
+    , ForEach
+        (Range 25 25) -- It is possible we create duplicates, so we make a few more than 20 (the size of drepState)
+        drepStateSet
+        (Pat DRepStateR [Arg expire, Arg anchor, Arg deposit])
+        [ Random (fieldToTerm anchor)
+        , GenFrom (fieldToTerm expire) (Constr "+200To500" (\(EpochNo n) -> EpochNo <$> choose (n + 200, n + 500)) ^$ currentEpoch)
+        , drepDeposit p :=: (fieldToTerm deposit)
+        ]
+    , Subset (Dom currentDRepState) voteUniv
+    , Subset (Rng currentDRepState) drepStateSet
+    , SumsTo (Right (Coin 1)) totalDRepDeposit EQL [ProjMap CoinR drepDepositL currentDRepState]
+    , SumsTo (Left (Coin 1)) totalDRepDeposit EQL [SumList (Elems drepDeposits)]
+    , Subset (Dom committeeState) voteCredUniv
+    , Random numDormantEpochs
+    ]
+  _ ->
+    [ Sized (Range 0 0) currentDRepState
+    , Sized (Range 0 0) committeeState
+    , Lit EpochR (EpochNo 0) :=: numDormantEpochs
+    , Random currentDRepState
+    ]
+  where
+    drepStateSet = Var $ pV p "drepStateSet" (SetR DRepStateR) No
+    deposit = Field @era "deposit" CoinR DRepStateR drepDepositL
+    totalDRepDeposit = Var $ pV p "totalDRepDeposit" CoinR No
+    anchor = Field @era "anchor" (MaybeR AnchorR) DRepStateR (drepAnchorL . strictMaybeToMaybeL)
+    expire = Field @era "expire" EpochR DRepStateR drepExpiryL
 
 vstateStage ::
   Reflect era =>
@@ -64,10 +96,11 @@ vstateStage proof = toolChainSub proof standardOrderInfo (vstatePreds proof)
 
 demoV :: ReplMode -> IO ()
 demoV mode = do
-  let proof = Babbage Standard
+  let proof = Conway Standard
   env <-
     generate
       ( pure emptySubst
+          >>= pParamsStage proof
           >>= universeStage def proof
           >>= vstateStage proof
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
@@ -98,9 +131,10 @@ pstatePreds p = pstateGenPreds p ++ pstateCheckPreds p
 pstateGenPreds :: Era era => Proof era -> [Pred era]
 pstateGenPreds _ =
   [ -- These Sized constraints are needd to be ensure that regPools is bigger than retiring
-    Sized (ExactSize 3) retiring
-  , Sized (AtLeast 3) regPools
+    Sized (ExactSize 5) retiring
+  , Sized (AtLeast 20) regPools
   , Subset (Dom regPools) poolHashUniv
+  , Sized (Range 10 15) futureRegPools
   , Subset (Dom futureRegPools) poolHashUniv
   , Subset (Dom poolDeposits) poolHashUniv
   , Choose
@@ -111,12 +145,12 @@ pstateGenPreds _ =
       , (1, Constr "(+3)" (+ 3) ^$ e, [CanFollow e currentEpoch])
       , (1, Constr "(+5)" (+ 5) ^$ e, [CanFollow e currentEpoch])
       ]
-      -- poolDistr not needed in PState, but is needed in NewEpochState
-      -- But since it is so intimately tied to regPools we define it here
-      -- Alternately we could put this in NewEpochState, and insist that pStateStage
-      -- preceed newEpochStateStage
-      -- , Dom regPools :=: Dom poolDistr
-      -- , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL poolDistr]
+  , -- poolDistr not needed in PState, but is needed in NewEpochState
+    -- But since it is so intimately tied to regPools we define it here
+    -- Alternately we could put this in NewEpochState, and insist that pStateStage
+    -- preceed newEpochStateStage
+    Dom regPools :=: Dom poolDistr
+  , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL poolDistr]
   ]
   where
     e = var "e" EpochR
@@ -196,7 +230,7 @@ certStatePreds :: Era era => Proof era -> [Pred era]
 certStatePreds p = certStateGenPreds p ++ certStateCheckPreds p
 
 certStateGenPreds :: Era era => Proof era -> [Pred era]
-certStateGenPreds _p =
+certStateGenPreds p =
   [ MetaSize (SzExact (fromIntegral (quorumConstant + 2))) genDelegSize
   , --  , GenFrom quorum (constTarget (pure (fromIntegral quorumConstant)))
 
@@ -216,6 +250,14 @@ certStateGenPreds _p =
   , Dom rewards :⊆: credsUniv
   , GenFrom rewardRange (Constr "many" manyCoin ^$ rewardSize)
   , rewardRange :=: Elems rewards
+  , NotMember (Lit CoinR (Coin 0)) (Rng stakeDeposits)
+  , Dom rewards :=: Dom stakeDeposits
+  , Dom delegations :⊆: Dom rewards
+  , if protocolVersion p >= protocolVersion (Conway Standard)
+      then Sized (ExactSize 0) ptrs
+      else Dom rewards :=: Rng ptrs
+  , Dom drepDelegation :⊆: credsUniv
+  , Rng drepDelegation :⊆: drepUniv
   , -- Preds to compute genDelegs
     -- First, a set of GenDelegPairs, where no keyHash is repeated.
     Sized genDelegSize gdKeyHashSet
@@ -238,6 +280,8 @@ certStateGenPreds _p =
   , SumsTo (Right (DeltaCoin 1)) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
   , mirAvailTreasury :<-: (Constr "computeAvailTreasury" (availableAfterMIR TreasuryMIR) :$ Mask accountStateT :$ Mask instantaneousRewardsT)
   , mirAvailReserves :<-: (Constr "computeAvailReserves" (availableAfterMIR ReservesMIR) :$ Mask accountStateT :$ Mask instantaneousRewardsT)
+  , Dom drepDelegation :⊆: credsUniv
+  , Rng drepDelegation :⊆: drepUniv
   ]
   where
     rewardSize = var "rewardSize" SizeR
@@ -286,12 +330,19 @@ mainD seed = defaultMain $ testIO "Testing DState Stage" (demoD Interactive seed
 
 -- ===============================================
 
+tell :: String -> (Subst era -> a) -> (Subst era -> a)
+tell s f (Subst m) =
+  case Map.lookup "drepState" m of
+    Nothing -> trace (s ++ " NO") (f (Subst m))
+    Just x -> trace (s ++ " YES " ++ show x) (f (Subst m))
+
 demoC :: ReplMode -> IO ()
 demoC mode = do
-  let proof = Babbage Standard
+  let proof = Conway Standard
   env <-
     generate
       ( pure emptySubst
+          >>= pParamsStage proof
           >>= universeStage def proof
           >>= vstateStage proof
           >>= pstateStage proof

@@ -35,6 +35,7 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
+import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), coerceKeyRole, hashKey)
@@ -94,6 +95,7 @@ data UnivSize = UnivSize
   , usNumTxIn :: Int
   , usNumPreUtxo :: Int -- must be smaller than numTxIn
   , usNumColUtxo :: Int -- max size of the UTxo = numPreUtxo + numColUtxo
+  , usNumDReps :: Int -- Should be less than the number of numCredentials
   }
 
 instance Default UnivSize where
@@ -110,11 +112,12 @@ instance Default UnivSize where
       , usNumStakeKeys = 10 -- less than numKeys
       , usNumGenesisKeys = 20 -- less than numKeys
       , usNumVoteKeys = 40 -- less than numKeys
-      , usNumCredentials = 30
+      , usNumCredentials = 40
       , usNumDatums = 30
       , usNumTxIn = 120
       , usNumPreUtxo = 100 -- must be smaller than numTxIn
       , usNumColUtxo = 20 -- max size of the UTxo = numPreUtxo + numColUtxo
+      , usNumDReps = 20 -- -- Should be less than the number of numCredentials
       }
 
 -- ============================================================
@@ -124,12 +127,13 @@ variedCoin :: Gen Coin
 variedCoin =
   Coin
     <$> frequency
-      [ (12, pure 0)
-      , (5, choose (1, 10))
-      , (10, choose (11, 100))
-      , (8, choose (101, 1000))
-      , (7, choose (1001, 10000))
-      , (2, choose (10001, 100000))
+      [ (2, pure 0)
+      , (2, choose (1, 10))
+      , (2, choose (11, 100))
+      , (2, choose (101, 1000))
+      , (2, choose (1001, 10000))
+      , (8, choose (10001, 100000))
+      , (12, choose (100001, 1000000))
       ]
 
 noZeroCoin :: Gen Coin
@@ -137,11 +141,11 @@ noZeroCoin =
   Coin
     <$> frequency
       [ (1, choose (1, 10))
-      , (1, choose (11, 100))
-      , (1, choose (101, 10000))
-      , (1, choose (10001, 60000))
-      , (2, choose (60001, 200000))
-      , (4, choose (200001, 400000))
+      , (1, choose (11, 1000))
+      , (1, choose (1001, 100000))
+      , (6, choose (100001, 600000))
+      , (6, choose (600001, 2000000))
+      , (6, choose (2000001, 4000000))
       ]
 
 -- ===============================================
@@ -356,6 +360,13 @@ noScripts _ (Addr _ _ (StakeRefBase (ScriptHashObj _))) = False
 noScripts _ (AddrBootstrap _) = False
 noScripts _ _ = True
 
+-- | Make some candidate DReps. The 'Always...' and one from each Credential.
+genDReps :: Set (Credential 'Staking c) -> Gen [DRep c]
+genDReps creds = shuffle (map (DRepCredential . coerceKeyRole) (Set.toList creds) ++ [DRepAlwaysAbstain, DRepAlwaysNoConfidence])
+
+genDRepsT :: UnivSize -> Term era (Set (Credential 'Staking (EraCrypto era))) -> Target era (Gen (Set (DRep (EraCrypto era))))
+genDRepsT sizes creds = Constr "listToSet" (\cs -> (Set.fromList . take (usNumDReps sizes)) <$> genDReps cs) ^$ creds
+
 -- ======================================================================
 -- Reusable Targets. First order representations of functions for use in
 -- building 'Target's. We will apply these to Term variables,
@@ -439,8 +450,8 @@ castCred = Set.map (coerceKeyRole . KeyHashObj)
 universePreds :: Reflect era => UnivSize -> Proof era -> [Pred era]
 universePreds size p =
   [ Sized (Range 100 500) currentSlot
-  , Sized (Range 0 30) beginSlotDelta
-  , Sized (Range 5 35) endSlotDelta
+  , Sized (Range 0 30) beginSlotDelta -- Note that (currentSlot - beginSlotDelta) is aways positive
+  , Sized (Range 300 500) endSlotDelta
   , Sized (ExactSize (usNumKeys size)) keypairs
   , keymapUniv :<-: (Constr "xx" (\s -> Map.fromList (map (\x -> (hashKey (vKey x), x)) s)) ^$ keypairs)
   , Sized (ExactSize (usNumPools size)) prePoolUniv
@@ -449,6 +460,7 @@ universePreds size p =
   , Sized (ExactSize (usNumStakeKeys size)) preStakeUniv
   , Subset preStakeUniv (Dom keymapUniv)
   , stakeHashUniv :<-: (Constr "WitnessToStaking" cast ^$ preStakeUniv)
+  , drepHashUniv :<-: (Constr "WitnessToDRepRole" cast ^$ preStakeUniv)
   , Sized (ExactSize (usNumGenesisKeys size)) preGenesisUniv
   , Subset preGenesisUniv (Dom keymapUniv)
   , preGenesisDom :<-: (Constr "WitnessToGenesis" cast ^$ preGenesisUniv)
@@ -500,8 +512,9 @@ universePreds size p =
           (\x -> colTxOutSetT p (Set.filter (noScripts p) x))
           ^$ addrUniv
       )
+  , GenFrom drepUniv (genDRepsT size credsUniv)
   , payUniv :=: spendCredsUniv
-  , voteUniv :<-: (Constr "coerce" (Set.map stakeToVote) ^$ credsUniv)
+  , voteUniv :<-: (Constr "coerce" (Set.map stakeToDRepRole) ^$ credsUniv)
   , bigCoin :<-: constTarget (Coin 2000000)
   , GenFrom
       feeTxOut
@@ -555,8 +568,8 @@ genValueF size proof c scripts = case whichValue proof of
   ValueShelleyToAllegra -> pure c
   ValueMaryToConway -> MaryValue c <$> multiAsset size scripts
 
-stakeToVote :: Credential 'Staking c -> Credential 'DRepRole c
-stakeToVote = coerceKeyRole
+stakeToDRepRole :: Credential 'Staking c -> Credential 'DRepRole c
+stakeToDRepRole = coerceKeyRole
 
 solveUniv :: Reflect era => UnivSize -> Proof era -> Gen (Subst era)
 solveUniv size proof = do

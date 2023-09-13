@@ -8,9 +8,11 @@
 module Test.Cardano.Ledger.Constrained.Preds.LedgerState where
 
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance (gasDeposit)
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
-import Data.Map.Strict as Map
+import qualified Data.List as List
+import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
@@ -45,6 +47,9 @@ enactStateGenPreds p =
   , Random prevHardFork
   , Random prevCommittee
   , Random prevConstitution
+  , Random prevDRepState
+  , Random partialDRepDistr
+  , Random prevDRepState
   ]
 
 enactStateCheckPreds :: Proof era -> [Pred era]
@@ -52,10 +57,7 @@ enactStateCheckPreds _ = []
 
 ledgerStatePreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
 ledgerStatePreds usize p =
-  [ -- Conway GovState Vars
-    Random prevDRepState
-  , Random previousCommitteeState
-  , Random enactWithdrawals
+  [ Subset (Dom enactWithdrawals) credsUniv
   , Random enactTreasury
   , Random constitution
   , Random committeeVar
@@ -63,16 +65,14 @@ ledgerStatePreds usize p =
   , Random prevHardFork
   , Random prevConstitution
   , Random prevCommittee
-  , Random prevProposals
-  , Random prevDRepDistr
-  , Random currProposals
-  , Random ratifyState
-  , MetaSize (SzRng 90 (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (mazsize collateral 3)
+  , Sized (Range 0 1) currProposals
+  , proposalDeposits :<-: (Constr "sumActionStateDeposits" (\x -> List.foldl' (<>) (Coin 0) (fmap gasDeposit x)) :$ (Simple currProposals))
+  , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
+    MetaSize (SzRng 90 (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (mazsize collateral 3)
   , Sized utxoSize preUtxo
   , Sized (Range 15 (usNumColUtxo usize)) colUtxo
   , MapMember feeTxIn feeTxOut (Right preUtxo)
-  , -- , Before feeTxIn colUtxo
-    Subset (Dom preUtxo) txinUniv
+  , Subset (Dom preUtxo) txinUniv
   , Subset (Rng preUtxo) (txoutUniv p)
   , utxo p :<-: (Constr "mapunion" Map.union ^$ preUtxo ^$ colUtxo)
   , Disjoint (Dom preUtxo) (Dom colUtxo)
@@ -80,18 +80,23 @@ ledgerStatePreds usize p =
   , Subset (Rng colUtxo) (colTxoutUniv p)
   , NotMember feeTxIn (Dom colUtxo)
   , NotMember feeTxOut (Rng colUtxo)
-  , SumsTo (Right (Coin 1)) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
+  , SumsTo (Right (Coin 1)) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits, One proposalDeposits, SumMap drepDeposits]
   , -- Some things we might want in the future.
     -- , SumsTo (Right (Coin 1)) utxoCoin EQL [ProjMap CoinR outputCoinL (utxo p)]
     -- , SumsTo (Right (Coin 1)) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
     Random fees
-  , Random (proposalsT p)
-  , Random (futureProposalsT p)
   , ledgerState :<-: (ledgerStateT p)
   , Sized (Range 1 10) donation
   , prevPParams p :<-: (Constr "id" id ^$ (pparams p))
   , currPParams p :<-: (Constr "id" id ^$ (pparams p))
   ]
+    ++ ( case whichGovState p of
+          GovStateConwayToConway -> prevPulsingPreds p
+          GovStateShelleyToBabbage ->
+            [ Sized (Range 0 1) (pparamProposals p)
+            , Sized (Range 0 1) (futurePParamProposals p)
+            ]
+       )
   where
     colUtxo = Var (V "colUtxo" (MapR TxInR (TxOutR p)) No)
     utxoSize = Var (V "utxoSize" SizeR No)
@@ -111,13 +116,8 @@ ledgerStateStage usize proof subst0 = do
     Nothing -> pure subst
     Just msg -> error msg
 
-demo :: ReplMode -> IO ()
-demo mode = do
-  let proof = Conway Standard
-  -- Babbage Standard
-  -- Alonzo Standard
-  -- Mary Standard
-  -- Shelley Standard
+demo :: Reflect era => Proof era -> ReplMode -> IO ()
+demo proof mode = do
   env <-
     generate
       ( pure emptySubst
@@ -130,11 +130,14 @@ demo mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   lstate <- monadTyped $ runTarget env (ledgerStateT proof)
+  let _env2 = getTarget lstate (ledgerStateT proof) emptyEnv
   when (mode == Interactive) $ putStrLn (show (pcLedgerState proof lstate))
   modeRepl mode proof env ""
 
 demoTest :: TestTree
-demoTest = testIO "Testing LedgerState Stage" (demo CI)
+demoTest = testIO "Testing LedgerState Stage" (demo (Conway Standard) CI)
 
 main :: IO ()
-main = defaultMain $ testIO "Testing LedgerState Stage" (demo Interactive)
+main = defaultMain $ testIO "Testing LedgerState Stage" (demo (Conway Standard) Interactive)
+
+-- =================================

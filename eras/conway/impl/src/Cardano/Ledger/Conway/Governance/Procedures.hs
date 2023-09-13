@@ -39,6 +39,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   indexedGovProps,
   -- Lenses
   pProcDepositL,
+  gasDepositL,
   committeeMembersL,
   committeeQuorumL,
   gasDRepVotesL,
@@ -192,6 +193,9 @@ data GovActionState era = GovActionState
   , gasExpiresAfter :: !EpochNo
   }
   deriving (Generic)
+
+gasDepositL :: Lens' (GovActionState era) Coin
+gasDepositL = lens gasDeposit (\x y -> x {gasDeposit = y})
 
 gasCommitteeVotesL :: Lens' (GovActionState era) (Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
 gasCommitteeVotesL = lens gasCommitteeVotes (\x y -> x {gasCommitteeVotes = y})

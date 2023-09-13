@@ -158,6 +158,7 @@ simplifyList r1 term = do
 isMapVar :: Name era -> Sum era c -> Bool
 isMapVar n1 (SumMap (Var v2)) = n1 == Name v2
 isMapVar n1 (ProjMap _ _ (Var v2)) = n1 == Name v2
+isMapVar n1 (SumList (Elems (Var v2))) = n1 == Name v2
 isMapVar _ _ = False
 
 exactlyOne :: (a -> Bool) -> [a] -> Bool
@@ -399,6 +400,9 @@ solveMapSummands ::
   c -> -- The sum of the other expressions on the rhs
   [Sum era c] ->
   Typed (RngSpec era rng)
+solveMapSummands small lhsC msgs cond (V _ (MapR _ r) _) c [SumList (Elems (Var (V name (MapR _ r1) _)))] = do
+  Refl <- sameRep r r1
+  pure (RngSum small (varOnRightSize msgs lhsC cond c name))
 solveMapSummands small lhsC msgs cond (V _ (MapR _ r) _) c [ProjMap _crep l (Var (V name (MapR _ r1) _))] = do
   Refl <- sameRep r r1
   pure (RngProj small r l (varOnRightSize msgs lhsC cond c name))
@@ -433,7 +437,7 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
   (List (Var v2@(V _ (SetR r2) _)) expr@(x : _)) | Just Refl <- sameName v1 v2 -> do
     Refl <- sameRep (termRep x) r2
     xs <- mapM (simplifyAtType r2) expr
-    setSpec (SzExact (length xs)) (relEqual r (makeFromList @(Set a) @a xs))
+    setSpec (SzMost (length xs)) (relEqual r (makeFromList @(Set a) @a xs))
   (Var v2 :=: expr) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
     setSpec (SzExact (Set.size set)) (relEqual r set)
@@ -753,12 +757,16 @@ dispatch v1 preds | Just (If tar x y) <- List.find isIf preds = do
   b <- simplifyTarget tar
   let others = filter (not . isIf) preds
   if b then dispatch v1 (x : others) else dispatch v1 (y : others)
-dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show preds) $ case preds of
+dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ "\n" ++ unlines (map show preds)) $ case preds of
   [Var v2 :=: Lit r2 t] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     pure (pure t)
-  [Lit r2 t :=: Var v2] | Name v1 == Name v2 -> do
+  [Lit r2 t :=: Var v2] | (Name v1) == Name v2 -> do
     Refl <- sameRep r1 r2
+    pure (pure t)
+  [expr :=: Var v2] | (Name v1) == Name v2 -> do
+    Refl <- sameRep r1 (termRep expr)
+    t <- simplify expr
     pure (pure t)
   [Sized (Var v2@(V _ r2 _)) term] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
@@ -768,6 +776,12 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     Refl <- sameRep r1 r2
     sz <- simplify sizeterm
     pure $ do n <- genFromSize sz; genSizedRep n r2
+  -- Here we solve for 'nm' by evaluating term, then use the 'lenz' to select the right component of 'x'
+  -- then return that value to bind to 'nm'
+  [cc@(Component (Left term) [AnyF (Field nm t _ lenz)])] | Name v1 == Name (V nm t No) -> explain ("Solving " ++ show cc) $ do
+    Refl <- sameV v1 (V nm t No)
+    x <- simplify term
+    pure (pure (x ^. lenz))
   [cc@(Component (Right (Var v2)) cs)] | Name v1 == Name v2 -> explain ("Solving " ++ show cc) $ do
     pairs <- mapM (anyToUpdate r1) cs
     pure $ do t <- genRep r1; pure (update t pairs)
@@ -864,6 +878,15 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
     xs <- mapM simplify expr
     pure $ pure (makeFromList xs)
   [Random (Var v2)] | Name v1 == Name v2 -> pure $ genRep r1
+  [p1@(Member (Left (Var v2)) y), p2@(NotMember (Var v3) z)]
+    | Just Refl <- sameName v1 v2
+    , Just Refl <- sameName v1 v3 -> do
+        yval <- simplify y
+        zval <- simplify z
+        pure (fst <$> itemFromSet ["Solving (Member & NotMember), for variable " ++ nam, show p1, show p2] (Set.difference yval zval))
+  [nm@(NotMember {}), m@(Member {})] -> dispatch v1 [m, nm]
+  [x, Random (Var v2)] | Name v1 == Name v2 -> dispatch v1 [x]
+  [Random (Var v2), x] | Name v1 == Name v2 -> dispatch v1 [x]
   cs -> case r1 of
     MapR dom rng -> do
       spec <- solveMaps v1 cs
@@ -889,8 +912,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ show
                 ++ nam
                 ++ " at type "
                 ++ show r1
-                ++ " for conditions "
-                ++ show cs
+                ++ " for conditions:\n"
                 ++ show (List.nubBy cpeq cs)
             ]
 

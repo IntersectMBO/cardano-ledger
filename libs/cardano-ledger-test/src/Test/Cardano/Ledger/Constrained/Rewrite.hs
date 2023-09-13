@@ -247,6 +247,7 @@ fresh (n, sub) (Lensed expr _) = mksub n (HashSet.toList (vars expr))
       where
         sub2 = zipWith (\(Name v@(V nm r _)) m1 -> SubItem v (Var (V (index nm m1) r No))) names [m ..]
 fresh (n, sub) (f :$ x) = fresh (fresh (n, sub) f) x
+fresh (n, sub) (Virtual x _ _) = fresh (n, sub) (Simple x)
 
 freshP :: (Int, SubItems era) -> Pat era t -> (Int, SubItems era)
 freshP (n, sub) (Pat _ as) = List.foldl' freshA (n, sub) as

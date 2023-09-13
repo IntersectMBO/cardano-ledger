@@ -555,8 +555,8 @@ univPreds p =
   , Dom goDelegs :⊆: credsUniv
   , Dom instanReserves :⊆: credsUniv
   , Dom instanTreasury :⊆: credsUniv
-  , Dom (proposalsT p) :⊆: Dom genesisHashUniv
-  , Dom (futureProposalsT p) :⊆: Dom genesisHashUniv
+  , Dom (pparamProposals p) :⊆: Dom genesisHashUniv
+  , Dom (futurePParamProposals p) :⊆: Dom genesisHashUniv
   , Dom genDelegs :⊆: Dom genesisHashUniv
   , Dom (utxo p) :⊆: txinUniv
   ]
@@ -578,7 +578,9 @@ dstatePreds _p =
   [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
   , Dom rewards :=: Dom stakeDeposits
   , Dom delegations :⊆: Dom rewards
-  , Random dreps
+  , Random currentDRepState
+  , Random drepDelegation
+  , Random currentDRepState
   , Random committeeState
   , Random numDormantEpochs
   , Dom rewards :=: Rng ptrs
@@ -609,8 +611,8 @@ utxostatePreds proof =
   , SumsTo (Right (Coin 1)) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
   , SumsTo (Right (Coin 1)) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
   , Random fees
-  , Random (proposalsT proof)
-  , Random (futureProposalsT proof)
+  , Random (pparamProposals proof)
+  , Random (futurePParamProposals proof)
   ]
 
 epochstatePreds :: EraGov era => Proof era -> [Pred era]

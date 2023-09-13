@@ -168,8 +168,8 @@ makeDRepPred ::
 makeDRepPred drep vote =
   Oneof
     drep
-    [ (1, constTarget DRepAlwaysAbstain, [])
-    , (1, constTarget DRepAlwaysNoConfidence, [])
+    [ (1, constTarget DRepAlwaysAbstain, [Random vote])
+    , (1, constTarget DRepAlwaysNoConfidence, [Random vote])
     , (5, Constr "" DRepCredential ^$ vote, [Member (Left vote) voteUniv])
     ]
 
@@ -327,6 +327,7 @@ certsPreds p = case whichTxCert p of
           , cRegKey ^$ stakeCred ^$ mkeydeposit
           ,
             [ NotMember stakeCred (Dom rewards)
+            , Member (Left stakeCred) credsUniv
             , Maybe mkeydeposit (idTarget kd) [kd :=: (keyDepAmt p)]
             ]
           )
@@ -351,13 +352,19 @@ certsPreds p = case whichTxCert p of
         ,
           ( 1
           , cRegDelegStake ^$ stakeCred ^$ poolHash ^$ kd
-          , [Member (Left stakeCred) (Dom rewards), Member (Left poolHash) (Dom regPools), kd :=: (keyDepAmt p)]
+          ,
+            [ NotMember stakeCred (Dom rewards)
+            , Member (Left stakeCred) credsUniv
+            , Member (Left poolHash) (Dom regPools)
+            , kd :=: (keyDepAmt p)
+            ]
           )
         ,
           ( 1
           , cRegDelegVote ^$ stakeCred ^$ drep ^$ kd ^$ vote
           ,
-            [ Member (Left stakeCred) (Dom rewards)
+            [ NotMember stakeCred (Dom rewards)
+            , Member (Left stakeCred) credsUniv
             , kd :=: (keyDepAmt p)
             , makeDRepPred drep vote
             ]
@@ -366,7 +373,8 @@ certsPreds p = case whichTxCert p of
           ( 1
           , cRegDelegStakeVote ^$ stakeCred ^$ poolHash ^$ drep ^$ kd ^$ vote
           ,
-            [ Member (Left stakeCred) (Dom rewards)
+            [ NotMember stakeCred (Dom rewards)
+            , Member (Left stakeCred) credsUniv
             , makeDRepPred drep vote
             , Member (Left poolHash) (Dom regPools)
             , kd :=: (keyDepAmt p)

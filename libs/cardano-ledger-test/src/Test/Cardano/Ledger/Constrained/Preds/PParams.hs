@@ -13,6 +13,7 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Script (Prices (..))
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
   NonNegativeInterval,
   boundRational,
  )
@@ -51,6 +52,16 @@ nonNegativeInterval r = case (boundRational @NonNegativeInterval r) of
   Just nn -> nn
   Nothing -> error ("Can't make NonNegativeInterval from: " ++ show r)
 
+{- Preds we want to be True in pparams
+  [ Sized (AtLeast 1) (maxBHSize proof)
+  , Sized (AtLeast 1) (maxTxSize proof)
+  , SumsTo (Right 1) (maxBBSize proof) LTE [One (maxBHSize proof), One (maxTxSize proof)]
+  , Component
+      (Right (pparams proof))
+      [field pp (maxTxSize proof), field pp (maxBHSize proof), field pp (maxBBSize proof)]
+  ]
+-}
+
 genPParams :: Reflect era => Proof era -> Natural -> Natural -> Natural -> Gen (PParamsF era)
 genPParams proof tx bb bh = do
   maxTxExUnits2 <- ExUnits <$> (fromIntegral <$> choose (100 :: Int, 10000)) <*> (fromIntegral <$> choose (100 :: Int, 10000))
@@ -76,6 +87,9 @@ genPParams proof tx bb bh = do
           , ProtocolVersion $ protocolVersion proof
           , PoolDeposit $ Coin 5
           , KeyDeposit $ Coin 2
+          , DRepDeposit $ Coin 7
+          , GovActionDeposit $ Coin 13
+          , DRepActivity $ EpochNo 8
           , EMax 100
           ]
     )
@@ -106,9 +120,16 @@ pParamsPreds p =
             [ extract (maxTxExUnits p) (pparams p)
             , extract (collateralPercentage p) (pparams p)
             ]
-          PParamsBabbageToConway ->
+          PParamsBabbageToBabbage ->
             [ extract (maxTxExUnits p) (pparams p)
             , extract (collateralPercentage p) (pparams p)
+            ]
+          PParamsConwayToConway ->
+            [ extract (maxTxExUnits p) (pparams p)
+            , extract (collateralPercentage p) (pparams p)
+            , extract (drepDeposit p) (pparams p)
+            , extract (drepDeposit p) (pparams p)
+            , extract (drepActivity p) (pparams p)
             ]
        )
 

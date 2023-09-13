@@ -58,7 +58,21 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotN
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Governance (Committee (..), Constitution, EnactState (..), GovAction (..), GovActionId (..), GovActionIx (..), GovActionPurpose (..), GovActionState (..), PrevGovActionId (..), PrevGovActionIds (..), RatifyState (..))
+import Cardano.Ledger.Conway.Governance (
+  Committee (..),
+  Constitution,
+  DRepPulser (..),
+  EnactState (..),
+  GovAction (..),
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionPurpose (..),
+  GovActionState (..),
+  PrevGovActionId (..),
+  PrevGovActionIds (..),
+  RatifyState (..),
+  RunConwayRatify (..),
+ )
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
@@ -99,12 +113,14 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val ((<+>)))
+import Control.Monad.Identity (Identity)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
+import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
@@ -154,16 +170,19 @@ import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
+  pcAnchor,
   pcCoin,
   pcCommittee,
   pcConstitution,
   pcConwayTxCert,
   pcDRep,
+  pcDRepPulser,
   pcDRepState,
   pcDState,
   pcData,
   pcDataHash,
   pcDatum,
+  pcEnactState,
   pcFutureGenDeleg,
   pcGenDelegPair,
   pcGovActionId,
@@ -171,7 +190,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcIndividualPoolStake,
   pcLedgerState,
   pcMultiAsset,
-  pcPParamsSynopsis,
+  pcPParams,
   pcPrevGovActionIds,
   pcRatifyState,
   pcReward,
@@ -192,6 +211,7 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck hiding (Fixed, total)
 
@@ -313,8 +333,12 @@ data Rep era t where
   PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
   RatifyStateR :: Reflect era => Rep era (RatifyState era)
   NumDormantEpochsR :: Era era => Rep era EpochNo
+  DRepHashR :: Era era => Rep era (KeyHash 'DRepRole (EraCrypto era))
+  AnchorR :: Era era => Rep era (Anchor (EraCrypto era))
   CommitteeStateR :: Era era => Rep era (CommitteeState era)
   VStateR :: Era era => Rep era (VState era)
+  EnactStateR :: Reflect era => Rep era (EnactState era)
+  DRepPulserR :: (RunConwayRatify era, Reflect era) => Rep era (DRepPulser era Identity (RatifyState era))
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -353,6 +377,7 @@ typeRepOf r@(repHasInstances -> IsTypeable) = typeRep r
 repHasInstances :: Rep era t -> HasInstances t
 repHasInstances r = case r of
   VStateR -> IsEq
+  EnactStateR -> IsEq
   RatifyStateR -> IsEq
   DRepStateR -> IsOrd
   CommColdCredR -> IsOrd
@@ -375,7 +400,12 @@ repHasInstances r = case r of
   PayHashR {} -> IsOrd
   IntegerR {} -> IsOrd
   ScriptsNeededR {} -> IsTypeable
-  ScriptPurposeR {} -> IsTypeable
+  ScriptPurposeR (Shelley _) -> IsEq
+  ScriptPurposeR (Mary _) -> IsEq
+  ScriptPurposeR (Allegra _) -> IsEq
+  ScriptPurposeR (Alonzo _) -> IsEq
+  ScriptPurposeR (Babbage _) -> IsEq
+  ScriptPurposeR (Conway _) -> IsEq
   TxBodyR {} -> IsEq
   ShelleyTxCertR {} -> IsEq
   ConwayTxCertR {} -> IsEq
@@ -456,6 +486,9 @@ repHasInstances r = case r of
   MaybeR (repHasInstances -> ia) -> requireInstances ia
   GenR (repHasInstances -> IsTypeable) -> IsTypeable
   NumDormantEpochsR {} -> IsOrd
+  DRepHashR {} -> IsOrd
+  AnchorR {} -> IsEq
+  DRepPulserR {} -> IsEq
 
 -- NOTE: The extra `()` constraint needs to be there for fourmolu.
 -- c.f. https://github.com/fourmolu/fourmolu/issues/374
@@ -535,7 +568,7 @@ synopsis CharR s = show s
 synopsis (ValueR p) (ValueF _ x) = show (pcVal p x)
 synopsis (TxOutR p) (TxOutF _ x) = show ((unReflect pcTxOut p x) :: PDoc)
 synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
-synopsis (PParamsR _) (PParamsF p x) = show $ pcPParamsSynopsis p x
+synopsis (PParamsR _) (PParamsF p x) = show $ pcPParams p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
@@ -617,6 +650,10 @@ synopsis RatifyStateR dr = show (pcRatifyState reify dr)
 synopsis NumDormantEpochsR x = show x
 synopsis CommitteeStateR x = show x
 synopsis VStateR x = show x
+synopsis DRepHashR k = "(KeyHash 'DRepRole " ++ show (keyHashSummary k) ++ ")"
+synopsis AnchorR k = show (pcAnchor k)
+synopsis EnactStateR x = show (pcEnactState reify x)
+synopsis DRepPulserR x = show (pcDRepPulser x)
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -819,22 +856,39 @@ genSizedRep _ PrevPParamUpdateR = arbitrary
 genSizedRep _ PrevHardForkR = arbitrary
 genSizedRep _ PrevCommitteeR = arbitrary
 genSizedRep _ PrevConstitutionR = arbitrary
-genSizedRep _ RatifyStateR =
+genSizedRep n RatifyStateR =
   RatifyState
-    <$> ( EnactState
-            <$> arbitrary
-            <*> arbitrary
-            <*> (unPParams <$> (genPParams reify))
-            <*> (unPParams <$> (genPParams reify))
-            <*> arbitrary
-            <*> arbitrary
-            <*> arbitrary
-        )
+    <$> genSizedRep n EnactStateR
     <*> arbitrary
     <*> arbitrary
 genSizedRep _ NumDormantEpochsR = arbitrary
 genSizedRep _ CommitteeStateR = arbitrary
 genSizedRep _ VStateR = arbitrary
+genSizedRep _ DRepHashR = arbitrary
+genSizedRep _ AnchorR = arbitrary
+genSizedRep _ EnactStateR =
+  EnactState
+    <$> arbitrary
+    <*> arbitrary
+    <*> (unPParams <$> (genPParams reify))
+    <*> (unPParams <$> (genPParams reify))
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+genSizedRep _ DRepPulserR =
+  DRepPulser
+    <$> arbitrary -- pulsesize
+    <*> arbitrary -- umap
+    <*> arbitrary -- balance
+    <*> arbitrary -- stakedistr
+    <*> arbitrary -- poolDistr
+    <*> arbitrary -- partial drep distr
+    <*> arbitrary -- drepstate
+    <*> arbitrary -- epoch
+    <*> arbitrary -- committeestate
+    <*> genRep EnactStateR
+    <*> (SS.fromList . (: []) <$> genRep GovActionStateR) -- proposals
+    <*> (pure testGlobals)
 
 genRep ::
   forall era b.
@@ -981,7 +1035,11 @@ shrinkRep PrevConstitutionR x = shrink x
 shrinkRep RatifyStateR _ = []
 shrinkRep CommitteeStateR _ = []
 shrinkRep VStateR x = shrink x
+shrinkRep EnactStateR _ = []
 shrinkRep NumDormantEpochsR x = shrink x
+shrinkRep DRepHashR x = shrink x
+shrinkRep AnchorR x = shrink x
+shrinkRep DRepPulserR _ = []
 
 -- ===========================
 

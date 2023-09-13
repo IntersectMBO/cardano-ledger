@@ -14,7 +14,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.Constrained.Examples (allExampleTests)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (predsTests)
 import Test.Cardano.Ledger.Constrained.Spec (allSpecTests)
-import Test.Cardano.Ledger.Constrained.Trace.Tests (conwayTrace)
+import Test.Cardano.Ledger.Constrained.Trace.Tests (conwayTrace, conwayTxwithDRepCertsTraceTests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
@@ -59,6 +59,7 @@ defaultTests =
   , genericProperties def
   , aggTests
   , ConstraintSTS.tests_STS
+  , conwayTxwithDRepCertsTraceTests
   ]
 
 nightlyTests :: [TestTree]
