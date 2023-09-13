@@ -1,15 +1,20 @@
+{-# LANGUAGE GADTs #-}
+
 module Test.Cardano.Ledger.Constrained.Trace.Actions where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era (..), TxBody)
+import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
+import Cardano.Ledger.Core (Era (..), TxBody, TxCert)
+import Cardano.Ledger.DRep (DRepState (DRepState))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad (forM_)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Test.Cardano.Ledger.Constrained.Classes (TxOutF (..))
-import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (TraceM, updateVar)
-import Test.Cardano.Ledger.Constrained.Vars (fees, utxo)
+import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (TraceM, getTerm, updateVar)
+import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 
 -- ====================================================================
@@ -27,3 +32,22 @@ outputsAction proof txb outs = updateVar (utxo proof) (\u -> Map.union u (makema
 
 feesAction :: Era era => Coin -> TraceM era ()
 feesAction feeCoin = updateVar fees (<+> feeCoin)
+
+certAction :: Era era => Proof era -> TxCert era -> TraceM era ()
+certAction p@(Conway _) cert =
+  case cert of
+    ConwayTxCertGov (ConwayRegDRep cred _ manchor) -> do
+      epoch <- getTerm currentEpoch
+      activity <- getTerm (drepActivity p)
+      dep <- getTerm (drepDeposit p)
+      updateVar drepState (Map.insert cred (DRepState (epoch + activity) manchor dep))
+    ConwayTxCertGov (ConwayUnRegDRep cred _dep) -> updateVar drepState (Map.delete cred)
+    ConwayTxCertGov (ConwayUpdateDRep cred mAnchor) -> do
+      epoch <- getTerm currentEpoch
+      activity <- getTerm (drepActivity p)
+      updateVar drepState (Map.adjust (\(DRepState _ _ deposit) -> DRepState (epoch + activity) mAnchor deposit) cred)
+    _ -> pure ()
+certAction _ _ = pure ()
+
+certsAction :: (Foldable t, Era era) => Proof era -> t (TxCert era) -> TraceM era ()
+certsAction p xs = forM_ xs (certAction p)

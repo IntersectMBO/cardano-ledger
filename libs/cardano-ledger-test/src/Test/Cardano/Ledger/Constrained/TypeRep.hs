@@ -154,6 +154,7 @@ import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
+  pcAnchor,
   pcCoin,
   pcCommittee,
   pcConstitution,
@@ -171,7 +172,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcIndividualPoolStake,
   pcLedgerState,
   pcMultiAsset,
-  pcPParamsSynopsis,
+  pcPParams,
   pcPrevGovActionIds,
   pcRatifyState,
   pcReward,
@@ -313,6 +314,8 @@ data Rep era t where
   PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
   RatifyStateR :: Reflect era => Rep era (RatifyState era)
   NumDormantEpochsR :: Era era => Rep era EpochNo
+  DRepHashR :: Era era => Rep era (KeyHash 'DRepRole (EraCrypto era))
+  AnchorR :: Era era => Rep era (Anchor (EraCrypto era))
   CommitteeStateR :: Era era => Rep era (CommitteeState era)
   VStateR :: Era era => Rep era (VState era)
 
@@ -456,6 +459,8 @@ repHasInstances r = case r of
   MaybeR (repHasInstances -> ia) -> requireInstances ia
   GenR (repHasInstances -> IsTypeable) -> IsTypeable
   NumDormantEpochsR {} -> IsOrd
+  DRepHashR {} -> IsOrd
+  AnchorR {} -> IsEq
 
 -- NOTE: The extra `()` constraint needs to be there for fourmolu.
 -- c.f. https://github.com/fourmolu/fourmolu/issues/374
@@ -535,7 +540,7 @@ synopsis CharR s = show s
 synopsis (ValueR p) (ValueF _ x) = show (pcVal p x)
 synopsis (TxOutR p) (TxOutF _ x) = show ((unReflect pcTxOut p x) :: PDoc)
 synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
-synopsis (PParamsR _) (PParamsF p x) = show $ pcPParamsSynopsis p x
+synopsis (PParamsR _) (PParamsF p x) = show $ pcPParams p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
@@ -617,6 +622,8 @@ synopsis RatifyStateR dr = show (pcRatifyState reify dr)
 synopsis NumDormantEpochsR x = show x
 synopsis CommitteeStateR x = show x
 synopsis VStateR x = show x
+synopsis DRepHashR k = "(KeyHash 'DRepRole " ++ show (keyHashSummary k) ++ ")"
+synopsis AnchorR k = show (pcAnchor k)
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -835,6 +842,8 @@ genSizedRep _ RatifyStateR =
 genSizedRep _ NumDormantEpochsR = arbitrary
 genSizedRep _ CommitteeStateR = arbitrary
 genSizedRep _ VStateR = arbitrary
+genSizedRep _ DRepHashR = arbitrary
+genSizedRep _ AnchorR = arbitrary
 
 genRep ::
   forall era b.
@@ -982,6 +991,8 @@ shrinkRep RatifyStateR _ = []
 shrinkRep CommitteeStateR _ = []
 shrinkRep VStateR x = shrink x
 shrinkRep NumDormantEpochsR x = shrink x
+shrinkRep DRepHashR x = shrink x
+shrinkRep AnchorR x = shrink x
 
 -- ===========================
 

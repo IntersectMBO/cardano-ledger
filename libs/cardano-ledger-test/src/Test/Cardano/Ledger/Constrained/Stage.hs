@@ -44,11 +44,15 @@ ledgerPipeline :: Reflect era => UnivSize -> Proof era -> Pipeline era
 ledgerPipeline sizes proof =
   [ Stage standardOrderInfo (pParamsPreds proof)
   , Stage standardOrderInfo (universePreds sizes proof)
-  , Stage standardOrderInfo (vstatePreds proof)
-  , Stage standardOrderInfo (pstatePreds proof)
-  , Stage standardOrderInfo (certStatePreds proof)
-  , Stage standardOrderInfo (ledgerStatePreds sizes proof)
   ]
+    ++ ( case whichPParams proof of
+          PParamsConwayToConway -> [Stage standardOrderInfo (vstatePreds proof)]
+          _ -> []
+       )
+    ++ [ Stage standardOrderInfo (pstatePreds proof)
+       , Stage standardOrderInfo (certStatePreds proof)
+       , Stage standardOrderInfo (ledgerStatePreds sizes proof)
+       ]
 
 -- | Translate a Stage into a DependGraph, given the set
 --   of variables that have aready been solved for.

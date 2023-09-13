@@ -76,18 +76,21 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraPParams, AlonzoEraTxBody)
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core (BabbageEraPParams)
+import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.BaseTypes as Base (Seed)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..))
 import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..))
 import Cardano.Ledger.Core (
   Era (EraCrypto),
@@ -97,6 +100,7 @@ import Cardano.Ledger.Core (
   EraTx,
   EraTxAuxData,
   EraTxOut,
+  PParamsHKD,
   ProtVerAtMost,
   Script,
   TxCert,
@@ -111,6 +115,7 @@ import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov, EraIndependentTxBody, ShelleyEraTxBody, ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -121,6 +126,7 @@ import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHBody)
 import Cardano.Protocol.TPraos.OCert
 import Control.State.Transition.Extended hiding (Assertion)
+import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.Universe (Shape (..), Shaped (..), Singleton (..), Some (..), (:~:) (Refl))
 import GHC.TypeLits (Symbol)
@@ -474,7 +480,7 @@ whichTxOut (Conway _) = TxOutBabbageToConway
 
 data TxCertWit era where
   TxCertShelleyToBabbage :: (TxCert era ~ ShelleyTxCert era, ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCertWit era
-  TxCertConwayToConway :: (TxCert era ~ ConwayTxCert era, ConwayEraTxCert era) => TxCertWit era
+  TxCertConwayToConway :: (TxCert era ~ ConwayTxCert era, ConwayEraTxCert era, ConwayEraPParams era) => TxCertWit era
 
 whichTxCert :: Proof era -> TxCertWit era
 whichTxCert (Shelley _) = TxCertShelleyToBabbage
@@ -497,17 +503,18 @@ whichValue (Babbage _) = ValueMaryToConway
 whichValue (Conway _) = ValueMaryToConway
 
 data PParamsWit era where
-  PParamsShelleyToMary :: EraPParams era => PParamsWit era
-  PParamsAlonzoToAlonzo :: AlonzoEraPParams era => PParamsWit era
-  PParamsBabbageToConway :: BabbageEraPParams era => PParamsWit era
+  PParamsShelleyToMary :: (PParamsHKD Identity era ~ ShelleyPParams Identity era, EraPParams era) => PParamsWit era
+  PParamsAlonzoToAlonzo :: (PParamsHKD Identity era ~ AlonzoPParams Identity era, AlonzoEraPParams era) => PParamsWit era
+  PParamsBabbageToBabbage :: (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era) => PParamsWit era
+  PParamsConwayToConway :: (PParamsHKD Identity era ~ ConwayPParams Identity era, ConwayEraPParams era) => PParamsWit era
 
 whichPParams :: Proof era -> PParamsWit era
 whichPParams (Shelley _) = PParamsShelleyToMary
 whichPParams (Allegra _) = PParamsShelleyToMary
 whichPParams (Mary _) = PParamsShelleyToMary
 whichPParams (Alonzo _) = PParamsAlonzoToAlonzo
-whichPParams (Babbage _) = PParamsBabbageToConway
-whichPParams (Conway _) = PParamsBabbageToConway
+whichPParams (Babbage _) = PParamsBabbageToBabbage
+whichPParams (Conway _) = PParamsConwayToConway
 
 data UTxOWit era where
   UTxOShelleyToMary ::

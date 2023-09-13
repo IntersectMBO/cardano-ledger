@@ -13,6 +13,7 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Script (Prices (..))
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
   NonNegativeInterval,
   boundRational,
  )
@@ -76,6 +77,9 @@ genPParams proof tx bb bh = do
           , ProtocolVersion $ protocolVersion proof
           , PoolDeposit $ Coin 5
           , KeyDeposit $ Coin 2
+          , DRepDeposit $ Coin 7
+          , GovActionDeposit $ Coin 13
+          , DRepActivity $ EpochNo 8
           , EMax 100
           ]
     )
@@ -106,9 +110,16 @@ pParamsPreds p =
             [ extract (maxTxExUnits p) (pparams p)
             , extract (collateralPercentage p) (pparams p)
             ]
-          PParamsBabbageToConway ->
+          PParamsBabbageToBabbage ->
             [ extract (maxTxExUnits p) (pparams p)
             , extract (collateralPercentage p) (pparams p)
+            ]
+          PParamsConwayToConway ->
+            [ extract (maxTxExUnits p) (pparams p)
+            , extract (collateralPercentage p) (pparams p)
+            , extract (drepDeposit p) (pparams p)
+            , extract (drepDeposit p) (pparams p)
+            , extract (drepActivity p) (pparams p)
             ]
        )
 

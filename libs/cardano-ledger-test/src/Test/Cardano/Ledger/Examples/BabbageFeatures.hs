@@ -216,7 +216,7 @@ defaultPPs =
   , MaxBlockExUnits $ ExUnits 1000000 1000000
   , ProtocolVersion $ ProtVer (natVersion @7) 0
   , CollateralPercentage 1
-  , AdaPerUTxOByte (CoinPerByte (Coin 5))
+  , CoinPerUTxOByte (CoinPerByte (Coin 5))
   ]
 
 pp :: EraPParams era => Proof era -> PParams era

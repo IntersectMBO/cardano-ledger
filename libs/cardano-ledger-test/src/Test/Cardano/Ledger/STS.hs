@@ -54,7 +54,8 @@ import Test.Cardano.Ledger.Constrained.Shrink
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Tests
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Constrained.Vars hiding (delegations, rewards)
+import Test.Cardano.Ledger.Constrained.Vars hiding (delegations, drepDeposit, rewards)
+import qualified Test.Cardano.Ledger.Constrained.Vars as Vars
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck
@@ -390,7 +391,9 @@ prop_GOVCERT sub =
   stsProperty @"GOVCERT"
     sub
     (\PropEnv {..} -> ConwayGovCertEnv pePParams peEpochNo)
-    (\_ -> genShrinkFromConstraints conwayProof sub vstatePreds (const []) vstateT)
+    (\_ -> genShrinkFromConstraints conwayProof sub (\p -> Random (Vars.drepDeposit p) : vstatePreds p) (const []) vstateT)
+    -- \^ vstatePreds are designed to run after pparams are defined because they depend upon 'Vars.drepDeposit'
+    --   Since we are not defining 'pparams' but only the Universes we need to add the 'Random (Vars.drepDeposit p)'
     -- TODO: this should eventually be replaced by constraints based generator
     (\PropEnv {..} st -> (genConwayGovCert pePParams st, shrinkConwayGovCert pePParams st))
     $ \_pEnv _env _st _sig _st' -> property True -- TODO: property?

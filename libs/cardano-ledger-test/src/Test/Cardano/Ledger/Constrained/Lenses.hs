@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | Define Lenses that facilitate accessing the types in the Var Model.
 --   Note the types in the Model, are often wrapped in a newtype in the real state,
@@ -46,6 +47,9 @@ mmL :: Lens' (NewEpochState era) Int
 mmL = lens mm (\ds u -> ds { mm = u })
 
 -}
+
+updateWithLens :: Lens' a b -> (b -> b) -> a -> a
+updateWithLens l f a = a & l .~ f (a ^. l)
 
 -- ===================================
 -- InstantaneousRewards
@@ -183,3 +187,10 @@ strictSeqListL = lens toList (\_ y -> fromList y)
 
 mapCompactFormCoinL :: Lens' (Map a (CompactForm Coin)) (Map a Coin)
 mapCompactFormCoinL = lens (Map.map fromCompact) (\_ y -> Map.map compactCoinOrError y)
+
+drepDelegationUMapL :: Lens' (UMap c) (Map (Credential 'Staking c) (DRep c))
+drepDelegationUMapL = lens dRepMap delta
+  where
+    delta um new = unSplitUMap (split {spDRep = new})
+      where
+        split = splitUMap um

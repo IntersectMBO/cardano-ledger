@@ -13,12 +13,15 @@ import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
+import Cardano.Ledger.BaseTypes (TxIx)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (Era (..), EraTx (..), EraTxBody (..), EraTxOut (..), Script, Tx, TxBody, Value, coinTxOutL)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (DataHash, ScriptHash)
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), getScriptsNeeded)
 import Cardano.Ledger.Val (Val (..))
@@ -31,7 +34,11 @@ import qualified Data.Set as Set
 import Debug.Trace
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Constrained.Classes (ScriptF (..), TxBodyF (..), TxCertF (..), TxF (..), TxOutF (..), liftUTxO, unScriptF)
+import Test.Cardano.Ledger.Constrained.Ast (emptySubst, runTarget, runTerm, substToEnv)
+import Test.Cardano.Ledger.Constrained.Classes (PParamsF (..), ScriptF (..), TxBodyF (..), TxCertF (..), TxF (..), TxOutF (..), liftUTxO, unScriptF)
+import Test.Cardano.Ledger.Constrained.Env (Env, emptyEnv)
+import Test.Cardano.Ledger.Constrained.Monad (Typed)
+import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (
   adjustNeededByRefScripts,
   allValid,
@@ -45,14 +52,61 @@ import Test.Cardano.Ledger.Constrained.Preds.Tx (
   necessaryKeyHashes,
   sufficientKeyHashes,
  )
-import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (TraceM, fromSetTerm, getTerm, liftGen, reqSig)
+import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
+  TraceM,
+  certStateTrace,
+  fromSetTerm,
+  fstTriple,
+  getTerm,
+  ledgerStateTrace,
+  liftGen,
+  liftTyped,
+  pparamsTrace,
+  pstateTrace,
+  putEnv,
+  reqSig,
+  runTraceM,
+  universeTrace,
+  vstateTrace,
+ )
 import qualified Test.Cardano.Ledger.Constrained.Trace.TraceMonad as TraceMonad (refInputs)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), WitnessesField (..))
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), UTxOWit (..), ValueWit (..), whichUTxO, whichValue)
+import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), Reflect (..), UTxOWit (..), ValueWit (..), whichUTxO, whichValue)
 import Test.Cardano.Ledger.Generic.Updaters (merge, newTx, newTxBody, newWitnesses)
-import Test.QuickCheck (discard, shuffle)
+import Test.QuickCheck (discard, generate, shuffle)
+
+-- ===================================================
+
+-- | Generate an Env that contains the pieces of the LedgerState
+--   by chaining smaller pieces together.
+genLedgerStateEnv :: Reflect era => Proof era -> TraceM era (Env era)
+genLedgerStateEnv proof = do
+  subst <-
+    pure emptySubst
+      >>= pparamsTrace proof
+      >>= universeTrace proof
+      >>= vstateTrace proof
+      >>= pstateTrace proof
+      >>= certStateTrace proof
+      >>= ledgerStateTrace proof
+  env <- liftTyped (substToEnv subst emptyEnv)
+  putEnv env
+
+go :: IO ()
+go = do
+  x <- generate (fstTriple <$> runTraceM 0 emptyEnv (genLedgerStateEnv (Babbage Standard)))
+  goRepl (Babbage Standard) x ""
+
+-- | Given an (Env era) construct the pair the the LendgerEnv and the LedgerState
+getSTSLedgerEnv :: Reflect era => Proof era -> TxIx -> Env era -> Typed (LedgerEnv era, LedgerState era)
+getSTSLedgerEnv proof txIx env = do
+  ledgerstate <- runTarget env (ledgerStateT proof)
+  slot <- runTerm env currentSlot
+  (PParamsF _ pp) <- runTerm env (pparams proof)
+  accntState <- runTarget env accountStateT
+  pure $ (LedgerEnv slot txIx pp accntState, ledgerstate)
 
 -- ====================================================================
 -- Picking things that have no Plutus Scripts inside. To make very
@@ -82,6 +136,10 @@ plutusFreeValue proof plutusmap v = case (whichValue proof, v) of
 plutusFreePolicyID :: Map (ScriptHash c) a -> PolicyID c -> Bool
 plutusFreePolicyID plutusmap (PolicyID h) = Map.notMember h plutusmap
 
+plutusFreeCredential :: Map (ScriptHash c) a -> Credential kr c -> Bool
+plutusFreeCredential _ (KeyHashObj _) = True
+plutusFreeCredential plutusmap (ScriptHashObj h) = Map.notMember h plutusmap
+
 -- ====================================================================
 -- Code to generate simple, but valid Transactions
 -- ====================================================================
@@ -91,7 +149,7 @@ plutusFreePolicyID plutusmap (PolicyID h) = Map.notMember h plutusmap
 --   Coin in the TxOut with the feeEstimate and the actual Coin in the UTxO output that corresponds to the input.
 --   Only works if the internal Env of the TraceM monad stores variables capable of creating the LedgerState
 --   See 'genLedgerStateEnv' for an example of how to do that.
-simpleTxBody :: Reflect era => Proof era -> Coin -> TraceM era (TxBody era)
+simpleTxBody :: Reflect era => Proof era -> Coin -> TraceM era [TxBodyField era]
 simpleTxBody proof feeEstimate = do
   plutusmap <- getTerm plutusUniv
   let ok (_, TxOutF _ v) = (v ^. coinTxOutL) >= feeEstimate && plutusFree plutusmap v
@@ -105,37 +163,38 @@ simpleTxBody proof feeEstimate = do
   addr <- fromSetTerm addrUniv
   vldt <- getTerm validityInterval
   let output = mkBasicTxOut addr (inject (inputCoin <-> feeEstimate))
-  pure $
-    newTxBody
-      proof
-      [ Inputs' [input]
-      , Outputs' [output]
-      , Txfee feeEstimate
-      , Vldt vldt
-      , Mint (liftMultiAsset (minusMultiValue proof (output ^. valueTxOutL) (out ^. valueTxOutL)))
-      ]
-
--- | The 60000 is arbitrary chosen by experience. The fee for most simpleTx as less than 60000. But in
---   at least one case we have seen as high as 108407. If that case happens we will discard.
---   A large fee is rare because it is caused by many scripts and fees that need large witnesses,
-maxFeeEstimate :: Coin
-maxFeeEstimate = Coin 60000
+  pure
+    [ Inputs' [input]
+    , Outputs' [output]
+    , Txfee feeEstimate
+    , Vldt vldt
+    , Mint (liftMultiAsset (minusMultiValue proof (output ^. valueTxOutL) (out ^. valueTxOutL)))
+    ]
 
 -- | Generate a (Tx era) from a simple (TxBody era), with 1 input and 1 output.
 --   Apply the "finishing" function 'completeTxBody' to make the result a valid Tx.
---   Only works if the internal Env of the TraceM monad stores variables capable of creating the LedgerState
-simpleTx :: Reflect era => Proof era -> TraceM era (Tx era)
-simpleTx proof = do
-  txb <- simpleTxBody proof maxFeeEstimate
-  completeTxBody proof txb
+--   Only works if the internal Env of the TraceM monad stores variables capable of
+--   creating the LedgerState. The parameter 'maxFeeEstimate' has to be chosen by
+--   experience. The fee for most simpleTx as less than 60000. But in at least one
+--   case we have seen as high as 108407. If that case happens we will discard.
+--   A large fee is rare because it is caused by many scripts and fees that need large witnesses,
+simpleTx :: Reflect era => Proof era -> Coin -> TraceM era (Tx era)
+simpleTx proof maxFeeEstimate = do
+  fields <- simpleTxBody proof maxFeeEstimate
+  let txb = newTxBody proof fields
+  completeTxBody proof maxFeeEstimate txb
+
+-- ====================================================================================
+-- Once we have a TxBody, we need to make a complete Tx, By filling in Missing pieces.
+-- ====================================================================================
 
 -- | Complete a TxBody, by running a fix-point computation that
 --   1) Adds the appropriate witnesses.
 --   2) Adjusts the the first output to pay the estimated fee.
 --   Run the computation until both the fee and the hash of the TxBody reach a fixpoint.
 --   Only works if the internal Env of the TraceM monad stores variables capable of creating the LedgerState
-completeTxBody :: Reflect era => Proof era -> TxBody era -> TraceM era (Tx era)
-completeTxBody proof txBody = do
+completeTxBody :: Reflect era => Proof era -> Coin -> TxBody era -> TraceM era (Tx era)
+completeTxBody proof maxFeeEstimate txBody = do
   u <- getTerm (utxo proof)
   scriptuniv <- getTerm (allScriptUniv proof)
   plutusuniv <- getTerm plutusUniv
@@ -186,7 +245,7 @@ completeTxBody proof txBody = do
 -- ========================================================================================
 
 -- | Add witnesses to the TxBody to construct a Tx with the appropriate witnesses.
---   This is a compicated function, but it should be applicable to ANY Tx generated using
+--   This is a compilcated function, but it should be applicable to ANY Tx generated using
 --   the Universes.
 addWitnesses ::
   forall era.

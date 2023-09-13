@@ -578,7 +578,8 @@ dstatePreds _p =
   [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
   , Dom rewards :=: Dom stakeDeposits
   , Dom delegations :⊆: Dom rewards
-  , Random dreps
+  , Random drepState
+  , Random drepDelegation
   , Random committeeState
   , Random numDormantEpochs
   , Dom rewards :=: Rng ptrs

@@ -30,6 +30,7 @@ import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
 import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL)
 import Cardano.Ledger.Core (
   EraPParams,
   PParams,
@@ -203,6 +204,15 @@ ptrs = Var $ V "ptrs" (MapR PtrR CredR) (Yes NewEpochStateR ptrsL)
 ptrsL :: NELens era (Map Ptr (Credential 'Staking (EraCrypto era)))
 ptrsL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . ptrsUMapL
 
+drepState :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+drepState = Var $ V "drepState" (MapR VCredR DRepStateR) (Yes NewEpochStateR drepsL)
+
+drepsL :: NELens era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+
+drepDelegation :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
+drepDelegation = Var $ V "drepDelegation" (MapR CredR DRepR) No
+
 futureGenDelegs :: Era era => Term era (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 futureGenDelegs =
   Var $
@@ -277,12 +287,6 @@ poolDeposits = Var $ V "poolDeposits" (MapR PoolHashR CoinR) (Yes NewEpochStateR
 
 poolDepositsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 poolDepositsL = nesEsL . esLStateL . lsCertStateL . certPStateL . psDepositsL
-
-dreps :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-dreps = Var $ V "dreps" (MapR VCredR DRepStateR) (Yes NewEpochStateR drepsL)
-
-drepsL :: NELens era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 committeeState = Var $ V "committeeState" (MapR CommColdCredR (MaybeR CommHotCredR)) (Yes NewEpochStateR committeeStateL)
@@ -676,6 +680,9 @@ spendCredsUniv = Var $ V "spendCredsUniv" (SetR PCredR) No
 voteUniv :: Era era => Term era (Set (Credential 'DRepRole (EraCrypto era)))
 voteUniv = Var $ V "voteUniv" (SetR VCredR) No
 
+drepUniv :: Era era => Term era (Set (DRep (EraCrypto era)))
+drepUniv = Var $ V "drepUniv" (SetR DRepR) No
+
 -- | The universe of Payment Credentials. A credential is either KeyHash of a ScriptHash
 --   We only find payment credentials in the Payment part of an Addr.
 payUniv :: Era era => Term era (Set (Credential 'Payment (EraCrypto era)))
@@ -707,6 +714,10 @@ poolHashUniv = Var $ V "poolHashUniv" (SetR PoolHashR) No
 -- | The universe of StakePool key hashes. These hashes hash are hashes of the Owners of a PoolParam
 stakeHashUniv :: Era era => Term era (Set (KeyHash 'Staking (EraCrypto era)))
 stakeHashUniv = Var $ V "stakeHashUniv" (SetR StakeHashR) No
+
+-- | The universe of DRep key hashes. These hashes hash are hashes of the DReps
+drepHashUniv :: Era era => Term era (Set (KeyHash 'DRepRole (EraCrypto era)))
+drepHashUniv = Var $ V "drepHashUniv" (SetR DRepHashR) No
 
 -- | The universe of the Genesis key hashes and their signing and validating GenDelegPairs
 genesisHashUniv :: Era era => Term era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
@@ -927,7 +938,7 @@ certstateT =
 vstateT :: forall era. Era era => RootTarget era (VState era) (VState era)
 vstateT =
   Invert "VState" (typeRep @(VState era)) (\x y z -> VState x (CommitteeState y) z)
-    :$ Lensed dreps vsDRepsL
+    :$ Lensed drepState vsDRepsL
     :$ Lensed committeeState (vsCommitteeStateL . csCommitteeCredsL)
     :$ Lensed numDormantEpochs vsNumDormantEpochsL
 
@@ -964,6 +975,7 @@ dstateT =
     :$ Lensed rewards (dsUnifiedL . rewardsUMapL)
     :$ Lensed stakeDeposits (dsUnifiedL . stakeDepositsUMapL)
     :$ Lensed delegations (dsUnifiedL . delegationsUMapL)
+    :$ Lensed drepDelegation (dsUnifiedL . drepDelegationUMapL)
     :$ Lensed ptrs (dsUnifiedL . ptrsUMapL)
     :$ Lensed futureGenDelegs dsFutureGenDelegsL
     :$ Lensed genDelegs (dsGenDelegsL . unGenDelegsL)
@@ -974,13 +986,14 @@ dstate ::
   Map (Credential 'Staking (EraCrypto era)) Coin ->
   Map (Credential 'Staking (EraCrypto era)) Coin ->
   Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
+  Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)) ->
   Map Ptr (Credential 'Staking (EraCrypto era)) ->
   Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   InstantaneousRewards (EraCrypto era) ->
   DState era
-dstate rew dep deleg ptr fgen gen =
-  DState (unSplitUMap (Split rew dep deleg Map.empty (error "Not implemented") ptr)) fgen (GenDelegs gen)
+dstate rew dep deleg drepdel ptr fgen gen =
+  DState (unSplitUMap (Split rew dep deleg drepdel (error "Not implemented") ptr)) fgen (GenDelegs gen)
 
 instantaneousRewardsT ::
   forall era.
@@ -1121,6 +1134,12 @@ collateralPercentage p =
       "collateralPercentage"
       NaturalR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppCollateralPercentageL)))
+
+drepDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
+drepDeposit p = Var $ pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
+
+drepActivity :: ConwayEraPParams era => Proof era -> Term era EpochNo
+drepActivity p = Var $ pV p "drepActivty" EpochR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
 
 maxEpoch :: Era era => Proof era -> Term era EpochNo
 maxEpoch p =

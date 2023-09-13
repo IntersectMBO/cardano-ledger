@@ -155,7 +155,7 @@ newEpochTransition = do
   if eNo /= eL + 1
     then pure (nes & newEpochStateDRepPulsingStateL %~ pulseDRepPulsingState)
     else do
-      es1 <- case ru of
+      es1 <- case ru of -- Here is where we extract the result of Reward pulsing.
         SNothing -> pure es0
         SJust p@(Pulsing _ _) -> do
           (ans, event) <- liftSTS (completeRupd p)

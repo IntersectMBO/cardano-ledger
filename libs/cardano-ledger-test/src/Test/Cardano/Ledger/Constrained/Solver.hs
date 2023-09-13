@@ -433,7 +433,7 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
   (List (Var v2@(V _ (SetR r2) _)) expr@(x : _)) | Just Refl <- sameName v1 v2 -> do
     Refl <- sameRep (termRep x) r2
     xs <- mapM (simplifyAtType r2) expr
-    setSpec (SzExact (length xs)) (relEqual r (makeFromList @(Set a) @a xs))
+    setSpec (SzMost (length xs)) (relEqual r (makeFromList @(Set a) @a xs))
   (Var v2 :=: expr) | Name v1 == Name v2 -> do
     With set <- simplifySet r expr
     setSpec (SzExact (Set.size set)) (relEqual r set)

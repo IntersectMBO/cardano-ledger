@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
@@ -7,12 +9,17 @@ module Test.Cardano.Ledger.Constrained.Trace.TraceMonad
 where
 
 import Cardano.Ledger.Babbage.TxBody (referenceInputsTxBodyL, reqSignerHashesTxBodyL)
-import Cardano.Ledger.Core (Era (..), TxBody)
+import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.Core (Era (..), EraRule, Tx, TxBody)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Except
+import Control.Monad.Trans.Reader (Reader)
 import Control.Monad.Trans.State.Strict hiding (State)
+import Control.State.Transition.Extended (BaseM, Environment, STS, Signal, State)
 import Data.Default.Class (Default (def))
 import qualified Data.HashSet as HashSet
 import Data.Map.Strict (Map)
@@ -226,10 +233,52 @@ pstateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
 pstateTrace proof subst = toolChainTrace proof standardOrderInfo (pstatePreds proof) subst
 
 vstateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
-vstateTrace proof subst = toolChainTrace proof standardOrderInfo (vstatePreds proof) subst
+vstateTrace proof subst =
+  case whichPParams proof of
+    PParamsConwayToConway -> toolChainTrace proof standardOrderInfo (vstatePreds proof) subst
+    _ -> pure subst
 
 certStateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
 certStateTrace proof subst = toolChainTrace proof standardOrderInfo (certStatePreds proof) subst
 
 ledgerStateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
 ledgerStateTrace proof subst = toolChainTrace proof standardOrderInfo (ledgerStatePreds def proof) subst
+
+-- ==============================================================
+-- Code to make Traces
+
+-- | Iterate a function 'make' to make a trace of length 'n'. Each call to 'make' gets the
+--   most recent value of the Env internal to TraceM. The function 'make' is
+--   supposed to compute 'a', and (possibly) update the Env internal to TraceM.
+makeTrace :: Int -> TraceM era a -> TraceM era [(Env era, a)]
+makeTrace 0 _ = pure []
+makeTrace n make = do
+  env0 <- getEnv
+  a <- make
+  xs <- makeTrace (n - 1) make
+  pure ((env0, a) : xs)
+
+data TraceStep era a = TraceStep !(Env era) !(Env era) !a
+
+beforeAfterTrace :: Int -> (Int -> TraceM era a) -> TraceM era [TraceStep era a]
+beforeAfterTrace 0 _ = pure []
+beforeAfterTrace !n make = do
+  !beforeEnv <- getEnv
+  !a <- make n
+  !afterEnv <- getEnv
+  xs <- beforeAfterTrace (n - 1) make
+  let !ans = TraceStep beforeEnv afterEnv a : xs
+  pure ans
+
+-- =====================================================================
+-- When tracing we will run many applySTS tests, so we make a few
+-- type synonyms that make it easy to state the STS conditions we will need.
+
+type LedgerSTS era =
+  ( Reflect era
+  , STS (EraRule "LEDGER" era)
+  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , BaseM (EraRule "LEDGER" era) ~ Reader Globals
+  )
