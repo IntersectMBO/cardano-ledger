@@ -30,7 +30,8 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxBody (..),
   BabbageEraTxOut (..),
   BabbageTxBody (..),
-  dataHashTxOutL, BabbageTxBodyUpgradeError,
+  BabbageTxBodyUpgradeError,
+  dataHashTxOutL,
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
@@ -38,16 +39,16 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Applicative ((<|>))
+import Control.Arrow (left)
 import Control.SetAlgebra (eval, (◁))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing), strictMaybeToMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
-import Control.Arrow (left)
 
-newtype  BabbageTxUpgradeError =
-  BTUEBodyUpgradeError BabbageTxBodyUpgradeError
+newtype BabbageTxUpgradeError
+  = BTUEBodyUpgradeError BabbageTxBodyUpgradeError
   deriving (Eq, Show)
 
 instance Crypto c => EraTx (BabbageEra c) where

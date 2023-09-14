@@ -512,11 +512,14 @@ upgradeBabbagePParams updateCoinsPerUTxOWord AlonzoPParams {..} =
     , bppTau = appTau
     , bppProtocolVersion = appProtocolVersion
     , bppMinPoolCost = appMinPoolCost
-    , bppCoinsPerUTxOByte = hkdMap (Proxy @f)
-        (if updateCoinsPerUTxOWord then
-          coinsPerUTxOWordToCoinsPerUTxOByte else
-          coinsPerUTxOWordToCoinsPerUTxOByteInTx)
-        appCoinsPerUTxOWord
+    , bppCoinsPerUTxOByte =
+        hkdMap
+          (Proxy @f)
+          ( if updateCoinsPerUTxOWord
+              then coinsPerUTxOWordToCoinsPerUTxOByte
+              else coinsPerUTxOWordToCoinsPerUTxOByteInTx
+          )
+          appCoinsPerUTxOWord
     , bppCostModels = appCostModels
     , bppPrices = appPrices
     , bppMaxTxExUnits = appMaxTxExUnits
