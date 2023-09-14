@@ -58,7 +58,6 @@ import Cardano.Ledger.Conway.Governance (Committee (..), Constitution, GovAction
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
-import Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.DRepDistr (DRepState)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
@@ -212,101 +211,101 @@ data Rep era t where
   MapR :: Ord a => Rep era a -> Rep era b -> Rep era (Map a b)
   SetR :: Ord a => Rep era a -> Rep era (Set a)
   ListR :: Rep era a -> Rep era [a]
-  AddrR :: Rep era (Addr (EraCrypto era))
-  CredR :: Rep era (Credential 'Staking (EraCrypto era))
-  VCredR :: Rep era (Credential 'DRepRole (EraCrypto era))
-  PoolHashR :: Rep era (KeyHash 'StakePool (EraCrypto era))
-  WitHashR :: Rep era (KeyHash 'Witness (EraCrypto era))
-  GenHashR :: Rep era (KeyHash 'Genesis (EraCrypto era))
-  GenDelegHashR :: Rep era (KeyHash 'GenesisDelegate (EraCrypto era))
-  VHashR :: Rep era (KeyHash 'DRepRole (EraCrypto era))
-  CommColdCredR :: Rep era (Credential 'ColdCommitteeRole (EraCrypto era))
-  CommHotCredR :: Rep era (Credential 'HotCommitteeRole (EraCrypto era))
-  PoolParamsR :: Rep era (PoolParams (EraCrypto era))
-  NewEpochStateR :: Rep era (NewEpochState era)
+  AddrR :: Era era => Rep era (Addr (EraCrypto era))
+  CredR :: Era era => Rep era (Credential 'Staking (EraCrypto era))
+  VCredR :: Era era => Rep era (Credential 'DRepRole (EraCrypto era))
+  PoolHashR :: Era era => Rep era (KeyHash 'StakePool (EraCrypto era))
+  WitHashR :: Era era => Rep era (KeyHash 'Witness (EraCrypto era))
+  GenHashR :: Era era => Rep era (KeyHash 'Genesis (EraCrypto era))
+  GenDelegHashR :: Era era => Rep era (KeyHash 'GenesisDelegate (EraCrypto era))
+  VHashR :: Era era => Rep era (KeyHash 'DRepRole (EraCrypto era))
+  CommColdCredR :: Era era => Rep era (Credential 'ColdCommitteeRole (EraCrypto era))
+  CommHotCredR :: Era era => Rep era (Credential 'HotCommitteeRole (EraCrypto era))
+  PoolParamsR :: Era era => Rep era (PoolParams (EraCrypto era))
+  NewEpochStateR :: Era era => Rep era (NewEpochState era)
   IntR :: Rep era Int
   FloatR :: Rep era Float
   NaturalR :: Rep era Natural
   Word64R :: Rep era Word64
-  TxInR :: Rep era (TxIn (EraCrypto era))
+  TxInR :: Era era => Rep era (TxIn (EraCrypto era))
   CharR :: Rep era Char
   UnitR :: Rep era ()
   PairR :: Rep era a -> Rep era b -> Rep era (a, b)
-  ProtVerR :: Proof era -> Rep era ProtVer -- We need the Proof to get arbitrary instances correct
+  ProtVerR :: Era era => Proof era -> Rep era ProtVer -- We need the Proof to get arbitrary instances correct
   -- \^ Rep's for type families (or those that embed type families)
-  ValueR :: Proof era -> Rep era (ValueF era)
-  UTxOR :: Proof era -> Rep era (UTxO era)
-  TxOutR :: Proof era -> Rep era (TxOutF era)
-  PParamsR :: Proof era -> Rep era (PParamsF era)
-  PParamsUpdateR :: Proof era -> Rep era (PParamsUpdateF era)
+  ValueR :: Era era => Proof era -> Rep era (ValueF era)
+  UTxOR :: Era era => Proof era -> Rep era (UTxO era)
+  TxOutR :: Era era => Proof era -> Rep era (TxOutF era)
+  PParamsR :: Era era => Proof era -> Rep era (PParamsF era)
+  PParamsUpdateR :: Era era => Proof era -> Rep era (PParamsUpdateF era)
   --
   DeltaCoinR :: Rep era DeltaCoin
-  GenDelegPairR :: Rep era (GenDelegPair (EraCrypto era))
-  FutureGenDelegR :: Rep era (FutureGenDeleg (EraCrypto era))
-  PPUPStateR :: Proof era -> Rep era (ShelleyGovState era)
+  GenDelegPairR :: Era era => Rep era (GenDelegPair (EraCrypto era))
+  FutureGenDelegR :: Era era => Rep era (FutureGenDeleg (EraCrypto era))
+  PPUPStateR :: Era era => Proof era -> Rep era (ShelleyGovState era)
   PtrR :: Rep era Ptr
-  IPoolStakeR :: Rep era (IndividualPoolStake (EraCrypto era))
-  SnapShotsR :: Rep era (SnapShots (EraCrypto era))
-  RewardR :: Rep era (Reward (EraCrypto era))
+  IPoolStakeR :: Era era => Rep era (IndividualPoolStake (EraCrypto era))
+  SnapShotsR :: Era era => Rep era (SnapShots (EraCrypto era))
+  RewardR :: Era era => Rep era (Reward (EraCrypto era))
   MaybeR :: Rep era t -> Rep era (Maybe t)
   SlotNoR :: Rep era SlotNo
   SizeR :: Rep era Size
-  MultiAssetR :: Crypto (EraCrypto era) => Rep era (MultiAsset (EraCrypto era))
-  PolicyIDR :: Rep era (PolicyID (EraCrypto era))
-  WitnessesFieldR :: Proof era -> Rep era (WitnessesField era)
+  MultiAssetR :: Era era => Rep era (MultiAsset (EraCrypto era))
+  PolicyIDR :: Era era => Rep era (PolicyID (EraCrypto era))
+  WitnessesFieldR :: Era era => Proof era -> Rep era (WitnessesField era)
   AssetNameR :: Rep era AssetName
-  TxCertR :: Proof era -> Rep era (TxCertF era)
-  RewardAcntR :: Rep era (RewardAcnt (EraCrypto era))
-  ValidityIntervalR :: Rep era ValidityInterval
-  KeyPairR :: Rep era (KeyPair 'Witness (EraCrypto era))
+  TxCertR :: Era era => Proof era -> Rep era (TxCertF era)
+  RewardAcntR :: Era era => Rep era (RewardAcnt (EraCrypto era))
+  ValidityIntervalR :: Era era => Rep era ValidityInterval
+  KeyPairR :: Era era => Rep era (KeyPair 'Witness (EraCrypto era))
   GenR :: Rep era x -> Rep era (Gen x)
-  ScriptR :: Proof era -> Rep era (ScriptF era)
-  ScriptHashR :: Rep era (ScriptHash (EraCrypto era))
+  ScriptR :: Era era => Proof era -> Rep era (ScriptF era)
+  ScriptHashR :: Era era => Rep era (ScriptHash (EraCrypto era))
   NetworkR :: Rep era Network
   RdmrPtrR :: Rep era RdmrPtr
   DataR :: Era era => Rep era (Data era)
   DatumR :: Era era => Rep era (Datum era)
   ExUnitsR :: Rep era ExUnits
   TagR :: Rep era Tag
-  DataHashR :: Rep era (DataHash (EraCrypto era))
-  PCredR :: Rep era (Credential 'Payment (EraCrypto era))
-  ShelleyTxCertR :: Rep era (ShelleyTxCert era)
-  ConwayTxCertR :: Rep era (ConwayTxCert era)
+  DataHashR :: Era era => Rep era (DataHash (EraCrypto era))
+  PCredR :: Era era => Rep era (Credential 'Payment (EraCrypto era))
+  ShelleyTxCertR :: Era era => Rep era (ShelleyTxCert era)
+  ConwayTxCertR :: Era era => Rep era (ConwayTxCert era)
   MIRPotR :: Rep era MIRPot
   IsValidR :: Rep era IsValid
   IntegerR :: Rep era Integer
-  ScriptsNeededR :: Proof era -> Rep era (ScriptsNeededF era)
-  ScriptPurposeR :: Proof era -> Rep era (ScriptPurpose era)
-  TxBodyR :: Proof era -> Rep era (TxBodyF era)
-  BootstrapWitnessR :: Crypto (EraCrypto era) => Rep era (BootstrapWitness (EraCrypto era))
+  ScriptsNeededR :: Era era => Proof era -> Rep era (ScriptsNeededF era)
+  ScriptPurposeR :: Era era => Proof era -> Rep era (ScriptPurpose era)
+  TxBodyR :: Era era => Proof era -> Rep era (TxBodyF era)
+  BootstrapWitnessR :: Era era => Rep era (BootstrapWitness (EraCrypto era))
   SigningKeyR :: Rep era SigningKey
-  TxWitsR :: Proof era -> Rep era (TxWitsF era)
-  PayHashR :: Rep era (KeyHash 'Payment (EraCrypto era))
-  TxR :: Proof era -> Rep era (TxF era)
-  ScriptIntegrityHashR :: Rep era (SafeHash (EraCrypto era) EraIndependentScriptIntegrity)
-  AuxiliaryDataHashR :: Rep era (AuxiliaryDataHash (EraCrypto era))
-  GovActionR :: Rep era (GovAction era)
-  WitVKeyR :: Proof era -> Rep era (WitVKey 'Witness (EraCrypto era))
-  TxAuxDataR :: Proof era -> Rep era (TxAuxDataF era)
+  TxWitsR :: Era era => Proof era -> Rep era (TxWitsF era)
+  PayHashR :: Era era => Rep era (KeyHash 'Payment (EraCrypto era))
+  TxR :: Era era => Proof era -> Rep era (TxF era)
+  ScriptIntegrityHashR :: Era era => Rep era (SafeHash (EraCrypto era) EraIndependentScriptIntegrity)
+  AuxiliaryDataHashR :: Era era => Rep era (AuxiliaryDataHash (EraCrypto era))
+  GovActionR :: Era era => Rep era (GovAction era)
+  WitVKeyR :: Era era => Proof era -> Rep era (WitVKey 'Witness (EraCrypto era))
+  TxAuxDataR :: Era era => Proof era -> Rep era (TxAuxDataF era)
   LanguageR :: Rep era Language
-  LedgerStateR :: Proof era -> Rep era (LedgerState era)
-  StakeHashR :: Rep era (KeyHash 'Staking (EraCrypto era))
+  LedgerStateR :: Era era => Proof era -> Rep era (LedgerState era)
+  StakeHashR :: Era era => Rep era (KeyHash 'Staking (EraCrypto era))
   BoolR :: Rep era Bool
-  DRepR :: Rep era (Core.DRep (EraCrypto era))
-  PoolMetadataR :: Proof era -> Rep era PoolMetadata
-  DRepStateR :: Rep era (DRepState (EraCrypto era))
-  DStateR :: Rep era (DState era)
-  GovActionIdR :: Rep era (GovActionId (EraCrypto era))
+  DRepR :: Era era => Rep era (Core.DRep (EraCrypto era))
+  PoolMetadataR :: Era era => Proof era -> Rep era PoolMetadata
+  DRepStateR :: Era era => Rep era (DRepState (EraCrypto era))
+  DStateR :: Era era => Rep era (DState era)
+  GovActionIdR :: Era era => Rep era (GovActionId (EraCrypto era))
   GovActionIxR :: Rep era GovActionIx
-  GovActionStateR :: Rep era (GovActionState era)
+  GovActionStateR :: Era era => Rep era (GovActionState era)
   UnitIntervalR :: Rep era UnitInterval
-  CommitteeR :: Rep era (Committee era)
-  ConstitutionR :: Rep era (Constitution era)
-  PrevGovActionIdsR :: Rep era (PrevGovActionIds era)
-  PrevPParamUpdateR :: Rep era (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era))
-  PrevHardForkR :: Rep era (PrevGovActionId 'HardForkPurpose (EraCrypto era))
-  PrevCommitteeR :: Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
-  PrevConstitutionR :: Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
+  CommitteeR :: Era era => Rep era (Committee era)
+  ConstitutionR :: Era era => Rep era (Constitution era)
+  PrevGovActionIdsR :: Era era => Rep era (PrevGovActionIds era)
+  PrevPParamUpdateR :: Era era => Rep era (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era))
+  PrevHardForkR :: Era era => Rep era (PrevGovActionId 'HardForkPurpose (EraCrypto era))
+  PrevCommitteeR :: Era era => Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
+  PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -317,7 +316,7 @@ stringR = ListR CharR
 data IsTypeable a where
   IsTypeable :: Typeable a => IsTypeable a
 
-repTypeable :: Era era => Rep era t -> IsTypeable t
+repTypeable :: Rep era t -> IsTypeable t
 repTypeable r = case r of
   DRepStateR -> IsTypeable
   CommColdCredR -> IsTypeable
@@ -424,7 +423,7 @@ repTypeable r = case r of
   PrevCommitteeR {} -> IsTypeable
   PrevConstitutionR {} -> IsTypeable
 
-instance Era era => Singleton (Rep era) where
+instance Singleton (Rep era) where
   testEql
     (repTypeable -> IsTypeable :: IsTypeable a)
     (repTypeable -> IsTypeable :: IsTypeable b) = eqT @a @b
@@ -434,106 +433,7 @@ instance Era era => Singleton (Rep era) where
 -- Show instances
 
 instance Show (Rep era t) where
-  show CoinR = "Coin"
-  show (a :-> b) = "(" ++ show a ++ " -> " ++ show b ++ ")"
-  show (MapR a b) = "(Map " ++ show a ++ " " ++ show b ++ ")"
-  show (SetR a) = "(Set " ++ show a ++ ")"
-  show (ListR a) = "[" ++ show a ++ "]"
-  show AddrR = "Addr"
-  show CredR = "(Credential 'Staking c)"
-  show PoolHashR = "(KeyHash 'StakePool c)"
-  show WitHashR = "(KeyHash 'Witness c)"
-  show GenHashR = "(KeyHash 'Genesis c)"
-  show GenDelegHashR = "(KeyHash 'GenesisDelegate c)"
-  show PoolParamsR = "(PoolParams c)"
-  show EpochR = "EpochNo"
-  show RationalR = "Rational"
-  show Word64R = "Word64"
-  show IntR = "Int"
-  show NaturalR = "Natural"
-  show FloatR = "Float"
-  show TxInR = "TxIn"
-  show (ValueR x) = "(Value " ++ short x ++ ")"
-  show (TxOutR x) = "(TxOut " ++ short x ++ ")"
-  show (UTxOR x) = "(UTxO " ++ short x ++ ")"
-  show (PParamsR x) = "(PParams " ++ short x ++ ")"
-  show (PParamsUpdateR x) = "(PParamsUpdate " ++ short x ++ ")"
-  show CharR = "Char"
-  show DeltaCoinR = "DeltaCoin"
-  show GenDelegPairR = "(GenDelegPair c)"
-  show FutureGenDelegR = "(FutureGenDeleg c)"
-  show (PPUPStateR p) = "(ShelleyGovState " ++ short p ++ ")"
-  show PtrR = "Ptr"
-  show IPoolStakeR = "(IndividualPoolStake c)"
-  show SnapShotsR = "(SnapShots c)"
-  show UnitR = "()"
-  show (PairR a b) = "(" ++ show a ++ ", " ++ show b ++ ")"
-  show RewardR = "(Reward c)"
-  show (MaybeR x) = "(Maybe " ++ show x ++ ")"
-  show NewEpochStateR = "NewEpochState"
-  show (ProtVerR x) = "(ProtVer " ++ short x ++ ")"
-  show SlotNoR = "(SlotNo c)"
-  show SizeR = "Size"
-  show VCredR = "(Credential 'Voting c)"
-  show VHashR = "(KeyHash 'Voting c)"
-  show MultiAssetR = "(MultiAsset c)"
-  show PolicyIDR = "(PolicyID c)"
-  show (WitnessesFieldR p) = "(WitnessesField " ++ short p ++ ")"
-  show AssetNameR = "AssetName"
-  show (TxCertR p) = "(TxCert " ++ short p ++ ")"
-  show RewardAcntR = "(RewardAcnt c)"
-  show ValidityIntervalR = "ValidityInterval"
-  show KeyPairR = "(KeyPair 'Witness era)"
-  show (GenR x) = "(Gen " ++ show x ++ ")"
-  show (ScriptR x) = "(Script " ++ short x ++ ")"
-  show ScriptHashR = "(ScriptHash c)"
-  show NetworkR = "Network"
-  show RdmrPtrR = "RdmrPtr"
-  show DataR = "(Data era)"
-  show DatumR = "(Datum era)"
-  show ExUnitsR = "ExUnits"
-  show TagR = "Tag"
-  show DataHashR = "(DataHash c)"
-  show PCredR = "(Credential 'Payment c)"
-  show ConwayTxCertR = "(ConwayTxCert era)"
-  show ShelleyTxCertR = "(ShelleyTxCert era)"
-  show MIRPotR = "MIRPot"
-  show IsValidR = "IsValid"
-  show IntegerR = "Integer"
-  show (ScriptsNeededR p) = "(ScriptsNeeded " ++ short p ++ ")"
-  show (ScriptPurposeR p) = "(ScriptPurpose " ++ short p ++ ")"
-  show (TxBodyR p) = "(TxBody " ++ short p ++ ")"
-  show BootstrapWitnessR = "(BootstrapWitness c)"
-  show SigningKeyR = "Byron.SigningKey"
-  show (TxWitsR p) = "(TxWits " ++ short p ++ ")"
-  show PayHashR = "(KeyHash 'Payment c)"
-  show (TxR p) = "(Tx " ++ short p ++ ")"
-  show ScriptIntegrityHashR = "ScriptIntegrityHash"
-  show AuxiliaryDataHashR = "AuxiliaryDataHash"
-  show GovActionR = "GovAction"
-  show (WitVKeyR _) = "(WitVKey 'Witness c)"
-  show (TxAuxDataR p) = "(TxAuxData " ++ short p ++ ")"
-  show CommColdCredR = "CommColdCred"
-  show CommHotCredR = "CommHotCred"
-  show LanguageR = "Language"
-  show (LedgerStateR p) = "(LedgerState " ++ short p ++ ")"
-  show StakeHashR = "(KeyHash 'Staking c)"
-  show BoolR = "Bool"
-  show DRepR = "(DRep c)"
-  show (PoolMetadataR _) = "PoolMetadata"
-  show DRepStateR = "DRepState"
-  show DStateR = "(DState c)"
-  show GovActionIdR = "(GovActionId c)"
-  show GovActionIxR = "GovActionIx"
-  show GovActionStateR = "GovActionState"
-  show UnitIntervalR = "UnitInterval"
-  show CommitteeR = "Committee"
-  show ConstitutionR = "Constitution"
-  show PrevGovActionIdsR = "PrevGovActionIds"
-  show PrevPParamUpdateR = "(PrevGovActionId 'PParamUpdate c)"
-  show PrevHardForkR = "(PrevGovActionId 'HardFork c)"
-  show PrevCommitteeR = "(PrevGovActionId 'Committee c)"
-  show PrevConstitutionR = "(PrevGovActionId 'Constitution c)"
+  showsPrec d (repTypeable -> IsTypeable :: IsTypeable t) = showsPrec d $ typeRep (Proxy @t)
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -780,14 +680,13 @@ instance Shaped (Rep era) any where
   shape PrevCommitteeR = Nullary 98
   shape PrevConstitutionR = Nullary 99
 
-compareRep :: forall era t s. Era era => Rep era t -> Rep era s -> Ordering
+compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep = cmpIndex @(Rep era)
 
 -- ================================================
 
 genSizedRep ::
   forall era t.
-  Era era =>
   Int ->
   Rep era t ->
   Gen t
@@ -960,7 +859,6 @@ genSizedRep _ PrevConstitutionR = arbitrary
 
 genRep ::
   forall era b.
-  Era era =>
   Rep era b ->
   Gen b
 genRep IntR = choose (0, 10000)
@@ -995,7 +893,7 @@ genpup (PPUPStateR (Conway _)) = arbitrary -- FIXME when Conway is fully defined
 
 -- Not all types in the universe have Arbitrary instances and thus don't shrink (the `[]` cases).
 -- TODO: add instances for these types.
-shrinkRep :: Era era => Rep era t -> t -> [t]
+shrinkRep :: Rep era t -> t -> [t]
 shrinkRep CoinR t = shrink t
 shrinkRep (_ :-> _) _ = []
 shrinkRep (MapR a b) t = shrinkMapBy Map.fromList Map.toList (shrinkRep $ ListR (PairR a b)) t
@@ -1103,14 +1001,6 @@ shrinkRep PrevCommitteeR x = shrink x
 shrinkRep PrevConstitutionR x = shrink x
 
 -- ===========================
-
-short :: Proof era -> String
-short (Shelley _) = "Shelley"
-short (Allegra _) = "Allegra"
-short (Mary _) = "Mary"
-short (Alonzo _) = "Alonzo"
-short (Babbage _) = "Babbage"
-short (Conway _) = "Conway"
 
 hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
 hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)

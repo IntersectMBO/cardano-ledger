@@ -284,7 +284,7 @@ committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeS
 
 -- UTxOState
 
-utxo :: Proof era -> Term era (Map (TxIn (EraCrypto era)) (TxOutF era))
+utxo :: Era era => Proof era -> Term era (Map (TxIn (EraCrypto era)) (TxOutF era))
 utxo p = Var $ pV p "utxo" (MapR TxInR (TxOutR p)) (Yes NewEpochStateR (utxoL p))
 
 utxoL :: Proof era -> NELens era (Map (TxIn (EraCrypto era)) (TxOutF era))
@@ -311,7 +311,7 @@ donation = Var $ V "donation" CoinR (Yes NewEpochStateR donationL)
 donationL :: NELens era Coin
 donationL = nesEsL . esLStateL . lsUTxOStateL . utxosDonationL
 
-ppup :: Proof era -> Term era (ShelleyGovState era)
+ppup :: Era era => Proof era -> Term era (ShelleyGovState era)
 ppup p = Var $ pV p "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p))
 
 ppupsL :: Proof era -> NELens era (ShelleyGovState era)
@@ -324,14 +324,14 @@ ppupsL (Conway _) = error "Conway era does not have a PPUPState, in ppupsL"
 
 -- nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . ???
 
-proposalsT :: Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+proposalsT :: Era era => Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 proposalsT p = Var (pV p "proposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
 futureProposalsT ::
-  Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+  Era era => Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 futureProposalsT p = Var (pV p "futureProposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
-currPParams :: Proof era -> Term era (PParamsF era)
+currPParams :: Era era => Proof era -> Term era (PParamsF era)
 currPParams p = Var (pV p "currPParams" (PParamsR p) No)
 
 prevPParams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
@@ -670,15 +670,15 @@ payUniv = Var $ V "payUniv" (SetR PCredR) No
 -- | The universe of Scripts (and their hashes) useable in spending contexts
 --  That means if they are Plutus scripts then they will be passed an additional
 --  argument (the TxInfo context)
-spendscriptUniv :: Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
+spendscriptUniv :: Era era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
 spendscriptUniv p = Var (pV p "spendscriptUniv" (MapR ScriptHashR (ScriptR p)) No)
 
 -- | The universe of Scripts (and their hashes) useable in contexts other than Spending
-nonSpendScriptUniv :: Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
+nonSpendScriptUniv :: Era era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
 nonSpendScriptUniv p = Var (pV p "nonSpendScriptUniv" (MapR ScriptHashR (ScriptR p)) No)
 
 -- | The union of 'spendscriptUniv' and 'nonSpendScriptUniv'. All possible scripts in any context
-allScriptUniv :: Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
+allScriptUniv :: Era era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
 allScriptUniv p = Var (pV p "allScriptUniv" (MapR ScriptHashR (ScriptR p)) No)
 
 -- | The universe of Data (and their hashes)
@@ -709,13 +709,13 @@ txinUniv = Var $ V "txinUniv" (SetR TxInR) No
 -- | The universe of TxOuts.
 --   It contains 'colTxoutUniv' as a sublist and 'feeOutput' as an element
 --   See also 'feeOutput' which is defined by the universes, and is related.
-txoutUniv :: Proof era -> Term era (Set (TxOutF era))
+txoutUniv :: Era era => Proof era -> Term era (Set (TxOutF era))
 txoutUniv p = Var (pV p "txoutUniv" (SetR (TxOutR p)) No)
 
 -- | The universe of TxOuts useable for collateral
 --   The collateral TxOuts consists only of VKey addresses
 --   and The collateral TxOuts do not contain any non-ADA part
-colTxoutUniv :: Proof era -> Term era (Set (TxOutF era))
+colTxoutUniv :: Era era => Proof era -> Term era (Set (TxOutF era))
 colTxoutUniv p = Var (pV p "colTxoutUniv" (SetR (TxOutR p)) No)
 
 -- | A TxOut, guaranteed to have
@@ -979,7 +979,7 @@ withEraPParams (Babbage _) x = x
 withEraPParams (Conway _) x = x
 
 -- | ProtVer in pparams
-protVer :: Proof era -> Term era ProtVer
+protVer :: Era era => Proof era -> Term era ProtVer
 protVer proof =
   Var
     ( pV
@@ -990,7 +990,7 @@ protVer proof =
     )
 
 -- | ProtVer in prevPParams
-prevProtVer :: Proof era -> Term era ProtVer
+prevProtVer :: Era era => Proof era -> Term era ProtVer
 prevProtVer proof =
   Var
     ( pV
@@ -1000,7 +1000,7 @@ prevProtVer proof =
         (Yes (PParamsR proof) $ withEraPParams proof (pparamsWrapperL . ppProtocolVersionL))
     )
 
-minFeeA :: Proof era -> Term era Coin
+minFeeA :: Era era => Proof era -> Term era Coin
 minFeeA proof =
   Var
     ( pV
@@ -1010,7 +1010,7 @@ minFeeA proof =
         (Yes (PParamsR proof) $ withEraPParams proof (pparamsWrapperL . ppMinFeeAL))
     )
 
-minFeeB :: Proof era -> Term era Coin
+minFeeB :: Era era => Proof era -> Term era Coin
 minFeeB proof =
   Var
     ( pV
@@ -1021,7 +1021,7 @@ minFeeB proof =
     )
 
 -- | Max Block Body Size
-maxBBSize :: Proof era -> Term era Natural
+maxBBSize :: Era era => Proof era -> Term era Natural
 maxBBSize p =
   Var
     ( pV
@@ -1032,7 +1032,7 @@ maxBBSize p =
     )
 
 -- | Max Tx Size
-maxTxSize :: Proof era -> Term era Natural
+maxTxSize :: Era era => Proof era -> Term era Natural
 maxTxSize p =
   Var
     ( pV
@@ -1043,7 +1043,7 @@ maxTxSize p =
     )
 
 -- | Max Block Header Size
-maxBHSize :: Proof era -> Term era Natural
+maxBHSize :: Era era => Proof era -> Term era Natural
 maxBHSize p =
   Var
     ( pV
@@ -1053,7 +1053,7 @@ maxBHSize p =
         (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBHSizeL)))
     )
 
-poolDepAmt :: Proof era -> Term era Coin
+poolDepAmt :: Era era => Proof era -> Term era Coin
 poolDepAmt p =
   Var $
     pV
@@ -1062,7 +1062,7 @@ poolDepAmt p =
       CoinR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppPoolDepositL)))
 
-keyDepAmt :: Proof era -> Term era Coin
+keyDepAmt :: Era era => Proof era -> Term era Coin
 keyDepAmt p =
   Var $
     pV
@@ -1089,7 +1089,7 @@ collateralPercentage p =
       NaturalR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppCollateralPercentageL)))
 
-maxEpoch :: Proof era -> Term era EpochNo
+maxEpoch :: Era era => Proof era -> Term era EpochNo
 maxEpoch p =
   Var $
     pV
@@ -1113,10 +1113,10 @@ collateral = Var $ V "collateral" (SetR TxInR) No
 refInputs :: Era era => Term era (Set (TxIn (EraCrypto era)))
 refInputs = Var $ V "refInputs" (SetR TxInR) No
 
-outputs :: Proof era -> Term era [TxOutF era]
+outputs :: Era era => Proof era -> Term era [TxOutF era]
 outputs p = Var $ pV p "outputs" (ListR (TxOutR p)) No
 
-collateralReturn :: Proof era -> Term era (TxOutF era)
+collateralReturn :: Era era => Proof era -> Term era (TxOutF era)
 collateralReturn p = Var $ pV p "collateralReturn" (TxOutR p) No
 
 -- | The sum of all the 'collateral' inputs. The Tx is constucted

@@ -160,21 +160,21 @@ infix 4 :⊆:
 pattern (:⊆:) :: forall era. (forall a. Ord a => Term era (Set a) -> Term era (Set a) -> Pred era)
 pattern x :⊆: y = Subset x y
 
-pattern ExactSize :: Int -> Term era Size
+pattern ExactSize :: Era era => Int -> Term era Size
 pattern ExactSize x <- (sameRng -> Just x)
   where
     ExactSize x = Lit SizeR (SzRng x x)
 
-pattern AtLeast :: Int -> Term era Size
+pattern AtLeast :: Era era => Int -> Term era Size
 pattern AtLeast n = Lit SizeR (SzLeast n)
 
-pattern Size :: Size -> Term era Size
+pattern Size :: Era era => Size -> Term era Size
 pattern Size n = Lit SizeR n
 
-pattern AtMost :: Int -> Term era Size
+pattern AtMost :: Era era => Int -> Term era Size
 pattern AtMost n = Lit SizeR (SzMost n)
 
-pattern Range :: Int -> Int -> Term era Size
+pattern Range :: Era era => Int -> Int -> Term era Size
 pattern Range i j <- Lit SizeR (SzRng i j)
   where
     Range i j =
@@ -195,7 +195,7 @@ sameRng :: Term era Size -> Maybe Int
 sameRng (Lit SizeR (SzRng x y)) = if x == y then Just x else Nothing
 sameRng _ = Nothing
 
-pattern Word64 :: Word64 -> Term era Word64
+pattern Word64 :: Era era => Word64 -> Term era Word64
 pattern Word64 x = Lit Word64R x
 
 var :: Era era => String -> Rep era t -> Term era t
@@ -232,10 +232,10 @@ infixl 0 ^$
 (^$) :: Target era (a -> t) -> Term era a -> Target era t
 (^$) f x = f :$ Simple x
 
-constTarget :: t -> Target era t
+constTarget :: Era era => t -> Target era t
 constTarget t = Constr "constTarget" (const t) ^$ Lit UnitR ()
 
-emptyTarget :: Target era ()
+emptyTarget :: Era era => Target era ()
 emptyTarget = Simple (Lit UnitR ())
 
 justTarget :: Term era t -> Target era (Maybe t)
@@ -1009,7 +1009,7 @@ runComp _ t (AnyF (FConst r v _ l)) = do
   With _ <- hasEq r r
   pure $ t ^. l == v
 
-termRep :: Term era t -> Rep era t
+termRep :: Era era => Term era t -> Rep era t
 termRep (Lit r _) = r
 termRep (Var (V _ r _)) = r
 termRep (Dom (termRep -> MapR r _)) = SetR r
@@ -1041,7 +1041,7 @@ makeTest env c = do
   b <- runPred env c
   pure (show c ++ " => " ++ show b, b, c)
 
-displayTerm :: Env era -> Term era a -> IO ()
+displayTerm :: Era era => Env era -> Term era a -> IO ()
 displayTerm env (Var v@(V nm rep _)) = do
   x <- monadTyped (findVar v env)
   putStrLn (nm ++ "\n" ++ format rep x)
