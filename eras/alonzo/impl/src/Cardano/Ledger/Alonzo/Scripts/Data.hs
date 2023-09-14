@@ -72,6 +72,12 @@ import Cardano.Ledger.SafeHash (
   SafeToHash (..),
   hashAnnotated,
  )
+import Cardano.Ledger.TreeDiff (
+  Expr (App),
+  ToExpr (toExpr),
+  toExpr,
+  trimExprViaShow,
+ )
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))
@@ -82,7 +88,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1 -- NOTE PV1.Data === PV2.Data
-import Cardano.Ledger.TreeDiff (ToExpr, toExpr, trimExprViaShow)
 
 -- ============================================================================
 -- the newtype Data is a wrapper around the type that Plutus expects as data.
@@ -149,7 +154,8 @@ newtype BinaryData era = BinaryData ShortByteString
 
 instance EraCrypto era ~ c => HashAnnotated (BinaryData era) EraIndependentData c
 
-instance ToExpr (BinaryData era)
+instance ToExpr (BinaryData era) where
+  toExpr _ = App "BinaryData" []
 
 instance Typeable era => EncCBOR (BinaryData era) where
   encCBOR (BinaryData sbs) = encodeTag 24 <> encCBOR sbs
@@ -215,7 +221,10 @@ data Datum era
   | Datum !(BinaryData era)
   deriving (Eq, Generic, NoThunks, Ord, Show)
 
-instance ToExpr (Datum era)
+instance ToExpr (Datum era) where
+  toExpr NoDatum = App "NoDatum" []
+  toExpr (DatumHash x) = App "DatumHash" [toExpr x]
+  toExpr (Datum bd) = App "Datum" [toExpr bd]
 
 instance Era era => EncCBOR (Datum era) where
   encCBOR d = encode $ case d of

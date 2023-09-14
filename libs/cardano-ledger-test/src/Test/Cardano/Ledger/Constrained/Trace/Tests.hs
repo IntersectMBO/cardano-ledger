@@ -4,21 +4,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Constrained.Trace.Tests
 where
 
-import Cardano.Ledger.Alonzo.Scripts.Data (BinaryData, Datum (..))
-import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (TxIx)
 import Cardano.Ledger.Core (EraRule, EraTx (..), EraTxBody (..), Tx)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
-import Cardano.Ledger.TreeDiff (
-  Expr (App),
-  ToExpr (toExpr),
- )
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Foldable (toList)
 import Lens.Micro ((^.))
@@ -55,21 +48,6 @@ import Test.Cardano.Ledger.Generic.TxGen (applySTSByProof)
 import Test.QuickCheck (Arbitrary (..), Property, conjoin, counterexample, generate, whenFail, withMaxSuccess, (===))
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
-
--- =================================
-
-instance ToExpr (BabbageTxOut (BabbageEra StandardCrypto)) where
-  toExpr (BabbageTxOut addr val dat sc) = App "BabbageTxOut" [toExpr addr, toExpr val, toExpr dat, toExpr sc]
-
-instance ToExpr (Datum (BabbageEra StandardCrypto)) where
-  toExpr NoDatum = App "NoDatum" []
-  toExpr (DatumHash x) = App "DatumHash" [toExpr x]
-  toExpr (Datum bd) = App "Datum" [toExpr bd]
-
-instance ToExpr (BinaryData (BabbageEra StandardCrypto)) where
-  toExpr _ = App "BinaryData" []
-
--- ===================================================
 
 -- | Generate an Env that contains the pieces of the LedgerState
 --   by chaining smaller pieces together.

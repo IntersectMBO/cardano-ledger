@@ -105,7 +105,10 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.TreeDiff (
+  Expr (App),
+  ToExpr (toExpr),
+ )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Monad ((<$!>))
@@ -148,7 +151,16 @@ data BabbageTxOut era
       {-# UNPACK #-} !DataHash32
   deriving (Generic)
 
-instance (ToExpr (CompactForm (Value era)), ToExpr (BinaryData era), ToExpr (Datum era), ToExpr (Script era)) => ToExpr (BabbageTxOut era)
+instance
+  ( EraTxOut era
+  , ToExpr (Value era)
+  , ToExpr (BinaryData era)
+  , ToExpr (Datum era)
+  , ToExpr (Script era)
+  ) =>
+  ToExpr (BabbageTxOut era)
+  where
+  toExpr (BabbageTxOut addr val dat sc) = App "BabbageTxOut" [toExpr addr, toExpr val, toExpr dat, toExpr sc]
 
 instance Crypto c => EraTxOut (BabbageEra c) where
   {-# SPECIALIZE instance EraTxOut (BabbageEra StandardCrypto) #-}
