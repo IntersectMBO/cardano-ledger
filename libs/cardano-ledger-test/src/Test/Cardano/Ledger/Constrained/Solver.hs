@@ -130,7 +130,7 @@ isCountType rep = case hasCount rep rep of
 -- ==================================================
 -- Extras, simple helper functions
 
-sameRep :: Era era => Rep era i -> Rep era j -> Typed (i :~: j)
+sameRep :: Rep era i -> Rep era j -> Typed (i :~: j)
 sameRep r1 r2 = case testEql r1 r2 of
   Just x -> pure x
   Nothing -> failT ["Type error in sameRep:\n  " ++ show r1 ++ " =/=\n  " ++ show r2]
@@ -167,7 +167,7 @@ exactlyOne pp xs = 1 == length (filter pp xs)
 --   This has been superceeded by the RelLens  RelSpec
 projOnDom ::
   forall era a dom rng.
-  (Era era, Ord dom) =>
+  Ord dom =>
   Set a ->
   Lens' dom a ->
   Rep era dom ->
@@ -180,7 +180,7 @@ projOnDom setA lensDomA repDom repRng = do
   where
     genThenOverwriteA a = Lens.set lensDomA a <$> genRep repDom
 
-atLeast :: (Era era, Adds c) => Rep era c -> c -> Gen c
+atLeast :: Adds c => Rep era c -> c -> Gen c
 atLeast rep c = add c <$> genRep rep
 
 -- ================================================================
@@ -623,7 +623,7 @@ summandsAsInt (x : xs) = do
   m <- summandsAsInt xs
   pure (m + n)
 
-sameV :: Era era => V era s -> V era t -> Typed (s :~: t)
+sameV :: V era s -> V era t -> Typed (s :~: t)
 sameV (V _ r1 _) (V _ r2 _) = sameRep r1 r2
 
 unique2 :: Adds c => V era t -> (Int, Bool, [Name era]) -> Sum era c -> Typed (Int, Bool, [Name era])
@@ -689,7 +689,7 @@ solveLists v@(V nm (ListR _) _) cs =
 -- Helper functions for use in 'dispatch'
 
 -- | Combine solving an generating for a variable with a 'Counts' instance
-genCount :: (Count t, Era era) => V era t -> [Pred era] -> Typed (Gen t)
+genCount :: Count t => V era t -> [Pred era] -> Typed (Gen t)
 genCount v1@(V _ rep _) [Random (Var v2)] | Name v1 == Name v2 = pure (genRep rep)
 genCount v1@(V _ r1 _) [Var v2@(V _ r2 _) :=: expr] | Name v1 == Name v2 = do
   Refl <- sameRep r1 r2
@@ -731,7 +731,7 @@ update :: t -> [Update t] -> t
 update t [] = t
 update t (Update s l : more) = update (Lens.set l s t) more
 
-anyToUpdate :: Era era => Rep era t1 -> (AnyF era t2) -> Typed (Update t1)
+anyToUpdate :: Rep era t1 -> (AnyF era t2) -> Typed (Update t1)
 anyToUpdate rep1 (AnyF (FConst _ s rep2 l)) = do
   Refl <- sameRep rep1 rep2
   pure (Update s l)

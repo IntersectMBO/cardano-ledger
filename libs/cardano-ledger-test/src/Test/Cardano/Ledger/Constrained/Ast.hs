@@ -232,10 +232,10 @@ infixl 0 ^$
 (^$) :: Target era (a -> t) -> Term era a -> Target era t
 (^$) f x = f :$ Simple x
 
-constTarget :: Era era => t -> Target era t
+constTarget :: t -> Target era t
 constTarget t = Constr "constTarget" (const t) ^$ Lit UnitR ()
 
-emptyTarget :: Era era => Target era ()
+emptyTarget :: Target era ()
 emptyTarget = Simple (Lit UnitR ())
 
 justTarget :: Term era t -> Target era (Maybe t)

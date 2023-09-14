@@ -1546,7 +1546,7 @@ runElemSpec xs spec = case spec of
 
 genElemSpec ::
   forall w era.
-  (Adds w, Era era) =>
+  Adds w =>
   Rep era w ->
   -- Rep era c ->
   SomeLens era w ->
@@ -1583,7 +1583,6 @@ genElemSpec repw (SomeLens (l :: Lens' w c)) siz = do
 
 genFromElemSpec ::
   forall era r.
-  Era era =>
   [String] ->
   Gen r ->
   Int ->
@@ -1710,7 +1709,7 @@ runListSpec xs spec = case spec of
 
 genListSpec ::
   forall w era.
-  (Adds w, Era era) =>
+  Adds w =>
   Rep era w ->
   -- Rep era c ->
   SomeLens era w ->
@@ -1722,7 +1721,6 @@ genListSpec repw l size = do
 
 genFromListSpec ::
   forall era r.
-  Era era =>
   [String] ->
   Gen r ->
   ListSpec era r ->
@@ -1838,7 +1836,7 @@ someSet g = do
   n <- pos @Int
   Set.fromList <$> vectorOf n g
 
-someMap :: forall era t d. (Ord d, TestAdd t, Era era) => Rep era d -> Gen (Map d t)
+someMap :: forall era t d. (Ord d, TestAdd t) => Rep era d -> Gen (Map d t)
 someMap r = do
   n <- pos @Int
   rs <- vectorOf n anyAdds
@@ -1857,7 +1855,7 @@ testm = do
   b <- aMap
   monadTyped (liftT (a <> b))
 
-aList :: Era era => Gen (ListSpec era Word64)
+aList :: Gen (ListSpec era Word64)
 aList = genSize >>= genListSpec Word64R (SomeLens word64CoinL)
 
 testl :: Gen (ListSpec TT Word64)
@@ -2174,7 +2172,7 @@ runPairSpec m1 (PairSpec _ _ VarOnRight m2) = Map.isSubmapOf m2 m1
 -- and insist that when solving 'var' it contains the pairs from 'm2' and possibly more pairs
 runPairSpec m1 (PairSpec _ _ VarOnLeft m2) = Map.isSubmapOf m1 m2
 
-genPairSpec :: (Era era, Ord dom, Eq rng) => Rep era dom -> Rep era rng -> Gen (PairSpec era dom rng)
+genPairSpec :: forall era dom rng. (Ord dom, Eq rng) => Rep era dom -> Rep era rng -> Gen (PairSpec era dom rng)
 genPairSpec domr rngr =
   frequency
     [ (1, pure PairAny)
@@ -2202,7 +2200,7 @@ fixSide _ PairAny = PairAny
 fixSide side (PairSpec d r _ m) = PairSpec d r side m
 
 genConsistentPairSpec ::
-  (Ord dom, Era era, Eq rng) =>
+  (Ord dom, Eq rng) =>
   Rep era dom ->
   Rep era rng ->
   PairSpec era dom rng ->
@@ -2236,7 +2234,7 @@ genConsistentPairSpec _ _ (PairSpec d r VarOnLeft m) =
       )
     ]
 
-genFromPairSpec :: (Era era, Ord dom) => [String] -> PairSpec era dom rng -> Gen (Map dom rng)
+genFromPairSpec :: forall era dom rng. Ord dom => [String] -> PairSpec era dom rng -> Gen (Map dom rng)
 genFromPairSpec msgs (PairNever xs) = errorMess "genFromPairSpec failed due to PairNever" (msgs ++ xs)
 genFromPairSpec _msgs PairAny = pure $ Map.empty
 genFromPairSpec msgs p@(PairSpec domr rngr VarOnRight mp) = do
