@@ -6,7 +6,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -375,58 +374,40 @@ instance Crypto c => EraTxBody (ConwayEra c) where
   certsTxBodyL = lensMemoRawType ctbrCerts (\txb x -> txb {ctbrCerts = x})
   {-# INLINE certsTxBodyL #-}
 
-  upgradeTxBody
-    BabbageTxBody
-      { btbInputs
-      , btbOutputs
-      , btbCerts
-      , btbWithdrawals
-      , btbTxFee
-      , btbValidityInterval
-      , btbUpdate
-      , btbAuxDataHash
-      , btbMint
-      , btbCollateral
-      , btbReqSignerHashes
-      , btbScriptIntegrityHash
-      , btbTxNetworkId
-      , btbReferenceInputs
-      , btbCollateralReturn
-      , btbTotalCollateral
-      } = do
-      when (isSJust btbUpdate) $
-        Left CTBUEContainsUpdate
-      certs <- traverse (left CTBUETxCert . upgradeTxCert) btbCerts
-      pure $
-        ConwayTxBody
-          { ctbSpendInputs = btbInputs
-          , ctbOutputs =
-              mkSized (eraProtVerLow @(ConwayEra c))
-                . upgradeTxOut
-                . sizedValue
-                <$> btbOutputs
-          , ctbCerts = certs
-          , ctbWithdrawals = btbWithdrawals
-          , ctbTxfee = btbTxFee
-          , ctbVldt = btbValidityInterval
-          , ctbAdHash = btbAuxDataHash
-          , ctbMint = btbMint
-          , ctbCollateralInputs = btbCollateral
-          , ctbReqSignerHashes = btbReqSignerHashes
-          , ctbScriptIntegrityHash = btbScriptIntegrityHash
-          , ctbTxNetworkId = btbTxNetworkId
-          , ctbReferenceInputs = btbReferenceInputs
-          , ctbCollateralReturn =
-              mkSized (eraProtVerLow @(ConwayEra c))
-                . upgradeTxOut
-                . sizedValue
-                <$> btbCollateralReturn
-          , ctbTotalCollateral = btbTotalCollateral
-          , ctbCurrentTreasuryValue = SNothing
-          , ctbProposalProcedures = mempty
-          , ctbVotingProcedures = VotingProcedures mempty
-          , ctbTreasuryDonation = Coin 0
-          }
+  upgradeTxBody btb = do
+    when (isSJust (btbUpdate btb)) $
+      Left CTBUEContainsUpdate
+    certs <- traverse (left CTBUETxCert . upgradeTxCert) (btbCerts btb)
+    pure $
+      ConwayTxBody
+        { ctbSpendInputs = btbInputs btb
+        , ctbOutputs =
+            mkSized (eraProtVerLow @(ConwayEra c))
+              . upgradeTxOut
+              . sizedValue
+              <$> btbOutputs btb
+        , ctbCerts = certs
+        , ctbWithdrawals = btbWithdrawals btb
+        , ctbTxfee = btbTxFee btb
+        , ctbVldt = btbValidityInterval btb
+        , ctbAdHash = btbAuxDataHash btb
+        , ctbMint = btbMint btb
+        , ctbCollateralInputs = btbCollateral btb
+        , ctbReqSignerHashes = btbReqSignerHashes btb
+        , ctbScriptIntegrityHash = btbScriptIntegrityHash btb
+        , ctbTxNetworkId = btbTxNetworkId btb
+        , ctbReferenceInputs = btbReferenceInputs btb
+        , ctbCollateralReturn =
+            mkSized (eraProtVerLow @(ConwayEra c))
+              . upgradeTxOut
+              . sizedValue
+              <$> btbCollateralReturn btb
+        , ctbTotalCollateral = btbTotalCollateral btb
+        , ctbCurrentTreasuryValue = SNothing
+        , ctbProposalProcedures = mempty
+        , ctbVotingProcedures = VotingProcedures mempty
+        , ctbTreasuryDonation = Coin 0
+        }
 
 instance
   ( Crypto c

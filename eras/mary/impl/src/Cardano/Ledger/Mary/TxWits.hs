@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -37,5 +36,8 @@ instance Crypto c => EraTxWits (MaryEra c) where
   scriptTxWitsL = scriptShelleyTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
-  upgradeTxWits (ShelleyTxWits {addrWits, scriptWits, bootWits}) =
-    ShelleyTxWits addrWits (fmap upgradeScript scriptWits) bootWits
+  upgradeTxWits stw =
+    ShelleyTxWits
+      (addrWits stw)
+      (upgradeScript <$> scriptWits stw)
+      (bootWits stw)
