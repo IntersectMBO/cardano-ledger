@@ -40,7 +40,11 @@ import Cardano.Ledger.Conway.Governance (
   votingStakePoolThreshold,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (committeeMembersL)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppMinCommitteeSizeL)
+import Cardano.Ledger.Conway.PParams (
+  ConwayEraPParams,
+  ppCommitteeTermLimitL,
+  ppMinCommitteeSizeL,
+ )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -252,6 +256,7 @@ ratifyTransition = do
           notDelayed = not rsDelayed
       if prevActionAsExpected gasAction ensPrevGovActionIds
         && validCommitteeSize ensCommittee ensPParams
+        && validCommitteeTerm ensCommittee ensPParams reCurrentEpoch
         && notDelayed
         && withdrawalCanWithdraw gasAction
         && spoAccepted st env ast
@@ -297,6 +302,17 @@ validCommitteeSize committee pp =
   let minCommitteeSize = pp ^. ppMinCommitteeSizeL
       members = foldMap' (^. committeeMembersL) committee
    in Map.size members >= fromIntegral minCommitteeSize
+
+validCommitteeTerm ::
+  ConwayEraPParams era =>
+  StrictMaybe (Committee era) ->
+  PParams era ->
+  EpochNo ->
+  Bool
+validCommitteeTerm committee pp currentEpoch =
+  let maxCommitteeTerm = pp ^. ppCommitteeTermLimitL
+      members = foldMap' (^. committeeMembersL) committee
+   in all (<= currentEpoch + fromIntegral maxCommitteeTerm) members
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = absurd
