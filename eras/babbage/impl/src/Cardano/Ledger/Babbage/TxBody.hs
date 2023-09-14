@@ -110,6 +110,7 @@ module Cardano.Ledger.Babbage.TxBody (
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
@@ -127,7 +128,8 @@ import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Babbage.TxOut hiding (TxOut)
 import Cardano.Ledger.BaseTypes (
   Network (..),
-  StrictMaybe (..), isSJust,
+  StrictMaybe (..),
+  isSJust,
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -160,7 +162,9 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Up
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Control.Arrow (left)
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -170,9 +174,6 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Prelude hiding (lookup)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams(appExtraEntropy), appD)
-import Control.Monad (when)
-import Control.Arrow (left)
 
 -- ======================================
 
@@ -428,8 +429,8 @@ allSizedOutputsBabbageTxBodyF =
           SJust collTxOut -> txOuts |> collTxOut
 {-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
 
-data BabbageTxBodyUpgradeError =
-    -- | The update attempts to update the decentralistion parameter, which is
+data BabbageTxBodyUpgradeError
+  = -- | The update attempts to update the decentralistion parameter, which is
     -- dropped in Babbage.
     BTBUEUpdatesD
   | -- | The update attempts to update the extra entropy, which is dropped in
@@ -491,8 +492,9 @@ instance Crypto c => EraTxBody (BabbageEra c) where
               ( error "upgradeTxCert has a Void error type, so this error cannot occur"
               )
               . upgradeTxCert
-          ) atbCerts
-      updates <-  traverse upgradeUpdate atbUpdate
+          )
+          atbCerts
+      updates <- traverse upgradeUpdate atbUpdate
       pure $
         BabbageTxBody
           { btbInputs = atbInputs
@@ -527,8 +529,8 @@ instance Crypto c => EraTxBody (BabbageEra c) where
           ProposedPPUpdates (AlonzoEra c) ->
           Either BabbageTxBodyUpgradeError (ProposedPPUpdates (BabbageEra c))
         upgradeProposedPPUpdates (ProposedPPUpdates m) =
-          ProposedPPUpdates <$>
-            traverse
+          ProposedPPUpdates
+            <$> traverse
               ( \(PParamsUpdate pphkd) -> do
                   when (isSJust $ appD pphkd) $
                     Left BTBUEUpdatesD
