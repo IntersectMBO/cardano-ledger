@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -44,13 +43,13 @@ instance Crypto c => EraTxWits (BabbageEra c) where
   scriptTxWitsL = scriptAlonzoTxWitsL
   {-# INLINE scriptTxWitsL #-}
 
-  upgradeTxWits (AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs}) =
+  upgradeTxWits atw =
     AlonzoTxWits
-      { txwitsVKey
-      , txwitsBoot
-      , txscripts = upgradeScript <$> txscripts
-      , txdats = upgradeTxDats txdats
-      , txrdmrs = upgradeRedeemers txrdmrs
+      { txwitsVKey = txwitsVKey atw
+      , txwitsBoot = txwitsBoot atw
+      , txscripts = upgradeScript <$> txscripts atw
+      , txdats = upgradeTxDats (txdats atw)
+      , txrdmrs = upgradeRedeemers (txrdmrs atw)
       }
 
 instance Crypto c => AlonzoEraTxWits (BabbageEra c) where

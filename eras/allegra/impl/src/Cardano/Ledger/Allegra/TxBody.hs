@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -358,46 +357,35 @@ instance Crypto c => EraTxBody (AllegraEra c) where
     lensMemoRawType atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
-  upgradeTxBody
-    ShelleyTxBody
-      { stbInputs
-      , stbOutputs
-      , stbCerts
-      , stbWithdrawals
-      , stbTxFee
-      , stbTTL
-      , stbUpdate
-      , stbMDHash
-      } = do
-      certs <- traverse upgradeTxCert stbCerts
-      pure $
-        AllegraTxBody
-          { atbInputs = stbInputs
-          , atbOutputs = upgradeTxOut <$> stbOutputs
-          , atbCerts = certs
-          , atbWithdrawals = stbWithdrawals
-          , atbTxFee = stbTxFee
-          , atbValidityInterval = ttlToValidityInterval stbTTL
-          , atbUpdate = fmap upgradeUpdate stbUpdate
-          , atbAuxDataHash = stbMDHash
-          }
-      where
-        ttlToValidityInterval :: SlotNo -> ValidityInterval
-        ttlToValidityInterval ttl = ValidityInterval SNothing (SJust ttl)
+  upgradeTxBody stb = do
+    certs <- traverse upgradeTxCert (stbCerts stb)
+    pure $
+      AllegraTxBody
+        { atbInputs = stbInputs stb
+        , atbOutputs = upgradeTxOut <$> stbOutputs stb
+        , atbCerts = certs
+        , atbWithdrawals = stbWithdrawals stb
+        , atbTxFee = stbTxFee stb
+        , atbValidityInterval = ttlToValidityInterval (stbTTL stb)
+        , atbUpdate = upgradeUpdate <$> stbUpdate stb
+        , atbAuxDataHash = stbMDHash stb
+        }
+    where
+      ttlToValidityInterval :: SlotNo -> ValidityInterval
+      ttlToValidityInterval ttl = ValidityInterval SNothing (SJust ttl)
 
-        upgradeUpdate :: Update (ShelleyEra c) -> Update (AllegraEra c)
-        upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
+      upgradeUpdate :: Update (ShelleyEra c) -> Update (AllegraEra c)
+      upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
 
-        upgradeProposedPPUpdates ::
-          ProposedPPUpdates (ShelleyEra c) ->
-          ProposedPPUpdates (AllegraEra c)
-        upgradeProposedPPUpdates (ProposedPPUpdates m) =
-          ProposedPPUpdates $
-            fmap
-              ( \(PParamsUpdate pphkd) ->
-                  PParamsUpdate $ upgradePParamsHKD () pphkd
-              )
-              m
+      upgradeProposedPPUpdates ::
+        ProposedPPUpdates (ShelleyEra c) ->
+        ProposedPPUpdates (AllegraEra c)
+      upgradeProposedPPUpdates (ProposedPPUpdates m) =
+        ProposedPPUpdates $
+          ( \(PParamsUpdate pphkd) ->
+              PParamsUpdate $ upgradePParamsHKD () pphkd
+          )
+            <$> m
 
 instance Crypto c => ShelleyEraTxBody (AllegraEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AllegraEra StandardCrypto) #-}

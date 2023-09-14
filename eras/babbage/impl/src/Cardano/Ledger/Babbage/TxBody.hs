@@ -470,75 +470,60 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   certsTxBodyL = certsBabbageTxBodyL
   {-# INLINE certsTxBodyL #-}
 
-  upgradeTxBody
-    AlonzoTxBody
-      { atbInputs
-      , atbOutputs
-      , atbCerts
-      , atbWithdrawals
-      , atbTxFee
-      , atbValidityInterval
-      , atbUpdate
-      , atbAuxDataHash
-      , atbMint
-      , atbCollateral
-      , atbReqSignerHashes
-      , atbScriptIntegrityHash
-      , atbTxNetworkId
-      } = do
-      certs <-
-        traverse
-          ( left
-              ( error "upgradeTxCert has a Void error type, so this error cannot occur"
-              )
-              . upgradeTxCert
-          )
-          atbCerts
-      updates <- traverse upgradeUpdate atbUpdate
-      pure $
-        BabbageTxBody
-          { btbInputs = atbInputs
-          , btbOutputs = mkSized (eraProtVerLow @(BabbageEra c)) . upgradeTxOut <$> atbOutputs
-          , btbCerts = certs
-          , btbWithdrawals = atbWithdrawals
-          , btbTxFee = atbTxFee
-          , btbValidityInterval = atbValidityInterval
-          , btbUpdate = updates
-          , btbAuxDataHash = atbAuxDataHash
-          , btbMint = atbMint
-          , btbCollateral = atbCollateral
-          , btbReqSignerHashes = atbReqSignerHashes
-          , btbScriptIntegrityHash = atbScriptIntegrityHash
-          , btbTxNetworkId = atbTxNetworkId
-          , btbReferenceInputs = mempty
-          , btbCollateralReturn = SNothing
-          , btbTotalCollateral = SNothing
-          }
-      where
-        upgradeUpdate ::
-          Update (AlonzoEra c) ->
-          Either BabbageTxBodyUpgradeError (Update (BabbageEra c))
-        upgradeUpdate (Update pp epoch) =
-          Update <$> upgradeProposedPPUpdates pp <*> pure epoch
+  upgradeTxBody atb = do
+    certs <-
+      traverse
+        ( left
+            ( error "upgradeTxCert has a Void error type, so this error cannot occur"
+            )
+            . upgradeTxCert
+        )
+        (atbCerts atb)
+    updates <- traverse upgradeUpdate (atbUpdate atb)
+    pure $
+      BabbageTxBody
+        { btbInputs = atbInputs atb
+        , btbOutputs = mkSized (eraProtVerLow @(BabbageEra c)) . upgradeTxOut <$> atbOutputs atb
+        , btbCerts = certs
+        , btbWithdrawals = atbWithdrawals atb
+        , btbTxFee = atbTxFee atb
+        , btbValidityInterval = atbValidityInterval atb
+        , btbUpdate = updates
+        , btbAuxDataHash = atbAuxDataHash atb
+        , btbMint = atbMint atb
+        , btbCollateral = atbCollateral atb
+        , btbReqSignerHashes = atbReqSignerHashes atb
+        , btbScriptIntegrityHash = atbScriptIntegrityHash atb
+        , btbTxNetworkId = atbTxNetworkId atb
+        , btbReferenceInputs = mempty
+        , btbCollateralReturn = SNothing
+        , btbTotalCollateral = SNothing
+        }
+    where
+      upgradeUpdate ::
+        Update (AlonzoEra c) ->
+        Either BabbageTxBodyUpgradeError (Update (BabbageEra c))
+      upgradeUpdate (Update pp epoch) =
+        Update <$> upgradeProposedPPUpdates pp <*> pure epoch
 
-        -- Note that here we use 'upgradeBabbagePParams False' in order to
-        -- preserve 'CoinsPerUTxOWord', in spite of the value now being
-        -- semantically incorrect. Anything else will result in an invalid
-        -- transaction.
-        upgradeProposedPPUpdates ::
-          ProposedPPUpdates (AlonzoEra c) ->
-          Either BabbageTxBodyUpgradeError (ProposedPPUpdates (BabbageEra c))
-        upgradeProposedPPUpdates (ProposedPPUpdates m) =
-          ProposedPPUpdates
-            <$> traverse
-              ( \(PParamsUpdate pphkd) -> do
-                  when (isSJust $ appD pphkd) $
-                    Left BTBUEUpdatesD
-                  when (isSJust $ appExtraEntropy pphkd) $
-                    Left BTBUEUpdatesExtraEntropy
-                  pure . PParamsUpdate $ upgradeBabbagePParams False pphkd
-              )
-              m
+      -- Note that here we use 'upgradeBabbagePParams False' in order to
+      -- preserve 'CoinsPerUTxOWord', in spite of the value now being
+      -- semantically incorrect. Anything else will result in an invalid
+      -- transaction.
+      upgradeProposedPPUpdates ::
+        ProposedPPUpdates (AlonzoEra c) ->
+        Either BabbageTxBodyUpgradeError (ProposedPPUpdates (BabbageEra c))
+      upgradeProposedPPUpdates (ProposedPPUpdates m) =
+        ProposedPPUpdates
+          <$> traverse
+            ( \(PParamsUpdate pphkd) -> do
+                when (isSJust $ appD pphkd) $
+                  Left BTBUEUpdatesD
+                when (isSJust $ appExtraEntropy pphkd) $
+                  Left BTBUEUpdatesExtraEntropy
+                pure . PParamsUpdate $ upgradeBabbagePParams False pphkd
+            )
+            m
 
 instance Crypto c => ShelleyEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (BabbageEra StandardCrypto) #-}

@@ -272,44 +272,34 @@ instance Crypto c => EraTxBody (MaryEra c) where
     lensMaryTxBodyRaw atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
-  upgradeTxBody
-    AllegraTxBody
-      { atbInputs
-      , atbOutputs
-      , atbCerts
-      , atbWithdrawals
-      , atbTxFee
-      , atbValidityInterval
-      , atbUpdate
-      , atbAuxDataHash
-      } = do
-      certs <- traverse upgradeTxCert atbCerts
-      pure $
-        MaryTxBody
-          { mtbInputs = atbInputs
-          , mtbOutputs = upgradeTxOut <$> atbOutputs
-          , mtbCerts = certs
-          , mtbWithdrawals = atbWithdrawals
-          , mtbTxFee = atbTxFee
-          , mtbValidityInterval = atbValidityInterval
-          , mtbUpdate = fmap upgradeUpdate atbUpdate
-          , mtbAuxDataHash = atbAuxDataHash
-          , mtbMint = mempty
-          }
-      where
-        upgradeUpdate :: Update (AllegraEra c) -> Update (MaryEra c)
-        upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
+  upgradeTxBody atb = do
+    certs <- traverse upgradeTxCert (atbCerts atb)
+    pure $
+      MaryTxBody
+        { mtbInputs = atbInputs atb
+        , mtbOutputs = upgradeTxOut <$> atbOutputs atb
+        , mtbCerts = certs
+        , mtbWithdrawals = atbWithdrawals atb
+        , mtbTxFee = atbTxFee atb
+        , mtbValidityInterval = atbValidityInterval atb
+        , mtbUpdate = upgradeUpdate <$> atbUpdate atb
+        , mtbAuxDataHash = atbAuxDataHash atb
+        , mtbMint = mempty
+        }
+    where
+      upgradeUpdate :: Update (AllegraEra c) -> Update (MaryEra c)
+      upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
 
-        upgradeProposedPPUpdates ::
-          ProposedPPUpdates (AllegraEra c) ->
-          ProposedPPUpdates (MaryEra c)
-        upgradeProposedPPUpdates (ProposedPPUpdates m) =
-          ProposedPPUpdates $
-            fmap
-              ( \(PParamsUpdate pphkd) ->
-                  PParamsUpdate $ upgradePParamsHKD () pphkd
-              )
-              m
+      upgradeProposedPPUpdates ::
+        ProposedPPUpdates (AllegraEra c) ->
+        ProposedPPUpdates (MaryEra c)
+      upgradeProposedPPUpdates (ProposedPPUpdates m) =
+        ProposedPPUpdates $
+          fmap
+            ( \(PParamsUpdate pphkd) ->
+                PParamsUpdate $ upgradePParamsHKD () pphkd
+            )
+            m
 
 instance Crypto c => ShelleyEraTxBody (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (MaryEra StandardCrypto) #-}
