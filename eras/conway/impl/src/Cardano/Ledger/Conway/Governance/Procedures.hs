@@ -516,17 +516,19 @@ data GovAction era
       -- | Proposed treasury withdrawals
       !(Map (RewardAcnt (EraCrypto era)) Coin)
   | NoConfidence
-      -- | Previous governance action id of `NoConfidence` or `NewCommittee` type, which
+      -- | Previous governance action id of `NoConfidence` or `UpdateCommittee` type, which
       -- corresponds to `CommitteePurpose`
       !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-  | NewCommittee
-      -- | Previous governance action id of `NewCommittee` or `NoConfidence` type, which
+  | UpdateCommittee
+      -- | Previous governance action id of `UpdateCommittee` or `NoConfidence` type, which
       -- corresponds to `CommitteePurpose`
       !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-      -- | Old committee
+      -- | Constitutional Committe members to be removed
       !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
-      -- | New Committee
-      !(Committee era)
+      -- | Constitutional committee members to be added
+      !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+      -- New quorum
+      !UnitInterval
   | NewConstitution
       -- | Previous governance action id of `NewConstitution` type, which corresponds to
       -- `ConstitutionPurpose`
@@ -554,7 +556,7 @@ instance EraPParams era => DecCBOR (GovAction era) where
       1 -> SumD HardForkInitiation <! D (decodeNullStrictMaybe decCBOR) <! From
       2 -> SumD TreasuryWithdrawals <! From
       3 -> SumD NoConfidence <! D (decodeNullStrictMaybe decCBOR)
-      4 -> SumD NewCommittee <! D (decodeNullStrictMaybe decCBOR) <! From <! From
+      4 -> SumD UpdateCommittee <! D (decodeNullStrictMaybe decCBOR) <! From <! From <! From
       5 -> SumD NewConstitution <! D (decodeNullStrictMaybe decCBOR) <! From
       6 -> SumD InfoAction
       k -> Invalid k
@@ -571,8 +573,8 @@ instance EraPParams era => EncCBOR (GovAction era) where
         Sum TreasuryWithdrawals 2 !> To ws
       NoConfidence gid ->
         Sum NoConfidence 3 !> E (encodeNullStrictMaybe encCBOR) gid
-      NewCommittee gid old new ->
-        Sum NewCommittee 4 !> E (encodeNullStrictMaybe encCBOR) gid !> To old !> To new
+      UpdateCommittee gid old new q ->
+        Sum UpdateCommittee 4 !> E (encodeNullStrictMaybe encCBOR) gid !> To old !> To new !> To q
       NewConstitution gid c ->
         Sum NewConstitution 5 !> E (encodeNullStrictMaybe encCBOR) gid !> To c
       InfoAction ->

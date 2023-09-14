@@ -8,7 +8,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conway.Arbitrary (
-  genNewCommittee,
+  genUpdateCommittee,
   genNoConfidence,
   genTreasuryWithdrawals,
   genHardForkInitiation,
@@ -227,8 +227,13 @@ genTreasuryWithdrawals = TreasuryWithdrawals <$> arbitrary
 genNoConfidence :: Era era => Gen (GovAction era)
 genNoConfidence = NoConfidence <$> arbitrary
 
-genNewCommittee :: Era era => Gen (GovAction era)
-genNewCommittee = NewCommittee <$> arbitrary <*> arbitrary <*> arbitrary
+genUpdateCommittee :: Era era => Gen (GovAction era)
+genUpdateCommittee =
+  UpdateCommittee
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
 
 genNewConstitution :: Era era => Gen (GovAction era)
 genNewConstitution = NewConstitution <$> arbitrary <*> arbitrary
@@ -243,7 +248,7 @@ govActionGenerators =
   , genHardForkInitiation
   , genTreasuryWithdrawals
   , genNoConfidence
-  , genNewCommittee
+  , genUpdateCommittee
   , genNewConstitution
   , pure InfoAction
   ]

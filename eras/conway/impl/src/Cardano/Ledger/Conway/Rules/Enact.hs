@@ -18,6 +18,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT)
 import Cardano.Ledger.Conway.Governance (
+  Committee (..),
   EnactState (..),
   GovAction (..),
   GovActionId (..),
@@ -31,6 +32,8 @@ import Cardano.Ledger.Conway.Governance (
   ensPrevPParamUpdateL,
   ensProtVerL,
  )
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.State.Transition.Extended (
   STS (..),
@@ -40,6 +43,7 @@ import Control.State.Transition.Extended (
  )
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Void (Void)
 import Lens.Micro
 
@@ -86,10 +90,10 @@ enactmentTransition = do
         st
           & ensCommitteeL .~ SNothing
           & ensPrevCommitteeL .~ SJust (PrevGovActionId govActionId)
-    NewCommittee _ _ committee ->
+    UpdateCommittee _ membersToRemove membersToAdd newQuorum -> do
       pure $
         st
-          & ensCommitteeL .~ SJust committee -- TODO: check old members
+          & ensCommitteeL %~ SJust . updatedCommittee membersToRemove membersToAdd newQuorum
           & ensPrevCommitteeL .~ SJust (PrevGovActionId govActionId)
     NewConstitution _ c ->
       pure $
@@ -97,3 +101,21 @@ enactmentTransition = do
           & ensConstitutionL .~ c
           & ensPrevConstitutionL .~ SJust (PrevGovActionId govActionId)
     InfoAction -> pure st
+
+updatedCommittee ::
+  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
+  UnitInterval ->
+  StrictMaybe (Committee era) ->
+  Committee era
+updatedCommittee membersToRemove membersToAdd newQuorum committee =
+  case committee of
+    SNothing -> Committee membersToAdd newQuorum
+    SJust (Committee currentMembers _) ->
+      let newCommitteeMembers =
+            Map.union
+              membersToAdd
+              (currentMembers `Map.withoutKeys` membersToRemove)
+       in Committee
+            newCommitteeMembers
+            newQuorum

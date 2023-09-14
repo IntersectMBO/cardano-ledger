@@ -30,6 +30,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
+  Committee (..),
   GovAction (..),
   GovActionState (..),
   PrevGovActionIds (..),
@@ -38,7 +39,12 @@ import Cardano.Ledger.Conway.Governance (
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
+import Cardano.Ledger.Conway.Governance.Procedures (committeeMembersL)
+import Cardano.Ledger.Conway.PParams (
+  ConwayEraPParams,
+  ppCommitteeTermLimitL,
+  ppMinCommitteeSizeL,
+ )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -65,6 +71,7 @@ import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Data.Word (Word64)
+import Lens.Micro ((^.))
 
 data RatifyEnv era = RatifyEnv
   { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
@@ -201,7 +208,7 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
 delayingAction :: GovAction era -> Bool
 delayingAction NoConfidence {} = True
 delayingAction HardForkInitiation {} = True
-delayingAction NewCommittee {} = True
+delayingAction UpdateCommittee {} = True
 delayingAction NewConstitution {} = True
 delayingAction TreasuryWithdrawals {} = False
 delayingAction ParameterChange {} = False
@@ -209,7 +216,7 @@ delayingAction InfoAction {} = False
 
 actionPriority :: GovAction era -> Int
 actionPriority NoConfidence {} = 0
-actionPriority NewCommittee {} = 1
+actionPriority UpdateCommittee {} = 1
 actionPriority NewConstitution {} = 2
 actionPriority HardForkInitiation {} = 3
 actionPriority ParameterChange {} = 4
@@ -231,7 +238,11 @@ ratifyTransition ::
 ratifyTransition = do
   TRC
     ( env@RatifyEnv {reCurrentEpoch}
-      , st@RatifyState {..}
+      , st@( RatifyState
+              rsEnactState@EnactState {ensCommittee, ensPParams, ensTreasury, ensPrevGovActionIds}
+              rsRemoved
+              rsDelayed
+            )
       , RatifySignal rsig
       ) <-
     judgmentContext
@@ -240,12 +251,12 @@ ratifyTransition = do
     ast :<| sigs -> do
       let gas@GovActionState {gasId, gasAction, gasExpiresAfter} = ast
           withdrawalCanWithdraw (TreasuryWithdrawals m) =
-            Map.foldr' (<+>) zero m <= ensTreasury rsEnactState
+            Map.foldr' (<+>) zero m <= ensTreasury
           withdrawalCanWithdraw _ = True
           notDelayed = not rsDelayed
-      if prevActionAsExpected
-        gasAction
-        (ensPrevGovActionIds rsEnactState)
+      if prevActionAsExpected gasAction ensPrevGovActionIds
+        && validCommitteeSize ensCommittee ensPParams
+        && validCommitteeTerm ensCommittee ensPParams reCurrentEpoch
         && notDelayed
         && withdrawalCanWithdraw gasAction
         && spoAccepted st env ast
@@ -280,11 +291,28 @@ prevActionAsExpected (HardForkInitiation prev _) (PrevGovActionIds {pgaHardFork}
   prev == pgaHardFork
 prevActionAsExpected (NoConfidence prev) (PrevGovActionIds {pgaCommittee}) =
   prev == pgaCommittee
-prevActionAsExpected (NewCommittee prev _ _) (PrevGovActionIds {pgaCommittee}) =
+prevActionAsExpected (UpdateCommittee prev _ _ _) (PrevGovActionIds {pgaCommittee}) =
   prev == pgaCommittee
 prevActionAsExpected (NewConstitution prev _) (PrevGovActionIds {pgaConstitution}) =
   prev == pgaConstitution
-prevActionAsExpected _ _ = True -- for the other actions, the last action is not relevant
+prevActionAsExpected _ _ = True -- for the other actions, the previous action is not relevant
+
+validCommitteeSize :: ConwayEraPParams era => StrictMaybe (Committee era) -> PParams era -> Bool
+validCommitteeSize committee pp =
+  let minCommitteeSize = pp ^. ppMinCommitteeSizeL
+      members = foldMap' (^. committeeMembersL) committee
+   in Map.size members >= fromIntegral minCommitteeSize
+
+validCommitteeTerm ::
+  ConwayEraPParams era =>
+  StrictMaybe (Committee era) ->
+  PParams era ->
+  EpochNo ->
+  Bool
+validCommitteeTerm committee pp currentEpoch =
+  let maxCommitteeTerm = pp ^. ppCommitteeTermLimitL
+      members = foldMap' (^. committeeMembersL) committee
+   in all (<= currentEpoch + fromIntegral maxCommitteeTerm) members
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = absurd

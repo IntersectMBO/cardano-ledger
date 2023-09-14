@@ -1729,12 +1729,13 @@ pcGovAction x = case x of
       [ppMap pcRewardAcnt pcCoin ws]
   (NoConfidence pgaid) ->
     ppRecord "NoConfidence" [("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)]
-  (NewCommittee pgaid old committee) ->
+  (UpdateCommittee pgaid toRemove toAdd quor) ->
     ppRecord
       "NewCommittee"
       [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
-      , ("oldMembers", ppSet pcCredential old)
-      , ("committee", pcCommittee committee)
+      , ("membersToRemove", ppSet pcCredential toRemove)
+      , ("members", ppMap pcCredential ppEpochNo toAdd)
+      , ("quorum", ppUnitInterval quor)
       ]
   (NewConstitution pgaid c) ->
     ppRecord

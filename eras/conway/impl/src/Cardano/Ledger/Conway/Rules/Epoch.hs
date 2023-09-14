@@ -24,12 +24,20 @@ where
 
 import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (certDStateL, certVStateL, dsUnifiedL, vsCommitteeStateL, vsDRepsL)
+import Cardano.Ledger.CertState (
+  CommitteeState (..),
+  certDStateL,
+  certVStateL,
+  dsUnifiedL,
+  vsCommitteeStateL,
+  vsDRepsL,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
+  Committee,
   ConwayGovState (..),
   GovActionState (..),
   GovSnapshots (..),
@@ -37,8 +45,10 @@ import Cardano.Ledger.Conway.Governance (
   cgEnactStateL,
   cgGovSnapshotsL,
   curGovSnapshotsL,
+  ensCommitteeL,
   snapshotActions,
  )
+import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
 import Cardano.Ledger.Conway.Governance.Snapshots (snapshotLookupId, snapshotRemoveIds)
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
 import Cardano.Ledger.DRepDistr (extractDRepDistr)
@@ -97,6 +107,7 @@ import Control.State.Transition (
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
@@ -270,6 +281,10 @@ epochTransition = do
         }
         & prevPParamsEpochStateL .~ pp
         & curPParamsEpochStateL .~ pp
+    updatedCommitteeState =
+      updateCommitteeState
+        (rsEnactState ^. ensCommitteeL)
+        (es' ^. esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL)
     esGovernanceL :: Lens' (EpochState era) (GovState era)
     esGovernanceL = esLStateL . lsUTxOStateL . utxosGovStateL
     oldGovSnapshots =
@@ -302,6 +317,8 @@ epochTransition = do
       & esGovernanceL . cgGovSnapshotsL .~ newGov
       -- Move donations to treasury
       & esAccountStateL . asTreasuryL <>~ donations
+      -- remove hot keys of committee members that were removed
+      & esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL .~ updatedCommitteeState
       -- Clear the donations field
       & esDonationL .~ mempty
 
@@ -336,3 +353,9 @@ instance
   where
   wrapFailed = absurd
   wrapEvent = absurd
+
+updateCommitteeState :: StrictMaybe (Committee era) -> CommitteeState era -> CommitteeState era
+updateCommitteeState committee (CommitteeState creds) =
+  CommitteeState $ Map.difference creds members
+  where
+    members = foldMap' committeeMembers committee
