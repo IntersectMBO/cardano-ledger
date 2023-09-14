@@ -3,6 +3,7 @@
 ## 1.9.0.0
 
 * Rename `NewCommitte` to `UpdateCommittee`
+* Remove `NewCommitteeSizeTooSmall` data constructor from `ConwayGovPredFailure`
 * Fix invalid order in `fromGovActionStateSeq`, thus also `DecCBOR` for `ProposalsSnapshot`
 * Remove `DecCBOR`/`EncCBOR` and `FromCBOR`/`ToCBOR` for `RatifyState`, since that state
   is ephemeral and is never serialized.

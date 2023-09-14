@@ -67,7 +67,6 @@ import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,
   ppGovActionExpirationL,
-  ppMinCommitteeSizeL,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
@@ -90,7 +89,6 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (^.))
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 import Validation (failureUnless)
 
 data GovEnv era = GovEnv
@@ -104,11 +102,6 @@ data ConwayGovPredFailure era
   | MalformedProposal (GovAction era)
   | ProposalProcedureNetworkIdMismatch (RewardAcnt (EraCrypto era)) Network
   | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAcnt (EraCrypto era))) Network
-  | NewCommitteeSizeTooSmall
-      -- | Size of `Committee` in `ProposalProcedure`
-      Natural
-      -- | `ppMinCommitteeSize` from `PParams`
-      Natural
   | ProposalDepositIncorrect
       -- | Submitted deposit
       Coin
@@ -130,9 +123,8 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     1 -> SumD MalformedProposal <! From
     2 -> SumD ProposalProcedureNetworkIdMismatch <! From <! From
     3 -> SumD TreasuryWithdrawalsNetworkIdMismatch <! From <! From
-    4 -> SumD NewCommitteeSizeTooSmall <! From <! From
-    5 -> SumD ProposalDepositIncorrect <! From <! From
-    6 -> SumD DisallowedVoters <! From
+    4 -> SumD ProposalDepositIncorrect <! From <! From
+    5 -> SumD DisallowedVoters <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -144,12 +136,10 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum ProposalProcedureNetworkIdMismatch 2 !> To acnt !> To nid
       TreasuryWithdrawalsNetworkIdMismatch acnts nid ->
         Sum TreasuryWithdrawalsNetworkIdMismatch 3 !> To acnts !> To nid
-      NewCommitteeSizeTooSmall submitted expected ->
-        Sum NewCommitteeSizeTooSmall 4 !> To submitted !> To expected
       ProposalDepositIncorrect submitted expected ->
-        Sum ProposalDepositIncorrect 5 !> To submitted !> To expected
+        Sum ProposalDepositIncorrect 4 !> To submitted !> To expected
       DisallowedVoters votes ->
-        Sum DisallowedVoters 6 !> To votes
+        Sum DisallowedVoters 5 !> To votes
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -266,12 +256,6 @@ govTransition = do
                   Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
              in Set.null mismatchedAccounts
                   ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
-          UpdateCommittee _mPrevGovActionId _membersToRemove membersToAdd _qrm -> do
-            let minCommitteeSize = pp ^. ppMinCommitteeSizeL
-                newCommitteeSize = fromIntegral . Map.size $ membersToAdd
-             in newCommitteeSize
-                  >= minCommitteeSize
-                    ?! NewCommitteeSizeTooSmall newCommitteeSize minCommitteeSize
           _ -> pure ()
 
         let st'' =
