@@ -31,6 +31,7 @@ import Cardano.Ledger.CertState (
   dsUnifiedL,
   vsCommitteeStateL,
   vsDRepsL,
+  vsNumDormantEpochsL,
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -38,6 +39,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee,
+  ConwayEraGov,
   ConwayGovState (..),
   GovActionState (..),
   GovSnapshots (..),
@@ -46,7 +48,10 @@ import Cardano.Ledger.Conway.Governance (
   cgGovSnapshotsL,
   curGovSnapshotsL,
   ensCommitteeL,
+  prevGovSnapshotsL,
   snapshotActions,
+  snapshotIds,
+  snapshotsGovStateL,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
 import Cardano.Ledger.Conway.Governance.Snapshots (snapshotLookupId, snapshotRemoveIds)
@@ -112,7 +117,7 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
-import Lens.Micro (Lens', (%~), (&), (.~), (<>~), (^.))
+import Lens.Micro (Lens', (%~), (&), (+~), (.~), (<>~), (^.))
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
@@ -120,7 +125,7 @@ data ConwayEpochEvent era
 
 instance
   ( EraTxOut era
-  , EraGov era
+  , ConwayEraGov era
   , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
@@ -173,6 +178,15 @@ returnProposalDeposits removedProposals =
   where
     updateUMap = returnProposalDepositsUMap removedProposals
 
+-- | When there have been zero governance proposals to vote on in the previous epoch
+-- increase the dormant-epoch counter by one.
+updateNumDormantEpochs :: ConwayEraGov era => LedgerState era -> LedgerState era
+updateNumDormantEpochs ls =
+  let wasPrevEpochDormant = Seq.null . snapshotIds $ ls ^. lsUTxOStateL . utxosGovStateL . snapshotsGovStateL . prevGovSnapshotsL
+   in if wasPrevEpochDormant
+        then ls & lsCertStateL . certVStateL . vsNumDormantEpochsL +~ 1
+        else ls
+
 epochTransition ::
   forall era.
   ( Embed (EraRule "SNAP" era) (ConwayEPOCH era)
@@ -188,7 +202,7 @@ epochTransition ::
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , GovState era ~ ConwayGovState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
-  , EraGov era
+  , ConwayEraGov era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
@@ -197,15 +211,16 @@ epochTransition = do
       , es@EpochState
           { esAccountState = acnt
           , esSnapshots = ss
-          , esLState = ls
+          , esLState = ledgerState
           , esNonMyopic = nm
           }
       , eNo
       ) <-
     judgmentContext
-  let pp = es ^. curPParamsEpochStateL
-  let utxoSt = lsUTxOState ls
-  let CertState vstate pstate dstate = lsCertState ls
+  let ls = updateNumDormantEpochs ledgerState
+      pp = es ^. curPParamsEpochStateL
+      utxoSt = lsUTxOState ls
+      CertState vstate pstate dstate = lsCertState ls
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
 

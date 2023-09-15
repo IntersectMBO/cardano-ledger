@@ -249,6 +249,7 @@ govTransition ::
   TransitionRule (ConwayGOV era)
 govTransition = do
   TRC (GovEnv txid currentEpoch pp, st, gp) <- judgmentContext
+  expectedNetworkId <- liftSTS $ asks networkId
 
   let applyProps st' Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
@@ -259,7 +260,6 @@ govTransition = do
 
         runTest $ actionWellFormed pProcGovAction
 
-        expectedNetworkId <- liftSTS $ asks networkId
         getRwdNetwork pProcReturnAddr
           == expectedNetworkId
             ?! ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId

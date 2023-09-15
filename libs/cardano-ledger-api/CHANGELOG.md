@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Add the dormant-epochs counter to `DRep` expiry in `queryDRepState` #3729
+  * If it is not zero.
 * Rename:
   * `GovActionsState` to `GovSnapshots`
   * `cgGovActionsStateL` to `cgGovSnapshotsL`
