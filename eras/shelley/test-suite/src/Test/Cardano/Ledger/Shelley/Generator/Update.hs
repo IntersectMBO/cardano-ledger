@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -61,6 +60,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Ratio (Ratio, (%))
+import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Records
 import GHC.Stack (HasCallStack)
@@ -92,7 +92,8 @@ genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
   (% 1000) <$> genInteger lower upper
 
-genIntervalInThousands :: (BoundedRational a, HasCallStack) => Integer -> Integer -> Gen a
+genIntervalInThousands ::
+  (Typeable a, BoundedRational a, HasCallStack) => Integer -> Integer -> Gen a
 genIntervalInThousands lower upper =
   unsafeBoundRational <$> genRationalInThousands lower upper
 

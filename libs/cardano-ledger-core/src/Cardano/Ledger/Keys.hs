@@ -87,7 +87,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr), defaultExprViaShow)
+import Cardano.Ledger.TreeDiff (Expr (..), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -95,6 +95,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
+import qualified Data.TreeDiff.OMap as OMap
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -164,6 +165,10 @@ type DSignable c = DSIGN.Signable (DSIGN c)
 newtype VKey (kd :: KeyRole) c = VKey {unVKey :: DSIGN.VerKeyDSIGN (DSIGN c)}
   deriving (Generic)
 
+instance Crypto c => ToExpr (VKey r c) where
+  toExpr vk =
+    Rec "VKey" $ OMap.fromList [("VKey (hashOf)", toExpr $ hashKey vk)]
+
 deriving via Quiet (VKey kd c) instance Crypto c => Show (VKey kd c)
 
 deriving instance Crypto c => Eq (VKey kd c)
@@ -173,9 +178,6 @@ deriving instance
   NFData (VKey kd c)
 
 deriving instance Crypto c => NoThunks (VKey kd c)
-
-instance Crypto c => ToExpr (VKey kd c) where
-  toExpr = defaultExprViaShow
 
 instance HasKeyRole VKey
 

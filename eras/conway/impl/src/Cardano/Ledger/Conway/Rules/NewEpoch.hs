@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -58,6 +59,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Default.Class (Default (..))
@@ -65,11 +67,13 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio (Ratio)
 import Data.Set (Set)
 import Data.Word (Word64)
+import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (.~), (^.))
 
 newtype ConwayNewEpochPredFailure era
   = CorruptRewardUpdate
       (RewardUpdate (EraCrypto era)) -- The reward update which violates an invariant
+  deriving (Generic)
 
 deriving instance Eq (ConwayNewEpochPredFailure era)
 
@@ -78,6 +82,8 @@ deriving instance
   , Show (PredicateFailure (EraRule "RATIFY" era))
   ) =>
   Show (ConwayNewEpochPredFailure era)
+
+instance NFData (ConwayNewEpochPredFailure era)
 
 data ConwayNewEpochEvent era
   = DeltaRewardEvent !(Event (EraRule "RUPD" era))

@@ -106,8 +106,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.TreeDiff (
-  Expr (App),
-  ToExpr (toExpr),
+  ToExpr,
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
@@ -150,17 +149,6 @@ data BabbageTxOut era
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
   deriving (Generic)
-
-instance
-  ( EraTxOut era
-  , ToExpr (Value era)
-  , ToExpr (BinaryData era)
-  , ToExpr (Datum era)
-  , ToExpr (Script era)
-  ) =>
-  ToExpr (BabbageTxOut era)
-  where
-  toExpr (BabbageTxOut addr val dat sc) = App "BabbageTxOut" [toExpr addr, toExpr val, toExpr dat, toExpr sc]
 
 instance Crypto c => EraTxOut (BabbageEra c) where
   {-# SPECIALIZE instance EraTxOut (BabbageEra StandardCrypto) #-}
@@ -480,6 +468,13 @@ instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) whe
     -- backwards compatibility shim can be removed.
     internBabbageTxOut (interns credsInterns) <$!> decodeBabbageTxOut fromCborBackwardsBothAddr
   {-# INLINEABLE decShareCBOR #-}
+
+instance
+  ( ToExpr (CompactAddr (EraCrypto era))
+  , ToExpr (CompactForm (Value era))
+  , ToExpr (Script era)
+  ) =>
+  ToExpr (BabbageTxOut era)
 
 internBabbageTxOut ::
   (Credential 'Staking (EraCrypto era) -> Credential 'Staking (EraCrypto era)) ->

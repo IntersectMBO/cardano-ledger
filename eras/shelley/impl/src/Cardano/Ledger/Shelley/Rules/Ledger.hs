@@ -270,7 +270,6 @@ depositEqualsObligation ::
   , Environment t ~ LedgerEnv era
   , Signal t ~ Tx era
   , State t ~ LedgerState era
-  , ProtVerAtMost era 8
   ) =>
   AssertionViolation t ->
   String

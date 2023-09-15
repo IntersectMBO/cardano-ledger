@@ -163,7 +163,9 @@ import NoThunks.Class (NoThunks)
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToExpr)
+  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR)
+
+instance ToExpr IsValid
 
 data AlonzoTx era = AlonzoTx
   { body :: !(TxBody era)
@@ -389,6 +391,8 @@ data ScriptPurpose era
   | Rewarding !(RewardAcnt (EraCrypto era))
   | Certifying !(TxCert era)
   deriving (Generic)
+
+instance ToExpr (TxCert era) => ToExpr (ScriptPurpose era)
 
 deriving instance (Era era, Eq (TxCert era)) => Eq (ScriptPurpose era)
 deriving instance (Era era, Show (TxCert era)) => Show (ScriptPurpose era)

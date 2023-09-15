@@ -54,6 +54,7 @@ module Cardano.Ledger.Conway.Governance (
   snapshotAddVote,
   snapshotIds,
   snapshotRemoveIds,
+  snapshotLookupId,
   fromGovActionStateSeq,
   isConsistent_,
   -- Lenses
@@ -158,6 +159,7 @@ import Cardano.Ledger.Conway.Governance.Snapshots (
   snapshotAddVote,
   snapshotIds,
   snapshotInsertGovAction,
+  snapshotLookupId,
   snapshotRemoveIds,
  )
 import Cardano.Ledger.Conway.PParams (

@@ -34,14 +34,13 @@ import Cardano.Ledger.Binary (
  )
 
 -- ToExpr (CBOR.Term) instance
-import Cardano.Ledger.TreeDiff (diffExpr)
 import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
 import Control.Exception (throwIO)
 import Control.Monad (unless)
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.String (fromString)
 import GHC.Stack
-import Test.Cardano.Ledger.Binary.TreeDiff ()
+import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 

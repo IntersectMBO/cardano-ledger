@@ -88,6 +88,7 @@ import Cardano.Ledger.Shelley.Rules (
   updateUTxOState,
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
@@ -322,6 +323,8 @@ data FailureDescription
   = PlutusFailure Text BS.ByteString
   deriving (Show, Eq, Generic, NoThunks)
 
+instance ToExpr FailureDescription
+
 instance EncCBOR FailureDescription where
   -- This strange encoding results from the fact that 'FailureDescription'
   -- used to have another constructor, which used key 0.
@@ -351,6 +354,8 @@ data TagMismatchDescription
   | FailedUnexpectedly (NonEmpty FailureDescription)
   deriving (Show, Eq, Generic, NoThunks)
 
+instance ToExpr TagMismatchDescription
+
 instance EncCBOR TagMismatchDescription where
   encCBOR PassedUnexpectedly = encode (Sum PassedUnexpectedly 0)
   encCBOR (FailedUnexpectedly fs) = encode (Sum FailedUnexpectedly 1 !> To fs)
@@ -376,6 +381,12 @@ data AlonzoUtxosPredFailure era
   | UpdateFailure (PPUPPredFailure era)
   deriving
     (Generic)
+
+instance
+  ( ToExpr (PPUPPredFailure era)
+  , ToExpr (TxCert era)
+  ) =>
+  ToExpr (AlonzoUtxosPredFailure era)
 
 instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) where
   inject () = UpdateFailure ()

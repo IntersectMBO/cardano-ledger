@@ -19,7 +19,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
-import Cardano.Ledger.TreeDiff (diffExpr)
 import Cardano.Ledger.UMap (UView (RewDepUView), depositMap, domain, fromCompact, sumDepositUView)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
@@ -37,6 +36,7 @@ import Data.Default.Class (Default (def))
 import Data.List (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
 import Test.Cardano.Ledger.Generic.Functions (
   getBody,
   getCollateralInputs,

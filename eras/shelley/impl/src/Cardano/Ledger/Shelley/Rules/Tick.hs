@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.Rules.Rupd (
  )
 import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo (unEpochNo), SlotNo, epochInfoEpoch)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
@@ -91,6 +92,12 @@ instance
   , NoThunks (PredicateFailure (EraRule "RUPD" era))
   ) =>
   NoThunks (ShelleyTickPredFailure era)
+
+instance
+  ( NFData (PredicateFailure (EraRule "NEWEPOCH" era))
+  , NFData (PredicateFailure (EraRule "RUPD" era))
+  ) =>
+  NFData (ShelleyTickPredFailure era)
 
 data ShelleyTickEvent era
   = TickNewEpochEvent (Event (EraRule "NEWEPOCH" era))

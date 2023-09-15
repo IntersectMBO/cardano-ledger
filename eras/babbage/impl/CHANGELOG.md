@@ -2,6 +2,13 @@
 
 ## 1.5.0.0
 
+* Add `Generic` instance for:
+  * `BabbageUtxoPredFailure`
+  * `BabbageUtxowPredFailure`
+* Add `ToExpr` instance for:
+  * `BabbageUtxoPredFailure`
+  * `BabbageUtxowPredFailure`
+  * `BabbageTxOut`
 * Switch to using `AlonzoEraUTxO` in rules
 * Deprecate `getDatumBabbage` in favor of `getBabbageSpendingDatum`
 * Add `getBabbageSupplementalDataHashes`

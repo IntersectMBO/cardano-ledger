@@ -20,10 +20,15 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   RatifySignal (..),
   committeeAccepted,
   committeeAcceptedRatio,
+  spoAccepted,
   dRepAccepted,
   dRepAcceptedRatio,
   reorderActions,
   actionPriority,
+  -- Testing
+  prevActionAsExpected,
+  validCommitteeTerm,
+  withdrawalCanWithdraw,
 ) where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..))
@@ -279,6 +284,11 @@ actionPriority InfoAction {} = 6
 reorderActions :: StrictSeq (GovActionState era) -> StrictSeq (GovActionState era)
 reorderActions = Seq.fromList . sortOn (actionPriority . gasAction) . toList
 
+withdrawalCanWithdraw :: GovAction era -> Coin -> Bool
+withdrawalCanWithdraw (TreasuryWithdrawals m) treasury =
+  Map.foldr' (<+>) zero m <= treasury
+withdrawalCanWithdraw _ _ = True
+
 ratifyTransition ::
   forall era.
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
@@ -303,14 +313,11 @@ ratifyTransition = do
   case reorderedActions of
     ast :<| sigs -> do
       let gas@GovActionState {gasId, gasAction, gasExpiresAfter} = ast
-          withdrawalCanWithdraw (TreasuryWithdrawals m) =
-            Map.foldr' (<+>) zero m <= ensTreasury
-          withdrawalCanWithdraw _ = True
           notDelayed = not rsDelayed
       if prevActionAsExpected gasAction ensPrevGovActionIds
         && validCommitteeTerm ensCommittee ensPParams reCurrentEpoch
         && notDelayed
-        && withdrawalCanWithdraw gasAction
+        && withdrawalCanWithdraw gasAction ensTreasury
         && committeeAccepted st env gas
         && spoAccepted st env ast
         && dRepAccepted env st gas

@@ -4,14 +4,8 @@ module Test.Cardano.Ledger.Core.Utils (
 )
 where
 
-import Cardano.Ledger.BaseTypes (BoundedRational (boundRational))
-import Data.Maybe (fromMaybe)
 import Test.Cardano.Ledger.Common
-
--- | Convert to a bounded rational type why throwing an error on failure
-unsafeBoundRational :: (HasCallStack, BoundedRational r) => Rational -> r
-unsafeBoundRational r =
-  fromMaybe (error $ "Could not convert from Rational: " ++ show r) $ boundRational r
+import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
 
 -- | This test for equality takes into account magnitude of the arguments
 epsilonMaybeEq ::

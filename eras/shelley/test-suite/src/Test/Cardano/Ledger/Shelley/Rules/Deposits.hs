@@ -29,7 +29,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules.Reports (
   synopsisCoinMap,
  )
-import Cardano.Ledger.TreeDiff (diffExpr)
 import Cardano.Ledger.UMap (depositMap)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
@@ -44,6 +43,7 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 
+import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
 import Test.QuickCheck (
   Property,
   counterexample,

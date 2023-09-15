@@ -66,7 +66,6 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showWithdrawal,
   synopsisCert,
  )
-import Cardano.Ledger.TreeDiff (ediffEq)
 import Cardano.Ledger.UMap (sumRewardsUView)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
@@ -81,6 +80,7 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (fold, foldl', toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.TreeDiff.QuickCheck (ediffEq)
 import Lens.Micro hiding (ix)
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
@@ -113,7 +113,6 @@ tests ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , GovState era ~ ShelleyGovState era
-  , ProtVerAtMost era 8
   ) =>
   Int ->
   TestTree
@@ -130,7 +129,6 @@ adaPreservationProps ::
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , GovState era ~ ShelleyGovState era
-  , ProtVerAtMost era 8
   ) =>
   Property
 adaPreservationProps =
@@ -173,7 +171,6 @@ checkPreservation ::
   forall era.
   ( EraSegWits era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   , GovState era ~ ShelleyGovState era
   , EraGov era
   ) =>

@@ -78,16 +78,4 @@ import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Wits
-import Cardano.Ledger.Core (EraTx (..), PParams)
-import Lens.Micro ((&), (.~), (^.))
-
--- | Calculate and update the fee in the transaction until it has the smallest possible
--- value according to the settings in the protocol parameters.
-setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
-setMinFeeTx pp tx =
-  let curMinFee = getMinFeeTx pp tx
-      curFee = tx ^. bodyTxL . feeTxBodyL
-      modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
-   in if curFee == curMinFee
-        then tx
-        else setMinFeeTx pp modifiedTx
+import Cardano.Ledger.Core (EraTx (..), setMinFeeTx)

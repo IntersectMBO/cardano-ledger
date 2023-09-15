@@ -2,6 +2,7 @@
 
 ## 1.3.4.1
 
+* Add `ToExpr` instance for `CompactValue`
 * Implement `getScriptsProvided`
 
 ## 1.3.4.0

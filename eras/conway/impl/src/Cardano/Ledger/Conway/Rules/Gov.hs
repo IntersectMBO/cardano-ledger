@@ -73,6 +73,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
@@ -120,6 +121,8 @@ data ConwayGovPredFailure era
       -- | Members for which the expiration epoch has already been reached
       (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   deriving (Eq, Show, Generic)
+
+instance EraPParams era => ToExpr (ConwayGovPredFailure era)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
 

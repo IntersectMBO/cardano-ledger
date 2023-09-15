@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Tools for reporting things in readable manner. Used in Rules to implement
@@ -31,12 +30,6 @@ import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.TxBody
-import Cardano.Ledger.Shelley.TxCert (
-  pattern DelegStakeTxCert,
-  pattern GenesisDelegTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
 import qualified Data.Map.Strict as Map
@@ -49,23 +42,16 @@ showCred :: Credential x c -> String
 showCred (ScriptHashObj (ScriptHash x)) = show x
 showCred (KeyHashObj (KeyHash x)) = show x
 
-synopsisCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> String
-synopsisCert x = case x of
-  RegTxCert cred -> "ShelleyRegCert " ++ take 10 (showCred cred)
-  UnRegTxCert cred -> "ShelleyUnRegCert " ++ take 10 (showCred cred)
-  DelegStakeTxCert cred _ -> "ShelleyDelegCert" ++ take 10 (showCred cred)
-  RegPoolTxCert pool -> let KeyHash hash = ppId pool in "RegPool " ++ take 10 (show hash)
-  RetirePoolTxCert khash e -> "RetirePool " ++ showKeyHash khash ++ " " ++ show e
-  GenesisDelegTxCert {} -> "GenesisCert"
-  MirTxCert {} -> "MirCert"
+synopsisCert :: ShelleyEraTxCert era => TxCert era -> String
+synopsisCert = show
 
 showKeyHash :: KeyHash c x -> String
 showKeyHash (KeyHash hash) = take 10 (show hash)
 
-showCerts :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => [TxCert era] -> String
+showCerts :: ShelleyEraTxCert era => [TxCert era] -> String
 showCerts certs = unlines (map (("  " ++) . synopsisCert) certs)
 
-showTxCerts :: (ShelleyEraTxBody era, ProtVerAtMost era 8) => TxBody era -> String
+showTxCerts :: ShelleyEraTxBody era => TxBody era -> String
 showTxCerts txb = showCerts (toList (txb ^. certsTxBodyL))
 
 -- | Display a synopsis of a map to Coin
@@ -77,7 +63,7 @@ synopsisCoinMap Nothing = "SYNOPSIS NOTHING"
 -- Printing Produced == Consumed
 
 produceEqualsConsumed ::
-  (ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  ShelleyEraTxBody era =>
   PParams era ->
   CertState era ->
   UTxO era ->

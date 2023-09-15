@@ -16,13 +16,18 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkWitnessesVKey,
   makeWitnessesFromScriptKeys,
   mkVKeyRwdAcnt,
+  mkKeyPair,
+  mkKeyHash,
 )
 where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
+import Cardano.Crypto.Hash (hashToBytes)
 import qualified Cardano.Crypto.Hash as CH
+import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.BaseTypes (Network (Testnet), shelleyProtVer)
+import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder)
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -35,7 +40,7 @@ import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
   KeyRole (..),
-  VKey,
+  VKey (..),
   asWitness,
   hashKey,
   signedDSIGN,
@@ -124,3 +129,15 @@ mkVKeyRwdAcnt ::
   KeyPair 'Staking c ->
   RewardAcnt c
 mkVKeyRwdAcnt network keys = RewardAcnt network $ KeyHashObj (hashKey $ vKey keys)
+
+mkKeyHash :: Crypto c => Int -> KeyHash kd c
+mkKeyHash = hashKey . vKey . mkKeyPair
+
+mkKeyPair :: Crypto c => Int -> KeyPair r c
+mkKeyPair seed = KeyPair vk sk
+  where
+    vk = VKey (DSIGN.deriveVerKeyDSIGN sk)
+    sk =
+      DSIGN.genKeyDSIGN $
+        mkSeedFromBytes . hashToBytes $
+          hashWithEncoder @CH.Blake2b_256 shelleyProtVer encCBOR seed

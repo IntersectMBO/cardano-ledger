@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -70,6 +71,7 @@ import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
 import Cardano.Ledger.Val ((<->))
@@ -93,6 +95,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Typeable (Typeable)
+import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (Validation, failureIf, failureUnless)
@@ -112,6 +115,13 @@ data BabbageUtxoPredFailure era
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
       ![(TxOut era, Coin)]
+  deriving (Generic)
+
+instance
+  ( ToExpr (AlonzoUtxoPredFailure era)
+  , ToExpr (TxOut era)
+  ) =>
+  ToExpr (BabbageUtxoPredFailure era)
 
 deriving instance
   ( Era era

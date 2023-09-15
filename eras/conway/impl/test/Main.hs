@@ -4,6 +4,7 @@ import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatifySpec
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatifySpec
+import qualified Test.Cardano.Ledger.Conway.EpochSpec as EpochSpec
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as GenesisSpec
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorderSpec
 
@@ -16,3 +17,4 @@ main =
       CommitteeRatifySpec.spec
       GenesisSpec.spec
       GovActionReorderSpec.spec
+      EpochSpec.spec

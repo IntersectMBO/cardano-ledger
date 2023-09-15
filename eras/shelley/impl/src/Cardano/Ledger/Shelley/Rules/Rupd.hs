@@ -56,6 +56,7 @@ import Cardano.Ledger.Slot (
   (+*),
  )
 import Cardano.Slotting.EpochInfo.API (epochInfoRange)
+import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (asks)
@@ -81,6 +82,8 @@ data ShelleyRupdPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
 
 instance NoThunks (ShelleyRupdPredFailure era)
+
+instance NFData (ShelleyRupdPredFailure era)
 
 instance
   ( Era era
