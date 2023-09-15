@@ -727,7 +727,7 @@ test19 = do
 
 -- ===================================================
 
-preds20 :: Proof era -> [Pred era]
+preds20 :: Era era => Proof era -> [Pred era]
 preds20 proof =
   [ Sized (ExactSize 10) intUniv
   , Sized (AtMost 6) rewardsx

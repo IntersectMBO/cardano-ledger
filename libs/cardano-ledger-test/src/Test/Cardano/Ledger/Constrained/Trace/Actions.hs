@@ -16,7 +16,7 @@ import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 -- Some experiments with updating the state (Stored in the Env)
 -- Used as a means to track what applySTS does.
 
-inputsAction :: Proof era -> Set (TxIn (EraCrypto era)) -> TraceM era ()
+inputsAction :: Era era => Proof era -> Set (TxIn (EraCrypto era)) -> TraceM era ()
 inputsAction proof is = updateVar (utxo proof) (\u -> Map.withoutKeys u is)
 
 outputsAction :: Reflect era => Proof era -> TxBody era -> [TxOutF era] -> TraceM era ()

@@ -480,5 +480,5 @@ maybeSL = lens foo bar
 poolMetaL :: Lens' (PoolParams era) (StrictMaybe PoolMetadata)
 poolMetaL = lens ppMetadata (\x r -> x {ppMetadata = r})
 
-poolMetadata :: Proof era -> Term era (Maybe PoolMetadata)
+poolMetadata :: Era era => Proof era -> Term era (Maybe PoolMetadata)
 poolMetadata p = Var (pV p "poolMetadata" (MaybeR (PoolMetadataR p)) (Yes PoolParamsR (poolMetaL . sMaybeL)))
