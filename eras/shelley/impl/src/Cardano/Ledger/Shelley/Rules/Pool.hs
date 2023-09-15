@@ -53,6 +53,7 @@ import Cardano.Ledger.Shelley.TxBody (
   getRwdNetwork,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
@@ -98,6 +99,8 @@ data ShelleyPoolPredFailure era
       !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
       !Int -- Size of the metadata hash
   deriving (Eq, Show, Generic)
+
+instance ToExpr (ShelleyPoolPredFailure era)
 
 instance NoThunks (ShelleyPoolPredFailure era)
 

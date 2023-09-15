@@ -2,9 +2,20 @@
 
 ## 1.8.0.0
 
+* Add `Generic` instance for `AuxiliaryDataHash`
+* Add `ToExpr` instances for:
+  * `CompactAddr`
+  * `AuxiliaryDataHash`
+  * `CompactDeltaCoin`
+  * `VKey`
+* Add `setMinFeeTx`
 * Add `ScriptsProvided`
 * Require new `EraUTxO` class method `getScriptsProvided`
 * `EraTx` replaced `EraTxBody` superclass for `EraUTxO`
+
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Core.Rational`
 
 ## 1.7.0.0
 

@@ -130,6 +130,7 @@ library testlib
         Test.Cardano.Ledger.Core.Binary.RoundTrip
         Test.Cardano.Ledger.Core.KeyPair
         Test.Cardano.Ledger.Core.Utils
+        Test.Cardano.Ledger.Core.Rational
 
     visibility:       public
     hs-source-dirs:   testlib

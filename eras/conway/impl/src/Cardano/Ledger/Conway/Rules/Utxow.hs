@@ -14,6 +14,7 @@
 module Cardano.Ledger.Conway.Rules.Utxow (
   ConwayUTXOW,
   conwayUtxowTransition,
+  conwayWitsVKeyNeeded,
 )
 where
 

@@ -87,7 +87,7 @@ import Data.Coerce (coerce)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
-import qualified PlutusLedgerApi.V1 as PV1 -- NOTE PV1.Data === PV2.Data
+import qualified PlutusLedgerApi.V1 as PV1
 
 -- ============================================================================
 -- the newtype Data is a wrapper around the type that Plutus expects as data.

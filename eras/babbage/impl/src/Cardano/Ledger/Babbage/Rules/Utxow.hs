@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -64,6 +65,7 @@ import Cardano.Ledger.Shelley.Rules (
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
@@ -82,6 +84,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
+import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -97,6 +100,14 @@ data BabbageUtxowPredFailure era
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
       !(Set (ScriptHash (EraCrypto era)))
+  deriving (Generic)
+
+instance
+  ( Era era
+  , ToExpr (PredicateFailure (EraRule "UTXO" era))
+  , ToExpr (TxCert era)
+  ) =>
+  ToExpr (BabbageUtxowPredFailure era)
 
 deriving instance
   ( Era era

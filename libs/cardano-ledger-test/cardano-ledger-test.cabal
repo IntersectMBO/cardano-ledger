@@ -75,7 +75,6 @@ library
         Test.Cardano.Ledger.Generic.Trace
         Test.Cardano.Ledger.Generic.Updaters
         Test.Cardano.Ledger.NoThunks
-        Test.Cardano.Ledger.Rational
         Test.Cardano.Ledger.STS
         Test.Cardano.Ledger.TestableEra
         Test.Cardano.Ledger.ValueFromList

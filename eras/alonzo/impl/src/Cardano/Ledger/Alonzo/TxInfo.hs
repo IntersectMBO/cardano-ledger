@@ -143,7 +143,7 @@ import Cardano.Ledger.Language (
   fromSLanguage,
   withSLanguage,
  )
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..), ToExpr)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
@@ -203,6 +203,8 @@ data TxOutSource c
   | TxOutFromOutput !TxIx
   deriving (Eq, Show, Generic, NoThunks)
 
+instance ToExpr (TxOutSource era)
+
 instance Crypto c => EncCBOR (TxOutSource c) where
   encCBOR = \case
     TxOutFromInput txIn -> encode $ Sum TxOutFromInput 0 !> To txIn
@@ -226,6 +228,8 @@ data TranslationError c
   | ReferenceInputsNotSupported !(Set (TxIn c))
   | TimeTranslationPastHorizon !Text
   deriving (Eq, Show, Generic, NoThunks)
+
+instance ToExpr (TranslationError c)
 
 instance Crypto c => EncCBOR (TranslationError c) where
   encCBOR = \case

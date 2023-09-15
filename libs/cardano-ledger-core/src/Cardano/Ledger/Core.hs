@@ -56,6 +56,9 @@ module Cardano.Ledger.Core (
   RewardType (..),
   Reward (..),
 
+  -- * Helpers
+  setMinFeeTx,
+
   -- * Re-exports
   module Cardano.Ledger.Hashes,
   module Cardano.Ledger.Core.Era,
@@ -623,3 +626,14 @@ getPhase1 = Map.mapMaybe phase1
 
 getPhase2 :: EraScript era => Map k (Script era) -> Map k (PhasedScript 'PhaseTwo era)
 getPhase2 = Map.mapMaybe (phaseScript PhaseTwoRep)
+
+-- | Calculate and update the fee in the transaction until it has the smallest possible
+-- value according to the settings in the protocol parameters.
+setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
+setMinFeeTx pp tx =
+  let curMinFee = getMinFeeTx pp tx
+      curFee = tx ^. bodyTxL . feeTxBodyL
+      modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
+   in if curFee == curMinFee
+        then tx
+        else setMinFeeTx pp modifiedTx

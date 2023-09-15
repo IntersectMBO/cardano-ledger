@@ -375,7 +375,7 @@ instance
        in PostCondition
             "Should preserve value in the UTxO state"
             ( \(TRC (UtxoEnv _ _pp _pools _, us, tx)) us' ->
-                (utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us')
+                utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us'
             )
     ]
 

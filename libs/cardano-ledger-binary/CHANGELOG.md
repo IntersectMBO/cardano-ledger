@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.1.3.1
+## 1.2.0.0
 
-*
+* Removed `diffExpr` `diffExprNoColor` `ediffEq`
 
 ## 1.1.3.0
 

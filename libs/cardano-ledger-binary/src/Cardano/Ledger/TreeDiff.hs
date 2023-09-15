@@ -10,9 +10,6 @@ module Cardano.Ledger.TreeDiff (
   ToExpr (listToExpr, toExpr),
   defaultExprViaShow,
   trimExprViaShow,
-  diffExpr,
-  diffExprNoColor,
-  ediffEq,
 )
 where
 
@@ -25,22 +22,14 @@ import Data.Foldable (toList)
 import Data.IP (IPv4, IPv6)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
-import Data.TreeDiff (ansiWlEditExpr, prettyEditExpr)
-import Data.TreeDiff.Class (ToExpr (listToExpr, toExpr), defaultExprViaShow, ediff)
+import Data.TreeDiff.Class (ToExpr (listToExpr, toExpr), defaultExprViaShow)
 import Data.TreeDiff.Expr (Expr (App, Lst, Rec))
-import Data.TreeDiff.QuickCheck (ediffEq)
 
 -- =====================================================
 -- Cardano functions that deal with TreeDiff and ToExpr
 
 trimExprViaShow :: Show a => Int -> a -> Expr
 trimExprViaShow _n x = defaultExprViaShow x -- App (take n (drop 1 (show x)) ++ "..") []
-
-diffExpr :: ToExpr a => a -> a -> String
-diffExpr x y = show (ansiWlEditExpr (ediff x y))
-
-diffExprNoColor :: ToExpr a => a -> a -> String
-diffExprNoColor x y = show (prettyEditExpr (ediff x y))
 
 -- ===========================================================
 -- Orphan instances from external imports

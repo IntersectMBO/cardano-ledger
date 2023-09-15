@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -66,9 +65,11 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
   UtxoEnv (..),
+  depositEqualsObligation,
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (UView (..), dRepMap)
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..))
@@ -76,7 +77,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
-  AssertionViolation (..),
   Embed (..),
   STS (..),
   TRC (..),
@@ -108,6 +108,13 @@ data ConwayLedgerPredFailure era
       -- | Submitted in transaction
       Coin
   deriving (Generic)
+
+instance
+  ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , ToExpr (PredicateFailure (EraRule "GOV" era))
+  , ToExpr (PredicateFailure (EraRule "CERTS" era))
+  ) =>
+  ToExpr (ConwayLedgerPredFailure era)
 
 deriving instance
   ( Era era
@@ -211,15 +218,7 @@ instance
   initialRules = []
   transitionRules = [ledgerTransition @ConwayLEDGER]
 
-  renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
-    "AssertionViolation ("
-      <> avSTS
-      <> "): "
-      <> avMsg
-      <> "\n"
-      <> show avCtx
-      <> "\n"
-      <> show avState
+  renderAssertionViolation = depositEqualsObligation
 
   assertions = shelleyLedgerAssertions
 

@@ -11,6 +11,25 @@
 * Remove unused `isTwoPhaseScriptAddress`
 * Change arguments to `hasExactSetOfRedeemers`
 
+### `testlib`
+
+* Add `ToExpr` instances for:
+  * `CollectError`
+  * `AlonzoUtxoPredFailure`
+  * `FailureDescription`
+  * `TagMismatchDescription`
+  * `AlonzoUtxosPredFailure`
+  * `AlonzoUtxowPredFailure`
+  * `BinaryData`
+  * `Datum`
+  * `IsValid`
+  * `ScriptPurpose`
+  * `TxOutSource`
+  * `TranslationError`
+  * `Addr28Extra`
+  * `DataHash32`
+  * `RdmrPtr`
+
 ## 1.4.2.0
 
 * Add `ToExpr` instance for:

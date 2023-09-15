@@ -2,6 +2,12 @@
 
 ## 1.7.0.0
 
+* Add `ToExpr` instances for:
+  * `ShelleyPoolPredFailure`
+  * `ShelleyUtxowPredFailure`
+* Add `NFData` instance for:
+  * `ShelleyRupdPredFailure`
+  * `ShelleyTickPredFailure`
 * Rename `validateFailedScripts` to `validateFailedNativeScripts` and change its
   arguments.
 * Change type of `validateMissingScripts`

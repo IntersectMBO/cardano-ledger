@@ -15,11 +15,10 @@ where
 import Cardano.Ledger.Binary (EncCBOR (..), toPlainEncoding)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
-import Cardano.Ledger.TreeDiff (diffExprNoColor)
 import Control.Monad
 import Control.Monad.Except (runExcept)
 import GHC.Stack
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..))
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), diffExprNoColor)
 import Test.Tasty.HUnit (Assertion, assertFailure)
 
 translateEraPartial ::

@@ -84,7 +84,7 @@ library
         cardano-crypto-test,
         cardano-crypto-wrapper,
         cardano-data,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.2,
         cardano-ledger-byron,
         cardano-ledger-byron-test,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.6.1,

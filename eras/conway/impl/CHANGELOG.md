@@ -2,6 +2,21 @@
 
 ## 1.10.0.0
 
+* Add `ToExpr` instance for:
+  * `Voter`
+  * `ConwayCertPredFailure`
+  * `ConwayCertsPredFailure`
+  * `ConwayDelegPredFailure`
+  * `ConwayGovPredFailure`
+  * `ConwayGovCertPredFailure`
+  * `ConwayLedgerPredFailure`
+  * `ConwayTxBody`
+* Add `Generic` and `NFData` instance for:
+  * `ConwayNewEpochPredFailure`
+* Add `totalObligation`
+* Add `utxosDepositedL`
+* Add `conwayWitsVKeyNeeded`
+* Add  `ConwayEraPParams era` constraint to `isCommitteeVotingAllowed` and `votingCommitteeThreshold`
 * Switch to using `AlonzoEraUTxO` in rules
 
 ## 1.9.0.0
@@ -85,6 +100,7 @@
 
 ### testlib
 
+* Add `Test.Cardano.Ledger.Conway.ImpTest`
 * Rename `genNewCommittee` to `genUpdateCommitteee`
 * Add `genNewCommittee`
 * Add `genNoConfidence`

@@ -36,6 +36,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRepDistr (drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -75,6 +76,8 @@ data ConwayGovCertPredFailure era
   | ConwayDRepIncorrectDeposit !Coin !Coin -- The first is the given and the second is the expected deposit
   | ConwayCommitteeHasPreviouslyResigned !(Credential 'ColdCommitteeRole (EraCrypto era))
   deriving (Show, Eq, Generic)
+
+instance ToExpr (ConwayGovCertPredFailure era)
 
 instance NoThunks (ConwayGovCertPredFailure era)
 
