@@ -18,11 +18,10 @@
 module Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
   (:~:) (Refl),
-  Shape (..),
   Singleton (..),
   Eql,
+  typeRepOf,
   synopsis,
-  compareRep,
   genSizedRep,
   genRep,
   shrinkRep,
@@ -110,7 +109,7 @@ import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
-import Data.Universe (Eql, Shape (..), Shaped (..), Singleton (..), cmpIndex)
+import Data.Universe (Eql, Singleton (..), cmpIndex)
 import Data.Word (Word16, Word64)
 import Formatting (formatToString)
 import Lens.Micro
@@ -347,6 +346,9 @@ pattern IsTypeable <- Type _ _
   where
     IsTypeable = Type Isn't Isn't
 
+typeRepOf :: Rep era t -> TypeRep
+typeRepOf r@(repHasInstances -> IsTypeable) = typeRep r
+
 repHasInstances :: Rep era t -> HasInstances t
 repHasInstances r = case r of
   VStateR -> IsEq
@@ -489,7 +491,7 @@ instance Singleton (Rep era) where
   testEql
     (repHasInstances -> IsTypeable :: HasInstances a)
     (repHasInstances -> IsTypeable :: HasInstances b) = eqT @a @b
-  cmpIndex x y = compare (shape x) (shape y)
+  cmpIndex x y = compare (typeRepOf x) (typeRepOf y)
 
 -- ============================================================
 -- Show instances
@@ -642,116 +644,6 @@ accumTxOut (Babbage _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
 accumTxOut (Conway _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
 
 -- ==================================================
-
-instance Shaped (Rep era) any where
-  shape CoinR = Nullary 0
-  shape (a :-> b) = Nary 1 [shape a, shape b]
-  shape (MapR a b) = Nary 2 [shape a, shape b]
-  shape (SetR a) = Nary 3 [shape a]
-  shape (ListR a) = Nary 4 [shape a]
-  shape CredR = Nullary 5
-  shape PoolHashR = Nullary 6
-  shape WitHashR = Nullary 7
-  shape GenHashR = Nullary 8
-  shape GenDelegHashR = Nullary 9
-  shape PoolParamsR = Nullary 10
-  shape EpochR = Nullary 11
-  shape RationalR = Nullary 12
-  shape Word64R = Nullary 13
-  shape IntR = Nullary 14
-  shape TxInR = Nullary 15
-  shape CharR = Nullary 16
-  shape (ValueR p) = Nary 17 [shape p]
-  shape (TxOutR p) = Nary 18 [shape p]
-  shape (UTxOR p) = Nary 19 [shape p]
-  shape (PParamsR p) = Nary 20 [shape p]
-  shape (PParamsUpdateR p) = Nary 21 [shape p]
-  shape DeltaCoinR = Nullary 22
-  shape GenDelegPairR = Nullary 23
-  shape FutureGenDelegR = Nullary 24
-  shape (PPUPStateR p) = Nary 25 [shape p]
-  shape PtrR = Nullary 26
-  shape IPoolStakeR = Nullary 27
-  shape SnapShotsR = Nullary 28
-  shape NaturalR = Nullary 29
-  shape FloatR = Nullary 30
-  shape UnitR = Nullary 31
-  shape RewardR = Nullary 32
-  shape (MaybeR x) = Nary 33 [shape x]
-  shape NewEpochStateR = Nullary 34
-  shape (ProtVerR x) = Nary 35 [shape x]
-  shape SlotNoR = Nullary 36
-  shape SizeR = Nullary 37
-  shape (PairR a b) = Nary 38 [shape a, shape b]
-  shape VCredR = Nullary 39
-  shape VHashR = Nullary 40
-  shape MultiAssetR = Nullary 41
-  shape PolicyIDR = Nullary 42
-  shape (WitnessesFieldR p) = Nary 43 [shape p]
-  shape AssetNameR = Nullary 44
-  shape (TxCertR p) = Nary 45 [shape p]
-  shape RewardAcntR = Nullary 46
-  shape ValidityIntervalR = Nullary 47
-  shape KeyPairR = Nullary 48
-  shape (GenR x) = Nary 49 [shape x]
-  shape (ScriptR p) = Nary 50 [shape p]
-  shape ScriptHashR = Nullary 51
-  shape NetworkR = Nullary 52
-  shape RdmrPtrR = Nullary 53
-  shape DataR = Nullary 54
-  shape DatumR = Nullary 55
-  shape ExUnitsR = Nullary 56
-  shape TagR = Nullary 57
-  shape DataHashR = Nullary 58
-  shape AddrR = Nullary 59
-  shape PCredR = Nullary 60
-  shape ConwayTxCertR = Nullary 61
-  shape ShelleyTxCertR = Nullary 62
-  shape MIRPotR = Nullary 63
-  shape IsValidR = Nullary 64
-  shape IntegerR = Nullary 65
-  shape (ScriptsNeededR p) = Nary 66 [shape p]
-  shape (ScriptPurposeR p) = Nary 67 [shape p]
-  shape (TxBodyR p) = Nary 68 [shape p]
-  shape BootstrapWitnessR = Nullary 69
-  shape SigningKeyR = Nullary 70
-  shape (TxWitsR p) = Nary 71 [shape p]
-  shape PayHashR = Nullary 72
-  shape (TxR p) = Nary 73 [shape p]
-  shape ScriptIntegrityHashR = Nullary 74
-  shape AuxiliaryDataHashR = Nullary 75
-  shape GovActionR = Nullary 76
-  shape (WitVKeyR p) = Nary 77 [shape p]
-  shape (TxAuxDataR p) = Nary 78 [shape p]
-  shape LanguageR = Nullary 79
-  shape (LedgerStateR p) = Nary 80 [shape p]
-  shape StakeHashR = Nullary 81
-  shape BoolR = Nullary 82
-  shape DRepR = Nullary 83
-  shape (PoolMetadataR p) = Nary 84 [shape p]
-  shape CommColdCredR = Nullary 85
-  shape CommHotCredR = Nullary 86
-  shape DRepStateR = Nullary 87
-  shape DStateR = Nullary 88
-  shape GovActionIdR = Nullary 89
-  shape GovActionIxR = Nullary 90
-  shape GovActionStateR = Nullary 91
-  shape UnitIntervalR = Nullary 92
-  shape CommitteeR = Nullary 93
-  shape ConstitutionR = Nullary 94
-  shape PrevGovActionIdsR = Nullary 95
-  shape PrevPParamUpdateR = Nullary 96
-  shape PrevHardForkR = Nullary 97
-  shape PrevCommitteeR = Nullary 98
-  shape PrevConstitutionR = Nullary 99
-  shape DRepDistrR = Nullary 100
-  shape CommitteeStateR = Nullary 101
-  shape VStateR = Nullary 102
-
-compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
-compareRep = cmpIndex @(Rep era)
-
--- ================================================
 
 genSizedRep ::
   forall era t.
