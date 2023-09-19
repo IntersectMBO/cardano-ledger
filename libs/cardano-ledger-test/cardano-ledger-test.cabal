@@ -124,7 +124,7 @@ library
         nothunks,
         plutus-core,
         hspec,
-        plutus-ledger-api ^>=1.11,
+        plutus-ledger-api ^>=1.13,
         prettyprinter,
         QuickCheck,
         small-steps,

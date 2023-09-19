@@ -23,11 +23,11 @@ import Cardano.Ledger.Alonzo.TxInfo (
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Data.ByteString.Short (ShortByteString)
-import PlutusLedgerApi.Test.EvaluationContext
 import PlutusLedgerApi.Test.Examples (
   alwaysFailingNAryFunction,
   alwaysSucceedingNAryFunction,
  )
+import PlutusLedgerApi.Test.V3.EvaluationContext
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated (
