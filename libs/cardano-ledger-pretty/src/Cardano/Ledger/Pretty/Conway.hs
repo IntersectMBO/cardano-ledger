@@ -294,7 +294,7 @@ ppConwayPParams n pp =
     , ("MaxBHSize", prettyA $ pp ^. hkdMaxBHSizeL @era @f)
     , ("MaxBBSize", prettyA $ pp ^. hkdMaxBBSizeL @era @f)
     , ("KeyDeposit", prettyA $ pp ^. hkdKeyDepositL @era @f)
-    , ("GovActionExpiration", prettyA $ pp ^. hkdGovActionExpirationL @era @f)
+    , ("GovActionLifetime", prettyA $ pp ^. hkdGovActionLifetimeL @era @f)
     , ("GovActionDeposit", prettyA $ pp ^. hkdGovActionDepositL @era @f)
     , ("EMax", prettyA $ pp ^. hkdEMaxL @era @f)
     , ("DRepVotingThresholds", prettyA $ pp ^. hkdDRepVotingThresholdsL @era @f)

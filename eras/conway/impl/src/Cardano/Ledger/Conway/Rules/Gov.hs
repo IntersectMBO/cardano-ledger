@@ -66,7 +66,7 @@ import Cardano.Ledger.Conway.Governance.Snapshots (snapshotGovActionStates)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,
-  ppGovActionExpirationL,
+  ppGovActionLifetimeL,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -288,7 +288,7 @@ govTransition = do
         let st'' =
               addAction
                 currentEpoch
-                (pp ^. ppGovActionExpirationL)
+                (pp ^. ppGovActionLifetimeL)
                 (GovActionId txid idx)
                 pProcDeposit
                 pProcReturnAddr

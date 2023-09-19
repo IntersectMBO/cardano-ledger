@@ -20,7 +20,7 @@
      },
      "minCommitteeSize":0,
      "committeeTermLimit":0,
-     "govActionExpiration":0,
+     "govActionLifetime":0,
      "govActionDeposit":0,
      "dRepDeposit":0,
      "dRepActivity":0

@@ -220,7 +220,7 @@ pp =
   emptyPParams
     & ppMaxValSizeL .~ 1000000000
     & ppDRepActivityL .~ 100
-    & ppGovActionExpirationL .~ 30
+    & ppGovActionLifetimeL .~ 30
     & ppGovActionDepositL .~ proposalDeposit
     & ppDRepVotingThresholdsL . dvtUpdateToConstitutionL
       .~ fromJust (boundRational (1 % 2))
@@ -347,7 +347,7 @@ preventDRepExpiry ::
 preventDRepExpiry pf = do
   let
     (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
-    pp' = pp & ppGovActionExpirationL .~ 3
+    pp' = pp & ppGovActionLifetimeL .~ 3
     proposalTx = txFromTestCaseData pf (proposal pf)
     govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
     initialGov =

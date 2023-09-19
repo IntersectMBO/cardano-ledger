@@ -2,6 +2,8 @@
 
 ## 1.9.0.0
 
+* Rename `ConwayPParams` to be consistent with the Agda specification. #
+  * `govActionExpiration` to `govActionLifetime`
 * Prevent `DRep` expiry when there are no active governance proposals to vote on (in ConwayCERTS). #3729
   * Add `updateNumDormantEpochs` function in `ConwayEPOCH` to update the dormant-epochs counter
   * Refactor access to `ConwayGovState` by making its lens part of `ConwayEraGov`.
