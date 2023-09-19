@@ -285,7 +285,7 @@ ppConwayPParams n pp =
     , ("MinPoolCost", prettyA $ pp ^. hkdMinPoolCostL @era @f)
     , ("MinFeeB", prettyA $ pp ^. hkdMinFeeBL @era @f)
     , ("MinFeeA", prettyA $ pp ^. hkdMinFeeAL @era @f)
-    , ("MinCommitteeSize", prettyA $ pp ^. hkdMinCommitteeSizeL @era @f)
+    , ("CommitteeMinSize", prettyA $ pp ^. hkdCommitteeMinSizeL @era @f)
     , ("MaxValSize", prettyA $ pp ^. hkdMaxValSizeL @era @f)
     , ("MaxTxSize", prettyA $ pp ^. hkdMaxTxSizeL @era @f)
     , ("MaxTxExUnits", prettyA $ pp ^. hkdMaxTxExUnitsL @era @f)

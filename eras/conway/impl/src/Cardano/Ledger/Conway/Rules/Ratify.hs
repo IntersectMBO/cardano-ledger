@@ -43,7 +43,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (committeeMembersL)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
   ppCommitteeMaxTermLengthL,
-  ppMinCommitteeSizeL,
+  ppCommitteeMinSizeL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -299,9 +299,9 @@ prevActionAsExpected _ _ = True -- for the other actions, the previous action is
 
 validCommitteeSize :: ConwayEraPParams era => StrictMaybe (Committee era) -> PParams era -> Bool
 validCommitteeSize committee pp =
-  let minCommitteeSize = pp ^. ppMinCommitteeSizeL
+  let committeeMinSize = pp ^. ppCommitteeMinSizeL
       members = foldMap' (^. committeeMembersL) committee
-   in Map.size members >= fromIntegral minCommitteeSize
+   in Map.size members >= fromIntegral committeeMinSize
 
 validCommitteeTerm ::
   ConwayEraPParams era =>
