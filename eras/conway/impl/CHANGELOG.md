@@ -2,7 +2,7 @@
 
 ## 1.9.0.0
 
-* Rename `ConwayPParams` to be consistent with the Agda specification. #
+* Rename `ConwayPParams` to be consistent with the Agda specification. #3739
   * `govActionExpiration` to `govActionLifetime`
   * `committeeTermLimit` to `committeeMaxTermLength`
   * `minCommitteeSize` to `committeeMinSize`
