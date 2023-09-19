@@ -28,15 +28,18 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Block (txid)
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core (
   dvtUpdateToConstitutionL,
  )
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.DRepDistr (DRepDistr (..))
+import Cardano.Ledger.DRepDistr (DRepDistr (..), drepExpiryL)
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
@@ -54,14 +57,18 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject)
+import Control.Exception (evaluate)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as SSeq
 import GHC.Stack
 import Lens.Micro
+import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Examples.BabbageFeatures (
   InitOutputs (..),
@@ -80,6 +87,7 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxBodyField (..),
   TxOutField (..),
  )
+import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
@@ -93,14 +101,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Tasty
 import Test.Tasty.HUnit
-
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepVotingThresholdsL, ppGovActionDepositL, ppGovActionExpirationL)
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody)
-import Control.Exception (evaluate)
-import qualified Data.Sequence as Seq
-import qualified Data.Sequence.Strict as SSeq
-import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
-import Test.Cardano.Ledger.Generic.PrettyCore ()
 
 stakeKeyHash :: forall era. Era era => Proof era -> KeyHash 'Staking (EraCrypto era)
 stakeKeyHash _pf = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
@@ -190,6 +190,13 @@ govActionState gaid ProposalProcedure {..} =
     pProcGovAction
     (EpochNo 0)
     (EpochNo 30)
+
+expiringGovActionState ::
+  EpochNo ->
+  GovActionId (EraCrypto era) ->
+  ProposalProcedure era ->
+  GovActionState era
+expiringGovActionState expiry govActionId pposal = govActionState govActionId pposal & gasExpiresAfterL .~ expiry
 
 govActionStateWithYesVotes :: Scriptic era => GovActionId (EraCrypto era) -> Proof era -> ProposalProcedure era -> GovActionState era
 govActionStateWithYesVotes gaid pf ProposalProcedure {..} =
@@ -320,6 +327,129 @@ vote pf govActionId =
     , keysForAddrWits = [KeyPairPayment (keys2 pf), KeyPairStakePool (stakePoolKeys pf), KeyPairDRep (drepKeys pf)]
     , otherWitsFields = []
     }
+
+preventDRepExpiry ::
+  forall era.
+  ( State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "EPOCH" era) ~ EpochState era
+  , Show (PredicateFailure (EraRule "LEDGER" era))
+  , Show (PredicateFailure (EraRule "EPOCH" era))
+  , Scriptic era
+  , GoodCrypto (EraCrypto era)
+  , EraTx era
+  , ConwayEraTxBody era
+  , GovState era ~ ConwayGovState era
+  , ConwayEraPParams era
+  , ConwayEraGov era
+  ) =>
+  Proof era ->
+  Assertion
+preventDRepExpiry pf = do
+  let
+    (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
+    pp' = pp & ppGovActionExpirationL .~ 3
+    proposalTx = txFromTestCaseData pf (proposal pf)
+    govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
+    initialGov =
+      def
+        & cgEnactStateL . ensCurPParamsL .~ pp'
+        & cgGovSnapshotsL . curGovSnapshotsL
+          .~ fromGovActionStateSeq (SSeq.singleton $ expiringGovActionState (EpochNo 2) govActionId $ newConstitutionProposal pf)
+    initialLedgerState = LedgerState (smartUTxOState pp' utxo0 (Coin 10) (Coin 0) initialGov zero) def
+    drepDistr = DRComplete $ Map.fromList [(DRepCredential (drepCredential pf), CompactCoin 1000)]
+    dreps = Map.singleton (drepCredential pf) (DRepState (EpochNo 2) SNothing (Coin 0))
+    epochState0 =
+      def
+        & curPParamsEpochStateL .~ pp'
+        & esLStateL .~ (initialLedgerState & lsCertStateL . certVStateL . vsDRepsL .~ dreps)
+        & epochStateDRepDistrL .~ drepDistr
+    poolDistr =
+      PoolDistr
+        ( Map.fromList
+            [
+              ( stakePoolKeyHash pf
+              , IndividualPoolStake
+                  spoThreshold
+                  (vrfKeyHash @(EraCrypto era))
+              )
+            ]
+        )
+    assertDReps epochNo epochState =
+      assertExprEqualWithMessage
+        (unwords ["Epoch", show @Int epochNo, "- DReps"])
+        (epochState ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL)
+    assertCurGovSnaps epochNo epochState =
+      assertExprEqualWithMessage
+        (unwords ["Epoch", show @Int epochNo, "- CurGovSnapshot"])
+        (SSeq.null . snapshotIds $ epochState ^. esLStateL . lsUTxOStateL . utxosGovStateL . snapshotsGovStateL . curGovSnapshotsL)
+    assertPrevGovSnaps epochNo epochState =
+      assertExprEqualWithMessage
+        (unwords ["Epoch", show @Int epochNo, "- PrevGovSnapshot"])
+        (SSeq.null . snapshotIds $ epochState ^. esLStateL . lsUTxOStateL . utxosGovStateL . snapshotsGovStateL . prevGovSnapshotsL)
+    assertNumDormantEpochs epochNo prevEpochState currEpochState doesAdvance =
+      assertExprEqualWithMessage
+        (unwords ["Epoch", show @Int epochNo, "- NumDormantEpochs"])
+        (prevEpochState ^. esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL + (if doesAdvance then 1 else 0))
+        (currEpochState ^. esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL)
+
+  assertDReps 0 epochState0 dreps
+  assertCurGovSnaps 0 epochState0 False
+  assertPrevGovSnaps 0 epochState0 True
+
+  epochState1 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState0 (EpochNo 1) poolDistr
+
+  assertNumDormantEpochs 1 epochState0 epochState1 True
+  assertDReps 1 epochState1 dreps
+  assertCurGovSnaps 1 epochState1 False
+  assertPrevGovSnaps 1 epochState1 False
+
+  epochState2 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState1 (EpochNo 2) poolDistr
+
+  assertNumDormantEpochs 2 epochState1 epochState2 False
+  assertDReps 2 epochState2 dreps
+  assertCurGovSnaps 2 epochState2 False
+  assertPrevGovSnaps 2 epochState2 False
+
+  epochState3 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState2 (EpochNo 3) poolDistr
+
+  assertNumDormantEpochs 3 epochState2 epochState3 False
+  assertDReps 3 epochState3 dreps
+  assertCurGovSnaps 3 epochState3 False
+  assertPrevGovSnaps 3 epochState3 False
+
+  epochState4 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState3 (EpochNo 4) poolDistr
+
+  assertNumDormantEpochs 4 epochState3 epochState4 False
+  assertDReps 4 epochState4 dreps
+  assertCurGovSnaps 4 epochState4 True
+  assertPrevGovSnaps 4 epochState4 True
+
+  epochState5 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState4 (EpochNo 5) poolDistr
+
+  assertNumDormantEpochs 5 epochState4 epochState5 True
+  assertDReps 5 epochState5 dreps
+  assertCurGovSnaps 5 epochState5 True
+  assertPrevGovSnaps 5 epochState5 True
+
+  -- Propose something
+  ledgerState5 <-
+    expectRight "Error running LEDGER when proposing: " $
+      runLEDGER (LEDGER pf) (epochState5 ^. esLStateL) pp' (trustMeP pf True proposalTx)
+  let epochState5' = epochState5 & esLStateL .~ ledgerState5
+  -- Check that the vsNumDormantEpochsL has been reset to 0
+  assertExprEqualWithMessage
+    "Epoch 5 - NumDormantEpochs after proposal"
+    (ledgerState5 ^. lsCertStateL . certVStateL . vsNumDormantEpochsL)
+    0
+  -- Check that the vsDRepsL <&> drepExpiryL has been bumped by the number vsNumDormantEpochsL
+  assertDReps 5 epochState5' (dreps <&> drepExpiryL %~ (+ 2))
+
+  epochState6 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState5' (EpochNo 6) poolDistr
+
+  assertNumDormantEpochs 6 epochState5' epochState6 True
+  assertDReps 6 epochState6 (dreps <&> drepExpiryL %~ (+ 2))
+  assertCurGovSnaps 6 epochState6 False
+  assertPrevGovSnaps 6 epochState6 False
 
 testGov ::
   forall era.
@@ -475,4 +605,5 @@ conwayFeatures =
   testGroup
     "Gov examples"
     [ testCase "gov" $ testGov (Conway Mock)
+    , testCase "Prevent DRep expiry when there are no proposals to vote on" $ preventDRepExpiry (Conway Mock)
     ]

@@ -41,6 +41,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   gasDRepVotesL,
   gasStakePoolVotesL,
   gasCommitteeVotesL,
+  gasExpiresAfterL,
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
@@ -192,6 +193,9 @@ gasDRepVotesL = lens gasDRepVotes (\x y -> x {gasDRepVotes = y})
 
 gasStakePoolVotesL :: Lens' (GovActionState era) (Map (KeyHash 'StakePool (EraCrypto era)) Vote)
 gasStakePoolVotesL = lens gasStakePoolVotes (\x y -> x {gasStakePoolVotes = y})
+
+gasExpiresAfterL :: Lens' (GovActionState era) EpochNo
+gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
 
 instance EraPParams era => ToExpr (GovActionState era)
 

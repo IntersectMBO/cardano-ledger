@@ -81,6 +81,7 @@ module Cardano.Ledger.Conway.Governance (
   prevCommitteeStateL,
   gasCommitteeVotesL,
   gasDRepVotesL,
+  gasExpiresAfterL,
   gasStakePoolVotesL,
 ) where
 
@@ -133,6 +134,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   VotingProcedures (..),
   gasCommitteeVotesL,
   gasDRepVotesL,
+  gasExpiresAfterL,
   gasStakePoolVotesL,
   govActionIdToText,
   indexedGovProps,

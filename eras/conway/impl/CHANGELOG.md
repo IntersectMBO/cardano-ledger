@@ -5,6 +5,7 @@
 * Prevent `DRep` expiry when there are no active governance proposals to vote on (in ConwayCERTS). #3729
   * Add `updateNumDormantEpochs` function in `ConwayEPOCH` to update the dormant-epochs counter
   * Refactor access to `ConwayGovState` by making its lens part of `ConwayEraGov`.
+  * Export `gasExpiresAfterL` for use in tests
 * Add `ExpirationEpochTooSmall` data constructor to `ConwayGovPredFailure`
 * Add `ConflictingCommitteeUpdate` data constructor to `ConwayGovPredFailure`
 * Rename `NewCommitte` to `UpdateCommittee`
