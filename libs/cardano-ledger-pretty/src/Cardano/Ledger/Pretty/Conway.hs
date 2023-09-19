@@ -20,6 +20,7 @@ module Cardano.Ledger.Pretty.Conway (
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Prices)
 import Cardano.Ledger.BaseTypes (EpochNo, NonNegativeInterval, ProtVer, UnitInterval)
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -62,6 +63,7 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
  )
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.DRepDistr (extractDRepDistr)
 import Cardano.Ledger.HKD (HKD, HKDFunctor)
 import Cardano.Ledger.Pretty (
   PDoc,
@@ -69,6 +71,7 @@ import Cardano.Ledger.Pretty (
   ppAuxiliaryDataHash,
   ppCoin,
   ppKeyHash,
+  ppMap,
   ppNetwork,
   ppPoolCert,
   ppRecord,
@@ -456,12 +459,13 @@ instance
   ) =>
   PrettyA (ConwayGovState era)
   where
-  prettyA cg@(ConwayGovState _ _) =
+  prettyA cg@(ConwayGovState _ _ _) =
     let ConwayGovState {..} = cg
      in ppRecord
           "ConwayGovState"
           [ ("GovSnapshots", prettyA cgGovSnapshots)
           , ("EnactState", prettyA cgEnactState)
+          , ("DRepDistr", ppMap prettyA (ppCoin . fromCompact) (extractDRepDistr cgDRepDistr))
           ]
 
 instance

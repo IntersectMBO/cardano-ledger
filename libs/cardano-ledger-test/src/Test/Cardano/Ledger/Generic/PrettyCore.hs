@@ -118,6 +118,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
+  IncrementalStake (IStake),
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
@@ -1672,11 +1673,12 @@ pcPrevGovActionIds PrevGovActionIds {..} =
     ]
 
 pcConwayGovState :: Proof era -> ConwayGovState era -> PDoc
-pcConwayGovState p (ConwayGovState ss es) =
+pcConwayGovState p (ConwayGovState ss es dr) =
   ppRecord
     "ConwayGovState"
     [ ("govSnapshots", pcGovSnapshots ss)
     , ("enactState", pcEnactState p es)
+    , ("drepDistr", ppMap pcDRep (pcCoin . fromCompact) (extractDRepDistr dr))
     ]
 
 pcProposalsSnapshot :: ProposalsSnapshot era -> PDoc
@@ -1801,11 +1803,10 @@ pcCertState (CertState vst pst dst) =
     ]
 
 pcVState :: VState era -> PDoc
-pcVState (VState dreps drepDistr (CommitteeState committeeHotCreds) numDormantEpochs) =
+pcVState (VState dreps (CommitteeState committeeHotCreds) numDormantEpochs) =
   ppRecord
     "VState"
     [ ("DReps", ppMap pcCredential pcDRepState dreps)
-    , ("DResDistr", ppMap pcDRep (pcCoin . fromCompact) (extractDRepDistr drepDistr))
     , ("CC Hot Keys", ppMap pcCredential (ppMaybe pcCredential) committeeHotCreds)
     , ("Number of dormant epochs", ppEpochNo numDormantEpochs)
     ]
@@ -1921,14 +1922,14 @@ pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
 instance Reflect era => PrettyC (NewEpochState era) era where prettyC = pcNewEpochState
 
 pcUTxOState :: Reflect era => Proof era -> UTxOState era -> PDoc
-pcUTxOState proof (UTxOState u dep fs _pups _stakedistro don) =
+pcUTxOState proof (UTxOState u dep fs gs (IStake m _) don) =
   ppRecord
     "UTxOState"
     [ ("utxo", pcUTxO proof u)
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
-    , ("ppups", ppString "PPUP")
-    , ("stake distr", ppString "Stake Distr") -- This is not part of the model
+    , ("govState", pcGovState proof gs)
+    , ("incremental stake distr", ppString ("size = " ++ show (Map.size m))) -- This is not part of the model
     , ("donation", prettyA don)
     ]
 

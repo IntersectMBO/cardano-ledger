@@ -34,7 +34,7 @@ import Cardano.Ledger.Binary (
   encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -56,6 +56,8 @@ import Data.Aeson (
 import Data.Aeson.Types (FromJSON (..))
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
@@ -100,6 +102,8 @@ class
 
   obligationGovState :: GovState era -> Coin
 
+  getDRepDistr :: GovState era -> Map (DRep (EraCrypto era)) (CompactForm Coin)
+
 instance
   ( ToExpr (PParamsUpdate era)
   , ToExpr (PParams era)
@@ -116,6 +120,8 @@ instance Crypto c => EraGov (ShelleyEra c) where
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
   obligationGovState = const zero
+
+  getDRepDistr = const Map.empty
 
 data ShelleyGovState era = ShelleyGovState
   { proposals :: !(ProposedPPUpdates era)

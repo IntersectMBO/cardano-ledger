@@ -55,7 +55,7 @@ import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.LedgerState hiding (delegations, deltaReserves, deltaTreasury, rewards)
+import Cardano.Ledger.Shelley.LedgerState hiding (credMapL, delegations, deltaReserves, deltaTreasury, rewards)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
@@ -283,7 +283,7 @@ committeeStateL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era
 committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
 
 numDormantEpochs :: Era era => Term era EpochNo
-numDormantEpochs = Var $ V "numDormantEpochs" NumDormantEpochsR (Yes NewEpochStateR numDormantEpochsL)
+numDormantEpochs = Var $ V "numDormantEpochs" EpochR (Yes NewEpochStateR numDormantEpochsL)
 
 numDormantEpochsL :: NELens era EpochNo
 numDormantEpochsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL
@@ -918,12 +918,27 @@ certstateT =
 -- | Target for VState
 vstateT :: forall era. Era era => RootTarget era (VState era) (VState era)
 vstateT =
-  Invert "VState" (typeRep @(VState era)) vStateF
+  Invert "VState" (typeRep @(VState era)) (\x y z -> VState x (CommitteeState y) z)
     :$ Lensed dreps vsDRepsL
     :$ Lensed committeeState (vsCommitteeStateL . csCommitteeCredsL)
     :$ Lensed numDormantEpochs vsNumDormantEpochsL
-  where
-    vStateF x y z = VState x (DRComplete Map.empty) (CommitteeState y) z
+
+committeeL ::
+  Lens'
+    ( Map
+        (Credential 'ColdCommitteeRole (EraCrypto era))
+        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
+    )
+    (CommitteeState era)
+committeeL = lens CommitteeState (\_ (CommitteeState x) -> x)
+
+{-
+committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+committeeState = Var $ V "committeeState" (MapR CommColdCredR (MaybeR CommHotCredR)) (Yes NewEpochStateR committeeStateL)
+
+committeeStateL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+-}
 
 -- | Target for PState
 pstateT :: forall era. Era era => RootTarget era (PState era) (PState era)
@@ -1502,11 +1517,15 @@ committeeVar = Var $ V "committeeVar" (MaybeR CommitteeR) No
 -- ====================================
 -- ConwayGovState Targets
 
+drepDistr :: Era era => Term era (DRepDistr (EraCrypto era))
+drepDistr = Var $ V "drepDistr" DRepDistrR No
+
 conwayGovStateT :: forall era. Reflect era => Proof era -> RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT _p =
   Invert "ConwayGovState" (typeRep @(ConwayGovState era)) ConwayGovState
     :$ Shift govSnapshotsT cgGovSnapshotsL
     :$ Shift enactStateT cgEnactStateL
+    :$ Lensed drepDistr cgDRepDistrL
 
 govSnapshotsT :: forall era. Era era => RootTarget era (GovSnapshots era) (GovSnapshots era)
 govSnapshotsT =

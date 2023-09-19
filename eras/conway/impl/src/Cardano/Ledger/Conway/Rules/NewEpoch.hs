@@ -29,7 +29,13 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayNEWEPOCH)
-import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
+import Cardano.Ledger.Conway.Governance (
+  ConwayEraGov,
+  ConwayGovState (..),
+  epochStateDRepDistrL,
+  freshDRepPulser,
+  newEpochStateDRepDistrL,
+ )
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
 import Cardano.Ledger.Conway.Rules.Ratify (
   RatifyEnv (..),
@@ -37,6 +43,7 @@ import Cardano.Ledger.Conway.Rules.Ratify (
   RatifyState (..),
  )
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.DRepDistr (pulseDRepDistr)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
@@ -58,7 +65,7 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio (Ratio)
 import Data.Set (Set)
 import Data.Word (Word64)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 
 newtype ConwayNewEpochPredFailure era
   = CorruptRewardUpdate
@@ -84,7 +91,7 @@ data ConwayNewEpochEvent era
 
 instance
   ( EraTxOut era
-  , EraGov era
+  , ConwayEraGov era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
   , Environment (EraRule "EPOCH" era) ~ PoolDistr (EraCrypto era)
@@ -125,7 +132,7 @@ instance
 newEpochTransition ::
   forall era.
   ( EraTxOut era
-  , EraGov era
+  , ConwayEraGov era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Environment (EraRule "EPOCH" era) ~ PoolDistr (EraCrypto era)
   , State (EraRule "EPOCH" era) ~ EpochState era
@@ -148,7 +155,7 @@ newEpochTransition = do
       ) <-
     judgmentContext
   if eNo /= eL + 1
-    then pure nes
+    then pure (nes & newEpochStateDRepDistrL %~ pulseDRepDistr)
     else do
       es1 <- case ru of
         SNothing -> pure es0

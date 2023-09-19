@@ -31,10 +31,10 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRepDistr (drepExpiryL, extractDRepDistr)
+import Cardano.Ledger.DRepDistr (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.Governance (EraGov (GovState, getConstitution))
+import Cardano.Ledger.Shelley.Governance (EraGov (GovState, getConstitution, getDRepDistr))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap (
   StakeCredentials (scRewards, scSPools),
@@ -105,6 +105,7 @@ queryDRepState nes creds
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.
 queryDRepStakeDistr ::
+  EraGov era =>
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the DReps will be returned.
@@ -114,8 +115,7 @@ queryDRepStakeDistr nes creds
   | null creds = Map.map fromCompact distr
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` creds
   where
-    distr = extractDRepDistr distrPulser
-    distrPulser = vsDRepDistr $ certVState $ lsCertState $ esLState $ nesEs nes
+    distr = getDRepDistr (nes ^. newEpochStateGovStateL)
 
 -- | Query committee members
 queryCommitteeState :: NewEpochState era -> CommitteeState era

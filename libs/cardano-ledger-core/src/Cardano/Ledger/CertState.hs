@@ -43,7 +43,6 @@ module Cardano.Ledger.CertState (
   psRetiringL,
   psDepositsL,
   vsDRepsL,
-  vsDRepDistrL,
   vsCommitteeStateL,
   vsNumDormantEpochsL,
   csCommitteeCredsL,
@@ -75,7 +74,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState (..))
+import Cardano.Ledger.DRepDistr (DRepState (..))
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -303,16 +302,12 @@ instance Era era => ToCBOR (CommitteeState era) where
   toCBOR = toEraCBOR @era
 
 -- | The state that tracks the voting entities (DReps and Constitutional Committee members)
---   The 'vsDRepDistr' field is a pulser that incrementally computes the stake distribution of the DReps
---   over the Epoch following the close of voting at end of the previous Epoch. The pulser is created
---   at the Epoch boundary, but does no work until it is pulsed in the 'Tick' rule.
 data VState era = VState
   { vsDReps ::
       !( Map
           (Credential 'DRepRole (EraCrypto era))
           (DRepState (EraCrypto era))
        )
-  , vsDRepDistr :: !(DRepDistr (EraCrypto era))
   , vsCommitteeState :: !(CommitteeState era)
   , vsNumDormantEpochs :: EpochNo
   -- ^ Number of contiguous epochs in which there are exactly zero
@@ -330,7 +325,7 @@ lookupDepositVState :: VState era -> Credential 'DRepRole (EraCrypto era) -> May
 lookupDepositVState vstate = fmap drepDeposit . flip Map.lookup (vstate ^. vsDRepsL)
 
 instance Default (VState era) where
-  def = VState def (DRComplete Map.empty) def (EpochNo 0)
+  def = VState def def (EpochNo 0)
 
 instance Typeable (EraCrypto era) => NoThunks (VState era)
 
@@ -341,7 +336,6 @@ instance Era era => DecShareCBOR (VState era) where
   decShareCBOR _ =
     decode $
       RecD VState
-        <! From
         <! From
         <! D decNoShareCBOR
         <! From
@@ -354,7 +348,6 @@ instance Era era => EncCBOR (VState era) where
     encode $
       Rec (VState @era)
         !> To vsDReps
-        !> To vsDRepDistr
         !> To vsCommitteeState
         !> To vsNumDormantEpochs
 
@@ -538,9 +531,6 @@ psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
 
 vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
-
-vsDRepDistrL :: Lens' (VState era) (DRepDistr (EraCrypto era))
-vsDRepDistrL = lens vsDRepDistr (\vs u -> vs {vsDRepDistr = u})
 
 vsCommitteeStateL :: Lens' (VState era) (CommitteeState era)
 vsCommitteeStateL = lens vsCommitteeState (\vs u -> vs {vsCommitteeState = u})
