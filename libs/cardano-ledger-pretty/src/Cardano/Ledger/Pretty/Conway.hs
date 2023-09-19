@@ -301,7 +301,7 @@ ppConwayPParams n pp =
     , ("DRepDeposit", prettyA $ pp ^. hkdDRepDepositL @era @f)
     , ("DRepActivity", prettyA $ pp ^. hkdDRepActivityL @era @f)
     , ("CostModels", prettyA $ pp ^. hkdCostModelsL @era @f)
-    , ("CommitteeTermLimit", prettyA $ pp ^. hkdCommitteeTermLimitL @era @f)
+    , ("CommitteeMaxTermLength", prettyA $ pp ^. hkdCommitteeMaxTermLengthL @era @f)
     , ("CollateralPercentage", prettyA $ pp ^. hkdCollateralPercentageL @era @f)
     , ("CoinsPerUTxOByte", prettyA $ pp ^. hkdCoinsPerUTxOByteL @era @f)
     , ("A0", prettyA $ pp ^. hkdA0L @era @f)

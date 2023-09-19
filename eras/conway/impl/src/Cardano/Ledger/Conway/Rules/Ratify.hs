@@ -42,7 +42,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Governance.Procedures (committeeMembersL)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
-  ppCommitteeTermLimitL,
+  ppCommitteeMaxTermLengthL,
   ppMinCommitteeSizeL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
@@ -310,7 +310,7 @@ validCommitteeTerm ::
   EpochNo ->
   Bool
 validCommitteeTerm committee pp currentEpoch =
-  let maxCommitteeTerm = pp ^. ppCommitteeTermLimitL
+  let maxCommitteeTerm = pp ^. ppCommitteeMaxTermLengthL
       members = foldMap' (^. committeeMembersL) committee
    in all (<= currentEpoch + fromIntegral maxCommitteeTerm) members
 
