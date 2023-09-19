@@ -299,6 +299,7 @@ epochTransition = do
         , reDRepDistr = drepDistr
         , reCurrentEpoch = eNo - 1
         , reDRepState = vstate ^. vsDRepsL
+        , reCommitteeState = vstate ^. vsCommitteeStateL
         }
     ratSig = RatifySignal . snapshotActions . prevGovSnapshots $ cgGovSnapshots govSt
   RatifyState {rsRemoved, rsEnactState = rsEnactState'} <-
