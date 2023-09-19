@@ -149,6 +149,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Era era => Arbitrary (PrevGovActionIds era) where
   arbitrary =

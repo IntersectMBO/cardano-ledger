@@ -11,6 +11,7 @@
 module Test.Cardano.Ledger.Conway.RatifySpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
+import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway
@@ -268,4 +269,4 @@ genPctsOf100 = do
   pure (a % s, b % s, c % s, d % s, e % s, f % s)
 
 emptyRatifyEnv :: forall era. RatifyEnv era
-emptyRatifyEnv = RatifyEnv Map.empty (PoolDistr Map.empty) Map.empty Map.empty (EpochNo 0)
+emptyRatifyEnv = RatifyEnv Map.empty (PoolDistr Map.empty) Map.empty Map.empty (EpochNo 0) (CommitteeState Map.empty)

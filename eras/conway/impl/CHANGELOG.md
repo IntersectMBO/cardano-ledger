@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `reCommitteeState` to `RatifyEnv`
 * Apply enacted `TreasuryWithdrawals` in `ConwayEPOCH` #3748
   * Add lenses `ensWithdrawalsL` and `ensTreasuryL`
 * Add PredicateFailure for current treasury value mismatch in tx body in LEDGER #3749
