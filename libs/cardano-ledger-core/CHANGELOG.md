@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.6.1.0
+## 1.7.0.0
 
+* Add `vsNumDormantEpochs` to `VState` to track the number of contiguous epochs in which there were no governance proposals to vote on. #3729
 * Add `fromEraShareCBOR`
 * Remove redundant `DecCBOR` constraint in `eraDecoder`
 * Add `FromJSON` instance to `Anchor`

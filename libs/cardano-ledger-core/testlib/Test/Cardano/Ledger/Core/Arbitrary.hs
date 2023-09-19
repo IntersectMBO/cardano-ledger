@@ -696,7 +696,7 @@ instance Crypto c => Arbitrary (Anchor c) where
 deriving instance Era era => Arbitrary (CommitteeState era)
 
 instance Era era => Arbitrary (VState era) where
-  arbitrary = VState <$> arbitrary <*> (DRComplete <$> arbitrary) <*> arbitrary
+  arbitrary = VState <$> arbitrary <*> (DRComplete <$> arbitrary) <*> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (InstantaneousRewards c) where
   arbitrary = InstantaneousRewards <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

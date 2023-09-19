@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, Network (..), ProtVer (..), SlotNo (..), StrictMaybe (..), UnitInterval)
 import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
-import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL)
+import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core (
@@ -281,6 +281,12 @@ committeeState = Var $ V "committeeState" (MapR CommColdCredR (MaybeR CommHotCre
 
 committeeStateL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+
+numDormantEpochs :: Era era => Term era EpochNo
+numDormantEpochs = Var $ V "numDormantEpochs" NumDormantEpochsR (Yes NewEpochStateR numDormantEpochsL)
+
+numDormantEpochsL :: NELens era EpochNo
+numDormantEpochsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL
 
 -- UTxOState
 
@@ -911,9 +917,13 @@ certstateT =
 
 -- | Target for VState
 vstateT :: forall era. Era era => RootTarget era (VState era) (VState era)
-vstateT = Invert "VState" (typeRep @(VState era)) vStateF :$ Lensed dreps vsDRepsL :$ Lensed committeeState (vsCommitteeStateL . csCommitteeCredsL)
+vstateT =
+  Invert "VState" (typeRep @(VState era)) vStateF
+    :$ Lensed dreps vsDRepsL
+    :$ Lensed committeeState (vsCommitteeStateL . csCommitteeCredsL)
+    :$ Lensed numDormantEpochs vsNumDormantEpochsL
   where
-    vStateF x z = VState x (DRComplete Map.empty) (CommitteeState z)
+    vStateF x y z = VState x (DRComplete Map.empty) (CommitteeState y) z
 
 -- | Target for PState
 pstateT :: forall era. Era era => RootTarget era (PState era) (PState era)

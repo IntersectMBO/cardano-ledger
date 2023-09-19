@@ -306,6 +306,7 @@ data Rep era t where
   PrevHardForkR :: Era era => Rep era (PrevGovActionId 'HardForkPurpose (EraCrypto era))
   PrevCommitteeR :: Era era => Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
   PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
+  NumDormantEpochsR :: Era era => Rep era EpochNo
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -319,6 +320,7 @@ data IsTypeable a where
 repTypeable :: Rep era t -> IsTypeable t
 repTypeable r = case r of
   DRepStateR -> IsTypeable
+  NumDormantEpochsR -> IsTypeable
   CommColdCredR -> IsTypeable
   CommHotCredR -> IsTypeable
   GovActionR -> IsTypeable
@@ -547,6 +549,7 @@ synopsis PrevPParamUpdateR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevHardForkR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevCommitteeR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevConstitutionR (PrevGovActionId x) = synopsis @e GovActionIdR x
+synopsis NumDormantEpochsR x = show x
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -679,6 +682,7 @@ instance Shaped (Rep era) any where
   shape PrevHardForkR = Nullary 97
   shape PrevCommitteeR = Nullary 98
   shape PrevConstitutionR = Nullary 99
+  shape NumDormantEpochsR = Nullary 101
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep = cmpIndex @(Rep era)
@@ -856,6 +860,7 @@ genSizedRep _ PrevPParamUpdateR = arbitrary
 genSizedRep _ PrevHardForkR = arbitrary
 genSizedRep _ PrevCommitteeR = arbitrary
 genSizedRep _ PrevConstitutionR = arbitrary
+genSizedRep _ NumDormantEpochsR = arbitrary
 
 genRep ::
   forall era b.
@@ -999,6 +1004,7 @@ shrinkRep PrevPParamUpdateR x = shrink x
 shrinkRep PrevHardForkR x = shrink x
 shrinkRep PrevCommitteeR x = shrink x
 shrinkRep PrevConstitutionR x = shrink x
+shrinkRep NumDormantEpochsR _ = []
 
 -- ===========================
 
@@ -1122,6 +1128,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help PrevHardForkR _ = failT ["PrevGovActionId 'HardFork, does not have an Ord instance"]
     help PrevCommitteeR _ = failT ["PrevGovActionId 'Committee, does not have an Ord instance"]
     help PrevConstitutionR _ = failT ["PrevGovActionId 'Constitution, does not have an Ord instance"]
+    help NumDormantEpochsR v = pure $ With v
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)

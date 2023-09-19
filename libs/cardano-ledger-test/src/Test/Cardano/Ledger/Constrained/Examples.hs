@@ -580,6 +580,7 @@ dstatePreds _p =
   , Dom delegations :⊆: Dom rewards
   , Random dreps
   , Random committeeState
+  , Random numDormantEpochs
   , Dom rewards :=: Rng ptrs
   , -- This implies (Fixed (ExactSize 3) instanReserves)
     -- But it also implies that the new introduced variable instanReservesDom also has size 3

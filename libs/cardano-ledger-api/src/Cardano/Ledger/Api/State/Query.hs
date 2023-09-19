@@ -31,7 +31,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRepDistr (extractDRepDistr)
+import Cardano.Ledger.DRepDistr (drepExpiryL, extractDRepDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (EraGov (GovState, getConstitution))
@@ -93,9 +93,14 @@ queryDRepState ::
   Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era))
 queryDRepState nes creds
   | null creds = drepsState
-  | otherwise = drepsState `Map.restrictKeys` creds
+  | otherwise =
+      drepsState `Map.restrictKeys` creds
+        & if numDormantEpochs == 0
+          then id
+          else (<&> drepExpiryL %~ (+ numDormantEpochs))
   where
     drepsState = vsDReps $ certVState $ lsCertState $ esLState $ nesEs nes
+    numDormantEpochs = vsNumDormantEpochs $ certVState $ lsCertState $ esLState $ nesEs nes
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.

@@ -1698,12 +1698,13 @@ instance PrettyA (DRepState c) where
 deriving instance PrettyA (CommitteeState era)
 
 instance PrettyA (VState era) where
-  prettyA (VState vsDReps vsDRepDistr vsCommitteeHotKeys) =
+  prettyA (VState vsDReps vsDRepDistr vsCommitteeHotKeys vsNumDormantEpochs) =
     ppRecord
       "VState"
       [ ("DReps", prettyA vsDReps)
       , ("DResDistr", ppMap prettyA (ppCoin . fromCompact) (extractDRepDistr vsDRepDistr))
       , ("CC Hot Keys", prettyA vsCommitteeHotKeys)
+      , ("Number of dormant epochs", prettyA vsNumDormantEpochs)
       ]
 
 -- ======================================================

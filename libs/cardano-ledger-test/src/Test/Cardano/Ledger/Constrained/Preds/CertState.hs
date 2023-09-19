@@ -55,6 +55,7 @@ vstatePreds _p =
   , Sized (Range 5 7) (Dom committeeState)
   , Subset (Dom dreps) voteUniv
   , Subset (Dom committeeState) voteCredUniv
+  , Random numDormantEpochs
   ]
 
 vstateStage ::
