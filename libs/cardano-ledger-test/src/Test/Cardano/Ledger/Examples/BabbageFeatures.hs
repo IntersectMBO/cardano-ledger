@@ -1060,6 +1060,7 @@ data KeyPairRole era
   | KeyPairWitness (KeyPair 'Witness (EraCrypto era))
   | KeyPairStakePool (KeyPair 'StakePool (EraCrypto era))
   | KeyPairDRep (KeyPair 'DRepRole (EraCrypto era))
+  | KeyPairCommittee (KeyPair 'HotCommitteeRole (EraCrypto era))
 
 initUtxoFromTestCaseData ::
   BabbageEraTxBody era =>
@@ -1119,6 +1120,7 @@ txFromTestCaseData
                 KeyPairWitness w -> mkWitnessVKey (hashAnnotated (txBody testCaseData)) w
                 KeyPairStakePool s -> mkWitnessVKey (hashAnnotated (txBody testCaseData)) s
                 KeyPairDRep d -> mkWitnessVKey (hashAnnotated (txBody testCaseData)) d
+                KeyPairCommittee d -> mkWitnessVKey (hashAnnotated (txBody testCaseData)) d
             )
             (keysForAddrWits testCaseData)
         tx =

@@ -20,7 +20,6 @@ import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (
-  BoundedRational (..),
   EpochNo (..),
   Network (..),
   StrictMaybe (..),
@@ -70,6 +69,7 @@ import GHC.Stack
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (
   InitOutputs (..),
   KeyPairRole (..),
@@ -116,6 +116,18 @@ drepCredential pf = KeyHashObj . hashKey . vKey $ drepKeys pf
 
 stakePoolKeyHash :: forall era. Era era => Proof era -> KeyHash 'StakePool (EraCrypto era)
 stakePoolKeyHash pf = hashKey . vKey $ stakePoolKeys pf
+
+ccHotKeys :: forall era. Era era => Proof era -> KeyPair 'HotCommitteeRole (EraCrypto era)
+ccHotKeys _pf = mkKeyPair' @(EraCrypto era) (RawSeed 0 0 0 0 40)
+
+ccHotCred :: forall era. Era era => Proof era -> Credential 'HotCommitteeRole (EraCrypto era)
+ccHotCred pf = KeyHashObj . hashKey . vKey $ ccHotKeys pf
+
+ccColdKeys :: forall era. Era era => Proof era -> KeyPair 'ColdCommitteeRole (EraCrypto era)
+ccColdKeys _pf = mkKeyPair' @(EraCrypto era) (RawSeed 0 0 0 0 50)
+
+ccColdCred :: forall era. Era era => Proof era -> Credential 'ColdCommitteeRole (EraCrypto era)
+ccColdCred pf = KeyHashObj . hashKey . vKey $ ccColdKeys pf
 
 keys1 :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
 keys1 _pf = mkKeyPair' @(EraCrypto era) (RawSeed 1 3 1 1 1)
@@ -173,6 +185,7 @@ voteYes pf govActionId =
   VotingProcedures $
     Map.fromList
       [ (DRepVoter (drepCredential pf), Map.fromList [(govActionId, VotingProcedure VoteYes SNothing)])
+      , (CommitteeVoter (ccHotCred pf), Map.fromList [(govActionId, VotingProcedure VoteYes SNothing)])
       ]
 
 govActionState ::
@@ -202,7 +215,7 @@ govActionStateWithYesVotes :: Scriptic era => GovActionId (EraCrypto era) -> Pro
 govActionStateWithYesVotes gaid pf ProposalProcedure {..} =
   GovActionState
     gaid
-    mempty
+    (Map.fromList [(ccHotCred pf, VoteYes)])
     (Map.fromList [(drepCredential pf, VoteYes)])
     mempty
     pProcDeposit
@@ -223,7 +236,8 @@ pp =
     & ppGovActionLifetimeL .~ 30
     & ppGovActionDepositL .~ proposalDeposit
     & ppDRepVotingThresholdsL . dvtUpdateToConstitutionL
-      .~ fromJust (boundRational (1 % 2))
+      .~ unsafeBoundRational (1 % 2)
+    & ppCommitteeMaxTermLengthL .~ 100
 
 fee :: Integer
 fee = 5
@@ -324,7 +338,12 @@ vote pf govActionId =
           , ofRefInputs = []
           , ofCollateral = []
           }
-    , keysForAddrWits = [KeyPairPayment (keys2 pf), KeyPairStakePool (stakePoolKeys pf), KeyPairDRep (drepKeys pf)]
+    , keysForAddrWits =
+        [ KeyPairPayment (keys2 pf)
+        , KeyPairStakePool (stakePoolKeys pf)
+        , KeyPairDRep (drepKeys pf)
+        , KeyPairCommittee (ccHotKeys pf)
+        ]
     , otherWitsFields = []
     }
 
@@ -471,10 +490,15 @@ testGov ::
 testGov pf = do
   let
     (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
+    committee = Committee @era (Map.fromList [(ccColdCred @era pf, EpochNo 100)]) (unsafeBoundRational (1 % 2))
+    committeeState = CommitteeState (Map.fromList [(ccColdCred pf, Just (ccHotCred pf))])
     initialGov =
       def
         & cgEnactStateL . ensCurPParamsL .~ pp
-    initialLedgerState = LedgerState (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero) def
+        & cgEnactStateL . ensCommitteeL .~ SJust committee
+    initialLedgerState =
+      LedgerState (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero) def
+        & lsCertStateL . certVStateL . vsCommitteeStateL .~ committeeState
 
     proposalTx = txFromTestCaseData pf (proposal pf)
 
@@ -517,6 +541,7 @@ testGov pf = do
         & curPParamsEpochStateL .~ pp
         & esLStateL .~ ledgerState1
         & epochStateDRepDistrL .~ drepDistr
+  let
     poolDistr =
       PoolDistr
         ( Map.fromList
@@ -554,7 +579,7 @@ testGov pf = do
         curGAState
         def
         prevDRepsState1
-        def
+        committeeState
     expectedGovState2 =
       ConwayGovState
         expectedGovSnapshots2
@@ -576,6 +601,7 @@ testGov pf = do
       Right x -> x
       Left e -> error $ "Error running runEPOCH: " <> show e
     constitution2 = epochState4 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+
   assertExprEqualWithMessage
     "prevGovAction set correctly"
     (SJust (PrevGovActionId govActionId))
@@ -605,6 +631,6 @@ conwayFeatures :: TestTree
 conwayFeatures =
   testGroup
     "Gov examples"
-    [ testCase "gov" $ testGov (Conway Mock)
+    [ testCase "Propose, vote and enact a new constitution when enough votes" $ testGov (Conway Mock)
     , testCase "Prevent DRep expiry when there are no proposals to vote on" $ preventDRepExpiry (Conway Mock)
     ]
