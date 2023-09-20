@@ -153,7 +153,7 @@ putM s = ProvM (modifyMState (const s))
 -- a BlackBox. This ensures that provenance cannot be used in the
 -- non-provenance part of the computation.
 getM :: Monad m => ProvM s m (BlackBox s)
-getM = ProvM (do m <- get; case m of { SNothing -> pure NoBox; SJust t -> pure (Box t) })
+getM = ProvM (do m <- get; case m of SNothing -> pure NoBox; SJust t -> pure (Box t))
 {-# INLINE getM #-}
 
 -- | Modify the provenance if collecting provenance, otherwise do nothing.
@@ -248,7 +248,7 @@ updateWithBlackBox _ NoBox _ = pure ()
 -- 2) The map does not contain the key
 -- 3) The value at the key has the wrong type.
 pull :: forall t m. (Monad m, Typeable t) => Text -> Prov m (BlackBox t)
-pull key = ProvM (do m <- get; case findM key m of { SNothing -> pure NoBox; SJust t -> pure (Box t) })
+pull key = ProvM (do m <- get; case findM key m of SNothing -> pure NoBox; SJust t -> pure (Box t))
 {-# INLINE pull #-}
 
 -- | Return a String representation of the current provenance store.
