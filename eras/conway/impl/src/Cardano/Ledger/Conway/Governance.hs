@@ -60,6 +60,7 @@ module Cardano.Ledger.Conway.Governance (
   cgGovSnapshotsL,
   cgEnactStateL,
   cgRatifyStateL,
+  cgDRepDistrL,
   ensCommitteeL,
   ensConstitutionL,
   ensCurPParamsL,
@@ -83,6 +84,14 @@ module Cardano.Ledger.Conway.Governance (
   gasDRepVotesL,
   gasExpiresAfterL,
   gasStakePoolVotesL,
+  utxosGovStateL,
+  newEpochStateDRepDistrL,
+  epochStateDRepDistrL,
+  epochStateStakeDistrL,
+  epochStateIncrStakeDistrL,
+  epochStateRegDrepL,
+  epochStateUMapL,
+  freshDRepPulser,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -161,20 +170,38 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.DRepDistr (DRepDistr (..), extractDRepDistr, startDRepDistr)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Governance
+import Cardano.Ledger.Shelley.LedgerState (
+  EpochState (..),
+  NewEpochState (..),
+  epochStateIncrStakeDistrL,
+  epochStateRegDrepL,
+  epochStateStakeDistrL,
+  epochStateUMapL,
+  esLStateL,
+  lsUTxOStateL,
+  nesEsL,
+  utxosGovStateL,
+ )
 import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.UMap (compactCoinOrError)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+
+-- ============================
 
 data GovSnapshots era = GovSnapshots
   { curGovSnapshots :: !(ProposalsSnapshot era)
@@ -475,8 +502,16 @@ instance EraPParams era => NoThunks (RatifyState era)
 data ConwayGovState era = ConwayGovState
   { cgGovSnapshots :: !(GovSnapshots era)
   , cgEnactState :: !(EnactState era)
+  , cgDRepDistr :: !(DRepDistr (EraCrypto era))
+  -- ^ The 'cgDRepDistr' field is a pulser that incrementally computes the stake distribution of the DReps
+  --   over the Epoch following the close of voting at end of the previous Epoch. The pulser is created
+  --   at the Epoch boundary, but does no work until it is pulsed in the 'NEWEPOCH' rule, whenever the
+  --   system is NOT at the epoch boundary.
   }
   deriving (Generic, Eq, Show)
+
+cgDRepDistrL :: Lens' (ConwayGovState era) (DRepDistr (EraCrypto era))
+cgDRepDistrL = lens cgDRepDistr (\x y -> x {cgDRepDistr = y})
 
 cgGovSnapshotsL :: Lens' (ConwayGovState era) (GovSnapshots era)
 cgGovSnapshotsL = lens cgGovSnapshots (\x y -> x {cgGovSnapshots = y})
@@ -504,6 +539,7 @@ instance EraPParams era => DecShareCBOR (ConwayGovState era) where
       RecD ConwayGovState
         <! (D decNoShareCBOR)
         <! From
+        <! From
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
   decCBOR = decNoShareCBOR
@@ -514,6 +550,7 @@ instance EraPParams era => EncCBOR (ConwayGovState era) where
       Rec ConwayGovState
         !> To cgGovSnapshots
         !> To cgEnactState
+        !> To cgDRepDistr
 
 instance EraPParams era => ToCBOR (ConwayGovState era) where
   toCBOR = toEraCBOR @era
@@ -521,7 +558,8 @@ instance EraPParams era => ToCBOR (ConwayGovState era) where
 instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
-instance EraPParams era => Default (ConwayGovState era)
+instance EraPParams era => Default (ConwayGovState era) where
+  def = ConwayGovState def def (DRComplete Map.empty)
 
 instance EraPParams era => NFData (ConwayGovState era)
 
@@ -534,7 +572,8 @@ instance EraPParams era => ToJSON (ConwayGovState era) where
 instance EraPParams era => ToExpr (ConwayGovState era)
 
 toConwayGovPairs :: (KeyValue a, EraPParams era) => ConwayGovState era -> [a]
-toConwayGovPairs cg@(ConwayGovState _ _) =
+toConwayGovPairs cg@(ConwayGovState _ _ _) =
+  -- TODO WILL DRepDistr CHANGE THIS?
   let ConwayGovState {..} = cg
    in [ "gov" .= cgGovSnapshots
       , "ratify" .= cgEnactState
@@ -552,13 +591,17 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   obligationGovState st =
     foldMap' gasDeposit $ snapshotActions (st ^. cgGovSnapshotsL . curGovSnapshotsL)
 
+  getDRepDistr govst = extractDRepDistr (govst ^. drepDistrGovStateL)
+
 class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)
   snapshotsGovStateL :: Lens' (GovState era) (GovSnapshots era)
+  drepDistrGovStateL :: Lens' (GovState era) (DRepDistr (EraCrypto era))
 
 instance Crypto c => ConwayEraGov (ConwayEra c) where
   constitutionGovStateL = cgEnactStateL . ensConstitutionL
   snapshotsGovStateL = cgGovSnapshotsL
+  drepDistrGovStateL = cgDRepDistrL
 
 pparamsUpdateThreshold ::
   forall era.
@@ -731,3 +774,32 @@ votingDRepThresholdInternal pp isElectedCommittee action =
         ParameterChange _ ppu -> VotingThreshold $ pparamsUpdateThreshold pp ppu
         TreasuryWithdrawals {} -> VotingThreshold dvtTreasuryWithdrawal
         InfoAction {} -> NoVotingThreshold
+
+-- ===================================================================
+-- Lenses for access to
+-- 1. (DRepDistr (EraCrypto era))
+-- 2. The 3 inputs we need to initialize one
+--    a. (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin)). Extracted from Incremental
+--    b. (Set (Credential 'DRepRole (EraCrypto era))). Registered DReps in the CertState
+--    c. (UMap (EraCrypto era)). The unified map in the DState.
+--                               We will use the to DRepUView to obtain  (Map (Credential 'Staking c) (DRep c))
+--                               to see what stake credentials delegate to which DReps
+-- 3. and its completion:  (Map (DRep c) (CompactForm Coin)).  The aggregated voting power of each DRep
+
+newEpochStateDRepDistrL :: ConwayEraGov era => Lens' (NewEpochState era) (DRepDistr (EraCrypto era))
+newEpochStateDRepDistrL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepDistrGovStateL
+
+epochStateDRepDistrL :: ConwayEraGov era => Lens' (EpochState era) (DRepDistr (EraCrypto era))
+epochStateDRepDistrL = esLStateL . lsUTxOStateL . utxosGovStateL . drepDistrGovStateL
+
+-- | Construct a new (as yet unpulsed) DRepDistr from 3 pieces of the EpochState.
+--   1) The unified map (storing the map from staking credentials to DReps).
+--   2) The set of registered DReps
+--   3) The map aggregating all the stake (coin) for each credential, from the Mark SnapShot.
+freshDRepPulser :: Int -> EpochState era -> DRepDistr (EraCrypto era)
+freshDRepPulser n es =
+  startDRepDistr
+    n
+    (es ^. epochStateUMapL)
+    (es ^. epochStateRegDrepL)
+    (VMap.fromMap (compactCoinOrError <$> (es ^. epochStateIncrStakeDistrL)))

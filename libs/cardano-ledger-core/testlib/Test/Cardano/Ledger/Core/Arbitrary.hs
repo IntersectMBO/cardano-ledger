@@ -84,7 +84,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
-import Cardano.Ledger.DRepDistr (DRepDistr (DRComplete), DRepState (..), startDRepDistr)
+import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState (..), startDRepDistr)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -696,7 +696,7 @@ instance Crypto c => Arbitrary (Anchor c) where
 deriving instance Era era => Arbitrary (CommitteeState era)
 
 instance Era era => Arbitrary (VState era) where
-  arbitrary = VState <$> arbitrary <*> (DRComplete <$> arbitrary) <*> arbitrary <*> arbitrary
+  arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (InstantaneousRewards c) where
   arbitrary = InstantaneousRewards <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

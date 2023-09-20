@@ -115,13 +115,11 @@ module Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
   utxosStakeDistrL,
   utxosDonationL,
-  newEpochStateDRepDistrL,
-  epochStateDRepDistrL,
   epochStateStakeDistrL,
-  epochStateIncrStakeDistrL,
-  epochStateRegDrepL,
   epochStateUMapL,
-  freshDRepPulser,
+  epochStateRegDrepL,
+  epochStateIncrStakeDistrL,
+  newEpochStateGovStateL,
 
   -- * Lenses from CertState
   certDStateL,
@@ -136,8 +134,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   psRetiringL,
   psDepositsL,
   vsDRepsL,
-  vsDRepDistrL,
   vsCommitteeStateL,
+  credMapL,
 
   -- * Lenses from SnapShot(s)
   ssStakeMarkL,

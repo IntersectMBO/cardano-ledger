@@ -461,7 +461,7 @@ testGov ::
   , GoodCrypto (EraCrypto era)
   , EraTx era
   , ConwayEraTxBody era
-  , EraGov era
+  , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , TxCert era ~ ConwayTxCert era
   , ConwayEraPParams era
@@ -485,7 +485,7 @@ testGov pf = do
         def
         mempty
         def
-    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL)
+    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL) (DRComplete Map.empty)
 
     eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState pp (trustMeP pf True proposalTx)
   ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) <-
@@ -503,7 +503,7 @@ testGov pf = do
         def
         mempty
         def
-    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL)
+    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL) (DRComplete Map.empty)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 pp (trustMeP pf True voteTx)
   ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) <-
     expectRight "Error running LEDGER when voting: " eitherLedgerState1
@@ -559,6 +559,7 @@ testGov pf = do
       ConwayGovState
         expectedGovSnapshots2
         (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL)
+        drepDistr
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 pp (trustMeP pf True secondProposalTx)
   ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) <-
     expectRight "Error running LEDGER when proposing:" eitherLedgerState3

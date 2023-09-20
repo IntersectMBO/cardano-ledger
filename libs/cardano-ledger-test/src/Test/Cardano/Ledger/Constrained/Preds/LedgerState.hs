@@ -47,6 +47,7 @@ ledgerStatePreds usize p =
   , Random prevHardFork
   , Random prevConstitution
   , Random prevCommittee
+  , Random drepDistr
   , MetaSize (SzRng 90 (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (mazsize collateral 3)
   , Sized utxoSize preUtxo
   , Sized (Range 15 (usNumColUtxo usize)) colUtxo

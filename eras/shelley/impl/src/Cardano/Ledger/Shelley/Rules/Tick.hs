@@ -30,7 +30,6 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
-import Cardano.Ledger.DRepDistr (pulseDRepDistr)
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
@@ -45,7 +44,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate,
   UTxOState (..),
   curPParamsEpochStateL,
-  newEpochStateDRepDistrL,
  )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (
   ShelleyNEWEPOCH,
@@ -66,7 +64,7 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Lens.Micro ((%~), (&), (.~), (^.))
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 -- ==================================================
@@ -273,8 +271,7 @@ bheadTransition = do
       TRC (RupdEnv bprev es, nesRu nes1, slot)
 
   let nes2 = nes1 {nesRu = ru''}
-  let nes3 = nes2 & newEpochStateDRepDistrL %~ pulseDRepDistr
-  pure nes3
+  pure nes2
 
 instance
   ( STS (ShelleyNEWEPOCH era)

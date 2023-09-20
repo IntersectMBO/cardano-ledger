@@ -10,6 +10,7 @@ import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..), cur
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Val (Val (..))
 import Data.Coerce
+import qualified Data.Map.Strict as Map
 import Lens.Micro
 
 instance Crypto c => EraPParams (MaryEra c) where
@@ -58,3 +59,5 @@ instance Crypto c => EraGov (MaryEra c) where
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
   obligationGovState = const zero
+
+  getDRepDistr = const Map.empty

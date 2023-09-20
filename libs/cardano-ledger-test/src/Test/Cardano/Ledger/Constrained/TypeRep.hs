@@ -59,7 +59,7 @@ import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
-import Cardano.Ledger.DRepDistr (DRepState)
+import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState, extractDRepDistr)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
@@ -306,7 +306,7 @@ data Rep era t where
   PrevHardForkR :: Era era => Rep era (PrevGovActionId 'HardForkPurpose (EraCrypto era))
   PrevCommitteeR :: Era era => Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
   PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
-  NumDormantEpochsR :: Era era => Rep era EpochNo
+  DRepDistrR :: Era era => Rep era (DRepDistr (EraCrypto era))
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -320,7 +320,6 @@ data IsTypeable a where
 repTypeable :: Rep era t -> IsTypeable t
 repTypeable r = case r of
   DRepStateR -> IsTypeable
-  NumDormantEpochsR -> IsTypeable
   CommColdCredR -> IsTypeable
   CommHotCredR -> IsTypeable
   GovActionR -> IsTypeable
@@ -424,6 +423,7 @@ repTypeable r = case r of
   PrevHardForkR {} -> IsTypeable
   PrevCommitteeR {} -> IsTypeable
   PrevConstitutionR {} -> IsTypeable
+  DRepDistrR {} -> IsTypeable
 
 instance Singleton (Rep era) where
   testEql
@@ -549,7 +549,7 @@ synopsis PrevPParamUpdateR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevHardForkR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevCommitteeR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevConstitutionR (PrevGovActionId x) = synopsis @e GovActionIdR x
-synopsis NumDormantEpochsR x = show x
+synopsis DRepDistrR dr = show (ppMap pcDRep (pcCoin . UM.fromCompact) (extractDRepDistr dr))
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -682,7 +682,7 @@ instance Shaped (Rep era) any where
   shape PrevHardForkR = Nullary 97
   shape PrevCommitteeR = Nullary 98
   shape PrevConstitutionR = Nullary 99
-  shape NumDormantEpochsR = Nullary 101
+  shape DRepDistrR = Nullary 100
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep = cmpIndex @(Rep era)
@@ -860,7 +860,7 @@ genSizedRep _ PrevPParamUpdateR = arbitrary
 genSizedRep _ PrevHardForkR = arbitrary
 genSizedRep _ PrevCommitteeR = arbitrary
 genSizedRep _ PrevConstitutionR = arbitrary
-genSizedRep _ NumDormantEpochsR = arbitrary
+genSizedRep _ DRepDistrR = DRComplete <$> arbitrary
 
 genRep ::
   forall era b.
@@ -1004,7 +1004,7 @@ shrinkRep PrevPParamUpdateR x = shrink x
 shrinkRep PrevHardForkR x = shrink x
 shrinkRep PrevCommitteeR x = shrink x
 shrinkRep PrevConstitutionR x = shrink x
-shrinkRep NumDormantEpochsR _ = []
+shrinkRep DRepDistrR x = shrink x
 
 -- ===========================
 
@@ -1128,7 +1128,7 @@ hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help PrevHardForkR _ = failT ["PrevGovActionId 'HardFork, does not have an Ord instance"]
     help PrevCommitteeR _ = failT ["PrevGovActionId 'Committee, does not have an Ord instance"]
     help PrevConstitutionR _ = failT ["PrevGovActionId 'Constitution, does not have an Ord instance"]
-    help NumDormantEpochsR v = pure $ With v
+    help DRepDistrR _ = failT ["DRepDistr, does not have an Ord instance"]
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
@@ -1158,6 +1158,7 @@ hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
     help PrevHardForkR v = pure $ With v
     help PrevCommitteeR v = pure $ With v
     help PrevConstitutionR v = pure $ With v
+    help DRepDistrR v = pure $ With v
     help x v = do
       With y <- hasOrd x v
       pure (With y)
