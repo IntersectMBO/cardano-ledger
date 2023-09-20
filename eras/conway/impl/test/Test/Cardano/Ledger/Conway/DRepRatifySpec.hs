@@ -8,7 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.RatifySpec (spec) where
+module Test.Cardano.Ledger.Conway.DRepRatifySpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.CertState (CommitteeState (..))
@@ -46,20 +46,20 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 
 spec :: Spec
 spec = do
-  describe "Ratification" $ do
-    drepsProp @Conway
-    drepsPropNoStake @Conway
-    drepsPropAllAbstain @Conway
-    drepsPropNoVotes @Conway
-    drepsPropAllYes @Conway
-    drepsPropAllNoConfidence @Conway
+  describe "DRep Ratification" $ do
+    acceptedRatioProp @Conway
+    noStakeProp @Conway
+    allAbstainProp @Conway
+    noVotesProp @Conway
+    allYesProp @Conway
+    noConfidenceProp @Conway
 
-drepsProp :: forall era. Era era => Spec
-drepsProp =
+acceptedRatioProp :: forall era. Era era => Spec
+acceptedRatioProp =
   prop "DRep vote count for arbitrary vote ratios" $
     forAll genRatios $ \ratios -> do
-      forAll (drepsTestData @era ratios) $
-        \(DRepTestData {..}) -> do
+      forAll (genTestData @era ratios) $
+        \(TestData {..}) -> do
           let drepState =
                 -- non-expired (active) dReps
                 Map.fromList
@@ -117,44 +117,44 @@ drepsProp =
               votes
               InfoAction
 
-drepsPropAllAbstain :: forall era. Era era => Spec
-drepsPropAllAbstain =
+allAbstainProp :: forall era. Era era => Spec
+allAbstainProp =
   prop "If all votes are abstain, accepted ratio is zero" $
-    forAll (drepsTestData @era (Ratios {yes = 0, no = 0, abstain = 50 % 100, alwaysAbstain = 50 % 100, noConfidence = 0})) $
+    forAll (genTestData @era (Ratios {yes = 0, no = 0, abstain = 50 % 100, alwaysAbstain = 50 % 100, noConfidence = 0})) $
       \drepTestData ->
         activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
-drepsPropAllNoConfidence :: forall era. Era era => Spec
-drepsPropAllNoConfidence =
+noConfidenceProp :: forall era. Era era => Spec
+noConfidenceProp =
   prop "If all votes are no confidence, accepted ratio is zero" $
-    forAll (drepsTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 100 % 100})) $
+    forAll (genTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 100 % 100})) $
       \drepTestData ->
         activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
-drepsPropNoVotes :: forall era. Era era => Spec
-drepsPropNoVotes =
+noVotesProp :: forall era. Era era => Spec
+noVotesProp =
   prop "If there are no votes, accepted ratio is zero" $
-    forAll (drepsTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})) $
+    forAll (genTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})) $
       \drepTestData ->
         activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
-drepsPropAllYes :: forall era. Era era => Spec
-drepsPropAllYes =
+allYesProp :: forall era. Era era => Spec
+allYesProp =
   prop "If all vote yes, accepted ratio is 1 (unless there is no stake) " $
-    forAll (drepsTestData @era (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})) $
+    forAll (genTestData @era (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})) $
       \drepTestData ->
         if totalStake drepTestData == Coin 0
           then activeDRepAcceptedRatio drepTestData `shouldBe` 0
           else activeDRepAcceptedRatio drepTestData `shouldBe` 1
 
-drepsPropNoStake ::
+noStakeProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
   , ConwayEraPParams era
   ) =>
   Spec
-drepsPropNoStake =
+noStakeProp =
   prop @((RatifyEnv era, RatifyState era, GovActionState era) -> IO ())
     "If there is no stake, accept iff threshold is zero"
     ( \(env, st, gas) ->
@@ -167,8 +167,8 @@ drepsPropNoStake =
           == SJust minBound
     )
 
-activeDRepAcceptedRatio :: forall era. DRepTestData era -> Rational
-activeDRepAcceptedRatio (DRepTestData {..}) =
+activeDRepAcceptedRatio :: forall era. TestData era -> Rational
+activeDRepAcceptedRatio (TestData {..}) =
   let activeDrepState =
         -- non-expired dReps
         Map.fromList
@@ -176,7 +176,7 @@ activeDRepAcceptedRatio (DRepTestData {..}) =
       ratifyEnv = (emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = activeDrepState}
    in dRepAcceptedRatio @era ratifyEnv votes InfoAction
 
-data DRepTestData era = DRepTestData
+data TestData era = TestData
   { distr :: Map (DRep (EraCrypto era)) (CompactForm Coin)
   , votes :: Map (Credential 'DRepRole (EraCrypto era)) Vote
   , totalStake :: Coin
@@ -199,12 +199,12 @@ data Ratios = Ratios
   deriving (Show)
 
 -- Prepare the stake distribution and votes according to the given ratios.
-drepsTestData ::
+genTestData ::
   forall era.
   Era era =>
   Ratios ->
-  Gen (DRepTestData era)
-drepsTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
+  Gen (TestData era)
+genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
   let inDreps = listOf (DRepCredential <$> (arbitrary @(Credential 'DRepRole (EraCrypto era))))
   dreps <- inDreps
 
@@ -230,7 +230,7 @@ drepsTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
       pct :: Integral a => Rational -> a
       pct r = ceiling (r * fromIntegral drepSize)
   pure
-    DRepTestData
+    TestData
       { distr = distr
       , votes = votes
       , totalStake = fromCompact (fold distr)
