@@ -33,7 +33,7 @@ import NoThunks.Class (NoThunks (..))
 instance Crypto c => EraTransition (ConwayEra c) where
   data TransitionConfig (ConwayEra c) = ConwayTransitionConfig
     { ctcConwayGenesis :: !(ConwayGenesis c)
-    , ctcBabbageTransitionConfig :: TransitionConfig (BabbageEra c)
+    , ctcBabbageTransitionConfig :: !(TransitionConfig (BabbageEra c))
     }
     deriving (Show, Eq, Generic)
 

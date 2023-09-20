@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Fast forward functionality is used in testing and benchmarking to initilize a chain
@@ -225,7 +226,6 @@ createInitialState tc =
     initialUtxo = genesisUTxO sg
     reserves :: Coin
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
-
 
 -- | Register the initial staking information in the 'NewEpochState'.
 --
