@@ -7,6 +7,29 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 8.5
+
+- Prevent `DRep` expiry when there are no Governance Actions.
+- Refreshing of expiry with votes and `UpdateTxCert`
+- Disable ability to submit transactions with votes by Stake Pool Operators and
+  Constitutional Committee members on Governance Actions that they should not
+  be able to vote on.
+- Add ability to supply initial Constitutional Committee and initial version of Constitution.
+- Preserve order of submitted ProposalProcedures and account for their priority.
+- Disallow empty fields in CBOR of Conway TxBody
+- Implement Constitutional Committee expiration, validation and modification
+
+## 8.4
+
+- `GovernanceProposals` functionality:
+  - Implement expiry
+  - Enforce the supplied deposit amount
+  - Enforce previous GovActionId is correct
+- Enforce deposits and ensure refunds for `DRep`s. This affects transaction building functionality.
+- Enforce thresholds for votes from PParams for Stake Pool Operators and DReps
+- Delaying of ratification after `NoConfidence`, `HardForkInitiation`, `NewCommittee`,
+  `NewConstitution` actions have been enacted.
+
 ## 8.3
 
 - `DRep` functionality progress:
