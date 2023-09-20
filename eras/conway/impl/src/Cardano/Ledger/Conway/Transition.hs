@@ -32,18 +32,18 @@ import NoThunks.Class (NoThunks (..))
 
 instance Crypto c => EraTransition (ConwayEra c) where
   data TransitionConfig (ConwayEra c) = ConwayTransitionConfig
-    { atcConwayGenesis :: !(ConwayGenesis c)
-    , atcBabbageTransitionConfig :: TransitionConfig (BabbageEra c)
+    { ctcConwayGenesis :: !(ConwayGenesis c)
+    , ctcBabbageTransitionConfig :: TransitionConfig (BabbageEra c)
     }
     deriving (Show, Eq, Generic)
 
   mkTransitionConfig = ConwayTransitionConfig
 
   tcPreviousEraConfigL =
-    lens atcBabbageTransitionConfig (\atc pc -> atc {atcBabbageTransitionConfig = pc})
+    lens ctcBabbageTransitionConfig (\ctc pc -> ctc {ctcBabbageTransitionConfig = pc})
 
   tcTranslationContextL =
-    lens atcConwayGenesis (\atc ag -> atc {atcConwayGenesis = ag})
+    lens ctcConwayGenesis (\ctc ag -> ctc {ctcConwayGenesis = ag})
 
 instance Crypto c => NoThunks (TransitionConfig (ConwayEra c))
 

@@ -99,7 +99,7 @@ class
 
   -- | Get the initial PParams for the current era from the `TransitionConfig`. Note that
   -- this is only useful for testing and fast forward functionality, because this function
-  -- assumes no on-chain chnages to PParams through PParamsUpdate functionality.
+  -- assumes no on-chain changes to PParams through PParamsUpdate functionality.
   --
   -- Default implementation will use the PParams from the Previous era and the current
   -- `TranslationContext` to construct PParams for the current era.
