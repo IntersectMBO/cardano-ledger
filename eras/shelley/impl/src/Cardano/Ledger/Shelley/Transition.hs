@@ -125,11 +125,9 @@ instance Crypto c => EraTransition (ShelleyEra c) where
   mkTransitionConfig =
     error "Impossible: There is no EraTransition instance for ByronEra"
 
-  tcPreviousEraConfigL =
-    error "Impossible: There is no EraTransition instance for ByronEra"
+  tcPreviousEraConfigL = notSupportedInThisEra
 
-  tcTranslationContextL =
-    error "Impossible: There is no EraTransition instance for ByronEra"
+  tcTranslationContextL = notSupportedInThisEra
 
   tcShelleyGenesisL = lens stcShelleyGenesis (\tc sg -> tc {stcShelleyGenesis = sg})
 
