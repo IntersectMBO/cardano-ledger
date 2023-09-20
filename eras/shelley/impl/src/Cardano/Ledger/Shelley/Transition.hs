@@ -125,9 +125,9 @@ instance Crypto c => EraTransition (ShelleyEra c) where
   mkTransitionConfig =
     error "Impossible: There is no EraTransition instance for ByronEra"
 
-  tcPreviousEraConfigL = notSupportedInThisEra
+  tcPreviousEraConfigL = notSupportedInThisEraL
 
-  tcTranslationContextL = notSupportedInThisEra
+  tcTranslationContextL = notSupportedInThisEraL
 
   tcShelleyGenesisL = lens stcShelleyGenesis (\tc sg -> tc {stcShelleyGenesis = sg})
 
@@ -170,6 +170,7 @@ instance Crypto c => FromJSON (TransitionConfig (ShelleyEra c)) where
 --
 -- /Warning/ - Should only be useed in testing and benchmarking
 createInitialState ::
+  forall era.
   EraTransition era =>
   TransitionConfig era ->
   NewEpochState era
@@ -188,7 +189,8 @@ createInitialState tc =
                     smartUTxOState pp initialUtxo zero zero basicGovernance zero
                 , lsCertState =
                     CertState
-                      { certDState = def {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
+                      { certDState =
+                          def {dsGenDelegs = GenDelegs (sgGenDelegs sg)} :: DState era
                       , certPState = def
                       , certVState = def
                       }
