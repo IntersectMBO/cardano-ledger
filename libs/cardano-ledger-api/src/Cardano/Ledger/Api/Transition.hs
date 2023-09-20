@@ -9,6 +9,7 @@ module Cardano.Ledger.Api.Transition (
   tcShelleyGenesisL,
   tcPreviousEraConfigL,
   tcTranslationContextL,
+  tcTranslationContextG,
 
   -- * Functions for Testing
   tcInitialPParamsG,
