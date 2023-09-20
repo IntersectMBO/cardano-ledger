@@ -68,7 +68,7 @@ class
 
   mkTransitionConfig ::
     -- | Translation context necessary for advancing from previous era into the current
-    -- one. This will usually be the conents of genesis file, if one exists for the
+    -- one. This will usually be the contents of genesis file, if one exists for the
     -- current era
     TranslationContext era ->
     -- | Transition configuration for the previous era.
@@ -166,6 +166,13 @@ instance Crypto c => FromJSON (TransitionConfig (ShelleyEra c)) where
     sg <- o .: "shelley"
     pure $ ShelleyTransitionConfig {stcShelleyGenesis = sg}
 
+toShelleyTransitionConfigPairs ::
+  (KeyValue a, Crypto c) =>
+  TransitionConfig (ShelleyEra c) ->
+  [a]
+toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
+  ["shelley" .= object (shelleyGenesisPairs (stcShelleyGenesis stc))]
+
 -- | Helper function for constructing the initial state for any era
 --
 -- /Warning/ - Should only be useed in testing and benchmarking
@@ -186,10 +193,10 @@ createInitialState tc =
           , esLState =
               LedgerState
                 { lsUTxOState =
-                    smartUTxOState pp initialUtxo zero zero basicGovernance zero
+                    smartUTxOState pp initialUtxo zero zero govState zero
                 , lsCertState =
                     CertState
-                      { certDState = def {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
+                      { certDState = dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
                       , certPState = def
                       , certVState = def
                       }
@@ -201,23 +208,24 @@ createInitialState tc =
     , stashedAVVMAddresses = def
     }
   where
-    basicGovernance =
+    dState :: DState era
+    dState = def
+    govState :: GovState era
+    govState =
       emptyGovState
         & curPParamsGovStateL .~ pp
         & prevPParamsGovStateL .~ pp
+    pp :: PParams era
     pp = tc ^. tcInitialPParamsG
     sg :: ShelleyGenesis (EraCrypto era)
     sg = tc ^. tcShelleyGenesisL
+    initialEpochNo :: EpochNo
     initialEpochNo = 0
+    initialUtxo :: UTxO :: era
     initialUtxo = genesisUTxO sg
+    reserves :: Coin
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
 
-toShelleyTransitionConfigPairs ::
-  (KeyValue a, Crypto c) =>
-  TransitionConfig (ShelleyEra c) ->
-  [a]
-toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
-  ["shelley" .= object (shelleyGenesisPairs (stcShelleyGenesis stc))]
 
 -- | Register the initial staking information in the 'NewEpochState'.
 --
