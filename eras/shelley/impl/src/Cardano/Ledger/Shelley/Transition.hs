@@ -221,7 +221,7 @@ createInitialState tc =
     sg = tc ^. tcShelleyGenesisL
     initialEpochNo :: EpochNo
     initialEpochNo = 0
-    initialUtxo :: UTxO :: era
+    initialUtxo :: UTxO era
     initialUtxo = genesisUTxO sg
     reserves :: Coin
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
