@@ -49,7 +49,6 @@ import Cardano.Ledger.Conway.Governance.Procedures (committeeMembersL)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
   ppCommitteeMaxTermLengthL,
-  ppCommitteeMinSizeL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -309,7 +308,6 @@ ratifyTransition = do
           withdrawalCanWithdraw _ = True
           notDelayed = not rsDelayed
       if prevActionAsExpected gasAction ensPrevGovActionIds
-        && validCommitteeSize ensCommittee ensPParams
         && validCommitteeTerm ensCommittee ensPParams reCurrentEpoch
         && notDelayed
         && withdrawalCanWithdraw gasAction
@@ -351,12 +349,6 @@ prevActionAsExpected (UpdateCommittee prev _ _ _) (PrevGovActionIds {pgaCommitte
 prevActionAsExpected (NewConstitution prev _) (PrevGovActionIds {pgaConstitution}) =
   prev == pgaConstitution
 prevActionAsExpected _ _ = True -- for the other actions, the previous action is not relevant
-
-validCommitteeSize :: ConwayEraPParams era => StrictMaybe (Committee era) -> PParams era -> Bool
-validCommitteeSize committee pp =
-  let committeeMinSize = pp ^. ppCommitteeMinSizeL
-      members = foldMap' (^. committeeMembersL) committee
-   in Map.size members >= fromIntegral committeeMinSize
 
 validCommitteeTerm ::
   ConwayEraPParams era =>
