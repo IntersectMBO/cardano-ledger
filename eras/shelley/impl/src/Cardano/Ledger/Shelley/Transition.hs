@@ -40,6 +40,7 @@ import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
@@ -90,6 +91,12 @@ class
     EraTransition (PreviousEra era) =>
     Lens' (TransitionConfig era) (TranslationContext era)
 
+  -- | Unlike `tcTranslationContextL`, this getter will also work for ShelleyEra.
+  tcTranslationContextG :: SimpleGetter (TransitionConfig era) (TranslationContext era)
+  default tcTranslationContextG ::
+    EraTransition (PreviousEra era) => SimpleGetter (TransitionConfig era) (TranslationContext era)
+  tcTranslationContextG = tcTranslationContextL
+
   -- | Lens for the `ShelleyGenesis` from the `TransitionConfig`. Default implementation
   -- looks in the previous era's config
   tcShelleyGenesisL :: Lens' (TransitionConfig era) (ShelleyGenesis (EraCrypto era))
@@ -127,6 +134,8 @@ instance Crypto c => EraTransition (ShelleyEra c) where
     error "Impossible: There is no EraTransition instance for ByronEra"
 
   tcPreviousEraConfigL = notSupportedInThisEraL
+
+  tcTranslationContextG = to (toFromByronTranslationContext . stcShelleyGenesis)
 
   tcTranslationContextL = notSupportedInThisEraL
 
