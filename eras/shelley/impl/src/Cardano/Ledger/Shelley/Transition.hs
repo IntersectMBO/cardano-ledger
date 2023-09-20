@@ -190,7 +190,7 @@ createInitialState tc =
                     smartUTxOState pp initialUtxo zero zero basicGovernance zero
                 , lsCertState =
                     CertState
-                      { certDState = def {dsGenDelegs = GenDelegs genDelegs}
+                      { certDState = def {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
                       , certPState = def
                       , certVState = def
                       }
@@ -211,7 +211,6 @@ createInitialState tc =
     initialEpochNo = 0
     initialUtxo = genesisUTxO sg
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
-    genDelegs = sgGenDelegs sg
 
 toShelleyTransitionConfigPairs ::
   (KeyValue a, Crypto c) =>
