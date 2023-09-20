@@ -120,13 +120,15 @@ instance
 -- We iterate over the committee, and incrementally construct the numerator and denominator,
 -- based on the votes and the committee state.
 committeeAccepted ::
+  ConwayEraPParams era =>
   RatifyState era ->
   RatifyEnv era ->
   GovActionState era ->
   Bool
 committeeAccepted rs RatifyEnv {reCommitteeState, reCurrentEpoch} GovActionState {gasCommitteeVotes, gasAction} =
   case votingCommitteeThreshold rs gasAction of
-    SNothing -> False -- this happens if we have no committee, in which case the committee vote is `no`
+    SNothing -> False -- this happens if we have no committee, or if the committee is too small,
+    -- in which case the committee vote is `no`
     SJust r ->
       -- short circuit on zero threshold, in which case the committee vote is `yes`
       r == minBound
