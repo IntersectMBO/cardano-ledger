@@ -97,13 +97,13 @@
           shell.tools =
             {
               cabal = "3.10.1.0";
-              ghcid = "0.8.8";
+              ghcid = "0.8.9";
             }
             // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
               # tools that work only with default compiler
-              fourmolu = "0.13.1.0";
+              fourmolu = "0.14.0.0";
               hlint = "3.6.1";
-              haskell-language-server = { src = nixpkgs.haskell-nix.sources."hls-2.0"; };
+              haskell-language-server = { src = nixpkgs.haskell-nix.sources."hls-2.2"; };
             };
 
           # and from nixpkgs or other inputs
