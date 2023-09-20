@@ -405,6 +405,6 @@ instance
 
 updateCommitteeState :: StrictMaybe (Committee era) -> CommitteeState era -> CommitteeState era
 updateCommitteeState committee (CommitteeState creds) =
-  CommitteeState $ Map.difference creds members
+  CommitteeState $ Map.intersection creds members
   where
     members = foldMap' committeeMembers committee
