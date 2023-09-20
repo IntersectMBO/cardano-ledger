@@ -123,6 +123,7 @@ test-suite tests
     other-modules:
         Test.Cardano.Ledger.Conway.BinarySpec
         Test.Cardano.Ledger.Conway.RatifySpec
+        Test.Cardano.Ledger.Conway.CommitteeRatifySpec
         Test.Cardano.Ledger.Conway.GenesisSpec
         Test.Cardano.Ledger.Conway.GovActionReorderSpec
         Paths_cardano_ledger_conway
@@ -142,6 +143,7 @@ test-suite tests
         cardano-ledger-binary:testlib,
         containers,
         data-default-class,
+        microlens,
         testlib,
         cardano-strict-containers,
         cardano-ledger-binary:testlib
