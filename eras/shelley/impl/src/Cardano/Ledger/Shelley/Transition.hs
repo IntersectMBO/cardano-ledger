@@ -189,8 +189,7 @@ createInitialState tc =
                     smartUTxOState pp initialUtxo zero zero basicGovernance zero
                 , lsCertState =
                     CertState
-                      { certDState =
-                          def {dsGenDelegs = GenDelegs (sgGenDelegs sg)} :: DState era
+                      { certDState = def {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
                       , certPState = def
                       , certVState = def
                       }
@@ -207,6 +206,7 @@ createInitialState tc =
         & curPParamsGovStateL .~ pp
         & prevPParamsGovStateL .~ pp
     pp = tc ^. tcInitialPParamsG
+    sg :: ShelleyGenesis (EraCrypto era)
     sg = tc ^. tcShelleyGenesisL
     initialEpochNo = 0
     initialUtxo = genesisUTxO sg
