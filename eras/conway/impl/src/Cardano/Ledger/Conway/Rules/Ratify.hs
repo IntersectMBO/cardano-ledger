@@ -18,6 +18,8 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   RatifyState (..),
   RatifyEnv (..),
   RatifySignal (..),
+  committeeAccepted,
+  committeeAcceptedRatio,
   dRepAccepted,
   dRepAcceptedRatio,
   reorderActions,
@@ -25,7 +27,7 @@ module Cardano.Ledger.Conway.Rules.Ratify (
 ) where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..))
-import Cardano.Ledger.CertState (CommitteeState, DRepState (..))
+import Cardano.Ledger.CertState (CommitteeState (csCommitteeCreds), DRepState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
@@ -36,8 +38,10 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionIds (..),
   RatifyState (..),
   Vote (..),
+  ensCommitteeL,
   ensTreasuryL,
   rsEnactStateL,
+  votingCommitteeThreshold,
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
@@ -106,10 +110,55 @@ instance
   initialRules = []
   transitionRules = [ratifyTransition]
 
---- Constants
+-- Compute the ratio yes/(yes + no), where
+-- yes:
+--      - the number of registered, unexpired, unresigned commitee members that voted yes
+-- no:
+--      - the number of registered, unexpired, unresigned committee members that voted no, plus
+--      - the number of registered, unexpired, unresigned committee members that did not vote for this action
+--
+-- We iterate over the committee, and incrementally construct the numerator and denominator,
+-- based on the votes and the committee state.
+committeeAccepted ::
+  RatifyState era ->
+  RatifyEnv era ->
+  GovActionState era ->
+  Bool
+committeeAccepted rs RatifyEnv {reCommitteeState, reCurrentEpoch} GovActionState {gasCommitteeVotes, gasAction} =
+  case votingCommitteeThreshold rs gasAction of
+    SNothing -> False -- this happens if we have no committee, in which case the committee vote is `no`
+    SJust r ->
+      -- short circuit on zero threshold, in which case the committee vote is `yes`
+      r == minBound
+        || committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch >= unboundRational r
+  where
+    members = foldMap' committeeMembers (rs ^. rsEnactStateL . ensCommitteeL)
 
--- ccThreshold :: Int
--- ccThreshold = 0
+committeeAcceptedRatio ::
+  forall era.
+  Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
+  Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote ->
+  CommitteeState era ->
+  EpochNo ->
+  Rational
+committeeAcceptedRatio members votes committeeState currentEpoch
+  | totalExcludingAbstain == 0 = 0
+  | otherwise = yesVotes % totalExcludingAbstain
+  where
+    accumVotes :: (Integer, Integer) -> Credential 'ColdCommitteeRole (EraCrypto era) -> EpochNo -> (Integer, Integer)
+    accumVotes (!yes, !tot) member expiry
+      | currentEpoch > expiry = (yes, tot) -- member is expired, vote "abstain" (don't count it)
+      | otherwise =
+          case Map.lookup member (csCommitteeCreds committeeState) of
+            Nothing -> (yes, tot) -- member is not registered, vote "abstain"
+            Just Nothing -> (yes, tot) -- member has resigned, vote "abstain"
+            Just (Just hotKey) ->
+              case Map.lookup hotKey votes of
+                Nothing -> (yes, tot + 1) -- member hasn't voted, vote "no"
+                Just Abstain -> (yes, tot) -- member voted "abstain"
+                Just VoteNo -> (yes, tot + 1) -- member voted "no"
+                Just VoteYes -> (yes + 1, tot + 1) -- member voted "yes"
+    (yesVotes, totalExcludingAbstain) = Map.foldlWithKey' accumVotes (0, 0) members
 
 spoAccepted ::
   ConwayEraPParams era =>
@@ -262,6 +311,7 @@ ratifyTransition = do
         && validCommitteeTerm ensCommittee ensPParams reCurrentEpoch
         && notDelayed
         && withdrawalCanWithdraw gasAction
+        && committeeAccepted st env gas
         && spoAccepted st env ast
         && dRepAccepted env st gas
         then do
