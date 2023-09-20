@@ -193,6 +193,7 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
@@ -558,7 +559,7 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
 instance EraPParams era => Default (ConwayGovState era) where
-  def = ConwayGovState def def (DRComplete def)
+  def = ConwayGovState def def (DRComplete Map.empty)
 
 instance EraPParams era => NFData (ConwayGovState era)
 

@@ -559,7 +559,7 @@ testGov pf = do
       ConwayGovState
         expectedGovSnapshots2
         (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL)
-        (DRComplete Map.empty)
+        drepDistr
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 pp (trustMeP pf True secondProposalTx)
   ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) <-
     expectRight "Error running LEDGER when proposing:" eitherLedgerState3
