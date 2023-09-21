@@ -74,7 +74,7 @@ import Data.Word (Word64)
 import Lens.Micro ((^.))
 
 data RatifyEnv era = RatifyEnv
-  { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
+  { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
   , reStakePoolDistr :: !(PoolDistr (EraCrypto era))
   , reDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
   , reDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))

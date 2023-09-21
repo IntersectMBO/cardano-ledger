@@ -221,8 +221,8 @@ toEpochStatePairs es@(EpochState _ _ _ _) =
 --   the epoch boundary is reached we 'resolve' these pointers, to see if any have
 --   become non-dangling since the time they were first used in the incremental computation.
 data IncrementalStake c = IStake
-  { credMap :: !(Map (Credential 'Staking c) Coin)
-  , ptrMap :: !(Map Ptr Coin)
+  { credMap :: !(Map (Credential 'Staking c) (CompactForm Coin))
+  , ptrMap :: !(Map Ptr (CompactForm Coin))
   }
   deriving (Generic, Show, Eq, Ord, NoThunks, NFData)
 
@@ -702,10 +702,10 @@ utxosDonationL = lens utxosDonation (\x y -> x {utxosDonation = y})
 
 -- ================ IncremetalStake ===========================
 
-credMapL :: Lens' (IncrementalStake c) (Map (Credential 'Staking c) Coin)
+credMapL :: Lens' (IncrementalStake c) (Map (Credential 'Staking c) (CompactForm Coin))
 credMapL = lens credMap (\x y -> x {credMap = y})
 
-ptrMapL :: Lens' (IncrementalStake c) (Map Ptr Coin)
+ptrMapL :: Lens' (IncrementalStake c) (Map Ptr (CompactForm Coin))
 ptrMapL = lens ptrMap (\x y -> x {ptrMap = y})
 
 -- ====================  Compound Lenses =======================
@@ -716,7 +716,7 @@ newEpochStateGovStateL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
 epochStateIncrStakeDistrL ::
   Lens'
     (EpochState era)
-    (Map (Credential 'Staking (EraCrypto era)) Coin)
+    (Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
 epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
 
 epochStateRegDrepL ::

@@ -40,8 +40,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), complete, pulse)
 import Data.Typeable
-import Data.VMap (VB, VMap (..), VP, foldlWithKey)
-import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..), allNoThunks)
@@ -102,9 +100,9 @@ drepDepositL = lens drepDeposit (\x y -> x {drepDeposit = y})
 drepDistr ::
   UMap c ->
   Map (Credential 'DRepRole c) (DRepState c) ->
-  VMap VB VP (Credential 'Staking c) (CompactForm Coin) ->
+  Map (Credential 'Staking c) (CompactForm Coin) ->
   Map (DRep c) (CompactForm Coin)
-drepDistr um regDreps stakeDistr = foldlWithKey (accumDRepDistr um regDreps) Map.empty stakeDistr
+drepDistr um regDreps stakeDistr = Map.foldlWithKey' (accumDRepDistr um regDreps) Map.empty stakeDistr
 
 -- | For each 'stakecred' and coin 'c', check if that credential is delegated to some DRep.
 --   If so then add that coin to the aggregated map 'ans', mapping DReps to compact Coin
@@ -143,11 +141,8 @@ data DRepPulser c (m :: Type -> Type) ans where
     !Int ->
     !(UMap c) ->
     !(Map (Credential 'DRepRole c) (DRepState c)) ->
-    -- Purposely NOT strict. Initially this is obtained from the Mark SnapShot (where it is a thunk)
-    -- when we first construct the DRepDistr (at the epoch boundary). We definitely don't want to incur
-    -- the cost of computing it there. It will be force by the first pulse, or the first use of TICKF,
-    -- and then never again.
-    (VMap VB VP (Credential 'Staking c) (CompactForm Coin)) ->
+    -- Initially this is obtained from the IncrementalStake, where we just copy the pointer
+    !(Map (Credential 'Staking c) (CompactForm Coin)) ->
     !ans ->
     DRepPulser c m ans
 
@@ -168,12 +163,12 @@ instance Crypto c => NFData (DRepPulser c Identity (Map (DRep c) (CompactForm Co
   rnf (DRepPulser n1 um drep bal ans) = n1 `deepseq` um `deepseq` drep `deepseq` bal `deepseq` rnf ans
 
 instance Pulsable (DRepPulser c) where
-  done (DRepPulser _ _ _ m _) = VMap.null m
+  done (DRepPulser _ _ _ m _) = Map.null m
   current (DRepPulser _ _ _ _ ans) = ans
-  pulseM ll@(DRepPulser _ _ _ balance _) | VMap.null balance = pure ll
+  pulseM ll@(DRepPulser _ _ _ balance _) | Map.null balance = pure ll
   pulseM (DRepPulser n um regDreps balance ans) =
-    let !(!steps, !balance') = VMap.splitAt n balance -- Athough it is initialized as a thunk. We want to force it with each pulse.
-        ans' = foldlWithKey (accumDRepDistr um regDreps) ans steps
+    let !(!steps, !balance') = Map.splitAt n balance -- Athough it is initialized as a thunk. We want to force it with each pulse.
+        ans' = Map.foldlWithKey' (accumDRepDistr um regDreps) ans steps
      in Identity (DRepPulser n um regDreps balance' ans')
 
 -- ===================================================================================
@@ -217,7 +212,7 @@ startDRepDistr ::
   Int ->
   UMap c ->
   Map (Credential 'DRepRole c) (DRepState c) ->
-  VMap VB VP (Credential 'Staking c) (CompactForm Coin) ->
+  Map (Credential 'Staking c) (CompactForm Coin) ->
   DRepDistr c
 startDRepDistr stepSize um regDreps stakeDistr
   | stepSize <= 0 || Map.null regDreps = DRComplete Map.empty
