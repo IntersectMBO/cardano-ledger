@@ -25,6 +25,7 @@ import Test.Cardano.Ledger.Examples.ConwayFeatures (conwayFeatures)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests, depositTests)
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
+import qualified Test.Cardano.Ledger.STS as ConstraintSTS
 import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
@@ -57,6 +58,7 @@ defaultTests =
       ]
   , genericProperties def
   , aggTests
+  , ConstraintSTS.tests_STS
   ]
 
 nightlyTests :: [TestTree]

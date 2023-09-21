@@ -7,12 +7,10 @@ module Test.Cardano.Ledger.Constrained.Preds.CertState where
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
-import Cardano.Ledger.Pretty (ppMap)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
-import GHC.Real ((%))
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
@@ -30,8 +28,6 @@ import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (
   pcCertState,
   pcDState,
-  pcIndividualPoolStake,
-  pcKeyHash,
   pcPState,
   pcVState,
  )
@@ -116,12 +112,12 @@ pstatePreds _p =
       , (1, Constr "(+3)" (+ 3) ^$ e, [CanFollow e currentEpoch])
       , (1, Constr "(+5)" (+ 5) ^$ e, [CanFollow e currentEpoch])
       ]
-  , -- poolDistr not needed in PState, but is needed in NewEpochState
-    -- But since it is so intimately tied to regPools we define it here
-    -- Alternately we could put this in NewEpochState, and insist that pStateStage
-    -- preceed newEpochStateStage
-    Dom regPools :=: Dom poolDistr
-  , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL poolDistr]
+      -- poolDistr not needed in PState, but is needed in NewEpochState
+      -- But since it is so intimately tied to regPools we define it here
+      -- Alternately we could put this in NewEpochState, and insist that pStateStage
+      -- preceed newEpochStateStage
+      -- , Dom regPools :=: Dom poolDistr
+      -- , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL poolDistr]
   ]
   where
     e = var "e" EpochR
@@ -145,10 +141,8 @@ demoP mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   pstate <- monadTyped $ runTarget env pstateT
-  pDistr <- monadTyped (findVar (unVar poolDistr) env)
   when (mode == Interactive) $ do
     putStrLn (show (pcPState pstate))
-    putStrLn (show (ppMap pcKeyHash pcIndividualPoolStake pDistr))
   modeRepl mode proof env ""
 
 demoTestP :: TestTree

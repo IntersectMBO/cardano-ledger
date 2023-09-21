@@ -53,7 +53,9 @@ shrinkOneVar originalEnv before x cs after =
     beforeEnv = restrictEnv before originalEnv
     beforeSubst = envToSubst beforeEnv
     cs' = map (substPred beforeSubst) cs
-    val = fromJust $ findName x originalEnv
+    val = case findName x originalEnv of
+      Just v -> v
+      Nothing -> error $ "shrinkOneVar: Failed to find: " ++ show x ++ " in env"
 
 shrinkVar :: Name era -> [Pred era] -> Payload era -> [Payload era]
 shrinkVar v cs p = [p' | p' <- shrinkPayload p, validAssignment v p' cs]
