@@ -10,7 +10,6 @@ module Cardano.Ledger.Api.Transition (
   tcShelleyGenesisL,
   tcPreviousEraConfigL,
   tcTranslationContextL,
-  tcTranslationContextG,
 
   -- * Genesis
   ShelleyGenesis (..),

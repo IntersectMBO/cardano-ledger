@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -40,7 +41,7 @@ import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
+import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..), toFromByronTranslationContext)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
@@ -88,14 +89,7 @@ class
   -- Translation context is a different name for the Genesis type for each era, they are
   -- one and the same concept.
   tcTranslationContextL ::
-    EraTransition (PreviousEra era) =>
     Lens' (TransitionConfig era) (TranslationContext era)
-
-  -- | Unlike `tcTranslationContextL`, this getter will also work for ShelleyEra.
-  tcTranslationContextG :: SimpleGetter (TransitionConfig era) (TranslationContext era)
-  default tcTranslationContextG ::
-    EraTransition (PreviousEra era) => SimpleGetter (TransitionConfig era) (TranslationContext era)
-  tcTranslationContextG = tcTranslationContextL
 
   -- | Lens for the `ShelleyGenesis` from the `TransitionConfig`. Default implementation
   -- looks in the previous era's config
@@ -135,9 +129,15 @@ instance Crypto c => EraTransition (ShelleyEra c) where
 
   tcPreviousEraConfigL = notSupportedInThisEraL
 
-  tcTranslationContextG = to (toFromByronTranslationContext . stcShelleyGenesis)
-
-  tcTranslationContextL = notSupportedInThisEraL
+  tcTranslationContextL =
+    tcShelleyGenesisL . lens toFromByronTranslationContext setFBTC
+    where
+      setFBTC shelleyGenesis FromByronTranslationContext {..} =
+        shelleyGenesis
+          { sgGenDelegs = fbtcGenDelegs
+          , sgProtocolParams = fbtcProtocolParams
+          , sgMaxLovelaceSupply = fbtcMaxLovelaceSupply
+          }
 
   tcShelleyGenesisL = lens stcShelleyGenesis (\tc sg -> tc {stcShelleyGenesis = sg})
 
