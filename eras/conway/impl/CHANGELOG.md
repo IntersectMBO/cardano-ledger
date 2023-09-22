@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add PredicateFailure for current treasury value mismatch in tx body in LEDGER #3749
 * Change `To/FromJSON` format for `ConwayGenesis`
 * Add `EraTransition` instance and `toConwayTransitionConfigPairs`.
 * Expose `toConwayGenesisPairs` and `toUpgradeConwayPParamsUpdatePairs`
