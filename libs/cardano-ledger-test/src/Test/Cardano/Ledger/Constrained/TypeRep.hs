@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -5,10 +6,14 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
+-- NOTE: This is here because of a bug in fourmolu
+-- c.f. https://github.com/fourmolu/fourmolu/issues/374
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
@@ -142,7 +147,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
   unValue,
  )
 import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
-import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed, explain, failT)
+import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed, failT)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
@@ -308,7 +313,6 @@ data Rep era t where
   PrevCommitteeR :: Era era => Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
   PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
   DRepDistrR :: Era era => Rep era (DRepDistr (EraCrypto era))
-  NumDormantEpochsR :: Era era => Rep era EpochNo
   CommitteeStateR :: Era era => Rep era (CommitteeState era)
   VStateR :: Era era => Rep era (VState era)
 
@@ -318,131 +322,180 @@ stringR = ListR CharR
 -- ===========================================================
 -- Proof of Rep equality
 
-data IsTypeable a where
-  IsTypeable :: Typeable a => IsTypeable a
+data Is c a where
+  Is :: c a => Is c a
+  Isn't :: Is c a
 
-repTypeable :: Rep era t -> IsTypeable t
-repTypeable r = case r of
-  NumDormantEpochsR -> IsTypeable
-  VStateR -> IsTypeable
-  DRepStateR -> IsTypeable
-  CommColdCredR -> IsTypeable
-  CommHotCredR -> IsTypeable
+data HasInstances a where
+  Type ::
+    Typeable a =>
+    Is Eq a ->
+    Is Ord a ->
+    HasInstances a
+
+pattern IsOrd :: () => (Typeable a, Ord a) => HasInstances a
+pattern IsOrd = Type Is Is
+
+pattern IsEq :: () => (Typeable a, Eq a) => HasInstances a
+pattern IsEq <- Type Is _
+  where
+    IsEq = Type Is Isn't
+
+{-# COMPLETE IsTypeable #-}
+pattern IsTypeable :: () => Typeable a => HasInstances a
+pattern IsTypeable <- Type _ _
+  where
+    IsTypeable = Type Isn't Isn't
+
+repHasInstances :: Rep era t -> HasInstances t
+repHasInstances r = case r of
+  VStateR -> IsEq
+  DRepDistrR -> IsEq
+  DRepStateR -> IsOrd
+  CommColdCredR -> IsOrd
+  CommHotCredR -> IsOrd
   GovActionR -> IsTypeable
-  PoolMetadataR {} -> IsTypeable
-  StakeHashR {} -> IsTypeable
-  BoolR {} -> IsTypeable
-  DRepR {} -> IsTypeable
-  WitVKeyR {} -> IsTypeable
-  TxAuxDataR {} -> IsTypeable
-  LanguageR {} -> IsTypeable
+  PoolMetadataR {} -> IsOrd
+  StakeHashR {} -> IsOrd
+  BoolR {} -> IsOrd
+  DRepR {} -> IsOrd
+  WitVKeyR {} -> IsOrd
+  TxAuxDataR {} -> IsEq
+  LanguageR {} -> IsOrd
   LedgerStateR {} -> IsTypeable
-  TxR {} -> IsTypeable
-  ScriptIntegrityHashR {} -> IsTypeable
-  AuxiliaryDataHashR {} -> IsTypeable
-  BootstrapWitnessR {} -> IsTypeable
-  SigningKeyR {} -> IsTypeable
-  TxWitsR {} -> IsTypeable
-  PayHashR {} -> IsTypeable
-  IntegerR {} -> IsTypeable
+  TxR {} -> IsEq
+  ScriptIntegrityHashR {} -> IsOrd
+  AuxiliaryDataHashR {} -> IsOrd
+  BootstrapWitnessR {} -> IsOrd
+  SigningKeyR {} -> IsEq
+  TxWitsR {} -> IsEq
+  PayHashR {} -> IsOrd
+  IntegerR {} -> IsOrd
   ScriptsNeededR {} -> IsTypeable
   ScriptPurposeR {} -> IsTypeable
-  TxBodyR {} -> IsTypeable
-  ShelleyTxCertR {} -> IsTypeable
-  ConwayTxCertR {} -> IsTypeable
-  MIRPotR {} -> IsTypeable
-  IsValidR {} -> IsTypeable
-  ExUnitsR {} -> IsTypeable
-  TagR {} -> IsTypeable
-  DataHashR {} -> IsTypeable
-  PCredR {} -> IsTypeable
-  NetworkR {} -> IsTypeable
-  RdmrPtrR {} -> IsTypeable
-  DataR {} -> IsTypeable
-  DatumR {} -> IsTypeable
+  TxBodyR {} -> IsEq
+  ShelleyTxCertR {} -> IsEq
+  ConwayTxCertR {} -> IsEq
+  MIRPotR {} -> IsOrd
+  IsValidR {} -> IsEq
+  ExUnitsR {} -> IsEq
+  TagR {} -> IsOrd
+  DataHashR {} -> IsOrd
+  PCredR {} -> IsOrd
+  NetworkR {} -> IsOrd
+  RdmrPtrR {} -> IsOrd
+  DataR {} -> IsEq
+  DatumR {} -> IsOrd
   KeyPairR {} -> IsTypeable
-  ScriptR {} -> IsTypeable
-  ScriptHashR {} -> IsTypeable
-  TxCertR {} -> IsTypeable
-  RewardAcntR {} -> IsTypeable
-  ValidityIntervalR {} -> IsTypeable
-  AssetNameR {} -> IsTypeable
+  ScriptR {} -> IsEq
+  ScriptHashR {} -> IsOrd
+  TxCertR {} -> IsEq
+  RewardAcntR {} -> IsOrd
+  ValidityIntervalR {} -> IsOrd
+  AssetNameR {} -> IsOrd
   WitnessesFieldR {} -> IsTypeable
-  MultiAssetR {} -> IsTypeable
-  PolicyIDR {} -> IsTypeable
-  CharR {} -> IsTypeable
-  RationalR {} -> IsTypeable
-  CoinR {} -> IsTypeable
-  EpochR {} -> IsTypeable
-  AddrR {} -> IsTypeable
-  CredR {} -> IsTypeable
-  VCredR {} -> IsTypeable
-  PoolHashR {} -> IsTypeable
-  WitHashR {} -> IsTypeable
-  GenHashR {} -> IsTypeable
-  GenDelegHashR {} -> IsTypeable
-  VHashR {} -> IsTypeable
-  PoolParamsR {} -> IsTypeable
+  MultiAssetR {} -> IsOrd
+  PolicyIDR {} -> IsOrd
+  CharR {} -> IsOrd
+  RationalR {} -> IsOrd
+  CoinR {} -> IsOrd
+  EpochR {} -> IsOrd
+  AddrR {} -> IsOrd
+  CredR {} -> IsOrd
+  VCredR {} -> IsOrd
+  PoolHashR {} -> IsOrd
+  WitHashR {} -> IsOrd
+  GenHashR {} -> IsOrd
+  GenDelegHashR {} -> IsOrd
+  VHashR {} -> IsOrd
+  PoolParamsR {} -> IsOrd
   NewEpochStateR {} -> IsTypeable
-  IntR {} -> IsTypeable
-  FloatR {} -> IsTypeable
-  NaturalR {} -> IsTypeable
-  Word64R {} -> IsTypeable
-  TxInR {} -> IsTypeable
-  UnitR {} -> IsTypeable
-  ProtVerR {} -> IsTypeable
-  ValueR {} -> IsTypeable
+  IntR {} -> IsOrd
+  FloatR {} -> IsOrd
+  NaturalR {} -> IsOrd
+  Word64R {} -> IsOrd
+  TxInR {} -> IsOrd
+  UnitR {} -> IsOrd
+  ProtVerR {} -> IsOrd
+  ValueR {} -> IsOrd
   UTxOR {} -> IsTypeable
-  TxOutR {} -> IsTypeable
+  TxOutR {} -> IsOrd
   PParamsR {} -> IsTypeable
   PParamsUpdateR {} -> IsTypeable
-  DeltaCoinR {} -> IsTypeable
-  GenDelegPairR {} -> IsTypeable
-  FutureGenDelegR {} -> IsTypeable
+  DeltaCoinR {} -> IsOrd
+  GenDelegPairR {} -> IsOrd
+  FutureGenDelegR {} -> IsOrd
   PPUPStateR {} -> IsTypeable
-  PtrR {} -> IsTypeable
-  IPoolStakeR {} -> IsTypeable
-  SnapShotsR {} -> IsTypeable
-  RewardR {} -> IsTypeable
-  SlotNoR {} -> IsTypeable
-  SizeR {} -> IsTypeable
-  (repTypeable -> IsTypeable) :-> (repTypeable -> IsTypeable) -> IsTypeable
-  MapR
-    (repTypeable -> IsTypeable)
-    (repTypeable -> IsTypeable) -> IsTypeable
-  SetR (repTypeable -> IsTypeable) -> IsTypeable
-  ListR (repTypeable -> IsTypeable) -> IsTypeable
-  PairR
-    (repTypeable -> IsTypeable)
-    (repTypeable -> IsTypeable) -> IsTypeable
-  MaybeR (repTypeable -> IsTypeable) -> IsTypeable
-  GenR (repTypeable -> IsTypeable) -> IsTypeable
-  DStateR {} -> IsTypeable
-  GovActionIdR {} -> IsTypeable
-  GovActionIxR {} -> IsTypeable
+  PtrR {} -> IsOrd
+  IPoolStakeR {} -> IsEq
+  SnapShotsR {} -> IsEq
+  RewardR {} -> IsOrd
+  SlotNoR {} -> IsOrd
+  SizeR {} -> IsOrd
+  DStateR {} -> IsEq
+  GovActionIdR {} -> IsOrd
+  GovActionIxR {} -> IsOrd
   GovActionStateR {} -> IsTypeable
-  UnitIntervalR {} -> IsTypeable
-  CommitteeR {} -> IsTypeable
-  ConstitutionR {} -> IsTypeable
-  PrevGovActionIdsR {} -> IsTypeable
-  PrevPParamUpdateR {} -> IsTypeable
-  PrevHardForkR {} -> IsTypeable
-  PrevCommitteeR {} -> IsTypeable
-  PrevConstitutionR {} -> IsTypeable
-  DRepDistrR {} -> IsTypeable
-  CommitteeStateR {} -> IsTypeable
+  CommitteeStateR {} -> IsOrd
+  UnitIntervalR {} -> IsOrd
+  CommitteeR {} -> IsEq
+  ConstitutionR {} -> IsEq
+  PrevGovActionIdsR {} -> IsEq
+  PrevPParamUpdateR {} -> IsEq
+  PrevHardForkR {} -> IsEq
+  PrevCommitteeR {} -> IsEq
+  PrevConstitutionR {} -> IsEq
+  (repHasInstances -> IsTypeable) :-> (repHasInstances -> IsTypeable) -> IsTypeable
+  MapR (repHasInstances -> IsTypeable) (repHasInstances -> ib) -> requireInstances ib
+  SetR (repHasInstances -> IsTypeable) -> IsOrd
+  ListR (repHasInstances -> ia) -> requireInstances ia
+  PairR (repHasInstances -> ia) (repHasInstances -> ib) -> lubInstances ia ib
+  MaybeR (repHasInstances -> ia) -> requireInstances ia
+  GenR (repHasInstances -> IsTypeable) -> IsTypeable
+
+-- NOTE: The extra `()` constraint needs to be there for fourmolu.
+-- c.f. https://github.com/fourmolu/fourmolu/issues/374
+lubIs :: ((c a, c b) => c (f a b), ()) => Is c a -> Is c b -> Is c (f a b)
+lubIs Is Is = Is
+lubIs _ _ = Isn't
+
+lubInstances ::
+  ( (Ord a, Ord b) => Ord (f a b)
+  , (Eq a, Eq b) => Eq (f a b)
+  , Typeable f
+  ) =>
+  HasInstances a ->
+  HasInstances b ->
+  HasInstances (f a b)
+lubInstances (Type eq_a ord_a) (Type eq_b ord_b) =
+  Type (lubIs eq_a eq_b) (lubIs ord_a ord_b)
+
+-- NOTE: The extra `()` constraint needs to be there for fourmolu.
+-- c.f. https://github.com/fourmolu/fourmolu/issues/374
+requireIs :: (c a => c (f a), ()) => Is c a -> Is c (f a)
+requireIs Is = Is
+requireIs _ = Isn't
+
+requireInstances ::
+  ( Ord a => Ord (f a)
+  , Eq a => Eq (f a)
+  , Typeable f
+  ) =>
+  HasInstances a ->
+  HasInstances (f a)
+requireInstances (Type eq ord) = Type (requireIs eq) (requireIs ord)
 
 instance Singleton (Rep era) where
   testEql
-    (repTypeable -> IsTypeable :: IsTypeable a)
-    (repTypeable -> IsTypeable :: IsTypeable b) = eqT @a @b
+    (repHasInstances -> IsTypeable :: HasInstances a)
+    (repHasInstances -> IsTypeable :: HasInstances b) = eqT @a @b
   cmpIndex x y = compare (shape x) (shape y)
 
 -- ============================================================
 -- Show instances
 
 instance Show (Rep era t) where
-  showsPrec d (repTypeable -> IsTypeable :: IsTypeable t) = showsPrec d $ typeRep (Proxy @t)
+  showsPrec d (repHasInstances -> IsTypeable :: HasInstances t) = showsPrec d $ typeRep (Proxy @t)
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis RationalR r = show r
@@ -557,7 +610,6 @@ synopsis PrevHardForkR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevCommitteeR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevConstitutionR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis DRepDistrR dr = show (ppMap pcDRep (pcCoin . UM.fromCompact) (extractDRepDistr dr))
-synopsis NumDormantEpochsR x = show x
 synopsis CommitteeStateR x = show x
 synopsis VStateR x = show x
 
@@ -694,8 +746,7 @@ instance Shaped (Rep era) any where
   shape PrevConstitutionR = Nullary 99
   shape DRepDistrR = Nullary 100
   shape CommitteeStateR = Nullary 101
-  shape NumDormantEpochsR = Nullary 102
-  shape VStateR = Nullary 103
+  shape VStateR = Nullary 102
 
 compareRep :: forall era t s. Rep era t -> Rep era s -> Ordering
 compareRep = cmpIndex @(Rep era)
@@ -874,7 +925,6 @@ genSizedRep _ PrevHardForkR = arbitrary
 genSizedRep _ PrevCommitteeR = arbitrary
 genSizedRep _ PrevConstitutionR = arbitrary
 genSizedRep _ DRepDistrR = DRComplete <$> arbitrary
-genSizedRep _ NumDormantEpochsR = arbitrary
 genSizedRep _ CommitteeStateR = arbitrary
 genSizedRep _ VStateR = arbitrary
 
@@ -1021,169 +1071,20 @@ shrinkRep PrevHardForkR x = shrink x
 shrinkRep PrevCommitteeR x = shrink x
 shrinkRep PrevConstitutionR x = shrink x
 shrinkRep DRepDistrR x = shrink x
-shrinkRep NumDormantEpochsR _ = []
 shrinkRep CommitteeStateR _ = []
 shrinkRep VStateR x = shrink x
 
 -- ===========================
 
 hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
-hasOrd rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
-  where
-    err t c = error ("hasOrd function 'help' evaluates its second arg at type " ++ show t ++ ", in " ++ c ++ " case.")
-    help :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
-    help CoinR t = pure $ With t
-    help r@(_ :-> _) _ = failT [show r ++ " does not have an Ord instance."]
-    help r@(MapR _ b) m = do
-      With _ <- help b (err b (show r))
-      pure (With m)
-    help (SetR _) s = pure $ With s
-    help r@(ListR a) l = do
-      With _ <- help a (err a (show r))
-      pure $ With l
-    help CredR c = pure $ With c
-    help PoolHashR p = pure $ With p
-    help GenHashR p = pure $ With p
-    help GenDelegHashR p = pure $ With p
-    help WitHashR p = pure $ With p
-    help PoolParamsR pp = pure $ With pp
-    help EpochR e = pure $ With e
-    help RationalR r = pure $ With r
-    help Word64R w = pure $ With w
-    help IntR i = pure $ With i
-    help NaturalR i = pure $ With i
-    help FloatR i = pure $ With i
-    help TxInR t = pure $ With t
-    help CharR s = pure $ With s
-    help UnitR v = pure $ With v
-    help (PairR a b) p = do
-      With _ <- help a undefined
-      With _ <- help b undefined
-      pure $ With p
-    help (ValueR _) v = pure $ With v
-    help (TxOutR _) v = pure $ With v
-    help (UTxOR _) _ = failT ["UTxO does not have Ord instance"]
-    help DeltaCoinR v = pure $ With v
-    help GenDelegPairR v = pure $ With v
-    help FutureGenDelegR v = pure $ With v
-    help (PPUPStateR _) _ = failT ["PPUPState does not have Ord instance"]
-    help PtrR v = pure $ With v
-    help SnapShotsR _ = failT ["SnapShot does not have Ord instance"]
-    help IPoolStakeR _ = failT ["IndividualPoolStake does not have Ord instance"]
-    help (PParamsR _) _ = failT ["PParams does not have Ord instance"]
-    help (PParamsUpdateR _) _ = failT ["PParamsUpdate does not have Ord instance"]
-    help RewardR v = pure $ With v
-    help r@(MaybeR a) l = do
-      With _ <- help a (err a (show r))
-      pure $ With l
-    help NewEpochStateR _ = failT ["NewEpochStateR does not have Ord instance"]
-    help (ProtVerR _) v = pure $ With v
-    help SlotNoR v = pure $ With v
-    help SizeR v = pure $ With v
-    help VCredR v = pure $ With v
-    help VHashR v = pure $ With v
-    help MultiAssetR v = pure $ With v
-    help PolicyIDR v = pure $ With v
-    help (WitnessesFieldR _) _ = failT ["WitnessesField does not have Ord instance"]
-    help AssetNameR v = pure $ With v
-    help (TxCertR _) _ = failT ["TxCert does not have Ord instance"]
-    help RewardAcntR v = pure $ With v
-    help ValidityIntervalR v = pure $ With v
-    help KeyPairR _ = failT ["KeyPair does not have Ord instance"]
-    help (GenR _) _ = failT ["Gen does not have Ord instance"]
-    help (ScriptR _) _ = failT ["Script does not have Ord instance"]
-    help ScriptHashR v = pure $ With v
-    help NetworkR v = pure $ With v
-    help TagR v = pure $ With v
-    help ExUnitsR _ = failT ["ExUnits does not have Ord instance"]
-    help RdmrPtrR v = pure $ With v
-    help DataR _ = failT ["Data does not have Ord instance"]
-    help DatumR v = pure $ With v
-    help DataHashR v = pure $ With v
-    help AddrR v = pure $ With v
-    help PCredR v = pure $ With v
-    help ConwayTxCertR _ = failT ["ConwayTxCert does not have Ord instance"]
-    help ShelleyTxCertR _ = failT ["ShelleyTxCert does not have Ord instance"]
-    help MIRPotR v = pure $ With v
-    help IsValidR _ = failT ["IsValid does not have Ord instance"]
-    help IntegerR i = pure $ With i
-    help (ScriptsNeededR _) _ = failT ["IsValid does not have Ord instance"]
-    help (ScriptPurposeR _) _ = failT ["ScriptPurpose does not have Ord instance"]
-    help (TxBodyR _) _ = failT ["TxBody does not have Ord instance"]
-    help BootstrapWitnessR t = pure $ With t
-    help SigningKeyR _ = failT ["SigningKey does not have an Ord instance"]
-    help (TxWitsR _) _ = failT ["TxWits does not have an Ord instance"]
-    help PayHashR p = pure $ With p
-    help (TxR _) _ = failT ["Tx does not have Ord instance"]
-    help ScriptIntegrityHashR x = pure $ With x
-    help AuxiliaryDataHashR x = pure $ With x
-    help GovActionR _ = failT ["GovAction does not have Ord instance"]
-    help (WitVKeyR p) x = case p of
-      Shelley _ -> pure $ With x
-      Allegra _ -> pure $ With x
-      Mary _ -> pure $ With x
-      Alonzo _ -> pure $ With x
-      Babbage _ -> pure $ With x
-      Conway _ -> pure $ With x
-    help (TxAuxDataR _) _ = failT ["TxAuxData does not have Ord instance"]
-    help CommColdCredR x = pure $ With x
-    help CommHotCredR x = pure $ With x
-    help LanguageR x = pure $ With x
-    help (LedgerStateR _) _ = failT ["LedgerState does not have Ord instance"]
-    help StakeHashR p = pure $ With p
-    help BoolR v = pure $ With v
-    help DRepR v = pure $ With v
-    help (PoolMetadataR _) v = pure $ With v
-    help DRepStateR v = pure $ With v
-    help DStateR _ = failT ["DState does not have Ord instance"]
-    help GovActionIdR v = pure $ With v
-    help GovActionIxR v = pure $ With v
-    help GovActionStateR _ = failT ["GovActionState does not have Ord instance"]
-    help UnitIntervalR v = pure $ With v
-    help CommitteeR _ = failT ["Committee does not have Ord instance"]
-    help ConstitutionR _ = failT ["Constitution does not have Ord instance"]
-    help PrevGovActionIdsR _ = failT ["PrevGovActionIds does not have an Ord instance"]
-    help PrevPParamUpdateR _ = failT ["PrevGovActionId 'ParamUpdate, does not have an Ord instance"]
-    help PrevHardForkR _ = failT ["PrevGovActionId 'HardFork, does not have an Ord instance"]
-    help PrevCommitteeR _ = failT ["PrevGovActionId 'Committee, does not have an Ord instance"]
-    help PrevConstitutionR _ = failT ["PrevGovActionId 'Constitution, does not have an Ord instance"]
-    help DRepDistrR _ = failT ["DRepDistr, does not have an Ord instance"]
-    help NumDormantEpochsR v = pure $ With v
-    help CommitteeStateR v = pure $ With v
-    help VStateR _ = failT ["No Ord instance for VState"]
+hasOrd rep x = case repHasInstances rep of
+  IsOrd -> pure $ With x
+  IsTypeable -> failT [show rep ++ " does not have an Ord instance."]
 
 hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
-hasEq rep xx = explain ("'hasOrd " ++ show rep ++ "' fails") (help rep xx)
-  where
-    help :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
-    help (TxOutR _) v = pure $ With v
-    help (ScriptR _) v = pure $ With v
-    help DataR v = pure $ With v
-    help SigningKeyR v = pure $ With v
-    help (TxWitsR _) v = pure $ With v
-    help (TxR _) v = pure $ With v
-    help (TxAuxDataR _) v = pure $ With v
-    help IsValidR v = pure $ With v
-    help GovActionR _ = failT ["GovAction does have an Eq instance, but it requires (Core.EraPParams era)"]
-    help (ScriptPurposeR p) v = case whichTxCert p of
-      TxCertShelleyToBabbage -> pure $ With v
-      TxCertConwayToConway -> pure $ With v
-    help (PairR a b) v = do
-      With _ <- hasEq a undefined
-      With _ <- hasEq b undefined
-      pure (With v)
-    help GovActionStateR _ = failT ["GovActionState does have an Eq instance, but it requires (Core.EraPParams era)"]
-    help CommitteeR v = pure $ With v
-    help ConstitutionR v = pure $ With v
-    help PrevGovActionIdsR v = pure $ With v
-    help PrevPParamUpdateR v = pure $ With v
-    help PrevHardForkR v = pure $ With v
-    help PrevCommitteeR v = pure $ With v
-    help PrevConstitutionR v = pure $ With v
-    help DRepDistrR v = pure $ With v
-    help x v = do
-      With y <- hasOrd x v
-      pure (With y)
+hasEq rep x = case repHasInstances rep of
+  IsEq -> pure $ With x
+  IsTypeable -> failT [show rep ++ " does not have an Eq instance."]
 
 format :: Rep era t -> t -> String
 format rep@(MapR d r) x = show (ppMap (syn d) (syn r) x) ++ synSum rep x ++ "\nsize=" ++ show (Map.size x)
