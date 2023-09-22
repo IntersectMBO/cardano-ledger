@@ -10,6 +10,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -72,8 +73,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
+import Cardano.Ledger.Shelley.PParams (Update (..), upgradeUpdate)
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   ShelleyTxBody (..),
@@ -367,25 +367,12 @@ instance Crypto c => EraTxBody (AllegraEra c) where
         , atbWithdrawals = stbWithdrawals stb
         , atbTxFee = stbTxFee stb
         , atbValidityInterval = ttlToValidityInterval (stbTTL stb)
-        , atbUpdate = upgradeUpdate <$> stbUpdate stb
+        , atbUpdate = upgradeUpdate () <$> stbUpdate stb
         , atbAuxDataHash = stbMDHash stb
         }
     where
       ttlToValidityInterval :: SlotNo -> ValidityInterval
       ttlToValidityInterval ttl = ValidityInterval SNothing (SJust ttl)
-
-      upgradeUpdate :: Update (ShelleyEra c) -> Update (AllegraEra c)
-      upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
-
-      upgradeProposedPPUpdates ::
-        ProposedPPUpdates (ShelleyEra c) ->
-        ProposedPPUpdates (AllegraEra c)
-      upgradeProposedPPUpdates (ProposedPPUpdates m) =
-        ProposedPPUpdates $
-          ( \(PParamsUpdate pphkd) ->
-              PParamsUpdate $ upgradePParamsHKD () pphkd
-          )
-            <$> m
 
 instance Crypto c => ShelleyEraTxBody (AllegraEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (AllegraEra StandardCrypto) #-}

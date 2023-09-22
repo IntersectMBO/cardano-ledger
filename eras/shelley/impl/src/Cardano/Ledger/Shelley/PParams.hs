@@ -34,6 +34,7 @@ module Cardano.Ledger.Shelley.PParams (
 
   -- * Deprecated
   updatePParams,
+  upgradeUpdate,
 )
 where
 
@@ -514,6 +515,28 @@ pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
 pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
   (succVersion m, 0) == (Just m', n') || (m, n + 1) == (m', n')
+
+upgradeUpdate ::
+  forall era.
+  ( EraPParams era
+  , EraPParams (PreviousEra era)
+  , EraCrypto (PreviousEra era) ~ EraCrypto era
+  ) =>
+  UpgradePParams StrictMaybe era ->
+  Update (PreviousEra era) ->
+  Update era
+upgradeUpdate args (Update pp epoch) = Update (upgradeProposedPPUpdates @era args pp) epoch
+
+upgradeProposedPPUpdates ::
+  ( EraPParams era
+  , EraPParams (PreviousEra era)
+  , EraCrypto (PreviousEra era) ~ EraCrypto era
+  ) =>
+  UpgradePParams StrictMaybe era ->
+  ProposedPPUpdates (PreviousEra era) ->
+  ProposedPPUpdates era
+upgradeProposedPPUpdates args (ProposedPPUpdates ppus) =
+  ProposedPPUpdates $ upgradePParamsUpdate args <$> ppus
 
 -- ==============================================
 

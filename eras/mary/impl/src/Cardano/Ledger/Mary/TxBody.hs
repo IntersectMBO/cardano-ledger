@@ -35,7 +35,6 @@ module Cardano.Ledger.Mary.TxBody (
 )
 where
 
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
@@ -58,7 +57,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (Update))
+import Cardano.Ledger.Shelley.PParams (Update, upgradeUpdate)
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
@@ -282,24 +281,10 @@ instance Crypto c => EraTxBody (MaryEra c) where
         , mtbWithdrawals = atbWithdrawals atb
         , mtbTxFee = atbTxFee atb
         , mtbValidityInterval = atbValidityInterval atb
-        , mtbUpdate = upgradeUpdate <$> atbUpdate atb
+        , mtbUpdate = upgradeUpdate () <$> atbUpdate atb
         , mtbAuxDataHash = atbAuxDataHash atb
         , mtbMint = mempty
         }
-    where
-      upgradeUpdate :: Update (AllegraEra c) -> Update (MaryEra c)
-      upgradeUpdate (Update pp epoch) = Update (upgradeProposedPPUpdates pp) epoch
-
-      upgradeProposedPPUpdates ::
-        ProposedPPUpdates (AllegraEra c) ->
-        ProposedPPUpdates (MaryEra c)
-      upgradeProposedPPUpdates (ProposedPPUpdates m) =
-        ProposedPPUpdates $
-          fmap
-            ( \(PParamsUpdate pphkd) ->
-                PParamsUpdate $ upgradePParamsHKD () pphkd
-            )
-            m
 
 instance Crypto c => ShelleyEraTxBody (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (MaryEra StandardCrypto) #-}
