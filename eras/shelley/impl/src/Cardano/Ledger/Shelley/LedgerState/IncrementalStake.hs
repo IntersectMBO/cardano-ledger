@@ -211,7 +211,7 @@ incrementalStakeDistr ::
   SnapShot (EraCrypto era)
 incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
   SnapShot
-    (Stake $ VMap.fromMap step2) -- (compactCoinOrError <$> step2))
+    (Stake $ VMap.fromMap step2)
     delegs_
     (VMap.fromMap poolParams)
   where
