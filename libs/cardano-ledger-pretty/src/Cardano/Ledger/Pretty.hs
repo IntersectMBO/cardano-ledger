@@ -738,8 +738,8 @@ ppIncrementalStake :: IncrementalStake c -> PDoc
 ppIncrementalStake (IStake st dangle) =
   ppRecord
     "IncrementalStake"
-    [ ("credMap", ppMap ppCredential ppCoin st)
-    , ("ptrMap", ppMap ppPtr ppCoin dangle)
+    [ ("credMap", ppMap ppCredential (ppCoin . fromCompact) st)
+    , ("ptrMap", ppMap ppPtr (ppCoin . fromCompact) dangle)
     ]
 
 ppUTxOState ::

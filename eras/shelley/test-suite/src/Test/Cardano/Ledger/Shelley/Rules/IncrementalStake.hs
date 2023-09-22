@@ -136,7 +136,7 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
                 ]
               )
           )
-          $ utxoBal === incrStakeBal
+          $ utxoBal === fromCompact incrStakeBal
         where
           utxoBal = coinBalance u'
           incrStakeBal = fold (credMap sd') <> fold (ptrMap sd')
