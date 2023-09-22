@@ -110,7 +110,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ShelleyPParams (sppMinUTxOValue), Update (..))
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -124,6 +124,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -238,11 +239,7 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
       } = do
       certs <-
         traverse
-          ( left
-              ( error "upgradeTxCert has a Void error type, so this error cannot occur"
-              )
-              . upgradeTxCert
-          )
+          (left absurd . upgradeTxCert)
           mtbCerts
 
       updates <- traverse upgradeUpdate mtbUpdate
@@ -275,10 +272,10 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
         upgradeProposedPPUpdates (ProposedPPUpdates m) =
           ProposedPPUpdates
             <$> traverse
-              ( \(PParamsUpdate pphkd) -> do
-                  when (isSJust $ sppMinUTxOValue pphkd) $
+              ( \ppu -> do
+                  when (isSJust $ ppu ^. ppuMinUTxOValueL) $
                     Left ATBUEMinUTxOUpdated
-                  pure . PParamsUpdate $ upgradePParamsHKD def pphkd
+                  pure $ upgradePParamsUpdate def ppu
               )
               m
 

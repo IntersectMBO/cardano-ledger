@@ -492,7 +492,6 @@ babbagePParamsHKDPairs px pp =
 upgradeBabbagePParams ::
   forall f c.
   HKDFunctor f =>
-  -- | Should we update the
   Bool ->
   PParamsHKD f (AlonzoEra c) ->
   BabbagePParams f (BabbageEra c)
