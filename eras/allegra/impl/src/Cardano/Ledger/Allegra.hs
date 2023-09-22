@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- CanStartFromGenesis
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra (
@@ -14,6 +16,7 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.Rules ()
 import Cardano.Ledger.Allegra.Scripts ()
+import Cardano.Ledger.Allegra.Transition ()
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Allegra.TxSeq ()

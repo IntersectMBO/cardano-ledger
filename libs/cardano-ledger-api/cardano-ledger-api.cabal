@@ -27,6 +27,7 @@ library
         Cardano.Ledger.Api.PParams
         Cardano.Ledger.Api.Scripts
         Cardano.Ledger.Api.Scripts.Data
+        Cardano.Ledger.Api.Transition
         Cardano.Ledger.Api.Tx
         Cardano.Ledger.Api.Tx.Address
         Cardano.Ledger.Api.Tx.AuxData

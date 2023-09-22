@@ -34,6 +34,9 @@ module Cardano.Ledger.Api.Era (
   Conway,
   ConwayEra,
 
+  -- ** Latest Known
+  LatestKnownEra,
+
   -- * Crypto
   StandardCrypto,
   Crypto (..),
@@ -77,3 +80,7 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Cardano.Ledger.Mary (Mary, MaryEra)
 import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
+
+-- | Sometimes it is useful to specify that a type corresponds to a latest era that is
+-- currently implemented
+type LatestKnownEra c = ConwayEra c

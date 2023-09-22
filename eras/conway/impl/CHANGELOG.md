@@ -3,11 +3,15 @@
 ## 1.9.0.0
 
 * Add PredicateFailure for current treasury value mismatch in tx body in LEDGER #3749
+* Change `To/FromJSON` format for `ConwayGenesis`
+* Add `EraTransition` instance and `toConwayTransitionConfigPairs`.
+* Expose `toConwayGenesisPairs` and `toUpgradeConwayPParamsUpdatePairs`
 * Rename `ConwayPParams` to be consistent with the Agda specification. #3739
   * `govActionExpiration` to `govActionLifetime`
   * `committeeTermLimit` to `committeeMaxTermLength`
   * `minCommitteeSize` to `committeeMinSize`
-* Prevent `DRep` expiry when there are no active governance proposals to vote on (in ConwayCERTS). #3729
+* Prevent `DRep` expiry when there are no active governance proposals to vote on (in
+  ConwayCERTS). #3729
   * Add `updateNumDormantEpochs` function in `ConwayEPOCH` to update the dormant-epochs counter
   * Refactor access to `ConwayGovState` by making its lens part of `ConwayEraGov`.
   * Export `gasExpiresAfterL` for use in tests
@@ -19,7 +23,8 @@
 * Remove `DecCBOR`/`EncCBOR` and `FromCBOR`/`ToCBOR` for `RatifyState`, since that state
   is ephemeral and is never serialized.
 * Add `PredicateFailure` for `Voter` - `GovAction` mismatches, with `checkVotesAreValid`. #3718
-  * Add `DisallowedVoters (Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))` inhabitant to the `ConwayGovPredFailure` data type.
+  * Add `DisallowedVoters (Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))`
+    inhabitant to the `ConwayGovPredFailure` data type.
   * Fix naming for `toPrevGovActionIdsParis` to `toPrevGovActionIdsPairs`
 * Rename:
   * `thresholdSPO` -> `votingStakePoolThreshold`
