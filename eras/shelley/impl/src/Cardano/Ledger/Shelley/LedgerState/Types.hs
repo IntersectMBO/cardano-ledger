@@ -713,6 +713,9 @@ ptrMapL = lens ptrMap (\x y -> x {ptrMap = y})
 newEpochStateGovStateL :: Lens' (NewEpochState era) (GovState era)
 newEpochStateGovStateL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
 
+epochStateTreasuryL :: Lens' (EpochState era) Coin
+epochStateTreasuryL = esAccountStateL . asTreasuryL
+
 epochStateIncrStakeDistrL ::
   Lens'
     (EpochState era)

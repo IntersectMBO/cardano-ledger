@@ -2,6 +2,8 @@
 
 ## 1.9.0.0
 
+* Apply enacted `TreasuryWithdrawals` in `ConwayEPOCH` #3748
+  * Add lenses `ensWithdrawalsL` and `ensTreasuryL`
 * Change `To/FromJSON` format for `ConwayGenesis`
 * Add `EraTransition` instance and `toConwayTransitionConfigPairs`.
 * Expose `toConwayGenesisPairs` and `toUpgradeConwayPParamsUpdatePairs`
