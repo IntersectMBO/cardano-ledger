@@ -165,11 +165,13 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
+import Data.Foldable (foldl')
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -230,7 +232,9 @@ instance
         (SJust a', SJust b') -> a' `eqUnsized` b'
         (SNothing, SNothing) -> True
         _ -> False
-      eqSeqUnsized x y = foldl (\acc (x', y') -> acc && x' `eqUnsized` y') True $ StrictSeq.zip x y
+      eqSeqUnsized x y =
+        length x == length y
+          && foldl' (\acc (x', y') -> acc && x' `eqUnsized` y') True (StrictSeq.zip x y)
       eqUnsized x y = sizedValue x == sizedValue y
 
 type instance MemoHashIndex BabbageTxBodyRaw = EraIndependentTxBody
@@ -473,11 +477,7 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   upgradeTxBody atb = do
     certs <-
       traverse
-        ( left
-            ( error "upgradeTxCert has a Void error type, so this error cannot occur"
-            )
-            . upgradeTxCert
-        )
+        (left absurd . upgradeTxCert)
         (atbCerts atb)
     updates <- traverse upgradeUpdate (atbUpdate atb)
     pure $
