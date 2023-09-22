@@ -36,6 +36,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (
   Coin (..),
+  CompactForm (CompactCoin),
   addDeltaCoin,
  )
 import Cardano.Ledger.Compactible
@@ -63,7 +64,6 @@ import Cardano.Ledger.Shelley.Rewards (
 import Cardano.Ledger.UMap (
   UMElem,
   UMap (..),
-  compactCoinOrError,
   member,
  )
 import qualified Cardano.Ledger.UMap as UM
@@ -73,7 +73,6 @@ import Cardano.Ledger.UTxO (
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Control.Exception (assert)
 import Data.Foldable (fold)
-import Data.Group (invert)
 import Data.Map.Internal.Debug as Map (valid)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -95,12 +94,20 @@ updateStakeDistribution ::
   IncrementalStake (EraCrypto era)
 updateStakeDistribution pp incStake0 utxoDel utxoAdd = incStake2
   where
-    incStake1 = incrementalAggregateUtxoCoinByCredential pp id utxoAdd incStake0
-    incStake2 = incrementalAggregateUtxoCoinByCredential pp invert utxoDel incStake1
+    incStake1 = incrementalAggregateUtxoCoinByCredential pp Id utxoAdd incStake0
+    incStake2 = incrementalAggregateUtxoCoinByCredential pp Invert utxoDel incStake1
+
+-- | Should a value be added (Id) or subtracted (Invert)
+data Mode = Id | Invert
+
+-- | add or subtract a Coin (depending on Mode) to a (CompactForm Coin)
+addCompact :: Mode -> CompactForm Coin -> CompactForm Coin -> CompactForm Coin
+addCompact Id (CompactCoin n) (CompactCoin m) = CompactCoin (m + fromIntegral n)
+addCompact Invert (CompactCoin n) (CompactCoin m) = CompactCoin (m - fromIntegral n)
 
 -- | Incrementally sum up all the Coin, for each staking Credential, in the outputs of the UTxO, and
 --   "add" them to the IncrementalStake. "add" has different meaning depending on if we are inserting
---   or deleting the UtxO entries. For inserts (mode is the identity: id) and for deletes (mode is invert).
+--   or deleting the UtxO entries. For inserts (the mode is Id) and for deletes (the mode is Invert).
 --   Never store a (Coin 0) balance, since these do not occur in the non-incremental style that
 --   works directly from the whole UTxO.
 --   This function has a non-incremental analog 'aggregateUtxoCoinByCredential' . In this incremental
@@ -110,30 +117,30 @@ incrementalAggregateUtxoCoinByCredential ::
   forall era.
   EraTxOut era =>
   PParams era ->
-  (Coin -> Coin) ->
+  Mode ->
   UTxO era ->
   IncrementalStake (EraCrypto era) ->
   IncrementalStake (EraCrypto era)
 incrementalAggregateUtxoCoinByCredential pp mode (UTxO u) initial =
   Map.foldl' accum initial u
   where
-    keepOrDelete new Nothing =
-      case mode new of
-        Coin 0 -> Nothing
+    keepOrDeleteCompact new Nothing =
+      case new of
+        CompactCoin 0 -> Nothing
         final -> Just final
-    keepOrDelete new (Just old) =
-      case mode new <> old of
-        Coin 0 -> Nothing
+    keepOrDeleteCompact new (Just old) =
+      case addCompact mode new old of
+        CompactCoin 0 -> Nothing
         final -> Just final
     ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
     accum ans@(IStake stake ptrs) out =
-      let c = out ^. coinTxOutL
+      let cc = out ^. compactCoinTxOutL
        in case out ^. addrTxOutL of
             Addr _ _ (StakeRefPtr p) ->
               if ignorePtrs
                 then ans
-                else IStake stake (Map.alter (keepOrDelete c) p ptrs)
-            Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDelete c) hk stake) ptrs
+                else IStake stake (Map.alter (keepOrDeleteCompact cc) p ptrs)
+            Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDeleteCompact cc) hk stake) ptrs
             _other -> ans
 
 -- ================================================
@@ -204,7 +211,7 @@ incrementalStakeDistr ::
   SnapShot (EraCrypto era)
 incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
   SnapShot
-    (Stake $ VMap.fromMap (compactCoinOrError <$> step2))
+    (Stake $ VMap.fromMap step2)
     delegs_
     (VMap.fromMap poolParams)
   where
@@ -220,19 +227,19 @@ incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
       if ignorePtrs
         then activeCreds
         else -- Resolve inserts and delets which were indexed by ptrs, by looking them up in the ptrsMap
-        -- and combining the result of the lookup with teh ordinary stake, keeping only the active credentials
+        -- and combining the result of the lookup with the ordinary stake, keeping only the active credentials
           Map.foldlWithKey' addResolvedPointer activeCreds ptrStake
     step2 = aggregateActiveStake triplesMap step1
-    addResolvedPointer ans ptr coin =
+    addResolvedPointer ans ptr ccoin =
       case Map.lookup ptr ptrsMap of -- map of ptrs to credentials
-        Just cred | VMap.member cred delegs_ -> Map.insertWith (<>) cred coin ans
+        Just cred | VMap.member cred delegs_ -> Map.insertWith (<>) cred ccoin ans
         _ -> ans
 
 -- | Aggregate active stake by merging two maps. The triple map from the
 --   UMap, and the IncrementalStake. Only keep the active stake. Active can
 --   be determined if there is a (SJust deleg) in the Tuple.  This is step2 =
 --   aggregate (dom activeDelegs ◁ rewards) step1
-aggregateActiveStake :: Ord k => Map k (UMElem c) -> Map k Coin -> Map k Coin
+aggregateActiveStake :: Ord k => Map k (UMElem c) -> Map k (CompactForm Coin) -> Map k (CompactForm Coin)
 aggregateActiveStake m1 m2 = assert (Map.valid m) m
   where
     m =
@@ -241,15 +248,15 @@ aggregateActiveStake m1 m2 = assert (Map.valid m) m
         -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
         (\_k trip coin2 -> extractAndAdd coin2 <$> UM.umElemRDActive trip)
         -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
-        (Map.mapMaybe (\trip -> fromCompact . UM.rdReward <$> UM.umElemRDActive trip))
+        (Map.mapMaybe (\trip -> UM.rdReward <$> UM.umElemRDActive trip))
         -- what to do when a key is only in 'incremental', keep everything, because at
         -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
         -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.
         id
         m1
         m2
-    extractAndAdd :: Coin -> UM.RDPair -> Coin
-    extractAndAdd coin (UM.RDPair rew _dep) = coin <> fromCompact rew
+    extractAndAdd :: CompactForm Coin -> UM.RDPair -> CompactForm Coin
+    extractAndAdd coin (UM.RDPair rew _dep) = coin <> rew
 
 -- =====================================================
 -- Part 3 Apply a reward update, in NewEpoch rule

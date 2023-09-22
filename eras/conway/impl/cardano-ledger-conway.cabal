@@ -89,8 +89,7 @@ library
         small-steps,
         text,
         transformers,
-        validation-selective,
-        vector-map
+        validation-selective
 
 library testlib
     exposed-modules:

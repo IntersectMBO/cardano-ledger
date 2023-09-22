@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Constrained.Lenses where
 
 import Cardano.Ledger.BaseTypes (SlotNo)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core (DRep)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..))
@@ -73,10 +74,10 @@ fGenDelegGenKeyHashL = lens fGenDelegGenKeyHash (\ds u -> ds {fGenDelegGenKeyHas
 -- IncrementalStake
 
 isCredMapL :: Lens' (IncrementalStake c) (Map (Credential 'Staking c) Coin)
-isCredMapL = lens credMap (\ds u -> ds {credMap = u})
+isCredMapL = lens (fmap fromCompact . credMap) (\ds u -> ds {credMap = fmap compactCoinOrError u})
 
 isPtrMapL :: Lens' (IncrementalStake c) (Map Ptr Coin)
-isPtrMapL = lens ptrMap (\ds u -> ds {ptrMap = u})
+isPtrMapL = lens (fmap fromCompact . ptrMap) (\ds u -> ds {ptrMap = fmap compactCoinOrError u})
 
 -- ===============================================
 -- NonMyopic

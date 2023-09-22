@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | This module suppies tools to tersely describe the differences between 2 values of the same type.
 module Test.Cardano.Ledger.TerseTools where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -99,6 +100,9 @@ instance CC.Crypto era => Terse (TxIn era) where
 
 instance Terse (Coin) where
   terse (Coin n) = show n
+
+instance Terse (CompactForm Coin) where
+  terse (CompactCoin n) = show n
 
 tersediffincremental :: String -> IncrementalStake c -> IncrementalStake c -> String
 tersediffincremental message (IStake a b) (IStake c d) =
