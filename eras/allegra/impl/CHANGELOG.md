@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.2.2.1
+## 1.2.3.0
 
-*
+* Add `EraTransition` instance.
 
 ## 1.2.2.0
 

@@ -6,6 +6,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- CanStartFromGenesis
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway (
@@ -24,6 +26,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Rules ()
+import Cardano.Ledger.Conway.Transition ()
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxInfo (conwayTxInfo)

@@ -2,6 +2,9 @@
 
 ## 1.6.1.0
 
+* Introduce `Cardano.Ledger.Shelley.Transition` module with `EraTransition` interface.
+* Deprecated `CanStartFromGenesis` interface in favor of `EraTransition`
+* Add `Semigroup` and `Monoid` instances for `ShelleyGenesisStaking`
 * Add `FromJSON` instance for `Constitution`
 
 ### `testlib`

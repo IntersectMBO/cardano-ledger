@@ -67,6 +67,10 @@ class
     NewEpochState era
   initialState = initialStateFromGenesis
 
+{-# DEPRECATED CanStartFromGenesis "Use `Cardano.Ledger.Shelley.Transition.EraTransition` instead" #-}
+{-# DEPRECATED fromShelleyPParams "Use `Cardano.Ledger.Shelley.Transition.tcInitialPParamsG` instead" #-}
+{-# DEPRECATED initialState "Use `Cardano.Ledger.Shelley.Transition.createInitialState` instead" #-}
+
 instance
   Crypto c =>
   CanStartFromGenesis (ShelleyEra c)

@@ -2,6 +2,9 @@
 
 ## 1.4.2.0
 
+* Add `toAlonzoTransitionConfigPairs` and `EraTransition` instance.
+* Rename `alonzoGenesisAesonPairs` -> `toAlonzoGenesisPairs` for consistency.
+
 ### `testlib`
 
 * Add `Test.Cardano.Ledger.Alonzo.Binary.RoundTrip` module with:
