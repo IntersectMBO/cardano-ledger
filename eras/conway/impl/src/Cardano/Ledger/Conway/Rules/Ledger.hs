@@ -29,11 +29,12 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (SJust, SNothing), epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.CertState (certDStateL, dsGenDelegsL)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (
@@ -47,7 +48,7 @@ import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
 import Cardano.Ledger.Conway.Rules.Certs (CertsEnv (CertsEnv), ConwayCertsEvent, ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), currentTreasuryValueTxBodyL)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -56,6 +57,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
   UTxOState (..),
+  asTreasuryL,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -100,6 +102,11 @@ data ConwayLedgerPredFailure era
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | ConwayGovFailure (PredicateFailure (EraRule "GOV" era)) -- Subtransition Failures
   | ConwayWdrlNotDelegatedToDRep (Set (Credential 'Staking (EraCrypto era)))
+  | ConwayTreasuryValueMismatch
+      -- | Actual
+      Coin
+      -- | Submitted in transaction
+      Coin
   deriving (Generic)
 
 deriving instance
@@ -149,6 +156,8 @@ instance
       ConwayGovFailure x -> Sum (ConwayGovFailure @era) 3 !> To x
       ConwayWdrlNotDelegatedToDRep x ->
         Sum (ConwayWdrlNotDelegatedToDRep @era) 4 !> To x
+      ConwayTreasuryValueMismatch actual submitted ->
+        Sum (ConwayTreasuryValueMismatch @era) 5 !> To actual !> To submitted
 
 instance
   ( Era era
@@ -163,6 +172,8 @@ instance
       1 -> SumD ConwayUtxowFailure <! From
       2 -> SumD ConwayCertsFailure <! From
       3 -> SumD ConwayGovFailure <! From
+      4 -> SumD ConwayWdrlNotDelegatedToDRep <! From
+      5 -> SumD ConwayTreasuryValueMismatch <! From <! From
       n -> Invalid n
 
 data ConwayLedgerEvent era
@@ -240,7 +251,15 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot _txIx pp _account, LedgerState utxoState certState, tx) <- judgmentContext
+  TRC (LedgerEnv slot _txIx pp account, LedgerState utxoState certState, tx) <- judgmentContext
+
+  let actualTreasuryValue = account ^. asTreasuryL
+   in case tx ^. bodyTxL . currentTreasuryValueTxBodyL of
+        SNothing -> pure ()
+        SJust submittedTreasuryValue ->
+          submittedTreasuryValue
+            == actualTreasuryValue
+              ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
 
   currentEpoch <- liftSTS $ do
     ei <- asks epochInfoPure
