@@ -46,7 +46,7 @@ spec =
         nes
           & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL
             .~ SJust (PrevGovActionId gaidConstitutionProp) -- Add first proposal to PrevGovActionIds in enacted state
-          & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgGovSnapshotsL
+          & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgProposalsL
             .~ def -- Remove all proposals from snapshots, so that the lookup only succeeds for enacted state
       constitutionHash'' <- freshSafeHash
       -- Once a proposal with a purpose has been enacted, following proposals can no longer have empty PrevGovActionIds
@@ -119,7 +119,7 @@ spec =
           nes
             & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL
               .~ SJust (PrevGovActionId gaidConstitutionProp) -- Add it to PrevGovActionIds in enacted state
-            & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgGovSnapshotsL
+            & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgProposalsL
               .~ def -- Remove from snapshots, so that the lookup only succeeds for enacted state
         let constitutionActionNext =
               NewConstitution
@@ -149,7 +149,7 @@ spec =
           nes
             & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL
               .~ SJust (PrevGovActionId gaidConstitutionProp) -- Add it to PrevGovActionIds in enacted state
-            & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgGovSnapshotsL
+            & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgProposalsL
               .~ def -- Remove from snapshots, so that the lookup only succeeds for enacted state
         let noConfidenceAction =
               NoConfidence $ SJust $ PrevGovActionId gaidConstitutionProp
@@ -196,7 +196,7 @@ spec =
           nes
             & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL
               .~ SJust (PrevGovActionId gaidConstitutionProp) -- Add it to PrevGovActionIds in enacted state
-            & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgGovSnapshotsL
+            & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgProposalsL
               .~ def -- Remove from snapshots, so that the lookup only succeeds for enacted state
         let constitutionActionNext =
               NewConstitution

@@ -46,7 +46,7 @@ import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (un
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.DRepDistr (drepExpiryL)
+import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   Coin,

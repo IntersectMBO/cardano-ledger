@@ -16,6 +16,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
+  RatifyEnv (..),
   RatifyState,
   Vote (..),
   ensCommitteeL,
@@ -23,7 +24,6 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules (
-  RatifyEnv (..),
   committeeAccepted,
   committeeAcceptedRatio,
  )

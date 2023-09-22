@@ -65,6 +65,9 @@ instance Default (ProposalsSnapshot era) where
 instance EraPParams era => EncCBOR (ProposalsSnapshot era) where
   encCBOR = encCBOR . snapshotActions
 
+instance EraPParams era => DecCBOR (ProposalsSnapshot era) where
+  decCBOR = fromGovActionStateSeq <$> decCBOR
+
 -- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (ProposalsSnapshot era) where
   decShareCBOR _ = fromGovActionStateSeq <$> decCBOR

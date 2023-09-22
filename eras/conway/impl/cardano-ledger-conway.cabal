@@ -52,8 +52,8 @@ library
         Cardano.Ledger.Conway.Rules.Epoch
         Cardano.Ledger.Conway.Rules.Ledger
         Cardano.Ledger.Conway.Rules.NewEpoch
-        Cardano.Ledger.Conway.Rules.Ratify
         Cardano.Ledger.Conway.Rules.Gov
+        Cardano.Ledger.Conway.Rules.Ratify
         Cardano.Ledger.Conway.Rules.Tickf
         Cardano.Ledger.Conway.Rules.Utxos
         Cardano.Ledger.Conway.Rules.Utxow
@@ -69,6 +69,7 @@ library
         base >=4.14 && <4.19,
         aeson,
         cardano-crypto-class,
+        cardano-data,
         cardano-ledger-binary >=1.1.3,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo ^>=1.5,

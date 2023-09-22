@@ -9,9 +9,9 @@ module Test.Cardano.Ledger.UMapSpec where
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core (DRep)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.UMap (
   RDPair (RDPair, rdReward),

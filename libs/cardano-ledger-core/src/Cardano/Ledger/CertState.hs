@@ -20,6 +20,7 @@ module Cardano.Ledger.CertState (
   FutureGenDeleg (..),
   Anchor (..),
   DRepState (..),
+  DRep (..),
   CommitteeState (..),
   AnchorData,
   lookupDepositDState,
@@ -74,7 +75,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.DRepDistr (DRepState (..))
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),

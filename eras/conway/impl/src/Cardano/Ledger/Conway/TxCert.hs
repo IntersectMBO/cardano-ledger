@@ -55,7 +55,6 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Anchor)
 import Cardano.Ledger.Core (
-  DRep,
   Era (EraCrypto),
   EraTxCert (..),
   PoolCert (..),
@@ -67,6 +66,7 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),

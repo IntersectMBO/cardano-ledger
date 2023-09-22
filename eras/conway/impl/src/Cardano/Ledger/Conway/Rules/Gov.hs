@@ -47,14 +47,13 @@ import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionState (..),
   GovProcedures (..),
-  GovSnapshots (..),
-  PrevGovActionId (PrevGovActionId),
+  PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
+  ProposalsSnapshot,
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
-  curGovSnapshotsL,
   indexedGovProps,
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
@@ -98,7 +97,7 @@ import Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro ((%~), (&), (^.))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
@@ -178,7 +177,7 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
 instance ConwayEraPParams era => STS (ConwayGOV era) where
-  type State (ConwayGOV era) = GovSnapshots era
+  type State (ConwayGOV era) = ProposalsSnapshot era
   type Signal (ConwayGOV era) = GovProcedures era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
@@ -192,12 +191,12 @@ instance ConwayEraPParams era => STS (ConwayGOV era) where
 addVoterVote ::
   forall era.
   Voter (EraCrypto era) ->
-  GovSnapshots era ->
+  ProposalsSnapshot era ->
   GovActionId (EraCrypto era) ->
   VotingProcedure era ->
-  GovSnapshots era
+  ProposalsSnapshot era
 addVoterVote voter as govActionId VotingProcedure {vProcVote} =
-  as & curGovSnapshotsL %~ snapshotAddVote voter vProcVote govActionId
+  snapshotAddVote voter vProcVote govActionId as
 
 addAction ::
   EpochNo ->
@@ -206,10 +205,10 @@ addAction ::
   Coin ->
   RewardAcnt (EraCrypto era) ->
   GovAction era ->
-  GovSnapshots era ->
-  GovSnapshots era
+  ProposalsSnapshot era ->
+  ProposalsSnapshot era
 addAction epoch gaExpiry gaid c addr act as =
-  as & curGovSnapshotsL %~ snapshotInsertGovAction gai'
+  snapshotInsertGovAction gai' as
   where
     gai' =
       GovActionState
@@ -225,11 +224,11 @@ addAction epoch gaExpiry gaid c addr act as =
         }
 
 noSuchGovActions ::
-  GovSnapshots era ->
+  ProposalsSnapshot era ->
   Map.Map (GovActionId (EraCrypto era)) v ->
   Test (ConwayGovPredFailure era)
-noSuchGovActions govSnapshots gaIds =
-  let curGovActionIds = snapshotGovActionStates $ curGovSnapshots govSnapshots
+noSuchGovActions proposals gaIds =
+  let curGovActionIds = snapshotGovActionStates proposals
       unknownGovActionIds = gaIds `Map.difference` curGovActionIds
    in failureUnless (Map.null unknownGovActionIds) $
         GovActionsDoNotExist (Map.keysSet unknownGovActionIds)
@@ -237,11 +236,11 @@ noSuchGovActions govSnapshots gaIds =
 checkVotesAreValid ::
   forall era.
   ConwayEraPParams era =>
-  GovSnapshots era ->
+  ProposalsSnapshot era ->
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
-checkVotesAreValid govSnapshots voters =
-  let curGovActionIds = snapshotGovActionStates $ curGovSnapshots govSnapshots
+checkVotesAreValid proposals voters =
+  let curGovActionIds = snapshotGovActionStates proposals
       disallowedVoters =
         Map.merge Map.dropMissing Map.dropMissing keepDisallowedVoters curGovActionIds voters
       keepDisallowedVoters = Map.zipWithMaybeMatched $ \_ GovActionState {gasAction} voter -> do
@@ -262,7 +261,7 @@ actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
 checkProposalsHaveAValidPrevious ::
   forall era.
   PrevGovActionIds era ->
-  GovSnapshots era ->
+  ProposalsSnapshot era ->
   GovProcedures era ->
   Test (ConwayGovPredFailure era)
 checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
@@ -275,7 +274,7 @@ checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
           -- The case of having an SNothing as valid, for the very first proposal ever, is handled in `prevActionAsExpected`
           SNothing -> False
           SJust (PrevGovActionId govActionId) ->
-            case snapshotLookupId govActionId $ snapshots ^. curGovSnapshotsL of
+            case snapshotLookupId govActionId $ snapshots of
               Nothing -> False
               -- lookup has to succeed _and_ purpose of looked-up action has to match condition
               Just found -> snapshotCond $ gasAction found

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -27,8 +28,8 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Block (txid)
-import Cardano.Ledger.CertState
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.CertState (CommitteeState (..), vsNumDormantEpochsL)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   dvtUpdateToConstitutionL,
  )
@@ -38,7 +39,7 @@ import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.DRepDistr (DRepDistr (..), drepExpiryL)
+import Cardano.Ledger.DRep (DRep (..), DRepState (..), drepExpiryL)
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
@@ -55,6 +56,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UMap (unify)
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.Exception (evaluate)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -102,6 +104,15 @@ import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Tasty
 import Test.Tasty.HUnit
 
+-- =================================================================
+
+-- | Accesses the same data as psProposalsL, but converts from (StrictSeq (GovActionState era)) to (ProposalsSnapshot era)
+psProposalsSnapshotL :: Lens' (PulsingSnapshot era) (ProposalsSnapshot era)
+psProposalsSnapshotL =
+  lens
+    (fromGovActionStateSeq . psProposals)
+    (\x y -> x {psProposals = snapshotActions y})
+
 stakeKeyHash :: forall era. Era era => Proof era -> KeyHash 'Staking (EraCrypto era)
 stakeKeyHash _pf = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
 
@@ -140,6 +151,13 @@ addrKeys1 pf = Addr Testnet pCred sCred
 
 keys2 :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
 keys2 _pf = mkKeyPair' @(EraCrypto era) (RawSeed 2 2 2 2 2)
+
+-- | If this looks magic, it is. The purpose of this is to use it to add to the UMap
+--   a mapping between a staking credential (in one of the TxOut's in the UTxO used)
+--   and one of the DReps. If no one delegates to a DRep, No DRep will have any way
+--   for their vote to count. Not how this is used to initialize the LedgerState
+delegs :: Era era => Proof era -> Map.Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era))
+delegs pf = Map.fromList [(KeyHashObj . coerceKeyRole . hashKey . vKey $ keys2 pf, DRepCredential (drepCredential pf))]
 
 addrKeys2 :: forall era. Era era => Proof era -> Addr (EraCrypto era)
 addrKeys2 pf = Addr Testnet pCred sCred
@@ -347,15 +365,29 @@ vote pf govActionId =
     , otherWitsFields = []
     }
 
+-- =====================================================
+-- Test that an epoch without proposals does not cause the the
+-- time that it takes for a DRep to expire become smaller
+-- =====================================================
+
+-- | Test that the expiration of Proposals works.
+--   We start with 1 proposal in the current state, and 0 proposals in the previous state (inside the DRepPulser)
+--   The one current proposal is proposed in Epoch 0, and expires after Epoch 2. So the number of proposals in
+--   each Epoch should look ike this
+--    Epoch   current  prev
+--    0       1        0
+--    1       1        1
+--    2       1        1
+--    3       0        1
+--    4       0        0
 preventDRepExpiry ::
   forall era.
-  ( State (EraRule "LEDGER" era) ~ LedgerState era
+  ( Reflect era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Show (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "EPOCH" era))
   , Scriptic era
-  , GoodCrypto (EraCrypto era)
-  , EraTx era
   , ConwayEraTxBody era
   , GovState era ~ ConwayGovState era
   , ConwayEraPParams era
@@ -372,16 +404,15 @@ preventDRepExpiry pf = do
     initialGov =
       def
         & cgEnactStateL . ensCurPParamsL .~ pp'
-        & cgGovSnapshotsL . curGovSnapshotsL
+        & cgProposalsL
           .~ fromGovActionStateSeq (SSeq.singleton $ expiringGovActionState (EpochNo 2) govActionId $ newConstitutionProposal pf)
+        & cgDRepPulsingStateL .~ (DRComplete def def)
     initialLedgerState = LedgerState (smartUTxOState pp' utxo0 (Coin 10) (Coin 0) initialGov zero) def
-    drepDistr = DRComplete $ Map.fromList [(DRepCredential (drepCredential pf), CompactCoin 1000)]
     dreps = Map.singleton (drepCredential pf) (DRepState (EpochNo 2) SNothing (Coin 0))
     epochState0 =
       def
         & curPParamsEpochStateL .~ pp'
         & esLStateL .~ (initialLedgerState & lsCertStateL . certVStateL . vsDRepsL .~ dreps)
-        & epochStateDRepDistrL .~ drepDistr
     poolDistr =
       PoolDistr
         ( Map.fromList
@@ -397,14 +428,25 @@ preventDRepExpiry pf = do
       assertExprEqualWithMessage
         (unwords ["Epoch", show @Int epochNo, "- DReps"])
         (epochState ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL)
-    assertCurGovSnaps epochNo epochState =
+    assertCurGovSnaps epochNo epochState expected =
       assertExprEqualWithMessage
-        (unwords ["Epoch", show @Int epochNo, "- CurGovSnapshot"])
-        (SSeq.null . snapshotIds $ epochState ^. esLStateL . lsUTxOStateL . utxosGovStateL . snapshotsGovStateL . curGovSnapshotsL)
-    assertPrevGovSnaps epochNo epochState =
+        (unwords ["Epoch", show @Int epochNo, "CurrentProposals null status expected to be" ++ show expected ++ ".", "It was not."])
+        (SSeq.null . snapshotIds $ epochState ^. esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL)
+        expected
+    assertPrevGovSnaps epochNo epochState expect =
       assertExprEqualWithMessage
-        (unwords ["Epoch", show @Int epochNo, "- PrevGovSnapshot"])
-        (SSeq.null . snapshotIds $ epochState ^. esLStateL . lsUTxOStateL . utxosGovStateL . snapshotsGovStateL . prevGovSnapshotsL)
+        (unlines ["At Epoch " ++ show @Int epochNo, "PrevGovSnapshot proposals null status expected to be " ++ show expect ++ ".", "But is is not."])
+        ( SSeq.null . snapshotIds $
+            epochState
+              ^. esLStateL
+                . lsUTxOStateL
+                . utxosGovStateL
+                . drepPulsingStateGovStateL
+                . pulsingStateSnapshotL
+                . psProposalsSnapshotL
+        )
+        expect
+
     assertNumDormantEpochs epochNo prevEpochState currEpochState doesAdvance =
       assertExprEqualWithMessage
         (unwords ["Epoch", show @Int epochNo, "- NumDormantEpochs"])
@@ -433,7 +475,7 @@ preventDRepExpiry pf = do
 
   assertNumDormantEpochs 3 epochState2 epochState3 False
   assertDReps 3 epochState3 dreps
-  assertCurGovSnaps 3 epochState3 False
+  assertCurGovSnaps 3 epochState3 True
   assertPrevGovSnaps 3 epochState3 False
 
   epochState4 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState3 (EpochNo 4) poolDistr
@@ -470,6 +512,10 @@ preventDRepExpiry pf = do
   assertCurGovSnaps 6 epochState6 False
   assertPrevGovSnaps 6 epochState6 False
 
+-- ======================================================
+-- Test that a vote passes
+-- ======================================================
+
 testGov ::
   forall era.
   ( State (EraRule "LEDGER" era) ~ LedgerState era
@@ -497,21 +543,19 @@ testGov pf = do
         & cgEnactStateL . ensCurPParamsL .~ pp
         & cgEnactStateL . ensCommitteeL .~ SJust committee
     initialLedgerState =
-      LedgerState (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero) def
-        & lsCertStateL . certVStateL . vsCommitteeStateL .~ committeeState
+      LedgerState
+        (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero)
+        (CertState def def (def & dsUnifiedL .~ (unify Map.empty Map.empty Map.empty (delegs pf))))
+    initialLedgerState1 = initialLedgerState & lsCertStateL . certVStateL . vsCommitteeStateL .~ committeeState
 
     proposalTx = txFromTestCaseData pf (proposal pf)
 
     govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
-    expectedGovState0 =
-      GovSnapshots
-        (fromGovActionStateSeq (SSeq.singleton $ govActionState govActionId (newConstitutionProposal pf)))
-        def
-        mempty
-        def
-    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL) (DRComplete Map.empty)
+    expectedGovState0 = (fromGovActionStateSeq (SSeq.singleton $ govActionState govActionId (newConstitutionProposal pf)))
 
-    eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState pp (trustMeP pf True proposalTx)
+    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL) (DRComplete def def)
+
+    eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState1 pp (trustMeP pf True proposalTx)
   ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) <-
     expectRight "Error running LEDGER when proposing: " eitherLedgerState0
 
@@ -521,28 +565,20 @@ testGov pf = do
   let
     voteTx = txFromTestCaseData pf (vote pf govActionId)
     gas = govActionStateWithYesVotes govActionId pf (newConstitutionProposal pf)
-    expectedGovState1 =
-      GovSnapshots
-        (fromGovActionStateSeq $ SSeq.singleton gas)
-        def
-        mempty
-        def
-    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL) (DRComplete Map.empty)
+    expectedGovState1 = (fromGovActionStateSeq $ SSeq.singleton gas)
+    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL) (DRComplete def def)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 pp (trustMeP pf True voteTx)
   ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) <-
     expectRight "Error running LEDGER when voting: " eitherLedgerState1
 
   assertExprEqualWithMessage "govState after vote" govState1 expectedGov1
-
   let
-    drepDistr = DRComplete $ Map.fromList [(DRepCredential (drepCredential pf), CompactCoin 1000)]
     epochState0 =
       (def :: EpochState era)
         & curPParamsEpochStateL .~ pp
         & esLStateL .~ ledgerState1
-        & epochStateDRepDistrL .~ drepDistr
   let
-    poolDistr =
+    !poolDistr =
       PoolDistr
         ( Map.fromList
             [
@@ -556,8 +592,7 @@ testGov pf = do
     -- Wait two epochs
     eitherEpochState1 = runEPOCH (EPOCH pf) epochState0 (EpochNo 2) poolDistr
   epochState1 <- expectRight "Error running runEPOCH: " eitherEpochState1
-  let
-    constitution = epochState1 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+  let constitution = epochState1 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
   assertExprEqualWithMessage "constitution after one epoch" constitution def
   let
     epochState1' = case runEPOCH (EPOCH pf) epochState1 (EpochNo 3) poolDistr of
@@ -565,7 +600,6 @@ testGov pf = do
       Right x -> x
     ledgerState2 = epochState1' ^. esLStateL
     constitution1 = epochState1' ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
-    prevDRepsState1 = epochState1 ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL
   assertExprEqualWithMessage "constitution after enactment" constitution1 (proposedConstitution @era)
   let
     -- Propose another constitution
@@ -574,17 +608,14 @@ testGov pf = do
     curGAState =
       fromGovActionStateSeq . SSeq.singleton $
         govActionState secondGovActionId (anotherConstitutionProposal pf govActionId)
-    expectedGovSnapshots2 =
-      GovSnapshots
-        curGAState
-        def
-        prevDRepsState1
-        committeeState
+    expectedGovSnapshots2 = curGAState
     expectedGovState2 =
       ConwayGovState
         expectedGovSnapshots2
         (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL)
-        drepDistr
+        -- This might appear to be cheating, but we expect the new PulsingState to be the
+        -- Completion of the one in ledgerState2, and (==) forces the competion of both its args.
+        (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL)
     eitherLedgerState3 = runLEDGER (LEDGER pf) ledgerState2 pp (trustMeP pf True secondProposalTx)
   ledgerState3@(LedgerState (UTxOState _ _ _ govState2 _ _) _) <-
     expectRight "Error running LEDGER when proposing:" eitherLedgerState3
@@ -613,8 +644,7 @@ testGov pf = do
         ^. esLStateL
           . lsUTxOStateL
           . utxosGovStateL
-          . cgGovSnapshotsL
-          . curGovSnapshotsL
+          . proposalsGovStateL
 
   case snapshotActions currentGovActions of
     gas' SSeq.:<| SSeq.Empty ->

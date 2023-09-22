@@ -50,7 +50,7 @@ import Cardano.Ledger.Core (
   valueTxOutL,
  )
 import Cardano.Ledger.Credential (Credential, Ptr)
-import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState)
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
@@ -997,7 +997,7 @@ instantaneousRewardsT =
 allvars :: String
 allvars = show (ppTarget (newEpochStateT (Conway Standard)))
 
-printTarget :: Target era t -> IO ()
+printTarget :: RootTarget era root t -> IO ()
 printTarget t = putStrLn (show (ppTarget t))
 
 -- =====================================================================
@@ -1498,15 +1498,6 @@ prevGovActionStates = Var $ V "prevGovActionStates" (MapR GovActionIdR GovAction
 prevProposalOrder :: Era era => Term era [GovActionId (EraCrypto era)]
 prevProposalOrder = Var $ V "prevProposalOrder" (ListR GovActionIdR) No
 
-currentGovSnapshots :: Era era => Term era [GovActionState era]
-currentGovSnapshots = Var $ V "currentGovSnapshots" (ListR GovActionStateR) No
-
-previousGovSnapshots :: Era era => Term era [GovActionState era]
-previousGovSnapshots = Var $ V "previousGovSnapshots" (ListR GovActionStateR) No
-
-previousDRepsState :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-previousDRepsState = Var $ V "previousDRepsState" (MapR VCredR DRepStateR) No
-
 currentDRepsState :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 currentDRepsState = Var $ V "currentDRepsState" (MapR VCredR DRepStateR) No
 
@@ -1525,37 +1516,74 @@ committeeVar = Var $ V "committeeVar" (MaybeR CommitteeR) No
 -- ====================================
 -- ConwayGovState Targets
 
-drepDistr :: Era era => Term era (DRepDistr (EraCrypto era))
-drepDistr = Var $ V "drepDistr" DRepDistrR No
+-- ================
+-- PulsingSnapshot
+
+prevProposals :: Era era => Term era [GovActionState era]
+prevProposals = Var $ V "prevProposals" (ListR GovActionStateR) No
+
+prevDRepDistr :: Era era => Term era (Map (DRep (EraCrypto era)) Coin)
+prevDRepDistr = Var $ V "drepDistr" (MapR DRepR CoinR) No
+
+prevDRepState :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+prevDRepState = Var $ V "prevDRepState" (MapR VCredR DRepStateR) No
+
+prevCommittee :: Era era => Term era (Maybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+prevCommittee = Var $ V "prevCommittee" (MaybeR PrevCommitteeR) No
+
+prevConstitution :: Era era => Term era (Maybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
+prevConstitution = Var $ V "prevConstitution" (MaybeR PrevConstitutionR) No
+
+pulsingSnapshotT :: forall era. Era era => RootTarget era (PulsingSnapshot era) (PulsingSnapshot era)
+pulsingSnapshotT =
+  Invert "PulsingSnapshot" (typeRep @(PulsingSnapshot era)) (\x y -> PulsingSnapshot (SS.fromList x) (Map.map compactCoinOrError y))
+    :$ Lensed prevProposals (psProposalsL . strictSeqListL) -- (undefined  :: Lens' (PulsingSnapshot era) [GovActionState era]) --
+    :$ Lensed prevDRepDistr (psDRepDistrL . mapCompactFormCoinL)
+    :$ Lensed prevDRepState psDRepStateL
+
+pulsingSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
+pulsingSnapshotL = lens getter setter
+  where
+    getter (DRComplete x _) = x
+    getter other = fst (finishDRepPulser other)
+    setter (DRComplete _ y) x = DRComplete x y
+    setter other x = DRComplete x y
+      where
+        (_, y) = finishDRepPulser other
+
+-- ================
+-- DRepPulsingState
+
+drepL :: Lens' (DRepPulsingState era) (Map (DRep (EraCrypto era)) Coin)
+drepL = pulsingSnapshotL . psDRepDistrL . mapCompactFormCoinL
+
+ratifyL :: Lens' (DRepPulsingState era) (RatifyState era)
+ratifyL = lens getter setter
+  where
+    getter (DRComplete _ y) = y
+    getter (x@(DRPulsing {})) = snd (finishDRepPulser x)
+    setter (DRComplete x _) y = DRComplete x y
+    setter (z@(DRPulsing {})) y = case finishDRepPulser z of
+      (x, _) -> DRComplete x y
+
+dRepPulsingStateT :: forall era. Reflect era => Proof era -> RootTarget era (DRepPulsingState era) (DRepPulsingState era)
+dRepPulsingStateT _p =
+  Invert "DRComplete" (typeRep @(DRepPulsingState era)) DRComplete
+    :$ Shift pulsingSnapshotT pulsingSnapshotL
+    :$ Lensed ratifyState ratifyL
+
+ratifyState :: Reflect era => Term era (RatifyState era)
+ratifyState = Var $ V "ratifyState" RatifyStateR No
 
 conwayGovStateT :: forall era. Reflect era => Proof era -> RootTarget era (ConwayGovState era) (ConwayGovState era)
-conwayGovStateT _p =
-  Invert "ConwayGovState" (typeRep @(ConwayGovState era)) ConwayGovState
-    :$ Shift govSnapshotsT cgGovSnapshotsL
+conwayGovStateT p =
+  Invert "ConwayGovState" (typeRep @(ConwayGovState era)) (\x -> ConwayGovState (fromGovActionStateSeq (SS.fromList x)))
+    :$ Lensed currProposals (cgProposalsL . snapshotL)
     :$ Shift enactStateT cgEnactStateL
-    :$ Lensed drepDistr cgDRepDistrL
+    :$ Shift (dRepPulsingStateT p) cgDRepPulsingStateL
 
-govSnapshotsT :: forall era. Era era => RootTarget era (GovSnapshots era) (GovSnapshots era)
-govSnapshotsT =
-  Invert "GovSnapshots" (typeRep @(GovSnapshots era)) modelGovSnapshots
-    :$ Lensed currentGovSnapshots (curGovSnapshotsL . snapshotL)
-    :$ Lensed previousGovSnapshots (prevGovSnapshotsL . snapshotL)
-    :$ Lensed previousDRepsState prevDRepsStateL
-    :$ Lensed previousCommitteeState (prevCommitteeStateL . csCommitteeCredsL)
-
--- | Function for constructing (GovSnapshots era) from the model types
-modelGovSnapshots ::
-  [GovActionState era] ->
-  [GovActionState era] ->
-  Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)) ->
-  Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))) ->
-  GovSnapshots era
-modelGovSnapshots cs ps pd pc =
-  GovSnapshots
-    (fromGovActionStateSeq (SS.fromList cs))
-    (fromGovActionStateSeq (SS.fromList ps))
-    pd
-    (CommitteeState pc)
+currProposals :: Era era => Term era [GovActionState era]
+currProposals = Var $ V "currProposals" (ListR GovActionStateR) No
 
 enactStateT :: forall era. Reflect era => RootTarget era (EnactState era) (EnactState era)
 enactStateT =
@@ -1596,12 +1624,6 @@ prevPParamUpdate = Var $ V "prevPParamUpdate" (MaybeR PrevPParamUpdateR) No
 prevHardFork :: Era era => Term era (Maybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
 prevHardFork = Var $ V "prevHardFork" (MaybeR PrevHardForkR) No
 
-prevCommittee :: Era era => Term era (Maybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-prevCommittee = Var $ V "prevCommittee" (MaybeR PrevCommitteeR) No
-
-prevConstitution :: Era era => Term era (Maybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
-prevConstitution = Var $ V "prevConstitution" (MaybeR PrevConstitutionR) No
-
 -- ================
 -- Lenses
 
@@ -1627,21 +1649,10 @@ committeeQuorumL :: Lens' (Committee era) UnitInterval
 committeeQuorumL = lens committeeQuorum (\x s -> x {committeeQuorum = s})
 
 smCommL :: Lens' (StrictMaybe (Committee era)) (Committee era)
-smCommL = lens foo (\_ t -> SJust t)
+smCommL = lens getter (\_ t -> SJust t)
   where
-    foo SNothing = Committee Map.empty maxBound
-    foo (SJust x) = x
-
-strictMaybeToMaybeL :: Lens' (StrictMaybe x) (Maybe x)
-strictMaybeToMaybeL = lens ff gg
-  where
-    ff (SJust x) = Just x
-    ff SNothing = Nothing
-    gg _ (Just x) = SJust x
-    gg _ Nothing = SNothing
-
-idLens :: Lens' a a
-idLens = lens (\x -> x) (\_ y -> y)
+    getter SNothing = Committee Map.empty maxBound
+    getter (SJust x) = x
 
 proposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
 proposalsL = lens proposals (\x y -> x {proposals = y})

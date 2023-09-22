@@ -23,7 +23,6 @@ module Cardano.Ledger.Conway.Rules.NewEpoch (
 
 import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
-  Globals (securityParameter),
   ShelleyBase,
   StrictMaybe (SJust, SNothing),
  )
@@ -33,18 +32,16 @@ import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayNEWEPOCH)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
   ConwayGovState (..),
-  epochStateDRepDistrL,
-  freshDRepPulser,
-  newEpochStateDRepDistrL,
- )
-import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
-import Cardano.Ledger.Conway.Rules.Ratify (
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
+  newEpochStateDRepPulsingStateL,
+  pulseDRepPulsingState,
  )
+import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
+
+-- import Cardano.Ledger.Conway.Rules.Ratify
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRepDistr (pulseDRepDistr)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
@@ -60,15 +57,12 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
-import Data.Ratio (Ratio)
 import Data.Set (Set)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro ((%~), (&), (.~), (^.))
+import Lens.Micro ((%~), (&), (^.))
 
 newtype ConwayNewEpochPredFailure era
   = CorruptRewardUpdate
@@ -161,7 +155,7 @@ newEpochTransition = do
       ) <-
     judgmentContext
   if eNo /= eL + 1
-    then pure (nes & newEpochStateDRepDistrL %~ pulseDRepDistr)
+    then pure (nes & newEpochStateDRepPulsingStateL %~ pulseDRepPulsingState)
     else do
       es1 <- case ru of
         SNothing -> pure es0
@@ -171,14 +165,6 @@ newEpochTransition = do
           updateRewards es0 eNo ans
         SJust (Complete ru') -> updateRewards es0 eNo ru'
       es2 <- trans @(EraRule "EPOCH" era) $ TRC (pd, es1, eNo)
-
-      -- Initialize DRep pulser. We expect approximately 10*k-many blocks to be produced each epoch.
-      -- Therefore to safely and evenly space out the DRep calculation, we divide
-      -- the number of stake credentials by 8*k (8, rather than 10, to be sure we finish a bit early)
-      k <- liftSTS $ asks securityParameter -- Maximum number of blocks we are allowed to roll back
-      let stakeSize = Map.size (es2 ^. epochStateIncrStakeDistrL)
-      let pulseSize = max 1 (ceiling ((fromIntegral stakeSize :: Ratio Word64) / (8 * (fromIntegral k :: Ratio Word64))))
-      let es3 = es2 & epochStateDRepDistrL .~ freshDRepPulser pulseSize es2 -- Install a new (as yet unpulsed) DRepDistr pulser
       let adaPots = totalAdaPotsES es2
       tellEvent $ TotalAdaPotsEvent adaPots
       let pd' = ssStakeMarkPoolDistr (esSnapshots es0)
@@ -188,7 +174,7 @@ newEpochTransition = do
           { nesEL = eNo
           , nesBprev = bcur
           , nesBcur = BlocksMade mempty
-          , nesEs = es3
+          , nesEs = es2
           , nesRu = SNothing
           , nesPd = pd'
           }

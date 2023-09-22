@@ -23,6 +23,7 @@ import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Conway.Governance (RunConwayRatify (..))
 import Cardano.Ledger.Conway.Rules ()
 import Cardano.Ledger.Conway.Transition ()
 import Cardano.Ledger.Conway.Translation ()
@@ -69,3 +70,5 @@ instance
   ExtendedUTxO (ConwayEra c)
   where
   txInfo = conwayTxInfo
+
+instance Crypto c => RunConwayRatify (ConwayEra c)

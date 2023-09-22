@@ -8,10 +8,10 @@
 module Test.Cardano.Ledger.Constrained.Lenses where
 
 import Cardano.Ledger.BaseTypes (SlotNo)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin)
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
-import Cardano.Ledger.Core (DRep)
 import Cardano.Ledger.Credential (Credential, Ptr)
+import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, rewards)
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (deltaReserves, deltaTreasury)
@@ -31,7 +31,8 @@ import qualified Cardano.Ledger.UMap as UM
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (fromList)
+import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set)
 import Lens.Micro
 
@@ -163,3 +164,22 @@ delegationsUMapL = lens sPoolMap delta
     delta um new = unSplitUMap (split {spDel = new})
       where
         split = splitUMap um
+
+-- Conversion Lenses
+
+strictMaybeToMaybeL :: Lens' (StrictMaybe x) (Maybe x)
+strictMaybeToMaybeL = lens ff gg
+  where
+    ff (SJust x) = Just x
+    ff SNothing = Nothing
+    gg _ (Just x) = SJust x
+    gg _ Nothing = SNothing
+
+idLens :: Lens' a a
+idLens = lens (\x -> x) (\_ y -> y)
+
+strictSeqListL :: Lens' (StrictSeq a) [a]
+strictSeqListL = lens toList (\_ y -> fromList y)
+
+mapCompactFormCoinL :: Lens' (Map a (CompactForm Coin)) (Map a Coin)
+mapCompactFormCoinL = lens (Map.map fromCompact) (\_ y -> Map.map compactCoinOrError y)

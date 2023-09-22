@@ -43,7 +43,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (
   CertState,
-  DRepState (..),
+  DRepState,
   certDStateL,
   certVStateL,
   dsUnifiedL,
