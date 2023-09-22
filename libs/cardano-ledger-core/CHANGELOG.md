@@ -2,6 +2,21 @@
 
 ## 1.7.0.0
 
+* Require `ToExpr` for `EraTx` class
+* Add `upgradeTx` function to `EraTx` class
+* Require `ToExpr` for `EraTxBody` class
+* Add `upgradeTxBody` function to `EraTxBody` class
+* Require `ToExpr` for `EraTxWits` class
+* Add `upgradeTxWits` function to `EraTxWits` class
+* Add `ToExpr` instance to:
+  * `CompactAddr`
+  * `Withdrawals`
+  * `AuxiliaryDataHash`
+  * `VKey`
+  * `ChainCode`
+  * `BootstrapWitness`
+  * `WitVKey`
+* Add `Generic` instance to `AuxiliaryDataHash`
 * Add `vsNumDormantEpochs` to `VState` to track the number of contiguous epochs in which there were no governance proposals to vote on. #3729
 * Add `fromEraShareCBOR`
 * Remove redundant `DecCBOR` constraint in `eraDecoder`
@@ -13,6 +28,7 @@
 
 ### `testlib`
 
+* Added `BinaryUpgradeOpts`
 * Add `Arbitrary` instance for `DRepDistr`
 * Move `Arbitrary` instance for `SnapShot` and `SnapShots` from `cardano-ledger-shelley:testlib`
 * Add `Test.Cardano.Ledger.Core.Binary.RoundTrip` with:

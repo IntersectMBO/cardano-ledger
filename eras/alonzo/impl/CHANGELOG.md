@@ -2,6 +2,27 @@
 
 ## 1.4.2.0
 
+* Add `ToExpr` instance for:
+  * `PlutusData`
+  * `Data`
+  * `BinaryData`
+  * `Datum`
+  * `AlonzoTx`
+  * `AlonzoTxBody`
+  * `AlonzoTxOut`
+  * `AlozoTxWits`
+  * `IsValid`
+  * `Addr28Extra`
+  * `DataHash32`
+  * `RdmrPtr`
+  * `Redeemers`
+* Add `Generic` instance for :
+  * `AlonzoTxBody`
+  * `Redeemers`
+  * `TxDats`
+* Add `upgradeData`, `upgradeRedeemers` and `upgradeTxDats`
+* Add `TxUpgradeError` type to `EraTx`
+* Add `AlonzoTxBodyUpgradeError`, `AlonzoTxUpgradeError`
 * Add `toAlonzoTransitionConfigPairs` and `EraTransition` instance.
 * Rename `alonzoGenesisAesonPairs` -> `toAlonzoGenesisPairs` for consistency.
 

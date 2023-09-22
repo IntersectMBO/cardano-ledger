@@ -2,6 +2,11 @@
 
 ## 1.3.4.0
 
+* Add `ToExpr` instance for:
+  * `MaryTxBody`
+  * `CompactForm (MaryValue)`
+  * `CompactValue`
+* Add `Generic` instance for `CompactValue`
 * Add `EraTransition` instance.
 
 ## 1.3.3.0

@@ -2,6 +2,10 @@
 
 ## 1.1.3.0
 
+* Add `ToExpr` instance for:
+  * `Sized`
+  * `SignedDSIGN`
+* Add `Generic` instance for `CompactValue`
 * Add `fieldGuarded` to be able to conditionally construct a `Field` #3712
   * Expose `showDecoderError` from `Cardano.Ledger.Binary.Plain`
 

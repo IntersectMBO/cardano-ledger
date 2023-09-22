@@ -1,6 +1,14 @@
 # Version history for `cardano-ledger-conway`
 
 ## 1.9.0.0
+* Add  `ConwayEraPParams era` constraint to `isCommitteeVotingAllowed` and `votingCommitteeThreshold`
+* Add `ToExpr` instance for:
+  * `Voter`
+  * `VotingProcedures`
+  * `VotingProcedure`
+  * `ProposalProcedure`
+  * `ConwayTxBody`
+* Add `ConwayTxBodyUpgradeError`, `ConwayTxCertUpgradeError`
 * Add to `Ratify`:
   * `committeeAccepted`
   * `committeeAcceptedRatio`

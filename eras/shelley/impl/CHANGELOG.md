@@ -2,6 +2,13 @@
 
 ## 1.6.1.0
 
+* Add `ToExpr` instance for:
+  * `Update`
+  * `ShelleyTx`
+  * `ShelleyTxBody`
+  * `ShelleyTxWits`
+* Add `Generic` instance for `ShelleyTx`
+* Add `Memoized` instance for `ShelleyTx`
 * Add lens `epochStateTreasuryL` #3748
 * Introduce `Cardano.Ledger.Shelley.Transition` module with `EraTransition` interface.
 * Deprecated `CanStartFromGenesis` interface in favor of `EraTransition`

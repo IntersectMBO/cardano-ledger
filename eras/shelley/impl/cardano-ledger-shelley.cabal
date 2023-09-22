@@ -106,7 +106,7 @@ library
         cardano-data >=1.0,
         cardano-ledger-binary >=1.0,
         cardano-ledger-byron,
-        cardano-ledger-core >=1.6.1 && <1.8,
+        cardano-ledger-core >=1.7 && <1.8,
         cardano-slotting,
         vector-map >=1.0,
         containers,

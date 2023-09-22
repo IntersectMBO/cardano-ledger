@@ -2,6 +2,7 @@
 
 ## 1.2.3.0
 
+* Add `ToExpr` instance for `AllegraTxBody`
 * Add `EraTransition` instance.
 
 ## 1.2.2.0

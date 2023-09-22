@@ -2,6 +2,11 @@
 
 ## 1.4.5.0
 
+* Add `ToExpr` instance for:
+  * `BabbageTxBody`
+  * `BabbageTxOut`
+* Add `Generic` instance for `BabbageTxBody`
+* Add `BabbageTxUpgradeError` and `BabbageTxBodyUpgradeError`
 * Add `EraTransition` instance.
 
 ## 1.4.4.0
