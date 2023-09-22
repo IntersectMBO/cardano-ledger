@@ -2,7 +2,7 @@
 
 ## 1.9.0.0
 
-* Add PredicateFailure for current treasury value mismatch in tx body in LEDGER #
+* Add PredicateFailure for current treasury value mismatch in tx body in LEDGER #3749
 * Rename `ConwayPParams` to be consistent with the Agda specification. #3739
   * `govActionExpiration` to `govActionLifetime`
   * `committeeTermLimit` to `committeeMaxTermLength`
