@@ -33,7 +33,7 @@ import Cardano.Ledger.CertState (
   vsDRepsL,
   vsNumDormantEpochsL,
  )
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
@@ -41,6 +41,7 @@ import Cardano.Ledger.Conway.Governance (
   Committee,
   ConwayEraGov,
   ConwayGovState (..),
+  EnactState,
   GovActionState (..),
   GovSnapshots (..),
   RatifyState (..),
@@ -48,6 +49,8 @@ import Cardano.Ledger.Conway.Governance (
   cgGovSnapshotsL,
   curGovSnapshotsL,
   ensCommitteeL,
+  ensTreasuryL,
+  ensWithdrawalsL,
   epochStateDRepDistrL,
   prevGovSnapshotsL,
   snapshotActions,
@@ -68,6 +71,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   asTreasuryL,
   curPParamsEpochStateL,
+  epochStateTreasuryL,
+  epochStateUMapL,
   esAccountState,
   esAccountStateL,
   esLState,
@@ -99,7 +104,8 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.UMap (UMap, UView (..), unionKeyDeposits)
+import Cardano.Ledger.UMap (UMap, UView (..), unionKeyDeposits, (∪+), (◁))
+import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Embed (..),
@@ -187,6 +193,33 @@ updateNumDormantEpochs ls =
         then ls & lsCertStateL . certVStateL . vsNumDormantEpochsL +~ 1
         else ls
 
+-- | Apply TreasuryWithdrawals to the EpochState
+--
+--   acnt' = record acnt { treasury = treasury + UTxOState.fees utxoSt
+--                                  + getCoin unclaimed + donations ∸ totWithdrawals }
+--
+-- The utxo fees and donations are applied in the remaining body of EPOCH transition
+applyEnactedWithdrawals :: EpochState era -> EnactState era -> (EpochState era, EnactState era)
+applyEnactedWithdrawals epochState enactedState =
+  let enactedWithdrawals = enactedState ^. ensWithdrawalsL
+      rewardsUView = RewDepUView $ epochState ^. epochStateUMapL
+      successfulRefunds = rewardsUView ◁ enactedWithdrawals
+      epochStateRewardsApplied =
+        epochState
+          -- Subtract `successfulRefunds` from the treasury, and add them to the rewards UMap
+          -- `unclaimed` refunds remain in the treasury.
+          -- Compared to the spec, instead of adding `unclaimed` and subtracting `totWithdrawals`
+          --   + unclaimed - totWithdrawals
+          -- we just subtract the `refunds`
+          --   - refunds
+          & epochStateTreasuryL %~ (<-> fold successfulRefunds)
+          -- The use of the partial function `compactCoinOrError` is justified here because
+          -- 1. the decoder for coin at the proposal-submission boundary has already confirmed we have a compactible value
+          -- 2. the refunds and unsuccessful refunds together do not exceed the current treasury value, as enforced by the `ENACT` rule.
+          & epochStateUMapL .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulRefunds))
+      enactedStateWithdrawalsReset = enactedState & ensWithdrawalsL .~ Map.empty -- reset enacted withdrawals
+   in (epochStateRewardsApplied, enactedStateWithdrawalsReset)
+
 epochTransition ::
   forall era.
   ( Embed (EraRule "SNAP" era) (ConwayEPOCH era)
@@ -268,18 +301,19 @@ epochTransition = do
         , reDRepState = vstate ^. vsDRepsL
         }
     ratSig = RatifySignal . snapshotActions . prevGovSnapshots $ cgGovSnapshots govSt
-  RatifyState {rsRemoved, rsEnactState} <-
+  RatifyState {rsRemoved, rsEnactState = rsEnactState'} <-
     trans @(EraRule "RATIFY" era) $
       TRC
         ( ratEnv
         , RatifyState
             { rsRemoved = mempty
-            , rsEnactState = govSt ^. cgEnactStateL
+            , rsEnactState = (govSt ^. cgEnactStateL) & ensTreasuryL .~ (es' ^. epochStateTreasuryL)
             , rsDelayed = False
             }
         , ratSig
         )
   let
+    (epochState', rsEnactState) = applyEnactedWithdrawals es' rsEnactState'
     curSnaps = curGovSnapshots $ cgGovSnapshots govSt
     lookupAction m gId =
       case snapshotLookupId gId curSnaps of
@@ -288,11 +322,10 @@ epochTransition = do
     removedProps =
       foldl' lookupAction mempty $
         Seq.fromList (Set.toList rsRemoved)
-    lState = returnProposalDeposits removedProps $ esLState es'
+    lState = returnProposalDeposits removedProps $ esLState epochState'
     es'' =
-      es'
-        { esAccountState = acnt'
-        , esLState = lState {lsUTxOState = utxoSt''}
+      epochState'
+        { esLState = lState {lsUTxOState = utxoSt''}
         }
         & prevPParamsEpochStateL .~ pp
         & curPParamsEpochStateL .~ pp
