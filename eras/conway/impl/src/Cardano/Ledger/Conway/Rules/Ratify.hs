@@ -35,6 +35,8 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionIds (..),
   RatifyState (..),
   Vote (..),
+  ensTreasuryL,
+  rsEnactStateL,
   thresholdDRep,
   thresholdSPO,
  )
@@ -61,6 +63,7 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Void (Void, absurd)
 import Data.Word (Word64)
+import Lens.Micro ((&), (.~))
 
 data RatifyEnv era = RatifyEnv
   { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
@@ -252,7 +255,7 @@ ratifyTransition = do
           if gasExpiresAfter < reCurrentEpoch
             then pure st' {rsRemoved = ast :<| rsRemoved} -- Action expires after current Epoch. Remove it.
             else pure st'
-    Empty -> pure st
+    Empty -> pure $ st & rsEnactStateL . ensTreasuryL .~ Coin 0
 
 -- | Check that the previous governance action id specified in the proposal
 --   does match the last one of the same purpose that was enacted.

@@ -1,5 +1,11 @@
 # Version history for `cardano-ledger-conway`
 
+
+## 1.8.1.0
+
+* Apply enacted `TreasuryWithdrawals` in `ConwayEPOCH` #3748
+  * Add lenses `ensWithdrawalsL` and `ensTreasuryL`
+
 ## 1.8.0.0
 
 * Change `ToJSONKey` implementation of `Voter` to flat text

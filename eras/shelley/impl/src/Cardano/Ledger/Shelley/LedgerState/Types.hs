@@ -733,6 +733,9 @@ epochStateStakeDistrL ::
     (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
 epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
 
+epochStateTreasuryL :: Lens' (EpochState era) Coin
+epochStateTreasuryL = esAccountStateL . asTreasuryL
+
 epochStateIncrStakeDistrL ::
   Lens'
     (EpochState era)

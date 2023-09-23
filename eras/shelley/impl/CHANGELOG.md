@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.6.1.0
+
+* Add lens `epochStateTreasuryL` #3748
+
 ## 1.6.0.0
 
 * Add lenses for `UTxOEnv` #3688

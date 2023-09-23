@@ -52,6 +52,8 @@ module Cardano.Ledger.Conway.Governance (
   ensConstitutionL,
   ensCurPParamsL,
   ensPrevPParamsL,
+  ensWithdrawalsL,
+  ensTreasuryL,
   ensPrevGovActionIdsL,
   ensPrevPParamUpdateL,
   ensPrevHardForkL,
@@ -381,6 +383,12 @@ ensCurPParamsL = lens ensPParams (\es x -> es {ensPParams = x})
 
 ensPrevPParamsL :: Lens' (EnactState era) (PParams era)
 ensPrevPParamsL = lens ensPrevPParams (\es x -> es {ensPrevPParams = x})
+
+ensTreasuryL :: Lens' (EnactState era) Coin
+ensTreasuryL = lens ensTreasury $ \es x -> es {ensTreasury = x}
+
+ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking (EraCrypto era)) Coin)
+ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 
 ensPrevGovActionIdsL :: Lens' (EnactState era) (PrevGovActionIds era)
 ensPrevGovActionIdsL = lens ensPrevGovActionIds (\es x -> es {ensPrevGovActionIds = x})

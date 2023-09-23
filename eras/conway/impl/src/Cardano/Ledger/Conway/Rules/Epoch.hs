@@ -24,19 +24,28 @@ where
 
 import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (certDStateL, certVStateL, dsUnifiedL, vsCommitteeStateL, vsDRepsL)
+import Cardano.Ledger.CertState (
+  certDStateL,
+  certVStateL,
+  dsUnifiedL,
+  vsCommitteeStateL,
+  vsDRepsL,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
+  EnactState,
   GovActionState (..),
   GovActionsState (..),
   RatifyState (..),
   cgEnactStateL,
   cgGovActionsStateL,
   curGovActionsStateL,
+  ensTreasuryL,
+  ensWithdrawalsL,
  )
 import Cardano.Ledger.Conway.Rules.Ratify (RatifyEnv (..), RatifySignal (..))
 import Cardano.Ledger.DRepDistr (extractDRepDistr)
@@ -51,6 +60,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
   curPParamsEpochStateL,
   epochStateDRepDistrL,
+  epochStateTreasuryL,
+  epochStateUMapL,
   esAccountState,
   esAccountStateL,
   esLState,
@@ -82,7 +93,8 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.UMap (UMap, UView (..), unionKeyDeposits)
+import Cardano.Ledger.UMap (UMap, UView (..), compactCoinOrError, unionKeyDeposits, (∪+), (◁))
+import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Embed (..),
@@ -158,6 +170,33 @@ returnProposalDeposits removedProposals =
   lsCertStateL . certDStateL . dsUnifiedL %~ updateUMap
   where
     updateUMap = returnProposalDepositsUMap removedProposals
+
+-- | Apply TreasuryWithdrawals to the EpochState
+--
+--   acnt' = record acnt { treasury = treasury + UTxOState.fees utxoSt
+--                                  + getCoin unclaimed + donations ∸ totWithdrawals }
+--
+-- The utxo fees and donations are applied in the remaining body of EPOCH transition
+applyEnactedWithdrawals :: EpochState era -> EnactState era -> (EpochState era, EnactState era)
+applyEnactedWithdrawals epochState enactedState =
+  let enactedWithdrawals = enactedState ^. ensWithdrawalsL
+      rewardsUView = RewDepUView $ epochState ^. epochStateUMapL
+      successfulRefunds = rewardsUView ◁ enactedWithdrawals
+      epochStateRewardsApplied =
+        epochState
+          -- Subtract `successfulRefunds` from the treasury, and add them to the rewards UMap
+          -- `unclaimed` refunds remain in the treasury.
+          -- Compared to the spec, instead of adding `unclaimed` and subtracting `totWithdrawals`
+          --   + unclaimed - totWithdrawals
+          -- we just subtract the `refunds`
+          --   - refunds
+          & epochStateTreasuryL %~ (<-> fold successfulRefunds)
+          -- The use of the partial function `compactCoinOrError` is justified here because
+          -- 1. the decoder for coin at the proposal-submission boundary has already confirmed we have a compactible value
+          -- 2. the refunds and unsuccessful refunds together do not exceed the current treasury value, as enforced by the `ENACT` rule.
+          & epochStateUMapL .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulRefunds))
+      enactedStateWithdrawalsReset = enactedState & ensWithdrawalsL .~ Map.empty -- reset enacted withdrawals
+   in (epochStateRewardsApplied, enactedStateWithdrawalsReset)
 
 epochTransition ::
   forall era.
@@ -241,23 +280,23 @@ epochTransition = do
     govStateToSeq = Seq.fromList . Map.elems
     -- TODO the order of governance actions is probably messed up here. Investigate
     ratSig = RatifySignal . govStateToSeq . prevGovActionsState $ cgGovActionsState govSt
-  RatifyState {rsRemoved, rsEnactState} <-
+  RatifyState {rsRemoved, rsEnactState = rsEnactState'} <-
     trans @(EraRule "RATIFY" era) $
       TRC
         ( ratEnv
         , RatifyState
             { rsRemoved = mempty
-            , rsEnactState = govSt ^. cgEnactStateL
+            , rsEnactState = (govSt ^. cgEnactStateL) & ensTreasuryL .~ (es' ^. epochStateTreasuryL)
             , rsDelayed = False
             }
         , ratSig
         )
   let
-    lState = returnProposalDeposits rsRemoved $ esLState es'
+    (epochState', rsEnactState) = applyEnactedWithdrawals es' rsEnactState'
+    lState = returnProposalDeposits rsRemoved $ esLState epochState'
     es'' =
-      es'
-        { esAccountState = acnt'
-        , esLState = lState {lsUTxOState = utxoSt''}
+      epochState'
+        { esLState = lState {lsUTxOState = utxoSt''}
         }
         & prevPParamsEpochStateL .~ pp
         & curPParamsEpochStateL .~ pp
