@@ -356,6 +356,8 @@ instance
   prettyA (ConwayGovFailure x) = prettyA x
   prettyA (ConwayWdrlNotDelegatedToDRep x) =
     ppSexp "ConwayWdrlNotDelegatedToDRep" [prettyA x]
+  prettyA (ConwayTreasuryValueMismatch x y) =
+    ppSexp "ConwayTreasuryValueMismatch" [prettyA x, prettyA y]
 
 instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
   prettyA = viaShow

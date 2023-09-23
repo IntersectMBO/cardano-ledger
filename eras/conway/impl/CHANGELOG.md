@@ -4,6 +4,7 @@
 
 * Apply enacted `TreasuryWithdrawals` in `ConwayEPOCH` #3748
   * Add lenses `ensWithdrawalsL` and `ensTreasuryL`
+* Add PredicateFailure for current treasury value mismatch in tx body in LEDGER #3749
 * Change `To/FromJSON` format for `ConwayGenesis`
 * Add `EraTransition` instance and `toConwayTransitionConfigPairs`.
 * Expose `toConwayGenesisPairs` and `toUpgradeConwayPParamsUpdatePairs`

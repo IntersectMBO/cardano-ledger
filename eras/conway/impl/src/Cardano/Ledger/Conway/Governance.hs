@@ -188,7 +188,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.UMap (compactCoinOrError)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
@@ -198,7 +197,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -810,4 +808,4 @@ freshDRepPulser n es =
     n
     (es ^. epochStateUMapL)
     (es ^. epochStateRegDrepL)
-    (VMap.fromMap (compactCoinOrError <$> (es ^. epochStateIncrStakeDistrL)))
+    (es ^. epochStateIncrStakeDistrL)
