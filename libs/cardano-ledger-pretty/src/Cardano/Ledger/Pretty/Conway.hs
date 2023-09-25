@@ -18,7 +18,7 @@ module Cardano.Ledger.Pretty.Conway (
 ) where
 
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Prices)
-import Cardano.Ledger.BaseTypes (EpochNo, NonNegativeInterval, ProtVer, UnitInterval)
+import Cardano.Ledger.BaseTypes (EpochNo, NonNegativeInterval, UnitInterval)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -64,7 +64,7 @@ import Cardano.Ledger.Conway.TxCert (
  )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRepDistr (extractDRepDistr)
-import Cardano.Ledger.HKD (HKD, HKDFunctor)
+import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Pretty (
   PDoc,
   PrettyA (..),
@@ -258,7 +258,6 @@ instance forall c. PrettyA (ConwayTxCert c) where
 ppConwayPParams ::
   forall era f.
   ( PrettyA (HKD f UnitInterval)
-  , PrettyA (HKD f ProtVer)
   , PrettyA (HKD f Prices)
   , PrettyA (HKD f PoolVotingThresholds)
   , PrettyA (HKD f Coin)
@@ -280,7 +279,6 @@ ppConwayPParams n pp =
     n
     [ ("Tau", prettyA $ pp ^. hkdTauL @era @f)
     , ("Rho", prettyA $ pp ^. hkdRhoL @era @f)
-    , ("ProtocolVersion", prettyA $ pp ^. hkdProtocolVersionL @era @f)
     , ("Prices", prettyA $ pp ^. hkdPricesL @era @f)
     , ("PoolVotingThresholds", prettyA $ pp ^. hkdPoolVotingThresholdsL @era @f)
     , ("PoolDeposit", prettyA $ pp ^. hkdPoolDepositL @era @f)

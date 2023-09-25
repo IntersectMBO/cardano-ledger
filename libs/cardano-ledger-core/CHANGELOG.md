@@ -2,6 +2,12 @@
 
 ## 1.8.0.0
 
+* Add `NoUpdate`, `HKDNoUpdate`
+* Add `toNoUpdate` and `fromNoUpdate` methods to `HKDFunctor`
+* Add `Updatable` instance for `NoUpdate`
+* Change functions to methods of `EraPParams`:
+  * `ppProtocolVersionL`
+  * `ppuProtocolVersionL`
 * Add `Generic` instance for `AuxiliaryDataHash`
 * Add `ToExpr` instances for:
   * `CompactAddr`

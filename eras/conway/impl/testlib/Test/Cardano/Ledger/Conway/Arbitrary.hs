@@ -52,6 +52,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Language (Language (..))
 import Control.State.Transition.Extended (STS (Event))
 import Data.Functor.Identity (Identity)
@@ -499,7 +500,7 @@ instance Era era => Arbitrary (ConwayPParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> pure SNothing
+      <*> pure NoUpdate
       <*> arbitrary
       <*> arbitrary
       <*> (fmap unFlexibleCostModels <$> arbitrary)

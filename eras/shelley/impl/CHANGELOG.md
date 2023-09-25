@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add `shelleyCommonPParamsHKDPairsV8`
 * Add `ToExpr` instances for:
   * `ShelleyPoolPredFailure`
   * `ShelleyUtxowPredFailure`

@@ -18,6 +18,7 @@
 * Add `conwayWitsVKeyNeeded`
 * Add  `ConwayEraPParams era` constraint to `isCommitteeVotingAllowed` and `votingCommitteeThreshold`
 * Switch to using `AlonzoEraUTxO` in rules
+* Change `cppProtocolVersion` to a `HKDNoUpdate` field
 
 ## 1.9.0.0
 

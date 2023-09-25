@@ -92,7 +92,7 @@ ppBabbagePParams pp =
 instance PrettyA CoinPerByte where
   prettyA = prettyA . unCoinPerByte
 
-ppBabbagePParamsUpdate :: BabbageEraPParams era => PParamsUpdate era -> PDoc
+ppBabbagePParamsUpdate :: (BabbageEraPParams era, ProtVerAtMost era 8) => PParamsUpdate era -> PDoc
 ppBabbagePParamsUpdate pp =
   ppRecord
     "PParamsUdate"

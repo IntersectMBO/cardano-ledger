@@ -67,7 +67,7 @@ import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core hiding (Value)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.HKD (HKD, HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
@@ -119,7 +119,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Monetary expansion
   , cppTau :: !(HKD f UnitInterval)
   -- ^ Treasury expansion
-  , cppProtocolVersion :: !(HKD f ProtVer)
+  , cppProtocolVersion :: !(HKDNoUpdate f ProtVer)
   -- ^ Protocol version
   , cppMinPoolCost :: !(HKD f Coin)
   -- ^ Minimum Stake Pool Cost
@@ -293,10 +293,12 @@ instance Crypto c => EraPParams (ConwayEra c) where
   hkdA0L = lens cppA0 $ \pp x -> pp {cppA0 = x}
   hkdRhoL = lens cppRho $ \pp x -> pp {cppRho = x}
   hkdTauL = lens cppTau $ \pp x -> pp {cppTau = x}
-  hkdProtocolVersionL = lens cppProtocolVersion $ \pp x -> pp {cppProtocolVersion = x}
+  hkdProtocolVersionL = notSupportedInThisEraL
   hkdMinPoolCostL = lens cppMinPoolCost $ \pp x -> pp {cppMinPoolCost = x}
+  ppProtocolVersionL = ppLens . lens cppProtocolVersion (\pp x -> pp {cppProtocolVersion = x})
 
   ppDG = to (const minBound)
+  ppuProtocolVersionL = notSupportedInThisEraL
   hkdDL = notSupportedInThisEraL
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
@@ -531,7 +533,7 @@ emptyConwayPParamsUpdate =
     , cppA0 = SNothing
     , cppRho = SNothing
     , cppTau = SNothing
-    , cppProtocolVersion = SNothing
+    , cppProtocolVersion = NoUpdate
     , cppMinPoolCost = SNothing
     , cppCoinsPerUTxOByte = SNothing
     , cppCostModels = SNothing
@@ -569,7 +571,7 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 9 (cppA0 ppup) encCBOR
     !> omitStrictMaybe 10 (cppRho ppup) encCBOR
     !> omitStrictMaybe 11 (cppTau ppup) encCBOR
-    !> omitStrictMaybe 14 SNothing encCBOR
+    !> OmitC NoUpdate
     !> omitStrictMaybe 16 (cppMinPoolCost ppup) encCBOR
     !> omitStrictMaybe 17 (cppCoinsPerUTxOByte ppup) encCBOR
     !> omitStrictMaybe 18 (cppCostModels ppup) encCBOR
@@ -726,6 +728,7 @@ instance FromJSON (UpgradeConwayPParams Identity) where
 
 upgradeConwayPParams ::
   forall f c.
+  HKDFunctor f =>
   UpgradeConwayPParams f ->
   PParamsHKD f (BabbageEra c) ->
   ConwayPParams f (ConwayEra c)
@@ -743,7 +746,7 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppA0 = bppA0
     , cppRho = bppRho
     , cppTau = bppTau
-    , cppProtocolVersion = bppProtocolVersion
+    , cppProtocolVersion = toNoUpdate @f @ProtVer bppProtocolVersion
     , cppMinPoolCost = bppMinPoolCost
     , cppCoinsPerUTxOByte = bppCoinsPerUTxOByte
     , cppCostModels = bppCostModels
@@ -766,6 +769,7 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
 
 downgradeConwayPParams ::
   forall f c.
+  HKDFunctor f =>
   ConwayPParams f (ConwayEra c) ->
   PParamsHKD f (BabbageEra c)
 downgradeConwayPParams ConwayPParams {..} =
@@ -782,7 +786,7 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppA0 = cppA0
     , bppRho = cppRho
     , bppTau = cppTau
-    , bppProtocolVersion = cppProtocolVersion
+    , bppProtocolVersion = fromNoUpdate @f @ProtVer cppProtocolVersion
     , bppMinPoolCost = cppMinPoolCost
     , bppCoinsPerUTxOByte = cppCoinsPerUTxOByte
     , bppCostModels = cppCostModels

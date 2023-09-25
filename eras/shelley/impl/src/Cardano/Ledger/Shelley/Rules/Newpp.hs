@@ -66,6 +66,7 @@ instance NoThunks (ShelleyNewppPredFailure era)
 instance
   ( EraGov era
   , GovState era ~ ShelleyGovState era
+  , ProtVerAtMost era 8
   ) =>
   STS (ShelleyNEWPP era)
   where
@@ -83,6 +84,7 @@ newPpTransition ::
   forall era.
   ( GovState era ~ ShelleyGovState era
   , EraGov era
+  , ProtVerAtMost era 8
   ) =>
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
@@ -114,6 +116,7 @@ newPpTransition = do
 updatePpup ::
   ( EraPParams era
   , GovState era ~ ShelleyGovState era
+  , ProtVerAtMost era 8
   ) =>
   GovState era ->
   PParams era ->

@@ -31,6 +31,7 @@ module Cardano.Ledger.Shelley.PParams (
   -- * JSON helpers
   shelleyCommonPParamsHKDPairs,
   shelleyCommonPParamsHKDPairsV6,
+  shelleyCommonPParamsHKDPairsV8,
 
   -- * Deprecated
   updatePParams,
@@ -240,6 +241,7 @@ instance
   , PParamsHKD Identity era ~ ShelleyPParams Identity era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
+  , ProtVerAtMost era 8
   ) =>
   ToJSON (ShelleyPParams Identity era)
   where
@@ -248,7 +250,7 @@ instance
 
 shelleyPParamsPairs ::
   forall era a.
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, KeyValue a) =>
+  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, KeyValue a) =>
   PParamsHKD Identity era ->
   [a]
 shelleyPParamsPairs pp =
@@ -416,6 +418,7 @@ instance
   , PParamsHKD StrictMaybe era ~ ShelleyPParams StrictMaybe era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
+  , ProtVerAtMost era 8
   ) =>
   ToJSON (ShelleyPParams StrictMaybe era)
   where
@@ -424,7 +427,7 @@ instance
 
 shelleyPParamsUpdatePairs ::
   forall era a.
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, KeyValue a) =>
+  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, KeyValue a) =>
   PParamsHKD StrictMaybe era ->
   [a]
 shelleyPParamsUpdatePairs pp =
@@ -434,13 +437,14 @@ shelleyPParamsUpdatePairs pp =
 
 shelleyPParamsHKDPairs ::
   forall f era.
-  (HKDFunctor f, EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
+  (HKDFunctor f, EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8) =>
   Proxy f ->
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
 shelleyPParamsHKDPairs px pp =
   shelleyCommonPParamsHKDPairs px pp
     ++ shelleyCommonPParamsHKDPairsV6 px pp
+    ++ shelleyCommonPParamsHKDPairsV8 px pp
     ++ [("minUTxOValue", hkdMap px (toJSON @Coin) (pp ^. hkdMinUTxOValueL @era @f))]
 
 -- | These are the fields that are common only up to major protocol version 6
@@ -453,6 +457,16 @@ shelleyCommonPParamsHKDPairsV6 ::
 shelleyCommonPParamsHKDPairsV6 px pp =
   [ ("decentralisationParam", hkdMap px (toJSON @UnitInterval) (pp ^. hkdDL @era @f))
   , ("extraEntropy", hkdMap px (toJSON @Nonce) (pp ^. hkdExtraEntropyL @era @f))
+  ]
+
+shelleyCommonPParamsHKDPairsV8 ::
+  forall f era.
+  (HKDFunctor f, EraPParams era, ProtVerAtMost era 8) =>
+  Proxy f ->
+  PParamsHKD f era ->
+  [(Key, HKD f Aeson.Value)]
+shelleyCommonPParamsHKDPairsV8 px pp =
+  [ ("protocolVersion", hkdMap px (toJSON @ProtVer) (pp ^. hkdProtocolVersionL @era @f))
   ]
 
 -- | These are the fields that are common across all eras
@@ -475,7 +489,6 @@ shelleyCommonPParamsHKDPairs px pp =
   , ("a0", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
   , ("rho", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
   , ("tau", hkdMap px (toJSON @UnitInterval) (pp ^. hkdTauL @era @f))
-  , ("protocolVersion", hkdMap px (toJSON @ProtVer) (pp ^. hkdProtocolVersionL @era @f))
   , ("minPoolCost", hkdMap px (toJSON @Coin) (pp ^. hkdMinPoolCostL @era @f))
   ]
 

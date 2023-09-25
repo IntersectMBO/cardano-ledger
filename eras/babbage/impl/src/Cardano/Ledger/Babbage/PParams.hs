@@ -313,7 +313,7 @@ instance Era era => FromCBOR (BabbagePParams Identity era) where
   fromCBOR = fromEraCBOR @era
 
 instance
-  (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era) =>
+  (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era, ProtVerAtMost era 8) =>
   ToJSON (BabbagePParams Identity era)
   where
   toJSON = object . babbagePParamsPairs
@@ -463,7 +463,7 @@ instance Era era => FromCBOR (BabbagePParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
 
 instance
-  (PParamsHKD StrictMaybe era ~ BabbagePParams StrictMaybe era, BabbageEraPParams era) =>
+  (PParamsHKD StrictMaybe era ~ BabbagePParams StrictMaybe era, BabbageEraPParams era, ProtVerAtMost era 8) =>
   ToJSON (BabbagePParams StrictMaybe era)
   where
   toJSON = object . babbagePParamsUpdatePairs
