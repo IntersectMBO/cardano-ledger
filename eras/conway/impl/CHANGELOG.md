@@ -1,6 +1,7 @@
 # Version history for `cardano-ledger-conway`
 
 ## 1.9.0.0
+
 * Add  `ConwayEraPParams era` constraint to `isCommitteeVotingAllowed` and `votingCommitteeThreshold`
 * Add `ToExpr` instance for:
   * `Voter`
@@ -13,8 +14,6 @@
   * `committeeAccepted`
   * `committeeAcceptedRatio`
 * Add `reCommitteeState` to `RatifyEnv`
-* Apply enacted `TreasuryWithdrawals` in `ConwayEPOCH` #3748
-  * Add lenses `ensWithdrawalsL` and `ensTreasuryL`
 * Add PredicateFailure for current treasury value mismatch in tx body in LEDGER #3749
 * Change `To/FromJSON` format for `ConwayGenesis`
 * Add `EraTransition` instance and `toConwayTransitionConfigPairs`.
@@ -91,6 +90,11 @@
 * Add `genNewConstitution`
 * Add `genGovActionStateFromAction`
 * Add `govActionGenerators`
+
+## 1.8.1.0
+
+* Apply enacted `TreasuryWithdrawals` in `ConwayEPOCH` #3748
+  * Add lenses `ensWithdrawalsL` and `ensTreasuryL`
 
 ## 1.8.0.0
 
