@@ -42,6 +42,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
   ConwayGovState (..),
   EnactState,
+  GovActionId,
   GovActionState (..),
   GovSnapshots (..),
   RatifyState (..),
@@ -113,6 +114,7 @@ import Control.State.Transition (
   TRC (..),
   TransitionRule,
   judgmentContext,
+  tellEvent,
   trans,
  )
 import Data.Foldable (Foldable (..))
@@ -121,6 +123,7 @@ import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as Seq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Lens.Micro (Lens', (%~), (&), (+~), (.~), (<>~), (^.))
@@ -128,6 +131,7 @@ import Lens.Micro (Lens', (%~), (&), (+~), (.~), (<>~), (^.))
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
   | SnapEvent (Event (EraRule "SNAP" era))
+  | RatifyEvent (RatifyEnv era) (EnactState era) (Set (GovActionId (EraCrypto era)))
 
 instance
   ( EraTxOut era
@@ -313,6 +317,7 @@ epochTransition = do
             }
         , ratSig
         )
+  tellEvent $ RatifyEvent ratEnv rsEnactState' rsRemoved
   let
     (epochState', rsEnactState) = applyEnactedWithdrawals es' rsEnactState'
     curSnaps = curGovSnapshots $ cgGovSnapshots govSt

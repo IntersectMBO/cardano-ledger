@@ -101,6 +101,11 @@ paid by the given transaction (both stake credential registration deposits and
 stake pool registration deposits) minus the sum of all refunds. It also contains
 the transaction hash.
 
+### `RatifyEvent RatifyEnv EnactState (Set (GovActionId))`
+
+This event only occurs on epoch boundaries, it contains the environment and the
+result of Ratifying.
+
 ### `RegisterPool poolID`
 
 This event happens for every new stake pool registration certificate.

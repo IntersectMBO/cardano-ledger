@@ -1,6 +1,7 @@
 # Version history for `cardano-ledger-conway`
 
 ## 1.9.0.0
+* Add new constructor `RatifyEvent` for `ConwayEpochEvent`
 * Add to `Ratify`:
   * `committeeAccepted`
   * `committeeAcceptedRatio`
