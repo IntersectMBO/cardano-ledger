@@ -52,7 +52,6 @@ import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
-  maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
@@ -112,7 +111,7 @@ data DataHash32
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
-  deriving (Eq, Generic, NoThunks)
+  deriving (Eq, Show, Generic, NoThunks)
 
 instance ToExpr DataHash32
 
@@ -456,12 +455,15 @@ mkTxOutCompact addr cAddr cVal mdh
 
 getAlonzoTxOutDataHash ::
   forall era.
-  HashAlgorithm (HASH (EraCrypto era)) =>
+  (HasCallStack, HashAlgorithm (HASH (EraCrypto era))) =>
   AlonzoTxOut era ->
   StrictMaybe (DataHash (EraCrypto era))
 getAlonzoTxOutDataHash = \case
   TxOutCompactDH' _ _ dh -> SJust dh
-  TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dh -> maybeToStrictMaybe $ decodeDataHash32 dh
+  TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dh ->
+    case decodeDataHash32 dh of
+      Nothing -> error $ "Impossible: Compacted a DataHash of non-standard size: " ++ show dh
+      Just dataHash -> SJust dataHash
   _ -> SNothing
 
 getAlonzoTxOutEitherAddr ::
