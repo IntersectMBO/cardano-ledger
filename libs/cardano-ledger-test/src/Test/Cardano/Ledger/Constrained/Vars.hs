@@ -21,7 +21,6 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, Network (..), ProtVer
 import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
 import Cardano.Ledger.CertState (CommitteeState, csCommitteeCredsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
-import Cardano.Ledger.Conway.Governance hiding (GovState, ensTreasuryL, ensWithdrawalsL)
 import Cardano.Ledger.Core (
   EraPParams,
   PParams,
