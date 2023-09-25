@@ -37,7 +37,7 @@ import Data.List (intercalate)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Universe (Shaped (..))
+import Data.Universe (Shape (..), Shaped (..))
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
@@ -98,7 +98,7 @@ instance Ord (Name era) where
   {-# SPECIALIZE instance Ord (Name (ConwayEra StandardCrypto)) #-}
   compare (Name (V n1 rep1 _)) (Name (V n2 rep2 _)) =
     case compare n1 n2 of
-      EQ -> compareRep rep1 rep2
+      EQ -> cmpIndex rep1 rep2
       other -> other
   {-# INLINE compare #-}
 
@@ -149,11 +149,6 @@ fieldToV (FConst _ _ _ _) = failT ["Cannot convert a FieldConst to a V"]
 
 data Payload era where
   Payload :: Rep era t -> t -> Access era s t -> Payload era
-
-instance Era era => Shaped (V era) (Rep era) where
-  shape (V n1 rep _) = Nary 0 [Esc (ListR CharR) n1, shape rep]
-
--- We are ignoring the Accessfield on purpose
 
 newtype Env era = Env (Map String (Payload era))
 
@@ -243,11 +238,11 @@ instance Eq (Proof e) where
   {-# INLINE (==) #-}
 
 instance Hashable (Rep e t) where
-  hashWithSalt s x = s `hashWithSalt` (shape x)
+  hashWithSalt s r = s `hashWithSalt` typeRepOf r
   {-# INLINE hashWithSalt #-}
 
 instance Eq (Rep e t) where
-  x == y = shape x == shape y
+  x == y = typeRepOf x == typeRepOf y
   {-# INLINE (==) #-}
 
 instance Hashable (V era t) where
