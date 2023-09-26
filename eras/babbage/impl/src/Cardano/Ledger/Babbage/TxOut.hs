@@ -94,6 +94,7 @@ import Cardano.Ledger.Binary (
   decodeFullAnnotator,
   decodeListLenOrIndef,
   decodeNestedCborBytes,
+  encodeListLen,
   encodeNestedCbor,
   getDecoderVersion,
   interns,
@@ -465,8 +466,8 @@ instance (EraScript era, Val (Value era)) => EncCBOR (BabbageTxOut era) where
   encCBOR = \case
     TxOutCompactRefScript addr cv d rs -> encodeTxOut addr cv d (SJust rs)
     TxOutCompactDatum addr cv d -> encodeTxOut addr cv (Datum d) SNothing
-    TxOutCompactDH addr cv dh -> encodeTxOut @era addr cv (DatumHash dh) SNothing
-    TxOutCompact addr cv -> encodeTxOut @era addr cv NoDatum SNothing
+    TxOutCompactDH addr cv dh -> encodeListLen 3 <> encCBOR addr <> encCBOR cv <> encCBOR dh
+    TxOutCompact addr cv -> encodeListLen 2 <> encCBOR addr <> encCBOR cv
 
 instance (EraScript era, Val (Value era)) => DecCBOR (BabbageTxOut era) where
   decCBOR = decodeBabbageTxOut fromCborBothAddr
