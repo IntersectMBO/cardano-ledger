@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.2.3.1
+
+*
+
 ## 1.2.3.0
 
 * Add `ToExpr` instance for `AllegraTxBody`

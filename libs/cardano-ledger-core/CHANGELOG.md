@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.7.0.1
+
+*
+
 ## 1.7.0.0
 
 * Require `ToExpr` for `EraTx` class

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.1.3.1
+
+*
+
 ## 1.1.3.0
 
 * Add `ToExpr` instance for:

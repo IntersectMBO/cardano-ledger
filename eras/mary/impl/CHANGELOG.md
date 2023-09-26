@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.3.4.1
+
+*
+
 ## 1.3.4.0
 
 * Add `ToExpr` instance for:
