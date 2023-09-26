@@ -18,7 +18,6 @@ import Cardano.Ledger.Alonzo.Scripts.Data (binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
-import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxOut (..),
   Datum (..),
@@ -27,6 +26,7 @@ import Cardano.Ledger.Babbage.TxBody (
   referenceInputs',
   spendInputs',
  )
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (BlocksMade),
   Globals (epochInfo),
@@ -140,13 +140,13 @@ scriptWitsNeeded' (Conway _) utxo txBody = regularScripts `Set.difference` inlin
   where
     theUtxo = UTxO utxo
     inputs = txBody ^. inputsTxBodyL
-    inlineScripts = keysSet $ refScripts inputs theUtxo
+    inlineScripts = keysSet $ getReferenceScripts theUtxo inputs
     regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
 scriptWitsNeeded' (Babbage _) utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
     inputs = spendInputs' txBody `Set.union` referenceInputs' txBody
-    inlineScripts = keysSet $ refScripts inputs theUtxo
+    inlineScripts = keysSet $ getReferenceScripts theUtxo inputs
     regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
 scriptWitsNeeded' (Alonzo _) utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)

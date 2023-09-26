@@ -381,8 +381,7 @@ instance
 
 utxoInductive ::
   forall era utxo.
-  ( EraTx era
-  , EraUTxO era
+  ( EraUTxO era
   , ShelleyEraTxBody era
   , ExactEra ShelleyEra era
   , STS (utxo era)

@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Tx ()
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
+import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Core
@@ -84,4 +84,3 @@ instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
 
 instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
-  txscripts _ = txscripts' . view witsTxL

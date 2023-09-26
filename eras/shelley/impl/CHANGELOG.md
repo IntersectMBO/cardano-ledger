@@ -1,10 +1,12 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.6.2.1
+## 1.7.0.0
 
-*
+* Rename `validateFailedScripts` to `validateFailedNativeScripts` and change its
+  arguments.
+* Change type of `validateMissingScripts`
 
-## 1.6.2.0
+## 1.6.1.0
 
 * Add `ToExpr` instance for:
   * `Update`

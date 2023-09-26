@@ -82,7 +82,7 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
@@ -217,13 +217,13 @@ missingRequiredDatums ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   ) =>
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   UTxO era ->
   Tx era ->
   Test (AlonzoUtxowPredFailure era)
-missingRequiredDatums scriptWits utxo tx = do
+missingRequiredDatums utxo tx = do
   let txBody = tx ^. bodyTxL
-      (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptWits
+      scriptsProvided = getScriptsProvided utxo tx
+      (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptsProvided
       txHashes = domain (unTxDats $ tx ^. witsTxL . datsTxWitsL)
       unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
       allowedSupplementalDataHashes = getSupplementalDataHashes utxo txBody
@@ -248,20 +248,19 @@ missingRequiredDatums scriptWits utxo tx = do
 hasExactSetOfRedeemers ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   ) =>
-  UTxO era ->
   Tx era ->
+  ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
   Test (AlonzoUtxowPredFailure era)
-hasExactSetOfRedeemers utxo tx (AlonzoScriptsNeeded scriptsNeeded) = do
+hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) = do
   let txBody = tx ^. bodyTxL
       redeemersNeeded =
         [ (rp, (sp, sh))
         | (sp, sh) <- scriptsNeeded
         , SJust rp <- [rdptr @era txBody sp]
-        , Just script <- [Map.lookup sh (txscripts utxo tx)]
+        , Just script <- [Map.lookup sh scriptsProvided]
         , (not . isNativeScript) script
         ]
       (extraRdmrs, missingRdmrs) =
@@ -342,21 +341,21 @@ alonzoStyleWitness = do
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses @era tx
+      scriptsProvided = getScriptsProvided utxo tx
 
   -- check scripts
   {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
-  runTestOnSignal $ Shelley.validateFailedScripts tx
+  runTestOnSignal $ Shelley.validateFailedNativeScripts scriptsProvided tx
 
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   let scriptsNeeded = getScriptsNeeded utxo txBody
       scriptsHashesNeeded = getScriptsHashesNeeded scriptsNeeded
       shelleyScriptsNeeded = ShelleyScriptsNeeded scriptsHashesNeeded
-      scriptsReceived = Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
-  runTest $ Shelley.validateMissingScripts pp shelleyScriptsNeeded scriptsReceived
+  runTest $ Shelley.validateMissingScripts pp shelleyScriptsNeeded scriptsProvided
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}
-  runTest $ missingRequiredDatums (tx ^. witsTxL . scriptTxWitsL) utxo tx
+  runTest $ missingRequiredDatums utxo tx
 
   {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx -}
   -- This is incorporated into missingRequiredDatums, see the
@@ -364,7 +363,7 @@ alonzoStyleWitness = do
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx scriptsNeeded
+  runTest $ hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txBodyHash ⟧_σ                -}

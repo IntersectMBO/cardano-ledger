@@ -54,7 +54,7 @@ library
         containers,
         hashable,
         cardano-ledger-shelley-test >=1.1,
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.6 && <1.7,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.6 && <1.8,
         cardano-strict-containers,
         microlens,
         mtl,

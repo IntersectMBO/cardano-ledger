@@ -19,6 +19,7 @@ module Cardano.Ledger.UTxO (
   -- * Primitives
   UTxO (..),
   EraUTxO (..),
+  ScriptsProvided (..),
 
   -- * Functions
   txins,
@@ -200,7 +201,21 @@ getScriptHash :: Addr c -> Maybe (ScriptHash c)
 getScriptHash (Addr _ (ScriptHashObj hs) _) = Just hs
 getScriptHash _ = Nothing
 
-class EraTxBody era => EraUTxO era where
+-- | The only reason it is a newtype instead of just a Map is becuase for later eras is
+-- expensive to compute the actual map, so we want to use the type safety guidance to
+-- avoid redundant work.
+newtype ScriptsProvided era = ScriptsProvided
+  { unScriptsProvided :: Map.Map (ScriptHash (EraCrypto era)) (Script era)
+  }
+  deriving (Generic)
+
+deriving instance (Era era, Eq (Script era)) => Eq (ScriptsProvided era)
+deriving instance (Era era, Ord (Script era)) => Ord (ScriptsProvided era)
+deriving instance (Era era, Show (Script era)) => Show (ScriptsProvided era)
+deriving instance (Era era, ToExpr (Script era)) => ToExpr (ScriptsProvided era)
+deriving instance (Era era, NFData (Script era)) => NFData (ScriptsProvided era)
+
+class EraTx era => EraUTxO era where
   -- | A customizable type on per era basis for the information required to find all
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
@@ -222,6 +237,16 @@ class EraTxBody era => EraUTxO era where
     (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
     TxBody era ->
     Value era
+
+  -- | Initial eras will look into witness set to find all of the available scripts, but
+  -- starting with Babbage we can look for available scripts in the UTxO using reference
+  -- inputs.
+  getScriptsProvided ::
+    -- | For some era it is necessary to look into the UTxO to find all of the available
+    -- scripts for the transaction
+    UTxO era ->
+    Tx era ->
+    ScriptsProvided era
 
   -- | Produce all the information required for figuring out which scripts are required
   -- for the transaction to be valid, once those scripts are evaluated

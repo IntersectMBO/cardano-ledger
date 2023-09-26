@@ -116,4 +116,5 @@ evalBalanceTxBody ::
   -- | The difference between what the transaction consumes and what it produces.
   Value era
 evalBalanceTxBody pp lookupKeyRefund lookupDRepRefund isRegPoolId utxo txBody =
-  getConsumedValue pp lookupKeyRefund lookupDRepRefund utxo txBody <-> getProducedValue pp isRegPoolId txBody
+  getConsumedValue pp lookupKeyRefund lookupDRepRefund utxo txBody
+    <-> getProducedValue pp isRegPoolId txBody

@@ -16,7 +16,10 @@ module Cardano.Ledger.Babbage (
   BabbageTxBody,
   AlonzoScript,
   AlonzoTxAuxData,
+  -- | All of these were defined in a different module.
   getDatumBabbage,
+  babbageTxScripts,
+  refScripts,
 )
 where
 
@@ -34,20 +37,25 @@ import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Transition ()
 import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Babbage.Tx (
-  babbageTxScripts,
- )
+import Cardano.Ledger.Babbage.Tx ()
 import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody,
   BabbageTxOut,
  )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
-import Cardano.Ledger.Babbage.UTxO (getBabbageSpendingDatum)
+import Cardano.Ledger.Babbage.UTxO (
+  getBabbageScriptsProvided,
+  getBabbageSpendingDatum,
+  getReferenceScripts,
+ )
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.UTxO (ScriptsProvided (..), UTxO (..))
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 
 type Babbage = BabbageEra StandardCrypto
 
@@ -65,7 +73,6 @@ instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
 
 instance (Crypto c, EraPlutusContext 'PlutusV2 (BabbageEra c)) => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
-  txscripts = babbageTxScripts
 
 -- | Extract binary data either directly from the `Tx` as an "inline datum"
 -- or look it up in the witnesses by the hash.
@@ -79,3 +86,21 @@ getDatumBabbage ::
   Maybe (Data era)
 getDatumBabbage tx utxo = getBabbageSpendingDatum utxo tx
 {-# DEPRECATED getDatumBabbage "In favor of `getBabbageSpendingDatum`" #-}
+
+babbageTxScripts ::
+  ( EraTx era
+  , BabbageEraTxBody era
+  ) =>
+  UTxO era ->
+  Tx era ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era)
+babbageTxScripts utxo = unScriptsProvided . getBabbageScriptsProvided utxo
+{-# DEPRECATED babbageTxScripts "In favor of `getScriptsProvided`" #-}
+
+refScripts ::
+  BabbageEraTxOut era =>
+  Set (TxIn (EraCrypto era)) ->
+  UTxO era ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era)
+refScripts = flip getReferenceScripts
+{-# DEPRECATED refScripts "In favor of `getReferenceScripts`" #-}

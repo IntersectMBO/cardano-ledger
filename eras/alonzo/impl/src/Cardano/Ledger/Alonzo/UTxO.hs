@@ -39,6 +39,7 @@ import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
+  ScriptsProvided (..),
   UTxO (..),
   getScriptHash,
  )
@@ -64,6 +65,8 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
   getConsumedValue pp lookupKeyDeposit _ = getConsumedMaryValue pp lookupKeyDeposit
 
   getProducedValue = shelleyProducedValue
+
+  getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
   getScriptsNeeded = getAlonzoScriptsNeeded
 
@@ -145,16 +148,16 @@ getInputDataHashesTxBody ::
   (EraTxBody era, AlonzoEraTxOut era, EraScript era) =>
   UTxO era ->
   TxBody era ->
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
+  ScriptsProvided era ->
   (Set.Set (DataHash (EraCrypto era)), Set.Set (TxIn (EraCrypto era)))
-getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
-  Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
+getInputDataHashesTxBody (UTxO mp) txBody (ScriptsProvided scriptsProvided) =
+  Map.foldlWithKey' accum (Set.empty, Set.empty) spendUTxO
   where
     spendInputs = txBody ^. inputsTxBodyL
-    smallUtxo = eval (spendInputs ◁ mp)
+    spendUTxO = eval (spendInputs ◁ mp)
     accum ans@(!hashSet, !inputSet) txIn txOut =
       let addr = txOut ^. addrTxOutL
-          isTwoPhaseScriptAddress = isTwoPhaseScriptAddressFromMap hashScriptMap addr
+          isTwoPhaseScriptAddress = isTwoPhaseScriptAddressFromMap scriptsProvided addr
        in case txOut ^. datumTxOutF of
             NoDatum
               | isTwoPhaseScriptAddress -> (hashSet, Set.insert txIn inputSet)

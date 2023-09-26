@@ -142,8 +142,7 @@ data AllegraUtxoEvent era
 -- | The UTxO transition rule for the Allegra era.
 utxoTransition ::
   forall era.
-  ( EraTx era
-  , EraUTxO era
+  ( EraUTxO era
   , AllegraEraTxBody era
   , STS (AllegraUTXO era)
   , Tx era ~ ShelleyTx era

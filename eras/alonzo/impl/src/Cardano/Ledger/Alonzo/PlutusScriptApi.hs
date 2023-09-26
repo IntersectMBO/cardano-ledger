@@ -54,7 +54,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Monad (guard)
@@ -142,8 +142,7 @@ knownToNotBe1Phase scriptsAvailable (sp, sh) = do
 --     if that is not the case, a PredicateFailure is raised in the Utxos rule.
 collectTwoPhaseScriptInputs ::
   forall era.
-  ( EraTx era
-  , MaryEraTxBody era
+  ( MaryEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -167,8 +166,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
 
 collectPlutusScriptsWithContext ::
   forall era.
-  ( EraTx era
-  , MaryEraTxBody era
+  ( MaryEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -202,10 +200,10 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
             (Right [])
   where
     costModels = costModelsValid $ pp ^. ppCostModelsL
-    scriptsAvailable = txscripts utxo tx
+    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded' = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededAndConfirmedToBePlutus =
-      mapMaybe (knownToNotBe1Phase scriptsAvailable) scriptsNeeded'
+      mapMaybe (knownToNotBe1Phase scriptsProvided) scriptsNeeded'
     getScriptWithRedeemer (sp, script) =
       case indexedRdmrs tx sp of
         Just (d, eu) -> Right (script, sp, d, eu)
@@ -291,8 +289,7 @@ evalPlutusScripts pv tx (plutusWithContext : rest) =
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (TxCert)
 -- See additional comments about 'scriptsNeededFromBody' below.
 scriptsNeeded ::
-  ( EraTx era
-  , EraUTxO era
+  ( EraUTxO era
   , ScriptsNeeded era ~ [(ScriptPurpose (EraCrypto era), ScriptHash (EraCrypto era))]
   ) =>
   UTxO era ->

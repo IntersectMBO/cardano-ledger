@@ -20,9 +20,11 @@ import Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsNeeded,
  )
 import Cardano.Ledger.Babbage.UTxO (
+  getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
  )
+
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core (
   Era (..),
@@ -130,6 +132,8 @@ instance Crypto c => EraUTxO (ConwayEra c) where
   getConsumedValue = conwayConsumedValue
 
   getProducedValue = conwayProducedValue
+
+  getScriptsProvided = getBabbageScriptsProvided
 
   getScriptsNeeded = getConwayScriptsNeeded
 

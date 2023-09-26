@@ -25,15 +25,33 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.Alonzo.UTxO (getInputDataHashesTxBody)
 import Cardano.Ledger.Api (setMinFeeTx)
-import Cardano.Ledger.Babbage.Tx (refScripts)
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
-import Cardano.Ledger.Core (EraRule, EraScript (..), EraTx (..), EraTxBody (..), EraTxOut (..), Value, bodyTxL, coinTxOutL, feeTxBodyL)
+import Cardano.Ledger.Core (
+  EraRule,
+  EraScript (..),
+  EraTx (..),
+  EraTxBody (..),
+  EraTxOut (..),
+  Value,
+  bodyTxL,
+  coinTxOutL,
+  feeTxBodyL,
+ )
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash (..))
-import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), Hash, KeyHash, KeyRole (..), asWitness, coerceKeyRole)
+import Cardano.Ledger.Keys (
+  GenDelegPair (..),
+  GenDelegs (..),
+  Hash,
+  KeyHash,
+  KeyRole (..),
+  asWitness,
+  coerceKeyRole,
+ )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Mary.Core (MaryEraTxBody)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
@@ -45,7 +63,7 @@ import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded, wits
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (EraUTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
 import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
@@ -207,7 +225,7 @@ getPlutusDataHashes ::
   Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
   Set (DataHash (EraCrypto era))
 getPlutusDataHashes ut (TxBodyF _ txbodyV) m =
-  fst $ getInputDataHashesTxBody (liftUTxO ut) txbodyV (Map.map unScriptF m)
+  fst $ getInputDataHashesTxBody (liftUTxO ut) txbodyV (ScriptsProvided (Map.map unScriptF m))
 
 bootWitsT ::
   forall era.
@@ -424,12 +442,13 @@ adjustNeededByRefScripts proof inps refinps ut neededhashes = case whichTxOut pr
   TxOutShelleyToMary -> neededhashes
   TxOutAlonzoToAlonzo -> neededhashes
   TxOutBabbageToConway ->
-    Set.difference
-      neededhashes
-      ( Set.union
-          (Map.keysSet (refScripts inps (liftUTxO ut)))
-          (Map.keysSet (refScripts refinps (liftUTxO ut)))
-      )
+    let spendUtxo = liftUTxO ut
+     in Set.difference
+          neededhashes
+          ( Set.union
+              (Map.keysSet (getReferenceScripts spendUtxo inps))
+              (Map.keysSet (getReferenceScripts spendUtxo refinps))
+          )
 
 -- ==============================================================
 

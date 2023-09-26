@@ -9,6 +9,7 @@
 * Deprecate `getAllowedSupplimentalDataHashes` in favor of `getSupplementalDataHashes`
 * Rename `NonOutputSupplimentaryDatums` to `NotAllowedSupplementalDatums`
 * Remove unused `isTwoPhaseScriptAddress`
+* Change arguments to `hasExactSetOfRedeemers`
 
 ## 1.4.2.0
 

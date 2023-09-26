@@ -37,11 +37,11 @@ import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
-import Cardano.Ledger.Babbage.Tx (refScripts)
 import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxBody (..),
   BabbageEraTxOut (..),
  )
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase, quorum, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -64,7 +64,7 @@ import Cardano.Ledger.Shelley.Rules (
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -200,15 +200,14 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
 validateFailedBabbageScripts ::
   forall era.
   ( EraTx era
-  , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   ) =>
   Tx era ->
-  UTxO era ->
+  ScriptsProvided era ->
   Set (ScriptHash (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
-validateFailedBabbageScripts tx utxo neededHashes =
-  let phase1Map = getPhase1 (txscripts utxo tx)
+validateFailedBabbageScripts tx scriptsProvided neededHashes =
+  let phase1Map = getPhase1 (unScriptsProvided scriptsProvided)
       failedScripts =
         Map.filterWithKey
           ( \hs (script, phased) ->
@@ -289,29 +288,29 @@ babbageUtxowTransition = do
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses @era tx
-      hashScriptMap = txscripts utxo tx
       inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
 
   -- check scripts
   {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   let scriptsNeeded = getScriptsNeeded utxo txBody
+      scriptsProvided = getScriptsProvided utxo tx
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
   -- CHANGED In BABBAGE txscripts depends on UTxO
-  runTest $ validateFailedBabbageScripts tx utxo scriptHashesNeeded
+  runTest $ validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
 
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   let sReceived = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
-      sRefs = Map.keysSet $ refScripts inputs utxo
+      sRefs = Map.keysSet $ getReferenceScripts utxo inputs
   runTest $ babbageMissingScripts pp scriptHashesNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
-  runTest $ missingRequiredDatums hashScriptMap utxo tx
+  runTest $ missingRequiredDatums utxo tx
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx scriptsNeeded
+  runTest $ hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
 
   -- check VKey witnesses
   -- let txbodyHash = hashAnnotated @(Crypto era) txbody

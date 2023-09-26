@@ -191,7 +191,6 @@ utxosTransition =
 scriptsTransition ::
   ( STS sts
   , Monad m
-  , EraTx era
   , Script era ~ AlonzoScript era
   , MaryEraTxBody era
   , AlonzoEraTxWits era
