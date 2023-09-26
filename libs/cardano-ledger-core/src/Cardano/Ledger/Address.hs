@@ -85,14 +85,14 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
   normalizePtr,
  )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, unless, when)
-import Control.Monad.Trans.Fail (runFail)
+import Control.Monad.Trans.Fail (runFail, FailT)
 import Control.Monad.Trans.State (StateT, evalStateT, get, modify', state)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -123,6 +123,7 @@ import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Numeric (showIntAtBase)
 import Quiet (Quiet (Quiet))
+import Data.Functor.Identity
 
 mkRwdAcnt ::
   Network ->
@@ -458,7 +459,8 @@ fromCborBothAddr = do
         addr <- decodeAddrStateAllowLeftoverT False sbs
         pure (addr, UnsafeCompactAddr sbs)
     {-# INLINE decodeAddrRigorous #-}
-{-# INLINE fromCborBothAddr #-}
+{-# INLINEABLE fromCborBothAddr #-}
+{-# SPECIALIZE fromCborBothAddr :: Decoder s (Addr StandardCrypto, CompactAddr StandardCrypto )#-}
 
 -- | Prior to Babbage era we did not check if a binary blob representing an address was
 -- fully consumed, so unfortunately we must preserve this behavior. However, we do not
@@ -474,6 +476,7 @@ fromCborBackwardsBothAddr = do
     let sbsCropped = SBS.toShort $ BS.take bytesConsumed $ SBS.fromShort sbs
     pure (addr, UnsafeCompactAddr sbsCropped)
 {-# INLINE fromCborBackwardsBothAddr #-}
+{-# SPECIALIZE fromCborBackwardsBothAddr :: Decoder s (Addr StandardCrypto, CompactAddr StandardCrypto) #-}
 
 class AddressBuffer b where
   bufLength :: b -> Int
@@ -554,7 +557,8 @@ decodeAddrEither ::
   BS.ByteString ->
   Either String (Addr c)
 decodeAddrEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
-{-# INLINE decodeAddrEither #-}
+{-# INLINEABLE decodeAddrEither #-}
+{-# SPECIALIZE decodeAddrEither :: BS.ByteString -> Either String (Addr StandardCrypto) #-}
 
 decodeAddrShortEither ::
   forall c.
@@ -562,7 +566,8 @@ decodeAddrShortEither ::
   ShortByteString ->
   Either String (Addr c)
 decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
-{-# INLINE decodeAddrShortEither #-}
+{-# INLINEABLE decodeAddrShortEither #-}
+{-# SPECIALIZE decodeAddrShortEither :: ShortByteString -> Either String (Addr StandardCrypto) #-}
 
 decodeAddrShort ::
   forall c m.
@@ -570,7 +575,8 @@ decodeAddrShort ::
   ShortByteString ->
   m (Addr c)
 decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
-{-# INLINE decodeAddrShort #-}
+{-# INLINEABLE decodeAddrShort #-}
+{-# SPECIALIZE decodeAddrShort :: ShortByteString -> FailT String Identity (Addr StandardCrypto) #-}
 
 decodeAddr ::
   forall c m.
@@ -578,7 +584,8 @@ decodeAddr ::
   BS.ByteString ->
   m (Addr c)
 decodeAddr sbs = evalStateT (decodeAddrStateT sbs) 0
-{-# INLINE decodeAddr #-}
+{-# INLINEABLE decodeAddr #-}
+{-# SPECIALIZE decodeAddr :: BS.ByteString -> FailT String Identity (Addr StandardCrypto) #-}
 
 -- | While decoding an Addr the header (the first byte in the buffer) is
 -- expected to be in a certain format. Here are the meaning of all the bits:
@@ -648,7 +655,9 @@ decodeAddrStateAllowLeftoverT isLenient buf = do
   unless isLenient $
     ensureBufIsConsumed "Addr" buf
   pure addr
-{-# INLINE decodeAddrStateAllowLeftoverT #-}
+{-# SPECIALIZE decodeAddrStateAllowLeftoverT :: Bool -> ShortByteString -> StateT Int (FailT String Identity) (Addr StandardCrypto) #-}
+{-# SPECIALIZE decodeAddrStateAllowLeftoverT :: Bool -> BS.ByteString -> StateT Int (FailT String Identity) (Addr StandardCrypto) #-}
+
 
 -- | Checks that the current offset is exactly at the end of the buffer.
 ensureBufIsConsumed ::
@@ -665,7 +674,8 @@ ensureBufIsConsumed name buf = do
   unless (lastOffset == len) $
     failDecoding name $
       "Left over bytes: " ++ show (len - lastOffset)
-{-# INLINE ensureBufIsConsumed #-}
+{-# SPECIALIZE ensureBufIsConsumed :: String -> ShortByteString -> StateT Int (FailT String Identity) () #-}
+{-# SPECIALIZE ensureBufIsConsumed :: String -> BS.ByteString -> StateT Int (FailT String Identity) () #-}
 
 -- | This decoder assumes the whole `ShortByteString` is occupied by the `BootstrapAddress`
 decodeBootstrapAddress ::
@@ -677,7 +687,9 @@ decodeBootstrapAddress buf =
   case decodeFull' byronProtVer $ bufToByteString buf of
     Left e -> fail $ show e
     Right addr -> BootstrapAddress addr <$ modify' (+ bufLength buf)
-{-# INLINE decodeBootstrapAddress #-}
+{-# SPECIALIZE decodeBootstrapAddress :: ShortByteString -> StateT Int (FailT String Identity) (BootstrapAddress StandardCrypto) #-}
+{-# SPECIALIZE decodeBootstrapAddress :: BS.ByteString -> StateT Int (FailT String Identity) (BootstrapAddress StandardCrypto) #-}
+
 
 decodePaymentCredential ::
   (Crypto c, MonadFail m, AddressBuffer b) =>
@@ -687,7 +699,8 @@ decodePaymentCredential ::
 decodePaymentCredential header buf
   | headerIsPaymentScript header = ScriptHashObj <$> decodeScriptHash buf
   | otherwise = KeyHashObj <$> decodeKeyHash buf
-{-# INLINE decodePaymentCredential #-}
+{-# SPECIALIZE decodePaymentCredential :: Header -> ShortByteString -> StateT Int (FailT String Identity) (PaymentCredential StandardCrypto) #-}
+{-# SPECIALIZE decodePaymentCredential :: Header -> BS.ByteString -> StateT Int (FailT String Identity) (PaymentCredential StandardCrypto) #-}
 
 decodeStakeReference ::
   (Crypto c, MonadFail m, AddressBuffer b) =>
@@ -704,7 +717,8 @@ decodeStakeReference isLenientPtrDecoder header buf
       if headerIsEnterpriseAddr header
         then pure StakeRefNull
         else StakeRefPtr <$> if isLenientPtrDecoder then decodePtrLenient buf else decodePtr buf
-{-# INLINE decodeStakeReference #-}
+{-# SPECIALIZE decodeStakeReference :: Bool -> Header -> ShortByteString -> StateT Int (FailT String Identity) (StakeReference StandardCrypto) #-}
+{-# SPECIALIZE decodeStakeReference :: Bool -> Header -> BS.ByteString -> StateT Int (FailT String Identity) (StakeReference StandardCrypto) #-}
 
 decodeKeyHash ::
   (Crypto c, MonadFail m, AddressBuffer b) =>
@@ -762,7 +776,8 @@ decodePtrLenient buf =
     <$> (SlotNo <$> decodeVariableLengthWord64 "SlotNo" buf)
     <*> (TxIx <$> decodeVariableLengthWord64 "TxIx" buf)
     <*> (CertIx <$> decodeVariableLengthWord64 "CertIx" buf)
-{-# INLINE decodePtrLenient #-}
+{-# SPECIALIZE decodePtrLenient :: ShortByteString -> StateT Int (FailT String Identity) Ptr #-}
+{-# SPECIALIZE decodePtrLenient :: BS.ByteString -> StateT Int (FailT String Identity) Ptr #-}
 
 guardLength ::
   (MonadFail m, AddressBuffer b) =>
@@ -775,7 +790,6 @@ guardLength name expectedLength buf = do
   offset <- get
   when (offset > bufLength buf - expectedLength) $
     failDecoding name "Not enough bytes for decoding"
-{-# INLINE guardLength #-}
 
 -- | Decode a variable length integral value that is encoded with 7 bits of data
 -- and the most significant bit (MSB), the 8th bit is set whenever there are
@@ -799,11 +813,10 @@ decode7BitVarLength name buf cont !acc = do
   if b8 `testBit` 7
     then cont (acc `shiftL` 7 .|. fromIntegral (b8 `clearBit` 7))
     else pure (acc `shiftL` 7 .|. fromIntegral b8)
-{-# INLINE decode7BitVarLength #-}
 
 failDecoding :: MonadFail m => String -> String -> m a
 failDecoding name msg = fail $ "Decoding " ++ name ++ ": " ++ msg
-{-# NOINLINE failDecoding #-}
+{-# INLINE failDecoding #-}
 
 decodeVariableLengthWord16 ::
   forall m b.
@@ -823,7 +836,6 @@ decodeVariableLengthWord16 name buf = do
           failDecoding name "More than 16bits was supplied"
         pure res
   d7 (d7 d7last) 0
-{-# INLINE decodeVariableLengthWord16 #-}
 
 decodeVariableLengthWord32 ::
   forall m b.
@@ -845,7 +857,6 @@ decodeVariableLengthWord32 name buf = do
         pure res
       {-# INLINE d7last #-}
   d7 (d7 (d7 (d7 d7last))) 0
-{-# INLINE decodeVariableLengthWord32 #-}
 
 -- | This decoder is here only with the purpose of preserving old buggy behavior. Should
 -- not be used for anything else.
@@ -856,7 +867,6 @@ decodeVariableLengthWord64 ::
   b ->
   StateT Int m Word64
 decodeVariableLengthWord64 name buf = fix (decode7BitVarLength name buf) 0
-{-# INLINE decodeVariableLengthWord64 #-}
 
 ------------------------------------------------------------------------------------------
 -- Reward Account Deserializer -----------------------------------------------------------
@@ -868,13 +878,13 @@ decodeRewardAcnt ::
   b ->
   m (RewardAcnt c)
 decodeRewardAcnt buf = evalStateT (decodeRewardAccountT buf) 0
-{-# INLINE decodeRewardAcnt #-}
+{-# INLINEABLE decodeRewardAcnt #-}
 
 fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
 fromCborRewardAcnt = do
   sbs :: ShortByteString <- decCBOR
   decodeRewardAcnt @c sbs
-{-# INLINE fromCborRewardAcnt #-}
+{-# INLINEABLE fromCborRewardAcnt #-}
 
 headerIsRewardAccount :: Header -> Bool
 headerIsRewardAccount header = header .&. 0b11101110 == 0b11100000
