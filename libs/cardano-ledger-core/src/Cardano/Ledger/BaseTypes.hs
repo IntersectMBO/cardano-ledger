@@ -717,6 +717,7 @@ txIxToInt (TxIx w16) = fromIntegral w16
 
 txIxFromIntegral :: Integral a => a -> Maybe TxIx
 txIxFromIntegral = fmap (TxIx . fromIntegral) . word16FromInteger . toInteger
+{-# INLINE txIxFromIntegral #-}
 
 -- | Construct a `TxIx` from an arbitrary precision `Integer`. Throws an error for
 -- values out of range. Make sure to use it only for testing.
@@ -741,6 +742,7 @@ certIxToInt (CertIx w16) = fromIntegral w16
 
 certIxFromIntegral :: Integral a => a -> Maybe CertIx
 certIxFromIntegral = fmap (CertIx . fromIntegral) . word16FromInteger . toInteger
+{-# INLINE certIxFromIntegral #-}
 
 -- | Construct a `CertIx` from an arbitrary precision `Integer`. Throws an error for
 -- values out of range. Make sure to use it only for testing.
@@ -753,6 +755,7 @@ word16FromInteger :: Integer -> Maybe Word16
 word16FromInteger i
   | i < fromIntegral (minBound :: Word16) || i > fromIntegral (maxBound :: Word16) = Nothing
   | otherwise = Just (fromInteger i)
+{-# INLINE word16FromInteger #-}
 
 -- =================================
 

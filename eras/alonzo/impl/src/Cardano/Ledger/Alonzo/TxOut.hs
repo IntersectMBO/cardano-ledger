@@ -133,6 +133,7 @@ decodeAddress28 stakeRef (Addr28Extra a b c d) = do
         hashFromPackedBytes $
           PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
   pure $! Addr network paymentCred (StakeRefBase stakeRef)
+{-# INLINE decodeAddress28 #-}
 
 data AlonzoTxOut era
   = TxOutCompact'
