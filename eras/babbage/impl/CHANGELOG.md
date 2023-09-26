@@ -5,6 +5,7 @@
 * Switch ot using `AlonzoEraUTxO` in rules
 * Deprecate `getDatumBabbage` in favor of `getBabbageSpendingDatum`
 * Add `getBabbageSupplementalDataHashes`
+* Remove unused `isTwoPhaseScriptAddress`
 
 ## 1.4.5.0
 

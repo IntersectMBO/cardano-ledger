@@ -8,6 +8,7 @@
 * Deprecate `getSpendingTxIn` in favor of `getAlonzoSpendingTxIn`
 * Deprecate `getAllowedSupplimentalDataHashes` in favor of `getSupplementalDataHashes`
 * Rename `NonOutputSupplimentaryDatums` to `NotAllowedSupplementalDatums`
+* Remove unused `isTwoPhaseScriptAddress`
 
 ## 1.4.2.0
 

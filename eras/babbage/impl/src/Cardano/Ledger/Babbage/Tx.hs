@@ -34,7 +34,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Arrow (left)
 import Control.SetAlgebra (eval, (◁))
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (SJust, SNothing), strictMaybeToMaybe)
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
