@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
   BabbageUtxoPredFailure (..),
@@ -57,12 +57,10 @@ import Lens.Micro
 
 instance
   ( AlonzoEraTx era
-  , ConwayEraPParams era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
-  , EraTxOut era
+  , ConwayEraPParams era
   , EraGov era
-  , EraTxCert era
-  , EraUTxO era
   , ExtendedUTxO era
   , EraPlutusContext 'PlutusV1 era
   , GovState era ~ ConwayGovState era
@@ -85,13 +83,11 @@ instance
 
 instance
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , ConwayEraPParams era
   , EraGov era
   , EraPlutusContext 'PlutusV1 era
-  , EraTxOut era
-  , EraTxCert era
-  , EraUTxO era
   , ExtendedUTxO era
   , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , GovState era ~ ConwayGovState era
@@ -110,9 +106,11 @@ instance
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , ConwayEraTxBody era
+  , ConwayEraPParams era
   , EraGov era
   , EraPlutusContext 'PlutusV1 era
-  , EraUTxO era
   , ExtendedUTxO era
   , GovState era ~ ConwayGovState era
   , Script era ~ AlonzoScript era
@@ -120,8 +118,6 @@ utxosTransition ::
   , Signal (ConwayUTXOS era) ~ Tx era
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , ConwayEraTxBody era
-  , ConwayEraPParams era
   ) =>
   TransitionRule (ConwayUTXOS era)
 utxosTransition =
@@ -145,14 +141,14 @@ updateConwayUTxOState pp u txb depositChange gov =
 conwayEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
+  , ConwayEraTxBody era
   , EraPlutusContext 'PlutusV1 era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
   , STS (ConwayUTXOS era)
-  , ConwayEraTxBody era
   ) =>
   TransitionRule (ConwayUTXOS era)
 conwayEvalScriptsTxValid = do

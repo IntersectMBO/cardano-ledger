@@ -25,7 +25,6 @@ where
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Scripts.Data ()
@@ -97,4 +96,3 @@ instance Crypto c => ExtendedUTxO (AlonzoEra c) where
       | txOut <- toList $ txBody ^. outputsTxBodyL
       , SJust dh <- [txOut ^. dataHashTxOutL]
       ]
-  getDatum = getDatumAlonzo

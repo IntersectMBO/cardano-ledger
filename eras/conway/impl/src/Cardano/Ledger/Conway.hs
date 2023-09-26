@@ -19,7 +19,7 @@ where
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO (..))
-import Cardano.Ledger.Babbage.Tx (babbageTxScripts, getDatumBabbage)
+import Cardano.Ledger.Babbage.Tx (babbageTxScripts)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Conway.Core
@@ -84,4 +84,3 @@ instance
       newOuts = map sizedValue $ toList $ txBody ^. allSizedOutputsTxBodyF
       referencedOuts = Map.elems $ Map.restrictKeys utxo (txBody ^. referenceInputsTxBodyL)
       outs = newOuts <> referencedOuts
-  getDatum = getDatumBabbage

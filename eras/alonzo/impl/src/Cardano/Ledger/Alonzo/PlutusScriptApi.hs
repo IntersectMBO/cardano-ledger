@@ -42,9 +42,14 @@ import Cardano.Ledger.Alonzo.TxInfo (
   runPlutusScript,
   valContext,
  )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDats)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), StrictMaybe (..), natVersion)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (getSpendingDatum),
+  AlonzoScriptsNeeded (..),
+  getAlonzoSpendingDatum,
+  getAlonzoSpendingTxIn,
+ )
+import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
@@ -70,25 +75,19 @@ import NoThunks.Class (NoThunks)
 
 -- | Only the Spending ScriptPurpose contains TxIn
 getSpendingTxIn :: ScriptPurpose era -> Maybe (TxIn (EraCrypto era))
-getSpendingTxIn = \case
-  Spending txin -> Just txin
-  Minting _policyid -> Nothing
-  Rewarding _rewaccnt -> Nothing
-  Certifying _dcert -> Nothing
+getSpendingTxIn = getAlonzoSpendingTxIn
+{-# DEPRECATED getSpendingTxIn "In favor of `getAlonzoSpendingTxIn`" #-}
 
 -- | Get the Data associated with a ScriptPurpose. Only the Spending
---   ScriptPurpose contains Data. The null list is returned for the other kinds.
+--   ScriptPurpose contains Data. Nothing is returned for the other kinds.
 getDatumAlonzo ::
   (AlonzoEraTxWits era, AlonzoEraTxOut era, EraTx era) =>
   Tx era ->
   UTxO era ->
   ScriptPurpose era ->
   Maybe (Data era)
-getDatumAlonzo tx (UTxO m) sp = do
-  txIn <- getSpendingTxIn sp
-  txOut <- Map.lookup txIn m
-  SJust hash <- Just $ txOut ^. dataHashTxOutL
-  Map.lookup hash (unTxDats $ tx ^. witsTxL . datsTxWitsL)
+getDatumAlonzo tx utxo = getAlonzoSpendingDatum utxo tx
+{-# DEPRECATED getDatumAlonzo "In favor of `getAlonzoSpendingDatum`" #-}
 
 -- ========================================================================
 
@@ -146,7 +145,7 @@ collectTwoPhaseScriptInputs ::
   ( EraTx era
   , MaryEraTxBody era
   , AlonzoEraTxWits era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
@@ -171,7 +170,7 @@ collectPlutusScriptsWithContext ::
   ( EraTx era
   , MaryEraTxBody era
   , AlonzoEraTxWits era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
@@ -215,7 +214,7 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
       cm <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
       case txInfo pp lang epochInfo sysStart utxo tx of
         Right inf ->
-          let datums = maybe id (:) (getDatum tx utxo sp) [d, valContext inf sp]
+          let datums = maybe id (:) (getSpendingDatum utxo tx sp) [d, valContext inf sp]
            in Right $
                 PlutusWithContext
                   { pwcScript = script

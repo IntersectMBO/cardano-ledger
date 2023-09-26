@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -106,6 +107,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   vldtTxBodyL,
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -547,6 +549,10 @@ class ExtendedUTxO era where
     UTxO era ->
     ScriptPurpose era ->
     Maybe (Data era)
+  default getDatum :: AlonzoEraUTxO era => Tx era -> UTxO era -> ScriptPurpose era -> Maybe (Data era)
+  getDatum tx utxo = getSpendingDatum utxo tx
+
+{-# DEPRECATED getDatum "In favor of `getDatumForSpending`" #-}
 
 getTxOutDatum :: AlonzoEraTxOut era => TxOut era -> Datum era
 getTxOutDatum txOut = txOut ^. datumTxOutF

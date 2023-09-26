@@ -7,22 +7,16 @@ module Cardano.Ledger.Babbage.Tx (
   AlonzoTx (..),
   BabbageTxBody (..),
   module X,
-  getDatumBabbage,
   babbageTxScripts,
   refScripts,
 )
 where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Alonzo.PlutusScriptApi (getSpendingTxIn)
 import Cardano.Ledger.Alonzo.Tx as X
 import Cardano.Ledger.Alonzo.TxSeq (
   AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
   hashAlonzoTxSeq,
- )
-import Cardano.Ledger.Alonzo.TxWits (
-  AlonzoEraTxWits (..),
-  unTxDats,
  )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.TxAuxData ()
@@ -31,14 +25,12 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxOut (..),
   BabbageTxBody (..),
   BabbageTxBodyUpgradeError,
-  dataHashTxOutL,
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (UTxO (..))
-import Control.Applicative ((<|>))
 import Control.Arrow (left)
 import Control.SetAlgebra (eval, (◁))
 import qualified Data.Map.Strict as Map
@@ -95,24 +87,6 @@ instance Crypto c => EraSegWits (BabbageEra c) where
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq
   numSegComponents = 4
-
--- | Extract binary data either directly from the `Tx` as an "inline datum"
--- or look it up in the witnesses by the hash.
-getDatumBabbage ::
-  ( AlonzoEraTx era
-  , BabbageEraTxOut era
-  ) =>
-  Tx era ->
-  UTxO era ->
-  ScriptPurpose era ->
-  Maybe (Data era)
-getDatumBabbage tx (UTxO m) sp = do
-  txIn <- getSpendingTxIn sp
-  txOut <- Map.lookup txIn m
-  let txOutDataFromWits = do
-        hash <- strictMaybeToMaybe (txOut ^. dataHashTxOutL)
-        Map.lookup hash (unTxDats (tx ^. witsTxL . datsTxWitsL))
-  strictMaybeToMaybe (txOut ^. dataTxOutL) <|> txOutDataFromWits
 
 -- Figure 3 of the Specification
 {- txscripts tx utxo = txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}

@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.4.5.1
+## 1.5.0.0
 
-*
+* Switch ot using `AlonzoEraUTxO` in rules
+* Deprecate `getDatumBabbage` in favor of `getBabbageSpendingDatum`
 
 ## 1.4.5.0
 

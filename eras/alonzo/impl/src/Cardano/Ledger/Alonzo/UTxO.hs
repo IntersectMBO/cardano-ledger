@@ -3,14 +3,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (..),
+  getAlonzoSpendingDatum,
+  getAlonzoSpendingTxIn,
   AlonzoScriptsNeeded (..),
   getAlonzoScriptsNeeded,
   getAlonzoScriptsHashesNeeded,
@@ -19,9 +24,11 @@ module Cardano.Ledger.Alonzo.UTxO (
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), MaryEraTxBody (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (datsTxWitsL), unTxDats)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Crypto
@@ -61,6 +68,47 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
   getScriptsNeeded = getAlonzoScriptsNeeded
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
+
+class EraUTxO era => AlonzoEraUTxO era where
+  -- | Lookup the TxIn from the `Spending` ScriptPurpose and find the datum needed for
+  -- spending that input. This function will return `Nothing` for all script purposes,
+  -- except spending, because only spending scripts require an extra datum.
+  --
+  -- This is the same function as in the spec:
+  --
+  -- @
+  --   getDatum :: Tx era -> UTxO era -> ScriptPurpose era -> [Data era]
+  -- @
+  getSpendingDatum ::
+    UTxO era ->
+    Tx era ->
+    ScriptPurpose era ->
+    Maybe (Data era)
+
+instance Crypto c => AlonzoEraUTxO (AlonzoEra c) where
+  getSpendingDatum = getAlonzoSpendingDatum
+
+-- | Get the Data associated with a ScriptPurpose. Only the Spending ScriptPurpose
+--  contains Data. Nothing is returned for the other kinds.
+getAlonzoSpendingDatum ::
+  (AlonzoEraTxWits era, AlonzoEraTxOut era, EraTx era) =>
+  UTxO era ->
+  Tx era ->
+  ScriptPurpose era ->
+  Maybe (Data era)
+getAlonzoSpendingDatum (UTxO m) tx sp = do
+  txIn <- getAlonzoSpendingTxIn sp
+  txOut <- Map.lookup txIn m
+  SJust hash <- Just $ txOut ^. dataHashTxOutL
+  Map.lookup hash (unTxDats $ tx ^. witsTxL . datsTxWitsL)
+
+-- | Only the Spending ScriptPurpose contains TxIn
+getAlonzoSpendingTxIn :: ScriptPurpose era -> Maybe (TxIn (EraCrypto era))
+getAlonzoSpendingTxIn = \case
+  Spending txin -> Just txin
+  Minting _policyId -> Nothing
+  Rewarding _rewardAccount -> Nothing
+  Certifying _txCert -> Nothing
 
 getAlonzoScriptsHashesNeeded :: AlonzoScriptsNeeded era -> Set.Set (ScriptHash (EraCrypto era))
 getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn)

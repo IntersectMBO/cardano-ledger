@@ -14,9 +14,13 @@ module Cardano.Ledger.Conway.UTxO (
 ) where
 
 import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
   getAlonzoScriptsHashesNeeded,
   getAlonzoScriptsNeeded,
+ )
+import Cardano.Ledger.Babbage.UTxO (
+  getBabbageSpendingDatum,
  )
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core (
@@ -33,6 +37,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   VotingProcedures (..),
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
+import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,
@@ -128,3 +133,6 @@ instance Crypto c => EraUTxO (ConwayEra c) where
   getScriptsNeeded = getConwayScriptsNeeded
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded -- TODO: This also changes for Conway
+
+instance Crypto c => AlonzoEraUTxO (ConwayEra c) where
+  getSpendingDatum = getBabbageSpendingDatum

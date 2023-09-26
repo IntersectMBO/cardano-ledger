@@ -36,6 +36,7 @@ library
         Cardano.Ledger.Babbage.TxWits
         Cardano.Ledger.Babbage.Transition
         Cardano.Ledger.Babbage.Translation
+        Cardano.Ledger.Babbage.UTxO
 
     hs-source-dirs:   src
     other-modules:
@@ -46,7 +47,6 @@ library
         Cardano.Ledger.Babbage.Rules.Utxo
         Cardano.Ledger.Babbage.Rules.Utxos
         Cardano.Ledger.Babbage.Rules.Ledger
-        Cardano.Ledger.Babbage.UTxO
 
     default-language: Haskell2010
     ghc-options:
@@ -61,7 +61,7 @@ library
         cardano-crypto-class,
         cardano-data >=1.0,
         cardano-ledger-allegra >=1.1,
-        cardano-ledger-alonzo ^>=1.4.2,
+        cardano-ledger-alonzo >=1.5,
         cardano-ledger-binary >=1.0,
         cardano-ledger-core >=1.7 && <1.8,
         cardano-ledger-mary >=1.1,

@@ -56,7 +56,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
   ScriptResult (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (
   Globals,
   ProtVer (..),
@@ -116,7 +116,7 @@ instance
   , AlonzoEraPParams era
   , ShelleyEraTxBody era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , TxCert era ~ ShelleyTxCert era
@@ -163,7 +163,7 @@ utxosTransition ::
   forall era.
   ( ExtendedUTxO era
   , AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , TxCert era ~ ShelleyTxCert era
@@ -196,7 +196,7 @@ scriptsTransition ::
   , MaryEraTxBody era
   , AlonzoEraTxWits era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BaseM sts ~ ReaderT Globals m
   , PredicateFailure sts ~ AlonzoUtxosPredFailure era
@@ -230,7 +230,7 @@ alonzoEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , Script era ~ AlonzoScript era
@@ -274,7 +274,7 @@ alonzoEvalScriptsTxInvalid ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , Script era ~ AlonzoScript era
