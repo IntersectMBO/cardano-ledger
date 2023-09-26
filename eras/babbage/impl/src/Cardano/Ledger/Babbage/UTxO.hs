@@ -4,6 +4,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.UTxO (
+  getBabbageSupplementalDataHashes,
   getBabbageSpendingDatum,
 ) where
 
@@ -20,16 +21,25 @@ import Cardano.Ledger.Alonzo.UTxO (
  )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Tx ()
+import Cardano.Ledger.Babbage.TxBody (
+  BabbageEraTxBody (
+    allSizedOutputsTxBodyF,
+    referenceInputsTxBodyL
+  ),
+ )
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (dataTxOutL))
 import Cardano.Ledger.Babbage.TxWits (datsTxWitsL)
-import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Control.Applicative
+import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Lens.Micro
 
 instance Crypto c => EraUTxO (BabbageEra c) where
@@ -44,7 +54,21 @@ instance Crypto c => EraUTxO (BabbageEra c) where
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
 instance Crypto c => AlonzoEraUTxO (BabbageEra c) where
+  getSupplementalDataHashes = getBabbageSupplementalDataHashes
+
   getSpendingDatum = getBabbageSpendingDatum
+
+getBabbageSupplementalDataHashes ::
+  BabbageEraTxBody era =>
+  UTxO era ->
+  TxBody era ->
+  Set.Set (DataHash (EraCrypto era))
+getBabbageSupplementalDataHashes (UTxO utxo) txBody =
+  Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
+  where
+    newOuts = map sizedValue $ toList $ txBody ^. allSizedOutputsTxBodyF
+    referencedOuts = Map.elems $ Map.restrictKeys utxo (txBody ^. referenceInputsTxBodyL)
+    outs = newOuts <> referencedOuts
 
 -- | Extract binary data either directly from the `Tx` as an "inline datum"
 -- or look it up in the witnesses by the hash.

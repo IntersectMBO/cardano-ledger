@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Tx (refScripts)
@@ -265,7 +265,7 @@ babbageUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ProtVerAtMost era 8
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
@@ -365,7 +365,7 @@ instance
   forall era.
   ( ExtendedUTxO era
   , AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ProtVerAtMost era 8
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era

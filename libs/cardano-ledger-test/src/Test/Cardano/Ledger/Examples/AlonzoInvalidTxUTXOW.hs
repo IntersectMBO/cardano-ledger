@@ -319,7 +319,7 @@ alonzoUTXOWTests pf =
               (trustMeP pf True $ notOkSupplimentaryDatumTx pf)
               ( Left
                   [ fromPredFail @era $
-                      NonOutputSupplimentaryDatums
+                      NotAllowedSupplementalDatums
                         (Set.singleton $ hashData @era totallyIrrelevantDatum)
                         mempty
                   ]

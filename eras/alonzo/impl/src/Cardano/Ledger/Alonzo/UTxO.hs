@@ -70,6 +70,15 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
 class EraUTxO era => AlonzoEraUTxO era where
+  -- | Get data hashes for a transaction that are not required. Such datums are optional,
+  -- but they can be added to the witness set. In a broaded terms datums corresponding to
+  -- the inputs that might be spent are the required datums and the datums corresponding
+  -- to the outputs and reference inputs are the supplemental datums.
+  getSupplementalDataHashes ::
+    UTxO era ->
+    TxBody era ->
+    Set.Set (DataHash (EraCrypto era))
+
   -- | Lookup the TxIn from the `Spending` ScriptPurpose and find the datum needed for
   -- spending that input. This function will return `Nothing` for all script purposes,
   -- except spending, because only spending scripts require an extra datum.
@@ -86,7 +95,20 @@ class EraUTxO era => AlonzoEraUTxO era where
     Maybe (Data era)
 
 instance Crypto c => AlonzoEraUTxO (AlonzoEra c) where
+  getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
+
   getSpendingDatum = getAlonzoSpendingDatum
+
+getAlonzoSupplementalDataHashes ::
+  (EraTxBody era, AlonzoEraTxOut era) =>
+  TxBody era ->
+  Set.Set (DataHash (EraCrypto era))
+getAlonzoSupplementalDataHashes txBody =
+  Set.fromList
+    [ dh
+    | txOut <- toList $ txBody ^. outputsTxBodyL
+    , SJust dh <- [txOut ^. dataHashTxOutL]
+    ]
 
 -- | Get the Data associated with a ScriptPurpose. Only the Spending ScriptPurpose
 --  contains Data. Nothing is returned for the other kinds.

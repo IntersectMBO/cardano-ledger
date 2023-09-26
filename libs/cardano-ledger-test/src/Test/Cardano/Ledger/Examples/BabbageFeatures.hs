@@ -30,7 +30,7 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
-  AlonzoUtxowPredFailure (MissingRequiredDatums, NonOutputSupplimentaryDatums),
+  AlonzoUtxowPredFailure (MissingRequiredDatums, NotAllowedSupplementalDatums),
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -1275,7 +1275,7 @@ genericBabbageFeatures pf =
               pf
               (inlineDatumRedundantDatumWit pf)
               ( fromPredFail @era
-                  ( NonOutputSupplimentaryDatums
+                  ( NotAllowedSupplementalDatums
                       (Set.singleton $ hashData @era datumExampleSixtyFiveBytes)
                       mempty
                   )

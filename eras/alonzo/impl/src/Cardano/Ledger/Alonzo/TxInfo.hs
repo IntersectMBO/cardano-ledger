@@ -543,6 +543,12 @@ class ExtendedUTxO era where
     TxBody era ->
     UTxO era ->
     Set (DataHash (EraCrypto era))
+  default getAllowedSupplimentalDataHashes ::
+    AlonzoEraUTxO era =>
+    TxBody era ->
+    UTxO era ->
+    Set (DataHash (EraCrypto era))
+  getAllowedSupplimentalDataHashes txBody utxo = getSupplementalDataHashes utxo txBody
 
   getDatum ::
     Tx era ->
@@ -552,6 +558,7 @@ class ExtendedUTxO era where
   default getDatum :: AlonzoEraUTxO era => Tx era -> UTxO era -> ScriptPurpose era -> Maybe (Data era)
   getDatum tx utxo = getSpendingDatum utxo tx
 
+{-# DEPRECATED getAllowedSupplimentalDataHashes "In favor of `getSupplementalDataHashes`" #-}
 {-# DEPRECATED getDatum "In favor of `getDatumForSpending`" #-}
 
 getTxOutDatum :: AlonzoEraTxOut era => TxOut era -> Datum era

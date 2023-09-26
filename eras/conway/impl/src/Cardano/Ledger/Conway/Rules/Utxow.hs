@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
   BabbageUtxoPredFailure,
@@ -79,7 +79,7 @@ conwayUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , ConwayEraTxBody era
@@ -188,7 +188,7 @@ instance
   forall era.
   ( ExtendedUTxO era
   , AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)

@@ -3,8 +3,11 @@
 ## 1.5.0.0
 
 * Add `AlonzoEraUTxO` and use in the rules.
+* Deprecate `getDatum` in favor of `getSpendingDatum`
 * Deprecate `getDatumAlonzo` in favor of `getAlonzoSpendingDatum`
 * Deprecate `getSpendingTxIn` in favor of `getAlonzoSpendingTxIn`
+* Deprecate `getAllowedSupplimentalDataHashes` in favor of `getSupplementalDataHashes`
+* Rename `NonOutputSupplimentaryDatums` to `NotAllowedSupplementalDatums`
 
 ## 1.4.2.0
 

@@ -44,16 +44,10 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Babbage.UTxO (getBabbageSpendingDatum)
-import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.UTxO (UTxO (..))
-import Data.Foldable (toList)
-import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict
-import qualified Data.Set as Set
-import Lens.Micro
 
 type Babbage = BabbageEra StandardCrypto
 
@@ -72,12 +66,6 @@ instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
 instance (Crypto c, EraPlutusContext 'PlutusV2 (BabbageEra c)) => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
   txscripts = babbageTxScripts
-  getAllowedSupplimentalDataHashes txBody (UTxO utxo) =
-    Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
-    where
-      newOuts = map sizedValue $ toList $ txBody ^. allSizedOutputsTxBodyF
-      referencedOuts = Map.elems $ Map.restrictKeys utxo (txBody ^. referenceInputsTxBodyL)
-      outs = newOuts <> referencedOuts
 
 -- | Extract binary data either directly from the `Tx` as an "inline datum"
 -- or look it up in the witnesses by the hash.

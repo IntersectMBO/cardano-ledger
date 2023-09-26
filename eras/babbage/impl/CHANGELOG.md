@@ -4,6 +4,7 @@
 
 * Switch ot using `AlonzoEraUTxO` in rules
 * Deprecate `getDatumBabbage` in favor of `getBabbageSpendingDatum`
+* Add `getBabbageSupplementalDataHashes`
 
 ## 1.4.5.0
 

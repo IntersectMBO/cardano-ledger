@@ -52,7 +52,11 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemers,
   unTxDats,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), getInputDataHashesTxBody)
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (..),
+  AlonzoScriptsNeeded (..),
+  getInputDataHashesTxBody,
+ )
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
@@ -106,10 +110,10 @@ data AlonzoUtxowPredFailure era
       !(Set (DataHash (EraCrypto era)))
       -- | Set of received data hashes
       !(Set (DataHash (EraCrypto era)))
-  | NonOutputSupplimentaryDatums
+  | NotAllowedSupplementalDatums
       -- | Set of unallowed data hashes
       !(Set (DataHash (EraCrypto era)))
-      -- | Set of acceptable supplimental data hashes
+      -- | Set of acceptable supplemental data hashes
       !(Set (DataHash (EraCrypto era)))
   | PPViewHashesDontMatch
       -- | The PPHash in the TxBody
@@ -165,7 +169,7 @@ instance
       ShelleyInAlonzoUtxowPredFailure x -> Sum ShelleyInAlonzoUtxowPredFailure 0 !> To x
       MissingRedeemers x -> Sum MissingRedeemers 1 !> To x
       MissingRequiredDatums x y -> Sum MissingRequiredDatums 2 !> To x !> To y
-      NonOutputSupplimentaryDatums x y -> Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
+      NotAllowedSupplementalDatums x y -> Sum NotAllowedSupplementalDatums 3 !> To x !> To y
       PPViewHashesDontMatch x y -> Sum PPViewHashesDontMatch 4 !> To x !> To y
       MissingRequiredSigners x -> Sum MissingRequiredSigners 5 !> To x
       UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 6 !> To x
@@ -197,7 +201,7 @@ decodePredFail ::
 decodePredFail 0 = SumD ShelleyInAlonzoUtxowPredFailure <! From
 decodePredFail 1 = SumD MissingRedeemers <! From
 decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
-decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
+decodePredFail 3 = SumD NotAllowedSupplementalDatums <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 5 = SumD MissingRequiredSigners <! From
 decodePredFail 6 = SumD UnspendableUTxONoDatumHash <! From
@@ -211,7 +215,7 @@ decodePredFail n = Invalid n
 missingRequiredDatums ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
+  , AlonzoEraUTxO era
   ) =>
   Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   UTxO era ->
@@ -222,10 +226,10 @@ missingRequiredDatums scriptWits utxo tx = do
       (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptWits
       txHashes = domain (unTxDats $ tx ^. witsTxL . datsTxWitsL)
       unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
-      allowedSupplimentalDataHashes = getAllowedSupplimentalDataHashes txBody utxo
+      allowedSupplementalDataHashes = getSupplementalDataHashes utxo txBody
       supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
       (okSupplimentalDHs, notOkSupplimentalDHs) =
-        Set.partition (`Set.member` allowedSupplimentalDataHashes) supplimentalDatumHashes
+        Set.partition (`Set.member` allowedSupplementalDataHashes) supplimentalDatumHashes
   sequenceA_
     [ failureUnless
         (Set.null txInsNoDataHash)
@@ -235,7 +239,7 @@ missingRequiredDatums scriptWits utxo tx = do
         (MissingRequiredDatums unmatchedDatumHashes txHashes)
     , failureUnless
         (Set.null notOkSupplimentalDHs)
-        (NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs)
+        (NotAllowedSupplementalDatums notOkSupplimentalDHs okSupplimentalDHs)
     ]
 
 -- ==================
@@ -316,7 +320,7 @@ alonzoStyleWitness ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -416,7 +420,7 @@ instance
   ( AlonzoEraTx era
   , EraTxAuxData era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , Script era ~ AlonzoScript era

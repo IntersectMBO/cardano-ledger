@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Transition ()
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx ()
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO ()
@@ -48,11 +48,6 @@ import Control.Arrow (left)
 import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
-import Data.Foldable (toList)
-import Data.Maybe.Strict
-import qualified Data.Set as Set
-import Lens.Micro
-import Lens.Micro.Extras (view)
 
 type Alonzo = AlonzoEra StandardCrypto
 
@@ -90,9 +85,3 @@ instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
 instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
   txscripts _ = txscripts' . view witsTxL
-  getAllowedSupplimentalDataHashes txBody _ =
-    Set.fromList
-      [ dh
-      | txOut <- toList $ txBody ^. outputsTxBodyL
-      , SJust dh <- [txOut ^. dataHashTxOutL]
-      ]
