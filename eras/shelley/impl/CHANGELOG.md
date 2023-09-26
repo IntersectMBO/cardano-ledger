@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.6.1.0
+## 1.6.2.0
 
 * Add `ToExpr` instance for:
   * `Update`
@@ -9,7 +9,6 @@
   * `ShelleyTxWits`
 * Add `Generic` instance for `ShelleyTx`
 * Add `Memoized` instance for `ShelleyTx`
-* Add lens `epochStateTreasuryL` #3748
 * Introduce `Cardano.Ledger.Shelley.Transition` module with `EraTransition` interface.
 * Deprecated `CanStartFromGenesis` interface in favor of `EraTransition`
 * Add `Semigroup` and `Monoid` instances for `ShelleyGenesisStaking`
@@ -21,6 +20,10 @@
 * `Test.Cardano.Ledger.Shelley.Binary.RoundTrip` module with:
   * `roundTripShelleyCommonSpec`
   * `roundTripStateEraTypesSpec`
+
+## 1.6.1.0
+
+* Add lens `epochStateTreasuryL` #3748
 
 ## 1.6.0.0
 

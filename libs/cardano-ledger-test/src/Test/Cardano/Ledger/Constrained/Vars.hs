@@ -17,11 +17,19 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash, ScriptPurpos
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, Network (..), ProtVer (..), SlotNo (..), StrictMaybe (..), UnitInterval)
+import Cardano.Ledger.BaseTypes (
+  BlocksMade (..),
+  EpochNo,
+  Network (..),
+  ProtVer (..),
+  SlotNo (..),
+  StrictMaybe (..),
+  UnitInterval,
+ )
 import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
 import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
-import Cardano.Ledger.Conway.Governance hiding (GovState, ensTreasuryL, ensWithdrawalsL)
+import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core (
   EraPParams,
   PParams,
@@ -1617,12 +1625,6 @@ committeeMembersL = lens committeeMembers (\x s -> x {committeeMembers = s})
 
 committeeQuorumL :: Lens' (Committee era) UnitInterval
 committeeQuorumL = lens committeeQuorum (\x s -> x {committeeQuorum = s})
-
-ensTreasuryL :: Lens' (EnactState era) Coin
-ensTreasuryL = lens ensTreasury (\x y -> x {ensTreasury = y})
-
-ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking (EraCrypto era)) Coin)
-ensWithdrawalsL = lens ensWithdrawals (\x y -> x {ensWithdrawals = y})
 
 smCommL :: Lens' (StrictMaybe (Committee era)) (Committee era)
 smCommL = lens foo (\_ t -> SJust t)

@@ -73,7 +73,6 @@ import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
-  maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
@@ -624,7 +623,7 @@ babbageMinUTxOValue pp sizedTxOut =
 {-# INLINE babbageMinUTxOValue #-}
 
 getEitherAddrBabbageTxOut ::
-  HashAlgorithm (ADDRHASH (EraCrypto era)) =>
+  (HasCallStack, HashAlgorithm (ADDRHASH (EraCrypto era))) =>
   BabbageTxOut era ->
   Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era))
 getEitherAddrBabbageTxOut = \case
@@ -658,19 +657,15 @@ getDataBabbageTxOut = \case
 -- | Return the data hash of a given transaction output, if one is present.
 --  Note that this function does *not* return the hash of an inline datum
 --  if one is present.
-getDataHashBabbageTxOut :: Era era => BabbageTxOut era -> StrictMaybe (DataHash (EraCrypto era))
-getDataHashBabbageTxOut = \case
-  TxOutCompact' {} -> SNothing
-  TxOutCompactDH' _ _ dh -> SJust dh
-  TxOutCompactDatum {} -> SNothing
-  TxOutCompactRefScript _ _ datum _ ->
-    case datum of
-      NoDatum -> SNothing
-      DatumHash dh -> SJust dh
-      Datum _d -> SNothing
-  TxOut_AddrHash28_AdaOnly {} -> SNothing
-  TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 ->
-    maybeToStrictMaybe $ decodeDataHash32 dataHash32
+getDataHashBabbageTxOut ::
+  (HasCallStack, Era era) =>
+  BabbageTxOut era ->
+  StrictMaybe (DataHash (EraCrypto era))
+getDataHashBabbageTxOut txOut =
+  case getDatumBabbageTxOut txOut of
+    NoDatum -> SNothing
+    DatumHash dh -> SJust dh
+    Datum _d -> SNothing
 {-# INLINE getDataHashBabbageTxOut #-}
 
 getScriptBabbageTxOut :: BabbageTxOut era -> StrictMaybe (Script era)
@@ -683,7 +678,7 @@ getScriptBabbageTxOut = \case
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> SNothing
 {-# INLINE getScriptBabbageTxOut #-}
 
-getDatumBabbageTxOut :: Era era => BabbageTxOut era -> Datum era
+getDatumBabbageTxOut :: (HasCallStack, Era era) => BabbageTxOut era -> Datum era
 getDatumBabbageTxOut = \case
   TxOutCompact' {} -> NoDatum
   TxOutCompactDH' _ _ dh -> DatumHash dh
@@ -692,7 +687,7 @@ getDatumBabbageTxOut = \case
   TxOut_AddrHash28_AdaOnly {} -> NoDatum
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32
     | Just dh <- decodeDataHash32 dataHash32 -> DatumHash dh
-    | otherwise -> error "Impossible: Compacted a hash of non-standard size"
+    | otherwise -> error $ "Impossible: Compacted a hash of non-standard size: " ++ show dataHash32
 {-# INLINEABLE getDatumBabbageTxOut #-}
 
 getCompactValueBabbageTxOut :: EraTxOut era => BabbageTxOut era -> CompactForm (Value era)

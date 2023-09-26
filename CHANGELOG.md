@@ -17,7 +17,18 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
 - Add ability to supply initial Constitutional Committee and initial version of Constitution.
 - Preserve order of submitted ProposalProcedures and account for their priority.
 - Disallow empty fields in CBOR of Conway TxBody
+- Add some sanity checks for `UpdateCommittee` proposals and change semantics of the
+  proposal from overwrite to modify the Committee
 - Implement Constitutional Committee expiration, validation and modification
+- Respect Constitutional Committee members votes and thresholds during ratification
+- Whenever Constitutional Committee size goes below `CommitteeMinSize` parameter the whole
+  committee will vote `No` on all proposals.
+- Restructure initial configuration in such a way that makes it possible for Conway era to
+  start without going through all previous eras, which is needed for testing and
+  benchmarking.
+- Apply ADA treasury transfers after enactment of `TreasuryWithdrawals` proposals
+- Enforce `currentTreasuryValue` field in the TxBody matches the actual Treasury amount,
+  whenver the field is supplied
 
 ## 8.4
 

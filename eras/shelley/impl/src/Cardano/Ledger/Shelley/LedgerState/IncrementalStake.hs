@@ -1,8 +1,10 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- ===========================================================================
@@ -72,12 +74,14 @@ import Cardano.Ledger.UTxO (
  )
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Control.Exception (assert)
+import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Map.Internal.Debug as Map (valid)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.VMap as VMap
+import Data.Word
 import Lens.Micro
 
 -- =======================================================================
@@ -94,53 +98,47 @@ updateStakeDistribution ::
   IncrementalStake (EraCrypto era)
 updateStakeDistribution pp incStake0 utxoDel utxoAdd = incStake2
   where
-    incStake1 = incrementalAggregateUtxoCoinByCredential pp Id utxoAdd incStake0
-    incStake2 = incrementalAggregateUtxoCoinByCredential pp Invert utxoDel incStake1
-
--- | Should a value be added (Id) or subtracted (Invert)
-data Mode = Id | Invert
-
--- | add or subtract a Coin (depending on Mode) to a (CompactForm Coin)
-addCompact :: Mode -> CompactForm Coin -> CompactForm Coin -> CompactForm Coin
-addCompact Id (CompactCoin n) (CompactCoin m) = CompactCoin (m + fromIntegral n)
-addCompact Invert (CompactCoin n) (CompactCoin m) = CompactCoin (m - fromIntegral n)
+    incStake1 = incAggUtxoCoinByCred pp (coerce ((+) @Word64)) utxoAdd incStake0
+    incStake2 = incAggUtxoCoinByCred pp (coerce ((-) @Word64)) utxoDel incStake1
 
 -- | Incrementally sum up all the Coin, for each staking Credential, in the outputs of the UTxO, and
 --   "add" them to the IncrementalStake. "add" has different meaning depending on if we are inserting
---   or deleting the UtxO entries. For inserts (the mode is Id) and for deletes (the mode is Invert).
+--   or deleting the UtxO entries. For inserts (the mode is to add (+)) and for deletes (the mode is
+--   to subtract (-)).
 --   Never store a (Coin 0) balance, since these do not occur in the non-incremental style that
 --   works directly from the whole UTxO.
 --   This function has a non-incremental analog 'aggregateUtxoCoinByCredential' . In this incremental
 --   version we expect the size of the UTxO to be fairly small. I.e the number of inputs and outputs
 --   in a transaction, which is aways < 4096, not millions, and very often < 10).
-incrementalAggregateUtxoCoinByCredential ::
+incAggUtxoCoinByCred ::
   forall era.
   EraTxOut era =>
   PParams era ->
-  Mode ->
+  (CompactForm Coin -> CompactForm Coin -> CompactForm Coin) ->
   UTxO era ->
   IncrementalStake (EraCrypto era) ->
   IncrementalStake (EraCrypto era)
-incrementalAggregateUtxoCoinByCredential pp mode (UTxO u) initial =
+incAggUtxoCoinByCred pp f (UTxO u) initial =
   Map.foldl' accum initial u
   where
-    keepOrDeleteCompact new Nothing =
-      case new of
-        CompactCoin 0 -> Nothing
-        final -> Just final
-    keepOrDeleteCompact new (Just old) =
-      case addCompact mode new old of
-        CompactCoin 0 -> Nothing
-        final -> Just final
+    keepOrDeleteCompact new = \case
+      Nothing ->
+        case new of
+          CompactCoin 0 -> Nothing
+          final -> Just final
+      Just old ->
+        case old `f` new of
+          CompactCoin 0 -> Nothing
+          final -> Just final
     ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
     accum ans@(IStake stake ptrs) out =
       let cc = out ^. compactCoinTxOutL
        in case out ^. addrTxOutL of
-            Addr _ _ (StakeRefPtr p) ->
-              if ignorePtrs
-                then ans
-                else IStake stake (Map.alter (keepOrDeleteCompact cc) p ptrs)
-            Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDeleteCompact cc) hk stake) ptrs
+            Addr _ _ (StakeRefPtr p)
+              | not ignorePtrs ->
+                  IStake stake (Map.alter (keepOrDeleteCompact cc) p ptrs)
+            Addr _ _ (StakeRefBase hk) ->
+              IStake (Map.alter (keepOrDeleteCompact cc) hk stake) ptrs
             _other -> ans
 
 -- ================================================
