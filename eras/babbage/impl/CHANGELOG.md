@@ -6,6 +6,7 @@
 * Deprecate `getDatumBabbage` in favor of `getBabbageSpendingDatum`
 * Add `getBabbageSupplementalDataHashes`
 * Remove unused `isTwoPhaseScriptAddress`
+* Deprecate `babbageTxScripts` and `refScripts`
 
 ## 1.4.5.0
 

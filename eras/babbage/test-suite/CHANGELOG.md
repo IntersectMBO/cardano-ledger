@@ -2,12 +2,12 @@
 
 ## 1.1.1.7
 
-*
+* Update CDDL files to reflect the change in header structure in
+  cardano-protocol-praos.
 
 ## 1.1.1.6
 
-* Update CDDL files to reflect the change in header structure in
-  cardano-protocol-praos.
+*
 
 ## 1.1.1.5
 

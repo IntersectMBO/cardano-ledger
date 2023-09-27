@@ -2,7 +2,7 @@
 
 ## 1.2.3.1
 
-*
+* Implement `getScriptsProvided`
 
 ## 1.2.3.0
 

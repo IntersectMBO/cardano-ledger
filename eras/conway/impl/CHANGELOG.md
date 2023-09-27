@@ -2,7 +2,7 @@
 
 ## 1.10.0.0
 
-* Switch ot using `AlonzoEraUTxO` in rules
+* Switch to using `AlonzoEraUTxO` in rules
 
 ## 1.9.0.0
 
