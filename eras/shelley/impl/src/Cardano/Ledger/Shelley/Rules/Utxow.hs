@@ -403,13 +403,10 @@ instance
 validateFailedNativeScripts ::
   EraTx era => ScriptsProvided era -> Tx era -> Test (ShelleyUtxowPredFailure era)
 validateFailedNativeScripts (ScriptsProvided scriptsProvided) tx = do
-  let phase1Map = getPhase1 scriptsProvided
-      failedScripts =
-        Map.filterWithKey
-          ( \hs (core, phase) ->
-              hashScript core /= hs || not (validateScript phase tx)
-          )
-          phase1Map
+  let failedScripts =
+        Map.filter -- we keep around only non-validating native scripts
+          (maybe False (not . validateNativeScript tx) . getNativeScript)
+          scriptsProvided
   failureUnless (Map.null failedScripts) $
     ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
 

@@ -1,10 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,7 +11,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# OPTIONS_GHC -Wno-orphans -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module defines core type families which we know to vary from era to
 -- era.
@@ -33,6 +32,7 @@ module Cardano.Ledger.Core (
   EraTxAuxData (..),
   EraTxWits (..),
   EraScript (..),
+  isNativeScript,
   hashScriptTxWitsL,
   Value,
   EraPParams (..),
@@ -43,14 +43,6 @@ module Cardano.Ledger.Core (
   -- $segWit
   EraSegWits (..),
   bBodySize,
-
-  -- * Phases
-  Phase (..),
-  PhaseRep (..),
-  SomeScript,
-  PhasedScript (..),
-  getPhase1,
-  getPhase2,
 
   -- * Rewards
   RewardType (..),
@@ -111,7 +103,6 @@ import Cardano.Ledger.Hashes
 import Cardano.Ledger.Keys (KeyRole (Staking, Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
-import Cardano.Ledger.Language (Plutus)
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
@@ -124,7 +115,7 @@ import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -168,7 +159,8 @@ class
 
   sizeTxF :: SimpleGetter (Tx era) Integer
 
-  validateScript :: PhasedScript 'PhaseOne era -> Tx era -> Bool
+  -- | Using information from the transaction validate the supplied native script.
+  validateNativeScript :: Tx era -> NativeScript era -> Bool
 
   getMinFeeTx :: PParams era -> Tx era -> Coin
 
@@ -176,6 +168,17 @@ class
     EraTx (PreviousEra era) =>
     Tx (PreviousEra era) ->
     Either (TxUpgradeError era) (Tx era)
+
+-- | Calculate and update the fee in the transaction until it has the smallest possible
+-- value according to the settings in the protocol parameters.
+setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
+setMinFeeTx pp tx =
+  let curMinFee = getMinFeeTx pp tx
+      curFee = tx ^. bodyTxL . feeTxBodyL
+      modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
+   in if curFee == curMinFee
+        then tx
+        else setMinFeeTx pp modifiedTx
 
 class
   ( EraTxOut era
@@ -398,7 +401,7 @@ isAdaOnlyTxOutF = to $ \txOut ->
     Left val -> isAdaOnly val
     Right cVal -> isAdaOnlyCompact cVal
 
-toCompactPartial :: (HasCallStack, Val a, Show a) => a -> CompactForm a
+toCompactPartial :: (HasCallStack, Val a) => a -> CompactForm a
 toCompactPartial v =
   fromMaybe (error $ "Illegal value in TxOut: " <> show v) $ toCompact v
 
@@ -513,6 +516,8 @@ class
   -- | Scripts which may lock transaction outputs in this era
   type Script era = (r :: Type) | r -> era
 
+  type NativeScript era = (r :: Type) | r -> era
+
   -- | Every era, except Shelley, must be able to upgrade a `Script` from a previous era.
   --
   -- /Warning/ - Important to note that any memoized binary representation will not be
@@ -520,6 +525,7 @@ class
   upgradeScript :: EraScript (PreviousEra era) => Script (PreviousEra era) -> Script era
 
   scriptPrefixTag :: Script era -> BS.ByteString
+
   hashScript :: Script era -> ScriptHash (EraCrypto era)
   -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
   -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
@@ -528,12 +534,11 @@ class
       . Hash.castHash
       . Hash.hashWith
         (\x -> scriptPrefixTag @era x <> originalBytes x)
-  phaseScript :: PhaseRep phase -> Script era -> Maybe (PhasedScript phase era)
-  isNativeScript :: Script era -> Bool
-  isNativeScript s =
-    case phaseScript @era PhaseOneRep s of
-      Nothing -> False
-      Just _ -> True
+
+  getNativeScript :: Script era -> Maybe (NativeScript era)
+
+isNativeScript :: EraScript era => Script era -> Bool
+isNativeScript = isJust . getNativeScript
 
 --------------------------------------------------------------------------------
 -- Segregated Witness
@@ -584,56 +589,3 @@ class
 
 bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
-
--- ====================================================
--- Reflecting the phase of scripts into types
--- ====================================================
-
--- | There are only two Phases
-data Phase
-  = PhaseOne -- simple scripts run in phase 1
-  | PhaseTwo -- smart scripts (Plutus) run in phase 2
-
--- | A GADT that witnesses the two Phases
-data PhaseRep t where
-  PhaseOneRep :: PhaseRep 'PhaseOne
-  PhaseTwoRep :: PhaseRep 'PhaseTwo
-
--- | Type family that defines a script type given a Phase and an Era.
-type family SomeScript (phase :: Phase) (era :: Type) :: Type
-
-{- Instance like these appear in modules Cardano.Ledger.{Shelley,ShelleyMA,Alonzo,Babbage}
-type instance SomeScript PhaseOne (BabbageEra c) = Timelock c
-type instance SomeScript PhaseOne (AlonzoEra c) = Timelock c
---  We need the Language for Phase2 scripts because Plutus comes in several variants
-type instance SomeScript PhaseTwo (BabbageEra c) = Plutus
-type instance SomeScript PhaseTwo (AlonzoEra c) = Plutus
-type instance SomeScript PhaseOne (ShelleyMAEra ma c) = Timelock c
-type instance SomeScript PhaseOne (ShelleyEra c) = MultiSig c
--}
-
--- | A concrete type that witnesses the Phase of SomeScript
-data PhasedScript phase era where
-  Phase1Script :: SomeScript 'PhaseOne era -> PhasedScript 'PhaseOne era
-  Phase2Script :: Plutus -> PhasedScript 'PhaseTwo era
-
-getPhase1 :: EraScript era => Map k (Script era) -> Map k (Script era, PhasedScript 'PhaseOne era)
-getPhase1 = Map.mapMaybe phase1
-  where
-    phase1 s = case phaseScript PhaseOneRep s of
-      Just ps -> Just (s, ps)
-      Nothing -> Nothing
-
-getPhase2 :: EraScript era => Map k (Script era) -> Map k (PhasedScript 'PhaseTwo era)
-getPhase2 = Map.mapMaybe (phaseScript PhaseTwoRep)
-
--- | Calculate and update the fee in the transaction until it has the smallest possible
--- value according to the settings in the protocol parameters.
-setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
-setMinFeeTx pp tx =
-  let curMinFee = getMinFeeTx pp tx
-      curFee = tx ^. bodyTxL . feeTxBodyL
-      modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
-   in if curFee == curMinFee
-        then tx
-        else setMinFeeTx pp modifiedTx

@@ -122,7 +122,6 @@ import Data.Aeson (
 import qualified Data.Aeson as Aeson (Value)
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
-import Data.ByteString.Short (ShortByteString)
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Either (isRight)
 import Data.Int (Int64)
@@ -200,24 +199,14 @@ instance SafeToHash (AlonzoScript era) where
   originalBytes (TimelockScript t) = originalBytes t
   originalBytes (PlutusScript (Plutus _ binaryPlutus)) = originalBytes binaryPlutus
 
-type instance SomeScript 'PhaseOne (AlonzoEra c) = Timelock (AlonzoEra c)
-
-type instance SomeScript 'PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
-
-isPlutusScript :: forall era. EraScript era => Script era -> Bool
-isPlutusScript x =
-  case phaseScript @era PhaseTwoRep x of
-    Just _ -> True
-    Nothing -> False
+isPlutusScript :: EraScript era => Script era -> Bool
+isPlutusScript = not . isNativeScript
 
 instance Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
+  type NativeScript (AlonzoEra c) = Timelock (AlonzoEra c)
 
   upgradeScript = TimelockScript . translateTimelock
-
-  phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
-  phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
-  phaseScript _ _ = Nothing
 
   scriptPrefixTag script =
     case script of
@@ -225,6 +214,10 @@ instance Crypto c => EraScript (AlonzoEra c) where
       PlutusScript (Plutus PlutusV1 _) -> "\x01"
       PlutusScript (Plutus PlutusV2 _) -> "\x02"
       PlutusScript (Plutus PlutusV3 _) -> "\x03"
+
+  getNativeScript = \case
+    TimelockScript ts -> Just ts
+    _ -> Nothing
 
 instance EqRaw (AlonzoScript era) where
   eqRaw = eqAlonzoScriptRaw

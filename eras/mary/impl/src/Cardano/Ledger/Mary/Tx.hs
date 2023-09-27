@@ -1,11 +1,6 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary.Tx (
@@ -14,13 +9,7 @@ module Cardano.Ledger.Mary.Tx (
 where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Core (
-  EraTx (..),
-  PhasedScript (..),
-  upgradeTxAuxData,
-  upgradeTxBody,
-  upgradeTxWits,
- )
+import Cardano.Ledger.Core (EraTx (..), upgradeTxAuxData, upgradeTxBody, upgradeTxWits)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
@@ -58,8 +47,8 @@ instance Crypto c => EraTx (MaryEra c) where
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) = validateTimelock @(MaryEra c) script
-  {-# INLINE validateScript #-}
+  validateNativeScript = validateTimelock
+  {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = shelleyMinFeeTx
 

@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -30,7 +31,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Data.ByteString (ByteString)
-import Data.ByteString.Short (ShortByteString)
 
 babbageScriptPrefixTag ::
   Script era ~ AlonzoScript era => Script era -> ByteString
@@ -41,17 +41,14 @@ babbageScriptPrefixTag script =
     PlutusScript (Plutus PlutusV2 _) -> "\x02"
     PlutusScript (Plutus PlutusV3 _) -> "\x03"
 
-type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock (BabbageEra c)
-
-type instance SomeScript 'PhaseTwo (BabbageEra c) = (Language, ShortByteString)
-
 instance Crypto c => EraScript (BabbageEra c) where
   type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
+  type NativeScript (BabbageEra c) = Timelock (BabbageEra c)
 
   upgradeScript = translateAlonzoScript
 
   scriptPrefixTag = babbageScriptPrefixTag
 
-  phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
-  phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
-  phaseScript _ _ = Nothing
+  getNativeScript = \case
+    TimelockScript ts -> Just ts
+    _ -> Nothing

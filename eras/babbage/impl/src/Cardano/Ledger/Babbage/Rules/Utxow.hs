@@ -209,27 +209,23 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
 
 {-  ∀ s ∈ (txscripts txw utxo ∩ Scriptnative), validateScript s tx   -}
 validateFailedBabbageScripts ::
-  forall era.
-  ( EraTx era
-  , Script era ~ AlonzoScript era
-  ) =>
+  EraTx era =>
   Tx era ->
   ScriptsProvided era ->
   Set (ScriptHash (EraCrypto era)) ->
   Test (ShelleyUtxowPredFailure era)
-validateFailedBabbageScripts tx scriptsProvided neededHashes =
-  let phase1Map = getPhase1 (unScriptsProvided scriptsProvided)
-      failedScripts =
+validateFailedBabbageScripts tx (ScriptsProvided scriptsProvided) neededHashes =
+  let failedScripts =
         Map.filterWithKey
-          ( \hs (script, phased) ->
-              let needed = hs `Set.member` neededHashes
-                  hashDisagrees = hashScript @era script /= hs
-                  -- TODO this is probably not needed. Only the script is transmitted on the wire, we compute the hash
-                  scriptDoesNotValidate = not (validateScript @era phased tx)
-                  answer = needed && (hashDisagrees || scriptDoesNotValidate)
-               in answer
+          ( \scriptHash script ->
+              case getNativeScript script of
+                Nothing -> False
+                Just nativeScript ->
+                  let scriptIsNeeded = scriptHash `Set.member` neededHashes
+                      scriptDoesNotValidate = not (validateNativeScript tx nativeScript)
+                   in scriptIsNeeded && scriptDoesNotValidate
           )
-          phase1Map
+          scriptsProvided
    in failureUnless
         (Map.null failedScripts)
         (Shelley.ScriptWitnessNotValidatingUTXOW $ Map.keysSet failedScripts)

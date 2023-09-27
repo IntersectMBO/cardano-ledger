@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -65,7 +66,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash, KeyRole (Witness))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
@@ -80,7 +81,12 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Scripts (MultiSig (..), nativeMultiSigTag)
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig (..),
+  evalMultiSig,
+  nativeMultiSigTag,
+  validateMultiSig,
+ )
 import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits ()
@@ -230,8 +236,8 @@ instance Crypto c => EraTx (ShelleyEra c) where
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script multisig) tx = validateNativeMultiSigScript multisig tx
-  {-# INLINE validateScript #-}
+  validateNativeScript = validateMultiSig
+  {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = shelleyMinFeeTx
 
@@ -406,20 +412,16 @@ hashMultiSigScript = hashScript @era
 
 -- ========================================
 
--- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
--- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript ::
   Era era =>
   MultiSig era ->
   Set (KeyHash 'Witness (EraCrypto era)) ->
   Bool
-evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
-evalNativeMultiSigScript (RequireAllOf msigs) vhks =
-  all (`evalNativeMultiSigScript` vhks) msigs
-evalNativeMultiSigScript (RequireAnyOf msigs) vhks =
-  any (`evalNativeMultiSigScript` vhks) msigs
-evalNativeMultiSigScript (RequireMOf m msigs) vhks =
-  m <= sum [if evalNativeMultiSigScript msig vhks then 1 else 0 | msig <- msigs]
+evalNativeMultiSigScript = flip evalMultiSig
+{-# DEPRECATED
+  evalNativeMultiSigScript
+  "In favor of `evalMultiSig` that has the arguments flipped"
+  #-}
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
@@ -427,10 +429,11 @@ validateNativeMultiSigScript ::
   MultiSig era ->
   Tx era ->
   Bool
-validateNativeMultiSigScript msig tx =
-  evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
-  where
-    vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
+validateNativeMultiSigScript = flip validateMultiSig
+{-# DEPRECATED
+  validateNativeMultiSigScript
+  "In favor of `validateMultiSig` that has the arguments flipped"
+  #-}
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::

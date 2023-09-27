@@ -2,7 +2,9 @@
 
 ## 1.6.1.0
 
-*
+* Export `isPlutusScript`
+* Add `NativeScript`, `getNativeScript` and `validateNativeScript`
+* Removed `phaseScript`
 
 ## 1.6.0.0
 
