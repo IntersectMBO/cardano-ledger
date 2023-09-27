@@ -34,15 +34,15 @@ header_body =
   , block_body_size  : uint
   , block_body_hash  : $hash32 ; merkle triple root
   , operational_cert
-  , protocol_version
+  , [ protocol_version ]
   ]
 
 operational_cert =
-  ( hot_vkey        : $kes_vkey
+  [ hot_vkey        : $kes_vkey
   , sequence_number : uint
   , kes_period      : uint
   , sigma           : $signature
-  )
+  ]
 
 next_major_protocol_version = 9
 
