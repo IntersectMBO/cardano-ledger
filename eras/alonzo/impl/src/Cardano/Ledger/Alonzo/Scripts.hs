@@ -130,7 +130,7 @@ import qualified Data.Map.Strict as Map
 import Data.Measure (BoundedMeasure, Measure)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Semigroup (All (..))
-import Data.Text as T (Text, pack)
+import Data.Text as T (Text)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), allNoThunks)
@@ -412,9 +412,9 @@ plutusV1ParamNames =
         ]
 
 plutusVXParamNames :: Language -> [Text]
-plutusVXParamNames PlutusV1 = T.pack . Plutus.showParamName <$> [minBound .. maxBound :: PV1.ParamName]
-plutusVXParamNames PlutusV2 = T.pack . Plutus.showParamName <$> [minBound .. maxBound :: PV2.ParamName]
-plutusVXParamNames PlutusV3 = T.pack . Plutus.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
+plutusVXParamNames PlutusV1 = Plutus.showParamName <$> [minBound .. maxBound :: PV1.ParamName]
+plutusVXParamNames PlutusV2 = Plutus.showParamName <$> [minBound .. maxBound :: PV2.ParamName]
+plutusVXParamNames PlutusV3 = Plutus.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
 
 validateCostModel :: MonadFail m => Language -> [Integer] -> m CostModel
 validateCostModel lang cmps =
