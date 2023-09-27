@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley-test`
 
+## 1.2.0.6
+
+*
+
 ## 1.2.0.5
 
 *
