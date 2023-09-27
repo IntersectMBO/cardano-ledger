@@ -637,7 +637,7 @@ getEitherAddrBabbageTxOut = \case
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
     | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"
-{-# INLINEABLE getEitherAddrBabbageTxOut #-}
+{-# INLINE getEitherAddrBabbageTxOut #-}
 
 -- TODO: Switch to using `getDatumBabbageTxOut`
 getDataBabbageTxOut :: Era era => BabbageTxOut era -> StrictMaybe (Data era)
