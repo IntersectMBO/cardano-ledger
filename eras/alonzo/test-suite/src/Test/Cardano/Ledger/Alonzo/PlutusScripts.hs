@@ -5,18 +5,18 @@ import Cardano.Ledger.Alonzo.Language (BinaryPlutus (..), Language (..), Plutus 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), CostModel, mkCostModel)
 import Data.ByteString.Short (pack)
 import Data.Either (fromRight)
-import qualified Data.Map as Map
-import PlutusLedgerApi.Test.EvaluationContext (costModelParamsForTesting)
+import qualified PlutusLedgerApi.Test.V1.EvaluationContext as V1
+import qualified PlutusLedgerApi.Test.V1.EvaluationContext as V2
 
 testingCostModelV1 :: CostModel
 testingCostModelV1 =
   fromRight (error "testingCostModelV1 is not well-formed") $
-    mkCostModel PlutusV1 (0 <$ Map.elems costModelParamsForTesting)
+    mkCostModel PlutusV1 (0 <$ V1.costModelParamsForTesting)
 
 testingCostModelV2 :: CostModel
 testingCostModelV2 =
   fromRight (error "testingCostModelV2 is not well-formed") $
-    mkCostModel PlutusV2 (0 <$ Map.elems costModelParamsForTesting)
+    mkCostModel PlutusV2 (0 <$ V2.costModelParamsForTesting)
 
 {- Preproceesed Plutus Script
 guessTheNumber'2_0 :: PlutusTx.Builtins.Internal.BuiltinData ->

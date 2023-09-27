@@ -22,12 +22,14 @@ import Cardano.Ledger.Alonzo.TxInfo (
  )
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Control.Monad.Writer (runWriterT)
 import Data.ByteString.Short (ShortByteString)
-import PlutusLedgerApi.Test.EvaluationContext
+import Data.Either (fromRight)
 import PlutusLedgerApi.Test.Examples (
   alwaysFailingNAryFunction,
   alwaysSucceedingNAryFunction,
  )
+import qualified PlutusLedgerApi.Test.V1.EvaluationContext as PV1
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated (
@@ -46,6 +48,9 @@ import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 -- =============================================
 
 -- Tests running Plutus scripts directely
+
+evalCtxForTesting :: PV1.EvaluationContext
+evalCtxForTesting = fst $ fromRight (error "failed to make evaluation context") $ runWriterT $ PV1.mkEvaluationContext (fmap snd PV1.costModelParamsForTesting)
 
 data ShouldSucceed = ShouldSucceed | ShouldFail
 

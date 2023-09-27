@@ -47,10 +47,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
--- FIXME: remove following line after plutus patch
-
 import Cardano.Ledger.Alonzo.TxInfo (VersionedTxInfo)
-import qualified PlutusLedgerApi.V3.Contexts as PV3
 import PlutusTx.Ratio as PlutusTx
 
 import Data.Typeable (Typeable)
@@ -112,9 +109,6 @@ instance Cborg.Serialise a => Cborg.Serialise (PV3.Extended a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.Interval a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
-
--- FIXME: remove following line after plutus patch
-deriving instance Generic PV3.BuiltinData
 
 -- FIXME: fix following after plutus patch
 instance Cborg.Serialise PlutusTx.Rational where
