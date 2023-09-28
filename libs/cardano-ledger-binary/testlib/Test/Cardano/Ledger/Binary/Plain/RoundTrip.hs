@@ -30,10 +30,12 @@ module Test.Cardano.Ledger.Binary.Plain.RoundTrip (
 where
 
 import Cardano.Ledger.Binary.Plain
+import qualified Codec.CBOR.FlatTerm as CBOR
 import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
 import qualified Data.Text as Text
 import Data.Typeable
+import qualified Formatting.Buildable as B (Buildable (..))
 import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), diffExpr, showExpr, showHexBytesGrouped)
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -54,7 +56,7 @@ roundTripSpec trip =
 -- | Tests the embedtrip property using QuickCheck generators
 embedTripSpec ::
   forall a b.
-  (Show a, Typeable a, Typeable b, Arbitrary a, HasCallStack) =>
+  (Eq b, Show a, Typeable a, Typeable b, Arbitrary a, HasCallStack) =>
   Trip a b ->
   (b -> a -> Expectation) ->
   Spec
@@ -63,7 +65,7 @@ embedTripSpec trip f =
     embedTripExpectation trip f
 
 -- Tests that a decoder error happens
-roundTripFailureExpectation :: forall a. (ToCBOR a, FromCBOR a) => a -> Expectation
+roundTripFailureExpectation :: forall a. (Eq a, ToCBOR a, FromCBOR a) => a -> Expectation
 roundTripFailureExpectation x =
   case roundTrip (cborTrip @a) x of
     Left _ -> pure ()
@@ -92,7 +94,7 @@ roundTripCborExpectation = roundTripExpectation (cborTrip @t)
 
 embedTripExpectation ::
   forall a b.
-  (Typeable b, HasCallStack) =>
+  (Typeable b, Eq b, HasCallStack) =>
   Trip a b ->
   (b -> a -> Expectation) ->
   a ->
@@ -112,6 +114,8 @@ data RoundTripFailure = RoundTripFailure
   , rtfReEncodedBytes :: Maybe BSL.ByteString
   -- ^ Re-serialized bytes, if there was a mismatch between the binary form and the
   -- reserialization of the data type.
+  , rtfFlatTermError :: Maybe String
+  -- ^ Roundtripping through FlatTerm
   , rtfDecoderError :: Maybe DecoderError
   -- ^ Error received while decoding the produced bytes.
   }
@@ -120,13 +124,14 @@ instance Show RoundTripFailure where
   show RoundTripFailure {..} =
     unlines $
       [ showMaybeDecoderError "Decoder" rtfDecoderError
+      , showMaybeDecoderError "FlatTerm" rtfFlatTermError
       ]
         ++ [ "Original did not match the reserialization (see below)."
            | Just _ <- pure rtfReEncodedBytes
            ]
         ++ showFailedTermsWithReSerialization rtfEncodedBytes rtfReEncodedBytes
 
-showMaybeDecoderError :: String -> Maybe DecoderError -> String
+showMaybeDecoderError :: B.Buildable b => String -> Maybe b -> String
 showMaybeDecoderError name = \case
   Nothing -> "No " ++ name ++ " error"
   Just err -> name ++ " error: " ++ showDecoderError err
@@ -174,18 +179,19 @@ cborTrip = Trip toCBOR fromCBOR
 mkTrip :: forall a b. (a -> Encoding) -> (forall s. Decoder s b) -> Trip a b
 mkTrip = Trip
 
-roundTrip :: forall t. Typeable t => Trip t t -> t -> Either RoundTripFailure t
+roundTrip :: forall t. (Eq t, Typeable t) => Trip t t -> t -> Either RoundTripFailure t
 roundTrip trip val = do
   (val', encoding, encodedBytes) <- embedTripLabelExtra (typeLabel @t) trip val
   let reserialized = serialize (tripEncoder trip val')
   if reserialized /= encodedBytes
     then
       Left $
-        RoundTripFailure encoding encodedBytes (Just reserialized) Nothing
+        RoundTripFailure encoding encodedBytes (Just reserialized) Nothing Nothing
     else Right val'
 
 embedTripLabel ::
   forall a b.
+  Eq b =>
   Text.Text ->
   Trip a b ->
   a ->
@@ -195,23 +201,40 @@ embedTripLabel lbl trip s =
 
 embedTripLabelExtra ::
   forall a b.
+  Eq b =>
   Text.Text ->
   Trip a b ->
   a ->
   Either RoundTripFailure (b, Encoding, BSL.ByteString)
 embedTripLabelExtra lbl (Trip encoder decoder) s =
   case decodeFullDecoder lbl decoder encodedBytes of
-    Right val -> Right (val, encoding, encodedBytes)
+    Right val ->
+      let flatTerm = CBOR.toFlatTerm encoding
+       in case CBOR.fromFlatTerm decoder flatTerm of
+            Left err -> Left $ mkFailure Nothing (Just err) Nothing
+            Right valFromFlatTerm
+              | val /= valFromFlatTerm ->
+                  let errMsg =
+                        "Deserializoing through FlatTerm produced a different "
+                          ++ "value then the regular deserializer did"
+                   in Left $ mkFailure Nothing (Just errMsg) Nothing
+              | not (CBOR.validFlatTerm flatTerm) ->
+                  let errMsg =
+                        "Despite successful deserialization the produced "
+                          ++ "FlatTerm for the type is not valid"
+                   in Left $ mkFailure Nothing (Just errMsg) Nothing
+              | otherwise -> Right (val, encoding, encodedBytes)
     Left err ->
-      Left $ RoundTripFailure encoding encodedBytes Nothing (Just err)
+      Left $ mkFailure Nothing Nothing (Just err)
   where
+    mkFailure = RoundTripFailure encoding encodedBytes
     encoding = encoder s
     encodedBytes = serialize encoding
 
 -- | Can we serialise a type, and then deserialise it as something else?
 embedTrip ::
   forall a b.
-  Typeable b =>
+  (Eq b, Typeable b) =>
   Trip a b ->
   a ->
   Either RoundTripFailure b
