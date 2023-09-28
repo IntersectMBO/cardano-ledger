@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Network,
   ShelleyBase,
+  StrictMaybe (..),
   networkId,
  )
 import Cardano.Ledger.Binary (
@@ -47,6 +48,8 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovProcedures (..),
   GovSnapshots (..),
+  PrevGovActionId (unPrevGovActionId),
+  PrevGovActionIds (..),
   ProposalProcedure (..),
   Voter (..),
   VotingProcedure (..),
@@ -61,6 +64,8 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovAction (..),
+  govProceduresProposalsL,
+  pProcGovActionL,
  )
 import Cardano.Ledger.Conway.Governance.Snapshots (snapshotGovActionStates)
 import Cardano.Ledger.Conway.PParams (
@@ -88,6 +93,7 @@ import Control.State.Transition.Extended (
 import qualified Data.Map.Merge.Strict as Map (dropMissing, merge, zipWithMaybeMatched)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (^.))
@@ -98,6 +104,7 @@ data GovEnv era = GovEnv
   { geTxId :: !(TxId (EraCrypto era))
   , geEpoch :: !EpochNo
   , gePParams :: !(PParams era)
+  , gePrevGovActionIds :: !(PrevGovActionIds era)
   }
 
 data ConwayGovPredFailure era
@@ -120,6 +127,7 @@ data ConwayGovPredFailure era
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
       (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+  | InvalidPrevGovActionIdsInProposals (Seq (ProposalProcedure era))
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => ToExpr (ConwayGovPredFailure era)
@@ -138,6 +146,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     5 -> SumD DisallowedVoters <! From
     6 -> SumD ConflictingCommitteeUpdate <! From
     7 -> SumD ExpirationEpochTooSmall <! From
+    8 -> SumD InvalidPrevGovActionIdsInProposals <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -157,6 +166,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum ConflictingCommitteeUpdate 6 !> To members
       ExpirationEpochTooSmall members ->
         Sum ExpirationEpochTooSmall 7 !> To members
+      InvalidPrevGovActionIdsInProposals proposals ->
+        Sum InvalidPrevGovActionIdsInProposals 8 !> To proposals
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -246,12 +257,49 @@ actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
       ParameterChange _ ppd -> ppuWellFormed ppd
       _ -> True
 
+checkProposalsHaveAValidPrevious ::
+  forall era.
+  PrevGovActionIds era ->
+  GovSnapshots era ->
+  GovProcedures era ->
+  Test (ConwayGovPredFailure era)
+checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
+  let isValidMember ::
+        StrictMaybe (PrevGovActionId p (EraCrypto era)) ->
+        (GovAction era -> Bool) ->
+        (PrevGovActionIds era -> StrictMaybe (PrevGovActionId p (EraCrypto era))) ->
+        Bool
+      isValidMember prev snapshotCond prevActionAccessor =
+        all
+          (== Just True) -- lookup has to succeed _and_ purpose of lookedup action has to match condition
+          ( fmap (snapshotCond . gasAction)
+              . (flip Map.lookup . snapshotGovActionStates $ snapshots ^. curGovSnapshotsL @era)
+              . unPrevGovActionId
+              <$> prev
+          )
+          || prev == prevActionAccessor prevGovActionIds
+      isValid proposal = case proposal ^. pProcGovActionL of
+        ParameterChange prev _ ->
+          isValidMember prev (\case ParameterChange {} -> True; _ -> False) pgaPParamUpdate
+        HardForkInitiation prev _ ->
+          isValidMember prev (\case HardForkInitiation {} -> True; _ -> False) pgaHardFork
+        TreasuryWithdrawals _ -> True
+        NoConfidence prev ->
+          isValidMember prev (\case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False) pgaCommittee
+        UpdateCommittee prev _ _ _ ->
+          isValidMember prev (\case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False) pgaCommittee
+        NewConstitution prev _ ->
+          isValidMember prev (\case NewConstitution {} -> True; _ -> False) pgaConstitution
+        InfoAction -> True
+      invalidProposals = Seq.filter (not . isValid) $ procedures ^. govProceduresProposalsL
+   in failureUnless (Seq.null invalidProposals) $ InvalidPrevGovActionIdsInProposals invalidProposals
+
 govTransition ::
   forall era.
   ConwayEraPParams era =>
   TransitionRule (ConwayGOV era)
 govTransition = do
-  TRC (GovEnv txid currentEpoch pp, st, gp) <- judgmentContext
+  TRC (GovEnv txid currentEpoch pp prevGovActionIds, st, gp) <- judgmentContext
   expectedNetworkId <- liftSTS $ asks networkId
 
   let applyProps st' Empty = pure st'
@@ -310,6 +358,7 @@ govTransition = do
           votingProcedures
   runTest $ noSuchGovActions st govActionIdVotes
   runTest $ checkVotesAreValid st govActionIdVotes
+  runTest $ checkProposalsHaveAValidPrevious prevGovActionIds st gp
 
   let applyVoterVotes curState voter =
         Map.foldlWithKey' (addVoterVote voter) curState
