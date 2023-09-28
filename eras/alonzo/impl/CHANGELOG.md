@@ -1,8 +1,15 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.4.2.1
+## 1.5.0.0
 
-*
+* Add `AlonzoEraUTxO` and use in the rules.
+* Deprecate `getDatum` in favor of `getSpendingDatum`
+* Deprecate `getDatumAlonzo` in favor of `getAlonzoSpendingDatum`
+* Deprecate `getSpendingTxIn` in favor of `getAlonzoSpendingTxIn`
+* Deprecate `getAllowedSupplimentalDataHashes` in favor of `getSupplementalDataHashes`
+* Rename `NonOutputSupplimentaryDatums` to `NotAllowedSupplementalDatums`
+* Remove unused `isTwoPhaseScriptAddress`
+* Change arguments to `hasExactSetOfRedeemers`
 
 ## 1.4.2.0
 

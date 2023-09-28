@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-core`
 
-## 1.7.0.1
+## 1.8.0.0
 
-*
+* Add `ScriptsProvided`
+* Require new `EraUTxO` class method `getScriptsProvided`
+* `EraTx` replaced `EraTxBody` superclass for `EraUTxO`
 
 ## 1.7.0.0
 

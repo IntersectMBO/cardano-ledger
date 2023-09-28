@@ -14,6 +14,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.UTxO (
+  EraUTxO (..),
   ShelleyScriptsNeeded (..),
   scriptsNeeded,
   getShelleyScriptsNeeded,
@@ -30,7 +31,15 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
-import Cardano.Ledger.CertState (CertState (..), certDStateL, certPStateL, certVStateL, lookupDepositDState, lookupDepositVState, psStakePoolParamsL)
+import Cardano.Ledger.CertState (
+  CertState (..),
+  certDStateL,
+  certPStateL,
+  certVStateL,
+  lookupDepositDState,
+  lookupDepositVState,
+  psStakePoolParamsL,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credScriptHash)
@@ -42,6 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   totalCertsDeposits,
  )
 import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
@@ -188,6 +198,8 @@ instance Crypto c => EraUTxO (ShelleyEra c) where
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
   getProducedValue = shelleyProducedValue
+
+  getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
   getScriptsNeeded = getShelleyScriptsNeeded
 

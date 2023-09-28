@@ -3,14 +3,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (..),
+  getAlonzoSpendingDatum,
+  getAlonzoSpendingTxIn,
   AlonzoScriptsNeeded (..),
   getAlonzoScriptsNeeded,
   getAlonzoScriptsHashesNeeded,
@@ -19,9 +24,11 @@ module Cardano.Ledger.Alonzo.UTxO (
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), MaryEraTxBody (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (datsTxWitsL), unTxDats)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Crypto
@@ -32,6 +39,7 @@ import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
+  ScriptsProvided (..),
   UTxO (..),
   getScriptHash,
  )
@@ -58,9 +66,74 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
 
   getProducedValue = shelleyProducedValue
 
+  getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
+
   getScriptsNeeded = getAlonzoScriptsNeeded
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
+
+class EraUTxO era => AlonzoEraUTxO era where
+  -- | Get data hashes for a transaction that are not required. Such datums are optional,
+  -- but they can be added to the witness set. In a broaded terms datums corresponding to
+  -- the inputs that might be spent are the required datums and the datums corresponding
+  -- to the outputs and reference inputs are the supplemental datums.
+  getSupplementalDataHashes ::
+    UTxO era ->
+    TxBody era ->
+    Set.Set (DataHash (EraCrypto era))
+
+  -- | Lookup the TxIn from the `Spending` ScriptPurpose and find the datum needed for
+  -- spending that input. This function will return `Nothing` for all script purposes,
+  -- except spending, because only spending scripts require an extra datum.
+  --
+  -- This is the same function as in the spec:
+  --
+  -- @
+  --   getDatum :: Tx era -> UTxO era -> ScriptPurpose era -> [Data era]
+  -- @
+  getSpendingDatum ::
+    UTxO era ->
+    Tx era ->
+    ScriptPurpose era ->
+    Maybe (Data era)
+
+instance Crypto c => AlonzoEraUTxO (AlonzoEra c) where
+  getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
+
+  getSpendingDatum = getAlonzoSpendingDatum
+
+getAlonzoSupplementalDataHashes ::
+  (EraTxBody era, AlonzoEraTxOut era) =>
+  TxBody era ->
+  Set.Set (DataHash (EraCrypto era))
+getAlonzoSupplementalDataHashes txBody =
+  Set.fromList
+    [ dh
+    | txOut <- toList $ txBody ^. outputsTxBodyL
+    , SJust dh <- [txOut ^. dataHashTxOutL]
+    ]
+
+-- | Get the Data associated with a ScriptPurpose. Only the Spending ScriptPurpose
+--  contains Data. Nothing is returned for the other kinds.
+getAlonzoSpendingDatum ::
+  (AlonzoEraTxWits era, AlonzoEraTxOut era, EraTx era) =>
+  UTxO era ->
+  Tx era ->
+  ScriptPurpose era ->
+  Maybe (Data era)
+getAlonzoSpendingDatum (UTxO m) tx sp = do
+  txIn <- getAlonzoSpendingTxIn sp
+  txOut <- Map.lookup txIn m
+  SJust hash <- Just $ txOut ^. dataHashTxOutL
+  Map.lookup hash (unTxDats $ tx ^. witsTxL . datsTxWitsL)
+
+-- | Only the Spending ScriptPurpose contains TxIn
+getAlonzoSpendingTxIn :: ScriptPurpose era -> Maybe (TxIn (EraCrypto era))
+getAlonzoSpendingTxIn = \case
+  Spending txin -> Just txin
+  Minting _policyId -> Nothing
+  Rewarding _rewardAccount -> Nothing
+  Certifying _txCert -> Nothing
 
 getAlonzoScriptsHashesNeeded :: AlonzoScriptsNeeded era -> Set.Set (ScriptHash (EraCrypto era))
 getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn)
@@ -75,22 +148,21 @@ getInputDataHashesTxBody ::
   (EraTxBody era, AlonzoEraTxOut era, EraScript era) =>
   UTxO era ->
   TxBody era ->
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
+  ScriptsProvided era ->
   (Set.Set (DataHash (EraCrypto era)), Set.Set (TxIn (EraCrypto era)))
-getInputDataHashesTxBody (UTxO mp) txBody hashScriptMap =
-  Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
+getInputDataHashesTxBody (UTxO mp) txBody (ScriptsProvided scriptsProvided) =
+  Map.foldlWithKey' accum (Set.empty, Set.empty) spendUTxO
   where
     spendInputs = txBody ^. inputsTxBodyL
-    smallUtxo = eval (spendInputs ◁ mp)
+    spendUTxO = eval (spendInputs ◁ mp)
     accum ans@(!hashSet, !inputSet) txIn txOut =
       let addr = txOut ^. addrTxOutL
+          isTwoPhaseScriptAddress = isTwoPhaseScriptAddressFromMap scriptsProvided addr
        in case txOut ^. datumTxOutF of
             NoDatum
-              | isTwoPhaseScriptAddressFromMap hashScriptMap addr ->
-                  (hashSet, Set.insert txIn inputSet)
+              | isTwoPhaseScriptAddress -> (hashSet, Set.insert txIn inputSet)
             DatumHash dataHash
-              | isTwoPhaseScriptAddressFromMap hashScriptMap addr ->
-                  (Set.insert dataHash hashSet, inputSet)
+              | isTwoPhaseScriptAddress -> (Set.insert dataHash hashSet, inputSet)
             -- Though it is somewhat odd to allow non-two-phase-scripts to include a datum,
             -- the Alonzo era already set the precedent with datum hashes, and several dapp
             -- developers see this as a helpful feature.

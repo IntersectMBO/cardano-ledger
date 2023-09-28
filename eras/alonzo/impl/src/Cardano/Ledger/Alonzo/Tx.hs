@@ -56,7 +56,6 @@ module Cardano.Ledger.Alonzo.Tx (
   AlonzoTxBody (..),
   -- Figure 4
   totExUnits,
-  isTwoPhaseScriptAddress,
   alonzoMinFeeTx,
   minfee,
   --  Figure 5
@@ -329,15 +328,6 @@ hashScriptIntegrity langViews rdmrs dats =
 -- ===============================================================
 -- From the specification, Figure 4 "Functions related to fees"
 -- ===============================================================
-
-isTwoPhaseScriptAddress ::
-  forall era.
-  (EraTx era, TxWits era ~ AlonzoTxWits era) =>
-  AlonzoTx era ->
-  Addr (EraCrypto era) ->
-  Bool
-isTwoPhaseScriptAddress tx =
-  isTwoPhaseScriptAddressFromMap @era (wits tx ^. scriptTxWitsL)
 
 -- | This ensures that the size of transactions from Mary is unchanged.
 -- The individual components all store their bytes; the only work we do in this

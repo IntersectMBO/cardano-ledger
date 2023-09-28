@@ -111,7 +111,7 @@ library
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test,
         cardano-ledger-shelley-ma-test,
-        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.0,
+        cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
         cardano-slotting,
         containers,
         formatting,

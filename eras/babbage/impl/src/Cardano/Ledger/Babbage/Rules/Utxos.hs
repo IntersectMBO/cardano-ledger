@@ -38,7 +38,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
@@ -80,7 +80,7 @@ instance
   , AlonzoEraPParams era
   , BabbageEraTxBody era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , EraPlutusContext 'PlutusV1 era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
@@ -122,7 +122,7 @@ utxosTransition ::
   ( AlonzoEraTx era
   , ExtendedUTxO era
   , BabbageEraTxBody era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , EraGov era
@@ -168,7 +168,7 @@ expectScriptsToPass ::
   forall era s.
   ( AlonzoEraTx era
   , EraPlutusContext 'PlutusV1 era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -203,7 +203,7 @@ babbageEvalScriptsTxValid ::
   forall era.
   ( ExtendedUTxO era
   , AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , STS (BabbageUTXOS era)
@@ -241,7 +241,7 @@ babbageEvalScriptsTxInvalid ::
   ( AlonzoEraTx era
   , BabbageEraTxBody era
   , EraPlutusContext 'PlutusV1 era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era

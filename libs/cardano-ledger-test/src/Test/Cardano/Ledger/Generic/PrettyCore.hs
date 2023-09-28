@@ -323,9 +323,9 @@ ppUtxowPredicateFail (MissingRequiredDatums s1 s2) =
     [ ("missing data hashes", ppSet ppSafeHash s1)
     , ("received data hashes", ppSet ppSafeHash s2)
     ]
-ppUtxowPredicateFail (NonOutputSupplimentaryDatums s1 s2) =
+ppUtxowPredicateFail (NotAllowedSupplementalDatums s1 s2) =
   ppRecord
-    "NonOutputSupplimentaryDatums"
+    "NotAllowedSupplementalDatums"
     [ ("unallowed data hashes", ppSet ppSafeHash s1)
     , ("acceptable data hashes", ppSet ppSafeHash s2)
     ]

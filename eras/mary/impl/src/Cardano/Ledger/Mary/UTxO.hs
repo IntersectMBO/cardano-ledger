@@ -13,6 +13,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Mary.TxBody ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.LedgerState (keyCertsRefunds)
@@ -23,6 +24,7 @@ import Cardano.Ledger.Shelley.UTxO (
  )
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
+  ScriptsProvided (..),
   UTxO (UTxO),
   balance,
  )
@@ -38,6 +40,8 @@ instance Crypto c => EraUTxO (MaryEra c) where
   getConsumedValue pp lookupKeyDeposit _ = getConsumedMaryValue pp lookupKeyDeposit
 
   getProducedValue = shelleyProducedValue
+
+  getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
   getScriptsNeeded = getMaryScriptsNeeded
 

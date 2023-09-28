@@ -650,16 +650,12 @@ instance
       decodePlutus lang = fmap (PlutusScript . Plutus lang) <$> D (guardPlutus lang >> decCBOR)
 
       addScripts :: [AlonzoScript era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
-      addScripts x wits = wits {atwrScriptTxWits = getKeys ([] :: [era]) x <> atwrScriptTxWits wits}
+      addScripts x wits =
+        wits
+          { atwrScriptTxWits =
+              keyBy (hashScript @era) x <> atwrScriptTxWits wits
+          }
       {-# INLINE addScripts #-}
-      getKeys ::
-        forall proxy e.
-        EraScript e =>
-        proxy e ->
-        [Script e] ->
-        Map (ScriptHash (EraCrypto e)) (Script e)
-      getKeys _ = keyBy (hashScript @e)
-      {-# INLINE getKeys #-}
   {-# INLINE decCBOR #-}
 
 deriving via

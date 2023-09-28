@@ -52,7 +52,11 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemers,
   unTxDats,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), getInputDataHashesTxBody)
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (..),
+  AlonzoScriptsNeeded (..),
+  getInputDataHashesTxBody,
+ )
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
@@ -78,7 +82,7 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
@@ -106,10 +110,10 @@ data AlonzoUtxowPredFailure era
       !(Set (DataHash (EraCrypto era)))
       -- | Set of received data hashes
       !(Set (DataHash (EraCrypto era)))
-  | NonOutputSupplimentaryDatums
+  | NotAllowedSupplementalDatums
       -- | Set of unallowed data hashes
       !(Set (DataHash (EraCrypto era)))
-      -- | Set of acceptable supplimental data hashes
+      -- | Set of acceptable supplemental data hashes
       !(Set (DataHash (EraCrypto era)))
   | PPViewHashesDontMatch
       -- | The PPHash in the TxBody
@@ -165,7 +169,7 @@ instance
       ShelleyInAlonzoUtxowPredFailure x -> Sum ShelleyInAlonzoUtxowPredFailure 0 !> To x
       MissingRedeemers x -> Sum MissingRedeemers 1 !> To x
       MissingRequiredDatums x y -> Sum MissingRequiredDatums 2 !> To x !> To y
-      NonOutputSupplimentaryDatums x y -> Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
+      NotAllowedSupplementalDatums x y -> Sum NotAllowedSupplementalDatums 3 !> To x !> To y
       PPViewHashesDontMatch x y -> Sum PPViewHashesDontMatch 4 !> To x !> To y
       MissingRequiredSigners x -> Sum MissingRequiredSigners 5 !> To x
       UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 6 !> To x
@@ -197,7 +201,7 @@ decodePredFail ::
 decodePredFail 0 = SumD ShelleyInAlonzoUtxowPredFailure <! From
 decodePredFail 1 = SumD MissingRedeemers <! From
 decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
-decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
+decodePredFail 3 = SumD NotAllowedSupplementalDatums <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 5 = SumD MissingRequiredSigners <! From
 decodePredFail 6 = SumD UnspendableUTxONoDatumHash <! From
@@ -211,21 +215,21 @@ decodePredFail n = Invalid n
 missingRequiredDatums ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
+  , AlonzoEraUTxO era
   ) =>
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   UTxO era ->
   Tx era ->
   Test (AlonzoUtxowPredFailure era)
-missingRequiredDatums scriptWits utxo tx = do
+missingRequiredDatums utxo tx = do
   let txBody = tx ^. bodyTxL
-      (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptWits
+      scriptsProvided = getScriptsProvided utxo tx
+      (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptsProvided
       txHashes = domain (unTxDats $ tx ^. witsTxL . datsTxWitsL)
       unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
-      allowedSupplimentalDataHashes = getAllowedSupplimentalDataHashes txBody utxo
+      allowedSupplementalDataHashes = getSupplementalDataHashes utxo txBody
       supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
       (okSupplimentalDHs, notOkSupplimentalDHs) =
-        Set.partition (`Set.member` allowedSupplimentalDataHashes) supplimentalDatumHashes
+        Set.partition (`Set.member` allowedSupplementalDataHashes) supplimentalDatumHashes
   sequenceA_
     [ failureUnless
         (Set.null txInsNoDataHash)
@@ -235,7 +239,7 @@ missingRequiredDatums scriptWits utxo tx = do
         (MissingRequiredDatums unmatchedDatumHashes txHashes)
     , failureUnless
         (Set.null notOkSupplimentalDHs)
-        (NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs)
+        (NotAllowedSupplementalDatums notOkSupplimentalDHs okSupplimentalDHs)
     ]
 
 -- ==================
@@ -244,20 +248,19 @@ missingRequiredDatums scriptWits utxo tx = do
 hasExactSetOfRedeemers ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , Script era ~ AlonzoScript era
   ) =>
-  UTxO era ->
   Tx era ->
+  ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
   Test (AlonzoUtxowPredFailure era)
-hasExactSetOfRedeemers utxo tx (AlonzoScriptsNeeded scriptsNeeded) = do
+hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) = do
   let txBody = tx ^. bodyTxL
       redeemersNeeded =
         [ (rp, (sp, sh))
         | (sp, sh) <- scriptsNeeded
         , SJust rp <- [rdptr @era txBody sp]
-        , Just script <- [Map.lookup sh (txscripts utxo tx)]
+        , Just script <- [Map.lookup sh scriptsProvided]
         , (not . isNativeScript) script
         ]
       (extraRdmrs, missingRdmrs) =
@@ -316,7 +319,7 @@ alonzoStyleWitness ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -338,21 +341,21 @@ alonzoStyleWitness = do
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses @era tx
+      scriptsProvided = getScriptsProvided utxo tx
 
   -- check scripts
   {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
-  runTestOnSignal $ Shelley.validateFailedScripts tx
+  runTestOnSignal $ Shelley.validateFailedNativeScripts scriptsProvided tx
 
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   let scriptsNeeded = getScriptsNeeded utxo txBody
       scriptsHashesNeeded = getScriptsHashesNeeded scriptsNeeded
       shelleyScriptsNeeded = ShelleyScriptsNeeded scriptsHashesNeeded
-      scriptsReceived = Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
-  runTest $ Shelley.validateMissingScripts pp shelleyScriptsNeeded scriptsReceived
+  runTest $ Shelley.validateMissingScripts pp shelleyScriptsNeeded scriptsProvided
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}
-  runTest $ missingRequiredDatums (tx ^. witsTxL . scriptTxWitsL) utxo tx
+  runTest $ missingRequiredDatums utxo tx
 
   {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx -}
   -- This is incorporated into missingRequiredDatums, see the
@@ -360,7 +363,7 @@ alonzoStyleWitness = do
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx scriptsNeeded
+  runTest $ hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txBodyHash ⟧_σ                -}
@@ -416,7 +419,7 @@ instance
   ( AlonzoEraTx era
   , EraTxAuxData era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , Script era ~ AlonzoScript era

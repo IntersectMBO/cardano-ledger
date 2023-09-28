@@ -301,8 +301,7 @@ validateOutputTooSmallUTxO pp outs =
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
   forall era.
-  ( EraTx era
-  , EraUTxO era
+  ( EraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era

@@ -25,7 +25,6 @@ where
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Scripts.Data ()
@@ -33,9 +32,9 @@ import Cardano.Ledger.Alonzo.Transition ()
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx ()
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTxOut)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
+import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Core
@@ -49,11 +48,6 @@ import Control.Arrow (left)
 import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
-import Data.Foldable (toList)
-import Data.Maybe.Strict
-import qualified Data.Set as Set
-import Lens.Micro
-import Lens.Micro.Extras (view)
 
 type Alonzo = AlonzoEra StandardCrypto
 
@@ -90,11 +84,3 @@ instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
 
 instance Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
-  txscripts _ = txscripts' . view witsTxL
-  getAllowedSupplimentalDataHashes txBody _ =
-    Set.fromList
-      [ dh
-      | txOut <- toList $ txBody ^. outputsTxBodyL
-      , SJust dh <- [txOut ^. dataHashTxOutL]
-      ]
-  getDatum = getDatumAlonzo

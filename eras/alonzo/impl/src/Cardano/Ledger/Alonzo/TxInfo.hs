@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -106,6 +107,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   vldtTxBodyL,
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -147,7 +149,7 @@ import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (getScriptsProvided), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
@@ -536,17 +538,35 @@ class ExtendedUTxO era where
     UTxO era ->
     Tx era ->
     Map.Map (ScriptHash (EraCrypto era)) (Script era)
+  default txscripts ::
+    EraUTxO era =>
+    UTxO era ->
+    Tx era ->
+    Map.Map (ScriptHash (EraCrypto era)) (Script era)
+  txscripts utxo = unScriptsProvided . getScriptsProvided utxo
 
   getAllowedSupplimentalDataHashes ::
     TxBody era ->
     UTxO era ->
     Set (DataHash (EraCrypto era))
+  default getAllowedSupplimentalDataHashes ::
+    AlonzoEraUTxO era =>
+    TxBody era ->
+    UTxO era ->
+    Set (DataHash (EraCrypto era))
+  getAllowedSupplimentalDataHashes txBody utxo = getSupplementalDataHashes utxo txBody
 
   getDatum ::
     Tx era ->
     UTxO era ->
     ScriptPurpose era ->
     Maybe (Data era)
+  default getDatum :: AlonzoEraUTxO era => Tx era -> UTxO era -> ScriptPurpose era -> Maybe (Data era)
+  getDatum tx utxo = getSpendingDatum utxo tx
+
+{-# DEPRECATED txscripts "In favor of `getScriptsProvided`" #-}
+{-# DEPRECATED getAllowedSupplimentalDataHashes "In favor of `getSupplementalDataHashes`" #-}
+{-# DEPRECATED getDatum "In favor of `getDatumForSpending`" #-}
 
 getTxOutDatum :: AlonzoEraTxOut era => TxOut era -> Datum era
 getTxOutDatum txOut = txOut ^. datumTxOutF

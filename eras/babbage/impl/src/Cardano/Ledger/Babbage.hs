@@ -16,6 +16,10 @@ module Cardano.Ledger.Babbage (
   BabbageTxBody,
   AlonzoScript,
   AlonzoTxAuxData,
+  -- | All of these were defined in a different module.
+  getDatumBabbage,
+  babbageTxScripts,
+  refScripts,
 )
 where
 
@@ -23,6 +27,8 @@ import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Scripts.Data (Data)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Core
@@ -31,27 +37,25 @@ import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Transition ()
 import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Babbage.Tx (
-  babbageTxScripts,
-  getDatumBabbage,
- )
+import Cardano.Ledger.Babbage.Tx ()
 import Cardano.Ledger.Babbage.TxAuxData ()
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody,
   BabbageTxOut,
  )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
-import Cardano.Ledger.Babbage.UTxO ()
-import Cardano.Ledger.Binary (sizedValue)
+import Cardano.Ledger.Babbage.UTxO (
+  getBabbageScriptsProvided,
+  getBabbageSpendingDatum,
+  getReferenceScripts,
+ )
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.UTxO (UTxO (..))
-import Data.Foldable (toList)
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.UTxO (ScriptsProvided (..), UTxO (..))
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict
-import qualified Data.Set as Set
-import Lens.Micro
+import Data.Set (Set)
 
 type Babbage = BabbageEra StandardCrypto
 
@@ -69,11 +73,34 @@ instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
 
 instance (Crypto c, EraPlutusContext 'PlutusV2 (BabbageEra c)) => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
-  txscripts = babbageTxScripts
-  getAllowedSupplimentalDataHashes txBody (UTxO utxo) =
-    Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
-    where
-      newOuts = map sizedValue $ toList $ txBody ^. allSizedOutputsTxBodyF
-      referencedOuts = Map.elems $ Map.restrictKeys utxo (txBody ^. referenceInputsTxBodyL)
-      outs = newOuts <> referencedOuts
-  getDatum = getDatumBabbage
+
+-- | Extract binary data either directly from the `Tx` as an "inline datum"
+-- or look it up in the witnesses by the hash.
+getDatumBabbage ::
+  ( AlonzoEraTx era
+  , BabbageEraTxOut era
+  ) =>
+  Tx era ->
+  UTxO era ->
+  ScriptPurpose era ->
+  Maybe (Data era)
+getDatumBabbage tx utxo = getBabbageSpendingDatum utxo tx
+{-# DEPRECATED getDatumBabbage "In favor of `getBabbageSpendingDatum`" #-}
+
+babbageTxScripts ::
+  ( EraTx era
+  , BabbageEraTxBody era
+  ) =>
+  UTxO era ->
+  Tx era ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era)
+babbageTxScripts utxo = unScriptsProvided . getBabbageScriptsProvided utxo
+{-# DEPRECATED babbageTxScripts "In favor of `getScriptsProvided`" #-}
+
+refScripts ::
+  BabbageEraTxOut era =>
+  Set (TxIn (EraCrypto era)) ->
+  UTxO era ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era)
+refScripts = flip getReferenceScripts
+{-# DEPRECATED refScripts "In favor of `getReferenceScripts`" #-}

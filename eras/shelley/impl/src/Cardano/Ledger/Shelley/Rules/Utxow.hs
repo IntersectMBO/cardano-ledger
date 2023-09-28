@@ -28,7 +28,7 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
   witsVKeyNeededNoGov,
 
   -- * Individual validation steps
-  validateFailedScripts,
+  validateFailedNativeScripts,
   validateMissingScripts,
   validateVerifiedWits,
   validateMetadata,
@@ -100,6 +100,7 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
+  ScriptsProvided (..),
   UTxO,
   txinLookup,
   verifyWitVKey,
@@ -294,8 +295,7 @@ initialLedgerStateUTXOW = do
 --   the PredicateFailure (type family) of the context of where it is called.
 transitionRulesUTXOW ::
   forall era utxow.
-  ( EraTx era
-  , EraUTxO era
+  ( EraUTxO era
   , ShelleyEraTxBody era
   , ProtVerAtMost era 8
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
@@ -319,16 +319,16 @@ transitionRulesUTXOW = do
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = utxosUtxo u
       witsKeyHashes = witsFromTxWitnesses tx
+      scriptsProvided = getScriptsProvided utxo tx
 
   -- check scripts
   {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
 
-  runTestOnSignal $ validateFailedScripts tx
+  runTestOnSignal $ validateFailedNativeScripts scriptsProvided tx
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
-      scriptsReceived = Map.keysSet (tx ^. witsTxL . scriptTxWitsL)
-  runTest $ validateMissingScripts pp scriptsNeeded scriptsReceived
+  runTest $ validateMissingScripts pp scriptsNeeded scriptsProvided
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
@@ -392,14 +392,14 @@ instance
   initialRules = [initialLedgerStateUTXOW]
 
 {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
-validateFailedScripts ::
-  forall era. EraTx era => Tx era -> Test (ShelleyUtxowPredFailure era)
-validateFailedScripts tx = do
-  let phase1Map = getPhase1 (tx ^. witsTxL . scriptTxWitsL)
+validateFailedNativeScripts ::
+  EraTx era => ScriptsProvided era -> Tx era -> Test (ShelleyUtxowPredFailure era)
+validateFailedNativeScripts (ScriptsProvided scriptsProvided) tx = do
+  let phase1Map = getPhase1 scriptsProvided
       failedScripts =
         Map.filterWithKey
           ( \hs (core, phase) ->
-              hashScript @era core /= hs || not (validateScript @era phase tx)
+              hashScript core /= hs || not (validateScript phase tx)
           )
           phase1Map
   failureUnless (Map.null failedScripts) $
@@ -407,25 +407,27 @@ validateFailedScripts tx = do
 
 {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)    -}
 {-  sNeeded := scriptsNeeded utxo tx                             -}
-{-  sReceived := Map.keysSet (tx ^. witsTxL . scriptTxWitsL)     -}
+{-  sProvided := Map.keysSet (tx ^. witsTxL . scriptTxWitsL)     -}
 validateMissingScripts ::
   EraPParams era =>
   PParams era ->
   ShelleyScriptsNeeded era ->
-  Set (ScriptHash (EraCrypto era)) ->
+  ScriptsProvided era ->
   Test (ShelleyUtxowPredFailure era)
-validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) sReceived =
+validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) scriptsprovided =
   if HardForks.missingScriptsSymmetricDifference (pp ^. ppProtocolVersionL)
     then
       sequenceA_
-        [ failureUnless (sNeeded `Set.isSubsetOf` sReceived) $
-            MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
-        , failureUnless (sReceived `Set.isSubsetOf` sNeeded) $
-            ExtraneousScriptWitnessesUTXOW (sReceived `Set.difference` sNeeded)
+        [ failureUnless (sNeeded `Set.isSubsetOf` sProvided) $
+            MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sProvided)
+        , failureUnless (sProvided `Set.isSubsetOf` sNeeded) $
+            ExtraneousScriptWitnessesUTXOW (sProvided `Set.difference` sNeeded)
         ]
     else
-      failureUnless (sNeeded == sReceived) $
-        MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
+      failureUnless (sNeeded == sProvided) $
+        MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sProvided)
+  where
+    sProvided = Map.keysSet $ unScriptsProvided scriptsprovided
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.

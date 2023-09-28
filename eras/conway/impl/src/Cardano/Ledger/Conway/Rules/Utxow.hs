@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
   BabbageUtxoPredFailure,
@@ -38,7 +38,7 @@ import Cardano.Ledger.Babbage.Rules (
   validateFailedBabbageScripts,
   validateScriptsWellFormed,
  )
-import Cardano.Ledger.Babbage.Tx (refScripts)
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOW)
@@ -79,7 +79,7 @@ conwayUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , ExtendedUTxO era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Script era ~ AlonzoScript era
   , ConwayEraTxBody era
@@ -101,29 +101,29 @@ conwayUtxowTransition = do
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses @era tx
-      hashScriptMap = txscripts utxo tx
       inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
 
   -- check scripts
   {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   let scriptsNeeded = getScriptsNeeded utxo txBody
+      scriptsProvided = getScriptsProvided utxo tx
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
   -- CHANGED In BABBAGE txscripts depends on UTxO
-  runTest $ validateFailedBabbageScripts tx utxo scriptHashesNeeded
+  runTest $ validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
 
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   let sReceived = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
-      sRefs = Map.keysSet $ refScripts inputs utxo
+      sRefs = Map.keysSet $ getReferenceScripts utxo inputs
   runTest $ babbageMissingScripts pp scriptHashesNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
-  runTest $ missingRequiredDatums hashScriptMap utxo tx
+  runTest $ missingRequiredDatums utxo tx
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx scriptsNeeded
+  runTest $ hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
 
   -- check VKey witnesses
   -- let txbodyHash = hashAnnotated @(Crypto era) txbody
@@ -188,7 +188,7 @@ instance
   forall era.
   ( ExtendedUTxO era
   , AlonzoEraTx era
-  , EraUTxO era
+  , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)

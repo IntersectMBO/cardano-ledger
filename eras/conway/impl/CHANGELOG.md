@@ -1,12 +1,12 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.9.0.1
+## 1.10.0.0
 
-*
+* Switch to using `AlonzoEraUTxO` in rules
 
 ## 1.9.0.0
 
-* Add  `ConwayEraPParams era` constraint to `isCommitteeVotingAllowed` and `votingCommitteeThreshold`
+* Add `ConwayEraPParams era` constraint to `isCommitteeVotingAllowed` and `votingCommitteeThreshold`
 * Add `ToExpr` instance for:
   * `Voter`
   * `VotingProcedures`

@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,
-  ExtendedUTxO (txscripts),
+  ExtendedUTxO (..),
   PlutusData (..),
   PlutusDebugLang (..),
   TranslationError,
@@ -43,7 +43,6 @@ import Cardano.Ledger.Alonzo.TxInfo (
   exBudgetToExUnits,
   transExUnits,
   transProtocolVersion,
-  txInfo,
   valContext,
  )
 import Cardano.Ledger.Alonzo.TxWits (
@@ -57,7 +56,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Array (Array, bounds, (!))
@@ -303,14 +302,14 @@ evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
     txBody = tx ^. bodyTxL
     wits = tx ^. witsTxL
     dats = unTxDats $ wits ^. datsTxWitsL
-    scriptsAvailable = txscripts utxo tx
+    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     AlonzoScriptsNeeded needed = getScriptsNeeded utxo txBody
-    neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed
+    neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsProvided) needed
     languagesUsed = Set.fromList [lang | (_, Plutus lang _) <- neededAndConfirmedToBePlutus]
 
     ptrToPlutusScript = Map.fromList $ do
       (sp, sh) <- needed
-      msb <- case Map.lookup sh scriptsAvailable of
+      msb <- case Map.lookup sh scriptsProvided of
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
         Just (PlutusScript plutus) -> pure $ Just plutus
