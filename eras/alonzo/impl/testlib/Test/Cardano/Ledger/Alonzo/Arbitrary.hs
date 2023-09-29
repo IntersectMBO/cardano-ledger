@@ -92,9 +92,7 @@ import qualified PlutusLedgerApi.Test.Examples as Plutus (
   alwaysSucceedingNAryFunction,
  )
 import qualified PlutusLedgerApi.V1 as PV1
-import qualified PlutusLedgerApi.V2 as PV2
-import qualified PlutusLedgerApi.V3 as PV3
-import PlutusPrelude (enumerate)
+import Test.Cardano.Ledger.Alonzo.CostModel (costModelParamsCount)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 
@@ -243,12 +241,6 @@ instance Arbitrary Language where
 
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
-
-costModelParamsCount :: Language -> Int
-costModelParamsCount lang = case lang of
-  PlutusV1 -> length (enumerate @PV1.ParamName)
-  PlutusV2 -> length (enumerate @PV2.ParamName)
-  PlutusV3 -> length (enumerate @PV3.ParamName)
 
 genCostModel :: Language -> Gen (Language, CostModel)
 genCostModel lang = (,) lang <$> genValidCostModel lang

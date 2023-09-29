@@ -96,6 +96,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Arbitrary
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.ImpTest
+        Test.Cardano.Ledger.Conway.PParamsSpec
 
     visibility:       public
     hs-source-dirs:   testlib

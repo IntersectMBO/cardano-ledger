@@ -23,6 +23,7 @@ module Cardano.Ledger.Core.PParams (
   emptyPParams,
   PParamsUpdate (..),
   emptyPParamsUpdate,
+  genericApplyPPUpdates,
 
   -- * PParams lens
   ppMinFeeAL,
@@ -208,6 +209,18 @@ instance Updatable (K1 t x a) (K1 t (StrictMaybe x) u) where
     SJust x -> x
     SNothing -> x'
 
+genericApplyPPUpdates ::
+  forall era a u.
+  ( Generic (PParamsHKD Identity era)
+  , Generic (PParamsHKD StrictMaybe era)
+  , Updatable (Rep (PParamsHKD Identity era) a) (Rep (PParamsHKD StrictMaybe era) u)
+  ) =>
+  PParams era ->
+  PParamsUpdate era ->
+  PParams era
+genericApplyPPUpdates (PParams a) (PParamsUpdate u) =
+  PParams . to $ applyUpdate (from @_ @a a) (from @_ @u u)
+
 class
   ( Era era
   , Eq (PParamsHKD Identity era)
@@ -252,8 +265,7 @@ class
     PParams era ->
     PParamsUpdate era ->
     PParams era
-  applyPPUpdates (PParams a) (PParamsUpdate u) =
-    PParams . to $ applyUpdate (from @_ @a a) (from @_ @u u)
+  applyPPUpdates = genericApplyPPUpdates @_ @a @u
 
   emptyPParamsIdentity :: PParamsHKD Identity era
   emptyPParamsStrictMaybe :: PParamsHKD StrictMaybe era
