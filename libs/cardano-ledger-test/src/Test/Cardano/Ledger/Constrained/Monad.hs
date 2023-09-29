@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Constrained.Monad (
   generateWithSeed,
 ) where
 
+import GHC.Stack
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
 
@@ -63,13 +64,13 @@ requireAll xs answer = if null bad then answer else failT (concat msgs)
 -- runTyped :: Typed t => Either [String] x
 
 -- | Pushes the (Left msgs) into a call to 'error'
-errorTyped :: Typed t -> t
+errorTyped :: HasCallStack => Typed t -> t
 errorTyped t = case runTyped t of
   Right x -> x
   Left xs -> error (unlines ("\nSolver-time error" : xs))
 
 -- | Pushes the (Left msgs) into a call to 'error', then injects into a Monad
-monadTyped :: Monad m => Typed t -> m t
+monadTyped :: (HasCallStack, Monad m) => Typed t -> m t
 monadTyped t = pure $! errorTyped t
 
 -- ================================================================

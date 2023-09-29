@@ -102,7 +102,11 @@ instance PrettyA ExUnits where
 
 ppCostModel :: CostModel -> PDoc
 ppCostModel cm =
-  ppSexp "CostModel" [ppLanguage (getCostModelLanguage cm), ppList ppInteger (getCostModelParams cm)]
+  ppSexp "CostModel" [ppLanguage (getCostModelLanguage cm), ppCMP]
+  where
+    ppCMP
+      | all (== 0) (getCostModelParams cm) = ppSexp "replicate" [ppInteger (fromIntegral $ length $ getCostModelParams cm), ppInteger 0]
+      | otherwise = ppList ppInteger (getCostModelParams cm)
 
 instance PrettyA CostModel where
   prettyA = ppCostModel

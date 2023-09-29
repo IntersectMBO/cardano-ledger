@@ -1,12 +1,15 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -23,12 +26,15 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.PoolParams
+import Cardano.Ledger.Pretty
 import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
 import qualified Cardano.Ledger.UMap as UM
+import Control.Monad.Reader
 import Control.State.Transition.Extended
 import qualified Data.ByteString as BS
 import Data.Default.Class (Default (def))
 import Data.Foldable
+import qualified Data.HashSet as HashSet
 import qualified Data.Map as Map
 import Data.Maybe
 import qualified Data.Set as Set
@@ -40,11 +46,13 @@ import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
 import Test.Cardano.Ledger.Constrained.Preds.CertState
+import Test.Cardano.Ledger.Constrained.Preds.LedgerState
 import Test.Cardano.Ledger.Constrained.Preds.PParams
 import Test.Cardano.Ledger.Constrained.Preds.Universes
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Shrink
 import Test.Cardano.Ledger.Constrained.Solver
+import Test.Cardano.Ledger.Constrained.Tests
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars hiding (delegations, rewards)
 import Test.Cardano.Ledger.Generic.Proof
@@ -135,8 +143,8 @@ solveUnknown env p = case p of
 
 lookupTerm ::
   Testable p =>
-  Subst (ConwayEra StandardCrypto) ->
-  Term (ConwayEra StandardCrypto) t ->
+  Subst era ->
+  Term era t ->
   (t -> p) ->
   Property
 lookupTerm sub term cont =
@@ -146,6 +154,24 @@ lookupTerm sub term cont =
    in case runTyped lkp of
         Left errors -> counterexample ("lookupTerm: " ++ show errors) False
         Right val -> property $ cont val
+
+genShrinkFromConstraints ::
+  Era era =>
+  Proof era ->
+  Subst era ->
+  (Proof era -> [Pred era]) ->
+  (Proof era -> [Pred era]) ->
+  RootTarget era t t ->
+  GenShrink t
+genShrinkFromConstraints proof sub generationPreds checkPreds target =
+  ( genFromConstraints proof standardOrderInfo ps target
+  , shrinkFromConstraints standardOrderInfo cps target
+  )
+  where
+    -- Pad with randoms here to make sure that the unconstrained variables in
+    -- the target are still shrunk and don't go missing when we shrink.
+    cps = applySubst sub $ checkPreds proof ++ [Random (Var v) | Name v <- HashSet.toList $ varsOfTarget mempty target]
+    ps = applySubst sub $ generationPreds proof ++ checkPreds proof
 
 ------------------------------------------------------------------------
 -- Generator helpers
@@ -157,20 +183,27 @@ conwayProof = Conway Standard
 -- PParams ----------------------------------------------------------------
 
 pParamsT ::
+  Reflect era =>
   RootTarget
-    (ConwayEra StandardCrypto)
-    (PParamsF (ConwayEra StandardCrypto))
-    (PParamsF (ConwayEra StandardCrypto))
-pParamsT = Lensed (pparams conwayProof) id
+    era
+    (PParamsF era)
+    (PParamsF era)
+pParamsT = Lensed (pparams reify) id
 
-pParamsPs :: Subst (ConwayEra StandardCrypto) -> [Pred (ConwayEra StandardCrypto)]
-pParamsPs s = applySubst s $ pParamsPreds conwayProof
+pParamsPs :: Reflect era => Subst era -> [Pred era]
+pParamsPs s = applySubst s $ pParamsPreds reify
 
-pParamsGen :: Subst (ConwayEra StandardCrypto) -> Gen (PParamsF (ConwayEra StandardCrypto))
-pParamsGen s = genFromConstraints conwayProof standardOrderInfo (pParamsPs s) pParamsT
+pParamsGen :: Reflect era => Subst era -> Gen (PParamsF era)
+pParamsGen s = genFromConstraints reify standardOrderInfo (pParamsPs s) pParamsT
 
 -- TODO: this is currently broken because it fails to find `maxTxSize`. This can be fixed
 -- by building a proper target for PParams but I don't yet know how to do that.
+-- NOTE: Can't we use the
+-- Proj :: Lens' b t -> Rep era t -> Term era b -> Term era t
+-- on var currPParams :: Era era => Proof era -> Term era (PParamsF era)
+-- and the var
+-- maxTxSize :: Era era => Proof era -> Term era Natural
+-- to do something?
 pParamsShrink ::
   Subst (ConwayEra StandardCrypto) ->
   PParamsF (ConwayEra StandardCrypto) ->
@@ -188,14 +221,13 @@ genConwayGovCert pp vs =
     [ do
         key <- arbitrary `suchThat` (`Map.notMember` vsDReps vs)
         ConwayRegDRep key (pp ^. ppDRepDepositL) <$> arbitrary
+    , ConwayAuthCommitteeHotKey <$> arbitrary <*> arbitrary
+    , ConwayResignCommitteeColdKey <$> arbitrary
     ]
       ++ [ do
           (k, dep) <- elements $ Map.toList (vsDReps vs)
           pure $ ConwayUnRegDRep k (drepDeposit dep)
          | mempty /= vsDReps vs
-         ]
-      ++ [ ConwayAuthCommitteeHotKey <$> arbitrary <*> arbitrary
-         , ConwayResignCommitteeColdKey <$> arbitrary
          ]
 
 shrinkConwayGovCert ::
@@ -253,10 +285,11 @@ genDelegCert ::
   Gen (ConwayDelegCert StandardCrypto)
 genDelegCert pp ds =
   oneof $
-    [gen_RegCert]
+    [ gen_RegCert
+    , gen_RegDelegCert
+    ]
       ++ [gen_UnRegCert | hasRegisteredKeys noReward]
       ++ [gen_DelegCert | hasRegisteredKeys unrestricted]
-      ++ [gen_RegDelegCert]
   where
     delegView = delegations ds
     rewardView = rewards ds
@@ -286,64 +319,112 @@ genDelegCert pp ds =
 -- Properties
 ------------------------------------------------------------------------
 
-prop_GOVCERT :: Subst (ConwayEra StandardCrypto) -> Property
-prop_GOVCERT sub =
-  forAll (pParamsGen sub) $ \(unPParams -> pParams) ->
-    lookupTerm sub currentEpoch $ \epochNo ->
-      forAllShrink (vStateGen sub) (vStateShrink sub) $ \vState ->
-        forAllShrink
-          (genConwayGovCert pParams vState)
-          (shrinkConwayGovCert pParams vState)
-          $ \signal ->
-            -- TODO: this can be generalized when we have more examples
-            runShelleyBase $ do
-              res <- applySTS @(ConwayGOVCERT Conway) $ TRC (ConwayGovCertEnv pParams epochNo, vState, signal)
-              pure $ case res of
-                Left pfailure -> counterexample (show pfailure) $ property False
-                Right _ -> property True -- There are no actual invariants on `VState` that we can check
-                -- so we are happy just checking that we actually do _something_ here
-  where
-    -- VState
-    vStatePs s = applySubst s $ vstatePreds conwayProof
-    vStateGen s = genFromConstraints conwayProof standardOrderInfo (vStatePs s) vstateT
-    vStateShrink s = shrinkFromConstraints standardOrderInfo (vStatePs s) vstateT
+-- Setup ------------------------------------------------------------------
 
-prop_POOL :: Subst (ConwayEra StandardCrypto) -> Property
-prop_POOL sub =
+data PropEnv era = PropEnv
+  { peNetwork :: Network
+  , pePParams :: PParams era
+  , peEpochNo :: EpochNo
+  , peSlotNo :: SlotNo
+  }
+
+type GenShrink a = (Gen a, a -> [a])
+
+stsProperty ::
+  forall r era env st sig.
+  ( Reflect era
+  , Environment (EraRule r era) ~ env
+  , State (EraRule r era) ~ st
+  , Signal (EraRule r era) ~ sig
+  , STS (EraRule r era)
+  , BaseM (EraRule r era) ~ ReaderT Globals Identity
+  , PrettyA st
+  , PrettyA sig
+  , PrettyA env
+  ) =>
+  Subst era ->
+  (PropEnv era -> env) ->
+  (PropEnv era -> GenShrink st) ->
+  (PropEnv era -> st -> GenShrink sig) ->
+  (PropEnv era -> env -> st -> sig -> st -> Property) ->
+  Property
+stsProperty sub mkEnv genSt genSig prop =
   lookupTerm sub network $ \net ->
     lookupTerm sub currentEpoch $ \epochNo ->
       lookupTerm sub currentSlot $ \slotNo ->
-        forAll (pParamsGen sub) $ \(unPParams -> pParams) ->
-          forAllShrink (pStateGen sub) (pStateShrink sub) $ \pState ->
-            -- TODO: this should eventually be replaced by constraints based generator
-            forAll (genPoolCert net epochNo pParams pState) $ \poolCert ->
-              runShelleyBase $ do
-                res <- applySTS @(ConwayPOOL Conway) $ TRC (PoolEnv slotNo pParams, pState, poolCert)
-                pure $ case res of
-                  Left pfailure -> counterexample (show pfailure) $ property False
-                  Right _ -> property True -- TODO: checking here! (requires splitting checking constraints from pstate)
-  where
-    -- PState
-    pStatePs s = applySubst s $ pstatePreds conwayProof
-    pStateGen s = genFromConstraints conwayProof standardOrderInfo (pStatePs s) pstateT
-    pStateShrink s = shrinkFromConstraints standardOrderInfo (pStatePs s) pstateT
+        forAllBlind (pParamsGen sub) $ \(unPParams -> pParams) ->
+          let pEnv = PropEnv net pParams epochNo slotNo
+           in counterexample (show $ ppString "env = " <> prettyA (mkEnv pEnv)) $
+                uncurry forAllShrinkBlind (genSt pEnv) $ \st ->
+                  counterexample (show $ ppString "st = " <> prettyA st) $
+                    uncurry forAllShrinkBlind (genSig pEnv st) $ \sig ->
+                      counterexample (show $ ppString "sig = " <> prettyA sig) $
+                        runShelleyBase $ do
+                          res <- applySTS @(EraRule r era) $ TRC (mkEnv pEnv, st, sig)
+                          pure $ case res of
+                            Left pfailure -> counterexample (show pfailure) $ property False
+                            Right st' ->
+                              counterexample (show $ ppString "st' = " <> prettyA st') $
+                                prop pEnv (mkEnv pEnv) st sig st'
+
+checkConstraints ::
+  era ~ ConwayEra StandardCrypto =>
+  Proof era ->
+  Subst (ConwayEra StandardCrypto) ->
+  (Proof era -> [Pred era]) ->
+  RootTarget era s t ->
+  s ->
+  Property
+checkConstraints proof sub preds target val =
+  let cs = applySubst sub $ preds proof
+      env = saturateEnv (getTarget val target emptyEnv) cs
+      check p = counterexample ("Failed: " ++ showPred p) $ ensureTyped (runPred env p) id
+   in counterexample ("-- Solution --\n" ++ showEnv env) $
+        conjoin $
+          map check cs
+
+-- STS properties ---------------------------------------------------------
+
+prop_GOVCERT :: Subst (ConwayEra StandardCrypto) -> Property
+prop_GOVCERT sub =
+  stsProperty @"GOVCERT"
+    sub
+    (\PropEnv {..} -> ConwayGovCertEnv pePParams peEpochNo)
+    (\_ -> genShrinkFromConstraints conwayProof sub vstatePreds (const []) vstateT)
+    -- TODO: this should eventually be replaced by constraints based generator
+    (\PropEnv {..} st -> (genConwayGovCert pePParams st, shrinkConwayGovCert pePParams st))
+    $ \_pEnv _env _st _sig _st' -> property True -- TODO: property?
+
+prop_POOL :: Subst (ConwayEra StandardCrypto) -> Property
+prop_POOL sub =
+  stsProperty @"POOL"
+    sub
+    (\PropEnv {..} -> PoolEnv peSlotNo pePParams)
+    (\_ -> genShrinkFromConstraints conwayProof sub pstateGenPreds pstateCheckPreds pstateT)
+    -- TODO: this should eventually be replaced by constraints based generator
+    (\PropEnv {..} st -> (genPoolCert peNetwork peEpochNo pePParams st, const []))
+    $ \_pEnv _env _st _sig st' -> checkConstraints conwayProof sub pstateCheckPreds pstateT st'
 
 prop_DELEG :: Subst (ConwayEra StandardCrypto) -> Property
 prop_DELEG sub =
-  forAll (pParamsGen sub) $ \(unPParams -> pParams) ->
-    forAllShrink (dStateGen sub) (dStateShrink sub) $ \dState ->
-      -- TODO: this should eventually be replaced by constraints based generator
-      forAll (genDelegCert pParams dState) $ \delegCert ->
-        runShelleyBase $ do
-          res <- applySTS @(ConwayDELEG Conway) $ TRC (pParams, dState, delegCert)
-          pure $ case res of
-            Left pfailure -> counterexample (show pfailure) $ property False
-            Right _ -> property True -- TODO: checking here! (requires splitting checking constraints from pstate)
-  where
-    -- PState
-    dStatePs s = applySubst s $ certStatePreds conwayProof
-    dStateGen s = genFromConstraints conwayProof standardOrderInfo (dStatePs s) dstateT
-    dStateShrink s = shrinkFromConstraints standardOrderInfo (dStatePs s) dstateT
+  stsProperty @"DELEG"
+    sub
+    (\PropEnv {..} -> pePParams)
+    (\_ -> genShrinkFromConstraints conwayProof sub certStateGenPreds certStateCheckPreds dstateT)
+    -- TODO: this should eventually be replaced by constraints based generator
+    (\PropEnv {..} st -> (genDelegCert pePParams st, const []))
+    $ \_pEnv _env _st _sig st' -> checkConstraints conwayProof sub certStateCheckPreds dstateT st'
+
+prop_ENACT :: Subst (ConwayEra StandardCrypto) -> Property
+prop_ENACT sub =
+  stsProperty @"ENACT"
+    sub
+    (const ())
+    (\_ -> genShrinkFromConstraints conwayProof sub enactStateGenPreds enactStateCheckPreds enactStateT)
+    -- TODO: this is a bit suspect, there are preconditions on these signals in the spec so we
+    -- shouldn't expect this to go through so easily.
+    (\_ _ -> (EnactSignal <$> arbitrary <*> arbitrary, const []))
+    $ \_pEnv _env _st _sig _st' -> property True
 
 ------------------------------------------------------------------------
 -- Test Tree
@@ -362,7 +443,12 @@ tests_STS =
       [ testProperty "prop_GOVCERT" $ idempotentIOProperty (prop_GOVCERT <$> io_subst)
       , testProperty "prop_POOL" $ idempotentIOProperty (prop_POOL <$> io_subst)
       , testProperty "prop_DELEG" $ idempotentIOProperty (prop_DELEG <$> io_subst)
+      , testProperty "prop_ENACT" $ idempotentIOProperty (prop_ENACT <$> io_subst)
       ]
+
+------------------------------------------------------------------------
+-- Development helpers
+------------------------------------------------------------------------
 
 runTest :: (Subst (ConwayEra StandardCrypto) -> Property) -> IO ()
 runTest prop = do

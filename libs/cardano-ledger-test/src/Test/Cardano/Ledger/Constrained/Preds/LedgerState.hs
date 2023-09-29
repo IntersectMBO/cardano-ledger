@@ -32,6 +32,24 @@ import Test.Tasty (TestTree, defaultMain)
 
 -- =========================================
 
+enactStateGenPreds :: Reflect era => Proof era -> [Pred era]
+enactStateGenPreds p =
+  [ Random committeeVar
+  , Random constitution
+  , prevPParams p :<-: (Constr "id" id ^$ pparams p)
+  , currPParams p :<-: (Constr "id" id ^$ pparams p)
+  , Random enactTreasury
+  , Random enactWithdrawals
+  , -- PrevGovActionsIds constraints
+    Random prevPParamUpdate
+  , Random prevHardFork
+  , Random prevCommittee
+  , Random prevConstitution
+  ]
+
+enactStateCheckPreds :: Proof era -> [Pred era]
+enactStateCheckPreds _ = []
+
 ledgerStatePreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
 ledgerStatePreds usize p =
   [ -- Conway GovState Vars
