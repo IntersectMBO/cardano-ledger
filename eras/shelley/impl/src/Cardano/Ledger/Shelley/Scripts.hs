@@ -22,6 +22,8 @@ module Cardano.Ledger.Shelley.Scripts (
     RequireSignature,
     RequireMOf
   ),
+  evalMultiSig,
+  validateMultiSig,
   ScriptHash (..),
   nativeMultiSigTag,
   eqMultiSigRaw,
@@ -40,7 +42,8 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, HASH)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
+import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash (..), KeyRole (Witness))
+import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -56,7 +59,9 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import Data.Functor.Classes (Eq1 (liftEq))
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- | A simple language for expressing conditions under which it is valid to
@@ -106,19 +111,18 @@ deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSig era)
 nativeMultiSigTag :: BS.ByteString
 nativeMultiSigTag = "\00"
 
-type instance SomeScript 'PhaseOne (ShelleyEra c) = MultiSig (ShelleyEra c)
-
 instance Crypto c => EraScript (ShelleyEra c) where
   type Script (ShelleyEra c) = MultiSig (ShelleyEra c)
+  type NativeScript (ShelleyEra c) = MultiSig (ShelleyEra c)
 
   -- Calling this partial function will result in compilation error, since ByronEra has
   -- no instance for EraScript type class.
   upgradeScript = error "It is not possible to translate a script with 'upgradeScript' from Byron era"
 
+  getNativeScript = Just
+
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   scriptPrefixTag _script = nativeMultiSigTag
-  phaseScript PhaseOneRep multisig = Just (Phase1Script multisig)
-  phaseScript PhaseTwoRep _ = Nothing
 
 deriving newtype instance NFData (MultiSig era)
 
@@ -191,3 +195,29 @@ eqMultiSigRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
     go (RequireAnyOf' ts1) (RequireAnyOf' ts2) = liftEq eqMultiSigRaw ts1 ts2
     go (RequireMOf' n1 ts1) (RequireMOf' n2 ts2) = n1 == n2 && liftEq eqMultiSigRaw ts1 ts2
     go _ _ = False
+
+-- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
+-- key hashes that signed the transaction to be validated.
+evalMultiSig ::
+  Era era =>
+  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  MultiSig era ->
+  Bool
+evalMultiSig vhks = go
+  where
+    -- The important part of this validator is that it will stop as soon as it reaches the
+    -- required number of valid scripts
+    isValidMOf n [] = n <= 0
+    isValidMOf n (msig : msigs) =
+      n <= 0 || if go msig then isValidMOf (n - 1) msigs else isValidMOf n msigs
+    go = \case
+      RequireSignature hk -> Set.member hk vhks
+      RequireAllOf msigs -> all go msigs
+      RequireAnyOf msigs -> any go msigs
+      RequireMOf m msigs -> isValidMOf m msigs
+
+-- | Script validator for native multi-signature scheme.
+validateMultiSig :: EraTx era => Tx era -> MultiSig era -> Bool
+validateMultiSig tx =
+  evalMultiSig $ Set.map (coerceKeyRole . witVKeyHash) (tx ^. witsTxL . addrTxWitsL)
+{-# INLINE validateMultiSig #-}

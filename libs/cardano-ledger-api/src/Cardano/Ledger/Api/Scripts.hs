@@ -1,11 +1,13 @@
 module Cardano.Ledger.Api.Scripts (
   module Cardano.Ledger.Api.Scripts.Data,
-  EraScript (Script),
+  EraScript (Script, NativeScript),
   scriptPrefixTag,
   upgradeScript,
   hashScript,
-  phaseScript,
+  getNativeScript,
+  validateNativeScript,
   isNativeScript,
+  isPlutusScript,
   ScriptHash,
   CostModels (..),
   ValidityInterval (..),
@@ -13,8 +15,8 @@ module Cardano.Ledger.Api.Scripts (
 where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModels (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModels (..), isPlutusScript)
 import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.Api.Scripts.Data
-import Cardano.Ledger.Core (EraScript (..))
+import Cardano.Ledger.Core (EraScript (..), isNativeScript, validateNativeScript)
 import Cardano.Ledger.Hashes (ScriptHash)

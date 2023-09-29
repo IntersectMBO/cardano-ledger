@@ -81,7 +81,8 @@ import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (fromShort)
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)), fromList)
-import Data.Set (Set, member)
+import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set (Set, member)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -193,13 +194,12 @@ instance Memoized Timelock where
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Timelock era)
 
-type instance SomeScript 'PhaseOne (AllegraEra c) = Timelock (AllegraEra c)
-
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in MultiSig
 instance Crypto c => EraScript (AllegraEra c) where
   type Script (AllegraEra c) = Timelock (AllegraEra c)
+  type NativeScript (AllegraEra c) = Timelock (AllegraEra c)
 
   upgradeScript = \case
     Shelley.RequireSignature keyHash -> RequireSignature keyHash
@@ -209,8 +209,7 @@ instance Crypto c => EraScript (AllegraEra c) where
 
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
 
-  phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
-  phaseScript PhaseTwoRep _ = Nothing
+  getNativeScript = Just
 
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
@@ -274,21 +273,24 @@ ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
   Era era =>
-  Set (KeyHash 'Witness (EraCrypto era)) ->
+  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
   ValidityInterval ->
   Timelock era ->
   Bool
-evalTimelock _vhks (ValidityInterval txStart _) (RequireTimeStart lockStart) =
-  lockStart `lteNegInfty` txStart
-evalTimelock _vhks (ValidityInterval _ txExp) (RequireTimeExpire lockExp) =
-  txExp `ltePosInfty` lockExp
-evalTimelock vhks _vi (RequireSignature hash) = member hash vhks
-evalTimelock vhks vi (RequireAllOf xs) =
-  all (evalTimelock vhks vi) xs
-evalTimelock vhks vi (RequireAnyOf xs) =
-  any (evalTimelock vhks vi) xs
-evalTimelock vhks vi (RequireMOf m xs) =
-  m <= sum (fmap (\x -> if evalTimelock vhks vi x then 1 else 0) xs)
+evalTimelock vhks (ValidityInterval txStart txExp) = go
+  where
+    -- The important part of this validator is that it will stop as soon as it reaches the
+    -- required number of valid scripts
+    isValidMOf n SSeq.Empty = n <= 0
+    isValidMOf n (ts SSeq.:<| tss) =
+      n <= 0 || if go ts then isValidMOf (n - 1) tss else isValidMOf n tss
+    go = \case
+      RequireTimeStart lockStart -> lockStart `lteNegInfty` txStart
+      RequireTimeExpire lockExp -> txExp `ltePosInfty` lockExp
+      RequireSignature hash -> hash `Set.member` vhks
+      RequireAllOf xs -> all go xs
+      RequireAnyOf xs -> any go xs
+      RequireMOf m xs -> isValidMOf m xs
 
 -- =========================================================
 -- Operations on Timelock scripts
