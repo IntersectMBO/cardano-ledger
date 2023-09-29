@@ -1,5 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -51,8 +50,8 @@ instance Crypto c => EraTx (BabbageEra c) where
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) = validateTimelock @(BabbageEra c) script
-  {-# INLINE validateScript #-}
+  validateNativeScript = validateTimelock
+  {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = alonzoMinFeeTx
 

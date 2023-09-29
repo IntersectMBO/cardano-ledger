@@ -40,7 +40,6 @@ module Cardano.Ledger.Api.Tx (
   bodyTxL,
   witsTxL,
   auxDataTxL,
-  validateScript,
   sizeTxF,
   getMinFeeTx,
   setMinFeeTx,

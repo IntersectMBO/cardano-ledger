@@ -2,6 +2,8 @@
 
 ## 1.5.0.0
 
+* Add `Test.Cardano.Ledger.Alonzo.CostModel`
+* Add `updateCostModels`
 * Add `AlonzoEraUTxO` and use in the rules.
 * Deprecate `getDatum` in favor of `getSpendingDatum`
 * Deprecate `getDatumAlonzo` in favor of `getAlonzoSpendingDatum`

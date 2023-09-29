@@ -54,8 +54,8 @@ instance Crypto c => EraTx (ConwayEra c) where
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
-  validateScript (Phase1Script script) = validateTimelock @(ConwayEra c) script
-  {-# INLINE validateScript #-}
+  validateNativeScript = validateTimelock
+  {-# INLINE validateNativeScript #-}
 
   getMinFeeTx = alonzoMinFeeTx
 

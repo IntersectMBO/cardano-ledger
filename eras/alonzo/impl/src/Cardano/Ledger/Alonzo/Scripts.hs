@@ -37,6 +37,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   CostModel,
   CostModelError (..),
   emptyCostModels,
+  updateCostModels,
   mkCostModel,
   mkCostModelsLenient,
   encodeCostModel,
@@ -121,7 +122,6 @@ import Data.Aeson (
 import qualified Data.Aeson as Aeson (Value)
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
-import Data.ByteString.Short (ShortByteString)
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Either (isRight)
 import Data.Int (Int64)
@@ -199,24 +199,14 @@ instance SafeToHash (AlonzoScript era) where
   originalBytes (TimelockScript t) = originalBytes t
   originalBytes (PlutusScript (Plutus _ binaryPlutus)) = originalBytes binaryPlutus
 
-type instance SomeScript 'PhaseOne (AlonzoEra c) = Timelock (AlonzoEra c)
-
-type instance SomeScript 'PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
-
-isPlutusScript :: forall era. EraScript era => Script era -> Bool
-isPlutusScript x =
-  case phaseScript @era PhaseTwoRep x of
-    Just _ -> True
-    Nothing -> False
+isPlutusScript :: EraScript era => Script era -> Bool
+isPlutusScript = not . isNativeScript
 
 instance Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
+  type NativeScript (AlonzoEra c) = Timelock (AlonzoEra c)
 
   upgradeScript = TimelockScript . translateTimelock
-
-  phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
-  phaseScript PhaseTwoRep (PlutusScript plutus) = Just (Phase2Script plutus)
-  phaseScript _ _ = Nothing
 
   scriptPrefixTag script =
     case script of
@@ -224,6 +214,10 @@ instance Crypto c => EraScript (AlonzoEra c) where
       PlutusScript (Plutus PlutusV1 _) -> "\x01"
       PlutusScript (Plutus PlutusV2 _) -> "\x02"
       PlutusScript (Plutus PlutusV3 _) -> "\x03"
+
+  getNativeScript = \case
+    TimelockScript ts -> Just ts
+    _ -> Nothing
 
 instance EqRaw (AlonzoScript era) where
   eqRaw = eqAlonzoScriptRaw
@@ -540,7 +534,8 @@ instance NFData CostModelError
 -- updating software, and deserializing can result in errors going away.
 --
 -- Additionally, 'CostModels' needs to be able to store cost models for future version
--- of Plutus, which we cannot yet even validate. These are stored in 'invalidCostModels'.
+-- of Plutus, which we cannot yet even validate. These are stored in
+-- 'costModelsUnknown`.
 data CostModels = CostModels
   { costModelsValid :: !(Map Language CostModel)
   , costModelsErrors :: !(Map Language CostModelError)
@@ -550,6 +545,18 @@ data CostModels = CostModels
 
 emptyCostModels :: CostModels
 emptyCostModels = CostModels mempty mempty mempty
+
+-- | Updates the first @CostModels@ with the second one so that only the
+-- cost models that are present in the second one get updated while all the
+-- others stay unchanged
+updateCostModels :: CostModels -> CostModels -> CostModels
+updateCostModels
+  (CostModels oldValid oldErrors oldUnk)
+  (CostModels newValid newErrors newUnk) =
+    CostModels
+      (Map.union newValid oldValid)
+      (Map.union newErrors oldErrors)
+      (Map.union newUnk oldUnk)
 
 -- | This function attempts to add a new cost model to a given 'CostModels'.
 -- If it is a valid cost model for a known version of Plutus, it is added to
