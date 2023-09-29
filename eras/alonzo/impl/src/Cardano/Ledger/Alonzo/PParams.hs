@@ -117,6 +117,7 @@ import Cardano.Ledger.Shelley.PParams (
   emptyPPPUpdates,
   shelleyCommonPParamsHKDPairs,
   shelleyCommonPParamsHKDPairsV6,
+  shelleyCommonPParamsHKDPairsV8,
  )
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Cardano.Ledger.Val (Val (..))
@@ -626,6 +627,7 @@ alonzoPParamsHKDPairs ::
   [(Key, HKD f Aeson.Value)]
 alonzoPParamsHKDPairs px pp =
   alonzoCommonPParamsHKDPairs px pp
+    ++ shelleyCommonPParamsHKDPairsV8 px pp
     ++ shelleyCommonPParamsHKDPairsV6 px pp
     ++ [("lovelacePerUTxOWord", hkdMap px (toJSON @CoinPerWord) (pp ^. hkdCoinsPerUTxOWordL @_ @f))]
 

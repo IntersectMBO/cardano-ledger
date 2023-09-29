@@ -6,7 +6,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -77,6 +76,7 @@ import Cardano.Ledger.EpochBoundary (
   Stake (..),
  )
 import qualified Cardano.Ledger.Era as Era (TxSeq)
+import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Keys (
   GKeys (..),
   GenDelegPair (..),
@@ -1300,7 +1300,7 @@ ppPParams pp =
     ]
 
 ppPParamsUpdate ::
-  (ProtVerAtMost era 4, ProtVerAtMost era 6, EraPParams era) =>
+  (ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, EraPParams era) =>
   PParamsUpdate era ->
   PDoc
 ppPParamsUpdate pp =
@@ -1790,6 +1790,9 @@ ptrace x y z = trace ("\n" ++ show (prettyA y) ++ "\n" ++ show x) z
 
 instance (PrettyA x, PrettyA y) => PrettyA (Map.Map x y) where
   prettyA m = ppMap prettyA prettyA m
+
+instance PrettyA (NoUpdate a) where
+  prettyA NoUpdate = "NoUpdate"
 
 -- | turn on trace appromimately 1 in 'n' times it is called.
 occaisionally :: Hashable.Hashable a => a -> Int -> String -> String

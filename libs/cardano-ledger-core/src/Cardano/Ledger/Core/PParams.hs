@@ -40,7 +40,6 @@ module Cardano.Ledger.Core.PParams (
   ppTauL,
   ppDL,
   ppExtraEntropyL,
-  ppProtocolVersionL,
   ppMinUTxOValueL,
   ppMinPoolCostL,
 
@@ -59,7 +58,6 @@ module Cardano.Ledger.Core.PParams (
   ppuTauL,
   ppuDL,
   ppuExtraEntropyL,
-  ppuProtocolVersionL,
   ppuMinUTxOValueL,
   ppuMinPoolCostL,
 
@@ -86,7 +84,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
-import Cardano.Ledger.HKD (HKD, HKDFunctor)
+import Cardano.Ledger.HKD (HKD, HKDFunctor (..), NoUpdate (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON, ToJSON)
@@ -208,6 +206,9 @@ instance Updatable (K1 t x a) (K1 t (StrictMaybe x) u) where
   applyUpdate (K1 x') (K1 sm) = K1 $ case sm of
     SJust x -> x
     SNothing -> x'
+
+instance Updatable (K1 t x a) (K1 t (NoUpdate x) u) where
+  applyUpdate (K1 x) (K1 NoUpdate) = K1 x
 
 genericApplyPPUpdates ::
   forall era a u.
@@ -339,7 +340,15 @@ class
   hkdExtraEntropyL :: (HKDFunctor f, ProtVerAtMost era 6) => Lens' (PParamsHKD f era) (HKD f Nonce)
 
   -- | Protocol version
-  hkdProtocolVersionL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f ProtVer)
+  hkdProtocolVersionL :: (HKDFunctor f, ProtVerAtMost era 8) => Lens' (PParamsHKD f era) (HKD f ProtVer)
+
+  ppProtocolVersionL :: EraPParams era => Lens' (PParams era) ProtVer
+  default ppProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParams era) ProtVer
+  ppProtocolVersionL = ppLens . hkdProtocolVersionL @era @Identity
+
+  -- | PParamsUpdate Protocol version
+  ppuProtocolVersionL :: (ProtVerAtMost era 8, EraPParams era) => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
+  ppuProtocolVersionL = ppuLens . hkdProtocolVersionL @era @StrictMaybe
 
   -- | Minimum UTxO value
   hkdMinUTxOValueL :: HKDFunctor f => ProtVerAtMost era 4 => Lens' (PParamsHKD f era) (HKD f Coin)
@@ -417,10 +426,6 @@ ppDL = ppLens . hkdDL @era @Identity
 ppExtraEntropyL :: forall era. (EraPParams era, ProtVerAtMost era 6) => Lens' (PParams era) Nonce
 ppExtraEntropyL = ppLens . hkdExtraEntropyL @era @Identity
 
--- | Protocol version
-ppProtocolVersionL :: forall era. EraPParams era => Lens' (PParams era) ProtVer
-ppProtocolVersionL = ppLens . hkdProtocolVersionL @era @Identity
-
 -- | Minimum UTxO value
 ppMinUTxOValueL :: forall era. (EraPParams era, ProtVerAtMost era 4) => Lens' (PParams era) Coin
 ppMinUTxOValueL = ppLens . hkdMinUTxOValueL @era @Identity
@@ -492,10 +497,6 @@ ppuExtraEntropyL ::
   (EraPParams era, ProtVerAtMost era 6) =>
   Lens' (PParamsUpdate era) (StrictMaybe Nonce)
 ppuExtraEntropyL = ppuLens . hkdExtraEntropyL @era @StrictMaybe
-
--- | Protocol version
-ppuProtocolVersionL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
-ppuProtocolVersionL = ppuLens . hkdProtocolVersionL @era @StrictMaybe
 
 -- | Minimum UTxO value
 ppuMinUTxOValueL ::

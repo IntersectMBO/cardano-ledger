@@ -233,7 +233,7 @@ genM gen = frequency [(1, SJust <$> gen), (2, pure SNothing)]
 -- | This is only good in the Shelley Era, used to define the genShelleyEraPParamsUpdate method for (EraGen (ShelleyEra c))
 genShelleyPParamsUpdate ::
   forall era.
-  (ProtVerAtMost era 4, ProtVerAtMost era 6, EraPParams era) =>
+  (ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, EraPParams era) =>
   Constants ->
   PParams era ->
   Gen (PParamsUpdate era)
