@@ -56,7 +56,7 @@ module Cardano.Ledger.Conway.PParams (
 where
 
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (Prices), emptyCostModels)
+import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (Prices), emptyCostModels, updateCostModels)
 import Cardano.Ledger.Ap (Ap, runAp_)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams
@@ -75,7 +75,7 @@ import Data.Aeson hiding (Encoding, decode, encode)
 import qualified Data.Aeson as Aeson
 import Data.Default.Class (Default (def))
 import Data.Functor.Identity (Identity)
-import Data.Maybe.Strict (StrictMaybe (..), isSNothing)
+import Data.Maybe.Strict (StrictMaybe (..), fromSMaybe, isSNothing)
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -274,6 +274,14 @@ instance Crypto c => EraPParams (ConwayEra c) where
   type PParamsHKD f (ConwayEra c) = ConwayPParams f (ConwayEra c)
   type UpgradePParams f (ConwayEra c) = UpgradeConwayPParams f
   type DowngradePParams f (ConwayEra c) = ()
+
+  applyPPUpdates :: PParams (ConwayEra c) -> PParamsUpdate (ConwayEra c) -> PParams (ConwayEra c)
+  applyPPUpdates pp ppu =
+    genericApplyPPUpdates pp ppu
+      & ppCostModelsL
+        .~ updateCostModels
+          (pp ^. ppCostModelsL)
+          (fromSMaybe emptyCostModels $ ppu ^. ppuCostModelsL)
 
   emptyPParamsIdentity = emptyConwayPParams
   emptyPParamsStrictMaybe = emptyConwayPParamsUpdate

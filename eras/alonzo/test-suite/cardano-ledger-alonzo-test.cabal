@@ -27,7 +27,6 @@ source-repository head
 library
     exposed-modules:
         Test.Cardano.Ledger.Alonzo.AlonzoEraGen
-        Test.Cardano.Ledger.Alonzo.CostModel
         Test.Cardano.Ledger.Alonzo.EraMapping
         Test.Cardano.Ledger.Alonzo.Examples.Consensus
         Test.Cardano.Ledger.Alonzo.PlutusScripts
