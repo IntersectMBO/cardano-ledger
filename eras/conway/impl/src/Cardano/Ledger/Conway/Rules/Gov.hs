@@ -73,6 +73,7 @@ import Cardano.Ledger.Conway.PParams (
   ppGovActionDepositL,
   ppGovActionLifetimeL,
  )
+import Cardano.Ledger.Conway.Rules.Ratify (prevActionAsExpected)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -267,30 +268,29 @@ checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
   let isValidMember ::
         StrictMaybe (PrevGovActionId p (EraCrypto era)) ->
         (GovAction era -> Bool) ->
-        (PrevGovActionIds era -> StrictMaybe (PrevGovActionId p (EraCrypto era))) ->
         Bool
-      isValidMember prev snapshotCond prevActionAccessor =
-        all
-          (== Just True) -- lookup has to succeed _and_ purpose of lookedup action has to match condition
-          ( fmap (snapshotCond . gasAction)
-              . (flip Map.lookup . snapshotGovActionStates $ snapshots ^. curGovSnapshotsL @era)
-              . unPrevGovActionId
-              <$> prev
-          )
-          || prev == prevActionAccessor prevGovActionIds
-      isValid proposal = case proposal ^. pProcGovActionL of
-        ParameterChange prev _ ->
-          isValidMember prev (\case ParameterChange {} -> True; _ -> False) pgaPParamUpdate
-        HardForkInitiation prev _ ->
-          isValidMember prev (\case HardForkInitiation {} -> True; _ -> False) pgaHardFork
-        TreasuryWithdrawals _ -> True
-        NoConfidence prev ->
-          isValidMember prev (\case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False) pgaCommittee
-        UpdateCommittee prev _ _ _ ->
-          isValidMember prev (\case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False) pgaCommittee
-        NewConstitution prev _ ->
-          isValidMember prev (\case NewConstitution {} -> True; _ -> False) pgaConstitution
-        InfoAction -> True
+      isValidMember prev snapshotCond =
+        case prev of
+          SNothing -> True
+          SJust prev' -> case Map.lookup (unPrevGovActionId prev') (snapshotGovActionStates $ snapshots ^. curGovSnapshotsL) of
+            Nothing -> False
+            -- lookup has to succeed _and_ purpose of looked-up action has to match condition
+            Just found -> snapshotCond . gasAction $ found
+      isValid proposal =
+        prevActionAsExpected (proposal ^. pProcGovActionL) prevGovActionIds
+          || case proposal ^. pProcGovActionL of
+            ParameterChange prev _ ->
+              isValidMember prev $ \case ParameterChange {} -> True; _ -> False
+            HardForkInitiation prev _ ->
+              isValidMember prev $ \case HardForkInitiation {} -> True; _ -> False
+            TreasuryWithdrawals _ -> True
+            NoConfidence prev ->
+              isValidMember prev $ \case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False
+            UpdateCommittee prev _ _ _ ->
+              isValidMember prev $ \case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False
+            NewConstitution prev _ ->
+              isValidMember prev $ \case NewConstitution {} -> True; _ -> False
+            InfoAction -> True
       invalidProposals = Seq.filter (not . isValid) $ procedures ^. govProceduresProposalsL
    in failureUnless (Seq.null invalidProposals) $ InvalidPrevGovActionIdsInProposals invalidProposals
 
