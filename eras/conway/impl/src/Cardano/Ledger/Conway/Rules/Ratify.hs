@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -345,17 +346,14 @@ ratifyTransition = do
 -- | Check that the previous governance action id specified in the proposal
 --   does match the last one of the same purpose that was enacted.
 prevActionAsExpected :: forall era. GovAction era -> PrevGovActionIds era -> Bool
-prevActionAsExpected (ParameterChange prev _) (PrevGovActionIds {pgaPParamUpdate}) =
-  prev == pgaPParamUpdate
-prevActionAsExpected (HardForkInitiation prev _) (PrevGovActionIds {pgaHardFork}) =
-  prev == pgaHardFork
-prevActionAsExpected (NoConfidence prev) (PrevGovActionIds {pgaCommittee}) =
-  prev == pgaCommittee
-prevActionAsExpected (UpdateCommittee prev _ _ _) (PrevGovActionIds {pgaCommittee}) =
-  prev == pgaCommittee
-prevActionAsExpected (NewConstitution prev _) (PrevGovActionIds {pgaConstitution}) =
-  prev == pgaConstitution
-prevActionAsExpected _ _ = True -- for the other actions, the previous action is not relevant
+prevActionAsExpected = \case
+  ParameterChange prev _ -> (prev ==) . pgaPParamUpdate
+  HardForkInitiation prev _ -> (prev ==) . pgaHardFork
+  TreasuryWithdrawals _ -> const True
+  NoConfidence prev -> (prev ==) . pgaCommittee
+  UpdateCommittee prev _ _ _ -> (prev ==) . pgaCommittee
+  NewConstitution prev _ -> (prev ==) . pgaConstitution
+  InfoAction -> const True
 
 validCommitteeTerm ::
   ConwayEraPParams era =>
