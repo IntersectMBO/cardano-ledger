@@ -142,6 +142,7 @@ test-suite tests
         Test.Cardano.Ledger.Conway.GenesisSpec
         Test.Cardano.Ledger.Conway.GovActionReorderSpec
         Test.Cardano.Ledger.Conway.EpochSpec
+        Test.Cardano.Ledger.Conway.GovSpec
         Paths_cardano_ledger_conway
 
     default-language: Haskell2010

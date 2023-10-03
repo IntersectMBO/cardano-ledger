@@ -12,8 +12,7 @@
 
 module Test.Cardano.Ledger.Conway.EpochSpec (spec) where
 
-import Cardano.Ledger.Address (RewardAcnt (RewardAcnt))
-import Cardano.Ledger.BaseTypes (Network (..), textToUrl)
+import Cardano.Ledger.BaseTypes (textToUrl)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (
@@ -33,9 +32,7 @@ import Cardano.Ledger.Conway.Governance (
   EnactState (..),
   GovAction (..),
   GovActionId (..),
-  GovActionIx (..),
   GovActionState (..),
-  ProposalProcedure (..),
   RatifyState (RatifyState),
   Vote (..),
   Voter (..),
@@ -158,31 +155,6 @@ setupSingleDRep = do
                 zero
           ]
   pure khDRep
-
--- | Submits a transaction that proposes the given governance action
-submitProposal ::
-  GovAction Conway ->
-  ImpTestM Conway (GovActionId StandardCrypto)
-submitProposal ga = do
-  khPropRwd <- freshKeyHash
-  txId <- submitBasicConwayTx "proposal" $ \tx ->
-    tx
-      & bodyTxL . proposalProceduresTxBodyL
-        .~ Seq.singleton
-          ProposalProcedure
-            { pProcDeposit = zero
-            , pProcReturnAddr =
-                RewardAcnt
-                  Testnet
-                  (KeyHashObj khPropRwd)
-            , pProcGovAction = ga
-            , pProcAnchor = def
-            }
-  pure
-    GovActionId
-      { gaidTxId = txId
-      , gaidGovActionIx = GovActionIx 0
-      }
 
 -- | Submits a transaction that votes "Yes" for the given governance action as
 -- some voter
