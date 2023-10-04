@@ -139,11 +139,11 @@ import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
 import qualified PlutusLedgerApi.Common as Plutus (showParamName)
 import qualified PlutusLedgerApi.V1 as PV1 (
   CostModelApplyError (..),
-  ScriptForEvaluation,
   EvaluationContext,
-  ParamName,
   MajorProtocolVersion (MajorProtocolVersion),
+  ParamName,
   ScriptDecodeError,
+  ScriptForEvaluation,
   deserialiseScript,
   mkEvaluationContext,
  )
