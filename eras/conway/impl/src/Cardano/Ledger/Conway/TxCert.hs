@@ -334,7 +334,7 @@ data Delegatee c
   = DelegStake !(KeyHash 'StakePool c)
   | DelegVote !(DRep c)
   | DelegStakeVote !(KeyHash 'StakePool c) !(DRep c)
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, Ord)
 
 instance NFData (Delegatee c)
 
@@ -366,7 +366,7 @@ data ConwayDelegCert c
     -- and delegate within a single certificate. Deposit is required and must match the
     -- expected deposit amount specified by `ppKeyDepositL` in the protocol parameters.
     ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, Ord)
 
 instance NFData (ConwayDelegCert c)
 
@@ -380,7 +380,7 @@ data ConwayGovCert c
   | ConwayUpdateDRep !(Credential 'DRepRole c) !(StrictMaybe (Anchor c))
   | ConwayAuthCommitteeHotKey !(Credential 'ColdCommitteeRole c) !(Credential 'HotCommitteeRole c)
   | ConwayResignCommitteeColdKey !(Credential 'ColdCommitteeRole c) !(StrictMaybe (Anchor c))
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, Ord)
 
 instance Crypto c => NFData (ConwayGovCert c)
 
@@ -392,7 +392,7 @@ data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
   | ConwayTxCertPool !(PoolCert (EraCrypto era))
   | ConwayTxCertGov !(ConwayGovCert (EraCrypto era))
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, Ord)
 
 instance Crypto (EraCrypto era) => NFData (ConwayTxCert era)
 

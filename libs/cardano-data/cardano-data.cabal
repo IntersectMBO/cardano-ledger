@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-data
-version:            1.1.0.0
+version:            1.1.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -22,6 +22,7 @@ library
         Data.MapExtras
         Data.ListMap
         Data.Universe
+        Data.OSet.Strict
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -32,7 +33,8 @@ library
     build-depends:
         base >=4.14 && <4.19,
         aeson,
-        cardano-ledger-binary >=1.0,
+        cardano-ledger-binary >=1.2,
+        cardano-strict-containers >=0.1.2.1,
         containers,
         deepseq,
         mtl,
@@ -40,7 +42,10 @@ library
         vector
 
 library testlib
-    exposed-modules:  Test.Cardano.Data
+    exposed-modules:
+        Test.Cardano.Data
+        Test.Cardano.Data.Arbitrary
+
     visibility:       public
     hs-source-dirs:   testlib
     default-language: Haskell2010
@@ -52,13 +57,18 @@ library testlib
         base,
         containers,
         hspec,
-        QuickCheck
+        QuickCheck,
+        cardano-ledger-binary:testlib,
+        cardano-data
 
 test-suite cardano-data-tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-    other-modules:    Test.Cardano.Data.MapExtrasSpec
+    other-modules:
+        Test.Cardano.Data.MapExtrasSpec
+        Test.Cardano.Data.OSet.StrictSpec
+
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -70,5 +80,8 @@ test-suite cardano-data-tests
         containers,
         hspec,
         cardano-data,
+        cardano-ledger-binary:testlib,
+        cardano-strict-containers,
         testlib,
-        QuickCheck
+        QuickCheck,
+        quickcheck-classes-base

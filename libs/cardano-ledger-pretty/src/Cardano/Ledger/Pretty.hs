@@ -196,6 +196,7 @@ import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import qualified Data.Hashable as Hashable
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map
+import Data.OSet.Strict (OSet)
 import Data.Proxy (Proxy (..))
 import Data.Ratio (Ratio, denominator, numerator)
 import Data.Sequence.Strict (StrictSeq)
@@ -374,6 +375,9 @@ ppList p xs =
 
 ppStrictSeq :: (a -> Doc ann) -> StrictSeq a -> Doc ann
 ppStrictSeq p xs = ppList p (foldr (:) [] xs)
+
+ppOSet :: (a -> Doc ann) -> OSet a -> Doc ann
+ppOSet p xs = ppList p (foldr (:) [] xs)
 
 ppStrictMaybe :: (x -> Doc ann) -> StrictMaybe x -> Doc ann
 ppStrictMaybe _ SNothing = text "?-"

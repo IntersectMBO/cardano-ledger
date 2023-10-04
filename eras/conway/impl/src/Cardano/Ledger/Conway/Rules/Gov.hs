@@ -93,8 +93,9 @@ import Control.State.Transition.Extended (
  )
 import qualified Data.Map.Merge.Strict as Map (dropMissing, merge, zipWithMaybeMatched)
 import qualified Data.Map.Strict as Map
-import Data.Sequence (Seq (..))
+import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -128,7 +129,7 @@ data ConwayGovPredFailure era
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
       (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
-  | InvalidPrevGovActionIdsInProposals (Seq (ProposalProcedure era))
+  | InvalidPrevGovActionIdsInProposals (Seq.Seq (ProposalProcedure era))
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => ToExpr (ConwayGovPredFailure era)
@@ -293,7 +294,7 @@ checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
             NewConstitution prev _ ->
               isValidPrevGovActionId prev $ \case NewConstitution {} -> True; _ -> False
             InfoAction -> True
-      invalidProposals = Seq.filter (not . isValid) $ procedures ^. govProceduresProposalsL
+      invalidProposals = Seq.filter (not . isValid) $ SSeq.fromStrict $ OSet.toStrictSeq $ procedures ^. govProceduresProposalsL
    in failureUnless (Seq.null invalidProposals) $ InvalidPrevGovActionIdsInProposals invalidProposals
 
 govTransition ::
@@ -304,8 +305,8 @@ govTransition = do
   TRC (GovEnv txid currentEpoch pp prevGovActionIds, st, gp) <- judgmentContext
   expectedNetworkId <- liftSTS $ asks networkId
 
-  let applyProps st' Empty = pure st'
-      applyProps st' ((idx, ProposalProcedure {..}) :<| ps) = do
+  let applyProps st' Seq.Empty = pure st'
+      applyProps st' ((idx, ProposalProcedure {..}) Seq.:<| ps) = do
         let expectedDeposit = pp ^. ppGovActionDepositL
          in pProcDeposit
               == expectedDeposit
@@ -348,7 +349,7 @@ govTransition = do
                 pProcGovAction
                 st'
         applyProps st'' ps
-  stProps <- applyProps st $ indexedGovProps $ gpProposalProcedures gp
+  stProps <- applyProps st $ indexedGovProps $ SSeq.fromStrict $ OSet.toStrictSeq $ gpProposalProcedures gp
 
   let VotingProcedures votingProcedures = gpVotingProcedures gp
       -- Inversion of the keys in VotingProcedures, where we can find the voter for every

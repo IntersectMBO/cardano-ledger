@@ -8,6 +8,7 @@ import System.IO (
   utf8,
  )
 import Test.Cardano.Data.MapExtrasSpec (mapExtrasSpec)
+import qualified Test.Cardano.Data.OSet.StrictSpec as SOSet
 import Test.Hspec
 import Test.Hspec.Runner
 
@@ -22,6 +23,7 @@ spec :: Spec
 spec =
   describe "cardano-data" $ do
     describe "MapExtras" mapExtrasSpec
+    describe "OSet.Strict" SOSet.spec
 
 main :: IO ()
 main = do

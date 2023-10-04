@@ -125,7 +125,7 @@ data PoolCert c
     RegPool !(PoolParams c)
   | -- | A stake pool retirement certificate.
     RetirePool !(KeyHash 'StakePool c) !EpochNo
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, Ord)
 
 instance NoThunks (PoolCert c)
 

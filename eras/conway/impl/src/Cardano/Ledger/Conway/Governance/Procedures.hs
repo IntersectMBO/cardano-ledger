@@ -105,7 +105,8 @@ import Data.Aeson.Types (toJSONKeyText)
 import Data.Default.Class
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence (Seq (..))
+import qualified Data.OSet.Strict as OSet
+import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import qualified Data.Text as Text
 import Data.Unit.Strict (forceElemsToWHNF)
@@ -389,22 +390,22 @@ toVotingProcedurePairs vProc@(VotingProcedure _ _) =
 
 data GovProcedures era = GovProcedures
   { gpVotingProcedures :: !(VotingProcedures era)
-  , gpProposalProcedures :: !(Seq (ProposalProcedure era))
+  , gpProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
   }
   deriving (Eq, Generic)
 
-govProceduresProposalsL :: Lens' (GovProcedures era) (Seq (ProposalProcedure era))
+govProceduresProposalsL :: Lens' (GovProcedures era) (OSet.OSet (ProposalProcedure era))
 govProceduresProposalsL = lens gpProposalProcedures $ \x y -> x {gpProposalProcedures = y}
 
 -- | Attaches indices to a sequence of proposal procedures. The indices grow
 -- from left to right.
 indexedGovProps ::
-  Seq (ProposalProcedure era) ->
-  Seq (GovActionIx, ProposalProcedure era)
+  Seq.Seq (ProposalProcedure era) ->
+  Seq.Seq (GovActionIx, ProposalProcedure era)
 indexedGovProps = enumerateProps 0
   where
-    enumerateProps _ Empty = Empty
-    enumerateProps !n (x :<| xs) = (GovActionIx n, x) :<| enumerateProps (succ n) xs
+    enumerateProps _ Seq.Empty = Seq.Empty
+    enumerateProps !n (x Seq.:<| xs) = (GovActionIx n, x) Seq.:<| enumerateProps (succ n) xs
 
 instance EraPParams era => NoThunks (GovProcedures era)
 
@@ -418,7 +419,7 @@ data ProposalProcedure era = ProposalProcedure
   , pProcGovAction :: !(GovAction era)
   , pProcAnchor :: !(Anchor (EraCrypto era))
   }
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Show, Ord)
 
 pProcDepositL :: Lens' (ProposalProcedure era) Coin
 pProcDepositL = lens pProcDeposit (\p x -> p {pProcDeposit = x})
@@ -516,7 +517,7 @@ data GovActionPurpose
   deriving (Eq, Show)
 
 newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId {unPrevGovActionId :: GovActionId c}
-  deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON, ToExpr)
+  deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON, ToExpr, Ord)
 
 type role PrevGovActionId nominal nominal
 
@@ -558,7 +559,7 @@ data GovAction era
       !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
       !(Constitution era)
   | InfoAction
-  deriving (Generic)
+  deriving (Generic, Ord)
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (GovAction era)
 

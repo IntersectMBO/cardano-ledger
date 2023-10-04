@@ -532,7 +532,7 @@ sameConwayTxBody
     , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
     , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     , ("VotingProcedures", eqVia prettyA (unVotingProcedures vp1) (unVotingProcedures vp2))
-    , ("ProposalProcedures", eqVia (ppStrictSeq prettyA) pp1 pp2)
+    , ("ProposalProcedures", eqVia (ppOSet prettyA) pp1 pp2)
     , ("CurrentTreasuryValue", eqVia (ppStrictMaybe prettyA) ctv1 ctv2)
     , ("TreasuryDonation", eqVia prettyA td1 td2)
     ]

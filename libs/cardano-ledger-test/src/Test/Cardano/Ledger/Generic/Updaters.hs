@@ -41,7 +41,6 @@ import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
@@ -220,7 +219,7 @@ updateTxBody pf txBody dt =
       RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
-      GovProcs (GovProcedures vp pp) -> txBody & votingProceduresTxBodyL .~ vp & proposalProceduresTxBodyL .~ Seq.forceToStrict pp
+      GovProcs (GovProcedures vp pp) -> txBody & votingProceduresTxBodyL .~ vp & proposalProceduresTxBodyL .~ pp
       _ -> txBody
 {-# NOINLINE updateTxBody #-}
 

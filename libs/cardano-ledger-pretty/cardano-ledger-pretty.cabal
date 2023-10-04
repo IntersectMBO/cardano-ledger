@@ -35,6 +35,7 @@ library
         bech32,
         bytestring,
         cardano-crypto-class,
+        cardano-data,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo >=1.2,
         cardano-ledger-babbage >=1.1,

@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Discard duplicates from `certsTxBodyL` and `proposalProceduresTxBodyL` #3779
 * Add `enactStateGovStateL` to `ConwayEraGov`
 * Add `psDRepDistrG`.
 * Rename `ensPParams` to `ensCurPParams`.

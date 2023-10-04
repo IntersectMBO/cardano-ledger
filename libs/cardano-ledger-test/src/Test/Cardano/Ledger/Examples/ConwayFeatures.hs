@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -65,7 +66,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
-import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import GHC.Stack
 import Lens.Micro
@@ -281,7 +281,7 @@ proposal pf =
               , newTxOut pf [Address (addrKeys1 pf), Amount (inject $ Coin 10000)]
               ]
           , Txfee (Coin fee)
-          , GovProcs (GovProcedures (VotingProcedures mempty) (Seq.fromList [newConstitutionProposal pf]))
+          , GovProcs (GovProcedures (VotingProcedures mempty) [newConstitutionProposal pf])
           ]
     , initOutputs =
         InitOutputs
@@ -315,7 +315,7 @@ secondProposal pf govActionId =
           , GovProcs
               ( GovProcedures
                   (VotingProcedures mempty)
-                  (Seq.fromList [anotherConstitutionProposal pf govActionId])
+                  [anotherConstitutionProposal pf govActionId]
               )
           ]
     , initOutputs =
@@ -348,7 +348,7 @@ vote pf govActionId =
               , newTxOut pf [Address (addrKeys2 pf), Amount (inject $ Coin 1995)]
               ]
           , Txfee (Coin fee)
-          , GovProcs (GovProcedures (voteYes pf govActionId) Seq.empty)
+          , GovProcs (GovProcedures (voteYes pf govActionId) [])
           , Certs' [ConwayTxCertGov (ConwayRegDRep (drepCredential pf) (Coin 0) SNothing)]
           ]
     , initOutputs =

@@ -2,6 +2,7 @@
 
 ## 1.2.0.0
 
+* Export `decodeSetTag`, `allowTag`, `variableListLenEncoding`, and `decodeDeduplicate` #3779
 * Removed `diffExpr` `diffExprNoColor` `ediffEq`
 
 ## 1.1.3.0
