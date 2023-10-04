@@ -65,7 +65,7 @@ library
         data-default-class,
         microlens,
         plutus-tx,
-        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.13,
+        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.14,
         QuickCheck,
         random,
         serialise,

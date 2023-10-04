@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
   PlutusDebugLang (..),
   TranslationError,
   VersionedTxInfo (..),
+  deserialiseAndEvaluateScript,
   exBudgetToExUnits,
   transExUnits,
   transProtocolVersion,
@@ -360,7 +361,7 @@ evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
         maxBudget = transExUnits $ pp ^. ppMaxTxExUnitsL
         protVer = pp ^. ppProtocolVersionL
         plutusProtVer = transProtocolVersion protVer
-        interpreter = \case
-          PlutusV1 -> PV1.evaluateScriptRestricting plutusProtVer PV1.Verbose
-          PlutusV2 -> PV2.evaluateScriptRestricting plutusProtVer PV2.Verbose
-          PlutusV3 -> PV3.evaluateScriptRestricting plutusProtVer PV3.Verbose
+        interpreter lang = case lang of
+          PlutusV1 -> deserialiseAndEvaluateScript lang plutusProtVer PV1.Verbose
+          PlutusV2 -> deserialiseAndEvaluateScript lang plutusProtVer PV2.Verbose
+          PlutusV3 -> deserialiseAndEvaluateScript lang plutusProtVer PV3.Verbose

@@ -46,6 +46,7 @@ import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V3.Contexts as PV3
 
 import Cardano.Ledger.Alonzo.TxInfo (VersionedTxInfo)
 import PlutusTx.Ratio as PlutusTx

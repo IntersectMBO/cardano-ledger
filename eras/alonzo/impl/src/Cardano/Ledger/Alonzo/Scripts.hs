@@ -139,15 +139,16 @@ import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
 import qualified PlutusLedgerApi.Common as Plutus (showParamName)
 import qualified PlutusLedgerApi.V1 as PV1 (
   CostModelApplyError (..),
+  ScriptForEvaluation,
   EvaluationContext,
   ParamName,
-  ProtocolVersion (ProtocolVersion),
+  MajorProtocolVersion (MajorProtocolVersion),
   ScriptDecodeError,
-  assertScriptWellFormed,
+  deserialiseScript,
   mkEvaluationContext,
  )
-import qualified PlutusLedgerApi.V2 as PV2 (ParamName, assertScriptWellFormed, mkEvaluationContext)
-import qualified PlutusLedgerApi.V3 as PV3 (ParamName, assertScriptWellFormed, mkEvaluationContext)
+import qualified PlutusLedgerApi.V2 as PV2 (ParamName, deserialiseScript, mkEvaluationContext)
+import qualified PlutusLedgerApi.V3 as PV3 (ParamName, deserialiseScript, mkEvaluationContext)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -755,18 +756,18 @@ validScript pv script =
   case script of
     TimelockScript sc -> deepseq sc True
     PlutusScript (Plutus lang (BinaryPlutus bytes)) ->
-      let assertScriptWellFormed =
+      let deserialiseScript =
             case lang of
-              PlutusV1 -> PV1.assertScriptWellFormed
-              PlutusV2 -> PV2.assertScriptWellFormed
-              PlutusV3 -> PV3.assertScriptWellFormed
-          eWellFormed :: Either PV1.ScriptDecodeError ()
-          eWellFormed = assertScriptWellFormed (transProtocolVersion pv) bytes
+              PlutusV1 -> PV1.deserialiseScript
+              PlutusV2 -> PV2.deserialiseScript
+              PlutusV3 -> PV3.deserialiseScript
+          eWellFormed :: Either PV1.ScriptDecodeError PV1.ScriptForEvaluation
+          eWellFormed = deserialiseScript (transProtocolVersion pv) bytes
        in isRight eWellFormed
 
-transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
-transProtocolVersion (ProtVer major minor) =
-  PV1.ProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major)) (fromIntegral minor)
+transProtocolVersion :: ProtVer -> PV1.MajorProtocolVersion
+transProtocolVersion (ProtVer major _minor) =
+  PV1.MajorProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major))
 
 -- | Check the equality of two underlying types, while ignoring their binary
 -- representation, which `Eq` instance normally does. This is used for testing.
