@@ -2,6 +2,11 @@
 
 ## 1.10.0.0
 
+* Prevent invalid previous gov-action ids in proposals #3768
+  * Also, add lenses
+    * `govProceduresProposalsL`
+    * `pProcGovActionL`
+    * `gasActionL`
 * Add `ToExpr` instance for:
   * `Voter`
   * `ConwayCertPredFailure`
