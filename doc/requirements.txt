@@ -65,5 +65,5 @@ sphinxcontrib-serializinghtml==1.1.5
     # via sphinx
 sphinxemoji==0.1.6
     # via -r requirements.in
-urllib3==1.26.10
+urllib3==1.26.17
     # via requests
