@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -22,7 +23,7 @@ module Cardano.Ledger.Shelley.Governance (
   constitutionScriptL,
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor)
+import Cardano.Ledger.BaseTypes (Anchor, EpochNo)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecShareCBOR (..),
@@ -36,7 +37,9 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Cardano.Ledger.TreeDiff (ToExpr)
@@ -93,6 +96,9 @@ class
   -- | Returns `Nothing` for all era preceding Conway, otherwise returns the hash of the constitution
   getConstitution :: GovState era -> Maybe (Constitution era)
   getConstitution = const Nothing
+
+  getCommitteeMembers :: GovState era -> Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
+  getCommitteeMembers = const Map.empty
 
   -- | Lens for accessing current protocol parameters
   curPParamsGovStateL :: Lens' (GovState era) (PParams era)
