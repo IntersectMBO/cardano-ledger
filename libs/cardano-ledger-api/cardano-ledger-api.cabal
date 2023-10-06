@@ -40,7 +40,10 @@ library
         Cardano.Ledger.Api.UTxO
 
     hs-source-dirs:   src
-    other-modules:    Cardano.Ledger.Api.Scripts.ExUnits
+    other-modules:
+        Cardano.Ledger.Api.Scripts.ExUnits
+        Cardano.Ledger.Api.State.Query.CommitteeMembersState
+
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -49,6 +52,7 @@ library
 
     build-depends:
         base >=4.14 && <4.19,
+        aeson,
         array,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-alonzo >=1.4,
