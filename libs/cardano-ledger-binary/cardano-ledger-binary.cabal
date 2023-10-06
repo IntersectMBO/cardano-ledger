@@ -67,7 +67,7 @@ library
         network,
         nothunks,
         primitive,
-        plutus-ledger-api ^>=1.13,
+        plutus-ledger-api ^>=1.14,
         recursion-schemes,
         serialise,
         tagged,

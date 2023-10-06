@@ -72,7 +72,7 @@ library
         deepseq,
         microlens,
         nothunks,
-        plutus-ledger-api ^>=1.13,
+        plutus-ledger-api ^>=1.14,
         set-algebra,
         small-steps,
         text,

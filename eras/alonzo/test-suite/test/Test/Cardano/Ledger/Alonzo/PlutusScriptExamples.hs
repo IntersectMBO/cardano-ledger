@@ -23,6 +23,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Control.Monad.Writer (runWriterT)
+import Data.Bifunctor (bimap)
 import Data.ByteString.Short (ShortByteString)
 import Data.Either (fromRight)
 import PlutusLedgerApi.Test.Examples (
@@ -69,9 +70,10 @@ directPlutusTest expectation script ds =
       assertBool "This script should have failed" False
   where
     -- Evaluate a script with sufficient budget to run it.
-    pv = PV1.ProtocolVersion 6 0
+    pv = PV1.MajorProtocolVersion 6
     evalWithTightBudget :: ShortByteString -> [PV1.Data] -> Either PV1.EvaluationError PV1.ExBudget
-    evalWithTightBudget scr datums = do
+    evalWithTightBudget ss datums = do
+      scr <- bimap PV1.CodecError id $ PV1.deserialiseScript pv ss
       budget <- snd $ PV1.evaluateScriptCounting pv PV1.Quiet evalCtxForTesting scr datums
       snd $ PV1.evaluateScriptRestricting pv PV1.Verbose evalCtxForTesting budget scr datums
 

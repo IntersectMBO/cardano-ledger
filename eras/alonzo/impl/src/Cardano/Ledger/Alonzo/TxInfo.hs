@@ -72,6 +72,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   unTxCertV3,
   debugPlutus,
   runPlutusScript,
+  deserialiseAndEvaluateScript,
   explainPlutusEvaluationError,
   languages,
   runPLCScript,
@@ -770,17 +771,38 @@ debugPlutus version db =
                   PlutusData d = pData
                in case sl of
                     SPlutusV1 ->
-                      case PV1.evaluateScriptRestricting pv v cm eu script d of
+                      case deserialiseAndEvaluateScript PlutusV1 pv v cm eu script d of
                         (logs, Left e) -> DebugInfo logs (PlutusErrorV1 e) pd
                         (_, Right ex) -> DebugSuccess ex
                     SPlutusV2 ->
-                      case PV2.evaluateScriptRestricting pv v cm eu script d of
+                      case deserialiseAndEvaluateScript PlutusV2 pv v cm eu script d of
                         (logs, Left e) -> DebugInfo logs (PlutusErrorV2 e) pd
                         (_, Right ex) -> DebugSuccess ex
                     SPlutusV3 ->
-                      case PV3.evaluateScriptRestricting pv v cm eu script d of
+                      case deserialiseAndEvaluateScript PlutusV3 pv v cm eu script d of
                         (logs, Left e) -> DebugInfo logs (PlutusErrorV3 e) pd
                         (_, Right ex) -> DebugSuccess ex
+
+-- TODO: this function is supposed to exist temporarily to cope with the breaking changes
+-- in https://github.com/input-output-hk/plutus/pull/5538, until script deserialisation
+-- is properly fixed in the ledger.
+deserialiseAndEvaluateScript ::
+  Language ->
+  PV1.MajorProtocolVersion ->
+  PV1.VerboseMode ->
+  PV1.EvaluationContext ->
+  PV1.ExBudget ->
+  PV1.SerialisedScript ->
+  [PV1.Data] ->
+  (PV1.LogOutput, Either PV1.EvaluationError PV1.ExBudget)
+deserialiseAndEvaluateScript lang pv v ctx budget ss = case deserialise pv ss of
+  Right script -> eval pv v ctx budget script
+  Left err -> const (mempty, Left (PV1.CodecError err))
+  where
+    (deserialise, eval) = case lang of
+      PlutusV1 -> (PV1.deserialiseScript, PV1.evaluateScriptRestricting)
+      PlutusV2 -> (PV2.deserialiseScript, PV2.evaluateScriptRestricting)
+      PlutusV3 -> (PV3.deserialiseScript, PV3.evaluateScriptRestricting)
 
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
@@ -841,9 +863,9 @@ runPlutusScript pv pwc@PlutusWithContext {pwcScript, pwcDatums, pwcExUnits, pwcC
           (unBinaryPlutus scriptBytes)
           (map getPlutusData pwcDatums)
     plutusPV = transProtocolVersion pv
-    plutusInterpreter PlutusV1 = PV1.evaluateScriptRestricting plutusPV
-    plutusInterpreter PlutusV2 = PV2.evaluateScriptRestricting plutusPV
-    plutusInterpreter PlutusV3 = PV3.evaluateScriptRestricting plutusPV -- TODO: Make class to unify all plutus versioned operations
+    plutusInterpreter PlutusV1 = deserialiseAndEvaluateScript PlutusV1 plutusPV
+    plutusInterpreter PlutusV2 = deserialiseAndEvaluateScript PlutusV2 plutusPV
+    plutusInterpreter PlutusV3 = deserialiseAndEvaluateScript PlutusV3 plutusPV -- TODO: Make class to unify all plutus versioned operations
 
 explainPlutusFailure ::
   forall era.
