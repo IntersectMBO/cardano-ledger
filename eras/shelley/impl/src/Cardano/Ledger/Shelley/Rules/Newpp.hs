@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.PParams (
   emptyPPPUpdates,
   pvCanFollow,
  )
+import Control.DeepSeq (NFData)
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -62,6 +63,8 @@ data ShelleyNewppPredFailure era
   deriving (Show, Eq, Generic)
 
 instance NoThunks (ShelleyNewppPredFailure era)
+
+instance NFData (ShelleyNewppPredFailure era)
 
 instance
   ( EraGov era

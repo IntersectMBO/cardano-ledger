@@ -76,7 +76,6 @@ import Cardano.Ledger.UTxO (
   EraUTxO (..),
   UTxO (..),
   coinBalance,
-  getScriptsHashesNeeded,
   getScriptsNeeded,
  )
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
@@ -453,7 +452,7 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraDone utxo pp tx =
     let theFee = tx ^. bodyTxL . feeTxBodyL -- Coin supplied to pay fees
         minimumFee = getMinFeeTx @(AlonzoEra c) pp tx
-        neededHashes = getScriptsHashesNeeded (getScriptsNeeded utxo (tx ^. bodyTxL))
+        neededHashes = getScriptsHashesNeeded $ getScriptsNeeded utxo (tx ^. bodyTxL)
         oldScriptWits = tx ^. witsTxL . scriptTxWitsL
         newWits = oldScriptWits `Map.restrictKeys` neededHashes
      in if minimumFee <= theFee

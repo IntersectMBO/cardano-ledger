@@ -2,6 +2,22 @@
 
 ## 1.7.0.0
 
+* Add `ToExpr` instances for:
+  * `ShelleyDelegPredFailure`
+  * `ShelleyDelegsPredFailure`
+  * `ShelleyDelplPredFailure`
+  * `ShelleyEpochPredFailure`
+  * `ShelleyLedgerPredFailure`
+  * `ShelleyPpupPredFailure`
+  * `ShelleyUtxoPredFailure`
+  * `VotingPeriod`
+* Add `NFData` instances for:
+  * `ShelleyMirPredFailure`
+  * `ShelleyNewEpochPredFailure`
+  * `ShelleyNewppPredFailure`
+  * `ShelleyPoolreapPredFailure`
+  * `ShelleySnapPredFailure`
+  * `ShelleyUpecPredFailure`
 * Add `epochStateGovStateL`
 * Add `shelleyCommonPParamsHKDPairsV8`
 * Add `ToExpr` instances for:
@@ -13,6 +29,12 @@
 * Rename `validateFailedScripts` to `validateFailedNativeScripts` and change its
   arguments.
 * Change type of `validateMissingScripts`
+
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Shelley.ImpTest`
+* Add `Test.Cardano.Ledger.Shelley.ImpTestSpec`
+* Add `EraImpTest` instance for `ShelleyEra`
 
 ## 1.6.1.0
 

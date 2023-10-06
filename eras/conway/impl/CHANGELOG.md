@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `enactStateGovStateL` to `ConwayEraGov`
 * Add `psDRepDistrG`.
 * Rename `ensPParams` to `ensCurPParams`.
 * Add `ToJSON` instance for `RatifyState`

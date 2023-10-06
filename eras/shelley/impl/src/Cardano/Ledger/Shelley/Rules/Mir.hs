@@ -44,6 +44,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.UMap (compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
+import Control.DeepSeq (NFData)
 import Control.SetAlgebra (eval, (∪+))
 import Control.State.Transition (
   Assertion (..),
@@ -62,6 +63,8 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyMirPredFailure era
   deriving (Show, Generic, Eq)
+
+instance NFData (ShelleyMirPredFailure era)
 
 data ShelleyMirEvent era
   = MirTransfer (InstantaneousRewards (EraCrypto era))

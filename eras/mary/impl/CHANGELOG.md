@@ -1,9 +1,14 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.3.4.1
+## 1.3.5.0
 
 * Add `ToExpr` instance for `CompactValue`
 * Implement `getScriptsProvided`
+
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Mary.ImpTest`
+* Add `EraImpTest` instance for `MaryEra`
 
 ## 1.3.4.0
 

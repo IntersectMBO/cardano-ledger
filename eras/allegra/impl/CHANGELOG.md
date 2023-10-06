@@ -2,8 +2,14 @@
 
 ## 1.3.0.0
 
+* Add `NFData` instance for `AllegraUtxoPredFailure`
 * Implement `getScriptsProvided`
 * Flip arguments on `validateTimelock`
+
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Allegra.ImpTest`
+* Add `EraImpTest` instance for `AllegraEra`
 
 ## 1.2.3.0
 

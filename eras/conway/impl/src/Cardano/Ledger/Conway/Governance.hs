@@ -653,11 +653,13 @@ class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)
   proposalsGovStateL :: Lens' (GovState era) (ProposalsSnapshot era)
   drepPulsingStateGovStateL :: Lens' (GovState era) (DRepPulsingState era)
+  enactStateGovStateL :: Lens' (GovState era) (EnactState era)
 
 instance Crypto c => ConwayEraGov (ConwayEra c) where
   constitutionGovStateL = cgEnactStateL . ensConstitutionL
   proposalsGovStateL = cgProposalsL
   drepPulsingStateGovStateL = cgDRepPulsingStateL
+  enactStateGovStateL = cgEnactStateL
 
 pparamsUpdateThreshold ::
   forall era.

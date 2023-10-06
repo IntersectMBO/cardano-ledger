@@ -23,6 +23,7 @@
 
 ### `testlib`
 
+* Add `testGlobals` and `mkDummySafeHash`
 * Add `Test.Cardano.Ledger.Core.Rational`
 
 ## 1.7.0.0

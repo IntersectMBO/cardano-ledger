@@ -64,6 +64,7 @@ import Lens.Micro
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
+import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import Test.Cardano.Ledger.Shelley.Examples.Consensus (examplePoolParams)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
@@ -126,9 +127,9 @@ exampleConwayCerts =
 exampleTxBodyConway :: TxBody Conway
 exampleTxBodyConway =
   ConwayTxBody
-    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- spending inputs
-    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral inputs
-    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 3]) -- reference inputs
+    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 1)) 0]) -- spending inputs
+    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 2)) 1]) -- collateral inputs
+    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 1)) 3]) -- reference inputs
     ( StrictSeq.fromList
         [ mkSized (eraProtVerHigh @Conway) $
             BabbageTxOut
@@ -150,8 +151,8 @@ exampleTxBodyConway =
     (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
     exampleMultiAsset -- mint
-    (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
-    (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
+    (SJust $ mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
+    (SJust . AuxiliaryDataHash $ mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
     (SJust Mainnet) -- txnetworkid
     (VotingProcedures mempty)
     mempty

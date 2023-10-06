@@ -15,6 +15,11 @@
 * Remove unused `isTwoPhaseScriptAddress`
 * Deprecate `babbageTxScripts` and `refScripts`
 
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Babbage.ImpTest`
+* Add `EraImpTest` instance for `BabbageEra`
+
 ## 1.4.5.0
 
 * Add `ToExpr` instance for:

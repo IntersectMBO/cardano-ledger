@@ -104,6 +104,7 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Arbitrary
         Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
         Test.Cardano.Ledger.Alonzo.CostModel
+        Test.Cardano.Ledger.Alonzo.ImpTest
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -120,9 +121,12 @@ library testlib
         cardano-ledger-binary,
         cardano-ledger-mary:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-crypto-class,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
         plutus-core,
+        data-default-class,
+        microlens,
         text
 
 test-suite tests
@@ -140,4 +144,5 @@ test-suite tests
         base,
         cardano-ledger-alonzo,
         cardano-ledger-core:testlib,
+        cardano-ledger-shelley:testlib,
         testlib

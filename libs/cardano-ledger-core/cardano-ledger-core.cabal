@@ -161,7 +161,9 @@ library testlib
         QuickCheck,
         random >=1.2,
         text,
-        vector-map
+        vector-map,
+        time,
+        cardano-slotting
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-name-shadowing

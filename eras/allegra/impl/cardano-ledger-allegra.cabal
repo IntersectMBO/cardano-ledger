@@ -68,7 +68,10 @@ library
         validation-selective
 
 library testlib
-    exposed-modules:  Test.Cardano.Ledger.Allegra.Arbitrary
+    exposed-modules:
+        Test.Cardano.Ledger.Allegra.Arbitrary
+        Test.Cardano.Ledger.Allegra.ImpTest
+
     visibility:       public
     hs-source-dirs:   testlib
     default-language: Haskell2010
@@ -80,6 +83,7 @@ library testlib
     build-depends:
         base,
         cardano-ledger-allegra >=1.1,
+        cardano-crypto-class,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},

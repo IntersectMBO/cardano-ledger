@@ -26,9 +26,7 @@ module Test.Cardano.Ledger.Shelley.Utils (
   mkKESKeyPair,
   mkVRFKeyPair,
   runShelleyBase,
-  testGlobals,
   maxKESIterations,
-  unsafeBoundRational,
   slotsPerKESIteration,
   testSTS,
   maxLLSupply,
@@ -38,6 +36,7 @@ module Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   RawSeed (..),
   Split (..),
+  module CoreUtils,
 )
 where
 
@@ -66,11 +65,9 @@ import Cardano.Crypto.VRF (
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (
   Globals (..),
-  Network (..),
   Nonce,
   ShelleyBase,
   epochInfoPure,
-  mkActiveSlotCoeff,
   mkNonceFromOutputVRF,
  )
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
@@ -87,9 +84,7 @@ import Cardano.Slotting.EpochInfo (
   epochInfoEpoch,
   epochInfoFirst,
   epochInfoSize,
-  fixedEpochInfo,
  )
-import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.Monad.Reader.Class (asks)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -101,11 +96,10 @@ import Control.State.Transition.Trace (
  )
 import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
-import Data.Time.Clock.POSIX
 import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
-import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
+import Test.Cardano.Ledger.Core.Utils as CoreUtils
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Protocol.TPraos.Create (KESKeyPair (..), VRFKeyPair (..), evolveKESUntil)
@@ -220,23 +214,6 @@ mkKESKeyPair seed =
         { kesSignKey = sk
         , kesVerKey = deriveVerKeyKES sk
         }
-
-testGlobals :: Globals
-testGlobals =
-  Globals
-    { epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
-    , slotsPerKESPeriod = 20
-    , stabilityWindow = 33
-    , randomnessStabilisationWindow = 33
-    , securityParameter = 10
-    , maxKESEvo = 10
-    , quorum = 5
-    , maxMajorPV = maxBound
-    , maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000
-    , activeSlotCoeff = mkActiveSlotCoeff . unsafeBoundRational $ 0.9
-    , networkId = Testnet
-    , systemStart = SystemStart $ posixSecondsToUTCTime 0
-    }
 
 runShelleyBase :: ShelleyBase a -> a
 runShelleyBase act = runIdentity $ runReaderT act testGlobals

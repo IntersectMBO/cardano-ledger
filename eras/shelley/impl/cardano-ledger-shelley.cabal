@@ -135,6 +135,8 @@ library testlib
         Test.Cardano.Ledger.Shelley.Binary.Golden
         Test.Cardano.Ledger.Shelley.Binary.RoundTrip
         Test.Cardano.Ledger.Shelley.Constants
+        Test.Cardano.Ledger.Shelley.ImpTest
+        Test.Cardano.Ledger.Shelley.ImpTestSpec
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -148,6 +150,7 @@ library testlib
         base,
         bytestring,
         cardano-crypto-class,
+        data-default-class,
         cardano-data,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
@@ -155,8 +158,17 @@ library testlib
         cardano-ledger-byron-test,
         cardano-ledger-shelley,
         containers,
+        deepseq,
         generic-random,
         containers,
+        transformers,
+        small-steps,
+        small-steps-test,
+        cardano-strict-containers,
+        microlens,
+        microlens-mtl,
+        prettyprinter,
+        unliftio,
         vector-map,
         mtl,
         text,

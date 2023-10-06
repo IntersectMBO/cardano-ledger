@@ -45,6 +45,7 @@ import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPool
 import Cardano.Ledger.Shelley.TxBody (Ptr)
 import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq
 import Control.State.Transition
 import Data.Typeable (Typeable)
@@ -91,6 +92,12 @@ instance
   , NFData (PredicateFailure (EraRule "POOL" era))
   ) =>
   NFData (ShelleyDelplPredFailure era)
+
+instance
+  ( ToExpr (PredicateFailure (EraRule "DELEG" era))
+  , ToExpr (PredicateFailure (EraRule "POOL" era))
+  ) =>
+  ToExpr (ShelleyDelplPredFailure era)
 
 instance
   ( Era era
