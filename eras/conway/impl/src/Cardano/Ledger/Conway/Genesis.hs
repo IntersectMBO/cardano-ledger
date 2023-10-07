@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Genesis (
@@ -15,6 +16,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
  )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams, toUpgradeConwayPParamsUpdatePairs)
@@ -45,17 +47,11 @@ instance Crypto c => NoThunks (ConwayGenesis c)
 
 -- | Genesis are always encoded with the version of era they are defined in.
 instance Crypto c => DecCBOR (ConwayGenesis c) where
-  decCBOR =
-    ConwayGenesis
-      <$> decCBOR
-      <*> decCBOR
-      <*> decCBOR
+  decCBOR = decode $ RecD ConwayGenesis <! From <! From <! From
 
 instance Crypto c => EncCBOR (ConwayGenesis c) where
   encCBOR (ConwayGenesis pparams constitution committee) =
-    encCBOR pparams
-      <> encCBOR constitution
-      <> encCBOR committee
+    encode $ Rec (ConwayGenesis @c) !> To pparams !> To constitution !> To committee
 
 instance Crypto c => ToJSON (ConwayGenesis c) where
   toJSON = object . toConwayGenesisPairs

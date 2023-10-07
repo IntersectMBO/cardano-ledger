@@ -23,8 +23,6 @@ source-repository head
 library
     exposed-modules:
         Test.Cardano.Ledger.Conway.Examples.Consensus
-        Test.Cardano.Ledger.Conway.Serialisation.Generators
-        Test.Cardano.Ledger.Conway.Serialisation.Roundtrip
         Test.Cardano.Ledger.Conway.Translation.TranslatableGen
 
     hs-source-dirs:   src
@@ -40,7 +38,7 @@ library
         cardano-ledger-alonzo-test,
         cardano-ledger-babbage >=1.3 && <1.6,
         cardano-ledger-babbage-test,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
+        cardano-ledger-binary >=1.0,
         cardano-strict-containers,
         cardano-ledger-conway:{cardano-ledger-conway, testlib} >=1.9 && <1.11,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.3,
@@ -55,9 +53,7 @@ library
         small-steps,
         plutus-tx,
         microlens,
-        QuickCheck,
-        tasty,
-        tasty-quickcheck
+        QuickCheck
 
 executable gen-golden
     main-is:          GenerateGoldenFileMain.hs
@@ -102,7 +98,6 @@ test-suite cardano-ledger-conway-test
         cardano-ledger-babbage,
         cardano-ledger-babbage-test ^>=1.1.1,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
-        cardano-ledger-conway-test,
         cardano-ledger-core,
         cardano-ledger-shelley-test,
         tasty,
