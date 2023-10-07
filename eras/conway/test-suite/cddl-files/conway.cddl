@@ -109,8 +109,6 @@ update_committee = (4, gov_action_id / null, set<committee_cold_credential>, { c
 
 new_constitution = (5, gov_action_id / null, constitution)
 
-committee = [{ committee_cold_credential => epoch }, unit_interval]
-
 constitution =
   [ anchor
   , scripthash / null
