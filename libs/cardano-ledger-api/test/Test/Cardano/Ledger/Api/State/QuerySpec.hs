@@ -51,7 +51,7 @@ spec = do
 
 committeeMembersStateSpec :: Spec
 committeeMembersStateSpec =
-  prop "CommitteeMembersState Query" $ withMaxSuccess 100 $ do
+  prop "CommitteeMembersState Query" $ do
     forAll (arbitrary @(NewEpochState Conway)) $ \nes' -> do
       forAll
         ( arbitrary
@@ -60,8 +60,8 @@ committeeMembersStateSpec =
              , Set MemberStatus
              )
         )
-        $ \(ckFilter, hkFilter, statusFilter) -> do
-          -- override some arbitrary number of cold keys from the CommitteeState with the ones from the Committee
+        $ \(ckFilter', hkFilter', statusFilter) -> do
+          -- replace some arbitrary number of cold keys from the committeeState with the ones from the committee
           -- so we can have Active members
           let (comMembers, comStateMembers) = committeeInfo nes'
           forAll (genCommonMembers comMembers comStateMembers) $ \newCommitteeState -> do
@@ -69,29 +69,21 @@ committeeMembersStateSpec =
                   nes'
                     & nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
                       .~ newCommitteeState
-            propEmpty nes
-            propComplete nes
-            propAuthorized nes
-            propActiveAuthorized nes
-            propNotAuthorized nes
-            propResigned nes
-            propUnrecognized nes
-            propFilters ckFilter hkFilter statusFilter nes
-
-genCommonMembers ::
-  Map.Map (Credential 'ColdCommitteeRole StandardCrypto) EpochNo ->
-  Map.Map (Credential 'ColdCommitteeRole StandardCrypto) (Maybe (Credential 'HotCommitteeRole StandardCrypto)) ->
-  Gen (CommitteeState Conway)
-genCommonMembers comMembers comStateMembers = do
-  s <- choose (0, Map.size comMembers)
-  let chosen = Map.take s comMembers
-  let x =
-        Map.fromList $
-          zipWith
-            (\(k1, _) (_, v2) -> (k1, v2))
-            (Map.assocs chosen)
-            (Map.assocs comStateMembers)
-  pure $ CommitteeState $ x `Map.union` (Map.drop s comStateMembers)
+            -- replace some cold and hot keys from the filter with known ones from both committee and committeeState
+            forAll
+              ( (,)
+                  <$> genRelevantColdCredsFilter ckFilter' comMembers comStateMembers
+                  <*> genRelevantHotCredsFilter hkFilter' comStateMembers
+              )
+              $ \(ckFilter, hkFilter) -> do
+                propEmpty nes
+                propComplete nes
+                propAuthorized nes
+                propActiveAuthorized nes
+                propNotAuthorized nes
+                propResigned nes
+                propUnrecognized nes
+                propFilters ckFilter hkFilter statusFilter nes
 
 propEmpty :: NewEpochState Conway -> Expectation
 propEmpty nes = do
@@ -179,7 +171,7 @@ propActiveAuthorized nes = do
                   _ -> []
             )
             result
-  let epochNo = nes ^. nesELL - 1
+  let epochNo = nes ^. nesELL
   -- if a member is active and authorized, then it should be:
   --   - in Committee and not expired
   --   - in CommitteeState, not empty
@@ -219,6 +211,41 @@ propFilters ckFilter hkFilter statusFilter nes = do
     result `shouldSatisfy` const (allHks `Set.isSubsetOf` hkFilter)
   unless (Set.null statusFilter) $
     result `shouldSatisfy` const (allMemberStatuses `Set.isSubsetOf` statusFilter)
+
+genCommonMembers ::
+  Map.Map (Credential 'ColdCommitteeRole StandardCrypto) EpochNo ->
+  Map.Map (Credential 'ColdCommitteeRole StandardCrypto) (Maybe (Credential 'HotCommitteeRole StandardCrypto)) ->
+  Gen (CommitteeState Conway)
+genCommonMembers comMembers comStateMembers = do
+  s <- choose (0, Map.size comMembers)
+  let chosen = Map.take s comMembers
+  let x =
+        Map.fromList $
+          zipWith
+            (\(k1, _) (_, v2) -> (k1, v2))
+            (Map.assocs chosen)
+            (Map.assocs comStateMembers)
+  pure $ CommitteeState $ x `Map.union` (Map.drop s comStateMembers)
+
+genRelevantColdCredsFilter ::
+  Set.Set (Credential 'ColdCommitteeRole StandardCrypto) ->
+  Map.Map (Credential 'ColdCommitteeRole StandardCrypto) EpochNo ->
+  Map.Map (Credential 'ColdCommitteeRole StandardCrypto) (Maybe (Credential 'HotCommitteeRole StandardCrypto)) ->
+  Gen (Set.Set (Credential 'ColdCommitteeRole StandardCrypto))
+genRelevantColdCredsFilter flt comMembers comStateMembers = do
+  s <- choose (0, Set.size flt)
+  let cm1 = Map.keysSet $ Map.take (s `div` 2) comMembers
+  let cm2 = Map.keysSet $ Map.take (s `div` 2) comStateMembers
+  pure $ Set.unions [Set.drop s flt, cm1, cm2]
+
+genRelevantHotCredsFilter ::
+  Set.Set (Credential 'HotCommitteeRole StandardCrypto) ->
+  Map.Map (Credential 'ColdCommitteeRole StandardCrypto) (Maybe (Credential 'HotCommitteeRole StandardCrypto)) ->
+  Gen (Set.Set (Credential 'HotCommitteeRole StandardCrypto))
+genRelevantHotCredsFilter flt comStateMembers = do
+  s <- choose (0, Set.size flt)
+  let cm = Set.fromList $ Map.elems (Map.mapMaybe id (Map.take s comStateMembers))
+  pure $ Set.drop s flt `Set.union` cm
 
 committeeInfo ::
   NewEpochState Conway ->
