@@ -42,6 +42,9 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   gasStakePoolVotesL,
   gasCommitteeVotesL,
   gasExpiresAfterL,
+  govProceduresProposalsL,
+  pProcGovActionL,
+  gasActionL,
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
@@ -196,6 +199,9 @@ gasStakePoolVotesL = lens gasStakePoolVotes (\x y -> x {gasStakePoolVotes = y})
 
 gasExpiresAfterL :: Lens' (GovActionState era) EpochNo
 gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
+
+gasActionL :: Lens' (GovActionState era) (GovAction era)
+gasActionL = lens gasAction $ \x y -> x {gasAction = y}
 
 instance EraPParams era => ToExpr (GovActionState era)
 
@@ -387,6 +393,9 @@ data GovProcedures era = GovProcedures
   }
   deriving (Eq, Generic)
 
+govProceduresProposalsL :: Lens' (GovProcedures era) (Seq (ProposalProcedure era))
+govProceduresProposalsL = lens gpProposalProcedures $ \x y -> x {gpProposalProcedures = y}
+
 -- | Attaches indices to a sequence of proposal procedures. The indices grow
 -- from left to right.
 indexedGovProps ::
@@ -413,6 +422,9 @@ data ProposalProcedure era = ProposalProcedure
 
 pProcDepositL :: Lens' (ProposalProcedure era) Coin
 pProcDepositL = lens pProcDeposit (\p x -> p {pProcDeposit = x})
+
+pProcGovActionL :: Lens' (ProposalProcedure era) (GovAction era)
+pProcGovActionL = lens pProcGovAction $ \x y -> x {pProcGovAction = y}
 
 instance EraPParams era => NoThunks (ProposalProcedure era)
 
@@ -503,7 +515,7 @@ data GovActionPurpose
   | ConstitutionPurpose
   deriving (Eq, Show)
 
-newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId (GovActionId c)
+newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId {unPrevGovActionId :: GovActionId c}
   deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON, ToExpr)
 
 type role PrevGovActionId nominal nominal

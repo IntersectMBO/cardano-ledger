@@ -32,13 +32,15 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getsNES,
   impIO,
   impIOMsg,
+  submitProposal,
+  submitFailingProposal,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
 import Cardano.Crypto.Hash (Hash)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF.Class as VRF
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (RewardAcnt))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
@@ -53,7 +55,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (
   Era (..),
-  EraGov (..),
   EraIndependentTxBody,
   EraPParams (..),
   EraRule,
@@ -65,6 +66,7 @@ import Cardano.Ledger.Conway.Core (
   ppMaxValSizeL,
   setMinFeeTx,
  )
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
   ppDRepActivityL,
@@ -99,7 +101,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   smartUTxOState,
   startStep,
   utxosDepositedL,
-  utxosGovStateL,
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -128,6 +129,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
@@ -571,6 +573,14 @@ submitBasicConwayTx desc f = do
       }
   pure txId
 
+-- | Same as `submitBasicConwayTx` but a version that expects failure
+submitFailingBasicConwayTx :: (Tx Conway -> Tx Conway) -> ImpTestM Conway ()
+submitFailingBasicConwayTx f = do
+  let
+    initialTx = mkBasicTx mkBasicTxBody
+  fixedTx <- fixupTx $ f initialTx
+  submitFailingTx fixedTx
+
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
 freshSafeHash = do
@@ -628,3 +638,45 @@ impIOMsg msg m = ImpTestM $ do
 -- failure
 impIO :: NFData a => IO a -> ImpTestM era a
 impIO = impIOMsg ""
+
+-- | Submits a transaction that proposes the given governance action
+submitProposal ::
+  GovAction Conway ->
+  ImpTestM Conway (GovActionId StandardCrypto)
+submitProposal ga = do
+  khPropRwd <- freshKeyHash
+  txId <- submitBasicConwayTx "proposal" $ \tx ->
+    tx
+      & bodyTxL . proposalProceduresTxBodyL
+        .~ Seq.singleton
+          ProposalProcedure
+            { pProcDeposit = zero
+            , pProcReturnAddr =
+                RewardAcnt
+                  Testnet
+                  (KeyHashObj khPropRwd)
+            , pProcGovAction = ga
+            , pProcAnchor = def
+            }
+  pure
+    GovActionId
+      { gaidTxId = txId
+      , gaidGovActionIx = GovActionIx 0
+      }
+
+submitFailingProposal :: GovAction Conway -> ImpTestM Conway ()
+submitFailingProposal ga = do
+  khPropRwd <- freshKeyHash
+  submitFailingBasicConwayTx $ \tx ->
+    tx
+      & bodyTxL . proposalProceduresTxBodyL
+        .~ Seq.singleton
+          ProposalProcedure
+            { pProcDeposit = zero
+            , pProcReturnAddr =
+                RewardAcnt
+                  Testnet
+                  (KeyHashObj khPropRwd)
+            , pProcGovAction = ga
+            , pProcAnchor = def
+            }

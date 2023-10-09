@@ -40,7 +40,9 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovProcedures (..),
   GovSnapshots,
+  cgEnactStateL,
   cgGovSnapshotsL,
+  ensPrevGovActionIdsL,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
@@ -294,7 +296,7 @@ ledgerTransition = do
         govActionsState' <-
           trans @(EraRule "GOV" era) $
             TRC
-              ( GovEnv (txid txBody) currentEpoch pp
+              ( GovEnv (txid txBody) currentEpoch pp (utxoState ^. utxosGovStateL . cgEnactStateL . ensPrevGovActionIdsL)
               , utxoState ^. utxosGovStateL . cgGovSnapshotsL
               , govProcedures
               )
