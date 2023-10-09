@@ -65,10 +65,9 @@ import Cardano.Ledger.UMap (
   UMap,
   domRestrictedStakeCredentials,
  )
-import Cardano.Slotting.Slot (EpochNo)
+import Control.Monad (guard)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (maybeToList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (<&>), (^.))
@@ -169,82 +168,45 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
           nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
       comMembers = getCommitteeMembers (queryGovState nes)
 
-      filteredComMembers
-        | null coldCredsFilter = comMembers
-        | otherwise = comMembers `Map.restrictKeys` coldCredsFilter
+      withFilteredColdCreds s
+        | Set.null coldCredsFilter = s
+        | otherwise = s `Set.intersection` coldCredsFilter
 
-      -- Start from the committee and lookup the hot credential in the Committee State.
-      -- This will miss 'Unrecognized' members (since we're iterating over the "recognized" ones).
-      recognized :: [(Credential 'ColdCommitteeRole (EraCrypto era), CommitteeMemberState (EraCrypto era))]
-      recognized =
-        Map.assocs filteredComMembers >>= \(ck, expirationEpoch) ->
-          let mbHk = Map.lookup ck comStateMembers
-              mbCommitteeMemberState = do
-                hkStatus <- hotCredStatus mbHk
-                status <- memberStatus expirationEpoch
-                let cms =
-                      CommitteeMemberState
-                        hkStatus
-                        status
-                        (Just expirationEpoch)
-                        nextEpochChange
-                pure (ck, cms)
-           in maybeToList mbCommitteeMemberState
-
-      unrecognizedMembers = Map.difference comStateMembers comMembers
-      filteredUnrecognizedMembers
-        | null coldCredsFilter = unrecognizedMembers
-        | otherwise = Map.restrictKeys unrecognizedMembers coldCredsFilter
-
-      -- Check for Unrecognized members, by starting from the CommitteeState
-      unrecognized :: [(Credential 'ColdCommitteeRole (EraCrypto era), CommitteeMemberState (EraCrypto era))]
-      unrecognized
-        -- we only look for Unrecognized members when it is contained in the filter, or when there is no filtering
+      relevantColdKeys
         | Set.null statusFilter || Set.member Unrecognized statusFilter =
-            unrecognized' filteredUnrecognizedMembers
-        | otherwise = []
+            withFilteredColdCreds $
+              Map.keysSet comMembers
+                `Set.union` Map.keysSet comStateMembers
+        | otherwise = withFilteredColdCreds $ Map.keysSet comMembers
 
-      unrecognized' ::
-        Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))) ->
-        [(Credential 'ColdCommitteeRole (EraCrypto era), CommitteeMemberState (EraCrypto era))]
-      unrecognized' members =
-        Map.assocs members >>= \(ck, mbHk) ->
-          let mbCommitteeMemberState = do
-                hkStatus <- hotCredStatus (Just mbHk)
-                let cms =
-                      CommitteeMemberState
-                        hkStatus
-                        Unrecognized
-                        Nothing
-                        nextEpochChange
-                pure (ck, cms)
-           in maybeToList mbCommitteeMemberState
-   in CommitteeMembersState
-        { csCommittee = Map.fromList (recognized ++ unrecognized)
-        , csEpochNo = nes ^. nesELL - 1
-        }
-  where
-    hotCredStatus ::
-      Maybe (Maybe (Credential 'HotCommitteeRole (EraCrypto era))) ->
-      Maybe (HotCredAuthStatus (EraCrypto era))
-    hotCredStatus Nothing = Just MemberNotAuthorized
-    hotCredStatus (Just Nothing) = Just MemberResigned
-    hotCredStatus (Just (Just hk)) = filtered hotCredsFilter hk MemberAuthorized
+      relevantHotKeys =
+        Map.keysSet $
+          Map.filter (maybe False (`Set.member` hotCredsFilter)) comStateMembers
 
-    memberStatus :: EpochNo -> Maybe MemberStatus
-    memberStatus expiry =
-      let status =
-            if (nes ^. nesELL - 1) > expiry
-              then Expired
-              else Active
-       in filtered statusFilter status id
+      relevant
+        | Set.null hotCredsFilter = relevantColdKeys
+        | otherwise = relevantColdKeys `Set.intersection` relevantHotKeys
 
-    -- TODO: implement this
-    nextEpochChange :: NextEpochChange
-    nextEpochChange = NoChangeExpected
+      cms = Map.mapMaybe id $ Map.fromSet mkMaybeMemberState relevant
+      currentEpoch = nes ^. nesELL
 
-    filtered :: Ord a => Set a -> a -> (a -> b) -> Maybe b
-    filtered fl x f
-      | Set.null fl = Just (f x)
-      | Set.member x fl = Just (f x)
-      | otherwise = Nothing
+      mkMaybeMemberState ::
+        Credential 'ColdCommitteeRole (EraCrypto era) ->
+        Maybe (CommitteeMemberState (EraCrypto era))
+      mkMaybeMemberState coldCred = do
+        let mbExpiry = Map.lookup coldCred comMembers
+        let status = case mbExpiry of
+              Nothing -> Unrecognized
+              Just expiry
+                | currentEpoch > expiry -> Expired
+                | otherwise -> Active
+        guard (null statusFilter || status `Set.member` statusFilter)
+        let hkStatus =
+              case Map.lookup coldCred comStateMembers of
+                Nothing -> MemberNotAuthorized
+                Just Nothing -> MemberResigned
+                Just (Just hk) -> MemberAuthorized hk
+        -- TODO: implement after pulsing and snapshots are done
+        let nextEpochChange = NoChangeExpected
+        pure $ CommitteeMemberState hkStatus status mbExpiry nextEpochChange
+   in CommitteeMembersState cms currentEpoch
