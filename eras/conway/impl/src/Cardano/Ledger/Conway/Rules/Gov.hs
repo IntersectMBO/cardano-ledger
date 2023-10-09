@@ -48,7 +48,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovProcedures (..),
   GovSnapshots (..),
-  PrevGovActionId (unPrevGovActionId),
+  PrevGovActionId (PrevGovActionId),
   PrevGovActionIds (..),
   ProposalProcedure (..),
   Voter (..),
@@ -61,6 +61,7 @@ import Cardano.Ledger.Conway.Governance (
   isStakePoolVotingAllowed,
   snapshotAddVote,
   snapshotInsertGovAction,
+  snapshotLookupId,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovAction (..),
@@ -265,31 +266,33 @@ checkProposalsHaveAValidPrevious ::
   GovProcedures era ->
   Test (ConwayGovPredFailure era)
 checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
-  let isValidMember ::
+  let isValidPrevGovActionId ::
         StrictMaybe (PrevGovActionId p (EraCrypto era)) ->
         (GovAction era -> Bool) ->
         Bool
-      isValidMember prev snapshotCond =
-        case prev of
-          SNothing -> True
-          SJust prev' -> case Map.lookup (unPrevGovActionId prev') (snapshotGovActionStates $ snapshots ^. curGovSnapshotsL) of
-            Nothing -> False
-            -- lookup has to succeed _and_ purpose of looked-up action has to match condition
-            Just found -> snapshotCond . gasAction $ found
+      isValidPrevGovActionId prevGovActionId snapshotCond =
+        case prevGovActionId of
+          -- The case of having an SNothing as valid, for the very first proposal ever, is handled in `prevActionAsExpected`
+          SNothing -> False
+          SJust (PrevGovActionId govActionId) ->
+            case snapshotLookupId govActionId $ snapshots ^. curGovSnapshotsL of
+              Nothing -> False
+              -- lookup has to succeed _and_ purpose of looked-up action has to match condition
+              Just found -> snapshotCond $ gasAction found
       isValid proposal =
         prevActionAsExpected (proposal ^. pProcGovActionL) prevGovActionIds
           || case proposal ^. pProcGovActionL of
             ParameterChange prev _ ->
-              isValidMember prev $ \case ParameterChange {} -> True; _ -> False
+              isValidPrevGovActionId prev $ \case ParameterChange {} -> True; _ -> False
             HardForkInitiation prev _ ->
-              isValidMember prev $ \case HardForkInitiation {} -> True; _ -> False
+              isValidPrevGovActionId prev $ \case HardForkInitiation {} -> True; _ -> False
             TreasuryWithdrawals _ -> True
             NoConfidence prev ->
-              isValidMember prev $ \case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False
+              isValidPrevGovActionId prev $ \case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False
             UpdateCommittee prev _ _ _ ->
-              isValidMember prev $ \case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False
+              isValidPrevGovActionId prev $ \case NoConfidence {} -> True; UpdateCommittee {} -> True; _ -> False
             NewConstitution prev _ ->
-              isValidMember prev $ \case NewConstitution {} -> True; _ -> False
+              isValidPrevGovActionId prev $ \case NewConstitution {} -> True; _ -> False
             InfoAction -> True
       invalidProposals = Seq.filter (not . isValid) $ procedures ^. govProceduresProposalsL
    in failureUnless (Seq.null invalidProposals) $ InvalidPrevGovActionIdsInProposals invalidProposals
