@@ -367,11 +367,7 @@ ppSet :: (x -> Doc ann) -> Set x -> Doc ann
 ppSet p xs = encloseSep lbrace rbrace comma (map p (toList xs))
 
 ppList :: (x -> Doc ann) -> [x] -> Doc ann
-ppList p xs =
-  group $
-    flatAlt
-      (puncLeft lbracket (map p xs) comma rbracket)
-      (encloseSep (lbracket <> space) (space <> rbracket) (comma <> space) (map p xs))
+ppList p xs = brackets $ fillSep $ punctuate comma $ map p xs
 
 ppStrictSeq :: (a -> Doc ann) -> StrictSeq a -> Doc ann
 ppStrictSeq p xs = ppList p (foldr (:) [] xs)

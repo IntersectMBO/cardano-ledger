@@ -25,7 +25,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.Pretty (PDoc, ppString)
+import Cardano.Ledger.Pretty (PDoc, PrettyA, ppString)
 import Cardano.Ledger.Shelley.Governance (ShelleyGovState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov (GovState (..))
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
@@ -520,7 +520,7 @@ data TxF era where
 unTxF :: TxF era -> Tx era
 unTxF (TxF _ x) = x
 
-instance Show (TxF era) where
+instance PrettyA (PParamsUpdate era) => Show (TxF era) where
   show (TxF p x) = show ((unReflect pcTx p x) :: PDoc)
 
 instance Eq (TxF era) where
@@ -558,7 +558,7 @@ data TxBodyF era where
 unTxBodyF :: TxBodyF era -> TxBody era
 unTxBodyF (TxBodyF _ x) = x
 
-instance Show (TxBodyF era) where
+instance PrettyA (PParamsUpdate era) => Show (TxBodyF era) where
   show (TxBodyF p x) = show ((unReflect pcTxBody p x) :: PDoc)
 
 instance Eq (TxBodyF era) where

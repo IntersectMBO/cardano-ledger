@@ -34,6 +34,17 @@ import Test.Tasty (TestTree, defaultMain)
 
 -- =========================================
 
+prevGovActionIdsGenPreds :: Reflect era => Proof era -> [Pred era]
+prevGovActionIdsGenPreds _ =
+  [ Random prevPParamUpdate
+  , Random prevHardFork
+  , Random prevCommittee
+  , Random prevConstitution
+  ]
+
+prevGovActionIdsCheckPreds :: Proof era -> [Pred era]
+prevGovActionIdsCheckPreds _ = []
+
 enactStateGenPreds :: Reflect era => Proof era -> [Pred era]
 enactStateGenPreds p =
   [ Random committeeVar
@@ -47,10 +58,10 @@ enactStateGenPreds p =
   , Random prevHardFork
   , Random prevCommittee
   , Random prevConstitution
-  , Random prevDRepState
-  , Random partialDRepDistr
-  , Random prevDRepState
+  , Subset (Dom prevDRepState) voteUniv
+  , Subset (Dom partialDRepDistr) drepUniv
   ]
+    ++ prevGovActionIdsGenPreds p
 
 enactStateCheckPreds :: Proof era -> [Pred era]
 enactStateCheckPreds _ = []

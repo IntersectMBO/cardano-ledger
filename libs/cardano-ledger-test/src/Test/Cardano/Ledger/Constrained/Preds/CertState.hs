@@ -50,24 +50,15 @@ manyCoin size = do
 
 -- ======================================
 
--- | Predicates for Voting State, only work in Conway or later Eras.
-vstatePreds :: forall era. Era era => Proof era -> [Pred era]
-vstatePreds p = case whichPParams p of
+vstatePreds :: Era era => Proof era -> [Pred era]
+vstatePreds p = vstateGenPreds p ++ vstateCheckPreds p
+
+vstateGenPreds :: Era era => Proof era -> [Pred era]
+vstateGenPreds p = case whichPParams p of
   PParamsConwayToConway ->
     [ Sized (Range 10 20) currentDRepState
     , Sized (Range 5 7) (Dom committeeState)
-    , ForEach
-        (Range 25 25) -- It is possible we create duplicates, so we make a few more than 20 (the size of drepState)
-        drepStateSet
-        (Pat DRepStateR [Arg expire, Arg anchor, Arg deposit])
-        [ Random (fieldToTerm anchor)
-        , GenFrom (fieldToTerm expire) (Constr "+200To500" (\(EpochNo n) -> EpochNo <$> choose (n + 200, n + 500)) ^$ currentEpoch)
-        , drepDeposit p :=: (fieldToTerm deposit)
-        ]
     , Subset (Dom currentDRepState) voteUniv
-    , Subset (Rng currentDRepState) drepStateSet
-    , SumsTo (Right (Coin 1)) totalDRepDeposit EQL [ProjMap CoinR drepDepositL currentDRepState]
-    , SumsTo (Left (Coin 1)) totalDRepDeposit EQL [SumList (Elems drepDeposits)]
     , Subset (Dom committeeState) voteCredUniv
     , Random numDormantEpochs
     ]
@@ -77,6 +68,23 @@ vstatePreds p = case whichPParams p of
     , Lit EpochR (EpochNo 0) :=: numDormantEpochs
     , Random currentDRepState
     ]
+
+vstateCheckPreds :: forall era. Era era => Proof era -> [Pred era]
+vstateCheckPreds p = case whichPParams p of
+  PParamsConwayToConway ->
+    [ ForEach
+        (Range 25 25) -- It is possible we create duplicates, so we make a few more than 20 (the size of drepState)
+        drepStateSet
+        (Pat DRepStateR [Arg expire, Arg anchor, Arg deposit])
+        [ Random (fieldToTerm anchor)
+        , GenFrom (fieldToTerm expire) (Constr "+200To500" (\(EpochNo n) -> EpochNo <$> choose (n + 200, n + 500)) ^$ currentEpoch)
+        , drepDeposit p :=: (fieldToTerm deposit)
+        ]
+    , Subset (Rng currentDRepState) drepStateSet
+    , SumsTo (Right (Coin 1)) totalDRepDeposit EQL [ProjMap CoinR drepDepositL currentDRepState]
+    , SumsTo (Left (Coin 1)) totalDRepDeposit EQL [SumList (Elems drepDeposits)]
+    ]
+  _ -> []
   where
     drepStateSet = Var $ pV p "drepStateSet" (SetR DRepStateR) No
     deposit = Field @era "deposit" CoinR DRepStateR drepDepositL

@@ -1663,6 +1663,10 @@ pcWitnesses proof wits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> b633f3e42 (rebased on latest ts-constrained-trace)
 pcTx :: Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where

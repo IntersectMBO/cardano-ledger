@@ -16,6 +16,10 @@
   * `ConwayGovCertEnv`
   * `PoolEnv`
   * `EnactSignal`
+  * `RatifyEnv`
+  * `RatifySignal`
+  * `GovEnv`
+  * `VotingProcedures`
 
 ## 1.3.2.0
 

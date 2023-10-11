@@ -109,7 +109,7 @@ import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMeta
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val ((<+>)))
@@ -157,6 +157,8 @@ import Test.Cardano.Ledger.Constrained.Classes (
   liftUTxO,
   unPParams,
   unPParamsUpdate,
+  unTxBodyF,
+  unTxF,
   unTxOut,
   unValue,
  )
@@ -198,6 +200,8 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcScriptHash,
   pcScriptPurpose,
   pcShelleyTxCert,
+  pcTx,
+  pcTxBody,
   pcTxCert,
   pcTxIn,
   pcTxOut,
@@ -253,6 +257,7 @@ data Rep era t where
   NaturalR :: Rep era Natural
   Word64R :: Rep era Word64
   TxInR :: Era era => Rep era (TxIn (EraCrypto era))
+  TxIdR :: Era era => Rep era (TxId (EraCrypto era))
   CharR :: Rep era Char
   UnitR :: Rep era ()
   PairR :: Rep era a -> Rep era b -> Rep era (a, b)
@@ -376,6 +381,7 @@ typeRepOf r@(repHasInstances -> IsTypeable) = typeRep r
 
 repHasInstances :: Rep era t -> HasInstances t
 repHasInstances r = case r of
+  TxIdR -> IsOrd
   VStateR -> IsEq
   EnactStateR -> IsEq
   RatifyStateR -> IsEq
@@ -535,6 +541,7 @@ instance Show (Rep era t) where
   showsPrec d (repHasInstances -> IsTypeable :: HasInstances t) = showsPrec d $ typeRep (Proxy @t)
 
 synopsis :: forall e t. Rep e t -> t -> String
+synopsis TxIdR r = show r
 synopsis RationalR r = show r
 synopsis CoinR c = show (pcCoin c)
 synopsis EpochR e = show e
@@ -614,12 +621,12 @@ synopsis IsValidR x = show x
 synopsis IntegerR x = show x
 synopsis (ScriptsNeededR _) x = show x
 synopsis (ScriptPurposeR p) x = show (pcScriptPurpose p x)
-synopsis (TxBodyR _) x = show x
+synopsis (TxBodyR p) x = show (pcTxBody p (unTxBodyF x))
 synopsis BootstrapWitnessR x = "(BootstrapWitness " ++ show (ppVKey (bwKey x)) ++ ")"
 synopsis SigningKeyR key = "(publicKeyOfSecretKey " ++ formatToString shortVerificationKeyHexF (toVerification key) ++ ")"
 synopsis (TxWitsR p) (TxWitsF _ x) = show ((unReflect pcWitnesses p x) :: PDoc)
 synopsis PayHashR k = "(KeyHash 'Payment " ++ show (keyHashSummary k) ++ ")"
-synopsis (TxR _) x = show x
+synopsis (TxR p) x = show (pcTx p (unTxF x))
 synopsis ScriptIntegrityHashR x = show (trim (ppHash (extractHash x)))
 synopsis AuxiliaryDataHashR (AuxiliaryDataHash x) = show (trim (ppHash (extractHash x)))
 synopsis GovActionR _x = "GovAction ..." -- show(prettyA x)
@@ -690,6 +697,7 @@ genSizedRep ::
   Int ->
   Rep era t ->
   Gen t
+genSizedRep _ TxIdR = arbitrary
 genSizedRep n CoinR =
   if n == 0
     then do Positive m <- arbitrary; pure (Coin m)
@@ -927,6 +935,7 @@ genpup (PPUPStateR (Conway _)) = arbitrary -- FIXME when Conway is fully defined
 -- Not all types in the universe have Arbitrary instances and thus don't shrink (the `[]` cases).
 -- TODO: add instances for these types.
 shrinkRep :: Rep era t -> t -> [t]
+shrinkRep TxIdR t = shrink t
 shrinkRep CoinR t = shrink t
 shrinkRep (_ :-> _) _ = []
 shrinkRep (MapR a b) t = shrinkMapBy Map.fromList Map.toList (shrinkRep $ ListR (PairR a b)) t
