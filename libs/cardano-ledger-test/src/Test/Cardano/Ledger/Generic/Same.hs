@@ -506,6 +506,7 @@ sameBabbageTxBody
 
 sameConwayTxBody ::
   ( ConwayEraTxBody era
+  , PrettyA (PParamsUpdate era)
   , Reflect era
   ) =>
   Proof era ->

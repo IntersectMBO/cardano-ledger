@@ -1663,6 +1663,10 @@ pcWitnesses proof wits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof wits
     pairs = concat (map (pcWitnessesField proof) fields)
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> b633f3e42 (rebased on latest ts-constrained-trace)
 pcTx :: Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where
@@ -2021,7 +2025,6 @@ psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
     , ("Current Blocks", ppMap pcKeyHash ppNatural cbm)
     , ("EpochNo", ppEpochNo en)
     ]
-
 
 pcUTxOState :: Proof era -> UTxOState era -> PDoc
 pcUTxOState proof (UTxOState u dep fs gs (IStake m _) don) =

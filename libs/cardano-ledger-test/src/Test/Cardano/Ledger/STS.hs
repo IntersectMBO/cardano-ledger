@@ -19,15 +19,22 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
+import Cardano.Ledger.Keys
+import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
+import Cardano.Ledger.Shelley.Tx (TxId (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.Monad.Reader
 import Control.State.Transition.Extended
@@ -38,7 +45,8 @@ import qualified Data.HashSet as HashSet
 import qualified Data.Map as Map
 import Data.Maybe
 import qualified Data.Set as Set
-import Lens.Micro ((^.))
+import GHC.Stack
+import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Constrained.Ast
@@ -55,12 +63,12 @@ import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Tests
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars hiding (delegations, drepDeposit, rewards)
-import qualified Test.Cardano.Ledger.Constrained.Vars as Vars
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck
+import Type.Reflection (typeRep)
 
 ------------------------------------------------------------------------
 -- Generator Setup
@@ -113,13 +121,13 @@ solveUnknown env p = case p of
     , knownSums sums
     , Right v <- runTyped (sumAdds <$> mapM (runSum env) sums) ->
         Just (Name x, Payload rep v acc)
-  Component (direct -> tm) (AnyF (Field s rep reps lens) : _)
+  Component (direct -> tm) (AnyF (Field s rep reps l) : _)
     | knownTerm tm
     , unknown x
     , Right r <- runTyped (runTerm env tm) ->
-        Just (x, Payload rep (r ^. lens) acc)
+        Just (x, Payload rep (r ^. l) acc)
     where
-      acc = Yes reps lens
+      acc = Yes reps l
       x = Name (V s rep acc)
   Component r (_ : flds) ->
     solveUnknown env (Component r flds)
@@ -316,6 +324,132 @@ genDelegCert pp ds =
 
     gen_RegDelegCert = ConwayRegDelegCert <$> arbitrary <*> arbitrary <*> pure (pp ^. ppKeyDepositL)
 
+-- TODO: this should be doable with constraints, at least for the `VotingProcedures` part
+genGovProceedure ::
+  era ~ ConwayEra StandardCrypto =>
+  PropEnv era ->
+  GovEnv era ->
+  Proposals era ->
+  Gen (GovProcedures era)
+genGovProceedure PropEnv {} GovEnv {} _snapshot =
+  GovProcedures <$> arbitrary <*> arbitrary
+
+------------------------------------------------------------------------
+-- Constraints
+------------------------------------------------------------------------
+
+-- TODO: I'm sure this is some form of Iso thing in la-la-lens land
+toCompF :: (HasCallStack, Compactible v) => Map.Map k v -> Map.Map k (UM.CompactForm v)
+toCompF = fmap $ fromJust . UM.toCompact
+
+fromCompF :: Compactible v => Map.Map k (UM.CompactForm v) -> Map.Map k v
+fromCompF = fmap UM.fromCompact
+
+-- RatifyEnv --------------------------------------------------------------
+
+ratifyEnvT :: PropEnv era -> RootTarget (ConwayEra StandardCrypto) (RatifyEnv (ConwayEra StandardCrypto)) (RatifyEnv (ConwayEra StandardCrypto))
+ratifyEnvT PropEnv {..} =
+  Invert
+    "RatifyEnv"
+    (typeRep @(RatifyEnv (ConwayEra StandardCrypto)))
+    (\sd spd drepd drepst cs -> RatifyEnv (toCompF sd) (PoolDistr spd) (toCompF drepd) drepst peEpochNo cs)
+    :$ Lensed
+      stakeDistrV
+      (lens (fromCompF . reStakeDistr) (\re x -> re {reStakeDistr = toCompF x}))
+    :$ Lensed
+      stakePoolDistrV
+      (lens reStakePoolDistr (\re x -> re {reStakePoolDistr = x}) . unPoolDistrL)
+    :$ Lensed
+      drepDistrV
+      (lens (fromCompF . reDRepDistr) (\re x -> re {reDRepDistr = toCompF x}))
+    :$ Lensed
+      drepStateV
+      (lens reDRepState $ \re x -> re {reDRepState = x})
+    :$ Lensed
+      committeeStateV
+      (lens reCommitteeState $ \re x -> re {reCommitteeState = x})
+
+drepDistrV :: Term (ConwayEra StandardCrypto) (Map.Map (DRep StandardCrypto) Coin)
+drepDistrV = Var $ V "drepDistr" (MapR DRepR CoinR) No
+
+stakeDistrV :: Term (ConwayEra StandardCrypto) (Map.Map (Credential 'Staking StandardCrypto) Cardano.Ledger.Coin.Coin)
+stakeDistrV = Var $ V "stakeDistr" (MapR CredR CoinR) No
+
+stakePoolDistrV :: Term (ConwayEra StandardCrypto) (Map.Map (KeyHash 'StakePool StandardCrypto) (IndividualPoolStake StandardCrypto))
+stakePoolDistrV = Var $ V "stakePoolDistr" (MapR PoolHashR IPoolStakeR) No
+
+drepStateV :: Term (ConwayEra StandardCrypto) (Map.Map (Credential 'DRepRole StandardCrypto) (DRepState StandardCrypto))
+drepStateV = Var $ V "drepState" (MapR VCredR DRepStateR) No
+
+committeeStateV :: Term (ConwayEra StandardCrypto) (CommitteeState (ConwayEra StandardCrypto))
+committeeStateV = Var $ V "committeeState" CommitteeStateR No
+
+ratifyEnvGenPreds :: Proof era -> [Pred (ConwayEra StandardCrypto)]
+ratifyEnvGenPreds _ =
+  [ Random drepDistrV
+  , Dom stakeDistrV :⊆: credsUniv
+  , Random stakePoolDistrV
+  , Dom drepStateV :⊆: voteUniv
+  , Random committeeStateV
+  ]
+
+ratifyEnvCheckPreds :: Proof era -> [Pred (ConwayEra StandardCrypto)]
+ratifyEnvCheckPreds _ = []
+
+-- RatifyState ------------------------------------------------------------
+
+ratifyStateT :: RootTarget (ConwayEra StandardCrypto) (RatifyState (ConwayEra StandardCrypto)) (RatifyState (ConwayEra StandardCrypto))
+ratifyStateT =
+  Invert "RatifyState" (typeRep @(RatifyState (ConwayEra StandardCrypto))) RatifyState
+    :$ Shift enactStateT (lens rsEnactState $ \rs x -> rs {rsEnactState = x})
+    :$ Lensed removedV (lens rsRemoved $ \rs x -> rs {rsRemoved = x})
+    :$ Lensed delayedV (lens rsDelayed $ \rs x -> rs {rsDelayed = x})
+
+removedV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
+removedV = Var $ V "removed" (SetR GovActionIdR) No
+
+delayedV :: Era era => Term era Bool
+delayedV = Var $ V "delayed" BoolR No
+
+-- TODO: it's possible that these should depend on the variables in the environment!
+ratifyStateGenPreds :: Proof (ConwayEra StandardCrypto) -> [Pred (ConwayEra StandardCrypto)]
+ratifyStateGenPreds p =
+  [ Random removedV
+  , Random delayedV
+  ]
+    ++ enactStateGenPreds p
+
+-- TODO: there should probably be more constraints here!
+ratifyStateCheckPreds :: Proof era -> [Pred era]
+ratifyStateCheckPreds p = enactStateCheckPreds p
+
+-- GovEnv -----------------------------------------------------------------
+
+govEnvT :: forall era. Reflect era => PropEnv era -> RootTarget era (GovEnv era) (GovEnv era)
+govEnvT PropEnv {..} =
+  Invert "GovEnv" (typeRep @(GovEnv era)) (\txid pgovact -> GovEnv txid peEpochNo pePParams pgovact)
+    :$ Lensed txIdV (lens geTxId $ \ge x -> ge {geTxId = x})
+    :$ Shift prevGovActionIdsT (lens gePrevGovActionIds $ \ge x -> ge {gePrevGovActionIds = x})
+
+txIdV :: Reflect era => Term era (TxId (EraCrypto era))
+txIdV = Var $ V "txId" TxIdR No
+
+govEnvGenPreds :: Reflect era => Proof era -> [Pred era]
+govEnvGenPreds p = Random txIdV : prevGovActionIdsGenPreds p
+
+govEnvCheckPreds :: Proof era -> [Pred era]
+govEnvCheckPreds p = prevGovActionIdsCheckPreds p
+
+-- GovSnapshots -----------------------------------------------------------
+
+proposalsSnapshotGenPreds :: Era era => Proof era -> [Pred era]
+proposalsSnapshotGenPreds _ =
+  [ Random prevProposals
+  ]
+
+proposalsSnapshotsCheckPreds :: Proof era -> [Pred era]
+proposalsSnapshotsCheckPreds _ = []
+
 ------------------------------------------------------------------------
 -- Properties
 ------------------------------------------------------------------------
@@ -329,44 +463,55 @@ data PropEnv era = PropEnv
   , peSlotNo :: SlotNo
   }
 
+extendSub :: Reflect era => PropEnv era -> Subst era -> Subst era
+extendSub PropEnv {..} sub =
+  ( extend
+      (pparamsVar reify)
+      (Lit (PParamsR reify) $ PParamsF reify pePParams)
+      sub
+  )
+
 type GenShrink a = (Gen a, a -> [a])
 
 stsProperty ::
-  forall r era env st sig.
+  forall r era env st sig fail.
   ( Reflect era
   , Environment (EraRule r era) ~ env
   , State (EraRule r era) ~ st
   , Signal (EraRule r era) ~ sig
+  , PredicateFailure (EraRule r era) ~ fail
   , STS (EraRule r era)
   , BaseM (EraRule r era) ~ ReaderT Globals Identity
   , PrettyA st
   , PrettyA sig
   , PrettyA env
+  , PrettyA fail
   ) =>
   Subst era ->
-  (PropEnv era -> env) ->
+  (PropEnv era -> GenShrink env) ->
   (PropEnv era -> GenShrink st) ->
   (PropEnv era -> st -> GenShrink sig) ->
   (PropEnv era -> env -> st -> sig -> st -> Property) ->
   Property
-stsProperty sub mkEnv genSt genSig prop =
-  lookupTerm sub network $ \net ->
-    lookupTerm sub currentEpoch $ \epochNo ->
-      lookupTerm sub currentSlot $ \slotNo ->
-        forAllBlind (pParamsGen sub) $ \(unPParams -> pParams) ->
-          let pEnv = PropEnv net pParams epochNo slotNo
-           in counterexample (show $ ppString "env = " <> prettyA (mkEnv pEnv)) $
-                uncurry forAllShrinkBlind (genSt pEnv) $ \st ->
-                  counterexample (show $ ppString "st = " <> prettyA st) $
-                    uncurry forAllShrinkBlind (genSig pEnv st) $ \sig ->
-                      counterexample (show $ ppString "sig = " <> prettyA sig) $
-                        runShelleyBase $ do
-                          res <- applySTS @(EraRule r era) $ TRC (mkEnv pEnv, st, sig)
-                          pure $ case res of
-                            Left pfailure -> counterexample (show pfailure) $ property False
-                            Right st' ->
-                              counterexample (show $ ppString "st' = " <> prettyA st') $
-                                prop pEnv (mkEnv pEnv) st sig st'
+stsProperty sub genEnv genSt genSig prop =
+  lookupTerm sub network $ \peNetwork ->
+    lookupTerm sub currentEpoch $ \peEpochNo ->
+      lookupTerm sub currentSlot $ \peSlotNo ->
+        forAllBlind (pParamsGen sub) $ \(unPParams -> pePParams) ->
+          let pEnv = PropEnv {..}
+           in uncurry forAllShrinkBlind (genEnv pEnv) $ \env ->
+                counterexample (show $ ppString "env = " <> prettyA env) $
+                  uncurry forAllShrinkBlind (genSt pEnv) $ \st ->
+                    counterexample (show $ ppString "st = " <> prettyA st) $
+                      uncurry forAllShrinkBlind (genSig pEnv st) $ \sig ->
+                        counterexample (show $ ppString "sig = " <> prettyA sig) $
+                          runShelleyBase $ do
+                            res <- applySTS @(EraRule r era) $ TRC (env, st, sig)
+                            pure $ case res of
+                              Left pfailures -> counterexample (show $ ppList prettyA pfailures) $ property False
+                              Right st' ->
+                                counterexample (show $ ppString "st' = " <> prettyA st') $
+                                  prop pEnv env st sig st'
 
 checkConstraints ::
   era ~ ConwayEra StandardCrypto =>
@@ -390,44 +535,62 @@ prop_GOVCERT :: Subst (ConwayEra StandardCrypto) -> Property
 prop_GOVCERT sub =
   stsProperty @"GOVCERT"
     sub
-    (\PropEnv {..} -> ConwayGovCertEnv pePParams peEpochNo)
-    (\_ -> genShrinkFromConstraints conwayProof sub (\p -> Random (Vars.drepDeposit p) : vstatePreds p) (const []) vstateT)
-    -- \^ vstatePreds are designed to run after pparams are defined because they depend upon 'Vars.drepDeposit'
-    --   Since we are not defining 'pparams' but only the Universes we need to add the 'Random (Vars.drepDeposit p)'
+    (\PropEnv {..} -> (pure $ ConwayGovCertEnv pePParams peEpochNo, const []))
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) vstateGenPreds vstateCheckPreds vstateT)
     -- TODO: this should eventually be replaced by constraints based generator
     (\PropEnv {..} st -> (genConwayGovCert pePParams st, shrinkConwayGovCert pePParams st))
-    $ \_pEnv _env _st _sig _st' -> property True -- TODO: property?
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) vstateCheckPreds vstateT st'
 
 prop_POOL :: Subst (ConwayEra StandardCrypto) -> Property
 prop_POOL sub =
   stsProperty @"POOL"
     sub
-    (\PropEnv {..} -> PoolEnv peSlotNo pePParams)
-    (\_ -> genShrinkFromConstraints conwayProof sub pstateGenPreds pstateCheckPreds pstateT)
+    (\PropEnv {..} -> (pure $ PoolEnv peSlotNo pePParams, const []))
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) pstateGenPreds pstateCheckPreds pstateT)
     -- TODO: this should eventually be replaced by constraints based generator
     (\PropEnv {..} st -> (genPoolCert peNetwork peEpochNo pePParams st, const []))
-    $ \_pEnv _env _st _sig st' -> checkConstraints conwayProof sub pstateCheckPreds pstateT st'
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) pstateCheckPreds pstateT st'
 
 prop_DELEG :: Subst (ConwayEra StandardCrypto) -> Property
 prop_DELEG sub =
   stsProperty @"DELEG"
     sub
-    (\PropEnv {..} -> pePParams)
-    (\_ -> genShrinkFromConstraints conwayProof sub certStateGenPreds certStateCheckPreds dstateT)
+    (\PropEnv {..} -> (pure $ pePParams, const []))
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) certStateGenPreds certStateCheckPreds dstateT)
     -- TODO: this should eventually be replaced by constraints based generator
     (\PropEnv {..} st -> (genDelegCert pePParams st, const []))
-    $ \_pEnv _env _st _sig st' -> checkConstraints conwayProof sub certStateCheckPreds dstateT st'
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) certStateCheckPreds dstateT st'
 
 prop_ENACT :: Subst (ConwayEra StandardCrypto) -> Property
 prop_ENACT sub =
   stsProperty @"ENACT"
     sub
-    (const ())
-    (\_ -> genShrinkFromConstraints conwayProof sub enactStateGenPreds enactStateCheckPreds enactStateT)
+    (const (pure (), const []))
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) enactStateGenPreds enactStateCheckPreds enactStateT)
     -- TODO: this is a bit suspect, there are preconditions on these signals in the spec so we
     -- shouldn't expect this to go through so easily.
     (\_ _ -> (EnactSignal <$> arbitrary <*> arbitrary, const []))
-    $ \_pEnv _env _st _sig _st' -> property True
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) enactStateCheckPreds enactStateT st'
+
+prop_RATIFY :: Subst (ConwayEra StandardCrypto) -> Property
+prop_RATIFY sub =
+  stsProperty @"RATIFY"
+    sub
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) ratifyEnvGenPreds ratifyEnvCheckPreds (ratifyEnvT pe))
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) ratifyStateGenPreds ratifyStateCheckPreds ratifyStateT)
+    (\_ _ -> (RatifySignal <$> arbitrary, const []))
+    -- TODO: we should probably check more things here
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) ratifyStateCheckPreds ratifyStateT st'
+
+prop_GOV :: Subst (ConwayEra StandardCrypto) -> Property
+prop_GOV sub =
+  stsProperty @"GOV"
+    sub
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) govEnvGenPreds govEnvCheckPreds (govEnvT pe))
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds proposalsT)
+    (\_ _ -> (arbitrary, const []))
+    -- TODO: we should probably check more things here
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds proposalsT st'
 
 ------------------------------------------------------------------------
 -- Test Tree
@@ -447,6 +610,8 @@ tests_STS =
       , testProperty "prop_POOL" $ idempotentIOProperty (prop_POOL <$> io_subst)
       , testProperty "prop_DELEG" $ idempotentIOProperty (prop_DELEG <$> io_subst)
       , testProperty "prop_ENACT" $ idempotentIOProperty (prop_ENACT <$> io_subst)
+      , testProperty "prop_RATIFY" $ idempotentIOProperty (prop_RATIFY <$> io_subst)
+      -- , testProperty "prop_GOV" $ idempotentIOProperty (prop_GOV <$> io_subst)
       ]
 
 ------------------------------------------------------------------------

@@ -24,7 +24,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
-  Anchor,
+  Anchor (..),
   Committee (..),
   ConwayGovState (..),
   DRepPulsingState (..),
@@ -32,12 +32,15 @@ import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
-  GovProcedures,
+  GovProcedures (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
   Proposals,
   PulsingSnapshot (..),
+  RatifyEnv (..),
+  RatifySignal (..),
+  RatifyState (..),
   Vote (..),
   Voter (..),
   VotingProcedure (..),
@@ -56,8 +59,8 @@ import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure (..),
   EnactSignal (..),
   EnactState (..),
+  GovEnv (..),
   PredicateFailure,
-  RatifyState (..),
  )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
@@ -74,6 +77,7 @@ import Cardano.Ledger.Pretty (
   ppAuxiliaryDataHash,
   ppCoin,
   ppKeyHash,
+  ppList,
   ppMap,
   ppNetwork,
   ppOSet,
@@ -90,6 +94,7 @@ import Cardano.Ledger.Pretty (
  )
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.Rules (PoolEnv (..))
+import Data.Foldable
 import Data.Text (Text)
 import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
@@ -98,6 +103,7 @@ import Prettyprinter (viaShow)
 instance
   ( ConwayEraTxBody era
   , PrettyA (TxOut era)
+  , PrettyA (PParamsUpdate era)
   , TxBody era ~ ConwayTxBody era
   ) =>
   PrettyA (ConwayTxBody era)
@@ -181,6 +187,7 @@ ppConwayTxBody ::
   forall era.
   ( ConwayEraTxBody era
   , PrettyA (TxOut era)
+  , PrettyA (PParamsUpdate era)
   , TxBody era ~ ConwayTxBody era
   ) =>
   ConwayTxBody era ->
@@ -210,13 +217,33 @@ instance PrettyA Vote where
   prettyA = viaShow
 
 instance EraPParams era => PrettyA (VotingProcedure era) where
-  prettyA = viaShow
+  prettyA VotingProcedure {..} =
+    ppRecord
+      "VotingProcedure"
+      [ ("Vote", prettyA vProcVote)
+      , ("Anchor", prettyA vProcAnchor)
+      ]
 
-instance EraPParams era => PrettyA (ProposalProcedure era) where
-  prettyA = viaShow
+instance EraPParams era => PrettyA (VotingProcedures era) where
+  prettyA VotingProcedures {..} = ppMap prettyA prettyA unVotingProcedures
 
-instance EraPParams era => PrettyA (GovProcedures era) where
-  prettyA = viaShow
+instance (EraPParams era, PrettyA (PParamsUpdate era)) => PrettyA (ProposalProcedure era) where
+  prettyA ProposalProcedure {..} =
+    ppRecord
+      "ProposalProcedure"
+      [ ("Deposit", prettyA pProcDeposit)
+      , ("ReturnAddr", prettyA pProcReturnAddr)
+      , ("GovAction", prettyA pProcGovAction)
+      , ("Anchor", prettyA pProcAnchor)
+      ]
+
+instance (EraPParams era, PrettyA (PParamsUpdate era)) => PrettyA (GovProcedures era) where
+  prettyA GovProcedures {..} =
+    ppRecord
+      "GovProcedures"
+      [ ("VotingProcedures", prettyA gpVotingProcedures)
+      , ("ProposalProcedures", ppList prettyA (toList gpProposalProcedures))
+      ]
 
 instance PrettyA (PrevGovActionId p c) where
   prettyA = viaShow
@@ -393,7 +420,12 @@ instance PrettyA (Voter c) where
   prettyA = ppString . show
 
 instance PrettyA (Anchor era) where
-  prettyA = viaShow
+  prettyA (Anchor u h) =
+    ppRecord
+      "Anchor"
+      [ ("url", ppString (show u))
+      , ("datahash", ppSafeHash h)
+      ]
 
 instance PrettyA (PParamsUpdate era) => PrettyA (GovActionState era) where
   prettyA gas@(GovActionState _ _ _ _ _ _ _ _ _) =
@@ -451,6 +483,19 @@ instance PrettyA (PrevGovActionIds era) where
       , ("LastConstitution", prettyA pgaConstitution)
       ]
 
+instance PrettyA (RatifyEnv era) where
+  prettyA rs@(RatifyEnv {}) =
+    let RatifyEnv {..} = rs
+     in ppRecord
+          "RatifyEnv"
+          [ ("StakeDistr", prettyA reStakeDistr)
+          , ("StakePoolDistr", prettyA reStakePoolDistr)
+          , ("DRepDistr", prettyA reDRepDistr)
+          , ("DRepState", prettyA reDRepState)
+          , ("CurrentEpoch", prettyA reCurrentEpoch)
+          , ("CommitteeState", prettyA reCommitteeState)
+          ]
+
 instance
   PrettyA (PParams era) =>
   PrettyA (RatifyState era)
@@ -463,6 +508,22 @@ instance
           , ("Removed", prettyA rsRemoved)
           , ("Delayed", prettyA rsDelayed)
           ]
+
+instance
+  PrettyA (PParamsUpdate era) =>
+  PrettyA (RatifySignal era)
+  where
+  prettyA (RatifySignal s) = ppStrictSeq prettyA s
+
+instance PrettyA (PParams era) => PrettyA (GovEnv era) where
+  prettyA GovEnv {..} =
+    ppRecord
+      "GovEnv"
+      [ ("TxId", prettyA geTxId)
+      , ("Epoch", prettyA geEpoch)
+      , ("PParams", prettyA gePParams)
+      , ("PrevGovActionId", prettyA gePrevGovActionIds)
+      ]
 
 instance
   ( PrettyA (PParamsUpdate era)
