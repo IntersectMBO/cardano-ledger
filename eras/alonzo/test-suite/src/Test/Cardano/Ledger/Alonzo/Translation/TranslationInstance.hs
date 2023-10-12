@@ -110,11 +110,7 @@ instance Cborg.Serialise a => Cborg.Serialise (PV3.Extended a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.Interval a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
-
--- FIXME: fix following after plutus patch
-instance Cborg.Serialise PlutusTx.Rational where
-  encode = error "fixme rational"
-  decode = error "fixme rational"
+instance Cborg.Serialise PlutusTx.Rational
 
 instance Cborg.Serialise VersionedTxInfo
 
