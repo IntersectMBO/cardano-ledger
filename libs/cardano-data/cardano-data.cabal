@@ -23,6 +23,7 @@ library
         Data.ListMap
         Data.Universe
         Data.OSet.Strict
+        Data.OMap.Strict
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -39,7 +40,8 @@ library
         deepseq,
         mtl,
         nothunks,
-        vector
+        vector,
+        microlens
 
 library testlib
     exposed-modules:
@@ -55,6 +57,8 @@ library testlib
 
     build-depends:
         base,
+        cardano-data,
+        cardano-ledger-binary:testlib,
         containers,
         hspec,
         QuickCheck,
@@ -68,6 +72,7 @@ test-suite cardano-data-tests
     other-modules:
         Test.Cardano.Data.MapExtrasSpec
         Test.Cardano.Data.OSet.StrictSpec
+        Test.Cardano.Data.OMap.StrictSpec
 
     default-language: Haskell2010
     ghc-options:
@@ -77,11 +82,12 @@ test-suite cardano-data-tests
 
     build-depends:
         base,
+        cardano-strict-containers,
         containers,
         hspec,
         cardano-data,
         cardano-ledger-binary:testlib,
-        cardano-strict-containers,
         testlib,
         QuickCheck,
-        quickcheck-classes-base
+        quickcheck-classes-base,
+        microlens
