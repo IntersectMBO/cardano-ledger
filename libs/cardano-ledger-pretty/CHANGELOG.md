@@ -2,7 +2,12 @@
 
 ## 1.3.3.0
 
-* Add `PrettyA` instance for `NoUpdate`
+* Add `PrettyA` instances for:
+  * `NoUpdate`
+  * `ConwayGovCert`
+  * `ConwayGovCertEnv`
+  * `PoolEnv`
+  * `EnactSignal`
 
 ## 1.3.2.0
 

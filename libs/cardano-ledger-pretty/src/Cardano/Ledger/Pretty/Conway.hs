@@ -48,9 +48,11 @@ import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure (..),
   ConwayCertsPredFailure (..),
   ConwayDelegPredFailure (..),
+  ConwayGovCertEnv (..),
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
   ConwayLedgerPredFailure (..),
+  EnactSignal (..),
   EnactState (..),
   PredicateFailure,
   RatifyState (..),
@@ -85,6 +87,7 @@ import Cardano.Ledger.Pretty (
   ppWithdrawals,
  )
 import Cardano.Ledger.Pretty.Babbage ()
+import Cardano.Ledger.Shelley.Rules (PoolEnv (..))
 import Data.Text (Text)
 import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
@@ -143,6 +146,15 @@ instance PrettyA (ConwayDelegCert c) where
       , ("Delegatee", prettyA delegatee)
       , ("Deposit", prettyA deposit)
       ]
+
+instance PrettyA (ConwayGovCert c) where
+  prettyA = ppConwayGovCert
+
+instance PrettyA (PParams c) => PrettyA (ConwayGovCertEnv c) where
+  prettyA (ConwayGovCertEnv pp ce) = ppSexp "ConwayGovCertEnv" [prettyA pp, prettyA ce]
+
+instance PrettyA (PParams c) => PrettyA (PoolEnv c) where
+  prettyA (PoolEnv sn pp) = ppSexp "PoolEnv" [prettyA sn, prettyA pp]
 
 ppConwayTxCert :: ConwayTxCert era -> PDoc
 ppConwayTxCert = \case
@@ -429,6 +441,14 @@ instance PrettyA (PParams era) => PrettyA (EnactState era) where
           , ("Withdrawals", prettyA ensWithdrawals)
           , ("PrevGovActionIds", prettyA ensPrevGovActionIds)
           ]
+
+instance PrettyA (PParamsUpdate era) => PrettyA (EnactSignal era) where
+  prettyA EnactSignal {..} =
+    ppRecord
+      "EnactSignal"
+      [ ("Gov Action Id", prettyA esGovActionId)
+      , ("Gov Action", prettyA esGovAction)
+      ]
 
 instance PrettyA (PrevGovActionIds era) where
   prettyA PrevGovActionIds {..} =

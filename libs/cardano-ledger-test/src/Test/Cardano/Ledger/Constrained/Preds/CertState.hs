@@ -25,6 +25,7 @@ import Test.Cardano.Ledger.Constrained.Size (Size (..), genFromSize)
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   pcCertState,
   pcDState,
@@ -92,18 +93,16 @@ pstateNames =
   ]
 
 pstatePreds :: Era era => Proof era -> [Pred era]
-pstatePreds _p =
+pstatePreds p = pstateGenPreds p ++ pstateCheckPreds p
+
+pstateGenPreds :: Era era => Proof era -> [Pred era]
+pstateGenPreds _ =
   [ -- These Sized constraints are needd to be ensure that regPools is bigger than retiring
     Sized (ExactSize 3) retiring
   , Sized (AtLeast 3) regPools
   , Subset (Dom regPools) poolHashUniv
   , Subset (Dom futureRegPools) poolHashUniv
   , Subset (Dom poolDeposits) poolHashUniv
-  , Subset (Dom retiring) (Dom regPools) -- Note regPools must be bigger than retiring
-  , Dom regPools :=: Dom poolDeposits
-  , NotMember (Lit CoinR (Coin 0)) (Rng poolDeposits)
-  , Disjoint (Dom regPools) (Dom futureRegPools)
-  , epochs :=: Elems retiring
   , Choose
       (ExactSize 3)
       epochs
@@ -122,6 +121,14 @@ pstatePreds _p =
   where
     e = var "e" EpochR
     epochs = var "epochs" (ListR EpochR)
+
+pstateCheckPreds :: Era era => Proof era -> [Pred era]
+pstateCheckPreds _ =
+  [ Subset (Dom retiring) (Dom regPools) -- Note regPools must be bigger than retiring
+  , Dom regPools :=: Dom poolDeposits
+  , NotMember (Lit CoinR (Coin 0)) (Rng poolDeposits)
+  , Disjoint (Dom regPools) (Dom futureRegPools)
+  ]
 
 pstateStage ::
   Reflect era =>
@@ -186,7 +193,10 @@ gdkeyL =
 -- ============================================================================
 
 certStatePreds :: Era era => Proof era -> [Pred era]
-certStatePreds _p =
+certStatePreds p = certStateGenPreds p ++ certStateCheckPreds p
+
+certStateGenPreds :: Era era => Proof era -> [Pred era]
+certStateGenPreds _p =
   [ MetaSize (SzExact (fromIntegral (quorumConstant + 2))) genDelegSize
   , --  , GenFrom quorum (constTarget (pure (fromIntegral quorumConstant)))
 
@@ -206,10 +216,6 @@ certStatePreds _p =
   , Dom rewards :⊆: credsUniv
   , GenFrom rewardRange (Constr "many" manyCoin ^$ rewardSize)
   , rewardRange :=: Elems rewards
-  , NotMember (Lit CoinR (Coin 0)) (Rng stakeDeposits)
-  , Dom rewards :=: Dom stakeDeposits
-  , Dom delegations :⊆: Dom rewards
-  , Dom rewards :=: Rng ptrs
   , -- Preds to compute genDelegs
     -- First, a set of GenDelegPairs, where no keyHash is repeated.
     Sized genDelegSize gdKeyHashSet
@@ -226,10 +232,10 @@ certStatePreds _p =
       LTH
       [One (Delta reserves), One deltaReserves, One (Lit DeltaCoinR (DeltaCoin (-3000)))]
   , Dom instanTreasury :⊆: credsUniv
+  , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   , NotMember (Lit CoinR (Coin 0)) (Rng instanTreasury)
   , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
   , SumsTo (Right (DeltaCoin 1)) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
-  , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   , mirAvailTreasury :<-: (Constr "computeAvailTreasury" (availableAfterMIR TreasuryMIR) :$ Mask accountStateT :$ Mask instantaneousRewardsT)
   , mirAvailReserves :<-: (Constr "computeAvailReserves" (availableAfterMIR ReservesMIR) :$ Mask accountStateT :$ Mask instantaneousRewardsT)
   ]
@@ -239,6 +245,16 @@ certStatePreds _p =
     genDelegSize = var "genDelegSize" SizeR
     gdKeyHashSet = var "gdKeyHashSet" (SetR GenDelegPairR)
     gdKeyHashList = var "gdKeyHashList" (ListR GenDelegPairR)
+
+certStateCheckPreds :: Era era => Proof era -> [Pred era]
+certStateCheckPreds p =
+  [ NotMember (Lit CoinR (Coin 0)) (Rng stakeDeposits)
+  , Dom rewards :=: Dom stakeDeposits
+  , Dom delegations :⊆: Dom rewards
+  , if protocolVersion p >= protocolVersion (Conway Standard)
+      then Sized (ExactSize 0) ptrs
+      else Dom rewards :=: Rng ptrs
+  ]
 
 dstateStage ::
   Reflect era =>
