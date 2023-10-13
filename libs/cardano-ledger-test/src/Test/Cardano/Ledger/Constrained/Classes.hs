@@ -156,6 +156,8 @@ class (Eq x, Show x, Typeable x) => Adds x where
 
   runOrdCondition :: OrdCond -> x -> x -> Bool
 
+  supportsNegative :: x -> Bool
+
   smallerOf :: x -> x -> x
 
 sumAdds :: (Foldable t, Adds c) => t c -> c
@@ -225,6 +227,7 @@ instance Adds ExUnits where
       mem = fromI ("Ex memory" : msgs) memInt
       step = fromI ("Ex steps" : msgs) stepInt
   toI (ExUnits mem step) = pair (toI mem) (toI step)
+  supportsNegative _ = False
   genSmall = oneof [pure $ toI (ExUnits 1 1), pure $ toI (ExUnits 2 2), pure $ toI (ExUnits 3 1)]
 
   -- Some ExUnits are incomparable: i.e. x=(ExUnits 5 7) and y=(ExUnits 8 3)
@@ -257,6 +260,7 @@ instance Adds Word64 where
   toI = fromIntegral
   genSmall = elements [0, 1, 2]
   runOrdCondition = runOrdCond
+  supportsNegative _ = False
   smallerOf = min
 
 instance Adds Int where
@@ -272,6 +276,7 @@ instance Adds Int where
   toI n = n
   genSmall = elements [-2, -1, 0, 1, 2]
   runOrdCondition = runOrdCond
+  supportsNegative _ = True
   smallerOf = min
 
 instance Adds Natural where
@@ -291,6 +296,7 @@ instance Adds Natural where
   toI = fromIntegral
   genSmall = elements [0, 1, 2]
   runOrdCondition = runOrdCond
+  supportsNegative _ = False
   smallerOf = min
 
 instance Adds Rational where
@@ -306,6 +312,7 @@ instance Adds Rational where
   toI r = round (r * 1000)
   genSmall = elements [0, 1]
   runOrdCondition = runOrdCond
+  supportsNegative _ = True
   smallerOf = min
 
 instance Adds Coin where
@@ -325,6 +332,7 @@ instance Adds Coin where
   toI (Coin n) = fromIntegral n
   genSmall = elements [0, 1, 2]
   runOrdCondition = runOrdCond
+  supportsNegative _ = False
   smallerOf = min
 
 instance Adds DeltaCoin where
@@ -340,6 +348,7 @@ instance Adds DeltaCoin where
   toI (DeltaCoin n) = fromIntegral n
   genSmall = elements [-2, 0, 1, 2]
   runOrdCondition = runOrdCond
+  supportsNegative _ = True
   smallerOf = min
 
 -- ===========================================================================
@@ -977,10 +986,43 @@ varOnRight _ lhs LTH rhs s
   | toI rhs > toI lhs -- When this holds the only constraint on the var 's' is that its is (>= 0)
     =
       AddsSpecSize s (SzLeast 0)
-varOnRight msgs lhs cond rhs s = AddsSpecSize s (varOnRightSize (("varOnRight @" ++ show (typeOf lhs) ++ " " ++ show lhs ++ " " ++ show cond ++ " " ++ s ++ " + " ++ show rhs) : msgs) lhs cond rhs s)
+varOnRight msgs lhs cond rhs s =
+  AddsSpecSize
+    s
+    ( varOnRightSize
+        ( ( "varOnRight @"
+              ++ show (typeOf lhs)
+              ++ " "
+              ++ show lhs
+              ++ " "
+              ++ show cond
+              ++ " "
+              ++ s
+              ++ " + "
+              ++ show rhs
+          )
+            : msgs
+        )
+        lhs
+        cond
+        rhs
+        s
+    )
 
 varOnRightSize :: Adds a => [String] -> a -> OrdCond -> a -> String -> Size
-varOnRightSize msgs n cond m s = ordCondToSize (s, reverseOrdCond cond, minus (("varOnRightSize " ++ show n ++ " " ++ show cond ++ " " ++ show m ++ " " ++ show s) : msgs) n m)
+varOnRightSize msgs n cond m s =
+  if not (supportsNegative n) && toI n <= toI m
+    then -- if the lhs 'n' is less than the rhs 'm', then the var 's' must be 0 or greater
+      SzLeast 0
+    else
+      ordCondToSize
+        ( s
+        , reverseOrdCond cond
+        , minus
+            (("varOnRightSize " ++ show n ++ " " ++ show cond ++ " " ++ show m ++ " + " ++ s) : msgs)
+            n
+            m
+        )
 
 -- Translate some thing like [SumsTo (Negate x) <= 4 + 6 + 9] where the variable 'x'
 -- is on the left, and we want to produce its negation.
