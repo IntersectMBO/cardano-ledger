@@ -384,7 +384,7 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
       (RngRel (relSubset rng (Set.fromList (Map.elems m))))
   other -> failT ["Cannot solve map condition: " ++ show other]
   where
-    msg = ("Solving for " ++ show v1 ++ " Predicate \n   " ++ show predicate)
+    msg = ("Solving for " ++ show v1 ++ "\nPredicate = " ++ show predicate)
 
 -- | We are solving for a (V era (Map d r)). This must occurr exactly once in the [Sum era c]
 --   That can only happen in a (RngSum cond c) or a (RngProj cond rep c) constructor of 'Sum'
