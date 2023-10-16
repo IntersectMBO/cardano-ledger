@@ -2,6 +2,7 @@
 
 ## 1.2.0.0
 
+* Add `Show` and `Eq` for `CBORGroup`
 * Export `decodeSetTag`, `allowTag`, `variableListLenEncoding`, and
   `decodeSetLikeEnforceNoDuplicates` #3779
 * Moved `diffExpr`, `diffExprNoColor`, `ediffEq` into the `testlib`

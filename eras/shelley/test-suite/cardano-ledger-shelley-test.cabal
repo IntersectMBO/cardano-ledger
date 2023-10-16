@@ -9,9 +9,6 @@ synopsis:
 
 build-type:         Simple
 data-files:
-    cddl-files/shelley.cddl
-    cddl-files/real/crypto.cddl
-    cddl-files/mock/extras.cddl
     test/Golden/ShelleyGenesis
 
 extra-source-files: CHANGELOG.md

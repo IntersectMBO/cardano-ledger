@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Defines reusable abstractions for testing RoundTrip properties of CBOR instances
@@ -59,6 +60,8 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   embedTrip,
   embedTripAnn,
   embedTripLabel,
+  embedTripLabelExtra,
+  decodeAnnExtra,
 )
 where
 
@@ -66,8 +69,9 @@ import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Codec.CBOR.FlatTerm as CBOR
 import Control.Monad (forM_, guard)
-import Data.Bifunctor (first)
+import Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Functor
 import Data.Proxy
 import qualified Data.Text as T
 import Data.Typeable
@@ -201,8 +205,8 @@ embedTripRangeFailureExpectation ::
 embedTripRangeFailureExpectation trip fromVersion toVersion t =
   forM_ [fromVersion .. toVersion] $ \version ->
     case embedTripLabelExtra (typeLabel @b) version version trip t of
-      (Left _, _, _) -> pure ()
-      (Right _, _, bs) ->
+      Left _ -> pure ()
+      Right (_, _, bs) ->
         expectationFailure $
           mconcat
             [ "Should not have deserialized: <version: "
@@ -365,7 +369,7 @@ data RoundTripFailure = RoundTripFailure
   , rtfReEncodedBytes :: Maybe BSL.ByteString
   -- ^ Re-serialized bytes, if there was a mismatch between the binary form and the
   -- reserialization of the data type.
-  , rtfFlatTermError :: Maybe String
+  , rtfConformanceError :: Maybe String
   -- ^ Roundtripping through FlatTerm
   , rtfDropperError :: Maybe DecoderError
   -- ^ Error received while decoding the produced bytes and dropping the value. Normally
@@ -388,7 +392,7 @@ instance Show RoundTripFailure where
       , "Decoder Version: " ++ show rtfDecoderVersion
       , showMaybeDecoderError "Decoder" rtfDecoderError
       , showMaybeDecoderError "Dropper" rtfDropperError
-      , showMaybeDecoderError "FlatTerm" rtfFlatTermError
+      , showMaybeDecoderError "Conformance" rtfConformanceError
       ]
         ++ [ "Original did not match the reserialization (see below)."
            | Just _ <- pure rtfReEncodedBytes
@@ -424,8 +428,7 @@ roundTrip ::
   t ->
   Either RoundTripFailure t
 roundTrip version trip val = do
-  let (res, encoding, encodedBytes) = embedTripLabelExtra (typeLabel @t) version version trip val
-  val' <- res
+  (val', encoding, encodedBytes) <- embedTripLabelExtra (typeLabel @t) version version trip val
   let reserialized = serialize version (tripEncoder trip val')
   if reserialized /= encodedBytes
     then
@@ -461,10 +464,23 @@ decodeAnn ::
   Version ->
   Plain.Encoding ->
   Either RoundTripFailure t
-decodeAnn encVersion decVersion encoding
+decodeAnn encVersion decVersion encoding =
+  fst <$> decodeAnnExtra (label (Proxy @(Annotator t))) encVersion decVersion decCBOR encoding
+
+decodeAnnExtra ::
+  forall t.
+  T.Text ->
+  -- | Version for the encoder
+  Version ->
+  -- | Version for the decoder
+  Version ->
+  (forall s. Decoder s (Annotator t)) ->
+  Plain.Encoding ->
+  Either RoundTripFailure (t, BSL.ByteString)
+decodeAnnExtra lbl encVersion decVersion decoder encoding
   | CBOR.validFlatTerm flatTerm =
-      first (mkRoundTripFailure Nothing Nothing Nothing . Just) $
-        decodeFullAnnotator decVersion (label (Proxy @(Annotator t))) decCBOR encodedBytes
+      bimap (mkRoundTripFailure Nothing Nothing Nothing . Just) (,encodedBytes) $
+        decodeFullAnnotator decVersion lbl decoder encodedBytes
   | otherwise =
       Left $ mkRoundTripFailure (Just "FlatTerm encoding is invalid") Nothing Nothing Nothing
   where
@@ -484,7 +500,7 @@ embedTripLabel ::
   a ->
   Either RoundTripFailure b
 embedTripLabel lbl encVersion decVersion trip s =
-  case embedTripLabelExtra lbl encVersion decVersion trip s of
+  embedTripLabelExtra lbl encVersion decVersion trip s <&> \case
     (res, _, _) -> res
 
 embedTripLabelExtra ::
@@ -497,9 +513,8 @@ embedTripLabelExtra ::
   Version ->
   Trip a b ->
   a ->
-  (Either RoundTripFailure b, Plain.Encoding, BSL.ByteString)
-embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
-  (result, encoding, encodedBytes)
+  Either RoundTripFailure (b, Plain.Encoding, BSL.ByteString)
+embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s = result
   where
     mkFailure = RoundTripFailure encVersion decVersion encoding encodedBytes Nothing
     result =
@@ -512,7 +527,7 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
                     Right valFromFlatTerm
                       | val /= valFromFlatTerm ->
                           let errMsg =
-                                "Deserializoing through FlatTerm produced a different "
+                                "Deserializing through FlatTerm produced a different "
                                   ++ "value then the regular deserializer did"
                            in Left $ mkFailure (Just errMsg) Nothing Nothing
                       | not (CBOR.validFlatTerm flatTerm) ->
@@ -520,7 +535,7 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
                                 "Despite successful deserialization the produced "
                                   ++ "FlatTerm for the type is not valid"
                            in Left $ mkFailure (Just errMsg) Nothing Nothing
-                      | otherwise -> Right val
+                      | otherwise -> Right (val, encoding, encodedBytes)
           --  else Left $ mkFailure Nothing Nothing
           | Just err <- mDropperError -> Left $ mkFailure Nothing (Just err) Nothing
         Left err ->

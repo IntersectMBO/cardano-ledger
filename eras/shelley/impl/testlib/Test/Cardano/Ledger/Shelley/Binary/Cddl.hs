@@ -1,0 +1,18 @@
+module Test.Cardano.Ledger.Shelley.Binary.Cddl (
+  readShelleyCddlFileNames,
+  readShelleyCddlFiles,
+) where
+
+import qualified Data.ByteString.Lazy as BSL
+import Paths_cardano_ledger_shelley
+
+readShelleyCddlFileNames :: IO [FilePath]
+readShelleyCddlFileNames = do
+  base <- getDataFileName "cddl-files/shelley.cddl"
+  crypto <- getDataFileName "cddl-files/real/crypto.cddl"
+  extras <- getDataFileName "cddl-files/mock/extras.cddl"
+  -- extras contains the types whose restrictions cannot be expressed in CDDL
+  pure [base, crypto, extras]
+
+readShelleyCddlFiles :: IO [BSL.ByteString]
+readShelleyCddlFiles = mapM BSL.readFile =<< readShelleyCddlFileNames

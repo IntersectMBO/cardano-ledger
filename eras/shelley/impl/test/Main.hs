@@ -5,6 +5,7 @@ module Main where
 import Cardano.Ledger.Shelley (Shelley)
 import Data.Data (Proxy (..))
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Shelley.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Shelley.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Shelley.ImpTestSpec as ImpTestSpec
 
@@ -13,4 +14,5 @@ main =
   ledgerTestMain $
     describe "Shelley" $ do
       Binary.spec
+      Cddl.spec
       ImpTestSpec.spec $ Proxy @Shelley

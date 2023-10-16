@@ -81,6 +81,7 @@ library
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Binary.Arbitrary
+        Test.Cardano.Ledger.Binary.Cddl
         Test.Cardano.Ledger.Binary.Plain.Golden
         Test.Cardano.Ledger.Binary.Plain.RoundTrip
         Test.Cardano.Ledger.Binary.Random
@@ -123,6 +124,8 @@ library testlib
         tasty-hunit,
         random >=1.2,
         text,
+        typed-process,
+        unliftio,
         vector,
         vector-map
 
