@@ -317,6 +317,7 @@ genPredicate env =
       ++ [(1, disjointC)]
       ++ [(1, sumsToC)]
       ++ [(1, hasDomC)]
+      ++ [(1, forAllSetC)]
   where
     withValue ::
       forall t.
@@ -331,6 +332,14 @@ genPredicate env =
 
     goodSized (Sized _ Rng {}, _) = False -- TODO/sizedRng
     goodSized _ = True
+
+    forAllSetC = do
+      TypeInEra rep <- genValType
+      withValue (genTerm env (SetR rep) (VarTerm 1)) $ \set val env' -> do
+        name <- genFreshVarName env'
+        let vvar = (V name rep No)
+        pure (ForAllSet set (Lensed (Var vvar) id) [Member (Left $ Var vvar) (Lit (SetR rep) val)], markSolved (vars set) 1 env')
+
 
     -- Fixed size
     fixedSizedC = flip suchThat goodSized $ do
@@ -624,6 +633,7 @@ showEnv (Env vmap) = unlines $ map pr (Map.toList vmap)
     pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
 
 predConstr :: Pred era -> String
+predConstr ForAllSet {} = "ForAllSet"
 predConstr MetaSize {} = "MetaSize"
 predConstr Sized {} = "Sized"
 predConstr (_ :=: _) = ":=:"

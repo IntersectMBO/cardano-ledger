@@ -499,6 +499,9 @@ solveSet v1@(V _ (SetR r) _) predicate = case predicate of
     | Name v1 == Name v2 -> do
         Refl <- sameRep r brep
         setSpec (SzMost (Map.size x)) (RelLens lensbt r trep (relSubset drep (Map.keysSet x)))
+  (ForAllSet (Var v2@(V _ (SetR brep) _))) tgt ps) | Name v1 == Name v2 -> do
+    Refl <- sameRep r brep
+    setSpec SzAny
   cond -> failT ["Can't solveSet " ++ show cond ++ " for variable " ++ show v1]
 
 solveSets :: Era era => V era (Set a) -> [Pred era] -> Typed (SetSpec era a)

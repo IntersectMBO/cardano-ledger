@@ -10,6 +10,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | A 'Spec' is a first order data structure that denotes a random generator
@@ -80,6 +83,39 @@ import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Standard)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (total)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits)
+import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Constrained.Ast
+
+instance Ord a => HasSpec era (Set a) where
+  type Spec era (Set a) = SetSpec era a
+
+instance (Era era, Ord k) => HasSpec era (Map k v) where
+  type Spec era (Map k v) = MapSpec era k v
+
+instance Era era => HasSpec era [a] where
+  type Spec era [a] = ListSpec era a
+
+instance HasSpec era ExUnits where
+  type Spec era ExUnits = AddsSpec ExUnits
+
+instance HasSpec era Word64 where
+  type Spec era Word64 = AddsSpec Word64
+
+instance HasSpec era Int where
+  type Spec era Int = AddsSpec Int
+
+instance HasSpec era Natural where
+  type Spec era Natural = AddsSpec Natural
+
+instance HasSpec era Rational where
+  type Spec era Rational = AddsSpec Rational
+
+instance HasSpec era Coin where
+  type Spec era Coin = AddsSpec Coin
+
+instance HasSpec era DeltaCoin where
+  type Spec era DeltaCoin = AddsSpec DeltaCoin
 
 type TestEra = BabbageEra Standard
 
@@ -229,6 +265,10 @@ testMergeSize2 = do
 -- =====================================================
 -- RelSpec
 
+data RelElemSpec era a where
+  NoElemSpec :: RelElemSpec era a
+  ElemsObey :: HasSpec era a => Spec era a -> RelElemSpec era a
+
 data RelSpec era dom where
   RelAny ::
     -- | There is no restriction on the set. Denotes the universe.
@@ -251,16 +291,18 @@ data RelSpec era dom where
     Maybe (Set d) ->
     -- | Can't set
     Set d ->
+    -- | The elements all obey this spec
+    RelElemSpec era d ->
     RelSpec era d
   -- RelLens :: Ord b => Lens' dom b -> Rep era dom -> Rep era b -> Set b -> RelSpec era dom
   -- Try this
   RelLens :: Ord b => Lens' dom b -> Rep era dom -> Rep era b -> (RelSpec era b) -> RelSpec era dom
 
 relSubset, relSuperset, relDisjoint, relEqual :: Ord t => Rep era t -> Set t -> RelSpec era t
-relSubset r set = RelOper r Set.empty (Just set) Set.empty
-relSuperset r set = RelOper r set Nothing Set.empty
-relDisjoint r set = RelOper r Set.empty Nothing set
-relEqual r set = RelOper r set (Just set) Set.empty
+relSubset r set = RelOper r Set.empty (Just set) Set.empty NoElemSpec
+relSuperset r set = RelOper r set Nothing Set.empty NoElemSpec
+relDisjoint r set = RelOper r Set.empty Nothing set NoElemSpec
+relEqual r set = RelOper r set (Just set) Set.empty NoElemSpec
 
 instance Monoid (RelSpec era dom) where
   mempty = RelAny

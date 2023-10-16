@@ -8,6 +8,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | The types that make up the Abstract Syntax Trees of the Language
 module Test.Cardano.Ledger.Constrained.Ast where
@@ -115,6 +119,11 @@ data Term era t where
 infix 4 :=:
 infix 4 :<-:
 
+class Monoid (Spec era a) => HasSpec era a where
+  type Spec era a
+  solve :: Era era => V era a -> Pred era -> Typed (Spec era a)
+  solve _ _ = failT ["We are lazy bum bum"]
+
 data Pred era where
   MetaSize :: Size -> Term era Size -> Pred era
   Sized :: Sizeable t => Term era Size -> Term era t -> Pred era
@@ -145,8 +154,8 @@ data Pred era where
   SubMap :: (Ord k, Eq v, Ord v) => Term era (Map k v) -> Term era (Map k v) -> Pred era
   If :: RootTarget era r Bool -> Pred era -> Pred era -> Pred era
   Before :: Term era a -> Term era b -> Pred era
-  ForAllSet :: Era era =>
-    Term era (Set t)
+  ForAllSet :: (HasSpec era t, Era era)
+            => Term era (Set t)
             -> RootTarget era t t
             -> [Pred era]
             -> Pred era
@@ -875,6 +884,13 @@ setTarget root (Simple _) _ = root
 setTarget root (Mask _) _ = root
 
 runPred :: Env era -> Pred era -> Typed Bool
+runPred env (ForAllSet tm tgt ps) = do
+  val <- runTerm env tm
+  and <$> sequence [ runPred env' p
+                   | v <- Set.toList val
+                   , let env' = getTarget v tgt env
+                   , p <- ps
+                   ]
 runPred env (MetaSize w x) = do
   sz <- runTerm env x
   case sz of
