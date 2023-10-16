@@ -145,6 +145,11 @@ data Pred era where
   SubMap :: (Ord k, Eq v, Ord v) => Term era (Map k v) -> Term era (Map k v) -> Pred era
   If :: RootTarget era r Bool -> Pred era -> Pred era -> Pred era
   Before :: Term era a -> Term era b -> Pred era
+  ForAllSet :: Era era =>
+    Term era (Set t)
+            -> RootTarget era t t
+            -> [Pred era]
+            -> Pred era
 
 data Sum era c where
   SumMap :: Adds c => Term era (Map a c) -> Sum era c
@@ -310,6 +315,7 @@ instance Show (Sum era c) where
   show (ProjMap crep _lens t) = "ProjMap " ++ show crep ++ " " ++ show t
 
 instance Show (Pred era) where
+  show (ForAllSet tm tgt ps) = "ForAllSet " ++ show tm ++ " " ++ show tgt ++ " " ++ show ps
   show (MetaSize n t) = "MetaSize " ++ show n ++ " " ++ show t
   show (Sized n t) = "Sized " ++ show n ++ " " ++ show t
   show (x :=: y) = show x ++ " :=: " ++ show y
@@ -471,6 +477,7 @@ varsOfPred ans s = case s of
   SubMap a b -> varsOfTerm (varsOfTerm ans a) b
   If t x y -> varsOfTarget (varsOfPred (varsOfPred ans x) y) t
   Before a b -> varsOfTerm (varsOfTerm ans a) b
+  ForAllSet tm tgt ps -> varsOfTerm (HashSet.difference (foldl varsOfPred ans ps) (varsOfTarget mempty tgt)) tm
 
 varsOfTrips :: Era era => HashSet (Name era) -> [(Int, RootTarget era r t2, [Pred era])] -> HashSet (Name era)
 varsOfTrips ans1 [] = ans1
@@ -535,6 +542,11 @@ instance Show (SubstElem era) where
   show (SubstElem rep t _) = show t ++ " :: " ++ show rep
 
 newtype Subst era = Subst (Map String (SubstElem era))
+
+without :: Subst era -> HashSet (Name era) -> Subst era
+without (Subst m) nms = Subst $ Map.withoutKeys m elms
+  where
+    elms = Set.fromList [ s | Name (V s _ _) <- HashSet.toList nms ]
 
 extend :: V era t -> Term era t -> Subst era -> Subst era
 extend (V nm rep access) term (Subst m) = Subst (Map.insert nm (SubstElem rep term access) m)
@@ -669,6 +681,7 @@ substPred sub (Maybe term target ps) = Maybe (substTerm sub term) target (map (s
 substPred sub (SubMap a b) = SubMap (substTerm sub a) (substTerm sub b)
 substPred sub (If t x y) = If (substTarget sub t) (substPred sub x) (substPred sub y)
 substPred sub (Before a b) = Before (substTerm sub a) (substTerm sub b)
+substPred sub (ForAllSet tm tgt ps) = ForAllSet (substTerm sub tm) tgt (map (substPred (sub `without` varsOfTarget mempty tgt)) ps)
 
 -- | Apply the Subst, and test if all variables are removed.
 substPredWithVarTest :: Subst era -> Pred era -> Pred era
