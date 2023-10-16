@@ -117,7 +117,7 @@ instance Crypto c => Arbitrary (ConwayGovCert c) where
       [ ConwayRegDRep <$> arbitrary <*> arbitrary <*> arbitrary
       , ConwayUnRegDRep <$> arbitrary <*> arbitrary
       , ConwayAuthCommitteeHotKey <$> arbitrary <*> arbitrary
-      , ConwayResignCommitteeColdKey <$> arbitrary
+      , ConwayResignCommitteeColdKey <$> arbitrary <*> arbitrary
       ]
 
 instance Crypto c => Arbitrary (AlonzoScript (ConwayEra c)) where

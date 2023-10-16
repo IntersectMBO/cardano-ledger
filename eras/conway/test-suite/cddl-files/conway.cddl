@@ -306,7 +306,7 @@ stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
 
 ; GOVCERT
 auth_committee_hot_cert = (14, committee_cold_credential, committee_hot_credential)
-resign_committee_cold_cert = (15, committee_cold_credential)
+resign_committee_cold_cert = (15, committee_cold_credential, anchor / null)
 reg_drep_cert = (16, drep_credential, coin, anchor / null)
 unreg_drep_cert = (17, drep_credential, coin)
 update_drep_cert = (18, drep_credential, anchor / null)

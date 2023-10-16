@@ -173,8 +173,8 @@ ppConwayGovCert = \case
     ppSexp "ConwayUpdateDRep" [prettyA cred, prettyA mAnchor]
   ConwayAuthCommitteeHotKey coldKey hotKey ->
     ppSexp "ConwayAuthCommitteeHotKey" [prettyA coldKey, prettyA hotKey]
-  ConwayResignCommitteeColdKey coldKey ->
-    ppSexp "ConwayResignCommitteeColdKey" [prettyA coldKey]
+  ConwayResignCommitteeColdKey coldKey a ->
+    ppSexp "ConwayResignCommitteeColdKey" [prettyA coldKey, prettyA a]
 
 ppConwayTxBody ::
   forall era.
