@@ -243,6 +243,12 @@ cradle:
     - path: "libs/cardano-protocol-tpraos/test"
       component: "cardano-protocol-tpraos:test:tests"
 
+    - path: "libs/constrained-generators/src"
+      component: "lib:constrained-generators"
+
+    - path: "libs/constrained-generators/test"
+      component: "constrained-generators:test:constrained"
+
     - path: "libs/ledger-state/src"
       component: "lib:ledger-state"
 

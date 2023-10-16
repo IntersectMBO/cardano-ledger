@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -119,6 +120,10 @@ data GovEnv era = GovEnv
   , gePrevGovActionIds :: !(GovRelation StrictMaybe era)
   , gePPolicy :: !(StrictMaybe (ScriptHash (EraCrypto era)))
   }
+  deriving (Generic)
+
+deriving instance Show (PParams era) => Show (GovEnv era)
+deriving instance Eq (PParams era) => Eq (GovEnv era)
 
 data ConwayGovPredFailure era
   = GovActionsDoNotExist (NonEmpty (GovActionId (EraCrypto era)))

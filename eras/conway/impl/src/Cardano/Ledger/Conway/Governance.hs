@@ -1203,7 +1203,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
   pure epochState'
 
 newtype RatifySignal era = RatifySignal (StrictSeq (GovActionState era))
-  deriving (Show)
+  deriving (Eq, Show, Generic)
 
 data RatifyEnv era = RatifyEnv
   { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
@@ -1213,6 +1213,7 @@ data RatifyEnv era = RatifyEnv
   , reCurrentEpoch :: !EpochNo
   , reCommitteeState :: !(CommitteeState era)
   }
+  deriving (Generic)
 
 deriving instance Show (RatifyEnv era)
 deriving instance Eq (RatifyEnv era)

@@ -248,10 +248,39 @@ import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
 import Data.Void (Void, absurd)
-import Data.Word (Word16, Word32, Word64, Word8)
-import GHC.Natural (Natural)
 import Lens.Micro ((^.))
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Generic.Fields (
+  PParamsField (..),
+  TxBodyField (..),
+  TxField (..),
+  WitnessesField (..),
+  abstractPParams,
+  abstractTx,
+  abstractTxBody,
+  abstractWitnesses,
+ )
+import qualified Test.Cardano.Ledger.Generic.Fields as Fields
+import Test.Cardano.Ledger.Generic.Proof (
+  AllegraEra,
+  GovStateWit (..),
+  MaryEra,
+  Proof (..),
+  Reflect (..),
+  ShelleyEra,
+  unReflect,
+  whichGovState,
+ )
+import Cardano.Ledger.Conway.Rules (
+  CertEnv (..),
+ )
+import Cardano.Ledger.Shelley.Rules (
+  LedgerEnv (..),
+  UtxoEnv (..),
+ )
+import Data.Word (Word16, Word32, Word64, Word8)
+import GHC.Natural (Natural)
 import Prettyprinter (
   Pretty (pretty),
   align,
@@ -279,29 +308,6 @@ import Prettyprinter (
  )
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Fields (
-  PParamsField (..),
-  TxBodyField (..),
-  TxField (..),
-  WitnessesField (..),
-  abstractPParams,
-  abstractTx,
-  abstractTxBody,
-  abstractWitnesses,
- )
-import qualified Test.Cardano.Ledger.Generic.Fields as Fields
-import Test.Cardano.Ledger.Generic.Proof (
-  AllegraEra,
-  GovStateWit (..),
-  MaryEra,
-  Proof (..),
-  Reflect (..),
-  ShelleyEra,
-  unReflect,
-  whichGovState,
- )
-
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
@@ -3286,3 +3292,43 @@ pcGovEnv GovEnv {..} =
 
 instance Reflect era => PrettyA (GovEnv era) where
   prettyA = pcGovEnv
+
+instance PrettyA Int where
+  prettyA = ppInt
+
+instance Reflect era => PrettyA (LedgerEnv era) where
+  prettyA LedgerEnv {..} =
+    ppRecord
+      "LedgerEnv"
+      [ ("slot no", prettyA ledgerSlotNo)
+      , ("ix", prettyA (txIxToInt ledgerIx))
+      , ("pparams", prettyA ledgerPp)
+      , ("account", prettyA ledgerAccount)
+      ]
+
+instance Reflect era => PrettyA (UtxoEnv era) where
+  prettyA UtxoEnv {..} =
+    ppRecord
+      "UtxoEnv"
+      [ ("slot no", prettyA ueSlot)
+      , ("pparams", prettyA uePParams)
+      , ("certState", prettyA ueCertState)
+      ]
+
+instance Reflect era => PrettyA (CertEnv era) where
+  prettyA CertEnv {..} =
+    ppRecord
+      "CertEnv"
+      [ ("slot no", prettyA ceSlotNo)
+      , ("pparams", prettyA cePParams)
+      , ("currentEpoch", prettyA ceCurrentEpoch)
+      ]
+
+instance Reflect era => PrettyA (CertState era) where
+  prettyA CertState {..} =
+    ppRecord
+      "CertState"
+      [ ("vState", prettyA certVState)
+      , ("pState", prettyA certPState)
+      , ("dState", prettyA certDState)
+      ]

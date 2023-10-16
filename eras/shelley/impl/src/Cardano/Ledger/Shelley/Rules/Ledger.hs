@@ -85,8 +85,10 @@ data LedgerEnv era = LedgerEnv
   , ledgerPp :: !(PParams era)
   , ledgerAccount :: !AccountState
   }
+  deriving (Generic)
 
 deriving instance Show (PParams era) => Show (LedgerEnv era)
+deriving instance Eq (PParams era) => Eq (LedgerEnv era)
 
 instance NFData (PParams era) => NFData (LedgerEnv era) where
   rnf (LedgerEnv _slotNo _ix pp _account) = rnf pp

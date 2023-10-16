@@ -70,6 +70,10 @@ data CertEnv era = CertEnv
   , cePParams :: !(PParams era)
   , ceCurrentEpoch :: !EpochNo
   }
+  deriving (Generic)
+
+deriving instance Eq (PParams era) => Eq (CertEnv era)
+deriving instance Show (PParams era) => Show (CertEnv era)
 
 data ConwayCertPredFailure era
   = DelegFailure (PredicateFailure (EraRule "DELEG" era))

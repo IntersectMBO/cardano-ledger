@@ -73,6 +73,7 @@ import NoThunks.Class (NoThunks (..))
 
 data PoolEnv era
   = PoolEnv !SlotNo !(PParams era)
+  deriving (Generic)
 
 deriving instance Show (PParams era) => Show (PoolEnv era)
 
