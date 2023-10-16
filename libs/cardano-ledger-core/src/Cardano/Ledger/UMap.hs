@@ -109,9 +109,9 @@ where
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core.TxCert (DRep)
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))

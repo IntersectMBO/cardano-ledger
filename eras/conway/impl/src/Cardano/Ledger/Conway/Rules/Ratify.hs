@@ -17,8 +17,6 @@
 
 module Cardano.Ledger.Conway.Rules.Ratify (
   RatifyState (..),
-  RatifyEnv (..),
-  RatifySignal (..),
   committeeAccepted,
   committeeAcceptedRatio,
   spoAccepted,
@@ -33,15 +31,22 @@ module Cardano.Ledger.Conway.Rules.Ratify (
 ) where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..))
-import Cardano.Ledger.CertState (CommitteeState (csCommitteeCreds), DRepState (..))
+import Cardano.Ledger.CertState (CommitteeState (csCommitteeCreds))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Core (
+  Era (EraCrypto),
+  EraGov,
+  EraRule,
+  PParams,
+ )
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   GovAction (..),
   GovActionState (..),
   PrevGovActionIds (..),
+  RatifyEnv (..),
+  RatifySignal (..),
   RatifyState (..),
   Vote (..),
   ensCommitteeL,
@@ -58,6 +63,7 @@ import Cardano.Ledger.Conway.PParams (
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -83,19 +89,6 @@ import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Data.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
-
-data RatifyEnv era = RatifyEnv
-  { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
-  , reStakePoolDistr :: !(PoolDistr (EraCrypto era))
-  , reDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
-  , reDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-  , reCurrentEpoch :: !EpochNo
-  , reCommitteeState :: !(CommitteeState era)
-  }
-
-deriving instance Show (RatifyEnv era)
-
-newtype RatifySignal era = RatifySignal (StrictSeq (GovActionState era))
 
 instance
   ( ConwayEraPParams era

@@ -59,12 +59,11 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotN
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway.Governance (Committee (..), Constitution, GovAction (..), GovActionId (..), GovActionIx (..), GovActionPurpose (..), GovActionState (..), PrevGovActionId (..), PrevGovActionIds (..))
+import Cardano.Ledger.Conway.Governance (Committee (..), Constitution, EnactState (..), GovAction (..), GovActionId (..), GovActionIx (..), GovActionPurpose (..), GovActionState (..), PrevGovActionId (..), PrevGovActionIds (..), RatifyState (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
-import Cardano.Ledger.DRepDistr (DRepDistr (..), extractDRepDistr)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
@@ -174,6 +173,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcMultiAsset,
   pcPParamsSynopsis,
   pcPrevGovActionIds,
+  pcRatifyState,
   pcReward,
   pcRewardAcnt,
   pcScriptHash,
@@ -296,7 +296,7 @@ data Rep era t where
   LedgerStateR :: Era era => Proof era -> Rep era (LedgerState era)
   StakeHashR :: Era era => Rep era (KeyHash 'Staking (EraCrypto era))
   BoolR :: Rep era Bool
-  DRepR :: Era era => Rep era (Core.DRep (EraCrypto era))
+  DRepR :: Era era => Rep era (DRep (EraCrypto era))
   PoolMetadataR :: Era era => Proof era -> Rep era PoolMetadata
   DRepStateR :: Era era => Rep era (DRepState (EraCrypto era))
   DStateR :: Era era => Rep era (DState era)
@@ -311,7 +311,8 @@ data Rep era t where
   PrevHardForkR :: Era era => Rep era (PrevGovActionId 'HardForkPurpose (EraCrypto era))
   PrevCommitteeR :: Era era => Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
   PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
-  DRepDistrR :: Era era => Rep era (DRepDistr (EraCrypto era))
+  RatifyStateR :: Reflect era => Rep era (RatifyState era)
+  NumDormantEpochsR :: Era era => Rep era EpochNo
   CommitteeStateR :: Era era => Rep era (CommitteeState era)
   VStateR :: Era era => Rep era (VState era)
 
@@ -352,7 +353,7 @@ typeRepOf r@(repHasInstances -> IsTypeable) = typeRep r
 repHasInstances :: Rep era t -> HasInstances t
 repHasInstances r = case r of
   VStateR -> IsEq
-  DRepDistrR -> IsEq
+  RatifyStateR -> IsEq
   DRepStateR -> IsOrd
   CommColdCredR -> IsOrd
   CommHotCredR -> IsOrd
@@ -454,6 +455,7 @@ repHasInstances r = case r of
   PairR (repHasInstances -> ia) (repHasInstances -> ib) -> lubInstances ia ib
   MaybeR (repHasInstances -> ia) -> requireInstances ia
   GenR (repHasInstances -> IsTypeable) -> IsTypeable
+  NumDormantEpochsR {} -> IsOrd
 
 -- NOTE: The extra `()` constraint needs to be there for fourmolu.
 -- c.f. https://github.com/fourmolu/fourmolu/issues/374
@@ -611,7 +613,8 @@ synopsis PrevPParamUpdateR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevHardForkR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevCommitteeR (PrevGovActionId x) = synopsis @e GovActionIdR x
 synopsis PrevConstitutionR (PrevGovActionId x) = synopsis @e GovActionIdR x
-synopsis DRepDistrR dr = show (ppMap pcDRep (pcCoin . UM.fromCompact) (extractDRepDistr dr))
+synopsis RatifyStateR dr = show (pcRatifyState reify dr)
+synopsis NumDormantEpochsR x = show x
 synopsis CommitteeStateR x = show x
 synopsis VStateR x = show x
 
@@ -816,7 +819,20 @@ genSizedRep _ PrevPParamUpdateR = arbitrary
 genSizedRep _ PrevHardForkR = arbitrary
 genSizedRep _ PrevCommitteeR = arbitrary
 genSizedRep _ PrevConstitutionR = arbitrary
-genSizedRep _ DRepDistrR = DRComplete <$> arbitrary
+genSizedRep _ RatifyStateR =
+  RatifyState
+    <$> ( EnactState
+            <$> arbitrary
+            <*> arbitrary
+            <*> (unPParams <$> (genPParams reify))
+            <*> (unPParams <$> (genPParams reify))
+            <*> arbitrary
+            <*> arbitrary
+            <*> arbitrary
+        )
+    <*> arbitrary
+    <*> arbitrary
+genSizedRep _ NumDormantEpochsR = arbitrary
 genSizedRep _ CommitteeStateR = arbitrary
 genSizedRep _ VStateR = arbitrary
 
@@ -962,9 +978,10 @@ shrinkRep PrevPParamUpdateR x = shrink x
 shrinkRep PrevHardForkR x = shrink x
 shrinkRep PrevCommitteeR x = shrink x
 shrinkRep PrevConstitutionR x = shrink x
-shrinkRep DRepDistrR x = shrink x
+shrinkRep RatifyStateR _ = []
 shrinkRep CommitteeStateR _ = []
 shrinkRep VStateR x = shrink x
+shrinkRep NumDormantEpochsR x = shrink x
 
 -- ===========================
 

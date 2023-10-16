@@ -76,13 +76,13 @@ txoutRefScriptL :: (Reflect era, BabbageEraTxOut era) => Lens' (TxOutF era) (May
 txoutRefScriptL = txOutFL . referenceScriptTxOutL . strictMaybeMaybeL . liftMaybeL scriptFL
 
 liftMaybeL :: Lens' a b -> Lens' (Maybe a) (Maybe b)
-liftMaybeL l = lens foo bar
+liftMaybeL l = lens getter setter
   where
-    foo (Just x) = Just (x ^. l)
-    foo Nothing = Nothing
-    bar (Just a) (Just b) = Just (a & l .~ b)
-    bar (Just _a) Nothing = Nothing -- Type wise this Nothing could be (Just a), but that is wrong
-    bar Nothing _ = Nothing
+    getter (Just x) = Just (x ^. l)
+    getter Nothing = Nothing
+    setter (Just a) (Just b) = Just (a & l .~ b)
+    setter (Just _a) Nothing = Nothing -- Type wise this Nothing could be (Just a), but that is wrong
+    setter Nothing _ = Nothing
 
 txoutScriptF :: (Reflect era, BabbageEraTxOut era) => Field era (TxOutF era) (Maybe (ScriptF era))
 txoutScriptF = Field "txoutScript" (MaybeR (ScriptR reify)) (TxOutR reify) txoutRefScriptL

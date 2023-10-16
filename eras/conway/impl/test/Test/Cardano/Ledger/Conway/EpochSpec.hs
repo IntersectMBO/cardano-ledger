@@ -17,7 +17,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (
   Constitution (..),
-  DRep (..),
   DRepVotingThresholds (..),
   EraGov (..),
   EraTx (..),
@@ -33,24 +32,25 @@ import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionId (..),
   GovActionState (..),
+  RatifyEnv (..),
   RatifyState (RatifyState),
   Vote (..),
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (VotingProcedures),
   cgEnactStateL,
-  curGovSnapshotsL,
   ensCommitteeL,
-  epochStateDRepDistrL,
+  epochStateDRepPulsingStateL,
   epochStateIncrStakeDistrL,
   gasDRepVotesL,
+  getPulsingStateDRepDistr,
   rsDelayed,
   rsEnactState,
   rsRemoved,
   snapshotLookupId,
  )
 import Cardano.Ledger.Conway.PParams (ppCommitteeMaxTermLengthL, ppDRepVotingThresholdsL)
-import Cardano.Ledger.Conway.Rules (RatifyEnv (..), committeeAccepted, committeeAcceptedRatio, dRepAccepted, dRepAcceptedRatio, prevActionAsExpected, spoAccepted, validCommitteeTerm, withdrawalCanWithdraw)
+import Cardano.Ledger.Conway.Rules (committeeAccepted, committeeAcceptedRatio, dRepAccepted, dRepAcceptedRatio, prevActionAsExpected, spoAccepted, validCommitteeTerm, withdrawalCanWithdraw)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
@@ -61,7 +61,7 @@ import Cardano.Ledger.Conway.TxCert (
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.DRepDistr (extractDRepDistr)
+import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), coerceKeyRole)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
@@ -198,7 +198,7 @@ constitutionShouldBe cUrl = do
 -- action id
 lookupGovActionState :: HasCallStack => GovActionId StandardCrypto -> ImpTestM Conway (GovActionState Conway)
 lookupGovActionState aId = do
-  proposals <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . snapshotsGovStateL . curGovSnapshotsL
+  proposals <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
   impIOMsg "Expecting an action state" $ do
     maybe (error $ "Could not find action state for action " <> show aId) pure $
       snapshotLookupId aId proposals
@@ -209,7 +209,7 @@ getRatifyEnv = do
   eNo <- getsNES nesELL
   stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
   poolDistr <- getsNES nesPdL
-  drepDistr <- getsNES $ nesEsL . epochStateDRepDistrL
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . getPulsingStateDRepDistr
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
   pure
@@ -217,7 +217,7 @@ getRatifyEnv = do
       { reStakePoolDistr = poolDistr
       , reStakeDistr = credMap stakeDistr
       , reDRepState = drepState
-      , reDRepDistr = extractDRepDistr drepDistr
+      , reDRepDistr = drepDistr
       , reCurrentEpoch = eNo - 1
       , reCommitteeState = committeeState
       }
@@ -268,7 +268,7 @@ isGovActionAccepted gaId = do
   eNo <- getsNES nesELL
   stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
   poolDistr <- getsNES nesPdL
-  drepDistr <- getsNES $ nesEsL . epochStateDRepDistrL
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . getPulsingStateDRepDistr
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   action <- lookupGovActionState gaId
   enactSt <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL
@@ -279,7 +279,7 @@ isGovActionAccepted gaId = do
         { reStakePoolDistr = poolDistr
         , reStakeDistr = credMap stakeDistr
         , reDRepState = drepState
-        , reDRepDistr = extractDRepDistr drepDistr
+        , reDRepDistr = drepDistr
         , reCurrentEpoch = eNo - 1
         , reCommitteeState = committeeState
         }

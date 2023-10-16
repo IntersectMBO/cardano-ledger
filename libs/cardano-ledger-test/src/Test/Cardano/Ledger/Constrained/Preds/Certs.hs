@@ -19,9 +19,9 @@ import Cardano.Ledger.Conway.TxCert (
   ConwayTxCert (..),
   Delegatee (..),
  )
-import Cardano.Ledger.Core (DRep (..))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (HASH, VRF)
+import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata, PoolParams (..))
@@ -462,20 +462,20 @@ main n = defaultMain $ testIO "Testing Certs Stage" (demo Interactive n)
 -- ========================================
 
 sMaybeL :: Lens' (StrictMaybe a) (Maybe a)
-sMaybeL = lens foo bar
+sMaybeL = lens getter setter
   where
-    foo (SJust x) = Just x
-    foo SNothing = Nothing
-    bar _ Nothing = SNothing
-    bar _ (Just x) = SJust x
+    getter (SJust x) = Just x
+    getter SNothing = Nothing
+    setter _ Nothing = SNothing
+    setter _ (Just x) = SJust x
 
 maybeSL :: Lens' (Maybe a) (StrictMaybe a)
-maybeSL = lens foo bar
+maybeSL = lens getter setter
   where
-    foo (Just x) = SJust x
-    foo Nothing = SNothing
-    bar _ SNothing = Nothing
-    bar _ (SJust x) = Just x
+    getter (Just x) = SJust x
+    getter Nothing = SNothing
+    setter _ SNothing = Nothing
+    setter _ (SJust x) = Just x
 
 poolMetaL :: Lens' (PoolParams era) (StrictMaybe PoolMetadata)
 poolMetaL = lens ppMetadata (\x r -> x {ppMetadata = r})

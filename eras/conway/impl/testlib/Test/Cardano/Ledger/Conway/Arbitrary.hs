@@ -28,16 +28,18 @@ import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayGovState (..),
+  DRepPulsingState (..),
   GovAction (..),
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
   GovProcedures (..),
-  GovSnapshots (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
   ProposalsSnapshot,
+  PulsingSnapshot (..),
+  RatifyEnv (..),
   Vote,
   Voter (..),
   VotingProcedure (..),
@@ -62,6 +64,12 @@ import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoScript, unFlexibleCostModels)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
+
+instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (PulsingSnapshot era) where
+  arbitrary = PulsingSnapshot <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance (Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) => Arbitrary (DRepPulsingState era) where
+  arbitrary = DRComplete <$> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (ConwayGenesis c) where
   arbitrary = ConwayGenesis <$> arbitrary <*> arbitrary <*> arbitrary
@@ -188,19 +196,6 @@ instance
   Arbitrary (ProposalsSnapshot era)
   where
   arbitrary = fromGovActionStateSeq <$> uniqueIdGovActions
-
-instance
-  ( Era era
-  , Arbitrary (PParamsUpdate era)
-  ) =>
-  Arbitrary (GovSnapshots era)
-  where
-  arbitrary =
-    GovSnapshots
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
 
 genGovActionStateFromAction :: Era era => GovAction era -> Gen (GovActionState era)
 genGovActionStateFromAction act =

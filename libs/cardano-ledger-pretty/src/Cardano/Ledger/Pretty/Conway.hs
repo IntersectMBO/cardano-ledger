@@ -27,20 +27,22 @@ import Cardano.Ledger.Conway.Governance (
   Anchor,
   Committee (..),
   ConwayGovState (..),
+  DRepPulsingState (..),
   GovAction (..),
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
   GovProcedures,
-  GovSnapshots (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
   ProposalsSnapshot,
+  PulsingSnapshot (..),
   Vote (..),
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  finishDRepPulser,
   snapshotActions,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
@@ -65,7 +67,6 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
  )
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.DRepDistr (extractDRepDistr)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Pretty (
   PDoc,
@@ -375,17 +376,6 @@ instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
 instance PrettyA (PParamsUpdate era) => PrettyA (ProposalsSnapshot era) where
   prettyA = prettyA . snapshotActions
 
-instance PrettyA (PParamsUpdate era) => PrettyA (GovSnapshots era) where
-  prettyA x@(GovSnapshots _ _ _ _) =
-    let GovSnapshots {..} = x
-     in ppRecord
-          "GovSnapshots"
-          [ ("curGovSnapshots", prettyA curGovSnapshots)
-          , ("prevGovSnapshots", prettyA prevGovSnapshots)
-          , ("prevDRepsState", prettyA prevDRepsState)
-          , ("prevCommitteeState", prettyA prevCommitteeState)
-          ]
-
 instance PrettyA (GovActionId era) where
   prettyA gaid@(GovActionId _ _) =
     let GovActionId {..} = gaid
@@ -483,10 +473,35 @@ instance
     let ConwayGovState {..} = cg
      in ppRecord
           "ConwayGovState"
-          [ ("GovSnapshots", prettyA cgGovSnapshots)
-          , ("EnactState", prettyA cgEnactState)
-          , ("DRepDistr", ppMap prettyA (ppCoin . fromCompact) (extractDRepDistr cgDRepDistr))
+          [ ("proposals", prettyA cgProposals)
+          , ("enactState", prettyA cgEnactState)
+          , ("drepPulsingState", ppDRepPulsingState cgDRepPulsingState)
           ]
+
+ppPulsingSnapshot :: PrettyA (PParamsUpdate era) => PulsingSnapshot era -> PDoc
+ppPulsingSnapshot (PulsingSnapshot x y z) =
+  ppRecord
+    "Snapshot"
+    [ ("proposals", ppStrictSeq prettyA x)
+    , ("drepDistr", ppMap prettyA (ppCoin . fromCompact) y)
+    , ("drepState", ppMap prettyA prettyA z)
+    ]
+
+ppDRepPulsingState :: (PrettyA (PParamsUpdate era), PrettyA (PParams era)) => DRepPulsingState era -> PDoc
+ppDRepPulsingState (DRComplete x y) =
+  ppRecord
+    "CompleteDRepPulsingState"
+    [ ("pulsingSnapshot", ppPulsingSnapshot x)
+    , ("ratifyState", prettyA y)
+    ]
+ppDRepPulsingState pst =
+  ppRecord
+    "CompleteDRepPulsingState"
+    [ ("pulsingSnapshot", ppPulsingSnapshot x)
+    , ("ratifyState", prettyA y)
+    ]
+  where
+    (x, y) = finishDRepPulser pst
 
 instance
   PrettyA (PredicateFailure (EraRule "CERT" era)) =>

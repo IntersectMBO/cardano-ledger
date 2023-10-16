@@ -53,19 +53,20 @@ enactStateCheckPreds _ = []
 ledgerStatePreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
 ledgerStatePreds usize p =
   [ -- Conway GovState Vars
-    Random previousGovSnapshots
-  , Random previousDRepsState
+    Random prevDRepState
   , Random previousCommitteeState
   , Random enactWithdrawals
   , Random enactTreasury
-  , Random currentGovSnapshots
   , Random constitution
   , Random committeeVar
   , Random prevPParamUpdate
   , Random prevHardFork
   , Random prevConstitution
   , Random prevCommittee
-  , Random drepDistr
+  , Random prevProposals
+  , Random prevDRepDistr
+  , Random currProposals
+  , Random ratifyState
   , MetaSize (SzRng 90 (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (mazsize collateral 3)
   , Sized utxoSize preUtxo
   , Sized (Range 15 (usNumColUtxo usize)) colUtxo

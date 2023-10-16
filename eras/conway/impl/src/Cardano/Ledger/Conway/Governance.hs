@@ -1,7 +1,13 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -11,16 +17,17 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Governance (
   EraGov (..),
-  GovSnapshots (..),
-  insertGovSnapshots,
   EnactState (..),
   RatifyState (..),
+  RatifyEnv (..),
+  RatifySignal (..),
   ConwayGovState (..),
   Committee (..),
   GovAction (..),
@@ -30,6 +37,7 @@ module Cardano.Ledger.Conway.Governance (
   GovActionPurpose (..),
   PrevGovActionIds (..),
   PrevGovActionId (..),
+  DRepPulsingState (..),
   govActionIdToText,
   Voter (..),
   Vote (..),
@@ -58,10 +66,9 @@ module Cardano.Ledger.Conway.Governance (
   fromGovActionStateSeq,
   isConsistent_,
   -- Lenses
-  cgGovSnapshotsL,
+  cgProposalsL,
   cgEnactStateL,
-  cgRatifyStateL,
-  cgDRepDistrL,
+  cgDRepPulsingStateL,
   ensCommitteeL,
   ensConstitutionL,
   ensCurPParamsL,
@@ -79,25 +86,39 @@ module Cardano.Ledger.Conway.Governance (
   prevPParamsConwayGovStateL,
   constitutionScriptL,
   constitutionAnchorL,
-  curGovSnapshotsL,
-  prevGovSnapshotsL,
-  prevDRepsStateL,
-  prevCommitteeStateL,
   gasCommitteeVotesL,
   gasDRepVotesL,
   gasExpiresAfterL,
   gasStakePoolVotesL,
   utxosGovStateL,
-  newEpochStateDRepDistrL,
-  epochStateDRepDistrL,
+  newEpochStateDRepPulsingStateL,
+  epochStateDRepPulsingStateL,
   epochStateStakeDistrL,
   epochStateIncrStakeDistrL,
   epochStateRegDrepL,
   epochStateUMapL,
-  freshDRepPulser,
+  reDRepDistrL,
+  startDRepPulsingState,
+  pulseDRepPulsingState,
+  completeDRepPulsingState,
+  extractDRepPulsingState,
+  finishDRepPulser,
+  computeDrepDistr,
+  getRatifyState,
+  conwayGovStateDRepDistrG,
+  getPulsingStateDRepDistr,
+  dormantEpoch,
+  PulsingSnapshot (..),
+  psProposalsL,
+  pulsingStateSnapshotL,
+  psDRepDistrL,
+  psDRepStateL,
+  RunConwayRatify (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
+  EpochNo (..),
+  Globals (..),
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
@@ -119,7 +140,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CommitteeState, DRepState)
+import Cardano.Ledger.CertState (CommitteeState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   dvtPPEconomicGroupL,
@@ -127,7 +148,7 @@ import Cardano.Ledger.Conway.Core (
   dvtPPNetworkGroupL,
   dvtPPTechnicalGroupL,
  )
-import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance.Procedures (
   Anchor (..),
   AnchorData (..),
@@ -172,11 +193,23 @@ import Cardano.Ledger.Conway.PParams (
   ppDRepVotingThresholdsL,
   ppPoolVotingThresholdsL,
  )
-import Cardano.Ledger.Core
+import Cardano.Ledger.Core (
+  Era (EraCrypto),
+  EraPParams (..),
+  PParams (..),
+  PParamsHKD,
+  PParamsUpdate,
+  emptyPParams,
+  fromEraCBOR,
+  -- fromEraShareCBOR,
+  ppProtocolVersionL,
+  toEraCBOR,
+ )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.DRepDistr (DRepDistr (..), extractDRepDistr, startDRepDistr)
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -190,115 +223,109 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   utxosGovStateL,
  )
-import Cardano.Ledger.TreeDiff (ToExpr)
-import Control.DeepSeq (NFData (..))
+import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..))
+import Cardano.Ledger.UMap
+import qualified Cardano.Ledger.UMap as UMap
+import Control.DeepSeq (NFData (..), deepseq)
+import Control.Monad.Trans.Reader (Reader, runReader)
+import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity (Identity)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Pulse (Pulsable (..), pulse)
+import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks)
+import NoThunks.Class (NoThunks (..), allNoThunks)
 
 -- ============================
 
-data GovSnapshots era = GovSnapshots
-  { curGovSnapshots :: !(ProposalsSnapshot era)
-  , prevGovSnapshots :: !(ProposalsSnapshot era)
-  , prevDRepsState ::
-      !( Map
-          (Credential 'DRepRole (EraCrypto era))
-          (DRepState (EraCrypto era))
-       )
-  , prevCommitteeState :: !(CommitteeState era)
+-- | A snapshot of information from the previous epoch stored inside the Pulser.
+--   After the pulser completes, but before the epoch turns, this information
+--   is store in the 'DRComplete' constructor of the 'DRepPulsingState'
+--   These are the values at the start of the current epoch. This allows the API
+--   To access these "previous" values, both during and after pulsing.
+data PulsingSnapshot era = PulsingSnapshot
+  { psProposals :: !(StrictSeq (GovActionState era))
+  , psDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
+  , psDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
   }
   deriving (Generic)
 
-instance EraPParams era => ToExpr (GovSnapshots era)
+psProposalsL :: Lens' (PulsingSnapshot era) (StrictSeq (GovActionState era))
+psProposalsL = lens psProposals (\x y -> x {psProposals = y})
 
-insertGovSnapshots ::
-  GovActionState era ->
-  GovSnapshots era ->
-  GovSnapshots era
-insertGovSnapshots v =
-  curGovSnapshotsL %~ snapshotInsertGovAction v
+psDRepDistrL :: Lens' (PulsingSnapshot era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+psDRepDistrL = lens psDRepDistr (\x y -> x {psDRepDistr = y})
 
-curGovSnapshotsL ::
-  Lens'
-    (GovSnapshots era)
-    (ProposalsSnapshot era)
-curGovSnapshotsL = lens curGovSnapshots (\x y -> x {curGovSnapshots = y})
+psDRepStateL :: Lens' (PulsingSnapshot era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+psDRepStateL = lens psDRepState (\x y -> x {psDRepState = y})
 
-prevGovSnapshotsL ::
-  Lens'
-    (GovSnapshots era)
-    (ProposalsSnapshot era)
-prevGovSnapshotsL = lens prevGovSnapshots (\x y -> x {prevGovSnapshots = y})
+instance EraPParams era => ToExpr (PulsingSnapshot era)
 
-prevDRepsStateL ::
-  Lens'
-    (GovSnapshots era)
-    (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-prevDRepsStateL = lens prevDRepsState (\x y -> x {prevDRepsState = y})
+deriving instance EraPParams era => Eq (PulsingSnapshot era)
 
-prevCommitteeStateL ::
-  Lens'
-    (GovSnapshots era)
-    (CommitteeState era)
-prevCommitteeStateL = lens prevCommitteeState (\x y -> x {prevCommitteeState = y})
+deriving instance EraPParams era => Show (PulsingSnapshot era)
 
-deriving instance EraPParams era => Eq (GovSnapshots era)
+instance EraPParams era => NFData (PulsingSnapshot era)
 
-deriving instance EraPParams era => Show (GovSnapshots era)
+instance EraPParams era => NoThunks (PulsingSnapshot era)
 
-toGovSnapshotsPairs :: (KeyValue a, EraPParams era) => GovSnapshots era -> [a]
-toGovSnapshotsPairs gas@(GovSnapshots _ _ _ _) =
-  let GovSnapshots {..} = gas
-   in [ "curGovSnapshots" .= curGovSnapshots
-      , "prevGovSnapshots" .= prevGovSnapshots
-      , "prevDRepsState" .= prevDRepsState
-      , "prevCommitteeState" .= prevCommitteeState
+toPulsingSnapshotsPairs :: (KeyValue a, EraPParams era) => PulsingSnapshot era -> [a]
+toPulsingSnapshotsPairs gas@(PulsingSnapshot _ _ _) =
+  let (PulsingSnapshot {..}) = gas
+   in [ "psProposals" .= psProposals
+      , -- , "psDRepDistr" .=  psDRepDistr   -- TODO   FIX ME
+        "psDRepState" .= psDRepState
       ]
 
-instance EraPParams era => ToJSON (GovSnapshots era) where
-  toJSON = object . toGovSnapshotsPairs
-  toEncoding = pairs . mconcat . toGovSnapshotsPairs
+instance EraPParams era => ToJSON (PulsingSnapshot era) where
+  toJSON = object . toPulsingSnapshotsPairs
+  toEncoding = pairs . mconcat . toPulsingSnapshotsPairs
 
-instance EraPParams era => NFData (GovSnapshots era)
+instance Default (PulsingSnapshot era) where
+  def = PulsingSnapshot mempty def def
 
-instance EraPParams era => NoThunks (GovSnapshots era)
-
-instance Default (GovSnapshots era) where
-  def = GovSnapshots def def def def
-
-instance EraPParams era => EncCBOR (GovSnapshots era) where
-  encCBOR GovSnapshots {..} =
+instance EraPParams era => EncCBOR (PulsingSnapshot era) where
+  encCBOR PulsingSnapshot {..} =
     encode $
-      Rec GovSnapshots
-        !> To curGovSnapshots
-        !> To prevGovSnapshots
-        !> To prevDRepsState
-        !> To prevCommitteeState
+      Rec PulsingSnapshot
+        !> To psProposals
+        !> To psDRepDistr
+        !> To psDRepState
 
 -- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
-instance EraPParams era => DecShareCBOR (GovSnapshots era) where
+instance EraPParams era => DecShareCBOR (PulsingSnapshot era) where
   decShareCBOR _ =
     decode $
-      RecD GovSnapshots
-        <! (D decNoShareCBOR)
-        <! (D decNoShareCBOR)
+      RecD PulsingSnapshot
         <! From
-        <! (D decNoShareCBOR)
+        <! From
+        <! From
 
-instance EraPParams era => ToCBOR (GovSnapshots era) where
+instance EraPParams era => DecCBOR (PulsingSnapshot era) where
+  decCBOR =
+    decode $
+      RecD PulsingSnapshot
+        <! From
+        <! From
+        <! From
+
+instance EraPParams era => ToCBOR (PulsingSnapshot era) where
   toCBOR = toEraCBOR @era
 
-instance EraPParams era => FromCBOR (GovSnapshots era) where
-  fromCBOR = fromEraShareCBOR @era
+instance EraPParams era => FromCBOR (PulsingSnapshot era) where
+  fromCBOR = fromEraCBOR @era
+
+-- ===============================
 
 data PrevGovActionIds era = PrevGovActionIds
   { pgaPParamUpdate :: !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
@@ -486,6 +513,8 @@ instance EraPParams era => NFData (EnactState era)
 
 instance EraPParams era => NoThunks (EnactState era)
 
+-- ========================================
+
 data RatifyState era = RatifyState
   { rsEnactState :: !(EnactState era)
   , rsRemoved :: !(Set (GovActionId (EraCrypto era)))
@@ -508,32 +537,29 @@ instance EraPParams era => NFData (RatifyState era)
 
 instance EraPParams era => NoThunks (RatifyState era)
 
+-- =============================================
 data ConwayGovState era = ConwayGovState
-  { cgGovSnapshots :: !(GovSnapshots era)
+  { cgProposals :: !(ProposalsSnapshot era) -- TODO rename 'ProposalsSnapshot' to 'Proposals'
   , cgEnactState :: !(EnactState era)
-  , cgDRepDistr :: !(DRepDistr (EraCrypto era))
-  -- ^ The 'cgDRepDistr' field is a pulser that incrementally computes the stake distribution of the DReps
-  --   over the Epoch following the close of voting at end of the previous Epoch. The pulser is created
-  --   at the Epoch boundary, but does no work until it is pulsed in the 'NEWEPOCH' rule, whenever the
-  --   system is NOT at the epoch boundary.
+  , cgDRepPulsingState :: !(DRepPulsingState era)
+  -- ^ The 'cgDRepPulsingState' field is a pulser that incrementally computes the stake distribution of the DReps
+  --   over the Epoch following the close of voting at end of the previous Epoch. It assembles this with some of
+  --   its other internal components into a (RatifyEnv era) when it completes, and then calls the RATIFY rule
+  --   and eventually returns the updated RatifyState. The pulser is created at the Epoch boundary, but does
+  --   no work until it is pulsed in the 'NEWEPOCH' rule, whenever the system is NOT at the epoch boundary.
   }
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Show)
 
-cgDRepDistrL :: Lens' (ConwayGovState era) (DRepDistr (EraCrypto era))
-cgDRepDistrL = lens cgDRepDistr (\x y -> x {cgDRepDistr = y})
+deriving instance EraPParams era => Eq (ConwayGovState era)
 
-cgGovSnapshotsL :: Lens' (ConwayGovState era) (GovSnapshots era)
-cgGovSnapshotsL = lens cgGovSnapshots (\x y -> x {cgGovSnapshots = y})
+cgProposalsL :: Lens' (ConwayGovState era) (ProposalsSnapshot era)
+cgProposalsL = lens cgProposals (\x y -> x {cgProposals = y})
 
 cgEnactStateL :: Lens' (ConwayGovState era) (EnactState era)
 cgEnactStateL = lens cgEnactState (\x y -> x {cgEnactState = y})
 
-{-# DEPRECATED cgRatifyStateL "Use cgEnactStateL instead" #-}
-cgRatifyStateL :: Lens' (ConwayGovState era) (RatifyState era)
-cgRatifyStateL =
-  lens
-    (\ConwayGovState {..} -> RatifyState cgEnactState mempty False)
-    (\x RatifyState {..} -> x & cgEnactStateL .~ rsEnactState)
+cgDRepPulsingStateL :: Lens' (ConwayGovState era) (DRepPulsingState era)
+cgDRepPulsingStateL = lens cgDRepPulsingState (\x y -> x {cgDRepPulsingState = y})
 
 curPParamsConwayGovStateL :: Lens' (ConwayGovState era) (PParams era)
 curPParamsConwayGovStateL = cgEnactStateL . ensCurPParamsL
@@ -541,25 +567,36 @@ curPParamsConwayGovStateL = cgEnactStateL . ensCurPParamsL
 prevPParamsConwayGovStateL :: Lens' (ConwayGovState era) (PParams era)
 prevPParamsConwayGovStateL = cgEnactStateL . ensPrevPParamsL
 
+conwayGovStateDRepDistrG :: SimpleGetter (ConwayGovState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+conwayGovStateDRepDistrG = to (\govst -> (psDRepDistr . fst) $ finishDRepPulser (cgDRepPulsingState govst))
+
+getRatifyState :: ConwayGovState era -> RatifyState era
+getRatifyState (ConwayGovState {cgDRepPulsingState}) = snd $ finishDRepPulser cgDRepPulsingState
+
 -- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (ConwayGovState era) where
   decShareCBOR _ =
     decode $
       RecD ConwayGovState
-        <! (D decNoShareCBOR)
+        <! From
         <! From
         <! From
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
-  decCBOR = decNoShareCBOR
+  decCBOR =
+    decode $
+      RecD ConwayGovState
+        <! From
+        <! From
+        <! From
 
 instance EraPParams era => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =
     encode $
       Rec ConwayGovState
-        !> To cgGovSnapshots
+        !> To cgProposals
         !> To cgEnactState
-        !> To cgDRepDistr
+        !> To cgDRepPulsingState
 
 instance EraPParams era => ToCBOR (ConwayGovState era) where
   toCBOR = toEraCBOR @era
@@ -568,7 +605,7 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
 instance EraPParams era => Default (ConwayGovState era) where
-  def = ConwayGovState def def (DRComplete Map.empty)
+  def = ConwayGovState def def (DRComplete def def)
 
 instance EraPParams era => NFData (ConwayGovState era)
 
@@ -584,7 +621,7 @@ toConwayGovPairs :: (KeyValue a, EraPParams era) => ConwayGovState era -> [a]
 toConwayGovPairs cg@(ConwayGovState _ _ _) =
   -- TODO WILL DRepDistr CHANGE THIS?
   let ConwayGovState {..} = cg
-   in [ "gov" .= cgGovSnapshots
+   in [ "gov" .= cgProposals
       , "ratify" .= cgEnactState
       ]
 
@@ -600,19 +637,19 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   prevPParamsGovStateL = prevPParamsConwayGovStateL
 
   obligationGovState st =
-    foldMap' gasDeposit $ snapshotActions (st ^. cgGovSnapshotsL . curGovSnapshotsL)
+    foldMap' gasDeposit $ snapshotActions (st ^. cgProposalsL)
 
-  getDRepDistr govst = extractDRepDistr (govst ^. drepDistrGovStateL)
+  getDRepDistr govst = (psDRepDistr . fst) $ finishDRepPulser (govst ^. drepPulsingStateGovStateL)
 
 class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)
-  snapshotsGovStateL :: Lens' (GovState era) (GovSnapshots era)
-  drepDistrGovStateL :: Lens' (GovState era) (DRepDistr (EraCrypto era))
+  proposalsGovStateL :: Lens' (GovState era) (ProposalsSnapshot era)
+  drepPulsingStateGovStateL :: Lens' (GovState era) (DRepPulsingState era)
 
 instance Crypto c => ConwayEraGov (ConwayEra c) where
   constitutionGovStateL = cgEnactStateL . ensConstitutionL
-  snapshotsGovStateL = cgGovSnapshotsL
-  drepDistrGovStateL = cgDRepDistrL
+  proposalsGovStateL = cgProposalsL
+  drepPulsingStateGovStateL = cgDRepPulsingStateL
 
 pparamsUpdateThreshold ::
   forall era.
@@ -795,30 +832,360 @@ votingDRepThresholdInternal pp isElectedCommittee action =
         InfoAction {} -> NoVotingThreshold
 
 -- ===================================================================
--- Lenses for access to
--- 1. (DRepDistr (EraCrypto era))
--- 2. The 3 inputs we need to initialize one
---    a. (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin)). Extracted from Incremental
---    b. (Set (Credential 'DRepRole (EraCrypto era))). Registered DReps in the CertState
---    c. (UMap (EraCrypto era)). The unified map in the DState.
---                               We will use the to DRepUView to obtain  (Map (Credential 'Staking c) (DRep c))
---                               to see what stake credentials delegate to which DReps
--- 3. and its completion:  (Map (DRep c) (CompactForm Coin)).  The aggregated voting power of each DRep
+-- Lenses for access to (DRepPulsingState era)
 
-newEpochStateDRepDistrL :: ConwayEraGov era => Lens' (NewEpochState era) (DRepDistr (EraCrypto era))
-newEpochStateDRepDistrL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepDistrGovStateL
+newEpochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (NewEpochState era) (DRepPulsingState era)
+newEpochStateDRepPulsingStateL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
 
-epochStateDRepDistrL :: ConwayEraGov era => Lens' (EpochState era) (DRepDistr (EraCrypto era))
-epochStateDRepDistrL = esLStateL . lsUTxOStateL . utxosGovStateL . drepDistrGovStateL
+epochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (EpochState era) (DRepPulsingState era)
+epochStateDRepPulsingStateL = esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
 
--- | Construct a new (as yet unpulsed) DRepDistr from 3 pieces of the EpochState.
---   1) The unified map (storing the map from staking credentials to DReps).
---   2) The set of registered DReps
---   3) The map aggregating all the stake (coin) for each credential, from the Mark SnapShot.
-freshDRepPulser :: Int -> EpochState era -> DRepDistr (EraCrypto era)
-freshDRepPulser n es =
-  startDRepDistr
-    n
-    (es ^. epochStateUMapL)
-    (es ^. epochStateRegDrepL)
-    (es ^. epochStateIncrStakeDistrL)
+-- ===============================================================================
+-- Algorithm for computing the DRep stake distrubution, with and without pulsing.
+-- ===============================================================================
+
+-- | Given three inputs
+--   1) Map (Credential 'Staking c) (DRep c).   The delegation map. Inside the DRepUView of the UMap 'um' from the DState.
+--   2) regDreps :: Map (Credential 'DRepRole c) (DRepState c). The map of registered DReps to their state. The first part of the VState.
+--   3) stakeDistr :: VMap VB VP (Credential 'Staking c) (CompactForm Coin). The aggregated stake distr extracted from the
+--      first component of the IncrementalStake i.e. (IStake credmap _) where credmap is converted to a VMap
+--  Compute the Drep distribution of stake(Coin)
+--  cost is expected to be O(size of 'stakeDistr' * log (size of 'um') * log (size of 'regDreps'))
+--  This is going to be expensive, so we will want to pulse it. Without pulsing, we estimate 3-5 seconds
+computeDrepDistr ::
+  UMap c ->
+  Map (Credential 'DRepRole c) (DRepState c) ->
+  Map (Credential 'Staking c) (CompactForm Coin) ->
+  Map (DRep c) (CompactForm Coin)
+computeDrepDistr um regDreps stakeDistr = Map.foldlWithKey' (accumDRepDistr um regDreps) Map.empty stakeDistr
+
+-- | For each 'stakecred' and coin 'c', check if that credential is delegated to some DRep.
+--   If so then add that coin to the aggregated map 'ans', mapping DReps to compact Coin
+--   If the DRep is a DRepCredential (rather than AwaysAbstain or AlwaysNoConfidence) then check
+--   that the credential is a member of the registered DRep map ('regDreps') before adding it to 'ans'
+accumDRepDistr ::
+  UMap c ->
+  Map (Credential 'DRepRole c) (DRepState c) ->
+  Map (DRep c) (CompactForm Coin) ->
+  Credential 'Staking c ->
+  CompactForm Coin ->
+  Map (DRep c) (CompactForm Coin)
+accumDRepDistr um regDreps ans stakecred c =
+  case UMap.lookup stakecred (DRepUView um) of
+    Nothing -> ans
+    Just drep@DRepAlwaysAbstain -> Map.insertWith UMap.addCompact drep c ans
+    Just drep@DRepAlwaysNoConfidence -> Map.insertWith UMap.addCompact drep c ans
+    Just (DRepCredential cred2) | Map.notMember cred2 regDreps -> ans
+    Just drep@(DRepCredential _) -> Map.insertWith UMap.addCompact drep c ans
+
+-- | The type of a Pulser which uses 'accumDRepDistr' as its underlying function.
+--   'accumDRepDistr' will be partially applied to the components of type (UMap c)
+--   and (Map (Credential 'DRepRole c) (DRepState c)) when pulsing. Note that we use two type
+--   equality (~) constraints to fix both the monad 'm' and the 'ans' type, to
+--   the context where we will use the type as a Pulser. The type DRepPulser must
+--   have 'm' and 'ans' as its last two parameters so we can make a Pulsable instance.
+--   We will always use this instantiation (DRepPulser era Identity (RatifyState era))
+data DRepPulser era (m :: Type -> Type) ans where
+  DRepPulser ::
+    forall era ans m.
+    (ans ~ RatifyState era, m ~ Identity, RunConwayRatify era) =>
+    { dpPulseSize :: !Int
+    -- ^ How many elements of 'dpBalance' to consume each pulse.
+    , dpUMap :: !(UMap (EraCrypto era))
+    -- ^ Snapshot containing the mapping of stake credentials to Pools.
+    , dpBalance :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+    -- ^ The object we are iterating over. Shrinks with each pulse
+    , dpStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+    -- ^ Snapshot of the stake distr (comes from the IncrementalStake)
+    , dpStakePoolDistr :: !(PoolDistr (EraCrypto era))
+    -- ^ Snapshot of the pool distr
+    , dpDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
+    -- ^ The partial result that grows with each pulse. The purpose of the pulsing.
+    , dpDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+    -- ^ Snapshot of registered DRep credentials
+    , dpCurrentEpoch :: !EpochNo
+    -- ^ Snapshot of the Epoch this pulser will complete in.
+    , dpCommitteeState :: !(CommitteeState era)
+    -- ^ Snapshot of the CommitteeState
+    , dpEnactState :: !(EnactState era)
+    -- ^ Snapshot of the EnactState, Used to build the Env of the RATIFY rule
+    , dpProposals :: !(StrictSeq (GovActionState era))
+    -- ^ Snap shot of the (ProposalsSnapshot era) isomorphic to (StrictSeq (GovActionState era))
+    --   Used to build the Signal of the RATIFY rule
+    , dpTreasury :: !Coin
+    , dpGlobals :: !Globals
+    } ->
+    DRepPulser era m ans
+
+instance Pulsable (DRepPulser era) where
+  done (DRepPulser {..}) = Map.null dpBalance
+
+  current x@(DRepPulser {}) = snd $ finishDRepPulser (DRPulsing x)
+
+  pulseM pulser@(DRepPulser {..}) | Map.null dpBalance = pure $ pulser
+  pulseM pulser@(DRepPulser {..}) =
+    let !(!steps, !balance') = Map.splitAt dpPulseSize dpBalance
+        drep' = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr steps
+     in pure (pulser {dpBalance = balance', dpDRepDistr = drep'})
+
+  completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
+
+deriving instance (EraPParams era, Show ans) => Show (DRepPulser era m ans)
+
+instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) where
+  showTypeOf _ = "DRepPulser"
+  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _ _) =
+    allNoThunks
+      [ noThunks ctxt (dpPulseSize drp)
+      , noThunks ctxt (dpUMap drp)
+      , noThunks ctxt (dpBalance drp)
+      , noThunks ctxt (dpStakeDistr drp)
+      , noThunks ctxt (dpStakePoolDistr drp)
+      , noThunks ctxt (dpDRepDistr drp)
+      , noThunks ctxt (dpDRepState drp)
+      , noThunks ctxt (dpCurrentEpoch drp)
+      , noThunks ctxt (dpCommitteeState drp)
+      , noThunks ctxt (dpEnactState drp)
+      , noThunks ctxt (dpProposals drp)
+      , noThunks ctxt (dpTreasury drp)
+      , noThunks ctxt (dpGlobals drp)
+      ]
+
+instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) where
+  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as treas gs) =
+    n `deepseq`
+      um `deepseq`
+        bal `deepseq`
+          stake `deepseq`
+            pool `deepseq`
+              drep `deepseq`
+                dstate `deepseq`
+                  ep `deepseq`
+                    cs `deepseq`
+                      es `deepseq`
+                        as `deepseq`
+                          treas `deepseq`
+                            rnf gs
+
+class
+  ( STS (ConwayRATIFY era)
+  , Signal (ConwayRATIFY era) ~ RatifySignal era
+  , BaseM (ConwayRATIFY era) ~ Reader Globals
+  , Environment (ConwayRATIFY era) ~ RatifyEnv era
+  , State (ConwayRATIFY era) ~ RatifyState era
+  ) =>
+  RunConwayRatify era
+  where
+  runConwayRatify :: Globals -> RatifyEnv era -> RatifyState era -> RatifySignal era -> RatifyState era
+  runConwayRatify globals ratifyEnv ratifyState ratifySig =
+    case runReader
+      ( applySTS @(ConwayRATIFY era)
+          (TRC (ratifyEnv, ratifyState, ratifySig))
+      )
+      globals of
+      Left ps -> error (unlines ("The ConwayRATIFY rule, which should never fail, did." : map show ps))
+      Right ratifyState' -> ratifyState'
+
+finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
+finishDRepPulser (DRComplete snap ratstate) = (snap, ratstate)
+finishDRepPulser (DRPulsing (DRepPulser {..})) = (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
+  where
+    !finalDRepDistr = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr dpBalance
+    !ratifyEnv =
+      RatifyEnv
+        { reStakeDistr = dpStakeDistr
+        , reStakePoolDistr = dpStakePoolDistr
+        , reDRepDistr = finalDRepDistr
+        , reDRepState = dpDRepState
+        , reCurrentEpoch = dpCurrentEpoch
+        , reCommitteeState = dpCommitteeState
+        }
+    !ratifySig = RatifySignal dpProposals
+    !ratifyState =
+      RatifyState
+        { rsRemoved = mempty
+        , rsEnactState = dpEnactState & ensTreasuryL .~ dpTreasury
+        , rsDelayed = False
+        }
+    !ratifyState' = runConwayRatify dpGlobals ratifyEnv ratifyState ratifySig
+
+-- ===========================================================
+-- The State which is stored in ConwayGovState
+-- ===========================================================
+
+data DRepPulsingState era
+  = DRPulsing !(DRepPulser era Identity (RatifyState era))
+  | DRComplete
+      !(PulsingSnapshot era)
+      !(RatifyState era)
+  deriving (Generic, NoThunks, NFData)
+
+pulsingStateSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
+pulsingStateSnapshotL = lens getter setter
+  where
+    getter (DRComplete x _) = x
+    getter state = fst (finishDRepPulser state)
+    setter (DRComplete _ y) snap = DRComplete snap y
+    setter state snap = (\(_, y) -> DRComplete snap y) (finishDRepPulser state)
+
+dormantEpoch :: DRepPulsingState era -> Bool
+dormantEpoch (DRPulsing x) = SS.null (dpProposals x)
+dormantEpoch (DRComplete b _) = SS.null (psProposals b)
+
+getPulsingStateDRepDistr :: SimpleGetter (DRepPulsingState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+getPulsingStateDRepDistr = to get
+  where
+    get (DRComplete x _) = psDRepDistr x
+    get x = (psDRepDistr . fst) $ finishDRepPulser x
+
+instance EraPParams era => Eq (DRepPulsingState era) where
+  x == y = finishDRepPulser x == finishDRepPulser y
+
+instance EraPParams era => Show (DRepPulsingState era) where
+  show (DRComplete x m) = "(DRComplete " ++ show x ++ " " ++ show m ++ ")"
+  show x = show (uncurry DRComplete (finishDRepPulser x))
+
+instance EraPParams era => EncCBOR (DRepPulsingState era) where
+  encCBOR (DRComplete x y) = encode (Rec DRComplete !> To x !> To y)
+  encCBOR x@(DRPulsing (DRepPulser {})) = encode (Rec DRComplete !> To snap !> To ratstate)
+    where
+      (snap, ratstate) = finishDRepPulser x
+
+-- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance EraPParams era => DecShareCBOR (DRepPulsingState era) where
+  decShareCBOR _ =
+    decode $
+      RecD DRComplete
+        <! From
+        <! From
+
+instance EraPParams era => DecCBOR (DRepPulsingState era) where
+  decCBOR = decode (RecD DRComplete <! From <! From)
+
+instance EraPParams era => ToExpr (DRepPulsingState era) where
+  toExpr (DRComplete x y) = App "DRComplete" [toExpr x, toExpr y]
+  toExpr x@(DRPulsing (DRepPulser {})) = App "DRComplete" [toExpr a, toExpr b]
+    where
+      (a, b) = finishDRepPulser x
+
+-- =====================================
+-- High level operations of DRepDistr
+
+-- | Assemble data needed for pulsing, mostly snapshots of things needed to compute the RatifyState when pulsing completes.
+startDRepPulsingState ::
+  RunConwayRatify era =>
+  Int ->
+  UMap (EraCrypto era) ->
+  Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin) ->
+  PoolDistr (EraCrypto era) ->
+  Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)) ->
+  EpochNo ->
+  CommitteeState era ->
+  EnactState era ->
+  StrictSeq (GovActionState era) ->
+  Coin ->
+  Globals ->
+  DRepPulsingState era
+startDRepPulsingState stepSize umap stakedistr pooldistr dstate epoch committee enact proposals treas global =
+  DRPulsing
+    ( DRepPulser
+        stepSize
+        umap
+        stakedistr -- used as the balance of things left to iterate over
+        stakedistr -- used as part of the snapshot
+        pooldistr
+        Map.empty -- The partial result starts as the empty map
+        dstate
+        epoch
+        committee
+        enact
+        proposals
+        treas
+        global
+    )
+
+pulseDRepPulsingState :: DRepPulsingState era -> DRepPulsingState era
+pulseDRepPulsingState x@(DRComplete _ _) = x
+pulseDRepPulsingState (DRPulsing x@(DRepPulser {})) =
+  let x2 = pulse x
+   in if done x2
+        then uncurry DRComplete (finishDRepPulser (DRPulsing x2))
+        else DRPulsing x2
+
+completeDRepPulsingState :: DRepPulsingState era -> DRepPulsingState era
+completeDRepPulsingState x@(DRPulsing _) = uncurry DRComplete (finishDRepPulser x)
+completeDRepPulsingState x@(DRComplete {}) = x
+
+extractDRepPulsingState :: DRepPulsingState era -> RatifyState era
+extractDRepPulsingState x@(DRPulsing _) = snd (finishDRepPulser x)
+extractDRepPulsingState (DRComplete _ x) = x
+
+-- ===================================
+-- RatifyEnv
+
+newtype RatifySignal era = RatifySignal (StrictSeq (GovActionState era))
+  deriving (Show)
+
+data RatifyEnv era = RatifyEnv
+  { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+  , reStakePoolDistr :: !(PoolDistr (EraCrypto era))
+  , reDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
+  , reDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+  , reCurrentEpoch :: !EpochNo
+  , reCommitteeState :: !(CommitteeState era)
+  }
+
+deriving instance Show (RatifyEnv era)
+deriving instance Eq (RatifyEnv era)
+
+instance Default (RatifyEnv era) where
+  def = RatifyEnv Map.empty (PoolDistr Map.empty) Map.empty Map.empty (EpochNo 0) def
+
+instance Typeable era => NoThunks (RatifyEnv era) where
+  showTypeOf _ = "RatifyEnv"
+  wNoThunks ctxt (RatifyEnv stake pool drep dstate ep cs) =
+    allNoThunks
+      [ noThunks ctxt stake
+      , noThunks ctxt pool
+      , noThunks ctxt drep
+      , noThunks ctxt dstate
+      , noThunks ctxt ep
+      , noThunks ctxt cs
+      ]
+
+instance Era era => NFData (RatifyEnv era) where
+  rnf (RatifyEnv stake pool drep dstate ep cs) =
+    stake `deepseq`
+      pool `deepseq`
+        drep `deepseq`
+          dstate `deepseq`
+            ep `deepseq`
+              rnf cs
+
+instance EraPParams era => EncCBOR (RatifyState era) where
+  encCBOR (RatifyState es remove del) =
+    encode
+      ( Rec (RatifyState @era)
+          !> To es
+          !> To remove
+          !> To del
+      )
+
+instance EraPParams era => DecCBOR (RatifyState era) where
+  decCBOR = decode (RecD RatifyState <! From <! From <! From)
+
+instance ToExpr (RatifyEnv era) where
+  toExpr (RatifyEnv stake pool drep dstate ep cs) =
+    App "RatifyEnv" [toExpr stake, toExpr pool, toExpr drep, toExpr dstate, toExpr ep, toExpr cs]
+
+-- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+instance EraPParams era => DecShareCBOR (RatifyState era) where
+  decShareCBOR _ =
+    decode $
+      RecD RatifyState
+        <! From
+        <! From
+        <! From
+
+reDRepDistrL :: Lens' (RatifyEnv era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+reDRepDistrL = lens reDRepDistr (\x y -> x {reDRepDistr = y})

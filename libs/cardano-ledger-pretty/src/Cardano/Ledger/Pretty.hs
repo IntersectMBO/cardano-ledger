@@ -59,7 +59,7 @@ import Cardano.Ledger.BaseTypes (
   txIxToInt,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (CommitteeState (..), DRepState, VState (..))
+import Cardano.Ledger.CertState (CommitteeState (..), VState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -70,6 +70,7 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
  )
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   SnapShots (..),

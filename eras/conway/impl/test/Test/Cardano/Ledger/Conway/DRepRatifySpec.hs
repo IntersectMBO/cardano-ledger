@@ -15,22 +15,22 @@ import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Core (Era (EraCrypto), PParamsHKD)
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
+  RatifyEnv (..),
   RatifyState,
   Vote (..),
   votingDRepThreshold,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules (
-  RatifyEnv (..),
   dRepAccepted,
   dRepAcceptedRatio,
  )
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRepDistr (DRepState (..))
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Val ((<+>), (<->))

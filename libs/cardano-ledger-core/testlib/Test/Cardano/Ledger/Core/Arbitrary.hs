@@ -84,7 +84,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
-import Cardano.Ledger.DRepDistr (DRepDistr (..), DRepState (..), startDRepDistr)
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -484,9 +484,6 @@ instance Crypto c => Arbitrary (IndividualPoolStake c) where
 
 instance Crypto c => Arbitrary (DRepState c) where
   arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary
-
-instance Crypto c => Arbitrary (DRepDistr c) where
-  arbitrary = startDRepDistr <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.UTxO -------------------------------------------------------------------

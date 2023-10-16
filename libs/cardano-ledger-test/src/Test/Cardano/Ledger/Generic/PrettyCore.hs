@@ -58,16 +58,19 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayGovState (..),
+  DRepPulsingState (..),
   EnactState (..),
   GovAction (..),
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
-  GovSnapshots (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalsSnapshot,
+  PulsingSnapshot (..),
+  RatifyState (..),
   Vote (..),
+  finishDRepPulser,
   snapshotActions,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..), Delegatee (..))
@@ -81,7 +84,7 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
  )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.DRepDistr (DRepState (..), extractDRepDistr)
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   SnapShots (..),
@@ -1632,16 +1635,6 @@ pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp) =
     , ("prevParams", pcPParamsSynopsis p prevpp)
     ]
 
-pcGovSnapshots :: GovSnapshots era -> PDoc
-pcGovSnapshots (GovSnapshots cur prev drep (CommitteeState m)) =
-  ppRecord
-    "GovSnapshots"
-    [ ("currGovSnapshots", pcProposalsSnapshot cur)
-    , ("prevGovSnapshots", pcProposalsSnapshot prev)
-    , ("precDRepState", ppMap pcCredential pcDRepState drep)
-    , ("prevCommittee", ppMap pcCredential (ppMaybe pcCredential) m)
-    ]
-
 pcEnactState :: Proof era -> EnactState era -> PDoc
 pcEnactState p ens@(EnactState _ _ _ _ _ _ _) =
   let EnactState {..} = ens
@@ -1676,9 +1669,43 @@ pcConwayGovState :: Proof era -> ConwayGovState era -> PDoc
 pcConwayGovState p (ConwayGovState ss es dr) =
   ppRecord
     "ConwayGovState"
-    [ ("govSnapshots", pcGovSnapshots ss)
+    [ ("proposals", pcProposalsSnapshot ss)
     , ("enactState", pcEnactState p es)
-    , ("drepDistr", ppMap pcDRep (pcCoin . fromCompact) (extractDRepDistr dr))
+    , ("drepPulsingState", pcDRepPulsingState p dr)
+    ]
+
+pcPulsingSnapshot :: PulsingSnapshot era -> PDoc
+pcPulsingSnapshot (PulsingSnapshot x y z) =
+  ppRecord
+    "Snapshot"
+    [ ("proposals", ppStrictSeq pcGovActionState x)
+    , ("drepDistr", ppMap pcDRep (ppCoin . fromCompact) y)
+    , ("drepState", ppMap pcCredential pcDRepState z)
+    ]
+
+pcDRepPulsingState :: Proof era -> DRepPulsingState era -> PDoc
+pcDRepPulsingState p (DRComplete x y) =
+  ppRecord
+    "DRComplete"
+    [ ("pulsingSnapshot", pcPulsingSnapshot x)
+    , ("ratifyState", pcRatifyState p y)
+    ]
+pcDRepPulsingState p pst =
+  ppRecord
+    "DRComplete"
+    [ ("pulsingSnapshot", pcPulsingSnapshot x)
+    , ("ratifyState", pcRatifyState p y)
+    ]
+  where
+    (x, y) = finishDRepPulser pst
+
+pcRatifyState :: Proof era -> RatifyState era -> PDoc
+pcRatifyState p (RatifyState enact remov del) =
+  ppRecord
+    "RatifyState"
+    [ ("enactstate", pcEnactState p enact)
+    , ("removed", ppSet pcGovActionId remov)
+    , ("delayed", ppBool del)
     ]
 
 pcProposalsSnapshot :: ProposalsSnapshot era -> PDoc

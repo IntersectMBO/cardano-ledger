@@ -9,13 +9,14 @@ import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (toCompact)
-import Cardano.Ledger.Core (DRep, Era (..))
+import Cardano.Ledger.Core (Era (..))
 import Cardano.Ledger.Credential (
   Credential (..),
   Ptr (..),
   StakeReference (..),
  )
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
