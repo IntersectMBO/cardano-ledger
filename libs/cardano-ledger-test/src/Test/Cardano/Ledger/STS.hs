@@ -222,7 +222,7 @@ genConwayGovCert pp vs =
         key <- arbitrary `suchThat` (`Map.notMember` vsDReps vs)
         ConwayRegDRep key (pp ^. ppDRepDepositL) <$> arbitrary
     , ConwayAuthCommitteeHotKey <$> arbitrary <*> arbitrary
-    , ConwayResignCommitteeColdKey <$> arbitrary
+    , ConwayResignCommitteeColdKey <$> arbitrary <*> arbitrary
     ]
       ++ [ do
           (k, dep) <- elements $ Map.toList (vsDReps vs)
@@ -244,7 +244,7 @@ shrinkConwayGovCert pp vs =
         ConwayUnRegDRep key dep -> fmap drepDeposit (Map.lookup key (vsDReps vs)) == Just dep
         ConwayUpdateDRep key _ -> Map.member key (vsDReps vs)
         ConwayAuthCommitteeHotKey _ _ -> True
-        ConwayResignCommitteeColdKey _ -> True
+        ConwayResignCommitteeColdKey _ _ -> True
 
 genPoolCert ::
   Network ->

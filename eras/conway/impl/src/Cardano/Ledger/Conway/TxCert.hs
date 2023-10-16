@@ -177,8 +177,8 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
   getAuthCommitteeHotKeyTxCert ::
     TxCert era -> Maybe (Credential 'ColdCommitteeRole (EraCrypto era), Credential 'HotCommitteeRole (EraCrypto era))
 
-  mkResignCommitteeColdTxCert :: Credential 'ColdCommitteeRole (EraCrypto era) -> TxCert era
-  getResignCommitteeColdTxCert :: TxCert era -> Maybe (Credential 'ColdCommitteeRole (EraCrypto era))
+  mkResignCommitteeColdTxCert :: Credential 'ColdCommitteeRole (EraCrypto era) -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
+  getResignCommitteeColdTxCert :: TxCert era -> Maybe (Credential 'ColdCommitteeRole (EraCrypto era), StrictMaybe (Anchor (EraCrypto era)))
 
   mkRegDRepTxCert :: Credential 'DRepRole (EraCrypto era) -> Coin -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
   getRegDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), Coin, StrictMaybe (Anchor (EraCrypto era)))
@@ -211,8 +211,8 @@ instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   getAuthCommitteeHotKeyTxCert (ConwayTxCertGov (ConwayAuthCommitteeHotKey ck hk)) = Just (ck, hk)
   getAuthCommitteeHotKeyTxCert _ = Nothing
 
-  mkResignCommitteeColdTxCert = ConwayTxCertGov . ConwayResignCommitteeColdKey
-  getResignCommitteeColdTxCert (ConwayTxCertGov (ConwayResignCommitteeColdKey ck)) = Just ck
+  mkResignCommitteeColdTxCert ck a = ConwayTxCertGov $ ConwayResignCommitteeColdKey ck a
+  getResignCommitteeColdTxCert (ConwayTxCertGov (ConwayResignCommitteeColdKey ck a)) = Just (ck, a)
   getResignCommitteeColdTxCert _ = Nothing
 
   mkRegDRepTxCert cred deposit mAnchor = ConwayTxCertGov $ ConwayRegDRep cred deposit mAnchor
@@ -279,8 +279,9 @@ pattern AuthCommitteeHotKeyTxCert ck hk <- (getAuthCommitteeHotKeyTxCert -> Just
 pattern ResignCommitteeColdTxCert ::
   ConwayEraTxCert era =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
+  StrictMaybe (Anchor (EraCrypto era)) ->
   TxCert era
-pattern ResignCommitteeColdTxCert ck <- (getResignCommitteeColdTxCert -> Just ck)
+pattern ResignCommitteeColdTxCert ck a <- (getResignCommitteeColdTxCert -> Just (ck, a))
   where
     ResignCommitteeColdTxCert ck = mkResignCommitteeColdTxCert ck
 
@@ -378,7 +379,7 @@ data ConwayGovCert c
   | ConwayUnRegDRep !(Credential 'DRepRole c) !Coin
   | ConwayUpdateDRep !(Credential 'DRepRole c) !(StrictMaybe (Anchor c))
   | ConwayAuthCommitteeHotKey !(Credential 'ColdCommitteeRole c) !(Credential 'HotCommitteeRole c)
-  | ConwayResignCommitteeColdKey !(Credential 'ColdCommitteeRole c)
+  | ConwayResignCommitteeColdKey !(Credential 'ColdCommitteeRole c) !(StrictMaybe (Anchor c))
   deriving (Show, Generic, Eq)
 
 instance Crypto c => NFData (ConwayGovCert c)
@@ -443,7 +444,8 @@ conwayTxCertDelegDecoder = \case
     pure (3, AuthCommitteeHotKeyTxCert cred key)
   15 -> do
     cred <- decCBOR
-    pure (2, ResignCommitteeColdTxCert cred)
+    a <- decodeNullStrictMaybe decCBOR
+    pure (3, ResignCommitteeColdTxCert cred a)
   16 -> do
     cred <- decCBOR
     deposit <- decCBOR
@@ -536,10 +538,11 @@ encodeGovCert = \case
       <> encodeWord8 14
       <> encCBOR cred
       <> encCBOR key
-  ConwayResignCommitteeColdKey cred ->
-    encodeListLen 2
+  ConwayResignCommitteeColdKey cred a ->
+    encodeListLen 3
       <> encodeWord8 15
       <> encCBOR cred
+      <> encodeNullStrictMaybe encCBOR a
   ConwayRegDRep cred deposit mAnchor ->
     encodeListLen 4
       <> encodeWord8 16
@@ -594,7 +597,7 @@ getScriptWitnessConwayTxCert = \case
     govWitness :: ConwayGovCert c -> Maybe (ScriptHash c)
     govWitness = \case
       ConwayAuthCommitteeHotKey coldCred _hotCred -> credScriptHash coldCred
-      ConwayResignCommitteeColdKey coldCred -> credScriptHash coldCred
+      ConwayResignCommitteeColdKey coldCred _ -> credScriptHash coldCred
       -- Registration of a DRep does not require a witness
       ConwayRegDRep {} -> Nothing
       ConwayUnRegDRep cred _ -> credScriptHash cred
@@ -615,7 +618,7 @@ getVKeyWitnessConwayTxCert = \case
     govWitness :: ConwayGovCert c -> Maybe (KeyHash 'Witness c)
     govWitness = \case
       ConwayAuthCommitteeHotKey coldCred _hotCred -> credKeyHashWitness coldCred
-      ConwayResignCommitteeColdKey coldCred -> credKeyHashWitness coldCred
+      ConwayResignCommitteeColdKey coldCred _ -> credKeyHashWitness coldCred
       -- Registration of a DRep does not require a witness
       ConwayRegDRep {} -> Nothing
       ConwayUnRegDRep cred _ -> credKeyHashWitness cred

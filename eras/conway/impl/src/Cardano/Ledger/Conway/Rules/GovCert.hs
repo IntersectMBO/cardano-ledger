@@ -174,7 +174,7 @@ conwayGovCertTransition = do
       pure vState {vsDReps = Map.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldCred hotCred ->
       checkAndOverwriteCommitteeHotCred vState coldCred $ Just hotCred
-    ConwayResignCommitteeColdKey coldCred ->
+    ConwayResignCommitteeColdKey coldCred _ ->
       checkAndOverwriteCommitteeHotCred vState coldCred Nothing
     -- Update a DRep expiry too along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do

@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add an anchor argument to `ResignCommitteeColdTxCert`
 * Prevent invalid previous gov-action ids in proposals #3768
   * Also, add lenses
     * `govProceduresProposalsL`
