@@ -2,6 +2,13 @@
 
 ## 1.10.0.0
 
+* Rename `ensPParams` to `ensCurPParams`.
+* Add `ToJSON` instance for `RatifyState`
+* Change `ToJSON` instance for `ConwayGovState`:
+  * Add `"nextRatifyState"` field
+  * Rename `"ratify"` to `"enactState"`
+  * Rename `"gov"` to `"proposals"`
+* Fix `ToJSON` instance for `EnactState`, previously current PParams were used for `"prevPParams"`.
 * Add an anchor argument to `ResignCommitteeColdTxCert`
 * Prevent invalid previous gov-action ids in proposals #3768
   * Also, add lenses

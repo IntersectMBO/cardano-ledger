@@ -296,7 +296,7 @@ ratifyTransition = do
   TRC
     ( env@RatifyEnv {reCurrentEpoch}
       , st@( RatifyState
-              rsEnactState@EnactState {ensCommittee, ensPParams, ensTreasury, ensPrevGovActionIds}
+              rsEnactState@EnactState {ensCommittee, ensCurPParams, ensTreasury, ensPrevGovActionIds}
               rsRemoved
               rsDelayed
             )
@@ -309,7 +309,7 @@ ratifyTransition = do
       let gas@GovActionState {gasId, gasAction, gasExpiresAfter} = ast
           notDelayed = not rsDelayed
       if prevActionAsExpected gasAction ensPrevGovActionIds
-        && validCommitteeTerm ensCommittee ensPParams reCurrentEpoch
+        && validCommitteeTerm ensCommittee ensCurPParams reCurrentEpoch
         && notDelayed
         && withdrawalCanWithdraw gasAction ensTreasury
         && committeeAccepted st env gas

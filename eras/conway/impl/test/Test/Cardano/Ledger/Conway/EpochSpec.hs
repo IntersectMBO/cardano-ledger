@@ -307,15 +307,19 @@ logRatificationChecks gaId = do
   let
     ratSt = RatifyState ens mempty False
   currentEpoch <- getsNES nesELL
-  logEntry "----- RATIFICATION CHECKS -----"
-  logEntry $ "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
-  logEntry $ "validCommitteeTerm:\t" <> show (validCommitteeTerm ensCommittee ensPParams currentEpoch)
-  logEntry "notDelayed:\t\t??"
-  logEntry $ "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
-  logEntry $ "committeeAccepted:\t" <> show (committeeAccepted ratSt ratEnv gas)
-  logEntry $ "spoAccepted:\t\t" <> show (spoAccepted ratSt ratEnv gas)
-  logEntry $ "dRepAccepted:\t\t" <> show (dRepAccepted ratEnv ratSt gas)
-  logEntry ""
+  logEntry $
+    unlines
+      [ "----- RATIFICATION CHECKS -----"
+      , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
+      , "validCommitteeTerm:\t"
+          <> show (validCommitteeTerm ensCommittee ensCurPParams currentEpoch)
+      , "notDelayed:\t\t??"
+      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
+      , "committeeAccepted:\t" <> show (committeeAccepted ratSt ratEnv gas)
+      , "spoAccepted:\t\t" <> show (spoAccepted ratSt ratEnv gas)
+      , "dRepAccepted:\t\t" <> show (dRepAccepted ratEnv ratSt gas)
+      , ""
+      ]
 
 -- | Submits a transaction that registers a hot key for the given cold key.
 -- Returns the hot key hash.

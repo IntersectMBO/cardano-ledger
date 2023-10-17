@@ -381,7 +381,7 @@ data EnactState era = EnactState
   -- ^ Constitutional Committee
   , ensConstitution :: !(Constitution era)
   -- ^ Constitution
-  , ensPParams :: !(PParams era)
+  , ensCurPParams :: !(PParams era)
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
   , ensWithdrawals :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
@@ -400,7 +400,7 @@ ensProtVerL :: EraPParams era => Lens' (EnactState era) ProtVer
 ensProtVerL = ensCurPParamsL . ppProtocolVersionL
 
 ensCurPParamsL :: Lens' (EnactState era) (PParams era)
-ensCurPParamsL = lens ensPParams (\es x -> es {ensPParams = x})
+ensCurPParamsL = lens ensCurPParams (\es x -> es {ensCurPParams = x})
 
 ensPrevPParamsL :: Lens' (EnactState era) (PParams era)
 ensPrevPParamsL = lens ensPrevPParams (\es x -> es {ensPrevPParams = x})
@@ -453,8 +453,8 @@ toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
   let EnactState {..} = cg
    in [ "committee" .= ensCommittee
       , "constitution" .= ensConstitution
-      , "pparams" .= ensPParams
-      , "prevPParams" .= ensPParams
+      , "curPParams" .= ensCurPParams
+      , "prevPParams" .= ensPrevPParams
       , "treasury" .= ensTreasury
       , "withdrawals" .= ensWithdrawals
       , "prevGovActionIds" .= ensPrevGovActionIds
@@ -497,7 +497,7 @@ instance EraPParams era => EncCBOR (EnactState era) where
       Rec EnactState
         !> To ensCommittee
         !> To ensConstitution
-        !> To ensPParams
+        !> To ensCurPParams
         !> To ensPrevPParams
         !> To ensTreasury
         !> To ensWithdrawals
@@ -536,6 +536,18 @@ instance EraPParams era => Default (RatifyState era)
 instance EraPParams era => NFData (RatifyState era)
 
 instance EraPParams era => NoThunks (RatifyState era)
+
+instance EraPParams era => ToJSON (RatifyState era) where
+  toJSON = object . toRatifyStatePairs
+  toEncoding = pairs . mconcat . toRatifyStatePairs
+
+toRatifyStatePairs :: (KeyValue a, EraPParams era) => RatifyState era -> [a]
+toRatifyStatePairs cg@(RatifyState _ _ _) =
+  let RatifyState {..} = cg
+   in [ "nextEnactState" .= rsEnactState
+      , "removedGovActions" .= rsRemoved
+      , "ratificationDelayed" .= rsDelayed
+      ]
 
 -- =============================================
 data ConwayGovState era = ConwayGovState
@@ -611,18 +623,18 @@ instance EraPParams era => NFData (ConwayGovState era)
 
 instance EraPParams era => NoThunks (ConwayGovState era)
 
+instance EraPParams era => ToExpr (ConwayGovState era)
+
 instance EraPParams era => ToJSON (ConwayGovState era) where
   toJSON = object . toConwayGovPairs
   toEncoding = pairs . mconcat . toConwayGovPairs
 
-instance EraPParams era => ToExpr (ConwayGovState era)
-
 toConwayGovPairs :: (KeyValue a, EraPParams era) => ConwayGovState era -> [a]
 toConwayGovPairs cg@(ConwayGovState _ _ _) =
-  -- TODO WILL DRepDistr CHANGE THIS?
   let ConwayGovState {..} = cg
-   in [ "gov" .= cgProposals
-      , "ratify" .= cgEnactState
+   in [ "proposals" .= cgProposals
+      , "enactState" .= cgEnactState
+      , "nextRatifyState" .= extractDRepPulsingState cgDRepPulsingState
       ]
 
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
