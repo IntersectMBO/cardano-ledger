@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add `epochStateGovStateL`
 * Add `shelleyCommonPParamsHKDPairsV8`
 * Add `ToExpr` instances for:
   * `ShelleyPoolPredFailure`

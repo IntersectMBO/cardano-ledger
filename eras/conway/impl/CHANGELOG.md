@@ -8,7 +8,10 @@
   * Add `"nextRatifyState"` field
   * Rename `"ratify"` to `"enactState"`
   * Rename `"gov"` to `"proposals"`
-* Fix `ToJSON` instance for `EnactState`, previously current PParams were used for `"prevPParams"`.
+* Fix `ToJSON` instance for `EnactState`:
+  * Current PParams were wrongfully used for `"prevPParams"`.
+  * Remove `"treasury"` and `"withdrawals"` as those are temporary bindings needed only
+    for `ENACT` rule
 * Add an anchor argument to `ResignCommitteeColdTxCert`
 * Prevent invalid previous gov-action ids in proposals #3768
   * Also, add lenses

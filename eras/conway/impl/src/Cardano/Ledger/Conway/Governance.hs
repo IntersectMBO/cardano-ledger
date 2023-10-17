@@ -455,8 +455,6 @@ toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
       , "constitution" .= ensConstitution
       , "curPParams" .= ensCurPParams
       , "prevPParams" .= ensPrevPParams
-      , "treasury" .= ensTreasury
-      , "withdrawals" .= ensWithdrawals
       , "prevGovActionIds" .= ensPrevGovActionIds
       ]
 

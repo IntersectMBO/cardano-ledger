@@ -53,6 +53,7 @@ import Cardano.Ledger.Conway.Governance (
   cgProposalsL,
   dormantEpoch,
   ensCommitteeL,
+  ensTreasuryL,
   ensWithdrawalsL,
   epochStateDRepPulsingStateL,
   extractDRepPulsingState,
@@ -71,6 +72,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   asTreasuryL,
   curPParamsEpochStateL,
+  epochStateGovStateL,
   epochStateTreasuryL,
   epochStateUMapL,
   esAccountState,
@@ -105,10 +107,11 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.UMap (UMap, UView (..), unionKeyDeposits, (∪+), (◁))
-import Cardano.Ledger.Val ((<->))
+import Cardano.Ledger.Val (zero, (<->))
 import Control.Monad.Trans.Reader (ask, asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
+  Assertion (..),
   Embed (..),
   STS (..),
   TRC (..),
@@ -161,10 +164,20 @@ instance
   type Environment (ConwayEPOCH era) = PoolDistr (EraCrypto era)
   type BaseM (ConwayEPOCH era) = ShelleyBase
 
-  -- \| EPOCH should never fail
+  -- EPOCH should never fail
   type PredicateFailure (ConwayEPOCH era) = Void
   type Event (ConwayEPOCH era) = ConwayEpochEvent era
   transitionRules = [epochTransition]
+  assertions =
+    let withdrawalsEmptyMessage = "Withdrawals in EnactState must be empty"
+        withdrawalsEmptyCheck es = null $ es ^. epochStateGovStateL . cgEnactStateL . ensWithdrawalsL
+        treasuryZeroMessage = "Treasury in EnactState must be zero"
+        treasuryZeroCheck es = zero == es ^. epochStateGovStateL . cgEnactStateL . ensTreasuryL
+     in [ PreCondition withdrawalsEmptyMessage (\(TRC (_, es, _)) -> withdrawalsEmptyCheck es)
+        , PostCondition withdrawalsEmptyMessage (const withdrawalsEmptyCheck)
+        , PreCondition treasuryZeroMessage (\(TRC (_, es, _)) -> treasuryZeroCheck es)
+        , PostCondition treasuryZeroMessage (const treasuryZeroCheck)
+        ]
 
 returnProposalDepositsUMap ::
   StrictSeq (GovActionState era) ->
@@ -349,8 +362,6 @@ epochTransition = do
       updateCommitteeState
         (rsEnactState' ^. ensCommitteeL)
         (es1 ^. esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL)
-    esGovernanceL :: Lens' (EpochState era) (GovState era)
-    esGovernanceL = esLStateL . lsUTxOStateL . utxosGovStateL
 
     newConwayGovState =
       ConwayGovState
@@ -364,7 +375,7 @@ epochTransition = do
     donations = es3 ^. esDonationL
   pure $
     es3
-      & esGovernanceL .~ newConwayGovState
+      & epochStateGovStateL .~ newConwayGovState
       -- Move donations to treasury
       & esAccountStateL . asTreasuryL <>~ donations
       -- remove hot keys of committee members that were removed
