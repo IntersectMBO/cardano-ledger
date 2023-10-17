@@ -281,8 +281,8 @@ toPulsingSnapshotsPairs :: (KeyValue a, EraPParams era) => PulsingSnapshot era -
 toPulsingSnapshotsPairs gas@(PulsingSnapshot _ _ _) =
   let (PulsingSnapshot {..}) = gas
    in [ "psProposals" .= psProposals
-      , -- , "psDRepDistr" .=  psDRepDistr   -- TODO   FIX ME
-        "psDRepState" .= psDRepState
+      , "psDRepDistr" .= psDRepDistr
+      , "psDRepState" .= psDRepState
       ]
 
 instance EraPParams era => ToJSON (PulsingSnapshot era) where
