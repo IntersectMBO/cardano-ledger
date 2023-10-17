@@ -43,7 +43,7 @@ import Cardano.Ledger.Conway.Governance (
   epochStateDRepPulsingStateL,
   epochStateIncrStakeDistrL,
   gasDRepVotesL,
-  getPulsingStateDRepDistr,
+  psDRepDistrG,
   rsDelayed,
   rsEnactState,
   rsRemoved,
@@ -209,7 +209,7 @@ getRatifyEnv = do
   eNo <- getsNES nesELL
   stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
   poolDistr <- getsNES nesPdL
-  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . getPulsingStateDRepDistr
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
   pure
@@ -268,7 +268,7 @@ isGovActionAccepted gaId = do
   eNo <- getsNES nesELL
   stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
   poolDistr <- getsNES nesPdL
-  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . getPulsingStateDRepDistr
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   action <- lookupGovActionState gaId
   enactSt <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL

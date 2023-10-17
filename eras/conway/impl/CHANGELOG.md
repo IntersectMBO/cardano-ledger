@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `psDRepDistrG`.
 * Rename `ensPParams` to `ensCurPParams`.
 * Add `ToJSON` instance for `RatifyState`
 * Change `ToJSON` instance for `ConwayGovState`:

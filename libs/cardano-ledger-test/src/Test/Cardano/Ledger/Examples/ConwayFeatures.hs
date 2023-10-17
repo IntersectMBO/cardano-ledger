@@ -545,13 +545,15 @@ testGov pf = do
     initialLedgerState =
       LedgerState
         (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero)
-        (CertState def def (def & dsUnifiedL .~ (unify Map.empty Map.empty Map.empty (delegs pf))))
-    initialLedgerState1 = initialLedgerState & lsCertStateL . certVStateL . vsCommitteeStateL .~ committeeState
+        (CertState def def (def & dsUnifiedL .~ unify Map.empty Map.empty Map.empty (delegs pf)))
+    initialLedgerState1 =
+      initialLedgerState & lsCertStateL . certVStateL . vsCommitteeStateL .~ committeeState
 
     proposalTx = txFromTestCaseData pf (proposal pf)
 
     govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
-    expectedGovState0 = (fromGovActionStateSeq (SSeq.singleton $ govActionState govActionId (newConstitutionProposal pf)))
+    expectedGovState0 =
+      fromGovActionStateSeq (SSeq.singleton $ govActionState govActionId (newConstitutionProposal pf))
 
     expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL) (DRComplete def def)
 
@@ -565,7 +567,7 @@ testGov pf = do
   let
     voteTx = txFromTestCaseData pf (vote pf govActionId)
     gas = govActionStateWithYesVotes govActionId pf (newConstitutionProposal pf)
-    expectedGovState1 = (fromGovActionStateSeq $ SSeq.singleton gas)
+    expectedGovState1 = fromGovActionStateSeq $ SSeq.singleton gas
     expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL) (DRComplete def def)
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 pp (trustMeP pf True voteTx)
   ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) <-
@@ -664,3 +666,11 @@ conwayFeatures =
     [ testCase "Propose, vote and enact a new constitution when enough votes" $ testGov (Conway Mock)
     , testCase "Prevent DRep expiry when there are no proposals to vote on" $ preventDRepExpiry (Conway Mock)
     ]
+
+pulsingStateSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
+pulsingStateSnapshotL = lens getter setter
+  where
+    getter (DRComplete x _) = x
+    getter state = fst (finishDRepPulser state)
+    setter (DRComplete _ y) snap = DRComplete snap y
+    setter state snap = DRComplete snap $ snd $ finishDRepPulser state

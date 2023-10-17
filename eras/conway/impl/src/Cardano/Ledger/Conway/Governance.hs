@@ -106,11 +106,10 @@ module Cardano.Ledger.Conway.Governance (
   computeDrepDistr,
   getRatifyState,
   conwayGovStateDRepDistrG,
-  getPulsingStateDRepDistr,
+  psDRepDistrG,
   dormantEpoch,
   PulsingSnapshot (..),
   psProposalsL,
-  pulsingStateSnapshotL,
   psDRepDistrL,
   psDRepStateL,
   RunConwayRatify (..),
@@ -201,7 +200,6 @@ import Cardano.Ledger.Core (
   PParamsUpdate,
   emptyPParams,
   fromEraCBOR,
-  -- fromEraShareCBOR,
   ppProtocolVersionL,
   toEraCBOR,
  )
@@ -928,15 +926,16 @@ data DRepPulser era (m :: Type -> Type) ans where
     DRepPulser era m ans
 
 instance Pulsable (DRepPulser era) where
-  done (DRepPulser {..}) = Map.null dpBalance
+  done DRepPulser {dpBalance} = Map.null dpBalance
 
   current x@(DRepPulser {}) = snd $ finishDRepPulser (DRPulsing x)
 
-  pulseM pulser@(DRepPulser {..}) | Map.null dpBalance = pure $ pulser
-  pulseM pulser@(DRepPulser {..}) =
-    let !(!steps, !balance') = Map.splitAt dpPulseSize dpBalance
-        drep' = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr steps
-     in pure (pulser {dpBalance = balance', dpDRepDistr = drep'})
+  pulseM pulser@(DRepPulser {..})
+    | Map.null dpBalance = pure pulser
+    | otherwise =
+        let !(!steps, !balance') = Map.splitAt dpPulseSize dpBalance
+            drep' = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr steps
+         in pure (pulser {dpBalance = balance', dpDRepDistr = drep'})
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
 
@@ -988,17 +987,17 @@ class
   where
   runConwayRatify :: Globals -> RatifyEnv era -> RatifyState era -> RatifySignal era -> RatifyState era
   runConwayRatify globals ratifyEnv ratifyState ratifySig =
-    case runReader
-      ( applySTS @(ConwayRATIFY era)
-          (TRC (ratifyEnv, ratifyState, ratifySig))
-      )
-      globals of
-      Left ps -> error (unlines ("The ConwayRATIFY rule, which should never fail, did." : map show ps))
-      Right ratifyState' -> ratifyState'
+    let ratifyResult =
+          runReader (applySTS @(ConwayRATIFY era) (TRC (ratifyEnv, ratifyState, ratifySig))) globals
+     in case ratifyResult of
+          Left ps ->
+            error (unlines ("Impossible: RATIFY rule never fails, but it did:" : map show ps))
+          Right ratifyState' -> ratifyState'
 
 finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
 finishDRepPulser (DRComplete snap ratstate) = (snap, ratstate)
-finishDRepPulser (DRPulsing (DRepPulser {..})) = (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
+finishDRepPulser (DRPulsing (DRepPulser {..})) =
+  (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
     !finalDRepDistr = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr dpBalance
     !ratifyEnv =
@@ -1030,23 +1029,18 @@ data DRepPulsingState era
       !(RatifyState era)
   deriving (Generic, NoThunks, NFData)
 
-pulsingStateSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
-pulsingStateSnapshotL = lens getter setter
-  where
-    getter (DRComplete x _) = x
-    getter state = fst (finishDRepPulser state)
-    setter (DRComplete _ y) snap = DRComplete snap y
-    setter state snap = (\(_, y) -> DRComplete snap y) (finishDRepPulser state)
-
 dormantEpoch :: DRepPulsingState era -> Bool
 dormantEpoch (DRPulsing x) = SS.null (dpProposals x)
 dormantEpoch (DRComplete b _) = SS.null (psProposals b)
 
-getPulsingStateDRepDistr :: SimpleGetter (DRepPulsingState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
-getPulsingStateDRepDistr = to get
+-- | This is potentially an expensive getter. Make sure not to use it in the first 80% of
+-- the epoch.
+psDRepDistrG ::
+  SimpleGetter (DRepPulsingState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+psDRepDistrG = to get
   where
     get (DRComplete x _) = psDRepDistr x
-    get x = (psDRepDistr . fst) $ finishDRepPulser x
+    get x = psDRepDistr . fst $ finishDRepPulser x
 
 instance EraPParams era => Eq (DRepPulsingState era) where
   x == y = finishDRepPulser x == finishDRepPulser y
@@ -1096,14 +1090,14 @@ startDRepPulsingState ::
   Coin ->
   Globals ->
   DRepPulsingState era
-startDRepPulsingState stepSize umap stakedistr pooldistr dstate epoch committee enact proposals treas global =
+startDRepPulsingState stepSize umap stakeDistr poolDistr dstate epoch committee enact proposals treas global =
   DRPulsing
     ( DRepPulser
         stepSize
         umap
-        stakedistr -- used as the balance of things left to iterate over
-        stakedistr -- used as part of the snapshot
-        pooldistr
+        stakeDistr -- used as the balance of things left to iterate over
+        stakeDistr -- used as part of the snapshot
+        poolDistr
         Map.empty -- The partial result starts as the empty map
         dstate
         epoch
