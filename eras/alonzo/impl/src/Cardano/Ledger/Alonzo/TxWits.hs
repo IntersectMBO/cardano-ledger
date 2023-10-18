@@ -22,7 +22,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.TxWits (
-  RdmrPtr (..),
+  RedeemerPointer (..),
   Redeemers (Redeemers),
   unRedeemers,
   nullRedeemers,
@@ -59,7 +59,8 @@ where
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
+import Cardano.Ledger.Alonzo.Scripts
+  (AlonzoScript (..), ExUnits (..), AlonzoEraScript (..), RedeemerPointer (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData, upgradeData)
 import Cardano.Ledger.Binary (
   Annotator,
@@ -94,60 +95,33 @@ import Cardano.Ledger.Shelley.TxBody (WitVKey)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
-import Data.Bifunctor (Bifunctor (first))
-import Data.Map.Strict (Map)
+import Data.Bifunctor (Bifunctor (..))
+import Data.Map.Strict (Map, mapKeys)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 -- ==========================================
 
-data RdmrPtr
-  = RdmrPtr
-      !Tag
-      {-# UNPACK #-} !Word64
-  deriving (Eq, Ord, Show, Generic)
+newtype RedeemersRaw era = RedeemersRaw (Map (RedeemerPointer era) (Data era, ExUnits))
+  deriving (Generic, Typeable)
 
-instance NoThunks RdmrPtr
+deriving newtype instance AlonzoEraScript era => NoThunks (RedeemersRaw era)
 
-instance NFData RdmrPtr
+deriving instance AlonzoEraScript era => Eq (RedeemersRaw era)
 
-instance ToExpr RdmrPtr
+instance AlonzoEraScript era => NFData (RedeemersRaw era)
 
--- EncCBOR and DecCBOR for RdmrPtr is used in UTXOW for error reporting
-instance DecCBOR RdmrPtr where
-  decCBOR = RdmrPtr <$> decCBOR <*> decCBOR
+deriving instance AlonzoEraScript era => Show (RedeemersRaw era)
 
-instance EncCBOR RdmrPtr where
-  encCBOR (RdmrPtr t w) = encCBOR t <> encCBOR w
+instance AlonzoEraScript era => ToExpr (RedeemersRaw era)
 
-instance EncCBORGroup RdmrPtr where
-  listLen _ = 2
-  listLenBound _ = 2
-  encCBORGroup (RdmrPtr t w) = encCBOR t <> encCBOR w
-  encodedGroupSizeExpr size_ _proxy =
-    encodedSizeExpr size_ (Proxy :: Proxy Tag)
-      + encodedSizeExpr size_ (Proxy :: Proxy Word64)
-
-instance DecCBORGroup RdmrPtr where
-  decCBORGroup = RdmrPtr <$> decCBOR <*> decCBOR
-
-newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
-  deriving (Eq, Generic, Typeable, NFData)
-  deriving newtype (NoThunks)
-
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (RedeemersRaw era)
-
-instance ToExpr (RedeemersRaw era)
-
-instance Typeable era => EncCBOR (RedeemersRaw era) where
+instance AlonzoEraScript era => EncCBOR (RedeemersRaw era) where
   encCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
     where
       keyValueEncoder (ptr, (dats, exs)) =
@@ -166,17 +140,17 @@ instance Memoized Redeemers where
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
   deriving newtype (Eq, Generic, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Redeemers era)
+deriving instance AlonzoEraScript era => Show (Redeemers era)
 
-instance ToExpr (Redeemers era)
+instance AlonzoEraScript era => ToExpr (Redeemers era)
 
 -- =====================================================
 -- Pattern for Redeemers
 
 pattern Redeemers ::
   forall era.
-  Era era =>
-  Map RdmrPtr (Data era, ExUnits) ->
+  AlonzoEraScript era =>
+  Map (RedeemerPointer era) (Data era, ExUnits) ->
   Redeemers era
 pattern Redeemers rs <-
   (getMemoRawType -> RedeemersRaw rs)
@@ -185,23 +159,35 @@ pattern Redeemers rs <-
 
 {-# COMPLETE Redeemers #-}
 
-unRedeemers :: Era era => Redeemers era -> Map RdmrPtr (Data era, ExUnits)
+unRedeemers :: AlonzoEraScript era => Redeemers era -> Map (RedeemerPointer era) (Data era, ExUnits)
 unRedeemers (Redeemers rs) = rs
 
-nullRedeemers :: Era era => Redeemers era -> Bool
+nullRedeemers :: AlonzoEraScript era => Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
 
-emptyRedeemers :: Era era => Redeemers era
+emptyRedeemers :: AlonzoEraScript era => Redeemers era
 emptyRedeemers = Redeemers mempty
+
+upgradeRedeemerPointer ::
+  (AlonzoEraScript era, AlonzoEraScript (PreviousEra era)) =>
+  RedeemerPointer (PreviousEra era) -> RedeemerPointer era
+upgradeRedeemerPointer (RedeemerPointer purpose v) =
+  RedeemerPointer
+    (upgradeRedeemerPurpose purpose)
+    v
 
 -- | Upgrade redeemers from one era to another. The underlying data structure
 -- will remain identical, but the memoised serialisation may change to reflect
 -- the versioned serialisation of the new era.
-upgradeRedeemers :: (Era era1, Era era2) => Redeemers era1 -> Redeemers era2
+upgradeRedeemers ::
+  ( AlonzoEraScript era, AlonzoEraScript (PreviousEra era)
+  ) =>
+  Redeemers (PreviousEra era) ->
+  Redeemers era
 upgradeRedeemers (Redeemers m) =
   Redeemers m'
   where
-    m' = fmap (first upgradeData) m
+    m' = mapKeys upgradeRedeemerPointer $ fmap (first upgradeData) m
 
 -- ====================================================================
 -- In the Spec, AlonzoTxWits has 4 logical fields. Here in the implementation
@@ -263,7 +249,12 @@ instance
   ) =>
   ToExpr (AlonzoTxWits era)
 
-instance (Era era, Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era) where
+instance
+  ( Script era ~ AlonzoScript era
+  , AlonzoEraScript era
+  ) =>
+  Semigroup (AlonzoTxWits era)
+  where
   (<>) x y | isEmptyTxWitness x = y
   (<>) x y | isEmptyTxWitness y = x
   (<>)
@@ -271,7 +262,12 @@ instance (Era era, Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era
     (getMemoRawType -> AlonzoTxWitsRaw u v w x (Redeemers y)) =
       AlonzoTxWits (a <> u) (b <> v) (c <> w) (d <> x) (Redeemers (e <> y))
 
-instance (Era era, Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits era) where
+instance
+  ( AlonzoEraScript era
+  , Script era ~ AlonzoScript era
+  ) =>
+  Monoid (AlonzoTxWits era)
+  where
   mempty = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 
 deriving instance
@@ -285,7 +281,7 @@ deriving instance
   ) =>
   NFData (AlonzoTxWits era)
 
-isEmptyTxWitness :: Era era => AlonzoTxWits era -> Bool
+isEmptyTxWitness :: AlonzoEraScript era => AlonzoTxWits era -> Bool
 isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
@@ -357,39 +353,28 @@ deriving via
 -- will remain identical, but the memoised serialisation may change to reflect
 -- the versioned serialisation of the new era.
 upgradeTxDats ::
-  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
-  TxDats era1 ->
-  TxDats era2
+  ( Era era
+  , Era (PreviousEra era)
+  , EraCrypto era ~ EraCrypto (PreviousEra era)
+  ) =>
+  TxDats (PreviousEra era) ->
+  TxDats era
 upgradeTxDats (TxDats datMap) = TxDats $ fmap upgradeData datMap
 
 -- =====================================================
 -- AlonzoTxWits instances
 
-deriving stock instance
-  ( Era era
-  , Eq (Script era)
-  ) =>
-  Eq (AlonzoTxWitsRaw era)
+deriving stock instance ( AlonzoEraScript era) => Eq (AlonzoTxWitsRaw era)
 
-deriving stock instance
-  (Era era, Show (Script era)) =>
-  Show (AlonzoTxWitsRaw era)
+deriving stock instance (AlonzoEraScript era) => Show (AlonzoTxWitsRaw era)
 
-instance (Era era, NoThunks (Script era)) => NoThunks (AlonzoTxWitsRaw era)
+instance (AlonzoEraScript era) => NoThunks (AlonzoTxWitsRaw era)
 
-deriving newtype instance
-  ( Era era
-  , Eq (Script era)
-  ) =>
-  Eq (AlonzoTxWits era)
+deriving newtype instance ( AlonzoEraScript era) => Eq (AlonzoTxWits era)
 
-deriving newtype instance
-  (Era era, Show (Script era)) =>
-  Show (AlonzoTxWits era)
+deriving newtype instance (AlonzoEraScript era) => Show (AlonzoTxWits era)
 
-deriving newtype instance
-  (Era era, NoThunks (Script era)) =>
-  NoThunks (AlonzoTxWits era)
+deriving newtype instance (AlonzoEraScript era) => NoThunks (AlonzoTxWits era)
 
 -- =====================================================
 -- Pattern for AlonzoTxWits
@@ -408,7 +393,7 @@ pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} 
 {-# COMPLETE AlonzoTxWits' #-}
 
 pattern AlonzoTxWits ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   Set (WitVKey 'Witness (EraCrypto era)) ->
   Set (BootstrapWitness (EraCrypto era)) ->
   Map (ScriptHash (EraCrypto era)) (Script era) ->
@@ -428,14 +413,14 @@ pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
 -- =======================================================
 
 addrAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrAlonzoTxWitsL =
   lensMemoRawType atwrAddrTxWits $ \witsRaw addrWits -> witsRaw {atwrAddrTxWits = addrWits}
 {-# INLINEABLE addrAlonzoTxWitsL #-}
 
 bootAddrAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrAlonzoTxWitsL =
   lensMemoRawType atwrBootAddrTxWits $
@@ -443,21 +428,21 @@ bootAddrAlonzoTxWitsL =
 {-# INLINEABLE bootAddrAlonzoTxWitsL #-}
 
 scriptAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptAlonzoTxWitsL =
   lensMemoRawType atwrScriptTxWits $ \witsRaw scriptWits -> witsRaw {atwrScriptTxWits = scriptWits}
 {-# INLINEABLE scriptAlonzoTxWitsL #-}
 
 datsAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (TxDats era)
 datsAlonzoTxWitsL =
   lensMemoRawType atwrDatsTxWits $ \witsRaw datsWits -> witsRaw {atwrDatsTxWits = datsWits}
 {-# INLINEABLE datsAlonzoTxWitsL #-}
 
 rdmrsAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   Lens' (AlonzoTxWits era) (Redeemers era)
 rdmrsAlonzoTxWitsL =
   lensMemoRawType atwrRdmrsTxWits $ \witsRaw rdmrsWits -> witsRaw {atwrRdmrsTxWits = rdmrsWits}
@@ -496,7 +481,8 @@ instance (EraScript (AlonzoEra c), Crypto c) => AlonzoEraTxWits (AlonzoEra c) wh
   rdmrsTxWitsL = rdmrsAlonzoTxWitsL
   {-# INLINE rdmrsTxWitsL #-}
 
-instance (TxWits era ~ AlonzoTxWits era, AlonzoEraTxWits era) => EqRaw (AlonzoTxWits era) where
+instance (TxWits era ~ AlonzoTxWits era
+  , AlonzoEraTxWits era, AlonzoEraScript era) => EqRaw (AlonzoTxWits era) where
   eqRaw = alonzoEqTxWitsRaw
 
 -- | This is a convenience Lens that will hash the `Data` when it is being added to the
@@ -515,7 +501,9 @@ hashDataTxWitsL =
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AlonzoTxWits era)
 
-instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw era) where
+instance
+  (Script era ~ AlonzoScript era
+  , AlonzoEraScript era) => EncCBOR (AlonzoTxWitsRaw era) where
   encCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
     encode $
       Keyed
@@ -568,18 +556,18 @@ instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw er
       isPlutusLanguage _ (TimelockScript _) = False
       isPlutusLanguage lang (PlutusScript ps) = lang == plutusLanguage ps
 
-instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
+instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
   decCBOR = do
     entries <- fmap sequence . decodeList $ decodeAnnElement
     pure $ RedeemersRaw . Map.fromList <$> entries
     where
-      decodeAnnElement :: forall s. Decoder s (Annotator (RdmrPtr, (Data era, ExUnits)))
+      decodeAnnElement :: forall s. Decoder s (Annotator (RedeemerPointer era, (Data era, ExUnits)))
       decodeAnnElement = do
         (rdmrPtr, dat, ex) <- decodeElement
         let f x y z = (x, (y, z))
         pure $ f rdmrPtr <$> dat <*> pure ex
       {-# INLINE decodeAnnElement #-}
-      decodeElement :: forall s. Decoder s (RdmrPtr, Annotator (Data era), ExUnits)
+      decodeElement :: forall s. Decoder s (RedeemerPointer era, Annotator (Data era), ExUnits)
       decodeElement = do
         decodeRecordNamed
           "Redeemer"
@@ -594,10 +582,10 @@ instance Era era => EncCBOR (Redeemers era)
 deriving via
   (Mem RedeemersRaw era)
   instance
-    Era era => DecCBOR (Annotator (Redeemers era))
+    AlonzoEraScript era => DecCBOR (Annotator (Redeemers era))
 
 instance
-  ( EraScript era
+  ( AlonzoEraScript era
   , EncCBOR (Data era)
   , EraScript era
   , Script era ~ AlonzoScript era
@@ -661,10 +649,13 @@ instance
 deriving via
   (Mem AlonzoTxWitsRaw era)
   instance
-    (EraScript era, Script era ~ AlonzoScript era) =>
+    (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
     DecCBOR (Annotator (AlonzoTxWits era))
 
-alonzoEqTxWitsRaw :: AlonzoEraTxWits era => TxWits era -> TxWits era -> Bool
+alonzoEqTxWitsRaw ::
+  ( AlonzoEraTxWits era
+  , AlonzoEraScript era
+  ) => TxWits era -> TxWits era -> Bool
 alonzoEqTxWitsRaw txWits1 txWits2 =
   shelleyEqTxWitsRaw txWits1 txWits2
     && eqRawType (txWits1 ^. datsTxWitsL) (txWits2 ^. datsTxWitsL)

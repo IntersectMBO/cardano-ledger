@@ -18,6 +18,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TupleSections #-}
 
 module Cardano.Ledger.Alonzo.TxBody (
   AlonzoTxOut (..),
@@ -69,7 +72,12 @@ module Cardano.Ledger.Alonzo.TxBody (
   EraIndependentScriptIntegrity,
   ScriptIntegrityHash,
   getAlonzoTxOutEitherAddr,
+  getAlonzoSpendingTxIn,
   utxoEntrySize,
+  alonzoRdptr,
+  alonzoRdptrInv,
+  alonzoRdptrUnwrapped,
+  alonzoRdptrInvUnwrapped,
 )
 where
 
@@ -77,7 +85,6 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.Alonzo.TxOut
@@ -97,7 +104,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
-import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
+import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID, PolicyID (..))
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -111,7 +118,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
-import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
+import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley, RewardAcnt)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
@@ -128,8 +135,42 @@ import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoRedeemerPurpose (..)
+  , AlonzoScriptPurpose (..), AlonzoEraScript (..), RedeemerPointer (..))
+import Cardano.Ledger.Indexable (Indexable(..))
+import Data.Word (Word64)
 
 -- ======================================
+
+class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
+  collateralInputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
+
+  reqSignerHashesTxBodyL :: Lens' (TxBody era) (Set (KeyHash 'Witness (EraCrypto era)))
+
+  scriptIntegrityHashTxBodyL ::
+    Lens' (TxBody era) (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+
+  networkIdTxBodyL :: Lens' (TxBody era) (StrictMaybe Network)
+
+  rdptr ::
+    TxBody era ->
+    ScriptPurpose era ->
+    StrictMaybe (RedeemerPointer era)
+
+  rdptrInv ::
+    TxBody era ->
+    RedeemerPointer era ->
+    StrictMaybe (ScriptPurpose era)
+
+  getSpendingTxIn :: ScriptPurpose era -> Maybe (TxIn (EraCrypto era))
+
+  mkSpendingPurpose :: TxIn (EraCrypto era) -> ScriptPurpose era
+
+  mkRewardingPurpose :: RewardAcnt (EraCrypto era) -> ScriptPurpose era
+
+  mkCertifyingPurpose :: TxCert era -> ScriptPurpose era
+
+  mkMintingPurpose :: PolicyID (EraCrypto era) -> ScriptPurpose era
 
 data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   { atbrInputs :: !(Set (TxIn (EraCrypto era)))
@@ -332,6 +373,88 @@ instance Crypto c => AlonzoEraTxBody (AlonzoEra c) where
   networkIdTxBodyL =
     lensMemoRawType atbrTxNetworkId (\txBodyRaw networkId -> txBodyRaw {atbrTxNetworkId = networkId})
   {-# INLINEABLE networkIdTxBodyL #-}
+
+  rdptr = alonzoRdptr
+  {-# INLINEABLE rdptr #-}
+
+  rdptrInv = alonzoRdptrInv
+  {-# INLINEABLE rdptrInv #-}
+
+  getSpendingTxIn = getAlonzoSpendingTxIn
+  {-# INLINEABLE getSpendingTxIn #-}
+
+  mkSpendingPurpose = Spending
+  {-# INLINEABLE mkSpendingPurpose #-}
+
+  mkRewardingPurpose = Rewarding
+  {-# INLINEABLE mkRewardingPurpose #-}
+
+  mkCertifyingPurpose = Certifying
+  {-# INLINEABLE mkCertifyingPurpose #-}
+
+  mkMintingPurpose = Minting
+  {-# INLINEABLE mkMintingPurpose #-}
+
+getAlonzoSpendingTxIn :: AlonzoScriptPurpose era -> Maybe (TxIn (EraCrypto era))
+getAlonzoSpendingTxIn (Spending txin) = Just txin
+getAlonzoSpendingTxIn _ = Nothing
+
+alonzoRdptr ::
+  ( MaryEraTxBody era
+  , Indexable (ScriptHash (EraCrypto era)) (Set (ScriptHash (EraCrypto era)))
+  , RedeemerPurpose era ~ AlonzoRedeemerPurpose era
+  ) =>
+  TxBody era ->
+  AlonzoScriptPurpose era ->
+  StrictMaybe (RedeemerPointer era)
+alonzoRdptr txb prp = uncurry RedeemerPointer <$> alonzoRdptrUnwrapped txb prp
+
+alonzoRdptrUnwrapped ::
+  ( MaryEraTxBody era
+  , Indexable (ScriptHash (EraCrypto era)) (Set (ScriptHash (EraCrypto era)))
+  ) =>
+  TxBody era ->
+  AlonzoScriptPurpose era ->
+  StrictMaybe (AlonzoRedeemerPurpose era, Word64)
+alonzoRdptrUnwrapped txBody = \case
+  Minting (PolicyID hash) ->
+    (Mint,) <$> indexOf hash (txBody ^. mintedTxBodyF)
+  Spending txin ->
+    (Spend,) <$> indexOf txin (txBody ^. inputsTxBodyL)
+  Rewarding racnt ->
+    (Rewrd,) <$> indexOf racnt (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  Certifying d ->
+    (Cert,) <$> indexOf d (txBody ^. certsTxBodyL)
+
+alonzoRdptrInv ::
+  ( MaryEraTxBody era
+  , Indexable (ScriptHash (EraCrypto era)) (Set (ScriptHash (EraCrypto era)))
+  , RedeemerPurpose era ~ AlonzoRedeemerPurpose era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
+  ) =>
+  TxBody era ->
+  RedeemerPointer era ->
+  StrictMaybe (ScriptPurpose era)
+alonzoRdptrInv txb (RedeemerPointer prp idx) = alonzoRdptrInvUnwrapped txb prp idx
+
+alonzoRdptrInvUnwrapped ::
+  ( MaryEraTxBody era
+  , Indexable (ScriptHash (EraCrypto era)) (Set (ScriptHash (EraCrypto era)))
+  ) =>
+  TxBody era ->
+  AlonzoRedeemerPurpose era ->
+  Word64 ->
+  StrictMaybe (AlonzoScriptPurpose era)
+alonzoRdptrInvUnwrapped txBody purpose idx = case purpose of
+  Mint ->
+    Minting . PolicyID <$> fromIndex idx (txBody ^. mintedTxBodyF)
+  Spend ->
+    Spending <$> fromIndex idx (txBody ^. inputsTxBodyL)
+  Rewrd ->
+    Rewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  Cert ->
+    Certifying <$> fromIndex idx (txBody ^. certsTxBodyL)
+
 
 deriving newtype instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>

@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   CostModels (..),
   ExUnits (ExUnits),
   Prices (..),
-  Tag,
+  AlonzoRedeemerPurpose,
   getCostModelLanguage,
   getCostModelParams,
  )
@@ -75,10 +75,10 @@ ppLanguage PlutusV3 = ppString "PlutusV3"
 instance PrettyA Language where
   prettyA = ppLanguage
 
-ppTag :: Tag -> PDoc
+ppTag :: AlonzoRedeemerPurpose -> PDoc
 ppTag x = ppString (show x)
 
-instance PrettyA Tag where
+instance PrettyA AlonzoRedeemerPurpose where
   prettyA = ppTag
 
 ppScript ::

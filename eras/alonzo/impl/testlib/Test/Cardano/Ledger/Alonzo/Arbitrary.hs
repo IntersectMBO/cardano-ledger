@@ -27,7 +27,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (BinaryPlutus (..), Language, Plutus (..))
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits), AlonzoEraPParams)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
@@ -41,9 +41,9 @@ import Cardano.Ledger.Alonzo.Scripts (
   CostModels (..),
   ExUnits (..),
   Prices (..),
-  Tag (..),
+  AlonzoRedeemerPurpose (..),
   mkCostModel,
-  mkCostModelsLenient,
+  mkCostModelsLenient, AlonzoEraScript (..), AlonzoScriptPurpose (..),
  )
 import Cardano.Ledger.Alonzo.Scripts.Data (
   BinaryData,
@@ -56,7 +56,6 @@ import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   IsValid (IsValid),
   ScriptIntegrity (ScriptIntegrity),
-  ScriptPurpose (..),
   getLanguageView,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (
@@ -67,7 +66,7 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (AlonzoTxOut))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (AlonzoTxWits),
-  RdmrPtr (RdmrPtr),
+  RedeemerPointer (RedeemerPointer),
   Redeemers (Redeemers),
   TxDats (TxDats),
  )
@@ -127,25 +126,27 @@ instance
   where
   arbitrary = mkAlonzoTxAuxData @[] <$> arbitrary <*> arbitrary
 
-instance Arbitrary Tag where
+instance Arbitrary (AlonzoRedeemerPurpose era) where
   arbitrary = arbitraryBoundedEnum
 
-instance Arbitrary RdmrPtr where
-  arbitrary = RdmrPtr <$> arbitrary <*> arbitrary
+instance Arbitrary (RedeemerPurpose era) => Arbitrary (RedeemerPointer era) where
+  arbitrary = RedeemerPointer <$> arbitrary <*> arbitrary
 
 instance Arbitrary ExUnits where
   arbitrary = ExUnits <$> genUnit <*> genUnit
     where
       genUnit = fromIntegral <$> choose (0, maxBound :: Int64)
 
-instance Era era => Arbitrary (Redeemers era) where
+instance (AlonzoEraScript era
+  , Arbitrary (RedeemerPurpose era)) => Arbitrary (Redeemers era) where
   arbitrary = Redeemers <$> arbitrary
 
 instance
   ( Era era
   , Arbitrary (Script era)
+  , Arbitrary (RedeemerPurpose era)
   , AlonzoScript era ~ Script era
-  , EraScript era
+  , AlonzoEraScript era
   ) =>
   Arbitrary (AlonzoTxWits era)
   where
@@ -376,6 +377,7 @@ instance
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   , Arbitrary (ShelleyUtxowPredFailure era)
   , Arbitrary (TxCert era)
+  , Arbitrary (ScriptPurpose era)
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
   where
@@ -391,7 +393,7 @@ instance
   ( Era era
   , Arbitrary (TxCert era)
   ) =>
-  Arbitrary (ScriptPurpose era)
+  Arbitrary (AlonzoScriptPurpose era)
   where
   arbitrary =
     oneof
@@ -403,7 +405,9 @@ instance
 
 instance
   ( AlonzoEraPParams era
+  , AlonzoEraScript era
   , Arbitrary (PParams era)
+  , Arbitrary (RedeemerPurpose era)
   ) =>
   Arbitrary (ScriptIntegrity era)
   where

@@ -22,7 +22,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
 
 import Cardano.Ledger.Alonzo.Era (AlonzoBBODY)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxBlockExUnitsL)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits, AlonzoEraScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
@@ -131,6 +131,7 @@ bbodyTransition ::
   , Era.TxSeq era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
   , AlonzoEraPParams era
+  , AlonzoEraScript era
   ) =>
   TransitionRule (someBBODY era)
 bbodyTransition =
@@ -203,6 +204,7 @@ instance
   , Tx era ~ AlonzoTx era
   , EraSegWits era
   , AlonzoEraPParams era
+  , AlonzoEraScript era
   ) =>
   STS (AlonzoBBODY era)
   where

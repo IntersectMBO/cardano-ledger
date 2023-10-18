@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -23,7 +22,8 @@ import Cardano.Ledger.Alonzo.TxInfo (
   unTxCertV3,
  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), RdmrPtr, unRedeemers, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..)
+  , RedeemerPointer, unRedeemers, unTxDats)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfoV1, babbageTxInfoV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as B
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -47,6 +47,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Lens.Micro
 import qualified PlutusLedgerApi.V3 as PV3
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody(..))
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (ConwayEra c) where
   -- FIXME: implement for conway era
@@ -75,7 +76,7 @@ conwayTxInfo ::
   SystemStart ->
   UTxO era ->
   Tx era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+  Either (TranslationError era) VersionedTxInfo
 conwayTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ Alonzo.transVITime pp ei sysS interval
   case lang of
@@ -103,7 +104,7 @@ conwayTxInfoV3 ::
   PV3.POSIXTimeRange ->
   Tx era ->
   UTxO era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+  Either (TranslationError era) VersionedTxInfo
 conwayTxInfoV3 timeRange tx utxo = do
   inputs <- mapM (B.txInfoInV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
   refInputs <- mapM (B.txInfoInV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
@@ -169,12 +170,11 @@ transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
       Map.insert (Alonzo.transCred cred) n ans
 
 transRedeemerPtr ::
-  ( MaryEraTxBody era
-  , EraPlutusContext 'PlutusV3 era
+  ( EraPlutusContext 'PlutusV3 era, AlonzoEraTxBody era
   ) =>
   TxBody era ->
-  (RdmrPtr, (Data era, ExUnits)) ->
-  Either (TranslationError (EraCrypto era)) (PV3.ScriptPurpose, PV3.Redeemer)
+  (RedeemerPointer era, (Data era, ExUnits)) ->
+  Either (TranslationError era) (PV3.ScriptPurpose, PV3.Redeemer)
 transRedeemerPtr txb (ptr, (d, _)) =
   case rdptrInv txb ptr of
     SNothing -> Left (RdmrPtrPointsToNothing ptr)

@@ -50,7 +50,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody (..),
   babbageAllInputsTxBodyF,
-  babbageSpendableInputsTxBodyF,
+  babbageSpendableInputsTxBodyF, AlonzoEraTxBody (..), alonzoRdptr, alonzoRdptrInv,
  )
 import Cardano.Ledger.BaseTypes (Network, fromSMaybe, isSJust)
 import Cardano.Ledger.Binary (
@@ -81,7 +81,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
-import Cardano.Ledger.Conway.Scripts ()
+import Cardano.Ledger.Conway.Scripts (ConwayRedeemerPurpose (..))
 import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert, ConwayTxCertUpgradeError)
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Crypto
@@ -121,6 +121,8 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
+import Cardano.Ledger.Alonzo.Tx (ScriptPurpose)
+import Cardano.Ledger.Alonzo.TxWits (RedeemerPointer)
 
 instance Memoized ConwayTxBody where
   type RawType ConwayTxBody = ConwayTxBodyRaw
@@ -479,6 +481,27 @@ instance Crypto c => AlonzoEraTxBody (ConwayEra c) where
 
   networkIdTxBodyL = lensMemoRawType ctbrTxNetworkId (\txb x -> txb {ctbrTxNetworkId = x})
   {-# INLINE networkIdTxBodyL #-}
+
+  rdptr = conwayRdptr
+  {-# INLINE rdptr #-}
+
+  rdptrInv = conwayRdptrInv
+  {-# INLINE rdptrInv #-}
+
+conwayRdptr ::
+    MaryEraTxBody era =>
+    TxBody era ->
+    ScriptPurpose era ->
+    StrictMaybe (RedeemerPointer era)
+conwayRdptr txb ScriptPurpose = undefined
+
+conwayRdptrInv ::
+    MaryEraTxBody era =>
+    TxBody era ->
+    ConwayRedeemerPurpose era ->
+    StrictMaybe (ScriptPurpose era)
+conwayRdptrInv txb (AlonzoInConwayRedeemerPurpose purpose) = alonzoRdptrInv txb purpose
+conwayRdptrInv txb _ = undefined
 
 instance Crypto c => BabbageEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance BabbageEraTxBody (ConwayEra StandardCrypto) #-}

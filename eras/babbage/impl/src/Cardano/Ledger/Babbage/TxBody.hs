@@ -119,6 +119,7 @@ import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
   AlonzoTxBody (..),
   MaryEraTxBody (..),
   ShelleyEraTxBody (..),
+  AlonzoEraTxOut (..), alonzoRdptr, alonzoRdptrInv, getAlonzoSpendingTxIn,
  )
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
@@ -176,6 +177,7 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Prelude hiding (lookup)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScriptPurpose(..))
 
 -- ======================================
 
@@ -568,6 +570,27 @@ instance Crypto c => AlonzoEraTxBody (BabbageEra c) where
 
   networkIdTxBodyL = networkIdBabbageTxBodyL
   {-# INLINE networkIdTxBodyL #-}
+
+  rdptr = alonzoRdptr
+  {-# INLINE rdptr #-}
+
+  rdptrInv = alonzoRdptrInv
+  {-# INLINE rdptrInv #-}
+
+  getSpendingTxIn = getAlonzoSpendingTxIn
+  {-# INLINE getSpendingTxIn #-}
+
+  mkSpendingPurpose = Spending
+  {-# INLINE mkSpendingPurpose #-}
+
+  mkRewardingPurpose = Rewarding
+  {-# INLINE mkRewardingPurpose #-}
+
+  mkCertifyingPurpose = Certifying
+  {-# INLINE mkCertifyingPurpose #-}
+
+  mkMintingPurpose = Minting
+  {-# INLINE mkMintingPurpose #-}
 
 instance Crypto c => BabbageEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance BabbageEraTxBody (BabbageEra StandardCrypto) #-}

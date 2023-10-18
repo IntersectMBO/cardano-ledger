@@ -23,6 +23,7 @@ import Control.State.Transition (STS (PredicateFailure))
 import Data.Functor.Identity (Identity)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoScript)
 import Test.QuickCheck
+import Cardano.Ledger.Babbage.Scripts (AlonzoEraScript(..))
 
 deriving instance Arbitrary CoinPerByte
 
@@ -99,6 +100,7 @@ instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   , Arbitrary (TxCert era)
+  , Arbitrary (ScriptPurpose era)
   ) =>
   Arbitrary (BabbageUtxowPredFailure era)
   where

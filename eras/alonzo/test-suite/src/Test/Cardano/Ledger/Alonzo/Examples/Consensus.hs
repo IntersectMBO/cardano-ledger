@@ -10,7 +10,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels (..), ExUnits (..), Prices (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as Tag (AlonzoRedeemerPurpose (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))

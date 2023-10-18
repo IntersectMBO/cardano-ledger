@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.PParams (
   alonzoCommonPParamsHKDPairs,
   encodeLangViews,
   getLanguageView,
+  AlonzoEraPParams (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,

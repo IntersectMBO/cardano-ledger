@@ -138,7 +138,7 @@ pattern Data p <- (getMemoRawType -> PlutusData p)
 -- | Upgrade 'Data' from one era to another. While the underlying data will
 -- remain the same, the memoised serialisation may change to reflect the
 -- versioned serialisation of the new era.
-upgradeData :: (Era era1, Era era2) => Data era1 -> Data era2
+upgradeData :: (Era era, Era (PreviousEra era)) => Data (PreviousEra era) -> Data era
 upgradeData (Data d) = Data d
 
 getPlutusData :: Data era -> PV1.Data

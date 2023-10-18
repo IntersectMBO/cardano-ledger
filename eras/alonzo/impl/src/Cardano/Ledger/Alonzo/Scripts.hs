@@ -14,15 +14,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 module Cardano.Ledger.Alonzo.Scripts (
-  Tag (..),
+  AlonzoRedeemerPurpose (..),
   BinaryPlutus (..),
   AlonzoScript (TimelockScript, PlutusScript),
+  AlonzoEraScript (..),
+  AlonzoScriptPurpose (..),
+  RedeemerPointer (..),
   Script,
   txscriptfee,
   isPlutusScript,
@@ -31,7 +35,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   validScript,
   transProtocolVersion,
   eqAlonzoScriptRaw,
-  translateAlonzoScript,
+  upgradeAlonzoScript,
 
   -- * Cost Model
   CostModel,
@@ -56,8 +60,8 @@ module Cardano.Ledger.Alonzo.Scripts (
 )
 where
 
+import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw, translateTimelock)
-import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
   NonNegativeInterval,
@@ -69,14 +73,14 @@ import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   Decoder,
   DecoderError (..),
-  EncCBOR (encCBOR),
+  EncCBOR (..),
   Encoding,
   ToCBOR (toCBOR),
   cborError,
   decodeMapByKey,
   encodeFoldableAsDefLenList,
   getVersion64,
-  ifDecoderVersionAtLeast,
+  ifDecoderVersionAtLeast, EncCBORGroup (..), DecCBORGroup (..),
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
@@ -149,26 +153,11 @@ import qualified PlutusLedgerApi.V1 as PV1 (
  )
 import qualified PlutusLedgerApi.V2 as PV2 (ParamName, deserialiseScript, mkEvaluationContext)
 import qualified PlutusLedgerApi.V3 as PV3 (ParamName, deserialiseScript, mkEvaluationContext)
-
--- | Marker indicating the part of a transaction for which this script is acting
--- as a validator.
-data Tag
-  = -- | Validates spending a script-locked UTxO
-    Spend
-  | -- | Validates minting new tokens
-    Mint
-  | -- | Validates certificate transactions
-    Cert
-  | -- | Validates withdrawal from a reward account
-    Rewrd
-  deriving (Eq, Generic, Ord, Show, Enum, Bounded)
-
-instance NoThunks Tag
-
-instance NFData Tag where
-  rnf = rwhnf
-
-instance ToExpr Tag
+import Cardano.Ledger.Alonzo.Era (AlonzoEra)
+import Cardano.Ledger.Alonzo.Redeemer (AlonzoRedeemerPurpose (..)
+  , AlonzoScriptPurpose (..))
+import Data.Kind (Type)
+import Data.Data (Proxy (..))
 
 -- =======================================================
 
@@ -180,11 +169,14 @@ data AlonzoScript era
 
 instance ToExpr (AlonzoScript era)
 
-translateAlonzoScript ::
-  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
-  AlonzoScript era1 ->
-  AlonzoScript era2
-translateAlonzoScript = \case
+upgradeAlonzoScript ::
+  ( Era era
+  , Era (PreviousEra era)
+  , EraCrypto era ~ EraCrypto (PreviousEra era)
+  ) =>
+  AlonzoScript (PreviousEra era) ->
+  AlonzoScript era
+upgradeAlonzoScript = \case
   TimelockScript ts -> TimelockScript $ translateTimelock ts
   PlutusScript ps -> PlutusScript ps
 
@@ -219,6 +211,38 @@ instance Crypto c => EraScript (AlonzoEra c) where
   getNativeScript = \case
     TimelockScript ts -> Just ts
     _ -> Nothing
+
+class
+  ( EraScript era
+  , Show (RedeemerPurpose era)
+  , Eq (RedeemerPurpose era)
+  , Ord (RedeemerPurpose era)
+  , ToExpr (RedeemerPurpose era)
+  , EncCBOR (RedeemerPurpose era)
+  , DecCBOR (RedeemerPurpose era)
+  , NFData (RedeemerPurpose era)
+  , NoThunks (RedeemerPurpose era)
+  , Show (ScriptPurpose era)
+  , Eq (ScriptPurpose era)
+  , ToExpr (ScriptPurpose era)
+  , EncCBOR (ScriptPurpose era)
+  , DecCBOR (ScriptPurpose era)
+  , NFData (ScriptPurpose era)
+  , NoThunks (ScriptPurpose era)
+  ) => AlonzoEraScript era where
+  type RedeemerPurpose era = (r :: Type) | r -> era
+  type ScriptPurpose era = (r :: Type) | r -> era
+
+  upgradeRedeemerPurpose ::
+    AlonzoEraScript (PreviousEra era) =>
+    RedeemerPurpose (PreviousEra era) ->
+    RedeemerPurpose era
+
+instance Crypto c => AlonzoEraScript (AlonzoEra c) where
+  type RedeemerPurpose (AlonzoEra c) = AlonzoRedeemerPurpose (AlonzoEra c)
+  type ScriptPurpose (AlonzoEra c) = AlonzoScriptPurpose (AlonzoEra c)
+
+  upgradeRedeemerPurpose = error "impossible: Cannot upgrade redeemer in Alonzo"
 
 instance EqRaw (AlonzoScript era) where
   eqRaw = eqAlonzoScriptRaw
@@ -673,19 +697,19 @@ txscriptfee Prices {prMem, prSteps} ExUnits {exUnitsMem = m, exUnitsSteps = s} =
 -- Serialisation
 --------------------------------------------------------------------------------
 
-tagToWord8 :: Tag -> Word8
+tagToWord8 :: AlonzoRedeemerPurpose era -> Word8
 tagToWord8 = toEnum . fromEnum
 
-word8ToTag :: Word8 -> Maybe Tag
+word8ToTag :: Word8 -> Maybe (AlonzoRedeemerPurpose era)
 word8ToTag e
-  | fromEnum e > fromEnum (Prelude.maxBound :: Tag) = Nothing
-  | fromEnum e < fromEnum (minBound :: Tag) = Nothing
+  | fromEnum e > fromEnum (Prelude.maxBound :: AlonzoRedeemerPurpose era) = Nothing
+  | fromEnum e < fromEnum (minBound :: AlonzoRedeemerPurpose era) = Nothing
   | otherwise = Just $ toEnum (fromEnum e)
 
-instance EncCBOR Tag where
+instance Era era => EncCBOR (AlonzoRedeemerPurpose era) where
   encCBOR = encCBOR . tagToWord8
 
-instance DecCBOR Tag where
+instance Era era => DecCBOR (AlonzoRedeemerPurpose era) where
   decCBOR =
     word8ToTag <$> decCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Tag" "Unknown redeemer tag"
@@ -786,3 +810,40 @@ instance ToExpr Prices
 
 instance ToExpr ExUnits where
   toExpr (WrapExUnits (ExUnits' x y)) = App "ExUnits" [defaultExprViaShow x, defaultExprViaShow y]
+
+data RedeemerPointer era
+  = RedeemerPointer
+      !(RedeemerPurpose era)
+      {-# UNPACK #-} !Word64
+  deriving (Generic)
+
+deriving instance Eq (RedeemerPurpose era) => Eq (RedeemerPointer era)
+
+deriving instance Show (RedeemerPurpose era) => Show (RedeemerPointer era)
+
+deriving instance Ord (RedeemerPurpose era) => Ord (RedeemerPointer era)
+
+instance NoThunks (RedeemerPurpose era) =>  NoThunks (RedeemerPointer era)
+
+instance NFData (RedeemerPurpose era) => NFData (RedeemerPointer era)
+
+instance ToExpr (RedeemerPurpose era) => ToExpr (RedeemerPointer era)
+
+-- EncCBOR and DecCBOR for RdmrPtr is used in UTXOW for error reporting
+instance AlonzoEraScript era => DecCBOR (RedeemerPointer era) where
+  decCBOR = RedeemerPointer <$> decCBOR <*> decCBOR
+
+instance AlonzoEraScript era => EncCBOR (RedeemerPointer era) where
+  encCBOR (RedeemerPointer t w) = encCBOR t <> encCBOR w
+
+instance AlonzoEraScript era => EncCBORGroup (RedeemerPointer era) where
+  listLen _ = 2
+  listLenBound _ = 2
+  encCBORGroup (RedeemerPointer t w) = encCBOR t <> encCBOR w
+
+  encodedGroupSizeExpr size_ _proxy =
+    encodedSizeExpr size_ (Proxy :: Proxy (RedeemerPurpose era))
+      + encodedSizeExpr size_ (Proxy :: Proxy Word64)
+
+instance AlonzoEraScript era => DecCBORGroup (RedeemerPointer era) where
+  decCBORGroup = RedeemerPointer <$> decCBOR <*> decCBOR

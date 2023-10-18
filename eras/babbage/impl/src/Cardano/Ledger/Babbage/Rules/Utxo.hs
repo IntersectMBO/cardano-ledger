@@ -99,6 +99,8 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (Validation, failureIf, failureUnless)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody(..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
 
 -- ======================================================
 
@@ -185,6 +187,7 @@ feesOK ::
   ( EraTx era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
+  , AlonzoEraScript era
   ) =>
   PParams era ->
   Tx era ->
@@ -321,7 +324,7 @@ utxoTransition ::
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
+  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)), AlonzoEraScript era
   ) =>
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
@@ -408,6 +411,7 @@ instance
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   , PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era
+  , AlonzoEraScript era
   ) =>
   STS (BabbageUTXO era)
   where

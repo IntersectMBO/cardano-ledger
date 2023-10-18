@@ -5,7 +5,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -14,6 +13,8 @@
 --   Babbage Specification
 module Cardano.Ledger.Babbage.Scripts (
   AlonzoScript (..),
+  EraScript (..),
+  AlonzoEraScript (..),
   isPlutusScript,
   babbageScriptPrefixTag,
 )
@@ -24,13 +25,15 @@ import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   isPlutusScript,
-  translateAlonzoScript,
+  AlonzoRedeemerPurpose, AlonzoEraScript (..), upgradeAlonzoScript, AlonzoScriptPurpose,
  )
 import Cardano.Ledger.Babbage.Era
+import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Data.ByteString (ByteString)
+import Data.Coerce (coerce)
 
 babbageScriptPrefixTag ::
   Script era ~ AlonzoScript era => Script era -> ByteString
@@ -45,10 +48,17 @@ instance Crypto c => EraScript (BabbageEra c) where
   type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
   type NativeScript (BabbageEra c) = Timelock (BabbageEra c)
 
-  upgradeScript = translateAlonzoScript
+  upgradeScript = upgradeAlonzoScript
 
   scriptPrefixTag = babbageScriptPrefixTag
 
   getNativeScript = \case
     TimelockScript ts -> Just ts
     _ -> Nothing
+
+instance Crypto c => AlonzoEraScript (BabbageEra c) where
+  type RedeemerPurpose (BabbageEra c) = AlonzoRedeemerPurpose (BabbageEra c)
+  type ScriptPurpose (BabbageEra c) = AlonzoScriptPurpose (BabbageEra c)
+
+  upgradeRedeemerPurpose = coerce
+

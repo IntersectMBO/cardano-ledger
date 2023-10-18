@@ -55,7 +55,7 @@ module Cardano.Ledger.Conway.PParams (
 )
 where
 
-import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
+import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..), AlonzoEraPParams (..), ppuMaxValSizeL, ppuCollateralPercentageL, ppCostModelsL, ppuCostModelsL)
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (Prices), emptyCostModels, updateCostModels)
 import Cardano.Ledger.Ap (Ap, runAp_)
 import Cardano.Ledger.Babbage (BabbageEra)

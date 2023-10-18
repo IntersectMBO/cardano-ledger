@@ -3,7 +3,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -14,8 +13,6 @@
 
 module Cardano.Ledger.Alonzo.PlutusScriptApi (
   -- Figure 8
-  getSpendingTxIn,
-  getDatumAlonzo,
   evalScripts,
   evalPlutusScripts,
   -- Figure 12
@@ -23,16 +20,16 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi (
   scriptsNeededFromBody,
   language,
   CollectError (..),
-  collectTwoPhaseScriptInputs,
   collectPlutusScriptsWithContext,
   knownToNotBe1Phase,
 )
 where
 
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..)
+  , CostModel, CostModels (..), ExUnits (..), AlonzoEraScript (..), AlonzoScriptPurpose)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data)
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
+import Cardano.Ledger.Alonzo.Tx (indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,
   ExtendedUTxO (..),
@@ -46,15 +43,12 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (getSpendingDatum),
   AlonzoScriptsNeeded (..),
-  getAlonzoSpendingDatum,
-  getAlonzoSpendingTxIn,
  )
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -69,26 +63,12 @@ import Debug.Trace (traceEvent)
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+import Cardano.Ledger.Alonzo.PParams (ppCostModelsL)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody)
 
 -- ===============================================================
 -- From the specification, Figure 8 "Scripts and their Arguments"
 -- ===============================================================
-
--- | Only the Spending ScriptPurpose contains TxIn
-getSpendingTxIn :: ScriptPurpose era -> Maybe (TxIn (EraCrypto era))
-getSpendingTxIn = getAlonzoSpendingTxIn
-{-# DEPRECATED getSpendingTxIn "In favor of `getAlonzoSpendingTxIn`" #-}
-
--- | Get the Data associated with a ScriptPurpose. Only the Spending
---   ScriptPurpose contains Data. Nothing is returned for the other kinds.
-getDatumAlonzo ::
-  (AlonzoEraTxWits era, AlonzoEraTxOut era, EraTx era) =>
-  Tx era ->
-  UTxO era ->
-  ScriptPurpose era ->
-  Maybe (Data era)
-getDatumAlonzo tx utxo = getAlonzoSpendingDatum utxo tx
-{-# DEPRECATED getDatumAlonzo "In favor of `getAlonzoSpendingDatum`" #-}
 
 -- ========================================================================
 
@@ -97,22 +77,26 @@ data CollectError era
   = NoRedeemer !(ScriptPurpose era)
   | NoWitness !(ScriptHash (EraCrypto era))
   | NoCostModel !Language
-  | BadTranslation !(TranslationError (EraCrypto era))
+  | BadTranslation !(TranslationError era)
   deriving (Generic)
 
-instance ToExpr (TxCert era) => ToExpr (CollectError era)
+instance
+  ( AlonzoEraScript era
+  , ToExpr (TxCert era)
+  ) =>
+  ToExpr (CollectError era)
 
-deriving instance (Era era, Eq (TxCert era)) => Eq (CollectError era)
-deriving instance (Era era, Show (TxCert era)) => Show (CollectError era)
-deriving instance (Era era, NoThunks (TxCert era)) => NoThunks (CollectError era)
+deriving instance (AlonzoEraScript era, Eq (TxCert era)) => Eq (CollectError era)
+deriving instance (AlonzoEraScript era, Show (TxCert era)) => Show (CollectError era)
+deriving instance (AlonzoEraScript era, NoThunks (TxCert era)) => NoThunks (CollectError era)
 
-instance EraTxCert era => EncCBOR (CollectError era) where
+instance (EraTxCert era, AlonzoEraScript era) => EncCBOR (CollectError era) where
   encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
   encCBOR (NoWitness x) = encode $ Sum (NoWitness @era) 1 !> To x
   encCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
   encCBOR (BadTranslation x) = encode $ Sum (BadTranslation @era) 3 !> To x
 
-instance (Era era, DecCBOR (TxCert era)) => DecCBOR (CollectError era) where
+instance (AlonzoEraScript era, DecCBOR (TxCert era)) => DecCBOR (CollectError era) where
   decCBOR = decode (Summands "CollectError" dec)
     where
       dec 0 = SumD NoRedeemer <! From
@@ -137,46 +121,17 @@ knownToNotBe1Phase scriptsAvailable (sp, sh) = do
   PlutusScript plutus <- sh `Map.lookup` scriptsAvailable
   Just (sp, plutus)
 
--- | Collect the inputs for twophase scripts. If any script can't find ist data return
---     a list of CollectError, if all goes well return a list of quadruples with the inputs.
---     Previous PredicateFailure tests should ensure we find Data for every script, BUT
---     the consequences of not finding Data means scripts can get dropped, so things
---     might validate that shouldn't. So we double check that every Script has its Data, and
---     if that is not the case, a PredicateFailure is raised in the Utxos rule.
-collectTwoPhaseScriptInputs ::
-  forall era.
-  ( MaryEraTxBody era
-  , AlonzoEraTxWits era
-  , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , ExtendedUTxO era
-  , Script era ~ AlonzoScript era
-  , AlonzoEraPParams era
-  , EraPlutusContext 'PlutusV1 era
-  ) =>
-  EpochInfo (Either Text) ->
-  SystemStart ->
-  PParams era ->
-  Tx era ->
-  UTxO era ->
-  Either [CollectError era] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
-collectTwoPhaseScriptInputs ei sysS pp tx utxo =
-  map unwrap <$> collectPlutusScriptsWithContext ei sysS pp tx utxo
-  where
-    unwrap (PlutusWithContext (Plutus lang (BinaryPlutus scriptBytes)) args exUnits costModel) =
-      (scriptBytes, lang, args, exUnits, costModel)
-{-# DEPRECATED collectTwoPhaseScriptInputs "In favor of `collectPlutusScriptsWithContext`" #-}
-
 collectPlutusScriptsWithContext ::
   forall era.
-  ( MaryEraTxBody era
-  , AlonzoEraTxWits era
+  ( AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
-  , AlonzoEraPParams era
   , EraPlutusContext 'PlutusV1 era
+  , AlonzoEraTxBody era
+  , AlonzoEraScript era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->

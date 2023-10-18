@@ -6,7 +6,7 @@ module Test.Cardano.Ledger.Babbage.Examples.Consensus where
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as Tag (AlonzoRedeemerPurpose (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (
   Data (..),
   dataToBinaryData,

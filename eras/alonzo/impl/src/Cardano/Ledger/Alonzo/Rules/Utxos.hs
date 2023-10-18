@@ -41,11 +41,10 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, AlonzoEraScript (..), AlonzoScriptPurpose)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
-  MaryEraTxBody (..),
   ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.Alonzo.TxInfo (
@@ -113,7 +112,8 @@ import NoThunks.Class (NoThunks)
 
 instance
   forall era.
-  ( AlonzoEraTx era
+  ( AlonzoEraScript era
+  , AlonzoEraTx era
   , AlonzoEraPParams era
   , ShelleyEraTxBody era
   , ExtendedUTxO era
@@ -132,6 +132,7 @@ instance
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext 'PlutusV1 era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -179,6 +180,8 @@ utxosTransition ::
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext 'PlutusV1 era
+  , AlonzoEraScript era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -193,15 +196,16 @@ scriptsTransition ::
   ( STS sts
   , Monad m
   , Script era ~ AlonzoScript era
-  , MaryEraTxBody era
   , AlonzoEraTxWits era
   , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BaseM sts ~ ReaderT Globals m
   , PredicateFailure sts ~ AlonzoUtxosPredFailure era
-  , AlonzoEraPParams era
   , EraPlutusContext 'PlutusV1 era
+  , AlonzoEraTxBody era
+  , AlonzoEraScript era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   SlotNo ->
   PParams era ->
@@ -240,7 +244,7 @@ alonzoEvalScriptsTxValid ::
   , ProtVerAtMost era 8
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext 'PlutusV1 era, ScriptPurpose era ~ AlonzoScriptPurpose era, AlonzoEraScript era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
@@ -278,7 +282,7 @@ alonzoEvalScriptsTxInvalid ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , Script era ~ AlonzoScript era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext 'PlutusV1 era, AlonzoEraScript era, ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxInvalid = do
@@ -385,6 +389,7 @@ data AlonzoUtxosPredFailure era
 instance
   ( ToExpr (PPUPPredFailure era)
   , ToExpr (TxCert era)
+  , AlonzoEraScript era
   ) =>
   ToExpr (AlonzoUtxosPredFailure era)
 
@@ -393,6 +398,7 @@ instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) wher
 
 instance
   ( EraTxCert era
+  , AlonzoEraScript era
   , EncCBOR (PPUPPredFailure era)
   ) =>
   EncCBOR (AlonzoUtxosPredFailure era)
@@ -403,7 +409,7 @@ instance
   encCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 2 !> To pf)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , DecCBOR (TxCert era)
   , DecCBOR (PPUPPredFailure era)
   ) =>
@@ -417,7 +423,7 @@ instance
       dec n = Invalid n
 
 deriving stock instance
-  ( Era era
+  ( AlonzoEraScript era
   , Show (TxCert era)
   , Show (Shelley.UTxOState era)
   , Show (PPUPPredFailure era)
@@ -425,7 +431,7 @@ deriving stock instance
   Show (AlonzoUtxosPredFailure era)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , Eq (TxCert era)
   , Eq (Shelley.UTxOState era)
   , Eq (PPUPPredFailure era)
@@ -438,7 +444,7 @@ instance
   _ == _ = False
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , NoThunks (TxCert era)
   , NoThunks (Shelley.UTxOState era)
   , NoThunks (PPUPPredFailure era)

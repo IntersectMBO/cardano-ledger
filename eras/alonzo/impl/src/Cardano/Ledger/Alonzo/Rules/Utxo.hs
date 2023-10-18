@@ -45,7 +45,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits, AlonzoEraScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxBody (
   AllegraEraTxBody (..),
@@ -264,7 +264,9 @@ vKeyLocked txOut =
 --   return) if any of the required parts are False.
 feesOK ::
   forall era.
-  AlonzoEraTx era =>
+    ( AlonzoEraTx era
+    , AlonzoEraScript era
+    ) =>
   PParams era ->
   Tx era ->
   UTxO era ->
@@ -351,6 +353,7 @@ validateOutsideForecast ::
   ( MaryEraTxBody era
   , AlonzoEraTxWits era
   , EraTx era
+  , AlonzoEraScript era
   ) =>
   EpochInfo (Either a) ->
   -- | Current slot number
@@ -434,6 +437,7 @@ validateExUnitsTooBigUTxO ::
   ( AlonzoEraTxWits era
   , EraTx era
   , AlonzoEraPParams era
+  , AlonzoEraScript era
   ) =>
   PParams era ->
   Tx era ->
@@ -475,6 +479,7 @@ utxoTransition ::
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
+  , AlonzoEraScript era
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
@@ -559,6 +564,7 @@ instance
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   , ProtVerAtMost era 8
+  , AlonzoEraScript era
   ) =>
   STS (AlonzoUTXO era)
   where

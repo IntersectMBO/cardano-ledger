@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Rules (
   requiredSignersAreWitnessed,
  )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, AlonzoEraScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
@@ -103,18 +103,17 @@ data BabbageUtxowPredFailure era
   deriving (Generic)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
   , ToExpr (TxCert era)
   ) =>
   ToExpr (BabbageUtxowPredFailure era)
 
 deriving instance
-  ( Era era
+  ( AlonzoEraScript era
   , Show (ShelleyUtxowPredFailure era)
   , Show (PredicateFailure (EraRule "UTXO" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
-  , Show (Script era)
   , Show (TxOut era)
   , Show (TxCert era)
   , Show (Value era)
@@ -122,13 +121,12 @@ deriving instance
   Show (BabbageUtxowPredFailure era)
 
 deriving instance
-  ( Era era
+  ( AlonzoEraScript era
   , Eq (ShelleyUtxowPredFailure era)
   , Eq (PredicateFailure (EraRule "UTXO" era))
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Eq (TxOut era)
   , Eq (TxCert era)
-  , Eq (Script era)
   ) =>
   Eq (BabbageUtxowPredFailure era)
 
@@ -139,13 +137,12 @@ instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) wher
   inject = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , EncCBOR (TxOut era)
   , EncCBOR (TxCert era)
   , EncCBOR (Value era)
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
-  , EncCBOR (Script era)
   , Typeable (TxAuxData era)
   ) =>
   EncCBOR (BabbageUtxowPredFailure era)
@@ -158,13 +155,12 @@ instance
       work (MalformedReferenceScripts x) = Sum MalformedReferenceScripts 4 !> To x
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , DecCBOR (TxOut era)
   , DecCBOR (TxCert era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   DecCBOR (BabbageUtxowPredFailure era)
@@ -282,7 +278,7 @@ babbageUtxowTransition ::
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , State (EraRule "UTXO" era) ~ UTxOState era
+  , State (EraRule "UTXO" era) ~ UTxOState era, AlonzoEraScript era
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
@@ -385,6 +381,7 @@ instance
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , ProtVerAtMost era 8
+  , AlonzoEraScript era
   ) =>
   STS (BabbageUTXOW era)
   where

@@ -130,13 +130,13 @@ instance ToExpr (TimelockRaw era)
 -- to prove the compiler that we can arbirarily switch out the eras as long
 -- as the cryptos for both eras are the same.
 translateTimelock ::
-  forall era1 era2.
-  ( Era era1
-  , Era era2
-  , EraCrypto era1 ~ EraCrypto era2
+  forall era.
+  ( Era era
+  , Era (PreviousEra era)
+  , EraCrypto era ~ EraCrypto (PreviousEra era)
   ) =>
-  Timelock era1 ->
-  Timelock era2
+  Timelock (PreviousEra era) ->
+  Timelock era
 translateTimelock (TimelockConstr (Memo tl bs)) =
   let rewrap rtl = TimelockConstr $ mkMemoBytes rtl (fromStrict $ fromShort bs)
    in case tl of

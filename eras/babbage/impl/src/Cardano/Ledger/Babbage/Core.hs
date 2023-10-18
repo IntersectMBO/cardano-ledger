@@ -31,6 +31,9 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Lens.Micro (Lens', SimpleGetter)
 import NoThunks.Class (NoThunks)
+import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody)
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
 
 class (AlonzoEraTxOut era, EraScript era) => BabbageEraTxOut era where
   referenceScriptTxOutL :: Lens' (TxOut era) (StrictMaybe (Script era))

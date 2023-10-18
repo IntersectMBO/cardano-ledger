@@ -46,7 +46,7 @@ import Cardano.Ledger.Address (
  )
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.PParams ()
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppCoinsPerUTxOWordL)
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.BaseTypes (
@@ -94,6 +94,11 @@ import GHC.TypeLits
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
+
+class (AlonzoEraPParams era, EraTxOut era) => AlonzoEraTxOut era where
+  dataHashTxOutL :: Lens' (TxOut era) (StrictMaybe (DataHash (EraCrypto era)))
+
+  datumTxOutF :: SimpleGetter (TxOut era) (Datum era)
 
 data Addr28Extra
   = Addr28Extra

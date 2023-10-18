@@ -26,9 +26,9 @@ where
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), AlonzoScriptPurpose)
 import Cardano.Ledger.Alonzo.Scripts.Data (Data)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Core
@@ -82,7 +82,7 @@ getDatumBabbage ::
   ) =>
   Tx era ->
   UTxO era ->
-  ScriptPurpose era ->
+  AlonzoScriptPurpose era ->
   Maybe (Data era)
 getDatumBabbage tx utxo = getBabbageSpendingDatum utxo tx
 {-# DEPRECATED getDatumBabbage "In favor of `getBabbageSpendingDatum`" #-}

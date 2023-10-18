@@ -11,7 +11,7 @@ module Cardano.Ledger.Babbage.UTxO (
 ) where
 
 import Cardano.Ledger.Alonzo.Scripts.Data (Data)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.TxOut (dataHashTxOutL)
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (
@@ -46,6 +46,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScriptPurpose)
 
 instance Crypto c => EraUTxO (BabbageEra c) where
   type ScriptsNeeded (BabbageEra c) = AlonzoScriptsNeeded (BabbageEra c)
@@ -85,7 +86,7 @@ getBabbageSpendingDatum ::
   ) =>
   UTxO era ->
   Tx era ->
-  ScriptPurpose era ->
+  AlonzoScriptPurpose era ->
   Maybe (Data era)
 getBabbageSpendingDatum (UTxO utxo) tx sp = do
   txIn <- getAlonzoSpendingTxIn sp

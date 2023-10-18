@@ -149,7 +149,7 @@ evalTxExUnits ::
   --  sufficient execution budget.
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReport era)
+  Either (TranslationError era) (RedeemerReport era)
 evalTxExUnits pp tx utxo ei sysS =
   Map.map (fmap snd) <$> evalTxExUnitsWithLogs pp tx utxo ei sysS
 
@@ -183,7 +183,7 @@ evalTxExUnitsWithLogs ::
   --
   --  Unlike `evalTxExUnits`, this function also returns evaluation logs, useful for
   --  debugging.
-  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs era)
+  Either (TranslationError era) (RedeemerReportWithLogs era)
 evalTxExUnitsWithLogs pp tx utxo ei sysS =
   let lookupCostModel lang = Map.lookup lang $ costModelsValid (pp ^. ppCostModelsL)
    in evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel
@@ -217,7 +217,7 @@ evaluateTransactionExecutionUnits ::
   --  sufficient execution budget.
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReport era)
+  Either (TranslationError era) (RedeemerReport era)
 evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
   Map.map (fmap snd) <$> evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels
 {-# DEPRECATED evaluateTransactionExecutionUnits "In favor of `evalTxExUnits`" #-}
@@ -251,7 +251,7 @@ evaluateTransactionExecutionUnitsWithLogs ::
   --  sufficient execution budget with logs of the script.
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs era)
+  Either (TranslationError era) (RedeemerReportWithLogs era)
 evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels =
   evalTxExUnitsWithLogsInternal pp tx utxo ei sysS $ \lang ->
     if l1 <= lang && lang <= l2
@@ -290,9 +290,9 @@ evalTxExUnitsWithLogsInternal ::
   --  sufficient execution budget with logs of the script.
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs era)
+  Either (TranslationError era) (RedeemerReportWithLogs era)
 evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
-  let getInfo :: Language -> Either (TranslationError (EraCrypto era)) VersionedTxInfo
+  let getInfo :: Language -> Either (TranslationError era) VersionedTxInfo
       getInfo lang = txInfo pp lang ei sysS utxo tx
   ctx <- sequence $ Map.fromSet getInfo languagesUsed
   pure $

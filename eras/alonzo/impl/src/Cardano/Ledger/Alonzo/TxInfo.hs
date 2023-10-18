@@ -22,6 +22,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   TxOutSource (..),
   TranslationError (..),
   transProtocolVersion,
+  transScriptPurpose,
   validScript,
   transDataHash,
   transDataHash',
@@ -49,7 +50,6 @@ module Cardano.Ledger.Alonzo.TxInfo (
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
-  transScriptPurpose,
   VersionedTxInfo (..),
   ExtendedUTxO (..),
   alonzoTxInfo,
@@ -97,17 +97,17 @@ import Cardano.Ledger.Alonzo.Scripts (
   encodeCostModel,
   getEvaluationContext,
   transProtocolVersion,
-  validScript,
+  validScript, AlonzoEraScript (..), AlonzoScriptPurpose (..),
  )
 import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum, getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
+import Cardano.Ledger.Alonzo.Tx (CostModel, txdats')
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoEraTxOut (..),
   mintTxBodyL,
   vldtTxBodyL,
  )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RedeemerPointer, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Binary (
@@ -219,39 +219,45 @@ instance Crypto c => DecCBOR (TxOutSource c) where
       dec n = Invalid n
 
 -- | NOTE: class 'TranslateEra' defines an associated type with the same name. Not to be confused.
-data TranslationError c
-  = ByronTxOutInContext !(TxOutSource c)
-  | TranslationLogicMissingInput !(TxIn c)
-  | RdmrPtrPointsToNothing !RdmrPtr
+data TranslationError era
+  = ByronTxOutInContext !(TxOutSource (EraCrypto era))
+  | TranslationLogicMissingInput !(TxIn (EraCrypto era))
+  | RdmrPtrPointsToNothing !(RedeemerPointer era)
   | LanguageNotSupported !Language
-  | InlineDatumsNotSupported !(TxOutSource c)
-  | ReferenceScriptsNotSupported !(TxOutSource c)
-  | ReferenceInputsNotSupported !(Set (TxIn c))
+  | InlineDatumsNotSupported !(TxOutSource (EraCrypto era))
+  | ReferenceScriptsNotSupported !(TxOutSource (EraCrypto era))
+  | ReferenceInputsNotSupported !(Set (TxIn (EraCrypto era)))
   | TimeTranslationPastHorizon !Text
-  deriving (Eq, Show, Generic, NoThunks)
+  deriving (Generic)
 
-instance ToExpr (TranslationError c)
+deriving instance AlonzoEraScript era => Eq (TranslationError era)
 
-instance Crypto c => EncCBOR (TranslationError c) where
+deriving instance AlonzoEraScript era => Show (TranslationError era)
+
+deriving instance AlonzoEraScript era => NoThunks (TranslationError era)
+
+instance AlonzoEraScript era => ToExpr (TranslationError era)
+
+instance AlonzoEraScript era => EncCBOR (TranslationError era) where
   encCBOR = \case
     ByronTxOutInContext txOutSource ->
-      encode $ Sum ByronTxOutInContext 0 !> To txOutSource
+      encode $ Sum (ByronTxOutInContext @era) 0 !> To txOutSource
     TranslationLogicMissingInput txIn ->
-      encode $ Sum TranslationLogicMissingInput 1 !> To txIn
+      encode $ Sum (TranslationLogicMissingInput @era) 1 !> To txIn
     RdmrPtrPointsToNothing ptr ->
-      encode $ Sum RdmrPtrPointsToNothing 2 !> To ptr
+      encode $ Sum (RdmrPtrPointsToNothing @era) 2 !> To ptr
     LanguageNotSupported lang ->
       encode $ Sum LanguageNotSupported 3 !> To lang
     InlineDatumsNotSupported txOutSource ->
-      encode $ Sum InlineDatumsNotSupported 4 !> To txOutSource
+      encode $ Sum (InlineDatumsNotSupported @era) 4 !> To txOutSource
     ReferenceScriptsNotSupported txOutSource ->
-      encode $ Sum ReferenceScriptsNotSupported 5 !> To txOutSource
+      encode $ Sum (ReferenceScriptsNotSupported @era) 5 !> To txOutSource
     ReferenceInputsNotSupported txIns ->
-      encode $ Sum ReferenceInputsNotSupported 6 !> To txIns
+      encode $ Sum (ReferenceInputsNotSupported @era) 6 !> To txIns
     TimeTranslationPastHorizon err ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
 
-instance Crypto c => DecCBOR (TranslationError c) where
+instance AlonzoEraScript era => DecCBOR (TranslationError era) where
   decCBOR = decode (Summands "TranslationError" dec)
     where
       dec 0 = SumD ByronTxOutInContext <! From
@@ -510,7 +516,7 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
 
 transScriptPurpose ::
   EraPlutusContext 'PlutusV1 era =>
-  ScriptPurpose era ->
+  AlonzoScriptPurpose era ->
   PV1.ScriptPurpose
 transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
@@ -537,7 +543,7 @@ class ExtendedUTxO era where
     SystemStart ->
     UTxO era ->
     Tx era ->
-    Either (TranslationError (EraCrypto era)) VersionedTxInfo
+    Either (TranslationError era) VersionedTxInfo
 
   txscripts ::
     UTxO era ->
@@ -591,7 +597,7 @@ alonzoTxInfo ::
   SystemStart ->
   UTxO era ->
   Tx era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+  Either (TranslationError era) VersionedTxInfo
 alonzoTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
   -- We need to do this as a separate step
@@ -615,7 +621,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           , PV1.txInfoData = map transDataPair datpairs
           , PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated txBody))
           }
-    _ -> Left $ LanguageNotSupported lang
+    _ -> Left . LanguageNotSupported $ lang
   where
     txBody :: TxBody era
     txBody = tx ^. bodyTxL
@@ -629,13 +635,15 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
 
 -- | valContext pairs transaction data with a script purpose.
 --   See figure 22 of the Alonzo specification.
-valContext ::
-  EraPlutusContext 'PlutusV1 era =>
+valContext :: forall era.
+  ( EraPlutusContext 'PlutusV1 era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
+  ) =>
   VersionedTxInfo ->
   ScriptPurpose era ->
   Data era
 valContext (TxInfoPV1 txinfo) sp =
-  Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
+  Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose @era sp)))
 valContext (TxInfoPV2 txinfo) sp =
   Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV3 txinfo) _sp =

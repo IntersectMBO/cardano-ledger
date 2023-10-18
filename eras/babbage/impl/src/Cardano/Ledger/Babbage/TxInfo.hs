@@ -12,9 +12,9 @@ module Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), AlonzoEraScript (..), AlonzoScriptPurpose)
 import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), binaryDataToData, getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
+import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,
   PlutusTxCert (..),
@@ -28,7 +28,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
-  RdmrPtr,
+  RedeemerPointer,
   unRedeemers,
   unTxDats,
  )
@@ -82,7 +82,7 @@ txInfoOutV1 ::
   ) =>
   TxOutSource (EraCrypto era) ->
   TxOut era ->
-  Either (TranslationError (EraCrypto era)) PV1.TxOut
+  Either (TranslationError era) PV1.TxOut
 txInfoOutV1 os txOut = do
   let val = txOut ^. valueTxOutL
       referenceScript = txOut ^. referenceScriptTxOutL
@@ -107,7 +107,7 @@ txInfoOutV2 ::
   ) =>
   TxOutSource (EraCrypto era) ->
   TxOut era ->
-  Either (TranslationError (EraCrypto era)) PV2.TxOut
+  Either (TranslationError era) PV2.TxOut
 txInfoOutV2 os txOut = do
   let val = txOut ^. valueTxOutL
       referenceScript = transReferenceScript @era $ txOut ^. referenceScriptTxOutL
@@ -136,7 +136,7 @@ txInfoInV1 ::
   ) =>
   UTxO era ->
   TxIn (EraCrypto era) ->
-  Either (TranslationError (EraCrypto era)) PV1.TxInInfo
+  Either (TranslationError era) PV1.TxInInfo
 txInfoInV1 (UTxO mp) txin =
   case Map.lookup txin mp of
     Nothing -> Left (TranslationLogicMissingInput txin)
@@ -153,7 +153,7 @@ txInfoInV2 ::
   ) =>
   UTxO era ->
   TxIn (EraCrypto era) ->
-  Either (TranslationError (EraCrypto era)) PV2.TxInInfo
+  Either (TranslationError era) PV2.TxInInfo
 txInfoInV2 (UTxO mp) txin =
   case Map.lookup txin mp of
     Nothing -> Left (TranslationLogicMissingInput txin)
@@ -165,16 +165,18 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  ( MaryEraTxBody era
-  , Alonzo.EraPlutusContext 'PlutusV1 era
+  forall era.
+  ( Alonzo.EraPlutusContext 'PlutusV1 era
+  , AlonzoEraTxBody era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TxBody era ->
-  (RdmrPtr, (Data era, ExUnits)) ->
-  Either (TranslationError (EraCrypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
+  (RedeemerPointer era, (Data era, ExUnits)) ->
+  Either (TranslationError era) (PV2.ScriptPurpose, PV2.Redeemer)
 transRedeemerPtr txb (ptr, (d, _)) =
   case rdptrInv txb ptr of
     SNothing -> Left (RdmrPtrPointsToNothing ptr)
-    SJust sp -> Right (Alonzo.transScriptPurpose sp, transRedeemer d)
+    SJust sp -> Right (Alonzo.transScriptPurpose @era sp, transRedeemer d)
 
 instance Crypto c => EraPlutusContext 'PlutusV1 (BabbageEra c) where
   transTxCert = TxCertPlutusV1 . alonzoTransTxCert
@@ -190,6 +192,8 @@ babbageTxInfo ::
   , Value era ~ MaryValue (EraCrypto era)
   , Alonzo.EraPlutusContext 'PlutusV1 era
   , Alonzo.EraPlutusContext 'PlutusV2 era
+  , AlonzoEraScript era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   PParams era ->
   Language ->
@@ -197,7 +201,7 @@ babbageTxInfo ::
   SystemStart ->
   UTxO era ->
   Tx era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+  Either (TranslationError era) VersionedTxInfo
 babbageTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ Alonzo.transVITime pp ei sysS interval
   case lang of
@@ -218,7 +222,7 @@ babbageTxInfoV1 ::
   PV1.POSIXTimeRange ->
   Tx era ->
   UTxO era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+  Either (TranslationError era) VersionedTxInfo
 babbageTxInfoV1 timeRange tx utxo = do
   let refInputs = txBody ^. referenceInputsTxBodyL
   unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
@@ -257,11 +261,12 @@ babbageTxInfoV2 ::
   , Value era ~ MaryValue (EraCrypto era)
   , EraPlutusContext 'PlutusV2 era
   , EraPlutusContext 'PlutusV1 era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era, AlonzoEraScript era
   ) =>
   PV2.POSIXTimeRange ->
   Tx era ->
   UTxO era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+  Either (TranslationError era) VersionedTxInfo
 babbageTxInfoV2 timeRange tx utxo = do
   inputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
   refInputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))

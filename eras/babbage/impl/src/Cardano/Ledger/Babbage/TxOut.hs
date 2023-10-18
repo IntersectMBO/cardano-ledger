@@ -64,7 +64,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   decodeDataHash32,
   encodeAddress28,
   encodeDataHash32,
-  getAdaOnly,
+  getAdaOnly, AlonzoEraTxOut,
  )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Babbage.Core

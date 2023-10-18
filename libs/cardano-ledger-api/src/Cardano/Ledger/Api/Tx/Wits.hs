@@ -30,11 +30,13 @@ module Cardano.Ledger.Api.Tx.Wits (
   Redeemers (..),
   unRedeemers,
   RdmrPtr (..),
-  Tag (..),
+  AlonzoRedeemerPurpose (..),
 )
 where
 
-import Cardano.Ledger.Alonzo.Scripts (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts
+  ( AlonzoRedeemerPurpose (..)
+  )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits,
   RdmrPtr (..),

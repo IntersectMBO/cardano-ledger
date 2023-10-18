@@ -34,12 +34,10 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), AlonzoEraScript (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
-  ScriptPurpose,
   hashScriptIntegrity,
-  rdptr,
  )
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
@@ -48,7 +46,7 @@ import Cardano.Ledger.Alonzo.TxBody (
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), languages)
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
-  RdmrPtr,
+  RedeemerPointer,
   unRedeemers,
   unTxDats,
  )
@@ -129,46 +127,42 @@ data AlonzoUtxowPredFailure era
       (Set (TxIn (EraCrypto era)))
   | -- | List of redeemers not needed
     ExtraRedeemers
-      ![RdmrPtr]
+      ![RedeemerPointer era]
   deriving (Generic)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
   , ToExpr (TxCert era)
   ) =>
   ToExpr (AlonzoUtxowPredFailure era)
 
 deriving instance
-  ( Era era
+  ( AlonzoEraScript era
   , Show (TxCert era)
-  , Show (Script era)
   , Show (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Show
   ) =>
   Show (AlonzoUtxowPredFailure era)
 
 deriving instance
-  ( Era era
+  ( AlonzoEraScript era
   , Eq (TxCert era)
-  , Eq (Script era)
   , Eq (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Eq
   ) =>
   Eq (AlonzoUtxowPredFailure era)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , NoThunks (TxCert era)
-  , NoThunks (Script era)
   , NoThunks (PredicateFailure (EraRule "UTXO" era))
   ) =>
   NoThunks (AlonzoUtxowPredFailure era)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , EncCBOR (TxCert era)
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (TxAuxData era)
-  , EncCBOR (Script era)
   ) =>
   EncCBOR (AlonzoUtxowPredFailure era)
   where
@@ -187,10 +181,8 @@ newtype AlonzoUtxowEvent era
   = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
 
 instance
-  ( Era era
-  , DecCBOR (TxCert era)
+  ( AlonzoEraScript era
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   DecCBOR (AlonzoUtxowPredFailure era)
@@ -198,10 +190,8 @@ instance
   decCBOR = decode (Summands "UtxowPredicateFail" decodePredFail)
 
 decodePredFail ::
-  ( Era era
-  , DecCBOR (TxCert era)
+  ( AlonzoEraScript era
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   Word ->
@@ -257,6 +247,7 @@ hasExactSetOfRedeemers ::
   forall era.
   ( AlonzoEraTx era
   , Script era ~ AlonzoScript era
+  , AlonzoEraScript era
   ) =>
   Tx era ->
   ScriptsProvided era ->
@@ -301,6 +292,7 @@ ppViewHashesMatch ::
   ( AlonzoEraTx era
   , ExtendedUTxO era
   , Script era ~ AlonzoScript era
+  , AlonzoEraScript era
   ) =>
   Tx era ->
   PParams era ->
@@ -336,7 +328,7 @@ alonzoStyleWitness ::
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , ProtVerAtMost era 8
+  , ProtVerAtMost era 8, AlonzoEraScript era
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
@@ -437,6 +429,7 @@ instance
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , ProtVerAtMost era 8
+  , AlonzoEraScript era
   ) =>
   STS (AlonzoUTXOW era)
   where

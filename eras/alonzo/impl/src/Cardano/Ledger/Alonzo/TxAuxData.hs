@@ -16,6 +16,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Cardano.Ledger.Alonzo.TxAuxData (
   -- * AlonzoTxAuxData
@@ -310,9 +311,12 @@ pattern AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} <-
 {-# COMPLETE AlonzoTxAuxData #-}
 
 translateAlonzoTxAuxData ::
-  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
-  AlonzoTxAuxData era1 ->
-  AlonzoTxAuxData era2
+  ( Era era
+  , Era (PreviousEra era)
+  , EraCrypto era ~ EraCrypto (PreviousEra era)
+  ) =>
+  AlonzoTxAuxData (PreviousEra era) ->
+  AlonzoTxAuxData era
 translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =
   AlonzoTxAuxData
     { atadMetadata = atadMetadata

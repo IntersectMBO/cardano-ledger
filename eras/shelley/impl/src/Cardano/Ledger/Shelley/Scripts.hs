@@ -36,7 +36,7 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (..),
-  ToCBOR,
+  ToCBOR (..),
   decodeRecordSum,
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))

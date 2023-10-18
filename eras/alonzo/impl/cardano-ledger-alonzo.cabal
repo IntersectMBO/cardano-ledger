@@ -49,6 +49,7 @@ library
 
     hs-source-dirs:   src
     other-modules:
+        Cardano.Ledger.Alonzo.Redeemer
         Cardano.Ledger.Alonzo.TxCert
         Cardano.Ledger.Alonzo.Era
         Cardano.Ledger.Alonzo.Rules.Bbody

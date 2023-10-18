@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | This module provides data structures and operations for talking about
 --     Non-native Script languages. It is expected that new languages (or new
@@ -74,7 +75,7 @@ data Plutus = Plutus
   { plutusLanguage :: !Language
   , plutusScript :: !BinaryPlutus
   }
-  deriving stock (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Show, Generic)
 
 instance ToExpr Plutus
 
@@ -83,6 +84,8 @@ instance NFData Plutus where
   rnf = rwhnf
 
 instance NoThunks Plutus
+
+deriving instance Ord Plutus
 
 -- | Binary representation of a Plutus script.
 newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}

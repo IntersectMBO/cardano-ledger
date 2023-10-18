@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.Rules (
   validEnd,
   when2Phase,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, AlonzoEraScript (..))
 import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
@@ -71,12 +71,15 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Debug.Trace (traceEvent)
 import Lens.Micro
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody(..))
 
 -- =====================================================
 
 instance
   forall era.
   ( AlonzoEraTx era
+  , AlonzoEraScript era
   , AlonzoEraPParams era
   , BabbageEraTxBody era
   , ExtendedUTxO era
@@ -95,6 +98,7 @@ instance
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , ProtVerAtMost era 8
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -136,7 +140,7 @@ utxosTransition ::
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext 'PlutusV1 era
-  , ProtVerAtMost era 8
+  , ProtVerAtMost era 8, AlonzoEraScript era, ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -176,6 +180,8 @@ expectScriptsToPass ::
   , Event (s era) ~ AlonzoUtxosEvent era
   , PredicateFailure (s era) ~ AlonzoUtxosPredFailure era
   , BaseM (s era) ~ ShelleyBase
+  , AlonzoEraScript era
+  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   PParams era ->
   Tx era ->
@@ -214,7 +220,7 @@ babbageEvalScriptsTxValid ::
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext 'PlutusV1 era
-  , ProtVerAtMost era 8
+  , ProtVerAtMost era 8, AlonzoEraScript era, ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
@@ -251,7 +257,7 @@ babbageEvalScriptsTxInvalid ::
   , Event (s era) ~ AlonzoUtxosEvent era
   , PredicateFailure (s era) ~ AlonzoUtxosPredFailure era
   , State (s era) ~ UTxOState era
-  , BaseM (s era) ~ ShelleyBase
+  , BaseM (s era) ~ ShelleyBase, AlonzoEraScript era, ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TransitionRule (s era)
 babbageEvalScriptsTxInvalid = do

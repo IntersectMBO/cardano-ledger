@@ -183,7 +183,7 @@ expectTranslationError ::
   (ExtendedUTxO era, BabbageTxInfoTests era) =>
   Language ->
   Tx era ->
-  TranslationError (EraCrypto era) ->
+  TranslationError era ->
   Assertion
 expectTranslationError lang tx expected =
   case ctx of
@@ -195,7 +195,7 @@ expectTranslationError lang tx expected =
 expectV1TranslationError ::
   (ExtendedUTxO era, BabbageTxInfoTests era) =>
   Tx era ->
-  TranslationError (EraCrypto era) ->
+  TranslationError era ->
   Assertion
 expectV1TranslationError = expectTranslationError PlutusV1
 

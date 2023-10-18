@@ -747,7 +747,7 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
 -- Generate Era agnostic Scripts
 
 -- Adds to gsScripts and gsPlutusScripts
-genScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (EraCrypto era))
+genScript :: forall era. Reflect era => Proof era -> RedeemerPurpose era -> GenRS era (ScriptHash (EraCrypto era))
 genScript proof tag = case proof of
   Conway _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
   Babbage _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
@@ -844,7 +844,7 @@ genPlutusScript ::
   forall era.
   Reflect era =>
   Proof era ->
-  Tag ->
+  RedeemerPurpose era ->
   GenRS era (ScriptHash (EraCrypto era))
 genPlutusScript proof tag = do
   isValid <- lift $ frequency [(5, pure False), (95, pure True)]
@@ -891,7 +891,7 @@ genPlutusScript proof tag = do
 -- generated set. Returns the credential
 -- Adds to both gsKeys and gsScripts and gsPlutusScript
 -- via genKeyHash and genScript
-genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (EraCrypto era))
+genCredential :: forall era kr. Reflect era => RedeemerPurpose era -> GenRS era (Credential kr (EraCrypto era))
 genCredential tag =
   frequencyT
     [ (35, KeyHashObj <$> genKeyHash')
@@ -955,7 +955,7 @@ genFreshCredential ::
   forall era kr.
   Reflect era =>
   Int ->
-  Tag ->
+  RedeemerPurpose era ->
   Set (Credential kr (EraCrypto era)) ->
   GenRS era (Credential kr (EraCrypto era))
 genFreshCredential 0 _tag _old = error "Ran out of tries in genFreshCredential."
@@ -967,7 +967,7 @@ genFreshCredential tries0 tag old = go tries0
         then go (tries - 1)
         else pure c
 
-genFreshRegCred :: forall era. Reflect era => Tag -> GenRS era (Credential 'Staking (EraCrypto era))
+genFreshRegCred :: forall era. Reflect era => RedeemerPurpose era -> GenRS era (Credential 'Staking (EraCrypto era))
 genFreshRegCred tag = do
   old <- gets (Map.keysSet . gsInitialRewards)
   avoid <- gets gsAvoidCred
@@ -999,7 +999,7 @@ genFreshCredentials ::
   Reflect era =>
   Int ->
   Int ->
-  Tag ->
+  RedeemerPurpose era ->
   Set (Credential kr (EraCrypto era)) ->
   [Credential kr (EraCrypto era)] ->
   GenRS era [Credential kr (EraCrypto era)]

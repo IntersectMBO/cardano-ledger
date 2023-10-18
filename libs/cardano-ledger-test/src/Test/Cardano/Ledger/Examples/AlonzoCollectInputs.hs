@@ -178,7 +178,7 @@ getTxInfo ::
   SystemStart ->
   UTxO era ->
   Tx era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
+  Either (TranslationError era) VersionedTxInfo
 getTxInfo (Alonzo _) = txInfo
 getTxInfo (Babbage _) = txInfo
 getTxInfo (Conway _) = txInfo
