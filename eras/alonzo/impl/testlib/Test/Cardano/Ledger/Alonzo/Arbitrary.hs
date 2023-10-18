@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   FlexibleCostModels (..),
   genAlonzoScript,
   genScripts,
+  genValidCostModel,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)

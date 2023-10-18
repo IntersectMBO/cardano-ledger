@@ -34,6 +34,7 @@
   * `Addr28Extra`
   * `DataHash32`
   * `RdmrPtr`
+* Expose `genValidCostModel` in `Arbitrary`
 
 ## 1.4.2.0
 
