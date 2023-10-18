@@ -39,8 +39,6 @@ import Cardano.Ledger.Conway.Governance (
   pulseDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
-
--- import Cardano.Ledger.Conway.Rules.Ratify
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys (KeyRole (..))

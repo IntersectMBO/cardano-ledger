@@ -24,17 +24,16 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 where
 
 import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
-import Cardano.Ledger.BaseTypes (ShelleyBase, securityParameter)
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (
   CommitteeState (..),
   certDStateL,
   certVStateL,
   dsUnifiedL,
   vsCommitteeStateL,
-  vsDRepsL,
   vsNumDormantEpochsL,
  )
-import Cardano.Ledger.Coin (Coin, compactCoinOrError)
+import Cardano.Ledger.Coin (compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
@@ -57,11 +56,11 @@ import Cardano.Ledger.Conway.Governance (
   ensWithdrawalsL,
   epochStateDRepPulsingStateL,
   extractDRepPulsingState,
-  snapshotActions,
-  startDRepPulsingState,
+  setFreshDRepPulsingState,
+  snapshotGovActionStates,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
-import Cardano.Ledger.Conway.Governance.Snapshots (snapshotLookupId, snapshotRemoveIds)
+import Cardano.Ledger.Conway.Governance.Snapshots (snapshotRemoveIds)
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -72,6 +71,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   asTreasuryL,
   curPParamsEpochStateL,
+  epochStateDonationL,
   epochStateGovStateL,
   epochStateTreasuryL,
   epochStateUMapL,
@@ -107,8 +107,7 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.UMap (UMap, UView (..), unionKeyDeposits, (∪+), (◁))
-import Cardano.Ledger.Val (zero, (<->))
-import Control.Monad.Trans.Reader (ask, asks)
+import Cardano.Ledger.Val (zero, (<+>), (<->))
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Assertion (..),
@@ -124,12 +123,8 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Ratio ((%))
-import Data.Sequence.Strict (StrictSeq (..))
-import qualified Data.Sequence.Strict as Seq
-import qualified Data.Set as Set
 import Data.Void (Void, absurd)
-import Lens.Micro (Lens', (%~), (&), (+~), (.~), (<>~), (^.))
+import Lens.Micro ((%~), (&), (+~), (.~), (^.))
 
 -- ====================================================
 
@@ -180,7 +175,8 @@ instance
         ]
 
 returnProposalDepositsUMap ::
-  StrictSeq (GovActionState era) ->
+  Foldable f =>
+  f (GovActionState era) ->
   UMap (EraCrypto era) ->
   UMap (EraCrypto era)
 returnProposalDepositsUMap gaids m =
@@ -194,8 +190,8 @@ returnProposalDepositsUMap gaids m =
         m'
 
 returnProposalDeposits ::
-  forall era.
-  StrictSeq (GovActionState era) ->
+  Foldable f =>
+  f (GovActionState era) ->
   LedgerState era ->
   LedgerState era
 returnProposalDeposits removedProposals =
@@ -309,80 +305,46 @@ epochTransition = do
     utxoSt'' =
       utxoSt'
         { utxosDeposited =
-            totalObligation
-              adjustedCertState
-              (utxoSt' ^. utxosGovStateL) --  . proposalsGovStateL)
+            totalObligation adjustedCertState (utxoSt' ^. utxosGovStateL)
         }
     govSt = utxosGovState utxoSt''
-    stakeDistr = credMap $ utxosStakeDistr utxoSt''
     RatifyState {rsRemoved, rsEnactState} = extractDRepPulsingState (es1 ^. epochStateDRepPulsingStateL)
-  -- We are now finished with the pulser started at the last epoch boundary, so we need to
-  -- initialize a fresh DRep pulser, by computing the pulse size, and gathering the data we
-  -- will snapshot inside the pulser. We expect approximately 10*k-many blocks to be produced
-  -- each epoch. Therefore to safely and evenly space out the DRep calculation, we divide
-  -- the number of stake credentials by 8*k (8, rather than 10, to be sure we finish
-  -- two stability windows before the end of the epoch)
-  globals <- liftSTS ask
-  k <- liftSTS $ asks securityParameter -- Maximum number of blocks we are allowed to roll back
-  let currentProposals = govSt ^. cgProposalsL
-      newProposals = snapshotRemoveIds rsRemoved currentProposals
-  let stakeSize = Map.size stakeDistr
-      pulseSize = max 1 (ceiling (toInteger stakeSize % (8 * toInteger k)))
-      newPulser =
-        startDRepPulsingState
-          pulseSize
-          (dstate ^. dsUnifiedL)
-          stakeDistr
-          stakePoolDistr
-          (vstate ^. vsDRepsL)
-          (eNo + 1) -- Recall that the pulser will run the RATIFY rule in the next Epoch.
-          (vstate ^. vsCommitteeStateL)
-          (govSt ^. cgEnactStateL)
-          (snapshotActions currentProposals) -- Use the (StrictSeq (GovActionState era)) rather than the (ProposalsSnapshot era) form.
-          (es1 ^. epochStateTreasuryL)
-          globals
   let
-    (es2, rsEnactState') = applyEnactedWithdrawals es1 rsEnactState
-    lookupAction m gId =
-      case snapshotLookupId gId currentProposals of
-        Just x -> x :<| m
-        Nothing -> m
-    removedProposals =
-      foldl' lookupAction mempty $
-        Seq.fromList (Set.toList rsRemoved)
+    (es2, newEnactState) = applyEnactedWithdrawals es1 rsEnactState
+    currentProposals = govSt ^. cgProposalsL
+    newProposals = snapshotRemoveIds rsRemoved currentProposals
+    removedProposals = snapshotGovActionStates currentProposals `Map.restrictKeys` rsRemoved
     lState = returnProposalDeposits removedProposals $ esLState es2
+
+    updatedCommitteeState =
+      updateCommitteeState
+        (newEnactState ^. ensCommitteeL)
+        (es1 ^. esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL)
+
+    currentTreasuryAmount = es2 ^. epochStateTreasuryL
+    donations = es2 ^. epochStateDonationL
+    -- Move donations to treasury
+    newTreasuryAmount = currentTreasuryAmount <+> donations
     es3 =
       es2
         { esAccountState = acnt'
         , esLState = lState {lsUTxOState = utxoSt''}
         }
-        & prevPParamsEpochStateL .~ pp
-        & curPParamsEpochStateL .~ pp
-    updatedCommitteeState =
-      updateCommitteeState
-        (rsEnactState' ^. ensCommitteeL)
-        (es1 ^. esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL)
+        & prevPParamsEpochStateL .~ (es0 ^. curPParamsEpochStateL)
+        & esAccountStateL . asTreasuryL .~ newTreasuryAmount
+        -- Clear the donations field
+        & epochStateDonationL .~ mempty
+        -- remove hot keys of committee members that were removed
+        & esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL .~ updatedCommitteeState
 
     newConwayGovState =
-      ConwayGovState
+      govSt
         { cgProposals = newProposals
-        , cgEnactState = rsEnactState'
-        , cgDRepPulsingState = newPulser
+        , cgEnactState = newEnactState
         }
 
-    esDonationL :: Lens' (EpochState era) Coin
-    esDonationL = esLStateL . lsUTxOStateL . utxosDonationL
-    donations = es3 ^. esDonationL
-  pure $
-    es3
-      & epochStateGovStateL .~ newConwayGovState
-      -- Move donations to treasury
-      & esAccountStateL . asTreasuryL <>~ donations
-      -- remove hot keys of committee members that were removed
-      & esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL .~ updatedCommitteeState
-      -- Clear the donations field
-      & esDonationL .~ mempty
-      & epochStateDRepPulsingStateL .~ newPulser
+  let es4 = es3 & epochStateGovStateL .~ newConwayGovState
+  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr es4
 
 instance
   ( Era era

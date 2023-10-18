@@ -40,10 +40,12 @@ import Cardano.Ledger.Conway.Core (
   EraTx (..),
   EraTxBody (..),
   EraTxOut (..),
+  PParams,
  )
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
+  ConwayGovState,
   EnactState (..),
   GovAction,
   GovActionId (..),
@@ -56,12 +58,20 @@ import Cardano.Ledger.Conway.Governance (
   Voter,
   VotingProcedure (..),
   VotingProcedures (..),
+  DRepPulsingState(DRComplete),
   ensCommitteeL,
   epochStateDRepPulsingStateL,
+  finishDRepPulser,
   gasDRepVotesL,
   psDRepDistrG,
+  cgDRepPulsingStateL,
   snapshotLookupId,
   utxosGovStateL,
+  votingDRepThreshold,
+  setCompleteDRepPulsingState,
+  cgEnactStateL,
+  ensCurPParamsL,
+  rsEnactStateL,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Rules (
@@ -85,17 +95,20 @@ import Cardano.Ledger.Core (EraRule)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (HasKeyRole (..), KeyHash, KeyRole (..))
+import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   NewEpochState,
   certVStateL,
   curPParamsEpochStateL,
+  epochStateGovStateL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
   nesELL,
   nesEsL,
   nesPdL,
+  newEpochStateGovStateL,
   utxosStakeDistrL,
   utxosUtxoL,
   vsCommitteeStateL,
@@ -110,7 +123,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((&), (.~), (^.), (%~))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
 import Test.Cardano.Ledger.Common (HasCallStack, shouldSatisfy)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
@@ -126,6 +139,23 @@ conwayImpWitsVKeyNeeded nes = conwayWitsVKeyNeeded utxo
   where
     utxo = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
 
+-- | Modify the PParams in the current state with the given function
+conwayModifyPParams ::
+  ( EraGov era
+  , GovState era ~ ConwayGovState era
+  ) =>
+  (PParams era -> PParams era) ->
+  ImpTestM era ()
+conwayModifyPParams f = modifyNES $ \nes ->
+  nes
+    & nesEsL . curPParamsEpochStateL %~ f
+    & newEpochStateGovStateL . cgDRepPulsingStateL %~ modifyDRepPulser
+  where
+    modifyDRepPulser pulser =
+      case finishDRepPulser pulser of
+        (snapshot, ratifyState) ->
+          DRComplete snapshot (ratifyState & rsEnactStateL . ensCurPParamsL %~ f)
+
 instance
   ( Crypto c
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
@@ -133,9 +163,13 @@ instance
   EraImpTest (ConwayEra c)
   where
   emptyImpNES rootCoin =
-    emptyAlonzoImpNES rootCoin
-      & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ 100
-      & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ 30
+    let nes =
+          emptyAlonzoImpNES rootCoin
+            & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ 100
+            & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ 30
+        epochState = nes ^. nesEsL
+        ratifyState = def & rsEnactStateL .~ (epochState ^. epochStateGovStateL . cgEnactStateL)
+     in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
 
   impWitsVKeyNeeded = conwayImpWitsVKeyNeeded
 
@@ -308,7 +342,11 @@ getRatifyEnv = do
       }
 
 -- | Calculates the ratio of DReps that have voted for the governance action
-calculateDRepAcceptedRatio :: forall era. ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era Rational
+calculateDRepAcceptedRatio ::
+  forall era.
+  (HasCallStack, ConwayEraGov era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era Rational
 calculateDRepAcceptedRatio gaId = do
   ratEnv <- getRatifyEnv
   gas <- lookupGovActionState gaId
@@ -320,7 +358,11 @@ calculateDRepAcceptedRatio gaId = do
 
 -- | Calculates the ratio of CC members that have voted for the governance
 -- action
-calculateCommitteeAcceptedRatio :: forall era. ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era Rational
+calculateCommitteeAcceptedRatio ::
+  forall era.
+  (HasCallStack, ConwayEraGov era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era Rational
 calculateCommitteeAcceptedRatio gaId = do
   eNo <- getsNES nesELL
   RatifyEnv {reCommitteeState} <- getRatifyEnv
@@ -337,7 +379,7 @@ calculateCommitteeAcceptedRatio gaId = do
       eNo
 
 -- | Logs the ratios of accepted votes per category
-logAcceptedRatio :: ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era ()
+logAcceptedRatio :: (HasCallStack, ConwayEraGov era) => GovActionId (EraCrypto era) -> ImpTestM era ()
 logAcceptedRatio aId = do
   dRepRatio <- calculateDRepAcceptedRatio aId
   committeeRatio <- calculateCommitteeAcceptedRatio aId
@@ -347,7 +389,10 @@ logAcceptedRatio aId = do
   logEntry ""
 
 -- | Checks whether the governance action has enough votes to be accepted
-isGovActionAccepted :: (ConwayEraGov era, ConwayEraPParams era) => GovActionId (EraCrypto era) -> ImpTestM era Bool
+isGovActionAccepted ::
+  (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era Bool
 isGovActionAccepted gaId = do
   eNo <- getsNES nesELL
   stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
@@ -378,7 +423,7 @@ isGovActionAccepted gaId = do
 -- | Logs the results of each check required to make the governance action pass
 logRatificationChecks :: (ConwayEraGov era, ConwayEraPParams era) => GovActionId (EraCrypto era) -> ImpTestM era ()
 logRatificationChecks gaId = do
-  gas@GovActionState {gasAction} <- lookupGovActionState gaId
+  gas@GovActionState {gasDRepVotes, gasAction} <- lookupGovActionState gaId
   ens@EnactState {..} <-
     getEnactState
   ratEnv <- getRatifyEnv
@@ -394,7 +439,13 @@ logRatificationChecks gaId = do
       , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
       , "committeeAccepted:\t" <> show (committeeAccepted ratSt ratEnv gas)
       , "spoAccepted:\t\t" <> show (spoAccepted ratSt ratEnv gas)
-      , "dRepAccepted:\t\t" <> show (dRepAccepted ratEnv ratSt gas)
+      , "dRepAccepted:\t\t"
+          <> show (dRepAccepted ratEnv ratSt gas)
+          <> " [To Pass: "
+          <> show (dRepAcceptedRatio ratEnv gasDRepVotes gasAction)
+          <> " >= "
+          <> show (votingDRepThreshold ratSt gasAction)
+          <> "]"
       , ""
       ]
 

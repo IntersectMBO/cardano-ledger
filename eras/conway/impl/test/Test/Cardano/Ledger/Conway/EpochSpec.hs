@@ -25,6 +25,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (
   ppCommitteeMaxTermLengthL,
   ppDRepVotingThresholdsL,
+  ppGovActionLifetimeL,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -63,8 +64,14 @@ spec =
       logEntry "Setting up PParams and DRep"
       modifyPParams $ \pp ->
         pp
-          & ppDRepVotingThresholdsL .~ def {dvtUpdateToConstitution = 1 %! 2}
+          & ppDRepVotingThresholdsL
+            .~ def
+              { dvtCommitteeNormal = 1 %! 1
+              , dvtCommitteeNoConfidence = 1 %! 2
+              , dvtUpdateToConstitution = 1 %! 2
+              }
           & ppCommitteeMaxTermLengthL .~ 10
+          & ppGovActionLifetimeL .~ 1
       khDRep <- setupSingleDRep
 
       logEntry "Registering committee member"
@@ -83,8 +90,11 @@ spec =
         assertNoCommittee = do
           committee <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
           impIOMsg "There should not be a committee" $ committee `shouldBe` SNothing
+      logRatificationChecks gaidCommitteeProp
       assertNoCommittee
+
       passEpoch
+      logRatificationChecks gaidCommitteeProp
       assertNoCommittee
       passEpoch
       do

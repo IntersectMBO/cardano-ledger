@@ -716,6 +716,9 @@ newEpochStateGovStateL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
 epochStateGovStateL :: Lens' (EpochState era) (GovState era)
 epochStateGovStateL = esLStateL . lsUTxOStateL . utxosGovStateL
 
+epochStateDonationL :: Lens' (EpochState era) Coin
+epochStateDonationL = esLStateL . lsUTxOStateL . utxosDonationL
+
 epochStateTreasuryL :: Lens' (EpochState era) Coin
 epochStateTreasuryL = esAccountStateL . asTreasuryL
 

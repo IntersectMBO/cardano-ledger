@@ -63,6 +63,7 @@ module Cardano.Ledger.Conway.Governance (
   snapshotIds,
   snapshotRemoveIds,
   snapshotLookupId,
+  snapshotGovActionStates,
   fromGovActionStateSeq,
   isConsistent_,
   -- Lenses
@@ -109,6 +110,8 @@ module Cardano.Ledger.Conway.Governance (
   psDRepDistrG,
   dormantEpoch,
   PulsingSnapshot (..),
+  setCompleteDRepPulsingState,
+  setFreshDRepPulsingState,
   psProposalsL,
   psDRepDistrL,
   psDRepStateL,
@@ -177,6 +180,7 @@ import Cardano.Ledger.Conway.Governance.Snapshots (
   isConsistent_,
   snapshotActions,
   snapshotAddVote,
+  snapshotGovActionStates,
   snapshotIds,
   snapshotInsertGovAction,
   snapshotLookupId,
@@ -212,20 +216,31 @@ import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
+  certDState,
+  certVState,
+  credMap,
+  dsUnified,
+  epochStateGovStateL,
   epochStateIncrStakeDistrL,
   epochStateRegDrepL,
   epochStateStakeDistrL,
+  epochStateTreasuryL,
   epochStateUMapL,
   esLStateL,
+  lsCertState,
+  lsUTxOState,
   lsUTxOStateL,
   nesEsL,
   utxosGovStateL,
+  utxosStakeDistr,
+  vsCommitteeState,
+  vsDReps,
  )
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..))
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
-import Control.Monad.Trans.Reader (Reader, runReader)
+import Control.Monad.Trans.Reader (Reader, ReaderT, ask, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
@@ -235,6 +250,7 @@ import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), pulse)
+import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
@@ -997,7 +1013,7 @@ class
           Right ratifyState' -> ratifyState'
 
 finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
-finishDRepPulser (DRComplete snap ratstate) = (snap, ratstate)
+finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
@@ -1125,6 +1141,67 @@ completeDRepPulsingState x@(DRComplete {}) = x
 extractDRepPulsingState :: DRepPulsingState era -> RatifyState era
 extractDRepPulsingState x@(DRPulsing _) = snd (finishDRepPulser x)
 extractDRepPulsingState (DRComplete _ x) = x
+
+setCompleteDRepPulsingState ::
+  GovState era ~ ConwayGovState era =>
+  PulsingSnapshot era ->
+  RatifyState era ->
+  EpochState era ->
+  EpochState era
+setCompleteDRepPulsingState snapshot ratifyState epochState =
+  epochState
+    & epochStateGovStateL . cgDRepPulsingStateL
+      .~ DRComplete snapshot ratifyState
+
+setFreshDRepPulsingState ::
+  ( GovState era ~ ConwayGovState era
+  , Monad m
+  , RunConwayRatify era
+  ) =>
+  EpochNo ->
+  PoolDistr (EraCrypto era) ->
+  EpochState era ->
+  ReaderT Globals m (EpochState era)
+setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
+  -- We are now finished with the pulser started at the last epoch boundary, so we need to
+  -- initialize a fresh DRep pulser, by computing the pulse size, and gathering the data we
+  -- will snapshot inside the pulser. We expect approximately 10*k-many blocks to be produced
+  -- each epoch. Therefore to safely and evenly space out the DRep calculation, we divide
+  -- the number of stake credentials by 8*k (8, rather than 10, to be sure we finish
+  -- two stability windows before the end of the epoch)
+  globals <- ask
+  let ledgerState = epochState ^. esLStateL
+      utxoState = lsUTxOState ledgerState
+      stakeDistr = credMap $ utxosStakeDistr utxoState
+      certState = lsCertState ledgerState
+      dState = certDState certState
+      vState = certVState certState
+      govState = epochState ^. epochStateGovStateL
+      stakeSize = Map.size stakeDistr
+      -- Maximum number of blocks we are allowed to roll back
+      k = securityParameter globals
+      pulseSize = max 1 (ceiling (toInteger stakeSize % (8 * toInteger k)))
+      epochState' =
+        epochState
+          & epochStateGovStateL . cgDRepPulsingStateL
+            .~ DRPulsing
+              ( DRepPulser
+                  { dpPulseSize = pulseSize
+                  , dpUMap = dsUnified dState
+                  , dpBalance = stakeDistr -- used as the balance of things left to iterate over
+                  , dpStakeDistr = stakeDistr -- used as part of the snapshot
+                  , dpStakePoolDistr = stakePoolDistr
+                  , dpDRepDistr = Map.empty -- The partial result starts as the empty map
+                  , dpDRepState = vsDReps vState
+                  , dpCurrentEpoch = epochNo
+                  , dpCommitteeState = vsCommitteeState vState
+                  , dpEnactState = cgEnactState govState
+                  , dpProposals = snapshotActions (govState ^. cgProposalsL)
+                  , dpTreasury = epochState ^. epochStateTreasuryL
+                  , dpGlobals = globals
+                  }
+              )
+  pure epochState'
 
 -- ===================================
 -- RatifyEnv

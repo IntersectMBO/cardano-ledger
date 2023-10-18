@@ -12,6 +12,7 @@ module Cardano.Ledger.Conway.Governance.Snapshots (
   snapshotRemoveIds,
   snapshotLookupId,
   fromGovActionStateSeq,
+  snapshotGovActionStates,
   -- Testing
   isConsistent_,
   snapshotGovActionStates,
