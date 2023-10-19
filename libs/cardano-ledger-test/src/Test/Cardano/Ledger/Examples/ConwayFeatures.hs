@@ -72,6 +72,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
+import qualified Test.Cardano.Ledger.Core.Utils as SLE
 import Test.Cardano.Ledger.Examples.BabbageFeatures (
   InitOutputs (..),
   KeyPairRole (..),

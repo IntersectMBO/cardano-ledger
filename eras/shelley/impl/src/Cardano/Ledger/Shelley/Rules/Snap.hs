@@ -37,6 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   incrementalStakeDistr,
  )
+import Control.DeepSeq (NFData)
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -54,6 +55,8 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleySnapPredFailure era -- No predicate failures
   deriving (Show, Generic, Eq)
+
+instance NFData (ShelleySnapPredFailure era)
 
 instance NoThunks (ShelleySnapPredFailure era)
 

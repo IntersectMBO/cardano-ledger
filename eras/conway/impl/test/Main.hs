@@ -13,6 +13,7 @@ import qualified Test.Cardano.Ledger.Conway.GenesisSpec as GenesisSpec
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorderSpec
 import qualified Test.Cardano.Ledger.Conway.GovSpec as GovSpec
 import qualified Test.Cardano.Ledger.Conway.PParamsSpec as PParamsSpec
+import qualified Test.Cardano.Ledger.Shelley.ImpTestSpec as ImpTestSpec
 
 main :: IO ()
 main =
@@ -24,5 +25,6 @@ main =
       GenesisSpec.spec
       GovActionReorderSpec.spec
       EpochSpec.spec
+      ImpTestSpec.spec $ Proxy @Conway
       GovSpec.spec
       PParamsSpec.spec $ Proxy @Conway

@@ -71,6 +71,7 @@ import Cardano.Ledger.Slot (
   (*-),
   (+*),
  )
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (RDPair (..), UView (..), compactCoinOrError, fromCompact)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
@@ -154,6 +155,8 @@ instance (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) => STS (She
 instance NoThunks (ShelleyDelegPredFailure era)
 
 instance NFData (ShelleyDelegPredFailure era)
+
+instance ToExpr (ShelleyDelegPredFailure era)
 
 instance
   (Era era, Typeable (Script era)) =>

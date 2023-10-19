@@ -15,6 +15,9 @@
 
 ### `testlib`
 
+* Add `emptyAlonzoImpNES`
+* Add `Test.Cardano.Ledger.Alonzo.ImpTest`
+* Add `EraImpTest` instance for `AlonzoEra`
 * Add `ToExpr` instances for:
   * `CollectError`
   * `AlonzoUtxoPredFailure`

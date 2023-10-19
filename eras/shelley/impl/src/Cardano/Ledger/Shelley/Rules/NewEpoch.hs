@@ -43,6 +43,7 @@ import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent, ShelleyMir
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
+import Control.DeepSeq (NFData)
 import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
@@ -75,6 +76,12 @@ instance
   , NoThunks (PredicateFailure (EraRule "MIR" era))
   ) =>
   NoThunks (ShelleyNewEpochPredFailure era)
+
+instance
+  ( NFData (PredicateFailure (EraRule "EPOCH" era))
+  , NFData (PredicateFailure (EraRule "MIR" era))
+  ) =>
+  NFData (ShelleyNewEpochPredFailure era)
 
 data ShelleyNewEpochEvent era
   = DeltaRewardEvent (Event (EraRule "RUPD" era))

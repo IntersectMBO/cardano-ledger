@@ -54,6 +54,7 @@ import Cardano.Ledger.Slot (
   epochInfoFirst,
   (*-),
  )
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
@@ -85,6 +86,8 @@ instance DecCBOR VotingPeriod where
       0 -> pure VoteForThisEpoch
       1 -> pure VoteForNextEpoch
       k -> invalidKey k
+
+instance ToExpr VotingPeriod
 
 data ShelleyPpupPredFailure era
   = -- | An update was proposed by a key hash that is not one of the genesis keys.
@@ -156,6 +159,8 @@ instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
         p <- decCBOR
         pure (2, PVCannotFollowPPUP p)
       k -> invalidKey k
+
+instance ToExpr (ShelleyPpupPredFailure era)
 
 ppupTransitionNonEmpty :: (EraPParams era, ProtVerAtMost era 8) => TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do

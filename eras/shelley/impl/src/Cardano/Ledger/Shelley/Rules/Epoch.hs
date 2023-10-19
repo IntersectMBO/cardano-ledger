@@ -56,6 +56,7 @@ import Cardano.Ledger.Shelley.Rules.PoolReap (
 import Cardano.Ledger.Shelley.Rules.Snap (ShelleySNAP, ShelleySnapPredFailure, SnapEnv (..), SnapEvent)
 import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo)
+import Control.DeepSeq (NFData)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Embed (..),
@@ -103,6 +104,13 @@ deriving stock instance
   , Show (UpecPredFailure era)
   ) =>
   Show (ShelleyEpochPredFailure era)
+
+instance
+  ( NFData (PredicateFailure (EraRule "POOLREAP" era))
+  , NFData (PredicateFailure (EraRule "SNAP" era))
+  , NFData (UpecPredFailure era)
+  ) =>
+  NFData (ShelleyEpochPredFailure era)
 
 data ShelleyEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))

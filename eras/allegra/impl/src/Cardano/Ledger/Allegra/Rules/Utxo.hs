@@ -62,6 +62,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (txup)
+import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
@@ -134,6 +135,13 @@ instance
   , NoThunks (PPUPPredFailure era)
   ) =>
   NoThunks (AllegraUtxoPredFailure era)
+
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (Value era)
+  , ToExpr (PPUPPredFailure era)
+  ) =>
+  ToExpr (AllegraUtxoPredFailure era)
 
 data AllegraUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))

@@ -1,682 +1,414 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conway.ImpTest (
-  ImpTestM,
-  ImpException (..),
-  passEpoch,
-  passTick,
-  itM,
-  freshKeyHash,
-  freshSafeHash,
-  lookupKeyPair,
-  submitTx,
-  submitFailingTx,
-  submitBasicConwayTx,
-  logEntry,
-  modifyNES,
-  getsNES,
-  impIO,
-  impIOMsg,
+  module ImpTest,
   submitProposal,
   submitFailingProposal,
+  voteForProposal,
+  registerDRep,
+  setupSingleDRep,
+  getEnactState,
+  lookupGovActionState,
+  getRatifyEnv,
+  calculateDRepAcceptedRatio,
+  calculateCommitteeAcceptedRatio,
+  logAcceptedRatio,
+  isGovActionAccepted,
+  logRatificationChecks,
+  registerCCHotKey,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
-import Cardano.Crypto.Hash (Hash)
-import Cardano.Crypto.Seed (mkSeedFromBytes)
-import qualified Cardano.Crypto.VRF.Class as VRF
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (RewardAcnt))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
-import Cardano.Ledger.BaseTypes (
-  BlocksMade (..),
-  EpochSize (..),
-  Globals (..),
-  Network (..),
-  ShelleyBase,
-  SlotNo,
-  mkActiveSlotCoeff,
- )
+import Cardano.Crypto.DSIGN.Class (Signable)
+import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import Cardano.Ledger.CertState (DRep (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   Era (..),
   EraIndependentTxBody,
-  EraPParams (..),
-  EraRule,
   EraTx (..),
   EraTxBody (..),
   EraTxOut (..),
-  EraTxWits (..),
-  emptyPParams,
-  ppMaxValSizeL,
-  setMinFeeTx,
  )
-import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (
-  ConwayEraPParams,
-  ppDRepActivityL,
-  ppGovActionLifetimeL,
+import Cardano.Ledger.Conway.Governance (
+  Committee (..),
+  ConwayEraGov (..),
+  EnactState (..),
+  GovAction,
+  GovActionId (..),
+  GovActionIx (..),
+  GovActionState (..),
+  ProposalProcedure (..),
+  RatifyEnv (..),
+  RatifyState (..),
+  Vote (..),
+  Voter,
+  VotingProcedure (..),
+  VotingProcedures (..),
+  ensCommitteeL,
+  epochStateDRepPulsingStateL,
+  gasDRepVotesL,
+  psDRepDistrG,
+  snapshotLookupId,
+  utxosGovStateL,
  )
-import Cardano.Ledger.Conway.Rules (conwayWitsVKeyNeeded)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppGovActionLifetimeL)
+import Cardano.Ledger.Conway.Rules (
+  committeeAccepted,
+  committeeAcceptedRatio,
+  conwayWitsVKeyNeeded,
+  dRepAccepted,
+  dRepAcceptedRatio,
+  prevActionAsExpected,
+  spoAccepted,
+  validCommitteeTerm,
+  withdrawalCanWithdraw,
+ )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
-import Cardano.Ledger.EpochBoundary (emptySnapShots)
-import Cardano.Ledger.Keys (
-  HasKeyRole (..),
-  KeyHash,
-  KeyRole (..),
-  hashKey,
-  hashVerKeyVRF,
+import Cardano.Ledger.Conway.TxCert (
+  ConwayEraTxCert (..),
+  Delegatee (..),
+  pattern AuthCommitteeHotKeyTxCert,
  )
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Core (EraRule)
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Keys (HasKeyRole (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  EpochState (..),
-  LedgerState (..),
-  NewEpochState (..),
-  StashedAVVMAddresses,
+  IncrementalStake (..),
+  NewEpochState,
+  certVStateL,
   curPParamsEpochStateL,
   esLStateL,
+  lsCertStateL,
   lsUTxOStateL,
   nesELL,
   nesEsL,
-  prevPParamsEpochStateL,
-  smartUTxOState,
-  startStep,
-  utxosDepositedL,
+  nesPdL,
+  utxosStakeDistrL,
   utxosUtxoL,
+  vsCommitteeStateL,
+  vsDRepsL,
  )
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
-import Cardano.Ledger.Shelley.UTxO (sumAllCoin)
-import Cardano.Ledger.TreeDiff (ToExpr (..))
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.TxIn (TxId)
 import Cardano.Ledger.Val (Val (..))
-import Cardano.Slotting.EpochInfo (fixedEpochInfo)
-import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Control.DeepSeq (NFData)
-import Control.Exception (Exception (..), SomeException (..), throwIO)
-import Control.Monad (void)
-import Control.Monad.State.Strict (MonadState (..), MonadTrans (..), StateT (..), execStateT, gets, modify)
-import Control.Monad.Trans.Reader (ReaderT (..))
-import qualified Control.Monad.Trans.State.Strict as M
-import Control.State.Transition (STS (..), TRC (..))
-import Control.State.Transition.Trace (applySTSTest)
-import qualified Data.ByteString as BS
-import Data.Coerce (coerce)
-import Data.Data (Proxy (..))
+import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
-import Data.Functor.Identity (Identity (..))
-import Data.Map.Strict (Map)
+import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
-import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Sequence.Strict as Seq
-import qualified Data.Set as Set
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.Word (Word64)
-import GHC.Generics (Generic)
-import Lens.Micro (Lens', SimpleGetter, lens, (%~), (&), (.~), (^.))
-import Lens.Micro.Mtl (view, (%=), (+=), (.=))
-import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
-import Test.Cardano.Ledger.Binary.TreeDiff (showExpr)
-import Test.Cardano.Ledger.Common (HasCallStack, Spec, it)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessVKey)
-import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
-import UnliftIO (catchAnyDeep)
+import Data.Set (Set)
+import Lens.Micro ((&), (.~), (^.))
+import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
+import Test.Cardano.Ledger.Common (HasCallStack, shouldSatisfy)
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 
--- | Stores ledger state and some other bookkeeping information to make it more
--- convenient to write tests in the ImpTestM monad
-data ImpTestState era = ImpTestState
-  { impNES :: !(NewEpochState era)
-  , impSafeHashIdx :: !Int
-  , impKeyPairs ::
-      Map
-        (KeyHash 'Witness (EraCrypto era))
-        (KeyPair 'Witness (EraCrypto era))
-  , impRootTxId :: TxId (EraCrypto era)
-  , impRootTxCoin :: Coin
-  , impLog :: [String]
-  , impLastTick :: SlotNo
-  }
-  deriving (Generic)
-
-impRootTxCoinL :: Lens' (ImpTestState era) Coin
-impRootTxCoinL = lens impRootTxCoin (\x y -> x {impRootTxCoin = y})
-
-impLastTickL :: Lens' (ImpTestState era) SlotNo
-impLastTickL = lens impLastTick (\x y -> x {impLastTick = y})
-
-instance
-  ( ConwayEraPParams era
-  , Default (StashedAVVMAddresses era)
-  , EraTxOut era
-  , EraGov era
+conwayImpWitsVKeyNeeded ::
+  ( EraTx era
+  , ConwayEraTxBody era
   ) =>
-  Default (ImpTestState era)
+  NewEpochState era ->
+  TxBody era ->
+  Set (KeyHash 'Witness (EraCrypto era))
+conwayImpWitsVKeyNeeded nes = conwayWitsVKeyNeeded utxo
   where
-  def =
-    ImpTestState
-      { impNES =
-          nes
-            & nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL .~ zero
-      , impSafeHashIdx = 0
-      , impKeyPairs = Map.singleton (coerce $ hashKey vk) (coerce kp)
-      , impRootTxId = rootTxId
-      , impRootTxCoin = rootCoin
-      , impLog = mempty
-      , impLastTick = 0
-      }
-    where
-      rootTxId = TxId (mkDummySafeHash 1)
-      rootCoin = Coin 1000000000000
-      pp =
-        emptyPParams
-          & ppMaxValSizeL .~ 1000000000
-          & ppDRepActivityL .~ 100
-          & ppGovActionLifetimeL .~ 30
-      addr :: Addr (EraCrypto era)
-      addr =
-        Addr
-          Testnet
-          (KeyHashObj $ hashKey vk)
-          (StakeRefBase (KeyHashObj testKeyHash))
-      testKeyHash = mkKeyHash (-1)
-      epochState :: EpochState era
-      epochState =
-        EpochState
-          { esAccountState =
-              AccountState
-                { asTreasury = Coin 10000
-                , asReserves = Coin 1000
-                }
-          , esSnapshots = emptySnapShots
-          , esLState =
-              LedgerState
-                { lsUTxOState =
-                    smartUTxOState
-                      pp
-                      utxo
-                      zero
-                      zero
-                      emptyGovState
-                      mempty
-                , lsCertState = def
-                }
-          , esNonMyopic = def
-          }
-          & prevPParamsEpochStateL .~ pp
-          & curPParamsEpochStateL .~ pp
-      nes =
-        NewEpochState
-          { stashedAVVMAddresses = def
-          , nesRu =
-              SJust $
-                startStep @era
-                  (EpochSize 432000)
-                  (BlocksMade (Map.singleton testKeyHash 10))
-                  epochState
-                  (Coin 45)
-                  (activeSlotCoeff testGlobals)
-                  10
-          , nesPd =
-              PoolDistr $
-                Map.fromList
-                  [
-                    ( testKeyHash
-                    , IndividualPoolStake
-                        1
-                        (hashVerKeyVRF . VRF.deriveVerKeyVRF . VRF.genKeyVRF . mkSeedFromBytes $ BS.replicate seedSize 1)
-                    )
-                  ]
-          , nesEs = epochState
-          , nesEL = 0
-          , nesBprev = BlocksMade (Map.singleton testKeyHash 10)
-          , nesBcur = BlocksMade mempty
-          }
-      kp@(KeyPair vk _) = mkKeyPair 0
-      seedSize = fromIntegral . seedSizeDSIGN $ Proxy @(DSIGN (EraCrypto era))
-      utxo =
-        UTxO $
-          Map.fromList
-            [
-              ( TxIn rootTxId minBound
-              , mkBasicTxOut @era addr $ inject rootCoin
-              )
-            ]
-
-mkDummySafeHash :: forall c a. Crypto c => Int -> SafeHash c a
-mkDummySafeHash = unsafeMakeSafeHash . mkDummyHash @(HASH c)
-
-deriving instance
-  ( EraTxOut era
-  , Show (StashedAVVMAddresses era)
-  , Show (GovState era)
-  ) =>
-  Show (ImpTestState era)
+    utxo = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
 
 instance
-  ( EraPParams era
-  , ToExpr (GovState era)
-  , ToExpr (TxOut era)
-  , ToExpr (StashedAVVMAddresses era)
-  , ToExpr (KeyPair 'Witness (EraCrypto era))
+  ( Crypto c
+  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  ToExpr (ImpTestState era)
+  EraImpTest (ConwayEra c)
+  where
+  emptyImpNES rootCoin =
+    emptyAlonzoImpNES rootCoin
+      & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ 100
+      & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ 30
 
-impNESL :: Lens' (ImpTestState era) (NewEpochState era)
-impNESL = lens impNES (\x y -> x {impNES = y})
+  impWitsVKeyNeeded = conwayImpWitsVKeyNeeded
 
-newtype ImpTestM era a = ImpTestM (M.StateT (ImpTestState era) IO a)
-  deriving (Functor, Applicative, Monad, MonadState (ImpTestState era))
-
-slotsPerEpoch :: Word64
-slotsPerEpoch = 100
-
-testGlobals :: Globals
-testGlobals =
-  Globals
-    { epochInfo = fixedEpochInfo (EpochSize slotsPerEpoch) (mkSlotLength 1)
-    , slotsPerKESPeriod = 20
-    , stabilityWindow = 33
-    , randomnessStabilisationWindow = 33
-    , securityParameter = 10
-    , maxKESEvo = 10
-    , quorum = 5
-    , maxMajorPV = maxBound
-    , maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000
-    , activeSlotCoeff = mkActiveSlotCoeff . unsafeBoundRational $ 0.9
-    , networkId = Testnet
-    , systemStart = SystemStart $ posixSecondsToUTCTime 0
-    }
-
-runShelleyBase :: ShelleyBase a -> a
-runShelleyBase act = runIdentity $ runReaderT act testGlobals
-
-submitTx_ ::
+-- | Submit a transaction that registers a new DRep and return the keyhash
+-- belonging to that DRep
+registerDRep ::
   forall era.
-  ( EraGov era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
-  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , STS (EraRule "LEDGER" era)
+  ( EraImpTest era
+  , ConwayEraTxCert era
   ) =>
-  Tx era ->
+  ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
+registerDRep = do
+  -- Register a DRep
+  khDRep <- freshKeyHash
+  _ <-
+    submitTx "register DRep" $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . certsTxBodyL
+          .~ SSeq.singleton
+            ( mkRegDRepTxCert
+                (KeyHashObj khDRep)
+                zero
+                SNothing
+            )
+  dreps <- getsNES @era $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+  impIO $ dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
+  pure khDRep
+
+-- | Registers a new DRep and delegates 1 ADA to it. Returns the keyhash of the
+-- DRep
+setupSingleDRep ::
+  forall era.
+  ( ConwayEraTxCert era
+  , EraImpTest era
+  ) =>
+  ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
+setupSingleDRep = do
+  khDRep <- registerDRep
+
+  khDelegator <- freshKeyHash
+  kpDelegator <- lookupKeyPair khDelegator
+  kpSpending <- lookupKeyPair =<< freshKeyHash
+  _ <-
+    submitTx "Delegate to DRep" $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL
+          .~ Seq.singleton
+            ( mkBasicTxOut
+                (mkAddr (kpSpending, kpDelegator))
+                (inject $ Coin 1000000)
+            )
+        & bodyTxL . certsTxBodyL
+          .~ Seq.fromList
+            [ mkRegDepositDelegTxCert @era
+                (KeyHashObj khDelegator)
+                (DelegStakeVote (coerceKeyRole khDRep) (DRepCredential $ KeyHashObj khDRep))
+                zero
+            ]
+  pure khDRep
+
+-- | Submits a transaction that votes "Yes" for the given governance action as
+-- some voter
+voteForProposal ::
+  ( EraImpTest era
+  , ConwayEraTxBody era
+  ) =>
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  ImpTestM era (TxId (EraCrypto era))
+voteForProposal voter gaId = do
+  submitTx "Vote as DRep" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . votingProceduresTxBodyL
+        .~ VotingProcedures
+          ( Map.singleton
+              voter
+              ( Map.singleton
+                  gaId
+                  ( VotingProcedure
+                      { vProcVote = VoteYes
+                      , vProcAnchor = SNothing
+                      }
+                  )
+              )
+          )
+
+-- | Submits a transaction that proposes the given governance action
+trySubmitProposal ::
+  ( EraImpTest era
+  , ConwayEraTxBody era
+  ) =>
+  GovAction era ->
   ImpTestM
     era
     ( Either
         [PredicateFailure (EraRule "LEDGER" era)]
-        (State (EraRule "LEDGER" era))
+        (GovActionId (EraCrypto era))
     )
-submitTx_ tx = do
-  ImpTestState {..} <- get
-  let
-    ls = impNES ^. nesEsL . esLStateL
-    pp = ls ^. lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
-    trc =
-      TRC
-        ( LedgerEnv 0 minBound pp def
-        , ls
-        , tx
-        )
-  pure $ runShelleyBase (applySTSTest @(EraRule "LEDGER" era) trc)
+trySubmitProposal ga = do
+  khPropRwd <- freshKeyHash
+  eitherTxId <-
+    trySubmitTx $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . proposalProceduresTxBodyL
+          .~ Seq.singleton
+            ProposalProcedure
+              { pProcDeposit = zero
+              , pProcReturnAddr =
+                  RewardAcnt
+                    Testnet
+                    (KeyHashObj khPropRwd)
+              , pProcGovAction = ga
+              , pProcAnchor = def
+              }
+  pure $ case eitherTxId of
+    Right txId ->
+      Right
+        GovActionId
+          { gaidTxId = txId
+          , gaidGovActionIx = GovActionIx 0
+          }
+    Left err -> Left err
 
--- | Submit a transaction that is expected to be accepted. The inputs and
--- outputs are automatically balanced.
-submitTx ::
-  ( HasCallStack
-  , EraGov era
-  , EraTx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
-  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
-  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  , STS (EraRule "LEDGER" era)
-  ) =>
-  String ->
-  Tx era ->
-  ImpTestM era (TxId (EraCrypto era))
-submitTx msg tx = do
-  res <- submitTx_ tx
-  case res of
-    Right x -> do
-      modify $ impNESL . nesEsL . esLStateL .~ x
-      pure . TxId $ hashAnnotated (tx ^. bodyTxL)
-    Left es ->
-      impIO . error $
-        "Failed to submit transaction "
-          <> show msg
-          <> ":\n"
-          <> unlines (showExpr <$> es)
-
--- | Submit a transaction that is expected to be rejected. The inputs and
--- outputs are automatically balanced.
-submitFailingTx ::
-  ( HasCallStack
-  , EraGov era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
-  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , STS (EraRule "LEDGER" era)
-  ) =>
-  Tx era ->
-  ImpTestM era ()
-submitFailingTx tx = do
-  res <- submitTx_ tx
-  case res of
-    Right _ -> error "Expected transaction to fail, but it succeeded"
-    Left [] -> error "Failed with no errors"
-    Left _ -> pure ()
-
--- | Runs the TICK rule once
-passTick ::
-  forall era.
-  ( HasCallStack
-  , BaseM (EraRule "TICK" era) ~ ReaderT Globals Identity
-  , Environment (EraRule "TICK" era) ~ ()
-  , State (EraRule "TICK" era) ~ NewEpochState era
-  , STS (EraRule "TICK" era)
-  , Signal (EraRule "TICK" era) ~ SlotNo
-  , EraTxOut era
-  , NFData (GovState era)
-  , NFData (StashedAVVMAddresses era)
-  , NFData (PredicateFailure (EraRule "TICK" era))
-  ) =>
-  ImpTestM era ()
-passTick = do
-  ImpTestState {impLastTick} <- get
-  curNES <- getsNES id
-  let
-    trc = TRC ((), curNES, impLastTick)
-  res <-
-    impIOMsg "Failed to run TICK" $
-      pure $
-        runShelleyBase (applySTSTest @(EraRule "TICK" era) trc)
-  case res of
-    Right !x -> do
-      impLastTickL += 1
-      modifyNES $ const x
-    Left e ->
-      impIO . error $
-        "Failed to run TICK:\n" <> unlines (show <$> e)
-
--- | Runs the TICK rule until the next epoch is reached
-passEpoch ::
-  forall era.
-  ( BaseM (EraRule "TICK" era) ~ ReaderT Globals Identity
-  , Environment (EraRule "TICK" era) ~ ()
-  , State (EraRule "TICK" era) ~ NewEpochState era
-  , STS (EraRule "TICK" era)
-  , Signal (EraRule "TICK" era) ~ SlotNo
-  , EraTxOut era
-  , NFData (GovState era)
-  , NFData (StashedAVVMAddresses era)
-  , NFData (PredicateFailure (EraRule "TICK" era))
-  ) =>
-  ImpTestM era ()
-passEpoch = do
-  startEpoch <- getsNES nesELL
-  let
-    tickUntilNewEpoch curEpoch = do
-      passTick
-      newEpoch <- getsNES nesELL
-      if newEpoch > curEpoch
-        then logEntry $ "Entered " <> show newEpoch
-        else tickUntilNewEpoch newEpoch
-  tickUntilNewEpoch startEpoch
-
--- | Stores extra information about the failure of the unit test
-data ImpException e = ImpException
-  { ieLog :: [String]
-  -- ^ Log entries up to the point where the test failed
-  , ieDescription :: String
-  -- ^ Description of the IO action that caused the failure
-  , ieThrownException :: e
-  -- ^ Exception that caused the test to fail
-  }
-
-instance Exception e => Show (ImpException e) where
-  show (ImpException msgLog msg e) =
-    "Log:\n"
-      <> unlines (('\t' :) <$> reverse msgLog)
-      <> "\nFailed at:\n\t"
-      <> msg
-      <> "\nException:\n\t"
-      <> displayException e
-
-instance Exception e => Exception (ImpException e)
-
--- | Adds a string to the log, which is only shown if the test fails
-logEntry :: String -> ImpTestM era ()
-logEntry msg = do
-  ImpTestState {impLog} <- get
-  modify $ \st ->
-    st
-      { impLog = msg : impLog
-      }
-
--- | Make the `ImpTestM` into a Spec item with the given description
-itM ::
-  forall era a.
-  ( Default (StashedAVVMAddresses era)
-  , EraTxOut era
-  , EraGov era
-  , ConwayEraPParams era
-  ) =>
-  String ->
-  ImpTestM era a ->
-  Spec
-itM desc (ImpTestM m) = it desc . void $ execStateT m def
-
--- | Returns the @TxWits@ needed for sumbmitting the transaction
-mkTxWits ::
-  ( HasCallStack
-  , Signable
-      (DSIGN (EraCrypto era))
-      (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , EraTx era
-  , ConwayEraTxBody era
-  ) =>
-  TxBody era ->
-  ImpTestM era (TxWits era)
-mkTxWits txb = do
-  ImpTestState {impNES, impKeyPairs} <- get
-  let
-    utxo = impNES ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
-    txbHash = hashAnnotated txb
-    witsNeeded = conwayWitsVKeyNeeded utxo txb
-    mkTxWit kh =
-      mkWitnessVKey txbHash
-        . fromMaybe (error "Could not find a keypair corresponding to keyhash. Always use `freshKeyHash` to create key hashes.")
-        $ Map.lookup kh impKeyPairs
-  pure $
-    mkBasicTxWits
-      & addrTxWitsL .~ Set.map mkTxWit witsNeeded
-
--- | Modifies the transaction to make it valid. Handles things such as balancing
--- produced and consumed values and ensuring fees are correct.
-fixupTx ::
-  forall era.
-  ( EraTx era
-  , EraGov era
-  , ConwayEraTxBody era
-  , Signable
-      (DSIGN (EraCrypto era))
-      (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , TxOut era ~ BabbageTxOut era
-  ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
-fixupTx tx = do
-  ImpTestState {impNES, impRootTxId, impRootTxCoin} <- get
-  let
-    utxos = impNES ^. nesEsL . esLStateL . lsUTxOStateL
-    pp = utxos ^. utxosGovStateL . curPParamsGovStateL
-  kpSpending <- lookupKeyPair =<< freshKeyHash
-  kpStaking <- lookupKeyPair =<< freshKeyHash
-  modify $ \st ->
-    st
-      { impRootTxId = TxId $ hashAnnotated (tx ^. bodyTxL)
-      }
-  let
-    outputsTotalCoin = sumAllCoin $ tx ^. bodyTxL . outputsTxBodyL
-    remainingCoin = impRootTxCoin <-> outputsTotalCoin
-    remainingTxOut =
-      BabbageTxOut @era
-        (mkAddr (kpSpending, kpStaking))
-        (inject remainingCoin)
-        NoDatum
-        SNothing
-  impRootTxCoinL .= remainingCoin
-  let
-    balancedTx =
-      setMinFeeTx pp tx
-        & bodyTxL . inputsTxBodyL %~ Set.insert (mkTxInPartial impRootTxId 0)
-        & bodyTxL . outputsTxBodyL %~ (remainingTxOut :<|)
-  wits <- mkTxWits (balancedTx ^. bodyTxL)
-  pure $ balancedTx & witsTxL .~ wits
-
--- | Constructs and submits a Conway era transaction. Takes a message that's
--- shown when the transaction fails and a function that constructs a transaction
--- from the basic transaction. The function does not have to balance the
--- produced and consumed values, this is done automatically.
-submitBasicConwayTx :: String -> (Tx Conway -> Tx Conway) -> ImpTestM Conway (TxId StandardCrypto)
-submitBasicConwayTx desc f = do
-  let
-    initialTx = mkBasicTx mkBasicTxBody
-  fixedTx <- fixupTx $ f initialTx
-  txId <- submitTx desc fixedTx
-  modify $ \st ->
-    st
-      { impRootTxId = txId
-      }
-  pure txId
-
--- | Same as `submitBasicConwayTx` but a version that expects failure
-submitFailingBasicConwayTx :: (Tx Conway -> Tx Conway) -> ImpTestM Conway ()
-submitFailingBasicConwayTx f = do
-  let
-    initialTx = mkBasicTx mkBasicTxBody
-  fixedTx <- fixupTx $ f initialTx
-  submitFailingTx fixedTx
-
--- | Creates a fresh @SafeHash@
-freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
-freshSafeHash = do
-  ImpTestState {impSafeHashIdx} <- get
-  modify $ \st -> st {impSafeHashIdx = succ impSafeHashIdx}
-  pure $ mkDummySafeHash impSafeHashIdx
-
--- | Adds a key pair to the keyhash lookup map
-addKeyPair :: Era era => KeyPair r (EraCrypto era) -> ImpTestM era ()
-addKeyPair kp@(KeyPair vk _) = do
-  ImpTestState {impKeyPairs} <- get
-  modify $ \st ->
-    st
-      { impKeyPairs =
-          Map.insert
-            (coerceKeyRole $ hashKey vk)
-            (coerce kp)
-            impKeyPairs
-      }
-
--- | Looks up the keypair corresponding to the keyhash. The keyhash must be
--- created with @freshKeyHash@ for this to work.
-lookupKeyPair :: HasCallStack => KeyHash r (EraCrypto era) -> ImpTestM era (KeyPair r (EraCrypto era))
-lookupKeyPair kh = do
-  ImpTestState {impKeyPairs} <- get
-  maybe (error $ "Could not find keyhash from the keypairs map: " ++ show kh) (pure . coerce) $
-    Map.lookup (coerceKeyRole kh) impKeyPairs
-
--- | Generates a fresh keyhash and stores the corresponding keypair in the
--- ImpTestState. Use @lookupKeyPair@ to look up the keypair corresponding to the
--- keyhash
-freshKeyHash :: Era era => ImpTestM era (KeyHash r (EraCrypto era))
-freshKeyHash = do
-  ImpTestState {impKeyPairs} <- get
-  let kp@(KeyPair kh _) = mkKeyPair $ Map.size impKeyPairs
-  addKeyPair kp
-  pure $ hashKey kh
-
--- | Modify the current new epoch state with a function
-modifyNES :: (NewEpochState era -> NewEpochState era) -> ImpTestM era ()
-modifyNES = (impNESL %=)
-
--- | Get a value from the current new epoch state using the lens
-getsNES :: SimpleGetter (NewEpochState era) a -> ImpTestM era a
-getsNES l = gets . view $ impNESL . l
-
--- | Runs an IO action and throws an @ImpException@ with the given message on
--- failure
-impIOMsg :: NFData a => String -> IO a -> ImpTestM era a
-impIOMsg msg m = ImpTestM $ do
-  logs <- gets impLog
-  lift . catchAnyDeep m $ \(SomeException e) -> throwIO $ ImpException logs msg e
-
--- | Runs an IO action and throws an @ImpException@ with a generic message on
--- failure
-impIO :: NFData a => IO a -> ImpTestM era a
-impIO = impIOMsg ""
-
--- | Submits a transaction that proposes the given governance action
 submitProposal ::
-  GovAction Conway ->
-  ImpTestM Conway (GovActionId StandardCrypto)
-submitProposal ga = do
-  khPropRwd <- freshKeyHash
-  txId <- submitBasicConwayTx "proposal" $ \tx ->
-    tx
-      & bodyTxL . proposalProceduresTxBodyL
-        .~ Seq.singleton
-          ProposalProcedure
-            { pProcDeposit = zero
-            , pProcReturnAddr =
-                RewardAcnt
-                  Testnet
-                  (KeyHashObj khPropRwd)
-            , pProcGovAction = ga
-            , pProcAnchor = def
-            }
+  forall era.
+  ( EraImpTest era
+  , ConwayEraTxBody era
+  ) =>
+  GovAction era ->
+  ImpTestM era (GovActionId (EraCrypto era))
+submitProposal ga = trySubmitProposal ga >>= impExpectSuccess
+
+submitFailingProposal ::
+  ( EraImpTest era
+  , ConwayEraTxBody era
+  ) =>
+  GovAction era ->
+  ImpTestM era ()
+submitFailingProposal ga = trySubmitProposal ga >>= impExpectFailure
+
+getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
+getEnactState = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . enactStateGovStateL
+
+-- | Looks up the governance action state corresponding to the governance
+-- action id
+lookupGovActionState :: (HasCallStack, ConwayEraGov era) => GovActionId (EraCrypto era) -> ImpTestM era (GovActionState era)
+lookupGovActionState aId = do
+  proposals <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
+  impIOMsg "Expecting an action state" $ do
+    maybe (error $ "Could not find action state for action " <> show aId) pure $
+      snapshotLookupId aId proposals
+
+-- | Builds a RatifyState from the current state
+getRatifyEnv :: ConwayEraGov era => ImpTestM era (RatifyEnv era)
+getRatifyEnv = do
+  eNo <- getsNES nesELL
+  stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
+  poolDistr <- getsNES nesPdL
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
+  drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+  committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
   pure
-    GovActionId
-      { gaidTxId = txId
-      , gaidGovActionIx = GovActionIx 0
+    RatifyEnv
+      { reStakePoolDistr = poolDistr
+      , reStakeDistr = credMap stakeDistr
+      , reDRepState = drepState
+      , reDRepDistr = drepDistr
+      , reCurrentEpoch = eNo - 1
+      , reCommitteeState = committeeState
       }
 
-submitFailingProposal :: GovAction Conway -> ImpTestM Conway ()
-submitFailingProposal ga = do
-  khPropRwd <- freshKeyHash
-  submitFailingBasicConwayTx $ \tx ->
-    tx
-      & bodyTxL . proposalProceduresTxBodyL
-        .~ Seq.singleton
-          ProposalProcedure
-            { pProcDeposit = zero
-            , pProcReturnAddr =
-                RewardAcnt
-                  Testnet
-                  (KeyHashObj khPropRwd)
-            , pProcGovAction = ga
-            , pProcAnchor = def
-            }
+-- | Calculates the ratio of DReps that have voted for the governance action
+calculateDRepAcceptedRatio :: forall era. ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era Rational
+calculateDRepAcceptedRatio gaId = do
+  ratEnv <- getRatifyEnv
+  gas <- lookupGovActionState gaId
+  pure $
+    dRepAcceptedRatio @era
+      ratEnv
+      (gas ^. gasDRepVotesL)
+      (gasAction gas)
+
+-- | Calculates the ratio of CC members that have voted for the governance
+-- action
+calculateCommitteeAcceptedRatio :: forall era. ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era Rational
+calculateCommitteeAcceptedRatio gaId = do
+  eNo <- getsNES nesELL
+  RatifyEnv {reCommitteeState} <- getRatifyEnv
+  GovActionState {gasCommitteeVotes} <- lookupGovActionState gaId
+  ens <- getEnactState
+  let
+    committee = ens ^. ensCommitteeL
+    members = foldMap' (committeeMembers @era) committee
+  pure $
+    committeeAcceptedRatio
+      members
+      gasCommitteeVotes
+      reCommitteeState
+      eNo
+
+-- | Logs the ratios of accepted votes per category
+logAcceptedRatio :: ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era ()
+logAcceptedRatio aId = do
+  dRepRatio <- calculateDRepAcceptedRatio aId
+  committeeRatio <- calculateCommitteeAcceptedRatio aId
+  logEntry "----- ACCEPTED RATIOS -----"
+  logEntry $ "DRep accepted ratio:\t\t" <> show dRepRatio
+  logEntry $ "Committee accepted ratio:\t" <> show committeeRatio
+  logEntry ""
+
+-- | Checks whether the governance action has enough votes to be accepted
+isGovActionAccepted :: (ConwayEraGov era, ConwayEraPParams era) => GovActionId (EraCrypto era) -> ImpTestM era Bool
+isGovActionAccepted gaId = do
+  eNo <- getsNES nesELL
+  stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
+  poolDistr <- getsNES nesPdL
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
+  drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+  action <- lookupGovActionState gaId
+  enactSt <- getEnactState
+  committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+  let
+    ratEnv =
+      RatifyEnv
+        { reStakePoolDistr = poolDistr
+        , reStakeDistr = credMap stakeDistr
+        , reDRepState = drepState
+        , reDRepDistr = drepDistr
+        , reCurrentEpoch = eNo - 1
+        , reCommitteeState = committeeState
+        }
+    ratSt =
+      RatifyState
+        { rsRemoved = mempty
+        , rsEnactState = enactSt
+        , rsDelayed = False
+        }
+  pure $ dRepAccepted ratEnv ratSt action
+
+-- | Logs the results of each check required to make the governance action pass
+logRatificationChecks :: (ConwayEraGov era, ConwayEraPParams era) => GovActionId (EraCrypto era) -> ImpTestM era ()
+logRatificationChecks gaId = do
+  gas@GovActionState {gasAction} <- lookupGovActionState gaId
+  ens@EnactState {..} <-
+    getEnactState
+  ratEnv <- getRatifyEnv
+  let
+    ratSt = RatifyState ens mempty False
+  currentEpoch <- getsNES nesELL
+  logEntry $
+    unlines
+      [ "----- RATIFICATION CHECKS -----"
+      , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
+      , "validCommitteeTerm:\t" <> show (validCommitteeTerm ensCommittee ensCurPParams currentEpoch)
+      , "notDelayed:\t\t??"
+      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
+      , "committeeAccepted:\t" <> show (committeeAccepted ratSt ratEnv gas)
+      , "spoAccepted:\t\t" <> show (spoAccepted ratSt ratEnv gas)
+      , "dRepAccepted:\t\t" <> show (dRepAccepted ratEnv ratSt gas)
+      , ""
+      ]
+
+-- | Submits a transaction that registers a hot key for the given cold key.
+-- Returns the hot key hash.
+registerCCHotKey ::
+  (EraImpTest era, ConwayEraTxCert era) =>
+  KeyHash 'ColdCommitteeRole (EraCrypto era) ->
+  ImpTestM era (KeyHash 'HotCommitteeRole (EraCrypto era))
+registerCCHotKey coldKey = do
+  hotKey <- freshKeyHash
+  _ <-
+    submitTx "Registering hot key" $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . certsTxBodyL
+          .~ Seq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
+  pure hotKey

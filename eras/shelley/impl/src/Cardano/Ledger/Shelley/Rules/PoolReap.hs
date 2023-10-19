@@ -42,6 +42,7 @@ import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
+import Control.DeepSeq (NFData)
 import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
 import Control.State.Transition (
   Assertion (..),
@@ -79,6 +80,8 @@ deriving stock instance Show (UTxOState era) => Show (ShelleyPoolreapState era)
 
 data ShelleyPoolreapPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
+
+instance NFData (ShelleyPoolreapPredFailure era)
 
 data ShelleyPoolreapEvent era = RetiredPools
   { refundPools :: Map.Map (Credential 'Staking (EraCrypto era)) (Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin)

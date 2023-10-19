@@ -40,8 +40,10 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules.Newpp (
   NewppEnv (..),
   ShelleyNEWPP,
+  ShelleyNewppPredFailure,
   ShelleyNewppState (..),
  )
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
@@ -73,6 +75,8 @@ newtype ShelleyUpecPredFailure era
   deriving (Eq, Show, Generic)
 
 instance NoThunks (ShelleyUpecPredFailure era)
+
+instance NFData (ShelleyNewppPredFailure era) => NFData (ShelleyUpecPredFailure era)
 
 instance
   ( EraGov era

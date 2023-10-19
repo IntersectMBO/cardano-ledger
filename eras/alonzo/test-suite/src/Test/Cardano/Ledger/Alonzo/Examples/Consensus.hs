@@ -48,6 +48,7 @@ import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
+import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 
@@ -92,13 +93,13 @@ ledgerExamplesAlonzo =
 exampleTxBodyAlonzo :: AlonzoTxBody Alonzo
 exampleTxBodyAlonzo =
   AlonzoTxBody
-    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- inputs
-    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral
+    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 1)) 0]) -- inputs
+    (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash Proxy 2)) 1]) -- collateral
     ( StrictSeq.fromList
         [ AlonzoTxOut
             (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
             (SLE.exampleMultiAssetValue 2)
-            (SJust $ SLE.mkDummySafeHash Proxy 1) -- outputs
+            (SJust $ mkDummySafeHash Proxy 1) -- outputs
         ]
     )
     SLE.exampleCerts -- txcerts
@@ -120,8 +121,8 @@ exampleTxBodyAlonzo =
     ) -- txUpdates
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
     exampleMultiAsset -- mint
-    (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
-    (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
+    (SJust $ mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
+    (SJust . AuxiliaryDataHash $ mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
     (SJust Mainnet) -- txnetworkid
   where
     MaryValue _ exampleMultiAsset = SLE.exampleMultiAssetValue 3

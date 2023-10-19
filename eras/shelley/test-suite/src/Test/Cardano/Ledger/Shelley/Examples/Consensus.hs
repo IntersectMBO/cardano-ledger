@@ -393,11 +393,6 @@ exampleLedgerChainDepState seed =
 testEpochInfo :: EpochInfo Identity
 testEpochInfo = epochInfoPure testGlobals
 
-mkDummySafeHash :: forall c a. Crypto c => Proxy c -> Int -> SafeHash c a
-mkDummySafeHash _ =
-  unsafeMakeSafeHash
-    . mkDummyHash @(HASH c)
-
 mkDummyAnchor :: Crypto c => Int -> Anchor c
 mkDummyAnchor n =
   Anchor
