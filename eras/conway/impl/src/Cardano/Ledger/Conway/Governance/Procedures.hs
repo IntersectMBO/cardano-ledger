@@ -452,6 +452,19 @@ instance EraPParams era => EncCBOR (ProposalProcedure era) where
         !> To pProcGovAction
         !> To pProcAnchor
 
+instance EraPParams era => ToJSON (ProposalProcedure era) where
+  toJSON = object . toProposalProcedurePairs
+  toEncoding = pairs . mconcat . toProposalProcedurePairs
+
+toProposalProcedurePairs :: (KeyValue a, EraPParams era) => ProposalProcedure era -> [a]
+toProposalProcedurePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
+  let ProposalProcedure {..} = proposalProcedure
+   in [ "deposit" .= pProcDeposit
+      , "returnAddr" .= pProcReturnAddr
+      , "govAction" .= pProcGovAction
+      , "anchor" .= pProcAnchor
+      ]
+
 data Committee era = Committee
   { committeeMembers :: !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   -- ^ Committee members with epoch number when each of them expires

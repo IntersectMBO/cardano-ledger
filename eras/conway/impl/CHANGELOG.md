@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `ToJSON` instance for `ProposalProcedure`
 * Fix `NewEpochState` translation: #3801
 * Change order of arguments for `committeeAccepted` adn `spoAccepted` for consistency #3801
 * Add `spoAcceptedRatio` #3801
