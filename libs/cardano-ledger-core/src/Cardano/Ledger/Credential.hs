@@ -16,6 +16,7 @@ module Cardano.Ledger.Credential (
   credKeyHashWitness,
   credScriptHash,
   credToText,
+  parseCredential,
   Ptr (Ptr),
   ptrSlotNo,
   ptrTxIx,
@@ -62,12 +63,10 @@ import Data.Aeson (
   (.=),
  )
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Types (
-  toJSONKeyText,
- )
+import Data.Aeson.Types (toJSONKeyText)
 import Data.Default.Class (Default (..))
 import Data.Foldable (asum)
-import Data.Text as T
+import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Generics (Generic)
@@ -117,22 +116,27 @@ instance Crypto c => ToJSONKey (Credential kr c) where
 
 instance Crypto c => FromJSONKey (Credential kr c) where
   fromJSONKey = FromJSONKeyTextParser parseCredential
-    where
-      parseCredential t = case T.splitOn "-" t of
-        ["scriptHash", hash] ->
-          maybe
-            (badHash hash)
-            (pure . ScriptHashObj . ScriptHash)
-            (hashFromTextAsHex hash)
-        ["keyHash", hash] ->
-          maybe
-            (badHash hash)
-            (pure . KeyHashObj . KeyHash)
-            (hashFromTextAsHex hash)
-        _ -> fail $ "Invalid credential: " <> show t
-      badHash h = fail $ "Invalid hash: " <> show h
 
-credToText :: Credential kr c -> Text
+parseCredential ::
+  (MonadFail m, Crypto c) =>
+  T.Text ->
+  m (Credential kr c)
+parseCredential t = case T.splitOn "-" t of
+  ["scriptHash", hash] ->
+    maybe
+      (badHash hash)
+      (pure . ScriptHashObj . ScriptHash)
+      (hashFromTextAsHex hash)
+  ["keyHash", hash] ->
+    maybe
+      (badHash hash)
+      (pure . KeyHashObj . KeyHash)
+      (hashFromTextAsHex hash)
+  _ -> fail $ "Invalid credential: " <> show t
+  where
+    badHash h = fail $ "Invalid hash: " <> show h
+
+credToText :: Credential kr c -> T.Text
 credToText (ScriptHashObj (ScriptHash hash)) = "scriptHash-" <> hashToTextAsHex hash
 credToText (KeyHashObj (KeyHash has)) = "keyHash-" <> hashToTextAsHex has
 

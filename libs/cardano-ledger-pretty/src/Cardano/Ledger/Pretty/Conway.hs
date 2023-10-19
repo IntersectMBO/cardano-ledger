@@ -424,7 +424,7 @@ instance PrettyA (PParams era) => PrettyA (EnactState era) where
      in ppRecord
           "EnactState"
           [ ("Constitutional Committee", prettyA ensCommittee)
-          , ("PParams", prettyA ensPParams)
+          , ("CurPParams", prettyA ensCurPParams)
           , ("PrevPParams", prettyA ensPrevPParams)
           , ("Constitution", prettyA ensConstitution)
           , ("Treasury", prettyA ensTreasury)

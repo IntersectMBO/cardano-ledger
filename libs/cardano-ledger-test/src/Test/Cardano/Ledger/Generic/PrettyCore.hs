@@ -1642,7 +1642,7 @@ pcEnactState p ens@(EnactState _ _ _ _ _ _ _) =
         "EnactState"
         [ ("Constitutional Committee", ppStrictMaybe pcCommittee ensCommittee)
         , ("Constitution", pcConstitution ensConstitution)
-        , ("PParams", pcPParamsSynopsis p ensPParams)
+        , ("CurPParams", pcPParamsSynopsis p ensCurPParams)
         , ("PrevPParams", pcPParamsSynopsis p ensPrevPParams)
         , ("Treasury", pcCoin ensTreasury)
         , ("Withdrawals", ppMap pcCredential pcCoin ensWithdrawals)

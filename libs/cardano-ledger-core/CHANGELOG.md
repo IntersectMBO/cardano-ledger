@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Add `ToJSON`/`FromJSON` and `ToJSONKey`/`FromJSONKey` instances for `DRep`
+* Add `parseCredential`
 * Add `NoUpdate`, `HKDNoUpdate`
 * Add `toNoUpdate` and `fromNoUpdate` methods to `HKDFunctor`
 * Add `Updatable` instance for `NoUpdate`

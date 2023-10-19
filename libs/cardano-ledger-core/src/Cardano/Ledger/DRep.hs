@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -18,13 +19,23 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
-import Data.Aeson (ToJSON (..))
+import Data.Aeson (
+  FromJSON (..),
+  FromJSONKey (..),
+  FromJSONKeyFunction (..),
+  ToJSON (..),
+  ToJSONKey (..),
+  Value (..),
+  withText,
+ )
+import Data.Aeson.Types (toJSONKeyText)
+import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -37,7 +48,7 @@ data DRep c
   | DRepScriptHash !(ScriptHash c)
   | DRepAlwaysAbstain
   | DRepAlwaysNoConfidence
-  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, ToExpr, ToJSON)
+  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, ToExpr)
 
 instance Crypto c => EncCBOR (DRep c) where
   encCBOR (DRepKeyHash kh) =
@@ -68,6 +79,33 @@ dRepToCred :: DRep c -> Maybe (Credential 'DRepRole c)
 dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
 dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
+
+instance Crypto c => ToJSON (DRep c) where
+  toJSON = String . dRepToText
+
+instance Crypto c => ToJSONKey (DRep c) where
+  toJSONKey = toJSONKeyText dRepToText
+
+dRepToText :: DRep c -> T.Text
+dRepToText = \case
+  DRepAlwaysAbstain -> "drep-alwaysAbstain"
+  DRepAlwaysNoConfidence -> "drep-alwaysNoConfidence"
+  DRepCredential cred -> "drep-" <> credToText cred
+
+instance Crypto c => FromJSON (DRep c) where
+  parseJSON = withText "DRep" parseDRep
+
+instance Crypto c => FromJSONKey (DRep c) where
+  fromJSONKey = FromJSONKeyTextParser parseDRep
+
+parseDRep :: (MonadFail f, Crypto c) => T.Text -> f (DRep c)
+parseDRep t = case T.span (/= '-') t of
+  ("drep", restWithDash)
+    | restWithDash == "-alwaysAbstain" -> pure DRepAlwaysAbstain
+    | restWithDash == "-alwaysNoConfidence" -> pure DRepAlwaysNoConfidence
+    | ("-", rest) <- T.span (== '-') restWithDash ->
+        DRepCredential <$> parseCredential rest
+  _ -> fail $ "Invalid DRep: " <> show t
 
 pattern DRepCredential :: Credential 'DRepRole c -> DRep c
 pattern DRepCredential c <- (dRepToCred -> Just c)

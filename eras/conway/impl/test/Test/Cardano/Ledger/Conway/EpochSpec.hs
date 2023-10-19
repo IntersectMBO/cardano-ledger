@@ -43,7 +43,7 @@ import Cardano.Ledger.Conway.Governance (
   epochStateDRepPulsingStateL,
   epochStateIncrStakeDistrL,
   gasDRepVotesL,
-  getPulsingStateDRepDistr,
+  psDRepDistrG,
   rsDelayed,
   rsEnactState,
   rsRemoved,
@@ -209,7 +209,7 @@ getRatifyEnv = do
   eNo <- getsNES nesELL
   stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
   poolDistr <- getsNES nesPdL
-  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . getPulsingStateDRepDistr
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
   pure
@@ -268,7 +268,7 @@ isGovActionAccepted gaId = do
   eNo <- getsNES nesELL
   stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
   poolDistr <- getsNES nesPdL
-  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . getPulsingStateDRepDistr
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   action <- lookupGovActionState gaId
   enactSt <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL
@@ -307,15 +307,19 @@ logRatificationChecks gaId = do
   let
     ratSt = RatifyState ens mempty False
   currentEpoch <- getsNES nesELL
-  logEntry "----- RATIFICATION CHECKS -----"
-  logEntry $ "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
-  logEntry $ "validCommitteeTerm:\t" <> show (validCommitteeTerm ensCommittee ensPParams currentEpoch)
-  logEntry "notDelayed:\t\t??"
-  logEntry $ "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
-  logEntry $ "committeeAccepted:\t" <> show (committeeAccepted ratSt ratEnv gas)
-  logEntry $ "spoAccepted:\t\t" <> show (spoAccepted ratSt ratEnv gas)
-  logEntry $ "dRepAccepted:\t\t" <> show (dRepAccepted ratEnv ratSt gas)
-  logEntry ""
+  logEntry $
+    unlines
+      [ "----- RATIFICATION CHECKS -----"
+      , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
+      , "validCommitteeTerm:\t"
+          <> show (validCommitteeTerm ensCommittee ensCurPParams currentEpoch)
+      , "notDelayed:\t\t??"
+      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
+      , "committeeAccepted:\t" <> show (committeeAccepted ratSt ratEnv gas)
+      , "spoAccepted:\t\t" <> show (spoAccepted ratSt ratEnv gas)
+      , "dRepAccepted:\t\t" <> show (dRepAccepted ratEnv ratSt gas)
+      , ""
+      ]
 
 -- | Submits a transaction that registers a hot key for the given cold key.
 -- Returns the hot key hash.
