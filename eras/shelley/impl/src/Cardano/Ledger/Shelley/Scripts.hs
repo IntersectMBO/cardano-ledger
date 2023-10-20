@@ -22,6 +22,7 @@ module Cardano.Ledger.Shelley.Scripts (
     RequireSignature,
     RequireMOf
   ),
+  EraScript (..),
   evalMultiSig,
   validateMultiSig,
   ScriptHash (..),

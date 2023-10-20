@@ -168,7 +168,6 @@ transRedeemerPtr ::
   forall era.
   ( Alonzo.EraPlutusContext 'PlutusV1 era
   , AlonzoEraTxBody era
-  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   TxBody era ->
   (RedeemerPointer era, (Data era, ExUnits)) ->
@@ -193,7 +192,6 @@ babbageTxInfo ::
   , Alonzo.EraPlutusContext 'PlutusV1 era
   , Alonzo.EraPlutusContext 'PlutusV2 era
   , AlonzoEraScript era
-  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   PParams era ->
   Language ->
@@ -261,7 +259,7 @@ babbageTxInfoV2 ::
   , Value era ~ MaryValue (EraCrypto era)
   , EraPlutusContext 'PlutusV2 era
   , EraPlutusContext 'PlutusV1 era
-  , ScriptPurpose era ~ AlonzoScriptPurpose era, AlonzoEraScript era
+  , AlonzoEraScript era
   ) =>
   PV2.POSIXTimeRange ->
   Tx era ->

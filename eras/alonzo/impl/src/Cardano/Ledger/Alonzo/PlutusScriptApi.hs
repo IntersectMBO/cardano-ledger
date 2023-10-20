@@ -27,7 +27,7 @@ where
 
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..)
-  , CostModel, CostModels (..), ExUnits (..), AlonzoEraScript (..), AlonzoScriptPurpose)
+  , CostModel, CostModels (..), ExUnits (..), AlonzoEraScript (..))
 import Cardano.Ledger.Alonzo.Scripts.Data (Data)
 import Cardano.Ledger.Alonzo.Tx (indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxInfo (
@@ -47,7 +47,7 @@ import Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..), withSLanguage)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -131,7 +131,6 @@ collectPlutusScriptsWithContext ::
   , EraPlutusContext 'PlutusV1 era
   , AlonzoEraTxBody era
   , AlonzoEraScript era
-  , ScriptPurpose era ~ AlonzoScriptPurpose era
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -168,17 +167,18 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
         Nothing -> Left (NoRedeemer sp)
     apply (script@(Plutus lang _), sp, d, eu) = do
       cm <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
-      case txInfo pp lang epochInfo sysStart utxo tx of
-        Right inf ->
-          let datums = maybe id (:) (getSpendingDatum utxo tx sp) [d, valContext inf sp]
-           in Right $
-                PlutusWithContext
-                  { pwcScript = script
-                  , pwcDatums = datums
-                  , pwcExUnits = eu
-                  , pwcCostModel = cm
-                  }
-        Left te -> Left $ BadTranslation te
+      withSLanguage lang $ \slang ->
+        case txInfo pp slang epochInfo sysStart utxo tx of
+          Right inf ->
+            let datums = maybe id (:) (getSpendingDatum utxo tx sp) [d, valContext inf sp]
+             in Right $
+                  PlutusWithContext
+                    { pwcScript = script
+                    , pwcDatums = datums
+                    , pwcExUnits = eu
+                    , pwcCostModel = cm
+                    }
+          Left te -> Left $ BadTranslation te
 
 -- | Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.

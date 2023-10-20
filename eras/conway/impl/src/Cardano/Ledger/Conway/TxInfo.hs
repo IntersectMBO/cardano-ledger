@@ -22,8 +22,11 @@ import Cardano.Ledger.Alonzo.TxInfo (
   unTxCertV3,
  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..)
-  , RedeemerPointer, unRedeemers, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits
+  ( AlonzoEraTxWits (..)
+  , unRedeemers
+  , unTxDats
+  )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfoV1, babbageTxInfoV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as B
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -69,6 +72,7 @@ conwayTxInfo ::
   , EraPlutusContext 'PlutusV1 era
   , EraPlutusContext 'PlutusV2 era
   , EraPlutusContext 'PlutusV3 era
+  , AlonzoEraScript era
   ) =>
   PParams era ->
   Language ->

@@ -19,6 +19,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE GADTs #-}
 
 module Cardano.Ledger.Alonzo.Scripts (
   AlonzoRedeemerPurpose (..),
@@ -28,6 +29,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   AlonzoScriptPurpose (..),
   RedeemerPointer (..),
   Script,
+  Plutus (..),
   txscriptfee,
   isPlutusScript,
   pointWiseExUnits,
@@ -66,7 +68,7 @@ import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
   NonNegativeInterval,
   ProtVer (..),
-  boundRational,
+  boundRational, EpochNo (..), txIxToInt,
  )
 import Cardano.Ledger.Binary (
   Annotator,
@@ -80,8 +82,9 @@ import Cardano.Ledger.Binary (
   decodeMapByKey,
   encodeFoldableAsDefLenList,
   getVersion64,
-  ifDecoderVersionAtLeast, EncCBORGroup (..), DecCBORGroup (..),
+  ifDecoderVersionAtLeast, EncCBORGroup (..), DecCBORGroup (..), FromCBOR,
  )
+import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Binary.Coders (
   Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
   Encode (Rec, Sum, To),
@@ -98,15 +101,12 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Language (
-  BinaryPlutus (..),
   Language (..),
-  Plutus (..),
-  guardPlutus,
   mkLanguageEnum,
-  nonNativeLanguages,
+  nonNativeLanguages, SLanguage (..),
  )
 import Cardano.Ledger.MemoBytes (EqRaw (..))
-import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.SafeHash (SafeToHash (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
@@ -141,30 +141,50 @@ import NoThunks.Class (NoThunks (..), allNoThunks)
 import Numeric.Natural (Natural)
 import PlutusCore.Evaluation.Machine.CostModelInterface (CostModelApplyWarn)
 import qualified PlutusLedgerApi.Common as Plutus (showParamName)
-import qualified PlutusLedgerApi.V1 as PV1 (
-  CostModelApplyError (..),
-  EvaluationContext,
-  MajorProtocolVersion (MajorProtocolVersion),
-  ParamName,
-  ScriptDecodeError,
-  ScriptForEvaluation,
-  deserialiseScript,
-  mkEvaluationContext,
- )
-import qualified PlutusLedgerApi.V2 as PV2 (ParamName, deserialiseScript, mkEvaluationContext)
-import qualified PlutusLedgerApi.V3 as PV3 (ParamName, deserialiseScript, mkEvaluationContext)
+import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
+import qualified PlutusLedgerApi.V3 as PV3
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Redeemer (AlonzoRedeemerPurpose (..)
   , AlonzoScriptPurpose (..))
 import Data.Kind (Type)
-import Data.Data (Proxy (..))
+import Data.ByteString.Short (ShortByteString, fromShort)
+import qualified Data.ByteString.Base64 as B64
+import Cardano.Ledger.Address (RewardAcnt(..))
+import Data.Type.Equality (TestEquality(..), type (:~:) (..))
+import Data.Data (Proxy (..), Typeable)
+import Type.Reflection (typeOf)
+import Cardano.Ledger.Allegra.Core (ShelleyEraTxCert)
+import Cardano.Ledger.PoolParams (PoolParams(..))
+import Cardano.Ledger.Mary.Value (PolicyID (..))
+import Cardano.Crypto.Hash (hashToBytes, Hash)
+import Cardano.Ledger.TxIn (TxIn (..), TxId (..))
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Keys (KeyHash(..))
+import qualified Data.ByteString as BS
 
 -- =======================================================
+
+data Plutus era = Plutus
+  { plutusLanguage :: !(PLanguage era)
+  , plutusScript :: !BinaryPlutus
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance ToExpr (Plutus era)
+
+-- | Already in Normal Form
+instance NFData (Plutus era) where
+  rnf = rwhnf
+
+instance NoThunks (Plutus era)
+
+deriving instance Ord (Plutus era)
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
   = TimelockScript !(Timelock era)
-  | PlutusScript !Plutus
+  | PlutusScript !(Plutus era)
   deriving (Eq, Generic, NoThunks)
 
 instance ToExpr (AlonzoScript era)
@@ -178,7 +198,7 @@ upgradeAlonzoScript ::
   AlonzoScript era
 upgradeAlonzoScript = \case
   TimelockScript ts -> TimelockScript $ translateTimelock ts
-  PlutusScript ps -> PlutusScript ps
+  PlutusScript ps -> PlutusScript $ undefined ps
 
 instance (EraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
@@ -195,6 +215,37 @@ instance SafeToHash (AlonzoScript era) where
 isPlutusScript :: EraScript era => Script era -> Bool
 isPlutusScript = not . isNativeScript
 
+-- | Binary representation of a Plutus script.
+newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}
+  deriving stock (Eq, Ord, Generic)
+  deriving newtype (ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData, NoThunks)
+
+instance ToExpr BinaryPlutus
+
+instance Show BinaryPlutus where
+  show = show . B64.encode . fromShort . unBinaryPlutus
+
+instance DecCBOR (Annotator BinaryPlutus) where
+  decCBOR = pure <$> decCBOR
+
+instance SafeToHash BinaryPlutus where
+  originalBytes (BinaryPlutus binaryBlutus) = fromShort binaryBlutus
+
+data PLanguage era = forall (l :: Language).
+  (Typeable l, EraPlutusContext l era) => PLanguage (SLanguage l)
+
+deriving instance Show (PLanguage era)
+
+instance Eq (PLanguage era) where
+  PLanguage x == PLanguage y = case testEquality (typeOf x) (typeOf y) of
+    Just Refl -> x == y
+    Nothing -> False
+
+instance Crypto c => DecCBOR (PLanguage (AlonzoEra c)) where
+  decCBOR = decode . Summands "PLanguage" $ \case
+    1 -> SumD $ PLanguage SPlutusV1
+    k -> Invalid k
+
 instance Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
   type NativeScript (AlonzoEra c) = Timelock (AlonzoEra c)
@@ -204,9 +255,9 @@ instance Crypto c => EraScript (AlonzoEra c) where
   scriptPrefixTag script =
     case script of
       TimelockScript _ -> nativeMultiSigTag -- "\x00"
-      PlutusScript (Plutus PlutusV1 _) -> "\x01"
-      PlutusScript (Plutus PlutusV2 _) -> "\x02"
-      PlutusScript (Plutus PlutusV3 _) -> "\x03"
+      PlutusScript (Plutus (PLanguage SPlutusV1) _) -> "\x01"
+      PlutusScript (Plutus (PLanguage SPlutusV2) _) -> "\x02"
+      PlutusScript (Plutus (PLanguage SPlutusV3) _) -> "\x03"
 
   getNativeScript = \case
     TimelockScript ts -> Just ts
@@ -752,22 +803,22 @@ instance Era era => ToCBOR (AlonzoScript era) where
 encodeScript :: Era era => AlonzoScript era -> Encode 'Open (AlonzoScript era)
 encodeScript = \case
   TimelockScript i -> Sum TimelockScript 0 !> To i
-  PlutusScript (Plutus PlutusV1 s) -> Sum (PlutusScript . Plutus PlutusV1) 1 !> To s
-  PlutusScript (Plutus PlutusV2 s) -> Sum (PlutusScript . Plutus PlutusV2) 2 !> To s
-  PlutusScript (Plutus PlutusV3 s) -> Sum (PlutusScript . Plutus PlutusV3) 3 !> To s
+  PlutusScript (Plutus (PLanguage SPlutusV1) s) -> Sum (PlutusScript . Plutus (PLanguage SPlutusV1)) 1 !> To s
+  PlutusScript (Plutus (PLanguage SPlutusV2) s) -> Sum (PlutusScript . Plutus (PLanguage SPlutusV2)) 2 !> To s
+  PlutusScript (Plutus (PLanguage SPlutusV3) s) -> Sum (PlutusScript . Plutus (PLanguage SPlutusV3)) 3 !> To s
 
 instance Era era => DecCBOR (Annotator (AlonzoScript era)) where
   decCBOR = decode (Summands "Alonzo Script" decodeScript)
     where
-      decodeAnnPlutus lang =
-        Ann (SumD $ PlutusScript . Plutus lang) <*! Ann (D (guardPlutus lang >> decCBOR))
+      decodeAnnPlutus plang =
+        Ann (SumD $ PlutusScript . Plutus plang) <*! Ann From
       {-# INLINE decodeAnnPlutus #-}
       decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
       decodeScript = \case
         0 -> Ann (SumD TimelockScript) <*! From
-        1 -> decodeAnnPlutus PlutusV1
-        2 -> decodeAnnPlutus PlutusV2
-        3 -> decodeAnnPlutus PlutusV3
+        1 -> decodeAnnPlutus (PLanguage SPlutusV1)
+        2 -> decodeAnnPlutus (PLanguage SPlutusV2)
+        3 -> decodeAnnPlutus (PLanguage SPlutusV3)
         n -> Invalid n
       {-# INLINE decodeScript #-}
   {-# INLINE decCBOR #-}
@@ -782,9 +833,9 @@ validScript pv script =
     PlutusScript (Plutus lang (BinaryPlutus bytes)) ->
       let deserialiseScript =
             case lang of
-              PlutusV1 -> PV1.deserialiseScript
-              PlutusV2 -> PV2.deserialiseScript
-              PlutusV3 -> PV3.deserialiseScript
+              PLanguage SPlutusV1 -> PV1.deserialiseScript
+              PLanguage SPlutusV2 -> PV2.deserialiseScript
+              PLanguage SPlutusV3 -> PV3.deserialiseScript
           eWellFormed :: Either PV1.ScriptDecodeError PV1.ScriptForEvaluation
           eWellFormed = deserialiseScript (transProtocolVersion pv) bytes
        in isRight eWellFormed
@@ -847,3 +898,82 @@ instance AlonzoEraScript era => EncCBORGroup (RedeemerPointer era) where
 
 instance AlonzoEraScript era => DecCBORGroup (RedeemerPointer era) where
   decCBORGroup = RedeemerPointer <$> decCBOR <*> decCBOR
+
+instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
+  transTxCert = TxCertPlutusV1 . alonzoTransTxCert
+
+  transScriptPurpose prp = ScriptPurposePlutusV1 $ case prp of
+    Minting policyid -> PV1.Minting (transPolicyID policyid)
+    Spending txin -> PV1.Spending (txInfoIn' txin)
+    Rewarding (RewardAcnt _network cred) -> PV1.Rewarding (PV1.StakingHash (transCred cred))
+    Certifying dcert -> PV1.Certifying . unTxCertV1 $ transTxCert dcert
+
+class Era era => EraPlutusContext (l :: Language) era where
+  transTxCert :: TxCert era -> PlutusTxCert l
+
+  transScriptPurpose :: ScriptPurpose era -> PlutusScriptPurpose l
+
+data PlutusTxCert (l :: Language) where
+  TxCertPlutusV1 :: PV1.DCert -> PlutusTxCert 'PlutusV1
+  TxCertPlutusV2 :: PV2.DCert -> PlutusTxCert 'PlutusV2
+  TxCertPlutusV3 :: PV3.TxCert -> PlutusTxCert 'PlutusV3
+
+data PlutusScriptPurpose (l :: Language) where
+  ScriptPurposePlutusV1 :: PV1.ScriptPurpose -> PlutusScriptPurpose 'PlutusV1
+  ScriptPurposePlutusV2 :: PV2.ScriptPurpose -> PlutusScriptPurpose 'PlutusV2
+  ScriptPurposePlutusV3 :: PV3.ScriptPurpose -> PlutusScriptPurpose 'PlutusV3
+
+alonzoTransTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
+alonzoTransTxCert = \case
+  RegTxCert stakeCred ->
+    PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
+  UnRegTxCert stakeCred ->
+    PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+  DelegStakeTxCert stakeCred keyHash ->
+    PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
+  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
+    PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
+  RetirePoolTxCert poolId (EpochNo i) ->
+    PV1.DCertPoolRetire (transKeyHash poolId) (fromIntegral i)
+  GenesisDelegTxCert {} -> PV1.DCertGenesis
+  MirTxCert {} -> PV1.DCertMir
+
+transShelleyTxCert ::
+  (ShelleyEraTxCert era, ProtVerAtMost era 8, TxCert era ~ ShelleyTxCert era) =>
+  ShelleyTxCert era ->
+  PV1.DCert
+transShelleyTxCert = alonzoTransTxCert
+{-# DEPRECATED transShelleyTxCert "In favor of `alonzoTransTxCert`" #-}
+
+transPolicyID :: PolicyID c -> PV1.CurrencySymbol
+transPolicyID (PolicyID (ScriptHash x)) = PV1.CurrencySymbol (PV1.toBuiltin (hashToBytes x))
+
+txInfoIn' :: TxIn c -> PV1.TxOutRef
+txInfoIn' (TxIn txid txIx) = PV1.TxOutRef (txInfoId txid) (toInteger (txIxToInt txIx))
+
+txInfoId :: TxId c -> PV1.TxId
+txInfoId (TxId safe) = PV1.TxId (transSafeHash safe)
+
+transSafeHash :: SafeHash c i -> PV1.BuiltinByteString
+transSafeHash = PV1.toBuiltin . hashToBytes . extractHash
+
+transCred :: Credential kr c -> PV1.Credential
+transCred (KeyHashObj (KeyHash kh)) =
+  PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
+transCred (ScriptHashObj (ScriptHash sh)) =
+  PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
+
+unTxCertV1 :: PlutusTxCert 'PlutusV1 -> PV1.DCert
+unTxCertV1 (TxCertPlutusV1 x) = x
+
+unTxCertV2 :: PlutusTxCert 'PlutusV2 -> PV2.DCert
+unTxCertV2 (TxCertPlutusV2 x) = x
+
+unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.TxCert
+unTxCertV3 (TxCertPlutusV3 x) = x
+
+transKeyHash :: KeyHash d c -> PV1.PubKeyHash
+transKeyHash (KeyHash h) = PV1.PubKeyHash (PV1.toBuiltin (hashToBytes h))
+
+transHash :: Hash h a -> BS.ByteString
+transHash = hashToBytes

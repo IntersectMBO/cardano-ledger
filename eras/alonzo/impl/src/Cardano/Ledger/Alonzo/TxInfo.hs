@@ -17,12 +17,13 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Cardano.Ledger.Alonzo.TxInfo (
   TxOutSource (..),
   TranslationError (..),
+  PlutusScriptPurpose (..),
   transProtocolVersion,
-  transScriptPurpose,
   validScript,
   transDataHash,
   transDataHash',
@@ -64,9 +65,9 @@ module Cardano.Ledger.Alonzo.TxInfo (
   PlutusError (..),
   PlutusDebugInfo (..),
   EraPlutusContext (..),
+  PLanguage (..),
   PlutusWithContext (..),
   alonzoTransTxCert,
-  PlutusTxCert (..),
   unTxCertV1,
   unTxCertV2,
   unTxCertV3,
@@ -148,7 +149,6 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (getScriptsProvided), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..))
@@ -277,18 +277,6 @@ transDataHash SNothing = Nothing
 transDataHash' :: DataHash c -> PV1.DatumHash
 transDataHash' safe = PV1.DatumHash (transSafeHash safe)
 
-transKeyHash :: KeyHash d c -> PV1.PubKeyHash
-transKeyHash (KeyHash h) = PV1.PubKeyHash (PV1.toBuiltin (hashToBytes h))
-
-transSafeHash :: SafeHash c i -> PV1.BuiltinByteString
-transSafeHash = PV1.toBuiltin . hashToBytes . extractHash
-
-transHash :: Hash h a -> BS.ByteString
-transHash = hashToBytes
-
-txInfoId :: TxId c -> PV1.TxId
-txInfoId (TxId safe) = PV1.TxId (transSafeHash safe)
-
 transStakeCred :: Credential kr c -> PV1.Credential
 transStakeCred (ScriptHashObj (ScriptHash sh)) =
   PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
@@ -303,12 +291,6 @@ transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
       !certIxInteger = toInteger (certIxToInt certIx)
    in Just (PV1.StakingPtr (fromIntegral slot) txIxInteger certIxInteger)
 transStakeReference StakeRefNull = Nothing
-
-transCred :: Credential kr c -> PV1.Credential
-transCred (KeyHashObj (KeyHash kh)) =
-  PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
-transCred (ScriptHashObj (ScriptHash sh)) =
-  PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 
 transAddr :: Addr c -> Maybe PV1.Address
 transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
@@ -363,9 +345,6 @@ transVITime _ ei sysS (ValidityInterval (SJust i) (SJust j)) = do
 -- ========================================
 -- translate TxIn and TxOut
 
-txInfoIn' :: TxIn c -> PV1.TxOutRef
-txInfoIn' (TxIn txid txIx) = PV1.TxOutRef (txInfoId txid) (toInteger (txIxToInt txIx))
-
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it and return
 --   (Just translation). If does not exist in the UTxO, return Nothing.
 txInfoIn ::
@@ -397,9 +376,6 @@ txInfoOut txOut = do
 -- ==================================
 -- translate Values
 
-transPolicyID :: PolicyID c -> PV1.CurrencySymbol
-transPolicyID (PolicyID (ScriptHash x)) = PV1.CurrencySymbol (PV1.toBuiltin (hashToBytes x))
-
 transAssetName :: AssetName -> PV1.TokenName
 transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 
@@ -409,7 +385,7 @@ transMultiAsset ma = transMultiAssetInternal ma mempty
 transMultiAssetInternal :: MultiAsset c -> PV1.Value -> PV1.Value
 transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAcc m
   where
-    accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
+    accum1 ans sym = Map.foldlWithKey' accum2 ans
       where
         accum2 ans2 tok quantity =
           PV1.unionWith
@@ -435,48 +411,6 @@ transValue (MaryValue n m) = justAda <> transMultiAsset m
 
 -- =============================================
 -- translate fields like TxCert, Withdrawals, and similar
-
-data PlutusTxCert (l :: Language) where
-  TxCertPlutusV1 :: PV1.DCert -> PlutusTxCert 'PlutusV1
-  TxCertPlutusV2 :: PV2.DCert -> PlutusTxCert 'PlutusV2
-  TxCertPlutusV3 :: PV3.TxCert -> PlutusTxCert 'PlutusV3
-
-unTxCertV1 :: PlutusTxCert 'PlutusV1 -> PV1.DCert
-unTxCertV1 (TxCertPlutusV1 x) = x
-
-unTxCertV2 :: PlutusTxCert 'PlutusV2 -> PV2.DCert
-unTxCertV2 (TxCertPlutusV2 x) = x
-
-unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.TxCert
-unTxCertV3 (TxCertPlutusV3 x) = x
-
-class Era era => EraPlutusContext (l :: Language) era where
-  transTxCert :: TxCert era -> PlutusTxCert l
-
-instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
-  transTxCert = TxCertPlutusV1 . alonzoTransTxCert
-
-alonzoTransTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
-alonzoTransTxCert = \case
-  RegTxCert stakeCred ->
-    PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
-  UnRegTxCert stakeCred ->
-    PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
-  DelegStakeTxCert stakeCred keyHash ->
-    PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
-  RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
-    PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
-  RetirePoolTxCert poolId (EpochNo i) ->
-    PV1.DCertPoolRetire (transKeyHash poolId) (fromIntegral i)
-  GenesisDelegTxCert {} -> PV1.DCertGenesis
-  MirTxCert {} -> PV1.DCertMir
-
-transShelleyTxCert ::
-  (ShelleyEraTxCert era, ProtVerAtMost era 8, TxCert era ~ ShelleyTxCert era) =>
-  ShelleyTxCert era ->
-  PV1.DCert
-transShelleyTxCert = alonzoTransTxCert
-{-# DEPRECATED transShelleyTxCert "In favor of `alonzoTransTxCert`" #-}
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
@@ -514,22 +448,11 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
 -- ===================================
 -- translate Script Purpose
 
-transScriptPurpose ::
-  EraPlutusContext 'PlutusV1 era =>
-  AlonzoScriptPurpose era ->
-  PV1.ScriptPurpose
-transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
-transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
-transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
-  PV1.Rewarding (PV1.StakingHash (transCred cred))
--- TODO Add support for PV3
-transScriptPurpose (Certifying dcert) = PV1.Certifying . unTxCertV1 $ transTxCert dcert
 
-data VersionedTxInfo
-  = TxInfoPV1 PV1.TxInfo
-  | TxInfoPV2 PV2.TxInfo
-  | TxInfoPV3 PV3.TxInfo
-  deriving (Show, Eq, Generic)
+data VersionedTxInfo l where
+  TxInfoPV1 :: PV1.TxInfo -> VersionedTxInfo 'PlutusV1
+  TxInfoPV2 :: PV2.TxInfo -> VersionedTxInfo 'PlutusV2
+  TxInfoPV3 :: PV3.TxInfo -> VersionedTxInfo 'PlutusV3
 
 -- | Where we keep functions that differ from Era to Era but which
 --   deal with the extra things in the TxOut (Scripts, DataHash, Datum, etc)
@@ -538,12 +461,12 @@ class ExtendedUTxO era where
   --    This is the major component of the valContext function.
   txInfo ::
     PParams era ->
-    Language ->
+    SLanguage l ->
     EpochInfo (Either Text) ->
     SystemStart ->
     UTxO era ->
     Tx era ->
-    Either (TranslationError era) VersionedTxInfo
+    Either (TranslationError era) (VersionedTxInfo l)
 
   txscripts ::
     UTxO era ->
@@ -584,20 +507,20 @@ getTxOutDatum txOut = txOut ^. datumTxOutF
 {-# DEPRECATED getTxOutDatum "In favor of `datumTxOutF`" #-}
 
 alonzoTxInfo ::
-  forall era.
+  forall (l :: Language) era.
   ( EraTx era
   , AlonzoEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
   , TxWits era ~ AlonzoTxWits era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext l era
   ) =>
   PParams era ->
-  Language ->
+  SLanguage l ->
   EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
   Tx era ->
-  Either (TranslationError era) VersionedTxInfo
+  Either (TranslationError era) (VersionedTxInfo l)
 alonzoTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
   -- We need to do this as a separate step
@@ -607,7 +530,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           Just txOut -> Right (txIn, txOut)
   txIns <- mapM lookupTxOut (Set.toList (txBody ^. inputsTxBodyL))
   case lang of
-    PlutusV1 ->
+    SPlutusV1 ->
       Right . TxInfoPV1 $
         PV1.TxInfo
           { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns
@@ -621,7 +544,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           , PV1.txInfoData = map transDataPair datpairs
           , PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated txBody))
           }
-    _ -> Left . LanguageNotSupported $ lang
+    _ -> Left . LanguageNotSupported $ fromSLanguage lang
   where
     txBody :: TxBody era
     txBody = tx ^. bodyTxL
@@ -635,20 +558,18 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
 
 -- | valContext pairs transaction data with a script purpose.
 --   See figure 22 of the Alonzo specification.
-valContext :: forall era.
-  ( EraPlutusContext 'PlutusV1 era
-  , ScriptPurpose era ~ AlonzoScriptPurpose era
+valContext :: forall era (l :: Language).
+  ( EraPlutusContext l era
   ) =>
-  VersionedTxInfo ->
+  VersionedTxInfo l ->
   ScriptPurpose era ->
   Data era
-valContext (TxInfoPV1 txinfo) sp =
-  Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose @era sp)))
-valContext (TxInfoPV2 txinfo) sp =
-  Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
-valContext (TxInfoPV3 txinfo) _sp =
-  -- FIXME: add support for PlutusV3
-  Data (PV3.toData (PV3.ScriptContext txinfo (error "Unimplemented")))
+valContext (TxInfoPV1 txinfo) sp = case transScriptPurpose @l sp of
+  ScriptPurposePlutusV1 prp -> Data (PV1.toData (PV1.ScriptContext txinfo prp))
+valContext (TxInfoPV2 txinfo) sp = case transScriptPurpose @l sp of
+  ScriptPurposePlutusV2 prp -> Data (PV2.toData (PV2.ScriptContext txinfo prp))
+valContext (TxInfoPV3 txinfo) sp = case transScriptPurpose @l sp of
+  ScriptPurposePlutusV3 prp -> Data (PV3.toData (PV3.ScriptContext txinfo prp))
 
 data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)

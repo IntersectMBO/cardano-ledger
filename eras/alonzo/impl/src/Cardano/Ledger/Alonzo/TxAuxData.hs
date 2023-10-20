@@ -57,7 +57,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH))
-import Cardano.Ledger.Language (Language (..), Plutus (..), guardPlutus)
+import Cardano.Ledger.Language (Language (..), guardPlutus)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
