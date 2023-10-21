@@ -24,7 +24,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   logStakeDistr,
   emptyShelleyImpNES,
   shelleyImpWitsVKeyNeeded,
-  modifyPParams,
+  modifyPrevPParams,
   passEpoch,
   passTick,
   itM,
@@ -209,6 +209,14 @@ class
     TxBody era ->
     Set.Set (KeyHash 'Witness (EraCrypto era))
 
+  -- | This modifer should change not only the current PParams, but also the future
+  -- PParams. If the future PParams are not updated, then they will overwrite the
+  -- mofication of the current PParams at the next epoch.
+  modifyPParams ::
+    (PParams era -> PParams era) ->
+    ImpTestM era ()
+  modifyPParams f = modifyNES $ nesEsL . curPParamsEpochStateL %~ f
+
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
   slotNo <- gets impLastTick
@@ -220,14 +228,13 @@ impLedgerEnv nes = do
       , ledgerAccount = nes ^. nesEsL . esAccountStateL
       }
 
--- | Modify the PParams in the current state with the given function
-modifyPParams ::
+-- | Modify the previous PParams in the current state with the given function. For current
+-- and future PParams, use `modifyPParams`
+modifyPrevPParams ::
   EraGov era =>
   (PParams era -> PParams era) ->
   ImpTestM era ()
-modifyPParams f = do
-  modifyNES $ nesEsL . curPParamsEpochStateL %~ f
-  modifyNES $ nesEsL . prevPParamsEpochStateL %~ f
+modifyPrevPParams f = modifyNES $ nesEsL . prevPParamsEpochStateL %~ f
 
 -- | Logs the current stake distribution
 logStakeDistr :: ImpTestM era ()

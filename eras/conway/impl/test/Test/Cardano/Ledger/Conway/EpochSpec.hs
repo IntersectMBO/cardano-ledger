@@ -117,19 +117,19 @@ spec =
         submitProposal constitutionAction
       logRatificationChecks gaidConstitutionProp
       do
-        isAccepted <- isGovActionAccepted gaidConstitutionProp
+        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
         impIOMsg "Gov action should not be accepted" $ isAccepted `shouldBe` False
       khCommitteeMemberHot <- registerCCHotKey khCommitteeMember
       _ <- voteForProposal (DRepVoter $ KeyHashObj khDRep) gaidConstitutionProp
       _ <- voteForProposal (CommitteeVoter $ KeyHashObj khCommitteeMemberHot) gaidConstitutionProp
       logAcceptedRatio gaidConstitutionProp
       do
-        isAccepted <- isGovActionAccepted gaidConstitutionProp
+        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
         impIOMsg "Gov action should be accepted" $ isAccepted `shouldBe` True
 
       passEpoch
       do
-        isAccepted <- isGovActionAccepted gaidConstitutionProp
+        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
         impIOMsg "Gov action should be accepted" $ isAccepted `shouldBe` True
       logAcceptedRatio gaidConstitutionProp
       logRatificationChecks gaidConstitutionProp

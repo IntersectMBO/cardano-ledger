@@ -16,7 +16,12 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (EraIndependentTxBody, EraTxOut)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Shelley.Core (EraGov)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState, StashedAVVMAddresses, curPParamsEpochStateL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState (
+  NewEpochState,
+  StashedAVVMAddresses,
+  curPParamsEpochStateL,
+  nesEsL,
+ )
 import Data.Default.Class (Default)
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest

@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -16,15 +17,17 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   voteForProposal,
   registerDRep,
   setupSingleDRep,
+  conwayModifyPParams,
   getEnactState,
   lookupGovActionState,
   getRatifyEnv,
   calculateDRepAcceptedRatio,
   calculateCommitteeAcceptedRatio,
   logAcceptedRatio,
-  isGovActionAccepted,
+  canGovActionBeDRepAccepted,
   logRatificationChecks,
   registerCCHotKey,
+  logCurPParams,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
@@ -127,6 +130,7 @@ import Lens.Micro ((&), (.~), (^.), (%~))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
 import Test.Cardano.Ledger.Common (HasCallStack, shouldSatisfy)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
+import Test.Cardano.Ledger.Binary.TreeDiff (showExpr)
 
 conwayImpWitsVKeyNeeded ::
   ( EraTx era
@@ -172,6 +176,8 @@ instance
      in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
 
   impWitsVKeyNeeded = conwayImpWitsVKeyNeeded
+
+  modifyPParams = conwayModifyPParams
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
@@ -388,12 +394,13 @@ logAcceptedRatio aId = do
   logEntry $ "Committee accepted ratio:\t" <> show committeeRatio
   logEntry ""
 
--- | Checks whether the governance action has enough votes to be accepted
-isGovActionAccepted ::
+-- | Checks whether the governance action has enough DRep votes to be accepted in the next
+-- epoch. (Note that no other checks execept DRep votes is used)
+canGovActionBeDRepAccepted ::
   (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
   GovActionId (EraCrypto era) ->
   ImpTestM era Bool
-isGovActionAccepted gaId = do
+canGovActionBeDRepAccepted gaId = do
   eNo <- getsNES nesELL
   stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
   poolDistr <- getsNES nesPdL
@@ -409,7 +416,7 @@ isGovActionAccepted gaId = do
         , reStakeDistr = credMap stakeDistr
         , reDRepState = drepState
         , reDRepDistr = drepDistr
-        , reCurrentEpoch = eNo - 1
+        , reCurrentEpoch = eNo
         , reCommitteeState = committeeState
         }
     ratSt =
@@ -463,3 +470,8 @@ registerCCHotKey coldKey = do
         & bodyTxL . certsTxBodyL
           .~ SSeq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
   pure hotKey
+
+logCurPParams :: EraGov era => ImpTestM era ()
+logCurPParams = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  logEntry $ "Current PParams:\n--------------" <> showExpr pp <> "\n--------------"
