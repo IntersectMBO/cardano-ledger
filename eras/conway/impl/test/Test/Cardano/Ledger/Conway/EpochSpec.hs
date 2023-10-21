@@ -71,7 +71,7 @@ spec =
               , dvtUpdateToConstitution = 1 %! 2
               }
           & ppCommitteeMaxTermLengthL .~ 10
-          & ppGovActionLifetimeL .~ 1
+          & ppGovActionLifetimeL .~ 2
       khDRep <- setupSingleDRep
 
       logEntry "Registering committee member"
@@ -88,7 +88,9 @@ spec =
 
       let
         assertNoCommittee = do
-          committee <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+          committee <-
+            getsNES $
+              nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
           impIOMsg "There should not be a committee" $ committee `shouldBe` SNothing
       logRatificationChecks gaidCommitteeProp
       assertNoCommittee
@@ -98,7 +100,9 @@ spec =
       assertNoCommittee
       passEpoch
       do
-        committee <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+        committee <-
+          getsNES $
+            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
         impIOMsg "There should be a committee" $ committee `shouldSatisfy` isSJust
       logEntry "Submitting new constitution"
       constitutionHash <- freshSafeHash
@@ -116,10 +120,12 @@ spec =
       gaidConstitutionProp <-
         submitProposal constitutionAction
       logRatificationChecks gaidConstitutionProp
+      passEpoch
+      passEpoch
       do
         isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
         impIOMsg "Gov action should not be accepted" $ isAccepted `shouldBe` False
-      khCommitteeMemberHot <- registerCCHotKey khCommitteeMember
+      khCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
       _ <- voteForProposal (DRepVoter $ KeyHashObj khDRep) gaidConstitutionProp
       _ <- voteForProposal (CommitteeVoter $ KeyHashObj khCommitteeMemberHot) gaidConstitutionProp
       logAcceptedRatio gaidConstitutionProp

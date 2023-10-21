@@ -26,7 +26,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logAcceptedRatio,
   canGovActionBeDRepAccepted,
   logRatificationChecks,
-  registerCCHotKey,
+  registerCommitteeHotKey,
   logCurPParams,
 ) where
 
@@ -49,6 +49,7 @@ import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
   ConwayGovState,
+  DRepPulsingState (DRComplete),
   EnactState (..),
   GovAction,
   GovActionId (..),
@@ -61,20 +62,20 @@ import Cardano.Ledger.Conway.Governance (
   Voter,
   VotingProcedure (..),
   VotingProcedures (..),
-  DRepPulsingState(DRComplete),
+  cgDRepPulsingStateL,
+  cgEnactStateL,
   ensCommitteeL,
+  ensCurPParamsL,
   epochStateDRepPulsingStateL,
   finishDRepPulser,
   gasDRepVotesL,
   psDRepDistrG,
-  cgDRepPulsingStateL,
+  rsEnactStateL,
+  setCompleteDRepPulsingState,
   snapshotLookupId,
   utxosGovStateL,
   votingDRepThreshold,
-  setCompleteDRepPulsingState,
-  cgEnactStateL,
-  ensCurPParamsL,
-  rsEnactStateL,
+  votingStakePoolThreshold,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Rules (
@@ -85,6 +86,7 @@ import Cardano.Ledger.Conway.Rules (
   dRepAcceptedRatio,
   prevActionAsExpected,
   spoAccepted,
+  spoAcceptedRatio,
   validCommitteeTerm,
   withdrawalCanWithdraw,
  )
@@ -93,6 +95,7 @@ import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert (..),
   Delegatee (..),
   pattern AuthCommitteeHotKeyTxCert,
+  pattern RegDRepTxCert,
  )
 import Cardano.Ledger.Core (EraRule)
 import Cardano.Ledger.Credential (Credential (..))
@@ -126,11 +129,11 @@ import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
-import Lens.Micro ((&), (.~), (^.), (%~))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
+import Test.Cardano.Ledger.Binary.TreeDiff (showExpr)
 import Test.Cardano.Ledger.Common (HasCallStack, shouldSatisfy)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
-import Test.Cardano.Ledger.Binary.TreeDiff (showExpr)
 
 conwayImpWitsVKeyNeeded ::
   ( EraTx era
@@ -195,7 +198,7 @@ registerDRep = do
       mkBasicTx mkBasicTxBody
         & bodyTxL . certsTxBodyL
           .~ SSeq.singleton
-            ( mkRegDRepTxCert
+            ( RegDRepTxCert
                 (KeyHashObj khDRep)
                 zero
                 SNothing
@@ -362,7 +365,7 @@ calculateDRepAcceptedRatio gaId = do
       (gas ^. gasDRepVotesL)
       (gasAction gas)
 
--- | Calculates the ratio of CC members that have voted for the governance
+-- | Calculates the ratio of Committee members that have voted for the governance
 -- action
 calculateCommitteeAcceptedRatio ::
   forall era.
@@ -444,8 +447,14 @@ logRatificationChecks gaId = do
       , "validCommitteeTerm:\t" <> show (validCommitteeTerm ensCommittee ensCurPParams currentEpoch)
       , "notDelayed:\t\t??"
       , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
-      , "committeeAccepted:\t" <> show (committeeAccepted ratSt ratEnv gas)
-      , "spoAccepted:\t\t" <> show (spoAccepted ratSt ratEnv gas)
+      , "committeeAccepted:\t" <> show (committeeAccepted ratEnv ratSt gas)
+      , "spoAccepted:\t\t"
+          <> show (spoAccepted ratEnv ratSt gas)
+          <> " [To Pass: "
+          <> show (spoAcceptedRatio ratEnv gas)
+          <> " >= "
+          <> show (votingStakePoolThreshold ratSt gasAction)
+          <> "]"
       , "dRepAccepted:\t\t"
           <> show (dRepAccepted ratEnv ratSt gas)
           <> " [To Pass: "
@@ -458,11 +467,11 @@ logRatificationChecks gaId = do
 
 -- | Submits a transaction that registers a hot key for the given cold key.
 -- Returns the hot key hash.
-registerCCHotKey ::
+registerCommitteeHotKey ::
   (EraImpTest era, ConwayEraTxCert era) =>
   KeyHash 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era (KeyHash 'HotCommitteeRole (EraCrypto era))
-registerCCHotKey coldKey = do
+registerCommitteeHotKey coldKey = do
   hotKey <- freshKeyHash
   _ <-
     submitTx "Registering hot key" $
