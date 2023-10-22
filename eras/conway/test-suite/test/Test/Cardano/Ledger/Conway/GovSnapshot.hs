@@ -41,11 +41,10 @@ govSnapshotProps =
           _ -> pure True
     , testProperty "Removing action preserves consistency" $ do
         as <- uniqueIdGovActions @Conway
-        case as of
+        pure $ case as of
           xs@(GovActionState {gasId} :<| _) ->
-            pure $
-              isConsistent_ (snapshotRemoveIds (Set.singleton gasId) $ fromGovActionStateSeq xs)
-          _ -> pure True
+            isConsistent_ $ fst $ snapshotRemoveIds (Set.singleton gasId) $ fromGovActionStateSeq xs
+          _ -> True
     , testProperty "Adding vote preserves consistency" $ do
         as <- uniqueIdGovActions @Conway
         voter <- arbitrary

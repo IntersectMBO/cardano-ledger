@@ -15,7 +15,6 @@ module Cardano.Ledger.Conway.Governance.Snapshots (
   snapshotGovActionStates,
   -- Testing
   isConsistent_,
-  snapshotGovActionStates,
 ) where
 
 import Cardano.Ledger.Binary (DecCBOR (..), DecShareCBOR (..), EncCBOR (..))
@@ -37,6 +36,7 @@ import Data.Foldable (Foldable (..))
 import Data.List (sort)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
+import Data.MapExtras (extractKeys)
 import Data.Maybe (fromMaybe)
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
@@ -132,12 +132,16 @@ snapshotAddVote voter vote gId ps@ProposalsSnapshot {..} =
 snapshotRemoveIds ::
   Set (GovActionId (EraCrypto era)) ->
   ProposalsSnapshot era ->
-  ProposalsSnapshot era
-snapshotRemoveIds gIds (ProposalsSnapshot {..}) =
-  ProposalsSnapshot
-    { psGovActionStates = psGovActionStates `Map.withoutKeys` gIds
-    , psProposalOrder = foldl' (\s x -> if x `Set.member` gIds then s else x :<| s) mempty psProposalOrder
-    }
+  (ProposalsSnapshot era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
+snapshotRemoveIds gIds (ProposalsSnapshot {..}) = (retainedProposals, removedGovActionStates)
+  where
+    (retainedGovActionStates, removedGovActionStates) = psGovActionStates `extractKeys` gIds
+    retainedProposals =
+      ProposalsSnapshot
+        { psGovActionStates = retainedGovActionStates
+        , psProposalOrder =
+            foldl' (\s x -> if x `Set.member` gIds then s else x :<| s) mempty psProposalOrder
+        }
 
 snapshotLookupId ::
   GovActionId (EraCrypto era) ->

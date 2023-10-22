@@ -99,7 +99,6 @@ module Cardano.Ledger.Conway.Governance (
   epochStateRegDrepL,
   epochStateUMapL,
   reDRepDistrL,
-  startDRepPulsingState,
   pulseDRepPulsingState,
   completeDRepPulsingState,
   extractDRepPulsingState,
@@ -1093,39 +1092,6 @@ instance EraPParams era => ToExpr (DRepPulsingState era) where
 -- =====================================
 -- High level operations of DRepDistr
 
--- | Assemble data needed for pulsing, mostly snapshots of things needed to compute the RatifyState when pulsing completes.
-startDRepPulsingState ::
-  RunConwayRatify era =>
-  Int ->
-  UMap (EraCrypto era) ->
-  Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin) ->
-  PoolDistr (EraCrypto era) ->
-  Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)) ->
-  EpochNo ->
-  CommitteeState era ->
-  EnactState era ->
-  StrictSeq (GovActionState era) ->
-  Coin ->
-  Globals ->
-  DRepPulsingState era
-startDRepPulsingState stepSize umap stakeDistr poolDistr dstate epoch committee enact proposals treas global =
-  DRPulsing
-    ( DRepPulser
-        stepSize
-        umap
-        stakeDistr -- used as the balance of things left to iterate over
-        stakeDistr -- used as part of the snapshot
-        poolDistr
-        Map.empty -- The partial result starts as the empty map
-        dstate
-        epoch
-        committee
-        enact
-        proposals
-        treas
-        global
-    )
-
 pulseDRepPulsingState :: DRepPulsingState era -> DRepPulsingState era
 pulseDRepPulsingState x@(DRComplete _ _) = x
 pulseDRepPulsingState (DRPulsing x@(DRepPulser {})) =
@@ -1153,6 +1119,8 @@ setCompleteDRepPulsingState snapshot ratifyState epochState =
     & epochStateGovStateL . cgDRepPulsingStateL
       .~ DRComplete snapshot ratifyState
 
+-- | Refresh the pulser in the EpochState using all the new data that is needed to compute
+-- the RatifyState when pulsing completes.
 setFreshDRepPulsingState ::
   ( GovState era ~ ConwayGovState era
   , Monad m
@@ -1163,12 +1131,14 @@ setFreshDRepPulsingState ::
   EpochState era ->
   ReaderT Globals m (EpochState era)
 setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
-  -- We are now finished with the pulser started at the last epoch boundary, so we need to
-  -- initialize a fresh DRep pulser, by computing the pulse size, and gathering the data we
-  -- will snapshot inside the pulser. We expect approximately 10*k-many blocks to be produced
-  -- each epoch. Therefore to safely and evenly space out the DRep calculation, we divide
-  -- the number of stake credentials by 8*k (8, rather than 10, to be sure we finish
-  -- two stability windows before the end of the epoch)
+  -- When we are finished with the pulser that was started at the last epoch boundary, we
+  -- need to initialize a fresh DRep pulser. We do so by computing the pulse size and
+  -- gathering the data, which we will snapshot inside the pulser. We expect approximately
+  -- 10*k-many blocks to be produced each epoch, where `k` value is the stability
+  -- window. We must ensure for secure operation of the Hard Fork Combinator that we have
+  -- the new EnactState available 2 stability windows before the end of the epoch, while
+  -- spreading out stake distribution computation throughout the first 8 stability
+  -- windows. Therefore, we divide the number of stake credentials by 8*k
   globals <- ask
   let ledgerState = epochState ^. esLStateL
       utxoState = lsUTxOState ledgerState

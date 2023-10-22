@@ -83,7 +83,24 @@ spec =
             mempty
             (Map.singleton (KeyHashObj khCommitteeMember) 10)
             (1 %! 2)
+      constitutionHash <- freshSafeHash
+      let
+        constitutionAction =
+          NewConstitution
+            SNothing
+            ( Constitution
+                ( Anchor
+                    (fromJust $ textToUrl "constitution.0")
+                    constitutionHash
+                )
+                SNothing
+            )
       gaidCommitteeProp <- submitProposal committeeAction
+
+      -- Submit NewConstitution proposal two epoch too early to check that the action
+      -- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)
+      gaidConstitutionProp <- submitProposal constitutionAction
+
       _ <- voteForProposal (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
 
       let
@@ -105,23 +122,8 @@ spec =
             nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
         impIOMsg "There should be a committee" $ committee `shouldSatisfy` isSJust
       logEntry "Submitting new constitution"
-      constitutionHash <- freshSafeHash
-      let
-        constitutionAction =
-          NewConstitution
-            SNothing
-            ( Constitution
-                ( Anchor
-                    (fromJust $ textToUrl "constitution.0")
-                    constitutionHash
-                )
-                SNothing
-            )
-      gaidConstitutionProp <-
-        submitProposal constitutionAction
+
       logRatificationChecks gaidConstitutionProp
-      passEpoch
-      passEpoch
       do
         isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
         impIOMsg "Gov action should not be accepted" $ isAccepted `shouldBe` False

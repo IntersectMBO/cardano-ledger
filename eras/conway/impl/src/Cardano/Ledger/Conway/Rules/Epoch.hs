@@ -26,15 +26,14 @@ where
 import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (
+  CertState (..),
   CommitteeState (..),
-  certDStateL,
-  certVStateL,
+  VState,
   dsUnifiedL,
   vsCommitteeStateL,
   vsNumDormantEpochsL,
  )
 import Cardano.Ledger.Coin (compactCoinOrError)
-import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
@@ -52,45 +51,37 @@ import Cardano.Ledger.Conway.Governance (
   cgProposalsL,
   dormantEpoch,
   ensCommitteeL,
+  ensPrevPParamsL,
   ensTreasuryL,
   ensWithdrawalsL,
   epochStateDRepPulsingStateL,
   extractDRepPulsingState,
   setFreshDRepPulsingState,
-  snapshotGovActionStates,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
 import Cardano.Ledger.Conway.Governance.Snapshots (snapshotRemoveIds)
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
-  EpochState,
-  IncrementalStake (..),
+  DState (..),
+  EpochState (..),
   LedgerState (..),
   PState (..),
   UTxOState (..),
   asTreasuryL,
-  curPParamsEpochStateL,
-  epochStateDonationL,
   epochStateGovStateL,
   epochStateTreasuryL,
   epochStateUMapL,
   esAccountState,
   esAccountStateL,
-  esLState,
   esLStateL,
-  esNonMyopic,
-  esSnapshots,
-  lsCertState,
+  esSnapshotsL,
   lsCertStateL,
-  lsUTxOState,
   lsUTxOStateL,
-  prevPParamsEpochStateL,
   totalObligation,
+  utxosDepositedL,
   utxosDonationL,
   utxosGovStateL,
-  pattern CertState,
-  pattern EpochState,
  )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules (
@@ -106,8 +97,8 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.UMap (UMap, UView (..), unionKeyDeposits, (∪+), (◁))
-import Cardano.Ledger.Val (zero, (<+>), (<->))
+import Cardano.Ledger.UMap (UView (..), unionKeyDeposits, (∪+), (◁))
+import Cardano.Ledger.Val (zero, (<->))
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Assertion (..),
@@ -121,10 +112,9 @@ import Control.State.Transition (
  )
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Void (Void, absurd)
-import Lens.Micro ((%~), (&), (+~), (.~), (^.))
+import Lens.Micro ((%~), (&), (+~), (.~), (<>~), (^.))
 
 -- ====================================================
 
@@ -159,7 +149,7 @@ instance
   type Environment (ConwayEPOCH era) = PoolDistr (EraCrypto era)
   type BaseM (ConwayEPOCH era) = ShelleyBase
 
-  -- EPOCH should never fail
+  -- EPOCH rule can never fail
   type PredicateFailure (ConwayEPOCH era) = Void
   type Event (ConwayEPOCH era) = ConwayEpochEvent era
   transitionRules = [epochTransition]
@@ -174,38 +164,28 @@ instance
         , PostCondition treasuryZeroMessage (const treasuryZeroCheck)
         ]
 
-returnProposalDepositsUMap ::
-  Foldable f =>
-  f (GovActionState era) ->
-  UMap (EraCrypto era) ->
-  UMap (EraCrypto era)
-returnProposalDepositsUMap gaids m =
-  unionKeyDeposits (RewDepUView m) $ foldl' addRew mempty gaids
-  where
-    addRew m' GovActionState {..} =
-      Map.insertWith
-        (<>)
-        (getRwdCred gasReturnAddr)
-        (fromMaybe mempty $ toCompact gasDeposit)
-        m'
-
 returnProposalDeposits ::
-  Foldable f =>
-  f (GovActionState era) ->
-  LedgerState era ->
-  LedgerState era
+  Foldable f => f (GovActionState era) -> DState era -> DState era
 returnProposalDeposits removedProposals =
-  lsCertStateL . certDStateL . dsUnifiedL %~ updateUMap
+  dsUnifiedL %~ returnProposalDepositsUMap
   where
-    updateUMap = returnProposalDepositsUMap removedProposals
+    returnProposalDepositsUMap umap =
+      unionKeyDeposits (RewDepUView umap) $ foldl' addReward mempty removedProposals
+      where
+        addReward m' GovActionState {..} =
+          Map.insertWith
+            (<>)
+            (getRwdCred gasReturnAddr)
+            (compactCoinOrError gasDeposit) -- Deposits have been validated at this point
+            m'
 
 -- | When there have been zero governance proposals to vote on in the previous epoch
 -- increase the dormant-epoch counter by one.
-updateNumDormantEpochs :: DRepPulsingState era -> LedgerState era -> LedgerState era
-updateNumDormantEpochs pulser ls =
+updateNumDormantEpochs :: DRepPulsingState era -> VState era -> VState era
+updateNumDormantEpochs pulser vState =
   if dormantEpoch pulser
-    then ls & lsCertStateL . certVStateL . vsNumDormantEpochsL +~ 1
-    else ls
+    then vState & vsNumDormantEpochsL +~ 1
+    else vState
 
 -- | Apply TreasuryWithdrawals to the EpochState
 --
@@ -233,7 +213,8 @@ applyEnactedWithdrawals epochState enactedState =
           -- 2. the refunds and unsuccessful refunds together do not exceed the
           --    current treasury value, as enforced by the `ENACT` rule.
           & epochStateUMapL .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulRefunds))
-      enactedStateWithdrawalsReset = enactedState & ensWithdrawalsL .~ Map.empty -- reset enacted withdrawals
+      -- Reset enacted withdrawals:
+      enactedStateWithdrawalsReset = enactedState & ensWithdrawalsL .~ Map.empty
    in (epochStateRewardsApplied, enactedStateWithdrawalsReset)
 
 epochTransition ::
@@ -261,90 +242,76 @@ epochTransition ::
 epochTransition = do
   TRC
     ( stakePoolDistr
-      , es0@EpochState
-          { esAccountState = acnt
-          , esSnapshots = ss
-          , esLState = ledgerState
-          , esNonMyopic = nm
+      , epochState0@EpochState
+          { esAccountState = accountState0
+          , esSnapshots = snapshots0
+          , esLState = ledgerState0
           }
       , eNo
       ) <-
     judgmentContext
-  let ls = updateNumDormantEpochs (es0 ^. epochStateDRepPulsingStateL) ledgerState
-      pp = es0 ^. curPParamsEpochStateL
-      utxoSt = lsUTxOState ls
-      CertState vstate pstate dstate = lsCertState ls
-  ss' <-
-    trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
+  let govState0 = utxosGovState utxoState0
+      curPParams = govState0 ^. curPParamsGovStateL
+      utxoState0 = lsUTxOState ledgerState0
+      CertState vState pState0 dState0 = lsCertState ledgerState0
+  snapshots1 <-
+    trans @(EraRule "SNAP" era) $ TRC (SnapEnv ledgerState0 curPParams, snapshots0, ())
 
-  let PState pParams fPParams _ _ = pstate
-      ppp = eval (pParams ⨃ fPParams)
-      pstate' =
-        pstate
-          { psStakePoolParams = ppp
+  -- Activate future StakePols
+  let newStakePoolParams = eval (psStakePoolParams pState0 ⨃ psFutureStakePoolParams pState0)
+      pState1 =
+        pState0
+          { psStakePoolParams = newStakePoolParams
           , psFutureStakePoolParams = Map.empty
           }
-  PoolreapState utxoSt' acnt' dstate' pstate'' <-
+  PoolreapState utxoState1 accountState1 dState1 pState2 <-
     trans @(EraRule "POOLREAP" era) $
-      TRC (ShelleyPoolreapEnv vstate, PoolreapState utxoSt acnt dstate pstate', eNo)
-
-  let adjustedCertState = CertState vstate pstate'' dstate'
-      adjustedLState =
-        ls
-          { lsUTxOState = utxoSt'
-          , lsCertState = adjustedCertState
-          }
-      es1 =
-        EpochState
-          acnt'
-          adjustedLState
-          ss'
-          nm
+      TRC (ShelleyPoolreapEnv vState, PoolreapState utxoState0 accountState0 dState0 pState1, eNo)
 
   let
-    utxoSt'' =
-      utxoSt'
-        { utxosDeposited =
-            totalObligation adjustedCertState (utxoSt' ^. utxosGovStateL)
+    pulsingState = epochState0 ^. epochStateDRepPulsingStateL
+
+    RatifyState {rsRemoved, rsEnactState} = extractDRepPulsingState pulsingState
+    (epochState1, newEnactState) = applyEnactedWithdrawals epochState0 rsEnactState
+    (newProposals, removedGovActions) =
+      -- It is important that we use current proposals here instead of the ones from the pulser
+      snapshotRemoveIds rsRemoved (govState0 ^. cgProposalsL)
+    govState1 =
+      govState0
+        & cgProposalsL .~ newProposals
+        & cgEnactStateL .~ (newEnactState & ensPrevPParamsL .~ curPParams)
+
+    certState =
+      CertState
+        { certPState = pState2
+        , certDState = returnProposalDeposits removedGovActions dState1
+        , certVState =
+            -- Increment the dormant epoch counter
+            updateNumDormantEpochs pulsingState vState
+              -- Remove cold credentials of committee members that were removed or were invalid
+              & vsCommitteeStateL %~ updateCommitteeState (newEnactState ^. ensCommitteeL)
         }
-    govSt = utxosGovState utxoSt''
-    RatifyState {rsRemoved, rsEnactState} = extractDRepPulsingState (es1 ^. epochStateDRepPulsingStateL)
-  let
-    (es2, newEnactState) = applyEnactedWithdrawals es1 rsEnactState
-    currentProposals = govSt ^. cgProposalsL
-    newProposals = snapshotRemoveIds rsRemoved currentProposals
-    removedProposals = snapshotGovActionStates currentProposals `Map.restrictKeys` rsRemoved
-    lState = returnProposalDeposits removedProposals $ esLState es2
+    accountState2 =
+      accountState1
+        -- Move donations to treasury:
+        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL)
+    utxoState2 =
+      utxoState1
+        & utxosDepositedL .~ totalObligation certState govState1
+        -- Clear the donations field:
+        & utxosDonationL .~ zero
+        & utxosGovStateL .~ govState1
+    ledgerState1 =
+      ledgerState0
+        & lsCertStateL .~ certState
+        & lsUTxOStateL .~ utxoState2
+    epochState2 =
+      epochState1
+        & esAccountStateL .~ accountState2
+        & esSnapshotsL .~ snapshots1
+        & esLStateL .~ ledgerState1
 
-    updatedCommitteeState =
-      updateCommitteeState
-        (newEnactState ^. ensCommitteeL)
-        (es1 ^. esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL)
-
-    currentTreasuryAmount = es2 ^. epochStateTreasuryL
-    donations = es2 ^. epochStateDonationL
-    -- Move donations to treasury
-    newTreasuryAmount = currentTreasuryAmount <+> donations
-    es3 =
-      es2
-        { esAccountState = acnt'
-        , esLState = lState {lsUTxOState = utxoSt''}
-        }
-        & prevPParamsEpochStateL .~ (es0 ^. curPParamsEpochStateL)
-        & esAccountStateL . asTreasuryL .~ newTreasuryAmount
-        -- Clear the donations field
-        & epochStateDonationL .~ mempty
-        -- remove hot keys of committee members that were removed
-        & esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL .~ updatedCommitteeState
-
-    newConwayGovState =
-      govSt
-        { cgProposals = newProposals
-        , cgEnactState = newEnactState
-        }
-
-  let es4 = es3 & epochStateGovStateL .~ newConwayGovState
-  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr es4
+  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState2
 
 instance
   ( Era era
