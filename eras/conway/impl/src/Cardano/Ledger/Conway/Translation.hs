@@ -80,7 +80,7 @@ instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
     let es = translateEra' ctxt $ nesEs nes
         -- We need to ensure that we have the same initial EnactState in the pulser as
         -- well as in the current EnactState, otherwise in the very first EPOCH rule call
-        -- the pulsert will reset it.
+        -- the pulser will reset it.
         ratifyState = def & rsEnactStateL .~ (es ^. epochStateGovStateL . cgEnactStateL)
     pure $
       NewEpochState
