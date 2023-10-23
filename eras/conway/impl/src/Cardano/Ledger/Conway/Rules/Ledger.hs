@@ -93,7 +93,6 @@ import Control.State.Transition.Extended (
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
-import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -294,7 +293,7 @@ ledgerTransition = do
         let govProcedures =
               GovProcedures
                 { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
-                , gpProposalProcedures = fromStrict $ txBody ^. proposalProceduresTxBodyL
+                , gpProposalProcedures = txBody ^. proposalProceduresTxBodyL
                 }
         govActionsState' <-
           trans @(EraRule "GOV" era) $

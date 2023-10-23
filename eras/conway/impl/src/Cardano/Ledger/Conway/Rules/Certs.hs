@@ -72,8 +72,8 @@ import Control.State.Transition.Extended (
   validateTrans,
  )
 import qualified Data.Map.Strict as Map
+import qualified Data.OSet.Strict as OSet
 import Data.Sequence (Seq (..))
-import qualified Data.Sequence.Strict as SSeq
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -191,7 +191,7 @@ conwayCertsTransition = do
       -- since the entire transaction will fail if the proposal is not accepted in
       -- GOV, and so will this expiry bump done here. It will be discarded.
       let certState' =
-            let hasProposals = not . SSeq.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
+            let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
                 numDormantEpochs = certState ^. certVStateL . vsNumDormantEpochsL
                 isNumDormantEpochsNonZero = numDormantEpochs /= 0
              in if hasProposals && isNumDormantEpochsNonZero

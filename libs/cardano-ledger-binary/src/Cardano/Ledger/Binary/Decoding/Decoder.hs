@@ -39,6 +39,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
 
   -- ** Compatibility tools
   binaryGetDecoder,
+  allowTag,
 
   -- ** Custom decoders
   decodeVersion,
@@ -65,6 +66,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeVMap,
   decodeSeq,
   decodeStrictSeq,
+  decodeSetTag,
 
   -- *** Time
   decodeUTCTime,
@@ -148,6 +150,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   peekAvailable,
   peekByteOffset,
   peekTokenType,
+  decodeDeduplicate,
 )
 where
 
@@ -833,22 +836,33 @@ decodeSetEnforceNoDuplicates ::
   Ord a =>
   Decoder s a ->
   Decoder s (Set.Set a)
-decodeSetEnforceNoDuplicates decodeElement = do
+decodeSetEnforceNoDuplicates decodeElement =
+  decodeDeduplicate decodeElement Set.member Set.insert -- do
+{-# INLINE decodeSetEnforceNoDuplicates #-}
+
+decodeDeduplicate ::
+  forall s a f.
+  Monoid (f a) =>
+  Decoder s a ->
+  (a -> f a -> Bool) ->
+  (a -> f a -> f a) ->
+  Decoder s (f a)
+decodeDeduplicate decodeElement isMember insert = do
   allowTag setTag
   decodeListLenOrIndef >>= \case
-    Just len -> loop (\x -> pure (x - 1, x <= 0)) len Set.empty
-    Nothing -> loop (\x -> (,) x <$> decodeBreakOr) () Set.empty
+    Just len -> loop (\x -> pure (x - 1, x <= 0)) len mempty
+    Nothing -> loop (\x -> (,) x <$> decodeBreakOr) () mempty
   where
-    loop :: (t -> Decoder s (t, Bool)) -> t -> Set.Set a -> Decoder s (Set.Set a)
+    loop :: (t -> Decoder s (t, Bool)) -> t -> f a -> Decoder s (f a)
     loop condition prevStep !acc = do
       (nextStep, shouldStop) <- condition prevStep
       if shouldStop
         then pure acc
         else do
           a <- decodeElement
-          when (a `Set.member` acc) $ fail "Duplicate key detected in the Set"
-          loop condition nextStep (Set.insert a acc)
-{-# INLINE decodeSetEnforceNoDuplicates #-}
+          when (a `isMember` acc) $ fail "Duplicate key detected in the Set"
+          loop condition nextStep (insert a acc)
+{-# INLINE decodeDeduplicate #-}
 
 decodeContainerSkelWithReplicate ::
   -- | How to get the size of the container

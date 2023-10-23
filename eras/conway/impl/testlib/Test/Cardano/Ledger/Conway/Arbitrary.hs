@@ -61,6 +61,7 @@ import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
 import qualified Data.Sequence.Strict as Seq
 import Test.Cardano.Data (genNonEmptyMap)
+import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoScript, unFlexibleCostModels)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -338,7 +339,7 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedur
       <*> arbitrary
       <*> arbitrary
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovProcedures era) where
+instance (EraPParams era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovProcedures era) where
   arbitrary =
     GovProcedures <$> arbitrary <*> arbitrary
 

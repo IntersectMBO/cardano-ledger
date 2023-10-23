@@ -331,7 +331,7 @@ abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl 
   , WppHash sih
   , AdHash adh
   , Txnetworkid net
-  , GovProcs $ GovProcedures vp (fromStrict pp)
+  , GovProcs $ GovProcedures vp pp
   , CurrentTreasuryValue ctv
   , TreasuryDonation td
   ]

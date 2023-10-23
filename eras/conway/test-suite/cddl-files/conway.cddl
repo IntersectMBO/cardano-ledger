@@ -55,7 +55,7 @@ transaction_body =
   , 1 : [* transaction_output]
   , 2 : coin                               ; fee
   , ? 3 : uint                             ; time to live
-  , ? 4 : [+ certificate]
+  , ? 4 : certificates
   , ? 5 : withdrawals
   , ? 7 : auxiliary_data_hash
   , ? 8 : uint                             ; validity interval start
@@ -68,7 +68,7 @@ transaction_body =
   , ? 17 : coin                            ; total collateral
   , ? 18 : nonempty_set<transaction_input> ; reference inputs
   , ? 19 : voting_procedures               ; New; Voting procedures
-  , ? 20 : [+ proposal_procedure]          ; New; Proposal procedures
+  , ? 20 : proposal_procedures             ; New; Proposal procedures
   , ? 21 : coin                            ; New; current treasury value
   , ? 22 : positive_coin                   ; New; donation
   }
@@ -86,6 +86,10 @@ proposal_procedure =
   , gov_action
   , anchor
   ]
+
+proposal_procedures = nonempty_oset<proposal_procedure>
+
+certificates = nonempty_oset<certificate>
 
 gov_action =
   [ parameter_change_action

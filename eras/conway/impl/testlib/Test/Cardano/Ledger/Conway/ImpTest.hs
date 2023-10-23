@@ -107,8 +107,8 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
-import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
@@ -182,13 +182,13 @@ setupSingleDRep = do
     submitTx "Delegate to DRep" $
       mkBasicTx mkBasicTxBody
         & bodyTxL . outputsTxBodyL
-          .~ Seq.singleton
+          .~ SSeq.singleton
             ( mkBasicTxOut
                 (mkAddr (kpSpending, kpDelegator))
                 (inject $ Coin 1000000)
             )
         & bodyTxL . certsTxBodyL
-          .~ Seq.fromList
+          .~ SSeq.fromList
             [ mkRegDepositDelegTxCert @era
                 (KeyHashObj khDelegator)
                 (DelegStakeVote (coerceKeyRole khDRep) (DRepCredential $ KeyHashObj khDRep))
@@ -240,7 +240,7 @@ trySubmitProposal ga = do
     trySubmitTx $
       mkBasicTx mkBasicTxBody
         & bodyTxL . proposalProceduresTxBodyL
-          .~ Seq.singleton
+          .~ OSet.singleton
             ProposalProcedure
               { pProcDeposit = zero
               , pProcReturnAddr =
@@ -410,5 +410,5 @@ registerCCHotKey coldKey = do
     submitTx "Registering hot key" $
       mkBasicTx mkBasicTxBody
         & bodyTxL . certsTxBodyL
-          .~ Seq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
+          .~ SSeq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
   pure hotKey

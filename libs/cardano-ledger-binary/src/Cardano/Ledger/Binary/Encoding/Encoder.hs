@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Binary.Encoding.Encoder (
@@ -39,6 +38,7 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeMap,
   encodeVMap,
   encodeVector,
+  variableListLenEncoding,
 
   -- **** Helpers
   encodeFoldableEncoder,

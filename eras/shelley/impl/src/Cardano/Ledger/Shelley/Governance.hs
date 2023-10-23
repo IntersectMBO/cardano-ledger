@@ -255,7 +255,7 @@ data Constitution era = Constitution
   { constitutionAnchor :: !(Anchor (EraCrypto era))
   , constitutionScript :: !(StrictMaybe (ScriptHash (EraCrypto era)))
   }
-  deriving (Generic)
+  deriving (Generic, Ord)
 
 instance ToExpr (Constitution era)
 

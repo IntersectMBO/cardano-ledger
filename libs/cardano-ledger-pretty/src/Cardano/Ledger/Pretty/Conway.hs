@@ -76,6 +76,7 @@ import Cardano.Ledger.Pretty (
   ppKeyHash,
   ppMap,
   ppNetwork,
+  ppOSet,
   ppPoolCert,
   ppRecord,
   ppSafeHash,
@@ -202,7 +203,7 @@ ppConwayTxBody txb =
     , ("auxiliary data hash", ppStrictMaybe ppAuxiliaryDataHash $ txb ^. auxDataHashTxBodyL)
     , ("network id", ppStrictMaybe ppNetwork $ txb ^. networkIdTxBodyL)
     , ("voting procedures", prettyA $ unVotingProcedures (txb ^. votingProceduresTxBodyL))
-    , ("proposal procedures", ppStrictSeq prettyA $ txb ^. proposalProceduresTxBodyL)
+    , ("proposal procedures", ppOSet prettyA $ txb ^. proposalProceduresTxBodyL)
     ]
 
 instance PrettyA Vote where
