@@ -37,6 +37,7 @@ library
         cardano-ledger-binary >=1.2,
         cardano-strict-containers >=0.1.2.1,
         containers,
+        data-default-class,
         deepseq,
         mtl,
         nothunks,

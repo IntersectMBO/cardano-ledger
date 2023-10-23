@@ -16,6 +16,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborSpec)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Classes.Base
+import Prelude hiding (filter)
 
 spec :: Spec
 spec =
@@ -23,34 +24,34 @@ spec =
     context "membership checks work" $ do
       prop "unconsed" $ \(m :: OMap Int Int) -> case m of
         Empty -> pure ()
-        (k, _v) :<|: _kv -> k `shouldSatisfy` (`member` m)
+        v :<|: _kv -> v ^. okeyL `shouldSatisfy` (`member` m)
       prop "unsnoced" $ \(m :: OMap Int Int) -> case m of
         Empty -> pure ()
-        _kv :|>: (k, _v) -> k `shouldSatisfy` (`member` m)
+        _kv :|>: v -> v ^. okeyL `shouldSatisfy` (`member` m)
     context "when cons-ing" $ do
       prop "adding a duplicate results in a no-op" $ \(m :: OMap Int Int) -> do
         case m of
           Empty -> pure ()
-          (k, v) :<|: _kv -> m `shouldBe` (k, v) <| m
+          v :<|: _kv -> m `shouldBe` v <| m
         case m of
           Empty -> pure ()
-          _kv :|>: (k, v) -> m `shouldBe` (k, v) <| m
-      prop "new values get added" $ \((m, k, v) :: (OMap Int Int, Int, Int)) -> do
-        if k `member` m
-          then (k, v) <| m `shouldBe` m
-          else (k, v) <| m `shouldBe` (k, v) :<|: m
+          _kv :|>: v -> m `shouldBe` v <| m
+      prop "new values get added" $ \((m, v) :: (OMap Int Int, Int)) -> do
+        if (v ^. okeyL) `member` m
+          then v <| m `shouldBe` m
+          else v <| m `shouldBe` v :<|: m
     context "when snoc-ing" $ do
       prop "adding a duplicate results in a no-op" $ \(m :: OMap Int Int) -> do
         case m of
           Empty -> pure ()
-          (k, v) :<|: _kv -> m `shouldBe` m |> (k, v)
+          v :<|: _kv -> m `shouldBe` m |> v
         case m of
           Empty -> pure ()
-          _kv :|>: (k, v) -> m `shouldBe` m |> (k, v)
-      prop "new values get added" $ \((m, k, v) :: (OMap Int Int, Int, Int)) -> do
-        if k `member` m
-          then m |> (k, v) `shouldBe` m
-          else m |> (k, v) `shouldBe` m :|>: (k, v)
+          _kv :|>: v -> m `shouldBe` m |> v
+      prop "new values get added" $ \((m, v) :: (OMap Int Int, Int)) -> do
+        if (v ^. okeyL) `member` m
+          then m |> v `shouldBe` m
+          else m |> v `shouldBe` m :|>: v
     context "mappend preserves uniqueness" $ do
       prop "mappending with itself should be a no-op" $ \(i :: OMap Int Int) -> do
         i |>< i `shouldBe` i
@@ -63,12 +64,19 @@ spec =
         case i of
           Empty -> i ><| j `shouldBe` j
           _is :|>: i' -> i ><| j `shouldBe` i ><| (i' <| j)
+    prop "filter and extractKeys" $
+      \((omap, set, i) :: (OMap Int Int, Set.Set Int, Int)) -> do
+        filter (< i) omap `shouldSatisfy` all (< i)
+        extractKeys set omap `shouldSatisfy` (all (`Set.member` set) . fst)
+        extractKeys set omap `shouldSatisfy` (all (`Set.notMember` set) . snd)
     prop "operations preserve invariant" $
-      \((omap, omap', sseq, set) :: (OMap Int Int, OMap Int Int, SSeq.StrictSeq Int, Set.Set Int)) -> do
+      \((omap, omap', sseq, set, i) :: (OMap Int Int, OMap Int Int, SSeq.StrictSeq Int, Set.Set Int, Int)) -> do
         omap |>< omap' `shouldSatisfy` invariantHolds'
         omap ><| omap' `shouldSatisfy` invariantHolds'
         fromStrictSeq sseq `shouldSatisfy` invariantHolds'
         fromSet set `shouldSatisfy` invariantHolds'
+        filter (> i) omap `shouldSatisfy` invariantHolds'
+        extractKeys set omap `shouldSatisfy` invariantHolds' . snd
     prop "fromStrictSeq preserves order" $
       \(set :: Set.Set Int) ->
         let sseq = SSeq.fromList $ Set.elems set

@@ -1,7 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Governance.Snapshots (
   ProposalsSnapshot,
@@ -32,25 +36,27 @@ import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import Data.Default.Class (Default (..))
-import Data.Foldable (Foldable (..))
-import Data.List (sort)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
-import Data.MapExtras (extractKeys)
-import Data.Maybe (fromMaybe)
+import qualified Data.OMap.Strict as OMap
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
-import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', (%~))
+import Lens.Micro (Lens', lens, (%~))
 import NoThunks.Class (NoThunks)
 
-data ProposalsSnapshot era = ProposalsSnapshot
-  { psGovActionStates :: !(Map (GovActionId (EraCrypto era)) (GovActionState era))
-  , psProposalOrder :: !(StrictSeq (GovActionId (EraCrypto era)))
-  -- ^ Newer actions are near the end
-  }
-  deriving (Generic, Eq, Show)
+-- Ref: https://gitlab.haskell.org/ghc/ghc/-/issues/14046
+instance
+  c ~ EraCrypto era =>
+  OMap.HasOKey (GovActionId c) (GovActionState era)
+  where
+  okeyL = lens gasId $ \gas gi -> gas {gasId = gi}
+
+newtype ProposalsSnapshot era
+  = ProposalsSnapshot
+      (OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
+  deriving newtype (Show, Eq)
+  deriving stock (Generic)
 
 instance EraPParams era => ToExpr (ProposalsSnapshot era)
 
@@ -61,7 +67,7 @@ instance EraPParams era => NFData (ProposalsSnapshot era)
 instance EraPParams era => NoThunks (ProposalsSnapshot era)
 
 instance Default (ProposalsSnapshot era) where
-  def = ProposalsSnapshot def def
+  def = ProposalsSnapshot def
 
 instance EraPParams era => EncCBOR (ProposalsSnapshot era) where
   encCBOR = encCBOR . snapshotActions
@@ -77,34 +83,23 @@ snapshotInsertGovAction ::
   GovActionState era ->
   ProposalsSnapshot era ->
   ProposalsSnapshot era
-snapshotInsertGovAction gas@GovActionState {gasId} ps@ProposalsSnapshot {..}
-  | Map.member gasId psGovActionStates =
-      ps {psGovActionStates = Map.insert gasId gas psGovActionStates}
-  | otherwise =
-      ProposalsSnapshot
-        { psGovActionStates = Map.insert gasId gas psGovActionStates
-        , psProposalOrder = psProposalOrder :|> gasId
-        }
+snapshotInsertGovAction gas (ProposalsSnapshot omap) =
+  ProposalsSnapshot (omap OMap.:|>: gas)
 
 snapshotActions ::
   ProposalsSnapshot era ->
   StrictSeq (GovActionState era)
-snapshotActions ProposalsSnapshot {..} = toGovAction <$> psProposalOrder
-  where
-    toGovAction gaId =
-      fromMaybe
-        (error $ "Impossible: ProposalsSnapshot invariant is not maintained: " <> show gaId)
-        (Map.lookup gaId psGovActionStates)
+snapshotActions (ProposalsSnapshot omap) = OMap.toStrictSeq omap
 
 snapshotIds ::
   ProposalsSnapshot era ->
   StrictSeq (GovActionId (EraCrypto era))
-snapshotIds = psProposalOrder
+snapshotIds (ProposalsSnapshot omap) = OMap.toStrictSeqOKeys omap
 
 snapshotGovActionStates ::
   ProposalsSnapshot era ->
   Map (GovActionId (EraCrypto era)) (GovActionState era)
-snapshotGovActionStates = psGovActionStates
+snapshotGovActionStates (ProposalsSnapshot omap) = OMap.toMap omap
 
 snapshotAddVote ::
   Voter (EraCrypto era) ->
@@ -112,10 +107,8 @@ snapshotAddVote ::
   GovActionId (EraCrypto era) ->
   ProposalsSnapshot era ->
   ProposalsSnapshot era
-snapshotAddVote voter vote gId ps@ProposalsSnapshot {..} =
-  ps
-    { psGovActionStates = Map.update (Just . updateVote) gId psGovActionStates
-    }
+snapshotAddVote voter vote gai (ProposalsSnapshot omap) =
+  ProposalsSnapshot $ OMap.adjust updateVote gai omap
   where
     insertVote ::
       Ord k =>
@@ -133,35 +126,24 @@ snapshotRemoveIds ::
   Set (GovActionId (EraCrypto era)) ->
   ProposalsSnapshot era ->
   (ProposalsSnapshot era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
-snapshotRemoveIds gIds (ProposalsSnapshot {..}) = (retainedProposals, removedGovActionStates)
-  where
-    (retainedGovActionStates, removedGovActionStates) = psGovActionStates `extractKeys` gIds
-    retainedProposals =
-      ProposalsSnapshot
-        { psGovActionStates = retainedGovActionStates
-        , psProposalOrder =
-            foldl' (\s x -> if x `Set.member` gIds then s else x :<| s) mempty psProposalOrder
-        }
+snapshotRemoveIds gais (ProposalsSnapshot omap) =
+  let (removed, retained) = OMap.extractKeys gais omap
+   in (ProposalsSnapshot retained, removed)
 
 snapshotLookupId ::
   GovActionId (EraCrypto era) ->
   ProposalsSnapshot era ->
   Maybe (GovActionState era)
-snapshotLookupId gId ProposalsSnapshot {psGovActionStates} =
-  Map.lookup gId psGovActionStates
+snapshotLookupId gai (ProposalsSnapshot omap) = OMap.lookup gai omap
 
 -- | Converts a sequence of `GovActionState`s to a `ProposalsSnapshot`.
 --
 -- /Warning/ - This function expects `GovActionState`'s to have unique
 -- `GovActionId`s, because duplicate Ids will result in `GovActionStates`
 -- to be dropped.
-fromGovActionStateSeq ::
-  StrictSeq (GovActionState era) ->
-  ProposalsSnapshot era
-fromGovActionStateSeq = foldl' (flip snapshotInsertGovAction) def
+fromGovActionStateSeq :: StrictSeq (GovActionState era) -> ProposalsSnapshot era
+fromGovActionStateSeq = ProposalsSnapshot . OMap.fromStrictSeq
 
 -- | Internal function for checking if the invariants are maintained
-isConsistent_ :: ProposalsSnapshot era -> Bool
-isConsistent_ (ProposalsSnapshot {psGovActionStates, psProposalOrder}) =
-  Map.keys psGovActionStates == sort (toList psProposalOrder)
-    && all (\(k, GovActionState {gasId}) -> k == gasId) (Map.toList psGovActionStates)
+isConsistent_ :: EraPParams era => ProposalsSnapshot era -> Bool
+isConsistent_ (ProposalsSnapshot omap) = OMap.invariantHolds' omap
