@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
   ShelleyDelegsEvent (..),
   PredicateFailure,
   validateZeroRewards,
-  validateDelegationRegistered,
+  validateStakePoolDelegateeRegistered,
   drainWithdrawals,
 )
 where
@@ -53,6 +53,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
   CertState (..),
   DState (..),
+  PState (..),
   certDState,
   psStakePoolParams,
   rewards,
@@ -69,7 +70,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert, pattern DelegStakeTxCert)
+import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (UMElem (..), UMap (..), UView (..), fromCompact)
@@ -231,27 +232,27 @@ delegsTransition = do
       validateTrans WithdrawalsNotInRewardsDELEGS $
         validateZeroRewards dState withdrawals network
       pure $ certState {certDState = drainWithdrawals dState withdrawals}
-    gamma :|> c -> do
+    gamma :|> txCert -> do
       certState' <-
         trans @(ShelleyDELEGS era) $ TRC (env, certState, gamma)
       validateTrans DelegateeNotRegisteredDELEG $
-        validateDelegationRegistered certState' c
+        case txCert of
+          DelegStakeTxCert _ targetPool ->
+            validateStakePoolDelegateeRegistered (certPState certState') targetPool
+          _ -> pure ()
       -- It is impossible to have 65535 number of certificates in a
       -- transaction, therefore partial function is justified.
       let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(EraRule "DELPL" era) $
-        TRC (DelplEnv slot ptr pp acnt, certState', c)
+        TRC (DelplEnv slot ptr pp acnt, certState', txCert)
 
-validateDelegationRegistered ::
-  ShelleyEraTxCert era =>
-  CertState era ->
-  TxCert era ->
+validateStakePoolDelegateeRegistered ::
+  PState era ->
+  KeyHash 'StakePool (EraCrypto era) ->
   Test (KeyHash 'StakePool (EraCrypto era))
-validateDelegationRegistered certState = \case
-  DelegStakeTxCert _ targetPool ->
-    let stPools = psStakePoolParams $ certPState certState
-     in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
-  _ -> pure ()
+validateStakePoolDelegateeRegistered pState targetPool =
+  let stPools = psStakePoolParams pState
+   in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
 
 -- @withdrawals_@ is small and @rewards@ big, better to transform the former
 -- than the latter into the right shape so we can call 'Map.isSubmapOf'.

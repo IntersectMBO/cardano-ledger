@@ -53,7 +53,9 @@ module Cardano.Ledger.Api.Tx.Cert (
   --   `UnRegDRepTxCert`
   -- @
   ConwayEraTxCert,
+  getDelegateeTxCert,
   Delegatee (..),
+  getStakePoolDelegatee,
   pattern RegDepositTxCert,
   pattern UnRegDepositTxCert,
   pattern DelegTxCert,
@@ -68,6 +70,8 @@ where
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,
   Delegatee (..),
+  getDelegateeTxCert,
+  getStakePoolDelegatee,
   pattern AuthCommitteeHotKeyTxCert,
   pattern DelegTxCert,
   pattern RegDRepTxCert,

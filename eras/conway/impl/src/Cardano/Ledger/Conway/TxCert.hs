@@ -23,6 +23,8 @@ module Cardano.Ledger.Conway.TxCert (
   toShelleyDelegCert,
   getScriptWitnessConwayTxCert,
   getVKeyWitnessConwayTxCert,
+  getDelegateeTxCert,
+  getStakePoolDelegatee,
   pattern RegDepositTxCert,
   pattern UnRegDepositTxCert,
   pattern DelegTxCert,
@@ -329,12 +331,24 @@ pattern UpdateDRepTxCert cred mAnchor <- (getUpdateDRepTxCert -> Just (cred, mAn
   , UpdateDRepTxCert
   #-}
 
+getDelegateeTxCert :: ConwayEraTxCert era => TxCert era -> Maybe (Delegatee (EraCrypto era))
+getDelegateeTxCert = \case
+  DelegTxCert _ delegatee -> Just delegatee
+  RegDepositDelegTxCert _ delegatee _ -> Just delegatee
+  _ -> Nothing
+
 -- | First type argument is the deposit
 data Delegatee c
   = DelegStake !(KeyHash 'StakePool c)
   | DelegVote !(DRep c)
   | DelegStakeVote !(KeyHash 'StakePool c) !(DRep c)
   deriving (Show, Generic, Eq, Ord)
+
+getStakePoolDelegatee :: Delegatee c -> Maybe (KeyHash 'StakePool c)
+getStakePoolDelegatee = \case
+  DelegStake targetPool -> Just targetPool
+  DelegVote {} -> Nothing
+  DelegStakeVote targetPool _ -> Just targetPool
 
 instance NFData (Delegatee c)
 

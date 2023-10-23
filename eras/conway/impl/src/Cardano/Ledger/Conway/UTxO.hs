@@ -82,7 +82,6 @@ getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voterScript
 
 conwayProducedValue ::
   ( ConwayEraTxBody era
-  , ConwayEraTxCert era
   , ConwayEraPParams era
   ) =>
   PParams era ->

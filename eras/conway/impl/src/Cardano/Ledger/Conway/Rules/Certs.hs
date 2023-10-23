@@ -46,6 +46,7 @@ import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (un
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Conway.TxCert (getDelegateeTxCert, getStakePoolDelegatee)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
@@ -56,7 +57,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Rules (
   drainWithdrawals,
-  validateDelegationRegistered,
+  validateStakePoolDelegateeRegistered,
   validateZeroRewards,
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
@@ -221,13 +222,16 @@ conwayCertsTransition = do
       validateTrans WithdrawalsNotInRewardsCERTS $ validateZeroRewards dState withdrawals network
 
       pure $ certStateWithDRepExpiryUpdated & certDStateL .~ drainWithdrawals dState withdrawals
-    gamma :|> c -> do
+    gamma :|> txCert -> do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
       validateTrans DelegateeNotRegisteredDELEG $
-        validateDelegationRegistered certState' c
+        case getDelegateeTxCert txCert >>= getStakePoolDelegatee of
+          Nothing -> pure ()
+          Just targetPool ->
+            validateStakePoolDelegateeRegistered (certPState certState') targetPool
       trans @(EraRule "CERT" era) $
-        TRC (CertEnv slot pp currentEpoch, certState', c)
+        TRC (CertEnv slot pp currentEpoch, certState', txCert)
 
 instance
   ( Era era
