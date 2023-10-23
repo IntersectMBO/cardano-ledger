@@ -37,7 +37,7 @@ where
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
-  decodeDeduplicate,
+  decodeSetLikeEnforceNoDuplicates,
   encodeStrictSeq,
   encodeTag,
   setTag,
@@ -102,7 +102,7 @@ instance EncCBOR a => EncCBOR (OSet a) where
   encCBOR (OSet seq _set) = encodeTag setTag <> encodeStrictSeq encCBOR seq
 
 instance (Show a, Ord a, DecCBOR a) => DecCBOR (OSet a) where
-  decCBOR = decodeDeduplicate decCBOR member (flip snoc)
+  decCBOR = decodeSetLikeEnforceNoDuplicates member (flip snoc) decCBOR
 
 -- | \( O(1) \). Shallow invariant using just `length` and `size`.
 invariantHolds :: OSet a -> Bool
