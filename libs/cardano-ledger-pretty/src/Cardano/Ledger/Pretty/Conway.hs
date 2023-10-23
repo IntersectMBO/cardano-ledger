@@ -561,10 +561,6 @@ instance PrettyA (ConwayDelegPredFailure era) where
       ppRecord
         "DRepAlreadyRegisteredForStakeKeyDELEG"
         [("Credential", prettyA x)]
-    WrongCertificateTypeDELEG ->
-      ppRecord
-        "WrongCertificateTypeDELEG"
-        []
 
 instance PrettyA (ConwayGovCertPredFailure era) where
   prettyA = const $ ppRecord "ConwayGovCertPredFailure" []

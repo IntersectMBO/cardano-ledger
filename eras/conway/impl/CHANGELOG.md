@@ -17,6 +17,7 @@
 * Add `PulsingSnapshot` and `psProposalsL`, `psDRepDistrL`, `psDRepStateL` #3759
 * Add `RunConwayRatify` class #3759
 * Enforce no duplicates from `certsTxBodyL` and `proposalProceduresTxBodyL` #3779
+* Remove `WrongCertificateTypeDELEG` predicate failure.
 * Add `getDelegateeTxCert` and `getStakePoolDelegatee`
 * Add `enactStateGovStateL` to `ConwayEraGov`
 * Add `psDRepDistrG`.

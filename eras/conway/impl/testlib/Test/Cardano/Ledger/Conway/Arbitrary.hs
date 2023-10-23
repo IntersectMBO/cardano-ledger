@@ -434,7 +434,6 @@ instance
       , StakeKeyNotRegisteredDELEG <$> arbitrary
       , StakeKeyHasNonZeroRewardAccountBalanceDELEG <$> arbitrary
       , DRepAlreadyRegisteredForStakeKeyDELEG <$> arbitrary
-      , pure WrongCertificateTypeDELEG
       ]
 
 -- GOVCERT
