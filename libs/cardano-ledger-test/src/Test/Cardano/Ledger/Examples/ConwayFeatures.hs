@@ -371,15 +371,16 @@ vote pf govActionId =
 -- time that it takes for a DRep to expire become smaller
 -- =====================================================
 
--- | Test that the expiration of Proposals works.
---   We start with 1 proposal in the current state, and 0 proposals in the previous state (inside the DRepPulser)
---   The one current proposal is proposed in Epoch 0, and expires after Epoch 2. So the number of proposals in
---   each Epoch should look ike this
+-- | Test that the expiration of Proposals works. We start with 1 proposal in the current
+-- state, and 0 proposals in the previous state (inside the DRepPulser) The one current
+-- proposal is proposed in Epoch 0, and expires after Epoch 2. So the number of proposals
+-- in each Epoch should look like this:
+--
 --    Epoch   current  prev
 --    0       1        0
 --    1       1        1
 --    2       1        1
---    3       0        1
+--    3       1        1
 --    4       0        0
 preventDRepExpiry ::
   forall era.
@@ -402,12 +403,13 @@ preventDRepExpiry pf = do
     pp' = pp & ppGovActionLifetimeL .~ 3
     proposalTx = txFromTestCaseData pf (proposal pf)
     govActionId = GovActionId (txid (proposalTx ^. bodyTxL)) (GovActionIx 0)
+    initEnactState = def & ensCurPParamsL .~ pp'
     initialGov =
       def
-        & cgEnactStateL . ensCurPParamsL .~ pp'
+        & cgEnactStateL .~ initEnactState
         & cgProposalsL
           .~ fromGovActionStateSeq (SSeq.singleton $ expiringGovActionState (EpochNo 2) govActionId $ newConstitutionProposal pf)
-        & cgDRepPulsingStateL .~ (DRComplete def def)
+        & cgDRepPulsingStateL .~ (DRComplete def (def & rsEnactStateL .~ initEnactState))
     initialLedgerState = LedgerState (smartUTxOState pp' utxo0 (Coin 10) (Coin 0) initialGov zero) def
     dreps = Map.singleton (drepCredential pf) (DRepState (EpochNo 2) SNothing (Coin 0))
     epochState0 =
@@ -431,7 +433,7 @@ preventDRepExpiry pf = do
         (epochState ^. esLStateL . lsCertStateL . certVStateL . vsDRepsL)
     assertCurGovSnaps epochNo epochState expected =
       assertExprEqualWithMessage
-        (unwords ["Epoch", show @Int epochNo, "CurrentProposals null status expected to be" ++ show expected ++ ".", "It was not."])
+        (unwords ["Epoch", show @Int epochNo, "CurrentProposals null status expected to be " ++ show expected ++ ".", "It was not."])
         (SSeq.null . snapshotIds $ epochState ^. esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL)
         expected
     assertPrevGovSnaps epochNo epochState expect =
@@ -476,7 +478,7 @@ preventDRepExpiry pf = do
 
   assertNumDormantEpochs 3 epochState2 epochState3 False
   assertDReps 3 epochState3 dreps
-  assertCurGovSnaps 3 epochState3 True
+  assertCurGovSnaps 3 epochState3 False
   assertPrevGovSnaps 3 epochState3 False
 
   epochState4 <- expectRight "Error running runEPOCH: " $ runEPOCH (EPOCH pf) epochState3 (EpochNo 4) poolDistr
@@ -539,10 +541,15 @@ testGov pf = do
     (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
     committee = Committee @era (Map.fromList [(ccColdCred @era pf, EpochNo 100)]) (unsafeBoundRational (1 % 2))
     committeeState = CommitteeState (Map.fromList [(ccColdCred pf, Just (ccHotCred pf))])
+    initialEnactState =
+      def
+        & ensCurPParamsL .~ pp
+        & ensCommitteeL .~ SJust committee
+    initialDRepPulsingState = DRComplete def (def & rsEnactStateL .~ initialEnactState)
     initialGov =
       def
-        & cgEnactStateL . ensCurPParamsL .~ pp
-        & cgEnactStateL . ensCommitteeL .~ SJust committee
+        & cgEnactStateL .~ initialEnactState
+        & cgDRepPulsingStateL .~ initialDRepPulsingState
     initialLedgerState =
       LedgerState
         (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero)
@@ -556,7 +563,8 @@ testGov pf = do
     expectedGovState0 =
       fromGovActionStateSeq (SSeq.singleton $ govActionState govActionId (newConstitutionProposal pf))
 
-    expectedGov0 = ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL) (DRComplete def def)
+    expectedGov0 =
+      ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL) initialDRepPulsingState
 
     eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState1 pp (trustMeP pf True proposalTx)
   ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) <-
@@ -569,7 +577,7 @@ testGov pf = do
     voteTx = txFromTestCaseData pf (vote pf govActionId)
     gas = govActionStateWithYesVotes govActionId pf (newConstitutionProposal pf)
     expectedGovState1 = fromGovActionStateSeq $ SSeq.singleton gas
-    expectedGov1 = ConwayGovState expectedGovState1 (initialGov ^. cgEnactStateL) (DRComplete def def)
+    expectedGov1 = ConwayGovState expectedGovState1 initialEnactState initialDRepPulsingState
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 pp (trustMeP pf True voteTx)
   ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) <-
     expectRight "Error running LEDGER when voting: " eitherLedgerState1
@@ -592,7 +600,7 @@ testGov pf = do
               )
             ]
         )
-    -- Wait two epochs
+    -- Wait two epochs (one for ratification another for enactment)
     eitherEpochState1 = runEPOCH (EPOCH pf) epochState0 (EpochNo 2) poolDistr
   epochState1 <- expectRight "Error running runEPOCH: " eitherEpochState1
   let constitution = epochState1 ^. esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL

@@ -89,7 +89,7 @@ acceptedProp =
   prop "Only NoConfidence or UpdateCommittee should pass without a committee" $
     forAll (arbitrary @(RatifyState era, RatifyEnv era, GovActionState era)) $ do
       \(rs, rEnv, gas) -> do
-        committeeAccepted @era (rs & rsEnactStateL . ensCommitteeL .~ SNothing) rEnv gas
+        committeeAccepted rEnv (rs & rsEnactStateL . ensCommitteeL .~ SNothing) gas
           `shouldBe` isNoConfidenceOrUpdateCommittee gas
   where
     isNoConfidenceOrUpdateCommittee GovActionState {gasAction} =

@@ -2,7 +2,21 @@
 
 ## 1.10.0.0
 
-* Discard duplicates from `certsTxBodyL` and `proposalProceduresTxBodyL` #3779
+* Fix `NewEpochState` translation: #3801
+* Change order of arguments for `committeeAccepted` adn `spoAccepted` for consistency #3801
+* Add `spoAcceptedRatio` #3801
+* Export `snapshotGovActionStates` #3801
+* Change type for `snapshotRemoveIds` to also return the removed actions. #3801
+* Add `reDRepDistrL` #3759
+* Remove `GovSnapshots` #3759
+* Move `DRepPulser` from `cardano-ledger-core`. #3759
+* Add `DRepPulsingState` #3759: `pulseDRepPulsingState`, `completeDRepPulsingState`,
+  `extractDRepPulsingState`, `finishDRepPulser`, `computeDrepDistr`, `getRatifyState`,
+  `getPulsingStateDRepDistr`, `dormantEpoch`, `setFreshDRepPulsingState`,
+  `setCompleteDRepPulsingState`
+* Add `PulsingSnapshot` and `psProposalsL`, `psDRepDistrL`, `psDRepStateL` #3759
+* Add `RunConwayRatify` class #3759
+* Forbid duplicates from `certsTxBodyL` and `proposalProceduresTxBodyL` #3779
 * Add `enactStateGovStateL` to `ConwayEraGov`
 * Add `psDRepDistrG`.
 * Rename `ensPParams` to `ensCurPParams`.
@@ -38,6 +52,10 @@
 * Add  `ConwayEraPParams era` constraint to `isCommitteeVotingAllowed` and `votingCommitteeThreshold`
 * Switch to using `AlonzoEraUTxO` in rules
 * Change `cppProtocolVersion` to a `HKDNoUpdate` field
+
+### `testlib`
+
+* Addition of `ImpTest` interface
 
 ## 1.9.0.0
 

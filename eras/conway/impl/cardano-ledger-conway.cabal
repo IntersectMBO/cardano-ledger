@@ -111,7 +111,7 @@ library testlib
         cardano-data:{cardano-data, testlib},
         containers,
         microlens,
-        cardano-ledger-binary,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-crypto-class,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-babbage:testlib,

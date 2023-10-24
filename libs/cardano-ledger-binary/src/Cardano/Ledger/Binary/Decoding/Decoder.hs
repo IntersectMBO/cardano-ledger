@@ -150,7 +150,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   peekAvailable,
   peekByteOffset,
   peekTokenType,
-  decodeDeduplicate,
+  decodeSetLikeEnforceNoDuplicates,
 )
 where
 
@@ -829,25 +829,26 @@ decodeSet valueDecoder =
     (decodeSetSkel Set.fromDistinctDescList valueDecoder)
 {-# INLINE decodeSet #-}
 
--- Decode a Set as a either a definite or indefinite list. Duplicates are
---   not allowed. Set tag 258 is permitted, but not enforced.
 decodeSetEnforceNoDuplicates ::
   forall s a.
   Ord a =>
   Decoder s a ->
   Decoder s (Set.Set a)
-decodeSetEnforceNoDuplicates decodeElement =
-  decodeDeduplicate decodeElement Set.member Set.insert -- do
+decodeSetEnforceNoDuplicates = decodeSetLikeEnforceNoDuplicates Set.member Set.insert
 {-# INLINE decodeSetEnforceNoDuplicates #-}
 
-decodeDeduplicate ::
+-- | Decode a Set as a either a definite or indefinite list. Duplicates are not
+-- allowed. Set tag 258 is permitted, but not enforced.
+decodeSetLikeEnforceNoDuplicates ::
   forall s a f.
   Monoid (f a) =>
-  Decoder s a ->
+  -- | Check for membership. Decoder will fail if this predicate returns True
   (a -> f a -> Bool) ->
+  -- | Add an aelement into the decoded Set like data structure
   (a -> f a -> f a) ->
+  Decoder s a ->
   Decoder s (f a)
-decodeDeduplicate decodeElement isMember insert = do
+decodeSetLikeEnforceNoDuplicates isMember insert decodeElement = do
   allowTag setTag
   decodeListLenOrIndef >>= \case
     Just len -> loop (\x -> pure (x - 1, x <= 0)) len mempty
@@ -862,7 +863,7 @@ decodeDeduplicate decodeElement isMember insert = do
           a <- decodeElement
           when (a `isMember` acc) $ fail "Duplicate key detected in the Set"
           loop condition nextStep (insert a acc)
-{-# INLINE decodeDeduplicate #-}
+{-# INLINE decodeSetLikeEnforceNoDuplicates #-}
 
 decodeContainerSkelWithReplicate ::
   -- | How to get the size of the container

@@ -120,6 +120,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   epochStateUMapL,
   epochStateRegDrepL,
   epochStateIncrStakeDistrL,
+  epochStateDonationL,
   newEpochStateGovStateL,
   epochStateTreasuryL,
 

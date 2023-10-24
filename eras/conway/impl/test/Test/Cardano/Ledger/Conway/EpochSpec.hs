@@ -25,6 +25,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (
   ppCommitteeMaxTermLengthL,
   ppDRepVotingThresholdsL,
+  ppGovActionLifetimeL,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -63,8 +64,14 @@ spec =
       logEntry "Setting up PParams and DRep"
       modifyPParams $ \pp ->
         pp
-          & ppDRepVotingThresholdsL .~ def {dvtUpdateToConstitution = 1 %! 2}
+          & ppDRepVotingThresholdsL
+            .~ def
+              { dvtCommitteeNormal = 1 %! 1
+              , dvtCommitteeNoConfidence = 1 %! 2
+              , dvtUpdateToConstitution = 1 %! 2
+              }
           & ppCommitteeMaxTermLengthL .~ 10
+          & ppGovActionLifetimeL .~ 2
       khDRep <- setupSingleDRep
 
       logEntry "Registering committee member"
@@ -76,21 +83,6 @@ spec =
             mempty
             (Map.singleton (KeyHashObj khCommitteeMember) 10)
             (1 %! 2)
-      gaidCommitteeProp <- submitProposal committeeAction
-      _ <- voteForProposal (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
-
-      let
-        assertNoCommittee = do
-          committee <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
-          impIOMsg "There should not be a committee" $ committee `shouldBe` SNothing
-      assertNoCommittee
-      passEpoch
-      assertNoCommittee
-      passEpoch
-      do
-        committee <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
-        impIOMsg "There should be a committee" $ committee `shouldSatisfy` isSJust
-      logEntry "Submitting new constitution"
       constitutionHash <- freshSafeHash
       let
         constitutionAction =
@@ -103,23 +95,49 @@ spec =
                 )
                 SNothing
             )
-      gaidConstitutionProp <-
-        submitProposal constitutionAction
+      gaidCommitteeProp <- submitProposal committeeAction
+
+      -- Submit NewConstitution proposal two epoch too early to check that the action
+      -- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)
+      gaidConstitutionProp <- submitProposal constitutionAction
+
+      _ <- voteForProposal (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
+
+      let
+        assertNoCommittee = do
+          committee <-
+            getsNES $
+              nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+          impIOMsg "There should not be a committee" $ committee `shouldBe` SNothing
+      logRatificationChecks gaidCommitteeProp
+      assertNoCommittee
+
+      passEpoch
+      logRatificationChecks gaidCommitteeProp
+      assertNoCommittee
+      passEpoch
+      do
+        committee <-
+          getsNES $
+            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+        impIOMsg "There should be a committee" $ committee `shouldSatisfy` isSJust
+      logEntry "Submitting new constitution"
+
       logRatificationChecks gaidConstitutionProp
       do
-        isAccepted <- isGovActionAccepted gaidConstitutionProp
+        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
         impIOMsg "Gov action should not be accepted" $ isAccepted `shouldBe` False
-      khCommitteeMemberHot <- registerCCHotKey khCommitteeMember
+      khCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
       _ <- voteForProposal (DRepVoter $ KeyHashObj khDRep) gaidConstitutionProp
       _ <- voteForProposal (CommitteeVoter $ KeyHashObj khCommitteeMemberHot) gaidConstitutionProp
       logAcceptedRatio gaidConstitutionProp
       do
-        isAccepted <- isGovActionAccepted gaidConstitutionProp
+        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
         impIOMsg "Gov action should be accepted" $ isAccepted `shouldBe` True
 
       passEpoch
       do
-        isAccepted <- isGovActionAccepted gaidConstitutionProp
+        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
         impIOMsg "Gov action should be accepted" $ isAccepted `shouldBe` True
       logAcceptedRatio gaidConstitutionProp
       logRatificationChecks gaidConstitutionProp

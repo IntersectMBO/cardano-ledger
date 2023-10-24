@@ -1,10 +1,13 @@
 # Version history for `cardano-ledger-api`
 
-## 1.6.1.0
+## 1.7.0.0
 
 * Export `isPlutusScript`
 * Add `NativeScript`, `getNativeScript` and `validateNativeScript`
 * Removed `phaseScript`
+* Remove `GovSnapshots`, `cgGovSnapshotsL`, `cgRatifyStateL`, `cgGovSnapshotsL` and
+  `cgRatifyStateL`
+* Add `cgProposalsL`
 
 ## 1.6.0.0
 

@@ -20,6 +20,7 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   committeeAccepted,
   committeeAcceptedRatio,
   spoAccepted,
+  spoAcceptedRatio,
   dRepAccepted,
   dRepAcceptedRatio,
   reorderActions,
@@ -119,19 +120,20 @@ instance
 -- based on the votes and the committee state.
 committeeAccepted ::
   ConwayEraPParams era =>
-  RatifyState era ->
   RatifyEnv era ->
+  RatifyState era ->
   GovActionState era ->
   Bool
-committeeAccepted rs RatifyEnv {reCommitteeState, reCurrentEpoch} GovActionState {gasCommitteeVotes, gasAction} =
-  case votingCommitteeThreshold rs gasAction of
+committeeAccepted RatifyEnv {reCommitteeState, reCurrentEpoch} rs gas =
+  case votingCommitteeThreshold rs (gasAction gas) of
     SNothing -> False -- this happens if we have no committee, or if the committee is too small,
     -- in which case the committee vote is `no`
     SJust r ->
       -- short circuit on zero threshold, in which case the committee vote is `yes`
-      r == minBound
-        || committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch >= unboundRational r
+      r == minBound || acceptedRatio >= unboundRational r
   where
+    acceptedRatio =
+      committeeAcceptedRatio members (gasCommitteeVotes gas) reCommitteeState reCurrentEpoch
     members = foldMap' committeeMembers (rs ^. rsEnactStateL . ensCommitteeL)
 
 committeeAcceptedRatio ::
@@ -145,7 +147,11 @@ committeeAcceptedRatio members votes committeeState currentEpoch
   | totalExcludingAbstain == 0 = 0
   | otherwise = yesVotes % totalExcludingAbstain
   where
-    accumVotes :: (Integer, Integer) -> Credential 'ColdCommitteeRole (EraCrypto era) -> EpochNo -> (Integer, Integer)
+    accumVotes ::
+      (Integer, Integer) ->
+      Credential 'ColdCommitteeRole (EraCrypto era) ->
+      EpochNo ->
+      (Integer, Integer)
     accumVotes (!yes, !tot) member expiry
       | currentEpoch > expiry = (yes, tot) -- member is expired, vote "abstain" (don't count it)
       | otherwise =
@@ -160,50 +166,46 @@ committeeAcceptedRatio members votes committeeState currentEpoch
                 Just VoteYes -> (yes + 1, tot + 1) -- member voted "yes"
     (yesVotes, totalExcludingAbstain) = Map.foldlWithKey' accumVotes (0, 0) members
 
-spoAccepted ::
-  ConwayEraPParams era =>
-  RatifyState era ->
-  RatifyEnv era ->
-  GovActionState era ->
-  Bool
-spoAccepted rs RatifyEnv {reStakePoolDistr = PoolDistr poolDistr} gas =
-  case votingStakePoolThreshold rs gasAction of
+spoAccepted :: ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
+spoAccepted re rs gas =
+  case votingStakePoolThreshold rs (gasAction gas) of
     -- Short circuit on zero threshold in order to avoid redundant computation.
-    SJust r -> r == minBound || totalAcceptedStakePoolsRatio >= unboundRational r
+    SJust r -> r == minBound || spoAcceptedRatio re gas >= unboundRational r
     SNothing -> False
+
+-- | Final ratio for `totalAcceptedStakePoolsRatio` we want is: t = y \/ (s - a)
+-- Where:
+--  * `y` - total delegated stake that voted Yes
+--  * `a` - total delegated stake that voted Abstain
+--  * `s` - total delegated stake
+--
+-- However, computing the total stake again would be wasteful, since we already have
+-- distributions per pool computed. So, values that we have available are not exactly
+-- what we need, because we have:
+--  * `y/s` - stake that votes yes over the total stake
+--  * `a/s` - stake that voted abstain over the total stake
+--
+-- We divide both numerator and denominator by `s` and we'll get a formula that we can
+-- use:
+--
+-- t = y \/ (s - a) = (y \/ s) / (1 - a \/ s)
+spoAcceptedRatio :: RatifyEnv era -> GovActionState era -> Rational
+spoAcceptedRatio RatifyEnv {reStakePoolDistr} GovActionState {gasStakePoolVotes}
+  | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
+  | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
   where
-    GovActionState {gasStakePoolVotes, gasAction} = gas
-    -- Final ratio for `totalAcceptedStakePoolsRatio` we want is: t = y / (s - a)
-    -- Where:
-    --  * `y` - total delegated stake that voted Yes
-    --  * `a` - total delegated stake that voted Abstain
-    --  * `s` - total delegated stake
-    --
-    -- However, computing the total stake again would be wasteful, since we already have
-    -- distributions per pool computed. So, values that we have available are not exactly
-    -- what we need, because we have:
-    --  * `y/s` - stake that votes yes over the total stake
-    --  * `a/s` - stake that voted abstain over the total stake
-    --
-    -- We divide both numerator and denominator by `s` and we'll get a formula that we can
-    -- use:
-    --
-    -- t = y / (s - a) = (y / s) / (1 - a / s)
-    totalAcceptedStakePoolsRatio
-      | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
-      | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
-      where
-        (Sum yesVotesRatio, Sum abstainVotesRatio) =
-          Map.foldMapWithKey lookupStakePoolDistrForVotes gasStakePoolVotes
+    PoolDistr stakePoolDistr = reStakePoolDistr
+    (Sum yesVotesRatio, Sum abstainVotesRatio) =
+      Map.foldMapWithKey lookupStakePoolDistrForVotes gasStakePoolVotes
 
-        lookupStakePoolDistrForVotes poolId vote = fromMaybe (mempty, mempty) $ do
-          distr <- Sum . individualPoolStake <$> Map.lookup poolId poolDistr
-          case vote of
-            VoteNo -> Nothing
-            VoteYes -> Just (distr, mempty)
-            Abstain -> Just (mempty, distr)
+    lookupStakePoolDistrForVotes poolId vote = fromMaybe (mempty, mempty) $ do
+      distr <- Sum . individualPoolStake <$> Map.lookup poolId stakePoolDistr
+      case vote of
+        VoteNo -> Nothing
+        VoteYes -> Just (distr, mempty)
+        Abstain -> Just (mempty, distr)
 
-dRepAccepted :: forall era. ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
+dRepAccepted :: ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
 dRepAccepted re rs GovActionState {gasDRepVotes, gasAction} =
   case votingDRepThreshold rs gasAction of
     SJust r ->
@@ -305,15 +307,13 @@ ratifyTransition = do
     judgmentContext
   let reorderedActions = reorderActions rsig
   case reorderedActions of
-    ast :<| sigs -> do
-      let gas@GovActionState {gasId, gasAction, gasExpiresAfter} = ast
-          notDelayed = not rsDelayed
+    gas@GovActionState {gasId, gasAction, gasExpiresAfter} :<| sigs -> do
       if prevActionAsExpected gasAction ensPrevGovActionIds
         && validCommitteeTerm ensCommittee ensCurPParams reCurrentEpoch
-        && notDelayed
+        && not rsDelayed
         && withdrawalCanWithdraw gasAction ensTreasury
-        && committeeAccepted st env gas
-        && spoAccepted st env ast
+        && committeeAccepted env st gas
+        && spoAccepted env st gas
         && dRepAccepted env st gas
         then do
           -- Update ENACT state with the governance action that was ratified
