@@ -2,6 +2,8 @@
 
 ## 1.7.0.0
 
+* Remove `validateDelegationRegistered` in favor of a new and more specific validating
+  function `validateStakePoolDelegateeRegistered`.
 * Add `ToExpr` instances for:
   * `ShelleyDelegPredFailure`
   * `ShelleyDelegsPredFailure`

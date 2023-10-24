@@ -68,7 +68,6 @@ data ConwayDelegPredFailure era
   | StakeKeyNotRegisteredDELEG !(Credential 'Staking (EraCrypto era))
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG !Coin
   | DRepAlreadyRegisteredForStakeKeyDELEG !(Credential 'Staking (EraCrypto era))
-  | WrongCertificateTypeDELEG
   deriving (Show, Eq, Generic)
 
 instance ToExpr (ConwayDelegPredFailure era)
@@ -90,8 +89,6 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
         Sum (StakeKeyHasNonZeroRewardAccountBalanceDELEG @era) 4 !> To mCoin
       DRepAlreadyRegisteredForStakeKeyDELEG stakeCred ->
         Sum (DRepAlreadyRegisteredForStakeKeyDELEG @era) 5 !> To stakeCred
-      WrongCertificateTypeDELEG ->
-        Sum (WrongCertificateTypeDELEG @era) 6
 
 instance Era era => DecCBOR (ConwayDelegPredFailure era) where
   decCBOR = decode $ Summands "ConwayDelegPredFailure" $ \case
@@ -100,7 +97,6 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
     3 -> SumD StakeKeyNotRegisteredDELEG <! From
     4 -> SumD StakeKeyHasNonZeroRewardAccountBalanceDELEG <! From
     5 -> SumD DRepAlreadyRegisteredForStakeKeyDELEG <! From
-    6 -> SumD WrongCertificateTypeDELEG
     n -> Invalid n
 
 newtype ConwayDelegEvent era = DelegEvent (Event (EraRule "DELEG" era))

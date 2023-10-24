@@ -100,7 +100,7 @@ import Cardano.Ledger.Conway.TxCert (
 import Cardano.Ledger.Core (EraRule)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Keys (HasKeyRole (..), KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
@@ -234,7 +234,7 @@ setupSingleDRep = do
           .~ SSeq.fromList
             [ mkRegDepositDelegTxCert @era
                 (KeyHashObj khDelegator)
-                (DelegStakeVote (coerceKeyRole khDRep) (DRepCredential $ KeyHashObj khDRep))
+                (DelegVote (DRepCredential $ KeyHashObj khDRep))
                 zero
             ]
   pure khDRep

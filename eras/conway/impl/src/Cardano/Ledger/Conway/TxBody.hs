@@ -82,7 +82,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert, ConwayTxCertUpgradeError)
+import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert, ConwayTxCertUpgradeError)
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -678,7 +678,7 @@ instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (ConwayTxBody era)
 
-class BabbageEraTxBody era => ConwayEraTxBody era where
+class (BabbageEraTxBody era, ConwayEraTxCert era) => ConwayEraTxBody era where
   -- | Lens for getting and setting number of `Coin` that is expected to be in the
   -- Treasury at the current Epoch
   currentTreasuryValueTxBodyL :: Lens' (TxBody era) (StrictMaybe Coin)
