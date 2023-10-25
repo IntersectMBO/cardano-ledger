@@ -149,7 +149,8 @@ queryCommitteeState nes =
   vsCommitteeState $ certVState $ lsCertState $ esLState $ nesEs nes
 {-# DEPRECATED queryCommitteeState "In favor of `queryCommitteeMembersState`" #-}
 
--- | Query committee members
+-- | Query committee members. Whenever the system is in No Confidence mode this query will
+-- return `Nothing`.
 queryCommitteeMembersState ::
   forall era.
   EraGov era =>
@@ -161,12 +162,12 @@ queryCommitteeMembersState ::
   -- (useful, for discovering, for example, only active members)
   Set MemberStatus ->
   NewEpochState era ->
-  CommitteeMembersState (EraCrypto era)
-queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
+  Maybe (CommitteeMembersState (EraCrypto era))
+queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
+  (comMembers, comQuorum) <- getCommitteeMembers (queryGovState nes)
   let comStateMembers =
         csCommitteeCreds $
           nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-      comMembers = getCommitteeMembers (queryGovState nes)
 
       withFilteredColdCreds s
         | Set.null coldCredsFilter = s
@@ -209,4 +210,9 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
         -- TODO: implement after pulsing and snapshots are done
         let nextEpochChange = NoChangeExpected
         pure $ CommitteeMemberState hkStatus status mbExpiry nextEpochChange
-   in CommitteeMembersState cms currentEpoch
+  pure
+    CommitteeMembersState
+      { csCommittee = cms
+      , csQuorum = comQuorum
+      , csEpochNo = currentEpoch
+      }
