@@ -182,6 +182,7 @@ poolReapTransition = do
       )
       ps
         { psStakePoolParams = eval (retired ⋪ psStakePoolParams ps)
+        -- TODO: redundant
         , psFutureStakePoolParams = eval (retired ⋪ psFutureStakePoolParams ps)
         , psRetiring = eval (retired ⋪ psRetiring ps)
         , psDeposits = remainingDeposits
