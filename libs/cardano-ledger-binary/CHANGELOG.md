@@ -4,7 +4,7 @@
 
 * Export `decodeSetTag`, `allowTag`, `variableListLenEncoding`, and
   `decodeSetLikeEnforceNoDuplicates` #3779
-* Removed `diffExpr` `diffExprNoColor` `ediffEq`
+* Moved `diffExpr`, `diffExprNoColor`, `ediffEq` into the `testlib`
 
 ## 1.1.3.0
 
@@ -13,7 +13,7 @@
   * `SignedDSIGN`
 * Add `Generic` instance for `CompactValue`
 * Add `fieldGuarded` to be able to conditionally construct a `Field` #3712
-  * Expose `showDecoderError` from `Cardano.Ledger.Binary.Plain`
+* Expose `showDecoderError` from `Cardano.Ledger.Binary.Plain`
 
 ### `testlib`
 
