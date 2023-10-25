@@ -26,7 +26,7 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetCommitteeState@
   queryCommitteeState,
 
-  -- * @GetCommitteeState@
+  -- * @GetCommitteeMembersState@
   queryCommitteeMembersState,
   CommitteeMemberState (..),
   CommitteeMembersState (..),

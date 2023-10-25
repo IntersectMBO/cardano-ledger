@@ -2,6 +2,8 @@
 
 ## 1.7.0.0
 
+* Deprecate `GetCommitteeState` query
+* Add `GetCommitteeMembersState` query
 * Export `isPlutusScript`
 * Add `NativeScript`, `getNativeScript` and `validateNativeScript`
 * Removed `phaseScript`
