@@ -1,5 +1,12 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.5.1.0
+
+### `testlib`
+
+* Provide CDDL spec files with `readAlonzoCddlFileNames` and `readAlonzoCddlFiles` from
+  `Test.Cardano.Ledger.Alonzo.Binary.Cddl`
+
 ## 1.5.0.0
 
 * Add `Test.Cardano.Ledger.Alonzo.CostModel`

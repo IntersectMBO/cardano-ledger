@@ -92,7 +92,7 @@ test-suite cardano-ledger-shelley-ma-test
         cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.1,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley-ma-test >=1.1,
-        cardano-ledger-allegra:{cardano-ledger-allegra} >=1.1,
+        cardano-ledger-allegra >=1.1,
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
         cardano-protocol-tpraos >=1.0,
         cardano-slotting,

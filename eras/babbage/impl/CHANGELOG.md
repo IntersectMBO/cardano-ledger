@@ -1,5 +1,12 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.5.1.0
+
+### `testlib`
+
+* Provide CDDL spec files with `readBabbageCddlFileNames` and `readBabbageCddlFiles` from
+  `Test.Cardano.Ledger.Babbage.Binary.Cddl`
+
 ## 1.5.0.0
 
 * Add `Generic` instance for:

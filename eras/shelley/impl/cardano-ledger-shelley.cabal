@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-shelley
-version:            1.7.0.0
+version:            1.7.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -199,7 +199,7 @@ test-suite tests
 
     build-depends:
         base,
-        cardano-ledger-binary:testlib,
+        cardano-ledger-binary:testlib >=1.2.1,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley,
         testlib

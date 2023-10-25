@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-babbage
-version:            1.5.0.0
+version:            1.5.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -132,7 +132,7 @@ test-suite tests
         cardano-ledger-allegra,
         cardano-ledger-babbage,
         cardano-ledger-core,
-        cardano-ledger-binary:testlib,
+        cardano-ledger-binary:testlib >=1.2.1,
         cardano-ledger-shelley:testlib,
         cardano-ledger-core:testlib,
         cardano-ledger-alonzo:testlib,

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-conway
-version:            1.10.0.0
+version:            1.10.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -160,7 +160,7 @@ test-suite tests
         cardano-ledger-conway,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-core,
-        cardano-ledger-binary:testlib,
+        cardano-ledger-binary:testlib >=1.2.1,
         containers,
         data-default-class,
         microlens,

@@ -1,8 +1,15 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.2.0.0
+## 1.2.1.0
 
 * Add `Show` and `Eq` for `CBORGroup`
+
+### `testlib`
+
+* Addition of `Test.Cardano.Ledger.Binary.Cddl` spec testing.
+
+## 1.2.0.0
+
 * Export `decodeSetTag`, `allowTag`, `variableListLenEncoding`, and
   `decodeSetLikeEnforceNoDuplicates` #3779
 * Moved `diffExpr`, `diffExprNoColor`, `ediffEq` into the `testlib`

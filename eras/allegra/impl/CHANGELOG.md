@@ -1,10 +1,18 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.3.0.0
+## 1.2.5.0
+
+### `testlib`
+
+* Provide CDDL spec files with `readBabbageCddlFileNames` and `readBabbageCddlFiles` from
+  `Test.Cardano.Ledger.Babbage.Binary.Cddl`
+
+## 1.2.4.0
 
 * Add `NFData` instance for `AllegraUtxoPredFailure`
 * Implement `getScriptsProvided`
-* Flip arguments on `validateTimelock`
+* Flip arguments on `validateTimelock` (breaking change, but mistakenly only minor version
+  was bumped)
 
 ### `testlib`
 
