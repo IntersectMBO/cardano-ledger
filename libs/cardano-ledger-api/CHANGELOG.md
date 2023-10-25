@@ -4,6 +4,7 @@
 
 * Deprecate `GetCommitteeState` query
 * Add `GetCommitteeMembersState` query
+* Add `invalidBeforeL` and `invalidHereAfterL`
 * Export `isPlutusScript`
 * Add `NativeScript`, `getNativeScript` and `validateNativeScript`
 * Removed `phaseScript`

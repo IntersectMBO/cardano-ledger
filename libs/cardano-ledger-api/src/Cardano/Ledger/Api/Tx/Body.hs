@@ -32,6 +32,8 @@ module Cardano.Ledger.Api.Tx.Body (
   AllegraEraTxBody,
   vldtTxBodyL,
   ValidityInterval (..),
+  invalidBeforeL,
+  invalidHereAfterL,
 
   -- * Mary Era
   MaryEraTxBody,
@@ -70,6 +72,7 @@ import Cardano.Ledger.Api.Scripts
 import Cardano.Ledger.Api.Tx.Out
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
+import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraTxBody (..), PParams, Value)
@@ -80,6 +83,7 @@ import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (getProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (getConsumedValue), UTxO)
 import Cardano.Ledger.Val ((<->))
+import Lens.Micro (Lens', lens)
 
 -- | Evaluate the difference between the value currently being consumed by a transaction
 -- and the total value being produced. This value will be zero for a valid transaction.
@@ -118,3 +122,29 @@ evalBalanceTxBody ::
 evalBalanceTxBody pp lookupKeyRefund lookupDRepRefund isRegPoolId utxo txBody =
   getConsumedValue pp lookupKeyRefund lookupDRepRefund utxo txBody
     <-> getProducedValue pp isRegPoolId txBody
+
+-- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'Maybe SlotNo'.
+invalidBeforeL :: Lens' ValidityInterval (Maybe SlotNo)
+invalidBeforeL = lens g s
+  where
+    g :: ValidityInterval -> Maybe SlotNo
+    g (ValidityInterval ma _) =
+      case ma of
+        SNothing -> Nothing
+        SJust a -> Just a
+
+    s :: ValidityInterval -> Maybe SlotNo -> ValidityInterval
+    s (ValidityInterval _ b) a = ValidityInterval (maybe SNothing SJust a) b
+
+-- | Lens to access the 'invalidHereAfter' field of a 'ValidityInterval' as a 'Maybe SlotNo'.
+invalidHereAfterL :: Lens' ValidityInterval (Maybe SlotNo)
+invalidHereAfterL = lens g s
+  where
+    g :: ValidityInterval -> Maybe SlotNo
+    g (ValidityInterval _ mb) =
+      case mb of
+        SNothing -> Nothing
+        SJust b -> Just b
+
+    s :: ValidityInterval -> Maybe SlotNo -> ValidityInterval
+    s (ValidityInterval ma _) = ValidityInterval ma . maybe SNothing SJust
