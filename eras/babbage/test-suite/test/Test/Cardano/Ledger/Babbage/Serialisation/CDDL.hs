@@ -14,7 +14,7 @@ import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.TxBody (Datum)
 import Cardano.Ledger.Core
 import qualified Data.ByteString.Lazy as BSL
-import Paths_cardano_ledger_babbage_test
+import Test.Cardano.Ledger.Babbage.Binary.Cddl (readBabbageCddlFiles)
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils (
   cddlAnnotatorTest,
   cddlTest,
@@ -41,11 +41,4 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       <*> pure cddl
 
 combinedCDDL :: IO BSL.ByteString
-combinedCDDL = do
-  base <- readDataFile "cddl-files/babbage.cddl"
-  crypto <- readDataFile "cddl-files/real/crypto.cddl"
-  extras <- readDataFile "cddl-files/mock/extras.cddl"
-  pure $ base <> crypto <> extras
-
-readDataFile :: FilePath -> IO BSL.ByteString
-readDataFile name = getDataFileName name >>= BSL.readFile
+combinedCDDL = mconcat <$> readBabbageCddlFiles
