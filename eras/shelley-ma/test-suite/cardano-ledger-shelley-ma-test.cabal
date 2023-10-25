@@ -12,10 +12,6 @@ description:
 
 category:      Network
 build-type:    Simple
-data-files:
-    cddl-files/shelley-ma.cddl
-    cddl-files/real/crypto.cddl
-    cddl-files/mock/extras.cddl
 
 source-repository head
     type:     git
@@ -81,7 +77,6 @@ test-suite cardano-ledger-shelley-ma-test
         Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
         Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding
         Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
-        Paths_cardano_ledger_shelley_ma_test
 
     default-language: Haskell2010
     ghc-options:
@@ -98,7 +93,7 @@ test-suite cardano-ledger-shelley-ma-test
         cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.1,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley-ma-test >=1.1,
-        cardano-ledger-allegra >=1.1,
+        cardano-ledger-allegra:{cardano-ledger-allegra, testlib} >=1.1,
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
         cardano-protocol-tpraos >=1.0,
         cardano-slotting,

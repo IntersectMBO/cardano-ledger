@@ -82,14 +82,11 @@ library testlib
         generic-random,
         nothunks
 
-
 test-suite tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-    other-modules:
-        Test.Cardano.Protocol.Binary.CddlSpec
-
+    other-modules:    Test.Cardano.Protocol.Binary.CddlSpec
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -102,4 +99,4 @@ test-suite tests
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-        cardano-protocol-tpraos,
+        cardano-protocol-tpraos

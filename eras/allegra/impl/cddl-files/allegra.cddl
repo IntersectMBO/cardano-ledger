@@ -50,24 +50,9 @@ major_protocol_version = 1..next_major_protocol_version
 
 protocol_version = (major_protocol_version, uint)
 
-transaction_body =
-  { 0 : set<transaction_input>
-  , 1 : [* transaction_output]
-  , 2 : coin ; fee
-  , ? 3 : uint ; ttl
-  , ? 4 : [* certificate]
-  , ? 5 : withdrawals
-  , ? 6 : update
-  , ? 7 : metadata_hash
-  , ? 8 : uint ; validity interval start
-  , ? 9 : mint
-  }
-
 transaction_input = [ transaction_id : $hash32
                     , index : uint
                     ]
-
-transaction_output = [address, amount : value]
 
 ; address = bytes
 ; reward_account = bytes
@@ -278,9 +263,9 @@ metadata_hash         = $hash32
 scripthash            = $hash28
 
 ; allegra differences
-transaction_body_allegra =
+transaction_body =
   { 0 : set<transaction_input>
-  , 1 : [* transaction_output_allegra]
+  , 1 : [* transaction_output]
   , 2 : coin ; fee
   , ? 3 : uint ; ttl
   , ? 4 : [* certificate]
@@ -289,4 +274,4 @@ transaction_body_allegra =
   , ? 7 : metadata_hash
   , ? 8 : uint ; validity interval start
   }
-transaction_output_allegra = [address, amount : coin]
+transaction_output = [address, amount : coin]

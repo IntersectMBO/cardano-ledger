@@ -6,11 +6,12 @@ maintainer:         operations@iohk.io
 author:             IOHK
 synopsis:           Shelley Ledger Executable Model
 build-type:         Simple
-extra-source-files: CHANGELOG.md
 data-files:
     cddl-files/shelley.cddl
     cddl-files/real/crypto.cddl
     cddl-files/mock/extras.cddl
+
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git

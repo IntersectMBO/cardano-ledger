@@ -8,9 +8,7 @@ synopsis:
     Test helpers from cardano-ledger-shelley exposed to other packages
 
 build-type:         Simple
-data-files:
-    test/Golden/ShelleyGenesis
-
+data-files:         test/Golden/ShelleyGenesis
 extra-source-files: CHANGELOG.md
 
 source-repository head
