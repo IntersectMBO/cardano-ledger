@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-shelley-test
-version:            1.2.0.6
+version:            1.3.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -55,7 +55,6 @@ library
         Test.Cardano.Ledger.Shelley.Rules.TestChain
         Test.Cardano.Ledger.Shelley.Rules.Deleg
         Test.Cardano.Ledger.Shelley.Rules.Pool
-        Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
         Test.Cardano.Ledger.Shelley.Serialisation.Generators
         Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
         Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
@@ -72,7 +71,6 @@ library
     build-depends:
         base >=4.14 && <4.19,
         QuickCheck >=2.13.2,
-        base16-bytestring >=1,
         bytestring,
         cardano-crypto,
         cardano-crypto-class,
@@ -98,7 +96,6 @@ library
         mtl,
         nothunks,
         plutus-ledger-api,
-        process-extras,
         serialise,
         set-algebra,
         small-steps,
@@ -111,7 +108,6 @@ library
         time,
         transformers,
         tree-diff,
-        unliftio,
         vector,
         vector-map
 
@@ -137,7 +133,6 @@ test-suite cardano-ledger-shelley-test
         Test.Cardano.Ledger.Shelley.Pretty
         Test.Cardano.Ledger.Shelley.SafeHash
         Test.Cardano.Ledger.Shelley.Serialisation
-        Test.Cardano.Ledger.Shelley.Serialisation.CDDL
         Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address
         Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding
         Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis

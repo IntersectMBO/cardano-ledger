@@ -16,7 +16,6 @@ import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
 import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslation
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScriptExamples as PlutusScriptExamples
-import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
@@ -44,7 +43,6 @@ defaultTests =
     , Tripping.tests
     , Translation.tests
     , Canonical.tests
-    , CDDL.tests 5
     , Golden.tests
     , GoldenTranslation.tests
     , PlutusScriptExamples.tests
@@ -56,7 +54,6 @@ nightlyTests =
   testGroup
     "Alonzo tests - nightly"
     $ Shelley.commonTests @A @(AlonzoLEDGER A)
-      ++ [ CDDL.tests 50
-         , IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy A)
+      ++ [ IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy A)
          , ChainTrace.tests
          ]

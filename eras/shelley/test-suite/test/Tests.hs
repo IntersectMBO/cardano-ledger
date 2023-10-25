@@ -56,7 +56,7 @@ defaultTests =
     , Bootstrap.bootstrapHashTest
     , WitVKeys.tests @(EraCrypto C)
     , Rewards.tests
-    , Serialisation.tests 5
+    , Serialisation.tests
     , RulesTests.chainExamples
     , RulesTests.multisigExamples
     , RulesTests.testTickF
@@ -69,4 +69,4 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Shelley tests - nightly"
-    $ [Serialisation.tests 50] ++ commonTests @C @(ShelleyLEDGER C)
+    $ Serialisation.tests : commonTests @C @(ShelleyLEDGER C)

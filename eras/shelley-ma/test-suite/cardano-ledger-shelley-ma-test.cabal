@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-shelley-ma-test
-version:       1.2.1.4
+version:       1.2.1.5
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -74,7 +74,6 @@ test-suite cardano-ledger-shelley-ma-test
         Test.Cardano.Ledger.Allegra.Translation
         Test.Cardano.Ledger.Allegra.ScriptTranslation
         Test.Cardano.Ledger.ShelleyMA.Serialisation
-        Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
         Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding
         Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
 
@@ -93,7 +92,7 @@ test-suite cardano-ledger-shelley-ma-test
         cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.1,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley-ma-test >=1.1,
-        cardano-ledger-allegra:{cardano-ledger-allegra, testlib} >=1.1,
+        cardano-ledger-allegra:{cardano-ledger-allegra} >=1.1,
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
         cardano-protocol-tpraos >=1.0,
         cardano-slotting,

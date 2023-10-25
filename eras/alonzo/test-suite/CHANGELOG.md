@@ -2,6 +2,10 @@
 
 ## 1.1.2.6
 
+* Move `cddl-files` to `cardao-ledger-alonzo`
+
+## 1.1.2.6
+
 *
 
 ## 1.1.2.5
