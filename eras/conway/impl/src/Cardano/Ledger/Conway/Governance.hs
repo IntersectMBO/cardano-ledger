@@ -653,7 +653,10 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
 
   getConstitution g = Just $ g ^. cgEnactStateL . ensConstitutionL
 
-  getCommitteeMembers g = foldMap' committeeMembers (g ^. cgEnactStateL . ensCommitteeL)
+  getCommitteeMembers g =
+    case g ^. cgEnactStateL . ensCommitteeL of
+      SJust Committee {..} -> Just (committeeMembers, committeeQuorum)
+      SNothing -> Nothing
 
   curPParamsGovStateL = curPParamsConwayGovStateL
 

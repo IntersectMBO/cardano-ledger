@@ -16,6 +16,7 @@ module Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   NextEpochChange (..),
 ) where
 
+import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
@@ -140,6 +141,7 @@ toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
 
 data CommitteeMembersState c = CommitteeMembersState
   { csCommittee :: !(Map (Credential 'ColdCommitteeRole c) (CommitteeMemberState c))
+  , csQuorum :: !UnitInterval
   , csEpochNo :: !EpochNo
   -- ^ Current epoch number. This is necessary to interpret committee member states
   }
@@ -149,16 +151,19 @@ deriving instance Ord (CommitteeMembersState c)
 instance ToExpr (CommitteeMembersState c)
 
 instance Crypto c => EncCBOR (CommitteeMembersState c) where
-  encCBOR (CommitteeMembersState cs epoch) =
-    encode $
-      Rec (CommitteeMembersState @c)
-        !> To cs
-        !> To epoch
+  encCBOR c@(CommitteeMembersState _ _ _) =
+    let CommitteeMembersState {..} = c
+     in encode $
+          Rec (CommitteeMembersState @c)
+            !> To csCommittee
+            !> To csQuorum
+            !> To csEpochNo
 
 instance Crypto c => DecCBOR (CommitteeMembersState c) where
   decCBOR =
     decode $
       RecD CommitteeMembersState
+        <! From
         <! From
         <! From
 
@@ -167,8 +172,9 @@ instance Crypto c => ToJSON (CommitteeMembersState c) where
   toEncoding = pairs . mconcat . toCommitteeMembersStatePairs
 
 toCommitteeMembersStatePairs :: (KeyValue a, Crypto c) => CommitteeMembersState c -> [a]
-toCommitteeMembersStatePairs c@(CommitteeMembersState _ _) =
+toCommitteeMembersStatePairs c@(CommitteeMembersState _ _ _) =
   let CommitteeMembersState {..} = c
    in [ "committee" .= csCommittee
+      , "quorum" .= csQuorum
       , "epoch" .= csEpochNo
       ]

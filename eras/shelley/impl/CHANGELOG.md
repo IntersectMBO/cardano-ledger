@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Change the return type of `getCommitteeMembers`
 * Remove `validateDelegationRegistered` in favor of a new and more specific validating
   function `validateStakePoolDelegateeRegistered`.
 * Add `ToExpr` instances for:

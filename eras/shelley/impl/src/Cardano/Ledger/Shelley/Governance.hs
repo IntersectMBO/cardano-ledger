@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Governance (
   constitutionScriptL,
 ) where
 
-import Cardano.Ledger.BaseTypes (Anchor, EpochNo)
+import Cardano.Ledger.BaseTypes (Anchor, EpochNo, UnitInterval)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecShareCBOR (..),
@@ -98,8 +98,9 @@ class
   getConstitution :: GovState era -> Maybe (Constitution era)
   getConstitution = const Nothing
 
-  getCommitteeMembers :: GovState era -> Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
-  getCommitteeMembers = const Map.empty
+  getCommitteeMembers ::
+    GovState era -> Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
+  getCommitteeMembers = const Nothing
 
   -- | Lens for accessing current protocol parameters
   curPParamsGovStateL :: Lens' (GovState era) (PParams era)
