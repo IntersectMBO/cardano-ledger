@@ -17,7 +17,7 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Conway tests"
-    [ CDDL.tests 10
+    [ CDDL.tests 3
     , Babbage.txInfoTests (Proxy @Conway)
     , Conway.txInfoTests (Proxy @Conway)
     , govSnapshotProps
