@@ -9,8 +9,7 @@ synopsis:      Tests for Cardano ledger babbage era
 description:   This package builds upon the Alonzo ledger
 category:      Network
 build-type:    Simple
-data-files:
-    golden/*.cbor
+data-files:    golden/*.cbor
 
 source-repository head
     type:     git

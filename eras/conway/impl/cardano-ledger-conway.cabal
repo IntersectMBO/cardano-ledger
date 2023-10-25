@@ -11,12 +11,13 @@ description:
 
 category:           Network
 build-type:         Simple
-data-files:         test/data/*.json
-extra-source-files: CHANGELOG.md
 data-files:
+    test/data/*.json
     cddl-files/conway.cddl
     cddl-files/real/crypto.cddl
     cddl-files/mock/extras.cddl
+
+extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
