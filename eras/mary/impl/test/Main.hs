@@ -4,8 +4,8 @@ module Main where
 
 import Cardano.Ledger.Mary (Mary)
 import Data.Data (Proxy (..))
-import qualified Test.Cardano.Ledger.Mary.Binary.CddlSpec as CddlSpec
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Mary.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Mary.BinarySpec as BinarySpec
 import Test.Cardano.Ledger.Mary.ImpTest ()
 import qualified Test.Cardano.Ledger.Mary.ValueSpec as ValueSpec

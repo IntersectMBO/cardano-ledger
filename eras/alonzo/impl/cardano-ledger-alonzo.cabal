@@ -13,6 +13,10 @@ description:
 category:           Network
 build-type:         Simple
 extra-source-files: CHANGELOG.md
+data-files:
+    cddl-files/alonzo.cddl
+    cddl-files/real/crypto.cddl
+    cddl-files/mock/extras.cddl
 
 source-repository head
     type:     git
@@ -102,9 +106,11 @@ library
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Alonzo.Arbitrary
+        Test.Cardano.Ledger.Alonzo.Binary.Cddl
         Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
         Test.Cardano.Ledger.Alonzo.CostModel
         Test.Cardano.Ledger.Alonzo.ImpTest
+        Paths_cardano_ledger_alonzo
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -116,6 +122,7 @@ library testlib
 
     build-depends:
         base,
+        bytestring,
         containers,
         cardano-ledger-alonzo >=1.1,
         cardano-ledger-binary,
@@ -133,7 +140,9 @@ test-suite tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-    other-modules:    Test.Cardano.Ledger.Alonzo.BinarySpec
+    other-modules:
+        Test.Cardano.Ledger.Alonzo.BinarySpec
+        Test.Cardano.Ledger.Alonzo.Binary.CddlSpec
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -142,7 +151,9 @@ test-suite tests
 
     build-depends:
         base,
+        cardano-ledger-allegra,
         cardano-ledger-alonzo,
-        cardano-ledger-core:testlib,
+        cardano-ledger-binary:testlib,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley:testlib,
         testlib

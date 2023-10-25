@@ -3,15 +3,15 @@
 
 module Test.Cardano.Ledger.Allegra.Binary.CddlSpec (spec) where
 
-import Cardano.Ledger.Core
 import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Core
+import Test.Cardano.Ledger.Allegra.Binary.Cddl (readAllegraCddlFiles)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Allegra.Binary.Cddl (readAllegraCddlFiles)
 
 spec :: Spec
 spec =

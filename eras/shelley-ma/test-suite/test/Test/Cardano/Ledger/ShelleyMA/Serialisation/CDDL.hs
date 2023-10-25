@@ -10,13 +10,13 @@ import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (Mary)
 import qualified Data.ByteString.Lazy as BSL
+import Test.Cardano.Ledger.Allegra.Binary.Cddl (readAllegraCddlFiles)
+import Test.Cardano.Ledger.Mary.Binary.Cddl (readMaryCddlFiles)
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils (
   cddlAnnotatorTest,
   cddlTest,
  )
 import Test.Tasty (TestTree, testGroup, withResource)
-import Test.Cardano.Ledger.Mary.Binary.Cddl (readMaryCddlFiles)
-import Test.Cardano.Ledger.Allegra.Binary.Cddl (readAllegraCddlFiles)
 
 cddlTests :: Int -> TestTree
 cddlTests n =

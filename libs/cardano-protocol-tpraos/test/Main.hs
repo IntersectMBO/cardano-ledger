@@ -1,7 +1,7 @@
 module Main where
 
-import qualified Test.Cardano.Protocol.Binary.CddlSpec as Cddl
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Protocol.Binary.CddlSpec as Cddl
 
 main :: IO ()
 main =

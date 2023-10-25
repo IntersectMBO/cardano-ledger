@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Core
 import qualified Data.ByteString.Lazy as BSL
 import Paths_cardano_ledger_alonzo_test
+import Test.Cardano.Ledger.Alonzo.Binary.Cddl (readAlonzoCddlFiles)
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils (
   cddlAnnotatorTest,
   cddlTest,
@@ -39,11 +40,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       <*> pure cddl
 
 combinedCDDL :: IO BSL.ByteString
-combinedCDDL = do
-  base <- readDataFile "cddl-files/alonzo.cddl"
-  crypto <- readDataFile "cddl-files/real/crypto.cddl"
-  extras <- readDataFile "cddl-files/mock/extras.cddl"
-  pure $ base <> crypto <> extras
+combinedCDDL = mconcat <$> readAlonzoCddlFiles
 
 readDataFile :: FilePath -> IO BSL.ByteString
 readDataFile name = getDataFileName name >>= BSL.readFile
