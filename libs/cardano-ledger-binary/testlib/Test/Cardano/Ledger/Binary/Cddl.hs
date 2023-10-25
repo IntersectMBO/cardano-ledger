@@ -65,7 +65,7 @@ beforeAllCddlFile numExamples getCddlFiles = beforeAll $ do
 
 withCddlVarFile :: HasCallStack => T.Text -> CddlData -> (CddlVarFile -> IO b) -> IO b
 withCddlVarFile varName CddlData {..} roundTripTest = do
-  let suffix = T.encodeUtf8 $ "\noutput = " <> varName <> "\n"
+  let suffix = T.encodeUtf8 $ "output = " <> varName <> "\n"
       varData = Cddl (BSL.fromStrict suffix <> unCddl cddlData)
   diagCbor <- genCddlDiagCbor cddlNumExamples varData
   usingTempFile (unCddl varData) $ \filePath ->
@@ -100,21 +100,29 @@ cddlRoundTripExpectation ::
 cddlRoundTripExpectation lbl encVersion decVersion trip@Trip {tripDecoder} CddlVarFile {..} = do
   forM_ cddlVarDiagCbor $ \diagCbor -> do
     Cbor cbor <- diagToCbor diagCbor
-    let failure err =
-          expectationFailure $ "Failed to Cddl RoundTrip verification:\n" ++ show err
-        mkFailure encoding =
+    let mkFailure encoding =
           RoundTripFailure encVersion decVersion encoding cbor
     case decodeFullDecoder decVersion lbl tripDecoder cbor of
       Left decErr ->
-        failure $ mkFailure mempty Nothing Nothing Nothing (Just decErr)
+        cddlFailure diagCbor $ mkFailure mempty Nothing Nothing Nothing (Just decErr)
       Right val ->
         case embedTripLabelExtra lbl encVersion decVersion trip val of
           Right (val', encoding, encodedBytes) ->
             validateCddlConformance cddlVarFilePath encodedBytes >>= \case
               Left confErr ->
-                failure $ mkFailure encoding (Just encodedBytes) (Just confErr) Nothing Nothing
+                cddlFailure diagCbor $
+                  mkFailure encoding (Just encodedBytes) (Just confErr) Nothing Nothing
               Right _bsl -> val' `shouldBe` val
-          embedErr -> failure embedErr
+          Left embedErr -> cddlFailure diagCbor embedErr
+
+cddlFailure :: HasCallStack => DiagCbor -> RoundTripFailure -> Expectation
+cddlFailure diagCbor err =
+  expectationFailure $
+    unlines
+      [ "Failed to Cddl RoundTrip verification:"
+      , show err
+      , "Generated diag: " <> BSL8.unpack (unDiagCbor diagCbor)
+      ]
 
 cddlRoundTripAnnCborSpec ::
   forall a.
@@ -141,23 +149,21 @@ cddlRoundTripAnnExpectation ::
 cddlRoundTripAnnExpectation lbl encVersion decVersion Trip {..} CddlVarFile {..} = do
   forM_ cddlVarDiagCbor $ \diagCbor -> do
     Cbor cbor <- diagToCbor diagCbor
-    let failure err =
-          expectationFailure $ "Failed to Cddl RoundTrip verification:\n" ++ show err
-        mkFailure encoding =
+    let mkFailure encoding =
           RoundTripFailure encVersion decVersion encoding cbor
-    -- lbl = label (Proxy @(Annotator a))
     case decodeFullAnnotator decVersion lbl tripDecoder cbor of
       Left decErr ->
-        failure $ mkFailure mempty Nothing Nothing Nothing (Just decErr)
+        cddlFailure diagCbor $ mkFailure mempty Nothing Nothing Nothing (Just decErr)
       Right val ->
         let encoding = toPlainEncoding encVersion $ tripEncoder val
          in case decodeAnnExtra lbl encVersion decVersion tripDecoder encoding of
               Right (val', encodedBytes) ->
                 validateCddlConformance cddlVarFilePath encodedBytes >>= \case
                   Left confErr ->
-                    failure $ mkFailure encoding (Just encodedBytes) (Just confErr) Nothing Nothing
+                    cddlFailure diagCbor $
+                      mkFailure encoding (Just encodedBytes) (Just confErr) Nothing Nothing
                   Right _bsl -> val' `shouldBe` val
-              embedErr -> failure embedErr
+              Left embedErr -> cddlFailure diagCbor embedErr
 
 genCddlDiagCbor :: HasCallStack => Int -> Cddl -> IO [DiagCbor]
 genCddlDiagCbor numCases =

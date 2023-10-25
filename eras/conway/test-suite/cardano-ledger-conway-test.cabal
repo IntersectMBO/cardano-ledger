@@ -10,9 +10,6 @@ description:   This package builds upon the Alonzo ledger
 category:      Network
 build-type:    Simple
 data-files:
-    cddl-files/conway.cddl
-    cddl-files/real/crypto.cddl
-    cddl-files/mock/extras.cddl
     golden/*.cbor
 
 source-repository head

@@ -16,7 +16,7 @@ import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingPro
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Core
 import qualified Data.ByteString.Lazy as BSL
-import Paths_cardano_ledger_conway_test (getDataFileName)
+import Test.Cardano.Ledger.Conway.Binary.Cddl (readConwayCddlFiles)
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils (
   cddlAnnotatorTest,
   cddlTest,
@@ -48,11 +48,4 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       <*> pure cddl
 
 combinedCDDL :: IO BSL.ByteString
-combinedCDDL = do
-  base <- readDataFile "cddl-files/conway.cddl"
-  crypto <- readDataFile "cddl-files/real/crypto.cddl"
-  extras <- readDataFile "cddl-files/mock/extras.cddl"
-  pure $ base <> crypto <> extras
-
-readDataFile :: FilePath -> IO BSL.ByteString
-readDataFile name = getDataFileName name >>= BSL.readFile
+combinedCDDL = mconcat <$> readConwayCddlFiles

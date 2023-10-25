@@ -13,6 +13,10 @@ category:           Network
 build-type:         Simple
 data-files:         test/data/*.json
 extra-source-files: CHANGELOG.md
+data-files:
+    cddl-files/conway.cddl
+    cddl-files/real/crypto.cddl
+    cddl-files/mock/extras.cddl
 
 source-repository head
     type:     git
@@ -94,9 +98,11 @@ library
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Conway.Arbitrary
+        Test.Cardano.Ledger.Conway.Binary.Cddl
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.PParamsSpec
         Test.Cardano.Ledger.Conway.ImpTest
+        Paths_cardano_ledger_conway
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -108,6 +114,7 @@ library testlib
 
     build-depends:
         base,
+        bytestring,
         cardano-data:{cardano-data, testlib},
         containers,
         microlens,
@@ -128,6 +135,7 @@ test-suite tests
     hs-source-dirs:   test
     other-modules:
         Test.Cardano.Ledger.Conway.BinarySpec
+        Test.Cardano.Ledger.Conway.Binary.CddlSpec
         Test.Cardano.Ledger.Conway.DRepRatifySpec
         Test.Cardano.Ledger.Conway.CommitteeRatifySpec
         Test.Cardano.Ledger.Conway.GenesisSpec
@@ -146,6 +154,8 @@ test-suite tests
         aeson,
         base,
         cardano-ledger-core:testlib,
+        cardano-ledger-allegra,
+        cardano-ledger-alonzo,
         cardano-ledger-conway,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-core,
