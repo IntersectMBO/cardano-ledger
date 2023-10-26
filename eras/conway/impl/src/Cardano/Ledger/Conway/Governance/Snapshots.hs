@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -79,28 +80,35 @@ instance EraPParams era => DecCBOR (ProposalsSnapshot era) where
 instance EraPParams era => DecShareCBOR (ProposalsSnapshot era) where
   decShareCBOR _ = fromGovActionStateSeq <$> decCBOR
 
+-- | Insert a `GovActionState`, overwriting an entry of it if the
+-- corresponding `GovActionId` already exists.
 snapshotInsertGovAction ::
   GovActionState era ->
   ProposalsSnapshot era ->
   ProposalsSnapshot era
 snapshotInsertGovAction gas (ProposalsSnapshot omap) =
-  ProposalsSnapshot (omap OMap.|> gas)
+  ProposalsSnapshot (omap OMap.||> gas)
 
+-- | Get the sequence of `GovActionState`s
 snapshotActions ::
   ProposalsSnapshot era ->
   StrictSeq (GovActionState era)
 snapshotActions (ProposalsSnapshot omap) = OMap.toStrictSeq omap
 
+-- | Get the sequence of `GovActionId`s
 snapshotIds ::
   ProposalsSnapshot era ->
   StrictSeq (GovActionId (EraCrypto era))
 snapshotIds (ProposalsSnapshot omap) = OMap.toStrictSeqOKeys omap
 
+-- | Get the unordered map of `GovActionId`s and `GovActionState`s
 snapshotGovActionStates ::
   ProposalsSnapshot era ->
   Map (GovActionId (EraCrypto era)) (GovActionState era)
 snapshotGovActionStates (ProposalsSnapshot omap) = OMap.toMap omap
 
+-- | Add a vote to an existing `GovActionState` This is a no-op if the .
+-- provided `GovActionId` does not already exist                       .
 snapshotAddVote ::
   Voter (EraCrypto era) ->
   Vote ->
@@ -122,6 +130,7 @@ snapshotAddVote voter vote gai (ProposalsSnapshot omap) =
       StakePoolVoter kh -> insertVote gasStakePoolVotesL kh
       CommitteeVoter c -> insertVote gasCommitteeVotesL c
 
+-- | Extract `GovActionState`s for the given set of `GovActionId`s from the `Proposals`
 snapshotRemoveIds ::
   Set (GovActionId (EraCrypto era)) ->
   ProposalsSnapshot era ->
@@ -145,5 +154,5 @@ fromGovActionStateSeq :: StrictSeq (GovActionState era) -> ProposalsSnapshot era
 fromGovActionStateSeq = ProposalsSnapshot . OMap.fromStrictSeq
 
 -- | Internal function for checking if the invariants are maintained
-isConsistent_ :: EraPParams era => ProposalsSnapshot era -> Bool
+isConsistent_ :: ProposalsSnapshot era -> Bool
 isConsistent_ (ProposalsSnapshot omap) = OMap.invariantHolds' omap
