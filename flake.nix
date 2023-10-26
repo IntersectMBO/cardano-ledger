@@ -146,22 +146,26 @@
             })
             ({pkgs, ...}:
               lib.mkIf pkgs.stdenv.hostPlatform.isUnix {
-                packages.cardano-ledger-shelley-ma-test.components.tests.cardano-ledger-shelley-ma-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-shelley-test.components.tests.cardano-ledger-shelley-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-alonzo-test.components.tests.cardano-ledger-alonzo-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-babbage-test.components.tests.cardano-ledger-babbage-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-conway-test.components.tests.cardano-ledger-conway-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-shelley.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-allegra.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-mary.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-alonzo.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-babbage.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-ledger-conway.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
+                packages.cardano-protocol-tpraos.components.tests.tests.build-tools = [pkgs.cddl pkgs.cbor-diag];
               })
             ({pkgs, ...}:
               lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
                 packages.set-algebra.components.tests.tests.buildable = lib.mkForce false;
                 packages.plutus-preprocessor.package.buildable = lib.mkForce false;
                 packages.cardano-ledger-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-shelley-ma-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-shelley-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-alonzo-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-babbage-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-conway-test.package.buildable = lib.mkForce false;
+                packages.cardano-ledger-shelley.package.buildable = lib.mkForce false;
+                packages.cardano-ledger-allegra.package.buildable = lib.mkForce false;
+                packages.cardano-ledger-mary.package.buildable = lib.mkForce false;
+                packages.cardano-ledger-alonzo.package.buildable = lib.mkForce false;
+                packages.cardano-ledger-babbage.package.buildable = lib.mkForce false;
+                packages.cardano-ledger-conway.package.buildable = lib.mkForce false;
+                packages.cardano-protocol-tpraos.package.buildable = lib.mkForce false;
               })
           ];
         });
