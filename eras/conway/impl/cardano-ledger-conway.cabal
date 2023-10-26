@@ -103,10 +103,10 @@ library testlib
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.PParamsSpec
         Test.Cardano.Ledger.Conway.ImpTest
-        Paths_cardano_ledger_conway
 
     visibility:       public
     hs-source-dirs:   testlib
+    other-modules:    Paths_cardano_ledger_conway
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates

@@ -111,10 +111,10 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
         Test.Cardano.Ledger.Alonzo.CostModel
         Test.Cardano.Ledger.Alonzo.ImpTest
-        Paths_cardano_ledger_alonzo
 
     visibility:       public
     hs-source-dirs:   testlib
+    other-modules:    Paths_cardano_ledger_alonzo
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
