@@ -9,6 +9,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Data.OMap.Strict (
   HasOKey (okeyL),
@@ -56,6 +58,7 @@ import GHC.Exts (IsList (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (elem, filter, lookup, null, seq)
+import GHC.Generics (Generic)
 
 -- | Class of types that can be mapped by a lens or a projection to a
 -- Ord type.
@@ -75,20 +78,22 @@ class HasOKey k v | v -> k where
 -- TODO: DecShareCBOR instance
 data OMap k v = OMap
   { omSSeq :: !(SSeq.StrictSeq v)
-  , omMap :: !(HasOKey k v => Map.Map k v)
-  }
+  , omMap :: !(Map.Map k v)
+  } deriving (Generic)
+
+deriving instance (NoThunks k, NoThunks v) => NoThunks (OMap k v)
 
 instance (HasOKey k v, ToExpr v) => ToExpr (OMap k v) where
   listToExpr = listToExpr . F.toList
-  toExpr = listToExpr . F.toList
+  toExpr = toExpr . F.toList
 
 instance (HasOKey k v, NFData v) => NFData (OMap k v) where
   rnf = rnf . omSSeq
 
-instance (HasOKey k v, NoThunks v) => NoThunks (OMap k v) where
-  noThunks ctx omap = noThunks ctx $ omSSeq omap
-  wNoThunks ctx omap = wNoThunks ctx $ omSSeq omap
-  showTypeOf = const "OMap"
+-- instance (HasOKey k v, NoThunks v) => NoThunks (OMap k v) where
+--   noThunks ctx omap = noThunks ctx $ omSSeq omap
+--   wNoThunks ctx omap = wNoThunks ctx $ omSSeq omap
+--   showTypeOf = const "OMap"
 
 instance (HasOKey k v, ToJSON v) => ToJSON (OMap k v) where
   toJSON = toJSON . omSSeq
@@ -143,15 +148,14 @@ instance (Typeable k, HasOKey k v, DecCBOR v, Ord k) => DecCBOR (OMap k v) where
       insert v omap = omap |> v
 
 -- | \(O(1)\). Shallow invariant using just `length` and `size`.
-invariantHolds :: HasOKey k v => OMap k v -> Bool
+invariantHolds :: OMap k v -> Bool
 invariantHolds (OMap seq kv) = SSeq.length seq == Map.size kv
 
 -- | \(O(n^2)\). Deep, costly invariant using membership check for each
 -- value. By the pigeon-hole principle, this check is exhaustive.
-invariantHolds' :: (HasOKey k v, Eq v) => OMap k v -> Bool
+invariantHolds' :: (HasOKey k v, Eq v, Ord k) => OMap k v -> Bool
 invariantHolds' omap@(OMap seq kv) =
-  let vs = Map.elems kv
-   in invariantHolds omap && all (`F.elem` vs) seq
+  invariantHolds omap && all (\v -> Map.lookup (v ^. okeyL) kv == Just v) seq
 
 -- | \(O(1)\).
 null :: OMap k v -> Bool
@@ -166,17 +170,17 @@ empty :: OMap k v
 empty = OMap SSeq.Empty Map.empty
 
 -- | \(O(1)\). Strict in its arguments.
-singleton :: k -> v -> OMap k v
-singleton !k !v = OMap (SSeq.singleton v) (Map.singleton k v)
+singleton :: HasOKey k v => v -> OMap k v
+singleton !v = OMap (SSeq.singleton v) (Map.singleton (v ^. okeyL) v)
 
 -- | \(O(\log n)\). The element at the specified position, counting from
 -- 0. If the specified position is negative or at least the length of
 -- the sequence, 'lookup' returns 'Nothing'.
-lookup :: (HasOKey k v, Ord k) => k -> OMap k v -> Maybe v
+lookup :: ( Ord k) =>k -> OMap k v -> Maybe v
 lookup k (OMap _seq kv) = Map.lookup k kv
 
 -- | `flip`ed version of `lookup`
-(!?) :: (HasOKey k v, Ord k) => OMap k v -> k -> Maybe v
+(!?) :: ( Ord k) =>OMap k v -> k -> Maybe v
 (!?) = flip lookup
 
 -- | \(O(\log n)\). Checks membership before cons'ing.
@@ -256,7 +260,7 @@ fromSet :: (HasOKey k v, Ord k) => Set.Set v -> OMap k v
 fromSet = fromStrictSeq . SSeq.fromList . Set.elems
 
 -- | \(O(1)\).
-toMap :: HasOKey k v => OMap k v -> Map.Map k v
+toMap :: OMap k v -> Map.Map k v
 toMap = omMap
 
 -- | \(O(1)\).
@@ -272,7 +276,7 @@ toStrictSeqOfPairs :: HasOKey k v => OMap k v -> SSeq.StrictSeq (k, v)
 toStrictSeqOfPairs = fmap (\v -> (v ^. okeyL, v)) . omSSeq
 
 -- | \(O(\log n)\). Key membership check.
-member :: (HasOKey k v, Ord k) => k -> OMap k v -> Bool
+member :: Ord k => k -> OMap k v -> Bool
 member k (OMap _seq kv) = Map.member k kv
 
 -- | \(O(\log n)\). Value membership check.
@@ -291,7 +295,7 @@ filter f = F.foldl' combine empty
 -- | \(O(n)\). Given a `Set` of @k@s, and an `OMap` @k@ @v@ return
 -- a pair of `Map` and `OMap` where the @ks@ in the `Set` have been
 -- removed from the `OMap` and presented as a separate `Map`.
-extractKeys :: (HasOKey k v, Ord k) => Set.Set k -> OMap k v -> (Map.Map k v, OMap k v)
+extractKeys :: (HasOKey k v, Ord k) => Set.Set k -> OMap k v -> (OMap k v, Map.Map k v)
 extractKeys ks (OMap seq kv) =
   let (kv', extractedKv) = MapE.extractKeys kv ks
       seq' =
@@ -299,7 +303,7 @@ extractKeys ks (OMap seq kv) =
           (\accum v -> if Set.member (v ^. okeyL) ks then accum else accum SSeq.|> v)
           SSeq.empty
           seq
-   in (extractedKv, OMap seq' kv')
+   in (OMap seq' kv', extractedKv)
 
 -- | \(O(\log n)\). Like `Map.adjust`. Returns the original `OMap`
 -- unaltered when the key does not exist in the `OMap` or when the
@@ -308,11 +312,13 @@ adjust :: (HasOKey k v, Ord k) => (v -> v) -> k -> OMap k v -> OMap k v
 adjust f k omap@(OMap seq kv) =
   case Map.lookup k kv of
     Nothing -> omap
-    Just v ->
-      let v' = f v
-       in if v' ^. okeyL == k
-            then OMap seq (Map.insert k v' kv)
-            else omap
+    Just v -> case SSeq.findIndexL (== v) seq of
+      Nothing -> omap
+      Just i -> 
+        let v' = f v
+         in if v' ^. okeyL == k
+              then OMap (SSeq.) (Map.insert k v' kv)
+              else omap
 
 -- | \(O(1)\)
 pattern Empty :: OMap k v

@@ -84,7 +84,7 @@ snapshotInsertGovAction ::
   ProposalsSnapshot era ->
   ProposalsSnapshot era
 snapshotInsertGovAction gas (ProposalsSnapshot omap) =
-  ProposalsSnapshot (omap OMap.:|>: gas)
+  ProposalsSnapshot (omap OMap.|> gas)
 
 snapshotActions ::
   ProposalsSnapshot era ->
@@ -127,7 +127,7 @@ snapshotRemoveIds ::
   ProposalsSnapshot era ->
   (ProposalsSnapshot era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
 snapshotRemoveIds gais (ProposalsSnapshot omap) =
-  let (removed, retained) = OMap.extractKeys gais omap
+  let (retained, removed) = OMap.extractKeys gais omap
    in (ProposalsSnapshot retained, removed)
 
 snapshotLookupId ::

@@ -67,8 +67,8 @@ spec =
     prop "filter and extractKeys" $
       \((omap, set, i) :: (OMap Int Int, Set.Set Int, Int)) -> do
         filter (< i) omap `shouldSatisfy` all (< i)
-        extractKeys set omap `shouldSatisfy` (all (`Set.member` set) . fst)
-        extractKeys set omap `shouldSatisfy` (all (`Set.notMember` set) . snd)
+        extractKeys set omap `shouldSatisfy` (all (`Set.member` set) . snd)
+        extractKeys set omap `shouldSatisfy` (all (`Set.notMember` set) . fst)
     prop "operations preserve invariant" $
       \((omap, omap', sseq, set, i) :: (OMap Int Int, OMap Int Int, SSeq.StrictSeq Int, Set.Set Int, Int)) -> do
         omap |>< omap' `shouldSatisfy` invariantHolds'
@@ -76,7 +76,8 @@ spec =
         fromStrictSeq sseq `shouldSatisfy` invariantHolds'
         fromSet set `shouldSatisfy` invariantHolds'
         filter (> i) omap `shouldSatisfy` invariantHolds'
-        extractKeys set omap `shouldSatisfy` invariantHolds' . snd
+        extractKeys set omap `shouldSatisfy` invariantHolds' . fst
+        adjust id i omap `shouldSatisfy` invariantHolds'
     prop "fromStrictSeq preserves order" $
       \(set :: Set.Set Int) ->
         let sseq = SSeq.fromList $ Set.elems set
