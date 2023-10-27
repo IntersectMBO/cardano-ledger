@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage-test`
 
+## 1.1.1.8
+
+* Move `cddl-files` to `cardao-ledger-alonzo`
+
 ## 1.1.1.7
 
 * Update CDDL files to reflect the change in header structure in

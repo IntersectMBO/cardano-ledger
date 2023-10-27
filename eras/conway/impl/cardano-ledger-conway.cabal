@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-conway
-version:            1.10.0.0
+version:            1.10.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -11,7 +11,12 @@ description:
 
 category:           Network
 build-type:         Simple
-data-files:         test/data/*.json
+data-files:
+    test/data/*.json
+    cddl-files/conway.cddl
+    cddl-files/real/crypto.cddl
+    cddl-files/mock/extras.cddl
+
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -94,12 +99,14 @@ library
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Conway.Arbitrary
+        Test.Cardano.Ledger.Conway.Binary.Cddl
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.PParamsSpec
         Test.Cardano.Ledger.Conway.ImpTest
 
     visibility:       public
     hs-source-dirs:   testlib
+    other-modules:    Paths_cardano_ledger_conway
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -108,6 +115,7 @@ library testlib
 
     build-depends:
         base,
+        bytestring,
         cardano-data:{cardano-data, testlib},
         containers,
         microlens,
@@ -128,6 +136,7 @@ test-suite tests
     hs-source-dirs:   test
     other-modules:
         Test.Cardano.Ledger.Conway.BinarySpec
+        Test.Cardano.Ledger.Conway.Binary.CddlSpec
         Test.Cardano.Ledger.Conway.DRepRatifySpec
         Test.Cardano.Ledger.Conway.CommitteeRatifySpec
         Test.Cardano.Ledger.Conway.GenesisSpec
@@ -146,10 +155,12 @@ test-suite tests
         aeson,
         base,
         cardano-ledger-core:testlib,
+        cardano-ledger-allegra,
+        cardano-ledger-alonzo,
         cardano-ledger-conway,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-core,
-        cardano-ledger-binary:testlib,
+        cardano-ledger-binary:testlib >=1.2.1,
         containers,
         data-default-class,
         microlens,

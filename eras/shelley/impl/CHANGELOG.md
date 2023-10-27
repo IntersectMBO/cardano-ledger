@@ -1,5 +1,12 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.7.1.0
+
+### `testlib`
+
+* Provide CDDL spec files with `readBabbageCddlFileNames` and `readBabbageCddlFiles` from
+  `Test.Cardano.Ledger.Babbage.Binary.Cddl`
+
 ## 1.7.0.0
 
 * Change the return type of `getCommitteeMembers`

@@ -1,5 +1,12 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.3.6.0
+
+### `testlib`
+
+* Provide CDDL spec files with `readMaryCddlFileNames` and `readMaryCddlFiles` from
+  `Test.Cardano.Ledger.Mary.Binary.Cddl`
+
 ## 1.3.5.0
 
 * Add `ToExpr` instance for `CompactValue`

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-mary
-version:            1.3.5.0
+version:            1.3.6.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -12,6 +12,11 @@ description:
 
 category:           Network
 build-type:         Simple
+data-files:
+    cddl-files/mary.cddl
+    cddl-files/real/crypto.cddl
+    cddl-files/mock/extras.cddl
+
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -77,10 +82,12 @@ library
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Mary.Arbitrary
+        Test.Cardano.Ledger.Mary.Binary.Cddl
         Test.Cardano.Ledger.Mary.ImpTest
 
     visibility:       public
     hs-source-dirs:   testlib
+    other-modules:    Paths_cardano_ledger_mary
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -89,6 +96,7 @@ library testlib
 
     build-depends:
         base,
+        bytestring,
         containers,
         cardano-data:testlib,
         cardano-crypto-class,
@@ -106,6 +114,7 @@ test-suite tests
     hs-source-dirs:   test
     other-modules:
         Test.Cardano.Ledger.Mary.BinarySpec
+        Test.Cardano.Ledger.Mary.Binary.CddlSpec
         Test.Cardano.Ledger.Mary.ValueSpec
 
     default-language: Haskell2010
@@ -119,7 +128,7 @@ test-suite tests
         base16-bytestring,
         bytestring,
         cardano-data:{cardano-data, testlib},
-        cardano-ledger-binary:testlib >=1.1,
+        cardano-ledger-binary:testlib >=1.2.1,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-mary,
         cardano-ledger-shelley:testlib,

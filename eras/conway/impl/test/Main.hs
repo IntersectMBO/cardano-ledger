@@ -5,6 +5,7 @@ module Main where
 import Cardano.Ledger.Conway (Conway)
 import Data.Proxy (Proxy (..))
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatifySpec
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatifySpec
@@ -20,6 +21,7 @@ main =
   ledgerTestMain $
     describe "Conway" $ do
       BinarySpec.spec
+      CddlSpec.spec
       DRepRatifySpec.spec
       CommitteeRatifySpec.spec
       GenesisSpec.spec

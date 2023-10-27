@@ -1,5 +1,12 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.10.1.0
+
+### `testlib`
+
+* Provide CDDL spec files with `readConwayCddlFileNames` and `readConwayCddlFiles` from
+  `Test.Cardano.Ledger.Conway.Binary.Cddl`
+
 ## 1.10.0.0
 
 * Add `ToJSON` instance for `ProposalProcedure`

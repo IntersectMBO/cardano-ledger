@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-babbage
-version:            1.5.0.0
+version:            1.5.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -14,6 +14,11 @@ description:
 
 category:           Network
 build-type:         Simple
+data-files:
+    cddl-files/babbage.cddl
+    cddl-files/real/crypto.cddl
+    cddl-files/mock/extras.cddl
+
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -82,10 +87,12 @@ library
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Babbage.Arbitrary
+        Test.Cardano.Ledger.Babbage.Binary.Cddl
         Test.Cardano.Ledger.Babbage.ImpTest
 
     visibility:       public
     hs-source-dirs:   testlib
+    other-modules:    Paths_cardano_ledger_babbage
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -94,6 +101,7 @@ library testlib
 
     build-depends:
         base,
+        bytestring,
         cardano-ledger-alonzo:testlib,
         cardano-ledger-shelley:testlib,
         cardano-crypto-class,
@@ -108,7 +116,10 @@ test-suite tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-    other-modules:    Test.Cardano.Ledger.Babbage.BinarySpec
+    other-modules:
+        Test.Cardano.Ledger.Babbage.BinarySpec
+        Test.Cardano.Ledger.Babbage.Binary.CddlSpec
+
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -118,7 +129,10 @@ test-suite tests
     build-depends:
         base,
         cardano-ledger-alonzo,
+        cardano-ledger-allegra,
         cardano-ledger-babbage,
+        cardano-ledger-core,
+        cardano-ledger-binary:testlib >=1.2.1,
         cardano-ledger-shelley:testlib,
         cardano-ledger-core:testlib,
         cardano-ledger-alonzo:testlib,

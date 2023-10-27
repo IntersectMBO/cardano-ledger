@@ -37,16 +37,17 @@ import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as B16L
+import qualified Data.ByteString.Lazy as BSL
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Sequence.Strict
 import GHC.Stack (HasCallStack)
 import Lens.Micro
+import Paths_cardano_ledger_alonzo_test
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Test.Cardano.Ledger.Alonzo.CostModel (freeV1V2CostModels)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
-import Test.Cardano.Ledger.Alonzo.Serialisation.CDDL (readDataFile)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Mary.Golden (
   largestName,
@@ -61,6 +62,9 @@ import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
+
+readDataFile :: FilePath -> IO BSL.ByteString
+readDataFile name = getDataFileName name >>= BSL.readFile
 
 -- | ada cost of storing a word8 of data as a UTxO entry, assuming no change to minUTxOValue
 coinsPerUTxOWordLocal :: Integer

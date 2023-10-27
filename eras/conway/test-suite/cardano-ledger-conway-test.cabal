@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-conway-test
-version:       1.2.1.1
+version:       1.2.1.2
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -9,11 +9,7 @@ synopsis:      Tests for Cardano ledger Conway era
 description:   This package builds upon the Alonzo ledger
 category:      Network
 build-type:    Simple
-data-files:
-    cddl-files/conway.cddl
-    cddl-files/real/crypto.cddl
-    cddl-files/mock/extras.cddl
-    golden/*.cbor
+data-files:    golden/*.cbor
 
 source-repository head
     type:     git
@@ -77,7 +73,6 @@ test-suite cardano-ledger-conway-test
     main-is:          Tests.hs
     hs-source-dirs:   test
     other-modules:
-        Test.Cardano.Ledger.Conway.Serialisation.CDDL
         Test.Cardano.Ledger.Conway.TxInfo
         Test.Cardano.Ledger.Conway.GovSnapshot
         Paths_cardano_ledger_conway_test
@@ -91,15 +86,12 @@ test-suite cardano-ledger-conway-test
 
     build-depends:
         base,
-        bytestring,
         containers,
-        cardano-ledger-allegra,
         cardano-ledger-alonzo,
         cardano-ledger-babbage,
         cardano-ledger-babbage-test ^>=1.1.1,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-core,
-        cardano-ledger-shelley-test,
         tasty,
         cardano-strict-containers,
         data-default-class,

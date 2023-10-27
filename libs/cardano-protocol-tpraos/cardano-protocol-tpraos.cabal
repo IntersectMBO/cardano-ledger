@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-protocol-tpraos
-version:       1.0.3.6
+version:       1.0.3.7
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -81,3 +81,22 @@ library testlib
         cardano-strict-containers,
         generic-random,
         nothunks
+
+test-suite tests
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:    Test.Cardano.Protocol.Binary.CddlSpec
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        base,
+        bytestring,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.7.1,
+        cardano-protocol-tpraos

@@ -145,7 +145,7 @@ showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
     Nothing ->
       -- This is the usual case where re-serialization is successful
       let (_, origHex, origStr) = termWithHex "Original" encodedBytes
-       in origStr ++ origHex
+       in origStr ++ ["OriginalHex:"] ++ origHex
     Just reBytes ->
       -- On a rare occasion when re-serialization does not match we try to show the
       -- diff of Hex as well as Terms

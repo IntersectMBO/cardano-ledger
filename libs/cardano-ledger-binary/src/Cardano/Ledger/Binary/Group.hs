@@ -20,6 +20,7 @@ import Data.Typeable
 --------------------------------------------------------------------------------
 
 newtype CBORGroup a = CBORGroup {unCBORGroup :: a}
+  deriving (Eq, Show)
 
 instance (DecCBORGroup a, EncCBORGroup a) => DecCBOR (CBORGroup a) where
   decCBOR = CBORGroup <$> groupRecord
