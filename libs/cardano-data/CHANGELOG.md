@@ -1,5 +1,9 @@
 # Version history for `cardano-data`
 
+## 1.1.2.0
+
+- Add Data.OMap.Strict #3791
+
 ## 1.1.1.0
 
 - Add Data.OSet.Strict #3779
