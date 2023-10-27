@@ -6,7 +6,10 @@ module Test.Cardano.Ledger.Conway.GovSpec where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams (ppGovActionLifetimeL)
+import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Shelley.LedgerState
+import Control.Monad (void)
 import Data.Default.Class (Default (..))
 import Data.Maybe
 import Lens.Micro
@@ -14,7 +17,45 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.ImpTest
 
 spec :: Spec
-spec =
+spec = do
+  describe "Votes fail as expected" $ do
+    itM @Conway "on expired gov-actions" $ do
+      modifyPParams $ ppGovActionLifetimeL .~ 2 -- Voting after the 3rd epoch should fail
+      khDRep <- setupSingleDRep
+      constitutionHash <- freshSafeHash
+      let constitutionAction =
+            NewConstitution
+              SNothing
+              ( Constitution
+                  ( Anchor
+                      (fromJust $ textToUrl "constitution.0")
+                      constitutionHash
+                  )
+                  SNothing
+              )
+      gaidConstitutionProp <- submitProposal constitutionAction
+      passEpoch
+      passEpoch
+      passEpoch
+      void $ voteForProposalFail (DRepVoter $ KeyHashObj khDRep) gaidConstitutionProp
+    itM @Conway "on non-existant gov-actions" $ do
+      khDRep <- setupSingleDRep
+      constitutionHash <- freshSafeHash
+      let constitutionAction =
+            NewConstitution
+              SNothing
+              ( Constitution
+                  ( Anchor
+                      (fromJust $ textToUrl "constitution.0")
+                      constitutionHash
+                  )
+                  SNothing
+              )
+      gaidConstitutionProp <- submitProposal constitutionAction
+      void $
+        voteForProposalFail
+          (DRepVoter $ KeyHashObj khDRep)
+          (gaidConstitutionProp {gaidGovActionIx = GovActionIx 99}) -- non-existant `GovActioNId`
   describe "Proposals always have valid previous actions" $ do
     itM @Conway "First ever proposal is accepted without needing a PrevGovActionId but after it is enacted, the following ones are not" $ do
       constitutionHash <- freshSafeHash

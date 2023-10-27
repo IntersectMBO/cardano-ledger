@@ -2,6 +2,8 @@
 
 ## 1.10.1.0
 
+* Add `VotingOnExpiredGovAction` predicate failure in `GOV` #3825
+
 ### `testlib`
 
 * Provide CDDL spec files with `readConwayCddlFileNames` and `readConwayCddlFiles` from
