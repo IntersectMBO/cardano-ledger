@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.8.0.1
+
+*
+
 ## 1.8.0.0
 
 * Add `ToJSON`/`FromJSON` and `ToJSONKey`/`FromJSONKey` instances for `DRep`

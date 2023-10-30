@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.7.0.1
+
+*
+
 ## 1.7.0.0
 
 * Deprecate `GetCommitteeState` query

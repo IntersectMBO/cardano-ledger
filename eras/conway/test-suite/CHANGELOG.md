@@ -2,7 +2,7 @@
 
 ## 1.2.1.2
 
-* Move `cddl-files` to `cardao-ledger-alonzo`
+* Move `cddl-files` to `cardano-ledger-alonzo`
 
 ## 1.2.1.1
 
