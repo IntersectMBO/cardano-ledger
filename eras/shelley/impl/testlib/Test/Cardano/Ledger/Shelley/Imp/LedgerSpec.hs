@@ -25,8 +25,8 @@ import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Common (Spec, describe, shouldBe)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.ImpTest (
-  EraImpTest,
   ImpTestM,
+  ShelleyEraImp,
   freshKeyHash,
   getsNES,
   impIO,
@@ -40,7 +40,7 @@ getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
 
 spec ::
   forall era.
-  EraImpTest era =>
+  ShelleyEraImp era =>
   Spec
 spec = describe "LEDGER" $ do
   itM @era "Transactions update UTxO" $ do

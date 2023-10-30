@@ -170,7 +170,7 @@ instance
   ( Crypto c
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  EraImpTest (ConwayEra c)
+  ShelleyEraImp (ConwayEra c)
   where
   emptyImpNES rootCoin =
     let nes =
@@ -186,7 +186,7 @@ instance
   modifyPParams = conwayModifyPParams
 
 class
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraGov era
   , ConwayEraTxBody era
   ) =>
@@ -202,7 +202,7 @@ instance
 -- belonging to that DRep
 registerDRep ::
   forall era.
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxCert era
   ) =>
   ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
@@ -228,7 +228,7 @@ registerDRep = do
 setupSingleDRep ::
   forall era.
   ( ConwayEraTxCert era
-  , EraImpTest era
+  , ShelleyEraImp era
   ) =>
   ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
 setupSingleDRep = do
@@ -258,7 +258,7 @@ setupSingleDRep = do
 -- | Submits a transaction that votes "Yes" for the given governance action as
 -- some voter
 voteForProposal ::
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   Voter (EraCrypto era) ->
@@ -284,7 +284,7 @@ voteForProposal voter gaId = do
 -- | Submits a transaction that votes "Yes" for the given governance action as
 -- some voter, and expects an `Either` result.
 tryVoteForProposal ::
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   Voter (EraCrypto era) ->
@@ -314,7 +314,7 @@ tryVoteForProposal voter gaId = do
 
 -- | Submits a transaction that proposes the given governance action
 trySubmitProposal ::
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
@@ -351,7 +351,7 @@ trySubmitProposal ga = do
 
 submitProposal ::
   forall era.
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
@@ -359,7 +359,7 @@ submitProposal ::
 submitProposal ga = trySubmitProposal ga >>= impExpectSuccess
 
 submitFailingProposal ::
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
@@ -515,7 +515,7 @@ logRatificationChecks gaId = do
 -- | Submits a transaction that registers a hot key for the given cold key.
 -- Returns the hot key hash.
 registerCommitteeHotKey ::
-  (EraImpTest era, ConwayEraTxCert era) =>
+  (ShelleyEraImp era, ConwayEraTxCert era) =>
   KeyHash 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era (KeyHash 'HotCommitteeRole (EraCrypto era))
 registerCommitteeHotKey coldKey = do

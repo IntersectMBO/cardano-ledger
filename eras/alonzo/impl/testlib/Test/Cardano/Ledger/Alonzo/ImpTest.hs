@@ -42,7 +42,7 @@ instance
   ( Crypto c
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  EraImpTest (AlonzoEra c)
+  ShelleyEraImp (AlonzoEra c)
   where
   emptyImpNES = emptyAlonzoImpNES
 

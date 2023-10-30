@@ -21,7 +21,7 @@
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   ImpException (..),
-  EraImpTest (..),
+  ShelleyEraImp (..),
   logStakeDistr,
   emptyShelleyImpNES,
   shelleyImpWitsVKeyNeeded,
@@ -202,7 +202,7 @@ class
   , NFData (PredicateFailure (EraRule "TICK" era))
   , NFData (StashedAVVMAddresses era)
   ) =>
-  EraImpTest era
+  ShelleyEraImp era
   where
   emptyImpNES :: Coin -> NewEpochState era
 
@@ -326,7 +326,7 @@ instance
   ( Crypto c
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  EraImpTest (ShelleyEra c)
+  ShelleyEraImp (ShelleyEra c)
   where
   emptyImpNES = emptyShelleyImpNES
 
@@ -353,7 +353,7 @@ runShelleyBase act = runIdentity $ runReaderT act testGlobals
 
 fixupFees ::
   forall era.
-  EraImpTest era =>
+  ShelleyEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupFees tx = do
@@ -381,7 +381,7 @@ fixupFees tx = do
 
 submitTx_ ::
   forall era.
-  EraImpTest era =>
+  ShelleyEraImp era =>
   Tx era ->
   ImpTestM
     era
@@ -404,7 +404,7 @@ submitTx_ tx = do
   pure $ (,txFixed) <$> runShelleyBase (applySTSTest @(EraRule "LEDGER" era) trc)
 
 trySubmitTx ::
-  EraImpTest era =>
+  ShelleyEraImp era =>
   Tx era ->
   ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (TxId (EraCrypto era)))
 trySubmitTx tx = do
@@ -419,7 +419,7 @@ trySubmitTx tx = do
 -- outputs are automatically balanced.
 submitFailingTx ::
   ( HasCallStack
-  , EraImpTest era
+  , ShelleyEraImp era
   ) =>
   Tx era ->
   ImpTestM era ()
@@ -507,7 +507,7 @@ logEntry e = impLogL %= (<> pretty e <> line)
 -- | Make the `ImpTestM` into a Spec item with the given description
 itM ::
   forall era a.
-  EraImpTest era =>
+  ShelleyEraImp era =>
   String ->
   ImpTestM era a ->
   Spec
@@ -528,7 +528,7 @@ itM desc (ImpTestM m) =
 -- | Returns the @TxWits@ needed for sumbmitting the transaction
 mkTxWits ::
   ( HasCallStack
-  , EraImpTest era
+  , ShelleyEraImp era
   ) =>
   TxBody era ->
   ImpTestM era (TxWits era)
@@ -607,7 +607,7 @@ impIO = impIOMsg ""
 
 submitTx ::
   ( HasCallStack
-  , EraImpTest era
+  , ShelleyEraImp era
   ) =>
   String ->
   Tx era ->

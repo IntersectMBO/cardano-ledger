@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Conway.Imp.EnactSpec (spec) where
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec :: forall era. EraImpTest era => Spec
+spec :: forall era. ShelleyEraImp era => Spec
 spec =
   describe "ENACT" $ do
     itM @era "TreasuryWithdrawal" $ do

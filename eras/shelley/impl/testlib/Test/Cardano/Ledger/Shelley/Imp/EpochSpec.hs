@@ -20,7 +20,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Val (Val (..))
 import Test.Cardano.Ledger.Common (Spec, describe, shouldBe)
 import Test.Cardano.Ledger.Shelley.ImpTest (
-  EraImpTest,
+  ShelleyEraImp,
   getsNES,
   impIO,
   itM,
@@ -30,7 +30,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
 
 spec ::
   forall era.
-  EraImpTest era =>
+  ShelleyEraImp era =>
   Spec
 spec = describe "EPOCH" $ do
   itM @era "Runs basic transaction" $ do
