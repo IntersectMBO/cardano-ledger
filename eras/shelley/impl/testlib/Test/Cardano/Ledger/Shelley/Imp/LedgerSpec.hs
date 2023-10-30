@@ -1,26 +1,39 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.ImpTestSpec (
+module Test.Cardano.Ledger.Shelley.Imp.LedgerSpec (
   spec,
 ) where
 
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraTx (..), EraTxBody (..), EraTxOut (..), coinTxOutL)
-import Cardano.Ledger.Shelley.LedgerState (esLStateL, lsCertStateL, lsUTxOStateL, nesELL, nesEsL, totalObligation, utxosDepositedL, utxosGovStateL, utxosUtxoL)
+import Cardano.Ledger.Shelley.LedgerState (
+  esLStateL,
+  lsUTxOStateL,
+  nesEsL,
+  utxosUtxoL,
+ )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
-import Data.Data (Proxy (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Common (Spec, describe, shouldBe)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
-import Test.Cardano.Ledger.Shelley.ImpTest (EraImpTest, ImpTestM, freshKeyHash, getsNES, impIO, itM, lookupKeyPair, passEpoch, submitTx)
+import Test.Cardano.Ledger.Shelley.ImpTest (
+  EraImpTest,
+  ImpTestM,
+  freshKeyHash,
+  getsNES,
+  impIO,
+  itM,
+  lookupKeyPair,
+  submitTx,
+ )
 
 getUTxO :: ImpTestM era (UTxO era)
 getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
@@ -28,28 +41,8 @@ getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
 spec ::
   forall era.
   EraImpTest era =>
-  Proxy era ->
   Spec
-spec _ = describe "ImpTest spec" $ do
-  itM @era "Runs basic transaction" $ do
-    do
-      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-      govState <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
-      impIO $ totalObligation certState govState `shouldBe` zero
-    do
-      deposited <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
-      impIO $ deposited `shouldBe` zero
-    _ <- submitTx "simple transaction" $ mkBasicTx mkBasicTxBody
-    passEpoch
-
-  itM @era "Crosses the epoch boundary" $ do
-    do
-      epoch <- getsNES nesELL
-      impIO $ epoch `shouldBe` 0
-    passEpoch
-    do
-      epoch <- getsNES nesELL
-      impIO $ epoch `shouldBe` 1
+spec = describe "LEDGER" $ do
   itM @era "Transactions update UTxO" $ do
     kpPayment1 <- lookupKeyPair =<< freshKeyHash
     kpStaking1 <- lookupKeyPair =<< freshKeyHash

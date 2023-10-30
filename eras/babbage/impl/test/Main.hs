@@ -3,12 +3,11 @@
 module Main where
 
 import Cardano.Ledger.Babbage (Babbage)
-import Data.Data (Proxy (..))
 import qualified Test.Cardano.Ledger.Babbage.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Babbage.BinarySpec as BinarySpec
 import Test.Cardano.Ledger.Babbage.ImpTest ()
 import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Shelley.ImpTestSpec as ImpTestSpec
+import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
 main :: IO ()
 main =
@@ -16,4 +15,5 @@ main =
     describe "Babbage" $ do
       BinarySpec.spec
       CddlSpec.spec
-      ImpTestSpec.spec $ Proxy @Babbage
+      describe "Imp" $ do
+        ShelleyImp.spec @Babbage

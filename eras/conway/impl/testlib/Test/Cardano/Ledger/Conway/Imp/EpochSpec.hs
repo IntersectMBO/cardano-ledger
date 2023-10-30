@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -7,17 +8,18 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Conway.EpochSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (textToUrl)
-import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (
   Constitution (..),
   DRepVotingThresholds (..),
  )
 import Cardano.Ledger.Conway.Governance (
   Anchor (..),
+  ConwayGovState,
   GovAction (..),
+  GovState,
   Voter (..),
   cgEnactStateL,
   ensCommitteeL,
@@ -39,20 +41,19 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..), isSJust)
 import Lens.Micro ((&), (.~))
-import Test.Cardano.Ledger.Common (
-  HasCallStack,
-  Spec,
-  describe,
-  shouldBe,
-  shouldSatisfy,
- )
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 
-spec :: HasCallStack => Spec
+spec ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  ) =>
+  Spec
 spec =
-  describe "Ratify traces" $ do
-    itM @Conway "DRep registration should succeed" $ do
+  describe "EPOCH" $ do
+    itM @era "DRep registration should succeed" $ do
       logEntry "Stake distribution before DRep registration:"
       logStakeDistr
       _ <- registerDRep
@@ -60,7 +61,7 @@ spec =
       logStakeDistr
       passEpoch
 
-    itM @Conway "constitution is accepted after two epochs" $ do
+    itM @era "constitution is accepted after two epochs" $ do
       logEntry "Setting up PParams and DRep"
       modifyPParams $ \pp ->
         pp

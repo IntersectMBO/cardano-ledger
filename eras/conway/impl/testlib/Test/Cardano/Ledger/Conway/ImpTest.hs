@@ -8,10 +8,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conway.ImpTest (
   module ImpTest,
+  ConwayEraImp,
   submitProposal,
   submitFailingProposal,
   voteForProposal,
@@ -182,6 +184,19 @@ instance
   impWitsVKeyNeeded = conwayImpWitsVKeyNeeded
 
   modifyPParams = conwayModifyPParams
+
+class
+  ( EraImpTest era
+  , ConwayEraGov era
+  , ConwayEraTxBody era
+  ) =>
+  ConwayEraImp era
+
+instance
+  ( Crypto c
+  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
+  ) =>
+  ConwayEraImp (ConwayEra c)
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep

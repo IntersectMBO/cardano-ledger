@@ -5,28 +5,29 @@ module Main where
 import Cardano.Ledger.Conway (Conway)
 import Data.Proxy (Proxy (..))
 import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as CddlSpec
-import qualified Test.Cardano.Ledger.Conway.BinarySpec as BinarySpec
-import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatifySpec
-import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatifySpec
-import qualified Test.Cardano.Ledger.Conway.EpochSpec as EpochSpec
-import qualified Test.Cardano.Ledger.Conway.GenesisSpec as GenesisSpec
-import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorderSpec
-import qualified Test.Cardano.Ledger.Conway.GovSpec as GovSpec
-import qualified Test.Cardano.Ledger.Conway.PParamsSpec as PParamsSpec
-import qualified Test.Cardano.Ledger.Shelley.ImpTestSpec as ImpTestSpec
+import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
+import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
+import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
+import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
+import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
+import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
+import qualified Test.Cardano.Ledger.Conway.GovSpec as Gov
+import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Conway.PParamsSpec as PParams
+import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
 main :: IO ()
 main =
   ledgerTestMain $
     describe "Conway" $ do
-      BinarySpec.spec
-      CddlSpec.spec
-      DRepRatifySpec.spec
-      CommitteeRatifySpec.spec
-      GenesisSpec.spec
-      GovActionReorderSpec.spec
-      EpochSpec.spec
-      ImpTestSpec.spec $ Proxy @Conway
-      GovSpec.spec
-      PParamsSpec.spec $ Proxy @Conway
+      Binary.spec
+      Cddl.spec
+      DRepRatify.spec
+      CommitteeRatify.spec
+      Genesis.spec
+      GovActionReorder.spec
+      Gov.spec
+      PParams.spec $ Proxy @Conway
+      describe "Imp" $ do
+        ConwayImp.spec @Conway
+        ShelleyImp.spec @Conway

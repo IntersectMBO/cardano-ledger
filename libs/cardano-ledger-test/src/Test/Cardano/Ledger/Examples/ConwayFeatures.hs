@@ -392,7 +392,6 @@ preventDRepExpiry ::
   , Scriptic era
   , ConwayEraTxBody era
   , GovState era ~ ConwayGovState era
-  , ConwayEraPParams era
   , ConwayEraGov era
   ) =>
   Proof era ->
@@ -532,7 +531,6 @@ testGov ::
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , TxCert era ~ ConwayTxCert era
-  , ConwayEraPParams era
   ) =>
   Proof era ->
   Assertion
