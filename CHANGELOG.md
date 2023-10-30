@@ -7,6 +7,18 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 8.6
+
+- Prevent updating protocol version with PParamUpdate
+- Slight performance improvements to native script handling:
+  - Remove redundant script hash verification.
+  - Short circuit multisig and timelock verification for `RequireMOf` as soon as necessary number of scripts have been validated.
+- Check that the previous governance action of a specific type is either the very last action that has been enacted or is already in the current proposals set.
+- Replace `queryCommitteeState` with more powerful `queryCommitteeMembersState`, which returns more information about committee members and supports filters based on credentials and statuses.
+- Repurpose `DRepPulser` to encapsulate the Snapshots needed to run the `EPOCH` and `RATIFY` Rules. This has fixed some problem related to snapshots and behaviour at the epoch boundary.
+- Add an optional anchor to committee member resignation certificate
+- Prevent delegation to non-registered pools
+
 ## 8.5
 
 - Prevent `DRep` expiry when there are no Governance Actions.
