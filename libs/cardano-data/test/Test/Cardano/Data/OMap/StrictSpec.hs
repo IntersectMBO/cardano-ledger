@@ -8,8 +8,6 @@
 
 module Test.Cardano.Data.OMap.StrictSpec where
 
-import Control.Exception (evaluate)
-import Control.Monad (unless)
 import Data.OMap.Strict
 import Data.Proxy (Proxy (Proxy))
 import Data.Sequence.Strict qualified as SSeq
@@ -107,13 +105,11 @@ spec =
               result `shouldSatisfy` invariantHolds'
     prop "adjust" $
       \((omap, i) :: (OMap Int OMapTest, Int)) ->
-        let validAdjustingFn omt@OMapTest {omSnd} = omt {omSnd = omSnd + 1}
-            -- Changes the `okeyL`. Violates the invariant.
-            invalidAdjustingFn omt@OMapTest {omFst} = omt {omFst = omFst + 1}
+        let adjustingFn omt@OMapTest {omSnd} = omt {omSnd = omSnd + 1}
+            overwritingAdjustingFn omt@OMapTest {omFst} = omt {omFst = omFst + 1} -- Changes the `okeyL`.
          in do
-              adjust validAdjustingFn i omap `shouldSatisfy` invariantHolds'
-              unless (null omap || not (member i omap)) $
-                evaluate (adjust invalidAdjustingFn i omap) `shouldThrow` anyErrorCall
+              adjust adjustingFn i omap `shouldSatisfy` invariantHolds'
+              adjust overwritingAdjustingFn i omap `shouldSatisfy` invariantHolds'
     context "overwriting" $ do
       prop "cons' - (<||)" $
         \((omap, i) :: (OMap Int OMapTest, OMapTest)) ->

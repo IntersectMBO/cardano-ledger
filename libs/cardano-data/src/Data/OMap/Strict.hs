@@ -63,6 +63,7 @@ import Data.Foldable qualified as F
 import Data.Map.Strict qualified as Map
 import Data.MapExtras qualified as MapE
 import Data.Maybe (fromJust, isJust)
+import Data.Sequence qualified as Seq
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
 import Data.Typeable (Typeable)
@@ -287,23 +288,46 @@ extractKeys ks (OMap seq kv) =
           seq
    in (OMap seq' kv', extractedKv)
 
--- | \(O(\log n)\). Like `Map.adjust`. Returns the original `OMap`
--- unaltered when the key does not exist in the `OMap`. Throws an error
--- when the `OMap` invariant is not sustained after the operation.
--- Does not touch the underlying `StrictSeq`.
+-- | \(O(n)\). Like `Map.adjust`.
+--
+-- Returns the original `OMap` unaltered when the key does not exist.
+--
+-- If the key exists, then the function is applied to the value, but we need to consider
+-- three possible cases:
+--
+--     1. The modified value's `okeyL` is unaltered
+--            - we return omap with the adjusted value,
+--     2. The modified value's `okeyL` is altered, but not a duplicate
+--            - we return the omap with adjusted key (in place) and value
+--     3. The modified value's `okeyL` is altered and is a duplicate
+--            - we return the omap with the old key deleted from the sequence but
+--              without inserting the new key since it is a duplicate, and
+--              deleting old value and inserting the new value in place of its duplicate.
 adjust :: (HasOKey k v, Ord k) => (v -> v) -> k -> OMap k v -> OMap k v
 adjust f k omap@(OMap seq kv) =
   case Map.lookup k kv of
     Nothing -> omap
     Just v ->
       let v' = f v
-       in if v' ^. okeyL == k
+          k' = v' ^. okeyL
+          i = fromJust $ SSeq.findIndexL (== k) seq -- since lookup succeeded
+       in if k' == k
             then OMap seq (Map.insert k v' kv)
-            else
-              error $
-                "OMap invariant violated! The provided adjusting "
-                  <> "function is expected to only adjust the value without "
-                  <> "changing its `okeyL` lens."
+            else case Map.lookup k' kv of
+              Nothing ->
+                OMap (updateStrictSeq i k' seq) (Map.insert k' v' $ Map.delete k kv)
+              Just _ ->
+                OMap (deleteAtStrictSeq i seq) (Map.insert k' v' $ Map.delete k kv)
+
+-- TODO: Add this to cardano-base as soon as possible.
+-- This is currently a very expensive operation, unnecessarily.
+updateStrictSeq :: Int -> a -> SSeq.StrictSeq a -> SSeq.StrictSeq a
+updateStrictSeq i a = SSeq.forceToStrict . Seq.update i a . SSeq.fromStrict
+
+-- TODO: Add this to cardano-base as soon as possible.
+-- This is currently a very expensive operation, unnecessarily.
+deleteAtStrictSeq :: Int -> SSeq.StrictSeq a -> SSeq.StrictSeq a
+deleteAtStrictSeq i = SSeq.forceToStrict . Seq.deleteAt i . SSeq.fromStrict
 
 -- | \(O(1)\)
 pattern Empty :: OMap k v
