@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -44,6 +45,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   mkTxWits,
   impNESL,
   constitutionShouldBe,
+  predicateFailureShouldBe,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
@@ -612,15 +614,27 @@ submitTx ::
   ImpTestM era (TxId (EraCrypto era))
 submitTx msg tx = logEntry msg >> trySubmitTx tx >>= impExpectSuccess
 
-impExpectSuccess :: (HasCallStack, NFData a, ToExpr e) => Either e a -> ImpTestM era a
+impExpectSuccess :: (HasCallStack, NFData a, ToExpr e, Show e) => Either e a -> ImpTestM era a
 impExpectSuccess (Right x) = pure x
 impExpectSuccess (Left err) =
   impIO . error $
-    "Expected success, got:\n" <> showExpr err
+    "Expected success, got:\n" <> showExpr err <> "\n" <> show err
 
 impExpectFailure :: HasCallStack => Either a b -> ImpTestM era ()
 impExpectFailure (Right _) = impIO . error $ "Expected a failure, but got a success"
 impExpectFailure (Left _) = pure ()
+
+predicateFailureShouldBe ::
+  ( Eq (PredicateFailure (EraRule rule era))
+  , Show (PredicateFailure (EraRule rule era))
+  ) =>
+  PredicateFailure (EraRule rule era) ->
+  Either [PredicateFailure (EraRule rule era)] right ->
+  ImpTestM era ()
+predicateFailureShouldBe pf = \case
+  Right _ -> impIO $ error "Expected a predicate failure, but got success"
+  Left [pf'] -> impIO $ pf `shouldBe` pf'
+  Left _ -> impIO $ error "Expected a single predicate failure, but got more"
 
 -- | Asserts that the URL of the current constitution is equal to the given
 -- string

@@ -54,6 +54,7 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  gasExpiresAfterL,
   indexedGovProps,
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
@@ -130,6 +131,7 @@ data ConwayGovPredFailure era
       -- | Members for which the expiration epoch has already been reached
       (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   | InvalidPrevGovActionIdsInProposals (Seq.Seq (ProposalProcedure era))
+  | VotingOnExpiredGovAction (Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => ToExpr (ConwayGovPredFailure era)
@@ -149,6 +151,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     6 -> SumD ConflictingCommitteeUpdate <! From
     7 -> SumD ExpirationEpochTooSmall <! From
     8 -> SumD InvalidPrevGovActionIdsInProposals <! From
+    9 -> SumD VotingOnExpiredGovAction <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -170,6 +173,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum ExpirationEpochTooSmall 7 !> To members
       InvalidPrevGovActionIdsInProposals proposals ->
         Sum InvalidPrevGovActionIdsInProposals 8 !> To proposals
+      VotingOnExpiredGovAction ga ->
+        Sum VotingOnExpiredGovAction 9 !> To ga
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -224,23 +229,30 @@ addAction epoch gaExpiry gaid c addr act as =
         , gasExpiresAfter = epoch + gaExpiry
         }
 
-noSuchGovActions ::
+checkVotesAreForValidActions ::
+  EpochNo ->
   ProposalsSnapshot era ->
-  Map.Map (GovActionId (EraCrypto era)) v ->
+  Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
-noSuchGovActions proposals gaIds =
+checkVotesAreForValidActions curEpoch proposals gaIds =
   let curGovActionIds = snapshotGovActionStates proposals
+      expiredActions = Map.filter ((curEpoch >) . (^. gasExpiresAfterL)) curGovActionIds
       unknownGovActionIds = gaIds `Map.difference` curGovActionIds
-   in failureUnless (Map.null unknownGovActionIds) $
-        GovActionsDoNotExist (Map.keysSet unknownGovActionIds)
+      votesOnExpiredActions = gaIds `Map.intersection` expiredActions
+   in failureUnless
+        (Map.null unknownGovActionIds)
+        (GovActionsDoNotExist (Map.keysSet unknownGovActionIds))
+        *> failureUnless
+          (Map.null votesOnExpiredActions)
+          (VotingOnExpiredGovAction votesOnExpiredActions)
 
-checkVotesAreValid ::
+checkVotersAreValid ::
   forall era.
   ConwayEraPParams era =>
   ProposalsSnapshot era ->
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
-checkVotesAreValid proposals voters =
+checkVotersAreValid proposals voters =
   let curGovActionIds = snapshotGovActionStates proposals
       disallowedVoters =
         Map.merge Map.dropMissing Map.dropMissing keepDisallowedVoters curGovActionIds voters
@@ -359,8 +371,8 @@ govTransition = do
           (\acc voter gaIds -> Map.union (voter <$ gaIds) acc)
           Map.empty
           votingProcedures
-  runTest $ noSuchGovActions st govActionIdVotes
-  runTest $ checkVotesAreValid st govActionIdVotes
+  runTest $ checkVotesAreForValidActions currentEpoch st govActionIdVotes
+  runTest $ checkVotersAreValid st govActionIdVotes
   runTest $ checkProposalsHaveAValidPrevious prevGovActionIds st gp
 
   let applyVoterVotes curState voter =

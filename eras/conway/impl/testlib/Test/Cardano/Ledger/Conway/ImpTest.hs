@@ -28,6 +28,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logRatificationChecks,
   registerCommitteeHotKey,
   logCurPParams,
+  tryVoteForProposal,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
@@ -250,6 +251,37 @@ voteForProposal ::
   ImpTestM era (TxId (EraCrypto era))
 voteForProposal voter gaId = do
   submitTx "Vote as DRep" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . votingProceduresTxBodyL
+        .~ VotingProcedures
+          ( Map.singleton
+              voter
+              ( Map.singleton
+                  gaId
+                  ( VotingProcedure
+                      { vProcVote = VoteYes
+                      , vProcAnchor = SNothing
+                      }
+                  )
+              )
+          )
+
+-- | Submits a transaction that votes "Yes" for the given governance action as
+-- some voter, and expects an `Either` result.
+tryVoteForProposal ::
+  ( EraImpTest era
+  , ConwayEraTxBody era
+  ) =>
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  ImpTestM
+    era
+    ( Either
+        [PredicateFailure (EraRule "LEDGER" era)]
+        (TxId (EraCrypto era))
+    )
+tryVoteForProposal voter gaId = do
+  trySubmitTx $
     mkBasicTx mkBasicTxBody
       & bodyTxL . votingProceduresTxBodyL
         .~ VotingProcedures
