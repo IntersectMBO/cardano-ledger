@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -7,11 +8,16 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ppGovActionLifetimeL)
+import Cardano.Ledger.Conway.Rules (
+  ConwayGovPredFailure (GovActionsDoNotExist, VotingOnExpiredGovAction),
+  ConwayLedgerPredFailure (ConwayGovFailure),
+ )
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Shelley.LedgerState
-import Control.Monad (void)
 import Data.Default.Class (Default (..))
+import qualified Data.Map.Strict as Map
 import Data.Maybe
+import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -37,7 +43,13 @@ spec = do
       passEpoch
       passEpoch
       passEpoch
-      void $ voteForProposalFail (DRepVoter $ KeyHashObj khDRep) gaidConstitutionProp
+      let voter = DRepVoter $ KeyHashObj khDRep
+      tryVoteForProposal voter gaidConstitutionProp
+        >>= predicateFailureShouldBe @"LEDGER" @Conway
+          ( ConwayGovFailure $
+              VotingOnExpiredGovAction $
+                Map.singleton gaidConstitutionProp voter
+          )
     itM @Conway "on non-existant gov-actions" $ do
       khDRep <- setupSingleDRep
       constitutionHash <- freshSafeHash
@@ -52,10 +64,15 @@ spec = do
                   SNothing
               )
       gaidConstitutionProp <- submitProposal constitutionAction
-      void $
-        voteForProposalFail
-          (DRepVoter $ KeyHashObj khDRep)
-          (gaidConstitutionProp {gaidGovActionIx = GovActionIx 99}) -- non-existant `GovActioNId`
+      let voter = DRepVoter $ KeyHashObj khDRep
+          dummyGaid = gaidConstitutionProp {gaidGovActionIx = GovActionIx 99} -- non-existant `GovActioNId`
+      tryVoteForProposal voter dummyGaid
+        >>= predicateFailureShouldBe @"LEDGER" @Conway
+          ( ConwayGovFailure $
+              GovActionsDoNotExist $
+                Set.singleton dummyGaid
+          )
+
   describe "Proposals always have valid previous actions" $ do
     itM @Conway "First ever proposal is accepted without needing a PrevGovActionId but after it is enacted, the following ones are not" $ do
       constitutionHash <- freshSafeHash
