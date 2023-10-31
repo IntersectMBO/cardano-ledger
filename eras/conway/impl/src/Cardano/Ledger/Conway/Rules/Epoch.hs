@@ -63,6 +63,7 @@ import Cardano.Ledger.Conway.Governance.Snapshots (snapshotRemoveIds)
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -70,8 +71,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   asTreasuryL,
   epochStateGovStateL,
-  epochStateTreasuryL,
-  epochStateUMapL,
   esAccountState,
   esAccountStateL,
   esLStateL,
@@ -193,29 +192,38 @@ updateNumDormantEpochs pulser vState =
 --                                  + getCoin unclaimed + donations ∸ totWithdrawals }
 --
 -- The utxo fees and donations are applied in the remaining body of EPOCH transition
-applyEnactedWithdrawals :: EpochState era -> EnactState era -> (EpochState era, EnactState era)
-applyEnactedWithdrawals epochState enactedState =
+applyEnactedWithdrawals ::
+  AccountState ->
+  DState era ->
+  EnactState era ->
+  (AccountState, DState era, EnactState era)
+applyEnactedWithdrawals accountState dState enactedState =
   let enactedWithdrawals = enactedState ^. ensWithdrawalsL
-      rewardsUView = RewDepUView $ epochState ^. epochStateUMapL
-      successfulRefunds = rewardsUView ◁ enactedWithdrawals
-      epochStateRewardsApplied =
-        epochState
+      rewardsUView = RewDepUView $ dState ^. dsUnifiedL
+      successfulWithdrawls = rewardsUView ◁ enactedWithdrawals
+      accountState' =
+        accountState
           -- Subtract `successfulRefunds` from the treasury, and add them to the rewards UMap
           -- `unclaimed` refunds remain in the treasury.
           -- Compared to the spec, instead of adding `unclaimed` and subtracting `totWithdrawals`
           --   + unclaimed - totWithdrawals
           -- we just subtract the `refunds`
           --   - refunds
-          & epochStateTreasuryL %~ (<-> fold successfulRefunds)
-          -- The use of the partial function `compactCoinOrError` is justified here because
-          -- 1. the decoder for coin at the proposal-submission boundary has already
-          --    confirmed we have a compactible value
-          -- 2. the refunds and unsuccessful refunds together do not exceed the
-          --    current treasury value, as enforced by the `ENACT` rule.
-          & epochStateUMapL .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulRefunds))
+          & asTreasuryL %~ (<-> fold successfulWithdrawls)
+      -- The use of the partial function `compactCoinOrError` is justified here because
+      -- 1. the decoder for coin at the proposal-submission boundary has already
+      --    confirmed we have a compactible value
+      -- 2. the refunds and unsuccessful refunds together do not exceed the
+      --    current treasury value, as enforced by the `ENACT` rule.
+      dState' =
+        dState
+          & dsUnifiedL .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulWithdrawls))
       -- Reset enacted withdrawals:
-      enactedStateWithdrawalsReset = enactedState & ensWithdrawalsL .~ Map.empty
-   in (epochStateRewardsApplied, enactedStateWithdrawalsReset)
+      enactedState' =
+        enactedState
+          & ensWithdrawalsL .~ Map.empty
+          & ensTreasuryL .~ mempty
+   in (accountState', dState', enactedState')
 
 epochTransition ::
   forall era.
@@ -272,7 +280,9 @@ epochTransition = do
     pulsingState = epochState0 ^. epochStateDRepPulsingStateL
 
     RatifyState {rsRemoved, rsEnactState} = extractDRepPulsingState pulsingState
-    (epochState1, newEnactState) = applyEnactedWithdrawals epochState0 rsEnactState
+
+    (accountState2, dState2, newEnactState) =
+      applyEnactedWithdrawals accountState1 dState1 rsEnactState
     (newProposals, removedGovActions) =
       -- It is important that we use current proposals here instead of the ones from the pulser
       snapshotRemoveIds rsRemoved (govState0 ^. cgProposalsL)
@@ -284,15 +294,15 @@ epochTransition = do
     certState =
       CertState
         { certPState = pState2
-        , certDState = returnProposalDeposits removedGovActions dState1
+        , certDState = returnProposalDeposits removedGovActions dState2
         , certVState =
             -- Increment the dormant epoch counter
             updateNumDormantEpochs pulsingState vState
               -- Remove cold credentials of committee members that were removed or were invalid
-              & vsCommitteeStateL %~ updateCommitteeState (newEnactState ^. ensCommitteeL)
+              & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgEnactStateL . ensCommitteeL)
         }
-    accountState2 =
-      accountState1
+    accountState3 =
+      accountState2
         -- Move donations to treasury:
         & asTreasuryL <>~ (utxoState0 ^. utxosDonationL)
     utxoState2 =
@@ -305,13 +315,13 @@ epochTransition = do
       ledgerState0
         & lsCertStateL .~ certState
         & lsUTxOStateL .~ utxoState2
-    epochState2 =
-      epochState1
-        & esAccountStateL .~ accountState2
+    epochState1 =
+      epochState0
+        & esAccountStateL .~ accountState3
         & esSnapshotsL .~ snapshots1
         & esLStateL .~ ledgerState1
 
-  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState2
+  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState1
 
 instance
   ( Era era

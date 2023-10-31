@@ -940,7 +940,6 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpProposals :: !(StrictSeq (GovActionState era))
     -- ^ Snap shot of the (ProposalsSnapshot era) isomorphic to (StrictSeq (GovActionState era))
     --   Used to build the Signal of the RATIFY rule
-    , dpTreasury :: !Coin
     , dpGlobals :: !Globals
     } ->
     DRepPulser era m ans
@@ -963,7 +962,7 @@ deriving instance (EraPParams era, Show ans) => Show (DRepPulser era m ans)
 
 instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) where
   showTypeOf _ = "DRepPulser"
-  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _ _) =
+  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _) =
     allNoThunks
       [ noThunks ctxt (dpPulseSize drp)
       , noThunks ctxt (dpUMap drp)
@@ -976,12 +975,11 @@ instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) 
       , noThunks ctxt (dpCommitteeState drp)
       , noThunks ctxt (dpEnactState drp)
       , noThunks ctxt (dpProposals drp)
-      , noThunks ctxt (dpTreasury drp)
       , noThunks ctxt (dpGlobals drp)
       ]
 
 instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) where
-  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as treas gs) =
+  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as gs) =
     n `deepseq`
       um `deepseq`
         bal `deepseq`
@@ -993,8 +991,7 @@ instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) wh
                     cs `deepseq`
                       es `deepseq`
                         as `deepseq`
-                          treas `deepseq`
-                            rnf gs
+                          rnf gs
 
 class
   ( STS (ConwayRATIFY era)
@@ -1033,7 +1030,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
     !ratifyState =
       RatifyState
         { rsRemoved = mempty
-        , rsEnactState = dpEnactState & ensTreasuryL .~ dpTreasury
+        , rsEnactState = dpEnactState
         , rsDelayed = False
         }
     !ratifyState' = runConwayRatify dpGlobals ratifyEnv ratifyState ratifySig
@@ -1168,9 +1165,11 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                   , dpDRepState = vsDReps vState
                   , dpCurrentEpoch = epochNo
                   , dpCommitteeState = vsCommitteeState vState
-                  , dpEnactState = cgEnactState govState
+                  , dpEnactState =
+                      (cgEnactState govState)
+                        { ensTreasury = epochState ^. epochStateTreasuryL
+                        }
                   , dpProposals = snapshotActions (govState ^. cgProposalsL)
-                  , dpTreasury = epochState ^. epochStateTreasuryL
                   , dpGlobals = globals
                   }
               )
