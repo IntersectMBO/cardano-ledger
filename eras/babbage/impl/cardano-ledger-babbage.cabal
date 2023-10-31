@@ -61,7 +61,7 @@ library
 
     build-depends:
         base >=4.14 && <4.19,
-        aeson,
+        aeson >=2.2,
         bytestring,
         cardano-crypto-class,
         cardano-data >=1.0,

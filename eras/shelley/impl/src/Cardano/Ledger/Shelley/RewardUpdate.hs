@@ -140,7 +140,7 @@ instance Crypto c => ToJSON (RewardUpdate c) where
   toJSON = object . toRewardUpdatePair
   toEncoding = pairs . mconcat . toRewardUpdatePair
 
-toRewardUpdatePair :: (KeyValue a, Crypto c) => RewardUpdate c -> [a]
+toRewardUpdatePair :: (KeyValue e a, Crypto c) => RewardUpdate c -> [a]
 toRewardUpdatePair ru@(RewardUpdate _ _ _ _ _) =
   let RewardUpdate {..} = ru
    in [ "deltaT" .= deltaT

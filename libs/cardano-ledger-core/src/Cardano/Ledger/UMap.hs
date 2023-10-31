@@ -208,7 +208,7 @@ instance Crypto c => ToJSON (UMElem c) where
   toJSON = object . toUMElemair
   toEncoding = Aeson.pairs . mconcat . toUMElemair
 
-toUMElemair :: (Aeson.KeyValue a, Crypto c) => UMElem c -> [a]
+toUMElemair :: (Aeson.KeyValue e a, Crypto c) => UMElem c -> [a]
 toUMElemair (UMElem !rd !ptr !spool !drep) =
   [ "reward" .= fmap rdReward rd
   , "deposit" .= fmap rdDeposit rd
@@ -410,7 +410,7 @@ instance Crypto c => ToJSON (UMap c) where
   toJSON = object . toUMapPair
   toEncoding = Aeson.pairs . mconcat . toUMapPair
 
-toUMapPair :: (Aeson.KeyValue a, Crypto c) => UMap c -> [a]
+toUMapPair :: (Aeson.KeyValue e a, Crypto c) => UMap c -> [a]
 toUMapPair (UMap !m1 !m2) =
   [ "credentials" .= m1
   , "pointers" .= m2

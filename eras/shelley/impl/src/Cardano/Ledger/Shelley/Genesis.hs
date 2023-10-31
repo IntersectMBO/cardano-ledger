@@ -237,7 +237,7 @@ instance Crypto c => ToJSON (ShelleyGenesis c) where
   toJSON = Aeson.object . toShelleyGenesisPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
 
-toShelleyGenesisPairs :: (Aeson.KeyValue a, Crypto c) => ShelleyGenesis c -> [a]
+toShelleyGenesisPairs :: (Aeson.KeyValue e a, Crypto c) => ShelleyGenesis c -> [a]
 toShelleyGenesisPairs
   ShelleyGenesis
     { sgSystemStart
@@ -305,7 +305,7 @@ instance Crypto c => ToJSON (ShelleyGenesisStaking c) where
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisStakingPairs
 
 toShelleyGenesisStakingPairs ::
-  (Aeson.KeyValue a, Crypto c) =>
+  (Aeson.KeyValue e a, Crypto c) =>
   ShelleyGenesisStaking c ->
   [a]
 toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =

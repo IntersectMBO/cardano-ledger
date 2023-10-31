@@ -78,7 +78,7 @@ library
 
     build-depends:
         base >=4.14 && <4.19,
-        aeson >=2,
+        aeson >=2.2,
         base16-bytestring,
         base64-bytestring,
         binary,

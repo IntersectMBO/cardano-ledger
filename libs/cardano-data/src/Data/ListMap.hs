@@ -89,16 +89,16 @@ instance (EncCBOR k, EncCBOR v) => EncCBOR (ListMap k v) where
       f (k, v) e = encCBOR k <> encCBOR v <> e
 
 instance ToJSONKey k => ToJSON1 (ListMap k) where
-  liftToJSON g _ = case toJSONKey of
+  liftToJSON _ g _ = case toJSONKey of
     ToJSONKeyText f _ -> Object . KM.fromList . unListMap . mapKeyValO f g
     ToJSONKeyValue f _ -> Array . V.fromList . L.map (toJSONPair f g) . unListMap
     where
       mapKeyValO :: (k1 -> k2) -> (v1 -> v2) -> ListMap k1 v1 -> ListMap k2 v2
       mapKeyValO fk kv = ListMap . foldrWithKey (\(k, v) -> ((fk k, kv v) :)) []
       toJSONPair :: (a -> Value) -> (b -> Value) -> (a, b) -> Value
-      toJSONPair a b = liftToJSON2 a (listValue a) b (listValue b)
+      toJSONPair a b = liftToJSON2 (const False) a (listValue a) (const False) b (listValue b)
 
-  liftToEncoding g _ = case toJSONKey of
+  liftToEncoding _ g _ = case toJSONKey of
     ToJSONKeyText _ f -> dict f g (foldrWithKey . uncurry)
     ToJSONKeyValue _ f -> E.list (pairEncoding f) . unListMap
     where
@@ -106,11 +106,10 @@ instance ToJSONKey k => ToJSON1 (ListMap k) where
 
 instance (ToJSON v, ToJSONKey k) => ToJSON (ListMap k v) where
   toJSON = J.toJSON1
+  toEncoding = J.toEncoding1
 
-  toEncoding = J.liftToEncoding J.toEncoding J.toEncodingList
-
-instance FromJSONKey k => FromJSON1 (ListMap k) where
-  liftParseJSON parser _ = J.withObject "ListMap" $ \obj -> do
+instance (FromJSON k, FromJSONKey k) => FromJSON1 (ListMap k) where
+  liftParseJSON _ parser _ = J.withObject "ListMap" $ \obj -> do
     let kv = KM.toList obj
     res <- forM kv $ \(k, v) -> do
       let t = Key.toText k
@@ -124,7 +123,7 @@ instance FromJSONKey k => FromJSON1 (ListMap k) where
       return (k', v')
     return $ ListMap res
 
-instance (FromJSON v, FromJSONKey k) => FromJSON (ListMap k v) where
+instance (FromJSON v, FromJSON k, FromJSONKey k) => FromJSON (ListMap k v) where
   parseJSON = J.parseJSON1
 
 instance NFData k => NFData1 (ListMap k)

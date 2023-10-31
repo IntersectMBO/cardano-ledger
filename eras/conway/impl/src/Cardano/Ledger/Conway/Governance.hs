@@ -292,7 +292,7 @@ instance EraPParams era => NFData (PulsingSnapshot era)
 
 instance EraPParams era => NoThunks (PulsingSnapshot era)
 
-toPulsingSnapshotsPairs :: (KeyValue a, EraPParams era) => PulsingSnapshot era -> [a]
+toPulsingSnapshotsPairs :: (KeyValue e a, EraPParams era) => PulsingSnapshot era -> [a]
 toPulsingSnapshotsPairs gas@(PulsingSnapshot _ _ _) =
   let (PulsingSnapshot {..}) = gas
    in [ "psProposals" .= psProposals
@@ -374,7 +374,7 @@ instance Era era => EncCBOR (PrevGovActionIds era) where
         !> To pgaCommittee
         !> To pgaConstitution
 
-toPrevGovActionIdsPairs :: (KeyValue a, Era era) => PrevGovActionIds era -> [a]
+toPrevGovActionIdsPairs :: (KeyValue e a, Era era) => PrevGovActionIds era -> [a]
 toPrevGovActionIdsPairs pga@(PrevGovActionIds _ _ _ _) =
   let PrevGovActionIds {..} = pga
    in [ "pgaPParamUpdate" .= pgaPParamUpdate
@@ -461,7 +461,7 @@ instance EraPParams era => ToJSON (EnactState era) where
   toJSON = object . toEnactStatePairs
   toEncoding = pairs . mconcat . toEnactStatePairs
 
-toEnactStatePairs :: (KeyValue a, EraPParams era) => EnactState era -> [a]
+toEnactStatePairs :: (KeyValue e a, EraPParams era) => EnactState era -> [a]
 toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
   let EnactState {..} = cg
    in [ "committee" .= ensCommittee
@@ -552,7 +552,7 @@ instance EraPParams era => ToJSON (RatifyState era) where
   toJSON = object . toRatifyStatePairs
   toEncoding = pairs . mconcat . toRatifyStatePairs
 
-toRatifyStatePairs :: (KeyValue a, EraPParams era) => RatifyState era -> [a]
+toRatifyStatePairs :: (KeyValue e a, EraPParams era) => RatifyState era -> [a]
 toRatifyStatePairs cg@(RatifyState _ _ _) =
   let RatifyState {..} = cg
    in [ "nextEnactState" .= rsEnactState
@@ -640,7 +640,7 @@ instance EraPParams era => ToJSON (ConwayGovState era) where
   toJSON = object . toConwayGovPairs
   toEncoding = pairs . mconcat . toConwayGovPairs
 
-toConwayGovPairs :: (KeyValue a, EraPParams era) => ConwayGovState era -> [a]
+toConwayGovPairs :: (KeyValue e a, EraPParams era) => ConwayGovState era -> [a]
 toConwayGovPairs cg@(ConwayGovState _ _ _) =
   let ConwayGovState {..} = cg
    in [ "proposals" .= cgProposals

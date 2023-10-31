@@ -169,7 +169,7 @@ instance (Era era, Val (Value era)) => ToJSON (ShelleyTxOut era) where
   toJSON = object . toTxOutPair
   toEncoding = pairs . mconcat . toTxOutPair
 
-toTxOutPair :: (KeyValue a, Era era, Val (Value era)) => ShelleyTxOut era -> [a]
+toTxOutPair :: (KeyValue e a, Era era, Val (Value era)) => ShelleyTxOut era -> [a]
 toTxOutPair (ShelleyTxOut !addr !amount) =
   [ "address" .= addr
   , "amount" .= amount

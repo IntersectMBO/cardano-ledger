@@ -52,7 +52,7 @@ instance Crypto c => ToJSON (TransitionConfig (ConwayEra c)) where
   toJSON = object . toConwayTransitionConfigPairs
   toEncoding = pairs . mconcat . toConwayTransitionConfigPairs
 
-toConwayTransitionConfigPairs :: (KeyValue a, Crypto c) => TransitionConfig (ConwayEra c) -> [a]
+toConwayTransitionConfigPairs :: (KeyValue e a, Crypto c) => TransitionConfig (ConwayEra c) -> [a]
 toConwayTransitionConfigPairs conwayConfig =
   toAlonzoTransitionConfigPairs alonzoConfig
     ++ ["conway" .= object (toConwayGenesisPairs (conwayConfig ^. tcTranslationContextL))]

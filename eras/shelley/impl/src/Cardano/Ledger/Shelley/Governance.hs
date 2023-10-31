@@ -236,7 +236,7 @@ instance EraPParams era => ToJSON (ShelleyGovState era) where
   toJSON = object . toPPUPStatePairs
   toEncoding = pairs . mconcat . toPPUPStatePairs
 
-toPPUPStatePairs :: (KeyValue a, EraPParams era) => ShelleyGovState era -> [a]
+toPPUPStatePairs :: (KeyValue e a, EraPParams era) => ShelleyGovState era -> [a]
 toPPUPStatePairs ShelleyGovState {..} =
   [ "proposals" .= proposals
   , "futureProposals" .= futureProposals
@@ -276,7 +276,7 @@ instance Era era => FromJSON (Constitution era) where
       <$> o .: "anchor"
       <*> (maybeToStrictMaybe <$> (o .:? "script"))
 
-toConstitutionPairs :: (KeyValue a, Era era) => Constitution era -> [a]
+toConstitutionPairs :: (KeyValue e a, Era era) => Constitution era -> [a]
 toConstitutionPairs c@(Constitution _ _) =
   let Constitution {..} = c
    in ["anchor" .= constitutionAnchor]

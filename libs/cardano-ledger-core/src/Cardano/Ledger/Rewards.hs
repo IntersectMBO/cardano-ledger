@@ -101,7 +101,7 @@ instance Crypto c => ToJSON (Reward c) where
   toJSON = object . toRewardPair
   toEncoding = pairs . mconcat . toRewardPair
 
-toRewardPair :: (KeyValue a, Crypto c) => Reward c -> [a]
+toRewardPair :: (KeyValue e a, Crypto c) => Reward c -> [a]
 toRewardPair r@(Reward _ _ _) =
   let Reward {..} = r
    in [ "rewardType" .= rewardType

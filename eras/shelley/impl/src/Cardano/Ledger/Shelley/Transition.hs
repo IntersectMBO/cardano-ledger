@@ -197,7 +197,7 @@ instance Crypto c => FromJSON (TransitionConfig (ShelleyEra c)) where
     pure $ ShelleyTransitionConfig {stcShelleyGenesis = sg}
 
 toShelleyTransitionConfigPairs ::
-  (KeyValue a, Crypto c) =>
+  (KeyValue e a, Crypto c) =>
   TransitionConfig (ShelleyEra c) ->
   [a]
 toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =

@@ -320,8 +320,8 @@ instance
   toEncoding = pairs . mconcat . babbagePParamsPairs
 
 babbagePParamsPairs ::
-  forall era a.
-  (BabbageEraPParams era, KeyValue a) =>
+  forall era a e.
+  (BabbageEraPParams era, KeyValue e a) =>
   PParamsHKD Identity era ->
   [a]
 babbagePParamsPairs pp =
@@ -470,8 +470,8 @@ instance
   toEncoding = pairs . mconcat . babbagePParamsUpdatePairs
 
 babbagePParamsUpdatePairs ::
-  forall era a.
-  (BabbageEraPParams era, KeyValue a) =>
+  forall era a e.
+  (BabbageEraPParams era, KeyValue e a) =>
   PParamsHKD StrictMaybe era ->
   [a]
 babbagePParamsUpdatePairs pp =

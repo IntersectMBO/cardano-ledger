@@ -192,7 +192,7 @@ instance ToJSON AlonzoGenesis where
   toJSON = object . toAlonzoGenesisPairs
   toEncoding = pairs . mconcat . toAlonzoGenesisPairs
 
-toAlonzoGenesisPairs :: Aeson.KeyValue a => AlonzoGenesis -> [a]
+toAlonzoGenesisPairs :: Aeson.KeyValue e a => AlonzoGenesis -> [a]
 toAlonzoGenesisPairs ag =
   [ "lovelacePerUTxOWord" .= coinsPerUTxOWord ag
   , "costModels" .= costmdls ag
@@ -204,7 +204,7 @@ toAlonzoGenesisPairs ag =
   , "maxCollateralInputs" .= maxCollateralInputs ag
   ]
 
-alonzoGenesisAesonPairs :: Aeson.KeyValue a => AlonzoGenesis -> [a]
+alonzoGenesisAesonPairs :: Aeson.KeyValue e a => AlonzoGenesis -> [a]
 alonzoGenesisAesonPairs = toAlonzoGenesisPairs
 {-# DEPRECATED alonzoGenesisAesonPairs "In favor of `toAlonzoGenesisPairs`" #-}
 
