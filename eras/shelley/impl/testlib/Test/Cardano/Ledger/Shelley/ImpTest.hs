@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -44,6 +45,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impIOMsg,
   mkTxWits,
   impNESL,
+  runImpRule,
+  registerRewardAccount,
   constitutionShouldBe,
   predicateFailureShouldBe,
 ) where
@@ -52,7 +55,7 @@ import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
 import Cardano.Crypto.Hash (Hash)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
   BlocksMade (..),
@@ -115,6 +118,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded)
+import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin)
@@ -143,10 +147,12 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (^.))
-import Lens.Micro.Mtl (view, (%=), (+=), (.=))
+import GHC.TypeLits (KnownSymbol, symbolVal)
+import Lens.Micro
+import Lens.Micro.Mtl
 import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line)
 import Prettyprinter.Render.String (renderString)
 import Test.Cardano.Ledger.Binary.TreeDiff (showExpr)
@@ -162,6 +168,7 @@ data ImpTestState era = ImpTestState
   , impSafeHashIdx :: !Int
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
   , impLastTick :: !SlotNo
+  , impGlobals :: !Globals
   , impLog :: !(Doc ())
   }
 
@@ -184,7 +191,7 @@ class
   ( Show (NewEpochState era)
   , ToExpr (NewEpochState era)
   , Signal (EraRule "LEDGER" era) ~ Tx era
-  , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , STS (EraRule "LEDGER" era)
   , Signable
       (DSIGN (EraCrypto era))
@@ -194,7 +201,7 @@ class
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , EraGov era
-  , BaseM (EraRule "TICK" era) ~ ReaderT Globals Identity
+  , BaseM (EraRule "TICK" era) ~ ShelleyBase
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
@@ -348,8 +355,8 @@ shelleyImpWitsVKeyNeeded nes txb = shelleyWitsVKeyNeeded utxo txb genDelegs
 newtype ImpTestM era a = ImpTestM (M.StateT (ImpTestState era) IO a)
   deriving (Functor, Applicative, Monad, MonadState (ImpTestState era))
 
-runShelleyBase :: ShelleyBase a -> a
-runShelleyBase act = runIdentity $ runReaderT act testGlobals
+runShelleyBase :: Globals -> ShelleyBase a -> a
+runShelleyBase globals act = runIdentity $ runReaderT act globals
 
 fixupFees ::
   forall era.
@@ -394,6 +401,7 @@ submitTx_ tx = do
   txFixed <- fixupFees tx
   logEntry $ showExpr txFixed
   lEnv <- impLedgerEnv st
+  globals <- use $ to impGlobals
   let
     trc =
       TRC
@@ -401,7 +409,7 @@ submitTx_ tx = do
         , st ^. nesEsL . esLStateL
         , txFixed
         )
-  pure $ (,txFixed) <$> runShelleyBase (applySTSTest @(EraRule "LEDGER" era) trc)
+  pure $ (,txFixed) <$> runShelleyBase globals (applySTSTest @(EraRule "LEDGER" era) trc)
 
 trySubmitTx ::
   ShelleyEraImp era =>
@@ -425,6 +433,30 @@ submitFailingTx ::
   ImpTestM era ()
 submitFailingTx tx = trySubmitTx tx >>= impExpectFailure
 
+runImpRule ::
+  forall rule era.
+  ( HasCallStack
+  , KnownSymbol rule
+  , STS (EraRule rule era)
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , NFData (State (EraRule rule era))
+  ) =>
+  Environment (EraRule rule era) ->
+  State (EraRule rule era) ->
+  Signal (EraRule rule era) ->
+  ImpTestM era (State (EraRule rule era))
+runImpRule stsEnv stsState stsSignal = do
+  let trc = TRC (stsEnv, stsState, stsSignal)
+      ruleName = symbolVal (Proxy @rule)
+  globals <- use $ to impGlobals
+  case runShelleyBase globals (applySTSTest @(EraRule rule era) trc) of
+    Left [] -> error $ "Impossible: STS rule failed without a predicate failure"
+    Left fs ->
+      impIO . error $
+        unlines $
+          ("Failed to run " <> ruleName <> ":") : map show fs
+    Right res -> pure res
+
 -- | Runs the TICK rule once
 passTick ::
   forall era.
@@ -434,27 +466,15 @@ passTick ::
   , STS (EraRule "TICK" era)
   , Signal (EraRule "TICK" era) ~ SlotNo
   , State (EraRule "TICK" era) ~ NewEpochState era
-  , NFData (PredicateFailure (EraRule "TICK" era))
   , NFData (State (EraRule "TICK" era))
   ) =>
   ImpTestM era ()
 passTick = do
   impLastTick <- gets impLastTick
   curNES <- getsNES id
-  let
-    trc = TRC ((), curNES, impLastTick)
-  res <-
-    impIOMsg "Failed to run TICK" $
-      pure $
-        runShelleyBase (applySTSTest @(EraRule "TICK" era) trc)
-  case res of
-    Right !x -> do
-      impLastTickL += 1
-      impNESL .= x
-    Left e ->
-      impIO . error $
-        unlines $
-          "Failed to run TICK:" : map show e
+  nes <- runImpRule @"TICK" () curNES impLastTick
+  impLastTickL += 1
+  impNESL .= nes
 
 -- | Runs the TICK rule until the next epoch is reached
 passEpoch ::
@@ -463,7 +483,6 @@ passEpoch ::
   , Environment (EraRule "TICK" era) ~ ()
   , STS (EraRule "TICK" era)
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , NFData (PredicateFailure (EraRule "TICK" era))
   , NFData (State (EraRule "TICK" era))
   , State (EraRule "TICK" era) ~ NewEpochState era
   ) =>
@@ -520,6 +539,7 @@ itM desc (ImpTestM m) =
       , impSafeHashIdx = 0
       , impKeyPairs = mempty
       , impLastTick = 0
+      , impGlobals = testGlobals
       , impLog = mempty
       }
   where
@@ -613,6 +633,32 @@ submitTx ::
   Tx era ->
   ImpTestM era (TxId (EraCrypto era))
 submitTx msg tx = logEntry msg >> trySubmitTx tx >>= impExpectSuccess
+
+registerRewardAccount ::
+  forall era.
+  ( HasCallStack
+  , ShelleyEraImp era
+  , ShelleyEraTxCert era
+  ) =>
+  ImpTestM era (RewardAcnt (EraCrypto era))
+registerRewardAccount = do
+  khDelegator <- freshKeyHash
+  kpDelegator <- lookupKeyPair khDelegator
+  kpSpending <- lookupKeyPair =<< freshKeyHash
+  let stakingCredential = KeyHashObj khDelegator
+  _ <-
+    submitTx "Delegate to DRep" $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL
+          .~ SSeq.fromList
+            [ mkBasicTxOut
+                (mkAddr (kpSpending, kpDelegator))
+                (inject $ Coin 10000000)
+            ]
+        & bodyTxL . certsTxBodyL
+          .~ SSeq.fromList [RegTxCert @era stakingCredential]
+  networkId <- use (to impGlobals . to networkId)
+  pure $ RewardAcnt networkId stakingCredential
 
 impExpectSuccess :: (HasCallStack, NFData a, ToExpr e, Show e) => Either e a -> ImpTestM era a
 impExpectSuccess (Right x) = pure x

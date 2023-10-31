@@ -130,7 +130,7 @@ library testlib
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-conway,
         data-default-class,
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+        cardano-ledger-shelley,
         cardano-strict-containers,
         small-steps
 

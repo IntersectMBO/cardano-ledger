@@ -36,7 +36,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.CertState (DRep (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -82,6 +82,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Rules (
+  EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
   conwayWitsVKeyNeeded,
@@ -189,6 +190,11 @@ class
   ( ShelleyEraImp era
   , ConwayEraGov era
   , ConwayEraTxBody era
+  , STS (EraRule "ENACT" era)
+  , BaseM (EraRule "ENACT" era) ~ ShelleyBase
+  , State (EraRule "ENACT" era) ~ EnactState era
+  , Signal (EraRule "ENACT" era) ~ EnactSignal era
+  , Environment (EraRule "ENACT" era) ~ ()
   ) =>
   ConwayEraImp era
 
