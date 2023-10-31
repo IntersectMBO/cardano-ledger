@@ -115,6 +115,8 @@ module Cardano.Ledger.Conway.Governance (
   psDRepDistrL,
   psDRepStateL,
   RunConwayRatify (..),
+  -- * Exported for testing
+  pparamsUpdateThreshold
 ) where
 
 import Cardano.Ledger.BaseTypes (
