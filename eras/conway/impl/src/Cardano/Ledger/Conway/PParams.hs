@@ -482,8 +482,8 @@ instance Crypto c => ToJSON (ConwayPParams Identity (ConwayEra c)) where
   toEncoding = pairs . mconcat . conwayPParamsPairs
 
 conwayPParamsPairs ::
-  forall era a.
-  (ConwayEraPParams era, KeyValue a) =>
+  forall era a e.
+  (ConwayEraPParams era, KeyValue e a) =>
   PParamsHKD Identity era ->
   [a]
 conwayPParamsPairs pp =
@@ -663,8 +663,8 @@ instance
   toEncoding = pairs . mconcat . conwayPParamsUpdatePairs
 
 conwayPParamsUpdatePairs ::
-  forall era a.
-  (ConwayEraPParams era, KeyValue a) =>
+  forall era a e.
+  (ConwayEraPParams era, KeyValue e a) =>
   PParamsHKD StrictMaybe era ->
   [a]
 conwayPParamsUpdatePairs pp =
@@ -701,7 +701,7 @@ instance ToJSON (UpgradeConwayPParams Identity) where
   toJSON = object . toUpgradeConwayPParamsUpdatePairs
   toEncoding = pairs . mconcat . toUpgradeConwayPParamsUpdatePairs
 
-toUpgradeConwayPParamsUpdatePairs :: KeyValue a => UpgradeConwayPParams Identity -> [a]
+toUpgradeConwayPParamsUpdatePairs :: KeyValue e a => UpgradeConwayPParams Identity -> [a]
 toUpgradeConwayPParamsUpdatePairs upp =
   uncurry (.=) <$> upgradeConwayPParamsHKDPairs upp
 

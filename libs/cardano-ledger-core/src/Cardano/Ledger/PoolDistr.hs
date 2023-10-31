@@ -73,7 +73,7 @@ instance Crypto c => ToJSON (IndividualPoolStake c) where
   toJSON = object . toIndividualPoolStakePair
   toEncoding = pairs . mconcat . toIndividualPoolStakePair
 
-toIndividualPoolStakePair :: (KeyValue a, Crypto c) => IndividualPoolStake c -> [a]
+toIndividualPoolStakePair :: (KeyValue e a, Crypto c) => IndividualPoolStake c -> [a]
 toIndividualPoolStakePair indivPoolStake@(IndividualPoolStake _ _) =
   let IndividualPoolStake {..} = indivPoolStake
    in [ "individualPoolStake" .= individualPoolStake

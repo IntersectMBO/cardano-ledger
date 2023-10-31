@@ -836,7 +836,7 @@ instance ToExpr (Anchor c)
 instance Crypto c => Default (Anchor c) where
   def = Anchor (Url "") def
 
-toAnchorPairs :: (KeyValue a, Crypto c) => Anchor c -> [a]
+toAnchorPairs :: (KeyValue e a, Crypto c) => Anchor c -> [a]
 toAnchorPairs vote@(Anchor _ _) =
   let Anchor {..} = vote
    in [ "url" .= anchorUrl

@@ -256,7 +256,7 @@ instance Crypto crypto => ToJSON (NonMyopic crypto) where
   toJSON = object . toNonMyopicPair
   toEncoding = pairs . mconcat . toNonMyopicPair
 
-toNonMyopicPair :: (KeyValue a, Crypto crypto) => NonMyopic crypto -> [a]
+toNonMyopicPair :: (KeyValue e a, Crypto crypto) => NonMyopic crypto -> [a]
 toNonMyopicPair nm@(NonMyopic _ _) =
   let NonMyopic {likelihoodsNM, rewardPotNM} = nm
    in [ "likelihoodsNM" .= likelihoodsNM

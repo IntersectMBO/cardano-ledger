@@ -220,7 +220,7 @@ instance ToJSON Ptr where
 
 instance ToJSONKey Ptr
 
-toPtrPair :: KeyValue a => Ptr -> [a]
+toPtrPair :: KeyValue e a => Ptr -> [a]
 toPtrPair (Ptr slotNo txIndex certIndex) =
   [ "slot" .= slotNo
   , "txIndex" .= txIndex

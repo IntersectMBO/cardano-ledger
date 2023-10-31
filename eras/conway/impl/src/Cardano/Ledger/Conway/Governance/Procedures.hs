@@ -160,7 +160,7 @@ instance Crypto c => ToJSON (GovActionId c) where
   toJSON = object . toGovActionIdPairs
   toEncoding = pairs . mconcat . toGovActionIdPairs
 
-toGovActionIdPairs :: (KeyValue a, Crypto c) => GovActionId c -> [a]
+toGovActionIdPairs :: (KeyValue e a, Crypto c) => GovActionId c -> [a]
 toGovActionIdPairs gaid@(GovActionId _ _) =
   let GovActionId {..} = gaid
    in [ "txId" .= gaidTxId
@@ -210,7 +210,7 @@ instance EraPParams era => ToJSON (GovActionState era) where
   toJSON = object . toGovActionStatePairs
   toEncoding = pairs . mconcat . toGovActionStatePairs
 
-toGovActionStatePairs :: (KeyValue a, EraPParams era) => GovActionState era -> [a]
+toGovActionStatePairs :: (KeyValue e a, EraPParams era) => GovActionState era -> [a]
 toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _) =
   let GovActionState {..} = gas
    in [ "actionId" .= gasId
@@ -381,7 +381,7 @@ instance EraPParams era => ToJSON (VotingProcedure era) where
   toJSON = object . toVotingProcedurePairs
   toEncoding = pairs . mconcat . toVotingProcedurePairs
 
-toVotingProcedurePairs :: (KeyValue a, EraPParams era) => VotingProcedure era -> [a]
+toVotingProcedurePairs :: (KeyValue e a, EraPParams era) => VotingProcedure era -> [a]
 toVotingProcedurePairs vProc@(VotingProcedure _ _) =
   let VotingProcedure {..} = vProc
    in [ "anchor" .= vProcAnchor
@@ -456,7 +456,7 @@ instance EraPParams era => ToJSON (ProposalProcedure era) where
   toJSON = object . toProposalProcedurePairs
   toEncoding = pairs . mconcat . toProposalProcedurePairs
 
-toProposalProcedurePairs :: (KeyValue a, EraPParams era) => ProposalProcedure era -> [a]
+toProposalProcedurePairs :: (KeyValue e a, EraPParams era) => ProposalProcedure era -> [a]
 toProposalProcedurePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
   let ProposalProcedure {..} = proposalProcedure
    in [ "deposit" .= pProcDeposit
@@ -515,7 +515,7 @@ instance Era era => FromJSON (Committee era) where
           <$> (forceElemsToWHNF <$> o .: "members")
           <*> o .: "quorum"
 
-toCommitteePairs :: (KeyValue a, EraPParams era) => Committee era -> [a]
+toCommitteePairs :: (KeyValue e a, EraPParams era) => Committee era -> [a]
 toCommitteePairs committee@(Committee _ _) =
   let Committee {..} = committee
    in [ "members" .= committeeMembers

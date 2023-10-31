@@ -366,8 +366,8 @@ instance Crypto c => ToJSON (AlonzoPParams Identity (AlonzoEra c)) where
   toEncoding = pairs . mconcat . alonzoPParamsPairs
 
 alonzoPParamsPairs ::
-  forall c a.
-  (Crypto c, KeyValue a) =>
+  forall c a e.
+  (Crypto c, KeyValue e a) =>
   PParamsHKD Identity (AlonzoEra c) ->
   [a]
 alonzoPParamsPairs pp =
@@ -610,8 +610,8 @@ instance Crypto c => ToJSON (AlonzoPParams StrictMaybe (AlonzoEra c)) where
   toEncoding = pairs . mconcat . alonzoPParamsUpdatePairs
 
 alonzoPParamsUpdatePairs ::
-  forall c a.
-  (Crypto c, KeyValue a) =>
+  forall c a e.
+  (Crypto c, KeyValue e a) =>
   PParamsHKD StrictMaybe (AlonzoEra c) ->
   [a]
 alonzoPParamsUpdatePairs pp =

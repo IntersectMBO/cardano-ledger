@@ -270,7 +270,7 @@ instance
 
 toBabbageTxOutPairs ::
   ( Era era
-  , KeyValue a
+  , KeyValue e a
   , Val (Value era)
   , ToJSON (Script era)
   ) =>

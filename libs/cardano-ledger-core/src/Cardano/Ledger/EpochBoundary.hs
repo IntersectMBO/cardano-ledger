@@ -200,7 +200,7 @@ instance Crypto c => ToJSON (SnapShot c) where
   toJSON = object . toSnapShotPair
   toEncoding = pairs . mconcat . toSnapShotPair
 
-toSnapShotPair :: (KeyValue a, Crypto c) => SnapShot c -> [a]
+toSnapShotPair :: (KeyValue e a, Crypto c) => SnapShot c -> [a]
 toSnapShotPair ss@(SnapShot _ _ _) =
   let SnapShot {..} = ss
    in [ "stake" .= ssStake
@@ -258,7 +258,7 @@ instance Crypto c => ToJSON (SnapShots c) where
   toJSON = object . toSnapShotsPair
   toEncoding = pairs . mconcat . toSnapShotsPair
 
-toSnapShotsPair :: (KeyValue a, Crypto crypto) => SnapShots crypto -> [a]
+toSnapShotsPair :: (KeyValue e a, Crypto crypto) => SnapShots crypto -> [a]
 toSnapShotsPair ss@(SnapShots !_ _ _ _ _) =
   -- ssStakeMarkPoolDistr is omitted on purpose
   let SnapShots {ssStakeMark, ssStakeSet, ssStakeGo, ssFee} = ss

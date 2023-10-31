@@ -108,7 +108,7 @@ instance ToJSON AccountState where
   toJSON = object . toAccountStatePairs
   toEncoding = pairs . mconcat . toAccountStatePairs
 
-toAccountStatePairs :: KeyValue a => AccountState -> [a]
+toAccountStatePairs :: KeyValue e a => AccountState -> [a]
 toAccountStatePairs as@(AccountState _ _) =
   let AccountState {asTreasury, asReserves} = as
    in [ "treasury" .= asTreasury
@@ -197,7 +197,7 @@ instance (EraTxOut era, EraGov era) => ToJSON (EpochState era) where
 toEpochStatePairs ::
   ( EraTxOut era
   , EraGov era
-  , KeyValue a
+  , KeyValue e a
   ) =>
   EpochState era ->
   [a]
@@ -254,7 +254,7 @@ instance Crypto c => ToJSON (IncrementalStake c) where
   toEncoding = pairs . mconcat . toIncrementalStakePairs
 
 toIncrementalStakePairs ::
-  (KeyValue a, Crypto c) => IncrementalStake c -> [a]
+  (KeyValue e a, Crypto c) => IncrementalStake c -> [a]
 toIncrementalStakePairs iStake@(IStake _ _) =
   let IStake {..} = iStake -- guard against addition or removal of fields
    in [ "credentials" .= credMap
@@ -353,7 +353,7 @@ instance (EraTxOut era, EraGov era) => ToJSON (UTxOState era) where
   toEncoding = pairs . mconcat . toUTxOStatePairs
 
 toUTxOStatePairs ::
-  (EraTxOut era, EraGov era, KeyValue a) => UTxOState era -> [a]
+  (EraTxOut era, EraGov era, KeyValue e a) => UTxOState era -> [a]
 toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
   let UTxOState {..} = utxoState
    in [ "utxo" .= utxosUtxo
@@ -544,7 +544,7 @@ instance (EraTxOut era, EraGov era) => ToJSON (LedgerState era) where
   toEncoding = pairs . mconcat . toLedgerStatePairs
 
 toLedgerStatePairs ::
-  (EraTxOut era, EraGov era, KeyValue a) => LedgerState era -> [a]
+  (EraTxOut era, EraGov era, KeyValue e a) => LedgerState era -> [a]
 toLedgerStatePairs ls@(LedgerState _ _) =
   let LedgerState {..} = ls
    in [ "utxoState" .= lsUTxOState

@@ -249,8 +249,8 @@ instance
   toEncoding = pairs . mconcat . shelleyPParamsPairs
 
 shelleyPParamsPairs ::
-  forall era a.
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, KeyValue a) =>
+  forall era a e.
+  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, KeyValue e a) =>
   PParamsHKD Identity era ->
   [a]
 shelleyPParamsPairs pp =
@@ -426,8 +426,8 @@ instance
   toEncoding = pairs . mconcat . shelleyPParamsUpdatePairs
 
 shelleyPParamsUpdatePairs ::
-  forall era a.
-  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, KeyValue a) =>
+  forall era a e.
+  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, KeyValue e a) =>
   PParamsHKD StrictMaybe era ->
   [a]
 shelleyPParamsUpdatePairs pp =

@@ -154,7 +154,7 @@ instance Crypto c => ToJSON (InstantaneousRewards c) where
   toJSON = object . toInstantaneousRewardsPair
   toEncoding = pairs . mconcat . toInstantaneousRewardsPair
 
-toInstantaneousRewardsPair :: (KeyValue a, Crypto c) => InstantaneousRewards c -> [a]
+toInstantaneousRewardsPair :: (KeyValue e a, Crypto c) => InstantaneousRewards c -> [a]
 toInstantaneousRewardsPair InstantaneousRewards {..} =
   [ "iRReserves" .= iRReserves
   , "iRTreasury" .= iRTreasury
@@ -206,7 +206,7 @@ instance Era era => ToJSON (DState era) where
   toJSON = object . toDStatePair
   toEncoding = pairs . mconcat . toDStatePair
 
-toDStatePair :: (KeyValue a, Era era) => DState era -> [a]
+toDStatePair :: (KeyValue e a, Era era) => DState era -> [a]
 toDStatePair DState {..} =
   [ "unified" .= dsUnified
   , "fGenDelegs" .= Map.toList dsFutureGenDelegs
@@ -271,7 +271,7 @@ instance Era era => ToJSON (PState era) where
   toJSON = object . toPStatePair
   toEncoding = pairs . mconcat . toPStatePair
 
-toPStatePair :: (KeyValue a, Era era) => PState era -> [a]
+toPStatePair :: (KeyValue e a, Era era) => PState era -> [a]
 toPStatePair PState {..} =
   [ "stakePoolParams" .= psStakePoolParams
   , "futureStakePoolParams" .= psFutureStakePoolParams
@@ -401,7 +401,7 @@ instance Era era => ToJSON (CertState era) where
   toJSON = object . toCertStatePairs
   toEncoding = pairs . mconcat . toCertStatePairs
 
-toCertStatePairs :: (KeyValue a, Era era) => CertState era -> [a]
+toCertStatePairs :: (KeyValue e a, Era era) => CertState era -> [a]
 toCertStatePairs CertState {..} =
   [ "dstate" .= certDState
   , "pstate" .= certPState

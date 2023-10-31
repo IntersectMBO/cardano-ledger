@@ -53,7 +53,7 @@ instance Crypto c => ToJSON (TransitionConfig (AlonzoEra c)) where
   toJSON = object . toAlonzoTransitionConfigPairs
   toEncoding = pairs . mconcat . toAlonzoTransitionConfigPairs
 
-toAlonzoTransitionConfigPairs :: (KeyValue a, Crypto c) => TransitionConfig (AlonzoEra c) -> [a]
+toAlonzoTransitionConfigPairs :: (KeyValue e a, Crypto c) => TransitionConfig (AlonzoEra c) -> [a]
 toAlonzoTransitionConfigPairs alonzoConfig =
   toShelleyTransitionConfigPairs shelleyConfig
     ++ ["alonzo" .= object (toAlonzoGenesisPairs (alonzoConfig ^. tcTranslationContextL))]

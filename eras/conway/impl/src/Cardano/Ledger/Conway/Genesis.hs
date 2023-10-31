@@ -66,7 +66,7 @@ instance Crypto c => FromJSON (ConwayGenesis c) where
         <*> obj .: "constitution"
         <*> obj .: "committee"
 
-toConwayGenesisPairs :: (Crypto c, KeyValue a) => ConwayGenesis c -> [a]
+toConwayGenesisPairs :: (Crypto c, KeyValue e a) => ConwayGenesis c -> [a]
 toConwayGenesisPairs cg@(ConwayGenesis _ _ _) =
   let ConwayGenesis {..} = cg
    in [ "constitution" .= cgConstitution

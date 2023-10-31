@@ -130,7 +130,7 @@ instance Crypto c => ToJSON (CommitteeMemberState c) where
   toJSON = object . toCommitteeMemberStatePairs
   toEncoding = pairs . mconcat . toCommitteeMemberStatePairs
 
-toCommitteeMemberStatePairs :: (Crypto c, KeyValue a) => CommitteeMemberState c -> [a]
+toCommitteeMemberStatePairs :: (Crypto c, KeyValue e a) => CommitteeMemberState c -> [a]
 toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
   let CommitteeMemberState {..} = c
    in [ "hotCredsAuthStatus" .= cmsHotCredAuthStatus
@@ -171,7 +171,7 @@ instance Crypto c => ToJSON (CommitteeMembersState c) where
   toJSON = object . toCommitteeMembersStatePairs
   toEncoding = pairs . mconcat . toCommitteeMembersStatePairs
 
-toCommitteeMembersStatePairs :: (KeyValue a, Crypto c) => CommitteeMembersState c -> [a]
+toCommitteeMembersStatePairs :: (KeyValue e a, Crypto c) => CommitteeMembersState c -> [a]
 toCommitteeMembersStatePairs c@(CommitteeMembersState _ _ _) =
   let CommitteeMembersState {..} = c
    in [ "committee" .= csCommittee

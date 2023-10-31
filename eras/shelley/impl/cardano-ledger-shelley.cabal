@@ -104,7 +104,7 @@ library
 
     build-depends:
         base >=4.14 && <4.19,
-        aeson >=2,
+        aeson >=2.2,
         bytestring,
         cardano-crypto-class,
         cardano-crypto-wrapper,

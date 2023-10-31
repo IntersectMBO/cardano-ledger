@@ -399,7 +399,7 @@ instance Crypto c => ToJSON (MaryValue c) where
   toJSON = object . toMaryValuePairs
   toEncoding = Aeson.pairs . mconcat . toMaryValuePairs
 
-toMaryValuePairs :: Crypto c => Aeson.KeyValue a => MaryValue c -> [a]
+toMaryValuePairs :: Crypto c => Aeson.KeyValue e a => MaryValue c -> [a]
 toMaryValuePairs (MaryValue l ps) =
   [ "lovelace" .= l
   , "policies" .= ps
