@@ -1,9 +1,14 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.10.1.0
+## 1.11.0.0
 
 * Switch to using `OMap` for `ProposalsSnapshot` #3791
 * Add `VotingOnExpiredGovAction` predicate failure in `GOV` #3825
+* Rename `modifiedGroups` -> `modifiedPPGroups` and move into `ConwayEraPParams`
+* Expose `pparamsUpdateThreshold`
+* Fix [#3835](https://github.com/input-output-hk/cardano-ledger/issues/3835)
+* Rename `PParamGroup` to `PPGroup` and `GovernanceGroup` to `GovGroup`
+* Introduce `THKD` and use it for `ConwayPParams`
 
 ### `testlib`
 

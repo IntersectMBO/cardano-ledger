@@ -2,7 +2,7 @@
 
 ## 1.8.0.1
 
-*
+* Deprecated `Cardano.Ledger.Ap`, since we no longer use this module
 
 ## 1.8.0.0
 
