@@ -399,7 +399,6 @@ submitTx_ ::
 submitTx_ tx = do
   st <- gets impNES
   txFixed <- fixupFees tx
-  logEntry $ showExpr txFixed
   lEnv <- impLedgerEnv st
   globals <- use $ to impGlobals
   let

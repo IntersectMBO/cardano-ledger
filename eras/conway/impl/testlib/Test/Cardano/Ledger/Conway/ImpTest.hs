@@ -109,9 +109,11 @@ import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   NewEpochState,
+  asTreasuryL,
   certVStateL,
   curPParamsEpochStateL,
   epochStateGovStateL,
+  esAccountStateL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
@@ -484,14 +486,17 @@ canGovActionBeDRepAccepted gaId = do
   pure $ dRepAccepted ratEnv ratSt action
 
 -- | Logs the results of each check required to make the governance action pass
-logRatificationChecks :: (ConwayEraGov era, ConwayEraPParams era) => GovActionId (EraCrypto era) -> ImpTestM era ()
+logRatificationChecks ::
+  (ConwayEraGov era, ConwayEraPParams era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era ()
 logRatificationChecks gaId = do
   gas@GovActionState {gasDRepVotes, gasAction} <- lookupGovActionState gaId
-  ens@EnactState {..} <-
-    getEnactState
+  ens@EnactState {..} <- getEnactState
   ratEnv <- getRatifyEnv
   let
     ratSt = RatifyState ens mempty False
+  curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
   logEntry $
     unlines
@@ -499,7 +504,7 @@ logRatificationChecks gaId = do
       , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
       , "validCommitteeTerm:\t" <> show (validCommitteeTerm ensCommittee ensCurPParams currentEpoch)
       , "notDelayed:\t\t??"
-      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
+      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
       , "committeeAccepted:\t" <> show (committeeAccepted ratEnv ratSt gas)
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
