@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.10.1.0
+
+* Fix for TreasuryWithdrawals not beeing enacted: [#3827](https://github.com/input-output-hk/cardano-ledger/issues/3827)
+
 ## 1.10.0.0
 
 * Add `ToJSON` instance for `ProposalProcedure`
