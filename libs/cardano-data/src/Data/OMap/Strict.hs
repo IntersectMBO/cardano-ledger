@@ -9,7 +9,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -24,8 +23,8 @@ module Data.OMap.Strict (
   member,
   (!?),
   fromSet,
-  fromStrictSeq,
-  fromStrictSeqDuplicates,
+  fromFoldable,
+  fromFoldableDuplicates,
   toMap,
   toStrictSeq,
   toStrictSeqOKeys,
@@ -39,7 +38,6 @@ module Data.OMap.Strict (
   (|><),
   (><|),
   elem,
-  elem',
   extractKeys,
   adjust,
   filter,
@@ -49,10 +47,8 @@ where
 import Cardano.Ledger.Binary (
   DecCBOR,
   EncCBOR (encCBOR),
-  decodeSetLikeEnforceNoDuplicates,
+  decodeListLikeEnforceNoDuplicates,
   encodeStrictSeq,
-  encodeTag,
-  setTag,
  )
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
 import Cardano.Ledger.TreeDiff (ToExpr (..))
@@ -62,8 +58,7 @@ import Data.Default.Class (Default (..))
 import Data.Foldable qualified as F
 import Data.Map.Strict qualified as Map
 import Data.MapExtras qualified as MapE
-import Data.Maybe (fromJust, isJust)
-import Data.Sequence qualified as Seq
+import Data.Maybe (isJust)
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
 import Data.Typeable (Typeable)
@@ -77,7 +72,7 @@ import Prelude hiding (elem, filter, lookup, null, seq)
 -- Ord type.
 --
 -- For a type @V@, defines a lens from @V@ to and Ord type @K@.
-class HasOKey k v | v -> k where
+class Ord k => HasOKey k v | v -> k where
   okeyL :: Lens' v k
 
 -- | A general-purpose finite, insert-ordered, map that is strict in its
@@ -108,21 +103,21 @@ instance Default (OMap k v) where
 
 -- | \(O(1)\). Shallow invariant using just `length` and `size`.
 invariantHolds :: OMap k v -> Bool
-invariantHolds (OMap seq kv) = SSeq.length seq == Map.size kv
+invariantHolds (OMap sseq kv) = SSeq.length sseq == Map.size kv
 
 -- | \(O(n \log n)\). Deep, costly invariant using membership check for each
 -- value. By the pigeon-hole principle, this check is exhaustive.
 invariantHolds' :: Ord k => OMap k v -> Bool
-invariantHolds' omap@(OMap seq kv) =
-  invariantHolds omap && all (\k -> isJust $ Map.lookup k kv) seq
+invariantHolds' omap@(OMap sseq kv) =
+  invariantHolds omap && all (\k -> isJust $ Map.lookup k kv) sseq
 
 -- | \(O(1)\).
 null :: OMap k v -> Bool
-null (OMap seq _) = SSeq.null seq
+null (OMap sseq _) = SSeq.null sseq
 
 -- | \(O(1)\).
 size :: OMap k v -> Int
-size (OMap seq _) = SSeq.length seq
+size (OMap sseq _) = SSeq.length sseq
 
 -- | \(O(1)\). Strict in its arguments.
 singleton :: HasOKey k v => v -> OMap k v
@@ -140,68 +135,70 @@ lookup k (OMap _seq kv) = Map.lookup k kv
 (!?) = flip lookup
 
 -- | \(O(\log n)\). Checks membership before cons'ing.
-cons :: (HasOKey k v, Ord k) => v -> OMap k v -> OMap k v
-cons v omap@(OMap seq kv) =
-  let k = v ^. okeyL
-   in case Map.lookup k kv of
-        Just _ -> omap
-        Nothing -> OMap (k SSeq.<| seq) (Map.insert k v kv)
+cons :: HasOKey k v => v -> OMap k v -> OMap k v
+cons v omap@(OMap sseq kv)
+  | Map.member k kv = omap
+  | otherwise = OMap (k SSeq.<| sseq) (Map.insert k v kv)
+  where
+    k = v ^. okeyL
 
 -- | \(O(\log n)\). Checks membership before cons'ing.
-(<|) :: (HasOKey k v, Ord k) => v -> OMap k v -> OMap k v
+(<|) :: HasOKey k v => v -> OMap k v -> OMap k v
 (<|) = cons
 
 infixr 5 <|
 
 -- | \(O(\log n)\). Checks membership before cons'ing. Overwrites a
 -- duplicate.
-cons' :: (HasOKey k v, Ord k) => v -> OMap k v -> OMap k v
-cons' v (OMap seq kv) =
-  let k = v ^. okeyL
-   in case Map.lookup k kv of
-        Just _ -> OMap seq (Map.insert k v kv)
-        Nothing -> OMap (k SSeq.<| seq) (Map.insert k v kv)
+cons' :: HasOKey k v => v -> OMap k v -> OMap k v
+cons' v (OMap sseq kv)
+  | Map.member k kv = OMap sseq kv'
+  | otherwise = OMap (k SSeq.<| sseq) kv'
+  where
+    k = v ^. okeyL
+    kv' = Map.insert k v kv
 
 -- | \(O(\log n)\). Checks membership before cons'ing. Overwrites a
 -- duplicate.
-(<||) :: (HasOKey k v, Ord k) => v -> OMap k v -> OMap k v
+(<||) :: HasOKey k v => v -> OMap k v -> OMap k v
 (<||) = cons'
 
 infixr 5 <||
 
 -- | \(O(\log n)\). Checks membership before snoc'ing.
-snoc :: (HasOKey k v, Ord k) => OMap k v -> v -> OMap k v
-snoc omap@(OMap seq kv) v =
-  let k = v ^. okeyL
-   in case Map.lookup k kv of
-        Just _ -> omap
-        Nothing -> OMap (seq SSeq.|> k) (Map.insert k v kv)
+snoc :: HasOKey k v => OMap k v -> v -> OMap k v
+snoc omap@(OMap sseq kv) v
+  | Map.member k kv = omap
+  | otherwise = OMap (sseq SSeq.|> k) (Map.insert k v kv)
+  where
+    k = v ^. okeyL
 
 -- | \(O(\log n)\). Checks membership before snoc'ing.
-(|>) :: (HasOKey k v, Ord k) => OMap k v -> v -> OMap k v
+(|>) :: HasOKey k v => OMap k v -> v -> OMap k v
 (|>) = snoc
 
 infixl 5 |>
 
 -- | \(O(\log n)\). Checks membership before snoc'ing. Overwrites a
 -- duplicate.
-snoc' :: (HasOKey k v, Ord k) => OMap k v -> v -> OMap k v
-snoc' (OMap seq kv) v =
-  let k = v ^. okeyL
-   in case Map.lookup k kv of
-        Just _ -> OMap seq (Map.insert k v kv)
-        Nothing -> OMap (seq SSeq.|> k) (Map.insert k v kv)
+snoc' :: HasOKey k v => OMap k v -> v -> OMap k v
+snoc' (OMap sseq kv) v
+  | Map.member k kv = OMap sseq kv'
+  | otherwise = OMap (sseq SSeq.|> k) kv'
+  where
+    k = v ^. okeyL
+    kv' = Map.insert k v kv
 
 -- | \(O(\log n)\). Checks membership before snoc'ing. Overwrites a
 -- duplicate.
-(||>) :: (HasOKey k v, Ord k) => OMap k v -> v -> OMap k v
+(||>) :: HasOKey k v => OMap k v -> v -> OMap k v
 (||>) = snoc'
 
 infixl 5 ||>
 
 -- | \(O(\log n)\).
 uncons :: Ord k => OMap k v -> Maybe (v, OMap k v)
-uncons (OMap seq kv) = case seq of
+uncons (OMap sseq kv) = case sseq of
   SSeq.Empty -> Nothing
   k SSeq.:<| ks ->
     case Map.lookup k kv of
@@ -210,7 +207,7 @@ uncons (OMap seq kv) = case seq of
 
 -- | \(O(\log n)\).
 unsnoc :: Ord k => OMap k v -> Maybe (OMap k v, v)
-unsnoc (OMap seq kv) = case seq of
+unsnoc (OMap sseq kv) = case sseq of
   SSeq.Empty -> Nothing
   ks SSeq.:|> k ->
     case Map.lookup k kv of
@@ -220,73 +217,62 @@ unsnoc (OMap seq kv) = case seq of
 -- | \(O(n \log n)\). Checks membership before snoc'ing.
 -- De-duplicates the StrictSeq without overwriting.
 -- Starts from the left or head, using `foldl'`
-fromStrictSeq :: (HasOKey k v, Ord k) => SSeq.StrictSeq v -> OMap k v
-fromStrictSeq = F.foldl' snoc_ empty
-  where
-    snoc_ :: (HasOKey k v, Ord k) => OMap k v -> v -> OMap k v
-    snoc_ omap@(OMap seq kv) v =
-      let k = v ^. okeyL
-       in if Map.member k kv
-            then omap
-            else OMap (seq SSeq.|> k) (Map.insert k v kv)
+fromFoldable :: (Foldable f, HasOKey k v) => f v -> OMap k v
+fromFoldable = F.foldl' snoc empty
 
 -- | \(O(n \log n)\). Checks membership before snoc'ing.
 -- De-duplicates the StrictSeq and collects and returns the duplicates found.
 -- Starts from the left or head, using `foldl'`
-fromStrictSeqDuplicates :: (HasOKey k v, Ord k, Ord v) => SSeq.StrictSeq v -> (Set.Set v, OMap k v)
-fromStrictSeqDuplicates = F.foldl' snoc_ (Set.empty, empty)
+fromFoldableDuplicates :: (Foldable f, HasOKey k v, Ord v) => f v -> (Set.Set v, OMap k v)
+fromFoldableDuplicates = F.foldl' snoc_ (Set.empty, empty)
   where
-    snoc_ :: (HasOKey k v, Ord k, Ord v) => (Set.Set v, OMap k v) -> v -> (Set.Set v, OMap k v)
-    snoc_ (duplicates, omap@(OMap seq kv)) v =
+    snoc_ :: (HasOKey k v, Ord v) => (Set.Set v, OMap k v) -> v -> (Set.Set v, OMap k v)
+    snoc_ (duplicates, omap@(OMap sseq kv)) v =
       let k = v ^. okeyL
        in if Map.member k kv
             then (Set.insert v duplicates, omap)
-            else (duplicates, OMap (seq SSeq.|> k) (Map.insert k v kv))
+            else (duplicates, OMap (sseq SSeq.|> k) (Map.insert k v kv))
 
--- | \(O(n + n \log n)\).
-fromSet :: (HasOKey k v, Ord k) => Set.Set v -> OMap k v
-fromSet = fromStrictSeq . SSeq.fromList . Set.elems
+-- | \(O(n \log n)\).
+fromSet :: HasOKey k v => Set.Set v -> OMap k v
+fromSet = fromFoldable
 
 -- | \(O(1)\).
 toMap :: OMap k v -> Map.Map k v
 toMap = omMap
 
--- | \(O(n \log n)\). Uses partial `fromJust`.
+-- | \(O(n \log n)\).
 toStrictSeq :: Ord k => OMap k v -> SSeq.StrictSeq v
-toStrictSeq (OMap seq kv) = fromJust $ traverse (`Map.lookup` kv) seq
+toStrictSeq (OMap sseq kv) = sseq <&> \k -> let !v = kv Map.! k in v
 
 -- | \(O(1)\).
 toStrictSeqOKeys :: OMap k v -> SSeq.StrictSeq k
 toStrictSeqOKeys = omSSeq
 
--- | \(O(n \log n)\). Uses partial `fromJust`.
+-- | \(O(n \log n)\).
 toStrictSeqOfPairs :: Ord k => OMap k v -> SSeq.StrictSeq (k, v)
-toStrictSeqOfPairs (OMap seq kv) = fromJust $ traverse (\k -> (k,) <$> Map.lookup k kv) seq
+toStrictSeqOfPairs (OMap sseq kv) = sseq <&> \k -> let !v = kv Map.! k in (k, v)
 
 -- | \(O(\log n)\). Key membership check.
 member :: Ord k => k -> OMap k v -> Bool
-member k (OMap _seq kv) = Map.member k kv
+member k (OMap _sseq kv) = Map.member k kv
 
--- | \(O(\log n)\). Value membership check, via key membership.
-elem :: (HasOKey k v, Ord k) => v -> OMap k v -> Bool
-elem v = member (v ^. okeyL)
-
--- | \(O(n)\). Expensive value membership check.
-elem' :: Eq v => v -> OMap k v -> Bool
-elem' v (OMap _seq kv) = F.elem v $ Map.elems kv
+-- | \(O(\log n)\). Value membership check.
+elem :: (HasOKey k v, Eq v) => v -> OMap k v -> Bool
+elem v = (Just v ==) . lookup (v ^. okeyL)
 
 -- | \(O(n)\). Given a `Set` of @k@s, and an `OMap` @k@ @v@ return
 -- a pair of `Map` and `OMap` where the @k@s in the `Set` have been
 -- removed from the `OMap` and presented as a separate `Map`.
 extractKeys :: Ord k => Set.Set k -> OMap k v -> (OMap k v, Map.Map k v)
-extractKeys ks (OMap seq kv) =
+extractKeys ks (OMap sseq kv) =
   let (kv', extractedKv) = MapE.extractKeys kv ks
-      seq' =
+      sseq' =
         F.foldl'
           (\accum k -> if Set.member k ks then accum else accum SSeq.|> k)
           SSeq.empty
-          seq
-   in (OMap seq' kv', extractedKv)
+          sseq
+   in (OMap sseq' kv', extractedKv)
 
 -- | \(O(n)\). Like `Map.adjust`.
 --
@@ -303,31 +289,40 @@ extractKeys ks (OMap seq kv) =
 --            - we return the omap with the old key deleted from the sequence but
 --              without inserting the new key since it is a duplicate, and
 --              deleting old value and inserting the new value in place of its duplicate.
-adjust :: (HasOKey k v, Ord k) => (v -> v) -> k -> OMap k v -> OMap k v
-adjust f k omap@(OMap seq kv) =
+--
+-- Examples:
+--
+-- >>> import GHC.Exts
+-- >>> import Lens.Micro
+-- >>> import Data.OMap.Strict
+-- >>> data OMapTest = OMapTest {omFst :: Int, omSnd :: Int} deriving (Eq, Show, Ord)
+-- >>> instance HasOKey Int OMapTest where okeyL = lens omFst $ \om u -> om {omFst = u}
+-- >>> let adjustingFn omt@OMapTest {omSnd} = omt {omSnd = omSnd + 1}
+-- >>> let overwritingAdjustingFn omt@OMapTest {omFst} = omt {omFst = omFst + 1} -- Changes the `okeyL`.
+-- >>> let m = fromList $ zipWith OMapTest [1,2] [1,2] :: OMap Int OMapTest
+-- >>> m
+-- OMap {omSSeq = StrictSeq {fromStrict = fromList [1,2]}, omMap = fromList [(1,OMapTest {omFst = 1, omSnd = 1}),(2,OMapTest {omFst = 2, omSnd = 2})]}
+-- >>> adjust adjustingFn 1 m
+-- OMap {omSSeq = StrictSeq {fromStrict = fromList [1,2]}, omMap = fromList [(1,OMapTest {omFst = 1, omSnd = 2}),(2,OMapTest {omFst = 2, omSnd = 2})]}
+-- >>> adjust overwritingAdjustingFn 1 m
+-- OMap {omSSeq = StrictSeq {fromStrict = fromList [2]}, omMap = fromList [(2,OMapTest {omFst = 2, omSnd = 1})]
+adjust :: HasOKey k v => (v -> v) -> k -> OMap k v -> OMap k v
+adjust f k omap@(OMap sseq kv) =
   case Map.lookup k kv of
     Nothing -> omap
     Just v ->
       let v' = f v
           k' = v' ^. okeyL
-          i = fromJust $ SSeq.findIndexL (== k) seq -- since lookup succeeded
        in if k' == k
-            then OMap seq (Map.insert k v' kv)
-            else case Map.lookup k' kv of
-              Nothing ->
-                OMap (updateStrictSeq i k' seq) (Map.insert k' v' $ Map.delete k kv)
-              Just _ ->
-                OMap (deleteAtStrictSeq i seq) (Map.insert k' v' $ Map.delete k kv)
-
--- TODO: Add this to cardano-base as soon as possible.
--- This is currently a very expensive operation, unnecessarily.
-updateStrictSeq :: Int -> a -> SSeq.StrictSeq a -> SSeq.StrictSeq a
-updateStrictSeq i a = SSeq.forceToStrict . Seq.update i a . SSeq.fromStrict
-
--- TODO: Add this to cardano-base as soon as possible.
--- This is currently a very expensive operation, unnecessarily.
-deleteAtStrictSeq :: Int -> SSeq.StrictSeq a -> SSeq.StrictSeq a
-deleteAtStrictSeq i = SSeq.forceToStrict . Seq.deleteAt i . SSeq.fromStrict
+            then OMap sseq (Map.insert k v' kv)
+            else
+              let kv' = Map.insert k' v' $ Map.delete k kv
+                  (lseq, rseq) = case SSeq.spanl (/= k) sseq of
+                    (l, _ SSeq.:<| r) -> (l, r)
+                    _ -> error "Impossible: supplied key expected to be in the sequence"
+               in case Map.lookup k' kv of
+                    Nothing -> OMap (lseq <> (k' SSeq.:<| rseq)) kv'
+                    Just _ -> OMap (lseq <> rseq) kv'
 
 -- | \(O(1)\)
 pattern Empty :: OMap k v
@@ -357,7 +352,7 @@ infixl 5 :|>:
 -- | \( O(n \log m) \). For every uncons-ed element from the sequence on the right,
 -- check its membership in the sequence on the left, before snoc'ing it.
 -- Preserve order. Remove duplicates from sequence on the right.
-(|><) :: (HasOKey k v, Ord k) => OMap k v -> OMap k v -> OMap k v
+(|><) :: HasOKey k v => OMap k v -> OMap k v -> OMap k v
 omapl |>< omapr = case omapr of
   Empty -> omapl
   r :<|: rs -> (omapl |> r) |>< rs
@@ -367,64 +362,68 @@ infixl 5 |><
 -- | \( O(m \log n) \). For every unsnoc-ed element from the sequence on the left,
 -- check its membership in the sequence on the right, before cons'ing it.
 -- Preserve order. Remove duplicates from sequence on the left.
-(><|) :: (HasOKey k v, Ord k) => OMap k v -> OMap k v -> OMap k v
+(><|) :: HasOKey k v => OMap k v -> OMap k v -> OMap k v
 omapl ><| omapr = case omapl of
   Empty -> omapr
   ls :|>: l -> ls ><| (l <| omapr)
 
 infixr 5 ><|
 
-instance (HasOKey k v, Ord k) => IsList (OMap k v) where
+instance HasOKey k v => IsList (OMap k v) where
   type Item (OMap k v) = v
-  fromList = fromStrictSeq . SSeq.fromList
-  toList = F.toList . toStrictSeq
+  fromList = fromFoldable
+  toList = F.toList
 
-instance (HasOKey k v, ToExpr v, Ord k) => ToExpr (OMap k v) where
+instance (HasOKey k v, ToExpr v) => ToExpr (OMap k v) where
   listToExpr = listToExpr . F.toList
   toExpr = toExpr . F.toList
 
-instance (HasOKey k v, ToJSON v, Ord k) => ToJSON (OMap k v) where
+instance (HasOKey k v, ToJSON v) => ToJSON (OMap k v) where
   toJSON = toJSON . toStrictSeq
   toEncoding = toEncoding . toStrictSeq
 
-instance (HasOKey k v, Ord k) => Semigroup (OMap k v) where
+instance HasOKey k v => Semigroup (OMap k v) where
   (<>) = (|><)
 
-instance (HasOKey k v, Ord k) => Monoid (OMap k v) where
+instance HasOKey k v => Monoid (OMap k v) where
   mempty = empty
 
 instance Ord k => Foldable (OMap k) where
-  foldMap f = F.foldMap f . SSeq.fromStrict . toStrictSeq
+  foldMap f = F.foldMap f . toStrictSeq
   {-# INLINEABLE foldMap #-}
-  foldr f z = F.foldr f z . SSeq.fromStrict . toStrictSeq
+  foldr f z = F.foldr f z . toStrictSeq
   {-# INLINEABLE foldr #-}
-  foldl f z = F.foldl f z . SSeq.fromStrict . toStrictSeq
+  foldl f z = F.foldl f z . toStrictSeq
   {-# INLINEABLE foldl #-}
-  foldr' f z = F.foldr' f z . SSeq.fromStrict . toStrictSeq
+  foldr' f z = F.foldr' f z . toStrictSeq
   {-# INLINEABLE foldr' #-}
-  foldl' f z = F.foldl' f z . SSeq.fromStrict . toStrictSeq
+  foldl' f z = F.foldl' f z . toStrictSeq
   {-# INLINEABLE foldl' #-}
-  foldr1 f = F.foldr1 f . SSeq.fromStrict . toStrictSeq
+  foldr1 f = F.foldr1 f . toStrictSeq
   {-# INLINEABLE foldr1 #-}
-  foldl1 f = F.foldl1 f . SSeq.fromStrict . toStrictSeq
+  foldl1 f = F.foldl1 f . toStrictSeq
   {-# INLINEABLE foldl1 #-}
-  length = F.length . SSeq.fromStrict . toStrictSeq
+  length = Map.size . omMap
   {-# INLINE length #-}
-  null = F.null . SSeq.fromStrict . toStrictSeq
+  null = Map.null . omMap
   {-# INLINE null #-}
 
 instance (Typeable k, EncCBOR v, Ord k) => EncCBOR (OMap k v) where
-  encCBOR omap = encodeTag setTag <> encodeStrictSeq encCBOR (toStrictSeq omap)
+  encCBOR omap = encodeStrictSeq encCBOR (toStrictSeq omap)
 
-instance (Typeable k, HasOKey k v, DecCBOR v, Ord k) => DecCBOR (OMap k v) where
-  decCBOR = decodeSetLikeEnforceNoDuplicates isMember insert decCBOR
+instance (Typeable k, HasOKey k v, DecCBOR v, Eq v) => DecCBOR (OMap k v) where
+  decCBOR = decodeListLikeEnforceNoDuplicates isMember insert decCBOR
     where
-      isMember = elem
+      -- we can't use `elem` here because it returns `False` when the
+      -- element is not fully equal, but the criterion for an element
+      -- to be included in the `OMap` only depends on its `okeyL` not
+      -- clashing.
+      isMember e = member (e ^. okeyL)
       insert v omap = omap |> v
 
 -- | \( O(n \log n) \)
 filter :: Ord k => (v -> Bool) -> OMap k v -> OMap k v
-filter f (OMap seq kv) =
+filter f (OMap sseq kv) =
   let kv' = Map.filter f kv
-      seq' = F.foldl' (\accum k -> if Map.member k kv' then accum SSeq.:|> k else accum) SSeq.empty seq
-   in OMap seq' kv'
+      sseq' = F.foldl' (\accum k -> if Map.member k kv' then accum SSeq.:|> k else accum) SSeq.empty sseq
+   in OMap sseq' kv'

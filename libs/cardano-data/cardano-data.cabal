@@ -64,7 +64,8 @@ library testlib
         hspec,
         QuickCheck,
         cardano-ledger-binary:testlib,
-        cardano-data
+        cardano-data,
+        microlens
 
 test-suite cardano-data-tests
     type:             exitcode-stdio-1.0

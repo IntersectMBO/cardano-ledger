@@ -151,6 +151,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   peekByteOffset,
   peekTokenType,
   decodeSetLikeEnforceNoDuplicates,
+  decodeListLikeEnforceNoDuplicates,
 )
 where
 
@@ -837,19 +838,18 @@ decodeSetEnforceNoDuplicates ::
 decodeSetEnforceNoDuplicates = decodeSetLikeEnforceNoDuplicates Set.member Set.insert
 {-# INLINE decodeSetEnforceNoDuplicates #-}
 
--- | Decode a Set as a either a definite or indefinite list. Duplicates are not
--- allowed. Set tag 258 is permitted, but not enforced.
-decodeSetLikeEnforceNoDuplicates ::
+-- | Decode a collection of values either as a definite or indefinite list. Duplicates are not
+-- allowed.
+decodeListLikeEnforceNoDuplicates ::
   forall s a f.
   Monoid (f a) =>
   -- | Check for membership. Decoder will fail if this predicate returns True
   (a -> f a -> Bool) ->
-  -- | Add an aelement into the decoded Set like data structure
+  -- | Add an aelement into the decoded List like data structure
   (a -> f a -> f a) ->
   Decoder s a ->
   Decoder s (f a)
-decodeSetLikeEnforceNoDuplicates isMember insert decodeElement = do
-  allowTag setTag
+decodeListLikeEnforceNoDuplicates isMember insert decodeElement = do
   decodeListLenOrIndef >>= \case
     Just len -> loop (\x -> pure (x - 1, x <= 0)) len mempty
     Nothing -> loop (\x -> (,) x <$> decodeBreakOr) () mempty
@@ -861,8 +861,23 @@ decodeSetLikeEnforceNoDuplicates isMember insert decodeElement = do
         then pure acc
         else do
           a <- decodeElement
-          when (a `isMember` acc) $ fail "Duplicate key detected in the Set"
+          when (a `isMember` acc) $ fail "Duplicate key detected in the List"
           loop condition nextStep (insert a acc)
+{-# INLINE decodeListLikeEnforceNoDuplicates #-}
+
+-- | Decode a Set as a either a definite or indefinite list. Duplicates are not
+-- allowed. Set tag 258 is permitted, but not enforced.
+decodeSetLikeEnforceNoDuplicates ::
+  forall s a f.
+  Monoid (f a) =>
+  -- | Check for membership. Decoder will fail if this predicate returns True
+  (a -> f a -> Bool) ->
+  -- | Add an aelement into the decoded Set like data structure
+  (a -> f a -> f a) ->
+  Decoder s a ->
+  Decoder s (f a)
+decodeSetLikeEnforceNoDuplicates isMember insert decodeElement =
+  allowTag setTag >> decodeListLikeEnforceNoDuplicates isMember insert decodeElement
 {-# INLINE decodeSetLikeEnforceNoDuplicates #-}
 
 decodeContainerSkelWithReplicate ::

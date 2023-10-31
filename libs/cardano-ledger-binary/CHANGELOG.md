@@ -2,6 +2,7 @@
 
 ## 1.2.1.0
 
+* Export `decodeListLikeEnforceNoDuplicates` #3791
 * Add `Show` and `Eq` for `CBORGroup`
 
 ### `testlib`

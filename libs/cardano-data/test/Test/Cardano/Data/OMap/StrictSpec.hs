@@ -64,99 +64,84 @@ spec =
             else m |> v `shouldBe` m :|>: v
     context "mappend preserves uniqueness" $ do
       prop "mappending with itself should be a no-op" $
-        \(i :: OMap Int Int) ->
+        \(i :: OMap Int Int) -> do
           let il = i |>< i
               ir = i ><| i
-           in do
-                il `shouldBe` i
-                ir `shouldBe` i
-                il `shouldSatisfy` invariantHolds'
-                ir `shouldSatisfy` invariantHolds'
+          il `shouldBe` i
+          ir `shouldBe` i
+          il `shouldSatisfy` invariantHolds'
+          ir `shouldSatisfy` invariantHolds'
       prop "mappending with duplicates: left-preserving" $
-        \((i, j) :: (OMap Int Int, OMap Int Int)) -> do
+        \((i, j) :: (OMap Int Int, OMap Int Int)) ->
           case j of
             Empty -> i `shouldBe` i |>< j
-            j' :<|: _js ->
+            j' :<|: _js -> do
               let result = i |>< j
-               in do
-                    result `shouldBe` (i |> j') |>< j
-                    result `shouldSatisfy` invariantHolds'
+              result `shouldBe` (i |> j') |>< j
+              result `shouldSatisfy` invariantHolds'
       prop "mappending with duplicates: right-preserving" $
-        \((i, j) :: (OMap Int Int, OMap Int Int)) -> do
+        \((i, j) :: (OMap Int Int, OMap Int Int)) ->
           case i of
             Empty -> i ><| j `shouldBe` j
-            _is :|>: i' ->
+            _is :|>: i' -> do
               let result = i ><| j
-               in do
-                    result `shouldBe` i ><| (i' <| j)
-                    result `shouldSatisfy` invariantHolds'
-    prop "extractKeys should satisfy membership" $
-      \((omap, set) :: (OMap Int Int, Set.Set Int)) ->
-        let result = extractKeys set omap
-         in do
-              result `shouldSatisfy` (all (`Set.notMember` set) . fst)
-              result `shouldSatisfy` (all (`Set.member` set) . snd)
-              result `shouldSatisfy` invariantHolds' . fst
-    prop "filter" $
-      \((omap, i) :: (OMap Int Int, Int)) ->
-        let result = filter (< i) omap
-         in do
-              result `shouldSatisfy` all (< i)
+              result `shouldBe` i ><| (i' <| j)
               result `shouldSatisfy` invariantHolds'
+    prop "extractKeys should satisfy membership" $
+      \((omap, set) :: (OMap Int Int, Set.Set Int)) -> do
+        let result = extractKeys set omap
+        result `shouldSatisfy` (all (`Set.notMember` set) . fst)
+        result `shouldSatisfy` (all (`Set.member` set) . snd)
+        result `shouldSatisfy` invariantHolds' . fst
+    prop "filter" $
+      \((omap, i) :: (OMap Int Int, Int)) -> do
+        let result = filter (< i) omap
+        result `shouldSatisfy` all (< i)
+        result `shouldSatisfy` invariantHolds'
     prop "adjust" $
-      \((omap, i) :: (OMap Int OMapTest, Int)) ->
+      \((omap, i) :: (OMap Int OMapTest, Int)) -> do
         let adjustingFn omt@OMapTest {omSnd} = omt {omSnd = omSnd + 1}
             overwritingAdjustingFn omt@OMapTest {omFst} = omt {omFst = omFst + 1} -- Changes the `okeyL`.
-         in do
-              adjust adjustingFn i omap `shouldSatisfy` invariantHolds'
-              adjust overwritingAdjustingFn i omap `shouldSatisfy` invariantHolds'
+        adjust adjustingFn i omap `shouldSatisfy` invariantHolds'
+        adjust overwritingAdjustingFn i omap `shouldSatisfy` invariantHolds'
     context "overwriting" $ do
       prop "cons' - (<||)" $
-        \((omap, i) :: (OMap Int OMapTest, OMapTest)) ->
+        \((omap, i) :: (OMap Int OMapTest, OMapTest)) -> do
           let consed = i <|| omap
-           in if i `elem` omap
-                then
-                  let adjusted = adjust (const i) (i ^. okeyL) omap
-                   in do
-                        consed `shouldBe` adjusted
-                else do
-                  consed `shouldBe` i <| omap
+              k = i ^. okeyL
+          if k `member` omap
+            then consed `shouldBe` adjust (const i) (i ^. okeyL) omap
+            else consed `shouldBe` i <| omap
       prop "snoc' - (||>)" $
-        \((omap, i) :: (OMap Int OMapTest, OMapTest)) ->
+        \((omap, i) :: (OMap Int OMapTest, OMapTest)) -> do
           let snoced = omap ||> i
-           in if i `elem` omap
-                then
-                  let adjusted = adjust (const i) (i ^. okeyL) omap
-                   in do
-                        snoced `shouldBe` adjusted
-                else do
-                  snoced `shouldBe` omap |> i
-    prop "fromStrictSeq preserves order" $
-      \(set :: Set.Set Int) ->
+              k = i ^. okeyL
+          if k `member` omap
+            then snoced `shouldBe` adjust (const i) (i ^. okeyL) omap
+            else snoced `shouldBe` omap |> i
+    prop "fromFoldable preserves order" $
+      \(set :: Set.Set Int) -> do
         let sseq = SSeq.fromList $ Set.elems set
-            omap = fromStrictSeq sseq
-         in do
-              toStrictSeq omap `shouldBe` sseq
-              omap `shouldSatisfy` invariantHolds'
-    context "fromStrictSeqDuplicates preserves order" $ do
+            omap = fromFoldable sseq
+        toStrictSeq omap `shouldBe` sseq
+        omap `shouldSatisfy` invariantHolds'
+    context "fromFoldableDuplicates preserves order" $ do
       prop "with duplicates" $
-        \(set :: Set.Set Int) ->
+        \(set :: Set.Set Int) -> do
           let sseq = SSeq.fromList $ Set.elems set
-              omap = fromStrictSeq sseq
-              result = fromStrictSeqDuplicates (sseq SSeq.>< sseq)
-           in do
-                (toStrictSeq . snd) result `shouldBe` sseq
-                result `shouldBe` (set, omap)
-                snd result `shouldSatisfy` invariantHolds'
+              omap = fromFoldable sseq
+              result = fromFoldableDuplicates (sseq SSeq.>< sseq)
+          toStrictSeq (snd result) `shouldBe` sseq
+          result `shouldBe` (set, omap)
+          snd result `shouldSatisfy` invariantHolds'
       prop "without duplicates" $
-        \(set :: Set.Set Int) ->
+        \(set :: Set.Set Int) -> do
           let sseq = SSeq.fromList $ Set.elems set
-              omap = fromStrictSeq sseq
-              result = fromStrictSeqDuplicates sseq
-           in do
-                (toStrictSeq . snd) result `shouldBe` sseq
-                result `shouldBe` (Set.empty, omap)
-                snd result `shouldSatisfy` invariantHolds'
+              omap = fromFoldable sseq
+              result = fromFoldableDuplicates sseq
+          toStrictSeq (snd result) `shouldBe` sseq
+          result `shouldBe` (Set.empty, omap)
+          snd result `shouldSatisfy` invariantHolds'
     context "CBOR round-trip" $ do
       roundTripCborSpec @(OMap Int Int)
     context "Typeclass laws" $ do

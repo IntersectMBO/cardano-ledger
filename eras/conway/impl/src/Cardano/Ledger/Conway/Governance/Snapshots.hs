@@ -4,9 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Governance.Snapshots (
   ProposalsSnapshot,
@@ -43,15 +41,8 @@ import qualified Data.OMap.Strict as OMap
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (%~))
+import Lens.Micro (Lens', (%~))
 import NoThunks.Class (NoThunks)
-
--- Ref: https://gitlab.haskell.org/ghc/ghc/-/issues/14046
-instance
-  c ~ EraCrypto era =>
-  OMap.HasOKey (GovActionId c) (GovActionState era)
-  where
-  okeyL = lens gasId $ \gas gi -> gas {gasId = gi}
 
 newtype ProposalsSnapshot era
   = ProposalsSnapshot
@@ -151,7 +142,7 @@ snapshotLookupId gai (ProposalsSnapshot omap) = OMap.lookup gai omap
 -- `GovActionId`s, because duplicate Ids will result in `GovActionStates`
 -- to be dropped.
 fromGovActionStateSeq :: StrictSeq (GovActionState era) -> ProposalsSnapshot era
-fromGovActionStateSeq = ProposalsSnapshot . OMap.fromStrictSeq
+fromGovActionStateSeq = ProposalsSnapshot . OMap.fromFoldable
 
 -- | Internal function for checking if the invariants are maintained
 isConsistent_ :: ProposalsSnapshot era -> Bool
