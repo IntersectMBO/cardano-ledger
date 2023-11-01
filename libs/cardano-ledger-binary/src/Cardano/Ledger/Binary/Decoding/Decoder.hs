@@ -845,7 +845,7 @@ decodeListLikeEnforceNoDuplicates ::
   Monoid (f a) =>
   -- | Check for membership. Decoder will fail if this predicate returns True
   (a -> f a -> Bool) ->
-  -- | Add an aelement into the decoded List like data structure
+  -- | Add an element into the decoded List like data structure
   (a -> f a -> f a) ->
   Decoder s a ->
   Decoder s (f a)

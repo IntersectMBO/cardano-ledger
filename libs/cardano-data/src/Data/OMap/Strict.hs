@@ -88,7 +88,10 @@ data OMap k v = OMap
   { omSSeq :: !(SSeq.StrictSeq k)
   , omMap :: !(Map.Map k v)
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Eq)
+
+instance (Show v, Ord k, Show k) => Show (OMap k v) where
+  show = show . toStrictSeqOfPairs
 
 deriving instance (NoThunks k, NoThunks v) => NoThunks (OMap k v)
 
@@ -292,20 +295,18 @@ extractKeys ks (OMap sseq kv) =
 --
 -- Examples:
 --
--- >>> import GHC.Exts
--- >>> import Lens.Micro
 -- >>> import Data.OMap.Strict
--- >>> data OMapTest = OMapTest {omFst :: Int, omSnd :: Int} deriving (Eq, Show, Ord)
--- >>> instance HasOKey Int OMapTest where okeyL = lens omFst $ \om u -> om {omFst = u}
--- >>> let adjustingFn omt@OMapTest {omSnd} = omt {omSnd = omSnd + 1}
--- >>> let overwritingAdjustingFn omt@OMapTest {omFst} = omt {omFst = omFst + 1} -- Changes the `okeyL`.
--- >>> let m = fromList $ zipWith OMapTest [1,2] [1,2] :: OMap Int OMapTest
+-- >>> import Lens.Micro
+-- >>> instance HasOKey Int (Int, Char) where okeyL = _1
+-- >>> let m = fromFoldable $ zip [1,2] ['a','b'] :: OMap Int (Int, Char)
 -- >>> m
--- OMap {omSSeq = StrictSeq {fromStrict = fromList [1,2]}, omMap = fromList [(1,OMapTest {omFst = 1, omSnd = 1}),(2,OMapTest {omFst = 2, omSnd = 2})]}
+-- StrictSeq {fromStrict = fromList [(1,(1,'a')),(2,(2,'b'))]}
+-- >>> let adjustingFn (k, v) = (k, succ v) -- Changes the value
+-- >>> let overwritingAdjustingFn (k,v) = (succ k, v) -- Changes the `okeyL`.
 -- >>> adjust adjustingFn 1 m
--- OMap {omSSeq = StrictSeq {fromStrict = fromList [1,2]}, omMap = fromList [(1,OMapTest {omFst = 1, omSnd = 2}),(2,OMapTest {omFst = 2, omSnd = 2})]}
--- >>> adjust overwritingAdjustingFn 1 m
--- OMap {omSSeq = StrictSeq {fromStrict = fromList [2]}, omMap = fromList [(2,OMapTest {omFst = 2, omSnd = 1})]
+-- StrictSeq {fromStrict = fromList [(1,(1,'b')),(2,(2,'b'))]}
+-- >>> adjust overwritingAdjustingFn  1 m
+-- StrictSeq {fromStrict = fromList [(2,(2,'a'))]}
 adjust :: HasOKey k v => (v -> v) -> k -> OMap k v -> OMap k v
 adjust f k omap@(OMap sseq kv) =
   case Map.lookup k kv of
@@ -389,20 +390,16 @@ instance HasOKey k v => Monoid (OMap k v) where
   mempty = empty
 
 instance Ord k => Foldable (OMap k) where
-  foldMap f = F.foldMap f . toStrictSeq
+  foldMap f (OMap sseq kv) = F.foldMap (\k -> f (kv Map.! k)) sseq
   {-# INLINEABLE foldMap #-}
-  foldr f z = F.foldr f z . toStrictSeq
+  foldr f z (OMap sseq kv) = F.foldr (\k -> f (kv Map.! k)) z sseq
   {-# INLINEABLE foldr #-}
-  foldl f z = F.foldl f z . toStrictSeq
+  foldl f z (OMap sseq kv) = F.foldl (\acc k -> f acc (kv Map.! k)) z sseq
   {-# INLINEABLE foldl #-}
-  foldr' f z = F.foldr' f z . toStrictSeq
+  foldr' f z (OMap sseq kv) = F.foldr' (\k -> f (kv Map.! k)) z sseq
   {-# INLINEABLE foldr' #-}
-  foldl' f z = F.foldl' f z . toStrictSeq
+  foldl' f z (OMap sseq kv) = F.foldl' (\acc k -> f acc (kv Map.! k)) z sseq
   {-# INLINEABLE foldl' #-}
-  foldr1 f = F.foldr1 f . toStrictSeq
-  {-# INLINEABLE foldr1 #-}
-  foldl1 f = F.foldl1 f . toStrictSeq
-  {-# INLINEABLE foldl1 #-}
   length = Map.size . omMap
   {-# INLINE length #-}
   null = Map.null . omMap
