@@ -3,9 +3,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -14,6 +16,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Governance.Procedures (
@@ -105,6 +108,7 @@ import Data.Aeson.Types (toJSONKeyText)
 import Data.Default.Class
 import Data.Map.Strict (Map)
 import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence as Seq
 import Data.Set (Set)
@@ -263,6 +267,13 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasAction
         !> To gasProposedIn
         !> To gasExpiresAfter
+
+-- Ref: https://gitlab.haskell.org/ghc/ghc/-/issues/14046
+instance
+  c ~ EraCrypto era =>
+  OMap.HasOKey (GovActionId c) (GovActionState era)
+  where
+  okeyL = lens gasId $ \gas gi -> gas {gasId = gi}
 
 data Voter c
   = CommitteeVoter !(Credential 'HotCommitteeRole c)

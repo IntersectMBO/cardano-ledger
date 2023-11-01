@@ -2,6 +2,7 @@
 
 ## 1.10.1.0
 
+* Switch to using `OMap` for `ProposalsSnapshot` #3791
 * Add `VotingOnExpiredGovAction` predicate failure in `GOV` #3825
 
 ### `testlib`

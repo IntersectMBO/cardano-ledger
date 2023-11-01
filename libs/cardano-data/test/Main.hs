@@ -1,3 +1,5 @@
+{-# LANGUAGE ImportQualifiedPost #-}
+
 module Main where
 
 import System.IO (
@@ -8,7 +10,8 @@ import System.IO (
   utf8,
  )
 import Test.Cardano.Data.MapExtrasSpec (mapExtrasSpec)
-import qualified Test.Cardano.Data.OSet.StrictSpec as SOSet
+import Test.Cardano.Data.OMap.StrictSpec qualified as OMap
+import Test.Cardano.Data.OSet.StrictSpec qualified as OSet
 import Test.Hspec
 import Test.Hspec.Runner
 
@@ -23,7 +26,8 @@ spec :: Spec
 spec =
   describe "cardano-data" $ do
     describe "MapExtras" mapExtrasSpec
-    describe "OSet.Strict" SOSet.spec
+    describe "OSet.Strict" OSet.spec
+    describe "OMap.Strict" OMap.spec
 
 main :: IO ()
 main = do
