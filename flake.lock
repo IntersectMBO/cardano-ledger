@@ -185,6 +185,22 @@
         "type": "github"
       }
     },
+    "formal-ledger-specification": {
+      "locked": {
+        "lastModified": 1698757962,
+        "narHash": "sha256-Ss/Gqqiucxz9N86PECfCAYTF1XLmpbOrQhsTtdlP8kw=",
+        "owner": "input-output-hk",
+        "repo": "formal-ledger-specifications",
+        "rev": "303cf55d74b975146dc46cb58dda85bdc438e3ff",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "303cf55",
+        "repo": "formal-ledger-specifications",
+        "type": "github"
+      }
+    },
     "ghc-8.6.5-iohk": {
       "flake": false,
       "locked": {
@@ -667,6 +683,7 @@
         "cardano-mainnet-mirror": "cardano-mainnet-mirror",
         "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
+        "formal-ledger-specification": "formal-ledger-specification",
         "haskellNix": "haskellNix",
         "iohkNix": "iohkNix",
         "nixpkgs": [

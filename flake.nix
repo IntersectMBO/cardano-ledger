@@ -16,6 +16,10 @@
     # non-flake nix compatibility
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
+
+    formal-ledger-specification = {
+      url = "github:input-output-hk/formal-ledger-specifications/303cf55";
+    };
   };
 
   outputs = inputs: let
@@ -48,6 +52,19 @@
 
         # see flake `variants` below for alternative compilers
         defaultCompiler = "ghc928";
+
+        executable-agda-spec =
+          inputs.formal-ledger-specification.hydraJobs.x86_64-linux.ledger-hsExe.src;
+        cabalProjectLocal = ''
+          repository cardano-haskell-packages-local
+            url: file:${inputs.CHaP}
+            secure: True
+          active-repositories: hackage.haskell.org, cardano-haskell-packages-local
+          packages:
+            ${executable-agda-spec}
+            libs/cardano-ledger-conformance
+        '';
+
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -68,12 +85,8 @@
           inputMap = {
             "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
           };
-          cabalProjectLocal = ''
-            repository cardano-haskell-packages-local
-              url: file:${inputs.CHaP}
-              secure: True
-            active-repositories: hackage.haskell.org, cardano-haskell-packages-local
-          '';
+
+          inherit cabalProjectLocal;
 
           # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
           shell.shellHook = ''
