@@ -1,0 +1,36 @@
+cabal-version:      3.0
+name:               cardano-ledger-conformance
+version:            0.1.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:           Testing utilities for conformance testing
+description:        Testing utilities for conformance testing
+build-type:         Simple
+extra-source-files: CHANGELOG.md
+
+source-repository head
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   libs/cardano-ledger-conformance
+
+flag asserts
+    description: Enable assertions
+    default:     False
+
+library
+    exposed-modules:  Test.Cardano.Ledger.Conformance
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages
+
+    build-depends:
+        base >=4.14 && <4.19,
+        cardano-ledger-executable-spec
+
+    if flag(asserts)
+        ghc-options: -fno-ignore-asserts
