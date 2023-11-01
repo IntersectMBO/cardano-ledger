@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-core
-version:            1.8.0.0
+version:            1.8.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -131,6 +131,7 @@ library testlib
         Test.Cardano.Ledger.Core.KeyPair
         Test.Cardano.Ledger.Core.Utils
         Test.Cardano.Ledger.Core.Rational
+        Test.Cardano.Ledger.Imp.Common
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -155,6 +156,7 @@ library testlib
         genvalidity,
         hspec,
         hedgehog-quickcheck,
+        HUnit,
         mtl,
         nothunks,
         primitive,
@@ -163,7 +165,8 @@ library testlib
         text,
         vector-map,
         time,
-        cardano-slotting
+        cardano-slotting,
+        unliftio
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-name-shadowing

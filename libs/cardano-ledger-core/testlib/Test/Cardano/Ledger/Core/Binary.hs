@@ -12,7 +12,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Data.Default.Class (Default (def))
 import Test.Cardano.Ledger.Binary.RoundTrip
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
 import Test.Cardano.Ledger.Common
 
 data BinaryUpgradeOpts = BinaryUpgradeOpts

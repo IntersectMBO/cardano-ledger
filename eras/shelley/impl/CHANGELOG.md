@@ -1,11 +1,19 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.7.1.0
+## 1.8.0.0
 
 ### `testlib`
 
 * Provide CDDL spec files with `readBabbageCddlFileNames` and `readBabbageCddlFiles` from
   `Test.Cardano.Ledger.Babbage.Binary.Cddl`
+* Remove `impExpectFailure` in favor of `expectLeft`
+* Remove `impExpectSuccess` in favor of `expectRightDeep`
+* Remove `itM` in favor of `it`
+* Remove `impIOMsg` in favor of new `impAnn`
+* Remove `impIO` and `predicateFailureShouldBe` as no longer needed
+* Add `withImpState`
+* Expose type `ImpTestState`
+* Add `Example` instance for `ImpTestM`
 
 ## 1.7.0.0
 

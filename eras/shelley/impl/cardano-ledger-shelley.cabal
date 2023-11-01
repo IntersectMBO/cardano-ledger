@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-shelley
-version:            1.7.1.0
+version:            1.8.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -170,10 +170,12 @@ library testlib
         deepseq,
         generic-random,
         containers,
+        HUnit,
         transformers,
         small-steps,
         small-steps-test,
         cardano-strict-containers,
+        hspec-core,
         microlens,
         microlens-mtl,
         prettyprinter,
