@@ -11,7 +11,6 @@ import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRati
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
-import qualified Test.Cardano.Ledger.Conway.GovSpec as Gov
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
 import qualified Test.Cardano.Ledger.Conway.PParamsSpec as PParams
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
@@ -26,7 +25,6 @@ main =
       CommitteeRatify.spec
       Genesis.spec
       GovActionReorder.spec
-      Gov.spec
       PParams.spec $ Proxy @Conway
       describe "Imp" $ do
         ConwayImp.spec @Conway

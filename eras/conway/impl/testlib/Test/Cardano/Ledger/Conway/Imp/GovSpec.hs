@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.GovSpec where
+module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway

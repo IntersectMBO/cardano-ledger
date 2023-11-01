@@ -12,6 +12,7 @@ import Cardano.Ledger.Conway.Governance (ConwayGovState, GovState)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
+import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp)
 
 spec ::
@@ -24,3 +25,4 @@ spec = do
   describe "ConwayImpSpec" $ do
     Enact.spec @era
     Epoch.spec @era
+    Gov.spec
