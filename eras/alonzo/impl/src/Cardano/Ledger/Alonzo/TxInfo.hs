@@ -72,6 +72,7 @@ module Cardano.Ledger.Alonzo.TxInfo (
   unTxCertV3,
   debugPlutus,
   runPlutusScript,
+  runPlutusScriptWithLogs,
   deserialiseAndEvaluateScript,
   explainPlutusEvaluationError,
   languages,
@@ -837,31 +838,39 @@ runPlutusScript ::
   ProtVer ->
   PlutusWithContext era ->
   ScriptResult
-runPlutusScript pv pwc@PlutusWithContext {pwcScript, pwcDatums, pwcExUnits, pwcCostModel} =
-  case interpretedScript of
-    Left evalError -> explainPlutusEvaluationError pv pwc evalError
-    Right _ ->
-      withSLanguage lang $ \slang ->
-        scriptPass $
-          PlutusDebug $
-            PlutusDebugLang
-              slang
-              pwcCostModel
-              pwcExUnits
-              scriptBytes
-              (PlutusData (map getPlutusData pwcDatums))
-              pv
+runPlutusScript pv pwc = snd (runPlutusScriptWithLogs pv pwc)
+
+runPlutusScriptWithLogs ::
+  forall era.
+  ProtVer ->
+  PlutusWithContext era ->
+  ([Text], ScriptResult)
+runPlutusScriptWithLogs pv pwc@PlutusWithContext {pwcScript, pwcDatums, pwcExUnits, pwcCostModel} =
+  ( logs
+  , case interpretedScript of
+      Left evalError -> explainPlutusEvaluationError pv pwc evalError
+      Right _ ->
+        withSLanguage lang $ \slang ->
+          scriptPass $
+            PlutusDebug $
+              PlutusDebugLang
+                slang
+                pwcCostModel
+                pwcExUnits
+                scriptBytes
+                (PlutusData (map getPlutusData pwcDatums))
+                pv
+  )
   where
     Plutus lang scriptBytes = pwcScript
-    interpretedScript =
-      snd $
-        plutusInterpreter
-          lang
-          PV1.Quiet
-          (getEvaluationContext pwcCostModel)
-          (transExUnits pwcExUnits)
-          (unBinaryPlutus scriptBytes)
-          (map getPlutusData pwcDatums)
+    (logs, interpretedScript) =
+      plutusInterpreter
+        lang
+        PV1.Quiet
+        (getEvaluationContext pwcCostModel)
+        (transExUnits pwcExUnits)
+        (unBinaryPlutus scriptBytes)
+        (map getPlutusData pwcDatums)
     plutusPV = transProtocolVersion pv
     plutusInterpreter PlutusV1 = deserialiseAndEvaluateScript PlutusV1 plutusPV
     plutusInterpreter PlutusV2 = deserialiseAndEvaluateScript PlutusV2 plutusPV

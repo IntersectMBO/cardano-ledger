@@ -17,7 +17,9 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi (
   getSpendingTxIn,
   getDatumAlonzo,
   evalScripts,
+  evalScriptsWithLogs,
   evalPlutusScripts,
+  evalPlutusScriptsWithLogs,
   -- Figure 12
   scriptsNeeded,
   scriptsNeededFromBody,
@@ -39,7 +41,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
   PlutusWithContext (..),
   ScriptResult (..),
   TranslationError (..),
-  runPlutusScript,
+  runPlutusScriptWithLogs,
   valContext,
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
@@ -254,8 +256,17 @@ evalScripts ::
   Tx era ->
   [(ShortByteString, Language, [Data era], ExUnits, CostModel)] ->
   ScriptResult
-evalScripts pv tx scripts =
-  evalPlutusScripts pv tx scripts'
+evalScripts pv tx scripts = snd $ evalScriptsWithLogs pv tx scripts
+
+evalScriptsWithLogs ::
+  forall era.
+  (EraTx era, Script era ~ AlonzoScript era) =>
+  ProtVer ->
+  Tx era ->
+  [(ShortByteString, Language, [Data era], ExUnits, CostModel)] ->
+  ([Text], ScriptResult)
+evalScriptsWithLogs pv tx scripts =
+  evalPlutusScriptsWithLogs pv tx scripts'
   where
     scripts' =
       [ PlutusWithContext (Plutus lang (BinaryPlutus pscript)) ds units cost
@@ -270,22 +281,30 @@ evalPlutusScripts ::
   Tx era ->
   [PlutusWithContext era] ->
   ScriptResult
-evalPlutusScripts _pv _tx [] = mempty
-evalPlutusScripts pv tx (plutusWithContext : rest) =
+evalPlutusScripts pv tx pwcs = snd $ evalPlutusScriptsWithLogs pv tx pwcs
+
+evalPlutusScriptsWithLogs ::
+  (EraTx era, Script era ~ AlonzoScript era) =>
+  ProtVer ->
+  Tx era ->
+  [PlutusWithContext era] ->
+  ([Text], ScriptResult)
+evalPlutusScriptsWithLogs _pv _tx [] = mempty
+evalPlutusScriptsWithLogs pv tx (plutusWithContext : rest) =
   let beginMsg =
         intercalate
           ","
           [ "[LEDGER][PLUTUS_SCRIPT]"
           , "BEGIN"
           ]
-      !res = traceEvent beginMsg $ runPlutusScript pv plutusWithContext
+      !res = traceEvent beginMsg $ runPlutusScriptWithLogs pv plutusWithContext
       endMsg =
         intercalate
           ","
           [ "[LEDGER][PLUTUS_SCRIPT]"
           , "END"
           ]
-   in traceEvent endMsg res <> evalPlutusScripts pv tx rest
+   in traceEvent endMsg res <> evalPlutusScriptsWithLogs pv tx rest
 
 -- Collect information (purpose and ScriptHash) about all the
 -- Credentials that refer to scripts, that might be run in a Tx.
