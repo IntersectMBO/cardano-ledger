@@ -44,10 +44,12 @@ import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, e
 import Cardano.Ledger.CertState (
   CertState,
   DRepState,
+  Obligations (..),
   certDStateL,
   certVStateL,
   dsUnifiedL,
   obligationCertState,
+  sumObligation,
   vsDRepsL,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
@@ -748,12 +750,14 @@ potEqualsObligation ::
   CertState era ->
   UTxOState era ->
   Bool
-potEqualsObligation certState utxoSt = obligation == pot
+potEqualsObligation certState utxoSt = obligations == pot
   where
-    obligation = totalObligation certState (utxoSt ^. utxosGovStateL)
+    obligations = totalObligation certState (utxoSt ^. utxosGovStateL)
     pot = utxoSt ^. utxosDepositedL
 
+allObligations :: EraGov era => CertState era -> GovState era -> Obligations
+allObligations certState govState =
+  obligationCertState certState <> obligationGovState govState
+
 totalObligation :: EraGov era => CertState era -> GovState era -> Coin
-totalObligation certState govState =
-  obligationCertState certState
-    <> obligationGovState govState
+totalObligation certState govState = sumObligation (allObligations certState govState)

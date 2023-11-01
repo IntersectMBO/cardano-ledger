@@ -87,7 +87,6 @@ import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr (..))
-import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   Key,
@@ -249,7 +248,7 @@ instance Crypto c => EraGov (BabbageEra c) where
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
-  obligationGovState = const zero
+  obligationGovState = const mempty
 
   getDRepDistr = const Map.empty
 

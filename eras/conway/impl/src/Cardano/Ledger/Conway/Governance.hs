@@ -144,7 +144,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CommitteeState)
+import Cardano.Ledger.CertState (CommitteeState, Obligations (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   dvtPPEconomicGroupL,
@@ -665,7 +665,12 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   prevPParamsGovStateL = prevPParamsConwayGovStateL
 
   obligationGovState st =
-    foldMap' gasDeposit $ snapshotActions (st ^. cgProposalsL)
+    Obligations
+      { oblProposal = foldMap' gasDeposit $ snapshotActions (st ^. cgProposalsL)
+      , oblDRep = Coin 0
+      , oblStake = Coin 0
+      , oblPool = Coin 0
+      }
 
   getDRepDistr govst = psDRepDistr . fst $ finishDRepPulser (govst ^. drepPulsingStateGovStateL)
 

@@ -43,7 +43,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgerPredFailure (..),
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
-  depositEqualsObligation,
+  renderDepositEqualsObligationViolation,
  )
 import Control.State.Transition (
   Embed (..),
@@ -132,7 +132,7 @@ instance
   initialRules = []
   transitionRules = [ledgerTransition @AlonzoLEDGER]
 
-  renderAssertionViolation = Shelley.depositEqualsObligation
+  renderAssertionViolation = Shelley.renderDepositEqualsObligationViolation
 
   assertions = shelleyLedgerAssertions
 

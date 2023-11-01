@@ -31,6 +31,8 @@ module Cardano.Ledger.CertState (
   payPoolDeposit,
   refundPoolDeposit,
   obligationCertState,
+  Obligations (..),
+  sumObligation,
   -- Lenses
   certDStateL,
   certPStateL,
@@ -435,7 +437,7 @@ ptrsMap :: DState era -> Map Ptr (Credential 'Staking (EraCrypto era))
 ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 
 -- ==========================================================
--- Functions that handle Deposits for pool key hashes.
+-- Functions that handle Deposits
 
 -- | One only pays a deposit on the initial pool registration. So return the
 --   the Deposits unchanged if the keyhash already exists. There are legal
@@ -461,12 +463,51 @@ refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
       Just c -> (c, Map.delete keyhash pool)
       Nothing -> (mempty, pool)
 
+-- | A composite of all the Deposits the system is obligated to eventually pay back.
+data Obligations = Obligations
+  { oblStake :: !Coin
+  , oblPool :: !Coin
+  , oblDRep :: !Coin
+  , oblProposal :: !Coin
+  }
+
 -- | Calculate total possible refunds in the system. There is an invariant that
---   this should be the same as the utxosDeposited field of the UTxOState. Note that
+--   the sum of all the fields should be the same as the utxosDeposited field of the UTxOState. Note that
 --   this does not depend upon the current values of the Key and Pool deposits of the PParams.
-obligationCertState :: CertState era -> Coin
-obligationCertState (CertState VState {} PState {psDeposits = stakePools} DState {dsUnified = umap}) =
-  UM.fromCompact (UM.sumDepositUView (RewDepUView umap)) <> foldl' (<>) (Coin 0) stakePools
+obligationCertState :: CertState era -> Obligations
+obligationCertState (CertState VState {vsDReps = dreps} PState {psDeposits = stakePools} DState {dsUnified = umap}) =
+  let accum ans drepstate = ans <> drepDeposit drepstate
+   in Obligations
+        { oblStake = UM.fromCompact (UM.sumDepositUView (RewDepUView umap))
+        , oblPool = foldl' (<>) (Coin 0) stakePools
+        , oblDRep = foldl' accum (Coin 0) dreps
+        , oblProposal = Coin 0
+        }
+
+sumObligation :: Obligations -> Coin
+sumObligation x = oblStake x <> oblPool x <> oblDRep x <> oblProposal x
+
+instance Semigroup Obligations where
+  x <> y =
+    Obligations
+      { oblStake = oblStake x <> oblStake y
+      , oblPool = oblPool x <> oblPool y
+      , oblDRep = oblDRep x <> oblDRep y
+      , oblProposal = oblProposal x <> oblProposal y
+      }
+
+instance Monoid Obligations where
+  mempty = Obligations {oblStake = Coin 0, oblPool = Coin 0, oblDRep = Coin 0, oblProposal = Coin 0}
+
+instance Show Obligations where
+  show x =
+    unlines
+      [ "Total Obligations = " ++ show (sumObligation x)
+      , "   Stake deposits = " ++ show (oblStake x)
+      , "   Pool deposits = " ++ show (oblPool x)
+      , "   DRep deposits = " ++ show (oblDRep x)
+      , "   Proposal deposits = " ++ show (oblProposal x)
+      ]
 
 -- =====================================================
 
