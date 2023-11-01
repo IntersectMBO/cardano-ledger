@@ -142,7 +142,9 @@ library testlib
         Test.Cardano.Ledger.Shelley.Binary.RoundTrip
         Test.Cardano.Ledger.Shelley.Constants
         Test.Cardano.Ledger.Shelley.ImpTest
-        Test.Cardano.Ledger.Shelley.ImpTestSpec
+        Test.Cardano.Ledger.Shelley.Imp
+        Test.Cardano.Ledger.Shelley.Imp.EpochSpec
+        Test.Cardano.Ledger.Shelley.Imp.LedgerSpec
 
     visibility:       public
     hs-source-dirs:   testlib

@@ -165,7 +165,6 @@ conwayCertsTransition ::
   forall era.
   ( EraTx era
   , ConwayEraTxBody era
-  , ConwayEraPParams era
   , State (EraRule "CERT" era) ~ CertState era
   , Embed (EraRule "CERT" era) (ConwayCERTS era)
   , Environment (EraRule "CERT" era) ~ CertEnv era

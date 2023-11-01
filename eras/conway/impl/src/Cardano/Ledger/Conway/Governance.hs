@@ -665,7 +665,7 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   obligationGovState st =
     foldMap' gasDeposit $ snapshotActions (st ^. cgProposalsL)
 
-  getDRepDistr govst = (psDRepDistr . fst) $ finishDRepPulser (govst ^. drepPulsingStateGovStateL)
+  getDRepDistr govst = psDRepDistr . fst $ finishDRepPulser (govst ^. drepPulsingStateGovStateL)
 
 class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)

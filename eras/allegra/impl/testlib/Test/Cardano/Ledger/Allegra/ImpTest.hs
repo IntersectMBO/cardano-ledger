@@ -9,7 +9,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Test.Cardano.Ledger.Shelley.ImpTest (
-  EraImpTest (..),
+  ShelleyEraImp (..),
   emptyShelleyImpNES,
   shelleyImpWitsVKeyNeeded,
  )
@@ -20,7 +20,7 @@ instance
       (DSIGN c)
       (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  EraImpTest (AllegraEra c)
+  ShelleyEraImp (AllegraEra c)
   where
   emptyImpNES = emptyShelleyImpNES
 

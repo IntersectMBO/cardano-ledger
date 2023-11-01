@@ -103,6 +103,9 @@ library testlib
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.PParamsSpec
         Test.Cardano.Ledger.Conway.ImpTest
+        Test.Cardano.Ledger.Conway.Imp
+        Test.Cardano.Ledger.Conway.Imp.EpochSpec
+        Test.Cardano.Ledger.Conway.Imp.EnactSpec
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -119,6 +122,7 @@ library testlib
         cardano-data:{cardano-data, testlib},
         containers,
         microlens,
+        microlens-mtl,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-crypto-class,
         cardano-ledger-core:{cardano-ledger-core, testlib},
@@ -141,7 +145,6 @@ test-suite tests
         Test.Cardano.Ledger.Conway.CommitteeRatifySpec
         Test.Cardano.Ledger.Conway.GenesisSpec
         Test.Cardano.Ledger.Conway.GovActionReorderSpec
-        Test.Cardano.Ledger.Conway.EpochSpec
         Test.Cardano.Ledger.Conway.GovSpec
         Paths_cardano_ledger_conway
 
@@ -165,5 +168,4 @@ test-suite tests
         data-default-class,
         microlens,
         testlib,
-        cardano-strict-containers,
-        microlens
+        cardano-strict-containers

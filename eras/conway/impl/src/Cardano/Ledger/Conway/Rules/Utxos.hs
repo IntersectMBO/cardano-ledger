@@ -108,7 +108,6 @@ utxosTransition ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ConwayEraTxBody era
-  , ConwayEraPParams era
   , EraGov era
   , EraPlutusContext 'PlutusV1 era
   , ExtendedUTxO era

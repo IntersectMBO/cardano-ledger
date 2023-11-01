@@ -8,10 +8,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conway.ImpTest (
   module ImpTest,
+  ConwayEraImp,
   submitProposal,
   submitFailingProposal,
   voteForProposal,
@@ -34,7 +36,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.CertState (DRep (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -80,6 +82,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Rules (
+  EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
   conwayWitsVKeyNeeded,
@@ -106,9 +109,11 @@ import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   NewEpochState,
+  asTreasuryL,
   certVStateL,
   curPParamsEpochStateL,
   epochStateGovStateL,
+  esAccountStateL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
@@ -168,7 +173,7 @@ instance
   ( Crypto c
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  EraImpTest (ConwayEra c)
+  ShelleyEraImp (ConwayEra c)
   where
   emptyImpNES rootCoin =
     let nes =
@@ -183,11 +188,29 @@ instance
 
   modifyPParams = conwayModifyPParams
 
+class
+  ( ShelleyEraImp era
+  , ConwayEraGov era
+  , ConwayEraTxBody era
+  , STS (EraRule "ENACT" era)
+  , BaseM (EraRule "ENACT" era) ~ ShelleyBase
+  , State (EraRule "ENACT" era) ~ EnactState era
+  , Signal (EraRule "ENACT" era) ~ EnactSignal era
+  , Environment (EraRule "ENACT" era) ~ ()
+  ) =>
+  ConwayEraImp era
+
+instance
+  ( Crypto c
+  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
+  ) =>
+  ConwayEraImp (ConwayEra c)
+
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
 registerDRep ::
   forall era.
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxCert era
   ) =>
   ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
@@ -213,7 +236,7 @@ registerDRep = do
 setupSingleDRep ::
   forall era.
   ( ConwayEraTxCert era
-  , EraImpTest era
+  , ShelleyEraImp era
   ) =>
   ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
 setupSingleDRep = do
@@ -243,7 +266,7 @@ setupSingleDRep = do
 -- | Submits a transaction that votes "Yes" for the given governance action as
 -- some voter
 voteForProposal ::
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   Voter (EraCrypto era) ->
@@ -269,7 +292,7 @@ voteForProposal voter gaId = do
 -- | Submits a transaction that votes "Yes" for the given governance action as
 -- some voter, and expects an `Either` result.
 tryVoteForProposal ::
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   Voter (EraCrypto era) ->
@@ -299,7 +322,7 @@ tryVoteForProposal voter gaId = do
 
 -- | Submits a transaction that proposes the given governance action
 trySubmitProposal ::
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
@@ -336,7 +359,7 @@ trySubmitProposal ga = do
 
 submitProposal ::
   forall era.
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
@@ -344,7 +367,7 @@ submitProposal ::
 submitProposal ga = trySubmitProposal ga >>= impExpectSuccess
 
 submitFailingProposal ::
-  ( EraImpTest era
+  ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
@@ -463,14 +486,17 @@ canGovActionBeDRepAccepted gaId = do
   pure $ dRepAccepted ratEnv ratSt action
 
 -- | Logs the results of each check required to make the governance action pass
-logRatificationChecks :: (ConwayEraGov era, ConwayEraPParams era) => GovActionId (EraCrypto era) -> ImpTestM era ()
+logRatificationChecks ::
+  (ConwayEraGov era, ConwayEraPParams era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era ()
 logRatificationChecks gaId = do
   gas@GovActionState {gasDRepVotes, gasAction} <- lookupGovActionState gaId
-  ens@EnactState {..} <-
-    getEnactState
+  ens@EnactState {..} <- getEnactState
   ratEnv <- getRatifyEnv
   let
     ratSt = RatifyState ens mempty False
+  curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
   logEntry $
     unlines
@@ -478,7 +504,7 @@ logRatificationChecks gaId = do
       , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
       , "validCommitteeTerm:\t" <> show (validCommitteeTerm ensCommittee ensCurPParams currentEpoch)
       , "notDelayed:\t\t??"
-      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction ensTreasury)
+      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
       , "committeeAccepted:\t" <> show (committeeAccepted ratEnv ratSt gas)
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
@@ -500,7 +526,7 @@ logRatificationChecks gaId = do
 -- | Submits a transaction that registers a hot key for the given cold key.
 -- Returns the hot key hash.
 registerCommitteeHotKey ::
-  (EraImpTest era, ConwayEraTxCert era) =>
+  (ShelleyEraImp era, ConwayEraTxCert era) =>
   KeyHash 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era (KeyHash 'HotCommitteeRole (EraCrypto era))
 registerCommitteeHotKey coldKey = do

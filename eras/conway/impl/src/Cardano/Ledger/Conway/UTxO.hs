@@ -81,9 +81,7 @@ getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voterScript
         txb ^. votingProceduresTxBodyL
 
 conwayProducedValue ::
-  ( ConwayEraTxBody era
-  , ConwayEraPParams era
-  ) =>
+  ConwayEraTxBody era =>
   PParams era ->
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   TxBody era ->
