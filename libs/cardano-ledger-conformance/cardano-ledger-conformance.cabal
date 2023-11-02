@@ -30,7 +30,19 @@ library
 
     build-depends:
         base >=4.14 && <4.19,
-        cardano-ledger-executable-spec
+        bytestring,
+        cardano-strict-containers,
+        microlens,
+        cardano-ledger-binary,
+        cardano-ledger-core,
+        cardano-ledger-allegra,
+        cardano-ledger-shelley,
+        cardano-ledger-alonzo,
+        cardano-ledger-conway,
+        cardano-ledger-executable-spec,
+        cardano-crypto-class,
+        containers,
+        text
 
     if flag(asserts)
         ghc-options: -fno-ignore-asserts
