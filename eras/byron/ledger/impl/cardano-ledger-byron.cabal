@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-byron
-version:            1.0.0.2
+version:            1.0.0.3
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -252,7 +252,7 @@ library
         quiet,
         resourcet,
         streaming,
-        streaming-binary >=0.2 && <0.3,
+        streaming-binary >=0.2 && <0.4,
         streaming-bytestring,
         text,
         time,

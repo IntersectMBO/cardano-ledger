@@ -14,8 +14,8 @@ category:           Network
 build-type:         Simple
 data-files:
     cddl-files/alonzo.cddl
-    cddl-files/real/crypto.cddl
-    cddl-files/mock/extras.cddl
+    cddl-files/crypto.cddl
+    cddl-files/extras.cddl
 
 extra-source-files: CHANGELOG.md
 
