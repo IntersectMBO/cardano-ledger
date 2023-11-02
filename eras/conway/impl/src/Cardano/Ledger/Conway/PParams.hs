@@ -380,6 +380,7 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
         isValid (/= zero) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
       , isValid (/= zero) ppuDRepDepositL
+      , ppu /= emptyPParamsUpdate
       ]
     where
       isValid ::
