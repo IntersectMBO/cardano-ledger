@@ -547,13 +547,13 @@ data CostModels = CostModels
 emptyCostModels :: CostModels
 emptyCostModels = CostModels mempty mempty mempty
 
--- | Updates the first @CostModels@ with the second one so that only the
--- cost models that are present in the second one get updated while all the
+-- | Updates the second @CostModels@ with the first one so that only the
+-- cost models that are present in the first one get updated while all the
 -- others stay unchanged
 updateCostModels :: CostModels -> CostModels -> CostModels
 updateCostModels
-  (CostModels oldValid oldErrors oldUnk)
-  (CostModels newValid newErrors newUnk) =
+  (CostModels newValid newErrors newUnk)
+  (CostModels oldValid oldErrors oldUnk) =
     CostModels
       (Map.union newValid oldValid)
       (Map.union newErrors oldErrors)

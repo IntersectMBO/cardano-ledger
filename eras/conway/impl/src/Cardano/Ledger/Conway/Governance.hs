@@ -115,6 +115,9 @@ module Cardano.Ledger.Conway.Governance (
   psDRepDistrL,
   psDRepStateL,
   RunConwayRatify (..),
+
+  -- * Exported for testing
+  pparamsUpdateThreshold,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -186,11 +189,10 @@ import Cardano.Ledger.Conway.Governance.Snapshots (
   snapshotRemoveIds,
  )
 import Cardano.Ledger.Conway.PParams (
-  ConwayEraPParams,
+  ConwayEraPParams (..),
   DRepVotingThresholds (..),
-  PParamGroup (..),
+  PPGroup (..),
   PoolVotingThresholds (..),
-  modifiedGroups,
   ppCommitteeMinSizeL,
   ppDRepVotingThresholdsL,
   ppPoolVotingThresholdsL,
@@ -688,14 +690,14 @@ pparamsUpdateThreshold ::
 pparamsUpdateThreshold pp ppu =
   let thresholdLens = \case
         NetworkGroup -> dvtPPNetworkGroupL
-        GovernanceGroup -> dvtPPGovGroupL
+        GovGroup -> dvtPPGovGroupL
         TechnicalGroup -> dvtPPTechnicalGroupL
         EconomicGroup -> dvtPPEconomicGroupL
       lookupGroupThreshold grp =
         pp ^. ppDRepVotingThresholdsL . thresholdLens grp
    in Set.foldr' max minBound $
         Set.map lookupGroupThreshold $
-          modifiedGroups @era ppu
+          modifiedPPGroups @era ppu
 
 data VotingThreshold
   = -- | This is the actual threshold. It is lazy, because upon proposal we only care if

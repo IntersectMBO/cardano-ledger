@@ -196,7 +196,10 @@ instance Updatable (U1 a) (U1 u) where
 instance Updatable (V1 a) (V1 u) where
   applyUpdate x _ = case x of {}
 
-instance (Updatable (a1 a) (u1 u), Updatable (a2 a) (u2 u)) => Updatable ((a1 :*: a2) a) ((u1 :*: u2) u) where
+instance
+  (Updatable (a1 a) (u1 u), Updatable (a2 a) (u2 u)) =>
+  Updatable ((a1 :*: a2) a) ((u1 :*: u2) u)
+  where
   applyUpdate (x1 :*: x2) (u1 :*: u2) = applyUpdate x1 u1 :*: applyUpdate x2 u2
 
 instance Updatable (a x) (a' x') => Updatable (M1 i c a x) (M1 i' c' a' x') where

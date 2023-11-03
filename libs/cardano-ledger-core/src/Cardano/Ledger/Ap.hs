@@ -3,7 +3,8 @@
 
 -- | This is taken from Edward Kmett's `free` library
 -- See: https://hackage.haskell.org/package/free-5.2
-module Cardano.Ledger.Ap (
+module Cardano.Ledger.Ap
+  {-# DEPRECATED "Because it is no longer used in Ledger" #-} (
   Ap (..),
   hoistAp,
   runAp,

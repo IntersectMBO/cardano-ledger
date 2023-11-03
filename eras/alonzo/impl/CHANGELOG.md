@@ -1,6 +1,8 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.5.1.0
+## 1.6.0.0
+
+* Swap the order of arguments for `updateCostModels`
 
 ### `testlib`
 

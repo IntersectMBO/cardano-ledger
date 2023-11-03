@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,16 +16,17 @@ import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.Core (Era (EraCrypto), PParamsHKD)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
   RatifyEnv (..),
   RatifyState,
   Vote (..),
+  pparamsUpdateThreshold,
   votingDRepThreshold,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepVotingThresholdsL)
 import Cardano.Ledger.Conway.Rules (
   dRepAccepted,
   dRepAcceptedRatio,
@@ -39,14 +41,18 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import qualified Data.Set as Set
 import Data.Word (Word64)
+import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Rational ((%!))
 
 spec :: Spec
 spec = do
   describe "DRep Ratification" $ do
+    correctThresholdsProp @Conway
     acceptedRatioProp @Conway
     noStakeProp @Conway
     allAbstainProp @Conway
@@ -54,8 +60,29 @@ spec = do
     allYesProp @Conway
     noConfidenceProp @Conway
 
+correctThresholdsProp ::
+  forall era.
+  ( ConwayEraPParams era
+  , Arbitrary (PParams era)
+  , Arbitrary (PParamsUpdate era)
+  ) =>
+  Spec
+correctThresholdsProp = do
+  prop "PParamsUpdateThreshold always selects a threshold" $ \(pp :: PParams era) ppu -> do
+    let DRepVotingThresholds {..} = pp ^. ppDRepVotingThresholdsL
+        allDRepThresholds =
+          Set.fromList
+            [ dvtPPNetworkGroup
+            , dvtPPEconomicGroup
+            , dvtPPTechnicalGroup
+            , dvtPPGovGroup
+            ]
+    when (ppu /= emptyPParamsUpdate) $
+      pparamsUpdateThreshold pp ppu `shouldSatisfy` (`Set.member` allDRepThresholds)
+    pparamsUpdateThreshold pp emptyPParamsUpdate `shouldBe` (0 %! 1)
+
 acceptedRatioProp :: forall era. Era era => Spec
-acceptedRatioProp =
+acceptedRatioProp = do
   prop "DRep vote count for arbitrary vote ratios" $
     forAll genRatios $ \ratios -> do
       forAll (genTestData @era ratios) $
