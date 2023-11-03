@@ -13,7 +13,7 @@
 module Cardano.Ledger.Pretty.Babbage where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure, AlonzoUtxowPredFailure)
-import Cardano.Ledger.Alonzo.Scripts.Data (BinaryData, binaryDataToData)
+import Cardano.Ledger.Plutus.Data (BinaryData, binaryDataToData)
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))

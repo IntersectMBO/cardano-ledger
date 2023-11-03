@@ -20,7 +20,7 @@
 -- This is needed for the `HeapWords (StrictMaybe (DataHash c))` instance
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Ledger.Alonzo.Scripts.Data (
+module Cardano.Ledger.Plutus.Data (
   Data (Data),
   DataHash,
   upgradeData,

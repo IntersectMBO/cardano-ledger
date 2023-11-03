@@ -9,7 +9,7 @@ module Bench.Cardano.Ledger.TxOut (benchTxOut) where
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Scripts.Data
+import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (decodeFull, serialize)

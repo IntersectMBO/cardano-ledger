@@ -50,7 +50,7 @@ import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag)
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..), dataToBinaryData)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))

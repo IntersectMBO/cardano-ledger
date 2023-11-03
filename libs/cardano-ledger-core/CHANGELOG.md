@@ -8,6 +8,7 @@
   `Cardano.Ledger.Plutus.ExUnits` module.
 * Move `CostModels` from `Cardano.Ledger.Alonzo.Scripts` to new
   `Cardano.Ledger.Plutus.CostModels` module.
+* Move `Cardano.Ledger.Alonzo.Scritps.Data` to `Cardano.Ledger.Plutus.Data`
 
 ### `testlib`
 

@@ -31,7 +31,7 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (
   TagMismatchDescription (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (
+import Cardano.Ledger.Plutus.Data (
   Data (..),
   Datum (..),
   binaryDataToData,

@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, ExUnits (..), Tag (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWits

@@ -14,7 +14,7 @@ where
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.TxInfo (
   PlutusWithContext (..),
   ScriptResult (Fails, Passes),

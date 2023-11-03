@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Alonzo.Scripts (eqAlonzoScriptRaw)
-import Cardano.Ledger.Alonzo.Scripts.Data (BinaryData, Data (..))
+import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (zipMemoRawType)

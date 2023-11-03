@@ -10,7 +10,7 @@ module Cardano.Ledger.Babbage.UTxO (
   getReferenceScripts,
 ) where
 
-import Cardano.Ledger.Alonzo.Scripts.Data (Data)
+import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose)
 import Cardano.Ledger.Alonzo.TxOut (dataHashTxOutL)
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)

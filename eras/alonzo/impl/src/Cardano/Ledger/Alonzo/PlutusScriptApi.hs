@@ -33,7 +33,7 @@ where
 
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data)
+import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxInfo (
   EraPlutusContext,

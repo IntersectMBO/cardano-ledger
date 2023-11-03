@@ -48,7 +48,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Scripts ()
-import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), dataHashSize)
+import Cardano.Ledger.Plutus.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),

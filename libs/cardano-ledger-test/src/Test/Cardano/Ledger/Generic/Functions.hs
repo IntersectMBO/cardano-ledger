@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Generic.Functions where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (binaryDataToData, hashData)
+import Cardano.Ledger.Plutus.Data (binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)

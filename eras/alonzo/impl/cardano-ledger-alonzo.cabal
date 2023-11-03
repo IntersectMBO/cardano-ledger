@@ -36,7 +36,7 @@ library
         Cardano.Ledger.Alonzo.PParams
         Cardano.Ledger.Alonzo.Rules
         Cardano.Ledger.Alonzo.Scripts
-        Cardano.Ledger.Alonzo.Scripts.Data
+        --Cardano.Ledger.Alonzo.Scripts.Data
         Cardano.Ledger.Alonzo.Translation
         Cardano.Ledger.Alonzo.Tx
         Cardano.Ledger.Alonzo.TxAuxData
@@ -81,14 +81,12 @@ library
         data-default-class,
         deepseq,
         FailT,
-        heapwords,
         mtl,
         microlens,
         nothunks,
         plutus-ledger-api ^>=1.15,
         plutus-core ^>=1.15,
         prettyprinter,
-        serialise,
         set-algebra >=1.0,
         small-steps >=1.0,
         text,

@@ -16,7 +16,7 @@ import Cardano.Ledger.Address (Addr (..), BootstrapAddress, RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.Language (Language (..), plutusLanguage)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxWits (
   RdmrPtr (..),

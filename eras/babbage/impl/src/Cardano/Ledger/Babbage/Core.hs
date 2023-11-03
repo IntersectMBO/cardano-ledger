@@ -17,7 +17,7 @@ module Cardano.Ledger.Babbage.Core (
 where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum)
+import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Sized (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.HKD (HKD, HKDFunctor)

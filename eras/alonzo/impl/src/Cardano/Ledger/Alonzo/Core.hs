@@ -35,7 +35,7 @@ where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Prices)
-import Cardano.Ledger.Alonzo.Scripts.Data (Datum)
+import Cardano.Ledger.Plutus.Data (Datum)
 import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin (Coin (Coin))

@@ -10,7 +10,7 @@ import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), dataToBinaryData)
+import Cardano.Ledger.Plutus.Data (Data (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.TxInfo (
   ExtendedUTxO (..),
   TranslationError (..),

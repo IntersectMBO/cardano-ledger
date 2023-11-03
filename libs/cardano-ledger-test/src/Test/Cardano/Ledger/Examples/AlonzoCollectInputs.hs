@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectPlutusScriptsWithContext)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   ScriptPurpose (..),
  )

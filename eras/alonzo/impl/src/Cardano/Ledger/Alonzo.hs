@@ -27,7 +27,7 @@ import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
-import Cardano.Ledger.Alonzo.Scripts.Data ()
+import Cardano.Ledger.Plutus.Data ()
 import Cardano.Ledger.Alonzo.Transition ()
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx ()

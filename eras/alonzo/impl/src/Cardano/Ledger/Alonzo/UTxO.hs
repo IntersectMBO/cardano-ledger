@@ -24,7 +24,7 @@ module Cardano.Ledger.Alonzo.UTxO (
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum (..))
+import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), MaryEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (datsTxWitsL), unTxDats)

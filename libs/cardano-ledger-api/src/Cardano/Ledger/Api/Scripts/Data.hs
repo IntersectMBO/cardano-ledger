@@ -18,7 +18,7 @@ module Cardano.Ledger.Api.Scripts.Data (
 )
 where
 
-import Cardano.Ledger.Alonzo.Scripts.Data (
+import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data (Data),
   DataHash,

@@ -50,7 +50,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   CostModel,
   mkCostModel,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (..),
   IsValid (..),

@@ -27,7 +27,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Tx (
   IsValid (..),
   ScriptPurpose (..),

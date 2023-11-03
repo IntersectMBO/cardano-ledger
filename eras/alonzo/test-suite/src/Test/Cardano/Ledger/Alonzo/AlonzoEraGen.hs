@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   pointWiseExUnits,
   txscriptfee,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx (..),
   AlonzoTx (..),

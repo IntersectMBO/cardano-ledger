@@ -53,6 +53,7 @@ library
         Cardano.Ledger.PoolDistr
         Cardano.Ledger.PoolParams
         Cardano.Ledger.Plutus.CostModels
+        Cardano.Ledger.Plutus.Data
         Cardano.Ledger.Plutus.ExUnits
         Cardano.Ledger.Plutus.Language
         Cardano.Ledger.Rewards
@@ -111,6 +112,7 @@ library
         partial-order,
         plutus-ledger-api,
         quiet,
+        serialise,
         scientific,
         set-algebra,
         non-integral >=1.0,

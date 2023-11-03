@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   Prices (..),
   mkCostModel,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)

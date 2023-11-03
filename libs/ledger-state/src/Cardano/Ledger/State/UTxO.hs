@@ -13,7 +13,7 @@
 module Cardano.Ledger.State.UTxO where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo.Scripts.Data
+import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.BaseTypes

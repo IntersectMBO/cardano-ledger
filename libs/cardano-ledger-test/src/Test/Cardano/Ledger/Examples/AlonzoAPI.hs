@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Examples.AlonzoAPI (tests) where
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))

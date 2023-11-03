@@ -10,7 +10,7 @@
 
 module Test.Cardano.Ledger.Constrained.Solver where
 
-import Cardano.Ledger.Alonzo.Scripts.Data (hashData)
+import Cardano.Ledger.Plutus.Data (hashData)
 import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Era (..), hashScript)

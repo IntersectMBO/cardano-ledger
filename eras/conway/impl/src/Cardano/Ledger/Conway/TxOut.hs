@@ -15,7 +15,7 @@ module Cardano.Ledger.Conway.TxOut (
 where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
-import Cardano.Ledger.Alonzo.Scripts.Data (translateDatum)
+import Cardano.Ledger.Plutus.Data (translateDatum)
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxOut (..),
   Datum (..),

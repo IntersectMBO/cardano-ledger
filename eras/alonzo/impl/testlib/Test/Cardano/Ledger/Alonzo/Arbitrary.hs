@@ -45,7 +45,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   mkCostModel,
   mkCostModelsLenient,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (
+import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data (..),
   Datum (..),

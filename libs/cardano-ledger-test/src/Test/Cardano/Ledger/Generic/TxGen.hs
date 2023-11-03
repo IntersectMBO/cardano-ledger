@@ -29,7 +29,7 @@ where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
-import Cardano.Ledger.Alonzo.Scripts.Data (Data, dataToBinaryData, hashData)
+import Cardano.Ledger.Plutus.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (

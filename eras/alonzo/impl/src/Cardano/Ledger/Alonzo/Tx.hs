@@ -93,7 +93,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   Tag (..),
   txscriptfee,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data, hashData)
+import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoTxBody (..),

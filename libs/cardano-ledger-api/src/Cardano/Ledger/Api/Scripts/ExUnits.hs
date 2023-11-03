@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
   getEvaluationContext,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum (..), binaryDataToData, getPlutusData)
+import Cardano.Ledger.Plutus.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (

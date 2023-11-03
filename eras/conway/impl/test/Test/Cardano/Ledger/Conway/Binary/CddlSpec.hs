@@ -5,7 +5,7 @@ module Test.Cardano.Ledger.Conway.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
-import Cardano.Ledger.Alonzo.Scripts.Data (Data, Datum)
+import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)

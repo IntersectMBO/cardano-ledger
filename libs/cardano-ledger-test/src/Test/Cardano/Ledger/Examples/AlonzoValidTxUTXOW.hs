@@ -19,7 +19,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),

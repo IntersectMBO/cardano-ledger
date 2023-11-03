@@ -12,7 +12,7 @@ import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (
+import Cardano.Ledger.Plutus.Data (
   Data (..),
   dataToBinaryData,
   hashData,

@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), dataToBinaryData, hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.TxInfo (
   TranslationError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
   TxOutSource (TxOutFromInput, TxOutFromOutput),

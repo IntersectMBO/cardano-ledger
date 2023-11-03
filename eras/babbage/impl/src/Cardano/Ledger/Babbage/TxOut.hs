@@ -49,7 +49,7 @@ import Cardano.Ledger.Address (
   fromCborBackwardsBothAddr,
   fromCborBothAddr,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (
+import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data,
   Datum (..),

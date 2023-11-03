@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (
+import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data (..),
  )

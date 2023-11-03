@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Constrained.Preds.TxOut where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..), dataToBinaryData, hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..), AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..), BabbageTxOut (..))
 import Cardano.Ledger.Coin (Coin (..))

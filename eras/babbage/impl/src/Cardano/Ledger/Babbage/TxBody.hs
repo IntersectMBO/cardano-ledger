@@ -111,7 +111,7 @@ module Cardano.Ledger.Babbage.TxBody (
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
-import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..))
+import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
   AllegraEraTxBody (..),

@@ -100,7 +100,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   transProtocolVersion,
   validScript,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum, getPlutusData)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum, getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),

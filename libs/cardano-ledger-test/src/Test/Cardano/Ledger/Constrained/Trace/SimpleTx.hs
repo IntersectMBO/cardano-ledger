@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Constrained.Trace.SimpleTx where
 import Cardano.Crypto.Signing (SigningKey)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
