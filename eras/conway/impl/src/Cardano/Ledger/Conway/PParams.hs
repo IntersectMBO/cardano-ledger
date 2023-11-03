@@ -347,7 +347,8 @@ instance Crypto c => EraPParams (ConwayEra c) where
   type UpgradePParams f (ConwayEra c) = UpgradeConwayPParams f
   type DowngradePParams f (ConwayEra c) = ()
 
-  applyPPUpdates = conwayApplyPPUpdates
+  applyPPUpdates (PParams pp) (PParamsUpdate ppu) =
+    PParams $ conwayApplyPPUpdates pp ppu
 
   emptyPParamsIdentity = emptyConwayPParams
   emptyPParamsStrictMaybe = emptyConwayPParamsUpdate
@@ -927,63 +928,62 @@ ppuDRepActivityL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
 ppuDRepActivityL = ppuLens . hkdDRepActivityL @era @StrictMaybe
 
-ppUpdate ::
-  PParamsUpdate era ->
-  Lens' (PParamsUpdate era) (StrictMaybe a) ->
-  Lens' (PParams era) a ->
-  PParams era ->
-  PParams era
-ppUpdate ppu ppuL ppL pp =
-  case ppu ^. ppuL of
-    SNothing -> pp
-    SJust p -> pp & ppL .~ p
-
-ppUpdateCostModels ::
-  AlonzoEraPParams era =>
-  PParamsUpdate era ->
-  PParams era ->
-  PParams era
-ppUpdateCostModels ppu pp =
-  case ppu ^. ppuCostModelsL of
-    SNothing -> pp
-    SJust p -> pp & ppCostModelsL %~ updateCostModels p
-
 conwayApplyPPUpdates ::
-  ConwayEraPParams era =>
-  PParams era ->
-  PParamsUpdate era ->
-  PParams era
+  ConwayPParams Identity era ->
+  ConwayPParams StrictMaybe era ->
+  ConwayPParams Identity era
 conwayApplyPPUpdates pp ppu =
-  pp
-    & ppUpdate ppu ppuMinFeeAL ppMinFeeAL
-    & ppUpdate ppu ppuMinFeeBL ppMinFeeBL
-    & ppUpdate ppu ppuMaxBBSizeL ppMaxBBSizeL
-    & ppUpdate ppu ppuMaxTxSizeL ppMaxTxSizeL
-    & ppUpdate ppu ppuMaxBHSizeL ppMaxBHSizeL
-    & ppUpdate ppu ppuKeyDepositL ppKeyDepositL
-    & ppUpdate ppu ppuPoolDepositL ppPoolDepositL
-    & ppUpdate ppu ppuEMaxL ppEMaxL
-    & ppUpdate ppu ppuNOptL ppNOptL
-    & ppUpdate ppu ppuA0L ppA0L
-    & ppUpdate ppu ppuRhoL ppRhoL
-    & ppUpdate ppu ppuTauL ppTauL
-    & ppUpdate ppu ppuMinPoolCostL ppMinPoolCostL
-    & ppUpdate ppu ppuCoinsPerUTxOByteL ppCoinsPerUTxOByteL
-    & ppUpdateCostModels ppu
-    & ppUpdate ppu ppuPricesL ppPricesL
-    & ppUpdate ppu ppuMaxTxExUnitsL ppMaxTxExUnitsL
-    & ppUpdate ppu ppuMaxBlockExUnitsL ppMaxBlockExUnitsL
-    & ppUpdate ppu ppuMaxValSizeL ppMaxValSizeL
-    & ppUpdate ppu ppuCollateralPercentageL ppCollateralPercentageL
-    & ppUpdate ppu ppuMaxCollateralInputsL ppMaxCollateralInputsL
-    & ppUpdate ppu ppuPoolVotingThresholdsL ppPoolVotingThresholdsL
-    & ppUpdate ppu ppuDRepVotingThresholdsL ppDRepVotingThresholdsL
-    & ppUpdate ppu ppuCommitteeMinSizeL ppCommitteeMinSizeL
-    & ppUpdate ppu ppuCommitteeMaxTermLengthL ppCommitteeMaxTermLengthL
-    & ppUpdate ppu ppuGovActionLifetimeL ppGovActionLifetimeL
-    & ppUpdate ppu ppuGovActionDepositL ppGovActionDepositL
-    & ppUpdate ppu ppuDRepDepositL ppDRepDepositL
-    & ppUpdate ppu ppuDRepActivityL ppDRepActivityL
+  ConwayPParams
+    { cppMinFeeA = ppUpdate (cppMinFeeA pp) (cppMinFeeA ppu)
+    , cppMinFeeB = ppUpdate (cppMinFeeB pp) (cppMinFeeB ppu)
+    , cppMaxBBSize = ppUpdate (cppMaxBBSize pp) (cppMaxBBSize ppu)
+    , cppMaxTxSize = ppUpdate (cppMaxTxSize pp) (cppMaxTxSize ppu)
+    , cppMaxBHSize = ppUpdate (cppMaxBHSize pp) (cppMaxBHSize ppu)
+    , cppKeyDeposit = ppUpdate (cppKeyDeposit pp) (cppKeyDeposit ppu)
+    , cppPoolDeposit = ppUpdate (cppPoolDeposit pp) (cppPoolDeposit ppu)
+    , cppEMax = ppUpdate (cppEMax pp) (cppEMax ppu)
+    , cppNOpt = ppUpdate (cppNOpt pp) (cppNOpt ppu)
+    , cppA0 = ppUpdate (cppA0 pp) (cppA0 ppu)
+    , cppRho = ppUpdate (cppRho pp) (cppRho ppu)
+    , cppTau = ppUpdate (cppTau pp) (cppTau ppu)
+    , cppProtocolVersion = cppProtocolVersion pp
+    , cppMinPoolCost = ppUpdate (cppMinPoolCost pp) (cppMinPoolCost ppu)
+    , cppCoinsPerUTxOByte = ppUpdate (cppCoinsPerUTxOByte pp) (cppCoinsPerUTxOByte ppu)
+    , cppCostModels = ppUpdateCostModels (cppCostModels pp) (cppCostModels ppu)
+    , cppPrices = ppUpdate (cppPrices pp) (cppPrices ppu)
+    , cppMaxTxExUnits = ppUpdate (cppMaxTxExUnits pp) (cppMaxTxExUnits ppu)
+    , cppMaxBlockExUnits = ppUpdate (cppMaxBlockExUnits pp) (cppMaxBlockExUnits ppu)
+    , cppMaxValSize = ppUpdate (cppMaxValSize pp) (cppMaxValSize ppu)
+    , cppCollateralPercentage = ppUpdate (cppCollateralPercentage pp) (cppCollateralPercentage ppu)
+    , cppMaxCollateralInputs = ppUpdate (cppMaxCollateralInputs pp) (cppMaxCollateralInputs ppu)
+    , cppPoolVotingThresholds = ppUpdate (cppPoolVotingThresholds pp) (cppPoolVotingThresholds ppu)
+    , cppDRepVotingThresholds = ppUpdate (cppDRepVotingThresholds pp) (cppDRepVotingThresholds ppu)
+    , cppCommitteeMinSize = ppUpdate (cppCommitteeMinSize pp) (cppCommitteeMinSize ppu)
+    , cppCommitteeMaxTermLength =
+        ppUpdate (cppCommitteeMaxTermLength pp) (cppCommitteeMaxTermLength ppu)
+    , cppGovActionLifetime = ppUpdate (cppGovActionLifetime pp) (cppGovActionLifetime ppu)
+    , cppGovActionDeposit = ppUpdate (cppGovActionDeposit pp) (cppGovActionDeposit ppu)
+    , cppDRepDeposit = ppUpdate (cppDRepDeposit pp) (cppDRepDeposit ppu)
+    , cppDRepActivity = ppUpdate (cppDRepActivity pp) (cppDRepActivity ppu)
+    }
+  where
+    ppUpdate ::
+      THKD f Identity a ->
+      THKD f StrictMaybe a ->
+      THKD f Identity a
+    ppUpdate (THKD ppCurValue) (THKD ppuValue) =
+      case ppuValue of
+        SNothing -> THKD ppCurValue
+        SJust ppNewValue -> THKD ppNewValue
+
+    ppUpdateCostModels ::
+      THKD f Identity CostModels ->
+      THKD f StrictMaybe CostModels ->
+      THKD f Identity CostModels
+    ppUpdateCostModels (THKD curCostModel) (THKD ppuCostModel) =
+      case ppuCostModel of
+        SNothing -> THKD curCostModel
+        SJust costModelUpdate -> THKD $ updateCostModels curCostModel costModelUpdate
 
 conwayModifiedPPGroups :: ConwayPParams StrictMaybe era -> Set PPGroup
 conwayModifiedPPGroups
