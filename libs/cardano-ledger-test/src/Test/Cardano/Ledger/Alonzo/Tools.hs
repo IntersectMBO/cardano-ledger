@@ -11,7 +11,6 @@ module Test.Cardano.Ledger.Alonzo.Tools (tests) where
 import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, ExUnits (..), Tag (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
@@ -24,6 +23,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))

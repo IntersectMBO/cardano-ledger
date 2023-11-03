@@ -34,7 +34,6 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
   CollectError (..),
@@ -69,6 +68,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize')
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Governance (EraGov (GovState), ShelleyGovState)

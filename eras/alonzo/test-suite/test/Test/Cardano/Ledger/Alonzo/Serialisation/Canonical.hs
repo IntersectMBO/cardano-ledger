@@ -5,7 +5,6 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
 
 import Cardano.Ledger.Alonzo (Alonzo, AlonzoEra)
-import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -27,6 +26,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Plutus.Language (Language)
 import Control.Monad (replicateM, unless, void)
 import qualified Data.ByteString.Base16 as B16
 import Data.ByteString.Lazy as LBS

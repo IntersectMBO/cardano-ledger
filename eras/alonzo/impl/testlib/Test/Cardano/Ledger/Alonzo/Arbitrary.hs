@@ -26,7 +26,6 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Language (BinaryPlutus (..), Language, Plutus (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
@@ -74,7 +73,7 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
   hashData,
  )
-import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..), nonNativeLanguages)
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Shelley.TxWits (keyBy)

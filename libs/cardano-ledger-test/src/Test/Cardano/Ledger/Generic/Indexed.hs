@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Generic.Indexed where
 
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -33,6 +32,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (MultiAsset (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty (
   PrettyA (..),
   PrettyAnn (Width),

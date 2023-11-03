@@ -20,7 +20,6 @@ module Cardano.Ledger.Babbage.Scripts (
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock)
-import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   isPlutusScript,
@@ -29,6 +28,7 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Data.ByteString (ByteString)
 

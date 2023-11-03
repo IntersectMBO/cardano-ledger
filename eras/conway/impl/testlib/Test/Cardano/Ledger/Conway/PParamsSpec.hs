@@ -5,9 +5,9 @@
 
 module Test.Cardano.Ledger.Conway.PParamsSpec (spec) where
 
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModelApplyError (..), CostModelError (..), CostModels (..), mkCostModel)
 import Cardano.Ledger.Conway.Core (AlonzoEraPParams, EraPParams (..), emptyPParams, emptyPParamsUpdate, ppCostModelsL, ppuCostModelsL)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Proxy (Proxy)

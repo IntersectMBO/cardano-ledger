@@ -16,7 +16,6 @@
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
@@ -52,6 +51,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)

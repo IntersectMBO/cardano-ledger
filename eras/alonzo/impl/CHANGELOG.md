@@ -3,6 +3,7 @@
 ## 1.5.1.0
 
 * Moved `Cardano.Ledger.Alonzo.Scripts.Data` to `Cardano.Ledger.Plutus.Data`
+* Deprecated `Cardano.Ledger.Alonzo.Language`
 
 ### `testlib`
 

@@ -12,7 +12,6 @@
 
 module Cardano.Ledger.Conway.Rules.Utxos (ConwayUTXOS) where
 
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
@@ -41,6 +40,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),

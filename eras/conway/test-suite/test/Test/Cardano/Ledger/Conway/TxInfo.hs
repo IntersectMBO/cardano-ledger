@@ -4,10 +4,10 @@
 
 module Test.Cardano.Ledger.Conway.TxInfo where
 
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import qualified Cardano.Ledger.Babbage.TxBody as B
 import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Data.Proxy (Proxy (..))
 import Test.Tasty (TestTree)
 

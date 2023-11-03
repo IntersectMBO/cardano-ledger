@@ -4,9 +4,9 @@
 
 module Main where
 
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.TxInfo (debugPlutus)
 import Cardano.Ledger.BaseTypes (natVersion)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import System.Environment (getArgs)
 import System.IO
 
