@@ -16,10 +16,10 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Alonzo.Scripts (eqAlonzoScriptRaw)
-import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (zipMemoRawType)
+import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()

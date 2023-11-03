@@ -29,7 +29,6 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   pointWiseExUnits,
   txscriptfee,
  )
-import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx (..),
   AlonzoTx (..),
@@ -69,6 +68,7 @@ import Cardano.Ledger.Mary.Value (
   multiAssetFromList,
   policies,
  )
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.TxIn (TxIn)

@@ -45,13 +45,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   mkCostModel,
   mkCostModelsLenient,
  )
-import Cardano.Ledger.Plutus.Data (
-  BinaryData,
-  Data (..),
-  Datum (..),
-  dataToBinaryData,
-  hashData,
- )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   IsValid (IsValid),
@@ -74,6 +67,13 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Plutus.Data (
+  BinaryData,
+  Data (..),
+  Datum (..),
+  dataToBinaryData,
+  hashData,
+ )
 import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)

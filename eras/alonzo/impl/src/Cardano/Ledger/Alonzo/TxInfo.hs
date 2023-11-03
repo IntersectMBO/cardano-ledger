@@ -100,7 +100,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   transProtocolVersion,
   validScript,
  )
-import Cardano.Ledger.Plutus.Data (Data (..), Datum, getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (CostModel, ScriptPurpose (..), txdats')
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
@@ -137,6 +136,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..), ToExpr)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum, getPlutusData)
 import Cardano.Ledger.Plutus.Language (
   BinaryPlutus (..),
   IsLanguage (..),

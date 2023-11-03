@@ -16,10 +16,6 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
  )
-import Cardano.Ledger.Plutus.Data (
-  BinaryData,
-  Data (..),
- )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTxBody (..),
  )
@@ -33,6 +29,10 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
+import Cardano.Ledger.Plutus.Data (
+  BinaryData,
+  Data (..),
+ )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.TxIn (TxIn)

@@ -20,7 +20,6 @@ module Cardano.Ledger.Conway.Translation (
 
 import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Alonzo.Scripts (translateAlonzoScript)
-import Cardano.Ledger.Plutus.Data (translateDatum)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
@@ -42,6 +41,7 @@ import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Plutus.Data (translateDatum)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState (..),

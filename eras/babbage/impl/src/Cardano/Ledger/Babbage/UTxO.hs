@@ -10,7 +10,6 @@ module Cardano.Ledger.Babbage.UTxO (
   getReferenceScripts,
 ) where
 
-import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose)
 import Cardano.Ledger.Alonzo.TxOut (dataHashTxOutL)
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
@@ -36,6 +35,7 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))

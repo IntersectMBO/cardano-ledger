@@ -25,7 +25,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   Prices (..),
   mkCostModel,
  )
-import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
@@ -33,6 +32,7 @@ import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
+import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.ByteString.Base16 as B16

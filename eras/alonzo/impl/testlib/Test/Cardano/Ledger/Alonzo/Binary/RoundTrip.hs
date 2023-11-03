@@ -11,9 +11,9 @@ module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
   roundTripAlonzoEraTypesSpec,
 ) where
 
-import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()

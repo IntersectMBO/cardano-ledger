@@ -24,7 +24,6 @@ module Cardano.Ledger.Alonzo.UTxO (
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), MaryEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (datsTxWitsL), unTxDats)
@@ -34,6 +33,7 @@ import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
+import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), getRwdCred)
 import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.TxIn

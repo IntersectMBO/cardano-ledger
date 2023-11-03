@@ -13,12 +13,12 @@ module Test.Cardano.Ledger.Generic.ApplyTx where
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
-import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (RdmrPtr), Redeemers (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)

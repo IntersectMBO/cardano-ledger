@@ -5,10 +5,10 @@ module Test.Cardano.Ledger.Babbage.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
-import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Babbage.Binary.Cddl (readBabbageCddlFiles)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,

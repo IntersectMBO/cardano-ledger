@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectPlutusScriptsWithContext)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   ScriptPurpose (..),
  )
@@ -31,6 +30,7 @@ import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)

@@ -93,7 +93,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   Tag (..),
   txscriptfee,
  )
-import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoTxBody (..),
@@ -130,6 +129,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), shelleyEqTxRaw)

@@ -2,6 +2,8 @@
 
 ## 1.5.1.0
 
+* Moved `Cardano.Ledger.Alonzo.Scripts.Data` to `Cardano.Ledger.Plutus.Data`
+
 ### `testlib`
 
 * Provide CDDL spec files with `readAlonzoCddlFileNames` and `readAlonzoCddlFiles` from

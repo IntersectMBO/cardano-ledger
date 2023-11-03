@@ -30,7 +30,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
   getEvaluationContext,
  )
-import Cardano.Ledger.Plutus.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (
@@ -55,6 +54,7 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Plutus.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))

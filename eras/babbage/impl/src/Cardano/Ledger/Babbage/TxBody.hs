@@ -111,7 +111,6 @@ module Cardano.Ledger.Babbage.TxBody (
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
-import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
   AllegraEraTxBody (..),
@@ -157,6 +156,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
   zipMemoRawType,
  )
+import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)

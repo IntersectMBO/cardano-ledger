@@ -60,7 +60,6 @@ import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
-import Cardano.Ledger.Plutus.Data (Data, hashData, upgradeData)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -88,6 +87,7 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
+import Cardano.Ledger.Plutus.Data (Data, hashData, upgradeData)
 import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), guardPlutus)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
