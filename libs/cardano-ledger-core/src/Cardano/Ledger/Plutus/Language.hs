@@ -16,7 +16,7 @@
 -- | This module provides data structures and operations for talking about
 --     Non-native Script languages. It is expected that new languages (or new
 --     versions of old languages) will be added here.
-module Cardano.Ledger.Language (
+module Cardano.Ledger.Plutus.Language (
   -- * Plutus Script
   Plutus (..),
   BinaryPlutus (..),

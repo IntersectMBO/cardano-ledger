@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.TxInfo (
   runPlutusScript,
  )
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
-import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Control.Monad.Writer (runWriterT)
 import Data.Bifunctor (bimap)
 import Data.ByteString.Short (ShortByteString)

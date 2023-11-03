@@ -63,7 +63,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   hashKey,
  )
-import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))

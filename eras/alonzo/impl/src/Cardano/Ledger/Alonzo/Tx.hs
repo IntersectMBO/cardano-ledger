@@ -128,9 +128,9 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
-import Cardano.Ledger.Language (nonNativeLanguages)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), shelleyEqTxRaw)
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), unWithdrawals)

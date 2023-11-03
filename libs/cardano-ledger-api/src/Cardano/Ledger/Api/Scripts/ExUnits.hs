@@ -55,7 +55,7 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
-import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo.API (EpochInfo)

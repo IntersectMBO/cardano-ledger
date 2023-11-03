@@ -110,8 +110,8 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
-import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.Orphans ()
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.PParams (
   ShelleyPParams (..),
   emptyPPPUpdates,

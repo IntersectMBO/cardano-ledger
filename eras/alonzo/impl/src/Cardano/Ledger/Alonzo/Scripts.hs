@@ -93,7 +93,8 @@ import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Language (
+import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.Plutus.Language (
   BinaryPlutus (..),
   Language (..),
   Plutus (..),
@@ -101,7 +102,6 @@ import Cardano.Ledger.Language (
   mkLanguageEnum,
   nonNativeLanguages,
  )
-import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)

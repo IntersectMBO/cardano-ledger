@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   deserializeTranslationInstances,
 ) where
 
-import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 
 import Cardano.Ledger.Core as Core
 

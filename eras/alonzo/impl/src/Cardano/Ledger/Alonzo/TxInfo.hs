@@ -136,7 +136,8 @@ import Cardano.Ledger.Credential (
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
-import Cardano.Ledger.Language (
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..), ToExpr)
+import Cardano.Ledger.Plutus.Language (
   BinaryPlutus (..),
   IsLanguage (..),
   Language (..),
@@ -145,7 +146,6 @@ import Cardano.Ledger.Language (
   fromSLanguage,
   withSLanguage,
  )
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..), ToExpr)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
