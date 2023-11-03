@@ -52,6 +52,8 @@ library
         Cardano.Ledger.Orphans
         Cardano.Ledger.PoolDistr
         Cardano.Ledger.PoolParams
+        Cardano.Ledger.Plutus.CostModels
+        Cardano.Ledger.Plutus.ExUnits
         Cardano.Ledger.Plutus.Language
         Cardano.Ledger.Rewards
         Cardano.Ledger.Rules.ValidationMode
@@ -82,6 +84,7 @@ library
         aeson >=2.2,
         base16-bytestring,
         base64-bytestring,
+        base-deriving-via,
         binary,
         bytestring,
         cardano-ledger-binary >=1.1.1,
@@ -101,10 +104,12 @@ library
         heapwords,
         iproute,
         mtl,
+        measures,
         microlens,
         network,
         nothunks,
         partial-order,
+        plutus-ledger-api,
         quiet,
         scientific,
         set-algebra,
@@ -121,6 +126,9 @@ library
 
     if flag(asserts)
         ghc-options: -fno-ignore-asserts
+
+    if !impl(ghc >=9.2)
+        ghc-options: -Wno-name-shadowing
 
 library testlib
     exposed-modules:

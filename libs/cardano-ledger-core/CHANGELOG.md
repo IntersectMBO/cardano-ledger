@@ -4,6 +4,10 @@
 
 * Deprecated `Cardano.Ledger.Ap`, since we no longer use this module
 * Moved `Cardano.Ledger.Language` to `Cardano.Ledger.Plutus.Language` with deprecation.
+* Move `ExUnits` and `Prices` from `Cardano.Ledger.Alonzo.Scripts` to new
+  `Cardano.Ledger.Plutus.ExUnits` module.
+* Move `CostModels` from `Cardano.Ledger.Alonzo.Scripts` to new
+  `Cardano.Ledger.Plutus.CostModels` module.
 
 ### `testlib`
 
