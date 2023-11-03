@@ -47,7 +47,7 @@ library
         Cardano.Ledger.Keys
         Cardano.Ledger.Keys.Bootstrap
         Cardano.Ledger.Keys.WitVKey
-        --Cardano.Ledger.Language
+        Cardano.Ledger.Language
         Cardano.Ledger.MemoBytes
         Cardano.Ledger.Orphans
         Cardano.Ledger.PoolDistr

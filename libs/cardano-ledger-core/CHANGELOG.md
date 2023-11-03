@@ -3,6 +3,7 @@
 ## 1.8.1.0
 
 * Deprecated `Cardano.Ledger.Ap`, since we no longer use this module
+* Moved `Cardano.Ledger.Language` to `Cardano.Ledger.Plutus.Language` with deprecation.
 
 ### `testlib`
 
