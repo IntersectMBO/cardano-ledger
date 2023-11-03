@@ -983,7 +983,7 @@ conwayApplyPPUpdates pp ppu =
     ppUpdateCostModels (THKD curCostModel) (THKD ppuCostModel) =
       case ppuCostModel of
         SNothing -> THKD curCostModel
-        SJust costModelUpdate -> THKD $ updateCostModels curCostModel costModelUpdate
+        SJust costModelUpdate -> THKD $ updateCostModels costModelUpdate curCostModel
 
 conwayModifiedPPGroups :: ConwayPParams StrictMaybe era -> Set PPGroup
 conwayModifiedPPGroups
