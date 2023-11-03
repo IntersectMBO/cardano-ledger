@@ -1,8 +1,17 @@
 # Version history for `cardano-ledger-core`
 
-## 1.8.0.1
+## 1.8.1.0
 
 * Deprecated `Cardano.Ledger.Ap`, since we no longer use this module
+
+### `testlib`
+
+* Addition of `Test.Cardano.Ledger.Imp.Common`
+* Re-export `ToExpr`, `showExpr`, `diffExpr`, `assertBool` and `assertFailure`
+* Add `shouldBeExpr`, `shouldBeRight`, `shouldBeRightExpr`, `shouldBeLeft` and
+  `shouldBeLeftExpr`
+* Add `expectRight`, `expectRightDeep`, `expectRightExpr`, `expectRightDeepExpr`,
+  `expectLeft`, `expectLeftExpr`, `expectLeftDeep` and `expectLeftDeepExpr`
 
 ## 1.8.0.0
 

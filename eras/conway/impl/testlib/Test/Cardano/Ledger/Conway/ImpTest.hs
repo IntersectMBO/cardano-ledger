@@ -14,9 +14,16 @@
 module Test.Cardano.Ledger.Conway.ImpTest (
   module ImpTest,
   ConwayEraImp,
-  submitProposal,
+  submitGovAction,
+  submitGovAction_,
   submitFailingProposal,
-  voteForProposal,
+  trySubmitGovAction,
+  trySubmitProposal,
+  submitVote,
+  submitVote_,
+  submitYesVote_,
+  submitFailingVote,
+  trySubmitVote,
   registerDRep,
   setupSingleDRep,
   conwayModifyPParams,
@@ -30,7 +37,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logRatificationChecks,
   registerCommitteeHotKey,
   logCurPParams,
-  tryVoteForProposal,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
@@ -128,6 +134,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.TxIn (TxId)
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad (void)
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
@@ -137,9 +144,8 @@ import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
 import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
-import Test.Cardano.Ledger.Binary.TreeDiff (showExpr)
-import Test.Cardano.Ledger.Common (HasCallStack, shouldSatisfy)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
+import Test.Cardano.Ledger.Imp.Common
 
 conwayImpWitsVKeyNeeded ::
   ( EraTx era
@@ -228,7 +234,7 @@ registerDRep = do
                 SNothing
             )
   dreps <- getsNES @era $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
-  impIO $ dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
+  dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
   pure khDRep
 
 -- | Registers a new DRep and delegates 1 ADA to it. Returns the keyhash of the
@@ -263,38 +269,61 @@ setupSingleDRep = do
             ]
   pure khDRep
 
--- | Submits a transaction that votes "Yes" for the given governance action as
+-- | Submits a transaction with a Vote for the given governance action as
 -- some voter
-voteForProposal ::
+submitVote ::
   ( ShelleyEraImp era
   , ConwayEraTxBody era
+  , HasCallStack
   ) =>
+  Vote ->
   Voter (EraCrypto era) ->
   GovActionId (EraCrypto era) ->
   ImpTestM era (TxId (EraCrypto era))
-voteForProposal voter gaId = do
-  submitTx "Vote as DRep" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . votingProceduresTxBodyL
-        .~ VotingProcedures
-          ( Map.singleton
-              voter
-              ( Map.singleton
-                  gaId
-                  ( VotingProcedure
-                      { vProcVote = VoteYes
-                      , vProcAnchor = SNothing
-                      }
-                  )
-              )
-          )
+submitVote vote voter gaId = trySubmitVote vote voter gaId >>= expectRightDeep
+
+-- | Submits a transaction that votes "Yes" for the given governance action as
+-- some voter
+submitYesVote_ ::
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , HasCallStack
+  ) =>
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  ImpTestM era ()
+submitYesVote_ voter gaId = void $ submitVote VoteYes voter gaId
+
+submitVote_ ::
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , HasCallStack
+  ) =>
+  Vote ->
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  ImpTestM era ()
+submitVote_ vote voter gaId = void $ submitVote vote voter gaId
+
+submitFailingVote ::
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , HasCallStack
+  ) =>
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  [PredicateFailure (EraRule "LEDGER" era)] ->
+  ImpTestM era ()
+submitFailingVote voter gaId expectedFailure =
+  trySubmitVote VoteYes voter gaId >>= (`shouldBeLeftExpr` expectedFailure)
 
 -- | Submits a transaction that votes "Yes" for the given governance action as
 -- some voter, and expects an `Either` result.
-tryVoteForProposal ::
+trySubmitVote ::
   ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
+  Vote ->
   Voter (EraCrypto era) ->
   GovActionId (EraCrypto era) ->
   ImpTestM
@@ -303,7 +332,7 @@ tryVoteForProposal ::
         [PredicateFailure (EraRule "LEDGER" era)]
         (TxId (EraCrypto era))
     )
-tryVoteForProposal voter gaId = do
+trySubmitVote vote voter gaId = do
   trySubmitTx $
     mkBasicTx mkBasicTxBody
       & bodyTxL . votingProceduresTxBodyL
@@ -313,15 +342,52 @@ tryVoteForProposal voter gaId = do
               ( Map.singleton
                   gaId
                   ( VotingProcedure
-                      { vProcVote = VoteYes
+                      { vProcVote = vote
                       , vProcAnchor = SNothing
                       }
                   )
               )
           )
 
--- | Submits a transaction that proposes the given governance action
+-- | Submits a transaction that proposes the given proposal
 trySubmitProposal ::
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  ) =>
+  ProposalProcedure era ->
+  ImpTestM
+    era
+    ( Either
+        [PredicateFailure (EraRule "LEDGER" era)]
+        (GovActionId (EraCrypto era))
+    )
+trySubmitProposal proposal = do
+  eitherTxId <-
+    trySubmitTx $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . proposalProceduresTxBodyL .~ OSet.singleton proposal
+  pure $ case eitherTxId of
+    Right txId ->
+      Right
+        GovActionId
+          { gaidTxId = txId
+          , gaidGovActionIx = GovActionIx 0
+          }
+    Left err -> Left err
+
+submitFailingProposal ::
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , HasCallStack
+  ) =>
+  ProposalProcedure era ->
+  [PredicateFailure (EraRule "LEDGER" era)] ->
+  ImpTestM era ()
+submitFailingProposal proposal expectedFailure =
+  trySubmitProposal proposal >>= (`shouldBeLeftExpr` expectedFailure)
+
+-- | Submits a transaction that proposes the given governance action
+trySubmitGovAction ::
   ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
@@ -332,58 +398,52 @@ trySubmitProposal ::
         [PredicateFailure (EraRule "LEDGER" era)]
         (GovActionId (EraCrypto era))
     )
-trySubmitProposal ga = do
+trySubmitGovAction ga = do
   khPropRwd <- freshKeyHash
-  eitherTxId <-
-    trySubmitTx $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . proposalProceduresTxBodyL
-          .~ OSet.singleton
-            ProposalProcedure
-              { pProcDeposit = zero
-              , pProcReturnAddr =
-                  RewardAcnt
-                    Testnet
-                    (KeyHashObj khPropRwd)
-              , pProcGovAction = ga
-              , pProcAnchor = def
-              }
-  pure $ case eitherTxId of
-    Right txId ->
-      Right
-        GovActionId
-          { gaidTxId = txId
-          , gaidGovActionIx = GovActionIx 0
-          }
-    Left err -> Left err
+  trySubmitProposal $
+    ProposalProcedure
+      { pProcDeposit = zero
+      , pProcReturnAddr =
+          RewardAcnt
+            Testnet
+            (KeyHashObj khPropRwd)
+      , pProcGovAction = ga
+      , pProcAnchor = def
+      }
 
-submitProposal ::
+submitGovAction ::
   forall era.
   ( ShelleyEraImp era
   , ConwayEraTxBody era
+  , HasCallStack
   ) =>
   GovAction era ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitProposal ga = trySubmitProposal ga >>= impExpectSuccess
+submitGovAction ga = trySubmitGovAction ga >>= expectRightExpr
 
-submitFailingProposal ::
+submitGovAction_ ::
+  forall era.
   ( ShelleyEraImp era
   , ConwayEraTxBody era
+  , HasCallStack
   ) =>
   GovAction era ->
   ImpTestM era ()
-submitFailingProposal ga = trySubmitProposal ga >>= impExpectFailure
+submitGovAction_ = void . submitGovAction
 
 getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
 getEnactState = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . enactStateGovStateL
 
 -- | Looks up the governance action state corresponding to the governance
 -- action id
-lookupGovActionState :: (HasCallStack, ConwayEraGov era) => GovActionId (EraCrypto era) -> ImpTestM era (GovActionState era)
+lookupGovActionState ::
+  (HasCallStack, ConwayEraGov era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era (GovActionState era)
 lookupGovActionState aId = do
   proposals <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
-  impIOMsg "Expecting an action state" $ do
-    maybe (error $ "Could not find action state for action " <> show aId) pure $
+  impAnn "Expecting an action state" $ do
+    maybe (assertFailure $ "Could not find action state for govActionId: " <> show aId) pure $
       snapshotLookupId aId proposals
 
 -- | Builds a RatifyState from the current state

@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -18,12 +17,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
  )
 import Cardano.Ledger.Val (Val (..))
-import Test.Cardano.Ledger.Common (Spec, describe, shouldBe)
+import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
+  ImpTestState,
   ShelleyEraImp,
   getsNES,
-  impIO,
-  itM,
   passEpoch,
   submitTx,
  )
@@ -31,24 +29,20 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
 spec ::
   forall era.
   ShelleyEraImp era =>
-  Spec
+  SpecWith (ImpTestState era)
 spec = describe "EPOCH" $ do
-  itM @era "Runs basic transaction" $ do
+  it "Runs basic transaction" $ do
     do
       certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
       govState <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
-      impIO $ totalObligation certState govState `shouldBe` zero
+      totalObligation certState govState `shouldBe` zero
     do
       deposited <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
-      impIO $ deposited `shouldBe` zero
+      deposited `shouldBe` zero
     _ <- submitTx "simple transaction" $ mkBasicTx mkBasicTxBody
     passEpoch
 
-  itM @era "Crosses the epoch boundary" $ do
-    do
-      epoch <- getsNES nesELL
-      impIO $ epoch `shouldBe` 0
+  it "Crosses the epoch boundary" $ do
+    getsNES nesELL `shouldReturn` 0
     passEpoch
-    do
-      epoch <- getsNES nesELL
-      impIO $ epoch `shouldBe` 1
+    getsNES nesELL `shouldReturn` 1

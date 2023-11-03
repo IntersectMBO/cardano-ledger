@@ -9,10 +9,10 @@ module Test.Cardano.Ledger.Shelley.Imp (
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
-import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
+import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp, withImpState)
 
 spec :: forall era. ShelleyEraImp era => Spec
 spec =
-  describe "ShelleyImpSpec" $ do
+  describe "ShelleyImpSpec" $ withImpState @era $ do
     Ledger.spec @era
     Epoch.spec @era

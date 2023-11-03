@@ -8,6 +8,7 @@
 ### `testlib`
 
 * Addition of `Test.Cardano.Ledger.Binary.Cddl` spec testing.
+* Export `toExpr` from `Test.Cardano.Ledger.Binary.TreeDiff`
 
 ## 1.2.0.0
 

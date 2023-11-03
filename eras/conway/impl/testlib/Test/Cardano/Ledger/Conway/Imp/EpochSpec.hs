@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -10,7 +9,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec, electBasicCommittee) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (textToUrl)
@@ -48,19 +47,19 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..), isSJust)
 import Lens.Micro ((&), (.~))
-import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
+import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
   ( ConwayEraImp era
   , GovState era ~ ConwayGovState era
   ) =>
-  Spec
+  SpecWith (ImpTestState era)
 spec =
   describe "EPOCH" $ do
-    itM @era "DRep registration should succeed" $ do
+    it "DRep registration should succeed" $ do
       logEntry "Stake distribution before DRep registration:"
       logStakeDistr
       _ <- registerDRep
@@ -68,7 +67,7 @@ spec =
       logStakeDistr
       passEpoch
 
-    itM @era "constitution is accepted after two epochs" $ do
+    it "constitution is accepted after two epochs" $ do
       constitutionHash <- freshSafeHash
       let
         constitutionAction =
@@ -84,25 +83,25 @@ spec =
       -- Submit NewConstitution proposal two epoch too early to check that the action
       -- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)
       logEntry "Submitting new constitution"
-      gaidConstitutionProp <- submitProposal constitutionAction
+      gaidConstitutionProp <- submitGovAction constitutionAction
 
       (dRepCred, committeeHotCred) <- electBasicCommittee
 
       logRatificationChecks gaidConstitutionProp
       do
         isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
-        impIOMsg "Gov action should not be accepted" $ isAccepted `shouldBe` False
-      _ <- voteForProposal (DRepVoter dRepCred) gaidConstitutionProp
-      _ <- voteForProposal (CommitteeVoter committeeHotCred) gaidConstitutionProp
+        assertBool "Gov action should not be accepted" $ not isAccepted
+      submitYesVote_ (DRepVoter dRepCred) gaidConstitutionProp
+      submitYesVote_ (CommitteeVoter committeeHotCred) gaidConstitutionProp
       logAcceptedRatio gaidConstitutionProp
       do
         isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
-        impIOMsg "Gov action should be accepted" $ isAccepted `shouldBe` True
+        assertBool "Gov action should be accepted" isAccepted
 
       passEpoch
       do
         isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
-        impIOMsg "Gov action should be accepted" $ isAccepted `shouldBe` True
+        assertBool "Gov action should be accepted" isAccepted
       logAcceptedRatio gaidConstitutionProp
       logRatificationChecks gaidConstitutionProp
       constitutionShouldBe ""
@@ -110,7 +109,7 @@ spec =
       passEpoch
       constitutionShouldBe "constitution.0"
 
-    itM @era "TreasuryWithdrawal" $ do
+    it "TreasuryWithdrawal" $ do
       (dRepCred, committeeHotCred) <- electBasicCommittee
 
       treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
@@ -118,26 +117,26 @@ spec =
       rewardAcount <- registerRewardAccount
       let withdrawalAmount = Coin 666
           govAction = TreasuryWithdrawals [(rewardAcount, withdrawalAmount)]
-      govActionId <- submitProposal govAction
+      govActionId <- submitGovAction govAction
 
-      _ <- voteForProposal (DRepVoter dRepCred) govActionId
-      _ <- voteForProposal (CommitteeVoter committeeHotCred) govActionId
+      submitYesVote_ (DRepVoter dRepCred) govActionId
+      submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
 
       passEpoch
       passEpoch
 
       treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
       umap <- getsNES $ nesEsL . epochStateUMapL
-      impIO $ do
-        let cred = getRwdCred rewardAcount
-        case UMap.lookup cred (RewDepUView umap) of
-          Nothing -> error $ "Expected a reward account: " ++ show cred
-          Just RDPair {rdReward} -> fromCompact rdReward `shouldBe` withdrawalAmount
-        treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
+      let cred = getRwdCred rewardAcount
+      case UMap.lookup cred (RewDepUView umap) of
+        Nothing -> error $ "Expected a reward account: " ++ show cred
+        Just RDPair {rdReward} -> fromCompact rdReward `shouldBe` withdrawalAmount
+      treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
 
 electBasicCommittee ::
   forall era.
-  ( ConwayEraImp era
+  ( HasCallStack
+  , ConwayEraImp era
   , GovState era ~ ConwayGovState era
   ) =>
   ImpTestM era (Credential 'DRepRole (EraCrypto era), Credential 'HotCommitteeRole (EraCrypto era))
@@ -164,16 +163,16 @@ electBasicCommittee = do
         mempty
         (Map.singleton (KeyHashObj khCommitteeMember) 10)
         (1 %! 2)
-  gaidCommitteeProp <- submitProposal committeeAction
+  gaidCommitteeProp <- submitGovAction committeeAction
 
-  _ <- voteForProposal (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
+  submitYesVote_ (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
 
   let
     assertNoCommittee = do
       committee <-
         getsNES $
           nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
-      impIOMsg "There should not be a committee" $ committee `shouldBe` SNothing
+      impAnn "There should not be a committee" $ committee `shouldBe` SNothing
   logRatificationChecks gaidCommitteeProp
   assertNoCommittee
 
@@ -185,7 +184,7 @@ electBasicCommittee = do
     committee <-
       getsNES $
         nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
-    impIOMsg "There should be a committee" $ committee `shouldSatisfy` isSJust
+    impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
 
   khCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
   pure (KeyHashObj khDRep, KeyHashObj khCommitteeMemberHot)

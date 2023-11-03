@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Binary.TreeDiff (
-  ToExpr,
+  ToExpr (..),
   CBORBytes (..),
   HexBytes (..),
   showExpr,

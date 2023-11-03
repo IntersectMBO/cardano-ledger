@@ -50,7 +50,7 @@ library
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.5 && <1.9,
         cardano-ledger-pretty,
         cardano-ledger-allegra ^>=1.2,
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.6 && <1.8,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.6 && <1.9,
         cardano-ledger-shelley-test >=1.2,
         cardano-ledger-shelley-ma-test ^>=1.2,
         cardano-ledger-mary ^>=1.3,

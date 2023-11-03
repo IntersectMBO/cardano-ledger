@@ -3,9 +3,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -21,6 +24,7 @@
 
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
+  ImpTestState,
   ImpException (..),
   ShelleyEraImp (..),
   logStakeDistr,
@@ -29,26 +33,22 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   modifyPrevPParams,
   passEpoch,
   passTick,
-  itM,
   freshKeyHash,
   freshSafeHash,
   lookupKeyPair,
   submitTx,
   submitFailingTx,
   trySubmitTx,
-  impExpectFailure,
-  impExpectSuccess,
   logEntry,
   modifyNES,
   getsNES,
-  impIO,
-  impIOMsg,
+  impAnn,
   mkTxWits,
   impNESL,
   runImpRule,
   registerRewardAccount,
   constitutionShouldBe,
-  predicateFailureShouldBe,
+  withImpState,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
@@ -69,19 +69,7 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (
-  Era (..),
-  EraIndependentTxBody,
-  EraRule,
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  EraTxWits (..),
-  PParams,
-  ProtVerAtMost,
-  emptyPParams,
-  setMinFeeTx,
- )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
@@ -119,23 +107,14 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded)
 import Cardano.Ledger.Shelley.TxCert
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Control.Exception (Exception (..), SomeException (..), throwIO)
-import Control.Monad (void)
-import Control.Monad.State.Strict (
-  MonadState (..),
-  MonadTrans (..),
-  StateT (..),
-  execStateT,
-  gets,
-  modify,
- )
-import Control.Monad.Trans.Reader (ReaderT (..))
-import qualified Control.Monad.Trans.State.Strict as M
+import Control.Monad.IO.Class
+import Control.Monad.Reader (MonadReader)
+import Control.Monad.State.Strict (MonadState (..), gets, modify)
+import Control.Monad.Trans.Reader (ReaderT (..), ask)
 import Control.State.Transition (STS (..), TRC (..))
 import Control.State.Transition.Trace (applySTSTest)
 import qualified Data.ByteString as BS
@@ -143,6 +122,7 @@ import Data.Coerce (coerce)
 import Data.Data (Proxy (..))
 import Data.Default.Class (Default (..))
 import Data.Functor.Identity (Identity (..))
+import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, fromMaybe)
@@ -150,16 +130,26 @@ import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import GHC.Stack (SrcLoc (..), getCallStack)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Lens.Micro
-import Lens.Micro.Mtl
+import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (^.))
+import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line)
 import Prettyprinter.Render.String (renderString)
-import Test.Cardano.Ledger.Binary.TreeDiff (showExpr)
-import Test.Cardano.Ledger.Common (HasCallStack, Spec, it, shouldBe)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals)
-import UnliftIO (catchAnyDeep)
+import Test.Cardano.Ledger.Imp.Common
+import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
+import Test.Hspec.Core.Spec (Example (..))
+import UnliftIO (MonadUnliftIO)
+import UnliftIO.Exception (
+  Exception (..),
+  SomeException (..),
+  catchAny,
+  catchAnyDeep,
+  evaluateDeep,
+  throwIO,
+ )
 
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
@@ -190,6 +180,18 @@ impRootTxIdL = lens impRootTxId (\x y -> x {impRootTxId = y})
 class
   ( Show (NewEpochState era)
   , ToExpr (NewEpochState era)
+  , ToExpr (TxOut era)
+  , ToExpr (PParams era)
+  , ToExpr (StashedAVVMAddresses era)
+  , ToExpr (GovState era)
+  , Show (TxOut era)
+  , Show (PParams era)
+  , Show (StashedAVVMAddresses era)
+  , Show (GovState era)
+  , Eq (TxOut era)
+  , Eq (PParams era)
+  , Eq (StashedAVVMAddresses era)
+  , Eq (GovState era)
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , STS (EraRule "LEDGER" era)
@@ -352,8 +354,49 @@ shelleyImpWitsVKeyNeeded nes txb = shelleyWitsVKeyNeeded utxo txb genDelegs
     utxo = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
     genDelegs = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
 
-newtype ImpTestM era a = ImpTestM (M.StateT (ImpTestState era) IO a)
-  deriving (Functor, Applicative, Monad, MonadState (ImpTestState era))
+newtype ImpTestM era a = ImpTestM (ReaderT (IORef (ImpTestState era)) IO a)
+  deriving
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadIO
+    , MonadUnliftIO
+    , MonadReader (IORef (ImpTestState era))
+    )
+
+instance MonadState (ImpTestState era) (ImpTestM era) where
+  get = ImpTestM $ do
+    liftIO . readIORef =<< ask
+  put x = ImpTestM $ do
+    liftIO . flip writeIORef x =<< ask
+
+instance Example (ImpTestM era ()) where
+  type Arg (ImpTestM era ()) = ImpTestState era
+
+  evaluateExample (ImpTestM m) = evaluateExample $ \arg -> do
+    ioRef <- newIORef arg
+    runReaderT m ioRef `catchAny` \exc -> do
+      logsDoc <- impLog <$> readIORef ioRef
+      let logs = renderString (layoutPretty defaultLayoutOptions logsDoc)
+          adjustHUnitExc header (HUnitFailure srcLoc failReason) =
+            toException $
+              HUnitFailure srcLoc $
+                case failReason of
+                  Reason msg -> Reason $ logs <> "\n" <> header <> msg
+                  ExpectedButGot Nothing expected got ->
+                    ExpectedButGot (Just $ logs <> header) expected got
+                  ExpectedButGot (Just msg) expected got ->
+                    ExpectedButGot (Just (logs <> "\n" <> header <> msg)) expected got
+          newExc
+            | Just hUnitExc <- fromException exc =
+                adjustHUnitExc [] hUnitExc
+            | Just (ImpException ann excThrown) <- fromException exc =
+                let header = unlines $ zipWith (\n str -> replicate n ' ' <> str) [0, 2 ..] ann
+                 in case fromException excThrown of
+                      Nothing -> toException $ ImpException [logs, header] excThrown
+                      Just hUnitExc -> adjustHUnitExc header hUnitExc
+            | otherwise = toException $ ImpException [logs] exc
+      throwIO newExc
 
 runShelleyBase :: Globals -> ShelleyBase a -> a
 runShelleyBase globals act = runIdentity $ runReaderT act globals
@@ -429,8 +472,9 @@ submitFailingTx ::
   , ShelleyEraImp era
   ) =>
   Tx era ->
+  [PredicateFailure (EraRule "LEDGER" era)] ->
   ImpTestM era ()
-submitFailingTx tx = trySubmitTx tx >>= impExpectFailure
+submitFailingTx tx expectedFailure = trySubmitTx tx >>= (`shouldBeLeftExpr` expectedFailure)
 
 runImpRule ::
   forall rule era.
@@ -451,10 +495,10 @@ runImpRule stsEnv stsState stsSignal = do
   case runShelleyBase globals (applySTSTest @(EraRule rule era) trc) of
     Left [] -> error $ "Impossible: STS rule failed without a predicate failure"
     Left fs ->
-      impIO . error $
+      assertFailure $
         unlines $
           ("Failed to run " <> ruleName <> ":") : map show fs
-    Right res -> pure res
+    Right res -> evaluateDeep res
 
 -- | Runs the TICK rule once
 passTick ::
@@ -498,49 +542,55 @@ passEpoch = do
   tickUntilNewEpoch startEpoch
 
 -- | Stores extra information about the failure of the unit test
-data ImpException e = ImpException
-  { ieLog :: Doc ()
-  -- ^ Log entries up to the point where the test failed
-  , ieDescription :: String
+data ImpException = ImpException
+  { ieAnnotation :: [String]
   -- ^ Description of the IO action that caused the failure
-  , ieThrownException :: e
+  , ieThrownException :: SomeException
   -- ^ Exception that caused the test to fail
   }
 
-instance Exception e => Show (ImpException e) where
-  show (ImpException msgLog msg e) =
+instance Show ImpException where
+  show (ImpException ann e) =
     "Log:\n"
-      <> renderString (layoutPretty defaultLayoutOptions msgLog)
-      <> "\nFailed at:\n\t"
-      <> msg
-      <> "\nException:\n\t"
+      <> unlines ann
+      <> "\nFailed with Exception:\n\t"
       <> displayException e
+instance Exception ImpException
 
-instance Exception e => Exception (ImpException e)
+-- | Annotation for when failure happens
+impAnn :: NFData a => String -> ImpTestM era a -> ImpTestM era a
+impAnn msg m = do
+  catchAnyDeep m $ \exc ->
+    throwIO $
+      case fromException exc of
+        Just (ImpException ann origExc) -> ImpException (msg : ann) origExc
+        Nothing -> ImpException [msg] exc
 
 -- | Adds a string to the log, which is only shown if the test fails
-logEntry :: String -> ImpTestM era ()
-logEntry e = impLogL %= (<> pretty e <> line)
+logEntry :: HasCallStack => String -> ImpTestM era ()
+logEntry e = impLogL %= (<> pretty loc <> "\t" <> pretty e <> line)
+  where
+    formatSrcLoc srcLoc =
+      "[" <> srcLocModule srcLoc <> ":" <> show (srcLocStartLine srcLoc) <> "]\n"
+    loc =
+      case getCallStack ?callStack of
+        (_, srcLoc) : _ -> formatSrcLoc srcLoc
+        _ -> ""
 
--- | Make the `ImpTestM` into a Spec item with the given description
-itM ::
-  forall era a.
-  ShelleyEraImp era =>
-  String ->
-  ImpTestM era a ->
-  Spec
-itM desc (ImpTestM m) =
-  it desc . void . execStateT m $
-    ImpTestState
-      { impNES = emptyImpNES rootCoin
-      , impRootTxCoin = rootCoin
-      , impRootTxId = TxId (mkDummySafeHash Proxy 0)
-      , impSafeHashIdx = 0
-      , impKeyPairs = mempty
-      , impLastTick = 0
-      , impGlobals = testGlobals
-      , impLog = mempty
-      }
+withImpState :: ShelleyEraImp era => SpecWith (ImpTestState era) -> Spec
+withImpState =
+  beforeAll $
+    pure
+      ImpTestState
+        { impNES = emptyImpNES rootCoin
+        , impRootTxCoin = rootCoin
+        , impRootTxId = TxId (mkDummySafeHash Proxy 0)
+        , impSafeHashIdx = 0
+        , impKeyPairs = mempty
+        , impLastTick = 0
+        , impGlobals = testGlobals
+        , impLog = mempty
+        }
   where
     rootCoin = Coin 1_000_000_000
 
@@ -612,18 +662,6 @@ modifyNES = (impNESL %=)
 getsNES :: SimpleGetter (NewEpochState era) a -> ImpTestM era a
 getsNES l = gets . view $ impNESL . l
 
--- | Runs an IO action and throws an @ImpException@ with the given message on
--- failure
-impIOMsg :: NFData a => String -> IO a -> ImpTestM era a
-impIOMsg msg m = ImpTestM $ do
-  logs <- gets impLog
-  lift . catchAnyDeep m $ \(SomeException e) -> throwIO $ ImpException logs msg e
-
--- | Runs an IO action and throws an @ImpException@ with a generic message on
--- failure
-impIO :: NFData a => IO a -> ImpTestM era a
-impIO = impIOMsg ""
-
 submitTx ::
   ( HasCallStack
   , ShelleyEraImp era
@@ -631,7 +669,7 @@ submitTx ::
   String ->
   Tx era ->
   ImpTestM era (TxId (EraCrypto era))
-submitTx msg tx = logEntry msg >> trySubmitTx tx >>= impExpectSuccess
+submitTx msg tx = logEntry msg >> trySubmitTx tx >>= expectRightDeepExpr
 
 registerRewardAccount ::
   forall era.
@@ -659,28 +697,6 @@ registerRewardAccount = do
   networkId <- use (to impGlobals . to networkId)
   pure $ RewardAcnt networkId stakingCredential
 
-impExpectSuccess :: (HasCallStack, NFData a, ToExpr e, Show e) => Either e a -> ImpTestM era a
-impExpectSuccess (Right x) = pure x
-impExpectSuccess (Left err) =
-  impIO . error $
-    "Expected success, got:\n" <> showExpr err <> "\n" <> show err
-
-impExpectFailure :: HasCallStack => Either a b -> ImpTestM era ()
-impExpectFailure (Right _) = impIO . error $ "Expected a failure, but got a success"
-impExpectFailure (Left _) = pure ()
-
-predicateFailureShouldBe ::
-  ( Eq (PredicateFailure (EraRule rule era))
-  , Show (PredicateFailure (EraRule rule era))
-  ) =>
-  PredicateFailure (EraRule rule era) ->
-  Either [PredicateFailure (EraRule rule era)] right ->
-  ImpTestM era ()
-predicateFailureShouldBe pf = \case
-  Right _ -> impIO $ error "Expected a predicate failure, but got success"
-  Left [pf'] -> impIO $ pf `shouldBe` pf'
-  Left _ -> impIO $ error "Expected a single predicate failure, but got more"
-
 -- | Asserts that the URL of the current constitution is equal to the given
 -- string
 constitutionShouldBe :: (HasCallStack, EraGov era) => String -> ImpTestM era ()
@@ -689,9 +705,9 @@ constitutionShouldBe cUrl = do
     getsNES $
       nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . to getConstitution
   Constitution {constitutionAnchor = Anchor {anchorUrl}} <-
-    impIOMsg "Expecting a constitution" $ do
+    impAnn "Expecting a constitution" $ do
       pure $
         fromMaybe
           (error "No constitution has been set")
           constitution
-  impIO $ anchorUrl `shouldBe` fromJust (textToUrl $ T.pack cUrl)
+  anchorUrl `shouldBe` fromJust (textToUrl $ T.pack cUrl)
