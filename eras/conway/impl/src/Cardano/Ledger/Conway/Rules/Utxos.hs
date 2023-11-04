@@ -12,6 +12,7 @@
 
 module Cardano.Ledger.Conway.Rules.Utxos (ConwayUTXOS) where
 
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
@@ -21,7 +22,6 @@ import Cardano.Ledger.Alonzo.Rules (
   validEnd,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,

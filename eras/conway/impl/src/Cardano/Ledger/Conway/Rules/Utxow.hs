@@ -20,6 +20,7 @@ where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
@@ -29,7 +30,6 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,

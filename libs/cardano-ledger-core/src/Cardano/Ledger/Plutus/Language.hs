@@ -187,7 +187,7 @@ fromSLanguage = \case
   SPlutusV3 -> PlutusV3
 
 -- | For implicit reflection on '@SLanguage@'
--- See "Cardano.Ledger.Alonzo.TxInfo" for example usage
+-- See "Cardano.Ledger.Alonzo.Plutus.TxInfo" for example usage
 class Typeable l => IsLanguage (l :: Language) where
   isLanguage :: SLanguage l
 

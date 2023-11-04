@@ -13,18 +13,18 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
-import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectPlutusScriptsWithContext)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Tx (
-  ScriptPurpose (..),
- )
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   PlutusWithContext (..),
   TranslationError,
   VersionedTxInfo,
   txInfo,
   valContext,
+ )
+import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectPlutusScriptsWithContext)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Tx (
+  ScriptPurpose (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)

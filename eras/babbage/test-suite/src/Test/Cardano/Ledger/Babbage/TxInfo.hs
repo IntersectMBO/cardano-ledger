@@ -8,14 +8,14 @@ module Test.Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   ExtendedUTxO (..),
   TranslationError (..),
   TxOutSource (..),
   VersionedTxInfo (..),
   txInfo,
  )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))
 import Cardano.Ledger.Babbage.TxBody (Datum (..))

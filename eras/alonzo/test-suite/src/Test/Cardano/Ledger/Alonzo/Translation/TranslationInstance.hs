@@ -48,7 +48,7 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V3.Contexts as PV3
 
-import Cardano.Ledger.Alonzo.TxInfo (VersionedTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (VersionedTxInfo)
 import PlutusTx.Ratio as PlutusTx
 
 import Data.Typeable (Typeable)

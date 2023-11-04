@@ -12,10 +12,10 @@
 module Test.Cardano.Ledger.Generic.Functions where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (languages)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
-import Cardano.Ledger.Alonzo.TxInfo (languages)
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxOut (..),
   Datum (..),
@@ -374,9 +374,9 @@ languagesUsed proof tx utxo sNeeded = case proof of
   (Shelley _) -> Set.empty
   (Allegra _) -> Set.empty
   (Mary _) -> Set.empty
-  (Alonzo _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo sNeeded
-  (Babbage _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo sNeeded
-  (Conway _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo sNeeded
+  (Alonzo _) -> Cardano.Ledger.Alonzo.Plutus.TxInfo.languages tx utxo sNeeded
+  (Babbage _) -> Cardano.Ledger.Alonzo.Plutus.TxInfo.languages tx utxo sNeeded
+  (Conway _) -> Cardano.Ledger.Alonzo.Plutus.TxInfo.languages tx utxo sNeeded
 {-# NOINLINE languagesUsed #-}
 
 -- | Compute the total Ada from Ada pots within 't'

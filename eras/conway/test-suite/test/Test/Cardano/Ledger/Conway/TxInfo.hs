@@ -4,7 +4,7 @@
 
 module Test.Cardano.Ledger.Conway.TxInfo where
 
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..))
 import qualified Cardano.Ledger.Babbage.TxBody as B
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Plutus.Language (Language (..))

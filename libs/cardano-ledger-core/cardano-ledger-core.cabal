@@ -56,6 +56,8 @@ library
         Cardano.Ledger.Plutus.Data
         Cardano.Ledger.Plutus.ExUnits
         Cardano.Ledger.Plutus.Language
+        Cardano.Ledger.Plutus.TxInfo
+        Cardano.Ledger.Plutus.Evaluate
         Cardano.Ledger.Rewards
         Cardano.Ledger.Rules.ValidationMode
         Cardano.Ledger.SafeHash
@@ -111,6 +113,8 @@ library
         nothunks,
         partial-order,
         plutus-ledger-api,
+        plutus-core,
+        prettyprinter,
         quiet,
         serialise,
         scientific,
@@ -123,6 +127,7 @@ library
         time,
         transformers,
         tree-diff,
+        utf8-string,
         validation-selective,
         vector-map >=1.0
 

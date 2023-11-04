@@ -35,6 +35,13 @@ where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
+  EraPlutusContext,
+  ExtendedUTxO (..),
+  PlutusDebug (..),
+  ScriptFailure (..),
+  ScriptResult (..),
+ )
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
   CollectError (..),
   collectPlutusScriptsWithContext,
@@ -46,13 +53,6 @@ import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   MaryEraTxBody (..),
   ShelleyEraTxBody (..),
- )
-import Cardano.Ledger.Alonzo.TxInfo (
-  EraPlutusContext,
-  ExtendedUTxO (..),
-  PlutusDebug (..),
-  ScriptFailure (..),
-  ScriptResult (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)

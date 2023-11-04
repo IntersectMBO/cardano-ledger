@@ -46,7 +46,6 @@ import Cardano.Ledger.Binary (
   EncCBOR (encCBOR),
   ToCBOR (toCBOR),
   cborError,
-  getVersion64,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (Ann, D, From, Invalid, SumD, Summands),
@@ -69,17 +68,17 @@ import Cardano.Ledger.Plutus.Language (
   Plutus (..),
   guardPlutus,
  )
+import Cardano.Ledger.Plutus.TxInfo (transProtocolVersion)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Data.Aeson (ToJSON (..), Value (String))
 import Data.Either (isRight)
-import Data.Word (Word64, Word8)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import qualified PlutusLedgerApi.V1 as PV1 (
-  MajorProtocolVersion (MajorProtocolVersion),
   ScriptDecodeError,
   ScriptForEvaluation,
   deserialiseScript,
@@ -230,10 +229,6 @@ validScript pv script =
           eWellFormed :: Either PV1.ScriptDecodeError PV1.ScriptForEvaluation
           eWellFormed = deserialiseScript (transProtocolVersion pv) bytes
        in isRight eWellFormed
-
-transProtocolVersion :: ProtVer -> PV1.MajorProtocolVersion
-transProtocolVersion (ProtVer major _minor) =
-  PV1.MajorProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major))
 
 -- | Check the equality of two underlying types, while ignoring their binary
 -- representation, which `Eq` instance normally does. This is used for testing.

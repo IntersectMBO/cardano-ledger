@@ -29,6 +29,7 @@ import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..), languages)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUTXO,
   AlonzoUtxoEvent,
@@ -45,7 +46,6 @@ import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   ScriptIntegrityHash,
  )
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), languages)
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
   RdmrPtr,

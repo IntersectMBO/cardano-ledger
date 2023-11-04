@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   assertTranslationResultsMatchGolden,
 ) where
 
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (Language)

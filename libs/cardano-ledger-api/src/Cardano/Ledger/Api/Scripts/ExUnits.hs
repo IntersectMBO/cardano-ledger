@@ -22,17 +22,7 @@ module Cardano.Ledger.Api.Scripts.ExUnits (
 where
 
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoScript (..),
-  CostModel,
-  CostModels (..),
-  ExUnits (..),
-  getEvaluationContext,
- )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   EraPlutusContext,
   ExtendedUTxO (..),
   PlutusData (..),
@@ -45,6 +35,16 @@ import Cardano.Ledger.Alonzo.TxInfo (
   transProtocolVersion,
   valContext,
  )
+import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoScript (..),
+  CostModel,
+  CostModels (..),
+  ExUnits (..),
+  getEvaluationContext,
+ )
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
   RdmrPtr (..),

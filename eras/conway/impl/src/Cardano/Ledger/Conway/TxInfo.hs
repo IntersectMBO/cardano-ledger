@@ -13,15 +13,15 @@
 module Cardano.Ledger.Conway.TxInfo (conwayTxInfo) where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   EraPlutusContext,
   TranslationError (..),
   VersionedTxInfo (..),
   unTxCertV3,
  )
-import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
+import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), RdmrPtr, unRedeemers, unTxDats)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfoV1, babbageTxInfoV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as B

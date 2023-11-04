@@ -32,9 +32,7 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi (
 where
 
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   EraPlutusContext,
   ExtendedUTxO (..),
   PlutusWithContext (..),
@@ -43,6 +41,8 @@ import Cardano.Ledger.Alonzo.TxInfo (
   runPlutusScriptWithLogs,
   valContext,
  )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (getSpendingDatum),

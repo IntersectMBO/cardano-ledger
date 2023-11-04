@@ -19,6 +19,7 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
   babbageEvalScriptsTxInvalid,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
@@ -36,7 +37,6 @@ import Cardano.Ledger.Alonzo.Rules (
   when2Phase,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core

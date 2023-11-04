@@ -13,12 +13,12 @@ module Test.Cardano.Ledger.Alonzo.PlutusScriptExamples (
 where
 
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   PlutusWithContext (..),
   ScriptResult (Fails, Passes),
   runPlutusScript,
  )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..))
