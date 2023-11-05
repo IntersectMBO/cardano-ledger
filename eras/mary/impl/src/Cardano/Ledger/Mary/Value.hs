@@ -285,10 +285,6 @@ roundupBytesToWords b = quot (b + wordLength - 1) wordLength
 -- ==============================================================
 -- CBOR
 
--- TODO filter out 0s at deserialization
--- TODO Probably the actual serialization will be of the formal Coin OR Value type
--- Maybe better to make this distinction in the TxOut de/serialization
-
 decodeValue ::
   forall c s.
   Crypto c =>
