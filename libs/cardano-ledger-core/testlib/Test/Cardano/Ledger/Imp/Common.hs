@@ -27,10 +27,12 @@ module Test.Cardano.Ledger.Imp.Common (
   shouldBeRightExpr,
   shouldBeLeftExpr,
   expectRight,
+  expectRightDeep_,
   expectRightDeep,
   expectRightExpr,
   expectRightDeepExpr,
   expectLeft,
+  expectLeftDeep_,
   expectLeftExpr,
   expectLeftDeep,
   expectLeftDeepExpr,
@@ -46,10 +48,12 @@ import Test.Cardano.Ledger.Common as X hiding (
   expectLeft,
   expectLeftDeep,
   expectLeftDeepExpr,
+  expectLeftDeep_,
   expectLeftExpr,
   expectRight,
   expectRightDeep,
   expectRightDeepExpr,
+  expectRightDeep_,
   expectRightExpr,
   expectationFailure,
   shouldBe,
@@ -176,10 +180,14 @@ shouldNotReturn f a = withRunInIO $ \run -> H.shouldNotReturn (run f) a
 shouldThrow :: (HasCallStack, Exception e, MonadUnliftIO m) => m a -> Selector e -> m ()
 shouldThrow f s = withRunInIO $ \run -> H.shouldThrow (run f) s
 
--- | Return value on the `Right` an fail otherwise. Lifted version of `H.expectRight`.
+-- | Return value on the `Right` and fail otherwise. Lifted version of `H.expectRight`.
 expectRight :: (HasCallStack, Show a, MonadIO m) => Either a b -> m b
 expectRight (Right r) = pure $! r
 expectRight (Left l) = assertFailure $ "Expected Right, got Left:\n" <> show l
+
+-- | Same as `expectRightDeep`, but discards the result
+expectRightDeep_ :: (HasCallStack, Show a, NFData b, MonadIO m) => Either a b -> m ()
+expectRightDeep_ = void . expectRightDeep
 
 -- | Same as `expectRight`, but also evaluate the returned value to NF
 expectRightDeep :: (HasCallStack, Show a, NFData b, MonadIO m) => Either a b -> m b
@@ -202,10 +210,14 @@ shouldBeRight e x = expectRight e >>= (`shouldBe` x)
 shouldBeRightExpr :: (HasCallStack, ToExpr a, Eq b, ToExpr b, MonadIO m) => Either a b -> b -> m ()
 shouldBeRightExpr e x = expectRightExpr e >>= (`shouldBeExpr` x)
 
--- | Return value on the `Left` an fail otherwise
+-- | Return value on the `Left` and fail otherwise
 expectLeft :: (HasCallStack, Show b, MonadIO m) => Either a b -> m a
 expectLeft (Left l) = pure $! l
 expectLeft (Right r) = assertFailure $ "Expected Left, got Right:\n" <> show r
+
+-- | Same as `expectLeftDeep`, but discards the result
+expectLeftDeep_ :: (HasCallStack, MonadIO m, Show b, NFData a) => Either a b -> m ()
+expectLeftDeep_ = void . expectLeftDeep
 
 -- | Same as `expectLeft`, but also evaluate the returned value to NF
 expectLeftDeep :: (HasCallStack, NFData a, Show b, MonadIO m) => Either a b -> m a

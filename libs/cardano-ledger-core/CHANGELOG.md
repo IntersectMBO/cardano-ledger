@@ -9,6 +9,11 @@
 * Change the type of `ppEMaxL` and `ppuEMaxL`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 
+### `testlib`
+
+* Add `diffExprCompact`
+* Add `expectLeftDeep_`, `expectRightDeep_`
+
 ## 1.9.0.0
 
 * Add `certsTotalDepositsTxBody` and `certsTotalRefundsTxBody`

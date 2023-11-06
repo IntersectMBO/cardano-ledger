@@ -180,6 +180,9 @@ cradle:
     - path: "libs/cardano-ledger-conformance/src"
       component: "lib:cardano-ledger-conformance"
 
+    - path: "libs/cardano-ledger-conformance/test"
+      component: "cardano-ledger-conformance:test:tests"
+
     - path: "libs/cardano-ledger-core/src"
       component: "lib:cardano-ledger-core"
 

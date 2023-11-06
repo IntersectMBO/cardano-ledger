@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   HexBytes (..),
   showExpr,
   diffExpr,
+  diffExprCompact,
   diffExprNoColor,
   hexByteStringExpr,
   showHexBytesGrouped,
@@ -84,6 +85,9 @@ diffExpr x y = show (ansiWlEditExpr (ediff x y))
 
 diffExprNoColor :: ToExpr a => a -> a -> String
 diffExprNoColor x y = show (prettyEditExpr (ediff x y))
+
+diffExprCompact :: ToExpr a => a -> a -> String
+diffExprCompact x y = show (ansiWlEditExprCompact (ediff x y))
 
 -- | Wraps regular ByteString, but shows and diffs it as hex
 newtype HexBytes = HexBytes {unHexBytes :: BS.ByteString}

@@ -8,6 +8,12 @@
 
 ### `testlib`
 
+* Add:
+  `fixupFees`
+  `impLastTickL`
+  `withNoFixup`
+  `ImpTestEnv`
+  `iteDoFixupL`
 * Add `runImpTestM`, `runImpTestM_`, `evalImpTestM` and `execImpTestM`
 * Add instance `Example (a -> ImpTestM era ())`, which allows use of `Arbitrary`
 * Add `getNextEpochCommitteeMembers` to `EraGov` typeclass, with a default empty implementation

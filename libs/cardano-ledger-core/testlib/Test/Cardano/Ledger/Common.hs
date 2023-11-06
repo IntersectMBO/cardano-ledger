@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Common (
   ToExpr (..),
   showExpr,
   diffExpr,
+  diffExprCompact,
 
   -- * Expectations
   assertBool,
@@ -21,17 +22,19 @@ module Test.Cardano.Ledger.Common (
   shouldBeLeftExpr,
   expectRight,
   expectRightDeep,
+  expectRightDeep_,
   expectRightExpr,
   expectRightDeepExpr,
   expectLeft,
   expectLeftExpr,
   expectLeftDeep,
+  expectLeftDeep_,
   expectLeftDeepExpr,
 )
 where
 
 import Control.DeepSeq (NFData)
-import Control.Monad as X (forM_, unless, when, (>=>))
+import Control.Monad as X (forM_, unless, void, when, (>=>))
 import System.IO (
   BufferMode (LineBuffering),
   hSetBuffering,
@@ -42,6 +45,7 @@ import System.IO (
 import Test.Cardano.Ledger.Binary.TreeDiff (
   ToExpr (..),
   diffExpr,
+  diffExprCompact,
   expectExprEqualWithMessage,
   showExpr,
  )
@@ -86,6 +90,10 @@ expectRight (Left l) = assertFailure $ "Expected Right, got Left:\n" <> show l
 expectRightDeep :: (HasCallStack, Show a, NFData b) => Either a b -> IO b
 expectRightDeep = expectRight >=> evaluateDeep
 
+-- | Same as `expectRightDeep`, but discards the result
+expectRightDeep_ :: (HasCallStack, Show a, NFData b) => Either a b -> IO ()
+expectRightDeep_ = void . expectRightDeep
+
 -- | Same as `expectRight`, but use `ToExpr` instead of `Show`
 expectRightExpr :: (HasCallStack, ToExpr a) => Either a b -> IO b
 expectRightExpr (Right r) = pure $! r
@@ -111,6 +119,10 @@ expectLeft (Right r) = assertFailure $ "Expected Left, got Right:\n" <> show r
 -- | Same as `expectLeft`, but also evaluate the returned value to NF
 expectLeftDeep :: (HasCallStack, NFData a, Show b) => Either a b -> IO a
 expectLeftDeep = expectLeft >=> evaluateDeep
+
+-- | Same as `expectLeftDeep`, but discards the result
+expectLeftDeep_ :: (HasCallStack, NFData a, Show b) => Either a b -> IO ()
+expectLeftDeep_ = void . expectLeftDeep
 
 -- | Same as `expectLeft`, but use `ToExpr` instead of `Show`
 expectLeftExpr :: (HasCallStack, ToExpr b) => Either a b -> IO a

@@ -1,8 +1,13 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,6 +17,7 @@
 
 module Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
+  spec,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
@@ -20,8 +26,8 @@ import Cardano.Ledger.Address (Addr (..), serialiseAddr)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoScript, AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
-import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices, Tag (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels, ExUnits (..), Prices, Tag (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
   RdmrPtr (..),
@@ -33,7 +39,7 @@ import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   ProtVer (..),
   SlotNo (..),
-  StrictMaybe,
+  StrictMaybe (..),
   TxIx (..),
   getVersion,
   strictMaybeToMaybe,
@@ -41,22 +47,29 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (
   AlonzoEraTxBody (..),
+  BabbageEraTxBody (..),
   CoinPerByte (..),
+  Era (..),
+  EraPParams (..),
+  EraRule,
   EraScript (..),
   EraTxWits (..),
+  PParams (..),
   vldtTxBodyL,
  )
+import Cardano.Ledger.Conway.Governance (GovAction (..), ProposalProcedure (..), VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
   DRepVotingThresholds,
   PoolVotingThresholds,
   THKD (..),
  )
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Core (
-  Era,
   EraIndependentData,
   EraIndependentScriptIntegrity,
   EraIndependentTxBody,
@@ -64,40 +77,91 @@ import Cardano.Ledger.Core (
   EraTxAuxData (..),
   EraTxBody (..),
   EraTxOut (..),
-  PParams,
  )
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (KeyHash (..), VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
+import Cardano.Ledger.Shelley.LedgerState (
+  NewEpochState,
+  UTxOState (..),
+  certDStateL,
+  curPParamsEpochStateL,
+  dsGenDelegsL,
+  esLStateL,
+  lsCertStateL,
+  lsUTxOStateL,
+  nesEsL,
+  totalObligation,
+  utxosDepositedL,
+  utxosGovStateL,
+  utxosUtxoL,
+ )
 import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad.RWS.Class (asks, gets, modify)
+import Control.State.Transition.Extended (STS (..))
 import Data.Bitraversable (bimapM)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import Data.Coerce (Coercible, coerce)
 import Data.Data (Typeable)
+import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
+import qualified Data.List as L
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
+import Data.Semigroup (Sum (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Word (Word32, Word64)
-import Lens.Micro ((^.))
+import Lens.Micro (to, (.~), (^.))
+import Lens.Micro.Extras (view)
 import qualified Lib as Agda
+import Test.Cardano.Ledger.Conformance.Orphans ()
+import Test.Cardano.Ledger.Constrained.Preds.Tx (genTxAndNewEpoch)
+import Test.Cardano.Ledger.Constrained.Preds.Universes (UnivSize (..))
+import Test.Cardano.Ledger.Conway.ImpTest (
+  ImpTestEnv (..),
+  ImpTestM,
+  ImpTestState,
+  evalImpTestM,
+  fixupFees,
+  getsNES,
+  impAnn,
+  impLastTickL,
+  logEntry,
+  modifyNES,
+  trySubmitTx,
+  withImpState,
+  withNoFixup,
+ )
+import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
+import Test.Cardano.Ledger.Imp.Common
 
 type SpecTranslationError = Text
 
 class SpecTranslate a where
   type SpecRep a
+  type TestRep a
+  type TestRep a = SpecRep a
 
   toSpecRep :: a -> Either SpecTranslationError (SpecRep a)
+
+  specToTestRep :: SpecRep a -> TestRep a
+  default specToTestRep :: Coercible (SpecRep a) (TestRep a) => SpecRep a -> TestRep a
+  specToTestRep = coerce
+
+  toTestRep :: a -> Either SpecTranslationError (TestRep a)
+  toTestRep x = specToTestRep @a <$> toSpecRep x
 
 instance SpecTranslate TxIx where
   type SpecRep TxIx = Integer
@@ -108,9 +172,6 @@ instance SpecTranslate (TxIn era) where
   type SpecRep (TxIn era) = Agda.TxIn
 
   toSpecRep (TxIn txId txIx) = toSpecRep (txId, txIx)
-
-byteStringToInteger :: ByteString -> Integer
-byteStringToInteger = BS.foldr' (\x y -> y * 256 + toInteger x) 0
 
 instance SpecTranslate (Addr era) where
   type SpecRep (Addr era) = Agda.Addr
@@ -152,11 +213,15 @@ instance SpecTranslate Integer where
 
 deriving instance SpecTranslate Coin
 
-deriving instance
+instance
   ( SpecTranslate (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
   ) =>
   SpecTranslate (UTxO era)
+  where
+  type SpecRep (UTxO era) = SpecRep (Map (TxIn (EraCrypto era)) (TxOut era))
+  toSpecRep (UTxO m) = toSpecRep m
+  specToTestRep = L.sortOn fst
 
 instance
   ( SpecTranslate (TxOut era)
@@ -170,6 +235,10 @@ instance
     Agda.MkUTxOState
       <$> toSpecRep (utxosUtxo x)
       <*> toSpecRep (utxosFees x)
+
+  specToTestRep x@(Agda.MkUTxOState _ _) =
+    let Agda.MkUTxOState {..} = x
+     in Agda.MkUTxOState (specToTestRep @(UTxO era) utxo) (specToTestRep @Coin fees)
 
 deriving instance SpecTranslate SlotNo
 
@@ -229,7 +298,7 @@ instance SpecTranslate (ConwayPParams Identity era) where
       <*> Right (toInteger . unTHKD $ cppMaxTxSize x)
       <*> Right (toInteger . unTHKD $ cppMaxBHSize x)
       <*> Right (toInteger . unTHKD $ cppMaxValSize x)
-      <*> Right (error "minUTxO is not in Conway, do not use this field")
+      <*> Right 0
       <*> toSpecRep (cppPoolDeposit x)
       <*> toSpecRep (cppEMax x)
       <*> toSpecRep (cppProtocolVersion x)
@@ -255,6 +324,14 @@ instance SpecTranslate (ConwayPParams Identity era) where
       <*> Right (toInteger . unTHKD $ cppMaxCollateralInputs x)
 
 instance
+  SpecTranslate (PParamsHKD Identity era) =>
+  SpecTranslate (PParams era)
+  where
+  type SpecRep (PParams era) = SpecRep (PParamsHKD Identity era)
+
+  toSpecRep (PParams x) = toSpecRep x
+
+instance
   ( SpecTranslate (PParams era)
   , SpecRep (PParams era) ~ Agda.PParams
   ) =>
@@ -267,10 +344,12 @@ instance
       <$> toSpecRep (ueSlot x)
       <*> toSpecRep (uePParams x)
 
-instance SpecTranslate a => SpecTranslate (Set a) where
+instance (SpecTranslate a, Ord (SpecRep a)) => SpecTranslate (Set a) where
   type SpecRep (Set a) = [SpecRep a]
 
   toSpecRep = traverse toSpecRep . Set.toList
+  specToTestRep = L.sort
+  toTestRep = toSpecRep
 
 instance SpecTranslate a => SpecTranslate (StrictSeq a) where
   type SpecRep (StrictSeq a) = [SpecRep a]
@@ -315,10 +394,18 @@ instance Era era => SpecTranslate (TxDats era) where
 
   toSpecRep (TxDats x) = toSpecRep x
 
-instance (SpecTranslate k, SpecTranslate v) => SpecTranslate (Map k v) where
+instance
+  ( SpecTranslate k
+  , SpecTranslate v
+  , Ord (SpecRep k)
+  ) =>
+  SpecTranslate (Map k v)
+  where
   type SpecRep (Map k v) = [(SpecRep k, SpecRep v)]
 
   toSpecRep = traverse (bimapM toSpecRep toSpecRep) . Map.toList
+  specToTestRep = L.sortOn fst
+  toTestRep = toSpecRep
 
 instance SpecTranslate Tag where
   type SpecRep Tag = Agda.Tag
@@ -406,8 +493,7 @@ toAgdaTxBody tx =
     <*> toSpecRep (tx ^. bodyTxL . scriptIntegrityHashTxBodyL)
 
 instance
-  ( SpecRep (TxBody era) ~ Agda.TxBody
-  , SpecTranslate (TxWits era)
+  ( SpecTranslate (TxWits era)
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecTranslate (TxAuxData era)
   , SpecRep (TxAuxData era) ~ Agda.AuxiliaryData
@@ -426,3 +512,164 @@ instance
       <$> toAgdaTxBody @era tx
       <*> toSpecRep (wits tx)
       <*> toSpecRep (auxiliaryData tx)
+
+trySubmitTxConform_ :: Tx Conway -> ImpTestM Conway ()
+trySubmitTxConform_ = void . trySubmitTxConform
+
+trySubmitTxConform ::
+  Tx Conway ->
+  ImpTestM
+    Conway
+    ( Either
+        [PredicateFailure (EraRule "LEDGER" Conway)]
+        (TxId (EraCrypto Conway))
+    )
+trySubmitTxConform txPreFixup = do
+  nes <- getsNES id
+  doFixup <- asks iteDoTxFixup
+  tx <-
+    if doFixup
+      then fixupFees txPreFixup
+      else pure txPreFixup
+  let
+  agdaUtxoState <- expectRight . toSpecRep $ nes ^. nesEsL . esLStateL . lsUTxOStateL
+  agdaTx <- expectRight $ toSpecRep tx
+  lastTick <- gets $ view impLastTickL
+  pParams <- getsNES $ nesEsL . curPParamsEpochStateL
+  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+  let
+    utxoEnv =
+      UtxoEnv
+        { ueSlot = lastTick
+        , uePParams = pParams
+        , ueGenDelegs = certState ^. certDStateL . dsGenDelegsL
+        , ueCertState = certState
+        }
+  agdaUtxoEnv <- expectRight $ toSpecRep utxoEnv
+  let
+    newAgdaUtxoState = Agda.utxoStep agdaUtxoEnv agdaUtxoState agdaTx
+  -- We already applied the fixup above, so no point doing it again
+  submitRes <- withNoFixup $ trySubmitTx tx
+  newUtxoState <- getsNES $ nesEsL . esLStateL . lsUTxOStateL
+  let
+    finalAgdaState :: Maybe Agda.UTxOState
+    finalAgdaState =
+      specToTestRep @(UTxOState Conway) <$> newAgdaUtxoState
+    initialState = Just . toExpr $ specToTestRep @(UTxOState Conway) agdaUtxoState
+  finalImplState :: Maybe Agda.UTxOState <- do
+    impAnn "Failed to submit transaction on the implementation side" $
+      expectRightDeep_ submitRes
+    pure . either (const Nothing) Just $ toTestRep newUtxoState
+  unless (finalAgdaState == finalImplState) $ do
+    logEntry $
+      "Changes in spec Utxo state:\n"
+        ++ diffExprCompact (toExpr initialState) (toExpr finalAgdaState)
+    logEntry $
+      "Changes in impl Utxo state:\n"
+        ++ diffExprCompact (toExpr initialState) (toExpr finalImplState)
+    expectationFailure "The final states of spec and implementation do not match"
+  pure submitRes
+
+conformsWhen :: (NewEpochState Conway -> Tx Conway -> Bool) -> ImpTestState Conway -> Property
+conformsWhen condition impState =
+  let
+    us =
+      def
+        { usMinCerts = 0
+        , usMaxCerts = 0
+        , usDatumFreq = 0
+        , usGenerateWithdrawals = False
+        , usNumPreUtxo = 3
+        , usNumColUtxo = 3
+        , usMinInputs = 1
+        , usMaxInputs = 3
+        , usMinCollaterals = 1
+        , usMaxCollaterals = 3
+        }
+    gen = genTxAndNewEpoch us $ reify @Conway
+   in
+    forAllBlind gen $ \(nes, tx, _env) ->
+      condition nes tx
+        ==> evalImpTestM impState
+        $ do
+          modify (impLastTickL @Conway .~ 100)
+          modifyNES $ const nes
+          logTxSummary tx
+          withNoFixup $ trySubmitTxConform_ tx
+
+txIsValid :: AlonzoEraTx era => Tx era -> Bool
+txIsValid tx = (tx ^. isValidTxL) == IsValid True
+
+spec :: HasCallStack => Spec
+spec = describe "Conway conformance tests" . withImpState $ do
+  it "Simple tx" $ do
+    do
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      govState <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+      totalObligation certState govState `shouldBe` zero
+    do
+      deposited <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
+      deposited `shouldBe` zero
+    res <- trySubmitTxConform $ mkBasicTx mkBasicTxBody
+    expectRightDeep_ res
+  describe "Constrained generator" $ do
+    it "UTXO conforms when IsValid True" $ conformsWhen (const txIsValid)
+
+logTxSummary :: Tx Conway -> ImpTestM Conway ()
+logTxSummary tx = do
+  UTxO utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  let
+    txb = tx ^. bodyTxL
+    ins = toList $ txb ^. inputsTxBodyL
+    collIns = toList $ txb ^. collateralInputsTxBodyL
+    outs = toList $ txb ^. outputsTxBodyL
+    collRet = txb ^. collateralReturnTxBodyL
+    showTxId = ("  " ++) . showExpr . byteStringToInteger . hashToBytes . extractHash
+    txInToOut txIn = fromJust (Map.lookup txIn utxo)
+    showScript (BabbageTxOut _ _ _ script) =
+      case script of
+        SJust (TimelockScript _) -> "(Timelock)"
+        SJust (PlutusScript _) -> "(Plutus)"
+        SNothing -> ""
+    showTxIn txIn@(TxIn (TxId txId) (TxIx i)) = showTxId txId ++ " #" ++ show i ++ showScript (txInToOut txIn)
+    bodyHash = hashAnnotated txb
+    showTxOut :: BabbageTxOut Conway -> Int -> [Char]
+    showTxOut txOut i = "  " ++ show valCoin ++ " (" ++ show (getSum $ foldMap (Sum . sum) maMap) ++ ") #" ++ show @Int i ++ " " ++ showScript txOut
+      where
+        MaryValue valCoin (MultiAsset maMap) = txOut ^. valueTxOutL
+    showProposal (ProposalProcedure {pProcGovAction}) =
+      "  " ++ case pProcGovAction of
+        ParameterChange {} -> "ParameterChange"
+        HardForkInitiation {} -> "HardForkInitiation"
+        TreasuryWithdrawals {} -> "TreasuryWithdrawals"
+        NoConfidence {} -> "NoConfidence"
+        UpdateCommittee {} -> "UpdateCommittee"
+        NewConstitution {} -> "NewConstitution"
+        InfoAction {} -> "InfoAction"
+    showProposals = showProposal <$> toList (txb ^. proposalProceduresTxBodyL)
+    showVotes = show <$> Map.toList (txb ^. votingProceduresTxBodyL . to unVotingProcedures)
+  logEntry . unlines $
+    concat
+      [ pure ""
+      , pure "bodyHash:"
+      , pure $ showTxId bodyHash
+      , pure "inputs:"
+      , showTxIn <$> ins
+      , pure "collateral inputs:"
+      , showTxIn <$> collIns
+      , pure "outputs:"
+      , zipWith showTxOut outs [0 ..]
+      , pure "collateral return:"
+      , case collRet of
+          SJust cr -> pure . showTxOut cr $ length outs
+          SNothing -> pure "no collateral return"
+      , pure "proposals:"
+      , showProposals
+      , pure "votes:"
+      , showVotes
+      , pure $ "donation: " ++ show (txb ^. treasuryDonationTxBodyL)
+      , pure $ show (tx ^. isValidTxL)
+      ]
+
+byteStringToInteger :: ByteString -> Integer
+byteStringToInteger = BS.foldr' (\x y -> y * 256 + toInteger x) 0

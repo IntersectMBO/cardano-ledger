@@ -88,9 +88,9 @@ ledgerStatePreds usize p =
   , Sized (Range 0 1) currProposals
   , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit) :$ (Simple currProposals))
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
-    MetaSize (SzRng 90 (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (mazsize collateral 3)
+    MetaSize (SzRng (usNumPreUtxo usize) (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (mazsize collateral 3)
   , Sized utxoSize preUtxo
-  , Sized (Range 15 (usNumColUtxo usize)) colUtxo
+  , Sized (Range (usNumColUtxo usize) (usNumColUtxo usize)) colUtxo
   , MapMember feeTxIn feeTxOut (Right preUtxo)
   , Subset (Dom preUtxo) txinUniv
   , Subset (Rng preUtxo) (txoutUniv p)
