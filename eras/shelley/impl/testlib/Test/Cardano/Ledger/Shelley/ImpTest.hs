@@ -157,8 +157,9 @@ import UnliftIO.Exception (
   throwIO,
  )
 
-data ImpTestState era = ImpTestState
+data ImpTestStateWith s era = ImpTestState
   { impNES :: !(NewEpochState era)
+  , impCustomState :: !s
   , impRootTxCoin :: !Coin
   , impRootTxId :: !(TxId (EraCrypto era))
   , impSafeHashIdx :: !Int
@@ -168,6 +169,8 @@ data ImpTestState era = ImpTestState
   , impLog :: !(Doc ())
   , impDoFixup :: !Bool
   }
+
+type ImpTestState = ImpTestStateWith ()
 
 impLogL :: Lens' (ImpTestState era) (Doc ())
 impLogL = lens impLog (\x y -> x {impLog = y})
@@ -610,6 +613,7 @@ withImpState =
     pure
       ImpTestState
         { impNES = emptyImpNES rootCoin
+        , impCustomState = ()
         , impRootTxCoin = rootCoin
         , impRootTxId = TxId (mkDummySafeHash Proxy 0)
         , impSafeHashIdx = 0
