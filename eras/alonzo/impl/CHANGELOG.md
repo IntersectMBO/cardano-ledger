@@ -2,6 +2,8 @@
 
 ## 1.5.1.0
 
+* Add `evalScriptsWithLogs`, `evalPlutusScriptsWithLogs` and `runPlutusScriptWithLogs`
+
 ### `testlib`
 
 * Provide CDDL spec files with `readAlonzoCddlFileNames` and `readAlonzoCddlFiles` from
