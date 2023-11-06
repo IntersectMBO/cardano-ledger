@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..))
 import Control.Monad.Writer (runWriterT)
 import Data.Bifunctor (bimap)
 import Data.ByteString.Short (ShortByteString)
@@ -80,7 +80,7 @@ directPlutusTest expectation script ds =
 getRawPlutusScript :: String -> AlonzoScript () -> ShortByteString
 getRawPlutusScript name =
   \case
-    PlutusScript (Plutus _ (BinaryPlutus sbs)) -> sbs
+    PlutusScript (Plutus _ (PlutusBinary sbs)) -> sbs
     _ -> error $ "Should not happen '" ++ name ++ "' is a plutus script"
 
 -- | Expects 3 args (data, redeemer, context)

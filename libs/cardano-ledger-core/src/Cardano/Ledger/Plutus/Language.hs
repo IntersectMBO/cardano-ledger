@@ -19,7 +19,7 @@
 module Cardano.Ledger.Plutus.Language (
   -- * Plutus Script
   Plutus (..),
-  BinaryPlutus (..),
+  PlutusBinary (..),
 
   -- * Value level Plutus Language version
   Language (..),
@@ -71,7 +71,7 @@ import NoThunks.Class (NoThunks)
 
 data Plutus = Plutus
   { plutusLanguage :: !Language
-  , plutusScript :: !BinaryPlutus
+  , plutusScript :: !PlutusBinary
   }
   deriving stock (Eq, Ord, Show, Generic)
 
@@ -82,18 +82,18 @@ instance NFData Plutus where
 instance NoThunks Plutus
 
 -- | Binary representation of a Plutus script.
-newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}
+newtype PlutusBinary = PlutusBinary {unPlutusBinary :: ShortByteString}
   deriving stock (Eq, Ord, Generic)
   deriving newtype (ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData, NoThunks)
 
-instance Show BinaryPlutus where
-  show = show . B64.encode . fromShort . unBinaryPlutus
+instance Show PlutusBinary where
+  show = show . B64.encode . fromShort . unPlutusBinary
 
-instance DecCBOR (Annotator BinaryPlutus) where
+instance DecCBOR (Annotator PlutusBinary) where
   decCBOR = pure <$> decCBOR
 
-instance SafeToHash BinaryPlutus where
-  originalBytes (BinaryPlutus binaryBlutus) = fromShort binaryBlutus
+instance SafeToHash PlutusBinary where
+  originalBytes (PlutusBinary binaryBlutus) = fromShort binaryBlutus
 
 -- | Non-Native Plutus Script language. This is expected to be an open type. We will add
 -- new Constuctors to this type as additional Plutus language versions as are added.  We

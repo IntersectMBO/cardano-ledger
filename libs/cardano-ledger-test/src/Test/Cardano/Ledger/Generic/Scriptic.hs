@@ -16,7 +16,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
-import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..))
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.Map.Strict as Map
@@ -118,8 +118,8 @@ instance forall c. Crypto c => HasTokens (ConwayEra c) where
 unTime :: Era era => Proof era -> (Proof era -> AlonzoScript era) -> Timelock era
 unTime wit f = case f wit of
   TimelockScript x -> x
-  PlutusScript (Plutus _ (BinaryPlutus "\SOH\NUL\NUL \ACK\SOH")) -> RequireAnyOf mempty
-  PlutusScript (Plutus _ (BinaryPlutus "\SOH\NUL\NUL \STX\NUL\NUL\DC1")) -> RequireAllOf mempty
+  PlutusScript (Plutus _ (PlutusBinary "\SOH\NUL\NUL \ACK\SOH")) -> RequireAnyOf mempty
+  PlutusScript (Plutus _ (PlutusBinary "\SOH\NUL\NUL \STX\NUL\NUL\DC1")) -> RequireAllOf mempty
   PlutusScript _ -> error "Plutus script in Timelock context"
 
 instance Crypto c => Scriptic (AlonzoEra c) where

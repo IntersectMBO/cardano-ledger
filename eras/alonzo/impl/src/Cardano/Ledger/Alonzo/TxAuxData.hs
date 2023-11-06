@@ -42,7 +42,7 @@ import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), BinaryPlutus (..), validScript)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), PlutusBinary (..), validScript)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
@@ -91,7 +91,7 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 data AlonzoTxAuxDataRaw era = AlonzoTxAuxDataRaw
   { atadrMetadata :: !(Map Word64 Metadatum)
   , atadrTimelock :: !(StrictSeq (Timelock era))
-  , atadrPlutus :: !(Map Language (NE.NonEmpty BinaryPlutus))
+  , atadrPlutus :: !(Map Language (NE.NonEmpty PlutusBinary))
   }
   deriving (Generic)
 
@@ -295,7 +295,7 @@ pattern AlonzoTxAuxData ::
   Era era =>
   Map Word64 Metadatum ->
   StrictSeq (Timelock era) ->
-  Map Language (NE.NonEmpty BinaryPlutus) ->
+  Map Language (NE.NonEmpty PlutusBinary) ->
   AlonzoTxAuxData era
 pattern AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} <-
   (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata atadTimelock atadPlutus)

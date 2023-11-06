@@ -74,7 +74,7 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
   hashData,
  )
-import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..), nonNativeLanguages)
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..), nonNativeLanguages)
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Shelley.TxWits (keyBy)
@@ -448,11 +448,11 @@ instance Arbitrary AlonzoGenesis where
 
 alwaysSucceeds :: Language -> Natural -> AlonzoScript era
 alwaysSucceeds lang n =
-  PlutusScript (Plutus lang (BinaryPlutus (Plutus.alwaysSucceedingNAryFunction n)))
+  PlutusScript (Plutus lang (PlutusBinary (Plutus.alwaysSucceedingNAryFunction n)))
 
 alwaysFails :: Language -> Natural -> AlonzoScript era
 alwaysFails lang n =
-  PlutusScript (Plutus lang (BinaryPlutus (Plutus.alwaysFailingNAryFunction n)))
+  PlutusScript (Plutus lang (PlutusBinary (Plutus.alwaysFailingNAryFunction n)))
 
 -- | This Arbitrary instance assumes the flexible deserialization
 -- scheme of 'CostModels' starting at version 9.

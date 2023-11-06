@@ -56,10 +56,10 @@ import Cardano.Ledger.Plutus.CostModels (
 import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.Plutus.Language (
-  BinaryPlutus (..),
   IsLanguage (..),
   Language (..),
   Plutus (..),
+  PlutusBinary (..),
   SLanguage (..),
   fromSLanguage,
   withSLanguage,
@@ -127,7 +127,7 @@ data PlutusDebugLang (l :: Language) where
     { pdSLanguage :: SLanguage l
     , pdCostModel :: CostModel
     , pdExUnits :: ExUnits
-    , pdPlutusScript :: BinaryPlutus
+    , pdPlutusScript :: PlutusBinary
     , pdPlutusData :: PlutusData
     , pdProtVer :: ProtVer
     } ->
@@ -215,7 +215,7 @@ debugPlutus version db =
                   v = PV1.Verbose
                   cm = getEvaluationContext costModel
                   eu = transExUnits exUnits
-                  BinaryPlutus script = binaryScript
+                  PlutusBinary script = binaryScript
                   PlutusData d = pData
                in case sl of
                     SPlutusV1 ->
@@ -294,7 +294,7 @@ runPlutusScriptWithLogs pv pwc@PlutusWithContext {pwcScript, pwcDatums, pwcExUni
         PV1.Quiet
         (getEvaluationContext pwcCostModel)
         (transExUnits pwcExUnits)
-        (unBinaryPlutus scriptBytes)
+        (unPlutusBinary scriptBytes)
         (map getPlutusData pwcDatums)
     plutusPV = transProtocolVersion pv
     plutusInterpreter PlutusV1 = deserialiseAndEvaluateScript PlutusV1 plutusPV

@@ -71,7 +71,7 @@ runPLCScript ::
 runPLCScript _ pv lang cm scriptBytes units ds =
   runPlutusScript pv $
     PlutusWithContext
-      { pwcScript = Plutus lang (BinaryPlutus scriptBytes)
+      { pwcScript = Plutus lang (PlutusBinary scriptBytes)
       , pwcDatums = map (Data @era) ds
       , pwcExUnits = units
       , pwcCostModel = cm
@@ -95,7 +95,7 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
   where
     pwc =
       PlutusWithContext
-        { pwcScript = Plutus lang (BinaryPlutus scriptbytestring)
+        { pwcScript = Plutus lang (PlutusBinary scriptbytestring)
         , pwcDatums = map (Data @era) ds
         , pwcExUnits = eu
         , pwcCostModel = cm

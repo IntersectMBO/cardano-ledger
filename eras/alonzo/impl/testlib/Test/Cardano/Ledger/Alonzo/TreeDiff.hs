@@ -14,8 +14,8 @@ module Test.Cardano.Ledger.Alonzo.TreeDiff (
 
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.Evaluate
 import Cardano.Ledger.Alonzo.Plutus.TxInfo
-import Cardano.Ledger.Alonzo.PlutusScriptApi
 import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx

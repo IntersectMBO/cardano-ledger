@@ -21,7 +21,7 @@
 
 module Cardano.Ledger.Alonzo.Scripts (
   Tag (..),
-  BinaryPlutus (..),
+  PlutusBinary (..),
   AlonzoScript (TimelockScript, PlutusScript),
   Script,
   isPlutusScript,
@@ -63,9 +63,9 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language (
-  BinaryPlutus (..),
   Language (..),
   Plutus (..),
+  PlutusBinary (..),
   guardPlutus,
  )
 import Cardano.Ledger.Plutus.TxInfo (transProtocolVersion)
@@ -215,7 +215,7 @@ validScript :: ProtVer -> AlonzoScript era -> Bool
 validScript pv script =
   case script of
     TimelockScript sc -> deepseq sc True
-    PlutusScript (Plutus lang (BinaryPlutus bytes)) ->
+    PlutusScript (Plutus lang (PlutusBinary bytes)) ->
       let deserialiseScript =
             case lang of
               PlutusV1 -> PV1.deserialiseScript

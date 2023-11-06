@@ -54,7 +54,7 @@ import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -162,7 +162,7 @@ collectTwoPhaseScriptInputs ::
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   map unwrap <$> collectPlutusScriptsWithContext ei sysS pp tx utxo
   where
-    unwrap (PlutusWithContext (Plutus lang (BinaryPlutus scriptBytes)) args exUnits costModel) =
+    unwrap (PlutusWithContext (Plutus lang (PlutusBinary scriptBytes)) args exUnits costModel) =
       (scriptBytes, lang, args, exUnits, costModel)
 {-# DEPRECATED collectTwoPhaseScriptInputs "In favor of `collectPlutusScriptsWithContext`" #-}
 
@@ -266,7 +266,7 @@ evalScriptsWithLogs pv tx scripts =
   evalPlutusScriptsWithLogs pv tx scripts'
   where
     scripts' =
-      [ PlutusWithContext (Plutus lang (BinaryPlutus pscript)) ds units cost
+      [ PlutusWithContext (Plutus lang (PlutusBinary pscript)) ds units cost
       | (pscript, lang, ds, units, cost) <- scripts
       ]
 {-# DEPRECATED evalScripts "In favor of `evalPlutusScripts`" #-}

@@ -55,7 +55,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Plutus.Data (Data, Datum (..), binaryDataToData, getPlutusData)
-import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
@@ -344,7 +344,7 @@ evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
         _ -> pure [rdmr, valContext inf sp]
       let pArgs = map getPlutusData args
 
-      case interpreter lang (getEvaluationContext cm) maxBudget (unBinaryPlutus script) pArgs of
+      case interpreter lang (getEvaluationContext cm) maxBudget (unPlutusBinary script) pArgs of
         (logs, Left e) -> case lang of
           PlutusV1 ->
             let debug = PlutusDebugLang SPlutusV1 cm exunits script (PlutusData pArgs) protVer

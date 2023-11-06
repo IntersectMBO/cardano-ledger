@@ -83,7 +83,7 @@ instance ToExpr (SafeHash c index) where
 -- Language
 instance ToExpr Plutus
 
-instance ToExpr BinaryPlutus
+instance ToExpr PlutusBinary
 
 instance ToExpr Language
 
