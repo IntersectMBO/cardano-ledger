@@ -502,7 +502,7 @@ txBodyPreds sizes@UnivSize {usGenerateWithdrawals} p =
     ++ [ mint :<-: (Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend)) ^$ (outputs p) ^$ spending)
        , networkID :<-: justTarget network
        , -- inputs
-         Sized (Range 2 10) inputs
+         Sized (Range 1 3) inputs
        , Member (Left feeTxIn) inputs
        , Subset inputs (Dom (utxo p))
        , -- collateral

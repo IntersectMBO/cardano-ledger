@@ -14,6 +14,8 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
@@ -133,8 +135,7 @@ import Test.Cardano.Ledger.Common (
   diffExprCompact,
   it,
   showExpr,
-  unless,
-  xit,
+  unless, fit,
  )
 import Test.Cardano.Ledger.Constrained.Preds.Tx (genTxAndNewEpoch)
 import Test.Cardano.Ledger.Constrained.Preds.Universes (UnivSize (..))
@@ -222,11 +223,15 @@ instance SpecTranslate Integer where
 
 deriving instance SpecTranslate Coin
 
-deriving instance
+instance
   ( SpecTranslate (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
   ) =>
   SpecTranslate (UTxO era)
+  where
+    type SpecRep (UTxO era) = SpecRep (Map (TxIn (EraCrypto era)) (TxOut era))
+    toSpecRep (UTxO m) = toSpecRep m
+    specToTestRep = L.sortOn fst
 
 instance
   ( SpecTranslate (TxOut era)
@@ -240,6 +245,10 @@ instance
     Agda.MkUTxOState
       <$> toSpecRep (utxosUtxo x)
       <*> toSpecRep (utxosFees x)
+
+  specToTestRep x@(Agda.MkUTxOState _ _) =
+    let Agda.MkUTxOState {..} = x
+     in Agda.MkUTxOState (specToTestRep @(UTxO era) utxo) (specToTestRep @Coin fees)
 
 deriving instance SpecTranslate SlotNo
 
@@ -342,6 +351,7 @@ instance
     Agda.MkUTxOEnv
       <$> toSpecRep (ueSlot x)
       <*> toSpecRep (uePParams x)
+
 
 instance (SpecTranslate a, Ord (SpecRep a)) => SpecTranslate (Set a) where
   type SpecRep (Set a) = [SpecRep a]
@@ -603,7 +613,7 @@ trySubmitTxConform txUnfixed = do
           "Failed to submit transaction on the implementation side:\n"
             <> show e
   unless (finalAgdaState == finalImplState) $ do
-    logEntry $ diffExprCompact (toExpr finalAgdaState) (toExpr finalImplState)
+    logEntry $ diffExprCompact finalAgdaState finalImplState
     fail "The final states of spec and implementation do not match"
   pure submitRes
 
@@ -624,7 +634,7 @@ spec = describe "Conway conformance tests" . withImpState $ do
     case res of
       Right _ -> pure ()
       Left e -> error $ show e
-  xit "Constrained generator" $ do
+  it "Constrained generator" $ do
     let
       us =
         def
@@ -632,6 +642,8 @@ spec = describe "Conway conformance tests" . withImpState $ do
           , usMaxCerts = 0
           , usDatumFreq = 0
           , usGenerateWithdrawals = False
+          , usNumPreUtxo = 3
+          , usNumColUtxo = 3
           }
     modify $ \x ->
       x
