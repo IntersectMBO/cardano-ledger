@@ -95,14 +95,13 @@ instance DecCBOR (Annotator BinaryPlutus) where
 instance SafeToHash BinaryPlutus where
   originalBytes (BinaryPlutus binaryBlutus) = fromShort binaryBlutus
 
--- | Non-Native Script language. This is an Enumerated type.
--- This is expected to be an open type. We will add new Constuctors
--- to this type as additional Non-Native scripting language as are added.
--- We use an enumerated type for two reasons.
--- 1) We can write total functions by case analysis over the constructors
--- 2) We will use DataKinds to make some datatypes  indexed by Language
--- For now, the only Non-Native Scriting language is Plutus
--- We might add new languages in the futures.
+-- | Non-Native Plutus Script language. This is expected to be an open type. We will add
+-- new Constuctors to this type as additional Plutus language versions as are added.  We
+-- use an enumerated type for two reasons.
+--
+-- 1. We can write total functions by case analysis over the constructors
+--
+-- 2. We use DataKinds to make some datatypes indexed by Language.
 --
 -- Note that the the serialization of 'Language' depends on the ordering.
 data Language
