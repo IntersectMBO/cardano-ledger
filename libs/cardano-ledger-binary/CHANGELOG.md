@@ -4,6 +4,10 @@
 
 * Moved `ToExpr` instances out of the main library and into the testlib.
 
+### `testlib`
+
+* Add `diffExprCompact`
+
 ## 1.2.1.0
 
 * Export `decodeListLikeEnforceNoDuplicates` #3791

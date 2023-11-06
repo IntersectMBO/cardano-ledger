@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -67,7 +68,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovState,
   DRepPulsingState (DRComplete),
   EnactState (..),
-  GovAction,
+  GovAction (..),
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
@@ -112,7 +113,10 @@ import Cardano.Ledger.Conway.Rules (
   validCommitteeTerm,
   withdrawalCanWithdraw,
  )
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Conway.TxBody (
+  ConwayEraTxBody (..),
+  proposalProceduresTxBodyL,
+ )
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert (..),
   Delegatee (..),
@@ -145,9 +149,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsCommitteeStateL,
   vsDRepsL,
  )
-import Cardano.Ledger.TxIn (TxId)
+import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..))
-import Control.Monad (void)
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))

@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,7 +6,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -29,9 +27,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   evalImpTestM,
   execImpTestM,
   ImpTestState,
+  ImpTestEnv (..),
   ImpException (..),
   ShelleyEraImp (..),
-  logStakeDistr,
   emptyShelleyImpNES,
   shelleyImpWitsVKeyNeeded,
   modifyPrevPParams,
@@ -43,17 +41,24 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitTx,
   submitFailingTx,
   trySubmitTx,
-  logEntry,
   modifyNES,
   getsNES,
   impAnn,
   mkTxWits,
-  impNESL,
   runImpRule,
   registerRewardAccount,
   getRewardAccountAmount,
   constitutionShouldBe,
   withImpState,
+  fixupFees,
+  -- Logging
+  logEntry,
+  logStakeDistr,
+  -- Combinators
+  withNoFixup,
+  -- Lenses
+  impNESL,
+  impLastTickL,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
@@ -119,11 +124,10 @@ import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (void)
 import Control.Monad.IO.Class
-import Control.Monad.Reader (MonadReader)
+import Control.Monad.Reader (MonadReader (..), asks)
 import Control.Monad.State.Strict (MonadState (..), gets, modify)
-import Control.Monad.Trans.Reader (ReaderT (..), ask)
+import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.State.Transition (STS (..), TRC (..))
 import Control.State.Transition.Trace (applySTSTest)
 import qualified Data.ByteString as BS
@@ -365,21 +369,31 @@ shelleyImpWitsVKeyNeeded nes txb = shelleyWitsVKeyNeeded utxo txb genDelegs
     utxo = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
     genDelegs = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
 
-newtype ImpTestM era a = ImpTestM (ReaderT (IORef (ImpTestState era)) IO a)
+data ImpTestEnv era = ImpTestEnv
+  { iteState :: !(IORef (ImpTestState era))
+  , iteDoTxFixup :: !Bool
+  -- ^ This flag is used to toggle the fixing up of transactions. If it
+  -- is set to False then any transaction should be submitted as-is.
+  }
+
+iteDoTxFixupL :: Lens' (ImpTestEnv era) Bool
+iteDoTxFixupL = lens iteDoTxFixup (\x y -> x {iteDoTxFixup = y})
+
+newtype ImpTestM era a = ImpTestM (ReaderT (ImpTestEnv era) IO a)
   deriving
     ( Functor
     , Applicative
     , Monad
     , MonadIO
     , MonadUnliftIO
-    , MonadReader (IORef (ImpTestState era))
+    , MonadReader (ImpTestEnv era)
     )
 
 instance MonadState (ImpTestState era) (ImpTestM era) where
   get = ImpTestM $ do
-    liftIO . readIORef =<< ask
+    liftIO . readIORef . iteState =<< ask
   put x = ImpTestM $ do
-    liftIO . flip writeIORef x =<< ask
+    liftIO . flip writeIORef x . iteState =<< ask
 
 instance Example (ImpTestM era ()) where
   type Arg (ImpTestM era ()) = ImpTestState era
@@ -403,8 +417,14 @@ runImpTestM_ impState = void . runImpTestM impState
 runImpTestM :: ImpTestState era -> ImpTestM era b -> IO (b, ImpTestState era)
 runImpTestM impState (ImpTestM m) = do
   ioRef <- newIORef impState
+  let
+    env =
+      ImpTestEnv
+        { iteState = ioRef
+        , iteDoTxFixup = True
+        }
   res <-
-    runReaderT m ioRef `catchAny` \exc -> do
+    runReaderT m env `catchAny` \exc -> do
       logsDoc <- impLog <$> readIORef ioRef
       let logs = renderString (layoutPretty defaultLayoutOptions logsDoc)
           adjustHUnitExc header (HUnitFailure srcLoc failReason) =
@@ -483,7 +503,11 @@ submitTx_ ::
     )
 submitTx_ tx = do
   st <- gets impNES
-  txFixed <- fixupFees tx
+  doFixup <- asks iteDoTxFixup
+  txFixed <-
+    if doFixup
+      then fixupFees tx
+      else pure tx
   lEnv <- impLedgerEnv st
   globals <- use $ to impGlobals
   let
@@ -535,7 +559,7 @@ runImpRule stsEnv stsState stsSignal = do
       ruleName = symbolVal (Proxy @rule)
   globals <- use $ to impGlobals
   case runShelleyBase globals (applySTSTest @(EraRule rule era) trc) of
-    Left [] -> error $ "Impossible: STS rule failed without a predicate failure"
+    Left [] -> error "Impossible: STS rule failed without a predicate failure"
     Left fs ->
       assertFailure $
         unlines $
@@ -735,7 +759,7 @@ registerRewardAccount = do
           .~ SSeq.fromList
             [ mkBasicTxOut
                 (mkAddr (kpSpending, kpDelegator))
-                (inject $ Coin 10000000)
+                (inject $ Coin 10_000_000)
             ]
         & bodyTxL . certsTxBodyL
           .~ SSeq.fromList [RegTxCert @era stakingCredential]
@@ -756,3 +780,7 @@ constitutionShouldBe cUrl = do
           (error "No constitution has been set")
           constitution
   anchorUrl `shouldBe` fromJust (textToUrl $ T.pack cUrl)
+
+-- | Performs the action without running the fix-up function on any transactions
+withNoFixup :: ImpTestM era a -> ImpTestM era a
+withNoFixup = local $ iteDoTxFixupL .~ False
