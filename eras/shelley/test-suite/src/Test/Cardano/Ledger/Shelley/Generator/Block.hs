@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Block (
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BHeaderView (bhviewBSize)
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Shelley.API hiding (vKey)
@@ -22,13 +23,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.API
-import Cardano.Protocol.TPraos.BHeader (
-  BHeader (..),
-  LastAppliedBlock (..),
-  hashHeaderToNonce,
-  mkSeed,
-  seedL,
- )
+import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..), hashHeaderToNonce, makeHeaderView, mkSeed, seedL)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCertEnv (..), currentIssueNo, kesPeriod)
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot (..), lookupInOverlaySchedule)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
@@ -70,7 +65,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
   testGlobals,
  )
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, discard)
 import qualified Test.QuickCheck as QC (choose)
 
 -- ======================================================
@@ -160,20 +155,24 @@ genBlockWithTxGen
             then error "no issue number available"
             else fromIntegral m
         oCert = mkOCert keys issueNumber (fst $ NE.head hotKeys)
-
-    mkBlock
-      <$> pure hashheader
-      <*> pure keys
-      <*> toList
-      <$> genTxs pp acnt ls nextSlot
-      <*> pure nextSlot
-      <*> pure (block + 1)
-      <*> pure (chainEpochNonce chainSt)
-      <*> pure kesPeriod_
-      -- This seems to be trying to work out the start of the KES "era",
-      -- e.g. the KES period in which this key starts to be valid.
-      <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
-      <*> pure oCert
+    theBlock <-
+      mkBlock
+        <$> pure hashheader
+        <*> pure keys
+        <*> toList
+        <$> genTxs pp acnt ls nextSlot
+        <*> pure nextSlot
+        <*> pure (block + 1)
+        <*> pure (chainEpochNonce chainSt)
+        <*> pure kesPeriod_
+        -- This seems to be trying to work out the start of the KES "era",
+        -- e.g. the KES period in which this key starts to be valid.
+        <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
+        <*> pure oCert
+    let hView = makeHeaderView (bheader theBlock)
+    if bhviewBSize hView <= pp ^. ppMaxBBSizeL
+      then pure theBlock
+      else discard
     where
       -- This is safe to take form the original chain state, since we only tick
       -- it forward; no new blocks will have been applied.
