@@ -1,8 +1,15 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.8.0.1
+## 1.8.1.0
 
 *
+
+### `testlib`
+
+* Add:
+  `fixupFees`
+  `impLastTickL`
+  `impDoFixupL`
 
 ## 1.8.0.0
 

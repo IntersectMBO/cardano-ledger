@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -96,6 +97,10 @@ data UnivSize = UnivSize
   , usNumPreUtxo :: Int -- must be smaller than numTxIn
   , usNumColUtxo :: Int -- max size of the UTxo = numPreUtxo + numColUtxo
   , usNumDReps :: Int -- Should be less than the number of numCredentials
+  , usMinCerts :: Int
+  , usMaxCerts :: Int
+  , usDatumFreq :: Int
+  , usGenerateWithdrawals :: Bool
   }
 
 instance Default UnivSize where
@@ -118,6 +123,10 @@ instance Default UnivSize where
       , usNumPreUtxo = 100 -- must be smaller than numTxIn
       , usNumColUtxo = 20 -- max size of the UTxo = numPreUtxo + numColUtxo
       , usNumDReps = 20 -- -- Should be less than the number of numCredentials
+      , usMaxCerts = 6
+      , usMinCerts = 4
+      , usDatumFreq = 1
+      , usGenerateWithdrawals = True
       }
 
 -- ============================================================
@@ -192,15 +201,15 @@ bootWitness hash bootaddrs byronuniv = List.foldl' accum Set.empty bootaddrs
 -- Datums
 
 -- | The universe of non-empty Datums. i.e. There are no NoDatum Datums in this list
-genDatums :: Era era => Int -> Map (DataHash (EraCrypto era)) (Data era) -> Gen [Datum era]
-genDatums n datauniv = vectorOf n (genDatum datauniv)
+genDatums :: Era era => UnivSize -> Int -> Map (DataHash (EraCrypto era)) (Data era) -> Gen [Datum era]
+genDatums sizes n datauniv = vectorOf n (genDatum sizes datauniv)
 
 -- | Only generate non-empty Datums. I.e. There are no NoDatum Datums generated.
-genDatum :: Era era => Map (DataHash (EraCrypto era)) (Data era) -> Gen (Datum era)
-genDatum datauniv =
-  oneof
-    [ DatumHash . fst <$> genFromMap ["from genDatums DatumHash case"] datauniv
-    , Datum . dataToBinaryData . snd <$> genFromMap ["from genDatums Datum case"] datauniv
+genDatum :: Era era => UnivSize -> Map (DataHash (EraCrypto era)) (Data era) -> Gen (Datum era)
+genDatum UnivSize {usDatumFreq} datauniv =
+  frequency
+    [ (1, DatumHash . fst <$> genFromMap ["from genDatums DatumHash case"] datauniv)
+    , (usDatumFreq, Datum . dataToBinaryData . snd <$> genFromMap ["from genDatums Datum case"] datauniv)
     ]
 
 -- ==============
@@ -209,6 +218,7 @@ genDatum datauniv =
 
 genTxOut ::
   Reflect era =>
+  UnivSize ->
   (Coin -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (Value era)) ->
   Proof era ->
   Coin ->
@@ -217,7 +227,7 @@ genTxOut ::
   Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
   Map (DataHash (EraCrypto era)) (Data era) ->
   Gen (TxOut era)
-genTxOut genvalue p c addruniv scriptuniv spendscriptuniv datauniv =
+genTxOut sizes genvalue p c addruniv scriptuniv spendscriptuniv datauniv =
   case whichTxOut p of
     TxOutShelleyToMary ->
       ShelleyTxOut <$> pick1 ["genTxOut ShelleyToMary Addr"] addruniv <*> genvalue c scriptuniv
@@ -241,7 +251,7 @@ genTxOut genvalue p c addruniv scriptuniv spendscriptuniv datauniv =
         AddrBootstrap _ -> pure $ BabbageTxOut addr v NoDatum maybescript
         Addr _ paycred _ ->
           if needsDatum paycred spendscriptuniv
-            then BabbageTxOut addr v <$> genDatum datauniv <*> pure maybescript
+            then BabbageTxOut addr v <$> genDatum sizes datauniv <*> pure maybescript
             else pure $ BabbageTxOut addr v NoDatum maybescript
 
 needsDatum :: EraScript era => Credential 'Payment (EraCrypto era) -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Bool
@@ -252,6 +262,7 @@ needsDatum _ _ = False
 
 genTxOuts ::
   Reflect era =>
+  UnivSize ->
   (Coin -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (Value era)) ->
   Proof era ->
   Int ->
@@ -260,10 +271,10 @@ genTxOuts ::
   Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
   Map (DataHash (EraCrypto era)) (Data era) ->
   Gen [TxOutF era]
-genTxOuts genvalue p ntxouts addruniv scriptuniv spendscriptuniv datauniv = do
+genTxOuts sizes genvalue p ntxouts addruniv scriptuniv spendscriptuniv datauniv = do
   let genOne = do
         c <- noZeroCoin
-        genTxOut genvalue p c addruniv scriptuniv spendscriptuniv datauniv
+        genTxOut sizes genvalue p c addruniv scriptuniv spendscriptuniv datauniv
   vectorOf ntxouts (TxOutF p <$> genOne)
 
 -- ==================================================================
@@ -490,7 +501,7 @@ universePreds size p =
   , spendCredsUniv :<-: listToSetTarget spendcredList
   , currentEpoch :<-: (Constr "epochFromSlotNo" epochFromSlotNo ^$ currentSlot)
   , GenFrom dataUniv (Constr "dataWits" (genDataWits p) ^$ (Lit IntR 30))
-  , GenFrom datumsUniv (Constr "genDatums" (genDatums (usNumDatums size)) ^$ dataUniv)
+  , GenFrom datumsUniv (Constr "genDatums" (genDatums size (usNumDatums size)) ^$ dataUniv)
   , -- 'network' is set by testGlobals which contains 'Testnet'
     network :<-: constTarget (Utils.networkId Utils.testGlobals)
   , GenFrom ptrUniv (ptrUnivT (usNumPtr size) currentSlot)
@@ -499,7 +510,7 @@ universePreds size p =
   , GenFrom multiAssetUniv (Constr "multiAsset" (vectorOf (usNumMultiAsset size) . multiAsset size) ^$ (nonSpendScriptUniv p))
   , GenFrom
       preTxoutUniv
-      ( Constr "genTxOuts" (genTxOuts (genValueF size p) p (usNumTxOuts size))
+      ( Constr "genTxOuts" (genTxOuts size (genValueF size p) p (usNumTxOuts size))
           ^$ addrUniv
           ^$ (nonSpendScriptUniv p)
           ^$ (spendscriptUniv p)

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -50,7 +51,7 @@ import Test.Cardano.Ledger.Constrained.Monad (generateWithSeed, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
-import Test.Cardano.Ledger.Constrained.Preds.Universes (universeStage)
+import Test.Cardano.Ledger.Constrained.Preds.Universes (UnivSize (..), universeStage)
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
@@ -207,8 +208,8 @@ And generate: partC suchthat: (Sum partC) = availableC
 
 -}
 
-certsPreds :: forall era. Reflect era => Proof era -> [Pred era]
-certsPreds p = case whichTxCert p of
+certsPreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
+certsPreds UnivSize {usMinCerts, usMaxCerts} p = case whichTxCert p of
   TxCertShelleyToBabbage ->
     [ certs :<-: (Constr "TxCertF" (fmap (TxCertF p)) ^$ shelleycerts)
     , Sized (Range 1 6) epochDelta -- Note that last Epoch is stored in 'maxEpoch' which was 100 on 7/7/23 see PParams.hs
@@ -320,7 +321,7 @@ certsPreds p = case whichTxCert p of
     [ certs :<-: (Constr "TxCertF" (fmap (TxCertF p)) ^$ conwaycerts)
     , Sized (Range 1 6) epochDelta
     , Choose
-        (Range 4 6)
+        (Range usMinCerts usMaxCerts)
         conwaycerts
         [
           ( 1
@@ -433,11 +434,12 @@ certsPreds p = case whichTxCert p of
 
 certsStage ::
   Reflect era =>
+  UnivSize ->
   Proof era ->
   Subst era ->
   Gen (Subst era)
-certsStage proof subst0 = do
-  let preds = certsPreds proof
+certsStage us proof subst0 = do
+  let preds = certsPreds us proof
   toolChainSub proof standardOrderInfo preds subst0
 
 demo :: ReplMode -> Int -> IO ()
@@ -454,7 +456,7 @@ demo mode seed = do
           >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof
-          >>= certsStage proof
+          >>= certsStage def proof
           >>= (\subst -> monadTyped (substToEnv subst emptyEnv))
       )
   certsv <- monadTyped (findVar (unVar certs) env)

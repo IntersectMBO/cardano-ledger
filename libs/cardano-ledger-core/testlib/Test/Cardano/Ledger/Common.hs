@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Common (
   ToExpr (..),
   showExpr,
   diffExpr,
+  diffExprCompact,
 
   -- * Expectations
   assertBool,
@@ -42,6 +43,7 @@ import System.IO (
 import Test.Cardano.Ledger.Binary.TreeDiff (
   ToExpr (..),
   diffExpr,
+  diffExprCompact,
   expectExprEqualWithMessage,
   showExpr,
  )

@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,7 +6,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -44,12 +42,16 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getsNES,
   impAnn,
   mkTxWits,
-  impNESL,
   runImpRule,
   registerRewardAccount,
   getRewardAccountAmount,
   constitutionShouldBe,
   withImpState,
+  fixupFees,
+  -- Lenses
+  impLastTickL,
+  impNESL,
+  impDoFixupL,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
@@ -164,6 +166,7 @@ data ImpTestState era = ImpTestState
   , impLastTick :: !SlotNo
   , impGlobals :: !Globals
   , impLog :: !(Doc ())
+  , impDoFixup :: !Bool
   }
 
 impLogL :: Lens' (ImpTestState era) (Doc ())
@@ -180,6 +183,9 @@ impRootTxCoinL = lens impRootTxCoin (\x y -> x {impRootTxCoin = y})
 
 impRootTxIdL :: Lens' (ImpTestState era) (TxId (EraCrypto era))
 impRootTxIdL = lens impRootTxId (\x y -> x {impRootTxId = y})
+
+impDoFixupL :: Lens' (ImpTestState era) Bool
+impDoFixupL = lens impDoFixup (\x y -> x {impDoFixup = y})
 
 class
   ( Show (NewEpochState era)
@@ -367,6 +373,7 @@ newtype ImpTestM era a = ImpTestM (ReaderT (IORef (ImpTestState era)) IO a)
     , MonadIO
     , MonadUnliftIO
     , MonadReader (IORef (ImpTestState era))
+    , MonadFail
     )
 
 instance MonadState (ImpTestState era) (ImpTestM era) where
@@ -457,7 +464,11 @@ submitTx_ ::
     )
 submitTx_ tx = do
   st <- gets impNES
-  txFixed <- fixupFees tx
+  doFixup <- gets $ view impDoFixupL
+  txFixed <-
+    if doFixup
+      then fixupFees tx
+      else pure tx
   lEnv <- impLedgerEnv st
   globals <- use $ to impGlobals
   let
@@ -509,7 +520,7 @@ runImpRule stsEnv stsState stsSignal = do
       ruleName = symbolVal (Proxy @rule)
   globals <- use $ to impGlobals
   case runShelleyBase globals (applySTSTest @(EraRule rule era) trc) of
-    Left [] -> error $ "Impossible: STS rule failed without a predicate failure"
+    Left [] -> error "Impossible: STS rule failed without a predicate failure"
     Left fs ->
       assertFailure $
         unlines $
@@ -606,6 +617,7 @@ withImpState =
         , impLastTick = 0
         , impGlobals = testGlobals
         , impLog = mempty
+        , impDoFixup = True
         }
   where
     rootCoin = Coin 1_000_000_000
@@ -705,7 +717,7 @@ registerRewardAccount = do
           .~ SSeq.fromList
             [ mkBasicTxOut
                 (mkAddr (kpSpending, kpDelegator))
-                (inject $ Coin 10000000)
+                (inject $ Coin 10_000_000)
             ]
         & bodyTxL . certsTxBodyL
           .~ SSeq.fromList [RegTxCert @era stakingCredential]

@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.9.0.1
+## 1.9.1.0
 
-*
+* Add `diffExprCompact`
 
 ## 1.9.0.0
 

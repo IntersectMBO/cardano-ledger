@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -496,7 +497,7 @@ minusMultiValue p v1 v2 = case whichValue p of
 -- ==============================================================
 
 txBodyPreds :: forall era. (HasCallStack, Reflect era) => UnivSize -> Proof era -> [Pred era]
-txBodyPreds sizes p =
+txBodyPreds sizes@UnivSize {usGenerateWithdrawals} p =
   (txOutPreds sizes p balanceCoin (outputs p))
     ++ [ mint :<-: (Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend)) ^$ (outputs p) ^$ spending)
        , networkID :<-: justTarget network
@@ -515,11 +516,14 @@ txBodyPreds sizes p =
        , -- withdrawals
          Sized (Range 0 2) prewithdrawal
        , Subset prewithdrawal (Dom nonZeroRewards)
-       , withdrawals
-          :<-: ( Constr "mkRwrdAcnt" (\s r -> Map.fromList (map (\x -> (RewardAcnt Testnet x, r Map.! x)) (Set.toList s)))
-                  ^$ prewithdrawal
-                  ^$ rewards
-               )
+       , if usGenerateWithdrawals
+          then
+            withdrawals
+              :<-: ( Constr "mkRwrdAcnt" (\s r -> Map.fromList (map (\x -> (RewardAcnt Testnet x, r Map.! x)) (Set.toList s)))
+                      ^$ prewithdrawal
+                      ^$ rewards
+                   )
+          else Sized (ExactSize 0) withdrawals
        , nonZeroRewards :<-: (Constr "filter (/=0)" (Map.filter (/= (Coin 0))) ^$ rewards)
        , -- refInputs
          Sized (Range 0 1) refInputs
@@ -773,7 +777,7 @@ genTxAndLedger sizes proof = do
         >>= vstateStage proof
         >>= pstateStage proof
         >>= dstateStage proof
-        >>= certsStage proof
+        >>= certsStage sizes proof
         >>= ledgerStateStage sizes proof
         >>= txBodyStage sizes proof
       )
@@ -793,7 +797,7 @@ genTxAndNewEpoch sizes proof = do
         >>= vstateStage proof
         >>= pstateStage proof
         >>= dstateStage proof
-        >>= certsStage proof
+        >>= certsStage sizes proof
         >>= ledgerStateStage sizes proof
         >>= txBodyStage sizes proof
         >>= epochStateStage proof
@@ -913,7 +917,7 @@ oneTest sizes proof = do
       >>= vstateStage proof
       >>= pstateStage proof
       >>= dstateStage proof
-      >>= certsStage proof
+      >>= certsStage sizes proof
       >>= ledgerStateStage sizes proof
       >>= txBodyStage sizes proof
   env0 <- monadTyped $ substToEnv subst emptyEnv
@@ -958,7 +962,7 @@ demo mode = do
           >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof
-          >>= certsStage proof
+          >>= certsStage sizes proof
           >>= ledgerStateStage sizes proof
           >>= txBodyStage sizes proof
       )

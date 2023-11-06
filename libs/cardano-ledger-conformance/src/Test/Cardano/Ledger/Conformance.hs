@@ -1,6 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,12 +17,13 @@
 
 module Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
+  spec,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Hash (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..), inInterval)
 import Cardano.Ledger.Alonzo (AlonzoScript, AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices, Tag (..))
@@ -37,14 +43,20 @@ import Cardano.Ledger.BaseTypes (
   getVersion,
   strictMaybeToMaybe,
  )
-import Cardano.Ledger.Binary (Sized (..))
+import Cardano.Ledger.Binary (Sized (..), serialize)
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (
   AlonzoEraTxBody (..),
   CoinPerByte (..),
+  Era (..),
+  EraPParams (..),
+  EraRule,
   EraScript (..),
   EraTxWits (..),
+  PParams (..),
+  ppMaxValSizeL,
   vldtTxBodyL,
  )
 import Cardano.Ledger.Conway.PParams (
@@ -55,7 +67,6 @@ import Cardano.Ledger.Conway.PParams (
  )
 import Cardano.Ledger.Conway.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Core (
-  Era,
   EraIndependentData,
   EraIndependentScriptIntegrity,
   EraIndependentTxBody,
@@ -63,40 +74,100 @@ import Cardano.Ledger.Core (
   EraTxAuxData (..),
   EraTxBody (..),
   EraTxOut (..),
-  PParams,
+  ppMaxTxSizeL,
  )
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (KeyHash (..), VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.Mary.Value ()
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (
+  UTxOState (..),
+  certDStateL,
+  consumed,
+  curPParamsEpochStateL,
+  dsGenDelegsL,
+  esLStateL,
+  lsCertStateL,
+  lsUTxOStateL,
+  nesEsL,
+  produced,
+  totalObligation,
+  utxosDepositedL,
+  utxosGovStateL,
+  utxosUtxoL,
+ )
 import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (UTxO (..), coinBalance, sumAllValue)
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.RWS.Class (gets, modify)
+import Control.State.Transition.Extended (STS (..))
 import Data.Bitraversable (bimapM)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
+import Data.Coerce (Coercible, coerce)
 import Data.Data (Typeable)
+import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
+import qualified Data.List as L
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
+import Data.Set (Set, isSubsetOf)
 import qualified Data.Set as Set
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Word (Word64)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro.Extras (view)
 import qualified Lib as Agda
+import Test.Cardano.Ledger.Common (
+  HasCallStack,
+  Spec,
+  describe,
+  diffExprCompact,
+  it,
+  showExpr,
+  unless,
+  xit,
+ )
+import Test.Cardano.Ledger.Constrained.Preds.Tx (genTxAndNewEpoch)
+import Test.Cardano.Ledger.Constrained.Preds.Universes (UnivSize (..))
+import Test.Cardano.Ledger.Conway.ImpTest (
+  ImpTestM,
+  getsNES,
+  impDoFixupL,
+  impLastTickL,
+  logCurPParams,
+  logEntry,
+  modifyNES,
+  trySubmitTx,
+  withImpState,
+ )
+import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
+import Test.Cardano.Ledger.Imp.Common (ToExpr (..), generate, shouldBe)
+import Test.Cardano.Ledger.Shelley.ImpTest (fixupFees)
 
 type SpecTranslationError = Text
 
 class SpecTranslate a where
   type SpecRep a
+  type TestRep a
+  type TestRep a = SpecRep a
 
   toSpecRep :: a -> Either SpecTranslationError (SpecRep a)
+
+  specToTestRep :: SpecRep a -> TestRep a
+  default specToTestRep :: Coercible (SpecRep a) (TestRep a) => SpecRep a -> TestRep a
+  specToTestRep = coerce
+
+toTestRep :: forall a. SpecTranslate a => a -> Either SpecTranslationError (TestRep a)
+toTestRep x = specToTestRep @a <$> toSpecRep x
 
 instance SpecTranslate TxIx where
   type SpecRep TxIx = Integer
@@ -226,7 +297,7 @@ instance SpecTranslate (ConwayPParams Identity era) where
       <*> Right (toInteger . unTHKD $ cppMaxTxSize x)
       <*> Right (toInteger . unTHKD $ cppMaxBHSize x)
       <*> Right (toInteger . unTHKD $ cppMaxValSize x)
-      <*> Right (error "minUTxO is not in Conway, do not use this field")
+      <*> Right 0
       <*> toSpecRep (cppPoolDeposit x)
       <*> toSpecRep (cppEMax x)
       <*> toSpecRep (cppProtocolVersion x)
@@ -252,6 +323,14 @@ instance SpecTranslate (ConwayPParams Identity era) where
       <*> Right (toInteger . unTHKD $ cppMaxCollateralInputs x)
 
 instance
+  SpecTranslate (PParamsHKD Identity era) =>
+  SpecTranslate (PParams era)
+  where
+  type SpecRep (PParams era) = SpecRep (PParamsHKD Identity era)
+
+  toSpecRep (PParams x) = toSpecRep x
+
+instance
   ( SpecTranslate (PParams era)
   , SpecRep (PParams era) ~ Agda.PParams
   ) =>
@@ -264,10 +343,11 @@ instance
       <$> toSpecRep (ueSlot x)
       <*> toSpecRep (uePParams x)
 
-instance SpecTranslate a => SpecTranslate (Set a) where
+instance (SpecTranslate a, Ord (SpecRep a)) => SpecTranslate (Set a) where
   type SpecRep (Set a) = [SpecRep a]
 
   toSpecRep = traverse toSpecRep . Set.toList
+  specToTestRep = L.sort
 
 instance SpecTranslate a => SpecTranslate (StrictSeq a) where
   type SpecRep (StrictSeq a) = [SpecRep a]
@@ -312,10 +392,17 @@ instance Era era => SpecTranslate (TxDats era) where
 
   toSpecRep (TxDats x) = toSpecRep x
 
-instance (SpecTranslate k, SpecTranslate v) => SpecTranslate (Map k v) where
+instance
+  ( SpecTranslate k
+  , SpecTranslate v
+  , Ord (SpecRep k)
+  ) =>
+  SpecTranslate (Map k v)
+  where
   type SpecRep (Map k v) = [(SpecRep k, SpecRep v)]
 
   toSpecRep = traverse (bimapM toSpecRep toSpecRep) . Map.toList
+  specToTestRep = L.sortOn fst
 
 instance SpecTranslate Tag where
   type SpecRep Tag = Agda.Tag
@@ -398,8 +485,7 @@ toAgdaTxBody tx =
     <*> toSpecRep (tx ^. bodyTxL . scriptIntegrityHashTxBodyL)
 
 instance
-  ( SpecRep (TxBody era) ~ Agda.TxBody
-  , SpecTranslate (TxWits era)
+  ( SpecTranslate (TxWits era)
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecTranslate (TxAuxData era)
   , SpecRep (TxAuxData era) ~ Agda.AuxiliaryData
@@ -418,3 +504,140 @@ instance
       <$> toAgdaTxBody @era tx
       <*> toSpecRep (wits tx)
       <*> toSpecRep (auxiliaryData tx)
+
+trySubmitTxConform ::
+  Tx Conway ->
+  ImpTestM
+    Conway
+    ( Either
+        [PredicateFailure (EraRule "LEDGER" Conway)]
+        (TxId (EraCrypto Conway))
+    )
+trySubmitTxConform txUnfixed = do
+  nes <- getsNES id
+  doFixup <- gets $ view impDoFixupL
+  tx <-
+    if doFixup
+      then fixupFees txUnfixed
+      else pure txUnfixed
+  let
+    txb = tx ^. bodyTxL
+    txins = txb ^. inputsTxBodyL
+    utxo = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+    txvldt = txb ^. vldtTxBodyL
+    pp = nes ^. nesEsL . curPParamsEpochStateL
+    txfee = txb ^. feeTxBodyL
+    s = nes ^. nesEsL . esLStateL . lsCertStateL
+    txsize = tx ^. sizeTxF
+    maxTxSize = pp ^. ppMaxTxSizeL
+    txouts = txb ^. outputsTxBodyL
+    maxValSize = pp ^. ppMaxValSizeL
+    serSize = fromIntegral . BSL.length . serialize (pvMajor (pp ^. ppProtocolVersionL))
+    consumedVal = consumed pp s utxo txb
+    producedVal = produced pp s txb
+  slot <- gets $ view impLastTickL
+  modifyNES $ const nes
+  agdaUtxoState <- case toSpecRep $ nes ^. nesEsL . esLStateL . lsUTxOStateL of
+    Right x -> pure x
+    Left e -> fail $ T.unpack e
+  agdaTx <- case toSpecRep tx of
+    Right x -> pure x
+    Left e -> fail $ T.unpack e
+  logEntry $ "Impl Tx:\n" <> showExpr tx
+  logEntry $ "Agda Tx:\n" <> showExpr agdaTx
+  logCurPParams
+  logEntry $
+    unlines
+      [ "txins ≢ ∅\n  " <> show (not $ null txins)
+      , " txins ⊆ dom utxo\n  " <> show (txins `isSubsetOf` Map.keysSet (unUTxO utxo))
+      , " inInterval slot txvldt\n  " <> show (inInterval slot txvldt)
+      , " minfee pp tx ≤ txfee\n  " <> show (getMinFeeTx pp tx <= txfee)
+      , " consumed pp s txb ≡ produced pp s txb\n  " <> show (consumedVal == producedVal)
+      , " txsize ≤ maxTxSize pp\n  " <> show (txsize <= fromIntegral maxTxSize)
+      , " ∀[ (_ , txout) ∈ txouts .proj₁ ] inject (utxoEntrySize txout * minUTxOValue pp) ≤ᵗ getValue txout\n  "
+          <> show (all (\txout -> inject (Coin 0) <= txout ^. valueTxOutL) txouts)
+      , " ∀[ (_ , txout) ∈ txouts .proj₁ ] serSize (getValue txout) ≤ maxValSize pp\n  "
+          <> show (all (\txout -> serSize (txout ^. valueTxOutL) <= maxValSize) txouts)
+      , " ∀[ (a , _) ∈ range txouts ] Sum.All (const ⊤) (λ a → a .BootstrapAddr.attrsSize ≤ 64) a\n  "
+          -- I assume we never create bootstrap addresses
+          <> show (all (\txout -> case txout ^. addrTxOutL of AddrBootstrap _ -> False; _ -> True) txouts)
+      ]
+  logEntry $
+    unlines
+      [ "Implementation:"
+      , "  consumed:\t" ++ show (coin consumedVal)
+      , "    ins:\t\t" ++ show (coinBalance (UTxO (Map.restrictKeys (unUTxO utxo) (txb ^. inputsTxBodyL))))
+      , "  produced:\t" ++ show (coin producedVal)
+      , "    outs:\t" ++ show (coin $ sumAllValue txouts)
+      , "    fee:\t\t" ++ show txfee
+      ]
+  lastTick <- gets $ view impLastTickL
+  pParams <- getsNES $ nesEsL . curPParamsEpochStateL
+  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+  let
+    utxoEnv =
+      UtxoEnv
+        { ueSlot = lastTick
+        , uePParams = pParams
+        , ueGenDelegs = certState ^. certDStateL . dsGenDelegsL
+        , ueCertState = certState
+        }
+  agdaUtxoEnv <- case toSpecRep utxoEnv of
+    Right x -> pure x
+    Left e -> fail $ T.unpack e
+  let
+    newAgdaUtxoState = Agda.utxoStep agdaUtxoEnv agdaUtxoState agdaTx
+  modify $ impDoFixupL .~ False
+  submitRes <- trySubmitTx tx
+  modify $ impDoFixupL .~ doFixup
+  newUtxoState <- getsNES $ nesEsL . esLStateL . lsUTxOStateL
+  let
+    finalAgdaState =
+      toExpr . specToTestRep @(UTxOState Conway) <$> newAgdaUtxoState
+    finalImplState = case submitRes of
+      Right _ -> case toTestRep newUtxoState of
+        Right x -> Just $ toExpr x
+        Left _ -> Nothing
+      Left e ->
+        error $
+          "Failed to submit transaction on the implementation side:\n"
+            <> show e
+  unless (finalAgdaState == finalImplState) $ do
+    logEntry $ diffExprCompact (toExpr finalAgdaState) (toExpr finalImplState)
+    fail "The final states of spec and implementation do not match"
+  pure submitRes
+
+spec :: HasCallStack => Spec
+spec = describe "Conway conformance tests" . withImpState $ do
+  it "Simple tx" $ do
+    modify $ \x ->
+      x
+        & impLastTickL .~ 100
+    do
+      certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+      govState <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+      totalObligation certState govState `shouldBe` zero
+    do
+      deposited <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
+      deposited `shouldBe` zero
+    res <- trySubmitTxConform $ mkBasicTx mkBasicTxBody
+    case res of
+      Right _ -> pure ()
+      Left e -> error $ show e
+  xit "Constrained generator" $ do
+    let
+      us =
+        def
+          { usMinCerts = 0
+          , usMaxCerts = 0
+          , usDatumFreq = 0
+          , usGenerateWithdrawals = False
+          }
+    modify $ \x ->
+      x
+        & impLastTickL .~ 100
+        & impDoFixupL .~ False
+    (nes, tx, _env) <- liftIO . generate . genTxAndNewEpoch us $ reify @Conway
+    modifyNES $ const nes
+    _ <- trySubmitTxConform tx
+    pure ()

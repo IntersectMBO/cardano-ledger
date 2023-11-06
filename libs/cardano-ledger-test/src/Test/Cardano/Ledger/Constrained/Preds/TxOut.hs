@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -114,13 +115,13 @@ isBootstrapAddr (Addr _ _ _) = False
 -- ================================================================================
 
 txOutPreds :: Reflect era => UnivSize -> Proof era -> Term era Coin -> Term era [TxOutF era] -> [Pred era]
-txOutPreds size p balanceCoin outputS =
+txOutPreds size@UnivSize {usDatumFreq} p balanceCoin outputS =
   [ Choose
       (Range 6 6)
       datums
       [ (1, Simple (Lit DatumR NoDatum), [])
       , (1, Constr "DatumHash" DatumHash ^$ hash, [Member (Left hash) (Dom dataUniv)])
-      , (1, Constr "Datum" (Datum . dataToBinaryData) ^$ dat, [Member (Left (HashD dat)) (Dom dataUniv)])
+      , (usDatumFreq, Constr "Datum" (Datum . dataToBinaryData) ^$ dat, [Member (Left (HashD dat)) (Dom dataUniv)])
       ]
   , datumsSet :<-: listToSetTarget datums
   , case whichTxOut p of
