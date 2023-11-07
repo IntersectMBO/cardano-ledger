@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -80,9 +81,9 @@ import Cardano.Ledger.Coin (Coin (..), decodePositiveCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert, ConwayTxCertUpgradeError)
+import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..), ConwayTxCertUpgradeError, pattern RegDRepTxCert)
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -111,8 +112,10 @@ import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
+import Data.Foldable (foldMap')
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OSet.Strict as SOS
+import Data.Semigroup (getSum)
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -438,6 +441,16 @@ totalProposalDeposits pp txb = nProposals <×> depositPerProposal
     nProposals = length (txb ^. proposalProceduresTxBodyL)
     depositPerProposal = pp ^. ppGovActionDepositL
 
+totalDRepDeposits ::
+  ConwayEraTxBody era =>
+  PParams era ->
+  TxBody era ->
+  Coin
+totalDRepDeposits pp txb = nDReps <×> depositPerDRep
+  where
+    nDReps = getSum @Int (foldMap' (\case RegDRepTxCert {} -> 1; _ -> 0) (txb ^. certsTxBodyL))
+    depositPerDRep = pp ^. ppDRepDepositL
+
 totalTxDepositsConway ::
   Crypto c =>
   PParams (ConwayEra c) ->
@@ -447,6 +460,7 @@ totalTxDepositsConway ::
 totalTxDepositsConway pp cs txb =
   totalTxDepositsShelley pp cs txb
     <> totalProposalDeposits pp txb
+    <> totalDRepDeposits pp txb
 
 instance Crypto c => AllegraEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra StandardCrypto) #-}

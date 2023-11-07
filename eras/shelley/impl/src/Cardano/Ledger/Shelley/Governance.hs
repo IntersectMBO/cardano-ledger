@@ -35,6 +35,7 @@ import Cardano.Ledger.Binary (
   encodeNullStrictMaybe,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -44,7 +45,6 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON,
@@ -108,7 +108,7 @@ class
   -- | Lens for accessing the previous protocol parameters
   prevPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
-  obligationGovState :: GovState era -> Coin
+  obligationGovState :: GovState era -> Obligations
 
   getDRepDistr :: GovState era -> Map (DRep (EraCrypto era)) (CompactForm Coin)
 
@@ -127,7 +127,7 @@ instance Crypto c => EraGov (ShelleyEra c) where
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
-  obligationGovState = const zero
+  obligationGovState = const mempty -- No GovState obigations in ShelleyEra
 
   getDRepDistr = const Map.empty
 

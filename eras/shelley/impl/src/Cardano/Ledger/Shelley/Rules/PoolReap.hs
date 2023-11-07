@@ -4,9 +4,11 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -34,7 +36,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   PState (..),
   UTxOState (..),
+  allObligations,
   rewards,
+  utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, ppRewardAcnt)
@@ -46,6 +50,7 @@ import Control.DeepSeq (NFData)
 import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
 import Control.State.Transition (
   Assertion (..),
+  AssertionViolation (..),
   STS (..),
   TRC (..),
   TransitionRule,
@@ -58,6 +63,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set (member)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyPoolreapState era = PoolreapState
@@ -108,12 +114,14 @@ instance
   type PredicateFailure (ShelleyPOOLREAP era) = ShelleyPoolreapPredFailure era
   type Event (ShelleyPOOLREAP era) = ShelleyPoolreapEvent era
   transitionRules = [poolReapTransition]
+
+  renderAssertionViolation = renderPoolReapViolation
   assertions =
     [ PostCondition
         "Deposit pot must equal obligation (PoolReap)"
-        ( \(TRC (_, _, _)) st ->
+        ( \(TRC (env, _, _)) st ->
             potEqualsObligation
-              (CertState def (prPState st) (prDState st))
+              (CertState (speVState env) (prPState st) (prDState st))
               (prUTxOSt st)
         )
     , PostCondition
@@ -187,3 +195,22 @@ poolReapTransition = do
         , psRetiring = eval (retired ⋪ psRetiring ps)
         , psDeposits = remainingDeposits
         }
+
+renderPoolReapViolation ::
+  ( EraGov era
+  , Environment t ~ ShelleyPoolreapEnv era
+  , State t ~ ShelleyPoolreapState era
+  ) =>
+  AssertionViolation t ->
+  String
+renderPoolReapViolation
+  AssertionViolation {avSTS, avMsg, avCtx = TRC (ShelleyPoolreapEnv vs, poolreapst, _)} =
+    let certst = CertState vs (prPState poolreapst) (prDState poolreapst)
+        obligations = allObligations certst (prUTxOSt poolreapst ^. utxosGovStateL)
+     in "\n\nAssertionViolation ("
+          <> avSTS
+          <> ")\n   "
+          <> avMsg
+          <> "\npot (utxosDeposited) = "
+          <> show (utxosDeposited (prUTxOSt poolreapst))
+          <> show obligations

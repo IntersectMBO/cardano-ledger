@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   Event,
   PredicateFailure,
   epochFromSlot,
-  depositEqualsObligation,
+  renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
 )
 where
@@ -44,22 +44,20 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
   LedgerState (..),
-  PState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
+import Cardano.Ledger.Shelley.LedgerState.Types (allObligations, potEqualsObligation)
 import Cardano.Ledger.Shelley.Rules.Delegs (
   DelegsEnv (..),
   ShelleyDELEGS,
   ShelleyDelegsEvent,
   ShelleyDelegsPredFailure,
  )
-import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts, synopsisCoinMap)
+import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Cardano.Ledger.TreeDiff (ToExpr)
-import Cardano.Ledger.UMap (depositMap)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Reader (Reader)
 import Control.Monad.Trans.Reader (asks)
@@ -211,7 +209,7 @@ instance
   initialRules = []
   transitionRules = [ledgerTransition]
 
-  renderAssertionViolation = depositEqualsObligation
+  renderAssertionViolation = renderDepositEqualsObligationViolation
 
   assertions = shelleyLedgerAssertions
 
@@ -271,8 +269,9 @@ instance
 
 -- =============================================================
 
-depositEqualsObligation ::
+renderDepositEqualsObligationViolation ::
   ( EraTx era
+  , EraGov era
   , ShelleyEraTxBody era
   , Environment t ~ LedgerEnv era
   , Signal t ~ Tx era
@@ -280,7 +279,7 @@ depositEqualsObligation ::
   ) =>
   AssertionViolation t ->
   String
-depositEqualsObligation
+renderDepositEqualsObligationViolation
   AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ pp _, _, tx), avState} =
     let dpstate = lsCertState <$> avState
         utxo = utxosUtxo . lsUTxOState <$> avState
@@ -293,12 +292,9 @@ depositEqualsObligation
           <> showTxCerts txb
           <> "\n(slot,keyDeposit,poolDeposit) "
           <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
-          <> "\nutxosDeposited = "
+          <> "\npot (utxosDeposited) = "
           <> show (utxosDeposited . lsUTxOState <$> avState)
-          <> "\nKey Deposits summary = "
-          <> synopsisCoinMap (depositMap . dsUnified . certDState . lsCertState <$> avState)
-          <> "\nPool Deposits summary = "
-          <> synopsisCoinMap (psDeposits . certPState . lsCertState <$> avState)
+          <> show (allObligations <$> (lsCertState <$> avState) <*> (utxosGovState . lsUTxOState <$> avState))
           <> "\nConsumed = "
           <> show (consumedTxBody txb pp <$> dpstate <*> utxo)
           <> "\nProduced = "

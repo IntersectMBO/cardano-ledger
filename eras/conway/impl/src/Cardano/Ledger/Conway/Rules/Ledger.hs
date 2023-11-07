@@ -69,7 +69,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
   UtxoEnv (..),
-  depositEqualsObligation,
+  renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch)
@@ -221,7 +221,7 @@ instance
   initialRules = []
   transitionRules = [ledgerTransition @ConwayLEDGER]
 
-  renderAssertionViolation = depositEqualsObligation
+  renderAssertionViolation = renderDepositEqualsObligationViolation
 
   assertions = shelleyLedgerAssertions
 
