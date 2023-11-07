@@ -173,7 +173,7 @@ someScriptAddr s = Addr Testnet pCred sCred
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
 timelockScript :: PostShelley era => Int -> Proof era -> Script era
-timelockScript s = allOf [matchkey 1, after (100 + s)]
+timelockScript s = fromNativeScript . allOf [matchkey 1, after (100 + s)]
 
 timelockHash ::
   forall era.
@@ -201,7 +201,7 @@ initUTxO pf =
         ++ map (\i -> (mkGenesisTxIn i, collateralOutput)) [11 .. 18]
         ++ [ (mkGenesisTxIn 100, timelockOut)
            , (mkGenesisTxIn 101, unspendableOut)
-           , (mkGenesisTxIn 102, alwaysSucceedsOutputV2)
+           , (mkGenesisTxIn 102, alwaysSucceedsOutputV1)
            , (mkGenesisTxIn 103, nonScriptOutWithDatum)
            ]
   where
@@ -227,8 +227,8 @@ initUTxO pf =
         (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 2)
         pCred = ScriptHashObj tlh
         sCred = StakeRefBase . KeyHashObj . hashKey $ svk
-        tlh = hashScript @era $ tls 0 pf
-        tls s = allOf [matchkey 1, after (100 + s)]
+        tlh = hashScript @era $ tls 0
+        tls s = fromNativeScript $ allOf [matchkey 1, after (100 + s)] pf
     -- This output is unspendable since it is locked by a plutus script, but has no datum hash.
     unspendableOut =
       newTxOut
@@ -236,10 +236,10 @@ initUTxO pf =
         [ Address (someScriptAddr (always 3 pf))
         , Amount (inject $ Coin 5000)
         ]
-    alwaysSucceedsOutputV2 =
+    alwaysSucceedsOutputV1 =
       newTxOut
         pf
-        [ Address (someScriptAddr (alwaysAlt 3 pf))
+        [ Address (someScriptAddr (always 3 pf))
         , Amount (inject $ Coin 5000)
         , DHash' [hashData $ datumExample1 @era]
         ]

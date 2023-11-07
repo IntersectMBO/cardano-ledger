@@ -23,6 +23,7 @@ import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (ContextError)
 import Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoBbodyPredFailure (..),
   AlonzoUtxoPredFailure (..),
@@ -31,7 +32,12 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (
   FailureDescription (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoScript (..),
+  ExUnits (..),
+  plutusScriptBinary,
+  plutusScriptLanguage,
+ )
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
@@ -102,14 +108,19 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..), flattenMultiAsset)
+import Cardano.Ledger.Mary.Value (
+  AssetName (..),
+  MaryValue (..),
+  MultiAsset (..),
+  PolicyID (..),
+  flattenMultiAsset,
+ )
 import Cardano.Ledger.Plutus.Data (
   Data (..),
   Datum (..),
   binaryDataToData,
   hashData,
  )
-import Cardano.Ledger.Plutus.Language (Plutus (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
@@ -597,7 +608,7 @@ instance PrettyA (ShelleyDelegPredFailure era) where
 -- Predicate Failure for Alonzo UTXOS
 
 ppUtxosPredicateFailure ::
-  (PrettyA (PPUPPredFailure era), PrettyA (TxCert era)) =>
+  (Show (ContextError era), PrettyA (PPUPPredFailure era), PrettyA (TxCert era)) =>
   AlonzoUtxosPredFailure era ->
   PDoc
 ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
@@ -613,18 +624,19 @@ ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = prettyA p
 instance
   ( PrettyA (PPUPPredFailure era)
   , PrettyA (TxCert era)
+  , Show (ContextError era)
   ) =>
   PrettyA (AlonzoUtxosPredFailure era)
   where
   prettyA = ppUtxosPredicateFailure
 
-ppCollectError :: PrettyA (TxCert era) => CollectError era -> PDoc
+ppCollectError :: (Show (ContextError era), PrettyA (TxCert era)) => CollectError era -> PDoc
 ppCollectError (NoRedeemer sp) = ppSexp "NoRedeemer" [ppScriptPurpose sp]
 ppCollectError (NoWitness sh) = ppSexp "NoWitness" [ppScriptHash sh]
 ppCollectError (NoCostModel l) = ppSexp "NoCostModel" [ppLanguage l]
 ppCollectError (BadTranslation x) = ppSexp "BadTranslation" [ppString (show x)]
 
-instance PrettyA (TxCert c) => PrettyA (CollectError c) where
+instance (Show (ContextError era), PrettyA (TxCert era)) => PrettyA (CollectError era) where
   prettyA = ppCollectError
 
 ppTagMismatchDescription :: TagMismatchDescription -> PDoc
@@ -837,11 +849,14 @@ ppCoreWitnesses (Allegra _) x = ppWitnessSetHKD x
 ppCoreWitnesses (Shelley _) x = ppWitnessSetHKD x
 
 ppCoreScript :: Proof era -> Script era -> PDoc
-ppCoreScript (Conway _) (PlutusScript (Plutus _ x)) = ppString (show x)
+ppCoreScript (Conway _) (PlutusScript plutusScript) =
+  ppString (show (plutusScriptBinary plutusScript))
 ppCoreScript (Conway _) (TimelockScript x) = ppTimelock x
-ppCoreScript (Babbage _) (PlutusScript (Plutus _ x)) = ppString (show x)
+ppCoreScript (Babbage _) (PlutusScript plutusScript) =
+  ppString (show (plutusScriptBinary plutusScript))
 ppCoreScript (Babbage _) (TimelockScript x) = ppTimelock x
-ppCoreScript (Alonzo _) (PlutusScript (Plutus _ x)) = ppString (show x)
+ppCoreScript (Alonzo _) (PlutusScript plutusScript) =
+  ppString (show (plutusScriptBinary plutusScript))
 ppCoreScript (Alonzo _) (TimelockScript x) = ppTimelock x
 ppCoreScript (Mary _) x = ppTimelock x
 ppCoreScript (Allegra _) x = ppTimelock x
@@ -1227,14 +1242,14 @@ multiSigSummary (SS.RequireAnyOf ps) = ppSexp "AnyOf" (map multiSigSummary ps)
 multiSigSummary (SS.RequireMOf m ps) = ppSexp "MOf" (ppInt m : map multiSigSummary ps)
 
 plutusSummary :: forall era. Proof era -> AlonzoScript era -> PDoc
-plutusSummary (Conway _) s@(PlutusScript (Plutus lang _)) =
-  ppString (show lang ++ " ") <> scriptHashSummary (hashScript @era s)
+plutusSummary (Conway _) s@(PlutusScript plutusScript) =
+  ppString (show (plutusScriptLanguage plutusScript) ++ " ") <> scriptHashSummary (hashScript @era s)
 plutusSummary (Conway _) (TimelockScript x) = timelockSummary x
-plutusSummary (Babbage _) s@(PlutusScript (Plutus lang _)) =
-  ppString (show lang ++ " ") <> scriptHashSummary (hashScript @era s)
+plutusSummary (Babbage _) s@(PlutusScript plutusScript) =
+  ppString (show (plutusScriptLanguage plutusScript) ++ " ") <> scriptHashSummary (hashScript @era s)
 plutusSummary (Babbage _) (TimelockScript x) = timelockSummary x
-plutusSummary (Alonzo _) s@(PlutusScript (Plutus lang _)) =
-  ppString (show lang ++ " ") <> scriptHashSummary (hashScript @era s)
+plutusSummary (Alonzo _) s@(PlutusScript plutusScript) =
+  ppString (show (plutusScriptLanguage plutusScript) ++ " ") <> scriptHashSummary (hashScript @era s)
 plutusSummary (Alonzo _) (TimelockScript x) = timelockSummary x
 plutusSummary other _ = ppString ("Plutus script in era " ++ show other ++ "???")
 
@@ -1426,13 +1441,13 @@ pcScript p@(Alonzo _) s@(PlutusScript (Plutus v _)) =
 
 pcScript (Conway _) (TimelockScript t) = pcTimelock @era t
 pcScript p@(Conway _) s@(PlutusScript v) =
-  parens (hsep [ppString ("PlutusScript " <> show (plutusLanguage v) <> " "), pcHashScript p s])
+  parens (hsep [ppString ("PlutusScript " <> show (plutusScriptLanguage v) <> " "), pcHashScript p s])
 pcScript (Babbage _) (TimelockScript t) = pcTimelock @era t
 pcScript p@(Babbage _) s@(PlutusScript v) =
-  parens (hsep [ppString ("PlutusScript " <> show (plutusLanguage v) <> " "), pcHashScript p s])
+  parens (hsep [ppString ("PlutusScript " <> show (plutusScriptLanguage v) <> " "), pcHashScript p s])
 pcScript (Alonzo _) (TimelockScript t) = pcTimelock @era t
 pcScript p@(Alonzo _) s@(PlutusScript v) =
-  parens (hsep [ppString ("PlutusScript " <> show (plutusLanguage v) <> " "), pcHashScript p s])
+  parens (hsep [ppString ("PlutusScript " <> show (plutusScriptLanguage v) <> " "), pcHashScript p s])
 pcScript (Mary _) s = pcTimelock @era s
 pcScript (Allegra _) s = pcTimelock @era s
 pcScript p@(Shelley _) s = pcMultiSig @era (pcHashScript @era p s) s

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -46,10 +47,10 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModelV1)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 
 -- | ShelleyLedgerExamples for Alonzo era
@@ -141,8 +142,8 @@ exampleTx =
         (mkWitnessesVKey (hashAnnotated exampleTxBodyAlonzo) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton
-            (hashScript @Alonzo $ alwaysSucceeds PlutusV1 3)
-            (alwaysSucceeds PlutusV1 3) -- txscripts
+            (hashScript @Alonzo $ alwaysSucceeds @'PlutusV1 3)
+            (alwaysSucceeds @'PlutusV1 3) -- txscripts
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
         ( Redeemers $
@@ -152,7 +153,7 @@ exampleTx =
     ( SJust $
         mkAlonzoTxAuxData
           SLE.exampleAuxDataMap -- auxiliary data
-          [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
+          [alwaysFails @'PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
     )
 
 exampleTransactionInBlock :: AlonzoTx Alonzo
@@ -171,7 +172,7 @@ exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =
   AlonzoGenesis
     { agCoinsPerUTxOWord = CoinPerWord $ Coin 1
-    , agCostModels = CostModels (Map.fromList [(PlutusV1, testingCostModelV1)]) mempty mempty
+    , agCostModels = CostModels (Map.fromList [(PlutusV1, zeroTestingCostModelV1)]) mempty mempty
     , agPrices = Prices (boundRational' 90) (boundRational' 91)
     , agMaxTxExUnits = ExUnits 123 123
     , agMaxBlockExUnits = ExUnits 223 223

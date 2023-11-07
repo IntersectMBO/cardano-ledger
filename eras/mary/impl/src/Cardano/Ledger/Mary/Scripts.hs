@@ -25,3 +25,5 @@ instance Crypto c => EraScript (MaryEra c) where
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
 
   getNativeScript = Just
+
+  fromNativeScript = id

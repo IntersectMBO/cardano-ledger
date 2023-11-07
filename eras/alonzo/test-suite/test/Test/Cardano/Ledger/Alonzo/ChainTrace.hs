@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -18,11 +19,12 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ScriptResult (..), pwcScript)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoLEDGER)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), mkPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..), ScriptResult (..))
+import Cardano.Ledger.Plutus.Language (plutusFromRunnable)
 import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -115,10 +117,15 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
                 (UTxO u) of
                 Left e -> error $ "Plutus script collection error: " <> show e
                 Right c -> c
-            collectedScripts = Set.fromList $ map pwcScript collected
+            collectedScripts =
+              Set.fromList
+                [ plutus
+                | PlutusWithContext {pwcScript} <- collected
+                , Just plutus <- [mkPlutusScript $ either id plutusFromRunnable pwcScript]
+                ]
             suppliedPScrpts = Set.fromList [plutus | PlutusScript plutus <- Map.elems allScripts]
             expectedPScripts = collectedScripts == suppliedPScrpts
-            allPlutusTrue = case evalPlutusScripts (pp ^. ppProtocolVersionL) tx collected of
+            allPlutusTrue = case evalPlutusScripts tx collected of
               Fails _ _ -> False
               Passes _ -> True
          in counterexample

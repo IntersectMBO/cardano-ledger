@@ -8,7 +8,7 @@ import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Babbage.GoldenTranslation as Golden (tests)
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
-import Test.Cardano.Ledger.Babbage.TxInfo (txInfoTests, txInfoTestsBabbageOnly)
+import Test.Cardano.Ledger.Babbage.TxInfo (txInfoTests)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
@@ -25,7 +25,6 @@ defaultTests =
     [ Golden.tests
     , Tripping.tests
     , txInfoTests (Proxy @Babbage)
-    , txInfoTestsBabbageOnly
     ]
 
 nightlyTests :: TestTree

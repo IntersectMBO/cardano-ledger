@@ -15,6 +15,7 @@
 module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   deserializeTranslationInstances,
+  VersionedTxInfo (..),
 ) where
 
 import Cardano.Ledger.Plutus.Language (Language (..))
@@ -48,10 +49,15 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V3.Contexts as PV3
 
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (VersionedTxInfo)
 import PlutusTx.Ratio as PlutusTx
 
 import Data.Typeable (Typeable)
+
+data VersionedTxInfo
+  = TxInfoPV1 PV1.TxInfo
+  | TxInfoPV2 PV2.TxInfo
+  | TxInfoPV3 PV3.TxInfo
+  deriving (Show, Eq, Generic)
 
 -- | Represents arguments passed to `alonzoTxInfo` along with the produced result.
 data TranslationInstance era = TranslationInstance

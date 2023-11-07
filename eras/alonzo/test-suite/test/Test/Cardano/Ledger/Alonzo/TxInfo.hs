@@ -9,7 +9,7 @@ import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (TranslationError (..), transVITime, txInfo)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (toPlutusTxInfo, transVITime)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
@@ -17,7 +17,7 @@ import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
@@ -90,19 +90,9 @@ txEx i o = AlonzoTx (txb i o) mempty (IsValid True) SNothing
 
 silentlyIgnore :: Tx Alonzo -> Assertion
 silentlyIgnore tx =
-  case ctx of
+  case toPlutusTxInfo SPlutusV1 def ei ss utxo tx of
     Right _ -> pure ()
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
-  where
-    ctx = txInfo def PlutusV1 ei ss utxo tx
-
-expectTranslationError :: Language -> Tx Alonzo -> TranslationError StandardCrypto -> Assertion
-expectTranslationError lang tx expected =
-  case ctx of
-    Right _ -> error "This translation was expected to fail, but it succeeded."
-    Left e -> e @?= expected
-  where
-    ctx = txInfo def lang ei ss utxo tx
 
 -- | The test checks that the old implementation of 'transVITime' stays intentionally incorrect,
 -- by returning close upper bound of the validaty interval.
@@ -122,13 +112,6 @@ transVITimeUpperBoundIsOpen = do
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
     Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False))
 
-expectLanguageNotSupported :: Language -> Assertion
-expectLanguageNotSupported lang =
-  expectTranslationError
-    lang
-    (txEx shelleyInput shelleyOutput)
-    (LanguageNotSupported lang)
-
 tests :: TestTree
 tests =
   testGroup
@@ -139,11 +122,6 @@ tests =
             silentlyIgnore (txEx shelleyInput byronOutput)
         , testCase "silently ignore byron txin" $
             silentlyIgnore (txEx byronInput shelleyOutput)
-        ]
-    , testGroup
-        "Plutus VX, X > 1"
-        [ testCase "translation error for V2 in Alonzo" (expectLanguageNotSupported PlutusV2)
-        , testCase "translation error for V3 in Alonzo" (expectLanguageNotSupported PlutusV3)
         ]
     , testGroup
         "transVITime"

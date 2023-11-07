@@ -25,7 +25,7 @@ where
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo ()
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Transition ()
@@ -77,6 +77,3 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock
 instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis
   fromShelleyPParams ag = translateEra' ag . API.fromShelleyPParams ()
-
-instance Crypto c => ExtendedUTxO (AlonzoEra c) where
-  txInfo = alonzoTxInfo

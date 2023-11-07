@@ -17,7 +17,7 @@
 module Test.Cardano.Ledger.Generic.Same where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
@@ -369,7 +369,7 @@ sameShelleyTxWits proof (ShelleyTxWits vk1 sh1 boot1) (ShelleyTxWits vk2 sh2 boo
 
 sameAlonzoTxWits ::
   forall era.
-  (Reflect era, Script era ~ AlonzoScript era) =>
+  (Reflect era, AlonzoEraScript era) =>
   Proof era ->
   AlonzoTxWits era ->
   AlonzoTxWits era ->
@@ -563,7 +563,7 @@ sameShelleyTx proof (ShelleyTx b1 w1 aux1) (ShelleyTx b2 w2 aux2) =
 
 sameAlonzoTx ::
   ( Reflect era
-  , Script era ~ AlonzoScript era
+  , AlonzoEraScript era
   , TxWits era ~ AlonzoTxWits era
   ) =>
   Proof era ->

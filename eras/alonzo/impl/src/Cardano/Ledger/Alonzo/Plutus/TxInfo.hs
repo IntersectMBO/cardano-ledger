@@ -1,9 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -20,15 +20,14 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Plutus.TxInfo (
+  EraPlutusTxInfo (..),
+  EraPlutusContext (..),
+  mkPlutusLanguageContext,
+  ContextError (..),
   TxOutSource (..),
-  TranslationError (..),
-  transProtocolVersion,
-  validScript,
   transDataHash,
-  transDataHash',
   transKeyHash,
   transSafeHash,
-  transHash,
   txInfoId,
   transStakeReference,
   transCred,
@@ -45,37 +44,10 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transMintValue,
   transValue,
   transWithdrawals,
-  getWitVKeyHash,
   transDataPair,
   transExUnits,
-  exBudgetToExUnits,
+  transTxCert,
   transScriptPurpose,
-  VersionedTxInfo (..),
-  ExtendedUTxO (..),
-  alonzoTxInfo,
-  valContext,
-  ScriptFailure (..),
-  ScriptResult (..),
-  scriptPass,
-  scriptFail,
-  PlutusDebugLang (..),
-  PlutusDebug (..),
-  PlutusData (..),
-  PlutusError (..),
-  PlutusDebugInfo (..),
-  EraPlutusContext (..),
-  PlutusWithContext (..),
-  alonzoTransTxCert,
-  PlutusTxCert (..),
-  unTxCertV1,
-  unTxCertV2,
-  unTxCertV3,
-  debugPlutus,
-  runPlutusScript,
-  runPlutusScriptWithLogs,
-  deserialiseAndEvaluateScript,
-  explainPlutusEvaluationError,
-  languages,
 )
 where
 
@@ -83,17 +55,16 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), validScript)
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), txdats')
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, PlutusScript (..))
+import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoEraTxOut (..),
   mintTxBodyL,
   vldtTxBodyL,
  )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDats)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -103,7 +74,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin
 import Cardano.Ledger.Core as Core hiding (TranslationError)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (
@@ -113,77 +83,155 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
  )
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Evaluate
-import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Language (Language (..), PlutusLanguage)
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (EraUTxO (getScriptsProvided), ScriptsProvided (..), UTxO (..))
+import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.Val (Val (..), zero)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Slot (EpochNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
+import Control.DeepSeq (NFData)
 import Data.ByteString.Short as SBS (fromShort)
 import Data.Foldable (Foldable (..))
+import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
+import qualified PlutusLedgerApi.V1 as P (ToData, toData)
 import qualified PlutusLedgerApi.V1 as PV1
-import PlutusLedgerApi.V1.Contexts ()
-import qualified PlutusLedgerApi.V2 as PV2
-import qualified PlutusLedgerApi.V3 as PV3
 
--- | NOTE: class 'TranslateEra' defines an associated type with the same name. Not to be confused.
-data TranslationError c
-  = ByronTxOutInContext !(TxOutSource c)
-  | TranslationLogicMissingInput !(TxIn c)
-  | RdmrPtrPointsToNothing !RdmrPtr
-  | LanguageNotSupported !Language
-  | InlineDatumsNotSupported !(TxOutSource c)
-  | ReferenceScriptsNotSupported !(TxOutSource c)
-  | ReferenceInputsNotSupported !(Set (TxIn c))
-  | TimeTranslationPastHorizon !Text
-  deriving (Eq, Show, Generic, NoThunks)
+class (PlutusLanguage l, AlonzoEraScript era) => EraPlutusTxInfo (l :: Language) era where
+  toPlutusTxCert :: proxy l -> TxCert era -> Either (ContextError era) (PlutusTxCert l)
 
-instance Crypto c => EncCBOR (TranslationError c) where
+  toPlutusScriptPurpose ::
+    proxy l ->
+    ScriptPurpose era ->
+    Either (ContextError era) (PlutusScriptPurpose l)
+
+  toPlutusTxInfo ::
+    proxy l ->
+    PParams era ->
+    EpochInfo (Either Text) ->
+    SystemStart ->
+    UTxO era ->
+    Tx era ->
+    Either (ContextError era) (PlutusTxInfo l)
+
+  toPlutusScriptContext ::
+    proxy l ->
+    PlutusTxInfo l ->
+    ScriptPurpose era ->
+    Either (ContextError era) (PlutusScriptContext l)
+
+class
+  ( AlonzoEraScript era
+  , Eq (ContextError era)
+  , Show (ContextError era)
+  , NFData (ContextError era)
+  , NoThunks (ContextError era)
+  , EncCBOR (ContextError era)
+  , DecCBOR (ContextError era)
+  ) =>
+  EraPlutusContext era
+  where
+  data ContextError era :: Type
+
+  mkPlutusScriptContext ::
+    PlutusScript era ->
+    ScriptPurpose era ->
+    PParams era ->
+    EpochInfo (Either Text) ->
+    SystemStart ->
+    UTxO era ->
+    Tx era ->
+    Either (ContextError era) (Data era)
+
+mkPlutusLanguageContext ::
+  (EraPlutusTxInfo l era, P.ToData (PlutusScriptContext l)) =>
+  proxy l ->
+  ScriptPurpose era ->
+  PParams era ->
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  UTxO era ->
+  Tx era ->
+  Either (ContextError era) (Data era)
+mkPlutusLanguageContext proxy scriptPurpose pp epochInfo sysStart utxo tx = do
+  txInfo <- toPlutusTxInfo proxy pp epochInfo sysStart utxo tx
+  scriptContext <- toPlutusScriptContext proxy txInfo scriptPurpose
+  pure $ Data $ P.toData scriptContext
+
+instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
+  toPlutusTxCert _ = pure . transTxCert
+
+  toPlutusScriptPurpose = transScriptPurpose
+
+  toPlutusTxInfo proxy pp ei sysS utxo tx = do
+    timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
+    -- We need to do this as a separate step
+    let lookupTxOut txIn =
+          case Map.lookup txIn (unUTxO utxo) of
+            Nothing -> Left $ TranslationLogicMissingInput txIn
+            Just txOut -> Right (txIn, txOut)
+    txIns <- mapM lookupTxOut (Set.toList (txBody ^. inputsTxBodyL))
+    txCerts <- mapM (toPlutusTxCert proxy) $ toList (txBody ^. certsTxBodyL)
+    Right $
+      PV1.TxInfo
+        { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns
+        , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
+        , PV1.txInfoFee = transCoin (txBody ^. feeTxBodyL)
+        , PV1.txInfoMint = transMintValue @c (txBody ^. mintTxBodyL)
+        , PV1.txInfoDCert = txCerts
+        , PV1.txInfoWdrl = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
+        , PV1.txInfoValidRange = timeRange
+        , PV1.txInfoSignatories = map transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
+        , PV1.txInfoData = map transDataPair dataPairs
+        , PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated txBody))
+        }
+    where
+      txBody = tx ^. bodyTxL
+      txOuts = txBody ^. outputsTxBodyL
+      interval = txBody ^. vldtTxBodyL
+      dataPairs = Map.toList (unTxDats $ tx ^. witsTxL . datsTxWitsL)
+
+  toPlutusScriptContext proxy txInfo scriptPurpose =
+    PV1.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+
+instance Crypto c => EraPlutusContext (AlonzoEra c) where
+  data ContextError (AlonzoEra c)
+    = TranslationLogicMissingInput !(TxIn c)
+    | TimeTranslationPastHorizon !Text
+    deriving (Eq, Show, Generic)
+
+  mkPlutusScriptContext (AlonzoPlutusV1 p) =
+    mkPlutusLanguageContext p
+
+instance NoThunks (ContextError (AlonzoEra c))
+
+instance Crypto c => NFData (ContextError (AlonzoEra c))
+
+instance Crypto c => EncCBOR (ContextError (AlonzoEra c)) where
   encCBOR = \case
-    ByronTxOutInContext txOutSource ->
-      encode $ Sum ByronTxOutInContext 0 !> To txOutSource
     TranslationLogicMissingInput txIn ->
       encode $ Sum TranslationLogicMissingInput 1 !> To txIn
-    RdmrPtrPointsToNothing ptr ->
-      encode $ Sum RdmrPtrPointsToNothing 2 !> To ptr
-    LanguageNotSupported lang ->
-      encode $ Sum LanguageNotSupported 3 !> To lang
-    InlineDatumsNotSupported txOutSource ->
-      encode $ Sum InlineDatumsNotSupported 4 !> To txOutSource
-    ReferenceScriptsNotSupported txOutSource ->
-      encode $ Sum ReferenceScriptsNotSupported 5 !> To txOutSource
-    ReferenceInputsNotSupported txIns ->
-      encode $ Sum ReferenceInputsNotSupported 6 !> To txIns
     TimeTranslationPastHorizon err ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
 
-instance Crypto c => DecCBOR (TranslationError c) where
-  decCBOR = decode (Summands "TranslationError" dec)
-    where
-      dec 0 = SumD ByronTxOutInContext <! From
-      dec 1 = SumD TranslationLogicMissingInput <! From
-      dec 2 = SumD RdmrPtrPointsToNothing <! From
-      dec 3 = SumD LanguageNotSupported <! From
-      dec 4 = SumD InlineDatumsNotSupported <! From
-      dec 5 = SumD ReferenceScriptsNotSupported <! From
-      dec 6 = SumD ReferenceInputsNotSupported <! From
-      dec 7 = SumD TimeTranslationPastHorizon <! From
-      dec n = Invalid n
+instance Crypto c => DecCBOR (ContextError (AlonzoEra c)) where
+  decCBOR = decode $ Summands "ContextError" $ \case
+    1 -> SumD TranslationLogicMissingInput <! From
+    7 -> SumD TimeTranslationPastHorizon <! From
+    n -> Invalid n
 
 -- | translate a validity interval to POSIX time
 transVITime ::
@@ -243,7 +291,7 @@ txInfoOut txOut = do
   let val = txOut ^. valueTxOutL
       dataHash = txOut ^. dataHashTxOutL
   addr <- transTxOutAddr txOut
-  pure (PV1.TxOut addr (transValue val) (transDataHash dataHash))
+  pure (PV1.TxOut addr (transValue val) (transDataHash <$> strictMaybeToMaybe dataHash))
 
 -- ==================================
 -- translate Values
@@ -275,23 +323,16 @@ transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAc
 -- makes no sense). However, if we don't preserve previous translation, scripts that
 -- previously succeeded will fail.
 transMintValue :: MultiAsset c -> PV1.Value
-transMintValue m = transMultiAssetInternal m justZeroAda
-  where
-    justZeroAda = PV1.singleton PV1.adaSymbol PV1.adaToken 0
+transMintValue m = transMultiAssetInternal m (transCoin zero)
 
 transValue :: MaryValue c -> PV1.Value
-transValue (MaryValue (Coin n) m) = justAda <> transMultiAsset m
-  where
-    justAda = PV1.singleton PV1.adaSymbol PV1.adaToken n
+transValue (MaryValue c m) = transCoin c <> transMultiAsset m
 
 -- =============================================
 -- translate fields like TxCert, Withdrawals, and similar
 
-instance Crypto c => EraPlutusContext 'PlutusV1 (AlonzoEra c) where
-  transTxCert = TxCertPlutusV1 . alonzoTransTxCert
-
-alonzoTransTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
-alonzoTransTxCert = \case
+transTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
+transTxCert = \case
   RegTxCert stakeCred ->
     PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
   UnRegTxCert stakeCred ->
@@ -299,151 +340,20 @@ alonzoTransTxCert = \case
   DelegStakeTxCert stakeCred keyHash ->
     PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
   RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
-    PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (transHash ppVrf)))
+    PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes ppVrf)))
   RetirePoolTxCert poolId (EpochNo i) ->
-    PV1.DCertPoolRetire (transKeyHash poolId) (fromIntegral i)
+    PV1.DCertPoolRetire (transKeyHash poolId) (toInteger i)
   GenesisDelegTxCert {} -> PV1.DCertGenesis
   MirTxCert {} -> PV1.DCertMir
 
--- ===================================
--- translate Script Purpose
-
 transScriptPurpose ::
-  EraPlutusContext 'PlutusV1 era =>
+  (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
+  proxy l ->
   ScriptPurpose era ->
-  PV1.ScriptPurpose
-transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
-transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
-transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
-  PV1.Rewarding (PV1.StakingHash (transCred cred))
--- TODO Add support for PV3
-transScriptPurpose (Certifying dcert) = PV1.Certifying . unTxCertV1 $ transTxCert dcert
-
--- | Where we keep functions that differ from Era to Era but which
---   deal with the extra things in the TxOut (Scripts, DataHash, Datum, etc)
-class ExtendedUTxO era where
-  -- Compute a Digest of the current transaction to pass to the script
-  --    This is the major component of the valContext function.
-  txInfo ::
-    PParams era ->
-    Language ->
-    EpochInfo (Either Text) ->
-    SystemStart ->
-    UTxO era ->
-    Tx era ->
-    Either (TranslationError (EraCrypto era)) VersionedTxInfo
-
-  txscripts ::
-    UTxO era ->
-    Tx era ->
-    Map.Map (ScriptHash (EraCrypto era)) (Script era)
-  default txscripts ::
-    EraUTxO era =>
-    UTxO era ->
-    Tx era ->
-    Map.Map (ScriptHash (EraCrypto era)) (Script era)
-  txscripts utxo = unScriptsProvided . getScriptsProvided utxo
-
-  getAllowedSupplimentalDataHashes ::
-    TxBody era ->
-    UTxO era ->
-    Set (DataHash (EraCrypto era))
-  default getAllowedSupplimentalDataHashes ::
-    AlonzoEraUTxO era =>
-    TxBody era ->
-    UTxO era ->
-    Set (DataHash (EraCrypto era))
-  getAllowedSupplimentalDataHashes txBody utxo = getSupplementalDataHashes utxo txBody
-
-  getDatum ::
-    Tx era ->
-    UTxO era ->
-    ScriptPurpose era ->
-    Maybe (Data era)
-  default getDatum :: AlonzoEraUTxO era => Tx era -> UTxO era -> ScriptPurpose era -> Maybe (Data era)
-  getDatum tx utxo = getSpendingDatum utxo tx
-
-{-# DEPRECATED txscripts "In favor of `getScriptsProvided`" #-}
-{-# DEPRECATED getAllowedSupplimentalDataHashes "In favor of `getSupplementalDataHashes`" #-}
-{-# DEPRECATED getDatum "In favor of `getDatumForSpending`" #-}
-
-alonzoTxInfo ::
-  forall era.
-  ( EraTx era
-  , AlonzoEraTxBody era
-  , Value era ~ MaryValue (EraCrypto era)
-  , TxWits era ~ AlonzoTxWits era
-  , EraPlutusContext 'PlutusV1 era
-  ) =>
-  PParams era ->
-  Language ->
-  EpochInfo (Either Text) ->
-  SystemStart ->
-  UTxO era ->
-  Tx era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
-alonzoTxInfo pp lang ei sysS utxo tx = do
-  timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
-  -- We need to do this as a separate step
-  let lookupTxOut txIn =
-        case Map.lookup txIn (unUTxO utxo) of
-          Nothing -> Left $ TranslationLogicMissingInput txIn
-          Just txOut -> Right (txIn, txOut)
-  txIns <- mapM lookupTxOut (Set.toList (txBody ^. inputsTxBodyL))
-  case lang of
-    PlutusV1 ->
-      Right . TxInfoPV1 $
-        PV1.TxInfo
-          { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns
-          , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
-          , PV1.txInfoFee = transValue (inject @Coin @(MaryValue (EraCrypto era)) fee)
-          , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
-          , PV1.txInfoDCert = toList $ fmap (unTxCertV1 . transTxCert) (txBody ^. certsTxBodyL)
-          , PV1.txInfoWdrl = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
-          , PV1.txInfoValidRange = timeRange
-          , PV1.txInfoSignatories = map transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
-          , PV1.txInfoData = map transDataPair datpairs
-          , PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated txBody))
-          }
-    _ -> Left $ LanguageNotSupported lang
-  where
-    txBody :: TxBody era
-    txBody = tx ^. bodyTxL
-    txWits :: AlonzoTxWits era
-    txWits = tx ^. witsTxL
-    txOuts = txBody ^. outputsTxBodyL
-    fee = txBody ^. feeTxBodyL
-    interval = txBody ^. vldtTxBodyL
-
-    datpairs = Map.toList (unTxDats $ txdats' txWits)
-
--- | valContext pairs transaction data with a script purpose.
---   See figure 22 of the Alonzo specification.
-valContext ::
-  EraPlutusContext 'PlutusV1 era =>
-  VersionedTxInfo ->
-  ScriptPurpose era ->
-  Data era
-valContext (TxInfoPV1 txinfo) sp =
-  Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
-valContext (TxInfoPV2 txinfo) sp =
-  Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
-valContext (TxInfoPV3 txinfo) _sp =
-  -- FIXME: add support for PlutusV3
-  Data (PV3.toData (PV3.ScriptContext txinfo (error "Unimplemented")))
-
--- | Compute the Set of Languages in an era, where 'AlonzoScripts' are used
-languages ::
-  forall era.
-  ( ExtendedUTxO era
-  , Script era ~ AlonzoScript era
-  ) =>
-  Tx era ->
-  UTxO era ->
-  Set (ScriptHash (EraCrypto era)) ->
-  Set Language
-languages tx utxo sNeeded = Map.foldl' accum Set.empty allscripts
-  where
-    allscripts = Map.restrictKeys (txscripts @era utxo tx) sNeeded
-    accum ans (TimelockScript _) = ans
-    accum ans (PlutusScript (Plutus l _)) = Set.insert l ans
+  Either (ContextError era) PV1.ScriptPurpose
+transScriptPurpose proxy = \case
+  Minting policyId -> pure $ PV1.Minting (transPolicyID policyId)
+  Spending txIn -> pure $ PV1.Spending (txInfoIn' txIn)
+  Rewarding (RewardAcnt _networkId cred) ->
+    pure $ PV1.Rewarding (PV1.StakingHash (transCred cred))
+  Certifying txCert -> PV1.Certifying <$> toPlutusTxCert proxy txCert

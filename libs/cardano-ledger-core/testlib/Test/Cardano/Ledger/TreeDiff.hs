@@ -81,7 +81,7 @@ instance ToExpr (SafeHash c index) where
   toExpr x = App "SafeHash" [toExpr (extractHash x)]
 
 -- Language
-instance ToExpr Plutus
+instance ToExpr (Plutus l)
 
 instance ToExpr PlutusBinary
 

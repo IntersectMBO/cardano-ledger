@@ -25,7 +25,6 @@ where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
@@ -41,7 +40,7 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody,
   BabbageTxOut,
  )
-import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
+import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
@@ -50,7 +49,6 @@ import Cardano.Ledger.Babbage.UTxO (
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Plutus.Language (Language (..))
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (ScriptsProvided (..), UTxO (..))
@@ -70,9 +68,6 @@ instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
   type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis
 
   fromShelleyPParams ag = translateEra' () . API.fromShelleyPParams ag
-
-instance (Crypto c, EraPlutusContext 'PlutusV2 (BabbageEra c)) => ExtendedUTxO (BabbageEra c) where
-  txInfo = babbageTxInfo
 
 -- | Extract binary data either directly from the `Tx` as an "inline datum"
 -- or look it up in the witnesses by the hash.

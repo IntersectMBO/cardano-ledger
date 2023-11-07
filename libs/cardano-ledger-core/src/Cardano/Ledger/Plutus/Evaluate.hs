@@ -10,8 +10,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -19,287 +22,207 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Plutus.Evaluate (
+  PlutusWithContext (..),
   ScriptFailure (..),
   ScriptResult (..),
   scriptPass,
   scriptFail,
-  PlutusDebugLang (..),
-  PlutusDebug (..),
-  PlutusData (..),
-  PlutusError (..),
+  PlutusDatums (..),
   PlutusDebugInfo (..),
-  EraPlutusContext (..),
-  PlutusWithContext (..),
-  PlutusTxCert (..),
-  unTxCertV1,
-  unTxCertV2,
-  unTxCertV3,
   debugPlutus,
   runPlutusScript,
   runPlutusScriptWithLogs,
-  deserialiseAndEvaluateScript,
+  evaluatePlutusWithContext,
   explainPlutusEvaluationError,
 )
 where
 
-import Cardano.Ledger.BaseTypes (ProtVer (..))
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Version, decodeFull')
-import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
-import Cardano.Ledger.Binary.Decoding (decodeRecordSum)
-import Cardano.Ledger.Core
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  Version,
+  toPlainDecoder,
+  toPlainEncoding,
+ )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   decodeCostModelFailHard,
   encodeCostModel,
   getEvaluationContext,
  )
-import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.Plutus.Language (
-  IsLanguage (..),
   Language (..),
   Plutus (..),
-  PlutusBinary (..),
-  SLanguage (..),
-  fromSLanguage,
-  withSLanguage,
+  PlutusLanguage (..),
+  PlutusRunnable (..),
+  decodeWithPlutus,
+  plutusFromRunnable,
+  plutusLanguage,
  )
 import Cardano.Ledger.Plutus.TxInfo
-import Control.Monad (when)
-import Control.Monad.Trans.Fail
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.UTF8 as BSU
-import qualified Data.Foldable as F (asum)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text, pack)
-import Data.Typeable (Proxy (..))
 import GHC.Generics (Generic)
+import PlutusLedgerApi.Common as P (EvaluationError (CodecError), ExBudget, VerboseMode)
 import qualified PlutusLedgerApi.V1 as PV1
 import PlutusLedgerApi.V1.Contexts ()
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Prettyprinter (Pretty (..))
 
-data PlutusWithContext era = PlutusWithContext
-  { pwcScript :: !Plutus
-  , pwcDatums :: ![Data era]
-  , pwcExUnits :: !ExUnits
-  , pwcCostModel :: !CostModel
+data PlutusWithContext where
+  PlutusWithContext ::
+    PlutusLanguage l =>
+    { pwcProtocolVersion :: !Version
+    , pwcScript :: !(Either (Plutus l) (PlutusRunnable l))
+    , pwcDatums :: !PlutusDatums
+    , pwcExUnits :: !ExUnits
+    , pwcCostModel :: !CostModel
+    } ->
+    PlutusWithContext
+
+deriving instance Show PlutusWithContext
+
+instance Eq PlutusWithContext where
+  pwc1@(PlutusWithContext {pwcScript = s1}) == pwc2@(PlutusWithContext {pwcScript = s2}) =
+    pwcProtocolVersion pwc1 == pwcProtocolVersion pwc2
+      && pwcDatums pwc1 == pwcDatums pwc2
+      && pwcExUnits pwc1 == pwcExUnits pwc2
+      && pwcCostModel pwc1 == pwcCostModel pwc2
+      && eqScripts s1 s2
+    where
+      eqScripts (Left p1) (Left p2) =
+        plutusLanguage p1 == plutusLanguage p2 && plutusBinary p1 == plutusBinary p2
+      eqScripts (Right p1) (Right p2) =
+        plutusLanguage p1 == plutusLanguage p2 && plutusRunnable p1 == plutusRunnable p2
+      eqScripts _ _ = False
+
+data ScriptFailure = ScriptFailure
+  { scriptFailureMessage :: Text
+  , scriptFailurePlutus :: PlutusWithContext
   }
-  deriving (Eq)
-
-deriving instance Era era => Show (PlutusWithContext era)
-
-data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Generic)
 
 data ScriptResult
-  = Passes [PlutusDebug]
-  | Fails [PlutusDebug] (NonEmpty ScriptFailure)
+  = Passes [PlutusWithContext]
+  | Fails [PlutusWithContext] (NonEmpty ScriptFailure)
   deriving (Generic)
 
-scriptPass :: PlutusDebug -> ScriptResult
-scriptPass pd = Passes [pd]
+scriptPass :: PlutusWithContext -> ScriptResult
+scriptPass pwc = Passes [pwc]
 
 scriptFail :: ScriptFailure -> ScriptResult
-scriptFail pd = Fails [] (pure pd)
+scriptFail sf = Fails [] (pure sf)
+
+withRunnablePlutusWithContext ::
+  PlutusWithContext ->
+  -- | Handle the decoder failure
+  (P.EvaluationError -> a) ->
+  (forall l. PlutusLanguage l => PlutusRunnable l -> a) ->
+  a
+withRunnablePlutusWithContext PlutusWithContext {pwcProtocolVersion, pwcScript} onError f =
+  case pwcScript of
+    Right pr -> f pr
+    Left plutus ->
+      case decodePlutusRunnable pwcProtocolVersion plutus of
+        Right pr -> f pr
+        Left err -> onError (P.CodecError err)
 
 instance Semigroup ScriptResult where
-  (Passes ps) <> (Passes qs) = Passes (ps <> qs)
-  (Passes ps) <> (Fails qs xs) = Fails (ps <> qs) xs
-  (Fails ps xs) <> (Passes qs) = Fails (ps <> qs) xs
-  (Fails ps xs) <> (Fails qs ys) = Fails (ps <> qs) (xs <> ys)
+  Passes ps <> Passes qs = Passes (ps <> qs)
+  Passes ps <> Fails qs xs = Fails (ps <> qs) xs
+  Fails ps xs <> Passes qs = Fails (ps <> qs) xs
+  Fails ps xs <> Fails qs ys = Fails (ps <> qs) (xs <> ys)
 
 instance Monoid ScriptResult where
   mempty = Passes mempty
 
-newtype PlutusData = PlutusData {unPlutusData :: [PV1.Data]}
-  deriving (Eq)
+newtype PlutusDatums = PlutusDatums {unPlutusDatums :: [PV1.Data]}
+  deriving (Eq, Show)
 
-instance EncCBOR PlutusData where
-  encCBOR (PlutusData d) = encCBOR d
+instance EncCBOR PlutusDatums where
+  encCBOR (PlutusDatums d) = encCBOR d
 
-instance DecCBOR PlutusData where
-  decCBOR = PlutusData <$> decCBOR
+instance DecCBOR PlutusDatums where
+  decCBOR = PlutusDatums <$> decCBOR
 
-data PlutusDebugLang (l :: Language) where
-  PlutusDebugLang ::
-    { pdSLanguage :: SLanguage l
-    , pdCostModel :: CostModel
-    , pdExUnits :: ExUnits
-    , pdPlutusScript :: PlutusBinary
-    , pdPlutusData :: PlutusData
-    , pdProtVer :: ProtVer
-    } ->
-    PlutusDebugLang l
+instance ToCBOR PlutusWithContext where
+  toCBOR (PlutusWithContext {..}) =
+    Plain.encodeListLen 5
+      <> toCBOR pwcProtocolVersion
+      <> toPlainEncoding pwcProtocolVersion (either encCBOR encCBOR pwcScript)
+      <> toPlainEncoding pwcProtocolVersion (encCBOR pwcDatums)
+      <> toPlainEncoding pwcProtocolVersion (encCBOR pwcExUnits)
+      <> toPlainEncoding pwcProtocolVersion (encodeCostModel pwcCostModel)
 
--- | There is dummy Show instance for PlutusDebugLang intentionally, because it is too
--- expensive and it will be too tempting to use it incorrectly. If needed for
--- testing use 'StandaloneDeriving', otherwise define an efficient way to display
--- this info.
-instance Show (PlutusDebugLang l) where
-  show _ = "PlutusDebug Omitted"
-
-deriving instance Eq (SLanguage l) => Eq (PlutusDebugLang l)
-
-deriving instance Generic (PlutusDebugLang l)
-
-instance (IsLanguage l, EncCBOR (SLanguage l)) => EncCBOR (PlutusDebugLang l) where
-  encCBOR (PlutusDebugLang slang costModel exUnits sbs pData protVer) =
-    encode $
-      Sum (PlutusDebugLang slang) (fromIntegral (fromEnum (fromSLanguage slang)))
-        !> E encodeCostModel costModel
-        !> To exUnits
-        !> To sbs
-        !> To pData
-        !> To protVer
-
-instance IsLanguage l => DecCBOR (PlutusDebugLang l) where
-  decCBOR = decodeRecordSum "PlutusDebugLang" $ \tag -> do
-    let slang = isLanguage @l
-        lang = fromSLanguage slang
-    when (fromEnum lang /= fromIntegral tag) $ fail $ "Unexpected language: " <> show tag
-    costModel <- decodeCostModelFailHard lang
-    exUnits <- decCBOR
-    sbs <- decCBOR
-    pData <- decCBOR
-    protVer <- decCBOR
-    pure (6, PlutusDebugLang slang costModel exUnits sbs pData protVer)
-
-data PlutusDebug where
-  PlutusDebug :: IsLanguage l => PlutusDebugLang l -> PlutusDebug
-
-deriving instance Show PlutusDebug
-
-instance EncCBOR PlutusDebug where
-  encCBOR (PlutusDebug pdbg) = encCBOR pdbg
-
-data PlutusError
-  = PlutusErrorV1 PV1.EvaluationError
-  | PlutusErrorV2 PV2.EvaluationError
-  | PlutusErrorV3 PV3.EvaluationError
-  deriving (Show)
+instance FromCBOR PlutusWithContext where
+  fromCBOR = Plain.decodeRecordNamed "PlutusWithContext" (const 5) $ do
+    pwcProtocolVersion <- fromCBOR
+    toPlainDecoder pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
+      let lang = plutusLanguage plutus
+          pwcScript = Left plutus
+      pwcDatums <- decCBOR
+      pwcExUnits <- decCBOR
+      pwcCostModel <- decodeCostModelFailHard lang
+      pure PlutusWithContext {..}
 
 data PlutusDebugInfo
-  = DebugSuccess PV1.ExBudget -- NOTE: PV1.ExBudget == PV2.ExBudget, hence this works
+  = DebugBadHex String
   | DebugCannotDecode String
-  | DebugInfo [Text] PlutusError PlutusDebug
-  | DebugBadHex String
+  | DebugSuccess [Text] PV1.ExBudget
+  | DebugFailure [Text] P.EvaluationError PlutusWithContext
   deriving (Show)
 
-debugPlutus ::
-  Version ->
-  String ->
-  PlutusDebugInfo
-debugPlutus version db =
+debugPlutus :: String -> PlutusDebugInfo
+debugPlutus db =
   case B64.decode (BSU.fromString db) of
     Left e -> DebugBadHex (show e)
     Right bs ->
-      let plutusDebugLangDecoder ::
-            forall l. IsLanguage l => Proxy l -> Fail String PlutusDebug
-          plutusDebugLangDecoder _ =
-            FailT $
-              pure $
-                either (Left . pure . show) (Right . PlutusDebug) $
-                  decodeFull' @(PlutusDebugLang l) version bs
-          plutusDebugDecoder =
-            F.asum
-              [ plutusDebugLangDecoder (Proxy @'PlutusV1)
-              , plutusDebugLangDecoder (Proxy @'PlutusV2)
-              , plutusDebugLangDecoder (Proxy @'PlutusV3)
-              ]
-       in case runFail plutusDebugDecoder of
-            Left e -> DebugCannotDecode e
-            Right pd@(PlutusDebug (PlutusDebugLang sl costModel exUnits binaryScript pData protVer)) ->
-              let pv = transProtocolVersion protVer
-                  v = PV1.Verbose
-                  cm = getEvaluationContext costModel
-                  eu = transExUnits exUnits
-                  PlutusBinary script = binaryScript
-                  PlutusData d = pData
-               in case sl of
-                    SPlutusV1 ->
-                      case deserialiseAndEvaluateScript PlutusV1 pv v cm eu script d of
-                        (logs, Left e) -> DebugInfo logs (PlutusErrorV1 e) pd
-                        (_, Right ex) -> DebugSuccess ex
-                    SPlutusV2 ->
-                      case deserialiseAndEvaluateScript PlutusV2 pv v cm eu script d of
-                        (logs, Left e) -> DebugInfo logs (PlutusErrorV2 e) pd
-                        (_, Right ex) -> DebugSuccess ex
-                    SPlutusV3 ->
-                      case deserialiseAndEvaluateScript PlutusV3 pv v cm eu script d of
-                        (logs, Left e) -> DebugInfo logs (PlutusErrorV3 e) pd
-                        (_, Right ex) -> DebugSuccess ex
+      case Plain.decodeFull' bs of
+        Left e -> DebugCannotDecode $ show e
+        Right pwc@(PlutusWithContext {..}) ->
+          let cm = getEvaluationContext pwcCostModel
+              eu = transExUnits pwcExUnits
+              PlutusDatums d = pwcDatums
+              onDecoderError err = DebugFailure [] err pwc
+              toDebugInfo = \case
+                (logs, Left err) -> DebugFailure logs err pwc
+                (logs, Right ex) -> DebugSuccess logs ex
+           in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable ->
+                toDebugInfo $
+                  evaluatePlutusRunnable pwcProtocolVersion PV1.Verbose cm eu plutusRunnable d
 
--- TODO: this function is supposed to exist temporarily to cope with the breaking changes
--- in https://github.com/input-output-hk/plutus/pull/5538, until script deserialisation
--- is properly fixed in the ledger.
-deserialiseAndEvaluateScript ::
-  Language ->
-  PV1.MajorProtocolVersion ->
-  PV1.VerboseMode ->
-  PV1.EvaluationContext ->
-  PV1.ExBudget ->
-  PV1.SerialisedScript ->
-  [PV1.Data] ->
-  (PV1.LogOutput, Either PV1.EvaluationError PV1.ExBudget)
-deserialiseAndEvaluateScript lang pv v ctx budget ss = case deserialise pv ss of
-  Right script -> eval pv v ctx budget script
-  Left err -> const (mempty, Left (PV1.CodecError err))
-  where
-    (deserialise, eval) = case lang of
-      PlutusV1 -> (PV1.deserialiseScript, PV1.evaluateScriptRestricting)
-      PlutusV2 -> (PV2.deserialiseScript, PV2.evaluateScriptRestricting)
-      PlutusV3 -> (PV3.deserialiseScript, PV3.evaluateScriptRestricting)
-
--- The runPLCScript in the Specification has a slightly different type
--- than the one in the implementation below. Made necessary by the the type
--- of PV1.evaluateScriptRestricting which is the interface to Plutus, and in the impementation
--- we try to track why a script failed (if it does) by the [String] in the Fails constructor of
--- ScriptResut.
-
-runPlutusScript ::
-  forall era.
-  ProtVer ->
-  PlutusWithContext era ->
-  ScriptResult
-runPlutusScript pv pwc = snd (runPlutusScriptWithLogs pv pwc)
+runPlutusScript :: PlutusWithContext -> ScriptResult
+runPlutusScript = snd . runPlutusScriptWithLogs
 
 runPlutusScriptWithLogs ::
-  forall era.
-  ProtVer ->
-  PlutusWithContext era ->
+  PlutusWithContext ->
   ([Text], ScriptResult)
-runPlutusScriptWithLogs pv pwc@PlutusWithContext {pwcScript, pwcDatums, pwcExUnits, pwcCostModel} =
-  ( logs
-  , case interpretedScript of
-      Left evalError -> explainPlutusEvaluationError pv pwc evalError
-      Right _ ->
-        withSLanguage lang $ \slang ->
-          scriptPass $
-            PlutusDebug $
-              PlutusDebugLang
-                slang
-                pwcCostModel
-                pwcExUnits
-                scriptBytes
-                (PlutusData (map getPlutusData pwcDatums))
-                pv
-  )
+runPlutusScriptWithLogs pwc = toScriptResult <$> evaluatePlutusWithContext PV1.Quiet pwc
   where
-    Plutus lang scriptBytes = pwcScript
-    (logs, interpretedScript) =
-      plutusInterpreter
-        lang
-        PV1.Quiet
-        (getEvaluationContext pwcCostModel)
-        (transExUnits pwcExUnits)
-        (unPlutusBinary scriptBytes)
-        (map getPlutusData pwcDatums)
-    plutusPV = transProtocolVersion pv
-    plutusInterpreter PlutusV1 = deserialiseAndEvaluateScript PlutusV1 plutusPV
-    plutusInterpreter PlutusV2 = deserialiseAndEvaluateScript PlutusV2 plutusPV
-    plutusInterpreter PlutusV3 = deserialiseAndEvaluateScript PlutusV3 plutusPV -- TODO: Make class to unify all plutus versioned operations
+    toScriptResult = \case
+      Left evalError -> explainPlutusEvaluationError pwc evalError
+      Right _ -> scriptPass pwc
+
+evaluatePlutusWithContext ::
+  P.VerboseMode ->
+  PlutusWithContext ->
+  ([Text], Either P.EvaluationError P.ExBudget)
+evaluatePlutusWithContext mode pwc@PlutusWithContext {..} =
+  withRunnablePlutusWithContext pwc (([],) . Left) $ \plutusRunnable ->
+    evaluatePlutusRunnable
+      pwcProtocolVersion
+      mode
+      (getEvaluationContext pwcCostModel)
+      (transExUnits pwcExUnits)
+      plutusRunnable
+      (unPlutusDatums pwcDatums)
 
 -- | Explain why a script might fail. Scripts come in two flavors:
 --
@@ -311,24 +234,24 @@ runPlutusScriptWithLogs pv pwc@PlutusWithContext {pwcScript, pwcDatums, pwcExUni
 -- way more information. But there is no guarantee the context data really can
 -- be decoded.
 explainPlutusEvaluationError ::
-  forall era.
-  ProtVer ->
-  PlutusWithContext era ->
-  PV1.EvaluationError ->
+  PlutusWithContext ->
+  P.EvaluationError ->
   ScriptResult
-explainPlutusEvaluationError pv PlutusWithContext {pwcScript, pwcDatums, pwcExUnits, pwcCostModel} e =
-  let Plutus lang binaryScript = pwcScript
+explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScript, pwcDatums} e =
+  let lang = either plutusLanguage plutusLanguage pwcScript
+      Plutus binaryScript = either id plutusFromRunnable pwcScript
       firstLine = "The " ++ show lang ++ " script failed:"
-      pvLine = "The protocol version is: " ++ show pv
+      pvLine = "The protocol version is: " ++ show pwcProtocolVersion
       plutusError = "The plutus evaluation error is: " ++ show e
 
-      getCtxAsString :: Language -> PV1.Data -> Maybe String
-      getCtxAsString PlutusV1 d = show . pretty <$> (PV1.fromData d :: Maybe PV1.ScriptContext)
-      getCtxAsString PlutusV2 d = show . pretty <$> (PV2.fromData d :: Maybe PV2.ScriptContext)
-      getCtxAsString PlutusV3 d = show . pretty <$> (PV3.fromData d :: Maybe PV3.ScriptContext)
+      getCtxAsString :: PV1.Data -> Language -> Maybe String
+      getCtxAsString d = \case
+        PlutusV1 -> show . pretty <$> (PV1.fromData d :: Maybe PV1.ScriptContext)
+        PlutusV2 -> show . pretty <$> (PV2.fromData d :: Maybe PV2.ScriptContext)
+        PlutusV3 -> show . pretty <$> (PV3.fromData d :: Maybe PV3.ScriptContext)
 
       ctxMessage info =
-        case getCtxAsString lang info of
+        case getCtxAsString info lang of
           Nothing ->
             concat
               [ "The third data argument does not translate to a "
@@ -337,9 +260,8 @@ explainPlutusEvaluationError pv PlutusWithContext {pwcScript, pwcDatums, pwcExUn
               , show info
               ]
           Just ctx -> "The script context is:\n" ++ ctx
-      datums = map getPlutusData pwcDatums
       dataLines =
-        case datums of
+        case unPlutusDatums pwcDatums of
           [dat, redeemer, info] ->
             [ "The datum is: " ++ show dat
             , "The redeemer is: " ++ show redeemer
@@ -354,16 +276,4 @@ explainPlutusEvaluationError pv PlutusWithContext {pwcScript, pwcDatums, pwcExUn
             , "The data is:\n" ++ show ds
             ]
       line = pack . unlines $ "" : firstLine : show binaryScript : plutusError : pvLine : dataLines
-
-      plutusDebug =
-        withSLanguage lang $ \slang ->
-          PlutusDebug $
-            PlutusDebugLang
-              { pdSLanguage = slang
-              , pdCostModel = pwcCostModel
-              , pdExUnits = pwcExUnits
-              , pdPlutusScript = binaryScript
-              , pdPlutusData = PlutusData datums
-              , pdProtVer = pv
-              }
-   in scriptFail $ PlutusSF line plutusDebug
+   in scriptFail $ ScriptFailure line pwc

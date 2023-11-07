@@ -19,10 +19,8 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
   uniqueIdGovActions,
 ) where
 
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Sized)
-import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (
@@ -57,14 +55,13 @@ import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
-import Cardano.Ledger.Plutus.Language (Language (..))
 import Control.State.Transition.Extended (STS (Event))
 import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
 import qualified Data.Sequence.Strict as Seq
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Data.Arbitrary ()
-import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoScript, genValidAndUnknownCostModels, unFlexibleCostModels)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidAndUnknownCostModels, unFlexibleCostModels)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
@@ -122,9 +119,6 @@ instance Crypto c => Arbitrary (ConwayGovCert c) where
       , ConwayAuthCommitteeHotKey <$> arbitrary <*> arbitrary
       , ConwayResignCommitteeColdKey <$> arbitrary <*> arbitrary
       ]
-
-instance Crypto c => Arbitrary (AlonzoScript (ConwayEra c)) where
-  arbitrary = genAlonzoScript [PlutusV1, PlutusV2, PlutusV3]
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Conway.Goverance  ------------------------------------------------------

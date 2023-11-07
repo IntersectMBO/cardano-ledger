@@ -1,4 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -8,19 +10,13 @@ module Test.Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  ExtendedUTxO (..),
-  TranslationError (..),
-  TxOutSource (..),
-  VersionedTxInfo (..),
-  txInfo,
- )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusTxInfo (toPlutusTxInfo), TxOutSource (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AlonzoScript)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))
 import Cardano.Ledger.Babbage.TxBody (Datum (..))
 import qualified Cardano.Ledger.Babbage.TxBody as B
-import Cardano.Ledger.Babbage.TxInfo (txInfoInV2, txInfoOutV2)
+import Cardano.Ledger.Babbage.TxInfo (ContextError (..), txInfoInV2, txInfoOutV2)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TranslationError)
@@ -28,7 +24,8 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data (..), dataToBinaryData)
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus.TxInfo (PlutusTxInfo)
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val
@@ -100,10 +97,10 @@ type BabbageTxInfoTests era =
   , Script era ~ AlonzoScript era
   )
 
-refScriptOutput :: forall era. BabbageTxInfoTests era => TxOut era
+refScriptOutput :: forall era. (BabbageTxInfoTests era, AlonzoEraScript era) => TxOut era
 refScriptOutput =
   mkBasicTxOut (shelleyAddr) (Val.inject $ Coin 3)
-    & referenceScriptTxOutL .~ (SJust $ alwaysSucceeds PlutusV2 3)
+    & referenceScriptTxOutL .~ (SJust $ alwaysSucceeds @'PlutusV2 3)
 
 -- This input is only a "Shelley input" in the sense
 -- that we attach it to a Shelley output in the UTxO created below.
@@ -116,7 +113,7 @@ inputWithInlineDatum = mkTxInPartial genesisId 3
 inputWithRefScript :: Crypto c => TxIn c
 inputWithRefScript = mkTxInPartial genesisId 4
 
-utxo :: forall era. BabbageTxInfoTests era => UTxO era
+utxo :: forall era. (BabbageTxInfoTests era, AlonzoEraScript era) => UTxO era
 utxo =
   UTxO $
     Map.fromList
@@ -151,53 +148,59 @@ txBare i o = mkBasicTx (txb i Nothing o)
 txRefInput :: forall era. (EraTx era, B.BabbageEraTxBody era) => TxIn (EraCrypto era) -> Tx era
 txRefInput refInput = mkBasicTx (txb shelleyInput (Just refInput) shelleyOutput)
 
-hasReferenceInput :: VersionedTxInfo -> Bool
-hasReferenceInput (TxInfoPV1 _) = False
-hasReferenceInput (TxInfoPV2 info) = PV2.txInfoReferenceInputs info /= mempty
-hasReferenceInput (TxInfoPV3 info) = PV3.txInfoReferenceInputs info /= mempty
+hasReferenceInput :: SLanguage l -> PlutusTxInfo l -> Bool
+hasReferenceInput slang txInfo =
+  case slang of
+    SPlutusV1 -> False
+    SPlutusV2 -> PV2.txInfoReferenceInputs txInfo /= mempty
+    SPlutusV3 -> PV3.txInfoReferenceInputs txInfo /= mempty
 
-expectOneInput :: PV2.TxInInfo -> VersionedTxInfo -> Bool
-expectOneInput _ (TxInfoPV1 _) = False
-expectOneInput i (TxInfoPV2 info) = PV2.txInfoInputs info == [i]
-expectOneInput i (TxInfoPV3 info) = PV3.txInfoInputs info == [i]
+expectOneInput :: PV2.TxInInfo -> SLanguage l -> PlutusTxInfo l -> Bool
+expectOneInput i slang txInfo =
+  case slang of
+    SPlutusV1 -> False
+    SPlutusV2 -> PV2.txInfoInputs txInfo == [i]
+    SPlutusV3 -> PV3.txInfoInputs txInfo == [i]
 
-expectOneOutput :: PV2.TxOut -> VersionedTxInfo -> Bool
-expectOneOutput _ (TxInfoPV1 _) = False
-expectOneOutput o (TxInfoPV2 info) = PV2.txInfoOutputs info == [o]
-expectOneOutput o (TxInfoPV3 info) = PV3.txInfoOutputs info == [o]
+expectOneOutput :: PV2.TxOut -> SLanguage l -> PlutusTxInfo l -> Bool
+expectOneOutput o slang txInfo =
+  case slang of
+    SPlutusV1 -> False
+    SPlutusV2 -> PV2.txInfoOutputs txInfo == [o]
+    SPlutusV3 -> PV3.txInfoOutputs txInfo == [o]
 
 successfulTranslation ::
-  (ExtendedUTxO era, BabbageTxInfoTests era) =>
-  Language ->
+  (BabbageTxInfoTests era, EraPlutusTxInfo l era, Show (ContextError era)) =>
+  SLanguage l ->
   Tx era ->
-  (VersionedTxInfo -> Bool) ->
+  (SLanguage l -> PlutusTxInfo l -> Bool) ->
   Assertion
-successfulTranslation lang tx f =
-  case ctx of
-    Right info -> assertBool "unexpected transaction info" (f info)
+successfulTranslation slang tx f =
+  case toPlutusTxInfo slang def ei ss utxo tx of
+    Right txInfo -> assertBool "unexpected transaction info" (f slang txInfo)
     Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
-  where
-    ctx = txInfo def lang ei ss utxo tx
 
 expectTranslationError ::
-  (ExtendedUTxO era, BabbageTxInfoTests era) =>
-  Language ->
+  (BabbageTxInfoTests era, Show (ContextError era), Eq (ContextError era), EraPlutusTxInfo l era) =>
+  SLanguage l ->
   Tx era ->
-  TranslationError (EraCrypto era) ->
+  ContextError era ->
   Assertion
-expectTranslationError lang tx expected =
-  case ctx of
+expectTranslationError slang tx expected =
+  case toPlutusTxInfo slang def ei ss utxo tx of
     Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
     Left e -> e @?= expected
-  where
-    ctx = txInfo def lang ei ss utxo tx
 
 expectV1TranslationError ::
-  (ExtendedUTxO era, BabbageTxInfoTests era) =>
+  ( BabbageTxInfoTests era
+  , Show (ContextError era)
+  , EraPlutusTxInfo 'PlutusV1 era
+  , Eq (ContextError era)
+  ) =>
   Tx era ->
-  TranslationError (EraCrypto era) ->
+  ContextError era ->
   Assertion
-expectV1TranslationError = expectTranslationError PlutusV1
+expectV1TranslationError = expectTranslationError SPlutusV1
 
 errorTranslate :: (HasCallStack, Show a) => String -> Either a b -> b
 errorTranslate exampleName =
@@ -205,47 +208,41 @@ errorTranslate exampleName =
 
 translatedInputEx1 ::
   forall era.
-  BabbageTxInfoTests era =>
+  (BabbageTxInfoTests era, era ~ Babbage) =>
   Proxy era ->
   PV2.TxInInfo
 translatedInputEx1 _ =
-  errorTranslate "translatedInputEx1" $ (txInfoInV2 @era) utxo inputWithInlineDatum
+  errorTranslate "translatedInputEx1" $ txInfoInV2 @(EraCrypto era) utxo inputWithInlineDatum
 
 translatedInputEx2 ::
   forall era.
-  BabbageTxInfoTests era =>
+  (BabbageTxInfoTests era, era ~ Babbage) =>
   Proxy era ->
   PV2.TxInInfo
 translatedInputEx2 _ =
-  errorTranslate "translatedInputEx2" $ (txInfoInV2 @era) utxo inputWithRefScript
+  errorTranslate "translatedInputEx2" $ txInfoInV2 @(EraCrypto era) utxo inputWithRefScript
 
-translatedOutputEx1 :: forall era. (BabbageEraTxOut era, Value era ~ MaryValue (EraCrypto era)) => Proxy era -> PV2.TxOut
+translatedOutputEx1 ::
+  forall era.
+  (BabbageEraTxOut era, era ~ Babbage) =>
+  Proxy era ->
+  PV2.TxOut
 translatedOutputEx1 _ =
-  errorTranslate "translatedOutputEx1" $ (txInfoOutV2 @era) (TxOutFromOutput minBound) inlineDatumOutput
+  errorTranslate "translatedOutputEx1" $
+    txInfoOutV2 @(EraCrypto era) (TxOutFromOutput minBound) inlineDatumOutput
 
 translatedOutputEx2 ::
   forall era.
-  BabbageTxInfoTests era =>
+  (BabbageTxInfoTests era, era ~ Babbage) =>
   Proxy era ->
   PV2.TxOut
 translatedOutputEx2 _ =
-  errorTranslate "translatedOutputEx2" $ (txInfoOutV2 @era) (TxOutFromOutput minBound) refScriptOutput
-
-expectLanguageNotSupported ::
-  forall era.
-  (ExtendedUTxO era, EraTx era, B.BabbageEraTxBody era, BabbageTxInfoTests era) =>
-  Proxy era ->
-  Language ->
-  Assertion
-expectLanguageNotSupported _ lang =
-  expectTranslationError @era
-    lang
-    (txBare shelleyInput shelleyOutput)
-    (LanguageNotSupported lang)
+  errorTranslate "translatedOutputEx2" $
+    txInfoOutV2 @(EraCrypto era) (TxOutFromOutput minBound) refScriptOutput
 
 txInfoTestsV1 ::
   forall era.
-  (ExtendedUTxO era, EraTx era, B.BabbageEraTxBody era, BabbageTxInfoTests era) =>
+  (EraTx era, BabbageTxInfoTests era, era ~ Babbage) =>
   Proxy era ->
   TestTree
 txInfoTestsV1 _ =
@@ -286,10 +283,10 @@ txInfoTestsV1 _ =
     ]
 
 txInfoTestsV2 ::
-  forall era.
-  (ExtendedUTxO era, EraTx era, B.BabbageEraTxBody era, BabbageTxInfoTests era) =>
+  forall era l.
+  (EraPlutusTxInfo l era, BabbageTxInfoTests era, era ~ Babbage) =>
   Proxy era ->
-  Language -> -- Conway V2 script context semantics are the same as V2
+  SLanguage l -> -- Conway V2 script context semantics are the same as V2
   TestTree
 txInfoTestsV2 p lang =
   testGroup
@@ -338,14 +335,7 @@ txInfoTestsV2 p lang =
 
 txInfoTests ::
   forall era.
-  (ExtendedUTxO era, EraTx era, B.BabbageEraTxBody era, BabbageTxInfoTests era) =>
+  (EraTx era, BabbageTxInfoTests era, era ~ Babbage) =>
   Proxy era ->
   TestTree
-txInfoTests p = testGroup "txInfo translation" [txInfoTestsV1 p, txInfoTestsV2 p PlutusV2]
-
-txInfoTestsBabbageOnly :: TestTree
-txInfoTestsBabbageOnly =
-  testGroup
-    "Plutus VX, X > 2"
-    [ testCase "translation error for V3 in Babbage" (expectLanguageNotSupported (Proxy @Babbage) PlutusV3)
-    ]
+txInfoTests p = testGroup "txInfo translation" [txInfoTestsV1 p, txInfoTestsV2 p SPlutusV2]

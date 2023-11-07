@@ -62,7 +62,13 @@ where
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript (..),
+  Tag,
+  decodePlutusScript,
+  fromPlutusScript,
+  toPlutusSLanguage,
+ )
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -91,11 +97,20 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.Plutus.Data (Data, hashData, upgradeData)
-import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), guardPlutus)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  Plutus (..),
+  PlutusLanguage,
+  SLanguage (..),
+  plutusBinary,
+  plutusLanguage,
+ )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
+import Control.Monad ((>=>))
 import Data.Bifunctor (Bifunctor (first))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -227,12 +242,11 @@ data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
 
 instance
   ( Era era
-  , Script era ~ AlonzoScript era
-  , c ~ EraCrypto era
+  , NFData (Script era)
   , NFData (TxDats era)
   , NFData (Redeemers era)
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
+  , NFData (SigDSIGN (DSIGN (EraCrypto era)))
+  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   ) =>
   NFData (AlonzoTxWitsRaw era)
 
@@ -243,7 +257,7 @@ newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes AlonzoTxWitsRaw era)
 instance Memoized AlonzoTxWits where
   type RawType AlonzoTxWits = AlonzoTxWitsRaw
 
-instance (Era era, Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era) where
+instance AlonzoEraScript era => Semigroup (AlonzoTxWits era) where
   (<>) x y | isEmptyTxWitness x = y
   (<>) x y | isEmptyTxWitness y = x
   (<>)
@@ -251,17 +265,16 @@ instance (Era era, Script era ~ AlonzoScript era) => Semigroup (AlonzoTxWits era
     (getMemoRawType -> AlonzoTxWitsRaw u v w x (Redeemers y)) =
       AlonzoTxWits (a <> u) (b <> v) (c <> w) (d <> x) (Redeemers (e <> y))
 
-instance (Era era, Script era ~ AlonzoScript era) => Monoid (AlonzoTxWits era) where
+instance AlonzoEraScript era => Monoid (AlonzoTxWits era) where
   mempty = AlonzoTxWits mempty mempty mempty mempty (Redeemers mempty)
 
 deriving instance
   ( Era era
-  , Script era ~ AlonzoScript era
-  , c ~ EraCrypto era
+  , NFData (Script era)
   , NFData (TxDats era)
   , NFData (Redeemers era)
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
+  , NFData (SigDSIGN (DSIGN (EraCrypto era)))
+  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   ) =>
   NFData (AlonzoTxWits era)
 
@@ -384,7 +397,7 @@ pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} 
 {-# COMPLETE AlonzoTxWits' #-}
 
 pattern AlonzoTxWits ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  AlonzoEraScript era =>
   Set (WitVKey 'Witness (EraCrypto era)) ->
   Set (BootstrapWitness (EraCrypto era)) ->
   Map (ScriptHash (EraCrypto era)) (Script era) ->
@@ -404,14 +417,14 @@ pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
 -- =======================================================
 
 addrAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrAlonzoTxWitsL =
   lensMemoRawType atwrAddrTxWits $ \witsRaw addrWits -> witsRaw {atwrAddrTxWits = addrWits}
 {-# INLINEABLE addrAlonzoTxWitsL #-}
 
 bootAddrAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrAlonzoTxWitsL =
   lensMemoRawType atwrBootAddrTxWits $
@@ -419,21 +432,21 @@ bootAddrAlonzoTxWitsL =
 {-# INLINEABLE bootAddrAlonzoTxWitsL #-}
 
 scriptAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptAlonzoTxWitsL =
   lensMemoRawType atwrScriptTxWits $ \witsRaw scriptWits -> witsRaw {atwrScriptTxWits = scriptWits}
 {-# INLINEABLE scriptAlonzoTxWitsL #-}
 
 datsAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (TxDats era)
 datsAlonzoTxWitsL =
   lensMemoRawType atwrDatsTxWits $ \witsRaw datsWits -> witsRaw {atwrDatsTxWits = datsWits}
 {-# INLINEABLE datsAlonzoTxWitsL #-}
 
 rdmrsAlonzoTxWitsL ::
-  (Era era, Script era ~ AlonzoScript era) =>
+  AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (Redeemers era)
 rdmrsAlonzoTxWitsL =
   lensMemoRawType atwrRdmrsTxWits $ \witsRaw rdmrsWits -> witsRaw {atwrRdmrsTxWits = rdmrsWits}
@@ -491,58 +504,46 @@ hashDataTxWitsL =
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AlonzoTxWits era)
 
-instance (Era era, Script era ~ AlonzoScript era) => EncCBOR (AlonzoTxWitsRaw era) where
+instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
   encCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
     encode $
       Keyed
-        (\a b c d e f g h -> AlonzoTxWitsRaw a b (c <> d <> e <> f) g h)
+        ( \a b c d e f g h ->
+            let ps = toScript @'PlutusV1 d <> toScript @'PlutusV2 e <> toScript @'PlutusV3 f
+             in AlonzoTxWitsRaw a b (c <> ps) g h
+        )
         !> Omit null (Key 0 $ To vkeys)
         !> Omit null (Key 2 $ To boots)
         !> Omit
           null
           ( Key 1 $
               E
-                (encCBOR . mapMaybe unwrapTS . Map.elems)
-                (Map.filter isTimelock scripts)
+                (encCBOR . mapMaybe getNativeScript . Map.elems)
+                (Map.filter isNativeScript scripts)
           )
-        !> Omit
-          null
-          ( Key 3 $
-              E
-                (encCBOR . mapMaybe unwrapPS1 . Map.elems)
-                (Map.filter (isPlutusLanguage PlutusV1) scripts)
-          )
-        !> Omit
-          null
-          ( Key 6 $
-              E
-                (encCBOR . mapMaybe unwrapPS2 . Map.elems)
-                (Map.filter (isPlutusLanguage PlutusV2) scripts)
-          )
-        !> Omit
-          null
-          ( Key 7 $
-              E
-                (encCBOR . mapMaybe unwrapPS3 . Map.elems)
-                (Map.filter (isPlutusLanguage PlutusV3) scripts)
-          )
+        !> Omit null (Key 3 $ encodePlutus SPlutusV1)
+        !> Omit null (Key 6 $ encodePlutus SPlutusV2)
+        !> Omit null (Key 7 $ encodePlutus SPlutusV3)
         !> Omit nullDats (Key 4 $ To dats)
         !> Omit nullRedeemers (Key 5 $ To rdmrs)
     where
-      unwrapTS (TimelockScript x) = Just x
-      unwrapTS _ = Nothing
-      unwrapPS1 (PlutusScript (Plutus PlutusV1 x)) = Just x
-      unwrapPS1 _ = Nothing
-      unwrapPS2 (PlutusScript (Plutus PlutusV2 x)) = Just x
-      unwrapPS2 _ = Nothing
-      unwrapPS3 (PlutusScript (Plutus PlutusV3 x)) = Just x
-      unwrapPS3 _ = Nothing
-
-      isTimelock (TimelockScript _) = True
-      isTimelock (PlutusScript _) = False
-
-      isPlutusLanguage _ (TimelockScript _) = False
-      isPlutusLanguage lang (PlutusScript ps) = lang == plutusLanguage ps
+      encodePlutus ::
+        PlutusLanguage l =>
+        SLanguage l ->
+        Encode ('Closed 'Dense) (Map.Map (ScriptHash (EraCrypto era)) (Plutus l))
+      encodePlutus slang =
+        E
+          (encCBOR . map plutusBinary . Map.elems)
+          (Map.mapMaybe (toPlutusScript >=> toPlutusSLanguage slang) scripts)
+      toScript ::
+        forall l h. PlutusLanguage l => Map.Map h (Plutus l) -> Map.Map h (Script era)
+      toScript ps =
+        case traverse (fmap fromPlutusScript . mkPlutusScript) ps of
+          Nothing ->
+            error $
+              "Impossible: Re-constructing unsupported language: "
+                ++ show (plutusLanguage (Proxy @l))
+          Just plutusScripts -> plutusScripts
 
 instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
   decCBOR = do
@@ -573,10 +574,8 @@ deriving via
     Era era => DecCBOR (Annotator (Redeemers era))
 
 instance
-  ( EraScript era
+  ( AlonzoEraScript era
   , EncCBOR (Data era)
-  , EraScript era
-  , Script era ~ AlonzoScript era
   ) =>
   DecCBOR (Annotator (AlonzoTxWitsRaw era))
   where
@@ -602,30 +601,21 @@ instance
       txWitnessField 1 =
         fieldAA
           addScripts
-          (listDecodeA (fmap TimelockScript <$> From))
-      txWitnessField 3 =
-        fieldA
-          addScripts
-          (decodePlutus PlutusV1)
+          (listDecodeA (fmap fromNativeScript <$> From))
+      txWitnessField 3 = fieldA addScripts (decodePlutus SPlutusV1)
       txWitnessField 4 =
         fieldAA
           (\x wits -> wits {atwrDatsTxWits = x})
           From
       txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
-      txWitnessField 6 =
-        fieldA
-          addScripts
-          (decodePlutus PlutusV2)
-      txWitnessField 7 =
-        fieldA
-          addScripts
-          (decodePlutus PlutusV3)
+      txWitnessField 6 = fieldA addScripts (decodePlutus SPlutusV2)
+      txWitnessField 7 = fieldA addScripts (decodePlutus SPlutusV3)
       txWitnessField n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
 
-      decodePlutus lang = fmap (PlutusScript . Plutus lang) <$> D (guardPlutus lang >> decCBOR)
+      decodePlutus slang = D (decodeList (fromPlutusScript <$> decodePlutusScript slang))
 
-      addScripts :: [AlonzoScript era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
+      addScripts :: [Script era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
       addScripts x wits =
         wits
           { atwrScriptTxWits =
@@ -637,8 +627,7 @@ instance
 deriving via
   (Mem AlonzoTxWitsRaw era)
   instance
-    (EraScript era, Script era ~ AlonzoScript era) =>
-    DecCBOR (Annotator (AlonzoTxWits era))
+    AlonzoEraScript era => DecCBOR (Annotator (AlonzoTxWits era))
 
 alonzoEqTxWitsRaw :: AlonzoEraTxWits era => TxWits era -> TxWits era -> Bool
 alonzoEqTxWitsRaw txWits1 txWits2 =

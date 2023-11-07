@@ -144,6 +144,8 @@ library testlib
         Test.Cardano.Ledger.Core.Utils
         Test.Cardano.Ledger.Core.Rational
         Test.Cardano.Ledger.Imp.Common
+        Test.Cardano.Ledger.Plutus
+        Test.Cardano.Ledger.Plutus.Examples
         Test.Cardano.Ledger.TreeDiff
 
     visibility:       public
@@ -174,6 +176,7 @@ library testlib
         nothunks,
         primitive,
         QuickCheck,
+        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
         random >=1.2,
         text,
         tree-diff,

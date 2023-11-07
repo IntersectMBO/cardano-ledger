@@ -529,6 +529,12 @@ class
   , DecCBOR (Annotator (Script era))
   , NoThunks (Script era)
   , SafeToHash (Script era)
+  , Eq (NativeScript era)
+  , Show (NativeScript era)
+  , NFData (NativeScript era)
+  , NoThunks (NativeScript era)
+  , EncCBOR (NativeScript era)
+  , DecCBOR (Annotator (NativeScript era))
   ) =>
   EraScript era
   where
@@ -555,6 +561,8 @@ class
         (\x -> scriptPrefixTag @era x <> originalBytes x)
 
   getNativeScript :: Script era -> Maybe (NativeScript era)
+
+  fromNativeScript :: NativeScript era -> Script era
 
 isNativeScript :: EraScript era => Script era -> Bool
 isNativeScript = isJust . getNativeScript

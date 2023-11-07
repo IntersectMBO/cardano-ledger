@@ -12,21 +12,18 @@ module Test.Cardano.Ledger.Babbage.Translation.TranslatableGen (
   utxoWithTx,
 ) where
 
-import Cardano.Ledger.Babbage (Babbage, BabbageEra)
-import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Crypto
-import Test.Cardano.Ledger.Babbage.Arbitrary ()
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AlonzoScript (..), ExUnits (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
+import Cardano.Ledger.Babbage (Babbage, BabbageEra)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Data.Map as Map
@@ -35,7 +32,12 @@ import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genScripts)
-import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..))
+import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
+  TranslatableGen (..),
+  TxInfoLanguage (..),
+ )
+import Test.Cardano.Ledger.Babbage.Arbitrary ()
+import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck (
   Arbitrary,
@@ -52,6 +54,10 @@ import Test.QuickCheck (
 instance TranslatableGen Babbage where
   tgTx l = genTx @Babbage (genTxBody l)
   tgUtxo = utxoWithTx @Babbage
+  mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
+  mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
+  mkTxInfoLanguage lang =
+    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @Babbage
 
 utxoWithTx ::
   forall era.
@@ -72,7 +78,7 @@ genTx ::
   forall era.
   ( Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
-  , AlonzoEraTxWits era
+  , AlonzoEraScript era
   , AlonzoScript era ~ Script era
   , AlonzoTxWits era ~ TxWits era
   ) =>
@@ -142,7 +148,7 @@ genNonByronAddr =
 genTxWits ::
   ( Arbitrary (Script era)
   , AlonzoScript era ~ Script era
-  , EraScript era
+  , AlonzoEraScript era
   ) =>
   Gen (AlonzoTxWits era)
 genTxWits =

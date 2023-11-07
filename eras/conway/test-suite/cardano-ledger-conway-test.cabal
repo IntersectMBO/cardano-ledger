@@ -65,7 +65,6 @@ executable gen-golden
         base,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-conway-test,
-        cardano-ledger-core,
         cardano-ledger-alonzo-test
 
 test-suite cardano-ledger-conway-test
@@ -87,11 +86,7 @@ test-suite cardano-ledger-conway-test
     build-depends:
         base,
         containers,
-        cardano-ledger-alonzo,
-        cardano-ledger-babbage,
-        cardano-ledger-babbage-test,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
-        cardano-ledger-core,
         tasty,
         cardano-strict-containers,
         tasty-quickcheck

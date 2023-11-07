@@ -11,6 +11,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -42,7 +43,14 @@ import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), PlutusBinary (..), validScript)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript (..),
+  AlonzoScript (..),
+  mkBinaryPlutusScript,
+  plutusScriptBinary,
+  plutusScriptLanguage,
+  validScript,
+ )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
@@ -67,22 +75,20 @@ import Cardano.Ledger.MemoBytes (
   getMemoSafeHash,
   mkMemoized,
  )
-import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), guardPlutus)
-import Cardano.Ledger.SafeHash (
-  HashAnnotated,
-  SafeToHash (..),
-  hashAnnotated,
- )
+import Cardano.Ledger.Plutus.Language (Language (..), PlutusBinary (..), guardPlutus)
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
 import Control.DeepSeq (NFData, deepseq)
+import Data.List (intercalate)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, mapMaybe)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.Stack
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 
 -- =============================================================================
@@ -136,37 +142,38 @@ instance Era era => EncCBOR (AlonzoTxAuxDataRaw era) where
 -- Note that the relative order of same type scripts will be preserved.
 mkAlonzoTxAuxData ::
   forall f era.
-  (Foldable f, Era era) =>
+  (Foldable f, AlonzoEraScript era) =>
   Map Word64 Metadatum ->
   f (AlonzoScript era) ->
   AlonzoTxAuxData era
 mkAlonzoTxAuxData atadrMetadata allScripts =
   mkMemoized $ AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus}
   where
-    partitionScripts (tss, pss1, pss2, pss3) =
+    partitionScripts (tss, pss) =
       \case
-        TimelockScript ts -> (ts :<| tss, pss1, pss2, pss3)
-        PlutusScript (Plutus PlutusV1 ps1) -> (tss, ps1 : pss1, pss2, pss3)
-        PlutusScript (Plutus PlutusV2 ps2) -> (tss, pss1, ps2 : pss2, pss3)
-        PlutusScript (Plutus PlutusV3 ps3) -> (tss, pss1, pss2, ps3 : pss3)
-    (atadrTimelock, plutusV1Scripts, plutusV2Scripts, plutusV3Scripts) =
-      foldr (flip partitionScripts) (mempty, mempty, mempty, mempty) allScripts
-    atadrPlutus =
-      Map.fromList
-        [ (lang, scripts)
-        | (lang, Just scripts) <-
-            [ (PlutusV1, NE.nonEmpty plutusV1Scripts)
-            , (PlutusV2, NE.nonEmpty plutusV2Scripts)
-            , (PlutusV3, NE.nonEmpty plutusV3Scripts)
-            ]
-        ]
+        TimelockScript ts -> (ts :<| tss, pss)
+        PlutusScript ps ->
+          let lang = plutusScriptLanguage ps
+              bs = plutusScriptBinary ps
+           in (tss, Map.alter (Just . maybe (pure bs) (NE.cons bs)) lang pss)
+    (atadrTimelock, atadrPlutus) =
+      foldr (flip partitionScripts) (mempty, Map.empty) allScripts
 
-getAlonzoTxAuxDataScripts :: Era era => AlonzoTxAuxData era -> StrictSeq (AlonzoScript era)
+getAlonzoTxAuxDataScripts ::
+  forall era.
+  AlonzoEraScript era =>
+  AlonzoTxAuxData era ->
+  StrictSeq (AlonzoScript era)
 getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadTimelock = timelocks, atadPlutus = plutus} =
   mconcat $
     (TimelockScript <$> timelocks)
-      : [ PlutusScript . Plutus lang <$> StrictSeq.fromList (NE.toList plutusScripts)
-        | lang <- [PlutusV1 ..]
+      : [ StrictSeq.fromList $
+          -- It is fine to filter out unsupported languages with mapMaybe, because the invariant for
+          -- AlonzoTxAuxData is that it does not contain scripts with languages that are not
+          -- supported in this era
+          mapMaybe (fmap PlutusScript . mkBinaryPlutusScript lang) $
+            NE.toList plutusScripts
+        | lang <- [PlutusV1 .. eraMaxLanguage @era]
         , Just plutusScripts <- [Map.lookup lang plutus]
         ]
 
@@ -262,7 +269,7 @@ hashAlonzoTxAuxData ::
 hashAlonzoTxAuxData x = AuxiliaryDataHash (hashAnnotated x)
 
 validateAlonzoTxAuxData ::
-  Era era =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   ProtVer ->
   AuxiliaryData era ->
   Bool
@@ -291,8 +298,12 @@ deriving via
   instance
     Era era => DecCBOR (Annotator (AuxiliaryData era))
 
+-- | Construct auxiliary data. Make sure not to supply plutus script versions that are not
+-- supported in this era, because it will result in a runtime exception. Use
+-- `mkAlonzoTxAuxData` instead if you need runtime safety guarantees.
 pattern AlonzoTxAuxData ::
-  Era era =>
+  forall era.
+  (HasCallStack, AlonzoEraScript era) =>
   Map Word64 Metadatum ->
   StrictSeq (Timelock era) ->
   Map Language (NE.NonEmpty PlutusBinary) ->
@@ -301,12 +312,19 @@ pattern AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} <-
   (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata atadTimelock atadPlutus)
   where
     AlonzoTxAuxData atadrMetadata atadrTimelock atadrPlutus =
-      mkMemoized $ AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus}
+      let unsupportedScripts =
+            Map.filterWithKey (\lang _ -> lang > eraMaxLanguage @era) atadrPlutus
+          prefix =
+            intercalate "," (show <$> Map.keys unsupportedScripts)
+              ++ if Map.size unsupportedScripts > 1 then " languages are" else " language is"
+       in if Map.null unsupportedScripts
+            then mkMemoized $ AlonzoTxAuxDataRaw {atadrMetadata, atadrTimelock, atadrPlutus}
+            else error $ prefix ++ " not supported in " ++ eraName @era
 
 {-# COMPLETE AlonzoTxAuxData #-}
 
 translateAlonzoTxAuxData ::
-  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
+  (AlonzoEraScript era1, AlonzoEraScript era2, EraCrypto era1 ~ EraCrypto era2) =>
   AlonzoTxAuxData era1 ->
   AlonzoTxAuxData era2
 translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =

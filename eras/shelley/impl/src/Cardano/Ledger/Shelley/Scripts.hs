@@ -119,6 +119,8 @@ instance Crypto c => EraScript (ShelleyEra c) where
 
   getNativeScript = Just
 
+  fromNativeScript = id
+
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   scriptPrefixTag _script = nativeMultiSigTag
 

@@ -29,22 +29,25 @@ import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  TranslationError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
   TxOutSource (TxOutFromInput, TxOutFromOutput),
  )
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
   AlonzoUtxowPredFailure (MissingRequiredDatums, NotAllowedSupplementalDatums),
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Babbage (Babbage)
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody (..),
   Datum (..),
+ )
+import Cardano.Ledger.Babbage.TxInfo (
+  ContextError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
  )
 import Cardano.Ledger.BaseTypes (
   Network (..),
@@ -63,7 +66,7 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Plutus.Data (Data (..), dataToBinaryData, hashData)
-import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..))
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..), PlutusLanguage)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))
@@ -84,6 +87,7 @@ import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
 import Test.Cardano.Ledger.Alonzo.CostModel (freeV1V2CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
@@ -129,7 +133,7 @@ keyHashForMultisig :: forall era. Era era => Proof era -> KeyHash 'Witness (EraC
 keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
 
 simpleScript :: forall era. Scriptic era => Proof era -> Script era
-simpleScript pf = allOf [require @era (keyHashForMultisig pf)] pf
+simpleScript pf = fromNativeScript $ allOf [require @era (keyHashForMultisig pf)] pf
 
 evenData3ArgsScript :: HasCallStack => Proof era -> Script era
 evenData3ArgsScript proof =
@@ -137,13 +141,14 @@ evenData3ArgsScript proof =
     Shelley _ -> error unsupported
     Mary _ -> error unsupported
     Allegra _ -> error unsupported
-    Alonzo _ -> evenData3ArgsLang PlutusV1
-    Babbage _ -> evenData3ArgsLang PlutusV2
-    Conway _ -> evenData3ArgsLang PlutusV2
+    Alonzo _ -> evenData3ArgsLang @'PlutusV1
+    Babbage _ -> evenData3ArgsLang @'PlutusV2
+    Conway _ -> evenData3ArgsLang @'PlutusV2
   where
     unsupported = "Plutus scripts are not supported in:" ++ show proof
-    evenData3ArgsLang lang =
-      PlutusScript . Plutus lang . PlutusBinary . SBS.pack $
+    evenData3ArgsLang :: forall l era'. (PlutusLanguage l, AlonzoEraScript era') => Script era'
+    evenData3ArgsLang =
+      mkPlutusScript' . Plutus @l . PlutusBinary . SBS.pack $
         concat
           [ [88, 65, 1, 0, 0, 51, 50, 34, 51, 34, 34, 37, 51, 83, 0]
           , [99, 50, 35, 51, 87, 52, 102, 225, 192, 8, 0, 64, 40, 2, 76]
@@ -796,15 +801,15 @@ referenceInputWithPlutusV1Script pf =
 
 malformedScript :: forall era. Proof era -> ShortByteString -> Script era
 malformedScript pf s = case pf of
-  Conway {} -> ms
-  Babbage {} -> ms
-  Alonzo {} -> ms
+  Conway {} -> bogusPlutus @'PlutusV3
+  Babbage {} -> bogusPlutus @'PlutusV2
+  Alonzo {} -> bogusPlutus @'PlutusV1
   x@Shelley {} -> er x
   x@Mary {} -> er x
   x@Allegra {} -> er x
   where
-    ms :: AlonzoScript era
-    ms = PlutusScript (Plutus PlutusV2 (PlutusBinary ("nonsense " <> s)))
+    bogusPlutus :: forall l era'. (PlutusLanguage l, AlonzoEraScript era') => Script era'
+    bogusPlutus = mkPlutusScript' (Plutus @l (PlutusBinary ("nonsense " <> s)))
     er x = error $ "no malformedScript for " <> show x
 
 malformedPlutusRefScript :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
@@ -1226,10 +1231,7 @@ testExpectFailure
 
 genericBabbageFeatures ::
   forall era.
-  ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era))
-  , BabbageBased era (PredicateFailure (EraRule "UTXOW" era))
-  , State (EraRule "UTXOW" era) ~ UTxOState era
-  , TxBody era ~ BabbageTxBody era
+  ( State (EraRule "UTXOW" era) ~ UTxOState era
   , GoodCrypto (EraCrypto era)
   , BabbageEraTxBody era
   , PostShelley era
@@ -1252,7 +1254,21 @@ genericBabbageFeatures pf =
         , testCase "reference script in output" $ testExpectSuccessValid pf (refScriptInOutput pf)
         , testCase "spend simple script output with reference script" $ testExpectSuccessValid pf (simpleScriptOutWithRefScriptUTxOState pf)
         ]
-    , testGroup
+    ]
+
+genericBabbageFailures ::
+  forall era.
+  ( State (EraRule "UTXOW" era) ~ UTxOState era
+  , BabbageEraTxBody era
+  , PostShelley era
+  , era ~ Babbage
+  ) =>
+  Proof era ->
+  TestTree
+genericBabbageFailures pf =
+  testGroup
+    (show pf ++ " UTXOW failure examples")
+    [ testGroup
         "invalid transactions"
         [ testCase "inline datum failing script" $ testExpectSuccessInvalid pf (inlineDatumFailingScript pf)
         , testCase "use a collateral output" $ testExpectSuccessInvalid pf (useCollateralReturn pf)
@@ -1347,6 +1363,7 @@ babbageFeatures :: TestTree
 babbageFeatures =
   testGroup
     "Babbage Features"
-    [ genericBabbageFeatures (Babbage Mock)
+    [ genericBabbageFeatures (Babbage Standard)
+    , genericBabbageFailures (Babbage Standard)
     -- genericBabbageFeatures (Conway Mock) TODO
     ]

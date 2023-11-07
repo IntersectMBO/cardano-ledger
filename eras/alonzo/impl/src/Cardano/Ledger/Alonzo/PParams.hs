@@ -682,8 +682,7 @@ getLanguageView pp lang =
       LangDepView -- The silly double bagging is to keep compatibility with a past bug
         (serialize' version (serialize' version lang))
         (serialize' version costModelEncoding)
-    PlutusV2 ->
-      latestLangDepView
+    PlutusV2 -> latestLangDepView
     PlutusV3 -> latestLangDepView
   where
     -- LangDepView for PlutusV1 differs from the rest

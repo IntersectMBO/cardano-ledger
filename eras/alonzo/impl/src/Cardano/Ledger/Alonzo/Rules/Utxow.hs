@@ -29,13 +29,12 @@ import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..), languages)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUTXO,
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   ScriptPurpose,
@@ -88,6 +87,7 @@ import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
 import Data.Foldable (sequenceA_)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -247,9 +247,7 @@ missingRequiredDatums utxo tx = do
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
 hasExactSetOfRedeemers ::
   forall era.
-  ( AlonzoEraTx era
-  , Script era ~ AlonzoScript era
-  ) =>
+  AlonzoEraTx era =>
   Tx era ->
   ScriptsProvided era ->
   AlonzoScriptsNeeded era ->
@@ -290,17 +288,15 @@ requiredSignersAreWitnessed txBody witsKeyHashes = do
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
 ppViewHashesMatch ::
   forall era.
-  ( AlonzoEraTx era
-  , ExtendedUTxO era
-  , Script era ~ AlonzoScript era
-  ) =>
+  AlonzoEraTx era =>
   Tx era ->
   PParams era ->
-  UTxO era ->
+  ScriptsProvided era ->
   Set (ScriptHash (EraCrypto era)) ->
   Test (AlonzoUtxowPredFailure era)
-ppViewHashesMatch tx pp utxo sNeeded = do
-  let langs = languages @era tx utxo sNeeded
+ppViewHashesMatch tx pp (ScriptsProvided scriptsProvided) scriptsNeeded = do
+  let scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
+      langs = Set.fromList $ plutusScriptLanguage <$> mapMaybe toPlutusScript scriptsUsed
       langViews = Set.map (getLanguageView pp) langs
       txWits = tx ^. witsTxL
       computedPPhash = hashScriptIntegrity langViews (txWits ^. rdmrsTxWitsL) (txWits ^. datsTxWitsL)
@@ -318,10 +314,8 @@ ppViewHashesMatch tx pp utxo sNeeded = do
 alonzoStyleWitness ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
@@ -394,10 +388,10 @@ alonzoStyleWitness = do
   {- languages txw ⊆ dom(costmdls tx)  -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
   -- It raises 'NoCostModel' a construcotr of the predicate failure 'CollectError'. This check
-  -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
+  -- which appears in the spec, seems broken since costmdls is a projection of PParams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx pp utxo scriptsHashesNeeded
+  runTest $ ppViewHashesMatch tx pp scriptsProvided scriptsHashesNeeded
 
   trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
@@ -418,11 +412,9 @@ instance
   forall era.
   ( AlonzoEraTx era
   , EraTxAuxData era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , Script era ~ AlonzoScript era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era

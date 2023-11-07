@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Constrained.Preds.Tx where
 import Cardano.Crypto.Signing (SigningKey)
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress, RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxWits (
   RdmrPtr (..),
@@ -59,7 +59,7 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Mary.Core (MaryEraTxBody)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (Language (..), plutusLanguage)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppList, ppMap, ppRecord, ppSafeHash)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
@@ -427,9 +427,9 @@ scriptWitsLangs :: Map k (ScriptF era) -> Set Language
 scriptWitsLangs m = Map.foldl' accum Set.empty m
   where
     accum :: Set Language -> ScriptF era -> Set Language
-    accum ans (ScriptF (Alonzo _) (PlutusScript l)) = Set.insert (plutusLanguage l) ans
-    accum ans (ScriptF (Babbage _) (PlutusScript l)) = Set.insert (plutusLanguage l) ans
-    accum ans (ScriptF (Conway _) (PlutusScript l)) = Set.insert (plutusLanguage l) ans
+    accum ans (ScriptF (Alonzo _) (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
+    accum ans (ScriptF (Babbage _) (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
+    accum ans (ScriptF (Conway _) (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
     accum ans _ = ans
 
 -- | Starting in the Babbage era, we can adjust the script witnesses by not supplying

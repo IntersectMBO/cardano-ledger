@@ -43,7 +43,6 @@ library
         Cardano.Ledger.Alonzo.TxAuxData
         Cardano.Ledger.Alonzo.TxBody
         Cardano.Ledger.Alonzo.TxOut
-        Cardano.Ledger.Alonzo.TxInfo
         Cardano.Ledger.Alonzo.TxSeq
         Cardano.Ledger.Alonzo.TxWits
         Cardano.Ledger.Alonzo.UTxO
@@ -123,7 +122,7 @@ library testlib
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-crypto-class,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
+        plutus-ledger-api,
         data-default-class,
         microlens,
         text

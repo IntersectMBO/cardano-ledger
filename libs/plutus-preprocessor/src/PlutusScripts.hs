@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
 
 module PlutusScripts (
   guessDecl,
@@ -17,13 +18,9 @@ module PlutusScripts (
 )
 where
 
-import Data.String (fromString)
 import Language.Haskell.TH
-import qualified PlutusLedgerApi.V1 as PV1
-import qualified PlutusTx as P (Data (..), compile)
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
-import qualified PlutusTx.Trace as Trace (traceError)
 
 guessDecl :: Q [Dec]
 guessDecl =

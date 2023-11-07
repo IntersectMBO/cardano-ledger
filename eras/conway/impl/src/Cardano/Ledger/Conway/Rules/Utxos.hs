@@ -12,7 +12,7 @@
 
 module Cardano.Ledger.Conway.Rules.Utxos (ConwayUTXOS) where
 
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
@@ -21,7 +21,6 @@ import Cardano.Ledger.Alonzo.Rules (
   validBegin,
   validEnd,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
@@ -36,7 +35,7 @@ import Cardano.Ledger.Conway.Era (ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
@@ -55,10 +54,8 @@ instance
   , ConwayEraTxBody era
   , ConwayEraPParams era
   , EraGov era
-  , ExtendedUTxO era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   , GovState era ~ ConwayGovState era
-  , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
   , Eq (PPUPPredFailure era)
@@ -81,12 +78,10 @@ instance
   , ConwayEraTxBody era
   , ConwayEraPParams era
   , EraGov era
-  , EraPlutusContext 'PlutusV1 era
-  , ExtendedUTxO era
+  , EraPlutusContext era
   , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , GovState era ~ ConwayGovState era
   , PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era
-  , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
   , Eq (PPUPPredFailure era)
@@ -102,11 +97,9 @@ utxosTransition ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ConwayEraTxBody era
+  , EraPlutusContext era
   , EraGov era
-  , EraPlutusContext 'PlutusV1 era
-  , ExtendedUTxO era
   , GovState era ~ ConwayGovState era
-  , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
   , Eq (PPUPPredFailure era)
@@ -124,9 +117,7 @@ conwayEvalScriptsTxValid ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ConwayEraTxBody era
-  , EraPlutusContext 'PlutusV1 era
-  , ExtendedUTxO era
-  , Script era ~ AlonzoScript era
+  , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
   , STS (ConwayUTXOS era)
