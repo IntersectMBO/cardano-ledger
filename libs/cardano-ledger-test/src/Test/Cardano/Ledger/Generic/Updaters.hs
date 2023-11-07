@@ -14,7 +14,6 @@
 module Test.Cardano.Ledger.Generic.Updaters where
 
 import Cardano.Crypto.DSIGN.Class ()
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (emptyCostModels)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
@@ -28,6 +27,7 @@ import Cardano.Ledger.Babbage.TxBody as Babbage (
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
 import Cardano.Ledger.Conway.PParams (ppGovActionDepositL)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
   ShelleyTx (..),
  )

@@ -19,7 +19,7 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
   babbageEvalScriptsTxInvalid,
 ) where
 
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
@@ -37,7 +37,6 @@ import Cardano.Ledger.Alonzo.Rules (
   when2Phase,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core
@@ -46,6 +45,7 @@ import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,

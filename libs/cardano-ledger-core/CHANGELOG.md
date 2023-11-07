@@ -3,6 +3,14 @@
 ## 1.8.1.0
 
 * Deprecated `Cardano.Ledger.Ap`, since we no longer use this module
+* Moved `Cardano.Ledger.Language` to `Cardano.Ledger.Plutus.Language` with deprecation.
+* Move `ExUnits` and `Prices` from `Cardano.Ledger.Alonzo.Scripts` to new
+  `Cardano.Ledger.Plutus.ExUnits` module.
+* Move `CostModels` from `Cardano.Ledger.Alonzo.Scripts` to new
+  `Cardano.Ledger.Plutus.CostModels` module.
+* Move `Cardano.Ledger.Alonzo.Scritps.Data` to `Cardano.Ledger.Plutus.Data`
+* Move some parts of `Cardano.Ledger.Alonzo.TxInfo` into
+  `Cardano.Ledger.Plutus.TxInfo` and `Cardano.Ledger.Plutus.Evaluate`
 
 ### `testlib`
 

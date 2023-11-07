@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Alonzo.CostModel (
 ) where
 
 import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), mkCostModel)
-import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.V1 as PV1

@@ -14,7 +14,6 @@ import qualified Cardano.Crypto.Signing as Byron
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Scripts (Tag (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
@@ -47,6 +46,7 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
   multiAssetFromList,
  )
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Val (Val (inject))
 import Data.Default.Class (Default (def))

@@ -57,7 +57,7 @@ import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
-import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Control.State.Transition.Extended (STS (Event))
 import Data.Functor.Identity (Identity)
 import Data.List (nubBy)

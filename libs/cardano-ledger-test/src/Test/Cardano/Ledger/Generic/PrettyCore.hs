@@ -31,12 +31,6 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (
   TagMismatchDescription (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (
-  Data (..),
-  Datum (..),
-  binaryDataToData,
-  hashData,
- )
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
@@ -100,8 +94,14 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
-import Cardano.Ledger.Language (Plutus (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..), flattenMultiAsset)
+import Cardano.Ledger.Plutus.Data (
+  Data (..),
+  Datum (..),
+  binaryDataToData,
+  hashData,
+ )
+import Cardano.Ledger.Plutus.Language (Plutus (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo

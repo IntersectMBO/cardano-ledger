@@ -25,15 +25,14 @@ where
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams ()
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.Rules ()
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
-import Cardano.Ledger.Alonzo.Scripts.Data ()
 import Cardano.Ledger.Alonzo.Transition ()
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx ()
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.BaseTypes (Globals)
@@ -41,6 +40,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Plutus.Data ()
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.API.Mempool
@@ -73,10 +73,6 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (A
   reapplyTx = reapplyAlonzoTx
 
 instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (AlonzoEra c)
-
--- To run a PlutusScript use Cardano.Ledger.Alonzo.TxInfo(runPLCScript)
--- To run any Alonzo Script use Cardano.Ledger.Alonzo.PlutusScriptApi(evalScripts)
--- hashScript x = ...  We use the default method for hashScript
 
 instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis

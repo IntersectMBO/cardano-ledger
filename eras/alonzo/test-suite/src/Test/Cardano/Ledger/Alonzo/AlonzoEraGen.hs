@@ -17,7 +17,6 @@ import Cardano.Ledger.Allegra.Scripts (Timelock (..), translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
@@ -29,7 +28,6 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   pointWiseExUnits,
   txscriptfee,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx (..),
   AlonzoTx (..),
@@ -69,6 +67,8 @@ import Cardano.Ledger.Mary.Value (
   multiAssetFromList,
   policies,
  )
+import Cardano.Ledger.Plutus.Data (Data (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.TxIn (TxIn)

@@ -3,7 +3,7 @@
 module Main where
 
 import Cardano.Ledger.Babbage (Babbage)
-import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (generateGoldenFile)
 import Test.Cardano.Ledger.Babbage.Translation.TranslatableGen ()
 

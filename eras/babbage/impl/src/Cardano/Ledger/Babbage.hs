@@ -25,12 +25,10 @@ where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
-import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
@@ -51,6 +49,8 @@ import Cardano.Ledger.Babbage.UTxO (
  )
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Plutus.Data (Data)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (ScriptsProvided (..), UTxO (..))

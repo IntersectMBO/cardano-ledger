@@ -11,11 +11,7 @@
 module Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Datum (..), binaryDataToData, getPlutusData)
-import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   EraPlutusContext,
   PlutusTxCert (..),
   TranslationError (..),
@@ -25,7 +21,9 @@ import Cardano.Ledger.Alonzo.TxInfo (
   unTxCertV1,
   unTxCertV2,
  )
-import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
   RdmrPtr,
@@ -45,6 +43,8 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))

@@ -10,7 +10,7 @@ import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set

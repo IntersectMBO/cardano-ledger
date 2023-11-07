@@ -39,7 +39,6 @@ where
 
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoBBODY,
   AlonzoUtxoPredFailure (..),
@@ -50,7 +49,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   CostModel,
   mkCostModel,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (..),
   IsValid (..),
@@ -76,6 +74,8 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   hashKey,
  )
+import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.API (

@@ -13,9 +13,9 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
 ) where
 
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.TxInfo
+import Cardano.Ledger.Alonzo.Plutus.TxInfo
 import Cardano.Ledger.Core as Core
-import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))

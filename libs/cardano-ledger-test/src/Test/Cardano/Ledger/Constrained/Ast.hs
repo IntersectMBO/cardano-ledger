@@ -12,10 +12,10 @@
 -- | The types that make up the Abstract Syntax Trees of the Language
 module Test.Cardano.Ledger.Constrained.Ast where
 
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), hashData)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraScript (..), hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
+import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Pretty
 import Data.Char (toLower)
 import Data.HashSet (HashSet)

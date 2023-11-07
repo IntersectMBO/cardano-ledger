@@ -10,10 +10,10 @@
 
 module Test.Cardano.Ledger.Constrained.Solver where
 
-import Cardano.Ledger.Alonzo.Scripts.Data (hashData)
 import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Era (..), hashScript)
+import Cardano.Ledger.Plutus.Data (hashData)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

@@ -2,6 +2,12 @@
 
 ## 1.5.1.0
 
+* Move `Cardano.Ledger.Alonzo.Scripts.Data` to `Cardano.Ledger.Plutus.Data`
+* Deprecated `Cardano.Ledger.Alonzo.Language`
+* Move `Cardano.Ledger.Alonzo.TxInfo` to `Cardano.Ledger.Alonzo.Plutus.TxInfo` with
+  deprecation of the former.
+* Add `evalScriptsWithLogs`, `evalPlutusScriptsWithLogs` and `runPlutusScriptWithLogs`: #3843
+
 ### `testlib`
 
 * Provide CDDL spec files with `readAlonzoCddlFileNames` and `readAlonzoCddlFiles` from

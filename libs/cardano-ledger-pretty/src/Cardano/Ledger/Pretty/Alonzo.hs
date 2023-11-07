@@ -13,7 +13,6 @@ module Cardano.Ledger.Pretty.Alonzo where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Language (Language (..), Plutus (..))
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   CostModel,
@@ -24,7 +23,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   getCostModelLanguage,
   getCostModelParams,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   AlonzoTx (AlonzoTx),
@@ -41,6 +39,8 @@ import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Plutus.Data (Data (..))
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..))
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
 import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppTimelock, ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)

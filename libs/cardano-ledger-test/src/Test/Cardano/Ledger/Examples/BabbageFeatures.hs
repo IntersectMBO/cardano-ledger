@@ -27,6 +27,10 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures (
 
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
+  TranslationError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
+  TxOutSource (TxOutFromInput, TxOutFromOutput),
+ )
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
@@ -34,11 +38,6 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), dataToBinaryData, hashData)
-import Cardano.Ledger.Alonzo.TxInfo (
-  TranslationError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
-  TxOutSource (TxOutFromInput, TxOutFromOutput),
- )
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
@@ -63,7 +62,8 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   hashKey,
  )
-import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Data (Data (..), dataToBinaryData, hashData)
+import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))

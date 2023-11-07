@@ -17,8 +17,7 @@ module Cardano.Ledger.Conway (
 where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
-import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.TxInfo (EraPlutusContext, ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO (..))
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -33,6 +32,7 @@ import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import qualified Cardano.Ledger.Shelley.API as API
 
 type Conway = ConwayEra StandardCrypto

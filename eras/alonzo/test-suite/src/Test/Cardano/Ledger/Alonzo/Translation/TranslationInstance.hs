@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   deserializeTranslationInstances,
 ) where
 
-import Cardano.Ledger.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 
 import Cardano.Ledger.Core as Core
 
@@ -48,7 +48,7 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V3.Contexts as PV3
 
-import Cardano.Ledger.Alonzo.TxInfo (VersionedTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (VersionedTxInfo)
 import PlutusTx.Ratio as PlutusTx
 
 import Data.Typeable (Typeable)

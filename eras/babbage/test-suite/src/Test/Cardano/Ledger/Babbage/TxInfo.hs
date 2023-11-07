@@ -7,17 +7,15 @@
 module Test.Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
-import Cardano.Ledger.Alonzo.Scripts.Data (Data (..), dataToBinaryData)
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   ExtendedUTxO (..),
   TranslationError (..),
   TxOutSource (..),
   VersionedTxInfo (..),
   txInfo,
  )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))
 import Cardano.Ledger.Babbage.TxBody (Datum (..))
@@ -29,6 +27,8 @@ import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Plutus.Data (Data (..), dataToBinaryData)
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Val as Val

@@ -56,7 +56,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (HASH))
-import Cardano.Ledger.Language (Language (..), Plutus (..), guardPlutus)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -67,6 +66,7 @@ import Cardano.Ledger.MemoBytes (
   getMemoSafeHash,
   mkMemoized,
  )
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), guardPlutus)
 import Cardano.Ledger.SafeHash (
   HashAnnotated,
   SafeToHash (..),

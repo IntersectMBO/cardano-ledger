@@ -8,10 +8,10 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   assertTranslationResultsMatchGolden,
 ) where
 
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Language (Language)
+import Cardano.Ledger.Plutus.Language (Language)
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Identity (Identity)

@@ -49,13 +49,6 @@ import Cardano.Ledger.Address (
   fromCborBackwardsBothAddr,
   fromCborBothAddr,
  )
-import Cardano.Ledger.Alonzo.Scripts.Data (
-  BinaryData,
-  Data,
-  Datum (..),
-  binaryDataToData,
-  dataToBinaryData,
- )
 import Cardano.Ledger.Alonzo.TxBody (
   Addr28Extra,
   AlonzoTxOut (AlonzoTxOut),
@@ -105,6 +98,13 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Plutus.Data (
+  BinaryData,
+  Data,
+  Datum (..),
+  binaryDataToData,
+  dataToBinaryData,
+ )
 import Cardano.Ledger.TreeDiff (
   ToExpr,
  )

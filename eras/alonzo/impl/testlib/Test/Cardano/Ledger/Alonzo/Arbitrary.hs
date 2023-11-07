@@ -26,7 +26,6 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Language (BinaryPlutus (..), Language, Plutus (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
@@ -44,13 +43,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   Tag (..),
   mkCostModel,
   mkCostModelsLenient,
- )
-import Cardano.Ledger.Alonzo.Scripts.Data (
-  BinaryData,
-  Data (..),
-  Datum (..),
-  dataToBinaryData,
-  hashData,
  )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
@@ -74,7 +66,14 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Plutus.Data (
+  BinaryData,
+  Data (..),
+  Datum (..),
+  dataToBinaryData,
+  hashData,
+ )
+import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..), nonNativeLanguages)
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Shelley.TxWits (keyBy)

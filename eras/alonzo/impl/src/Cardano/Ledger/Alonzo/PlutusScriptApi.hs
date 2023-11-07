@@ -32,10 +32,7 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi (
 where
 
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
-import Cardano.Ledger.Alonzo.Scripts.Data (Data)
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
-import Cardano.Ledger.Alonzo.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   EraPlutusContext,
   ExtendedUTxO (..),
   PlutusWithContext (..),
@@ -44,6 +41,8 @@ import Cardano.Ledger.Alonzo.TxInfo (
   runPlutusScriptWithLogs,
   valContext,
  )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (getSpendingDatum),
@@ -54,7 +53,8 @@ import Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Language (BinaryPlutus (..), Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Data (Data)
+import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
