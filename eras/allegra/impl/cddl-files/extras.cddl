@@ -1,11 +1,14 @@
-set<a> = [a]
-  ; real set is [* a]
+finite_set<a> = [* a]
 
+set<a> = [* a]
+
+;unit_interval = #6.30([uint, uint])
 unit_interval = #6.30([1, 2])
   ; real unit_interval is: #6.30([uint, uint])
   ; but this produces numbers outside the unit interval
   ; and can also produce a zero in the denominator
 
+;rational = #6.30([uint, uint])
 rational =  #6.30(
    [ numerator   : 1
    , denominator : 2

@@ -9,8 +9,8 @@ import Paths_cardano_ledger_conway
 readConwayCddlFileNames :: IO [FilePath]
 readConwayCddlFileNames = do
   base <- getDataFileName "cddl-files/conway.cddl"
-  crypto <- getDataFileName "cddl-files/real/crypto.cddl"
-  extras <- getDataFileName "cddl-files/mock/extras.cddl"
+  crypto <- getDataFileName "cddl-files/crypto.cddl"
+  extras <- getDataFileName "cddl-files/extra.cddl"
   -- extras contains the types whose restrictions cannot be expressed in CDDL
   pure [base, crypto, extras]
 
