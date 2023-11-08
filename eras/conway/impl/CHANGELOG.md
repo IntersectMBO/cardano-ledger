@@ -9,6 +9,8 @@
 * Fix [#3835](https://github.com/input-output-hk/cardano-ledger/issues/3835)
 * Rename `PParamGroup` to `PPGroup` and `GovernanceGroup` to `GovGroup`
 * Introduce `THKD` and use it for `ConwayPParams`
+* Add `data ConwayGovEvent era` with constructor `GovNewProposals !(TxId (EraCrypto era)) !(ProposalsSnapshot era)`. #3856
+* Add `EpochBoundaryRatifyState (RatifyState era)` inhabitant to the `ConwayEpochEvent era` data type.
 
 ### `testlib`
 

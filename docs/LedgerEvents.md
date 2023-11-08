@@ -124,6 +124,14 @@ all the information needed to re-run a Plutus script.
 This event is the same as `SuccessfulPlutusScriptsEvent`, except that it contains the
 information for all the failed Plutus scripts in a single transaction.
 
+### `EpochBoundaryRatifyState ratifyState`
+
+This event happens on the epoch boundary and gives us the ratification state (`RatifyState era`) _up to the current epoch boundary_.
+
+### `GovNewProposals txid proposalsSnapshot`
+
+This event is triggered on each tx and gives us the votes, proposals and txid of a particular tx.
+
 ## Notes / TODO
 
 There appears to be multiple, redundant `NewEpoch` events.
