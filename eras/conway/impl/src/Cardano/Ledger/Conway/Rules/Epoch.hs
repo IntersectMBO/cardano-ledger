@@ -105,6 +105,7 @@ import Control.State.Transition (
   TransitionRule,
   judgmentContext,
   liftSTS,
+  tellEvent,
   trans,
  )
 import Data.Foldable (Foldable (..))
@@ -118,6 +119,7 @@ import Lens.Micro ((%~), (&), (+~), (.~), (<>~), (^.))
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
   | SnapEvent (Event (EraRule "SNAP" era))
+  | EpochBoundaryRatifyState (RatifyState era)
 
 instance
   ( EraTxOut era
@@ -277,7 +279,7 @@ epochTransition = do
   let
     pulsingState = epochState0 ^. epochStateDRepPulsingStateL
 
-    RatifyState {rsRemoved, rsEnactState} = extractDRepPulsingState pulsingState
+    ratState0@RatifyState {rsRemoved, rsEnactState} = extractDRepPulsingState pulsingState
 
     (accountState2, dState2, newEnactState) =
       applyEnactedWithdrawals accountState1 dState1 rsEnactState
@@ -318,7 +320,7 @@ epochTransition = do
         & esAccountStateL .~ accountState3
         & esSnapshotsL .~ snapshots1
         & esLStateL .~ ledgerState1
-
+  tellEvent $ EpochBoundaryRatifyState ratState0
   liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState1
 
 instance
