@@ -49,7 +49,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
 import Cardano.Ledger.Conway.Rules.Certs (CertsEnv (CertsEnv), ConwayCertsEvent, ConwayCertsPredFailure)
-import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..))
+import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..), ConwayGovEvent(..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), currentTreasuryValueTxBodyL)
 import Cardano.Ledger.Credential (Credential)
@@ -290,6 +290,7 @@ ledgerTransition = do
           all (`UMap.member` delegatedAddrs) wdrlCreds
             ?! ConwayWdrlNotDelegatedToDRep (wdrlCreds Set.\\ Map.keysSet (dRepMap dUnified))
 
+        -- Votes and proposals from signal tx
         let govProcedures =
               GovProcedures
                 { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
@@ -391,7 +392,7 @@ instance
   ( ConwayEraPParams era
   , BaseM (ConwayLEDGER era) ~ ShelleyBase
   , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
-  , Event (EraRule "GOV" era) ~ ()
+  , Event (EraRule "GOV" era) ~ ConwayGovEvent era
   ) =>
   Embed (ConwayGOV era) (ConwayLEDGER era)
   where

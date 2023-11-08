@@ -16,6 +16,7 @@
 module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGOV,
   GovEnv (..),
+  ConwayGovEvent(..),
   ConwayGovPredFailure (..),
 ) where
 
@@ -90,6 +91,7 @@ import Control.State.Transition.Extended (
   TransitionRule,
   judgmentContext,
   liftSTS,
+  tellEvent,
   (?!),
  )
 import qualified Data.Map.Merge.Strict as Map (dropMissing, merge, zipWithMaybeMatched)
@@ -182,13 +184,16 @@ instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
 instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
+data ConwayGovEvent era
+  = GovNewProposals !(TxId (EraCrypto era)) !(ProposalsSnapshot era)
+
 instance ConwayEraPParams era => STS (ConwayGOV era) where
   type State (ConwayGOV era) = ProposalsSnapshot era
   type Signal (ConwayGOV era) = GovProcedures era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
   type PredicateFailure (ConwayGOV era) = ConwayGovPredFailure era
-  type Event (ConwayGOV era) = ()
+  type Event (ConwayGOV era) = ConwayGovEvent era
 
   initialRules = []
 
@@ -213,8 +218,8 @@ addAction ::
   GovAction era ->
   ProposalsSnapshot era ->
   ProposalsSnapshot era
-addAction epoch gaExpiry gaid c addr act as =
-  snapshotInsertGovAction gai' as
+addAction epoch gaExpiry gaid c addr act =
+  snapshotInsertGovAction gai' 
   where
     gai' =
       GovActionState
@@ -287,7 +292,7 @@ checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
           -- The case of having an SNothing as valid, for the very first proposal ever, is handled in `prevActionAsExpected`
           SNothing -> False
           SJust (PrevGovActionId govActionId) ->
-            case snapshotLookupId govActionId $ snapshots of
+            case snapshotLookupId govActionId snapshots of
               Nothing -> False
               -- lookup has to succeed _and_ purpose of looked-up action has to match condition
               Just found -> snapshotCond $ gasAction found
@@ -377,7 +382,10 @@ govTransition = do
 
   let applyVoterVotes curState voter =
         Map.foldlWithKey' (addVoterVote voter) curState
-  pure $ Map.foldlWithKey' applyVoterVotes stProps votingProcedures
+      updatedProposalStates =
+        Map.foldlWithKey' applyVoterVotes stProps votingProcedures
+  tellEvent $ GovNewProposals txid updatedProposalStates
+  pure updatedProposalStates
 
 instance Inject (ConwayGovPredFailure era) (ConwayGovPredFailure era) where
   inject = id
