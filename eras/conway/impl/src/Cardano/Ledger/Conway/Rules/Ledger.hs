@@ -49,7 +49,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
 import Cardano.Ledger.Conway.Rules.Certs (CertsEnv (CertsEnv), ConwayCertsEvent, ConwayCertsPredFailure)
-import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure, GovEnv (..), ConwayGovEvent(..))
+import Cardano.Ledger.Conway.Rules.Gov (ConwayGovEvent (..), ConwayGovPredFailure, GovEnv (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), currentTreasuryValueTxBodyL)
 import Cardano.Ledger.Credential (Credential)

@@ -16,7 +16,7 @@
 module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGOV,
   GovEnv (..),
-  ConwayGovEvent(..),
+  ConwayGovEvent (..),
   ConwayGovPredFailure (..),
 ) where
 
@@ -219,7 +219,7 @@ addAction ::
   ProposalsSnapshot era ->
   ProposalsSnapshot era
 addAction epoch gaExpiry gaid c addr act =
-  snapshotInsertGovAction gai' 
+  snapshotInsertGovAction gai'
   where
     gai' =
       GovActionState
