@@ -30,7 +30,7 @@ uniq x = length x == Set.size (Set.fromList x)
 govSnapshotProps :: TestTree
 govSnapshotProps =
   testGroup
-    "ProposalsSnapshot"
+    "Proposals"
     [ testProperty "Generator is consistent" (isConsistent_ @Conway)
     , testProperty "Adding action preserves consistency" $ do
         as <- uniqueIdGovActions @Conway

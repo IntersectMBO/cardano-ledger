@@ -55,7 +55,7 @@ module Cardano.Ledger.Conway.Governance (
   isStakePoolVotingAllowed,
   isDRepVotingAllowed,
   isCommitteeVotingAllowed,
-  ProposalsSnapshot,
+  Proposals,
   snapshotInsertGovAction,
   snapshotActions,
   snapshotAddVote,
@@ -176,7 +176,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   indexedGovProps,
  )
 import Cardano.Ledger.Conway.Governance.Snapshots (
-  ProposalsSnapshot,
+  Proposals,
   fromGovActionStateSeq,
   isConsistent_,
   snapshotActions,
@@ -563,7 +563,7 @@ toRatifyStatePairs cg@(RatifyState _ _ _) =
 
 -- =============================================
 data ConwayGovState era = ConwayGovState
-  { cgProposals :: !(ProposalsSnapshot era) -- TODO rename 'ProposalsSnapshot' to 'Proposals'
+  { cgProposals :: !(Proposals era)
   , cgEnactState :: !(EnactState era)
   , cgDRepPulsingState :: !(DRepPulsingState era)
   -- ^ The 'cgDRepPulsingState' field is a pulser that incrementally computes the stake distribution of the DReps
@@ -576,7 +576,7 @@ data ConwayGovState era = ConwayGovState
 
 deriving instance EraPParams era => Eq (ConwayGovState era)
 
-cgProposalsL :: Lens' (ConwayGovState era) (ProposalsSnapshot era)
+cgProposalsL :: Lens' (ConwayGovState era) (Proposals era)
 cgProposalsL = lens cgProposals (\x y -> x {cgProposals = y})
 
 cgEnactStateL :: Lens' (ConwayGovState era) (EnactState era)
@@ -675,7 +675,7 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
 
 class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)
-  proposalsGovStateL :: Lens' (GovState era) (ProposalsSnapshot era)
+  proposalsGovStateL :: Lens' (GovState era) (Proposals era)
   drepPulsingStateGovStateL :: Lens' (GovState era) (DRepPulsingState era)
   enactStateGovStateL :: Lens' (GovState era) (EnactState era)
 
@@ -944,7 +944,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpEnactState :: !(EnactState era)
     -- ^ Snapshot of the EnactState, Used to build the Env of the RATIFY rule
     , dpProposals :: !(StrictSeq (GovActionState era))
-    -- ^ Snap shot of the (ProposalsSnapshot era) isomorphic to (StrictSeq (GovActionState era))
+    -- ^ Snap shot of the (Proposals era) isomorphic to (StrictSeq (GovActionState era))
     --   Used to build the Signal of the RATIFY rule
     , dpGlobals :: !Globals
     } ->

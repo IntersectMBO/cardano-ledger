@@ -107,9 +107,9 @@ import Test.Tasty.HUnit
 
 -- =================================================================
 
--- | Accesses the same data as psProposalsL, but converts from (StrictSeq (GovActionState era)) to (ProposalsSnapshot era)
-psProposalsSnapshotL :: Lens' (PulsingSnapshot era) (ProposalsSnapshot era)
-psProposalsSnapshotL =
+-- | Accesses the same data as psProposalsL, but converts from (StrictSeq (GovActionState era)) to (Proposals era)
+psProposalsL' :: Lens' (PulsingSnapshot era) (Proposals era)
+psProposalsL' =
   lens
     (fromGovActionStateSeq . psProposals)
     (\x y -> x {psProposals = snapshotActions y})
@@ -445,7 +445,7 @@ preventDRepExpiry pf = do
                 . utxosGovStateL
                 . drepPulsingStateGovStateL
                 . pulsingStateSnapshotL
-                . psProposalsSnapshotL
+                . psProposalsL'
         )
         expect
 

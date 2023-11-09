@@ -60,7 +60,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
-  ProposalsSnapshot,
+  Proposals,
   PulsingSnapshot (..),
   RatifyState (..),
   Vote (..),
@@ -1669,7 +1669,7 @@ pcConwayGovState :: Proof era -> ConwayGovState era -> PDoc
 pcConwayGovState p (ConwayGovState ss es dr) =
   ppRecord
     "ConwayGovState"
-    [ ("proposals", pcProposalsSnapshot ss)
+    [ ("proposals", pcProposals ss)
     , ("enactState", pcEnactState p es)
     , ("drepPulsingState", pcDRepPulsingState p dr)
     ]
@@ -1708,8 +1708,8 @@ pcRatifyState p (RatifyState enact remov del) =
     , ("delayed", ppBool del)
     ]
 
-pcProposalsSnapshot :: ProposalsSnapshot era -> PDoc
-pcProposalsSnapshot x = ppSexp "ProposalsSnapShot" (map pcGovActionState (toList (snapshotActions x)))
+pcProposals :: Proposals era -> PDoc
+pcProposals x = ppSexp "Proposals" (map pcGovActionState (toList (snapshotActions x)))
 
 pcGovActionState :: GovActionState era -> PDoc
 pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =

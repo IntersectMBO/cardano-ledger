@@ -40,7 +40,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState (..),
   GovProcedures (..),
-  ProposalsSnapshot,
+  Proposals,
   cgEnactStateL,
   cgProposalsL,
   ensPrevGovActionIdsL,
@@ -201,7 +201,7 @@ instance
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ ProposalsSnapshot era
+  , State (EraRule "GOV" era) ~ Proposals era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
@@ -242,7 +242,7 @@ ledgerTransition ::
   , Embed (EraRule "CERTS" era) (someLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ ProposalsSnapshot era
+  , State (EraRule "GOV" era) ~ Proposals era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
@@ -378,7 +378,7 @@ instance
   , Signal (EraRule "GOV" era) ~ GovProcedures era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ ProposalsSnapshot era
+  , State (EraRule "GOV" era) ~ Proposals era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era

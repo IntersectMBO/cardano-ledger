@@ -51,7 +51,7 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
-  ProposalsSnapshot,
+  Proposals,
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
@@ -185,10 +185,10 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
 data ConwayGovEvent era
-  = GovNewProposals !(TxId (EraCrypto era)) !(ProposalsSnapshot era)
+  = GovNewProposals !(TxId (EraCrypto era)) !(Proposals era)
 
 instance ConwayEraPParams era => STS (ConwayGOV era) where
-  type State (ConwayGOV era) = ProposalsSnapshot era
+  type State (ConwayGOV era) = Proposals era
   type Signal (ConwayGOV era) = GovProcedures era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
@@ -202,10 +202,10 @@ instance ConwayEraPParams era => STS (ConwayGOV era) where
 addVoterVote ::
   forall era.
   Voter (EraCrypto era) ->
-  ProposalsSnapshot era ->
+  Proposals era ->
   GovActionId (EraCrypto era) ->
   VotingProcedure era ->
-  ProposalsSnapshot era
+  Proposals era
 addVoterVote voter as govActionId VotingProcedure {vProcVote} =
   snapshotAddVote voter vProcVote govActionId as
 
@@ -216,8 +216,8 @@ addAction ::
   Coin ->
   RewardAcnt (EraCrypto era) ->
   GovAction era ->
-  ProposalsSnapshot era ->
-  ProposalsSnapshot era
+  Proposals era ->
+  Proposals era
 addAction epoch gaExpiry gaid c addr act =
   snapshotInsertGovAction gai'
   where
@@ -236,7 +236,7 @@ addAction epoch gaExpiry gaid c addr act =
 
 checkVotesAreForValidActions ::
   EpochNo ->
-  ProposalsSnapshot era ->
+  Proposals era ->
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
 checkVotesAreForValidActions curEpoch proposals gaIds =
@@ -254,7 +254,7 @@ checkVotesAreForValidActions curEpoch proposals gaIds =
 checkVotersAreValid ::
   forall era.
   ConwayEraPParams era =>
-  ProposalsSnapshot era ->
+  Proposals era ->
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
 checkVotersAreValid proposals voters =
@@ -279,7 +279,7 @@ actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
 checkProposalsHaveAValidPrevious ::
   forall era.
   PrevGovActionIds era ->
-  ProposalsSnapshot era ->
+  Proposals era ->
   GovProcedures era ->
   Test (ConwayGovPredFailure era)
 checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =

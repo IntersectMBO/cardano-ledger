@@ -1627,13 +1627,13 @@ prevHardFork = Var $ V "prevHardFork" (MaybeR PrevHardForkR) No
 -- ================
 -- Lenses
 
-snapshotL :: Lens' (ProposalsSnapshot era) [GovActionState era]
+snapshotL :: Lens' (Proposals era) [GovActionState era]
 snapshotL =
   lens
     (\s -> foldr (:) [] (snapshotActions s))
     (\_ l -> fromGovActionStateSeq (SS.fromList l))
 
-unSnapshotL :: Lens' [GovActionState era] (ProposalsSnapshot era)
+unSnapshotL :: Lens' [GovActionState era] (Proposals era)
 unSnapshotL =
   lens
     (\l -> fromGovActionStateSeq (SS.fromList l))
