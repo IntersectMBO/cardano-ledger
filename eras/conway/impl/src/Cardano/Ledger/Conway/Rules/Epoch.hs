@@ -57,7 +57,7 @@ import Cardano.Ledger.Conway.Governance (
   setFreshDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
-import Cardano.Ledger.Conway.Governance.Snapshots (proposalsRemoveIds)
+import Cardano.Ledger.Conway.Governance.Proposals (proposalsRemoveIds)
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (

@@ -175,7 +175,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   govActionIdToText,
   indexedGovProps,
  )
-import Cardano.Ledger.Conway.Governance.Snapshots (
+import Cardano.Ledger.Conway.Governance.Proposals (
   Proposals,
   fromGovActionStateSeq,
   isConsistent_,

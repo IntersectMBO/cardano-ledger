@@ -95,7 +95,7 @@ spec =
             & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL
               .~ SJust (PrevGovActionId gaidConstitutionProp) -- Add first proposal to PrevGovActionIds in enacted state
             & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgProposalsL
-              .~ def -- Remove all proposals from proposalss, so that the lookup only succeeds for enacted state
+              .~ def -- Remove all proposals, so that the lookup only succeeds for ecacted state.
         constitutionHash'' <- freshSafeHash
         -- Once a proposal with a purpose has been enacted, following proposals can no
         -- longer have empty PrevGovActionIds

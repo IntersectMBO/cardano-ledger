@@ -46,7 +46,7 @@ library
     other-modules:
         Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.Governance.Procedures
-        Cardano.Ledger.Conway.Governance.Snapshots
+        Cardano.Ledger.Conway.Governance.Proposals
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
         Cardano.Ledger.Conway.Rules.Pool

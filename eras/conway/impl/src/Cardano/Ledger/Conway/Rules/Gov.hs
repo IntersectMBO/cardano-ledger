@@ -69,7 +69,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   govProceduresProposalsL,
   pProcGovActionL,
  )
-import Cardano.Ledger.Conway.Governance.Snapshots (proposalsGovActionStates)
+import Cardano.Ledger.Conway.Governance.Proposals (proposalsGovActionStates)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,

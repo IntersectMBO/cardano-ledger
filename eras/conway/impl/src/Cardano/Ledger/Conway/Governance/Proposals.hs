@@ -6,7 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Conway.Governance.Snapshots (
+module Cardano.Ledger.Conway.Governance.Proposals (
   Proposals,
   proposalsIds,
   proposalsAddVote,
