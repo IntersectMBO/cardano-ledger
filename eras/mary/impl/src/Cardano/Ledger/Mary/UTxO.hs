@@ -16,7 +16,6 @@ import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Mary.TxBody ()
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.Shelley.LedgerState (keyCertsRefunds)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getShelleyScriptsNeeded,
@@ -69,7 +68,7 @@ getConsumedMaryValue pp lookupRefund (UTxO u) txBody = consumedValue <> txBody ^
     consumedValue =
       balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
         <> inject (refunds <> withdrawals)
-    refunds = keyCertsRefunds pp lookupRefund (txBody ^. certsTxBodyL)
+    refunds = getTotalRefundsTxBody pp lookupRefund (const Nothing) txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 -- | Computes the set of script hashes required to unlock the transaction inputs and the

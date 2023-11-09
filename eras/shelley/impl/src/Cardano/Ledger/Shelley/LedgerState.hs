@@ -83,10 +83,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   -- * Remove Bootstrap Redeem Addresses
   returnRedeemAddrsToReserves,
   updateNonMyopic,
-  depositPoolChange,
   emptyRewardUpdate,
   pvCanFollow,
-  reapRewards,
   availableAfterMIR,
   ShelleyGovState (..),
 

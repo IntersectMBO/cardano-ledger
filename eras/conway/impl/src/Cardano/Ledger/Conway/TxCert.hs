@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -25,6 +26,10 @@ module Cardano.Ledger.Conway.TxCert (
   getVKeyWitnessConwayTxCert,
   getDelegateeTxCert,
   getStakePoolDelegatee,
+  conwayDRepDepositsTxCerts,
+  conwayDRepRefundsTxCerts,
+  conwayTotalDepositsTxCerts,
+  conwayTotalRefundsTxCerts,
   pattern RegDepositTxCert,
   pattern UnRegDepositTxCert,
   pattern DelegTxCert,
@@ -53,19 +58,11 @@ import Cardano.Ledger.Binary (
   toPlainDecoder,
   toPlainEncoding,
  )
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Anchor)
-import Cardano.Ledger.Core (
-  Era (EraCrypto),
-  EraTxCert (..),
-  PoolCert (..),
-  ScriptHash,
-  Value,
-  eraProtVerLow,
-  notSupportedInThisEra,
-  poolCertKeyHashWitness,
- )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRep)
@@ -76,18 +73,22 @@ import Cardano.Ledger.Shelley.TxCert (
   encodePoolCert,
   encodeShelleyDelegCert,
   poolTxCertDecoder,
+  shelleyTotalDepositsTxCerts,
+  shelleyTotalRefundsTxCerts,
   shelleyTxCertDelegDecoder,
   pattern DelegStakeTxCert,
   pattern MirTxCert,
-  pattern RegPoolTxCert,
   pattern RegTxCert,
-  pattern RetirePoolTxCert,
   pattern UnRegTxCert,
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Data.Foldable (foldMap', foldl')
+import qualified Data.Map.Strict as Map
+import Data.Monoid (Sum (..))
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 data ConwayTxCertUpgradeError
@@ -134,6 +135,10 @@ instance Crypto c => EraTxCert (ConwayEra c) where
     UnRegTxCert c -> Just c
     UnRegDepositTxCert c _ -> Just c
     _ -> Nothing
+
+  getTotalRefundsTxCerts = conwayTotalRefundsTxCerts
+
+  getTotalDepositsTxCerts = conwayTotalDepositsTxCerts
 
 instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   mkRegTxCert c = ConwayTxCertDeleg $ ConwayRegCert c SNothing
@@ -637,3 +642,70 @@ getVKeyWitnessConwayTxCert = \case
       ConwayRegDRep {} -> Nothing
       ConwayUnRegDRep cred _ -> credKeyHashWitness cred
       ConwayUpdateDRep cred _ -> credKeyHashWitness cred
+
+-- | Determine the total deposit amount needed from a TxBody.
+-- The block may (legitimately) contain multiple registration certificates
+-- for the same pool, where the first will be treated as a registration and
+-- any subsequent ones as re-registration. As such, we must only take a
+-- deposit for the first such registration. It is even possible for a single
+-- transaction to have multiple pool registration for the same pool, so as
+-- we process pool registrations, we must keep track of those that are already
+-- registered, so we do not add a Deposit for the same pool twice.
+--
+-- Note that this is not an issue for key registrations since subsequent
+-- registration certificates would be invalid.
+conwayTotalDepositsTxCerts ::
+  (ConwayEraPParams era, Foldable f, ConwayEraTxCert era) =>
+  PParams era ->
+  -- | Check whether a pool with a supplied PoolStakeId is already registered.
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  f (TxCert era) ->
+  Coin
+conwayTotalDepositsTxCerts pp isRegPoolRegistered certs =
+  shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs
+    <+> conwayDRepDepositsTxCerts pp certs
+
+conwayDRepDepositsTxCerts ::
+  (ConwayEraPParams era, Foldable f, ConwayEraTxCert era) =>
+  PParams era ->
+  f (TxCert era) ->
+  Coin
+conwayDRepDepositsTxCerts pp certs = nDReps <×> depositPerDRep
+  where
+    nDReps = getSum @Int (foldMap' (\case RegDRepTxCert {} -> 1; _ -> 0) certs)
+    depositPerDRep = pp ^. ppDRepDepositL
+
+-- | Compute the key deregistration refunds in a transaction
+conwayTotalRefundsTxCerts ::
+  (EraPParams era, Foldable f, ConwayEraTxCert era) =>
+  PParams era ->
+  -- | Function that can lookup current deposit, in case when the Staking credential is registered.
+  (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+  -- | Function that can lookup current deposit, in case when the DRep credential is registered.
+  (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+  f (TxCert era) ->
+  Coin
+conwayTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit certs =
+  shelleyTotalRefundsTxCerts pp lookupStakingDeposit certs
+    <+> conwayDRepRefundsTxCerts lookupDRepDeposit certs
+
+-- | Compute the Refunds from a TxBody, given a function that computes a partial Coin for
+-- known Credentials.
+conwayDRepRefundsTxCerts ::
+  (Foldable f, ConwayEraTxCert era) =>
+  (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+  f (TxCert era) ->
+  Coin
+conwayDRepRefundsTxCerts lookupDRepDeposit = snd . foldl' go (Map.empty, Coin 0)
+  where
+    go accum@(!drepRegsInTx, !totalRefund) = \case
+      RegDRepTxCert cred deposit _ ->
+        -- Track registrations
+        (Map.insert cred deposit drepRegsInTx, totalRefund)
+      UnRegDRepTxCert cred _
+        -- DRep previously registered in the same tx.
+        | Just deposit <- Map.lookup cred drepRegsInTx ->
+            (Map.delete cred drepRegsInTx, totalRefund <+> deposit)
+        -- DRep previously registered in some other tx.
+        | Just deposit <- lookupDRepDeposit cred -> (drepRegsInTx, totalRefund <+> deposit)
+      _ -> accum

@@ -38,6 +38,8 @@ import Cardano.Ledger.Core (
   bodyTxL,
   coinTxOutL,
   feeTxBodyL,
+  getTotalDepositsTxCerts,
+  getTotalRefundsTxCerts,
  )
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash (..))
@@ -58,7 +60,7 @@ import Cardano.Ledger.Plutus.Language (Language (..), plutusLanguage)
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppList, ppMap, ppRecord, ppSafeHash)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState, keyCertsRefunds, totalCertsDeposits)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded, witsVKeyNeededNoGov)
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
@@ -526,7 +528,13 @@ txBodyPreds sizes p =
           balanceCoin
           EQL
           [ProjMap CoinR outputCoinL spending, SumMap withdrawals, One txrefunds, One txdeposits]
-       , txrefunds :<-: (Constr "certsRefunds" certsRefunds ^$ pparams p ^$ stakeDeposits ^$ certs)
+       , txrefunds
+          :<-: ( Constr "certsRefunds" certsRefunds
+                  ^$ pparams p
+                  ^$ stakeDeposits
+                  ^$ drepDeposits
+                  ^$ certs
+               )
        , txdeposits :<-: (Constr "certsDeposits" certsDeposits ^$ pparams p ^$ regPools ^$ certs)
        , scriptsNeeded :<-: (needT p ^$ tempTxBody ^$ (utxo p))
        , txisvalid :<-: (Constr "allValid" allValid ^$ valids)
@@ -627,10 +635,15 @@ txBodyPreds sizes p =
     colRestriction = Var (V "colRestriction" (MapR TxInR (TxOutR p)) No)
     nonZeroRewards = var "nonZeroRewards" (MapR CredR CoinR)
     balanceCoin = Var (V "balanceCoin" CoinR No)
-    certsRefunds (PParamsF _ pp) depositsx certsx = keyCertsRefunds pp (`Map.lookup` depositsx) (map unTxCertF certsx)
+    certsRefunds (PParamsF _ pp) stakingDepositsx drepDepositsx certsx =
+      getTotalRefundsTxCerts
+        pp
+        (`Map.lookup` stakingDepositsx)
+        (`Map.lookup` drepDepositsx)
+        (map unTxCertF certsx)
     certsDeposits (PParamsF _ pp) regpools certsx = Coin (-n)
       where
-        (Coin n) = totalCertsDeposits pp (`Map.member` regpools) (map unTxCertF certsx)
+        Coin n = getTotalDepositsTxCerts pp (`Map.member` regpools) (map unTxCertF certsx)
     txrefunds = Var (pV p "txrefunds" CoinR No)
     txdeposits = Var (pV p "txdeposits" CoinR No)
     acNeeded :: Term era [(ScriptPurpose era, ScriptHash (EraCrypto era))]

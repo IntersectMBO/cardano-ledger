@@ -66,6 +66,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize')
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (Language (..))
@@ -247,8 +248,8 @@ alonzoEvalScriptsTxValid = do
     judgmentContext
   let txBody = tx ^. bodyTxL
       protVer = pp ^. ppProtocolVersionL
-      refunded = getTotalRefundsTxBody pp dpstate txBody
-      depositChange = getTotalDepositsTxBody pp dpstate txBody <-> refunded
+      refunded = certsTotalRefundsTxBody pp dpstate txBody
+      depositChange = certsTotalDepositsTxBody pp dpstate txBody <-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
   () <- pure $! traceEvent validBegin ()
 

@@ -99,7 +99,7 @@ import Cardano.Ledger.Core.TxCert
 import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes
-import Cardano.Ledger.Keys (KeyRole (Staking, Witness))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.MemoBytes
@@ -225,6 +225,32 @@ class
   allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
 
   certsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxCert era))
+
+  -- | Compute the total deposits from the certificates in a TxBody.
+  --
+  -- This is the contribution of a TxBody towards the consumed amount by the transaction
+  getTotalDepositsTxBody ::
+    PParams era ->
+    -- | Check whether stake pool is registered or not
+    (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+    TxBody era ->
+    Coin
+  getTotalDepositsTxBody pp isPoolRegisted txBody =
+    getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
+
+  -- | Compute the total refunds from the Certs of a TxBody.
+  --
+  -- This is the contribution of a TxBody towards produced amount by the transaction
+  getTotalRefundsTxBody ::
+    PParams era ->
+    -- | Lookup current deposit for Staking credential if one is registered
+    (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+    -- | Lookup current deposit for DRep credential if one is registered
+    (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+    TxBody era ->
+    Coin
+  getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
+    getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
 
   -- | Upgrade the transaction body from the previous era.
   --

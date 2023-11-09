@@ -62,7 +62,6 @@ module Cardano.Ledger.Shelley.TxBody (
   addrEitherShelleyTxOutL,
   valueEitherShelleyTxOutL,
   totalTxDepositsShelley,
-  totalTxRefundsShelley,
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
@@ -108,7 +107,7 @@ import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (totalTxDepositsShelley, totalTxRefundsShelley)
+import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (totalTxDepositsShelley)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -327,7 +326,10 @@ instance Crypto c => EraTxBody (ShelleyEra c) where
     lensMemoRawType stbrCerts $ \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
-  upgradeTxBody = error "Calling this function will cause a compilation error, since there is no TxBody instance for ByronEra"
+  upgradeTxBody =
+    error $
+      "Calling this function will cause a compilation error, "
+        ++ "since there is no TxBody instance for ByronEra"
 
 instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra StandardCrypto) #-}
@@ -339,10 +341,6 @@ instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   updateTxBodyL =
     lensMemoRawType stbrUpdate $ \txBodyRaw update -> txBodyRaw {stbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
-
-  getTotalDepositsTxBody = totalTxDepositsShelley
-
-  getTotalRefundsTxBody = totalTxRefundsShelley
 
 deriving newtype instance
   (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>

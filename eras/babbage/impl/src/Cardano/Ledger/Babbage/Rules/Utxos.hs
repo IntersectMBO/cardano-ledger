@@ -44,6 +44,7 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -157,9 +158,9 @@ tellDepositChangeEvent ::
   Rule (s era) 'Transition Coin
 tellDepositChangeEvent pp dpstate txBody = do
   {- refunded := keyRefunds pp txb -}
-  let refunded = getTotalRefundsTxBody pp dpstate txBody
+  let refunded = certsTotalRefundsTxBody pp dpstate txBody
   {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
-  let depositChange = getTotalDepositsTxBody pp dpstate txBody <-> refunded
+  let depositChange = certsTotalDepositsTxBody pp dpstate txBody <-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
   pure depositChange
 

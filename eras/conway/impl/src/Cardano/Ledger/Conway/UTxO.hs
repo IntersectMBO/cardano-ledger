@@ -39,8 +39,8 @@ import Cardano.Ledger.Conway.Governance.Procedures (
  )
 import Cardano.Ledger.Conway.PParams (ppDRepDepositL)
 import Cardano.Ledger.Conway.Tx ()
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), drepRefundsConway)
-import Cardano.Ledger.Conway.TxCert (pattern RegDRepTxCert)
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Conway.TxCert (conwayDRepRefundsTxCerts, pattern RegDRepTxCert)
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -100,7 +100,7 @@ conwayConsumedValue ::
   Value era
 conwayConsumedValue pp lookupKeyDeposit lookupDRepDeposit utxo txBody =
   let maryRefunds = getConsumedMaryValue pp lookupKeyDeposit utxo txBody
-      drepRefunds = inject $ drepRefundsConway lookupDRepDeposit txBody
+      drepRefunds = inject $ conwayDRepRefundsTxCerts lookupDRepDeposit (txBody ^. certsTxBodyL)
    in maryRefunds <+> drepRefunds
 
 instance Crypto c => EraUTxO (ConwayEra c) where

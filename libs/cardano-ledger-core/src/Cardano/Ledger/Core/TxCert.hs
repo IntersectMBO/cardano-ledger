@@ -26,7 +26,9 @@ module Cardano.Ledger.Core.TxCert (
 where
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core.Era (Era (EraCrypto))
+import Cardano.Ledger.Core.PParams (PParams)
 import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Hashes (ScriptHash)
@@ -86,6 +88,26 @@ class
 
   -- | Extract staking credential from any certificate that can unregister such credential
   lookupUnRegStakeTxCert :: TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
+
+  -- | Compute the total deposits from a list of certificates.
+  getTotalDepositsTxCerts ::
+    Foldable f =>
+    PParams era ->
+    -- | Check whether stake pool is registered or not
+    (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+    f (TxCert era) ->
+    Coin
+
+  -- | Compute the total refunds from a list of certificates.
+  getTotalRefundsTxCerts ::
+    Foldable f =>
+    PParams era ->
+    -- | Lookup current deposit for Staking credential if one is registered
+    (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+    -- | Lookup current deposit for DRep credential if one is registered
+    (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+    f (TxCert era) ->
+    Coin
 
 pattern RegPoolTxCert :: EraTxCert era => PoolParams (EraCrypto era) -> TxCert era
 pattern RegPoolTxCert d <- (getRegPoolTxCert -> Just d)

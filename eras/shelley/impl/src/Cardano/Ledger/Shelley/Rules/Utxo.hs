@@ -58,6 +58,7 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
+import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs)
@@ -447,8 +448,8 @@ utxoInductive = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
 
-  let refunded = getTotalRefundsTxBody pp dpstate txBody
-  let totalDeposits' = getTotalDepositsTxBody pp dpstate txBody
+  let refunded = certsTotalRefundsTxBody pp dpstate txBody
+  let totalDeposits' = certsTotalDepositsTxBody pp dpstate txBody
   let depositChange = totalDeposits' Val.<-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
   pure $! updateUTxOState pp u txBody depositChange ppup'

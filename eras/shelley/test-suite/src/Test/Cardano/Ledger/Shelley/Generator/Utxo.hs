@@ -180,7 +180,7 @@ genTx
           ksIndexedGenDelegates
           pparams
           (utxoSt, dpState)
-      (certs, deposits, refunds, dpState', (certWits, certScripts)) <-
+      (certs, deposits, refunds, dpState', certWits, certScripts) <-
         genTxCerts ge pparams dpState slot txIx reserves
       metadata <- genEraAuxiliaryData @era constants
       -------------------------------------------------------------------------
@@ -248,7 +248,7 @@ genTx
           slot
           (Set.fromList inputs)
           draftOutputs
-          certs
+          (StrictSeq.fromList certs)
           (Withdrawals (Map.fromList wdrls))
           draftFee
           (maybeToStrictMaybe update)

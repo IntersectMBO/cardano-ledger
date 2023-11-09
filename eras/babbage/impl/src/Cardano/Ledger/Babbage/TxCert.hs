@@ -5,6 +5,7 @@
 module Cardano.Ledger.Babbage.TxCert () where
 
 import Cardano.Ledger.Babbage.Era
+import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.TxCert
 
@@ -35,6 +36,10 @@ instance Crypto c => EraTxCert (BabbageEra c) where
   lookupUnRegStakeTxCert = \case
     UnRegTxCert c -> Just c
     _ -> Nothing
+
+  getTotalDepositsTxCerts = shelleyTotalDepositsTxCerts
+
+  getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
 instance Crypto c => ShelleyEraTxCert (BabbageEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (BabbageEra StandardCrypto) #-}

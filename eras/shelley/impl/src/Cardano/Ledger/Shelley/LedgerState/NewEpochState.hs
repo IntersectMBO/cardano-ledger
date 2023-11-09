@@ -7,8 +7,6 @@ module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
   getGKeys,
   genesisState,
-  depositPoolChange,
-  reapRewards,
   updateNES,
   returnRedeemAddrsToReserves,
 ) where
@@ -22,11 +20,7 @@ import Cardano.Ledger.CertState (
   DState (..),
   InstantaneousRewards (..),
  )
-import Cardano.Ledger.Coin (
-  Coin (..),
-  CompactForm (CompactCoin),
-  addDeltaCoin,
- )
+import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -36,7 +30,6 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
-import Cardano.Ledger.UMap (RDPair (..), UMElem (..), UMap (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -99,34 +92,6 @@ genesisState genDelegs0 utxo0 =
         }
 
 -- Functions for stake delegation model
-
--- | Calculate the change to the deposit pool for a given transaction.
-depositPoolChange ::
-  ShelleyEraTxBody era =>
-  LedgerState era ->
-  PParams era ->
-  TxBody era ->
-  Coin
-depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
-  where
-    -- Note that while (currentPool + txDeposits) >= txRefunds,
-    -- it could be that txDeposits < txRefunds. We keep the parenthesis above
-    -- to emphasize this point.
-
-    currentPool = (utxosDeposited . lsUTxOState) ls
-    txDeposits = getTotalDepositsTxBody pp (lsCertState ls) txBody
-    txRefunds = getTotalRefundsTxBody pp (lsCertState ls) txBody
-
--- Remove the rewards from the UMap, but leave the deposits alone
-reapRewards ::
-  UMap c ->
-  RewardAccounts c ->
-  UMap c
-reapRewards (UMap tmap ptrmap) withdrawals = UMap (Map.mapWithKey g tmap) ptrmap
-  where
-    g k (UMElem w x y z) = UMElem (fmap (removeRewards k) w) x y z
-    removeRewards k v@(RDPair _ d) =
-      if k `Map.member` withdrawals then RDPair (CompactCoin 0) d else v
 
 -- A TxOut has 4 different shapes, depending on the shape of its embedded Addr.
 -- Credentials are stored in only 2 of the 4 cases.
