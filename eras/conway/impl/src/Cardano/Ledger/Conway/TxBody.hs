@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -21,6 +22,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxBody (
+  totalTxRefundsConway,
+  drepRefundsConway,
   ConwayEraTxBody (..),
   ConwayTxBody (
     ConwayTxBody,
@@ -76,16 +79,18 @@ import Cardano.Ledger.Binary.Coders (
   ofield,
   (!>),
  )
-import Cardano.Ledger.CertState (CertState)
+import Cardano.Ledger.CertState (CertState (..))
 import Cardano.Ledger.Coin (Coin (..), decodePositiveCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..), ConwayTxCertUpgradeError, pattern RegDRepTxCert)
+import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..), ConwayTxCertUpgradeError, pattern RegDRepTxCert, pattern UnRegDRepTxCert)
 import Cardano.Ledger.Conway.TxOut ()
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.DRep (DRepState (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (
   MaryValue (..),
@@ -105,6 +110,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
+import Cardano.Ledger.Shelley.LedgerState (VState (..), totalTxRefundsShelley)
 import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -112,7 +118,8 @@ import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
-import Data.Foldable (foldMap')
+import Data.Foldable (foldMap', foldl')
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OSet.Strict as SOS
 import Data.Semigroup (getSum)
@@ -431,6 +438,11 @@ instance
 
   getTotalDepositsTxBody = totalTxDepositsConway
 
+  getTotalRefundsTxBody = totalTxRefundsConway
+
+-- ==========================================
+-- Deposits and Refunds for Conway TxBody
+
 totalProposalDeposits ::
   ConwayEraTxBody era =>
   PParams era ->
@@ -451,6 +463,14 @@ totalDRepDeposits pp txb = nDReps <×> depositPerDRep
     nDReps = getSum @Int (foldMap' (\case RegDRepTxCert {} -> 1; _ -> 0) (txb ^. certsTxBodyL))
     depositPerDRep = pp ^. ppDRepDepositL
 
+-- | Compute all the deposits in a TxBody
+--   This includes deposits for
+--   1) registering Stake
+--   2) registering a StakePool
+--   3) registering a DRep
+--   4) making a Proposal
+-- This is the contribution of a TxBody towards the total 'Obligations' of the system
+-- See the Tyeps and Functions Cardano.Ledger.CertState(Obligations,obligationCertState) for more information.
 totalTxDepositsConway ::
   Crypto c =>
   PParams (ConwayEra c) ->
@@ -458,9 +478,32 @@ totalTxDepositsConway ::
   TxBody (ConwayEra c) ->
   Coin
 totalTxDepositsConway pp cs txb =
-  totalTxDepositsShelley pp cs txb
-    <> totalProposalDeposits pp txb
-    <> totalDRepDeposits pp txb
+  totalTxDepositsShelley pp cs txb -- Stake and StakePool
+    <> totalProposalDeposits pp txb -- only in Conway and later
+    <> totalDRepDeposits pp txb -- only in Conway and later
+
+-- | Compute the Refunds from a TxBody, given a function that computes a partial Coin for known Credentials.
+drepRefundsConway :: ConwayEraTxBody era => (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) -> TxBody era -> Coin
+drepRefundsConway lookupDRepDeposit txBody =
+  let go accum@(!drepRegsInTx, !totalRefund) = \case
+        RegDRepTxCert c deposit _ ->
+          -- Track registrations
+          (Map.insert c deposit drepRegsInTx, totalRefund)
+        UnRegDRepTxCert c _
+          -- DRep previously registered in the same tx.
+          | Just deposit <- Map.lookup c drepRegsInTx -> (Map.delete c drepRegsInTx, totalRefund <+> deposit)
+          -- DRep previously registered in some other tx.
+          | Just deposit <- lookupDRepDeposit c -> (drepRegsInTx, totalRefund <+> deposit)
+        _ -> accum
+   in inject $ snd $ foldl' go (Map.empty, Coin 0) $ txBody ^. certsTxBodyL
+
+-- | Compute the refunds from both unregistering DReps and unregistering stake credentials
+--   in a TxBody. Refunds for Proposals and StakePools are handled at the epoch boundary,
+--   and are handled separately, so are not included here.
+totalTxRefundsConway :: ConwayEraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
+totalTxRefundsConway pp certState txb = drepRefundsConway depositOf txb <+> totalTxRefundsShelley pp certState txb -- Unregistering DReps
+  where
+    depositOf cred = drepDeposit <$> Map.lookup cred (vsDReps (certVState certState))
 
 instance Crypto c => AllegraEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra StandardCrypto) #-}

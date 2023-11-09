@@ -75,7 +75,6 @@ import Cardano.Ledger.Shelley.Governance (EraGov (GovState), ShelleyGovState)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
-  keyTxRefunds,
   updateStakeDistribution,
  )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -248,7 +247,7 @@ alonzoEvalScriptsTxValid = do
     judgmentContext
   let txBody = tx ^. bodyTxL
       protVer = pp ^. ppProtocolVersionL
-      refunded = keyTxRefunds pp dpstate txBody
+      refunded = getTotalRefundsTxBody pp dpstate txBody
       depositChange = getTotalDepositsTxBody pp dpstate txBody <-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
   () <- pure $! traceEvent validBegin ()

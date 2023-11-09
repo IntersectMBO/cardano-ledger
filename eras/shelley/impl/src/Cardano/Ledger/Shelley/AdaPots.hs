@@ -26,9 +26,6 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
-  keyTxRefunds,
- )
 import Cardano.Ledger.Shelley.LedgerState.Types (
   AccountState (..),
   EpochState (..),
@@ -150,7 +147,7 @@ consumedTxBody ::
 consumedTxBody txBody pp dpstate (UTxO u) =
   Consumed
     { conInputs = coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
-    , conRefunds = keyTxRefunds pp dpstate txBody
+    , conRefunds = getTotalRefundsTxBody pp dpstate txBody
     , conWithdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
     }
 

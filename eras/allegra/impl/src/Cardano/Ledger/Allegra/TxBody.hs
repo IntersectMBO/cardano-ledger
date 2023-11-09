@@ -79,6 +79,7 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (..),
   Withdrawals (..),
   totalTxDepositsShelley,
+  totalTxRefundsShelley,
  )
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -385,6 +386,7 @@ instance Crypto c => ShelleyEraTxBody (AllegraEra c) where
   {-# INLINEABLE updateTxBodyL #-}
 
   getTotalDepositsTxBody = totalTxDepositsShelley
+  getTotalRefundsTxBody = totalTxRefundsShelley
 
 instance Crypto c => AllegraEraTxBody (AllegraEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (AllegraEra StandardCrypto) #-}

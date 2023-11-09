@@ -51,7 +51,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   PPUPPredFailure,
   UTxOState (..),
-  keyTxRefunds,
   updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -158,7 +157,7 @@ tellDepositChangeEvent ::
   Rule (s era) 'Transition Coin
 tellDepositChangeEvent pp dpstate txBody = do
   {- refunded := keyRefunds pp txb -}
-  let refunded = keyTxRefunds pp dpstate txBody
+  let refunded = getTotalRefundsTxBody pp dpstate txBody
   {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
   let depositChange = getTotalDepositsTxBody pp dpstate txBody <-> refunded
   tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange

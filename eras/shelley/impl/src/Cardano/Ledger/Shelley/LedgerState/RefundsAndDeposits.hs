@@ -10,7 +10,7 @@
 module Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
   totalCertsDeposits,
   totalCertsDepositsCertState,
-  keyTxRefunds,
+  totalTxRefundsShelley,
   keyCertsRefunds,
   keyCertsRefundsCertState,
   totalTxDeposits,
@@ -132,10 +132,11 @@ keyCertsRefunds pp lookupDeposit certs = snd (foldl' accum (mempty, Coin 0) cert
               | Just deposit <- lookupDeposit k -> (regKeys, totalRefunds <+> deposit)
             _ -> (regKeys, totalRefunds)
 
-keyTxRefunds ::
+-- | Compute the refunds attributable to unregistering Stake credentials in a TxBody
+totalTxRefundsShelley ::
   ShelleyEraTxBody era =>
   PParams era ->
   CertState era ->
   TxBody era ->
   Coin
-keyTxRefunds pp dpstate tx = keyCertsRefundsCertState pp dpstate (tx ^. certsTxBodyL)
+totalTxRefundsShelley pp dpstate tx = keyCertsRefundsCertState pp dpstate (tx ^. certsTxBodyL)

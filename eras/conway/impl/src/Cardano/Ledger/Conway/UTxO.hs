@@ -24,12 +24,10 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
  )
-
-import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (
   Era (..),
   EraTxBody (..),
-  MaryEraTxBody,
   PParams,
   Value,
  )
@@ -39,14 +37,10 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   Voter (..),
   VotingProcedures (..),
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
+import Cardano.Ledger.Conway.PParams (ppDRepDepositL)
 import Cardano.Ledger.Conway.Tx ()
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Conway.TxCert (
-  ConwayEraTxCert,
-  pattern RegDRepTxCert,
-  pattern UnRegDRepTxCert,
- )
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), drepRefundsConway)
+import Cardano.Ledger.Conway.TxCert (pattern RegDRepTxCert)
 import Cardano.Ledger.Credential (Credential, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -55,11 +49,10 @@ import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Cardano.Ledger.Val (Val (..))
-import Data.Foldable (foldMap', foldl')
+import Data.Foldable (foldMap')
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Semigroup (getSum)
-import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
 getConwayScriptsNeeded ::
@@ -96,9 +89,7 @@ conwayProducedValue pp isStakePool txBody =
     drepDeposits = getSum @Int (foldMap' (\case RegDRepTxCert {} -> 1; _ -> 0) (txBody ^. certsTxBodyL)) <×> pp ^. ppDRepDepositL
 
 conwayConsumedValue ::
-  ( ConwayEraTxCert era
-  , ConwayEraPParams era
-  , MaryEraTxBody era
+  ( ConwayEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
   ) =>
   PParams era ->
@@ -109,18 +100,7 @@ conwayConsumedValue ::
   Value era
 conwayConsumedValue pp lookupKeyDeposit lookupDRepDeposit utxo txBody =
   let maryRefunds = getConsumedMaryValue pp lookupKeyDeposit utxo txBody
-      drepRefunds =
-        let go accum@(!drepRegsInTx, !totalRefund) = \case
-              RegDRepTxCert c _ _ ->
-                -- Track registrations
-                (Set.insert c drepRegsInTx, totalRefund)
-              UnRegDRepTxCert c _
-                -- DRep previously registered in the same tx.
-                | Set.member c drepRegsInTx -> (Set.delete c drepRegsInTx, totalRefund <+> pp ^. ppDRepDepositL)
-                -- DRep previously registered in some other tx.
-                | Just deposit <- lookupDRepDeposit c -> (drepRegsInTx, totalRefund <+> deposit)
-              _ -> accum
-         in inject $ snd $ foldl' go (Set.empty, Coin 0) $ txBody ^. certsTxBodyL
+      drepRefunds = inject $ drepRefundsConway lookupDRepDeposit txBody
    in maryRefunds <+> drepRefunds
 
 instance Crypto c => EraUTxO (ConwayEra c) where
