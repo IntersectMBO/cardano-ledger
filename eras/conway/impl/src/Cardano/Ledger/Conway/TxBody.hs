@@ -45,6 +45,8 @@ module Cardano.Ledger.Conway.TxBody (
     ctbCurrentTreasuryValue,
     ctbTreasuryDonation
   ),
+  conwayTotalDepositsTxBody,
+  conwayProposalsDeposits,
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))

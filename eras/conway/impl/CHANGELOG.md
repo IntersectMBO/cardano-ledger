@@ -3,6 +3,9 @@
 ## 1.11.0.0
 
 * Switch `ppCommitteeMaxTermLength` to `EpochNo`, rather than `Natural`
+* Add `conwayTotalDepositsTxBody` and `conwayProposalsDeposits`
+* Add `conwayDRepDepositsTxCerts`, `conwayDRepRefundsTxCerts`,
+  `conwayTotalDepositsTxCerts` and `conwayTotalRefundsTxCerts`
 * Rename data-type `ProposalsSnapshot` to `Proposals`. #3859
   * Rename module `Governance.Snapshots` to `Governance.Proposals`.
   * Rename all the functions related to the data-type.

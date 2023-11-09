@@ -80,7 +80,7 @@ library
         cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.2,
         cardano-ledger-byron,
         cardano-ledger-byron-test,
-        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.6.1,
+        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.9,
         cardano-ledger-pretty,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.6 && <1.9,
         cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.0.1,

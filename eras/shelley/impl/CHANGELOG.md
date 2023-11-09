@@ -2,6 +2,14 @@
 
 ## 1.8.0.0
 
+* Add `shelleyTotalDepositsTxCerts` and `shelleyTotalRefundsTxCerts`
+* Remove dead functions: `depositPoolChange` and `reapRewards`
+* Move `getTotalDepositsTxBody` and `getTotalRefundsTxBody` into
+  `cardano-ledger-core:Cardano.Ledger.Core.EraTxBody` from `ShelleyEraTxBody`
+* Change type signature and behavior of `updateUTxOState`
+* Deprecate `totalCertsDeposits`, `totalCertsDepositsCertState`, `totalTxDepositsShelley`,
+  `keyCertsRefundsCertState`, `keyCertsRefunds` and `totalTxRefundsShelley`
+
 ### `testlib`
 
 * Provide CDDL spec files with `readBabbageCddlFileNames` and `readBabbageCddlFiles` from
