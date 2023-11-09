@@ -86,7 +86,7 @@ import Cardano.Ledger.Conway.Governance (
   psDRepDistrG,
   rsEnactStateL,
   setCompleteDRepPulsingState,
-  snapshotLookupId,
+  proposalsLookupId,
   utxosGovStateL,
   votingDRepThreshold,
   votingStakePoolThreshold,

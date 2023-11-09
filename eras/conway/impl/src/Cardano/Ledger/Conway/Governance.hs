@@ -56,13 +56,13 @@ module Cardano.Ledger.Conway.Governance (
   isDRepVotingAllowed,
   isCommitteeVotingAllowed,
   Proposals,
-  snapshotInsertGovAction,
-  snapshotActions,
-  snapshotAddVote,
-  snapshotIds,
-  snapshotRemoveIds,
-  snapshotLookupId,
-  snapshotGovActionStates,
+  proposalsInsertGovAction,
+  proposalsActions,
+  proposalsAddVote,
+  proposalsIds,
+  proposalsRemoveIds,
+  proposalsLookupId,
+  proposalsGovActionStates,
   fromGovActionStateSeq,
   isConsistent_,
   -- Lenses
@@ -179,13 +179,13 @@ import Cardano.Ledger.Conway.Governance.Snapshots (
   Proposals,
   fromGovActionStateSeq,
   isConsistent_,
-  snapshotActions,
-  snapshotAddVote,
-  snapshotGovActionStates,
-  snapshotIds,
-  snapshotInsertGovAction,
-  snapshotLookupId,
-  snapshotRemoveIds,
+  proposalsActions,
+  proposalsAddVote,
+  proposalsGovActionStates,
+  proposalsIds,
+  proposalsInsertGovAction,
+  proposalsLookupId,
+  proposalsRemoveIds,
  )
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
@@ -665,7 +665,7 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
 
   obligationGovState st =
     Obligations
-      { oblProposal = foldMap' gasDeposit $ snapshotActions (st ^. cgProposalsL)
+      { oblProposal = foldMap' gasDeposit $ proposalsActions (st ^. cgProposalsL)
       , oblDRep = Coin 0
       , oblStake = Coin 0
       , oblPool = Coin 0
@@ -1175,7 +1175,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                       (cgEnactState govState)
                         { ensTreasury = epochState ^. epochStateTreasuryL
                         }
-                  , dpProposals = snapshotActions (govState ^. cgProposalsL)
+                  , dpProposals = proposalsActions (govState ^. cgProposalsL)
                   , dpGlobals = globals
                   }
               )

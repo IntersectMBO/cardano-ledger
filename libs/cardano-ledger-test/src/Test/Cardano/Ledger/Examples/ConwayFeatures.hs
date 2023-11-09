@@ -112,7 +112,7 @@ psProposalsL' :: Lens' (PulsingSnapshot era) (Proposals era)
 psProposalsL' =
   lens
     (fromGovActionStateSeq . psProposals)
-    (\x y -> x {psProposals = snapshotActions y})
+    (\x y -> x {psProposals = proposalsActions y})
 
 stakeKeyHash :: forall era. Era era => Proof era -> KeyHash 'Staking (EraCrypto era)
 stakeKeyHash _pf = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
@@ -433,12 +433,12 @@ preventDRepExpiry pf = do
     assertCurGovSnaps epochNo epochState expected =
       assertExprEqualWithMessage
         (unwords ["Epoch", show @Int epochNo, "CurrentProposals null status expected to be " ++ show expected ++ ".", "It was not."])
-        (SSeq.null . snapshotIds $ epochState ^. esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL)
+        (SSeq.null . proposalsIds $ epochState ^. esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL)
         expected
     assertPrevGovSnaps epochNo epochState expect =
       assertExprEqualWithMessage
         (unlines ["At Epoch " ++ show @Int epochNo, "PrevGovSnapshot proposals null status expected to be " ++ show expect ++ ".", "But is is not."])
-        ( SSeq.null . snapshotIds $
+        ( SSeq.null . proposalsIds $
             epochState
               ^. esLStateL
                 . lsUTxOStateL
@@ -655,7 +655,7 @@ testGov pf = do
           . utxosGovStateL
           . proposalsGovStateL
 
-  case snapshotActions currentGovActions of
+  case proposalsActions currentGovActions of
     gas' SSeq.:<| SSeq.Empty ->
       assertExprEqualWithMessage
         "un-enacted govAction is recorded in rsFuture"

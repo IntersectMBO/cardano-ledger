@@ -8,14 +8,14 @@
 
 module Cardano.Ledger.Conway.Governance.Snapshots (
   Proposals,
-  snapshotIds,
-  snapshotAddVote,
-  snapshotInsertGovAction,
-  snapshotActions,
-  snapshotRemoveIds,
-  snapshotLookupId,
+  proposalsIds,
+  proposalsAddVote,
+  proposalsInsertGovAction,
+  proposalsActions,
+  proposalsRemoveIds,
+  proposalsLookupId,
   fromGovActionStateSeq,
-  snapshotGovActionStates,
+  proposalsGovActionStates,
   -- Testing
   isConsistent_,
 ) where
@@ -62,7 +62,7 @@ instance Default (Proposals era) where
   def = Proposals def
 
 instance EraPParams era => EncCBOR (Proposals era) where
-  encCBOR = encCBOR . snapshotActions
+  encCBOR = encCBOR . proposalsActions
 
 instance EraPParams era => DecCBOR (Proposals era) where
   decCBOR = fromGovActionStateSeq <$> decCBOR
@@ -73,40 +73,40 @@ instance EraPParams era => DecShareCBOR (Proposals era) where
 
 -- | Insert a `GovActionState`, overwriting an entry of it if the
 -- corresponding `GovActionId` already exists.
-snapshotInsertGovAction ::
+proposalsInsertGovAction ::
   GovActionState era ->
   Proposals era ->
   Proposals era
-snapshotInsertGovAction gas (Proposals omap) =
+proposalsInsertGovAction gas (Proposals omap) =
   Proposals (omap OMap.||> gas)
 
 -- | Get the sequence of `GovActionState`s
-snapshotActions ::
+proposalsActions ::
   Proposals era ->
   StrictSeq (GovActionState era)
-snapshotActions (Proposals omap) = OMap.toStrictSeq omap
+proposalsActions (Proposals omap) = OMap.toStrictSeq omap
 
 -- | Get the sequence of `GovActionId`s
-snapshotIds ::
+proposalsIds ::
   Proposals era ->
   StrictSeq (GovActionId (EraCrypto era))
-snapshotIds (Proposals omap) = OMap.toStrictSeqOKeys omap
+proposalsIds (Proposals omap) = OMap.toStrictSeqOKeys omap
 
 -- | Get the unordered map of `GovActionId`s and `GovActionState`s
-snapshotGovActionStates ::
+proposalsGovActionStates ::
   Proposals era ->
   Map (GovActionId (EraCrypto era)) (GovActionState era)
-snapshotGovActionStates (Proposals omap) = OMap.toMap omap
+proposalsGovActionStates (Proposals omap) = OMap.toMap omap
 
 -- | Add a vote to an existing `GovActionState` This is a no-op if the .
 -- provided `GovActionId` does not already exist                       .
-snapshotAddVote ::
+proposalsAddVote ::
   Voter (EraCrypto era) ->
   Vote ->
   GovActionId (EraCrypto era) ->
   Proposals era ->
   Proposals era
-snapshotAddVote voter vote gai (Proposals omap) =
+proposalsAddVote voter vote gai (Proposals omap) =
   Proposals $ OMap.adjust updateVote gai omap
   where
     insertVote ::
@@ -122,19 +122,19 @@ snapshotAddVote voter vote gai (Proposals omap) =
       CommitteeVoter c -> insertVote gasCommitteeVotesL c
 
 -- | Extract `GovActionState`s for the given set of `GovActionId`s from the `Proposals`
-snapshotRemoveIds ::
+proposalsRemoveIds ::
   Set (GovActionId (EraCrypto era)) ->
   Proposals era ->
   (Proposals era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
-snapshotRemoveIds gais (Proposals omap) =
+proposalsRemoveIds gais (Proposals omap) =
   let (retained, removed) = OMap.extractKeys gais omap
    in (Proposals retained, removed)
 
-snapshotLookupId ::
+proposalsLookupId ::
   GovActionId (EraCrypto era) ->
   Proposals era ->
   Maybe (GovActionState era)
-snapshotLookupId gai (Proposals omap) = OMap.lookup gai omap
+proposalsLookupId gai (Proposals omap) = OMap.lookup gai omap
 
 -- | Converts a sequence of `GovActionState`s to a `Proposals`.
 --

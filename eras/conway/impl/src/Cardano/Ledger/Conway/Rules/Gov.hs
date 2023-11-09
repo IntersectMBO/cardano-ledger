@@ -60,16 +60,16 @@ import Cardano.Ledger.Conway.Governance (
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
   isStakePoolVotingAllowed,
-  snapshotAddVote,
-  snapshotInsertGovAction,
-  snapshotLookupId,
+  proposalsAddVote,
+  proposalsInsertGovAction,
+  proposalsLookupId,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovAction (..),
   govProceduresProposalsL,
   pProcGovActionL,
  )
-import Cardano.Ledger.Conway.Governance.Snapshots (snapshotGovActionStates)
+import Cardano.Ledger.Conway.Governance.Snapshots (proposalsGovActionStates)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,
@@ -207,7 +207,7 @@ addVoterVote ::
   VotingProcedure era ->
   Proposals era
 addVoterVote voter as govActionId VotingProcedure {vProcVote} =
-  snapshotAddVote voter vProcVote govActionId as
+  proposalsAddVote voter vProcVote govActionId as
 
 addAction ::
   EpochNo ->
@@ -219,7 +219,7 @@ addAction ::
   Proposals era ->
   Proposals era
 addAction epoch gaExpiry gaid c addr act =
-  snapshotInsertGovAction gai'
+  proposalsInsertGovAction gai'
   where
     gai' =
       GovActionState
@@ -240,7 +240,7 @@ checkVotesAreForValidActions ::
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
 checkVotesAreForValidActions curEpoch proposals gaIds =
-  let curGovActionIds = snapshotGovActionStates proposals
+  let curGovActionIds = proposalsGovActionStates proposals
       expiredActions = Map.filter ((curEpoch >) . (^. gasExpiresAfterL)) curGovActionIds
       unknownGovActionIds = gaIds `Map.difference` curGovActionIds
       votesOnExpiredActions = gaIds `Map.intersection` expiredActions
@@ -258,7 +258,7 @@ checkVotersAreValid ::
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
 checkVotersAreValid proposals voters =
-  let curGovActionIds = snapshotGovActionStates proposals
+  let curGovActionIds = proposalsGovActionStates proposals
       disallowedVoters =
         Map.merge Map.dropMissing Map.dropMissing keepDisallowedVoters curGovActionIds voters
       keepDisallowedVoters = Map.zipWithMaybeMatched $ \_ GovActionState {gasAction} voter -> do
@@ -282,20 +282,20 @@ checkProposalsHaveAValidPrevious ::
   Proposals era ->
   GovProcedures era ->
   Test (ConwayGovPredFailure era)
-checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
+checkProposalsHaveAValidPrevious prevGovActionIds proposalss procedures =
   let isValidPrevGovActionId ::
         StrictMaybe (PrevGovActionId p (EraCrypto era)) ->
         (GovAction era -> Bool) ->
         Bool
-      isValidPrevGovActionId prevGovActionId snapshotCond =
+      isValidPrevGovActionId prevGovActionId proposalsCond =
         case prevGovActionId of
           -- The case of having an SNothing as valid, for the very first proposal ever, is handled in `prevActionAsExpected`
           SNothing -> False
           SJust (PrevGovActionId govActionId) ->
-            case snapshotLookupId govActionId snapshots of
+            case proposalsLookupId govActionId proposalss of
               Nothing -> False
               -- lookup has to succeed _and_ purpose of looked-up action has to match condition
-              Just found -> snapshotCond $ gasAction found
+              Just found -> proposalsCond $ gasAction found
       isValid proposal =
         prevActionAsExpected (proposal ^. pProcGovActionL) prevGovActionIds
           || case proposal ^. pProcGovActionL of

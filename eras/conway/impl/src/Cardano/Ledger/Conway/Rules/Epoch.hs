@@ -57,7 +57,7 @@ import Cardano.Ledger.Conway.Governance (
   setFreshDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
-import Cardano.Ledger.Conway.Governance.Snapshots (snapshotRemoveIds)
+import Cardano.Ledger.Conway.Governance.Snapshots (proposalsRemoveIds)
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -285,7 +285,7 @@ epochTransition = do
       applyEnactedWithdrawals accountState1 dState1 rsEnactState
     (newProposals, removedGovActions) =
       -- It is important that we use current proposals here instead of the ones from the pulser
-      snapshotRemoveIds rsRemoved (govState0 ^. cgProposalsL)
+      proposalsRemoveIds rsRemoved (govState0 ^. cgProposalsL)
     govState1 =
       govState0
         & cgProposalsL .~ newProposals

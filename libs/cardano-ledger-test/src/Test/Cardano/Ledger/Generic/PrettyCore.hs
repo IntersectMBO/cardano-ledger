@@ -65,7 +65,7 @@ import Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   Vote (..),
   finishDRepPulser,
-  snapshotActions,
+  proposalsActions,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..), Delegatee (..))
 import Cardano.Ledger.Core
@@ -1709,7 +1709,7 @@ pcRatifyState p (RatifyState enact remov del) =
     ]
 
 pcProposals :: Proposals era -> PDoc
-pcProposals x = ppSexp "Proposals" (map pcGovActionState (toList (snapshotActions x)))
+pcProposals x = ppSexp "Proposals" (map pcGovActionState (toList (proposalsActions x)))
 
 pcGovActionState :: GovActionState era -> PDoc
 pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =

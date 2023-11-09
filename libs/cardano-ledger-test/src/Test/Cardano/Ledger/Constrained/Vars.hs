@@ -360,7 +360,7 @@ ppupStateT ::
   RootTarget era (ShelleyGovState era) (ShelleyGovState era)
 ppupStateT p =
   Invert "PPUPState" (typeRep @(ShelleyGovState era)) ppupfun
-    :$ Lensed (proposalsT p) (proposalsL . proposedMapL p)
+    :$ Lensed (proposalsT p) (shellyGovStateProposedPPUpdatesL . proposedMapL p)
     :$ Lensed (futureProposalsT p) (futureproposalsL . proposedMapL p)
     :$ Lensed (currPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
     :$ Lensed (prevPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
@@ -1578,7 +1578,7 @@ ratifyState = Var $ V "ratifyState" RatifyStateR No
 conwayGovStateT :: forall era. Reflect era => Proof era -> RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT p =
   Invert "ConwayGovState" (typeRep @(ConwayGovState era)) (\x -> ConwayGovState (fromGovActionStateSeq (SS.fromList x)))
-    :$ Lensed currProposals (cgProposalsL . snapshotL)
+    :$ Lensed currProposals (cgProposalsL . proposalsL)
     :$ Shift enactStateT cgEnactStateL
     :$ Shift (dRepPulsingStateT p) cgDRepPulsingStateL
 
@@ -1627,17 +1627,17 @@ prevHardFork = Var $ V "prevHardFork" (MaybeR PrevHardForkR) No
 -- ================
 -- Lenses
 
-snapshotL :: Lens' (Proposals era) [GovActionState era]
-snapshotL =
+proposalsL :: Lens' (Proposals era) [GovActionState era]
+proposalsL =
   lens
-    (\s -> foldr (:) [] (snapshotActions s))
+    (\s -> foldr (:) [] (proposalsActions s))
     (\_ l -> fromGovActionStateSeq (SS.fromList l))
 
-unSnapshotL :: Lens' [GovActionState era] (Proposals era)
-unSnapshotL =
+unProposalsL :: Lens' [GovActionState era] (Proposals era)
+unProposalsL =
   lens
     (\l -> fromGovActionStateSeq (SS.fromList l))
-    (\_ s -> foldr (:) [] (snapshotActions s))
+    (\_ s -> foldr (:) [] (proposalsActions s))
 
 pparamsFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 pparamsFL p = lens (PParamsF p) (\_ (PParamsF _ x) -> x)
@@ -1654,8 +1654,8 @@ smCommL = lens getter (\_ t -> SJust t)
     getter SNothing = Committee Map.empty maxBound
     getter (SJust x) = x
 
-proposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
-proposalsL = lens proposals (\x y -> x {proposals = y})
+shellyGovStateProposedPPUpdatesL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
+shellyGovStateProposedPPUpdatesL = lens proposals (\x y -> x {proposals = y})
 
 futureproposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
 futureproposalsL = lens futureProposals (\x y -> x {futureProposals = y})
