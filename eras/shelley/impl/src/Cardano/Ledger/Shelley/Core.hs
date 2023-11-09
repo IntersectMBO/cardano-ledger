@@ -43,6 +43,7 @@ class (ShelleyEraTxCert era, EraTxBody era) => ShelleyEraTxBody era where
   updateTxBodyG = updateTxBodyL
 
   getTotalDepositsTxBody :: PParams era -> CertState era -> TxBody era -> Coin
+  getTotalRefundsTxBody :: PParams era -> CertState era -> TxBody era -> Coin
 
 type Wdrl c = Withdrawals c
 {-# DEPRECATED Wdrl "In favor of `Cardano.Ledger.Address.Withdrawals`" #-}

@@ -48,7 +48,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   deltaT,
   iRReserves,
   iRTreasury,
-  keyTxRefunds,
   prevPParamsEpochStateL,
   rewards,
   rs,
@@ -293,7 +292,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
         ++ "total deposits "
         ++ show (getTotalDepositsTxBody currPP oldCertState (tx ^. bodyTxL))
         ++ "\ntotal refunds "
-        ++ show (keyTxRefunds currPP oldCertState (tx ^. bodyTxL))
+        ++ show (getTotalRefundsTxBody currPP oldCertState (tx ^. bodyTxL))
 
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
@@ -480,7 +479,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
             <+> getTotalDepositsTxBody pp_ dpstate txb
         consumed_ =
           coinBalance u
-            <+> keyTxRefunds pp_ dpstate txb
+            <+> getTotalRefundsTxBody pp_ dpstate txb
             <+> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
@@ -512,7 +511,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
           txb = tx ^. bodyTxL
           inps =
             coinBalance @era (UTxO (Map.restrictKeys u (txb ^. inputsTxBodyL)))
-              <> keyTxRefunds pp_ dpstate txb
+              <> getTotalRefundsTxBody pp_ dpstate txb
               <> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
           outs =
             coinBalance (txouts @era txb)

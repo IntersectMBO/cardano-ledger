@@ -111,7 +111,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
-import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley)
+import Cardano.Ledger.Shelley.TxBody (totalTxDepositsShelley, totalTxRefundsShelley)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
@@ -289,6 +289,7 @@ instance Crypto c => ShelleyEraTxBody (AlonzoEra c) where
   {-# INLINEABLE updateTxBodyL #-}
 
   getTotalDepositsTxBody = totalTxDepositsShelley
+  getTotalRefundsTxBody = totalTxRefundsShelley
 
 instance Crypto c => AllegraEraTxBody (AlonzoEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (AlonzoEra StandardCrypto) #-}
