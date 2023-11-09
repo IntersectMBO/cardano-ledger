@@ -341,6 +341,7 @@ instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
   {-# INLINEABLE updateTxBodyL #-}
 
   getTotalDepositsTxBody = totalTxDepositsShelley
+
   getTotalRefundsTxBody = totalTxRefundsShelley
 
 deriving newtype instance

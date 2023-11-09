@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -22,6 +23,7 @@
 
 module Cardano.Ledger.Conway.TxBody (
   totalTxRefundsConway,
+  drepRefundsConway,
   ConwayEraTxBody (..),
   ConwayTxBody (
     ConwayTxBody,
@@ -54,7 +56,7 @@ import Cardano.Ledger.Babbage.TxBody (
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
-import Cardano.Ledger.BaseTypes (EpochNo (..), Network, fromSMaybe, isSJust)
+import Cardano.Ledger.BaseTypes (Network, fromSMaybe, isSJust)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -86,6 +88,7 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL, ppGovAct
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..), ConwayTxCertUpgradeError, pattern RegDRepTxCert, pattern UnRegDRepTxCert)
 import Cardano.Ledger.Conway.TxOut ()
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRepState (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -434,7 +437,11 @@ instance
   updateTxBodyG = to (const SNothing)
 
   getTotalDepositsTxBody = totalTxDepositsConway
+
   getTotalRefundsTxBody = totalTxRefundsConway
+
+-- ==========================================
+-- Deposits and Refunds for Conway TxBody
 
 totalProposalDeposits ::
   ConwayEraTxBody era =>
@@ -475,26 +482,28 @@ totalTxDepositsConway pp cs txb =
     <> totalProposalDeposits pp txb -- only in Conway and later
     <> totalDRepDeposits pp txb -- only in Conway and later
 
-drepRefundsConway :: ConwayEraTxBody era => CertState era -> TxBody era -> Coin
-drepRefundsConway certState txb = Coin (snd (foldl' accum (vsDReps (certVState certState), 0) (txb ^. certsTxBodyL)))
-  where
-    accum pair@(currMap, currRefund) (UnRegDRepTxCert cred (Coin n)) = case (Map.lookup cred currMap) of
-      (Just (DRepState _ _ (Coin m))) | n == m -> (Map.delete cred currMap, currRefund + m)
-      _ -> pair
-    accum pair@(currMap, currRefund) (RegDRepTxCert cred c _) = case (Map.lookup cred currMap) of
-      Nothing -> (Map.insert cred (DRepState (EpochNo 0) SNothing c) currMap, currRefund)
-      -- we are only ever going to look at 'c', so the bogus epoch (EpochNo 0) and anchor (SNothing) are OK.
-      _ -> pair
-    accum pair _ = pair
+-- | Compute the Refunds from a TxBody, given a function that computes a partial Coin for known Credentials.
+drepRefundsConway :: ConwayEraTxBody era => (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) -> TxBody era -> Coin
+drepRefundsConway lookupDRepDeposit txBody =
+  let go accum@(!drepRegsInTx, !totalRefund) = \case
+        RegDRepTxCert c deposit _ ->
+          -- Track registrations
+          (Map.insert c deposit drepRegsInTx, totalRefund)
+        UnRegDRepTxCert c _
+          -- DRep previously registered in the same tx.
+          | Just deposit <- Map.lookup c drepRegsInTx -> (Map.delete c drepRegsInTx, totalRefund <+> deposit)
+          -- DRep previously registered in some other tx.
+          | Just deposit <- lookupDRepDeposit c -> (drepRegsInTx, totalRefund <+> deposit)
+        _ -> accum
+   in inject $ snd $ foldl' go (Map.empty, Coin 0) $ txBody ^. certsTxBodyL
 
 -- | Compute the refunds from both unregistering DReps and unregistering stake credentials
 --   in a TxBody. Refunds for Proposals and StakePools are handled at the epoch boundary,
 --   and are handled separately, so are not included here.
 totalTxRefundsConway :: ConwayEraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
-totalTxRefundsConway pp certState txb =
-  drepRefundsConway certState txb
-    <+> totalTxRefundsShelley pp certState txb -- Unregistering DReps
-    -- Unregistering Stake credentials
+totalTxRefundsConway pp certState txb = drepRefundsConway depositOf txb <+> totalTxRefundsShelley pp certState txb -- Unregistering DReps
+  where
+    depositOf cred = drepDeposit <$> Map.lookup cred (vsDReps (certVState certState))
 
 instance Crypto c => AllegraEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra StandardCrypto) #-}
