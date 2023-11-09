@@ -15,7 +15,6 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
   BabbageUTXOS,
   utxosTransition,
   expectScriptsToPass,
-  tellDepositChangeEvent,
   babbageEvalScriptsTxInvalid,
 ) where
 
@@ -44,12 +43,9 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState,
   PPUPPredFailure,
   UTxOState (..),
   updateStakeDistribution,
@@ -63,7 +59,6 @@ import Cardano.Ledger.Shelley.Rules (
   updateUTxOState,
  )
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
-import Cardano.Ledger.Val ((<->))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (nonEmpty)
@@ -147,23 +142,6 @@ utxosTransition =
 
 -- ===================================================================
 
-tellDepositChangeEvent ::
-  forall era s.
-  ( AlonzoEraTx era
-  , Event (s era) ~ AlonzoUtxosEvent era
-  ) =>
-  PParams era ->
-  CertState era ->
-  TxBody era ->
-  Rule (s era) 'Transition Coin
-tellDepositChangeEvent pp dpstate txBody = do
-  {- refunded := keyRefunds pp txb -}
-  let refunded = certsTotalRefundsTxBody pp dpstate txBody
-  {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
-  let depositChange = certsTotalDepositsTxBody pp dpstate txBody <-> refunded
-  tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
-  pure depositChange
-
 expectScriptsToPass ::
   forall era s.
   ( AlonzoEraTx era
@@ -218,10 +196,9 @@ babbageEvalScriptsTxValid ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
-  TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _ _), tx) <-
+  TRC (UtxoEnv slot pp certState genDelegs, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
-  depositChange <- tellDepositChangeEvent pp dpstate txBody
 
   -- We intentionally run the PPUP rule before evaluating any Plutus scripts.
   -- We do not want to waste computation running plutus scripts if the
@@ -231,10 +208,12 @@ babbageEvalScriptsTxValid = do
       TRC
         (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
 
-  let !_ = traceEvent validBegin ()
+  () <- pure $! traceEvent validBegin ()
   expectScriptsToPass pp tx utxo
-  let !_ = traceEvent validEnd ()
-  pure $! updateUTxOState pp u txBody depositChange ppup'
+  () <- pure $! traceEvent validEnd ()
+
+  updateUTxOState pp utxos txBody certState ppup' $
+    tellEvent . TotalDeposits (hashAnnotated txBody)
 
 babbageEvalScriptsTxInvalid ::
   forall s era.

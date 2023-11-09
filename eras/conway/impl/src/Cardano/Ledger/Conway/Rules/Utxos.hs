@@ -28,28 +28,22 @@ import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure (..),
   babbageEvalScriptsTxInvalid,
   expectScriptsToPass,
-  tellDepositChangeEvent,
  )
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOS)
-import Cardano.Ledger.Conway.Governance (
-  ConwayGovState (..),
- )
+import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
   utxosDonationL,
  )
-import Cardano.Ledger.Shelley.Rules (
-  UtxoEnv (..),
-  updateUTxOState,
- )
+import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.State.Transition.Extended
 import Debug.Trace (traceEvent)
@@ -125,18 +119,6 @@ utxosTransition =
       IsValid True -> conwayEvalScriptsTxValid
       IsValid False -> babbageEvalScriptsTxInvalid
 
-updateConwayUTxOState ::
-  ConwayEraTxBody era =>
-  PParams era ->
-  UTxOState era ->
-  TxBody era ->
-  Coin ->
-  GovState era ->
-  UTxOState era
-updateConwayUTxOState pp u txb depositChange gov =
-  updateUTxOState pp u txb depositChange gov
-    & utxosDonationL <>~ txb ^. treasuryDonationTxBodyL
-
 conwayEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
@@ -151,13 +133,15 @@ conwayEvalScriptsTxValid ::
   ) =>
   TransitionRule (ConwayUTXOS era)
 conwayEvalScriptsTxValid = do
-  TRC (UtxoEnv _ pp dpstate _, u@(UTxOState utxo _ _ gov _ _), tx) <-
+  TRC (UtxoEnv _ pp certState _, utxos@(UTxOState utxo _ _ govState _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
-  depositChange <- tellDepositChangeEvent pp dpstate txBody
 
-  let !_ = traceEvent validBegin ()
+  () <- pure $! traceEvent validBegin ()
   expectScriptsToPass pp tx utxo
-  let !_ = traceEvent validEnd ()
-  -- TODO Check that the deposit amounts on governance actions are correct
-  pure $! updateConwayUTxOState pp u txBody depositChange gov
+  () <- pure $! traceEvent validEnd ()
+
+  utxos' <-
+    updateUTxOState pp utxos txBody certState govState $
+      tellEvent . TotalDeposits (hashAnnotated txBody)
+  pure $! utxos' & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
