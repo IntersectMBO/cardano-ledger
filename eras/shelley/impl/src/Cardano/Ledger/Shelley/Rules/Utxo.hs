@@ -218,23 +218,23 @@ instance
   encCBOR = \case
     BadInputsUTxO ins ->
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR ins
-    (ExpiredUTxO a b) ->
+    ExpiredUTxO a b ->
       encodeListLen 3
         <> encCBOR (1 :: Word8)
         <> encCBOR a
         <> encCBOR b
-    (MaxTxSizeUTxO a b) ->
+    MaxTxSizeUTxO a b ->
       encodeListLen 3
         <> encCBOR (2 :: Word8)
         <> encCBOR a
         <> encCBOR b
     InputSetEmptyUTxO -> encodeListLen 1 <> encCBOR (3 :: Word8)
-    (FeeTooSmallUTxO a b) ->
+    FeeTooSmallUTxO a b ->
       encodeListLen 3
         <> encCBOR (4 :: Word8)
         <> encCBOR a
         <> encCBOR b
-    (ValueNotConservedUTxO a b) ->
+    ValueNotConservedUTxO a b ->
       encodeListLen 3
         <> encCBOR (5 :: Word8)
         <> encCBOR a
@@ -243,16 +243,16 @@ instance
       encodeListLen 2
         <> encCBOR (6 :: Word8)
         <> encCBOR outs
-    (UpdateFailure a) ->
+    UpdateFailure a ->
       encodeListLen 2
         <> encCBOR (7 :: Word8)
         <> encCBOR a
-    (WrongNetwork right wrongs) ->
+    WrongNetwork right wrongs ->
       encodeListLen 3
         <> encCBOR (8 :: Word8)
         <> encCBOR right
         <> encCBOR wrongs
-    (WrongNetworkWithdrawal right wrongs) ->
+    WrongNetworkWithdrawal right wrongs ->
       encodeListLen 3
         <> encCBOR (9 :: Word8)
         <> encCBOR right
@@ -273,7 +273,7 @@ instance
       \case
         0 -> do
           ins <- decCBOR
-          pure (2, BadInputsUTxO ins) -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
+          pure (2, BadInputsUTxO ins)
         1 -> do
           a <- decCBOR
           b <- decCBOR

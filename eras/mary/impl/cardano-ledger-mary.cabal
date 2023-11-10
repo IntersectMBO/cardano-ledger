@@ -101,12 +101,11 @@ library testlib
         cardano-data:testlib,
         cardano-crypto-class,
         cardano-ledger-binary:testlib,
-        cardano-ledger-core,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-mary >=1.0.0.1,
         cardano-ledger-allegra:testlib,
         cardano-ledger-shelley:testlib,
-        cardano-strict-containers,
-        QuickCheck
+        cardano-strict-containers
 
 test-suite tests
     type:             exitcode-stdio-1.0
