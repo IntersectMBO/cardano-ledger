@@ -30,7 +30,7 @@ import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
+import Cardano.Ledger.Mary.Value (valueFromList)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
@@ -96,7 +96,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( AlonzoTxOut
               carlAddr
-              (valueFromList 1407406 [(pid1, smallestName, 1)])
+              (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
               (SJust $ hashData @Alonzo (Data (PV1.List [])))
           )
           @?= Coin 1655136
@@ -104,7 +104,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( AlonzoTxOut
               bobAddr
-              (valueFromList 1407406 [(pid1, smallestName, 1)])
+              (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
               SNothing
           )
           @?= Coin 1310316
@@ -112,7 +112,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( AlonzoTxOut
               aliceAddr
-              (valueFromList 1444443 [(pid1, smallName 1, 1)])
+              (valueFromList (Coin 1444443) [(pid1, smallName 1, 1)])
               SNothing
           )
           @?= Coin 1344798
@@ -121,7 +121,7 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               aliceAddr
               ( valueFromList
-                  1555554
+                  (Coin 1555554)
                   [ (pid1, smallName 1, 1)
                   , (pid1, smallName 2, 1)
                   , (pid1, smallName 3, 1)
@@ -134,7 +134,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( AlonzoTxOut
               carlAddr
-              (valueFromList 1555554 [(pid1, largestName 65, 1)])
+              (valueFromList (Coin 1555554) [(pid1, largestName 65, 1)])
               SNothing
           )
           @?= Coin 1448244
@@ -143,7 +143,7 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               carlAddr
               ( valueFromList
-                  1962961
+                  (Coin 1962961)
                   [ (pid1, largestName 65, 1)
                   , (pid1, largestName 66, 1)
                   , (pid1, largestName 67, 1)
@@ -156,7 +156,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( AlonzoTxOut
               aliceAddr
-              (valueFromList 1592591 [(pid1, smallestName, 1), (pid2, smallestName, 1)])
+              (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
               SNothing
           )
           @?= Coin 1482726
@@ -164,7 +164,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( AlonzoTxOut
               aliceAddr
-              (valueFromList 1592591 [(pid1, smallestName, 1), (pid2, smallestName, 1)])
+              (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
               (SJust $ hashData @Alonzo (Data (PV1.Constr 0 [])))
           )
           @?= Coin 1827546
@@ -172,7 +172,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( AlonzoTxOut
               bobAddr
-              (valueFromList 1629628 [(pid1, smallName 1, 1), (pid2, smallName 2, 1)])
+              (valueFromList (Coin 1629628) [(pid1, smallName 1, 1), (pid2, smallName 2, 1)])
               SNothing
           )
           @?= Coin 1517208
@@ -181,7 +181,13 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               aliceAddr
               ( let f i c = (i, smallName c, 1)
-                 in valueFromList 7407400 [f i c | (i, cs) <- [(pid1, [32 .. 63]), (pid2, [64 .. 95]), (pid3, [96 .. 127])], c <- cs]
+                 in valueFromList
+                      (Coin 7407400)
+                      [ f i c
+                      | (i, cs) <-
+                          [(pid1, [32 .. 63]), (pid2, [64 .. 95]), (pid3, [96 .. 127])]
+                      , c <- cs
+                      ]
               )
               SNothing
           )
@@ -191,7 +197,7 @@ goldenUTxOEntryMinAda =
         -- with the old parameter minUTxOValue.
         -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
         -- we can divide minUTxOValue by 29 and round.
-        utxoEntrySize @Alonzo (AlonzoTxOut aliceAddr (MaryValue 0 mempty) SNothing) @?= 29
+        utxoEntrySize @Alonzo (AlonzoTxOut aliceAddr mempty SNothing) @?= 29
     ]
 
 goldenSerialization :: TestTree

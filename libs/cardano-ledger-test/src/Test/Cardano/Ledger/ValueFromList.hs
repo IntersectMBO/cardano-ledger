@@ -5,7 +5,8 @@
 -- interacted with somewhat generically.
 module Test.Cardano.Ledger.ValueFromList where
 
-import qualified Cardano.Ledger.Crypto as C
+import Cardano.Ledger.Coin
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value as Mary (
   AssetName,
   MaryValue (..),
@@ -24,12 +25,12 @@ class Val.Val val => ValueFromList val c | val -> c where
 
   gettriples :: val -> (Integer, [(PolicyID c, AssetName, Integer)])
 
-instance C.Crypto c => ValueFromList (MaryValue c) c where
-  valueFromList c triples = MaryValue c (Mary.multiAssetFromList triples)
+instance Crypto c => ValueFromList (MaryValue c) c where
+  valueFromList c triples = MaryValue (Coin c) (Mary.multiAssetFromList triples)
 
   insert combine pid an new (MaryValue c ma) = MaryValue c $ Mary.insertMultiAsset combine pid an new ma
 
-  gettriples (MaryValue c (MultiAsset m1)) = (c, triples)
+  gettriples (MaryValue (Coin c) (MultiAsset m1)) = (c, triples)
     where
       triples =
         [ (policyId, aname, amount)

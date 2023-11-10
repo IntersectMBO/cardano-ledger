@@ -305,7 +305,7 @@ instance Crypto c => MaryEraTxBody (AlonzoEra c) where
     lensMemoRawType atbrMint (\txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_})
   {-# INLINEABLE mintTxBodyL #-}
 
-  mintValueTxBodyF = mintTxBodyL . to (MaryValue 0)
+  mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
   {-# INLINEABLE mintValueTxBodyF #-}
 
   mintedTxBodyF = to (Set.map policyID . policies . atbrMint . getMemoRawType)

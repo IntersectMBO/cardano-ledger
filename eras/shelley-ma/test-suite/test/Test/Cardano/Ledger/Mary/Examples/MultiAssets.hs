@@ -152,7 +152,7 @@ aliceCoinSimpleEx1 :: Coin
 aliceCoinSimpleEx1 = aliceInitCoin <-> feeEx
 
 tokensSimpleEx1 :: MaryValue StandardCrypto
-tokensSimpleEx1 = (MaryValue 0 mintSimpleEx1) <+> Val.inject aliceCoinSimpleEx1
+tokensSimpleEx1 = MaryValue mempty mintSimpleEx1 <+> Val.inject aliceCoinSimpleEx1
 
 -- Mint a purple token bundle, consisting of thirteen plums and two amethysts.
 -- Give the bundle to Alice.
@@ -192,13 +192,13 @@ aliceCoinsSimpleEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> minUtxoSimpleEx2)
 
 aliceTokensSimpleEx2 :: MaryValue StandardCrypto
 aliceTokensSimpleEx2 =
-  MaryValue (unCoin aliceCoinsSimpleEx2) $
+  MaryValue aliceCoinsSimpleEx2 $
     MultiAsset $
       Map.singleton purplePolicyId (Map.fromList [(plum, 8), (amethyst, 2)])
 
 bobTokensSimpleEx2 :: MaryValue StandardCrypto
 bobTokensSimpleEx2 =
-  MaryValue (unCoin minUtxoSimpleEx2) $
+  MaryValue minUtxoSimpleEx2 $
     MultiAsset $
       Map.singleton purplePolicyId (Map.singleton plum 5)
 
@@ -276,7 +276,7 @@ aliceCoinsTimeEx1 :: Coin
 aliceCoinsTimeEx1 = aliceInitCoin <-> feeEx
 
 tokensTimeEx1 :: MaryValue StandardCrypto
-tokensTimeEx1 = (MaryValue 0 mintTimeEx1) <+> Val.inject aliceCoinsTimeEx1
+tokensTimeEx1 = MaryValue mempty mintTimeEx1 <+> Val.inject aliceCoinsTimeEx1
 
 -- Mint tokens
 txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody Mary
@@ -330,7 +330,7 @@ mintTimeEx2 = Coin 120
 
 bobTokensTimeEx2 :: MaryValue StandardCrypto
 bobTokensTimeEx2 =
-  MaryValue (unCoin mintTimeEx2) $
+  MaryValue mintTimeEx2 $
     MultiAsset $
       Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
 
@@ -396,7 +396,7 @@ bobCoinsSingWitEx1 :: Coin
 bobCoinsSingWitEx1 = bobInitCoin <-> feeEx
 
 tokensSingWitEx1 :: MaryValue StandardCrypto
-tokensSingWitEx1 = (MaryValue 0 mintSingWitEx1) <+> Val.inject bobCoinsSingWitEx1
+tokensSingWitEx1 = MaryValue mempty mintSingWitEx1 <+> Val.inject bobCoinsSingWitEx1
 
 -- Bob pays the fees, but only alice can witness the minting
 txbodySingWitEx1 :: TxBody Mary
@@ -449,7 +449,7 @@ mintNegEx1 =
 
 aliceTokensNegEx1 :: MaryValue StandardCrypto
 aliceTokensNegEx1 =
-  MaryValue (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
+  MaryValue (aliceCoinsSimpleEx2 <-> feeEx) $
     MultiAsset $
       Map.singleton purplePolicyId (Map.singleton amethyst 2)
 
@@ -492,7 +492,7 @@ mintNegEx2 =
 
 aliceTokensNegEx2 :: MaryValue StandardCrypto
 aliceTokensNegEx2 =
-  MaryValue (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
+  MaryValue (aliceCoinsSimpleEx2 <-> feeEx) $
     MultiAsset $
       Map.singleton purplePolicyId (Map.fromList [(plum, -1), (amethyst, 2)])
 
@@ -526,7 +526,9 @@ smallValue =
 
 smallOut :: ShelleyTxOut Mary
 smallOut =
-  ShelleyTxOut Cast.aliceAddr $ (MaryValue 0 smallValue) <+> Val.inject (aliceInitCoin <-> (feeEx <+> minUtxoBigEx))
+  ShelleyTxOut Cast.aliceAddr $
+    MaryValue mempty smallValue
+      <+> Val.inject (aliceInitCoin <-> (feeEx <+> minUtxoBigEx))
 
 numAssets :: Int
 numAssets = 1000
@@ -539,7 +541,7 @@ bigValue =
       (Map.fromList $ map (\x -> (AssetName . fromString $ show x, 1)) [1 .. numAssets])
 
 bigOut :: ShelleyTxOut Mary
-bigOut = ShelleyTxOut Cast.aliceAddr $ (MaryValue 0 bigValue) <+> Val.inject minUtxoBigEx
+bigOut = ShelleyTxOut Cast.aliceAddr $ MaryValue mempty bigValue <+> Val.inject minUtxoBigEx
 
 txbodyWithBigValue :: TxBody Mary
 txbodyWithBigValue =

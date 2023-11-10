@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Mary.Arbitrary (
 ) where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -212,7 +213,7 @@ genMaryValue :: Gen (MultiAsset c) -> Gen (MaryValue c)
 genMaryValue genMA = do
   i <- toInteger <$> genPositiveInt
   ma <- genMA
-  pure $ MaryValue i ma
+  pure $ MaryValue (Coin i) ma
 
 instance Crypto c => Arbitrary (MaryValue c) where
   arbitrary =

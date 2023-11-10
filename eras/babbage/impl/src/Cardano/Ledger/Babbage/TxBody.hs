@@ -353,7 +353,7 @@ mintBabbageTxBodyL =
 mintValueBabbageTxBodyF ::
   (BabbageEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
   SimpleGetter (BabbageTxBody era) (Value era)
-mintValueBabbageTxBodyF = mintBabbageTxBodyL . to (MaryValue 0)
+mintValueBabbageTxBodyF = mintBabbageTxBodyL . to (MaryValue mempty)
 {-# INLINEABLE mintValueBabbageTxBodyF #-}
 
 collateralInputsBabbageTxBodyL ::

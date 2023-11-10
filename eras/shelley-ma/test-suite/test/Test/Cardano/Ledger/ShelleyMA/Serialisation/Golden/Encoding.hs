@@ -296,7 +296,7 @@ goldenEncodingTestsMary =
     , checkEncodingCBOR
         (eraProtVerHigh @Mary)
         "not_just_ada_value"
-        ( MaryValue @StandardCrypto 2 $
+        ( MaryValue @StandardCrypto (Coin 2) $
             MultiAsset $
               Map.fromList
                 [
@@ -349,7 +349,10 @@ goldenEncodingTestsMary =
     , checkEncodingCBORDecodeFailure
         (eraProtVerHigh @Mary)
         "value_with_negative"
-        (MaryValue 1 $ MultiAsset $ Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19)))
+        ( MaryValue (Coin 1) $
+            MultiAsset $
+              Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19))
+        )
         ( T
             ( TkListLen 2
                 . TkInteger 1

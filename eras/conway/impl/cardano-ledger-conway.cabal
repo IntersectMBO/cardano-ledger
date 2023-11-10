@@ -80,7 +80,7 @@ library
         cardano-ledger-alonzo ^>=1.5.1,
         cardano-ledger-babbage >=1.4.1,
         cardano-ledger-core ^>=1.8.1,
-        cardano-ledger-mary >=1.1,
+        cardano-ledger-mary >=1.4,
         cardano-ledger-shelley >=1.7 && <1.9,
         cardano-slotting,
         cardano-strict-containers,

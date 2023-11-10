@@ -83,7 +83,7 @@ goldenScaledMinDeposit =
     "golden tests - scaledMinDeposit"
     [ testCase "one policy, one (smallest) name" $
         scaledMinDeposit
-          ( MaryValue 1407406 $
+          ( MaryValue (Coin 1407406) $
               MultiAsset $
                 Map.singleton pid1 (Map.fromList [(smallestName, 1)])
           )
@@ -91,7 +91,7 @@ goldenScaledMinDeposit =
           @?= Coin 1407406
     , testCase "one policy, one (small) name" $
         scaledMinDeposit
-          ( MaryValue 1444443 $
+          ( MaryValue (Coin 1444443) $
               MultiAsset $
                 Map.singleton
                   pid1
@@ -101,7 +101,7 @@ goldenScaledMinDeposit =
           @?= Coin 1444443
     , testCase "one policy, one (real) name" $
         scaledMinDeposit
-          ( MaryValue 1444443 $
+          ( MaryValue (Coin 1444443) $
               MultiAsset $
                 Map.singleton
                   pid1
@@ -111,7 +111,7 @@ goldenScaledMinDeposit =
           @?= Coin 1481480
     , testCase "one policy, three (small) name" $
         scaledMinDeposit
-          ( MaryValue 1555554 $
+          ( MaryValue (Coin 1555554) $
               MultiAsset $
                 Map.singleton
                   pid1
@@ -126,7 +126,7 @@ goldenScaledMinDeposit =
           @?= Coin 1555554
     , testCase "one policy, one (largest) name" $
         scaledMinDeposit
-          ( MaryValue 1555554 $
+          ( MaryValue (Coin 1555554) $
               MultiAsset $
                 Map.singleton
                   pid1
@@ -136,7 +136,7 @@ goldenScaledMinDeposit =
           @?= Coin 1555554
     , testCase "one policy, three (largest) name" $
         scaledMinDeposit
-          ( MaryValue 1962961 $
+          ( MaryValue (Coin 1962961) $
               MultiAsset $
                 Map.singleton
                   pid1
@@ -151,7 +151,7 @@ goldenScaledMinDeposit =
           @?= Coin 1962961
     , testCase "two policies, one (smallest) name" $
         scaledMinDeposit
-          ( MaryValue 1592591 $
+          ( MaryValue (Coin 1592591) $
               MultiAsset $
                 Map.fromList
                   [
@@ -168,7 +168,7 @@ goldenScaledMinDeposit =
           @?= Coin 1592591
     , testCase "two policies, two (small) names" $
         scaledMinDeposit
-          ( MaryValue 1629628 $
+          ( MaryValue (Coin 1629628) $
               MultiAsset $
                 Map.fromList
                   [
@@ -185,7 +185,7 @@ goldenScaledMinDeposit =
           @?= Coin 1629628
     , testCase "three policies, ninety-six (small) names" $
         scaledMinDeposit
-          ( MaryValue 7407400 $
+          ( MaryValue (Coin 7407400) $
               MultiAsset $
                 Map.fromList
                   [

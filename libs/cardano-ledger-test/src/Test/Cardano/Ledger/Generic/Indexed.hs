@@ -117,7 +117,7 @@ instance (Reflect era, EraScript era, Fixed (Script era)) => Fixed (MultiAsset e
   unique n =
     MultiAsset
       ( MaryValue
-          (fromIntegral n)
+          (Coin (fromIntegral n))
           ( Mary.MultiAsset
               ( Map.singleton
                   (lift (pickPolicyID @era n))
@@ -132,7 +132,7 @@ scriptsize _ = size (Proxy @(Script era))
 
 instance CC.Crypto c => Fixed (MaryValue c) where
   size _ = Nothing
-  unique n = MaryValue (fromIntegral n) (Mary.MultiAsset Map.empty)
+  unique n = MaryValue (Coin (fromIntegral n)) (Mary.MultiAsset Map.empty)
 
 -- =======================================================
 -- Keys and KeyHashes
