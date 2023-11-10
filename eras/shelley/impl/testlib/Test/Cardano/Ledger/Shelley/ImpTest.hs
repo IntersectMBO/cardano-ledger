@@ -47,6 +47,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impNESL,
   runImpRule,
   registerRewardAccount,
+  getRewardAccountAmount,
   constitutionShouldBe,
   withImpState,
 ) where
@@ -70,7 +71,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Keys (
@@ -82,7 +83,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (Constitution (..), EraGov (..), ShelleyEraTxBody)
+import Cardano.Ledger.Shelley.Core (Constitution (..), EraGov (..), ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -93,6 +94,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   dsGenDelegsL,
   epochStateIncrStakeDistrL,
+  epochStateUMapL,
   esAccountStateL,
   esLStateL,
   lsCertStateL,
@@ -108,6 +110,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded)
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
@@ -200,6 +203,7 @@ class
       (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , EraUTxO era
+  , ShelleyEraTxBody era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , EraGov era
@@ -401,6 +405,14 @@ instance Example (ImpTestM era ()) where
 runShelleyBase :: Globals -> ShelleyBase a -> a
 runShelleyBase globals act = runIdentity $ runReaderT act globals
 
+getRewardAccountAmount :: RewardAcnt (EraCrypto era) -> ImpTestM era Coin
+getRewardAccountAmount rewardAcount = do
+  umap <- getsNES $ nesEsL . epochStateUMapL
+  let cred = getRwdCred rewardAcount
+  case UMap.lookup cred (RewDepUView umap) of
+    Nothing -> assertFailure $ "Expected a reward account: " ++ show cred
+    Just RDPair {rdReward} -> pure $ fromCompact rdReward
+
 fixupFees ::
   forall era.
   ShelleyEraImp era =>
@@ -409,11 +421,14 @@ fixupFees ::
 fixupFees tx = do
   ImpTestState {impRootTxId, impRootTxCoin} <- get
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
   let
+    deposits = getTotalDepositsTxBody pp certState (tx ^. bodyTxL)
+    refunds = getTotalRefundsTxBody pp certState (tx ^. bodyTxL)
     outputsTotalCoin = sumAllCoin $ tx ^. bodyTxL . outputsTxBodyL
-    remainingCoin = impRootTxCoin <-> outputsTotalCoin
+    remainingCoin = impRootTxCoin <-> (outputsTotalCoin <+> deposits <-> refunds)
     remainingTxOut =
       mkBasicTxOut @era
         (mkAddr (kpSpending, kpStaking))
@@ -675,7 +690,6 @@ registerRewardAccount ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
-  , ShelleyEraTxCert era
   ) =>
   ImpTestM era (RewardAcnt (EraCrypto era))
 registerRewardAccount = do
@@ -684,7 +698,7 @@ registerRewardAccount = do
   kpSpending <- lookupKeyPair =<< freshKeyHash
   let stakingCredential = KeyHashObj khDelegator
   _ <-
-    submitTx "Delegate to DRep" $
+    submitTx ("Register Reward Account: " <> T.unpack (credToText stakingCredential)) $
       mkBasicTx mkBasicTxBody
         & bodyTxL . outputsTxBodyL
           .~ SSeq.fromList

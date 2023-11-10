@@ -11,15 +11,14 @@
 
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec, electBasicCommittee) where
 
-import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (textToUrl)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Anchor (..),
   ConwayGovState,
   GovAction (..),
+  ProposalProcedure (..),
   Voter (..),
   cgEnactStateL,
   ensCommitteeL,
@@ -27,20 +26,19 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (
   ppCommitteeMaxTermLengthL,
   ppDRepVotingThresholdsL,
+  ppGovActionDepositL,
   ppGovActionLifetimeL,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
-  epochStateUMapL,
   esAccountStateL,
   esLStateL,
   lsUTxOStateL,
   nesEsL,
   utxosGovStateL,
  )
-import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
@@ -126,12 +124,34 @@ spec =
       passEpoch
 
       treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
-      umap <- getsNES $ nesEsL . epochStateUMapL
-      let cred = getRwdCred rewardAcount
-      case UMap.lookup cred (RewDepUView umap) of
-        Nothing -> error $ "Expected a reward account: " ++ show cred
-        Just RDPair {rdReward} -> fromCompact rdReward `shouldBe` withdrawalAmount
+
       treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
+
+    it "Expired proposl deposit refunded" $ do
+      let deposit = Coin 999
+      modifyPParams $ \pp ->
+        pp
+          & ppGovActionLifetimeL .~ 1
+          & ppGovActionDepositL .~ deposit
+      rewardAcount <- registerRewardAccount
+
+      getRewardAccountAmount rewardAcount `shouldReturn` Coin 0
+
+      govActionId <-
+        submitProposal $
+          ProposalProcedure
+            { pProcDeposit = deposit
+            , pProcReturnAddr = rewardAcount
+            , pProcGovAction = TreasuryWithdrawals [(rewardAcount, Coin 123456789)]
+            , pProcAnchor = def
+            }
+      expectPresentGovActionId govActionId
+      passEpoch
+      passEpoch
+      passEpoch
+      expectMissingGovActionId govActionId
+
+      getRewardAccountAmount rewardAcount `shouldReturn` deposit
 
 electBasicCommittee ::
   forall era.
@@ -152,6 +172,7 @@ electBasicCommittee = do
           }
       & ppCommitteeMaxTermLengthL .~ 10
       & ppGovActionLifetimeL .~ 2
+      & ppGovActionDepositL .~ Coin 123
   khDRep <- setupSingleDRep
 
   logEntry "Registering committee member"

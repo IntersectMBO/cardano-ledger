@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -16,6 +17,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   ConwayEraImp,
   submitGovAction,
   submitGovAction_,
+  submitProposal,
   submitFailingProposal,
   trySubmitGovAction,
   trySubmitProposal,
@@ -28,7 +30,10 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   setupSingleDRep,
   conwayModifyPParams,
   getEnactState,
+  getGovActionState,
   lookupGovActionState,
+  expectPresentGovActionId,
+  expectMissingGovActionId,
   getRatifyEnv,
   calculateDRepAcceptedRatio,
   calculateCommitteeAcceptedRatio,
@@ -86,7 +91,12 @@ import Cardano.Ledger.Conway.Governance (
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppGovActionLifetimeL)
+import Cardano.Ledger.Conway.PParams (
+  ConwayEraPParams,
+  ppDRepActivityL,
+  ppGovActionDepositL,
+  ppGovActionLifetimeL,
+ )
 import Cardano.Ledger.Conway.Rules (
   EnactSignal,
   committeeAccepted,
@@ -349,6 +359,16 @@ trySubmitVote vote voter gaId = do
               )
           )
 
+submitProposal ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , HasCallStack
+  ) =>
+  ProposalProcedure era ->
+  ImpTestM era (GovActionId (EraCrypto era))
+submitProposal proposal = trySubmitProposal proposal >>= expectRightExpr
+
 -- | Submits a transaction that proposes the given proposal
 trySubmitProposal ::
   ( ShelleyEraImp era
@@ -399,14 +419,12 @@ trySubmitGovAction ::
         (GovActionId (EraCrypto era))
     )
 trySubmitGovAction ga = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
   khPropRwd <- freshKeyHash
   trySubmitProposal $
     ProposalProcedure
-      { pProcDeposit = zero
-      , pProcReturnAddr =
-          RewardAcnt
-            Testnet
-            (KeyHashObj khPropRwd)
+      { pProcDeposit = pp ^. ppGovActionDepositL
+      , pProcReturnAddr = RewardAcnt Testnet (KeyHashObj khPropRwd)
       , pProcGovAction = ga
       , pProcAnchor = def
       }
@@ -434,17 +452,43 @@ submitGovAction_ = void . submitGovAction
 getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
 getEnactState = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . enactStateGovStateL
 
--- | Looks up the governance action state corresponding to the governance
--- action id
+-- | Looks up the governance action state corresponding to the governance action id
 lookupGovActionState ::
+  ConwayEraGov era =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era (Maybe (GovActionState era))
+lookupGovActionState aId = do
+  proposals <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
+  pure $ snapshotLookupId aId proposals
+
+-- | Looks up the governance action state corresponding to the governance action id
+getGovActionState ::
   (HasCallStack, ConwayEraGov era) =>
   GovActionId (EraCrypto era) ->
   ImpTestM era (GovActionState era)
-lookupGovActionState aId = do
-  proposals <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
+getGovActionState govActionId =
   impAnn "Expecting an action state" $ do
-    maybe (assertFailure $ "Could not find action state for govActionId: " <> show aId) pure $
-      snapshotLookupId aId proposals
+    lookupGovActionState govActionId >>= \case
+      Nothing ->
+        assertFailure $ "Could not find action state for govActionId: " <> show govActionId
+      Just govActionState -> pure govActionState
+
+expectPresentGovActionId ::
+  (HasCallStack, ConwayEraGov era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era ()
+expectPresentGovActionId govActionId = void $ getGovActionState govActionId
+
+expectMissingGovActionId ::
+  (HasCallStack, ConwayEraGov era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era ()
+expectMissingGovActionId govActionId =
+  impAnn "Expecting for gov action state to be missing" $ do
+    lookupGovActionState govActionId >>= \case
+      Just _ ->
+        expectationFailure $ "Found gov action state for govActionId: " <> show govActionId
+      Nothing -> pure ()
 
 -- | Builds a RatifyState from the current state
 getRatifyEnv :: ConwayEraGov era => ImpTestM era (RatifyEnv era)
@@ -473,7 +517,7 @@ calculateDRepAcceptedRatio ::
   ImpTestM era Rational
 calculateDRepAcceptedRatio gaId = do
   ratEnv <- getRatifyEnv
-  gas <- lookupGovActionState gaId
+  gas <- getGovActionState gaId
   pure $
     dRepAcceptedRatio @era
       ratEnv
@@ -490,7 +534,7 @@ calculateCommitteeAcceptedRatio ::
 calculateCommitteeAcceptedRatio gaId = do
   eNo <- getsNES nesELL
   RatifyEnv {reCommitteeState} <- getRatifyEnv
-  GovActionState {gasCommitteeVotes} <- lookupGovActionState gaId
+  GovActionState {gasCommitteeVotes} <- getGovActionState gaId
   ens <- getEnactState
   let
     committee = ens ^. ensCommitteeL
@@ -524,7 +568,7 @@ canGovActionBeDRepAccepted gaId = do
   poolDistr <- getsNES nesPdL
   drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
-  action <- lookupGovActionState gaId
+  action <- getGovActionState gaId
   enactSt <- getEnactState
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
   let
@@ -551,7 +595,7 @@ logRatificationChecks ::
   GovActionId (EraCrypto era) ->
   ImpTestM era ()
 logRatificationChecks gaId = do
-  gas@GovActionState {gasDRepVotes, gasAction} <- lookupGovActionState gaId
+  gas@GovActionState {gasDRepVotes, gasAction} <- getGovActionState gaId
   ens@EnactState {..} <- getEnactState
   ratEnv <- getRatifyEnv
   let
