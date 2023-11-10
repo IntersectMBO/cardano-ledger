@@ -459,7 +459,7 @@ lookupGovActionState ::
   ImpTestM era (Maybe (GovActionState era))
 lookupGovActionState aId = do
   proposals <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
-  pure $ snapshotLookupId aId proposals
+  pure $ proposalsLookupId aId proposals
 
 -- | Looks up the governance action state corresponding to the governance action id
 getGovActionState ::
