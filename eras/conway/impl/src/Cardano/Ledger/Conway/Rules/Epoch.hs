@@ -94,7 +94,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.UMap (UView (..), unionKeyDeposits, (∪+), (◁))
+import Cardano.Ledger.UMap (UView (..), unionRewAgg, (∪+), (◁))
 import Cardano.Ledger.Val (zero, (<->))
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
@@ -169,7 +169,7 @@ returnProposalDeposits removedProposals =
   dsUnifiedL %~ returnProposalDepositsUMap
   where
     returnProposalDepositsUMap umap =
-      unionKeyDeposits (RewDepUView umap) $ foldl' addReward mempty removedProposals
+      unionRewAgg (RewDepUView umap) $ foldl' addReward mempty removedProposals
       where
         addReward m' GovActionState {..} =
           Map.insertWith
