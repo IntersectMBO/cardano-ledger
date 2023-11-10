@@ -51,7 +51,7 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
-  ProposalsSnapshot,
+  Proposals,
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
@@ -60,16 +60,16 @@ import Cardano.Ledger.Conway.Governance (
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
   isStakePoolVotingAllowed,
-  snapshotAddVote,
-  snapshotInsertGovAction,
-  snapshotLookupId,
+  proposalsAddVote,
+  proposalsInsertGovAction,
+  proposalsLookupId,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovAction (..),
   govProceduresProposalsL,
   pProcGovActionL,
  )
-import Cardano.Ledger.Conway.Governance.Snapshots (snapshotGovActionStates)
+import Cardano.Ledger.Conway.Governance.Proposals (proposalsGovActionStates)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,
@@ -185,10 +185,10 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
 data ConwayGovEvent era
-  = GovNewProposals !(TxId (EraCrypto era)) !(ProposalsSnapshot era)
+  = GovNewProposals !(TxId (EraCrypto era)) !(Proposals era)
 
 instance ConwayEraPParams era => STS (ConwayGOV era) where
-  type State (ConwayGOV era) = ProposalsSnapshot era
+  type State (ConwayGOV era) = Proposals era
   type Signal (ConwayGOV era) = GovProcedures era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
@@ -202,12 +202,12 @@ instance ConwayEraPParams era => STS (ConwayGOV era) where
 addVoterVote ::
   forall era.
   Voter (EraCrypto era) ->
-  ProposalsSnapshot era ->
+  Proposals era ->
   GovActionId (EraCrypto era) ->
   VotingProcedure era ->
-  ProposalsSnapshot era
+  Proposals era
 addVoterVote voter as govActionId VotingProcedure {vProcVote} =
-  snapshotAddVote voter vProcVote govActionId as
+  proposalsAddVote voter vProcVote govActionId as
 
 addAction ::
   EpochNo ->
@@ -216,10 +216,10 @@ addAction ::
   Coin ->
   RewardAcnt (EraCrypto era) ->
   GovAction era ->
-  ProposalsSnapshot era ->
-  ProposalsSnapshot era
+  Proposals era ->
+  Proposals era
 addAction epoch gaExpiry gaid c addr act =
-  snapshotInsertGovAction gai'
+  proposalsInsertGovAction gai'
   where
     gai' =
       GovActionState
@@ -236,11 +236,11 @@ addAction epoch gaExpiry gaid c addr act =
 
 checkVotesAreForValidActions ::
   EpochNo ->
-  ProposalsSnapshot era ->
+  Proposals era ->
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
 checkVotesAreForValidActions curEpoch proposals gaIds =
-  let curGovActionIds = snapshotGovActionStates proposals
+  let curGovActionIds = proposalsGovActionStates proposals
       expiredActions = Map.filter ((curEpoch >) . (^. gasExpiresAfterL)) curGovActionIds
       unknownGovActionIds = gaIds `Map.difference` curGovActionIds
       votesOnExpiredActions = gaIds `Map.intersection` expiredActions
@@ -254,11 +254,11 @@ checkVotesAreForValidActions curEpoch proposals gaIds =
 checkVotersAreValid ::
   forall era.
   ConwayEraPParams era =>
-  ProposalsSnapshot era ->
+  Proposals era ->
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
 checkVotersAreValid proposals voters =
-  let curGovActionIds = snapshotGovActionStates proposals
+  let curGovActionIds = proposalsGovActionStates proposals
       disallowedVoters =
         Map.merge Map.dropMissing Map.dropMissing keepDisallowedVoters curGovActionIds voters
       keepDisallowedVoters = Map.zipWithMaybeMatched $ \_ GovActionState {gasAction} voter -> do
@@ -279,23 +279,23 @@ actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
 checkProposalsHaveAValidPrevious ::
   forall era.
   PrevGovActionIds era ->
-  ProposalsSnapshot era ->
+  Proposals era ->
   GovProcedures era ->
   Test (ConwayGovPredFailure era)
-checkProposalsHaveAValidPrevious prevGovActionIds snapshots procedures =
+checkProposalsHaveAValidPrevious prevGovActionIds proposalss procedures =
   let isValidPrevGovActionId ::
         StrictMaybe (PrevGovActionId p (EraCrypto era)) ->
         (GovAction era -> Bool) ->
         Bool
-      isValidPrevGovActionId prevGovActionId snapshotCond =
+      isValidPrevGovActionId prevGovActionId proposalsCond =
         case prevGovActionId of
           -- The case of having an SNothing as valid, for the very first proposal ever, is handled in `prevActionAsExpected`
           SNothing -> False
           SJust (PrevGovActionId govActionId) ->
-            case snapshotLookupId govActionId snapshots of
+            case proposalsLookupId govActionId proposalss of
               Nothing -> False
               -- lookup has to succeed _and_ purpose of looked-up action has to match condition
-              Just found -> snapshotCond $ gasAction found
+              Just found -> proposalsCond $ gasAction found
       isValid proposal =
         prevActionAsExpected (proposal ^. pProcGovActionL) prevGovActionIds
           || case proposal ^. pProcGovActionL of

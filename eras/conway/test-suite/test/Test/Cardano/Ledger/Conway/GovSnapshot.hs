@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.GovSnapshot (
-  govSnapshotProps,
+  govProposalsProps,
 ) where
 
 import Cardano.Ledger.Conway (Conway)
@@ -10,11 +10,11 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   fromGovActionStateSeq,
   isConsistent_,
-  snapshotActions,
-  snapshotAddVote,
-  snapshotIds,
-  snapshotInsertGovAction,
-  snapshotRemoveIds,
+  proposalsActions,
+  proposalsAddVote,
+  proposalsIds,
+  proposalsInsertGovAction,
+  proposalsRemoveIds,
  )
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
@@ -27,23 +27,23 @@ import Test.Tasty.QuickCheck (Arbitrary (..), testProperty)
 uniq :: Ord a => [a] -> Bool
 uniq x = length x == Set.size (Set.fromList x)
 
-govSnapshotProps :: TestTree
-govSnapshotProps =
+govProposalsProps :: TestTree
+govProposalsProps =
   testGroup
-    "ProposalsSnapshot"
+    "Proposals"
     [ testProperty "Generator is consistent" (isConsistent_ @Conway)
     , testProperty "Adding action preserves consistency" $ do
         as <- uniqueIdGovActions @Conway
         case as of
           x :<| xs ->
             pure $
-              isConsistent_ (snapshotInsertGovAction x $ fromGovActionStateSeq xs)
+              isConsistent_ (proposalsInsertGovAction x $ fromGovActionStateSeq xs)
           _ -> pure True
     , testProperty "Removing action preserves consistency" $ do
         as <- uniqueIdGovActions @Conway
         pure $ case as of
           xs@(GovActionState {gasId} :<| _) ->
-            isConsistent_ $ fst $ snapshotRemoveIds (Set.singleton gasId) $ fromGovActionStateSeq xs
+            isConsistent_ $ fst $ proposalsRemoveIds (Set.singleton gasId) $ fromGovActionStateSeq xs
           _ -> True
     , testProperty "Adding vote preserves consistency" $ do
         as <- uniqueIdGovActions @Conway
@@ -52,11 +52,11 @@ govSnapshotProps =
         case as of
           xs@(GovActionState {gasId} :<| _) ->
             pure $
-              isConsistent_ (snapshotAddVote voter vote gasId $ fromGovActionStateSeq xs)
+              isConsistent_ (proposalsAddVote voter vote gasId $ fromGovActionStateSeq xs)
           _ -> pure True
-    , testProperty "IDs are unique" $ uniq . toList . snapshotIds @Conway
+    , testProperty "IDs are unique" $ uniq . toList . proposalsIds @Conway
     , testProperty "Order is preserved when inserting" $ do
         as <- uniqueIdGovActions @Conway
-        let snapshot = foldl' (flip snapshotInsertGovAction) def as
-        pure $ as == snapshotActions snapshot
+        let proposals = foldl' (flip proposalsInsertGovAction) def as
+        pure $ as == proposalsActions proposals
     ]

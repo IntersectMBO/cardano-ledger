@@ -6,16 +6,16 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Conway.Governance.Snapshots (
-  ProposalsSnapshot,
-  snapshotIds,
-  snapshotAddVote,
-  snapshotInsertGovAction,
-  snapshotActions,
-  snapshotRemoveIds,
-  snapshotLookupId,
+module Cardano.Ledger.Conway.Governance.Proposals (
+  Proposals,
+  proposalsIds,
+  proposalsAddVote,
+  proposalsInsertGovAction,
+  proposalsActions,
+  proposalsRemoveIds,
+  proposalsLookupId,
   fromGovActionStateSeq,
-  snapshotGovActionStates,
+  proposalsGovActionStates,
   -- Testing
   isConsistent_,
 ) where
@@ -44,70 +44,70 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', (%~))
 import NoThunks.Class (NoThunks)
 
-newtype ProposalsSnapshot era
-  = ProposalsSnapshot
+newtype Proposals era
+  = Proposals
       (OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
   deriving newtype (Show, Eq)
   deriving stock (Generic)
 
-instance EraPParams era => ToExpr (ProposalsSnapshot era)
+instance EraPParams era => ToExpr (Proposals era)
 
-instance EraPParams era => ToJSON (ProposalsSnapshot era)
+instance EraPParams era => ToJSON (Proposals era)
 
-instance EraPParams era => NFData (ProposalsSnapshot era)
+instance EraPParams era => NFData (Proposals era)
 
-instance EraPParams era => NoThunks (ProposalsSnapshot era)
+instance EraPParams era => NoThunks (Proposals era)
 
-instance Default (ProposalsSnapshot era) where
-  def = ProposalsSnapshot def
+instance Default (Proposals era) where
+  def = Proposals def
 
-instance EraPParams era => EncCBOR (ProposalsSnapshot era) where
-  encCBOR = encCBOR . snapshotActions
+instance EraPParams era => EncCBOR (Proposals era) where
+  encCBOR = encCBOR . proposalsActions
 
-instance EraPParams era => DecCBOR (ProposalsSnapshot era) where
+instance EraPParams era => DecCBOR (Proposals era) where
   decCBOR = fromGovActionStateSeq <$> decCBOR
 
 -- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
-instance EraPParams era => DecShareCBOR (ProposalsSnapshot era) where
+instance EraPParams era => DecShareCBOR (Proposals era) where
   decShareCBOR _ = fromGovActionStateSeq <$> decCBOR
 
 -- | Insert a `GovActionState`, overwriting an entry of it if the
 -- corresponding `GovActionId` already exists.
-snapshotInsertGovAction ::
+proposalsInsertGovAction ::
   GovActionState era ->
-  ProposalsSnapshot era ->
-  ProposalsSnapshot era
-snapshotInsertGovAction gas (ProposalsSnapshot omap) =
-  ProposalsSnapshot (omap OMap.||> gas)
+  Proposals era ->
+  Proposals era
+proposalsInsertGovAction gas (Proposals omap) =
+  Proposals (omap OMap.||> gas)
 
 -- | Get the sequence of `GovActionState`s
-snapshotActions ::
-  ProposalsSnapshot era ->
+proposalsActions ::
+  Proposals era ->
   StrictSeq (GovActionState era)
-snapshotActions (ProposalsSnapshot omap) = OMap.toStrictSeq omap
+proposalsActions (Proposals omap) = OMap.toStrictSeq omap
 
 -- | Get the sequence of `GovActionId`s
-snapshotIds ::
-  ProposalsSnapshot era ->
+proposalsIds ::
+  Proposals era ->
   StrictSeq (GovActionId (EraCrypto era))
-snapshotIds (ProposalsSnapshot omap) = OMap.toStrictSeqOKeys omap
+proposalsIds (Proposals omap) = OMap.toStrictSeqOKeys omap
 
 -- | Get the unordered map of `GovActionId`s and `GovActionState`s
-snapshotGovActionStates ::
-  ProposalsSnapshot era ->
+proposalsGovActionStates ::
+  Proposals era ->
   Map (GovActionId (EraCrypto era)) (GovActionState era)
-snapshotGovActionStates (ProposalsSnapshot omap) = OMap.toMap omap
+proposalsGovActionStates (Proposals omap) = OMap.toMap omap
 
 -- | Add a vote to an existing `GovActionState` This is a no-op if the .
 -- provided `GovActionId` does not already exist                       .
-snapshotAddVote ::
+proposalsAddVote ::
   Voter (EraCrypto era) ->
   Vote ->
   GovActionId (EraCrypto era) ->
-  ProposalsSnapshot era ->
-  ProposalsSnapshot era
-snapshotAddVote voter vote gai (ProposalsSnapshot omap) =
-  ProposalsSnapshot $ OMap.adjust updateVote gai omap
+  Proposals era ->
+  Proposals era
+proposalsAddVote voter vote gai (Proposals omap) =
+  Proposals $ OMap.adjust updateVote gai omap
   where
     insertVote ::
       Ord k =>
@@ -122,28 +122,28 @@ snapshotAddVote voter vote gai (ProposalsSnapshot omap) =
       CommitteeVoter c -> insertVote gasCommitteeVotesL c
 
 -- | Extract `GovActionState`s for the given set of `GovActionId`s from the `Proposals`
-snapshotRemoveIds ::
+proposalsRemoveIds ::
   Set (GovActionId (EraCrypto era)) ->
-  ProposalsSnapshot era ->
-  (ProposalsSnapshot era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
-snapshotRemoveIds gais (ProposalsSnapshot omap) =
+  Proposals era ->
+  (Proposals era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
+proposalsRemoveIds gais (Proposals omap) =
   let (retained, removed) = OMap.extractKeys gais omap
-   in (ProposalsSnapshot retained, removed)
+   in (Proposals retained, removed)
 
-snapshotLookupId ::
+proposalsLookupId ::
   GovActionId (EraCrypto era) ->
-  ProposalsSnapshot era ->
+  Proposals era ->
   Maybe (GovActionState era)
-snapshotLookupId gai (ProposalsSnapshot omap) = OMap.lookup gai omap
+proposalsLookupId gai (Proposals omap) = OMap.lookup gai omap
 
--- | Converts a sequence of `GovActionState`s to a `ProposalsSnapshot`.
+-- | Converts a sequence of `GovActionState`s to a `Proposals`.
 --
 -- /Warning/ - This function expects `GovActionState`'s to have unique
 -- `GovActionId`s, because duplicate Ids will result in `GovActionStates`
 -- to be dropped.
-fromGovActionStateSeq :: StrictSeq (GovActionState era) -> ProposalsSnapshot era
-fromGovActionStateSeq = ProposalsSnapshot . OMap.fromFoldable
+fromGovActionStateSeq :: StrictSeq (GovActionState era) -> Proposals era
+fromGovActionStateSeq = Proposals . OMap.fromFoldable
 
 -- | Internal function for checking if the invariants are maintained
-isConsistent_ :: ProposalsSnapshot era -> Bool
-isConsistent_ (ProposalsSnapshot omap) = OMap.invariantHolds' omap
+isConsistent_ :: Proposals era -> Bool
+isConsistent_ (Proposals omap) = OMap.invariantHolds' omap

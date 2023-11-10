@@ -2,6 +2,9 @@
 
 ## 1.11.0.0
 
+* Rename data-type `ProposalsSnapshot` to `Proposals`. #3859
+  * Rename module `Governance.Snapshots` to `Governance.Proposals`.
+  * Rename all the functions related to the data-type.
 * Switch to using `OMap` for `ProposalsSnapshot` #3791
 * Add `VotingOnExpiredGovAction` predicate failure in `GOV` #3825
 * Rename `modifiedGroups` -> `modifiedPPGroups` and move into `ConwayEraPParams`

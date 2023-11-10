@@ -55,14 +55,14 @@ module Cardano.Ledger.Conway.Governance (
   isStakePoolVotingAllowed,
   isDRepVotingAllowed,
   isCommitteeVotingAllowed,
-  ProposalsSnapshot,
-  snapshotInsertGovAction,
-  snapshotActions,
-  snapshotAddVote,
-  snapshotIds,
-  snapshotRemoveIds,
-  snapshotLookupId,
-  snapshotGovActionStates,
+  Proposals,
+  proposalsInsertGovAction,
+  proposalsActions,
+  proposalsAddVote,
+  proposalsIds,
+  proposalsRemoveIds,
+  proposalsLookupId,
+  proposalsGovActionStates,
   fromGovActionStateSeq,
   isConsistent_,
   -- Lenses
@@ -175,17 +175,17 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   govActionIdToText,
   indexedGovProps,
  )
-import Cardano.Ledger.Conway.Governance.Snapshots (
-  ProposalsSnapshot,
+import Cardano.Ledger.Conway.Governance.Proposals (
+  Proposals,
   fromGovActionStateSeq,
   isConsistent_,
-  snapshotActions,
-  snapshotAddVote,
-  snapshotGovActionStates,
-  snapshotIds,
-  snapshotInsertGovAction,
-  snapshotLookupId,
-  snapshotRemoveIds,
+  proposalsActions,
+  proposalsAddVote,
+  proposalsGovActionStates,
+  proposalsIds,
+  proposalsInsertGovAction,
+  proposalsLookupId,
+  proposalsRemoveIds,
  )
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
@@ -563,7 +563,7 @@ toRatifyStatePairs cg@(RatifyState _ _ _) =
 
 -- =============================================
 data ConwayGovState era = ConwayGovState
-  { cgProposals :: !(ProposalsSnapshot era) -- TODO rename 'ProposalsSnapshot' to 'Proposals'
+  { cgProposals :: !(Proposals era)
   , cgEnactState :: !(EnactState era)
   , cgDRepPulsingState :: !(DRepPulsingState era)
   -- ^ The 'cgDRepPulsingState' field is a pulser that incrementally computes the stake distribution of the DReps
@@ -576,7 +576,7 @@ data ConwayGovState era = ConwayGovState
 
 deriving instance EraPParams era => Eq (ConwayGovState era)
 
-cgProposalsL :: Lens' (ConwayGovState era) (ProposalsSnapshot era)
+cgProposalsL :: Lens' (ConwayGovState era) (Proposals era)
 cgProposalsL = lens cgProposals (\x y -> x {cgProposals = y})
 
 cgEnactStateL :: Lens' (ConwayGovState era) (EnactState era)
@@ -665,7 +665,7 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
 
   obligationGovState st =
     Obligations
-      { oblProposal = foldMap' gasDeposit $ snapshotActions (st ^. cgProposalsL)
+      { oblProposal = foldMap' gasDeposit $ proposalsActions (st ^. cgProposalsL)
       , oblDRep = Coin 0
       , oblStake = Coin 0
       , oblPool = Coin 0
@@ -675,7 +675,7 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
 
 class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)
-  proposalsGovStateL :: Lens' (GovState era) (ProposalsSnapshot era)
+  proposalsGovStateL :: Lens' (GovState era) (Proposals era)
   drepPulsingStateGovStateL :: Lens' (GovState era) (DRepPulsingState era)
   enactStateGovStateL :: Lens' (GovState era) (EnactState era)
 
@@ -944,7 +944,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpEnactState :: !(EnactState era)
     -- ^ Snapshot of the EnactState, Used to build the Env of the RATIFY rule
     , dpProposals :: !(StrictSeq (GovActionState era))
-    -- ^ Snap shot of the (ProposalsSnapshot era) isomorphic to (StrictSeq (GovActionState era))
+    -- ^ Snap shot of the (Proposals era) isomorphic to (StrictSeq (GovActionState era))
     --   Used to build the Signal of the RATIFY rule
     , dpGlobals :: !Globals
     } ->
@@ -1175,7 +1175,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                       (cgEnactState govState)
                         { ensTreasury = epochState ^. epochStateTreasuryL
                         }
-                  , dpProposals = snapshotActions (govState ^. cgProposalsL)
+                  , dpProposals = proposalsActions (govState ^. cgProposalsL)
                   , dpGlobals = globals
                   }
               )

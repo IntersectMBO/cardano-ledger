@@ -36,14 +36,14 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
-  ProposalsSnapshot,
+  Proposals,
   PulsingSnapshot (..),
   Vote (..),
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
   finishDRepPulser,
-  snapshotActions,
+  proposalsActions,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.Rules (
@@ -374,8 +374,8 @@ instance
 instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
   prettyA = viaShow
 
-instance PrettyA (PParamsUpdate era) => PrettyA (ProposalsSnapshot era) where
-  prettyA = prettyA . snapshotActions
+instance PrettyA (PParamsUpdate era) => PrettyA (Proposals era) where
+  prettyA = prettyA . proposalsActions
 
 instance PrettyA (GovActionId era) where
   prettyA gaid@(GovActionId _ _) =

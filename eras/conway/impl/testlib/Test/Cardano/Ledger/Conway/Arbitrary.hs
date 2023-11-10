@@ -38,7 +38,7 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionId (..),
   PrevGovActionIds (..),
   ProposalProcedure (..),
-  ProposalsSnapshot,
+  Proposals,
   PulsingSnapshot (..),
   RatifyEnv (..),
   Vote,
@@ -196,7 +196,7 @@ instance
   ( Era era
   , Arbitrary (PParamsUpdate era)
   ) =>
-  Arbitrary (ProposalsSnapshot era)
+  Arbitrary (Proposals era)
   where
   arbitrary = fromGovActionStateSeq <$> uniqueIdGovActions
 
