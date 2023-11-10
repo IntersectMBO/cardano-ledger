@@ -14,8 +14,7 @@ build-type:         Simple
 data-files:
     test/data/*.json
     cddl-files/conway.cddl
-    cddl-files/real/crypto.cddl
-    cddl-files/mock/extras.cddl
+    cddl-files/extra.cddl
 
 extra-source-files: CHANGELOG.md
 

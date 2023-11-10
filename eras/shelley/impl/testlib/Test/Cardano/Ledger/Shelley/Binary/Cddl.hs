@@ -9,8 +9,8 @@ import Paths_cardano_ledger_shelley
 readShelleyCddlFileNames :: IO [FilePath]
 readShelleyCddlFileNames = do
   base <- getDataFileName "cddl-files/shelley.cddl"
-  crypto <- getDataFileName "cddl-files/real/crypto.cddl"
-  extras <- getDataFileName "cddl-files/mock/extras.cddl"
+  crypto <- getDataFileName "cddl-files/crypto.cddl"
+  extras <- getDataFileName "cddl-files/extras.cddl"
   -- extras contains the types whose restrictions cannot be expressed in CDDL
   pure [base, crypto, extras]
 
