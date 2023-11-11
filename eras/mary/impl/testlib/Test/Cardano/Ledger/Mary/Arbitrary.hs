@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Mary.Arbitrary (
   genMultiAssetZero,
   genPositiveInt,
   genNegativeInt,
+  genNonNegativeInt,
 ) where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
@@ -194,6 +195,14 @@ genEmptyMultiAsset :: Crypto c => Gen (MultiAsset c)
 genEmptyMultiAsset =
   MultiAsset <$> genNonEmptyMap arbitrary (pure Map.empty)
 
+-- | Better generator for a Non-Negative Int that explores more values
+genNonNegativeInt :: Gen Int
+genNonNegativeInt =
+  oneof
+    [ choose (0, maxBound)
+    , getNonNegative <$> arbitrary
+    ]
+
 -- | Better generator for a positive Int that explores more values
 genPositiveInt :: Gen Int
 genPositiveInt =
@@ -202,6 +211,7 @@ genPositiveInt =
     , getPositive <$> arbitrary
     ]
 
+-- | Better generator for a Negative Int that explores more values
 genNegativeInt :: Gen Int
 genNegativeInt =
   oneof
@@ -211,7 +221,7 @@ genNegativeInt =
 
 genMaryValue :: Gen (MultiAsset c) -> Gen (MaryValue c)
 genMaryValue genMA = do
-  i <- toInteger <$> genPositiveInt
+  i <- toInteger <$> genNonNegativeInt
   ma <- genMA
   pure $ MaryValue (Coin i) ma
 
