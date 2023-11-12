@@ -23,6 +23,7 @@ module Cardano.Ledger.Plutus.CostModels (
   -- * Cost Model
   CostModel,
   CostModelError (..),
+  decodeValidAndUnknownCostModels,
   emptyCostModels,
   updateCostModels,
   mkCostModel,
@@ -213,6 +214,23 @@ decodeCostModelsFailingOnError :: Decoder s CostModels
 decodeCostModelsFailingOnError =
   CostModels <$> decodeMapByKey decCBOR legacyDecodeCostModel <*> pure mempty <*> pure mempty
 {-# INLINE decodeCostModelsFailingOnError #-}
+
+decodeValidAndUnknownCostModels :: Decoder s CostModels
+decodeValidAndUnknownCostModels = do
+  validAndUnkonwnCms <- decodeMapByKey decCBOR decodeValidOrUnknownCm
+  pure $ Map.foldrWithKey addValidOrUnknownCm emptyCostModels validAndUnkonwnCms
+  where
+    decodeValidOrUnknownCm :: Word8 -> Decoder s (Either [Integer] CostModel)
+    decodeValidOrUnknownCm langW8 = do
+      case mkLanguageEnum (fromIntegral langW8) of
+        Just lang -> Right <$> decodeCostModelFailHard lang
+        Nothing -> Left <$> decCBOR
+
+    addValidOrUnknownCm :: Word8 -> Either [Integer] CostModel -> CostModels -> CostModels
+    addValidOrUnknownCm langW8 unknownOrCm (CostModels validCms errors invalidCms) =
+      case unknownOrCm of
+        Left cmIds -> CostModels validCms errors (Map.insert langW8 cmIds invalidCms)
+        Right cm -> CostModels (Map.insert (cmLanguage cm) cm validCms) errors invalidCms
 
 decodeCostModels :: Decoder s CostModels
 decodeCostModels =

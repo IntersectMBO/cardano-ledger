@@ -15,6 +15,7 @@
 * Move `Cardano.Ledger.Alonzo.Scritps.Data` to `Cardano.Ledger.Plutus.Data`
 * Move some parts of `Cardano.Ledger.Alonzo.TxInfo` into
   `Cardano.Ledger.Plutus.TxInfo` and `Cardano.Ledger.Plutus.Evaluate`
+* Expose `decodeValidAndUnknownCostModels` in `CostModels`
 
 ### `testlib`
 
