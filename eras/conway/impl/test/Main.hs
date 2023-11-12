@@ -4,6 +4,7 @@ module Main where
 
 import Cardano.Ledger.Conway (Conway)
 import Data.Proxy (Proxy (..))
+import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
@@ -29,3 +30,5 @@ main =
       describe "Imp" $ do
         ConwayImp.spec @Conway
         ShelleyImp.spec @Conway
+      describe "CostModels" $ do
+        CostModelsSpec.spec @Conway Proxy

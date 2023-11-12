@@ -159,6 +159,7 @@ test-suite tests
         base,
         cardano-ledger-core:testlib,
         cardano-ledger-allegra,
+        cardano-ledger-alonzo:testlib,
         cardano-ledger-alonzo,
         cardano-ledger-conway,
         cardano-ledger-shelley:testlib,
