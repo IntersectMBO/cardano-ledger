@@ -79,6 +79,7 @@ import Cardano.Ledger.Conway.Core hiding (Value)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
+import Cardano.Ledger.Plutus.CostModels (decodeValidAndUnknownCostModels)
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
@@ -675,7 +676,7 @@ updateField = \case
   11 -> field (\x up -> up {cppTau = THKD (SJust x)}) From
   16 -> field (\x up -> up {cppMinPoolCost = THKD (SJust x)}) From
   17 -> field (\x up -> up {cppCoinsPerUTxOByte = THKD (SJust x)}) From
-  18 -> field (\x up -> up {cppCostModels = THKD (SJust x)}) From
+  18 -> field (\x up -> up {cppCostModels = THKD (SJust x)}) $ D decodeValidAndUnknownCostModels
   19 -> field (\x up -> up {cppPrices = THKD (SJust x)}) From
   20 -> field (\x up -> up {cppMaxTxExUnits = THKD (SJust x)}) From
   21 -> field (\x up -> up {cppMaxBlockExUnits = THKD (SJust x)}) From
