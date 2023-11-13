@@ -12,6 +12,7 @@
 
 * Provide CDDL spec files with `readAlonzoCddlFileNames` and `readAlonzoCddlFiles` from
   `Test.Cardano.Ledger.Alonzo.Binary.Cddl`
+* Expose `genValidAndUnknownCostModels` in `Arbitrary`
 
 ## 1.5.0.0
 
