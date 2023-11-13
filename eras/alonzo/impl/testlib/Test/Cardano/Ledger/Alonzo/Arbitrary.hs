@@ -21,6 +21,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genAlonzoScript,
   genScripts,
   genValidCostModel,
+  genValidAndUnknownCostModels,
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -256,6 +257,13 @@ genValidCostModel lang = do
 
 genValidCostModelPair :: Language -> Gen (Language, CostModel)
 genValidCostModelPair lang = (,) lang <$> genValidCostModel lang
+
+genValidAndUnknownCostModels :: Gen CostModels
+genValidAndUnknownCostModels = do
+  langs <- sublistOf nonNativeLanguages
+  validCms <- Map.fromList <$> mapM genValidCostModelPair langs
+  unknown <- genUnknownCostModels
+  pure $ CostModels validCms mempty unknown
 
 -- | This Arbitrary instance assumes the inflexible deserialization
 -- scheme prior to version 9.
