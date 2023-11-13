@@ -91,7 +91,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
-import Control.Monad (guard, unless, when)
+import Control.Monad (guard, unless, when, void)
 import Control.Monad.Trans.Fail (runFail, FailT)
 import Control.Monad.Trans.State (StateT, evalStateT, get, modify', state)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
@@ -124,6 +124,9 @@ import NoThunks.Class (NoThunks (..))
 import Numeric (showIntAtBase)
 import Quiet (Quiet (Quiet))
 import Data.Functor.Identity
+
+import System.IO.Unsafe
+import Control.Concurrent
 
 mkRwdAcnt ::
   Network ->
@@ -636,6 +639,7 @@ decodeAddrStateAllowLeftoverT ::
   b ->
   StateT Int m (Addr c)
 decodeAddrStateAllowLeftoverT isLenient buf = do
+  void $ return $ unsafePerformIO $ threadDelay 500000
   guardLength "Header" 1 buf
   let header = Header $ bufUnsafeIndex buf 0
   addr <-
