@@ -375,16 +375,16 @@ url = tstr .size (0..64)
 withdrawals = { + reward_account => coin }
 
 protocol_param_update =
-  { ? 0:  uint                   ; minfee A
-  , ? 1:  uint                   ; minfee B
+  { ? 0:  coin                   ; minfee A
+  , ? 1:  coin                   ; minfee B
   , ? 2:  uint                   ; max block body size
   , ? 3:  uint                   ; max transaction size
   , ? 4:  uint                   ; max block header size
   , ? 5:  coin                   ; key deposit
   , ? 6:  coin                   ; pool deposit
-  , ? 7: epoch                   ; maximum epoch
-  , ? 8: uint                    ; n_opt: desired number of stake pools
-  , ? 9: rational                ; pool pledge influence
+  , ? 7:  epoch                  ; maximum epoch
+  , ? 8:  uint                   ; n_opt: desired number of stake pools
+  , ? 9:  nonnegative_interval   ; pool pledge influence
   , ? 10: unit_interval          ; expansion rate
   , ? 11: unit_interval          ; treasury growth rate
   , ? 16: coin                   ; min pool cost
@@ -399,7 +399,7 @@ protocol_param_update =
   , ? 25: pool_voting_thresholds ; pool voting thresholds
   , ? 26: drep_voting_thresholds ; DRep voting thresholds
   , ? 27: uint                   ; min committee size
-  , ? 28: uint                   ; committee term limit
+  , ? 28: epoch                  ; committee term limit
   , ? 29: epoch                  ; governance action validity period
   , ? 30: coin                   ; governance action deposit
   , ? 31: coin                   ; DRep deposit
@@ -473,7 +473,7 @@ redeemer_tag =
 ex_units = [mem: uint, steps: uint]
 
 ex_unit_prices =
-  [ mem_price: sub_coin, step_price: sub_coin ]
+  [ mem_price: nonnegative_interval, step_price: nonnegative_interval ]
 
 language = 0 ; Plutus v1
          / 1 ; Plutus v2
@@ -544,8 +544,6 @@ invalid_before = (4, uint)
 invalid_hereafter = (5, uint)
 
 coin = uint
-
-sub_coin = positive_interval
 
 multiasset<a> = { + policy_id => { + asset_name => a } }
 policy_id = scripthash

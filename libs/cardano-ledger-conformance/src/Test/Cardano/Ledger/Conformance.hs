@@ -240,7 +240,7 @@ instance SpecTranslate (ConwayPParams Identity era) where
       <*> toSpecRep (cppDRepDeposit x)
       <*> toSpecRep (cppDRepActivity x)
       <*> Right (toInteger . unTHKD $ cppCommitteeMinSize x)
-      <*> Right (toInteger . unTHKD $ cppCommitteeMaxTermLength x)
+      <*> Right (toInteger . unEpochNo . unTHKD $ cppCommitteeMaxTermLength x)
       -- This is the minimumAVS field which we ended up not needing. It will be
       -- removed from the spec.
       <*> Right (error "minimumAVS is not in Conway, do not use this field")

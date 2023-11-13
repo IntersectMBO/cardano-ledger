@@ -357,7 +357,7 @@ validCommitteeTerm ::
 validCommitteeTerm committee pp currentEpoch =
   let maxCommitteeTerm = pp ^. ppCommitteeMaxTermLengthL
       members = foldMap' (^. committeeMembersL) committee
-   in all (<= currentEpoch + fromIntegral maxCommitteeTerm) members
+   in all (<= currentEpoch + maxCommitteeTerm) members
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = absurd
