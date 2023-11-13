@@ -221,7 +221,6 @@ data ConwayPParams f era = ConwayPParams
   , cppCommitteeMinSize :: !(THKD 'GovGroup f Natural)
   -- ^ Minimum size of the Constitutional Committee
   , cppCommitteeMaxTermLength :: !(THKD 'GovGroup f Natural) -- TODO: This too should be EpochNo
-
   -- ^ The Constitutional Committee Term limit in number of Slots
   , cppGovActionLifetime :: !(THKD 'GovGroup f EpochNo)
   -- ^ Gov action lifetime in number of Epochs
