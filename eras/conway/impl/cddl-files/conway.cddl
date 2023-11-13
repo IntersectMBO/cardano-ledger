@@ -399,7 +399,7 @@ protocol_param_update =
   , ? 25: pool_voting_thresholds ; pool voting thresholds
   , ? 26: drep_voting_thresholds ; DRep voting thresholds
   , ? 27: uint                   ; min committee size
-  , ? 28: uint                   ; committee term limit
+  , ? 28: epoch                  ; committee term limit
   , ? 29: epoch                  ; governance action validity period
   , ? 30: coin                   ; governance action deposit
   , ? 31: coin                   ; DRep deposit

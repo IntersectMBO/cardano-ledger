@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Switch `ppCommitteeMaxTermLength` to `EpochNo`, rather than `Natural`
 * Rename data-type `ProposalsSnapshot` to `Proposals`. #3859
   * Rename module `Governance.Snapshots` to `Governance.Proposals`.
   * Rename all the functions related to the data-type.
