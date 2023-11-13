@@ -12,7 +12,6 @@ import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
-import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.TxBody
 import Cardano.Ledger.Mary.Value
@@ -41,7 +40,7 @@ instance CC.Crypto c => PrettyA (MultiAsset c) where
   prettyA x = ppSexp "MultiAsset" [ppMultiAsset x]
 
 ppValue :: MaryValue c -> PDoc
-ppValue (MaryValue n m) = ppSexp "Value" $ [ppCoin (Coin n), ppMultiAsset m] ++ ppBad
+ppValue (MaryValue n m) = ppSexp "Value" $ [ppCoin n, ppMultiAsset m] ++ ppBad
   where
     ppBad = case getBadMultiAsset m of
       [] -> []

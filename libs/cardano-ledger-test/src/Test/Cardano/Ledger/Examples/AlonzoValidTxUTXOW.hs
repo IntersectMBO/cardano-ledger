@@ -563,8 +563,16 @@ validatingWithMintRedeemers =
 multiAsset :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAsset (EraCrypto era)
 multiAsset pf = forge @era 1 (always 2 pf)
 
-validatingWithMintTxOut :: (HasTokens era, EraTxOut era, Scriptic era, Value era ~ MaryValue (EraCrypto era)) => Proof era -> TxOut era
-validatingWithMintTxOut pf = newTxOut pf [Address (someAddr pf), Amount (MaryValue 0 (multiAsset pf) <+> inject (Coin 995))]
+validatingWithMintTxOut ::
+  ( HasTokens era
+  , EraTxOut era
+  , Scriptic era
+  , Value era ~ MaryValue (EraCrypto era)
+  ) =>
+  Proof era ->
+  TxOut era
+validatingWithMintTxOut pf =
+  newTxOut pf [Address (someAddr pf), Amount (MaryValue mempty (multiAsset pf) <+> inject (Coin 995))]
 
 validatingWithMintState ::
   forall era.
@@ -612,7 +620,7 @@ notValidatingWithMintTx pf =
         pf
         [ Inputs' [mkGenesisTxIn 8]
         , Collateral' [mkGenesisTxIn 18]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (MaryValue 0 mint <+> inject (Coin 995))]]
+        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (MaryValue mempty mint <+> inject (Coin 995))]]
         , Txfee (Coin 5)
         , Mint mint
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
@@ -711,7 +719,7 @@ validatingManyScriptsTxOut pf =
   newTxOut
     pf
     [ Address (someAddr pf)
-    , Amount (MaryValue 0 (validatingManyScriptsMint pf) <+> inject (Coin 4996))
+    , Amount (MaryValue mempty (validatingManyScriptsMint pf) <+> inject (Coin 4996))
     ]
 
 validatingManyScriptsState ::

@@ -99,7 +99,7 @@ collateralOutput :: BabbageTxOut Babbage
 collateralOutput =
   BabbageTxOut
     (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
-    (MaryValue 8675309 mempty)
+    (MaryValue (Coin 8675309) mempty)
     NoDatum
     SNothing
 

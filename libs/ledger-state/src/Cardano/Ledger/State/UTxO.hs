@@ -587,7 +587,7 @@ countTxOutStats = foldMap countTxOutStat
     countTxOutStat :: TxOut CurrentEra -> TxOutStats
     countTxOutStat txOut =
       let addr = txOut ^. addrTxOutL
-          MaryValue v (MultiAsset m) = txOut ^. valueTxOutL
+          MaryValue (Coin v) (MultiAsset m) = txOut ^. valueTxOutL
           !dataStat =
             strictMaybe
               mempty

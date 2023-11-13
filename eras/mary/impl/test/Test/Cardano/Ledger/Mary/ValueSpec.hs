@@ -35,6 +35,7 @@ import Test.Cardano.Ledger.Mary.Arbitrary (
   genMultiAsset,
   genMultiAssetToFail,
   genMultiAssetZero,
+  genNegativeInt,
  )
 
 spec :: Spec
@@ -61,13 +62,11 @@ spec = do
         forAll (genEmptyMultiAsset @StandardCrypto) $
           roundTripCborRangeFailureExpectation (natVersion @9) maxBound
     context "MaryValue" $ do
-      prop "Positive MaryValue succeeds for all eras" $
-        forAll
-          (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> chooseInt (1, maxBound))))
-          roundTripCborExpectation
+      prop "Positive MaryValue succeeds for all eras" $ \(mv :: MaryValue StandardCrypto) ->
+        roundTripCborExpectation mv
       prop "Negative MaryValue fails for all eras" $
         forAll
-          (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> chooseInt (minBound, -1))))
+          (genMaryValue (genMultiAsset @StandardCrypto (toInteger <$> genNegativeInt)))
           roundTripCborFailureExpectation
       prop "Zero MaryValue fails for Conway" $
         forAll (genMaryValue (genMultiAssetZero @StandardCrypto)) $

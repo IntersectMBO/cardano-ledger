@@ -272,7 +272,7 @@ addTokens ::
 addTokens proxy tooLittleLovelace pparams ts (txOut :<| os) =
   if txOut ^. coinTxOutL < getMinCoinTxOut pparams txOut
     then addTokens proxy (txOut :<| tooLittleLovelace) pparams ts os
-    else Just $ tooLittleLovelace >< addValToTxOut @era (MaryValue 0 ts) txOut <| os
+    else Just $ tooLittleLovelace >< addValToTxOut @era (MaryValue mempty ts) txOut <| os
 addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 
 -- | This function is only good in the Mary Era
@@ -317,11 +317,13 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
     )
 
 instance Split (MaryValue era) where
-  vsplit (MaryValue n _) 0 = ([], Coin n)
-  vsplit (MaryValue n mp) m
+  vsplit (MaryValue n _) 0 = ([], n)
+  vsplit (MaryValue (Coin n) mp) m
     | m <= 0 = error "must split coins into positive parts"
     | otherwise =
-        ( take (fromIntegral m) (MaryValue (n `div` m) mp : repeat (MaryValue (n `div` m) mempty))
+        ( take
+            (fromIntegral m)
+            (MaryValue (Coin (n `div` m)) mp : repeat (MaryValue (Coin (n `div` m)) mempty))
         , Coin (n `rem` m)
         )
 

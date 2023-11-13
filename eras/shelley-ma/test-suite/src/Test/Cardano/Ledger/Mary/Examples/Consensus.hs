@@ -6,6 +6,7 @@
 
 module Test.Cardano.Ledger.Mary.Examples.Consensus where
 
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Core
@@ -29,7 +30,7 @@ ledgerExamplesMary =
     mempty
 
 exampleMultiAssetValue :: Crypto c => Int -> MaryValue c
-exampleMultiAssetValue x = MaryValue 100 $ exampleMultiAsset x
+exampleMultiAssetValue x = MaryValue (Coin 100) $ exampleMultiAsset x
 
 exampleMultiAsset :: forall c. Crypto c => Int -> MultiAsset c
 exampleMultiAsset x =

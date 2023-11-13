@@ -90,7 +90,9 @@ insert3 combine pid aid new (MaryValue c (MultiAsset m1)) =
 
 -- | Make a Value with no coin, and just one token.
 unit :: PolicyID c -> AssetName -> Integer -> MaryValue c
-unit pid aid n = MaryValue 0 $ MultiAsset (canonicalInsert pickNew pid (canonicalInsert pickNew aid n empty) empty)
+unit pid aid n =
+  MaryValue mempty $
+    MultiAsset (canonicalInsert pickNew pid (canonicalInsert pickNew aid n empty) empty)
 
 -- Use <+> and <->
 
@@ -117,17 +119,17 @@ insert2 combine pid aid new m1 =
 -- 3 functions that build Values from Policy Asset triples.
 
 valueFromList :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
-valueFromList list c = MaryValue c $ foldr acc mempty list
+valueFromList list c = MaryValue (Coin c) $ foldr acc mempty list
   where
     acc (policy, asset, count) m = insertMultiAsset (+) policy asset count m
 
 valueFromList3 :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
-valueFromList3 list c = foldr acc (MaryValue c mempty) list
+valueFromList3 list c = foldr acc (MaryValue (Coin c) mempty) list
   where
     acc (policy, asset, count) m = insert3 (+) policy asset count m
 
 valueFromList2 :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
-valueFromList2 list c = foldr acc (MaryValue c mempty) list
+valueFromList2 list c = foldr acc (MaryValue (Coin c) mempty) list
   where
     acc (policy, asset, count) m = insert2 (+) policy asset count m
 

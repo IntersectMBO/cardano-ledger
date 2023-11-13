@@ -61,7 +61,7 @@ import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt (..),
  )
 import Cardano.Ledger.Shelley.TxCert (pattern UnRegTxCert)
-import Cardano.Ledger.Val (inject, (<+>))
+import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -534,7 +534,7 @@ validatingManyScriptsBody pf =
       newTxOut
         pf
         [ Address (someAddr pf)
-        , Amount (MaryValue 0 mint <+> inject (Coin 4996))
+        , Amount (MaryValue (Coin 4996) mint)
         ]
     mint = forge @era 1 (always 2 pf) <> forge @era 1 (timelockScript 1 pf)
 

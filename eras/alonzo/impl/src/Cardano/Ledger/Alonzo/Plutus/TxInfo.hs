@@ -103,6 +103,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core as Core hiding (TranslationError)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (
@@ -283,7 +284,7 @@ transMintValue m = transMultiAssetInternal m justZeroAda
     justZeroAda = PV1.singleton PV1.adaSymbol PV1.adaToken 0
 
 transValue :: MaryValue c -> PV1.Value
-transValue (MaryValue n m) = justAda <> transMultiAsset m
+transValue (MaryValue (Coin n) m) = justAda <> transMultiAsset m
   where
     justAda = PV1.singleton PV1.adaSymbol PV1.adaToken n
 

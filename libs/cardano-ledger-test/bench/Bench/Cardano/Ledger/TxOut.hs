@@ -39,7 +39,9 @@ benchTxOut =
       addr :: Int -> Addr StandardCrypto
       addr n = Addr Mainnet (key n) stake
       value :: MaryValue StandardCrypto
-      value = MaryValue 200 $ MultiAsset (singleton (PolicyID policyId28) (singleton assName 217))
+      value =
+        MaryValue (Coin 200) $
+          MultiAsset (singleton (PolicyID policyId28) (singleton assName 217))
       txOutAddr :: Int -> TxOut Alonzo
       txOutAddr n =
         mkBasicTxOut (addr n) value & dataHashTxOutL .~ SJust dataHash32

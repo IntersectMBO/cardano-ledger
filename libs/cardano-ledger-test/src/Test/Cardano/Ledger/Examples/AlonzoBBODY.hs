@@ -76,7 +76,7 @@ import Cardano.Ledger.Shelley.TxCert (pattern UnRegTxCert)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (UView (RewDepUView))
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.Val (inject, (<+>), (<->))
+import Cardano.Ledger.Val (inject, (<->))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.ByteString as BS (replicate)
@@ -510,7 +510,8 @@ multiAsset :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAss
 multiAsset pf = forge @era 1 (always 2 pf)
 
 validatingTxWithMintOut :: forall era. (HasTokens era, EraTxOut era, Scriptic era, Value era ~ MaryValue (EraCrypto era)) => Proof era -> TxOut era
-validatingTxWithMintOut pf = newTxOut pf [Address (someAddr pf), Amount (MaryValue 0 (multiAsset pf) <+> inject (Coin 995))]
+validatingTxWithMintOut pf =
+  newTxOut pf [Address (someAddr pf), Amount (MaryValue (Coin 995) (multiAsset pf))]
 
 notValidatingTxWithMint ::
   forall era.
@@ -538,7 +539,7 @@ notValidatingTxWithMint pf =
         pf
         [ Inputs' [mkGenesisTxIn 8]
         , Collateral' [mkGenesisTxIn 18]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (MaryValue 0 ma <+> inject (Coin 995))]]
+        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (MaryValue (Coin 995) ma)]]
         , Txfee (Coin 5)
         , Mint ma
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersWithMint mempty)

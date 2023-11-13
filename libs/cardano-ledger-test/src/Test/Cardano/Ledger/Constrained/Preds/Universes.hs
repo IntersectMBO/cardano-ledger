@@ -551,8 +551,8 @@ multiAsset size scripts = do
       pure $ multiAssetFromList xs
 
 genValueF :: UnivSize -> Proof era -> Coin -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (Value era)
-genValueF size proof (Coin c) scripts = case whichValue proof of
-  ValueShelleyToAllegra -> pure (Coin c)
+genValueF size proof c scripts = case whichValue proof of
+  ValueShelleyToAllegra -> pure c
   ValueMaryToConway -> MaryValue c <$> multiAsset size scripts
 
 stakeToVote :: Credential 'Staking c -> Credential 'DRepRole c

@@ -316,7 +316,7 @@ instance Crypto c => MaryEraTxBody (MaryEra c) where
 
   mintValueTxBodyF =
     to $ \(TxBodyConstr (Memo (MaryTxBodyRaw txBodyRaw) _)) ->
-      MaryValue 0 (atbrMint txBodyRaw)
+      MaryValue mempty (atbrMint txBodyRaw)
   {-# INLINEABLE mintValueTxBodyF #-}
 
   mintedTxBodyF =

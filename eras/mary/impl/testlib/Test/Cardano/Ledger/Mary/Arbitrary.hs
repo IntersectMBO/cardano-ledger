@@ -13,9 +13,13 @@ module Test.Cardano.Ledger.Mary.Arbitrary (
   genMultiAsset,
   genMultiAssetToFail,
   genMultiAssetZero,
+  genPositiveInt,
+  genNegativeInt,
+  genNonNegativeInt,
 ) where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -36,21 +40,7 @@ import Data.String (IsString (fromString))
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Arbitrary (genByteString, genShortByteString)
-import Test.QuickCheck (
-  Arbitrary,
-  Gen,
-  NonZero (getNonZero),
-  Positive (getPositive),
-  arbitrary,
-  choose,
-  chooseInt,
-  elements,
-  frequency,
-  listOf1,
-  oneof,
-  scale,
-  vectorOf,
- )
+import Test.Cardano.Ledger.Common
 
 instance Arbitrary AssetName where
   arbitrary =
@@ -205,15 +195,39 @@ genEmptyMultiAsset :: Crypto c => Gen (MultiAsset c)
 genEmptyMultiAsset =
   MultiAsset <$> genNonEmptyMap arbitrary (pure Map.empty)
 
+-- | Better generator for a Non-Negative Int that explores more values
+genNonNegativeInt :: Gen Int
+genNonNegativeInt =
+  oneof
+    [ choose (0, maxBound)
+    , getNonNegative <$> arbitrary
+    ]
+
+-- | Better generator for a positive Int that explores more values
+genPositiveInt :: Gen Int
+genPositiveInt =
+  oneof
+    [ choose (1, maxBound)
+    , getPositive <$> arbitrary
+    ]
+
+-- | Better generator for a Negative Int that explores more values
+genNegativeInt :: Gen Int
+genNegativeInt =
+  oneof
+    [ choose (minBound, -1)
+    , negate . getPositive <$> arbitrary
+    ]
+
 genMaryValue :: Gen (MultiAsset c) -> Gen (MaryValue c)
 genMaryValue genMA = do
-  i <- toInteger <$> choose (0 :: Int, maxBound)
+  i <- toInteger <$> genNonNegativeInt
   ma <- genMA
-  pure $ MaryValue i ma
+  pure $ MaryValue (Coin i) ma
 
 instance Crypto c => Arbitrary (MaryValue c) where
   arbitrary =
-    genMaryValue $ genMultiAsset $ toInteger <$> choose (1 :: Int, maxBound)
+    genMaryValue $ genMultiAsset $ toInteger <$> genPositiveInt
 
 instance Crypto c => Arbitrary (CompactForm (MaryValue c)) where
   arbitrary = toCompactMaryValue <$> arbitrary

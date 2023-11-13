@@ -517,7 +517,7 @@ instance Crypto c => MaryEraTxBody (ConwayEra c) where
   mintTxBodyL = lensMemoRawType ctbrMint (\txb x -> txb {ctbrMint = x})
   {-# INLINE mintTxBodyL #-}
 
-  mintValueTxBodyF = mintTxBodyL . to (MaryValue 0)
+  mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
 
   mintedTxBodyF = to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (ctbrMint txBodyRaw)))
   {-# INLINE mintedTxBodyF #-}

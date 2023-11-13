@@ -1063,7 +1063,7 @@ txBodyFieldSummary txb = case txb of
   (Txfee c) -> [("Fee", ppCoin c)]
   (Update (SJust _)) -> [("Collateral Return", ppString "?")]
   (ReqSignerHashes x) -> [("Required Signer hashes", ppInt (Set.size x))]
-  (Mint ma) -> [("Mint", ppInteger (Val.size (MaryValue 0 ma)) <> ppString " bytes")]
+  (Mint ma) -> [("Mint", ppInteger (Val.size (MaryValue mempty ma)) <> ppString " bytes")]
   (WppHash (SJust _)) -> [("WppHash", ppString "?")]
   (AdHash (SJust _)) -> [("AdHash", ppString "?")]
   (Txnetworkid (SJust x)) -> [("Network id", ppNetwork x)]
@@ -1143,7 +1143,7 @@ multiAssetSummary (MultiAsset m) = ppString ("num tokens = " ++ show (Map.size m
 
 vSummary :: MaryValue c -> PDoc
 vSummary (MaryValue n ma) =
-  ppSexp "Value" [ppInteger n, multiAssetSummary ma]
+  ppSexp "Value" [ppCoin n, multiAssetSummary ma]
 
 scriptSummary :: forall era. Proof era -> Script era -> PDoc
 scriptSummary p@(Conway _) script = plutusSummary p script
@@ -1337,7 +1337,7 @@ pcValue :: MaryValue c -> PDoc
 pcValue (MaryValue n (MultiAsset m)) =
   ppSexp
     "Value"
-    [ ppInteger n
+    [ ppCoin n
     , -- , ppString ("num tokens = " ++ show (Map.size m))
       ppSet pcPolicyID (Map.keysSet m)
     ]
