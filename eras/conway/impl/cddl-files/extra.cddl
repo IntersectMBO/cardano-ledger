@@ -1,8 +1,12 @@
+; Conway era introduces an optional 258 tag for sets, which will become mandatory in the
+; next era. We recommend all the tooling to account for this future breaking change now,
+; rather than in the next era when it will be enforced.
+
 set<a> = #6.258([* a]) / [* a]
 
 nonempty_set<a> = #6.258([+ a]) / [+ a]
 
-nonempty_oset<a> = #6.258([+ a])
+nonempty_oset<a> = #6.258([+ a]) / [+ a]
 
 positive_int = 1 .. 18446744073709551615
 
