@@ -537,7 +537,7 @@ txBodyPreds sizes p =
           :<-: ( Constr "certsRefunds" certsRefunds
                   ^$ pparams p
                   ^$ stakeDeposits
-                  ^$ drepDeposits
+                  ^$ drepDepositsView
                   ^$ certs
                )
        , txdeposits :<-: (Constr "certsDeposits" certsDeposits ^$ pparams p ^$ regPools ^$ certs)

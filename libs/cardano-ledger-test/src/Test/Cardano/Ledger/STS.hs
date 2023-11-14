@@ -63,6 +63,7 @@ import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Tests
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars hiding (delegations, drepDeposit, rewards)
+import qualified Test.Cardano.Ledger.Constrained.Vars as Vars
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck
@@ -536,7 +537,15 @@ prop_GOVCERT sub =
   stsProperty @"GOVCERT"
     sub
     (\PropEnv {..} -> (pure $ ConwayGovCertEnv pePParams peEpochNo, const []))
-    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) vstateGenPreds vstateCheckPreds vstateT)
+    ( \pe ->
+        genShrinkFromConstraints
+          conwayProof
+          (extendSub pe sub)
+          vstateGenPreds
+          (\p -> (Vars.drepDeposit p :=: Lit CoinR (Coin 7)) : vstateCheckPreds p)
+          vstateT
+    )
+    -- drepDeposit is defined in the PParams stage, which is not used here
     -- TODO: this should eventually be replaced by constraints based generator
     (\PropEnv {..} st -> (genConwayGovCert pePParams st, shrinkConwayGovCert pePParams st))
     $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) vstateCheckPreds vstateT st'
@@ -546,7 +555,14 @@ prop_POOL sub =
   stsProperty @"POOL"
     sub
     (\PropEnv {..} -> (pure $ PoolEnv peSlotNo pePParams, const []))
-    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) pstateGenPreds pstateCheckPreds pstateT)
+    ( \pe ->
+        genShrinkFromConstraints
+          conwayProof
+          (extendSub pe sub)
+          pstateGenPreds
+          pstateCheckPreds
+          pstateT
+    )
     -- TODO: this should eventually be replaced by constraints based generator
     (\PropEnv {..} st -> (genPoolCert peNetwork peEpochNo pePParams st, const []))
     $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) pstateCheckPreds pstateT st'

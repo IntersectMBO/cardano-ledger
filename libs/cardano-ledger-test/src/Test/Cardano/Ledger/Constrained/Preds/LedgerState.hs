@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Constrained.Preds.LedgerState where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (gasDeposit)
+import Cardano.Ledger.DRep (drepDepositL)
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
@@ -91,7 +92,11 @@ ledgerStatePreds usize p =
   , Subset (Rng colUtxo) (colTxoutUniv p)
   , NotMember feeTxIn (Dom colUtxo)
   , NotMember feeTxOut (Rng colUtxo)
-  , SumsTo (Right (Coin 1)) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits, One proposalDeposits, SumMap drepDeposits]
+  , SumsTo
+      (Right (Coin 1))
+      deposits
+      EQL
+      [SumMap stakeDeposits, SumMap poolDeposits, One proposalDeposits, ProjMap CoinR drepDepositL currentDRepState]
   , -- Some things we might want in the future.
     -- , SumsTo (Right (Coin 1)) utxoCoin EQL [ProjMap CoinR outputCoinL (utxo p)]
     -- , SumsTo (Right (Coin 1)) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
