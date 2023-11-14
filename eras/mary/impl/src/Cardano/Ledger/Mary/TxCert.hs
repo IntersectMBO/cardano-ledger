@@ -7,6 +7,7 @@ module Cardano.Ledger.Mary.TxCert () where
 
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Shelley.TxCert (
   EraTxCert (..),
   PoolCert (..),
@@ -15,6 +16,8 @@ import Cardano.Ledger.Shelley.TxCert (
   ShelleyTxCert (..),
   getScriptWitnessShelleyTxCert,
   getVKeyWitnessShelleyTxCert,
+  shelleyTotalDepositsTxCerts,
+  shelleyTotalRefundsTxCerts,
   upgradeShelleyTxCert,
   pattern RegTxCert,
   pattern UnRegTxCert,
@@ -47,6 +50,10 @@ instance Crypto c => EraTxCert (MaryEra c) where
   lookupUnRegStakeTxCert = \case
     UnRegTxCert c -> Just c
     _ -> Nothing
+
+  getTotalDepositsTxCerts = shelleyTotalDepositsTxCerts
+
+  getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
 instance Crypto c => ShelleyEraTxCert (MaryEra c) where
   {-# SPECIALIZE instance ShelleyEraTxCert (MaryEra StandardCrypto) #-}

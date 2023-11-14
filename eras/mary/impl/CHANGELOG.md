@@ -3,6 +3,8 @@
 ## 1.4.0.0
 
 * Switch `MaryValue` field for ADA from `Integer` to `Coin`
+* Make sure that `getConsumedMaryValue` can also handle `DRep` deposits. This is safe for
+  all pre-Conway eras and useful for Conway onwards eras.
 
 ### `testlib`
 

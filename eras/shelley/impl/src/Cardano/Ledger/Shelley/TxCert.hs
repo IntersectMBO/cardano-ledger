@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -65,6 +67,10 @@ module Cardano.Ledger.Shelley.TxCert (
   encodePoolCert,
   encodeGenesisDelegCert,
 
+  -- ** Deposits and Refunds
+  shelleyTotalDepositsTxCerts,
+  shelleyTotalRefundsTxCerts,
+
   -- * Re-exports
   EraTxCert (..),
   pattern RegPoolTxCert,
@@ -101,12 +107,19 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash (..), KeyRole (..), VerKeyVRF, asWitness)
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.TreeDiff (ToExpr)
+import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Foldable (Foldable (..), foldMap', foldl')
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust, isNothing)
+import Data.Monoid (Sum (..))
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 instance Crypto c => EraTxCert (ShelleyEra c) where
@@ -138,6 +151,10 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
   lookupUnRegStakeTxCert = \case
     UnRegTxCert c -> Just c
     _ -> Nothing
+
+  getTotalDepositsTxCerts = shelleyTotalDepositsTxCerts
+
+  getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
 class EraTxCert era => ShelleyEraTxCert era where
   mkRegTxCert :: StakeCredential (EraCrypto era) -> TxCert era
@@ -556,3 +573,65 @@ getVKeyWitnessShelleyTxCert = \case
   ShelleyTxCertPool poolCert -> Just $ poolCertKeyHashWitness poolCert
   ShelleyTxCertGenesisDeleg genesisCert -> Just $ genesisKeyHashWitness genesisCert
   ShelleyTxCertMir {} -> Nothing
+
+-- | Determine the total deposit amount needed from a TxBody.
+-- The block may (legitimately) contain multiple registration certificates
+-- for the same pool, where the first will be treated as a registration and
+-- any subsequent ones as re-registration. As such, we must only take a
+-- deposit for the first such registration. It is even possible for a single
+-- transaction to have multiple pool registration for the same pool, so as
+-- we process pool registrations, we must keep track of those that are already
+-- registered, so we do not add a Deposit for the same pool twice.
+--
+-- Note that this is not an issue for key registrations since subsequent
+-- registration certificates would be invalid.
+shelleyTotalDepositsTxCerts ::
+  (EraPParams era, Foldable f, EraTxCert era) =>
+  PParams era ->
+  -- | Check whether a pool with a supplied PoolStakeId is already registered.
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  f (TxCert era) ->
+  Coin
+shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =
+  numKeys
+    <×> (pp ^. ppKeyDepositL)
+    <+> numNewRegPoolCerts
+    <×> (pp ^. ppPoolDepositL)
+  where
+    numKeys = getSum @Int $ foldMap' (\x -> if isRegStakeTxCert x then 1 else 0) certs
+    numNewRegPoolCerts = Set.size (foldl' addNewPoolIds Set.empty certs)
+    addNewPoolIds regPoolIds = \case
+      RegPoolTxCert (PoolParams {ppId})
+        -- We don't pay a deposit on a pool that is already registered or duplicated in the certs
+        | not (isRegPoolRegistered ppId || Set.member ppId regPoolIds) -> Set.insert ppId regPoolIds
+      _ -> regPoolIds
+
+-- | Compute the key deregistration refunds in a transaction
+shelleyTotalRefundsTxCerts ::
+  (EraPParams era, Foldable f, EraTxCert era) =>
+  PParams era ->
+  -- | Function that can lookup current deposit, in case when the stake key is registered.
+  (StakeCredential (EraCrypto era) -> Maybe Coin) ->
+  f (TxCert era) ->
+  Coin
+shelleyTotalRefundsTxCerts pp lookupDeposit = snd . foldl' accum (mempty, Coin 0)
+  where
+    keyDeposit = pp ^. ppKeyDepositL
+    accum (!regCreds, !totalRefunds) cert =
+      case lookupRegStakeTxCert cert of
+        Just k ->
+          -- Need to track new delegations in case that the same key is later deregistered in
+          -- the same transaction.
+          (Set.insert k regCreds, totalRefunds)
+        Nothing ->
+          case lookupUnRegStakeTxCert cert of
+            Just cred
+              -- We first check if there was already a registration certificate in this
+              -- transaction.
+              | Set.member cred regCreds -> (Set.delete cred regCreds, totalRefunds <+> keyDeposit)
+              -- Check for the deposit left during registration in some previous
+              -- transaction. This de-registration check will be matched first, despite being
+              -- the last case to match, because registration is not possible without
+              -- de-registration.
+              | Just deposit <- lookupDeposit cred -> (regCreds, totalRefunds <+> deposit)
+            _ -> (regCreds, totalRefunds)

@@ -49,7 +49,7 @@ import Cardano.Ledger.Core (
   valueTxOutL,
  )
 import Cardano.Ledger.Credential (Credential, Ptr)
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
+import Cardano.Ledger.DRep (DRep (..), DRepState (..), drepDepositL)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
@@ -283,6 +283,12 @@ dreps = Var $ V "dreps" (MapR VCredR DRepStateR) (Yes NewEpochStateR drepsL)
 
 drepsL :: NELens era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+
+drepDeposits :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Coin)
+drepDeposits = Var $ V "drepDeposits" (MapR VCredR CoinR) (Yes NewEpochStateR drepDepositsL)
+
+drepDepositsL :: NELens era (Map (Credential 'DRepRole (EraCrypto era)) Coin)
+drepDepositsL = drepsL . lens (fmap drepDeposit) (Map.intersectionWith (flip (set drepDepositL)))
 
 committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 committeeState = Var $ V "committeeState" (MapR CommColdCredR (MaybeR CommHotCredR)) (Yes NewEpochStateR committeeStateL)

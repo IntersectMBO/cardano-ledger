@@ -50,7 +50,7 @@ import Lens.Micro
 instance Crypto c => EraUTxO (BabbageEra c) where
   type ScriptsNeeded (BabbageEra c) = AlonzoScriptsNeeded (BabbageEra c)
 
-  getConsumedValue pp lookupKeyDeposit _ = getConsumedMaryValue pp lookupKeyDeposit
+  getConsumedValue = getConsumedMaryValue
 
   getProducedValue = shelleyProducedValue
 

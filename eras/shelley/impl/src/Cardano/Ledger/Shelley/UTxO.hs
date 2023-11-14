@@ -46,10 +46,6 @@ import Cardano.Ledger.Credential (Credential (..), credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (
-  keyCertsRefunds,
-  totalCertsDeposits,
- )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Shelley.TxBody (
@@ -170,9 +166,10 @@ shelleyProducedValue ::
 shelleyProducedValue pp isRegPoolId txBody =
   sumAllValue (txBody ^. outputsTxBodyL)
     <+> Val.inject
-      (txBody ^. feeTxBodyL <+> totalCertsDeposits pp isRegPoolId (txBody ^. certsTxBodyL))
+      (txBody ^. feeTxBodyL <+> getTotalDepositsTxBody pp isRegPoolId txBody)
 
--- | Compute the lovelace which are destroyed by the transaction
+-- | Compute the lovelace which are destroyed by the transaction. This implementation is
+-- suitable for Shelley and Allegra only.
 getConsumedCoin ::
   ShelleyEraTxBody era =>
   PParams era ->
@@ -186,7 +183,7 @@ getConsumedCoin pp lookupRefund (UTxO u) txBody =
     <> refunds
     <> withdrawals
   where
-    refunds = keyCertsRefunds pp lookupRefund (txBody ^. certsTxBodyL)
+    refunds = getTotalRefundsTxBody pp lookupRefund (const Nothing) txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set.Set (ScriptHash (EraCrypto era)))

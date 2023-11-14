@@ -1,7 +1,11 @@
 # Version history for `cardano-ledger-core`
 
-## 1.8.1.0
+## 1.9.0.0
 
+* Add `certsTotalDepositsTxBody` and `certsTotalRefundsTxBody`
+* Add `getTotalDepositsTxBody` and `getTotalRefundsTxBody` to `EraTxBody`. Corresponding
+  functions have been removed from `ShelleyEraTxBody` in favor of the two above
+* Add `getTotalDepositsTxCerts` and `getTotalRefundsTxCerts` to `EraTxCert`
 * Deprecated `Cardano.Ledger.Ap`, since we no longer use this module
 * Moved `Cardano.Ledger.Language` to `Cardano.Ledger.Plutus.Language` with deprecation.
 * Move `ExUnits` and `Prices` from `Cardano.Ledger.Alonzo.Scripts` to new

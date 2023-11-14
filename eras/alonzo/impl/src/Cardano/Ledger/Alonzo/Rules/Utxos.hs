@@ -89,7 +89,6 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
-import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad.Trans.Reader (ReaderT, asks)
@@ -243,13 +242,11 @@ alonzoEvalScriptsTxValid ::
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
-  TRC (UtxoEnv slot pp dpstate genDelegs, u@(UTxOState utxo _ _ pup _ _), tx) <-
+  TRC (UtxoEnv slot pp certState genDelegs, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
       protVer = pp ^. ppProtocolVersionL
-      refunded = getTotalRefundsTxBody pp dpstate txBody
-      depositChange = getTotalDepositsTxBody pp dpstate txBody <-> refunded
-  tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
+
   () <- pure $! traceEvent validBegin ()
 
   scriptsTransition slot pp tx utxo $ \case
@@ -267,7 +264,8 @@ alonzoEvalScriptsTxValid = do
       TRC
         (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
 
-  pure $! updateUTxOState pp u txBody depositChange ppup'
+  updateUTxOState pp utxos txBody certState ppup' $
+    tellEvent . TotalDeposits (hashAnnotated txBody)
 
 alonzoEvalScriptsTxInvalid ::
   forall era.

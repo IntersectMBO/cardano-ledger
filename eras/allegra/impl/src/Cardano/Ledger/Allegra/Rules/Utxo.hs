@@ -60,7 +60,6 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (txup)
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
@@ -163,33 +162,33 @@ utxoTransition ::
   ) =>
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _ _ ppup _ _ = u
-  let txb = tx ^. bodyTxL
+  TRC (Shelley.UtxoEnv slot pp certState genDelegs, utxos, tx) <- judgmentContext
+  let Shelley.UTxOState utxo _ _ ppup _ _ = utxos
+  let txBody = tx ^. bodyTxL
 
   {- ininterval slot (txvld tx) -}
-  runTest $ validateOutsideValidityIntervalUTxO slot txb
+  runTest $ validateOutsideValidityIntervalUTxO slot txBody
 
   {- txins txb ≠ ∅ -}
   -- runValidationTransMaybe fromShelleyFailure $ Shelley.validateInputSetEmptyUTxO txb
-  runTest $ Shelley.validateInputSetEmptyUTxO txb
+  runTest $ Shelley.validateInputSetEmptyUTxO txBody
 
   {- minfee pp tx ≤ txfee txb -}
   runTest $ Shelley.validateFeeTooSmallUTxO pp tx
 
   {- txins txb ⊆ dom utxo -}
-  runTest $ Shelley.validateBadInputsUTxO utxo $ txb ^. inputsTxBodyL
+  runTest $ Shelley.validateBadInputsUTxO utxo $ txBody ^. inputsTxBodyL
 
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTest $ Shelley.validateWrongNetwork netId . toList $ txb ^. outputsTxBodyL
+  runTest $ Shelley.validateWrongNetwork netId . toList $ txBody ^. outputsTxBodyL
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
-  runTest $ Shelley.validateWrongNetworkWithdrawal netId txb
+  runTest $ Shelley.validateWrongNetworkWithdrawal netId txBody
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo dpstate txb
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo certState txBody
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
@@ -198,7 +197,7 @@ utxoTransition = do
   {- adaPolicy ∉ supp mint tx
      above check not needed because mint field of type MultiAsset cannot contain ada -}
 
-  let outputs = txouts txb
+  let outputs = txouts txBody
   {- ∀ txout ∈ txouts txb, getValue txout ≥ inject (scaledMinDeposit v (minUTxOValue pp)) -}
   runTest $ validateOutputTooSmallUTxO pp outputs
 
@@ -212,10 +211,8 @@ utxoTransition = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx
 
-  let refunded = getTotalRefundsTxBody pp dpstate txb
-  let depositChange = getTotalDepositsTxBody pp dpstate txb Val.<-> refunded
-  tellEvent $ TotalDeposits (hashAnnotated txb) depositChange
-  pure $! Shelley.updateUTxOState pp u txb depositChange ppup'
+  Shelley.updateUTxOState pp utxos txBody certState ppup' $
+    tellEvent . TotalDeposits (hashAnnotated txBody)
 
 -- | Ensure the transaction is within the validity window.
 --

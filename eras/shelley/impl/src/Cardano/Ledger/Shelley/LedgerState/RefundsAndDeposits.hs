@@ -23,13 +23,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (StakeCredential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..), ShelleyEraTxCert)
-import Cardano.Ledger.Val ((<+>), (<×>))
-import Data.Foldable (Foldable (..), foldMap', foldl')
+import Cardano.Ledger.Shelley.TxCert (shelleyTotalDepositsTxCerts, shelleyTotalRefundsTxCerts)
 import qualified Data.Map.Strict as Map
-import Data.Monoid (Sum (..))
-import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
 -- | Determine the total deposit amount needed from a TxBody.
@@ -50,19 +46,8 @@ totalCertsDeposits ::
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   f (TxCert era) ->
   Coin
-totalCertsDeposits pp isRegPool certs =
-  numKeys
-    <×> (pp ^. ppKeyDepositL)
-    <+> numNewRegPoolCerts
-    <×> (pp ^. ppPoolDepositL)
-  where
-    numKeys = getSum @Int $ foldMap' (\x -> if isRegStakeTxCert x then 1 else 0) certs
-    numNewRegPoolCerts = Set.size (foldl' addNewPoolIds Set.empty certs)
-    addNewPoolIds regPoolIds = \case
-      RegPoolTxCert (PoolParams {ppId})
-        -- We don't pay a deposit on a pool that is already registered or duplicated in the certs
-        | not (isRegPool ppId || Set.member ppId regPoolIds) -> Set.insert ppId regPoolIds
-      _ -> regPoolIds
+totalCertsDeposits = shelleyTotalDepositsTxCerts
+{-# DEPRECATED totalCertsDeposits "In favor of `shelleyTotalDepositsTxCerts` or more general `getTotalDepositsTxCerts`" #-}
 
 totalCertsDepositsCertState ::
   (EraPParams era, Foldable f, ShelleyEraTxCert era) =>
@@ -72,6 +57,7 @@ totalCertsDepositsCertState ::
   Coin
 totalCertsDepositsCertState pp dpstate =
   totalCertsDeposits pp (`Map.member` psStakePoolParams (certPState dpstate))
+{-# DEPRECATED totalCertsDepositsCertState "In favor of `shelleyTotalDepositsTxCerts` or more general `getTotalDepositsTxCerts`" #-}
 
 -- | Calculates the total amount of deposits needed for all pool registration and
 -- stake delegation certificates to be valid.
@@ -83,6 +69,7 @@ totalTxDepositsShelley ::
   Coin
 totalTxDepositsShelley pp dpstate txb =
   totalCertsDepositsCertState pp dpstate (txb ^. certsTxBodyL)
+{-# DEPRECATED totalTxDepositsShelley "In favor of `shelleyTotalDepositsTxCerts` or more general `Cardano.Ledger.CertState.certsTotalDepositsTxCerts`" #-}
 
 {-# DEPRECATED totalTxDeposits "Use totalTxDepositsShelley or getTotalDepositsTxBody instead" #-}
 totalTxDeposits ::
@@ -101,6 +88,7 @@ keyCertsRefundsCertState ::
   f (TxCert era) ->
   Coin
 keyCertsRefundsCertState pp dpstate = keyCertsRefunds pp (lookupDepositDState (certDState dpstate))
+{-# DEPRECATED keyCertsRefundsCertState "In favor of `shelleyTotalRefundsTxCerts` or more general `getTotalRefundsTxCerts`" #-}
 
 -- | Compute the key deregistration refunds in a transaction
 keyCertsRefunds ::
@@ -110,27 +98,8 @@ keyCertsRefunds ::
   (StakeCredential (EraCrypto era) -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
-keyCertsRefunds pp lookupDeposit certs = snd (foldl' accum (mempty, Coin 0) certs)
-  where
-    keyDeposit = pp ^. ppKeyDepositL
-    accum (!regKeys, !totalRefunds) cert =
-      case lookupRegStakeTxCert cert of
-        Just k ->
-          -- Need to track new delegations in case that the same key is later deregistered in
-          -- the same transaction.
-          (Set.insert k regKeys, totalRefunds)
-        Nothing ->
-          case lookupUnRegStakeTxCert cert of
-            Just k
-              -- We first check if there was already a registration certificate in this
-              -- transaction.
-              | Set.member k regKeys -> (Set.delete k regKeys, totalRefunds <+> keyDeposit)
-              -- Check for the deposit left during registration in some previous
-              -- transaction. This de-registration check will be matched first, despite being
-              -- the last case to match, because registration is not possible without
-              -- de-registration.
-              | Just deposit <- lookupDeposit k -> (regKeys, totalRefunds <+> deposit)
-            _ -> (regKeys, totalRefunds)
+keyCertsRefunds = shelleyTotalRefundsTxCerts
+{-# DEPRECATED keyCertsRefunds "In favor of `shelleyTotalRefundsTxCerts` or more general `getTotalRefundsTxCerts`" #-}
 
 -- | Compute the refunds attributable to unregistering Stake credentials in a TxBody
 totalTxRefundsShelley ::
@@ -140,3 +109,4 @@ totalTxRefundsShelley ::
   TxBody era ->
   Coin
 totalTxRefundsShelley pp dpstate tx = keyCertsRefundsCertState pp dpstate (tx ^. certsTxBodyL)
+{-# DEPRECATED totalTxRefundsShelley "In favor of `shelleyTotalRefundsTxCerts` or more general `Cardano.Ledger.CertState.certsTotalRefundssTxCerts`" #-}

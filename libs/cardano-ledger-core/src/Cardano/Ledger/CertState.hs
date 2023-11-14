@@ -33,6 +33,8 @@ module Cardano.Ledger.CertState (
   obligationCertState,
   Obligations (..),
   sumObligation,
+  certsTotalDepositsTxBody,
+  certsTotalRefundsTxBody,
   -- Lenses
   certDStateL,
   certPStateL,
@@ -471,16 +473,18 @@ data Obligations = Obligations
   , oblProposal :: !Coin
   }
 
--- | Calculate total possible refunds in the system. There is an invariant that
---   the sum of all the fields should be the same as the utxosDeposited field of the UTxOState. Note that
---   this does not depend upon the current values of the Key and Pool deposits of the PParams.
+-- | Calculate total possible refunds in the system that are related to certificates
+--
+-- There is an invariant that the sum of all the fields should be the same as the
+-- utxosDeposited field of the UTxOState. Note that this does not depend upon the current
+-- values of the Key and Pool deposits of the PParams.
 obligationCertState :: CertState era -> Obligations
-obligationCertState (CertState VState {vsDReps = dreps} PState {psDeposits = stakePools} DState {dsUnified = umap}) =
-  let accum ans drepstate = ans <> drepDeposit drepstate
+obligationCertState (CertState VState {vsDReps} PState {psDeposits} DState {dsUnified}) =
+  let accum ans drepState = ans <> drepDeposit drepState
    in Obligations
-        { oblStake = UM.fromCompact (UM.sumDepositUView (RewDepUView umap))
-        , oblPool = foldl' (<>) (Coin 0) stakePools
-        , oblDRep = foldl' accum (Coin 0) dreps
+        { oblStake = UM.fromCompact (UM.sumDepositUView (RewDepUView dsUnified))
+        , oblPool = foldl' (<>) (Coin 0) psDeposits
+        , oblDRep = foldl' accum (Coin 0) vsDReps
         , oblProposal = Coin 0
         }
 
@@ -508,6 +512,22 @@ instance Show Obligations where
       , "   DRep deposits = " ++ show (oblDRep x)
       , "   Proposal deposits = " ++ show (oblProposal x)
       ]
+
+-- | Compute the total deposits from the Certs of a TxBody.
+--
+-- This is the contribution of a TxBody towards the deposit pot (utxosDeposit field of
+-- the UTxOState) of the system
+certsTotalDepositsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
+certsTotalDepositsTxBody pp CertState {certPState} =
+  getTotalDepositsTxBody pp (`Map.member` psStakePoolParams certPState)
+
+-- | Compute the total refunds from the Certs of a TxBody.
+--
+-- This is the contribution of a TxBody towards the total 'Obligations' of the system
+-- See `Obligations` and `obligationCertState` for more information.
+certsTotalRefundsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
+certsTotalRefundsTxBody pp CertState {certDState, certVState} =
+  getTotalRefundsTxBody pp (lookupDepositDState certDState) (lookupDepositVState certVState)
 
 -- =====================================================
 

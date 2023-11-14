@@ -19,6 +19,12 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
 where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, TxIx)
+import Cardano.Ledger.CertState (
+  CertState (..),
+  lookupDepositDState,
+  lookupDepositVState,
+  psStakePoolParams,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
@@ -29,11 +35,6 @@ import Cardano.Ledger.Shelley.API (
   KeyRole (..),
   Ptr (..),
   ShelleyDELPL,
- )
-import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
-  keyCertsRefundsCertState,
-  totalCertsDepositsCertState,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -63,8 +64,6 @@ import Data.List (partition)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Proxy (Proxy (..))
-import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
@@ -204,11 +203,12 @@ genTxCerts ::
   TxIx ->
   AccountState ->
   Gen
-    ( StrictSeq (TxCert era)
+    ( [TxCert era]
     , Coin
     , Coin
     , CertState era
-    , ([KeyPair 'Witness (EraCrypto era)], [(Core.Script era, Core.Script era)])
+    , [KeyPair 'Witness (EraCrypto era)]
+    , [(Core.Script era, Core.Script era)]
     )
 genTxCerts
   ge@( GenEnv
@@ -216,13 +216,13 @@ genTxCerts
         _scriptspace
         Constants {maxCertsPerTx}
       )
-  pparams
-  dpState
+  pp
+  certState@CertState {certDState, certVState, certPState}
   slot
   txIx
   acnt = do
-    let env = (slot, txIx, pparams, acnt)
-        st0 = (dpState, minBound)
+    let env = (slot, txIx, pp, acnt)
+        st0 = (certState, minBound)
 
     certsTrace <-
       QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0
@@ -232,16 +232,25 @@ genTxCerts
         (certs, creds) = unzip certsCreds
         (scriptCreds, keyCreds) = partition isScript creds
         keyCreds' = concat (keyCreds : map scriptWitnesses scriptCreds)
-        refunds = keyCertsRefundsCertState pparams dpState certs
+
+        refunds =
+          getTotalRefundsTxCerts
+            pp
+            (lookupDepositDState certDState)
+            (lookupDepositVState certVState)
+            certs
+
+        deposits = getTotalDepositsTxCerts pp (`Map.member` psStakePoolParams certPState) certs
+
+        certWits = concat (keyCredAsWitness <$> keyCreds')
+        certScripts = extractScriptCred <$> scriptCreds
     pure
-      ( StrictSeq.fromList certs
-      , totalCertsDepositsCertState pparams dpState certs
+      ( certs
+      , deposits
       , refunds
       , lastState_
-      ,
-        ( concat (keyCredAsWitness <$> keyCreds')
-        , extractScriptCred <$> scriptCreds
-        )
+      , certWits
+      , certScripts
       )
     where
       isScript (ScriptCred _) = True

@@ -26,6 +26,12 @@ import Cardano.Ledger.Block (
   Block (..),
   bbody,
  )
+import Cardano.Ledger.CertState (
+  CertState (..),
+  DState (..),
+  certsTotalDepositsTxBody,
+  certsTotalRefundsTxBody,
+ )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -34,8 +40,6 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Internal (compareAdaPots)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -290,9 +294,9 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
         ++ "\ncerts:"
         ++ showListy (("   " ++) . synopsisCert) (toList $ tx ^. bodyTxL . certsTxBodyL)
         ++ "total deposits "
-        ++ show (getTotalDepositsTxBody currPP oldCertState (tx ^. bodyTxL))
+        ++ show (certsTotalDepositsTxBody currPP oldCertState (tx ^. bodyTxL))
         ++ "\ntotal refunds "
-        ++ show (getTotalRefundsTxBody currPP oldCertState (tx ^. bodyTxL))
+        ++ show (certsTotalRefundsTxBody currPP oldCertState (tx ^. bodyTxL))
 
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
@@ -470,16 +474,16 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         (failedScripts .||. ediffEq created consumed_)
       where
         failedScripts = property $ hasFailedScripts tx
-        LedgerState (UTxOState {utxosUtxo = u}) dpstate = ledgerSt
+        LedgerState (UTxOState {utxosUtxo = u}) certState = ledgerSt
         LedgerState (UTxOState {utxosUtxo = u'}) _ = ledgerSt'
         txb = tx ^. bodyTxL
         created =
           coinBalance u'
             <+> (txb ^. feeTxBodyL)
-            <+> getTotalDepositsTxBody pp_ dpstate txb
+            <+> certsTotalDepositsTxBody pp_ certState txb
         consumed_ =
           coinBalance u
-            <+> getTotalRefundsTxBody pp_ dpstate txb
+            <+> certsTotalRefundsTxBody pp_ certState txb
             <+> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
@@ -487,7 +491,6 @@ preserveBalanceRestricted ::
   forall era ledger.
   ( ChainProperty era
   , TestingLedger era ledger
-  , ShelleyEraTxBody era
   , EraSegWits era
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -503,7 +506,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
 
     createdIsConsumed
       SourceSignalTarget
-        { source = LedgerState (UTxOState {utxosUtxo = UTxO u}) dpstate
+        { source = LedgerState (UTxOState {utxosUtxo = UTxO u}) certState
         , signal = tx
         } =
         inps === outs
@@ -511,13 +514,12 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
           txb = tx ^. bodyTxL
           inps =
             coinBalance @era (UTxO (Map.restrictKeys u (txb ^. inputsTxBodyL)))
-              <> getTotalRefundsTxBody pp_ dpstate txb
+              <> certsTotalRefundsTxBody pp_ certState txb
               <> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
           outs =
             coinBalance (txouts @era txb)
-              <> txb
-                ^. feeTxBodyL
-              <> getTotalDepositsTxBody pp_ dpstate txb
+              <> (txb ^. feeTxBodyL)
+              <> certsTotalDepositsTxBody pp_ certState txb
 
 preserveOutputsTx ::
   forall era ledger.

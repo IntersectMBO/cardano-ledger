@@ -58,6 +58,7 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
+import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs)
@@ -95,6 +96,7 @@ import Cardano.Ledger.UTxO (
   balance,
   txouts,
  )
+import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq
 import Control.Monad.Trans.Reader (asks)
@@ -407,8 +409,8 @@ utxoInductive ::
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp dpstate genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo _ _ ppup _ _ = u
+  TRC (UtxoEnv slot pp certState genDelegs, utxos, tx) <- judgmentContext
+  let UTxOState utxo _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
 
@@ -433,7 +435,7 @@ utxoInductive = do
   runTest $ validateWrongNetworkWithdrawal netId txBody
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ validateValueNotConservedUTxO pp utxo dpstate txBody
+  runTest $ validateValueNotConservedUTxO pp utxo certState txBody
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
@@ -447,11 +449,8 @@ utxoInductive = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
 
-  let refunded = getTotalRefundsTxBody pp dpstate txBody
-  let totalDeposits' = getTotalDepositsTxBody pp dpstate txBody
-  let depositChange = totalDeposits' Val.<-> refunded
-  tellEvent $ TotalDeposits (hashAnnotated txBody) depositChange
-  pure $! updateUTxOState pp u txBody depositChange ppup'
+  updateUTxOState pp utxos txBody certState ppup' $
+    tellEvent . TotalDeposits (hashAnnotated txBody)
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).
@@ -610,30 +609,42 @@ validateMaxTxSizeUTxO pp tx =
     maxTxSize = toInteger (pp ^. ppMaxTxSizeL)
     txSize = tx ^. sizeTxF
 
+-- | This monadic action captures the final stages of the UTXO(S) rule. In particular it
+-- applies all of the UTxO related aditions and removals, gathers all of the fees into the
+-- fee pot `utxosFees` and updates the `utxosDeposited` field. Continuation supplied will
+-- be called on the @deposit - refund@ change, which is normally used to emit the
+-- `TotalDeposits` event.
 updateUTxOState ::
-  EraTxBody era =>
+  (EraTxBody era, Monad m) =>
   PParams era ->
   UTxOState era ->
   TxBody era ->
-  Coin ->
+  CertState era ->
   GovState era ->
-  UTxOState era
-updateUTxOState pp UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr, utxosDonation} txb depositChange govState =
-  let UTxO utxo = utxosUtxo
-      !utxoAdd = txouts txb -- These will be inserted into the UTxO
+  (Coin -> m ()) ->
+  m (UTxOState era)
+updateUTxOState pp utxos txBody certState govState depositChangeEvent = do
+  let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr, utxosDonation} = utxos
+      UTxO utxo = utxosUtxo
+      !utxoAdd = txouts txBody -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
-      !(utxoWithout, utxoDel) = extractKeys utxo (txb ^. inputsTxBodyL)
+      !(utxoWithout, utxoDel) = extractKeys utxo (txBody ^. inputsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
       newIncStakeDistro = updateStakeDistribution pp utxosStakeDistr (UTxO utxoDel) utxoAdd
-   in UTxOState
-        { utxosUtxo = UTxO newUTxO
-        , utxosDeposited = utxosDeposited <> depositChange
-        , utxosFees = utxosFees <> txb ^. feeTxBodyL
-        , utxosGovState = govState
-        , utxosStakeDistr = newIncStakeDistro
-        , utxosDonation = utxosDonation
-        }
+      totalRefunds = certsTotalRefundsTxBody pp certState txBody
+      totalDeposits = certsTotalDepositsTxBody pp certState txBody
+      depositChange = totalDeposits <-> totalRefunds
+  depositChangeEvent depositChange
+  pure $!
+    UTxOState
+      { utxosUtxo = UTxO newUTxO
+      , utxosDeposited = utxosDeposited <> depositChange
+      , utxosFees = utxosFees <> txBody ^. feeTxBodyL
+      , utxosGovState = govState
+      , utxosStakeDistr = newIncStakeDistro
+      , utxosDonation = utxosDonation
+      }
 
 instance
   ( Era era

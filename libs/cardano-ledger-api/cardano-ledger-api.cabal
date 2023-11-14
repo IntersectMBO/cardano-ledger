@@ -59,7 +59,7 @@ library
         cardano-ledger-babbage >=1.1,
         cardano-ledger-binary >=1.0,
         cardano-ledger-conway >=1.10,
-        cardano-ledger-core >=1.8.1 && <1.9,
+        cardano-ledger-core >=1.8.1 && <1.10,
         cardano-ledger-mary >=1.1,
         cardano-ledger-shelley >=1.7,
         cardano-slotting,

@@ -62,7 +62,7 @@ deriving instance (Era era, Show (TxCert era)) => Show (AlonzoScriptsNeeded era)
 instance Crypto c => EraUTxO (AlonzoEra c) where
   type ScriptsNeeded (AlonzoEra c) = AlonzoScriptsNeeded (AlonzoEra c)
 
-  getConsumedValue pp lookupKeyDeposit _ = getConsumedMaryValue pp lookupKeyDeposit
+  getConsumedValue = getConsumedMaryValue
 
   getProducedValue = shelleyProducedValue
 

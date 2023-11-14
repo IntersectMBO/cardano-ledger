@@ -69,6 +69,7 @@ import Cardano.Ledger.BaseTypes (
   TxIx (..),
   textToUrl,
  )
+import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
@@ -425,8 +426,8 @@ fixupFees tx = do
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
   let
-    deposits = getTotalDepositsTxBody pp certState (tx ^. bodyTxL)
-    refunds = getTotalRefundsTxBody pp certState (tx ^. bodyTxL)
+    deposits = certsTotalDepositsTxBody pp certState (tx ^. bodyTxL)
+    refunds = certsTotalRefundsTxBody pp certState (tx ^. bodyTxL)
     outputsTotalCoin = sumAllCoin $ tx ^. bodyTxL . outputsTxBodyL
     remainingCoin = impRootTxCoin <-> (outputsTotalCoin <+> deposits <-> refunds)
     remainingTxOut =

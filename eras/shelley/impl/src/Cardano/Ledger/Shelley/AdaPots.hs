@@ -21,6 +21,8 @@ import Cardano.Ledger.CertState (
   CertState (..),
   DState (..),
   PState (..),
+  certsTotalDepositsTxBody,
+  certsTotalRefundsTxBody,
   rewards,
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -147,7 +149,7 @@ consumedTxBody ::
 consumedTxBody txBody pp dpstate (UTxO u) =
   Consumed
     { conInputs = coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
-    , conRefunds = getTotalRefundsTxBody pp dpstate txBody
+    , conRefunds = certsTotalRefundsTxBody pp dpstate txBody
     , conWithdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
     }
 
@@ -162,5 +164,5 @@ producedTxBody txBody pp dpstate =
   Produced
     { proOutputs = coinBalance (txouts txBody)
     , proFees = txBody ^. feeTxBodyL
-    , proDeposits = getTotalDepositsTxBody pp dpstate txBody
+    , proDeposits = certsTotalDepositsTxBody pp dpstate txBody
     }
