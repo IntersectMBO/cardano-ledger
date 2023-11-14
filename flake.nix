@@ -157,15 +157,15 @@
             ({pkgs, ...}:
               lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
                 packages.set-algebra.components.tests.tests.buildable = lib.mkForce false;
-                packages.plutus-preprocessor.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-shelley.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-allegra.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-mary.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-alonzo.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-babbage.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-conway.package.buildable = lib.mkForce false;
-                packages.cardano-protocol-tpraos.package.buildable = lib.mkForce false;
+                packages.plutus-preprocessor.buildable = lib.mkForce false;
+                packages.cardano-ledger-test.buildable = lib.mkForce false;
+                packages.cardano-ledger-shelley.buildable = lib.mkForce false;
+                packages.cardano-ledger-allegra.buildable = lib.mkForce false;
+                packages.cardano-ledger-mary.buildable = lib.mkForce false;
+                packages.cardano-ledger-alonzo.buildable = lib.mkForce false;
+                packages.cardano-ledger-babbage.buildable = lib.mkForce false;
+                packages.cardano-ledger-conway.buildable = lib.mkForce false;
+                packages.cardano-protocol-tpraos.buildable = lib.mkForce false;
               })
           ];
         });
