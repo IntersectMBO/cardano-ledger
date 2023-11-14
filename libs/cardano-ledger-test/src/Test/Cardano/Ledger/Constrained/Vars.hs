@@ -28,13 +28,10 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
-import Cardano.Ledger.Pretty (ppString)
-
--- import Cardano.Ledger.BaseTypes (Globals(..),EpochNo(..))
 import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL, ppGovActionDepositL)
 import Cardano.Ledger.Core (
   EraPParams,
   PParams,
@@ -66,6 +63,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
+import Cardano.Ledger.Pretty (ppString)
 import Cardano.Ledger.SafeHash (SafeHash)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
@@ -1129,6 +1127,24 @@ keyDepAmt p =
       "keyDepAmt"
       CoinR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppKeyDepositL)))
+
+drepDepAmt :: ConwayEraPParams era => Proof era -> Term era Coin
+drepDepAmt p =
+  Var $
+    pV
+      p
+      "drepDepAmt"
+      CoinR
+      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
+
+proposalDepAmt :: ConwayEraPParams era => Proof era -> Term era Coin
+proposalDepAmt p =
+  Var $
+    pV
+      p
+      "proposalDepAmt"
+      CoinR
+      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppGovActionDepositL)))
 
 maxTxExUnits :: AlonzoEraPParams era => Proof era -> Term era ExUnits
 maxTxExUnits p =

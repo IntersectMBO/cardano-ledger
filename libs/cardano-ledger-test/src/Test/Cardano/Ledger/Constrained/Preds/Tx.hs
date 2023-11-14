@@ -106,7 +106,6 @@ import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), protocolVersi
 import Test.Cardano.Ledger.Generic.PrettyCore (
   pcGenDelegPair,
   pcKeyHash,
-  pcNewEpochState,
   pcScript,
   pcScriptHash,
   pcTxBody,
@@ -811,7 +810,7 @@ demoTxNes :: IO ()
 demoTxNes = do
   let proof = Conway Standard
   (nes, _tx, env) <- generate $ genTxAndNewEpoch def proof
-  putStrLn (show (pcNewEpochState proof nes))
+  putStrLn (show (psNewEpochState proof nes))
   goRepl proof env ""
 
 -- ================================================================

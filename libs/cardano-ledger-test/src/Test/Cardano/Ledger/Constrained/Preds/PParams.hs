@@ -128,8 +128,9 @@ pParamsPreds p =
             [ extract (maxTxExUnits p) (pparams p)
             , extract (collateralPercentage p) (pparams p)
             , extract (drepDeposit p) (pparams p)
-            , extract (drepDeposit p) (pparams p)
             , extract (drepActivity p) (pparams p)
+            , extract (drepDepAmt p) (pparams p)
+            , extract (proposalDepAmt p) (pparams p)
             ]
        )
 
