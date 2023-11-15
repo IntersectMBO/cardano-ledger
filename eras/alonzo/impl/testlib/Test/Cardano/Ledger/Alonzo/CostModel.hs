@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Test.Cardano.Ledger.Alonzo.CostModel (
   freeCostModel,
   costModelParamsCount,
@@ -14,13 +12,12 @@ import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
-import PlutusPrelude (enumerate)
 
 costModelParamsCount :: Language -> Int
 costModelParamsCount lang = case lang of
-  PlutusV1 -> length (enumerate @PV1.ParamName)
-  PlutusV2 -> length (enumerate @PV2.ParamName)
-  PlutusV3 -> length (enumerate @PV3.ParamName)
+  PlutusV1 -> length ([minBound .. maxBound] :: [PV1.ParamName])
+  PlutusV2 -> length ([minBound .. maxBound] :: [PV2.ParamName])
+  PlutusV3 -> length ([minBound .. maxBound] :: [PV3.ParamName])
 
 -- | A cost model that sets everything as being free
 freeCostModel :: Language -> CostModel

@@ -83,7 +83,6 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Data.ByteString as BS (ByteString)
 import qualified Data.Map.Strict as Map
-import Data.SatInt (SatInt, fromSatInt)
 import Data.Text (Text)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -93,8 +92,8 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
+import PlutusLedgerApi.V1 (SatInt, fromSatInt)
 import qualified PlutusLedgerApi.V1 as PV1
-import PlutusLedgerApi.V1.Contexts ()
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 

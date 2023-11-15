@@ -107,7 +107,6 @@ import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
-import PlutusPrelude (enumerate)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
@@ -144,14 +143,14 @@ freeCostModelV1 :: CostModel
 freeCostModelV1 =
   fromRight (error "corrupt freeCostModelV1") $
     mkCostModel PlutusV1 $
-      0 <$ (enumerate @PV1.ParamName)
+      0 <$ ([minBound .. maxBound] :: [PV1.ParamName])
 
 -- | A cost model that sets everything as being free
 freeCostModelV2 :: CostModel
 freeCostModelV2 =
   fromRight (error "corrupt freeCostModelV2") $
     mkCostModel PlutusV1 $
-      0 <$ (enumerate @PV2.ParamName)
+      0 <$ ([minBound .. maxBound] :: [PV2.ParamName])
 
 someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
 someKeys _pf = KeyPair vk sk

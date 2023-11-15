@@ -124,7 +124,6 @@ library testlib
         cardano-crypto-class,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
-        plutus-core,
         data-default-class,
         microlens,
         text
