@@ -96,14 +96,14 @@
           # tools we want in our shell, from hackage
           shell.tools =
             {
-              cabal = "3.10.1.0";
+              cabal = "3.10.2.1";
               ghcid = "0.8.9";
             }
             // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
               # tools that work only with default compiler
               fourmolu = "0.14.0.0";
               hlint = "3.6.1";
-              haskell-language-server = { src = nixpkgs.haskell-nix.sources."hls-2.2"; };
+              haskell-language-server = "2.4.0.0";
             };
 
           # and from nixpkgs or other inputs
