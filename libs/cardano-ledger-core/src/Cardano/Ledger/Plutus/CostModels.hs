@@ -53,7 +53,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Plutus.Language (Language (..), mkLanguageEnum, nonNativeLanguages)
 import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..))
-import Control.DeepSeq (NFData (..), deepseq, rwhnf)
+import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (forM, when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
 import Data.Aeson (
@@ -71,7 +71,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text as T (Text)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..), allNoThunks)
+import NoThunks.Class (NoThunks (..))
 import PlutusLedgerApi.Common (CostModelApplyWarn, showParamName)
 import qualified PlutusLedgerApi.V1 as PV1 (
   CostModelApplyError (..),
@@ -299,14 +299,7 @@ instance Ord CostModelError where
 instance ToExpr CostModelError where
   toExpr (CostModelError x1) = toExpr (show x1)
 
-instance NoThunks PV1.CostModelApplyError where
-  showTypeOf _ = "CostModelApplyError"
-  wNoThunks _ctxt _error = allNoThunks []
-
 instance NoThunks CostModelError
-
-instance NFData PV1.CostModelApplyError where
-  rnf = rwhnf
 
 instance NFData CostModelError
 
