@@ -622,11 +622,8 @@ tests_STS =
   withResource genUniverse (const $ pure ()) $ \io_subst ->
     testGroup
       "STS property tests"
-      [ -- testProperty "prop_GOVCERT" $ idempotentIOProperty (prop_GOVCERT <$> io_subst),
-        -- I can't get this to work with the current vstatePreds
-        -- Vstate preds depends upon drepDeposit which is defined in the PParams stage
-        -- AND it "Failed to find: drepStateSet in env"
-        testProperty "prop_POOL" $ idempotentIOProperty (prop_POOL <$> io_subst)
+      [ testProperty "prop_GOVCERT" $ idempotentIOProperty (prop_GOVCERT <$> io_subst)
+      , testProperty "prop_POOL" $ idempotentIOProperty (prop_POOL <$> io_subst)
       , testProperty "prop_DELEG" $ idempotentIOProperty (prop_DELEG <$> io_subst)
       , testProperty "prop_ENACT" $ idempotentIOProperty (prop_ENACT <$> io_subst)
       , testProperty "prop_RATIFY" $ idempotentIOProperty (prop_RATIFY <$> io_subst)

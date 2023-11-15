@@ -1128,21 +1128,18 @@ keyDepAmt p =
       CoinR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppKeyDepositL)))
 
-drepDepAmt :: ConwayEraPParams era => Proof era -> Term era Coin
-drepDepAmt p =
-  Var $
-    pV
-      p
-      "drepDepAmt"
-      CoinR
-      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
+drepActivity :: ConwayEraPParams era => Proof era -> Term era EpochNo
+drepActivity p = Var $ pV p "drepActivty" EpochR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
 
-proposalDepAmt :: ConwayEraPParams era => Proof era -> Term era Coin
-proposalDepAmt p =
+drepDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
+drepDeposit p = Var $ pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
+
+proposalDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
+proposalDeposit p =
   Var $
     pV
       p
-      "proposalDepAmt"
+      "proposalDeposit"
       CoinR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppGovActionDepositL)))
 
@@ -1163,12 +1160,6 @@ collateralPercentage p =
       "collateralPercentage"
       NaturalR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppCollateralPercentageL)))
-
-drepDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
-drepDeposit p = Var $ pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
-
-drepActivity :: ConwayEraPParams era => Proof era -> Term era EpochNo
-drepActivity p = Var $ pV p "drepActivty" EpochR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
 
 maxEpoch :: Era era => Proof era -> Term era EpochNo
 maxEpoch p =

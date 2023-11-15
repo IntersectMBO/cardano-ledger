@@ -56,14 +56,25 @@ manyCoin size = do
 vstatePreds :: Era era => Proof era -> [Pred era]
 vstatePreds p = vstateGenPreds p ++ vstateCheckPreds p
 
-vstateGenPreds :: Era era => Proof era -> [Pred era]
+vstateGenPreds :: forall era. Era era => Proof era -> [Pred era]
 vstateGenPreds p = case whichPParams p of
   PParamsConwayToConway ->
-    [ Sized (Range 10 20) currentDRepState
+    [ MetaSize (SzRng 5 15) currentDRepStateSize
+    , Sized currentDRepStateSize currentDRepState
     , Sized (Range 5 7) (Dom committeeState)
     , Subset (Dom currentDRepState) voteUniv
     , Subset (Dom committeeState) voteCredUniv
-    , Random numDormantEpochs
+    , Sized (Range 0 5) numDormantEpochs
+    , ForEach
+        currentDRepStateSize
+        drepStateList
+        (Pat DRepStateR [Arg expire, Arg anchor, Arg deposit])
+        [ Random (fieldToTerm anchor)
+        , GenFrom (fieldToTerm expire) (Constr "+200To500" (\(EpochNo n) -> EpochNo <$> choose (n + 200, n + 500)) ^$ currentEpoch)
+        , drepDeposit p :=: (fieldToTerm deposit)
+        ]
+    , drepStateList :=: (Elems currentDRepState)
+    , SumsTo (Left (Coin 1)) totalDRepDeposit EQL [ProjMap CoinR drepDepositL currentDRepState]
     ]
   _ ->
     [ Sized (Range 0 0) currentDRepState
@@ -71,29 +82,16 @@ vstateGenPreds p = case whichPParams p of
     , Lit EpochR (EpochNo 0) :=: numDormantEpochs
     , Random currentDRepState
     ]
-
-vstateCheckPreds :: forall era. Era era => Proof era -> [Pred era]
-vstateCheckPreds p = case whichPParams p of
-  PParamsConwayToConway ->
-    [ ForEach
-        (Range 25 25) -- It is possible we create duplicates, so we make a few more than 20 (the size of drepState)
-        drepStateSet
-        (Pat DRepStateR [Arg expire, Arg anchor, Arg deposit])
-        [ Random (fieldToTerm anchor)
-        , GenFrom (fieldToTerm expire) (Constr "+200To500" (\(EpochNo n) -> EpochNo <$> choose (n + 200, n + 500)) ^$ currentEpoch)
-        , drepDeposit p :=: (fieldToTerm deposit)
-        ]
-    , Subset (Rng currentDRepState) drepStateSet
-    , SumsTo (Right (Coin 1)) totalDRepDeposit EQL [ProjMap CoinR drepDepositL currentDRepState]
-    , SumsTo (Left (Coin 1)) totalDRepDeposit EQL [SumList (Elems drepDeposits)]
-    ]
-  _ -> []
   where
-    drepStateSet = Var $ pV p "drepStateSet" (SetR DRepStateR) No
+    drepStateList = Var $ pV p "drepStateList" (ListR DRepStateR) No
     deposit = Field @era "deposit" CoinR DRepStateR drepDepositL
-    totalDRepDeposit = Var $ pV p "totalDRepDeposit" CoinR No
     anchor = Field @era "anchor" (MaybeR AnchorR) DRepStateR (drepAnchorL . strictMaybeToMaybeL)
     expire = Field @era "expire" EpochR DRepStateR drepExpiryL
+    totalDRepDeposit = Var $ pV p "totalDRepDeposit" CoinR No
+    currentDRepStateSize = Var $ pV p "currentDRepStateSize" SizeR No
+
+vstateCheckPreds :: Proof era -> [Pred era]
+vstateCheckPreds _p = []
 
 vstateStage ::
   Reflect era =>
