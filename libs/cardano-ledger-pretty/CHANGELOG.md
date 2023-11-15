@@ -1,5 +1,9 @@
 # Changelog for `cardano-ledger-pretty`
 
+## 1.3.3.2
+
+*
+
 ## 1.3.3.1
 
 *

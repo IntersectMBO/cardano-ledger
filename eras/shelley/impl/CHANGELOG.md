@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.8.0.1
+
+*
+
 ## 1.8.0.0
 
 * Add `shelleyTotalDepositsTxCerts` and `shelleyTotalRefundsTxCerts`

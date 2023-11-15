@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.0.3.8
+
+*
+
 ## 1.0.3.7
 
 * Add a test suite

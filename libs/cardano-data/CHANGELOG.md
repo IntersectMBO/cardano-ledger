@@ -1,16 +1,20 @@
 # Version history for `cardano-data`
 
+## 1.1.2.1
+
+*
+
 ## 1.1.2.0
 
-- Add Data.OMap.Strict #3791
+* Add Data.OMap.Strict #3791
 
 ## 1.1.1.0
 
-- Add Data.OSet.Strict #3779
+* Add Data.OSet.Strict #3779
 
 ## 1.1.0.0
 
-- Remove `Data.UMap` #3371
+* Remove `Data.UMap` #3371
 
 ## 1.0.1.0
 
