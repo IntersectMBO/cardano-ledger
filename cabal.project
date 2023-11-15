@@ -18,9 +18,9 @@ source-repository-package
 
 index-state:
   -- Bump this if you need newer packages from Hackage
-  , hackage.haskell.org 2023-11-09T23:50:15Z
+  , hackage.haskell.org 2023-11-15T00:00:00Z
   -- Bump this if you need newer packages from CHaP
-  , cardano-haskell-packages 2023-11-08T10:13:53Z
+  , cardano-haskell-packages 2023-11-15T00:00:00Z
 
 packages:
   eras/allegra/impl
@@ -65,11 +65,6 @@ packages:
   libs/cardano-ledger-test
   libs/plutus-preprocessor
   libs/ledger-state
-
-constraints:
-  -- Plutus is incompatible with 0.1.5 because of the Identity instance, once
-  -- they fix that we shall remove this constraint.
-  nothunks == 0.1.4
 
 program-options
   ghc-options: -Werror
