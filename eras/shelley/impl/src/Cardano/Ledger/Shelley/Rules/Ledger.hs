@@ -285,16 +285,17 @@ renderDepositEqualsObligationViolation
             pot = utxoSt ^. utxosDepositedL
          in "\n\nAssertionViolation ("
               <> avSTS
-              <> ")\n   "
+              <> ")\n\n  "
               <> avMsg
-              <> "\nCERTS\n"
+              <> "\n\nCERTS\n"
               <> showTxCerts txb
               <> "\n(slot,keyDeposit,poolDeposit) "
               <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
-              <> "\npot (utxosDeposited) = "
-              ++ show pot
-                <> show (allObligations certstate (utxosGovState utxoSt))
-                <> "\nConsumed = "
-                <> show (consumedTxBody txb pp certstate utxo)
-                <> "\nProduced = "
-                <> show (producedTxBody txb pp certstate)
+              <> "\nThe Pot (utxosDeposited) = "
+              <> show pot
+              <> "\n"
+              <> show (allObligations certstate (utxosGovState utxoSt))
+              <> "\nConsumed = "
+              <> show (consumedTxBody txb pp certstate utxo)
+              <> "\nProduced = "
+              <> show (producedTxBody txb pp certstate)

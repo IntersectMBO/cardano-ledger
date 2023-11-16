@@ -57,7 +57,7 @@ import Cardano.Ledger.Conway.Governance (
   setFreshDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
-import Cardano.Ledger.Conway.Governance.Proposals (proposalsRemoveIds)
+import Cardano.Ledger.Conway.Governance.Proposals (proposalsRemoveDescendentIds, proposalsRemoveIds)
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -279,22 +279,26 @@ epochTransition = do
   let
     pulsingState = epochState0 ^. epochStateDRepPulsingStateL
 
-    ratState0@RatifyState {rsRemoved, rsEnactState} = extractDRepPulsingState pulsingState
+    ratState0@RatifyState {rsRemoved, rsEnacted, rsEnactState} = extractDRepPulsingState pulsingState
 
     (accountState2, dState2, newEnactState) =
       applyEnactedWithdrawals accountState1 dState1 rsEnactState
-    (newProposals, removedGovActions) =
-      -- It is important that we use current proposals here instead of the ones from the pulser
-      proposalsRemoveIds rsRemoved (govState0 ^. cgProposalsL)
+
+    -- It is important that we use current proposals here instead of the ones from the pulser
+    (proposals0, removedInvalidGovActions) = proposalsRemoveDescendentIds rsRemoved (govState0 ^. cgProposalsL)
+    (proposals1, removedEnactedGovActions) = proposalsRemoveIds rsEnacted proposals0
+
     govState1 =
       govState0
-        & cgProposalsL .~ newProposals
+        & cgProposalsL .~ proposals1
         & cgEnactStateL .~ (newEnactState & ensPrevPParamsL .~ curPParams)
+
+    allRemovedGovActions = removedInvalidGovActions <> removedEnactedGovActions
 
     certState =
       CertState
         { certPState = pState2
-        , certDState = returnProposalDeposits removedGovActions dState2
+        , certDState = returnProposalDeposits allRemovedGovActions dState2
         , certVState =
             -- Increment the dormant epoch counter
             updateNumDormantEpochs pulsingState vState

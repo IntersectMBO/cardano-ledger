@@ -68,6 +68,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
@@ -224,6 +225,7 @@ govActionState gaid ProposalProcedure {..} =
     pProcGovAction
     (EpochNo 0)
     (EpochNo 30)
+    mempty
 
 expiringGovActionState ::
   EpochNo ->
@@ -244,6 +246,7 @@ govActionStateWithYesVotes gaid pf ProposalProcedure {..} =
     pProcGovAction
     (EpochNo 0)
     (EpochNo 30)
+    mempty
 
 -- | Value for the actual threshold, plus a small epsilon for GT (>) relation
 spoThreshold :: Rational
@@ -565,8 +568,11 @@ testGov pf = do
     expectedGovState0 =
       fromGovActionStateSeq (SSeq.singleton $ govActionState govActionId (newConstitutionProposal pf))
 
-    expectedGov0 =
-      ConwayGovState expectedGovState0 (initialGov ^. cgEnactStateL) initialDRepPulsingState
+    enactStateWithChildren =
+      initialEnactState
+        & ensPrevGovActionIdsChildrenL . pgacConstitutionL %~ Set.insert (PrevGovActionId govActionId)
+
+    expectedGov0 = ConwayGovState expectedGovState0 enactStateWithChildren initialDRepPulsingState
 
     eitherLedgerState0 = runLEDGER (LEDGER pf) initialLedgerState1 pp (trustMeP pf True proposalTx)
   ledgerState0@(LedgerState (UTxOState _ _ _ govState0 _ _) _) <-
@@ -579,7 +585,7 @@ testGov pf = do
     voteTx = txFromTestCaseData pf (vote pf govActionId)
     gas = govActionStateWithYesVotes govActionId pf (newConstitutionProposal pf)
     expectedGovState1 = fromGovActionStateSeq $ SSeq.singleton gas
-    expectedGov1 = ConwayGovState expectedGovState1 initialEnactState initialDRepPulsingState
+    expectedGov1 = ConwayGovState expectedGovState1 enactStateWithChildren initialDRepPulsingState
     eitherLedgerState1 = runLEDGER (LEDGER pf) ledgerState0 pp (trustMeP pf True voteTx)
   ledgerState1@(LedgerState (UTxOState _ _ _ govState1 _ _) _) <-
     expectRight "Error running LEDGER when voting: " eitherLedgerState1
@@ -625,7 +631,10 @@ testGov pf = do
     expectedGovState2 =
       ConwayGovState
         expectedGovSnapshots2
-        (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL)
+        ( ledgerState2 ^. lsUTxOStateL . utxosGovStateL . cgEnactStateL
+            & ensPrevGovActionIdsChildrenL . pgacConstitutionL
+              .~ Set.singleton (PrevGovActionId secondGovActionId)
+        )
         -- This might appear to be cheating, but we expect the new PulsingState to be the
         -- Completion of the one in ledgerState2, and (==) forces the competion of both its args.
         (ledgerState2 ^. lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL)

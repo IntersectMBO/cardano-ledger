@@ -588,6 +588,7 @@ canGovActionBeDRepAccepted gaId = do
     ratSt =
       RatifyState
         { rsRemoved = mempty
+        , rsEnacted = mempty
         , rsEnactState = enactSt
         , rsDelayed = False
         }
@@ -603,7 +604,7 @@ logRatificationChecks gaId = do
   ens@EnactState {..} <- getEnactState
   ratEnv <- getRatifyEnv
   let
-    ratSt = RatifyState ens mempty False
+    ratSt = RatifyState ens mempty mempty False
   curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
   logEntry $

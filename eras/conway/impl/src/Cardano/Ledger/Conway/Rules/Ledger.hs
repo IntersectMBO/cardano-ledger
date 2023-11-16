@@ -40,16 +40,15 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState (..),
   GovProcedures (..),
-  Proposals,
-  cgEnactStateL,
-  cgProposalsL,
+  enactStateGovStateL,
+  ensPrevGovActionIdsChildrenL,
   ensPrevGovActionIdsL,
   proposalsGovStateL,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
 import Cardano.Ledger.Conway.Rules.Certs (CertsEnv (CertsEnv), ConwayCertsEvent, ConwayCertsPredFailure)
-import Cardano.Ledger.Conway.Rules.Gov (ConwayGovEvent (..), ConwayGovPredFailure, GovEnv (..))
+import Cardano.Ledger.Conway.Rules.Gov (ConwayGovEvent (..), ConwayGovPredFailure, GovEnv (..), GovRuleState (..))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), currentTreasuryValueTxBodyL)
 import Cardano.Ledger.Credential (Credential)
@@ -193,7 +192,7 @@ instance
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ Proposals era
+  , State (EraRule "GOV" era) ~ GovRuleState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
@@ -234,7 +233,7 @@ ledgerTransition ::
   , Embed (EraRule "CERTS" era) (someLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ Proposals era
+  , State (EraRule "GOV" era) ~ GovRuleState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
@@ -288,14 +287,23 @@ ledgerTransition = do
                 { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
                 , gpProposalProcedures = txBody ^. proposalProceduresTxBodyL
                 }
-        govActionsState' <-
+        GovRuleState govActionsState' prevGovActionIdsChildren <-
           trans @(EraRule "GOV" era) $
             TRC
-              ( GovEnv (txid txBody) currentEpoch pp (utxoState ^. utxosGovStateL . cgEnactStateL . ensPrevGovActionIdsL)
-              , utxoState ^. utxosGovStateL . proposalsGovStateL
+              ( GovEnv
+                  (txid txBody)
+                  currentEpoch
+                  pp
+                  (utxoState ^. utxosGovStateL . enactStateGovStateL . ensPrevGovActionIdsL)
+              , GovRuleState
+                  (utxoState ^. utxosGovStateL . proposalsGovStateL)
+                  (utxoState ^. utxosGovStateL . enactStateGovStateL . ensPrevGovActionIdsChildrenL)
               , govProcedures
               )
-        let utxoState' = utxoState & utxosGovStateL . cgProposalsL .~ govActionsState'
+        let utxoState' =
+              utxoState
+                & utxosGovStateL . proposalsGovStateL .~ govActionsState'
+                & utxosGovStateL . enactStateGovStateL . ensPrevGovActionIdsChildrenL .~ prevGovActionIdsChildren
         pure (utxoState', certStateAfterCERTS)
       else pure (utxoState, certState)
 
@@ -370,7 +378,7 @@ instance
   , Signal (EraRule "GOV" era) ~ GovProcedures era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ Proposals era
+  , State (EraRule "GOV" era) ~ GovRuleState era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era

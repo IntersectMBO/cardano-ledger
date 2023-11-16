@@ -6,9 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -44,20 +42,28 @@ import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   GovAction (..),
+  GovActionId,
   GovActionState (..),
+  PrevGovActionId (..),
   PrevGovActionIds (..),
+  PrevGovActionIdsChildren (..),
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
   Vote (..),
   ensCommitteeL,
+  ensPrevGovActionIdsChildrenL,
   ensTreasuryL,
+  pgacCommitteeL,
+  pgacConstitutionL,
+  pgacHardForkL,
+  pgacPParamUpdateL,
   rsEnactStateL,
   votingCommitteeThreshold,
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (committeeMembersL)
+import Cardano.Ledger.Conway.Governance.Procedures (committeeMembersL, gasActionL, gasChildrenL)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
   ppCommitteeMaxTermLengthL,
@@ -77,6 +83,7 @@ import Control.State.Transition.Extended (
   judgmentContext,
   trans,
  )
+import Data.Coerce (coerce)
 import Data.Foldable (Foldable (..))
 import Data.List (sortOn)
 import Data.Map.Strict (Map)
@@ -298,8 +305,15 @@ ratifyTransition = do
   TRC
     ( env@RatifyEnv {reCurrentEpoch}
       , st@( RatifyState
-              rsEnactState@EnactState {ensCommittee, ensCurPParams, ensTreasury, ensPrevGovActionIds}
+              rsEnactState@EnactState
+                { ensCommittee
+                , ensCurPParams
+                , ensTreasury
+                , ensPrevGovActionIds
+                , ensPrevGovActionIdsChildren
+                }
               rsRemoved
+              rsEnacted
               rsDelayed
             )
       , RatifySignal rsig
@@ -316,14 +330,18 @@ ratifyTransition = do
         && spoAccepted env st gas
         && dRepAccepted env st gas
         then do
+          let siblings = getSiblings ensPrevGovActionIdsChildren gasAction
           -- Update ENACT state with the governance action that was ratified
           es <-
             trans @(EraRule "ENACT" era) $
               TRC ((), rsEnactState, EnactSignal gasId gasAction)
           let st' =
                 st
-                  { rsEnactState = es
-                  , rsRemoved = Set.insert gasId rsRemoved
+                  { rsEnactState =
+                      es
+                        & ensPrevGovActionIdsChildrenL .~ updatePrevGovActionIdsChildren gas ensPrevGovActionIdsChildren
+                  , rsEnacted = Set.insert gasId rsEnacted
+                  , rsRemoved = Set.union (Set.delete gasId siblings) rsRemoved
                   , rsDelayed = delayingAction gasAction
                   }
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
@@ -347,6 +365,33 @@ prevActionAsExpected = \case
   UpdateCommittee prev _ _ _ -> (prev ==) . pgaCommittee
   NewConstitution prev _ -> (prev ==) . pgaConstitution
   InfoAction -> const True
+
+-- | Get the siblings of a `GovAction`.
+getSiblings :: PrevGovActionIdsChildren era -> GovAction era -> Set.Set (GovActionId (EraCrypto era))
+getSiblings pgac = \case
+  ParameterChange {} -> Set.map unPrevGovActionId (pgac ^. pgacPParamUpdateL)
+  HardForkInitiation {} -> Set.map unPrevGovActionId (pgac ^. pgacHardForkL)
+  TreasuryWithdrawals _ -> mempty
+  NoConfidence {} -> Set.map unPrevGovActionId (pgac ^. pgacCommitteeL)
+  UpdateCommittee {} -> Set.map unPrevGovActionId (pgac ^. pgacCommitteeL)
+  NewConstitution {} -> Set.map unPrevGovActionId (pgac ^. pgacConstitutionL)
+  InfoAction -> mempty
+
+updatePrevGovActionIdsChildren ::
+  GovActionState era ->
+  PrevGovActionIdsChildren era ->
+  PrevGovActionIdsChildren era
+updatePrevGovActionIdsChildren gas pgac =
+  case gas ^. gasActionL of
+    ParameterChange {} -> pgac & pgacPParamUpdateL .~ Set.map coerce children
+    HardForkInitiation {} -> pgac & pgacHardForkL .~ Set.map coerce children
+    TreasuryWithdrawals _ -> pgac
+    NoConfidence {} -> pgac & pgacCommitteeL .~ Set.map coerce children
+    UpdateCommittee {} -> pgac & pgacCommitteeL .~ Set.map coerce children
+    NewConstitution {} -> pgac & pgacConstitutionL .~ Set.map coerce children
+    InfoAction -> pgac
+  where
+    children = gas ^. gasChildrenL
 
 validCommitteeTerm ::
   ConwayEraPParams era =>
