@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.11.0.1
+
+*
+
 ## 1.11.0.0
 
 * Switch `ppCommitteeMaxTermLength` to `EpochNo`, rather than `Natural`

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.2.5.1
+
+*
+
 ## 1.2.5.0
 
 ### `testlib`

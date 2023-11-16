@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley-test`
 
+## 1.3.0.1
+
+*
+
 ## 1.3.0.0
 
 * Move `CDDLUtils` functionality into `cardano-ledger-binary`

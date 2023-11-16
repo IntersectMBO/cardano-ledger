@@ -1,8 +1,16 @@
 # Revision history for `cardano-ledger-byron`
 
+## 1.0.0.4
+
+*
+
 ## 1.0.0.3
 
 * Update `streaming-binary` dependency to 0.4.
+
+## 1.0.0.2
+
+*
 
 ## 1.0.0.1
 

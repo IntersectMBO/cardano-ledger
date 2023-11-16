@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-core
-version:            1.9.0.0
+version:            1.9.0.1
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -113,7 +113,6 @@ library
         nothunks,
         partial-order,
         plutus-ledger-api,
-        plutus-core,
         prettyprinter,
         quiet,
         serialise,

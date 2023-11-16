@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.4.0.1
+
+*
+
 ## 1.4.0.0
 
 * Switch `MaryValue` field for ADA from `Integer` to `Coin`

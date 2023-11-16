@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.9.0.1
+
+*
+
 ## 1.9.0.0
 
 * Add `certsTotalDepositsTxBody` and `certsTotalRefundsTxBody`
