@@ -347,7 +347,6 @@ test-suite cardano-ledger-byron-test
         directory,
         filepath,
         formatting,
-        generic-monoid,
         heapwords,
         hedgehog >=1.0.4,
         microlens,
