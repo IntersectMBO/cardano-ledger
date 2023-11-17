@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.8.0.1
+## 1.9.0.0
 
-*
+* Change the type of `ppEMaxL`
+	
 
 ## 1.8.0.0
 

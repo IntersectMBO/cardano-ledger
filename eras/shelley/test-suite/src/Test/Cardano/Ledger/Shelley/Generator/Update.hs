@@ -22,6 +22,7 @@ where
 
 import Cardano.Ledger.BaseTypes (
   BoundedRational,
+  EpochInterval (..),
   NonNegativeInterval,
   Nonce (NeutralNonce),
   ProtVer (..),
@@ -174,9 +175,9 @@ hi = 200000
 genEMax ::
   HasCallStack =>
   Constants ->
-  Gen EpochNo
+  Gen EpochInterval
 genEMax Constants {frequencyLowMaxEpoch} =
-  EpochNo <$> genWord64 frequencyLowMaxEpoch 500
+  EpochInterval . fromIntegral <$> genWord64 frequencyLowMaxEpoch 500
 
 -- | nOpt
 genNOpt :: HasCallStack => Gen Natural

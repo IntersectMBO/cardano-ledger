@@ -29,6 +29,7 @@ import Cardano.Ledger.BaseTypes (
   Globals (..),
   Network,
   ShelleyBase,
+  addEpochInterval,
   epochInfoPure,
   invalidKey,
   networkId,
@@ -220,8 +221,8 @@ poolCertTransition (PoolEnv slot pp) ps@PState {psStakePoolParams, psFutureStake
       ei <- asks epochInfoPure
       epochInfoEpoch ei slot
     let maxEpoch = pp ^. ppEMaxL
-    (cepoch < e && e <= cepoch + maxEpoch)
-      ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
+    (cepoch < e && e <= addEpochInterval cepoch maxEpoch)
+      ?! StakePoolRetirementWrongEpochPOOL cepoch e (addEpochInterval cepoch maxEpoch)
     -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
     pure $ ps {psRetiring = eval (psRetiring ⨃ singleton hk e)}
 

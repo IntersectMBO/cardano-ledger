@@ -23,6 +23,7 @@ where
 import Cardano.Ledger.BaseTypes (
   EpochNo,
   ShelleyBase,
+  addEpochInterval,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
@@ -167,7 +168,7 @@ conwayGovCertTransition = do
       pure
         vState
           { vsDReps =
-              Map.insert cred (DRepState (cgceCurrentEpoch + ppDRepActivity) mAnchor ppDRepDeposit) vsDReps
+              Map.insert cred (DRepState (addEpochInterval cgceCurrentEpoch ppDRepActivity) mAnchor ppDRepDeposit) vsDReps
           }
     ConwayUnRegDRep cred deposit -> do
       checkRegistrationAndDepositAgainstPaidDeposit vsDReps cred deposit
@@ -183,7 +184,11 @@ conwayGovCertTransition = do
         vState
           { vsDReps =
               Map.adjust
-                (\drepState -> drepState & drepExpiryL .~ cgceCurrentEpoch + ppDRepActivity & drepAnchorL .~ mAnchor)
+                ( \drepState ->
+                    drepState
+                      & drepExpiryL .~ addEpochInterval cgceCurrentEpoch ppDRepActivity
+                      & drepAnchorL .~ mAnchor
+                )
                 cred
                 vsDReps
           }

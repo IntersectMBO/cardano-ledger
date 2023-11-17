@@ -40,6 +40,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   BoundedRational (..),
   DnsName,
+  EpochInterval (..),
   FixedPoint,
   Globals (..),
   Network (..),
@@ -1288,7 +1289,7 @@ ppPParams pp =
     , ("maxBHSize", ppNatural $ pp ^. ppMaxBHSizeL)
     , ("keyDeposit", ppCoin $ pp ^. ppKeyDepositL)
     , ("poolDeposit", ppCoin $ pp ^. ppPoolDepositL)
-    , ("eMax", ppEpochNo $ pp ^. ppEMaxL)
+    , ("eMax", ppEpochInterval $ pp ^. ppEMaxL)
     , ("nOpt", ppNatural $ pp ^. ppNOptL)
     , ("a0", ppRational $ unboundRational $ pp ^. ppA0L)
     , ("rho", ppUnitInterval $ pp ^. ppRhoL)
@@ -1314,7 +1315,7 @@ ppPParamsUpdate pp =
     , ("maxBHSize", ppStrictMaybe ppNatural $ pp ^. ppuMaxBHSizeL)
     , ("keyDeposit", ppStrictMaybe ppCoin $ pp ^. ppuKeyDepositL)
     , ("poolDeposit", ppStrictMaybe ppCoin $ pp ^. ppuPoolDepositL)
-    , ("eMax", ppStrictMaybe ppEpochNo $ pp ^. ppuEMaxL)
+    , ("eMax", ppStrictMaybe ppEpochInterval $ pp ^. ppuEMaxL)
     , ("nOpt", ppStrictMaybe ppNatural $ pp ^. ppuNOptL)
     , ("a0", ppStrictMaybe (ppRational . unboundRational) $ pp ^. ppuA0L)
     , ("rho", ppStrictMaybe ppUnitInterval $ pp ^. ppuRhoL)
@@ -1492,6 +1493,9 @@ ppDuration (Duration x) = text "Duration" <+> pretty x
 ppEpochNo :: EpochNo -> Doc ann
 ppEpochNo (EpochNo x) = text "EpochNo" <+> pretty x
 
+ppEpochInterval :: EpochInterval -> Doc ann
+ppEpochInterval (EpochInterval x) = text "EpochInterval" <+> pretty x
+
 ppEpochSize :: EpochSize -> Doc ann
 ppEpochSize (EpochSize x) = text "EpochSize" <+> pretty x
 
@@ -1506,6 +1510,9 @@ instance PrettyA Duration where
 
 instance PrettyA EpochNo where
   prettyA = ppEpochNo
+
+instance PrettyA EpochInterval where
+  prettyA = ppEpochInterval
 
 instance PrettyA EpochSize where
   prettyA = ppEpochSize

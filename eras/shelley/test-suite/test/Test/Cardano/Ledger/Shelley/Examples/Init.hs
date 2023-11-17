@@ -53,7 +53,7 @@ ppEx =
     & ppMaxBBSizeL .~ 50000
     & ppMaxBHSizeL .~ 10000
     & ppMaxTxSizeL .~ 10000
-    & ppEMaxL .~ EpochNo 10000
+    & ppEMaxL .~ 10000
     & ppKeyDepositL .~ Coin 7
     & ppPoolDepositL .~ Coin 250
     & ppDL .~ unsafeBoundRational 0.5

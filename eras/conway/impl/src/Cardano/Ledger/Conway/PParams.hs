@@ -67,7 +67,8 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (
-  EpochNo (EpochNo),
+  EpochInterval (..),
+  EpochNo,
   NonNegativeInterval,
   ProtVer (ProtVer),
   UnitInterval,
@@ -181,7 +182,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ The amount of a key registration deposit
   , cppPoolDeposit :: !(THKD 'EconomicGroup f Coin)
   -- ^ The amount of a pool registration deposit
-  , cppEMax :: !(THKD 'TechnicalGroup f EpochNo)
+  , cppEMax :: !(THKD 'TechnicalGroup f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
   -- be scheduled for.
   , cppNOpt :: !(THKD 'TechnicalGroup f Natural)
@@ -222,13 +223,13 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Minimum size of the Constitutional Committee
   , cppCommitteeMaxTermLength :: !(THKD 'GovGroup f EpochNo)
   -- ^ The Constitutional Committee Term limit in number of Slots
-  , cppGovActionLifetime :: !(THKD 'GovGroup f EpochNo)
+  , cppGovActionLifetime :: !(THKD 'GovGroup f EpochInterval)
   -- ^ Gov action lifetime in number of Epochs
   , cppGovActionDeposit :: !(THKD 'GovGroup f Coin)
   -- ^ The amount of the Gov Action deposit
   , cppDRepDeposit :: !(THKD 'GovGroup f Coin)
   -- ^ The amount of a DRep registration deposit
-  , cppDRepActivity :: !(THKD 'GovGroup f EpochNo)
+  , cppDRepActivity :: !(THKD 'GovGroup f EpochInterval)
   -- ^ The number of Epochs that a DRep can perform no activity without losing their @Active@ status.
   }
   deriving (Generic)
@@ -260,10 +261,10 @@ data UpgradeConwayPParams f = UpgradeConwayPParams
   , ucppDRepVotingThresholds :: !(HKD f DRepVotingThresholds)
   , ucppCommitteeMinSize :: !(HKD f Natural)
   , ucppCommitteeMaxTermLength :: !(HKD f EpochNo)
-  , ucppGovActionLifetime :: !(HKD f EpochNo)
+  , ucppGovActionLifetime :: !(HKD f EpochInterval)
   , ucppGovActionDeposit :: !(HKD f Coin)
   , ucppDRepDeposit :: !(HKD f Coin)
-  , ucppDRepActivity :: !(HKD f EpochNo)
+  , ucppDRepActivity :: !(HKD f EpochInterval)
   }
   deriving (Generic)
 
@@ -296,10 +297,10 @@ instance Default (UpgradeConwayPParams Identity) where
       , ucppDRepVotingThresholds = def
       , ucppCommitteeMinSize = 0
       , ucppCommitteeMaxTermLength = 0
-      , ucppGovActionLifetime = EpochNo 0
+      , ucppGovActionLifetime = EpochInterval 0
       , ucppGovActionDeposit = Coin 0
       , ucppDRepDeposit = Coin 0
-      , ucppDRepActivity = EpochNo 0
+      , ucppDRepActivity = EpochInterval 0
       }
 
 instance Default (UpgradeConwayPParams StrictMaybe) where
@@ -411,7 +412,7 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
       , isValid (/= 0) ppuMaxValSizeL
       , isValid (/= 0) ppuCollateralPercentageL
       , isValid (/= 0) ppuCommitteeMaxTermLengthL
-      , isValid (/= 0) ppuGovActionLifetimeL
+      , isValid (/= EpochInterval 0) ppuGovActionLifetimeL
       , -- Coins
         isValid (/= zero) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
@@ -545,7 +546,7 @@ emptyConwayPParams =
     , cppMaxBHSize = THKD 0
     , cppKeyDeposit = THKD (Coin 0)
     , cppPoolDeposit = THKD (Coin 0)
-    , cppEMax = THKD (EpochNo 0)
+    , cppEMax = THKD (EpochInterval 0)
     , cppNOpt = THKD 100
     , cppA0 = THKD minBound
     , cppRho = THKD minBound
@@ -565,10 +566,10 @@ emptyConwayPParams =
     , cppDRepVotingThresholds = THKD def
     , cppCommitteeMinSize = THKD 0
     , cppCommitteeMaxTermLength = THKD 0
-    , cppGovActionLifetime = THKD (EpochNo 0)
+    , cppGovActionLifetime = THKD (EpochInterval 0)
     , cppGovActionDeposit = THKD (Coin 0)
     , cppDRepDeposit = THKD (Coin 0)
-    , cppDRepActivity = THKD (EpochNo 0)
+    , cppDRepActivity = THKD (EpochInterval 0)
     }
 
 emptyConwayPParamsUpdate :: ConwayPParams StrictMaybe era
@@ -741,10 +742,10 @@ conwayUpgradePParamsHKDPairs px pp =
   , ("dRepVotingThresholds", hkdMap px (toJSON @DRepVotingThresholds) (pp ^. hkdDRepVotingThresholdsL @era @f))
   , ("committeeMinSize", hkdMap px (toJSON @Natural) (pp ^. hkdCommitteeMinSizeL @era @f))
   , ("committeeMaxTermLength", hkdMap px (toJSON @EpochNo) (pp ^. hkdCommitteeMaxTermLengthL @era @f))
-  , ("govActionLifetime", hkdMap px (toJSON @EpochNo) (pp ^. hkdGovActionLifetimeL @era @f))
+  , ("govActionLifetime", hkdMap px (toJSON @EpochInterval) (pp ^. hkdGovActionLifetimeL @era @f))
   , ("govActionDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdGovActionDepositL @era @f))
   , ("dRepDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdDRepDepositL @era @f))
-  , ("dRepActivity", hkdMap px (toJSON @EpochNo) (pp ^. hkdDRepActivityL @era @f))
+  , ("dRepActivity", hkdMap px (toJSON @EpochInterval) (pp ^. hkdDRepActivityL @era @f))
   ]
 
 instance ToJSON (UpgradeConwayPParams Identity) where
@@ -761,10 +762,10 @@ upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
   , ("dRepVotingThresholds", (toJSON @DRepVotingThresholds) ucppDRepVotingThresholds)
   , ("committeeMinSize", (toJSON @Natural) ucppCommitteeMinSize)
   , ("committeeMaxTermLength", (toJSON @EpochNo) ucppCommitteeMaxTermLength)
-  , ("govActionLifetime", (toJSON @EpochNo) ucppGovActionLifetime)
+  , ("govActionLifetime", (toJSON @EpochInterval) ucppGovActionLifetime)
   , ("govActionDeposit", (toJSON @Coin) ucppGovActionDeposit)
   , ("dRepDeposit", (toJSON @Coin) ucppDRepDeposit)
-  , ("dRepActivity", (toJSON @EpochNo) ucppDRepActivity)
+  , ("dRepActivity", (toJSON @EpochInterval) ucppDRepActivity)
   ]
 
 instance FromJSON PoolVotingThresholds
@@ -864,10 +865,10 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
   hkdCommitteeMinSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
   hkdCommitteeMaxTermLengthL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
-  hkdGovActionLifetimeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
+  hkdGovActionLifetimeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
   hkdGovActionDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
   hkdDRepDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
-  hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
+  hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
 
 ppPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
@@ -883,7 +884,7 @@ ppCommitteeMinSizeL = ppLens . hkdCommitteeMinSizeL @era @Identity
 ppCommitteeMaxTermLengthL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochNo
 ppCommitteeMaxTermLengthL = ppLens . hkdCommitteeMaxTermLengthL @era @Identity
 
-ppGovActionLifetimeL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochNo
+ppGovActionLifetimeL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
 ppGovActionLifetimeL = ppLens . hkdGovActionLifetimeL @era @Identity
 
 ppGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
@@ -892,7 +893,7 @@ ppGovActionDepositL = ppLens . hkdGovActionDepositL @era @Identity
 ppDRepDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
 ppDRepDepositL = ppLens . hkdDRepDepositL @era @Identity
 
-ppDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochNo
+ppDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
 ppDRepActivityL = ppLens . hkdDRepActivityL @era @Identity
 
 ppuPoolVotingThresholdsL ::
@@ -912,7 +913,7 @@ ppuCommitteeMaxTermLengthL ::
 ppuCommitteeMaxTermLengthL = ppuLens . hkdCommitteeMaxTermLengthL @era @StrictMaybe
 
 ppuGovActionLifetimeL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
 ppuGovActionLifetimeL = ppuLens . hkdGovActionLifetimeL @era @StrictMaybe
 
 ppuGovActionDepositL ::
@@ -924,7 +925,7 @@ ppuDRepDepositL ::
 ppuDRepDepositL = ppuLens . hkdDRepDepositL @era @StrictMaybe
 
 ppuDRepActivityL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
 ppuDRepActivityL = ppuLens . hkdDRepActivityL @era @StrictMaybe
 
 conwayApplyPPUpdates ::

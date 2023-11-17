@@ -50,6 +50,7 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
   NonNegativeInterval,
   Nonce,
   ProtVer (..),
@@ -85,7 +86,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates)
-import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
@@ -100,7 +100,7 @@ import Data.Functor.Identity (Identity (..))
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (Proxy))
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, to, (^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -121,7 +121,7 @@ data BabbagePParams f era = BabbagePParams
   -- ^ The amount of a key registration deposit
   , bppPoolDeposit :: !(HKD f Coin)
   -- ^ The amount of a pool registration deposit
-  , bppEMax :: !(HKD f EpochNo)
+  , bppEMax :: !(HKD f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
   -- be scheduled for.
   , bppNOpt :: !(HKD f Natural)
@@ -337,7 +337,7 @@ emptyBabbagePParams =
     , bppMaxBHSize = 0
     , bppKeyDeposit = Coin 0
     , bppPoolDeposit = Coin 0
-    , bppEMax = EpochNo 0
+    , bppEMax = EpochInterval 0
     , bppNOpt = 100
     , bppA0 = minBound
     , bppRho = minBound

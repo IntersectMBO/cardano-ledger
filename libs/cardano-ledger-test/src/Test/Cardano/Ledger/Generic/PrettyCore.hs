@@ -2172,7 +2172,7 @@ pcPParamsField x = case x of
   MaxBHSize natural -> [("maxBHsize", ppNatural natural)]
   KeyDeposit coin -> [("keydeposit", pcCoin coin)]
   PoolDeposit coin -> [("pooldeposit", pcCoin coin)]
-  EMax n -> [("emax", ppEpochNo n)]
+  EMax n -> [("emax", ppEpochInterval n)]
   NOpt natural -> [("NOpt", ppNatural natural)]
   A0 i -> [("A0", viaShow i)]
   Rho u -> [("Rho", ppUnitInterval u)]
@@ -2195,10 +2195,10 @@ pcPParamsField x = case x of
   DRepVotingThreshold _ -> [("DRepVotingThresholds", ppString "?")]
   MinCommitteeSize n -> [("minCommitteeSize", ppNatural n)]
   CommitteeTermLimit n -> [("committeeTermLimit", ppEpochNo n)]
-  GovActionExpiration epochNo -> [("govActionExpire", ppEpochNo epochNo)]
+  GovActionExpiration epochNo -> [("govActionExpire", ppEpochInterval epochNo)]
   GovActionDeposit coin -> [("govActiondDeposit", pcCoin coin)]
   DRepDeposit coin -> [("drepdeposit", pcCoin coin)]
-  DRepActivity epochNo -> [("drepActivity", ppEpochNo epochNo)]
+  DRepActivity epochNo -> [("drepActivity", ppEpochInterval epochNo)]
 
 pcPParams :: Proof era -> PParams era -> PDoc
 pcPParams proof pp = ppRecord ("TxBody " <> pack (show proof)) pairs

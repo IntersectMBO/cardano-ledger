@@ -40,6 +40,7 @@ module Cardano.Ledger.Shelley.PParams (
 where
 
 import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
   NonNegativeInterval,
   Nonce (NeutralNonce),
   ProtVer (..),
@@ -108,7 +109,7 @@ data ShelleyPParams f era = ShelleyPParams
   -- ^ The amount of a key registration deposit
   , sppPoolDeposit :: !(HKD f Coin)
   -- ^ The amount of a pool registration deposit
-  , sppEMax :: !(HKD f EpochNo)
+  , sppEMax :: !(HKD f EpochInterval)
   -- ^ epoch bound on pool retirement
   , sppNOpt :: !(HKD f Natural)
   -- ^ Desired number of pools
@@ -288,7 +289,7 @@ emptyShelleyPParams =
     , sppMaxBHSize = 0
     , sppKeyDeposit = Coin 0
     , sppPoolDeposit = Coin 0
-    , sppEMax = EpochNo 0
+    , sppEMax = EpochInterval 0
     , sppNOpt = 100
     , sppA0 = minBound
     , sppRho = minBound
@@ -484,7 +485,7 @@ shelleyCommonPParamsHKDPairs px pp =
   , ("maxBlockHeaderSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxBHSizeL @era @f))
   , ("keyDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
   , ("poolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
-  , ("eMax", hkdMap px (toJSON @EpochNo) (pp ^. hkdEMaxL @era @f))
+  , ("eMax", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
   , ("nOpt", hkdMap px (toJSON @Natural) (pp ^. hkdNOptL @era @f))
   , ("a0", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
   , ("rho", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))

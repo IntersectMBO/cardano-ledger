@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
+import qualified Cardano.Ledger.BaseTypes as Base (EpochInterval (..), Globals (..))
 import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
@@ -1125,12 +1125,6 @@ keyDepAmt p =
       CoinR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppKeyDepositL)))
 
-drepActivity :: ConwayEraPParams era => Proof era -> Term era EpochNo
-drepActivity p = Var $ pV p "drepActivty" EpochR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
-
-drepDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
-drepDeposit p = Var $ pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
-
 proposalDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
 proposalDeposit p =
   Var $
@@ -1158,13 +1152,19 @@ collateralPercentage p =
       NaturalR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppCollateralPercentageL)))
 
-maxEpoch :: Era era => Proof era -> Term era EpochNo
+drepDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
+drepDeposit p = Var $ pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
+
+drepActivity :: ConwayEraPParams era => Proof era -> Term era Base.EpochInterval
+drepActivity p = Var $ pV p "drepActivty" EpochIntervalR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
+
+maxEpoch :: Era era => Proof era -> Term era Base.EpochInterval
 maxEpoch p =
   Var $
     pV
       p
       "maxEpoch"
-      EpochR
+      EpochIntervalR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppEMaxL)))
 
 -- =================================================================

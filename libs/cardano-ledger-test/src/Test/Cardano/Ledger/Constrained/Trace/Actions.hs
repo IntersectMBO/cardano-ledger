@@ -2,6 +2,7 @@
 
 module Test.Cardano.Ledger.Constrained.Trace.Actions where
 
+import Cardano.Ledger.BaseTypes (addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core (Era (..), TxBody, TxCert)
@@ -40,14 +41,14 @@ certAction p@(Conway _) cert =
       epoch <- getTerm currentEpoch
       activity <- getTerm (drepActivity p)
       dep <- getTerm (drepDeposit p)
-      updateVar currentDRepState (Map.insert cred (DRepState (epoch + activity) manchor dep))
+      updateVar currentDRepState (Map.insert cred (DRepState (addEpochInterval epoch activity) manchor dep))
     ConwayTxCertGov (ConwayUnRegDRep cred dep) -> do
       updateVar currentDRepState (Map.delete cred)
       updateVar deposits (<-> dep)
     ConwayTxCertGov (ConwayUpdateDRep cred mAnchor) -> do
       epoch <- getTerm currentEpoch
       activity <- getTerm (drepActivity p)
-      updateVar currentDRepState (Map.adjust (\(DRepState _ _ deposit) -> DRepState (epoch + activity) mAnchor deposit) cred)
+      updateVar currentDRepState (Map.adjust (\(DRepState _ _ deposit) -> DRepState (addEpochInterval epoch activity) mAnchor deposit) cred)
     _ -> pure ()
 certAction _ _ = pure ()
 

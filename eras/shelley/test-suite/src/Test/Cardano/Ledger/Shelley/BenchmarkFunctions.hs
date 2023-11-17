@@ -156,7 +156,7 @@ ppsBench =
   emptyPParams
     & ppMaxBBSizeL .~ 50000
     & ppDL .~ unsafeBoundRational 0.5
-    & ppEMaxL .~ EpochNo 10000
+    & ppEMaxL .~ 10000
     & ppKeyDepositL .~ Coin 0
     & ppMaxBHSizeL .~ 10000
     & ppMaxTxSizeL .~ 1000000000

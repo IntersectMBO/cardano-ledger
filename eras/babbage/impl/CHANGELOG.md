@@ -1,11 +1,13 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.5.1.1
+## 1.6.1.0
 
 *
 
-## 1.5.1.0
+## 1.6.0.0
 
+* Change the type of `ppEMaxL`
+	
 ### `testlib`
 
 * Provide CDDL spec files with `readBabbageCddlFileNames` and `readBabbageCddlFiles` from

@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Pool (
 )
 where
 
+import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Block (
   bheader,
  )
@@ -170,17 +171,17 @@ poolRegistrationProp _ = property ()
 
 poolRetirementProp ::
   EpochNo ->
-  EpochNo ->
+  EpochInterval ->
   SourceSignalTarget (ShelleyPOOL era) ->
   Property
 poolRetirementProp
   currentEpoch@(EpochNo ce)
-  (EpochNo maxEpoch)
+  (EpochInterval maxEpoch)
   SourceSignalTarget {source = sourceSt, target = targetSt, signal = RetirePool hk e} =
     conjoin
       [ counterexample
           ("epoch must be well formed " <> show ce <> " " <> show e <> " " <> show maxEpoch)
-          (currentEpoch < e && e < EpochNo (ce + maxEpoch))
+          (currentEpoch < e && e < EpochNo (ce + fromIntegral maxEpoch))
       , counterexample
           "hk must be in source stPools"
           (eval (hk ∈ dom (psStakePoolParams sourceSt)) :: Bool)

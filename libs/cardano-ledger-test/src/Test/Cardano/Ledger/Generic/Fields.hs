@@ -52,6 +52,8 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (
 import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  EpochNo (..),
   Network (..),
   NonNegativeInterval,
   Nonce,
@@ -87,7 +89,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), WitVKey (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Slot (SlotNo (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
@@ -212,7 +214,7 @@ data PParamsField era
   | -- | The amount of a pool registration deposit
     PoolDeposit Coin
   | -- | epoch bound on pool retirement
-    EMax EpochNo
+    EMax EpochInterval
   | -- | Desired number of pools
     NOpt Natural
   | -- | Pool influence
@@ -254,10 +256,10 @@ data PParamsField era
   | DRepVotingThreshold DRepVotingThresholds
   | MinCommitteeSize Natural
   | CommitteeTermLimit EpochNo
-  | GovActionExpiration EpochNo
+  | GovActionExpiration EpochInterval
   | GovActionDeposit Coin
   | DRepDeposit Coin
-  | DRepActivity EpochNo
+  | DRepActivity EpochInterval
 
 abstractPParams :: Proof era -> PParams era -> [PParamsField era]
 abstractPParams proof ppp = case (whichPParams proof, ppp) of

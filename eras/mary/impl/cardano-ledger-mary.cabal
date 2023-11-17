@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-mary
-version:            1.4.0.0
+version:            1.4.0.1
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -65,8 +65,8 @@ library
         cardano-data,
         cardano-ledger-allegra >=1.1,
         cardano-ledger-binary >=1.0,
-        cardano-ledger-core >=1.9 && <1.10,
-        cardano-ledger-shelley >=1.7 && <1.9,
+        cardano-ledger-core >=1.9 && <1.11,
+        cardano-ledger-shelley >=1.7 && <1.10,
         containers,
         deepseq,
         groups,
@@ -102,7 +102,7 @@ library testlib
         cardano-crypto-class,
         cardano-ledger-binary:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-mary >=1.0.0.1,
+        cardano-ledger-mary,
         cardano-ledger-allegra:testlib,
         cardano-ledger-shelley:testlib,
         cardano-strict-containers

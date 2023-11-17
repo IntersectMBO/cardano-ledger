@@ -267,12 +267,13 @@ genPoolCert net epochNo pParams pState =
     [RegPool <$> genPoolParams]
       ++ [ RetirePool <$> genRetirePool <*> genRetireEpoch
          | not $ null rpools
-         , epochNo + 1 < maxEp
+         , epochNo + 1 < maxEpochNo
          ]
   where
-    maxEp = pParams ^. (withEraPParams conwayProof ppEMaxL)
+    EpochInterval maxEp = pParams ^. (withEraPParams conwayProof ppEMaxL)
+    maxEpochNo = EpochNo (fromIntegral maxEp)
     rpools = Map.keys $ psStakePoolParams pState
-    genRetireEpoch = (min maxEp) . (1 + epochNo +) <$> arbitrary
+    genRetireEpoch = (min maxEpochNo) . (1 + epochNo +) <$> arbitrary
     genRetirePool = elements rpools
 
     maxMetaLen = fromIntegral (sizeHash ([] @(CC.HASH StandardCrypto)))

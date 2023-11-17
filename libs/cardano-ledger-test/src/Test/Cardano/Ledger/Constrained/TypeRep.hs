@@ -54,7 +54,7 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.BaseTypes (EpochNo (..), Network (..), ProtVer (..), SlotNo (..), UnitInterval, mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), Network (..), ProtVer (..), SlotNo (..), UnitInterval, mkTxIxPartial)
 import Cardano.Ledger.Binary.Version (Version)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -236,6 +236,7 @@ data Rep era t where
   RationalR :: Rep era Rational
   CoinR :: Rep era Coin
   EpochR :: Rep era EpochNo
+  EpochIntervalR :: Rep era EpochInterval
   (:->) :: Rep era a -> Rep era b -> Rep era (a -> b)
   MapR :: Ord a => Rep era a -> Rep era b -> Rep era (Map a b)
   SetR :: Ord a => Rep era a -> Rep era (Set a)
@@ -439,6 +440,7 @@ repHasInstances r = case r of
   RationalR {} -> IsOrd
   CoinR {} -> IsOrd
   EpochR {} -> IsOrd
+  EpochIntervalR {} -> IsOrd
   AddrR {} -> IsOrd
   CredR {} -> IsOrd
   VCredR {} -> IsOrd
@@ -545,6 +547,7 @@ synopsis TxIdR r = show r
 synopsis RationalR r = show r
 synopsis CoinR c = show (pcCoin c)
 synopsis EpochR e = show e
+synopsis EpochIntervalR e = show e
 synopsis (a :-> b) _ = "(Arrow " ++ show a ++ " " ++ show b ++ ")"
 synopsis Word64R w = show w
 synopsis rep@(MapR a b) mp = case Map.toList mp of
@@ -716,6 +719,7 @@ genSizedRep _ GenHashR = arbitrary
 genSizedRep _ GenDelegHashR = arbitrary
 genSizedRep _ PoolParamsR = arbitrary
 genSizedRep n EpochR = pure $ EpochNo $ fromIntegral n
+genSizedRep n EpochIntervalR = pure $ EpochInterval $ fromIntegral n
 genSizedRep _ RationalR = arbitrary
 genSizedRep _ Word64R = choose (0, 1000)
 genSizedRep n IntR = pure n
@@ -948,6 +952,7 @@ shrinkRep GenHashR t = shrink t
 shrinkRep GenDelegHashR t = shrink t
 shrinkRep PoolParamsR t = shrink t
 shrinkRep EpochR t = shrink t
+shrinkRep EpochIntervalR t = shrink t
 shrinkRep RationalR t = shrink t
 shrinkRep Word64R t = shrink t
 shrinkRep IntR t = shrink t

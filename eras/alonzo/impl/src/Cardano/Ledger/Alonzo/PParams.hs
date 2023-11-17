@@ -70,7 +70,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   zipSemiExUnits,
  )
 import Cardano.Ledger.BaseTypes (
-  EpochNo (..),
+  EpochInterval (..),
   NonNegativeInterval,
   Nonce (NeutralNonce),
   StrictMaybe (..),
@@ -166,7 +166,7 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ The amount of a key registration deposit
   , appPoolDeposit :: !(HKD f Coin)
   -- ^ The amount of a pool registration deposit
-  , appEMax :: !(HKD f EpochNo)
+  , appEMax :: !(HKD f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
   -- be scheduled for.
   , appNOpt :: !(HKD f Natural)
@@ -471,7 +471,7 @@ emptyAlonzoPParams =
     , appMaxBHSize = 0
     , appKeyDeposit = Coin 0
     , appPoolDeposit = Coin 0
-    , appEMax = EpochNo 0
+    , appEMax = EpochInterval 0
     , appNOpt = 100
     , appA0 = minBound
     , appRho = minBound

@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.5.1.1
+## 1.6.0.0
 
-*
+* Changed the type of the ConwayPParams field appEMax
 
 ## 1.5.1.0
 

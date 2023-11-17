@@ -50,6 +50,8 @@ module Cardano.Ledger.BaseTypes (
   activeSlotLog,
   module Data.Maybe.Strict,
   BlocksMade (..),
+  EpochInterval (..),
+  addEpochInterval,
 
   -- * Indices
   TxIx (..),
@@ -158,7 +160,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Typeable (Typeable)
-import Data.Word (Word16, Word64, Word8)
+import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -845,3 +847,15 @@ toAnchorPairs vote@(Anchor _ _) =
 
 instance Default Network where
   def = Mainnet
+
+-- | Denotes a positive change in the EpochNo
+newtype EpochInterval = EpochInterval
+  { unEpochInterval :: Word32
+  }
+  deriving (Eq, Ord, Generic)
+  deriving (Show) via Quiet EpochInterval
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, ToExpr, Num)
+
+-- | Add a EpochInterval (a positive change) to an EpochNo to get a new EpochNo
+addEpochInterval :: EpochNo -> EpochInterval -> EpochNo
+addEpochInterval (EpochNo n) (EpochInterval m) = EpochNo (n + fromIntegral m)
