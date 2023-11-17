@@ -2,9 +2,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Api.State.QuerySpec (spec) where
 
@@ -23,8 +24,10 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov,
+  ConwayGovState,
   DRepPulsingState (..),
   RatifyState (..),
+  cgEnactStateL,
   ensCommitteeL,
   newEpochStateDRepPulsingStateL,
   rsEnactStateL,
@@ -32,6 +35,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap (UMap)
@@ -64,46 +68,44 @@ committeeMembersStateSpec ::
   forall era.
   ( ConwayEraGov era
   , EraTxOut era
-  , Arbitrary (PParams era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (GovState era)
-  , Arbitrary (StashedAVVMAddresses era)
-  , Show (StashedAVVMAddresses era)
+  , Default (EpochState era)
+  , Default (StashedAVVMAddresses era)
+  , GovState era ~ ConwayGovState era
   ) =>
   Spec
 committeeMembersStateSpec =
-  prop "CommitteeMembersState Query" $ \nes' ckFilter' hkFilter' statusFilter -> do
-    case committeeInfo nes' of
-      Nothing -> property ()
-      Just (committee, _, _) -> do
-        -- half of the committee members in the next epoch will overlap with the current ones
-        forAll (genNextCommittee @era committee) $ \nextCommittee ->
-          -- replace some arbitrary number of cold keys from the committeeState with the
-          -- ones from the committee so we can have Active members
-          forAll (genRelevantCommitteeState @era committee nextCommittee) $ \committeeState ->
-            let nes =
-                  nes'
-                    & nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-                      .~ committeeState
-                    & newEpochStateDRepPulsingStateL .~ DRComplete def nextRatifyState
-                nextRatifyState =
-                  (def @(RatifyState era))
-                    & rsEnactStateL . ensCommitteeL .~ maybeToStrictMaybe nextCommittee
-             in -- replace some cold and hot keys from the filter with known ones from both
-                -- committee and committeeState
-                forAll (genRelevantColdCredsFilter ckFilter' committee committeeState) $ \ckFilter ->
-                  forAll (genRelevantHotCredsFilter hkFilter' committeeState) $ \hkFilter -> do
-                    propEmpty nes
-                    propComplete nes
-                    propAuthorized nes
-                    propActiveAuthorized nes
-                    propNotAuthorized nes
-                    propResigned nes
-                    propUnrecognized nes
-                    propNextEpoch nes
-                    propNoExpiration nes
-                    propFilters ckFilter hkFilter statusFilter nes
+  prop "CommitteeMembersState Query" $ \statusFilter -> do
+    forAll genCommittee $ \committee ->
+      -- half of the committee members in the next epoch will overlap with the current ones
+      forAll (genNextCommittee @era committee) $ \nextCommittee ->
+        -- replace some arbitrary number of cold keys from the committeeState with the
+        -- ones from the committee so we can have Active members
+        forAll (genRelevantCommitteeState @era committee nextCommittee) $ \committeeState -> do
+          let nes =
+                defNewEpochState
+                  & nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+                    .~ committeeState
+                  & newEpochStateDRepPulsingStateL .~ DRComplete def nextRatifyState
+                  & nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+                    .~ maybeToStrictMaybe committee
+              nextRatifyState =
+                (def @(RatifyState era))
+                  & rsEnactStateL . ensCommitteeL .~ maybeToStrictMaybe nextCommittee
+              defNewEpochState = NewEpochState @era (EpochNo 0) (BlocksMade def) (BlocksMade def) def def (PoolDistr def) def
+          -- replace some cold and hot keys from the filter with known ones from both
+          -- committee and committeeState
+          forAll (genRelevantColdCredsFilter committee committeeState) $ \ckFilter ->
+            forAll (genRelevantHotCredsFilter committeeState) $ \hkFilter -> do
+              propEmpty nes
+              propComplete nes
+              propAuthorized nes
+              propActiveAuthorized nes
+              propNotAuthorized nes
+              propResigned nes
+              propUnrecognized nes
+              propNextEpoch nes
+              propNoExpiration nes
+              propFilters ckFilter hkFilter statusFilter nes
 
 propEmpty ::
   forall era.
@@ -311,20 +313,26 @@ propNoExpiration nes =
         -- only Unrecognized members should have no expiration
         Set.fromList (cmsStatus <$> Map.elems noExpiration) `shouldBe` Set.singleton Unrecognized
 
+genCommittee ::
+  forall era.
+  Era era =>
+  Gen (Maybe (Committee era))
+genCommittee = frequency [(1, pure Nothing), (9, Just <$> arbitrary)]
+
 genRelevantCommitteeState ::
   forall era.
   EraTxOut era =>
-  Committee era ->
+  Maybe (Committee era) ->
   Maybe (Committee era) ->
   Gen (CommitteeState era)
-genRelevantCommitteeState (Committee cm _) nextCom = do
+genRelevantCommitteeState maybeCm nextCom = do
   CommitteeState comStateMembers <- arbitrary @(CommitteeState era)
-  let comMembers = Map.keysSet cm
-  let nextComMembers = Map.keysSet (foldMap' committeeMembers nextCom)
-  let third = Set.size comMembers `div` 3
-  let chosen = Set.toList $ Set.take third comMembers
-  let nextChosen = Set.toList $ Set.take third nextComMembers
-  let x =
+  let comMembers = Map.keysSet (foldMap' committeeMembers maybeCm)
+      nextComMembers = Map.keysSet (foldMap' committeeMembers nextCom)
+      third = Set.size comMembers `div` 3
+      chosen = Set.toList $ Set.take third comMembers
+      nextChosen = Set.toList $ Set.take third nextComMembers
+      x =
         Map.fromList $
           zipWith
             (\k1 (_, v2) -> (k1, v2))
@@ -335,33 +343,38 @@ genRelevantCommitteeState (Committee cm _) nextCom = do
 genNextCommittee ::
   forall era.
   EraTxOut era =>
-  Committee era ->
+  Maybe (Committee era) ->
   Gen (Maybe (Committee era))
-genNextCommittee (Committee comMembers _) =
+genNextCommittee maybeCm =
   oneof [pure Nothing, Just <$> genCom]
   where
     genCom = do
+      let comMembers = foldMap' committeeMembers maybeCm
       new <- arbitrary @(Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
       q <- arbitrary
       retainSize <- choose (0, Map.size comMembers)
       pure $ Committee (Map.union new (Map.take retainSize comMembers)) q
 
 genRelevantColdCredsFilter ::
-  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
-  Committee era ->
+  forall era.
+  EraTxOut era =>
+  Maybe (Committee era) ->
   CommitteeState era ->
   Gen (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
-genRelevantColdCredsFilter flt (Committee comMembers _) (CommitteeState comStateMembers) = do
+genRelevantColdCredsFilter maybeCm (CommitteeState comStateMembers) = do
+  flt <- arbitrary
   s <- choose (0, Set.size flt)
-  let cm1 = Map.keysSet $ Map.take (s `div` 2) comMembers
+  let cm1 = Map.keysSet $ Map.take (s `div` 2) (foldMap' committeeMembers maybeCm)
   let cm2 = Map.keysSet $ Map.take (s `div` 2) comStateMembers
   pure $ Set.unions [Set.drop s flt, cm1, cm2]
 
 genRelevantHotCredsFilter ::
-  Set.Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
+  forall era.
+  EraTxOut era =>
   CommitteeState era ->
   Gen (Set.Set (Credential 'HotCommitteeRole (EraCrypto era)))
-genRelevantHotCredsFilter flt (CommitteeState comStateMembers) = do
+genRelevantHotCredsFilter (CommitteeState comStateMembers) = do
+  flt <- arbitrary
   s <- choose (0, Set.size flt)
   let cm = Set.fromList $ Map.elems (Map.mapMaybe id (Map.take s comStateMembers))
   pure $ Set.drop s flt `Set.union` cm
