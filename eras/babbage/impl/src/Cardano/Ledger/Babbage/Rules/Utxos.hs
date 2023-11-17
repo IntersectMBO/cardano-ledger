@@ -18,11 +18,11 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
   babbageEvalScriptsTxInvalid,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosEvent (..),
   AlonzoUtxosPredFailure (..),

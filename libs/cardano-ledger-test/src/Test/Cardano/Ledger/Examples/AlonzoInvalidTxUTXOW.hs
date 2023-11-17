@@ -16,7 +16,7 @@
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),

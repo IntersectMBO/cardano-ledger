@@ -35,17 +35,17 @@ where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+  CollectError (..),
+  collectPlutusScriptsWithContext,
+  evalPlutusScripts,
+ )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   EraPlutusContext,
   ExtendedUTxO (..),
   PlutusDebug (..),
   ScriptFailure (..),
   ScriptResult (..),
- )
-import Cardano.Ledger.Alonzo.PlutusScriptApi (
-  CollectError (..),
-  collectPlutusScriptsWithContext,
-  evalPlutusScripts,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))

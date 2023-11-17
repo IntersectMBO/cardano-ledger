@@ -18,7 +18,7 @@ import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo (language)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   AlonzoScript (..),

@@ -12,7 +12,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Alonzo.PlutusScriptApi (
+module Cardano.Ledger.Alonzo.Plutus.Evaluate (
   -- Figure 8
   getSpendingTxIn,
   getDatumAlonzo,

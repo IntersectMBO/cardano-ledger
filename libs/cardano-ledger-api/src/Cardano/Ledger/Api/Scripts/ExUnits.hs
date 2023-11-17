@@ -22,6 +22,7 @@ module Cardano.Ledger.Api.Scripts.ExUnits (
 where
 
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (knownToNotBe1Phase)
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   EraPlutusContext,
   ExtendedUTxO (..),
@@ -35,7 +36,6 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transProtocolVersion,
   valContext,
  )
-import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   CostModel,

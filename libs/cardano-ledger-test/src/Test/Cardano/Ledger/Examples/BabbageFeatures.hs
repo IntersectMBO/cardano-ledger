@@ -27,11 +27,11 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures (
 
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   TranslationError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
   TxOutSource (TxOutFromInput, TxOutFromOutput),
  )
-import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
   AlonzoUtxowPredFailure (MissingRequiredDatums, NotAllowedSupplementalDatums),

@@ -14,11 +14,11 @@ module Test.Cardano.Ledger.Alonzo.ChainTrace (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ScriptResult (..), pwcScript)
-import Cardano.Ledger.Alonzo.PlutusScriptApi (
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (ScriptResult (..), pwcScript)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)

@@ -13,6 +13,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..), collectPlutusScriptsWithContext)
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   PlutusWithContext (..),
   TranslationError,
@@ -20,7 +21,6 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   txInfo,
   valContext,
  )
-import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectPlutusScriptsWithContext)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx (
