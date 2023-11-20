@@ -23,6 +23,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
 import Cardano.Ledger.Address (RewardAcnt, getRwdNetwork)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  ProtVer,
   EpochNo (..),
   Network,
   ShelleyBase,
@@ -136,6 +137,15 @@ data ConwayGovPredFailure era
       (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   | InvalidPrevGovActionIdsInProposals (Seq.Seq (ProposalProcedure era))
   | VotingOnExpiredGovAction (Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
+  | ProposalCantFollow
+      -- | The Id of the GovAction being Proposed 
+      (GovActionId (EraCrypto era))
+      -- | Its protocol version
+      ProtVer
+      -- | The Id of the Previous GovAction pointed to by the one proposed
+      (GovActionId (EraCrypto era))
+      -- | The ProtVer of the Previous GovAction pointed to by the one proposed
+      ProtVer
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => ToExpr (ConwayGovPredFailure era)
@@ -156,6 +166,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     7 -> SumD ExpirationEpochTooSmall <! From
     8 -> SumD InvalidPrevGovActionIdsInProposals <! From
     9 -> SumD VotingOnExpiredGovAction <! From
+    10 -> SumD  ProposalCantFollow <! From <! From <! From <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -179,6 +190,9 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum InvalidPrevGovActionIdsInProposals 8 !> To proposals
       VotingOnExpiredGovAction ga ->
         Sum VotingOnExpiredGovAction 9 !> To ga
+      ProposalCantFollow proposed proposedProtVer previous prevProtVer ->
+        Sum ProposalCantFollow 10 !> To proposed !> To proposedProtVer
+                                  !> To previous !> To prevProtVer
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
