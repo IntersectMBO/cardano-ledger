@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -27,13 +28,10 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
-import Cardano.Ledger.Pretty (ppString)
-
--- import Cardano.Ledger.BaseTypes (Globals(..),EpochNo(..))
 import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL, ppGovActionDepositL)
 import Cardano.Ledger.Core (
   EraPParams,
   PParams,
@@ -65,6 +63,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
+import Cardano.Ledger.Pretty (ppString)
 import Cardano.Ledger.SafeHash (SafeHash)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
@@ -79,7 +78,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
-import Data.Foldable (toList)
+import qualified Data.Foldable as F
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -460,8 +459,11 @@ snapshotsL = nesEsL . esSnapshotsL
 ppFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 ppFL p = lens (\pp -> PParamsF p pp) (\_ (PParamsF _ qq) -> qq)
 
+pparamsVar :: Gov.EraGov era => Proof era -> V era (PParamsF era)
+pparamsVar p = (V "pparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . curPParamsEpochStateL . ppFL p)))
+
 pparams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
-pparams p = Var (V "pparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . curPParamsEpochStateL . ppFL p)))
+pparams p = Var $ pparamsVar p
 
 nmLikelihoodsT :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) [Float])
 nmLikelihoodsT = Var (V "likelihoodsNM" (MapR PoolHashR (ListR FloatR)) (Yes NewEpochStateR (nesEsL . esNonMyopicL . nmLikelihoodsL)))
@@ -1123,6 +1125,21 @@ keyDepAmt p =
       CoinR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppKeyDepositL)))
 
+drepActivity :: ConwayEraPParams era => Proof era -> Term era EpochNo
+drepActivity p = Var $ pV p "drepActivty" EpochR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
+
+drepDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
+drepDeposit p = Var $ pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
+
+proposalDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
+proposalDeposit p =
+  Var $
+    pV
+      p
+      "proposalDeposit"
+      CoinR
+      (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppGovActionDepositL)))
+
 maxTxExUnits :: AlonzoEraPParams era => Proof era -> Term era ExUnits
 maxTxExUnits p =
   Var $
@@ -1140,12 +1157,6 @@ collateralPercentage p =
       "collateralPercentage"
       NaturalR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppCollateralPercentageL)))
-
-drepDeposit :: ConwayEraPParams era => Proof era -> Term era Coin
-drepDeposit p = Var $ pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepDepositL)))
-
-drepActivity :: ConwayEraPParams era => Proof era -> Term era EpochNo
-drepActivity p = Var $ pV p "drepActivty" EpochR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
 
 maxEpoch :: Era era => Proof era -> Term era EpochNo
 maxEpoch p =
@@ -1694,6 +1705,11 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         -- treas
         testGlobals
 
+proposalsT :: forall era. Era era => RootTarget era (Proposals era) (Proposals era)
+proposalsT =
+  Invert "fromGovActionStateSeq" (typeRep @(Proposals era)) (fromGovActionStateSeq . SS.fromList)
+    :$ Lensed prevProposals (lens (F.toList . proposalsActions) $ const (fromGovActionStateSeq . SS.fromList))
+
 -- ==================================================
 -- Second form of DRepPulsingState 'DRComplete'
 -- ==================================================
@@ -1744,7 +1760,7 @@ prevProposals = Var $ V "prevProposals" (ListR GovActionStateR) No
 prevProposalsL :: Lens' (DRepPulser era Identity (RatifyState era)) [GovActionState era]
 prevProposalsL =
   lens
-    (\x -> toList (dpProposals x))
+    (\x -> F.toList (dpProposals x))
     (\x y -> x {dpProposals = SS.fromList y})
 
 -- | Partially computed DRepDistr inside the pulser
@@ -1866,8 +1882,8 @@ proposalDeposits :: Era era => Term era Coin
 proposalDeposits = Var (V "proposalDeposits" CoinR No)
 
 -- | A view of 'currentDRepState' (sum of the drepDeposit field of in the range of 'currentDRepState')
-drepDeposits :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Coin)
-drepDeposits = Var (V "drepDeposits" (MapR VCredR CoinR) No)
+drepDepositsView :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Coin)
+drepDepositsView = Var (V "drepDepositsView" (MapR VCredR CoinR) No)
 
 currProposals :: Era era => Term era [GovActionState era]
 currProposals = Var $ V "currProposals" (ListR GovActionStateR) No

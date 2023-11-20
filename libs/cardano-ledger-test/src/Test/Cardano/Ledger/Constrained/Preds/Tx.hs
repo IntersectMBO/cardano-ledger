@@ -495,7 +495,7 @@ minusMultiValue p v1 v2 = case whichValue p of
 -- Using constraints to generate a TxBody
 -- ==============================================================
 
-txBodyPreds :: forall era. (HasCallStack, Reflect era) => UnivSize -> Proof era -> [Pred era]
+txBodyPreds :: forall era. (Reflect era, HasCallStack) => UnivSize -> Proof era -> [Pred era]
 txBodyPreds sizes p =
   (txOutPreds sizes p balanceCoin (outputs p))
     ++ [ mint :<-: (Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend)) ^$ (outputs p) ^$ spending)
@@ -537,7 +537,7 @@ txBodyPreds sizes p =
           :<-: ( Constr "certsRefunds" certsRefunds
                   ^$ pparams p
                   ^$ stakeDeposits
-                  ^$ drepDeposits
+                  ^$ drepDepositsView
                   ^$ certs
                )
        , txdeposits :<-: (Constr "certsDeposits" certsDeposits ^$ pparams p ^$ regPools ^$ certs)
