@@ -56,7 +56,6 @@ import Data.Bimap (Bimap)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Map as Map
-import Data.Monoid.Generic (GenericMonoid (GenericMonoid), GenericSemigroup (GenericSemigroup))
 import qualified Data.Set as Set
 import Data.Time (Day (ModifiedJulianDay), UTCTime (UTCTime))
 import Lens.Micro (to, (^.), (^..))
@@ -80,9 +79,20 @@ data AbstractToConcreteIdMaps = AbstractToConcreteIdMaps
   { transactionIds :: !(Map Abstract.TxId UTxO.TxId)
   , proposalIds :: !(Map Abstract.Update.UpId Update.UpId)
   }
-  deriving (Eq, Show, Generic)
-  deriving (Semigroup) via GenericSemigroup AbstractToConcreteIdMaps
-  deriving (Monoid) via GenericMonoid AbstractToConcreteIdMaps
+  deriving (Eq, Generic, Show)
+
+instance Monoid AbstractToConcreteIdMaps where
+  mempty = AbstractToConcreteIdMaps mempty mempty
+  mconcat xs =
+    AbstractToConcreteIdMaps
+      (mconcat $ map transactionIds xs)
+      (mconcat $ map proposalIds xs)
+
+instance Semigroup AbstractToConcreteIdMaps where
+  a <> b =
+    AbstractToConcreteIdMaps
+      (transactionIds a <> transactionIds b)
+      (proposalIds a <> proposalIds b)
 
 -- | Elaborate an abstract block into a concrete block (without annotations).
 elaborate ::

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-byron
-version:            1.0.0.3
+version:            1.0.0.4
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -347,7 +347,6 @@ test-suite cardano-ledger-byron-test
         directory,
         filepath,
         formatting,
-        generic-monoid,
         heapwords,
         hedgehog >=1.0.4,
         microlens,
