@@ -84,7 +84,6 @@ import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
-import Test.Cardano.Ledger.Constrained.Examples (checkForSoundness, testIO)
 import Test.Cardano.Ledger.Constrained.Monad (Typed, failT, generateWithSeed, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.Certs (certsStage)
@@ -122,12 +121,14 @@ import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
+import Cardano.Ledger.DRep (drepDepositL)
 import qualified Test.Cardano.Ledger.Constrained.Preds.CertState as CertState
 import qualified Test.Cardano.Ledger.Constrained.Preds.Certs as Certs
 import qualified Test.Cardano.Ledger.Constrained.Preds.LedgerState as LedgerState
 import qualified Test.Cardano.Ledger.Constrained.Preds.PParams as PParams
 import qualified Test.Cardano.Ledger.Constrained.Preds.TxOut as TxOut
 import qualified Test.Cardano.Ledger.Constrained.Preds.Universes as Universes
+import Test.Cardano.Ledger.Constrained.Utils (checkForSoundness, testIO)
 
 predsTests :: TestTree
 predsTests =
@@ -554,8 +555,9 @@ txBodyPreds sizes p =
        , tempTx :<-: txTarget tempTxBody tempBootWits tempKeyWits
        , -- Compute the real fee, and then recompute the TxBody and the Tx
          txfee :<-: (Constr "finalFee" computeFinalFee ^$ (pparams p) ^$ tempTx)
-         --  , txbodyterm :<-: txbodyTarget txfee wppHash totalCol
+       , --  , txbodyterm :<-: txbodyTarget txfee wppHash totalCol
          --  , txterm :<-: txTarget txbodyterm bootWits keyWits
+         ProjM drepDepositL CoinR currentDRepState :=: drepDepositsView
        ]
     ++ case whichUTxO p of
       UTxOShelleyToMary ->

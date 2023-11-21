@@ -47,7 +47,6 @@ import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Combinators (genFromMap, itemFromSet)
 import Test.Cardano.Ledger.Constrained.Env
-import Test.Cardano.Ledger.Constrained.Examples (testIO)
 import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.Repl
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
@@ -56,6 +55,7 @@ import Test.Cardano.Ledger.Constrained.Rewrite (rewriteGen, standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Size
 import Test.Cardano.Ledger.Constrained.Solver (toolChain, toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxOutField (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (pcData, pcDataHash, pcScript, pcScriptHash, pcTxOut)

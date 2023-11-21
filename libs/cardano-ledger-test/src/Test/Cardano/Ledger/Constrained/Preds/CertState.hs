@@ -18,7 +18,6 @@ import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
-import Test.Cardano.Ledger.Constrained.Examples (testIO)
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL, strictMaybeToMaybeL)
 import Test.Cardano.Ledger.Constrained.Monad (generateWithSeed, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
@@ -28,6 +27,7 @@ import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Size (Size (..), genFromSize)
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (

@@ -19,6 +19,7 @@ library
     exposed-modules:
         Test.Cardano.Ledger.Alonzo.Tools
         Test.Cardano.Ledger.Constrained.Ast
+        Test.Cardano.Ledger.Constrained.Utils
         Test.Cardano.Ledger.Constrained.Classes
         Test.Cardano.Ledger.Constrained.Combinators
         Test.Cardano.Ledger.Constrained.Env
@@ -114,6 +115,7 @@ library
         cardano-ledger-shelley-ma-test,
         cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
         cardano-slotting,
+        deepseq,
         containers,
         formatting,
         groups,

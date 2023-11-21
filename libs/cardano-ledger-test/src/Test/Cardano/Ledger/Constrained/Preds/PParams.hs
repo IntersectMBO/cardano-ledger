@@ -24,12 +24,12 @@ import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env (Access (..), V (..), emptyEnv)
-import Test.Cardano.Ledger.Constrained.Examples (testIO)
 import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
 import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)

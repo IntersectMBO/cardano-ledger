@@ -19,13 +19,11 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
 import Cardano.Ledger.Shelley.Core (EraGov)
+import Control.DeepSeq (deepseq)
 import Control.Exception (ErrorCall (..))
-import qualified Control.Exception as Exc
 import Control.Monad (when)
-import qualified Data.HashSet as HashSet
-import qualified Data.List as List
+import Data.Default.Class (Default (..))
 import Data.Map (Map)
-import qualified Data.Map as Map
 import Data.Ratio ((%))
 import Debug.Trace (trace)
 import Test.Cardano.Ledger.Constrained.Ast
@@ -33,11 +31,13 @@ import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad
+import Test.Cardano.Ledger.Constrained.Preds.Tx (genTxAndNewEpoch)
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.Spec (TT)
 import Test.Cardano.Ledger.Constrained.Tests (prop_shrinking, prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Constrained.Utils (explainBad, testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..))
 import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Reflect (..), StandardCrypto)
@@ -51,12 +51,6 @@ import Test.Tasty.QuickCheck
 type Babbage = BabbageEra StandardCrypto
 
 -- =======================================================
-
-testIO :: String -> IO a -> TestTree
-testIO msg x = testCase msg (Exc.catch (x >> pure ()) handler)
-  where
-    -- handler :: Exc.ErrorCall -> IO ()
-    handler (Exc.SomeException zs) = assertFailure (unlines [msg, show zs])
 
 -- ===========================================
 
@@ -115,24 +109,6 @@ genMaybeCounterExample proof _testname loud order cs target = do
   if loud
     then trace (unlines (messages2 : messages3)) (pure ans)
     else pure ans
-
-checkForSoundness :: Era era => [Pred era] -> Subst era -> Typed (Env era, Maybe String)
-checkForSoundness preds subst = do
-  !env <- monadTyped $ substToEnv subst emptyEnv
-  testTriples <- mapM (makeTest env) preds
-  let bad = filter (\(_, b, _) -> not b) testTriples
-  if null bad
-    then pure (env, Nothing)
-    else pure (env, Just ("Some conditions fail\n" ++ explainBad bad subst))
-
-explainBad :: Era era => [(String, Bool, Pred era)] -> Subst era -> String
-explainBad cs (Subst subst) = unlines (map getString cs) ++ "\n" ++ show restricted
-  where
-    names = List.foldl' varsOfPred HashSet.empty (map getPred cs)
-    restricted = Map.filterWithKey ok subst
-    ok key (SubstElem rep _term access) = HashSet.member (Name (V key rep access)) names
-    getString (s, _, _) = s
-    getPred (_, _, pr) = pr
 
 -- | Test that 'cs' :: [Pred] has a solution
 testn :: Era era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen Property
@@ -819,4 +795,7 @@ allExampleTests =
     , testPropMax 30 "Test 20. ptr & rewards are inverses" test20
     , testPropMax 30 "Constraint soundness" $ prop_soundness
     , testProperty "Shrinking soundness" $ withMaxSuccess 30 $ prop_shrinking
+    , testProperty "NewEpochState and Tx generation" $ do
+        (st, tx, _) <- genTxAndNewEpoch def $ Conway Standard
+        (st, tx) `deepseq` pure True
     ]
