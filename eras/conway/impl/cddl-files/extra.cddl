@@ -1,6 +1,6 @@
 ; Conway era introduces an optional 258 tag for sets, which will become mandatory in the
-; next era. We recommend all the tooling to account for this future breaking change now,
-; rather than in the next era when it will be enforced.
+; second era after Conway. We recommend all the tooling to account for this future breaking
+; change sooner rather than later, in order to provide a smooth transition for their users.
 
 set<a> = #6.258([* a]) / [* a]
 
