@@ -40,6 +40,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logAcceptedRatio,
   canGovActionBeDRepAccepted,
   logRatificationChecks,
+  resignCommitteeColdKey,
   registerCommitteeHotKey,
   logCurPParams,
 ) where
@@ -117,6 +118,7 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
   pattern AuthCommitteeHotKeyTxCert,
   pattern RegDRepTxCert,
+  pattern ResignCommitteeColdTxCert,
  )
 import Cardano.Ledger.Core (EraRule)
 import Cardano.Ledger.Credential (Credential (..))
@@ -646,6 +648,18 @@ registerCommitteeHotKey coldKey = do
         & bodyTxL . certsTxBodyL
           .~ SSeq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
   pure hotKey
+
+-- | Submits a transaction that resigns the cold key
+resignCommitteeColdKey ::
+  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  KeyHash 'ColdCommitteeRole (EraCrypto era) ->
+  ImpTestM era ()
+resignCommitteeColdKey coldKey = do
+  void $
+    submitTx "Resigning cold key" $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . certsTxBodyL
+          .~ SSeq.singleton (ResignCommitteeColdTxCert (KeyHashObj coldKey) SNothing)
 
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do

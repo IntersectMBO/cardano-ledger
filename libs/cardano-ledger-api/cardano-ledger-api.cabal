@@ -97,6 +97,7 @@ test-suite cardano-ledger-api-test
     other-modules:
         Test.Cardano.Ledger.Api.Tx.Out
         Test.Cardano.Ledger.Api.Tx.Body
+        Test.Cardano.Ledger.Api.State.Imp.QuerySpec
         Test.Cardano.Ledger.Api.State.QuerySpec
 
     default-language: Haskell2010
@@ -118,4 +119,5 @@ test-suite cardano-ledger-api-test
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-strict-containers,
         containers,
-        microlens
+        microlens,
+        microlens-mtl
