@@ -7,6 +7,7 @@
   `ppCommitteeMaxTermLengthL`, `ppuGovActionLifetimeL`, `ppuDRepActivityL` and
   `ppuCommitteeMaxTermLengthL`
 * Move all `ToExpr` instances into `testlib`s.
+* Introduce `ToBeExpired` data constructor to `NextEpochChange`
 
 ## 1.7.0.1
 

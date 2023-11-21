@@ -69,6 +69,7 @@ import Cardano.Ledger.UMap (
 import Control.Monad (guard)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (<&>), (^.))
@@ -219,10 +220,13 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
       nextEpochChange ck
         | not inCurrent && inNext = ToBeEnacted
         | not inNext = ToBeRemoved
+        | expiring = ToBeExpired
         | otherwise = NoChangeExpected
         where
-          inCurrent = Map.member ck comMembers
+          lookupCurrent = Map.lookup ck comMembers
+          inCurrent = isJust lookupCurrent
           inNext = Set.member ck nextComMembers
+          expiring = maybe False (== currentEpoch) lookupCurrent
 
   pure
     CommitteeMembersState

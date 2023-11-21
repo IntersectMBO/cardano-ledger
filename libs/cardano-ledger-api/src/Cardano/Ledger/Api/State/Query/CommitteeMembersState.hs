@@ -80,6 +80,7 @@ data NextEpochChange
   | -- | Member will be removed
     ToBeRemoved
   | NoChangeExpected
+  | ToBeExpired
   deriving (Show, Eq, Enum, Bounded, Generic, Ord, ToJSON)
 
 instance EncCBOR NextEpochChange where

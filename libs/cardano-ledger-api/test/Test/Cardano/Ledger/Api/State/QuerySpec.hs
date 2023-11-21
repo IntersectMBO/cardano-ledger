@@ -278,8 +278,8 @@ propNextEpoch ::
   Expectation
 propNextEpoch nes = do
   withCommitteeInfo nes $
-    \(Committee cm _) (CommitteeState comStateMembers') nextComMembers' noFilterResult -> do
-      let comMembers = Map.keysSet cm
+    \(Committee comMembers' _) (CommitteeState comStateMembers') nextComMembers' noFilterResult -> do
+      let comMembers = Map.keysSet comMembers'
       let comStateMembers = Map.keysSet comStateMembers'
       let nextComMembers = Map.keysSet nextComMembers'
 
@@ -289,8 +289,25 @@ propNextEpoch nes = do
       filterNext ToBeRemoved noFilterResult
         `shouldSatisfy` (\res -> Map.keysSet res == (comMembers `Set.union` comStateMembers) `Set.difference` nextComMembers)
 
-      filterNext NoChangeExpected noFilterResult
-        `shouldSatisfy` (\res -> Map.keysSet res == (comMembers `Set.intersection` nextComMembers))
+      -- members who are both in current and nextCommittee are either ToBeExpired or NoChangeExpected
+      Map.keysSet (filterNext NoChangeExpected noFilterResult)
+        `Set.union` Map.keysSet (filterNext ToBeExpired noFilterResult)
+        `shouldSatisfy` (== (comMembers `Set.intersection` nextComMembers))
+
+      let currentEpoch = csEpochNo noFilterResult
+      let expiring =
+            Map.keysSet $
+              Map.union
+                (Map.filter (== currentEpoch) comMembers')
+                (Map.filter (== currentEpoch) nextComMembers')
+
+      -- members ToBeExpired have the expiry set to currentEpoch, either in the current committee or in the next one
+      Map.keysSet (filterNext ToBeExpired noFilterResult)
+        `shouldSatisfy` (`Set.isSubsetOf` expiring)
+
+      cmsExpiration
+        <$> filterNext NoChangeExpected noFilterResult
+          `shouldSatisfy` all (all (>= currentEpoch + 1))
   where
     filterNext nextEpochChange cms =
       Map.filter
