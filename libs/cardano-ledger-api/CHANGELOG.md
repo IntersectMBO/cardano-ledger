@@ -1,15 +1,15 @@
 # Version history for `cardano-ledger-api`
 
-## 1.7.0.2
-
-*
-
 ## 1.8.0.0
 
 * Change the type of `ppEMaxL`, `ppuEMaxL`, `ppGovActionLifetimeL`, `ppDRepActivityL`,
-  `ppCommitteeMaxTermLengthL`, `ppuGovActionLifetimeL`, `ppuDRepActivityL` and 
+  `ppCommitteeMaxTermLengthL`, `ppuGovActionLifetimeL`, `ppuDRepActivityL` and
 	`ppuCommitteeMaxTermLengthL`
-	
+
+## 1.7.0.1
+
+*
+
 ## 1.7.0.0
 
 * Deprecate `GetCommitteeState` query
