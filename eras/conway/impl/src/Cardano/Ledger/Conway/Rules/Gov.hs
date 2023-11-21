@@ -23,9 +23,9 @@ module Cardano.Ledger.Conway.Rules.Gov (
 import Cardano.Ledger.Address (RewardAcnt, getRwdNetwork)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
-  ProtVer,
   EpochNo (..),
   Network,
+  ProtVer,
   ShelleyBase,
   StrictMaybe (..),
   addEpochInterval,
@@ -63,6 +63,7 @@ import Cardano.Ledger.Conway.Governance (
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
   isStakePoolVotingAllowed,
+  proposalsActions,
   proposalsAddVote,
   proposalsInsertGovAction,
   proposalsLookupId,
@@ -83,6 +84,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
+import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.Shelley.Tx (TxId (..))
 import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
@@ -97,8 +99,10 @@ import Control.State.Transition.Extended (
   tellEvent,
   (?!),
  )
+import qualified Data.Foldable as Fold (toList)
 import qualified Data.Map.Merge.Strict as Map (dropMissing, merge, zipWithMaybeMatched)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
@@ -107,6 +111,8 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
+
+-- ===========================================
 
 data GovEnv era = GovEnv
   { geTxId :: !(TxId (EraCrypto era))
@@ -137,15 +143,16 @@ data ConwayGovPredFailure era
       (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   | InvalidPrevGovActionIdsInProposals (Seq.Seq (ProposalProcedure era))
   | VotingOnExpiredGovAction (Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
-  | ProposalCantFollow
-      -- | The Id of the GovAction being Proposed 
-      (GovActionId (EraCrypto era))
-      -- | Its protocol version
-      ProtVer
-      -- | The Id of the Previous GovAction pointed to by the one proposed
-      (GovActionId (EraCrypto era))
-      -- | The ProtVer of the Previous GovAction pointed to by the one proposed
-      ProtVer
+  | ProposalsCantFollow
+      ( Map.Map
+          -- \| The Id of the GovAction being Proposed
+          (GovActionId (EraCrypto era))
+          -- \| Its protocol version
+          ( ProtVer
+          , -- \| The ProtVer of the Previous GovAction pointed to by the one proposed
+            ProtVer
+          )
+      )
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => ToExpr (ConwayGovPredFailure era)
@@ -166,7 +173,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     7 -> SumD ExpirationEpochTooSmall <! From
     8 -> SumD InvalidPrevGovActionIdsInProposals <! From
     9 -> SumD VotingOnExpiredGovAction <! From
-    10 -> SumD  ProposalCantFollow <! From <! From <! From <! From
+    10 -> SumD ProposalsCantFollow <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -190,9 +197,9 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum InvalidPrevGovActionIdsInProposals 8 !> To proposals
       VotingOnExpiredGovAction ga ->
         Sum VotingOnExpiredGovAction 9 !> To ga
-      ProposalCantFollow proposed proposedProtVer previous prevProtVer ->
-        Sum ProposalCantFollow 10 !> To proposed !> To proposedProtVer
-                                  !> To previous !> To prevProtVer
+      ProposalsCantFollow themap ->
+        Sum ProposalsCantFollow 10
+          !> To themap
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -337,7 +344,7 @@ govTransition ::
 govTransition = do
   TRC (GovEnv txid currentEpoch pp prevGovActionIds, st, gp) <- judgmentContext
   expectedNetworkId <- liftSTS $ asks networkId
-
+  runTest $ checkProposalsHaveBadProtVer pp prevGovActionIds st
   let applyProps st' Seq.Empty = pure st'
       applyProps st' ((idx, ProposalProcedure {..}) Seq.:<| ps) = do
         let expectedDeposit = pp ^. ppGovActionDepositL
@@ -405,3 +412,55 @@ govTransition = do
 
 instance Inject (ConwayGovPredFailure era) (ConwayGovPredFailure era) where
   inject = id
+
+-- ================================================
+
+-- | If the GovAction is a HardFork, then return 2 things (if they exist)
+--   1) The proposed ProtVer
+--   2) The ProtVer of the preceeding HardFork
+--   If it is not a HardFork, or the previous govActionId points to something other
+--   than  HardFork, return Nothing. It will be verified with another predicate check
+preceedingHardFork ::
+  EraPParams era =>
+  GovAction era ->
+  PParams era ->
+  PrevGovActionIds era ->
+  Proposals era ->
+  Maybe (ProtVer, ProtVer)
+preceedingHardFork (HardForkInitiation mPrev newProtVer) pp pgaids ps
+  | mPrev == pgaHardFork pgaids = Just (newProtVer, pp ^. ppProtocolVersionL)
+  | otherwise = do
+      SJust (PrevGovActionId prevGovActionId) <- Just mPrev
+      HardForkInitiation _ prevProtVer <- gasAction <$> proposalsLookupId prevGovActionId ps
+      Just (newProtVer, prevProtVer)
+preceedingHardFork _ _ _ _ = Nothing
+
+-- | If the GovAction part of the GovActionState is a HardFork, test that
+--   it's ProtVer is legal. If it is not then return the data to make one
+--   entry in the Map inside PredicateFailure 'ProposalsCantFollow'
+legalProtVer ::
+  EraPParams era =>
+  PParams era ->
+  PrevGovActionIds era ->
+  Proposals era ->
+  GovActionState era ->
+  Maybe (GovActionId (EraCrypto era), (ProtVer, ProtVer))
+legalProtVer pp pgaids ps gas = do
+  (newProtVer, prevProtVer) <- preceedingHardFork (gasAction gas) pp pgaids ps
+  if pvCanFollow newProtVer (SJust prevProtVer)
+    then Nothing
+    else Just (gasId gas, (newProtVer, prevProtVer))
+
+-- | Raise a Predicate failure if any of the proposals is a Hardfork,
+--   and it does not have a legal ProtVer
+checkProposalsHaveBadProtVer ::
+  EraPParams era =>
+  PParams era ->
+  PrevGovActionIds era ->
+  Proposals era ->
+  Test (ConwayGovPredFailure era)
+checkProposalsHaveBadProtVer pp pgaids ps =
+  let invalidProposals =
+        mapMaybe (legalProtVer pp pgaids ps) $ Fold.toList (proposalsActions ps)
+   in failureUnless (null invalidProposals) $
+        ProposalsCantFollow (Map.fromList invalidProposals)
