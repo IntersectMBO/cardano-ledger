@@ -385,6 +385,11 @@ instance Example (ImpTestM era ()) where
 
   evaluateExample impTest = evaluateExample (`evalImpTestM` impTest)
 
+instance (Arbitrary a, Show a) => Example (a -> ImpTestM era ()) where
+  type Arg (a -> ImpTestM era ()) = ImpTestState era
+
+  evaluateExample impTest = evaluateExample (\s -> property $ evalImpTestM s . impTest)
+
 evalImpTestM :: ImpTestState era -> ImpTestM era b -> IO b
 evalImpTestM impState = fmap fst . runImpTestM impState
 

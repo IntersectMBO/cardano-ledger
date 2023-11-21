@@ -4,10 +4,10 @@
 
 * Change the type of `ppEMaxL`
 
-
 ### `testlib`
 
 * Add `runImpTestM`, `runImpTestM_`, `evalImpTestM` and `execImpTestM`
+* Add instance `Example (a -> ImpTestM era ())`, which allows use of `Arbitrary`
 
 ## 1.8.0.0
 
