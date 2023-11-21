@@ -56,7 +56,8 @@ import Cardano.Ledger.Shelley.Governance (
     GovState,
     getCommitteeMembers,
     getConstitution,
-    getDRepDistr
+    getDRepDistr,
+    getNextEpochCommitteeMembers
   ),
  )
 import Cardano.Ledger.Shelley.LedgerState
@@ -165,6 +166,8 @@ queryCommitteeMembersState ::
   Maybe (CommitteeMembersState (EraCrypto era))
 queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
   (comMembers, comQuorum) <- getCommitteeMembers (queryGovState nes)
+  let nextComMembers =
+        maybe Set.empty (Map.keysSet . fst) (getNextEpochCommitteeMembers (queryGovState nes))
   let comStateMembers =
         csCommitteeCreds $
           nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
@@ -176,8 +179,11 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
       relevantColdKeys
         | Set.null statusFilter || Set.member Unrecognized statusFilter =
             withFilteredColdCreds $
-              Map.keysSet comMembers
-                `Set.union` Map.keysSet comStateMembers
+              Set.unions
+                [ Map.keysSet comMembers
+                , Map.keysSet comStateMembers
+                , nextComMembers
+                ]
         | otherwise = withFilteredColdCreds $ Map.keysSet comMembers
 
       relevantHotKeys =
@@ -207,9 +213,17 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
                 Nothing -> MemberNotAuthorized
                 Just Nothing -> MemberResigned
                 Just (Just hk) -> MemberAuthorized hk
-        -- TODO: implement after pulsing and snapshots are done
-        let nextEpochChange = NoChangeExpected
-        pure $ CommitteeMemberState hkStatus status mbExpiry nextEpochChange
+        pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
+
+      nextEpochChange :: Credential 'ColdCommitteeRole (EraCrypto era) -> NextEpochChange
+      nextEpochChange ck
+        | not inCurrent && inNext = ToBeEnacted
+        | not inNext = ToBeRemoved
+        | otherwise = NoChangeExpected
+        where
+          inCurrent = Map.member ck comMembers
+          inNext = Set.member ck nextComMembers
+
   pure
     CommitteeMembersState
       { csCommittee = cms
