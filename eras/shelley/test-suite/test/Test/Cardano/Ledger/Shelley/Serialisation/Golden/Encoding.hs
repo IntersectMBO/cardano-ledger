@@ -21,6 +21,7 @@ import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
+  EpochInterval (..),
   Network (..),
   Nonce (..),
   ProtVer (..),
@@ -664,7 +665,7 @@ tests =
           maxbhsize = 4
           keydeposit = Coin 5
           pooldeposit = Coin 6
-          emax = EpochNo 7
+          emax = EpochInterval 7
           nopt = 8
           a0 = unsafeBoundRational $ 1 % 6
           rho = unsafeBoundRational $ 1 % 6

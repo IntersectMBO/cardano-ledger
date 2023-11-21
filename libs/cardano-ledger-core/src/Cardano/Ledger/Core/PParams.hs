@@ -74,7 +74,7 @@ module Cardano.Ledger.Core.PParams (
 where
 
 import Cardano.Ledger.BaseTypes (
-  EpochNo (..),
+  EpochInterval (..),
   NonNegativeInterval,
   Nonce (..),
   ProtVer,
@@ -317,7 +317,7 @@ class
   hkdPoolDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   -- | epoch bound on pool retirement
-  hkdEMaxL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
+  hkdEMaxL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
 
   -- | Desired number of pools
   hkdNOptL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
@@ -402,7 +402,7 @@ ppPoolDepositL :: forall era. EraPParams era => Lens' (PParams era) Coin
 ppPoolDepositL = ppLens . hkdPoolDepositL @era @Identity
 
 -- | epoch bound on pool retirement
-ppEMaxL :: forall era. EraPParams era => Lens' (PParams era) EpochNo
+ppEMaxL :: forall era. EraPParams era => Lens' (PParams era) EpochInterval
 ppEMaxL = ppLens . hkdEMaxL @era @Identity
 
 -- | Desired number of pools
@@ -468,7 +468,7 @@ ppuPoolDepositL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (Stri
 ppuPoolDepositL = ppuLens . hkdPoolDepositL @era @StrictMaybe
 
 -- | epoch bound on pool retirement
-ppuEMaxL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
+ppuEMaxL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
 ppuEMaxL = ppuLens . hkdEMaxL @era @StrictMaybe
 
 -- | Desired number of pools

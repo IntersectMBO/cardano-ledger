@@ -22,10 +22,12 @@ module Cardano.Ledger.Conway.Rules.Gov (
 
 import Cardano.Ledger.Address (RewardAcnt, getRwdNetwork)
 import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
   EpochNo (..),
   Network,
   ShelleyBase,
   StrictMaybe (..),
+  addEpochInterval,
   networkId,
  )
 import Cardano.Ledger.Binary (
@@ -211,7 +213,7 @@ addVoterVote voter as govActionId VotingProcedure {vProcVote} =
 
 addAction ::
   EpochNo ->
-  EpochNo ->
+  EpochInterval ->
   GovActionId (EraCrypto era) ->
   Coin ->
   RewardAcnt (EraCrypto era) ->
@@ -231,7 +233,7 @@ addAction epoch gaExpiry gaid c addr act =
         , gasReturnAddr = addr
         , gasAction = act
         , gasProposedIn = epoch
-        , gasExpiresAfter = epoch + gaExpiry
+        , gasExpiresAfter = addEpochInterval epoch gaExpiry
         }
 
 checkVotesAreForValidActions ::

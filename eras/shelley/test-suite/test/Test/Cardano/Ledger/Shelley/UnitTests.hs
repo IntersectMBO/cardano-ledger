@@ -155,7 +155,7 @@ pp =
     & ppKeyDepositL .~ Coin 100
     & ppPoolDepositL .~ Coin 250
     & ppMaxTxSizeL .~ 1024
-    & ppEMaxL .~ EpochNo 10
+    & ppEMaxL .~ EpochInterval 10
     & ppMinUTxOValueL .~ Coin 100
     & ppMinPoolCostL .~ Coin 10
 

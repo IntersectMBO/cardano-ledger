@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, Globals (..), ShelleyBase, SlotNo)
+import Cardano.Ledger.BaseTypes (EpochNo, Globals (..), ShelleyBase, SlotNo, addEpochInterval)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -208,7 +208,7 @@ conwayCertsTransition = do
           updatedVSDReps =
             Map.foldlWithKey'
               ( \dreps voter _ -> case voter of
-                  DRepVoter cred -> Map.adjust (drepExpiryL .~ currentEpoch + drepActivity) cred dreps
+                  DRepVoter cred -> Map.adjust (drepExpiryL .~ addEpochInterval currentEpoch drepActivity) cred dreps
                   _ -> dreps
               )
               (certState' ^. certVStateL . vsDRepsL)

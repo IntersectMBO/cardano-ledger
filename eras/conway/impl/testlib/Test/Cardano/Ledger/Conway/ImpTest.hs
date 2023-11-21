@@ -47,7 +47,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.CertState (DRep (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -194,8 +194,8 @@ instance
   emptyImpNES rootCoin =
     let nes =
           emptyAlonzoImpNES rootCoin
-            & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ 100
-            & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ 30
+            & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
+            & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
         epochState = nes ^. nesEsL
         ratifyState = def & rsEnactStateL .~ (epochState ^. epochStateGovStateL . cgEnactStateL)
      in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState

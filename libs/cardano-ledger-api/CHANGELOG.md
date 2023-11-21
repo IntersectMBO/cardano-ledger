@@ -4,10 +4,12 @@
 
 *
 
-## 1.7.0.1
+## 1.8.0.0
 
-*
-
+* Change the type of `ppEMaxL`, `ppuEMaxL`, `ppGovActionLifetimeL`, `ppDRepActivityL`,
+  `ppCommitteeMaxTermLengthL`, `ppuGovActionLifetimeL`, `ppuDRepActivityL` and 
+	`ppuCommitteeMaxTermLengthL`
+	
 ## 1.7.0.0
 
 * Deprecate `GetCommitteeState` query

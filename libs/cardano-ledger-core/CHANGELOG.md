@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-core`
 
-## 1.9.0.1
+## 1.10.0.0
 
-*
+* Add the newtype `EpochInterval`
+* Change the type of `ppEMaxL` and `ppuEMaxL`
 
 ## 1.9.0.0
 

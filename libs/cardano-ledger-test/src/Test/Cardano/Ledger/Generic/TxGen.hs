@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (..),
  )
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
-import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
@@ -601,9 +601,9 @@ genTxCert slot =
     genEpoch = do
       let EpochNo txEpoch = epochFromSlotNo slot
       EpochNo curEpoch <- gets $ mEL . gsModel
-      EpochNo maxEpoch <- asks $ view ppEMaxL . gePParams
+      EpochInterval maxEpoch <- asks $ view ppEMaxL . gePParams
       let nextEpoch = 1 + (txEpoch - curEpoch) -- This will be either 1 or 2. It is 2 if the Tx is at the epoch boundary
-      delta <- lift $ choose (nextEpoch, maxEpoch)
+      delta <- lift $ choose (nextEpoch, fromIntegral maxEpoch)
       return . EpochNo $ (curEpoch + delta)
 
 -- getShelleyTxCertDelegG :: forall era. Reflect era => TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))

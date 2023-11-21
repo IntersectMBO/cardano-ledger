@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.11.0.1
+## 1.12.0.0
 
-*
+* Changed the type of ConwayPParam's fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
+* Changed types of lenses: `ppGovActionLifetimeL`, `ppDRepActivityL`, `ppCommitteeMaxTermLengthL` and `ppuGovActionLifetimeL`, `ppuDRepActivityL`, `ppuCommitteeMaxTermLengthL`
 
 ## 1.11.0.0
 

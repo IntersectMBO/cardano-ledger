@@ -29,6 +29,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (..),
  )
 import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
   EpochNo (..),
   ProtVer (..),
   SlotNo (..),
@@ -87,7 +88,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import Data.Word (Word64)
+import Data.Word (Word32, Word64)
 import Lens.Micro ((^.))
 import qualified Lib as Agda
 
@@ -173,6 +174,8 @@ instance
 deriving instance SpecTranslate SlotNo
 
 deriving instance SpecTranslate EpochNo
+
+deriving instance SpecTranslate EpochInterval
 
 instance SpecTranslate ProtVer where
   type SpecRep ProtVer = (Integer, Integer)
@@ -327,6 +330,11 @@ instance SpecTranslate Tag where
 
 instance SpecTranslate Word64 where
   type SpecRep Word64 = Integer
+
+  toSpecRep = pure . toInteger
+
+instance SpecTranslate Word32 where
+  type SpecRep Word32 = Integer
 
   toSpecRep = pure . toInteger
 

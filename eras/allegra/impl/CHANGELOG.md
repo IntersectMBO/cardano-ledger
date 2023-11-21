@@ -2,7 +2,7 @@
 
 ## 1.2.5.1
 
-*
+* Update `cardano-ledger-core` bounds
 
 ## 1.2.5.0
 

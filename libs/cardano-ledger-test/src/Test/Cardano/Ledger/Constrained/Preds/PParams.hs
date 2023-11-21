@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Script (Prices (..))
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes (
-  EpochNo (..),
+  EpochInterval (..),
   NonNegativeInterval,
   boundRational,
  )
@@ -90,7 +90,7 @@ genPParams proof tx bb bh = do
           , KeyDeposit $ Coin 2
           , DRepDeposit $ Coin 7
           , GovActionDeposit $ Coin 13
-          , DRepActivity $ EpochNo 8
+          , DRepActivity $ EpochInterval 8
           , EMax 100
           ]
     )
