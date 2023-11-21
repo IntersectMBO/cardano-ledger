@@ -24,6 +24,10 @@
 
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
+  runImpTestM,
+  runImpTestM_,
+  evalImpTestM,
+  execImpTestM,
   ImpTestState,
   ImpException (..),
   ShelleyEraImp (..),
@@ -115,6 +119,7 @@ import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (void)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.State.Strict (MonadState (..), gets, modify)
@@ -378,8 +383,21 @@ instance MonadState (ImpTestState era) (ImpTestM era) where
 instance Example (ImpTestM era ()) where
   type Arg (ImpTestM era ()) = ImpTestState era
 
-  evaluateExample (ImpTestM m) = evaluateExample $ \arg -> do
-    ioRef <- newIORef arg
+  evaluateExample impTest = evaluateExample (`evalImpTestM` impTest)
+
+evalImpTestM :: ImpTestState era -> ImpTestM era b -> IO b
+evalImpTestM impState = fmap fst . runImpTestM impState
+
+execImpTestM :: ImpTestState era -> ImpTestM era b -> IO (ImpTestState era)
+execImpTestM impState = fmap snd . runImpTestM impState
+
+runImpTestM_ :: ImpTestState era -> ImpTestM era b -> IO ()
+runImpTestM_ impState = void . runImpTestM impState
+
+runImpTestM :: ImpTestState era -> ImpTestM era b -> IO (b, ImpTestState era)
+runImpTestM impState (ImpTestM m) = do
+  ioRef <- newIORef impState
+  res <-
     runReaderT m ioRef `catchAny` \exc -> do
       logsDoc <- impLog <$> readIORef ioRef
       let logs = renderString (layoutPretty defaultLayoutOptions logsDoc)
@@ -402,6 +420,8 @@ instance Example (ImpTestM era ()) where
                       Just hUnitExc -> adjustHUnitExc header hUnitExc
             | otherwise = toException $ ImpException [logs] exc
       throwIO newExc
+  endState <- readIORef ioRef
+  pure (res, endState)
 
 runShelleyBase :: Globals -> ShelleyBase a -> a
 runShelleyBase globals act = runIdentity $ runReaderT act globals
