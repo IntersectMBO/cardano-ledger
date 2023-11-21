@@ -75,9 +75,9 @@ spec =
     let newMembers =
           Map.fromList
             [ (c1, EpochNo 12)
-            , (c2, EpochNo 1)
+            , (c2, EpochNo 2)
             , (c3, EpochNo 11)
-            , (c4, EpochNo 2)
+            , (c4, EpochNo 6)
             ]
     ga1 <-
       electCommittee
@@ -89,14 +89,15 @@ spec =
     expectMembers Set.empty
     expectNoFilterQueryResult Nothing
     passEpoch >> passEpoch
+    -- epoch 2
     expectMembers $ Map.keysSet newMembers
     expectNoFilterQueryResult $
       Just $
         Map.fromList
           [ (c1, CommitteeMemberState MemberNotAuthorized Active (Just 12) NoChangeExpected)
-          , (c2, CommitteeMemberState MemberNotAuthorized Expired (Just 1) NoChangeExpected)
+          , (c2, CommitteeMemberState MemberNotAuthorized Active (Just 2) ToBeExpired)
           , (c3, CommitteeMemberState MemberNotAuthorized Active (Just 11) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 2) NoChangeExpected)
+          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 6) NoChangeExpected)
           ]
     hk1 <- registerCommitteeHotKey c1
     hk2 <- registerCommitteeHotKey c2
@@ -104,16 +105,19 @@ spec =
       Just $
         Map.fromList
           [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
-          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 1) NoChangeExpected)
+          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
           , (c3, CommitteeMemberState MemberNotAuthorized Active (Just 11) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 2) NoChangeExpected)
+          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 6) NoChangeExpected)
           ]
     expectQueryResult
       (Set.fromList [c2, c3, c5])
       mempty
       (Set.fromList [Active, Unrecognized])
       ( Just $
-          Map.singleton c3 (CommitteeMemberState MemberNotAuthorized Active (Just 11) NoChangeExpected)
+          Map.fromList
+            [ (c3, CommitteeMemberState MemberNotAuthorized Active (Just 11) NoChangeExpected)
+            , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
+            ]
       )
 
     _ <- resignCommitteeColdKey c3
@@ -123,15 +127,15 @@ spec =
       Just $
         Map.fromList
           [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
-          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 1) NoChangeExpected)
+          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
           , (c3, CommitteeMemberState MemberResigned Active (Just 11) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 2) NoChangeExpected)
+          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 6) NoChangeExpected)
           , (c5, CommitteeMemberState (MemberAuthorized (KeyHashObj hk5)) Unrecognized Nothing ToBeRemoved)
           ]
     expectQueryResult
       (Set.fromList [c2, c3, c5])
       (Set.singleton hk5)
-      (Set.fromList [Active, Unrecognized])
+      (Set.fromList [Unrecognized])
       ( Just $
           Map.singleton c5 (CommitteeMemberState (MemberAuthorized (KeyHashObj hk5)) Unrecognized Nothing ToBeRemoved)
       )
@@ -147,6 +151,7 @@ spec =
             ]
         )
     passEpoch
+    -- epoch 3
     hk6 <- registerCommitteeHotKey c6
     hk8 <- registerCommitteeHotKey c8
 
@@ -155,9 +160,9 @@ spec =
       Just $
         Map.fromList
           [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
-          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 1) ToBeRemoved)
+          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 2) ToBeRemoved)
           , (c3, CommitteeMemberState MemberResigned Active (Just 11) ToBeRemoved)
-          , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just 2) NoChangeExpected)
+          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 6) NoChangeExpected)
           , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Unrecognized Nothing ToBeEnacted)
           , (c7, CommitteeMemberState MemberNotAuthorized Unrecognized Nothing ToBeEnacted)
           , (c8, CommitteeMemberState (MemberAuthorized (KeyHashObj hk8)) Unrecognized Nothing ToBeRemoved)
@@ -167,16 +172,17 @@ spec =
       (Set.singleton hk2)
       (Set.fromList [Expired])
       ( Just $
-          Map.singleton c2 (CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 1) ToBeRemoved)
+          Map.singleton c2 (CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 2) ToBeRemoved)
       )
 
     passEpoch
+    -- epoch 4
     expectMembers $ Set.fromList [c1, c4, c6, c7]
     expectNoFilterQueryResult $
       Just $
         Map.fromList
           [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just 2) NoChangeExpected)
+          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 6) NoChangeExpected)
           , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Active (Just 10) NoChangeExpected)
           , (c7, CommitteeMemberState MemberNotAuthorized Active (Just 10) NoChangeExpected)
           ]
