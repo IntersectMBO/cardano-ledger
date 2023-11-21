@@ -7,6 +7,18 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 8.7
+
+- Fix `PParamsUpdate` governance action ratification. Votes of DReps are now accounted for.
+- Move CDDL specification files from test packages into libraries that actually implement each era.
+- Add ability to retain Plutus logs for debugging when running scripts
+- Adition of `ConwayGovEvent`
+- Enforce no duplicates for submitted ProposalProcedures
+- Fix deserialization of `CostModels` in the `PParamsUpdate`. Invalid `CostModels` are no longer allowed, only `CostModels` for unrecognized Plutus versions are allowed starting with Conway
+- Improve deposit and refund calculation logic
+- Fix deserialization of `ValueNotConservedUTxO` predicate failure that could not
+  previously report zero ADA.
+
 ## 8.6
 
 - Prevent updating protocol version with PParamUpdate
