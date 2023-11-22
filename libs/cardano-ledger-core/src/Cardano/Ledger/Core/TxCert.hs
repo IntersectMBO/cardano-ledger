@@ -160,6 +160,7 @@ poolCertKeyHashWitness = \case
 poolCWitness :: PoolCert c -> Credential 'StakePool c
 poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
 poolCWitness (RetirePool k _) = KeyHashObj k
+{-# DEPRECATED poolCWitness "As useless. PoolIds have nothing to do with credentials" #-}
 
 -- | Check if supplied TxCert is a stake registering certificate
 isRegStakeTxCert :: EraTxCert era => TxCert era -> Bool
