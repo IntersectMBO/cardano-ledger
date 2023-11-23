@@ -81,13 +81,27 @@ data NextEpochChange
     ToBeRemoved
   | NoChangeExpected
   | ToBeExpired
-  deriving (Show, Eq, Enum, Bounded, Generic, Ord, ToJSON)
+  | TermAdjusted EpochNo
+  deriving (Show, Eq, Generic, Ord, ToJSON)
 
 instance EncCBOR NextEpochChange where
-  encCBOR = encodeEnum
+  encCBOR =
+    encode . \case
+      ToBeEnacted -> Sum ToBeEnacted 0
+      ToBeRemoved -> Sum ToBeRemoved 1
+      NoChangeExpected -> Sum NoChangeExpected 2
+      ToBeExpired -> Sum ToBeExpired 3
+      TermAdjusted e -> Sum TermAdjusted 4 !> To e
 
 instance DecCBOR NextEpochChange where
-  decCBOR = decodeEnumBounded
+  decCBOR =
+    decode $ Summands "NextEpochChange" $ \case
+      0 -> SumD ToBeEnacted
+      1 -> SumD ToBeRemoved
+      2 -> SumD NoChangeExpected
+      3 -> SumD ToBeExpired
+      4 -> SumD TermAdjusted <! From
+      k -> Invalid k
 
 data CommitteeMemberState c = CommitteeMemberState
   { cmsHotCredAuthStatus :: !(HotCredAuthStatus c)

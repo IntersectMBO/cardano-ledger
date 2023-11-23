@@ -289,9 +289,12 @@ propNextEpoch nes = do
       filterNext ToBeRemoved noFilterResult
         `shouldSatisfy` (\res -> Map.keysSet res == (comMembers `Set.union` comStateMembers) `Set.difference` nextComMembers)
 
-      -- members who are both in current and nextCommittee are either ToBeExpired or NoChangeExpected
-      Map.keysSet (filterNext NoChangeExpected noFilterResult)
-        `Set.union` Map.keysSet (filterNext ToBeExpired noFilterResult)
+      -- members who are both in current and nextCommittee are either ToBeExpired, TermAdjusted or NoChangeExpected
+      Set.unions
+        [ Map.keysSet (filterNext NoChangeExpected noFilterResult)
+        , Map.keysSet (filterNext ToBeExpired noFilterResult)
+        , Map.keysSet (termAdjusted noFilterResult)
+        ]
         `shouldSatisfy` (== (comMembers `Set.intersection` nextComMembers))
 
       let currentEpoch = csEpochNo noFilterResult
@@ -314,6 +317,14 @@ propNextEpoch nes = do
         ( \case
             CommitteeMemberState _ _ _ nextEpochChange' ->
               nextEpochChange == nextEpochChange'
+        )
+        (csCommittee cms)
+    termAdjusted cms =
+      Map.mapMaybeWithKey
+        ( \k cm ->
+            case cm of
+              CommitteeMemberState _ _ _ (TermAdjusted _) -> Just k
+              _ -> Nothing
         )
         (csCommittee cms)
 

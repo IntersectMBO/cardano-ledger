@@ -168,7 +168,7 @@ queryCommitteeMembersState ::
 queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
   (comMembers, comQuorum) <- getCommitteeMembers (queryGovState nes)
   let nextComMembers =
-        maybe Set.empty (Map.keysSet . fst) (getNextEpochCommitteeMembers (queryGovState nes))
+        maybe Map.empty fst (getNextEpochCommitteeMembers (queryGovState nes))
   let comStateMembers =
         csCommitteeCreds $
           nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
@@ -183,7 +183,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
               Set.unions
                 [ Map.keysSet comMembers
                 , Map.keysSet comStateMembers
-                , nextComMembers
+                , Map.keysSet nextComMembers
                 ]
         | otherwise = withFilteredColdCreds $ Map.keysSet comMembers
 
@@ -220,13 +220,22 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
       nextEpochChange ck
         | not inCurrent && inNext = ToBeEnacted
         | not inNext = ToBeRemoved
-        | expiring = ToBeExpired
+        | Just curTerm <- lookupCurrent
+        , Just nextTerm <- lookupNext
+        , curTerm /= nextTerm
+        , -- if the term is adjusted such that it expires in the next epoch,
+          -- we set it to ToBeExpired instead of TermAdjusted
+          not expiringNext =
+            TermAdjusted nextTerm
+        | expiringCurrent || expiringNext = ToBeExpired
         | otherwise = NoChangeExpected
         where
           lookupCurrent = Map.lookup ck comMembers
+          lookupNext = Map.lookup ck nextComMembers
           inCurrent = isJust lookupCurrent
-          inNext = Set.member ck nextComMembers
-          expiring = maybe False (== currentEpoch) lookupCurrent
+          inNext = isJust lookupNext
+          expiringCurrent = lookupCurrent == Just currentEpoch
+          expiringNext = lookupNext == Just currentEpoch
 
   pure
     CommitteeMembersState

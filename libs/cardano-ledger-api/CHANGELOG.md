@@ -8,6 +8,7 @@
   `ppuCommitteeMaxTermLengthL`
 * Move all `ToExpr` instances into `testlib`s.
 * Introduce `ToBeExpired` data constructor to `NextEpochChange`
+* Introduce `TermAdjusted` data constructor to `NextEpochChange`
 
 ## 1.7.0.1
 
