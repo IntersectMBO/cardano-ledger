@@ -317,7 +317,7 @@ genCommittee ::
   forall era.
   Era era =>
   Gen (Maybe (Committee era))
-genCommittee = frequency [(1, pure Nothing), (9, Just <$> arbitrary)]
+genCommittee = frequency [(1, pure Nothing), (9, Just <$> genCommittee' arbitrary)]
 
 genRelevantCommitteeState ::
   forall era.
@@ -325,20 +325,13 @@ genRelevantCommitteeState ::
   Maybe (Committee era) ->
   Maybe (Committee era) ->
   Gen (CommitteeState era)
-genRelevantCommitteeState maybeCm nextCom = do
-  CommitteeState comStateMembers <- arbitrary @(CommitteeState era)
-  let comMembers = Map.keysSet (foldMap' committeeMembers maybeCm)
-      nextComMembers = Map.keysSet (foldMap' committeeMembers nextCom)
-      third = Set.size comMembers `div` 3
-      chosen = Set.toList $ Set.take third comMembers
-      nextChosen = Set.toList $ Set.take third nextComMembers
-      x =
-        Map.fromList $
-          zipWith
-            (\k1 (_, v2) -> (k1, v2))
-            (chosen <> nextChosen)
-            (Map.assocs comStateMembers)
-  pure $ CommitteeState $ x `Map.union` Map.drop (length chosen + length nextChosen) comStateMembers
+genRelevantCommitteeState maybeCm maybeNextCm = do
+  membersRetaining <-
+    (++)
+      <$> genMembersRetaining maybeCm
+      <*> genMembersRetaining maybeNextCm
+  pairs <- zip membersRetaining <$> arbitrary
+  pure $ CommitteeState $ Map.fromList pairs
 
 genNextCommittee ::
   forall era.
@@ -346,14 +339,13 @@ genNextCommittee ::
   Maybe (Committee era) ->
   Gen (Maybe (Committee era))
 genNextCommittee maybeCm =
-  oneof [pure Nothing, Just <$> genCom]
-  where
-    genCom = do
-      let comMembers = foldMap' committeeMembers maybeCm
-      new <- arbitrary @(Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
-      q <- arbitrary
-      retainSize <- choose (0, Map.size comMembers)
-      pure $ Committee (Map.union new (Map.take retainSize comMembers)) q
+  oneof [pure Nothing, Just <$> genCommittee' (genMembersRetaining maybeCm)]
+
+genCommittee' :: Gen [Credential 'ColdCommitteeRole (EraCrypto era)] -> Gen (Committee era)
+genCommittee' genCreds = do
+  creds <- genCreds
+  m <- zip creds <$> listOf (EpochNo <$> chooseBoundedIntegral (0, 20))
+  Committee (Map.fromList m) <$> arbitrary
 
 genRelevantColdCredsFilter ::
   forall era.
@@ -362,22 +354,33 @@ genRelevantColdCredsFilter ::
   CommitteeState era ->
   Gen (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 genRelevantColdCredsFilter maybeCm (CommitteeState comStateMembers) = do
-  flt <- arbitrary
-  s <- choose (0, Set.size flt)
-  let cm1 = Map.keysSet $ Map.take (s `div` 2) (foldMap' committeeMembers maybeCm)
-  let cm2 = Map.keysSet $ Map.take (s `div` 2) comStateMembers
-  pure $ Set.unions [Set.drop s flt, cm1, cm2]
+  creds <-
+    (++)
+      <$> genMembersRetaining maybeCm
+      <*> genRetaining (Map.keys comStateMembers)
+  pure $ Set.fromList creds
 
 genRelevantHotCredsFilter ::
   forall era.
   EraTxOut era =>
   CommitteeState era ->
   Gen (Set.Set (Credential 'HotCommitteeRole (EraCrypto era)))
-genRelevantHotCredsFilter (CommitteeState comStateMembers) = do
-  flt <- arbitrary
-  s <- choose (0, Set.size flt)
-  let cm = Set.fromList $ Map.elems (Map.mapMaybe id (Map.take s comStateMembers))
-  pure $ Set.drop s flt `Set.union` cm
+genRelevantHotCredsFilter (CommitteeState comStateMembers) =
+  Set.fromList <$> genRetaining (Map.elems (Map.mapMaybe id comStateMembers))
+
+genMembersRetaining ::
+  forall era.
+  EraTxOut era =>
+  Maybe (Committee era) ->
+  Gen [Credential 'ColdCommitteeRole (EraCrypto era)]
+genMembersRetaining maybeCm =
+  genRetaining $ Map.keys $ foldMap' committeeMembers maybeCm
+
+genRetaining :: Arbitrary a => [a] -> Gen [a]
+genRetaining ret = do
+  retSize <- choose (0, length ret)
+  new <- arbitrary
+  pure $ new <> take retSize ret
 
 withCommitteeInfo ::
   EraGov era =>
