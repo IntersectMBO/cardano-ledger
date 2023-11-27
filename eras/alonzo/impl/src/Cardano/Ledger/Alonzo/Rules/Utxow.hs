@@ -82,7 +82,6 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
@@ -131,13 +130,6 @@ data AlonzoUtxowPredFailure era
     ExtraRedeemers
       ![RdmrPtr]
   deriving (Generic)
-
-instance
-  ( Era era
-  , ToExpr (PredicateFailure (EraRule "UTXO" era))
-  , ToExpr (TxCert era)
-  ) =>
-  ToExpr (AlonzoUtxowPredFailure era)
 
 deriving instance
   ( Era era

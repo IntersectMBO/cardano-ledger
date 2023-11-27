@@ -50,7 +50,6 @@ import Cardano.Ledger.Binary (
   unlessDecoderVersionAtLeast,
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (
   FromJSON (parseJSON),
@@ -76,8 +75,6 @@ data Plutus = Plutus
   }
   deriving stock (Eq, Ord, Show, Generic)
 
-instance ToExpr Plutus
-
 -- | Already in Normal Form
 instance NFData Plutus where
   rnf = rwhnf
@@ -88,8 +85,6 @@ instance NoThunks Plutus
 newtype BinaryPlutus = BinaryPlutus {unBinaryPlutus :: ShortByteString}
   deriving stock (Eq, Ord, Generic)
   deriving newtype (ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData, NoThunks)
-
-instance ToExpr BinaryPlutus
 
 instance Show BinaryPlutus where
   show = show . B64.encode . fromShort . unBinaryPlutus
@@ -160,8 +155,6 @@ instance DecCBOR Language where
 
 nonNativeLanguages :: [Language]
 nonNativeLanguages = [minBound .. maxBound]
-
-instance ToExpr Language
 
 -- | Singleton for '@Language@'
 data SLanguage (l :: Language) where

@@ -38,7 +38,6 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.TreeDiff (ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
@@ -112,7 +111,7 @@ instance Compactible Coin where
 
 instance Compactible DeltaCoin where
   newtype CompactForm DeltaCoin = CompactDeltaCoin Word64
-    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, ToJSON, Prim, ToExpr)
+    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, ToJSON, Prim)
 
   toCompact (DeltaCoin dc) = CompactDeltaCoin <$> integerToWord64 dc
   fromCompact (CompactDeltaCoin cdc) = DeltaCoin (unCoin (word64ToCoin cdc))
@@ -144,13 +143,6 @@ instance DecCBOR (CompactForm DeltaCoin) where
   decCBOR = CompactDeltaCoin <$> decCBOR
 
 -- ================================
-
-instance ToExpr Coin
-
-instance ToExpr DeltaCoin
-
-instance ToExpr (CompactForm Coin) where
-  toExpr x = toExpr (fromCompact x)
 
 decodePositiveCoin :: String -> Decoder s Coin
 decodePositiveCoin errorMessage = do

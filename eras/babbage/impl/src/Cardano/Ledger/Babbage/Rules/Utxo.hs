@@ -71,7 +71,6 @@ import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
 import Cardano.Ledger.Val ((<->))
@@ -116,12 +115,6 @@ data BabbageUtxoPredFailure era
     BabbageOutputTooSmallUTxO
       ![(TxOut era, Coin)]
   deriving (Generic)
-
-instance
-  ( ToExpr (AlonzoUtxoPredFailure era)
-  , ToExpr (TxOut era)
-  ) =>
-  ToExpr (BabbageUtxoPredFailure era)
 
 deriving instance
   ( Era era

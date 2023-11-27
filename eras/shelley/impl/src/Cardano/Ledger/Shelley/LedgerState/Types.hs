@@ -66,7 +66,6 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData)
@@ -573,40 +572,6 @@ instance Default (UTxOState era) => Default (LedgerState era) where
 
 instance Default AccountState where
   def = AccountState (Coin 0) (Coin 0)
-
--- =============================================================
--- TreeDiff ToExpr instances
-
-instance ToExpr AccountState
-
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (PParams era)
-  , ToExpr (StashedAVVMAddresses era)
-  , ToExpr (GovState era)
-  ) =>
-  ToExpr (NewEpochState era)
-
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (PParams era)
-  , ToExpr (GovState era)
-  ) =>
-  ToExpr (EpochState era)
-
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (GovState era)
-  ) =>
-  ToExpr (LedgerState era)
-
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (GovState era)
-  ) =>
-  ToExpr (UTxOState era)
-
-instance ToExpr (IncrementalStake c)
 
 -- =============================================================
 -- Lenses for types found inside NewEpochState and its fields

@@ -134,7 +134,6 @@ import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), shelleyEqTxRaw)
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), unWithdrawals)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
@@ -165,8 +164,6 @@ newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
   deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR)
 
-instance ToExpr IsValid
-
 data AlonzoTx era = AlonzoTx
   { body :: !(TxBody era)
   , wits :: !(TxWits era)
@@ -174,10 +171,6 @@ data AlonzoTx era = AlonzoTx
   , auxiliaryData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic)
-
-instance
-  (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
-  ToExpr (AlonzoTx era)
 
 newtype AlonzoTxUpgradeError = ATUEBodyUpgradeError AlonzoTxBodyUpgradeError
   deriving (Show)
@@ -391,8 +384,6 @@ data ScriptPurpose era
   | Rewarding !(RewardAcnt (EraCrypto era))
   | Certifying !(TxCert era)
   deriving (Generic)
-
-instance ToExpr (TxCert era) => ToExpr (ScriptPurpose era)
 
 deriving instance (Era era, Eq (TxCert era)) => Eq (ScriptPurpose era)
 deriving instance (Era era, Show (TxCert era)) => Show (ScriptPurpose era)

@@ -44,7 +44,6 @@ import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (
   FromJSON,
@@ -111,12 +110,6 @@ class
   obligationGovState :: GovState era -> Obligations
 
   getDRepDistr :: GovState era -> Map (DRep (EraCrypto era)) (CompactForm Coin)
-
-instance
-  ( ToExpr (PParamsUpdate era)
-  , ToExpr (PParams era)
-  ) =>
-  ToExpr (ShelleyGovState era)
 
 instance Crypto c => EraGov (ShelleyEra c) where
   type GovState (ShelleyEra c) = ShelleyGovState (ShelleyEra c)
@@ -257,8 +250,6 @@ data Constitution era = Constitution
   , constitutionScript :: !(StrictMaybe (ScriptHash (EraCrypto era)))
   }
   deriving (Generic, Ord)
-
-instance ToExpr (Constitution era)
 
 constitutionAnchorL :: Lens' (Constitution era) (Anchor (EraCrypto era))
 constitutionAnchorL = lens constitutionAnchor (\x y -> x {constitutionAnchor = y})

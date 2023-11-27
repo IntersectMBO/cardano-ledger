@@ -41,6 +41,7 @@ module Cardano.Ledger.Alonzo.TxBody (
     atbAuxDataHash,
     atbTxNetworkId
   ),
+  AlonzoTxBodyRaw (..),
   AlonzoTxBodyUpgradeError (..),
   AlonzoEraTxBody (..),
   ShelleyEraTxBody (..),
@@ -111,7 +112,6 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData (..))
@@ -163,20 +163,12 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBodyRaw era)
 
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (AlonzoTxBodyRaw era)
-
 newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
   deriving (ToCBOR, Generic)
   deriving newtype (SafeToHash)
 
 instance Memoized AlonzoTxBody where
   type RawType AlonzoTxBody = AlonzoTxBodyRaw
-
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (AlonzoTxBody era)
 
 data AlonzoTxBodyUpgradeError
   = -- | The TxBody contains a protocol parameter update that attempts to update

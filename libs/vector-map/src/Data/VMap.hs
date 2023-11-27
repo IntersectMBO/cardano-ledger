@@ -53,7 +53,6 @@ import Control.DeepSeq
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
 import qualified Data.Map.Strict as Map
 import Data.Maybe as Maybe hiding (mapMaybe)
-import Data.TreeDiff.Class (ToExpr (toExpr))
 import Data.VMap.KVVector (KVVector (..))
 import qualified Data.VMap.KVVector as KV
 import qualified Data.Vector as V
@@ -277,6 +276,3 @@ splitAt i (VMap vec) = let (l, r) = VG.splitAt i vec in (VMap l, VMap r)
 internMaybe :: (VG.Vector kv k, Ord k) => k -> VMap kv vv k v -> Maybe k
 internMaybe key = KV.internKVVectorMaybe key . unVMap
 {-# INLINE internMaybe #-}
-
-instance (VG.Vector kv k, VG.Vector vv v, ToExpr k, ToExpr v) => ToExpr (VMap kv vv k v) where
-  toExpr = toExpr . toMap

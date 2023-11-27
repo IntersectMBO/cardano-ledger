@@ -88,7 +88,6 @@ import Cardano.Ledger.Credential (
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, unless, when)
@@ -390,22 +389,13 @@ bootstrapKeyHash (BootstrapAddress byronAddress) =
           Hash.hashFromBytes bytes
    in KeyHash hash
 
--- ==============================================
-
-instance ToExpr (Addr c)
-
-instance ToExpr (RewardAcnt era)
-
-instance ToExpr (BootstrapAddress c) where
-  toExpr = defaultExprViaShow
-
 ------------------------------------------------------------------------------------------
 -- Compact Address -----------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 newtype CompactAddr c = UnsafeCompactAddr ShortByteString
   deriving stock (Eq, Generic, Ord)
-  deriving newtype (NoThunks, NFData, ToExpr)
+  deriving newtype (NoThunks, NFData)
 
 instance Crypto c => Show (CompactAddr c) where
   show c = show (decompactAddr c)
@@ -945,5 +935,3 @@ fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 newtype Withdrawals c = Withdrawals {unWithdrawals :: Map (RewardAcnt c) Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)
-
-instance ToExpr (Withdrawals c)

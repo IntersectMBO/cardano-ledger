@@ -72,7 +72,6 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert)
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (UMElem (..), UMap (..), UView (..), fromCompact)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
@@ -137,10 +136,6 @@ deriving stock instance
 instance
   NFData (PredicateFailure (EraRule "DELPL" era)) =>
   NFData (ShelleyDelegsPredFailure era)
-
-instance
-  ToExpr (PredicateFailure (EraRule "DELPL" era)) =>
-  ToExpr (ShelleyDelegsPredFailure era)
 
 instance
   ( EraTx era

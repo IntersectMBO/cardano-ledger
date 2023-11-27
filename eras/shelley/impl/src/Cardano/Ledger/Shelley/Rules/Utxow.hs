@@ -98,7 +98,6 @@ import Cardano.Ledger.Shelley.TxCert (
   isInstantaneousRewards,
  )
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
   ScriptsProvided (..),
@@ -162,13 +161,6 @@ data ShelleyUtxowPredFailure era
   | ExtraneousScriptWitnessesUTXOW
       !(Set (ScriptHash (EraCrypto era))) -- extraneous scripts
   deriving (Generic)
-
-instance
-  ( Era era
-  , ToExpr (PredicateFailure (EraRule "UTXO" era))
-  , ToExpr (AuxiliaryDataHash (EraCrypto era))
-  ) =>
-  ToExpr (ShelleyUtxowPredFailure era)
 
 newtype ShelleyUtxowEvent era
   = UtxoEvent (Event (EraRule "UTXO" era))

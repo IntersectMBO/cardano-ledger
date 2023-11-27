@@ -35,7 +35,6 @@ import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Kind (Type)
 import Data.Maybe (isJust)
@@ -53,7 +52,6 @@ class
   , NFData (TxCert era)
   , Show (TxCert era)
   , Eq (TxCert era)
-  , ToExpr (TxCert era)
   ) =>
   EraTxCert era
   where
@@ -150,8 +148,6 @@ data PoolCert c
   deriving (Show, Generic, Eq, Ord)
 
 instance NoThunks (PoolCert c)
-
-instance ToExpr (PoolCert c)
 
 instance NFData (PoolCert c) where
   rnf = rwhnf

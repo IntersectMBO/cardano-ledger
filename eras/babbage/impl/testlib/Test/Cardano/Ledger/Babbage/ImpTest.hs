@@ -10,6 +10,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Test.Cardano.Ledger.Alonzo.ImpTest (emptyAlonzoImpNES)
+import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
   shelleyImpWitsVKeyNeeded,

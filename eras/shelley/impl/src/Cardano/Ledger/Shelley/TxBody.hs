@@ -122,7 +122,6 @@ import Cardano.Ledger.Shelley.TxOut (
   valueEitherShelleyTxOutL,
  )
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
@@ -165,13 +164,6 @@ deriving instance
 deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (ShelleyTxBodyRaw era)
-
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (ShelleyTxBodyRaw era)
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (ShelleyTxBody era)
@@ -281,13 +273,6 @@ instance Memoized ShelleyTxBody where
 instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   EqRaw (ShelleyTxBody era)
-
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (ShelleyTxBody era)
 
 instance Crypto c => EraTxBody (ShelleyEra c) where
   {-# SPECIALIZE instance EraTxBody (ShelleyEra StandardCrypto) #-}

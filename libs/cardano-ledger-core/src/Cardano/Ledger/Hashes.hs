@@ -33,13 +33,10 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Binary.Plain (FromCBOR, ToCBOR)
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto)
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-
-instance ToExpr (ScriptHash c)
 
 --   $eraIndep
 --

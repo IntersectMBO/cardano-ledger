@@ -25,6 +25,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
     atadTimelock,
     atadPlutus
   ),
+  AlonzoTxAuxDataRaw (..),
   mkAlonzoTxAuxData,
   AuxiliaryDataHash (..),
   hashAlonzoTxAuxData,
@@ -73,7 +74,6 @@ import Cardano.Ledger.SafeHash (
   hashAnnotated,
  )
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData, deepseq)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
@@ -105,8 +105,6 @@ deriving via
   InspectHeapNamed "AlonzoTxAuxDataRaw" (AlonzoTxAuxDataRaw era)
   instance
     NoThunks (AlonzoTxAuxDataRaw era)
-
-instance ToExpr (AlonzoTxAuxDataRaw era)
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AlonzoTxAuxData era)
@@ -235,8 +233,6 @@ newtype AlonzoTxAuxData era = AuxiliaryDataConstr (MemoBytes AlonzoTxAuxDataRaw 
 
 instance Memoized AlonzoTxAuxData where
   type RawType AlonzoTxAuxData = AlonzoTxAuxDataRaw
-
-instance ToExpr (AlonzoTxAuxData era)
 
 instance EqRaw (AlonzoTxAuxData era)
 

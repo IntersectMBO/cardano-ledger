@@ -44,7 +44,6 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Cardano.Ledger.Val (Val)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 
@@ -183,8 +182,3 @@ packedADDRHASH _ =
     replicate
       (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (ADDRHASH (EraCrypto era)))))
       (1 :: Word8)
-
--- ============================================================
-
-instance (EraTxOut era, ToExpr (Value era)) => ToExpr (ShelleyTxOut era) where
-  toExpr (ShelleyTxOut x y) = App "ShelleyTxOut" [toExpr x, toExpr y]

@@ -8,6 +8,7 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Crypto (Crypto (..))
+import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
   emptyShelleyImpNES,

@@ -32,7 +32,6 @@ import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (..), decodeRecordNamed
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON (..))
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
@@ -117,9 +116,3 @@ instance Crypto c => DecCBOR (TxIn c) where
       "TxIn"
       (const 2)
       (TxIn <$> decCBOR <*> decCBOR)
-
--- ============================================================
-
-instance ToExpr (TxIn c)
-
-instance ToExpr (TxId c)

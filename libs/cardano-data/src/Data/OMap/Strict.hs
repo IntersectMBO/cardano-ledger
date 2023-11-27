@@ -51,7 +51,6 @@ import Cardano.Ledger.Binary (
   encodeStrictSeq,
  )
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import Data.Default.Class (Default (..))
@@ -374,10 +373,6 @@ instance HasOKey k v => IsList (OMap k v) where
   type Item (OMap k v) = v
   fromList = fromFoldable
   toList = F.toList
-
-instance (HasOKey k v, ToExpr v) => ToExpr (OMap k v) where
-  listToExpr = listToExpr . F.toList
-  toExpr = toExpr . F.toList
 
 instance (HasOKey k v, ToJSON v) => ToJSON (OMap k v) where
   toJSON = toJSON . toStrictSeq

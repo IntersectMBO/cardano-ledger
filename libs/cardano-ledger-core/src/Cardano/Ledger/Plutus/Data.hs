@@ -21,6 +21,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Plutus.Data (
+  PlutusData (..),
   Data (Data),
   DataHash,
   upgradeData,
@@ -72,12 +73,6 @@ import Cardano.Ledger.SafeHash (
   SafeToHash (..),
   hashAnnotated,
  )
-import Cardano.Ledger.TreeDiff (
-  Expr (App),
-  ToExpr (toExpr),
-  toExpr,
-  trimExprViaShow,
- )
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))
@@ -98,9 +93,6 @@ import qualified PlutusLedgerApi.V1 as PV1
 newtype PlutusData era = PlutusData PV1.Data
   deriving newtype (Eq, Generic, Show, NFData, NoThunks, Cborg.Serialise)
 
-instance ToExpr (PlutusData era) where
-  toExpr = trimExprViaShow 30
-
 instance Typeable era => EncCBOR (PlutusData era) where
   encCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
 
@@ -109,7 +101,7 @@ instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
 
 newtype Data era = DataConstr (MemoBytes PlutusData era)
   deriving (Eq, Generic)
-  deriving newtype (SafeToHash, ToCBOR, NFData, ToExpr)
+  deriving newtype (SafeToHash, ToCBOR, NFData)
 
 -- | Encodes memoized bytes created upon construction.
 instance Typeable era => EncCBOR (Data era)
@@ -153,9 +145,6 @@ newtype BinaryData era = BinaryData ShortByteString
   deriving (Generic)
 
 instance EraCrypto era ~ c => HashAnnotated (BinaryData era) EraIndependentData c
-
-instance ToExpr (BinaryData era) where
-  toExpr _ = App "BinaryData" []
 
 instance Typeable era => EncCBOR (BinaryData era) where
   encCBOR (BinaryData sbs) = encodeTag 24 <> encCBOR sbs
@@ -220,11 +209,6 @@ data Datum era
   | DatumHash !(DataHash (EraCrypto era))
   | Datum !(BinaryData era)
   deriving (Eq, Generic, NoThunks, Ord, Show)
-
-instance ToExpr (Datum era) where
-  toExpr NoDatum = App "NoDatum" []
-  toExpr (DatumHash x) = App "DatumHash" [toExpr x]
-  toExpr (Datum bd) = App "Datum" [toExpr bd]
 
 instance Era era => EncCBOR (Datum era) where
   encCBOR d = encode $ case d of

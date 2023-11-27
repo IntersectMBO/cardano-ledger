@@ -77,7 +77,6 @@ import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Slotting.EpochInfo (
@@ -102,6 +101,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils as CoreUtils
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.Cardano.Protocol.TPraos.Create (KESKeyPair (..), VRFKeyPair (..), evolveKESUntil)
 import Test.Tasty.HUnit (
   Assertion,

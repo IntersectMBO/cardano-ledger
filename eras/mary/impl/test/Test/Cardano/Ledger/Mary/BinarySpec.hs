@@ -7,6 +7,7 @@ import Data.Default.Class (def)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary (specUpgrade)
 import Test.Cardano.Ledger.Mary.Arbitrary ()
+import Test.Cardano.Ledger.Mary.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
 
 spec :: Spec

@@ -87,7 +87,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickPredFailure,
  )
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (
@@ -131,6 +130,8 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Test.Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 
 type instance EraRule "TICKN" (ShelleyEra c) = TICKN
 

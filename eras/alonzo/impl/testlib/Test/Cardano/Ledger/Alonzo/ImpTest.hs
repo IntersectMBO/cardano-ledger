@@ -24,6 +24,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Data.Default.Class (Default)
 import Lens.Micro ((&), (.~))
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
 
 emptyAlonzoImpNES ::

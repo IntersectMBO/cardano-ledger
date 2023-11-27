@@ -7,6 +7,7 @@ import Cardano.Ledger.Babbage
 import Data.Default.Class (def)
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
+import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary (specUpgrade)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)

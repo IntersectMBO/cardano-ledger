@@ -73,7 +73,6 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (UView (..), dRepMap)
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..))
@@ -111,13 +110,6 @@ data ConwayLedgerPredFailure era
       -- | Submitted in transaction
       Coin
   deriving (Generic)
-
-instance
-  ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
-  , ToExpr (PredicateFailure (EraRule "GOV" era))
-  , ToExpr (PredicateFailure (EraRule "CERTS" era))
-  ) =>
-  ToExpr (ConwayLedgerPredFailure era)
 
 deriving instance
   ( Era era

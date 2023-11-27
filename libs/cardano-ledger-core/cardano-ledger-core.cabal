@@ -125,7 +125,6 @@ library
         text,
         time,
         transformers,
-        tree-diff,
         utf8-string,
         validation-selective,
         vector-map >=1.0
@@ -147,6 +146,7 @@ library testlib
         Test.Cardano.Ledger.Core.Utils
         Test.Cardano.Ledger.Core.Rational
         Test.Cardano.Ledger.Imp.Common
+        Test.Cardano.Ledger.TreeDiff
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -178,7 +178,8 @@ library testlib
         QuickCheck,
         random >=1.2,
         text,
-        vector-map,
+        tree-diff,
+        vector-map:{vector-map, testlib},
         time,
         cardano-slotting,
         unliftio

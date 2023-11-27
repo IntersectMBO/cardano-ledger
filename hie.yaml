@@ -288,6 +288,9 @@ cradle:
     - path: "libs/vector-map/src"
       component: "lib:vector-map"
 
+    - path: "libs/vector-map/testlib"
+      component: "vector-map:lib:testlib"
+
     - path: "libs/vector-map/test"
       component: "vector-map:test:tests"
 

@@ -54,7 +54,6 @@ module Control.State.Transition.Trace (
 )
 where
 
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -71,7 +70,7 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.), (^..))
 import Lens.Micro.TH (makeLenses)
 import NoThunks.Class (NoThunks (..))
-import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
+import Test.Cardano.Ledger.Binary.TreeDiff (ToExpr, assertExprEqualWithMessage)
 import Test.Tasty.HUnit (assertFailure, (@?=))
 
 -- Signal and resulting state.

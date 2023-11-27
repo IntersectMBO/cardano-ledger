@@ -107,6 +107,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
         Test.Cardano.Ledger.Conway.Imp.EnactSpec
         Test.Cardano.Ledger.Conway.Imp.GovSpec
+        Test.Cardano.Ledger.Conway.TreeDiff
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -124,6 +125,7 @@ library testlib
         containers,
         microlens,
         microlens-mtl,
+        cardano-data:testlib,
         cardano-ledger-binary,
         cardano-crypto-class,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.8.1,

@@ -15,11 +15,19 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   expectExprEqual,
   expectExprEqualWithMessage,
   assertExprEqualWithMessage,
+  Expr (App, Rec, Lst),
+  defaultExprViaShow,
+  trimExprViaShow,
 )
 where
 
 import qualified Cardano.Binary as Plain
+import qualified Cardano.Crypto.DSIGN as DSIGN
+import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Crypto.Hash.Class ()
 import Cardano.Ledger.Binary
+import Cardano.Slotting.Block (BlockNo)
+import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import Control.Monad (unless)
@@ -28,9 +36,52 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
+import Data.Foldable (toList)
+import Data.IP (IPv4, IPv6)
+import Data.Maybe.Strict (StrictMaybe)
+import Data.Sequence.Strict (StrictSeq)
 import Data.TreeDiff
 import Test.Hspec (Expectation, HasCallStack, expectationFailure)
 import Test.Tasty.HUnit (Assertion, assertFailure)
+
+-- =====================================================
+-- Cardano functions that deal with TreeDiff and ToExpr
+
+trimExprViaShow :: Show a => Int -> a -> Expr
+trimExprViaShow _n x = defaultExprViaShow x -- App (take n (drop 1 (show x)) ++ "..") []
+
+-- ===========================================================
+-- Orphan instances from external imports
+
+instance ToExpr IPv4
+
+instance ToExpr IPv6
+
+instance ToExpr SlotNo
+
+instance ToExpr BlockNo
+
+instance ToExpr EpochNo
+
+instance ToExpr EpochSize
+
+instance ToExpr x => ToExpr (WithOrigin x)
+
+instance ToExpr (Hash.Hash c index) where
+  toExpr = trimExprViaShow 10
+
+instance DSIGN.DSIGNAlgorithm c => ToExpr (DSIGN.SignedDSIGN c index) where
+  toExpr = trimExprViaShow 10
+
+instance ToExpr a => ToExpr (StrictSeq a) where
+  toExpr x = App "StrictSeqFromList" [listToExpr (toList x)]
+
+instance ToExpr a => ToExpr (StrictMaybe a)
+
+instance ToExpr Version where
+  toExpr (Version n) = App "Version" [toExpr n]
+
+instance ToExpr a => ToExpr (Sized a)
 
 --------------------------------------------------------------------------------
 --  Diffing and pretty showing CBOR

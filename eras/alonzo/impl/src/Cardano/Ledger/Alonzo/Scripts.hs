@@ -71,7 +71,6 @@ import Cardano.Ledger.Plutus.Language (
 import Cardano.Ledger.Plutus.TxInfo (transProtocolVersion)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Data.Aeson (ToJSON (..), Value (String))
 import Data.Either (isRight)
@@ -104,8 +103,6 @@ instance NoThunks Tag
 instance NFData Tag where
   rnf = rwhnf
 
-instance ToExpr Tag
-
 -- =======================================================
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
@@ -113,8 +110,6 @@ data AlonzoScript era
   = TimelockScript !(Timelock era)
   | PlutusScript !Plutus
   deriving (Eq, Generic, NoThunks)
-
-instance ToExpr (AlonzoScript era)
 
 translateAlonzoScript ::
   (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>

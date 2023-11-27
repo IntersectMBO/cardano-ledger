@@ -91,7 +91,6 @@ import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolUView))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
@@ -290,7 +289,7 @@ newtype CommitteeState era = CommitteeState
         (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
   -- ^ `Nothing` to indicate "resigned".
   }
-  deriving (Eq, Ord, Show, Generic, NoThunks, NFData, ToExpr, Default)
+  deriving (Eq, Ord, Show, Generic, NoThunks, NFData, Default)
 
 deriving instance Era era => EncCBOR (CommitteeState era)
 
@@ -528,20 +527,6 @@ certsTotalDepositsTxBody pp CertState {certPState} =
 certsTotalRefundsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
 certsTotalRefundsTxBody pp CertState {certDState, certVState} =
   getTotalRefundsTxBody pp (lookupDepositDState certDState) (lookupDepositVState certVState)
-
--- =====================================================
-
-instance ToExpr (CertState era)
-
-instance ToExpr (PState era)
-
-instance ToExpr (DState era)
-
-instance ToExpr (VState era)
-
-instance ToExpr (FutureGenDeleg c)
-
-instance ToExpr (InstantaneousRewards c)
 
 -- =======================================================
 -- Lenses for CertState and its subsidiary types

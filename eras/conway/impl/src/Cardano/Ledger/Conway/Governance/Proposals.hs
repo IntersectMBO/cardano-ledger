@@ -31,7 +31,6 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   gasDRepVotesL,
   gasStakePoolVotesL,
  )
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import Data.Default.Class (Default (..))
@@ -49,8 +48,6 @@ newtype Proposals era
       (OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
   deriving newtype (Show, Eq)
   deriving stock (Generic)
-
-instance EraPParams era => ToExpr (Proposals era)
 
 instance EraPParams era => ToJSON (Proposals era)
 

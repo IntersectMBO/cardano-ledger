@@ -43,8 +43,10 @@ module Cardano.Ledger.Conway.TxBody (
     ctbVotingProcedures,
     ctbProposalProcedures,
     ctbCurrentTreasuryValue,
-    ctbTreasuryDonation
+    ctbTreasuryDonation,
+    TxBodyConstr
   ),
+  ConwayTxBodyRaw (..),
   conwayTotalDepositsTxBody,
   conwayProposalsDeposits,
 ) where
@@ -111,7 +113,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (left)
@@ -155,7 +156,6 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance (EraPParams era, Eq (TxOut era)) => Eq (ConwayTxBodyRaw era)
-instance (EraPParams era, ToExpr (TxOut era)) => ToExpr (ConwayTxBodyRaw era)
 
 instance
   (EraPParams era, NoThunks (TxOut era)) =>
@@ -283,10 +283,6 @@ deriving newtype instance
 deriving instance
   (EraPParams era, Show (TxOut era)) =>
   Show (ConwayTxBody era)
-
-deriving instance
-  (EraPParams era, ToExpr (TxOut era)) =>
-  ToExpr (ConwayTxBody era)
 
 type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
 

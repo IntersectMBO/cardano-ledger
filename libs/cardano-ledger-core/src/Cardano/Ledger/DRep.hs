@@ -23,7 +23,6 @@ import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (
   FromJSON (..),
@@ -48,7 +47,7 @@ data DRep c
   | DRepScriptHash !(ScriptHash c)
   | DRepAlwaysAbstain
   | DRepAlwaysNoConfidence
-  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, ToExpr)
+  deriving (Show, Eq, Ord, Generic, NoThunks, NFData)
 
 instance Crypto c => EncCBOR (DRep c) where
   encCBOR (DRepKeyHash kh) =
@@ -142,8 +141,6 @@ instance Crypto c => EncCBOR (DRepState c) where
         !> To drepExpiry
         !> To drepAnchor
         !> To drepDeposit
-
-instance ToExpr (DRepState c)
 
 instance Crypto c => ToJSON (DRepState c)
 

@@ -60,7 +60,6 @@ import Cardano.Ledger.Shelley.Rules (
   validateStakePoolDelegateeRegistered,
   validateZeroRewards,
  )
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -96,10 +95,6 @@ data ConwayCertsPredFailure era
   | -- | CERT rule subtransition Failures
     CertFailure !(PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
-
-instance
-  ToExpr (PredicateFailure (EraRule "CERT" era)) =>
-  ToExpr (ConwayCertsPredFailure era)
 
 deriving stock instance
   Eq (PredicateFailure (EraRule "CERT" era)) =>

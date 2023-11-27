@@ -21,7 +21,7 @@
 
 module Cardano.Ledger.Plutus.CostModels (
   -- * Cost Model
-  CostModel,
+  CostModel (..),
   CostModelError (..),
   decodeValidAndUnknownCostModels,
   emptyCostModels,
@@ -52,7 +52,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Plutus.Language (Language (..), mkLanguageEnum, nonNativeLanguages)
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (forM, when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
@@ -296,9 +295,6 @@ instance Eq CostModelError where
 instance Ord CostModelError where
   CostModelError x1 <= CostModelError x2 = show x1 <= show x2
 
-instance ToExpr CostModelError where
-  toExpr (CostModelError x1) = toExpr (show x1)
-
 instance NoThunks CostModelError
 
 instance NFData CostModelError
@@ -394,9 +390,3 @@ instance ToJSON CostModels where
 -- by `Cardano.Ledger.Alonzo.PParams.getLanguageView`
 encodeCostModel :: CostModel -> Encoding
 encodeCostModel = encodeFoldableAsDefLenList encCBOR . getCostModelParams
-
-instance ToExpr CostModel where
-  toExpr (CostModel lang cmmap _) =
-    App "CostModel" [toExpr lang, toExpr cmmap, App "PV1.EvaluationContext" []]
-
-instance ToExpr CostModels

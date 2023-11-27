@@ -59,7 +59,6 @@ import Cardano.Ledger.Keys (
   verifySignedDSIGN,
  )
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
@@ -212,7 +211,6 @@ newtype ScriptsProvided era = ScriptsProvided
 deriving instance (Era era, Eq (Script era)) => Eq (ScriptsProvided era)
 deriving instance (Era era, Ord (Script era)) => Ord (ScriptsProvided era)
 deriving instance (Era era, Show (Script era)) => Show (ScriptsProvided era)
-deriving instance (Era era, ToExpr (Script era)) => ToExpr (ScriptsProvided era)
 deriving instance (Era era, NFData (Script era)) => NFData (ScriptsProvided era)
 
 class EraTx era => EraUTxO era where
@@ -254,7 +252,3 @@ class EraTx era => EraUTxO era where
 
   -- | Extract the set of all script hashes that are needed for script validation.
   getScriptsHashesNeeded :: ScriptsNeeded era -> Set (ScriptHash (EraCrypto era))
-
--- ============================================================
-
-instance ToExpr (TxOut era) => ToExpr (UTxO era)

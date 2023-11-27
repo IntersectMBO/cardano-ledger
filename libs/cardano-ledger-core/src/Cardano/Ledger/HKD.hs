@@ -17,7 +17,6 @@ module Cardano.Ledger.HKD (
 )
 where
 
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -37,8 +36,6 @@ data NoUpdate a = NoUpdate
 instance NoThunks (NoUpdate a)
 
 instance NFData (NoUpdate a)
-
-instance ToExpr (NoUpdate a)
 
 type family HKDNoUpdate f a where
   HKDNoUpdate Identity a = a

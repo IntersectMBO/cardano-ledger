@@ -113,7 +113,6 @@ import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Aeson (ToJSON (..), object, (.=))
@@ -139,8 +138,6 @@ data RDPair = RDPair
   , rdDeposit :: {-# UNPACK #-} !(CompactForm Coin)
   }
   deriving (Show, Eq, Ord, Generic, NoThunks, NFData)
-
-instance ToExpr RDPair
 
 instance EncCBOR RDPair where
   encCBOR RDPair {rdReward, rdDeposit} =
@@ -201,8 +198,6 @@ data UMElem c
   | TFFFE {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c)
   | TFFFF {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c) !(DRep c)
   deriving (Eq, Ord, Generic, NoThunks, NFData)
-
-instance ToExpr (UMElem c)
 
 instance Crypto c => ToJSON (UMElem c) where
   toJSON = object . toUMElemair
@@ -403,8 +398,6 @@ data StakeCredentials c = StakeCredentials
   -- ^ There will be no empty sets in the range
   }
   deriving (Show, Eq, Generic, NoThunks, NFData)
-
-instance ToExpr (UMap c)
 
 instance Crypto c => ToJSON (UMap c) where
   toJSON = object . toUMapPair

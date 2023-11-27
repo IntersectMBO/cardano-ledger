@@ -16,7 +16,6 @@ source-repository head
 
 library
     exposed-modules:
-        Cardano.Ledger.TreeDiff
         Cardano.Ledger.Binary
         Cardano.Ledger.Binary.Coders
         Cardano.Ledger.Binary.Crypto
@@ -74,7 +73,6 @@ library
         text,
         time,
         transformers >=0.5,
-        tree-diff,
         vector,
         vector-map >=1.0
 

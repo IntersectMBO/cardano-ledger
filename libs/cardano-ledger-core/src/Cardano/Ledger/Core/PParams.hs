@@ -91,7 +91,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
-import Data.TreeDiff.Class (ToExpr)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import GHC.Natural (Natural)
 import Lens.Micro (Lens', SimpleGetter, lens)
@@ -136,9 +135,6 @@ deriving newtype instance
 deriving newtype instance
   (Typeable era, FromCBOR (PParamsHKD Identity era)) => FromCBOR (PParams era)
 
-deriving newtype instance
-  ToExpr (PParamsHKD Identity era) => ToExpr (PParams era)
-
 deriving instance Generic (PParams era)
 
 -- | The type of updates to Protocol parameters
@@ -179,9 +175,6 @@ deriving newtype instance
 
 deriving newtype instance
   FromJSON (PParamsHKD StrictMaybe era) => FromJSON (PParamsUpdate era)
-
-deriving newtype instance
-  ToExpr (PParamsHKD StrictMaybe era) => ToExpr (PParamsUpdate era)
 
 deriving instance Generic (PParamsUpdate era)
 
@@ -237,7 +230,6 @@ class
   , FromCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , ToJSON (PParamsHKD Identity era)
-  , ToExpr (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
@@ -248,7 +240,6 @@ class
   , FromCBOR (PParamsHKD StrictMaybe era)
   , NoThunks (PParamsHKD StrictMaybe era)
   , ToJSON (PParamsHKD StrictMaybe era)
-  , ToExpr (PParamsHKD StrictMaybe era)
   ) =>
   EraPParams era
   where

@@ -65,7 +65,6 @@ import Cardano.Ledger.Shelley.Rules (
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
@@ -101,13 +100,6 @@ data BabbageUtxowPredFailure era
     MalformedReferenceScripts
       !(Set (ScriptHash (EraCrypto era)))
   deriving (Generic)
-
-instance
-  ( Era era
-  , ToExpr (PredicateFailure (EraRule "UTXO" era))
-  , ToExpr (TxCert era)
-  ) =>
-  ToExpr (BabbageUtxowPredFailure era)
 
 deriving instance
   ( Era era

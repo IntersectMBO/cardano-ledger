@@ -89,7 +89,6 @@ library
         small-steps >=1.0,
         text,
         transformers,
-        tree-diff,
         validation-selective
 
     if !impl(ghc >=9.2)
@@ -103,6 +102,7 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
         Test.Cardano.Ledger.Alonzo.CostModel
         Test.Cardano.Ledger.Alonzo.ImpTest
+        Test.Cardano.Ledger.Alonzo.TreeDiff
 
     visibility:       public
     hs-source-dirs:   testlib

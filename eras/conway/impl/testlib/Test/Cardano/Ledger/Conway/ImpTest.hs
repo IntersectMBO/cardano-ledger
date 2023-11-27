@@ -58,6 +58,7 @@ import Cardano.Ledger.Conway.Core (
   EraTxBody (..),
   EraTxOut (..),
   PParams,
+  PParamsHKD,
  )
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
@@ -148,12 +149,14 @@ import Control.Monad (void)
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
+import Data.Functor.Identity
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
 import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
+import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Imp.Common
 
@@ -213,6 +216,7 @@ class
   , State (EraRule "ENACT" era) ~ EnactState era
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Environment (EraRule "ENACT" era) ~ ()
+  , ToExpr (PParamsHKD Identity era)
   ) =>
   ConwayEraImp era
 
@@ -642,7 +646,7 @@ registerCommitteeHotKey coldKey = do
           .~ SSeq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
   pure hotKey
 
-logCurPParams :: EraGov era => ImpTestM era ()
+logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   logEntry $ "Current PParams:\n--------------" <> showExpr pp <> "\n--------------"

@@ -73,7 +73,6 @@ import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), Key, KeyValue, ToJSON (..), object, pairs, (.!=), (.:), (.:?), (.=))
@@ -551,13 +550,3 @@ upgradeProposedPPUpdates ::
   ProposedPPUpdates era
 upgradeProposedPPUpdates args (ProposedPPUpdates ppus) =
   ProposedPPUpdates $ upgradePParamsUpdate args <$> ppus
-
--- ==============================================
-
-instance ToExpr (PParamsUpdate era) => ToExpr (ProposedPPUpdates era)
-
-instance ToExpr (ShelleyPParams StrictMaybe era)
-
-instance ToExpr (ShelleyPParams Identity era)
-
-instance ToExpr (PParamsUpdate era) => ToExpr (Update era)

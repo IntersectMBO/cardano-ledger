@@ -50,7 +50,6 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Set (Set)
-import Data.TreeDiff.Class (ToExpr)
 import Lens.Micro (Lens', SimpleGetter)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
@@ -74,7 +73,7 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
 
 newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
   deriving stock (Eq, Ord)
-  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, ToExpr, Show)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
 
 class EraPParams era => AlonzoEraPParams era where
   hkdCoinsPerUTxOWordL ::

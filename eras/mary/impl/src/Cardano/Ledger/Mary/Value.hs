@@ -28,9 +28,10 @@ module Cardano.Ledger.Mary.Value (
   showValue,
   flattenMultiAsset,
   valueFromList,
-  ToExpr (..),
   CompactValue (..),
+  CompactForm (CompactValue),
   isMultiAssetSmallEnough,
+  assetNameToTextAsHex,
 )
 where
 
@@ -61,7 +62,6 @@ import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Exception (assert)
@@ -398,7 +398,7 @@ instance ToJSONKey AssetName where
 
 instance Crypto c => Compactible (MaryValue c) where
   newtype CompactForm (MaryValue c) = CompactValue (CompactValue c)
-    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData, ToExpr)
+    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -427,8 +427,6 @@ instance NFData (CompactValue c) where
 
 instance Crypto c => Eq (CompactValue c) where
   a == b = from a == from b
-
-instance ToExpr (CompactValue c)
 
 deriving via
   OnlyCheckWhnfNamed "CompactValue" (CompactValue c)
@@ -889,14 +887,3 @@ flattenMultiAsset (MultiAsset m) =
   | (policyId, m2) <- assocs m
   , (aname, amount) <- assocs m2
   ]
-
--- ==========================================
-
-instance ToExpr (MaryValue c)
-
-instance ToExpr (MultiAsset c)
-
-instance ToExpr (PolicyID c)
-
-instance ToExpr AssetName where
-  toExpr an = App "AssetName" [toExpr (assetNameToTextAsHex an)]

@@ -81,7 +81,6 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
 import Cardano.Ledger.Plutus.CostModels (decodeValidAndUnknownCostModels)
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson hiding (Encoding, decode, encode)
@@ -137,9 +136,6 @@ instance NoThunks (HKD f a) => NoThunks (THKD t f a) where
 
 instance NFData (HKD f a) => NFData (THKD t f a) where
   rnf = rnf . unTHKD
-
-instance ToExpr (HKD f a) => ToExpr (THKD t f a) where
-  toExpr = toExpr . unTHKD
 
 instance (Typeable t, EncCBOR a) => EncCBOR (THKD t Identity a) where
   encCBOR = encCBOR . unTHKD
@@ -234,8 +230,6 @@ data ConwayPParams f era = ConwayPParams
   }
   deriving (Generic)
 
-instance ToExpr (ConwayPParams Identity era)
-
 deriving instance Eq (ConwayPParams Identity era)
 
 deriving instance Ord (ConwayPParams Identity era)
@@ -277,8 +271,6 @@ deriving instance Show (UpgradeConwayPParams Identity)
 instance NoThunks (UpgradeConwayPParams Identity)
 
 instance NFData (UpgradeConwayPParams Identity)
-
-instance ToExpr (ConwayPParams StrictMaybe era)
 
 deriving instance Eq (UpgradeConwayPParams StrictMaybe)
 
