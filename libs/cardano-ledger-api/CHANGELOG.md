@@ -4,7 +4,7 @@
 
 * Change the type of `ppEMaxL`, `ppuEMaxL`, `ppGovActionLifetimeL`, `ppDRepActivityL`,
   `ppCommitteeMaxTermLengthL`, `ppuGovActionLifetimeL`, `ppuDRepActivityL` and
-	`ppuCommitteeMaxTermLengthL`
+  `ppuCommitteeMaxTermLengthL`
 
 ## 1.7.0.1
 

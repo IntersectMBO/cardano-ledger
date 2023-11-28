@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Moved `ToExpr` instances out of the main library and into the testlib.
 * Change the type of `ppEMaxL`
 
 ## 1.5.1.0
