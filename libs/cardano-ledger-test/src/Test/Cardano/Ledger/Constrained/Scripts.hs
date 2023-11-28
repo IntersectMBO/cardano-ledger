@@ -139,7 +139,8 @@ genCoreScript proof tag keymap vi = case proof of
   Conway _ ->
     frequency
       [ (1, TimelockScript <$> genTimelock keymap vi proof)
-      , (1, snd <$> genPlutusScript tag proof)
+      -- TODO Add this once scripts are working in Conway
+      -- , (1, snd <$> genPlutusScript tag proof)
       ]
   Babbage _ ->
     frequency

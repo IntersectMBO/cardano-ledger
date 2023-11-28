@@ -26,6 +26,7 @@ module Cardano.Ledger.Conway.TxCert (
   getVKeyWitnessConwayTxCert,
   getDelegateeTxCert,
   getStakePoolDelegatee,
+  getVoteDelegatee,
   conwayDRepDepositsTxCerts,
   conwayDRepRefundsTxCerts,
   conwayTotalDepositsTxCerts,
@@ -353,6 +354,11 @@ getStakePoolDelegatee = \case
   DelegStake targetPool -> Just targetPool
   DelegVote {} -> Nothing
   DelegStakeVote targetPool _ -> Just targetPool
+
+getVoteDelegatee :: Delegatee c -> Maybe (DRep c)
+getVoteDelegatee DelegStake {} = Nothing
+getVoteDelegatee (DelegVote x) = Just x
+getVoteDelegatee (DelegStakeVote _ x) = Just x
 
 instance NFData (Delegatee c)
 
