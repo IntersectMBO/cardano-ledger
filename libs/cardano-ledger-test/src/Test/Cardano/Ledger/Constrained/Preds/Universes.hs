@@ -105,6 +105,11 @@ data UnivSize = UnivSize
   , usMaxInputs :: Int
   , usMinCollaterals :: Int
   , usMaxCollaterals :: Int
+  , usRegKeyFreq :: Int
+  , usUnRegKeyFreq :: Int
+  , usAllowReRegisterPool :: Bool
+  , usSpendScriptFreq :: Int
+  , usCredScriptFreq :: Int
   }
 
 instance Default UnivSize where
@@ -135,6 +140,11 @@ instance Default UnivSize where
       , usMaxInputs = 10
       , usMinCollaterals = 2
       , usMaxCollaterals = 2
+      , usAllowReRegisterPool = True
+      , usRegKeyFreq = 1
+      , usUnRegKeyFreq = 1
+      , usSpendScriptFreq = 3
+      , usCredScriptFreq = 1
       }
 
 -- ============================================================
@@ -497,7 +507,7 @@ universePreds size p =
   , Choose
       (ExactSize (usNumCredentials size))
       credList
-      [ (1, scriptHashObjT scripthash, [Member (Left scripthash) (Dom (nonSpendScriptUniv p))])
+      [ (usCredScriptFreq size, scriptHashObjT scripthash, [Member (Left scripthash) (Dom (nonSpendScriptUniv p))])
       , (1, keyHashObjT keyhash, [Member (Left keyhash) (Dom keymapUniv)])
       ]
   , credsUniv :<-: listToSetTarget credList
@@ -507,7 +517,7 @@ universePreds size p =
   , Choose
       (ExactSize 70)
       spendcredList
-      [ (3, scriptHashObjT scripthash, [Member (Left scripthash) (Dom (spendscriptUniv p))])
+      [ (usSpendScriptFreq size, scriptHashObjT scripthash, [Member (Left scripthash) (Dom (spendscriptUniv p))])
       , (2, keyHashObjT keyhash, [Member (Left keyhash) (Dom keymapUniv)])
       ]
   , spendCredsUniv :<-: listToSetTarget spendcredList

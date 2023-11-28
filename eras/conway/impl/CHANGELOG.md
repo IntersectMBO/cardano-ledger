@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `getVoteDelegatee`
 * Track and prune unreachable proposals #3855
   * Move `PrevGovActionIds` from `Governance` to `Governance.Proposals`
   * Add `PrevGovActionIdsChildren` to `EnactState`

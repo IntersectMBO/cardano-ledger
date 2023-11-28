@@ -22,7 +22,7 @@ module Test.Cardano.Ledger.Conformance (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Hash (Hash, hashToBytes)
-import Cardano.Ledger.Address (Addr (..), serialiseAddr)
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), serialiseAddr)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoScript, AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
@@ -35,6 +35,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (..),
  )
 import Cardano.Ledger.BaseTypes (
+  Anchor,
   EpochInterval (..),
   EpochNo (..),
   ProtVer (..),
@@ -56,8 +57,11 @@ import Cardano.Ledger.Conway.Core (
   EraPParams (..),
   EraRule,
   EraScript (..),
+  EraTxCert (..),
   EraTxWits (..),
   PParams (..),
+  PoolCert (..),
+  ScriptHash (..),
   vldtTxBodyL,
  )
 import Cardano.Ledger.Conway.Governance (GovAction (..), ProposalProcedure (..), VotingProcedures (..))
@@ -68,6 +72,13 @@ import Cardano.Ledger.Conway.PParams (
   THKD (..),
  )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Conway.TxCert (
+  ConwayDelegCert (..),
+  ConwayGovCert (..),
+  ConwayTxCert (..),
+  getStakePoolDelegatee,
+  getVoteDelegatee,
+ )
 import Cardano.Ledger.Conway.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Core (
   EraIndependentData,
@@ -78,12 +89,15 @@ import Cardano.Ledger.Core (
   EraTxBody (..),
   EraTxOut (..),
  )
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.HKD (HKD)
-import Cardano.Ledger.Keys (KeyHash (..), VKey (..))
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
@@ -138,6 +152,7 @@ import Test.Cardano.Ledger.Conway.ImpTest (
   getsNES,
   impAnn,
   impLastTickL,
+  logCurPParams,
   logEntry,
   modifyNES,
   trySubmitTx,
@@ -463,20 +478,103 @@ instance
 instance SpecTranslate a => SpecTranslate (StrictMaybe a) where
   type SpecRep (StrictMaybe a) = Maybe (SpecRep a)
 
-  toSpecRep = traverse toSpecRep . strictMaybeToMaybe
+  toSpecRep = toSpecRep . strictMaybeToMaybe
+
+instance SpecTranslate a => SpecTranslate (Maybe a) where
+  type SpecRep (Maybe a) = Maybe (SpecRep a)
+
+  toSpecRep = traverse toSpecRep
 
 instance SpecTranslate (AlonzoTxAuxData era) where
   type SpecRep (AlonzoTxAuxData era) = Agda.AuxiliaryData
 
   toSpecRep _ = pure ()
 
+deriving instance SpecTranslate (ScriptHash c)
+
+instance SpecTranslate (Credential k c) where
+  type SpecRep (Credential k c) = Agda.Credential
+
+  toSpecRep (KeyHashObj h) = Agda.KeyHashObj <$> toSpecRep h
+  toSpecRep (ScriptHashObj h) = Agda.ScriptObj <$> toSpecRep h
+
+instance SpecTranslate (RewardAcnt c) where
+  type SpecRep (RewardAcnt c) = SpecRep (Credential 'Staking c)
+
+  toSpecRep = toSpecRep . getRwdCred
+
+instance SpecTranslate (PoolParams era) where
+  type SpecRep (PoolParams era) = Agda.PoolParams
+
+  toSpecRep = toSpecRep . ppRewardAcnt
+
+instance SpecTranslate (DRep c) where
+  type SpecRep (DRep c) = Agda.VDeleg
+
+  toSpecRep (DRepCredential c) = Agda.CredVoter Agda.DRep <$> toSpecRep c
+  toSpecRep DRepAlwaysAbstain = pure Agda.AbstainRep
+  toSpecRep DRepAlwaysNoConfidence = pure Agda.NoConfidenceRep
+
+instance SpecTranslate (Anchor c) where
+  type SpecRep (Anchor c) = Agda.Anchor
+  toSpecRep _ = pure ()
+
+instance SpecTranslate (ConwayTxCert era) where
+  type SpecRep (ConwayTxCert era) = Agda.TxCert
+
+  toSpecRep (ConwayTxCertDeleg (ConwayRegCert _ _)) = Left "RegCert not supported"
+  toSpecRep (ConwayTxCertDeleg (ConwayUnRegCert _ _)) = Left "UnRegCert not supported"
+  toSpecRep (ConwayTxCertDeleg (ConwayDelegCert c d)) =
+    Agda.Delegate
+      <$> toSpecRep c
+      <*> toSpecRep (getVoteDelegatee d)
+      <*> toSpecRep (KeyHashObj <$> getStakePoolDelegatee d)
+      <*> pure 0
+  toSpecRep (ConwayTxCertDeleg (ConwayRegDelegCert s d c)) =
+    Agda.Delegate
+      <$> toSpecRep s
+      <*> toSpecRep (getVoteDelegatee d)
+      <*> toSpecRep (KeyHashObj <$> getStakePoolDelegatee d)
+      <*> toSpecRep c
+  toSpecRep (ConwayTxCertPool (RegPool p@PoolParams {ppId})) =
+    Agda.RegPool
+      <$> toSpecRep (KeyHashObj ppId)
+      <*> toSpecRep p
+  toSpecRep (ConwayTxCertPool (RetirePool kh e)) =
+    Agda.RetirePool
+      <$> toSpecRep (KeyHashObj kh)
+      <*> toSpecRep e
+  toSpecRep (ConwayTxCertGov (ConwayRegDRep c d _)) =
+    Agda.RegDRep
+      <$> toSpecRep c
+      <*> toSpecRep d
+      <*> pure () -- TODO Are the anchors supposed to be optional?
+  toSpecRep (ConwayTxCertGov (ConwayUnRegDRep c _)) =
+    Agda.DeRegDRep
+      <$> toSpecRep c
+  toSpecRep (ConwayTxCertGov (ConwayUpdateDRep c _)) =
+    Agda.RegDRep
+      <$> toSpecRep c
+      <*> pure 0
+      <*> pure () -- TODO Are the anchors supposed to be optional?
+  toSpecRep (ConwayTxCertGov (ConwayAuthCommitteeHotKey c h)) =
+    Agda.CCRegHot
+      <$> toSpecRep c
+      <*> toSpecRep (SJust h)
+  toSpecRep (ConwayTxCertGov (ConwayResignCommitteeColdKey c _)) =
+    Agda.CCRegHot
+      <$> toSpecRep c
+      <*> toSpecRep (SNothing @(Credential _ _))
+
 deriving instance SpecTranslate (TxId era)
 
 toAgdaTxBody ::
   ( SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecRep (TxCert era) ~ Agda.TxCert
   , EraTx era
   , AlonzoEraTxBody era
   , SpecTranslate (TxOut era)
+  , SpecTranslate (TxCert era)
   ) =>
   Tx era ->
   Either SpecTranslationError Agda.TxBody
@@ -491,17 +589,20 @@ toAgdaTxBody tx =
     <*> toSpecRep (tx ^. bodyTxL . collateralInputsTxBodyL)
     <*> toSpecRep (tx ^. bodyTxL . reqSignerHashesTxBodyL)
     <*> toSpecRep (tx ^. bodyTxL . scriptIntegrityHashTxBodyL)
+    <*> toSpecRep (tx ^. bodyTxL . certsTxBodyL)
 
 instance
   ( SpecTranslate (TxWits era)
-  , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecTranslate (TxAuxData era)
+  , SpecTranslate (TxOut era)
+  , SpecTranslate (TxCert era)
+  , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxAuxData era) ~ Agda.AuxiliaryData
   , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecRep (TxCert era) ~ Agda.TxCert
   , Tx era ~ AlonzoTx era
   , EraTx era
   , AlonzoEraTxBody era
-  , SpecTranslate (TxOut era)
   ) =>
   SpecTranslate (AlonzoTx era)
   where
@@ -570,22 +671,36 @@ trySubmitTxConform txPreFixup = do
     expectationFailure "The final states of spec and implementation do not match"
   pure submitRes
 
-conformsWhen :: (NewEpochState Conway -> Tx Conway -> Bool) -> ImpTestState Conway -> Property
-conformsWhen condition impState =
+conformsWhen :: Bool -> (NewEpochState Conway -> Tx Conway -> Bool) -> ImpTestState Conway -> Property
+conformsWhen makeTestsSmall condition impState =
   let
-    us =
-      def
-        { usMinCerts = 0
-        , usMaxCerts = 0
-        , usDatumFreq = 0
-        , usGenerateWithdrawals = False
-        , usNumPreUtxo = 3
+    smallerExamples x =
+      x
+        { usNumPreUtxo = 3
         , usNumColUtxo = 3
         , usMinInputs = 1
         , usMaxInputs = 3
         , usMinCollaterals = 1
         , usMaxCollaterals = 3
         }
+    usNecessary =
+      def
+        { -- Not supported by the spec:
+          usRegKeyFreq = 0
+        , usUnRegKeyFreq = 0
+        , usDatumFreq = 0
+        , usGenerateWithdrawals = False
+        , -- Ensures there's no double pool registration:
+          usMinCerts = 0
+        , usMaxCerts = 4
+        , usAllowReRegisterPool = False
+        , -- Not supported by the implementation:
+          usSpendScriptFreq = 0
+        , usCredScriptFreq = 0
+        }
+    us
+      | makeTestsSmall = smallerExamples usNecessary
+      | otherwise = usNecessary
     gen = genTxAndNewEpoch us $ reify @Conway
    in
     forAllBlind gen $ \(nes, tx, _env) ->
@@ -594,6 +709,8 @@ conformsWhen condition impState =
         $ do
           modify (impLastTickL @Conway .~ 100)
           modifyNES $ const nes
+          logCurPParams
+          -- logNESSummary
           logTxSummary tx
           withNoFixup $ trySubmitTxConform_ tx
 
@@ -613,7 +730,8 @@ spec = describe "Conway conformance tests" . withImpState $ do
     res <- trySubmitTxConform $ mkBasicTx mkBasicTxBody
     expectRightDeep_ res
   describe "Constrained generator" $ do
-    it "UTXO conforms when IsValid True" $ conformsWhen (const txIsValid)
+    it "UTXO conforms with small examples when IsValid True" $ conformsWhen True (const txIsValid)
+    it "UTXO conforms with large examples when IsValid True" $ conformsWhen False (const txIsValid)
 
 logTxSummary :: Tx Conway -> ImpTestM Conway ()
 logTxSummary tx = do
@@ -648,6 +766,7 @@ logTxSummary tx = do
         InfoAction {} -> "InfoAction"
     showProposals = showProposal <$> toList (txb ^. proposalProceduresTxBodyL)
     showVotes = show <$> Map.toList (txb ^. votingProceduresTxBodyL . to unVotingProcedures)
+    showCerts = ("  " ++) . show <$> toList (txb ^. certsTxBodyL)
   logEntry . unlines $
     concat
       [ pure ""
@@ -663,6 +782,8 @@ logTxSummary tx = do
       , case collRet of
           SJust cr -> pure . showTxOut cr $ length outs
           SNothing -> pure "no collateral return"
+      , pure "certs:"
+      , showCerts
       , pure "proposals:"
       , showProposals
       , pure "votes:"

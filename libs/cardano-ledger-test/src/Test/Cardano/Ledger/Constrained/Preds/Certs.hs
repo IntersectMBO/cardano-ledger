@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -17,8 +19,10 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), maybeToStrictMaybe)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
+  ConwayEraTxCert,
   ConwayTxCert (..),
   Delegatee (..),
+  pattern RegDepositDelegTxCert,
  )
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (HASH, VRF)
@@ -29,6 +33,7 @@ import Cardano.Ledger.PoolParams (PoolMetadata, PoolParams (..))
 import Cardano.Ledger.Pretty (ppList)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, InstantaneousRewards, availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (
+  EraTxCert (..),
   GenesisDelegCert (..),
   MIRCert (..),
   MIRPot (..),
@@ -118,23 +123,19 @@ cDelegStakeVote ::
     )
 cDelegStakeVote = Constr "cDelegStakeVote" (\x y z _ -> ConwayTxCertDeleg (ConwayDelegCert x (DelegStakeVote y z)))
 
-cRegDelegStake :: Target era (StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> Coin -> ConwayTxCert era)
-cRegDelegStake = Constr "cRegDelegStake" (\x y c -> ConwayTxCertDeleg (ConwayRegDelegCert x (DelegStake y) c))
+cRegDeleg ::
+  ConwayEraTxCert era =>
+  Target era (StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> Coin -> TxCert era)
+cRegDeleg = Constr "cRegDeleg" RegDepositDelegTxCert
 
-cRegDelegVote :: Target era (StakeCredential (EraCrypto era) -> DRep (EraCrypto era) -> Coin -> a -> ConwayTxCert era)
-cRegDelegVote = Constr "cRegDelegVote" (\x y c _ -> ConwayTxCertDeleg (ConwayRegDelegCert x (DelegVote y) c))
+cDelegateeStake :: Target era (KeyHash 'StakePool (EraCrypto era) -> Delegatee (EraCrypto era))
+cDelegateeStake = Constr "cDelegateeStake" DelegStake
 
-cRegDelegStakeVote ::
-  Target
-    era
-    ( StakeCredential (EraCrypto era) ->
-      KeyHash 'StakePool (EraCrypto era) ->
-      DRep (EraCrypto era) ->
-      Coin ->
-      a ->
-      ConwayTxCert era
-    )
-cRegDelegStakeVote = Constr "cRegDelegStakeVote" (\w x y c _ -> ConwayTxCertDeleg (ConwayRegDelegCert w (DelegStakeVote x y) c))
+cDelegateeVote :: Target era (DRep (EraCrypto era) -> Delegatee (EraCrypto era))
+cDelegateeVote = Constr "cDelegateeVote" DelegVote
+
+cDelegateeStakeVote :: Target era (KeyHash 'StakePool (EraCrypto era) -> DRep (EraCrypto era) -> Delegatee (EraCrypto era))
+cDelegateeStakeVote = Constr "cDelegateeVote" DelegStakeVote
 
 cRegPool :: Target era (PoolParams (EraCrypto era) -> ConwayTxCert era)
 cRegPool = Constr "cRegPool" (\x -> ConwayTxCertPool (RegPool x))
@@ -162,17 +163,19 @@ partBfromPartA p mp = Map.fromList (fixer (Map.toList mp))
 --   The parameter 'vote' should be existentially bound
 --   in the surrounding context (inside a Choose Target perhaps)
 makeDRepPred ::
-  Era era =>
   Term era (DRep (EraCrypto era)) ->
   Term era (Credential 'DRepRole (EraCrypto era)) ->
   Pred era
 makeDRepPred drep vote =
-  Oneof
-    drep
-    [ (1, constTarget DRepAlwaysAbstain, [Random vote])
-    , (1, constTarget DRepAlwaysNoConfidence, [Random vote])
-    , (5, Constr "" DRepCredential ^$ vote, [Member (Left vote) voteUniv])
-    ]
+  drep :<-: (Constr "" DRepCredential ^$ vote)
+
+-- TODO @TimSheard nested `Oneof`s seem to be broken
+-- Oneof
+--  drep
+--  [ (1, constTarget DRepAlwaysAbstain, [])
+--  , (1, constTarget DRepAlwaysNoConfidence, [])
+--  , (5, Constr "" DRepCredential ^$ vote, [])
+--  ]
 
 -- =====================================
 
@@ -209,7 +212,7 @@ And generate: partC suchthat: (Sum partC) = availableC
 -}
 
 certsPreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
-certsPreds UnivSize {usMinCerts, usMaxCerts} p = case whichTxCert p of
+certsPreds UnivSize {..} p = case whichTxCert p of
   TxCertShelleyToBabbage ->
     [ certs :<-: (Constr "TxCertF" (fmap (TxCertF p)) ^$ shelleycerts)
     , Sized (Range 1 6) epochDelta -- Note that last Epoch is stored in 'maxEpoch' which was 100 on 7/7/23 see PParams.hs
@@ -241,7 +244,7 @@ certsPreds UnivSize {usMinCerts, usMaxCerts} p = case whichTxCert p of
           ( 1
           , sRegPool ^$ poolParams
           ,
-            [ -- Pick a random PoolParams, except constrain the fields poolId, poolRewAcnt, poolOwners, and pooMetadaa
+            [ -- Pick a random PoolParams, except constrain the fields poolId, poolRewAcnt, poolOwners, and poolMetadata
               -- by the additional Preds. Note that the (genRep (PoolMetadataR p)) function knows how to handle the
               -- 'SoftForks.restrictPoolMetadataHash' issue on '(poolMetadata p)'. So using 'Random' which uses genRep
               -- should produce the right PoolMetadata format, by obseriving the Proof 'p'.
@@ -325,6 +328,116 @@ certsPreds UnivSize {usMinCerts, usMaxCerts} p = case whichTxCert p of
         conwaycerts
         [
           ( 1
+          , cDelegStake ^$ stakeCred ^$ poolHash
+          ,
+            [ Member (Left stakeCred) (Dom rewards)
+            , Member (Left poolHash) (Dom regPools)
+            ]
+          )
+        ,
+          ( 1
+          , cDelegVote ^$ stakeCred ^$ drep ^$ vote
+          ,
+            [ Member (Left stakeCred) (Dom rewards)
+            , makeDRepPred drep vote
+            , Member (Left vote) voteUniv
+            ]
+          )
+        ,
+          ( 1
+          , cRegDeleg ^$ stakeCred ^$ delegatee ^$ kd
+          ,
+            [ Oneof
+                delegatee
+                [
+                  ( 3
+                  , cDelegateeStake ^$ poolHash
+                  ,
+                    [ Member (Left poolHash) (Dom regPools)
+                    ]
+                  )
+                ,
+                  ( 1
+                  , cDelegateeVote ^$ drep1
+                  ,
+                    [ makeDRepPred drep1 vote1
+                    , Member (Left vote1) voteUniv
+                    ]
+                  )
+                ,
+                  ( 1
+                  , cDelegateeVote ^$ drep1a
+                  ,
+                    [ drep1a :<-: constTarget DRepAlwaysAbstain
+                    ]
+                  )
+                ,
+                  ( 1
+                  , cDelegateeVote ^$ drep1b
+                  ,
+                    [ drep1b :<-: constTarget DRepAlwaysNoConfidence
+                    ]
+                  )
+                ,
+                  ( 1
+                  , cDelegateeStakeVote ^$ poolHash ^$ drep2
+                  ,
+                    [ Member (Left poolHash) (Dom regPools)
+                    , makeDRepPred drep2 vote2
+                    , Member (Left vote2) voteUniv
+                    ]
+                  )
+                ,
+                  ( 1
+                  , cDelegateeStakeVote ^$ poolHash ^$ drep2a
+                  ,
+                    [ Member (Left poolHash) (Dom regPools)
+                    , drep2a :<-: constTarget DRepAlwaysAbstain
+                    ]
+                  )
+                ,
+                  ( 1
+                  , cDelegateeStakeVote ^$ poolHash ^$ drep2b
+                  ,
+                    [ Member (Left poolHash) (Dom regPools)
+                    , drep2b :<-: constTarget DRepAlwaysNoConfidence
+                    ]
+                  )
+                ]
+            , Member (Left stakeCred) credsUniv
+            , NotMember stakeCred (Dom rewards)
+            , kd :=: keyDepAmt p
+            ]
+          )
+        ,
+          ( 1
+          , cRegPool ^$ poolParams
+          , [ -- Pick a random PoolParams, except constrain the poolId and the poolRewAcnt, by the additional Preds
+              Component
+                (Right poolParams)
+                [ field PoolParamsR poolId
+                , field PoolParamsR poolRewAcnt
+                , field PoolParamsR poolOwners
+                , field PoolParamsR (poolMetadata p)
+                ]
+            , Member (Left poolId) poolHashUniv
+            , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAcnt ^$ network ^$ rewCred)
+            , Member (Right rewCred) credsUniv
+            , Subset poolOwners stakeHashUniv
+            , Maybe (poolMetadata p) (Simple localpool) [Random localpool]
+            ]
+              ++ [NotMember poolId (Dom regPools) | not usAllowReRegisterPool]
+          )
+        ,
+          ( 1
+          , cRetirePool ^$ poolHash ^$ epoch
+          ,
+            [ Member (Left poolHash) (Dom regPools)
+            , epoch :<-: (Constr "+" (+) ^$ currentEpoch ^$ epochDelta)
+            ]
+          )
+        ,
+          ( usRegKeyFreq
           , cRegKey ^$ stakeCred ^$ mkeydeposit
           ,
             [ NotMember stakeCred (Dom rewards)
@@ -333,76 +446,17 @@ certsPreds UnivSize {usMinCerts, usMaxCerts} p = case whichTxCert p of
             ]
           )
         ,
-          ( 1
+          ( usUnRegKeyFreq
           , cUnRegKey ^$ stakeCred ^$ mkeydeposit
           ,
             [ MapMember stakeCred (Lit CoinR (Coin 0)) (Left rewards)
             , Maybe mkeydeposit (idTarget kd) [MapMember stakeCred kd (Left stakeDeposits)]
             ]
           )
-        ,
-          ( 1
-          , cDelegStake ^$ stakeCred ^$ poolHash
-          , [Member (Left stakeCred) (Dom rewards), Member (Left poolHash) (Dom regPools)]
-          )
-        ,
-          ( 1
-          , cDelegVote ^$ stakeCred ^$ drep ^$ vote
-          , [Member (Left stakeCred) (Dom rewards), makeDRepPred drep vote]
-          )
-        ,
-          ( 1
-          , cRegDelegStake ^$ stakeCred ^$ poolHash ^$ kd
-          ,
-            [ NotMember stakeCred (Dom rewards)
-            , Member (Left stakeCred) credsUniv
-            , Member (Left poolHash) (Dom regPools)
-            , kd :=: (keyDepAmt p)
-            ]
-          )
-        ,
-          ( 1
-          , cRegDelegVote ^$ stakeCred ^$ drep ^$ kd ^$ vote
-          ,
-            [ NotMember stakeCred (Dom rewards)
-            , Member (Left stakeCred) credsUniv
-            , kd :=: (keyDepAmt p)
-            , makeDRepPred drep vote
-            ]
-          )
-        ,
-          ( 1
-          , cRegDelegStakeVote ^$ stakeCred ^$ poolHash ^$ drep ^$ kd ^$ vote
-          ,
-            [ NotMember stakeCred (Dom rewards)
-            , Member (Left stakeCred) credsUniv
-            , makeDRepPred drep vote
-            , Member (Left poolHash) (Dom regPools)
-            , kd :=: (keyDepAmt p)
-            ]
-          )
-        ,
-          ( 1
-          , cRegPool ^$ poolParams
-          ,
-            [ -- Pick a random PoolParams, except constrain the poolId and the poolRewAcnt, by the additional Preds
-              Component
-                (Right poolParams)
-                [field PoolParamsR poolId, field PoolParamsR poolRewAcnt, field PoolParamsR poolOwners]
-            , Member (Left poolId) poolHashUniv
-            , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAcnt ^$ network ^$ rewCred)
-            , Member (Right rewCred) credsUniv
-            , Subset poolOwners stakeHashUniv
-            ]
-          )
-        ,
-          ( 1
-          , cRetirePool ^$ poolHash ^$ epoch
-          , [Member (Left poolHash) (Dom regPools), epoch :<-: (Constr "+" (+) ^$ currentEpoch ^$ epochDelta)]
-          )
         ]
     ]
   where
+    delegatee = Var $ pV p "delegatee" DelegateeR No
     stakeCred = Var $ pV p "stakeCred" CredR No
     deregkey = Var $ pV p "destakeCred" CredR No
     poolHash = Var $ pV p "poolHash" PoolHashR No
@@ -419,6 +473,8 @@ certsPreds UnivSize {usMinCerts, usMaxCerts} p = case whichTxCert p of
     mkeydeposit = Var $ pV p "mkeyDeposit" (MaybeR CoinR) No
     kd = Var $ pV p "kd" CoinR No
     vote = Var $ pV p "vote" VCredR No
+    vote1 = Var $ pV p "vote1" VCredR No
+    vote2 = Var $ pV p "vote2" VCredR No
     epochDelta = Var $ pV p "epochDelta" EpochR No
     poolId = Var (pV p "poolId" PoolHashR (Yes PoolParamsR (lens ppId (\x i -> x {ppId = i}))))
     poolOwners = Var (pV p "poolOwners" (SetR StakeHashR) (Yes PoolParamsR (lens ppOwners (\x i -> x {ppOwners = i}))))
@@ -431,6 +487,12 @@ certsPreds UnivSize {usMinCerts, usMaxCerts} p = case whichTxCert p of
     mircoin = Var $ pV p "mircoin" CoinR No
     mircert = Var (pV p "mircert" ShelleyTxCertR No)
     drep = Var (pV p "drep" DRepR No)
+    drep1 = Var (pV p "drep1" DRepR No)
+    drep1a = Var (pV p "drep1a" DRepR No)
+    drep1b = Var (pV p "drep1b" DRepR No)
+    drep2 = Var (pV p "drep2" DRepR No)
+    drep2a = Var (pV p "drep2a" DRepR No)
+    drep2b = Var (pV p "drep2b" DRepR No)
 
 certsStage ::
   Reflect era =>

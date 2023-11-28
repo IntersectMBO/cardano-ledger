@@ -82,7 +82,7 @@ import Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   RunConwayRatify (..),
  )
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
+import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..), Delegatee (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
@@ -190,6 +190,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcData,
   pcDataHash,
   pcDatum,
+  pcDelegatee,
   pcEnactState,
   pcFutureGenDeleg,
   pcGenDelegPair,
@@ -353,6 +354,7 @@ data Rep era t where
   EnactStateR :: Reflect era => Rep era (EnactState era)
   DRepPulserR :: (RunConwayRatify era, Reflect era) => Rep era (DRepPulser era Identity (RatifyState era))
   PrevGovActionIdsChildrenR :: Era era => Rep era (PrevGovActionIdsChildren era)
+  DelegateeR :: Era era => Rep era (Delegatee (EraCrypto era))
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -506,6 +508,7 @@ repHasInstances r = case r of
   AnchorR {} -> IsEq
   DRepPulserR {} -> IsEq
   PrevGovActionIdsChildrenR {} -> IsEq
+  DelegateeR {} -> IsOrd
 
 -- NOTE: The extra `()` constraint needs to be there for fourmolu.
 -- c.f. https://github.com/fourmolu/fourmolu/issues/374
@@ -674,6 +677,7 @@ synopsis AnchorR k = show (pcAnchor k)
 synopsis EnactStateR x = show (pcEnactState reify x)
 synopsis DRepPulserR x = show (pcDRepPulser x)
 synopsis PrevGovActionIdsChildrenR x = show (pcPrevGovActionIdsChildren x)
+synopsis DelegateeR x = show (pcDelegatee x)
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -915,6 +919,12 @@ genSizedRep _ DRepPulserR =
     <*> (SS.fromList . (: []) <$> genRep GovActionStateR) -- proposals
     <*> (pure testGlobals)
 genSizedRep _ PrevGovActionIdsChildrenR = arbitrary
+genSizedRep n DelegateeR =
+  oneof
+    [ DelegStake <$> genSizedRep n (PoolHashR @era)
+    , DelegVote <$> genSizedRep n (DRepR @era)
+    , DelegStakeVote <$> genSizedRep n (PoolHashR @era) <*> genSizedRep n (DRepR @era)
+    ]
 
 genRep ::
   forall era b.
@@ -1069,6 +1079,7 @@ shrinkRep DRepHashR x = shrink x
 shrinkRep AnchorR x = shrink x
 shrinkRep DRepPulserR _ = []
 shrinkRep PrevGovActionIdsChildrenR x = shrink x
+shrinkRep DelegateeR _ = []
 
 hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
 hasOrd rep x = case repHasInstances rep of
