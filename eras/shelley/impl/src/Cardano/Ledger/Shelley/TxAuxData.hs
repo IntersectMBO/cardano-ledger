@@ -68,7 +68,6 @@ import Cardano.Ledger.SafeHash (
   hashAnnotated,
  )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -90,8 +89,6 @@ data Metadatum
   | S !T.Text
   deriving stock (Show, Eq, Ord, Generic)
 
-instance ToExpr Metadatum
-
 instance NoThunks Metadatum
 
 instance NFData Metadatum where
@@ -108,8 +105,6 @@ data ShelleyTxAuxData era = ShelleyTxAuxData'
   }
   deriving (Eq, Show, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] (ShelleyTxAuxData era)
-
-instance ToExpr (ShelleyTxAuxData era)
 
 type Metadata era = ShelleyTxAuxData era
 

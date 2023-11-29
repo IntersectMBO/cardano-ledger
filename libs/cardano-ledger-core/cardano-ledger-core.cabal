@@ -90,12 +90,12 @@ library
         base-deriving-via,
         binary,
         bytestring,
-        cardano-ledger-binary >=1.1.1,
+        cardano-ledger-binary ^>=1.3,
         cardano-crypto,
         cardano-crypto-class,
         cardano-crypto-praos,
         cardano-crypto-wrapper,
-        cardano-data,
+        cardano-data ^>=1.2,
         cardano-ledger-byron,
         cardano-prelude,
         cardano-slotting,
@@ -125,10 +125,9 @@ library
         text,
         time,
         transformers,
-        tree-diff,
         utf8-string,
         validation-selective,
-        vector-map >=1.0
+        vector-map ^>=1.1
 
     if flag(asserts)
         ghc-options: -fno-ignore-asserts
@@ -147,6 +146,7 @@ library testlib
         Test.Cardano.Ledger.Core.Utils
         Test.Cardano.Ledger.Core.Rational
         Test.Cardano.Ledger.Imp.Common
+        Test.Cardano.Ledger.TreeDiff
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -178,7 +178,8 @@ library testlib
         QuickCheck,
         random >=1.2,
         text,
-        vector-map,
+        tree-diff,
+        vector-map:{vector-map, testlib},
         time,
         cardano-slotting,
         unliftio

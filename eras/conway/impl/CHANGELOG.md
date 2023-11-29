@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Moved `ToExpr` instances out of the main library and into the testlib.
 * Changed the type of ConwayPParam's fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
 * Changed types of lenses: `ppGovActionLifetimeL`, `ppDRepActivityL`, `ppCommitteeMaxTermLengthL` and `ppuGovActionLifetimeL`, `ppuDRepActivityL`, `ppuCommitteeMaxTermLengthL`
 

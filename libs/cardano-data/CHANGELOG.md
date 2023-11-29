@@ -1,8 +1,8 @@
 # Version history for `cardano-data`
 
-## 1.1.2.1
+## 1.2.0.0
 
-*
+* Moved `ToExpr` instances out of the main library and into the testlib.
 
 ## 1.1.2.0
 

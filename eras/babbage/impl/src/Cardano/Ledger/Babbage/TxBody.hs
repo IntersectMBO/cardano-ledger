@@ -56,6 +56,7 @@ module Cardano.Ledger.Babbage.TxBody (
     btbAuxDataHash,
     btbTxNetworkId
   ),
+  BabbageTxBodyRaw (..),
   BabbageTxBodyUpgradeError (..),
   mkBabbageTxBody,
   inputsBabbageTxBodyL,
@@ -159,7 +160,6 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
@@ -250,10 +250,6 @@ instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (BabbageTxBodyRaw era)
 
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (BabbageTxBodyRaw era)
-
 deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (BabbageTxBodyRaw era)
@@ -267,10 +263,6 @@ instance Memoized BabbageTxBody where
 deriving newtype instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (BabbageTxBody era)
-
-instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
-  ToExpr (BabbageTxBody era)
 
 inputsBabbageTxBodyL ::
   BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (TxIn (EraCrypto era)))

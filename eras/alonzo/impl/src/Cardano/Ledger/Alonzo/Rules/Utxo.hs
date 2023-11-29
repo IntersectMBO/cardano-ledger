@@ -90,7 +90,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
@@ -198,13 +197,6 @@ data AlonzoUtxoPredFailure era
       !Natural
   | NoCollateralInputs
   deriving (Generic)
-
-instance
-  ( ToExpr (Value era)
-  , ToExpr (TxOut era)
-  , ToExpr (PredicateFailure (EraRule "UTXOS" era))
-  ) =>
-  ToExpr (AlonzoUtxoPredFailure era)
 
 deriving stock instance
   ( Era era

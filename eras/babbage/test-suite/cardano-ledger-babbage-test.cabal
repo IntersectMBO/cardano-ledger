@@ -66,7 +66,7 @@ executable gen-golden
 
     build-depends:
         base,
-        cardano-ledger-core >=1.2,
+        cardano-ledger-core,
         cardano-ledger-alonzo-test,
         cardano-ledger-babbage,
         cardano-ledger-babbage-test
@@ -91,7 +91,7 @@ test-suite cardano-ledger-babbage-test
         cardano-ledger-binary:testlib,
         cardano-ledger-alonzo-test,
         cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
-        cardano-ledger-babbage-test >=1.1,
+        cardano-ledger-babbage-test,
         cardano-ledger-core,
         cardano-ledger-shelley-ma-test,
         cardano-ledger-shelley-test,

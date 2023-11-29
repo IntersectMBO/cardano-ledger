@@ -27,6 +27,7 @@ module Cardano.Ledger.Shelley.Scripts (
   ScriptHash (..),
   nativeMultiSigTag,
   eqMultiSigRaw,
+  MultiSigRaw (..),
 )
 where
 
@@ -55,7 +56,6 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import Data.Functor.Classes (Eq1 (liftEq))
@@ -95,8 +95,6 @@ deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSigRaw era)
 
 instance NFData (MultiSigRaw era)
 
-instance ToExpr (MultiSigRaw era)
-
 newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
   deriving (Eq, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
@@ -130,8 +128,6 @@ deriving via
   Mem MultiSigRaw era
   instance
     Era era => DecCBOR (Annotator (MultiSig era))
-
-instance ToExpr (MultiSig era)
 
 instance EqRaw (MultiSig era) where
   eqRaw = eqMultiSigRaw

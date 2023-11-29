@@ -90,7 +90,6 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.Governance (Constitution)
 import Cardano.Ledger.Shelley.RewardProvenance ()
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..))
@@ -133,15 +132,11 @@ newtype GovActionIx = GovActionIx Word32
     , ToJSON
     )
 
-instance ToExpr GovActionIx
-
 data GovActionId c = GovActionId
   { gaidTxId :: !(TxId c)
   , gaidGovActionIx :: !GovActionIx
   }
   deriving (Generic, Eq, Ord, Show)
-
-instance ToExpr (GovActionId c)
 
 instance Crypto c => DecCBOR (GovActionId c) where
   decCBOR =
@@ -211,8 +206,6 @@ gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
 
 gasActionL :: Lens' (GovActionState era) (GovAction era)
 gasActionL = lens gasAction $ \x y -> x {gasAction = y}
-
-instance EraPParams era => ToExpr (GovActionState era)
 
 instance EraPParams era => ToJSON (GovActionState era) where
   toJSON = object . toGovActionStatePairs
@@ -287,8 +280,6 @@ data Voter c
 
 instance Crypto c => ToJSON (Voter c)
 
-instance Crypto c => ToExpr (Voter c)
-
 instance Crypto c => ToJSONKey (Voter c) where
   toJSONKey = toJSONKeyText $ \case
     CommitteeVoter cred ->
@@ -331,8 +322,6 @@ data Vote
   | Abstain
   deriving (Generic, Eq, Show, Enum, Bounded)
 
-instance ToExpr Vote
-
 instance ToJSON Vote
 
 instance NoThunks Vote
@@ -354,8 +343,6 @@ newtype VotingProcedures era = VotingProcedures
 
 deriving newtype instance Era era => NFData (VotingProcedures era)
 
-instance Era era => ToExpr (VotingProcedures era)
-
 instance Era era => DecCBOR (VotingProcedures era) where
   decCBOR =
     fmap VotingProcedures $ decodeMapByKey decCBOR $ \voter -> do
@@ -373,7 +360,6 @@ data VotingProcedure era = VotingProcedure
   deriving (Generic, Eq, Show)
 
 instance NoThunks (VotingProcedure era)
-instance ToExpr (VotingProcedure era)
 
 instance Crypto (EraCrypto era) => NFData (VotingProcedure era)
 
@@ -446,8 +432,6 @@ instance EraPParams era => NoThunks (ProposalProcedure era)
 
 instance EraPParams era => NFData (ProposalProcedure era)
 
-instance EraPParams era => ToExpr (ProposalProcedure era)
-
 instance EraPParams era => DecCBOR (ProposalProcedure era) where
   decCBOR =
     decode $
@@ -487,8 +471,6 @@ data Committee era = Committee
   -- ^ Quorum of the committee that is necessary for a successful vote
   }
   deriving (Eq, Show, Generic)
-
-instance ToExpr (Committee era)
 
 instance Era era => NoThunks (Committee era)
 
@@ -545,7 +527,7 @@ data GovActionPurpose
   deriving (Eq, Show)
 
 newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId {unPrevGovActionId :: GovActionId c}
-  deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON, ToExpr, Ord)
+  deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON, Ord)
 
 type role PrevGovActionId nominal nominal
 
@@ -588,8 +570,6 @@ data GovAction era
       !(Constitution era)
   | InfoAction
   deriving (Generic, Ord)
-
-instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (GovAction era)
 
 deriving instance EraPParams era => Eq (GovAction era)
 

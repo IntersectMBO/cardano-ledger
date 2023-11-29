@@ -28,7 +28,6 @@ import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Encoding (EncCBOR (encCBOR))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import Data.Default.Class (Default)
@@ -43,8 +42,6 @@ data PoolVotingThresholds = PoolVotingThresholds
   , pvtHardForkInitiation :: !UnitInterval
   }
   deriving (Eq, Ord, Show, Generic, Default, ToJSON, NFData, NoThunks)
-
-instance ToExpr PoolVotingThresholds
 
 instance EncCBOR PoolVotingThresholds where
   encCBOR PoolVotingThresholds {..} =
@@ -76,8 +73,6 @@ data DRepVotingThresholds = DRepVotingThresholds
   , dvtTreasuryWithdrawal :: !UnitInterval
   }
   deriving (Eq, Ord, Show, Generic, Default, ToJSON, NFData, NoThunks)
-
-instance ToExpr DRepVotingThresholds
 
 dvtPPNetworkGroupL :: Lens' DRepVotingThresholds UnitInterval
 dvtPPNetworkGroupL = lens dvtPPNetworkGroup (\x y -> x {dvtPPNetworkGroup = y})

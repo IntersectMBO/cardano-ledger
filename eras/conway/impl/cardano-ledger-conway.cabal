@@ -75,14 +75,14 @@ library
         aeson >=2.2,
         data-default-class,
         cardano-crypto-class,
-        cardano-data >=1.1.2.0,
-        cardano-ledger-binary >=1.2,
-        cardano-ledger-allegra >=1.1,
+        cardano-data >=1.2,
+        cardano-ledger-binary ^>=1.3,
+        cardano-ledger-allegra ^>=1.3,
         cardano-ledger-alonzo ^>=1.6,
-        cardano-ledger-babbage >=1.4.1,
+        cardano-ledger-babbage ^>=1.6,
         cardano-ledger-core ^>=1.10,
-        cardano-ledger-mary >=1.4,
-        cardano-ledger-shelley >=1.9 && <1.10,
+        cardano-ledger-mary ^>=1.5,
+        cardano-ledger-shelley ^>=1.9,
         cardano-slotting,
         cardano-strict-containers,
         containers,
@@ -107,6 +107,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
         Test.Cardano.Ledger.Conway.Imp.EnactSpec
         Test.Cardano.Ledger.Conway.Imp.GovSpec
+        Test.Cardano.Ledger.Conway.TreeDiff
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -126,7 +127,7 @@ library testlib
         microlens-mtl,
         cardano-ledger-binary,
         cardano-crypto-class,
-        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.8.1,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-babbage:testlib,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-conway,
@@ -164,7 +165,7 @@ test-suite tests
         cardano-ledger-conway,
         cardano-ledger-shelley:testlib,
         cardano-ledger-core,
-        cardano-ledger-binary:testlib >=1.2.1,
+        cardano-ledger-binary:testlib,
         containers,
         data-default-class,
         microlens,

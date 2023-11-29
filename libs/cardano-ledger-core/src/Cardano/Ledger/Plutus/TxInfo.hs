@@ -76,7 +76,6 @@ import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -106,8 +105,6 @@ data TxOutSource c
   = TxOutFromInput !(TxIn c)
   | TxOutFromOutput !TxIx
   deriving (Eq, Show, Generic, NoThunks)
-
-instance ToExpr (TxOutSource era)
 
 instance Crypto c => EncCBOR (TxOutSource c) where
   encCBOR = \case

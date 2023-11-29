@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.2.1.1
+## 1.3.0.0
 
-*
+* Moved `ToExpr` instances out of the main library and into the testlib.
 
 ## 1.2.1.0
 

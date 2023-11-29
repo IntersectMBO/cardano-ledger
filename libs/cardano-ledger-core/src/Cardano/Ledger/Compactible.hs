@@ -8,7 +8,6 @@ module Cardano.Ledger.Compactible (
 where
 
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Data.Kind (Type)
 import NoThunks.Class (NoThunks)
 
@@ -26,7 +25,6 @@ class
   , Eq (CompactForm a)
   , EncCBOR (CompactForm a)
   , NoThunks (CompactForm a)
-  , ToExpr (CompactForm a)
   ) =>
   Compactible a
   where

@@ -148,6 +148,7 @@ import Prettyprinter.Render.String (renderString)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
 import Test.Hspec.Core.Spec (Example (..))
 import UnliftIO (MonadUnliftIO)

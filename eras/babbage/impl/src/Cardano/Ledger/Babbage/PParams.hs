@@ -86,7 +86,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates)
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   Key,
@@ -576,9 +575,3 @@ coinsPerUTxOByteToCoinsPerUTxOWord (CoinPerByte (Coin c)) = CoinPerWord $ Coin $
 -- invalid.
 coinsPerUTxOWordToCoinsPerUTxOByteInTx :: CoinPerWord -> CoinPerByte
 coinsPerUTxOWordToCoinsPerUTxOByteInTx (CoinPerWord (Coin c)) = CoinPerByte $ Coin c
-
--- ======================================
-
-instance ToExpr (BabbagePParams StrictMaybe era)
-
-instance ToExpr (BabbagePParams Identity era)

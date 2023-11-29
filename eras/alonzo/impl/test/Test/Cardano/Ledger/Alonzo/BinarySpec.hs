@@ -7,6 +7,7 @@ import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.Scripts
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary (BinaryUpgradeOpts (..), specUpgrade)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)

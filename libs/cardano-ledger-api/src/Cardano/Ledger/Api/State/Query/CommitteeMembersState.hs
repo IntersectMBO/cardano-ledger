@@ -32,7 +32,6 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Slot (
   EpochNo (..),
  )
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
@@ -47,8 +46,6 @@ data MemberStatus
     Unrecognized
   deriving (Show, Eq, Enum, Bounded, Generic, Ord, ToJSON)
 
-instance ToExpr MemberStatus
-
 instance EncCBOR MemberStatus where
   encCBOR = encodeEnum
 
@@ -61,8 +58,6 @@ data HotCredAuthStatus c
     MemberNotAuthorized
   | MemberResigned
   deriving (Show, Eq, Generic, Ord, ToJSON)
-
-instance ToExpr (HotCredAuthStatus c)
 
 instance Crypto c => EncCBOR (HotCredAuthStatus c) where
   encCBOR =
@@ -87,8 +82,6 @@ data NextEpochChange
   | NoChangeExpected
   deriving (Show, Eq, Enum, Bounded, Generic, Ord, ToJSON)
 
-instance ToExpr NextEpochChange
-
 instance EncCBOR NextEpochChange where
   encCBOR = encodeEnum
 
@@ -106,7 +99,6 @@ data CommitteeMemberState c = CommitteeMemberState
   deriving (Show, Eq, Generic)
 
 deriving instance Ord (CommitteeMemberState c)
-instance ToExpr (CommitteeMemberState c)
 
 instance Crypto c => EncCBOR (CommitteeMemberState c) where
   encCBOR (CommitteeMemberState cStatus mStatus ex nec) =
@@ -148,7 +140,6 @@ data CommitteeMembersState c = CommitteeMembersState
   deriving (Eq, Show, Generic)
 
 deriving instance Ord (CommitteeMembersState c)
-instance ToExpr (CommitteeMembersState c)
 
 instance Crypto c => EncCBOR (CommitteeMembersState c) where
   encCBOR c@(CommitteeMembersState _ _ _) =

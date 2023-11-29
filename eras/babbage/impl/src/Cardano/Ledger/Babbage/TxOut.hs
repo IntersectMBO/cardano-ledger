@@ -105,9 +105,6 @@ import Cardano.Ledger.Plutus.Data (
   binaryDataToData,
   dataToBinaryData,
  )
-import Cardano.Ledger.TreeDiff (
-  ToExpr,
- )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Monad ((<$!>))
@@ -468,13 +465,6 @@ instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) whe
     -- backwards compatibility shim can be removed.
     internBabbageTxOut (interns credsInterns) <$!> decodeBabbageTxOut fromCborBackwardsBothAddr
   {-# INLINEABLE decShareCBOR #-}
-
-instance
-  ( ToExpr (CompactAddr (EraCrypto era))
-  , ToExpr (CompactForm (Value era))
-  , ToExpr (Script era)
-  ) =>
-  ToExpr (BabbageTxOut era)
 
 internBabbageTxOut ::
   (Credential 'Staking (EraCrypto era) -> Credential 'Staking (EraCrypto era)) ->

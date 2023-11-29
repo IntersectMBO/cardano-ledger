@@ -70,7 +70,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppVrf))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
@@ -276,12 +275,6 @@ emptySnapShots =
   SnapShots emptySnapShot (calculatePoolDistr emptySnapShot) emptySnapShot emptySnapShot (Coin 0)
 
 -- =======================================
-
-instance ToExpr (SnapShots c)
-
-instance ToExpr (SnapShot c)
-
-instance ToExpr (Stake c)
 
 -- | Sum up the Coin (as CompactForm Coin = Word64) for each StakePool
 calculatePoolStake ::

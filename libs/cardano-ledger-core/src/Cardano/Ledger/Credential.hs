@@ -47,7 +47,6 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   asWitness,
  )
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import Data.Aeson (
@@ -336,11 +335,3 @@ instance Ord (GenesisCredential c) where
 
 instance Eq (GenesisCredential c) where
   (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
-
--- ==================================
-
-instance ToExpr (Credential keyrole c)
-
-instance ToExpr (StakeReference c)
-
-instance ToExpr Ptr

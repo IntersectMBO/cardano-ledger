@@ -203,7 +203,6 @@ import Cardano.Ledger.Core (
   Era (EraCrypto),
   EraPParams (..),
   PParams (..),
-  PParamsHKD,
   PParamsUpdate,
   emptyPParams,
   fromEraCBOR,
@@ -239,7 +238,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsCommitteeState,
   vsDReps,
  )
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..))
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
@@ -285,8 +283,6 @@ psDRepDistrL = lens psDRepDistr (\x y -> x {psDRepDistr = y})
 
 psDRepStateL :: Lens' (PulsingSnapshot era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 psDRepStateL = lens psDRepState (\x y -> x {psDRepState = y})
-
-instance EraPParams era => ToExpr (PulsingSnapshot era)
 
 deriving instance EraPParams era => Eq (PulsingSnapshot era)
 
@@ -391,8 +387,6 @@ instance Era era => ToJSON (PrevGovActionIds era) where
   toJSON = object . toPrevGovActionIdsPairs
   toEncoding = pairs . mconcat . toPrevGovActionIdsPairs
 
-instance ToExpr (PrevGovActionIds era)
-
 data EnactState era = EnactState
   { ensCommittee :: !(StrictMaybe (Committee era))
   -- ^ Constitutional Committee
@@ -458,8 +452,6 @@ ensPrevConstitutionL =
   lens
     (pgaConstitution . ensPrevGovActionIds)
     (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaConstitution = x}})
-
-instance ToExpr (PParamsHKD Identity era) => ToExpr (EnactState era)
 
 instance EraPParams era => ToJSON (EnactState era) where
   toJSON = object . toEnactStatePairs
@@ -543,8 +535,6 @@ deriving instance EraPParams era => Show (RatifyState era)
 
 rsEnactStateL :: Lens' (RatifyState era) (EnactState era)
 rsEnactStateL = lens rsEnactState (\x y -> x {rsEnactState = y})
-
-instance EraPParams era => ToExpr (RatifyState era)
 
 instance EraPParams era => Default (RatifyState era)
 
@@ -637,8 +627,6 @@ instance EraPParams era => Default (ConwayGovState era) where
 instance EraPParams era => NFData (ConwayGovState era)
 
 instance EraPParams era => NoThunks (ConwayGovState era)
-
-instance EraPParams era => ToExpr (ConwayGovState era)
 
 instance EraPParams era => ToJSON (ConwayGovState era) where
   toJSON = object . toConwayGovPairs
@@ -1095,12 +1083,6 @@ instance EraPParams era => DecShareCBOR (DRepPulsingState era) where
 instance EraPParams era => DecCBOR (DRepPulsingState era) where
   decCBOR = decode (RecD DRComplete <! From <! From)
 
-instance EraPParams era => ToExpr (DRepPulsingState era) where
-  toExpr (DRComplete x y) = App "DRComplete" [toExpr x, toExpr y]
-  toExpr x@(DRPulsing (DRepPulser {})) = App "DRComplete" [toExpr a, toExpr b]
-    where
-      (a, b) = finishDRepPulser x
-
 -- =====================================
 -- High level operations of DRepDistr
 
@@ -1240,10 +1222,6 @@ instance EraPParams era => EncCBOR (RatifyState era) where
 
 instance EraPParams era => DecCBOR (RatifyState era) where
   decCBOR = decode (RecD RatifyState <! From <! From <! From)
-
-instance ToExpr (RatifyEnv era) where
-  toExpr (RatifyEnv stake pool drep dstate ep cs) =
-    App "RatifyEnv" [toExpr stake, toExpr pool, toExpr drep, toExpr dstate, toExpr ep, toExpr cs]
 
 -- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (RatifyState era) where

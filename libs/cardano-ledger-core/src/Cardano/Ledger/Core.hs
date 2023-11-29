@@ -105,7 +105,6 @@ import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
@@ -139,7 +138,6 @@ class
   , Show (Tx era)
   , Eq (Tx era)
   , EqRaw (Tx era)
-  , ToExpr (Tx era)
   ) =>
   EraTx era
   where
@@ -192,7 +190,6 @@ class
   , Show (TxBody era)
   , Eq (TxBody era)
   , EqRaw (TxBody era)
-  , ToExpr (TxBody era)
   ) =>
   EraTxBody era
   where
@@ -443,7 +440,6 @@ class
   , ToCBOR (TxAuxData era)
   , EncCBOR (TxAuxData era)
   , DecCBOR (Annotator (TxAuxData era))
-  , ToExpr (TxAuxData era)
   , HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
   ) =>
   EraTxAuxData era
@@ -484,7 +480,6 @@ class
   , ToCBOR (TxWits era)
   , EncCBOR (TxWits era)
   , DecCBOR (Annotator (TxWits era))
-  , ToExpr (TxWits era)
   ) =>
   EraTxWits era
   where
@@ -534,7 +529,6 @@ class
   , DecCBOR (Annotator (Script era))
   , NoThunks (Script era)
   , SafeToHash (Script era)
-  , ToExpr (Script era)
   ) =>
   EraScript era
   where

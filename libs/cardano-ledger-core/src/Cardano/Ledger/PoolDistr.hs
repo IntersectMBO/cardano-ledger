@@ -26,7 +26,6 @@ where
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -111,9 +110,3 @@ instance
   where
   toBase (PoolDistr x) = x
   fromBase = PoolDistr
-
--- =======================================
-
-instance ToExpr (PoolDistr c)
-
-instance ToExpr (IndividualPoolStake c)

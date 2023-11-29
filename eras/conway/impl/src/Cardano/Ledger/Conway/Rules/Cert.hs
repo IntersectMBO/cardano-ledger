@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.API (
   VState,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed,
@@ -76,13 +75,6 @@ data ConwayCertPredFailure era
   | PoolFailure (PredicateFailure (EraRule "POOL" era))
   | GovCertFailure (PredicateFailure (EraRule "GOVCERT" era))
   deriving (Generic)
-
-instance
-  ( ToExpr (PredicateFailure (EraRule "DELEG" era))
-  , ToExpr (PredicateFailure (EraRule "GOVCERT" era))
-  , ToExpr (PredicateFailure (EraRule "POOL" era))
-  ) =>
-  ToExpr (ConwayCertPredFailure era)
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "DELEG" era))

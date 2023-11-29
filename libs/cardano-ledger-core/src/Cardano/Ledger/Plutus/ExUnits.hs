@@ -23,7 +23,7 @@ module Cardano.Ledger.Plutus.ExUnits (
   pointWiseExUnits,
   zipSemiExUnits,
   ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
-  ExUnits',
+  ExUnits' (..),
   Prices (..),
 )
 where
@@ -49,7 +49,6 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (..), defaultExprViaShow)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
 import Data.Aeson (
@@ -234,8 +233,3 @@ instance EncCBOR Prices where
 instance DecCBOR Prices where
   decCBOR = decode $ RecD Prices <! From <! From
   {-# INLINE decCBOR #-}
-
-instance ToExpr Prices
-
-instance ToExpr ExUnits where
-  toExpr (WrapExUnits (ExUnits' x y)) = App "ExUnits" [defaultExprViaShow x, defaultExprViaShow y]

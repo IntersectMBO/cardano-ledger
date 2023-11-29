@@ -13,6 +13,7 @@ import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Data.Default.Class (Default (def))
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.TreeDiff ()
 
 data BinaryUpgradeOpts = BinaryUpgradeOpts
   { isScriptUpgradeable :: Bool
@@ -73,6 +74,7 @@ specTxAuxDataUpgrade ::
   , EraTxAuxData era
   , Arbitrary (TxAuxData (PreviousEra era))
   , HasCallStack
+  , ToExpr (TxAuxData era)
   ) =>
   Spec
 specTxAuxDataUpgrade =
@@ -113,6 +115,7 @@ specTxWitsUpgrade ::
   , EraTxWits era
   , Arbitrary (TxWits (PreviousEra era))
   , HasCallStack
+  , ToExpr (TxWits era)
   ) =>
   Spec
 specTxWitsUpgrade =
@@ -135,6 +138,7 @@ specTxBodyUpgrade ::
   , EraTxBody era
   , Arbitrary (TxBody (PreviousEra era))
   , HasCallStack
+  , ToExpr (TxBody era)
   ) =>
   Spec
 specTxBodyUpgrade =
@@ -161,6 +165,7 @@ specTxUpgrade ::
   , EraTx era
   , Arbitrary (Tx (PreviousEra era))
   , HasCallStack
+  , ToExpr (Tx era)
   ) =>
   Spec
 specTxUpgrade =
@@ -193,6 +198,10 @@ specUpgrade ::
   , Arbitrary (Tx (PreviousEra era))
   , Arbitrary (Script (PreviousEra era))
   , HasCallStack
+  , ToExpr (Tx era)
+  , ToExpr (TxBody era)
+  , ToExpr (TxWits era)
+  , ToExpr (TxAuxData era)
   ) =>
   BinaryUpgradeOpts ->
   Spec

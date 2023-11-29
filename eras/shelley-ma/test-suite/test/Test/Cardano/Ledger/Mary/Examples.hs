@@ -18,6 +18,7 @@ import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Data.Default.Class (def)
 import GHC.Stack
 import Lens.Micro
+import Test.Cardano.Ledger.Mary.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
 

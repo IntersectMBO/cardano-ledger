@@ -42,7 +42,6 @@ import Cardano.Ledger.Binary (
   encodeTag,
   setTag,
  )
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData)
 import Data.Foldable qualified as F
 import Data.Sequence.Strict qualified as SSeq
@@ -65,7 +64,7 @@ data OSet a = OSet
   , osSet :: !(Set.Set a)
   }
   deriving stock (Eq, Ord, Show, Generic)
-  deriving (ToExpr, NoThunks, NFData)
+  deriving (NoThunks, NFData)
 
 instance Ord a => Semigroup (OSet a) where
   (<>) = (|><)

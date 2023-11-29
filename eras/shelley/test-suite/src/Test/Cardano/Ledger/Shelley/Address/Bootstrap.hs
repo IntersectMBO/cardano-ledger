@@ -74,6 +74,7 @@ import qualified Test.Cardano.Crypto.Gen as Byron
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Utils (testSTS)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Hedgehog (hedgehog)

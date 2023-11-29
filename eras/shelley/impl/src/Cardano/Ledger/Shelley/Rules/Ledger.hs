@@ -58,7 +58,6 @@ import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Reader (Reader)
 import Control.Monad.Trans.Reader (asks)
@@ -158,12 +157,6 @@ instance
           a <- decCBOR
           pure (2, DelegsFailure a)
         k -> invalidKey k
-
-instance
-  ( ToExpr (PredicateFailure (EraRule "UTXOW" era))
-  , ToExpr (PredicateFailure (EraRule "DELEGS" era))
-  ) =>
-  ToExpr (ShelleyLedgerPredFailure era)
 
 epochFromSlot :: SlotNo -> Reader Globals EpochNo
 epochFromSlot slot = do

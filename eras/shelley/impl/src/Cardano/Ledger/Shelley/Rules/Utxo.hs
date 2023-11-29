@@ -89,7 +89,6 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.UTxO (consumed, produced, txup)
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Ledger.UTxO (
   EraUTxO,
   UTxO (..),
@@ -311,13 +310,6 @@ instance
           outs <- decCBOR
           pure (2, OutputBootAddrAttrsTooBig outs)
         k -> invalidKey k
-
-instance
-  ( ToExpr (PPUPPredFailure era)
-  , ToExpr (Value era)
-  , ToExpr (TxOut era)
-  ) =>
-  ToExpr (ShelleyUtxoPredFailure era)
 
 instance
   ( EraTx era

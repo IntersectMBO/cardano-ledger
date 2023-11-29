@@ -59,7 +59,6 @@ import Cardano.Ledger.Shelley.Rewards (
   PoolRewardInfo (..),
   rewardOnePoolMember,
  )
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), Value (Null), object, pairs, (.=))
 import Data.Default.Class (def)
@@ -365,9 +364,3 @@ instance Crypto c => ToJSON (PulsingRewUpdate c) where
   toEncoding = \case
     Pulsing _ _ -> toEncoding Null
     Complete ru -> toEncoding ru
-
--- ===============================================================
-
--- | You really don't want to see what is inside this.
-instance ToExpr (PulsingRewUpdate c) where
-  toExpr _ = App "PulsingRewUpdate..." []

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.3.0.0
+
+* Moved `ToExpr` instances out of the main library and into the testlib.
+
 ## 1.2.5.1
 
 * Update `cardano-ledger-core` bounds

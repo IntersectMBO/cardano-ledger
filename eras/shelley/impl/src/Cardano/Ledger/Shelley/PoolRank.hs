@@ -53,7 +53,6 @@ import Cardano.Ledger.EpochBoundary (maxPool)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..), memberRew)
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
@@ -388,11 +387,3 @@ nonMyopicMemberRew
         f = maxPool pp rPot (unStakeShare nm) (unStakeShare s)
         fHat = floor (p * (fromRational . coinToRational) f)
      in memberRew (Coin fHat) pool t nm
-
--- =====================================================================
-
-instance ToExpr Likelihood
-
-instance ToExpr LogWeight
-
-instance ToExpr (NonMyopic c)

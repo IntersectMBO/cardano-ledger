@@ -4,6 +4,7 @@
 
 * Add the newtype `EpochInterval`
 * Change the type of `ppEMaxL` and `ppuEMaxL`
+* Moved `ToExpr` instances out of the main library and into the testlib.
 
 ## 1.9.0.0
 

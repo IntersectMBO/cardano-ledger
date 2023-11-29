@@ -119,7 +119,6 @@ import Cardano.Ledger.Shelley.PParams (
   shelleyCommonPParamsHKDPairsV6,
   shelleyCommonPParamsHKDPairsV8,
  )
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
@@ -407,7 +406,7 @@ instance FromJSON (AlonzoPParams Identity era) where
 -- that operate on TxExUnits and BlockExUnits use the `ExUnits` type, not this one.
 newtype OrdExUnits = OrdExUnits {unOrdExUnits :: ExUnits}
   deriving (Eq)
-  deriving newtype (Show, NoThunks, NFData, DecCBOR, EncCBOR, FromJSON, ToJSON, ToExpr)
+  deriving newtype (Show, NoThunks, NFData, DecCBOR, EncCBOR, FromJSON, ToJSON)
 
 instance Ord OrdExUnits where
   compare = coerce (zipSemiExUnits compare)
@@ -763,7 +762,3 @@ downgradeAlonzoPParams DowngradeAlonzoPParams {dappMinUTxOValue} AlonzoPParams {
     , sppMinUTxOValue = dappMinUTxOValue -- <- parameter that was dropped in Alonzo
     , sppMinPoolCost = appMinPoolCost
     }
-
-instance ToExpr (AlonzoPParams StrictMaybe era)
-
-instance ToExpr (AlonzoPParams Identity era)

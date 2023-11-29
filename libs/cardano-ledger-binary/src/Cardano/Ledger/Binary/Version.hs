@@ -10,7 +10,7 @@
 
 module Cardano.Ledger.Binary.Version (
   -- * Versioning
-  Version,
+  Version (..),
   getVersion,
   MinVersion,
   MaxVersion,
@@ -29,7 +29,6 @@ module Cardano.Ledger.Binary.Version (
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Proxy (Proxy (..))
@@ -131,8 +130,3 @@ byronProtVer = natVersion @1
 shelleyProtVer :: Version
 shelleyProtVer = natVersion @2
 {-# INLINE shelleyProtVer #-}
-
--- ==================================
-
-instance ToExpr Version where
-  toExpr (Version n) = App "Version" [toExpr n]

@@ -72,7 +72,6 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Mary.Value (ToExpr)
 import Cardano.Ledger.Plutus.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.SafeHash (
   extractHash,
@@ -103,8 +102,6 @@ data Addr28Extra
       {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
   deriving (Eq, Generic, NoThunks)
 
-instance ToExpr Addr28Extra
-
 data DataHash32
   = DataHash32
       {-# UNPACK #-} !Word64 -- DataHash
@@ -112,8 +109,6 @@ data DataHash32
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
   deriving (Eq, Show, Generic, NoThunks)
-
-instance ToExpr DataHash32
 
 decodeAddress28 ::
   forall c.
@@ -160,8 +155,6 @@ deriving instance Generic (AlonzoTxOut era)
 -- | Already in NF
 instance NFData (AlonzoTxOut era) where
   rnf = rwhnf
-
-instance ToExpr (CompactForm (Value era)) => ToExpr (AlonzoTxOut era)
 
 addressErrorMsg :: String
 addressErrorMsg = "Impossible: Compacted an address of non-standard size"

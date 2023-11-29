@@ -38,7 +38,6 @@ import Cardano.Ledger.Core (Era (EraCrypto), EraPParams, EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
-import Cardano.Ledger.TreeDiff (ToExpr)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_)
@@ -69,8 +68,6 @@ data ConwayDelegPredFailure era
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG !Coin
   | DRepAlreadyRegisteredForStakeKeyDELEG !(Credential 'Staking (EraCrypto era))
   deriving (Show, Eq, Generic)
-
-instance ToExpr (ConwayDelegPredFailure era)
 
 instance NoThunks (ConwayDelegPredFailure era)
 

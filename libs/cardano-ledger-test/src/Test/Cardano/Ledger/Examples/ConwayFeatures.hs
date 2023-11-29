@@ -62,6 +62,7 @@ import Cardano.Ledger.Val (Val (..), inject)
 import Control.Exception (evaluate)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
+import Data.Functor.Identity
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
@@ -70,6 +71,7 @@ import qualified Data.Sequence.Strict as SSeq
 import GHC.Stack
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.TreeDiff (assertExprEqualWithMessage)
+import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import qualified Test.Cardano.Ledger.Core.Utils as SLE
@@ -531,6 +533,8 @@ testGov ::
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , TxCert era ~ ConwayTxCert era
+  , ToExpr (PParamsHKD Identity era)
+  , ToExpr (PParamsHKD StrictMaybe era)
   ) =>
   Proof era ->
   Assertion

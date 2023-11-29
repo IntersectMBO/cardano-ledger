@@ -64,7 +64,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString (ByteString)
@@ -236,8 +235,3 @@ instance SafeToHash Safe where
 
 hashSafeList :: Hash.HashAlgorithm (HASH c) => Proxy c -> Proxy index -> [Safe] -> SafeHash c index
 hashSafeList pc pindex xs = makeHashWithExplicitProxys pc pindex (fold $ originalBytes <$> xs)
-
--- ===========================================================
-
-instance ToExpr (SafeHash c index) where
-  toExpr x = App "SafeHash" [toExpr (extractHash x)]

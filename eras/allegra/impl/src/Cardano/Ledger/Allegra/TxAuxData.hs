@@ -18,6 +18,7 @@
 
 module Cardano.Ledger.Allegra.TxAuxData (
   AllegraTxAuxData (AllegraTxAuxData),
+  AllegraTxAuxDataRaw (..),
 
   -- * Deprecations
   AuxiliaryData,
@@ -54,7 +55,6 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..), validMetadatum)
-import Cardano.Ledger.TreeDiff (ToExpr (..))
 import Codec.CBOR.Decoding (
   TokenType (
     TypeListLen,
@@ -87,8 +87,6 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   }
   deriving (Generic, Eq)
 
-instance ToExpr (AllegraTxAuxDataRaw era)
-
 instance Crypto c => EraTxAuxData (AllegraEra c) where
   type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)
 
@@ -107,8 +105,6 @@ instance NFData (AllegraTxAuxDataRaw era)
 newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes AllegraTxAuxDataRaw era)
   deriving (Generic)
   deriving newtype (Eq, ToCBOR, SafeToHash)
-
-instance ToExpr (AllegraTxAuxData era)
 
 instance Memoized AllegraTxAuxData where
   type RawType AllegraTxAuxData = AllegraTxAuxDataRaw

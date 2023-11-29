@@ -32,6 +32,7 @@ module Cardano.Ledger.BaseTypes (
   PositiveInterval,
   NonNegativeInterval,
   BoundedRational (..),
+  BoundedRatio (..),
   fpPrecision,
   promoteRatio,
   invalidKey,
@@ -113,7 +114,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
 import Cardano.Ledger.SafeHash (HashWithCrypto (..), SafeHash, SafeToHash)
-import Cardano.Ledger.TreeDiff (Expr (App), ToExpr (toExpr), trimExprViaShow)
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import Cardano.Slotting.Slot as Slotting (
@@ -761,33 +761,6 @@ word16FromInteger i
 
 -- =================================
 
-instance ToExpr TxIx
-
-instance ToExpr CertIx where
-  toExpr (CertIx x) = App "CertIx" [toExpr x]
-
-instance ToExpr UnitInterval
-
-instance ToExpr Network
-
-instance ToExpr Port
-
-instance ToExpr Url
-
-instance ToExpr Nonce where
-  toExpr NeutralNonce = App "NeutralNonce" []
-  toExpr (Nonce x) = App "Nonce" [trimExprViaShow 10 x]
-
-instance ToExpr DnsName
-
-instance (ToExpr x, ToExpr y, Integral y) => ToExpr (BoundedRatio x y)
-
-instance ToExpr NonNegativeInterval
-
-instance ToExpr (BlocksMade c)
-
-instance ToExpr ProtVer
-
 newtype AnchorData = AnchorData ByteString
   deriving (Eq)
   deriving newtype (SafeToHash)
@@ -833,8 +806,6 @@ instance Crypto c => FromJSON (Anchor c) where
     anchorDataHash <- o .: "dataHash"
     pure $ Anchor {..}
 
-instance ToExpr (Anchor c)
-
 instance Crypto c => Default (Anchor c) where
   def = Anchor (Url "") def
 
@@ -854,7 +825,7 @@ newtype EpochInterval = EpochInterval
   }
   deriving (Eq, Ord, Generic)
   deriving (Show) via Quiet EpochInterval
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, ToExpr, Num)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, Num)
 
 -- | Add a EpochInterval (a positive change) to an EpochNo to get a new EpochNo
 addEpochInterval :: EpochNo -> EpochInterval -> EpochNo

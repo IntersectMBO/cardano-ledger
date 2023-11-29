@@ -111,7 +111,6 @@ import Cardano.Ledger.Mary.Value (
   MaryValue (..),
   MultiAsset (..),
   PolicyID (..),
-  ToExpr,
  )
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Evaluate
@@ -154,8 +153,6 @@ data TranslationError c
   | ReferenceInputsNotSupported !(Set (TxIn c))
   | TimeTranslationPastHorizon !Text
   deriving (Eq, Show, Generic, NoThunks)
-
-instance ToExpr (TranslationError c)
 
 instance Crypto c => EncCBOR (TranslationError c) where
   encCBOR = \case
