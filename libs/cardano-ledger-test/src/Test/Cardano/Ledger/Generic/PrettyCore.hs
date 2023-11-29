@@ -2211,8 +2211,8 @@ pcDRepPulser x =
   ppRecord
     "DRepPulser"
     [ ("pulseSize", ppInt (dpPulseSize x))
-    , ("umap", uMapSummary (dpUMap x))
-    , ("balance", summaryMapCompact (dpBalance x))
+    , ("DRepUView Map", ppMap pcCredential pcDRep (dRepMap (dpUMap x)))
+    , ("balance", ppMap pcCredential (pcCoin . fromCompact) (dpBalance x))
     , ("stakeDistr", summaryMapCompact (dpStakeDistr x))
     , ("poolDistr", pcPoolDistr (dpStakePoolDistr x))
     , ("partialDrepDistr", summaryMapCompact (dpDRepDistr x))

@@ -93,6 +93,7 @@ data MockBlock era = MockBlock
 
 data MockChainState era = MockChainState
   { mcsNes :: !(NewEpochState era)
+  , mcsTickNes :: !(NewEpochState era)
   , mcsLastBlock :: !SlotNo
   , mcsCount :: !Int -- Counts the blocks made
   }
@@ -105,14 +106,14 @@ deriving instance
   Eq (MockChainState era)
 
 instance Show (MockChainState era) where
-  show (MockChainState nes slot count) =
+  show (MockChainState nes _ slot count) =
     show count ++ " " ++ show slot ++ "\n  " ++ show (nesBcur nes)
 
 instance Show (MockBlock era) where
   show (MockBlock is sl _) = show is ++ " " ++ show sl
 
 instance Reflect era => TotalAda (MockChainState era) where
-  totalAda (MockChainState nes _ _) = totalAda nes
+  totalAda (MockChainState nes _ _ _) = totalAda nes
 
 deriving instance Generic (MockChainState era)
 
@@ -149,7 +150,7 @@ instance
   transitionRules = [chainTransition]
     where
       chainTransition = do
-        TRC (_, MockChainState nes lastSlot count, MockBlock issuer slot txs) <- judgmentContext
+        TRC (_, MockChainState nes _ lastSlot count, MockBlock issuer slot txs) <- judgmentContext
         lastSlot < slot ?! BlocksOutOfOrder lastSlot slot
 
         nes' <- trans @(EraRule "TICK" era) $ TRC ((), nes, slot)
@@ -165,7 +166,7 @@ instance
         let newEpochstate = epochState {esLState = newledgerState}
             newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}
 
-        pure (MockChainState newNewEpochState slot (count + 1))
+        pure (MockChainState newNewEpochState nes' slot (count + 1))
 
 -- ===========================
 -- Embed instances
@@ -214,7 +215,7 @@ ppMockChainState ::
   Reflect era =>
   MockChainState era ->
   PDoc
-ppMockChainState (MockChainState nes sl count) =
+ppMockChainState (MockChainState nes _ sl count) =
   ppRecord
     "MockChainState"
     [ ("NewEpochState", pcNewEpochState reify nes)

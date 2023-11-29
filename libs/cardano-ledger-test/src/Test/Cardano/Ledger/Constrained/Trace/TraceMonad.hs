@@ -354,7 +354,7 @@ instance
 
   envGen _gstate = pure ()
 
-  sigGen (PredGen txss _) () mcs@(MockChainState newepoch (SlotNo lastSlot) count) = do
+  sigGen (PredGen txss _) () mcs@(MockChainState newepoch _ (SlotNo lastSlot) count) = do
     let NewEpochState epochnum _ _ _epochstate _ pooldistr _ = newepoch
     issuerkey <- chooseIssuer epochnum lastSlot count pooldistr
     let (txs, nextSlotNo) = txss ! count
@@ -371,7 +371,7 @@ instance
 
 -- ==================================================
 -- Now to run a Property test we need two things
--- 1) An initial (MockChainState newepochstate slot count)
+-- 1) An initial (MockChainState newepochstate tickNes slot count)
 -- 2) A (PredGen blocks env)
 -- We need to generate these together so that the trace is valid, i.e. it passes all the STS rules
 
@@ -385,7 +385,7 @@ genTraceParts proof len genTx = do
   env0 <- genNewEpochStateEnv proof
   newepochstate <- liftTyped $ runTarget env0 (newEpochStateT proof)
   SlotNo currslot <- liftTyped $ runTerm env0 currentSlot
-  let initStateFun = Just (\(IRC ()) -> pure (Right (MockChainState newepochstate (SlotNo currslot) 0)))
+  let initStateFun = Just (\(IRC ()) -> pure (Right (MockChainState newepochstate newepochstate (SlotNo currslot) 0)))
   steps <- beforeAfterTrace len (\_ -> genTx proof)
   let getTx (TraceStep _ _ x) = x
   zs <- traceStepToVector getTx steps (currslot + 1) []
@@ -498,7 +498,7 @@ splitEpochs xs = init $ splitE boundary xs [] [] -- We only want full traces, so
 -- =====================
 
 showPulserState :: ConwayEraGov era => MockChainState era -> String
-showPulserState (MockChainState nes slot _) = "Slot = " ++ show slot ++ "   " ++ getPulserInfo (nes ^. newEpochStateDRepPulsingStateL)
+showPulserState (MockChainState nes _ slot _) = "Slot = " ++ show slot ++ "   " ++ getPulserInfo (nes ^. newEpochStateDRepPulsingStateL)
   where
     getPulserInfo (DRPulsing x) = "Balance = " ++ show (summaryMapCompact (dpBalance x)) ++ "    DRepDistr = " ++ show (summaryMapCompact (dpDRepDistr x))
     getPulserInfo (DRComplete psnap _) = "Complete DRepDistr = " ++ show (summaryMapCompact (psDRepDistr psnap))
