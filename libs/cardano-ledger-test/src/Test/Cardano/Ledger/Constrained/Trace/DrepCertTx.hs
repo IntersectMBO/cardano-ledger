@@ -194,7 +194,7 @@ pulserWorks mcsfirst mcslast =
         ++ "\nLast "
         ++ showPulserState mcslast
     )
-    (bruteForceDRepDistr (mcsNes mcsfirst) === extractPulsingDRepDistr (mcsNes mcslast))
+    (bruteForceDRepDistr (mcsTickNes mcsfirst) === extractPulsingDRepDistr (mcsNes mcslast))
 
 bruteForceDRepDistr :: NewEpochState era -> Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
 bruteForceDRepDistr nes = computeDrepDistr umap dreps incstk

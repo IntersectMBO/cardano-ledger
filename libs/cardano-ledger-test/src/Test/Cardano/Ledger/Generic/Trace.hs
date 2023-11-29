@@ -194,7 +194,7 @@ initialMockChainState ::
   GenState era ->
   MockChainState era
 initialMockChainState proof gstate =
-  MockChainState newepochstate (getSlot gstate) 0
+  MockChainState newepochstate newepochstate (getSlot gstate) 0
   where
     ledgerstate = initialLedgerState gstate
     newepochstate =
@@ -384,7 +384,7 @@ smartTxBody proof u txbody = ppRecord "TxBody" pairs
 instance STS (MOCKCHAIN era)
   where
   type State (MOCKCHAIN era) = MockChainState era
-  type Signal (MOCKCHAIN era) = (MockBlock era,UTxO era)
+  type Signal (MOCKCHAIN era) = (MockBlock era)
   type Environment (MOCKCHAIN era) = ()
 -}
 -- ==============================================================
@@ -403,7 +403,7 @@ instance
 
   envGen _gstate = pure ()
 
-  sigGen (Gen1 txss gs) () mcs@(MockChainState newepoch (SlotNo lastSlot) count) = do
+  sigGen (Gen1 txss gs) () mcs@(MockChainState newepoch _ (SlotNo lastSlot) count) = do
     let NewEpochState epochnum _ _ epochstate _ pooldistr _ = newepoch
     issuerkey <- chooseIssuer epochnum lastSlot count pooldistr
     let (txs, nextSlotNo) = txss ! count
