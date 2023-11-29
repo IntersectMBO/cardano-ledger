@@ -74,7 +74,7 @@ library
         time,
         transformers >=0.5,
         vector,
-        vector-map >=1.0
+        vector-map ^>=1.1
 
 library testlib
     exposed-modules:
@@ -103,7 +103,7 @@ library testlib
         cardano-binary,
         cardano-crypto-class,
         cardano-crypto-tests,
-        cardano-ledger-binary >=1.0,
+        cardano-ledger-binary,
         cardano-prelude-test,
         cardano-strict-containers,
         cardano-slotting,

@@ -5,6 +5,7 @@
 * Change the type of `ppEMaxL`, `ppuEMaxL`, `ppGovActionLifetimeL`, `ppDRepActivityL`,
   `ppCommitteeMaxTermLengthL`, `ppuGovActionLifetimeL`, `ppuDRepActivityL` and
   `ppuCommitteeMaxTermLengthL`
+* Move all `ToExpr` instances into `testlib`s.
 
 ## 1.7.0.1
 
