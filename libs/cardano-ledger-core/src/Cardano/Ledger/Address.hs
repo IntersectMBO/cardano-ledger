@@ -129,8 +129,7 @@ mkRwdAcnt ::
   RewardAcnt c
 mkRwdAcnt network script@(ScriptHashObj _) = RewardAcnt network script
 mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
-
--- TODO: Deprecate in favor of RewardAcnt. This is just a synonym.
+{-# DEPRECATED mkRwdAcnt "In favor of `RewardAcnt`" #-}
 
 -- | Serialise an address to the external format.
 serialiseAddr :: Addr c -> ByteString

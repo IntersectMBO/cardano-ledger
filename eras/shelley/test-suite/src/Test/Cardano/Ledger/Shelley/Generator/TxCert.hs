@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Shelley.Generator.TxCert (
 )
 where
 
-import Cardano.Ledger.Address (mkRwdAcnt)
+import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
@@ -41,7 +41,6 @@ import Cardano.Ledger.Shelley.API (
   Network (..),
   PState (..),
   PoolParams (..),
-  RewardAcnt (..),
   StrictMaybe (..),
   VKey,
  )
@@ -260,7 +259,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
              in ((&&) <$> registered <*> zeroRewards) cred
         )
         scripts
-    zeroRewards k = case UM.lookup (getRwdCred $ mkRwdAcnt Testnet k) (rewards dState) of
+    zeroRewards k = case UM.lookup (getRwdCred $ RewardAcnt Testnet k) (rewards dState) of
       Nothing -> False
       Just (UM.RDPair ccoin _) -> ccoin == UM.CompactCoin 0
 
