@@ -49,6 +49,8 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   govProceduresProposalsL,
   pProcGovActionL,
   gasActionL,
+  gasChildrenL,
+  gasIdL,
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
@@ -186,13 +188,18 @@ data GovActionState era = GovActionState
   , gasAction :: !(GovAction era)
   , gasProposedIn :: !EpochNo
   , gasExpiresAfter :: !EpochNo
+  , gasChildren :: Set (GovActionId (EraCrypto era))
   }
   deriving (Generic)
+
+gasIdL :: Lens' (GovActionState era) (GovActionId (EraCrypto era))
+gasIdL = lens gasId $ \x y -> x {gasId = y}
 
 gasDepositL :: Lens' (GovActionState era) Coin
 gasDepositL = lens gasDeposit (\x y -> x {gasDeposit = y})
 
-gasCommitteeVotesL :: Lens' (GovActionState era) (Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
+gasCommitteeVotesL ::
+  Lens' (GovActionState era) (Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
 gasCommitteeVotesL = lens gasCommitteeVotes (\x y -> x {gasCommitteeVotes = y})
 
 gasDRepVotesL :: Lens' (GovActionState era) (Map (Credential 'DRepRole (EraCrypto era)) Vote)
@@ -207,12 +214,15 @@ gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
 gasActionL :: Lens' (GovActionState era) (GovAction era)
 gasActionL = lens gasAction $ \x y -> x {gasAction = y}
 
+gasChildrenL :: Lens' (GovActionState era) (Set (GovActionId (EraCrypto era)))
+gasChildrenL = lens gasChildren $ \x y -> x {gasChildren = y}
+
 instance EraPParams era => ToJSON (GovActionState era) where
   toJSON = object . toGovActionStatePairs
   toEncoding = pairs . mconcat . toGovActionStatePairs
 
 toGovActionStatePairs :: (KeyValue e a, EraPParams era) => GovActionState era -> [a]
-toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _) =
+toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _ _) =
   let GovActionState {..} = gas
    in [ "actionId" .= gasId
       , "committeeVotes" .= gasCommitteeVotes
@@ -223,6 +233,7 @@ toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _) =
       , "action" .= gasAction
       , "proposedIn" .= gasProposedIn
       , "expiresAfter" .= gasExpiresAfter
+      , "children" .= gasChildren
       ]
 
 deriving instance EraPParams era => Eq (GovActionState era)
@@ -238,6 +249,7 @@ instance EraPParams era => DecShareCBOR (GovActionState era) where
   decShareCBOR _ =
     decode $
       RecD GovActionState
+        <! From
         <! From
         <! From
         <! From
@@ -264,6 +276,7 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasAction
         !> To gasProposedIn
         !> To gasExpiresAfter
+        !> To gasChildren
 
 -- Ref: https://gitlab.haskell.org/ghc/ghc/-/issues/14046
 instance
@@ -526,8 +539,20 @@ data GovActionPurpose
   | ConstitutionPurpose
   deriving (Eq, Show)
 
-newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId {unPrevGovActionId :: GovActionId c}
-  deriving (Eq, Show, Generic, EncCBOR, DecCBOR, NoThunks, NFData, ToJSON, Ord)
+newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId
+  { unPrevGovActionId :: GovActionId c
+  }
+  deriving
+    ( Eq
+    , Show
+    , Generic
+    , EncCBOR
+    , DecCBOR
+    , NoThunks
+    , NFData
+    , ToJSON
+    , Ord
+    )
 
 type role PrevGovActionId nominal nominal
 

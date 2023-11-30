@@ -35,6 +35,7 @@ import Cardano.Ledger.Conway.Governance (
   GovProcedures (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
+  PrevGovActionIdsChildren,
   ProposalProcedure (..),
   Proposals,
   PulsingSnapshot (..),
@@ -60,6 +61,7 @@ import Cardano.Ledger.Conway.Rules (
   EnactSignal (..),
   EnactState (..),
   GovEnv (..),
+  GovRuleState (..),
   PredicateFailure,
  )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), ConwayTxBody (..))
@@ -248,6 +250,9 @@ instance (EraPParams era, PrettyA (PParamsUpdate era)) => PrettyA (GovProcedures
 instance PrettyA (PrevGovActionId p c) where
   prettyA = viaShow
 
+instance PrettyA (PrevGovActionIdsChildren era) where
+  prettyA = viaShow
+
 instance PrettyA (PParamsUpdate era) => PrettyA (GovAction era) where
   prettyA (ParameterChange pgaid ppup) =
     ppRecord
@@ -405,6 +410,15 @@ instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
 instance PrettyA (PParamsUpdate era) => PrettyA (Proposals era) where
   prettyA = prettyA . proposalsActions
 
+instance PrettyA (PParamsUpdate era) => PrettyA (GovRuleState era) where
+  prettyA grs@(GovRuleState _ _) =
+    let GovRuleState {..} = grs
+     in ppRecord
+          "GovRuleState"
+          [ ("grsPrevGovActionIdsChildren", prettyA grsPrevGovActionIdsChildren)
+          , ("grsProposals", prettyA grsProposals)
+          ]
+
 instance PrettyA (GovActionId era) where
   prettyA gaid@(GovActionId _ _) =
     let GovActionId {..} = gaid
@@ -429,7 +443,7 @@ instance PrettyA (Anchor era) where
       ]
 
 instance PrettyA (PParamsUpdate era) => PrettyA (GovActionState era) where
-  prettyA gas@(GovActionState _ _ _ _ _ _ _ _ _) =
+  prettyA gas@(GovActionState _ _ _ _ _ _ _ _ _ _) =
     let GovActionState {..} = gas
      in ppRecord
           "GovActionState"
@@ -442,6 +456,7 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovActionState era) where
           , ("Action", prettyA gasAction)
           , ("Proposed In", prettyA gasProposedIn)
           , ("Expires After", prettyA gasExpiresAfter)
+          , ("Children", prettyA gasChildren)
           ]
 
 instance PrettyA (Constitution era) where
@@ -453,7 +468,7 @@ instance PrettyA (Constitution era) where
       ]
 
 instance PrettyA (PParams era) => PrettyA (EnactState era) where
-  prettyA ens@(EnactState _ _ _ _ _ _ _) =
+  prettyA ens@(EnactState _ _ _ _ _ _ _ _) =
     let EnactState {..} = ens
      in ppRecord
           "EnactState"
@@ -464,6 +479,7 @@ instance PrettyA (PParams era) => PrettyA (EnactState era) where
           , ("Treasury", prettyA ensTreasury)
           , ("Withdrawals", prettyA ensWithdrawals)
           , ("PrevGovActionIds", prettyA ensPrevGovActionIds)
+          , ("PrevGovActionIdsChildren", prettyA ensPrevGovActionIdsChildren)
           ]
 
 instance PrettyA (PParamsUpdate era) => PrettyA (EnactSignal era) where
@@ -501,12 +517,13 @@ instance
   PrettyA (PParams era) =>
   PrettyA (RatifyState era)
   where
-  prettyA rs@(RatifyState _ _ _) =
+  prettyA rs@(RatifyState _ _ _ _) =
     let RatifyState {..} = rs
      in ppRecord
           "RatifyState"
           [ ("EnactState", prettyA rsEnactState)
           , ("Removed", prettyA rsRemoved)
+          , ("Enacted", prettyA rsEnacted)
           , ("Delayed", prettyA rsDelayed)
           ]
 

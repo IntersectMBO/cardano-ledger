@@ -119,7 +119,7 @@ spec =
                 }
         submitFailingProposal
           invalidNewConstitutionProposal
-          [ ConwayGovFailure $ InvalidPrevGovActionIdsInProposals [invalidNewConstitutionProposal]
+          [ ConwayGovFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       context "Invalid proposals are rejected" $ do
         it "Invalid Index in PrevGovActionId" $ do
@@ -148,7 +148,7 @@ spec =
                   }
           submitFailingProposal
             invalidNewConstitutionProposal
-            [ ConwayGovFailure $ InvalidPrevGovActionIdsInProposals [invalidNewConstitutionProposal]
+            [ ConwayGovFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
             ]
         it "Valid PrevGovActionId but invalid purpose" $ do
           gaidConstitutionProp <- submitInitConstitutionGovAction
@@ -164,7 +164,7 @@ spec =
                   }
           submitFailingProposal
             invalidNoConfidenceProposal
-            [ ConwayGovFailure $ InvalidPrevGovActionIdsInProposals [invalidNoConfidenceProposal]
+            [ ConwayGovFailure $ InvalidPrevGovActionId invalidNoConfidenceProposal
             ]
       context "Valid proposals are accepted" $ do
         it "Submit Constitution and use valid PrevGovActionId" $ do

@@ -41,6 +41,10 @@ prevGovActionIdsGenPreds _ =
   , Random prevHardFork
   , Random prevCommittee
   , Random prevConstitution
+  , Random ppUpdateChildren
+  , Random hardForkChildren
+  , Random committeeChildren
+  , Random constitutionChildren
   ]
 
 prevGovActionIdsCheckPreds :: Proof era -> [Pred era]
@@ -73,6 +77,10 @@ ledgerStatePreds usize p =
   , Random enactTreasury
   , Random constitution
   , Random committeeVar
+  , Random ppUpdateChildren
+  , Random hardForkChildren
+  , Random committeeChildren
+  , Random constitutionChildren
   , Random prevPParamUpdate
   , Random prevHardFork
   , Random prevConstitution

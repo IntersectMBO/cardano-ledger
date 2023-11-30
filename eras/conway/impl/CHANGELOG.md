@@ -2,6 +2,22 @@
 
 ## 1.12.0.0
 
+* Track and prune unreachable proposals #3855
+  * Move `PrevGovActionIds` from `Governance` to `Governance.Proposals`
+  * Add `PrevGovActionIdsChildren` to `EnactState`
+  * Add `rsEnacted` field to `RatifyState` to track enacted proposals separately from removed ones
+  * Add `gasChildren` to `GovActionState`
+  * Remove `proposalsInsertGovAction` to `Governance.Proposals`
+  * Add the following to `Governance.Proposals`
+    * `proposalsRemoveDescendentIds`
+    * `PrevGovActionIdsChildren` and associated lenses
+    * `proposalsAddProposal` as the only way to add new proposals to the system
+  * Add the pruning functionality and the deposit refunds in the `Epoch` rule
+  * In the `Gov` rule
+    * Introduce the `GovRuleState` to include `PrevGovActionIdsChildren` along with the `Proposals`
+    * Modify the rule transition implementation to accept new proposals into the `Proposals` forests based on proposal purpose
+  * In the `Ratify` rule
+    * Account for the tracking of enacted and removed proposals
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Changed the type of ConwayPParam's fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
 * Changed types of lenses: `ppGovActionLifetimeL`, `ppDRepActivityL`, `ppCommitteeMaxTermLengthL` and `ppuGovActionLifetimeL`, `ppuDRepActivityL`, `ppuCommitteeMaxTermLengthL`

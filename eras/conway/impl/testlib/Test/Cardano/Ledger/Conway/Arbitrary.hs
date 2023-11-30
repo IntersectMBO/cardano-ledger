@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -37,6 +36,7 @@ import Cardano.Ledger.Conway.Governance (
   GovProcedures (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
+  PrevGovActionIdsChildren (..),
   ProposalProcedure (..),
   Proposals,
   PulsingSnapshot (..),
@@ -149,6 +149,7 @@ instance
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
@@ -171,6 +172,14 @@ instance Era era => Arbitrary (PrevGovActionIds era) where
       <*> arbitrary
       <*> arbitrary
 
+instance Era era => Arbitrary (PrevGovActionIdsChildren era) where
+  arbitrary =
+    PrevGovActionIdsChildren
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (EnactState era)
@@ -178,6 +187,7 @@ instance
   arbitrary =
     EnactState
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -210,6 +220,7 @@ genGovActionStateFromAction act =
     <*> arbitrary
     <*> arbitrary
     <*> pure act
+    <*> arbitrary
     <*> arbitrary
     <*> arbitrary
 

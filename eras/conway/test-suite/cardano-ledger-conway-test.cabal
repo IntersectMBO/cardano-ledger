@@ -94,5 +94,4 @@ test-suite cardano-ledger-conway-test
         cardano-ledger-core,
         tasty,
         cardano-strict-containers,
-        data-default-class,
         tasty-quickcheck

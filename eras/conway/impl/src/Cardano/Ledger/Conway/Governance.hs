@@ -35,6 +35,7 @@ module Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionPurpose (..),
   PrevGovActionIds (..),
+  PrevGovActionIdsChildren (..),
   PrevGovActionId (..),
   DRepPulsingState (..),
   DRepPulser (..),
@@ -57,9 +58,9 @@ module Cardano.Ledger.Conway.Governance (
   isDRepVotingAllowed,
   isCommitteeVotingAllowed,
   Proposals,
-  proposalsInsertGovAction,
   proposalsActions,
   proposalsAddVote,
+  proposalsAddProposal,
   proposalsIds,
   proposalsRemoveIds,
   proposalsLookupId,
@@ -116,6 +117,11 @@ module Cardano.Ledger.Conway.Governance (
   psDRepDistrL,
   psDRepStateL,
   RunConwayRatify (..),
+  ensPrevGovActionIdsChildrenL,
+  pgacPParamUpdateL,
+  pgacHardForkL,
+  pgacCommitteeL,
+  pgacConstitutionL,
 
   -- * Exported for testing
   pparamsUpdateThreshold,
@@ -179,14 +185,20 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   indexedGovProps,
  )
 import Cardano.Ledger.Conway.Governance.Proposals (
+  PrevGovActionIds (..),
+  PrevGovActionIdsChildren (..),
   Proposals,
   fromGovActionStateSeq,
   isConsistent_,
+  pgacCommitteeL,
+  pgacConstitutionL,
+  pgacHardForkL,
+  pgacPParamUpdateL,
   proposalsActions,
+  proposalsAddProposal,
   proposalsAddVote,
   proposalsGovActionStates,
   proposalsIds,
-  proposalsInsertGovAction,
   proposalsLookupId,
   proposalsRemoveIds,
  )
@@ -260,8 +272,6 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..), allNoThunks)
-
--- ============================
 
 -- | A snapshot of information from the previous epoch stored inside the Pulser.
 --   After the pulser completes, but before the epoch turns, this information
@@ -338,55 +348,6 @@ instance EraPParams era => ToCBOR (PulsingSnapshot era) where
 instance EraPParams era => FromCBOR (PulsingSnapshot era) where
   fromCBOR = fromEraCBOR @era
 
--- ===============================
-
-data PrevGovActionIds era = PrevGovActionIds
-  { pgaPParamUpdate :: !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
-  -- ^ The last enacted GovActionId for a protocol parameter update
-  , pgaHardFork :: !(StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
-  -- ^ The last enacted GovActionId for a hard fork
-  , pgaCommittee :: !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-  -- ^ The last enacted GovActionId for a committee change or no confidence vote
-  , pgaConstitution :: !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
-  -- ^ The last enacted GovActionId for a new constitution
-  }
-  deriving (Eq, Show, Generic)
-
-instance NoThunks (PrevGovActionIds era)
-instance Era era => NFData (PrevGovActionIds era)
-instance Default (PrevGovActionIds era)
-
-instance Era era => DecCBOR (PrevGovActionIds era) where
-  decCBOR =
-    decode $
-      RecD PrevGovActionIds
-        <! From
-        <! From
-        <! From
-        <! From
-
-instance Era era => EncCBOR (PrevGovActionIds era) where
-  encCBOR PrevGovActionIds {..} =
-    encode $
-      Rec (PrevGovActionIds @era)
-        !> To pgaPParamUpdate
-        !> To pgaHardFork
-        !> To pgaCommittee
-        !> To pgaConstitution
-
-toPrevGovActionIdsPairs :: (KeyValue e a, Era era) => PrevGovActionIds era -> [a]
-toPrevGovActionIdsPairs pga@(PrevGovActionIds _ _ _ _) =
-  let PrevGovActionIds {..} = pga
-   in [ "pgaPParamUpdate" .= pgaPParamUpdate
-      , "pgaHardFork" .= pgaHardFork
-      , "pgaCommittee" .= pgaCommittee
-      , "pgaConstitution" .= pgaConstitution
-      ]
-
-instance Era era => ToJSON (PrevGovActionIds era) where
-  toJSON = object . toPrevGovActionIdsPairs
-  toEncoding = pairs . mconcat . toPrevGovActionIdsPairs
-
 data EnactState era = EnactState
   { ensCommittee :: !(StrictMaybe (Committee era))
   -- ^ Constitutional Committee
@@ -398,6 +359,7 @@ data EnactState era = EnactState
   , ensWithdrawals :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
   , ensPrevGovActionIds :: !(PrevGovActionIds era)
   -- ^ Last enacted GovAction Ids
+  , ensPrevGovActionIdsChildren :: !(PrevGovActionIdsChildren era) -- TODO: @aniketd Move this inside Proposals
   }
   deriving (Generic)
 
@@ -424,6 +386,10 @@ ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 
 ensPrevGovActionIdsL :: Lens' (EnactState era) (PrevGovActionIds era)
 ensPrevGovActionIdsL = lens ensPrevGovActionIds (\es x -> es {ensPrevGovActionIds = x})
+
+ensPrevGovActionIdsChildrenL :: Lens' (EnactState era) (PrevGovActionIdsChildren era)
+ensPrevGovActionIdsChildrenL =
+  lens ensPrevGovActionIdsChildren (\es x -> es {ensPrevGovActionIdsChildren = x})
 
 ensPrevPParamUpdateL ::
   Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
@@ -458,13 +424,14 @@ instance EraPParams era => ToJSON (EnactState era) where
   toEncoding = pairs . mconcat . toEnactStatePairs
 
 toEnactStatePairs :: (KeyValue e a, EraPParams era) => EnactState era -> [a]
-toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
+toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _ _) =
   let EnactState {..} = cg
    in [ "committee" .= ensCommittee
       , "constitution" .= ensConstitution
       , "curPParams" .= ensCurPParams
       , "prevPParams" .= ensPrevPParams
       , "prevGovActionIds" .= ensPrevGovActionIds
+      , "prevGovActionIdsChilren" .= ensPrevGovActionIdsChildren
       ]
 
 deriving instance Eq (PParams era) => Eq (EnactState era)
@@ -481,6 +448,7 @@ instance EraPParams era => Default (EnactState era) where
       (Coin 0)
       def
       def
+      def
 
 instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR = decNoShareCBOR
@@ -490,6 +458,7 @@ instance EraPParams era => DecShareCBOR (EnactState era) where
   decShareCBOR _ =
     decode $
       RecD EnactState
+        <! From
         <! From
         <! From
         <! From
@@ -509,6 +478,7 @@ instance EraPParams era => EncCBOR (EnactState era) where
         !> To ensTreasury
         !> To ensWithdrawals
         !> To ensPrevGovActionIds
+        !> To ensPrevGovActionIdsChildren
 
 instance EraPParams era => ToCBOR (EnactState era) where
   toCBOR = toEraCBOR @era
@@ -525,6 +495,7 @@ instance EraPParams era => NoThunks (EnactState era)
 data RatifyState era = RatifyState
   { rsEnactState :: !(EnactState era)
   , rsRemoved :: !(Set (GovActionId (EraCrypto era)))
+  , rsEnacted :: !(Set (GovActionId (EraCrypto era)))
   , rsDelayed :: !Bool
   }
   deriving (Generic)
@@ -547,10 +518,11 @@ instance EraPParams era => ToJSON (RatifyState era) where
   toEncoding = pairs . mconcat . toRatifyStatePairs
 
 toRatifyStatePairs :: (KeyValue e a, EraPParams era) => RatifyState era -> [a]
-toRatifyStatePairs cg@(RatifyState _ _ _) =
+toRatifyStatePairs cg@(RatifyState _ _ _ _) =
   let RatifyState {..} = cg
    in [ "nextEnactState" .= rsEnactState
       , "removedGovActions" .= rsRemoved
+      , "enactedGovActions" .= rsEnacted
       , "ratificationDelayed" .= rsDelayed
       ]
 
@@ -1011,7 +983,7 @@ class
             error (unlines ("Impossible: RATIFY rule never fails, but it did:" : map show ps))
           Right ratifyState' -> ratifyState'
 
-finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
+finishDRepPulser :: DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
 finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
@@ -1030,6 +1002,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
     !ratifyState =
       RatifyState
         { rsRemoved = mempty
+        , rsEnacted = mempty
         , rsEnactState = dpEnactState
         , rsDelayed = False
         }
@@ -1212,22 +1185,24 @@ instance Era era => NFData (RatifyEnv era) where
               rnf cs
 
 instance EraPParams era => EncCBOR (RatifyState era) where
-  encCBOR (RatifyState es remove del) =
+  encCBOR (RatifyState es removed enacted delayed) =
     encode
       ( Rec (RatifyState @era)
           !> To es
-          !> To remove
-          !> To del
+          !> To removed
+          !> To enacted
+          !> To delayed
       )
 
 instance EraPParams era => DecCBOR (RatifyState era) where
-  decCBOR = decode (RecD RatifyState <! From <! From <! From)
+  decCBOR = decode (RecD RatifyState <! From <! From <! From <! From)
 
 -- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (RatifyState era) where
   decShareCBOR _ =
     decode $
       RecD RatifyState
+        <! From
         <! From
         <! From
         <! From

@@ -393,6 +393,8 @@ ratifyEnvGenPreds _ =
   , Random stakePoolDistrV
   , Dom drepStateV :⊆: voteUniv
   , Random committeeStateV
+  , Random ppUpdateChildren
+  , Random hardForkChildren
   ]
 
 ratifyEnvCheckPreds :: Proof era -> [Pred (ConwayEra StandardCrypto)]
@@ -405,10 +407,14 @@ ratifyStateT =
   Invert "RatifyState" (typeRep @(RatifyState (ConwayEra StandardCrypto))) RatifyState
     :$ Shift enactStateT (lens rsEnactState $ \rs x -> rs {rsEnactState = x})
     :$ Lensed removedV (lens rsRemoved $ \rs x -> rs {rsRemoved = x})
+    :$ Lensed enactedV (lens rsEnacted $ \rs x -> rs {rsEnacted = x})
     :$ Lensed delayedV (lens rsDelayed $ \rs x -> rs {rsDelayed = x})
 
 removedV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
 removedV = Var $ V "removed" (SetR GovActionIdR) No
+
+enactedV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
+enactedV = Var $ V "enacted" (SetR GovActionIdR) No
 
 delayedV :: Era era => Term era Bool
 delayedV = Var $ V "delayed" BoolR No
@@ -417,6 +423,7 @@ delayedV = Var $ V "delayed" BoolR No
 ratifyStateGenPreds :: Proof (ConwayEra StandardCrypto) -> [Pred (ConwayEra StandardCrypto)]
 ratifyStateGenPreds p =
   [ Random removedV
+  , Random enactedV
   , Random delayedV
   ]
     ++ enactStateGenPreds p
@@ -604,10 +611,10 @@ prop_GOV sub =
   stsProperty @"GOV"
     sub
     (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) govEnvGenPreds govEnvCheckPreds (govEnvT pe))
-    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds proposalsT)
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds govRuleStateT)
     (\_ _ -> (arbitrary, const []))
     -- TODO: we should probably check more things here
-    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds proposalsT st'
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds govRuleStateT st'
 
 ------------------------------------------------------------------------
 -- Test Tree

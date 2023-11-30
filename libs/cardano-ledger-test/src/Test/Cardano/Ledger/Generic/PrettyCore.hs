@@ -64,6 +64,7 @@ import Cardano.Ledger.Conway.Governance (
   GovProcedures (..),
   PrevGovActionId (..),
   PrevGovActionIds (..),
+  PrevGovActionIdsChildren (..),
   ProposalProcedure (..),
   Proposals,
   PulsingSnapshot (..),
@@ -1694,7 +1695,7 @@ pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp) =
     ]
 
 pcEnactState :: Proof era -> EnactState era -> PDoc
-pcEnactState p ens@(EnactState _ _ _ _ _ _ _) =
+pcEnactState p ens@(EnactState _ _ _ _ _ _ _ _) =
   let EnactState {..} = ens
    in ppRecord
         "EnactState"
@@ -1705,12 +1706,13 @@ pcEnactState p ens@(EnactState _ _ _ _ _ _ _) =
         , ("Treasury", pcCoin ensTreasury)
         , ("Withdrawals", ppMap pcCredential pcCoin ensWithdrawals)
         , ("PrevGovActionIds", pcPrevGovActionIds ensPrevGovActionIds)
+        , ("PrevGovActionIdsChildren", pcPrevGovActionIdsChildren ensPrevGovActionIdsChildren)
         ]
 
 pcGovActionId :: GovActionId c -> PDoc
 pcGovActionId (GovActionId txid (GovActionIx a)) = ppSexp "GovActId" [pcTxId txid, ppWord32 a]
 
-pcPrevGovActionId :: PrevGovActionId a era -> PDoc
+pcPrevGovActionId :: PrevGovActionId a c -> PDoc
 pcPrevGovActionId (PrevGovActionId x) = pcGovActionId x
 
 pcPrevGovActionIds :: PrevGovActionIds era -> PDoc
@@ -1721,6 +1723,16 @@ pcPrevGovActionIds PrevGovActionIds {..} =
     , ("LastHardFork", ppStrictMaybe pcPrevGovActionId pgaHardFork)
     , ("LastCommittee", ppStrictMaybe pcPrevGovActionId pgaCommittee)
     , ("LastConstitution", ppStrictMaybe pcPrevGovActionId pgaConstitution)
+    ]
+
+pcPrevGovActionIdsChildren :: PrevGovActionIdsChildren era -> PDoc
+pcPrevGovActionIdsChildren PrevGovActionIdsChildren {..} =
+  ppRecord
+    "PrevGovActionIdsChildren"
+    [ ("PParamUpdateChildren", ppSet pcPrevGovActionId pgacPParamUpdate)
+    , ("HardForkChildren", ppSet pcPrevGovActionId pgacHardFork)
+    , ("CommitteeChildren", ppSet pcPrevGovActionId pgacCommittee)
+    , ("ConstitutionChildren", ppSet pcPrevGovActionId pgacConstitution)
     ]
 
 pcConwayGovState :: Proof era -> ConwayGovState era -> PDoc
@@ -1751,19 +1763,20 @@ pcDRepPulsingState p (DRComplete x y) =
 pcDRepPulsingState _ (DRPulsing x) = ppSexp "DRPulsing" [pcDRepPulser x]
 
 pcRatifyState :: Proof era -> RatifyState era -> PDoc
-pcRatifyState p (RatifyState enact remov del) =
+pcRatifyState p (RatifyState enactedState removedPs enactedPs delayedPs) =
   ppRecord
     "RatifyState"
-    [ ("enactstate", pcEnactState p enact)
-    , ("removed", ppSet pcGovActionId remov)
-    , ("delayed", ppBool del)
+    [ ("enactstate", pcEnactState p enactedState)
+    , ("removed", ppSet pcGovActionId removedPs)
+    , ("enacted", ppSet pcGovActionId enactedPs)
+    , ("delayed", ppBool delayedPs)
     ]
 
 pcProposals :: Proposals era -> PDoc
 pcProposals x = ppSexp "Proposals" (map pcGovActionState (toList (proposalsActions x)))
 
 pcGovActionState :: GovActionState era -> PDoc
-pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =
+pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _ _) =
   let GovActionState {..} = gas
    in ppRecord
         "GovActionState"
@@ -1776,6 +1789,7 @@ pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =
         , ("Action", pcGovAction gasAction)
         , ("Proposed In", ppEpochNo gasProposedIn)
         , ("Expires After", ppEpochNo gasExpiresAfter)
+        , ("Children", ppSet pcGovActionId gasChildren)
         ]
 
 pcVote :: Vote -> PDoc

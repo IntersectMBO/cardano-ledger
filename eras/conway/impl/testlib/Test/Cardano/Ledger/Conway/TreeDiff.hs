@@ -68,6 +68,8 @@ instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (Pulsin
 
 instance ToExpr (PrevGovActionIds era)
 
+instance ToExpr (PrevGovActionIdsChildren era)
+
 instance ToExpr (PParamsHKD Identity era) => ToExpr (EnactState era)
 
 instance (EraPParams era, ToExpr (PParamsHKD Identity era)) => ToExpr (RatifyState era)
