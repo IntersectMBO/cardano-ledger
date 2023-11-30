@@ -124,7 +124,7 @@ library
         nothunks,
         quiet,
         set-algebra >=1.0,
-        small-steps >=1.0,
+        small-steps >=1.0.1,
         cardano-strict-containers,
         text,
         time,

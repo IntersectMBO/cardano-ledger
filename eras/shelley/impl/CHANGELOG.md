@@ -3,6 +3,8 @@
 ## 1.9.0.0
 
 * Change the type of `ppEMaxL`
+* Change the type of `pvCanFollow` to make sure new protocol version is not optional
+* Add `hasLegalProtVerUpdate`
 
 ### `testlib`
 
