@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Remove deprecated `Cardano.Ledger.CompactAddress` and `Cardano.Ledger.UMapCompact`
 * Add the newtype `EpochInterval`
 * Change the type of `ppEMaxL` and `ppuEMaxL`
 * Moved `ToExpr` instances out of the main library and into the testlib.
