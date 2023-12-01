@@ -44,9 +44,8 @@ module Cardano.Ledger.Address (
   isPayCredScriptCompactAddr,
   isBootstrapCompactAddr,
   decodeAddr,
-  decodeAddrShort,
   decodeAddrEither,
-  decodeAddrShortEither,
+  decodeAddrStateT,
   decodeAddrStateLenientT,
   fromCborAddr,
   fromCborBothAddr,
@@ -547,24 +546,6 @@ decodeAddrEither ::
   Either String (Addr c)
 decodeAddrEither bs = runFail $ evalStateT (decodeAddrStateT bs) 0
 {-# INLINE decodeAddrEither #-}
-
--- | Same as `decodeAddrShort`, but produces an `Either` result
-decodeAddrShortEither ::
-  forall c.
-  Crypto c =>
-  ShortByteString ->
-  Either String (Addr c)
-decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
-{-# INLINE decodeAddrShortEither #-}
-
--- | Same as `decodeAddr`, but works on `ShortByteString`
-decodeAddrShort ::
-  forall c m.
-  (Crypto c, MonadFail m) =>
-  ShortByteString ->
-  m (Addr c)
-decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
-{-# INLINE decodeAddrShort #-}
 
 -- | Strict decoder for an address from a `ByteString`. This will not let you decode some
 -- of the buggy addresses that have been placed on chain. This decoder is intended for

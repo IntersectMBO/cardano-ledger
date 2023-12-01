@@ -34,9 +34,26 @@ where
 import Cardano.Ledger.Address
 import Cardano.Ledger.Crypto
 import Control.Applicative ((<|>))
-import Control.Monad.Trans.Fail (runFailLast)
+import Control.Monad.Trans.Fail (runFail, runFailLast)
 import Control.Monad.Trans.State.Strict (evalStateT, get)
 import qualified Data.ByteString as BS
+import Data.ByteString.Short (ShortByteString)
+
+-- | Same as `decodeAddrShort`, but produces an `Either` result
+decodeAddrShortEither ::
+  Crypto c =>
+  ShortByteString ->
+  Either String (Addr c)
+decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
+{-# INLINE decodeAddrShortEither #-}
+
+-- | Same as `decodeAddr`, but works on `ShortByteString`
+decodeAddrShort ::
+  (Crypto c, MonadFail m) =>
+  ShortByteString ->
+  m (Addr c)
+decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
+{-# INLINE decodeAddrShort #-}
 
 -- | Decoded Address.
 data DecAddr c
