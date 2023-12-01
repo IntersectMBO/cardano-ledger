@@ -7,41 +7,39 @@
 
 import Cardano.Ledger.Address (Addr, decodeAddrEither, serialiseAddr)
 import Cardano.Ledger.Crypto (StandardCrypto)
-
 import Control.Monad (replicateM)
-
 import Criterion (Benchmark, bench, env, nf)
 import Criterion.Main (defaultMain)
-
 import Data.ByteString.Char8 (ByteString)
-import Data.Either (lefts)
-
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.QuickCheck (arbitrary, generate)
+import Test.QuickCheck (arbitrary)
+import Test.QuickCheck.Gen (Gen (..))
+import Test.QuickCheck.Random (QCGen, mkQCGen)
 
 main :: IO ()
 main = do
   defaultMain $
-    map (\c -> env (generateAddrAsBytestring c) decodeAddrBench) (map (* 500) [1 .. 2])
+    map (\c -> env (generateAddrAsBytestring qcGen c) decodeAddrBench) (map (* 500) [1 .. 2])
   where
+    qcGen = mkQCGen 2023
     decodeAddrBench :: [ByteString] -> Benchmark
     decodeAddrBench xs =
       bench ("decodeAddr (" ++ show (length xs) ++ ")") (nf tryDecodeAddr xs)
 
 -- -------------------------------------------------------------------------------------------------
 
-generateAddrAsBytestring :: Int -> IO [ByteString]
-generateAddrAsBytestring count =
-  replicateM count (serialiseAddr <$> genAddr)
+generateAddrAsBytestring :: QCGen -> Int -> IO [ByteString]
+generateAddrAsBytestring qcGen count =
+  pure $ unGen (replicateM count (serialiseAddr <$> genAddr)) qcGen 30
   where
-    genAddr :: IO (Addr StandardCrypto)
-    genAddr = generate arbitrary
+    genAddr :: Gen (Addr StandardCrypto)
+    genAddr = arbitrary
 
 tryDecodeAddr :: [ByteString] -> ()
 tryDecodeAddr xs =
-  case lefts $ map decode xs of
-    [] -> ()
-    ys -> error $ "tryDecodeAddr: " ++ show ys
+  case mapM decode xs of
+    Right _ -> ()
+    Left err -> error $ "tryDecodeAddr: " ++ show err
   where
     decode :: ByteString -> Either String (Addr StandardCrypto)
     decode = decodeAddrEither

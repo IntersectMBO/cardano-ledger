@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `DecAddr` and `decodeAddrLenient` with `decodeAddrLenientEither`
 * Change the type of `ppEMaxL`, `ppuEMaxL`, `ppGovActionLifetimeL`, `ppDRepActivityL`,
   `ppCommitteeMaxTermLengthL`, `ppuGovActionLifetimeL`, `ppuDRepActivityL` and
   `ppuCommitteeMaxTermLengthL`
