@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -65,18 +65,31 @@ import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain)
+import Type.Reflection (Typeable, typeRep)
 
 -- =============================================
 -- Shelley Cert Targets
 
-sRegKey :: Target era (StakeCredential (EraCrypto era) -> ShelleyTxCert era)
-sRegKey = Constr "sRegKey" (\x -> ShelleyTxCertDelegCert (ShelleyRegCert x))
+sRegKey ::
+  forall era.
+  Typeable era =>
+  RootTarget era (ShelleyTxCert era) (StakeCredential (EraCrypto era) -> ShelleyTxCert era)
+sRegKey = Invert "sRegKey" (typeRep @(ShelleyTxCert era)) (\x -> ShelleyTxCertDelegCert (ShelleyRegCert x))
 
-sUnRegKey :: Target era (StakeCredential (EraCrypto era) -> ShelleyTxCert era)
-sUnRegKey = Constr "UnRegKey" (\x -> ShelleyTxCertDelegCert (ShelleyUnRegCert x))
+sUnRegKey ::
+  forall era.
+  Typeable era =>
+  RootTarget era (ShelleyTxCert era) (StakeCredential (EraCrypto era) -> ShelleyTxCert era)
+sUnRegKey = Invert "UnRegKey" (typeRep @(ShelleyTxCert era)) (\x -> ShelleyTxCertDelegCert (ShelleyUnRegCert x))
 
-sDelegStake :: Target era (StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> ShelleyTxCert era)
-sDelegStake = Constr "sDelegStake" (\x y -> ShelleyTxCertDelegCert (ShelleyDelegCert x y))
+sDelegStake ::
+  forall era.
+  Typeable era =>
+  RootTarget
+    era
+    (ShelleyTxCert era)
+    (StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> ShelleyTxCert era)
+sDelegStake = Invert "sDelegStake" (typeRep @(ShelleyTxCert era)) (\x y -> ShelleyTxCertDelegCert (ShelleyDelegCert x y))
 
 sRegPool :: Target era (PoolParams (EraCrypto era) -> ShelleyTxCert era)
 sRegPool = Constr "sRegPool" (\x -> ShelleyTxCertPool (RegPool x))
@@ -84,8 +97,8 @@ sRegPool = Constr "sRegPool" (\x -> ShelleyTxCertPool (RegPool x))
 sRetirePool :: Target era (KeyHash 'StakePool (EraCrypto era) -> EpochNo -> ShelleyTxCert era)
 sRetirePool = Constr "sRetirePool" (\x e -> ShelleyTxCertPool (RetirePool x e))
 
-sMirShift :: Target era (Coin -> MIRPot -> Coin -> ShelleyTxCert era)
-sMirShift = Constr "sMirShift" (\_avail x c -> ShelleyTxCertMir (MIRCert x (SendToOppositePotMIR c)))
+sMirShift :: forall era. Era era => RootTarget era (ShelleyTxCert era) (Coin -> MIRPot -> Coin -> ShelleyTxCert era)
+sMirShift = Invert "sMirShift" (typeRep @(ShelleyTxCert era)) (\_avail x c -> ShelleyTxCertMir (MIRCert x (SendToOppositePotMIR c)))
 
 sGovern ::
   Target
@@ -124,18 +137,28 @@ cDelegStakeVote ::
 cDelegStakeVote = Constr "cDelegStakeVote" (\x y z _ -> ConwayTxCertDeleg (ConwayDelegCert x (DelegStakeVote y z)))
 
 cRegDeleg ::
+  forall era.
   ConwayEraTxCert era =>
   Target era (StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> Coin -> TxCert era)
 cRegDeleg = Constr "cRegDeleg" RegDepositDelegTxCert
 
-cDelegateeStake :: Target era (KeyHash 'StakePool (EraCrypto era) -> Delegatee (EraCrypto era))
-cDelegateeStake = Constr "cDelegateeStake" DelegStake
+cDelegateeStake ::
+  forall era.
+  Era era =>
+  RootTarget era (Delegatee (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era) -> Delegatee (EraCrypto era))
+cDelegateeStake = Invert "cDelegateeStake" (typeRep @(Delegatee (EraCrypto era))) DelegStake
 
-cDelegateeVote :: Target era (DRep (EraCrypto era) -> Delegatee (EraCrypto era))
-cDelegateeVote = Constr "cDelegateeVote" DelegVote
+cDelegateeVote ::
+  forall era.
+  Era era =>
+  RootTarget era (Delegatee (EraCrypto era)) (DRep (EraCrypto era) -> Delegatee (EraCrypto era))
+cDelegateeVote = Invert "cDelegateeVote" (typeRep @(Delegatee (EraCrypto era))) DelegVote
 
-cDelegateeStakeVote :: Target era (KeyHash 'StakePool (EraCrypto era) -> DRep (EraCrypto era) -> Delegatee (EraCrypto era))
-cDelegateeStakeVote = Constr "cDelegateeVote" DelegStakeVote
+cDelegateeStakeVote ::
+  forall era.
+  Era era =>
+  RootTarget era (Delegatee (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era) -> DRep (EraCrypto era) -> Delegatee (EraCrypto era))
+cDelegateeStakeVote = Invert "cDelegateeVote" (typeRep @(Delegatee (EraCrypto era))) DelegStakeVote
 
 cRegPool :: Target era (PoolParams (EraCrypto era) -> ConwayTxCert era)
 cRegPool = Constr "cRegPool" (\x -> ConwayTxCertPool (RegPool x))
@@ -163,19 +186,23 @@ partBfromPartA p mp = Map.fromList (fixer (Map.toList mp))
 --   The parameter 'vote' should be existentially bound
 --   in the surrounding context (inside a Choose Target perhaps)
 makeDRepPred ::
+  forall era.
+  Era era =>
   Term era (DRep (EraCrypto era)) ->
   Term era (Credential 'DRepRole (EraCrypto era)) ->
   Pred era
 makeDRepPred drep vote =
-  drep :<-: (Constr "" DRepCredential ^$ vote)
-
--- TODO @TimSheard nested `Oneof`s seem to be broken
--- Oneof
---  drep
---  [ (1, constTarget DRepAlwaysAbstain, [])
---  , (1, constTarget DRepAlwaysNoConfidence, [])
---  , (5, Constr "" DRepCredential ^$ vote, [])
---  ]
+  Oneof
+    drep
+    [ (1, constRootTarget DRepAlwaysAbstain, [Random vote])
+    , (1, constRootTarget DRepAlwaysNoConfidence, [Random vote])
+    ,
+      ( 5
+      , Invert "" (typeRep @(DRep (EraCrypto era))) DRepCredential
+          :$ Partial vote (\case DRepCredential x -> Just x; _ -> Nothing)
+      , [Member (Left vote) voteUniv]
+      )
+    ]
 
 -- =====================================
 
@@ -186,8 +213,10 @@ availableForDistrC :: DeltaCoin -> MIRPot -> AccountState -> InstantaneousReward
 availableForDistrC sumb p act irew = minusCoinDeltaCoin (availableAfterMIR p act irew) sumb
 
 txCertMir ::
-  Target era (MIRPot -> Map (Credential 'Staking (EraCrypto era)) DeltaCoin -> any -> ShelleyTxCert era)
-txCertMir = Constr "txCertMir" (\x m1 _ -> ShelleyTxCertMir (MIRCert x (StakeAddressesMIR m1)))
+  forall era any.
+  Era era =>
+  RootTarget era (ShelleyTxCert era) (MIRPot -> Map (Credential 'Staking (EraCrypto era)) DeltaCoin -> any -> ShelleyTxCert era)
+txCertMir = Invert "txCertMir" (typeRep @(ShelleyTxCert era)) (\pot distr _ -> ShelleyTxCertMir (MIRCert pot (StakeAddressesMIR distr)))
 
 {-
 The  'mirdistr' has type (Map (Credential 'Staking c) DeltaCoin) In Eras Alonzo and Babbage
@@ -225,11 +254,21 @@ certsPreds UnivSize {..} p = case whichTxCert p of
           ,
             [ Oneof
                 shelleycert -- Can only have one of these at a time
-                [ (1, sRegKey ^$ stakeCred, [NotMember stakeCred (Dom rewards)])
-                , (1, sUnRegKey ^$ deregkey, [MapMember deregkey (Lit CoinR (Coin 0)) (Left rewards)])
+                [
+                  ( 1
+                  , sRegKey :$ Partial stakeCred (\case (ShelleyTxCertDelegCert (ShelleyRegCert x)) -> Just x; _ -> Nothing)
+                  , [NotMember stakeCred (Dom rewards)]
+                  )
                 ,
                   ( 1
-                  , sDelegStake ^$ stakeCred ^$ poolHash
+                  , sUnRegKey :$ Partial deregkey (\case (ShelleyTxCertDelegCert (ShelleyUnRegCert x)) -> Just x; _ -> Nothing)
+                  , [MapMember deregkey (Lit CoinR (Coin 0)) (Left rewards)]
+                  )
+                ,
+                  ( 1
+                  , sDelegStake
+                      :$ Partial stakeCred (\case (ShelleyTxCertDelegCert (ShelleyDelegCert x _)) -> Just x; _ -> Nothing)
+                      :$ Partial poolHash (\case (ShelleyTxCertDelegCert (ShelleyDelegCert _ y)) -> Just y; _ -> Nothing)
                   , [Member (Left stakeCred) (Dom rewards), Member (Left poolHash) (Dom regPools)]
                   )
                 ]
@@ -270,7 +309,10 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                 mircert -- Either a StakeAddressesMIR or a SendToOppositePotMIR, choose just 1
                 [
                   ( 1
-                  , txCertMir ^$ pot ^$ mirdistr :$ (constTarget ())
+                  , txCertMir
+                      :$ Partial pot (\case (ShelleyTxCertMir (MIRCert pt (StakeAddressesMIR _))) -> Just pt; _ -> Nothing)
+                      :$ Partial mirdistr (\case (ShelleyTxCertMir (MIRCert _ (StakeAddressesMIR distr))) -> Just distr; _ -> Nothing)
+                      :$ Partial (Lit UnitR ()) (const (Just ()))
                   ,
                     [ Random pot -- choose Treasury or Reserves
                     , If
@@ -308,7 +350,10 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                   )
                 ,
                   ( if (HardForks.allowMIRTransfer (protocolVersion p)) then 1 else 0 -- Not allowed before Alonzo, so make frequency 0
-                  , sMirShift ^$ available ^$ pot ^$ mircoin
+                  , sMirShift
+                      :$ Partial available (\case (ShelleyTxCertMir (MIRCert _ (SendToOppositePotMIR _))) -> Just (Coin 99); _ -> Nothing)
+                      :$ Partial pot (\case (ShelleyTxCertMir (MIRCert pt (SendToOppositePotMIR _))) -> Just pt; _ -> Nothing)
+                      :$ Partial mircoin (\case (ShelleyTxCertMir (MIRCert _ (SendToOppositePotMIR c))) -> Just c; _ -> Nothing)
                   ,
                     [ Random pot
                     , available :<-: (Constr "available" availableAfterMIR ^$ pot :$ Mask accountStateT :$ Mask instantaneousRewardsT)
@@ -351,14 +396,14 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                 delegatee
                 [
                   ( 3
-                  , cDelegateeStake ^$ poolHash
+                  , cDelegateeStake :$ Partial poolHash (\case (DelegStake x) -> Just x; _ -> Nothing)
                   ,
                     [ Member (Left poolHash) (Dom regPools)
                     ]
                   )
                 ,
                   ( 1
-                  , cDelegateeVote ^$ drep1
+                  , cDelegateeVote :$ Partial drep1 (\case (DelegVote x) -> Just x; _ -> Nothing)
                   ,
                     [ makeDRepPred drep1 vote1
                     , Member (Left vote1) voteUniv
@@ -366,21 +411,23 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                   )
                 ,
                   ( 1
-                  , cDelegateeVote ^$ drep1a
+                  , cDelegateeVote :$ Partial drep1a (\case (DelegVote x) -> Just x; _ -> Nothing)
                   ,
                     [ drep1a :<-: constTarget DRepAlwaysAbstain
                     ]
                   )
                 ,
                   ( 1
-                  , cDelegateeVote ^$ drep1b
+                  , cDelegateeVote :$ Partial drep1b (\case (DelegVote x) -> Just x; _ -> Nothing)
                   ,
                     [ drep1b :<-: constTarget DRepAlwaysNoConfidence
                     ]
                   )
                 ,
                   ( 1
-                  , cDelegateeStakeVote ^$ poolHash ^$ drep2
+                  , cDelegateeStakeVote
+                      :$ Partial poolHash (\case (DelegStakeVote x _) -> Just x; _ -> Nothing)
+                      :$ Partial drep2 (\case (DelegStakeVote _ x) -> Just x; _ -> Nothing)
                   ,
                     [ Member (Left poolHash) (Dom regPools)
                     , makeDRepPred drep2 vote2
@@ -389,7 +436,9 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                   )
                 ,
                   ( 1
-                  , cDelegateeStakeVote ^$ poolHash ^$ drep2a
+                  , cDelegateeStakeVote
+                      :$ Partial poolHash (\case (DelegStakeVote x _) -> Just x; _ -> Nothing)
+                      :$ Partial drep2a (\case (DelegStakeVote _ x) -> Just x; _ -> Nothing)
                   ,
                     [ Member (Left poolHash) (Dom regPools)
                     , drep2a :<-: constTarget DRepAlwaysAbstain
@@ -397,7 +446,9 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                   )
                 ,
                   ( 1
-                  , cDelegateeStakeVote ^$ poolHash ^$ drep2b
+                  , cDelegateeStakeVote
+                      :$ Partial poolHash (\case (DelegStakeVote x _) -> Just x; _ -> Nothing)
+                      :$ Partial drep2b (\case (DelegStakeVote _ x) -> Just x; _ -> Nothing)
                   ,
                     [ Member (Left poolHash) (Dom regPools)
                     , drep2b :<-: constTarget DRepAlwaysNoConfidence
@@ -507,8 +558,8 @@ certsStage us proof subst0 = do
 demo :: ReplMode -> Int -> IO ()
 demo mode seed = do
   let proof =
-        -- Conway Standard
-        Babbage Standard
+        Conway Standard
+  -- Babbage Standard
   env <-
     generateWithSeed
       seed

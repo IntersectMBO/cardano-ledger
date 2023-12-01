@@ -8,6 +8,7 @@
 
 module Test.Cardano.Ledger.Constrained.Trace.Pipeline where
 
+import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Core (Era, EraRule, Tx)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
@@ -29,7 +30,6 @@ import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (TxF (..))
 import Test.Cardano.Ledger.Constrained.Env (Env, Name, emptyEnv, findVar)
-import Test.Cardano.Ledger.Constrained.Examples (Babbage)
 import Test.Cardano.Ledger.Constrained.Monad (errorTyped, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (adjustColInput, adjustFeeInput, txBodyPreds)

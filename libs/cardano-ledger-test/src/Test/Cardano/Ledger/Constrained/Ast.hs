@@ -54,7 +54,7 @@ import Test.Cardano.Ledger.Constrained.Size (Size (..), runSize, seps)
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), format, hasEq, synopsis, testEql, (:~:) (Refl))
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.QuickCheck (Gen, oneof)
-import Type.Reflection (TypeRep, Typeable)
+import Type.Reflection (TypeRep, Typeable, typeRep)
 
 -- =========================================================
 -- class FromList cannot be defined in Classes.hs because
@@ -141,7 +141,7 @@ data Pred era where
     [Pred era] ->
     Pred era
   Maybe :: forall r era t. (Era era, Typeable r) => Term era (Maybe t) -> RootTarget era r t -> [Pred era] -> Pred era
-  Oneof :: Era era => Term era t -> [(Int, RootTarget era r t, [Pred era])] -> Pred era
+  Oneof :: (Eq t, Era era) => Term era t -> [(Int, RootTarget era t t, [Pred era])] -> Pred era
   SubMap :: (Ord k, Eq v, Ord v) => Term era (Map k v) -> Term era (Map k v) -> Pred era
   If :: RootTarget era r Bool -> Pred era -> Pred era -> Pred era
   Before :: Term era a -> Term era b -> Pred era
@@ -230,7 +230,13 @@ data RootTarget era root t where
   (:$) :: RootTarget era r (a -> b) -> RootTarget era r a -> RootTarget era r b
   Constr :: String -> (a -> b) -> RootTarget era Void (a -> b)
   Invert :: String -> TypeRep root -> (a -> b) -> RootTarget era root (a -> b)
-  Lensed :: Term era t -> Lens' root t -> RootTarget era root t
+  Lensed :: Term era t -> SimpleGetter root t -> RootTarget era root t
+  Partial ::
+    Term era t ->
+    (root -> Maybe t) ->
+    -- | Partial designed to be used in Pred 'Oneof' where the RootTarget getter may fail.
+    --   So use 'Partial' instead of 'Lensed' in 'Oneof'
+    RootTarget era root t
   Shift :: RootTarget era root2 a -> Lens' root1 root2 -> RootTarget era root1 a
   Mask :: RootTarget era r a -> RootTarget era Void a
   Virtual ::
@@ -253,6 +259,9 @@ infixl 0 ^$
 constTarget :: t -> Target era t
 constTarget t = Constr "constTarget" (const t) ^$ Lit UnitR ()
 
+constRootTarget :: forall era t. Typeable t => t -> RootTarget era t t
+constRootTarget t = Invert "constRootTarget" (typeRep @t) (\() -> t) :$ Lensed (Lit UnitR ()) (to (const ()))
+
 emptyTarget :: Target era ()
 emptyTarget = Simple (Lit UnitR ())
 
@@ -274,27 +283,6 @@ listToSetTarget x = Constr "FromList" Set.fromList ^$ x
 
 setToListTarget :: Term era (Set x) -> Target era [x]
 setToListTarget x = Constr "toList" Set.toList ^$ x
-
--- Sometimes when using 'Choose' we want a Target which binds a bunch of
--- variables but puts no global constraints on them and does not use them to
--- compute anything. The 'bindN' Target constructors each bind N such variables.
-bind2 :: Term era a1 -> Term era a2 -> Target era ()
-bind2 a b = Constr "bind2" (\_ _ -> ()) ^$ a ^$ b
-
-bind3 :: Term era a1 -> Term era a2 -> Term era a3 -> Target era ()
-bind3 a b c = Constr "bind3" (\_ _ _ -> ()) ^$ a ^$ b ^$ c
-
-bind4 :: Term era a1 -> Term era a2 -> Term era a3 -> Term era a4 -> Target era ()
-bind4 a b c d = Constr "bind4" (\_ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d
-
-bind5 :: Term era a1 -> Term era a2 -> Term era a3 -> Term era a4 -> Term era a5 -> Target era ()
-bind5 a b c d e = Constr "bind5" (\_ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e
-
-bind6 :: Term era a1 -> Term era a2 -> Term era a3 -> Term era a4 -> Term era a5 -> Term era a6 -> Target era ()
-bind6 a b c d e f = Constr "bind5" (\_ _ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e ^$ f
-
-bind7 :: Term era a1 -> Term era a2 -> Term era a3 -> Term era a4 -> Term era a5 -> Term era a6 -> Term era a7 -> Target era ()
-bind7 a b c d e f g = Constr "bind5" (\_ _ _ _ _ _ _ -> ()) ^$ a ^$ b ^$ c ^$ d ^$ e ^$ f ^$ g
 
 -- ===================================
 
@@ -370,6 +358,7 @@ instance Show (RootTarget era r t) where
   show (Constr nm _f) = nm
   show (Simple x) = show x
   show (Lensed x _) = show x
+  show (Partial x _) = show x
   show (f :$ x) = "(" ++ show f ++ " :$ " ++ showL pp " :$ " (args x) ++ ")"
     where
       pp :: Univ.Any (RootTarget era r) -> String
@@ -384,6 +373,7 @@ showT :: forall era t r. RootTarget era r t -> String
 showT (Constr nm _f) = nm
 showT (Simple x) = show x
 showT (Lensed x _) = show x
+showT (Partial x _) = show x
 showT (f :$ x) = "(" ++ showT f ++ " " ++ showL pp " " (args x) ++ ")"
   where
     pp :: Univ.Any (RootTarget era r) -> String
@@ -408,6 +398,7 @@ targetRecord (Constr n _) xs = ppRecord (pack n) xs
 targetRecord (ts :$ t) xs = targetRecord ts (targetPair t : xs)
 targetRecord (Simple e) [] = ppString (show e)
 targetRecord (Lensed e _) [] = ppString (show e)
+targetRecord (Partial e _) [] = ppString (show e)
 targetRecord (Invert n _ _) xs = ppRecord (pack n) xs
 targetRecord (Shift x _) xs = targetRecord x xs
 targetRecord (Mask x) xs = targetRecord x xs
@@ -418,8 +409,10 @@ nameOf :: RootTarget era r t -> Text
 nameOf (Constr cs _) = pack (map toLower cs ++ "T")
 nameOf (Simple (Var (V n _ _))) = pack n
 nameOf (Lensed (Var (V n _ _)) _) = pack n
+nameOf (Partial (Var (V n _ _)) _) = pack n
 nameOf (Simple term) = pack (show term)
 nameOf (Lensed term _) = pack (show term)
+nameOf (Partial term _) = pack (show term)
 nameOf (x :$ _) = nameOf x
 nameOf (Invert cs _ _) = pack (map toLower cs ++ "T")
 nameOf (Shift x _) = nameOf x
@@ -429,6 +422,7 @@ nameOf (Virtual _ x _) = pack (show x)
 targetPair :: RootTarget era r t -> (Text, PDoc)
 targetPair (Simple (Var (V n rep _))) = (pack n, ppString (show rep))
 targetPair (Lensed (Var (V n rep _)) _) = (pack n, ppString (show rep))
+targetPair (Partial (Var (V n rep _)) _) = (pack n, ppString (show rep))
 targetPair (Virtual (Var (V _ rep _)) newname _) = (pack (show newname), ppString (show rep))
 targetPair x = (nameOf x, targetRecord x [])
 
@@ -462,6 +456,7 @@ varsOfTarget ans s = case s of
   (a :$ b) -> varsOfTarget (varsOfTarget ans a) b
   (Simple x) -> varsOfTerm ans x
   (Lensed x _) -> varsOfTerm ans x
+  (Partial x _) -> varsOfTerm ans x
   (Constr _ _) -> ans
   (Invert _ _ _) -> ans
   (Shift x _) -> varsOfTarget ans x
@@ -741,6 +736,7 @@ substSum sub (ProjMap crep l x) = ProjMap crep l (substTerm sub x)
 substTarget :: Subst era -> RootTarget era r t -> RootTarget era r t
 substTarget sub (Simple e) = Simple (substTerm sub e)
 substTarget sub (Lensed e l) = Lensed (substTerm sub e) l
+substTarget sub (Partial e l) = Partial (substTerm sub e) l
 substTarget sub (a :$ b) = substTarget sub a :$ substTarget sub b
 substTarget _ (Constr n f) = Constr n f
 substTarget _ (Invert x l f) = Invert x l f
@@ -817,6 +813,7 @@ simplifyTarget (Mask x) = simplifyTarget x
 simplifyTarget (Virtual x _ _) = simplify x
 simplifyTarget (Simple t) = simplify t
 simplifyTarget (Lensed t _) = simplify t
+simplifyTarget (Partial t _) = simplify t
 simplifyTarget (Constr _ f) = pure f
 simplifyTarget (x :$ y) = do
   f <- simplifyTarget x
@@ -865,6 +862,7 @@ runTarget :: Env era -> RootTarget era x t -> Typed t
 runTarget _ (Invert _ _ f) = pure f
 runTarget env (Simple t) = runTerm env t
 runTarget env (Lensed t _) = runTerm env t
+runTarget env (Partial t _) = runTerm env t
 runTarget env (Shift x _) = runTarget env x
 runTarget env (Mask x) = runTarget env x
 runTarget env (Virtual x _ _) = runTerm env x
@@ -879,6 +877,11 @@ runTarget env (x :$ y) = do
 getTarget :: forall era root t. root -> RootTarget era root t -> Env era -> Env era
 getTarget root (Lensed (Var v) l) env = storeVar v (root ^. l) env
 getTarget _ (Lensed _ _) env = env
+getTarget root (Partial (Var v) f) env =
+  case f root of
+    Just val -> storeVar v val env
+    Nothing -> error ("A Partial RootTarget returned Nothing: " ++ show v ++ "\n Maybe use 'targetMaybeEnv' instead of 'getTarget' ")
+getTarget _ (Partial _ _) env = env
 getTarget root (x :$ y) env = getTarget root x (getTarget root y env)
 getTarget root (Shift x l) env = getTarget (root ^. l) x env
 getTarget _ (Invert _ _ _) env = env
@@ -888,23 +891,17 @@ getTarget _ (Mask _) env = env
 getTarget root (Virtual (Var v) _ l) env = storeVar v (root ^. l) env
 getTarget _ (Virtual {}) env = env
 
--- | Update the root, by using the Lense to overwrite locations, using values from the Env.
---   When the target has type (RootTarget era Void x), the function is the identity on the root
-setTarget :: root -> RootTarget era root t -> Env era -> root
-setTarget root (Lensed term l) env =
-  case runTyped (runTerm env term) of
-    Left _ -> root
-    Right t -> root & l .~ t
-setTarget root (x :$ y) env = setTarget (setTarget root y env) x env
-setTarget root (Shift x l) env = root & l .~ (setTarget (root ^. l) x env)
-setTarget root (Invert _ _ _) _ = root
-setTarget root (Constr _ _) _ = root
-setTarget root (Simple _) _ = root
-setTarget root (Mask _) _ = root
-setTarget root (Virtual term _ l) env =
-  case runTyped (runTerm env term) of
-    Left _ -> root
-    Right t -> root & l .~ t
+targetMaybeEnv :: forall era root t. root -> RootTarget era root t -> Env era -> Maybe (Env era)
+targetMaybeEnv root (Lensed (Var v) l) env = Just (storeVar v (root ^. l) env)
+targetMaybeEnv root (Virtual (Var v) _ l) env = Just (storeVar v (root ^. l) env)
+targetMaybeEnv root (Shift x l) env = targetMaybeEnv (root ^. l) x env
+targetMaybeEnv root (Partial (Var v) f) env =
+  case f root of
+    Just val -> Just (storeVar v val env)
+    Nothing -> Nothing
+targetMaybeEnv root (x :$ y) env =
+  targetMaybeEnv root y env >>= targetMaybeEnv root x
+targetMaybeEnv _ _ _ = Nothing
 
 runPred :: Env era -> Pred era -> Typed Bool
 runPred env (MetaSize w x) = do
@@ -995,12 +992,17 @@ runPred env (If t x y) = do
     then runPred env x
     else runPred env y
 runPred _ (Before _ _) = pure True
-runPred env (Oneof _ preds) = do
-  let try (_, _tar, ps) = do
-        ws <- sequence (map (runPred env) ps)
-        pure (and ws)
-  qs <- sequence (map try preds)
-  pure (or qs)
+runPred env (Oneof name triples) = do
+  root <- runTerm env name
+  let firstMatching [] = pure False
+      firstMatching ((_, tar, ps) : more) = case targetMaybeEnv root tar env of
+        Nothing -> firstMatching more
+        Just env2 -> do
+          qs <- mapM (runPred env2) ps
+          if and qs
+            then pure True
+            else firstMatching more
+  firstMatching triples
 runPred env (ListWhere sz name target ps) = do
   xs <- runTerm env name
   size <- runTerm env sz

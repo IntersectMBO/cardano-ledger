@@ -50,6 +50,8 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   pProcGovActionL,
   gasActionL,
   gasChildrenL,
+  gasReturnAddrL,
+  gasProposedInL,
   gasIdL,
 ) where
 
@@ -209,6 +211,12 @@ gasStakePoolVotesL = lens gasStakePoolVotes (\x y -> x {gasStakePoolVotes = y})
 
 gasExpiresAfterL :: Lens' (GovActionState era) EpochNo
 gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
+
+gasProposedInL :: Lens' (GovActionState era) EpochNo
+gasProposedInL = lens gasProposedIn $ \x y -> x {gasProposedIn = y}
+
+gasReturnAddrL :: Lens' (GovActionState era) (RewardAcnt (EraCrypto era))
+gasReturnAddrL = lens gasReturnAddr $ \x y -> x {gasReturnAddr = y}
 
 gasActionL :: Lens' (GovActionState era) (GovAction era)
 gasActionL = lens gasAction $ \x y -> x {gasAction = y}

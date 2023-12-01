@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -14,11 +15,13 @@
 
 module Test.Cardano.Ledger.Constrained.Examples where
 
+import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.CertState (FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
-import Cardano.Ledger.Shelley.Core (EraGov)
 import Control.DeepSeq (deepseq)
 import Control.Exception (ErrorCall (..))
 import Control.Monad (when)
@@ -41,15 +44,14 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (explainBad, testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..))
-import Test.Cardano.Ledger.Generic.Proof (BabbageEra, ConwayEra, Reflect (..), StandardCrypto)
+import Test.Cardano.Ledger.Generic.Proof (ConwayEra, Reflect (..), StandardCrypto)
 import Test.Cardano.Ledger.Generic.Trace (testPropMax)
 import Test.Hspec (shouldThrow)
 import Test.QuickCheck hiding (Fixed, total)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-
-type Babbage = BabbageEra StandardCrypto
+import Type.Reflection (typeRep)
 
 -- =======================================================
 
@@ -741,9 +743,27 @@ test21 seed = do
       pred21 =
         Oneof
           w
-          [ (1, Constr "three" (\x y z -> [x, y, z]) ^$ a ^$ b ^$ c, [Random a, Random b, Random c])
-          , (1, Constr "two" (\x y -> [x, y]) ^$ a ^$ b, [Random a, Random b])
-          , (1, Constr "one" (\x -> [x]) ^$ a, [Random a])
+          [
+            ( 1
+            , Invert "three" (typeRep @[Int]) (\x y z -> [x, y, z])
+                :$ Partial a (\case [x, _, _] -> Just x; _ -> Nothing)
+                :$ Partial b (\case [_, y, _] -> Just y; _ -> Nothing)
+                :$ Partial c (\case [_, _, z] -> Just z; _ -> Nothing)
+            , [Random a, Random b, Random c]
+            )
+          ,
+            ( 1
+            , Invert "two" (typeRep @[Int]) (\x y -> [x, y])
+                :$ Partial a (\case [x, _] -> Just x; _ -> Nothing)
+                :$ Partial b (\case [_, y] -> Just y; _ -> Nothing)
+            , [Random a, Random b]
+            )
+          ,
+            ( 1
+            , Invert "one" (typeRep @[Int]) (\x -> [x])
+                :$ Partial a (\case [x] -> Just x; _ -> Nothing)
+            , [Random a]
+            )
           ]
   env <-
     generateWithSeed
@@ -851,3 +871,30 @@ listWherePreds =
 
 mainListWhere :: IO ()
 mainListWhere = demoPreds (Conway Standard) listWherePreds
+
+govPreds :: [Pred (ConwayEra StandardCrypto)]
+govPreds =
+  [ ListWhere
+      (Range 2 4)
+      govstates
+      govActionStateTarget
+      [ Random hotCommitteeCredsUniv
+      , Random voteUniv
+      , Random poolHashUniv
+      , Lit CoinR (Coin 13) :=: depositV
+      , Lit EpochR (EpochNo 3) :=: currentEpoch
+      , Random idV
+      , Subset (Dom committeeVotesV) hotCommitteeCredsUniv
+      , Subset (Dom drepVotesV) voteUniv
+      , Subset (Dom stakePoolVotesV) poolHashUniv
+      , proposalDeposits :=: depositV
+      , Random returnAddrV
+      , Random actionV
+      , currentEpoch :=: proposedInV
+      , Random expiresAfterV
+      , Sized (Range 0 3) childrenV
+      ]
+  ]
+
+mainGov :: IO ()
+mainGov = demoPreds (Conway Standard) govPreds

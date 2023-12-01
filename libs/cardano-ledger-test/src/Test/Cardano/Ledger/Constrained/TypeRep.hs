@@ -80,6 +80,7 @@ import Cardano.Ledger.Conway.Governance (
   PrevGovActionIdsChildren (..),
   RatifyState (..),
   RunConwayRatify (..),
+  Vote (..),
  )
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..), Delegatee (..))
 import qualified Cardano.Ledger.Core as Core
@@ -192,6 +193,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcEnactState,
   pcFutureGenDeleg,
   pcGenDelegPair,
+  pcGovAction,
   pcGovActionId,
   pcGovActionState,
   pcIndividualPoolStake,
@@ -353,6 +355,7 @@ data Rep era t where
   DRepPulserR :: (RunConwayRatify era, Reflect era) => Rep era (DRepPulser era Identity (RatifyState era))
   PrevGovActionIdsChildrenR :: Era era => Rep era (PrevGovActionIdsChildren era)
   DelegateeR :: Era era => Rep era (Delegatee (EraCrypto era))
+  VoteR :: Rep era Vote
 
 stringR :: Rep era String
 stringR = ListR CharR
@@ -507,6 +510,7 @@ repHasInstances r = case r of
   DRepPulserR {} -> IsEq
   PrevGovActionIdsChildrenR {} -> IsEq
   DelegateeR {} -> IsOrd
+  VoteR {} -> IsEq
 
 -- NOTE: The extra `()` constraint needs to be there for fourmolu.
 -- c.f. https://github.com/fourmolu/fourmolu/issues/374
@@ -642,7 +646,7 @@ synopsis PayHashR k = "(KeyHash 'Payment " ++ show (keyHashSummary k) ++ ")"
 synopsis (TxR p) x = show (pcTx p (unTxF x))
 synopsis ScriptIntegrityHashR x = show (trim (ppHash (extractHash x)))
 synopsis AuxiliaryDataHashR (AuxiliaryDataHash x) = show (trim (ppHash (extractHash x)))
-synopsis GovActionR _x = "GovAction ..." -- show(prettyA x)
+synopsis GovActionR x = show (pcGovAction x)
 synopsis (WitVKeyR p) x = show ((unReflect pcWitVKey p x) :: PDoc)
 synopsis (TxAuxDataR _) x = show x
 synopsis CommColdCredR x = show x
@@ -676,6 +680,7 @@ synopsis EnactStateR x = show (pcEnactState reify x)
 synopsis DRepPulserR x = show (pcDRepPulser x)
 synopsis PrevGovActionIdsChildrenR x = show (pcPrevGovActionIdsChildren x)
 synopsis DelegateeR x = show (pcDelegatee x)
+synopsis VoteR v = show v
 
 synSum :: Rep era a -> a -> String
 synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
@@ -923,6 +928,7 @@ genSizedRep n DelegateeR =
     , DelegVote <$> genSizedRep n (DRepR @era)
     , DelegStakeVote <$> genSizedRep n (PoolHashR @era) <*> genSizedRep n (DRepR @era)
     ]
+genSizedRep _ VoteR = arbitrary
 
 genRep ::
   forall era b.
@@ -1078,6 +1084,7 @@ shrinkRep AnchorR x = shrink x
 shrinkRep DRepPulserR _ = []
 shrinkRep PrevGovActionIdsChildrenR x = shrink x
 shrinkRep DelegateeR _ = []
+shrinkRep VoteR x = shrink x
 
 hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
 hasOrd rep x = case repHasInstances rep of

@@ -87,6 +87,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
+import Test.Cardano.Ledger.Constrained.Lenses (fstL, sndL)
 import Test.Cardano.Ledger.Constrained.Monad (Typed, errorTyped, failT, generateWithSeed, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.Certs (certsStage)
