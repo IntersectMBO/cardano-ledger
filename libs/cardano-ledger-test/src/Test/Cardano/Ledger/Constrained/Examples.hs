@@ -31,6 +31,7 @@ import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL)
 import Test.Cardano.Ledger.Constrained.Monad
+import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (genTxAndNewEpoch)
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Solver
@@ -40,7 +41,7 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (explainBad, testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..))
-import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Reflect (..), StandardCrypto)
+import Test.Cardano.Ledger.Generic.Proof (BabbageEra, ConwayEra, Reflect (..), StandardCrypto)
 import Test.Cardano.Ledger.Generic.Trace (testPropMax)
 import Test.Hspec (shouldThrow)
 import Test.QuickCheck hiding (Fixed, total)
@@ -798,4 +799,55 @@ allExampleTests =
     , testProperty "NewEpochState and Tx generation" $ do
         (st, tx, _) <- genTxAndNewEpoch def $ Conway Standard
         (st, tx) `deepseq` pure True
+    , testPreds "ListWhereTest" (Conway Standard) listWherePreds
     ]
+
+-- ==============================
+
+-- | Use to generate a solution to 'preds', test that the
+--   solution meets the 'preds', and puts you in the Repl to
+--   inspect the value of each variable solved for.
+--   Companion function to 'testPreds'
+demoPreds :: Reflect era => Proof era -> [Pred era] -> IO ()
+demoPreds proof preds = do
+  let tryPred env p = (p, errorTyped (runPred env p))
+  env <-
+    generate
+      ( pure emptySubst
+          >>= toolChainSub proof standardOrderInfo preds
+          >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
+      )
+  let pairs = map (tryPred env) preds
+  mapM_ (\(p, b) -> putStrLn (show p ++ " = " ++ show b)) pairs
+  modeRepl Interactive proof env ""
+
+-- | Use this to generate a solution to 'preds', and make a TestTree
+--   that tests the solution meets the 'preds'.
+--   Companion function to 'demoPreds'
+testPreds :: Reflect era => String -> Proof era -> [Pred era] -> TestTree
+testPreds name proof preds = do
+  let tryPred env p = (p, errorTyped (runPred env p))
+  testProperty name $ do
+    env <-
+      ( pure emptySubst
+          >>= toolChainSub proof standardOrderInfo preds
+          >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
+        )
+    let pairs = map (tryPred env) preds
+    pure (property (and (map snd pairs)))
+
+listWherePreds :: [Pred (ConwayEra StandardCrypto)]
+listWherePreds =
+  [ Sized (ExactSize 10) credsUniv
+  , Sized (ExactSize 10) voteUniv
+  , ListWhere
+      (Range 2 4)
+      ans
+      (pairT CredR VCredR)
+      [Member (Right (pair1 CredR)) credsUniv, Member (Right (pair2 VCredR)) voteUniv]
+  ]
+  where
+    ans = Var (V "ans" (ListR (PairR CredR VCredR)) No)
+
+mainListWhere :: IO ()
+mainListWhere = demoPreds (Conway Standard) listWherePreds

@@ -9,6 +9,7 @@
 module Test.Cardano.Ledger.Constrained.Rewrite (
   rewrite,
   rewriteGen,
+  rewritePred,
   compile,
   compileGenWithSubst,
   removeSameVar,
@@ -332,21 +333,42 @@ pickNunique n xs = do
   pure [xs !! i | i <- indexes]
 
 rewritePred :: Era era => Int -> Pred era -> Gen ([Pred era], Int)
-rewritePred m0 (Oneof (Var v) ps) = do
-  (tar, qs) <- frequency (map (\(i, t, p) -> (i, pure (t, p))) ps)
+rewritePred m0 (Oneof (Var v) ps0) = do
+  let ps1 = filter (\(i, _, _) -> i > 0) ps0
+  (tar, qs) <- frequency (map (\(i, t, p) -> (i, pure (t, p))) ps1)
   pure ((Var v :<-: tar) : qs, m0)
-rewritePred m0 (Choose (Lit SizeR sz) (Var v) ps) = do
+rewritePred m0 (Choose (Lit SizeR sz) (Var v) ps0) = do
+  let ps1 = filter (\(i, _, _) -> i > 0) ps0
   count <- genFromSize sz
-  -- let (sumstoPred, otherps) = List.partition (extendableSumsTo tar) ps
   ps2 <-
-    if count <= length ps
-      then take count <$> shuffle (map (\(_, t, p) -> (t, p)) ps)
-      else vectorOf count (frequency (map (\(i, t, p) -> (i, pure (t, p))) ps))
+    if count <= length ps1
+      then take count <$> shuffle (map (\(_, t, p) -> (t, p)) ps1)
+      else vectorOf count (frequency (map (\(i, t, p) -> (i, pure (t, p))) ps1))
   let ((m1, _), ps3) = List.foldl' freshPairs ((m0, []), []) ps2
       (xs, m2) = freshVars m1 count v
       renamedPred = map snd ps3
   (expandedPred, m3) <- removeExpandablePred ([], m2) (concat renamedPred)
-  pure (expandedPred ++ zipWith (:<-:) xs (map fst ps3) ++ [List (Var v) xs], m3)
+  let newps = expandedPred ++ zipWith (:<-:) xs (map fst ps3) ++ [List (Var v) xs]
+  pure (newps, m3)
+
+{- ListWhere (Range 2 2) w target{a,b} [Member a x, Member b y] rewrites to
+[ Member a1 x
+, Member b1 y
+, Member a2 x
+, Member b2 y
+, w1 :<-: target{a1,b1} a1 b1
+, w2 :<-: target{a2,b2} a2 b2
+List w [w1,w2]
+] -}
+rewritePred m0 (ListWhere (Lit SizeR sz) (Var v) tar ps) = do
+  count <- genFromSize sz
+  let ((m1, subb), ps3) = List.foldl' freshPairs ((m0, []), []) (take count (repeat (tar, ps)))
+      (vs, m2) = freshVars2 m1 count v -- [v.1, v.2, v.3 ...]
+      renamedPred = map snd ps3
+      renamedTargets = map fst ps3
+  (expandedPred, m3) <- removeExpandablePred ([], m2) (concat renamedPred)
+  let newps = expandedPred ++ zipWith (:<-:) vs renamedTargets ++ [List (Var v) vs]
+  pure (newps, m3)
 rewritePred m0 (ForEach (Lit SizeR sz) (Var v) tar ps) = do
   let (sumstoPred, otherPred) = List.partition (extendableSumsTo tar) ps
   count <- genFromSize sz
@@ -618,6 +640,11 @@ accumdep info answer c = case c of
       (vars sz)
       (vars x)
       (mkDeps (vars x) (varsOfPats HashSet.empty [(pat, ps)]) answer)
+  ListWhere sz x tar ps ->
+    mkDeps
+      (vars sz)
+      (vars x)
+      (mkDeps (vars x) (varsOfPairs HashSet.empty [(tar, ps)]) answer)
   Choose sz x xs ->
     mkDeps (vars sz) (vars x) (mkDeps (vars x) (varsOfTrips HashSet.empty xs) answer)
   SubMap left right -> mkDeps (vars left) (vars right) answer

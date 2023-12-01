@@ -84,7 +84,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
-import Test.Cardano.Ledger.Constrained.Monad (Typed, failT, generateWithSeed, monadTyped)
+import Test.Cardano.Ledger.Constrained.Monad (Typed, errorTyped, failT, generateWithSeed, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.Certs (certsStage)
 import Test.Cardano.Ledger.Constrained.Preds.LedgerState (ledgerStateStage)
@@ -149,12 +149,6 @@ byteSizeT x = Constr "byteSize" (byteSize (reify @era)) ^$ x
 
 -- ===============================================
 -- Helpful Lenses
-
-sndL :: Lens' (a, b) b
-sndL = lens snd (\(x, _) y -> (x, y))
-
-fstL :: Lens' (a, b) a
-fstL = lens fst (\(_, y) x -> (x, y))
 
 txFL :: Lens' (TxF era) (Tx era)
 txFL = lens (\(TxF _ x) -> x) (\(TxF p _) x -> TxF p x)
@@ -708,32 +702,35 @@ adjustColInput ::
   -- Term era Coin ->
   -- Term era Coin ->
   Env era ->
-  Typed (Env era)
+  Typed (Gen (Env era))
 adjustColInput env = do
   let utxoterm = utxo reify
       utxoV = unVar utxoterm
   extracoin <- runTerm env extraCol
   utxomap <- runTerm env utxoterm
   col <- runTerm env collateral
-  let newutxo = adjustC (Set.toList col) utxomap extracoin outputCoinL
-      env2 = storeVar utxoV newutxo env
-  (env5, body) <- updateTarget override txbodyterm (txbodyTarget txfee wppHash totalCol) env2
-  (env6, _) <- updateTarget override txterm (txTarget (Lit (TxBodyR reify) body) bootWits keyWits) env5
-  pure env6
+  case adjustC (Set.toList col) utxomap extracoin outputCoinL of
+    Nothing -> pure discard
+    Just newutxo -> do
+      let env2 = storeVar utxoV newutxo env
+      (env5, body) <- updateTarget override txbodyterm (txbodyTarget txfee wppHash totalCol) env2
+      (env6, _) <- updateTarget override txterm (txTarget (Lit (TxBodyR reify) body) bootWits keyWits) env5
+      pure (pure env6)
 
 -- | Adjust the part of the UTxO that maps the 'collateral' inputs, to pay the collateral fee.
---   This will adjust 1 or more of the TxOuts assoicated with the collateral , to make up the difference.
-adjustC :: (Ord k, Show k) => [k] -> Map k v -> Coin -> Lens' v Coin -> Map k v
-adjustC [] _ extra _ | extra < (Coin 0) = error ("Extra is too negative to adjust Utxo: " ++ show extra)
-adjustC [] m _ _ = m
+--   This will adjust 1 or more of the TxOuts associated with the collateral , to make up the difference.
+--   It may happen on rare occaisions, there is not enough Coin to make the adjustment, so return Nothing
+adjustC :: (Ord k, Show k) => [k] -> Map k v -> Coin -> Lens' v Coin -> Maybe (Map k v)
+adjustC [] _ extra _ | extra < (Coin 0) = Nothing
+adjustC [] m _ _ = Just m
 adjustC (i : is) m extra@(Coin n) coinL = case compare n 0 of
-  EQ -> m
-  GT -> Map.adjust addextra i m
+  EQ -> Just m
+  GT -> Just (Map.adjust addextra i m)
     where
       addextra outf = outf & coinL .~ ((outf ^. coinL) <+> extra)
   LT ->
     if ex >= 0
-      then Map.adjust subextra i m
+      then Just (Map.adjust subextra i m)
       else adjustC is (Map.adjust subextra i m) amount coinL
     where
       amount@(Coin ex) = case Map.lookup i m of
@@ -781,7 +778,7 @@ genTxAndLedger sizes proof = do
       )
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
-  env2 <- monadTyped $ adjustColInput env1
+  env2 <- errorTyped $ adjustColInput env1
   ledger <- monadTyped $ runTarget env2 (ledgerStateT proof)
   (TxF _ tx) <- monadTyped (findVar (unVar txterm) env2)
   pure (ledger, tx, env2)
@@ -803,7 +800,7 @@ genTxAndNewEpoch sizes proof = do
       )
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
-  env2 <- monadTyped $ adjustColInput env1
+  env2 <- errorTyped $ adjustColInput env1
   newepochst <- monadTyped $ runTarget env2 (newEpochStateT proof)
   TxF _ tx <- monadTyped (findVar (unVar txterm) env2)
   pure (newepochst, tx, env2)
@@ -920,7 +917,7 @@ oneTest sizes proof = do
       >>= txBodyStage sizes proof
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
-  env2 <- monadTyped $ adjustColInput env1
+  env2 <- errorTyped $ adjustColInput env1
   ledgerstate <- monadTyped $ runTarget env2 (ledgerStateT proof)
   (TxF _ tx) <- monadTyped (runTerm env2 txterm)
 
@@ -972,7 +969,7 @@ demo mode = do
     Just msg -> error msg
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
-  env2 <- monadTyped $ adjustColInput env1
+  env2 <- generate $ errorTyped $ adjustColInput env1
   when (mode == Interactive) $ displayTerm env2 txfee
   when (mode == Interactive) $ displayTerm env2 txterm
   -- compute Produced and Consumed

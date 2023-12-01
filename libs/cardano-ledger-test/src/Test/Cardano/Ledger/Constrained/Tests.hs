@@ -647,6 +647,7 @@ predConstr SubMap {} = "SubMap"
 predConstr If {} = "If"
 predConstr Before {} = "Before"
 predConstr Oneof {} = "Oneof"
+predConstr ListWhere {} = "ListWhere"
 
 constraintProperty :: Maybe Int -> Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
 constraintProperty timeout strict whitelist info prop =

@@ -125,7 +125,7 @@ import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (merge, newPParams, newTx, newTxBody, newWitnesses)
 import qualified Test.Cardano.Ledger.Shelley.Utils as Utils (testGlobals)
-import Type.Reflection (typeRep)
+import Type.Reflection (Typeable, typeRep)
 
 import Data.Ratio ((%))
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
@@ -2040,3 +2040,30 @@ constitutionChildrenL =
   lens
     (pgacToGai . pgacConstitution)
     $ \x y -> x {pgacConstitution = gaiToPgac y}
+
+pair1 :: Era era => Rep era a -> Term era a
+pair1 rep = Var (V "pair1" rep No)
+
+pair2 :: Era era => Rep era b -> Term era b
+pair2 rep = Var (V "pair2" rep No)
+
+pairT :: forall era a b. (Typeable a, Typeable b, Era era) => Rep era a -> Rep era b -> RootTarget era (a, b) (a, b)
+pairT repa repb =
+  Invert "(,)" (typeRep @(a, b)) (,)
+    :$ Lensed (pair1 repa) fstL
+    :$ Lensed (pair2 repb) sndL
+
+-- ======================================================================
+
+-- Don't tell me that these have impementations in Lens.Micro( _1, _2 )
+-- The problem with this, is that it needs special pragmas to work, and without
+-- these pragmas, causes ghci to hang.
+-- In addition there is NO documentation (only examples in Lens.Micro)
+-- and who remembers this any way?
+-- Way easier to remember these beacause they use the Cardano.Ledger Lens naming conventions
+
+fstL :: Lens' (a, b) a
+fstL = lens fst (\(_, b) a -> (a, b))
+
+sndL :: Lens' (a, b) b
+sndL = lens snd (\(a, _) b -> (a, b))
