@@ -204,6 +204,7 @@ test-suite tests
     build-depends:
         base,
         aeson,
+        base16-bytestring,
         binary,
         bytestring,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
