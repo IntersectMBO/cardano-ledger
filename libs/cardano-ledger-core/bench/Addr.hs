@@ -19,7 +19,7 @@ import Test.QuickCheck.Random (QCGen, mkQCGen)
 main :: IO ()
 main = do
   defaultMain $
-    map (\c -> env (generateAddrAsBytestring qcGen c) decodeAddrBench) (map (* 500) [1 .. 2])
+    map (\c -> env (generateAddrAsBytestring qcGen c) decodeAddrBench) [500, 1000]
   where
     qcGen = mkQCGen 2023
     decodeAddrBench :: [ByteString] -> Benchmark
@@ -35,10 +35,10 @@ generateAddrAsBytestring qcGen count =
     genAddr :: Gen (Addr StandardCrypto)
     genAddr = arbitrary
 
-tryDecodeAddr :: [ByteString] -> ()
+tryDecodeAddr :: [ByteString] -> [Addr StandardCrypto]
 tryDecodeAddr xs =
   case mapM decode xs of
-    Right _ -> ()
+    Right addrs -> addrs
     Left err -> error $ "tryDecodeAddr: " ++ show err
   where
     decode :: ByteString -> Either String (Addr StandardCrypto)
