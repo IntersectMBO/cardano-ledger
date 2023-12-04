@@ -599,14 +599,18 @@ instance Show ImpException where
       <> displayException e
 instance Exception ImpException
 
--- | Annotation for when failure happens
+-- | Annotation for when failure happens. All the logging done within annotation will be
+-- discarded if there no failures within the annotation.
 impAnn :: NFData a => String -> ImpTestM era a -> ImpTestM era a
 impAnn msg m = do
-  catchAnyDeep m $ \exc ->
+  logs <- use impLogL
+  res <- catchAnyDeep m $ \exc ->
     throwIO $
       case fromException exc of
         Just (ImpException ann origExc) -> ImpException (msg : ann) origExc
         Nothing -> ImpException [msg] exc
+  impLogL .= logs
+  pure res
 
 -- | Adds a string to the log, which is only shown if the test fails
 logEntry :: HasCallStack => String -> ImpTestM era ()
