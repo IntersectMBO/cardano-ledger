@@ -12,11 +12,12 @@
 
 module Cardano.Ledger.Babbage.TxInfo where
 
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
-  TxOutSource (..),
+  mkPlutusLanguageContext,
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
 import Cardano.Ledger.Alonzo.TxWits (
@@ -159,7 +160,7 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  Alonzo.EraPlutusTxInfo l (BabbageEra c) =>
+  EraPlutusTxInfo l (BabbageEra c) =>
   proxy l ->
   TxBody (BabbageEra c) ->
   (RdmrPtr, (Data (BabbageEra c), ExUnits)) ->
@@ -183,8 +184,8 @@ instance Crypto c => EraPlutusContext (BabbageEra c) where
     deriving (Eq, Show, Generic)
 
   mkPlutusScriptContext = \case
-    BabbagePlutusV1 p -> Alonzo.mkPlutusLanguageContext p
-    BabbagePlutusV2 p -> Alonzo.mkPlutusLanguageContext p
+    BabbagePlutusV1 p -> mkPlutusLanguageContext p
+    BabbagePlutusV2 p -> mkPlutusLanguageContext p
 
 instance NoThunks (ContextError (BabbageEra c))
 

@@ -34,12 +34,12 @@ where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ContextError, EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (

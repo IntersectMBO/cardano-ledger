@@ -11,7 +11,8 @@ module Test.Cardano.Ledger.Alonzo.Tools (tests) where
 import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, transExUnits)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (transExUnits)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxWits

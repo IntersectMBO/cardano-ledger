@@ -32,6 +32,7 @@ library
         Cardano.Ledger.Alonzo.Transition
         Cardano.Ledger.Alonzo.Genesis
         Cardano.Ledger.Alonzo.Language
+        Cardano.Ledger.Alonzo.Plutus.Context
         Cardano.Ledger.Alonzo.Plutus.Evaluate
         Cardano.Ledger.Alonzo.Plutus.TxInfo
         Cardano.Ledger.Alonzo.PParams

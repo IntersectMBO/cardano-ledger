@@ -24,12 +24,12 @@ module Cardano.Ledger.Conway.TxInfo (
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
-  TxOutSource (..),
-  transPolicyID,
+  mkPlutusLanguageContext,
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo hiding (ContextError (..))
 import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), rdptrInv)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), RdmrPtr, unRedeemers, unTxDats)
@@ -164,7 +164,7 @@ txInfoInV2 (UTxO mp) txin =
       Right (PV2.TxInInfo (Alonzo.txInfoIn' txin) out)
 
 transRedeemerPtr ::
-  Alonzo.EraPlutusTxInfo l (ConwayEra c) =>
+  EraPlutusTxInfo l (ConwayEra c) =>
   proxy l ->
   TxBody (ConwayEra c) ->
   (RdmrPtr, (Data (ConwayEra c), ExUnits)) ->
@@ -189,9 +189,9 @@ instance Crypto c => EraPlutusContext (ConwayEra c) where
     deriving (Eq, Show, Generic)
 
   mkPlutusScriptContext = \case
-    ConwayPlutusV1 p -> Alonzo.mkPlutusLanguageContext p
-    ConwayPlutusV2 p -> Alonzo.mkPlutusLanguageContext p
-    ConwayPlutusV3 p -> Alonzo.mkPlutusLanguageContext p
+    ConwayPlutusV1 p -> mkPlutusLanguageContext p
+    ConwayPlutusV2 p -> mkPlutusLanguageContext p
+    ConwayPlutusV3 p -> mkPlutusLanguageContext p
 
 instance NoThunks (ContextError (ConwayEra c))
 
@@ -457,7 +457,7 @@ transScriptPurpose ::
   ScriptPurpose era ->
   Either (ContextError era) PV3.ScriptPurpose
 transScriptPurpose proxy = \case
-  Minting policyId -> pure $ PV3.Minting (transPolicyID policyId)
+  Minting policyId -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   Spending txIn -> pure $ PV3.Spending (txInfoIn' txIn)
   Rewarding (RewardAcnt _networkId cred) ->
     pure $ PV3.Rewarding (transCred cred)

@@ -10,7 +10,8 @@ module Test.Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusTxInfo (toPlutusTxInfo), TxOutSource (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo (toPlutusTxInfo))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AlonzoScript)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Core (BabbageEraTxOut (..))

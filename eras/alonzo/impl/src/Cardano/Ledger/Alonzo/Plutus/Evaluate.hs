@@ -22,7 +22,7 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
 where
 
 import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))

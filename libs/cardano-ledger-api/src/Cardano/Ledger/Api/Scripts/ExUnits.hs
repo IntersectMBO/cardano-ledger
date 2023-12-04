@@ -20,12 +20,11 @@ module Cardano.Ledger.Api.Scripts.ExUnits (
 where
 
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (lookupPlutusScript)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
+import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
-  EraPlutusContext,
-  mkPlutusScriptContext,
+  EraPlutusContext (mkPlutusScriptContext),
  )
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (lookupPlutusScript)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   CostModels (..),

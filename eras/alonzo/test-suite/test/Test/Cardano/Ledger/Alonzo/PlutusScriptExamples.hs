@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Alonzo.PlutusScriptExamples (
 where
 
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Core (eraProtVerLow)
 import Cardano.Ledger.Plutus.Evaluate (

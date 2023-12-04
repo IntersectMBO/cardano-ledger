@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   assertTranslationResultsMatchGolden,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.TxInfo
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
 import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Core
