@@ -16,11 +16,15 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
 ) where
 
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Plutus.Context
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  ContextError,
+  EraPlutusTxInfo,
+  PlutusTxInfo,
+  toPlutusTxInfo,
+ )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (eraMaxLanguage))
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
-import Cardano.Ledger.Plutus.TxInfo (PlutusTxInfo)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))

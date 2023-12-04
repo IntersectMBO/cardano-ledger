@@ -15,6 +15,7 @@ module Cardano.Ledger.Babbage.TxInfo where
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
+  PlutusScriptPurpose,
   mkPlutusLanguageContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
@@ -53,7 +54,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Plutus.TxInfo (PlutusScriptPurpose, transCoin, transScriptHash)
+import Cardano.Ledger.Plutus.TxInfo (transCoin, transScriptHash)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))

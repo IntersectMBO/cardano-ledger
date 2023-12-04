@@ -37,13 +37,6 @@ module Cardano.Ledger.Plutus.TxInfo (
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
-
-  -- * Language dependent translation
-  PlutusTxInfo,
-  PlutusTxCert,
-  PlutusTxOut,
-  PlutusScriptPurpose,
-  PlutusScriptContext,
 )
 where
 
@@ -72,7 +65,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
-import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
@@ -90,8 +82,6 @@ import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 (SatInt, fromSatInt)
 import qualified PlutusLedgerApi.V1 as PV1
-import qualified PlutusLedgerApi.V2 as PV2
-import qualified PlutusLedgerApi.V3 as PV3
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -177,34 +167,6 @@ slotToPOSIXTime ei sysS s = do
 
 txInfoIn' :: TxIn c -> PV1.TxOutRef
 txInfoIn' (TxIn txid txIx) = PV1.TxOutRef (txInfoId txid) (toInteger (txIxToInt txIx))
-
--- =============================================
--- Type families that specify Plutus types that are different from one version to another
-
-type family PlutusTxCert (l :: Language) where
-  PlutusTxCert 'PlutusV1 = PV1.DCert
-  PlutusTxCert 'PlutusV2 = PV2.DCert
-  PlutusTxCert 'PlutusV3 = PV3.TxCert
-
-type family PlutusTxOut (l :: Language) where
-  PlutusTxOut 'PlutusV1 = PV1.TxOut
-  PlutusTxOut 'PlutusV2 = PV2.TxOut
-  PlutusTxOut 'PlutusV3 = PV3.TxOut
-
-type family PlutusScriptPurpose (l :: Language) where
-  PlutusScriptPurpose 'PlutusV1 = PV1.ScriptPurpose
-  PlutusScriptPurpose 'PlutusV2 = PV2.ScriptPurpose
-  PlutusScriptPurpose 'PlutusV3 = PV3.ScriptPurpose
-
-type family PlutusScriptContext (l :: Language) where
-  PlutusScriptContext 'PlutusV1 = PV1.ScriptContext
-  PlutusScriptContext 'PlutusV2 = PV2.ScriptContext
-  PlutusScriptContext 'PlutusV3 = PV3.ScriptContext
-
-type family PlutusTxInfo (l :: Language) where
-  PlutusTxInfo 'PlutusV1 = PV1.TxInfo
-  PlutusTxInfo 'PlutusV2 = PV2.TxInfo
-  PlutusTxInfo 'PlutusV3 = PV3.TxInfo
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp

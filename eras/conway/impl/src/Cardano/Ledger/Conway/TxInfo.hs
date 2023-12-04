@@ -27,6 +27,8 @@ import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
+  PlutusScriptPurpose,
+  PlutusTxCert,
   mkPlutusLanguageContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
@@ -58,14 +60,7 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Plutus.TxInfo (
-  PlutusScriptPurpose,
-  PlutusTxCert,
-  transCoin,
-  transCred,
-  transKeyHash,
-  txInfoIn',
- )
+import Cardano.Ledger.Plutus.TxInfo (transCoin, transCred, transKeyHash, txInfoIn')
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.TxCert
