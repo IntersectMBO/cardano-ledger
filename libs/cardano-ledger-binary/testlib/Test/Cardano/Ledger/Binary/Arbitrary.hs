@@ -23,7 +23,7 @@ import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Binary.Version
 import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
+import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
@@ -50,6 +50,7 @@ import Data.Word
 import GHC.Stack
 import System.Random.Stateful hiding (genByteString, genShortByteString)
 import Test.Cardano.Ledger.Binary.Random (QC (QC))
+import Test.Cardano.Slotting.Arbitrary ()
 import Test.Crypto.Hash ()
 import Test.Crypto.KES ()
 import Test.Crypto.VRF ()
@@ -197,15 +198,11 @@ instance
       genCertVRF :: Gen (CertVRF v)
       genCertVRF = arbitrary
 
-deriving instance Arbitrary SlotNo
-
 instance Arbitrary t => Arbitrary (WithOrigin t) where
   arbitrary = frequency [(20, pure Origin), (80, At <$> arbitrary)]
   shrink = \case
     Origin -> []
     At x -> Origin : map At (shrink x)
-
-deriving instance Arbitrary EpochNo
 
 deriving instance Arbitrary EpochSize
 

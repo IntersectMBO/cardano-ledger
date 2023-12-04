@@ -106,7 +106,7 @@ library testlib
         cardano-ledger-binary,
         cardano-prelude-test,
         cardano-strict-containers,
-        cardano-slotting,
+        cardano-slotting:{cardano-slotting, testlib} >=0.1.2,
         cborg,
         containers,
         formatting,
