@@ -30,7 +30,7 @@ import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (TxF (..))
 import Test.Cardano.Ledger.Constrained.Env (Env, Name, emptyEnv, findVar)
 import Test.Cardano.Ledger.Constrained.Examples (Babbage)
-import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
+import Test.Cardano.Ledger.Constrained.Monad (errorTyped, monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (goRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (adjustColInput, adjustFeeInput, txBodyPreds)
 import Test.Cardano.Ledger.Constrained.Rewrite (
@@ -218,6 +218,6 @@ genSig proof (_, sub, _) _ledgerEnv = do
   let preds = fmap (substPred sub) (txBodyPreds def proof)
   (env0, _sub, _graph) <- solvePipeline [Stage standardOrderInfo preds]
   env1 <- monadTyped $ adjustFeeInput env0
-  env2 <- monadTyped $ adjustColInput env1
+  env2 <- errorTyped $ adjustColInput env1
   (TxF _ tx) <- monadTyped (findVar (unVar txterm) env2)
   pure tx

@@ -145,6 +145,7 @@ data Pred era where
   SubMap :: (Ord k, Eq v, Ord v) => Term era (Map k v) -> Term era (Map k v) -> Pred era
   If :: RootTarget era r Bool -> Pred era -> Pred era -> Pred era
   Before :: Term era a -> Term era b -> Pred era
+  ListWhere :: (Era era, Eq t) => Term era Size -> Term era [t] -> RootTarget era t t -> [Pred era] -> Pred era
 
 data Sum era c where
   SumMap :: Adds c => Term era (Map a c) -> Sum era c
@@ -358,6 +359,8 @@ instance Show (Pred era) where
   show (SubMap x y) = "SubMap " ++ show x ++ " " ++ show y
   show (If t x y) = "If (" ++ show t ++ ") (" ++ show x ++ ") (" ++ show y ++ ")"
   show (Before x y) = "Before " ++ show x ++ " " ++ show y
+  show (ListWhere sz t tar ps) =
+    "(ListWhere " ++ show sz ++ " " ++ show t ++ " " ++ show tar ++ " " ++ showL show ", " ps ++ ")"
   showList xs ans = unlines (ans : (map show xs))
 
 showAllTarget :: RootTarget era r t -> [Char]
@@ -494,6 +497,12 @@ varsOfPred ans s = case s of
   SubMap a b -> varsOfTerm (varsOfTerm ans a) b
   If t x y -> varsOfTarget (varsOfPred (varsOfPred ans x) y) t
   Before a b -> varsOfTerm (varsOfTerm ans a) b
+  ListWhere sz t tar ps -> HashSet.union vs others
+    where
+      vs = varsOfTerm (varsOfTerm ans t) sz
+      bound = varsOfTarget HashSet.empty tar
+      pvs = List.foldl' varsOfPred HashSet.empty ps
+      others = HashSet.difference pvs bound
 
 varsOfTrips :: Era era => HashSet (Name era) -> [(Int, RootTarget era r t2, [Pred era])] -> HashSet (Name era)
 varsOfTrips ans1 [] = ans1
@@ -692,6 +701,10 @@ substPred sub (Maybe term target ps) = Maybe (substTerm sub term) target (map (s
 substPred sub (SubMap a b) = SubMap (substTerm sub a) (substTerm sub b)
 substPred sub (If t x y) = If (substTarget sub t) (substPred sub x) (substPred sub y)
 substPred sub (Before a b) = Before (substTerm sub a) (substTerm sub b)
+substPred sub (ListWhere sz t tar ps) =
+  ListWhere (substTerm sub sz) (substTerm sub t) tar (map (substPred newsub) ps)
+  where
+    newsub = composeSubst (substFromTarget tar) sub
 
 -- | Apply the Subst, and test if all variables are removed.
 substPredWithVarTest :: Subst era -> Pred era -> Pred era
@@ -988,6 +1001,16 @@ runPred env (Oneof _ preds) = do
         pure (and ws)
   qs <- sequence (map try preds)
   pure (or qs)
+runPred env (ListWhere sz name target ps) = do
+  xs <- runTerm env name
+  size <- runTerm env sz
+  let sizeOK = runSize (length xs) size
+  let p x = do
+        let env2 = getTarget x target env
+        bs <- mapM (runPred env2) ps
+        pure (and bs)
+  bs <- mapM p xs
+  pure $ sizeOK && (and bs)
 
 hashSetToSet :: Ord a => HashSet a -> Set a
 hashSetToSet x = Set.fromList (HashSet.toList x)
