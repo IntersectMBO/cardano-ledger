@@ -1,14 +1,13 @@
-cabal-version:      3.0
-name:               cardano-ledger-conformance
-version:            0.1.0.0
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
-bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
-synopsis:           Testing utilities for conformance testing
-description:        Testing utilities for conformance testing
-build-type:         Simple
-extra-source-files: CHANGELOG.md
+cabal-version: 3.0
+name:          cardano-ledger-conformance
+version:       0.1.0.0
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+synopsis:      Testing utilities for conformance testing
+description:   Testing utilities for conformance testing
+build-type:    Simple
 
 source-repository head
     type:     git
