@@ -18,6 +18,7 @@ import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.Binary.Put as B
 import Data.Bits
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import Data.Either
@@ -56,6 +57,8 @@ roundTripAddressSpec = describe "Address" $ do
     prop "Decompact addr with junk" $
       propDecompactAddrWithJunk @StandardCrypto
     prop "Same as old decompactor" $ propSameAsOldDecompactAddr @StandardCrypto
+    it "fail on extraneous bytes" $
+      decodeAddr @StandardCrypto addressWithExtraneousBytes `shouldBe` Nothing
   describe "Addr" $ do
     roundTripCborSpec @(Addr StandardCrypto)
     prop "RoundTrip-invalid" $
@@ -225,3 +228,13 @@ propDeserializeRewardAcntErrors v acnt = do
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isNothing
     $ decodeRewardAcnt @c badAddr
+
+addressWithExtraneousBytes :: HasCallStack => BS.ByteString
+addressWithExtraneousBytes = bs
+  where
+    bs = case B16.decode hs of
+      Left e -> error $ show e
+      Right x -> x
+    hs =
+      "01AA5C8B35A934ED83436ABB56CDB44878DAC627529D2DA0B59CDA794405931B9359\
+      \46E9391CABDFFDED07EB727F94E9E0F23739FF85978905BD460158907C589B9F1A62"

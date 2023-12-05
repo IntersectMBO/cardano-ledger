@@ -15,7 +15,7 @@ where
 import Cardano.Crypto.VRF (hashVerKeyVRF)
 import Cardano.Ledger.Address (
   Addr (..),
-  mkRwdAcnt,
+  RewardAcnt (..),
  )
 import Cardano.Ledger.BaseTypes (
   Globals (activeSlotCoeff, securityParameter),
@@ -146,7 +146,7 @@ genChainInEpoch epoch = do
                         , ppPledge = Coin 1
                         , ppCost = Coin 1
                         , ppMargin = minBound
-                        , ppRewardAcnt = mkRwdAcnt Testnet $ KeyHashObj owner
+                        , ppRewardAcnt = RewardAcnt Testnet $ KeyHashObj owner
                         , ppOwners = Set.singleton owner
                         , ppRelays = StrictSeq.empty
                         , ppMetadata = SNothing

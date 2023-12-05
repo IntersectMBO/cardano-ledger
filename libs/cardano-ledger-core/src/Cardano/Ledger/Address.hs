@@ -44,9 +44,9 @@ module Cardano.Ledger.Address (
   isPayCredScriptCompactAddr,
   isBootstrapCompactAddr,
   decodeAddr,
-  decodeAddrShort,
   decodeAddrEither,
-  decodeAddrShortEither,
+  decodeAddrStateT,
+  decodeAddrStateLenientT,
   fromCborAddr,
   fromCborBothAddr,
   fromCborCompactAddr,
@@ -92,7 +92,7 @@ import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, unless, when)
 import Control.Monad.Trans.Fail (runFail)
-import Control.Monad.Trans.State (StateT, evalStateT, get, modify', state)
+import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, modify', state)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
@@ -129,8 +129,7 @@ mkRwdAcnt ::
   RewardAcnt c
 mkRwdAcnt network script@(ScriptHashObj _) = RewardAcnt network script
 mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
-
--- TODO: Deprecate in favor of RewardAcnt. This is just a synonym.
+{-# DEPRECATED mkRwdAcnt "In favor of `RewardAcnt`" #-}
 
 -- | Serialise an address to the external format.
 serialiseAddr :: Addr c -> ByteString
@@ -142,6 +141,7 @@ serialiseAddr = BSL.toStrict . B.runPut . putAddr
 deserialiseAddr :: Crypto c => ByteString -> Maybe (Addr c)
 deserialiseAddr = decodeAddr
 {-# INLINE deserialiseAddr #-}
+{-# DEPRECATED deserialiseAddr "In favor of `Cardano.Ledger.Api.Tx.Address.decodeAddr` or `Cardano.Ledger.Api.Tx.Address.decodeAddrLenient`. Please choose the appropriate variant carefully depending on your use case" #-}
 
 -- | Serialise a reward account to the external format.
 serialiseRewardAcnt :: RewardAcnt c -> ByteString
@@ -163,6 +163,7 @@ data Addr c
   | AddrBootstrap (BootstrapAddress c)
   deriving (Show, Eq, Generic, NFData, Ord)
 
+-- | Lookup a Network Id for an Address
 getNetwork :: Addr c -> Network
 getNetwork (Addr n _ _) = n
 getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
@@ -411,7 +412,7 @@ compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 
 decompactAddr :: forall c. (HasCallStack, Crypto c) => CompactAddr c -> Addr c
 decompactAddr (UnsafeCompactAddr sbs) =
-  case runFail $ evalStateT (decodeAddrStateAllowLeftoverT True sbs) 0 of
+  case runFail $ evalStateT (decodeAddrStateLenientT True True sbs) 0 of
     Right addr -> addr
     Left err ->
       error $
@@ -445,7 +446,7 @@ fromCborBothAddr = do
     decodeAddrRigorous = do
       sbs <- decCBOR
       flip evalStateT 0 $ do
-        addr <- decodeAddrStateAllowLeftoverT False sbs
+        addr <- decodeAddrStateLenientT False False sbs
         pure (addr, UnsafeCompactAddr sbs)
     {-# INLINE decodeAddrRigorous #-}
 {-# INLINE fromCborBothAddr #-}
@@ -459,7 +460,7 @@ fromCborBackwardsBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactA
 fromCborBackwardsBothAddr = do
   sbs <- decCBOR
   flip evalStateT 0 $ do
-    addr <- decodeAddrStateAllowLeftoverT True sbs
+    addr <- decodeAddrStateLenientT True True sbs
     bytesConsumed <- get
     let sbsCropped = SBS.toShort $ BS.take bytesConsumed $ SBS.fromShort sbs
     pure (addr, UnsafeCompactAddr sbsCropped)
@@ -538,40 +539,40 @@ headerIsBaseAddress :: Header -> Bool
 headerIsBaseAddress = not . (`testBit` 6)
 {-# INLINE headerIsBaseAddress #-}
 
+-- | Same as `decodeAddr`, but produces an `Either` result
 decodeAddrEither ::
   forall c.
   Crypto c =>
   BS.ByteString ->
   Either String (Addr c)
-decodeAddrEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
+decodeAddrEither bs = runFail $ evalStateT (decodeAddrStateT bs) 0
 {-# INLINE decodeAddrEither #-}
 
-decodeAddrShortEither ::
-  forall c.
-  Crypto c =>
-  ShortByteString ->
-  Either String (Addr c)
-decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
-{-# INLINE decodeAddrShortEither #-}
-
-decodeAddrShort ::
-  forall c m.
-  (Crypto c, MonadFail m) =>
-  ShortByteString ->
-  m (Addr c)
-decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
-{-# INLINE decodeAddrShort #-}
-
+-- | Strict decoder for an address from a `ByteString`. This will not let you decode some
+-- of the buggy addresses that have been placed on chain. This decoder is intended for
+-- addresses that are to be placed on chian today.
 decodeAddr ::
   forall c m.
   (Crypto c, MonadFail m) =>
   BS.ByteString ->
   m (Addr c)
-decodeAddr sbs = evalStateT (decodeAddrStateT sbs) 0
+decodeAddr bs = evalStateT (decodeAddrStateT bs) 0
 {-# INLINE decodeAddr #-}
 
--- | While decoding an Addr the header (the first byte in the buffer) is
--- expected to be in a certain format. Here are the meaning of all the bits:
+-- | Just like `decodeAddrStateLenientT`, but enforces the address to be well-formed.
+decodeAddrStateT ::
+  (Crypto c, MonadFail m, AddressBuffer b) =>
+  b ->
+  StateT Int m (Addr c)
+decodeAddrStateT = decodeAddrStateLenientT False False
+{-# INLINE decodeAddrStateT #-}
+
+-- | This is the most general decoder for a Cardano address. This function is not meant to
+-- be used directly, but it is exported for convenice. `decodeAddr` and other should be
+-- used instead.
+--
+-- While decoding an Addr the header (the first byte in the buffer) is expected to be in a
+-- certain format. Here are the meaning of all the bits:
 --
 -- @@@
 --
@@ -603,22 +604,19 @@ decodeAddr sbs = evalStateT (decodeAddrStateT sbs) 0
 --                         \ `Staking Credential is a Script / No Staking Credential
 --                          `Not a Base Address
 -- @@@
-decodeAddrStateT ::
+decodeAddrStateLenientT ::
   (Crypto c, MonadFail m, AddressBuffer b) =>
-  b ->
-  StateT Int m (Addr c)
-decodeAddrStateT = decodeAddrStateAllowLeftoverT False
-{-# INLINE decodeAddrStateT #-}
-
--- | Just like `decodeAddrStateT`, but does not check whether the input was consumed in full.
-decodeAddrStateAllowLeftoverT ::
-  (Crypto c, MonadFail m, AddressBuffer b) =>
-  -- | Enable lenient decoding, i.e. indicate whether junk can follow an address or a
-  -- Ptr. This is necessary for backwards compatibility only.
+  -- | Enable lenient decoding for Ptrs, i.e. indicate whether junk can follow a Ptr. This
+  -- is necessary for backwards compatibility only.  Setting this argument to True is only
+  -- needed for backwards compatibility.
+  Bool ->
+  -- | Indicate whether decoder should not enforce the full input to be consumed or not,
+  -- i.e. allow garbage at the end or not. Setting this argument to True is only needed
+  -- for backwards compatibility.
   Bool ->
   b ->
   StateT Int m (Addr c)
-decodeAddrStateAllowLeftoverT isLenient buf = do
+decodeAddrStateLenientT isPtrLenient isLenient buf = do
   guardLength "Header" 1 buf
   let header = Header $ bufUnsafeIndex buf 0
   addr <-
@@ -633,12 +631,12 @@ decodeAddrStateAllowLeftoverT isLenient buf = do
         -- Advance one byte for the consumed header
         modify' (+ 1)
         payment <- decodePaymentCredential header buf
-        staking <- decodeStakeReference isLenient header buf
+        staking <- decodeStakeReference isPtrLenient header buf
         pure $ Addr (headerNetworkId header) payment staking
   unless isLenient $
     ensureBufIsConsumed "Addr" buf
   pure addr
-{-# INLINE decodeAddrStateAllowLeftoverT #-}
+{-# INLINE decodeAddrStateLenientT #-}
 
 -- | Checks that the current offset is exactly at the end of the buffer.
 ensureBufIsConsumed ::

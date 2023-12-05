@@ -2,6 +2,9 @@
 
 ## 1.10.0.0
 
+* Move `decodeAddrShort` and `decodeAddrShortEither` to
+  `cardano-ledger-api:Cardano.Ledger.Api.Tx.Address`
+* Remove deprecated `Cardano.Ledger.CompactAddress` and `Cardano.Ledger.UMapCompact`
 * Add the newtype `EpochInterval`
 * Change the type of `ppEMaxL` and `ppuEMaxL`
 * Moved `ToExpr` instances out of the main library and into the testlib.

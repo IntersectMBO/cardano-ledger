@@ -28,7 +28,6 @@ library
     exposed-modules:
         Cardano.Ledger.Address
         Cardano.Ledger.Ap
-        Cardano.Ledger.CompactAddress
         Cardano.Ledger.AuxiliaryData
         Cardano.Ledger.BaseTypes
         Cardano.Ledger.BHeaderView
@@ -67,7 +66,6 @@ library
         Cardano.Ledger.UTxO
         Cardano.Ledger.Val
         Cardano.Ledger.UMap
-        Cardano.Ledger.UMapCompact
 
     hs-source-dirs:   src
     other-modules:
@@ -206,6 +204,7 @@ test-suite tests
     build-depends:
         base,
         aeson,
+        base16-bytestring,
         binary,
         bytestring,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},

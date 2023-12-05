@@ -28,7 +28,6 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
 )
 where
 
-import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes (
   Network,
   ShelleyBase,
@@ -288,7 +287,7 @@ validateZeroRewards dState (Withdrawals wdrls) network = do
     Map.differenceWith
       (\x y -> if x /= y then Just x else Nothing)
       wdrls
-      (Map.mapKeys (mkRwdAcnt network) (UM.rewardMap (dsUnified dState)))
+      (Map.mapKeys (RewardAcnt network) (UM.rewardMap (dsUnified dState)))
 
 instance
   ( Era era
