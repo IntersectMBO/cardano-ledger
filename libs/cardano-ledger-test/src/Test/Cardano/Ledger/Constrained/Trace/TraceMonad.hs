@@ -444,9 +444,9 @@ mockChainProp proof n genTxAndUpdateEnv propf = do
 --   conjoin [p pstate0 sig1 state1, p state0 sig2 state2, p state0 sig3 state3]
 -- test that 'p' holds between state0 and stateN for all N
 stepProp :: (MockChainState era -> MockBlock era -> MockChainState era -> Property) -> (Trace (MOCKCHAIN era) -> Property)
-stepProp p tr = case (zip sigs states) of
+stepProp p tr = case zipWith (p state0) sigs states of
   [] -> property True
-  (_ : more) -> conjoin (map (\(sig, st) -> p state0 sig st) more)
+  (_ : more) -> conjoin more
   where
     state0 = tr ^. traceInitState
     states = traceStates OldestFirst tr
@@ -455,10 +455,10 @@ stepProp p tr = case (zip sigs states) of
 -- | Given trace [(sig0,state0),(sig1,state1),(sig2,state2),(sig3,state3)]
 --   conjoin [p pstate0 sig1 state1, p state1 sig2 state2, p state2 sig3 state3]
 --   test that 'p' holds bteween (state0 stateN sig(N+1) state(N+1) for all N
-deltaProp :: (MockChainState era -> MockBlock era -> MockChainState era -> Property) -> (Trace (MOCKCHAIN era) -> Property)
+deltaProp :: (MockChainState era -> MockBlock era -> MockChainState era -> Property) -> Trace (MOCKCHAIN era) -> Property
 deltaProp p tr = case states of
   [] -> property True
-  (_ : more) -> conjoin (map (\(statei, sig, statej) -> p statei sig statej) (zip3 states sigs more))
+  _ : more -> conjoin (zipWith3 p states sigs more)
   where
     states = traceStates OldestFirst tr
     sigs = traceSignals OldestFirst tr
