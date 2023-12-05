@@ -73,12 +73,11 @@ spec =
     c7 <- freshKeyHash
     c8 <- freshKeyHash
     let newMembers =
-          Map.fromList
-            [ (c1, EpochNo 12)
-            , (c2, EpochNo 2)
-            , (c3, EpochNo 7)
-            , (c4, EpochNo 5)
-            ]
+          [ (c1, EpochNo 12)
+          , (c2, EpochNo 2)
+          , (c3, EpochNo 7)
+          , (c4, EpochNo 5)
+          ]
     ga1 <-
       electCommittee
         SNothing
@@ -92,33 +91,30 @@ spec =
     expectMembers $ Map.keysSet newMembers
     -- members for which the expiration epoch is the current epoch are `ToBeExpired`
     expectNoFilterQueryResult $
-      Just $
-        Map.fromList
-          [ (c1, CommitteeMemberState MemberNotAuthorized Active (Just 12) NoChangeExpected)
-          , (c2, CommitteeMemberState MemberNotAuthorized Active (Just 2) ToBeExpired)
-          , (c3, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
-          ]
+      Just
+        [ (c1, CommitteeMemberState MemberNotAuthorized Active (Just 12) NoChangeExpected)
+        , (c2, CommitteeMemberState MemberNotAuthorized Active (Just 2) ToBeExpired)
+        , (c3, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
+        , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
+        ]
     -- hot cred status of members with registered hot keys becomes `MemberAuthorized`
     hk1 <- registerCommitteeHotKey c1
     hk2 <- registerCommitteeHotKey c2
     expectNoFilterQueryResult $
-      Just $
-        Map.fromList
-          [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
-          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
-          , (c3, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
-          ]
+      Just
+        [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
+        , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
+        , (c3, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
+        , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
+        ]
     expectQueryResult
-      (Set.fromList [c2, c3, c5])
+      [c2, c3, c5]
       mempty
-      (Set.fromList [Active, Unrecognized])
-      ( Just $
-          Map.fromList
-            [ (c3, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
-            , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
-            ]
+      [Active, Unrecognized]
+      ( Just
+          [ (c3, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
+          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
+          ]
       )
 
     _ <- resignCommitteeColdKey c3
@@ -128,92 +124,90 @@ spec =
     -- registering a hot key for a credential that's not part of the committee will yield `Unrecognized` member status
     -- and expected change of `ToBeRemoved`
     expectNoFilterQueryResult $
-      Just $
-        Map.fromList
-          [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
-          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
-          , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
-          , (c5, CommitteeMemberState (MemberAuthorized (KeyHashObj hk5)) Unrecognized Nothing ToBeRemoved)
-          ]
+      Just
+        [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
+        , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Active (Just 2) ToBeExpired)
+        , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
+        , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
+        , (c5, CommitteeMemberState (MemberAuthorized (KeyHashObj hk5)) Unrecognized Nothing ToBeRemoved)
+        ]
     expectQueryResult
-      (Set.fromList [c2, c3, c5])
-      (Set.singleton hk5)
-      (Set.fromList [Unrecognized])
+      [c2, c3, c5]
+      [hk5]
+      [Unrecognized]
       ( Just $
-          Map.singleton c5 (CommitteeMemberState (MemberAuthorized (KeyHashObj hk5)) Unrecognized Nothing ToBeRemoved)
+          Map.singleton
+            c5
+            (CommitteeMemberState (MemberAuthorized (KeyHashObj hk5)) Unrecognized Nothing ToBeRemoved)
       )
 
     passEpoch -- epoch 3
     -- the `Unrecognized` member gets removed from the query result
     -- the member which in the previous epoch was expected `ToBeEpired`, has now MemberStatus `Expired` and `NoChangeExpected`
     expectNoFilterQueryResult $
-      Just $
-        Map.fromList
-          [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
-          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 2) NoChangeExpected)
-          , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
-          ]
+      Just
+        [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) NoChangeExpected)
+        , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 2) NoChangeExpected)
+        , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
+        , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
+        ]
 
     -- elect new committee to be: c1 (term extended ), c3 (no changes), c4 (term shortened, expiring next epoch), c6, c7 (new)
     ga2 <-
       electCommittee
         (SJust ga1)
         drep
-        (Set.fromList [c2])
-        ( Map.fromList
-            [ (c1, 13)
-            , (c4, 4)
-            , (c6, 6)
-            , (c7, 7)
-            ]
-        )
+        [c2]
+        [ (c1, 13)
+        , (c4, 4)
+        , (c6, 6)
+        , (c7, 7)
+        ]
     passEpoch -- epoch 4
     hk6 <- registerCommitteeHotKey c6
     hk8 <- registerCommitteeHotKey c8
 
     -- in the next epoch after the election, the old committee is still in place
-    expectMembers $ Set.fromList [c1, c2, c3, c4]
+    expectMembers [c1, c2, c3, c4]
     -- members that are not be part of the next committee are `ToBeRemoved`
     -- members that are part of both current and next committee have `NoChangeExpected` or `TermAdjusted`
     -- members that part of only next committee are `ToBeEnacted`
     expectNoFilterQueryResult $
-      Just $
-        Map.fromList
-          [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) (TermAdjusted 13))
-          , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 2) ToBeRemoved)
-          , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
-          , -- though its term was adjusted, `ToBeExpired` takes precedence
-            (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) ToBeExpired)
-          , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Unrecognized Nothing ToBeEnacted)
-          , (c7, CommitteeMemberState MemberNotAuthorized Unrecognized Nothing ToBeEnacted)
-          , (c8, CommitteeMemberState (MemberAuthorized (KeyHashObj hk8)) Unrecognized Nothing ToBeRemoved)
-          ]
+      Just
+        [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 12) (TermAdjusted 13))
+        , (c2, CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 2) ToBeRemoved)
+        , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
+        , -- though its term was adjusted, `ToBeExpired` takes precedence
+          (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) ToBeExpired)
+        , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Unrecognized Nothing ToBeEnacted)
+        , (c7, CommitteeMemberState MemberNotAuthorized Unrecognized Nothing ToBeEnacted)
+        , (c8, CommitteeMemberState (MemberAuthorized (KeyHashObj hk8)) Unrecognized Nothing ToBeRemoved)
+        ]
     expectQueryResult
-      (Set.fromList [c2])
-      (Set.singleton hk2)
-      (Set.fromList [Expired])
+      [c2]
+      [hk2]
+      [Expired]
       ( Just $
-          Map.singleton c2 (CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 2) ToBeRemoved)
+          Map.singleton
+            c2
+            (CommitteeMemberState (MemberAuthorized (KeyHashObj hk2)) Expired (Just 2) ToBeRemoved)
       )
 
     passEpoch >> passEpoch -- epoch 6
     -- the new committee is in place with the adjusted terms
-    expectMembers $ Set.fromList [c1, c3, c4, c6, c7]
+    expectMembers [c1, c3, c4, c6, c7]
     expectNoFilterQueryResult $
-      Just $
-        Map.fromList
-          [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 13) NoChangeExpected)
-          , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just 4) NoChangeExpected)
-          , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Active (Just 6) ToBeExpired)
-          , (c7, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
-          ]
+      Just
+        [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 13) NoChangeExpected)
+        , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
+        , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just 4) NoChangeExpected)
+        , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Active (Just 6) ToBeExpired)
+        , (c7, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
+        ]
     expectQueryResult
       Set.empty
       Set.empty
-      (Set.fromList [Unrecognized])
+      [Unrecognized]
       (Just Map.empty)
 
     -- elect new committee to be:
@@ -225,34 +219,30 @@ spec =
       electCommittee
         (SJust ga2)
         drep
-        (Set.fromList [c1])
-        ( Map.fromList
-            [ (c3, 9)
-            , (c4, 9)
-            , (c6, 9)
-            ]
-        )
+        [c1]
+        [ (c3, 9)
+        , (c4, 9)
+        , (c6, 9)
+        ]
     passEpoch -- epoch 7
     -- members whose term changed have next epoch change `TermAdjusted`
     expectNoFilterQueryResult $
-      Just $
-        Map.fromList
-          [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 13) ToBeRemoved)
-          , (c3, CommitteeMemberState MemberResigned Active (Just 7) (TermAdjusted 9))
-          , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just 4) (TermAdjusted 9))
-          , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Expired (Just 6) (TermAdjusted 9))
-          , (c7, CommitteeMemberState MemberNotAuthorized Active (Just 7) ToBeExpired)
-          ]
+      Just
+        [ (c1, CommitteeMemberState (MemberAuthorized (KeyHashObj hk1)) Active (Just 13) ToBeRemoved)
+        , (c3, CommitteeMemberState MemberResigned Active (Just 7) (TermAdjusted 9))
+        , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just 4) (TermAdjusted 9))
+        , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Expired (Just 6) (TermAdjusted 9))
+        , (c7, CommitteeMemberState MemberNotAuthorized Active (Just 7) ToBeExpired)
+        ]
     passEpoch -- epoch 8
-    expectMembers $ Set.fromList [c3, c4, c6, c7]
+    expectMembers [c3, c4, c6, c7]
     expectNoFilterQueryResult $
-      Just $
-        Map.fromList
-          [ (c3, CommitteeMemberState MemberResigned Active (Just 9) NoChangeExpected)
-          , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 9) NoChangeExpected)
-          , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Active (Just 9) NoChangeExpected)
-          , (c7, CommitteeMemberState MemberNotAuthorized Expired (Just 7) NoChangeExpected)
-          ]
+      Just
+        [ (c3, CommitteeMemberState MemberResigned Active (Just 9) NoChangeExpected)
+        , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 9) NoChangeExpected)
+        , (c6, CommitteeMemberState (MemberAuthorized (KeyHashObj hk6)) Active (Just 9) NoChangeExpected)
+        , (c7, CommitteeMemberState MemberNotAuthorized Expired (Just 7) NoChangeExpected)
+        ]
   where
     expectMembers ::
       HasCallStack => Set.Set (KeyHash 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
