@@ -56,7 +56,8 @@ import Cardano.Ledger.Shelley.Governance (
     GovState,
     getCommitteeMembers,
     getConstitution,
-    getDRepDistr
+    getDRepDistr,
+    getNextEpochCommitteeMembers
   ),
  )
 import Cardano.Ledger.Shelley.LedgerState
@@ -68,6 +69,7 @@ import Cardano.Ledger.UMap (
 import Control.Monad (guard)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (<&>), (^.))
@@ -165,6 +167,8 @@ queryCommitteeMembersState ::
   Maybe (CommitteeMembersState (EraCrypto era))
 queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
   (comMembers, comQuorum) <- getCommitteeMembers (queryGovState nes)
+  let nextComMembers =
+        maybe Map.empty fst (getNextEpochCommitteeMembers (queryGovState nes))
   let comStateMembers =
         csCommitteeCreds $
           nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
@@ -176,8 +180,11 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
       relevantColdKeys
         | Set.null statusFilter || Set.member Unrecognized statusFilter =
             withFilteredColdCreds $
-              Map.keysSet comMembers
-                `Set.union` Map.keysSet comStateMembers
+              Set.unions
+                [ Map.keysSet comMembers
+                , Map.keysSet comStateMembers
+                , Map.keysSet nextComMembers
+                ]
         | otherwise = withFilteredColdCreds $ Map.keysSet comMembers
 
       relevantHotKeys =
@@ -207,9 +214,29 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
                 Nothing -> MemberNotAuthorized
                 Just Nothing -> MemberResigned
                 Just (Just hk) -> MemberAuthorized hk
-        -- TODO: implement after pulsing and snapshots are done
-        let nextEpochChange = NoChangeExpected
-        pure $ CommitteeMemberState hkStatus status mbExpiry nextEpochChange
+        pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
+
+      nextEpochChange :: Credential 'ColdCommitteeRole (EraCrypto era) -> NextEpochChange
+      nextEpochChange ck
+        | not inCurrent && inNext = ToBeEnacted
+        | not inNext = ToBeRemoved
+        | Just curTerm <- lookupCurrent
+        , Just nextTerm <- lookupNext
+        , curTerm /= nextTerm
+        , -- if the term is adjusted such that it expires in the next epoch,
+          -- we set it to ToBeExpired instead of TermAdjusted
+          not expiringNext =
+            TermAdjusted nextTerm
+        | expiringCurrent || expiringNext = ToBeExpired
+        | otherwise = NoChangeExpected
+        where
+          lookupCurrent = Map.lookup ck comMembers
+          lookupNext = Map.lookup ck nextComMembers
+          inCurrent = isJust lookupCurrent
+          inNext = isJust lookupNext
+          expiringCurrent = lookupCurrent == Just currentEpoch
+          expiringNext = lookupNext == Just currentEpoch
+
   pure
     CommitteeMembersState
       { csCommittee = cms

@@ -617,10 +617,9 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
 
   getConstitution g = Just $ g ^. cgEnactStateL . ensConstitutionL
 
-  getCommitteeMembers g =
-    case g ^. cgEnactStateL . ensCommitteeL of
-      SJust Committee {..} -> Just (committeeMembers, committeeQuorum)
-      SNothing -> Nothing
+  getCommitteeMembers g = ensCommitteeMembers (g ^. cgEnactStateL)
+
+  getNextEpochCommitteeMembers g = ensCommitteeMembers (getRatifyState g ^. rsEnactStateL)
 
   curPParamsGovStateL = curPParamsConwayGovStateL
 
@@ -635,6 +634,13 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
       }
 
   getDRepDistr govst = psDRepDistr . fst $ finishDRepPulser (govst ^. drepPulsingStateGovStateL)
+
+ensCommitteeMembers ::
+  EnactState era ->
+  Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
+ensCommitteeMembers ens = case ens ^. ensCommitteeL of
+  SJust Committee {..} -> Just (committeeMembers, committeeQuorum)
+  SNothing -> Nothing
 
 class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)

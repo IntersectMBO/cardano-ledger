@@ -101,6 +101,10 @@ class
     GovState era -> Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
   getCommitteeMembers = const Nothing
 
+  getNextEpochCommitteeMembers ::
+    GovState era -> Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
+  getNextEpochCommitteeMembers = const Nothing
+
   -- | Lens for accessing current protocol parameters
   curPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
