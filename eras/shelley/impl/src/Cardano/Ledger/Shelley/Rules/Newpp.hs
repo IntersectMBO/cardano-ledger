@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
   emptyPPPUpdates,
-  pvCanFollow,
+  hasLegalProtVerUpdate,
  )
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
@@ -130,9 +130,7 @@ updatePpup ppupSt pp =
     & futureProposalsL .~ emptyPPPUpdates
   where
     ProposedPPUpdates newProposals = futureProposals ppupSt
-    goodPV ppu =
-      pvCanFollow (pp ^. ppProtocolVersionL) $ ppu ^. ppuProtocolVersionL
     ps =
-      if all goodPV newProposals
+      if all (hasLegalProtVerUpdate pp) newProposals
         then ProposedPPUpdates newProposals
         else emptyPPPUpdates

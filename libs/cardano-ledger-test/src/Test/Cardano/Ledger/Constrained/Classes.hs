@@ -38,7 +38,6 @@ import Data.Default.Class (Default (def))
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (SJust))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
@@ -458,7 +457,7 @@ instance Count Int where
   genSucc n = pure (n + 1)
 
 instance Count ProtVer where
-  canFollow succX predX = pvCanFollow predX (SJust succX)
+  canFollow succX predX = pvCanFollow predX succX
   genPred succX@(ProtVer n 0)
     | n == minBound = error ("genPredFromSucc @ProtVer is undefined on " ++ show succX)
   genPred (ProtVer n 0) = ProtVer (pred n) <$> elements [0, 1, 2, 3]

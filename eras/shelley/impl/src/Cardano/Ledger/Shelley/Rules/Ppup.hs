@@ -26,7 +26,7 @@ import Cardano.Ledger.BaseTypes (
   Globals (stabilityWindow),
   ProtVer,
   ShelleyBase,
-  StrictMaybe (SJust),
+  StrictMaybe (..),
   epochInfoPure,
   invalidKey,
  )
@@ -44,7 +44,7 @@ import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
   Update (..),
-  pvCanFollow,
+  hasLegalProtVerUpdate,
  )
 import Cardano.Ledger.Slot (
   Duration (Duration),
@@ -58,7 +58,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
-import qualified Data.Map.Strict as Map
+import qualified Data.Foldable as F (find)
 import Data.Set (Set)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -181,13 +181,12 @@ ppupTransitionNonEmpty = do
     Just (Update (ProposedPPUpdates pup) te) -> do
       eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
 
-      let goodPV =
-            pvCanFollow (pp ^. ppProtocolVersionL) . (^. ppuProtocolVersionL)
-      let badPVs = filter (not . goodPV) (Map.elems pup)
-      case map (^. ppuProtocolVersionL) badPVs of
-        -- All Nothing cases have been filtered out by 'pvCanFollow'
-        SJust pv : _ -> failBecause $ PVCannotFollowPPUP pv
-        _ -> pure ()
+      let firstIllegalProtVerUpdate = do
+            ppu <- F.find (not . hasLegalProtVerUpdate pp) pup
+            -- SNothing is considered legal
+            SJust newBadProtVer <- Just (ppu ^. ppuProtocolVersionL)
+            Just newBadProtVer
+      failOnJust firstIllegalProtVerUpdate PVCannotFollowPPUP
 
       sp <- liftSTS $ asks stabilityWindow
       firstSlotNextEpoch <- do

@@ -440,7 +440,7 @@ legalProtVer ::
   Maybe (GovActionId (EraCrypto era), (ProtVer, ProtVer))
 legalProtVer pp pgaids ps gas = do
   (newProtVer, prevProtVer) <- preceedingHardFork (gasAction gas) pp pgaids ps
-  if pvCanFollow newProtVer (SJust prevProtVer)
+  if pvCanFollow prevProtVer newProtVer
     then Nothing
     else Just (gasId gas, (newProtVer, prevProtVer))
 

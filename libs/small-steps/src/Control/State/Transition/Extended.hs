@@ -52,6 +52,10 @@ module Control.State.Transition.Extended (
   ifFailureFree,
   whenFailureFree,
   failBecause,
+  failOnJust,
+  failOnNonEmpty,
+  failureOnJust,
+  failureOnNonEmpty,
   judgmentContext,
   trans,
   liftSTS,
@@ -96,7 +100,7 @@ import Data.Bifunctor (Bifunctor (second), first)
 import Data.Coerce (Coercible, coerce)
 import Data.Data (Data, Typeable)
 import Data.Default.Class (Default, def)
-import Data.Foldable (find, traverse_)
+import Data.Foldable as F (find, toList, traverse_)
 import Data.Functor (($>), (<&>))
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -385,6 +389,29 @@ infix 1 ?!
 
 failBecause :: PredicateFailure sts -> Rule sts ctx ()
 failBecause = (False ?!)
+
+-- | Produce a predicate failure when condition contains a Just value, contents of which
+-- can be used inside the predicate failure
+failOnJust :: Maybe a -> (a -> PredicateFailure sts) -> Rule sts ctx ()
+failOnJust cond onJust = liftF $ Predicate (failureOnJust cond onJust) id ()
+
+-- | Produce a failure when condition contains a Just value, contents of which can be used
+-- inside the failure
+failureOnJust :: Maybe a -> (a -> e) -> Validation (NonEmpty e) ()
+failureOnJust cond onJust =
+  case cond of
+    Nothing -> Success ()
+    Just a -> Failure (onJust a :| [])
+
+-- | Produce a predicate failure when supplied foldable is not empty, contents of which
+-- will be converted to a NonEmpty list and can be used inside the predicate failure.
+failOnNonEmpty :: Foldable f => f a -> (NonEmpty a -> PredicateFailure sts) -> Rule sts ctx ()
+failOnNonEmpty cond onNonEmpty = liftF $ Predicate (failureOnNonEmpty cond onNonEmpty) id ()
+
+-- | Produce a failure when supplied foldable is not empty, contents of which will be
+-- converted to a NonEmpty list and theh can be used inside the  failure.
+failureOnNonEmpty :: Foldable f => f a -> (NonEmpty a -> e) -> Validation (NonEmpty e) ()
+failureOnNonEmpty cond = failureOnJust (NE.nonEmpty (F.toList cond))
 
 -- | Oh noes with an explanation
 --

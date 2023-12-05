@@ -27,6 +27,7 @@ module Cardano.Ledger.Shelley.PParams (
   emptyPPPUpdates,
   Update (..),
   pvCanFollow,
+  hasLegalProtVerUpdate,
 
   -- * JSON helpers
   shelleyCommonPParamsHKDPairs,
@@ -524,10 +525,26 @@ updatePParams :: EraPParams era => PParams era -> PParamsUpdate era -> PParams e
 updatePParams = applyPPUpdates
 {-# DEPRECATED updatePParams "Use applyPPUpdates instead" #-}
 
-pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
-pvCanFollow _ SNothing = True
-pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
-  (succVersion m, 0) == (Just m', n') || (m, n + 1) == (m', n')
+-- | Check whether the new protocol version is a legitimate version bump with respect to the
+-- previous one.
+pvCanFollow ::
+  -- | Previous protocol version
+  ProtVer ->
+  -- | New protocol version
+  ProtVer ->
+  Bool
+pvCanFollow (ProtVer curMajor curMinor) (ProtVer newMajor newMinor) =
+  (succVersion curMajor, 0) == (Just newMajor, newMinor)
+    || (curMajor, curMinor + 1) == (newMajor, newMinor)
+
+-- | Check whether `PParamsUpdate` contains a valid `ProtVer` update. When a protocol version
+-- update is not included in `PParamsUpdate` it is considered a legal update.
+hasLegalProtVerUpdate ::
+  (ProtVerAtMost era 8, EraPParams era) => PParams era -> PParamsUpdate era -> Bool
+hasLegalProtVerUpdate pp ppu =
+  case ppu ^. ppuProtocolVersionL of
+    SNothing -> True
+    SJust newProtVer -> pvCanFollow (pp ^. ppProtocolVersionL) newProtVer
 
 upgradeUpdate ::
   forall era.
