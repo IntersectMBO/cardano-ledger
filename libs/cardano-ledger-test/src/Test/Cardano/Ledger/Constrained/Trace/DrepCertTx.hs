@@ -161,11 +161,8 @@ drepTree =
   testGroup
     "DRep property traces"
     [ testProperty
-        "Watch pulser on traces of length 120."
-        (withMaxSuccess 2 $ mockChainProp (Conway Standard) 120 (drepCertTxForTrace (Coin 100000)) (stepProp watchPulser))
-    , testProperty
         "All Tx are valid on traces of length 150."
-        (withMaxSuccess 2 $ mockChainProp (Conway Standard) 150 (drepCertTxForTrace (Coin 100000)) (stepProp allValidSignals))
+        (withMaxSuccess 5 $ mockChainProp (Conway Standard) 150 (drepCertTxForTrace (Coin 100000)) (stepProp allValidSignals))
     , testProperty
         "Bruteforce = Pulsed, in every epoch, on traces of length 150"
         (withMaxSuccess 5 $ mockChainProp (Conway Standard) 150 (drepCertTxForTrace (Coin 60000)) (epochProp pulserWorks))
@@ -182,9 +179,6 @@ main = defaultMain drepTree
 
 allValidSignals :: MockChainState era -> MockBlock era -> MockChainState era -> Property
 allValidSignals _state0 (MockBlock _ _ _txs) _stateN = (property True)
-
-watchPulser :: ConwayEraGov era => MockChainState era -> MockBlock era -> MockChainState era -> Property
-watchPulser _state0 (MockBlock _ _ _txs) stateN = trace (showPulserState stateN) (property True)
 
 pulserWorks :: ConwayEraGov era => MockChainState era -> MockChainState era -> Property
 pulserWorks mcsfirst mcslast =
