@@ -19,25 +19,18 @@ module Cardano.Ledger.Rules.ValidationMode (
   applySTSNonStatic,
   applySTSValidateSuchThat,
 
-  -- * Interface with validation-selective libarary
-  mapMaybeValidation,
-
   -- * Interface for independent Tests
   Inject (..),
-  InjectMaybe (..),
   Test,
   runTest,
-  runTestMaybe,
   runTestOnSignal,
 )
 where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Control.State.Transition.Extended
-import Data.Bifunctor (first)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe (mapMaybe)
 import Validation
 
 applySTSValidateSuchThat ::
@@ -107,21 +100,7 @@ applySTSNonStatic ::
   m (Either [PredicateFailure s] (State s))
 applySTSNonStatic = applySTSValidateSuchThat (notElem lblStatic)
 
--- | Helper function to filter out unused failures
-mapMaybeValidation ::
-  (e -> Maybe e') ->
-  Validation (NonEmpty e) () ->
-  Validation (NonEmpty e') ()
-mapMaybeValidation toPredicateFailureMaybe =
-  maybe (Success ()) Failure
-    . NE.nonEmpty
-    . fromFailure []
-    . first (mapMaybe toPredicateFailureMaybe . NE.toList)
-
 -- ===========================================================
-
-class InjectMaybe t s where
-  injectMaybe :: t -> Maybe s
 
 type Test failure = Validation (NonEmpty failure) ()
 
@@ -130,6 +109,3 @@ runTest = validateTrans inject
 
 runTestOnSignal :: Inject t (PredicateFailure sts) => Test t -> Rule sts ctx ()
 runTestOnSignal = validateTransLabeled inject $ lblStatic NE.:| []
-
-runTestMaybe :: InjectMaybe t (PredicateFailure sts) => Test t -> Rule sts ctx ()
-runTestMaybe = validate . mapMaybeValidation injectMaybe

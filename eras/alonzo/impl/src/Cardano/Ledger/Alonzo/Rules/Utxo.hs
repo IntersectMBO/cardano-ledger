@@ -78,7 +78,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Rules.ValidationMode (
   Inject (..),
-  InjectMaybe (..),
   Test,
   runTest,
   runTestOnSignal,
@@ -690,36 +689,6 @@ instance
 -- =====================================================
 -- Injecting from one PredicateFailure to another
 
-fromShelleyFailure :: ShelleyUtxoPredFailure era -> Maybe (AlonzoUtxoPredFailure era)
-fromShelleyFailure = \case
-  Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
-  Shelley.ExpiredUTxO {} -> Nothing -- Replaced with `OutsideValidityIntervalUTxO` in Allegra
-  Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
-  Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
-  Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
-  Shelley.ValueNotConservedUTxO vc vp -> Just $ ValueNotConservedUTxO vc vp
-  Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
-  Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
-  Shelley.OutputTooSmallUTxO {} -> Nothing -- Updated in Allegra
-  Shelley.UpdateFailure {} -> Nothing -- Removed
-  Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
-
-fromAllegraFailure :: AllegraUtxoPredFailure era -> Maybe (AlonzoUtxoPredFailure era)
-fromAllegraFailure = \case
-  Allegra.BadInputsUTxO {} -> Nothing -- Inherited from Shelley
-  Allegra.OutsideValidityIntervalUTxO vi slotNo -> Just $ OutsideValidityIntervalUTxO vi slotNo
-  Allegra.MaxTxSizeUTxO {} -> Nothing -- Inherited from Shelley
-  Allegra.InputSetEmptyUTxO -> Nothing -- Inherited from Shelley
-  Allegra.FeeTooSmallUTxO {} -> Nothing -- Inherited from Shelley
-  Allegra.ValueNotConservedUTxO {} -> Nothing -- Inherited from Shelley
-  Allegra.WrongNetwork {} -> Nothing -- Inherited from Shelley
-  Allegra.WrongNetworkWithdrawal {} -> Nothing -- Inherited from Shelley
-  Allegra.OutputTooSmallUTxO {} -> Nothing -- Updated
-  Allegra.UpdateFailure {} -> Nothing -- Removed
-  Allegra.OutputBootAddrAttrsTooBig {} -> Nothing -- Inherited from Shelley
-  Allegra.TriesToForgeADA -> Just TriesToForgeADA
-  Allegra.OutputTooBigUTxO {} -> Nothing -- Updated error reporting
-
 instance Inject (AlonzoUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
   inject = id
 
@@ -778,9 +747,3 @@ utxoPredFailShelleyToAlonzo (Shelley.OutputTooSmallUTxO x) = OutputTooSmallUTxO 
 utxoPredFailShelleyToAlonzo (Shelley.UpdateFailure x) = UtxosFailure (inject x)
 utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) =
   OutputTooBigUTxO (map (0,0,) outs)
-
-instance InjectMaybe (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
-  injectMaybe = fromShelleyFailure
-
-instance InjectMaybe (AllegraUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
-  injectMaybe = fromAllegraFailure
