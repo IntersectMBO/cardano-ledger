@@ -54,7 +54,6 @@ library
         Test.Cardano.Ledger.Constrained.Size
         Test.Cardano.Ledger.Constrained.Solver
         Test.Cardano.Ledger.Examples.BabbageFeatures
-        Test.Cardano.Ledger.Examples.ConwayFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoBBODY
