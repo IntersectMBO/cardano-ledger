@@ -76,14 +76,25 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Prettyprinter (Pretty (..))
 
+-- | This type contains all that is necessary from Ledger to evaluate a plutus script.
 data PlutusWithContext where
   PlutusWithContext ::
     PlutusLanguage l =>
     { pwcProtocolVersion :: !Version
+    -- ^ Mayjor protocol version that is necessary for [de]serialization
     , pwcScript :: !(Either (Plutus l) (PlutusRunnable l))
+    -- ^ Actual plutus script that will be evaluated. Script is allowed to be in two forms:
+    -- serialized and deserialized. This is necesary for implementing the opptimization
+    -- that preserves deserialized `PlutusRunnable` after verifying wellformedness of
+    -- plutus scripts during transaction validation (yet to be implemented).
     , pwcDatums :: !PlutusDatums
+    -- ^ All of the arguments to the Plutus scripts, including the redeemer and the
+    -- Plutus context that was obtained from the transaction translation
     , pwcExUnits :: !ExUnits
+    -- ^ Limit on the execution units
     , pwcCostModel :: !CostModel
+    -- ^ `CostModel` to be used during script evaluation. It must match the language
+    -- version in the `pwcScript`
     } ->
     PlutusWithContext
 

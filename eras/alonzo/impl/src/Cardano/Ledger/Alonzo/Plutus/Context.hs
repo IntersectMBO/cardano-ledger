@@ -17,7 +17,6 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   -- * Language dependent translation
   PlutusTxInfo,
   PlutusTxCert,
-  PlutusTxOut,
   PlutusScriptPurpose,
   PlutusScriptContext,
 )
@@ -41,7 +40,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
-class (PlutusLanguage l, AlonzoEraScript era) => EraPlutusTxInfo (l :: Language) era where
+class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language) era where
   toPlutusTxCert :: proxy l -> TxCert era -> Either (ContextError era) (PlutusTxCert l)
 
   toPlutusScriptPurpose ::
@@ -109,11 +108,6 @@ type family PlutusTxCert (l :: Language) where
   PlutusTxCert 'PlutusV1 = PV1.DCert
   PlutusTxCert 'PlutusV2 = PV2.DCert
   PlutusTxCert 'PlutusV3 = PV3.TxCert
-
-type family PlutusTxOut (l :: Language) where
-  PlutusTxOut 'PlutusV1 = PV1.TxOut
-  PlutusTxOut 'PlutusV2 = PV2.TxOut
-  PlutusTxOut 'PlutusV3 = PV3.TxOut
 
 type family PlutusScriptPurpose (l :: Language) where
   PlutusScriptPurpose 'PlutusV1 = PV1.ScriptPurpose

@@ -20,20 +20,18 @@
 
 module Cardano.Ledger.Plutus.TxInfo (
   TxOutSource (..),
+  transAddr,
   transProtocolVersion,
   transDataHash,
   transKeyHash,
   transSafeHash,
   transScriptHash,
-  txInfoId,
+  transTxId,
   transStakeReference,
   transCred,
-  transAddr,
-  transTxOutAddr,
   slotToPOSIXTime,
-  txInfoIn',
+  transTxIn,
   transCoin,
-  transWithdrawals,
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
@@ -41,7 +39,7 @@ module Cardano.Ledger.Plutus.TxInfo (
 where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), Withdrawals (..))
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   TxIx,
@@ -71,13 +69,11 @@ import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (..), rwhnf)
-import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 (SatInt, fromSatInt)
@@ -124,9 +120,6 @@ transSafeHash = PV1.toBuiltin . hashToBytes . extractHash
 transScriptHash :: ScriptHash c -> PV1.ScriptHash
 transScriptHash (ScriptHash h) = PV1.ScriptHash (PV1.toBuiltin (hashToBytes h))
 
-txInfoId :: TxId c -> PV1.TxId
-txInfoId (TxId safe) = PV1.TxId (transSafeHash safe)
-
 transStakeReference :: StakeReference c -> Maybe PV1.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transCred cred))
 transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
@@ -141,17 +134,13 @@ transCred (KeyHashObj (KeyHash kh)) =
 transCred (ScriptHashObj (ScriptHash sh)) =
   PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 
+-- | Translate an address. `Cardano.Ledger.BaseTypes.NetworkId` is discarded and Byron
+-- Addresses will result in Nothing.
 transAddr :: Addr c -> Maybe PV1.Address
-transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
-transAddr (AddrBootstrap _bootaddr) = Nothing
-
-transTxOutAddr :: EraTxOut era => TxOut era -> Maybe PV1.Address
-transTxOutAddr txOut = do
-  -- filter out Byron addresses without uncompacting them
-  case txOut ^. bootAddrTxOutF of
-    Just _ -> Nothing
-    -- The presence of a Byron address is caught above in the Just case
-    Nothing -> transAddr (txOut ^. addrTxOutL)
+transAddr = \case
+  AddrBootstrap {} -> Nothing
+  Addr _networkId paymentCred stakeReference ->
+    Just (PV1.Address (transCred paymentCred) (transStakeReference stakeReference))
 
 slotToPOSIXTime ::
   EpochInfo (Either Text) ->
@@ -165,14 +154,11 @@ slotToPOSIXTime ei sysS s = do
 -- ========================================
 -- translate TxIn and TxOut
 
-txInfoIn' :: TxIn c -> PV1.TxOutRef
-txInfoIn' (TxIn txid txIx) = PV1.TxOutRef (txInfoId txid) (toInteger (txIxToInt txIx))
+transTxId :: TxId c -> PV1.TxId
+transTxId (TxId safe) = PV1.TxId (transSafeHash safe)
 
-transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
-transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
-  where
-    accum ans (RewardAcnt _network cred) (Coin n) =
-      Map.insert (PV1.StakingHash (transCred cred)) n ans
+transTxIn :: TxIn c -> PV1.TxOutRef
+transTxIn (TxIn txid txIx) = PV1.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
 transCoin :: Coin -> PV1.Value
 transCoin (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c

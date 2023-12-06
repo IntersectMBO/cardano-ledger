@@ -578,7 +578,7 @@ langsUsed ::
   Set Language
 langsUsed hashScriptMap =
   Set.fromList
-    [ l
-    | (_hash, script) <- Map.toList hashScriptMap
-    , Just l <- [plutusScriptLanguage <$> toPlutusScript script]
+    [ plutusScriptLanguage plutusScript
+    | script <- Map.elems hashScriptMap
+    , Just plutusScript <- [toPlutusScript script]
     ]

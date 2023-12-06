@@ -32,7 +32,7 @@ instance ToExpr PoolVotingThresholds
 
 instance ToExpr DRepVotingThresholds
 
--- Scritps
+-- Scripts
 instance ToExpr (PlutusScript (ConwayEra c))
 
 -- PlutusContext

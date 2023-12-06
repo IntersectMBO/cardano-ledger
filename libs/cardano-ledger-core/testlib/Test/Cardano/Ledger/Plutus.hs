@@ -10,11 +10,10 @@ module Test.Cardano.Ledger.Plutus (
   zeroTestingCostModelV1,
   zeroTestingCostModelV2,
   zeroTestingCostModelV3,
-  -- TODO: export after refactoring is done
-  -- testingCostModel,
-  -- testingCostModelV1,
-  -- testingCostModelV2,
-  -- testingCostModelV3,
+  testingCostModel,
+  testingCostModelV1,
+  testingCostModelV2,
+  testingCostModelV3,
   testingEvaluationContext,
 ) where
 

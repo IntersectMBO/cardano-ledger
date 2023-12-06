@@ -184,7 +184,7 @@ mkPlutusScriptContext' ::
 mkPlutusScriptContext' (Alonzo _) = mkPlutusScriptContext
 mkPlutusScriptContext' (Babbage _) = mkPlutusScriptContext
 mkPlutusScriptContext' (Conway _) = mkPlutusScriptContext
-mkPlutusScriptContext' era = error ("mkPlutusScriptContext is ot defined in era " ++ show era)
+mkPlutusScriptContext' era = error ("mkPlutusScriptContext is not defined in era " ++ show era)
 
 testEpochInfo :: EpochInfo (Either Text)
 testEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

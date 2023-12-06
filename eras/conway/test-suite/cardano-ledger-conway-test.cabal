@@ -86,6 +86,7 @@ test-suite cardano-ledger-conway-test
     build-depends:
         base,
         containers,
+        cardano-ledger-babbage-test,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         tasty,
         cardano-strict-containers,

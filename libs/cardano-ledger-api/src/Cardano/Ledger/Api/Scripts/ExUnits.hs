@@ -66,8 +66,7 @@ data TransactionScriptFailure era
   = -- | A redeemer was supplied which points to a script hash which
     -- we cannot connect to a Plutus script.
     RedeemerPointsToUnknownScriptHash !RdmrPtr
-  | -- | Missing redeemer. The first parameter is the ,
-    -- and the second parameter is the map of pointers which can be resolved.
+  | -- | Missing redeemer.
     MissingScript
       -- | Redeemer pointer which cannot be resolved
       !RdmrPtr
@@ -81,7 +80,7 @@ data TransactionScriptFailure era
     MissingDatum !(DataHash (EraCrypto era))
   | -- | Plutus evaluation error, for any version
     ValidationFailure
-      -- | Supplied execution units in the transactoin, which were ignored for calculating
+      -- | Supplied execution units in the transaction, which were ignored for calculating
       -- the actual execution units.
       !ExUnits
       !P.EvaluationError
@@ -224,7 +223,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
         note (NoCostModelInLedgerState lang) $ Map.lookup lang costModels
       -- Similar to getSpendingDatum, but with more informative errors. It is OK to use
       -- inline datums, when they are present, since for PlutusV1 presence of inline
-      -- datums would short circuit earlier on PlutuContext translation.
+      -- datums would short circuit earlier on PlutusContext translation.
       datums <-
         case getAlonzoSpendingTxIn scriptPurpose of
           Just txin -> do

@@ -467,6 +467,7 @@ alwaysFailsLang :: (HasCallStack, AlonzoEraScript era) => Language -> Natural ->
 alwaysFailsLang lang n =
   withSLanguage lang $ \slang -> mkPlutusScript' $ asSLanguage slang (alwaysFailsPlutus n)
 
+-- | Partial version of `mkPlutusScript`
 mkPlutusScript' ::
   forall era l.
   (HasCallStack, AlonzoEraScript era, PlutusLanguage l) =>

@@ -12,7 +12,6 @@ import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (transExUnits)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxWits
@@ -24,7 +23,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
+import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))

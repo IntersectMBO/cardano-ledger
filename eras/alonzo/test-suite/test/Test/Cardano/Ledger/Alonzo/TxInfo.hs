@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.TxInfo (
@@ -8,9 +9,9 @@ module Test.Cardano.Ledger.Alonzo.TxInfo (
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
-import Cardano.Ledger.Alonzo.Plutus.Context (toPlutusTxInfo)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (transVITime)
+import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, toPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (transValidityInterval)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
@@ -100,8 +101,9 @@ silentlyIgnore tx =
 transVITimeUpperBoundIsClosed :: Assertion
 transVITimeUpperBoundIsClosed = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transVITime (def :: PParams Alonzo) ei ss interval of
-    Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
+  case transValidityInterval (def :: PParams Alonzo) ei ss interval of
+    Left (e :: ContextError Alonzo) ->
+      assertFailure $ "no translation error was expected, but got: " <> show e
     Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True))
 
 -- | The test checks that since protocol version 9 'transVITime' works correctly,
@@ -109,8 +111,9 @@ transVITimeUpperBoundIsClosed = do
 transVITimeUpperBoundIsOpen :: Assertion
 transVITimeUpperBoundIsOpen = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transVITime (def & ppProtocolVersionL .~ BT.ProtVer (natVersion @9) 0 :: PParams Alonzo) ei ss interval of
-    Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
+  case transValidityInterval (def & ppProtocolVersionL .~ BT.ProtVer (natVersion @9) 0 :: PParams Alonzo) ei ss interval of
+    Left (e :: ContextError Alonzo) ->
+      assertFailure $ "no translation error was expected, but got: " <> show e
     Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False))
 
 tests :: TestTree

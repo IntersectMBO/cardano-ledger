@@ -111,14 +111,18 @@ class
   where
   data PlutusScript era :: Type
 
+  -- | Highest supported Plutus language version for this era.
   eraMaxLanguage :: Language
 
+  -- | Attempt to extract a `PlutusScript` from a wrapper type family `Script`. Whenevr
+  -- `Script` is a native script `Nothing` will be returned
   toPlutusScript :: Script era -> Maybe (PlutusScript era)
   default toPlutusScript :: Script era ~ AlonzoScript era => Script era -> Maybe (PlutusScript era)
   toPlutusScript = \case
     PlutusScript ps -> Just ps
     _ -> Nothing
 
+  -- | Convert a `PlutusScript` to a wrapper type family `Script`
   fromPlutusScript :: PlutusScript era -> Script era
   default fromPlutusScript :: Script era ~ AlonzoScript era => PlutusScript era -> Script era
   fromPlutusScript = PlutusScript
@@ -126,6 +130,8 @@ class
   -- | Returns Nothing, whenver plutus language is not supported for this era.
   mkPlutusScript :: PlutusLanguage l => Plutus l -> Maybe (PlutusScript era)
 
+  -- | Give a `PlutusScript` apply a function that can handle `Plutus` scripts of all
+  -- known versions.
   withPlutusScript ::
     PlutusScript era ->
     (forall l. PlutusLanguage l => Plutus l -> a) ->
@@ -164,6 +170,9 @@ withPlutusScriptLanguage lang ps f =
   withPlutusScript ps $ \plutus ->
     f plutus <$ guard (plutusLanguage plutus == lang)
 
+-- | Attempt to extract the version aware `Plutus` script, but only if it matches the
+-- language version supplied. This is useful whenever the version is known by some other
+-- means.
 toPlutusSLanguage ::
   forall l era.
   (PlutusLanguage l, AlonzoEraScript era) =>
@@ -176,6 +185,7 @@ toPlutusSLanguage _ ps = withPlutusScript ps gcast
 plutusScriptLanguage :: AlonzoEraScript era => PlutusScript era -> Language
 plutusScriptLanguage ps = withPlutusScript ps plutusLanguage
 
+-- | Extract binary representation of the script.
 plutusScriptBinary :: AlonzoEraScript era => PlutusScript era -> PlutusBinary
 plutusScriptBinary ps = withPlutusScript ps plutusBinary
 
