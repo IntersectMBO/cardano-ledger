@@ -23,7 +23,7 @@ import Cardano.Ledger.Mary.Value (
   insertMultiAsset,
   lookupMultiAsset,
  )
-import Cardano.Ledger.Val (Val (..), invert)
+import Cardano.Ledger.Val (Val (..), inject, invert)
 import Control.DeepSeq (rnf)
 import Control.Monad (replicateM)
 import Data.ByteString.Short (ShortByteString)
@@ -204,7 +204,7 @@ proplist =
   , (\_ _ x _ _ -> invert x == (-1 :: Integer) <×> x, "invertScale")
   , (\_ _ x _ _ -> (0 :: Integer) <×> x == zero, "scaleZero")
   , (\r _ _ _ _ -> r <×> zero @v == zero @v, "zeroScale")
-  , (\r s _ _ _ -> r <×> inject @v (Coin s) == inject @v (r <×> Coin s), "scaleInject")
+  , (\r s _ _ _ -> r <×> inject @_ @v (Coin s) == inject (r <×> Coin s), "scaleInject")
   , (\_ _ x _ _ -> (1 :: Integer) <×> x == x, "scaleOne")
   , (\r _ x y _ -> r <×> (x <+> y) == (r <×> x) <+> (r <×> y), "scalePlus")
   , (\r s x _ _ -> r <×> (s <×> x) == (r * s) <×> x, "scaleScale")
@@ -213,7 +213,7 @@ proplist =
   , (\_ _ _ _ _ -> coin (zero @v) == zero, "coinZero")
   , (\_ _ x y _ -> coin (x <+> y) == coin x <+> coin y, "coinPlus")
   , (\r _ x _ _ -> coin (r <×> x) == r <×> coin x, "coinScale")
-  , (\r _ _ _ _ -> coin @v (inject @v (Coin r)) == Coin r, "coinInject")
+  , (\r _ _ _ _ -> coin @v (inject @_ @v (Coin r)) == Coin r, "coinInject")
   , (\_ _ _ _ _ -> pointwise (==) (zero @v) zero, "pointwise zero")
   ]
 

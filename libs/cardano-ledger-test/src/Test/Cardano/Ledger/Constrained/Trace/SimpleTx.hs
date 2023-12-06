@@ -12,9 +12,19 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (TxIx)
+import Cardano.Ledger.BaseTypes (TxIx, inject)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era (..), EraTx (..), EraTxBody (..), EraTxOut (..), Script, Tx, TxBody, Value, coinTxOutL)
+import Cardano.Ledger.Core (
+  Era (..),
+  EraTx (..),
+  EraTxBody (..),
+  EraTxOut (..),
+  Script,
+  Tx,
+  TxBody,
+  Value,
+  coinTxOutL,
+ )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (DataHash, ScriptHash)
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
@@ -35,7 +45,16 @@ import Debug.Trace
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Constrained.Ast (runTarget, runTerm)
-import Test.Cardano.Ledger.Constrained.Classes (PParamsF (..), ScriptF (..), TxBodyF (..), TxCertF (..), TxF (..), TxOutF (..), liftUTxO, unScriptF)
+import Test.Cardano.Ledger.Constrained.Classes (
+  PParamsF (..),
+  ScriptF (..),
+  TxBodyF (..),
+  TxCertF (..),
+  TxF (..),
+  TxOutF (..),
+  liftUTxO,
+  unScriptF,
+ )
 import Test.Cardano.Ledger.Constrained.Env (Env)
 import Test.Cardano.Ledger.Constrained.Monad (Typed)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (

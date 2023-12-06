@@ -39,7 +39,7 @@ import Cardano.Ledger.Babbage.TxBody (
   BabbageEraTxOut (..),
   MaryEraTxBody (..),
  )
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject, isSJust)
 import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -48,7 +48,6 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
@@ -232,7 +231,7 @@ babbageTxInfoV1 timeRange tx utxo = do
     PV1.TxInfo
       { PV1.txInfoInputs = inputs
       , PV1.txInfoOutputs = outputs
-      , PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
+      , PV1.txInfoFee = Alonzo.transValue (inject @_ @(MaryValue (EraCrypto era)) fee)
       , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
       , PV1.txInfoDCert = toList $ fmap (unTxCertV1 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
       , PV1.txInfoWdrl = Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))
@@ -276,7 +275,7 @@ babbageTxInfoV2 timeRange tx utxo = do
       { PV2.txInfoInputs = inputs
       , PV2.txInfoOutputs = outputs
       , PV2.txInfoReferenceInputs = refInputs
-      , PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
+      , PV2.txInfoFee = Alonzo.transValue (inject @_ @(MaryValue (EraCrypto era)) fee)
       , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
       , PV2.txInfoDCert = toList $ fmap (unTxCertV2 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
       , PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWithdrawals (txBody ^. withdrawalsTxBodyL))

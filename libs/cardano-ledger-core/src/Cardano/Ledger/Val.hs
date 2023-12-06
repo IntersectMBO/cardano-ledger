@@ -10,6 +10,7 @@
 -- with which we may quantify a transaction output.
 module Cardano.Ledger.Val (
   Val (..),
+  inject,
   scale,
   invert,
   sumVal,
@@ -17,6 +18,7 @@ module Cardano.Ledger.Val (
 )
 where
 
+import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -29,6 +31,7 @@ import NoThunks.Class (NoThunks)
 
 class
   ( Compactible t
+  , Inject Coin t
   , EncCBOR (CompactForm t)
   , DecCBOR (CompactForm t)
   , Abelian t
@@ -63,9 +66,6 @@ class
 
   -- | Get the ADA present in the value (since ADA is our "blessed" currency)
   coin :: t -> Coin
-
-  -- | Create a value containing only this amount of ADA
-  inject :: Coin -> t
 
   -- | modify the blessed Coin part of t
   modifyCoin :: (Coin -> Coin) -> t -> t
@@ -116,7 +116,6 @@ adaOnly v = (inject . coin) v == v
 instance Val Coin where
   n <×> (Coin x) = Coin $ fromIntegral n * x
   coin = id
-  inject = id
   size _ = 1
   modifyCoin f v = f v
   pointwise p (Coin x) (Coin y) = p x y
@@ -129,7 +128,6 @@ instance Val Coin where
 instance Val DeltaCoin where
   n <×> (DeltaCoin x) = DeltaCoin $ fromIntegral n * x
   coin = coerce
-  inject = coerce
   size _ = 1
   modifyCoin f v = coerce f v
   pointwise p (DeltaCoin x) (DeltaCoin y) = p x y

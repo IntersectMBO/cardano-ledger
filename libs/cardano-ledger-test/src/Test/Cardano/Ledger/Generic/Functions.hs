@@ -59,7 +59,7 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
-import Cardano.Ledger.Val (Val (inject, (<+>), (<->)))
+import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)
 import Data.Default.Class (Default (def))

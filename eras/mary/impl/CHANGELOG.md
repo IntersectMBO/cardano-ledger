@@ -3,6 +3,7 @@
 ## 1.5.0.0
 
 * Moved `ToExpr` instances out of the main library and into the testlib.
+* Remove deprecated `translateValue` and `translateCompactValue`
 
 ## 1.4.0.0
 

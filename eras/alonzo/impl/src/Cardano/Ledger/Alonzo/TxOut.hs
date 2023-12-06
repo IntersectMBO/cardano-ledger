@@ -51,6 +51,7 @@ import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
+  inject,
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (

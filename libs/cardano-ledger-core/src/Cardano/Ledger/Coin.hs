@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -25,6 +26,7 @@ module Cardano.Ledger.Coin (
 where
 
 import Cardano.HeapWords (HeapWords)
+import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
@@ -40,6 +42,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Coerce (coerce)
 import Data.Group (Abelian, Group (..))
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
@@ -67,6 +70,8 @@ newtype Coin = Coin {unCoin :: Integer}
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd, ToCBOR, EncCBOR, HeapWords)
 
+instance Inject Coin Coin
+
 instance FromCBOR Coin where
   fromCBOR = Coin . toInteger <$> Plain.decodeWord64
 
@@ -82,6 +87,9 @@ newtype DeltaCoin = DeltaCoin Integer
   deriving (Show) via Quiet DeltaCoin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd, NFData, ToCBOR, DecCBOR, EncCBOR, ToJSON, FromJSON)
+
+instance Inject Coin DeltaCoin where
+  inject = coerce
 
 addDeltaCoin :: Coin -> DeltaCoin -> Coin
 addDeltaCoin (Coin x) (DeltaCoin y) = Coin (x + y)

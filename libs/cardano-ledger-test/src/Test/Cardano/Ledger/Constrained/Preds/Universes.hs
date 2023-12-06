@@ -22,6 +22,7 @@ import Cardano.Ledger.BaseTypes (
   SlotNo (..),
   StrictMaybe (..),
   TxIx (..),
+  inject,
   mkCertIxPartial,
  )
 import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
@@ -50,7 +51,6 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Val (Val (inject))
 import Data.Default.Class (Default (def))
 import qualified Data.List as List
 import Data.Map (Map)

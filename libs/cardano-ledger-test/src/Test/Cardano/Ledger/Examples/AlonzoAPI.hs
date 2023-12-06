@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Examples.AlonzoAPI (tests) where
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
-import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
+import Cardano.Ledger.BaseTypes (ProtVer (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (getMinFeeTx)
 import Cardano.Ledger.Plutus.Data (Data (..))
@@ -24,7 +24,6 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (evaluateTransactionFee)
-import Cardano.Ledger.Val (Val (inject))
 import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)

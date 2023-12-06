@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.Val (Val (inject), (<+>), (<->))
+import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Iterate.Exp (dom, (∈))
 import Control.Iterate.SetAlgebra (eval)

@@ -76,7 +76,7 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint, Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (

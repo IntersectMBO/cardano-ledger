@@ -32,6 +32,7 @@ module Cardano.Ledger.Rules.ValidationMode (
 )
 where
 
+import Cardano.Ledger.BaseTypes (Inject (..))
 import Control.State.Transition.Extended
 import Data.Bifunctor (first)
 import Data.List.NonEmpty (NonEmpty)
@@ -118,9 +119,6 @@ mapMaybeValidation toPredicateFailureMaybe =
     . first (mapMaybe toPredicateFailureMaybe . NE.toList)
 
 -- ===========================================================
-
-class Inject t s where
-  inject :: t -> s
 
 class InjectMaybe t s where
   injectMaybe :: t -> Maybe s

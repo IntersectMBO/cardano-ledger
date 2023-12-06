@@ -49,7 +49,13 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), ShelleyBase, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  Network (..),
+  ShelleyBase,
+  StrictMaybe (..),
+  inject,
+ )
 import Cardano.Ledger.CertState (DRep (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
