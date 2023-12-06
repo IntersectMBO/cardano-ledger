@@ -120,23 +120,90 @@ spec =
 
     describe "Constitution" $ do
       it "submitted successfully with valid PrevGovActionId" $ do
+        modifyPParams $ ppGovActionLifetimeL .~ 1
+
         curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+        initialPulser <- getsNES $ newEpochStateGovStateL . cgDRepPulsingStateL
+        initialEnactState <- getsNES $ newEpochStateGovStateL . cgEnactStateL
+
         (govActionId, _) <- submitConstitution SNothing
         curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
         impAnn "Constitution has not been enacted yet" $
           curConstitution' `shouldBe` curConstitution
-        void $ submitConstitution (SJust $ PrevGovActionId govActionId)
+
+        ConwayGovState expectedProposals expectedEnactState expectedPulser <- getsNES newEpochStateGovStateL
+
+        impAnn "EnactState reflects the submitted governance action" $ do
+          let enactStateWithChildren =
+                initialEnactState
+                  & ensPrevGovActionIdsChildrenL . pgacConstitutionL %~ Set.insert (PrevGovActionId govActionId)
+          expectedEnactState `shouldBe` enactStateWithChildren
+
+        impAnn "Proposals contain the submitted proposal" $
+          expectedProposals `shouldSatisfy` \props -> govActionId `elem` proposalsIds props
+
+        impAnn "Pulser has not changed" $
+          expectedPulser `shouldBe` initialPulser
+
+        passEpoch >> passEpoch
+        impAnn "Proposal gets removed after expiry" $ do
+          ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
+          let ratifyState = extractDRepPulsingState pulser
+          rsRemoved ratifyState `shouldBe` Set.singleton govActionId
 
       it "submitted and enacted when voted on" $ do
         (dRep, committeeMember) <- electBasicCommittee
         (govActionId, constitution) <- submitConstitution SNothing
+
+        ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes <- getsNES newEpochStateGovStateL
         submitYesVote_ (DRepVoter dRep) govActionId
         submitYesVote_ (CommitteeVoter committeeMember) govActionId
+        ConwayGovState proposalsAfterVotes enactStateAfterVotes pulserAfterVotes <- getsNES newEpochStateGovStateL
+
+        impAnn "Votes are recorded in the proposals" $ do
+          let proposalsWithVotes =
+                proposalsAddVote
+                  (CommitteeVoter committeeMember)
+                  VoteYes
+                  govActionId
+                  ( proposalsAddVote
+                      (DRepVoter dRep)
+                      VoteYes
+                      govActionId
+                      proposalsBeforeVotes
+                  )
+          proposalsAfterVotes `shouldBe` proposalsWithVotes
+
+        impAnn "EnactState has not changed" $
+          enactStateAfterVotes `shouldBe` enactStateBeforeVotes
+
+        impAnn "Pulser has not changed" $
+          pulserAfterVotes `shouldBe` pulserBeforeVotes
+
         passEpoch
+
+        impAnn "New constitution is not enacted after one epoch" $ do
+          constitutionAfterOneEpoch <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+          constitutionAfterOneEpoch `shouldBe` def
+
+        impAnn "Pulser should reflect the constitution to be enacted" $ do
+          ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
+          let ratifyState = extractDRepPulsingState pulser
+          rsEnacted ratifyState `shouldBe` Set.singleton govActionId
+          rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
+
         passEpoch
-        curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-        impAnn "Constitution has been enacted" $
+
+        impAnn "Constitution is enacted after two epochs" $ do
+          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
           curConstitution `shouldBe` constitution
+
+        impAnn "Pulser is reset" $ do
+          ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
+          let pulserRatifyState = extractDRepPulsingState pulser
+          rsEnacted pulserRatifyState `shouldBe` Set.empty
+          enactState <- getsNES $ newEpochStateGovStateL . cgEnactStateL
+          rsEnactState pulserRatifyState `shouldBe` enactState
 
 submitConstitution ::
   forall era.
