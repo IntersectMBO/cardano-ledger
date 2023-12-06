@@ -10,16 +10,23 @@
 module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.CertState (vsNumDormantEpochsL)
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (ppGovActionLifetimeL)
+import Cardano.Ledger.Conway.PParams (ppDRepActivityL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
+import Cardano.Ledger.DRep (drepExpiryL)
+import Cardano.Ledger.Keys (
+  KeyHash,
+  KeyRole (..),
+ )
 import Cardano.Ledger.Shelley.LedgerState
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Imp.EpochSpec (electBasicCommittee)
@@ -205,6 +212,123 @@ spec =
           enactState <- getsNES $ newEpochStateGovStateL . cgEnactStateL
           rsEnactState pulserRatifyState `shouldBe` enactState
 
+    describe "DRep expiry" $ do
+      it "is updated based on to number of dormant epochs" $ do
+        modifyPParams $ ppGovActionLifetimeL .~ 2
+        drep <- setupSingleDRep
+
+        expectNumDormantEpochs 0
+
+        -- epoch 0
+        _ <- submitConstitution SNothing
+        expectCurrentProposals
+        expectNoPulserProposals
+        expectNumDormantEpochs 0
+        expectExtraDRepExpiry drep 0
+
+        passEpoch
+        -- epoch 1
+        expectCurrentProposals
+        expectPulserProposals
+        expectNumDormantEpochs 1
+        expectExtraDRepExpiry drep 0
+
+        passEpoch
+        -- epoch 2
+        expectCurrentProposals
+        expectPulserProposals
+        expectNumDormantEpochs 1
+        expectExtraDRepExpiry drep 0
+
+        passEpoch
+        -- epoch 3
+        expectCurrentProposals
+        expectPulserProposals
+        expectNumDormantEpochs 1
+        expectExtraDRepExpiry drep 0
+
+        passEpoch
+        -- epoch 4, proposals expired
+        expectNoCurrentProposals
+        expectNoPulserProposals
+        expectNumDormantEpochs 1
+        expectExtraDRepExpiry drep 0
+
+        passEpoch
+        -- epoch 5
+        expectNoCurrentProposals
+        expectNoPulserProposals
+        expectNumDormantEpochs 2
+        expectExtraDRepExpiry drep 0
+
+        _ <- submitConstitution SNothing
+        -- number of dormant epochs is added to the drep expiry and the reset
+        expectNumDormantEpochs 0
+        expectExtraDRepExpiry drep 2
+
+        passEpoch
+        -- epoch 6
+        expectCurrentProposals
+        expectPulserProposals
+        expectNumDormantEpochs 1
+        expectExtraDRepExpiry drep 2
+  where
+    expectNumDormantEpochs :: HasCallStack => EpochNo -> ImpTestM era ()
+    expectNumDormantEpochs expected = do
+      nd <-
+        getsNES $
+          nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL
+      nd `shouldBeExpr` expected
+
+    expectExtraDRepExpiry ::
+      HasCallStack => KeyHash 'DRepRole (EraCrypto era) -> EpochNo -> ImpTestM era ()
+    expectExtraDRepExpiry kh expected = do
+      drepActivity <-
+        getsNES $
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppDRepActivityL
+      dsMap <-
+        getsNES $
+          nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL @era
+      let ds = Map.lookup (KeyHashObj kh) dsMap
+      (^. drepExpiryL)
+        <$> ds
+          `shouldBe` Just (addEpochInterval expected drepActivity)
+
+    expectCurrentProposals :: HasCallStack => ImpTestM era ()
+    expectCurrentProposals = do
+      props <- currentProposals
+      assertBool "Expected proposals in current gov state" (not (SSeq.null props))
+
+    expectNoCurrentProposals :: HasCallStack => ImpTestM era ()
+    expectNoCurrentProposals = do
+      props <- currentProposals
+      assertBool "Expected no proposals in current gov state" (SSeq.null props)
+
+    expectPulserProposals :: HasCallStack => ImpTestM era ()
+    expectPulserProposals = do
+      props <- lastEpochProposals
+      assertBool "Expected proposals in the pulser" (not (SSeq.null props))
+
+    expectNoPulserProposals :: HasCallStack => ImpTestM era ()
+    expectNoPulserProposals = do
+      props <- lastEpochProposals
+      assertBool "Expected no proposals in the pulser" (SSeq.null props)
+
+    currentProposals =
+      proposalsIds
+        <$> getsNES (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL @era)
+    lastEpochProposals =
+      proposalsIds
+        <$> getsNES
+          ( nesEsL
+              . esLStateL
+              . lsUTxOStateL
+              . utxosGovStateL
+              . drepPulsingStateGovStateL @era
+              . pulsingStateSnapshotL
+              . psProposalsL'
+          )
+
 submitConstitution ::
   forall era.
   ConwayEraImp era =>
@@ -244,3 +368,18 @@ proposalWithRewardAccount action = do
       , pProcGovAction = action
       , pProcAnchor = def
       }
+
+pulsingStateSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
+pulsingStateSnapshotL = lens getter setter
+  where
+    getter (DRComplete x _) = x
+    getter state = fst (finishDRepPulser state)
+    setter (DRComplete _ y) snap = DRComplete snap y
+    setter state snap = DRComplete snap $ snd $ finishDRepPulser state
+
+-- | Accesses the same data as psProposalsL, but converts from (StrictSeq (GovActionState era)) to (Proposals era)
+psProposalsL' :: Lens' (PulsingSnapshot era) (Proposals era)
+psProposalsL' =
+  lens
+    (fromGovActionStateSeq . psProposals)
+    (\x y -> x {psProposals = proposalsActions y})

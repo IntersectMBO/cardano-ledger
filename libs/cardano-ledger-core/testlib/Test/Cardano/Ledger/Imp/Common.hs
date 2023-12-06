@@ -22,6 +22,7 @@ module Test.Cardano.Ledger.Imp.Common (
   shouldThrow,
 
   -- ** Non-standard expectations
+  shouldBeExpr,
   shouldBeRight,
   shouldBeLeft,
   shouldBeRightExpr,
