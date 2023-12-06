@@ -28,7 +28,7 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (SJust, SNothing), epochInfoPure)
+import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
@@ -47,8 +47,17 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
-import Cardano.Ledger.Conway.Rules.Certs (CertsEnv (CertsEnv), ConwayCertsEvent, ConwayCertsPredFailure)
-import Cardano.Ledger.Conway.Rules.Gov (ConwayGovEvent (..), ConwayGovPredFailure, GovEnv (..), GovRuleState (..))
+import Cardano.Ledger.Conway.Rules.Certs (
+  CertsEnv (CertsEnv),
+  ConwayCertsEvent,
+  ConwayCertsPredFailure,
+ )
+import Cardano.Ledger.Conway.Rules.Gov (
+  ConwayGovEvent (..),
+  ConwayGovPredFailure,
+  GovEnv (..),
+  GovRuleState (..),
+ )
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), currentTreasuryValueTxBodyL)
 import Cardano.Ledger.Credential (Credential)
@@ -101,7 +110,7 @@ import NoThunks.Class (NoThunks (..))
 data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
-  | ConwayGovFailure (PredicateFailure (EraRule "GOV" era)) -- Subtransition Failures
+  | ConwayGovFailure (PredicateFailure (EraRule "GOV" era))
   | ConwayWdrlNotDelegatedToDRep (Set (Credential 'Staking (EraCrypto era)))
   | ConwayTreasuryValueMismatch
       -- | Actual
@@ -398,3 +407,21 @@ instance
   where
   wrapFailed = ConwayGovFailure
   wrapEvent = GovEvent
+
+instance
+  PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era =>
+  Inject (ConwayGovPredFailure era) (ConwayLedgerPredFailure era)
+  where
+  inject = ConwayGovFailure
+
+instance
+  PredicateFailure (EraRule "UTXOW" era) ~ BabbageUtxowPredFailure era =>
+  Inject (BabbageUtxowPredFailure era) (ConwayLedgerPredFailure era)
+  where
+  inject = ConwayUtxowFailure
+
+instance
+  PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era =>
+  Inject (ConwayCertsPredFailure era) (ConwayLedgerPredFailure era)
+  where
+  inject = ConwayCertsFailure
