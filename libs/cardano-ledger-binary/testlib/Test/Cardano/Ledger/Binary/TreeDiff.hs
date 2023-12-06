@@ -26,8 +26,6 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Hash.Class ()
 import Cardano.Ledger.Binary
-import Cardano.Slotting.Block (BlockNo)
-import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import Control.Monad (unless)
@@ -41,6 +39,7 @@ import Data.IP (IPv4, IPv6)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.TreeDiff
+import Test.Cardano.Slotting.TreeDiff ()
 import Test.Hspec (Expectation, HasCallStack, expectationFailure)
 import Test.Tasty.HUnit (Assertion, assertFailure)
 
@@ -56,16 +55,6 @@ trimExprViaShow _n x = defaultExprViaShow x -- App (take n (drop 1 (show x)) ++ 
 instance ToExpr IPv4
 
 instance ToExpr IPv6
-
-instance ToExpr SlotNo
-
-instance ToExpr BlockNo
-
-instance ToExpr EpochNo
-
-instance ToExpr EpochSize
-
-instance ToExpr x => ToExpr (WithOrigin x)
 
 instance ToExpr (Hash.Hash c index) where
   toExpr = trimExprViaShow 10
