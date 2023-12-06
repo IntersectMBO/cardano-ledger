@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -31,8 +32,6 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
-  utxoPredFailMaToAlonzo,
-  utxoPredFailShelleyToAlonzo,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   validateExUnitsTooBigUTxO,
@@ -147,13 +146,13 @@ instance
   Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   Inject (AllegraUtxoPredFailure era) (BabbageUtxoPredFailure era)
   where
-  inject = AlonzoInBabbageUtxoPredFailure . utxoPredFailMaToAlonzo
+  inject = AlonzoInBabbageUtxoPredFailure . inject
 
 instance
   Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   Inject (ShelleyUtxoPredFailure era) (BabbageUtxoPredFailure era)
   where
-  inject = AlonzoInBabbageUtxoPredFailure . utxoPredFailShelleyToAlonzo
+  inject = AlonzoInBabbageUtxoPredFailure . inject
 
 -- =======================================================
 
@@ -439,11 +438,11 @@ instance
   ) =>
   EncCBOR (BabbageUtxoPredFailure era)
   where
-  encCBOR pf = encode (work pf)
-    where
-      work (AlonzoInBabbageUtxoPredFailure x) = Sum AlonzoInBabbageUtxoPredFailure 1 !> To x
-      work (IncorrectTotalCollateralField c1 c2) = Sum IncorrectTotalCollateralField 2 !> To c1 !> To c2
-      work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 3 !> To x
+  encCBOR =
+    encode . \case
+      AlonzoInBabbageUtxoPredFailure x -> Sum AlonzoInBabbageUtxoPredFailure 1 !> To x
+      IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 2 !> To c1 !> To c2
+      BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 3 !> To x
 
 instance
   ( Era era
@@ -456,12 +455,11 @@ instance
   ) =>
   DecCBOR (BabbageUtxoPredFailure era)
   where
-  decCBOR = decode (Summands "BabbageUtxoPred" work)
-    where
-      work 1 = SumD AlonzoInBabbageUtxoPredFailure <! From
-      work 2 = SumD IncorrectTotalCollateralField <! From <! From
-      work 3 = SumD BabbageOutputTooSmallUTxO <! From
-      work n = Invalid n
+  decCBOR = decode $ Summands "BabbageUtxoPred" $ \case
+    1 -> SumD AlonzoInBabbageUtxoPredFailure <! From
+    2 -> SumD IncorrectTotalCollateralField <! From <! From
+    3 -> SumD BabbageOutputTooSmallUTxO <! From
+    n -> Invalid n
 
 deriving via
   InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPredFailure era)

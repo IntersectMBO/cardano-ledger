@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Delete `utxoPredFailMaToAlonzo`, `utxoPredFailShelleyToAlonzo`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Changed the type of the ConwayPParams field appEMax
 

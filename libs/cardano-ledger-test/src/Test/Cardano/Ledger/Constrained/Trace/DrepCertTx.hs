@@ -168,9 +168,6 @@ drepTree =
         (withMaxSuccess 5 $ mockChainProp (Conway Standard) 150 (drepCertTxForTrace (Coin 60000)) (epochProp pulserWorks))
     ]
 
-main :: IO ()
-main = defaultMain drepTree
-
 -- =================================================
 -- Example functions that can be lifted to
 -- Trace (MOCKCHAIN era) -> Property

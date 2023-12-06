@@ -19,8 +19,6 @@ module Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUTXO,
   AlonzoUtxoPredFailure (..),
   AlonzoUtxoEvent (..),
-  utxoPredFailMaToAlonzo,
-  utxoPredFailShelleyToAlonzo,
   validateCollateralContainsNonADA,
   validateExUnitsTooBigUTxO,
   validateOutputTooBigUTxO,
@@ -702,48 +700,35 @@ instance
   Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   Inject (AllegraUtxoPredFailure era) (AlonzoUtxoPredFailure era)
   where
-  inject = utxoPredFailMaToAlonzo
-
-utxoPredFailMaToAlonzo ::
-  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
-  AllegraUtxoPredFailure era ->
-  AlonzoUtxoPredFailure era
-utxoPredFailMaToAlonzo (Allegra.BadInputsUTxO x) = BadInputsUTxO x
-utxoPredFailMaToAlonzo (Allegra.OutsideValidityIntervalUTxO vi slotNo) =
-  OutsideValidityIntervalUTxO vi slotNo
-utxoPredFailMaToAlonzo (Allegra.MaxTxSizeUTxO x y) = MaxTxSizeUTxO x y
-utxoPredFailMaToAlonzo Allegra.InputSetEmptyUTxO = InputSetEmptyUTxO
-utxoPredFailMaToAlonzo (Allegra.FeeTooSmallUTxO c1 c2) = FeeTooSmallUTxO c1 c2
-utxoPredFailMaToAlonzo (Allegra.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
-utxoPredFailMaToAlonzo (Allegra.WrongNetwork x y) = WrongNetwork x y
-utxoPredFailMaToAlonzo (Allegra.WrongNetworkWithdrawal x y) = WrongNetworkWithdrawal x y
-utxoPredFailMaToAlonzo (Allegra.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
-utxoPredFailMaToAlonzo (Allegra.UpdateFailure x) = UtxosFailure (inject x)
-utxoPredFailMaToAlonzo (Allegra.OutputBootAddrAttrsTooBig xs) =
-  OutputTooBigUTxO (map (0,0,) xs)
-utxoPredFailMaToAlonzo Allegra.TriesToForgeADA = TriesToForgeADA
-utxoPredFailMaToAlonzo (Allegra.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
+  inject = \case
+    Allegra.BadInputsUTxO x -> BadInputsUTxO x
+    Allegra.OutsideValidityIntervalUTxO vi slotNo -> OutsideValidityIntervalUTxO vi slotNo
+    Allegra.MaxTxSizeUTxO x y -> MaxTxSizeUTxO x y
+    Allegra.InputSetEmptyUTxO -> InputSetEmptyUTxO
+    Allegra.FeeTooSmallUTxO c1 c2 -> FeeTooSmallUTxO c1 c2
+    Allegra.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
+    Allegra.WrongNetwork x y -> WrongNetwork x y
+    Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
+    Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
+    Allegra.UpdateFailure x -> UtxosFailure (inject x)
+    Allegra.OutputBootAddrAttrsTooBig xs -> OutputTooBigUTxO (map (0,0,) xs)
+    Allegra.TriesToForgeADA -> TriesToForgeADA
+    Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
 
 instance
   Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   Inject (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era)
   where
-  inject = utxoPredFailShelleyToAlonzo
-
-utxoPredFailShelleyToAlonzo ::
-  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
-  ShelleyUtxoPredFailure era ->
-  AlonzoUtxoPredFailure era
-utxoPredFailShelleyToAlonzo (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins
-utxoPredFailShelleyToAlonzo (Shelley.ExpiredUTxO ttl current) =
-  OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
-utxoPredFailShelleyToAlonzo (Shelley.MaxTxSizeUTxO a m) = MaxTxSizeUTxO a m
-utxoPredFailShelleyToAlonzo Shelley.InputSetEmptyUTxO = InputSetEmptyUTxO
-utxoPredFailShelleyToAlonzo (Shelley.FeeTooSmallUTxO mf af) = FeeTooSmallUTxO mf af
-utxoPredFailShelleyToAlonzo (Shelley.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
-utxoPredFailShelleyToAlonzo (Shelley.WrongNetwork n as) = WrongNetwork n as
-utxoPredFailShelleyToAlonzo (Shelley.WrongNetworkWithdrawal n as) = WrongNetworkWithdrawal n as
-utxoPredFailShelleyToAlonzo (Shelley.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
-utxoPredFailShelleyToAlonzo (Shelley.UpdateFailure x) = UtxosFailure (inject x)
-utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) =
-  OutputTooBigUTxO (map (0,0,) outs)
+  inject = \case
+    Shelley.BadInputsUTxO ins -> BadInputsUTxO ins
+    Shelley.ExpiredUTxO ttl current ->
+      OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
+    Shelley.MaxTxSizeUTxO a m -> MaxTxSizeUTxO a m
+    Shelley.InputSetEmptyUTxO -> InputSetEmptyUTxO
+    Shelley.FeeTooSmallUTxO mf af -> FeeTooSmallUTxO mf af
+    Shelley.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
+    Shelley.WrongNetwork n as -> WrongNetwork n as
+    Shelley.WrongNetworkWithdrawal n as -> WrongNetworkWithdrawal n as
+    Shelley.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
+    Shelley.UpdateFailure x -> UtxosFailure (inject x)
+    Shelley.OutputBootAddrAttrsTooBig outs -> OutputTooBigUTxO (map (0,0,) outs)
