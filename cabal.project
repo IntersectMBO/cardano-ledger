@@ -20,7 +20,7 @@ index-state:
   -- Bump this if you need newer packages from Hackage
   , hackage.haskell.org 2023-11-15T00:00:00Z
   -- Bump this if you need newer packages from CHaP
-  , cardano-haskell-packages 2023-11-29T12:13:23Z
+  , cardano-haskell-packages 2023-12-07T15:09:47Z
 
 packages:
   eras/allegra/impl
