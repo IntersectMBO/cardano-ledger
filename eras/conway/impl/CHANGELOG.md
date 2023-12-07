@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Change 'getScriptWitnessConwayTxCert' so that DRepRegistration certificate requires a witness		
 * Add `transTxBodyWithdrawals`, `transTxCert`, `transDRepCred`, `transColdCommitteeCred`,
   `transHotCommitteeCred`, `transDelegatee`, `transDRep`, `transScriptPurpose`
 * Remove `conwayTxInfo` and `babbageScriptPrefixTag`

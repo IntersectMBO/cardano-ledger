@@ -614,8 +614,7 @@ getScriptWitnessConwayTxCert = \case
     govWitness = \case
       ConwayAuthCommitteeHotKey coldCred _hotCred -> credScriptHash coldCred
       ConwayResignCommitteeColdKey coldCred _ -> credScriptHash coldCred
-      -- Registration of a DRep does not require a witness
-      ConwayRegDRep {} -> Nothing
+      ConwayRegDRep cred _ _ -> credScriptHash cred
       ConwayUnRegDRep cred _ -> credScriptHash cred
       ConwayUpdateDRep cred _ -> credScriptHash cred
 
@@ -636,7 +635,7 @@ getVKeyWitnessConwayTxCert = \case
       ConwayAuthCommitteeHotKey coldCred _hotCred -> credKeyHashWitness coldCred
       ConwayResignCommitteeColdKey coldCred _ -> credKeyHashWitness coldCred
       -- Registration of a DRep does not require a witness
-      ConwayRegDRep {} -> Nothing
+      ConwayRegDRep cred _ _ -> credKeyHashWitness cred
       ConwayUnRegDRep cred _ -> credKeyHashWitness cred
       ConwayUpdateDRep cred _ -> credKeyHashWitness cred
 
