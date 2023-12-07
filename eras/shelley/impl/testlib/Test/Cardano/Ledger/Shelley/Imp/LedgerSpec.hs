@@ -5,7 +5,7 @@ module Test.Cardano.Ledger.Shelley.Imp.LedgerSpec (
   spec,
 ) where
 
-import Cardano.Ledger.BaseTypes (TxIx (..))
+import Cardano.Ledger.BaseTypes (TxIx (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraTx (..), EraTxBody (..), EraTxOut (..), coinTxOutL)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -16,7 +16,6 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.Val (Val (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set

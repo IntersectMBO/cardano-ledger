@@ -14,16 +14,13 @@ module Cardano.Ledger.Mary.Translation where
 
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
-import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata)
-import qualified Cardano.Ledger.Val as Val
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 
@@ -154,11 +151,3 @@ instance Crypto c => TranslateEra (MaryEra c) Timelock where
 instance Crypto c => TranslateEra (MaryEra c) AllegraTxAuxData where
   translateEra ctx (AllegraTxAuxData md as) =
     pure $ AllegraTxAuxData md $ translateEra' ctx <$> as
-
-translateValue :: Crypto c => Coin -> MaryValue c
-translateValue = Val.inject
-{-# DEPRECATED translateValue "Use `Val.inject` instead" #-}
-
-translateCompactValue :: Crypto c => CompactForm Coin -> CompactForm (MaryValue c)
-translateCompactValue = Val.injectCompact
-{-# DEPRECATED translateCompactValue "Use `Val.injectCompact` instead" #-}

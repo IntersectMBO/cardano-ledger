@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Remove unused `mapMaybeValidation` and `runTestMaybe`
+* Remove `InjectMaybe` type class in favor of more general `Inject`
 * Move `decodeAddrShort` and `decodeAddrShortEither` to
   `cardano-ledger-api:Cardano.Ledger.Api.Tx.Address`
 * Remove deprecated `Cardano.Ledger.CompactAddress` and `Cardano.Ledger.UMapCompact`

@@ -93,7 +93,7 @@ import Cardano.Ledger.Alonzo.TxBody (
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, RdmrPtr, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -122,7 +122,6 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (getScriptsProvided), ScriptsProvided (..), UTxO (..))
-import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Slot (EpochNo (..))
 import Cardano.Slotting.Time (SystemStart)
@@ -397,7 +396,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
         PV1.TxInfo
           { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns
           , PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts)
-          , PV1.txInfoFee = transValue (inject @(MaryValue (EraCrypto era)) fee)
+          , PV1.txInfoFee = transValue (inject @Coin @(MaryValue (EraCrypto era)) fee)
           , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
           , PV1.txInfoDCert = toList $ fmap (unTxCertV1 . transTxCert) (txBody ^. certsTxBodyL)
           , PV1.txInfoWdrl = Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))

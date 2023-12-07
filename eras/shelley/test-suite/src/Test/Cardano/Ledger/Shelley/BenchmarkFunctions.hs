@@ -29,7 +29,7 @@ where
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Ledger.Address (Addr)
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), TxIx, mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), TxIx, inject, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -71,7 +71,6 @@ import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCer
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
-import Cardano.Ledger.Val (Val (inject))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Default.Class (def)

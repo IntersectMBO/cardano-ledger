@@ -76,6 +76,7 @@ import Cardano.Ledger.BaseTypes (
   SlotNo,
   StrictMaybe (..),
   TxIx (..),
+  inject,
   textToUrl,
  )
 import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)

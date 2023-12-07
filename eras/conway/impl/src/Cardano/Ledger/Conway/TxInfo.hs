@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), RdmrPtr, unRedeemers, unTxDats)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfoV1, babbageTxInfoV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as B
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core hiding (TranslationError)
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -36,7 +36,6 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
@@ -118,7 +117,7 @@ conwayTxInfoV3 timeRange tx utxo = do
       { PV3.txInfoInputs = inputs
       , PV3.txInfoOutputs = outputs
       , PV3.txInfoReferenceInputs = refInputs
-      , PV3.txInfoFee = Alonzo.transValue (inject @(MaryValue (EraCrypto era)) fee)
+      , PV3.txInfoFee = Alonzo.transValue (inject @_ @(MaryValue (EraCrypto era)) fee)
       , -- Note that this translation is different from previous Plutus versions, since we no
         -- longer add a zero ADA value to the mint field during translation:
         PV3.txInfoMint = Alonzo.transMultiAsset (txBody ^. mintTxBodyL)

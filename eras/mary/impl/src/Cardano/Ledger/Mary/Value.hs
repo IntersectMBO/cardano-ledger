@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -36,6 +37,7 @@ module Cardano.Ledger.Mary.Value (
 where
 
 import qualified Cardano.Crypto.Hash.Class as Hash
+import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
@@ -205,6 +207,9 @@ instance Group (MaryValue c) where
 
 instance Abelian (MaryValue c)
 
+instance Inject Coin (MaryValue c) where
+  inject c = MaryValue c (MultiAsset Map.empty)
+
 -- ===================================================
 -- Make the Val instance of MaryValue
 
@@ -215,7 +220,6 @@ instance Crypto c => Val (MaryValue c) where
       (MultiAsset (canonicalMap (canonicalMap (fromIntegral s *)) m))
   isZero (MaryValue c (MultiAsset m)) = c == zero && Map.null m
   coin (MaryValue c _) = c
-  inject c = MaryValue c (MultiAsset Map.empty)
   modifyCoin f (MaryValue c m) = MaryValue (f c) m
   pointwise p (MaryValue (Coin c) (MultiAsset x)) (MaryValue (Coin d) (MultiAsset y)) =
     p c d && pointWise (pointWise p) x y

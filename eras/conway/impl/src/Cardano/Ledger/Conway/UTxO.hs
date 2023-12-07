@@ -43,7 +43,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
-import Cardano.Ledger.Val (Val (..))
+import Cardano.Ledger.Val (Val (..), inject)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Lens.Micro ((^.))

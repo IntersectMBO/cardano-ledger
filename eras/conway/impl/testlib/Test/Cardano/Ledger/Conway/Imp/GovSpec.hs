@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,15 +12,11 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ppGovActionLifetimeL)
-import Cardano.Ledger.Conway.Rules (
-  ConwayGOV,
-  ConwayGovPredFailure (..),
-  ConwayLEDGER,
-  ConwayLedgerPredFailure (ConwayGovFailure),
- )
-import Cardano.Ledger.Core (EraRule)
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Shelley.LedgerState
+import Control.State.Transition.Extended (PredicateFailure)
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe
@@ -33,8 +30,7 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , GovState era ~ ConwayGovState era
-  , EraRule "GOV" era ~ ConwayGOV era
-  , EraRule "LEDGER" era ~ ConwayLEDGER era
+  , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   SpecWith (ImpTestState era)
 spec =
@@ -62,7 +58,9 @@ spec =
         passEpoch
         let voter = DRepVoter $ KeyHashObj khDRep
         submitFailingVote voter gaidConstitutionProp $
-          [ ConwayGovFailure $ VotingOnExpiredGovAction $ Map.singleton gaidConstitutionProp voter
+          [ inject $
+              VotingOnExpiredGovAction @era $
+                Map.singleton gaidConstitutionProp voter
           ]
       it "on non-existant gov-actions" $ do
         khDRep <- setupSingleDRep
@@ -70,7 +68,7 @@ spec =
         let voter = DRepVoter $ KeyHashObj khDRep
             dummyGaid = gaidConstitutionProp {gaidGovActionIx = GovActionIx 99} -- non-existant `GovActionId`
         submitFailingVote voter dummyGaid $
-          [ConwayGovFailure $ GovActionsDoNotExist $ Set.singleton dummyGaid]
+          [inject $ GovActionsDoNotExist @era $ Set.singleton dummyGaid]
 
     describe "Proposals always have valid previous actions" $ do
       it "Another proposal after the first ever proposal is accepted" $ do
@@ -119,7 +117,7 @@ spec =
                 }
         submitFailingProposal
           invalidNewConstitutionProposal
-          [ ConwayGovFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
+          [ inject $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       context "Invalid proposals are rejected" $ do
         it "Invalid Index in PrevGovActionId" $ do
@@ -148,7 +146,7 @@ spec =
                   }
           submitFailingProposal
             invalidNewConstitutionProposal
-            [ ConwayGovFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
+            [ inject $ InvalidPrevGovActionId invalidNewConstitutionProposal
             ]
         it "Valid PrevGovActionId but invalid purpose" $ do
           gaidConstitutionProp <- submitInitConstitutionGovAction
@@ -164,7 +162,7 @@ spec =
                   }
           submitFailingProposal
             invalidNoConfidenceProposal
-            [ ConwayGovFailure $ InvalidPrevGovActionId invalidNoConfidenceProposal
+            [ inject $ InvalidPrevGovActionId invalidNoConfidenceProposal
             ]
       context "Valid proposals are accepted" $ do
         it "Submit Constitution and use valid PrevGovActionId" $ do

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -12,6 +13,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -73,6 +76,9 @@ module Cardano.Ledger.BaseTypes (
   Globals (..),
   epochInfoPure,
   ShelleyBase,
+
+  -- * Injection
+  Inject (..),
 )
 where
 
@@ -830,3 +836,8 @@ newtype EpochInterval = EpochInterval
 -- | Add a EpochInterval (a positive change) to an EpochNo to get a new EpochNo
 addEpochInterval :: EpochNo -> EpochInterval -> EpochNo
 addEpochInterval (EpochNo n) (EpochInterval m) = EpochNo (n + fromIntegral m)
+
+class Inject t s where
+  inject :: t -> s
+  default inject :: t ~ s => t -> s
+  inject = id

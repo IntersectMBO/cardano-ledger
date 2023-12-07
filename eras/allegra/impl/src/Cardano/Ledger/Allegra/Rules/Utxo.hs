@@ -48,7 +48,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Rules.ValidationMode (
   Inject (..),
-  InjectMaybe (..),
   Test,
   runTest,
  )
@@ -162,7 +161,6 @@ utxoTransition = do
   runTest $ validateOutsideValidityIntervalUTxO slot txBody
 
   {- txins txb ≠ ∅ -}
-  -- runValidationTransMaybe fromShelleyFailure $ Shelley.validateInputSetEmptyUTxO txb
   runTest $ Shelley.validateInputSetEmptyUTxO txBody
 
   {- minfee pp tx ≤ txfee txb -}
@@ -417,23 +415,6 @@ instance
 
 -- ===============================================
 -- Inject instances
-
-fromShelleyFailure :: Shelley.ShelleyUtxoPredFailure era -> Maybe (AllegraUtxoPredFailure era)
-fromShelleyFailure = \case
-  Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
-  Shelley.ExpiredUTxO {} -> Nothing -- Rule was replaced with `OutsideValidityIntervalUTxO`
-  Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
-  Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
-  Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
-  Shelley.ValueNotConservedUTxO c p -> Just $ ValueNotConservedUTxO c p
-  Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
-  Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
-  Shelley.OutputTooSmallUTxO {} -> Nothing -- Rule was updated
-  Shelley.UpdateFailure ppf -> Just $ UpdateFailure ppf
-  Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
-
-instance InjectMaybe (Shelley.ShelleyUtxoPredFailure era) (AllegraUtxoPredFailure era) where
-  injectMaybe = fromShelleyFailure
 
 instance Inject (AllegraUtxoPredFailure era) (AllegraUtxoPredFailure era) where
   inject = id

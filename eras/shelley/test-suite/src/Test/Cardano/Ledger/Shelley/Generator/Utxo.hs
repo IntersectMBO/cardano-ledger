@@ -25,6 +25,7 @@ import Cardano.Ledger.Address (
  )
 import Cardano.Ledger.BaseTypes (
   Network (..),
+  inject,
   maybeToStrictMaybe,
  )
 import Cardano.Ledger.Binary (EncCBOR, serialize)

@@ -23,7 +23,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (MaryTxBody))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -80,14 +80,14 @@ import qualified Test.QuickCheck as QC
    `instance ValidateScript (ShelleyMAEra ma c) where ... `
 ------------------------------------------------------------------------------}
 
-instance CC.Crypto c => ScriptClass (MaryEra c) where
+instance Crypto c => ScriptClass (MaryEra c) where
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
   basescript _proxy = someLeaf @(MaryEra c)
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance CC.Crypto c => EraGen (MaryEra c) where
+instance Crypto c => EraGen (MaryEra c) where
   genGenesisValue = maryGenesisValue
   genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
@@ -100,7 +100,7 @@ instance CC.Crypto c => EraGen (MaryEra c) where
   genEraPParams = genPParams
   genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
 
-genAuxiliaryData :: CC.Crypto c => Constants -> Gen (StrictMaybe (TxAuxData (MaryEra c)))
+genAuxiliaryData :: Crypto c => Constants -> Gen (StrictMaybe (TxAuxData (MaryEra c)))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary)
@@ -108,7 +108,7 @@ genAuxiliaryData Constants {frequencyTxWithMetadata} =
     ]
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
-maryGenesisValue :: forall era c. CC.Crypto c => GenEnv era -> Gen (MaryValue c)
+maryGenesisValue :: GenEnv era -> Gen (MaryValue c)
 maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
   Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 
@@ -144,13 +144,13 @@ coloredCoinMaxMint = 1000 * 1000
 redCoins :: Era era => Timelock era
 redCoins = trivialPolicy 0
 
-redCoinId :: forall c. CC.Crypto c => PolicyID c
+redCoinId :: forall c. Crypto c => PolicyID c
 redCoinId = PolicyID $ hashScript @(MaryEra c) redCoins
 
 red :: AssetName
 red = AssetName "red"
 
-genRed :: CC.Crypto c => Gen (MultiAsset c)
+genRed :: Crypto c => Gen (MultiAsset c)
 genRed = do
   n <- genInteger coloredCoinMinMint coloredCoinMaxMint
   pure $ multiAssetFromList [(redCoinId, red, n)]
@@ -165,7 +165,7 @@ genRed = do
 blueCoins :: Era era => Timelock era
 blueCoins = trivialPolicy 1
 
-blueCoinId :: forall c. CC.Crypto c => PolicyID c
+blueCoinId :: forall c. Crypto c => PolicyID c
 blueCoinId = PolicyID $ hashScript @(MaryEra c) blueCoins
 
 maxBlueMint :: Int
@@ -175,7 +175,7 @@ maxBlueMint = 5
 -- current coin selection algorithm does not prevent creating
 -- a multi-asset that is too large.
 
-genBlue :: CC.Crypto c => Gen (MultiAsset c)
+genBlue :: Crypto c => Gen (MultiAsset c)
 genBlue = do
   as <- QC.resize maxBlueMint $ QC.listOf genSingleBlue
   -- the transaction size gets too big if we mint too many assets
@@ -196,13 +196,13 @@ genBlue = do
 yellowCoins :: Era era => Timelock era
 yellowCoins = trivialPolicy 2
 
-yellowCoinId :: forall c. CC.Crypto c => PolicyID c
+yellowCoinId :: forall c. Crypto c => PolicyID c
 yellowCoinId = PolicyID $ hashScript @(MaryEra c) yellowCoins
 
 yellowNumAssets :: Int
 yellowNumAssets = 5
 
-genYellow :: CC.Crypto c => Gen (MultiAsset c)
+genYellow :: Crypto c => Gen (MultiAsset c)
 genYellow = do
   xs <- QC.sublistOf [0 .. yellowNumAssets]
   as <- mapM genSingleYellow xs
@@ -243,7 +243,7 @@ yellowFreq = 20
 genBundle :: Int -> Gen (MultiAsset c) -> Gen (MultiAsset c)
 genBundle freq g = QC.frequency [(freq, g), (100 - freq, pure mempty)]
 
-genMint :: CC.Crypto c => Gen (MultiAsset c)
+genMint :: Crypto c => Gen (MultiAsset c)
 genMint = do
   r <- genBundle redFreq genRed
   b <- genBundle blueFreq genBlue
@@ -327,7 +327,7 @@ instance Split (MaryValue era) where
         , Coin (n `rem` m)
         )
 
-instance CC.Crypto c => MinGenTxout (MaryEra c) where
+instance Crypto c => MinGenTxout (MaryEra c) where
   calcEraMinUTxO _txout pp = pp ^. ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
