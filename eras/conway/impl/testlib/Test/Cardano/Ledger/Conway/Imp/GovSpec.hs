@@ -29,7 +29,6 @@ import Data.Maybe
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Conway.Imp.EpochSpec (electBasicCommittee)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
