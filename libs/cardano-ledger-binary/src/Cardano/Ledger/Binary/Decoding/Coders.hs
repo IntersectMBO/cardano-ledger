@@ -339,7 +339,7 @@ data Decode (w :: Wrapped) t where
   -- | Label the constructor of a Record-like datatype (one with multiple constructors) as an Decode.
   SumD :: t -> Decode 'Open t
   -- | Lift a Word to Decode function into a DeCode for a type with multiple constructors.
-  Summands :: String -> (Word -> Decode 'Open t) -> Decode ('Closed 'Dense) t
+  Summands :: Text.Text -> (Word -> Decode 'Open t) -> Decode ('Closed 'Dense) t
   -- | Lift a Word to Field function into a DeCode for a type with 1 constructor stored sparsely
   SparseKeyed ::
     Typeable t =>

@@ -2,8 +2,10 @@
 
 ## 1.3.0.0
 
+* Add `decodeListLikeT` and `decodeListLike`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Add `encodeEnum` and `decodeEnumBounded`
+* Change first argument of `decodeRecordSum` and `Summands` from `String` to `Text`
 
 ### `testlib`
 

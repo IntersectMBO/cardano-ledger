@@ -48,6 +48,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeRecordNamed,
   decodeRecordNamedT,
   decodeRecordSum,
+  decodeListLike,
+  decodeListLikeT,
   decodeEnumBounded,
   decodeWithOrigin,
 
@@ -580,36 +582,60 @@ decodeRecordNamedT ::
   (a -> Int) ->
   m (Decoder s) a ->
   m (Decoder s) a
-decodeRecordNamedT name getRecordSize decoder = do
-  lenOrIndef <- lift decodeListLenOrIndef
-  x <- decoder
-  lift $ case lenOrIndef of
-    Just n -> matchSize (Text.pack "Record " <> name) (getRecordSize x) n
-    Nothing -> do
-      isBreak <- decodeBreakOr
-      unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
-  pure x
+decodeRecordNamedT name getRecordSize decoder =
+  decodeListLikeT name decoder $ \result n ->
+    lift $ matchSize ("Record " <> name) n (getRecordSize result)
 {-# INLINE decodeRecordNamedT #-}
 
-decodeRecordSum :: String -> (Word -> Decoder s (Int, a)) -> Decoder s a
-decodeRecordSum name decoder = do
-  lenOrIndef <- decodeListLenOrIndef
-  tag <- decodeWord
-  (size, x) <- decoder tag -- we decode all the stuff we want
-  case lenOrIndef of
-    Just n -> matchSize (Text.pack "Sum " <> Text.pack name) size n
-    Nothing -> do
-      isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
-      unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
-  pure x
+decodeRecordSum :: Text.Text -> (Word -> Decoder s (Int, a)) -> Decoder s a
+decodeRecordSum name decoder =
+  snd <$> do
+    decodeListLike name (decodeWord >>= decoder) $ \(size, _) n ->
+      matchSize (Text.pack "Sum " <> name) size n
 {-# INLINE decodeRecordSum #-}
+
+-- | Use this decoder for any list like structure that accepts fixed or variable list
+-- length encoding.
+decodeListLike ::
+  -- | Name for error reporting
+  Text.Text ->
+  -- | Decoder for the datastructure itself
+  Decoder s a ->
+  -- | In case when length was provided, act upon it.
+  (a -> Int -> Decoder s ()) ->
+  Decoder s a
+decodeListLike name decoder actOnLength =
+  runIdentityT $ decodeListLikeT name (lift decoder) (\r i -> lift (actOnLength r i))
+{-# INLINE decodeListLike #-}
+
+decodeListLikeT ::
+  (MonadTrans m, Monad (m (Decoder s))) =>
+  -- | Name for error reporting
+  Text.Text ->
+  -- | Decoder for the datastructure itself
+  m (Decoder s) a ->
+  -- | In case when length was provided, act upon it.
+  (a -> Int -> m (Decoder s) ()) ->
+  m (Decoder s) a
+decodeListLikeT name decoder actOnLength = do
+  lenOrIndef <- lift decodeListLenOrIndef
+  result <- decoder
+  case lenOrIndef of
+    Just n -> actOnLength result n
+    Nothing -> lift $ do
+      isBreak <- decodeBreakOr
+      unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
+  pure result
+{-# INLINE decodeListLikeT #-}
 
 decodeEnumBounded :: forall a s. (Enum a, Bounded a, Typeable a) => Decoder s a
 decodeEnumBounded = do
   n <- decodeInt
   if fromEnum (minBound :: a) <= n && n <= fromEnum (maxBound :: a)
     then pure $ toEnum n
-    else fail $ "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
+    else
+      fail $
+        "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
 {-# INLINE decodeEnumBounded #-}
 
 decodeWithOrigin :: Decoder s a -> Decoder s (WithOrigin a)
