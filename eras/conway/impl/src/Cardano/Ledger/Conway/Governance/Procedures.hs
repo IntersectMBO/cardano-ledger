@@ -23,6 +23,8 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   GovProcedures (..),
   VotingProcedures (..),
   VotingProcedure (..),
+  foldlVotingProcedures,
+  foldrVotingProcedures,
   ProposalProcedure (..),
   Anchor (..),
   AnchorData (..),
@@ -57,6 +59,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
 import Cardano.Ledger.Address (RewardAcnt)
+import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
@@ -110,6 +113,7 @@ import Data.Aeson (
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Default.Class
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
@@ -122,7 +126,7 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
-newtype GovActionIx = GovActionIx Word32
+newtype GovActionIx = GovActionIx {unGovActionIx :: Word32}
   deriving
     ( Generic
     , Eq
@@ -372,6 +376,34 @@ instance Era era => DecCBOR (VotingProcedures era) where
           "VotingProcedures require votes, but Voter: " <> show voter <> " didn't have any"
       pure subMap
   {-# INLINE decCBOR #-}
+
+foldlVotingProcedures ::
+  -- | Accumulating function
+  (c -> Voter (EraCrypto era) -> GovActionId (EraCrypto era) -> VotingProcedure era -> c) ->
+  -- | Initial accumulator
+  c ->
+  -- | Procedures to fold over
+  VotingProcedures era ->
+  c
+foldlVotingProcedures f initAcc =
+  let fVotes initVotesAcc voter =
+        Map.foldlWithKey' (\acc -> f acc voter) initVotesAcc
+   in Map.foldlWithKey' fVotes initAcc . unVotingProcedures
+
+foldrVotingProcedures ::
+  -- | Accumulating function
+  (Voter (EraCrypto era) -> GovActionId (EraCrypto era) -> VotingProcedure era -> c -> c) ->
+  -- | Initial accumulator
+  c ->
+  -- | Procedures to fold over
+  VotingProcedures era ->
+  c
+foldrVotingProcedures f initAcc =
+  let fVotes voter votes acc =
+        Map.foldrWithKey' (f voter) acc votes
+   in Map.foldrWithKey' fVotes initAcc . unVotingProcedures
+
+deriving instance c ~ EraCrypto era => Indexable (Voter c) (VotingProcedures era)
 
 data VotingProcedure era = VotingProcedure
   { vProcVote :: !Vote

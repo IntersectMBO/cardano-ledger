@@ -5,15 +5,14 @@
 module Test.Cardano.Ledger.Babbage.Examples.Consensus where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (
   AuxiliaryDataHash (..),
   mkAlonzoTxAuxData,
  )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Translation ()
@@ -166,7 +165,7 @@ exampleTx =
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
         ( Redeemers $
-            Map.singleton (RdmrPtr Tag.Spend 0) (redeemerExample, ExUnits 5000 5000)
+            Map.singleton (AlonzoSpending $ AsIndex 0) (redeemerExample, ExUnits 5000 5000)
         ) -- redeemers
     )
     ( SJust $

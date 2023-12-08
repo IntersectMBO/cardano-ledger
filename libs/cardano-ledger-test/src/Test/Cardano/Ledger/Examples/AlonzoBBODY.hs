@@ -19,8 +19,7 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
@@ -36,7 +35,7 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (..),
  )
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   KeyRole (..),
   coerceKeyRole,
@@ -81,6 +80,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
+import Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (mkSingleRedeemer)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
   alwaysSucceedsHash,
@@ -100,6 +100,7 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
   WitnessesField (..),
  )
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (
@@ -240,7 +241,7 @@ validatingTx pf =
         [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
         , ScriptWits' [always 3 pf]
         , DataWits' [someDatum]
-        , RdmrWits validatingRedeemers
+        , RdmrWits $ validatingRedeemers pf
         ]
     ]
 
@@ -252,13 +253,18 @@ validatingBody pf =
     , Collateral' [mkGenesisTxIn 11]
     , Outputs' [validatingTxOut pf]
     , Txfee (Coin 5)
-    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemers (mkTxDats someDatum))
+    , WppHash
+        ( newScriptIntegrityHash
+            pf
+            (pp pf)
+            [PlutusV1]
+            (validatingRedeemers pf)
+            (mkTxDats someDatum)
+        )
     ]
 
-validatingRedeemers :: Era era => Redeemers era
-validatingRedeemers =
-  Redeemers $
-    Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+validatingRedeemers :: Era era => Proof era -> Redeemers era
+validatingRedeemers pf = mkSingleRedeemer pf Spending (Data (PV1.I 42))
 
 validatingTxOut :: EraTxOut era => Proof era -> TxOut era
 validatingTxOut pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]
@@ -289,17 +295,16 @@ notValidatingTx pf =
         , Collateral' [mkGenesisTxIn 12]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]]
         , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemers (mkTxDats anotherDatum))
+        , WppHash
+            ( newScriptIntegrityHash
+                pf
+                (pp pf)
+                [PlutusV1]
+                notValidatingRedeemers
+                (mkTxDats anotherDatum)
+            )
         ]
-    notValidatingRedeemers =
-      Redeemers
-        ( Map.fromList
-            [
-              ( RdmrPtr Tag.Spend 0
-              , (Data (PV1.I 1), ExUnits 5000 5000)
-              )
-            ]
-        )
+    notValidatingRedeemers = mkSingleRedeemer pf Spending (Data (PV1.I 1))
 
 validatingTxWithWithdrawal ::
   forall era.
@@ -316,7 +321,7 @@ validatingTxWithWithdrawal pf =
     , WitnessesI
         [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithWithdrawal pf)) (someKeys pf)]
         , ScriptWits' [always 2 pf]
-        , RdmrWits validatingWithWithdrawalRedeemers
+        , RdmrWits $ validatingWithWithdrawalRedeemers pf
         ]
     ]
 
@@ -334,13 +339,18 @@ validatingBodyWithWithdrawal pf =
               (RewardAcnt Testnet (scriptStakeCredSuceed pf))
               (Coin 1000)
         )
-    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingWithWithdrawalRedeemers mempty)
+    , WppHash
+        ( newScriptIntegrityHash
+            pf
+            (pp pf)
+            [PlutusV1]
+            (validatingWithWithdrawalRedeemers pf)
+            mempty
+        )
     ]
 
-validatingWithWithdrawalRedeemers :: Era era => Redeemers era
-validatingWithWithdrawalRedeemers =
-  Redeemers $
-    Map.singleton (RdmrPtr Tag.Rewrd 0) (Data (PV1.I 42), ExUnits 5000 5000)
+validatingWithWithdrawalRedeemers :: Era era => Proof era -> Redeemers era
+validatingWithWithdrawalRedeemers pf = mkSingleRedeemer pf Rewarding (Data (PV1.I 42))
 
 validatingTxWithWithdrawalOut :: EraTxOut era => Proof era -> TxOut era
 validatingTxWithWithdrawalOut pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
@@ -379,7 +389,7 @@ notValidatingTxWithWithdrawal pf =
             )
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemers mempty)
         ]
-    notValidatingRedeemers = Redeemers $ Map.singleton (RdmrPtr Tag.Rewrd 0) (Data (PV1.I 0), ExUnits 5000 5000)
+    notValidatingRedeemers = mkSingleRedeemer pf Rewarding (Data (PV1.I 0))
 
 validatingTxWithCert ::
   forall era.
@@ -397,7 +407,7 @@ validatingTxWithCert pf =
     , WitnessesI
         [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithCert pf)) (someKeys pf)]
         , ScriptWits' [always 2 pf]
-        , RdmrWits validatingRedeemrsWithCert
+        , RdmrWits $ validatingRedeemrsWithCert pf
         ]
     ]
 
@@ -410,13 +420,11 @@ validatingBodyWithCert pf =
     , Outputs' [validatingTxWithCertOut pf]
     , Certs' [UnRegTxCert (scriptStakeCredSuceed pf)]
     , Txfee (Coin 5)
-    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemrsWithCert mempty)
+    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemrsWithCert pf) mempty)
     ]
 
-validatingRedeemrsWithCert :: Era era => Redeemers era
-validatingRedeemrsWithCert =
-  Redeemers $
-    Map.singleton (RdmrPtr Tag.Cert 0) (Data (PV1.I 42), ExUnits 5000 5000)
+validatingRedeemrsWithCert :: Era era => Proof era -> Redeemers era
+validatingRedeemrsWithCert pf = mkSingleRedeemer pf Certifying (Data (PV1.I 42))
 
 validatingTxWithCertOut :: EraTxOut era => Proof era -> TxOut era
 validatingTxWithCertOut pf =
@@ -456,7 +464,7 @@ notValidatingTxWithCert pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersWithCert mempty)
         ]
-    notValidatingRedeemersWithCert = Redeemers $ Map.singleton (RdmrPtr Tag.Cert 0) (Data (PV1.I 0), ExUnits 5000 5000)
+    notValidatingRedeemersWithCert = mkSingleRedeemer pf Certifying (Data (PV1.I 0))
 
 validatingTxWithMint ::
   forall era.
@@ -475,7 +483,7 @@ validatingTxWithMint pf =
     , WitnessesI
         [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBodyWithMint pf)) (someKeys pf)]
         , ScriptWits' [always 2 pf]
-        , RdmrWits validatingRedeemersWithMint
+        , RdmrWits $ validatingRedeemersWithMint pf
         ]
     ]
 
@@ -491,18 +499,24 @@ validatingBodyWithMint pf =
     , Outputs' [validatingTxWithMintOut pf]
     , Txfee (Coin 5)
     , Mint (multiAsset pf)
-    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersWithMint mempty)
+    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemersWithMint pf) mempty)
     ]
 
-validatingRedeemersWithMint :: Era era => Redeemers era
-validatingRedeemersWithMint =
-  Redeemers $
-    Map.singleton (RdmrPtr Tag.Mint 0) (Data (PV1.I 42), ExUnits 5000 5000)
+validatingRedeemersWithMint :: Era era => Proof era -> Redeemers era
+validatingRedeemersWithMint pf = mkSingleRedeemer pf Minting (Data (PV1.I 42))
 
 multiAsset :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAsset (EraCrypto era)
 multiAsset pf = forge @era 1 (always 2 pf)
 
-validatingTxWithMintOut :: forall era. (HasTokens era, EraTxOut era, Scriptic era, Value era ~ MaryValue (EraCrypto era)) => Proof era -> TxOut era
+validatingTxWithMintOut ::
+  forall era.
+  ( HasTokens era
+  , EraTxOut era
+  , Scriptic era
+  , Value era ~ MaryValue (EraCrypto era)
+  ) =>
+  Proof era ->
+  TxOut era
 validatingTxWithMintOut pf =
   newTxOut pf [Address (someAddr pf), Amount (MaryValue (Coin 995) (multiAsset pf))]
 
@@ -537,7 +551,7 @@ notValidatingTxWithMint pf =
         , Mint ma
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersWithMint mempty)
         ]
-    notValidatingRedeemersWithMint = Redeemers $ Map.singleton (RdmrPtr Tag.Mint 0) (Data (PV1.I 0), ExUnits 5000 5000)
+    notValidatingRedeemersWithMint = mkSingleRedeemer pf Minting (Data (PV1.I 0))
     ma = forge @era 1 (never 1 pf)
 
 poolMDHTooBigTx ::
@@ -676,7 +690,7 @@ makeTooBig proof@(Babbage _) =
 --   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayCertsFailure . CertFailure . PoolFailure $ ConwayPoolPredFailure -- FIXME: This needs fixing after POOL rules are implemented for Conway
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 
-coldKeys :: CC.Crypto c => KeyPair 'BlockIssuer c
+coldKeys :: Crypto c => KeyPair 'BlockIssuer c
 coldKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
@@ -706,8 +720,8 @@ scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 successDeposit :: UM.CompactForm Coin
 successDeposit = UM.CompactCoin 7
 
-hashsize :: forall c. CC.Crypto c => Int
-hashsize = fromIntegral $ sizeHash ([] @(CC.HASH c))
+hashsize :: forall c. Crypto c => Int
+hashsize = fromIntegral $ sizeHash ([] @(HASH c))
 
 -- ============================== PParams ===============================
 

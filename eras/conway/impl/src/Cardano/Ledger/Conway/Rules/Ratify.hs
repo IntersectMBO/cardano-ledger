@@ -253,8 +253,9 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
               | reCurrentEpoch > expiry -> (yes, tot) -- drep is expired, so we don't consider it
               | otherwise ->
                   case Map.lookup cred gasDRepVotes of
-                    Nothing -> (yes, tot + stake) -- drep hasn't voted for this action, so we don't count
-                    -- the vote but we consider it in the denominator
+                    -- drep hasn't voted for this action, so we don't count
+                    -- the vote but we consider it in the denominator:
+                    Nothing -> (yes, tot + stake)
                     Just VoteYes -> (yes + stake, tot + stake)
                     Just Abstain -> (yes, tot)
                     Just VoteNo -> (yes, tot + stake)

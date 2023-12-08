@@ -33,32 +33,16 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
 )
 where
 
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
-import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Plutus.Context (
-  ContextError,
-  EraPlutusContext,
- )
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
-import Cardano.Ledger.Alonzo.Tx (
-  AlonzoEraTx (..),
-  IsValid (..),
- )
-import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoEraTxBody (..),
-  MaryEraTxBody (..),
-  ShelleyEraTxBody (..),
- )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
-import Cardano.Ledger.Alonzo.UTxO (
-  AlonzoEraUTxO (..),
-  AlonzoScriptsNeeded,
- )
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (
   Globals,
   ShelleyBase,
@@ -74,7 +58,6 @@ import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext,
   ScriptFailure (..),
@@ -82,10 +65,6 @@ import Cardano.Ledger.Plutus.Evaluate (
  )
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Governance (
-  EraGov (GovState),
-  ShelleyGovState,
- )
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
@@ -209,13 +188,12 @@ utxosTransition =
 scriptsTransition ::
   ( STS sts
   , Monad m
-  , MaryEraTxBody era
+  , AlonzoEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BaseM sts ~ ReaderT Globals m
   , PredicateFailure sts ~ AlonzoUtxosPredFailure era
-  , AlonzoEraPParams era
   , EraPlutusContext era
   ) =>
   SlotNo ->
@@ -300,7 +278,7 @@ alonzoEvalScriptsTxInvalid = do
   TRC (UtxoEnv slot pp _, us@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
-  let !_ = traceEvent invalidBegin ()
+  () <- pure $! traceEvent invalidBegin ()
 
   scriptsTransition slot pp tx utxo $ \case
     Passes _ps ->
@@ -310,11 +288,11 @@ alonzoEvalScriptsTxInvalid = do
       mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
       tellEvent (FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
 
-  let !_ = traceEvent invalidEnd ()
+  () <- pure $! traceEvent invalidEnd ()
 
-      {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
-      {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
-      !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+  {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
+  {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
+  let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
   pure $!
     us
       { utxosUtxo = UTxO utxoKeep
@@ -391,6 +369,7 @@ instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) wher
 
 instance
   ( EraTxCert era
+  , AlonzoEraScript era
   , EncCBOR (ContextError era)
   , EncCBOR (PPUPPredFailure era)
   ) =>
@@ -403,6 +382,7 @@ instance
 
 instance
   ( EraTxCert era
+  , AlonzoEraScript era
   , DecCBOR (ContextError era)
   , DecCBOR (PPUPPredFailure era)
   ) =>
@@ -416,7 +396,7 @@ instance
       dec n = Invalid n
 
 deriving stock instance
-  ( Era era
+  ( AlonzoEraScript era
   , Show (TxCert era)
   , Show (ContextError era)
   , Show (Shelley.UTxOState era)
@@ -425,7 +405,7 @@ deriving stock instance
   Show (AlonzoUtxosPredFailure era)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , Eq (TxCert era)
   , Eq (ContextError era)
   , Eq (Shelley.UTxOState era)
@@ -439,7 +419,7 @@ instance
   _ == _ = False
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , NoThunks (TxCert era)
   , NoThunks (ContextError era)
   , NoThunks (Shelley.UTxOState era)

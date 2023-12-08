@@ -2,6 +2,9 @@
 
 ## 1.12.0.0
 
+* Add `ConwayPlutusPurpose`
+* Add `unGovActionIx`
+* Add `foldlVotingProcedures`
 * Add a policy field to `ParameterChange` and `TreasuryWithdrawals` constructors
   of `GovAction`
 * Add `InvalidPolicyHash` to `ConwayGovPredFailure`

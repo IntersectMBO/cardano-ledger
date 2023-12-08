@@ -23,7 +23,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.TxWits (
-  RdmrPtr (..),
   Redeemers (Redeemers),
   RedeemersRaw,
   unRedeemers,
@@ -65,12 +64,11 @@ import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
-  Tag (..),
+  AsIndex (..),
   decodePlutusScript,
   fromPlutusScript,
   toPlutusSLanguage,
  )
-import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -121,7 +119,6 @@ import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
-import Data.Aeson (ToJSON (..), (.=))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty as NE (toList)
 import Data.Map.Strict (Map)
@@ -131,57 +128,23 @@ import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 -- ==========================================
 
-data RdmrPtr
-  = RdmrPtr
-      !Tag
-      {-# UNPACK #-} !Word64
-  deriving (Eq, Ord, Show, Generic)
+newtype RedeemersRaw era = RedeemersRaw
+  { unRedeemersRaw :: Map (PlutusPurpose AsIndex era) (Data era, ExUnits)
+  }
+  deriving (Generic)
 
-instance NoThunks RdmrPtr
+deriving newtype instance AlonzoEraScript era => Eq (RedeemersRaw era)
+deriving newtype instance AlonzoEraScript era => NFData (RedeemersRaw era)
+deriving newtype instance AlonzoEraScript era => NoThunks (RedeemersRaw era)
+deriving newtype instance AlonzoEraScript era => Show (RedeemersRaw era)
 
-instance NFData RdmrPtr
-
--- EncCBOR and DecCBOR for RdmrPtr is used in UTXOW for error reporting
-instance DecCBOR RdmrPtr where
-  decCBOR = RdmrPtr <$> decCBOR <*> decCBOR
-
-instance EncCBOR RdmrPtr where
-  encCBOR (RdmrPtr t w) = encCBOR t <> encCBOR w
-
-instance EncCBORGroup RdmrPtr where
-  listLen _ = 2
-  listLenBound _ = 2
-  encCBORGroup (RdmrPtr t w) = encCBOR t <> encCBOR w
-  encodedGroupSizeExpr size_ _proxy =
-    encodedSizeExpr size_ (Proxy :: Proxy Tag)
-      + encodedSizeExpr size_ (Proxy :: Proxy Word64)
-
-instance DecCBORGroup RdmrPtr where
-  decCBORGroup = RdmrPtr <$> decCBOR <*> decCBOR
-
-instance ToJSON RdmrPtr where
-  toJSON = \case
-    RdmrPtr Spend n -> kindObjectWithValue "RedeemerPointerSpending" n
-    RdmrPtr Mint n -> kindObjectWithValue "RedeemerPointerMinting" n
-    RdmrPtr Cert n -> kindObjectWithValue "RedeemerPointerCertifying" n
-    RdmrPtr Rewrd n -> kindObjectWithValue "RedeemerPointerWithdrawing" n
-    where
-      kindObjectWithValue name n = kindObject name ["value" .= n]
-
-newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
-  deriving (Eq, Generic, Typeable, NFData)
-  deriving newtype (NoThunks)
-
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (RedeemersRaw era)
-
-instance Typeable era => EncCBOR (RedeemersRaw era) where
+instance AlonzoEraScript era => EncCBOR (RedeemersRaw era) where
   encCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
     where
       keyValueEncoder (ptr, (dats, exs)) =
@@ -198,17 +161,20 @@ instance Memoized Redeemers where
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
-  deriving newtype (Eq, Generic, ToCBOR, NoThunks, SafeToHash, Typeable, NFData)
+  deriving newtype (Generic, ToCBOR, SafeToHash, Typeable)
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Redeemers era)
+deriving newtype instance AlonzoEraScript era => Eq (Redeemers era)
+deriving newtype instance AlonzoEraScript era => NFData (Redeemers era)
+deriving newtype instance AlonzoEraScript era => NoThunks (Redeemers era)
+deriving instance AlonzoEraScript era => Show (Redeemers era)
 
 -- =====================================================
 -- Pattern for Redeemers
 
 pattern Redeemers ::
   forall era.
-  Era era =>
-  Map RdmrPtr (Data era, ExUnits) ->
+  AlonzoEraScript era =>
+  Map (PlutusPurpose AsIndex era) (Data era, ExUnits) ->
   Redeemers era
 pattern Redeemers rs <-
   (getMemoRawType -> RedeemersRaw rs)
@@ -217,23 +183,28 @@ pattern Redeemers rs <-
 
 {-# COMPLETE Redeemers #-}
 
-unRedeemers :: Era era => Redeemers era -> Map RdmrPtr (Data era, ExUnits)
-unRedeemers (Redeemers rs) = rs
+unRedeemers :: Redeemers era -> Map (PlutusPurpose AsIndex era) (Data era, ExUnits)
+unRedeemers = unRedeemersRaw . getMemoRawType
 
-nullRedeemers :: Era era => Redeemers era -> Bool
+nullRedeemers :: Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
 
-emptyRedeemers :: Era era => Redeemers era
+emptyRedeemers :: AlonzoEraScript era => Redeemers era
 emptyRedeemers = Redeemers mempty
 
 -- | Upgrade redeemers from one era to another. The underlying data structure
 -- will remain identical, but the memoised serialisation may change to reflect
 -- the versioned serialisation of the new era.
-upgradeRedeemers :: (Era era1, Era era2) => Redeemers era1 -> Redeemers era2
-upgradeRedeemers (Redeemers m) =
-  Redeemers m'
-  where
-    m' = fmap (first upgradeData) m
+upgradeRedeemers ::
+  forall era.
+  (AlonzoEraScript (PreviousEra era), AlonzoEraScript era) =>
+  Redeemers (PreviousEra era) ->
+  Redeemers era
+upgradeRedeemers =
+  Redeemers
+    . Map.mapKeys upgradePlutusPurposeAsIndex
+    . Map.map (first upgradeData)
+    . unRedeemers
 
 -- ====================================================================
 -- In the Spec, AlonzoTxWits has 4 logical fields. Here in the implementation
@@ -299,7 +270,7 @@ deriving instance
   ) =>
   NFData (AlonzoTxWits era)
 
-isEmptyTxWitness :: Era era => AlonzoTxWits era -> Bool
+isEmptyTxWitness :: AlonzoEraScript era => AlonzoTxWits era -> Bool
 isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
@@ -378,31 +349,17 @@ upgradeTxDats (TxDats datMap) = TxDats $ fmap upgradeData datMap
 -- =====================================================
 -- AlonzoTxWits instances
 
-deriving stock instance
-  ( Era era
-  , Eq (Script era)
-  ) =>
-  Eq (AlonzoTxWitsRaw era)
+deriving stock instance AlonzoEraScript era => Eq (AlonzoTxWitsRaw era)
 
-deriving stock instance
-  (Era era, Show (Script era)) =>
-  Show (AlonzoTxWitsRaw era)
+deriving stock instance AlonzoEraScript era => Show (AlonzoTxWitsRaw era)
 
-instance (Era era, NoThunks (Script era)) => NoThunks (AlonzoTxWitsRaw era)
+instance AlonzoEraScript era => NoThunks (AlonzoTxWitsRaw era)
 
-deriving newtype instance
-  ( Era era
-  , Eq (Script era)
-  ) =>
-  Eq (AlonzoTxWits era)
+deriving newtype instance AlonzoEraScript era => Eq (AlonzoTxWits era)
 
-deriving newtype instance
-  (Era era, Show (Script era)) =>
-  Show (AlonzoTxWits era)
+deriving newtype instance AlonzoEraScript era => Show (AlonzoTxWits era)
 
-deriving newtype instance
-  (Era era, NoThunks (Script era)) =>
-  NoThunks (AlonzoTxWits era)
+deriving newtype instance AlonzoEraScript era => NoThunks (AlonzoTxWits era)
 
 -- =====================================================
 -- Pattern for AlonzoTxWits
@@ -495,7 +452,7 @@ instance (EraScript (AlonzoEra c), Crypto c) => EraTxWits (AlonzoEra c) where
   upgradeTxWits (ShelleyTxWits {addrWits, scriptWits, bootWits}) =
     AlonzoTxWits addrWits bootWits (upgradeScript <$> scriptWits) mempty emptyRedeemers
 
-class EraTxWits era => AlonzoEraTxWits era where
+class (EraTxWits era, AlonzoEraScript era) => AlonzoEraTxWits era where
   datsTxWitsL :: Lens' (TxWits era) (TxDats era)
 
   rdmrsTxWitsL :: Lens' (TxWits era) (Redeemers era)
@@ -575,20 +532,28 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
                 ++ show (plutusLanguage (Proxy @l))
           Just plutusScripts -> plutusScripts
 
-instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
-  decCBOR =
+instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
+  decCBOR = do
     ifDecoderVersionAtLeast
       (natVersion @9)
-      (mapTraverseableDecoderA (decodeNonEmptyList decodeAnnElement) (RedeemersRaw . Map.fromList . NE.toList))
-      (mapTraverseableDecoderA (decodeList decodeAnnElement) (RedeemersRaw . Map.fromList))
+      ( mapTraverseableDecoderA
+          (decodeNonEmptyList decodeAnnElement)
+          (RedeemersRaw . Map.fromList . NE.toList)
+      )
+      ( mapTraverseableDecoderA
+          (decodeList decodeAnnElement)
+          (RedeemersRaw . Map.fromList)
+      )
     where
-      decodeAnnElement :: forall s. Decoder s (Annotator (RdmrPtr, (Data era, ExUnits)))
+      decodeAnnElement ::
+        forall s. Decoder s (Annotator (PlutusPurpose AsIndex era, (Data era, ExUnits)))
       decodeAnnElement = do
         (rdmrPtr, dat, ex) <- decodeElement
         let f x y z = (x, (y, z))
         pure $ f rdmrPtr <$> dat <*> pure ex
       {-# INLINE decodeAnnElement #-}
-      decodeElement :: forall s. Decoder s (RdmrPtr, Annotator (Data era), ExUnits)
+      decodeElement ::
+        forall s. Decoder s (PlutusPurpose AsIndex era, Annotator (Data era), ExUnits)
       decodeElement = do
         decodeRecordNamed
           "Redeemer"
@@ -598,12 +563,12 @@ instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
   {-# INLINE decCBOR #-}
 
 -- | Encodes memoized bytes created upon construction.
-instance Era era => EncCBOR (Redeemers era)
+instance AlonzoEraScript era => EncCBOR (Redeemers era)
 
 deriving via
   (Mem RedeemersRaw era)
   instance
-    Era era => DecCBOR (Annotator (Redeemers era))
+    AlonzoEraScript era => DecCBOR (Annotator (Redeemers era))
 
 instance
   ( AlonzoEraScript era

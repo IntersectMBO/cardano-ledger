@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -13,6 +14,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -48,6 +50,7 @@ module Cardano.Ledger.Alonzo.TxBody (
   ShelleyEraTxBody (..),
   AllegraEraTxBody (..),
   MaryEraTxBody (..),
+  Indexable (..),
   inputs',
   collateral',
   outputs',
@@ -72,12 +75,19 @@ module Cardano.Ledger.Alonzo.TxBody (
   ScriptIntegrityHash,
   getAlonzoTxOutEitherAddr,
   utxoEntrySize,
+  alonzoRedeemerPointer,
+  alonzoRedeemerPointerInverse,
 )
 where
 
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Scripts ()
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  AsIndex (..),
+  AsItem (..),
+  PlutusPurpose,
+ )
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.Alonzo.TxOut
@@ -98,7 +108,12 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
-import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies)
+import Cardano.Ledger.Mary.Value (
+  MaryValue (MaryValue),
+  MultiAsset (..),
+  PolicyID (..),
+  policies,
+ )
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -118,13 +133,17 @@ import Control.Arrow (left)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
 import Data.Default.Class (def)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (isSJust)
+import Data.OSet.Strict (OSet)
+import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Void (absurd)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -140,6 +159,19 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
     Lens' (TxBody era) (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
 
   networkIdTxBodyL :: Lens' (TxBody era) (StrictMaybe Network)
+
+  -- | This function is called @rdptr@ in the spec. Given a `TxBody` and a plutus
+  -- purpose with an item, we should be able to find the plutus purpose as in index
+  redeemerPointer ::
+    TxBody era ->
+    PlutusPurpose AsItem era ->
+    StrictMaybe (PlutusPurpose AsIndex era)
+
+  -- | This is an inverse of `redeemerPointer`. Given purpose as an index return it as an item.
+  redeemerPointerInverse ::
+    TxBody era ->
+    PlutusPurpose AsIndex era ->
+    StrictMaybe (PlutusPurpose AsItem era)
 
 -- ======================================
 
@@ -336,6 +368,10 @@ instance Crypto c => AlonzoEraTxBody (AlonzoEra c) where
   networkIdTxBodyL =
     lensMemoRawType atbrTxNetworkId (\txBodyRaw networkId -> txBodyRaw {atbrTxNetworkId = networkId})
   {-# INLINEABLE networkIdTxBodyL #-}
+
+  redeemerPointer = alonzoRedeemerPointer
+
+  redeemerPointerInverse = alonzoRedeemerPointerInverse
 
 deriving newtype instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
@@ -604,3 +640,71 @@ instance
   DecCBOR (Annotator (AlonzoTxBodyRaw era))
   where
   decCBOR = pure <$> decCBOR
+
+alonzoRedeemerPointer ::
+  forall era.
+  MaryEraTxBody era =>
+  TxBody era ->
+  AlonzoPlutusPurpose AsItem era ->
+  StrictMaybe (AlonzoPlutusPurpose AsIndex era)
+alonzoRedeemerPointer txBody = \case
+  AlonzoSpending txIn ->
+    AlonzoSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
+  AlonzoMinting policyID ->
+    AlonzoMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set (PolicyID (EraCrypto era)))
+  AlonzoCertifying txCert ->
+    AlonzoCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
+  AlonzoRewarding rewardAccount ->
+    AlonzoRewarding <$> indexOf rewardAccount (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+
+alonzoRedeemerPointerInverse ::
+  MaryEraTxBody era =>
+  TxBody era ->
+  AlonzoPlutusPurpose AsIndex era ->
+  StrictMaybe (AlonzoPlutusPurpose AsItem era)
+alonzoRedeemerPointerInverse txBody = \case
+  AlonzoSpending idx ->
+    AlonzoSpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
+  AlonzoMinting idx ->
+    AlonzoMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
+  AlonzoCertifying idx ->
+    AlonzoCertifying <$> fromIndex idx (txBody ^. certsTxBodyL)
+  AlonzoRewarding idx ->
+    AlonzoRewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+
+class Indexable elem container where
+  indexOf :: AsItem Word32 elem -> container -> StrictMaybe (AsIndex Word32 elem)
+  fromIndex :: AsIndex Word32 elem -> container -> StrictMaybe (AsItem Word32 elem)
+
+instance Ord k => Indexable k (Set k) where
+  indexOf (AsItem n) s = case Set.lookupIndex n s of
+    Just x -> SJust (AsIndex (fromIntegral @Int @Word32 x))
+    Nothing -> SNothing
+  fromIndex (AsIndex w32) s =
+    let i = fromIntegral @Word32 @Int w32
+     in if i < Set.size s
+          then SJust $ AsItem (Set.elemAt i s)
+          else SNothing
+
+instance Eq k => Indexable k (StrictSeq k) where
+  indexOf (AsItem n) seqx = case StrictSeq.findIndexL (== n) seqx of
+    Just m -> SJust (AsIndex (fromIntegral @Int @Word32 m))
+    Nothing -> SNothing
+  fromIndex (AsIndex i) seqx =
+    case StrictSeq.lookup (fromIntegral @Word32 @Int i) seqx of
+      Nothing -> SNothing
+      Just x -> SJust $ AsItem x
+
+instance Ord k => Indexable k (Map.Map k v) where
+  indexOf (AsItem n) mp = case Map.lookupIndex n mp of
+    Just x -> SJust (AsIndex (fromIntegral @Int @Word32 x))
+    Nothing -> SNothing
+  fromIndex (AsIndex w32) mp =
+    let i = fromIntegral @Word32 @Int w32
+     in if i < fromIntegral (Map.size mp)
+          then SJust . AsItem . fst $ Map.elemAt i mp
+          else SNothing
+
+instance Ord k => Indexable k (OSet k) where
+  indexOf asItem = indexOf asItem . OSet.toStrictSeq
+  fromIndex asIndex = fromIndex asIndex . OSet.toStrictSeq

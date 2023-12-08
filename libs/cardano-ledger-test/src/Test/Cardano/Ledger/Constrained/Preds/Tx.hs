@@ -16,37 +16,17 @@ module Test.Cardano.Ledger.Constrained.Preds.Tx where
 
 import Cardano.Crypto.Signing (SigningKey)
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress, RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), plutusScriptLanguage)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..), rdptr)
-import Cardano.Ledger.Alonzo.TxWits (
-  RdmrPtr (..),
-  Redeemers (..),
-  TxDats (..),
- )
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (getInputDataHashesTxBody)
-import Cardano.Ledger.Api (setMinFeeTx)
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
-import Cardano.Ledger.Core (
-  EraRule,
-  EraScript (..),
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  Value,
-  bodyTxL,
-  coinTxOutL,
-  feeTxBodyL,
-  getTotalDepositsTxCerts,
-  getTotalRefundsTxCerts,
- )
-import Cardano.Ledger.Era (Era (EraCrypto))
-import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash (..))
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -58,7 +38,6 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Mary.Core (MaryEraTxBody)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
@@ -67,6 +46,7 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
+import Cardano.Ledger.Tools (setMinFeeTx)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.Val (Val (..), inject)
@@ -107,6 +87,7 @@ import Test.Cardano.Ledger.Constrained.Vars hiding (totalAda)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), protocolVersion)
+import Test.Cardano.Ledger.Generic.GenState (mkRedeemers)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PDoc,
   PrettyA (..),
@@ -189,13 +170,15 @@ integrityHash ::
   Proof era1 ->
   Term era2 (PParamsF era1) ->
   Term era2 (Set Language) ->
-  Term era2 (Map RdmrPtr (Data era1, ExUnits)) ->
+  Term era2 (Map (PlutusPointerF era1) (Data era1, ExUnits)) ->
   Term era2 (Map (DataHash (EraCrypto era1)) (Data era1)) ->
   Target era2 (Maybe (ScriptIntegrityHash (EraCrypto era1)))
-integrityHash p pp langs rs ds = (Constr "integrityHash" hashfun ^$ pp ^$ langs ^$ rs ^$ ds)
+integrityHash p pp langs rs ds = Constr "integrityHash" hashfun ^$ pp ^$ langs ^$ rs ^$ ds
   where
     hashfun (PParamsF _ ppp) ls r d =
-      strictMaybeToMaybe $ newScriptIntegrityHash p ppp (Set.toList ls) (Redeemers r) (TxDats d)
+      let r' = [(ptr, de) | (PlutusPointerF _ ptr, de) <- Map.toList r]
+       in strictMaybeToMaybe $
+            newScriptIntegrityHash p ppp (Set.toList ls) (mkRedeemers p r') (TxDats d)
 
 -- | "Construct the Scripts Needed to compute the Script Witnesses from the UTxO and the partial TxBody
 needT ::
@@ -214,27 +197,29 @@ needT proof = Constr "neededScripts" needed
     needed (TxBodyF _ txbodyV) ut = ScriptsNeededF proof (getScriptsNeeded (liftUTxO ut) txbodyV)
 
 rdmrPtrsT ::
-  MaryEraTxBody era =>
+  AlonzoEraTxBody era =>
   Target
     era
     ( TxBodyF era ->
-      [((ScriptPurpose era), (ScriptHash (EraCrypto era)))] ->
+      [((PlutusPurposeF era), (ScriptHash (EraCrypto era)))] ->
       Map (ScriptHash (EraCrypto era)) any ->
-      Set RdmrPtr
+      Set (PlutusPointerF era)
     )
 rdmrPtrsT = Constr "getRdmrPtrs" getRdmrPtrs
 
 getRdmrPtrs ::
-  MaryEraTxBody era =>
+  AlonzoEraTxBody era =>
   TxBodyF era ->
-  [((ScriptPurpose era), (ScriptHash (EraCrypto era)))] ->
+  [((PlutusPurposeF era), (ScriptHash (EraCrypto era)))] ->
   Map (ScriptHash (EraCrypto era)) any ->
-  Set RdmrPtr
+  Set (PlutusPointerF era)
 getRdmrPtrs (TxBodyF _ txbodyV) xs allplutus = List.foldl' accum Set.empty xs
   where
-    accum ans (sp, hash) = case (rdptr txbodyV sp, Map.member hash allplutus) of
-      (SJust x, True) -> Set.insert x ans
-      _ -> ans
+    accum ans (PlutusPurposeF p sp, hash)
+      | Map.member hash allplutus
+      , SJust x <- redeemerPointer txbodyV sp =
+          Set.insert (PlutusPointerF p x) ans
+      | otherwise = ans
 
 getPlutusDataHashes ::
   (AlonzoEraTxOut era, EraTxBody era, EraScript era) =>
@@ -680,10 +665,10 @@ txBodyPreds sizes@UnivSize {..} p =
         Coin n = getTotalDepositsTxCerts pp (`Map.member` regpools) (map unTxCertF certsx)
     txrefunds = Var (pV p "txrefunds" CoinR No)
     txdeposits = Var (pV p "txdeposits" CoinR No)
-    acNeeded :: Term era [(ScriptPurpose era, ScriptHash (EraCrypto era))]
+    acNeeded :: Term era [(PlutusPurposeF era, ScriptHash (EraCrypto era))]
     acNeeded = Var $ pV p "acNeeded" (ListR (PairR (ScriptPurposeR p) ScriptHashR)) No
     neededHashSet = Var $ pV p "neededHashSet" (SetR ScriptHashR) No
-    rdmrPtrs = Var $ pV p "rdmrPtrs" (SetR RdmrPtrR) No
+    rdmrPtrs = Var $ pV p "rdmrPtrs" (SetR (RdmrPtrR p)) No
     plutusDataHashes = Var $ pV p "plutusDataHashes" (SetR DataHashR) No
     oneAuxdata = Var $ pV p "oneAuxdata" (TxAuxDataR reify) No
     tempTxFee = Var $ pV p "tempTxFee" CoinR No

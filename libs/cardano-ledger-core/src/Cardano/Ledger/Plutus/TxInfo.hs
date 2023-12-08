@@ -22,6 +22,7 @@ module Cardano.Ledger.Plutus.TxInfo (
   TxOutSource (..),
   txOutSourceToText,
   transAddr,
+  transRewardAccount,
   transProtocolVersion,
   transDataHash,
   transKeyHash,
@@ -41,7 +42,7 @@ module Cardano.Ledger.Plutus.TxInfo (
 where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   TxIx,
@@ -152,6 +153,13 @@ transAddr = \case
   AddrBootstrap {} -> Nothing
   Addr _networkId paymentCred stakeReference ->
     Just (PV1.Address (transCred paymentCred) (transStakeReference stakeReference))
+
+-- | Translate reward account by discarding `NetowrkId` and only translating the staking credential.
+--
+-- /Note/ - This function is the right one to use starting with PlutusV3, prior to that an
+-- extra `PV1.StakingHash` wrapper is needed.
+transRewardAccount :: RewardAcnt c -> PV1.Credential
+transRewardAccount (RewardAcnt _networkId cred) = transCred cred
 
 slotToPOSIXTime ::
   EpochInfo (Either Text) ->

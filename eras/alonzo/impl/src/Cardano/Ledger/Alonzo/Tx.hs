@@ -59,14 +59,10 @@ module Cardano.Ledger.Alonzo.Tx (
   alonzoMinFeeTx,
   minfee,
   --  Figure 5
-  Indexable (..), -- indexOf
-  ScriptPurpose (..),
   isTwoPhaseScriptAddressFromMap,
   Shelley.txouts,
-  indexedRdmrs,
-  rdptr,
+  indexRedeemers,
   -- Figure 6
-  rdptrInv,
   getMapFromValue,
   -- Segwit
   alonzoSegwitTx,
@@ -77,8 +73,7 @@ module Cardano.Ledger.Alonzo.Tx (
 )
 where
 
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (
@@ -89,23 +84,21 @@ import Cardano.Ledger.Alonzo.PParams (
   ppPricesL,
  )
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript,
+  AlonzoEraScript (PlutusPurpose),
+  AsItem (..),
   CostModel,
   ExUnits (..),
-  Tag (..),
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   AlonzoTxBody (..),
   AlonzoTxBodyUpgradeError,
-  MaryEraTxBody (..),
   ScriptIntegrityHash,
  )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
   AlonzoTxWits (..),
-  RdmrPtr (..),
   Redeemers (..),
   TxDats (..),
   nullDats,
@@ -128,19 +121,17 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), shelleyEqTxRaw)
-import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), unWithdrawals)
-import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.Arrow (left)
-import Control.DeepSeq (NFData (..), rwhnf)
+import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (
@@ -148,12 +139,9 @@ import Data.Maybe.Strict (
   maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
-import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro hiding (set)
 import NoThunks.Class (NoThunks)
@@ -296,9 +284,9 @@ data ScriptIntegrity era
       !(Set LangDepView) -- From the Protocol parameters
   deriving (Eq, Generic, Typeable)
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (ScriptIntegrity era)
+deriving instance AlonzoEraScript era => Show (ScriptIntegrity era)
 
-deriving instance Typeable era => NoThunks (ScriptIntegrity era)
+deriving instance AlonzoEraScript era => NoThunks (ScriptIntegrity era)
 
 -- ScriptIntegrity is not transmitted over the network. The bytes are independently
 -- reconstructed by all nodes. There are no original bytes to preserve.
@@ -315,7 +303,7 @@ instance
 
 hashScriptIntegrity ::
   forall era.
-  Era era =>
+  AlonzoEraScript era =>
   Set LangDepView ->
   Redeemers era ->
   TxDats era ->
@@ -383,112 +371,17 @@ totExUnits tx =
 -- Figure 6:Indexing script and data objects
 -- ===============================================================
 
-data ScriptPurpose era
-  = Minting !(PolicyID (EraCrypto era))
-  | Spending !(TxIn (EraCrypto era))
-  | Rewarding !(RewardAcnt (EraCrypto era))
-  | Certifying !(TxCert era)
-  deriving (Generic)
-
-deriving instance (Era era, Eq (TxCert era)) => Eq (ScriptPurpose era)
-deriving instance (Era era, Show (TxCert era)) => Show (ScriptPurpose era)
-deriving instance (Era era, NoThunks (TxCert era)) => NoThunks (ScriptPurpose era)
-
-instance (Era era, NFData (TxCert era)) => NFData (ScriptPurpose era) where
-  rnf = \case
-    Certifying c -> rnf c
-    sp -> rwhnf sp
-
-instance (Era era, EncCBOR (TxCert era)) => EncCBOR (ScriptPurpose era) where
-  encCBOR (Minting x) = encode (Sum (Minting @era) 0 !> To x)
-  encCBOR (Spending x) = encode (Sum (Spending @era) 1 !> To x)
-  encCBOR (Rewarding x) = encode (Sum (Rewarding @era) 2 !> To x)
-  encCBOR (Certifying x) = encode (Sum Certifying 3 !> To x)
-
-instance (Era era, DecCBOR (TxCert era)) => DecCBOR (ScriptPurpose era) where
-  decCBOR = decode (Summands "ScriptPurpose" dec)
-    where
-      dec 0 = SumD Minting <! From
-      dec 1 = SumD Spending <! From
-      dec 2 = SumD Rewarding <! From
-      dec 3 = SumD Certifying <! From
-      dec n = Invalid n
-  {-# INLINE decCBOR #-}
-
--- =======================================
-
-class Indexable elem container where
-  indexOf :: elem -> container -> StrictMaybe Word64
-  fromIndex :: Word64 -> container -> StrictMaybe elem
-
-instance Ord k => Indexable k (Set k) where
-  indexOf n set = case Set.lookupIndex n set of
-    Just x -> SJust (fromIntegral x)
-    Nothing -> SNothing
-  fromIndex i set =
-    if fromIntegral i < Set.size set
-      then SJust $ Set.elemAt (fromIntegral i) set
-      else SNothing
-
-instance Eq k => Indexable k (StrictSeq k) where
-  indexOf n seqx = case StrictSeq.findIndexL (== n) seqx of
-    Just m -> SJust (fromIntegral m)
-    Nothing -> SNothing
-  fromIndex i seqx = maybeToStrictMaybe $ StrictSeq.lookup (fromIntegral i) seqx
-
-instance Ord k => Indexable k (Map.Map k v) where
-  indexOf n mp = case Map.lookupIndex n mp of
-    Just x -> SJust (fromIntegral x)
-    Nothing -> SNothing
-  fromIndex i mp =
-    if fromIntegral i < Map.size mp
-      then SJust . fst $ Map.elemAt (fromIntegral i) mp
-      else SNothing
-
-rdptr ::
-  forall era.
-  MaryEraTxBody era =>
-  TxBody era ->
-  ScriptPurpose era ->
-  StrictMaybe RdmrPtr
-rdptr txBody = \case
-  Minting hash ->
-    RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (PolicyID (EraCrypto era)))
-  Spending txin ->
-    RdmrPtr Spend <$> indexOf txin (txBody ^. inputsTxBodyL)
-  Rewarding racnt ->
-    RdmrPtr Rewrd <$> indexOf racnt (unWithdrawals (txBody ^. withdrawalsTxBodyL))
-  Certifying d ->
-    RdmrPtr Cert <$> indexOf d (txBody ^. certsTxBodyL)
-
-rdptrInv ::
-  forall era.
-  MaryEraTxBody era =>
-  TxBody era ->
-  RdmrPtr ->
-  StrictMaybe (ScriptPurpose era)
-rdptrInv txBody = \case
-  RdmrPtr Mint idx ->
-    Minting <$> fromIndex idx (txBody ^. mintedTxBodyF)
-  RdmrPtr Spend idx ->
-    Spending <$> fromIndex idx (txBody ^. inputsTxBodyL)
-  RdmrPtr Rewrd idx ->
-    Rewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
-  RdmrPtr Cert idx ->
-    Certifying <$> fromIndex idx (txBody ^. certsTxBodyL)
-
 {-# DEPRECATED getMapFromValue "No longer used" #-}
 getMapFromValue :: MaryValue c -> Map.Map (PolicyID c) (Map.Map AssetName Integer)
 getMapFromValue (MaryValue _ (MultiAsset m)) = m
 
--- | Find the Data and ExUnits assigned to a script.
-indexedRdmrs ::
-  forall era.
-  (MaryEraTxBody era, AlonzoEraTxWits era, EraTx era) =>
+-- | Find the Data and ExUnits assigned to a plutus script.
+indexRedeemers ::
+  (AlonzoEraTxBody era, AlonzoEraTxWits era, EraTx era) =>
   Tx era ->
-  ScriptPurpose era ->
+  PlutusPurpose AsItem era ->
   Maybe (Data era, ExUnits)
-indexedRdmrs tx sp = case rdptr @era (tx ^. bodyTxL) sp of
+indexRedeemers tx sp = case redeemerPointer (tx ^. bodyTxL) sp of
   SNothing -> Nothing
   SJust rPtr -> Map.lookup rPtr rdmrs
     where

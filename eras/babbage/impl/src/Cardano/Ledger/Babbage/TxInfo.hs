@@ -32,8 +32,8 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr, unRedeemers)
+import Cardano.Ledger.Alonzo.Tx (Data)
+import Cardano.Ledger.Alonzo.TxWits (unRedeemers)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
@@ -171,16 +171,16 @@ transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 transRedeemerPtr ::
   forall proxy l era.
   ( EraPlutusTxInfo l era
-  , MaryEraTxBody era
+  , AlonzoEraTxBody era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
   TxBody era ->
-  (RdmrPtr, (Data era, ExUnits)) ->
+  (PlutusPurpose AsIndex era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
 transRedeemerPtr proxy txBody (ptr, (d, _)) =
-  case rdptrInv txBody ptr of
-    SNothing -> Left $ inject $ RdmrPtrPointsToNothing @era ptr
+  case redeemerPointerInverse txBody ptr of
+    SNothing -> Left $ inject $ RedeemerPointerPointsToNothing ptr
     SJust sp -> do
       plutusScriptPurpose <- toPlutusScriptPurpose proxy sp
       Right (plutusScriptPurpose, transRedeemer d)
@@ -189,7 +189,7 @@ transRedeemerPtr proxy txBody (ptr, (d, _)) =
 -- to a `PV2.Redeemer`
 transTxRedeemers ::
   ( EraPlutusTxInfo l era
-  , MaryEraTxBody era
+  , AlonzoEraTxBody era
   , EraTx era
   , AlonzoEraTxWits era
   , Inject (BabbageContextError era) (ContextError era)
@@ -213,33 +213,37 @@ instance Crypto c => EraPlutusContext (BabbageEra c) where
 data BabbageContextError era
   = AlonzoContextError !(AlonzoContextError era)
   | ByronTxOutInContext !(TxOutSource (EraCrypto era))
-  | RdmrPtrPointsToNothing !RdmrPtr
+  | RedeemerPointerPointsToNothing !(PlutusPurpose AsIndex era)
   | InlineDatumsNotSupported !(TxOutSource (EraCrypto era))
   | ReferenceScriptsNotSupported !(TxOutSource (EraCrypto era))
   | ReferenceInputsNotSupported !(Set.Set (TxIn (EraCrypto era)))
   deriving (Generic)
 
-deriving instance Eq (ContextError era) => Eq (BabbageContextError era)
+deriving instance
+  (Eq (AlonzoContextError era), Eq (PlutusPurpose AsIndex era)) =>
+  Eq (BabbageContextError era)
 
-deriving instance Show (ContextError era) => Show (BabbageContextError era)
+deriving instance
+  (Show (AlonzoContextError era), Show (PlutusPurpose AsIndex era)) =>
+  Show (BabbageContextError era)
 
-instance NoThunks (BabbageContextError era)
+instance NoThunks (PlutusPurpose AsIndex era) => NoThunks (BabbageContextError era)
 
-instance Era era => NFData (BabbageContextError era)
+instance (Era era, NFData (PlutusPurpose AsIndex era)) => NFData (BabbageContextError era)
 
 instance Inject (BabbageContextError era) (BabbageContextError era)
 
 instance Inject (AlonzoContextError era) (BabbageContextError era) where
   inject = AlonzoContextError
 
-instance Era era => EncCBOR (BabbageContextError era) where
+instance (Era era, EncCBOR (PlutusPurpose AsIndex era)) => EncCBOR (BabbageContextError era) where
   encCBOR = \case
     ByronTxOutInContext txOutSource ->
       encode $ Sum (ByronTxOutInContext @era) 0 !> To txOutSource
     AlonzoContextError (TranslationLogicMissingInput txIn) ->
       encode $ Sum (TranslationLogicMissingInput @era) 1 !> To txIn
-    RdmrPtrPointsToNothing ptr ->
-      encode $ Sum RdmrPtrPointsToNothing 2 !> To ptr
+    RedeemerPointerPointsToNothing ptr ->
+      encode $ Sum RedeemerPointerPointsToNothing 2 !> To ptr
     InlineDatumsNotSupported txOutSource ->
       encode $ Sum (InlineDatumsNotSupported @era) 4 !> To txOutSource
     ReferenceScriptsNotSupported txOutSource ->
@@ -249,23 +253,23 @@ instance Era era => EncCBOR (BabbageContextError era) where
     AlonzoContextError (TimeTranslationPastHorizon err) ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
 
-instance Era era => DecCBOR (BabbageContextError era) where
+instance (Era era, DecCBOR (PlutusPurpose AsIndex era)) => DecCBOR (BabbageContextError era) where
   decCBOR = decode $ Summands "ContextError" $ \case
     0 -> SumD ByronTxOutInContext <! From
     1 -> SumD (AlonzoContextError . TranslationLogicMissingInput) <! From
-    2 -> SumD RdmrPtrPointsToNothing <! From
+    2 -> SumD RedeemerPointerPointsToNothing <! From
     4 -> SumD InlineDatumsNotSupported <! From
     5 -> SumD ReferenceScriptsNotSupported <! From
     6 -> SumD ReferenceInputsNotSupported <! From
     7 -> SumD (AlonzoContextError . TimeTranslationPastHorizon) <! From
     n -> Invalid n
 
-instance ToJSON (BabbageContextError era) where
+instance ToJSON (PlutusPurpose AsIndex era) => ToJSON (BabbageContextError era) where
   toJSON = \case
     AlonzoContextError err -> toJSON err
     ByronTxOutInContext txOutSource ->
       String $ "Byron UTxO being created or spent: " <> txOutSourceToText txOutSource
-    RdmrPtrPointsToNothing ptr ->
+    RedeemerPointerPointsToNothing ptr ->
       kindObject "RedeemerPointerPointsToNothing" ["ptr" .= toJSON ptr]
     InlineDatumsNotSupported txOutSource ->
       String $ "Inline datums not supported, output source: " <> txOutSourceToText txOutSource
@@ -279,7 +283,7 @@ instance ToJSON (BabbageContextError era) where
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
   toPlutusTxCert _ = pure . Alonzo.transTxCert
 
-  toPlutusScriptPurpose = Alonzo.transScriptPurpose
+  toPlutusScriptPurpose = Alonzo.transPlutusPurpose
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     let refInputs = txBody ^. referenceInputsTxBodyL
@@ -315,7 +319,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
 instance Crypto c => EraPlutusTxInfo 'PlutusV2 (BabbageEra c) where
   toPlutusTxCert _ = pure . Alonzo.transTxCert
 
-  toPlutusScriptPurpose = Alonzo.transScriptPurpose
+  toPlutusScriptPurpose = Alonzo.transPlutusPurpose
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)

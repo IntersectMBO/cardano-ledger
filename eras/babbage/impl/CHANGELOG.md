@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Remove deprecated `getDatumBabbage`, `babbageTxScripts`, `refScripts`
 * Add `ToJSON` for `BabbageContextError`
 * `FromJSON` instance for `PParamsUPdate`: #3949
 * Fixed JSON serialization of `PParams` to include the `protocolVersion`: #3953

@@ -93,6 +93,7 @@ instance
 instance
   ( Era era
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
+  , Arbitrary (PlutusPurpose AsItem era)
   , Arbitrary (TxCert era)
   ) =>
   Arbitrary (BabbageUtxowPredFailure era)

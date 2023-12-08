@@ -25,7 +25,7 @@ where
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
+import Cardano.Ledger.Alonzo.Tx (indexRedeemers)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), kindObject, natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -60,31 +60,31 @@ import NoThunks.Class (NoThunks)
 
 -- | When collecting inputs for two phase scripts, 3 things can go wrong.
 data CollectError era
-  = NoRedeemer !(ScriptPurpose era)
+  = NoRedeemer !(PlutusPurpose AsItem era)
   | NoWitness !(ScriptHash (EraCrypto era))
   | NoCostModel !Language
   | BadTranslation !(ContextError era)
   deriving (Generic)
 
 deriving instance
-  (Era era, Eq (TxCert era), Eq (ContextError era)) =>
+  (AlonzoEraScript era, Eq (ContextError era)) =>
   Eq (CollectError era)
 
 deriving instance
-  (Era era, Show (TxCert era), Show (ContextError era)) =>
+  (AlonzoEraScript era, Show (ContextError era)) =>
   Show (CollectError era)
 
 deriving instance
-  (Era era, NoThunks (TxCert era), NoThunks (ContextError era)) =>
+  (AlonzoEraScript era, NoThunks (ContextError era)) =>
   NoThunks (CollectError era)
 
-instance (EraTxCert era, EncCBOR (ContextError era)) => EncCBOR (CollectError era) where
+instance (AlonzoEraScript era, EncCBOR (ContextError era)) => EncCBOR (CollectError era) where
   encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
   encCBOR (NoWitness x) = encode $ Sum (NoWitness @era) 1 !> To x
   encCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
   encCBOR (BadTranslation x) = encode $ Sum (BadTranslation @era) 3 !> To x
 
-instance (EraTxCert era, DecCBOR (ContextError era)) => DecCBOR (CollectError era) where
+instance (AlonzoEraScript era, DecCBOR (ContextError era)) => DecCBOR (CollectError era) where
   decCBOR = decode (Summands "CollectError" dec)
     where
       dec 0 = SumD NoRedeemer <! From
@@ -95,7 +95,7 @@ instance (EraTxCert era, DecCBOR (ContextError era)) => DecCBOR (CollectError er
 
 instance
   ( Era era
-  , ToJSON (ScriptPurpose era)
+  , ToJSON (PlutusPurpose AsItem era)
   , ToJSON (ContextError era)
   ) =>
   ToJSON (CollectError era)
@@ -132,11 +132,10 @@ lookupPlutusScript scriptsAvailable scriptHash = do
 
 collectPlutusScriptsWithContext ::
   forall era.
-  ( MaryEraTxBody era
+  ( AlonzoEraTxBody era
   , AlonzoEraTxWits era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , AlonzoEraPParams era
   , EraPlutusContext era
   ) =>
   EpochInfo (Either Text) ->
@@ -173,7 +172,7 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
     usedLanguages = Set.fromList $ map (plutusScriptLanguage . snd) neededPlutusScripts
 
     getScriptWithRedeemer (sp, script) =
-      case indexedRdmrs tx sp of
+      case indexRedeemers tx sp of
         Just (d, eu) -> Right (script, sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
     apply (plutusScript, scriptPurpose, d, eu) = do

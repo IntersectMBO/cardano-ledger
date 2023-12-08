@@ -434,7 +434,7 @@ transaction_witness_set =
   , ? 2: [+ bootstrap_witness ]
   , ? 3: nonempty_set<plutus_v1_script>
   , ? 4: [+ plutus_data ]
-  , ? 5: [+ redeemer ]
+  , ? 5: redeemers
   , ? 6: nonempty_set<plutus_v2_script>
   , ? 7: nonempty_set<plutus_v3_script>
   }
@@ -469,13 +469,19 @@ constr<a> =
   ; similarly for tag range: 6.1280 .. 6.1400 inclusive
   / #6.102([uint, [* a]])
 
-redeemer = [ tag: redeemer_tag, index: uint, data: plutus_data, ex_units: ex_units ]
+redeemers =
+  [ + [ tag: redeemer_tag, index: uint, data: plutus_data, ex_units: ex_units ] ]
+; TODO: Add alternative implementation that reflects the reality more accuratly:
+;  / { + [ tag: redeemer_tag, index: uint ] => [ data: plutus_data, ex_units: ex_units ] }
+
 redeemer_tag =
-    0 ; inputTag "Spend"
-  / 1 ; mintTag  "Mint"
-  / 2 ; certTag  "Cert"
-  / 3 ; wdrlTag  "Reward"
-  ; TODO / 4 ; drepTag  "DRep"
+    0 ; Spending
+  / 1 ; Minting
+  / 2 ; Certifying
+  / 3 ; Rewarding
+  / 4 ; Voting
+  / 5 ; Proposing
+
 ex_units = [mem: uint, steps: uint]
 
 ex_unit_prices =

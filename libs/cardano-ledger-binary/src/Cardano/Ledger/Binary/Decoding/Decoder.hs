@@ -942,9 +942,9 @@ decodeSetLikeEnforceNoDuplicates ::
   -- elements it contains. This is useful when a sequence on the wire is represented by a
   -- @set@, namely no duplicates are allowed, while the Haskell representation uses some
   -- other data structure that enforces no duplicates by some other means. For example a
-  -- `Map`, where keys are hashes of the values encoded on the wire. The final size of the
-  -- data strucutre taht isreturned will be used to enforce the invariant of a Set, that
-  -- the number of elements decoded matches the final size of the Set, thus ensuring no
+  -- `Map`, where keys are hashes of the values encoded on the wire. The size of the final
+  -- data structure will be used to enforce the invariant that the number of elements
+  -- decoded matches the final size of the Set like data structure, thus ensuring no
   -- duplicates were encountered.
   (b -> (Int, c)) ->
   Decoder s a ->

@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -97,11 +98,10 @@ data BabbageUtxowPredFailure era
   deriving (Generic)
 
 deriving instance
-  ( Era era
+  ( AlonzoEraScript era
   , Show (ShelleyUtxowPredFailure era)
   , Show (PredicateFailure (EraRule "UTXO" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
-  , Show (Script era)
   , Show (TxOut era)
   , Show (TxCert era)
   , Show (Value era)
@@ -109,13 +109,12 @@ deriving instance
   Show (BabbageUtxowPredFailure era)
 
 deriving instance
-  ( Era era
+  ( AlonzoEraScript era
   , Eq (ShelleyUtxowPredFailure era)
   , Eq (PredicateFailure (EraRule "UTXO" era))
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Eq (TxOut era)
   , Eq (TxCert era)
-  , Eq (Script era)
   ) =>
   Eq (BabbageUtxowPredFailure era)
 
@@ -126,43 +125,40 @@ instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) wher
   inject = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , EncCBOR (TxOut era)
   , EncCBOR (TxCert era)
   , EncCBOR (Value era)
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
-  , EncCBOR (Script era)
   , Typeable (TxAuxData era)
   ) =>
   EncCBOR (BabbageUtxowPredFailure era)
   where
-  encCBOR = encode . work
-    where
-      work (AlonzoInBabbageUtxowPredFailure x) = Sum AlonzoInBabbageUtxowPredFailure 1 !> To x
-      work (UtxoFailure x) = Sum UtxoFailure 2 !> To x
-      work (MalformedScriptWitnesses x) = Sum MalformedScriptWitnesses 3 !> To x
-      work (MalformedReferenceScripts x) = Sum MalformedReferenceScripts 4 !> To x
+  encCBOR =
+    encode . \case
+      AlonzoInBabbageUtxowPredFailure x -> Sum AlonzoInBabbageUtxowPredFailure 1 !> To x
+      UtxoFailure x -> Sum UtxoFailure 2 !> To x
+      MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 3 !> To x
+      MalformedReferenceScripts x -> Sum MalformedReferenceScripts 4 !> To x
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , DecCBOR (TxOut era)
   , DecCBOR (TxCert era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   DecCBOR (BabbageUtxowPredFailure era)
   where
-  decCBOR = decode (Summands "BabbageUtxowPred" work)
-    where
-      work 1 = SumD AlonzoInBabbageUtxowPredFailure <! From
-      work 2 = SumD UtxoFailure <! From
-      work 3 = SumD MalformedScriptWitnesses <! From
-      work 4 = SumD MalformedReferenceScripts <! From
-      work n = Invalid n
+  decCBOR = decode $ Summands "BabbageUtxowPred" $ \case
+    1 -> SumD AlonzoInBabbageUtxowPredFailure <! From
+    2 -> SumD UtxoFailure <! From
+    3 -> SumD MalformedScriptWitnesses <! From
+    4 -> SumD MalformedReferenceScripts <! From
+    n -> Invalid n
 
 deriving via
   InspectHeapNamed "BabbageUtxowPred" (BabbageUtxowPredFailure era)

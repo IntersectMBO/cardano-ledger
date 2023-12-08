@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,9 +19,10 @@
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
-import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
@@ -34,16 +36,18 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (
  )
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
+  AlonzoPlutusPurpose (..),
   AlonzoScript (..),
+  AsIndex (..),
+  AsItem (..),
   ExUnits (..),
-  Tag (..),
+  PlutusPurpose,
   plutusScriptLanguage,
  )
-import qualified Cardano.Ledger.Alonzo.Scripts as Scripts (Prices (..))
-
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData, atadMetadata')
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), TxDats (..), unRedeemers, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Core (CoinPerByte (..))
@@ -95,7 +99,26 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   proposalsActions,
  )
-import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayGovCert (..), ConwayTxCert (..), Delegatee (..))
+import Cardano.Ledger.Conway.Rules (
+  ConwayCertsPredFailure (..),
+  ConwayDelegPredFailure (..),
+  ConwayGovCertEnv (..),
+  ConwayGovCertPredFailure (..),
+  ConwayGovPredFailure (..),
+  ConwayLedgerPredFailure (..),
+  ConwayNewEpochPredFailure,
+  EnactSignal (..),
+  GovEnv (..),
+  GovRuleState (..),
+ )
+import qualified Cardano.Ledger.Conway.Rules as ConwayRules
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.TxCert (
+  ConwayDelegCert (..),
+  ConwayGovCert (..),
+  ConwayTxCert (..),
+  Delegatee (..),
+ )
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (
@@ -137,6 +160,8 @@ import Cardano.Ledger.Plutus.Data (
   binaryDataToData,
   hashData,
  )
+import qualified Cardano.Ledger.Plutus.ExUnits as ExUnits (Prices (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
@@ -162,6 +187,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   VState (..),
  )
+import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
+import Cardano.Ledger.Shelley.Rules (PoolEnv (..), ShelleyLedgerPredFailure (..), UpecPredFailure)
 import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyState (..),
@@ -198,72 +225,27 @@ import Cardano.Ledger.UMap (
 import qualified Cardano.Ledger.UMap as UM (UMap, UView (..), size)
 import Cardano.Ledger.UTxO (ScriptsNeeded, UTxO (..))
 import qualified Cardano.Ledger.Val as Val
+import Codec.Binary.Bech32
 import Control.Monad.Identity (Identity)
 import Control.State.Transition.Extended (STS (..))
+import qualified Data.ByteString as Long (ByteString)
+import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import Data.Foldable (toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.OSet.Strict (OSet)
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
-import Data.Void (absurd)
-import Lens.Micro ((^.))
-import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Fields (
-  PParamsField (..),
-  TxBodyField (..),
-  TxField (..),
-  WitnessesField (..),
-  abstractPParams,
-  abstractTx,
-  abstractTxBody,
-  abstractWitnesses,
- )
-import qualified Test.Cardano.Ledger.Generic.Fields as Fields
-import Test.Cardano.Ledger.Generic.Proof (
-  AllegraEra,
-  GovStateWit (..),
-  MaryEra,
-  Proof (..),
-  Reflect (..),
-  ShelleyEra,
-  unReflect,
-  whichGovState,
- )
-
-import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..))
-import Cardano.Ledger.Conway.Rules (
-  ConwayCertsPredFailure (..),
-  -- ConwayCertPredFailure(..),
-  ConwayDelegPredFailure (..),
-  ConwayGovCertEnv (..),
-  ConwayGovCertPredFailure (..),
-  ConwayGovPredFailure (..),
-  ConwayLedgerPredFailure (..),
-  ConwayNewEpochPredFailure,
-  EnactSignal (..),
-  GovEnv (..),
-  GovRuleState (..),
- )
-import qualified Cardano.Ledger.Conway.Rules as ConwayRules
-import qualified Cardano.Ledger.Plutus.ExUnits as ExUnits (Prices)
-import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
-import Cardano.Ledger.Shelley.Rules (PoolEnv (..), ShelleyLedgerPredFailure (..), UpecPredFailure)
-import Codec.Binary.Bech32
-import qualified Data.ByteString as Long (ByteString)
-import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
-import Data.OSet.Strict (OSet)
-import Data.Sequence.Strict (StrictSeq)
-import Data.Void (Void)
+import Data.Void (Void, absurd)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Natural (Natural)
+import Lens.Micro ((^.))
+import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Prettyprinter (
   Pretty (pretty),
   align,
@@ -291,12 +273,33 @@ import Prettyprinter (
  )
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Generic.Fields (
+  PParamsField (..),
+  TxBodyField (..),
+  TxField (..),
+  WitnessesField (..),
+  abstractPParams,
+  abstractTx,
+  abstractTxBody,
+  abstractWitnesses,
+ )
+import qualified Test.Cardano.Ledger.Generic.Fields as Fields
+import Test.Cardano.Ledger.Generic.Proof (
+  AllegraEra,
+  GovStateWit (..),
+  MaryEra,
+  Proof (..),
+  Reflect (..),
+  ShelleyEra,
+  unReflect,
+  whichGovState,
+ )
 
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxAuxData (
-  AlonzoTxAuxData (atadMetadata),
   getAlonzoTxAuxDataScripts,
  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
@@ -328,6 +331,12 @@ instance (PrettyA a, PrettyA b) => PrettyA (Map a b) where
 
 instance (PrettyA a, PrettyA b) => PrettyA (a, b) where
   prettyA (x, y) = encloseSep lparen rparen comma [prettyA x, prettyA y]
+
+instance PrettyA Word32 where
+  prettyA = ppString . show
+
+instance PrettyA Word64 where
+  prettyA = ppString . show
 
 -- =====================================
 -- Operations for pretty printing
@@ -541,7 +550,7 @@ instance PrettyA LogWeight where
   prettyA = ppLogWeight
 
 ppPrices :: ExUnits.Prices -> PDoc
-ppPrices (Scripts.Prices prMem prSteps) =
+ppPrices (ExUnits.Prices prMem prSteps) =
   ppRecord
     "Prices"
     [ ("prMem", ppRational $ unboundRational prMem)
@@ -580,24 +589,22 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
 instance PrettyA (RewardUpdate c) where
   prettyA = ppRewardUpdate
 
-ppTag :: Tag -> PDoc
-ppTag x = ppString (show x)
-
-ppRdmrPtr :: RdmrPtr -> PDoc
-ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [ppTag tag, ppWord64 w]
-
 ppLanguage :: Language -> PDoc
 ppLanguage = ppString . show
 
-ppTxWitness :: forall era. Reflect era => AlonzoTxWits era -> PDoc
-ppTxWitness (AlonzoTxWits' vk wb sc da (Redeemers rd)) =
+ppTxWitness ::
+  forall era.
+  Reflect era =>
+  AlonzoTxWits era ->
+  PDoc
+ppTxWitness (AlonzoTxWits' vk wb sc da rd) =
   ppRecord
     "AlonzoTxWits"
     [ ("keys", ppSet (pcWitVKey @era reify) vk)
     , ("bootstrap witnesses", ppSet ppBootstrapWitness wb)
     , ("scripts map", ppMap pcScriptHash (pcScript reify) sc)
     , ("Data map", ppMap ppSafeHash pcData (unTxDats da))
-    , ("Redeemer map", ppMap ppRdmrPtr (ppPair pcData pcExUnits) rd)
+    , ("Redeemer map", ppMap ppPlutusPurposeAsIndex (ppPair pcData pcExUnits) (unRedeemers rd))
     ]
 
 instance Reflect era => PrettyA (AlonzoTxWits era) where
@@ -793,20 +800,34 @@ instance Reflect era => PrettyA (AllegraTxAuxData era) where
   prettyA = ppAllegraTxAuxData
 
 ppAlonzoTxAuxData ::
-  ( Reflect era
-  , Script era ~ AlonzoScript era
-  , AlonzoEraScript era
-  ) =>
+  Reflect era =>
   AlonzoTxAuxData era ->
   PDoc
 ppAlonzoTxAuxData auxData =
   ppSexp
     "AuxiliaryData"
-    [ ppMap ppWord64 ppMetadatum (atadMetadata auxData)
-    , ppStrictSeq (pcScript reify) (getAlonzoTxAuxDataScripts auxData)
+    [ ppMap ppWord64 ppMetadatum (atadMetadata' auxData)
+    , ppStrictSeq (pcScript reify) (extractAlonzoTxAuxDataScripts auxData)
     ]
 
-instance (Reflect era, Script era ~ AlonzoScript era, AlonzoEraScript era) => PrettyA (AlonzoTxAuxData era) where
+extractAlonzoTxAuxDataScripts ::
+  forall era.
+  Reflect era =>
+  AlonzoTxAuxData era ->
+  StrictSeq (Script era)
+extractAlonzoTxAuxDataScripts auxData =
+  case reify @era of
+    Shelley _ -> error "Unsuported"
+    Allegra _ -> error "Unsuported"
+    Mary _ -> error "Unsuported"
+    Alonzo _ -> getAlonzoTxAuxDataScripts auxData
+    Babbage _ -> getAlonzoTxAuxDataScripts auxData
+    Conway _ -> getAlonzoTxAuxDataScripts auxData
+
+instance
+  (Reflect era, Script era ~ AlonzoScript era) =>
+  PrettyA (AlonzoTxAuxData era)
+  where
   prettyA = ppAlonzoTxAuxData
 
 pcAuxData :: Reflect era => Proof era -> TxAuxData era -> PDoc
@@ -825,15 +846,6 @@ instance PrettyA (Withdrawals c) where
 
 ppWitHashes :: Set (KeyHash 'Witness c) -> PDoc
 ppWitHashes hs = ppSexp "WitHashes" [ppSet pcKeyHash hs]
-
-pcScriptPurpose :: Proof era -> ScriptPurpose era -> PDoc
-pcScriptPurpose _ (Minting policy) = ppSexp "Minting" [pcPolicyID policy]
-pcScriptPurpose _ (Spending txin) = ppSexp "Spending" [pcTxIn txin]
-pcScriptPurpose _ (Rewarding acct) = ppSexp "Rewarding" [pcRewardAcnt acct]
-pcScriptPurpose p (Certifying dcert) = ppSexp "Certifying" [pcTxCert p dcert]
-
-instance Reflect era => PrettyA (ScriptPurpose era) where
-  prettyA = pcScriptPurpose reify
 
 -- ================================================
 -- Pretty printers for Tx and TxBody
@@ -859,13 +871,20 @@ instance
   where
   prettyA = ppShelleyTx
 
-ppAlonzoTx :: forall era. (Reflect era, Tx era ~ AlonzoTx era) => AlonzoTx era -> PDoc
+ppAlonzoTx ::
+  forall era.
+  (Reflect era, Tx era ~ AlonzoTx era) =>
+  AlonzoTx era ->
+  PDoc
 ppAlonzoTx tx = ppRecord "AlonzoTx" pairs
   where
     fields = abstractTx reify tx
     pairs = concatMap (pcTxField @era (reify @era)) fields
 
-instance (Reflect era, Tx era ~ AlonzoTx era) => PrettyA (AlonzoTx era) where
+instance
+  (Reflect era, Tx era ~ AlonzoTx era) =>
+  PrettyA (AlonzoTx era)
+  where
   prettyA = ppAlonzoTx
 
 ppShelleyTxBody ::
@@ -966,7 +985,11 @@ pcScript (Mary _) s = pcTimelock @era s
 pcScript (Allegra _) s = pcTimelock @era s
 pcScript p@(Shelley _) s = pcMultiSig @era (pcHashScript @era p s) s
 
-pcWitnesses :: Reflect era => Proof era -> TxWits era -> PDoc
+pcWitnesses ::
+  Reflect era =>
+  Proof era ->
+  TxWits era ->
+  PDoc
 pcWitnesses proof txwits = ppRecord "Witnesses" pairs
   where
     fields = abstractWitnesses proof txwits
@@ -1047,14 +1070,19 @@ pcTxField proof x = case x of
   AuxData (SJust auxdata) -> [("aux data", pcAuxData proof auxdata)]
   Valid (IsValid v) -> [("is valid", ppString (show v))]
 
-pcWitnessesField :: forall era. Reflect era => Proof era -> WitnessesField era -> [(Text, PDoc)]
+pcWitnessesField ::
+  forall era.
+  Reflect era =>
+  Proof era ->
+  WitnessesField era ->
+  [(Text, PDoc)]
 pcWitnessesField proof x = case x of
   AddrWits set -> [("key wits", ppSet (pcWitVKey proof) set)]
   BootWits bwits -> [("boot wits", ppSet (\z -> ppVKey (bwKey z)) bwits)]
   ScriptWits mp -> [("script wits", ppMap pcScriptHash (pcScript proof) mp)]
   DataWits (TxDats m) -> [("data wits", ppMap pcDataHash pcData m)]
-  RdmrWits (Redeemers m) ->
-    [("redeemer wits", ppMap ppRdmrPtr (pcPair pcData pcExUnits) m)]
+  RdmrWits m ->
+    [("redeemer wits", ppMap ppPlutusPurposeAsIndex (pcPair pcData pcExUnits) (unRedeemers m))]
 
 pcPParamsField ::
   PParamsField era ->
@@ -1345,14 +1373,21 @@ ppShelleyLedgerPredFailure proof (DelegsFailure x) = ppDELEGS proof x
 instance Reflect era => PrettyA (ShelleyLedgerPredFailure era) where
   prettyA = ppShelleyLedgerPredFailure reify
 
-ppBabbageUtxowPredFailure :: Reflect era => Proof era -> BabbageUtxowPredFailure era -> PDoc
+ppBabbageUtxowPredFailure ::
+  Reflect era =>
+  Proof era ->
+  BabbageUtxowPredFailure era ->
+  PDoc
 ppBabbageUtxowPredFailure proof failure = case failure of
   AlonzoInBabbageUtxowPredFailure x -> ppSexp "AlonzoInBabbageUtxowPredFailure" [ppAlonzoUtxowPredFailure x]
   Cardano.Ledger.Babbage.Rules.UtxoFailure x -> ppSexp "UtxoFailure" [ppUTXO proof x]
   MalformedScriptWitnesses x -> ppSexp "MalformedScriptWitnesses" [ppSet pcScriptHash x]
   MalformedReferenceScripts x -> ppSexp "MalformedReferenceScripts" [ppSet pcScriptHash x] -- !(Set (ScriptHash (EraCrypto era)))
 
-instance Reflect era => PrettyA (BabbageUtxowPredFailure era) where
+instance
+  Reflect era =>
+  PrettyA (BabbageUtxowPredFailure era)
+  where
   prettyA = ppBabbageUtxowPredFailure reify
 
 -- ================
@@ -1464,10 +1499,13 @@ instance PrettyA (ShelleyNewppPredFailure era) where prettyA = ppNewppPredicateF
 -- =========================================
 -- Predicate Failure for Alonzo UTXOW
 
-ppAlonzoUtxowPredFailure :: forall era. Reflect era => AlonzoUtxowPredFailure era -> PDoc
-ppAlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure x) = ppShelleyUtxowPredFailure x
+ppAlonzoUtxowPredFailure ::
+  Reflect era =>
+  AlonzoUtxowPredFailure era ->
+  PDoc
+ppAlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure x) = prettyA x
 ppAlonzoUtxowPredFailure (MissingRedeemers xs) =
-  ppSexp "MissingRedeemers" [ppList (ppPair (pcScriptPurpose reify) pcScriptHash) xs]
+  ppSexp "MissingRedeemers" [ppList (ppPair ppPlutusPurposeAsItem prettyA) xs]
 ppAlonzoUtxowPredFailure (MissingRequiredDatums s1 s2) =
   ppRecord
     "MissingRequiredDatums"
@@ -1491,9 +1529,12 @@ ppAlonzoUtxowPredFailure (MissingRequiredSigners x) =
 ppAlonzoUtxowPredFailure (UnspendableUTxONoDatumHash x) =
   ppSexp "UnspendableUTxONoDatumHash" [ppSet pcTxIn x]
 ppAlonzoUtxowPredFailure (ExtraRedeemers x) =
-  ppSexp "ExtraRedeemers" [ppList ppRdmrPtr x]
+  ppSexp "ExtraRedeemers" [ppList ppPlutusPurposeAsIndex x]
 
-instance Reflect era => PrettyA (AlonzoUtxowPredFailure era) where
+instance
+  Reflect era =>
+  PrettyA (AlonzoUtxowPredFailure era)
+  where
   prettyA = ppAlonzoUtxowPredFailure
 
 -- ====================================================
@@ -1722,9 +1763,7 @@ instance PrettyA (ShelleyPoolPredFailure era) where
 
 ppUtxosPredicateFailure ::
   forall era.
-  ( Show (ContextError era)
-  , Reflect era
-  ) =>
+  Reflect era =>
   AlonzoUtxosPredFailure era ->
   PDoc
 ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
@@ -1734,24 +1773,58 @@ ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
     , ("mismatch description", ppTagMismatchDescription tag)
     ]
 ppUtxosPredicateFailure (CollectErrors es) =
-  ppRecord' mempty [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
+  ppRecord'
+    mempty
+    [
+      ( "When collecting inputs for twophase scripts, these went wrong."
+      , ppList ppCollectError es
+      )
+    ]
 ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = ppPPUPPredFailure @era p
 
-instance
-  ( Reflect era
-  , Show (ContextError era)
-  ) =>
-  PrettyA (AlonzoUtxosPredFailure era)
-  where
+instance Reflect era => PrettyA (AlonzoUtxosPredFailure era) where
   prettyA = ppUtxosPredicateFailure
 
-ppCollectError :: (Show (ContextError era), Reflect era) => CollectError era -> PDoc
-ppCollectError (NoRedeemer sp) = ppSexp "NoRedeemer" [pcScriptPurpose reify sp]
-ppCollectError (NoWitness sh) = ppSexp "NoWitness" [pcScriptHash sh]
+ppCollectError ::
+  Reflect era =>
+  CollectError era ->
+  PDoc
+ppCollectError (NoRedeemer sp) = ppSexp "NoRedeemer" [ppPlutusPurposeAsItem sp]
+ppCollectError (NoWitness sh) = ppSexp "NoWitness" [prettyA sh]
 ppCollectError (NoCostModel l) = ppSexp "NoCostModel" [ppLanguage l]
-ppCollectError (BadTranslation x) = ppSexp "BadTranslation" [ppString (show x)]
+ppCollectError (BadTranslation x) = ppSexp "BadTranslation" [ppContextError x]
 
-instance (Show (ContextError era), Reflect era) => PrettyA (CollectError era) where
+ppContextError :: forall era. Reflect era => ContextError era -> PDoc
+ppContextError e =
+  case reify @era of
+    Shelley _ -> error "Unsuported"
+    Allegra _ -> error "Unsuported"
+    Mary _ -> error "Unsuported"
+    Alonzo _ -> ppString (show e)
+    Babbage _ -> ppString (show e)
+    Conway _ -> ppString (show e)
+
+ppPlutusPurposeAsIndex :: forall era. Reflect era => PlutusPurpose AsIndex era -> PDoc
+ppPlutusPurposeAsIndex p =
+  case reify @era of
+    Shelley _ -> error "Unsuported"
+    Allegra _ -> error "Unsuported"
+    Mary _ -> error "Unsuported"
+    Alonzo _ -> prettyA p
+    Babbage _ -> prettyA p
+    Conway _ -> prettyA p
+
+ppPlutusPurposeAsItem :: forall era. Reflect era => PlutusPurpose AsItem era -> PDoc
+ppPlutusPurposeAsItem p =
+  case reify @era of
+    Shelley _ -> error "Unsuported"
+    Allegra _ -> error "Unsuported"
+    Mary _ -> error "Unsuported"
+    Alonzo _ -> prettyA p
+    Babbage _ -> prettyA p
+    Conway _ -> prettyA p
+
+instance Reflect era => PrettyA (CollectError era) where
   prettyA = ppCollectError
 
 ppTagMismatchDescription :: TagMismatchDescription -> PDoc
@@ -1954,15 +2027,15 @@ bodySummary proof txbody =
     "TxBody"
     (concat (map txBodyFieldSummary (abstractTxBody proof txbody)))
 
-witnessFieldSummary :: Era era => WitnessesField era -> (Text, PDoc)
+witnessFieldSummary :: WitnessesField era -> (Text, PDoc)
 witnessFieldSummary wit = case wit of
   (AddrWits s) -> ("Address Witnesses", ppInt (Set.size s))
   (BootWits s) -> ("BootStrap Witnesses", ppInt (Set.size s))
   (ScriptWits s) -> ("Script Witnesses", ppInt (Map.size s))
   (DataWits m) -> ("Data Witnesses", ppInt (Map.size (unTxDats m)))
-  (RdmrWits (Redeemers m)) -> ("Redeemer Witnesses", ppInt (Map.size m))
+  (RdmrWits redeemers) -> ("Redeemer Witnesses", ppInt (Map.size (unRedeemers redeemers)))
 
-witnessSummary :: Era era => Proof era -> TxWits era -> PDoc
+witnessSummary :: Proof era -> TxWits era -> PDoc
 witnessSummary proof txwits =
   ppRecord
     "Witnesses"
@@ -2426,7 +2499,7 @@ pcProposalProcedure (ProposalProcedure c rewacnt govact anch) =
 instance PrettyA (ProposalProcedure era) where
   prettyA = pcProposalProcedure
 
-pcVoter :: (Voter c) -> PDoc
+pcVoter :: Voter c -> PDoc
 pcVoter (CommitteeVoter cred) = ppSexp "CommitteeVoter" [pcCredential cred]
 pcVoter (DRepVoter cred) = ppSexp "DRepVoter" [pcCredential cred]
 pcVoter (StakePoolVoter keyhash) = ppSexp "StakePoolVoter" [pcKeyHash keyhash]
@@ -3049,17 +3122,67 @@ pcMultiAsset m = ppList pptriple (flattenMultiAsset m)
 instance PrettyA (MultiAsset c) where
   prettyA = pcMultiAsset
 
+instance PrettyA a => PrettyA (AsIndex a b) where
+  prettyA (AsIndex i) = ppSexp "AsIndex" [prettyA i]
+
+instance PrettyA b => PrettyA (AsItem a b) where
+  prettyA (AsItem i) = ppSexp "AsItem" [prettyA i]
+
+instance
+  Reflect era =>
+  PrettyA (AlonzoPlutusPurpose AsIndex era)
+  where
+  prettyA = \case
+    AlonzoMinting i -> ppSexp "AlonzoMinting" [ppString (show i)]
+    AlonzoSpending i -> ppSexp "AlonzoSpending" [ppString (show i)]
+    AlonzoRewarding i -> ppSexp "AlonzoRewarding" [ppString (show i)]
+    AlonzoCertifying i -> ppSexp "AlonzoCertifying" [ppString (show i)]
+
+instance
+  (Reflect era, PrettyA (TxCert era)) =>
+  PrettyA (AlonzoPlutusPurpose AsItem era)
+  where
+  prettyA = \case
+    AlonzoMinting i -> ppSexp "AlonzoMinting" [prettyA i]
+    AlonzoSpending i -> ppSexp "AlonzoSpending" [prettyA i]
+    AlonzoRewarding i -> ppSexp "AlonzoRewarding" [prettyA i]
+    AlonzoCertifying i -> ppSexp "AlonzoCertifying" [prettyA i]
+
+instance
+  Reflect era =>
+  PrettyA (ConwayPlutusPurpose AsIndex era)
+  where
+  prettyA = \case
+    ConwayMinting i -> ppSexp "ConwayMinting" [ppString (show i)]
+    ConwaySpending i -> ppSexp "ConwaySpending" [ppString (show i)]
+    ConwayRewarding i -> ppSexp "ConwayRewarding" [ppString (show i)]
+    ConwayCertifying i -> ppSexp "ConwayCertifying" [ppString (show i)]
+    ConwayVoting i -> ppSexp "ConwayVoting" [ppString (show i)]
+    ConwayProposing i -> ppSexp "ConwayProposing" [ppString (show i)]
+
+instance
+  (Reflect era, PrettyA (TxCert era)) =>
+  PrettyA (ConwayPlutusPurpose AsItem era)
+  where
+  prettyA = \case
+    ConwayMinting i -> ppSexp "ConwayMinting" [prettyA i]
+    ConwaySpending i -> ppSexp "ConwaySpending" [prettyA i]
+    ConwayRewarding i -> ppSexp "ConwayRewarding" [prettyA i]
+    ConwayCertifying i -> ppSexp "ConwayCertifying" [prettyA i]
+    ConwayVoting i -> ppSexp "ConwayVoting" [prettyA i]
+    ConwayProposing i -> ppSexp "ConwayProposing" [prettyA i]
+
 -- ScriptsNeeded is a typr family so it doesn't have PrettyA instance, use pcScriptsNeeded instead of prettyA
-pcScriptsNeeded :: Proof era -> ScriptsNeeded era -> PDoc
+pcScriptsNeeded :: Reflect era => Proof era -> ScriptsNeeded era -> PDoc
 pcScriptsNeeded (Shelley _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
 pcScriptsNeeded (Allegra _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
 pcScriptsNeeded (Mary _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
-pcScriptsNeeded p@(Alonzo _) (AlonzoScriptsNeeded pl) =
-  ppSexp "ScriptsNeeded" [ppList (ppPair (pcScriptPurpose p) pcScriptHash) pl]
-pcScriptsNeeded p@(Babbage _) (AlonzoScriptsNeeded pl) =
-  ppSexp "ScriptsNeeded" [ppList (ppPair (pcScriptPurpose p) pcScriptHash) pl]
-pcScriptsNeeded p@(Conway _) (AlonzoScriptsNeeded pl) =
-  ppSexp "ScriptsNeeded" [ppList (ppPair (pcScriptPurpose p) pcScriptHash) pl]
+pcScriptsNeeded (Alonzo _) (AlonzoScriptsNeeded pl) =
+  ppSexp "ScriptsNeeded" [ppList (ppPair prettyA pcScriptHash) pl]
+pcScriptsNeeded (Babbage _) (AlonzoScriptsNeeded pl) =
+  ppSexp "ScriptsNeeded" [ppList (ppPair prettyA pcScriptHash) pl]
+pcScriptsNeeded (Conway _) (AlonzoScriptsNeeded pl) =
+  ppSexp "ScriptsNeeded" [ppList (ppPair prettyA pcScriptHash) pl]
 
 pcDRepPulser :: DRepPulser era Identity (RatifyState era) -> PDoc
 pcDRepPulser x =

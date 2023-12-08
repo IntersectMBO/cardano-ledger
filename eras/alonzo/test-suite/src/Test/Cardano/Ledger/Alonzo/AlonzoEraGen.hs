@@ -20,6 +20,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo (
+  AlonzoPlutusPurpose (..),
   AlonzoScript (..),
   ExUnits (..),
   Prices (..),
@@ -31,9 +32,7 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (..),
   IsValid (..),
-  ScriptPurpose (..),
   hashScriptIntegrity,
-  rdptr,
   totExUnits,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
@@ -45,7 +44,6 @@ import Cardano.Ledger.Alonzo.TxBody (
  )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
-  RdmrPtr (..),
   Redeemers (..),
   TxDats (..),
  )
@@ -477,16 +475,13 @@ addRedeemMap ::
   Crypto c =>
   TxBody (AlonzoEra c) ->
   (PV1.Data, Natural, Natural) ->
-  ScriptPurpose (AlonzoEra c) ->
-  Map RdmrPtr (Data (AlonzoEra c), ExUnits) ->
-  Map RdmrPtr (Data (AlonzoEra c), ExUnits)
+  AlonzoPlutusPurpose AsItem (AlonzoEra c) ->
+  Map (AlonzoPlutusPurpose AsIndex (AlonzoEra c)) (Data (AlonzoEra c), ExUnits) ->
+  Map (AlonzoPlutusPurpose AsIndex (AlonzoEra c)) (Data (AlonzoEra c), ExUnits)
 addRedeemMap body1 (dat, space, steps) purpose ans =
-  case (purpose, rdptr @(AlonzoEra c) body1 purpose) of
-    (Spending _, SJust ptr) -> Map.insert ptr (Data dat, ExUnits space steps) ans
-    (Minting _, SJust ptr) -> Map.insert ptr (Data dat, ExUnits space steps) ans
-    (Rewarding _, SJust ptr) -> Map.insert ptr (Data dat, ExUnits space steps) ans
-    (Certifying _, SJust ptr) -> Map.insert ptr (Data dat, ExUnits space steps) ans
-    _ -> ans
+  case redeemerPointer @(AlonzoEra c) body1 purpose of
+    SJust ptr -> Map.insert ptr (Data dat, ExUnits space steps) ans
+    SNothing -> ans
 
 getDataMap ::
   forall era.

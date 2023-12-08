@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
   genGovActionStateFromAction,
   govActionGenerators,
   uniqueIdGovActions,
+  genConwayPlutusPurposePointer,
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -51,6 +52,7 @@ import Cardano.Ledger.Conway.PParams (
   UpgradeConwayPParams (..),
  )
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Crypto (Crypto)
@@ -59,6 +61,7 @@ import Control.State.Transition.Extended (STS (Event))
 import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
 import qualified Data.Sequence.Strict as Seq
+import Data.Word
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidAndUnknownCostModels, unFlexibleCostModels)
@@ -68,7 +71,10 @@ import Test.Cardano.Ledger.Common
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (PulsingSnapshot era) where
   arbitrary = PulsingSnapshot <$> arbitrary <*> arbitrary <*> arbitrary
 
-instance (Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) => Arbitrary (DRepPulsingState era) where
+instance
+  (Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) =>
+  Arbitrary (DRepPulsingState era)
+  where
   arbitrary = DRComplete <$> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (ConwayGenesis c) where
@@ -323,6 +329,40 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance
+  ( Era era
+  , Arbitrary (TxCert era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (ConwayPlutusPurpose AsItem era)
+  where
+  arbitrary =
+    oneof
+      [ ConwaySpending <$> arbitrary
+      , ConwayMinting <$> arbitrary
+      , ConwayCertifying <$> arbitrary
+      , ConwayRewarding <$> arbitrary
+      , ConwayVoting <$> arbitrary
+      , ConwayProposing <$> arbitrary
+      ]
+
+instance
+  Era era =>
+  Arbitrary (ConwayPlutusPurpose AsIndex era)
+  where
+  arbitrary = arbitrary >>= genConwayPlutusPurposePointer
+
+genConwayPlutusPurposePointer :: Word32 -> Gen (ConwayPlutusPurpose AsIndex era)
+genConwayPlutusPurposePointer i =
+  elements
+    [ ConwaySpending (AsIndex i)
+    , ConwayMinting (AsIndex i)
+    , ConwayCertifying (AsIndex i)
+    , ConwayRewarding (AsIndex i)
+    , ConwayVoting (AsIndex i)
+    , ConwayProposing (AsIndex i)
+    ]
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Conway.Rules -----------------------------------------------------------

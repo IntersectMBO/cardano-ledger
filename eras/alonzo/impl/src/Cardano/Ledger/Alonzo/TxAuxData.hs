@@ -22,9 +22,13 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   -- * AlonzoTxAuxData
   AlonzoTxAuxData (
     AlonzoTxAuxData,
+    AlonzoTxAuxData',
     atadMetadata,
     atadTimelock,
-    atadPlutus
+    atadPlutus,
+    atadMetadata',
+    atadTimelock',
+    atadPlutus'
   ),
   AlonzoTxAuxDataRaw,
   mkAlonzoTxAuxData,
@@ -322,6 +326,15 @@ pattern AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} <-
             else error $ prefix ++ " not supported in " ++ eraName @era
 
 {-# COMPLETE AlonzoTxAuxData #-}
+
+pattern AlonzoTxAuxData' ::
+  forall era.
+  Map Word64 Metadatum ->
+  StrictSeq (Timelock era) ->
+  Map Language (NE.NonEmpty PlutusBinary) ->
+  AlonzoTxAuxData era
+pattern AlonzoTxAuxData' {atadMetadata', atadTimelock', atadPlutus'} <-
+  (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata' atadTimelock' atadPlutus')
 
 translateAlonzoTxAuxData ::
   (AlonzoEraScript era1, AlonzoEraScript era2, EraCrypto era1 ~ EraCrypto era2) =>

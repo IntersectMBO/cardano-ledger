@@ -30,11 +30,17 @@ import Cardano.Ledger.Shelley.Rules
 import Test.Cardano.Ledger.Mary.TreeDiff
 
 -- Scripts
-instance ToExpr Tag
-
 instance ToExpr (PlutusScript (AlonzoEra c))
 
 instance ToExpr (PlutusScript era) => ToExpr (AlonzoScript era)
+
+instance ToExpr (AlonzoPlutusPurpose AsIndex era)
+
+instance ToExpr (TxCert era) => ToExpr (AlonzoPlutusPurpose AsItem era)
+
+deriving newtype instance ToExpr ix => ToExpr (AsIndex ix it)
+
+deriving newtype instance ToExpr it => ToExpr (AsItem ix it)
 
 -- Core
 deriving newtype instance ToExpr CoinPerWord
@@ -52,11 +58,9 @@ instance ToExpr (AlonzoPParams StrictMaybe era)
 instance ToExpr (AlonzoPParams Identity era)
 
 -- TxWits
-instance ToExpr RdmrPtr
+instance ToExpr (PlutusPurpose AsIndex era) => ToExpr (RedeemersRaw era)
 
-instance ToExpr (RedeemersRaw era)
-
-instance ToExpr (Redeemers era)
+instance ToExpr (PlutusPurpose AsIndex era) => ToExpr (Redeemers era)
 
 instance
   ( Era era
@@ -101,12 +105,15 @@ instance
   (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
   ToExpr (AlonzoTx era)
 
-instance ToExpr (TxCert era) => ToExpr (ScriptPurpose era)
-
 -- Plutus/TxInfo
 instance ToExpr (AlonzoContextError era)
 
-instance (ToExpr (ContextError era), ToExpr (TxCert era)) => ToExpr (CollectError era)
+instance
+  ( ToExpr (ContextError era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (TxCert era)
+  ) =>
+  ToExpr (CollectError era)
 
 -- Rules/Utxo
 instance
@@ -122,7 +129,8 @@ instance ToExpr FailureDescription
 instance ToExpr TagMismatchDescription
 
 instance
-  ( ToExpr (PPUPPredFailure era)
+  ( ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (PPUPPredFailure era)
   , ToExpr (ContextError era)
   , ToExpr (TxCert era)
   ) =>
@@ -131,6 +139,8 @@ instance
 -- Rules/Utxow
 instance
   ( Era era
+  , ToExpr (PlutusPurpose AsIndex era)
+  , ToExpr (PlutusPurpose AsItem era)
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
   , ToExpr (TxCert era)
   ) =>

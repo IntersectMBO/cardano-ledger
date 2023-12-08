@@ -8,9 +8,8 @@ module Test.Cardano.Ledger.Constrained.Trace.SimpleTx where
 
 import Cardano.Crypto.Signing (SigningKey)
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (TxIx, inject)
 import Cardano.Ledger.Coin (Coin (..))
@@ -29,6 +28,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (DataHash, ScriptHash)
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -47,6 +47,8 @@ import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Constrained.Ast (runTarget, runTerm)
 import Test.Cardano.Ledger.Constrained.Classes (
   PParamsF (..),
+  PlutusPointerF (..),
+  PlutusPurposeF (..),
   ScriptF (..),
   TxBodyF (..),
   TxCertF (..),
@@ -81,6 +83,7 @@ import qualified Test.Cardano.Ledger.Constrained.Trace.TraceMonad as TraceMonad 
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), WitnessesField (..))
+import Test.Cardano.Ledger.Generic.GenState (mkRedeemers)
 import Test.Cardano.Ledger.Generic.Proof (
   Proof (..),
   Reflect (..),
@@ -260,7 +263,7 @@ addWitnesses proof scriptUniv plutusuniv byronuniv keymapuniv datauniv txb ut gd
     needed = getScriptsNeeded ut txb
     neededWits, scriptwits :: Map (ScriptHash (EraCrypto era)) (Script era)
     plutusValids :: [IsValid]
-    rptrs :: Set RdmrPtr
+    rptrs :: Set (PlutusPointerF era)
     dataw :: Map (DataHash (EraCrypto era)) (Data era)
     (scriptwits, neededWits, plutusValids, rptrs, dataw) = case whichUTxO proof of
       UTxOShelleyToMary -> (witss, witss, [], Set.empty, Map.empty)
@@ -269,6 +272,7 @@ addWitnesses proof scriptUniv plutusuniv byronuniv keymapuniv datauniv txb ut gd
           witss = Map.restrictKeys scriptUniv setneed
       UTxOAlonzoToConway ->
         let AlonzoScriptsNeeded xs = needed
+            xs' = [(PlutusPurposeF proof p, d) | (p, d) <- xs]
             neededHashset = Set.fromList (fmap snd xs)
             refAdjusted =
               adjustNeededByRefScripts
@@ -281,7 +285,7 @@ addWitnesses proof scriptUniv plutusuniv byronuniv keymapuniv datauniv txb ut gd
          in ( Map.restrictKeys scriptUniv refAdjusted
             , Map.restrictKeys scriptUniv neededHashset
             , validities
-            , getRdmrPtrs (TxBodyF proof txb) xs plutusuniv
+            , getRdmrPtrs (TxBodyF proof txb) xs' plutusuniv
             , Map.restrictKeys
                 datauniv
                 ( getPlutusDataHashes
@@ -319,10 +323,10 @@ addWitnesses proof scriptUniv plutusuniv byronuniv keymapuniv datauniv txb ut gd
         byronuniv
     redeem =
       Set.foldl'
-        (\ans x -> Map.insert x (Data @era (PV1.I 1), ExUnits 3 3) ans)
+        (\ans (PlutusPointerF _ x) -> (x, (Data @era (PV1.I 1), ExUnits 3 3)) : ans)
         -- It doesn't actuallly matter what the Data is, and the ExUnits only need to be small
         -- as maxTxExUnits is usually something big like (ExUnits mem=1217 data=3257)
-        Map.empty
+        []
         rptrs
     wits =
       newWitnesses
@@ -332,7 +336,7 @@ addWitnesses proof scriptUniv plutusuniv byronuniv keymapuniv datauniv txb ut gd
         , BootWits bootwits
         , ScriptWits scriptwits
         , DataWits (TxDats dataw)
-        , RdmrWits (Redeemers redeem)
+        , RdmrWits (mkRedeemers proof redeem)
         ]
     tx =
       newTx

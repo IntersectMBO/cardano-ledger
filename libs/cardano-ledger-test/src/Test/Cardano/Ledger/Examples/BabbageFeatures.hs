@@ -36,15 +36,18 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure (MissingRequiredDatums, NotAllowedSupplementalDatums),
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage (Babbage)
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Babbage.TxInfo (
-  BabbageContextError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
+  BabbageContextError (
+    InlineDatumsNotSupported,
+    ReferenceInputsNotSupported,
+    ReferenceScriptsNotSupported
+  ),
  )
 import Cardano.Ledger.BaseTypes (
   Network (..),
@@ -98,6 +101,7 @@ import Test.Cardano.Ledger.Generic.Fields (
   WitnessesField (..),
  )
 import Test.Cardano.Ledger.Generic.Functions
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemers, mkRedeemersFromTags)
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
@@ -181,10 +185,11 @@ datumExampleEven = Data (PV1.I 2)
 datumExampleOdd :: Era era => Data era
 datumExampleOdd = Data (PV1.I 3)
 
-validatingRedeemers :: Era era => Redeemers era
-validatingRedeemers =
-  Redeemers $
-    Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+validatingRedeemers :: Era era => Proof era -> Redeemers era
+validatingRedeemers proof =
+  mkRedeemersFromTags
+    proof
+    [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 -- We intentionally use a ByteString with length greater than 64 to serve as
 -- as reminder that our protection against contiguous data over 64 Bytes on
@@ -235,7 +240,7 @@ inlineDatum pf =
           , Collateral' [anotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers mempty)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
           ]
     , initOutputs =
         InitOutputs
@@ -253,7 +258,7 @@ inlineDatum pf =
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
         [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits validatingRedeemers
+        , RdmrWits $ validatingRedeemers pf
         ]
     }
 
@@ -267,7 +272,7 @@ inlineDatumFailingScript pf =
           , Collateral' [anotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers mempty)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
           ]
     , initOutputs =
         InitOutputs
@@ -285,7 +290,7 @@ inlineDatumFailingScript pf =
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
         [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits validatingRedeemers
+        , RdmrWits $ validatingRedeemers pf
         ]
     }
 
@@ -304,7 +309,7 @@ referenceScript pf =
           , Collateral' [yetAnotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers txDats)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) txDats)
           ]
     , initOutputs =
         InitOutputs
@@ -329,7 +334,7 @@ referenceScript pf =
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
         [ DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits validatingRedeemers
+        , RdmrWits $ validatingRedeemers pf
         ]
     }
 
@@ -353,7 +358,7 @@ inlineDatumAndRefScript pf =
           , Collateral' [yetAnotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers mempty)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
           ]
     , initOutputs =
         InitOutputs
@@ -377,7 +382,7 @@ inlineDatumAndRefScript pf =
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
-        [ RdmrWits validatingRedeemers
+        [ RdmrWits $ validatingRedeemers pf
         ]
     }
 
@@ -401,7 +406,7 @@ inlineDatumAndRefScriptWithRedundantWitScript pf =
           , Collateral' [yetAnotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers mempty)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
           ]
     , initOutputs =
         InitOutputs
@@ -426,7 +431,7 @@ inlineDatumAndRefScriptWithRedundantWitScript pf =
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
         [ ScriptWits' [alwaysAlt 3 pf] -- This is redundant with the reference script
-        , RdmrWits validatingRedeemers
+        , RdmrWits $ validatingRedeemers pf
         ]
     }
 
@@ -484,7 +489,7 @@ refInputWithDataHashWithWit pf =
           pf
           [ Inputs' [someTxIn]
           , RefInputs' [anotherTxIn]
-          , WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) txDats)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [] (mkRedeemers pf []) txDats)
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]]
           , Txfee (Coin 5)
           ]
@@ -509,10 +514,11 @@ refInputWithDataHashWithWit pf =
 -- Valid: Use a reference script for authorizing a delegation certificate
 -- ====================================================================================
 
-certRedeemers :: Era era => Redeemers era
-certRedeemers =
-  Redeemers $
-    Map.singleton (RdmrPtr Tag.Cert 0) (Data (PV1.I 42), ExUnits 5000 5000)
+certRedeemers :: Era era => Proof era -> Redeemers era
+certRedeemers proof =
+  mkRedeemersFromTags
+    proof
+    [((Certifying, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 refscriptForDelegCert ::
   forall era.
@@ -535,7 +541,7 @@ refscriptForDelegCert pf =
               [ UnRegTxCert (ScriptHashObj (hashScript @era $ alwaysAlt 2 pf))
               ]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] certRedeemers mempty)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (certRedeemers pf) mempty)
           ]
     , initOutputs =
         InitOutputs
@@ -551,7 +557,7 @@ refscriptForDelegCert pf =
           , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = [RdmrWits certRedeemers]
+    , otherWitsFields = [RdmrWits $ certRedeemers pf]
     }
 
 -- ====================================================================================
@@ -570,7 +576,7 @@ useCollateralReturn pf =
           , TotalCol (SJust $ Coin 5)
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemers txDats)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
           ]
     , initOutputs =
         InitOutputs
@@ -589,7 +595,7 @@ useCollateralReturn pf =
     , otherWitsFields =
         [ ScriptWits' [never 3 pf]
         , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits validatingRedeemers
+        , RdmrWits $ validatingRedeemers pf
         ]
     }
 
@@ -609,7 +615,7 @@ incorrectCollateralTotal pf =
           , TotalCol (SJust $ Coin 6)
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers mempty)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
           ]
     , initOutputs =
         InitOutputs
@@ -627,7 +633,7 @@ incorrectCollateralTotal pf =
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
         [ ScriptWits' [evenData3ArgsScript pf]
-        , RdmrWits validatingRedeemers
+        , RdmrWits $ validatingRedeemers pf
         ]
     }
 
@@ -649,7 +655,7 @@ inlineDatumRedundantDatumWit pf =
           , Collateral' [anotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers txDats)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) txDats)
           ]
     , initOutputs =
         InitOutputs
@@ -668,7 +674,7 @@ inlineDatumRedundantDatumWit pf =
     , otherWitsFields =
         [ ScriptWits' [evenData3ArgsScript pf]
         , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits validatingRedeemers
+        , RdmrWits (validatingRedeemers pf)
         ]
     }
 
@@ -686,7 +692,7 @@ inlineDatumWithPlutusV1Script pf =
           , Collateral' [anotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemers mempty)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) mempty)
           ]
     , initOutputs =
         InitOutputs
@@ -704,7 +710,7 @@ inlineDatumWithPlutusV1Script pf =
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
         [ ScriptWits' [always 3 pf]
-        , RdmrWits validatingRedeemers
+        , RdmrWits (validatingRedeemers pf)
         ]
     }
 
@@ -722,7 +728,7 @@ referenceScriptWithPlutusV1Script pf =
           , Collateral' [anotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995), RefScript (SJust $ simpleScript pf)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemers txDats)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
           ]
     , initOutputs =
         InitOutputs
@@ -741,7 +747,7 @@ referenceScriptWithPlutusV1Script pf =
     , otherWitsFields =
         [ ScriptWits' [always 3 pf]
         , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits validatingRedeemers
+        , RdmrWits (validatingRedeemers pf)
         ]
     }
 
@@ -760,7 +766,7 @@ referenceInputWithPlutusV1Script pf =
           , Collateral' [yetAnotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemers txDats)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
           ]
     , initOutputs =
         InitOutputs
@@ -785,7 +791,7 @@ referenceInputWithPlutusV1Script pf =
     , otherWitsFields =
         [ ScriptWits' [always 3 pf]
         , DataWits' [datumExampleSixtyFiveBytes]
-        , RdmrWits validatingRedeemers
+        , RdmrWits (validatingRedeemers pf)
         ]
     }
 
@@ -950,7 +956,7 @@ malformedScriptWit pf =
           [ Inputs' [someTxIn]
           , Collateral' [anotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 5000)]]
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers mempty)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
           ]
     , initOutputs =
         InitOutputs
@@ -968,7 +974,7 @@ malformedScriptWit pf =
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
         [ ScriptWits' [malformedScript pf "malfoy"]
-        , RdmrWits validatingRedeemers
+        , RdmrWits (validatingRedeemers pf)
         ]
     }
 
@@ -989,7 +995,7 @@ noSuchThingAsReferenceDatum pf =
           , Collateral' [yetAnotherTxIn]
           , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
           , Txfee (Coin 5)
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemers (TxDats mempty))
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) (TxDats mempty))
           ]
     , initOutputs =
         InitOutputs
@@ -1015,7 +1021,7 @@ noSuchThingAsReferenceDatum pf =
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields =
         [ ScriptWits' [alwaysAlt 3 pf]
-        , RdmrWits validatingRedeemers
+        , RdmrWits (validatingRedeemers pf)
         ]
     }
 

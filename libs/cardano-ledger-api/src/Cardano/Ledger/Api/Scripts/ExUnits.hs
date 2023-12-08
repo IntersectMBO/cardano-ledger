@@ -27,17 +27,20 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (lookupPlutusScript)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
+  AsIndex (..),
+  AsItem (..),
+  PlutusPurpose (..),
   plutusScriptLanguage,
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (redeemerPointer))
+import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
-  RdmrPtr (..),
   unRedeemers,
   unTxDats,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), getAlonzoSpendingTxIn)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), pvMajor)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.CostModels (costModelsValid)
@@ -65,16 +68,16 @@ import qualified PlutusLedgerApi.Common as P
 data TransactionScriptFailure era
   = -- | A redeemer was supplied which points to a script hash which
     -- we cannot connect to a Plutus script.
-    RedeemerPointsToUnknownScriptHash !RdmrPtr
+    RedeemerPointsToUnknownScriptHash !(PlutusPurpose AsIndex era)
   | -- | Missing redeemer.
     MissingScript
       -- | Redeemer pointer which cannot be resolved
-      !RdmrPtr
+      !(PlutusPurpose AsIndex era)
       -- | Map of pointers which can be resolved together with PlutusScripts and their
       -- respective contexts
       !( Map
-          RdmrPtr
-          (ScriptPurpose era, Maybe (PlutusScript era), ScriptHash (EraCrypto era))
+          (PlutusPurpose AsIndex era)
+          (PlutusPurpose AsItem era, Maybe (PlutusScript era), ScriptHash (EraCrypto era))
        )
   | -- | Missing datum.
     MissingDatum !(DataHash (EraCrypto era))
@@ -99,20 +102,32 @@ data TransactionScriptFailure era
     NoCostModelInLedgerState !Language
 
 deriving instance
-  (Era era, Eq (TxCert era), Eq (PlutusScript era)) =>
+  ( Era era
+  , Eq (TxCert era)
+  , Eq (PlutusScript era)
+  , Eq (PlutusPurpose AsIndex era)
+  , Eq (PlutusPurpose AsItem era)
+  ) =>
   Eq (TransactionScriptFailure era)
 
 deriving instance
-  (Era era, Show (TxCert era), Show (PlutusScript era)) =>
+  ( Era era
+  , Show (TxCert era)
+  , Show (PlutusScript era)
+  , Show (PlutusPurpose AsIndex era)
+  , Show (PlutusPurpose AsItem era)
+  ) =>
   Show (TransactionScriptFailure era)
 
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
 note e Nothing = Left e
 
-type RedeemerReport era = Map RdmrPtr (Either (TransactionScriptFailure era) ExUnits)
+type RedeemerReport era =
+  Map (PlutusPurpose AsIndex era) (Either (TransactionScriptFailure era) ExUnits)
 
-type RedeemerReportWithLogs era = Map RdmrPtr (Either (TransactionScriptFailure era) ([Text], ExUnits))
+type RedeemerReportWithLogs era =
+  Map (PlutusPurpose AsIndex era) (Either (TransactionScriptFailure era) ([Text], ExUnits))
 
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
@@ -174,13 +189,13 @@ evalTxExUnitsWithLogs ::
   Either (ContextError era) (RedeemerReportWithLogs era)
 evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
   ptrToPlutusScript <-
-    forM neededPlutusScripts $ \(scriptPurpose, mPlutusScript, scriptHash) -> do
+    forM neededPlutusScripts $ \(plutusPurpose, mPlutusScript, scriptHash) -> do
       mPlutusScriptAndContext <-
         forM mPlutusScript $ \plutusScript -> do
           scriptContext <-
             mkPlutusScriptContext
               plutusScript
-              scriptPurpose
+              plutusPurpose
               pp
               epochInfo
               sysStart
@@ -188,13 +203,13 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
               tx
           pure (plutusScript, scriptContext)
       -- Since `getScriptsNeeded` used the `txBody` to create script purposes, it would be
-      -- a logic error if `rdptr` was not able to find `scriptPurpose`.
+      -- a logic error if `redeemerPointer` was not able to find `plutusPurpose`.
       let !pointer =
-            case rdptr txBody scriptPurpose of
+            case redeemerPointer txBody plutusPurpose of
               SNothing ->
                 error "Impossible: Redeemer pointer was not found in the TxBody"
               SJust p -> p
-      pure (pointer, (scriptPurpose, mPlutusScriptAndContext, scriptHash))
+      pure (pointer, (plutusPurpose, mPlutusScriptAndContext, scriptHash))
   pure $ Map.mapWithKey (findAndCount $ Map.fromList ptrToPlutusScript) rdmrs
   where
     maxBudget = pp ^. ppMaxTxExUnitsL
@@ -211,7 +226,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
         (\(sp, sh) -> (sp, lookupPlutusScript scriptsProvided sh, sh))
         scriptsNeeded
     findAndCount ptrToPlutusScript pointer (rdmr, exUnits) = do
-      (scriptPurpose, mPlutusScript, _) <-
+      (plutusPurpose, mPlutusScript, _) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
           Map.lookup pointer ptrToPlutusScript
       let ptrToPlutusScriptNoContext =
@@ -225,14 +240,14 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
       -- inline datums, when they are present, since for PlutusV1 presence of inline
       -- datums would short circuit earlier on PlutusContext translation.
       datums <-
-        case getAlonzoSpendingTxIn scriptPurpose of
-          Just txin -> do
-            txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
+        case plutusPurposeSpendingTxIn plutusPurpose of
+          Just txIn -> do
+            txOut <- note (UnknownTxIn txIn) $ Map.lookup txIn (unUTxO utxo)
             datum <-
               case txOut ^. datumTxOutF of
                 Datum binaryData -> pure $ binaryDataToData binaryData
                 DatumHash dh -> note (MissingDatum dh) $ Map.lookup dh dats
-                NoDatum -> Left (InvalidTxIn txin)
+                NoDatum -> Left (InvalidTxIn txIn)
             pure [datum, rdmr, scriptContext]
           Nothing -> pure [rdmr, scriptContext]
       let pwc =

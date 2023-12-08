@@ -13,9 +13,8 @@
 
 module Test.Cardano.Ledger.Constrained.Classes where
 
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (AsIndex, AsItem, PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
@@ -24,6 +23,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Shelley.Governance (ShelleyGovState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov (GovState (..))
@@ -65,6 +65,7 @@ import Test.Cardano.Ledger.Constrained.Size (
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
+import Test.Cardano.Ledger.Generic.GenState (plutusPurposeTags)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PDoc,
   PrettyA,
@@ -76,6 +77,8 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcTxOut,
   pcVal,
   pcWitnesses,
+  ppPlutusPurposeAsIndex,
+  ppPlutusPurposeAsItem,
   ppString,
  )
 import Test.Cardano.Ledger.Generic.Proof (
@@ -588,6 +591,43 @@ instance Eq (TxCertF era) where
   (TxCertF (Babbage _) x) == (TxCertF (Babbage _) y) = x == y
   (TxCertF (Conway _) x) == (TxCertF (Conway _) y) = x == y
 
+-- ==================
+data PlutusPurposeF era where
+  PlutusPurposeF :: Proof era -> PlutusPurpose AsItem era -> PlutusPurposeF era
+
+unPlutusPurposeF :: PlutusPurposeF era -> PlutusPurpose AsItem era
+unPlutusPurposeF (PlutusPurposeF _ pp) = pp
+
+data PlutusPointerF era where
+  PlutusPointerF :: Proof era -> PlutusPurpose AsIndex era -> PlutusPointerF era
+
+unPlutusPointerF :: PlutusPointerF era -> PlutusPurpose AsIndex era
+unPlutusPointerF (PlutusPointerF _ pp) = pp
+
+instance Show (PlutusPurposeF era) where
+  show (PlutusPurposeF p x) = unReflect (\_ -> show (ppPlutusPurposeAsItem x)) p
+
+instance Show (PlutusPointerF era) where
+  show (PlutusPointerF p x) = unReflect (\_ -> show (ppPlutusPurposeAsIndex x)) p
+
+instance Eq (PlutusPurposeF era) where
+  PlutusPurposeF (Alonzo _) x == PlutusPurposeF (Alonzo _) y = x == y
+  PlutusPurposeF (Babbage _) x == PlutusPurposeF (Babbage _) y = x == y
+  PlutusPurposeF (Conway _) x == PlutusPurposeF (Conway _) y = x == y
+  _ == _ = error "Unsupported"
+
+instance Eq (PlutusPointerF era) where
+  PlutusPointerF (Alonzo _) x == PlutusPointerF (Alonzo _) y = x == y
+  PlutusPointerF (Babbage _) x == PlutusPointerF (Babbage _) y = x == y
+  PlutusPointerF (Conway _) x == PlutusPointerF (Conway _) y = x == y
+  _ == _ = error "Unsupported"
+
+instance Ord (PlutusPointerF era) where
+  compare (PlutusPointerF (Alonzo _) x) (PlutusPointerF (Alonzo _) y) = compare x y
+  compare (PlutusPointerF (Babbage _) x) (PlutusPointerF (Babbage _) y) = compare x y
+  compare (PlutusPointerF (Conway _) x) (PlutusPointerF (Conway _) y) = compare x y
+  compare _ _ = error "Unsupported"
+
 -- =========
 data TxOutF era where
   TxOutF :: Proof era -> TxOut era -> TxOutF era
@@ -800,7 +840,7 @@ unScriptsNeededF :: ScriptsNeededF era -> ScriptsNeeded era
 unScriptsNeededF (ScriptsNeededF _ v) = v
 
 instance Show (ScriptsNeededF era) where
-  show (ScriptsNeededF p t) = show (pcScriptsNeeded p t)
+  show (ScriptsNeededF p t) = unReflect (\_ -> show (pcScriptsNeeded p t)) p
 
 -- ========================
 
@@ -823,9 +863,9 @@ instance Eq (ScriptF era) where
 
 genScriptF :: Era era => Proof era -> Gen (ScriptF era)
 genScriptF proof = do
-  tag <- arbitrary
+  tag <- elements $ plutusPurposeTags proof
   vi <- arbitrary
-  m <- Map.fromList <$> (vectorOf 5 arbitrary)
+  m <- Map.fromList <$> vectorOf 5 arbitrary
   corescript <- genCoreScript proof tag m vi
   pure (ScriptF proof corescript)
 
