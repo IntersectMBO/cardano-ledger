@@ -289,6 +289,6 @@ setPParams = do
           , dvtCommitteeNoConfidence = 1 %! 2
           , dvtUpdateToConstitution = 1 %! 2
           }
-      & ppCommitteeMaxTermLengthL .~ 10
+      & ppCommitteeMaxTermLengthL .~ 100
       & ppGovActionLifetimeL .~ 2
       & ppGovActionDepositL .~ Coin 123

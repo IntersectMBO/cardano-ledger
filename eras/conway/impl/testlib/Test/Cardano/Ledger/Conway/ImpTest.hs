@@ -94,6 +94,7 @@ import Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
   setCompleteDRepPulsingState,
   utxosGovStateL,
+  votingCommitteeThreshold,
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
@@ -611,21 +612,31 @@ logRatificationChecks ::
   GovActionId (EraCrypto era) ->
   ImpTestM era ()
 logRatificationChecks gaId = do
-  gas@GovActionState {gasDRepVotes, gasAction} <- getGovActionState gaId
+  gas@GovActionState {gasCommitteeVotes, gasDRepVotes, gasAction} <- getGovActionState gaId
   ens@EnactState {..} <- getEnactState
   ratEnv <- getRatifyEnv
   let
     ratSt = RatifyState ens mempty mempty False
   curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
+  let
+    members = foldMap' committeeMembers (ens ^. ensCommitteeL)
+    committeeState = reCommitteeState ratEnv
   logEntry $
     unlines
       [ "----- RATIFICATION CHECKS -----"
       , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
-      , "validCommitteeTerm:\t" <> show (validCommitteeTerm ensCommittee ensCurPParams currentEpoch)
+      , "validCommitteeTerm:\t" <> show (validCommitteeTerm gasAction ensCurPParams currentEpoch)
       , "notDelayed:\t\t??"
       , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
-      , "committeeAccepted:\t" <> show (committeeAccepted ratEnv ratSt gas)
+      , "committeeAccepted:\t\t"
+          <> show (committeeAccepted ratEnv ratSt gas)
+          <> " [To Pass: "
+          <> show
+            (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
+          <> show " >= "
+          <> show (votingCommitteeThreshold ratSt gasAction)
+          <> show "]"
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
           <> " [To Pass: "
