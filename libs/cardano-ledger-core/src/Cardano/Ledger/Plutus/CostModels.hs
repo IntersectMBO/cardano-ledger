@@ -21,7 +21,7 @@
 
 module Cardano.Ledger.Plutus.CostModels (
   -- * Cost Model
-  CostModel (..),
+  CostModel,
   CostModelError (..),
   decodeValidAndUnknownCostModels,
   emptyCostModels,
