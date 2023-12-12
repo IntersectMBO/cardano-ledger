@@ -22,11 +22,11 @@ module Test.Cardano.Ledger.Babbage.GoldenTranslation (
 )
 where
 
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-
 import Cardano.Ledger.Babbage (Babbage)
 import Paths_cardano_ledger_babbage_test (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
+import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.Cardano.Ledger.Babbage.Translation.TranslatableGen ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 

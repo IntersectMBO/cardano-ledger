@@ -16,7 +16,7 @@
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests) where
 
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
@@ -50,6 +50,7 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Plutus.CostModels (emptyCostModels)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty.Babbage ()
@@ -343,11 +344,14 @@ alonzoUTXOWTests pf =
                   ]
               )
         , testCase "no cost model" $
-            testU
-              pf
-              (trustMeP pf True $ noCostModelTx pf)
-              ( Left [fromUtxos @era (CollectErrors [NoCostModel PlutusV2])]
-              )
+            let pp' = updatePParams pf (pp pf) (Costmdls emptyCostModels)
+             in testUTXOW
+                  (UTXOW pf)
+                  (initUTxO pf)
+                  pp'
+                  (trustMeP pf True $ noCostModelTx pf pp')
+                  ( Left [fromUtxos @era (CollectErrors [NoCostModel PlutusV1])]
+                  )
         ]
     ]
 
@@ -905,14 +909,15 @@ noCostModelTx ::
   , EraTx era
   ) =>
   Proof era ->
+  PParams era ->
   Tx era
-noCostModelTx pf =
+noCostModelTx pf pp' =
   newTx
     pf
     [ Body noCostModelBody
     , WitnessesI
         [ AddrWits' [mkWitnessVKey (hashAnnotated noCostModelBody) (someKeys pf)]
-        , ScriptWits' [alwaysAlt 3 pf]
+        , ScriptWits' [always 3 pf]
         , DataWits' [Data (PV1.I 123)]
         , RdmrWits redeemers
         ]
@@ -925,7 +930,7 @@ noCostModelTx pf =
         , Collateral' [mkGenesisTxIn 11]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
         , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] redeemers (mkTxDats (Data (PV1.I 123))))
+        , WppHash (newScriptIntegrityHash pf pp' [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
         ]
     redeemers = Redeemers $ Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
 

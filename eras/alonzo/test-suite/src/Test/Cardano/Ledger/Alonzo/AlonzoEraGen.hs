@@ -18,14 +18,16 @@ import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language)
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo (
+  AlonzoEraScript,
   AlonzoScript (..),
   ExUnits (..),
   Prices (..),
   isPlutusScript,
+  plutusScriptLanguage,
   pointWiseExUnits,
+  toPlutusScript,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.Tx (
@@ -95,9 +97,11 @@ import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
-import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds, mkPlutusScript')
 import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
-import Test.Cardano.Ledger.Alonzo.PlutusScripts (
+import Test.Cardano.Ledger.Binary.Random
+import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
+import Test.Cardano.Ledger.Plutus.Examples (
   evenRedeemer2,
   evendata3,
   guessTheNumber3,
@@ -106,8 +110,6 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts (
   redeemerIs102,
   sumsTo103,
  )
-import Test.Cardano.Ledger.Binary.Random
-import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -130,57 +132,47 @@ import Test.QuickCheck hiding ((><))
 -- ============================================================
 
 -- | We are choosing new TxOut to pay fees, We want only Key locked addresss with Ada only values.
-vKeyLockedAdaOnly :: Mock c => TxOut (AlonzoEra c) -> Bool
+vKeyLockedAdaOnly :: Crypto c => TxOut (AlonzoEra c) -> Bool
 vKeyLockedAdaOnly txOut = vKeyLocked txOut && isAdaOnly (txOut ^. valueTxOutL)
 
-phase2scripts3Arg :: forall c. Mock c => [TwoPhase3ArgInfo (AlonzoEra c)]
+phase2scripts3Arg :: forall era. AlonzoEraScript era => [TwoPhase3ArgInfo era]
 phase2scripts3Arg =
-  [ TwoPhase3ArgInfo
-      (alwaysSucceeds PlutusV1 3)
-      (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV1 3))
-      (P.I 1)
-      (P.I 1, bigMem, bigStep)
-      True
-  , TwoPhase3ArgInfo guessTheNumber3 (hashScript @(AlonzoEra c) guessTheNumber3) (P.I 9) (P.I 9, bigMem, bigStep) True
-  , TwoPhase3ArgInfo evendata3 (hashScript @(AlonzoEra c) evendata3) (P.I 8) (P.I 8, bigMem, bigStep) True
-  , TwoPhase3ArgInfo odddata3 (hashScript @(AlonzoEra c) odddata3) (P.I 9) (P.I 9, bigMem, bigStep) True
-  , TwoPhase3ArgInfo sumsTo103 (hashScript @(AlonzoEra c) sumsTo103) (P.I 1) (P.I 9, bigMem, bigStep) True
-  , TwoPhase3ArgInfo
-      (alwaysFails PlutusV1 3)
-      (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 3))
-      (P.I 1)
-      (P.I 1, bigMem, bigStep)
-      False
+  [ mkTwoPhase3ArgInfo (alwaysSucceeds @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' guessTheNumber3) (P.I 9) (P.I 9, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' evendata3) (P.I 8) (P.I 8, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' odddata3) (P.I 9) (P.I 9, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' sumsTo103) (P.I 1) (P.I 9, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (alwaysFails @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) False
   ]
+  where
+    mkTwoPhase3ArgInfo script = TwoPhase3ArgInfo script (hashScript @era script)
 
-phase2scripts2Arg :: forall c. Mock c => [TwoPhase2ArgInfo (AlonzoEra c)]
+phase2scripts2Arg :: forall era. AlonzoEraScript era => [TwoPhase2ArgInfo era]
 phase2scripts2Arg =
-  [ TwoPhase2ArgInfo
-      (alwaysSucceeds PlutusV1 2)
-      (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV1 2))
-      (P.I 1, bigMem, bigStep)
-      True
-  , TwoPhase2ArgInfo oddRedeemer2 (hashScript @(AlonzoEra c) oddRedeemer2) (P.I 13, bigMem, bigStep) True
-  , TwoPhase2ArgInfo evenRedeemer2 (hashScript @(AlonzoEra c) evenRedeemer2) (P.I 14, bigMem, bigStep) True
-  , TwoPhase2ArgInfo redeemerIs102 (hashScript @(AlonzoEra c) redeemerIs102) (P.I 10, bigMem, bigStep) True
-  , TwoPhase2ArgInfo (alwaysFails PlutusV1 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 2)) (P.I 1, bigMem, bigStep) False
+  [ mkTwoPhase2ArgInfo (alwaysSucceeds @'PlutusV1 2) (P.I 1, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (mkPlutusScript' oddRedeemer2) (P.I 13, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (mkPlutusScript' evenRedeemer2) (P.I 14, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (mkPlutusScript' redeemerIs102) (P.I 10, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (alwaysFails @'PlutusV1 2) (P.I 1, bigMem, bigStep) False
   ]
+  where
+    mkTwoPhase2ArgInfo script = TwoPhase2ArgInfo script (hashScript @era script)
 
-phase2scripts3ArgSucceeds :: forall c. Mock c => AlonzoScript (AlonzoEra c) -> Bool
+phase2scripts3ArgSucceeds :: forall era. AlonzoEraScript era => Script era -> Bool
 phase2scripts3ArgSucceeds script =
   maybe True getSucceeds3 $
-    List.find (\info -> getScript3 @(AlonzoEra c) info == script) phase2scripts3Arg
+    List.find (\info -> getScript3 info == script) phase2scripts3Arg
 
-phase2scripts2ArgSucceeds :: forall c. Mock c => AlonzoScript (AlonzoEra c) -> Bool
+phase2scripts2ArgSucceeds :: forall era. AlonzoEraScript era => Script era -> Bool
 phase2scripts2ArgSucceeds script =
   maybe True getSucceeds2 $
-    List.find (\info -> getScript2 @(AlonzoEra c) info == script) phase2scripts2Arg
+    List.find (\info -> getScript2 info == script) phase2scripts2Arg
 
-genPlutus2Arg :: Mock c => Gen (Maybe (TwoPhase2ArgInfo (AlonzoEra c)))
+genPlutus2Arg :: AlonzoEraScript era => Gen (Maybe (TwoPhase2ArgInfo era))
 genPlutus2Arg = frequency [(10, Just <$> elements phase2scripts2Arg), (90, pure Nothing)]
 
 -- | Gen a Mint value in the Alonzo Era, with a 10% chance that it includes an AlonzoScript
-genAlonzoMint :: Mock c => MultiAsset c -> Gen (MultiAsset c, [AlonzoScript (AlonzoEra c)])
+genAlonzoMint :: Crypto c => MultiAsset c -> Gen (MultiAsset c, [AlonzoScript (AlonzoEra c)])
 genAlonzoMint startvalue = do
   ans <- genPlutus2Arg
   case ans of
@@ -581,11 +573,12 @@ someLeaf _proxy keyHash =
 
 -- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::
-  forall era.
-  (Script era ~ AlonzoScript era, EraScript era) =>
-  Map.Map (ScriptHash (EraCrypto era)) (AlonzoScript era) ->
+  AlonzoEraScript era =>
+  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   Set Language
 langsUsed hashScriptMap =
   Set.fromList
-    [ l | (_hash, script) <- Map.toList hashScriptMap, (not . isNativeScript @era) script, Just l <- [language @era script]
+    [ plutusScriptLanguage plutusScript
+    | script <- Map.elems hashScriptMap
+    , Just plutusScript <- [toPlutusScript script]
     ]

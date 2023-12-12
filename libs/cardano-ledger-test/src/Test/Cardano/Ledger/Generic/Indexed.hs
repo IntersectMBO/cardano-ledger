@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -17,7 +18,7 @@ module Test.Cardano.Ledger.Generic.Indexed where
 
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AlonzoScript (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -255,13 +256,13 @@ instance (Era era, Reflect era) => Fixed (Timelock era) where
 -- ====================================================
 -- Alonzo Scripts
 
-alonzoSimple :: forall era. [AlonzoScript era]
+alonzoSimple :: forall era. (Script era ~ AlonzoScript era, AlonzoEraScript era) => [AlonzoScript era]
 alonzoSimple =
-  [ alwaysFails PlutusV1 1 -- always False
-  , alwaysSucceeds PlutusV1 1 -- always True
+  [ alwaysFails @'PlutusV1 1 -- always False
+  , alwaysSucceeds @'PlutusV1 1 -- always True
   ]
 
-somealonzo :: Era era => Proof era -> [AlonzoScript era]
+somealonzo :: (Script era ~ AlonzoScript era, AlonzoEraScript era) => Proof era -> [AlonzoScript era]
 somealonzo c =
   alonzoSimple
     ++ ( fmap

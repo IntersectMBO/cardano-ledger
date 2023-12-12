@@ -14,10 +14,13 @@ module Test.Cardano.Ledger.Babbage.TreeDiff (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.Rules
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules
+import Cardano.Ledger.Babbage.Scripts
 import Cardano.Ledger.Babbage.TxBody
+import Cardano.Ledger.Babbage.TxInfo (ContextError (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Shelley.Rules
@@ -25,6 +28,12 @@ import Test.Cardano.Ledger.Alonzo.TreeDiff
 
 -- Core
 deriving newtype instance ToExpr CoinPerByte
+
+-- Scripts
+instance ToExpr (PlutusScript (BabbageEra c))
+
+-- PlutusContext
+instance ToExpr (ContextError (BabbageEra c))
 
 -- PParams
 instance ToExpr (BabbagePParams StrictMaybe era)

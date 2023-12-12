@@ -71,7 +71,6 @@ library
         cardano-ledger-core ^>=1.10,
         cardano-ledger-mary ^>=1.5,
         cardano-ledger-shelley ^>=1.9,
-        cardano-slotting,
         cardano-strict-containers,
         containers,
         deepseq,

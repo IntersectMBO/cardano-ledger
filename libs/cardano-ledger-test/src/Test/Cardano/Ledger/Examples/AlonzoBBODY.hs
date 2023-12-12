@@ -622,7 +622,7 @@ testBBodyState pf =
             , (mkGenesisTxIn 8, newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)])
             , (mkGenesisTxIn 100, timelockOut)
             , (mkGenesisTxIn 101, unspendableOut)
-            , (mkGenesisTxIn 102, alwaysSucceedsOutputV2)
+            , (mkGenesisTxIn 102, alwaysSucceedsOutputV1)
             , (mkGenesisTxIn 103, nonScriptOutWithDatum)
             ]
       alwaysFailsOutput =
@@ -638,7 +638,7 @@ testBBodyState pf =
           (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 2)
           pCred = ScriptHashObj timelockHash
           sCred = StakeRefBase . KeyHashObj . hashKey $ svk
-          timelockHash = hashScript @era $ allOf [matchkey 1, after 100] pf
+          timelockHash = hashScript @era $ fromNativeScript $ allOf [matchkey 1, after 100] pf
       -- This output is unspendable since it is locked by a plutus script,
       -- but has no datum hash.
       unspendableOut =
@@ -647,10 +647,10 @@ testBBodyState pf =
           [ Address (someScriptAddr (always 3 pf))
           , Amount (inject $ Coin 5000)
           ]
-      alwaysSucceedsOutputV2 =
+      alwaysSucceedsOutputV1 =
         newTxOut
           pf
-          [ Address (someScriptAddr (alwaysAlt 3 pf))
+          [ Address (someScriptAddr (always 3 pf))
           , Amount (inject $ Coin 5000)
           , DHash' [hashData $ someDatum @era]
           ]

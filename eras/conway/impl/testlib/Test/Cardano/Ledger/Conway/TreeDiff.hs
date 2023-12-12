@@ -12,12 +12,15 @@ module Test.Cardano.Ledger.Conway.TreeDiff (
 ) where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.Scripts
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Conway.TxInfo (ContextError)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD
 import Data.Functor.Identity
@@ -28,6 +31,12 @@ import Test.Cardano.Ledger.Babbage.TreeDiff
 instance ToExpr PoolVotingThresholds
 
 instance ToExpr DRepVotingThresholds
+
+-- Scripts
+instance ToExpr (PlutusScript (ConwayEra c))
+
+-- PlutusContext
+instance ToExpr (ContextError (ConwayEra c))
 
 -- Governance/Procedure
 instance ToExpr GovActionIx

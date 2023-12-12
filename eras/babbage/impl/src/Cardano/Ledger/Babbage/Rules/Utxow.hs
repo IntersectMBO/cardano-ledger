@@ -23,7 +23,6 @@ where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
   AlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure),
@@ -33,7 +32,7 @@ import Cardano.Ledger.Alonzo.Rules (
   requiredSignersAreWitnessed,
  )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, validScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
@@ -229,7 +228,7 @@ validateScriptsWellFormed ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
-  , Script era ~ AlonzoScript era
+  , AlonzoEraScript era
   ) =>
   PParams era ->
   Tx era ->
@@ -262,11 +261,9 @@ validateScriptsWellFormed pp tx =
 babbageUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ProtVerAtMost era 8
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
   , STS (BabbageUTXOW era)
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -352,7 +349,7 @@ babbageUtxowTransition = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx pp utxo scriptHashesNeeded
+  runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
 
   trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
@@ -361,14 +358,12 @@ babbageUtxowTransition = do
 
 instance
   forall era.
-  ( ExtendedUTxO era
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ProtVerAtMost era 8
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , Script era ~ AlonzoScript era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era

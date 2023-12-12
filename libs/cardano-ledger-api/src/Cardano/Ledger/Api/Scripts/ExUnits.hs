@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -11,37 +12,23 @@
 
 module Cardano.Ledger.Api.Scripts.ExUnits (
   TransactionScriptFailure (..),
-  ValidationFailed (..),
   evalTxExUnits,
-  evaluateTransactionExecutionUnits,
   RedeemerReport,
   evalTxExUnitsWithLogs,
-  evaluateTransactionExecutionUnitsWithLogs,
   RedeemerReportWithLogs,
 )
 where
 
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  EraPlutusContext,
-  ExtendedUTxO (..),
-  PlutusData (..),
-  PlutusDebugLang (..),
-  TranslationError,
-  VersionedTxInfo (..),
-  deserialiseAndEvaluateScript,
-  exBudgetToExUnits,
-  transExUnits,
-  transProtocolVersion,
-  valContext,
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  ContextError,
+  EraPlutusContext (mkPlutusScriptContext),
  )
-import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (lookupPlutusScript)
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoScript (..),
-  CostModel,
+  AlonzoEraScript (..),
   CostModels (..),
-  ExUnits (..),
-  getEvaluationContext,
+  plutusScriptLanguage,
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
@@ -51,44 +38,54 @@ import Cardano.Ledger.Alonzo.TxWits (
   unRedeemers,
   unTxDats,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Core hiding (TranslationError)
-import Cardano.Ledger.Plutus.Data (Data, Datum (..), binaryDataToData, getPlutusData)
-import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..), SLanguage (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), getAlonzoSpendingTxIn)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), pvMajor)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
+import Cardano.Ledger.Plutus.Evaluate (
+  PlutusDatums (..),
+  PlutusWithContext (..),
+  evaluatePlutusWithContext,
+ )
+import Cardano.Ledger.Plutus.ExUnits
+import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Data.Array (Array, bounds, (!))
+import Control.Monad (forM)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
-import qualified Data.Set as Set
 import Data.Text (Text)
 import Lens.Micro
-import qualified PlutusLedgerApi.Common as Plutus
-import qualified PlutusLedgerApi.V1 as PV1
-import qualified PlutusLedgerApi.V2 as PV2
-import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.Common as P
 
--- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
+-- | Script failures that can be returned by 'evalTxExUnitsWithLogs'.
 data TransactionScriptFailure era
-  = -- | A redeemer was supplied that does not point to a
-    --  valid plutus evaluation site in the given transaction.
-    RedeemerNotNeeded !RdmrPtr !(ScriptHash (EraCrypto era))
-  | -- | A redeemer was supplied which points to a script hash which
+  = -- | A redeemer was supplied which points to a script hash which
     -- we cannot connect to a Plutus script.
     RedeemerPointsToUnknownScriptHash !RdmrPtr
-  | -- | Missing redeemer. The first parameter is the redeemer pointer which cannot be resolved,
-    -- and the second parameter is the map of pointers which can be resolved.
+  | -- | Missing redeemer.
     MissingScript
+      -- | Redeemer pointer which cannot be resolved
       !RdmrPtr
-      !(Map RdmrPtr (ScriptPurpose era, Maybe Plutus, ScriptHash (EraCrypto era)))
+      -- | Map of pointers which can be resolved together with PlutusScripts and their
+      -- respective contexts
+      !( Map
+          RdmrPtr
+          (ScriptPurpose era, Maybe (PlutusScript era), ScriptHash (EraCrypto era))
+       )
   | -- | Missing datum.
     MissingDatum !(DataHash (EraCrypto era))
   | -- | Plutus evaluation error, for any version
-    ValidationFailure ValidationFailed
+    ValidationFailure
+      -- | Supplied execution units in the transaction, which were ignored for calculating
+      -- the actual execution units.
+      !ExUnits
+      !P.EvaluationError
+      ![Text]
+      !PlutusWithContext
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
     UnknownTxIn !(TxIn (EraCrypto era))
@@ -97,22 +94,17 @@ data TransactionScriptFailure era
     InvalidTxIn !(TxIn (EraCrypto era))
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
-    IncompatibleBudget !PV1.ExBudget
+    IncompatibleBudget !P.ExBudget
   | -- | There was no cost model for a given version of Plutus in the ledger state
     NoCostModelInLedgerState !Language
 
-deriving instance (Era era, Eq (TxCert era)) => Eq (TransactionScriptFailure era)
+deriving instance
+  (Era era, Eq (TxCert era), Eq (PlutusScript era)) =>
+  Eq (TransactionScriptFailure era)
 
-deriving instance (Era era, Show (TxCert era)) => Show (TransactionScriptFailure era)
-
-data ValidationFailed where
-  ValidationFailedV1 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV1 -> ValidationFailed
-  ValidationFailedV2 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV2 -> ValidationFailed
-  ValidationFailedV3 :: !Plutus.EvaluationError -> ![Text] -> PlutusDebugLang 'PlutusV3 -> ValidationFailed
-
-deriving instance Eq ValidationFailed
-
-deriving instance Show ValidationFailed
+deriving instance
+  (Era era, Show (TxCert era), Show (PlutusScript era)) =>
+  Show (TransactionScriptFailure era)
 
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
@@ -130,11 +122,9 @@ type RedeemerReportWithLogs era = Map RdmrPtr (Either (TransactionScriptFailure 
 evalTxExUnits ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , EraUTxO era
+  , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
-  , EraPlutusContext 'PlutusV1 era
   ) =>
   PParams era ->
   -- | The transaction.
@@ -149,7 +139,7 @@ evalTxExUnits ::
   --  sufficient execution budget.
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReport era)
+  Either (ContextError era) (RedeemerReport era)
 evalTxExUnits pp tx utxo ei sysS =
   Map.map (fmap snd) <$> evalTxExUnitsWithLogs pp tx utxo ei sysS
 
@@ -157,15 +147,13 @@ evalTxExUnits pp tx utxo ei sysS =
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
 --
 --  The execution budgets in the supplied transaction are completely ignored.
---  The results of 'evaluateTransactionExecutionUnitsWithLogs' are intended to replace them.
+--  The results of 'evalTxExUnitsWithLogs' are intended to replace them.
 evalTxExUnitsWithLogs ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , EraUTxO era
+  , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
-  , EraPlutusContext 'PlutusV1 era
   ) =>
   PParams era ->
   -- | The transaction.
@@ -183,185 +171,81 @@ evalTxExUnitsWithLogs ::
   --
   --  Unlike `evalTxExUnits`, this function also returns evaluation logs, useful for
   --  debugging.
-  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs era)
-evalTxExUnitsWithLogs pp tx utxo ei sysS =
-  let lookupCostModel lang = Map.lookup lang $ costModelsValid (pp ^. ppCostModelsL)
-   in evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel
-
--- | Evaluate the execution budgets needed for all the redeemers in
---  a given transaction. If a redeemer is invalid, a failure is returned instead.
---
---  The execution budgets in the supplied transaction are completely ignored.
---  The results of 'evaluateTransactionExecutionUnits' are intended to replace them.
-evaluateTransactionExecutionUnits ::
-  forall era.
-  ( AlonzoEraTx era
-  , ExtendedUTxO era
-  , EraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
-  , EraPlutusContext 'PlutusV1 era
-  ) =>
-  PParams era ->
-  -- | The transaction.
-  Tx era ->
-  -- | The current UTxO set (or the relevant portion for the transaction).
-  UTxO era ->
-  -- | The epoch info, used to translate slots to POSIX time for plutus.
-  EpochInfo (Either Text) ->
-  -- | The start time of the given block chain.
-  SystemStart ->
-  -- | The array of cost models, indexed by the supported languages.
-  Array Language CostModel ->
-  -- | We return a map from redeemer pointers to either a failure or a
-  --  sufficient execution budget.
-  --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
-  --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReport era)
-evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
-  Map.map (fmap snd) <$> evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels
-{-# DEPRECATED evaluateTransactionExecutionUnits "In favor of `evalTxExUnits`" #-}
-
--- | Evaluate the execution budgets needed for all the redeemers in
---  a given transaction. If a redeemer is invalid, a failure is returned instead.
---
---  The execution budgets in the supplied transaction are completely ignored.
---  The results of 'evaluateTransactionExecutionUnitsWithLogs' are intended to replace them.
-evaluateTransactionExecutionUnitsWithLogs ::
-  forall era.
-  ( AlonzoEraTx era
-  , ExtendedUTxO era
-  , EraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
-  , EraPlutusContext 'PlutusV1 era
-  ) =>
-  PParams era ->
-  -- | The transaction.
-  Tx era ->
-  -- | The current UTxO set (or the relevant portion for the transaction).
-  UTxO era ->
-  -- | The epoch info, used to translate slots to POSIX time for plutus.
-  EpochInfo (Either Text) ->
-  -- | The start time of the given block chain.
-  SystemStart ->
-  -- | The array of cost models, indexed by the supported languages.
-  Array Language CostModel ->
-  -- | We return a map from redeemer pointers to either a failure or a
-  --  sufficient execution budget with logs of the script.
-  --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
-  --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs era)
-evaluateTransactionExecutionUnitsWithLogs pp tx utxo ei sysS costModels =
-  evalTxExUnitsWithLogsInternal pp tx utxo ei sysS $ \lang ->
-    if l1 <= lang && lang <= l2
-      then Just (costModels ! lang)
-      else Nothing
+  Either (ContextError era) (RedeemerReportWithLogs era)
+evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
+  ptrToPlutusScript <-
+    forM neededPlutusScripts $ \(scriptPurpose, mPlutusScript, scriptHash) -> do
+      mPlutusScriptAndContext <-
+        forM mPlutusScript $ \plutusScript -> do
+          scriptContext <-
+            mkPlutusScriptContext
+              plutusScript
+              scriptPurpose
+              pp
+              epochInfo
+              sysStart
+              utxo
+              tx
+          pure (plutusScript, scriptContext)
+      -- Since `getScriptsNeeded` used the `txBody` to create script purposes, it would be
+      -- a logic error if `rdptr` was not able to find `scriptPurpose`.
+      let !pointer =
+            case rdptr txBody scriptPurpose of
+              SNothing ->
+                error "Impossible: Redeemer pointer was not found in the TxBody"
+              SJust p -> p
+      pure (pointer, (scriptPurpose, mPlutusScriptAndContext, scriptHash))
+  pure $ Map.mapWithKey (findAndCount $ Map.fromList ptrToPlutusScript) rdmrs
   where
-    (l1, l2) = bounds costModels
-{-# DEPRECATED evaluateTransactionExecutionUnitsWithLogs "In favor of `evalTxExUnitsWithLogs`" #-}
-
--- | Evaluate the execution budgets needed for all the redeemers in
---  a given transaction. If a redeemer is invalid, a failure is returned instead.
---
---  The execution budgets in the supplied transaction are completely ignored.
---  The results of 'evaluateTransactionExecutionUnitsWithLogs' are intended to replace them.
-evalTxExUnitsWithLogsInternal ::
-  forall era.
-  ( AlonzoEraTx era
-  , ExtendedUTxO era
-  , EraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
-  , EraPlutusContext 'PlutusV1 era
-  ) =>
-  PParams era ->
-  -- | The transaction.
-  Tx era ->
-  -- | The current UTxO set (or the relevant portion for the transaction).
-  UTxO era ->
-  -- | The epoch info, used to translate slots to POSIX time for plutus.
-  EpochInfo (Either Text) ->
-  -- | The start time of the given block chain.
-  SystemStart ->
-  -- | The array of cost models, indexed by the supported languages.
-  (Language -> Maybe CostModel) ->
-  -- | We return a map from redeemer pointers to either a failure or a
-  --  sufficient execution budget with logs of the script.
-  --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
-  --  to construct a valid execution context for the given transaction.
-  Either (TranslationError (EraCrypto era)) (RedeemerReportWithLogs era)
-evalTxExUnitsWithLogsInternal pp tx utxo ei sysS lookupCostModel = do
-  let getInfo :: Language -> Either (TranslationError (EraCrypto era)) VersionedTxInfo
-      getInfo lang = txInfo pp lang ei sysS utxo tx
-  ctx <- sequence $ Map.fromSet getInfo languagesUsed
-  pure $
-    Map.mapWithKey
-      (findAndCount ctx)
-      (unRedeemers $ wits ^. rdmrsTxWitsL)
-  where
+    maxBudget = pp ^. ppMaxTxExUnitsL
     txBody = tx ^. bodyTxL
     wits = tx ^. witsTxL
     dats = unTxDats $ wits ^. datsTxWitsL
+    rdmrs = unRedeemers $ wits ^. rdmrsTxWitsL
+    protVerMajor = pvMajor (pp ^. ppProtocolVersionL)
+    costModels = costModelsValid $ pp ^. ppCostModelsL
     ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
-    AlonzoScriptsNeeded needed = getScriptsNeeded utxo txBody
-    neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsProvided) needed
-    languagesUsed = Set.fromList [lang | (_, Plutus lang _) <- neededAndConfirmedToBePlutus]
-
-    ptrToPlutusScript = Map.fromList $ do
-      (sp, sh) <- needed
-      msb <- case Map.lookup sh scriptsProvided of
-        Nothing -> pure Nothing
-        Just (TimelockScript _) -> []
-        Just (PlutusScript plutus) -> pure $ Just plutus
-      pointer <- case rdptr txBody sp of
-        SNothing -> []
-        -- Since scriptsNeeded used the transaction to create script purposes,
-        -- it would be a logic error if rdptr was not able to find sp.
-        SJust p -> pure p
-      pure (pointer, (sp, msb, sh))
-
-    findAndCount ::
-      Map Language VersionedTxInfo ->
-      RdmrPtr ->
-      (Data era, ExUnits) ->
-      Either (TransactionScriptFailure era) ([Text], ExUnits)
-    findAndCount info pointer (rdmr, exunits) = do
-      (sp, mscript, sh) <-
+    AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo txBody
+    neededPlutusScripts =
+      map
+        (\(sp, sh) -> (sp, lookupPlutusScript scriptsProvided sh, sh))
+        scriptsNeeded
+    findAndCount ptrToPlutusScript pointer (rdmr, exUnits) = do
+      (scriptPurpose, mPlutusScript, _) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
           Map.lookup pointer ptrToPlutusScript
-      Plutus lang script <- note (MissingScript pointer ptrToPlutusScript) mscript
-      inf <- note (RedeemerNotNeeded pointer sh) $ Map.lookup lang info
-      cm <- note (NoCostModelInLedgerState lang) (lookupCostModel lang)
-      args <- case sp of
-        Spending txin -> do
-          txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
-          datum <- case txOut ^. datumTxOutF of
-            Datum binaryData -> pure $ binaryDataToData binaryData
-            DatumHash dh -> note (MissingDatum dh) $ Map.lookup dh dats
-            NoDatum -> Left (InvalidTxIn txin)
-          pure [datum, rdmr, valContext inf sp]
-        _ -> pure [rdmr, valContext inf sp]
-      let pArgs = map getPlutusData args
-
-      case interpreter lang (getEvaluationContext cm) maxBudget (unBinaryPlutus script) pArgs of
-        (logs, Left e) -> case lang of
-          PlutusV1 ->
-            let debug = PlutusDebugLang SPlutusV1 cm exunits script (PlutusData pArgs) protVer
-             in Left $ ValidationFailure $ ValidationFailedV1 e logs debug
-          PlutusV2 ->
-            let debug = PlutusDebugLang SPlutusV2 cm exunits script (PlutusData pArgs) protVer
-             in Left $ ValidationFailure $ ValidationFailedV2 e logs debug
-          PlutusV3 ->
-            let debug = PlutusDebugLang SPlutusV3 cm exunits script (PlutusData pArgs) protVer
-             in Left $ ValidationFailure $ ValidationFailedV3 e logs debug
+      let ptrToPlutusScriptNoContext =
+            Map.map (\(sp, mps, sh) -> (sp, fst <$> mps, sh)) ptrToPlutusScript
+      (plutusScript, scriptContext) <-
+        note (MissingScript pointer ptrToPlutusScriptNoContext) mPlutusScript
+      let lang = plutusScriptLanguage plutusScript
+      costModel <-
+        note (NoCostModelInLedgerState lang) $ Map.lookup lang costModels
+      -- Similar to getSpendingDatum, but with more informative errors. It is OK to use
+      -- inline datums, when they are present, since for PlutusV1 presence of inline
+      -- datums would short circuit earlier on PlutusContext translation.
+      datums <-
+        case getAlonzoSpendingTxIn scriptPurpose of
+          Just txin -> do
+            txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
+            datum <-
+              case txOut ^. datumTxOutF of
+                Datum binaryData -> pure $ binaryDataToData binaryData
+                DatumHash dh -> note (MissingDatum dh) $ Map.lookup dh dats
+                NoDatum -> Left (InvalidTxIn txin)
+            pure [datum, rdmr, scriptContext]
+          Nothing -> pure [rdmr, scriptContext]
+      let pwc =
+            withPlutusScript plutusScript $ \plutus ->
+              PlutusWithContext
+                { pwcProtocolVersion = protVerMajor
+                , pwcScript = Left plutus
+                , pwcDatums = PlutusDatums (getPlutusData <$> datums)
+                , pwcExUnits = maxBudget
+                , pwcCostModel = costModel
+                }
+      case evaluatePlutusWithContext P.Verbose pwc of
+        (logs, Left err) -> Left $ ValidationFailure exUnits err logs pwc
         (logs, Right exBudget) ->
-          note (IncompatibleBudget exBudget) $ (,) logs <$> exBudgetToExUnits exBudget
-      where
-        maxBudget = transExUnits $ pp ^. ppMaxTxExUnitsL
-        protVer = pp ^. ppProtocolVersionL
-        plutusProtVer = transProtocolVersion protVer
-        interpreter lang = case lang of
-          PlutusV1 -> deserialiseAndEvaluateScript lang plutusProtVer PV1.Verbose
-          PlutusV2 -> deserialiseAndEvaluateScript lang plutusProtVer PV2.Verbose
-          PlutusV3 -> deserialiseAndEvaluateScript lang plutusProtVer PV3.Verbose
+          note (IncompatibleBudget exBudget) $
+            (,) logs <$> exBudgetToExUnits exBudget

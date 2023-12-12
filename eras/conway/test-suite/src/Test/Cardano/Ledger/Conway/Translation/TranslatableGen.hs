@@ -10,11 +10,14 @@ import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..))
+import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
+  TranslatableGen (..),
+  TxInfoLanguage (..),
+ )
 import qualified Test.Cardano.Ledger.Babbage.Translation.TranslatableGen as BabbageTranslatableGen (
   genTx,
   genTxOut,
@@ -31,6 +34,9 @@ import Test.QuickCheck (
 instance TranslatableGen Conway where
   tgTx l = BabbageTranslatableGen.genTx @Conway (genTxBody l)
   tgUtxo = BabbageTranslatableGen.utxoWithTx @Conway
+  mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
+  mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
+  mkTxInfoLanguage PlutusV3 = TxInfoLanguage SPlutusV3
 
 genTxBody :: forall c. Crypto c => Language -> Gen (ConwayTxBody (ConwayEra c))
 genTxBody l = do

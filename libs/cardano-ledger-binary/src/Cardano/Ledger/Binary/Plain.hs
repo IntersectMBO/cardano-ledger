@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Module that re-exports everythign from `cardano-binary` package.
 --
@@ -15,6 +17,8 @@ module Cardano.Ledger.Binary.Plain (
   decodeListLikeT,
   serializeAsHexText,
   decodeFullFromHexText,
+  encodeEnum,
+  decodeEnumBounded,
 
   -- * DSIGN
   C.encodeVerKeyDSIGN,
@@ -57,6 +61,7 @@ import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.ByteString.Base16 as B16
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import Data.Typeable
 import Formatting (build, formatToString)
 import qualified Formatting.Buildable as B (Buildable (..))
 
@@ -121,3 +126,14 @@ decodeListLikeT name decoder actOnLength = do
       unless isBreak $ cborError $ DecoderErrorCustom name "Excess terms in array"
   pure result
 {-# INLINE decodeListLikeT #-}
+
+encodeEnum :: Enum a => a -> Encoding
+encodeEnum = encodeInt . fromEnum
+
+decodeEnumBounded :: forall a s. (Enum a, Bounded a, Typeable a) => Decoder s a
+decodeEnumBounded = do
+  n <- decodeInt
+  if fromEnum (minBound :: a) <= n && n <= fromEnum (maxBound :: a)
+    then pure $ toEnum n
+    else fail $ "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
+{-# INLINE decodeEnumBounded #-}

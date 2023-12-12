@@ -2,6 +2,9 @@
 
 ## 1.6.0.0
 
+* Remove `txInfoOutV1`, `txInfoOutV2`, `txInfoInV1` and `txInfoInV2`.
+* Add `transTxOutV1`, `transTxOutV2`, `transTxInInfoV1`, `transTxInInfoV2` and `transTxRedeemers`
+* Remove `babbageScriptPrefixTag`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Change the type of `ppEMaxL`
 

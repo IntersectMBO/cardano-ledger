@@ -20,7 +20,6 @@ where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
@@ -28,7 +27,6 @@ import Cardano.Ledger.Alonzo.Rules (
   missingRequiredDatums,
   ppViewHashesMatch,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
@@ -79,10 +77,8 @@ import Lens.Micro
 conwayUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
   , ConwayEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
@@ -154,7 +150,7 @@ conwayUtxowTransition = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx pp utxo scriptHashesNeeded
+  runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
 
   trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
@@ -187,13 +183,11 @@ conwayWitsVKeyNeeded utxo txBody =
 
 instance
   forall era.
-  ( ExtendedUTxO era
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , Script era ~ AlonzoScript era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ConwayUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era

@@ -24,9 +24,16 @@ import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Hash (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), serialiseAddr)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo (AlonzoScript, AlonzoTxAuxData)
+import Cardano.Ledger.Alonzo (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels, ExUnits (..), Prices, Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript,
+  AlonzoScript (..),
+  CostModels,
+  ExUnits (..),
+  Prices,
+  Tag (..),
+ )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
@@ -49,28 +56,9 @@ import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Core (
-  AlonzoEraTxBody (..),
-  BabbageEraTxBody (..),
-  CoinPerByte (..),
-  Era (..),
-  EraPParams (..),
-  EraRule,
-  EraScript (..),
-  EraTxCert (..),
-  EraTxWits (..),
-  PParams (..),
-  PoolCert (..),
-  ScriptHash (..),
-  vldtTxBodyL,
- )
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovAction (..), ProposalProcedure (..), VotingProcedures (..))
-import Cardano.Ledger.Conway.PParams (
-  ConwayPParams (..),
-  DRepVotingThresholds,
-  PoolVotingThresholds,
-  THKD (..),
- )
+import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
@@ -80,15 +68,6 @@ import Cardano.Ledger.Conway.TxCert (
   getVoteDelegatee,
  )
 import Cardano.Ledger.Conway.TxOut (BabbageTxOut (..))
-import Cardano.Ledger.Core (
-  EraIndependentData,
-  EraIndependentScriptIntegrity,
-  EraIndependentTxBody,
-  EraTx (..),
-  EraTxAuxData (..),
-  EraTxBody (..),
-  EraTxOut (..),
- )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep (DRep (..))
@@ -461,9 +440,7 @@ instance Era era => SpecTranslate (Redeemers era) where
   toSpecRep (Redeemers x) = toSpecRep x
 
 instance
-  ( Era era
-  , Script era ~ AlonzoScript era
-  ) =>
+  AlonzoEraScript era =>
   SpecTranslate (AlonzoTxWits era)
   where
   type SpecRep (AlonzoTxWits era) = Agda.TxWitnesses

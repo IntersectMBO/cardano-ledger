@@ -23,6 +23,7 @@
 module Cardano.Ledger.Plutus.Data (
   PlutusData (..),
   Data (Data),
+  unData,
   DataHash,
   upgradeData,
   hashData,
@@ -126,6 +127,11 @@ pattern Data p <- (getMemoRawType -> PlutusData p)
     Data p = mkMemoized $ PlutusData p
 
 {-# COMPLETE Data #-}
+
+unData :: Data era -> PV1.Data
+unData eraData =
+  case getMemoRawType eraData of
+    PlutusData plutusData -> plutusData
 
 -- | Upgrade 'Data' from one era to another. While the underlying data will
 -- remain the same, the memoised serialisation may change to reflect the

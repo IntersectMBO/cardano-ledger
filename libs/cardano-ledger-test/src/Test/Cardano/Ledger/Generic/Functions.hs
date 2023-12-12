@@ -12,8 +12,12 @@
 module Test.Cardano.Ledger.Generic.Functions where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (languages)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript,
+  ExUnits (..),
+  plutusScriptLanguage,
+  toPlutusScript,
+ )
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Babbage.TxBody (
@@ -58,7 +62,7 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvided)
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)
@@ -73,7 +77,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
 import Numeric.Natural
-import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFailsLang, alwaysSucceedsLang)
 import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, Model, ModelNewEpochState (..))
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
@@ -307,24 +311,24 @@ primaryLanguage _ = Nothing
 {-# NOINLINE primaryLanguage #-}
 
 alwaysTrue :: forall era. Proof era -> Maybe Language -> Natural -> Script era
-alwaysTrue (Conway _) (Just l) n = alwaysSucceeds @era l n
-alwaysTrue p@(Conway _) Nothing _ = allOf [] p
-alwaysTrue (Babbage _) (Just l) n = alwaysSucceeds @era l n
-alwaysTrue p@(Babbage _) Nothing _ = allOf [] p
-alwaysTrue (Alonzo _) (Just l) n = alwaysSucceeds @era l n
-alwaysTrue p@(Alonzo _) Nothing _ = allOf [] p
+alwaysTrue (Conway _) (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue p@(Conway _) Nothing _ = fromNativeScript $ allOf [] p
+alwaysTrue (Babbage _) (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue p@(Babbage _) Nothing _ = fromNativeScript $ allOf [] p
+alwaysTrue (Alonzo _) (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue p@(Alonzo _) Nothing _ = fromNativeScript $ allOf [] p
 alwaysTrue p@(Mary _) _ n = always n p
 alwaysTrue p@(Allegra _) _ n = always n p
 alwaysTrue p@(Shelley _) _ n = always n p
 {-# NOINLINE alwaysTrue #-}
 
 alwaysFalse :: forall era. Proof era -> Maybe Language -> Natural -> Script era
-alwaysFalse (Conway _) (Just l) n = alwaysFails @era l n
-alwaysFalse p@(Conway _) Nothing _ = anyOf [] p
-alwaysFalse (Babbage _) (Just l) n = alwaysFails @era l n
-alwaysFalse p@(Babbage _) Nothing _ = anyOf [] p
-alwaysFalse (Alonzo _) (Just l) n = alwaysFails @era l n
-alwaysFalse p@(Alonzo _) Nothing _ = anyOf [] p
+alwaysFalse (Conway _) (Just l) n = alwaysFailsLang @era l n
+alwaysFalse p@(Conway _) Nothing _ = fromNativeScript $ anyOf [] p
+alwaysFalse (Babbage _) (Just l) n = alwaysFailsLang @era l n
+alwaysFalse p@(Babbage _) Nothing _ = fromNativeScript $ anyOf [] p
+alwaysFalse (Alonzo _) (Just l) n = alwaysFailsLang @era l n
+alwaysFalse p@(Alonzo _) Nothing _ = fromNativeScript $ anyOf [] p
 alwaysFalse p@(Mary _) _ n = never n p
 alwaysFalse p@(Allegra _) _ n = never n p
 alwaysFalse p@(Shelley _) _ n = never n p
@@ -364,7 +368,6 @@ createRUpdNonPulsing' proof model =
 
 languagesUsed ::
   forall era.
-  Era era =>
   Proof era ->
   Tx era ->
   UTxO era ->
@@ -374,10 +377,26 @@ languagesUsed proof tx utxo sNeeded = case proof of
   (Shelley _) -> Set.empty
   (Allegra _) -> Set.empty
   (Mary _) -> Set.empty
-  (Alonzo _) -> Cardano.Ledger.Alonzo.Plutus.TxInfo.languages tx utxo sNeeded
-  (Babbage _) -> Cardano.Ledger.Alonzo.Plutus.TxInfo.languages tx utxo sNeeded
-  (Conway _) -> Cardano.Ledger.Alonzo.Plutus.TxInfo.languages tx utxo sNeeded
+  (Alonzo _) -> languages tx utxo sNeeded
+  (Babbage _) -> languages tx utxo sNeeded
+  (Conway _) -> languages tx utxo sNeeded
 {-# NOINLINE languagesUsed #-}
+
+-- | Compute the Set of Languages in an era, where 'AlonzoScripts' are used
+languages ::
+  forall era.
+  (EraUTxO era, AlonzoEraScript era) =>
+  Tx era ->
+  UTxO era ->
+  Set (ScriptHash (EraCrypto era)) ->
+  Set Language
+languages tx utxo sNeeded = Map.foldl' accum Set.empty allScripts
+  where
+    allScripts = Map.restrictKeys (unScriptsProvided $ getScriptsProvided utxo tx) sNeeded
+    accum ans script =
+      case toPlutusScript script of
+        Nothing -> ans
+        Just plutusScript -> Set.insert (plutusScriptLanguage plutusScript) ans
 
 -- | Compute the total Ada from Ada pots within 't'
 class TotalAda t where

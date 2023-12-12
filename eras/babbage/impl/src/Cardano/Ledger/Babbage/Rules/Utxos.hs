@@ -18,8 +18,8 @@ module Cardano.Ledger.Babbage.Rules.Utxos (
   babbageEvalScriptsTxInvalid,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO, ScriptResult (Fails, Passes))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
@@ -29,13 +29,11 @@ import Cardano.Ledger.Alonzo.Rules (
   TagMismatchDescription (..),
   invalidBegin,
   invalidEnd,
-  scriptFailuresToPlutusDebug,
-  scriptFailuresToPredicateFailure,
+  scriptFailureToFailureDescription,
   validBegin,
   validEnd,
   when2Phase,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Core
@@ -43,7 +41,7 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
 import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Evaluate (ScriptFailure (..), ScriptResult (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
@@ -70,15 +68,12 @@ import Lens.Micro
 -- =====================================================
 
 instance
-  forall era.
   ( AlonzoEraTx era
   , AlonzoEraPParams era
   , BabbageEraTxBody era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
@@ -115,11 +110,9 @@ instance
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , BabbageEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
@@ -130,7 +123,7 @@ utxosTransition ::
   , EncCBOR (PPUPPredFailure era)
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
@@ -145,10 +138,8 @@ utxosTransition =
 expectScriptsToPass ::
   forall era s.
   ( AlonzoEraTx era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   , AlonzoEraUTxO era
-  , ExtendedUTxO era
-  , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (s era)
   , Event (s era) ~ AlonzoUtxosEvent era
@@ -166,24 +157,21 @@ expectScriptsToPass pp tx utxo = do
   case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
     Right sLst -> do
       {- isValid tx = evalScripts tx sLst = True -}
-      let protVer = pp ^. ppProtocolVersionL
       whenFailureFree $
-        when2Phase $ case evalPlutusScripts @era protVer tx sLst of
+        when2Phase $ case evalPlutusScripts tx sLst of
           Fails _ fs ->
             failBecause $
               ValidationTagMismatch
                 (tx ^. isValidTxL)
-                (FailedUnexpectedly (scriptFailuresToPredicateFailure protVer fs))
+                (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
           Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
     Left info -> failBecause (CollectErrors info)
 
 babbageEvalScriptsTxValid ::
   forall era.
-  ( ExtendedUTxO era
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
   , STS (BabbageUTXOS era)
   , Signal (BabbageUTXOS era) ~ Tx era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
@@ -191,7 +179,7 @@ babbageEvalScriptsTxValid ::
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
@@ -219,10 +207,8 @@ babbageEvalScriptsTxInvalid ::
   forall s era.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   , AlonzoEraUTxO era
-  , ExtendedUTxO era
-  , Script era ~ AlonzoScript era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (s era)
   , Environment (s era) ~ UtxoEnv era
@@ -247,11 +233,11 @@ babbageEvalScriptsTxInvalid = do
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
       whenFailureFree $
-        when2Phase $ case evalPlutusScripts @era (pp ^. ppProtocolVersionL) tx sLst of
+        when2Phase $ case evalPlutusScripts tx sLst of
           Passes _ -> failBecause $ ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
           Fails ps fs -> do
             mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
-            tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
+            tellEvent (FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
     Left info -> failBecause (CollectErrors info)
 
   () <- pure $! traceEvent invalidEnd ()

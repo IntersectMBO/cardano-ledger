@@ -1,6 +1,6 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,24 +11,33 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Scripts (
   Tag (..),
-  BinaryPlutus (..),
+  PlutusBinary (..),
   AlonzoScript (TimelockScript, PlutusScript),
   Script,
   isPlutusScript,
   validScript,
-  transProtocolVersion,
   eqAlonzoScriptRaw,
-  translateAlonzoScript,
+  AlonzoEraScript (..),
+  PlutusScript (..),
+  withPlutusScriptLanguage,
+  plutusScriptLanguage,
+  decodePlutusScript,
+  plutusScriptBinary,
+  mkBinaryPlutusScript,
+  isValidPlutusScript,
+  toPlutusSLanguage,
 
   -- * Re-exports
   module Cardano.Ledger.Plutus.CostModels,
@@ -42,9 +51,11 @@ import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
+  Decoder,
   DecoderError (..),
   EncCBOR (encCBOR),
   ToCBOR (toCBOR),
+  Version,
   cborError,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -63,27 +74,68 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language (
-  BinaryPlutus (..),
   Language (..),
   Plutus (..),
-  guardPlutus,
+  PlutusBinary (..),
+  PlutusLanguage (..),
+  SLanguage (..),
+  asSLanguage,
+  isValidPlutus,
+  plutusLanguage,
+  plutusSLanguage,
+  withSLanguage,
  )
-import Cardano.Ledger.Plutus.TxInfo (transProtocolVersion)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
+import Control.Monad (guard)
 import Data.Aeson (ToJSON (..), Value (String))
-import Data.Either (isRight)
+import Data.Kind (Type)
+import Data.Maybe (fromJust, isJust)
+import Data.Typeable
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import GHC.Stack
 import NoThunks.Class (NoThunks (..))
-import qualified PlutusLedgerApi.V1 as PV1 (
-  ScriptDecodeError,
-  ScriptForEvaluation,
-  deserialiseScript,
- )
-import qualified PlutusLedgerApi.V2 as PV2 (deserialiseScript)
-import qualified PlutusLedgerApi.V3 as PV3 (deserialiseScript)
+
+class
+  ( EraScript era
+  , Eq (PlutusScript era)
+  , Ord (PlutusScript era)
+  , Show (PlutusScript era)
+  , NoThunks (PlutusScript era)
+  , NFData (PlutusScript era)
+  , SafeToHash (PlutusScript era)
+  ) =>
+  AlonzoEraScript era
+  where
+  data PlutusScript era :: Type
+
+  -- | Highest supported Plutus language version for this era.
+  eraMaxLanguage :: Language
+
+  -- | Attempt to extract a `PlutusScript` from a wrapper type family `Script`. Whenevr
+  -- `Script` is a native script `Nothing` will be returned
+  toPlutusScript :: Script era -> Maybe (PlutusScript era)
+  default toPlutusScript :: Script era ~ AlonzoScript era => Script era -> Maybe (PlutusScript era)
+  toPlutusScript = \case
+    PlutusScript ps -> Just ps
+    _ -> Nothing
+
+  -- | Convert a `PlutusScript` to a wrapper type family `Script`
+  fromPlutusScript :: PlutusScript era -> Script era
+  default fromPlutusScript :: Script era ~ AlonzoScript era => PlutusScript era -> Script era
+  fromPlutusScript = PlutusScript
+
+  -- | Returns Nothing, whenver plutus language is not supported for this era.
+  mkPlutusScript :: PlutusLanguage l => Plutus l -> Maybe (PlutusScript era)
+
+  -- | Give a `PlutusScript` apply a function that can handle `Plutus` scripts of all
+  -- known versions.
+  withPlutusScript ::
+    PlutusScript era ->
+    (forall l. PlutusLanguage l => Plutus l -> a) ->
+    a
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -103,36 +155,74 @@ instance NoThunks Tag
 instance NFData Tag where
   rnf = rwhnf
 
+mkBinaryPlutusScript :: AlonzoEraScript era => Language -> PlutusBinary -> Maybe (PlutusScript era)
+mkBinaryPlutusScript lang pb = withSLanguage lang (mkPlutusScript . (`asSLanguage` Plutus pb))
+
+-- | Apply a function to a plutus script, but only if it is of expected language version,
+-- otherwise it will return Nothing.
+withPlutusScriptLanguage ::
+  AlonzoEraScript era =>
+  Language ->
+  PlutusScript era ->
+  (forall l. PlutusLanguage l => Plutus l -> a) ->
+  Maybe a
+withPlutusScriptLanguage lang ps f =
+  withPlutusScript ps $ \plutus ->
+    f plutus <$ guard (plutusLanguage plutus == lang)
+
+-- | Attempt to extract the version aware `Plutus` script, but only if it matches the
+-- language version supplied. This is useful whenever the version is known by some other
+-- means.
+toPlutusSLanguage ::
+  forall l era.
+  (PlutusLanguage l, AlonzoEraScript era) =>
+  SLanguage l ->
+  PlutusScript era ->
+  Maybe (Plutus l)
+toPlutusSLanguage _ ps = withPlutusScript ps gcast
+
+-- | Get value level plutus language of the plutus script
+plutusScriptLanguage :: AlonzoEraScript era => PlutusScript era -> Language
+plutusScriptLanguage ps = withPlutusScript ps plutusLanguage
+
+-- | Extract binary representation of the script.
+plutusScriptBinary :: AlonzoEraScript era => PlutusScript era -> PlutusBinary
+plutusScriptBinary ps = withPlutusScript ps plutusBinary
+
+-- | Verifies whether Plutus script is well formed or not, which simply means whether it
+-- deserializes successfully or not.
+isValidPlutusScript :: AlonzoEraScript era => Version -> PlutusScript era -> Bool
+isValidPlutusScript pv ps = withPlutusScript ps (isValidPlutus pv)
+
 -- =======================================================
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
   = TimelockScript !(Timelock era)
-  | PlutusScript !Plutus
-  deriving (Eq, Generic, NoThunks)
+  | PlutusScript !(PlutusScript era)
+  deriving (Generic)
 
-translateAlonzoScript ::
-  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
-  AlonzoScript era1 ->
-  AlonzoScript era2
-translateAlonzoScript = \case
-  TimelockScript ts -> TimelockScript $ translateTimelock ts
-  PlutusScript ps -> PlutusScript ps
+deriving instance Eq (PlutusScript era) => Eq (AlonzoScript era)
 
-instance (EraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
+instance (Era era, NoThunks (PlutusScript era)) => NoThunks (AlonzoScript era)
+
+instance NFData (PlutusScript era) => NFData (AlonzoScript era) where
+  rnf = \case
+    TimelockScript ts -> rnf ts
+    PlutusScript ps -> rnf ps
+
+instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
   show s@(PlutusScript plutus) =
-    "PlutusScript " ++ show (plutusLanguage plutus) ++ " " ++ show (hashScript @era s)
-
-instance NFData (AlonzoScript era)
+    "PlutusScript " ++ show (plutusScriptLanguage plutus) ++ " " ++ show (hashScript @era s)
 
 -- | Both constructors know their original bytes
-instance SafeToHash (AlonzoScript era) where
+instance SafeToHash (PlutusScript era) => SafeToHash (AlonzoScript era) where
   originalBytes (TimelockScript t) = originalBytes t
-  originalBytes (PlutusScript (Plutus _ binaryPlutus)) = originalBytes binaryPlutus
+  originalBytes (PlutusScript plutus) = originalBytes plutus
 
-isPlutusScript :: EraScript era => Script era -> Bool
-isPlutusScript = not . isNativeScript
+isPlutusScript :: AlonzoEraScript era => Script era -> Bool
+isPlutusScript = isJust . toPlutusScript
 
 instance Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
@@ -140,21 +230,33 @@ instance Crypto c => EraScript (AlonzoEra c) where
 
   upgradeScript = TimelockScript . translateTimelock
 
-  scriptPrefixTag script =
-    case script of
-      TimelockScript _ -> nativeMultiSigTag -- "\x00"
-      PlutusScript (Plutus PlutusV1 _) -> "\x01"
-      PlutusScript (Plutus PlutusV2 _) -> "\x02"
-      PlutusScript (Plutus PlutusV3 _) -> "\x03"
+  scriptPrefixTag = \case
+    TimelockScript _ -> nativeMultiSigTag -- "\x00"
+    PlutusScript (AlonzoPlutusV1 _) -> "\x01"
 
   getNativeScript = \case
     TimelockScript ts -> Just ts
     _ -> Nothing
 
-instance EqRaw (AlonzoScript era) where
+  fromNativeScript = TimelockScript
+
+instance Crypto c => AlonzoEraScript (AlonzoEra c) where
+  newtype PlutusScript (AlonzoEra c) = AlonzoPlutusV1 (Plutus 'PlutusV1)
+    deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic)
+
+  eraMaxLanguage = PlutusV1
+
+  mkPlutusScript plutus =
+    case plutusSLanguage plutus of
+      SPlutusV1 -> Just $ AlonzoPlutusV1 plutus
+      _ -> Nothing
+
+  withPlutusScript (AlonzoPlutusV1 plutus) f = f plutus
+
+instance Eq (PlutusScript era) => EqRaw (AlonzoScript era) where
   eqRaw = eqAlonzoScriptRaw
 
-instance Era era => ToJSON (AlonzoScript era) where
+instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
   toJSON = String . serializeAsHexText
 
 --------------------------------------------------------------------------------
@@ -180,54 +282,63 @@ instance DecCBOR Tag where
       Just n -> pure n
   {-# INLINE decCBOR #-}
 
-instance Era era => EncCBOR (AlonzoScript era)
+decodePlutusScript ::
+  forall era l s.
+  (AlonzoEraScript era, PlutusLanguage l) =>
+  SLanguage l ->
+  Decoder s (PlutusScript era)
+decodePlutusScript slang = do
+  pb <- decCBOR
+  case mkPlutusScript $ asSLanguage slang $ Plutus pb of
+    Nothing ->
+      fail $ show (plutusLanguage slang) ++ " is not supported in " ++ eraName @era ++ " era."
+    Just plutusScript -> pure plutusScript
 
-instance Era era => ToCBOR (AlonzoScript era) where
+instance AlonzoEraScript era => EncCBOR (AlonzoScript era)
+
+instance AlonzoEraScript era => ToCBOR (AlonzoScript era) where
   toCBOR = toEraCBOR @era . encode . encodeScript
 
-encodeScript :: Era era => AlonzoScript era -> Encode 'Open (AlonzoScript era)
+encodeScript :: AlonzoEraScript era => AlonzoScript era -> Encode 'Open (AlonzoScript era)
 encodeScript = \case
   TimelockScript i -> Sum TimelockScript 0 !> To i
-  PlutusScript (Plutus PlutusV1 s) -> Sum (PlutusScript . Plutus PlutusV1) 1 !> To s
-  PlutusScript (Plutus PlutusV2 s) -> Sum (PlutusScript . Plutus PlutusV2) 2 !> To s
-  PlutusScript (Plutus PlutusV3 s) -> Sum (PlutusScript . Plutus PlutusV3) 3 !> To s
+  PlutusScript plutusScript -> withPlutusScript plutusScript $ \plutus@(Plutus pb) ->
+    case plutusSLanguage plutus of
+      SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
+      SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
+      SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
 
-instance Era era => DecCBOR (Annotator (AlonzoScript era)) where
-  decCBOR = decode (Summands "Alonzo Script" decodeScript)
+instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
+  decCBOR = decode (Summands "AlonzoScript" decodeScript)
     where
-      decodeAnnPlutus lang =
-        Ann (SumD $ PlutusScript . Plutus lang) <*! Ann (D (guardPlutus lang >> decCBOR))
+      decodeAnnPlutus slang =
+        Ann (SumD PlutusScript) <*! Ann (D (decodePlutusScript slang))
       {-# INLINE decodeAnnPlutus #-}
       decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
       decodeScript = \case
         0 -> Ann (SumD TimelockScript) <*! From
-        1 -> decodeAnnPlutus PlutusV1
-        2 -> decodeAnnPlutus PlutusV2
-        3 -> decodeAnnPlutus PlutusV3
+        1 -> decodeAnnPlutus SPlutusV1
+        2 -> decodeAnnPlutus SPlutusV2
+        3 -> decodeAnnPlutus SPlutusV3
         n -> Invalid n
       {-# INLINE decodeScript #-}
   {-# INLINE decCBOR #-}
 
--- | Test that every Alonzo script represents a real Script.
---     Run deepseq to see that there are no infinite computations and that
---     every Plutus Script unflattens into a real PV1.Script
-validScript :: ProtVer -> AlonzoScript era -> Bool
+-- | Verify that every `Script` represents a valid script. Force native scripts to Normal
+-- Form, to ensure that there are no bottoms and deserialize `Plutus` scripts into a
+-- `Cardano.Ledger.Plutus.Language.PlutusRunnable`.
+validScript :: (HasCallStack, AlonzoEraScript era) => ProtVer -> Script era -> Bool
 validScript pv script =
-  case script of
-    TimelockScript sc -> deepseq sc True
-    PlutusScript (Plutus lang (BinaryPlutus bytes)) ->
-      let deserialiseScript =
-            case lang of
-              PlutusV1 -> PV1.deserialiseScript
-              PlutusV2 -> PV2.deserialiseScript
-              PlutusV3 -> PV3.deserialiseScript
-          eWellFormed :: Either PV1.ScriptDecodeError PV1.ScriptForEvaluation
-          eWellFormed = deserialiseScript (transProtocolVersion pv) bytes
-       in isRight eWellFormed
+  case toPlutusScript script of
+    Just plutusScript -> isValidPlutusScript (pvMajor pv) plutusScript
+    Nothing ->
+      case getNativeScript script of
+        Just timelockScript -> deepseq timelockScript True
+        Nothing -> error "Impossible: There are only Native and Plutus scripts available"
 
 -- | Check the equality of two underlying types, while ignoring their binary
 -- representation, which `Eq` instance normally does. This is used for testing.
-eqAlonzoScriptRaw :: AlonzoScript era -> AlonzoScript era -> Bool
+eqAlonzoScriptRaw :: Eq (PlutusScript era) => AlonzoScript era -> AlonzoScript era -> Bool
 eqAlonzoScriptRaw (TimelockScript t1) (TimelockScript t2) = eqTimelockRaw t1 t2
 eqAlonzoScriptRaw (PlutusScript ps1) (PlutusScript ps2) = ps1 == ps2
 eqAlonzoScriptRaw _ _ = False

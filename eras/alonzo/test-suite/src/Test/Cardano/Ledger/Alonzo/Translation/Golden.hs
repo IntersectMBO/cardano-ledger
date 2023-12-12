@@ -8,15 +8,22 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   assertTranslationResultsMatchGolden,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, toPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
 import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Plutus.Language (Language)
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Identity (Identity)
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (TranslatableGen (..), epochInfo, systemStart, translationInstances)
+import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
+  TranslatableGen (..),
+  TxInfoLanguage (..),
+  epochInfo,
+  systemStart,
+  toVersionedTxInfo,
+  translationInstances,
+ )
 import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   deserializeTranslationInstances,
@@ -28,23 +35,23 @@ import Test.Tasty.HUnit (Assertion, assertEqual)
 -- and serializes both arguments and result to golden/translations.cbor file
 generateGoldenFile ::
   forall era.
-  ( ExtendedUTxO era
+  ( Show (ContextError era)
+  , AlonzoEraScript era
   , TranslatableGen era
   , Arbitrary (PParamsHKD Identity era)
   ) =>
-  [Language] ->
   FilePath ->
   IO ()
-generateGoldenFile ls file = do
+generateGoldenFile file = do
   putStrLn $ "Generating golden file for TxInfo: " <> file
-  let instances = translationInstances @era ls 100 100000 -- 100 instances with an arbitrary seed
+  let instances = translationInstances @era 100 100000 -- 100 instances with an arbitrary seed
   let cbor = serialize (eraProtVerHigh @era) instances
   BSL.writeFile file cbor
 
 assertTranslationResultsMatchGolden ::
   forall era.
-  ( EraTx era
-  , ExtendedUTxO era
+  ( TranslatableGen era
+  , Show (ContextError era)
   , HasCallStack
   ) =>
   IO FilePath ->
@@ -56,22 +63,24 @@ assertTranslationResultsMatchGolden file = do
 
 assertTranslationComparison ::
   forall era.
-  ( EraTx era
-  , ExtendedUTxO era
+  ( TranslatableGen era
+  , Show (ContextError era)
   , HasCallStack
   ) =>
   TranslationInstance era ->
   Assertion
-assertTranslationComparison (TranslationInstance pp l utxo tx expected) =
-  let result = txInfo pp l epochInfo systemStart utxo tx
-      errorMessage =
-        unlines
-          [ "Unexpected txinfo with arguments: "
-          , " pp: " <> show pp
-          , " language: " <> show l
-          , " utxo: " <> show utxo
-          , " tx: " <> show tx
-          ]
-   in case result of
+assertTranslationComparison (TranslationInstance pp lang utxo tx expected) =
+  case mkTxInfoLanguage @era lang of
+    TxInfoLanguage slang -> do
+      case toPlutusTxInfo slang pp epochInfo systemStart utxo tx of
         Left e -> error $ show e
-        Right actual -> assertEqual errorMessage expected actual
+        Right actual -> assertEqual errorMessage expected $ toVersionedTxInfo slang actual
+  where
+    errorMessage =
+      unlines
+        [ "Unexpected txinfo with arguments: "
+        , " pp: " <> show pp
+        , " language: " <> show lang
+        , " utxo: " <> show utxo
+        , " tx: " <> show tx
+        ]

@@ -81,9 +81,9 @@ instance ToExpr (SafeHash c index) where
   toExpr x = App "SafeHash" [toExpr (extractHash x)]
 
 -- Language
-instance ToExpr Plutus
+instance ToExpr (Plutus l)
 
-instance ToExpr BinaryPlutus
+instance ToExpr PlutusBinary
 
 instance ToExpr Language
 
@@ -94,11 +94,15 @@ instance ToExpr (t era) => ToExpr (MemoBytes t era)
 instance ToExpr (ScriptHash c)
 
 instance ToExpr CostModelError where
-  toExpr (CostModelError x1) = toExpr (show x1)
+  toExpr = toExpr . show
 
 instance ToExpr CostModel where
-  toExpr (CostModel lang cmmap _) =
-    App "CostModel" [toExpr lang, toExpr cmmap, App "EvaluationContext" []]
+  toExpr costModel =
+    App
+      "CostModel"
+      [ toExpr (getCostModelLanguage costModel)
+      , toExpr (getCostModelParams costModel)
+      ]
 
 instance ToExpr CostModels
 

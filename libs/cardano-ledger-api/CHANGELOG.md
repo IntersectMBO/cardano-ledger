@@ -2,6 +2,10 @@
 
 ## 1.8.0.0
 
+* Remove old and deprecated functions `evaluateTransactionExecutionUnits`,
+  `evaluateTransactionExecutionUnitsWithLogs`
+* Remove no longer necessary `ValidationFailed`
+* Adjust `TransactionScriptFailure`
 * Add `DecAddr` and `decodeAddrLenient` with `decodeAddrLenientEither`
 * Change the type of `ppEMaxL`, `ppuEMaxL`, `ppGovActionLifetimeL`, `ppDRepActivityL`,
   `ppCommitteeMaxTermLengthL`, `ppuGovActionLifetimeL`, `ppuDRepActivityL` and

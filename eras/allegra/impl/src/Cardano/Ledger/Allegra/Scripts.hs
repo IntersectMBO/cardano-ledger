@@ -205,6 +205,8 @@ instance Crypto c => EraScript (AllegraEra c) where
 
   getNativeScript = Just
 
+  fromNativeScript = id
+
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
 

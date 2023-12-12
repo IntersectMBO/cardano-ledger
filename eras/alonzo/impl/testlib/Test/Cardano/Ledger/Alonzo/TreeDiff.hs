@@ -12,10 +12,11 @@ module Test.Cardano.Ledger.Alonzo.TreeDiff (
   module Test.Cardano.Ledger.Mary.TreeDiff,
 ) where
 
-import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.Evaluate
 import Cardano.Ledger.Alonzo.Plutus.TxInfo
-import Cardano.Ledger.Alonzo.PlutusScriptApi
 import Cardano.Ledger.Alonzo.Rules
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx
@@ -30,7 +31,9 @@ import Test.Cardano.Ledger.Mary.TreeDiff
 -- Scripts
 instance ToExpr Tag
 
-instance ToExpr (AlonzoScript era)
+instance ToExpr (PlutusScript (AlonzoEra c))
+
+instance ToExpr (PlutusScript era) => ToExpr (AlonzoScript era)
 
 -- Core
 deriving newtype instance ToExpr CoinPerWord
@@ -100,10 +103,9 @@ instance
 instance ToExpr (TxCert era) => ToExpr (ScriptPurpose era)
 
 -- Plutus/TxInfo
-instance ToExpr (TranslationError c)
+instance ToExpr (ContextError (AlonzoEra c))
 
--- PlutusScriptApi
-instance ToExpr (TxCert era) => ToExpr (CollectError era)
+instance (ToExpr (ContextError era), ToExpr (TxCert era)) => ToExpr (CollectError era)
 
 -- Rules/Utxo
 instance
@@ -120,6 +122,7 @@ instance ToExpr TagMismatchDescription
 
 instance
   ( ToExpr (PPUPPredFailure era)
+  , ToExpr (ContextError era)
   , ToExpr (TxCert era)
   ) =>
   ToExpr (AlonzoUtxosPredFailure era)

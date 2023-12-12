@@ -20,38 +20,28 @@
 
 module Cardano.Ledger.Plutus.TxInfo (
   TxOutSource (..),
+  transAddr,
   transProtocolVersion,
   transDataHash,
-  transDataHash',
   transKeyHash,
   transSafeHash,
-  transHash,
-  txInfoId,
+  transScriptHash,
+  transTxId,
   transStakeReference,
   transCred,
-  transAddr,
-  transTxOutAddr,
   slotToPOSIXTime,
-  txInfoIn',
-  transWithdrawals,
-  getWitVKeyHash,
+  transTxIn,
+  transCoin,
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
-  VersionedTxInfo (..),
-  EraPlutusContext (..),
-  PlutusTxCert (..),
-  unTxCertV1,
-  unTxCertV2,
-  unTxCertV3,
 )
 where
 
-import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), Withdrawals (..))
+import Cardano.Crypto.Hash.Class (hashToBytes)
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
   ProtVer (..),
-  StrictMaybe (..),
   TxIx,
   certIxToInt,
   getVersion64,
@@ -70,31 +60,24 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (KeyHash (..), hashKey)
-import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
-import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
-import Data.ByteString as BS (ByteString)
-import qualified Data.Map.Strict as Map
+import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Text (Text)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 (SatInt, fromSatInt)
 import qualified PlutusLedgerApi.V1 as PV1
-import qualified PlutusLedgerApi.V2 as PV2
-import qualified PlutusLedgerApi.V3 as PV3
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -105,6 +88,9 @@ data TxOutSource c
   = TxOutFromInput !(TxIn c)
   | TxOutFromOutput !TxIx
   deriving (Eq, Show, Generic, NoThunks)
+
+instance NFData (TxOutSource era) where
+  rnf = rwhnf
 
 instance Crypto c => EncCBOR (TxOutSource c) where
   encCBOR = \case
@@ -122,12 +108,8 @@ transProtocolVersion :: ProtVer -> PV1.MajorProtocolVersion
 transProtocolVersion (ProtVer major _minor) =
   PV1.MajorProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major))
 
-transDataHash :: StrictMaybe (DataHash c) -> Maybe PV1.DatumHash
-transDataHash (SJust safe) = Just (transDataHash' safe)
-transDataHash SNothing = Nothing
-
-transDataHash' :: DataHash c -> PV1.DatumHash
-transDataHash' safe = PV1.DatumHash (transSafeHash safe)
+transDataHash :: DataHash c -> PV1.DatumHash
+transDataHash safe = PV1.DatumHash (transSafeHash safe)
 
 transKeyHash :: KeyHash d c -> PV1.PubKeyHash
 transKeyHash (KeyHash h) = PV1.PubKeyHash (PV1.toBuiltin (hashToBytes h))
@@ -135,11 +117,8 @@ transKeyHash (KeyHash h) = PV1.PubKeyHash (PV1.toBuiltin (hashToBytes h))
 transSafeHash :: SafeHash c i -> PV1.BuiltinByteString
 transSafeHash = PV1.toBuiltin . hashToBytes . extractHash
 
-transHash :: Hash h a -> BS.ByteString
-transHash = hashToBytes
-
-txInfoId :: TxId c -> PV1.TxId
-txInfoId (TxId safe) = PV1.TxId (transSafeHash safe)
+transScriptHash :: ScriptHash c -> PV1.ScriptHash
+transScriptHash (ScriptHash h) = PV1.ScriptHash (PV1.toBuiltin (hashToBytes h))
 
 transStakeReference :: StakeReference c -> Maybe PV1.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transCred cred))
@@ -155,17 +134,13 @@ transCred (KeyHashObj (KeyHash kh)) =
 transCred (ScriptHashObj (ScriptHash sh)) =
   PV1.ScriptCredential (PV1.ScriptHash (PV1.toBuiltin (hashToBytes sh)))
 
+-- | Translate an address. `Cardano.Ledger.BaseTypes.NetworkId` is discarded and Byron
+-- Addresses will result in Nothing.
 transAddr :: Addr c -> Maybe PV1.Address
-transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
-transAddr (AddrBootstrap _bootaddr) = Nothing
-
-transTxOutAddr :: EraTxOut era => TxOut era -> Maybe PV1.Address
-transTxOutAddr txOut = do
-  -- filter out Byron addresses without uncompacting them
-  case txOut ^. bootAddrTxOutF of
-    Just _ -> Nothing
-    -- The presence of a Byron address is caught above in the Just case
-    Nothing -> transAddr (txOut ^. addrTxOutL)
+transAddr = \case
+  AddrBootstrap {} -> Nothing
+  Addr _networkId paymentCred stakeReference ->
+    Just (PV1.Address (transCred paymentCred) (transStakeReference stakeReference))
 
 slotToPOSIXTime ::
   EpochInfo (Either Text) ->
@@ -179,46 +154,17 @@ slotToPOSIXTime ei sysS s = do
 -- ========================================
 -- translate TxIn and TxOut
 
-txInfoIn' :: TxIn c -> PV1.TxOutRef
-txInfoIn' (TxIn txid txIx) = PV1.TxOutRef (txInfoId txid) (toInteger (txIxToInt txIx))
+transTxId :: TxId c -> PV1.TxId
+transTxId (TxId safe) = PV1.TxId (transSafeHash safe)
 
--- =============================================
--- translate fields like TxCert, Withdrawals, and similar
+transTxIn :: TxIn c -> PV1.TxOutRef
+transTxIn (TxIn txid txIx) = PV1.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
-data PlutusTxCert (l :: Language) where
-  TxCertPlutusV1 :: PV1.DCert -> PlutusTxCert 'PlutusV1
-  TxCertPlutusV2 :: PV2.DCert -> PlutusTxCert 'PlutusV2
-  TxCertPlutusV3 :: PV3.TxCert -> PlutusTxCert 'PlutusV3
-
-unTxCertV1 :: PlutusTxCert 'PlutusV1 -> PV1.DCert
-unTxCertV1 (TxCertPlutusV1 x) = x
-
-unTxCertV2 :: PlutusTxCert 'PlutusV2 -> PV2.DCert
-unTxCertV2 (TxCertPlutusV2 x) = x
-
-unTxCertV3 :: PlutusTxCert 'PlutusV3 -> PV3.TxCert
-unTxCertV3 (TxCertPlutusV3 x) = x
-
-class Era era => EraPlutusContext (l :: Language) era where
-  transTxCert :: TxCert era -> PlutusTxCert l
-
-transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
-transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
-  where
-    accum ans (RewardAcnt _network cred) (Coin n) =
-      Map.insert (PV1.StakingHash (transCred cred)) n ans
-
-getWitVKeyHash :: (Crypto c, Typeable kr) => WitVKey kr c -> PV1.PubKeyHash
-getWitVKeyHash =
-  PV1.PubKeyHash
-    . PV1.toBuiltin
-    . hashToBytes
-    . (\(KeyHash x) -> x)
-    . hashKey
-    . (\(WitVKey x _) -> x)
+transCoin :: Coin -> PV1.Value
+transCoin (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c
 
 transDataPair :: (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
-transDataPair (x, y) = (transDataHash' x, PV1.Datum (PV1.dataToBuiltinData (getPlutusData y)))
+transDataPair (x, y) = (transDataHash x, PV1.Datum (PV1.dataToBuiltinData (getPlutusData y)))
 
 transExUnits :: ExUnits -> PV1.ExBudget
 transExUnits (ExUnits mem steps) =
@@ -234,9 +180,3 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
     safeFromSatInt i
       | i >= 0 = Just . fromInteger $ fromSatInt i
       | otherwise = Nothing
-
-data VersionedTxInfo
-  = TxInfoPV1 PV1.TxInfo
-  | TxInfoPV2 PV2.TxInfo
-  | TxInfoPV3 PV3.TxInfo
-  deriving (Show, Eq, Generic)

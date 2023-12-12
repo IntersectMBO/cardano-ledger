@@ -14,6 +14,7 @@ module Cardano.Ledger.Pretty.Alonzo where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript,
   AlonzoScript (..),
   CostModel,
   CostModels (..),
@@ -22,6 +23,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   Tag,
   getCostModelLanguage,
   getCostModelParams,
+  plutusScriptLanguage,
  )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
@@ -40,7 +42,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..))
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
 import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppTimelock, ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)
@@ -68,9 +70,7 @@ instance
   prettyA = ppTxSeq
 
 ppLanguage :: Language -> PDoc
-ppLanguage PlutusV1 = ppString "PlutusV1"
-ppLanguage PlutusV2 = ppString "PlutusV2"
-ppLanguage PlutusV3 = ppString "PlutusV3"
+ppLanguage = ppString . show
 
 instance PrettyA Language where
   prettyA = ppLanguage
@@ -83,14 +83,15 @@ instance PrettyA Tag where
 
 ppScript ::
   forall era.
-  (EraScript era, Script era ~ AlonzoScript era) =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   AlonzoScript era ->
   PDoc
-ppScript s@(PlutusScript (Plutus v _)) =
-  ppString ("PlutusScript " <> show v <> " ") PP.<+> ppScriptHash (hashScript @era s)
+ppScript s@(PlutusScript ps) =
+  ppString ("PlutusScript " <> show (plutusScriptLanguage ps) <> " ")
+    PP.<+> ppScriptHash (hashScript @era s)
 ppScript (TimelockScript x) = ppTimelock x
 
-instance (EraScript era, Script era ~ AlonzoScript era) => PrettyA (AlonzoScript era) where
+instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => PrettyA (AlonzoScript era) where
   prettyA = ppScript
 
 ppExUnits :: ExUnits -> PDoc
@@ -181,7 +182,7 @@ instance Era era => PrettyA (Data era) where
   prettyA = ppData
 
 ppAuxiliaryData ::
-  (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
+  (PrettyA (Script era), AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   AlonzoTxAuxData era ->
   PDoc
 ppAuxiliaryData auxData@AlonzoTxAuxData {atadMetadata = metadata} =
@@ -192,7 +193,7 @@ ppAuxiliaryData auxData@AlonzoTxAuxData {atadMetadata = metadata} =
     ]
 
 instance
-  (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
+  (PrettyA (Script era), EraTx era, AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   PrettyA (AlonzoTxAuxData era)
   where
   prettyA = ppAuxiliaryData

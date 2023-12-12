@@ -10,6 +10,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   validateAlonzoTxAuxData,
  )
 import Cardano.Ledger.Conway.Era
+import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 

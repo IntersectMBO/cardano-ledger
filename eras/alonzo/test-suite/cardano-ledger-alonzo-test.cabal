@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-alonzo-test
-version:       1.1.2.8
+version:       1.2.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -26,7 +26,6 @@ library
         Test.Cardano.Ledger.Alonzo.AlonzoEraGen
         Test.Cardano.Ledger.Alonzo.EraMapping
         Test.Cardano.Ledger.Alonzo.Examples.Consensus
-        Test.Cardano.Ledger.Alonzo.PlutusScripts
         Test.Cardano.Ledger.Alonzo.Serialisation.Generators
         Test.Cardano.Ledger.Alonzo.Scripts
         Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
@@ -62,7 +61,7 @@ library
         data-default-class,
         microlens,
         plutus-tx,
-        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.18,
+        plutus-ledger-api ^>=1.18,
         QuickCheck,
         random,
         serialise,
@@ -84,7 +83,6 @@ executable gen-golden
 
     build-depends:
         base,
-        cardano-ledger-core,
         cardano-ledger-alonzo,
         cardano-ledger-alonzo-test
 
@@ -118,21 +116,20 @@ test-suite cardano-ledger-alonzo-test
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-alonzo-test,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        cardano-ledger-core,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
         cardano-ledger-shelley-ma-test,
         cardano-protocol-tpraos,
         cardano-slotting,
         containers,
         data-default-class,
-        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
+        plutus-ledger-api,
         QuickCheck,
         small-steps,
         small-steps-test,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test,
         microlens,
-        mtl,
         cardano-strict-containers,
         tasty,
         tasty-hunit,

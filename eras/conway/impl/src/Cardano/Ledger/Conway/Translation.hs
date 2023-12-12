@@ -14,12 +14,10 @@ module Cardano.Ledger.Conway.Translation (
   Tx (..),
   addrPtrNormalize,
   translateDatum,
-  translateScript,
   translateTxOut,
 ) where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
-import Cardano.Ledger.Alonzo.Scripts (translateAlonzoScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
@@ -209,7 +207,3 @@ translateTxOut ::
   TxOut (ConwayEra c)
 translateTxOut = upgradeTxOut
 {-# DEPRECATED translateTxOut "In favor of `upgradeTxOut`" #-}
-
-translateScript :: Crypto c => Script (BabbageEra c) -> Script (ConwayEra c)
-translateScript = translateAlonzoScript
-{-# DEPRECATED translateScript "In favor of `upgradeScript`" #-}

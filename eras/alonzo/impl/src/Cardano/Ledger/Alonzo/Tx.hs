@@ -88,6 +88,7 @@ import Cardano.Ledger.Alonzo.PParams (
   getLanguageView,
  )
 import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript,
   CostModel,
   ExUnits (..),
   Tag (..),
@@ -211,7 +212,10 @@ instance Crypto c => EraTx (AlonzoEra c) where
 instance (Tx era ~ AlonzoTx era, AlonzoEraTx era) => EqRaw (AlonzoTx era) where
   eqRaw = alonzoEqTxRaw
 
-class (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era) => AlonzoEraTx era where
+class
+  (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era, AlonzoEraScript era) =>
+  AlonzoEraTx era
+  where
   isValidTxL :: Lens' (Tx era) IsValid
 
 instance Crypto c => AlonzoEraTx (AlonzoEra c) where

@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -15,40 +17,65 @@
 module Cardano.Ledger.Babbage.Scripts (
   AlonzoScript (..),
   isPlutusScript,
-  babbageScriptPrefixTag,
+  PlutusScript (..),
 )
 where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript (..),
   AlonzoScript (..),
+  PlutusScript (..),
   isPlutusScript,
-  translateAlonzoScript,
  )
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Language
+import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
-import Data.ByteString (ByteString)
-
-babbageScriptPrefixTag ::
-  Script era ~ AlonzoScript era => Script era -> ByteString
-babbageScriptPrefixTag script =
-  case script of
-    TimelockScript _ -> nativeMultiSigTag -- "\x00"
-    PlutusScript (Plutus PlutusV1 _) -> "\x01"
-    PlutusScript (Plutus PlutusV2 _) -> "\x02"
-    PlutusScript (Plutus PlutusV3 _) -> "\x03"
+import Control.DeepSeq (NFData (..), rwhnf)
+import GHC.Generics
+import NoThunks.Class (NoThunks (..))
 
 instance Crypto c => EraScript (BabbageEra c) where
   type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
   type NativeScript (BabbageEra c) = Timelock (BabbageEra c)
 
-  upgradeScript = translateAlonzoScript
+  upgradeScript = \case
+    TimelockScript ts -> TimelockScript $ translateTimelock ts
+    PlutusScript (AlonzoPlutusV1 ps) -> PlutusScript $ BabbagePlutusV1 ps
 
-  scriptPrefixTag = babbageScriptPrefixTag
+  scriptPrefixTag = \case
+    TimelockScript _ -> nativeMultiSigTag -- "\x00"
+    PlutusScript (BabbagePlutusV1 _) -> "\x01"
+    PlutusScript (BabbagePlutusV2 _) -> "\x02"
 
   getNativeScript = \case
     TimelockScript ts -> Just ts
     _ -> Nothing
+
+  fromNativeScript = TimelockScript
+
+instance Crypto c => AlonzoEraScript (BabbageEra c) where
+  data PlutusScript (BabbageEra c)
+    = BabbagePlutusV1 !(Plutus 'PlutusV1)
+    | BabbagePlutusV2 !(Plutus 'PlutusV2)
+    deriving (Eq, Ord, Show, Generic)
+
+  eraMaxLanguage = PlutusV2
+
+  mkPlutusScript plutus =
+    case plutusSLanguage plutus of
+      SPlutusV1 -> Just $ BabbagePlutusV1 plutus
+      SPlutusV2 -> Just $ BabbagePlutusV2 plutus
+      _ -> Nothing
+
+  withPlutusScript (BabbagePlutusV1 plutus) f = f plutus
+  withPlutusScript (BabbagePlutusV2 plutus) f = f plutus
+
+instance NFData (PlutusScript (BabbageEra c)) where
+  rnf = rwhnf
+instance NoThunks (PlutusScript (BabbageEra c))
+instance Crypto c => SafeToHash (PlutusScript (BabbageEra c)) where
+  originalBytes ps = withPlutusScript ps originalBytes

@@ -2,6 +2,36 @@
 
 ## 1.10.0.0
 
+* Add `unData`, `getCostModelEvaluationContext`
+* Changes to `Cardano.Ledger.Plutus.Evaluate`:
+  * Make `PlutusWithContext` era agnostic, but Language aware. `pwcScript` can be either
+    in decoded or binary format. `pwcProtocolVersion` was added too.
+  * `debugPlutus`, `runPlutusScript`, `runPlutusScriptWithLogs` and
+      `explainPlutusEvaluationError` no longer accept `PrtoVer` as argument, since major
+      protocol version has been added to `PlutusWithContext`
+  * Change constructor of `ScriptFailure` from `PlutusSF` to `ScriptFailure` and add
+    record names: `scriptFailureMessage` and `scriptFailurePlutus`
+  * Remove `PlutusDebugLang`, `PlutusDebug`, `PlutusData` and `PlutusError`
+  * Stop re-exporting   removed:   `EraPlutusContext`,  `PlutusTxCert`,   `unTxCertV1`,
+    `unTxCertV2` and `unTxCertV3`
+  * Add `evaluatePlutusWithContext`
+  * Remove `deserialiseAndEvaluateScript` in favor of `evaluatePlutusWithContext`
+* Changes to `Cardano.Ledger.Plutus.Language`:
+  * Rename `BinaryPlutus` to `PlutusBinary` for consistency with names of other Plutus types.
+  * Add `Plutus` with helpers: `decodeWithPlutus`, `isValidPlutus`
+  * Add `PlutusRunnable` with helpers: `plutusFromRunnable`
+  * Add `asSLanguage`
+  * Add `plutusSLanguage` and `plutusLanguage`
+  * Deprecated `fromSLanguage` in favor of more general `plutusLanguage`
+  * Rename `IsLanguage` class to `PlutusLanguage` and add these functions to the class:
+    `decodePlutusRunnable`, `evaluatePlutusRunnable` and `evaluatePlutusRunnableBudget`
+* Changes to `Cardano.Ledger.Plutus.TxInfo`:
+  * `NFData` instance for `TxOutSource`
+  * Remove: `transDataHash'`, `transHash` (use `hashToBytes` instead), `transTxOutAddr`,
+    `txInfoIn'`, `getWitVKeyHash`, `VersionedTxInfo`, `EraPlutusContext`, `PlutusTxCert`,
+    `unTxCertV1`, `unTxCertV2`, `unTxCertV3` and `txInfoId` (use `transTxId` instead)
+  * Add `transCoin`, `transTxId`
+* Add `fromNativeScript`
 * Remove unused `mapMaybeValidation` and `runTestMaybe`
 * Remove `InjectMaybe` type class in favor of more general `Inject`
 * Move `decodeAddrShort` and `decodeAddrShortEither` to
@@ -15,6 +45,7 @@
 
 * Add `diffExprCompact`
 * Add `expectLeftDeep_`, `expectRightDeep_`
+* Two new modules `Test.Cardano.Ledger.Plutus` and `Test.Cardano.Ledger.Plutus.Examples`
 
 ## 1.9.0.0
 

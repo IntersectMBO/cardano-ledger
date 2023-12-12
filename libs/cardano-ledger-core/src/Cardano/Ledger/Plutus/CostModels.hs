@@ -21,7 +21,7 @@
 
 module Cardano.Ledger.Plutus.CostModels (
   -- * Cost Model
-  CostModel (..),
+  CostModel,
   CostModelError (..),
   decodeValidAndUnknownCostModels,
   emptyCostModels,
@@ -31,6 +31,7 @@ module Cardano.Ledger.Plutus.CostModels (
   encodeCostModel,
   getCostModelLanguage,
   getCostModelParams,
+  getCostModelEvaluationContext,
   getEvaluationContext,
   costModelParamNames,
   costModelToMap,
@@ -204,6 +205,9 @@ getCostModelLanguage (CostModel lang _ _) = lang
 
 getCostModelParams :: CostModel -> [Integer]
 getCostModelParams (CostModel _ cm _) = cm
+
+getCostModelEvaluationContext :: CostModel -> PV1.EvaluationContext
+getCostModelEvaluationContext = cmEvalCtx
 
 decodeCostModelsCollectingErrors :: Decoder s CostModels
 decodeCostModelsCollectingErrors = mkCostModelsLenient <$> decCBOR

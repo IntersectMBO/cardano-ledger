@@ -74,10 +74,7 @@ import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeRefer
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), dataHashSize)
-import Cardano.Ledger.SafeHash (
-  extractHash,
-  unsafeMakeSafeHash,
- )
+import Cardano.Ledger.SafeHash (extractHash, unsafeMakeSafeHash)
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)

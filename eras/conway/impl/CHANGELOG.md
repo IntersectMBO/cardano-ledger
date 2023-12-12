@@ -2,6 +2,10 @@
 
 ## 1.12.0.0
 
+* Add `transTxBodyWithdrawals`, `transTxCert`, `transDRepCred`, `transColdCommitteeCred`,
+  `transHotCommitteeCred`, `transDelegatee`, `transDRep`, `transScriptPurpose`
+* Remove `conwayTxInfo` and `babbageScriptPrefixTag`
+* Remove deprcated `translateScript`
 * Add `getVoteDelegatee`
 * Track and prune unreachable proposals #3855
   * Move `PrevGovActionIds` from `Governance` to `Governance.Proposals`

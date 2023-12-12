@@ -11,9 +11,8 @@ module Test.Cardano.Ledger.Alonzo.Tools (tests) where
 import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (EraPlutusContext, ExtendedUTxO, exBudgetToExUnits, transExUnits)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, ExUnits (..), Tag (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
@@ -24,6 +23,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
@@ -104,12 +104,10 @@ testExUnitCalculation ::
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , AlonzoEraTx era
-  , ExtendedUTxO era
   , STS (EraRule "UTXOS" era)
-  , Script era ~ AlonzoScript era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   ) =>
   Tx era ->
   UTxOState era ->
@@ -135,15 +133,13 @@ exampleExUnitCalc ::
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , Signable (DSIGN (EraCrypto era)) (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , ExtendedUTxO era
   , STS (EraRule "UTXOS" era)
   , AlonzoEraTx era
   , PostShelley era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
+  , EraPlutusContext era
   , EraGov era
-  , EraPlutusContext 'PlutusV1 era
   ) =>
   Proof era ->
   IO ()
@@ -158,16 +154,14 @@ exampleExUnitCalc proof =
 
 exampleInvalidExUnitCalc ::
   forall era.
-  ( ExtendedUTxO era
-  , PostShelley era
+  ( PostShelley era
   , AlonzoEraTx era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
   , Signable
       (DSIGN (EraCrypto era))
       (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   ) =>
   Proof era ->
   IO ()
@@ -229,7 +223,7 @@ validatingBody pf =
   where
     redeemers =
       Redeemers $
-        Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+        Map.singleton (RdmrPtr Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
 
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
@@ -258,11 +252,9 @@ updateTxExUnits ::
   forall era m.
   ( MonadFail m
   , AlonzoEraTx era
-  , ExtendedUTxO era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   ) =>
   Tx era ->
   UTxO era ->

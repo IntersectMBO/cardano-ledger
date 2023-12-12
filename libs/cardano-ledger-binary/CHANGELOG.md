@@ -3,6 +3,7 @@
 ## 1.3.0.0
 
 * Moved `ToExpr` instances out of the main library and into the testlib.
+* Add `encodeEnum` and `decodeEnumBounded`
 
 ### `testlib`
 

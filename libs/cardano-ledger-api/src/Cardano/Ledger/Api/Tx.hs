@@ -51,13 +51,10 @@ module Cardano.Ledger.Api.Tx (
 
   -- ** Execution units
   evalTxExUnits,
-  evaluateTransactionExecutionUnits,
   RedeemerReport,
   evalTxExUnitsWithLogs,
-  evaluateTransactionExecutionUnitsWithLogs,
   RedeemerReportWithLogs,
   TransactionScriptFailure (..),
-  ValidationFailed (..),
 )
 where
 
@@ -67,11 +64,8 @@ import Cardano.Ledger.Api.Scripts.ExUnits (
   RedeemerReport,
   RedeemerReportWithLogs,
   TransactionScriptFailure (..),
-  ValidationFailed (..),
   evalTxExUnits,
   evalTxExUnitsWithLogs,
-  evaluateTransactionExecutionUnits,
-  evaluateTransactionExecutionUnitsWithLogs,
  )
 import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body

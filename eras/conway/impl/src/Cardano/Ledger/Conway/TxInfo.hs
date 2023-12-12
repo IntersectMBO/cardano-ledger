@@ -1,6 +1,7 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -10,183 +11,301 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.TxInfo (conwayTxInfo) where
+module Cardano.Ledger.Conway.TxInfo (
+  ContextError (..),
+  transTxBodyWithdrawals,
+  transTxCert,
+  transDRepCred,
+  transColdCommitteeCred,
+  transHotCommitteeCred,
+  transDelegatee,
+  transDRep,
+  transScriptPurpose,
+) where
 
+import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  EraPlutusContext,
-  TranslationError (..),
-  VersionedTxInfo (..),
-  unTxCertV3,
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  EraPlutusContext (..),
+  EraPlutusTxInfo (..),
+  PlutusTxCert,
+  mkPlutusLanguageContext,
  )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), RdmrPtr, unRedeemers, unTxDats)
-import Cardano.Ledger.Babbage.TxInfo (babbageTxInfoV1, babbageTxInfoV2)
-import qualified Cardano.Ledger.Babbage.TxInfo as B
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
+import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.TxInfo (ContextError (..))
+import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
+import Cardano.Ledger.BaseTypes (EpochNo (..), Inject (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
+ )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core hiding (TranslationError)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.TxCert ()
+import Cardano.Ledger.Conway.Scripts (PlutusScript (..))
+import Cardano.Ledger.Conway.Tx ()
+import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.DRep (DRep (..))
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Plutus.TxInfo (transCoin, transCred, transKeyHash, transTxIn)
+import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.TxCert
-import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Slotting.EpochInfo (EpochInfo)
-import Cardano.Slotting.Time (SystemStart)
-import Control.Arrow (left)
-import Control.Monad (zipWithM)
-import Data.Foldable (Foldable (..))
+import Control.DeepSeq (NFData)
+import Control.Monad (unless, zipWithM)
+import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.Text (Text)
+import GHC.Generics
 import Lens.Micro
+import NoThunks.Class (NoThunks)
+import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
-instance Crypto c => EraPlutusContext 'PlutusV1 (ConwayEra c) where
-  -- FIXME: implement for conway era
-  transTxCert = Alonzo.TxCertPlutusV1 . error "Unimplemented"
+instance Crypto c => EraPlutusContext (ConwayEra c) where
+  data ContextError (ConwayEra c)
+    = BabbageContextError !(ContextError (BabbageEra c))
+    | CertificateNotSupported !(TxCert (ConwayEra c))
+    deriving (Eq, Show, Generic)
 
-instance Crypto c => EraPlutusContext 'PlutusV2 (ConwayEra c) where
-  -- FIXME: implement for conway era
-  transTxCert = Alonzo.TxCertPlutusV2 . error "Unimplemented"
+  mkPlutusScriptContext = \case
+    ConwayPlutusV1 p -> mkPlutusLanguageContext p
+    ConwayPlutusV2 p -> mkPlutusLanguageContext p
+    ConwayPlutusV3 p -> mkPlutusLanguageContext p
 
-instance Crypto c => EraPlutusContext 'PlutusV3 (ConwayEra c) where
-  transTxCert = Alonzo.TxCertPlutusV3 . conwayTransTxCert
+instance Inject (ContextError (ConwayEra c)) (ContextError (ConwayEra c))
 
-conwayTxInfo ::
-  forall era.
-  ( EraTx era
-  , AlonzoEraTxWits era
-  , BabbageEraTxBody era
-  , Value era ~ MaryValue (EraCrypto era)
-  , EraPlutusContext 'PlutusV1 era
-  , EraPlutusContext 'PlutusV2 era
-  , EraPlutusContext 'PlutusV3 era
-  ) =>
-  PParams era ->
-  Language ->
-  EpochInfo (Either Text) ->
-  SystemStart ->
-  UTxO era ->
-  Tx era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
-conwayTxInfo pp lang ei sysS utxo tx = do
-  timeRange <- left TimeTranslationPastHorizon $ Alonzo.transVITime pp ei sysS interval
-  case lang of
-    PlutusV1 -> babbageTxInfoV1 timeRange tx utxo
-    PlutusV2 -> babbageTxInfoV2 timeRange tx utxo
-    PlutusV3 -> conwayTxInfoV3 timeRange tx utxo
-  where
-    interval = tx ^. bodyTxL . vldtTxBodyL
+instance Inject (ContextError (BabbageEra c)) (ContextError (ConwayEra c)) where
+  inject = BabbageContextError
 
--- | Changes from PlutusV2 TxInfo:
---
--- * `txInfoFee` no longer gets a zero ADA inserted into the field, since minting ADA is
---   not possible.
---
--- * `txInfoDCert` is renamed to `txInfoTxCerts`. Certificates are no longer just
---   about delegation, so @D@ prefix no longer make sense.
-conwayTxInfoV3 ::
-  forall era.
-  ( EraTx era
-  , AlonzoEraTxWits era
-  , BabbageEraTxBody era
-  , Value era ~ MaryValue (EraCrypto era)
-  , EraPlutusContext 'PlutusV3 era
-  ) =>
-  PV3.POSIXTimeRange ->
-  Tx era ->
-  UTxO era ->
-  Either (TranslationError (EraCrypto era)) VersionedTxInfo
-conwayTxInfoV3 timeRange tx utxo = do
-  inputs <- mapM (B.txInfoInV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
-  refInputs <- mapM (B.txInfoInV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
-  outputs <-
-    zipWithM
-      (B.txInfoOutV2 . Alonzo.TxOutFromOutput)
-      [minBound ..]
-      (foldr (:) [] outs)
-  rdmrs' <- mapM (transRedeemerPtr txBody) rdmrs
-  pure . TxInfoPV3 $
-    PV3.TxInfo -- TODO Add relevant CIP-1694 data to PV3.TxInfo
-      { PV3.txInfoInputs = inputs
-      , PV3.txInfoOutputs = outputs
-      , PV3.txInfoReferenceInputs = refInputs
-      , PV3.txInfoFee = Alonzo.transValue (inject @_ @(MaryValue (EraCrypto era)) fee)
-      , -- Note that this translation is different from previous Plutus versions, since we no
-        -- longer add a zero ADA value to the mint field during translation:
-        PV3.txInfoMint = Alonzo.transMultiAsset (txBody ^. mintTxBodyL)
-      , PV3.txInfoTxCerts = toList $ fmap (unTxCertV3 . Alonzo.transTxCert) (txBody ^. certsTxBodyL)
-      , PV3.txInfoWdrl = PV3.fromList $ Map.toList (transWithdrawals (txBody ^. withdrawalsTxBodyL))
-      , PV3.txInfoValidRange = timeRange
-      , PV3.txInfoSignatories =
-          map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL))
-      , PV3.txInfoRedeemers = PV3.fromList rdmrs'
-      , PV3.txInfoData = PV3.fromList $ map Alonzo.transDataPair datpairs
-      , PV3.txInfoId = PV3.TxId (Alonzo.transSafeHash (hashAnnotated txBody))
-      , -- FIXME: implement for plutus v3
-        PV3.txInfoVotes = error "Unimplemented"
-      , -- FIXME: implement for plutus v3
-        PV3.txInfoProposalProcedures = error "Unimplemented"
-      , -- FIXME: implement for plutus v3
-        PV3.txInfoCurrentTreasuryAmount = error "Unimplemented"
-      , -- FIXME: implement for plutus v3
-        PV3.txInfoTreasuryDonation = error "Unimplemented"
-      }
-  where
-    txBody = tx ^. bodyTxL
-    witnesses = tx ^. witsTxL
-    outs = txBody ^. outputsTxBodyL
-    fee = txBody ^. feeTxBodyL
-    datpairs = Map.toList (unTxDats $ witnesses ^. datsTxWitsL)
-    rdmrs = Map.toList (unRedeemers $ witnesses ^. rdmrsTxWitsL)
+instance Inject (ContextError (AlonzoEra c)) (ContextError (ConwayEra c)) where
+  inject = BabbageContextError . inject
 
--- | This is a temporary version that only translates certificates from previous eras,
--- none of them are Conway specific.
-conwayTransTxCert :: ShelleyEraTxCert era => TxCert era -> PV3.TxCert
-conwayTransTxCert = \case
+instance NoThunks (ContextError (ConwayEra c))
+
+instance Crypto c => NFData (ContextError (ConwayEra c))
+
+instance Crypto c => EncCBOR (ContextError (ConwayEra c)) where
+  encCBOR = \case
+    -- We start at tag 8, just in case to avoid clashes with previous eras.
+    BabbageContextError babbageContextError ->
+      encode $ Sum BabbageContextError 8 !> To babbageContextError
+    CertificateNotSupported txCert ->
+      encode $ Sum CertificateNotSupported 9 !> To txCert
+
+instance Crypto c => DecCBOR (ContextError (ConwayEra c)) where
+  decCBOR = decode $ Summands "ContextError" $ \case
+    8 -> SumD BabbageContextError <! From
+    9 -> SumD CertificateNotSupported <! From
+    n -> Invalid n
+
+instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
+  toPlutusTxCert _ = fmap Alonzo.transTxCert . downgradeConwayTxCert
+
+  toPlutusScriptPurpose = Alonzo.transScriptPurpose
+
+  toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
+    let refInputs = txBody ^. referenceInputsTxBodyL
+    unless (Set.null refInputs) $ Left $ inject $ ReferenceInputsNotSupported refInputs
+
+    timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
+    inputs <- mapM (Babbage.transTxInInfoV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+    outputs <-
+      zipWithM
+        (Babbage.transTxOutV1 . TxOutFromOutput)
+        [minBound ..]
+        (F.toList (txBody ^. outputsTxBodyL))
+    txCerts <- Alonzo.transTxBodyCerts proxy txBody
+    pure
+      PV1.TxInfo
+        { PV1.txInfoInputs = inputs
+        , PV1.txInfoOutputs = outputs
+        , PV1.txInfoFee = transCoin (txBody ^. feeTxBodyL)
+        , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+        , PV1.txInfoDCert = txCerts
+        , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
+        , PV1.txInfoValidRange = timeRange
+        , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+        , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV1.txInfoId = Alonzo.transTxBodyId txBody
+        }
+    where
+      txBody = tx ^. bodyTxL
+
+  toPlutusScriptContext proxy txInfo scriptPurpose =
+    PV1.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+
+instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
+  toPlutusTxCert _ = fmap Alonzo.transTxCert . downgradeConwayTxCert
+
+  toPlutusScriptPurpose = Alonzo.transScriptPurpose
+
+  toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
+    timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
+    inputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+    refInputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
+    outputs <-
+      zipWithM
+        (Babbage.transTxOutV2 . TxOutFromOutput)
+        [minBound ..]
+        (F.toList (txBody ^. outputsTxBodyL))
+    txCerts <- Alonzo.transTxBodyCerts proxy txBody
+    plutusRedeemers <- Babbage.transTxRedeemers proxy tx
+    pure
+      PV2.TxInfo
+        { PV2.txInfoInputs = inputs
+        , PV2.txInfoOutputs = outputs
+        , PV2.txInfoReferenceInputs = refInputs
+        , PV2.txInfoFee = transCoin (txBody ^. feeTxBodyL)
+        , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+        , PV2.txInfoDCert = txCerts
+        , PV2.txInfoWdrl = PV2.fromList $ Alonzo.transTxBodyWithdrawals txBody
+        , PV2.txInfoValidRange = timeRange
+        , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+        , PV2.txInfoRedeemers = plutusRedeemers
+        , PV2.txInfoData = PV2.fromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV2.txInfoId = Alonzo.transTxBodyId txBody
+        }
+    where
+      txBody = tx ^. bodyTxL
+
+  toPlutusScriptContext proxy txInfo scriptPurpose =
+    PV2.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+
+instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
+  toPlutusTxCert _ = pure . transTxCert
+
+  toPlutusScriptPurpose = transScriptPurpose
+
+  toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
+    timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
+    inputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+    refInputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
+    outputs <-
+      zipWithM
+        (Babbage.transTxOutV2 . TxOutFromOutput)
+        [minBound ..]
+        (F.toList (txBody ^. outputsTxBodyL))
+    txCerts <- Alonzo.transTxBodyCerts proxy txBody
+    plutusRedeemers <- Babbage.transTxRedeemers proxy tx
+    pure
+      PV3.TxInfo
+        { PV3.txInfoInputs = inputs
+        , PV3.txInfoOutputs = outputs
+        , PV3.txInfoReferenceInputs = refInputs
+        , PV3.txInfoFee = transCoin (txBody ^. feeTxBodyL)
+        , PV3.txInfoMint = Alonzo.transMultiAsset (txBody ^. mintTxBodyL)
+        , PV3.txInfoTxCerts = txCerts
+        , PV3.txInfoWdrl = transTxBodyWithdrawals txBody
+        , PV3.txInfoValidRange = timeRange
+        , PV3.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+        , PV3.txInfoRedeemers = plutusRedeemers
+        , PV3.txInfoData = PV3.fromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV3.txInfoId = Alonzo.transTxBodyId txBody
+        , -- FIXME: implement for plutus v3
+          PV3.txInfoVotes = error "Unimplemented"
+        , -- FIXME: implement for plutus v3
+          PV3.txInfoProposalProcedures = error "Unimplemented"
+        , -- FIXME: implement for plutus v3
+          PV3.txInfoCurrentTreasuryAmount = error "Unimplemented"
+        , -- FIXME: implement for plutus v3
+          PV3.txInfoTreasuryDonation = error "Unimplemented"
+        }
+    where
+      txBody = tx ^. bodyTxL
+
+  toPlutusScriptContext proxy txInfo scriptPurpose =
+    PV3.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+
+-- | Translate all `Withdrawal`s from within a `TxBody`
+transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential Integer
+transTxBodyWithdrawals txBody =
+  PV3.fromList $
+    map (\(RewardAcnt _networkId cred, Coin c) -> (transCred cred, c)) $
+      Map.toList (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
+
+transTxCert :: ConwayEraTxCert era => TxCert era -> PV3.TxCert
+transTxCert = \case
+  RegPoolTxCert PoolParams {ppId, ppVrf} ->
+    PV3.TxCertPoolRegister (transKeyHash ppId) (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes ppVrf)))
+  RetirePoolTxCert poolId (EpochNo retireEpochNo) ->
+    PV3.TxCertPoolRetire (transKeyHash poolId) (toInteger retireEpochNo)
   RegTxCert stakeCred ->
-    PV3.TxCertRegStaking (Alonzo.transCred stakeCred) (error "unimplemented")
+    PV3.TxCertRegStaking (transCred stakeCred) Nothing
   UnRegTxCert stakeCred ->
-    PV3.TxCertUnRegStaking (Alonzo.transCred stakeCred) (error "unimplemented")
-  DelegStakeTxCert stakeCred _keyHash ->
-    PV3.TxCertDelegStaking
-      (Alonzo.transCred stakeCred)
-      (error "unimplemented")
-  _ -> error "Translation of Conway Certificate is not implemented yet"
+    PV3.TxCertUnRegStaking (transCred stakeCred) Nothing
+  RegDepositTxCert stakeCred deposit ->
+    PV3.TxCertRegStaking (transCred stakeCred) (Just (transCoin deposit))
+  UnRegDepositTxCert stakeCred refund ->
+    PV3.TxCertUnRegStaking (transCred stakeCred) (Just (transCoin refund))
+  DelegTxCert stakeCred delegatee ->
+    PV3.TxCertDelegStaking (transCred stakeCred) (transDelegatee delegatee)
+  RegDepositDelegTxCert stakeCred delegatee deposit ->
+    PV3.TxCertRegDeleg (transCred stakeCred) (transDelegatee delegatee) (transCoin deposit)
+  AuthCommitteeHotKeyTxCert coldCred hotCred ->
+    PV3.TxCertAuthHotCommittee (transColdCommitteeCred coldCred) (transHotCommitteeCred hotCred)
+  ResignCommitteeColdTxCert coldCred _anchor ->
+    PV3.TxCertResignColdCommittee (transColdCommitteeCred coldCred)
+  RegDRepTxCert drepCred deposit _anchor ->
+    PV3.TxCertRegDRep (transDRepCred drepCred) (transCoin deposit)
+  UnRegDRepTxCert drepCred refund ->
+    PV3.TxCertUnRegDRep (transDRepCred drepCred) (transCoin refund)
+  UpdateDRepTxCert drepCred _anchor ->
+    PV3.TxCertUpdateDRep (transDRepCred drepCred)
 
--- adapted from Alonzo.TxInfo so as to drop the 'StakingCredential' constructor.
-transWithdrawals :: Withdrawals c -> Map.Map PV3.Credential Integer
-transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
-  where
-    accum ans (RewardAcnt _network cred) (Coin n) =
-      Map.insert (Alonzo.transCred cred) n ans
+transDRepCred :: Credential 'DRepRole c -> PV3.DRepCredential
+transDRepCred = PV3.DRepCredential . transCred
 
-transRedeemerPtr ::
-  ( MaryEraTxBody era
-  , EraPlutusContext 'PlutusV3 era
-  ) =>
-  TxBody era ->
-  (RdmrPtr, (Data era, ExUnits)) ->
-  Either (TranslationError (EraCrypto era)) (PV3.ScriptPurpose, PV3.Redeemer)
-transRedeemerPtr txb (ptr, (d, _)) =
-  case rdptrInv txb ptr of
-    SNothing -> Left (RdmrPtrPointsToNothing ptr)
-    SJust sp -> Right (transScriptPurpose sp, B.transRedeemer d)
+transColdCommitteeCred :: Credential 'ColdCommitteeRole c -> PV3.ColdCommitteeCredential
+transColdCommitteeCred = PV3.ColdCommitteeCredential . transCred
+
+transHotCommitteeCred :: Credential 'HotCommitteeRole c -> PV3.HotCommitteeCredential
+transHotCommitteeCred = PV3.HotCommitteeCredential . transCred
+
+transDelegatee :: Delegatee c -> PV3.Delegatee
+transDelegatee = \case
+  DelegStake poolId -> PV3.DelegStake (transKeyHash poolId)
+  DelegVote drep -> PV3.DelegVote (transDRep drep)
+  DelegStakeVote poolId drep -> PV3.DelegStakeVote (transKeyHash poolId) (transDRep drep)
+
+transDRep :: DRep c -> PV3.DRep
+transDRep = \case
+  DRepCredential drepCred -> PV3.DRep (transDRepCred drepCred)
+  DRepAlwaysAbstain -> PV3.DRepAlwaysAbstain
+  DRepAlwaysNoConfidence -> PV3.DRepAlwaysNoConfidence
 
 transScriptPurpose ::
-  EraPlutusContext 'PlutusV3 era =>
+  (EraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert) =>
+  proxy l ->
   ScriptPurpose era ->
-  PV3.ScriptPurpose
-transScriptPurpose (Minting policyid) = PV3.Minting (Alonzo.transPolicyID policyid)
-transScriptPurpose (Spending txin) = PV3.Spending (Alonzo.txInfoIn' txin)
-transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
-  PV3.Rewarding (Alonzo.transCred cred)
-transScriptPurpose (Certifying dcert) = PV3.Certifying $ unTxCertV3 $ Alonzo.transTxCert dcert
+  Either (ContextError era) PV3.ScriptPurpose
+transScriptPurpose proxy = \case
+  Minting policyId -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
+  Spending txIn -> pure $ PV3.Spending (transTxIn txIn)
+  Rewarding (RewardAcnt _networkId cred) ->
+    pure $ PV3.Rewarding (transCred cred)
+  Certifying txCert -> PV3.Certifying <$> toPlutusTxCert proxy txCert
 
--- FIXME: Add support for PV3, add voting , proposing
+downgradeConwayTxCert ::
+  Crypto c =>
+  TxCert (ConwayEra c) ->
+  Either (ContextError (ConwayEra c)) (TxCert (BabbageEra c))
+downgradeConwayTxCert = \case
+  RegPoolTxCert poolParams -> Right $ RegPoolTxCert poolParams
+  RetirePoolTxCert poolId epochNo -> Right $ RetirePoolTxCert poolId epochNo
+  RegTxCert cred -> Right $ RegTxCert cred
+  UnRegTxCert cred -> Right $ UnRegTxCert cred
+  DelegStakeTxCert cred poolId -> Right $ DelegStakeTxCert cred poolId
+  txCert -> Left $ CertificateNotSupported txCert

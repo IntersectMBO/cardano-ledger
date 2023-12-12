@@ -2,9 +2,58 @@
 
 ## 1.6.0.0
 
+* Add `transTxBodyId`, `transTxBodyCerts`, `transTxBodyWithdrawals`, `transTxBodyReqSignerHashes`,
+  `transTxWitsDatums`
+* Remove deprecated `VersionedTxInfo`,  `getDatum`, `getAllowedSupplimentalDataHashes`, `txscripts`
+* Remove `ExtendedUTxO` in favor of `PlutusEraTxInfo` and `txInfo` in favor of `toPlutusTxInfo`
+* Rename `alonzoTransTxCert` to `transTxCert`
+* Remove `alonzoTxInfo` and `languages` as unnecessary.
+* Remove `transTxOutAddr` in favor of `transAddr`
+* Remove `txInfoIn'`, `txInfoIn` as unnecessary
+* Rename `txInfoOut` to `transTxOut` for consistency
+* Replace `valContext` with `toPlutusContext`,
+* Stop exporting from `Cardano.Ledger.Alonzo.Plutus.TxInfo`: `getWitVKeyHash`,
+  `transKeyHash`, `transKeyHash`, `transSafeHash`, `transStakeReference`,
+  `slotToPOSIXTime`, `transCred`, `transProtocolVersion`, `validScript`, `transDataHash'`,
+  `transDataHash`, `transExUnits`, `ScriptFailure`, `ScriptResult`, `scriptPass`,
+  `scriptFail`, `PlutusDebugLang`, `PlutusDebug`, `PlutusData`, `PlutusError`,
+  `PlutusDebugInfo`, `EraPlutusContext`, `PlutusWithContext`, `PlutusTxCert`,
+  `unTxCertV1`, `unTxCertV2`, `unTxCertV3`, `debugPlutus`, `runPlutusScript`,
+  `runPlutusScriptWithLogs`, `deserialiseAndEvaluateScript` and
+  `explainPlutusEvaluationError`.
+* Add new module `Cardano.Ledger.Alonzo.Plutus.Context` that contains new type classes for
+  plutus context translation: `EraPlutusTxInfo` and `EraPlutusContext` as well as the type
+  families for plutus specific types: `PlutusTxInfo`, `PlutusTxCert`,
+  `PlutusScriptPurpose`, `PlutusScriptContext`
+* Remove deprecated module `Cardano.Ledger.Alonzo.TxInfo`
+* Add `lookupPlutusScript` and `transLookupTxOut`
+* Add `transValidityInterval`
+* Remove `transVITime` in favor of `transValidityInterval`.
+* Remove deprecated `scriptsNeeded`, `scriptsNeededFromBody`, `evalScripts`,
+  `evalScriptsWithLogs`, `collectTwoPhaseScriptInputs` `getDatumAlonzo`, `getSpendingTxIn`.
+* Remove `language` in favor of two separate functions `plutusScriptLanguage` and `toPlutusScript`
+* Remove  `knownToNotBe1Phase` in favor of `lookupPlutusScript`.
+* Rename `Cardano.Ledger.Alonzo.PlutusScriptApi` to `Cardano.Ledger.Alonzo.Plutus.Evaluate`
+* Turn `TranslationError` sum type into a `ContextError` data family
+* Add `AlonzoEraScript` type class with associated data family `PlutusScript` and functions:
+  `eraMaxLanguage`, `toPlutusScript`, `fromplutusScript`, `mkPlutusScript` and `withPlutusScript`
+* Add `withPlutusScriptLanguage`, `plutusScriptLanguage`, `decodePlutusScript`,
+  `plutusScriptBinary`, `mkBinaryPlutusScript`, `isValidPlutusScript` and
+  `toPlutusSLanguage`
+* Remove `Cardano.Ledger.Alonzo.TxInfo` module
+* Remove `ExtendedUTxO`
+* Instead of accepting `UTxO` the validation function `ppViewHashesMatch` now accepts
+  `ScriptsProvided` and remove the no longer needed `languages` function.
 * Delete `utxoPredFailMaToAlonzo`, `utxoPredFailShelleyToAlonzo`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Changed the type of the ConwayPParams field appEMax
+
+### `testlib`
+
+* Add `mkPlutusScript'`
+* Add `alwaysSucceedsLang` and `alwaysFailsLang`
+* Change `alwaysSucceeds` and `alwaysFails` to accept the language version at the type level.
+* Remove `genAlonzoScript`
 
 ## 1.5.1.0
 

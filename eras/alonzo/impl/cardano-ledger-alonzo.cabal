@@ -32,8 +32,9 @@ library
         Cardano.Ledger.Alonzo.Transition
         Cardano.Ledger.Alonzo.Genesis
         Cardano.Ledger.Alonzo.Language
+        Cardano.Ledger.Alonzo.Plutus.Context
+        Cardano.Ledger.Alonzo.Plutus.Evaluate
         Cardano.Ledger.Alonzo.Plutus.TxInfo
-        Cardano.Ledger.Alonzo.PlutusScriptApi
         Cardano.Ledger.Alonzo.PParams
         Cardano.Ledger.Alonzo.Rules
         Cardano.Ledger.Alonzo.Scripts
@@ -43,7 +44,6 @@ library
         Cardano.Ledger.Alonzo.TxAuxData
         Cardano.Ledger.Alonzo.TxBody
         Cardano.Ledger.Alonzo.TxOut
-        Cardano.Ledger.Alonzo.TxInfo
         Cardano.Ledger.Alonzo.TxSeq
         Cardano.Ledger.Alonzo.TxWits
         Cardano.Ledger.Alonzo.UTxO
@@ -123,7 +123,7 @@ library testlib
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-crypto-class,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-        plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
+        plutus-ledger-api,
         data-default-class,
         microlens,
         text

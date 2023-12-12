@@ -28,26 +28,19 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
   AlonzoUtxosEvent (..),
   when2Phase,
   FailureDescription (..),
-  scriptFailuresToPredicateFailure,
-  scriptFailuresToPlutusDebug,
+  scriptFailureToFailureDescription,
 )
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  EraPlutusContext,
-  ExtendedUTxO (..),
-  PlutusDebug (..),
-  ScriptFailure (..),
-  ScriptResult (..),
- )
-import Cardano.Ledger.Alonzo.PlutusScriptApi (
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
@@ -58,17 +51,21 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (
   Globals,
-  ProtVer (..),
   ShelleyBase,
   epochInfo,
   strictMaybeToMaybe,
   systemStart,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize')
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Evaluate (
+  PlutusWithContext,
+  ScriptFailure (..),
+  ScriptResult (..),
+ )
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Governance (EraGov (GovState), ShelleyGovState)
@@ -113,10 +110,9 @@ instance
   ( AlonzoEraTx era
   , AlonzoEraPParams era
   , ShelleyEraTxBody era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
+  , AlonzoEraScript era
   , TxCert era ~ ShelleyTxCert era
   , EraGov era
   , GovState era ~ ShelleyGovState era
@@ -128,7 +124,7 @@ instance
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -143,8 +139,8 @@ instance
 data AlonzoUtxosEvent era
   = AlonzoPpupToUtxosEvent (Event (EraRule "PPUP" era))
   | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
-  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusDebug)
-  | FailedPlutusScriptsEvent (NonEmpty PlutusDebug)
+  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
+  | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
 
 instance
   ( Era era
@@ -159,11 +155,9 @@ instance
 
 utxosTransition ::
   forall era.
-  ( ExtendedUTxO era
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Script era ~ AlonzoScript era
   , TxCert era ~ ShelleyTxCert era
   , EraGov era
   , GovState era ~ ShelleyGovState era
@@ -175,7 +169,7 @@ utxosTransition ::
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -189,16 +183,14 @@ utxosTransition =
 scriptsTransition ::
   ( STS sts
   , Monad m
-  , Script era ~ AlonzoScript era
   , MaryEraTxBody era
   , AlonzoEraTxWits era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BaseM sts ~ ReaderT Globals m
   , PredicateFailure sts ~ AlonzoUtxosPredFailure era
   , AlonzoEraPParams era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   ) =>
   SlotNo ->
   PParams era ->
@@ -211,7 +203,7 @@ scriptsTransition slot pp tx utxo action = do
   ei <- liftSTS $ asks epochInfo
   case collectPlutusScriptsWithContext (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
     Right sLst ->
-      when2Phase $ action $ evalPlutusScripts (pp ^. ppProtocolVersionL) tx sLst
+      when2Phase $ action $ evalPlutusScripts tx sLst
     Left info
       | alonzoFailures <- filter isNotBadTranslation info
       , not (null alonzoFailures) ->
@@ -226,25 +218,22 @@ scriptsTransition slot pp tx utxo action = do
 alonzoEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
-  , Script era ~ AlonzoScript era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , ProtVerAtMost era 8
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
   TRC (UtxoEnv slot pp certState genDelegs, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
-      protVer = pp ^. ppProtocolVersionL
 
   () <- pure $! traceEvent validBegin ()
 
@@ -253,7 +242,7 @@ alonzoEvalScriptsTxValid = do
       failBecause $
         ValidationTagMismatch
           (tx ^. isValidTxL)
-          (FailedUnexpectedly (scriptFailuresToPredicateFailure protVer fs))
+          (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
     Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
 
   () <- pure $! traceEvent validEnd ()
@@ -269,12 +258,10 @@ alonzoEvalScriptsTxValid = do
 alonzoEvalScriptsTxInvalid ::
   forall era.
   ( AlonzoEraTx era
-  , ExtendedUTxO era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
-  , Script era ~ AlonzoScript era
-  , EraPlutusContext 'PlutusV1 era
+  , EraPlutusContext era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxInvalid = do
@@ -289,7 +276,7 @@ alonzoEvalScriptsTxInvalid = do
         ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
     Fails ps fs -> do
       mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
-      tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
+      tellEvent (FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
 
   let !_ = traceEvent invalidEnd ()
 
@@ -327,21 +314,14 @@ instance EncCBOR FailureDescription where
   encCBOR (PlutusFailure s b) = encode $ Sum PlutusFailure 1 !> To s !> To b
 
 instance DecCBOR FailureDescription where
-  decCBOR = decode (Summands "FailureDescription" dec)
-    where
-      -- Note the lack of key 0. See the EncCBOR instance above for an explanation.
-      dec 1 = SumD PlutusFailure <! From <! From
-      dec n = Invalid n
+  decCBOR = decode $ Summands "FailureDescription" $ \case
+    -- Note the lack of key 0. See the EncCBOR instance above for an explanation.
+    1 -> SumD PlutusFailure <! From <! From
+    n -> Invalid n
 
-scriptFailureToFailureDescription :: ProtVer -> ScriptFailure -> FailureDescription
-scriptFailureToFailureDescription protVer (PlutusSF t pd) =
-  PlutusFailure t (B64.encode $ serialize' (pvMajor protVer) pd)
-
-scriptFailuresToPredicateFailure :: ProtVer -> NonEmpty ScriptFailure -> NonEmpty FailureDescription
-scriptFailuresToPredicateFailure protVer = fmap (scriptFailureToFailureDescription protVer)
-
-scriptFailuresToPlutusDebug :: NonEmpty ScriptFailure -> NonEmpty PlutusDebug
-scriptFailuresToPlutusDebug = fmap (\(PlutusSF _ pdb) -> pdb)
+scriptFailureToFailureDescription :: ScriptFailure -> FailureDescription
+scriptFailureToFailureDescription (ScriptFailure msg pwc) =
+  PlutusFailure msg (B64.encode $ Plain.serialize' pwc)
 
 data TagMismatchDescription
   = PassedUnexpectedly
@@ -379,6 +359,7 @@ instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) wher
 
 instance
   ( EraTxCert era
+  , EncCBOR (ContextError era)
   , EncCBOR (PPUPPredFailure era)
   ) =>
   EncCBOR (AlonzoUtxosPredFailure era)
@@ -389,8 +370,8 @@ instance
   encCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 2 !> To pf)
 
 instance
-  ( Era era
-  , DecCBOR (TxCert era)
+  ( EraTxCert era
+  , DecCBOR (ContextError era)
   , DecCBOR (PPUPPredFailure era)
   ) =>
   DecCBOR (AlonzoUtxosPredFailure era)
@@ -405,6 +386,7 @@ instance
 deriving stock instance
   ( Era era
   , Show (TxCert era)
+  , Show (ContextError era)
   , Show (Shelley.UTxOState era)
   , Show (PPUPPredFailure era)
   ) =>
@@ -413,6 +395,7 @@ deriving stock instance
 instance
   ( Era era
   , Eq (TxCert era)
+  , Eq (ContextError era)
   , Eq (Shelley.UTxOState era)
   , Eq (PPUPPredFailure era)
   ) =>
@@ -426,6 +409,7 @@ instance
 instance
   ( Era era
   , NoThunks (TxCert era)
+  , NoThunks (ContextError era)
   , NoThunks (Shelley.UTxOState era)
   , NoThunks (PPUPPredFailure era)
   ) =>

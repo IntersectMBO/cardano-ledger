@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,17 +15,18 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Arbitrary (
+  mkPlutusScript',
   alwaysSucceeds,
+  alwaysSucceedsLang,
   alwaysFails,
+  alwaysFailsLang,
   costModelParamsCount,
   FlexibleCostModels (..),
-  genAlonzoScript,
   genScripts,
   genValidCostModel,
   genValidAndUnknownCostModels,
 ) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
@@ -36,6 +38,7 @@ import Cardano.Ledger.Alonzo.Rules (
   TagMismatchDescription (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript (..),
   AlonzoScript (..),
   CostModel,
   CostModels (..),
@@ -66,7 +69,6 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data (..),
@@ -74,7 +76,15 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
   hashData,
  )
-import Cardano.Ledger.Plutus.Language (BinaryPlutus (..), Language (..), Plutus (..), nonNativeLanguages)
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  Plutus (..),
+  PlutusLanguage,
+  asSLanguage,
+  nonNativeLanguages,
+  plutusLanguage,
+  withSLanguage,
+ )
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Shelley.TxWits (keyBy)
@@ -88,14 +98,11 @@ import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Word (Word8)
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.Test.Examples as Plutus (
-  alwaysFailingNAryFunction,
-  alwaysSucceedingNAryFunction,
- )
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.CostModel (costModelParamsCount)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
+import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus)
 
 instance Era era => Arbitrary (Data era) where
   arbitrary = Data <$> arbitrary
@@ -121,7 +128,7 @@ instance Arbitrary PV1.Data where
 
 instance
   ( Arbitrary (AlonzoScript era)
-  , Era era
+  , AlonzoEraScript era
   ) =>
   Arbitrary (AlonzoTxAuxData era)
   where
@@ -144,8 +151,7 @@ instance Era era => Arbitrary (Redeemers era) where
 instance
   ( Era era
   , Arbitrary (Script era)
-  , AlonzoScript era ~ Script era
-  , EraScript era
+  , AlonzoEraScript era
   ) =>
   Arbitrary (AlonzoTxWits era)
   where
@@ -221,21 +227,14 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-genAlonzoScript ::
-  forall era.
-  Era era =>
-  [Language] ->
-  Gen (AlonzoScript era)
-genAlonzoScript langs = do
-  lang <- elements langs -- The language is not present in the Script serialization
-  frequency
-    [ (1, pure (alwaysSucceeds lang 1))
-    , (1, pure (alwaysFails lang 1))
-    , (10, TimelockScript <$> arbitrary)
-    ]
-
-instance Crypto c => Arbitrary (AlonzoScript (AlonzoEra c)) where
-  arbitrary = genAlonzoScript [PlutusV1]
+instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Arbitrary (AlonzoScript era) where
+  arbitrary = do
+    lang <- elements [minBound .. eraMaxLanguage @era]
+    frequency
+      [ (1, alwaysSucceedsLang lang <$> elements [1, 2, 3])
+      , (1, alwaysFailsLang lang <$> elements [1, 2, 3])
+      , (10, TimelockScript <$> arbitrary)
+      ]
 
 instance Arbitrary Language where
   arbitrary = elements nonNativeLanguages
@@ -446,13 +445,40 @@ instance Arbitrary AlonzoGenesis where
       <*> arbitrary
       <*> arbitrary
 
-alwaysSucceeds :: Language -> Natural -> AlonzoScript era
-alwaysSucceeds lang n =
-  PlutusScript (Plutus lang (BinaryPlutus (Plutus.alwaysSucceedingNAryFunction n)))
+alwaysSucceeds ::
+  forall l era.
+  (HasCallStack, PlutusLanguage l, AlonzoEraScript era) =>
+  Natural ->
+  Script era
+alwaysSucceeds n = mkPlutusScript' (alwaysSucceedsPlutus @l n)
 
-alwaysFails :: Language -> Natural -> AlonzoScript era
-alwaysFails lang n =
-  PlutusScript (Plutus lang (BinaryPlutus (Plutus.alwaysFailingNAryFunction n)))
+alwaysFails ::
+  forall l era.
+  (HasCallStack, PlutusLanguage l, AlonzoEraScript era) =>
+  Natural ->
+  Script era
+alwaysFails n = mkPlutusScript' (alwaysFailsPlutus @l n)
+
+alwaysSucceedsLang :: (HasCallStack, AlonzoEraScript era) => Language -> Natural -> Script era
+alwaysSucceedsLang lang n =
+  withSLanguage lang $ \slang -> mkPlutusScript' $ asSLanguage slang (alwaysSucceedsPlutus n)
+
+alwaysFailsLang :: (HasCallStack, AlonzoEraScript era) => Language -> Natural -> Script era
+alwaysFailsLang lang n =
+  withSLanguage lang $ \slang -> mkPlutusScript' $ asSLanguage slang (alwaysFailsPlutus n)
+
+-- | Partial version of `mkPlutusScript`
+mkPlutusScript' ::
+  forall era l.
+  (HasCallStack, AlonzoEraScript era, PlutusLanguage l) =>
+  Plutus l ->
+  Script era
+mkPlutusScript' plutus =
+  case mkPlutusScript plutus of
+    Nothing ->
+      error $
+        "Plutus version " ++ show (plutusLanguage plutus) ++ " is not supported in " ++ eraName @era
+    Just plutusScript -> fromPlutusScript plutusScript
 
 -- | This Arbitrary instance assumes the flexible deserialization
 -- scheme of 'CostModels' starting at version 9.

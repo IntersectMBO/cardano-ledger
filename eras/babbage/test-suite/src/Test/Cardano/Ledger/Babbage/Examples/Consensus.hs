@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -115,7 +116,7 @@ exampleTxBodyBabbage =
               (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
               (MarySLE.exampleMultiAssetValue 2)
               (Datum $ dataToBinaryData datumExample) -- inline datum
-              (SJust $ alwaysSucceeds PlutusV2 3) -- reference script
+              (SJust $ alwaysSucceeds @'PlutusV2 3) -- reference script
         ]
     )
     (SJust $ mkSized (eraProtVerHigh @Babbage) collateralOutput) -- collateral return
@@ -159,8 +160,8 @@ exampleTx =
         (mkWitnessesVKey (hashAnnotated exampleTxBodyBabbage) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
         ( Map.singleton
-            (hashScript @Babbage $ alwaysSucceeds PlutusV1 3)
-            (alwaysSucceeds PlutusV1 3) -- txscripts
+            (hashScript @Babbage $ alwaysSucceeds @'PlutusV1 3)
+            (alwaysSucceeds @'PlutusV1 3) -- txscripts
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
         ( Redeemers $
@@ -170,13 +171,13 @@ exampleTx =
     ( SJust $
         mkAlonzoTxAuxData
           SLE.exampleAuxDataMap -- metadata
-          [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
+          [alwaysFails @'PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
     )
 
 exampleTransactionInBlock :: AlonzoTx Babbage
 exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
-    (ShelleyTx b w a) = exampleTx
+    ShelleyTx b w a = exampleTx
 
 exampleBabbageNewEpochState :: NewEpochState Babbage
 exampleBabbageNewEpochState =
