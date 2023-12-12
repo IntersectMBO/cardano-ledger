@@ -53,13 +53,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   VState (..),
  )
-import Cardano.Ledger.Shelley.TxBody (
-  ShelleyTxOut (..),
- )
-import Cardano.Ledger.Shelley.TxCert (
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvided)

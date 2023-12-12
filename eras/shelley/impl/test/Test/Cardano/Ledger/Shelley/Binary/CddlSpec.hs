@@ -11,6 +11,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.PoolParams (StakePoolRelay)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (
   Credential,
@@ -18,7 +19,6 @@ import Cardano.Ledger.Shelley.API (
   ProposedPPUpdates,
   Update,
  )
-import Cardano.Ledger.Shelley.TxBody (StakePoolRelay)
 import Cardano.Ledger.TxIn (TxIn)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,

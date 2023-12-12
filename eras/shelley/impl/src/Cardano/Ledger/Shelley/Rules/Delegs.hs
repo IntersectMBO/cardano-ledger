@@ -44,7 +44,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential, Ptr (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS)
@@ -64,7 +64,6 @@ import Cardano.Ledger.Shelley.Rules.Delpl (
   ShelleyDelplPredFailure,
  )
 import Cardano.Ledger.Shelley.TxBody (
-  Ptr (..),
   RewardAcnt (..),
   ShelleyEraTxBody (..),
   Withdrawals (..),

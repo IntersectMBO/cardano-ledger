@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
+import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
@@ -19,14 +20,10 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV1))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking))
 import Cardano.Ledger.Shelley.Rewards (aggregateRewards)
-import Cardano.Ledger.Shelley.TxBody (
-  PoolParams (..),
-  RewardAcnt (..),
-  Withdrawals (..),
- )
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))

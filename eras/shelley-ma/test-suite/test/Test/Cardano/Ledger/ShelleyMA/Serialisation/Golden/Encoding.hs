@@ -10,7 +10,7 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Allegra.Scripts (
   Timelock (..),
@@ -20,11 +20,11 @@ import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Shelley.PParams (
@@ -33,14 +33,7 @@ import Cardano.Ledger.Shelley.PParams (
   pattern Update,
  )
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
-import Cardano.Ledger.Shelley.TxBody (
-  RewardAcnt (..),
-  ShelleyTxOut (..),
-  Withdrawals (..),
- )
-import Cardano.Ledger.Shelley.TxCert (
-  pattern RegTxCert,
- )
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val

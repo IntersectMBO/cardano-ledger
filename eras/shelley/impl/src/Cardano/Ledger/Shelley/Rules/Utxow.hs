@@ -61,9 +61,12 @@ import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
   VKey,
+  WitVKey (..),
   asWitness,
+  bwKey,
+  verifyBootstrapWit,
  )
-import Cardano.Ledger.Keys.Bootstrap (bwKey, verifyBootstrapWit)
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (
   Inject (..),
   Test,
@@ -88,9 +91,7 @@ import Cardano.Ledger.Shelley.Tx (
   witsFromTxWitnesses,
  )
 import Cardano.Ledger.Shelley.TxBody (
-  PoolParams (..),
   ShelleyEraTxBody (..),
-  WitVKey (..),
   getRwdCred,
   unWithdrawals,
  )

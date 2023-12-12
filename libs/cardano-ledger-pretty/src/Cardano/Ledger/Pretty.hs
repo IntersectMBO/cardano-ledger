@@ -26,13 +26,7 @@ import Cardano.Chain.Common (
   UnparsedFields (..),
  )
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (
-  Addr (..),
-  BootstrapAddress (..),
-  CompactAddr,
-  RewardAcnt (..),
-  decompactAddr,
- )
+import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), CompactAddr, RewardAcnt (..), Withdrawals (..), decompactAddr)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
@@ -87,12 +81,18 @@ import Cardano.Ledger.Keys (
   KeyRole (Staking),
   VKey (..),
   VerKeyKES,
+  WitVKey (..),
   hashKey,
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.PoolParams (
+  PoolMetadata (..),
+  PoolParams (..),
+  StakePoolRelay (..),
+ )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
@@ -140,24 +140,16 @@ import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
-import Cardano.Ledger.Shelley.TxBody (
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
+import Cardano.Ledger.Shelley.TxCert (
+  GenesisDelegCert (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
-  PoolMetadata (..),
-  PoolParams (..),
-  ShelleyTxBody (..),
-  ShelleyTxBodyRaw (..),
-  ShelleyTxOut (..),
-  StakePoolRelay (..),
-  WitVKey (..),
-  Withdrawals (..),
- )
-import Cardano.Ledger.Shelley.TxCert (
-  GenesisDelegCert (..),
   ShelleyDelegCert (..),
   ShelleyTxCert (..),
  )
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
   prettyWitnessSetParts,

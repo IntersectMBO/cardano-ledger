@@ -47,6 +47,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
 )
 where
 
+import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Nonce (..),
@@ -70,6 +71,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -93,7 +95,6 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
-import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
   UView (PtrUView, RewDepUView, SPoolUView),

@@ -25,7 +25,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   rewards,
  )
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
-import Cardano.Ledger.Shelley.TxBody
 import qualified Cardano.Ledger.UMap as UM
 import Control.SetAlgebra (eval, rng, (∈))
 import Control.State.Transition.Trace (
@@ -43,9 +42,6 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
-import Test.QuickCheck (Property, conjoin, counterexample)
-
-import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert, pattern UnRegTxCert)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   delegTraceFromBlock,
   forAllChainTrace,
@@ -55,7 +51,10 @@ import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
  )
 import Test.QuickCheck (
+  Property,
   Testable (..),
+  conjoin,
+  counterexample,
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)

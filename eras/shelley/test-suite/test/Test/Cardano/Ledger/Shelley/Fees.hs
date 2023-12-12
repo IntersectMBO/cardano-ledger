@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Shelley.Fees (
 )
 where
 
+import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
@@ -29,6 +30,7 @@ import Cardano.Ledger.Keys (
   asWitness,
   hashKey,
  )
+import Cardano.Ledger.PoolParams (PoolMetadata (..), StakePoolRelay (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (
@@ -47,11 +49,6 @@ import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
 import Cardano.Ledger.Shelley.TxAuxData
-import Cardano.Ledger.Shelley.TxBody (
-  PoolMetadata (..),
-  StakePoolRelay (..),
-  Withdrawals (..),
- )
 import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert, pattern UnRegTxCert)
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,

@@ -44,13 +44,13 @@ import Cardano.Ledger.Coin (
   rationalToCoinViaFloor,
  )
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core (EraCrypto, EraPParams (..), PParams (..), Reward (..), RewardType (..), ppA0L, ppNOptL)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.EpochBoundary (Stake (..), maxPool')
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.UMap (compactCoinOrError)
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)

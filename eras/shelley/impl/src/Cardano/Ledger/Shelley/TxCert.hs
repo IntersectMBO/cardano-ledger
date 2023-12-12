@@ -104,7 +104,12 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashWitness, credScriptHash)
+import Cardano.Ledger.Credential (
+  Credential (..),
+  StakeCredential,
+  credKeyHashWitness,
+  credScriptHash,
+ )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash (..), KeyRole (..), VerKeyVRF, asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (..))

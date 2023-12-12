@@ -12,7 +12,7 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation
-import Cardano.Ledger.Shelley.TxBody
+import Cardano.Ledger.Shelley.Core
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty
@@ -48,9 +48,9 @@ translateTxOutByronToShelley ::
   forall c.
   CryptoClass.Crypto c =>
   Byron.TxOut ->
-  ShelleyTxOut (ShelleyEra c)
+  TxOut (ShelleyEra c)
 translateTxOutByronToShelley (Byron.TxOut addr amount) =
-  ShelleyTxOut (translateAddr addr) (translateAmount amount)
+  mkBasicTxOut (translateAddr addr) (translateAmount amount)
   where
     translateAmount :: Byron.Lovelace -> Coin
     translateAmount = Coin . Byron.lovelaceToInteger

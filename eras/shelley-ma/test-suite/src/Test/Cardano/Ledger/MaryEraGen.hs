@@ -34,9 +34,10 @@ import Cardano.Ledger.Mary.Value (
   policies,
  )
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Tx (ShelleyTxOut (..), TxIn)
 import Cardano.Ledger.Shelley.TxBody (Withdrawals)
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)

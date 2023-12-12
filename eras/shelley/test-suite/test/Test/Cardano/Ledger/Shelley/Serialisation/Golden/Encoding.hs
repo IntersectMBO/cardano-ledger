@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding (tests) where
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   EpochInterval (..),
@@ -60,7 +60,6 @@ import Cardano.Ledger.Binary.Crypto (
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
@@ -70,6 +69,7 @@ import Cardano.Ledger.Keys (
   SignedDSIGN,
   VKey (..),
   VerKeyVRF,
+  WitVKey (..),
   asWitness,
   encodeSignedKES,
   hashKey,
@@ -77,10 +77,16 @@ import Cardano.Ledger.Keys (
   signedDSIGN,
   signedKES,
  )
+import Cardano.Ledger.PoolParams (
+  PoolMetadata (..),
+  PoolParams (..),
+  StakePoolRelay (..),
+ )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
-import Cardano.Ledger.Shelley.API (MIRCert (..), MultiSig)
+import Cardano.Ledger.Shelley.API (MultiSig)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
   pattern ProposedPPUpdates,
@@ -90,36 +96,8 @@ import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
-import Cardano.Ledger.Shelley.TxBody (
-  MIRPot (..),
-  MIRTarget (..),
-  PoolMetadata (..),
-  ShelleyTxBody (..),
-  ShelleyTxOut (..),
-  StakePoolRelay (..),
-  WitVKey (..),
-  Withdrawals (..),
-  pmHash,
-  pmUrl,
-  ppCost,
-  ppId,
-  ppMargin,
-  ppMetadata,
-  ppOwners,
-  ppPledge,
-  ppRelays,
-  ppRewardAcnt,
-  ppVrf,
-  pattern PoolParams,
-  pattern RewardAcnt,
- )
-import Cardano.Ledger.Shelley.TxCert (
-  pattern DelegStakeTxCert,
-  pattern GenesisDelegTxCert,
-  pattern MirTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))

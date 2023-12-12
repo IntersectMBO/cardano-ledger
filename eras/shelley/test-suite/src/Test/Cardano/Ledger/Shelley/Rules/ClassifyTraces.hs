@@ -40,9 +40,6 @@ import Cardano.Ledger.Shelley.TxCert (
   isReservesMIRCert,
   isRetirePool,
   isTreasuryMIRCert,
-  pattern DelegStakeTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Protocol.TPraos.BHeader (

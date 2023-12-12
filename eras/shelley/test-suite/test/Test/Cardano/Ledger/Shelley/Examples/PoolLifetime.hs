@@ -35,7 +35,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import qualified Cardano.Ledger.EpochBoundary as EB
@@ -44,9 +43,10 @@ import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
  )
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraGov)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PulsingRewUpdate (..),
@@ -63,25 +63,13 @@ import Cardano.Ledger.Shelley.PoolRank (
   leaderProbability,
   likelihood,
  )
-import Cardano.Ledger.Shelley.Tx (
-  ShelleyTx (..),
- )
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
-  MIRCert (..),
-  MIRPot (..),
-  MIRTarget (..),
-  PoolParams (..),
   RewardAcnt (..),
   ShelleyTxBody (..),
-  ShelleyTxOut (..),
-  Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.TxCert (
-  ShelleyTxCert (..),
-  pattern DelegStakeTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
  )

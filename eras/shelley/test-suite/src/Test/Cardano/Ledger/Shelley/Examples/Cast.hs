@@ -39,7 +39,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Cast (
 )
 where
 
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
@@ -59,10 +59,9 @@ import Cardano.Ledger.Keys (
   hashKey,
   hashVerKeyVRF,
  )
-import Cardano.Ledger.Shelley.TxBody (
+import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
   PoolParams (..),
-  RewardAcnt (..),
  )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))

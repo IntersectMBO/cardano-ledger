@@ -90,10 +90,6 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
-import Cardano.Ledger.Shelley.Tx (
-  pattern TxIn,
- )
-import qualified Cardano.Ledger.Shelley.Tx as Ledger
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
  )
@@ -104,6 +100,7 @@ import Cardano.Ledger.Slot (
   epochInfoFirst,
   (*-),
  )
+import Cardano.Ledger.TxIn (TxId, TxIn (TxIn))
 import Cardano.Ledger.UTxO (UTxO (UTxO))
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCert)
@@ -521,7 +518,7 @@ genesisAccountState =
 -- | Creates the UTxO for a new ledger with the specified
 -- genesis TxId and transaction outputs.
 genesisCoins ::
-  Ledger.TxId (EraCrypto era) ->
+  TxId (EraCrypto era) ->
   [TxOut era] ->
   UTxO era
 genesisCoins genesisTxId outs =

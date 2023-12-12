@@ -1,16 +1,12 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -34,22 +30,13 @@ module Cardano.Ledger.Shelley.Tx (
   sizeShelleyTxF,
   segwitTx,
   mkBasicShelleyTx,
-  txwitsScript,
-  extractKeyHashWitnessSet,
-  evalNativeMultiSigScript,
-  hashMultiSigScript,
-  nativeMultiSigTag,
-  validateNativeMultiSigScript,
-  minfee,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
   shelleyEqTxRaw,
 
-  -- * Re-exports
-  ShelleyTxBody (..),
-  ShelleyTxOut (..),
-  TxIn (..),
-  TxId (..),
+  -- * Deprecated
+  txwitsScript,
+  hashMultiSigScript,
 )
 where
 
@@ -65,7 +52,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
@@ -80,25 +67,17 @@ import Cardano.Ledger.MemoBytes (
   pattern Memo,
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Scripts (
-  MultiSig (..),
-  evalMultiSig,
-  nativeMultiSigTag,
-  validateMultiSig,
- )
+import Cardano.Ledger.Shelley.Scripts (MultiSig (..), validateMultiSig)
 import Cardano.Ledger.Shelley.TxAuxData ()
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..))
+import Cardano.Ledger.Shelley.TxBody ()
 import Cardano.Ledger.Shelley.TxWits ()
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import Data.Functor.Classes (Eq1 (liftEq))
 import Data.Map.Strict (Map)
-import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (
   StrictMaybe (..),
   maybeToStrictMaybe,
@@ -162,27 +141,26 @@ instance Memoized ShelleyTx where
 -- memoized binary representation.
 bodyShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (TxBody era)
 bodyShelleyTxL =
-  lens
-    (\(TxConstr (Memo tx _)) -> strBody tx)
-    (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeShelleyTxRaw $ tx {strBody = txBody})
+  lens (\(TxConstr (Memo tx _)) -> strBody tx) $
+    \(TxConstr (Memo tx _)) txBody ->
+      TxConstr $ memoBytes $ encodeShelleyTxRaw $ tx {strBody = txBody}
 {-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `TxWits` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
 witsShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (TxWits era)
 witsShelleyTxL =
-  lens
-    (\(TxConstr (Memo tx _)) -> strWits tx)
-    (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeShelleyTxRaw $ tx {strWits = txWits})
+  lens (\(TxConstr (Memo tx _)) -> strWits tx) $
+    \(TxConstr (Memo tx _)) txWits ->
+      TxConstr $ memoBytes $ encodeShelleyTxRaw $ tx {strWits = txWits}
 {-# INLINEABLE witsShelleyTxL #-}
 
 -- | `TxAuxData` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
 auxDataShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
 auxDataShelleyTxL =
-  lens
-    (\(TxConstr (Memo tx _)) -> strAuxiliaryData tx)
-    (\(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {strAuxiliaryData = auxData})
+  lens (\(TxConstr (Memo tx _)) -> strAuxiliaryData tx) $
+    \(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {strAuxiliaryData = auxData}
 {-# INLINEABLE auxDataShelleyTxL #-}
 
 -- | Size getter for `ShelleyTx`.
@@ -395,31 +373,9 @@ hashMultiSigScript ::
   MultiSig (EraCrypto era) ->
   ScriptHash (EraCrypto era)
 hashMultiSigScript = hashScript @era
+{-# DEPRECATED hashMultiSigScript "In favor of `hashScript`" #-}
 
 -- ========================================
-
-evalNativeMultiSigScript ::
-  Era era =>
-  MultiSig era ->
-  Set (KeyHash 'Witness (EraCrypto era)) ->
-  Bool
-evalNativeMultiSigScript = flip evalMultiSig
-{-# DEPRECATED
-  evalNativeMultiSigScript
-  "In favor of `evalMultiSig` that has the arguments flipped"
-  #-}
-
--- | Script validator for native multi-signature scheme.
-validateNativeMultiSigScript ::
-  EraTx era =>
-  MultiSig era ->
-  Tx era ->
-  Bool
-validateNativeMultiSigScript = flip validateMultiSig
-{-# DEPRECATED
-  validateNativeMultiSigScript
-  "In favor of `validateMultiSig` that has the arguments flipped"
-  #-}
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
@@ -427,22 +383,12 @@ txwitsScript ::
   Tx era ->
   Map (ScriptHash (EraCrypto era)) (Script era)
 txwitsScript tx = tx ^. witsTxL . scriptTxWitsL
-
-extractKeyHashWitnessSet ::
-  forall (r :: KeyRole) c.
-  [Credential r c] ->
-  Set (KeyHash 'Witness c)
-extractKeyHashWitnessSet = Set.fromList . mapMaybe credKeyHashWitness
-{-# DEPRECATED extractKeyHashWitnessSet "In favor of `credKeyHashWitness`" #-}
+{-# DEPRECATED txwitsScript "In favor of `scriptTxWitsL`" #-}
 
 -- | Minimum fee calculation
 shelleyMinFeeTx :: EraTx era => PParams era -> Tx era -> Coin
 shelleyMinFeeTx pp tx =
   (tx ^. sizeTxF <×> pp ^. ppMinFeeAL) <+> pp ^. ppMinFeeBL
-
-minfee :: EraTx era => PParams era -> Tx era -> Coin
-minfee = shelleyMinFeeTx
-{-# DEPRECATED minfee "In favor of `getMinFeeTx`" #-}
 
 -- | Extract the witness hashes from the Transaction.
 witsFromTxWitnesses ::

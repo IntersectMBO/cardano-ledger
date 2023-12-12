@@ -13,22 +13,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxBody (
-  ShelleyDelegCert,
-  Delegation (..),
-  GenesisDelegCert (..),
-  MIRCert (..),
-  MIRPot (..),
-  MIRTarget (..),
-  PoolCert (..),
-  PoolMetadata (..),
-  PoolParams (..),
-  Ptr (..),
-  RewardAcnt (..),
-  StakePoolRelay (..),
   ShelleyTxBody (
     ShelleyTxBody,
     TxBodyConstr,
@@ -44,29 +33,13 @@ module Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   ShelleyTxBodyRaw (..),
   EraIndependentTxBody,
-  TxOut,
-  ShelleyTxOut (ShelleyTxOut, TxOutCompact),
-  Url,
+  RewardAcnt (..),
   Withdrawals (..),
-  Wdrl,
-  pattern Wdrl,
-  --
-  module Cardano.Ledger.Keys.WitVKey,
-  witKeyHash,
-  wvkBytes,
-  --
-  SizeOfPoolOwners (..),
-  SizeOfPoolRelays (..),
-
-  -- * Helpers
-  addrEitherShelleyTxOutL,
-  valueEitherShelleyTxOutL,
-  totalTxDepositsShelley,
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
@@ -88,10 +61,8 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential (Ptr (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -103,28 +74,14 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
-import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits (totalTxDepositsShelley)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.TxCert (
-  GenesisDelegCert (..),
-  MIRCert (..),
-  MIRPot (..),
-  MIRTarget (..),
-  ShelleyDelegCert,
- )
-import Cardano.Ledger.Shelley.TxOut (
-  ShelleyTxOut (..),
-  addrEitherShelleyTxOutL,
-  valueEitherShelleyTxOutL,
- )
+import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..))
+import Cardano.Ledger.Shelley.TxOut ()
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -132,7 +89,13 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+
+class (ShelleyEraTxCert era, EraTxBody era) => ShelleyEraTxBody era where
+  ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo
+
+  updateTxBodyL :: ProtVerAtMost era 8 => Lens' (TxBody era) (StrictMaybe (Update era))
 
 -- ==============================
 -- The underlying type for TxBody
@@ -413,11 +376,3 @@ instance
   hashAnnotated = getMemoSafeHash
 
 -- ===============================================================
-
-witKeyHash :: WitVKey kr c -> KeyHash 'Witness c
-witKeyHash = witVKeyHash
-{-# DEPRECATED witKeyHash "In favor of `witVKeyHash`" #-}
-
-wvkBytes :: WitVKey kr c -> BSL.ByteString
-wvkBytes = witVKeyBytes
-{-# DEPRECATED wvkBytes "In favor of `witVKeyBytes`" #-}

@@ -48,8 +48,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   rewards,
  )
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
-import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (
   UTxO (..),

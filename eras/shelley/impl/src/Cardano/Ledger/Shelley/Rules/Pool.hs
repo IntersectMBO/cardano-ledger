@@ -25,6 +25,7 @@ module Cardano.Ledger.Shelley.Rules.Pool (
 where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
+import Cardano.Ledger.Address (getRwdNetwork)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Network,
@@ -43,16 +44,12 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Shelley.TxBody (
-  PoolMetadata (..),
-  PoolParams (..),
-  getRwdNetwork,
- )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq
 import Control.Monad (forM_, when)

@@ -9,7 +9,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
-import Cardano.Ledger.Shelley.TxBody (
+import Cardano.Ledger.Shelley.TxOut (
   ShelleyTxOut (..),
   addrEitherShelleyTxOutL,
   valueEitherShelleyTxOutL,

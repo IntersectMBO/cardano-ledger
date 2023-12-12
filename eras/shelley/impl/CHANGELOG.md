@@ -2,6 +2,27 @@
 
 ## 1.9.0.0
 
+* Deprecated unused `hashMultiSigScript`, `txwitsScript`
+* Delete deprecated modules:
+  * `Cardano.Ledger.Shelley.Orphans`
+  * `Cardano.Ledger.Shelley.Delegation.PoolParams`
+  * `Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits`
+* Remove deprecated functions: `updateTxBodyG`, `totalCertsDeposits`,
+  `totalCertsDepositsCertState`, `totalTxRefundsShelley`, `keyCertsRefunds`,
+  `keyCertsRefundsCertState`, `totalTxDeposits`, `totalTxDepositsShelley` `minfee`,
+  `extractKeyHashWitnessSet`, `witKeyHash`, `wvkBytes`, `validateNativeMultiSigScript`,
+  `evalNativeMultiSigScript`, `diffWitHashes`, `nullWitHashes`, `unWitHashes` and
+  `emptyDState`
+* Remove deprecated type: `WitHashes`
+* Stop exporting `ShelleyTxBody`, `ShelleyTxOut`, `TxIn`, `TxId` from
+  `Cardano.Ledger.Shelley.Tx`
+* Stop exporting `GenesisDelegCert`, `MIRCert`, `MIRPot`, `MIRTarget`, `ShelleyDelegCert`,
+  `PoolCert`, `PoolMetadata`, `PoolParams`, `Ptr`, `StakePoolRelay`, `TxOut`,
+  `ShelleyTxOut`, `Url`, `SizeOfPoolRelays`, `SizeOfPoolOwners`, `Delegation`,
+  `addrEitherShelleyTxOutL`, `valueEitherShelleyTxOutL`, `nativeMultiSigTag` and
+  `Cardano.Ledger.Keys.WitVKey` module from `Cardano.Ledger.Shelley.TxBody`
+* Export `RegTxCert`, `UnRegTxCert`, `DelegStakeTxCert` and `GenesisDelegTxCert` from
+  `Cardano.Ledger.Shelley.Core`.
 * Change the type of `ppEMaxL`
 * Change the type of `pvCanFollow` to make sure new protocol version is not optional
 * Add `hasLegalProtVerUpdate`

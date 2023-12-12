@@ -3,10 +3,7 @@ module Cardano.Ledger.Shelley.API.Types (
 )
 where
 
-import Cardano.Ledger.Address as X (
-  Addr (..),
-  RewardAcnt (..),
- )
+import Cardano.Ledger.Address as X (Addr (..), RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.BHeaderView as X (isOverlaySlot)
 import Cardano.Ledger.BaseTypes as X (
   CertIx,
@@ -23,9 +20,6 @@ import Cardano.Ledger.BaseTypes as X (
   txIxFromIntegral,
   txIxToInt,
  )
-
--- TODO deprecate these?
-
 import Cardano.Ledger.Block as X (
   Block (..),
   bbody,
@@ -37,6 +31,7 @@ import Cardano.Ledger.Coin as X (
  )
 import Cardano.Ledger.Credential as X (
   Credential (..),
+  Ptr (..),
   StakeReference (..),
  )
 import Cardano.Ledger.EpochBoundary as X (
@@ -51,7 +46,7 @@ import Cardano.Ledger.Keys as X (
   Hash,
   KESignable,
   KeyHash (..),
-  KeyPair (..), -- deprecated
+  KeyPair (..),
   KeyRole (..),
   SignKeyDSIGN,
   SignKeyKES,
@@ -61,6 +56,7 @@ import Cardano.Ledger.Keys as X (
   VKey (..),
   VerKeyKES,
   VerKeyVRF,
+  WitVKey (..),
   coerceKeyRole,
   hashKey,
   hashVerKeyVRF,
@@ -72,6 +68,11 @@ import Cardano.Ledger.PoolDistr as X (
   PoolDistr (..),
   individualPoolStake,
  )
+import Cardano.Ledger.PoolParams as X (
+  PoolMetadata (..),
+  PoolParams (..),
+  StakePoolRelay (..),
+ )
 import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (
@@ -81,7 +82,7 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   EpochState (..),
   IncrementalStake (..),
   InstantaneousRewards (..),
-  KeyPairs, -- deprecated
+  KeyPairs,
   LedgerState (..),
   NewEpochState (..),
   PState (..),
@@ -125,33 +126,23 @@ import Cardano.Ledger.Shelley.StabilityWindow as X (
   computeRandomnessStabilisationWindow,
   computeStabilityWindow,
  )
-import Cardano.Ledger.Shelley.Tx as X (
-  ShelleyTx (..),
-  ShelleyTxBody (..),
-  ShelleyTxOut (..),
- )
+import Cardano.Ledger.Shelley.Tx as X (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData as X (
   Metadata,
   Metadatum (..),
   ShelleyTxAuxData (..),
  )
-import Cardano.Ledger.Shelley.TxBody as X (
+import Cardano.Ledger.Shelley.TxBody as X (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxCert as X (
   Delegation (..),
   GenesisDelegCert (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
-  PoolMetadata (..),
-  PoolParams (..),
-  Ptr (..),
-  StakePoolRelay (..),
-  WitVKey (..),
-  Withdrawals (..),
- )
-import Cardano.Ledger.Shelley.TxCert as X (
   PoolCert (..),
   ShelleyDelegCert (..),
  )
+import Cardano.Ledger.Shelley.TxOut as X (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits as X (
   ShelleyTxWits,
  )

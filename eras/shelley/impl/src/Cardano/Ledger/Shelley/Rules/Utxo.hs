@@ -81,7 +81,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
   ShelleyPpupPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxIn)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
   RewardAcnt,
   ShelleyEraTxBody (..),
@@ -89,6 +89,7 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.UTxO (consumed, produced, txup)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (
   EraUTxO,
   UTxO (..),

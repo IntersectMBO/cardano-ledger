@@ -87,7 +87,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
-import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..), WitVKey (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
@@ -112,8 +112,7 @@ import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMetadataHash)
-import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
-import Cardano.Ledger.Shelley.TxCert (MIRPot (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM

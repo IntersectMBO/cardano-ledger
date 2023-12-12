@@ -87,6 +87,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.Shelley.Core
@@ -101,7 +102,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
  )
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))

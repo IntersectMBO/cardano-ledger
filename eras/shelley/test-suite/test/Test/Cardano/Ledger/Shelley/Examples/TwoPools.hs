@@ -50,6 +50,7 @@ import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
  )
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.Core
@@ -76,13 +77,8 @@ import Cardano.Ledger.Shelley.Rewards (
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
-import Cardano.Ledger.Shelley.TxBody (
-  PoolParams (..),
-  RewardAcnt (..),
-  ShelleyTxBody (..),
-  ShelleyTxOut (..),
- )
-import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert)
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
  )

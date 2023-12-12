@@ -105,6 +105,7 @@ import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
   VKey (..),
+  WitVKey (..),
   hashKey,
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
@@ -122,6 +123,7 @@ import Cardano.Ledger.Plutus.Data (
   hashData,
  )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
 import qualified Cardano.Ledger.Pretty.Babbage as Babbage
@@ -170,12 +172,9 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyUtxowPredFailure (..),
  )
 import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
-import Cardano.Ledger.Shelley.TxBody (
-  PoolParams (..),
-  ShelleyTxOut (..),
-  WitVKey (..),
- )
-import Cardano.Ledger.Shelley.TxCert (MIRCert (..), MIRTarget (..), ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+
+import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (

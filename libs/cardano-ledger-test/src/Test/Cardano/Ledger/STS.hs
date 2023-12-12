@@ -34,7 +34,7 @@ import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
-import Cardano.Ledger.Shelley.Tx (TxId (..))
+import Cardano.Ledger.TxIn (TxId (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.Monad.Reader
 import Control.State.Transition.Extended

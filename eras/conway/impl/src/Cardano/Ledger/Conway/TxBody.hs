@@ -432,8 +432,6 @@ instance
   updateTxBodyL = notSupportedInThisEraL
   {-# INLINE updateTxBodyL #-}
 
-  updateTxBodyG = to (const SNothing)
-
 -- ==========================================
 -- Deposits and Refunds for Conway TxBody
 

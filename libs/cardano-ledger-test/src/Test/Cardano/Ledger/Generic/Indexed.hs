@@ -24,13 +24,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (Witness),
-  SignKeyDSIGN,
-  VKey,
-  hashKey,
- )
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness), SignKeyDSIGN, VKey, WitVKey (..), hashKey)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (MultiAsset (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
@@ -47,7 +41,6 @@ import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
-import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString, pack, unpack)
 import qualified Data.Map.Strict as Map

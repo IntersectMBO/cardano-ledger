@@ -50,9 +50,9 @@ import Cardano.Ledger.Shelley.Tx (
  )
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (..),
-  ShelleyTxOut (..),
   Withdrawals (..),
  )
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (
   bootWits,
  )

@@ -18,6 +18,7 @@ import Cardano.Ledger.Credential (
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -25,11 +26,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   PState (..),
  )
-import Cardano.Ledger.Shelley.Scripts ()
-import Cardano.Ledger.Shelley.TxBody (
-  PoolParams (..),
-  ShelleyTxOut (..),
- )
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (

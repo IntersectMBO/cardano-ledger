@@ -94,7 +94,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (Constitution (..), EraGov (..), ShelleyEraTxBody (..))
+import Cardano.Ledger.Shelley.Core (Constitution (..), EraGov (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -119,6 +119,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap

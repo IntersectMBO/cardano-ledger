@@ -38,14 +38,12 @@ library
         Cardano.Ledger.Shelley.BlockChain
         Cardano.Ledger.Shelley.Core
         Cardano.Ledger.Shelley.Delegation.Certificates
-        Cardano.Ledger.Shelley.Delegation.PoolParams
         Cardano.Ledger.Shelley.EpochBoundary
         Cardano.Ledger.Shelley.Genesis
         Cardano.Ledger.Shelley.Governance
         Cardano.Ledger.Shelley.HardForks
         Cardano.Ledger.Shelley.LedgerState
         Cardano.Ledger.Shelley.Metadata
-        Cardano.Ledger.Shelley.Orphans
         Cardano.Ledger.Shelley.PoolRank
         Cardano.Ledger.Shelley.PoolParams
         Cardano.Ledger.Shelley.PParams
@@ -75,7 +73,6 @@ library
         Cardano.Ledger.Shelley.LedgerState.IncrementalStake
         Cardano.Ledger.Shelley.LedgerState.NewEpochState
         Cardano.Ledger.Shelley.LedgerState.PulsingReward
-        Cardano.Ledger.Shelley.LedgerState.RefundsAndDeposits
         Cardano.Ledger.Shelley.Rules.Bbody
         Cardano.Ledger.Shelley.Rules.Deleg
         Cardano.Ledger.Shelley.Rules.Delegs

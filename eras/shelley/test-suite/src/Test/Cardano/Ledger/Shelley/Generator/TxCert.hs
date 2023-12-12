@@ -35,9 +35,6 @@ import Cardano.Ledger.Shelley.API (
   GenDelegs (..),
   KeyHash,
   KeyRole (..),
-  MIRCert (..),
-  MIRPot (..),
-  MIRTarget (..),
   Network (..),
   PState (..),
   PoolParams (..),
@@ -47,12 +44,6 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
-import Cardano.Ledger.Shelley.TxCert (
-  pattern DelegStakeTxCert,
-  pattern GenesisDelegTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import qualified Cardano.Ledger.UMap as UM
 import Control.Monad (replicateM)
