@@ -45,7 +45,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   incrementalStakeDistr,
   ptrsMap,
  )
-import Cardano.Ledger.Shelley.TxBody
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Control.SetAlgebra (dom, eval, (▷), (◁))

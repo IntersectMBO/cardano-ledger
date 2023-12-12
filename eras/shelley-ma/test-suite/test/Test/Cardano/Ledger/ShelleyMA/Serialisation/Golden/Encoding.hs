@@ -12,10 +12,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodi
 
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Allegra.Scripts (
-  Timelock (..),
-  ValidityInterval (..),
- )
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))

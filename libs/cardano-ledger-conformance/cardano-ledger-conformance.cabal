@@ -37,7 +37,6 @@ library
         data-default-class,
         cardano-ledger-binary,
         cardano-ledger-core,
-        cardano-ledger-allegra,
         cardano-ledger-mary,
         cardano-ledger-shelley,
         cardano-ledger-alonzo,

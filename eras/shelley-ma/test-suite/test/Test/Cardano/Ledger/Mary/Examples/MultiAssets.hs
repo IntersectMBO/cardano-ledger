@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Mary.Examples.MultiAssets (
 where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure (..))
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))

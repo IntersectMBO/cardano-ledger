@@ -23,7 +23,6 @@ module Test.Cardano.Ledger.Conformance (
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Hash (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), serialiseAddr)
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (

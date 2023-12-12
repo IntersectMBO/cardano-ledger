@@ -2,6 +2,7 @@
 
 ## 1.3.0.0
 
+* Export `ValidityInterval` from `Cardano.Ledger.Allegra.Core`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 
 ## 1.2.5.1

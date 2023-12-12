@@ -48,7 +48,6 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Crypto.Signing (SigningKey (..), shortVerificationKeyHexF, toVerification)
 import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..))

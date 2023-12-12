@@ -7,7 +7,6 @@ module Test.Cardano.Ledger.Alonzo.TxInfo (
 ) where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, toPlutusTxInfo)

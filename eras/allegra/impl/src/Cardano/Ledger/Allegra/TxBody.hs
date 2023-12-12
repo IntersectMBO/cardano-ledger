@@ -15,9 +15,11 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.TxBody (
+  AllegraEraTxBody (..),
   AllegraTxBody (
     AllegraTxBody,
     atbAuxDataHash,
@@ -29,7 +31,6 @@ module Cardano.Ledger.Allegra.TxBody (
     atbValidityInterval,
     atbWithdrawals
   ),
-  AllegraEraTxBody (..),
   emptyAllegraTxBodyRaw,
   AllegraTxBodyRaw (..),
   StrictMaybe (..),
@@ -37,7 +38,6 @@ module Cardano.Ledger.Allegra.TxBody (
 )
 where
 
-import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxCert ()
@@ -73,19 +73,19 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (Update (..), upgradeUpdate)
-import Cardano.Ledger.Shelley.TxBody (
-  ShelleyEraTxBody (..),
-  ShelleyTxBody (..),
-  Withdrawals (..),
- )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+
+class ShelleyEraTxBody era => AllegraEraTxBody era where
+  vldtTxBodyL :: Lens' (TxBody era) ValidityInterval
 
 -- =======================================================
 
@@ -340,18 +340,18 @@ instance Crypto c => EraTxBody (AllegraEra c) where
     lensMemoRawType atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
-  upgradeTxBody stb = do
-    certs <- traverse upgradeTxCert (stbCerts stb)
+  upgradeTxBody txBody = do
+    certs <- traverse upgradeTxCert (txBody ^. certsTxBodyL)
     pure $
       AllegraTxBody
-        { atbInputs = stbInputs stb
-        , atbOutputs = upgradeTxOut <$> stbOutputs stb
+        { atbInputs = txBody ^. inputsTxBodyL
+        , atbOutputs = upgradeTxOut <$> (txBody ^. outputsTxBodyL)
         , atbCerts = certs
-        , atbWithdrawals = stbWithdrawals stb
-        , atbTxFee = stbTxFee stb
-        , atbValidityInterval = ttlToValidityInterval (stbTTL stb)
-        , atbUpdate = upgradeUpdate () <$> stbUpdate stb
-        , atbAuxDataHash = stbMDHash stb
+        , atbWithdrawals = txBody ^. withdrawalsTxBodyL
+        , atbTxFee = txBody ^. feeTxBodyL
+        , atbValidityInterval = ttlToValidityInterval (txBody ^. ttlTxBodyL)
+        , atbUpdate = upgradeUpdate () <$> (txBody ^. updateTxBodyL)
+        , atbAuxDataHash = txBody ^. auxDataHashTxBodyL
         }
     where
       ttlToValidityInterval :: SlotNo -> ValidityInterval

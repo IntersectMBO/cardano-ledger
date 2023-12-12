@@ -109,7 +109,6 @@ module Cardano.Ledger.Babbage.TxBody (
   txOutScript,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))

@@ -41,7 +41,6 @@ module Test.Cardano.Ledger.Generic.Fields (
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..), unOrdExUnits)
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)

@@ -22,10 +22,7 @@ where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Allegra.TxBody (
-  AllegraTxBody (..),
-  ValidityInterval (ValidityInterval),
- )
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (encCBOR, serialize')

@@ -74,7 +74,6 @@ module Cardano.Ledger.Alonzo.TxBody (
 )
 where
 
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()

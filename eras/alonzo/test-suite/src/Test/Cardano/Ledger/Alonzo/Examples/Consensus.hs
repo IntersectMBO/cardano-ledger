@@ -5,7 +5,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
