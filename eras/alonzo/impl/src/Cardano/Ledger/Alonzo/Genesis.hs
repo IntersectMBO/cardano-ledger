@@ -40,9 +40,8 @@ module Cardano.Ledger.Alonzo.Genesis (
 )
 where
 
-import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (UpgradeAlonzoPParams (..))
+import Cardano.Ledger.Alonzo.PParams (CoinPerWord, UpgradeAlonzoPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices (..))
 import Cardano.Ledger.Binary (
   DecCBOR,
@@ -58,6 +57,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
 import qualified Data.Aeson as Aeson

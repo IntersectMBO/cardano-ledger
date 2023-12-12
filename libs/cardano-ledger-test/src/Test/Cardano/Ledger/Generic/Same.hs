@@ -17,8 +17,7 @@
 module Test.Cardano.Ledger.Generic.Same where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))

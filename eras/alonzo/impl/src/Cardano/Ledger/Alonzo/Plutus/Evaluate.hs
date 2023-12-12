@@ -21,11 +21,10 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
 )
 where
 
-import Cardano.Ledger.Alonzo.Core hiding (TranslationError)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), plutusScriptLanguage)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -54,10 +53,8 @@ import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 -- ===============================================================
--- From the specification, Figure 8 "Scripts and their Arguments"
+-- From the specification, Figure 7 "Scripts and their Arguments"
 -- ===============================================================
-
--- ========================================================================
 
 -- | When collecting inputs for two phase scripts, 3 things can go wrong.
 data CollectError era

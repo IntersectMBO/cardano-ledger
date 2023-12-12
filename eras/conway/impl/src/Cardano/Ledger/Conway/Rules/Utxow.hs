@@ -27,7 +27,6 @@ import Cardano.Ledger.Alonzo.Rules (
   missingRequiredDatums,
   ppViewHashesMatch,
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,

@@ -38,7 +38,6 @@ import Cardano.Ledger.Alonzo.Rules (
   TagMismatchDescription (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript (..),
   AlonzoScript (..),
   CostModel,
   CostModels (..),

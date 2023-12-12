@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -16,12 +17,13 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains just the type of protocol parameters.
 module Cardano.Ledger.Alonzo.PParams (
   -- * Era Agnostic
-  AlonzoEraPParams,
+  AlonzoEraPParams (..),
   ppCoinsPerUTxOWordL,
   ppCostModelsL,
   ppPricesL,
@@ -51,13 +53,13 @@ module Cardano.Ledger.Alonzo.PParams (
   LangDepView (..),
   encodeLangViews,
   OrdExUnits (..),
+  CoinPerWord (..),
 
   -- * JSON helpers
   alonzoCommonPParamsHKDPairs,
 )
 where
 
-import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   CostModel,
@@ -110,6 +112,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
+import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.PParams (
@@ -147,6 +150,100 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+
+class EraPParams era => AlonzoEraPParams era where
+  hkdCoinsPerUTxOWordL ::
+    (HKDFunctor f, ExactEra AlonzoEra era) =>
+    Lens' (PParamsHKD f era) (HKD f CoinPerWord)
+
+  hkdCostModelsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CostModels)
+
+  hkdPricesL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Prices)
+
+  hkdMaxTxExUnitsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f ExUnits)
+
+  hkdMaxBlockExUnitsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f ExUnits)
+
+  hkdMaxValSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+
+  hkdCollateralPercentageL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+
+  hkdMaxCollateralInputsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+
+ppCoinsPerUTxOWordL ::
+  forall era.
+  (AlonzoEraPParams era, ExactEra AlonzoEra era) =>
+  Lens' (PParams era) CoinPerWord
+ppCoinsPerUTxOWordL = ppLens . hkdCoinsPerUTxOWordL @era @Identity
+
+ppCostModelsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) CostModels
+ppCostModelsL = ppLens . hkdCostModelsL @era @Identity
+
+ppPricesL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Prices
+ppPricesL = ppLens . hkdPricesL @era @Identity
+
+ppMaxTxExUnitsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) ExUnits
+ppMaxTxExUnitsL = ppLens . hkdMaxTxExUnitsL @era @Identity
+
+ppMaxBlockExUnitsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) ExUnits
+ppMaxBlockExUnitsL = ppLens . hkdMaxBlockExUnitsL @era @Identity
+
+ppMaxValSizeL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
+ppMaxValSizeL = ppLens . hkdMaxValSizeL @era @Identity
+
+ppCollateralPercentageL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
+ppCollateralPercentageL = ppLens . hkdCollateralPercentageL @era @Identity
+
+ppMaxCollateralInputsL :: forall era. AlonzoEraPParams era => Lens' (PParams era) Natural
+ppMaxCollateralInputsL = ppLens . hkdMaxCollateralInputsL @era @Identity
+
+ppuCoinsPerUTxOWordL ::
+  forall era.
+  (AlonzoEraPParams era, ExactEra AlonzoEra era) =>
+  Lens' (PParamsUpdate era) (StrictMaybe CoinPerWord)
+ppuCoinsPerUTxOWordL = ppuLens . hkdCoinsPerUTxOWordL @era @StrictMaybe
+
+ppuCostModelsL ::
+  forall era.
+  AlonzoEraPParams era =>
+  Lens' (PParamsUpdate era) (StrictMaybe CostModels)
+ppuCostModelsL = ppuLens . hkdCostModelsL @era @StrictMaybe
+
+ppuPricesL ::
+  forall era.
+  AlonzoEraPParams era =>
+  Lens' (PParamsUpdate era) (StrictMaybe Prices)
+ppuPricesL = ppuLens . hkdPricesL @era @StrictMaybe
+
+ppuMaxTxExUnitsL ::
+  forall era.
+  AlonzoEraPParams era =>
+  Lens' (PParamsUpdate era) (StrictMaybe ExUnits)
+ppuMaxTxExUnitsL = ppuLens . hkdMaxTxExUnitsL @era @StrictMaybe
+
+ppuMaxBlockExUnitsL ::
+  forall era.
+  AlonzoEraPParams era =>
+  Lens' (PParamsUpdate era) (StrictMaybe ExUnits)
+ppuMaxBlockExUnitsL = ppuLens . hkdMaxBlockExUnitsL @era @StrictMaybe
+
+ppuMaxValSizeL ::
+  forall era.
+  AlonzoEraPParams era =>
+  Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuMaxValSizeL = ppuLens . hkdMaxValSizeL @era @StrictMaybe
+
+ppuCollateralPercentageL ::
+  forall era.
+  AlonzoEraPParams era =>
+  Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuCollateralPercentageL = ppuLens . hkdCollateralPercentageL @era @StrictMaybe
+
+ppuMaxCollateralInputsL ::
+  forall era.
+  AlonzoEraPParams era =>
+  Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuMaxCollateralInputsL = ppuLens . hkdMaxCollateralInputsL @era @StrictMaybe
 
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
@@ -399,6 +496,10 @@ instance FromJSON (AlonzoPParams Identity era) where
         <*> obj .: "maxValSize"
         <*> obj .: "collateralPercentage"
         <*> obj .: "maxCollateralInputs"
+
+newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
+  deriving stock (Eq, Ord)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
 
 -- | This is a helper type that allows us to define an `Ord` instance for executions units
 -- without affecting the `ExUnits` type. This is needed in order to derive an `Ord` instance`

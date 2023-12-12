@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Babbage.Translation.TranslatableGen (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AlonzoScript (..), ExUnits (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Babbage (Babbage, BabbageEra)

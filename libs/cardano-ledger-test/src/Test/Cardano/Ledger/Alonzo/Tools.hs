@@ -13,7 +13,6 @@ import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Api.Tx (TransactionScriptFailure (..), evalTxExUnits)

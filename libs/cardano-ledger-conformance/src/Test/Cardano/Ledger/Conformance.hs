@@ -26,14 +26,13 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), serialiseAddr)
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript,
   AlonzoScript (..),
   CostModels,
   ExUnits (..),
   Prices,
   Tag (..),
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
   RdmrPtr (..),

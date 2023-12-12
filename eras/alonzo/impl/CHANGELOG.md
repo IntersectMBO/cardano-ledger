@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Export `AlonzoEraTx` from `Cardano.Ledger.Alonzo.Core`
 * Add `transTxBodyId`, `transTxBodyCerts`, `transTxBodyWithdrawals`, `transTxBodyReqSignerHashes`,
   `transTxWitsDatums`
 * Remove deprecated `VersionedTxInfo`,  `getDatum`, `getAllowedSupplimentalDataHashes`, `txscripts`
