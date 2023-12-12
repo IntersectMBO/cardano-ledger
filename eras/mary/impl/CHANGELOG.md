@@ -2,6 +2,7 @@
 
 ## 1.5.0.0
 
+* Stop exporting `ValidityInterval` and `StrictMaybe` from `Cardano.Ledger.Mary.TxBody`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Remove deprecated `translateValue` and `translateCompactValue`
 
