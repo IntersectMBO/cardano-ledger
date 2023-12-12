@@ -87,10 +87,12 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
+import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
+import Data.Default.Class (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
@@ -260,6 +262,9 @@ deriving newtype instance
 deriving newtype instance
   Crypto c =>
   FromJSON (KeyHash disc c)
+
+instance Crypto b => Default (KeyHash a b) where
+  def = KeyHash def
 
 instance HasKeyRole KeyHash
 

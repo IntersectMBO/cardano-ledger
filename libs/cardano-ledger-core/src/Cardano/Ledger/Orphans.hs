@@ -12,8 +12,6 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (KeyHash (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as Long (ByteString, empty)
@@ -67,9 +65,6 @@ deriving newtype instance NoThunks (Fixed p)
 
 -- ===============================================
 -- Blank instance needed to compute Provenance
-
-instance Crypto b => Default (KeyHash a b) where
-  def = KeyHash def
 
 instance Default (SS.StrictSeq t) where
   def = SS.Empty

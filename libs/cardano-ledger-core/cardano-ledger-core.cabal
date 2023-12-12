@@ -70,9 +70,10 @@ library
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Core.Era
-        Cardano.Ledger.Core.TxCert
+        Cardano.Ledger.Keys.Internal
         Cardano.Ledger.Core.PParams
         Cardano.Ledger.Core.Translation
+        Cardano.Ledger.Core.TxCert
 
     default-language: Haskell2010
     ghc-options:

@@ -10,7 +10,6 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (EraIndependentData, ScriptHash)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (RDPair)

@@ -32,7 +32,7 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys (
+import Cardano.Ledger.Keys.Internal (
   Hash,
   KeyHash (..),
   KeyRole (..),

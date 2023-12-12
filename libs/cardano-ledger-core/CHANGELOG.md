@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Re-export `Cardano.Ledger.Keys.Bootstrap` and `Cardano.Ledger.Keys.WitsVKey` from
+  `Cardano.Ledger.Keys`
 * Add `unData`, `getCostModelEvaluationContext`
 * Changes to `Cardano.Ledger.Plutus.Evaluate`:
   * Make `PlutusWithContext` era agnostic, but Language aware. `pwcScript` can be either
