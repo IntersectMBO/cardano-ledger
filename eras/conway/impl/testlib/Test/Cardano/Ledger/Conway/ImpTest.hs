@@ -44,6 +44,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   resignCommitteeColdKey,
   registerCommitteeHotKey,
   logCurPParams,
+  electCommittee,
+  electBasicCommittee,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
@@ -51,6 +53,7 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
+  EpochNo,
   Network (..),
   ShelleyBase,
   StrictMaybe (..),
@@ -59,15 +62,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.CertState (DRep (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (
-  Era (..),
-  EraIndependentTxBody,
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  PParams,
-  PParamsHKD,
- )
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
@@ -77,12 +72,14 @@ import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionId (..),
   GovActionIx (..),
+  GovActionPurpose (..),
   GovActionState (..),
+  PrevGovActionId (..),
   ProposalProcedure (..),
   RatifyEnv (..),
   RatifyState (..),
   Vote (..),
-  Voter,
+  Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
   cgDRepPulsingStateL,
@@ -97,12 +94,15 @@ import Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
   setCompleteDRepPulsingState,
   utxosGovStateL,
+  votingCommitteeThreshold,
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
+  ppCommitteeMaxTermLengthL,
   ppDRepActivityL,
+  ppDRepVotingThresholdsL,
   ppGovActionDepositL,
   ppGovActionLifetimeL,
  )
@@ -130,11 +130,9 @@ import Cardano.Ledger.Conway.TxCert (
   pattern RegDRepTxCert,
   pattern ResignCommitteeColdTxCert,
  )
-import Cardano.Ledger.Core (EraRule)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   NewEpochState,
@@ -162,13 +160,16 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (isSJust)
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
+import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
 conwayImpWitsVKeyNeeded ::
@@ -611,21 +612,31 @@ logRatificationChecks ::
   GovActionId (EraCrypto era) ->
   ImpTestM era ()
 logRatificationChecks gaId = do
-  gas@GovActionState {gasDRepVotes, gasAction} <- getGovActionState gaId
+  gas@GovActionState {gasCommitteeVotes, gasDRepVotes, gasAction} <- getGovActionState gaId
   ens@EnactState {..} <- getEnactState
   ratEnv <- getRatifyEnv
   let
     ratSt = RatifyState ens mempty mempty False
   curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
+  let
+    members = foldMap' committeeMembers (ens ^. ensCommitteeL)
+    committeeState = reCommitteeState ratEnv
   logEntry $
     unlines
       [ "----- RATIFICATION CHECKS -----"
       , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
-      , "validCommitteeTerm:\t" <> show (validCommitteeTerm ensCommittee ensCurPParams currentEpoch)
+      , "validCommitteeTerm:\t" <> show (validCommitteeTerm gasAction ensCurPParams currentEpoch)
       , "notDelayed:\t\t??"
       , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
-      , "committeeAccepted:\t" <> show (committeeAccepted ratEnv ratSt gas)
+      , "committeeAccepted:\t\t"
+          <> show (committeeAccepted ratEnv ratSt gas)
+          <> " [To Pass: "
+          <> show
+            (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
+          <> show " >= "
+          <> show (votingCommitteeThreshold ratSt gasAction)
+          <> show "]"
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
           <> " [To Pass: "
@@ -669,6 +680,85 @@ resignCommitteeColdKey coldKey = do
       mkBasicTx mkBasicTxBody
         & bodyTxL . certsTxBodyL
           .~ SSeq.singleton (ResignCommitteeColdTxCert (KeyHashObj coldKey) SNothing)
+
+electCommittee ::
+  forall era.
+  ( HasCallStack
+  , ConwayEraImp era
+  ) =>
+  StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)) ->
+  KeyHash 'DRepRole (EraCrypto era) ->
+  Set.Set (KeyHash 'ColdCommitteeRole (EraCrypto era)) ->
+  Map.Map (KeyHash 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
+  ImpTestM era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
+electCommittee prevGovId drep toRemove toAdd = do
+  let
+    committeeAction =
+      UpdateCommittee
+        prevGovId
+        (Set.map KeyHashObj toRemove)
+        (Map.mapKeys KeyHashObj toAdd)
+        (1 %! 2)
+  gaidCommitteeProp <- submitGovAction committeeAction
+  submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidCommitteeProp
+  pure (PrevGovActionId gaidCommitteeProp)
+
+electBasicCommittee ::
+  forall era.
+  ( HasCallStack
+  , ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  ) =>
+  ImpTestM era (Credential 'DRepRole (EraCrypto era), Credential 'HotCommitteeRole (EraCrypto era))
+electBasicCommittee = do
+  logEntry "Setting up PParams and DRep"
+  modifyPParams $ \pp ->
+    pp
+      & ppDRepVotingThresholdsL
+        .~ def
+          { dvtCommitteeNormal = 1 %! 1
+          , dvtCommitteeNoConfidence = 1 %! 2
+          , dvtUpdateToConstitution = 1 %! 2
+          }
+      & ppCommitteeMaxTermLengthL .~ 10
+      & ppGovActionLifetimeL .~ 2
+      & ppGovActionDepositL .~ Coin 123
+  khDRep <- setupSingleDRep
+
+  logEntry "Registering committee member"
+  khCommitteeMember <- freshKeyHash
+  let
+    committeeAction =
+      UpdateCommittee
+        SNothing
+        mempty
+        (Map.singleton (KeyHashObj khCommitteeMember) 10)
+        (1 %! 2)
+  gaidCommitteeProp <- submitGovAction committeeAction
+
+  submitYesVote_ (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
+
+  let
+    assertNoCommittee = do
+      committee <-
+        getsNES $
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+      impAnn "There should not be a committee" $ committee `shouldBe` SNothing
+  logRatificationChecks gaidCommitteeProp
+  assertNoCommittee
+
+  passEpoch
+  logRatificationChecks gaidCommitteeProp
+  assertNoCommittee
+  passEpoch
+  do
+    committee <-
+      getsNES $
+        nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+    impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
+
+  khCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
+  pure (KeyHashObj khDRep, KeyHashObj khCommitteeMemberHot)
 
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do

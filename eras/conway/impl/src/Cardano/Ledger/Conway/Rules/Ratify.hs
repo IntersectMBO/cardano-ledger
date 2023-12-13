@@ -63,7 +63,7 @@ import Cardano.Ledger.Conway.Governance (
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (committeeMembersL, gasActionL, gasChildrenL)
+import Cardano.Ledger.Conway.Governance.Procedures (gasActionL, gasChildrenL)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
   ppCommitteeMaxTermLengthL,
@@ -306,8 +306,7 @@ ratifyTransition = do
     ( env@RatifyEnv {reCurrentEpoch}
       , st@( RatifyState
               rsEnactState@EnactState
-                { ensCommittee
-                , ensCurPParams
+                { ensCurPParams
                 , ensTreasury
                 , ensPrevGovActionIds
                 , ensPrevGovActionIdsChildren
@@ -323,7 +322,7 @@ ratifyTransition = do
   case reorderedActions of
     gas@GovActionState {gasId, gasAction, gasExpiresAfter} :<| sigs -> do
       if prevActionAsExpected gasAction ensPrevGovActionIds
-        && validCommitteeTerm ensCommittee ensCurPParams reCurrentEpoch
+        && validCommitteeTerm gasAction ensCurPParams reCurrentEpoch
         && not rsDelayed
         && withdrawalCanWithdraw gasAction ensTreasury
         && committeeAccepted env st gas
@@ -395,14 +394,17 @@ updatePrevGovActionIdsChildren gas pgac =
 
 validCommitteeTerm ::
   ConwayEraPParams era =>
-  StrictMaybe (Committee era) ->
+  GovAction era ->
   PParams era ->
   EpochNo ->
   Bool
-validCommitteeTerm committee pp currentEpoch =
-  let maxCommitteeTerm = pp ^. ppCommitteeMaxTermLengthL
-      members = foldMap' (^. committeeMembersL) committee
-   in all (<= currentEpoch + maxCommitteeTerm) members
+validCommitteeTerm govAction pp currentEpoch =
+  case govAction of
+    UpdateCommittee _ _ newMembers _ -> withinMaxTermLength newMembers
+    _ -> True
+  where
+    committeeMaxTermLength = pp ^. ppCommitteeMaxTermLengthL
+    withinMaxTermLength = all (<= currentEpoch + committeeMaxTermLength)
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = absurd

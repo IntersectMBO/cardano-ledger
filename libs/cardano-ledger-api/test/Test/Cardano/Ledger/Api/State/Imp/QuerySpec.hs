@@ -20,10 +20,6 @@ import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayGovState,
   EraGov (..),
-  GovAction (..),
-  GovActionPurpose (..),
-  PrevGovActionId (..),
-  Voter (DRepVoter),
   cgEnactStateL,
   ensCommitteeL,
  )
@@ -278,28 +274,6 @@ spec =
     expectNoFilterQueryResult =
       expectQueryResult mempty mempty mempty
 
-electCommittee ::
-  forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  ) =>
-  StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)) ->
-  KeyHash 'DRepRole (EraCrypto era) ->
-  Set.Set (KeyHash 'ColdCommitteeRole (EraCrypto era)) ->
-  Map.Map (KeyHash 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
-  ImpTestM era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
-electCommittee prevGovId drep toRemove toAdd = do
-  let
-    committeeAction =
-      UpdateCommittee
-        prevGovId
-        (Set.map KeyHashObj toRemove)
-        (Map.mapKeys KeyHashObj toAdd)
-        (1 %! 2)
-  gaidCommitteeProp <- submitGovAction committeeAction
-  submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidCommitteeProp
-  pure (PrevGovActionId gaidCommitteeProp)
-
 setPParams ::
   forall era.
   ( HasCallStack
@@ -315,6 +289,6 @@ setPParams = do
           , dvtCommitteeNoConfidence = 1 %! 2
           , dvtUpdateToConstitution = 1 %! 2
           }
-      & ppCommitteeMaxTermLengthL .~ 10
+      & ppCommitteeMaxTermLengthL .~ 100
       & ppGovActionLifetimeL .~ 2
       & ppGovActionDepositL .~ Coin 123

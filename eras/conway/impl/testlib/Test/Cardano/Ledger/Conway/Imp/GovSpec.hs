@@ -11,8 +11,9 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (vsNumDormantEpochsL)
+import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (ppDRepActivityL, ppGovActionLifetimeL)
+import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
@@ -22,15 +23,17 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.Shelley.LedgerState
+import Control.Monad (replicateM_)
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Default.Class (Default (..))
+import Data.Foldable (Foldable (..), traverse_)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Conway.Imp.EpochSpec (electBasicCommittee)
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -272,7 +275,96 @@ spec =
         expectPulserProposals
         expectNumDormantEpochs 1
         expectExtraDRepExpiry drep 2
+
+    describe "Committee actions validation" $ do
+      it "proposals to update the committee get delayed if the expiration exceeds the max term" $ do
+        setPParams
+        drep <- setupSingleDRep
+        maxTermLength <-
+          getsNES $
+            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppCommitteeMaxTermLengthL
+
+        (initialMembers, govIdCom1) <-
+          impAnn "Initial committee is enacted" $ do
+            c1 <- freshKeyHash
+            c2 <- freshKeyHash
+            currentEpoch <- getsNES nesELL
+            let maxExpiry = currentEpoch + maxTermLength
+            let initialMembers = [(c1, maxExpiry), (c2, maxExpiry)]
+            govIdCom1 <-
+              electCommittee
+                SNothing
+                drep
+                Set.empty
+                initialMembers
+            passEpoch >> passEpoch
+            expectMembers $ Map.keysSet initialMembers
+            pure (Map.keysSet initialMembers, govIdCom1)
+
+        (membersExceedingExpiry, exceedingExpiry) <-
+          impAnn "Committee with members exceeding the maxTerm is not enacted" $ do
+            -- submit a proposal for adding two members to the committee,
+            -- one of which has a max term exceeding the maximum
+            c3 <- freshKeyHash
+            c4 <- freshKeyHash
+            currentEpoch <- getsNES nesELL
+            let exceedingExpiry = currentEpoch + maxTermLength + 7
+            let membersExceedingExpiry = [(c3, exceedingExpiry), (c4, currentEpoch + maxTermLength)]
+            _ <-
+              electCommittee
+                (SJust govIdCom1)
+                drep
+                Set.empty
+                membersExceedingExpiry
+            passEpoch >> passEpoch
+            -- the new committee has not been enacted
+            expectMembers initialMembers
+            pure (Map.keysSet membersExceedingExpiry, exceedingExpiry)
+
+        -- other actions get ratified and enacted
+        govIdConst1 <- impAnn "Other actions are ratified and enacted" $ do
+          (govIdConst1, constitution) <- submitConstitution SNothing
+          submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst1
+          hks <- traverse registerCommitteeHotKey (Set.toList initialMembers)
+          traverse_ (\m -> submitYesVote_ (CommitteeVoter (KeyHashObj m)) govIdConst1) hks
+
+          passEpoch >> passEpoch
+          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+          curConstitution `shouldBe` constitution
+          pure govIdConst1
+
+        -- after enough epochs pass, the expiration of the new members becomes acceptable
+        -- and the new committee is enacted
+        impAnn "New committee is enacted" $ do
+          currentEpoch <- getsNES nesELL
+          let delta =
+                fromIntegral (unEpochNo exceedingExpiry)
+                  - fromIntegral (unEpochNo (maxTermLength + currentEpoch))
+          replicateM_ delta passEpoch
+
+          -- pass one more epoch after ratification, in order to be enacted
+          passEpoch
+          expectMembers $ initialMembers <> membersExceedingExpiry
+
+        impAnn "New committee can vote" $ do
+          (govIdConst2, constitution) <- submitConstitution $ SJust (PrevGovActionId govIdConst1)
+          submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst2
+          hks <- traverse registerCommitteeHotKey (Set.toList membersExceedingExpiry)
+          traverse_ (\m -> submitYesVote_ (CommitteeVoter (KeyHashObj m)) govIdConst2) hks
+
+          passEpoch >> passEpoch
+          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+          curConstitution `shouldBe` constitution
   where
+    expectMembers ::
+      HasCallStack => Set.Set (KeyHash 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
+    expectMembers expKhs = do
+      committee <-
+        getsNES $
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+      let members = Map.keysSet $ foldMap' committeeMembers committee
+      impAnn "Expecting committee members" $ members `shouldBe` Set.map KeyHashObj expKhs
+
     expectNumDormantEpochs :: HasCallStack => EpochNo -> ImpTestM era ()
     expectNumDormantEpochs expected = do
       nd <-
@@ -383,3 +475,22 @@ psProposalsL' =
   lens
     (fromGovActionStateSeq . psProposals)
     (\x y -> x {psProposals = proposalsActions y})
+
+setPParams ::
+  forall era.
+  ( HasCallStack
+  , ConwayEraImp era
+  ) =>
+  ImpTestM era ()
+setPParams = do
+  modifyPParams $ \pp ->
+    pp
+      & ppDRepVotingThresholdsL
+        .~ def
+          { dvtCommitteeNormal = 1 %! 1
+          , dvtCommitteeNoConfidence = 1 %! 2
+          , dvtUpdateToConstitution = 1 %! 2
+          }
+      & ppCommitteeMaxTermLengthL .~ 10
+      & ppGovActionLifetimeL .~ 100
+      & ppGovActionDepositL .~ Coin 123
