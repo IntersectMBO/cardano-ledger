@@ -42,6 +42,7 @@ where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams (
+  AlonzoEraPParams (..),
   AlonzoPParams (..),
   LangDepView (..),
   OrdExUnits (..),
@@ -89,6 +90,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()

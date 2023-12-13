@@ -5,7 +5,7 @@ module Cardano.Ledger.Alonzo.Core (
   ScriptIntegrityHash,
   AlonzoEraTxBody (..),
   AlonzoEraTxWits (..),
-  AlonzoEraPParams (..),
+  AlonzoEraPParams,
   CoinPerWord (..),
   ppCoinsPerUTxOWordL,
   ppCostModelsL,
@@ -28,7 +28,7 @@ module Cardano.Ledger.Alonzo.Core (
 where
 
 import Cardano.Ledger.Alonzo.PParams (
-  AlonzoEraPParams (..),
+  AlonzoEraPParams,
   CoinPerWord (..),
   ppCoinsPerUTxOWordL,
   ppCollateralPercentageL,

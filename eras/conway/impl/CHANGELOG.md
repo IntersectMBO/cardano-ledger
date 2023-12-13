@@ -6,7 +6,7 @@
 * Implement `ToJSON` instance for `PoolVotingThresholds` and `DRepVotingThreshold`,
   instead of deriving that doesn't handle field names correctly.
 * Hide `Cardano.Ledger.Conway.TxOut` module
-* Export `ConwayEraPParams` from `Cardano.Ledger.Conway.Core`
+* Export `ConwayEraPParams` and `ConwayEraTxBody` from `Cardano.Ledger.Conway.Core`
 * Stop exporting `BabbagePParams` from `Cardano.Ledger.Conway.PParams`
 * Add `transTxBodyWithdrawals`, `transTxCert`, `transDRepCred`, `transColdCommitteeCred`,
   `transHotCommitteeCred`, `transDelegatee`, `transDRep`, `transScriptPurpose`

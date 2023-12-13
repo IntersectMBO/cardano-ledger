@@ -2,6 +2,8 @@
 
 ## 1.3.0.0
 
+* Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from
+  `Cardano.Ledger.Allegra.Core`.
 * Export `ValidityInterval` from `Cardano.Ledger.Allegra.Core`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 

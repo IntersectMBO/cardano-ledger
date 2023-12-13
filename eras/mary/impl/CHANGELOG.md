@@ -2,6 +2,8 @@
 
 ## 1.5.0.0
 
+* Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from
+  `Cardano.Ledger.Mary.Core`.
 * Stop exporting `ValidityInterval` and `StrictMaybe` from `Cardano.Ledger.Mary.TxBody`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Remove deprecated `translateValue` and `translateCompactValue`

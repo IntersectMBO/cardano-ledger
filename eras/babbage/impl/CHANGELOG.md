@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from
+  `Cardano.Ledger.Babbage.Core`.
 * Remove `txInfoOutV1`, `txInfoOutV2`, `txInfoInV1` and `txInfoInV2`.
 * Add `transTxOutV1`, `transTxOutV2`, `transTxInInfoV1`, `transTxInInfoV2` and `transTxRedeemers`
 * Remove `babbageScriptPrefixTag`

@@ -2,6 +2,8 @@
 
 ## 1.9.0.0
 
+* Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from
+  `Cardano.Ledger.Shelley.Core`.
 * Deprecated unused `hashMultiSigScript`, `txwitsScript`
 * Delete deprecated modules:
   * `Cardano.Ledger.Shelley.Orphans`

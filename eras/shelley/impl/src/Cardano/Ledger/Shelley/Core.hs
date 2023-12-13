@@ -18,7 +18,18 @@ module Cardano.Ledger.Shelley.Core (
 where
 
 import Cardano.Ledger.Address (Withdrawals (..))
-import Cardano.Ledger.Core
+import Cardano.Ledger.Core (
+  EraPParams (
+    DowngradePParams,
+    PParamsHKD,
+    UpgradePParams,
+    applyPPUpdates,
+    ppDG,
+    ppProtocolVersionL,
+    ppuProtocolVersionL
+  ),
+ )
+import Cardano.Ledger.Core hiding (EraPParams (..))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.TxCert (

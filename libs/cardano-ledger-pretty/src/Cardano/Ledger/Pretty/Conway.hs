@@ -17,6 +17,7 @@ module Cardano.Ledger.Pretty.Conway (
   ppConwayTxBody,
 ) where
 
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Prices)
 import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo, NonNegativeInterval, UnitInterval)
 import Cardano.Ledger.Coin (Coin)
@@ -71,6 +72,7 @@ import Cardano.Ledger.Conway.TxCert (
   ConwayTxCert (..),
   Delegatee (..),
  )
+import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Pretty (

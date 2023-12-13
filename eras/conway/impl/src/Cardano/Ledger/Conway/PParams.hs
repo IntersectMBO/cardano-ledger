@@ -60,7 +60,7 @@ module Cardano.Ledger.Conway.PParams (
 )
 where
 
-import Cardano.Ledger.Alonzo.PParams (OrdExUnits (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..), OrdExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts (
   CostModels,
   ExUnits (..),
@@ -89,6 +89,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
 import Cardano.Ledger.Plutus.CostModels (decodeValidAndUnknownCostModels)

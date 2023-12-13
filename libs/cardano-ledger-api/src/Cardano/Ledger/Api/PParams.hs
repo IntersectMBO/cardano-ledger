@@ -214,7 +214,7 @@ module Cardano.Ledger.Api.PParams (
 where
 
 import Cardano.Ledger.Alonzo.Core (
-  AlonzoEraPParams (..),
+  AlonzoEraPParams,
   CoinPerWord (..),
   ppCoinsPerUTxOWordL,
   ppCollateralPercentageL,
