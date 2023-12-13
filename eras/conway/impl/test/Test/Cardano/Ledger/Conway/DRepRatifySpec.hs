@@ -26,7 +26,6 @@ import Cardano.Ledger.Conway.Governance (
   pparamsUpdateThreshold,
   votingDRepThreshold,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepVotingThresholdsL)
 import Cardano.Ledger.Conway.Rules (
   dRepAccepted,
   dRepAcceptedRatio,

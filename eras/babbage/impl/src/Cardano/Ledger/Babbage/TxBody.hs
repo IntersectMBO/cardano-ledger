@@ -111,6 +111,7 @@ module Cardano.Ledger.Babbage.TxBody (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
@@ -120,7 +121,6 @@ import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
   MaryEraTxBody (..),
   ShelleyEraTxBody (..),
  )
-import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (upgradeBabbagePParams)
 import Cardano.Ledger.Babbage.Scripts ()

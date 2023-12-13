@@ -43,6 +43,7 @@ module Cardano.Ledger.Conway.TxCert (
 )
 where
 
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -63,24 +64,18 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Anchor)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
-  ShelleyEraTxCert (..),
   encodePoolCert,
   encodeShelleyDelegCert,
   poolTxCertDecoder,
   shelleyTotalDepositsTxCerts,
   shelleyTotalRefundsTxCerts,
   shelleyTxCertDelegDecoder,
-  pattern DelegStakeTxCert,
-  pattern MirTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)

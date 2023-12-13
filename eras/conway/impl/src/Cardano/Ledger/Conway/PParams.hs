@@ -23,16 +23,6 @@
 
 -- | This module contains the type of protocol parameters and EraPParams instance
 module Cardano.Ledger.Conway.PParams (
-  BabbagePParams (..),
-  ConwayPParams (..),
-  getLanguageView,
-  LangDepView (..),
-  encodeLangViews,
-  upgradeConwayPParams,
-  UpgradeConwayPParams (..),
-  toUpgradeConwayPParamsUpdatePairs,
-  PoolVotingThresholds (..),
-  DRepVotingThresholds (..),
   ConwayEraPParams (..),
   ppPoolVotingThresholdsL,
   ppDRepVotingThresholdsL,
@@ -50,6 +40,20 @@ module Cardano.Ledger.Conway.PParams (
   ppuGovActionDepositL,
   ppuDRepDepositL,
   ppuDRepActivityL,
+  PoolVotingThresholds (..),
+  DRepVotingThresholds (..),
+  dvtPPNetworkGroupL,
+  dvtPPGovGroupL,
+  dvtPPTechnicalGroupL,
+  dvtPPEconomicGroupL,
+  dvtUpdateToConstitutionL,
+  ConwayPParams (..),
+  getLanguageView,
+  LangDepView (..),
+  encodeLangViews,
+  upgradeConwayPParams,
+  UpgradeConwayPParams (..),
+  toUpgradeConwayPParamsUpdatePairs,
   THKD (..),
   PPGroup (..),
   conwayModifiedPPGroups,
@@ -65,6 +69,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   updateCostModels,
  )
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
@@ -73,17 +78,23 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (ProtVer),
   UnitInterval,
  )
-import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (Coin))
-import Cardano.Ledger.Conway.Core hiding (Value)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
 import Cardano.Ledger.Plutus.CostModels (decodeValidAndUnknownCostModels)
 import Cardano.Ledger.Val (Val (..))
-import Control.DeepSeq (NFData (..))
-import Data.Aeson hiding (Encoding, decode, encode)
+import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Aeson hiding (Encoding, Value, decode, encode)
 import qualified Data.Aeson as Aeson
 import Data.Default.Class (Default (def))
 import Data.Functor.Identity (Identity)
@@ -96,6 +107,202 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+
+class BabbageEraPParams era => ConwayEraPParams era where
+  modifiedPPGroups :: PParamsUpdate era -> Set PPGroup
+  ppuWellFormed :: PParamsUpdate era -> Bool
+
+  hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
+  hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
+  hkdCommitteeMinSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdCommitteeMaxTermLengthL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
+  hkdGovActionLifetimeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
+  hkdGovActionDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdDRepDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
+  hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
+
+ppPoolVotingThresholdsL ::
+  forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
+ppPoolVotingThresholdsL = ppLens . hkdPoolVotingThresholdsL @era @Identity
+
+ppDRepVotingThresholdsL ::
+  forall era. ConwayEraPParams era => Lens' (PParams era) DRepVotingThresholds
+ppDRepVotingThresholdsL = ppLens . hkdDRepVotingThresholdsL @era @Identity
+
+ppCommitteeMinSizeL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
+ppCommitteeMinSizeL = ppLens . hkdCommitteeMinSizeL @era @Identity
+
+ppCommitteeMaxTermLengthL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochNo
+ppCommitteeMaxTermLengthL = ppLens . hkdCommitteeMaxTermLengthL @era @Identity
+
+ppGovActionLifetimeL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
+ppGovActionLifetimeL = ppLens . hkdGovActionLifetimeL @era @Identity
+
+ppGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
+ppGovActionDepositL = ppLens . hkdGovActionDepositL @era @Identity
+
+ppDRepDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
+ppDRepDepositL = ppLens . hkdDRepDepositL @era @Identity
+
+ppDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
+ppDRepActivityL = ppLens . hkdDRepActivityL @era @Identity
+
+ppuPoolVotingThresholdsL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe PoolVotingThresholds)
+ppuPoolVotingThresholdsL = ppuLens . hkdPoolVotingThresholdsL @era @StrictMaybe
+
+ppuDRepVotingThresholdsL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe DRepVotingThresholds)
+ppuDRepVotingThresholdsL = ppuLens . hkdDRepVotingThresholdsL @era @StrictMaybe
+
+ppuCommitteeMinSizeL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuCommitteeMinSizeL = ppuLens . hkdCommitteeMinSizeL @era @StrictMaybe
+
+ppuCommitteeMaxTermLengthL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
+ppuCommitteeMaxTermLengthL = ppuLens . hkdCommitteeMaxTermLengthL @era @StrictMaybe
+
+ppuGovActionLifetimeL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
+ppuGovActionLifetimeL = ppuLens . hkdGovActionLifetimeL @era @StrictMaybe
+
+ppuGovActionDepositL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuGovActionDepositL = ppuLens . hkdGovActionDepositL @era @StrictMaybe
+
+ppuDRepDepositL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
+ppuDRepDepositL = ppuLens . hkdDRepDepositL @era @StrictMaybe
+
+ppuDRepActivityL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
+ppuDRepActivityL = ppuLens . hkdDRepActivityL @era @StrictMaybe
+
+data PoolVotingThresholds = PoolVotingThresholds
+  { pvtMotionNoConfidence :: !UnitInterval
+  , pvtCommitteeNormal :: !UnitInterval
+  , pvtCommitteeNoConfidence :: !UnitInterval
+  , pvtHardForkInitiation :: !UnitInterval
+  }
+  deriving (Eq, Ord, Show, Generic)
+
+instance NoThunks PoolVotingThresholds
+
+instance NFData PoolVotingThresholds where
+  rnf = rwhnf
+
+instance Default PoolVotingThresholds where
+  def = PoolVotingThresholds def def def def
+
+instance ToJSON PoolVotingThresholds where
+  toJSON pvt@(PoolVotingThresholds _ _ _ _) =
+    let PoolVotingThresholds {..} = pvt
+     in object
+          [ ("motionNoConfidence", toJSON pvtMotionNoConfidence)
+          , ("committeeNormal", toJSON pvtCommitteeNormal)
+          , ("committeeNoConfidence", toJSON pvtCommitteeNoConfidence)
+          , ("hardForkInitiation", toJSON pvtHardForkInitiation)
+          ]
+
+instance EncCBOR PoolVotingThresholds where
+  encCBOR PoolVotingThresholds {..} =
+    encodeListLen 4
+      <> encCBOR pvtMotionNoConfidence
+      <> encCBOR pvtCommitteeNormal
+      <> encCBOR pvtCommitteeNoConfidence
+      <> encCBOR pvtHardForkInitiation
+
+instance DecCBOR PoolVotingThresholds where
+  decCBOR =
+    decodeRecordNamed "PoolVotingThresholds" (const 4) $ do
+      pvtMotionNoConfidence <- decCBOR
+      pvtCommitteeNormal <- decCBOR
+      pvtCommitteeNoConfidence <- decCBOR
+      pvtHardForkInitiation <- decCBOR
+      pure $ PoolVotingThresholds {..}
+
+data DRepVotingThresholds = DRepVotingThresholds
+  { dvtMotionNoConfidence :: !UnitInterval
+  , dvtCommitteeNormal :: !UnitInterval
+  , dvtCommitteeNoConfidence :: !UnitInterval
+  , dvtUpdateToConstitution :: !UnitInterval
+  , dvtHardForkInitiation :: !UnitInterval
+  , dvtPPNetworkGroup :: !UnitInterval
+  , dvtPPEconomicGroup :: !UnitInterval
+  , dvtPPTechnicalGroup :: !UnitInterval
+  , dvtPPGovGroup :: !UnitInterval
+  , dvtTreasuryWithdrawal :: !UnitInterval
+  }
+  deriving (Eq, Ord, Show, Generic)
+
+instance NoThunks DRepVotingThresholds
+
+instance NFData DRepVotingThresholds where
+  rnf = rwhnf
+
+instance Default DRepVotingThresholds where
+  def = DRepVotingThresholds def def def def def def def def def def
+
+instance ToJSON DRepVotingThresholds where
+  toJSON pvt@(DRepVotingThresholds _ _ _ _ _ _ _ _ _ _) =
+    let DRepVotingThresholds {..} = pvt
+     in object
+          [ ("motionNoConfidence", toJSON dvtMotionNoConfidence)
+          , ("committeeNormal", toJSON dvtCommitteeNormal)
+          , ("committeeNoConfidence", toJSON dvtCommitteeNoConfidence)
+          , ("updateToConstitution", toJSON dvtUpdateToConstitution)
+          , ("hardForkInitiation", toJSON dvtHardForkInitiation)
+          , ("ppNetworkGroup", toJSON dvtPPNetworkGroup)
+          , ("ppEconomicGroup", toJSON dvtPPEconomicGroup)
+          , ("ppTechnicalGroup", toJSON dvtPPTechnicalGroup)
+          , ("ppGovGroup", toJSON dvtPPGovGroup)
+          , ("treasuryWithdrawal", toJSON dvtTreasuryWithdrawal)
+          ]
+
+dvtPPNetworkGroupL :: Lens' DRepVotingThresholds UnitInterval
+dvtPPNetworkGroupL = lens dvtPPNetworkGroup (\x y -> x {dvtPPNetworkGroup = y})
+
+dvtPPEconomicGroupL :: Lens' DRepVotingThresholds UnitInterval
+dvtPPEconomicGroupL = lens dvtPPEconomicGroup (\x y -> x {dvtPPEconomicGroup = y})
+
+dvtPPTechnicalGroupL :: Lens' DRepVotingThresholds UnitInterval
+dvtPPTechnicalGroupL = lens dvtPPTechnicalGroup (\x y -> x {dvtPPTechnicalGroup = y})
+
+dvtPPGovGroupL :: Lens' DRepVotingThresholds UnitInterval
+dvtPPGovGroupL = lens dvtPPGovGroup (\x y -> x {dvtPPGovGroup = y})
+
+dvtUpdateToConstitutionL :: Lens' DRepVotingThresholds UnitInterval
+dvtUpdateToConstitutionL = lens dvtUpdateToConstitution (\x y -> x {dvtUpdateToConstitution = y})
+
+instance EncCBOR DRepVotingThresholds where
+  encCBOR DRepVotingThresholds {..} =
+    encodeListLen 10
+      <> encCBOR dvtMotionNoConfidence
+      <> encCBOR dvtCommitteeNormal
+      <> encCBOR dvtCommitteeNoConfidence
+      <> encCBOR dvtUpdateToConstitution
+      <> encCBOR dvtHardForkInitiation
+      <> encCBOR dvtPPNetworkGroup
+      <> encCBOR dvtPPEconomicGroup
+      <> encCBOR dvtPPTechnicalGroup
+      <> encCBOR dvtPPGovGroup
+      <> encCBOR dvtTreasuryWithdrawal
+
+instance DecCBOR DRepVotingThresholds where
+  decCBOR =
+    decodeRecordNamed "DRepVotingThresholds" (const 10) $ do
+      dvtMotionNoConfidence <- decCBOR
+      dvtCommitteeNormal <- decCBOR
+      dvtCommitteeNoConfidence <- decCBOR
+      dvtUpdateToConstitution <- decCBOR
+      dvtHardForkInitiation <- decCBOR
+      dvtPPNetworkGroup <- decCBOR
+      dvtPPEconomicGroup <- decCBOR
+      dvtPPTechnicalGroup <- decCBOR
+      dvtPPGovGroup <- decCBOR
+      dvtTreasuryWithdrawal <- decCBOR
+      pure $ DRepVotingThresholds {..}
 
 -- | Protocol parameter groups that dictate different thresholds for DReps.
 data PPGroup
@@ -720,7 +927,7 @@ conwayPParamsHKDPairs ::
   (ConwayEraPParams era, HKDFunctor f) =>
   Proxy f ->
   PParamsHKD f era ->
-  [(Key, HKD f Value)]
+  [(Key, HKD f Aeson.Value)]
 conwayPParamsHKDPairs px pp = babbagePParamsHKDPairs px pp <> conwayUpgradePParamsHKDPairs px pp
 
 conwayUpgradePParamsHKDPairs ::
@@ -728,7 +935,7 @@ conwayUpgradePParamsHKDPairs ::
   (ConwayEraPParams era, HKDFunctor f) =>
   Proxy f ->
   PParamsHKD f era ->
-  [(Key, HKD f Value)]
+  [(Key, HKD f Aeson.Value)]
 conwayUpgradePParamsHKDPairs px pp =
   [ ("poolVotingThresholds", hkdMap px (toJSON @PoolVotingThresholds) (pp ^. hkdPoolVotingThresholdsL @era @f))
   , ("dRepVotingThresholds", hkdMap px (toJSON @DRepVotingThresholds) (pp ^. hkdDRepVotingThresholdsL @era @f))
@@ -848,77 +1055,6 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppCollateralPercentage = unTHKD cppCollateralPercentage
     , bppMaxCollateralInputs = unTHKD cppMaxCollateralInputs
     }
-
-class BabbageEraPParams era => ConwayEraPParams era where
-  modifiedPPGroups :: PParamsUpdate era -> Set PPGroup
-  ppuWellFormed :: PParamsUpdate era -> Bool
-
-  hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
-  hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
-  hkdCommitteeMinSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
-  hkdCommitteeMaxTermLengthL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochNo)
-  hkdGovActionLifetimeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
-  hkdGovActionDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
-  hkdDRepDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
-  hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
-
-ppPoolVotingThresholdsL ::
-  forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
-ppPoolVotingThresholdsL = ppLens . hkdPoolVotingThresholdsL @era @Identity
-
-ppDRepVotingThresholdsL ::
-  forall era. ConwayEraPParams era => Lens' (PParams era) DRepVotingThresholds
-ppDRepVotingThresholdsL = ppLens . hkdDRepVotingThresholdsL @era @Identity
-
-ppCommitteeMinSizeL :: forall era. ConwayEraPParams era => Lens' (PParams era) Natural
-ppCommitteeMinSizeL = ppLens . hkdCommitteeMinSizeL @era @Identity
-
-ppCommitteeMaxTermLengthL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochNo
-ppCommitteeMaxTermLengthL = ppLens . hkdCommitteeMaxTermLengthL @era @Identity
-
-ppGovActionLifetimeL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
-ppGovActionLifetimeL = ppLens . hkdGovActionLifetimeL @era @Identity
-
-ppGovActionDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
-ppGovActionDepositL = ppLens . hkdGovActionDepositL @era @Identity
-
-ppDRepDepositL :: forall era. ConwayEraPParams era => Lens' (PParams era) Coin
-ppDRepDepositL = ppLens . hkdDRepDepositL @era @Identity
-
-ppDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
-ppDRepActivityL = ppLens . hkdDRepActivityL @era @Identity
-
-ppuPoolVotingThresholdsL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe PoolVotingThresholds)
-ppuPoolVotingThresholdsL = ppuLens . hkdPoolVotingThresholdsL @era @StrictMaybe
-
-ppuDRepVotingThresholdsL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe DRepVotingThresholds)
-ppuDRepVotingThresholdsL = ppuLens . hkdDRepVotingThresholdsL @era @StrictMaybe
-
-ppuCommitteeMinSizeL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
-ppuCommitteeMinSizeL = ppuLens . hkdCommitteeMinSizeL @era @StrictMaybe
-
-ppuCommitteeMaxTermLengthL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochNo)
-ppuCommitteeMaxTermLengthL = ppuLens . hkdCommitteeMaxTermLengthL @era @StrictMaybe
-
-ppuGovActionLifetimeL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
-ppuGovActionLifetimeL = ppuLens . hkdGovActionLifetimeL @era @StrictMaybe
-
-ppuGovActionDepositL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuGovActionDepositL = ppuLens . hkdGovActionDepositL @era @StrictMaybe
-
-ppuDRepDepositL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Coin)
-ppuDRepDepositL = ppuLens . hkdDRepDepositL @era @StrictMaybe
-
-ppuDRepActivityL ::
-  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
-ppuDRepActivityL = ppuLens . hkdDRepActivityL @era @StrictMaybe
 
 conwayApplyPPUpdates ::
   ConwayPParams Identity era ->

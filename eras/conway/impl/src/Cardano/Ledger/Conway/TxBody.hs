@@ -52,6 +52,7 @@ module Cardano.Ledger.Conway.TxBody (
 ) where
 
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody (..),
   babbageAllInputsTxBodyF,
@@ -81,7 +82,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
  )
 import Cardano.Ledger.Coin (Coin (..), decodePositiveCoin)
-import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)

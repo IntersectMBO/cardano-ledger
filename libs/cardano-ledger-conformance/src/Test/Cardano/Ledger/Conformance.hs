@@ -39,6 +39,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
   TxDats (..),
  )
+import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   Anchor,
   EpochInterval (..),
@@ -57,7 +58,6 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovAction (..), ProposalProcedure (..), VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
@@ -65,7 +65,6 @@ import Cardano.Ledger.Conway.TxCert (
   getStakePoolDelegatee,
   getVoteDelegatee,
  )
-import Cardano.Ledger.Conway.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep (DRep (..))

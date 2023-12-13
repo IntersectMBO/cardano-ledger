@@ -153,12 +153,6 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.CertState (CommitteeState, Obligations (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (
-  dvtPPEconomicGroupL,
-  dvtPPGovGroupL,
-  dvtPPNetworkGroupL,
-  dvtPPTechnicalGroupL,
- )
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance.Procedures (
   Anchor (..),
@@ -207,6 +201,10 @@ import Cardano.Ledger.Conway.PParams (
   DRepVotingThresholds (..),
   PPGroup (..),
   PoolVotingThresholds (..),
+  dvtPPEconomicGroupL,
+  dvtPPGovGroupL,
+  dvtPPNetworkGroupL,
+  dvtPPTechnicalGroupL,
   ppCommitteeMinSizeL,
   ppDRepVotingThresholdsL,
   ppPoolVotingThresholdsL,

@@ -41,7 +41,6 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (Voter (..), VotingProcedures (..))
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Credential (credKeyHashWitness)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)

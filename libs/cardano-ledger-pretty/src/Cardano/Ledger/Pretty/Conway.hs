@@ -64,7 +64,7 @@ import Cardano.Ledger.Conway.Rules (
   GovRuleState (..),
   PredicateFailure,
  )
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), ConwayTxBody (..))
+import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),

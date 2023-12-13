@@ -24,7 +24,6 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential

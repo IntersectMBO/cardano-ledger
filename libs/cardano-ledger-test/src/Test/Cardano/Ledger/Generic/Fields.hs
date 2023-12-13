@@ -64,17 +64,7 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
-import Cardano.Ledger.Conway.PParams (
-  ConwayPParams (..),
-  ppCommitteeMaxTermLengthL,
-  ppCommitteeMinSizeL,
-  ppDRepActivityL,
-  ppDRepDepositL,
-  ppDRepVotingThresholdsL,
-  ppGovActionDepositL,
-  ppGovActionLifetimeL,
-  ppPoolVotingThresholdsL,
- )
+import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), WitVKey (..), hashKey)

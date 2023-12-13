@@ -9,12 +9,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.TxOut (
-  module BabbageTxOutReExports,
-)
-where
+module Cardano.Ledger.Conway.TxOut () where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxOut (..),
   Datum (..),
@@ -27,15 +25,9 @@ import Cardano.Ledger.Babbage.TxBody (
   referenceScriptBabbageTxOutL,
   valueEitherBabbageTxOutL,
  )
-import Cardano.Ledger.Babbage.TxBody as BabbageTxOutReExports (
-  AlonzoEraTxOut (..),
-  BabbageEraTxOut (..),
-  BabbageTxOut (..),
- )
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Data (translateDatum)
 import Data.Maybe.Strict (StrictMaybe (..))
