@@ -12,10 +12,15 @@
 module Test.Cardano.Ledger.Constrained.Trace.TraceMonad
 where
 
-import Cardano.Ledger.Babbage.TxBody (referenceInputsTxBodyL, reqSignerHashesTxBodyL)
 import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
-import Cardano.Ledger.Conway.Governance (ConwayEraGov, DRepPulser (..), DRepPulsingState (..), PulsingSnapshot (..), newEpochStateDRepPulsingStateL)
-import Cardano.Ledger.Core (Era (..), Tx, TxBody)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (
+  ConwayEraGov,
+  DRepPulser (..),
+  DRepPulsingState (..),
+  PulsingSnapshot (..),
+  newEpochStateDRepPulsingStateL,
+ )
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Pretty (ppList, ppPair, ppSlotNo, ppStrictSeq)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState (..))
@@ -26,8 +31,19 @@ import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.State.Strict hiding (State)
 import Control.State.Transition.Extended (IRC (..), STS, TRC (..))
-import Control.State.Transition.Trace (Trace (..), TraceOrder (OldestFirst), lastState, traceInitState, traceSignals, traceStates)
-import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), shrinkTrace, traceFromInitState)
+import Control.State.Transition.Trace (
+  Trace (..),
+  TraceOrder (OldestFirst),
+  lastState,
+  traceInitState,
+  traceSignals,
+  traceStates,
+ )
+import Control.State.Transition.Trace.Generator.QuickCheck (
+  HasTrace (..),
+  shrinkTrace,
+  traceFromInitState,
+ )
 import Data.Default.Class (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold (toList)

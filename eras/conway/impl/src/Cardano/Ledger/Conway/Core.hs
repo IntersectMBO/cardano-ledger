@@ -55,4 +55,5 @@ import Cardano.Ledger.Conway.PParams (
   ppuGovActionLifetimeL,
   ppuPoolVotingThresholdsL,
  )
+import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))

@@ -27,16 +27,7 @@ module Cardano.Ledger.Babbage.TxBody (
     TxOutCompactDatum,
     TxOutCompactRefScript
   ),
-  AlonzoEraTxOut (..),
-  BabbageEraTxOut (..),
-  addrEitherBabbageTxOutL,
-  valueEitherBabbageTxOutL,
-  dataHashBabbageTxOutL,
-  dataBabbageTxOutL,
-  datumBabbageTxOutL,
-  referenceScriptBabbageTxOutL,
   allSizedOutputsBabbageTxBodyF,
-  getDatumBabbageTxOut,
   babbageMinUTxOValue,
   BabbageTxBody (
     BabbageTxBody,
@@ -84,7 +75,6 @@ module Cardano.Ledger.Babbage.TxBody (
   collateralReturnBabbageTxBodyL,
   sizedCollateralReturnBabbageTxBodyL,
   BabbageEraTxBody (..),
-  module AlonzoTxBodyReExports,
   Datum (..),
   spendInputs',
   collateralInputs',
@@ -114,13 +104,6 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
-  AllegraEraTxBody (..),
-  AlonzoEraTxBody (..),
-  AlonzoTxBody (..),
-  MaryEraTxBody (..),
-  ShelleyEraTxBody (..),
- )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (upgradeBabbagePParams)
 import Cardano.Ledger.Babbage.Scripts ()
@@ -477,27 +460,28 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   certsTxBodyL = certsBabbageTxBodyL
   {-# INLINE certsTxBodyL #-}
 
-  upgradeTxBody atb = do
+  upgradeTxBody txBody = do
     certs <-
       traverse
         (left absurd . upgradeTxCert)
-        (atbCerts atb)
-    updates <- traverse upgradeUpdate (atbUpdate atb)
+        (txBody ^. certsTxBodyL)
+    updates <- traverse upgradeUpdate (txBody ^. updateTxBodyL)
     pure $
       BabbageTxBody
-        { btbInputs = atbInputs atb
-        , btbOutputs = mkSized (eraProtVerLow @(BabbageEra c)) . upgradeTxOut <$> atbOutputs atb
+        { btbInputs = txBody ^. inputsTxBodyL
+        , btbOutputs =
+            mkSized (eraProtVerLow @(BabbageEra c)) . upgradeTxOut <$> (txBody ^. outputsTxBodyL)
         , btbCerts = certs
-        , btbWithdrawals = atbWithdrawals atb
-        , btbTxFee = atbTxFee atb
-        , btbValidityInterval = atbValidityInterval atb
+        , btbWithdrawals = txBody ^. withdrawalsTxBodyL
+        , btbTxFee = txBody ^. feeTxBodyL
+        , btbValidityInterval = txBody ^. vldtTxBodyL
         , btbUpdate = updates
-        , btbAuxDataHash = atbAuxDataHash atb
-        , btbMint = atbMint atb
-        , btbCollateral = atbCollateral atb
-        , btbReqSignerHashes = atbReqSignerHashes atb
-        , btbScriptIntegrityHash = atbScriptIntegrityHash atb
-        , btbTxNetworkId = atbTxNetworkId atb
+        , btbAuxDataHash = txBody ^. auxDataHashTxBodyL
+        , btbMint = txBody ^. mintTxBodyL
+        , btbCollateral = txBody ^. collateralInputsTxBodyL
+        , btbReqSignerHashes = txBody ^. reqSignerHashesTxBodyL
+        , btbScriptIntegrityHash = txBody ^. scriptIntegrityHashTxBodyL
+        , btbTxNetworkId = txBody ^. networkIdTxBodyL
         , btbReferenceInputs = mempty
         , btbCollateralReturn = SNothing
         , btbTotalCollateral = SNothing

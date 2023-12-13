@@ -16,5 +16,6 @@ import Cardano.Ledger.Babbage.PParams (
   ppCoinsPerUTxOByteL,
   ppuCoinsPerUTxOByteL,
  )
+import Cardano.Ledger.Babbage.Tx ()
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..))

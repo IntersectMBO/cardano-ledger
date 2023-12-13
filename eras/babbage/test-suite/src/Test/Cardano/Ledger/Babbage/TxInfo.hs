@@ -17,15 +17,14 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.TxBody
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxInfo (ContextError (..), transTxInInfoV2, transTxOutV2)
 import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.Plutus.Data (Data (..), dataToBinaryData)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))

@@ -30,22 +30,10 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (ContextError (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
-import Cardano.Ledger.Alonzo.TxWits (
-  AlonzoEraTxWits (..),
-  RdmrPtr,
-  unRedeemers,
- )
+import Cardano.Ledger.Alonzo.TxWits (RdmrPtr, unRedeemers)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
-import Cardano.Ledger.Babbage.Tx ()
-import Cardano.Ledger.Babbage.TxBody (
-  AllegraEraTxBody (..),
-  AlonzoEraTxOut (..),
-  BabbageEraTxBody (..),
-  BabbageEraTxOut (..),
-  MaryEraTxBody (..),
- )
-import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), isSJust)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -56,7 +44,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)

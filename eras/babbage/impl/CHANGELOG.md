@@ -4,6 +4,11 @@
 
 * Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from
   `Cardano.Ledger.Babbage.Core`.
+* Stop exporting `AllegraEraTxBody`, `AlonzoEraTxBody`,`AlonzoTxBody`,
+  `MaryEraTxBody`,`ShelleyEraTxBody`, `addrEitherBabbageTxOutL`,
+  `valueEitherBabbageTxOutL`, `dataHashBabbageTxOutL`, `dataBabbageTxOutL`,
+  `datumBabbageTxOutL`, `referenceScriptBabbageTxOutL`, `getDatumBabbageTxOut` and `Datum`
+  from `Cardano.Ledger.Babbage.TxBody`
 * Remove `txInfoOutV1`, `txInfoOutV2`, `txInfoInV1` and `txInfoInV2`.
 * Add `transTxOutV1`, `transTxOutV2`, `transTxInInfoV1`, `transTxInInfoV2` and `transTxRedeemers`
 * Remove `babbageScriptPrefixTag`

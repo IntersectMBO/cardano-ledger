@@ -13,9 +13,8 @@ module Cardano.Ledger.Conway.TxOut () where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody (
+import Cardano.Ledger.Babbage.TxOut (
   BabbageTxOut (..),
-  Datum (..),
   addrEitherBabbageTxOutL,
   babbageMinUTxOValue,
   dataBabbageTxOutL,
@@ -29,7 +28,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Plutus.Data (translateDatum)
+import Cardano.Ledger.Plutus.Data (Datum (..), translateDatum)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Lens.Micro
 

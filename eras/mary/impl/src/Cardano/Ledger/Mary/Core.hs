@@ -5,4 +5,5 @@ module Cardano.Ledger.Mary.Core (
 where
 
 import Cardano.Ledger.Allegra.Core
+import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))

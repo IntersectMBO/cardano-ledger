@@ -21,8 +21,6 @@ import Cardano.Ledger.Conway.Governance (
   ProposalProcedure (..),
   Voter (..),
  )
-import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
   esAccountStateL,
