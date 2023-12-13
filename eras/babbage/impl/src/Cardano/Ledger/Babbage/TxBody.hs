@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -119,7 +120,7 @@ import Cardano.Ledger.Alonzo.TxBody as AlonzoTxBodyReExports (
   MaryEraTxBody (..),
   ShelleyEraTxBody (..),
  )
-import Cardano.Ledger.Babbage.Core
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (upgradeBabbagePParams)
 import Cardano.Ledger.Babbage.Scripts ()
@@ -173,7 +174,19 @@ import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-import Prelude hiding (lookup)
+
+class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
+  sizedOutputsTxBodyL :: Lens' (TxBody era) (StrictSeq (Sized (TxOut era)))
+
+  referenceInputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
+
+  totalCollateralTxBodyL :: Lens' (TxBody era) (StrictMaybe Coin)
+
+  collateralReturnTxBodyL :: Lens' (TxBody era) (StrictMaybe (TxOut era))
+
+  sizedCollateralReturnTxBodyL :: Lens' (TxBody era) (StrictMaybe (Sized (TxOut era)))
+
+  allSizedOutputsTxBodyF :: SimpleGetter (TxBody era) (StrictSeq (Sized (TxOut era)))
 
 -- ======================================
 

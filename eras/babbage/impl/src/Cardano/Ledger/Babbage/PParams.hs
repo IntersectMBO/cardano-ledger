@@ -1,9 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -14,10 +16,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains the type of protocol parameters and EraPParams instance
 module Cardano.Ledger.Babbage.PParams (
+  BabbageEraPParams (..),
+  CoinPerByte (..),
+  ppCoinsPerUTxOByteL,
+  ppuCoinsPerUTxOByteL,
   BabbagePParams (..),
   emptyBabbagePParams,
   emptyBabbagePParamsUpdate,
@@ -33,6 +40,7 @@ module Cardano.Ledger.Babbage.PParams (
 where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams (
   AlonzoPParams (..),
   LangDepView (..),
@@ -47,7 +55,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   Prices (..),
   emptyCostModels,
  )
-import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
@@ -88,6 +95,7 @@ import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates)
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
+  FromJSON,
   Key,
   KeyValue ((.=)),
   ToJSON (..),
@@ -102,6 +110,21 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+
+newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
+  deriving stock (Eq, Ord)
+  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
+
+class AlonzoEraPParams era => BabbageEraPParams era where
+  hkdCoinsPerUTxOByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
+
+ppCoinsPerUTxOByteL ::
+  forall era. BabbageEraPParams era => Lens' (PParams era) CoinPerByte
+ppCoinsPerUTxOByteL = ppLens . hkdCoinsPerUTxOByteL @era @Identity
+
+ppuCoinsPerUTxOByteL ::
+  forall era. BabbageEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
+ppuCoinsPerUTxOByteL = ppuLens . hkdCoinsPerUTxOByteL @era @StrictMaybe
 
 -- | Babbage Protocol parameters. Ways in which parameters have changed from Alonzo: lack
 -- of @d@, @extraEntropy@ and replacement of @coinsPerUTxOWord@ with @coinsPerUTxOByte@

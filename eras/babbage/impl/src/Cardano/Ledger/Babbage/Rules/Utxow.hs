@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Rules (
   requiredSignersAreWitnessed,
  )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, validScript)
+import Cardano.Ledger.Alonzo.Scripts (validScript)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
@@ -229,7 +229,6 @@ validateScriptsWellFormed ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
-  , AlonzoEraScript era
   ) =>
   PParams era ->
   Tx era ->

@@ -1,10 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE UndecidableSuperClasses #-}
-
 module Cardano.Ledger.Babbage.Core (
   BabbageEraTxOut (..),
   BabbageEraTxBody (..),
@@ -17,51 +10,11 @@ module Cardano.Ledger.Babbage.Core (
 where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Sized (..))
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.HKD (HKD, HKDFunctor)
-import Cardano.Ledger.Plutus.Data (Data, Datum)
-import Cardano.Ledger.TxIn (TxIn (..))
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Functor.Identity (Identity)
-import Data.Maybe.Strict (StrictMaybe)
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
-import Lens.Micro (Lens', SimpleGetter)
-import NoThunks.Class (NoThunks)
-
-class (AlonzoEraTxOut era, EraScript era) => BabbageEraTxOut era where
-  referenceScriptTxOutL :: Lens' (TxOut era) (StrictMaybe (Script era))
-
-  dataTxOutL :: Lens' (TxOut era) (StrictMaybe (Data era))
-
-  datumTxOutL :: Lens' (TxOut era) (Datum era)
-
-class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
-  sizedOutputsTxBodyL :: Lens' (TxBody era) (StrictSeq (Sized (TxOut era)))
-
-  referenceInputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
-
-  totalCollateralTxBodyL :: Lens' (TxBody era) (StrictMaybe Coin)
-
-  collateralReturnTxBodyL :: Lens' (TxBody era) (StrictMaybe (TxOut era))
-
-  sizedCollateralReturnTxBodyL :: Lens' (TxBody era) (StrictMaybe (Sized (TxOut era)))
-
-  allSizedOutputsTxBodyF :: SimpleGetter (TxBody era) (StrictSeq (Sized (TxOut era)))
-
-newtype CoinPerByte = CoinPerByte {unCoinPerByte :: Coin}
-  deriving stock (Eq, Ord)
-  deriving newtype (EncCBOR, DecCBOR, ToJSON, FromJSON, NFData, NoThunks, Show)
-
-class AlonzoEraPParams era => BabbageEraPParams era where
-  hkdCoinsPerUTxOByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
-
-ppCoinsPerUTxOByteL ::
-  forall era. BabbageEraPParams era => Lens' (PParams era) CoinPerByte
-ppCoinsPerUTxOByteL = ppLens . hkdCoinsPerUTxOByteL @era @Identity
-
-ppuCoinsPerUTxOByteL ::
-  forall era. BabbageEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
-ppuCoinsPerUTxOByteL = ppuLens . hkdCoinsPerUTxOByteL @era @StrictMaybe
+import Cardano.Ledger.Babbage.PParams (
+  BabbageEraPParams (..),
+  CoinPerByte (..),
+  ppCoinsPerUTxOByteL,
+  ppuCoinsPerUTxOByteL,
+ )
+import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
+import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..))
