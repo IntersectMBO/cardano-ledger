@@ -577,7 +577,7 @@ demo mode seed = do
   modeRepl mode proof env ""
 
 demoTest :: TestTree
-demoTest = testIO "Testing Certs Stage" (demo CI 99)
+demoTest = testIO "Testing Certs Stage" (demo CI 263662165)
 
 main :: Int -> IO ()
 main n = defaultMain $ testIO "Testing Certs Stage" (demo Interactive n)

@@ -50,6 +50,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Void (Void)
+import Debug.Trace
 import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Combinators (setSized)
@@ -393,7 +394,8 @@ rewritePred m0 (Oneof term@(Var (V nm rep _)) ps0) = do
       params = zipWith (\param (i, _, _) -> Pair (Lit IntR i) param) vs ps0
       wheres = zipWith (\v (_, tar, ps) -> (v, tar, ps)) vs ps0
       (unfolded, m3) = unfoldWhere (wheres, m2)
-  pure (unfolded ++ [List vlist params, freq term vlist], m3)
+  (expandedPred, m4) <- removeExpandablePred ([], m3) unfolded
+  pure (expandedPred ++ [List vlist params, freq term vlist], m4)
 rewritePred m0 (Choose (Lit SizeR sz) (Var v) ps0) = do
   let ps1 = filter (\(i, _, _) -> i > 0) ps0
   count <- genFromSize sz
