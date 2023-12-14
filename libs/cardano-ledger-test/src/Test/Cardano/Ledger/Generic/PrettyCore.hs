@@ -1842,7 +1842,7 @@ pcGovAction x = case x of
       "NewCommittee"
       [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
       , ("membersToRemove", ppSet pcCredential toRemove)
-      , ("members", ppMap pcCredential ppEpochNo toAdd)
+      , ("membersToAdd", ppMap pcCredential ppEpochNo toAdd)
       , ("quorum", ppUnitInterval quor)
       ]
   (NewConstitution pgaid c) ->

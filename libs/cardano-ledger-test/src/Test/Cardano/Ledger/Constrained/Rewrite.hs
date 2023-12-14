@@ -34,6 +34,7 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance (GovAction (..))
 import Cardano.Ledger.Core (EraTxOut (..), TxOut, coinTxOutL)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era (Era (EraCrypto))
@@ -49,10 +50,11 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Void (Void)
+import Debug.Trace
 import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Combinators (setSized)
-import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), V (..), sameName)
+import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), V (..), pV, sameName)
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
 import Test.Cardano.Ledger.Constrained.Size
 import Test.Cardano.Ledger.Constrained.Size (genFromSize)
@@ -247,6 +249,12 @@ fresh (n, sub) (Lensed expr _) = mksub n (HashSet.toList (vars expr))
     mksub m names = (n + length names, sub2 ++ sub)
       where
         sub2 = zipWith (\(Name v@(V nm r _)) m1 -> SubItem v (Var (V (index nm m1) r No))) names [m ..]
+fresh (n, sub) (Partial (Var v@(V nm rep acc)) _) = (n + 1, SubItem v (Var (V (index nm n) rep acc)) : sub)
+fresh (n, sub) (Partial expr _) = mksub n (HashSet.toList (vars expr))
+  where
+    mksub m names = (n + length names, sub2 ++ sub)
+      where
+        sub2 = zipWith (\(Name v@(V nm r _)) m1 -> SubItem v (Var (V (index nm m1) r No))) names [m ..]
 fresh (n, sub) (f :$ x) = fresh (fresh (n, sub) f) x
 fresh (n, sub) (Virtual x _ _) = fresh (n, sub) (Simple x)
 
@@ -277,6 +285,29 @@ freshPairs ::
   (RootTarget era r t, [Pred era]) ->
   ((Int, SubItems era), [(RootTarget era r t, [Pred era])])
 freshPairs (xx, ans) (tar, ps) = (yy, (target2, ps2) : ans)
+  where
+    yy@(_, subitems) = fresh xx tar
+    subst = itemsToSubst subitems
+    target2 = substTarget subst tar
+    ps2 = map (substPred subst) ps
+
+freshPair ::
+  Int ->
+  (RootTarget era r t, [Pred era]) ->
+  (Int, SubItems era, RootTarget era r t, [Pred era])
+freshPair m0 (tar, ps) = (m1, subitems, target2, ps2)
+  where
+    (m1, subitems) = fresh (m0, []) tar
+    subst = itemsToSubst subitems
+    target2 = substTarget subst tar
+    ps2 = map (substPred subst) ps
+
+-- | Used to rename targets and preds, where they are embeded in a Triple, where the first component is the frequency
+freshTriples ::
+  ((Int, SubItems era), [(Int, RootTarget era r t, [Pred era])]) ->
+  (Int, RootTarget era r t, [Pred era]) ->
+  ((Int, SubItems era), [(Int, RootTarget era r t, [Pred era])])
+freshTriples (xx, ans) (i, tar, ps) = (yy, (i, target2, ps2) : ans)
   where
     yy@(_, subitems) = fresh xx tar
     subst = itemsToSubst subitems
@@ -332,11 +363,39 @@ pickNunique n xs = do
   indexes <- nUniqueFromM n (length xs - 1)
   pure [xs !! i | i <- indexes]
 
+-- | Make a GenFrom frequency Pred, from the input and output terms
+freq :: forall era t. Term era t -> Term era [(Int, t)] -> Pred era
+freq outVar inVar = GenFrom outVar (Constr "frequency" (frequency . map h) :$ (Simple inVar))
+  where
+    h (i, x) = (i, pure x)
+
+-- | Where is an abstraction for ( term :<-: target : preds )
+type Where era t = (Term era t, RootTarget era t t, [Pred era])
+
+-- | Unfold (Where x tar ps) into (x :<-: tar' : ps'), renaming tar to tar' and ps to ps'
+unfoldWhere :: forall era t. ([Where era t], Int) -> ([Pred era], Int)
+unfoldWhere (ps0, m0) = List.foldl' accum ([], m0) ps0
+  where
+    accum :: ([Pred era], Int) -> Where era t -> ([Pred era], Int)
+    accum (ans, mx) (t, tar, ps) = ((t :<-: tar2) : ps2 ++ ans, mx1)
+      where
+        (mx1, _, tar2, ps2) = freshPair mx (tar, ps)
+
 rewritePred :: Era era => Int -> Pred era -> Gen ([Pred era], Int)
-rewritePred m0 (Oneof (Var v) ps0) = do
-  let ps1 = filter (\(i, _, _) -> i > 0) ps0
-  (tar, qs) <- frequency (map (\(i, t, p) -> (i, pure (t, p))) ps1)
-  pure ((Var v :<-: tar) : qs, m0)
+{-
+OneOf x [(i,t1,p1),(j,t2,p2)] rewrites to
+[ Where x.1 t1 p1, Where x.2 t2 p2, List xlist.3 [(i,x.1),(j,x.2)], GenFrom x frequency xlist.3]
+where each (Where xi ti pi) is unfolded by renaming 'ti' and 'pi'
+-}
+rewritePred m0 (Oneof term@(Var (V nm rep _)) ps0) = do
+  let count = length ps0
+      (vs, m1) = freshVars m0 count (V nm (ListR rep) No)
+      (vlist, m2) = (Var (V (index (nm ++ "Pairs") m1) (ListR (PairR IntR rep)) No), m1 + 1)
+      params = zipWith (\param (i, _, _) -> Pair (Lit IntR i) param) vs ps0
+      wheres = zipWith (\v (_, tar, ps) -> (v, tar, ps)) vs ps0
+      (unfolded, m3) = unfoldWhere (wheres, m2)
+  (expandedPred, m4) <- removeExpandablePred ([], m3) unfolded
+  pure (expandedPred ++ [List vlist params, freq term vlist], m4)
 rewritePred m0 (Choose (Lit SizeR sz) (Var v) ps0) = do
   let ps1 = filter (\(i, _, _) -> i > 0) ps0
   count <- genFromSize sz
@@ -362,13 +421,14 @@ List w [w1,w2]
 ] -}
 rewritePred m0 (ListWhere (Lit SizeR sz) (Var v) tar ps) = do
   count <- genFromSize sz
-  let ((m1, subb), ps3) = List.foldl' freshPairs ((m0, []), []) (take count (repeat (tar, ps)))
-      (vs, m2) = freshVars2 m1 count v -- [v.1, v.2, v.3 ...]
+  (ps1, m1) <- pure (ps, m0) -- removeExpandablePred ([], m0) ps
+  let ((m2, subb), ps3) = List.foldl' freshPairs ((m1, []), []) (take count (repeat (tar, ps1)))
+      (vs, m3) = freshVars2 m2 count v -- [v.1, v.2, v.3 ...]
       renamedPred = map snd ps3
       renamedTargets = map fst ps3
-  (expandedPred, m3) <- removeExpandablePred ([], m2) (concat renamedPred)
+  (expandedPred, m4) <- removeExpandablePred ([], m3) (concat renamedPred)
   let newps = expandedPred ++ zipWith (:<-:) vs renamedTargets ++ [List (Var v) vs]
-  pure (newps, m3)
+  pure (newps, m4)
 rewritePred m0 (ForEach (Lit SizeR sz) (Var v) tar ps) = do
   let (sumstoPred, otherPred) = List.partition (extendableSumsTo tar) ps
   count <- genFromSize sz

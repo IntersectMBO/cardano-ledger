@@ -210,3 +210,17 @@ pairL xy ab = lens getter setter
 --   liftUTxO :: Map (TxIn (EraCrypto era)) (TxOutF era) -> UTxO era
 utxoFL :: Proof era -> Lens' (Map (TxIn (EraCrypto era)) (TxOutF era)) (UTxO era)
 utxoFL p = lens liftUTxO (\_ (UTxO new) -> (Map.map (TxOutF p) new))
+
+-- ======================================================================
+-- Don't tell me that these have impementations in Lens.Micro( _1, _2 )
+-- The problem with this, is that it needs special pragmas to work, and without
+-- these pragmas, causes ghci to hang.
+-- In addition there is NO documentation (only examples in Lens.Micro)
+-- and who remembers this any way?
+-- Way easier to remember these because they use the Cardano.Ledger Lens naming conventions
+
+fstL :: Lens' (a, b) a
+fstL = lens fst (\(_, b) a -> (a, b))
+
+sndL :: Lens' (a, b) b
+sndL = lens snd (\(a, _) b -> (a, b))

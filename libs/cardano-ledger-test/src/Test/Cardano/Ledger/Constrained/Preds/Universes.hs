@@ -77,6 +77,9 @@ import qualified Test.Cardano.Ledger.Shelley.Utils as Utils
 import Test.Tasty (TestTree, defaultMain)
 import Test.Tasty.QuickCheck
 
+import Cardano.Ledger.Conway.Governance (GovActionId (..), GovActionIx (..))
+import Cardano.Ledger.TxIn (TxIn (..))
+
 -- ==========================================================
 
 data UnivSize = UnivSize
@@ -474,8 +477,14 @@ cast :: forall c k. Set (KeyHash 'Witness c) -> Set (KeyHash k c)
 cast x = Set.map (\kh -> coerceKeyRole @KeyHash @'Witness kh) x
 
 -- TODO make some Script Credentials in addition to Key credentials
-castCred :: Set (KeyHash 'Witness c) -> Set (Credential 'ColdCommitteeRole c)
-castCred = Set.map (coerceKeyRole . KeyHashObj)
+castCredCold :: Set (KeyHash 'Witness c) -> Set (Credential 'ColdCommitteeRole c)
+castCredCold = Set.map (coerceKeyRole . KeyHashObj)
+
+castCredHot :: Set (KeyHash 'Witness c) -> Set (Credential 'HotCommitteeRole c)
+castCredHot = Set.map (coerceKeyRole . KeyHashObj)
+
+txinToGovactionId :: TxIn c -> GovActionId c
+txinToGovactionId (TxIn idx (TxIx n)) = GovActionId idx (GovActionIx (fromIntegral n))
 
 -- =================================================================
 -- Using constraints to generate the Universes
@@ -500,9 +509,10 @@ universePreds size p =
   , preGenesisDom :=: (Dom genesisHashUniv)
   , Sized (ExactSize (usNumVoteKeys size)) preVoteUniv
   , Subset preVoteUniv (Dom keymapUniv)
-  , voteCredUniv :<-: (Constr "WitnessToStakePool" castCred ^$ preVoteUniv)
+  , voteCredUniv :<-: (Constr "WitnessToStakePool" castCredCold ^$ preVoteUniv)
   , Sized (ExactSize (usNumTxIn size)) txinUniv
   , Member (Right feeTxIn) txinUniv
+  , govActionIdUniv :<-: (Constr "TxIn-to-GovActionId" (Set.map txinToGovactionId) ^$ txinUniv)
   , validityInterval :<-: makeValidityT beginSlotDelta currentSlot endSlotDelta
   , Choose
       (ExactSize (usNumCredentials size))
@@ -548,6 +558,8 @@ universePreds size p =
   , GenFrom drepUniv (genDRepsT size credsUniv)
   , payUniv :=: spendCredsUniv
   , voteUniv :<-: (Constr "coerce" (Set.map stakeToDRepRole) ^$ credsUniv)
+  , hotCommitteeCredsUniv :<-: (Constr "coerce" (Set.map stakeToHotCommittee) ^$ credsUniv)
+  , coldCommitteeCredsUniv :<-: (Constr "coerce" (Set.map stakeToColdCommittee) ^$ credsUniv)
   , bigCoin :<-: constTarget (Coin 2000000)
   , GenFrom
       feeTxOut
@@ -603,6 +615,12 @@ genValueF size proof c scripts = case whichValue proof of
 
 stakeToDRepRole :: Credential 'Staking c -> Credential 'DRepRole c
 stakeToDRepRole = coerceKeyRole
+
+stakeToHotCommittee :: Credential 'Staking c -> Credential 'HotCommitteeRole c
+stakeToHotCommittee = coerceKeyRole
+
+stakeToColdCommittee :: Credential 'Staking c -> Credential 'ColdCommitteeRole c
+stakeToColdCommittee = coerceKeyRole
 
 solveUniv :: Reflect era => UnivSize -> Proof era -> Gen (Subst era)
 solveUniv size proof = do
