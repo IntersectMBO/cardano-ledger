@@ -15,8 +15,6 @@ unit_interval = #6.30([1, 2])
   ; but this produces numbers outside the unit interval
   ; and can also produce a zero in the denominator
 
-rational =  #6.30([int, positive_int])
-
 nonnegative_interval = #6.30([uint, positive_int])
 
 
