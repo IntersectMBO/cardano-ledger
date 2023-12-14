@@ -11,11 +11,20 @@ nonempty_oset<a> = #6.258([+ a]) / [+ a]
 positive_int = 1 .. 18446744073709551615
 
 unit_interval = #6.30([1, 2])
-  ; real unit_interval is: #6.30([uint, uint])
-  ; but this produces numbers outside the unit interval
-  ; and can also produce a zero in the denominator
+  ; unit_interval = #6.30([uint, uint])
+  ;
+  ; Comment above depicts the actual definition for `unit_interval`.
+  ;
+  ; Unit interval is a number in the range between 0 and 1, which
+  ; means there are two extra constraints:
+  ; * numerator <= denominator
+  ; * denominator > 0
+  ;
+  ; Relation between numerator and denominator cannot be expressed in CDDL, which
+  ; poses a problem for testing. We need to be able to generate random valid data
+  ; for testing implementation of our encoders/decoders. Which means we cannot use
+  ; the actual definition here and we hard code the value to 1/2
 
-rational =  #6.30([int, positive_int])
 
 nonnegative_interval = #6.30([uint, positive_int])
 

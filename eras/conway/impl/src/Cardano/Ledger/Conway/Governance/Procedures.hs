@@ -593,7 +593,7 @@ data GovAction era
       !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
       -- | Constitutional committee members to be added
       !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
-      -- New quorum
+      -- | New quorum
       !UnitInterval
   | NewConstitution
       -- | Previous governance action id of `NewConstitution` type, which corresponds to
