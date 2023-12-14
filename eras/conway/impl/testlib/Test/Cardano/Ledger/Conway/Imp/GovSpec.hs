@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
@@ -45,6 +46,8 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "GOV" $ do
+    describe "Hardfork" $ do
+      it "Hardfork" hardForkCanFollow
     describe "Voting" $ do
       context "fails for" $ do
         it "expired gov-actions" $ do
@@ -494,3 +497,61 @@ setPParams = do
       & ppCommitteeMaxTermLengthL .~ 10
       & ppGovActionLifetimeL .~ 100
       & ppGovActionDepositL .~ Coin 123
+
+-- =========================================================
+-- Proposing a HardFork should always use a new ProtVer that
+-- can follow the one installed in the previous HardFork action.
+
+-- | A legal ProtVer that differs in the minor Version
+minorFollow :: ProtVer -> ProtVer
+minorFollow (ProtVer x y) = ProtVer x (y + 1)
+
+-- | A legal ProtVer that differs in the major Version
+majorFollow :: ProtVer -> ProtVer
+majorFollow (ProtVer x y) = case (succVersion x) of
+  Just x' -> ProtVer x' y
+  Nothing -> error "The last major version (maxBound Word64) can't be incremented"
+
+cantFollow :: ProtVer -> ProtVer
+cantFollow (ProtVer (Version x) y) = ProtVer (Version (x - 1)) (y + 45)
+
+hardForkCanFollow ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ImpTestM era ()
+hardForkCanFollow = do
+  rewardAccount <- registerRewardAccount
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let protver = pp ^. ppProtocolVersionL
+  gaid <-
+    impAnn "Minor ProtVer CanFollow Failure" $
+      submitProposal $
+        ProposalProcedure
+          { pProcDeposit = pp ^. ppGovActionDepositL
+          , pProcReturnAddr = rewardAccount
+          , pProcGovAction = HardForkInitiation SNothing (minorFollow protver)
+          , pProcAnchor = def
+          }
+  pp2 <- getsNES $ nesEsL . curPParamsEpochStateL
+  let protver2 = pp2 ^. ppProtocolVersionL
+  _ <-
+    impAnn "Major ProtVer CanFollow Failure" $
+      submitProposal $
+        ProposalProcedure
+          { pProcDeposit = pp ^. ppGovActionDepositL
+          , pProcReturnAddr = rewardAccount
+          , pProcGovAction = HardForkInitiation (SJust (PrevGovActionId gaid)) (majorFollow protver2)
+          , pProcAnchor = def
+          }
+  pp3 <- getsNES $ nesEsL . curPParamsEpochStateL
+  let protver3 = pp3 ^. ppProtocolVersionL
+  _ <-
+    impAnn "Same ProtVer should fail, but it does not" $
+      submitProposal
+        ( ProposalProcedure
+            { pProcDeposit = pp ^. ppGovActionDepositL
+            , pProcReturnAddr = rewardAccount
+            , pProcGovAction = HardForkInitiation (SJust (PrevGovActionId gaid)) (cantFollow protver3)
+            , pProcAnchor = def
+            }
+        )
+  pure ()

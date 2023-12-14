@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Conway.Imp (
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject)
+import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Governance (ConwayGovState, GovState)
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Core (EraRule)
@@ -33,3 +34,6 @@ spec = do
     Enact.spec @era
     Epoch.spec @era
     Gov.spec @era
+
+_main :: IO ()
+_main = ledgerTestMain (spec @Conway)
