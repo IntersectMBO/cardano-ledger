@@ -14,7 +14,6 @@ module Cardano.Ledger.Pretty.Alonzo where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript,
   AlonzoScript (..),
   CostModel,
   CostModels (..),
@@ -26,7 +25,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   plutusScriptLanguage,
  )
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoEraTx,
   AlonzoTx (AlonzoTx),
   AlonzoTxBody (AlonzoTxBody),
   IsValid (..),

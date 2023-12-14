@@ -20,9 +20,6 @@ import Cardano.Ledger.Shelley.API (
   DState (..),
   DelegEnv (..),
   InstantaneousRewards (..),
-  MIRCert (..),
-  MIRPot (..),
-  MIRTarget (..),
   Ptr (..),
   ShelleyDELEG,
  )

@@ -19,7 +19,6 @@ where
 import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..), mkCertIxPartial)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary (emptySnapShot)
@@ -29,6 +28,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -46,18 +46,9 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure (..),
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (
-  MIRPot (..),
-  MIRTarget (..),
-  ShelleyTxBody (..),
-  ShelleyTxOut (..),
-  Withdrawals (..),
- )
-import Cardano.Ledger.Shelley.TxCert (
-  MIRCert (..),
-  ShelleyTxCert (..),
-  pattern RegTxCert,
- )
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))

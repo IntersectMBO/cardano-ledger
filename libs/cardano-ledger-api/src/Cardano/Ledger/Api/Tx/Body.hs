@@ -25,7 +25,6 @@ module Cardano.Ledger.Api.Tx.Body (
   ShelleyEraTxBody,
   ttlTxBodyL,
   updateTxBodyL,
-  updateTxBodyG, -- deprecated
   certsTxBodyL,
 
   -- * Allegra Era

@@ -112,7 +112,6 @@ test-suite cardano-ledger-alonzo-test
         aeson >=2,
         base16-bytestring,
         bytestring,
-        cardano-ledger-allegra,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-alonzo-test,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},

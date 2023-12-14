@@ -10,18 +10,11 @@
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoScript (..),
- )
-import Cardano.Ledger.Alonzo.Tx (
-  AlonzoTxBody (..),
- )
-import Cardano.Ledger.Alonzo.TxAuxData (
-  AuxiliaryDataHash,
- )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..))
+import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
@@ -29,10 +22,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
-import Cardano.Ledger.Plutus.Data (
-  BinaryData,
-  Data (..),
- )
+import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.TxIn (TxIn)

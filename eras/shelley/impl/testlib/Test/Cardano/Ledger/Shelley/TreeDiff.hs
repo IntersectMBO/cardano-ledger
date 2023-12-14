@@ -22,6 +22,7 @@ import Cardano.Ledger.Shelley.Tx
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxCert
+import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits
 import Test.Cardano.Ledger.TreeDiff
 

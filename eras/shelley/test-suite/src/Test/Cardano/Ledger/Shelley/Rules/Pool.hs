@@ -17,6 +17,7 @@ import Cardano.Ledger.Block (
   bheader,
  )
 import Cardano.Ledger.Core
+import Cardano.Ledger.PoolParams (ppId)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
@@ -26,7 +27,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   psStakePoolParams,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyPOOL)
-import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.BHeader (
   bhbody,

@@ -22,10 +22,7 @@ where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
-import Cardano.Ledger.Allegra.TxBody (
-  AllegraTxBody (..),
-  ValidityInterval (ValidityInterval),
- )
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (encCBOR, serialize')
@@ -36,7 +33,7 @@ import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>))

@@ -29,7 +29,6 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<+>), (<->))

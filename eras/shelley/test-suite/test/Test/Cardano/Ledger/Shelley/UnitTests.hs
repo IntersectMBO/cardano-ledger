@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..), getRwdCred)
+import Cardano.Ledger.Address (Addr (..), getRwdCred, pattern RewardAcnt)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
@@ -27,6 +27,21 @@ import Cardano.Ledger.Keys (
   asWitness,
   hashKey,
   hashVerKeyVRF,
+ )
+import Cardano.Ledger.PoolParams (
+  PoolMetadata (..),
+  PoolParams (..),
+  pmHash,
+  pmUrl,
+  ppCost,
+  ppId,
+  ppMargin,
+  ppMetadata,
+  ppOwners,
+  ppPledge,
+  ppRelays,
+  ppRewardAcnt,
+  ppVrf,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
@@ -52,34 +67,15 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure (..),
   ShelleyUtxowPredFailure (..),
  )
-import Cardano.Ledger.Shelley.Tx (
-  ShelleyTx (..),
-  ShelleyTxBody (..),
-  ShelleyTxOut (..),
-  TxIn (..),
-  stbTTL,
- )
-import Cardano.Ledger.Shelley.TxBody (
-  PoolMetadata (..),
-  PoolParams (..),
-  pmHash,
-  pmUrl,
-  ppCost,
-  ppId,
-  ppMargin,
-  ppMetadata,
-  ppOwners,
-  ppPledge,
-  ppRelays,
-  ppRewardAcnt,
-  ppVrf,
-  pattern RewardAcnt,
- )
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits,
   addrWits,
  )
+import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)

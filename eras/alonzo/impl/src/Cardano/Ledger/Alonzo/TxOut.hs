@@ -14,12 +14,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.TxOut (
-  AlonzoTxOut (.., AlonzoTxOut, TxOutCompact, TxOutCompactDH),
   AlonzoEraTxOut (..),
+  AlonzoTxOut (.., AlonzoTxOut, TxOutCompact, TxOutCompactDH),
   -- Constructors are not exported for safety:
   Addr28Extra,
   DataHash32,
@@ -44,9 +45,8 @@ import Cardano.Ledger.Address (
   decompactAddr,
   fromCborBothAddr,
  )
-import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.PParams ()
+import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, CoinPerWord (..), ppCoinsPerUTxOWordL)
 import Cardano.Ledger.Alonzo.Scripts ()
 import Cardano.Ledger.BaseTypes (
   Network (..),
@@ -75,6 +75,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.SafeHash (extractHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
@@ -90,7 +91,11 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
-import Prelude hiding (lookup)
+
+class (AlonzoEraPParams era, EraTxOut era) => AlonzoEraTxOut era where
+  dataHashTxOutL :: Lens' (TxOut era) (StrictMaybe (DataHash (EraCrypto era)))
+
+  datumTxOutF :: SimpleGetter (TxOut era) (Datum era)
 
 data Addr28Extra
   = Addr28Extra

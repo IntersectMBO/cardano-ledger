@@ -22,7 +22,6 @@ import Cardano.Ledger.Conway.Governance (
   ensCommitteeL,
   rsEnactStateL,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules (
   committeeAccepted,
   committeeAcceptedRatio,

@@ -25,14 +25,14 @@ import Cardano.Ledger.Shelley.API (
   Update,
  )
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
-import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (ShelleyTxBody, stbInputs, stbOutputs, stbTxFee),
-  ShelleyTxOut (..),
   Withdrawals (..),
  )
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.Monad (replicateM)

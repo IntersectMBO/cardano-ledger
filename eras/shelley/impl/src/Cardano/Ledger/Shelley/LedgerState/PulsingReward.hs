@@ -19,6 +19,7 @@ module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
 )
 where
 
+import Cardano.Ledger.Address (RewardAcnt (..), getRwdCred)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
@@ -45,6 +46,7 @@ import Cardano.Ledger.EpochBoundary (
   sumStakePerPool,
  )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
@@ -71,11 +73,6 @@ import Cardano.Ledger.Shelley.Rewards (
   leaderRewardToGeneral,
   mkPoolRewardInfo,
   sumRewards,
- )
-import Cardano.Ledger.Shelley.TxBody (
-  PoolParams (..),
-  RewardAcnt (..),
-  getRwdCred,
  )
 import Cardano.Ledger.Slot (EpochSize (..))
 import qualified Cardano.Ledger.UMap as UM

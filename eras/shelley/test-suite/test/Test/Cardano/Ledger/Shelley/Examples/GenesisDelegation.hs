@@ -36,11 +36,8 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (
-  ShelleyTxBody (..),
-  ShelleyTxOut (..),
- )
-import Cardano.Ledger.Shelley.TxCert (pattern GenesisDelegTxCert)
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))

@@ -54,14 +54,14 @@ import Cardano.Ledger.Binary.Crypto (
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH, DSIGN))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys (
+import Cardano.Ledger.Keys.Internal (
   Hash,
   KeyHash (..),
   KeyRole (..),
+  SignedDSIGN,
   VKey (..),
   verifySignedDSIGN,
  )
-import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
@@ -81,11 +81,7 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
 
 data BootstrapWitness c = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness c)
-  , bwSig' ::
-      !( Keys.SignedDSIGN
-          c
-          (Hash c EraIndependentTxBody)
-       )
+  , bwSig' :: !(SignedDSIGN c (Hash c EraIndependentTxBody))
   , bwChainCode' :: !ChainCode
   , bwAttributes' :: !ByteString
   , bwBytes :: LBS.ByteString
@@ -111,7 +107,7 @@ deriving via
 pattern BootstrapWitness ::
   Crypto c =>
   VKey 'Witness c ->
-  Keys.SignedDSIGN c (Hash c EraIndependentTxBody) ->
+  SignedDSIGN c (Hash c EraIndependentTxBody) ->
   ChainCode ->
   ByteString ->
   BootstrapWitness c

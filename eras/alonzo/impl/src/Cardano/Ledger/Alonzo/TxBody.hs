@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -74,8 +75,6 @@ module Cardano.Ledger.Alonzo.TxBody (
 )
 where
 
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Scripts ()
@@ -97,6 +96,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
 import Cardano.Ledger.MemoBytes (
@@ -110,7 +110,7 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
@@ -127,6 +127,18 @@ import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+
+type ScriptIntegrityHash c = SafeHash c EraIndependentScriptIntegrity
+
+class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
+  collateralInputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
+
+  reqSignerHashesTxBodyL :: Lens' (TxBody era) (Set (KeyHash 'Witness (EraCrypto era)))
+
+  scriptIntegrityHashTxBodyL ::
+    Lens' (TxBody era) (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+
+  networkIdTxBodyL :: Lens' (TxBody era) (StrictMaybe Network)
 
 -- ======================================
 

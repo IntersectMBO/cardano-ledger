@@ -3,7 +3,7 @@
 ## 1.8.0.0
 
 * Remove old and deprecated functions `evaluateTransactionExecutionUnits`,
-  `evaluateTransactionExecutionUnitsWithLogs`
+  `evaluateTransactionExecutionUnitsWithLogs` and `updateTxBodyG`
 * Remove no longer necessary `ValidationFailed`
 * Adjust `TransactionScriptFailure`
 * Add `DecAddr` and `decodeAddrLenient` with `decodeAddrLenientEither`

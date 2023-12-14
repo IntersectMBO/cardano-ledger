@@ -13,7 +13,6 @@
 module Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER) where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent, ledgerTransition)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageLEDGER)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)

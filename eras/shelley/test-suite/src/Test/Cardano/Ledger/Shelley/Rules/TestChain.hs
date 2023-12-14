@@ -30,6 +30,7 @@ import Cardano.Ledger.Block (
   neededTxInsForBlock,
  )
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Ptr (..))
 import Cardano.Ledger.Shelley.API (ApplyBlock, CertState (..), ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -45,7 +46,6 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEnv (..),
   ShelleyPOOL,
  )
-import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (
@@ -71,6 +71,7 @@ import Data.Maybe (mapMaybe)
 import Data.Proxy
 import qualified Data.Set as Set
 import Data.Word (Word64)
+import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Constants (Constants)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
@@ -80,9 +81,6 @@ import qualified Test.Cardano.Ledger.Shelley.Generator.Presets as Preset (genEnv
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
-
-import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCert, pattern UnRegTxCert)
-import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   runShelleyBase,

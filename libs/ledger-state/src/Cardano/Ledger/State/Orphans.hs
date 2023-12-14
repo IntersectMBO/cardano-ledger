@@ -17,10 +17,10 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.TxIn
 import Data.ByteString.Short

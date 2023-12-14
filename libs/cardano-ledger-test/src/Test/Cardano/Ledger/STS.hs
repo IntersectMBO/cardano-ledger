@@ -24,7 +24,6 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
@@ -34,7 +33,7 @@ import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
-import Cardano.Ledger.Shelley.Tx (TxId (..))
+import Cardano.Ledger.TxIn (TxId (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.Monad.Reader
 import Control.State.Transition.Extended

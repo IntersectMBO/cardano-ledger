@@ -18,8 +18,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default.Class (Default (..))

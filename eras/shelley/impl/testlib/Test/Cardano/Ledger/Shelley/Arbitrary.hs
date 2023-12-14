@@ -67,9 +67,6 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
-  MIRCert,
-  MIRPot,
-  MIRTarget (SendToOppositePotMIR, StakeAddressesMIR),
   ShelleyTxCert,
  )
 import Cardano.Ledger.Shelley.TxOut

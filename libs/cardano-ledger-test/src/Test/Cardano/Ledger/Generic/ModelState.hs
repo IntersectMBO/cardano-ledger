@@ -50,6 +50,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Pretty (
   PDoc,
   ppAccountState,
@@ -85,7 +86,6 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM

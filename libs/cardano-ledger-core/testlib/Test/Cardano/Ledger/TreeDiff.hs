@@ -26,8 +26,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys
-import Cardano.Ledger.Keys.Bootstrap
-import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.Data

@@ -38,7 +38,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
-import Cardano.Ledger.Keys (KeyRole (Witness))
+import Cardano.Ledger.Keys (KeyRole (Witness), WitVKey)
 import Cardano.Ledger.Pretty (PrettyA (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.API (
@@ -53,7 +53,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody, WitVKey, Withdrawals)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody, Withdrawals)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn)
 import Cardano.Ledger.UTxO (UTxO)
 import Cardano.Protocol.TPraos.BHeader (BHeader)

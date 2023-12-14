@@ -20,18 +20,15 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules (vKeyLocked)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo (
-  AlonzoEraScript,
   AlonzoScript (..),
   ExUnits (..),
   Prices (..),
   isPlutusScript,
   plutusScriptLanguage,
   pointWiseExUnits,
-  toPlutusScript,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoEraTx (..),
   AlonzoTx (..),
   IsValid (..),
   ScriptPurpose (..),
@@ -47,7 +44,6 @@ import Cardano.Ledger.Alonzo.TxBody (
   utxoEntrySize,
  )
 import Cardano.Ledger.Alonzo.TxWits (
-  AlonzoEraTxWits (..),
   AlonzoTxWits (..),
   RdmrPtr (..),
   Redeemers (..),

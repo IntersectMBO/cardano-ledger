@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (CollectErrors),
   AlonzoUtxowPredFailure (MissingRequiredDatums, NotAllowedSupplementalDatums),
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage (Babbage)
@@ -72,7 +72,6 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.TxCert (pattern UnRegTxCert)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)

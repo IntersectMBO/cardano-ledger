@@ -74,10 +74,11 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, HASH, KES)
 import Cardano.Ledger.Keys
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.StabilityWindow
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (UTxO))
 import qualified Cardano.Ledger.Val as Val

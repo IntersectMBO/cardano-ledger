@@ -13,10 +13,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary.TxBody (
+  MaryEraTxBody (..),
   MaryTxBody (
     MaryTxBody,
     mtbAuxDataHash,
@@ -30,18 +32,15 @@ module Cardano.Ledger.Mary.TxBody (
     mtbMint
   ),
   MaryTxBodyRaw (..),
-  MaryEraTxBody (..),
-  StrictMaybe (..),
-  ValidityInterval (..),
 )
 where
 
+import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxCert ()
 import Cardano.Ledger.Mary.TxOut ()
@@ -66,6 +65,13 @@ import qualified Data.Set as Set (Set, map)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+
+class AllegraEraTxBody era => MaryEraTxBody era where
+  mintTxBodyL :: Lens' (TxBody era) (MultiAsset (EraCrypto era))
+
+  mintValueTxBodyF :: SimpleGetter (TxBody era) (Value era)
+
+  mintedTxBodyF :: SimpleGetter (TxBody era) (Set.Set (ScriptHash (EraCrypto era)))
 
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.

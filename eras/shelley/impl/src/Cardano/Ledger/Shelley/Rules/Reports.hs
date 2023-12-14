@@ -24,12 +24,13 @@ import Cardano.Ledger.CertState (
   InstantaneousRewards (..),
  )
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.TxBody
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), ShelleyEraTxBody (..), Withdrawals (..))
+import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
 import qualified Data.Map.Strict as Map

@@ -32,15 +32,11 @@ import Cardano.Ledger.Alonzo.Rules (
   requiredSignersAreWitnessed,
  )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, validScript)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
+import Cardano.Ledger.Alonzo.Scripts (validScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
-import Cardano.Ledger.Babbage.TxBody (
-  BabbageEraTxBody (..),
-  BabbageEraTxOut (..),
- )
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase, quorum, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -52,10 +48,9 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
@@ -64,6 +59,7 @@ import Cardano.Ledger.Shelley.Rules (
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
@@ -228,7 +224,6 @@ validateScriptsWellFormed ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
-  , AlonzoEraScript era
   ) =>
   PParams era ->
   Tx era ->

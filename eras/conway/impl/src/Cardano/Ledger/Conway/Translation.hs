@@ -18,7 +18,6 @@ module Cardano.Ledger.Conway.Translation (
 ) where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))

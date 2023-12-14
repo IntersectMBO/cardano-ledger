@@ -26,7 +26,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -49,18 +49,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   dsGenDelegs,
   dsIRewards,
   rewards,
- )
-import Cardano.Ledger.Shelley.TxBody (
-  MIRCert (..),
-  MIRPot (..),
-  MIRTarget (..),
-  Ptr,
- )
-import Cardano.Ledger.Shelley.TxCert (
-  pattern DelegStakeTxCert,
-  pattern GenesisDelegTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (
   Duration (..),

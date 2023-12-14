@@ -80,12 +80,13 @@ where
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
-import Cardano.Ledger.Alonzo.Core (AlonzoEraPParams, ppPricesL)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (
+  AlonzoEraPParams,
   LangDepView (..),
   encodeLangViews,
   getLanguageView,
+  ppPricesL,
  )
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript,

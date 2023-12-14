@@ -45,7 +45,6 @@ import Cardano.Ledger.Conway.Governance (
   ensPrevGovActionIdsL,
   proposalsGovStateL,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
 import Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (CertsEnv),
@@ -58,8 +57,6 @@ import Cardano.Ledger.Conway.Rules.Gov (
   GovEnv (..),
   GovRuleState (..),
  )
-import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..))
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), currentTreasuryValueTxBodyL)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))

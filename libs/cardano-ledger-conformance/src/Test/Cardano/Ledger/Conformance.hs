@@ -23,24 +23,23 @@ module Test.Cardano.Ledger.Conformance (
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Hash (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), serialiseAddr)
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript,
   AlonzoScript (..),
   CostModels,
   ExUnits (..),
   Prices,
   Tag (..),
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
   RdmrPtr (..),
   Redeemers (..),
   TxDats (..),
  )
+import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   Anchor,
   EpochInterval (..),
@@ -59,7 +58,6 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovAction (..), ProposalProcedure (..), VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
@@ -67,7 +65,6 @@ import Cardano.Ledger.Conway.TxCert (
   getStakePoolDelegatee,
   getVoteDelegatee,
  )
-import Cardano.Ledger.Conway.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep (DRep (..))

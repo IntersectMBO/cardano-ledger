@@ -40,7 +40,7 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
   ShelleyTx (..),
  )
-import Cardano.Ledger.Shelley.TxBody as Shelley (ShelleyTxOut (..))
+import Cardano.Ledger.Shelley.TxOut as Shelley (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits as Shelley (
   addrWits,
   bootWits,

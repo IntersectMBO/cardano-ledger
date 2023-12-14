@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Alonzo.Trace () where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Shelley.LedgerState (CertState (..), UTxOState)
 import Cardano.Ledger.Shelley.Rules (

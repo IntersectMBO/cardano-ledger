@@ -55,6 +55,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
 import Cardano.Ledger.Address (RewardAcnt)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
   AnchorData (..),
@@ -85,12 +86,10 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (Era (..), EraPParams (..), PParamsUpdate)
 import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (extractHash)
-import Cardano.Ledger.Shelley.Governance (Constitution)
 import Cardano.Ledger.Shelley.RewardProvenance ()
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)

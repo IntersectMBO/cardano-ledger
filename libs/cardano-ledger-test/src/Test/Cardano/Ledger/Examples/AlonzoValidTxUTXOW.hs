@@ -15,6 +15,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (tests) where
 
+import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -41,15 +42,11 @@ import Cardano.Ledger.Shelley.API (
   ProtVer (..),
   UTxO (..),
  )
-import Cardano.Ledger.Shelley.Core hiding (TranslationError)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   smartUTxOState,
  )
-import Cardano.Ledger.Shelley.TxBody (
-  RewardAcnt (..),
- )
-import Cardano.Ledger.Shelley.TxCert (pattern UnRegTxCert)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))

@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -49,6 +50,7 @@ import Cardano.Ledger.Address (
   fromCborBackwardsBothAddr,
   fromCborBothAddr,
  )
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.TxBody (
   Addr28Extra,
   AlonzoTxOut (AlonzoTxOut),
@@ -60,9 +62,8 @@ import Cardano.Ledger.Alonzo.TxBody (
   getAdaOnly,
  )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
-import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.PParams ()
+import Cardano.Ledger.Babbage.PParams (BabbageEraPParams (..), CoinPerByte (..), ppCoinsPerUTxOByteL)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
@@ -117,7 +118,13 @@ import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (NoThunks)
-import Prelude hiding (lookup)
+
+class (AlonzoEraTxOut era, AlonzoEraScript era) => BabbageEraTxOut era where
+  referenceScriptTxOutL :: Lens' (TxOut era) (StrictMaybe (Script era))
+
+  dataTxOutL :: Lens' (TxOut era) (StrictMaybe (Data era))
+
+  datumTxOutL :: Lens' (TxOut era) (Datum era)
 
 data BabbageTxOut era
   = TxOutCompact'

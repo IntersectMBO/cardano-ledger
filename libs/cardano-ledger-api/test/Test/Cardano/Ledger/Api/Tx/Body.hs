@@ -16,10 +16,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.TxCert (
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
 import Cardano.Ledger.Shelley.UTxO hiding (consumed, produced)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val

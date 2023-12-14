@@ -4,7 +4,7 @@
 
 module Test.Cardano.Ledger.Babbage.Examples.Consensus where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Translation ()

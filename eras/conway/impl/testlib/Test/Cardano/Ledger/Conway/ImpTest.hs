@@ -98,14 +98,6 @@ import Cardano.Ledger.Conway.Governance (
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
-import Cardano.Ledger.Conway.PParams (
-  ConwayEraPParams,
-  ppCommitteeMaxTermLengthL,
-  ppDRepActivityL,
-  ppDRepVotingThresholdsL,
-  ppGovActionDepositL,
-  ppGovActionLifetimeL,
- )
 import Cardano.Ledger.Conway.Rules (
   EnactSignal,
   committeeAccepted,
@@ -118,10 +110,6 @@ import Cardano.Ledger.Conway.Rules (
   spoAcceptedRatio,
   validCommitteeTerm,
   withdrawalCanWithdraw,
- )
-import Cardano.Ledger.Conway.TxBody (
-  ConwayEraTxBody (..),
-  proposalProceduresTxBodyL,
  )
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert (..),

@@ -33,6 +33,7 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   isConsistent_,
 ) where
 
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR (..), DecShareCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -43,7 +44,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Conway.Core (Era (..), EraPParams)
 import Cardano.Ledger.Conway.Governance.Procedures (
   GovAction (..),
   GovActionId,

@@ -8,7 +8,7 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Shelley.TxBody (
+import Cardano.Ledger.Shelley.TxOut (
   ShelleyTxOut (..),
   addrEitherShelleyTxOutL,
   valueEitherShelleyTxOutL,

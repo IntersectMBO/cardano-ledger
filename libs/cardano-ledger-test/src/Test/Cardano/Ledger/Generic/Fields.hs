@@ -41,7 +41,6 @@ module Test.Cardano.Ledger.Generic.Fields (
 where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..), unOrdExUnits)
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)
@@ -65,28 +64,19 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
-import Cardano.Ledger.Conway.PParams (
-  ConwayPParams (..),
-  ppCommitteeMaxTermLengthL,
-  ppCommitteeMinSizeL,
-  ppDRepActivityL,
-  ppDRepDepositL,
-  ppDRepVotingThresholdsL,
-  ppGovActionDepositL,
-  ppGovActionLifetimeL,
-  ppPoolVotingThresholdsL,
- )
+import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..), hashKey)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), WitVKey (..), hashKey)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), WitVKey (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo (..))

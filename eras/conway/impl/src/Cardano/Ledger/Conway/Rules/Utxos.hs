@@ -33,8 +33,6 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (

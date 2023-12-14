@@ -11,7 +11,6 @@
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))

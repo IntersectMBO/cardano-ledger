@@ -61,7 +61,6 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.TxInfo (transCoin, transCred, transKeyHash, transTxIn)
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.Shelley.TxCert
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, zipWithM)
 import Data.Foldable as F (Foldable (..))

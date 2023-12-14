@@ -334,14 +334,15 @@ class
   hkdExtraEntropyL :: (HKDFunctor f, ProtVerAtMost era 6) => Lens' (PParamsHKD f era) (HKD f Nonce)
 
   -- | Protocol version
-  hkdProtocolVersionL :: (HKDFunctor f, ProtVerAtMost era 8) => Lens' (PParamsHKD f era) (HKD f ProtVer)
+  hkdProtocolVersionL ::
+    (HKDFunctor f, ProtVerAtMost era 8) => Lens' (PParamsHKD f era) (HKD f ProtVer)
 
-  ppProtocolVersionL :: EraPParams era => Lens' (PParams era) ProtVer
+  ppProtocolVersionL :: Lens' (PParams era) ProtVer
   default ppProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParams era) ProtVer
   ppProtocolVersionL = ppLens . hkdProtocolVersionL @era @Identity
 
   -- | PParamsUpdate Protocol version
-  ppuProtocolVersionL :: (ProtVerAtMost era 8, EraPParams era) => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
+  ppuProtocolVersionL :: ProtVerAtMost era 8 => Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
   ppuProtocolVersionL = ppuLens . hkdProtocolVersionL @era @StrictMaybe
 
   -- | Minimum UTxO value

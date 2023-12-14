@@ -27,7 +27,6 @@ import Cardano.Ledger.Alonzo.Rules (
   missingRequiredDatums,
   ppViewHashesMatch,
  )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
@@ -42,18 +41,18 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (Voter (..), VotingProcedures (..))
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Credential (credKeyHashWitness)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (UtxoEvent),
   UtxoEnv (..),
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Control.State.Transition.Extended (
   Embed (..),

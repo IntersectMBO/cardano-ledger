@@ -18,7 +18,6 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules
-import Cardano.Ledger.Babbage.Scripts
 import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Babbage.TxInfo (ContextError (..))
 import Cardano.Ledger.BaseTypes
