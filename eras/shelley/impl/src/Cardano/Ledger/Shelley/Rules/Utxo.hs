@@ -150,8 +150,8 @@ deriving instance Show (PParams era) => Show (UtxoEnv era)
 data UtxoEvent era
   = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | UpdateEvent (Event (EraRule "PPUP" era))
-  | NewlySpendableUTxOsEvent (UTxO era) 
-    -- ^ Only the UTxO that is spendable after processing the valid signal tx
+  | -- | Only the UTxO that is spendable after processing the valid signal tx
+    NewlySpendableUTxOsEvent (UTxO era)
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO
@@ -444,7 +444,12 @@ utxoInductive = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
 
-  updateUTxOState pp utxos txBody certState ppup'
+  updateUTxOState
+    pp
+    utxos
+    txBody
+    certState
+    ppup'
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (tellEvent . NewlySpendableUTxOsEvent)
 
@@ -618,7 +623,7 @@ updateUTxOState ::
   CertState era ->
   GovState era ->
   (Coin -> m ()) ->
-  (UTxO era -> m()) -> 
+  (UTxO era -> m ()) ->
   m (UTxOState era)
 updateUTxOState pp utxos txBody certState govState depositChangeEvent newlySpendableUTxOsEvent = do
   let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr, utxosDonation} = utxos

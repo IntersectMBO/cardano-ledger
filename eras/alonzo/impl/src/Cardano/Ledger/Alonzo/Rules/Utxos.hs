@@ -142,8 +142,8 @@ data AlonzoUtxosEvent era
   | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
   | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
-  | NewlySpendableUTxOsEvent (UTxO era) 
-    -- ^ Only the UTxO that is spendable after processing the valid signal tx
+  | -- | Only the UTxO that is spendable after processing the valid signal tx
+    NewlySpendableUTxOsEvent (UTxO era)
 
 instance
   ( Era era
@@ -255,7 +255,12 @@ alonzoEvalScriptsTxValid = do
       TRC
         (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
 
-  updateUTxOState pp utxos txBody certState ppup' 
+  updateUTxOState
+    pp
+    utxos
+    txBody
+    certState
+    ppup'
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (tellEvent . NewlySpendableUTxOsEvent)
 

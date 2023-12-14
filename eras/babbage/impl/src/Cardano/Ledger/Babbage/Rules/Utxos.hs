@@ -200,7 +200,12 @@ babbageEvalScriptsTxValid = do
   expectScriptsToPass pp tx utxo
   () <- pure $! traceEvent validEnd ()
 
-  updateUTxOState pp utxos txBody certState ppup' 
+  updateUTxOState
+    pp
+    utxos
+    txBody
+    certState
+    ppup'
     (tellEvent . TotalDeposits (hashAnnotated txBody))
     (tellEvent . NewlySpendableUTxOsEvent)
 
