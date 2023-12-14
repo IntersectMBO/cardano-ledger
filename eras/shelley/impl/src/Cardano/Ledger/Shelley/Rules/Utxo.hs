@@ -150,6 +150,8 @@ deriving instance Show (PParams era) => Show (UtxoEnv era)
 data UtxoEvent era
   = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | UpdateEvent (Event (EraRule "PPUP" era))
+  | NewlySpendableUTxOsEvent (UTxO era) 
+    -- ^ Only the UTxO that is spendable after processing the valid signal tx
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO
@@ -442,8 +444,9 @@ utxoInductive = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
 
-  updateUTxOState pp utxos txBody certState ppup' $
-    tellEvent . TotalDeposits (hashAnnotated txBody)
+  updateUTxOState pp utxos txBody certState ppup'
+    (tellEvent . TotalDeposits (hashAnnotated txBody))
+    (tellEvent . NewlySpendableUTxOsEvent)
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).
@@ -615,8 +618,9 @@ updateUTxOState ::
   CertState era ->
   GovState era ->
   (Coin -> m ()) ->
+  (UTxO era -> m()) -> 
   m (UTxOState era)
-updateUTxOState pp utxos txBody certState govState depositChangeEvent = do
+updateUTxOState pp utxos txBody certState govState depositChangeEvent newlySpendableUTxOsEvent = do
   let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr, utxosDonation} = utxos
       UTxO utxo = utxosUtxo
       !utxoAdd = txouts txBody -- These will be inserted into the UTxO
@@ -629,6 +633,7 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent = do
       totalDeposits = certsTotalDepositsTxBody pp certState txBody
       depositChange = totalDeposits <-> totalRefunds
   depositChangeEvent depositChange
+  newlySpendableUTxOsEvent utxoAdd
   pure $!
     UTxOState
       { utxosUtxo = UTxO newUTxO

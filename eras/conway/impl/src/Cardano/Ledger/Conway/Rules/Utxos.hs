@@ -131,6 +131,7 @@ conwayEvalScriptsTxValid = do
   () <- pure $! traceEvent validEnd ()
 
   utxos' <-
-    updateUTxOState pp utxos txBody certState govState $
-      tellEvent . TotalDeposits (hashAnnotated txBody)
+    updateUTxOState pp utxos txBody certState govState 
+      (tellEvent . TotalDeposits (hashAnnotated txBody))
+      (tellEvent . NewlySpendableUTxOsEvent)
   pure $! utxos' & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL

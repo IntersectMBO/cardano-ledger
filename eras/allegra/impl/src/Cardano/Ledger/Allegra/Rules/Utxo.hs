@@ -138,6 +138,8 @@ instance
 data AllegraUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))
   | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
+  | NewlySpendableUTxOsEvent (UTxO era) 
+    -- ^ Only the UTxO that is spendable after processing the valid signal tx
 
 -- | The UTxO transition rule for the Allegra era.
 utxoTransition ::
@@ -203,8 +205,9 @@ utxoTransition = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx
 
-  Shelley.updateUTxOState pp utxos txBody certState ppup' $
-    tellEvent . TotalDeposits (hashAnnotated txBody)
+  Shelley.updateUTxOState pp utxos txBody certState ppup' 
+    (tellEvent . TotalDeposits (hashAnnotated txBody))
+    (tellEvent . NewlySpendableUTxOsEvent)
 
 -- | Ensure the transaction is within the validity window.
 --
