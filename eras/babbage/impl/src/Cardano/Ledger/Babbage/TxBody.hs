@@ -126,7 +126,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
+import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, PolicyID (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -301,8 +301,8 @@ babbageAllInputsTxBodyF =
       `Set.union` (txBody ^. referenceInputsTxBodyL)
 {-# INLINEABLE babbageAllInputsTxBodyF #-}
 
-mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (ScriptHash (EraCrypto era)))
-mintedBabbageTxBodyF = to (Set.map policyID . policies . btbrMint . getMemoRawType)
+mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (PolicyID (EraCrypto era)))
+mintedBabbageTxBodyF = to (policies . btbrMint . getMemoRawType)
 {-# INLINEABLE mintedBabbageTxBodyF #-}
 
 withdrawalsBabbbageTxBodyL ::

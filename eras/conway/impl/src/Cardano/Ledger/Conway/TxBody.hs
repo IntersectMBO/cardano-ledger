@@ -97,7 +97,6 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (
   MaryValue (..),
   MultiAsset (..),
-  PolicyID (..),
   policies,
  )
 import Cardano.Ledger.MemoBytes (
@@ -122,7 +121,6 @@ import qualified Data.OSet.Strict as SOS
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
@@ -479,7 +477,7 @@ instance Crypto c => MaryEraTxBody (ConwayEra c) where
   mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
 
   mintedTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (ctbrMint txBodyRaw)))
+    to (\(TxBodyConstr (Memo txBodyRaw _)) -> policies (ctbrMint txBodyRaw))
   {-# INLINE mintedTxBodyF #-}
 
 instance Crypto c => AlonzoEraTxBody (ConwayEra c) where

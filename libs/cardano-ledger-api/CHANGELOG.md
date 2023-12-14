@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Change return type of `mintedTxBodyF` to `Set PolicyID`
 * Remove old and deprecated functions `evaluateTransactionExecutionUnits`,
   `evaluateTransactionExecutionUnitsWithLogs` and `updateTxBodyG`
 * Remove no longer necessary `ValidationFailed`

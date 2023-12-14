@@ -452,8 +452,8 @@ rdptr ::
   ScriptPurpose era ->
   StrictMaybe RdmrPtr
 rdptr txBody = \case
-  Minting (PolicyID hash) ->
-    RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (ScriptHash (EraCrypto era)))
+  Minting hash ->
+    RdmrPtr Mint <$> indexOf hash (txBody ^. mintedTxBodyF :: Set (PolicyID (EraCrypto era)))
   Spending txin ->
     RdmrPtr Spend <$> indexOf txin (txBody ^. inputsTxBodyL)
   Rewarding racnt ->
@@ -469,7 +469,7 @@ rdptrInv ::
   StrictMaybe (ScriptPurpose era)
 rdptrInv txBody = \case
   RdmrPtr Mint idx ->
-    Minting . PolicyID <$> fromIndex idx (txBody ^. mintedTxBodyF)
+    Minting <$> fromIndex idx (txBody ^. mintedTxBodyF)
   RdmrPtr Spend idx ->
     Spending <$> fromIndex idx (txBody ^. inputsTxBodyL)
   RdmrPtr Rewrd idx ->

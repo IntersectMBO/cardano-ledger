@@ -15,7 +15,7 @@ import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Mary.TxBody ()
-import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue, policyID)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getShelleyScriptsNeeded,
@@ -84,4 +84,5 @@ getMaryScriptsNeeded ::
 getMaryScriptsNeeded u txBody =
   case getShelleyScriptsNeeded u txBody of
     ShelleyScriptsNeeded shelleyScriptsNeeded ->
-      ShelleyScriptsNeeded (shelleyScriptsNeeded `Set.union` (txBody ^. mintedTxBodyF))
+      ShelleyScriptsNeeded $
+        shelleyScriptsNeeded `Set.union` Set.map policyID (txBody ^. mintedTxBodyF)
