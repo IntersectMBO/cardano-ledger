@@ -6,6 +6,7 @@
   `Cardano.Ledger.Allegra.Core`.
 * Export `ValidityInterval` from `Cardano.Ledger.Allegra.Core`
 * Moved `ToExpr` instances out of the main library and into the testlib.
+* Add `TxUTxODiff (UTxO era) (UTxO era)` inhabitant to the `AllegraUtxoEvent era` data type.
 
 ## 1.2.5.1
 
